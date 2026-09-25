@@ -28,6 +28,8 @@ import { usePendingLocks } from './locks/usePendingLocks';
 import { useIncomingSummary } from '../incoming/useIncomingSummary';
 import { ReviewModeButton } from '../review/ReviewModeButton';
 import { usePendingReview } from './review/usePendingReview';
+import { BulkPrivateNotice, confirmBulkPrivateCheckin } from './BulkPrivateNotice';
+import { bulkPrivateFiles } from './bulkPrivate';
 import { behindBranch, behindDescription } from './checkinBehind';
 import { mergeSourceChangeset, uploadSize } from './checkinButton';
 import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkinAfterUpdate';
@@ -39,7 +41,7 @@ import { moveToChangelist } from './changelistOperations';
 import { changeTone } from './changeTone';
 import { checkinComment, useCheckinDraft, useCheckinDraftStore } from './checkinDraftStore';
 import { pendingChangeMenu } from './pendingChangeMenu';
-import { openWithDefaultApp, undoChanges } from './pendingChangeOperations';
+import { addFilterRule, openWithDefaultApp, undoChanges } from './pendingChangeOperations';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { usePendingChanges } from './usePendingChanges';
 import styles from './PendingChangesView.module.css';
@@ -83,6 +85,7 @@ export function PendingChangesView() {
     { branch: branchName, loadedChangeset: workspace?.loadedChangeset },
     included.length,
   );
+  const bulkPrivate = bulkPrivateFiles(included);
   const selectedCount = changes.filter((change) => selection.selected.has(changeKey(change))).length;
   const changelists = snapshot?.changelists ?? [];
   const rows = buildChangeRows({ changes, changelists, layout, grouping, isChecked: isIncluded, collapsed });
@@ -125,6 +128,7 @@ export function PendingChangesView() {
   };
 
   const checkin = async (): Promise<boolean> => {
+    if (bulkPrivate && !(await confirmBulkPrivateCheckin(bulkPrivate))) return false;
     const done = await runBusy(() =>
       checkinChanges({
         workspacePath,
@@ -244,6 +248,13 @@ export function PendingChangesView() {
             )}
             {hiddenIncludedCount > 0 && <HiddenCheckedNotice count={hiddenIncludedCount} onClear={clearFilter} />}
             <LockedByOthersNotice changes={included} locks={locks} />
+            {bulkPrivate && (
+              <BulkPrivateNotice
+                bulk={bulkPrivate}
+                onExclude={() => setIncludedChanges(bulkPrivate.changes, false)}
+                onIgnoreFolder={(folder) => void addFilterRule(workspacePath, 'ignore', `/${folder}`)}
+              />
+            )}
             {checkinAfterUpdate && (
               <CheckinAfterUpdateNotice
                 message={checkinAfterUpdate}

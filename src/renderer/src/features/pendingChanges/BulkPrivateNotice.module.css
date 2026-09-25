@@ -1,0 +1,36 @@
+.notice {
+  display: flex;
+  flex: none;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 6px var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+  background: var(--label-bg);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  line-height: 16px;
+}
+
+.icon {
+  flex: none;
+  margin-top: 1px;
+  color: var(--status-changed);
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.text {
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
