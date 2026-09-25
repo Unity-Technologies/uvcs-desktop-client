@@ -1,3 +1,4 @@
+import { useMergeCommands } from '../../features/merge/useMergeCommands';
 import { useNavigation } from '../navigation/navigationStore';
 import { viewDefinition } from '../navigation/viewRegistry';
 import { CommandLogPanel } from './CommandLogPanel';
@@ -15,6 +16,7 @@ export function WorkspaceScreen() {
   const commandLogOpen = useCommandLogStore((state) => state.open);
   useWorkspaceWatcher();
   useWorkspaceCommands();
+  useMergeCommands();
 
   const ActiveView = viewDefinition(view).component;
   const topPage = pages.at(-1);

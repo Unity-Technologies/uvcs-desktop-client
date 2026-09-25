@@ -1,6 +1,6 @@
 import { homedir } from 'node:os';
 import type { CommandLogEntry } from '@shared/events';
-import { CmError } from './CmError';
+import { CmError, SILENT_FAILURE_MESSAGE } from './CmError';
 import type { CmResult } from './CmResult';
 import { CmShellPool } from './CmShellPool';
 import { runCmProcess } from './runCmProcess';
@@ -83,5 +83,5 @@ export class CmClient {
 
 function extractErrorMessage(output: string): string {
   const lines = output.trim().split('\n').map((line) => line.trim()).filter(Boolean);
-  return lines.at(-1)?.replace(/^Error:\s*/, '') ?? 'The cm command failed.';
+  return lines.at(-1)?.replace(/^Error:\s*/, '') ?? SILENT_FAILURE_MESSAGE;
 }

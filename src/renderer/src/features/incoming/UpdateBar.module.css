@@ -1,0 +1,27 @@
+.bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--accent-soft);
+}
+
+.bar[data-tone='blocked'] {
+  background: color-mix(in srgb, var(--status-changed) 12%, transparent);
+}
+
+.icon {
+  flex: none;
+  color: var(--accent);
+}
+
+.bar[data-tone='blocked'] .icon {
+  color: var(--status-changed);
+}
+
+.text {
+  flex: 1;
+  font-size: var(--text-sm);
+}

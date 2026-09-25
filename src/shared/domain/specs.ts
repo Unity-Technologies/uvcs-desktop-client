@@ -8,6 +8,9 @@ export const spec = {
   itemAtChangeset: (itemId: number, changesetId: number): string => `itemid:${itemId}#cs:${changesetId}`,
   serverPathAtChangeset: (serverPath: string, changesetId: number): string =>
     `serverpath:${serverPath}#cs:${changesetId}`,
+  /** An item at any point in history, given as a changeset or shelve spec (`cs:12`, `sh:3`). */
+  itemAt: (itemId: number, pointSpec: string): string => `itemid:${itemId}#${pointSpec}`,
+  serverPathAt: (serverPath: string, pointSpec: string): string => `serverpath:${serverPath}#${pointSpec}`,
 };
 
 export function repositorySpec(name: string, server: string): string {

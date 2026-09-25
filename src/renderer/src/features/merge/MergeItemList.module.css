@@ -1,0 +1,76 @@
+.list {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-1) 0;
+  overflow: auto;
+  outline: none;
+}
+
+.row {
+  position: absolute;
+  left: var(--space-1);
+  right: var(--space-1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.row[data-type='item']:hover {
+  background: var(--bg-hover);
+}
+
+.row[data-selected='true'] {
+  background: var(--bg-selected);
+}
+
+.list:focus .row[data-selected='true'] {
+  background: var(--bg-selected-strong);
+}
+
+.sectionLabel {
+  flex: 1;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.count {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.directoryIcon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--status-added) 16%, transparent);
+  color: var(--status-added);
+}
+
+.directoryIcon[data-pending='true'] {
+  background: color-mix(in srgb, var(--status-conflict) 16%, transparent);
+  color: var(--status-conflict);
+}
+
+.tag {
+  flex: none;
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--bg-hover);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  line-height: 16px;
+}
+
+.tag[data-pending='true'] {
+  background: color-mix(in srgb, var(--status-conflict) 14%, transparent);
+  color: var(--status-conflict);
+}

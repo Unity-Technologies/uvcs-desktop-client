@@ -1,7 +1,53 @@
-import { Construction } from 'lucide-react';
+import { CheckCircle2, FileDiff, GitMerge } from 'lucide-react';
+import type { MergePlan } from '@shared/domain/merge';
+import { navigation } from '../../app/navigation/navigationStore';
 import type { PageProps } from '../../app/navigation/pages';
+import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
+import { CenteredSpinner } from '../../ui/Spinner';
+import { MergeSession } from './MergeSession';
+import { useMergePlan } from './useMergePlan';
 
-export function MergePage(_props: PageProps<'merge'>) {
-  return <EmptyState icon={<Construction size={22} />} title="Merge" description="This area is being built." />;
+/** Previews a merge, walks the user through its conflicts and runs it. */
+export function MergePage({ page }: PageProps<'merge'>) {
+  const workspacePath = useWorkspacePath();
+  const { data: plan, isLoading, error, refetch, isFetching } = useMergePlan(workspacePath, page.request);
+
+  if (isLoading) return <CenteredSpinner />;
+  if (error || !plan) {
+    return (
+      <EmptyState
+        icon={<GitMerge size={22} />}
+        title="Couldn't prepare the merge"
+        description={error?.message}
+        action={
+          <Button loading={isFetching} onClick={() => void refetch()}>
+            Try again
+          </Button>
+        }
+      />
+    );
+  }
+
+  if (plan.status !== 'ready') return <MergeNotPossible plan={plan} />;
+  return <MergeSession key={JSON.stringify(page.request)} workspacePath={workspacePath} request={page.request} plan={plan} />;
+}
+
+function MergeNotPossible({ plan }: { plan: MergePlan }) {
+  switch (plan.status) {
+    case 'pendingChanges':
+      return (
+        <EmptyState
+          icon={<FileDiff size={22} />}
+          title="Check in or shelve your changes first"
+          description="Merging into a workspace with pending changes could mix your work with the merge. Your changes are safe; deal with them first and come back."
+          action={<Button onClick={() => navigation.goToView('changes')}>Go to Changes</Button>}
+        />
+      );
+    case 'alreadyMerged':
+      return <EmptyState icon={<CheckCircle2 size={22} />} title="Nothing to merge" description="The destination already has all these changes." />;
+    default:
+      return <EmptyState icon={<GitMerge size={22} />} title="This interval can't be merged" description="Check the changesets you picked and try again." />;
+  }
 }
