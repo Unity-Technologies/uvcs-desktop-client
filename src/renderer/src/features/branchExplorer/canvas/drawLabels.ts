@@ -1,10 +1,11 @@
-import type { DrawContext } from './drawContext';
+import { DIMMED_ALPHA, type DrawContext } from './drawContext';
+import { drawRectHit } from './drawSearchHit';
 import { columnX } from './geometry';
 import { LABEL_HEIGHT, labelTop, labelWidth } from './labelPlacement';
 
 /** Label pills above the labeled changesets that are on screen. */
 export function drawLabels({ ctx, scene, visible }: DrawContext): void {
-  const { layout, palette } = scene;
+  const { layout, palette, search } = scene;
   const lastColumn = Math.min(visible.lastColumn, layout.nodesByColumn.length - 1);
 
   ctx.save();
@@ -20,6 +21,13 @@ export function drawLabels({ ctx, scene, visible }: DrawContext): void {
     labels.forEach((label, index) => {
       const top = labelTop(layout, node, index);
       const width = labelWidth(ctx.measureText(label.name).width);
+      const hit = search?.labels.has(label.name) ?? false;
+      const opacity = search && !hit ? DIMMED_ALPHA : 1;
+      ctx.globalAlpha = opacity;
+      if (search && hit) {
+        const current = search.active?.kind === 'label' && search.active.name === label.name;
+        drawRectHit(ctx, { x: x - width / 2, y: top, width, height: LABEL_HEIGHT }, LABEL_HEIGHT / 2, palette.searchHit, current, scene.searchPing);
+      }
       ctx.beginPath();
       ctx.roundRect(x - width / 2, top, width, LABEL_HEIGHT, LABEL_HEIGHT / 2);
       ctx.fillStyle = palette.background;
@@ -27,10 +35,10 @@ export function drawLabels({ ctx, scene, visible }: DrawContext): void {
       ctx.fillStyle = palette.labelBackground;
       ctx.fill();
       ctx.strokeStyle = palette.labelText;
-      ctx.globalAlpha = 0.45;
+      ctx.globalAlpha = opacity * 0.45;
       ctx.lineWidth = 1;
       ctx.stroke();
-      ctx.globalAlpha = 1;
+      ctx.globalAlpha = opacity;
       ctx.fillStyle = palette.labelText;
       ctx.fillText(label.name, x, top + LABEL_HEIGHT / 2 + 0.5);
     });

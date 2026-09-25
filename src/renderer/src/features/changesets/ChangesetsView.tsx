@@ -1,5 +1,5 @@
 import { GitCommitVertical } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -40,11 +40,6 @@ export function ChangesetsView() {
   const focused = visible.find((changeset) => changesetKey(changeset) === selection.anchor);
   const columns = useMemo(() => changesetColumns(workspace?.loadedChangeset), [workspace?.loadedChangeset]);
   const menuContext = { workspacePath, loadedChangeset: workspace?.loadedChangeset, loadedBranch: currentBranch };
-  const newestKey = visible[0] && changesetKey(visible[0]);
-
-  useEffect(() => {
-    if (!focused && newestKey) setSelection({ selected: new Set([newestKey]), anchor: newestKey });
-  }, [focused, newestKey]);
 
   useCommands(
     useMemo<Command[]>(
@@ -89,6 +84,7 @@ export function ChangesetsView() {
                 rowKey={changesetKey}
                 selection={selection}
                 onSelectionChange={setSelection}
+                selectFirstRow
                 onActivate={openChangesetDiff}
                 contextMenu={(rows) => changesetMenu(menuContext, rows)}
               />

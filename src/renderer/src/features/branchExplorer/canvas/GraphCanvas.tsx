@@ -1,30 +1,37 @@
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react';
 import type { MenuEntry } from '../../../lib/actions';
+import { subscribeToAvatars } from '../../../lib/avatars/avatarImages';
 import { ActionContextMenu } from '../../../ui/menu/ActionContextMenu';
 import type { GraphLayout } from '../model/layoutGraph';
 import type { GraphScene } from './drawContext';
 import { drawGraph } from './drawGraph';
-import { graphSize } from './geometry';
+import { graphSize, headerTop } from './geometry';
 import { hitTest, nodePoint, type GraphTarget } from './graphTargets';
 import { GraphTooltip } from './GraphTooltip';
+import { laneShape } from './laneShape';
 import { useGraphPalette } from './useGraphPalette';
-import { centerOn, fitToScreen, openingViewport, revealPoint, toWorld, zoomAt, type Size, type Viewport } from './viewport';
+import { useGraphViewport } from './useGraphViewport';
+import { useSearchPing } from './useSearchPing';
+import { centerOn, fitToScreen, openingViewport, revealPoint, toWorld, type Size } from './viewport';
+import { isDiscreteWheel, wheelZoomFactor } from './zoom';
 import styles from './GraphCanvas.module.css';
-import { subscribeToAvatars } from '../../../lib/avatars/avatarImages';
 
-/** Scene fields owned by the view; the canvas adds the viewport, size, palette and hover state. */
+/** Scene fields owned by the view; the canvas adds the viewport, size, palette, hover state and animations. */
 export type GraphHighlights = Pick<
   GraphScene,
-  'selectedChangeset' | 'selectedBranch' | 'homeChangeset' | 'currentBranch' | 'highlightedAuthor' | 'searchHits' | 'activeSearchHit' | 'options'
+  'selectedChangeset' | 'selectedBranch' | 'homeChangeset' | 'currentBranch' | 'highlightedAuthor' | 'search' | 'options'
 >;
 
 export interface GraphCanvasHandle {
   /** Scrolls just enough to show the changeset. */
   revealChangeset: (id: number) => void;
+  /** Scrolls just enough to show the branch's header card. */
+  revealBranch: (name: string) => void;
   centerOnChangeset: (id: number) => void;
   /** The first view of a graph, focused on a changeset. */
   showOpeningView: (focusId: number) => void;
   fit: () => void;
+  /** Glides the zoom by `factor` around the middle of the canvas. */
   zoomBy: (factor: number) => void;
 }
 
@@ -35,17 +42,21 @@ interface GraphCanvasProps {
   onActivate: (target: GraphTarget) => void;
   /** Builds the context menu for what was right-clicked. */
   contextMenu: (target: GraphTarget | null) => MenuEntry[];
+  /** Floating controls drawn over the canvas. */
+  children?: ReactNode;
 }
 
 const DRAG_THRESHOLD = 4;
+const DOUBLE_CLICK_ZOOM = 1.4;
+/** Where in a header card a reveal aims: far enough in to show the start of the name. */
+const HEADER_REVEAL_INSET = 60;
 
 export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(function GraphCanvas(
-  { layout, highlights, onSelect, onActivate, contextMenu },
+  { layout, highlights, onSelect, onActivate, contextMenu, children },
   ref,
 ) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const viewportRef = useRef<Viewport>({ panX: 0, panY: 0, zoom: 1 });
   const sizeRef = useRef<Size>({ width: 0, height: 0 });
   const frameRef = useRef(0);
   const contextTargetRef = useRef<GraphTarget | null>(null);
@@ -61,71 +72,118 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const scheduleDraw = useCallback(() => {
     cancelAnimationFrame(frameRef.current);
     frameRef.current = requestAnimationFrame(() => {
-      const canvas = canvasRef.current;
+      const ctx = canvasRef.current?.getContext('2d');
       const { layout: currentLayout, highlights: currentHighlights, palette: currentPalette, hoveredChangeset: hovered } = sceneRef.current;
-      const ctx = canvas?.getContext('2d');
       if (!ctx || !currentPalette || sizeRef.current.width === 0) return;
       drawGraph(
         ctx,
-        { ...currentHighlights, layout: currentLayout, viewport: viewportRef.current, size: sizeRef.current, palette: currentPalette, hoveredChangeset: hovered },
+        {
+          ...currentHighlights,
+          layout: currentLayout,
+          viewport: view.viewportRef.current,
+          size: sizeRef.current,
+          palette: currentPalette,
+          hoveredChangeset: hovered,
+          searchPing: searchPingRef.current,
+        },
         window.devicePixelRatio,
       );
     });
   }, []);
 
-  const setViewport = useCallback(
-    (viewport: Viewport) => {
-      viewportRef.current = viewport;
+  const view = useGraphViewport(
+    () => graphSize(sceneRef.current.layout.columnCount, sceneRef.current.layout.rowCount),
+    () => sizeRef.current,
+    () => {
+      // Whatever moves the graph moves it away from the tooltip's anchor.
+      setHover(null);
       scheduleDraw();
     },
-    [scheduleDraw],
   );
+  const searchPingRef = useSearchPing(highlights.search?.active ?? null, scheduleDraw);
 
   useEffect(scheduleDraw, [layout, highlights, palette, hoveredChangeset, scheduleDraw]);
+  // A filter can shrink or grow the graph: keep it on screen.
+  useEffect(() => view.keepInBounds(), [layout, view]);
   // Avatars arrive in the background; repaint as each one lands.
   useEffect(() => subscribeToAvatars(scheduleDraw), [scheduleDraw]);
 
+  const center = (): { x: number; y: number } => ({ x: sizeRef.current.width / 2, y: sizeRef.current.height / 2 });
+
   useImperativeHandle(
     ref,
-    () => ({
-      revealChangeset: (id) => {
-        const point = nodePoint(layout, id);
-        if (point) setViewport(revealPoint(viewportRef.current, point.x, point.y, sizeRef.current));
-      },
-      centerOnChangeset: (id) => {
-        const point = nodePoint(layout, id);
-        if (point) setViewport(centerOn(viewportRef.current, point.x, point.y, sizeRef.current));
-      },
-      showOpeningView: (focusId) => {
-        const show = (): void => {
-          const point = nodePoint(layout, focusId);
-          if (point) setViewport(openingViewport(graphSize(layout.columnCount, layout.rowCount), sizeRef.current, point.x, point.y));
-        };
-        if (sizeRef.current.width === 0) pendingViewRef.current = show;
-        else show();
-      },
-      fit: () => setViewport(fitToScreen(graphSize(layout.columnCount, layout.rowCount), sizeRef.current)),
-      zoomBy: (factor) => setViewport(zoomAt(viewportRef.current, factor, sizeRef.current.width / 2, sizeRef.current.height / 2)),
-    }),
-    [layout, setViewport],
+    () => {
+      const reveal = (x: number, y: number): void => {
+        setHover(null);
+        view.jumpTo(revealPoint(view.viewportRef.current, x, y, sizeRef.current));
+      };
+      return {
+        revealChangeset: (id) => {
+          const point = nodePoint(layout, id);
+          if (point) reveal(point.x, point.y);
+        },
+        revealBranch: (name) => {
+          const lane = layout.lanesByBranch.get(name);
+          if (!lane) return;
+          const shape = laneShape(lane);
+          reveal(shape.left + HEADER_REVEAL_INSET, headerTop(shape.y));
+        },
+        centerOnChangeset: (id) => {
+          const point = nodePoint(layout, id);
+          if (point) view.jumpTo(centerOn(view.viewportRef.current, point.x, point.y, sizeRef.current));
+        },
+        showOpeningView: (focusId) => {
+          const show = (): void => {
+            const point = nodePoint(layout, focusId);
+            if (point) view.jumpTo(openingViewport(graphSize(layout.columnCount, layout.rowCount), sizeRef.current, point.x, point.y));
+          };
+          if (sizeRef.current.width === 0) pendingViewRef.current = show;
+          else show();
+        },
+        fit: () => view.jumpTo(fitToScreen(graphSize(layout.columnCount, layout.rowCount), sizeRef.current)),
+        zoomBy: (factor) => view.zoomStep(center().x, center().y, factor),
+      };
+    },
+    [layout, view],
   );
 
   const onResize = useCallback(() => {
     const pending = pendingViewRef.current;
     pendingViewRef.current = null;
     if (pending) pending();
-    else scheduleDraw();
-  }, [scheduleDraw]);
+    else view.keepInBounds();
+    scheduleDraw();
+  }, [view, scheduleDraw]);
 
   useCanvasSize(containerRef, canvasRef, sizeRef, onResize);
-  useWheelZoomAndPan(containerRef, viewportRef, setViewport);
+  useWheel(containerRef, (event, x, y) => {
+    view.inertia.cancel();
+    if (event.ctrlKey || event.metaKey) {
+      // A wheel notch glides; a trackpad pinch follows the fingers.
+      if (isDiscreteWheel(event.deltaY, event.deltaMode)) view.zoomStep(x, y, wheelZoomFactor(event.deltaY, event.deltaMode));
+      else view.pinchZoom(x, y, Math.exp(-event.deltaY * 0.01));
+      return;
+    }
+    view.stop();
+    const sideways = event.shiftKey && event.deltaX === 0;
+    view.panBy(-(sideways ? event.deltaY : event.deltaX), -(sideways ? 0 : event.deltaY));
+  });
 
-  const targetAt = (clientX: number, clientY: number): GraphTarget | null => {
+  const localPoint = (clientX: number, clientY: number): { x: number; y: number } => {
     const bounds = containerRef.current!.getBoundingClientRect();
-    return hitTest(layout, toWorld(viewportRef.current, clientX - bounds.left, clientY - bounds.top));
+    return { x: clientX - bounds.left, y: clientY - bounds.top };
   };
 
+  const targetAt = (clientX: number, clientY: number): GraphTarget | null => {
+    const point = localPoint(clientX, clientY);
+    return hitTest(layout, toWorld(view.viewportRef.current, point.x, point.y));
+  };
+
+  /** Floating controls over the canvas handle their own pointer events. */
+  const onCanvas = (event: React.SyntheticEvent): boolean => event.target === canvasRef.current;
+
   const onPointerDown = (event: React.PointerEvent): void => {
+    if (!onCanvas(event)) return;
     containerRef.current?.focus();
     if (event.button === 2) {
       contextTargetRef.current = targetAt(event.clientX, event.clientY);
@@ -134,21 +192,28 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     }
     if (event.button !== 0) return;
 
-    const start = { x: event.clientX, y: event.clientY, viewport: viewportRef.current };
+    // Grabbing the graph catches it mid-glide.
+    view.stop();
+    view.inertia.sample(event.clientX, event.clientY, event.timeStamp);
+    const start = { x: event.clientX, y: event.clientY };
+    let last = start;
     let dragging = false;
     const onMove = (move: PointerEvent): void => {
-      const dx = move.clientX - start.x;
-      const dy = move.clientY - start.y;
-      if (!dragging && Math.hypot(dx, dy) < DRAG_THRESHOLD) return;
+      if (!dragging && Math.hypot(move.clientX - start.x, move.clientY - start.y) < DRAG_THRESHOLD) return;
       dragging = true;
       containerRef.current?.setAttribute('data-panning', 'true');
-      setViewport({ ...start.viewport, panX: start.viewport.panX + dx, panY: start.viewport.panY + dy });
+      view.panBy(move.clientX - last.x, move.clientY - last.y);
+      last = { x: move.clientX, y: move.clientY };
+      // Pointer moves are coalesced to one per frame; the raw samples make the release velocity accurate.
+      const samples = move.getCoalescedEvents?.() ?? [];
+      for (const sample of samples.length > 0 ? samples : [move]) view.inertia.sample(sample.clientX, sample.clientY, sample.timeStamp);
     };
     const onUp = (up: PointerEvent): void => {
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
       containerRef.current?.removeAttribute('data-panning');
-      if (!dragging) onSelect(targetAt(up.clientX, up.clientY));
+      if (dragging) view.inertia.release();
+      else onSelect(targetAt(up.clientX, up.clientY));
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -156,9 +221,16 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
 
   const onPointerMove = (event: React.PointerEvent): void => {
     if (event.buttons !== 0) return;
+    const target = onCanvas(event) ? targetAt(event.clientX, event.clientY) : null;
+    setHover(target && { target, ...localPoint(event.clientX, event.clientY) });
+  };
+
+  const onDoubleClick = (event: React.MouseEvent): void => {
+    if (!onCanvas(event)) return;
     const target = targetAt(event.clientX, event.clientY);
-    const bounds = containerRef.current!.getBoundingClientRect();
-    setHover(target && { target, x: event.clientX - bounds.left, y: event.clientY - bounds.top });
+    if (target) return onActivate(target);
+    const point = localPoint(event.clientX, event.clientY);
+    view.zoomStep(point.x, point.y, DOUBLE_CLICK_ZOOM);
   };
 
   return (
@@ -173,15 +245,13 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         onPointerLeave={() => setHover(null)}
         onContextMenu={(event) => {
           // Nothing under the pointer: no menu (preventing the default also stops the menu from opening).
-          if (!contextTargetRef.current) event.preventDefault();
+          if (!onCanvas(event) || !contextTargetRef.current) event.preventDefault();
         }}
-        onDoubleClick={(event) => {
-          const target = targetAt(event.clientX, event.clientY);
-          if (target) onActivate(target);
-        }}
+        onDoubleClick={onDoubleClick}
       >
         <canvas ref={canvasRef} className={styles.canvas} />
         {hover && <GraphTooltip target={hover.target} layout={layout} x={hover.x} y={hover.y} />}
+        {children}
       </div>
     </ActionContextMenu>
   );
@@ -191,7 +261,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
 function useCanvasSize(
   containerRef: React.RefObject<HTMLDivElement | null>,
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
-  sizeRef: React.MutableRefObject<Size>,
+  sizeRef: React.RefObject<Size>,
   onResize: () => void,
 ): void {
   useEffect(() => {
@@ -211,30 +281,20 @@ function useCanvasSize(
   }, [containerRef, canvasRef, sizeRef, onResize]);
 }
 
-/** Wheel and trackpad: scroll pans; ⌘/Ctrl + wheel (and pinch) zooms around the pointer. */
-function useWheelZoomAndPan(
-  containerRef: React.RefObject<HTMLDivElement | null>,
-  viewportRef: React.MutableRefObject<Viewport>,
-  setViewport: (viewport: Viewport) => void,
-): void {
+/** Wheel and trackpad events with the pointer position in the container, never zooming the page. */
+function useWheel(containerRef: React.RefObject<HTMLDivElement | null>, onWheel: (event: WheelEvent, x: number, y: number) => void): void {
+  const handlerRef = useRef(onWheel);
+  handlerRef.current = onWheel;
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
-    const onWheel = (event: WheelEvent): void => {
+    const listener = (event: WheelEvent): void => {
       event.preventDefault();
-      const viewport = viewportRef.current;
-      if (event.ctrlKey || event.metaKey) {
-        const bounds = container.getBoundingClientRect();
-        setViewport(zoomAt(viewport, Math.exp(-event.deltaY * 0.01), event.clientX - bounds.left, event.clientY - bounds.top));
-        return;
-      }
-      const deltaX = event.shiftKey && event.deltaX === 0 ? event.deltaY : event.deltaX;
-      const deltaY = event.shiftKey && event.deltaX === 0 ? 0 : event.deltaY;
-      setViewport({ ...viewport, panX: viewport.panX - deltaX, panY: viewport.panY - deltaY });
+      const bounds = container.getBoundingClientRect();
+      handlerRef.current(event, event.clientX - bounds.left, event.clientY - bounds.top);
     };
     // Registered natively: React's wheel listeners are passive and cannot prevent page zoom.
-    container.addEventListener('wheel', onWheel, { passive: false });
-    return () => container.removeEventListener('wheel', onWheel);
-  }, [containerRef, viewportRef, setViewport]);
+    container.addEventListener('wheel', listener, { passive: false });
+    return () => container.removeEventListener('wheel', listener);
+  }, [containerRef]);
 }

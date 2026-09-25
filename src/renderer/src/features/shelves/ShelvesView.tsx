@@ -75,32 +75,31 @@ export function ShelvesView() {
         <CenteredSpinner />
       ) : error ? (
         <EmptyState title="Couldn't load shelves" description={error.message} />
+      ) : visible.length === 0 ? (
+        <EmptyState
+          icon={<Archive size={22} />}
+          title="No shelves"
+          description="Shelve pending changes from the Changes view to save them without checking in."
+        />
       ) : (
         <ListWithDetails
           list={
-            visible.length === 0 ? (
-              <EmptyState
-                icon={<Archive size={22} />}
-                title="No shelves"
-                description="Shelve pending changes from the Changes view to save them without checking in."
+            <HighlightQuery query={search.trim()}>
+              <DataTable
+                rows={visible}
+                columns={COLUMNS}
+                rowKey={shelveKey}
+                selection={selection}
+                onSelectionChange={setSelection}
+                selectFirstRow
+                onActivate={showShelveChanges}
+                contextMenu={(selectedShelves) => shelveMenu(workspacePath, selectedShelves)}
+                initialSort={{ columnId: 'id', descending: true }}
               />
-            ) : (
-              <HighlightQuery query={search.trim()}>
-                <DataTable
-                  rows={visible}
-                  columns={COLUMNS}
-                  rowKey={shelveKey}
-                  selection={selection}
-                  onSelectionChange={setSelection}
-                  onActivate={showShelveChanges}
-                  contextMenu={(selectedShelves) => shelveMenu(workspacePath, selectedShelves)}
-                  initialSort={{ columnId: 'id', descending: true }}
-                />
-              </HighlightQuery>
-            )
+            </HighlightQuery>
           }
           details={
-            selected ? <ShelveDetails workspacePath={workspacePath} shelve={selected} /> : <EmptyState title="Select a shelve" description="Double-click a shelve to see its changes." />
+            selected ? <ShelveDetails workspacePath={workspacePath} shelve={selected} /> : <EmptyState title="No shelve selected" description="Select a shelve to see its details. Double-click it to open its changes." />
           }
         />
       )}

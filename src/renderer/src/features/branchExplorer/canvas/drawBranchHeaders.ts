@@ -1,5 +1,6 @@
 import type { Lane } from '../model/layoutGraph';
-import type { DrawContext } from './drawContext';
+import { DIMMED_ALPHA, type DrawContext } from './drawContext';
+import { drawRectHit } from './drawSearchHit';
 import { fitText, summaryOf } from './fitText';
 import { BAND_HEIGHT, HEADER_HEIGHT, HEADER_MAX_WIDTH, headerTop, ROW_HEIGHT } from './geometry';
 import { branchColor } from './graphPalette';
@@ -12,6 +13,7 @@ const MIN_WIDTH = 64;
 /** Keeps a card clear of the next branch band on the same row. */
 const CLEARANCE = 12;
 const CURRENT_BADGE = 'current';
+const CARD_RADIUS = 6;
 
 /**
  * A small card above each band with the branch name and comment. While the start of a band is
@@ -56,6 +58,7 @@ export function drawCompactBranchNames(draw: DrawContext): void {
     const room = Math.max(60, roomBeforeNextLane(draw, lane, shape.left) * viewport.zoom);
     const bottom = (shape.y - BAND_HEIGHT / 2) * viewport.zoom + viewport.panY - 3;
     const name = fitText(ctx, lane.branch.name, Math.min(room, Math.max(60, right - left + 80)));
+    ctx.globalAlpha = scene.search && !scene.search.branches.has(lane.branch.name) ? DIMMED_ALPHA : 1;
     ctx.strokeStyle = palette.background;
     ctx.lineWidth = 3;
     ctx.lineJoin = 'round';
@@ -104,10 +107,17 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
   const current = scene.currentBranch === lane.branch.name;
   const color = branchColor(palette, lane.branch.name);
   const middle = top + HEADER_HEIGHT / 2;
+  const { search } = scene;
 
   ctx.save();
+  if (search?.branches.has(lane.branch.name)) {
+    const current = search.active?.kind === 'branch' && search.active.name === lane.branch.name;
+    drawRectHit(ctx, { x: left, y: top, width, height: HEADER_HEIGHT }, CARD_RADIUS, palette.searchHit, current, scene.searchPing);
+  } else if (search) {
+    ctx.globalAlpha = DIMMED_ALPHA;
+  }
   ctx.beginPath();
-  ctx.roundRect(left, top, width, HEADER_HEIGHT, 6);
+  ctx.roundRect(left, top, width, HEADER_HEIGHT, CARD_RADIUS);
   ctx.fillStyle = palette.surfaceRaised;
   ctx.fill();
   ctx.strokeStyle = selected ? palette.accent : palette.border;

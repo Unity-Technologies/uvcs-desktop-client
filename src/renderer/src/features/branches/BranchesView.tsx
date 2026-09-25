@@ -109,30 +109,29 @@ export function BranchesView() {
         <CenteredSpinner />
       ) : error ? (
         <EmptyState title="Couldn't load branches" description={error.message} />
+      ) : rows.length === 0 ? (
+        <EmptyState icon={<GitBranch size={22} />} title="No branches found" description="Try a different filter or date range." />
       ) : (
         <ListWithDetails
           list={
-            rows.length === 0 ? (
-              <EmptyState icon={<GitBranch size={22} />} title="No branches found" description="Try a different filter or date range." />
-            ) : (
-              <HighlightQuery query={search}>
-                <DataTable
-                  rows={rows}
-                  columns={columns}
-                  rowKey={rowKey}
-                  selection={selection}
-                  onSelectionChange={setSelection}
-                  onActivate={(row) => row.branch.name !== currentBranch && void switchToBranch(workspacePath, row.branch.name)}
-                  contextMenu={(selectedRows) => branchMenu(workspacePath, selectedRows.map((row) => row.branch), currentBranch)}
-                />
-              </HighlightQuery>
-            )
+            <HighlightQuery query={search}>
+              <DataTable
+                rows={rows}
+                columns={columns}
+                rowKey={rowKey}
+                selection={selection}
+                onSelectionChange={setSelection}
+                selectFirstRow
+                onActivate={(row) => row.branch.name !== currentBranch && void switchToBranch(workspacePath, row.branch.name)}
+                contextMenu={(selectedRows) => branchMenu(workspacePath, selectedRows.map((row) => row.branch), currentBranch)}
+              />
+            </HighlightQuery>
           }
           details={
             selected ? (
               <BranchDetails workspacePath={workspacePath} branch={selected} isCurrent={selected.name === currentBranch} />
             ) : (
-              <EmptyState title="Select a branch" description="Double-click a branch to switch to it." />
+              <EmptyState title="No branch selected" description="Select a branch to see its details. Double-click it to switch to it." />
             )
           }
         />

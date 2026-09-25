@@ -83,35 +83,34 @@ export function LabelsView() {
         <CenteredSpinner />
       ) : error ? (
         <EmptyState title="Couldn't load labels" description={error.message} />
+      ) : visible.length === 0 ? (
+        <EmptyState
+          icon={<Tag size={22} />}
+          title="No labels"
+          description="Labels mark important changesets, like releases."
+          action={<Button onClick={() => openCreateLabelDialog(workspacePath)}>Label your workspace changeset</Button>}
+        />
       ) : (
         <ListWithDetails
           list={
-            visible.length === 0 ? (
-              <EmptyState
-                icon={<Tag size={22} />}
-                title="No labels"
-                description="Labels mark important changesets, like releases."
-                action={<Button onClick={() => openCreateLabelDialog(workspacePath)}>Label your workspace changeset</Button>}
+            <HighlightQuery query={search}>
+              <DataTable
+                rows={visible}
+                columns={COLUMNS}
+                rowKey={labelKey}
+                selection={selection}
+                onSelectionChange={setSelection}
+                selectFirstRow
+                onActivate={(label) => void switchToLabel(workspacePath, label)}
+                contextMenu={(selectedLabels) => labelMenu(workspacePath, selectedLabels)}
               />
-            ) : (
-              <HighlightQuery query={search}>
-                <DataTable
-                  rows={visible}
-                  columns={COLUMNS}
-                  rowKey={labelKey}
-                  selection={selection}
-                  onSelectionChange={setSelection}
-                  onActivate={(label) => void switchToLabel(workspacePath, label)}
-                  contextMenu={(selectedLabels) => labelMenu(workspacePath, selectedLabels)}
-                />
-              </HighlightQuery>
-            )
+            </HighlightQuery>
           }
           details={
             selected ? (
               <LabelDetails workspacePath={workspacePath} label={selected} />
             ) : (
-              <EmptyState title="Select a label" description="Select two labels to compare them." />
+              <EmptyState title="No label selected" description="Select a label to see its details, or two labels to compare them." />
             )
           }
         />
