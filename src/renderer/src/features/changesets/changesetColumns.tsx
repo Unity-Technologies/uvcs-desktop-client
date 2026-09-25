@@ -3,7 +3,7 @@ import type { Label } from '@shared/domain/label';
 import { shortBranchName } from '@shared/domain/specs';
 import { LabelChips } from '../../components/LabelChips';
 import { firstLine } from '../../lib/text';
-import { UserLabel } from '../../ui/Avatar';
+import { Avatar, UserLabel } from '../../ui/Avatar';
 import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import type { Column } from '../../ui/table/DataTable';
@@ -12,6 +12,12 @@ import styles from './ChangesetsView.module.css';
 /** Columns of the changesets table; `loadedChangeset` is highlighted as the workspace's current one. */
 export function changesetColumns(loadedChangeset: number | undefined, labelsByChangeset: ReadonlyMap<number, readonly Label[]>): Column<Changeset>[] {
   return [
+    {
+      id: 'avatar',
+      header: '',
+      width: 34,
+      render: (changeset) => <Avatar user={changeset.owner} size={20} />,
+    },
     {
       id: 'id',
       header: 'Changeset',
@@ -54,7 +60,7 @@ export function changesetColumns(loadedChangeset: number | undefined, labelsByCh
         </span>
       ),
     },
-    { id: 'owner', header: 'Author', width: 150, hideBelow: 700, sortValue: (changeset) => changeset.owner, render: (changeset) => <UserLabel user={changeset.owner} /> },
+    { id: 'owner', header: 'Author', width: 150, hideBelow: 700, sortValue: (changeset) => changeset.owner, render: (changeset) => <UserLabel user={changeset.owner} avatar={false} /> },
     {
       id: 'date',
       header: 'Date',
