@@ -20,6 +20,7 @@ import { ChangesList } from './ChangesList';
 import { ChangesSummaryBar } from './ChangesSummaryBar';
 import { CheckinPanel } from './CheckinPanel';
 import { HiddenCheckedNotice, NoFilterMatches } from './FilterNotices';
+import { LiveRefreshToggle } from './LiveRefreshToggle';
 import { useReviewMode } from './review/useReviewMode';
 import { mergeSourceChangeset, uploadSize } from './checkinButton';
 import { checkinChanges, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
@@ -120,6 +121,7 @@ export function PendingChangesView() {
       subtitle={snapshot && `${snapshot.changes.filter(isCheckinCandidate).length} pending`}
       actions={
         <>
+          <LiveRefreshToggle />
           <IconButton icon={<RefreshCw size={14} className={isFetching ? styles.spinning : undefined} />} label="Refresh" shortcut="mod+r" onClick={() => void invalidateWorkspace(workspacePath)} />
           <IconButton icon={<SlidersHorizontal size={14} />} label="What to show" onClick={() => openSettingsDialogAt('pendingChanges')} />
         </>
