@@ -4,7 +4,7 @@ import { useCommands, type Command } from '../../app/commands/commandStore';
 import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { prompt } from '../../ui/dialog/prompt';
 import { openMerge } from './mergeOperations';
-import { pickBranch } from './pickBranch';
+import { pickBranch } from '../branches/BranchPickerDialog';
 
 /** Palette commands to start any kind of merge. */
 export function useMergeCommands(): void {
@@ -20,7 +20,7 @@ export function useMergeCommands(): void {
         icon: GitMerge,
         shortcut: 'mod+shift+m',
         run: async () => {
-          const branch = await pickBranch({ title: 'Merge from branch', confirmLabel: 'Preview merge', exclude: currentBranch });
+          const branch = await pickBranch({ title: 'Merge from branch', exclude: currentBranch });
           if (branch) openMerge({ kind: 'merge', sourceSpec: `br:${branch}` });
         },
       },
@@ -31,7 +31,7 @@ export function useMergeCommands(): void {
         icon: GitPullRequestArrow,
         disabled: !currentBranch,
         run: async () => {
-          const destination = await pickBranch({ title: `Merge ${currentBranch} into`, confirmLabel: 'Preview merge', exclude: currentBranch });
+          const destination = await pickBranch({ title: `Merge ${currentBranch} into`, exclude: currentBranch });
           if (destination) openMerge({ kind: 'merge', sourceSpec: `br:${currentBranch}`, destinationBranch: destination });
         },
       },
