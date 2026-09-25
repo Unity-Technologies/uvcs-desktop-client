@@ -7,13 +7,17 @@ import {
   Filter,
   GitBranch,
   GitCommitVertical,
+  GitBranchPlus,
   GitMerge,
   GitPullRequestArrow,
   Minus,
   Tag,
+  TagIcon,
 } from 'lucide-react';
 import { spec } from '@shared/domain/specs';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
+import { openCreateBranchDialog } from '../branches/CreateBranchDialog';
+import { openCreateLabelDialog } from '../labels/CreateLabelDialog';
 import type { GraphTarget } from './canvas/graphTargets';
 import { graphActions } from './graphActions';
 import type { GraphLayout, Lane } from './model/layoutGraph';
@@ -52,10 +56,24 @@ export function graphMenu(target: GraphTarget | null, context: GraphMenuContext)
 }
 
 function changesetMenu(id: number, { workspacePath, layout, goToChangeset }: GraphMenuContext): MenuEntry[] {
-  const parent = layout.nodes.get(id)?.changeset.parent ?? -1;
+  const changeset = layout.nodes.get(id)?.changeset;
+  const parent = changeset?.parent ?? -1;
   return tidyMenu([
     { id: 'diff', label: 'Diff changeset', icon: FileDiff, run: () => graphActions.diffChangeset(id) },
     { id: 'switch', label: 'Switch workspace to this changeset', icon: GitCommitVertical, run: () => graphActions.switchToChangeset(workspacePath, id) },
+    SEPARATOR,
+    changeset && {
+      id: 'createBranch',
+      label: 'Create branch from here…',
+      icon: GitBranchPlus,
+      run: () =>
+        openCreateBranchDialog(workspacePath, {
+          parentBranch: changeset.branch,
+          startingPoint: spec.changeset(id),
+          startingPointLabel: `changeset ${id}`,
+        }),
+    },
+    { id: 'label', label: 'Label this changeset…', icon: TagIcon, run: () => openCreateLabelDialog(workspacePath, id) },
     SEPARATOR,
     { id: 'merge', label: 'Merge from this changeset', icon: GitMerge, run: () => graphActions.merge('merge', spec.changeset(id)) },
     { id: 'cherryPick', label: 'Cherry pick this changeset', icon: GitPullRequestArrow, run: () => graphActions.merge('cherryPick', spec.changeset(id)) },
