@@ -3,8 +3,10 @@ import { useSettings } from './useSettings';
 
 const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
-/** Applies the theme preference to the document, following the OS when set to "system". */
-export function useTheme(): void {
+export type ResolvedTheme = 'light' | 'dark';
+
+/** The theme in effect: the preference, or the OS appearance when set to "system". */
+export function useResolvedTheme(): ResolvedTheme {
   const { theme } = useSettings();
   const [systemIsDark, setSystemIsDark] = useState(darkQuery.matches);
 
@@ -14,7 +16,12 @@ export function useTheme(): void {
     return () => darkQuery.removeEventListener('change', onChange);
   }, []);
 
-  const resolved = theme === 'system' ? (systemIsDark ? 'dark' : 'light') : theme;
+  return theme === 'system' ? (systemIsDark ? 'dark' : 'light') : theme;
+}
+
+/** Applies the theme preference to the document. */
+export function useTheme(): void {
+  const resolved = useResolvedTheme();
   useEffect(() => {
     document.documentElement.dataset.theme = resolved;
   }, [resolved]);

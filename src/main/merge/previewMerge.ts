@@ -1,0 +1,36 @@
+import type { MergePlan, MergeRequest } from '@shared/domain/merge';
+import type { CmClient } from '../cm/CmClient';
+import { CmError, SILENT_FAILURE_MESSAGE } from '../cm/CmError';
+import { parseMergePlan } from '../cm/mergeOutput';
+import { MACHINE_READABLE_ARGS, mergeSourceArgs } from './mergeArgs';
+
+const PENDING_CHANGES_PLAN: MergePlan = { status: 'pendingChanges', changes: [], fileConflicts: [], directoryConflicts: [], warnings: [] };
+
+/** Asks `cm` what a merge would do. Nothing in the workspace changes. */
+export async function previewMerge(cm: CmClient, workspacePath: string, request: MergeRequest): Promise<MergePlan> {
+  const intoWorkspace = !request.destinationBranch;
+  if (intoWorkspace && (await hasPendingChanges(cm, workspacePath))) return PENDING_CHANGES_PLAN;
+
+  try {
+    const output = await cm.query(['merge', ...mergeSourceArgs(request), ...MACHINE_READABLE_ARGS, '--printcontributors'], { cwd: workspacePath });
+    return parseMergePlan(output);
+  } catch (error) {
+    throw await explainFailure(cm, workspacePath, request, error);
+  }
+}
+
+async function hasPendingChanges(cm: CmClient, workspacePath: string): Promise<boolean> {
+  const output = await cm.query(['status', '--short', '--controlledchanged', '--changed', '--localdeleted'], { cwd: workspacePath });
+  return output.trim().length > 0;
+}
+
+/** The machine-readable preview can fail silently; the plain one explains why. */
+async function explainFailure(cm: CmClient, workspacePath: string, request: MergeRequest, error: unknown): Promise<unknown> {
+  if (!(error instanceof CmError) || error.message !== SILENT_FAILURE_MESSAGE) return error;
+  try {
+    await cm.query(['merge', ...mergeSourceArgs(request)], { cwd: workspacePath });
+    return error;
+  } catch (explained) {
+    return explained;
+  }
+}
