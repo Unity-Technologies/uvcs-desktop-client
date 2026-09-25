@@ -3,7 +3,8 @@ import type { OperationTracker } from '../operations/OperationTracker';
 import type { DiffReviewStore } from '../review/DiffReviewStore';
 import type { ReviewStore } from '../review/ReviewStore';
 import type { SettingsStore } from '../settings/SettingsStore';
-import type { WorkspaceWatcher } from '../watch/WorkspaceWatcher';
+import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
+import type { WorkspaceWindows } from '../window/WorkspaceWindows';
 import type { LeftChangesFinder } from '../workspace/leftChanges';
 import type { SwitchShelveRecords } from '../workspace/switchShelveRecords';
 
@@ -14,7 +15,8 @@ export interface ServiceContext {
   reviews: ReviewStore;
   diffReviews: DiffReviewStore;
   settings: SettingsStore;
-  watcher: WorkspaceWatcher;
+  watchers: WorkspaceWatchers;
+  windows: WorkspaceWindows;
 }
 
 /** What switching with pending changes shares across services: its shelve records and the left-changes lookup. */

@@ -10,6 +10,7 @@ import { useMenuCommands } from './commands/useMenuCommands';
 import { errorDetailsAction } from './errors/errorDetailsAction';
 import { HomeScreen } from './home/HomeScreen';
 import { queryClient } from './queryClient';
+import { useSettingsFromOtherWindows } from './settings/useSettings';
 import { useTheme } from './settings/useTheme';
 import { CmUnavailableScreen } from './startup/CmUnavailableScreen';
 import { SetupProblemScreen } from './startup/SetupProblemScreen';
@@ -33,6 +34,7 @@ export function App() {
 
 function Root() {
   useTheme();
+  useSettingsFromOtherWindows();
   useAppCommands();
   useMenuCommands();
   useRequestedWorkspace();

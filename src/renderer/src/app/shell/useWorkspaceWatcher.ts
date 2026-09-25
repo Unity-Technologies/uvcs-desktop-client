@@ -33,6 +33,7 @@ export function useWorkspaceWatcher(): void {
 
   useEffect(() => {
     void api.workspaces.watch(workspacePath).then(setCoverage);
+    return () => void api.workspaces.unwatch();
   }, [workspacePath]);
 
   // Edits made while automatic refresh was off went unnoticed: catch up once when it's back on.

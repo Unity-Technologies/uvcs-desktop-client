@@ -5,6 +5,7 @@ import {
   Eye,
   EyeOff,
   FileDiff,
+  FolderGit2,
   GitBranchPlus,
   GitGraph,
   GitMerge,
@@ -32,6 +33,7 @@ import {
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
 import { openMergeTaskDialog } from '../mergeTask/MergeTaskDialog';
 import { isTaskBranch } from '../mergeTask/mergeTaskSummary';
+import { openTaskWorkspaceDialog } from '../taskWorkspace/TaskWorkspaceDialog';
 import { openCreateBranchDialog } from './CreateBranchDialog';
 
 /** The context menu for the selected branches. `currentBranch` is the branch the workspace is on. */
@@ -49,6 +51,12 @@ export function branchMenu(workspacePath: string, branches: Branch[], currentBra
       label: 'Switch to this branch',
       icon: ArrowRightLeft,
       run: () => void switchToBranch(workspacePath, single.name),
+    },
+    single && !isCurrent && {
+      id: 'taskWorkspace',
+      label: 'Work on this branch in a new workspace…',
+      icon: FolderGit2,
+      run: () => openTaskWorkspaceDialog({ workspacePath, branch: single.name }),
     },
     single && {
       id: 'create',

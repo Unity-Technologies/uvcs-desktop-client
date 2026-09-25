@@ -1,14 +1,17 @@
-import { Copy, FolderOpen, FolderPlus, FolderSearch, PenLine, Trash2, X } from 'lucide-react';
+import { Copy, FolderOpen, FolderPlus, FolderSearch, PenLine, SquareTerminal, Trash2, X } from 'lucide-react';
 import type { RepositorySummary } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { SEPARATOR, type MenuEntry } from '../../lib/actions';
 import { forgetRecentWorkspace } from '../settings/useSettings';
+import { copyWorkspacePath, openTerminalIn } from '../workspace/workspaceShellActions';
 import { copyRepositorySpec, deleteRepository, removeWorkspace, renameRepository, renameWorkspace, revealWorkspace } from './homeOperations';
 
 export function workspaceMenu(workspace: WorkspaceSummary, open: (path: string) => void): MenuEntry[] {
   return [
     { id: 'open', label: 'Open', icon: FolderOpen, run: () => open(workspace.path) },
     { id: 'reveal', label: 'Reveal in file manager', icon: FolderSearch, run: () => revealWorkspace(workspace) },
+    { id: 'terminal', label: 'Open terminal here', icon: SquareTerminal, run: () => openTerminalIn(workspace.path) },
+    { id: 'copyPath', label: 'Copy path', icon: Copy, run: () => copyWorkspacePath(workspace.path) },
     SEPARATOR,
     { id: 'rename', label: 'Rename…', icon: PenLine, run: () => void renameWorkspace(workspace) },
     { id: 'remove', label: 'Remove workspace…', icon: X, danger: true, run: () => void removeWorkspace(workspace) },

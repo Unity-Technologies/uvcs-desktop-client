@@ -15,36 +15,41 @@ const AFTER_OWN_WRITE_GRACE_MS = 250;
 const RECURSIVE_WATCH_PLATFORMS = new Set<NodeJS.Platform>(['darwin', 'win32']);
 
 /**
- * Watches the open workspace and reports what changed, in coalesced batches: file edits (pending changes) apart
+ * Watches a workspace and reports what changed, in coalesced batches: file edits (pending changes) apart
  * from `.plastic` state rewrites (checkin, update, switch... by any tool). Changes caused by the app's own writes
  * are dropped, because the app refreshes its views after them anyway.
  */
 export class WorkspaceWatcher {
-  private workspacePath: string | null = null;
   private watchers: FSWatcher[] = [];
   private ignoreRules: IgnoreRules = NO_IGNORE_RULES;
   private ownWritesRunning = 0;
   private quietUntil = 0;
+  private stopped = false;
   private readonly batcher: ChangeBatcher;
 
-  constructor(onChanged: (workspacePath: string, change: WorkspaceChange) => void) {
-    this.batcher = new ChangeBatcher((change) => this.workspacePath && onChanged(this.workspacePath, change), QUIET_MS, MAX_WAIT_MS);
+  constructor(
+    readonly workspacePath: string,
+    onChanged: (change: WorkspaceChange) => void,
+  ) {
+    this.batcher = new ChangeBatcher((change) => !this.stopped && onChanged(change), QUIET_MS, MAX_WAIT_MS);
   }
 
-  watch(workspacePath: string): WatchCoverage {
-    this.stop();
-    this.workspacePath = workspacePath;
-    void this.loadIgnoreRules(workspacePath);
-    if (RECURSIVE_WATCH_PLATFORMS.has(process.platform) && this.tryWatch(workspacePath, true)) return 'full';
+  start(): WatchCoverage {
+    void this.loadIgnoreRules();
+    if (RECURSIVE_WATCH_PLATFORMS.has(process.platform) && this.tryWatch(this.workspacePath, true)) return 'full';
     // Without recursion, edits in subfolders go unnoticed; the root and `.plastic` still report checkins, switches...
-    this.tryWatch(workspacePath, false);
-    this.tryWatch(join(workspacePath, '.plastic'), false);
+    this.tryWatch(this.workspacePath, false);
+    this.tryWatch(join(this.workspacePath, '.plastic'), false);
     return 'partial';
   }
 
-  /** Ignores changes in the watched workspace until `write` settles; `cwd` limits it to writes in that workspace. */
-  ignoreOwnWrite(write: Promise<unknown>, cwd?: string): void {
-    if (!this.workspacePath || (cwd && !isInside(cwd, this.workspacePath))) return;
+  /** Whether a command run in `cwd` works on this workspace. */
+  covers(cwd: string): boolean {
+    return cwd === this.workspacePath || cwd.startsWith(this.workspacePath.endsWith(sep) ? this.workspacePath : this.workspacePath + sep);
+  }
+
+  /** Ignores changes until `write` settles. */
+  ignoreOwnWrite(write: Promise<unknown>): void {
     this.ownWritesRunning++;
     this.batcher.cancel();
     void write
@@ -56,20 +61,17 @@ export class WorkspaceWatcher {
   }
 
   stop(): void {
+    this.stopped = true;
     this.watchers.forEach((watcher) => watcher.close());
     this.watchers = [];
     this.batcher.cancel();
-    this.workspacePath = null;
-    this.ignoreRules = NO_IGNORE_RULES;
   }
 
   private tryWatch(path: string, recursive: boolean): boolean {
-    const root = this.workspacePath;
-    if (!root) return false;
     try {
       const watcher = watch(path, { recursive }, (event, fileName) => {
-        const relativePath = fileName === null ? undefined : relative(root, join(path, fileName));
-        this.onEvent(root, event, relativePath);
+        const relativePath = fileName === null ? undefined : relative(this.workspacePath, join(path, fileName));
+        this.onEvent(event, relativePath);
       });
       watcher.on('error', () => watcher.close());
       this.watchers.push(watcher);
@@ -79,9 +81,9 @@ export class WorkspaceWatcher {
     }
   }
 
-  private onEvent(root: string, event: string, relativePath: string | undefined): void {
-    if (root !== this.workspacePath) return;
-    if (relativePath === 'ignore.conf') void this.loadIgnoreRules(root);
+  private onEvent(event: string, relativePath: string | undefined): void {
+    if (this.stopped) return;
+    if (relativePath === 'ignore.conf') void this.loadIgnoreRules();
     const kind = classifyChange(relativePath, this.ignoreRules);
     if (!kind || this.ownWritesRunning > 0 || Date.now() < this.quietUntil) return;
     this.batcher.add({
@@ -92,12 +94,8 @@ export class WorkspaceWatcher {
     });
   }
 
-  private async loadIgnoreRules(workspacePath: string): Promise<void> {
-    const ignoreConf = await readFile(join(workspacePath, 'ignore.conf'), 'utf8').catch(() => '');
-    if (this.workspacePath === workspacePath) this.ignoreRules = parseIgnoreRules(ignoreConf);
+  private async loadIgnoreRules(): Promise<void> {
+    const ignoreConf = await readFile(join(this.workspacePath, 'ignore.conf'), 'utf8').catch(() => '');
+    this.ignoreRules = parseIgnoreRules(ignoreConf);
   }
-}
-
-function isInside(path: string, directory: string): boolean {
-  return path === directory || path.startsWith(directory.endsWith(sep) ? directory : directory + sep);
 }

@@ -1,5 +1,6 @@
-import { Command as CommandIcon, Settings } from 'lucide-react';
+import { AppWindow, Command as CommandIcon, Settings } from 'lucide-react';
 import { useMemo } from 'react';
+import { api } from '../../api/client';
 import { openSettingsDialog } from '../settings/SettingsDialog';
 import { useCommandPalette } from './commandPaletteStore';
 import { useCommands, type Command } from './commandStore';
@@ -16,6 +17,7 @@ export function useAppCommands(): void {
         icon: CommandIcon,
         run: () => useCommandPalette.getState().setOpen(true),
       },
+      { id: 'app.newWindow', group: 'App', label: 'New window', icon: AppWindow, keywords: ['window'], run: () => void api.windows.openHome() },
     ],
     [],
   );

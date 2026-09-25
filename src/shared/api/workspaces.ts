@@ -1,5 +1,5 @@
 import type { PendingChangesAction, SwitchPreflight, SwitchResult } from '../domain/switchWithChanges';
-import type { WorkspaceInfo, WorkspaceSelector, WorkspaceSummary } from '../domain/workspace';
+import type { NewFolderCheck, WorkspaceGlance, WorkspaceInfo, WorkspaceSelector, WorkspaceSummary } from '../domain/workspace';
 
 export interface CreateWorkspaceRequest {
   name: string;
@@ -35,8 +35,27 @@ export interface WorkspacesApi {
   remove(workspacePath: string): Promise<void>;
   /** Downloads the latest changes of the loaded branch. */
   update(workspacePath: string, operationId: string): Promise<void>;
-  /** Emits `workspaceChanged` events when the workspace changes on disk. Replaces any previous watch. */
+  /**
+   * The calling window now shows this workspace: it gets `workspaceChanged` events when the workspace changes on
+   * disk, instead of the ones of the workspace it showed before. Windows showing the same workspace share a watcher.
+   */
   watch(workspacePath: string): Promise<WatchCoverage>;
+  /** The calling window shows no workspace anymore (back to the home screen). */
+  unwatch(): Promise<void>;
+  /**
+   * What another workspace is loaded from and how many pending changes it has: one local `cm status` (it reads the
+   * workspace on disk, never the server). For a few workspaces on screen, e.g. while the switcher is open.
+   */
+  glance(workspacePath: string): Promise<WorkspaceGlance>;
+  /** Whether a new workspace can go in this folder. No `cm` call. */
+  checkNewFolder(path: string): Promise<NewFolderCheck>;
+  /** Loads `targetSpec` in a workspace just created (nothing pending, nothing loaded): a plain `cm switch`. */
+  switchNewWorkspace(workspacePath: string, targetSpec: string, operationId: string): Promise<void>;
+  /**
+   * Undoes the creation of a workspace that failed halfway: unregisters it, and deletes its folder when `create`
+   * made it (it didn't exist or was empty), so nothing of the user's goes.
+   */
+  discardNew(workspacePath: string): Promise<void>;
   /** What the workspace's pending changes allow before switching it to `targetSpec`. */
   switchPreflight(workspacePath: string, targetSpec: string): Promise<SwitchPreflight>;
   /**

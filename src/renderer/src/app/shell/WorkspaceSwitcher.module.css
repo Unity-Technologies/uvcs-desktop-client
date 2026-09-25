@@ -149,3 +149,11 @@
   background: var(--bg-hover);
   color: var(--text-primary);
 }
+
+.here {
+  display: grid;
+  flex: none;
+  grid-template-columns: 1fr 1fr;
+  padding: var(--space-1);
+  border-top: 1px solid var(--border-subtle);
+}

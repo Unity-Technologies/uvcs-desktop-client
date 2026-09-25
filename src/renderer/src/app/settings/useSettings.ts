@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
+import { useUvcsEvent } from '../../api/useUvcsEvent';
 import { queryClient } from '../queryClient';
 
 export function useSettings(): AppSettings {
@@ -22,17 +23,18 @@ export async function saveSettings(changes: Partial<AppSettings>): Promise<void>
   queryClient.setQueryData(queryKeys.settings, await api.settings.update(changes));
 }
 
+/** Keeps this window's settings in step with the changes other windows (and the main process) make. */
+export function useSettingsFromOtherWindows(): void {
+  useUvcsEvent('settingsChanged', (settings) => queryClient.setQueryData(queryKeys.settings, settings));
+}
+
 /** Remembers a workspace at the top of the recent list, the app's and the OS's. */
 export async function rememberRecentWorkspace(workspacePath: string): Promise<void> {
   void api.system.addRecentDocument(workspacePath);
-  const settings = await api.settings.get();
-  const recentWorkspacePaths = [workspacePath, ...settings.recentWorkspacePaths.filter((path) => path !== workspacePath)].slice(0, 10);
-  queryClient.setQueryData(queryKeys.settings, await api.settings.update({ recentWorkspacePaths }));
+  queryClient.setQueryData(queryKeys.settings, await api.settings.rememberRecentWorkspace(workspacePath));
 }
 
 /** Drops a workspace from the recent list, e.g. once it's removed or its folder is gone for good. */
 export async function forgetRecentWorkspace(workspacePath: string): Promise<void> {
-  const { recentWorkspacePaths } = await api.settings.get();
-  const updated = await api.settings.update({ recentWorkspacePaths: recentWorkspacePaths.filter((path) => path !== workspacePath) });
-  queryClient.setQueryData(queryKeys.settings, updated);
+  queryClient.setQueryData(queryKeys.settings, await api.settings.forgetRecentWorkspace(workspacePath));
 }

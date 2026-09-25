@@ -10,6 +10,9 @@ export interface Rect {
 export const MIN_WINDOW_WIDTH = 960;
 export const MIN_WINDOW_HEIGHT = 600;
 
+/** How far a new window is moved from the one it was opened from. */
+const CASCADE_OFFSET = 28;
+
 /** How much of the window's top edge must be on a screen for the user to see and drag it. */
 const GRAB_WIDTH = 120;
 const GRAB_HEIGHT = 40;
@@ -34,6 +37,18 @@ export function restoreWindowBounds(saved: SavedWindowBounds | null, workAreas: 
     width,
     height,
   };
+}
+
+/**
+ * Where a new window opens when another one is already open: a step below and to the right of it, back to the
+ * top left of its display when that would run off the bottom or the right.
+ */
+export function cascadeWindowBounds(from: Rect, workAreas: Rect[]): Rect | null {
+  if (workAreas.length === 0) return null;
+  const home = displayOf(from, workAreas);
+  const moved = { ...from, x: from.x + CASCADE_OFFSET, y: from.y + CASCADE_OFFSET };
+  const fits = moved.x + moved.width <= home.x + home.width && moved.y + moved.height <= home.y + home.height;
+  return restoreWindowBounds({ ...(fits ? moved : { ...from, x: home.x, y: home.y }), maximized: false }, workAreas);
 }
 
 /** The display the window overlaps most, or the nearest one if it overlaps none (its monitor was unplugged). */

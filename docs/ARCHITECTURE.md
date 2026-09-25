@@ -18,7 +18,7 @@ src/
 4. `CmClient` runs the command:
    - `query()` for short reads: reuses pooled `cm shell` sessions (much faster than spawning `cm`).
    - `execute()` for long or cancellable work (update, switch, checkin, merge): a dedicated process that streams progress lines.
-5. Every command is logged and pushed to the renderer (`commandLogged`), shown in the command log panel.
+5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), shown in the command log panel.
 
 ## Parsing `cm` output
 
@@ -50,6 +50,25 @@ merges the shelve on the target (bring). Failures put the changes back. Left she
 client's) are offered again by the "Welcome back" banner in Changes (`features/leftChanges`), or restored
 automatically on arrival when they apply cleanly.
 
+## Windows
+
+One window per workspace, so several tasks (often one AI agent each, in its own workspace and branch) run side by side.
+
+- `main/window/WorkspaceWindows` opens the windows; opening a workspace that another window shows brings that window
+  forward instead (`windows.focusWorkspace`, checked by `useOpenWorkspace`). A new window asked to open a workspace
+  takes it at start (`system.takeRequestedWorkspace`). The Window menu lists them; closing the last one keeps the app on
+  macOS, and the Dock icon opens the home screen.
+- Each API call runs with its window as the caller (`main/ipc/caller.ts`, followed across `await`s), so its commands
+  (`commandLogged`) and operation progress go back to that window only. `workspaces.watch` is the window saying which
+  workspace it shows: `main/watch/WorkspaceWatchers` keeps one watcher per shown workspace and sends its changes to the
+  windows showing it; own writes are ignored in the workspace they touch.
+- Settings are written in main, one change at a time; values computed from the stored ones (the recent workspaces) are
+  computed there too, and every window gets the result (`settingsChanged`).
+- "New workspace for a task" (`features/taskWorkspace`) creates a child of /main at its head (or takes an existing branch),
+  a workspace next to the current one, and switches it (a plain `cm switch`: it's empty); a failure removes the new
+  workspace and keeps the branch. The switcher shows the branch and pending changes of the other workspaces of the same
+  repository with one local `cm status` each, only while it's open (`workspaces.glance`).
+
 ## Two developers on one branch
 
 - `cm` rejects every checkin once the branch head moved ("A merge is needed from changeset…"), even without overlapping
@@ -75,7 +94,7 @@ renderer/src/
 
 - **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)`, so `invalidateWorkspace(path)` refreshes everything after an operation.
 - **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check.
-  - `main/watch/WorkspaceWatcher` watches the open workspace (recursive on macOS/Windows; the root and `.plastic` only on Linux),
+  - `main/watch/WorkspaceWatcher` watches an open workspace (recursive on macOS/Windows; the root and `.plastic` only on Linux),
     skips `ignore.conf` folders and `.plastic` lock/temp files, coalesces bursts (300 ms quiet, 2 s max wait) and drops what the
     app's own writes cause (`changesWorkspace` commands and tracked operations): the renderer refreshes after those anyway.
   - `workspaceChanged` tells file edits (pending changes, review marks, files view, open diffs of workspace files; if auto refresh is on, and once when it's turned back on)

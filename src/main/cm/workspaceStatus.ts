@@ -22,8 +22,8 @@ export async function readWorkspaceStatus(cm: CmClient, workspacePath: string): 
 }
 
 /**
- * Parses `cm status --header --xml`. Output without the selector or the changeset is an error rather than an empty
- * status: queries built from an empty branch or changeset -1 would ask the server for the whole repository.
+ * The header of `cm status --xml`, with or without the changes. Output without the selector or the changeset is an
+ * error rather than an empty status: queries built from an empty branch or changeset -1 would read the whole repository.
  */
 export function parseWorkspaceStatus(xml: string): WorkspaceStatus {
   const status = child(parseXml(xml, []), 'StatusOutput');

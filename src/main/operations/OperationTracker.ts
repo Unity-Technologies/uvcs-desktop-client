@@ -1,3 +1,5 @@
+import { AsyncResource } from 'node:async_hooks';
+
 export interface OperationContext {
   signal: AbortSignal;
   reportProgress: (line: string) => void;
@@ -31,7 +33,8 @@ export class OperationTracker {
     try {
       const finished = work({
         signal: controller.signal,
-        reportProgress: (line) => this.onProgress(operationId, line),
+        // Progress lines come from process output events: bound to the caller's context, they reach the window that started it.
+        reportProgress: AsyncResource.bind((line: string) => this.onProgress(operationId, line)),
       });
       if (writes) this.onStarted(finished);
       return await finished;

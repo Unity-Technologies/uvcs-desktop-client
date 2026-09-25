@@ -1,13 +1,17 @@
 import { existsSync } from 'node:fs';
+import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { app } from 'electron';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
 import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
+import { readWorkspaceGlance } from '../cm/workspaceGlance';
 import { resolveWorkspaceRepositories } from '../cm/workspaceRepositories';
 import { readWorkspaceStatus } from '../cm/workspaceStatus';
 import { CmError } from '../cm/CmError';
+import { checkNewWorkspaceFolder } from '../files/newWorkspaceFolder';
+import { callerId } from '../ipc/caller';
 import { UPDATE_ARGS } from '../merge/updateWithMerge';
 import { readSwitchPreflight } from '../workspace/switchPreflight';
 import { switchWithChanges } from '../workspace/switchWithChanges';
@@ -15,8 +19,10 @@ import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const UPDATE_NEEDS_MERGE = 'Some of your local changes collide with incoming ones. Open Incoming to merge them while updating.';
 
-export function createWorkspacesService({ cm, operations, watcher, settings }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
+export function createWorkspacesService({ cm, operations, watchers, settings }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
   const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups') };
+  /** Folders `create` made (they didn't exist or were empty): the only ones `discardNew` may delete. */
+  const createdFolders = new Set<string>();
 
   async function list(): Promise<WorkspaceSummary[]> {
     const output = await cm.query(['workspace', 'list', `--format=${recordFormat(['wkname', 'path', 'wkid'])}`]);
@@ -49,7 +55,9 @@ export function createWorkspacesService({ cm, operations, watcher, settings }: S
   }
 
   async function create(request: CreateWorkspaceRequest): Promise<WorkspaceSummary> {
+    const madeHere = (await checkNewWorkspaceFolder(request.path)) === 'available';
     await cm.query(['workspace', 'create', request.name, request.path, request.repository]);
+    if (madeHere) createdFolders.add(request.path);
     const created = (await list()).find((workspace) => workspace.name === request.name);
     if (!created) throw new Error(`Workspace ${request.name} was not found after creating it.`);
     return created;
@@ -81,7 +89,19 @@ export function createWorkspacesService({ cm, operations, watcher, settings }: S
 
   async function watch(workspacePath: string): Promise<WatchCoverage> {
     cm.warmUp(workspacePath);
-    return watcher.watch(workspacePath);
+    return watchers.watch(callerId(), workspacePath);
+  }
+
+  function switchNewWorkspace(workspacePath: string, targetSpec: string, operationId: string): Promise<void> {
+    return operations.run(operationId, async ({ signal, reportProgress }) => {
+      await cm.execute(['switch', targetSpec, '--noinput'], { cwd: workspacePath, signal, onOutputLine: reportProgress });
+    });
+  }
+
+  async function discardNew(workspacePath: string): Promise<void> {
+    await cm.query(['workspace', 'delete', workspacePath]);
+    if (!createdFolders.delete(workspacePath)) return;
+    await rm(workspacePath, { recursive: true, force: true });
   }
 
   function repositoriesOf(workspacePaths: string[], lookupId: string): Promise<Record<string, string | null>> {
@@ -100,6 +120,11 @@ export function createWorkspacesService({ cm, operations, watcher, settings }: S
     remove,
     update,
     watch,
+    unwatch: async () => watchers.release(callerId()),
+    glance: (workspacePath) => readWorkspaceGlance(cm, workspacePath),
+    checkNewFolder: checkNewWorkspaceFolder,
+    switchNewWorkspace,
+    discardNew,
     switchPreflight: (workspacePath, targetSpec) => readSwitchPreflight(cm, switchShelves, workspacePath, targetSpec),
     switchTo: (workspacePath, targetSpec, operationId, pendingChanges) =>
       operations.run(operationId, (context) => switchWithChanges(switchDependencies, workspacePath, targetSpec, pendingChanges, context)),

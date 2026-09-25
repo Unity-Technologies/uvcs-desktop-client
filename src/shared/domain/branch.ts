@@ -15,7 +15,7 @@ export interface Branch {
 export interface CreateBranchRequest {
   /** Full name of the new branch: `/main/feature` for a child branch, `/feature` for a top-level one. */
   name: string;
-  /** Where the branch starts: a changeset (`cs:12`) or a label (`lb:v1`) spec. */
-  startingPoint: string;
+  /** Where the branch starts: a changeset (`cs:12`) or a label (`lb:v1`) spec; the head of the parent branch when omitted. */
+  startingPoint?: string;
   comment: string;
 }
