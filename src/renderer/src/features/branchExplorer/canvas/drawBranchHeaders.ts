@@ -169,10 +169,10 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
   // Fading a branch without hits fades its ink: tint, border and text.
   const ink = ghost ? GHOST_ALPHA : 1;
   ctx.fillStyle = color;
-  ctx.globalAlpha = ink * ((palette.isDark ? 0.16 : 0.1) + (hovered ? 0.06 : 0));
+  ctx.globalAlpha = ink * ((palette.isDark ? 0.2 : 0.15) + (hovered ? 0.06 : 0));
   ctx.fill();
   ctx.strokeStyle = selected ? palette.accent : color;
-  ctx.globalAlpha = ink * (selected || current ? 1 : hovered ? 0.75 : 0.5);
+  ctx.globalAlpha = ink * (selected || current ? 1 : hovered ? 0.8 : 0.6);
   ctx.lineWidth = selected ? 1.5 : 1;
   ctx.stroke();
   ctx.clip();
