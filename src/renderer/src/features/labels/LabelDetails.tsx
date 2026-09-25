@@ -2,27 +2,29 @@ import { ArrowRightLeft, FileDiff, GitMerge, Tag } from 'lucide-react';
 import type { Label } from '@shared/domain/label';
 import { spec } from '@shared/domain/specs';
 import { formatDateTime } from '../../lib/formatDate';
-import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
-import { DetailsPanel, DetailsSection, DetailsText, PropertyList } from '../../ui/DetailsPanel';
+import { DetailsPanel, DetailsSection, DetailsText } from '../../ui/DetailsPanel';
+import { PropertyList } from '../../ui/PropertyList';
 import { AttributesEditor } from '../attributes/AttributesEditor';
 import { mergeFromLabel, showLabelChanges, switchToLabel } from './labelOperations';
 
 export function LabelDetails({ workspacePath, label }: { workspacePath: string; label: Label }) {
   return (
     <DetailsPanel
-      icon={<Tag size={18} />}
+      icon={<Tag />}
+      kind="Label"
+      context={`Changeset ${label.changeset} · ${label.branch}`}
       title={label.name}
-      subtitle={`Changeset ${label.changeset} on ${label.branch}`}
+      author={{ user: label.owner, date: label.date }}
       actions={
         <>
-          <Button size="small" variant="primary" icon={<ArrowRightLeft size={13} />} onClick={() => void switchToLabel(workspacePath, label)}>
+          <Button variant="primary" icon={<ArrowRightLeft size={14} />} onClick={() => void switchToLabel(workspacePath, label)}>
             Switch
           </Button>
-          <Button size="small" icon={<GitMerge size={13} />} onClick={() => mergeFromLabel(label)}>
+          <Button icon={<GitMerge size={14} />} onClick={() => mergeFromLabel(label)}>
             Merge
           </Button>
-          <Button size="small" icon={<FileDiff size={13} />} onClick={() => showLabelChanges(label)}>
+          <Button icon={<FileDiff size={14} />} onClick={() => showLabelChanges(label)}>
             Changes
           </Button>
         </>
@@ -34,11 +36,9 @@ export function LabelDetails({ workspacePath, label }: { workspacePath: string; 
       <DetailsSection title="Properties">
         <PropertyList
           properties={[
-            ['Created by', <UserLabel user={label.owner} />],
-            ['Created', formatDateTime(label.date)],
-            ['Changeset', label.changeset],
-            ['Branch', label.branch],
-            ['Repository', label.repository],
+            { label: 'Created', value: formatDateTime(label.date) },
+            { label: 'Changeset', value: label.changeset, copyText: `cs:${label.changeset}` },
+            { label: 'Branch', value: label.branch },
           ]}
         />
       </DetailsSection>

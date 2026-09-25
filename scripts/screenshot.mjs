@@ -24,10 +24,17 @@ for (const step of steps) {
   const action = step.slice(0, separator);
   const value = step.slice(separator + 1);
   switch (action) {
-    case 'open':
+    case 'open': {
+      // Recent workspaces first; otherwise look in "All workspaces".
+      const recent = window.getByText(value, { exact: true }).first();
+      if (!(await recent.isVisible({ timeout: 4000 }).catch(() => false))) {
+        await window.getByText('All workspaces', { exact: true }).first().click();
+        await window.getByPlaceholder('Find a workspace').fill(value);
+      }
       await window.getByText(value, { exact: true }).first().click({ timeout: 15000 });
       await window.waitForTimeout(1500);
       break;
+    }
     case 'click':
       await window.getByText(value, { exact: true }).first().click({ timeout: 10000 });
       break;

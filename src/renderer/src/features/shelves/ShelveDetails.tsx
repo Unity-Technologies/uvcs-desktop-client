@@ -1,26 +1,28 @@
 import { Archive, ArchiveRestore, FileDiff, Trash2 } from 'lucide-react';
 import type { Shelve } from '@shared/domain/shelve';
 import { formatDateTime } from '../../lib/formatDate';
-import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
-import { DetailsPanel, DetailsSection, DetailsText, PropertyList } from '../../ui/DetailsPanel';
+import { DetailsPanel, DetailsSection, DetailsText } from '../../ui/DetailsPanel';
+import { PropertyList } from '../../ui/PropertyList';
 import { applyShelve, deleteShelve, showShelveChanges } from './shelveOperations';
 
 export function ShelveDetails({ workspacePath, shelve }: { workspacePath: string; shelve: Shelve }) {
   return (
     <DetailsPanel
-      icon={<Archive size={18} />}
+      icon={<Archive />}
+      kind="Shelve"
+      context={`On top of changeset ${shelve.parentChangeset}`}
       title={`Shelve ${shelve.id}`}
-      subtitle={`Made on top of changeset ${shelve.parentChangeset}`}
+      author={{ user: shelve.owner, date: shelve.date }}
       actions={
         <>
-          <Button size="small" variant="primary" icon={<ArchiveRestore size={13} />} onClick={() => void applyShelve(workspacePath, shelve)}>
+          <Button variant="primary" icon={<ArchiveRestore size={14} />} onClick={() => void applyShelve(workspacePath, shelve)}>
             Apply
           </Button>
-          <Button size="small" icon={<FileDiff size={13} />} onClick={() => showShelveChanges(shelve)}>
+          <Button icon={<FileDiff size={14} />} onClick={() => showShelveChanges(shelve)}>
             Changes
           </Button>
-          <Button size="small" variant="ghost" icon={<Trash2 size={13} />} onClick={() => void deleteShelve(workspacePath, shelve)}>
+          <Button variant="ghost" icon={<Trash2 size={14} />} onClick={() => void deleteShelve(workspacePath, shelve)}>
             Delete
           </Button>
         </>
@@ -32,10 +34,8 @@ export function ShelveDetails({ workspacePath, shelve }: { workspacePath: string
       <DetailsSection title="Properties">
         <PropertyList
           properties={[
-            ['Created by', <UserLabel user={shelve.owner} />],
-            ['Created', formatDateTime(shelve.date)],
-            ['Based on', `Changeset ${shelve.parentChangeset}`],
-            ['Repository', shelve.repository],
+            { label: 'Created', value: formatDateTime(shelve.date) },
+            { label: 'Based on', value: `Changeset ${shelve.parentChangeset}` },
           ]}
         />
       </DetailsSection>

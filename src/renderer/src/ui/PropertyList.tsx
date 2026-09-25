@@ -1,14 +1,18 @@
+import { Copy } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { copyToClipboard } from '../lib/copyToClipboard';
 import styles from './PropertyList.module.css';
 
 export interface Property {
   label: string;
   value: ReactNode;
-  /** Monospaced, selectable values such as hashes and paths. */
+  /** Monospaced values such as hashes, specs and paths. */
   mono?: boolean;
+  /** Text to copy with the row's copy button, for values people paste elsewhere. */
+  copyText?: string;
 }
 
-/** A label / value list for details panes. Empty values are skipped. */
+/** Label / value rows for details panels. Empty values are skipped. */
 export function PropertyList({ properties }: { properties: Property[] }) {
   const visible = properties.filter((property) => property.value !== '' && property.value !== null && property.value !== undefined);
 
@@ -18,6 +22,15 @@ export function PropertyList({ properties }: { properties: Property[] }) {
         <div key={property.label} className={styles.row}>
           <dt className={styles.label}>{property.label}</dt>
           <dd className={[styles.value, property.mono && 'mono', 'selectable'].filter(Boolean).join(' ')}>{property.value}</dd>
+          {property.copyText && (
+            <button
+              className={styles.copy}
+              onClick={() => copyToClipboard(property.copyText!, property.label)}
+              aria-label={`Copy ${property.label.toLowerCase()}`}
+            >
+              <Copy size={12} />
+            </button>
+          )}
         </div>
       ))}
     </dl>

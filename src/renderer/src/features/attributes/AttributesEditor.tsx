@@ -5,7 +5,7 @@ import { api } from '../../api/client';
 import { runAction } from '../../app/operations/runOperation';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { Button } from '../../ui/Button';
-import { DetailsSection } from '../../ui/DetailsPanel';
+import { DetailsEmpty, DetailsSection } from '../../ui/DetailsPanel';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { useAttributeTypes, useAttributeValues } from './useAttributes';
@@ -48,7 +48,7 @@ export function AttributesEditor({ objectSpec }: { objectSpec: string }) {
       }
     >
       {rows.length === 0 ? (
-        <p className={styles.empty}>No attributes.</p>
+        <DetailsEmpty>No attributes yet.</DetailsEmpty>
       ) : (
         <div className={styles.list}>
           {rows.map((row) => (

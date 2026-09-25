@@ -9,7 +9,8 @@ import { formatDateTime } from '../../lib/formatDate';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
-import { DetailsPanel, DetailsSection, DetailsText, PropertyList } from '../../ui/DetailsPanel';
+import { DetailsPanel, DetailsSection, DetailsText } from '../../ui/DetailsPanel';
+import { PropertyList } from '../../ui/PropertyList';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
@@ -102,14 +103,16 @@ function attributeTypeMenu(workspacePath: string, types: AttributeType[]): MenuE
 function AttributeTypeDetails({ workspacePath, type }: { workspacePath: string; type: AttributeType }) {
   return (
     <DetailsPanel
-      icon={<Tags size={18} />}
+      icon={<Tags />}
+      kind="Attribute"
       title={type.name}
+      author={{ user: type.owner, date: type.date }}
       actions={
         <>
-          <Button size="small" icon={<MessageSquareText size={13} />} onClick={() => void editAttributeComment(workspacePath, type)}>
+          <Button icon={<MessageSquareText size={14} />} onClick={() => void editAttributeComment(workspacePath, type)}>
             Edit comment
           </Button>
-          <Button size="small" icon={<Pencil size={13} />} onClick={() => void renameAttributeType(workspacePath, type)}>
+          <Button icon={<Pencil size={14} />} onClick={() => void renameAttributeType(workspacePath, type)}>
             Rename
           </Button>
         </>
@@ -121,9 +124,7 @@ function AttributeTypeDetails({ workspacePath, type }: { workspacePath: string; 
       <DetailsSection title="Properties">
         <PropertyList
           properties={[
-            ['Created by', <UserLabel user={type.owner} />],
-            ['Created', formatDateTime(type.date)],
-            ['Repository', type.repository],
+            { label: 'Created', value: formatDateTime(type.date) },
           ]}
         />
       </DetailsSection>

@@ -62,7 +62,7 @@ function ItemProperties({ workspacePath, item, pendingChange }: ItemDetailsPaneP
   });
 
   const properties: Property[] = [
-    { label: 'Path', value: `/${item.path}`, mono: true },
+    { label: 'Path', value: `/${item.path}`, mono: true, copyText: `/${item.path}` },
     { label: 'Status', value: pendingChange ? describeKinds(pendingChange) : item.isPrivate ? 'Private' : 'Up to date' },
     { label: 'Type', value: item.itemType === 'directory' ? 'Folder' : item.itemType === 'binaryFile' ? 'Binary file' : 'Text file' },
     { label: 'Size', value: item.itemType === 'directory' ? '' : formatSize(item.size) },
@@ -78,7 +78,7 @@ function ItemProperties({ workspacePath, item, pendingChange }: ItemDetailsPaneP
       { label: 'Changelist', value: details?.changelist },
       { label: 'Xlink to', value: details?.xlinkTarget },
       { label: 'Under xlink', value: details?.underXlinkTarget },
-      { label: 'Hash', value: details?.hash, mono: true },
+      { label: 'Hash', value: details?.hash, mono: true, copyText: details?.hash },
     );
   }
 
