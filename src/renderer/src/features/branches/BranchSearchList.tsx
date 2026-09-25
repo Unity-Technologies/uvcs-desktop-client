@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { Search } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import type { MenuEntry } from '../../lib/actions';
 import { navigationTarget } from '../../lib/listNavigation';
@@ -32,6 +32,7 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
   const listRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const movedByKeyboard = useRef(false);
+  const listboxId = useId();
 
   const { rows, branches } = useMemo(() => branchSearchRows(groups, query), [groups, query]);
   const virtualizer = useVirtualizer({
@@ -87,6 +88,12 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
           placeholder={placeholder}
           autoFocus
           spellCheck={false}
+          role="combobox"
+          aria-label={placeholder}
+          aria-expanded
+          aria-autocomplete="list"
+          aria-controls={listboxId}
+          aria-activedescendant={branches[highlighted] ? `${listboxId}-${highlighted}` : undefined}
           onChange={(event) => {
             setQuery(event.target.value);
             setHighlighted(0);
@@ -98,7 +105,7 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
       <HighlightQuery query={query}>
         <div ref={listRef} className={styles.list}>
           {branches.length === 0 && <div className={styles.empty}>No branches match “{query}”.</div>}
-          <div className={styles.rows} style={{ height: virtualizer.getTotalSize() }}>
+          <div id={listboxId} role="listbox" aria-label="Branches" className={styles.rows} style={{ height: virtualizer.getTotalSize() }}>
             {virtualizer.getVirtualItems().map((virtualRow) => {
               const row = rows[virtualRow.index]!;
               const position = {
@@ -107,7 +114,7 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
               };
               if (row.type === 'group') {
                 return (
-                  <div key={`group:${row.title}`} className={styles.groupTitle} style={position}>
+                  <div key={`group:${row.title}`} role="presentation" className={styles.groupTitle} style={position}>
                     {row.title}
                   </div>
                 );
@@ -118,6 +125,10 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
                   branch={row.branch}
                   current={row.branch.name === currentBranch}
                   highlighted={row.index === highlighted}
+                  id={`${listboxId}-${row.index}`}
+                  role="option"
+                  aria-selected={row.index === highlighted}
+                  tabIndex={-1}
                   data-branch-index={row.index}
                   style={position}
                   onMouseEnter={() => setHighlighted(row.index)}

@@ -5,11 +5,11 @@ import type { CodeReview } from '@shared/domain/codeReview';
 import { spec } from '@shared/domain/specs';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { NoSelection } from '../../components/NoSelection';
 import { PathLabel } from '../../components/PathLabel';
 import { SincePicker } from '../../components/SincePicker';
-import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { sinceDateFor } from '../../lib/sincePresets';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
@@ -45,7 +45,7 @@ export function BranchesView() {
   });
 
   const [search, setSearch] = useState('');
-  const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
+  const [selection, setSelection] = useViewSelection('branches');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
 
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;

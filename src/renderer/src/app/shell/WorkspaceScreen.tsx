@@ -1,4 +1,4 @@
-import { Suspense } from 'react';
+import { Suspense, useRef } from 'react';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { useIncomingNotificationClicks } from '../../features/incoming/incomingNotifications';
 import { useMergeCommands } from '../../features/merge/useMergeCommands';
@@ -10,6 +10,7 @@ import { Sidebar } from './Sidebar';
 import { StatusBar } from './StatusBar';
 import { TopBar } from './TopBar';
 import { useCommandLogHost, useCommandLogStore } from './commandLogStore';
+import { useMainFocus } from './useMainFocus';
 import { useWindowTitle } from './useWindowTitle';
 import { useWorkspaceCommands } from './useWorkspaceCommands';
 import { useWorkspaceWatcher } from './useWorkspaceWatcher';
@@ -24,6 +25,8 @@ export function WorkspaceScreen() {
   useWindowTitle();
   useMergeCommands();
   useIncomingNotificationClicks();
+  const contentRef = useRef<HTMLDivElement>(null);
+  useMainFocus(contentRef);
 
   const ActiveView = viewDefinition(view).component;
   const topPage = pages.at(-1);
@@ -34,7 +37,7 @@ export function WorkspaceScreen() {
         <Sidebar />
         <main className={styles.main}>
           <TopBar />
-          <div className={styles.content}>
+          <div ref={contentRef} className={styles.content}>
             {/* Views stay mounted under pages so going back keeps their scroll and selection. */}
             <div className={styles.layer} hidden={Boolean(topPage)}>
               <Suspense fallback={<CenteredSpinner />}>

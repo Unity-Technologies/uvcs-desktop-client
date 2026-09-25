@@ -1,10 +1,11 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronRight, Folder, MoreHorizontal } from 'lucide-react';
-import { useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react';
+import { useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge } from '../../components/StatusBadge';
 import type { MenuEntry } from '../../lib/actions';
+import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { isMac } from '../../lib/platform';
 import { selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
 import { Checkbox } from '../../ui/Checkbox';
@@ -12,7 +13,7 @@ import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { describeKinds, isCheckinCandidate } from './changeCategories';
 import { changeTone } from './changeTone';
-import { rowIndent, type ChangeRow } from './changeRows';
+import { rowIndent, treeLevel, type ChangeRow } from './changeRows';
 import { LockChip } from './locks/LockChip';
 import type { PendingLocks } from './locks/pendingLocks';
 import { isReviewKey, toggleReviewedFromKey } from '../review/reviewKey';
@@ -63,6 +64,10 @@ export function ChangesList({
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
   const focused = focusedKey !== null && orderedKeys.includes(focusedKey) ? focusedKey : selection.anchor;
   const grouped = rows.some((row) => row.type === 'group');
+  // Folders or changelists make it a tree for screen readers; otherwise it's a plain list of files.
+  const isTree = rows.some((row) => row.type !== 'change');
+  const rowIdPrefix = useId();
+  const focusedIndex = focused === null ? -1 : rows.findIndex((row) => row.key === focused);
 
   // A plain press on a row of a multi-selection keeps the selection until release, so the whole of it can be dragged.
   const narrowOnClick = useRef<string | null>(null);
@@ -138,16 +143,32 @@ export function ChangesList({
 
   return (
     <ActionContextMenu entries={() => contextMenu(selectedChanges())}>
-      <div ref={viewportRef} className={styles.list} tabIndex={0} onKeyDown={onKeyDown}>
+      <div
+        ref={viewportRef}
+        className={styles.list}
+        tabIndex={0}
+        role={isTree ? 'tree' : 'listbox'}
+        aria-label="Pending changes"
+        aria-multiselectable
+        aria-activedescendant={focusedIndex === -1 ? undefined : `${rowIdPrefix}-${focusedIndex}`}
+        onKeyDown={onKeyDown}
+        {...MAIN_FOCUS}
+      >
         <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
           {virtualizer.getVirtualItems().map((item) => {
             const row = rows[item.index]!;
             return (
               <div
                 key={row.key}
+                id={`${rowIdPrefix}-${item.index}`}
+                role={isTree ? 'treeitem' : 'option'}
+                aria-level={isTree ? treeLevel(row, grouped) : undefined}
+                aria-expanded={row.type === 'change' ? undefined : !row.collapsed}
+                aria-selected={row.type === 'change' ? selection.selected.has(row.key) : undefined}
                 className={styles.row}
                 data-type={row.type}
                 data-selected={selection.selected.has(row.key)}
+                data-focused={row.key === focused}
                 data-drop-target={dropTarget === row.key}
                 data-review={review.on && row.type === 'change' ? (review.statusOf(row.change) ?? undefined) : undefined}
                 style={{ top: item.start, height: ROW_HEIGHT, '--row-indent': `${rowIndent(row, grouped)}px` } as CSSProperties}
@@ -181,7 +202,7 @@ function RowContent({ row, onToggleIncluded, changelistMenu, review, locks }: Ro
       return (
         <>
           <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
-          <Checkbox checked={row.checkState} onChange={(checked) => onToggleIncluded(row, checked)} />
+          <Checkbox checked={row.checkState} onChange={(checked) => onToggleIncluded(row, checked)} ariaLabel={`Include ${row.label}`} focusable={false} />
           <span className={styles.groupLabel} data-tip={row.changelist?.description}>
             {row.label}
           </span>
@@ -199,7 +220,7 @@ function RowContent({ row, onToggleIncluded, changelistMenu, review, locks }: Ro
       return (
         <>
           <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
-          <Checkbox checked={row.checkState} onChange={(checked) => onToggleIncluded(row, checked)} />
+          <Checkbox checked={row.checkState} onChange={(checked) => onToggleIncluded(row, checked)} ariaLabel={`Include ${row.name}`} focusable={false} />
           <Folder size={14} className={styles.folder} />
           <span className={styles.directoryName}>{row.name}</span>
         </>
@@ -212,7 +233,7 @@ function RowContent({ row, onToggleIncluded, changelistMenu, review, locks }: Ro
       return (
         <>
           {isCheckinCandidate(change) ? (
-            <Checkbox checked={row.checked} onChange={(checked) => onToggleIncluded(row, checked)} />
+            <Checkbox checked={row.checked} onChange={(checked) => onToggleIncluded(row, checked)} ariaLabel="Include in the check in" focusable={false} />
           ) : (
             <span className={styles.checkboxPlaceholder} />
           )}

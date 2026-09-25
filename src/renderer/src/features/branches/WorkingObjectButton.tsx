@@ -16,6 +16,7 @@ import { branchMenu } from './branchMenu';
 import { switchToBranch } from './branchOperations';
 import { BranchSearchList } from './BranchSearchList';
 import { branchSwitcherGroups } from './branchSwitcherGroups';
+import { useReturnFocus } from '../../ui/useReturnFocus';
 import { useBranchSwitcher } from './branchSwitcherStore';
 import { newBranchFromWorkspace } from './newBranchFromWorkspace';
 import { useRecentBranchGuids } from './recentBranches';
@@ -37,6 +38,7 @@ export function WorkingObjectButton() {
   const workspacePath = useWorkspacePath();
   const running = useRunningOperation(workspacePath);
   const { isOpen, setOpen } = useBranchSwitcher();
+  const returnFocus = useReturnFocus(isOpen);
   useBranchCommands(workspace);
 
   const switching = running?.kind === 'switch' ? running.title : null;
@@ -60,7 +62,7 @@ export function WorkingObjectButton() {
         />
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content className={styles.popover} align="start" sideOffset={6}>
+        <Popover.Content className={styles.popover} align="start" sideOffset={6} {...returnFocus}>
           {workspace && <BranchSwitcher workspace={workspace} onDone={() => setOpen(false)} />}
         </Popover.Content>
       </Popover.Portal>

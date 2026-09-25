@@ -6,7 +6,7 @@ import { NoSelection } from '../../components/NoSelection';
 import { PathLabel } from '../../components/PathLabel';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
+import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
@@ -52,7 +52,7 @@ export function LocksView() {
   const workspacePath = useWorkspacePath();
   const [scope, setScope] = useState<Scope>('all');
   const [filter, setFilter] = useState('');
-  const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
+  const [selection, setSelection] = useViewSelection('locks');
   const { data: locks, isLoading, error, isFetching } = useLocks(scope === 'mine');
 
   const visible = (locks ?? []).filter((lock) => `${lock.path} ${lock.owner}`.toLowerCase().includes(filter.toLowerCase()));

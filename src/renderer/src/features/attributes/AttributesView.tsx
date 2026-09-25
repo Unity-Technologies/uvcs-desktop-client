@@ -3,9 +3,9 @@ import { useMemo, useState } from 'react';
 import type { AttributeType } from '@shared/domain/attribute';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { NoSelection } from '../../components/NoSelection';
-import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
@@ -43,7 +43,7 @@ export function AttributesView() {
   const workspacePath = useWorkspacePath();
   const { data: types, isLoading, isFetching, error } = useAttributeTypes();
   const [search, setSearch] = useState('');
-  const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
+  const [selection, setSelection] = useViewSelection('attributes');
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();

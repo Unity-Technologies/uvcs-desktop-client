@@ -7,15 +7,21 @@ interface CheckboxProps {
   checked: CheckState;
   onChange: (checked: boolean) => void;
   label?: string;
+  /** The name screen readers give a checkbox without a visible label. */
+  ariaLabel?: string;
+  /** False inside a list that toggles it from the keyboard itself (Space), so Tab doesn't stop at every row. */
+  focusable?: boolean;
   disabled?: boolean;
 }
 
-export function Checkbox({ checked, onChange, label, disabled }: CheckboxProps) {
+export function Checkbox({ checked, onChange, label, ariaLabel, focusable = true, disabled }: CheckboxProps) {
   const box = (
     <button
       type="button"
       role="checkbox"
       aria-checked={checked}
+      aria-label={ariaLabel}
+      tabIndex={focusable ? undefined : -1}
       disabled={disabled}
       className={styles.box}
       data-state={checked === 'mixed' ? 'mixed' : checked ? 'checked' : 'unchecked'}

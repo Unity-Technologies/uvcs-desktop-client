@@ -3,11 +3,11 @@ import { useMemo, useState } from 'react';
 import type { Label } from '@shared/domain/label';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { NoSelection } from '../../components/NoSelection';
 import { PathLabel } from '../../components/PathLabel';
 import { SincePicker } from '../../components/SincePicker';
-import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { sinceDateFor } from '../../lib/sincePresets';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
@@ -53,7 +53,7 @@ export function LabelsView() {
   const { since, onlyMine, update } = useLabelsViewStore();
   const { data: labels, isLoading, isFetching, error } = useLabels({ sinceDate: sinceDateFor(since), owner: onlyMine ? 'me' : undefined });
   const [search, setSearch] = useState('');
-  const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
+  const [selection, setSelection] = useViewSelection('labels');
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();

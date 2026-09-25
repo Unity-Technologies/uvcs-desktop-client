@@ -5,7 +5,8 @@ import { useChangeFilter } from '../../components/useChangeFilter';
 import { openSettingsDialogAt } from '../../app/settings/SettingsDialog';
 import { useSettings } from '../../app/settings/useSettings';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
+import { useViewSelection } from '../../app/navigation/viewSelectionStore';
+import { EMPTY_SELECTION } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
@@ -54,7 +55,7 @@ export function PendingChangesView() {
   const draft = useCheckinDraft(workspacePath);
   const { setMessage, setIncluded, reset } = useCheckinDraftStore();
 
-  const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
+  const [selection, setSelection] = useViewSelection('changes');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [busy, setBusy] = useState(false);
 

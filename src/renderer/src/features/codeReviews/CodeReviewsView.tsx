@@ -4,10 +4,10 @@ import { CODE_REVIEW_STATUSES, MAX_LISTED_CODE_REVIEWS, type CodeReview, type Co
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { NoSelection } from '../../components/NoSelection';
 import { PathLabel } from '../../components/PathLabel';
-import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
@@ -76,7 +76,7 @@ export function CodeReviewsView() {
   const [status, setStatus] = useState<StatusFilter>('any');
   const [search, setSearch] = useState('');
   const [since, setSince] = useState<SincePreset>('last3Months');
-  const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
+  const [selection, setSelection] = useViewSelection('codeReviews');
   const { data: reviews, isLoading, isFetching, error } = useCodeReviews({
     scope,
     status: status === 'any' ? undefined : status,

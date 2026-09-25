@@ -83,3 +83,16 @@
 .end {
   justify-content: flex-end;
 }
+
+/* The row the keyboard is on, while the keyboard is on the table. */
+.table:focus-visible .row[data-focused='true'] {
+  box-shadow: var(--focus-ring-inset);
+}
+
+.table:focus-visible {
+  box-shadow: var(--focus-ring-inset);
+}
+
+.table:focus-visible:has(.row[data-focused='true']) {
+  box-shadow: none;
+}

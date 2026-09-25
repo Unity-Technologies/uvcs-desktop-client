@@ -4,9 +4,9 @@ import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { NoSelection } from '../../components/NoSelection';
-import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
@@ -34,7 +34,7 @@ export function FilesView() {
   const { toggle, expand } = useExpandedDirectoriesStore();
   const { data: pendingChanges } = usePendingChanges();
   const [filter, setFilter] = useState('');
-  const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
+  const [selection, setSelection] = useViewSelection('files');
   const [revealPath, setRevealPath] = useState<string | null>(null);
 
   const { childrenByDirectory, isLoadingRoot, error } = useTreeListings(

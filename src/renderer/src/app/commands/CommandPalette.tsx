@@ -1,5 +1,5 @@
 import { Command as Cmdk } from 'cmdk';
-import { useDeferredValue, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { createFuzzyIndex, fuzzyMatchPositions, fuzzyMatchQuality } from '../../lib/fuzzyIndex';
 import { useShortcut } from '../../lib/useShortcut';
 import { HighlightQuery } from '../../ui/Highlight';
@@ -45,6 +45,7 @@ function OpenPalette({ close }: { close: () => void }) {
   const { scope, text } = parseScope(deferredQuery);
   const commandsByOwner = useCommandStore((state) => state.commandsByOwner);
   const workspacePath = useSession((state) => state.workspacePath);
+  useFocusBackOnClose();
 
   const commands = useMemo(
     // Opening the palette from inside it would do nothing.
@@ -149,6 +150,17 @@ function OpenPalette({ close }: { close: () => void }) {
       </Cmdk>
     </div>
   );
+}
+
+/** Closing gives focus back to where it was (the list the palette was opened over), unless it went away meanwhile. */
+function useFocusBackOnClose(): void {
+  // Read while rendering, before the palette's field takes focus.
+  const [previous] = useState(() => document.activeElement);
+  useEffect(() => {
+    return () => {
+      if (previous instanceof HTMLElement && previous !== document.body && previous.isConnected) previous.focus({ preventScroll: true });
+    };
+  }, [previous]);
 }
 
 function moreValue(section: SectionId): string {

@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
+import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { NoSelection } from '../../components/NoSelection';
 import { EmptyState } from '../../ui/EmptyState';
@@ -27,7 +27,7 @@ export function ChangesetsView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
   const [filter, setFilter] = useState<ChangesetFilterState>(DEFAULT_CHANGESET_FILTER);
-  const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
+  const [selection, setSelection] = useViewSelection('changesets');
 
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
   // The search is applied locally; only the other filters trigger a new `cm find`.
