@@ -71,7 +71,7 @@ describe('hitTest', () => {
 });
 
 describe('hoverCardFor', () => {
-  const cardAt = (point: { x: number; y: number }, drawn: DrawnTargets | null = null) => hoverCardFor(hitTest(layout, point, drawn), drawn);
+  const cardAt = (point: { x: number; y: number }, drawn: DrawnTargets | null = null) => hoverCardFor(hitTest(layout, point, drawn), point, drawn);
 
   function withCaption(id: number): { drawn: DrawnTargets; caption: { x: number; y: number } } {
     const node = layout.nodes.get(id)!;
@@ -102,11 +102,24 @@ describe('hoverCardFor', () => {
   });
 
 
-  it('has no card on a branch header or its band', () => {
+  it('shows a plain tooltip on a branch header only when its name or comment was cut', () => {
+    const lane = layout.lanesByBranch.get('/main/a')!;
+    const shape = laneShape(lane);
+    const onHeader = { x: shape.left + 10, y: headerTop(shape.y) + 5 };
+    const whole = drawnTargets();
+    whole.branchHeaders.add(lane, shape.left, headerTop(shape.y), 120, 22);
+    expect(cardAt(onHeader, whole)).toBeNull();
+
+    const cut = drawnTargets();
+    cut.branchHeaders.add(lane, shape.left, headerTop(shape.y), 120, 22, true);
+    expect(cardAt(onHeader, cut)).toMatchObject({ kind: 'pointer', target: { lane: { branch: { name: '/main/a' } } } });
+  });
+
+  it('never shows a cut header tooltip from its band', () => {
     const lane = layout.lanesByBranch.get('/main/a')!;
     const shape = laneShape(lane);
     const drawn = drawnTargets();
-    drawn.branchHeaders.add(lane, shape.left, headerTop(shape.y), 120, 22);
+    drawn.branchHeaders.add(lane, shape.left, headerTop(shape.y), 120, 22, true);
     const a = nodePoint(layout, 2)!;
     const b = nodePoint(layout, 4)!;
     expect(cardAt({ x: (a.x + b.x) / 2, y: a.y }, drawn)).toBeNull();

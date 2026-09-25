@@ -324,7 +324,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     const point = localPoint(event.clientX, event.clientY);
     const target = onCanvas(event) ? targetAt(event.clientX, event.clientY) : null;
     setHovered(target);
-    const subject = hoverCardFor(target, drawnRef.current);
+    const subject = hoverCardFor(target, toWorld(view.viewportRef.current, point.x, point.y), drawnRef.current);
     if (!subject) return hoverCard.requestClose();
     const anchor = anchorFor(subject);
     hoverCard.show({ key: hoverCardKey(subject.target), target: subject.target, anchor, ...point }, anchor === null);
