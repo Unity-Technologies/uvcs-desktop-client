@@ -11,10 +11,9 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  gap: 3px;
-  min-width: 22px;
+  width: 22px;
   height: 22px;
-  padding: 0 5px;
+  padding: 0;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-sm);
   background: none;
@@ -27,18 +26,9 @@
   cursor: pointer;
 }
 
-/* A status nobody has stays a bare letter, fainter still. */
+/* A status nobody has, fainter still. */
 .chip[data-empty='true'] {
-  padding: 0;
   opacity: 0.35;
-}
-
-.count {
-  color: var(--text-secondary);
-  font-family: var(--font-ui);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
-  font-variant-numeric: tabular-nums;
 }
 
 .chip:hover {

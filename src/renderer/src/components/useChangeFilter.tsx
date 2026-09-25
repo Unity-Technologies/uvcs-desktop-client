@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { SearchField } from '../ui/SearchField';
 import { Tooltip } from '../ui/Tooltip';
-import { countTones, formatToneCount, matchesChangeFilter, offeredTones } from './changeFilter';
+import { countTones, matchesChangeFilter, offeredTones } from './changeFilter';
 import { STATUS_LETTERS, StatusLetter, type StatusTone } from './StatusBadge';
 import styles from './useChangeFilter.module.css';
 
@@ -63,7 +63,6 @@ export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tone
           <Tooltip key={tone} content={label}>
             <button type="button" className={styles.chip} data-tone={tone} data-empty={count === 0} aria-pressed={activeTones.has(tone)} aria-label={label} onClick={() => toggle(tone)}>
               <StatusLetter letter={STATUS_LETTERS[tone]} />
-              {count > 0 && <span className={styles.count}>{formatToneCount(count)}</span>}
             </button>
           </Tooltip>
         );
