@@ -91,7 +91,7 @@ function OpenPalette({ close }: { close: () => void }) {
   };
 
   return (
-    <div className={styles.overlay} onMouseDown={close}>
+    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Command palette" onMouseDown={close}>
       <Cmdk
         className={styles.palette}
         label="Command palette"
