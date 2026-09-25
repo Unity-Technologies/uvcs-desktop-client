@@ -25,6 +25,7 @@ import { neighborChangeset, type GraphDirection } from './model/navigateGraph';
 import { searchGraph, searchHighlight, type SearchHit } from './model/searchGraph';
 import { useBranchExplorerCommands } from './useBranchExplorerCommands';
 import { useBranchExplorerData } from './useBranchExplorerData';
+import { useRevealRequest } from './useRevealRequest';
 import styles from './BranchExplorerView.module.css';
 
 const ARROW_DIRECTIONS: Record<string, GraphDirection> = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
@@ -32,9 +33,10 @@ const ARROW_DIRECTIONS: Record<string, GraphDirection> = { ArrowLeft: 'left', Ar
 export function BranchExplorerView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
-  const { data, isLoading, isFetching, error } = useBranchExplorerData();
+  const { data, isLoading, isFetching, isPlaceholderData, error } = useBranchExplorerData();
   const preferences = useBranchExplorerPreferences();
-  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, structureOnly, detailsOpen, highlightedAuthor, showComments, showAvatars } = preferences;
+  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, structureOnly, detailsOpen, highlightedAuthor, showComments, showAvatars, revealRequest } =
+    preferences;
 
   const canvasRef = useRef<GraphCanvasHandle>(null);
   const [selection, setSelection] = useState<GraphSelection | null>(null);
@@ -67,8 +69,10 @@ export function BranchExplorerView() {
     if (homeChangeset !== null) keep.add(homeChangeset);
     if (selectedChangeset !== null) keep.add(selectedChangeset);
     for (const hit of searchHits) if (hit.kind === 'changeset') keep.add(hit.id);
+    if (revealRequest?.kind === 'changeset') keep.add(revealRequest.id);
+    if (revealRequest?.kind === 'label') keep.add(revealRequest.changeset);
     return layoutGraph(filtered, { keep });
-  }, [filtered, fullLayout, structureOnly, expanded, homeChangeset, selectedChangeset, searchHits]);
+  }, [filtered, fullLayout, structureOnly, expanded, homeChangeset, selectedChangeset, searchHits, revealRequest]);
 
   const authors = useMemo(() => [...new Set(data?.changesets.map((changeset) => changeset.owner))].sort(), [data]);
   const branchNames = useMemo(() => (data?.branches.map((branch) => branch.name) ?? []).sort(), [data]);
@@ -110,6 +114,21 @@ export function BranchExplorerView() {
   const zoomBy = useCallback((factor: number) => canvasRef.current?.zoomBy(factor), []);
   useInitialFocus(layout, homeChangeset, canvasRef, structureOnly);
   useBranchExplorerCommands({ goHome, fit });
+  useRevealRequest({
+    layout,
+    settled: !isFetching && !isPlaceholderData,
+    filtersActive: focus !== null || onlyRelatedToCurrent || hideMergedBranches || visibleBranches !== null || highlightedAuthor !== null,
+    clearFilters,
+    reveal: (hit) => {
+      if (hit.kind === 'branch') {
+        setSelection({ kind: 'branch', name: hit.name });
+        canvasRef.current?.frameBranch(hit.name);
+      } else {
+        setSelection({ kind: 'changeset', id: hit.id });
+        canvasRef.current?.frameChangeset(hit.id);
+      }
+    },
+  });
 
   const stepSearch = (direction: 1 | -1): void => {
     if (searchHits.length === 0) return;

@@ -12,7 +12,7 @@ import { laneShape } from './laneShape';
 import { useGraphPalette } from './useGraphPalette';
 import { useGraphViewport } from './useGraphViewport';
 import { useSearchPing } from './useSearchPing';
-import { centerOn, fitToScreen, openingViewport, revealPoint, toWorld, type Size } from './viewport';
+import { centerOn, fitToScreen, frameOn, openingViewport, revealPoint, toWorld, type Size, type Viewport } from './viewport';
 import { isDiscreteWheel, wheelZoomFactor } from './zoom';
 import styles from './GraphCanvas.module.css';
 
@@ -28,6 +28,9 @@ export interface GraphCanvasHandle {
   /** Scrolls just enough to show the branch's header card. */
   revealBranch: (name: string) => void;
   centerOnChangeset: (id: number) => void;
+  /** Glides to a changeset or a branch's header card, centered and readable: a reveal from another view. */
+  frameChangeset: (id: number) => void;
+  frameBranch: (name: string) => void;
   /** The first view of a graph, focused on a changeset. */
   showOpeningView: (focusId: number) => void;
   fit: () => void;
@@ -117,16 +120,35 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         setHover(null);
         view.jumpTo(revealPoint(view.viewportRef.current, x, y, sizeRef.current));
       };
+      const frame = (point: { x: number; y: number } | null): void => {
+        if (!point) return;
+        setHover(null);
+        const framed = (): Viewport => frameOn(view.viewportRef.current, point.x, point.y, sizeRef.current);
+        // Before the canvas has a size there is nothing to glide from: once it has one, glide from the opening view.
+        const opening = pendingViewRef.current;
+        if (sizeRef.current.width === 0) {
+          pendingViewRef.current = () => {
+            opening?.();
+            view.glideTo(framed());
+          };
+        } else view.glideTo(framed());
+      };
+      const headerPoint = (name: string): { x: number; y: number } | null => {
+        const lane = layout.lanesByBranch.get(name);
+        if (!lane) return null;
+        const shape = laneShape(lane);
+        return { x: shape.left + HEADER_REVEAL_INSET, y: headerTop(shape.y) };
+      };
       return {
+        frameChangeset: (id) => frame(nodePoint(layout, id)),
+        frameBranch: (name) => frame(headerPoint(name)),
         revealChangeset: (id) => {
           const point = nodePoint(layout, id);
           if (point) reveal(point.x, point.y);
         },
         revealBranch: (name) => {
-          const lane = layout.lanesByBranch.get(name);
-          if (!lane) return;
-          const shape = laneShape(lane);
-          reveal(shape.left + HEADER_REVEAL_INSET, headerTop(shape.y));
+          const point = headerPoint(name);
+          if (point) reveal(point.x, point.y);
         },
         centerOnChangeset: (id) => {
           const point = nodePoint(layout, id);

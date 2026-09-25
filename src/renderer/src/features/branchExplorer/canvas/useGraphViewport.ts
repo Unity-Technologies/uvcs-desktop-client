@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useRef } from 'react';
 import { usePanInertia, type PanInertia } from './usePanInertia';
+import { useViewportGlide } from './useViewportGlide';
 import { useZoomAnimation } from './useZoomAnimation';
 import { clampViewport, zoomAt, type Size, type Viewport } from './viewport';
 
@@ -7,6 +8,8 @@ export interface GraphViewport {
   viewportRef: React.RefObject<Viewport>;
   /** Jumps to a viewport, stopping any glide. */
   jumpTo: (viewport: Viewport) => void;
+  /** Glides to a viewport (as close as the bounds allow). */
+  glideTo: (viewport: Viewport) => void;
   /** Stops a zoom glide or a drag's inertia where it is: the user took over. */
   stop: () => void;
   /** Pans by a screen delta and returns how far the view actually moved. */
@@ -55,11 +58,13 @@ export function useGraphViewport(contentSize: () => Size, screenSize: () => Size
 
   const zoomAnimation = useZoomAnimation(zoomTo, () => viewportRef.current.zoom);
   const inertia = usePanInertia(panBy);
+  const glide = useViewportGlide(apply, () => viewportRef.current, () => latest.current.screenSize());
 
   return useMemo<GraphViewport>(() => {
     const stop = (): void => {
       zoomAnimation.stop();
       inertia.cancel();
+      glide.stop();
     };
     return {
       viewportRef,
@@ -70,15 +75,22 @@ export function useGraphViewport(contentSize: () => Size, screenSize: () => Size
         stop();
         apply(viewport);
       },
+      glideTo: (viewport) => {
+        stop();
+        const screen = latest.current.screenSize();
+        glide.glideTo(screen.width === 0 ? viewport : clampViewport(viewport, latest.current.contentSize(), screen));
+      },
       pinchZoom: (screenX, screenY, factor) => {
         zoomAnimation.stop();
+        glide.stop();
         zoomTo(screenX, screenY, viewportRef.current.zoom * factor);
       },
       zoomStep: (screenX, screenY, factor) => {
         inertia.cancel();
+        glide.stop();
         zoomAnimation.zoomStep(screenX, screenY, factor);
       },
       keepInBounds: () => apply(viewportRef.current),
     };
-  }, [apply, panBy, zoomTo, zoomAnimation, inertia]);
+  }, [apply, panBy, zoomTo, zoomAnimation, inertia, glide]);
 }
