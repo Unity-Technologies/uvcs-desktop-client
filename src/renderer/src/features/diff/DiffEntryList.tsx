@@ -83,6 +83,7 @@ export function DiffEntryList({ entries, selection, onSelectionChange, contextMe
           rowHeight={28}
           letterMoves
           onRowKeyDown={onRowKeyDown}
+          hideHeader
         />
       </HighlightQuery>
     </div>
