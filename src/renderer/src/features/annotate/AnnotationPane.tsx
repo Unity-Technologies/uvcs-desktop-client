@@ -2,8 +2,10 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Calendar, GitCommitVertical, User } from 'lucide-react';
 import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import type { ItemRevision } from '@shared/domain/history';
+import { isPinnedSpec } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
+import { IMMUTABLE_QUERY } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { pluralize } from '../../lib/text';
 import { Button } from '../../ui/Button';
@@ -41,6 +43,8 @@ export function AnnotationPane({ path, revisionSpec, revisions, leading }: Annot
   const { data: annotation, error } = useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'annotate', path, spec),
     queryFn: () => api.annotate.file(workspacePath, path, spec),
+    // A revision pinned to a changeset is annotated once; the workspace's own version follows local edits.
+    ...(spec !== undefined && isPinnedSpec(spec) ? { staleTime: Infinity, meta: IMMUTABLE_QUERY } : {}),
   });
 
   const rows = useMemo(() => (annotation ? buildAnnotationRows(annotation) : []), [annotation]);

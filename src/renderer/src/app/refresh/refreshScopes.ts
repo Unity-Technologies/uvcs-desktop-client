@@ -65,6 +65,8 @@ export function isAffectedByShelving(key: QueryKey): boolean {
  */
 export function isAffectedByNewChangesets(key: QueryKey): boolean {
   if ((LOCAL_AREAS as readonly unknown[]).includes(area(key)) || area(key) === 'content') return false;
+  // The workspace's own version of a file (no revision spec) changes with the workspace, not with others' checkins.
+  if (area(key) === 'annotate' && key[4] == null) return false;
   if (UNTOUCHED_BY_CHECKINS.includes(area(key) as string)) return false;
   return !(area(key) === 'incoming' && detail(key) === 'summary');
 }

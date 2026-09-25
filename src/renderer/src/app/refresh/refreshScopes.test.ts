@@ -53,6 +53,8 @@ describe('refresh scopes', () => {
     expect(isAffectedByNewChangesets(key('attributeTypes'))).toBe(false);
     expect(isAffectedByNewChangesets(key('attributeValues', 'br:/main/task'))).toBe(false);
     expect(isAffectedByNewChangesets(key('codeReviews', { scope: 'all' }))).toBe(false);
+    expect(isAffectedByNewChangesets(key('annotate', 'src/a.ts', undefined))).toBe(false);
+    expect(isAffectedByNewChangesets(key('history', 'src/a.ts'))).toBe(true);
   });
 
   it("refreshes after this workspace's checkin or update all but the objects they leave alone", () => {

@@ -13,6 +13,14 @@ export const spec = {
   serverPathAt: (serverPath: string, pointSpec: string): string => `serverpath:${serverPath}#${pointSpec}`,
 };
 
+/**
+ * Whether a revision spec is pinned to a changeset or a shelve (`serverpath:/a.ts#cs:12`, `itemid:27#sh:3`,
+ * `src/a.ts#cs:12`): what it reads never changes.
+ */
+export function isPinnedSpec(revisionSpec: string): boolean {
+  return /#(?:cs|sh):\d+$/.test(revisionSpec);
+}
+
 export function repositorySpec(name: string, server: string): string {
   return `${name}@${server}`;
 }
