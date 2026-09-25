@@ -127,8 +127,13 @@
   opacity: 0.6;
 }
 
-/* Entering or leaving review mode, reviewed files ease back and forth. */
+/* Entering or leaving review mode, reviewed files ease back and forth; files that just appeared fade in (on the row
+   itself, positioned by the virtualizer, so nothing around it moves). */
 @media (prefers-reduced-motion: no-preference) {
+  .row[data-arrived='true'] {
+    animation: var(--keyframes-row-enter) var(--duration-slow) var(--ease-out);
+  }
+
   .row[data-type='change'] > :not(.trailing, :first-child) {
     transition: opacity var(--duration-normal);
   }
