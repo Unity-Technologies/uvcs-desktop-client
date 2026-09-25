@@ -21,11 +21,24 @@ export function pendingLocks(changes: PendingChange[], mine: Lock[], all: Lock[]
   const mineIds = new Set(mine.map((lock) => lock.guid));
   const result = new Map<string, PendingLock>();
   for (const lock of [...mine, ...all]) {
-    const path = lock.path.replace(/^\//, '');
+    const path = workspacePathOf(lock);
     if (lock.status !== 'Locked' || !pending.has(path) || result.has(path)) continue;
     result.set(path, { mine: mineIds.has(lock.guid), owner: lock.owner, workspace: lock.workspace });
   }
   return result;
+}
+
+/**
+ * Whether any of the repository's locks holds a pending change. My locks are among them, so only then is it worth
+ * asking which ones are mine.
+ */
+export function locksPendingChanges(changes: PendingChange[], all: Lock[]): boolean {
+  const pending = new Set(changes.map((change) => change.path));
+  return all.some((lock) => lock.status === 'Locked' && pending.has(workspacePathOf(lock)));
+}
+
+function workspacePathOf(lock: Lock): string {
+  return lock.path.replace(/^\//, '');
 }
 
 /** Explains why some changes can't be checked in, e.g. "Hero.fbx is locked by ana — …". */
