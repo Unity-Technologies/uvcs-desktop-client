@@ -7,7 +7,7 @@
   background: none;
   color: var(--text-tertiary);
   cursor: pointer;
-  animation: var(--keyframes-fade-in) var(--duration-normal);
+  animation: var(--keyframes-fade-in) var(--duration-normal) var(--ease-out);
 }
 
 .toggle:hover {

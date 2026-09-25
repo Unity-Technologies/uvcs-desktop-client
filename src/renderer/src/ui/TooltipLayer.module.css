@@ -14,7 +14,7 @@
   white-space: pre-line;
   word-break: break-word;
   pointer-events: none;
-  animation: var(--keyframes-pop-in) 0.1s var(--ease-out);
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
 }
 
 .main {

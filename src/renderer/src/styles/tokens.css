@@ -34,14 +34,23 @@
   --view-header-height: 48px;
   --toolbar-height: 40px;
 
+  /* Motion. Everything that appears eases out (fast start, soft landing); what moves between two places eases in
+     and out. Durations drop to zero under prefers-reduced-motion (global.css), so animations built on them are
+     instant there; loops such as spinners and skeleton pulses opt out on their own. */
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-instant: 80ms;
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --duration-slow: 320ms;
   /* Keyframes live in global.css; CSS modules reference them through these variables
      because modules rename any keyframe name written literally. */
   --keyframes-spin: spin;
   --keyframes-fade-in: fade-in;
   --keyframes-pop-in: pop-in;
-  --duration-fast: 120ms;
-  --duration-normal: 200ms;
+  --keyframes-view-enter: view-enter;
+  --keyframes-row-enter: row-enter;
+  --keyframes-pulse: pulse;
 
   --accent-contrast: #ffffff;
 }
