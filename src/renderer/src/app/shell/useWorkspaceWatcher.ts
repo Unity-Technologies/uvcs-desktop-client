@@ -37,7 +37,11 @@ export function useWorkspaceWatcher(): void {
 
   useEffect(() => {
     const watched = autoRefresh && coverage === 'full';
-    for (const area of LOCAL_AREAS) queryClient.setQueryDefaults(queryKeys.inWorkspace(workspacePath, area), { refetchOnWindowFocus: !watched });
+    for (const area of LOCAL_AREAS) {
+      // `.plastic` rewrites refresh the workspace info even without auto refresh: views mounting don't need to.
+      const staleTime = area === 'info' && coverage === 'full' ? Infinity : undefined;
+      queryClient.setQueryDefaults(queryKeys.inWorkspace(workspacePath, area), { refetchOnWindowFocus: !watched, staleTime });
+    }
   }, [workspacePath, autoRefresh, coverage]);
 
   useUvcsEvent('workspaceChanged', (event) => {
