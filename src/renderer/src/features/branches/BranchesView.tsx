@@ -5,6 +5,7 @@ import { spec } from '@shared/domain/specs';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
+import { NoSelection } from '../../components/NoSelection';
 import { SincePicker } from '../../components/SincePicker';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { sinceDateFor } from '../../lib/sincePresets';
@@ -22,7 +23,7 @@ import { ToggleChip } from '../../ui/ToggleChip';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { BranchDetails } from './BranchDetails';
 import { branchMenu } from './branchMenu';
-import { switchToBranch } from './branchOperations';
+import { diffBranch } from './branchOperations';
 import { useBranchesViewStore, type BranchesLayout } from './branchesViewStore';
 import { buildBranchTree, type BranchTreeRow } from './branchTree';
 import { openCreateBranchDialog } from './CreateBranchDialog';
@@ -122,16 +123,16 @@ export function BranchesView() {
                 selection={selection}
                 onSelectionChange={setSelection}
                 selectFirstRow
-                onActivate={(row) => row.branch.name !== currentBranch && void switchToBranch(workspacePath, row.branch.name)}
+                onActivate={(row) => diffBranch(row.branch.name)}
                 contextMenu={(selectedRows) => branchMenu(workspacePath, selectedRows.map((row) => row.branch), currentBranch)}
               />
             </HighlightQuery>
           }
           details={
             selected ? (
-              <BranchDetails workspacePath={workspacePath} branch={selected} isCurrent={selected.name === currentBranch} />
+              <BranchDetails key={selected.name} branch={selected} menu={branchMenu(workspacePath, [selected], currentBranch)} />
             ) : (
-              <EmptyState title="No branch selected" description="Select a branch to see its details. Double-click it to switch to it." />
+              <NoSelection noun="branch" />
             )
           }
         />

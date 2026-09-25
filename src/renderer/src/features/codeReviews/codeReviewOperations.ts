@@ -39,8 +39,8 @@ export async function deleteReviews(workspacePath: string, reviews: CodeReviewSu
   return deleted === true;
 }
 
-export function openReview(review: Pick<CodeReview, 'id'>): void {
-  navigation.openPage({ kind: 'codeReview', reviewId: review.id });
+export function openReview(review: Pick<CodeReview, 'id'>, focusPath?: string): void {
+  navigation.openPage({ kind: 'codeReview', reviewId: review.id, focusPath });
 }
 
 export function describeTarget(target: CodeReviewTarget): string {

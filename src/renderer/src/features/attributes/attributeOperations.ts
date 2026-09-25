@@ -12,8 +12,11 @@ export async function renameAttributeType(workspacePath: string, type: Attribute
 
 export async function editAttributeComment(workspacePath: string, type: AttributeType): Promise<void> {
   const comment = await prompt({ title: `Describe ${type.name}`, label: 'Comment', initialValue: type.comment, confirmLabel: 'Save' });
-  if (comment === undefined) return;
-  await runAction(workspacePath, "Couldn't update the attribute", () => api.attributes.editTypeComment(workspacePath, type.name, comment));
+  if (comment !== undefined) await saveAttributeComment(workspacePath, type, comment);
+}
+
+export function saveAttributeComment(workspacePath: string, type: AttributeType, comment: string): Promise<void | undefined> {
+  return runAction(workspacePath, "Couldn't update the attribute", () => api.attributes.editTypeComment(workspacePath, type.name, comment));
 }
 
 export async function deleteAttributeTypes(workspacePath: string, types: AttributeType[]): Promise<void> {

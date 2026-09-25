@@ -41,8 +41,11 @@ export function switchToChangeset(workspacePath: string, changeset: Changeset): 
 
 export async function editChangesetComment(workspacePath: string, changeset: Changeset): Promise<void> {
   const comment = await askForChangesetComment(changeset.id, changeset.comment);
-  if (comment === undefined) return;
-  await runAction(workspacePath, "Couldn't update the comment", () => api.changesets.editComment(workspacePath, changeset.id, comment));
+  if (comment !== undefined) await saveChangesetComment(workspacePath, changeset, comment);
+}
+
+export function saveChangesetComment(workspacePath: string, changeset: Pick<Changeset, 'id'>, comment: string): Promise<void | undefined> {
+  return runAction(workspacePath, "Couldn't update the comment", () => api.changesets.editComment(workspacePath, changeset.id, comment));
 }
 
 export async function moveChangesetToBranch(workspacePath: string, changeset: Changeset): Promise<void> {

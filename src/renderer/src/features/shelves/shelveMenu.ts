@@ -10,7 +10,7 @@ export function shelveMenu(workspacePath: string, shelves: Shelve[]): MenuEntry[
 
   return tidyMenu([
     { id: 'apply', label: 'Apply to workspace', icon: ArchiveRestore, run: () => void applyShelve(workspacePath, shelve) },
-    { id: 'changes', label: 'Show shelved changes', icon: FileDiff, run: () => showShelveChanges(shelve) },
+    { id: 'diff', label: 'Show shelved changes', icon: FileDiff, run: () => showShelveChanges(shelve) },
     SEPARATOR,
     { id: 'copy', label: 'Copy shelve spec', icon: Copy, run: () => copyToClipboard(`sh:${shelve.id}`, 'Shelve spec') },
     SEPARATOR,

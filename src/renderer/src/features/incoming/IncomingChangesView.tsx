@@ -9,9 +9,11 @@ import { IconButton } from '../../ui/IconButton';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { ChangesetDetails } from '../changesets/ChangesetDetails';
+import { changesetMenu } from '../changesets/changesetMenu';
 import { FileConflictPanel } from '../merge/resolve/FileConflictPanel';
 import { useFileConflicts } from '../merge/resolve/useFileConflicts';
-import { IncomingChangesetDetail, IncomingFileDiff } from './IncomingDetail';
+import { IncomingFileDiff } from './IncomingDetail';
 import { IncomingList, type IncomingSelection } from './IncomingList';
 import { UpdateBar } from './UpdateBar';
 import { UPDATE_LABELS, updateConflictFiles } from './updateConflictFiles';
@@ -125,7 +127,11 @@ function IncomingSession({ workspacePath, incoming, header }: IncomingSessionPro
           ) : selectedFile ? (
             <IncomingFileDiff workspacePath={workspacePath} file={selectedFile} />
           ) : selectedChangeset ? (
-            <IncomingChangesetDetail changeset={selectedChangeset} />
+            <ChangesetDetails
+              key={selectedChangeset.id}
+              changeset={selectedChangeset}
+              menu={changesetMenu({ workspacePath, loadedChangeset: incoming.loadedChangeset, loadedBranch: incoming.branch ?? undefined }, [selectedChangeset])}
+            />
           ) : (
             <EmptyState title="Select a changeset or a file" />
           )

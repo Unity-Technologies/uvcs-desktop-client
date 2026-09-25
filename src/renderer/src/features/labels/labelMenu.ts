@@ -28,7 +28,7 @@ export function labelMenu(workspacePath: string, labels: Label[]): MenuEntry[] {
     single && { id: 'merge', label: 'Merge into workspace', icon: GitMerge, run: () => mergeFromLabel(single) },
     single && { id: 'mergeTo', label: 'Merge to…', icon: GitPullRequestArrow, run: () => void mergeTo(spec.label(single.name), single.name) },
     SEPARATOR,
-    single && { id: 'changes', label: 'Show labeled changeset', icon: FileDiff, run: () => showLabelChanges(single) },
+    single && { id: 'diff', label: 'Show labeled changeset', icon: FileDiff, run: () => showLabelChanges(single) },
     single && { id: 'diffWith', label: 'Compare with another label…', icon: GitCompareArrows, run: () => void diffWithAnotherLabel(single) },
     pair && { id: 'diffPair', label: 'Compare selected labels', icon: GitCompareArrows, run: () => diffLabels(pair[0], pair[1]) },
     single && { id: 'browse', label: 'Browse files at this label', icon: FolderTree, run: () => browseLabel(single) },

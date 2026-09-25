@@ -2,6 +2,7 @@ import { GitGraph, RefreshCw, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { ListWithDetails } from '../../components/ListWithDetails';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
 import { CenteredSpinner } from '../../ui/Spinner';
@@ -102,6 +103,8 @@ export function BranchExplorerView() {
     setActiveHitIndex(-1);
   };
 
+  const menuFor = (target: GraphTarget | null) => graphMenu(target, { workspacePath, layout: layout!, goToChangeset, showRelatedTo: setRelatedTo });
+
   const activate = (target: GraphTarget): void => {
     const selected = selectionFor(target);
     if (selected?.kind === 'changeset') graphActions.diffChangeset(selected.id);
@@ -125,6 +128,8 @@ export function BranchExplorerView() {
       fit();
     } else if (event.key === 'Enter' && selection?.kind === 'changeset') {
       graphActions.diffChangeset(selection.id);
+    } else if (event.key === 'Enter' && selection?.kind === 'branch') {
+      graphActions.diffBranch(selection.name);
     } else if (event.key === 'Escape') {
       setSelection(null);
     }
@@ -177,26 +182,30 @@ export function BranchExplorerView() {
         </div>
       )}
       <div className={styles.body} onKeyDown={onKeyDown}>
-        <GraphCanvas
-          ref={canvasRef}
-          layout={layout}
-          highlights={highlights}
-          onSelect={(target) => setSelection(selectionFor(target))}
-          onActivate={activate}
-          contextMenu={(target) => graphMenu(target, { workspacePath, layout, goToChangeset, showRelatedTo: setRelatedTo })}
-        >
-          <GraphNavControls onGoHome={goHome} onFit={fit} onZoom={zoomBy} />
-        </GraphCanvas>
-        {detailsOpen && (
-          <DetailsPanel
-            selection={selection}
-            layout={layout}
-            workspacePath={workspacePath}
-            homeChangeset={homeChangeset}
-            goToChangeset={goToChangeset}
-            selectBranch={(name) => setSelection({ kind: 'branch', name })}
-          />
-        )}
+        <ListWithDetails
+          hideDetails={!detailsOpen}
+          list={
+            <GraphCanvas
+              ref={canvasRef}
+              layout={layout}
+              highlights={highlights}
+              onSelect={(target) => setSelection(selectionFor(target))}
+              onActivate={activate}
+              contextMenu={menuFor}
+            >
+              <GraphNavControls onGoHome={goHome} onFit={fit} onZoom={zoomBy} />
+            </GraphCanvas>
+          }
+          details={
+            <DetailsPanel
+              selection={selection}
+              layout={layout}
+              menuFor={menuFor}
+              goToChangeset={goToChangeset}
+              selectBranch={(name) => setSelection({ kind: 'branch', name })}
+            />
+          }
+        />
       </div>
     </>
   );
