@@ -10,6 +10,8 @@ interface CommandLogStore {
   entries: CommandLogEntry[];
   open: boolean;
   scope: CommandLogScope;
+  /** Entries up to this id were on screen in the log: failures after it are news. */
+  seenUpTo: number;
   add: (entry: CommandLogEntry) => void;
   clear: () => void;
   toggle: () => void;
@@ -21,9 +23,10 @@ export const useCommandLogStore = create<CommandLogStore>((set) => ({
   entries: [],
   open: false,
   scope: 'workspace',
+  seenUpTo: 0,
   add: (entry) => set((state) => ({ entries: [...state.entries.slice(-(MAX_ENTRIES - 1)), entry] })),
   clear: () => set({ entries: [] }),
-  toggle: () => set((state) => ({ open: !state.open })),
+  toggle: () => set((state) => ({ open: !state.open, seenUpTo: state.entries.at(-1)?.id ?? state.seenUpTo })),
   setScope: (scope) => set({ scope }),
 }));
 
