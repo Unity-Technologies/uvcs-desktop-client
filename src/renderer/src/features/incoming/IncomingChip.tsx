@@ -1,6 +1,6 @@
 import * as Popover from '@radix-ui/react-popover';
 import { AlertTriangle, ArrowDownToLine } from 'lucide-react';
-import { useLayoutEffect, useRef, useState, type MouseEvent } from 'react';
+import { useRef, useState, type MouseEvent } from 'react';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { useRunningOperation } from '../../app/operations/runningOperationsStore';
@@ -19,8 +19,8 @@ import { useIncomingSummary } from './useIncomingSummary';
 import styles from './IncomingChip.module.css';
 
 /**
- * Shows up next to the branch only when the branch has changesets the workspace doesn't: one click updates,
- * or, when they collide with local changes, leads to Incoming to merge them. Hovering lists them.
+ * A segment of the branch pill that shows up only when the branch has changesets the workspace doesn't: how many,
+ * and whether they collide with local changes. Hovering lists them, with Update (or Resolve in Incoming) one click away.
  */
 export function IncomingChip() {
   const workspacePath = useWorkspacePath();
@@ -31,13 +31,8 @@ export function IncomingChip() {
   const state = incomingChipState(summary, changes, running);
   const card = useHoverCard();
   const [verifying, setVerifying] = useState(false);
-
-  // An update's stage changes many times a second: hold the chip's width so the toolbar doesn't jitter.
-  const chipRef = useRef<HTMLDivElement>(null);
-  const restingWidth = useRef<number | null>(null);
-  useLayoutEffect(() => {
-    if (state && state.kind !== 'updating' && chipRef.current) restingWidth.current = chipRef.current.offsetWidth;
-  });
+  // Only a card opened by clicking takes focus, so only that one gives it back: a hover never leaves a focus ring behind.
+  const tookFocus = useRef(false);
 
   if (!state) return null;
 
@@ -64,81 +59,79 @@ export function IncomingChip() {
 
   if (state.kind === 'updating') {
     return (
-      <div
-        ref={chipRef}
-        className={styles.chip}
-        data-tone="updating"
-        style={restingWidth.current !== null ? { width: restingWidth.current } : undefined}
-        role="status"
-      >
-        <span className={styles.body}>
-          <Spinner size={13} />
-          <span className={styles.text}>
-            <span className={styles.label}>Updating…</span>
-            <span className={styles.stage}>{state.stage}</span>
-          </span>
-        </span>
+      <div className={`${styles.chip} ${styles.updating}`} role="status">
+        <Spinner size={13} />
+        <span className={styles.label}>Updating</span>
+        <span className={styles.stage}>{state.stage}</span>
       </div>
     );
   }
 
   const conflicts = state.kind === 'conflicts';
-  const label = conflicts ? `${pluralize(state.count, 'new changeset')} · ${pluralize(state.conflictCount, 'conflict')}` : pluralize(state.count, 'new changeset');
-  const primary = conflicts ? (
-    <button className={styles.primary} data-tip="Merge the files changed on both sides in Incoming" onClick={review}>
-      Resolve…
-    </button>
-  ) : (
-    <button className={styles.primary} disabled={verifying} data-tip="Download them; your local changes stay as they are" data-tip-sub="cm update" onClick={() => void update()}>
-      {verifying && <Spinner size={11} />}
-      Update
-    </button>
-  );
-
   return (
-    <div ref={chipRef} className={styles.chip} data-tone={state.kind}>
-      <Popover.Root open={card.open} onOpenChange={card.onOpenChange}>
-        <Popover.Trigger asChild>
-          <button
-            className={styles.body}
-            {...card.hoverProps}
-            onClick={(event: MouseEvent) => {
-              event.preventDefault();
-              card.toggle();
-            }}
-          >
-            {conflicts ? <AlertTriangle size={14} /> : <ArrowDownToLine size={14} />}
-            <span className={styles.label}>{label}</span>
-          </button>
-        </Popover.Trigger>
-        <Popover.Portal>
-          <Popover.Content
-            className={styles.card}
-            align="start"
-            sideOffset={6}
-            {...card.hoverProps}
-            onOpenAutoFocus={(event) => !card.pinned && event.preventDefault()}
-          >
-            <IncomingCard
-              state={state}
-              changes={changes}
-              actions={
-                <>
-                  <Button size="small" variant={conflicts ? 'primary' : 'secondary'} onClick={review}>
-                    {conflicts ? 'Resolve in Incoming…' : 'Review in Incoming'}
+    <Popover.Root open={card.open} onOpenChange={card.onOpenChange}>
+      <Popover.Trigger asChild>
+        <button
+          className={styles.chip}
+          aria-label={
+            conflicts
+              ? `${pluralize(state.count, 'new changeset')}, ${pluralize(state.conflictCount, 'conflict')}`
+              : pluralize(state.count, 'new changeset')
+          }
+          {...card.hoverProps}
+          onClick={(event: MouseEvent) => {
+            event.preventDefault();
+            card.toggle();
+          }}
+        >
+          {verifying ? <Spinner size={13} /> : <ArrowDownToLine size={14} className={styles.icon} />}
+          <span className={styles.count}>{state.count}</span>
+          {conflicts && (
+            <span className={styles.conflicts}>
+              <AlertTriangle size={13} className={styles.icon} />
+              <span className={styles.count}>{state.conflictCount}</span>
+            </span>
+          )}
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          className={styles.card}
+          align="start"
+          sideOffset={6}
+          {...card.hoverProps}
+          onOpenAutoFocus={(event) => {
+            tookFocus.current = card.pinned;
+            if (!card.pinned) event.preventDefault();
+          }}
+          onCloseAutoFocus={(event) => !tookFocus.current && event.preventDefault()}
+        >
+          <IncomingCard
+            state={state}
+            changes={changes}
+            actions={
+              <>
+                <Button size="small" variant={conflicts ? 'primary' : 'secondary'} onClick={review}>
+                  {conflicts ? 'Resolve in Incoming…' : 'Review in Incoming'}
+                </Button>
+                {!conflicts && (
+                  <Button
+                    size="small"
+                    variant="primary"
+                    icon={<ArrowDownToLine size={13} />}
+                    loading={verifying}
+                    data-tip="Download them; your local changes stay as they are"
+                    data-tip-sub="cm update"
+                    onClick={() => void update()}
+                  >
+                    Update
                   </Button>
-                  {!conflicts && (
-                    <Button size="small" variant="primary" loading={verifying} onClick={() => void update()}>
-                      Update
-                    </Button>
-                  )}
-                </>
-              }
-            />
-          </Popover.Content>
-        </Popover.Portal>
-      </Popover.Root>
-      {primary}
-    </div>
+                )}
+              </>
+            }
+          />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
   );
 }
