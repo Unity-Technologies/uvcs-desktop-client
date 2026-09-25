@@ -6,18 +6,18 @@ import { useLayoutEffect, useRef } from 'react';
 import { captionCardCorner, captionCardMaxWidth, keepInside } from './captionCard';
 import { summaryOf } from './fitText';
 import type { GraphPalette } from './graphPalette';
-import type { GraphTarget } from './graphTargets';
+import type { PointerCardTarget } from './graphTargets';
 import styles from './GraphTooltip.module.css';
 
 /**
  * Where a tooltip opens: over a changeset's caption (the card's first line lays exactly on it, in the caption's
- * font and color, so the cut comment appears to complete itself in place), just below a branch header whose text
- * was cut (the pill unfolding), or next to the pointer. `x` and `baseline` are the caption's first glyph.
+ * font and color, so the cut comment appears to complete itself in place), or next to the pointer. `x` and
+ * `baseline` are the caption's first glyph.
  */
 export type TooltipAnchor = { kind: 'caption'; x: number; baseline: number; color: string };
 
 interface GraphTooltipProps {
-  target: GraphTarget;
+  target: PointerCardTarget;
   layout: GraphLayout;
   palette: GraphPalette;
   /** The pointer, for tooltips without an anchor. */
@@ -90,7 +90,7 @@ export function GraphTooltip({ target, layout, palette, x, y, anchor, containerW
   );
 }
 
-function tooltipContent(target: GraphTarget, layout: GraphLayout): { title: string; body?: string; meta?: string } | null {
+function tooltipContent(target: PointerCardTarget, layout: GraphLayout): { title: string; body?: string; meta?: string } | null {
   switch (target.kind) {
     case 'changeset': {
       const changeset = layout.nodes.get(target.id)?.changeset;
@@ -109,12 +109,6 @@ function tooltipContent(target: GraphTarget, layout: GraphLayout): { title: stri
         meta: 'Click to show them',
       };
     }
-    case 'branch':
-      return {
-        title: target.lane.branch.name,
-        body: target.lane.branch.comment || undefined,
-        meta: `Created by ${displayName(target.lane.branch.owner)} · ${formatRelativeDate(target.lane.branch.date)}`,
-      };
     case 'label':
       return {
         title: `Label ${target.label.name}`,

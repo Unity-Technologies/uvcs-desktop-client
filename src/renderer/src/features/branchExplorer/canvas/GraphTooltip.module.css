@@ -38,7 +38,7 @@
 }
 
 /*
- * The card that completes a cut caption (or unfolds a cut branch header), laid exactly over it: its border and
+ * The card that completes a cut caption, laid exactly over it: its border and
  * padding are mirrored in captionCard.ts (CARD_INSET_X). It only fades in: moving would break the "completes in
  * place" illusion. The pointer can move into it to select and copy its text.
  */

@@ -12,7 +12,7 @@ import { laneShape } from './laneShape';
 const layout = layoutGraph(sampleHistory());
 
 function drawnTargets(): DrawnTargets {
-  return { reviewChips: new DrawnBoxes(), branchHeaders: new DrawnBoxes(), captions: new DrawnBoxes() };
+  return { reviewChips: new DrawnBoxes(), branchHeaders: new DrawnBoxes(), cutBranchComments: new DrawnBoxes(), captions: new DrawnBoxes() };
 }
 
 describe('hitTest', () => {
@@ -101,25 +101,30 @@ describe('hoverCardFor', () => {
     expect(cardAt(between)).toBeNull();
   });
 
-
-  it('shows a plain tooltip on a branch header only when its name or comment was cut', () => {
+  it('shows the whole comment in a plain tooltip only on a header comment line that does not show all of it', () => {
     const lane = layout.lanesByBranch.get('/main/a')!;
     const shape = laneShape(lane);
-    const onHeader = { x: shape.left + 10, y: headerTop(shape.y) + 5 };
+    const top = headerTop(shape.y, 36);
+    const onComment = { x: shape.left + 20, y: top + 26 };
     const whole = drawnTargets();
-    whole.branchHeaders.add(lane, shape.left, headerTop(shape.y), 120, 22);
-    expect(cardAt(onHeader, whole)).toBeNull();
+    whole.branchHeaders.add(lane, shape.left, top, 120, 36);
+    expect(cardAt(onComment, whole)).toBeNull();
 
     const cut = drawnTargets();
-    cut.branchHeaders.add(lane, shape.left, headerTop(shape.y), 120, 22, true);
-    expect(cardAt(onHeader, cut)).toMatchObject({ kind: 'pointer', target: { lane: { branch: { name: '/main/a' } } } });
+    cut.branchHeaders.add(lane, shape.left, top, 120, 36);
+    cut.cutBranchComments.add(lane, shape.left + 8, top + 18, 100, 18);
+    expect(cardAt(onComment, cut)).toEqual({ kind: 'clippedText', key: '/main/a', text: lane.branch.comment.trim() });
   });
 
-  it('never shows a cut header tooltip from its band', () => {
+  it('shows no tooltip on the name line or the band of a header whose comment is cut', () => {
     const lane = layout.lanesByBranch.get('/main/a')!;
     const shape = laneShape(lane);
+    const top = headerTop(shape.y, 36);
     const drawn = drawnTargets();
-    drawn.branchHeaders.add(lane, shape.left, headerTop(shape.y), 120, 22, true);
+    drawn.branchHeaders.add(lane, shape.left, top, 120, 36);
+    drawn.cutBranchComments.add(lane, shape.left + 8, top + 18, 100, 18);
+    expect(cardAt({ x: shape.left + 20, y: top + 8 }, drawn)).toBeNull();
+    expect(cardAt({ x: shape.left + 115, y: top + 26 }, drawn)).toBeNull();
     const a = nodePoint(layout, 2)!;
     const b = nodePoint(layout, 4)!;
     expect(cardAt({ x: (a.x + b.x) / 2, y: a.y }, drawn)).toBeNull();

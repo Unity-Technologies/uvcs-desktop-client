@@ -23,13 +23,16 @@ const PINNED_INSET = 8;
 /** Heights of the search marks behind the name and the comment. */
 const NAME_MARK_HEIGHT = 15;
 const COMMENT_MARK_HEIGHT = 13;
+/** For the pointer, the comment line starts halfway between the two lines and runs to the pill's bottom edge. */
+const COMMENT_LINE_TOP = (HEADER_NAME_MIDDLE + HEADER_COMMENT_MIDDLE) / 2;
 
 /**
  * A pill above each band, tinted in the branch's color, in two lines like the official client's: the branch name
  * with its code review, then the comment, smaller and muted (a branch without a comment gets a one-line pill). It
  * grows to the longer line, up to a few columns and never into the next branch on its row. While the start of a band
  * is scrolled away, its pill stays pinned to the left edge (floating, with a shadow) so the branch stays
- * identifiable. Records where each pill landed for the pointer.
+ * identifiable. Records where each pill landed for the pointer, and where its comment line lies when it doesn't show
+ * the whole comment.
  */
 export function drawBranchHeaders(draw: DrawContext): void {
   const { scene, visible } = draw;
@@ -43,8 +46,8 @@ export function drawBranchHeaders(draw: DrawContext): void {
     const width = Math.max(MIN_WIDTH, Math.min(room, contentWidth(draw, lane) + PADDING * 2));
     const pinnedLeft = visible.left + PINNED_INSET / scene.viewport.zoom;
     const left = Math.max(shape.left, Math.min(pinnedLeft, shape.right - width));
-    const cut = drawCard(draw, lane, left, top, width, height, left > shape.left + 0.5);
-    draw.drawn.branchHeaders.add(lane, left, top, width, height, cut);
+    drawCard(draw, lane, left, top, width, height, left > shape.left + 0.5);
+    draw.drawn.branchHeaders.add(lane, left, top, width, height);
   }
 }
 
@@ -88,7 +91,6 @@ export function drawCompactBranchNames(draw: DrawContext): void {
       (bottom - COMPACT_NAME_HEIGHT - viewport.panY) / viewport.zoom,
       textWidth(ctx, name) / viewport.zoom,
       COMPACT_NAME_HEIGHT / viewport.zoom,
-      name !== lane.branch.name,
     );
   }
   ctx.restore();
@@ -139,8 +141,8 @@ function contentWidth(draw: DrawContext, lane: Lane): number {
   return lead + Math.max(name + (chip ? GAP + chip : 0), comment);
 }
 
-/** Draws a branch's pill; says whether its name or comment had to be cut to fit. */
-function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, width: number, height: number, pinned: boolean): boolean {
+/** Draws a branch's pill, recording its comment line when that doesn't show the whole comment. */
+function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, width: number, height: number, pinned: boolean): void {
   const { ctx, scene } = draw;
   const { palette, search } = scene;
   const name = lane.branch.name;
@@ -202,13 +204,14 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
 
   // Second line: the comment's summary, smaller and muted, cut at the end.
   const comment = summaryOf(lane.branch.comment);
-  let cut = fitted !== name;
   if (comment) {
     const commentMiddle = top + HEADER_COMMENT_MIDDLE;
     ctx.font = palette.fonts.branchComment;
     const text = fitText(ctx, comment, right - textLeft);
     // Only the first line shows: more lines are hidden text too.
-    cut ||= text !== comment || lane.branch.comment.trim() !== comment;
+    if (text !== comment || lane.branch.comment.trim() !== comment) {
+      draw.drawn.cutBranchComments.add(lane, textLeft, top + COMMENT_LINE_TOP, textWidth(ctx, text), height - COMMENT_LINE_TOP);
+    }
     drawSearchMarks(draw, text, textLeft, commentMiddle, COMMENT_MARK_HEIGHT);
     ctx.fillStyle = palette.textTertiary;
     ctx.fillText(text, textLeft, commentMiddle + 0.5);
@@ -217,7 +220,6 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
   ctx.restore();
 
   if (search?.active?.kind === 'branch' && search.active.name === name) drawRectCorona(draw, left, top, width, height, CARD_RADIUS);
-  return cut;
 }
 
 /** The first part of the current branch's pill in solid accent, the home glyph knocked out of it. */

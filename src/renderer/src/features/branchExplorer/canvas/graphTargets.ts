@@ -19,17 +19,22 @@ export type GraphTarget =
   /** The code review chip in a branch's header card. */
   | { kind: 'codeReview'; review: CodeReview };
 
+/** What gets a card by the pointer: everything but branches. */
+export type PointerCardTarget = Exclude<GraphTarget, { kind: 'branch' }>;
+
 /**
  * The hover card for what the pointer is on. A changeset's card completes its comment over its caption, whether the
  * pointer is on the node or on the caption: one card, so moving between them never closes it (a changeset whose
  * caption isn't drawn gets its card by the pointer). A branch gets no card: its two-line header already says it all,
- * and a card there would cover the changesets the pointer is heading to. Only a header whose name or comment was cut
- * gets a plain tooltip by the pointer, from the header itself. Anything else gets its card by the pointer.
+ * and a card there would cover the changesets the pointer is heading to. Only a header's comment line that doesn't
+ * show the whole comment gets a plain tooltip with it, like any clipped label in the app, while the pointer is on
+ * that line. Anything else gets its card by the pointer.
  * The boxes are the last frame's, reused by the next one: read them right away.
  */
 export type HoverCard =
   | { kind: 'caption'; target: Extract<GraphTarget, { kind: 'changeset' }>; caption: DrawnBox<NodeLayout> }
-  | { kind: 'pointer'; target: GraphTarget };
+  | { kind: 'pointer'; target: PointerCardTarget }
+  | { kind: 'clippedText'; key: string; text: string };
 
 export function hoverCardFor(target: GraphTarget | null, point: Point, drawn: DrawnTargets | null): HoverCard | null {
   if (!target) return null;
@@ -38,8 +43,8 @@ export function hoverCardFor(target: GraphTarget | null, point: Point, drawn: Dr
     return caption ? { kind: 'caption', target, caption } : { kind: 'pointer', target };
   }
   if (target.kind === 'branch') {
-    const header = drawn?.branchHeaders.at(point);
-    return header?.item === target.lane && header.cut ? { kind: 'pointer', target } : null;
+    const { branch } = target.lane;
+    return drawn?.cutBranchComments.at(point)?.item === target.lane ? { kind: 'clippedText', key: branch.name, text: branch.comment.trim() } : null;
   }
   return { kind: 'pointer', target };
 }
