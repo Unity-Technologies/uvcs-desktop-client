@@ -16,6 +16,8 @@ export interface IncomingSummary {
   loadedChangeset: number;
   headChangeset: number;
   changesetCount: number;
+  /** Who checked in the incoming changesets, newest first, each once. */
+  authors: string[];
 }
 
 /** A file changed both locally and by an incoming changeset. Updating needs to merge it. */

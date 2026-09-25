@@ -14,27 +14,38 @@ import { readWorkspaceStatus } from '../cm/workspaceStatus';
 const LOCAL_CONTENT_CHANGES = new Set(['changed', 'checkedOut', 'replaced']);
 
 /**
- * How many changesets the branch has after the loaded one. Polled, so it is a single `cm find` returning only
- * changeset numbers; the renderer tells where the workspace stands (its workspace info follows `.plastic`).
+ * How many changesets the branch has after the loaded one, and by whom. Polled, so it is a single `cm find` returning
+ * only changeset numbers and owners; the renderer tells where the workspace stands (its workspace info follows `.plastic`).
  */
 export async function readIncomingSummary(cm: CmClient, workspacePath: string, { branch, loadedChangeset }: LoadedBranch): Promise<IncomingSummary> {
-  if (!branch) return { branch: null, loadedChangeset, headChangeset: loadedChangeset, changesetCount: 0 };
-  const output = await cm.query(incomingChangesetIdsArgs(branch, loadedChangeset), { cwd: workspacePath });
-  return summarizeIncoming(branch, loadedChangeset, parseRecords(output).map(([id]) => Number(id)));
+  if (!branch) return { branch: null, loadedChangeset, headChangeset: loadedChangeset, changesetCount: 0, authors: [] };
+  const output = await cm.query(incomingChangesetsArgs(branch, loadedChangeset), { cwd: workspacePath });
+  return summarizeIncoming(branch, loadedChangeset, parseRecords(output).map(([id, owner]) => ({ id: Number(id), owner: owner ?? '' })));
 }
 
-export function incomingChangesetIdsArgs(branch: string, loadedChangeset: number): string[] {
+export function incomingChangesetsArgs(branch: string, loadedChangeset: number): string[] {
   return [
     'find',
     'changeset',
     `where changesetid > ${loadedChangeset} and branch = '${escapeQueryValue(branch)}'`,
-    `--format=${recordFormat(['changesetid'])}`,
+    `--format=${recordFormat(['changesetid', 'owner'])}`,
     '--nototal',
   ];
 }
 
-export function summarizeIncoming(branch: string, loadedChangeset: number, incomingIds: number[]): IncomingSummary {
-  return { branch, loadedChangeset, headChangeset: incomingIds.reduce((head, id) => Math.max(head, id), loadedChangeset), changesetCount: incomingIds.length };
+export function summarizeIncoming(branch: string, loadedChangeset: number, incoming: { id: number; owner: string }[]): IncomingSummary {
+  const newestFirst = [...incoming].sort((a, b) => b.id - a.id);
+  return {
+    branch,
+    loadedChangeset,
+    headChangeset: newestFirst[0]?.id ?? loadedChangeset,
+    changesetCount: incoming.length,
+    authors: distinctAuthors(newestFirst.map((changeset) => changeset.owner)),
+  };
+}
+
+function distinctAuthors(owners: string[]): string[] {
+  return [...new Set(owners.filter(Boolean))];
 }
 
 export async function readIncomingChanges(cm: CmClient, workspacePath: string): Promise<IncomingChanges> {
@@ -82,7 +93,7 @@ async function readIncomingChangesets(cm: CmClient, workspacePath: string): Prom
   const status = await readWorkspaceStatus(cm, workspacePath);
   const loadedChangeset = status.loadedChangeset;
   if (status.selector.kind !== 'branch') {
-    return { summary: { branch: null, loadedChangeset, headChangeset: loadedChangeset, changesetCount: 0 }, changesets: [] };
+    return { summary: { branch: null, loadedChangeset, headChangeset: loadedChangeset, changesetCount: 0, authors: [] }, changesets: [] };
   }
 
   const branch = status.selector.name;
@@ -90,7 +101,13 @@ async function readIncomingChangesets(cm: CmClient, workspacePath: string): Prom
   const changesets = findRecords(xml, 'CHANGESET').map(toChangeset);
 
   return {
-    summary: { branch, loadedChangeset, headChangeset: changesets[0]?.id ?? loadedChangeset, changesetCount: changesets.length },
+    summary: {
+      branch,
+      loadedChangeset,
+      headChangeset: changesets[0]?.id ?? loadedChangeset,
+      changesetCount: changesets.length,
+      authors: distinctAuthors(changesets.map((changeset) => changeset.owner)),
+    },
     changesets,
   };
 }

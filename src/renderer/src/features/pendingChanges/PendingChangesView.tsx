@@ -25,8 +25,10 @@ import { HiddenCheckedNotice, NoFilterMatches } from './FilterNotices';
 import { LockedByOthersNotice } from './locks/LockedByOthersNotice';
 import { RefreshButton } from './RefreshButton';
 import { usePendingLocks } from './locks/usePendingLocks';
+import { useIncomingSummary } from '../incoming/useIncomingSummary';
 import { ReviewModeButton } from '../review/ReviewModeButton';
 import { usePendingReview } from './review/usePendingReview';
+import { behindBranch, behindDescription } from './checkinBehind';
 import { mergeSourceChangeset, uploadSize } from './checkinButton';
 import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinChanges, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
@@ -49,6 +51,7 @@ export function PendingChangesView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
   const { data: snapshot, isLoading, isFetching, isPlaceholderData, dataUpdatedAt, error } = usePendingChanges();
+  const { data: incomingSummary } = useIncomingSummary();
   const settings = useSettings();
   const { layout, setLayout, grouping, setGrouping } = usePendingChangesViewStore();
   const draft = useCheckinDraft(workspacePath);
@@ -72,11 +75,12 @@ export function PendingChangesView() {
   const included = allChanges.filter(isIncluded);
   const shown = new Set(changes);
   const hiddenIncludedCount = included.filter((change) => !shown.has(change)).length;
+  const branchName = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
   const rejectedCheckin = useCheckinAfterUpdateStore((state) => state.rejected[workspacePath]);
   const forgetRejectedCheckin = useCheckinAfterUpdateStore((state) => state.forget);
   const checkinAfterUpdate = checkinAfterUpdateMessage(
     rejectedCheckin,
-    { branch: workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined, loadedChangeset: workspace?.loadedChangeset },
+    { branch: branchName, loadedChangeset: workspace?.loadedChangeset },
     included.length,
   );
   const selectedCount = changes.filter((change) => selection.selected.has(changeKey(change))).length;
@@ -86,6 +90,8 @@ export function PendingChangesView() {
   const mergeChanges = allChanges.filter((change) => change.mergeInfo);
   const { data: mergeSource } = useChangeset(mergeSourceChangeset(mergeChanges));
   const firstChangeKey = rows.find((row) => row.type === 'change')?.key;
+  // Checking in completes a pending merge as it is; updating first is for plain check-ins.
+  const behind = mergeChanges.length > 0 ? null : behindBranch(incomingSummary, branchName);
 
   // Keep something selected, so the diff pane is useful from the start and after the selected file goes away.
   useEffect(() => {
@@ -120,7 +126,13 @@ export function PendingChangesView() {
 
   const checkin = async (): Promise<boolean> => {
     const done = await runBusy(() =>
-      checkinChanges({ workspacePath, changes: included, comment: checkinComment(draft), warnOnEmptyComment: settings.warnOnEmptyComment }),
+      checkinChanges({
+        workspacePath,
+        changes: included,
+        comment: checkinComment(draft),
+        warnOnEmptyComment: settings.warnOnEmptyComment,
+        updateFirst: behind !== null,
+      }),
     );
     if (done) {
       reset(workspacePath);
@@ -248,6 +260,8 @@ export function PendingChangesView() {
               uploadBytes={uploadSize(included)}
               branchName={workspace?.selector.name ?? ''}
               merging={mergeChanges.length > 0}
+              behindCount={behind?.count ?? 0}
+              behindDescription={behind && behindDescription(behind)}
               recentComments={settings.recentComments}
               busy={busy}
               onCheckin={checkin}

@@ -8,6 +8,7 @@ const summary = (loadedChangeset: number, headChangeset: number): IncomingSummar
   loadedChangeset,
   headChangeset,
   changesetCount: headChangeset - loadedChangeset,
+  authors: [],
 });
 
 describe('loadedChangesetChanged', () => {

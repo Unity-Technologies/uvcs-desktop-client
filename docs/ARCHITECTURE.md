@@ -75,6 +75,8 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   files. `checkinChanges` recognizes it (`checkinRejection`) and asks (`CheckinRejectedDialog`): when what came in touches
   none of the files and needs no merge, it updates (the guarded update) and checks in again with the same files and comment;
   otherwise it leads to Incoming, and Changes offers to check in once the workspace updated past the rejection.
+- When the incoming check already knows the branch moved on (and names who checked in), the button reads "Update & check
+  in" and takes the same path up front (`updateFirst`): no overlap updates and checks in without asking; overlap asks.
 - An update stopped by colliding local changes (`--dontmerge`) shows a toast leading to Incoming (`explainUpdateConflicts`).
 - Local changes to files the branch deleted or moved block the update. `shelveBlockedAndUpdate` shelves just those files
   as a switch shelve record (`reason: 'update'`), undoes them and updates; the "Welcome back" banner offers them back.
@@ -133,7 +135,7 @@ Repositories like `codice@codice@cloud` hold ~280k changesets, ~20k branches, th
 and many people use the same server. Every `cm` command other than local reads (`status`, `getworkspacefrompath`,
 `workspace list`, `profile list`, `version`...) is server work, so each one has to earn its place:
 
-- **Idle** (focused, nothing touched): only the incoming check, one `cm find changeset ... --format={changesetid}` a
+- **Idle** (focused, nothing touched): only the incoming check, one `cm find changeset ... --format={changesetid}{owner}` a
   minute (every five behind other apps, none while hidden). It takes the branch and loaded changeset from the workspace
   info, which follows `.plastic`, instead of asking `cm status`. Nothing else polls: left changes, locks and lists wait
   for an event, a focus or an operation.

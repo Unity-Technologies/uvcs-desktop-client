@@ -20,6 +20,8 @@ interface CheckinButtonState {
   uploadBytes: number;
   /** A merge is pending: checking in completes it. */
   merging: boolean;
+  /** Changesets on the branch the workspace doesn't have yet: the button updates first. */
+  behindCount: number;
 }
 
 /** One wording of the button: the action, then "to /main" and the upload size, dimmed. */
@@ -38,9 +40,10 @@ interface CheckinButtonLabel {
 
 /**
  * What the check-in button says, e.g. "Check in 4 changes" "to /main/task" "1.1 MB"; as it narrows, without the size,
- * with the branch's leaf only ("to task"), without the branch and finally "Check in 4".
+ * with the branch's leaf only ("to task"), without the branch and finally "Check in 4". Behind the branch head it
+ * updates first ("Update & check in 4 changes").
  */
-export function checkinButtonLabel({ mode, includedCount, branchName, uploadBytes, merging }: CheckinButtonState): CheckinButtonLabel {
+export function checkinButtonLabel({ mode, includedCount, branchName, uploadBytes, merging, behindCount }: CheckinButtonState): CheckinButtonLabel {
   const size = includedCount > 0 && uploadBytes > 0 ? formatSize(uploadBytes) : null;
   if (mode === 'shelve') {
     if (includedCount === 0) return { forms: [{ action: 'Nothing to shelve', target: null, size: null }], tip: 'Shelve' };
@@ -49,6 +52,10 @@ export function checkinButtonLabel({ mode, includedCount, branchName, uploadByte
   if (includedCount === 0) return { forms: [{ action: 'Nothing to check in', target: null, size: null }], tip: 'Check in' };
   const tip = branchName ? `Check in to ${branchName}` : 'Check in';
   if (merging) return { forms: shorterForms('Check in merge', null, branchName, size), tip };
+  if (behindCount > 0) {
+    const behindTip = branchName ? `Update, then check in to ${branchName}` : 'Update, then check in';
+    return { forms: shorterForms(`Update & check in ${pluralize(includedCount, 'change')}`, `Update & check in ${includedCount}`, branchName, size), tip: behindTip };
+  }
   return { forms: shorterForms(`Check in ${pluralize(includedCount, 'change')}`, `Check in ${includedCount}`, branchName, size), tip };
 }
 
