@@ -14,7 +14,7 @@ interface KeepChoicesProps {
 
 /**
  * How to settle a whole file with conflicts at once, next to "Resolve in <tool>": keep a version or both, in one
- * compact "Keep  Yours | Incoming | Both" group with the current choice pressed; "Changes" then shows what it produces.
+ * compact "Keep [Yours | Incoming | Both]" group (the word outside, the choices in their track) with the current choice pressed; "Changes" then shows what it produces.
  */
 export function KeepChoices({ labels, chosen, onChoose, onStartOver }: KeepChoicesProps) {
   const { source, destination } = labels.roles;
@@ -26,10 +26,10 @@ export function KeepChoices({ labels, chosen, onChoose, onStartOver }: KeepChoic
 
   return (
     <>
+      <span className={styles.keep} aria-hidden data-keep-label>
+        Keep
+      </span>
       <div className={styles.group} role="group" aria-label="Keep for the whole file">
-        <span className={styles.keep} aria-hidden data-keep-label>
-          Keep
-        </span>
         {choices.map(({ choice, label, tip }) => (
           <button
             key={choice}

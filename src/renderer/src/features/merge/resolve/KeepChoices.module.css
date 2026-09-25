@@ -8,8 +8,10 @@
   background: var(--bg-active);
 }
 
+/* A plain label before the track, so it never reads as one of the choices. */
 .keep {
-  padding: 0 6px 0 var(--space-1);
+  flex: none;
+  margin-right: calc(-1 * var(--space-1));
   color: var(--text-tertiary);
   font-size: var(--text-sm);
 }
