@@ -7,6 +7,7 @@ import { sendEvent } from './ipc/sendEvent';
 import { OperationTracker } from './operations/OperationTracker';
 import { createServices } from './services/createServices';
 import { SettingsStore } from './settings/SettingsStore';
+import { changesWorkspace } from './watch/changesWorkspace';
 import { WorkspaceWatcher } from './watch/WorkspaceWatcher';
 import { installAppMenu } from './window/appMenu';
 import { createMainWindow } from './window/createMainWindow';
@@ -17,12 +18,20 @@ function start(): void {
   cm.warmUp();
   cm.onCommandLogged((entry) => sendEvent('commandLogged', entry));
 
+  // The renderer refreshes its views after its own operations and writes; the watcher skips what they cause.
+  const watcher = new WorkspaceWatcher((workspacePath, change) => sendEvent('workspaceChanged', { workspacePath, ...change }));
+  cm.onCommandStarted(({ args, cwd, finished }) => changesWorkspace(args) && watcher.ignoreOwnWrite(finished, cwd));
+  const operations = new OperationTracker(
+    (operationId, line) => sendEvent('operationProgress', { operationId, line }),
+    (finished) => watcher.ignoreOwnWrite(finished),
+  );
+
   registerApi(
     createServices({
       cm,
-      operations: new OperationTracker((operationId, line) => sendEvent('operationProgress', { operationId, line })),
+      operations,
       settings: new SettingsStore(join(app.getPath('userData'), 'settings.json')),
-      watcher: new WorkspaceWatcher((workspacePath, pathsChanged) => sendEvent('workspaceChanged', { workspacePath, pathsChanged })),
+      watcher,
     }),
   );
 
