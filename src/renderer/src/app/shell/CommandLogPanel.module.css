@@ -59,6 +59,11 @@
   overflow-wrap: anywhere;
 }
 
+.cwd {
+  margin-left: var(--space-2);
+  color: var(--text-tertiary);
+}
+
 .entry[data-failed='true'] .command {
   color: var(--status-deleted);
 }

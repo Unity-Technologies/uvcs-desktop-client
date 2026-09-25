@@ -13,8 +13,11 @@ export interface WorkspacesApi {
    * Which repository each workspace works on (`name@server`), or null when it can't be told quickly
    * (missing folder, unreachable server). Costs one `cm` call per workspace, so only the first 10 paths
    * are looked up: pass the few workspaces on screen (e.g. the recent ones), never the whole list.
+   * `system.cancelOperation(lookupId)` stops the lookups, e.g. when the list leaves the screen.
    */
-  repositoriesOf(workspacePaths: string[]): Promise<Record<string, string | null>>;
+  repositoriesOf(workspacePaths: string[], lookupId: string): Promise<Record<string, string | null>>;
+  /** The paths whose folder no longer exists on disk. */
+  missingFolders(workspacePaths: string[]): Promise<string[]>;
   /** Returns the workspace root containing the given directory, or null. */
   findRoot(directory: string): Promise<string | null>;
   create(request: CreateWorkspaceRequest): Promise<WorkspaceSummary>;

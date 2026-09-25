@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import type { CreateWorkspaceRequest, WorkspacesApi } from '@shared/api/workspaces';
 import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
@@ -19,7 +20,7 @@ export function createWorkspacesService({ cm, operations, watcher }: ServiceCont
   async function info(workspacePath: string): Promise<WorkspaceInfo> {
     const [status, nameOutput] = await Promise.all([
       readWorkspaceStatus(cm, workspacePath),
-      cm.query(['getworkspacefrompath', workspacePath, '--format={wkname}']),
+      cm.query(['getworkspacefrompath', workspacePath, '--format={wkname}'], { cwd: workspacePath }),
     ]);
 
     return {
@@ -82,5 +83,13 @@ export function createWorkspacesService({ cm, operations, watcher }: ServiceCont
     });
   }
 
-  return { list, info, repositoriesOf: (paths) => resolveWorkspaceRepositories(cm, paths), findRoot, create, rename, remove, update, watch, switchTo };
+  function repositoriesOf(workspacePaths: string[], lookupId: string): Promise<Record<string, string | null>> {
+    return operations.run(lookupId, ({ signal }) => resolveWorkspaceRepositories(cm, workspacePaths, signal));
+  }
+
+  async function missingFolders(workspacePaths: string[]): Promise<string[]> {
+    return workspacePaths.filter((path) => !existsSync(path));
+  }
+
+  return { list, info, repositoriesOf, missingFolders, findRoot, create, rename, remove, update, watch, switchTo };
 }

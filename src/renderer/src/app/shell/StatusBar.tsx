@@ -2,12 +2,15 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { UserLabel } from '../../ui/Avatar';
+import { useWorkspacePath } from '../workspace/useWorkspace';
+import { ranInWorkspace } from './commandLogScope';
 import { useCommandLogStore } from './commandLogStore';
 import styles from './StatusBar.module.css';
 
 export function StatusBar() {
   const { data: user } = useQuery({ queryKey: queryKeys.user, queryFn: () => api.system.currentUser(), staleTime: Infinity });
-  const lastCommand = useCommandLogStore((state) => state.entries.at(-1));
+  const workspacePath = useWorkspacePath();
+  const lastCommand = useCommandLogStore((state) => state.entries.findLast((entry) => ranInWorkspace(entry, workspacePath)));
   const toggleCommandLog = useCommandLogStore((state) => state.toggle);
 
   return (
