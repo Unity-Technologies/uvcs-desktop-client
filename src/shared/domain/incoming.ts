@@ -45,3 +45,11 @@ export interface UpdateResult {
   /** Where the local versions of the conflicting files were saved before updating. */
   backupDirectory: string | null;
 }
+
+/** The locally changed files the branch deleted or moved, shelved so the workspace could update. */
+export interface ShelvedForUpdate {
+  shelveId: number;
+  count: number;
+  /** False when other files still need merging: the workspace waits for them in Incoming. */
+  updated: boolean;
+}
