@@ -2,7 +2,6 @@ import type { ChangesetsApi } from '@shared/api/changesets';
 import { findArgs } from '../cm/findQuery';
 import { findRecords, toChangeset } from '../cm/findObjects';
 import { child, integer, parseXml } from '../cm/parseXml';
-import { withTempFile } from '../files/tempFile';
 import type { ServiceContext } from './ServiceContext';
 
 export function createChangesetsService({ cm, operations }: ServiceContext): ChangesetsApi {
@@ -37,11 +36,6 @@ export function createChangesetsService({ cm, operations }: ServiceContext): Cha
       await cm.query(['changeset', 'delete', `cs:${changesetId}`], { cwd: workspacePath });
     },
 
-    async applyLabel(workspacePath, changesetId, labelName, comment) {
-      await withTempFile(comment, (commentsFile) =>
-        cm.query(['label', 'create', `lb:${labelName}`, `cs:${changesetId}`, `-commentsfile=${commentsFile}`], { cwd: workspacePath }),
-      );
-    },
 
     revertWorkspaceTo(workspacePath, changesetId, operationId) {
       return operations.run(operationId, async ({ signal, reportProgress }) => {

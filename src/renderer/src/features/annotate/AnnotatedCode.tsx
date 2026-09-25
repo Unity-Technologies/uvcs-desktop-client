@@ -4,7 +4,8 @@ import { fileNameOf } from '../../lib/text';
 import { AnnotationGutter } from './AnnotationGutter';
 import type { AnnotateColumns } from './annotateOptionsStore';
 import type { AnnotationRow } from './annotationRows';
-import { useDocumentTheme } from './useDocumentTheme';
+import { useResolvedTheme } from '../../app/settings/useResolvedTheme';
+import { PIERRE_SURFACE_CSS, pierreThemeName } from '../diff/viewer/pierreOptions';
 import styles from './AnnotatedCode.module.css';
 
 /**
@@ -15,7 +16,6 @@ const ANNOTATION_LINE_HEIGHT = 20;
 const CODE_PADDING_TOP = 8;
 
 // Seed Pierre's surface from the app's own background so the editor blends into the page.
-const PIERRE_SURFACE_CSS = ':host{--diffs-bg:var(--bg-surface);background-color:var(--bg-surface)}';
 
 interface AnnotatedCodeProps {
   code: string;
@@ -30,11 +30,11 @@ interface AnnotatedCodeProps {
  * and share a pinned line height, so they scroll together without any syncing code.
  */
 export function AnnotatedCode({ code, path, rows, columns, onOpenChangeset }: AnnotatedCodeProps) {
-  const theme = useDocumentTheme();
+  const theme = useResolvedTheme();
   const file = useMemo(() => ({ name: fileNameOf(path), contents: code }), [path, code]);
   const options = useMemo(
     () => ({
-      theme: theme === 'dark' ? ('pierre-dark' as const) : ('pierre-light' as const),
+      theme: pierreThemeName(theme),
       themeType: theme,
       overflow: 'scroll' as const,
       disableFileHeader: true,

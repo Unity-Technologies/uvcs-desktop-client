@@ -3,8 +3,10 @@ import {
   Copy,
   FileDiff,
   FolderTree,
+  GitBranchPlus,
   GitMerge,
   GitPullRequestArrow,
+  MessageSquareCode,
   MessageSquareText,
   Minus,
   MoveRight,
@@ -15,11 +17,13 @@ import {
 import type { Changeset } from '@shared/domain/changeset';
 import { navigation } from '../../app/navigation/navigationStore';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
-import { copyText } from '../../lib/clipboard';
+import { copyToClipboard } from '../../lib/copyToClipboard';
+import { openCreateBranchDialog } from '../branches/CreateBranchDialog';
+import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
+import { openCreateLabelDialog } from '../labels/CreateLabelDialog';
 import {
   deleteChangeset,
   editChangesetComment,
-  labelChangeset,
   mergeChangesetTo,
   moveChangesetToBranch,
   openChangesetDiff,
@@ -57,7 +61,24 @@ function singleChangesetMenu({ workspacePath, loadedChangeset, loadedBranch }: C
     },
     SEPARATOR,
     { id: 'switch', label: 'Switch workspace to this changeset', icon: ArrowRightLeft, run: () => void switchToChangeset(workspacePath, changeset) },
-    { id: 'label', label: 'Label this changeset…', icon: Tag, run: () => void labelChangeset(workspacePath, changeset) },
+    {
+      id: 'createBranch',
+      label: 'Create branch from here…',
+      icon: GitBranchPlus,
+      run: () =>
+        openCreateBranchDialog(workspacePath, {
+          parentBranch: changeset.branch,
+          startingPoint: source,
+          startingPointLabel: `changeset ${changeset.id}`,
+        }),
+    },
+    { id: 'label', label: 'Label this changeset…', icon: Tag, run: () => openCreateLabelDialog(workspacePath, changeset.id) },
+    {
+      id: 'codeReview',
+      label: 'Create code review…',
+      icon: MessageSquareCode,
+      run: () => openCreateCodeReviewDialog(workspacePath, { kind: 'changeset', value: String(changeset.id) }),
+    },
     SEPARATOR,
     { id: 'merge', label: 'Merge from this changeset', icon: GitMerge, run: () => openMerge({ kind: 'merge', sourceSpec: source }) },
     { id: 'cherryPick', label: 'Cherry pick this changeset', icon: GitPullRequestArrow, run: () => openMerge({ kind: 'cherryPick', sourceSpec: source }) },
@@ -85,9 +106,9 @@ function singleChangesetMenu({ workspacePath, loadedChangeset, loadedBranch }: C
       label: 'Copy',
       icon: Copy,
       entries: [
-        { id: 'copy.id', label: `Copy “cs:${changeset.id}”`, run: () => copyText(source, 'Changeset spec copied') },
-        { id: 'copy.guid', label: 'Copy GUID', run: () => copyText(changeset.guid, 'GUID copied') },
-        { id: 'copy.comment', label: 'Copy comment', run: () => copyText(changeset.comment, 'Comment copied') },
+        { id: 'copy.id', label: `Copy “cs:${changeset.id}”`, run: () => copyToClipboard(source, 'Changeset spec') },
+        { id: 'copy.guid', label: 'Copy GUID', run: () => copyToClipboard(changeset.guid, 'GUID') },
+        { id: 'copy.comment', label: 'Copy comment', run: () => copyToClipboard(changeset.comment, 'Comment') },
       ],
     },
   ]);

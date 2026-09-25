@@ -2,11 +2,12 @@ import type { Changeset } from '@shared/domain/changeset';
 import type { MergeRequest } from '@shared/domain/merge';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
-import { runAction, runOperation } from '../../app/operations/runOperation';
+import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
+import { pickBranch } from '../branches/BranchPickerDialog';
 import { askForChangesetComment } from './EditCommentDialog';
 
 export function openChangesetDiff(changeset: Pick<Changeset, 'id'>, focusPath?: string): void {
@@ -27,28 +28,15 @@ export function openMerge(request: MergeRequest): void {
 }
 
 export async function mergeChangesetTo(changeset: Changeset): Promise<void> {
-  const destinationBranch = await prompt({
+  const destinationBranch = await pickBranch({
     title: `Merge changeset ${changeset.id} to…`,
-    label: 'Destination branch',
     description: 'The merge happens on the server; your workspace is not touched.',
-    initialValue: '/main',
-    confirmLabel: 'Continue',
   });
   if (destinationBranch) openMerge({ kind: 'merge', sourceSpec: `cs:${changeset.id}`, destinationBranch });
 }
 
 export function switchToChangeset(workspacePath: string, changeset: Changeset): Promise<void | undefined> {
   return switchWorkspace(workspacePath, `cs:${changeset.id}`, `changeset ${changeset.id}`);
-}
-
-export async function labelChangeset(workspacePath: string, changeset: Changeset): Promise<void> {
-  const labelName = await prompt({ title: `Label changeset ${changeset.id}`, label: 'Label name', confirmLabel: 'Create label' });
-  if (!labelName) return;
-
-  const labeled = await runAction(workspacePath, "Couldn't create the label", () =>
-    api.changesets.applyLabel(workspacePath, changeset.id, labelName, ''),
-  );
-  if (labeled !== undefined) toast.success(`Labeled changeset ${changeset.id} as ${labelName}`);
 }
 
 export async function editChangesetComment(workspacePath: string, changeset: Changeset): Promise<void> {
@@ -67,10 +55,10 @@ export async function moveChangesetToBranch(workspacePath: string, changeset: Ch
   });
   if (!branch) return;
 
-  const moved = await runAction(workspacePath, "Couldn't move the changeset", () =>
+  const moved = await runVoidAction(workspacePath, "Couldn't move the changeset", () =>
     api.changesets.moveToBranch(workspacePath, changeset.id, branch),
   );
-  if (moved !== undefined) toast.success(`Moved changeset ${changeset.id} to ${branch}`);
+  if (moved) toast.success(`Moved changeset ${changeset.id} to ${branch}`);
 }
 
 export async function deleteChangeset(workspacePath: string, changeset: Changeset): Promise<void> {
@@ -82,8 +70,8 @@ export async function deleteChangeset(workspacePath: string, changeset: Changese
   });
   if (!confirmed) return;
 
-  const deleted = await runAction(workspacePath, "Couldn't delete the changeset", () => api.changesets.remove(workspacePath, changeset.id));
-  if (deleted !== undefined) toast.success(`Deleted changeset ${changeset.id}`);
+  const deleted = await runVoidAction(workspacePath, "Couldn't delete the changeset", () => api.changesets.remove(workspacePath, changeset.id));
+  if (deleted) toast.success(`Deleted changeset ${changeset.id}`);
 }
 
 export async function revertWorkspaceToChangeset(workspacePath: string, changeset: Changeset): Promise<void> {

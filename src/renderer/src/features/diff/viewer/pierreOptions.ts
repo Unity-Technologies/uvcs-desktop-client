@@ -5,7 +5,7 @@ import type { ResolvedTheme } from '../../../app/settings/useResolvedTheme';
  * Pierre derives every diff tint from `--diffs-bg`; seeding it with our surface color makes
  * diffs blend with the app in both themes while keeping Pierre's syntax and add/remove colors.
  */
-const SURFACE_CSS = ':host{--diffs-bg:var(--bg-surface);background-color:var(--bg-surface)}';
+export const PIERRE_SURFACE_CSS = ':host{--diffs-bg:var(--bg-surface);background-color:var(--bg-surface)}';
 
 interface DiffAppearance {
   theme: ResolvedTheme;
@@ -14,9 +14,13 @@ interface DiffAppearance {
   wrapLines: boolean;
 }
 
+export function pierreThemeName(theme: ResolvedTheme): 'pierre-light' | 'pierre-dark' {
+  return theme === 'dark' ? 'pierre-dark' : 'pierre-light';
+}
+
 export function pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }: DiffAppearance): FileDiffOptions<undefined, undefined> {
   return {
-    theme: theme === 'dark' ? 'pierre-dark' : 'pierre-light',
+    theme: pierreThemeName(theme),
     themeType: theme,
     diffStyle: layout,
     overflow: wrapLines ? 'wrap' : 'scroll',
@@ -26,6 +30,6 @@ export function pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines 
     expandUnchanged: !collapseUnchanged,
     disableFileHeader: true,
     stickyHeader: false,
-    unsafeCSS: SURFACE_CSS,
+    unsafeCSS: PIERRE_SURFACE_CSS,
   };
 }

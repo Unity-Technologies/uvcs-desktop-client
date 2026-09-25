@@ -2,7 +2,7 @@ import { AppWindow, Copy, Download, FileDiff, RotateCcw, ScanText } from 'lucide
 import type { ItemRevision } from '@shared/domain/history';
 import { navigation } from '../../app/navigation/navigationStore';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
-import { copyText } from '../../lib/clipboard';
+import { copyToClipboard } from '../../lib/copyToClipboard';
 import { fileNameOf } from '../../lib/text';
 import { openChangesetDiff } from '../changesets/changesetOperations';
 import { openRevision, revertItemTo, saveRevisionAs } from './revisionOperations';
@@ -45,6 +45,6 @@ export function historyMenu({ workspacePath, path }: HistoryMenuContext, selecte
       run: () => void revertItemTo(workspacePath, path, revision.changesetId),
     },
     SEPARATOR,
-    revision && { id: 'copySpec', label: 'Copy revision spec', icon: Copy, run: () => copyText(revision.spec, 'Revision spec copied') },
+    revision && { id: 'copySpec', label: 'Copy revision spec', icon: Copy, run: () => copyToClipboard(revision.spec, 'Revision spec') },
   ]);
 }

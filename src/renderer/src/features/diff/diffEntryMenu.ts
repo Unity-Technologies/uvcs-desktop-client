@@ -2,7 +2,7 @@ import { AppWindow, Copy, Download, History } from 'lucide-react';
 import type { DiffEntry } from '@shared/domain/diff';
 import { navigation } from '../../app/navigation/navigationStore';
 import { tidyMenu, type MenuEntry } from '../../lib/actions';
-import { copyText } from '../../lib/clipboard';
+import { copyToClipboard } from '../../lib/copyToClipboard';
 import { fileNameOf } from '../../lib/text';
 import { openRevision, saveRevisionAs } from '../history/revisionOperations';
 
@@ -35,7 +35,7 @@ export function diffEntryMenu(workspacePath: string, entries: DiffEntry[]): Menu
       id: 'copy',
       label: entries.length === 1 ? 'Copy path' : `Copy ${entries.length} paths`,
       icon: Copy,
-      run: () => copyText(entries.map((entry) => entry.path).join('\n'), entries.length === 1 ? 'Path copied' : 'Paths copied'),
+      run: () => copyToClipboard(entries.map((entry) => entry.path).join('\n'), entries.length === 1 ? 'Path' : 'Paths'),
     },
   ]);
 }

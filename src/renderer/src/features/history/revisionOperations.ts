@@ -1,5 +1,5 @@
 import { api } from '../../api/client';
-import { runAction } from '../../app/operations/runOperation';
+import { runAction, runVoidAction } from '../../app/operations/runOperation';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 
@@ -29,6 +29,6 @@ export async function revertItemTo(workspacePath: string, path: string, changese
   });
   if (!confirmed) return;
 
-  const reverted = await runAction(workspacePath, "Couldn't revert the file", () => api.history.revertTo(workspacePath, path, changesetId));
-  if (reverted !== undefined) toast.success(`Reverted ${path}`, `Content from changeset ${changesetId} is now a pending change.`);
+  const reverted = await runVoidAction(workspacePath, "Couldn't revert the file", () => api.history.revertTo(workspacePath, path, changesetId));
+  if (reverted) toast.success(`Reverted ${path}`, `Content from changeset ${changesetId} is now a pending change.`);
 }
