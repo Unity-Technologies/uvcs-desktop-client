@@ -1,14 +1,15 @@
 import type { UvcsApi } from '@shared/api';
-import type { RemoteError } from '@shared/ipc';
+import type { FailedCommand, RemoteError } from '@shared/ipc';
 
 /** An error raised by the main process, typically a failed `cm` command. */
 export class ApiError extends Error {
-  readonly commandLine?: string;
+  /** The failed `cm` command behind this error, if any. */
+  readonly command?: FailedCommand;
 
   constructor(error: RemoteError) {
     super(error.message);
     this.name = 'ApiError';
-    this.commandLine = error.commandLine;
+    this.command = error.command;
   }
 }
 

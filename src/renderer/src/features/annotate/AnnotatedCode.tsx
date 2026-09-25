@@ -1,7 +1,7 @@
 import { File } from '@pierre/diffs/react';
 import { useMemo, type CSSProperties } from 'react';
 import { fileNameOf } from '../../lib/text';
-import { AnnotationGutter } from './AnnotationGutter';
+import { AnnotationGutter, type AnnotateBefore } from './AnnotationGutter';
 import type { AnnotateColumns } from './annotateOptionsStore';
 import type { AnnotationRow } from './annotationRows';
 import { useResolvedTheme } from '../../app/settings/useResolvedTheme';
@@ -23,13 +23,14 @@ interface AnnotatedCodeProps {
   rows: AnnotationRow[];
   columns: AnnotateColumns;
   onOpenChangeset: (changesetId: number) => void;
+  annotateBefore?: AnnotateBefore;
 }
 
 /**
  * Highlighted code (Pierre) with the annotation gutter beside it. Both live in one scroll container
  * and share a pinned line height, so they scroll together without any syncing code.
  */
-export function AnnotatedCode({ code, path, rows, columns, onOpenChangeset }: AnnotatedCodeProps) {
+export function AnnotatedCode({ code, path, rows, columns, onOpenChangeset, annotateBefore }: AnnotatedCodeProps) {
   const theme = useResolvedTheme();
   const file = useMemo(() => ({ name: fileNameOf(path), contents: code }), [path, code]);
   const options = useMemo(
@@ -49,7 +50,7 @@ export function AnnotatedCode({ code, path, rows, columns, onOpenChangeset }: An
       style={{ '--diffs-line-height': `${ANNOTATION_LINE_HEIGHT}px`, '--diffs-gap-block': `${CODE_PADDING_TOP}px` } as CSSProperties}
     >
       <div className={styles.columns}>
-        <AnnotationGutter rows={rows} columns={columns} lineHeight={ANNOTATION_LINE_HEIGHT} onOpenChangeset={onOpenChangeset} />
+        <AnnotationGutter rows={rows} columns={columns} lineHeight={ANNOTATION_LINE_HEIGHT} onOpenChangeset={onOpenChangeset} annotateBefore={annotateBefore} />
         <File key={theme} className={styles.code} file={file} options={options} disableWorkerPool />
       </div>
     </div>

@@ -15,12 +15,23 @@ export interface OperationProgress {
   line: string;
 }
 
+/** What changed on disk in a workspace since the last event. */
+export interface WorkspaceChange {
+  /** Workspace files changed: the pending changes may differ. */
+  content: boolean;
+  /** Items were added, deleted or moved, not only edited. */
+  pathsChanged: boolean;
+  /** `cm` rewrote the workspace state in `.plastic` (checkin, update, switch, undo...), whoever ran it. */
+  metadata: boolean;
+}
+
 /** Events pushed from the main process to the renderer. */
 export interface UvcsEvents {
   commandLogged: CommandLogEntry;
-  /** `pathsChanged`: items were added, deleted or moved on disk, not only edited. */
-  workspaceChanged: { workspacePath: string; pathsChanged: boolean };
+  workspaceChanged: WorkspaceChange & { workspacePath: string };
   operationProgress: OperationProgress;
+  /** A workspace was picked from the OS recent documents; `system.takeRequestedWorkspace` tells which. */
+  workspaceOpenRequested: Record<string, never>;
   /** A native menu item was chosen; runs the registered command with this id. */
   menuCommand: { commandId: string };
 }

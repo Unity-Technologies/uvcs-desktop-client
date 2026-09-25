@@ -1,0 +1,39 @@
+/**
+ * Which workspace queries each kind of change makes stale. Workspace query keys are
+ * `['workspace', path, area, ...details]` (`queryKeys.inWorkspace`); these predicates read the area and details.
+ */
+type QueryKey = readonly unknown[];
+
+const area = (key: QueryKey) => key[2];
+const detail = (key: QueryKey) => key[3];
+
+/** What the disk holds, rather than the server: the watcher keeps it fresh, so window focus doesn't need to. */
+export const LOCAL_AREAS = ['pendingChanges', 'info', 'explorer'] as const;
+
+/** Workspace files changed: pending changes, the files view and the workspace side of open diffs. */
+export function isAffectedByFileChanges(key: QueryKey): boolean {
+  if (area(key) === 'pendingChanges') return true;
+  if (area(key) === 'explorer') return detail(key) === 'directory' || detail(key) === 'details';
+  return area(key) === 'content' && (detail(key) as { kind?: string } | undefined)?.kind === 'workspaceFile';
+}
+
+/** Items came or went: the "go to file" list of every path. */
+export function isAffectedByMovedPaths(key: QueryKey): boolean {
+  return area(key) === 'explorer' && detail(key) === 'allPaths';
+}
+
+/** `cm` rewrote `.plastic`: what is checked out, added or in a changelist, and possibly what is loaded. */
+export function isAffectedByWorkspaceState(key: QueryKey): boolean {
+  return area(key) === 'pendingChanges' || area(key) === 'info';
+}
+
+/** The workspace loads another changeset or branch: everything but the workspace info that told. */
+export function isAffectedByLoadedChangeset(key: QueryKey): boolean {
+  return area(key) !== 'info';
+}
+
+/** New changesets on the server: repository views (history, branches, incoming...), not the disk or the check that told. */
+export function isAffectedByNewChangesets(key: QueryKey): boolean {
+  if ((LOCAL_AREAS as readonly unknown[]).includes(area(key)) || area(key) === 'content') return false;
+  return !(area(key) === 'incoming' && detail(key) === 'summary');
+}

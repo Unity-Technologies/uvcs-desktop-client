@@ -7,6 +7,9 @@ interface PendingChangesViewStore {
   grouping: ChangesGrouping;
   setLayout: (layout: ChangesLayout) => void;
   setGrouping: (grouping: ChangesGrouping) => void;
+  /** Height of the check-in description, set by dragging the top edge of the check-in panel. */
+  descriptionHeight: number;
+  setDescriptionHeight: (height: number) => void;
 }
 
 export const usePendingChangesViewStore = create<PendingChangesViewStore>()(
@@ -16,6 +19,8 @@ export const usePendingChangesViewStore = create<PendingChangesViewStore>()(
       grouping: 'none',
       setLayout: (layout) => set({ layout }),
       setGrouping: (grouping) => set({ grouping }),
+      descriptionHeight: 96,
+      setDescriptionHeight: (descriptionHeight) => set({ descriptionHeight }),
     }),
     {
       name: 'pending-changes-view',

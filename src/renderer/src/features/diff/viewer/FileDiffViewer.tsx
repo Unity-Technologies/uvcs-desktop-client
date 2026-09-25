@@ -1,32 +1,17 @@
-import { useQuery } from '@tanstack/react-query';
-import { Columns2, FoldVertical, Pencil, Rows2, WrapText } from 'lucide-react';
-import { Suspense, useMemo, type ReactNode } from 'react';
-import type { ContentSource, FileContent } from '@shared/domain/content';
-import { api } from '../../../api/client';
-import { queryKeys } from '../../../api/queryKeys';
-import { formatSize } from '../../../lib/formatDate';
-import { useShortcut } from '../../../lib/useShortcut';
-import { Button } from '../../../ui/Button';
+import type { ReactNode } from 'react';
+import type { ContentSource } from '@shared/domain/content';
+import { useSpinDelay } from '../../../lib/useSpinDelay';
 import { EmptyState } from '../../../ui/EmptyState';
-import { IconButton } from '../../../ui/IconButton';
-import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { CenteredSpinner } from '../../../ui/Spinner';
-import { useDiffPreferences, type DiffLayout } from './diffPreferencesStore';
-import { ImageDiff } from './ImageDiff';
-import { lineChangeStats } from './lineChangeStats';
-import { LineStats } from './LineStats';
-import { lazyComponent } from '../../../lib/lazyComponent';
-import { useFileEditing } from './useFileEditing';
-import styles from './FileDiffViewer.module.css';
-
-// The diff renderer (Pierre + Shiki) is large; load it with the first diff instead of at startup.
-const TextDiff = lazyComponent(() => import('./TextDiff').then((module) => module.TextDiff));
+import { DiffViewerFrame } from './DiffViewerFrame';
+import { LoadedFileDiff } from './LoadedFileDiff';
+import { useDiffContents, type DiffContents } from './useDiffContents';
 
 interface FileDiffViewerProps {
   workspacePath: string;
   original: ContentSource;
   modified: ContentSource;
-  /** Used for syntax highlighting and to recognize images. */
+  /** Used for syntax highlighting. */
   fileName: string;
   /** Shown at the left of the toolbar, e.g. the file path and its status. */
   title?: ReactNode;
@@ -37,109 +22,36 @@ interface FileDiffViewerProps {
 /**
  * Compares two versions of a file, choosing a text, image or binary presentation.
  * When the modified side is a file in the workspace, it can be edited in place.
+ * Switching files keeps the previous diff on screen until the next one loads; a spinner
+ * only shows up when loading is slow.
  */
 export function FileDiffViewer({ workspacePath, original, modified, fileName, title, identicalDescription }: FileDiffViewerProps) {
-  const { layout, collapseUnchanged, wrapLines, setLayout, setCollapseUnchanged, setWrapLines } = useDiffPreferences();
-  const originalContent = useContent(workspacePath, original);
-  const modifiedContent = useContent(workspacePath, modified);
-  const editablePath = modified.kind === 'workspaceFile' ? modified.path : null;
-  const editing = useFileEditing(workspacePath, editablePath);
+  const contents = useDiffContents(workspacePath, original, modified);
+  const spin = useSpinDelay(contents.isPending || contents.isPlaceholderData);
 
-  const error = originalContent.error ?? modifiedContent.error;
-  const left = originalContent.data;
-  const right = modifiedContent.data;
-  const isText = Boolean(left && right && !left.isBinary && !right.isBinary);
-  const canEdit = isText && editablePath !== null;
-  const stats = useMemo(() => (isText ? lineChangeStats(left?.text ?? '', right?.text ?? '') : null), [isText, left?.text, right?.text]);
-
-  useShortcut('mod+s', () => void editing.save(), editing.editing);
-  useShortcut('mod+e', editing.start, canEdit && !editing.editing);
-
+  if (contents.error) {
+    return (
+      <DiffViewerFrame title={title}>
+        <EmptyState title="Couldn't load this file" description={contents.error.message} />
+      </DiffViewerFrame>
+    );
+  }
+  if (spin || !contents.data) {
+    return <DiffViewerFrame title={title}>{spin && <CenteredSpinner />}</DiffViewerFrame>;
+  }
   return (
-    <div className={styles.viewer}>
-      <div className={styles.toolbar}>
-        <div className={styles.title}>{title}</div>
-        {editing.editing ? (
-          <div className={styles.group}>
-            <Button size="small" variant="ghost" onClick={editing.discard}>
-              {editing.dirty ? 'Discard edits' : 'Done'}
-            </Button>
-            <Button size="small" variant="primary" disabled={!editing.dirty} onClick={() => void editing.save()}>
-              Save
-            </Button>
-          </div>
-        ) : (
-          isText && (
-            <>
-              {stats && (stats.added > 0 || stats.removed > 0) && <LineStats {...stats} />}
-              <div className={styles.group}>
-                {canEdit && <IconButton size="small" icon={<Pencil size={13} />} label="Edit this file" shortcut="mod+e" onClick={editing.start} />}
-                <IconButton
-                  size="small"
-                  icon={<FoldVertical size={14} />}
-                  label={collapseUnchanged ? 'Show all lines' : 'Collapse unchanged lines'}
-                  variant={collapseUnchanged ? 'secondary' : 'ghost'}
-                  onClick={() => setCollapseUnchanged(!collapseUnchanged)}
-                />
-                <IconButton
-                  size="small"
-                  icon={<WrapText size={14} />}
-                  label={wrapLines ? "Don't wrap lines" : 'Wrap lines'}
-                  variant={wrapLines ? 'secondary' : 'ghost'}
-                  onClick={() => setWrapLines(!wrapLines)}
-                />
-              </div>
-              <SegmentedControl<DiffLayout>
-                value={layout}
-                onChange={setLayout}
-                segments={[
-                  { value: 'split', label: <><Columns2 size={13} /> Split</>, title: 'Side-by-side view' },
-                  { value: 'unified', label: <><Rows2 size={13} /> Unified</>, title: 'Unified view' },
-                ]}
-              />
-            </>
-          )
-        )}
-      </div>
-
-      {error ? (
-        <EmptyState title="Couldn't load this file" description={error.message} />
-      ) : !left || !right ? (
-        <CenteredSpinner />
-      ) : isText ? (
-        left.text === right.text && !editing.editing ? (
-          <EmptyState
-            title="No content changes"
-            description={identicalDescription ?? 'The contents of both versions are identical.'}
-            action={canEdit && <Button icon={<Pencil size={13} />} onClick={editing.start}>Edit file</Button>}
-          />
-        ) : (
-          <Suspense fallback={<CenteredSpinner />}>
-            <TextDiff original={left.text ?? ''} modified={right.text ?? ''} fileName={fileName} editing={editing.editing} onEdit={editing.change} />
-          </Suspense>
-        )
-      ) : left.imageDataUrl || right.imageDataUrl ? (
-        <ImageDiff originalUrl={left.imageDataUrl} modifiedUrl={right.imageDataUrl} />
-      ) : (
-        <BinarySummary original={left} modified={right} />
-      )}
-    </div>
-  );
-}
-
-function useContent(workspacePath: string, source: ContentSource) {
-  return useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'content', source),
-    queryFn: () => api.content.read(workspacePath, source),
-    staleTime: source.kind === 'workspaceFile' ? 0 : Infinity,
-  });
-}
-
-function BinarySummary({ original, modified }: { original: FileContent; modified: FileContent }) {
-  return (
-    <EmptyState
-      title="Binary file"
-      description={`${formatSize(original.size)} → ${formatSize(modified.size)}. Binary contents can't be compared as text.`}
+    <LoadedFileDiff
+      // A new pair starts fresh: edits, blend and zoom belong to the file they were made on.
+      key={pairKey(contents.data)}
+      workspacePath={workspacePath}
+      contents={contents.data}
+      fileName={fileName}
+      title={title}
+      identicalDescription={identicalDescription}
     />
   );
+}
+
+function pairKey({ original, modified }: DiffContents): string {
+  return JSON.stringify([original, modified]);
 }

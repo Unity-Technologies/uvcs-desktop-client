@@ -55,7 +55,6 @@ function EntryDiff({ workspacePath, entry }: { workspacePath: string; entry: Dif
   const { original, modified } = diffEntrySources(entry);
   return (
     <FileDiffViewer
-      key={entry.path}
       workspacePath={workspacePath}
       original={original}
       modified={modified}

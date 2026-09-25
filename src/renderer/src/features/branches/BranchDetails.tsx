@@ -6,6 +6,7 @@ import { Button } from '../../ui/Button';
 import { DetailsBadge, DetailsPanel, DetailsSection, DetailsText } from '../../ui/DetailsPanel';
 import { PropertyList } from '../../ui/PropertyList';
 import { AttributesEditor } from '../attributes/AttributesEditor';
+import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { diffBranch, mergeFromBranch, switchToBranch } from './branchOperations';
 
 interface BranchDetailsProps {
@@ -49,6 +50,7 @@ export function BranchDetails({ workspacePath, branch, isCurrent }: BranchDetail
       <DetailsSection title="Comment">
         <DetailsText text={branch.comment} placeholder="No comment" />
       </DetailsSection>
+      <ChangedFilesSection target={{ kind: 'branch', branch: branch.name }} onOpen={(path) => diffBranch(branch.name, path)} />
       <DetailsSection title="Details">
         <PropertyList
           properties={[

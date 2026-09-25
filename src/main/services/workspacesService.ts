@@ -1,6 +1,7 @@
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { app } from 'electron';
-import type { CreateWorkspaceRequest, WorkspacesApi } from '@shared/api/workspaces';
+import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
 import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
 import { resolveWorkspaceRepositories } from '../cm/workspaceRepositories';
@@ -25,7 +26,7 @@ export function createWorkspacesService({ cm, operations, watcher, settings }: S
   async function info(workspacePath: string): Promise<WorkspaceInfo> {
     const [status, nameOutput] = await Promise.all([
       readWorkspaceStatus(cm, workspacePath),
-      cm.query(['getworkspacefrompath', workspacePath, '--format={wkname}']),
+      cm.query(['getworkspacefrompath', workspacePath, '--format={wkname}'], { cwd: workspacePath }),
     ]);
 
     return {
@@ -71,21 +72,26 @@ export function createWorkspacesService({ cm, operations, watcher, settings }: S
           onOutputLine: reportProgress,
         });
       } catch (error) {
-        if (error instanceof CmError && error.message.includes('--dontmerge')) throw new Error(UPDATE_NEEDS_MERGE);
+        if (error instanceof CmError && error.message.includes('--dontmerge')) throw error.withMessage(UPDATE_NEEDS_MERGE);
         throw error;
       }
     });
   }
 
-  async function watch(workspacePath: string): Promise<void> {
+  async function watch(workspacePath: string): Promise<WatchCoverage> {
     cm.warmUp(workspacePath);
-    watcher.watch(workspacePath);
+    return watcher.watch(workspacePath);
+  }
+
+  function repositoriesOf(workspacePaths: string[], lookupId: string): Promise<Record<string, string | null>> {
+    return operations.read(lookupId, ({ signal }) => resolveWorkspaceRepositories(cm, workspacePaths, signal));
   }
 
   return {
     list,
     info,
-    repositoriesOf: (paths) => resolveWorkspaceRepositories(cm, paths),
+    repositoriesOf,
+    findMissing: async (paths) => paths.filter((path) => !existsSync(path)),
     findRoot,
     create,
     rename,

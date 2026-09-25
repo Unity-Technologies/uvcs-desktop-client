@@ -1,17 +1,21 @@
 import { Command as Cmdk } from 'cmdk';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { createFuzzyIndex, fuzzyMatchPositions, fuzzyMatchQuality } from '../../lib/fuzzyIndex';
 import { useShortcut } from '../../lib/useShortcut';
-import { Highlight, HighlightQuery } from '../../ui/Highlight';
-import { Kbd } from '../../ui/Kbd';
+import { HighlightQuery } from '../../ui/Highlight';
+import { Spinner } from '../../ui/Spinner';
 import { useSession } from '../workspace/sessionStore';
 import { useCommandPalette } from './commandPaletteStore';
 import { useCommandStore, type Command } from './commandStore';
-import { rankGroups, type SearchGroup, type SearchResult } from './searchResults';
+import { PaletteFooter } from './PaletteFooter';
+import { PaletteRow } from './PaletteRow';
+import { isInScope, LIST_ORDER, parseScope, type SectionId } from './paletteScope';
+import { collapseGroups, COLLAPSED_ROWS, rankGroups, type SearchGroup, type SearchResult } from './searchResults';
 import { usePaletteSearch } from './usePaletteSearch';
+import { useWorkspaceResults } from './useWorkspaceResults';
 import styles from './CommandPalette.module.css';
 
-const MAX_COMMANDS = 6;
+const MAX_COMMANDS = 50;
 
 export function CommandPalette() {
   const { isOpen: open, setOpen, toggle } = useCommandPalette();
@@ -23,36 +27,67 @@ export function CommandPalette() {
 }
 
 /**
- * Every command while the query is empty; then the best commands, workspace files and repository objects,
- * with the most relevant groups first. Ranks everything itself (cmdk only renders).
+ * One box for everything: commands, files, branches, labels, workspaces, changesets, shelves and code reviews, each kind in its
+ * own section capped at a few rows ("N more" expands it). Empty, it lists what is at hand; typed, the sections with
+ * the best matches come first. `>`, `@`, `/` and `#` narrow the search. Enter opens a result, Tab its actions.
+ * Ranks everything itself (cmdk only renders and moves the selection).
  */
 function OpenPalette({ close }: { close: () => void }) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState('');
+  const [expanded, setExpanded] = useState<ReadonlySet<SectionId>>(new Set());
+  const [menuFor, setMenuFor] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   // Ranking hundreds of thousands of paths takes a few frames; typing stays responsive meanwhile.
   const deferredQuery = useDeferredValue(query);
+  const { scope, text } = parseScope(deferredQuery);
   const commandsByOwner = useCommandStore((state) => state.commandsByOwner);
   const workspacePath = useSession((state) => state.workspacePath);
 
-  const commands = useMemo(() => [...commandsByOwner.values()].flat().filter((command) => !command.disabled), [commandsByOwner]);
+  const commands = useMemo(
+    // Opening the palette from inside it would do nothing.
+    () => [...commandsByOwner.values()].flat().filter((command) => !command.disabled && command.id !== 'app.commandPalette'),
+    [commandsByOwner],
+  );
   const commandIndex = useMemo(() => createFuzzyIndex(commands.map(commandSearchText)), [commands]);
-  const { groups: objectGroups, isLoading } = usePaletteSearch(workspacePath, deferredQuery);
+  const { groups: objectGroups, isLoading } = usePaletteSearch(workspacePath, text, scope);
+  const workspaceGroup = useWorkspaceResults(workspacePath, text);
 
   const groups = useMemo<SearchGroup[]>(() => {
-    if (!deferredQuery.trim()) {
-      return [...groupCommands(commands)].map(([heading, groupCommands]) => ({ heading, results: groupCommands.map((command) => commandResult(command)) }));
-    }
-    const ranked = commandIndex.rank(deferredQuery, MAX_COMMANDS).map((index) => commandResult(commands[index]!, deferredQuery));
-    return rankGroups([{ heading: 'Commands', results: ranked }, ...objectGroups]);
-  }, [commands, commandIndex, deferredQuery, objectGroups]);
+    const commandResults = text
+      ? commandIndex.rank(text, MAX_COMMANDS).map((index) => commandResult(commands[index]!, text))
+      : commands.map((command) => commandResult(command));
+    const commandGroup: SearchGroup = { section: 'commands', heading: 'Commands', results: commandResults };
+    const all = [commandGroup, ...objectGroups, workspaceGroup].filter((group) => group.results.length > 0 && isInScope(group.section, scope));
+    return text ? rankGroups(all) : all.sort((a, b) => LIST_ORDER.indexOf(a.section) - LIST_ORDER.indexOf(b.section));
+  }, [commands, commandIndex, text, scope, objectGroups, workspaceGroup]);
 
-  const values = groups.flatMap((group) => group.results.map((result) => result.id));
+  // A prefix asks for one kind of thing, so its sections show in full.
+  const shown = collapseGroups(groups, scope === 'all' ? expanded : 'all');
+  const values = shown.flatMap((group) => [...group.results.map((result) => result.id), ...(group.more > 0 ? [moreValue(group.section)] : [])]);
   // Keeps the user's pick while results stream in; falls back to the first result when it disappears.
   const selectedValue = values.includes(selected) ? selected : (values[0] ?? '');
+  const selectedResult = shown.flatMap((group) => group.results).find((result) => result.id === selectedValue);
 
   const run = (result: SearchResult): void => {
     if (!result.keepOpen) close();
     result.run();
+  };
+
+  const expand = (section: SectionId): void => {
+    setExpanded((sections) => new Set(sections).add(section));
+    // The first row that was held back takes the place of "N more".
+    setSelected(groups.find((group) => group.section === section)?.results[COLLAPSED_ROWS]?.id ?? '');
+  };
+
+  const onKeyDown = (event: KeyboardEvent): void => {
+    // Keys pressed in a row's actions menu bubble up here through its portal; they are the menu's, not cmdk's.
+    if (event.target !== inputRef.current) return event.preventDefault();
+    if (event.key === 'Escape') close();
+    if (event.key === 'Tab') {
+      event.preventDefault();
+      if (selectedResult?.menu) setMenuFor(selectedResult.id);
+    }
   };
 
   return (
@@ -65,62 +100,71 @@ function OpenPalette({ close }: { close: () => void }) {
         value={selectedValue}
         onValueChange={setSelected}
         onMouseDown={(event) => event.stopPropagation()}
-        onKeyDown={(event) => event.key === 'Escape' && close()}
+        onKeyDown={onKeyDown}
       >
-        <Cmdk.Input
-          className={styles.input}
-          placeholder="Fuzzy search everything: files, branches, labels, changesets, commands…"
-          value={query}
-          onValueChange={(value) => {
-            setQuery(value);
-            setSelected('');
-          }}
-          autoFocus
-        />
-        <HighlightQuery query={deferredQuery}>
+        <div className={styles.search}>
+          <Cmdk.Input
+            ref={inputRef}
+            className={styles.input}
+            placeholder="Search files, branches, labels, changesets, commands…"
+            value={query}
+            onValueChange={(value) => {
+              setQuery(value);
+              setSelected('');
+              setExpanded(new Set());
+            }}
+            spellCheck={false}
+            autoFocus
+          />
+          {isLoading && text && <Spinner size={14} />}
+        </div>
+        <HighlightQuery query={text}>
           <Cmdk.List className={styles.list}>
             <Cmdk.Empty className={styles.empty}>{isLoading ? 'Searching…' : 'Nothing matches.'}</Cmdk.Empty>
-            {groups.map((group) => (
-              <Cmdk.Group key={group.heading} heading={group.heading} className={styles.group}>
-                {group.results.map((result) => {
-                  const Icon = result.icon;
-                  return (
-                    <Cmdk.Item key={result.id} value={result.id} className={styles.item} disabled={result.disabled} onSelect={() => run(result)}>
-                      <span className={styles.icon}>
-                        <Icon size={15} className={result.busy ? 'spinning' : undefined} />
-                      </span>
-                      <span className={styles.label}>
-                        <Highlight text={result.label} positions={result.labelMatches} />
-                      </span>
-                      {result.detail && (
-                        <span className={styles.detail}>
-                          <Highlight text={result.detail} positions={result.detailMatches} />
-                        </span>
-                      )}
-                      {result.shortcut && <Kbd keys={result.shortcut} />}
-                    </Cmdk.Item>
-                  );
-                })}
+            {shown.map((group) => (
+              <Cmdk.Group key={group.section} heading={group.heading} className={styles.group}>
+                {group.results.map((result) => (
+                  <PaletteRow
+                    key={result.id}
+                    result={result}
+                    selected={result.id === selectedValue}
+                    menuOpen={menuFor === result.id}
+                    onMenuOpenChange={(open) => setMenuFor(open ? result.id : null)}
+                    onMenuClosed={() => inputRef.current?.focus()}
+                    onRun={() => run(result)}
+                  />
+                ))}
+                {group.more > 0 && (
+                  <Cmdk.Item value={moreValue(group.section)} className={styles.more} onSelect={() => expand(group.section)}>
+                    {group.more} more {group.heading.toLowerCase()}
+                  </Cmdk.Item>
+                )}
               </Cmdk.Group>
             ))}
           </Cmdk.List>
         </HighlightQuery>
+        <PaletteFooter inWorkspace={workspacePath !== null} />
       </Cmdk>
     </div>
   );
 }
 
-/** Without a query, a command is listed under its own group, so it needs no detail and highlights nothing. */
+function moreValue(section: SectionId): string {
+  return `more:${section}`;
+}
+
+/** The command's group reads after it ("Changes · Go to"), so commands with the same name in different groups can be told apart. */
 function commandResult(command: Command, query?: string): SearchResult {
   const searchText = commandSearchText(command);
   return {
     id: `command:${command.id}`,
     icon: command.icon ?? (() => null),
     label: command.label,
-    detail: query ? command.group : undefined,
+    detail: command.group,
     shortcut: command.shortcut,
     // Commands match on their label and keywords; only the label is shown.
     labelMatches: query ? fuzzyMatchPositions(searchText, query).filter((position) => position < command.label.length) : [],
+    detailMatches: [],
     quality: query ? fuzzyMatchQuality(searchText, query) : undefined,
     run: command.run,
   };
@@ -128,10 +172,4 @@ function commandResult(command: Command, query?: string): SearchResult {
 
 function commandSearchText(command: Command): string {
   return [command.label, ...(command.keywords ?? [])].join(' ');
-}
-
-function groupCommands(commands: Command[]): Map<string, Command[]> {
-  const groups = new Map<string, Command[]>();
-  for (const command of commands) groups.set(command.group, [...(groups.get(command.group) ?? []), command]);
-  return groups;
 }

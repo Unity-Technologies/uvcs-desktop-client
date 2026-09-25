@@ -25,6 +25,11 @@ export function hasContentChanges(change: PendingChange): boolean {
   return change.kinds.includes('changed') || change.kinds.includes('replaced');
 }
 
+/** Whether the item is in the workspace on disk, so it can be opened or revealed. */
+export function existsOnDisk(change: PendingChange): boolean {
+  return !change.kinds.includes('deleted') && !change.kinds.includes('locallyDeleted');
+}
+
 /** Private, ignored and cloaked items are not under version control (yet). */
 export function isControlled(change: PendingChange): boolean {
   return !['private', 'ignored', 'cloaked'].includes(categoryOf(change));

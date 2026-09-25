@@ -50,6 +50,10 @@
   background: var(--bg-hover);
 }
 
+.entry[data-revealed='true'] {
+  background: var(--bg-selected);
+}
+
 .duration {
   color: var(--text-tertiary);
   text-align: right;
@@ -57,6 +61,11 @@
 
 .command {
   overflow-wrap: anywhere;
+}
+
+.cwd {
+  margin-left: var(--space-2);
+  color: var(--text-tertiary);
 }
 
 .entry[data-failed='true'] .command {

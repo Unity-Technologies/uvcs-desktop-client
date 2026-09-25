@@ -3,6 +3,7 @@ import { spec } from '@shared/domain/specs';
 import { Button } from '../../../ui/Button';
 import { DetailsBadge, DetailsPanel, DetailsSection, DetailsText } from '../../../ui/DetailsPanel';
 import { PropertyList, type Property } from '../../../ui/PropertyList';
+import { ChangedFilesSection } from '../../changesets/ChangedFilesSection';
 import { graphActions } from '../graphActions';
 import type { GraphLayout, NodeLayout } from '../model/layoutGraph';
 import { MERGE_LINK_NAMES } from '../model/mergeLinkNames';
@@ -79,6 +80,7 @@ export function ChangesetDetails({ node, layout, workspacePath, isHome, goToChan
       <DetailsSection title="Relations">
         <PropertyList properties={properties} />
       </DetailsSection>
+      <ChangedFilesSection target={{ kind: 'changeset', changesetId: changeset.id }} onOpen={(path) => graphActions.diffChangeset(changeset.id, path)} />
     </DetailsPanel>
   );
 }

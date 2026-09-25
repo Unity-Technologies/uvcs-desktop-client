@@ -4,11 +4,17 @@ import { useMemo } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import type { SelectorKind, WorkspaceInfo } from '@shared/domain/workspace';
 import { useCommands, type Command } from '../../app/commands/commandStore';
-import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
+import { useRunningOperation } from '../../app/operations/runningOperationsStore';
+import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { SELECTOR_KIND_LABELS, workingObjectName } from '../../components/workingObject';
 import type { Icon } from '../../lib/actions';
 import { Button } from '../../ui/Button';
+import { Spinner } from '../../ui/Spinner';
+import { ToolbarPill } from '../../ui/ToolbarPill';
+import { branchMenu } from './branchMenu';
 import { switchToBranch } from './branchOperations';
-import { BranchSearchList, type BranchGroup } from './BranchSearchList';
+import { BranchSearchList } from './BranchSearchList';
+import { branchSwitcherGroups } from './branchSwitcherGroups';
 import { useBranchSwitcher } from './branchSwitcherStore';
 import { newBranchFromWorkspace } from './newBranchFromWorkspace';
 import { useRecentBranches } from './recentBranchesStore';
@@ -22,28 +28,31 @@ const SELECTOR_ICONS: Record<SelectorKind, Icon> = {
   shelve: Archive,
 };
 
-const SELECTOR_PREFIXES: Record<SelectorKind, string> = {
-  branch: '',
-  changeset: 'Changeset ',
-  label: 'Label ',
-  shelve: 'Shelve ',
-};
-
 /** Shows what the workspace is loaded from and lets the user switch branches. */
 export function WorkingObjectButton() {
   const { data: workspace } = useWorkspaceInfo();
+  const workspacePath = useWorkspacePath();
+  const running = useRunningOperation(workspacePath);
   const { isOpen, setOpen } = useBranchSwitcher();
   useBranchCommands(workspace);
 
+  const switching = running?.kind === 'switch' ? running.title : null;
   const SelectorIcon = SELECTOR_ICONS[workspace?.selector.kind ?? 'branch'];
+  const name = workspace ? workingObjectName(workspace.selector) : '…';
 
   return (
     <Popover.Root open={isOpen} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
-        <Button variant="ghost" icon={<SelectorIcon size={14} />} className={styles.trigger}>
-          <span className={styles.selector}>{workspace ? `${SELECTOR_PREFIXES[workspace.selector.kind]}${workspace.selector.name}` : '…'}</span>
-          <ChevronDown size={13} className={styles.chevron} />
-        </Button>
+        <ToolbarPill
+          className={styles.trigger}
+          emphasis="sub"
+          icon={switching ? <Spinner size={13} /> : <SelectorIcon size={15} />}
+          label={SELECTOR_KIND_LABELS[workspace?.selector.kind ?? 'branch']}
+          sub={switching ? `${switching}…` : name}
+          data-tip={switching ? undefined : 'Switch branch'}
+          data-tip-shortcut={switching ? undefined : 'mod+shift+w'}
+          trailing={<ChevronDown size={13} className={styles.chevron} />}
+        />
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content className={styles.popover} align="start" sideOffset={6}>
@@ -58,7 +67,7 @@ function BranchSwitcher({ workspace, onDone }: { workspace: WorkspaceInfo; onDon
   const { data: branches = [] } = useBranches();
   const recentNames = useRecentBranches(workspace.path);
   const currentBranch = workspace.selector.kind === 'branch' ? workspace.selector.name : undefined;
-  const groups = useMemo(() => switcherGroups(branches, recentNames), [branches, recentNames]);
+  const groups = useMemo(() => branchSwitcherGroups(branches, recentNames), [branches, recentNames]);
 
   const pick = (branch: Branch): void => {
     onDone();
@@ -71,6 +80,7 @@ function BranchSwitcher({ workspace, onDone }: { workspace: WorkspaceInfo; onDon
       currentBranch={currentBranch}
       placeholder="Switch to branch…"
       onPick={pick}
+      menu={(branch) => branchMenu(workspace.path, [branch], currentBranch)}
       footer={
         <Button
           size="small"
@@ -86,19 +96,6 @@ function BranchSwitcher({ workspace, onDone }: { workspace: WorkspaceInfo; onDon
       }
     />
   );
-}
-
-function switcherGroups(branches: Branch[], recentNames: string[]): BranchGroup[] {
-  const byName = new Map(branches.map((branch) => [branch.name, branch]));
-  const main = branches.filter((branch) => !branch.parent);
-  const recent = recentNames.map((name) => byName.get(name)).filter((branch): branch is Branch => Boolean(branch));
-  const others = [...branches].sort((a, b) => a.name.localeCompare(b.name));
-
-  return [
-    { title: main.length === 1 ? 'Main branch' : 'Top-level branches', branches: main },
-    { title: 'Recent', branches: recent },
-    { title: 'All branches', branches: others },
-  ];
 }
 
 function useBranchCommands(workspace: WorkspaceInfo | undefined): void {

@@ -1,18 +1,31 @@
+import type { IncomingSummary } from '@shared/domain/incoming';
 import type { PendingChangesAction } from '@shared/domain/switchWithChanges';
 import { api } from '../../api/client';
+import { queryKeys } from '../../api/queryKeys';
 import { askSwitchWithChanges } from '../../features/branches/SwitchWithChangesDialog';
 import { planSwitch } from '../../features/branches/switchOptions';
-import { useToastStore } from '../../ui/toast/toastStore';
-import { runAction, runOperation } from '../operations/runOperation';
+import { toast, useToastStore } from '../../ui/toast/toastStore';
+import { refuseWhileBusy, runAction, runOperation } from '../operations/runOperation';
+import { queryClient } from '../queryClient';
 import { switchToast } from './switchToast';
 
 export function updateWorkspace(workspacePath: string): Promise<void | undefined> {
   return runOperation({
     title: 'Updating workspace',
     workspacePath,
+    kind: 'update',
     run: (operationId) => api.workspaces.update(workspacePath, operationId),
     successMessage: () => 'Workspace is up to date',
   });
+}
+
+/** Updates the workspace, after asking the server whether there is anything new; says so when there isn't. */
+export async function updateUnlessUpToDate(workspacePath: string): Promise<void> {
+  const summaryKey = queryKeys.inWorkspace(workspacePath, 'incoming', 'summary');
+  await queryClient.refetchQueries({ queryKey: summaryKey });
+  const summary = queryClient.getQueryData<IncomingSummary>(summaryKey);
+  if (summary?.branch && summary.changesetCount === 0) toast.info('Already up to date', `Your workspace has everything on ${summary.branch}.`);
+  else await updateWorkspace(workspacePath);
 }
 
 /**
@@ -26,12 +39,14 @@ export async function switchWorkspace(
   displayName: string,
   pendingChanges?: PendingChangesAction,
 ): Promise<boolean> {
+  if (refuseWhileBusy(workspacePath)) return false;
   const action = pendingChanges ?? (await choosePendingChangesAction(workspacePath, targetSpec, displayName));
   if (action === null) return false;
 
   const result = await runOperation({
     title: `Switching to ${displayName}`,
     workspacePath,
+    kind: 'switch',
     run: (operationId) => api.workspaces.switchTo(workspacePath, targetSpec, operationId, action),
     // Once changes are shelved, stopping halfway would leave them in limbo.
     cancellable: !action,

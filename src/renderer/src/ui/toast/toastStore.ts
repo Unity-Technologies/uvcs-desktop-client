@@ -13,6 +13,8 @@ export interface Toast {
   title: string;
   detail?: string;
   action?: ToastAction;
+  /** What an error toast reports; the toast host can offer its details. */
+  error?: unknown;
 }
 
 interface ToastStore {
@@ -47,6 +49,11 @@ export const toast = {
   info: (title: string, detail?: string) => useToastStore.getState().show({ kind: 'info', title, detail }),
   success: (title: string, detail?: string, action?: ToastAction) =>
     useToastStore.getState().show({ kind: 'success', title, detail, action }),
-  error: (title: string, error?: unknown) =>
-    useToastStore.getState().show({ kind: 'error', title, detail: error instanceof Error ? error.message : undefined }),
+  /** `error` is an exception, or a sentence that explains the failure. */
+  error: (title: string, error?: unknown) => useToastStore.getState().show({ kind: 'error', title, detail: describeError(error), error }),
 };
+
+function describeError(error: unknown): string | undefined {
+  if (error instanceof Error) return error.message;
+  return typeof error === 'string' ? error : undefined;
+}

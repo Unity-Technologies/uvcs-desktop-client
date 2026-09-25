@@ -10,7 +10,7 @@ import { putBack } from './privateBackups';
 import { selectorObjectRef } from './selectorObjectRef';
 import { describeSelector, selectorSpec } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
-import { applyShelveCleanly, deleteShelves, readShelveEntries } from './switchShelves';
+import { applyShelveCleanly, deleteShelves, detachReplacedFiles, readShelveEntries } from './switchShelves';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';
 
 /**
@@ -74,6 +74,7 @@ export class LeftChangesFinder {
   /** The changes are in the workspace again: back into their changelists, and the shelve and record go away. */
   async finish(workspacePath: string, record: SwitchShelveRecord): Promise<void> {
     if (record.backup) await putBack(workspacePath, record.backup);
+    await detachReplacedFiles(this.cm, workspacePath);
     await this.restoreChangelists(workspacePath, record);
     await deleteShelves(this.cm, workspacePath, [{ id: record.shelveId, repository: record.repository }]);
     this.records.remove([record]);

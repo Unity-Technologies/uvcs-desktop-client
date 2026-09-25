@@ -13,6 +13,7 @@ const MAX_RESOLVED_WORKSPACES = 10;
 /**
  * Repository of the recently used workspaces. Each lookup is a `cm` call, so this is limited to
  * the few recent ones and resolved once per session, never for the whole workspace list.
+ * The lookups stop when nothing on screen needs them anymore (e.g. leaving the home screen).
  */
 export function useRecentWorkspaceRepositories(workspaces: WorkspaceSummary[] | undefined) {
   const { recentWorkspacePaths } = useSettings();
@@ -20,9 +21,22 @@ export function useRecentWorkspaceRepositories(workspaces: WorkspaceSummary[] | 
   const paths = recentWorkspacePaths.filter((path) => known.has(path)).slice(0, MAX_RESOLVED_WORKSPACES);
   return useQuery({
     queryKey: ['workspaceRepositories', paths],
-    queryFn: () => api.workspaces.repositoriesOf(paths),
+    queryFn: ({ signal }) => {
+      const lookupId = crypto.randomUUID();
+      signal.addEventListener('abort', () => void api.system.cancelOperation(lookupId));
+      return api.workspaces.repositoriesOf(paths, lookupId);
+    },
     enabled: paths.length > 0,
     staleTime: Infinity,
+  });
+}
+
+/** Which of these recent paths (ones `cm` doesn't list) lost their folder. */
+export function useMissingWorkspacePaths(paths: string[]) {
+  return useQuery({
+    queryKey: ['missingWorkspacePaths', paths],
+    queryFn: () => api.workspaces.findMissing(paths),
+    enabled: paths.length > 0,
   });
 }
 
@@ -38,3 +52,4 @@ export function useRepositories(server: string | null) {
     staleTime: 60_000,
   });
 }
+

@@ -3,6 +3,15 @@ import type { PendingChangesOnSwitch, SwitchShelveRecord } from './switchWithCha
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
+/** Where the main window was last, to reopen it there. */
+export interface SavedWindowBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  maximized: boolean;
+}
+
 export interface AppSettings {
   theme: ThemePreference;
   recentWorkspacePaths: string[];
@@ -21,6 +30,8 @@ export interface AppSettings {
   restoreLeftChangesAutomatically: boolean;
   /** The shelves created while switching with pending changes, until they are restored or discarded. */
   switchShelves: SwitchShelveRecord[];
+  /** Null until the window is first moved or resized. */
+  windowBounds: SavedWindowBounds | null;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -34,4 +45,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   pendingChangesOnSwitch: 'ask',
   restoreLeftChangesAutomatically: true,
   switchShelves: [],
+  windowBounds: null,
 };

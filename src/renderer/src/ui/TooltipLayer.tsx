@@ -114,7 +114,8 @@ function findTip(target: Element | null): Omit<Tip, 'pointerX' | 'pointerY'> | n
   const host = target?.closest<HTMLElement>('[data-tip]');
   if (host) {
     const text = host.getAttribute('data-tip');
-    if (!text || (host.hasAttribute('data-tip-overflow') && !isClipped(host))) return null;
+    // A menu or popover trigger that is open already shows what it does.
+    if (!text || host.dataset.state === 'open' || (host.hasAttribute('data-tip-overflow') && !isClipped(host))) return null;
     return { text, sub: host.getAttribute('data-tip-sub') ?? undefined, shortcut: host.getAttribute('data-tip-shortcut') ?? undefined };
   }
 

@@ -15,7 +15,6 @@ export function RevisionChanges({ workspacePath, item }: { workspacePath: string
 
   return (
     <FileDiffViewer
-      key={item.revisionId}
       workspacePath={workspacePath}
       original={previous}
       modified={current}

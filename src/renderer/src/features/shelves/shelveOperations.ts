@@ -38,8 +38,8 @@ export async function applyShelve(workspacePath: string, shelve: Shelve): Promis
   });
 }
 
-export function showShelveChanges(shelve: Shelve): void {
-  navigation.openPage({ kind: 'diff', title: `Shelve ${shelve.id}`, target: { kind: 'shelve', shelveId: shelve.id } });
+export function showShelveChanges(shelve: Shelve, focusPath?: string): void {
+  navigation.openPage({ kind: 'diff', title: `Shelve ${shelve.id}`, target: { kind: 'shelve', shelveId: shelve.id }, focusPath });
 }
 
 export async function deleteShelve(workspacePath: string, shelve: Shelve): Promise<void> {

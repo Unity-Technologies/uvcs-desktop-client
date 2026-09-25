@@ -4,7 +4,8 @@
   align-items: center;
   gap: var(--space-2);
   height: 32px;
-  padding: 0 var(--space-2) 0 10px;
+  /* The list's rows start after its side inset and their own padding; the checkbox shares their column. */
+  padding: 0 var(--space-2) 0 calc(var(--space-1) + var(--space-2) + var(--checkbox-inset, 0px));
   border-bottom: 1px solid var(--border-subtle);
 }
 

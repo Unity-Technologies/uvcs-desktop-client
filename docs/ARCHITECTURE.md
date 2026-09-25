@@ -62,6 +62,16 @@ renderer/src/
 ```
 
 - **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)`, so `invalidateWorkspace(path)` refreshes everything after an operation.
+- **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check.
+  - `main/watch/WorkspaceWatcher` watches the open workspace (recursive on macOS/Windows; the root and `.plastic` only on Linux),
+    skips `ignore.conf` folders and `.plastic` lock/temp files, coalesces bursts (300 ms quiet, 2 s max wait) and drops what the
+    app's own writes cause (`changesWorkspace` commands and tracked operations): the renderer refreshes after those anyway.
+  - `workspaceChanged` tells file edits (pending changes, files view; if auto refresh is on) from `.plastic` rewrites by any tool
+    (workspace info; everything when the loaded changeset or branch moved). See `app/shell/useWorkspaceWatcher.ts` and `app/refresh/`.
+  - Window focus (wired to real focus in `trackWindowFocus`) refetches stale server views; local views skip it while the watcher sees everything.
+  - Incoming: `useIncomingSummary` polls every minute with focus, every five minutes behind other apps, never hidden, and on focus if
+    older than 20 s. A branch head moved by someone else refreshes the repository views.
+  - Use `refreshQueries` for event-driven refreshes: it never cancels a fetch in flight, it queues one follow-up.
 - **Mutations**: `runOperation` (progress toast, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.

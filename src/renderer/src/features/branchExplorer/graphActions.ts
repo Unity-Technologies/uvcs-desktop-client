@@ -12,9 +12,10 @@ export const graphActions = {
 
   merge: (kind: MergeKind, sourceSpec: string) => navigation.openPage({ kind: 'merge', request: { kind, sourceSpec } }),
 
-  diffChangeset: (id: number) =>
-    navigation.openPage({ kind: 'diff', title: `Changeset ${id}`, target: { kind: 'changeset', changesetId: id } }),
-  diffBranch: (name: string) => navigation.openPage({ kind: 'diff', title: `Branch ${name}`, target: { kind: 'branch', branch: name } }),
+  diffChangeset: (id: number, focusPath?: string) =>
+    navigation.openPage({ kind: 'diff', title: `Changeset ${id}`, target: { kind: 'changeset', changesetId: id }, focusPath }),
+  diffBranch: (name: string, focusPath?: string) =>
+    navigation.openPage({ kind: 'diff', title: `Branch ${name}`, target: { kind: 'branch', branch: name }, focusPath }),
 
   copy: (text: string) => {
     void navigator.clipboard.writeText(text);

@@ -82,6 +82,26 @@ export function buildChangeRows({ changes, changelists, layout, grouping, isChec
   return rows;
 }
 
+/** Horizontal step of each level: a folder inside a folder, or anything inside a changelist. */
+export const INDENT = 16;
+/** Room a row's disclosure chevron takes (icon and gap), kept empty on change rows so checkboxes line up. */
+export const CHEVRON_SLOT = 19;
+
+/** Whether some rows expand and collapse, which gives every row a chevron column. */
+export function hasDisclosureRows(rows: ChangeRow[]): boolean {
+  return rows.some((row) => row.type !== 'change');
+}
+
+/**
+ * How far a row's content starts from the left edge. A change's checkbox sits one level right of its folder's or
+ * changelist's checkbox, and top-level checkboxes all share one column.
+ */
+export function rowIndent(row: ChangeRow, { grouped, disclosure }: { grouped: boolean; disclosure: boolean }): number {
+  if (row.type === 'group') return 0;
+  const levels = row.depth + (grouped ? 1 : 0);
+  return levels * INDENT + (row.type === 'change' && disclosure ? CHEVRON_SLOT : 0);
+}
+
 export function changeKey(change: PendingChange): string {
   return `change:${change.path}`;
 }
@@ -96,7 +116,7 @@ function sortByPath(changes: PendingChange[]): PendingChange[] {
 }
 
 /** A flat list reads by kind of change first, in the order of the filter chips; a tree has to follow the folders. */
-function sortByStatus(changes: PendingChange[]): PendingChange[] {
+export function sortByStatus(changes: PendingChange[]): PendingChange[] {
   return [...changes].sort((a, b) => compareTones(changeTone(a), changeTone(b)) || a.path.localeCompare(b.path));
 }
 

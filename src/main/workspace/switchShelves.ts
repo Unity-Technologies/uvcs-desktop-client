@@ -1,3 +1,4 @@
+import { readFile, writeFile } from 'node:fs/promises';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { MergeRequest } from '@shared/domain/merge';
 import type { PendingChange } from '@shared/domain/pendingChanges';
@@ -5,7 +6,9 @@ import { spec } from '@shared/domain/specs';
 import { automaticShelveComment, parseCreatedShelves, type CreatedShelve } from '../cm/automaticShelve';
 import type { CmClient } from '../cm/CmClient';
 import { DIFF_FORMAT, parseDiffEntries } from '../cm/diffEntries';
+import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { withTempFile } from '../files/tempFile';
+import { toAbsolutePath } from '../files/workspacePaths';
 import { previewMerge } from '../merge/previewMerge';
 import { runMerge } from '../merge/runMerge';
 import type { OperationContext } from '../operations/OperationTracker';
@@ -65,4 +68,22 @@ export async function applyShelveCleanly(cm: CmClient, workspacePath: string, sh
 
   await runMerge(cm, workspacePath, request, { directoryConflicts: [], files: {} }, context);
   return { kind: 'applied' };
+}
+
+/**
+ * A merge from a shelve "replaces" the files it brings with the shelve's revisions, which are gone once the shelve
+ * is deleted: reading the file's base (its diff) would then fail. Before deleting a shelve whose merge is done, those
+ * files become plain checkouts with the same content. Only right after that merge: every replaced file comes from it.
+ */
+export async function detachReplacedFiles(cm: CmClient, workspacePath: string): Promise<void> {
+  const { changes } = parsePendingChanges(await cm.query(['status', '--xml', '--controlledchanged'], { cwd: workspacePath }));
+  const paths = changes
+    .filter((change) => change.kinds.includes('replaced') && !change.kinds.includes('moved') && change.itemType !== 'directory')
+    .map((change) => toAbsolutePath(workspacePath, change.path));
+  if (paths.length === 0) return;
+
+  const contents = await Promise.all(paths.map((path) => readFile(path)));
+  await cm.query(['undo', ...paths], { cwd: workspacePath });
+  await Promise.all(paths.map((path, index) => writeFile(path, contents[index]!)));
+  await cm.query(['checkout', ...paths], { cwd: workspacePath });
 }

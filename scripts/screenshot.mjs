@@ -5,6 +5,8 @@
 //   click:<text>           click the first element showing <text>
 //   rclick:<text>          right-click it (opens context menus)
 //   dblclick:<text>        double-click it
+//   label:<name>           click the first element with that accessible name (icon buttons, e.g. label:Command log)
+//   hover:<text>           hover the first element showing <text> (tooltips)
 //   key:<keys>             press keys, e.g. key:Meta+3
 //   type:<text>            type text into the focused element
 //   wait:<ms>              wait
@@ -44,6 +46,12 @@ for (const step of steps) {
     case 'dblclick':
       await window.getByText(value, { exact: true }).first().dblclick({ timeout: 10000 });
       break;
+    case 'label':
+      await window.getByLabel(value, { exact: true }).first().click({ timeout: 10000 });
+      break;
+    case 'hover':
+      await window.getByText(value, { exact: true }).first().hover({ timeout: 10000 });
+      break;
     case 'key':
       await window.keyboard.press(value);
       break;
@@ -54,7 +62,8 @@ for (const step of steps) {
       await window.waitForTimeout(Number(value));
       break;
     case 'theme':
-      await window.evaluate((theme) => (document.documentElement.dataset.theme = theme), value);
+      // Emulates the OS appearance, so everything that follows it (code panes included) switches too.
+      await window.emulateMedia({ colorScheme: value });
       break;
     default:
       throw new Error(`Unknown step ${step}`);

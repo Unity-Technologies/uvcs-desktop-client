@@ -16,25 +16,30 @@ export function parseStatusHeader(output: string): string | null {
 /**
  * Finds the repository of up to `MAX_LOOKUPS` workspaces, two at a time,
  * giving up (and killing `cm`) on the ones that don't answer quickly.
+ * Aborting `signal` kills the running lookups and skips the rest.
  */
-export async function resolveWorkspaceRepositories(cm: CmClient, workspacePaths: string[]): Promise<Record<string, string | null>> {
+export async function resolveWorkspaceRepositories(
+  cm: CmClient,
+  workspacePaths: string[],
+  signal: AbortSignal,
+): Promise<Record<string, string | null>> {
   const repositories: Record<string, string | null> = {};
   const pending = [...new Set(workspacePaths)].slice(0, MAX_LOOKUPS);
 
   const worker = async (): Promise<void> => {
-    for (let path = pending.shift(); path !== undefined; path = pending.shift()) {
-      repositories[path] = await repositoryOf(cm, path);
+    for (let path = pending.shift(); path !== undefined && !signal.aborted; path = pending.shift()) {
+      repositories[path] = await repositoryOf(cm, path, signal);
     }
   };
   await Promise.all(Array.from({ length: CONCURRENT_LOOKUPS }, worker));
   return repositories;
 }
 
-async function repositoryOf(cm: CmClient, workspacePath: string): Promise<string | null> {
+async function repositoryOf(cm: CmClient, workspacePath: string, signal: AbortSignal): Promise<string | null> {
   if (!existsSync(workspacePath)) return null;
   try {
     const output = await cm.execute(['status', '--header', '--machinereadable', '--fieldseparator=|', workspacePath], {
-      signal: AbortSignal.timeout(LOOKUP_TIMEOUT_MS),
+      signal: AbortSignal.any([signal, AbortSignal.timeout(LOOKUP_TIMEOUT_MS)]),
       killSignal: 'SIGKILL',
     });
     return parseStatusHeader(output);

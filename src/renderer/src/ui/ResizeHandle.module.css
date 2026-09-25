@@ -1,0 +1,20 @@
+/* Sits on the parent's top border, with a taller invisible grab area. */
+.handle {
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  cursor: row-resize;
+  z-index: 1;
+}
+
+.handle::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
+.handle:hover {
+  background: var(--accent);
+}

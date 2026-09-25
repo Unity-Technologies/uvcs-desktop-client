@@ -1,29 +1,56 @@
 import type { FilterRuleList, PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
+import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runVoidAction } from '../../app/operations/runOperation';
 import { copyToClipboard } from '../../lib/copyToClipboard';
+import { pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
-import { isControlled } from './changeCategories';
+import { existsOnDisk, isControlled } from './changeCategories';
+import { askUndoChanges } from './UndoChangesDialog';
+import { BACKUP_SHELVE_COMMENT } from './undoPlan';
 
 export function absolutePath(workspacePath: string, relativePath: string): string {
   const separator = workspacePath.includes('\\') ? '\\' : '/';
   return `${workspacePath}${separator}${relativePath.split('/').join(separator)}`;
 }
 
+/** Undoes the controlled changes after confirming, shelving them first when the user keeps the backup option. */
 export async function undoChanges(workspacePath: string, changes: PendingChange[]): Promise<void> {
   const controlled = changes.filter(isControlled);
   if (controlled.length === 0) return;
 
-  const confirmed = await confirm({
-    title: controlled.length === 1 ? `Undo changes to ${fileName(controlled[0]!.path)}?` : `Undo ${controlled.length} changes?`,
-    message: 'Your local modifications will be lost. This cannot be undone.',
-    confirmLabel: 'Undo changes',
-    danger: true,
-  });
-  if (!confirmed) return;
+  const answer = await askUndoChanges(controlled);
+  if (!answer) return;
 
-  await runAction(workspacePath, "Couldn't undo the changes", () => api.pendingChanges.undo(workspacePath, controlled.map((change) => change.path)));
+  const paths = controlled.map((change) => change.path);
+  let backupShelveId: number | undefined;
+  if (answer.backup) {
+    // Backup before undo: if the shelve fails, nothing is undone.
+    backupShelveId = await runAction(workspacePath, "Couldn't shelve a backup, so nothing was undone", () =>
+      api.pendingChanges.shelve(workspacePath, paths, BACKUP_SHELVE_COMMENT),
+    );
+    if (backupShelveId === undefined) return;
+  }
+
+  const undone = await runVoidAction(workspacePath, "Couldn't undo the changes", () => api.pendingChanges.undo(workspacePath, paths));
+  if (!undone) return;
+
+  const title = `Undid ${pluralize(controlled.length, 'change')}`;
+  if (backupShelveId === undefined) {
+    toast.success(title);
+    return;
+  }
+  const shelveId = backupShelveId;
+  toast.success(`${title} · backed up in shelve ${shelveId}`, undefined, {
+    label: 'View',
+    run: () => navigation.openPage({ kind: 'diff', title: `Shelve ${shelveId}`, target: { kind: 'shelve', shelveId } }),
+  });
+}
+
+/** Opens the file with the app the OS associates with it; deleted items have nothing on disk to open. */
+export function openWithDefaultApp(workspacePath: string, change: PendingChange): void {
+  if (existsOnDisk(change)) void api.system.openPath(absolutePath(workspacePath, change.path));
 }
 
 export async function deletePrivateFiles(workspacePath: string, changes: Pick<PendingChange, 'path'>[]): Promise<void> {

@@ -7,6 +7,7 @@ import { askDialog } from '../../ui/dialog/dialogStore';
 import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
 import { queryClient } from '../queryClient';
+import { forgetRecentWorkspace } from '../settings/useSettings';
 import { DeleteRepositoryDialog } from './dialogs/DeleteRepositoryDialog';
 
 async function runAndRefresh(failureTitle: string, action: () => Promise<unknown>, queryKey: readonly unknown[]): Promise<boolean> {
@@ -37,11 +38,7 @@ export async function removeWorkspace(workspace: WorkspaceSummary): Promise<void
   if (!confirmed) return;
 
   const removed = await runAndRefresh("Couldn't remove the workspace", () => api.workspaces.remove(workspace.path), queryKeys.workspaces);
-  if (!removed) return;
-
-  const { recentWorkspacePaths } = await api.settings.get();
-  const updated = await api.settings.update({ recentWorkspacePaths: recentWorkspacePaths.filter((path) => path !== workspace.path) });
-  queryClient.setQueryData(queryKeys.settings, updated);
+  if (removed) await forgetRecentWorkspace(workspace.path);
 }
 
 export function revealWorkspace(workspace: WorkspaceSummary): void {

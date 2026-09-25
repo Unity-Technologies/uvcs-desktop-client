@@ -11,9 +11,23 @@ export function useWorkspacePath(): string {
 }
 
 export function useWorkspaceInfo() {
+  return useWorkspaceInfoOf(useWorkspacePath());
+}
+
+/** Like `useWorkspaceInfo`, for code that also runs without a workspace (null). */
+export function useWorkspaceInfoOf(workspacePath: string | null) {
+  return useQuery({
+    queryKey: queryKeys.inWorkspace(workspacePath ?? '', 'info'),
+    queryFn: () => api.workspaces.info(workspacePath!),
+    enabled: workspacePath !== null,
+  });
+}
+
+/** Whether the open workspace's folder is gone (deleted, moved, or on a drive that isn't mounted). */
+export function useWorkspaceFolderMissing() {
   const workspacePath = useWorkspacePath();
   return useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'info'),
-    queryFn: () => api.workspaces.info(workspacePath),
+    queryKey: queryKeys.inWorkspace(workspacePath, 'folderMissing'),
+    queryFn: async () => (await api.workspaces.findMissing([workspacePath])).length > 0,
   });
 }
