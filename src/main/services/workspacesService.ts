@@ -8,6 +8,7 @@ import { readWorkingObjectComment } from '../cm/workingObjectComment';
 import { resolveWorkspaceRepositories } from '../cm/workspaceRepositories';
 import { readWorkspaceStatus } from '../cm/workspaceStatus';
 import { CmError } from '../cm/CmError';
+import { callerId } from '../ipc/caller';
 import { UPDATE_ARGS } from '../merge/updateWithMerge';
 import { readSwitchPreflight } from '../workspace/switchPreflight';
 import { switchWithChanges } from '../workspace/switchWithChanges';
@@ -15,7 +16,7 @@ import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const UPDATE_NEEDS_MERGE = 'Some of your local changes collide with incoming ones. Open Incoming to merge them while updating.';
 
-export function createWorkspacesService({ cm, operations, watcher, settings }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
+export function createWorkspacesService({ cm, operations, watchers, settings }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
   const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups') };
 
   async function list(): Promise<WorkspaceSummary[]> {
@@ -81,7 +82,7 @@ export function createWorkspacesService({ cm, operations, watcher, settings }: S
 
   async function watch(workspacePath: string): Promise<WatchCoverage> {
     cm.warmUp(workspacePath);
-    return watcher.watch(workspacePath);
+    return watchers.watch(callerId(), workspacePath);
   }
 
   function repositoriesOf(workspacePaths: string[], lookupId: string): Promise<Record<string, string | null>> {
@@ -100,6 +101,7 @@ export function createWorkspacesService({ cm, operations, watcher, settings }: S
     remove,
     update,
     watch,
+    unwatch: async () => watchers.release(callerId()),
     switchPreflight: (workspacePath, targetSpec) => readSwitchPreflight(cm, switchShelves, workspacePath, targetSpec),
     switchTo: (workspacePath, targetSpec, operationId, pendingChanges) =>
       operations.run(operationId, (context) => switchWithChanges(switchDependencies, workspacePath, targetSpec, pendingChanges, context)),

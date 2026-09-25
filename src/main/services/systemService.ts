@@ -2,11 +2,11 @@ import { homedir } from 'node:os';
 import { app, dialog, shell } from 'electron';
 import type { SystemApi } from '@shared/api/system';
 import { checkSetup } from '../cm/setupCheck';
+import { callerId } from '../ipc/caller';
 import { showIncomingNotification } from '../window/incomingNotification';
-import { takeRequestedWorkspace } from '../window/recentDocuments';
 import type { ServiceContext } from './ServiceContext';
 
-export function createSystemService({ cm, operations }: ServiceContext): SystemApi {
+export function createSystemService({ cm, operations, windows }: ServiceContext): SystemApi {
   return {
     cmVersion: async () => {
       cm.relocate();
@@ -31,7 +31,7 @@ export function createSystemService({ cm, operations }: ServiceContext): SystemA
     homeDirectory: async () => homedir(),
     cancelOperation: async (operationId) => operations.cancel(operationId),
     addRecentDocument: async (workspacePath) => app.addRecentDocument(workspacePath),
-    takeRequestedWorkspace: async () => takeRequestedWorkspace(),
-    notifyIncoming: async (workspacePath, message) => showIncomingNotification(workspacePath, message),
+    takeRequestedWorkspace: async () => windows.takeRequested(callerId()),
+    notifyIncoming: async (workspacePath, message) => showIncomingNotification(windows, workspacePath, message),
   };
 }

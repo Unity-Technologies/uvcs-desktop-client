@@ -16,7 +16,7 @@ export interface SystemApi {
   cancelOperation(operationId: string): Promise<void>;
   /** Lists the workspace in the OS recent documents (the Dock menu on macOS, the jump list on Windows). */
   addRecentDocument(workspacePath: string): Promise<void>;
-  /** The workspace last picked from the OS recent documents, once; null if none is waiting. */
+  /** The workspace this window was asked to open (picked from the OS recent documents, or opened in a new window), once; null if none. */
   takeRequestedWorkspace(): Promise<string | null>;
   /** Shows an OS notification about incoming changes; clicking it focuses the window and sends `incomingNotificationClicked`. */
   notifyIncoming(workspacePath: string, message: string): Promise<void>;

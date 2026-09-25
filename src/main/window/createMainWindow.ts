@@ -1,15 +1,18 @@
 import { join } from 'node:path';
 import { BrowserWindow, nativeTheme, shell } from 'electron';
 import type { SettingsStore } from '../settings/SettingsStore';
-import { loadWindowBounds, saveWindowBounds } from './savedWindowBounds';
+import { cascadedWindowBounds, loadWindowBounds, saveWindowBounds } from './savedWindowBounds';
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from './windowBounds';
 
 const DARK_BACKGROUND = '#16171b';
 const LIGHT_BACKGROUND = '#ffffff';
 
-/** Opens the main window where it was last (fitted to the current displays). The page title becomes the window title. */
-export function createMainWindow(settings: SettingsStore): BrowserWindow {
-  const { bounds, maximized } = loadWindowBounds(settings);
+/**
+ * Opens a window where the last one was (fitted to the current displays), or a little below and to the right of
+ * `cascadeFrom` so a new window doesn't hide the one it was opened from. The page title becomes the window title.
+ */
+export function createMainWindow(settings: SettingsStore, cascadeFrom?: BrowserWindow): BrowserWindow {
+  const { bounds, maximized } = cascadeFrom ? cascadedWindowBounds(cascadeFrom) : loadWindowBounds(settings);
   const window = new BrowserWindow({
     width: 1400,
     height: 900,

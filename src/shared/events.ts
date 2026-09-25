@@ -1,3 +1,5 @@
+import type { AppSettings } from './domain/settings';
+
 export interface CommandLogEntry {
   id: number;
   commandLine: string;
@@ -25,11 +27,16 @@ export interface WorkspaceChange {
   metadata: boolean;
 }
 
-/** Events pushed from the main process to the renderer. */
+/**
+ * Events pushed from the main process to the renderer. Each window gets the commands and progress of its own
+ * API calls, and the changes of the workspace it shows.
+ */
 export interface UvcsEvents {
   commandLogged: CommandLogEntry;
   workspaceChanged: WorkspaceChange & { workspacePath: string };
   operationProgress: OperationProgress;
+  /** The settings changed, in this window or another one. */
+  settingsChanged: AppSettings;
   /** A workspace was picked from the OS recent documents; `system.takeRequestedWorkspace` tells which. */
   workspaceOpenRequested: Record<string, never>;
   /** A native menu item was chosen; runs the registered command with this id. */

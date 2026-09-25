@@ -2,6 +2,7 @@ import { ipcMain } from 'electron';
 import type { UvcsApi } from '@shared/api';
 import { INVOKE_CHANNEL, type InvokeRequest, type InvokeResponse, type RemoteError } from '@shared/ipc';
 import { CmError } from '../cm/CmError';
+import { runForCaller } from './caller';
 
 type AnyMethod = (...args: unknown[]) => Promise<unknown>;
 
@@ -14,12 +15,12 @@ export function registerApi(api: UvcsApi): void {
     }
   }
 
-  ipcMain.handle(INVOKE_CHANNEL, async (_event, request: InvokeRequest): Promise<InvokeResponse> => {
+  ipcMain.handle(INVOKE_CHANNEL, async (event, request: InvokeRequest): Promise<InvokeResponse> => {
     const method = methods.get(request.method);
     if (!method) return { ok: false, error: { message: `Unknown API method ${request.method}` } };
 
     try {
-      return { ok: true, value: await method(...request.args) };
+      return { ok: true, value: await runForCaller(event.sender, () => method(...request.args)) };
     } catch (error) {
       return { ok: false, error: toRemoteError(error) };
     }

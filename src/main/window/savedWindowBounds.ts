@@ -1,6 +1,6 @@
 import { screen, type BrowserWindow } from 'electron';
 import type { SettingsStore } from '../settings/SettingsStore';
-import { restoreWindowBounds, type Rect } from './windowBounds';
+import { cascadeWindowBounds, restoreWindowBounds, type Rect } from './windowBounds';
 
 const SAVE_DELAY_MS = 500;
 
@@ -9,6 +9,12 @@ export function loadWindowBounds(settings: SettingsStore): { bounds: Rect | null
   const saved = settings.get().windowBounds;
   const workAreas = screen.getAllDisplays().map((display) => display.workArea);
   return { bounds: restoreWindowBounds(saved, workAreas), maximized: saved?.maximized ?? false };
+}
+
+/** Bounds for a new window opened from `window`: offset from it, fitted to the displays. */
+export function cascadedWindowBounds(window: BrowserWindow): { bounds: Rect | null; maximized: boolean } {
+  const workAreas = screen.getAllDisplays().map((display) => display.workArea);
+  return { bounds: cascadeWindowBounds(window.getNormalBounds(), workAreas), maximized: false };
 }
 
 /** Saves the window's bounds while it moves or resizes (after a short pause) and when it closes. */

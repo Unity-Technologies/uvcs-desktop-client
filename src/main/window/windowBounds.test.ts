@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { restoreWindowBounds } from './windowBounds';
+import { cascadeWindowBounds, restoreWindowBounds } from './windowBounds';
 
 const laptop = { x: 0, y: 25, width: 1512, height: 920 };
 const external = { x: 1512, y: 0, width: 2560, height: 1415 };
@@ -29,5 +29,17 @@ describe('restoreWindowBounds', () => {
   it('never goes below the minimum size, and ignores missing bounds', () => {
     expect(restoreWindowBounds(saved(0, 30, 200, 100), [laptop])).toMatchObject({ width: 960, height: 600 });
     expect(restoreWindowBounds(null, [laptop])).toBeNull();
+  });
+});
+
+describe('cascadeWindowBounds', () => {
+  const window = { x: 100, y: 80, width: 1200, height: 800 };
+
+  it('opens a new window a step below and to the right of the other one', () => {
+    expect(cascadeWindowBounds(window, [laptop])).toEqual({ x: 128, y: 108, width: 1200, height: 800 });
+  });
+
+  it('goes back to the top left of the display when the step would run off it', () => {
+    expect(cascadeWindowBounds({ ...window, y: 130 }, [laptop])).toEqual({ x: 0, y: 25, width: 1200, height: 800 });
   });
 });

@@ -23,6 +23,7 @@ import { createSettingsService } from './settingsService';
 import { createShelvesService } from './shelvesService';
 import { createSyncService } from './syncService';
 import { createSystemService } from './systemService';
+import { createWindowsService } from './windowsService';
 import { createWorkspacesService } from './workspacesService';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
@@ -53,6 +54,7 @@ export function createServices(context: ServiceContext): UvcsApi {
     shelves: createShelvesService(context),
     sync: createSyncService(context),
     system: createSystemService(context),
+    windows: createWindowsService(context),
     workspaces: createWorkspacesService(context, switching),
   };
 }

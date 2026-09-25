@@ -35,8 +35,13 @@ export interface WorkspacesApi {
   remove(workspacePath: string): Promise<void>;
   /** Downloads the latest changes of the loaded branch. */
   update(workspacePath: string, operationId: string): Promise<void>;
-  /** Emits `workspaceChanged` events when the workspace changes on disk. Replaces any previous watch. */
+  /**
+   * The calling window now shows this workspace: it gets `workspaceChanged` events when the workspace changes on
+   * disk, instead of the ones of the workspace it showed before. Windows showing the same workspace share a watcher.
+   */
   watch(workspacePath: string): Promise<WatchCoverage>;
+  /** The calling window shows no workspace anymore (back to the home screen). */
+  unwatch(): Promise<void>;
   /** What the workspace's pending changes allow before switching it to `targetSpec`. */
   switchPreflight(workspacePath: string, targetSpec: string): Promise<SwitchPreflight>;
   /**
