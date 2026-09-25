@@ -39,3 +39,15 @@ export function itemStatus(item: TreeItem, index: PendingChangesIndex): ItemStat
   if (item.isCheckedOut) return { tone: 'changed', label: 'Checked out' };
   return null;
 }
+
+/**
+ * The mark on an item's icon, as the Plastic desktop GUI overlays them: its pending status, else a link for an xlink,
+ * private, or a check for an item under version control and up to date.
+ */
+export type IconOverlay = StatusTone | 'xlink' | 'controlled';
+
+export function iconOverlay(item: Pick<TreeItem, 'isPrivate' | 'xlink'>, status: ItemStatus | null): IconOverlay {
+  if (status) return status.tone;
+  if (item.xlink) return 'xlink';
+  return item.isPrivate ? 'private' : 'controlled';
+}

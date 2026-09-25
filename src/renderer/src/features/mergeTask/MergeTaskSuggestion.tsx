@@ -2,16 +2,19 @@ import { useQuery } from '@tanstack/react-query';
 import { GitPullRequest } from 'lucide-react';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
-import { IMMUTABLE_QUERY } from '../../app/queryClient';
+import { IMMUTABLE_QUERY, SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { Button } from '../../ui/Button';
 import { useBranch } from '../branches/useBranches';
+import { finishedTaskFor, useFinishedTasksStore } from './finishedTask';
+import { FinishedTaskCard } from './FinishedTaskCard';
 import { openMergeTaskDialog } from './MergeTaskDialog';
 import { isTaskBranch } from './mergeTaskSummary';
 
 /**
- * For a clean workspace on a task branch with changesets of its own: a quiet way to finish the task. It stays cheap:
- * one `cm find` reads the branch (never the list of every branch), and one `cm find` (limit 1) per branch head tells whether
- * the branch has changesets. The merge itself is only previewed once the dialog opens.
+ * For a clean workspace on a task branch with changesets of its own: a quiet way to finish the task, and once it's
+ * merged, what to do next. It stays cheap: one `cm find` reads the branch (never the list of every branch), one (limit 1)
+ * per branch head tells whether the branch has changesets, and one merge link (limit 1) per head whether that head is
+ * already merged into the parent. The merge itself is only previewed once the dialog opens.
  */
 export function MergeTaskSuggestion({ workspacePath, branchName }: { workspacePath: string; branchName: string }) {
   const branch = useBranch(branchName).data ?? undefined;
@@ -24,11 +27,25 @@ export function MergeTaskSuggestion({ workspacePath, branchName }: { workspacePa
     staleTime: Infinity,
     meta: IMMUTABLE_QUERY,
   });
-  if (!task || !hasChangesets) return null;
+  const { data: mergedInto } = useQuery({
+    queryKey: queryKeys.inWorkspace(workspacePath, 'mergeTaskMergedInto', branchName, task?.headChangeset, task?.parent),
+    queryFn: () => api.merge.mergedInto(workspacePath, task!.headChangeset, task!.parent),
+    enabled: task !== undefined && hasChangesets === true,
+    // Keyed by the branch head too. A merge found stays found; "not merged yet" is asked again after operations and,
+    // like other slow lists, every few minutes at most.
+    ...SLOW_CHANGING_QUERY,
+    staleTime: (query) => (query.state.data == null ? SLOW_CHANGING_QUERY.staleTime : Infinity),
+  });
+  const merged = useFinishedTasksStore((state) => state.merged[workspacePath]);
+  const dismissed = useFinishedTasksStore((state) => state.dismissed);
+
+  const finished = finishedTaskFor({ branch: branchName, parent: task?.parent, merged, mergedInto, dismissed });
+  if (finished) return <FinishedTaskCard workspacePath={workspacePath} task={finished} />;
+  if (!task || !hasChangesets || mergedInto !== null) return null;
 
   return (
     <Button variant="ghost" size="small" icon={<GitPullRequest size={13} />} onClick={() => openMergeTaskDialog(workspacePath, task)}>
-      Your branch is ready? Merge to {task.parent}
+      Ready? Merge {task.name} into {task.parent}
     </Button>
   );
 }
