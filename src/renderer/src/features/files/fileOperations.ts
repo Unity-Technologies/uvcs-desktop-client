@@ -7,11 +7,11 @@ import { absolutePath, deletePrivateFiles, fileName } from '../pendingChanges/pe
 import { useFilesViewStore } from './filesViewStore';
 import { parentOf } from './fileTreeRows';
 
-export function openItem(workspacePath: string, item: TreeItem): void {
+export function openItem(workspacePath: string, item: Pick<TreeItem, 'path'>): void {
   void runAction(workspacePath, "Couldn't open the file", () => api.system.openPath(absolutePath(workspacePath, item.path)));
 }
 
-export function revealItem(workspacePath: string, item: TreeItem): void {
+export function revealItem(workspacePath: string, item: Pick<TreeItem, 'path'>): void {
   void api.system.revealInFileManager(absolutePath(workspacePath, item.path));
 }
 

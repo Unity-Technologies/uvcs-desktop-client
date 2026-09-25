@@ -1,9 +1,9 @@
 import { ExternalLink, Trash2, UserPlus } from 'lucide-react';
-import { CODE_REVIEW_STATUSES, type CodeReview } from '@shared/domain/codeReview';
+import { CODE_REVIEW_STATUSES, type CodeReviewSummary } from '@shared/domain/codeReview';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { deleteReviews, openReview, reassignReview, setReviewStatus } from './codeReviewOperations';
 
-export function codeReviewMenu(workspacePath: string, reviews: CodeReview[]): MenuEntry[] {
+export function codeReviewMenu(workspacePath: string, reviews: CodeReviewSummary[]): MenuEntry[] {
   const single = reviews.length === 1 ? reviews[0]! : null;
 
   return tidyMenu([
