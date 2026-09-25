@@ -13,7 +13,10 @@ interface PathLabelProps {
   strikethrough?: boolean;
   /** Fuzzy-matched positions in `path` to highlight; otherwise the words of the surrounding `HighlightQuery` are. */
   matches?: readonly number[];
-  /** As wide as the whole path (up to its container), where the container wraps the label rather than sizing it. */
+  /**
+   * As wide as the whole path (up to its container) and no narrower than the name, where the container wraps the
+   * label rather than sizing it.
+   */
   fitContent?: boolean;
   /** False where the element around it has a tooltip naming the path already. */
   tooltip?: boolean;
@@ -31,7 +34,7 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fit
   const directory = nameOnly ? '' : path.slice(0, nameStart);
   const ref = useRef<HTMLSpanElement>(null);
   const [shownDirectory, setShownDirectory] = useState(directory);
-  const [contentWidth, setContentWidth] = useState<number>();
+  const [contentSize, setContentSize] = useState<{ width: number; minWidth: string; flexShrink: number }>();
 
   // Fit before paint, so recycled rows of a virtual list don't flash, and again whenever the container resizes.
   useLayoutEffect(() => {
@@ -40,7 +43,11 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fit
     const fit = (): void => {
       const measure = textMeasurer(element);
       // Widths are rounded; the extra pixel keeps a rounded-up width from clipping the fitted text.
-      if (fitContent) setContentWidth(Math.ceil(measure(directory + name)) + 1);
+      if (fitContent) {
+        const nameWidth = Math.ceil(measure(name)) + 1;
+        // Next to other labels, the one with the most folder to drop gives way first.
+        setContentSize({ width: Math.ceil(measure(directory)) + nameWidth, minWidth: `min(${nameWidth}px, 100%)`, flexShrink: measure(directory) });
+      }
       setShownDirectory(directory && trimFolderToFit(directory, element.clientWidth - measure(name) - 1, measure));
     };
     fit();
@@ -56,7 +63,7 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fit
       ref={ref}
       className={styles.path}
       data-fit-content={fitContent}
-      style={fitContent ? { width: contentWidth } : undefined}
+      style={fitContent ? contentSize : undefined}
       data-tip={!tooltip ? undefined : oldPath ? `${oldPath} → ${path}` : trimmed ? path : undefined}
     >
       {shownDirectory && (

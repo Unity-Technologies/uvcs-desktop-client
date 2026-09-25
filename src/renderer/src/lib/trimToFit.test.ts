@@ -38,9 +38,10 @@ describe('trimFolderToFit', () => {
     expect(trimFolderToFit('Assets/Scripts/Gameplay/', 20, measure)).toBe('Assets/…/Gameplay/');
   });
 
-  it('cuts the end when not even the first segment fits', () => {
-    expect(trimFolderToFit(branchParent, 6, measure)).toBe('/main…');
-    expect(trimFolderToFit('/', 0, measure)).toBe('');
+  it('leaves only an ellipsis when not even the first segment fits', () => {
+    expect(trimFolderToFit(branchParent, 6, measure)).toBe('…/');
+    expect(trimFolderToFit('/main/', 4, measure)).toBe('…/');
+    expect(trimFolderToFit(branchParent, 1, measure)).toBe('');
   });
 });
 

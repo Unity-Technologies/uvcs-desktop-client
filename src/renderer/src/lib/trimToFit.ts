@@ -23,7 +23,7 @@ export function trimToFit(text: string, maxWidth: number, measure: Measure): str
 /**
  * A folder (ending in `/`) shortened to fit by dropping whole segments from its middle, so what is left still reads
  * as a path: `/main/…/child_1/` for `/main/child-br/empty-branch2/child_1/`. Keeps the first segment and as many of
- * the last ones as fit; when not even `/main/…/` does, cuts the end like `trimToFit`.
+ * the last ones as fit; when not even `/main/…/` does, just `…/`, or nothing.
  */
 export function trimFolderToFit(folder: string, maxWidth: number, measure: Measure): string {
   if (measure(folder) <= maxWidth) return folder;
@@ -34,7 +34,7 @@ export function trimFolderToFit(folder: string, maxWidth: number, measure: Measu
     const shortened = head + segments.slice(segments.length - kept).map((segment) => `${segment}/`).join('');
     if (measure(shortened) <= maxWidth) return shortened;
   }
-  return trimToFit(folder, maxWidth, measure);
+  return measure(`${ELLIPSIS}/`) <= maxWidth ? `${ELLIPSIS}/` : '';
 }
 
 /** Where character positions of `text` (search matches) land once it is shortened to `shown`; cut ones are left out. */

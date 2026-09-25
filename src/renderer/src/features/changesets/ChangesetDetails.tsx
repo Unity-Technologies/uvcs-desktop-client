@@ -37,7 +37,7 @@ export function ChangesetDetails({ changeset, menu, links = PLAIN_LINKS, relatio
     <DetailsPanel
       icon={<GitCommitVertical />}
       kind={`Changeset ${changeset.id}`}
-      context={<PathLabel path={changeset.branch} />}
+      context={<PathLabel path={changeset.branch} fitContent />}
       title={firstLine(changeset.comment) || 'No comment'}
       author={{ user: changeset.owner, date: changeset.date }}
       badges={

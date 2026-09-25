@@ -34,7 +34,7 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
     <DetailsPanel
       icon={<GitBranch />}
       kind="Branch"
-      context={branch.parent && <PathLabel path={branch.parent} />}
+      context={branch.parent && <PathLabel path={branch.parent} fitContent />}
       title={shortBranchName(branch.name)}
       author={{ user: branch.owner, date: branch.date }}
       badges={

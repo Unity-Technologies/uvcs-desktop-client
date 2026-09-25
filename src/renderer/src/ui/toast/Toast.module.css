@@ -83,6 +83,8 @@
 
 .title {
   font-weight: 500;
+  /* Long branch names wrap whole rather than run past the edge. */
+  overflow-wrap: anywhere;
 }
 
 .detail {

@@ -17,7 +17,7 @@ export function LabelDetails({ label, menu }: { label: Label; menu: MenuEntry[] 
     <DetailsPanel
       icon={<Tag />}
       kind="Label"
-      context={<PathLabel path={label.branch} />}
+      context={<PathLabel path={label.branch} fitContent />}
       title={label.name}
       author={{ user: label.owner, date: label.date }}
       primaryAction={

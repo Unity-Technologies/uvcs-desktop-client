@@ -1,5 +1,6 @@
 import { AlertTriangle, ArrowDownToLine, GitMerge } from 'lucide-react';
 import type { MergePlan, MergeRequest } from '@shared/domain/merge';
+import { shortBranchName } from '@shared/domain/specs';
 import { updateWorkspace } from '../../app/shell/workspaceOperations';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { PathLabel } from '../../components/PathLabel';
@@ -75,8 +76,9 @@ export function MergeHeader({
         <span className={styles.status}>
           {pendingCount > 0 ? `${pendingCount} ${pendingCount === 1 ? 'decision' : 'decisions'} left` : 'Everything is decided'}
         </span>
+        {/* The title above names the whole destination; the button keeps its leaf, leaving room for the comment. */}
         <Button variant="primary" size="large" disabled={!canMerge} loading={merging} onClick={onMerge}>
-          {intoServerBranch ? `Merge into ${labels.destination}` : 'Complete merge'}
+          {intoServerBranch ? `Merge into ${shortBranchName(labels.destination)}` : 'Complete merge'}
           <Kbd keys="mod+enter" />
         </Button>
       </div>
