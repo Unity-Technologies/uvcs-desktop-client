@@ -30,6 +30,17 @@ export function describeDiscard(lines: ChangedLine[]): DiscardAction {
   };
 }
 
+/** The action of a whole change: "Revert change" when it replaces lines, otherwise what it does ("Remove 2 lines"). */
+export function wholeChangeLabel(lines: ChangedLine[]): string {
+  const action = describeDiscard(lines);
+  return action.kind === 'revert' ? 'Revert change' : action.label;
+}
+
+/** The action of one changed line: an added line goes, a removed one comes back. */
+export function lineActionLabel({ side }: ChangedLine): string {
+  return side === 'additions' ? 'Remove this line' : 'Restore this line';
+}
+
 function count(lines: number): string {
   return lines === 1 ? '1 line' : `${lines} lines`;
 }

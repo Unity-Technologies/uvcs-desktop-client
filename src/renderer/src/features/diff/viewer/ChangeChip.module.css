@@ -1,62 +1,50 @@
-.bar {
+/* Sits on the change's top edge, over the code of the line above it. */
+.chip {
   position: absolute;
   z-index: 2;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 2px;
-  padding: 2px;
+  gap: 5px;
+  height: 20px;
+  padding: 0 6px 0 5px;
   border: 1px solid var(--border-default);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: var(--bg-surface-raised);
   box-shadow: var(--shadow-md);
+  color: var(--text-secondary);
   font-family: var(--font-ui);
   font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
   animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
 }
 
-.discard,
-.clear {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 22px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--text-primary);
-  font: inherit;
-  cursor: pointer;
-}
-
-.discard {
-  padding: 0 6px 0 8px;
-  font-weight: var(--weight-medium);
-}
-
-.discard:hover {
+.chip:hover {
+  border-color: var(--accent);
   background: var(--accent-soft);
   color: var(--accent-text);
 }
 
-.discard[data-kind='remove']:hover {
+.chip[data-kind='remove']:hover {
+  border-color: var(--change-deleted);
   background: var(--diff-removed-bg);
   color: var(--change-deleted);
 }
 
-.clear {
-  justify-content: center;
-  width: 22px;
-  padding: 0;
-  color: var(--text-tertiary);
+/* Lines are picked: the chip is the one action, so it stands out. */
+.chip[data-picked] {
+  border-color: var(--accent);
+  color: var(--accent-text);
 }
 
-.clear:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+.chip[data-picked][data-kind='remove'] {
+  border-color: var(--change-deleted);
+  color: var(--change-deleted);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .bar {
+  .chip {
     animation: none;
   }
 }

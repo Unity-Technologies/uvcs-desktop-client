@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { afterLeaving } from './leaveGuard';
 import type { Page } from './pages';
 import type { ViewId } from './views';
 
@@ -10,10 +11,11 @@ interface NavigationStore {
   goBack: () => void;
 }
 
-export const useNavigation = create<NavigationStore>((set) => ({
+export const useNavigation = create<NavigationStore>((set, get) => ({
   view: 'changes',
   pages: [],
-  goToView: (view) => set({ view, pages: [] }),
+  // Pages open over the view and keep it, so only another view leaves what it shows (unsaved edits, say).
+  goToView: (view) => (view === get().view ? set({ pages: [] }) : afterLeaving(() => set({ view, pages: [] }))),
   openPage: (page) => set((state) => ({ pages: [...state.pages, page] })),
   goBack: () => set((state) => ({ pages: state.pages.slice(0, -1) })),
 }));

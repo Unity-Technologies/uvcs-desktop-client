@@ -1,7 +1,7 @@
 import { parseDiffFromFile } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
 import { listChangeBlocks, listChangeRegions } from './changeBlocks';
-import { changedLinesInRange, regionRange } from './lineSelection';
+import { changedLinesInRange, linesRange, regionRange } from './lineSelection';
 
 const lines = (...items: string[]) => items.map((item) => `${item}\n`).join('');
 // a, b → B C (changed), c, d removed, e, f added.
@@ -45,5 +45,22 @@ describe('regionRange', () => {
       expect(changedLinesInRange(blocks, regionRange(region), 'unified')).toEqual(region.lines);
       expect(changedLinesInRange(blocks, regionRange(region), 'split')).toEqual(region.lines);
     }
+  });
+});
+
+describe('linesRange', () => {
+  it('trims a pick to its changed lines, keeping the same lines', () => {
+    const picks = [
+      { start: 1, side: 'additions' as const, end: 6, endSide: 'additions' as const },
+      { start: 1, side: 'deletions' as const, end: 5, endSide: 'deletions' as const },
+      { start: 2, side: 'deletions' as const, end: 3, endSide: 'additions' as const },
+    ];
+    for (const layout of ['split', 'unified'] as const) {
+      for (const pick of picks) {
+        const picked = changedLinesInRange(blocks, pick, layout);
+        expect(changedLinesInRange(blocks, linesRange(picked), layout)).toEqual(picked);
+      }
+    }
+    expect(linesRange([added(2), added(3), added(6)])).toEqual({ start: 2, side: 'additions', end: 6, endSide: 'additions' });
   });
 });

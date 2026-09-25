@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeDiscard } from './discardAction';
+import { describeDiscard, lineActionLabel, wholeChangeLabel } from './discardAction';
 
 const removed = (lineNumber: number) => ({ side: 'deletions' as const, lineNumber });
 const added = (lineNumber: number) => ({ side: 'additions' as const, lineNumber });
@@ -30,5 +30,20 @@ describe('describeDiscard', () => {
       done: 'Reverted 3 lines',
       description: 'Replace these 2 lines with the original one',
     });
+  });
+});
+
+describe('wholeChangeLabel', () => {
+  it('reverts a change that replaces lines, and says what the others do', () => {
+    expect(wholeChangeLabel([removed(3), added(3)])).toBe('Revert change');
+    expect(wholeChangeLabel([added(3), added(4)])).toBe('Remove 2 lines');
+    expect(wholeChangeLabel([removed(3)])).toBe('Restore 1 line');
+  });
+});
+
+describe('lineActionLabel', () => {
+  it('removes an added line and restores a removed one', () => {
+    expect(lineActionLabel(added(3))).toBe('Remove this line');
+    expect(lineActionLabel(removed(3))).toBe('Restore this line');
   });
 });

@@ -25,6 +25,11 @@ export function changedLinesInRange(blocks: ChangeBlock[], range: LineRange, lay
 
 /** A range from a change's first line to its last, to show it picked. */
 export function regionRange({ lines }: ChangeRegion): LineRange {
+  return linesRange(lines);
+}
+
+/** A range from the first of some changed lines to the last (in the order the unified view shows them). */
+export function linesRange(lines: ChangedLine[]): LineRange {
   const first = lines[0]!;
   const last = lines.at(-1)!;
   return { start: first.lineNumber, side: first.side, end: last.lineNumber, endSide: last.side };

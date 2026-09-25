@@ -4,6 +4,7 @@ import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { selectAfterLeaving } from '../../app/navigation/leaveGuard';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { NoSelection } from '../../components/NoSelection';
@@ -99,7 +100,7 @@ export function FilesView() {
             <FileTreeTable
               rows={rows}
               selection={selection}
-              onSelectionChange={setSelection}
+              onSelectionChange={(next) => selectAfterLeaving(selection, next, setSelection)}
               onToggleDirectory={(directory) => (directory === '' ? setRootExpanded((shown) => !shown) : toggle(workspacePath, directory))}
               onOpenFile={(item) => openItem(workspacePath, item)}
               contextMenu={(items) => fileMenu(workspacePath, items, pendingIndex)}

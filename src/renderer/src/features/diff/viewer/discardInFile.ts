@@ -1,13 +1,8 @@
-import type { ContentSource, FileContent } from '@shared/domain/content';
 import { api } from '../../../api/client';
-import { workspaceKey } from '../../../api/queryKeys';
-import { queryClient } from '../../../app/queryClient';
-import { refreshQueries } from '../../../app/refresh/refreshQueries';
-import { isAffectedByFileChanges } from '../../../app/refresh/refreshScopes';
 import { fileNameOf } from '../../../lib/text';
 import { toast } from '../../../ui/toast/toastStore';
 import { forgetDiscard, lastDiscard, recordDiscard, type Discard } from './discardHistory';
-import type { DiffContents } from './useDiffContents';
+import { refreshFileViews, showFileText } from './fileText';
 
 export interface DiscardTarget {
   workspacePath: string;
@@ -43,9 +38,9 @@ async function undoDiscard(target: DiscardTarget, discard: Discard): Promise<voi
   if (await write(target, discard.before)) forgetDiscard(target.workspacePath, target.path, discard);
 }
 
-/** Shows the new text right away, then writes it and re-reads what depends on the file (also with auto refresh off). */
+/** Shows the new text right away, then writes it and re-reads what depends on the file. */
 async function write({ workspacePath, path }: DiscardTarget, text: string): Promise<boolean> {
-  showText(workspacePath, path, text);
+  showFileText(workspacePath, path, text);
   try {
     await api.content.writeWorkspaceFile(workspacePath, path, text);
     return true;
@@ -53,22 +48,6 @@ async function write({ workspacePath, path }: DiscardTarget, text: string): Prom
     toast.error(`Couldn't write ${fileNameOf(path)}`, error);
     return false;
   } finally {
-    await refreshQueries({ queryKey: workspaceKey(workspacePath), predicate: ({ queryKey }) => isAffectedByFileChanges(queryKey) });
-  }
-}
-
-/** Puts the text in the cached contents of the file and in the diffs showing it, so they update without waiting for the disk. */
-function showText(workspacePath: string, path: string, text: string): void {
-  const isFile = (source: ContentSource | undefined): boolean => source?.kind === 'workspaceFile' && source.path === path;
-  const withText = (content: FileContent): FileContent => ({ ...content, text, size: new TextEncoder().encode(text).length });
-  for (const query of queryClient.getQueryCache().findAll({ queryKey: workspaceKey(workspacePath) })) {
-    const [, , area, first, second] = query.queryKey as [string, string, string, ContentSource?, ContentSource?];
-    if (area === 'content' && isFile(first)) {
-      queryClient.setQueryData<FileContent>(query.queryKey, (content) => content && withText(content));
-    } else if (area === 'diffContents' && (isFile(first) || isFile(second))) {
-      queryClient.setQueryData<DiffContents>(query.queryKey, (contents) =>
-        contents && { ...contents, left: isFile(first) ? withText(contents.left) : contents.left, right: isFile(second) ? withText(contents.right) : contents.right },
-      );
-    }
+    await refreshFileViews(workspacePath);
   }
 }

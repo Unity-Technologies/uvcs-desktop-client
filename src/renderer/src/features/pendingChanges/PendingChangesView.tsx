@@ -5,6 +5,7 @@ import { useChangeFilter } from '../../components/useChangeFilter';
 import { openSettingsDialogAt } from '../../app/settings/SettingsDialog';
 import { useSettings } from '../../app/settings/useSettings';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { selectAfterLeaving, settleBeforeLeaving } from '../../app/navigation/leaveGuard';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { joinComment } from '../../lib/comment';
 import { EMPTY_SELECTION } from '../../lib/selection';
@@ -141,6 +142,8 @@ export function PendingChangesView() {
   };
 
   const checkin = async (): Promise<boolean> => {
+    // Checking in takes the files as they are on disk: unsaved edits are saved first, or dropped, or it waits.
+    if (!(await settleBeforeLeaving())) return false;
     if (bulkPrivate && !(await confirmBulkPrivateCheckin(bulkPrivate))) return false;
     const done = await runBusy(() =>
       checkinChanges({
@@ -252,7 +255,7 @@ export function PendingChangesView() {
                 <ChangesList
                   rows={rows}
                   selection={selection}
-                  onSelectionChange={setSelection}
+                  onSelectionChange={(next) => selectAfterLeaving(selection, next, setSelection)}
                   onToggleIncluded={toggleIncluded}
                   onToggleCollapsed={toggleCollapsed}
                   onOpen={(change) => openWithDefaultApp(workspacePath, change)}

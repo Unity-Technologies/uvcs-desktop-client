@@ -3,15 +3,28 @@
   flex: none;
   align-items: center;
   gap: var(--space-2);
+  min-height: 30px;
   padding: 4px var(--space-2) 4px var(--space-3);
   border-bottom: 1px solid var(--border-subtle);
-  background: var(--label-bg);
   color: var(--text-primary);
   font-size: var(--text-sm);
 }
 
+.notice[data-tone='attention'] {
+  background: var(--label-bg);
+}
+
+.notice[data-tone='info'] {
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+}
+
 .icon {
+  display: inline-flex;
   flex: none;
+}
+
+.notice[data-tone='attention'] .icon {
   color: var(--label-text);
 }
 
