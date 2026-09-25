@@ -18,4 +18,6 @@ export interface SystemApi {
   addRecentDocument(workspacePath: string): Promise<void>;
   /** The workspace last picked from the OS recent documents, once; null if none is waiting. */
   takeRequestedWorkspace(): Promise<string | null>;
+  /** Shows an OS notification about incoming changes; clicking it focuses the window and sends `incomingNotificationClicked`. */
+  notifyIncoming(workspacePath: string, message: string): Promise<void>;
 }
