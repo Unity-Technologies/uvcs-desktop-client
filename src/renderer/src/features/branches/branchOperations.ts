@@ -1,5 +1,6 @@
 import type { Branch } from '@shared/domain/branch';
 import { shortBranchName, spec } from '@shared/domain/specs';
+import type { PendingChangesAction } from '@shared/domain/switchWithChanges';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runVoidAction } from '../../app/operations/runOperation';
@@ -10,9 +11,10 @@ import { toast } from '../../ui/toast/toastStore';
 import { pickBranch } from './BranchPickerDialog';
 import { useRecentBranchesStore } from './recentBranchesStore';
 
-export async function switchToBranch(workspacePath: string, branch: string): Promise<void> {
+/** Resolves to whether the workspace switched. `pendingChanges` is the choice already made for the pending changes, if any. */
+export function switchToBranch(workspacePath: string, branch: string, pendingChanges?: PendingChangesAction): Promise<boolean> {
   useRecentBranchesStore.getState().remember(workspacePath, branch);
-  await switchWorkspace(workspacePath, spec.branch(branch), branch);
+  return switchWorkspace(workspacePath, spec.branch(branch), branch, pendingChanges);
 }
 
 export async function renameBranch(workspacePath: string, branch: Branch): Promise<void> {

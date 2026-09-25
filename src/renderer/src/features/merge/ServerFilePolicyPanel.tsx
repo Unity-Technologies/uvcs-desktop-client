@@ -13,8 +13,8 @@ interface ServerFilePolicyPanelProps {
 }
 
 /**
- * A merge into a server branch has no workspace to hold hand-merged files, so when some file can't be
- * merged automatically, every conflicting file keeps one side.
+ * A merge into a server branch has no workspace to hold merged files, and `cm` could only combine them
+ * with its external merge tool, so every conflicting file keeps one side.
  */
 export function ServerFilePolicyPanel({ path, fileCount, labels, policy, onChoose }: ServerFilePolicyPanelProps) {
   return (
@@ -23,10 +23,10 @@ export function ServerFilePolicyPanel({ path, fileCount, labels, policy, onChoos
         <Server size={20} />
       </span>
       <h2 className={styles.title}>
-        {policy ? `Keeping ${policy === 'source' ? labels.source : labels.destination} for every conflicting file` : `${path} needs a manual merge`}
+        {policy ? `Keeping ${policy === 'source' ? labels.source : labels.destination} for every conflicting file` : `${path} changed on both sides`}
       </h2>
       <p className={styles.text}>
-        This merge runs on the server, where files can't be merged by hand. Choose which version to keep for all {fileCount} conflicting{' '}
+        This merge runs on the server, where files can't be combined. Choose which version to keep for all {fileCount} conflicting{' '}
         {fileCount === 1 ? 'file' : 'files'}, or switch your workspace to {labels.destination} and merge there to combine them line by line.
       </p>
       <div className={styles.actions}>

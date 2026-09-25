@@ -3,7 +3,7 @@ import type { MenuEntry } from '../../../lib/actions';
 import { subscribeToAvatars } from '../../../lib/avatars/avatarImages';
 import { ActionContextMenu } from '../../../ui/menu/ActionContextMenu';
 import type { GraphLayout } from '../model/layoutGraph';
-import type { GraphScene } from './drawContext';
+import type { DrawnReviewChip, GraphScene } from './drawContext';
 import { drawGraph } from './drawGraph';
 import { graphSize, headerTop } from './geometry';
 import { hitTest, nodePoint, type GraphTarget } from './graphTargets';
@@ -12,14 +12,14 @@ import { laneShape } from './laneShape';
 import { useGraphPalette } from './useGraphPalette';
 import { useGraphViewport } from './useGraphViewport';
 import { useSearchPing } from './useSearchPing';
-import { centerOn, fitToScreen, openingViewport, revealPoint, toWorld, type Size } from './viewport';
+import { centerOn, fitToScreen, frameOn, openingViewport, revealPoint, toWorld, type Size, type Viewport } from './viewport';
 import { isDiscreteWheel, wheelZoomFactor } from './zoom';
 import styles from './GraphCanvas.module.css';
 
 /** Scene fields owned by the view; the canvas adds the viewport, size, palette, hover state and animations. */
 export type GraphHighlights = Pick<
   GraphScene,
-  'selectedChangeset' | 'selectedBranch' | 'homeChangeset' | 'currentBranch' | 'highlightedAuthor' | 'search' | 'options'
+  'selectedChangeset' | 'selectedBranch' | 'homeChangeset' | 'currentBranch' | 'highlightedAuthor' | 'search' | 'options' | 'reviews'
 >;
 
 export interface GraphCanvasHandle {
@@ -28,6 +28,9 @@ export interface GraphCanvasHandle {
   /** Scrolls just enough to show the branch's header card. */
   revealBranch: (name: string) => void;
   centerOnChangeset: (id: number) => void;
+  /** Glides to a changeset or a branch's header card, centered and readable: a reveal from another view. */
+  frameChangeset: (id: number) => void;
+  frameBranch: (name: string) => void;
   /** The first view of a graph, focused on a changeset. */
   showOpeningView: (focusId: number) => void;
   fit: () => void;
@@ -50,6 +53,8 @@ const DRAG_THRESHOLD = 4;
 const DOUBLE_CLICK_ZOOM = 1.4;
 /** Where in a header card a reveal aims: far enough in to show the start of the name. */
 const HEADER_REVEAL_INSET = 60;
+/** How far from the right edge a tooltip still fits to the right of the pointer. */
+const TOOLTIP_ROOM = 360;
 
 export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(function GraphCanvas(
   { layout, highlights, onSelect, onActivate, contextMenu, children },
@@ -65,17 +70,20 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const palette = useGraphPalette(containerRef);
   const [hover, setHover] = useState<{ target: GraphTarget; x: number; y: number } | null>(null);
 
-  const hoveredChangeset = hover?.target.kind === 'changeset' ? hover.target.id : null;
-  const sceneRef = useRef({ layout, highlights, palette, hoveredChangeset });
-  sceneRef.current = { layout, highlights, palette, hoveredChangeset };
+  const hoveredChangeset = hover?.target.kind === 'changeset' ? hover.target.id : hover?.target.kind === 'collapsed' ? hover.target.node.changeset.id : null;
+  const hoveredReview = hover?.target.kind === 'codeReview' ? hover.target.review.id : null;
+  const sceneRef = useRef({ layout, highlights, palette, hoveredChangeset, hoveredReview });
+  sceneRef.current = { layout, highlights, palette, hoveredChangeset, hoveredReview };
+  /** Where the code review chips were drawn in the last frame. */
+  const reviewChipsRef = useRef<DrawnReviewChip[]>([]);
 
   const scheduleDraw = useCallback(() => {
     cancelAnimationFrame(frameRef.current);
     frameRef.current = requestAnimationFrame(() => {
       const ctx = canvasRef.current?.getContext('2d');
-      const { layout: currentLayout, highlights: currentHighlights, palette: currentPalette, hoveredChangeset: hovered } = sceneRef.current;
+      const { layout: currentLayout, highlights: currentHighlights, palette: currentPalette, hoveredChangeset: hovered, hoveredReview: hoveredChip } = sceneRef.current;
       if (!ctx || !currentPalette || sizeRef.current.width === 0) return;
-      drawGraph(
+      reviewChipsRef.current = drawGraph(
         ctx,
         {
           ...currentHighlights,
@@ -84,6 +92,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           size: sizeRef.current,
           palette: currentPalette,
           hoveredChangeset: hovered,
+          hoveredReview: hoveredChip,
           searchPing: searchPingRef.current,
         },
         window.devicePixelRatio,
@@ -102,7 +111,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   );
   const searchPingRef = useSearchPing(highlights.search?.active ?? null, scheduleDraw);
 
-  useEffect(scheduleDraw, [layout, highlights, palette, hoveredChangeset, scheduleDraw]);
+  useEffect(scheduleDraw, [layout, highlights, palette, hoveredChangeset, hoveredReview, scheduleDraw]);
   // A filter can shrink or grow the graph: keep it on screen.
   useEffect(() => view.keepInBounds(), [layout, view]);
   // Avatars arrive in the background; repaint as each one lands.
@@ -117,16 +126,35 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         setHover(null);
         view.jumpTo(revealPoint(view.viewportRef.current, x, y, sizeRef.current));
       };
+      const frame = (point: { x: number; y: number } | null): void => {
+        if (!point) return;
+        setHover(null);
+        const framed = (): Viewport => frameOn(view.viewportRef.current, point.x, point.y, sizeRef.current);
+        // Before the canvas has a size there is nothing to glide from: once it has one, glide from the opening view.
+        const opening = pendingViewRef.current;
+        if (sizeRef.current.width === 0) {
+          pendingViewRef.current = () => {
+            opening?.();
+            view.glideTo(framed());
+          };
+        } else view.glideTo(framed());
+      };
+      const headerPoint = (name: string): { x: number; y: number } | null => {
+        const lane = layout.lanesByBranch.get(name);
+        if (!lane) return null;
+        const shape = laneShape(lane);
+        return { x: shape.left + HEADER_REVEAL_INSET, y: headerTop(shape.y) };
+      };
       return {
+        frameChangeset: (id) => frame(nodePoint(layout, id)),
+        frameBranch: (name) => frame(headerPoint(name)),
         revealChangeset: (id) => {
           const point = nodePoint(layout, id);
           if (point) reveal(point.x, point.y);
         },
         revealBranch: (name) => {
-          const lane = layout.lanesByBranch.get(name);
-          if (!lane) return;
-          const shape = laneShape(lane);
-          reveal(shape.left + HEADER_REVEAL_INSET, headerTop(shape.y));
+          const point = headerPoint(name);
+          if (point) reveal(point.x, point.y);
         },
         centerOnChangeset: (id) => {
           const point = nodePoint(layout, id);
@@ -174,9 +202,12 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     return { x: clientX - bounds.left, y: clientY - bounds.top };
   };
 
-  const targetAt = (clientX: number, clientY: number): GraphTarget | null => {
+  /** Code review chips only react to clicks; for anything else they are part of their branch's card. */
+  const targetAt = (clientX: number, clientY: number, withChips = true): GraphTarget | null => {
     const point = localPoint(clientX, clientY);
-    return hitTest(layout, toWorld(view.viewportRef.current, point.x, point.y));
+    const world = toWorld(view.viewportRef.current, point.x, point.y);
+    const chip = withChips && reviewChipsRef.current.find((drawn) => world.x >= drawn.x && world.x <= drawn.x + drawn.width && world.y >= drawn.y && world.y <= drawn.y + drawn.height);
+    return chip ? { kind: 'codeReview', review: chip.review } : hitTest(layout, world);
   };
 
   /** Floating controls over the canvas handle their own pointer events. */
@@ -186,7 +217,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     if (!onCanvas(event)) return;
     containerRef.current?.focus();
     if (event.button === 2) {
-      contextTargetRef.current = targetAt(event.clientX, event.clientY);
+      contextTargetRef.current = targetAt(event.clientX, event.clientY, false);
       onSelect(contextTargetRef.current);
       return;
     }
@@ -227,7 +258,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
 
   const onDoubleClick = (event: React.MouseEvent): void => {
     if (!onCanvas(event)) return;
-    const target = targetAt(event.clientX, event.clientY);
+    const target = targetAt(event.clientX, event.clientY, false);
     if (target) return onActivate(target);
     const point = localPoint(event.clientX, event.clientY);
     view.zoomStep(point.x, point.y, DOUBLE_CLICK_ZOOM);
@@ -250,7 +281,9 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         onDoubleClick={onDoubleClick}
       >
         <canvas ref={canvasRef} className={styles.canvas} />
-        {hover && <GraphTooltip target={hover.target} layout={layout} x={hover.x} y={hover.y} />}
+        {hover && (
+          <GraphTooltip target={hover.target} layout={layout} x={hover.x} y={hover.y} flip={hover.x > sizeRef.current.width - TOOLTIP_ROOM} />
+        )}
         {children}
       </div>
     </ActionContextMenu>

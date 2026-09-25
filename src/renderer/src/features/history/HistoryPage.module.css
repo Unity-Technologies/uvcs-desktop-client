@@ -1,3 +1,10 @@
+.commentCell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .clipped {
   overflow: hidden;
   text-overflow: ellipsis;

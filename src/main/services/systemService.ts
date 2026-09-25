@@ -1,7 +1,8 @@
 import { homedir } from 'node:os';
-import { dialog, shell } from 'electron';
+import { app, dialog, shell } from 'electron';
 import type { SystemApi } from '@shared/api/system';
 import { checkSetup } from '../cm/setupCheck';
+import { takeRequestedWorkspace } from '../window/recentDocuments';
 import type { ServiceContext } from './ServiceContext';
 
 export function createSystemService({ cm, operations }: ServiceContext): SystemApi {
@@ -28,5 +29,7 @@ export function createSystemService({ cm, operations }: ServiceContext): SystemA
     },
     homeDirectory: async () => homedir(),
     cancelOperation: async (operationId) => operations.cancel(operationId),
+    addRecentDocument: async (workspacePath) => app.addRecentDocument(workspacePath),
+    takeRequestedWorkspace: async () => takeRequestedWorkspace(),
   };
 }

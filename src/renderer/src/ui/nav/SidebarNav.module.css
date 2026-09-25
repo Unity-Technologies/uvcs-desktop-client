@@ -98,6 +98,14 @@
   text-align: center;
 }
 
+.dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+
 .item[data-active='true'] .badge {
   background: var(--accent);
   color: var(--accent-contrast);

@@ -1,0 +1,46 @@
+.pill {
+  composes: control from './ToolbarControl.module.css';
+
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 0 var(--space-2) 0 10px;
+  text-align: left;
+}
+
+.icon {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  color: var(--text-secondary);
+}
+
+.stack {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.label,
+.sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.label {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+  line-height: 14px;
+}
+
+.sub {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  line-height: 13px;
+}

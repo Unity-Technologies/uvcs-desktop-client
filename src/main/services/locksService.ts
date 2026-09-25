@@ -4,9 +4,17 @@ import type { ServiceContext } from './ServiceContext';
 
 export function createLocksService({ cm }: ServiceContext): LocksApi {
   return {
-    async list(workspacePath, repository, { onlyMine }) {
+    async list(workspacePath, repository, { onlyMine, onlyThisWorkspace = false }) {
       const output = await cm.query(
-        ['lock', 'list', '--anystatus', `--repository=${repository}`, ...(onlyMine ? ['--onlycurrentuser'] : []), ...LOCK_LIST_FORMAT_ARGS],
+        [
+          'lock',
+          'list',
+          '--anystatus',
+          `--repository=${repository}`,
+          ...(onlyMine ? ['--onlycurrentuser'] : []),
+          ...(onlyThisWorkspace ? ['--onlycurrentworkspace'] : []),
+          ...LOCK_LIST_FORMAT_ARGS,
+        ],
         { cwd: workspacePath },
       );
       return parseLocks(output, repository.slice(repository.indexOf('@') + 1));

@@ -15,15 +15,15 @@ import { describeMergeProgress, directoryConflictIdentity, parseCreatedChangeset
 import { withTempDirectory } from '../files/tempFile';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
-import { MACHINE_READABLE_ARGS, mergeSourceArgs } from './mergeArgs';
+import { fileConflictArgs, MACHINE_READABLE_ARGS, mergeSourceArgs } from './mergeArgs';
 import { assertResolutionsComplete, describeUnmergeablePlan } from './mergeRules';
 import { previewMerge } from './previewMerge';
 
 /**
  * Runs a merge with the user's decisions:
  * 1. Directory conflicts are solved one by one with `--resolveconflict`; `cm` keeps the decisions in state files.
- * 2. The final `cm merge --merge` applies everything. Conflicting files keep the destination content,
- *    so nothing is decided behind the user's back.
+ * 2. The final `cm merge --merge` applies everything. Conflicting files keep one side (see `fileConflictArgs`),
+ *    so nothing is decided behind the user's back and no external merge tool opens.
  * 3. For workspace merges, each conflicting file is then written with its resolution.
  * If anything looks different from the plan the user reviewed, it stops before changing the workspace.
  */
@@ -101,22 +101,6 @@ function resolveConflictArgs(resolution: DirectoryConflictResolution): string[] 
     case 'rename':
       return [...common, '--resolutionoption=rename', `--resolutioninfo=${resolution.newName}`];
   }
-}
-
-/**
- * Workspace merges keep the destination and write the resolutions afterwards. A merge into a server branch
- * cannot take per-file content: it either keeps one side for every conflicting file or lets `cm` merge them.
- */
-function fileConflictArgs(request: MergeRequest, plan: MergePlan, resolutions: MergeResolutions): string[] {
-  if (plan.fileConflicts.length === 0) return [];
-  if (!request.destinationBranch) return ['--keepdestination'];
-
-  const choices = new Set(plan.fileConflicts.map((conflict) => resolutions.files[conflict.path]!.choice));
-  if (choices.size > 1) throw new Error('A merge into a server branch must resolve every conflicting file the same way.');
-  const [choice] = choices;
-  if (choice === 'source') return ['--keepsource'];
-  if (choice === 'destination') return ['--keepdestination'];
-  return [];
 }
 
 async function writeFileResolutions(

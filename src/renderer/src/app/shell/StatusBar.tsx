@@ -1,25 +1,77 @@
 import { useQuery } from '@tanstack/react-query';
+import { TerminalSquare } from 'lucide-react';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
+import { useIncomingSummary } from '../../features/incoming/useIncomingSummary';
 import { UserLabel } from '../../ui/Avatar';
+import { Spinner } from '../../ui/Spinner';
+import { navigation } from '../navigation/navigationStore';
+import { useRunningOperation } from '../operations/runningOperationsStore';
+import { useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
+import { ranInWorkspace } from './commandLogScope';
 import { useCommandLogStore } from './commandLogStore';
+import { workspaceContext } from './workspaceContext';
 import styles from './StatusBar.module.css';
 
+/**
+ * A quiet line at the bottom: where the workspace is and what is running on the left, who you are on the right.
+ * The last `cm` command is only a faint hint, shown on hover and while something runs; a failed one leaves a red dot
+ * until the command log (which the hint opens) has been looked at.
+ */
 export function StatusBar() {
   const { data: user } = useQuery({ queryKey: queryKeys.user, queryFn: () => api.system.currentUser(), staleTime: Infinity });
-  const lastCommand = useCommandLogStore((state) => state.entries.at(-1));
+  const workspacePath = useWorkspacePath();
+  const { data: info } = useWorkspaceInfo();
+  const { data: summary } = useIncomingSummary();
+  const running = useRunningOperation(workspacePath);
+  const lastCommand = useCommandLogStore((state) => state.entries.findLast((entry) => ranInWorkspace(entry, workspacePath)));
+  const failure = useCommandLogStore((state) =>
+    state.open ? undefined : state.entries.findLast((entry) => entry.exitCode !== 0 && entry.id > state.seenUpTo && ranInWorkspace(entry, workspacePath)),
+  );
   const toggleCommandLog = useCommandLogStore((state) => state.toggle);
+  const context = info && workspaceContext(info, summary);
+  const hint = failure ?? lastCommand;
 
   return (
-    <footer className={styles.statusBar}>
-      <button className={styles.lastCommand} onClick={toggleCommandLog} data-tip="Show command log">
-        {lastCommand && (
+    <footer className={styles.statusBar} data-busy={Boolean(running)}>
+      <div className={styles.context}>
+        {running ? (
           <>
-            <span className={styles.dot} data-failed={lastCommand.exitCode !== 0} />
-            <span className={styles.command}>{lastCommand.commandLine}</span>
-            <span className={styles.duration}>{lastCommand.durationMs} ms</span>
+            <Spinner size={10} />
+            <span className={styles.activity}>{running.title}</span>
+            {running.detail && <span className={styles.detail}>{running.detail}</span>}
           </>
+        ) : (
+          context && (
+            <>
+              <span>{context.position}</span>
+              {context.sync && <span className={styles.separator}>·</span>}
+              {context.behind > 0 ? (
+                <button className={styles.behind} onClick={() => navigation.goToView('incoming')} data-tip="Review the incoming changesets">
+                  {context.sync}
+                </button>
+              ) : (
+                context.sync && <span>{context.sync}</span>
+              )}
+            </>
+          )
         )}
+      </div>
+      <button
+        className={styles.log}
+        data-failed={Boolean(failure)}
+        onClick={toggleCommandLog}
+        data-tip={failure ? 'A command failed: show the command log' : 'Show the command log'}
+        data-tip-shortcut="mod+shift+l"
+        aria-label="Command log"
+      >
+        {hint && (
+          <span className={styles.hint}>
+            {hint.commandLine}
+            <span className={styles.duration}>{hint.durationMs} ms</span>
+          </span>
+        )}
+        {failure ? <span className={styles.failedDot} /> : <TerminalSquare size={12} />}
       </button>
       {user && <UserLabel user={user} />}
     </footer>

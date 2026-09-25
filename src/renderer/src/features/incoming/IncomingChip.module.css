@@ -1,0 +1,84 @@
+/* A segment joined to the branch pill (see TopBar): neutral like it, with color only on the icons and the counts. */
+.chip {
+  composes: control from '../../ui/ToolbarControl.module.css';
+
+  --tone: var(--accent-text);
+
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--space-2) 0 10px;
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  animation: segment-in var(--duration-normal) var(--ease-out);
+}
+
+.conflicts {
+  --tone: var(--status-conflict);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 2px;
+}
+
+/* An update's stage changes many times a second: a fixed width keeps the toolbar from jittering. */
+.updating {
+  width: 220px;
+  color: var(--text-secondary);
+}
+
+@keyframes segment-in {
+  from {
+    opacity: 0;
+    transform: translateX(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip {
+    animation: none;
+  }
+}
+
+.icon {
+  flex: none;
+  color: var(--tone);
+}
+
+.count {
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--tone) 14%, transparent);
+  color: var(--tone);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  line-height: 18px;
+  text-align: center;
+}
+
+.label {
+  flex: none;
+  font-weight: var(--weight-medium);
+}
+
+.stage {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  text-overflow: ellipsis;
+}
+
+.card {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
+  z-index: 900;
+}
+
+.card[data-state='open'] {
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+}

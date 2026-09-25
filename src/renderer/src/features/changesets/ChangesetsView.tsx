@@ -11,6 +11,7 @@ import { CenteredSpinner } from '../../ui/Spinner';
 import { HighlightQuery } from '../../ui/Highlight';
 import { DataTable } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
 import { changesetColumns } from './changesetColumns';
 import { ChangesetDetails } from './ChangesetDetails';
 import { DEFAULT_CHANGESET_FILTER, matchesSearch, toQueryFilter, type ChangesetFilterState } from './changesetFilters';
@@ -39,7 +40,8 @@ export function ChangesetsView() {
   const visible = useMemo(() => (changesets ?? []).filter((changeset) => matchesSearch(changeset, filter.search)), [changesets, filter.search]);
   const selected = visible.filter((changeset) => selection.selected.has(changesetKey(changeset)));
   const focused = visible.find((changeset) => changesetKey(changeset) === selection.anchor);
-  const columns = useMemo(() => changesetColumns(workspace?.loadedChangeset), [workspace?.loadedChangeset]);
+  const labelsByChangeset = useLabelsByChangeset();
+  const columns = useMemo(() => changesetColumns(workspace?.loadedChangeset, labelsByChangeset), [workspace?.loadedChangeset, labelsByChangeset]);
   const menuContext = { workspacePath, loadedChangeset: workspace?.loadedChangeset, loadedBranch: currentBranch };
 
   useCommands(

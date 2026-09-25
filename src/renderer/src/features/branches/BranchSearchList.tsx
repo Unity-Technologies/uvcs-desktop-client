@@ -1,13 +1,17 @@
-import { GitBranch, Search } from 'lucide-react';
-import { useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
+import { Search } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { Branch } from '@shared/domain/branch';
-import { Highlight, HighlightQuery } from '../../ui/Highlight';
+import type { MenuEntry } from '../../lib/actions';
+import { navigationTarget } from '../../lib/listNavigation';
+import { HighlightQuery } from '../../ui/Highlight';
+import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
+import { BranchSearchItem } from './BranchSearchItem';
+import { branchSearchRows, type BranchGroup } from './branchSearchRows';
 import styles from './BranchSearchList.module.css';
 
-export interface BranchGroup {
-  title: string;
-  branches: Branch[];
-}
+const GROUP_HEIGHT = 28;
+const BRANCH_HEIGHT = 44;
 
 interface BranchSearchListProps {
   groups: BranchGroup[];
@@ -15,32 +19,46 @@ interface BranchSearchListProps {
   /** Marks a branch, e.g. the one the workspace is on. */
   currentBranch?: string;
   placeholder?: string;
-  /** Rendered below the list, e.g. a "New branch" button. */
-  footer?: ReactNode;
+  /** The context menu of a row. */
+  menu?: (branch: Branch) => MenuEntry[];
+  /** Next to the filter field, e.g. a "New branch" button. */
+  action?: ReactNode;
 }
 
-/** A searchable, keyboard-driven list of branches in titled groups. */
-export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 'Find a branch', footer }: BranchSearchListProps) {
+/** A searchable, keyboard-driven list of branches in titled groups. Virtualized: repositories can have thousands of branches. */
+export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 'Find a branch', menu, action }: BranchSearchListProps) {
   const [query, setQuery] = useState('');
   const [highlighted, setHighlighted] = useState(0);
+  const listRef = useRef<HTMLDivElement>(null);
+  const movedByKeyboard = useRef(false);
 
-  const visibleGroups = useMemo(() => filterGroups(groups, query), [groups, query]);
-  const flat = visibleGroups.flatMap((group) => group.branches);
+  const { rows, branches } = useMemo(() => branchSearchRows(groups, query), [groups, query]);
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => listRef.current,
+    estimateSize: (index) => (rows[index]!.type === 'group' ? GROUP_HEIGHT : BRANCH_HEIGHT),
+    overscan: 8,
+  });
+
+  useEffect(() => {
+    if (!movedByKeyboard.current) return;
+    movedByKeyboard.current = false;
+    const rowIndex = rows.findIndex((row) => row.type === 'branch' && row.index === highlighted);
+    // The first branch brings its group title into view too.
+    if (rowIndex !== -1) virtualizer.scrollToIndex(highlighted === 0 ? 0 : rowIndex);
+  }, [highlighted, rows, virtualizer]);
 
   const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    const target = navigationTarget(event.key, highlighted, branches.length);
+    if (target !== null) {
       event.preventDefault();
-      const step = event.key === 'ArrowDown' ? 1 : -1;
-      setHighlighted((index) => Math.min(flat.length - 1, Math.max(0, index + step)));
-    } else if (event.key === 'Enter' && flat[highlighted]) {
+      movedByKeyboard.current = true;
+      setHighlighted(target);
+    } else if (event.key === 'Enter' && branches[highlighted]) {
       event.preventDefault();
-      onPick(flat[highlighted]);
+      onPick(branches[highlighted]);
     }
   };
-
-  const groupOffsets = visibleGroups.map((_, index) =>
-    visibleGroups.slice(0, index).reduce((count, group) => count + group.branches.length, 0),
-  );
 
   return (
     <div className={styles.container} onKeyDown={onKeyDown}>
@@ -55,48 +73,50 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
           onChange={(event) => {
             setQuery(event.target.value);
             setHighlighted(0);
+            listRef.current?.scrollTo({ top: 0 });
           }}
         />
+        {action}
       </div>
       <HighlightQuery query={query}>
-        <div className={styles.list}>
-          {flat.length === 0 && <div className={styles.empty}>No branches match “{query}”.</div>}
-          {visibleGroups.map((group, groupIndex) => (
-            <div key={group.title}>
-              <div className={styles.groupTitle}>{group.title}</div>
-              {group.branches.map((branch, branchIndex) => {
-                const index = groupOffsets[groupIndex]! + branchIndex;
+        <div ref={listRef} className={styles.list}>
+          {branches.length === 0 && <div className={styles.empty}>No branches match “{query}”.</div>}
+          <div className={styles.rows} style={{ height: virtualizer.getTotalSize() }}>
+            {virtualizer.getVirtualItems().map((virtualRow) => {
+              const row = rows[virtualRow.index]!;
+              const position = {
+                top: virtualRow.start,
+                height: virtualRow.size,
+              };
+              if (row.type === 'group') {
                 return (
-                  <button
-                    key={`${group.title}:${branch.name}`}
-                    className={styles.item}
-                    data-highlighted={index === highlighted}
-                    onMouseEnter={() => setHighlighted(index)}
-                    onClick={() => onPick(branch)}
-                  >
-                    <GitBranch size={13} className={styles.icon} />
-                    <span className={styles.name}>
-                      <Highlight text={branch.name} />
-                    </span>
-                    {branch.name === currentBranch && <span className={styles.current}>Current</span>}
-                  </button>
+                  <div key={`group:${row.title}`} className={styles.groupTitle} style={position}>
+                    {row.title}
+                  </div>
                 );
-              })}
-            </div>
-          ))}
+              }
+              const item = (
+                <BranchSearchItem
+                  key={row.branch.name}
+                  branch={row.branch}
+                  current={row.branch.name === currentBranch}
+                  highlighted={row.index === highlighted}
+                  style={position}
+                  onMouseEnter={() => setHighlighted(row.index)}
+                  onClick={() => onPick(row.branch)}
+                />
+              );
+              return menu ? (
+                <ActionContextMenu key={row.branch.name} entries={() => menu(row.branch)}>
+                  {item}
+                </ActionContextMenu>
+              ) : (
+                item
+              );
+            })}
+          </div>
         </div>
       </HighlightQuery>
-      {footer && <div className={styles.footer}>{footer}</div>}
     </div>
   );
-}
-
-function filterGroups(groups: BranchGroup[], query: string): BranchGroup[] {
-  const needle = query.trim().toLowerCase();
-  return groups
-    .map((group) => ({
-      ...group,
-      branches: needle ? group.branches.filter((branch) => branch.name.toLowerCase().includes(needle)) : group.branches,
-    }))
-    .filter((group) => group.branches.length > 0);
 }

@@ -1,8 +1,9 @@
-import { ArrowRightLeft, Copy, FileDiff, FolderTree, GitBranchPlus, GitCompareArrows, GitMerge, GitPullRequestArrow, Pencil, Trash2 } from 'lucide-react';
+import { ArrowRightLeft, Copy, FileDiff, FolderTree, GitBranchPlus, GitCompareArrows, GitGraph, GitMerge, GitPullRequestArrow, Pencil, Trash2 } from 'lucide-react';
 import type { Label } from '@shared/domain/label';
 import { spec } from '@shared/domain/specs';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { copyToClipboard } from '../../lib/copyToClipboard';
+import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { mergeTo } from '../branches/branchOperations';
 import {
   browseLabel,
@@ -32,6 +33,12 @@ export function labelMenu(workspacePath: string, labels: Label[]): MenuEntry[] {
     single && { id: 'diffWith', label: 'Compare with another label…', icon: GitCompareArrows, run: () => void diffWithAnotherLabel(single) },
     pair && { id: 'diffPair', label: 'Compare selected labels', icon: GitCompareArrows, run: () => diffLabels(pair[0], pair[1]) },
     single && { id: 'browse', label: 'Browse files at this label', icon: FolderTree, run: () => browseLabel(single) },
+    single && {
+      id: 'showInBranchExplorer',
+      label: 'Show in Branch Explorer',
+      icon: GitGraph,
+      run: () => showInBranchExplorer({ kind: 'label', name: single.name, changeset: single.changeset, date: single.date }),
+    },
     SEPARATOR,
     single && { id: 'rename', label: 'Rename…', icon: Pencil, run: () => void renameLabel(workspacePath, single) },
     single && { id: 'copy', label: 'Copy name', icon: Copy, run: () => copyToClipboard(single.name, 'Label name') },

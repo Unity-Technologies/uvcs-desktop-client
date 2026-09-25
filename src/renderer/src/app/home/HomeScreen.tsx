@@ -1,8 +1,7 @@
 import { FolderDown } from 'lucide-react';
 import { useState } from 'react';
-import { api } from '../../api/client';
-import { toast } from '../../ui/toast/toastStore';
 import { useSettings } from '../settings/useSettings';
+import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
 import { HomeSidebar } from './HomeSidebar';
 import type { HomeSection } from './homeSection';
@@ -18,14 +17,6 @@ export function HomeScreen() {
   const open = useOpenWorkspace();
   const drop = useFolderDrop(open);
 
-  const openFolder = async (): Promise<void> => {
-    const directory = await api.system.pickDirectory('Open a workspace folder');
-    if (!directory) return;
-    const root = await api.workspaces.findRoot(directory);
-    if (root) open(root);
-    else toast.error('That folder is not inside a workspace', 'Drop it on this window to create a workspace there.');
-  };
-
   return (
     <div className={styles.home} onDragOver={drop.onDragOver} onDragLeave={drop.onDragLeave} onDrop={drop.onDrop}>
       <HomeSidebar section={section} onSelect={setSection} />
@@ -38,7 +29,7 @@ export function HomeScreen() {
             key={section.kind}
             mode={section.kind}
             onOpen={open}
-            onOpenFolder={() => void openFolder()}
+            onOpenFolder={() => void openWorkspaceFolder(open)}
             onShowAll={() => setSection({ kind: 'all' })}
           />
         )}

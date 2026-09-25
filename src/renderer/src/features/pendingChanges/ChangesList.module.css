@@ -102,13 +102,40 @@
   width: 15px;
 }
 
+.trailing {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  margin-left: auto;
+}
+
 .tag {
   flex: none;
-  margin-left: auto;
   padding: 0 6px;
   border-radius: var(--radius-full);
   background: var(--bg-hover);
   color: var(--text-tertiary);
   font-size: var(--text-xs);
   line-height: 16px;
+}
+
+/* An unreviewed file's check appears where the pointer or the selection is. */
+.row:hover .reviewToggle,
+.row[data-selected='true'] .reviewToggle {
+  opacity: 1;
+}
+
+/* Reviewed files step back, so what's left to look at stands out. */
+.row[data-review='reviewed'] > :not(.trailing, :first-child) {
+  opacity: 0.6;
+}
+
+/* Changed since the review, with the reviewed text kept to compare against. */
+.sinceReviewDot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--status-changed);
 }

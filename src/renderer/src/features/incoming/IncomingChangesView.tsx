@@ -2,7 +2,6 @@ import { CheckCircle2, GitBranch, RefreshCw } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { IncomingChanges, UpdateResolutions } from '@shared/domain/incoming';
 import { invalidateWorkspace } from '../../app/queryClient';
-import { updateWorkspace } from '../../app/shell/workspaceOperations';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
@@ -17,7 +16,7 @@ import { IncomingFileDiff } from './IncomingDetail';
 import { IncomingList, type IncomingSelection } from './IncomingList';
 import { UpdateBar } from './UpdateBar';
 import { UPDATE_LABELS, updateConflictFiles } from './updateConflictFiles';
-import { updateResolvingConflicts } from './updateOperations';
+import { updateResolvingConflicts, updateToIncoming } from './updateOperations';
 import { useIncomingChanges } from './useIncomingChanges';
 
 export function IncomingChangesView() {
@@ -81,7 +80,7 @@ function IncomingSession({ workspacePath, incoming, header }: IncomingSessionPro
 
   const update = async (): Promise<void> => {
     setUpdating(true);
-    if (incoming.conflicts.length === 0) await updateWorkspace(workspacePath);
+    if (incoming.conflicts.length === 0) await updateToIncoming(workspacePath, incoming);
     else if (resolutions) await updateResolvingConflicts(workspacePath, resolutions);
     setUpdating(false);
   };

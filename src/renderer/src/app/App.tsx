@@ -15,6 +15,7 @@ import { CmUnavailableScreen } from './startup/CmUnavailableScreen';
 import { SetupProblemScreen } from './startup/SetupProblemScreen';
 import { useCmAvailability, useSetupCheck } from './startup/useCmAvailability';
 import { useSession } from './workspace/sessionStore';
+import { useRequestedWorkspace } from './workspace/useRequestedWorkspace';
 import { WorkspaceGate } from './workspace/WorkspaceGate';
 
 export function App() {
@@ -34,6 +35,7 @@ function Root() {
   useTheme();
   useAppCommands();
   useMenuCommands();
+  useRequestedWorkspace();
   const workspacePath = useSession((state) => state.workspacePath);
   const cm = useCmAvailability();
   const setup = useSetupCheck(cm.isSuccess);
