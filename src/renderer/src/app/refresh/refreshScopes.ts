@@ -8,11 +8,11 @@ const area = (key: QueryKey) => key[2];
 const detail = (key: QueryKey) => key[3];
 
 /** What the disk holds, rather than the server: the watcher keeps it fresh, so window focus doesn't need to. */
-export const LOCAL_AREAS = ['pendingChanges', 'info', 'explorer'] as const;
+export const LOCAL_AREAS = ['pendingChanges', 'info', 'explorer', 'review'] as const;
 
-/** Workspace files changed: pending changes, the files view and the workspace side of open diffs. */
+/** Workspace files changed: pending changes, review marks, the files view and the workspace side of open diffs. */
 export function isAffectedByFileChanges(key: QueryKey): boolean {
-  if (area(key) === 'pendingChanges') return true;
+  if (area(key) === 'pendingChanges' || area(key) === 'review') return true;
   if (area(key) === 'explorer') return detail(key) === 'directory' || detail(key) === 'details';
   return area(key) === 'content' && (detail(key) as { kind?: string } | undefined)?.kind === 'workspaceFile';
 }

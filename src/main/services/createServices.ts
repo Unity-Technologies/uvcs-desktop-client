@@ -14,6 +14,7 @@ import { createLocksService } from './locksService';
 import { createMergeService } from './mergeService';
 import { createPendingChangesService } from './pendingChangesService';
 import { createRepositoriesService } from './repositoriesService';
+import { createReviewService } from './reviewService';
 import { createSettingsService } from './settingsService';
 import { createShelvesService } from './shelvesService';
 import { createSyncService } from './syncService';
@@ -38,6 +39,7 @@ export function createServices(context: ServiceContext): UvcsApi {
     merge: createMergeService(context),
     pendingChanges: createPendingChangesService(context),
     repositories: createRepositoriesService(context),
+    review: createReviewService(context),
     settings: createSettingsService(context),
     shelves: createShelvesService(context),
     sync: createSyncService(context),

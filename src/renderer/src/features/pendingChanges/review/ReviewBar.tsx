@@ -1,0 +1,46 @@
+import { CircleCheck, Eraser, ListChecks, MoreHorizontal } from 'lucide-react';
+import type { CSSProperties } from 'react';
+import { IconButton } from '../../../ui/IconButton';
+import { ActionDropdownMenu } from '../../../ui/menu/ActionDropdownMenu';
+import { ToggleChip } from '../../../ui/ToggleChip';
+import type { ReviewProgress } from './reviewProgress';
+import styles from './ReviewBar.module.css';
+
+interface ReviewBarProps {
+  progress: ReviewProgress;
+  onlyUnreviewed: boolean;
+  onOnlyUnreviewedChange: (only: boolean) => void;
+  onMarkAll: () => void;
+  onClearMarks: () => void;
+  hasMarks: boolean;
+}
+
+/** How far the review of the pending changes got, a filter for what is left, and ways to mark or clear everything. */
+export function ReviewBar({ progress, onlyUnreviewed, onOnlyUnreviewedChange, onMarkAll, onClearMarks, hasMarks }: ReviewBarProps) {
+  const { total, reviewed } = progress;
+  const left = total - reviewed;
+  const done = left === 0;
+
+  return (
+    <div className={styles.bar} data-done={done}>
+      {done ? <CircleCheck size={13} className={styles.icon} /> : <ListChecks size={13} className={styles.icon} />}
+      <span className={styles.label} data-tip="Mark files as you review them: R toggles, J and K move">
+        {reviewed} of {total} reviewed
+      </span>
+      <span className={styles.meter} style={{ '--progress': `${(reviewed / total) * 100}%` } as CSSProperties} />
+      {(left > 0 || onlyUnreviewed) && (
+        <ToggleChip pressed={onlyUnreviewed} onChange={onOnlyUnreviewedChange}>
+          Unreviewed ({left})
+        </ToggleChip>
+      )}
+      <ActionDropdownMenu
+        entries={[
+          { id: 'review.markAll', label: 'Mark all reviewed', icon: CircleCheck, disabled: done, run: onMarkAll },
+          { id: 'review.clear', label: 'Clear review marks', icon: Eraser, disabled: !hasMarks, run: onClearMarks },
+        ]}
+      >
+        <IconButton size="small" icon={<MoreHorizontal size={14} />} label="Review actions" />
+      </ActionDropdownMenu>
+    </div>
+  );
+}

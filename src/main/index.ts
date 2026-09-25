@@ -5,6 +5,7 @@ import { locateCm } from './cm/locateCm';
 import { registerApi } from './ipc/registerApi';
 import { sendEvent } from './ipc/sendEvent';
 import { OperationTracker } from './operations/OperationTracker';
+import { ReviewStore } from './review/ReviewStore';
 import { createServices } from './services/createServices';
 import { SettingsStore } from './settings/SettingsStore';
 import { changesWorkspace } from './watch/changesWorkspace';
@@ -30,6 +31,7 @@ function start(): void {
     createServices({
       cm,
       operations,
+      reviews: new ReviewStore(join(app.getPath('userData'), 'review-snapshots')),
       settings: new SettingsStore(join(app.getPath('userData'), 'settings.json')),
       watcher,
     }),

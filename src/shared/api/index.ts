@@ -13,6 +13,7 @@ import type { LocksApi } from './locks';
 import type { MergeApi } from './merge';
 import type { PendingChangesApi } from './pendingChanges';
 import type { RepositoriesApi } from './repositories';
+import type { ReviewApi } from './review';
 import type { SettingsApi } from './settings';
 import type { ShelvesApi } from './shelves';
 import type { SyncApi } from './sync';
@@ -39,6 +40,7 @@ export interface UvcsApi {
   merge: MergeApi;
   pendingChanges: PendingChangesApi;
   repositories: RepositoriesApi;
+  review: ReviewApi;
   settings: SettingsApi;
   shelves: ShelvesApi;
   sync: SyncApi;

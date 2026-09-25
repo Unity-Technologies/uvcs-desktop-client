@@ -13,10 +13,14 @@ import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { describeKinds, isCheckinCandidate } from './changeCategories';
 import { changeTone } from './changeTone';
 import { hasDisclosureRows, rowIndent, type ChangeRow } from './changeRows';
+import { ReviewToggle } from './review/ReviewToggle';
+import { hasChangesSinceReview, isReviewable, reviewStatus, shouldMarkReviewed, type ReviewMarks } from './review/reviewProgress';
 import { useChangelistDrop } from './useChangelistDrop';
 import styles from './ChangesList.module.css';
 
 const ROW_HEIGHT = 28;
+/** Vim-style moves, next to the arrows. */
+const LETTER_STEPS: Record<string, number> = { j: 1, k: -1 };
 
 interface ChangesListProps {
   rows: ChangeRow[];
@@ -30,6 +34,9 @@ interface ChangesListProps {
   onMoveToChangelist?: (changes: PendingChange[], changelist: string | null) => void;
   contextMenu: (selected: PendingChange[]) => MenuEntry[];
   changelistMenu: (changelist: Changelist) => MenuEntry[];
+  reviewMarks: ReviewMarks;
+  /** The row's check, or R on the selection: marks the changes reviewed, or clears their marks. */
+  onToggleReviewed: (changes: PendingChange[]) => void;
 }
 
 export function ChangesList({
@@ -42,6 +49,8 @@ export function ChangesList({
   onMoveToChangelist,
   contextMenu,
   changelistMenu,
+  reviewMarks,
+  onToggleReviewed,
 }: ChangesListProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const changeRows = useMemo(() => rows.filter((row) => row.type === 'change'), [rows]);
@@ -70,15 +79,28 @@ export function ChangesList({
     return steps[key];
   };
 
+  const moveBy = (step: number, extend: boolean): void => {
+    const moved = selectOnArrow(selection, orderedKeys, step, extend, focused);
+    if (!moved) return;
+    setFocusedKey(moved.focused);
+    onSelectionChange(moved.state);
+    virtualizer.scrollToIndex(rows.findIndex((row) => row.key === moved.focused));
+  };
+
   const onKeyDown = (event: KeyboardEvent): void => {
-    const step = moveSteps(event.key);
+    const plain = !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
+    const step = moveSteps(event.key) ?? (plain ? LETTER_STEPS[event.key] : undefined);
     if (step !== undefined) {
       event.preventDefault();
-      const moved = selectOnArrow(selection, orderedKeys, step, event.shiftKey, focused);
-      if (!moved) return;
-      setFocusedKey(moved.focused);
-      onSelectionChange(moved.state);
-      virtualizer.scrollToIndex(rows.findIndex((row) => row.key === moved.focused));
+      moveBy(step, event.shiftKey);
+    } else if (event.key === 'r' && plain) {
+      event.preventDefault();
+      const selected = selectedChanges().filter(isReviewable);
+      if (selected.length === 0) return;
+      // Marking one file moves on to the next, so a review goes R, R, R down the list.
+      const advance = selected.length === 1 && shouldMarkReviewed(selected, reviewMarks);
+      onToggleReviewed(selected);
+      if (advance) moveBy(1, false);
     } else if (event.key === ' ') {
       event.preventDefault();
       const selectedRows = changeRows.filter((row) => selection.selected.has(row.key));
@@ -128,6 +150,7 @@ export function ChangesList({
                 data-type={row.type}
                 data-selected={selection.selected.has(row.key)}
                 data-drop-target={dropTarget === row.key}
+                data-review={row.type === 'change' && isReviewable(row.change) ? reviewStatus(reviewMarks, row.change) : undefined}
                 style={{ top: item.start, height: ROW_HEIGHT, '--row-indent': `${rowIndent(row, indentLayout)}px` } as CSSProperties}
                 onMouseDown={(event) => onRowMouseDown(row, event)}
                 onClick={() => onRowClick(row)}
@@ -135,7 +158,13 @@ export function ChangesList({
                 {...dragProps(row)}
                 {...dropProps(row)}
               >
-                <RowContent row={row} onToggleIncluded={onToggleIncluded} changelistMenu={changelistMenu} />
+                <RowContent
+                  row={row}
+                  onToggleIncluded={onToggleIncluded}
+                  changelistMenu={changelistMenu}
+                  reviewMarks={reviewMarks}
+                  onToggleReviewed={onToggleReviewed}
+                />
               </div>
             );
           })}
@@ -145,13 +174,9 @@ export function ChangesList({
   );
 }
 
-interface RowContentProps {
-  row: ChangeRow;
-  onToggleIncluded: ChangesListProps['onToggleIncluded'];
-  changelistMenu: ChangesListProps['changelistMenu'];
-}
+type RowContentProps = { row: ChangeRow } & Pick<ChangesListProps, 'onToggleIncluded' | 'changelistMenu' | 'reviewMarks' | 'onToggleReviewed'>;
 
-function RowContent({ row, onToggleIncluded, changelistMenu }: RowContentProps) {
+function RowContent({ row, onToggleIncluded, changelistMenu, reviewMarks, onToggleReviewed }: RowContentProps) {
   switch (row.type) {
     case 'group':
       return (
@@ -191,9 +216,15 @@ function RowContent({ row, onToggleIncluded, changelistMenu }: RowContentProps) 
             <span className={styles.checkboxPlaceholder} />
           )}
           <StatusBadge tone={changeTone(change)} title={describeKinds(change)} />
+          {hasChangesSinceReview(reviewMarks, change) && <span className={styles.sinceReviewDot} data-tip="Changed since you reviewed it" />}
           <PathLabel path={change.path} nameOnly={row.depth > 0} oldPath={change.oldPath} strikethrough={deleted} />
-          {change.mergeInfo && <span className={styles.tag}>{change.mergeInfo}</span>}
-          {change.kinds.includes('moved') && change.kinds.includes('changed') && <span className={styles.tag}>modified</span>}
+          <span className={styles.trailing}>
+            {change.mergeInfo && <span className={styles.tag}>{change.mergeInfo}</span>}
+            {change.kinds.includes('moved') && change.kinds.includes('changed') && <span className={styles.tag}>modified</span>}
+            {isReviewable(change) && (
+              <ReviewToggle status={reviewStatus(reviewMarks, change)} onToggle={() => onToggleReviewed([change])} className={styles.reviewToggle} />
+            )}
+          </span>
         </>
       );
     }

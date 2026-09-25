@@ -32,10 +32,12 @@ interface LoadedFileDiffProps {
   fileName: string;
   title?: ReactNode;
   identicalDescription?: string;
+  /** Controls about what to compare, first in the toolbar of a text diff. */
+  compareControls?: ReactNode;
 }
 
 /** One loaded pair of file versions, with the toolbar that fits how it's shown. */
-export function LoadedFileDiff({ workspacePath, contents, fileName, title, identicalDescription }: LoadedFileDiffProps) {
+export function LoadedFileDiff({ workspacePath, contents, fileName, title, identicalDescription, compareControls }: LoadedFileDiffProps) {
   const { layout, collapseUnchanged, wrapLines, imageMode, setLayout, setCollapseUnchanged, setWrapLines, setImageMode } = useDiffPreferences();
   const { left, right, modified } = contents;
   const editablePath = modified.kind === 'workspaceFile' ? modified.path : null;
@@ -67,6 +69,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
     </PaneToolbarGroup>
   ) : isText ? (
     <>
+      {compareControls}
       {stats && (stats.added > 0 || stats.removed > 0) && <LineStats {...stats} />}
       <PaneToolbarGroup>
         {canEdit && <IconButton size="small" icon={<Pencil size={13} />} label="Edit this file" shortcut="mod+e" onClick={editing.start} />}
