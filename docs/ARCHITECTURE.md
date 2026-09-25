@@ -82,7 +82,7 @@ renderer/src/
   - Locks live on the server, where nothing reports changes: pending changes re-read them along with the changes, at most every 30 s.
   - Window focus (wired to real focus in `trackWindowFocus`) refetches stale server views; local views skip it while the watcher sees everything.
   - Incoming: `useIncomingSummary` polls every minute with focus, every five minutes behind other apps, never hidden, and on focus if
-    older than 20 s. A branch head moved by someone else refreshes the repository views.
+    older than 20 s. A branch head moved by someone else refreshes the repository views (`isAffectedByNewChangesets`).
   - Use `refreshQueries` for event-driven refreshes: it never cancels a fetch in flight, it queues one follow-up.
 - **Review marks**: `main/review/ReviewStore` keeps, per workspace, the fingerprint of each file marked reviewed (and a copy of its text,
   read as the `reviewSnapshot` content source) under `<userData>/review-snapshots/`; marks of paths that leave the pending changes are dropped.
@@ -95,6 +95,33 @@ renderer/src/
   Details, Attributes, Relations. Selecting a row must stay cheap: `cm diff` runs only on request (`ChangedFilesSection`),
   other lookups wait for the selection to settle (`useSettled`), and immutable results are cached (`IMMUTABLE_QUERY`).
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in components.
+
+## Server budget
+
+Repositories like `codice@codice@cloud` hold ~280k changesets, ~20k branches, thousands of labels, shelves and reviews,
+and many people use the same server. Every `cm` command other than local reads (`status`, `getworkspacefrompath`,
+`workspace list`, `profile list`, `version`...) is server work, so each one has to earn its place:
+
+- **Idle** (focused, nothing touched): only the incoming check, one `cm find changeset ... --format={changesetid}` a
+  minute (every five behind other apps, none while hidden). It takes the branch and loaded changeset from the workspace
+  info, which follows `.plastic`, instead of asking `cm status`. Nothing else polls: left changes, locks and lists wait
+  for an event, a focus or an operation.
+- **Focus**: the incoming check if older than 20 s, and the server views on screen once stale (30 s by default). Lists
+  that hardly change by themselves and are heavy to read use `SLOW_CHANGING_QUERY` (every branch, every label, attribute
+  types, the working object's comment, the palette's lists): five minutes, and focus never re-reads them. The Branch
+  Explorer is kept five minutes and focus never re-reads all history. Local views skip focus while the watcher sees the disk.
+- **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`), `cm diff`
+  runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id) are
+  cached (`IMMUTABLE_QUERY`) and skipped by refreshes.
+- **After an operation**: `invalidateWorkspace` refetches what is on screen and marks the rest stale. Event-driven
+  refreshes are scoped (`refreshScopes.ts`): someone else's checkin leaves labels, shelves, attribute types and reviews alone.
+- **Queries**: list everything only when the view needs everything, and then read it rarely. Otherwise filter on the
+  server: a date (`sinceDate`), a `limit`, one object by name or id (`api.branches.get`), batched id lookups
+  (`branchNamesById`, remembered by `BranchNamesCache`). Prefer `--format` with just the fields needed over `--xml`.
+  Equivalent filters must share one query key (`compactFilter`). A parse failure must fail, never degrade to an empty
+  filter (`parseWorkspaceStatus`): `cm find changeset where changesetid > -1` reads the whole repository.
+- **Guard**: development builds warn in the console (`[server budget]`) when the same server command runs more than
+  twice in ten seconds (`main/cm/repeatedCommands.ts`).
 
 ## Conventions
 
