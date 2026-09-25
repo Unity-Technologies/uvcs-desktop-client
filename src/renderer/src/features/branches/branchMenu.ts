@@ -8,6 +8,7 @@ import {
   GitBranchPlus,
   GitGraph,
   GitMerge,
+  GitPullRequest,
   GitPullRequestArrow,
   MessageSquareCode,
   Pencil,
@@ -29,6 +30,8 @@ import {
   switchToBranch,
 } from './branchOperations';
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
+import { openMergeTaskDialog } from '../mergeTask/MergeTaskDialog';
+import { isTaskBranch } from '../mergeTask/mergeTaskSummary';
 import { openCreateBranchDialog } from './CreateBranchDialog';
 
 /** The context menu for the selected branches. `currentBranch` is the branch the workspace is on. */
@@ -64,6 +67,12 @@ export function branchMenu(workspacePath: string, branches: Branch[], currentBra
       label: `Merge into ${currentBranch ?? 'workspace'}`,
       icon: GitMerge,
       run: () => mergeFromBranch(single.name),
+    },
+    single && isTaskBranch(single) && {
+      id: 'mergeTask',
+      label: `Merge to ${single.parent}…`,
+      icon: GitPullRequest,
+      run: () => openMergeTaskDialog(workspacePath, single),
     },
     single && {
       id: 'mergeTo',

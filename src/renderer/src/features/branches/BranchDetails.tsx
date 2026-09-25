@@ -1,4 +1,4 @@
-import { ArrowRightLeft, FileDiff, GitBranch, GitMerge } from 'lucide-react';
+import { ArrowRightLeft, FileDiff, GitBranch, GitMerge, GitPullRequest } from 'lucide-react';
 import type { Branch } from '@shared/domain/branch';
 import { shortBranchName, spec } from '@shared/domain/specs';
 import { formatDateTime } from '../../lib/formatDate';
@@ -7,6 +7,7 @@ import { DetailsBadge, DetailsPanel, DetailsSection, DetailsText } from '../../u
 import { PropertyList } from '../../ui/PropertyList';
 import { AttributesEditor } from '../attributes/AttributesEditor';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
+import { openMergeTaskDialog } from '../mergeTask/MergeTaskDialog';
 import { diffBranch, mergeFromBranch, switchToBranch } from './branchOperations';
 
 interface BranchDetailsProps {
@@ -39,6 +40,17 @@ export function BranchDetails({ workspacePath, branch, isCurrent }: BranchDetail
           {!isCurrent && (
             <Button icon={<GitMerge size={14} />} onClick={() => mergeFromBranch(branch.name)}>
               Merge
+            </Button>
+          )}
+          {branch.parent && (
+            // Next to Switch and Merge there is only room for the icon.
+            <Button
+              icon={<GitPullRequest size={14} />}
+              aria-label={`Merge to ${branch.parent}…`}
+              data-tip={isCurrent ? undefined : `Merge to ${branch.parent}…`}
+              onClick={() => openMergeTaskDialog(workspacePath, branch)}
+            >
+              {isCurrent && `Merge to ${branch.parent}`}
             </Button>
           )}
           <Button icon={<FileDiff size={14} />} onClick={() => diffBranch(branch.name)}>

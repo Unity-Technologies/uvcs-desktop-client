@@ -16,6 +16,7 @@ import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { useChangeset } from '../changesets/useChangeset';
 import { LeftChangesBanner } from '../leftChanges/LeftChangesBanner';
+import { MergeTaskSuggestion } from '../mergeTask/MergeTaskSuggestion';
 import { ChangeDiffPanel } from './ChangeDiffPanel';
 import { ChangesList } from './ChangesList';
 import { ChangesSummaryBar } from './ChangesSummaryBar';
@@ -150,6 +151,7 @@ export function PendingChangesView() {
           icon={<CheckCircle2 size={24} />}
           title="No pending changes"
           description={`Your workspace matches ${workspace?.selector.name ?? 'the repository'}. Changes you make to files show up here automatically.`}
+          action={workspace?.selector.kind === 'branch' && <MergeTaskSuggestion workspacePath={workspacePath} branchName={workspace.selector.name} />}
         />
       </>
     );

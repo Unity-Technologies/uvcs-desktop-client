@@ -9,6 +9,7 @@ import {
   GitCommitVertical,
   GitBranchPlus,
   GitMerge,
+  GitPullRequest,
   GitPullRequestArrow,
   Minus,
   Tag,
@@ -17,6 +18,8 @@ import { spec } from '@shared/domain/specs';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { openCreateBranchDialog } from '../branches/CreateBranchDialog';
 import { openCreateLabelDialog } from '../labels/CreateLabelDialog';
+import { openMergeTaskDialog } from '../mergeTask/MergeTaskDialog';
+import { isTaskBranch } from '../mergeTask/mergeTaskSummary';
 import type { GraphTarget } from './canvas/graphTargets';
 import { graphActions } from './graphActions';
 import type { GraphLayout, Lane } from './model/layoutGraph';
@@ -89,6 +92,12 @@ function branchMenu(lane: Lane, { workspacePath, layout, goToChangeset, showRela
   return tidyMenu([
     { id: 'switch', label: 'Switch workspace to this branch', icon: GitBranch, run: () => graphActions.switchToBranch(workspacePath, name) },
     { id: 'merge', label: 'Merge from this branch', icon: GitMerge, run: () => graphActions.merge('merge', spec.branch(name)) },
+    isTaskBranch(lane.branch) && {
+      id: 'mergeTask',
+      label: `Merge to ${lane.branch.parent}…`,
+      icon: GitPullRequest,
+      run: () => openMergeTaskDialog(workspacePath, lane.branch),
+    },
     { id: 'diff', label: 'Diff branch', icon: FileDiff, run: () => graphActions.diffBranch(name) },
     SEPARATOR,
     layout.nodes.has(head) && { id: 'head', label: 'Go to head changeset', icon: ArrowRightToLine, run: () => goToChangeset(head) },
