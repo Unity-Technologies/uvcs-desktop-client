@@ -118,7 +118,8 @@ renderer/src/
   styles/       Design tokens and global CSS
 ```
 
-- **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)`, so `invalidateWorkspace(path)` refreshes everything after an operation.
+- **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)`, so `invalidateWorkspace(path)` refreshes everything after an operation
+  (or what it can touch: `invalidateWorkspace(path, affected)`, `runOperation({ affects })`).
 - **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check.
   - `main/watch/WorkspaceWatcher` watches an open workspace (recursive on macOS/Windows; the root and `.plastic` only on Linux),
     skips `ignore.conf` folders and `.plastic` lock/temp files, coalesces bursts (300 ms quiet, 2 s max wait) and drops what the
@@ -181,15 +182,29 @@ and many people use the same server. Every `cm` command other than local reads (
   for an event, a focus or an operation.
 - **Focus**: the incoming check if older than 20 s, and the server views on screen once stale (30 s by default). Lists
   that hardly change by themselves and are heavy to read use `SLOW_CHANGING_QUERY` (every branch, every label, attribute
-  types, the working object's comment, the palette's lists): five minutes, and focus never re-reads them. The Branch
+  types, attribute values, the working object's comment, the palette's lists): five minutes, and focus never re-reads them. The Branch
   Explorer is kept five minutes and focus never re-reads all history. Local views skip focus while the watcher sees the disk.
 - **Home**: the repository and branch of every listed workspace come from its `.plastic/plastic.selector` file
   (`workspaces.heads`); `cm` is asked only about recent workspaces whose file can't tell.
 - **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`), `cm diff`
-  runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id) are
-  cached (`IMMUTABLE_QUERY`) and skipped by refreshes.
-- **After an operation**: `invalidateWorkspace` refetches what is on screen and marks the rest stale. Event-driven
-  refreshes are scoped (`refreshScopes.ts`): someone else's checkin leaves labels, shelves, attribute types and reviews alone.
+  runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id, specs
+  pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`) and skipped by refreshes.
+  An object opened from a list already read starts from it (`useChangeset`) and is asked for only once that list is stale.
+- **After an operation**: `invalidateWorkspace` refetches what is on screen and marks the rest stale, scoped to what the
+  operation can change (`refreshScopes.ts`, `runOperation({ affects })`): a checkin, an update or a merge from a branch
+  leave labels, shelves, attributes, reviews, left changes and changesets already read alone; shelving changes that stay
+  in the workspace refreshes only the shelve lists; a new branch only the branch lists and the Branch Explorer. Reads
+  refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
+  the last (create a branch and switch to it). Views keyed by the workspace info (`keyedByWorkspaceInfo`: left changes, the
+  incoming check, the branch the workspace is on) wait for it, and when the operation gave them another key they are only
+  marked stale: they are read under the new key as they show, never once more under the old one. Event-driven refreshes
+  are scoped too: someone else's checkin leaves labels, shelves, attributes, reviews and the workspace's own annotations alone.
+- **Reuse**: what a command already returned answers later questions instead of another command. Branch lists (the
+  Branches view, the Branch Explorer with its hidden branches) name the branches code reviews point to by id
+  (`BranchNamesCache.remember`); the palette takes the newest reviews from the branch chips; the top bar takes the branch
+  comment from the branch query. Pending changes ask which locks are mine only when some lock holds one of them; left
+  changes look the selector's object id up only when an automatic shelve by another client could match it, and arriving
+  from a switch looks for changes to restore only when this app left some there.
 - **Queries**: list everything only when the view needs everything, and then read it rarely. Otherwise filter on the
   server: a date (`sinceDate`), a `limit`, one object by name or id (`api.branches.get`), batched id lookups
   (`branchNamesById`, remembered by `BranchNamesCache`). Prefer `--format` with just the fields needed over `--xml`.
