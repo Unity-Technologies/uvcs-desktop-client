@@ -68,6 +68,7 @@
 .stage {
   overflow: hidden;
   color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
   text-overflow: ellipsis;
 }
 

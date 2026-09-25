@@ -9,12 +9,19 @@ const ICONS: Record<CodeReviewStatus, React.ReactNode> = {
   'Rework required': <RotateCcw size={12} />,
 };
 
-/** `compact` is for chips next to a name: smaller, with a short status. */
-export function CodeReviewStatusBadge({ status, compact = false }: { status: CodeReviewStatus; compact?: boolean }) {
+interface CodeReviewStatusBadgeProps {
+  status: CodeReviewStatus;
+  /** For chips next to a name: smaller, with a short status. */
+  compact?: boolean;
+  /** Just the icon, where there is no room for the status. */
+  iconOnly?: boolean;
+}
+
+export function CodeReviewStatusBadge({ status, compact = false, iconOnly = false }: CodeReviewStatusBadgeProps) {
   return (
-    <span className={styles.badge} data-status={status} data-compact={compact}>
+    <span className={styles.badge} data-status={status} data-compact={compact} data-icon-only={iconOnly} aria-label={iconOnly ? status : undefined}>
       {ICONS[status]}
-      {compact ? SHORT_STATUS[status] : status}
+      {!iconOnly && (compact ? SHORT_STATUS[status] : status)}
     </span>
   );
 }

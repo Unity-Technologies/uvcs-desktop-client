@@ -1,6 +1,7 @@
 import { Command as Cmdk } from 'cmdk';
-import { useDeferredValue, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { createFuzzyIndex, fuzzyMatchPositions, fuzzyMatchQuality } from '../../lib/fuzzyIndex';
+import { isRowMenuKey } from '../../lib/rowMenu';
 import { useShortcut } from '../../lib/useShortcut';
 import { HighlightQuery } from '../../ui/Highlight';
 import { Spinner } from '../../ui/Spinner';
@@ -14,14 +15,16 @@ import { collapseGroups, COLLAPSED_ROWS, rankGroups, type SearchGroup, type Sear
 import { usePaletteSearch } from './usePaletteSearch';
 import { useWorkspaceResults } from './useWorkspaceResults';
 import styles from './CommandPalette.module.css';
+import { hotkeys } from '../../lib/shortcutRegistry';
 
 const MAX_COMMANDS = 50;
 
 export function CommandPalette() {
   const { isOpen: open, setOpen, toggle } = useCommandPalette();
 
-  useShortcut('mod+k', toggle);
-  useShortcut('mod+shift+p', () => setOpen(true));
+  const [toggleKey, openKey] = hotkeys('commandPalette');
+  useShortcut(toggleKey, toggle);
+  useShortcut(openKey, () => setOpen(true));
 
   return open ? <OpenPalette close={() => setOpen(false)} /> : null;
 }
@@ -43,6 +46,7 @@ function OpenPalette({ close }: { close: () => void }) {
   const { scope, text } = parseScope(deferredQuery);
   const commandsByOwner = useCommandStore((state) => state.commandsByOwner);
   const workspacePath = useSession((state) => state.workspacePath);
+  useFocusBackOnClose();
 
   const commands = useMemo(
     // Opening the palette from inside it would do nothing.
@@ -84,14 +88,15 @@ function OpenPalette({ close }: { close: () => void }) {
     // Keys pressed in a row's actions menu bubble up here through its portal; they are the menu's, not cmdk's.
     if (event.target !== inputRef.current) return event.preventDefault();
     if (event.key === 'Escape') close();
-    if (event.key === 'Tab') {
+    // Tab never leaves the palette: it opens the selected result's actions, when it has some.
+    if (event.key === 'Tab' || isRowMenuKey(event)) {
       event.preventDefault();
       if (selectedResult?.menu) setMenuFor(selectedResult.id);
     }
   };
 
   return (
-    <div className={styles.overlay} onMouseDown={close}>
+    <div className={styles.overlay} role="dialog" aria-modal="true" aria-label="Command palette" onMouseDown={close}>
       <Cmdk
         className={styles.palette}
         label="Command palette"
@@ -147,6 +152,17 @@ function OpenPalette({ close }: { close: () => void }) {
       </Cmdk>
     </div>
   );
+}
+
+/** Closing gives focus back to where it was (the list the palette was opened over), unless it went away meanwhile. */
+function useFocusBackOnClose(): void {
+  // Read while rendering, before the palette's field takes focus.
+  const [previous] = useState(() => document.activeElement);
+  useEffect(() => {
+    return () => {
+      if (previous instanceof HTMLElement && previous !== document.body && previous.isConnected) previous.focus({ preventScroll: true });
+    };
+  }, [previous]);
 }
 
 function moreValue(section: SectionId): string {

@@ -11,6 +11,7 @@ import type {
 } from '@shared/domain/pendingChanges';
 import { explainLockedItems } from '../cm/lockedItems';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
+import { readCheckinProgress } from '../cm/progress/checkinProgress';
 import { withTempFile } from '../files/tempFile';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
@@ -34,7 +35,7 @@ export function createPendingChangesService({ cm, operations }: ServiceContext):
   }
 
   function checkin(workspacePath: string, request: CheckinRequest, operationId: string): Promise<CheckinResult> {
-    return operations.run(operationId, ({ signal, reportProgress }) =>
+    return operations.run(operationId, ({ signal, progressOf }) =>
       withTempFile(request.comment, async (commentsFile) => {
         const output = await explainLockedItems('checked in', () =>
           cm.execute(
@@ -46,7 +47,7 @@ export function createPendingChangesService({ cm, operations }: ServiceContext):
               `-commentsfile=${commentsFile}`,
               '--machinereadable',
             ],
-            { cwd: workspacePath, signal, onOutputLine: reportProgress },
+            { cwd: workspacePath, signal, onOutputLine: progressOf(readCheckinProgress) },
           ),
         );
         const created = CREATED_CHANGESET_LINE.exec(output);
@@ -84,8 +85,10 @@ export function createPendingChangesService({ cm, operations }: ServiceContext):
     await appendFile(rulesFile, `${separator}${pattern}\n`, 'utf8');
   }
 
-  function shelve(workspacePath: string, paths: string[], comment: string): Promise<number> {
-    return withTempFile(comment, async (commentsFile) => {
+  function shelve(workspacePath: string, paths: string[], comment: string, operationId: string): Promise<number> {
+    // `--summaryformat` prints just the shelve, in any language, and nothing else: no stages to follow.
+    return operations.run(operationId, ({ reportProgress }) => withTempFile(comment, async (commentsFile) => {
+      reportProgress('Uploading your changes');
       const output = await cm.execute(
         [
           'shelveset',
@@ -100,7 +103,7 @@ export function createPendingChangesService({ cm, operations }: ServiceContext):
       const created = CREATED_SHELVE.exec(output);
       if (!created) throw new Error('The shelve finished but no shelve id was reported.');
       return Number(created[1]);
-    });
+    }));
   }
 
   async function createChangelist(workspacePath: string, { name, description }: Changelist): Promise<void> {

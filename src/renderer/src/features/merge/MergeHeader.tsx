@@ -12,6 +12,7 @@ import { ContributorsDiagram } from './ContributorsDiagram';
 import { mergeTitle, mergeTitleText, type MergeTitle } from './mergeDescription';
 import type { ConflictLabels } from './resolve/threeWayMerge';
 import styles from './MergeHeader.module.css';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 interface MergeHeaderProps {
   request: MergeRequest;
@@ -38,7 +39,7 @@ export function MergeHeader({
   merging,
   onMerge,
 }: MergeHeaderProps) {
-  useShortcut('mod+enter', onMerge, canMerge);
+  useShortcut(hotkey('merge'), onMerge, canMerge);
   const conflictCount = plan.fileConflicts.length + plan.directoryConflicts.length;
 
   return (
@@ -79,7 +80,7 @@ export function MergeHeader({
         {/* The title above names the whole destination; the button keeps its leaf, leaving room for the comment. */}
         <Button variant="primary" size="large" disabled={!canMerge} loading={merging} onClick={onMerge}>
           {intoServerBranch ? `Merge into ${shortBranchName(labels.destination)}` : 'Complete merge'}
-          <Kbd keys="mod+enter" />
+          <Kbd keys={hotkey('merge')} />
         </Button>
       </div>
     </header>

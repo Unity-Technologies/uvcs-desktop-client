@@ -15,6 +15,8 @@ export interface Toast {
   action?: ToastAction;
   /** What an error toast reports; the toast host can offer its details. */
   error?: unknown;
+  /** A long operation's card, running (`progress`) or done: the toast host leaves drawing it to the app. */
+  operationId?: string;
 }
 
 interface ToastStore {

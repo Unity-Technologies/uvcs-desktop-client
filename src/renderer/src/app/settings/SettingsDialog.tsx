@@ -49,7 +49,12 @@ function SettingsDialog({ initialSection, onClose }: { initialSection: SettingsS
           ))}
         </nav>
         <div className={styles.pane}>
-          {section === 'appearance' && <AppearancePane settings={settings} updateSettings={updateSettings} />}
+          {section === 'appearance' && (
+            <>
+              <AppearancePane settings={settings} updateSettings={updateSettings} />
+              <PeopleGroup settings={settings} updateSettings={updateSettings} />
+            </>
+          )}
           {section === 'pendingChanges' && <PendingChangesPane settings={settings} updateSettings={updateSettings} />}
           {section === 'checkin' && <CheckinPane settings={settings} updateSettings={updateSettings} />}
           {section === 'workspaces' && <WorkspacesPane settings={settings} updateSettings={updateSettings} />}
@@ -101,6 +106,18 @@ function AppearancePane({ settings, updateSettings }: PaneProps) {
           );
         })}
       </div>
+    </SettingsGroup>
+  );
+}
+
+function PeopleGroup({ settings, updateSettings }: PaneProps) {
+  return (
+    <SettingsGroup title="People">
+      <Checkbox
+        label="Show profile pictures from Gravatar (sends a hash of each email address to gravatar.com)"
+        checked={settings.showGravatar}
+        onChange={(showGravatar) => updateSettings({ showGravatar })}
+      />
     </SettingsGroup>
   );
 }

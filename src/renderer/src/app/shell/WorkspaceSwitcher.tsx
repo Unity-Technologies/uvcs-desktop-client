@@ -1,10 +1,14 @@
 import * as Popover from '@radix-ui/react-popover';
 import { Copy, FolderGit2, FolderOpen, FolderPlus, Layers, SquareTerminal } from 'lucide-react';
-import { useEffect, useRef, useState, type KeyboardEvent, type ReactElement } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactElement } from 'react';
 import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorkspaceDialog';
 import { navigationTarget } from '../../lib/listNavigation';
+import { isRowMenuKey, openContextMenuOf } from '../../lib/rowMenu';
+import { hotkey } from '../../lib/shortcutRegistry';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
+import { KeyHints } from '../../ui/KeyHints';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
+import { useReturnFocus } from '../../ui/useReturnFocus';
 import { openCreateWorkspaceDialog } from '../home/dialogs/CreateWorkspaceDialog';
 import { missingWorkspaceMenu, workspaceMenu } from '../home/homeMenus';
 import { unlistedRecentPaths, type WorkspaceEntry } from '../home/recentWorkspaces';
@@ -28,6 +32,7 @@ export function WorkspaceSwitcher({ currentPath, children }: { currentPath: stri
   const [open, setOpen] = useState(false);
   const closeWorkspace = useSession((state) => state.closeWorkspace);
   const openWorkspace = useOpenWorkspace();
+  const returnFocus = useReturnFocus(open);
 
   // Popover actions often open a dialog or a folder picker: close first so focus goes where it should.
   const closeThen = (action: () => void) => () => {
@@ -41,7 +46,7 @@ export function WorkspaceSwitcher({ currentPath, children }: { currentPath: stri
         <Popover.Trigger asChild>{children}</Popover.Trigger>
       </ActionContextMenu>
       <Popover.Portal>
-        <Popover.Content className={styles.popover} side="bottom" align="start" sideOffset={4}>
+        <Popover.Content className={styles.popover} side="bottom" align="start" sideOffset={4} {...returnFocus}>
           <WorkspaceList currentPath={currentPath} onChoose={(path) => closeThen(() => openWorkspace(path))()} />
           <div className={styles.footer}>
             <button className={styles.footerItem} onClick={closeThen(() => void openWorkspaceFolder(openWorkspace))}>
@@ -82,6 +87,8 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
   const [highlighted, setHighlighted] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
   const movedByKeyboard = useRef(false);
+  const filterRef = useRef<HTMLInputElement>(null);
+  const listboxId = useId();
   const { recentWorkspacePaths } = useSettings();
   const { data: workspaces = [] } = useWorkspaceList();
   const { data: repositories } = useRecentWorkspaceRepositories(workspaces);
@@ -107,6 +114,9 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
     } else if (event.key === 'Enter' && flat[highlighted]) {
       event.preventDefault();
       onChoose(flat[highlighted].workspace.path);
+    } else if (flat[highlighted] && isRowMenuKey(event)) {
+      event.preventDefault();
+      openContextMenuOf(document.getElementById(`${listboxId}-${highlighted}`));
     }
   };
 
@@ -114,8 +124,20 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
   const row = ({ workspace, missing }: WorkspaceEntry, index: number) => {
     const repository = repositories?.[workspace.path];
     return (
-      <ActionContextMenu key={workspace.guid} entries={() => (missing ? missingWorkspaceMenu : workspaceMenu)(workspace, onChoose)}>
+      <ActionContextMenu
+        key={workspace.guid}
+        entries={() => (missing ? missingWorkspaceMenu : workspaceMenu)(workspace, onChoose)}
+        // Back to the filter, so typing and the arrow keys carry on.
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          filterRef.current?.focus();
+        }}
+      >
         <button
+          id={`${listboxId}-${index}`}
+          role="option"
+          aria-selected={index === highlighted}
+          tabIndex={-1}
           className={styles.item}
           data-highlighted={index === highlighted}
           data-missing={missing}
@@ -152,10 +174,17 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
   return (
     <>
       <input
+        ref={filterRef}
         className={styles.filter}
         placeholder="Switch to workspace…"
         value={filter}
         spellCheck={false}
+        role="combobox"
+        aria-label="Switch to workspace"
+        aria-expanded
+        aria-autocomplete="list"
+        aria-controls={listboxId}
+        aria-activedescendant={flat[highlighted] ? `${listboxId}-${highlighted}` : undefined}
         onChange={(event) => {
           setFilter(event.target.value);
           setHighlighted(0);
@@ -163,15 +192,24 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
         onKeyDown={onKeyDown}
         autoFocus
       />
-      <div ref={listRef} className={styles.list}>
+      <div ref={listRef} id={listboxId} role="listbox" aria-label="Workspaces" className={styles.list}>
         {flat.length === 0 && <div className={styles.empty}>{filter ? 'No matching workspaces' : 'No other workspaces'}</div>}
         <HighlightQuery query={filter}>
-          {recent.length > 0 && <div className={styles.groupTitle}>Recent</div>}
+          {recent.length > 0 && (
+            <div role="presentation" className={styles.groupTitle}>
+              Recent
+            </div>
+          )}
           {recent.map((entry, index) => row(entry, index))}
-          {others.length > 0 && <div className={styles.groupTitle}>{recent.length > 0 ? 'Other workspaces' : 'Workspaces'}</div>}
+          {others.length > 0 && (
+            <div role="presentation" className={styles.groupTitle}>
+              {recent.length > 0 ? 'Other workspaces' : 'Workspaces'}
+            </div>
+          )}
           {others.map((entry, index) => row(entry, recent.length + index))}
         </HighlightQuery>
       </div>
+      <KeyHints hints={[{ keys: hotkey('rowActions'), label: 'actions' }]} />
     </>
   );
 }

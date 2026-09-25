@@ -48,6 +48,22 @@ describe('buildFileTreeRows', () => {
     const rows = buildFileTreeRows({ childrenByDirectory: tree, expanded: new Set(['src']), filter: 'A.T' });
     expect(rows.map((row) => row.item.path)).toEqual(['src', 'src/a.ts']);
   });
+
+  it('puts everything under the workspace root when there is one, filtered or not', () => {
+    const root = { item: item('', 'directory'), expanded: true };
+    const rows = buildFileTreeRows({ childrenByDirectory: tree, expanded: new Set(['src']), filter: 'a.ts', root });
+    expect(rows.map((row) => [row.item.path, row.depth])).toEqual([
+      ['', 0],
+      ['src', 1],
+      ['src/a.ts', 2],
+    ]);
+  });
+
+  it('shows just the root while it is collapsed, and loading until the root is listed', () => {
+    expect(buildFileTreeRows({ childrenByDirectory: tree, expanded: new Set(), root: { item: item('', 'directory'), expanded: false } })).toHaveLength(1);
+    const [loading] = buildFileTreeRows({ childrenByDirectory: new Map(), expanded: new Set(), root: { item: item('', 'directory'), expanded: true } });
+    expect(loading?.isLoading).toBe(true);
+  });
 });
 
 describe('path helpers', () => {

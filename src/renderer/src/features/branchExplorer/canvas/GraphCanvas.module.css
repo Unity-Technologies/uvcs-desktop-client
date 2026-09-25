@@ -23,7 +23,16 @@
   height: 100%;
 }
 
-/* The graph shows its own selection; a focus ring around the whole canvas is just noise. */
 .container:focus-visible {
   box-shadow: none;
+}
+
+/* Over the positioned content (the canvas), which would paint over an outline or an inset shadow. */
+.container:focus-visible::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  box-shadow: var(--focus-ring-inset);
+  pointer-events: none;
 }

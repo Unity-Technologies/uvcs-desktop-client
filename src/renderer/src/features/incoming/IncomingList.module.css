@@ -3,6 +3,7 @@
   min-height: 0;
   padding: var(--space-1);
   overflow: auto;
+  outline: none;
 }
 
 .section + .section {
@@ -77,4 +78,16 @@
   gap: 5px;
   color: var(--text-tertiary);
   font-size: var(--text-xs);
+}
+
+.list:focus-visible {
+  box-shadow: var(--focus-ring-inset);
+}
+
+.list:focus-visible:has([data-selected='true']) {
+  box-shadow: none;
+}
+
+.list:focus-visible [data-selected='true'] {
+  box-shadow: var(--focus-ring-inset);
 }

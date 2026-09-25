@@ -4,13 +4,14 @@ import { useSettings } from '../../app/settings/useSettings';
 import { Button } from '../../ui/Button';
 import { Tooltip } from '../../ui/Tooltip';
 import styles from './RefreshButton.module.css';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 /** Refreshes the workspace views. Quietly says so when automatic refresh is off, the only time pressing it matters. */
 export function RefreshButton({ workspacePath, fetching }: { workspacePath: string; fetching: boolean }) {
   const { autoRefresh } = useSettings();
   const label = autoRefresh ? 'Refresh' : 'Automatic refresh is off — click to refresh';
   return (
-    <Tooltip content={label} shortcut="mod+r">
+    <Tooltip content={label} shortcut={hotkey('refresh')}>
       <Button
         variant="ghost"
         icon={<RefreshCw size={14} className={fetching ? styles.spinning : undefined} />}

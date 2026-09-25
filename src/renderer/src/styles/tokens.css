@@ -53,6 +53,12 @@
   --keyframes-pulse: pulse;
 
   --accent-contrast: #ffffff;
+
+  --focus-ring-visible: 0 0 0 2px var(--focus-color);
+  /* For lists, rows and panes, whose outer edge a parent would clip. */
+  --focus-ring-inset: inset 0 0 0 2px var(--focus-color);
+  /* For panes whose content paints over an inset shadow (a canvas, a diff): outlines paint on top. Offset it by -2px. */
+  --focus-outline: 2px solid var(--focus-color);
 }
 
 :root,
@@ -63,10 +69,13 @@
   --accent-hover: #0860c7;
   --accent-soft: rgba(9, 105, 218, 0.1);
   --accent-text: #0969da;
+  /* Text fields: a soft halo around their accent border. */
   --focus-ring: 0 0 0 3px rgba(9, 105, 218, 0.3);
+  /* Everything else the keyboard reaches: a ring that stands out (3:1) from what surrounds it. */
+  --focus-color: #0969da;
 
   --status-added: #1a7f37;
-  --status-changed: #bf8700;
+  --status-changed: #9a6700;
   --status-deleted: #cf222e;
   --status-moved: #0e7c86;
   --status-private: #6e7781;
@@ -77,7 +86,7 @@
   --change-changed: #1f6feb;
   --change-deleted: #cf222e;
   --change-moved: #8250df;
-  --change-permissions: #d1640a;
+  --change-permissions: #bc4c00;
 
   --bg-app: #f6f8fa;
   --bg-sidebar: #f6f8fa;
@@ -97,7 +106,7 @@
   --border-strong: #afb8c1;
   --text-primary: #1f2328;
   --text-secondary: #59636e;
-  --text-tertiary: #818b98;
+  --text-tertiary: #687280;
   --text-inverse: #ffffff;
   --shadow-sm: 0 1px 0 rgba(31, 35, 40, 0.04);
   --shadow-md: 0 3px 12px rgba(31, 35, 40, 0.12), 0 1px 3px rgba(31, 35, 40, 0.06);
@@ -123,6 +132,7 @@
   --accent-soft: rgba(56, 139, 253, 0.15);
   --accent-text: #4493f8;
   --focus-ring: 0 0 0 3px rgba(56, 139, 253, 0.4);
+  --focus-color: #4493f8;
 
   --status-added: #3fb950;
   --status-changed: #d29922;
@@ -154,7 +164,7 @@
   --border-strong: #484f58;
   --text-primary: #e6edf3;
   --text-secondary: #9198a1;
-  --text-tertiary: #6e7681;
+  --text-tertiary: #848d97;
   --text-inverse: #0d1117;
   --shadow-sm: 0 1px 0 rgba(1, 4, 9, 0.3);
   --shadow-md: 0 6px 20px rgba(1, 4, 9, 0.5), 0 1px 3px rgba(1, 4, 9, 0.35);

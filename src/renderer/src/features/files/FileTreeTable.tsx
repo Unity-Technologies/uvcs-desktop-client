@@ -1,6 +1,5 @@
-import { ChevronRight, File, FileImage, Folder, FolderOpen, Link2 } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
 import type { TreeItem } from '@shared/domain/explorer';
-import { StatusBadge } from '../../components/StatusBadge';
 import type { MenuEntry } from '../../lib/actions';
 import { formatSize } from '../../lib/formatDate';
 import type { SelectionState } from '../../lib/selection';
@@ -10,11 +9,13 @@ import { RelativeTime } from '../../ui/RelativeTime';
 import { Spinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import type { FileTreeRow } from './fileTreeRows';
-import type { ItemStatus } from './itemStatus';
+import { ItemIcon } from './ItemIcon';
+import { iconOverlay, type ItemStatus } from './itemStatus';
+import { isWorkspaceRoot } from './workspaceRoot';
+import { XlinkChip } from './XlinkChip';
 import styles from './FileTreeTable.module.css';
 
 const INDENT = 16;
-const IMAGE_EXTENSION = /\.(png|jpe?g|gif|bmp|webp|psd|tga|exr|ico)$/i;
 
 interface FileTreeTableProps {
   rows: FileTreeRow[];
@@ -63,7 +64,7 @@ export function FileTreeTable({
       hideBelow: 560,
       render: (row) => (hasKnownSize(row.item) ? formatSize(row.item.size) : ''),
     },
-    { id: 'date', header: 'Modified', width: 116, secondary: true, render: (row) => row.item.date && <RelativeTime date={row.item.date} /> },
+    { id: 'date', header: 'Modified', width: 116, secondary: true, hideBelow: 520, render: (row) => row.item.date && <RelativeTime date={row.item.date} /> },
     {
       id: 'changeset',
       header: 'Changeset',
@@ -73,7 +74,7 @@ export function FileTreeTable({
       hideBelow: 640,
       render: (row) => (row.item.changeset > 0 ? row.item.changeset : ''),
     },
-    { id: 'owner', header: '', width: 40, render: (row) => row.item.owner && <Avatar user={row.item.owner} size={18} /> },
+    { id: 'owner', header: 'By', width: 44, hideBelow: 600, render: (row) => row.item.owner && <Avatar user={row.item.owner} size={18} /> },
   ];
 
   const onRowKeyDown = (event: React.KeyboardEvent, row: FileTreeRow): void => {
@@ -128,24 +129,16 @@ function NameCell({ row, status, changesInside, onToggle }: NameCellProps) {
       ) : (
         <span className={styles.chevronSpace} />
       )}
-      <ItemIcon item={item} expanded={row.isExpanded} />
-      <span className={styles.label} data-private={item.isPrivate}>
-        <Highlight text={item.name} />
+      <ItemIcon item={item} expanded={row.isExpanded} overlay={iconOverlay(item, status)} />
+      <span className={styles.text}>
+        <span className={styles.label} data-private={item.isPrivate} data-root={isWorkspaceRoot(item)}>
+          <Highlight text={item.name} />
+        </span>
+        {item.xlink && <XlinkChip xlink={item.xlink} />}
       </span>
-      {status && <StatusBadge tone={status.tone} title={status.label} />}
-      {!status && changesInside && <span className={styles.changesDot} data-tip="Contains pending changes" />}
+      {!status && changesInside && !isWorkspaceRoot(item) && <span className={styles.changesDot} data-tip="Contains pending changes" />}
     </span>
   );
-}
-
-function ItemIcon({ item, expanded }: { item: TreeItem; expanded: boolean }) {
-  if (item.itemType === 'directory') {
-    const Icon = expanded ? FolderOpen : Folder;
-    return <Icon size={14} className={styles.folderIcon} />;
-  }
-  if (item.itemType === 'xlink') return <Link2 size={14} className={styles.fileIcon} />;
-  if (IMAGE_EXTENSION.test(item.name)) return <FileImage size={14} className={styles.fileIcon} />;
-  return <File size={14} className={styles.fileIcon} />;
 }
 
 /** `cm ls` reports 0 bytes for items that are added but not checked in yet. */

@@ -140,3 +140,16 @@
     transition: opacity var(--duration-normal);
   }
 }
+
+/* The row the keyboard is on, while the keyboard is on the list. */
+.list:focus-visible {
+  box-shadow: var(--focus-ring-inset);
+}
+
+.list:focus-visible:has(.row[data-focused='true']) {
+  box-shadow: none;
+}
+
+.list:focus-visible .row[data-focused='true'] {
+  box-shadow: var(--focus-ring-inset);
+}

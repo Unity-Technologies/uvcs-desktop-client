@@ -50,14 +50,15 @@ interface NavItemProps {
   active?: boolean;
   /** Active, but a page is open on top of it. */
   dimmed?: boolean;
-  /** Keyboard shortcut shown in the rail's tooltip. */
+  /** Shown with its label as a tooltip (in the rail, the label shows there too). */
   shortcut?: string;
   onClick: () => void;
 }
 
 export function NavItem({ icon, label, detail, badge, dot = false, active = false, dimmed = false, shortcut, onClick }: NavItemProps) {
   const rail = useInRail();
-  const tip = rail ? [label, detail, badge ? `${badge}` : undefined].filter(Boolean).join(' · ') : undefined;
+  // Wide, the label shows already: the tooltip is there to tell the shortcut.
+  const tip = rail ? [label, detail, badge ? `${badge}` : undefined].filter(Boolean).join(' · ') : shortcut && label;
 
   return (
     <button
@@ -65,8 +66,9 @@ export function NavItem({ icon, label, detail, badge, dot = false, active = fals
       className={styles.item}
       data-active={active}
       data-dimmed={dimmed}
+      aria-current={active ? 'page' : undefined}
       data-tip={tip}
-      data-tip-shortcut={rail ? shortcut : undefined}
+      data-tip-shortcut={shortcut}
       aria-label={rail ? label : undefined}
       onClick={onClick}
     >

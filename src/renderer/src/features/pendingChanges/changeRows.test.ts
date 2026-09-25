@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { buildChangeRows, LEVEL_INDENT, rowIndent, topLevelCheckboxInset, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { buildChangeRows, LEVEL_INDENT, rowIndent, topLevelCheckboxInset, treeLevel, type ChangesGrouping, type ChangesLayout } from './changeRows';
 
 function change(path: string, kinds: PendingChange['kinds'], changelist?: string): PendingChange {
   return { path, kinds, itemType: 'file', size: 0, lastModified: '', changelist };
@@ -87,5 +87,22 @@ describe('rowIndent', () => {
     expect(rowIndent(rows[0]!, true)).toBe(0);
     expect(rowIndent(rows[1]!, true)).toBe(LEVEL_INDENT);
     expect(topLevelCheckboxInset(rows)).toBe(LEVEL_INDENT);
+  });
+});
+
+describe('treeLevel', () => {
+  it('puts folders and files under their changelist, one level per folder', () => {
+    const rows = buildChangeRows({ ...base, changes: [changes[3]!], layout: 'tree', grouping: 'changelist' });
+    expect(rows.map((row) => [row.type, treeLevel(row, true)])).toEqual([
+      ['group', 1],
+      ['directory', 2],
+      ['directory', 3],
+      ['change', 4],
+    ]);
+  });
+
+  it('starts at the first level without changelists', () => {
+    const rows = buildChangeRows({ ...base, changes: [changes[3]!], layout: 'tree' });
+    expect(rows.map((row) => treeLevel(row, false))).toEqual([1, 2, 3]);
   });
 });

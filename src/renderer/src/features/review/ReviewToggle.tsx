@@ -2,6 +2,7 @@ import { CircleCheck } from 'lucide-react';
 import { Tooltip } from '../../ui/Tooltip';
 import type { ReviewStatus } from './reviewStatus';
 import styles from './ReviewToggle.module.css';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 const LABELS: Record<ReviewStatus, string> = {
   unreviewed: 'Mark as reviewed',
@@ -26,7 +27,7 @@ interface ReviewToggleProps {
 export function ReviewToggle({ status, onToggle, folder = false }: ReviewToggleProps) {
   const label = (folder ? FOLDER_LABELS : LABELS)[status];
   return (
-    <Tooltip content={label} shortcut={folder ? undefined : 'r'}>
+    <Tooltip content={label} shortcut={folder ? undefined : hotkey('review')}>
       <button
         type="button"
         className={styles.toggle}

@@ -34,6 +34,7 @@ import {
   revertWorkspaceToChangeset,
   switchToChangeset,
 } from './changesetOperations';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 interface ChangesetMenuContext {
   workspacePath: string;
@@ -54,7 +55,7 @@ function singleChangesetMenu({ workspacePath, loadedChangeset, loadedBranch }: C
   const canRevertTo = loadedChangeset !== undefined && changeset.branch === loadedBranch && changeset.id < loadedChangeset;
 
   return tidyMenu([
-    { id: 'diff', label: 'Diff changeset', icon: FileDiff, shortcut: 'mod+d', run: () => openChangesetDiff(changeset) },
+    { id: 'diff', label: 'Diff changeset', icon: FileDiff, shortcut: hotkey('listDiff'), run: () => openChangesetDiff(changeset) },
     {
       id: 'browse',
       label: 'Browse repository at this changeset',

@@ -1,8 +1,11 @@
 import type { IncomingChanges, IncomingSummary } from '@shared/domain/incoming';
+import { describeProgressBriefly } from '../../app/operations/describeProgress';
+import { ringValue } from '../../app/operations/progressBar';
 import type { RunningOperation } from '../../app/operations/runningOperationsStore';
 
 export type IncomingChipState =
-  | { kind: 'updating'; stage: string }
+  /** `ring`: how full the progress ring is, null to spin. */
+  | { kind: 'updating'; stage: string; ring: number | null }
   /** New changesets that don't touch anything changed locally (or not known yet: `checked` is false). */
   | { kind: 'incoming'; branch: string; count: number; checked: boolean }
   /** New changesets that change files also changed locally: they have to be merged, never updated blindly. */
@@ -17,7 +20,7 @@ export function incomingChipState(
   changes: IncomingChanges | undefined,
   running: RunningOperation | undefined,
 ): IncomingChipState | null {
-  if (running?.kind === 'update') return { kind: 'updating', stage: running.detail ?? 'Starting' };
+  if (running?.kind === 'update') return { kind: 'updating', stage: describeProgressBriefly(running.progress), ring: ringValue(running.bar) };
   if (!summary?.branch || summary.changesetCount === 0) return null;
 
   const { branch, changesetCount: count } = summary;

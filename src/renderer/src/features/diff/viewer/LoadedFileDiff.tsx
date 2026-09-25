@@ -27,6 +27,7 @@ import { LineStats } from './LineStats';
 import type { DiscardRequest } from './useBlockDiscard';
 import type { DiffContents } from './useDiffContents';
 import { useFileEditing } from './useFileEditing';
+import { hotkey } from '../../../lib/shortcutRegistry';
 
 // The diff renderer (Pierre + Shiki) is large; load it with the first diff instead of at startup.
 const TextDiff = lazyComponent(() => import('./TextDiff').then((module) => module.TextDiff));
@@ -71,8 +72,8 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const onlyIgnoredChanges = presentation.kind === 'text' && !presentation.identical && stats !== null && !hasLineChanges(stats);
   const openFile = editablePath === null ? undefined : () => void api.system.openPath(absolutePath(workspacePath, editablePath));
 
-  useShortcut('mod+s', () => void editing.save(), editing.editing);
-  useShortcut('mod+e', startEditing, canEdit && !editing.editing);
+  useShortcut(hotkey('saveFile'), () => void editing.save(), editing.editing);
+  useShortcut(hotkey('editFile'), startEditing, canEdit && !editing.editing);
 
   const discardTarget: DiscardTarget | null = canDiscardChanges(original, modified)
     ? { workspacePath, path: modified.path, baseText: original.kind === 'workspaceBase' ? (left.text ?? '') : null, onMatchesBase }
@@ -100,7 +101,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       {compareControls}
       {stats && hasLineChanges(stats) && <LineStats {...stats} />}
       <PaneToolbarGroup>
-        {canEdit && <IconButton size="small" icon={<Pencil size={13} />} label="Edit this file" shortcut="mod+e" onClick={startEditing} />}
+        {canEdit && <IconButton size="small" icon={<Pencil size={13} />} label="Edit this file" shortcut={hotkey('editFile')} onClick={startEditing} />}
         <ComparisonMethodMenu value={comparisonMethod} onChange={setComparisonMethod} />
         <IconButton
           size="small"

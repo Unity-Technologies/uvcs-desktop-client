@@ -18,6 +18,7 @@ import { useHasLeftChanges } from '../../features/leftChanges/useLeftChanges';
 import { usePendingChangesCount } from '../../features/pendingChanges/usePendingChanges';
 import type { Icon } from '../../lib/actions';
 import { lazyComponent } from '../../lib/lazyComponent';
+import { viewShortcut } from '../../lib/shortcutRegistry';
 import type { ViewId } from './views';
 
 // Views load on first visit so the app starts fast.
@@ -39,7 +40,8 @@ export interface ViewDefinition {
   label: string;
   icon: Icon;
   group: 'Workspace' | 'History' | 'Collaborate';
-  shortcut?: string;
+  /** ⌘1, ⌘2… in sidebar order. */
+  shortcut: string;
   component: ComponentType;
   /** A hook returning a count to show next to the view in the sidebar. */
   useBadge?: () => number | undefined;
@@ -47,20 +49,23 @@ export interface ViewDefinition {
   useDot?: () => boolean;
 }
 
-export const VIEWS: ViewDefinition[] = [
-  { id: 'changes', label: 'Changes', icon: FileDiff, group: 'Workspace', shortcut: 'mod+1', component: PendingChangesView, useBadge: usePendingChangesCount, useDot: useHasLeftChanges },
+const SIDEBAR_VIEWS: Omit<ViewDefinition, 'shortcut'>[] = [
+  { id: 'changes', label: 'Changes', icon: FileDiff, group: 'Workspace', component: PendingChangesView, useBadge: usePendingChangesCount, useDot: useHasLeftChanges },
   { id: 'incoming', label: 'Incoming', icon: ArrowDownToLine, group: 'Workspace', component: IncomingChangesView, useBadge: useIncomingChangesCount },
-  { id: 'files', label: 'Files', icon: FolderTree, group: 'Workspace', shortcut: 'mod+2', component: FilesView },
-  { id: 'branchExplorer', label: 'Branch Explorer', icon: GitGraph, group: 'History', shortcut: 'mod+3', component: BranchExplorerView },
-  { id: 'changesets', label: 'Changesets', icon: GitCommitVertical, group: 'History', shortcut: 'mod+4', component: ChangesetsView },
-  { id: 'branches', label: 'Branches', icon: GitBranch, group: 'History', shortcut: 'mod+5', component: BranchesView },
-  { id: 'labels', label: 'Labels', icon: Tag, group: 'History', shortcut: 'mod+6', component: LabelsView },
-  { id: 'shelves', label: 'Shelves', icon: Archive, group: 'History', shortcut: 'mod+7', component: ShelvesView },
+  { id: 'files', label: 'Files', icon: FolderTree, group: 'Workspace', component: FilesView },
+  { id: 'branchExplorer', label: 'Branch Explorer', icon: GitGraph, group: 'History', component: BranchExplorerView },
+  { id: 'changesets', label: 'Changesets', icon: GitCommitVertical, group: 'History', component: ChangesetsView },
+  { id: 'branches', label: 'Branches', icon: GitBranch, group: 'History', component: BranchesView },
+  { id: 'labels', label: 'Labels', icon: Tag, group: 'History', component: LabelsView },
+  { id: 'shelves', label: 'Shelves', icon: Archive, group: 'History', component: ShelvesView },
   { id: 'attributes', label: 'Attributes', icon: Tags, group: 'History', component: AttributesView },
-  { id: 'codeReviews', label: 'Code reviews', icon: MessageSquareCode, group: 'Collaborate', shortcut: 'mod+8', component: CodeReviewsView },
+  { id: 'codeReviews', label: 'Code reviews', icon: MessageSquareCode, group: 'Collaborate', component: CodeReviewsView },
   { id: 'locks', label: 'Locks', icon: Lock, group: 'Collaborate', component: LocksView },
-  { id: 'sync', label: 'Sync', icon: RefreshCcw, group: 'Collaborate', shortcut: 'mod+9', component: SyncView },
+  { id: 'sync', label: 'Sync', icon: RefreshCcw, group: 'Collaborate', component: SyncView },
 ];
+
+/** In sidebar order: the sidebar lists them group by group, in this order. */
+export const VIEWS: ViewDefinition[] = SIDEBAR_VIEWS.map((view, position) => ({ ...view, shortcut: viewShortcut(position) }));
 
 export function viewDefinition(id: ViewId): ViewDefinition {
   return VIEWS.find((view) => view.id === id)!;

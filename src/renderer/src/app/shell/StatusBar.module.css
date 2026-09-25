@@ -36,6 +36,18 @@
   text-overflow: ellipsis;
 }
 
+/* Changes every report: tabular digits in a fixed width keep the stage after it still. */
+.percent {
+  flex: none;
+  width: 4ch;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.percent:empty {
+  display: none;
+}
+
 .separator {
   opacity: 0.6;
 }

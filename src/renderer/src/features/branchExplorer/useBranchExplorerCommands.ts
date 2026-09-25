@@ -1,19 +1,22 @@
-import { EyeOff, Filter, FoldHorizontal, Home, Maximize } from 'lucide-react';
+import { EyeOff, Filter, FoldHorizontal, Home, Maximize, Search } from 'lucide-react';
 import { useMemo } from 'react';
 import { useCommands, type Command } from '../../app/commands/commandStore';
+import { hotkey } from '../../lib/shortcutRegistry';
 import { useBranchExplorerPreferences } from './branchExplorerStore';
 
 interface BranchExplorerCommandHandlers {
   goHome: () => void;
   fit: () => void;
+  find: () => void;
 }
 
 /** Palette commands available while the Branch Explorer is open. */
-export function useBranchExplorerCommands({ goHome, fit }: BranchExplorerCommandHandlers): void {
+export function useBranchExplorerCommands({ goHome, fit, find }: BranchExplorerCommandHandlers): void {
   const { onlyRelatedToCurrent, hideMergedBranches, structureOnly, set } = useBranchExplorerPreferences();
 
   const commands = useMemo<Command[]>(
     () => [
+      { id: 'branchExplorer.find', group: 'Branch Explorer', label: 'Find in graph', icon: Search, shortcut: hotkey('graphFind'), run: find },
       { id: 'branchExplorer.home', group: 'Branch Explorer', label: 'Go to workspace changeset', icon: Home, run: goHome },
       { id: 'branchExplorer.fit', group: 'Branch Explorer', label: 'Fit graph to window', icon: Maximize, run: fit },
       {
@@ -38,7 +41,7 @@ export function useBranchExplorerCommands({ goHome, fit }: BranchExplorerCommand
         run: () => set({ structureOnly: !structureOnly }),
       },
     ],
-    [goHome, fit, onlyRelatedToCurrent, hideMergedBranches, structureOnly, set],
+    [goHome, fit, find, onlyRelatedToCurrent, hideMergedBranches, structureOnly, set],
   );
 
   useCommands(commands);

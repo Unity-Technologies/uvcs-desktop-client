@@ -6,9 +6,11 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { prompt } from '../../ui/dialog/prompt';
 import { FILE_SHORTCUTS } from './fileMenu';
 import { createItem, deleteItems, renameItem, targetDirectoryFor } from './fileOperations';
+import { isWorkspaceRoot } from './workspaceRoot';
 import { useFilesViewStore } from './filesViewStore';
+import { hotkey } from '../../lib/shortcutRegistry';
 
-export const GO_TO_FILE_SHORTCUT = 'mod+p';
+export const GO_TO_FILE_SHORTCUT = hotkey('goToFile');
 
 async function browseRepositoryAtChangeset(): Promise<void> {
   const answer = await prompt({ title: 'Browse repository', label: 'Changeset number', confirmLabel: 'Browse' });
@@ -22,6 +24,7 @@ export function useFileCommands(workspacePath: string, selected: TreeItem[], onG
     const single = selected.length === 1 ? selected[0]! : undefined;
     const isControlledFile = Boolean(single && !single.isPrivate && single.itemType !== 'directory');
     const directory = targetDirectoryFor(single);
+    const hasRoot = selected.some(isWorkspaceRoot);
 
     return [
       { id: 'files.goTo', group: 'Files', label: 'Go to file…', icon: Search, shortcut: GO_TO_FILE_SHORTCUT, run: onGoToFile },
@@ -54,8 +57,8 @@ export function useFileCommands(workspacePath: string, selected: TreeItem[], onG
         label: 'Rename selected item…',
         icon: TextCursorInput,
         shortcut: FILE_SHORTCUTS.rename,
-        disabled: !single,
-        run: () => single && void renameItem(workspacePath, single),
+        disabled: !single || hasRoot,
+        run: () => single && !hasRoot && void renameItem(workspacePath, single),
       },
       {
         id: 'files.delete',
@@ -63,8 +66,8 @@ export function useFileCommands(workspacePath: string, selected: TreeItem[], onG
         label: 'Delete selected items',
         icon: Trash2,
         shortcut: FILE_SHORTCUTS.delete,
-        disabled: selected.length === 0,
-        run: () => void deleteItems(workspacePath, selected),
+        disabled: selected.length === 0 || hasRoot,
+        run: () => !hasRoot && void deleteItems(workspacePath, selected),
       },
       {
         id: 'files.history',
@@ -72,8 +75,8 @@ export function useFileCommands(workspacePath: string, selected: TreeItem[], onG
         label: 'View history of selected item',
         icon: History,
         shortcut: FILE_SHORTCUTS.history,
-        disabled: !single || single.isPrivate,
-        run: () => single && navigation.openPage({ kind: 'history', path: single.path }),
+        disabled: !single || single.isPrivate || hasRoot,
+        run: () => single && !hasRoot && navigation.openPage({ kind: 'history', path: single.path }),
       },
       {
         id: 'files.annotate',

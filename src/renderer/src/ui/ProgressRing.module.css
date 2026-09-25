@@ -1,0 +1,40 @@
+.ring {
+  flex: none;
+  /* The arc starts at the top and runs clockwise. */
+  transform: rotate(-90deg);
+}
+
+.ring[data-indeterminate='true'] {
+  animation: ring-spin 0.9s linear infinite;
+}
+
+.track {
+  fill: none;
+  stroke: var(--border-default);
+}
+
+.arc {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 300ms linear;
+}
+
+@keyframes ring-spin {
+  from {
+    transform: rotate(-90deg);
+  }
+  to {
+    transform: rotate(270deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring[data-indeterminate='true'] {
+    animation: none;
+  }
+
+  .arc {
+    transition: none;
+  }
+}

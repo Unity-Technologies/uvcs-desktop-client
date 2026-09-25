@@ -98,6 +98,12 @@ export function rowIndent(row: ChangeRow, grouped: boolean): number {
   return (row.depth + (grouped ? 1 : 0)) * LEVEL_INDENT;
 }
 
+/** The row's level in the tree screen readers are told about: changelists first, then folders, then files. */
+export function treeLevel(row: ChangeRow, grouped: boolean): number {
+  if (row.type === 'group') return 1;
+  return row.depth + (grouped ? 2 : 1);
+}
+
 /** Changelist headers lead the rows: the top-level checkboxes are theirs, after their chevrons. */
 export function topLevelCheckboxInset(rows: ChangeRow[]): number {
   return rows.some((row) => row.type === 'group') ? LEVEL_INDENT : 0;

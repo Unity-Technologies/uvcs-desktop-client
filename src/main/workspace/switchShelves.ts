@@ -7,6 +7,7 @@ import { automaticShelveComment, parseCreatedShelves, type CreatedShelve } from 
 import type { CmClient } from '../cm/CmClient';
 import { DIFF_FORMAT, parseDiffEntries } from '../cm/diffEntries';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
+import { readShelveProgress } from '../cm/progress/shelveProgress';
 import { withTempFile } from '../files/tempFile';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { previewMerge } from '../merge/previewMerge';
@@ -25,11 +26,15 @@ export async function createSwitchShelve(
   workspacePath: string,
   changes: PendingChange[],
   objectRef: string,
+  context: OperationContext,
   onlyPaths?: string[],
 ): Promise<CreatedShelve> {
   const targets = onlyPaths?.map((path) => toAbsolutePath(workspacePath, path)) ?? [];
   const output = await withTempFile(automaticShelveComment(objectRef), (commentsFile) =>
-    cm.execute(['shelveset', 'create', ...targets, '--all', `-commentsfile=${commentsFile}`], { cwd: workspacePath }),
+    cm.execute(['shelveset', 'create', ...targets, '--all', `-commentsfile=${commentsFile}`], {
+      cwd: workspacePath,
+      onOutputLine: context.progressOf(readShelveProgress),
+    }),
   );
   const created = parseCreatedShelves(output);
   if (created.length === 0) throw new Error('The shelve finished but no shelve was reported, so the workspace was left as it was.');

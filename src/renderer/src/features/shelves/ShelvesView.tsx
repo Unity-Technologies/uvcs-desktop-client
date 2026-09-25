@@ -3,10 +3,10 @@ import { useMemo, useState } from 'react';
 import type { Shelve } from '@shared/domain/shelve';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
 import { NoSelection } from '../../components/NoSelection';
-import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { UserLabel } from '../../ui/Avatar';
 import { EmptyState } from '../../ui/EmptyState';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
@@ -52,7 +52,7 @@ export function ShelvesView() {
   const { onlyMine, setOnlyMine } = useShelvesViewStore();
   const { data: shelves, isLoading, isFetching, error } = useShelves({ owner: onlyMine ? 'me' : undefined });
   const [search, setSearch] = useState('');
-  const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
+  const [selection, setSelection] = useViewSelection('shelves');
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase();

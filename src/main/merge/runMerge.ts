@@ -11,7 +11,8 @@ import {
 } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
-import { describeMergeProgress, directoryConflictIdentity, parseCreatedChangeset, parseDestinationMoved, parseMergePlan } from '../cm/mergeOutput';
+import { directoryConflictIdentity, parseCreatedChangeset, parseDestinationMoved, parseMergePlan } from '../cm/mergeOutput';
+import { readMergeProgress } from '../cm/progress/mergeProgress';
 import { withTempDirectory } from '../files/tempFile';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
@@ -58,10 +59,7 @@ export async function runMerge(
       cm.execute(args, {
         cwd: workspacePath,
         signal: context.signal,
-        onOutputLine: (line) => {
-          const progress = describeMergeProgress(line);
-          if (progress) context.reportProgress(progress);
-        },
+        onOutputLine: context.progressOf(readMergeProgress),
       });
 
     await resolveDirectoryConflicts(plan, resolutions.directoryConflicts, (resolution) => run([...mergeArgs, ...resolveConflictArgs(resolution)]));

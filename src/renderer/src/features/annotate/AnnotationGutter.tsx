@@ -78,6 +78,7 @@ function AnnotateBeforeButton({ changesetId, visible, annotateBefore }: { change
       className={styles.before}
       data-tip={`Annotate before this change\nThe file as of cs:${revision.changesetId}`}
       onClick={() => annotateBefore.annotate(revision)}
+      aria-label="Annotate before this change"
       tabIndex={-1}
     >
       <GalleryHorizontalEnd size={13} />

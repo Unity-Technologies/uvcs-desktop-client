@@ -10,18 +10,21 @@ import { PathLabel } from '../../components/PathLabel';
 import { workingObjectName } from '../../components/workingObject';
 import { runningFirst, type Icon } from '../../lib/actions';
 import { Button } from '../../ui/Button';
-import { Spinner } from '../../ui/Spinner';
+import { ringValue } from '../../app/operations/progressBar';
+import { ProgressRing } from '../../ui/ProgressRing';
 import { ToolbarPill } from '../../ui/ToolbarPill';
 import { branchMenu } from './branchMenu';
 import { switchToBranch } from './branchOperations';
 import { BranchSearchList } from './BranchSearchList';
 import { branchSwitcherGroups } from './branchSwitcherGroups';
+import { useReturnFocus } from '../../ui/useReturnFocus';
 import { useBranchSwitcher } from './branchSwitcherStore';
 import { newBranchFromWorkspace } from './newBranchFromWorkspace';
 import { useRecentBranchGuids } from './recentBranches';
 import { useBranches } from './useBranches';
 import { useWorkingObjectComment } from './useWorkingObjectComment';
 import styles from './WorkingObjectButton.module.css';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 const SELECTOR_ICONS: Record<SelectorKind, Icon> = {
   branch: GitBranch,
@@ -36,9 +39,11 @@ export function WorkingObjectButton() {
   const workspacePath = useWorkspacePath();
   const running = useRunningOperation(workspacePath);
   const { isOpen, setOpen } = useBranchSwitcher();
+  const returnFocus = useReturnFocus(isOpen);
   useBranchCommands(workspace);
 
   const switching = running?.kind === 'switch' ? running.title : null;
+  const switchBar = running?.kind === 'switch' ? running.bar : null;
   const SelectorIcon = SELECTOR_ICONS[workspace?.selector.kind ?? 'branch'];
   const title = workspace ? workingObjectTitle(workspace.selector) : '…';
   const { data: comment } = useWorkingObjectComment(workspace);
@@ -49,17 +54,17 @@ export function WorkingObjectButton() {
       <Popover.Trigger asChild>
         <ToolbarPill
           className={styles.trigger}
-          icon={switching ? <Spinner size={13} /> : <SelectorIcon size={15} />}
+          icon={switchBar ? <ProgressRing value={ringValue(switchBar)} size={14} /> : <SelectorIcon size={15} />}
           label={switching ? `${switching}…` : workspace?.selector.kind === 'branch' ? <PathLabel path={title} fitContent tooltip={false} /> : title}
           sub={switching || comment === undefined ? undefined : firstLine || <span className={styles.noComment}>No comment</span>}
           data-tip={switching ? undefined : title}
           data-tip-sub={switching ? undefined : comment?.trim() || undefined}
-          data-tip-shortcut={switching ? undefined : 'mod+shift+w'}
+          data-tip-shortcut={switching ? undefined : hotkey('switchBranch')}
           trailing={<ChevronDown size={14} className={styles.chevron} />}
         />
       </Popover.Trigger>
       <Popover.Portal>
-        <Popover.Content className={styles.popover} align="start" sideOffset={6}>
+        <Popover.Content className={styles.popover} align="start" sideOffset={6} {...returnFocus}>
           {workspace && <BranchSwitcher workspace={workspace} onDone={() => setOpen(false)} />}
         </Popover.Content>
       </Popover.Portal>
@@ -98,7 +103,7 @@ function BranchSwitcher({ workspace, onDone }: { workspace: WorkspaceInfo; onDon
           variant="secondary"
           icon={<GitBranchPlus size={13} />}
           data-tip="New branch from what the workspace is loaded from"
-          data-tip-shortcut="mod+b"
+          data-tip-shortcut={hotkey('newBranch')}
           onClick={() => {
             onDone();
             newBranchFromWorkspace(workspace);
@@ -120,7 +125,7 @@ function useBranchCommands(workspace: WorkspaceInfo | undefined): void {
         group: 'Branch',
         label: 'Switch branch…',
         icon: GitBranch,
-        shortcut: 'mod+shift+w',
+        shortcut: hotkey('switchBranch'),
         run: () => setOpen(true),
       },
       {
@@ -128,7 +133,7 @@ function useBranchCommands(workspace: WorkspaceInfo | undefined): void {
         group: 'Branch',
         label: 'New branch…',
         icon: GitBranchPlus,
-        shortcut: 'mod+b',
+        shortcut: hotkey('newBranch'),
         disabled: !workspace,
         run: () => workspace && newBranchFromWorkspace(workspace),
       },

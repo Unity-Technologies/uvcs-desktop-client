@@ -6,12 +6,23 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  position: relative;
   overflow: hidden;
-  outline: none; /* a focus ring would frame the whole pane; keys still work */
+  outline: none;
 }
 
 .pane:focus-visible {
   box-shadow: none;
+}
+
+/* Over the positioned content (the canvas), which would paint over an outline or an inset shadow. */
+.pane:focus-visible::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  box-shadow: var(--focus-ring-inset);
+  pointer-events: none;
 }
 
 .stage {

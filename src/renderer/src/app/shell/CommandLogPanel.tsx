@@ -48,7 +48,7 @@ export function CommandLogPanel() {
               {entry.commandLine}
               {scope === 'all' && !ranInWorkspace(entry, workspacePath) && <span className={styles.cwd}>in {entry.cwd}</span>}
             </span>
-            <button className={styles.copy} onClick={() => void navigator.clipboard.writeText(entry.commandLine)} data-tip="Copy command">
+            <button className={styles.copy} onClick={() => void navigator.clipboard.writeText(entry.commandLine)} data-tip="Copy command" aria-label="Copy command">
               <Copy size={11} />
             </button>
             {entry.output && <pre className={styles.output}>{entry.output}</pre>}

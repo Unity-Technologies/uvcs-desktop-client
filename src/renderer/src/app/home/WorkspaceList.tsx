@@ -1,9 +1,11 @@
 import { forwardRef, useImperativeHandle, useRef, type KeyboardEvent, type ReactNode } from 'react';
-import { navigationTarget } from '../../lib/listNavigation';
+import { focusFirstItem, moveRovingFocus } from '../../lib/rovingFocus';
 import { HighlightQuery } from '../../ui/Highlight';
 import type { WorkspaceEntry } from './recentWorkspaces';
 import { WorkspaceRow } from './WorkspaceRow';
 import styles from './Home.module.css';
+
+const ROWS = '[data-workspace-row]';
 
 export interface WorkspaceListSection {
   id: string;
@@ -34,24 +36,9 @@ interface WorkspaceListProps {
  */
 export const WorkspaceList = forwardRef<WorkspaceListHandle, WorkspaceListProps>(function WorkspaceList({ sections, query, onOpen, onLeaveTop }, ref) {
   const listRef = useRef<HTMLDivElement>(null);
-  const rows = (): HTMLElement[] => [...(listRef.current?.querySelectorAll<HTMLElement>('[data-workspace-row]') ?? [])];
-  useImperativeHandle(ref, () => ({ focusFirst: () => rows()[0]?.focus() }), []);
+  useImperativeHandle(ref, () => ({ focusFirst: () => void focusFirstItem(listRef.current, ROWS) }), []);
 
-  const onKeyDown = (event: KeyboardEvent): void => {
-    const all = rows();
-    const current = all.indexOf(event.target as HTMLElement);
-    if (current === -1) return;
-    if (event.key === 'ArrowUp' && current === 0 && onLeaveTop) {
-      event.preventDefault();
-      onLeaveTop();
-      return;
-    }
-    const target = navigationTarget(event.key, current, all.length);
-    if (target === null) return;
-    event.preventDefault();
-    all[target]!.focus();
-    all[target]!.scrollIntoView({ block: 'nearest' });
-  };
+  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => moveRovingFocus(event.currentTarget, event, onLeaveTop, ROWS);
 
   return (
     <HighlightQuery query={query}>

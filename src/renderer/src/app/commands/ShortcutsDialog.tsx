@@ -1,36 +1,75 @@
+import { Fragment } from 'react';
+import { SHORTCUT_AREAS, SHORTCUTS, type ShortcutArea } from '../../lib/shortcutRegistry';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { Kbd } from '../../ui/Kbd';
-import { allCommands, type Command } from './commandStore';
+import { VIEWS } from '../navigation/viewRegistry';
 import styles from './ShortcutsDialog.module.css';
 
-export function openShortcutsDialog(): void {
-  openDialog((close) => <ShortcutsDialog onClose={close} />);
+interface SheetRow {
+  label: string;
+  keys: readonly string[];
 }
 
-/** Every command that currently has a keyboard shortcut, grouped like the command palette. */
-function ShortcutsDialog({ onClose }: { onClose: () => void }) {
-  const groups = new Map<string, Command[]>();
-  for (const command of allCommands().filter((candidate) => candidate.shortcut)) {
-    groups.set(command.group, [...(groups.get(command.group) ?? []), command]);
-  }
+let sheetOpen = false;
 
+/** Shows every shortcut of the app; pressing its keys again while it's open does nothing. */
+export function openShortcutsDialog(): void {
+  if (sheetOpen) return;
+  sheetOpen = true;
+  openDialog((close) => (
+    <ShortcutsDialog
+      onClose={() => {
+        sheetOpen = false;
+        close();
+      }}
+    />
+  ));
+}
+
+/** The rows of each area: the views in sidebar order, then the registry's shortcuts (contextual ones included). */
+function sheetAreas(): [ShortcutArea, SheetRow[]][] {
+  const rows = new Map<ShortcutArea, SheetRow[]>(SHORTCUT_AREAS.map((area) => [area, []]));
+  rows.set(
+    'Go to',
+    VIEWS.map((view) => ({ label: view.label, keys: [view.shortcut] })),
+  );
+  for (const shortcut of Object.values(SHORTCUTS)) rows.get(shortcut.area)!.push(shortcut);
+  return [...rows].filter(([, areaRows]) => areaRows.length > 0);
+}
+
+function ShortcutsDialog({ onClose }: { onClose: () => void }) {
   return (
-    <Dialog title="Keyboard shortcuts" width={560} onClose={onClose} footer={<Button variant="primary" onClick={onClose}>Done</Button>}>
+    <Dialog title="Keyboard shortcuts" width={820} onClose={onClose} footer={<Button variant="primary" onClick={onClose}>Done</Button>}>
       <div className={styles.columns}>
-        {[...groups].map(([group, commands]) => (
-          <section key={group}>
-            <h2 className={styles.heading}>{group}</h2>
-            {commands.map((command) => (
-              <div key={command.id} className={styles.row}>
-                <span>{command.label}</span>
-                <Kbd keys={command.shortcut!} />
-              </div>
-            ))}
+        {sheetAreas().map(([area, rows]) => (
+          <section key={area} aria-labelledby={headingId(area)}>
+            <h2 id={headingId(area)} className={styles.heading}>
+              {area}
+            </h2>
+            <dl className={styles.list}>
+              {rows.map((row) => (
+                <div key={row.label} className={styles.row}>
+                  <dt>{row.label}</dt>
+                  <dd className={styles.keys}>
+                    {row.keys.map((key, index) => (
+                      <Fragment key={key}>
+                        {index > 0 && <span className={styles.or}>/</span>}
+                        <Kbd keys={key} />
+                      </Fragment>
+                    ))}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </section>
         ))}
       </div>
     </Dialog>
   );
+}
+
+function headingId(area: ShortcutArea): string {
+  return `shortcuts-${area.toLowerCase().replaceAll(' ', '-')}`;
 }

@@ -28,6 +28,30 @@ src/
 - A `cm shell` command ends at the `CommandResult <code>` line that ends its output, with nothing more in the pipe
   (`CmShellSession`): comments can quote such lines, and a misread end shifts every later command by one output.
 
+## Operation progress
+
+Long operations report a structured `OperationProgress` (`shared/domain/operation.ts`): a stage (`preparing`,
+`calculating`, `downloading`, `uploading`, `applying`, `confirming`, `finishing`, or `working` in the app's words),
+stable stage words, files and bytes done and to do, a fraction (or null), the file at hand, whether stopping is still
+safe, and the step of a multi-command operation (shelve, undo, switch, bring). Never a raw `cm` line.
+
+- Each command's output is read by a pure `ProgressReader` (`main/cm/progress/`), passed as
+  `onOutputLine: context.progressOf(reader)`; the `OperationTracker` adds the step (`context.beginStep`) and throttles to
+  ten reports a second, stage changes at once.
+- `cm update`/`cm switch` run with `--forcedetailedprogress` (`cm/updateArgs.ts`): `cm` prints its bytes-and-files line
+  only to a terminal otherwise, and `--machinereadable` turns it off. It rewrites the line with `\r` every 200 ms, so
+  `runCmProcess` splits lines at `\r` too. The words are localized: readers go by the line's shape.
+- `cm checkin --machinereadable` reports uploaded bytes only every 5 s with redirected output; `cm merge` prints its plan,
+  then a record per change applied in a burst, then downloads silently; `cm shelveset create` only names its stages.
+- Stopping is offered only while it leaves things as they were: a killed update or switch leaves the workspace half
+  updated with partial files as private `.private.0` copies, and a checkin killed while confirming may be half recorded;
+  killed while uploading, nothing is committed.
+- The renderer keeps each operation's progress and its bar motion (`runningOperationsStore`, `progressBar`): the bar
+  glides linearly towards where the next report should land at the current pace (never backwards, at most halfway into
+  what's left), sweeps while nothing is measured, and stays full and shimmering while wrapping up. `OperationCard` draws
+  it in fixed rows and widths, then turns into the success message in place; the status bar, the branch pill and the
+  incoming chip show the same operation with a `ProgressRing`.
+
 ## No external tools, ever
 
 The app never lets `cm` open its merge or diff tool; every conflict is resolved in the app's merge page.
@@ -120,9 +144,16 @@ renderer/src/
   whitespaces, both, Recognize all; one global preference, Recognize all by default). Lines are compared trimmed
   (`features/diff/viewer/comparisonMethod`) through a line comparator handed to Pierre and `diff`, so the diff still
   shows and discards the original text. `cm` commands keep their own comparison: merges don't change with it.
-- **Mutations**: `runOperation` (progress toast, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
+- **Mutations**: `runOperation` (progress card, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
+- **Keyboard**: every shortcut is declared in `lib/shortcutRegistry.ts` and bound through `hotkey(id)`; the shortcuts sheet
+  (`?`, ⌘/) lists the registry, and a test rejects shortcut literals anywhere else and menu accelerators that differ. Views
+  get ⌘1… in sidebar order (`viewShortcut`).
+- **Focus**: the list, tree or graph a view or page works on carries `MAIN_FOCUS` (`lib/mainFocus.ts`). `useMainFocus`
+  focuses it after navigating and whenever focus falls to the document (a dialog, menu or popover closed), and hands it
+  list keys pressed while nothing has focus. Views keep their list's selection while away (`useViewSelection`). Lists
+  expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
 - **List and details**: `ListWithDetails` (one remembered details width for every view) around a `DetailsPanel`: hero, the
   default action (what Enter does on the row) plus the row's context menu behind "More actions", then Comment, changed files,
@@ -132,6 +163,8 @@ renderer/src/
   well-known GUID, the workspace's recent branches, then the rest newest first. Recent branches are the official client's,
   read from and written to its `plasticgui.conf` (`main/plasticConfig`) on every switch, so both apps list the same ones.
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in components.
+  - Text tokens keep 4.5:1 and focus rings 3:1 (`styles/tokens.test.ts`); focus shows with `--focus-ring-visible`, or
+    `--focus-ring-inset` on rows and panes (over their content when it would paint over the ring).
   - Motion uses the `--duration-*` and `--ease-*` tokens and the shared keyframes of `styles/global.css` (through
     `--keyframes-*`); reduced motion zeroes the durations, so only loops (spinners, skeleton pulses) opt out themselves.
   - Lists that load show skeletons at their real row height (`ui/Skeleton`, `TableSkeleton`, `ListWithDetailsSkeleton`).

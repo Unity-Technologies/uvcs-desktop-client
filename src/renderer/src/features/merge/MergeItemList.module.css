@@ -74,3 +74,15 @@
   background: color-mix(in srgb, var(--status-conflict) 14%, transparent);
   color: var(--status-conflict);
 }
+
+.list:focus-visible .row[data-selected='true'] {
+  box-shadow: var(--focus-ring-inset);
+}
+
+.list:focus-visible {
+  box-shadow: var(--focus-ring-inset);
+}
+
+.list:focus-visible:has(.row[data-selected='true']) {
+  box-shadow: none;
+}

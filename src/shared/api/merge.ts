@@ -9,6 +9,11 @@ export interface MergeApi {
    * merges into a server branch create a changeset.
    */
   run(workspacePath: string, request: MergeRequest, resolutions: MergeResolutions, operationId: string): Promise<MergeResult>;
+  /**
+   * The changeset that merged `sourceChangeset` into `destinationBranch` (e.g. a task branch's head into its parent), or
+   * null when it wasn't merged there. One `cm find merge` returning a single link.
+   */
+  mergedInto(workspacePath: string, sourceChangeset: number, destinationBranch: string): Promise<number | null>;
   /** One light `cm find` for the changesets on `loaded.branch` after the loaded one; polled, so it reads nothing else. */
   incomingSummary(workspacePath: string, loaded: LoadedBranch): Promise<IncomingSummary>;
   incomingChanges(workspacePath: string): Promise<IncomingChanges>;

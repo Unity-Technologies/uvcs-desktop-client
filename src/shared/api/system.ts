@@ -20,6 +20,11 @@ export interface SystemApi {
   addRecentDocument(workspacePath: string): Promise<void>;
   /** The workspace this window was asked to open (picked from the OS recent documents, or opened in a new window), once; null if none. */
   takeRequestedWorkspace(): Promise<string | null>;
+  /**
+   * A data URL of the user's Gravatar picture, or null when they have none, the user isn't an email address, or profile
+   * pictures are turned off (`showGravatar`). Kept for the session, missing pictures included.
+   */
+  gravatar(user: string, size: number): Promise<string | null>;
   /** Shows an OS notification about incoming changes; clicking it focuses the window and sends `incomingNotificationClicked`. */
   notifyIncoming(workspacePath: string, message: string): Promise<void>;
 }

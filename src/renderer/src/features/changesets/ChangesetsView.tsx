@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
+import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
 import { NoSelection } from '../../components/NoSelection';
@@ -19,6 +19,7 @@ import { ChangesetFiltersBar } from './ChangesetFiltersBar';
 import { changesetMenu } from './changesetMenu';
 import { openChangesetDiff, openRangeDiff } from './changesetOperations';
 import { useChangesets } from './useChangesets';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 const changesetKey = (changeset: Changeset): string => String(changeset.id);
 
@@ -26,7 +27,7 @@ export function ChangesetsView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
   const [filter, setFilter] = useState<ChangesetFilterState>(DEFAULT_CHANGESET_FILTER);
-  const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
+  const [selection, setSelection] = useViewSelection('changesets');
 
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
   // The search is applied locally; only the other filters trigger a new `cm find`.
@@ -51,7 +52,7 @@ export function ChangesetsView() {
           id: 'changesets.diff',
           group: 'Changesets',
           label: selected.length === 2 ? 'Diff selected changesets' : 'Diff selected changeset',
-          shortcut: 'mod+d',
+          shortcut: hotkey('listDiff'),
           disabled: selected.length === 0 || selected.length > 2,
           run: () => (selected.length === 2 ? openRangeDiff(...sortedPair(selected)) : openChangesetDiff(selected[0]!)),
         },

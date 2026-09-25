@@ -24,7 +24,8 @@ import { GraphNavControls } from './GraphNavControls';
 import { GraphSearch } from './GraphSearch';
 import { filterGraph, type GraphFocus } from './model/filterGraph';
 import { layoutGraph } from './model/layoutGraph';
-import { neighborChangeset, type GraphDirection } from './model/navigateGraph';
+import { describeSelection } from './model/describeSelection';
+import { neighborChangeset, startingChangeset, type GraphDirection } from './model/navigateGraph';
 import { searchGraph, searchHighlight, type SearchHit } from './model/searchGraph';
 import { useBranchExplorerCommands } from './useBranchExplorerCommands';
 import { useBranchExplorerData } from './useBranchExplorerData';
@@ -44,6 +45,7 @@ export function BranchExplorerView() {
     preferences;
 
   const canvasRef = useRef<GraphCanvasHandle>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
   const [selection, setSelection] = useState<GraphSelection | null>(null);
   const [focus, setFocus] = useState<GraphFocus | null>(null);
   /** How far the last focus reached; the next one starts there. */
@@ -121,7 +123,11 @@ export function BranchExplorerView() {
   const fit = useCallback(() => canvasRef.current?.fit(), []);
   const zoomBy = useCallback((factor: number) => canvasRef.current?.zoomBy(factor), []);
   useInitialFocus(layout, homeChangeset, canvasRef, structureOnly);
-  useBranchExplorerCommands({ goHome, fit });
+  const find = useCallback(() => {
+    searchRef.current?.focus();
+    searchRef.current?.select();
+  }, []);
+  useBranchExplorerCommands({ goHome, fit, find });
   useRevealRequest({
     layout,
     settled: !isFetching && !isPlaceholderData,
@@ -178,9 +184,13 @@ export function BranchExplorerView() {
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!layout || event.target instanceof HTMLInputElement) return;
     const direction = ARROW_DIRECTIONS[event.key];
-    if (direction && selection?.kind === 'changeset') {
+    if (direction) {
       event.preventDefault();
-      const next = neighborChangeset(layout, selection.id, direction);
+      // Without a selected changeset, the first arrow picks where to start.
+      const next =
+        selection?.kind === 'changeset'
+          ? neighborChangeset(layout, selection.id, direction)
+          : startingChangeset(layout, selection?.kind === 'branch' ? selection.name : null, homeChangeset);
       if (next !== null) goToChangeset(next);
     } else if (event.key === 'Home' || event.key === 'h') {
       goHome();
@@ -213,6 +223,8 @@ export function BranchExplorerView() {
             onSearchChange={changeSearch}
             position={search.trim() ? { current: activeHitIndex + 1, total: searchHits.length } : null}
             onStep={stepSearch}
+            inputRef={searchRef}
+            onLeave={() => canvasRef.current?.focus()}
           />
           <IconButton
             icon={<RefreshCw size={14} className={isFetching ? styles.spinning : undefined} />}
@@ -263,6 +275,9 @@ export function BranchExplorerView() {
     <>
       {header}
       <div className={styles.body} onKeyDown={onKeyDown}>
+        <div className="visually-hidden" aria-live="polite" aria-atomic="true">
+          {describeSelection(layout, selection, homeChangeset)}
+        </div>
         <ListWithDetails
           hideDetails={!detailsOpen}
           list={

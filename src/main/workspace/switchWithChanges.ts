@@ -3,6 +3,8 @@ import type { PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import type { PendingChangesAction, RestoredChanges, SwitchResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
+import { readUpdateProgress } from '../cm/progress/updateProgress';
+import { switchArgs } from '../cm/updateArgs';
 import { readWorkspaceStatus } from '../cm/workspaceStatus';
 import type { OperationContext } from '../operations/OperationTracker';
 import type { SettingsStore } from '../settings/SettingsStore';
@@ -48,9 +50,9 @@ export async function switchWithChanges(
   const snapshot = parsePendingChanges(await cm.query(SWITCH_STATUS_ARGS, { cwd: workspacePath }));
   const summary = summarizePending(snapshot.changes);
   const switchTo = (): Promise<string> =>
-    cm.execute(['switch', targetSpec, '--noinput'], { cwd: workspacePath, signal: context.signal, onOutputLine: context.reportProgress });
+    cm.execute(switchArgs(targetSpec), { cwd: workspacePath, signal: context.signal, onOutputLine: context.progressOf(readUpdateProgress) });
   // Once the workspace starts changing (changes shelved, a restore under way), stopping halfway would leave a mess.
-  const committed: OperationContext = { signal: new AbortController().signal, reportProgress: context.reportProgress };
+  const committed: OperationContext = { ...context, signal: new AbortController().signal };
 
   if (summary.pendingCount === 0) {
     await switchTo();
@@ -89,9 +91,10 @@ async function shelveAndSwitch(
   context: OperationContext,
 ): Promise<SwitchShelveRecord> {
   const { cm, records } = deps;
-  context.reportProgress('Shelving changes…');
+  const steps = mode === 'bring' ? 4 : 3;
+  context.beginStep('Shelving your changes', 1, steps);
   const objectRef = await sourceObjectRef(cm, workspacePath, workspace);
-  const shelve = await createSwitchShelve(cm, workspacePath, snapshot.changes, objectRef);
+  const shelve = await createSwitchShelve(cm, workspacePath, snapshot.changes, objectRef, context);
   const target = parseSelectorSpec(targetSpec).selector;
   const record: SwitchShelveRecord = {
     workspaceGuid: workspace.guid,
@@ -108,13 +111,13 @@ async function shelveAndSwitch(
 
   // From here on the changes live in the shelve: any failure puts them back.
   try {
-    context.reportProgress('Undoing…');
+    context.beginStep('Undoing them here', 2, steps);
     await cm.execute(['undo', '-r', workspacePath], { cwd: workspacePath });
     if (mode === 'leave') await moveNewItemsAside(deps, workspacePath, snapshot, record);
     await assertClean(cm, workspacePath);
 
-    context.reportProgress('Switching…');
-    await cm.execute(['switch', targetSpec, '--noinput'], { cwd: workspacePath, onOutputLine: context.reportProgress });
+    context.beginStep('Switching', 3, steps);
+    await cm.execute(switchArgs(targetSpec), { cwd: workspacePath, onOutputLine: context.progressOf(readUpdateProgress) });
   } catch (error) {
     throw await rollBack(deps, workspacePath, workspace, record, error, context);
   }
@@ -187,7 +190,7 @@ async function rollBack(
 }
 
 async function bringChanges(deps: SwitchDependencies, workspacePath: string, record: SwitchShelveRecord, context: OperationContext): Promise<SwitchResult> {
-  context.reportProgress('Bringing your changes…');
+  context.beginStep('Bringing your changes', 4, 4);
   try {
     const outcome = await applyShelveCleanly(deps.cm, workspacePath, record.shelveId, context);
     if (outcome.kind === 'applied') {

@@ -25,6 +25,18 @@ describe('parseTreeItems', () => {
     expect(items[1]).toMatchObject({ itemType: 'file', isPrivate: true, size: 5 });
     expect(items[2]).toMatchObject({ itemType: 'binaryFile', isCheckedOut: true, date: '' });
   });
+
+  it('names an xlink after its path and reads where it points', () => {
+    const xml = `<LsResults><LsItems>
+      <LsItem><Status>Controlled</Status><Name>third -&gt; wxlink -&gt; / 17568@nervathirdparty@ [relative] codice@cloud</Name>
+        <WkPath>libs/third</WkPath><Type>dir</Type></LsItem>
+    </LsItems></LsResults>`;
+    expect(parseTreeItems(xml)[0]).toMatchObject({
+      name: 'third',
+      itemType: 'directory',
+      xlink: { writable: true, repository: 'nervathirdparty', changeset: 17568, path: '/' },
+    });
+  });
 });
 
 describe('parseItemDetails', () => {

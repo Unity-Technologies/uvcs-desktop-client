@@ -1,5 +1,6 @@
 import { Check, ChevronDown, Focus, X } from 'lucide-react';
 import type { MenuEntry } from '../../lib/actions';
+import { hotkey } from '../../lib/shortcutRegistry';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import type { GraphFocus } from './model/filterGraph';
 import styles from './BranchExplorerView.module.css';
@@ -38,7 +39,7 @@ export function FocusChip({ focus, onHopsChange, onExit }: FocusChipProps) {
           <ChevronDown size={12} className={styles.filterChevron} />
         </button>
       </ActionDropdownMenu>
-      <button type="button" className={styles.focusExit} onClick={onExit} aria-label="Show all branches" data-tip="Show all branches" data-tip-shortcut="escape">
+      <button type="button" className={styles.focusExit} onClick={onExit} aria-label="Show all branches" data-tip="Show all branches" data-tip-shortcut={hotkey('graphClear')}>
         <X size={12} />
       </button>
     </div>

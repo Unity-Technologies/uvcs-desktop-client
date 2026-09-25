@@ -4,8 +4,8 @@ import { Kbd } from '../../../ui/Kbd';
 import type { ChangedLine } from './changeBlocks';
 import { describeDiscard } from './discardAction';
 import styles from './PickedLinesBar.module.css';
+import { hotkey } from '../../../lib/shortcutRegistry';
 
-export const DISCARD_SHORTCUT = 'mod+alt+z';
 
 interface PickedLinesBarProps {
   /** The scrolling element around the diff, which the bar is placed in. */
@@ -36,9 +36,9 @@ export function PickedLinesBar({ containerRef, lines, onPreview, onDiscard, onCl
       >
         {action.kind === 'remove' ? <X size={12} strokeWidth={2.25} /> : <Undo2 size={12} strokeWidth={2.25} />}
         {action.label}
-        <Kbd keys={DISCARD_SHORTCUT} />
+        <Kbd keys={hotkey('discardLines')} />
       </button>
-      <button type="button" className={styles.clear} aria-label="Clear the picked lines" data-tip="Clear the picked lines" data-tip-shortcut="escape" onClick={onClear}>
+      <button type="button" className={styles.clear} aria-label="Clear the picked lines" data-tip="Clear the picked lines" data-tip-shortcut={hotkey('clearPickedLines')} onClick={onClear}>
         <X size={12} />
       </button>
     </div>

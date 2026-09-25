@@ -1,9 +1,10 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { FolderTree } from 'lucide-react';
-import { useRef, type KeyboardEvent } from 'react';
+import { useId, useRef, type KeyboardEvent } from 'react';
 import type { MergeChangeKind } from '@shared/domain/merge';
 import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge, type StatusTone } from '../../components/StatusBadge';
+import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { needsDecision, type MergeItem, type MergeListRow } from './mergeItems';
 import styles from './MergeItemList.module.css';
 
@@ -27,6 +28,8 @@ export function MergeItemList({ rows, selectedKey, onSelect }: MergeItemListProp
   const viewportRef = useRef<HTMLDivElement>(null);
   const itemKeys = rows.filter((row) => row.type === 'item').map((row) => row.key);
   const virtualizer = useVirtualizer({ count: rows.length, getScrollElement: () => viewportRef.current, estimateSize: () => ROW_HEIGHT, overscan: 12 });
+  const idPrefix = useId();
+  const selectedIndex = rows.findIndex((row) => row.key === selectedKey);
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
@@ -39,13 +42,25 @@ export function MergeItemList({ rows, selectedKey, onSelect }: MergeItemListProp
   };
 
   return (
-    <div ref={viewportRef} className={styles.list} tabIndex={0} onKeyDown={onKeyDown}>
+    <div
+      ref={viewportRef}
+      className={styles.list}
+      tabIndex={0}
+      role="listbox"
+      aria-label="Files to merge"
+      aria-activedescendant={selectedIndex === -1 ? undefined : `${idPrefix}-${selectedIndex}`}
+      onKeyDown={onKeyDown}
+      {...MAIN_FOCUS}
+    >
       <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const row = rows[virtualRow.index]!;
           return (
             <div
               key={row.key}
+              id={`${idPrefix}-${virtualRow.index}`}
+              role={row.type === 'item' ? 'option' : 'presentation'}
+              aria-selected={row.type === 'item' ? row.key === selectedKey : undefined}
               className={styles.row}
               data-type={row.type}
               data-selected={row.key === selectedKey}

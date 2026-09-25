@@ -10,8 +10,9 @@ import { describeDiscard } from './discardAction';
 import { discardLines } from './discardLines';
 import { lineMarksCss, type LineMarks } from './lineMarksCss';
 import { changedLinesInRange, regionRange, type LineRange } from './lineSelection';
-import { DISCARD_SHORTCUT, PickedLinesBar } from './PickedLinesBar';
+import { PickedLinesBar } from './PickedLinesBar';
 import { useShadowStyle } from './useShadowStyle';
+import { hotkey } from '../../../lib/shortcutRegistry';
 
 /** A discard ready to write: the file's new text and what was done, for the toast. */
 export interface DiscardRequest {
@@ -134,14 +135,14 @@ export function useBlockDiscard({ enabled, oldFile, newFile, comparisonMethod, l
   const onKeyDown = (event: KeyboardEvent): void => {
     if (!enabled) return;
     const handlers: [string, () => void][] = [
-      ['alt+down', () => moveToChange(1)],
-      ['alt+up', () => moveToChange(-1)],
-      [DISCARD_SHORTCUT, () => void discard(picked?.lines ?? [])],
-      ['mod+z', () => onUndo?.()],
-      ['escape', () => setPick(null)],
+      [hotkey('nextChange'), () => moveToChange(1)],
+      [hotkey('previousChange'), () => moveToChange(-1)],
+      [hotkey('discardLines'), () => void discard(picked?.lines ?? [])],
+      [hotkey('undoDiscard'), () => onUndo?.()],
+      [hotkey('clearPickedLines'), () => setPick(null)],
     ];
     const handler = handlers.find(([shortcut]) => matchesShortcut(event.nativeEvent, shortcut));
-    if (!handler || (handler[0] === 'escape' && !picked)) return;
+    if (!handler || (handler[0] === hotkey('clearPickedLines') && !picked)) return;
     event.preventDefault();
     handler[1]();
   };
