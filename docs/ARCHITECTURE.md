@@ -69,9 +69,13 @@ The merge page (`features/merge`) is a preview until "Complete merge": it says s
 and every status reads as what the merge will do, never as done (`mergeStatus`): "Will merge automatically", "Needs your
 decision", then the user's choice ("Keeping yours", "Keeping incoming", "Combined", "Edited by you"), one chip in the list
 and the file header, explained by its tooltip. Sides are "Yours"/"Incoming" in a workspace and "Destination"/"Source" when
-merging into a server branch (`mergeLabels`), always next to their branch. A conflicting file is read-only: it opens on
-what the merge changes in the destination (or on the result while conflicts remain), can show each contributor and the
-base, and is only edited after "Edit merged result…". Once merged, the page states where the result went.
+merging into a server branch (`mergeLabels`), always next to their branch. A conflicting file is read-only, with short
+one-line views: "Conflicts" while any is left (each with Keep yours / Keep incoming / Keep both), then "Changes" (the
+destination now → after the merge), "Yours", "Incoming" and "Base". A file with conflicts offers whole-file choices
+(`conflictChoices`): Keep yours, Keep incoming, Keep both, or "Resolve by hand…", the only way to edit text, under a
+banner with Done and Discard edits; the choice shows picked and "Changes" shows what it produces. A file that merges
+automatically is never edited; its menu only overrides it by keeping one version. Once merged, the page states where
+the result went.
 
 ## Switching with pending changes
 

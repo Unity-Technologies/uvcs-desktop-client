@@ -1,39 +1,27 @@
-import { Editor } from '@pierre/diffs/edit';
-import { EditProvider, File, UnresolvedFile } from '@pierre/diffs/react';
-import { useState } from 'react';
+import { UnresolvedFile } from '@pierre/diffs/react';
 import { Button } from '../../../ui/Button';
 import type { MergeLabels } from '../mergeDescription';
-import { ReadOnlyText } from './ReadOnlyText';
 import { resolveConflictRegion, type ConflictRegionChoice } from './threeWayMerge';
 import { usePierreOptions } from './usePierreOptions';
-import styles from './MergedTextEditor.module.css';
+import styles from './ConflictHunks.module.css';
+import surface from './TextSurface.module.css';
 
-interface MergedTextEditorProps {
+interface ConflictHunksProps {
   path: string;
+  /** The merged text, conflicts between markers. */
   text: string;
   labels: MergeLabels;
-  hasConflicts: boolean;
-  editing: boolean;
   onChange: (text: string) => void;
 }
 
-const createEditor: React.ComponentProps<typeof EditProvider>['createEditor'] = (type, options, key) => new Editor(type, options, key);
-
-/**
- * The merged file, read-only. While conflicts remain, each one offers to keep the destination, the source or both.
- * Only in edit mode, which the user asks for, can the text be changed freely.
- */
-export function MergedTextEditor({ path, text, labels, hasConflicts, editing, onChange }: MergedTextEditorProps) {
+/** The merged file, read-only, with each conflict offering to keep the destination's lines, the source's or both. */
+export function ConflictHunks({ path, text, labels, onChange }: ConflictHunksProps) {
   const options = usePierreOptions();
-
-  if (editing) return <EditableText path={path} text={text} onChange={onChange} />;
-  if (!hasConflicts) return <ReadOnlyText path={path} text={text} />;
-
   const choose = (conflictIndex: number, choice: ConflictRegionChoice): void => onChange(resolveConflictRegion(text, conflictIndex, choice));
   const { source, destination } = labels.roles;
 
   return (
-    <div className={styles.surface}>
+    <div className={surface.surface}>
       {/* The component keeps its own copy of the conflicts, so it is recreated whenever the text changes. */}
       <UnresolvedFile
         key={contentKey(text)}
@@ -59,20 +47,6 @@ export function MergedTextEditor({ path, text, labels, hasConflicts, editing, on
           </div>
         )}
       />
-    </div>
-  );
-}
-
-/** The editor owns the document while editing; the text it started from must stay fixed. */
-function EditableText({ path, text, onChange }: Pick<MergedTextEditorProps, 'path' | 'text' | 'onChange'>) {
-  const options = usePierreOptions();
-  const [initialText] = useState(text);
-
-  return (
-    <div className={styles.surface}>
-      <EditProvider createEditor={createEditor}>
-        <File file={{ name: path, contents: initialText }} disableWorkerPool options={options} edit onEditChange={(event) => onChange(event.file.contents)} />
-      </EditProvider>
     </div>
   );
 }
