@@ -11,8 +11,9 @@ import { sortByStatus } from '../../features/pendingChanges/changeRows';
 import { usePendingChangesOf } from '../../features/pendingChanges/usePendingChanges';
 import { createFuzzyIndex } from '../../lib/fuzzyIndex';
 import { matchesAllWords } from '../../lib/matchesAllWords';
+import { sinceDateFor } from '../../lib/sincePresets';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
-import { queryClient } from '../queryClient';
+import { queryClient, SLOW_CHANGING_QUERY } from '../queryClient';
 import { useWorkspaceInfoOf } from '../workspace/useWorkspace';
 import {
   branchResult,
@@ -42,7 +43,8 @@ const RECENT_CHANGESETS = 2000;
 /** Room for the loose matches of a case-tolerant server search, which are filtered precisely here. */
 const SERVER_SEARCH_LIMIT = 50;
 const SERVER_SEARCH_DELAY_MS = 300;
-const MIN_SERVER_SEARCH_LENGTH = 2;
+/** `like` patterns drop each word's first letter (`caseTolerantPattern`): two letters would match nearly everything. */
+const MIN_SERVER_SEARCH_LENGTH = 3;
 const CHANGESET_NUMBER = /^(?:cs:)?(\d+)$/i;
 const STALE_TIME = 60_000;
 /** Keeps the lists between palette openings, so reopening it never starts from scratch. */
@@ -64,16 +66,24 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
   const changesetNumber = CHANGESET_NUMBER.exec(term)?.[1];
 
   // Cached lists.
-  const cached = { enabled, staleTime: STALE_TIME, gcTime: CACHE_TIME };
+  const cached = { enabled, ...SLOW_CHANGING_QUERY, gcTime: CACHE_TIME };
   const recentFilter: QueryFilter = { limit: RECENT_CHANGESETS };
+  // Shelves by everyone pile up by the thousand; older ones are still found by the server search.
+  const recentShelvesFilter: QueryFilter = { sinceDate: sinceDateFor('last3Months') };
   const files = useWorkspacePaths(path, enabled);
   const pendingChanges = usePendingChangesOf(workspacePath);
   const workspace = useWorkspaceInfoOf(workspacePath);
   const recentBranches = useRecentBranches(path);
   const branches = useQuery({ queryKey: branchesKey(path, {}), queryFn: () => api.branches.list(path, {}), ...cached });
   const labels = useQuery({ queryKey: labelsKey(path, {}), queryFn: () => api.labels.list(path, {}), ...cached });
-  const changesets = useQuery({ queryKey: changesetsKey(path, recentFilter), queryFn: () => api.changesets.list(path, recentFilter), ...cached });
-  const shelves = useQuery({ queryKey: shelvesKey(path, {}), queryFn: () => api.shelves.list(path, {}), ...cached });
+  const changesets = useQuery({
+    queryKey: changesetsKey(path, recentFilter),
+    queryFn: () => api.changesets.list(path, recentFilter),
+    ...cached,
+    // New changesets come by the minute.
+    staleTime: STALE_TIME,
+  });
+  const shelves = useQuery({ queryKey: shelvesKey(path, recentShelvesFilter), queryFn: () => api.shelves.list(path, recentShelvesFilter), ...cached });
   const codeReviews = useQuery({ queryKey: codeReviewsKey(path, undefined), queryFn: () => api.codeReviews.listSummaries(path, { scope: 'all' }), ...cached });
 
   // Server searches, once typing pauses, only for the sections in scope.
@@ -99,10 +109,9 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
     staleTime: STALE_TIME,
   });
 
-  // Branches, labels and shelves are cached in full, so a server match missing from them means they are out of date.
+  // Branches and labels are cached in full, so a server match missing from them means they are out of date.
   useRefreshWhenMissing(foundBranches.data, branches.data, path, 'branches');
   useRefreshWhenMissing(foundLabels.data, labels.data, path, 'labels');
-  useRefreshWhenMissing(foundShelves.data, shelves.data, path, 'shelves');
 
   const fileIndex = useMemo(() => createFuzzyIndex(files.data?.map((entry) => entry.path) ?? []), [files.data]);
   const branchIndex = useMemo(() => createFuzzyIndex(branches.data?.map((branch) => branch.name) ?? []), [branches.data]);
@@ -330,7 +339,7 @@ function useRefreshWhenMissing(
   found: { id: number }[] | undefined,
   cached: { id: number }[] | undefined,
   workspacePath: string,
-  area: 'branches' | 'labels' | 'shelves',
+  area: 'branches' | 'labels',
 ): void {
   useEffect(() => {
     if (!found || !cached) return;
