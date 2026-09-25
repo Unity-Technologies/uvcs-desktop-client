@@ -4,6 +4,7 @@ import { linkCurve, pointOnCurve, type Curve } from './curves';
 import { NODE_RADIUS } from './geometry';
 import { branchColor, mergeLinkDash } from './graphPalette';
 import { nodePoint } from './graphTargets';
+import { boundsOf, crossesView } from './linkVisibility';
 
 const ARROW_SIZE = 7;
 const DOT_RADIUS = 5;
@@ -13,12 +14,8 @@ export function drawMergeLinks(draw: DrawContext): void {
   for (const link of scene.layout.mergeLinks) {
     const from = nodePoint(scene.layout, link.sourceChangeset)!;
     const to = nodePoint(scene.layout, link.destinationChangeset)!;
-    const offScreen =
-      Math.max(from.x, to.x) < visible.left ||
-      Math.min(from.x, to.x) > visible.right ||
-      Math.max(from.y, to.y) < visible.top ||
-      Math.min(from.y, to.y) > visible.bottom;
-    if (!offScreen) drawLink(draw, link, linkCurve(from, to));
+    const curve = linkCurve(from, to);
+    if (crossesView(boundsOf(curve), visible, NODE_RADIUS + ARROW_SIZE)) drawLink(draw, link, curve);
   }
 }
 

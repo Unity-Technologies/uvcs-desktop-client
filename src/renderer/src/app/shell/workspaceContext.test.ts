@@ -12,7 +12,7 @@ const info = (selector: WorkspaceSelector, loadedChangeset = 11): WorkspaceInfo 
   selector,
   loadedChangeset,
 });
-const summary = (changesetCount: number, branch = '/main'): IncomingSummary => ({ branch, loadedChangeset: 11, headChangeset: 11 + changesetCount, changesetCount });
+const summary = (changesetCount: number, branch = '/main'): IncomingSummary => ({ branch, loadedChangeset: 11, headChangeset: 11 + changesetCount, changesetCount, authors: [] });
 
 describe('workspaceContext', () => {
   it('tells the loaded changeset, the branch and whether the branch moved on', () => {

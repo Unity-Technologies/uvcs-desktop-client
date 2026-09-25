@@ -2,6 +2,7 @@ import { Editor } from '@pierre/diffs/edit';
 import { EditProvider, MultiFileDiff } from '@pierre/diffs/react';
 import { useMemo, useRef } from 'react';
 import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
+import { lineDiffOptions, type ComparisonMethod } from './comparisonMethod';
 import { useDiffPreferences } from './diffPreferencesStore';
 import { pierreDiffOptions, pierreThemeName } from './pierreOptions';
 import { useBlockDiscard, type DiscardRequest } from './useBlockDiscard';
@@ -14,6 +15,8 @@ interface TextDiffProps {
   modified: string;
   /** Used for the language of the syntax highlighting. */
   fileName: string;
+  /** Which differences count; the text shown is always the original. */
+  comparisonMethod: ComparisonMethod;
   /** Lets the user type into the modified side. */
   editing?: boolean;
   /** Receives the modified side's text after every edit. */
@@ -30,17 +33,18 @@ const SCROLLER_FOCUS_CSS = '[data-code]:focus-visible { outline: var(--focus-out
 const createEditor: React.ComponentProps<typeof EditProvider>['createEditor'] = (type, options, key) => new Editor(type, options, key);
 
 /** Syntax-highlighted text diff, side by side or unified, optionally editable on the modified side. */
-export function TextDiff({ original, modified, fileName, editing = false, onEdit, onDiscard, onUndoDiscard }: TextDiffProps) {
+export function TextDiff({ original, modified, fileName, comparisonMethod, editing = false, onEdit, onDiscard, onUndoDiscard }: TextDiffProps) {
   const theme = useResolvedTheme();
   const { layout, collapseUnchanged, wrapLines } = useDiffPreferences();
   const container = useRef<HTMLDivElement>(null);
   // Stable inputs: new objects would make Pierre reload the files and drop an ongoing edit.
   const oldFile = useMemo(() => ({ name: fileName, contents: original }), [fileName, original]);
   const newFile = useMemo(() => ({ name: fileName, contents: modified }), [fileName, modified]);
-  const discard = useBlockDiscard({ enabled: Boolean(onDiscard) && !editing, oldFile, newFile, layout, containerRef: container, onDiscard, onUndo: onUndoDiscard });
+  const parseDiffOptions = lineDiffOptions(comparisonMethod);
+  const discard = useBlockDiscard({ enabled: Boolean(onDiscard) && !editing, oldFile, newFile, comparisonMethod, layout, containerRef: container, onDiscard, onUndo: onUndoDiscard });
   const options = useMemo(
-    () => ({ ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }), ...discard.options }),
-    [theme, layout, collapseUnchanged, wrapLines, discard.options],
+    () => ({ ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }), parseDiffOptions, ...discard.options }),
+    [theme, layout, collapseUnchanged, wrapLines, parseDiffOptions, discard.options],
   );
   const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);
   useShadowStyle(container, SCROLLER_FOCUS_CSS);
@@ -53,6 +57,8 @@ export function TextDiff({ original, modified, fileName, editing = false, onEdit
       <div ref={container} className={styles.diff} tabIndex={0} role="region" aria-label={`Diff of ${fileName}`} onKeyDown={discard.onKeyDown} onPointerDown={discard.onPointerDown}>
         <EditProvider createEditor={createEditor}>
           <MultiFileDiff
+            // Pierre computes the diff once per pair of files, whatever the options say later.
+            key={comparisonMethod}
             oldFile={oldFile}
             newFile={newFile}
             options={options}

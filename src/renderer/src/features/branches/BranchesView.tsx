@@ -7,6 +7,7 @@ import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ListWithDetails } from '../../components/ListWithDetails';
+import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
 import { NoSelection } from '../../components/NoSelection';
 import { PathLabel } from '../../components/PathLabel';
 import { SincePicker } from '../../components/SincePicker';
@@ -19,7 +20,6 @@ import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
 import { SegmentedControl } from '../../ui/SegmentedControl';
-import { CenteredSpinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ToggleChip } from '../../ui/ToggleChip';
 import { ViewHeader } from '../../ui/ViewHeader';
@@ -112,7 +112,7 @@ export function BranchesView() {
         />
       </ViewHeader>
       {isLoading ? (
-        <CenteredSpinner />
+        <ListWithDetailsSkeleton columns={columns} />
       ) : error ? (
         <EmptyState title="Couldn't load branches" description={error.message} />
       ) : rows.length === 0 ? (

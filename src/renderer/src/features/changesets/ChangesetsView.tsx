@@ -5,9 +5,9 @@ import { useCommands, type Command } from '../../app/commands/commandStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ListWithDetails } from '../../components/ListWithDetails';
+import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
 import { NoSelection } from '../../components/NoSelection';
 import { EmptyState } from '../../ui/EmptyState';
-import { CenteredSpinner } from '../../ui/Spinner';
 import { HighlightQuery } from '../../ui/Highlight';
 import { DataTable } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
@@ -68,7 +68,7 @@ export function ChangesetsView() {
   );
 
   if (error) return <>{header}<EmptyState title="Couldn't load changesets" description={error.message} /></>;
-  if (isLoading) return <>{header}<CenteredSpinner /></>;
+  if (isLoading) return <>{header}<ListWithDetailsSkeleton columns={columns} /></>;
 
   return (
     <>

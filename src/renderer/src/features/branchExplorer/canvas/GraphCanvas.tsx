@@ -80,28 +80,31 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   /** Where the code review chips were drawn in the last frame. */
   const reviewChipsRef = useRef<DrawnReviewChip[]>([]);
 
+  const drawNow = useCallback(() => {
+    cancelAnimationFrame(frameRef.current);
+    const ctx = canvasRef.current?.getContext('2d');
+    const { layout: currentLayout, highlights: currentHighlights, palette: currentPalette, hoveredChangeset: hovered, hoveredReview: hoveredChip } = sceneRef.current;
+    if (!ctx || !currentPalette || sizeRef.current.width === 0) return;
+    reviewChipsRef.current = drawGraph(
+      ctx,
+      {
+        ...currentHighlights,
+        layout: currentLayout,
+        viewport: view.viewportRef.current,
+        size: sizeRef.current,
+        palette: currentPalette,
+        hoveredChangeset: hovered,
+        hoveredReview: hoveredChip,
+        searchPing: searchPingRef.current,
+      },
+      window.devicePixelRatio,
+    );
+  }, []);
+
   const scheduleDraw = useCallback(() => {
     cancelAnimationFrame(frameRef.current);
-    frameRef.current = requestAnimationFrame(() => {
-      const ctx = canvasRef.current?.getContext('2d');
-      const { layout: currentLayout, highlights: currentHighlights, palette: currentPalette, hoveredChangeset: hovered, hoveredReview: hoveredChip } = sceneRef.current;
-      if (!ctx || !currentPalette || sizeRef.current.width === 0) return;
-      reviewChipsRef.current = drawGraph(
-        ctx,
-        {
-          ...currentHighlights,
-          layout: currentLayout,
-          viewport: view.viewportRef.current,
-          size: sizeRef.current,
-          palette: currentPalette,
-          hoveredChangeset: hovered,
-          hoveredReview: hoveredChip,
-          searchPing: searchPingRef.current,
-        },
-        window.devicePixelRatio,
-      );
-    });
-  }, []);
+    frameRef.current = requestAnimationFrame(drawNow);
+  }, [drawNow]);
 
   const view = useGraphViewport(
     () => graphSize(sceneRef.current.layout.columnCount, sceneRef.current.layout.rowCount),
@@ -184,8 +187,9 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     pendingViewRef.current = null;
     if (pending) pending();
     else view.keepInBounds();
-    scheduleDraw();
-  }, [view, scheduleDraw]);
+    // Resizing cleared the canvas: redraw before this frame is painted, or it flashes blank.
+    drawNow();
+  }, [view, drawNow]);
 
   useCanvasSize(containerRef, canvasRef, sizeRef, onResize);
   useWheel(containerRef, (event, x, y) => {
@@ -298,7 +302,11 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   );
 });
 
-/** Keeps the canvas backing store in sync with its CSS size and the display's pixel ratio. */
+/**
+ * Keeps the canvas backing store in sync with its CSS size and the display's pixel ratio. Resizing the
+ * backing store clears it, so `onResize` must redraw right away: observers run after layout and before
+ * paint, so a redraw there reaches the screen in the same frame.
+ */
 function useCanvasSize(
   containerRef: React.RefObject<HTMLDivElement | null>,
   canvasRef: React.RefObject<HTMLCanvasElement | null>,
@@ -313,8 +321,11 @@ function useCanvasSize(
     const observer = new ResizeObserver(([entry]) => {
       const { width, height } = entry!.contentRect;
       sizeRef.current = { width, height };
-      canvas.width = Math.round(width * window.devicePixelRatio);
-      canvas.height = Math.round(height * window.devicePixelRatio);
+      const pixelWidth = Math.round(width * window.devicePixelRatio);
+      const pixelHeight = Math.round(height * window.devicePixelRatio);
+      // Setting a dimension clears the canvas even when it doesn't change.
+      if (canvas.width !== pixelWidth) canvas.width = pixelWidth;
+      if (canvas.height !== pixelHeight) canvas.height = pixelHeight;
       onResize();
     });
     observer.observe(container);

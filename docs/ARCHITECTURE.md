@@ -75,6 +75,8 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   files. `checkinChanges` recognizes it (`checkinRejection`) and asks (`CheckinRejectedDialog`): when what came in touches
   none of the files and needs no merge, it updates (the guarded update) and checks in again with the same files and comment;
   otherwise it leads to Incoming, and Changes offers to check in once the workspace updated past the rejection.
+- When the incoming check already knows the branch moved on (and names who checked in), the button reads "Update & check
+  in" and takes the same path up front (`updateFirst`): no overlap updates and checks in without asking; overlap asks.
 - An update stopped by colliding local changes (`--dontmerge`) shows a toast leading to Incoming (`explainUpdateConflicts`).
 - Local changes to files the branch deleted or moved block the update. `shelveBlockedAndUpdate` shelves just those files
   as a switch shelve record (`reason: 'update'`), undoes them and updates; the "Welcome back" banner offers them back.
@@ -114,6 +116,10 @@ renderer/src/
 - **Discarding changes**: a workspace file's diff against its loaded revision (or reviewed copy) discards a whole change
   from a chip in the gutter, or just the lines picked by their numbers (`features/diff/viewer/useBlockDiscard`). The new
   text is computed in the renderer (`discardLines`), shown at once and written; each file keeps an undo stack for the session.
+- **Comparison method**: every text diff compares lines under the official client's methods (Ignore EOLs, Ignore
+  whitespaces, both, Recognize all; one global preference, Recognize all by default). Lines are compared trimmed
+  (`features/diff/viewer/comparisonMethod`) through a line comparator handed to Pierre and `diff`, so the diff still
+  shows and discards the original text. `cm` commands keep their own comparison: merges don't change with it.
 - **Mutations**: `runOperation` (progress toast, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
@@ -132,9 +138,12 @@ renderer/src/
 - **Branch switcher**: groups and orders branches like the official Desktop client (`branchSwitcherGroups`): /main by its
   well-known GUID, the workspace's recent branches, then the rest newest first. Recent branches are the official client's,
   read from and written to its `plasticgui.conf` (`main/plasticConfig`) on every switch, so both apps list the same ones.
-- **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in components. Text tokens keep 4.5:1
-  and focus rings 3:1 (`styles/tokens.test.ts`); focus shows with `--focus-ring-visible`, or `--focus-ring-inset` on rows
-  and panes (over their content when it would paint over the ring).
+- **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in components.
+  - Text tokens keep 4.5:1 and focus rings 3:1 (`styles/tokens.test.ts`); focus shows with `--focus-ring-visible`, or
+    `--focus-ring-inset` on rows and panes (over their content when it would paint over the ring).
+  - Motion uses the `--duration-*` and `--ease-*` tokens and the shared keyframes of `styles/global.css` (through
+    `--keyframes-*`); reduced motion zeroes the durations, so only loops (spinners, skeleton pulses) opt out themselves.
+  - Lists that load show skeletons at their real row height (`ui/Skeleton`, `TableSkeleton`, `ListWithDetailsSkeleton`).
 
 ## Server budget
 
@@ -142,7 +151,7 @@ Repositories like `codice@codice@cloud` hold ~280k changesets, ~20k branches, th
 and many people use the same server. Every `cm` command other than local reads (`status`, `getworkspacefrompath`,
 `workspace list`, `profile list`, `version`...) is server work, so each one has to earn its place:
 
-- **Idle** (focused, nothing touched): only the incoming check, one `cm find changeset ... --format={changesetid}` a
+- **Idle** (focused, nothing touched): only the incoming check, one `cm find changeset ... --format={changesetid}{owner}` a
   minute (every five behind other apps, none while hidden). It takes the branch and loaded changeset from the workspace
   info, which follows `.plastic`, instead of asking `cm status`. Nothing else polls: left changes, locks and lists wait
   for an event, a focus or an operation.
@@ -150,6 +159,8 @@ and many people use the same server. Every `cm` command other than local reads (
   that hardly change by themselves and are heavy to read use `SLOW_CHANGING_QUERY` (every branch, every label, attribute
   types, the working object's comment, the palette's lists): five minutes, and focus never re-reads them. The Branch
   Explorer is kept five minutes and focus never re-reads all history. Local views skip focus while the watcher sees the disk.
+- **Home**: the repository and branch of every listed workspace come from its `.plastic/plastic.selector` file
+  (`workspaces.heads`); `cm` is asked only about recent workspaces whose file can't tell.
 - **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`), `cm diff`
   runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id) are
   cached (`IMMUTABLE_QUERY`) and skipped by refreshes.

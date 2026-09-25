@@ -4,7 +4,7 @@
   inset: 0;
   background: var(--overlay);
   backdrop-filter: blur(3px);
-  animation: var(--keyframes-fade-in) var(--duration-normal);
+  animation: var(--keyframes-fade-in) var(--duration-normal) var(--ease-out);
   z-index: 800;
 }
 

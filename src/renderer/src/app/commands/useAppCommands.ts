@@ -1,7 +1,8 @@
-import { AppWindow, Command as CommandIcon, Keyboard, Settings } from 'lucide-react';
+import { AppWindow, Command as CommandIcon, Keyboard, PanelLeft, Settings } from 'lucide-react';
 import { useMemo } from 'react';
 import { api } from '../../api/client';
 import { openSettingsDialog } from '../settings/SettingsDialog';
+import { SIDEBAR_SHORTCUT, toggleSidebar } from '../shell/sidebarStore';
 import { useCommandPalette } from './commandPaletteStore';
 import { useCommands, type Command } from './commandStore';
 import { openShortcutsDialog } from './ShortcutsDialog';
@@ -28,6 +29,15 @@ export function useAppCommands(): void {
         keywords: ['keys', 'hotkeys', 'help'],
         shortcut: hotkey('shortcuts'),
         run: openShortcutsDialog,
+      },
+      {
+        id: 'app.sidebar',
+        group: 'App',
+        label: 'Toggle sidebar',
+        icon: PanelLeft,
+        keywords: ['rail', 'collapse', 'expand', 'navigation'],
+        shortcut: SIDEBAR_SHORTCUT,
+        run: toggleSidebar,
       },
       { id: 'app.newWindow', group: 'App', label: 'New window', icon: AppWindow, keywords: ['window'], run: () => void api.windows.openHome() },
     ],

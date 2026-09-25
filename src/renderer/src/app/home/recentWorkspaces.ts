@@ -1,10 +1,14 @@
-import type { WorkspaceSummary } from '@shared/domain/workspace';
+import type { WorkspaceSelector, WorkspaceSummary } from '@shared/domain/workspace';
 import { lastSegment } from '../../lib/paths';
 
 export interface WorkspaceEntry {
   workspace: WorkspaceSummary;
   /** Its folder is gone; `cm` no longer lists it, only the recent list remembers it. */
   missing: boolean;
+  /** `name@server`; undefined while still resolving, null when unknown. */
+  repository?: string | null;
+  /** What it's loaded from, when its folder tells without asking `cm`. */
+  selector?: WorkspaceSelector | null;
 }
 
 /** Recent paths `cm` doesn't list: candidates for a missing folder. */

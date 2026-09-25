@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { SearchField } from '../ui/SearchField';
 import { Tooltip } from '../ui/Tooltip';
-import { matchesChangeFilter, offeredTones } from './changeFilter';
+import { countTones, formatToneCount, matchesChangeFilter, offeredTones } from './changeFilter';
 import { STATUS_LETTERS, StatusLetter, type StatusTone } from './StatusBadge';
 import styles from './useChangeFilter.module.css';
 
@@ -31,7 +31,8 @@ export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tone
   const [query, setQuery] = useState('');
   const [chosenTones, setChosenTones] = useState<ReadonlySet<StatusTone>>(new Set());
 
-  const tones = useMemo(() => offeredTones(new Set(items.map(toneOf))), [items, toneOf]);
+  const counts = useMemo(() => countTones(items.map(toneOf)), [items, toneOf]);
+  const tones = useMemo(() => offeredTones(new Set(counts.keys())), [counts]);
   // A chip can go away while chosen (the last private file is added); never keep filtering by a hidden chip.
   const activeTones = useMemo(() => new Set([...chosenTones].filter((tone) => tones.includes(tone))), [chosenTones, tones]);
   const visible = useMemo(
@@ -55,13 +56,18 @@ export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tone
   const bar = (
     <div className={styles.bar}>
       <SearchField value={query} onChange={setQuery} placeholder={`Filter ${items.length} files`} width="100%" />
-      {tones.map((tone) => (
-        <Tooltip key={tone} content={TONE_LABELS[tone]}>
-          <button type="button" className={styles.chip} data-tone={tone} aria-pressed={activeTones.has(tone)} aria-label={TONE_LABELS[tone]} onClick={() => toggle(tone)}>
-            <StatusLetter letter={STATUS_LETTERS[tone]} />
-          </button>
-        </Tooltip>
-      ))}
+      {tones.map((tone) => {
+        const count = counts.get(tone) ?? 0;
+        const label = count > 0 ? `${TONE_LABELS[tone]} (${count.toLocaleString('en-US')})` : TONE_LABELS[tone];
+        return (
+          <Tooltip key={tone} content={label}>
+            <button type="button" className={styles.chip} data-tone={tone} data-empty={count === 0} aria-pressed={activeTones.has(tone)} aria-label={label} onClick={() => toggle(tone)}>
+              <StatusLetter letter={STATUS_LETTERS[tone]} />
+              {count > 0 && <span className={styles.count}>{formatToneCount(count)}</span>}
+            </button>
+          </Tooltip>
+        );
+      })}
     </div>
   );
 

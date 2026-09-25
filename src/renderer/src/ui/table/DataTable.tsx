@@ -245,7 +245,7 @@ export function DataTable<Row>({
   );
 }
 
-function columnStyle<Row>(column: Column<Row>): React.CSSProperties {
+export function columnStyle<Row>(column: Column<Row>): React.CSSProperties {
   return column.width ? { width: column.width, flex: 'none' } : { flex: column.grow ?? 1, minWidth: 80 };
 }
 

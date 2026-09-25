@@ -9,6 +9,7 @@ const incoming = (changesets: Changeset[]): IncomingChanges => ({
   loadedChangeset: 10,
   headChangeset: 10 + changesets.length,
   changesetCount: changesets.length,
+  authors: [],
   changesets,
   files: [],
   conflicts: [],

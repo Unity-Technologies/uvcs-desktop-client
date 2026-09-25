@@ -3,7 +3,7 @@
   flex: 1;
   flex-direction: column;
   min-width: 0;
-  animation: var(--keyframes-fade-in) var(--duration-fast);
+  animation: var(--keyframes-view-enter) var(--duration-fast) var(--ease-out);
 }
 
 .breadcrumb {

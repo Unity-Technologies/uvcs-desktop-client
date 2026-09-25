@@ -1,38 +1,42 @@
 import { FolderDown } from 'lucide-react';
 import { useState } from 'react';
-import { useSettings } from '../settings/useSettings';
 import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
+import { useServers } from '../workspace/workspaceQueries';
 import { HomeSidebar } from './HomeSidebar';
 import type { HomeSection } from './homeSection';
 import { RepositoriesPanel } from './RepositoriesPanel';
 import { useFolderDrop } from './useFolderDrop';
+import { WelcomePanel } from './WelcomePanel';
 import { WorkspacesPanel } from './WorkspacesPanel';
 import styles from './Home.module.css';
 
 export function HomeScreen() {
-  const { recentWorkspacePaths } = useSettings();
-  const [chosenSection, setSection] = useState<HomeSection | null>(null);
-  const section: HomeSection = chosenSection ?? { kind: recentWorkspacePaths.length > 0 ? 'recent' : 'all' };
+  const [section, setSection] = useState<HomeSection>({ kind: 'welcome' });
+  const { data: servers } = useServers();
+  const firstServer = servers?.[0]?.server;
   const open = useOpenWorkspace();
   const drop = useFolderDrop(open);
+  const openFolder = (): void => void openWorkspaceFolder(open);
 
   return (
     <div className={styles.home} onDragOver={drop.onDragOver} onDragLeave={drop.onDragLeave} onDrop={drop.onDrop}>
       <HomeSidebar section={section} onSelect={setSection} />
       <main className={styles.main}>
         <div className={styles.dragRegion} />
-        {section.kind === 'server' ? (
-          <RepositoriesPanel key={section.server} server={section.server} onOpen={open} />
-        ) : (
-          <WorkspacesPanel
-            key={section.kind}
-            mode={section.kind}
-            onOpen={open}
-            onOpenFolder={() => void openWorkspaceFolder(open)}
-            onShowAll={() => setSection({ kind: 'all' })}
-          />
-        )}
+        <div className={styles.panel} key={section.kind === 'server' ? section.server : section.kind}>
+          {section.kind === 'server' ? (
+            <RepositoriesPanel server={section.server} onOpen={open} />
+          ) : section.kind === 'all' ? (
+            <WorkspacesPanel onOpen={open} onOpenFolder={openFolder} />
+          ) : (
+            <WelcomePanel
+              onOpen={open}
+              onOpenFolder={openFolder}
+              onBrowseRepositories={firstServer ? () => setSection({ kind: 'server', server: firstServer }) : undefined}
+            />
+          )}
+        </div>
       </main>
       {drop.isDraggingOver && (
         <div className={styles.dropOverlay}>

@@ -4,6 +4,8 @@ import { useNavigation } from '../navigation/navigationStore';
 import { VIEWS, type ViewDefinition } from '../navigation/viewRegistry';
 import { openSettingsDialog } from '../settings/SettingsDialog';
 import { useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
+import { useSidebarCollapsed } from './sidebarStore';
+import { SidebarToggleItem } from './SidebarToggleItem';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import styles from './Sidebar.module.css';
 
@@ -12,11 +14,17 @@ const GROUPS: ViewDefinition['group'][] = ['Workspace', 'History', 'Collaborate'
 export function Sidebar() {
   const { data: workspace } = useWorkspaceInfo();
   const workspacePath = useWorkspacePath();
+  const rail = useSidebarCollapsed();
 
   return (
-    <SidebarColumn>
+    <SidebarColumn rail={rail}>
       <WorkspaceSwitcher currentPath={workspacePath}>
-        <button className={styles.workspace} aria-label="Switch workspace">
+        <button
+          className={styles.workspace}
+          data-rail={rail}
+          aria-label="Switch workspace"
+          data-tip={rail ? workspace && `${workspace.name} · ${workspace.repository}` : undefined}
+        >
           <span className={styles.workspaceIcon}>{workspace?.name.charAt(0).toUpperCase()}</span>
           <span className={styles.workspaceText}>
             <span className={styles.workspaceName}>{workspace?.name ?? '…'}</span>
@@ -38,6 +46,7 @@ export function Sidebar() {
 
       <NavFooter>
         <NavItem icon={<Settings size={15} />} label="Settings" onClick={openSettingsDialog} />
+        <SidebarToggleItem />
       </NavFooter>
     </SidebarColumn>
   );

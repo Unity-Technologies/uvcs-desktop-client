@@ -21,7 +21,7 @@
   margin: auto;
   padding: var(--space-6) 0 var(--space-8);
   text-align: center;
-  animation: var(--keyframes-fade-in) var(--duration-normal);
+  animation: var(--keyframes-fade-in) var(--duration-normal) var(--ease-out);
 }
 
 .icon {

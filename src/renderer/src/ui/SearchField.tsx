@@ -9,7 +9,7 @@ interface SearchFieldProps {
   autoFocus?: boolean;
   /** Pixels, or any CSS width such as `100%`. */
   width?: number | string;
-  /** Keys the field doesn't handle itself (it clears on Escape), e.g. ↓ into the list it filters. */
+  /** Keys the field doesn't handle, e.g. ↓ to move into the list it filters. */
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
 }
 

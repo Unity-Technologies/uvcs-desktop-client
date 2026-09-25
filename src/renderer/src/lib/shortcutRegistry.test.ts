@@ -62,7 +62,7 @@ describe('shortcut registry', () => {
   });
 
   it('writes keys the formatter and matcher understand', () => {
-    for (const key of everyKey) expect(key).toMatch(/^((mod|ctrl|alt|shift)\+)*([a-z0-9]|f\d+|[-=,/[?]|plus|space|enter|escape|tab|backspace|up|down|left|right|home|end)$/);
+    for (const key of everyKey) expect(key).toMatch(/^((mod|ctrl|alt|shift)\+)*([a-z0-9]|f\d+|[-=,/[?\\]|plus|space|enter|escape|tab|backspace|up|down|left|right|home|end)$/);
   });
 });
 

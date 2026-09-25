@@ -7,13 +7,17 @@ import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { SearchField } from '../../ui/SearchField';
-import { CenteredSpinner } from '../../ui/Spinner';
+import { ListSkeleton } from '../../ui/Skeleton';
 import { ViewHeader } from '../../ui/ViewHeader';
-import { useRepositories, useWorkspaceList, useRecentWorkspaceRepositories } from '../workspace/workspaceQueries';
+import { useRepositories } from '../workspace/workspaceQueries';
 import { openCreateRepositoryDialog } from './dialogs/CreateRepositoryDialog';
 import { openCreateWorkspaceDialog } from './dialogs/CreateWorkspaceDialog';
 import { RepositoryRow } from './RepositoryRow';
+import { useWorkspaceEntries } from './useWorkspaceEntries';
 import styles from './Home.module.css';
+
+/** The rows ↑/↓ walk: each repository, and the workspaces listed under an expanded one. */
+const ROWS = '[data-roving-item], [data-workspace-row]';
 
 interface RepositoriesPanelProps {
   server: string;
@@ -25,12 +29,11 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const { data: repositories, isLoading, isFetching, error, refetch } = useRepositories(server);
-  const { data: workspaces } = useWorkspaceList();
-  const { data: workspaceRepositories } = useRecentWorkspaceRepositories(workspaces);
+  const { all: workspaceEntries } = useWorkspaceEntries('');
 
   const shown = (repositories ?? []).filter((repository) => repository.name.toLowerCase().includes(filter.toLowerCase()));
   const workspacesOf = (repository: RepositorySummary) =>
-    (workspaces ?? []).filter((workspace) => workspaceRepositories?.[workspace.path] === repository.spec);
+    workspaceEntries.filter((entry) => entry.repository === repository.spec).map((entry) => entry.workspace);
   const createWorkspace = (repository: RepositorySummary): void => openCreateWorkspaceDialog({ repository, onCreated: onOpen });
 
   return (
@@ -55,13 +58,17 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
           placeholder="Find a repository"
           autoFocus
           onKeyDown={(event) => {
-            if (event.key === 'ArrowDown' && focusFirstItem(listRef.current)) event.preventDefault();
+            if (event.key === 'ArrowDown' && focusFirstItem(listRef.current, ROWS)) event.preventDefault();
           }}
         />
       </ViewHeader>
 
-      <div ref={listRef} className={styles.list} onKeyDown={(event) => moveRovingFocus(event.currentTarget, event, () => searchRef.current?.focus())}>
-        {isLoading && <CenteredSpinner />}
+      <div
+        ref={listRef}
+        className={styles.list}
+        onKeyDown={(event) => moveRovingFocus(event.currentTarget, event, () => searchRef.current?.focus(), ROWS)}
+      >
+        {isLoading && <ListSkeleton rowHeight={48} />}
         {error && (
           <EmptyState
             title={`Couldn't reach ${server}`}

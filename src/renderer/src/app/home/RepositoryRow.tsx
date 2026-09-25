@@ -1,4 +1,4 @@
-import { ChevronRight, Database, MoreHorizontal } from 'lucide-react';
+import { ChevronRight, MoreHorizontal } from 'lucide-react';
 import { useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
@@ -9,12 +9,13 @@ import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { repositoryMenu } from './homeMenus';
+import { RepositoryAvatar } from './RepositoryAvatar';
 import { WorkspaceRow } from './WorkspaceRow';
 import styles from './Home.module.css';
 
 interface RepositoryRowProps {
   repository: RepositorySummary;
-  /** Recently used workspaces known to work on the repository. */
+  /** The workspaces known to work on the repository. */
   workspaces: WorkspaceSummary[];
   onOpen: (path: string) => void;
   onCreateWorkspace: (repository: RepositorySummary) => void;
@@ -31,16 +32,14 @@ export function RepositoryRow({ repository, workspaces, onOpen, onCreateWorkspac
         <div className={styles.row}>
           <button className={styles.rowMain} onClick={() => setExpanded(!expanded)} aria-expanded={expanded} {...ROVING_ITEM}>
             <ChevronRight size={14} className={styles.chevron} data-expanded={expanded} />
-            <span className={styles.rowIcon}>
-              <Database size={15} />
-            </span>
+            <RepositoryAvatar name={repository.name} size={32} />
             <span className={styles.rowText}>
               <span className={styles.rowTitle}>
                 <Highlight text={repository.name} />
               </span>
               <span className={styles.rowSubtitle}>
                 {[
-                  workspaces.length > 0 && `${workspaces.length} recent workspace${workspaces.length === 1 ? '' : 's'}`,
+                  workspaces.length > 0 && `${workspaces.length} workspace${workspaces.length === 1 ? '' : 's'}`,
                   repository.owner && `created by ${displayName(repository.owner)}`,
                 ]
                   .filter(Boolean)

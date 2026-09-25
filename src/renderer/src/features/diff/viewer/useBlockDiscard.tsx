@@ -3,6 +3,7 @@ import type { FileDiffOptions } from '@pierre/diffs/react';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { createStore } from 'zustand/vanilla';
 import { matchesShortcut } from '../../../lib/shortcuts';
+import { lineDiffOptions, type ComparisonMethod } from './comparisonMethod';
 import { listChangeBlocks, listChangeRegions, type ChangedLine, type DisplayMeta } from './changeBlocks';
 import { DiscardChip, type HoveredLineStore } from './DiscardChip';
 import { describeDiscard } from './discardAction';
@@ -24,6 +25,8 @@ interface BlockDiscardOptions {
   enabled: boolean;
   oldFile: FileContents;
   newFile: FileContents;
+  /** How the diff shown compares lines, so the blocks are the ones on screen. */
+  comparisonMethod: ComparisonMethod;
   layout: 'split' | 'unified';
   /** The scrolling element around the diff: its keys drive the actions, and it holds the diff's shadow root. */
   containerRef: RefObject<HTMLElement | null>;
@@ -55,9 +58,12 @@ const RESTORED_MS = 900;
  * In the diff, ⌥↓/⌥↑ pick the next or previous change, ⌥⌘Z discards the picked lines, ⌘Z undoes the last discard and
  * Esc drops the pick.
  */
-export function useBlockDiscard({ enabled, oldFile, newFile, layout, containerRef, onDiscard, onUndo }: BlockDiscardOptions) {
+export function useBlockDiscard({ enabled, oldFile, newFile, comparisonMethod, layout, containerRef, onDiscard, onUndo }: BlockDiscardOptions) {
   // The same diff Pierre computes for display, so every block lines up with what is shown.
-  const meta = useMemo(() => (enabled ? parseDiffFromFile(oldFile, newFile) : null), [enabled, oldFile, newFile]);
+  const meta = useMemo(
+    () => (enabled ? parseDiffFromFile(oldFile, newFile, lineDiffOptions(comparisonMethod)) : null),
+    [enabled, oldFile, newFile, comparisonMethod],
+  );
   const blocks = useMemo(() => (meta ? listChangeBlocks(meta) : []), [meta]);
   const regions = useMemo(() => listChangeRegions(blocks), [blocks]);
   const [hovered] = useState<HoveredLineStore>(() => createStore<ChangedLine | null>(() => null));
@@ -106,7 +112,7 @@ export function useBlockDiscard({ enabled, oldFile, newFile, layout, containerRe
       await new Promise((resolve) => setTimeout(resolve, LEAVE_MS));
       leaving.current = false;
     }
-    const { text, restoredAt } = discardLines(meta, lines);
+    const { text, restoredAt } = discardLines(meta, lines, comparisonMethod);
     setPick(null);
     // What was clicked goes with the lines: keep the diff's keys (⌘Z) working, and wait for the pointer to move.
     containerRef.current?.focus({ preventScroll: true });

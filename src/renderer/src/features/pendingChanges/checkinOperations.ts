@@ -4,6 +4,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation } from '../../app/operations/runOperation';
 import { queryClient } from '../../app/queryClient';
+import { firstLine } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
@@ -11,6 +12,7 @@ import { updateToIncoming } from '../incoming/updateOperations';
 import { useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinRejection, overlappingPaths, type CheckinRejection } from './checkinRejection';
 import { askCatchUpForCheckin } from './CheckinRejectedDialog';
+import { useSuccessMomentStore } from './successMoment';
 
 const MAX_RECENT_COMMENTS = 15;
 
@@ -19,11 +21,14 @@ interface CheckinOptions {
   changes: PendingChange[];
   comment: string;
   warnOnEmptyComment: boolean;
+  /** The incoming check saw the branch move on: update (or review what came in) before checking in, not after a rejection. */
+  updateFirst?: boolean;
 }
 
 /**
  * Checks in the given changes. Resolves to true when a changeset was created. When someone checked in to the branch
- * meanwhile, offers to update and check in again (or to review what came in first).
+ * meanwhile, offers to update and check in again (or to review what came in first); known beforehand (`updateFirst`),
+ * it does so up front.
  */
 export async function checkinChanges(options: CheckinOptions): Promise<boolean> {
   const { workspacePath, changes, comment, warnOnEmptyComment } = options;
@@ -35,6 +40,7 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
     });
     if (!proceed) return false;
   }
+  if (options.updateFirst) return catchUpAndCheckin({ ...options, updateFirst: false, warnOnEmptyComment: false }, null);
 
   const rejected: { rejection?: CheckinRejection } = {};
   const result = await runOperation({
@@ -55,26 +61,31 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
   if (!result) return rejected.rejection ? catchUpAndCheckin(options, rejected.rejection) : false;
 
   useCheckinAfterUpdateStore.getState().forget(workspacePath);
+  useSuccessMomentStore.getState().show(workspacePath, { verb: 'Checked in', changesetId: result.changesetId, branch: result.branch, detail: firstLine(comment) || undefined });
   if (comment.trim()) await rememberComment(comment.trim());
   return true;
 }
 
 /**
- * The branch moved on since the workspace was updated. When what came in touches none of the files being checked in
- * and updating needs no decision, updates and checks in the same files with the same comment. Otherwise leads to
- * Incoming; once the workspace is updated, Changes offers to check in.
+ * The branch moved on since the workspace was updated: `rejection` tells where it stood when `cm` refused the checkin,
+ * null when the incoming check told beforehand. When what came in touches none of the files being checked in and
+ * updating needs no decision, updates and checks in the same files with the same comment (asking first only after a
+ * rejection). Otherwise leads to Incoming; once the workspace is updated, Changes offers to check in.
  */
-async function catchUpAndCheckin(options: CheckinOptions, rejection: CheckinRejection): Promise<boolean> {
+async function catchUpAndCheckin(options: CheckinOptions, rejection: CheckinRejection | null): Promise<boolean> {
   const { workspacePath, changes } = options;
   const incoming = await runAction(workspacePath, "Couldn't check what came in", () => api.merge.incomingChanges(workspacePath));
   if (!incoming?.branch) return false;
+  // Someone updated the workspace since the incoming check: nothing to catch up with.
+  if (!rejection && incoming.changesets.length === 0) return checkinChanges(options);
 
   const overlapping = overlappingPaths(incoming.files, changes.map((change) => change.path));
   const needsReview = overlapping.length + incoming.conflicts.length + incoming.blockedPaths.length > 0;
-  const choice = await askCatchUpForCheckin({ incoming, overlapping, needsReview });
+  const choice = !rejection && !needsReview ? 'updateAndCheckin' : await askCatchUpForCheckin({ incoming, overlapping, needsReview, rejected: rejection !== null });
   if (!choice) return false;
 
-  useCheckinAfterUpdateStore.getState().remember(workspacePath, { branch: incoming.branch, loadedChangeset: rejection.loadedChangeset });
+  const loadedChangeset = rejection?.loadedChangeset ?? incoming.loadedChangeset;
+  useCheckinAfterUpdateStore.getState().remember(workspacePath, { branch: incoming.branch, loadedChangeset });
   if (choice === 'review') {
     navigation.goToView('incoming');
     return false;
