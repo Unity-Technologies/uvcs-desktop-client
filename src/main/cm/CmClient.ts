@@ -47,6 +47,11 @@ export class CmClient {
     return this.run(args, options, false);
   }
 
+  /** Prepares `cm shell` sessions for a working directory (defaults to the home directory). */
+  warmUp(cwd = homedir()): void {
+    this.shellPool.warmUp(cwd);
+  }
+
   dispose(): void {
     this.shellPool.disposeAll();
   }

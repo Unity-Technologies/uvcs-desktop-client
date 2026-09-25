@@ -39,6 +39,11 @@ export class CmShellSession {
     return this.queue.length + (this.running ? 1 : 0);
   }
 
+  /** Starts the `cm shell` process ahead of time; its startup is the slowest part of a first query. */
+  start(): void {
+    this.ensureProcess();
+  }
+
   run(args: string[]): Promise<CmResult> {
     return new Promise((resolve, reject) => {
       this.queue.push({ commandLine: toShellCommandLine(args), resolve, reject });

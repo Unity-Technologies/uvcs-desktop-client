@@ -1,3 +1,5 @@
+import { Suspense } from 'react';
+import { CenteredSpinner } from '../../ui/Spinner';
 import { useMergeCommands } from '../../features/merge/useMergeCommands';
 import { useNavigation } from '../navigation/navigationStore';
 import { viewDefinition } from '../navigation/viewRegistry';
@@ -30,7 +32,9 @@ export function WorkspaceScreen() {
           <div className={styles.content}>
             {/* Views stay mounted under pages so going back keeps their scroll and selection. */}
             <div className={styles.layer} hidden={Boolean(topPage)}>
-              <ActiveView key={view} />
+              <Suspense fallback={<CenteredSpinner />}>
+                <ActiveView key={view} />
+              </Suspense>
             </div>
             {topPage && <PageFrame key={pages.length} page={topPage} />}
           </div>

@@ -13,6 +13,14 @@ export class CmShellPool {
     return this.leastBusySession(cwd).run(args);
   }
 
+  /** Starts the sessions for a directory so the first queries there don't pay the startup cost. */
+  warmUp(cwd: string): void {
+    const sessions = this.sessionsByDirectory.get(cwd) ?? [];
+    while (sessions.length < SESSIONS_PER_DIRECTORY) sessions.push(new CmShellSession(this.cmPath, cwd));
+    this.sessionsByDirectory.set(cwd, sessions);
+    sessions.forEach((session) => session.start());
+  }
+
   disposeAll(): void {
     this.sessionsByDirectory.forEach((sessions) => sessions.forEach((session) => session.dispose()));
     this.sessionsByDirectory.clear();

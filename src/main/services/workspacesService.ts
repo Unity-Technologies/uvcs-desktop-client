@@ -72,6 +72,7 @@ export function createWorkspacesService({ cm, operations, watcher }: ServiceCont
   }
 
   async function watch(workspacePath: string): Promise<void> {
+    cm.warmUp(workspacePath);
     watcher.watch(workspacePath);
   }
 

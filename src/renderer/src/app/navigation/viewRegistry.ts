@@ -13,22 +13,25 @@ import {
   Tags,
 } from 'lucide-react';
 import type { ComponentType } from 'react';
-import { AttributesView } from '../../features/attributes/AttributesView';
-import { BranchExplorerView } from '../../features/branchExplorer/BranchExplorerView';
-import { BranchesView } from '../../features/branches/BranchesView';
-import { ChangesetsView } from '../../features/changesets/ChangesetsView';
-import { CodeReviewsView } from '../../features/codeReviews/CodeReviewsView';
-import { FilesView } from '../../features/files/FilesView';
-import { IncomingChangesView } from '../../features/incoming/IncomingChangesView';
 import { useIncomingChangesCount } from '../../features/incoming/useIncomingChangesCount';
-import { LabelsView } from '../../features/labels/LabelsView';
-import { LocksView } from '../../features/locks/LocksView';
-import { PendingChangesView } from '../../features/pendingChanges/PendingChangesView';
 import { usePendingChangesCount } from '../../features/pendingChanges/usePendingChanges';
-import { ShelvesView } from '../../features/shelves/ShelvesView';
-import { SyncView } from '../../features/sync/SyncView';
 import type { Icon } from '../../lib/actions';
+import { lazyComponent } from '../../lib/lazyComponent';
 import type { ViewId } from './views';
+
+// Views load on first visit so the app starts fast.
+const AttributesView = lazyComponent(() => import('../../features/attributes/AttributesView').then((module) => module.AttributesView));
+const BranchExplorerView = lazyComponent(() => import('../../features/branchExplorer/BranchExplorerView').then((module) => module.BranchExplorerView));
+const BranchesView = lazyComponent(() => import('../../features/branches/BranchesView').then((module) => module.BranchesView));
+const ChangesetsView = lazyComponent(() => import('../../features/changesets/ChangesetsView').then((module) => module.ChangesetsView));
+const CodeReviewsView = lazyComponent(() => import('../../features/codeReviews/CodeReviewsView').then((module) => module.CodeReviewsView));
+const FilesView = lazyComponent(() => import('../../features/files/FilesView').then((module) => module.FilesView));
+const IncomingChangesView = lazyComponent(() => import('../../features/incoming/IncomingChangesView').then((module) => module.IncomingChangesView));
+const LabelsView = lazyComponent(() => import('../../features/labels/LabelsView').then((module) => module.LabelsView));
+const LocksView = lazyComponent(() => import('../../features/locks/LocksView').then((module) => module.LocksView));
+const PendingChangesView = lazyComponent(() => import('../../features/pendingChanges/PendingChangesView').then((module) => module.PendingChangesView));
+const ShelvesView = lazyComponent(() => import('../../features/shelves/ShelvesView').then((module) => module.ShelvesView));
+const SyncView = lazyComponent(() => import('../../features/sync/SyncView').then((module) => module.SyncView));
 
 export interface ViewDefinition {
   id: ViewId;

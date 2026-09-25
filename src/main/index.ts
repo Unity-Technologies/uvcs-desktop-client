@@ -14,6 +14,7 @@ import { createMainWindow } from './window/createMainWindow';
 const cm = new CmClient(locateCm());
 
 function start(): void {
+  cm.warmUp();
   cm.onCommandLogged((entry) => sendEvent('commandLogged', entry));
 
   registerApi(
@@ -32,7 +33,21 @@ function start(): void {
   });
 }
 
-app.whenReady().then(start);
+// One running app per user: a second launch focuses the existing window. Development builds skip
+// this so several instances (e.g. automated UI checks) can run side by side.
+if (app.isPackaged && !app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', focusMainWindow);
+  app.whenReady().then(start);
+}
+
+function focusMainWindow(): void {
+  const window = BrowserWindow.getAllWindows()[0];
+  if (!window) return;
+  if (window.isMinimized()) window.restore();
+  window.focus();
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

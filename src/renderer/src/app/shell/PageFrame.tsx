@@ -1,4 +1,6 @@
 import { ChevronLeft } from 'lucide-react';
+import { Suspense } from 'react';
+import { CenteredSpinner } from '../../ui/Spinner';
 import { useNavigation } from '../navigation/navigationStore';
 import { PageContent, pageTitle } from '../navigation/pageRegistry';
 import type { Page } from '../navigation/pages';
@@ -22,7 +24,9 @@ export function PageFrame({ page }: { page: Page }) {
         <span className={styles.current}>{pageTitle(page)}</span>
       </div>
       <div className={styles.content}>
-        <PageContent page={page} />
+        <Suspense fallback={<CenteredSpinner />}>
+          <PageContent page={page} />
+        </Suspense>
       </div>
     </div>
   );

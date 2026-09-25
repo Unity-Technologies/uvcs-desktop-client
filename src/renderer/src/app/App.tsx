@@ -36,6 +36,5 @@ function Root() {
   const cm = useCmAvailability();
 
   if (cm.error) return <CmUnavailableScreen reason={cm.error.message} onRetry={() => void cm.refetch()} />;
-  if (!cm.data) return null;
   return workspacePath ? <WorkspaceScreen key={workspacePath} /> : <HomeScreen />;
 }

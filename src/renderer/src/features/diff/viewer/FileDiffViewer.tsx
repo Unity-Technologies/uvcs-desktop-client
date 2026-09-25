@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Columns2, FoldVertical, Pencil, Rows2, WrapText } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Suspense, type ReactNode } from 'react';
 import type { ContentSource, FileContent } from '@shared/domain/content';
 import { api } from '../../../api/client';
 import { queryKeys } from '../../../api/queryKeys';
@@ -12,9 +12,12 @@ import { IconButton } from '../../../ui/IconButton';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { useDiffPreferences } from './diffPreferencesStore';
 import { ImageDiff } from './ImageDiff';
-import { TextDiff } from './TextDiff';
+import { lazyComponent } from '../../../lib/lazyComponent';
 import { useFileEditing } from './useFileEditing';
 import styles from './FileDiffViewer.module.css';
+
+// The diff renderer (Pierre + Shiki) is large; load it with the first diff instead of at startup.
+const TextDiff = lazyComponent(() => import('./TextDiff').then((module) => module.TextDiff));
 
 interface FileDiffViewerProps {
   workspacePath: string;
@@ -102,7 +105,9 @@ export function FileDiffViewer({ workspacePath, original, modified, fileName, ti
             action={canEdit && <Button icon={<Pencil size={13} />} onClick={editing.start}>Edit file</Button>}
           />
         ) : (
-          <TextDiff original={left.text ?? ''} modified={right.text ?? ''} fileName={fileName} editing={editing.editing} onEdit={editing.change} />
+          <Suspense fallback={<CenteredSpinner />}>
+            <TextDiff original={left.text ?? ''} modified={right.text ?? ''} fileName={fileName} editing={editing.editing} onEdit={editing.change} />
+          </Suspense>
         )
       ) : left.imageDataUrl || right.imageDataUrl ? (
         <ImageDiff originalUrl={left.imageDataUrl} modifiedUrl={right.imageDataUrl} />
