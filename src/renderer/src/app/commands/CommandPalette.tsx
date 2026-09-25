@@ -1,6 +1,7 @@
 import { Command as Cmdk } from 'cmdk';
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { createFuzzyIndex, fuzzyMatchPositions, fuzzyMatchQuality } from '../../lib/fuzzyIndex';
+import { isRowMenuKey } from '../../lib/rowMenu';
 import { useShortcut } from '../../lib/useShortcut';
 import { HighlightQuery } from '../../ui/Highlight';
 import { Spinner } from '../../ui/Spinner';
@@ -87,7 +88,8 @@ function OpenPalette({ close }: { close: () => void }) {
     // Keys pressed in a row's actions menu bubble up here through its portal; they are the menu's, not cmdk's.
     if (event.target !== inputRef.current) return event.preventDefault();
     if (event.key === 'Escape') close();
-    if (event.key === 'Tab') {
+    // Tab never leaves the palette: it opens the selected result's actions, when it has some.
+    if (event.key === 'Tab' || isRowMenuKey(event)) {
       event.preventDefault();
       if (selectedResult?.menu) setMenuFor(selectedResult.id);
     }

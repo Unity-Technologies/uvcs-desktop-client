@@ -52,6 +52,7 @@ export const SHORTCUTS = {
   listSelectAll: { area: 'Lists', label: 'Select all', keys: ['mod+a'] },
   listDiff: { area: 'Lists', label: 'Diff the selected changeset or file', keys: ['mod+d'] },
   listExpand: { area: 'Lists', label: 'Collapse or expand a folder', keys: ['left', 'right'] },
+  rowActions: { area: 'Lists', label: 'Actions of the highlighted result (palette, pickers, Go to file)', keys: ['tab', 'shift+f10'] },
 
   checkin: { area: 'Changes', label: 'Check in', keys: ['mod+enter'] },
   toggleIncluded: { area: 'Changes', label: 'Include or exclude from the check in', keys: ['space'] },
@@ -90,7 +91,6 @@ export const SHORTCUTS = {
 
   paletteMove: { area: 'Command palette', label: 'Move', keys: ['up', 'down'] },
   paletteOpen: { area: 'Command palette', label: 'Open', keys: ['enter'] },
-  paletteActions: { area: 'Command palette', label: 'Actions of the result', keys: ['tab'] },
 
   imageZoomIn: { area: 'Image diff', label: 'Zoom in', keys: ['='] },
   imageZoomOut: { area: 'Image diff', label: 'Zoom out', keys: ['-'] },

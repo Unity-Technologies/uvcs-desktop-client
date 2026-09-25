@@ -6,21 +6,47 @@
   overflow: auto;
 }
 
-.result {
+.resultRow {
   display: flex;
   flex: none;
   align-items: center;
-  gap: var(--space-2);
   height: 30px;
+  padding-right: var(--space-1);
+  border-radius: var(--radius-sm);
+}
+
+.resultRow[data-highlighted='true'] {
+  background: var(--accent-soft);
+}
+
+.result {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  height: 100%;
   padding: 0 var(--space-2);
   border: none;
-  border-radius: var(--radius-sm);
   background: none;
   text-align: left;
 }
 
-.result[data-highlighted='true'] {
-  background: var(--accent-soft);
+/* The highlighted result's actions (Tab), like the command palette's. */
+.actions {
+  display: flex;
+  flex: none;
+  padding: 2px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+}
+
+.actions:hover,
+.actions[data-state='open'] {
+  background: var(--bg-active);
+  color: var(--text-primary);
 }
 
 .folder {

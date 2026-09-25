@@ -3,7 +3,10 @@ import { Copy, FolderGit2, FolderOpen, FolderPlus, Layers, SquareTerminal } from
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactElement } from 'react';
 import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorkspaceDialog';
 import { navigationTarget } from '../../lib/listNavigation';
+import { isRowMenuKey, openContextMenuOf } from '../../lib/rowMenu';
+import { hotkey } from '../../lib/shortcutRegistry';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
+import { KeyHints } from '../../ui/KeyHints';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { useReturnFocus } from '../../ui/useReturnFocus';
 import { openCreateWorkspaceDialog } from '../home/dialogs/CreateWorkspaceDialog';
@@ -84,6 +87,7 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
   const [highlighted, setHighlighted] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
   const movedByKeyboard = useRef(false);
+  const filterRef = useRef<HTMLInputElement>(null);
   const listboxId = useId();
   const { recentWorkspacePaths } = useSettings();
   const { data: workspaces = [] } = useWorkspaceList();
@@ -110,6 +114,9 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
     } else if (event.key === 'Enter' && flat[highlighted]) {
       event.preventDefault();
       onChoose(flat[highlighted].workspace.path);
+    } else if (flat[highlighted] && isRowMenuKey(event)) {
+      event.preventDefault();
+      openContextMenuOf(document.getElementById(`${listboxId}-${highlighted}`));
     }
   };
 
@@ -117,7 +124,15 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
   const row = ({ workspace, missing }: WorkspaceEntry, index: number) => {
     const repository = repositories?.[workspace.path];
     return (
-      <ActionContextMenu key={workspace.guid} entries={() => (missing ? missingWorkspaceMenu : workspaceMenu)(workspace, onChoose)}>
+      <ActionContextMenu
+        key={workspace.guid}
+        entries={() => (missing ? missingWorkspaceMenu : workspaceMenu)(workspace, onChoose)}
+        // Back to the filter, so typing and the arrow keys carry on.
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          filterRef.current?.focus();
+        }}
+      >
         <button
           id={`${listboxId}-${index}`}
           role="option"
@@ -159,6 +174,7 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
   return (
     <>
       <input
+        ref={filterRef}
         className={styles.filter}
         placeholder="Switch to workspace…"
         value={filter}
@@ -193,6 +209,7 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
           {others.map((entry, index) => row(entry, recent.length + index))}
         </HighlightQuery>
       </div>
+      <KeyHints hints={[{ keys: hotkey('rowActions'), label: 'actions' }]} />
     </>
   );
 }

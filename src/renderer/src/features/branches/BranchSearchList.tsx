@@ -4,7 +4,10 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type R
 import type { Branch } from '@shared/domain/branch';
 import type { MenuEntry } from '../../lib/actions';
 import { navigationTarget } from '../../lib/listNavigation';
+import { isRowMenuKey, openContextMenuOf } from '../../lib/rowMenu';
+import { hotkey } from '../../lib/shortcutRegistry';
 import { HighlightQuery } from '../../ui/Highlight';
+import { KeyHints } from '../../ui/KeyHints';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { BranchSearchItem } from './BranchSearchItem';
 import { branchSearchRows, type BranchGroup } from './branchSearchRows';
@@ -53,9 +56,9 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
   const onKeyDown = (event: KeyboardEvent): void => {
     // Keys pressed in a row's context menu (a portal) bubble here too: they belong to the menu.
     if (!event.currentTarget.contains(event.target as Node)) return;
-    if (menu && (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey))) {
+    if (menu && branches[highlighted] && isRowMenuKey(event)) {
       event.preventDefault();
-      openRowMenu(highlighted);
+      openContextMenuOf(listRef.current?.querySelector<HTMLElement>(`[data-branch-index="${highlighted}"]`) ?? null);
       return;
     }
     const target = navigationTarget(event.key, highlighted, branches.length);
@@ -67,14 +70,6 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
       event.preventDefault();
       onPick(branches[highlighted]);
     }
-  };
-
-  /** The context menu of a row from the keyboard, opened where a right click on it would. */
-  const openRowMenu = (index: number): void => {
-    const row = listRef.current?.querySelector<HTMLElement>(`[data-branch-index="${index}"]`);
-    if (!row) return;
-    const bounds = row.getBoundingClientRect();
-    row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: bounds.left + 24, clientY: bounds.bottom - 4 }));
   };
 
   return (
@@ -154,6 +149,7 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
           </div>
         </div>
       </HighlightQuery>
+      {menu && <KeyHints hints={[{ keys: hotkey('rowActions'), label: 'actions' }]} />}
     </div>
   );
 }

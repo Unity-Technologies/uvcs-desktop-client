@@ -17,7 +17,7 @@ export function PaletteFooter({ inWorkspace }: { inWorkspace: boolean }) {
         <Kbd keys={hotkey('paletteOpen')} /> open
       </span>
       <span className={styles.hint}>
-        <Kbd keys={hotkey('paletteActions')} /> actions
+        <Kbd keys={hotkey('rowActions')} /> actions
       </span>
       <span className={styles.scopes}>
         {SCOPE_PREFIXES.filter(({ scope }) => inWorkspace || scope === 'commands').map(({ prefix, hint }) => (
