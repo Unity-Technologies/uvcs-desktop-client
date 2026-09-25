@@ -111,11 +111,10 @@ export function hotkeys(id: ShortcutId): readonly string[] {
 }
 
 /**
- * The shortcut of the view at `position` in the sidebar: ⌘1…⌘9, then ⌘0, then ⇧⌘1, ⇧⌘2…, so the keys read in
- * sidebar order and every view has one.
+ * The shortcut of the view at `position` in the sidebar: ⌘1…⌘9, then ⇧⌘1, ⇧⌘2…, so the keys read in sidebar
+ * order and every view has one. ⌘0 is left to the View menu's Actual Size.
  */
 export function viewShortcut(position: number): string {
   if (position < 9) return `mod+${position + 1}`;
-  if (position === 9) return 'mod+0';
-  return `mod+shift+${position - 9}`;
+  return `mod+shift+${position - 8}`;
 }

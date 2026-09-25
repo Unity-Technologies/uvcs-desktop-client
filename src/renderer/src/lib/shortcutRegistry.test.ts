@@ -67,7 +67,7 @@ describe('shortcut registry', () => {
 });
 
 describe('viewShortcut', () => {
-  it('numbers the views in sidebar order, ⌘0 tenth, then with Shift', () => {
+  it('numbers the views in sidebar order, then with Shift, leaving ⌘0 to Actual Size', () => {
     expect(Array.from({ length: 12 }, (_, position) => viewShortcut(position))).toEqual([
       'mod+1',
       'mod+2',
@@ -78,9 +78,9 @@ describe('viewShortcut', () => {
       'mod+7',
       'mod+8',
       'mod+9',
-      'mod+0',
       'mod+shift+1',
       'mod+shift+2',
+      'mod+shift+3',
     ]);
   });
 });
