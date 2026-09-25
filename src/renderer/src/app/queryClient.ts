@@ -16,6 +16,13 @@ export const queryClient = new QueryClient({
   },
 });
 
+/**
+ * Server lists that hardly change by themselves (every branch, every label, attribute types...), and are heavy on big
+ * repositories: kept for five minutes and not re-read on window focus. The operations that change them refresh them
+ * (`invalidateWorkspace`), and so does the Refresh button.
+ */
+export const SLOW_CHANGING_QUERY = { staleTime: 5 * 60_000, refetchOnWindowFocus: false } as const;
+
 /** Marks a query whose result never changes once read (e.g. what a changeset changed), so refreshes skip it. */
 export const IMMUTABLE_QUERY = { immutable: true };
 

@@ -1,7 +1,8 @@
 import type { BranchesApi } from '@shared/api/branches';
 import type { Branch, CreateBranchRequest } from '@shared/domain/branch';
 import type { QueryFilter } from '@shared/domain/query';
-import { findArgs } from '../cm/findQuery';
+import { shortBranchName } from '@shared/domain/specs';
+import { escapeQueryValue, findArgs } from '../cm/findQuery';
 import { findRecords, toBranch } from '../cm/findObjects';
 import { withTempFile } from '../files/tempFile';
 import type { ServiceContext } from './ServiceContext';
@@ -19,6 +20,13 @@ export function createBranchesService({ cm }: ServiceContext): BranchesApi {
       filter.includeHidden ? find(workspacePath, filter, ["hidden = 'true'"]) : Promise.resolve([]),
     ]);
     return [...visible, ...hidden.map((branch) => ({ ...branch, isHidden: true }))].sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  async function get(workspacePath: string, name: string): Promise<Branch | null> {
+    // `cm find` matches branches by their last name part only.
+    const where = `where name = '${escapeQueryValue(shortBranchName(name))}'`;
+    const xml = await cm.query(['find', 'branch', where, '--xml', '--nototal'], { cwd: workspacePath });
+    return findRecords(xml, 'BRANCH').map(toBranch).find((branch) => branch.name === name) ?? null;
   }
 
   function create(workspacePath: string, request: CreateBranchRequest): Promise<void> {
@@ -41,7 +49,7 @@ export function createBranchesService({ cm }: ServiceContext): BranchesApi {
     await cm.query(['branch', hidden ? 'hide' : 'unhide', ...branches.map((branch) => `br:${branch}`)], { cwd: workspacePath });
   }
 
-  return { list, create, rename, delete: remove, setHidden };
+  return { list, get, create, rename, delete: remove, setHidden };
 }
 
 export function startingPointOption(startingPoint: string): string {

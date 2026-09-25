@@ -4,17 +4,17 @@ import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { IMMUTABLE_QUERY } from '../../app/queryClient';
 import { Button } from '../../ui/Button';
-import { useBranches } from '../branches/useBranches';
+import { useBranch } from '../branches/useBranches';
 import { openMergeTaskDialog } from './MergeTaskDialog';
 import { isTaskBranch } from './mergeTaskSummary';
 
 /**
  * For a clean workspace on a task branch with changesets of its own: a quiet way to finish the task. It stays cheap:
- * the branch comes from the list the top bar already loads, and one `cm find` (limit 1) per branch head tells whether
+ * one `cm find` reads the branch (never the list of every branch), and one `cm find` (limit 1) per branch head tells whether
  * the branch has changesets. The merge itself is only previewed once the dialog opens.
  */
 export function MergeTaskSuggestion({ workspacePath, branchName }: { workspacePath: string; branchName: string }) {
-  const branch = useBranches().data?.find((candidate) => candidate.name === branchName);
+  const branch = useBranch(branchName).data ?? undefined;
   const task = isTaskBranch(branch) ? branch : undefined;
   const { data: hasChangesets } = useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'mergeTaskHasChangesets', branchName, task?.headChangeset),
