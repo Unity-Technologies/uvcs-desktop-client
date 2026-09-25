@@ -6,7 +6,7 @@
   min-height: 0;
   padding: var(--space-5);
   overflow: auto;
-  animation: fade-in var(--duration-fast);
+  animation: var(--keyframes-fade-in) var(--duration-fast);
 }
 
 .header {

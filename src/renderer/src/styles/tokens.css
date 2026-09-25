@@ -29,6 +29,11 @@
   --topbar-height: 48px;
 
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Keyframes live in global.css; CSS modules reference them through these variables
+     because modules rename any keyframe name written literally. */
+  --keyframes-spin: spin;
+  --keyframes-fade-in: fade-in;
+  --keyframes-pop-in: pop-in;
   --duration-fast: 120ms;
   --duration-normal: 200ms;
 

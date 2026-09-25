@@ -3,7 +3,7 @@
   border: 2px solid var(--border-default);
   border-top-color: var(--accent);
   border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+  animation: var(--keyframes-spin) 0.7s linear infinite;
 }
 
 .centered {
@@ -13,5 +13,5 @@
   justify-content: center;
   height: 100%;
   min-height: 120px;
-  animation: fade-in 400ms 200ms both;
+  animation: var(--keyframes-fade-in) 400ms 200ms both;
 }

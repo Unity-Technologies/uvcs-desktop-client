@@ -274,6 +274,6 @@
   font-size: var(--text-lg);
   font-weight: 500;
   pointer-events: none;
-  animation: fade-in var(--duration-fast);
+  animation: var(--keyframes-fade-in) var(--duration-fast);
   z-index: 10;
 }

@@ -22,7 +22,7 @@
   background: var(--bg-surface-raised);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
-  animation: pop-in var(--duration-fast) var(--ease-out);
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
   z-index: 900;
 }
 

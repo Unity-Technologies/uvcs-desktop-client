@@ -9,6 +9,6 @@
   color: var(--text-inverse);
   font-size: var(--text-sm);
   box-shadow: var(--shadow-md);
-  animation: fade-in var(--duration-fast) var(--ease-out);
+  animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
   z-index: 1000;
 }

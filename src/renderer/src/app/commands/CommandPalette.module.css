@@ -5,7 +5,7 @@
   justify-content: center;
   padding-top: 14vh;
   background: var(--overlay);
-  animation: fade-in var(--duration-fast);
+  animation: var(--keyframes-fade-in) var(--duration-fast);
   z-index: 850;
 }
 
@@ -19,7 +19,7 @@
   background: var(--bg-surface-raised);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
-  animation: pop-in var(--duration-normal) var(--ease-out);
+  animation: var(--keyframes-pop-in) var(--duration-normal) var(--ease-out);
 }
 
 .input {

@@ -7,7 +7,7 @@
   background: var(--bg-surface-raised);
   box-shadow: var(--shadow-md);
   pointer-events: none;
-  animation: fade-in var(--duration-fast);
+  animation: var(--keyframes-fade-in) var(--duration-fast);
   z-index: 10;
 }
 

@@ -89,5 +89,5 @@
   border: 2px solid currentColor;
   border-right-color: transparent;
   border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+  animation: var(--keyframes-spin) 0.7s linear infinite;
 }

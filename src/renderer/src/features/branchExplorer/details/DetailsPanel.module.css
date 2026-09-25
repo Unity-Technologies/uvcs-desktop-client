@@ -5,7 +5,7 @@
   width: 320px;
   border-left: 1px solid var(--border-subtle);
   overflow: auto;
-  animation: fade-in var(--duration-fast);
+  animation: var(--keyframes-fade-in) var(--duration-fast);
 }
 
 .details {
