@@ -7,11 +7,13 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  outline: none; /* a focus ring would frame the whole pane; keys still work */
+  outline: none;
 }
 
 .pane:focus-visible {
   box-shadow: none;
+  outline: var(--focus-outline);
+  outline-offset: -2px;
 }
 
 .stage {

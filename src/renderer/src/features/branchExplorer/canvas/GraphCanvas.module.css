@@ -23,7 +23,9 @@
   height: 100%;
 }
 
-/* The graph shows its own selection; a focus ring around the whole canvas is just noise. */
+/* Inside the edges, so the details panel next to it doesn't clip it. */
 .container:focus-visible {
   box-shadow: none;
+  outline: var(--focus-outline);
+  outline-offset: -2px;
 }

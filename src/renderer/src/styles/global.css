@@ -40,7 +40,7 @@ textarea {
 
 :focus-visible {
   outline: none;
-  box-shadow: var(--focus-ring);
+  box-shadow: var(--focus-ring-visible);
 }
 
 /* Text fields show focus with their own border (see Field.module.css); borderless ones, such as
