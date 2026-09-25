@@ -35,7 +35,7 @@ interface NavItemProps {
 
 export function NavItem({ icon, label, detail, badge, active = false, dimmed = false, onClick }: NavItemProps) {
   return (
-    <button className={styles.item} data-active={active} data-dimmed={dimmed} onClick={onClick}>
+    <button type="button" className={styles.item} data-active={active} data-dimmed={dimmed} onClick={onClick}>
       <span className={styles.icon}>{icon}</span>
       <span className={styles.label}>{label}</span>
       {detail && <span className={styles.detail}>{detail}</span>}
