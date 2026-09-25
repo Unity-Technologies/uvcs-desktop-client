@@ -12,6 +12,7 @@ import { HomeScreen } from './home/HomeScreen';
 import { queryClient } from './queryClient';
 import { useSettingsFromOtherWindows } from './settings/useSettings';
 import { useTheme } from './settings/useTheme';
+import { useGravatarSetting } from './settings/useGravatarSetting';
 import { CmUnavailableScreen } from './startup/CmUnavailableScreen';
 import { SetupProblemScreen } from './startup/SetupProblemScreen';
 import { useCmAvailability, useSetupCheck } from './startup/useCmAvailability';
@@ -34,6 +35,7 @@ export function App() {
 
 function Root() {
   useTheme();
+  useGravatarSetting();
   useSettingsFromOtherWindows();
   useAppCommands();
   useMenuCommands();
