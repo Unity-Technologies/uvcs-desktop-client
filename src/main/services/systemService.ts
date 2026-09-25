@@ -3,6 +3,7 @@ import { app, dialog, shell } from 'electron';
 import type { SystemApi } from '@shared/api/system';
 import { checkSetup } from '../cm/setupCheck';
 import { callerId } from '../ipc/caller';
+import { openTerminal } from '../system/openTerminal';
 import { showIncomingNotification } from '../window/incomingNotification';
 import type { ServiceContext } from './ServiceContext';
 
@@ -20,6 +21,7 @@ export function createSystemService({ cm, operations, windows }: ServiceContext)
       if (error) throw new Error(error);
     },
     revealInFileManager: async (path) => shell.showItemInFolder(path),
+    openTerminal: (path) => openTerminal(path),
     openExternal: (url) => shell.openExternal(url),
     moveToTrash: async (paths) => {
       for (const path of paths) await shell.trashItem(path);

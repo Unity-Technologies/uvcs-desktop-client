@@ -1,6 +1,7 @@
 import * as Popover from '@radix-ui/react-popover';
-import { FolderOpen, FolderPlus, Layers } from 'lucide-react';
+import { Copy, FolderGit2, FolderOpen, FolderPlus, Layers, SquareTerminal } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactElement } from 'react';
+import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorkspaceDialog';
 import { navigationTarget } from '../../lib/listNavigation';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
@@ -12,10 +13,15 @@ import { useSession } from '../workspace/sessionStore';
 import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
 import { useMissingWorkspacePaths, useRecentWorkspaceRepositories, useWorkspaceList } from '../workspace/workspaceQueries';
+import { copyWorkspacePath, openTerminalIn } from '../workspace/workspaceShellActions';
+import { currentWorkspaceMenu } from './currentWorkspaceMenu';
 import { workspaceSwitcherList } from './workspaceSwitcherList';
 import styles from './WorkspaceSwitcher.module.css';
 
-/** Quick switch to any workspace, recent ones first, without going back to the home screen. */
+/**
+ * Quick switch to any workspace, recent ones first, without going back to the home screen.
+ * Right-clicking the card offers the open workspace's actions.
+ */
 export function WorkspaceSwitcher({ currentPath, children }: { currentPath: string; children: ReactElement }) {
   const [open, setOpen] = useState(false);
   const closeWorkspace = useSession((state) => state.closeWorkspace);
@@ -29,7 +35,9 @@ export function WorkspaceSwitcher({ currentPath, children }: { currentPath: stri
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger asChild>{children}</Popover.Trigger>
+      <ActionContextMenu entries={() => currentWorkspaceMenu(currentPath)}>
+        <Popover.Trigger asChild>{children}</Popover.Trigger>
+      </ActionContextMenu>
       <Popover.Portal>
         <Popover.Content className={styles.popover} side="bottom" align="start" sideOffset={4}>
           <WorkspaceList currentPath={currentPath} onChoose={(path) => closeThen(() => openWorkspace(path))()} />
@@ -42,9 +50,23 @@ export function WorkspaceSwitcher({ currentPath, children }: { currentPath: stri
               <FolderPlus size={14} />
               New workspace…
             </button>
+            <button className={styles.footerItem} onClick={closeThen(() => openTaskWorkspaceDialog({ workspacePath: currentPath }))}>
+              <FolderGit2 size={14} />
+              New workspace for a task…
+            </button>
             <button className={styles.footerItem} onClick={closeWorkspace}>
               <Layers size={14} />
               All workspaces and repositories…
+            </button>
+          </div>
+          <div className={styles.here}>
+            <button className={styles.footerItem} onClick={closeThen(() => openTerminalIn(currentPath))}>
+              <SquareTerminal size={14} />
+              Open terminal here
+            </button>
+            <button className={styles.footerItem} onClick={closeThen(() => copyWorkspacePath(currentPath))}>
+              <Copy size={14} />
+              Copy workspace path
             </button>
           </div>
         </Popover.Content>

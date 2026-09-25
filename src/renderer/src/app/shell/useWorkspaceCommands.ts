@@ -1,6 +1,7 @@
-import { ArrowDownToLine, FolderOpen, Keyboard, ListChecks, Monitor, Moon, Pause, Play, RefreshCw, Sun, TerminalSquare } from 'lucide-react';
+import { ArrowDownToLine, Copy, FolderGit2, FolderOpen, Keyboard, ListChecks, Monitor, Moon, Pause, Play, RefreshCw, SquareTerminal, Sun, TerminalSquare } from 'lucide-react';
 import type { ThemePreference } from '@shared/domain/settings';
 import { setReviewMode } from '../../features/review/reviewModeSetting';
+import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorkspaceDialog';
 import type { Icon } from '../../lib/actions';
 import { useMemo } from 'react';
 import { useCommands, type Command } from '../commands/commandStore';
@@ -11,6 +12,7 @@ import { invalidateWorkspace } from '../queryClient';
 import { useSettings, useUpdateSettings } from '../settings/useSettings';
 import { useSession } from '../workspace/sessionStore';
 import { useWorkspacePath } from '../workspace/useWorkspace';
+import { copyWorkspacePath, openTerminalIn } from '../workspace/workspaceShellActions';
 import { useCommandLogStore } from './commandLogStore';
 import { updateUnlessUpToDate } from './workspaceOperations';
 
@@ -77,6 +79,30 @@ export function useWorkspaceCommands(): void {
         icon: FolderOpen,
         shortcut: 'mod+shift+o',
         run: closeWorkspace,
+      },
+      {
+        id: 'workspace.newForTask',
+        group: 'Workspace',
+        label: 'New workspace for a task…',
+        icon: FolderGit2,
+        keywords: ['agent', 'branch', 'parallel', 'worktree'],
+        run: () => openTaskWorkspaceDialog({ workspacePath }),
+      },
+      {
+        id: 'workspace.openTerminal',
+        group: 'Workspace',
+        label: 'Open terminal here',
+        icon: SquareTerminal,
+        keywords: ['shell', 'console', 'agent'],
+        run: () => openTerminalIn(workspacePath),
+      },
+      {
+        id: 'workspace.copyPath',
+        group: 'Workspace',
+        label: 'Copy workspace path',
+        icon: Copy,
+        keywords: ['folder', 'directory'],
+        run: () => copyWorkspacePath(workspacePath),
       },
       {
         id: 'app.commandLog',

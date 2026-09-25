@@ -22,3 +22,6 @@ export interface WorkspaceInfo {
   selector: WorkspaceSelector;
   loadedChangeset: number;
 }
+
+/** Whether a folder can hold a new workspace: `available` when it doesn't exist or is empty. */
+export type NewFolderCheck = 'available' | 'notEmpty' | 'notAFolder';

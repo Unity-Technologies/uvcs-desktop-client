@@ -62,6 +62,9 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   windows showing it; own writes are ignored in the workspace they touch.
 - Settings are written in main, one change at a time; values computed from the stored ones (the recent workspaces) are
   computed there too, and every window gets the result (`settingsChanged`).
+- "New workspace for a task" (`features/taskWorkspace`) creates a child of /main at its head (or takes an existing branch),
+  a workspace next to the current one, and switches it (a plain `cm switch`: it's empty); a failure removes the new
+  workspace and keeps the branch.
 
 ## Two developers on one branch
 
