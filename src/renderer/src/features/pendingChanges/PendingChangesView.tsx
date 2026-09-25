@@ -14,11 +14,13 @@ import { SegmentedControl } from '../../ui/SegmentedControl';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { useChangeset } from '../changesets/useChangeset';
 import { ChangeDiffPanel } from './ChangeDiffPanel';
 import { ChangesList } from './ChangesList';
 import { ChangesSummaryBar } from './ChangesSummaryBar';
 import { CheckinPanel } from './CheckinPanel';
 import { HiddenCheckedNotice, NoFilterMatches } from './FilterNotices';
+import { mergeSourceChangeset, uploadSize } from './checkinButton';
 import { checkinChanges, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
 import { isCheckinCandidate } from './changeCategories';
 import { buildChangeRows, changeKey, changesUnderRow, CHEVRON_SLOT, hasDisclosureRows, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
@@ -60,6 +62,7 @@ export function PendingChangesView() {
   const rows = buildChangeRows({ changes, changelists, layout, grouping, isChecked: isIncluded, collapsed });
   const focused = changes.find((change) => changeKey(change) === selection.anchor);
   const mergeChanges = allChanges.filter((change) => change.mergeInfo);
+  const { data: mergeSource } = useChangeset(mergeSourceChangeset(mergeChanges));
   const firstChangeKey = rows.find((row) => row.type === 'change')?.key;
 
   // Keep something selected, so the diff pane is useful from the start and after the selected file goes away.
@@ -70,6 +73,11 @@ export function PendingChangesView() {
   const setIncludedChanges = (selected: PendingChange[], include: boolean): void =>
     setIncluded(workspacePath, selected.map((change) => change.path), include);
   const toggleIncluded = (row: ChangeRow, include: boolean): void => setIncludedChanges(changesUnderRow(row), include);
+
+  // Checking in completes a pending merge: start its comment with where the merge comes from.
+  useEffect(() => {
+    if (mergeSource && !draft.summary && !draft.description) setMessage(workspacePath, { summary: `Merged from ${mergeSource.branch}` });
+  }, [mergeSource?.id]);
 
   const toggleCollapsed = (key: string): void =>
     setCollapsed((current) => {
@@ -197,7 +205,9 @@ export function PendingChangesView() {
               description={draft.description}
               onMessageChange={(message) => setMessage(workspacePath, message)}
               includedCount={included.length}
+              uploadBytes={uploadSize(included)}
               branchName={workspace?.selector.name ?? ''}
+              merging={mergeChanges.length > 0}
               recentComments={settings.recentComments}
               busy={busy}
               onCheckin={checkin}

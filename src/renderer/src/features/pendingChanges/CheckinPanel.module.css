@@ -1,4 +1,5 @@
 .panel {
+  position: relative;
   display: flex;
   flex: none;
   flex-direction: column;
@@ -41,7 +42,6 @@
 }
 
 .description {
-  height: 96px;
   min-height: 32px;
   line-height: 1.5;
   resize: none;
@@ -75,11 +75,29 @@
   border-bottom-left-radius: 0;
 }
 
-.branch {
+/* When the panel is narrow the branch gives way first, then the action; the size stays whole. */
+.action,
+.target {
+  min-width: 0;
   overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.action {
+  flex: 0 1 auto;
+}
+
+.target {
+  flex: 0 1000 auto;
   opacity: 0.75;
   font-weight: 400;
-  text-overflow: ellipsis;
+}
+
+.size {
+  flex: none;
+  opacity: 0.75;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
 }
 
 .modeMenu {
