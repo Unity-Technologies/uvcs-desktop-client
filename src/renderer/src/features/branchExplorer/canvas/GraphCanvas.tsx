@@ -10,6 +10,7 @@ import { GraphTooltip } from './GraphTooltip';
 import { useGraphPalette } from './useGraphPalette';
 import { centerOn, fitToScreen, openingViewport, revealPoint, toWorld, zoomAt, type Size, type Viewport } from './viewport';
 import styles from './GraphCanvas.module.css';
+import { subscribeToAvatars } from '../../../lib/avatars/avatarImages';
 
 /** Scene fields owned by the view; the canvas adds the viewport, size, palette and hover state. */
 export type GraphHighlights = Pick<
@@ -81,6 +82,8 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   );
 
   useEffect(scheduleDraw, [layout, highlights, palette, hoveredChangeset, scheduleDraw]);
+  // Avatars arrive in the background; repaint as each one lands.
+  useEffect(() => subscribeToAvatars(scheduleDraw), [scheduleDraw]);
 
   useImperativeHandle(
     ref,

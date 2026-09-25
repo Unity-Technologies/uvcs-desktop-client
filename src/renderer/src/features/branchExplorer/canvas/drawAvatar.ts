@@ -1,3 +1,4 @@
+import { avatarImageFor } from '../../../lib/avatars/avatarImages';
 import { initials, userHue } from '../../../lib/userName';
 
 interface AvatarStyle {
@@ -14,7 +15,7 @@ interface AvatarStyle {
   font: string;
 }
 
-/** A changeset drawn as its author's avatar: initials on the author's color, ringed with the branch color. */
+/** A changeset drawn as its author's avatar (Gravatar, or initials on the author's color), ringed with the branch color. */
 export function drawAvatar(ctx: CanvasRenderingContext2D, style: AvatarStyle): void {
   const { x, y, radius } = style;
 
@@ -33,6 +34,15 @@ export function drawAvatar(ctx: CanvasRenderingContext2D, style: AvatarStyle): v
   ctx.arc(x, y, radius, 0, Math.PI * 2);
   ctx.fillStyle = `hsl(${userHue(style.owner)} 52% 50%)`;
   ctx.fill();
+
+  const image = avatarImageFor(style.owner);
+  if (image) {
+    ctx.save();
+    ctx.clip();
+    ctx.drawImage(image, x - radius, y - radius, radius * 2, radius * 2);
+    ctx.restore();
+    return;
+  }
 
   if (!style.showInitials) return;
   ctx.fillStyle = '#fff';

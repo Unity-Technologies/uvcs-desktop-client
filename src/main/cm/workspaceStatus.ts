@@ -23,15 +23,26 @@ export async function readWorkspaceStatus(cm: CmClient, workspacePath: string): 
   const workspaceStatus = child(child(status, 'WorkspaceStatus'), 'Status');
   const repSpec = child(workspaceStatus, 'RepSpec');
   const repositoryName = text(repSpec?.Name);
-  const configName = text(status?.WkConfigName);
+  const server = text(repSpec?.Server);
 
   return {
     repositoryName,
-    server: text(repSpec?.Server),
+    server,
     selector: {
       kind: SELECTOR_KINDS[text(status?.WkConfigType)] ?? 'branch',
-      name: configName.slice(0, configName.lastIndexOf(`@${repositoryName}@`)) || configName,
+      name: selectorName(text(status?.WkConfigName), repositoryName, server),
     },
     loadedChangeset: integer(workspaceStatus?.Changeset),
   };
+}
+
+/**
+ * `/main/task@codice@codice@cloud` → `/main/task`. The repository spec is removed as a whole
+ * suffix, because repository and organization names can repeat (`codice@codice@cloud`).
+ */
+export function selectorName(configName: string, repositoryName: string, server: string): string {
+  for (const suffix of [`@${repositoryName}@${server}`, `@${repositoryName}`]) {
+    if (configName.endsWith(suffix)) return configName.slice(0, -suffix.length);
+  }
+  return configName;
 }
