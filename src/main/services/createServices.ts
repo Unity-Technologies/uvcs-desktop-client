@@ -1,6 +1,7 @@
 import type { UvcsApi } from '@shared/api';
 import { LeftChangesFinder } from '../workspace/leftChanges';
 import { SwitchShelveRecords } from '../workspace/switchShelveRecords';
+import { createAccountsService } from './accountsService';
 import { createAnnotateService } from './annotateService';
 import { createAttributesService } from './attributesService';
 import { createBranchExplorerService } from './branchExplorerService';
@@ -30,6 +31,7 @@ export function createServices(context: ServiceContext): UvcsApi {
   const switching: SwitchContext = { switchShelves, leftChanges: new LeftChangesFinder(context.cm, switchShelves) };
 
   return {
+    accounts: createAccountsService(context),
     annotate: createAnnotateService(context),
     attributes: createAttributesService(context),
     branchExplorer: createBranchExplorerService(context),

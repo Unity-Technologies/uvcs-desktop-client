@@ -1,9 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
 import { TerminalSquare } from 'lucide-react';
-import { api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
 import { useIncomingSummary } from '../../features/incoming/useIncomingSummary';
-import { UserLabel } from '../../ui/Avatar';
 import { Spinner } from '../../ui/Spinner';
 import { navigation } from '../navigation/navigationStore';
 import { useRunningOperation } from '../operations/runningOperationsStore';
@@ -14,12 +10,11 @@ import { workspaceContext } from './workspaceContext';
 import styles from './StatusBar.module.css';
 
 /**
- * A quiet line at the bottom: where the workspace is and what is running on the left, who you are on the right.
+ * A quiet line at the bottom: where the workspace is and what is running on the left, the command log on the right.
  * The last `cm` command is only a faint hint, shown on hover and while something runs; a failed one leaves a red dot
  * until the command log (which the hint opens) has been looked at.
  */
 export function StatusBar() {
-  const { data: user } = useQuery({ queryKey: queryKeys.user, queryFn: () => api.system.currentUser(), staleTime: Infinity });
   const workspacePath = useWorkspacePath();
   const { data: info } = useWorkspaceInfo();
   const { data: summary } = useIncomingSummary();
@@ -73,7 +68,6 @@ export function StatusBar() {
         )}
         {failure ? <span className={styles.failedDot} /> : <TerminalSquare size={12} />}
       </button>
-      {user && <UserLabel user={user} />}
     </footer>
   );
 }
