@@ -1,8 +1,8 @@
 import { Tags } from 'lucide-react';
 import type { AttributeType } from '@shared/domain/attribute';
+import { DetailsHeading } from '../../components/DetailsHeading';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
-import { DetailsComment } from '../../ui/DetailsComment';
 import { DetailsPanel, DetailsSection } from '../../ui/DetailsPanel';
 import { PropertyList } from '../../ui/PropertyList';
 import { saveAttributeComment } from './attributeOperations';
@@ -18,11 +18,10 @@ export function AttributeTypeDetails({ workspacePath, type, menu }: AttributeTyp
     <DetailsPanel
       icon={<Tags />}
       kind="Attribute"
-      title={type.name}
+      heading={<DetailsHeading name={type.name} comment={type.comment} onSave={(comment) => saveAttributeComment(workspacePath, type, comment)} />}
       author={{ user: type.owner, date: type.date }}
       menu={menu}
     >
-      <DetailsComment text={type.comment} onSave={(comment) => saveAttributeComment(workspacePath, type, comment)} />
       <DetailsSection title="Details">
         <PropertyList
           properties={[

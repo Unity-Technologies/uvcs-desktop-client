@@ -24,6 +24,7 @@ export function DetailsPanel({ selection, layout, menuFor, goToChangeset, select
   const links: ObjectLinks = {
     changeset: (id) => (layout.nodes.has(id) ? <DetailsLink onClick={() => goToChangeset(id)}>Changeset {id}</DetailsLink> : `Changeset ${id}`),
     branch: (name) => <BranchName name={name} onClick={() => selectBranch(name)} />,
+    selectBranch,
   };
 
   if (node) {

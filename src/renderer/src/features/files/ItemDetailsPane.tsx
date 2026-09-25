@@ -4,6 +4,7 @@ import type { TreeItem } from '@shared/domain/explorer';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
+import { DetailsHeading } from '../../components/DetailsHeading';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime, formatSize } from '../../lib/formatDate';
 import { useSettled } from '../../lib/useSettled';
@@ -35,7 +36,7 @@ export function ItemDetailsPane({ workspacePath, item, pendingChange, menu }: It
       icon={item.itemType === 'directory' ? <Folder /> : <File />}
       kind={item.itemType === 'directory' ? 'Folder' : 'File'}
       context={`/${item.path.slice(0, nameStart)}`}
-      title={item.name}
+      heading={<DetailsHeading name={item.name} />}
       author={item.owner && !item.isPrivate ? { user: item.owner, date: item.date } : undefined}
       badges={
         pendingChange ? (
@@ -49,7 +50,6 @@ export function ItemDetailsPane({ workspacePath, item, pendingChange, menu }: It
           <SegmentedControl<DetailsTab>
             value={detailsTab}
             onChange={setDetailsTab}
-            stretch
             segments={[
               { value: 'details', label: 'Details' },
               { value: 'changes', label: pendingChange ? 'Pending changes' : 'Last change' },

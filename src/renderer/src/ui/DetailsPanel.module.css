@@ -3,14 +3,29 @@
   flex: 1;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
+  background: var(--bg-surface);
+}
+
+/* The heading and whatever sections follow it: as tall as they need, scrolling once the changes pane needs the room
+   (it shrinks a hundred times faster than the pane, which keeps its size until the heading is down to its minimum). */
+.top {
+  display: flex;
+  flex: 0 100 auto;
+  flex-direction: column;
+  min-height: 120px;
   overflow: auto;
-  background: var(--bg-subtle);
+}
+
+.top:only-child {
+  flex: 1;
 }
 
 /* Selecting another row remounts the panel: its surfaces stay put while the content fades in, so the change reads as a
    crossfade instead of a flash. */
 .hero > *,
-.body {
+.body,
+.changes > * {
   animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
 }
 
@@ -23,9 +38,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
-  padding: var(--space-5) var(--space-5) var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
-  background: var(--bg-surface);
+  padding: var(--space-3) var(--space-5) var(--space-4);
 }
 
 .kindRow {
@@ -33,6 +46,7 @@
   align-items: center;
   gap: 6px;
   min-width: 0;
+  min-height: 28px;
   color: var(--text-tertiary);
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
@@ -61,36 +75,85 @@
   letter-spacing: 0.06em;
 }
 
+.badges {
+  display: flex;
+  flex: 0 1 auto;
+  flex-shrink: 0.2;
+  gap: 4px;
+  min-width: 0;
+  overflow: hidden;
+}
+
 .context {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.separator {
-  flex: none;
-}
-
-.title {
-  display: -webkit-box;
-  margin: 0;
-  overflow: hidden;
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-  line-height: 1.35;
-  overflow-wrap: anywhere;
-  /* A long comment reads in full in the Comment section below; the title only names the object. */
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
 .metaRow {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* Every item starts with its dot; the list reaches a dot's width past the left edge, so the dot of an item starting a
+   line is clipped away and only dots between items show. */
+.metaList {
+  --meta-dot: 16px;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
+  row-gap: 4px;
+  margin-left: calc(-1 * var(--meta-dot));
+  white-space: nowrap;
+}
+
+.metaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  max-width: calc(100% - var(--meta-dot));
+}
+
+.metaItem::before {
+  content: '·';
+  flex: none;
+  width: var(--meta-dot);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.copyable {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 4px;
+  margin: 0 -4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
   color: var(--text-secondary);
   font-size: var(--text-sm);
+}
+
+.copyable:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.copyIcon {
+  flex: none;
+  color: var(--text-tertiary);
+  opacity: 0.6;
+  transition: opacity var(--duration-fast);
+}
+
+.copyable:hover .copyIcon,
+.copyable:focus-visible .copyIcon {
+  opacity: 1;
 }
 
 .author {
@@ -139,36 +202,101 @@
 
 .actions {
   display: flex;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  margin-left: auto;
+  color: var(--text-primary);
+  font-size: var(--text-md);
 }
 
-.primaryAction {
+.moreDetails {
   display: flex;
-  flex: 1;
-  min-width: 0;
+  flex-direction: column;
+  gap: var(--space-1);
 }
 
-.primaryAction > * {
-  flex: 1;
+.disclosure {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  margin-left: -4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.disclosure:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.chevron {
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.disclosure[aria-expanded='true'] .chevron {
+  transform: rotate(90deg);
+}
+
+.properties {
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-subtle);
+  font-size: var(--text-sm);
+}
+
+/* Once the list shows, the pane is at least as tall as it was sized and takes whatever room the heading leaves. */
+.changes {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.changes[data-expanded='true'] {
+  flex: 1 1 var(--changes-height);
+  min-height: 120px;
+}
+
+.changesHeader {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 34px;
+  padding: var(--space-1) var(--space-5) 0;
+}
+
+.changes > .placeholder {
+  padding: 0 var(--space-5);
 }
 
 .body {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
-  padding: var(--space-4) var(--space-5) var(--space-6);
+  padding: 0 var(--space-5) var(--space-6);
 }
 
-.panel[data-fill='true'] {
+.panel[data-fill='true'] > .top {
+  flex: 1;
   overflow: hidden;
 }
 
-.panel[data-fill='true'] > .body {
+.panel[data-fill='true'] .body {
   flex: 1;
   min-height: 0;
   padding: 0;
-  background: var(--bg-surface);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .section {
@@ -198,14 +326,7 @@
   padding: var(--space-3);
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
-  background: var(--bg-surface);
-}
-
-.text {
-  margin: 0;
-  line-height: 1.55;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  background: var(--bg-subtle);
 }
 
 .placeholder {

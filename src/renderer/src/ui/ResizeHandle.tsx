@@ -8,13 +8,16 @@ interface ResizeHandleProps {
   min: number;
   max: number;
   onResize: (size: number) => void;
+  /** The element's height when a drag starts, where it can differ from `size` (e.g. it grows to fill the space left). */
+  measure?: () => number;
 }
 
 /** A splitter along the top edge of its positioned parent: dragging it up makes the sized element below it taller. */
-export function ResizeHandle({ size, min, max, onResize }: ResizeHandleProps) {
+export function ResizeHandle({ size, min, max, onResize, measure }: ResizeHandleProps) {
   const startDrag = (event: PointerEvent): void => {
     const startY = event.clientY;
-    trackPointerDrag(event, 'row-resize', (move) => onResize(Math.min(max, Math.max(min, size + startY - move.clientY))));
+    const startSize = measure?.() ?? size;
+    trackPointerDrag(event, 'row-resize', (move) => onResize(Math.min(max, Math.max(min, startSize + startY - move.clientY))));
   };
 
   return <div className={styles.handle} role="separator" aria-orientation="horizontal" onPointerDown={startDrag} />;

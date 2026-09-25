@@ -1,0 +1,143 @@
+.heading {
+  position: relative;
+  min-width: 0;
+}
+
+/* Room for the pencil at the end of the title's first line. */
+.heading[data-editable='true'] .title {
+  padding-right: 26px;
+}
+
+.edit {
+  position: absolute;
+  top: -1px;
+  right: -4px;
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+
+.heading:hover .edit,
+.edit:focus-visible {
+  opacity: 1;
+}
+
+.folded {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.title {
+  display: -webkit-box;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+}
+
+.placeholder {
+  color: var(--text-tertiary);
+  font-weight: var(--weight-medium);
+}
+
+.add {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  font: inherit;
+  font-weight: var(--weight-medium);
+}
+
+.add:hover {
+  color: var(--accent-text);
+}
+
+.description {
+  width: 100%;
+  max-height: calc(6 * 1.55em);
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+/* The cut line fades out instead of ending mid-glyph. */
+.description[data-cut='true'] {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 1.55em), transparent);
+}
+
+.folded[data-expanded='true'] .description {
+  max-height: none;
+  mask-image: none;
+}
+
+.plain {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.toggle {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent-text);
+  font-size: var(--text-sm);
+}
+
+.toggle:hover {
+  text-decoration: underline;
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.summaryField,
+.descriptionField {
+  width: 100%;
+  padding: 5px var(--space-2);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font: inherit;
+  outline: none;
+}
+
+.summaryField {
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.descriptionField {
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.summaryField:focus,
+.descriptionField:focus {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.hint {
+  flex: 1;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}

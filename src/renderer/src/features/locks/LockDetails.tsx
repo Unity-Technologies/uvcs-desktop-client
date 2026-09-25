@@ -1,5 +1,6 @@
 import { Lock as LockIcon, LockOpen } from 'lucide-react';
 import type { Lock } from '@shared/domain/lock';
+import { DetailsHeading } from '../../components/DetailsHeading';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
 import { Button } from '../../ui/Button';
@@ -15,12 +16,12 @@ export function LockDetails({ workspacePath, lock, menu }: { workspacePath: stri
       icon={<LockIcon />}
       kind="Lock"
       context={lock.path.slice(0, nameStart) || '/'}
-      title={lock.path.slice(nameStart)}
+      heading={<DetailsHeading name={lock.path.slice(nameStart)} />}
       author={{ user: lock.owner, date: lock.date }}
       badges={<DetailsBadge tone={isReleasable(lock) ? 'warning' : 'neutral'}>{lock.status}</DetailsBadge>}
       primaryAction={
         isReleasable(lock) && (
-          <Button variant="primary" icon={<LockOpen size={14} />} onClick={() => void releaseLocks(workspacePath, [lock])}>
+          <Button variant="primary" size="small" icon={<LockOpen size={13} />} onClick={() => void releaseLocks(workspacePath, [lock])}>
             Release
           </Button>
         )

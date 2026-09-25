@@ -155,10 +155,14 @@ renderer/src/
   list keys pressed while nothing has focus. Views keep their list's selection while away (`useViewSelection`). Lists
   expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
-- **List and details**: `ListWithDetails` (one remembered details width for every view) around a `DetailsPanel`: hero, the
-  default action (what Enter does on the row) plus the row's context menu behind "More actions", then Comment, changed files,
-  Details, Attributes, Relations. Selecting a row must stay cheap: `cm diff` runs only on request (`ChangedFilesSection`),
-  other lookups wait for the selection to settle (`useSettled`), and immutable results are cached (`IMMUTABLE_QUERY`).
+- **List and details**: `ListWithDetails` (one remembered details width for every view) around a `DetailsPanel`. Every
+  kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
+  context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
+  description, or the object's name with the comment below; edited in place where cm can edit it); a meta row (author ·
+  date · spec to copy · branch chip); attribute chips (`AttributeChips`); properties and relations behind "More details";
+  then the changes pane under a remembered splitter (`DetailsChangesPane`). Selecting a row must stay cheap: `cm diff`
+  runs only on request (`ChangedFilesSection`), other lookups wait for the selection to settle (`useSettled`), and
+  immutable results are cached (`IMMUTABLE_QUERY`).
 - **Branch switcher**: groups and orders branches like the official Desktop client (`branchSwitcherGroups`): /main by its
   well-known GUID, the workspace's recent branches, then the rest newest first. Recent branches are the official client's,
   read from and written to its `plasticgui.conf` (`main/plasticConfig`) on every switch, so both apps list the same ones.
