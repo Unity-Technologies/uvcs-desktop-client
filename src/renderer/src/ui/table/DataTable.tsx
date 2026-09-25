@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowDown, ArrowUp } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { MenuEntry } from '../../lib/actions';
 import { isMac } from '../../lib/platform';
 import { selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
@@ -16,6 +16,8 @@ export interface Column<Row> {
   grow?: number;
   align?: 'start' | 'end';
   secondary?: boolean;
+  /** Hidden while the table is narrower than this, so the flexible columns (a comment, a name) keep room to be read. */
+  hideBelow?: number;
   render: (row: Row) => ReactNode;
   sortValue?: (row: Row) => string | number;
 }
@@ -54,10 +56,22 @@ export function DataTable<Row>({
   selectFirstRow = false,
 }: DataTableProps<Row>) {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
+  const [tableWidth, setTableWidth] = useState(Infinity);
   const [sort, setSort] = useState(initialSort);
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
 
   const sortedRows = useMemo(() => sortRows(rows, columns, sort), [rows, columns, sort]);
+  const shownColumns = columns.filter((column) => !column.hideBelow || tableWidth >= column.hideBelow);
+
+  const hidesColumns = columns.some((column) => column.hideBelow);
+  useLayoutEffect(() => {
+    const table = tableRef.current;
+    if (!table || !hidesColumns) return;
+    const observer = new ResizeObserver(() => setTableWidth(table.clientWidth));
+    observer.observe(table);
+    return () => observer.disconnect();
+  }, [hidesColumns]);
   const orderedKeys = useMemo(() => sortedRows.map(rowKey), [sortedRows, rowKey]);
   const rowsByKey = useMemo(() => new Map(sortedRows.map((row) => [rowKey(row), row])), [sortedRows, rowKey]);
 
@@ -133,7 +147,7 @@ export function DataTable<Row>({
               onMouseDown={(event) => onRowMouseDown(key, event)}
               onDoubleClick={() => onActivate?.(row)}
             >
-              {columns.map((column) => (
+              {shownColumns.map((column) => (
                 <div
                   key={column.id}
                   className={[styles.cell, column.secondary && styles.secondary, column.align === 'end' && styles.end].filter(Boolean).join(' ')}
@@ -150,9 +164,9 @@ export function DataTable<Row>({
   );
 
   return (
-    <div className={styles.table} tabIndex={0} onKeyDown={onKeyDown}>
+    <div ref={tableRef} className={styles.table} tabIndex={0} onKeyDown={onKeyDown}>
       <div className={styles.header}>
-        {columns.map((column) => (
+        {shownColumns.map((column) => (
           <button
             key={column.id}
             className={[styles.headerCell, column.sortValue && styles.sortable, column.align === 'end' && styles.end].filter(Boolean).join(' ')}

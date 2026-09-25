@@ -6,6 +6,7 @@ import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { NoSelection } from '../../components/NoSelection';
+import { PathLabel } from '../../components/PathLabel';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
@@ -40,18 +41,28 @@ const COLUMNS: Column<CodeReview>[] = [
         <span className={styles.id}>
           #<Highlight text={String(review.id)} />
         </span>
-        <Highlight text={review.title} />
+        <span className={styles.titleText}>
+          <Highlight text={review.title} />
+        </span>
       </span>
     ),
     sortValue: (review) => review.title.toLowerCase(),
   },
   { id: 'status', header: 'Status', width: 150, render: (review) => <CodeReviewStatusBadge status={review.status} />, sortValue: (review) => review.status },
-  { id: 'target', header: 'Changes', grow: 1, secondary: true, render: (review) => describeTarget(review.target) },
-  { id: 'owner', header: 'Author', grow: 1, render: (review) => <UserLabel user={review.owner} />, sortValue: (review) => review.owner },
+  {
+    id: 'target',
+    header: 'Changes',
+    grow: 1,
+    secondary: true,
+    hideBelow: 820,
+    render: (review) => (review.target.kind === 'branch' ? <PathLabel path={review.target.branch} /> : describeTarget(review.target)),
+  },
+  { id: 'owner', header: 'Author', grow: 1, hideBelow: 600, render: (review) => <UserLabel user={review.owner} />, sortValue: (review) => review.owner },
   {
     id: 'assignee',
     header: 'Reviewer',
     grow: 1,
+    hideBelow: 700,
     render: (review) => (review.assignee ? <UserLabel user={review.assignee} /> : <span className={styles.unassigned}>Unassigned</span>),
     sortValue: (review) => review.assignee,
   },

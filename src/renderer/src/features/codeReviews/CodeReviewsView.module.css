@@ -9,6 +9,11 @@
   white-space: nowrap;
 }
 
+.titleText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .id {
   flex: none;
   color: var(--text-tertiary);
