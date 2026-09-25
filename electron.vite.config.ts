@@ -20,6 +20,5 @@ export default defineConfig({
     resolve: {
       alias: { ...sharedAlias, '@renderer': resolve(__dirname, 'src/renderer/src') },
     },
-    optimizeDeps: { include: ['@pierre/diffs', '@pierre/diffs/react'] },
   },
 });
