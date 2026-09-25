@@ -30,7 +30,10 @@ export function isRefreshable(query: Query): boolean {
   return query.meta?.immutable !== true;
 }
 
-/** Refreshes every view of a workspace; call it after anything that changes the workspace or its repository. */
-export function invalidateWorkspace(workspacePath: string): Promise<void> {
-  return queryClient.invalidateQueries({ queryKey: workspaceKey(workspacePath), predicate: isRefreshable });
+/**
+ * Refreshes every view of a workspace; call it after anything that changes the workspace or its repository.
+ * `affected` narrows it to what the change can touch.
+ */
+export function invalidateWorkspace(workspacePath: string, affected: (queryKey: readonly unknown[]) => boolean = () => true): Promise<void> {
+  return queryClient.invalidateQueries({ queryKey: workspaceKey(workspacePath), predicate: (query) => isRefreshable(query) && affected(query.queryKey) });
 }

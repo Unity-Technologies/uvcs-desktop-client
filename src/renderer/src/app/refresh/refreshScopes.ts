@@ -40,6 +40,11 @@ export function isAffectedByLoadedChangeset(key: QueryKey): boolean {
 /** Repository objects a checkin by someone else doesn't touch. */
 const UNTOUCHED_BY_CHECKINS = ['labels', 'shelves', 'attributeTypes', 'attributeUsedValues', 'codeReviews', 'leftChanges'];
 
+/** A checkin from this workspace: everything but the objects checkins don't create or change. */
+export function isAffectedByOwnCheckin(key: QueryKey): boolean {
+  return !UNTOUCHED_BY_CHECKINS.includes(area(key) as string);
+}
+
 /**
  * New changesets on the server: repository views (history, branches, incoming...), not the disk, the check that told,
  * nor the lists of objects checkins don't create (every label or shelve is a heavy read on big repositories).

@@ -4,6 +4,7 @@ import {
   isAffectedByLoadedChangeset,
   isAffectedByMovedPaths,
   isAffectedByNewChangesets,
+  isAffectedByOwnCheckin,
   isAffectedByWorkspaceState,
 } from './refreshScopes';
 
@@ -49,5 +50,15 @@ describe('refresh scopes', () => {
     expect(isAffectedByNewChangesets(key('shelves', {}))).toBe(false);
     expect(isAffectedByNewChangesets(key('attributeTypes'))).toBe(false);
     expect(isAffectedByNewChangesets(key('codeReviews', { scope: 'all' }))).toBe(false);
+  });
+
+  it("refreshes after this workspace's checkin all but the objects a checkin leaves alone", () => {
+    expect(isAffectedByOwnCheckin(key('pendingChanges'))).toBe(true);
+    expect(isAffectedByOwnCheckin(key('info'))).toBe(true);
+    expect(isAffectedByOwnCheckin(key('incoming', 'summary', { branch: '/main', loadedChangeset: 4 }))).toBe(true);
+    expect(isAffectedByOwnCheckin(key('changesets', {}))).toBe(true);
+    expect(isAffectedByOwnCheckin(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(false);
+    expect(isAffectedByOwnCheckin(key('labels', {}))).toBe(false);
+    expect(isAffectedByOwnCheckin(key('shelves', { owner: 'me' }))).toBe(false);
   });
 });

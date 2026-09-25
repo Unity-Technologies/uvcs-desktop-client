@@ -27,6 +27,8 @@ interface OperationOptions<T> {
    * bar; otherwise the failure shows as an error toast.
    */
   onFailure?: (error: unknown) => boolean;
+  /** The views it can change (`refreshScopes`), refreshed when it ends; every view by default. */
+  affects?: (queryKey: readonly unknown[]) => boolean;
 }
 
 /**
@@ -44,6 +46,7 @@ export async function runOperation<T>({
   cancellable = true,
   kind,
   onFailure,
+  affects,
 }: OperationOptions<T>): Promise<T | undefined> {
   if (kind && refuseWhileBusy(workspacePath)) return undefined;
 
@@ -86,7 +89,7 @@ export async function runOperation<T>({
   } finally {
     stopListening();
     operations.finish(operationId);
-    void invalidateWorkspace(workspacePath);
+    void invalidateWorkspace(workspacePath, affects);
   }
 }
 
