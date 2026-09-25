@@ -43,32 +43,19 @@ export function pendingChangeMenu(
   workspacePath: string,
   changes: PendingChange[],
   changelists: Changelist[],
-  { isIncluded, setIncluded }: CheckinInclusion,
+  /** Offers to include or exclude the changes; left out where there is no check-in to pick for (the command palette). */
+  inclusion?: CheckinInclusion,
 ): MenuEntry[] {
   if (changes.length === 0) return [];
 
   const single = changes.length === 1 ? changes[0]! : null;
-  const candidates = changes.filter(isCheckinCandidate);
-  const excluded = candidates.filter((change) => !isIncluded(change));
-  const included = candidates.filter(isIncluded);
   const privateChanges = changes.filter((change) => categoryOf(change) === 'private');
   const controlledChanges = changes.filter(isControlled);
   const checkoutCandidates = controlledChanges.filter((change) => !change.kinds.includes('checkedOut') && !change.kinds.includes('added'));
   const onDisk = single && existsOnDisk(single);
 
   return tidyMenu([
-    excluded.length > 0 && {
-      id: 'include',
-      label: 'Include in check-in',
-      icon: SquareCheckBig,
-      run: () => setIncluded(excluded, true),
-    },
-    included.length > 0 && {
-      id: 'exclude',
-      label: 'Exclude from check-in',
-      icon: Square,
-      run: () => setIncluded(included, false),
-    },
+    ...(inclusion ? inclusionEntries(changes, inclusion) : []),
     SEPARATOR,
     onDisk && {
       id: 'open',
@@ -137,6 +124,17 @@ export function pendingChangeMenu(
         },
       ],
     },
+  ]);
+}
+
+/** Include the unchecked changes in the next check-in, or exclude the checked ones. */
+function inclusionEntries(changes: PendingChange[], { isIncluded, setIncluded }: CheckinInclusion): MenuEntry[] {
+  const candidates = changes.filter(isCheckinCandidate);
+  const excluded = candidates.filter((change) => !isIncluded(change));
+  const included = candidates.filter(isIncluded);
+  return tidyMenu([
+    excluded.length > 0 && { id: 'include', label: 'Include in check-in', icon: SquareCheckBig, run: () => setIncluded(excluded, true) },
+    included.length > 0 && { id: 'exclude', label: 'Exclude from check-in', icon: Square, run: () => setIncluded(included, false) },
   ]);
 }
 
