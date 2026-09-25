@@ -25,6 +25,19 @@ export function fitBranchName(ctx: CanvasRenderingContext2D, name: string, maxWi
   });
 }
 
+const widths = new Map<string, number>();
+
+/** The width of `text` in the context's current font, cached like the fitted texts. */
+export function textWidth(ctx: CanvasRenderingContext2D, text: string): number {
+  const key = `${ctx.font}|${text}`;
+  let width = widths.get(key);
+  if (width === undefined) {
+    if (widths.size > MAX_CACHED) widths.clear();
+    widths.set(key, (width = ctx.measureText(text).width));
+  }
+  return width;
+}
+
 function cached(key: string, fit: () => string): string {
   const hit = cache.get(key);
   if (hit !== undefined) return hit;

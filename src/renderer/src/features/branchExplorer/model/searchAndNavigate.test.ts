@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { sampleHistory } from './graphFixtures';
 import { layoutGraph } from './layoutGraph';
 import { neighborChangeset } from './navigateGraph';
-import { searchGraph, searchHighlight } from './searchGraph';
+import { searchGraph, searchHighlight, type SearchHit } from './searchGraph';
 
 const layout = layoutGraph(sampleHistory());
 
@@ -36,10 +36,17 @@ describe('searchGraph', () => {
 describe('searchHighlight', () => {
   it('splits hits by kind and keeps the current one', () => {
     const hits = searchGraph(layout, 'main');
-    const highlight = searchHighlight(hits, hits[0]!);
+    const highlight = searchHighlight(layout, hits, hits[0]!);
     expect([...highlight.branches]).toEqual(['/main', '/main/a', '/main/b']);
     expect(highlight.changesets.size).toBe(0);
     expect(highlight.active).toEqual({ kind: 'branch', name: '/main' });
+  });
+
+  it('lights the branches holding a changeset hit', () => {
+    const hits: SearchHit[] = [{ kind: 'changeset', id: 2 }];
+    const highlight = searchHighlight(layout, hits, null);
+    expect([...highlight.litBranches]).toEqual([layout.nodes.get(2)!.changeset.branch]);
+    expect(highlight.branches.size).toBe(0);
   });
 });
 

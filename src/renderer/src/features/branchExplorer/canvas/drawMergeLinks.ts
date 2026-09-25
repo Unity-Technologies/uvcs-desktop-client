@@ -1,5 +1,5 @@
 import type { MergeLink } from '@shared/domain/branchExplorer';
-import type { DrawContext } from './drawContext';
+import { STRUCTURE_DIMMED_ALPHA, type DrawContext } from './drawContext';
 import { linkCurve, pointOnCurve, type Curve } from './curves';
 import { NODE_RADIUS } from './geometry';
 import { branchColor, mergeLinkDash } from './graphPalette';
@@ -28,23 +28,32 @@ function linkColor({ scene }: DrawContext, link: MergeLink): string {
 
 function drawLink(draw: DrawContext, link: MergeLink, curve: Curve): void {
   const { ctx, scene } = draw;
-  const involvesSelection = scene.selectedChangeset === link.sourceChangeset || scene.selectedChangeset === link.destinationChangeset;
+  const emphasized = involves(link, scene.selectedChangeset) || involves(link, scene.hoveredChangeset);
+  // While searching, a link stays lit only between two hits; the rest recede with the changesets they join.
+  const { search } = scene;
+  const lit = !search || (search.changesets.has(link.sourceChangeset) && search.changesets.has(link.destinationChangeset));
   const [from, c1, c2, to] = curve;
 
   ctx.save();
   ctx.strokeStyle = linkColor(draw, link);
   ctx.fillStyle = ctx.strokeStyle;
-  ctx.globalAlpha = involvesSelection ? 1 : 0.7;
-  ctx.lineWidth = involvesSelection ? 2.5 : 1.75;
+  ctx.globalAlpha = emphasized ? 1 : lit ? 0.75 : STRUCTURE_DIMMED_ALPHA;
+  ctx.lineWidth = emphasized ? 2.5 : 2;
   ctx.lineCap = 'round';
   ctx.setLineDash(mergeLinkDash(link.type));
   ctx.beginPath();
   ctx.moveTo(from.x, from.y);
   ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, to.x, to.y);
   ctx.stroke();
-  ctx.setLineDash([]);
+  ctx.setLineDash(NO_DASH);
   drawArrowHead(ctx, curve, draw.detail.avatars ? NODE_RADIUS + 4 : DOT_RADIUS + 3);
   ctx.restore();
+}
+
+const NO_DASH: number[] = [];
+
+function involves(link: MergeLink, changeset: number | null): boolean {
+  return changeset === link.sourceChangeset || changeset === link.destinationChangeset;
 }
 
 /** An arrow touching the destination changeset, aligned with the end of the curve. */

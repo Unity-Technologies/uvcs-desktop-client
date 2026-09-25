@@ -91,11 +91,11 @@ export function BranchExplorerView() {
       homeChangeset,
       currentBranch,
       highlightedAuthor,
-      search: search.trim() ? searchHighlight(searchHits, searchHits[activeHitIndex] ?? null) : null,
+      search: search.trim() && fullLayout ? searchHighlight(fullLayout, searchHits, searchHits[activeHitIndex] ?? null) : null,
       options: { showComments, showAvatars },
       reviews: reviews ?? NO_REVIEWS,
     }),
-    [selection, homeChangeset, currentBranch, highlightedAuthor, search, searchHits, activeHitIndex, showComments, showAvatars, reviews],
+    [selection, homeChangeset, currentBranch, highlightedAuthor, search, fullLayout, searchHits, activeHitIndex, showComments, showAvatars, reviews],
   );
 
   const goToChangeset = useCallback((id: number) => {

@@ -1,7 +1,8 @@
 import type { GraphChangeset } from '@shared/domain/branchExplorer';
 import type { CodeReview } from '@shared/domain/codeReview';
-import type { GraphLayout } from '../model/layoutGraph';
+import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
 import type { SearchHighlight } from '../model/searchGraph';
+import type { DrawnBoxes } from './drawnBoxes';
 import type { GraphPalette } from './graphPalette';
 import type { Size, Viewport } from './viewport';
 
@@ -21,6 +22,8 @@ export interface GraphScene {
   selectedChangeset: number | null;
   selectedBranch: string | null;
   hoveredChangeset: number | null;
+  /** The branch whose header or band is under the pointer. */
+  hoveredBranch: string | null;
   /** The code review whose chip is under the pointer. */
   hoveredReview: number | null;
   homeChangeset: number | null;
@@ -36,17 +39,21 @@ export interface GraphScene {
   reviews: ReadonlyMap<string, CodeReview>;
 }
 
-/** A code review chip where it was drawn this frame (world coordinates), so a click on it can open the review. */
-export interface DrawnReviewChip {
-  review: CodeReview;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
+/** Where the pointer targets were drawn in the last frame (world coordinates). Owned by the canvas, refilled by every frame. */
+export interface DrawnTargets {
+  reviewChips: DrawnBoxes<CodeReview>;
+  /** Branch header cards where they are drawn, pinned to the left edge or not. */
+  branchHeaders: DrawnBoxes<Lane>;
+  /** Changeset comments, as wide as the text drawn. */
+  captions: DrawnBoxes<NodeLayout>;
 }
 
-/** Opacity of what the author filter or a search pushes into the background. */
-export const DIMMED_ALPHA = 0.25;
+/** Opacity of the changesets the author filter or a search pushes into the background. */
+export const DIMMED_ALPHA = 0.18;
+/** Headers and labels without a hit fade less: they are how one finds the way, they must stay locatable. */
+export const GHOST_ALPHA = 0.3;
+/** Bands and links recede with the changesets while a search picks some out. */
+export const STRUCTURE_DIMMED_ALPHA = 0.12;
 
 export function isChangesetDimmed({ highlightedAuthor, search }: GraphScene, changeset: GraphChangeset): boolean {
   return (highlightedAuthor !== null && changeset.owner !== highlightedAuthor) || (search !== null && !search.changesets.has(changeset.id));
@@ -68,8 +75,8 @@ export interface DetailLevel {
   text: boolean;
   /** Avatars with initials instead of plain dots. */
   avatars: boolean;
-  /** Changeset comments under the nodes. */
-  comments: boolean;
+  /** Opacity of the changeset comments under the nodes; 0 when hidden. */
+  captions: number;
 }
 
 export interface DrawContext {
@@ -77,14 +84,23 @@ export interface DrawContext {
   scene: GraphScene;
   visible: VisibleArea;
   detail: DetailLevel;
-  /** Filled while drawing. */
-  reviewChips: DrawnReviewChip[];
+  pixelRatio: number;
+  drawn: DrawnTargets;
 }
+
+/** Comments are fully shown from this zoom, and fade out as a whole just below it: never one by one. */
+const CAPTIONS_FULL_ZOOM = 0.8;
+const CAPTIONS_FADE_SPAN = 0.15;
 
 export function detailLevel(zoom: number, options: GraphViewOptions): DetailLevel {
   return {
     text: zoom >= 0.45,
     avatars: options.showAvatars && zoom >= 0.55,
-    comments: options.showComments && zoom >= 0.8,
+    captions: options.showComments ? captionAlpha(zoom) : 0,
   };
+}
+
+/** Opacity of the comment layer at a zoom: a soft exit instead of a pop while zooming through the threshold. */
+export function captionAlpha(zoom: number): number {
+  return Math.min(1, Math.max(0, (zoom - (CAPTIONS_FULL_ZOOM - CAPTIONS_FADE_SPAN)) / CAPTIONS_FADE_SPAN));
 }

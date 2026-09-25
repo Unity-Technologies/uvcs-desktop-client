@@ -1,5 +1,5 @@
 import type { Lane } from '../model/layoutGraph';
-import type { DrawContext } from './drawContext';
+import { STRUCTURE_DIMMED_ALPHA, type DrawContext } from './drawContext';
 import { BAND_HEIGHT, NODE_RADIUS } from './geometry';
 import { branchColor } from './graphPalette';
 import { nodePoint } from './graphTargets';
@@ -7,6 +7,9 @@ import { laneShape, type LaneShape } from './laneShape';
 import { boundsOf, crossesView } from './linkVisibility';
 
 const ELBOW_RADIUS = 16;
+/** The selection wraps the band like it wraps a changeset: a soft halo and an accent ring. */
+const SELECTION_HALO = 6;
+const SELECTION_RING = 3;
 
 /** Branch bands, and the elbow each branch draws from its base changeset on the parent's band. */
 export function drawLanes(draw: DrawContext): void {
@@ -16,39 +19,64 @@ export function drawLanes(draw: DrawContext): void {
     const base = lane.baseChangeset !== null ? nodePoint(scene.layout, lane.baseChangeset) : null;
     // The band and the whole elbow down from its base: the elbow stays while it crosses the screen.
     const bounds = boundsOf([{ x: shape.left, y: shape.y }, { x: shape.right, y: shape.y }, ...(base ? [base] : [])]);
-    if (!crossesView(bounds, visible, BAND_HEIGHT)) continue;
+    if (!crossesView(bounds, visible, BAND_HEIGHT + SELECTION_HALO)) continue;
 
     const color = branchColor(scene.palette, lane.branch.name);
-    if (base) drawBranchStart(draw, base, shape, color);
+    if (base) drawBranchStart(draw, lane, base, shape, color);
     drawBand(draw, lane, shape, color);
   }
 }
 
-function drawBand({ ctx, scene }: DrawContext, lane: Lane, shape: LaneShape, color: string): void {
-  const isCurrent = scene.currentBranch === lane.branch.name;
-  const isSelected = scene.selectedBranch === lane.branch.name;
-  const height = BAND_HEIGHT;
+function drawBand(draw: DrawContext, lane: Lane, shape: LaneShape, color: string): void {
+  const { ctx, scene } = draw;
+  const name = lane.branch.name;
+  const isCurrent = scene.currentBranch === name;
+  const isSelected = scene.selectedBranch === name;
+  const isHovered = scene.hoveredBranch === name;
+  // While a search picks changesets out, the bands recede, unless they hold a hit.
+  const recedes = scene.search !== null && !scene.search.litBranches.has(name);
+  const top = shape.y - BAND_HEIGHT / 2;
+  const width = shape.right - shape.left;
+  const radius = BAND_HEIGHT / 2;
 
   ctx.save();
-  ctx.beginPath();
-  ctx.roundRect(shape.left, shape.y - height / 2, shape.right - shape.left, height, height / 2);
+  if (isSelected) {
+    ctx.fillStyle = scene.palette.accentSoft;
+    roundRect(ctx, shape.left, top, width, BAND_HEIGHT, radius, SELECTION_HALO);
+    ctx.fill();
+  }
+  roundRect(ctx, shape.left, top, width, BAND_HEIGHT, radius, 0);
   ctx.fillStyle = color;
-  ctx.globalAlpha = (scene.palette.isDark ? 0.14 : 0.1) + (isCurrent ? 0.08 : 0) + (isSelected ? 0.06 : 0);
+  ctx.globalAlpha = (scene.palette.isDark ? 0.1 : 0.06) + (isCurrent ? 0.03 : 0) + (isHovered ? 0.04 : 0);
+  if (recedes) ctx.globalAlpha *= 0.5;
   ctx.fill();
   ctx.strokeStyle = color;
-  ctx.globalAlpha = isSelected ? 0.95 : isCurrent ? 0.75 : 0.3;
-  ctx.lineWidth = isSelected || isCurrent ? 1.5 : 1;
+  ctx.globalAlpha = (isCurrent ? 0.6 : isHovered ? 0.5 : 0.3) * (recedes ? 0.4 : 1);
+  ctx.lineWidth = isCurrent ? 1.5 : 1;
   ctx.stroke();
+  if (isSelected) {
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = scene.palette.accent;
+    ctx.lineWidth = 2;
+    roundRect(ctx, shape.left, top, width, BAND_HEIGHT, radius, SELECTION_RING);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
+function roundRect(ctx: CanvasRenderingContext2D, left: number, top: number, width: number, height: number, radius: number, grow: number): void {
+  ctx.beginPath();
+  ctx.roundRect(left - grow, top - grow, width + grow * 2, height + grow * 2, radius + grow);
+}
+
 /** Down from the base changeset, a rounded turn, then right into the band. */
-function drawBranchStart({ ctx }: DrawContext, base: { x: number; y: number }, shape: LaneShape, color: string): void {
+function drawBranchStart({ ctx, scene }: DrawContext, lane: Lane, base: { x: number; y: number }, shape: LaneShape, color: string): void {
   const radius = Math.max(4, Math.min(ELBOW_RADIUS, shape.left - base.x, shape.y - base.y - NODE_RADIUS));
+  const recedes = scene.search !== null && !scene.search.litBranches.has(lane.branch.name);
 
   ctx.save();
   ctx.strokeStyle = color;
-  ctx.globalAlpha = 0.75;
+  ctx.globalAlpha = recedes ? STRUCTURE_DIMMED_ALPHA : 0.8;
   ctx.lineWidth = 2;
   ctx.lineCap = 'round';
   ctx.beginPath();
