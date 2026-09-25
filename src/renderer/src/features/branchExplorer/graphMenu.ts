@@ -12,7 +12,6 @@ import {
   GitPullRequestArrow,
   Minus,
   Tag,
-  TagIcon,
 } from 'lucide-react';
 import { spec } from '@shared/domain/specs';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
@@ -73,7 +72,7 @@ function changesetMenu(id: number, { workspacePath, layout, goToChangeset }: Gra
           startingPointLabel: `changeset ${id}`,
         }),
     },
-    { id: 'label', label: 'Label this changeset…', icon: TagIcon, run: () => openCreateLabelDialog(workspacePath, id) },
+    { id: 'label', label: 'Label this changeset…', icon: Tag, run: () => openCreateLabelDialog(workspacePath, id) },
     SEPARATOR,
     { id: 'merge', label: 'Merge from this changeset', icon: GitMerge, run: () => graphActions.merge('merge', spec.changeset(id)) },
     { id: 'cherryPick', label: 'Cherry pick this changeset', icon: GitPullRequestArrow, run: () => graphActions.merge('cherryPick', spec.changeset(id)) },
