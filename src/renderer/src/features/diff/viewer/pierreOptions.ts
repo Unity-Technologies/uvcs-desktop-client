@@ -18,7 +18,7 @@ export function pierreThemeName(theme: ResolvedTheme): 'pierre-light' | 'pierre-
   return theme === 'dark' ? 'pierre-dark' : 'pierre-light';
 }
 
-export function pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }: DiffAppearance): FileDiffOptions<undefined, undefined> {
+export function pierreDiffOptions<LAnnotation = undefined>({ theme, layout, collapseUnchanged, wrapLines }: DiffAppearance): FileDiffOptions<LAnnotation, undefined> {
   return {
     theme: pierreThemeName(theme),
     themeType: theme,

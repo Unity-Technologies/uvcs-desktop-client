@@ -1,5 +1,5 @@
 import { AppWindow, Columns2, FileText, FoldVertical, Pencil, Rows2, WrapText } from 'lucide-react';
-import { Suspense, useMemo, type ReactNode } from 'react';
+import { Suspense, useMemo, useState, type ReactNode } from 'react';
 import type { FileContent } from '@shared/domain/content';
 import { api } from '../../../api/client';
 import { formatSize } from '../../../lib/formatDate';
@@ -15,9 +15,11 @@ import { diffPresentation } from './diffPresentation';
 import { useDiffPreferences, type DiffLayout } from './diffPreferencesStore';
 import { PaneToolbarGroup } from '../../../ui/PaneToolbar';
 import { DiffViewerFrame } from './DiffViewerFrame';
+import { FileChangedNotice } from './FileChangedNotice';
 import { IMAGE_DIFF_MODES, type ImageDiffMode } from './image/imageDiffModes';
 import { lineChangeStats } from './lineChangeStats';
 import { LineStats } from './LineStats';
+import { revertBlock } from './revertBlock';
 import type { DiffContents } from './useDiffContents';
 import { useFileEditing } from './useFileEditing';
 
@@ -32,14 +34,25 @@ interface LoadedFileDiffProps {
   fileName: string;
   title?: ReactNode;
   identicalDescription?: string;
+  /** Controls about what to compare, first in the toolbar of a text diff. */
+  compareControls?: ReactNode;
+  /** Reverting blocks brought the workspace file back to its loaded revision. */
+  onMatchesBase?: () => void;
 }
 
 /** One loaded pair of file versions, with the toolbar that fits how it's shown. */
-export function LoadedFileDiff({ workspacePath, contents, fileName, title, identicalDescription }: LoadedFileDiffProps) {
+export function LoadedFileDiff({ workspacePath, contents, fileName, title, identicalDescription, compareControls, onMatchesBase }: LoadedFileDiffProps) {
   const { layout, collapseUnchanged, wrapLines, imageMode, setLayout, setCollapseUnchanged, setWrapLines, setImageMode } = useDiffPreferences();
-  const { left, right, modified } = contents;
-  const editablePath = modified.kind === 'workspaceFile' ? modified.path : null;
+  const editablePath = contents.modified.kind === 'workspaceFile' ? contents.modified.path : null;
   const editing = useFileEditing(workspacePath, editablePath);
+  // The file follows the disk, except while it's being edited: then it stays as it was when editing started.
+  const [editedFrom, setEditedFrom] = useState(contents);
+  const { left, right, original } = editing.editing ? editedFrom : contents;
+  const changedOnDisk = editing.editing && contents.right.text !== editedFrom.right.text && contents.right.text !== editing.draft;
+  const startEditing = (): void => {
+    setEditedFrom(contents);
+    editing.start();
+  };
 
   const presentation = diffPresentation(left, right);
   const isText = presentation.kind === 'text';
@@ -48,10 +61,20 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const openFile = editablePath === null ? undefined : () => void api.system.openPath(absolutePath(workspacePath, editablePath));
 
   useShortcut('mod+s', () => void editing.save(), editing.editing);
-  useShortcut('mod+e', editing.start, canEdit && !editing.editing);
+  useShortcut('mod+e', startEditing, canEdit && !editing.editing);
+
+  // Against nothing (an added file), reverting a block only deletes it: undo or delete the file instead.
+  const onRevertBlock =
+    editablePath === null || original.kind === 'empty'
+      ? undefined
+      : (reverted: string) =>
+          void revertBlock(
+            { workspacePath, path: editablePath, currentText: right.text ?? '', baseText: original.kind === 'workspaceBase' ? (left.text ?? '') : null, onMatchesBase },
+            reverted,
+          );
 
   const editAction = canEdit && (
-    <Button icon={<Pencil size={13} />} onClick={editing.start}>
+    <Button icon={<Pencil size={13} />} onClick={startEditing}>
       Edit file
     </Button>
   );
@@ -67,9 +90,10 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
     </PaneToolbarGroup>
   ) : isText ? (
     <>
+      {compareControls}
       {stats && (stats.added > 0 || stats.removed > 0) && <LineStats {...stats} />}
       <PaneToolbarGroup>
-        {canEdit && <IconButton size="small" icon={<Pencil size={13} />} label="Edit this file" shortcut="mod+e" onClick={editing.start} />}
+        {canEdit && <IconButton size="small" icon={<Pencil size={13} />} label="Edit this file" shortcut="mod+e" onClick={startEditing} />}
         <IconButton
           size="small"
           icon={<FoldVertical size={14} />}
@@ -108,13 +132,18 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
 
   let body: ReactNode;
   if (isText && editing.editing) {
-    body = <TextDiffBody original={left.text} modified={right.text} fileName={fileName} editing onEdit={editing.change} />;
+    body = (
+      <>
+        {changedOnDisk && <FileChangedNotice onReload={editing.discard} />}
+        <TextDiffBody original={left.text} modified={right.text} fileName={fileName} editing onEdit={editing.change} />
+      </>
+    );
   } else if (presentation.kind === 'text' && presentation.empty) {
     body = <EmptyState icon={<FileText size={22} />} title="Empty file" description="This file has no content." action={editAction} />;
   } else if (presentation.kind === 'text' && presentation.identical) {
     body = <EmptyState title="No content changes" description={identicalDescription ?? 'The contents of both versions are identical.'} action={editAction} />;
   } else if (presentation.kind === 'text') {
-    body = <TextDiffBody original={left.text} modified={right.text} fileName={fileName} />;
+    body = <TextDiffBody original={left.text} modified={right.text} fileName={fileName} onRevertBlock={onRevertBlock} />;
   } else if (presentation.kind === 'tooLarge') {
     body = (
       <EmptyState
@@ -146,12 +175,13 @@ interface TextDiffBodyProps {
   fileName: string;
   editing?: boolean;
   onEdit?: (text: string) => void;
+  onRevertBlock?: (text: string) => void;
 }
 
-function TextDiffBody({ original, modified, fileName, editing = false, onEdit = () => {} }: TextDiffBodyProps) {
+function TextDiffBody({ original, modified, fileName, editing = false, onEdit = () => {}, onRevertBlock }: TextDiffBodyProps) {
   return (
     <Suspense fallback={<CenteredSpinner />}>
-      <TextDiff original={original ?? ''} modified={modified ?? ''} fileName={fileName} editing={editing} onEdit={onEdit} />
+      <TextDiff original={original ?? ''} modified={modified ?? ''} fileName={fileName} editing={editing} onEdit={onEdit} onRevertBlock={onRevertBlock} />
     </Suspense>
   );
 }

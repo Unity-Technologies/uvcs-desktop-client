@@ -21,6 +21,10 @@ import { ChangesList } from './ChangesList';
 import { ChangesSummaryBar } from './ChangesSummaryBar';
 import { CheckinPanel } from './CheckinPanel';
 import { HiddenCheckedNotice, NoFilterMatches } from './FilterNotices';
+import { LiveRefreshToggle } from './LiveRefreshToggle';
+import { LockedByOthersNotice } from './locks/LockedByOthersNotice';
+import { usePendingLocks } from './locks/usePendingLocks';
+import { useReviewMode } from './review/useReviewMode';
 import { mergeSourceChangeset, uploadSize } from './checkinButton';
 import { checkinChanges, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
 import { isCheckinCandidate } from './changeCategories';
@@ -41,7 +45,7 @@ const changePath = (change: PendingChange): string => change.path;
 export function PendingChangesView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
-  const { data: snapshot, isLoading, isFetching, error } = usePendingChanges();
+  const { data: snapshot, isLoading, isFetching, isPlaceholderData, dataUpdatedAt, error } = usePendingChanges();
   const settings = useSettings();
   const { layout, setLayout, grouping, setGrouping } = usePendingChangesViewStore();
   const draft = useCheckinDraft(workspacePath);
@@ -52,7 +56,14 @@ export function PendingChangesView() {
   const [busy, setBusy] = useState(false);
 
   const allChanges = snapshot?.changes ?? NO_CHANGES;
-  const { visible: changes, query, clear: clearFilter, bar: filterBar } = useChangeFilter(allChanges, changePath, changeTone);
+  const review = useReviewMode(workspacePath, allChanges, snapshot !== undefined && !isPlaceholderData);
+  const locks = usePendingLocks(workspacePath, workspace?.repository, allChanges, dataUpdatedAt);
+  const { visible: filtered, query, clear: clearTextFilter, bar: filterBar } = useChangeFilter(allChanges, changePath, changeTone);
+  const changes = review.narrow(filtered);
+  const clearFilter = (): void => {
+    clearTextFilter();
+    review.showAll();
+  };
   const isIncluded = (change: PendingChange): boolean => isCheckinCandidate(change) && !draft.excludedPaths.has(change.path);
   // Check in takes every checked change, including those the filter hides: the filter only narrows what is shown.
   const included = allChanges.filter(isIncluded);
@@ -114,6 +125,7 @@ export function PendingChangesView() {
       subtitle={snapshot && `${snapshot.changes.filter(isCheckinCandidate).length} pending`}
       actions={
         <>
+          <LiveRefreshToggle />
           <IconButton icon={<RefreshCw size={14} className={isFetching ? styles.spinning : undefined} />} label="Refresh" shortcut="mod+r" onClick={() => void invalidateWorkspace(workspacePath)} />
           <IconButton icon={<SlidersHorizontal size={14} />} label="What to show" onClick={() => openSettingsDialogAt('pendingChanges')} />
         </>
@@ -182,6 +194,7 @@ export function PendingChangesView() {
               onUndoUnchanged={() => void undoUnchangedCheckouts(workspacePath)}
               checkboxInset={hasDisclosureRows(rows) ? CHEVRON_SLOT : 0}
             />
+            {review.bar}
             {filterBar}
             {changes.length === 0 ? (
               <NoFilterMatches onClear={clearFilter} />
@@ -197,12 +210,18 @@ export function PendingChangesView() {
                   onMoveToChangelist={
                     grouping === 'changelist' ? (moved, changelist) => void moveToChangelist(workspacePath, changelist, moved) : undefined
                   }
-                  contextMenu={(selected) => pendingChangeMenu(workspacePath, selected, changelists, { isIncluded, setIncluded: setIncludedChanges })}
+                  contextMenu={(selected) =>
+                    pendingChangeMenu(workspacePath, selected, changelists, { isIncluded, setIncluded: setIncludedChanges }, { marks: review.marks, toggle: review.toggle })
+                  }
                   changelistMenu={(changelist) => changelistMenu(workspacePath, changelist)}
+                  reviewMarks={review.marks}
+                  onToggleReviewed={review.toggle}
+                  locks={locks}
                 />
               </HighlightQuery>
             )}
             {hiddenIncludedCount > 0 && <HiddenCheckedNotice count={hiddenIncludedCount} onClear={clearFilter} />}
+            <LockedByOthersNotice changes={included} locks={locks} />
             <CheckinPanel
               summary={draft.summary}
               description={draft.description}
@@ -222,7 +241,7 @@ export function PendingChangesView() {
           selectedCount > 1 ? (
             <EmptyState icon={<Files size={24} />} title={`${selectedCount} files selected`} description="Select a single file to see its diff." />
           ) : focused ? (
-            <ChangeDiffPanel workspacePath={workspacePath} change={focused} />
+            <ChangeDiffPanel workspacePath={workspacePath} change={focused} reviewMark={review.marks.get(focused.path)} />
           ) : (
             <EmptyState title="Select a change" description="Pick a file on the left to see what changed." />
           )

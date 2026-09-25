@@ -7,6 +7,8 @@ import { toast } from '../../../ui/toast/toastStore';
 interface FileEditing {
   editing: boolean;
   dirty: boolean;
+  /** The edited text, until it's saved or discarded. */
+  draft: string | null;
   start: () => void;
   change: (text: string) => void;
   save: () => Promise<void>;
@@ -48,6 +50,7 @@ export function useFileEditing(workspacePath: string, path: string | null): File
   return {
     editing,
     dirty: draft !== null,
+    draft,
     start: () => setEditing(true),
     change: (text) => {
       if (!path) return;
