@@ -40,8 +40,12 @@ export function isAffectedByLoadedChangeset(key: QueryKey): boolean {
 /** Repository objects a checkin by someone else doesn't touch. */
 const UNTOUCHED_BY_CHECKINS = ['labels', 'shelves', 'attributeTypes', 'attributeUsedValues', 'codeReviews', 'leftChanges'];
 
-/** A checkin from this workspace: everything but the objects checkins don't create or change. */
-export function isAffectedByOwnCheckin(key: QueryKey): boolean {
+/**
+ * This workspace checked in, updated, or merged from a branch or changeset: everything but the objects those leave
+ * alone, and changesets already read (only editing a comment changes one).
+ */
+export function isAffectedByCheckinOrUpdate(key: QueryKey): boolean {
+  if (area(key) === 'changesets' && detail(key) === 'byId') return false;
   return !UNTOUCHED_BY_CHECKINS.includes(area(key) as string);
 }
 

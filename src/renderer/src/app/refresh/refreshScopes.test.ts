@@ -5,7 +5,7 @@ import {
   isAffectedByMovedPaths,
   isAffectedByNewBranch,
   isAffectedByNewChangesets,
-  isAffectedByOwnCheckin,
+  isAffectedByCheckinOrUpdate,
   isAffectedByShelving,
   isAffectedByWorkspaceState,
 } from './refreshScopes';
@@ -54,14 +54,15 @@ describe('refresh scopes', () => {
     expect(isAffectedByNewChangesets(key('codeReviews', { scope: 'all' }))).toBe(false);
   });
 
-  it("refreshes after this workspace's checkin all but the objects a checkin leaves alone", () => {
-    expect(isAffectedByOwnCheckin(key('pendingChanges'))).toBe(true);
-    expect(isAffectedByOwnCheckin(key('info'))).toBe(true);
-    expect(isAffectedByOwnCheckin(key('incoming', 'summary', { branch: '/main', loadedChangeset: 4 }))).toBe(true);
-    expect(isAffectedByOwnCheckin(key('changesets', {}))).toBe(true);
-    expect(isAffectedByOwnCheckin(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(false);
-    expect(isAffectedByOwnCheckin(key('labels', {}))).toBe(false);
-    expect(isAffectedByOwnCheckin(key('shelves', { owner: 'me' }))).toBe(false);
+  it("refreshes after this workspace's checkin or update all but the objects they leave alone", () => {
+    expect(isAffectedByCheckinOrUpdate(key('pendingChanges'))).toBe(true);
+    expect(isAffectedByCheckinOrUpdate(key('info'))).toBe(true);
+    expect(isAffectedByCheckinOrUpdate(key('incoming', 'summary', { branch: '/main', loadedChangeset: 4 }))).toBe(true);
+    expect(isAffectedByCheckinOrUpdate(key('changesets', {}))).toBe(true);
+    expect(isAffectedByCheckinOrUpdate(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(false);
+    expect(isAffectedByCheckinOrUpdate(key('labels', {}))).toBe(false);
+    expect(isAffectedByCheckinOrUpdate(key('shelves', { owner: 'me' }))).toBe(false);
+    expect(isAffectedByCheckinOrUpdate(key('changesets', 'byId', 4))).toBe(false);
   });
 
   it('refreshes only the shelve lists after shelving changes that stay in the workspace', () => {

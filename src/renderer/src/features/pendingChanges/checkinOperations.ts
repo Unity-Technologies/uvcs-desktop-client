@@ -4,7 +4,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation, runRead } from '../../app/operations/runOperation';
 import { queryClient } from '../../app/queryClient';
-import { isAffectedByOwnCheckin, isAffectedByShelving } from '../../app/refresh/refreshScopes';
+import { isAffectedByCheckinOrUpdate, isAffectedByShelving } from '../../app/refresh/refreshScopes';
 import { firstLine } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
@@ -48,7 +48,7 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
     title: `Checking in ${pluralize(changes.length, 'change')}`,
     workspacePath,
     run: (operationId) => api.pendingChanges.checkin(workspacePath, { paths: changes.map((change) => change.path), comment }, operationId),
-    affects: isAffectedByOwnCheckin,
+    affects: isAffectedByCheckinOrUpdate,
     successMessage: (created) => `Created changeset ${created.changesetId} on ${created.branch}`,
     successAction: (created) => ({
       label: 'View',

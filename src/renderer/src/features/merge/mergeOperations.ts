@@ -2,6 +2,7 @@ import { followUpMerge, type MergeRequest, type MergeResolutions } from '@shared
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runOperation } from '../../app/operations/runOperation';
+import { isAffectedByCheckinOrUpdate } from '../../app/refresh/refreshScopes';
 import { toast } from '../../ui/toast/toastStore';
 
 /** Runs the merge; workspace merges then show the pending changes to check in. */
@@ -10,6 +11,8 @@ export async function completeMerge(workspacePath: string, request: MergeRequest
     title: 'Merging',
     workspacePath,
     run: (operationId) => api.merge.run(workspacePath, request, resolutions, operationId),
+    // Merging a shelve that was left behind when switching finishes those left changes.
+    affects: request.sourceSpec.startsWith('sh:') ? undefined : isAffectedByCheckinOrUpdate,
     successMessage: (merged) =>
       request.destinationBranch
         ? merged.destinationMoved

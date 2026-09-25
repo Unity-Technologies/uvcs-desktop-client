@@ -6,6 +6,7 @@ import { explainUpdateConflicts, showUpdatedMoment } from '../../features/incomi
 import { recheckIncoming } from '../../features/incoming/useIncomingSummary';
 import { toast } from '../../ui/toast/toastStore';
 import { refuseWhileBusy, runOperation, runRead } from '../operations/runOperation';
+import { isAffectedByCheckinOrUpdate } from '../refresh/refreshScopes';
 import { switchToast } from './switchToast';
 
 /** Resolves to whether it updated. */
@@ -14,6 +15,7 @@ export async function updateWorkspace(workspacePath: string): Promise<boolean> {
     title: 'Updating workspace',
     workspacePath,
     kind: 'update',
+    affects: isAffectedByCheckinOrUpdate,
     run: async (operationId) => {
       await api.workspaces.update(workspacePath, operationId);
       return true;
