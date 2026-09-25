@@ -21,6 +21,8 @@ import { ChangesSummaryBar } from './ChangesSummaryBar';
 import { CheckinPanel } from './CheckinPanel';
 import { HiddenCheckedNotice, NoFilterMatches } from './FilterNotices';
 import { LiveRefreshToggle } from './LiveRefreshToggle';
+import { LockedByOthersNotice } from './locks/LockedByOthersNotice';
+import { usePendingLocks } from './locks/usePendingLocks';
 import { useReviewMode } from './review/useReviewMode';
 import { mergeSourceChangeset, uploadSize } from './checkinButton';
 import { checkinChanges, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
@@ -42,7 +44,7 @@ const changePath = (change: PendingChange): string => change.path;
 export function PendingChangesView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
-  const { data: snapshot, isLoading, isFetching, isPlaceholderData, error } = usePendingChanges();
+  const { data: snapshot, isLoading, isFetching, isPlaceholderData, dataUpdatedAt, error } = usePendingChanges();
   const settings = useSettings();
   const { layout, setLayout, grouping, setGrouping } = usePendingChangesViewStore();
   const draft = useCheckinDraft(workspacePath);
@@ -54,6 +56,7 @@ export function PendingChangesView() {
 
   const allChanges = snapshot?.changes ?? NO_CHANGES;
   const review = useReviewMode(workspacePath, allChanges, snapshot !== undefined && !isPlaceholderData);
+  const locks = usePendingLocks(workspacePath, workspace?.repository, allChanges, dataUpdatedAt);
   const { visible: filtered, query, clear: clearTextFilter, bar: filterBar } = useChangeFilter(allChanges, changePath, changeTone);
   const changes = review.narrow(filtered);
   const clearFilter = (): void => {
@@ -210,10 +213,12 @@ export function PendingChangesView() {
                   changelistMenu={(changelist) => changelistMenu(workspacePath, changelist)}
                   reviewMarks={review.marks}
                   onToggleReviewed={review.toggle}
+                  locks={locks}
                 />
               </HighlightQuery>
             )}
             {hiddenIncludedCount > 0 && <HiddenCheckedNotice count={hiddenIncludedCount} onClear={clearFilter} />}
+            <LockedByOthersNotice changes={included} locks={locks} />
             <CheckinPanel
               summary={draft.summary}
               description={draft.description}

@@ -13,6 +13,8 @@ import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { describeKinds, isCheckinCandidate } from './changeCategories';
 import { changeTone } from './changeTone';
 import { hasDisclosureRows, rowIndent, type ChangeRow } from './changeRows';
+import { LockChip } from './locks/LockChip';
+import type { PendingLocks } from './locks/pendingLocks';
 import { ReviewToggle } from './review/ReviewToggle';
 import { hasChangesSinceReview, isReviewable, reviewStatus, shouldMarkReviewed, type ReviewMarks } from './review/reviewProgress';
 import { useChangelistDrop } from './useChangelistDrop';
@@ -37,6 +39,7 @@ interface ChangesListProps {
   reviewMarks: ReviewMarks;
   /** The row's check, or R on the selection: marks the changes reviewed, or clears their marks. */
   onToggleReviewed: (changes: PendingChange[]) => void;
+  locks: PendingLocks;
 }
 
 export function ChangesList({
@@ -51,6 +54,7 @@ export function ChangesList({
   changelistMenu,
   reviewMarks,
   onToggleReviewed,
+  locks,
 }: ChangesListProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const changeRows = useMemo(() => rows.filter((row) => row.type === 'change'), [rows]);
@@ -164,6 +168,7 @@ export function ChangesList({
                   changelistMenu={changelistMenu}
                   reviewMarks={reviewMarks}
                   onToggleReviewed={onToggleReviewed}
+                  locks={locks}
                 />
               </div>
             );
@@ -174,9 +179,9 @@ export function ChangesList({
   );
 }
 
-type RowContentProps = { row: ChangeRow } & Pick<ChangesListProps, 'onToggleIncluded' | 'changelistMenu' | 'reviewMarks' | 'onToggleReviewed'>;
+type RowContentProps = { row: ChangeRow } & Pick<ChangesListProps, 'onToggleIncluded' | 'changelistMenu' | 'reviewMarks' | 'onToggleReviewed' | 'locks'>;
 
-function RowContent({ row, onToggleIncluded, changelistMenu, reviewMarks, onToggleReviewed }: RowContentProps) {
+function RowContent({ row, onToggleIncluded, changelistMenu, reviewMarks, onToggleReviewed, locks }: RowContentProps) {
   switch (row.type) {
     case 'group':
       return (
@@ -208,6 +213,7 @@ function RowContent({ row, onToggleIncluded, changelistMenu, reviewMarks, onTogg
     case 'change': {
       const { change } = row;
       const deleted = change.kinds.includes('deleted') || change.kinds.includes('locallyDeleted');
+      const lock = locks.get(change.path);
       return (
         <>
           {isCheckinCandidate(change) ? (
@@ -221,6 +227,7 @@ function RowContent({ row, onToggleIncluded, changelistMenu, reviewMarks, onTogg
           <span className={styles.trailing}>
             {change.mergeInfo && <span className={styles.tag}>{change.mergeInfo}</span>}
             {change.kinds.includes('moved') && change.kinds.includes('changed') && <span className={styles.tag}>modified</span>}
+            {lock && <LockChip path={change.path} lock={lock} />}
             {isReviewable(change) && (
               <ReviewToggle status={reviewStatus(reviewMarks, change)} onToggle={() => onToggleReviewed([change])} className={styles.reviewToggle} />
             )}

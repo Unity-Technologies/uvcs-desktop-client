@@ -9,6 +9,7 @@ import type {
   PendingChangesFilter,
   PendingChangesSnapshot,
 } from '@shared/domain/pendingChanges';
+import { explainLockedItems } from '../cm/lockedItems';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { withTempFile } from '../files/tempFile';
 import { toAbsolutePath } from '../files/workspacePaths';
@@ -35,16 +36,18 @@ export function createPendingChangesService({ cm, operations }: ServiceContext):
   function checkin(workspacePath: string, request: CheckinRequest, operationId: string): Promise<CheckinResult> {
     return operations.run(operationId, ({ signal, reportProgress }) =>
       withTempFile(request.comment, async (commentsFile) => {
-        const output = await cm.execute(
-          [
-            'checkin',
-            ...absolutePaths(workspacePath, request.paths),
-            '--all',
-            '--private',
-            `-commentsfile=${commentsFile}`,
-            '--machinereadable',
-          ],
-          { cwd: workspacePath, signal, onOutputLine: reportProgress },
+        const output = await explainLockedItems('checked in', () =>
+          cm.execute(
+            [
+              'checkin',
+              ...absolutePaths(workspacePath, request.paths),
+              '--all',
+              '--private',
+              `-commentsfile=${commentsFile}`,
+              '--machinereadable',
+            ],
+            { cwd: workspacePath, signal, onOutputLine: reportProgress },
+          ),
         );
         const created = CREATED_CHANGESET_LINE.exec(output);
         if (!created) throw new Error('The checkin finished but no changeset was reported.');
@@ -71,7 +74,7 @@ export function createPendingChangesService({ cm, operations }: ServiceContext):
   }
 
   async function checkout(workspacePath: string, paths: string[]): Promise<void> {
-    await cm.query(['checkout', ...absolutePaths(workspacePath, paths)], { cwd: workspacePath });
+    await explainLockedItems('checked out', () => cm.query(['checkout', ...absolutePaths(workspacePath, paths)], { cwd: workspacePath }));
   }
 
   async function addFilterRule(workspacePath: string, list: FilterRuleList, pattern: string): Promise<void> {
