@@ -1,5 +1,6 @@
 import type { AnnotateApi } from './annotate';
 import type { AttributesApi } from './attributes';
+import type { BranchExplorerApi } from './branchExplorer';
 import type { BranchesApi } from './branches';
 import type { ChangesetsApi } from './changesets';
 import type { CodeReviewsApi } from './codeReviews';
@@ -25,6 +26,7 @@ import type { WorkspacesApi } from './workspaces';
 export interface UvcsApi {
   annotate: AnnotateApi;
   attributes: AttributesApi;
+  branchExplorer: BranchExplorerApi;
   branches: BranchesApi;
   changesets: ChangesetsApi;
   codeReviews: CodeReviewsApi;

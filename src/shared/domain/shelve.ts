@@ -4,6 +4,7 @@ export interface Shelve {
   comment: string;
   owner: string;
   date: string;
-  branch: string;
+  /** The changeset the shelved changes were made on top of. */
+  parentChangeset: number;
   repository: string;
 }

@@ -52,4 +52,8 @@ renderer/src/
 - No dead code, no speculative abstractions, no duplicated logic.
 - Pure logic gets a `*.test.ts` next to it (`npm test`).
 - `npm run typecheck` must pass.
-- To see the app: `npm run build && node scripts/screenshot.mjs /tmp/shot.png open:<workspace path> key:Meta+3`.
+- To see the app, either:
+  - scripted: `npm run build && node scripts/screenshot.mjs /tmp/shot.png open:<workspace path> key:Meta+3`, or
+  - interactive: `npm run build && UVCS_CDP_PORT=9333 npm run app:debug &`, then
+    `npx playwright-cli attach --cdp=http://localhost:9333` and use `snapshot`, `click <ref>`, `screenshot`
+    (see `.claude/skills/playwright-cli`). Use a distinct port and `-s=<session>` per parallel agent.
