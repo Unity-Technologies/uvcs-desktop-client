@@ -22,7 +22,7 @@ export function SegmentedControl<Value extends string>({ value, segments, onChan
           type="button"
           role="radio"
           aria-checked={segment.value === value}
-          title={segment.title}
+          data-tip={segment.title}
           className={styles.segment}
           onClick={() => onChange(segment.value)}
         >

@@ -122,7 +122,7 @@ function RowContent({ row, onToggleIncluded, changelistMenu }: RowContentProps) 
         <>
           <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
           <Checkbox checked={row.checkState} onChange={(checked) => onToggleIncluded(row, checked)} />
-          <span className={styles.groupLabel} title={row.changelist?.description}>
+          <span className={styles.groupLabel} data-tip={row.changelist?.description}>
             {row.label}
           </span>
           {row.changelist && (

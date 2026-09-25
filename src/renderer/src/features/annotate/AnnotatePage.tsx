@@ -38,7 +38,7 @@ export function AnnotatePage({ page }: PageProps<'annotate'>) {
       }
       actions={
         <>
-          <div className={styles.legend} title="Older lines have a lighter strip">
+          <div className={styles.legend} data-tip="Older lines have a lighter strip">
             <span>Older</span>
             <span className={styles.scale} />
             <span>Newer</span>

@@ -16,7 +16,7 @@ export const STATUS_LETTERS: Record<StatusTone, string> = {
 /** A small colored letter describing what happened to a file, as in the Plastic desktop GUI. */
 export function StatusBadge({ tone, title, letter }: { tone: StatusTone; title: string; letter?: string }) {
   return (
-    <span className={styles.badge} data-tone={tone} title={title}>
+    <span className={styles.badge} data-tone={tone} data-tip={title}>
       {letter ?? STATUS_LETTERS[tone]}
     </span>
   );

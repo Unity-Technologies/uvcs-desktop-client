@@ -12,7 +12,7 @@ export function StatusBar() {
 
   return (
     <footer className={styles.statusBar}>
-      <button className={styles.lastCommand} onClick={toggleCommandLog} title="Show command log">
+      <button className={styles.lastCommand} onClick={toggleCommandLog} data-tip="Show command log">
         {lastCommand && (
           <>
             <span className={styles.dot} data-failed={lastCommand.exitCode !== 0} />

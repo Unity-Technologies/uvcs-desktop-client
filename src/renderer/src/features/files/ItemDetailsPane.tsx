@@ -25,7 +25,7 @@ export function ItemDetailsPane({ workspacePath, item, pendingChange }: ItemDeta
   return (
     <div className={styles.pane}>
       <div className={styles.header}>
-        <span className={styles.name} title={item.path}>
+        <span className={styles.name} data-tip-overflow data-tip={item.path}>
           {item.name}
         </span>
         {!item.isPrivate && (

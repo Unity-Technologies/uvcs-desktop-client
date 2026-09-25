@@ -1,0 +1,51 @@
+/* Above dialogs, menus and toasts, so a clipped label reveals itself wherever it is hovered. */
+.tooltip {
+  position: fixed;
+  z-index: 1100;
+  max-width: min(380px, calc(100vw - 16px));
+  padding: 5px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  white-space: pre-line;
+  word-break: break-word;
+  pointer-events: none;
+  animation: var(--keyframes-pop-in) 0.1s var(--ease-out);
+}
+
+.main {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.sub {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+}
+
+/* A rotated square; only the two edges facing away from the bubble carry a border, so it reads as one caret. */
+.arrow {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface-raised);
+  transform: rotate(45deg);
+}
+
+.tooltip[data-side='above'] .arrow {
+  bottom: -6px;
+  border-top: none;
+  border-left: none;
+}
+
+.tooltip[data-side='below'] .arrow {
+  top: -6px;
+  border-right: none;
+  border-bottom: none;
+}

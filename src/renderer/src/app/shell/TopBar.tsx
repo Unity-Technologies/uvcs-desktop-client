@@ -18,7 +18,7 @@ export function TopBar() {
     <div className={styles.topBar}>
       <WorkingObjectButton />
       <div className={styles.spacer} />
-      <button className={styles.search} title="Fuzzy search files, branches, labels, changesets, shelves, code reviews and commands" onClick={() => setCommandPaletteOpen(true)}>
+      <button className={styles.search} data-tip="Fuzzy search files, branches, labels, changesets, shelves, code reviews and commands" onClick={() => setCommandPaletteOpen(true)}>
         <Search size={13} />
         <span>Search everything</span>
         <Kbd keys="mod+k" />

@@ -26,7 +26,7 @@ export function CommandLogPanel() {
           <div key={entry.id} className={styles.entry} data-failed={entry.exitCode !== 0}>
             <span className={styles.duration}>{entry.durationMs} ms</span>
             <span className={styles.command}>{entry.commandLine}</span>
-            <button className={styles.copy} onClick={() => void navigator.clipboard.writeText(entry.commandLine)} title="Copy command">
+            <button className={styles.copy} onClick={() => void navigator.clipboard.writeText(entry.commandLine)} data-tip="Copy command">
               <Copy size={11} />
             </button>
             {entry.output && <pre className={styles.output}>{entry.output}</pre>}

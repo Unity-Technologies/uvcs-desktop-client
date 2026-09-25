@@ -8,7 +8,7 @@ export function Avatar({ user, size = 20 }: { user: string; size?: number }) {
   const image = useAvatarImage(user);
 
   return (
-    <span className={styles.avatar} title={displayName(user)} style={{ width: size, height: size }}>
+    <span className={styles.avatar} data-tip={displayName(user)} style={{ width: size, height: size }}>
       {image ? (
         <img className={styles.image} src={image.src} alt="" draggable={false} />
       ) : (

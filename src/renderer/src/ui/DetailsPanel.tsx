@@ -32,7 +32,7 @@ export function DetailsPanel({ icon, kind, title, context, author, badges, actio
           {context && (
             <>
               <span className={styles.separator}>·</span>
-              <span className={styles.context} title={typeof context === 'string' ? context : undefined}>
+              <span className={styles.context} data-tip-overflow data-tip={typeof context === 'string' ? context : undefined}>
                 {context}
               </span>
             </>

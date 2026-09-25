@@ -33,7 +33,7 @@ interface NodeProps {
 function Node({ role, contributor, tone, name }: NodeProps) {
   const label = contributor.branch || name;
   return (
-    <span className={styles.node} data-tone={tone} title={`${role}: ${label}`}>
+    <span className={styles.node} data-tone={tone} data-tip={`${role}: ${label}`}>
       <span className={styles.dot} />
       <span className={styles.role}>{role}</span>
       {/* A shelve has no changeset of its own (cm reports a negative one) nor a branch. */}

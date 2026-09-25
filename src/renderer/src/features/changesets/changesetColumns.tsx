@@ -18,7 +18,7 @@ export function changesetColumns(loadedChangeset: number | undefined): Column<Ch
       render: (changeset) => (
         <span className={styles.changesetId}>
           <Highlight text={String(changeset.id)} />
-          {changeset.id === loadedChangeset && <span className={styles.current} title="Loaded in your workspace" />}
+          {changeset.id === loadedChangeset && <span className={styles.current} data-tip="Loaded in your workspace" />}
         </span>
       ),
     },
@@ -42,7 +42,7 @@ export function changesetColumns(loadedChangeset: number | undefined): Column<Ch
       secondary: true,
       sortValue: (changeset) => changeset.branch,
       render: (changeset) => (
-        <span title={changeset.branch}>
+        <span data-tip-overflow data-tip={changeset.branch}>
           <Highlight text={shortBranchName(changeset.branch)} />
         </span>
       ),

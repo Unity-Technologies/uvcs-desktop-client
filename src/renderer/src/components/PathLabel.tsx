@@ -41,10 +41,11 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches }: P
     return () => observer.disconnect();
   }, [directory, name]);
 
-  const keptLength = shownDirectory === directory ? directory.length : shownDirectory.length - ELLIPSIS.length;
+  const trimmed = shownDirectory !== directory;
+  const keptLength = trimmed ? shownDirectory.length - ELLIPSIS.length : directory.length;
 
   return (
-    <span ref={ref} className={styles.path} title={oldPath ? `${oldPath} → ${path}` : path}>
+    <span ref={ref} className={styles.path} data-tip={oldPath ? `${oldPath} → ${path}` : trimmed ? path : undefined}>
       {shownDirectory && (
         <span className={styles.directory}>
           <Highlight text={shownDirectory} positions={matches?.filter((position) => position < keptLength)} />

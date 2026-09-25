@@ -131,7 +131,7 @@ function NameCell({ row, status, changesInside, onToggle }: NameCellProps) {
         <Highlight text={item.name} />
       </span>
       {status && <StatusBadge tone={status.tone} title={status.label} />}
-      {!status && changesInside && <span className={styles.changesDot} title="Contains pending changes" />}
+      {!status && changesInside && <span className={styles.changesDot} data-tip="Contains pending changes" />}
     </span>
   );
 }

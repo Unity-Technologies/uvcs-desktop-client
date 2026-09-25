@@ -88,7 +88,7 @@ function AttributeRow({ attribute, startEditing, onSave, onCancel, onRemove }: A
     <div className={styles.row}>
       <span className={styles.name}>{attribute.name}</span>
       {draft === null ? (
-        <button className={styles.value} onClick={() => setDraft(attribute.value)} title="Click to edit">
+        <button className={styles.value} onClick={() => setDraft(attribute.value)} data-tip="Click to edit">
           {attribute.value || <span className={styles.placeholder}>Empty</span>}
         </button>
       ) : (

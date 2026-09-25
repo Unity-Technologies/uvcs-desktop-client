@@ -28,7 +28,7 @@ export function AnnotationGutter({ rows, columns, lineHeight, onOpenChangeset }:
             className={styles.cell}
             data-block-start={row.isBlockStart && index > 0}
             style={{ height: lineHeight, '--recency': row.recency } as CSSProperties}
-            title={`${changeset.comment.trim() || 'No comment'}\n\n${displayName(changeset.owner)} · cs:${changeset.changesetId} · ${changeset.branch}\n${formatDateTime(changeset.date)}`}
+            data-tip={`${changeset.comment.trim() || 'No comment'}\n\n${displayName(changeset.owner)} · cs:${changeset.changesetId} · ${changeset.branch}\n${formatDateTime(changeset.date)}`}
             onClick={() => onOpenChangeset(changeset.changesetId)}
             tabIndex={-1}
           >

@@ -1,7 +1,7 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { DialogHost } from '../ui/dialog/DialogHost';
 import { ToastHost } from '../ui/toast/ToastHost';
-import { TooltipProvider } from '../ui/Tooltip';
+import { TooltipLayer } from '../ui/TooltipLayer';
 import { CommandPalette } from './commands/CommandPalette';
 import { CommandShortcuts } from './commands/CommandShortcuts';
 import { useAppCommands } from './commands/useAppCommands';
@@ -17,13 +17,12 @@ import { useSession } from './workspace/sessionStore';
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider delayDuration={500}>
-        <Root />
-        <CommandPalette />
-        <CommandShortcuts />
-        <DialogHost />
-        <ToastHost />
-      </TooltipProvider>
+      <Root />
+      <CommandPalette />
+      <CommandShortcuts />
+      <DialogHost />
+      <ToastHost />
+      <TooltipLayer />
     </QueryClientProvider>
   );
 }
