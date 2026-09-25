@@ -1,9 +1,9 @@
-import { CODE_REVIEW_STATUSES, type CodeReview, type CodeReviewStatus } from '@shared/domain/codeReview';
+import { CODE_REVIEW_STATUSES, type CodeReviewStatus, type CodeReviewSummary } from '@shared/domain/codeReview';
 import { findRecords } from './findObjects';
 import { integer, text } from './parseXml';
 
 /** A review as `cm find review` reports it; branch targets come as object ids (`id:54`) to be resolved. */
-export interface RawCodeReview extends Omit<CodeReview, 'target'> {
+export interface RawCodeReview extends CodeReviewSummary {
   targetType: 'branch' | 'changeset' | 'other';
   /** Branch object id or changeset number. */
   targetId: number;

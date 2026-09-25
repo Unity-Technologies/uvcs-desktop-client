@@ -6,4 +6,9 @@ export interface QueryFilter {
   branch?: string;
   includeHidden?: boolean;
   limit?: number;
+  /**
+   * Only objects whose name (branches, labels), comment (changesets, shelves) or title (code reviews) contains its words,
+   * in order. `cm` compares case-sensitively, so the first letter of each word is left out: expect some extra matches.
+   */
+  text?: string;
 }

@@ -7,9 +7,26 @@ import { escapeQueryValue, findArgs } from '../cm/findQuery';
 import type { ServiceContext } from './ServiceContext';
 
 export function createCodeReviewsService({ cm }: ServiceContext): CodeReviewsApi {
-  async function find(workspacePath: string, conditions: string[], filter: QueryFilter): Promise<CodeReview[]> {
+  async function findRaw(workspacePath: string, conditions: string[], filter: QueryFilter): Promise<RawCodeReview[]> {
     const xml = await cm.query(findArgs('review', filter, 'date desc', conditions), { cwd: workspacePath });
-    return resolveTargets(workspacePath, parseCodeReviews(xml));
+    return parseCodeReviews(xml);
+  }
+
+  async function find(workspacePath: string, conditions: string[], filter: QueryFilter): Promise<CodeReview[]> {
+    return resolveTargets(workspacePath, await findRaw(workspacePath, conditions, filter));
+  }
+
+  function findListed(workspacePath: string, filter: CodeReviewFilter): Promise<RawCodeReview[]> {
+    const conditions = [
+      ...(filter.scope === 'assignedToMe' ? ["assignee = 'me'"] : []),
+      ...(filter.status ? [`status = '${escapeQueryValue(filter.status)}'`] : []),
+    ];
+    return findRaw(workspacePath, conditions, {
+      owner: filter.scope === 'createdByMe' ? 'me' : undefined,
+      sinceDate: filter.sinceDate,
+      text: filter.text,
+      limit: MAX_LISTED_CODE_REVIEWS,
+    });
   }
 
   /** `cm` reports branch targets only by object id; the names come from a few batched lookups. */
@@ -29,16 +46,13 @@ export function createCodeReviewsService({ cm }: ServiceContext): CodeReviewsApi
   }
 
   return {
-    list(workspacePath, filter: CodeReviewFilter) {
-      const conditions = [
-        ...(filter.scope === 'assignedToMe' ? ["assignee = 'me'"] : []),
-        ...(filter.status ? [`status = '${escapeQueryValue(filter.status)}'`] : []),
-      ];
-      return find(workspacePath, conditions, {
-        owner: filter.scope === 'createdByMe' ? 'me' : undefined,
-        sinceDate: filter.sinceDate,
-        limit: MAX_LISTED_CODE_REVIEWS,
-      });
+    async list(workspacePath, filter) {
+      return resolveTargets(workspacePath, await findListed(workspacePath, filter));
+    },
+
+    async listSummaries(workspacePath, filter) {
+      const reviews = await findListed(workspacePath, filter);
+      return reviews.map(({ targetType: _targetType, targetId: _targetId, ...summary }) => summary);
     },
 
     async get(workspacePath, reviewId) {

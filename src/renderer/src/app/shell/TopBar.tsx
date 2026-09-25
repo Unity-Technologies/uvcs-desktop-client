@@ -1,4 +1,4 @@
-import { ArrowDownToLine, Command as CommandIcon, TerminalSquare } from 'lucide-react';
+import { ArrowDownToLine, Search, TerminalSquare } from 'lucide-react';
 import { WorkingObjectButton } from '../../features/branches/WorkingObjectButton';
 import { IconButton } from '../../ui/IconButton';
 import { Button } from '../../ui/Button';
@@ -18,9 +18,9 @@ export function TopBar() {
     <div className={styles.topBar}>
       <WorkingObjectButton />
       <div className={styles.spacer} />
-      <button className={styles.search} onClick={() => setCommandPaletteOpen(true)}>
-        <CommandIcon size={13} />
-        <span>Search commands</span>
+      <button className={styles.search} title="Fuzzy search files, branches, labels, changesets, shelves, code reviews and commands" onClick={() => setCommandPaletteOpen(true)}>
+        <Search size={13} />
+        <span>Search everything</span>
         <Kbd keys="mod+k" />
       </button>
       <IconButton icon={<TerminalSquare size={15} />} label="Command log" shortcut="mod+shift+l" onClick={toggleCommandLog} />

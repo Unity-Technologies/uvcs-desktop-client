@@ -18,11 +18,16 @@ export interface CodeReview {
   target: CodeReviewTarget;
 }
 
+/** A review without its target, which takes extra `cm` lookups to resolve (branches come back as object ids). */
+export type CodeReviewSummary = Omit<CodeReview, 'target'>;
+
 export interface CodeReviewFilter {
   scope: 'all' | 'createdByMe' | 'assignedToMe';
   status?: CodeReviewStatus;
   /** `YYYY-MM-DD`; only reviews created on or after it. */
   sinceDate?: string;
+  /** Only reviews whose title contains it. */
+  text?: string;
 }
 
 /** Repositories can hold thousands of reviews; lists show the newest ones up to this many. */

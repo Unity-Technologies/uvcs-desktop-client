@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { findArgs } from './findQuery';
+import { caseTolerantPattern, findArgs } from './findQuery';
 
 describe('findArgs', () => {
   it('combines filter conditions, order and limit', () => {
@@ -10,6 +10,17 @@ describe('findArgs', () => {
       '--xml',
       '--nototal',
     ]);
+  });
+
+  it('searches the text in the field that describes each object', () => {
+    expect(findArgs('branch', { text: 'task' }, null)[2]).toBe("where name like '%ask%'");
+    expect(findArgs('changeset', { text: "don't" }, null)[2]).toBe("where comment like '%on''t%'");
+    expect(findArgs('review', { text: 'fix', limit: 5 }, null)[2]).toBe("where title like '%ix%' limit 5");
+  });
+
+  it('ignores the case of the first letter of each word', () => {
+    expect(caseTolerantPattern('bamboo  plugin')).toBe('%amboo%lugin%');
+    expect(caseTolerantPattern('a fix')).toBe('%a%ix%');
   });
 
   it('escapes quotes in values', () => {

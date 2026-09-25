@@ -39,7 +39,7 @@ export async function deleteReviews(workspacePath: string, reviews: CodeReview[]
   return deleted === true;
 }
 
-export function openReview(review: CodeReview): void {
+export function openReview(review: Pick<CodeReview, 'id'>): void {
   navigation.openPage({ kind: 'codeReview', reviewId: review.id });
 }
 

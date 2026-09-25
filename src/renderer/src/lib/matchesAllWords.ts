@@ -1,0 +1,18 @@
+/** True when every word of the query appears somewhere in the text, in any order and case. For free text like comments. */
+export function matchesAllWords(text: string, query: string): boolean {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (words.length === 0) return false;
+
+  const haystack = text.toLowerCase();
+  return words.every((word) => haystack.includes(word));
+}
+
+/** How convincing a word match is, from 0 to 1, on the same scale as `fuzzyMatchQuality`. */
+export function wordMatchQuality(text: string, query: string): number {
+  if (!matchesAllWords(text, query)) return 0;
+  const haystack = text.toLowerCase();
+  const needle = query.trim().toLowerCase();
+  if (haystack === needle) return 1;
+  if (haystack.startsWith(needle)) return 0.9;
+  return haystack.includes(needle) ? 0.8 : 0.6;
+}
