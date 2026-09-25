@@ -1,3 +1,4 @@
+import { AUTO_MERGE_TOOL, type CustomMergeTool } from './mergeTools';
 import { DEFAULT_PENDING_CHANGES_FILTER, type PendingChangesFilter } from './pendingChanges';
 import type { PendingChangesOnSwitch, SwitchShelveRecord } from './switchWithChanges';
 
@@ -38,6 +39,12 @@ export interface AppSettings {
   showGravatar: boolean;
   /** Show an OS notification when someone checks in to the loaded branch while the window is in the background. */
   notifyOnIncoming: boolean;
+  /** The merge tool "Resolve in…" opens: `auto` (the UVCS merge tool, else the first found) or a tool id. */
+  mergeTool: string;
+  /** Merge apps the user added ("Choose another app…"). */
+  customMergeTools: CustomMergeTool[];
+  /** The user's arguments for a merge tool, by its id, instead of its own. */
+  mergeToolArgs: Record<string, string[]>;
   /** Null until the window is first moved or resized. */
   windowBounds: SavedWindowBounds | null;
 }
@@ -57,5 +64,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   reviewModeHintDone: false,
   showGravatar: true,
   notifyOnIncoming: false,
+  mergeTool: AUTO_MERGE_TOOL,
+  customMergeTools: [],
+  mergeToolArgs: {},
   windowBounds: null,
 };

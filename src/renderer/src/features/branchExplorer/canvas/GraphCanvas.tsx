@@ -3,17 +3,19 @@ import type { MenuEntry } from '../../../lib/actions';
 import { subscribeToAvatars } from '../../../lib/avatars/avatarImages';
 import { MAIN_FOCUS } from '../../../lib/mainFocus';
 import { ActionContextMenu } from '../../../ui/menu/ActionContextMenu';
+import { TooltipBubble } from '../../../ui/TooltipBubble';
 import type { GraphLayout } from '../model/layoutGraph';
 import type { DrawnTargets, GraphScene } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
 import { drawGraph } from './drawGraph';
 import { COLUMN_WIDTH, graphSize } from './geometry';
 import { captionMetrics } from './captionCard';
-import { hitTest, hoverCardFor, nodePoint, type GraphTarget, type HoverCard } from './graphTargets';
+import { hitTest, hoverCardFor, nodePoint, type GraphTarget, type HoverCard, type PointerCardTarget } from './graphTargets';
 import { GraphTooltip, HOVER_CARD_ATTRIBUTE, type TooltipAnchor } from './GraphTooltip';
 import { laneHeaderTop, laneShape } from './laneShape';
 import { useGraphPalette } from './useGraphPalette';
 import { useGraphViewport } from './useGraphViewport';
+import { useCanvasTip } from './useCanvasTip';
 import { useHoverCard } from './useHoverCard';
 import { useSearchPing } from './useSearchPing';
 import { centerOn, fitToScreen, frameOn, openingViewport, revealPoint, toWorld, type Size, type Viewport } from './viewport';
@@ -80,8 +82,10 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const palette = useGraphPalette(containerRef);
   /** What the pointer is on, highlighted; the hover card has its own life (`useHoverCard`). */
   const [hovered, setHovered] = useState<GraphTarget | null>(null);
-  const hoverCard = useHoverCard<{ key: string; target: GraphTarget; x: number; y: number; anchor: TooltipAnchor | null }>();
+  const hoverCard = useHoverCard<{ key: string; target: PointerCardTarget; x: number; y: number; anchor: TooltipAnchor | null }>();
   const card = hoverCard.card;
+  /** The whole text of a branch comment cut in its header, while the pointer is on it. */
+  const clippedTip = useCanvasTip();
 
   const hoveredChangeset = hovered?.kind === 'changeset' ? hovered.id : hovered?.kind === 'collapsed' ? hovered.node.changeset.id : null;
   const hoveredBranch = hovered?.kind === 'branch' ? hovered.lane.branch.name : null;
@@ -89,13 +93,20 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const sceneRef = useRef({ layout, highlights, palette, hoveredChangeset, hoveredBranch, hoveredReview });
   sceneRef.current = { layout, highlights, palette, hoveredChangeset, hoveredBranch, hoveredReview };
   /** Where the last frame drew what the pointer can land on. */
-  const drawnRef = useRef<DrawnTargets>({ reviewChips: new DrawnBoxes(), branchHeaders: new DrawnBoxes(), captions: new DrawnBoxes() });
+  const drawnRef = useRef<DrawnTargets>({
+    reviewChips: new DrawnBoxes(),
+    branchHeaders: new DrawnBoxes(),
+    cutBranchComments: new DrawnBoxes(),
+    captions: new DrawnBoxes(),
+  });
 
   const { close: closeHoverCard } = hoverCard;
+  const { hide: hideClippedTip } = clippedTip;
   const clearHover = useCallback(() => {
     setHovered(null);
     closeHoverCard();
-  }, [closeHoverCard]);
+    hideClippedTip();
+  }, [closeHoverCard, hideClippedTip]);
 
   const drawNow = useCallback(() => {
     cancelAnimationFrame(frameRef.current);
@@ -257,7 +268,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   };
 
   /** A changeset's card opens over its caption, in its font and color; a branch's just below its header, wherever they were drawn. */
-  const anchorFor = (subject: HoverCard): TooltipAnchor | null => {
+  const anchorFor = (subject: Exclude<HoverCard, { kind: 'clippedText' }>): TooltipAnchor | null => {
     const { zoom, panX, panY } = view.viewportRef.current;
     if (subject.kind === 'caption') {
       const { caption } = subject;
@@ -282,6 +293,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
 
   const onPointerDown = (event: React.PointerEvent): void => {
     if (!onCanvas(event)) return;
+    clippedTip.hide();
     containerRef.current?.focus();
     if (event.button === 2) {
       contextTargetRef.current = targetAt(event.clientX, event.clientY, false);
@@ -325,6 +337,11 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     const target = onCanvas(event) ? targetAt(event.clientX, event.clientY) : null;
     setHovered(target);
     const subject = hoverCardFor(target, toWorld(view.viewportRef.current, point.x, point.y), drawnRef.current);
+    if (subject?.kind === 'clippedText') {
+      clippedTip.show(subject.key, subject.text, event.clientX, event.clientY);
+      return hoverCard.requestClose();
+    }
+    clippedTip.hide();
     if (!subject) return hoverCard.requestClose();
     const anchor = anchorFor(subject);
     hoverCard.show({ key: hoverCardKey(subject.target), target: subject.target, anchor, ...point }, anchor === null);
@@ -354,6 +371,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         onPointerLeave={() => {
           setHovered(null);
           hoverCard.requestClose();
+          clippedTip.hide();
         }}
         onContextMenu={(event) => {
           // Nothing under the pointer: no menu (preventing the default also stops the menu from opening).
@@ -373,6 +391,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
             containerWidth={sizeRef.current.width}
           />
         )}
+        {clippedTip.tip && <TooltipBubble {...clippedTip.tip} wide />}
         {children}
       </div>
     </ActionContextMenu>
@@ -380,7 +399,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
 });
 
 /** Names what a hover card is about: the pointer moving within the same card keeps it. */
-function hoverCardKey(target: GraphTarget): string {
+function hoverCardKey(target: PointerCardTarget): string {
   switch (target.kind) {
     case 'changeset':
       return `changeset:${target.id}`;
@@ -388,8 +407,6 @@ function hoverCardKey(target: GraphTarget): string {
       return `collapsed:${target.node.changeset.id}`;
     case 'label':
       return `label:${target.label.name}`;
-    case 'branch':
-      return `branch:${target.lane.branch.name}`;
     case 'mergeLink':
       return `link:${target.link.sourceChangeset}:${target.link.destinationChangeset}:${target.link.type}`;
     case 'codeReview':

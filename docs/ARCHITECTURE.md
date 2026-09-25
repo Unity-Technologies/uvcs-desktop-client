@@ -52,28 +52,55 @@ safe, and the step of a multi-command operation (shelve, undo, switch, bring). N
   it in fixed rows and widths, then turns into the success message in place; the status bar, the branch pill and the
   incoming chip show the same operation with a `ProgressRing`.
 
-## No external tools, ever
+## No external tool opens by itself
 
-The app never lets `cm` open its merge or diff tool; every conflict is resolved in the app's merge page.
+`cm` never opens its merge or diff tool, and background work never opens anything. A merge tool opens only when the
+user asks for it on one conflicting file ("Resolve in…"), and the app keeps the decision.
 
 - `cm merge --merge` always carries `--nointeractiveresolution` and an explicit decision for every conflicting file
   (`fileConflictArgs`): workspace merges keep the destination and the app writes the resolutions; merges into a
   server branch keep one side for all files.
 - Shelves are applied as merges from `sh:N` (never `cm shelveset apply`); `cm update` keeps `--dontmerge`;
-  `cm diff` always has `--format`. `main/cm/noExternalUi.test.ts` checks these statically.
+  `cm diff` always has `--format`. `main/cm/noExternalUi.test.ts` checks these statically, and that processes start
+  only to run `cm`, open a terminal, or from `main/merge/mergeTools/launch.ts`, imported only by `mergeToolsService`.
 - `cm` processes run with stdin closed, so a console prompt fails instead of hanging.
+
+## Merge tools
+
+`cm` has no way to run its merge tool for one chosen conflict (`--resolveconflict` is for directory conflicts only;
+`--merge` runs it for every file), so the app runs the tool itself, per file (`main/merge/mergeTools`):
+
+- Found per OS (`knownTools`, `detectTools`): the UVCS merge tool (the Desktop GUI run as `xmerge`, `binmerge` for
+  binaries: `macplasticx` in PlasticSCM.app, `plastic.exe` next to `cm.exe`, `plasticgui`), VS Code and its forks,
+  JetBrains IDEs, Sublime Merge, KDiff3, Beyond Compare, Meld, P4Merge, Araxis and FileMerge (`opendiff`, only with
+  Xcode), each with the three-way command line of its docs (cross-checked with Git's `mergetools/*`). client.conf's text merge tools that aren't the UVCS one are offered too, by extension
+  (`clientConfMergeTools`), and the user can add any program with an arguments template (`{base}` `{yours}`
+  `{incoming}` `{result}` and their `…Name`s). Settings keep the preferred tool (`auto`: the UVCS one, else the first
+  found), the user's tools and per-tool arguments.
+- `mergeTools.resolve` saves the three versions to temp files named after the file (`a.BASE.ts`...), writes the result
+  file with the file as it stands in the app (the automatic merge with its markers, or the user's picks), runs the
+  tool without a shell (`.cmd` launchers through `cmd.exe`, arguments quoted), and waits. Few tools tell saving from
+  cancelling by their exit code, so the result file decides (`judgeToolResult`): unchanged means nothing was resolved;
+  saved text becomes the file's decision (markers left count as conflicts left); a binary result must be one of its
+  versions. "Stop waiting" kills the tool process and takes what was saved so far.
+- The workspace is never touched: the outcome is a decision like any other, written when the merge completes.
 
 ## Merge page
 
 The merge page (`features/merge`) is a preview until "Complete merge": it says so ("Preview", "Nothing has changed yet"),
 and every status reads as what the merge will do, never as done (`mergeStatus`): "Will merge automatically", "Needs your
 decision", then the user's choice ("Keeping yours", "Keeping incoming", "Combined", "Edited by you"), one chip in the list
-and the file header, explained by its tooltip. Sides are "Yours"/"Incoming" in a workspace and "Destination"/"Source" when
-merging into a server branch (`mergeLabels`), always next to their branch. A conflicting file is read-only, with short
+and the file header, explained by its tooltip ("Open in VS Code…", "Resolved in VS Code" for merge tools). Sides
+are "Yours"/"Incoming" in a workspace and "Destination"/"Source" when merging into a server branch (`mergeLabels`), always next to their branch. A conflicting file is read-only, with short
 one-line views: "Conflicts" while any is left (each with Keep yours / Keep incoming / Keep both), then "Changes" (the
-destination now → after the merge), "Yours", "Incoming" and "Base". A file with conflicts offers whole-file choices
-(`conflictChoices`): Keep yours, Keep incoming, Keep both, or "Resolve by hand…", the only way to edit text, under a
-banner with Done and Discard edits; the choice shows picked and "Changes" shows what it produces. A file that merges
+destination now → after the merge), "Yours", "Incoming" and "Base". A file with conflicts leads with "Resolve in
+<tool>" (`MergeToolButton`, a split button: the other tools found, "Resolve all N files in <tool>, one by one", "Choose
+another app…", "Edit the text in the app" and the settings behind the caret; picking a tool there makes it the
+preferred one), then whole-file choices (`conflictChoices`): Keep yours, Keep incoming, Keep both. While a tool has the
+file, a banner says so (Bring to front, Stop waiting), its conflicts are read-only and the merge can't complete; a
+toast tells how it ended. Editing the text in the app opens a banner with Done and Discard edits; the choice shows
+picked and "Changes" shows what it produces. Binary conflicts offer only tools that merge binaries (the UVCS one). The
+Incoming view resolves update conflicts with the same panel; server-branch merges keep one side for every file. A file that merges
 automatically is never edited; its menu only overrides it by keeping one version. Once merged, the page states where
 the result went.
 

@@ -3,6 +3,7 @@ import { DirectoryConflictPanel } from './directoryConflicts/DirectoryConflictPa
 import { MergeChangePreview } from './MergeChangePreview';
 import type { MergeItem } from './mergeItems';
 import type { ServerFilePolicy } from './mergeResolutions';
+import type { ConflictToolActions } from './mergeTools/MergeToolButton';
 import { FileConflictPanel } from './resolve/FileConflictPanel';
 import type { FileConflictDecision } from './resolve/fileConflictDecision';
 import type { MergeLabels } from './mergeDescription';
@@ -15,6 +16,7 @@ interface MergeDetailProps {
   labels: MergeLabels;
   request: MergeRequest;
   serverPolicy: { needed: boolean; fileCount: number; policy: ServerFilePolicy | undefined; onChoose: (policy: ServerFilePolicy) => void };
+  toolActions: ConflictToolActions;
   onDecideFile: (key: string, decision: FileConflictDecision) => void;
   onStartOverFile: (key: string) => void;
   onResolveDirectory: (index: number, resolution: DirectoryConflictResolution) => void;
@@ -28,6 +30,7 @@ export function MergeDetail({
   labels,
   request,
   serverPolicy,
+  toolActions,
   onDecideFile,
   onStartOverFile,
   onResolveDirectory,
@@ -61,6 +64,7 @@ export function MergeDetail({
           workspacePath={workspacePath}
           state={item.state}
           labels={labels}
+          toolActions={toolActions}
           onDecide={(decision) => onDecideFile(item.state.file.key, decision)}
           onStartOver={() => onStartOverFile(item.state.file.key)}
         />

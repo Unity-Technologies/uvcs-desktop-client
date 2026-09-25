@@ -7,6 +7,10 @@
   overflow: auto;
 }
 
+.tool {
+  display: flex;
+}
+
 .intro {
   margin: 0;
   color: var(--text-secondary);

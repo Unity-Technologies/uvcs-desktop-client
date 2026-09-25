@@ -123,3 +123,24 @@
   color: var(--text-secondary);
   font-size: var(--text-sm);
 }
+
+.note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.argsField {
+  width: 100%;
+}
+
+.args {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.oneLine {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

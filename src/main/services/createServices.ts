@@ -18,6 +18,7 @@ import { createLabelsService } from './labelsService';
 import { createLeftChangesService } from './leftChangesService';
 import { createLocksService } from './locksService';
 import { createMergeService } from './mergeService';
+import { createMergeToolsService } from './mergeToolsService';
 import { createPendingChangesService } from './pendingChangesService';
 import { createRepositoriesService } from './repositoriesService';
 import { createReviewService } from './reviewService';
@@ -50,6 +51,7 @@ export function createServices(context: ServiceContext): UvcsApi {
     leftChanges: createLeftChangesService(context, switching),
     locks: createLocksService(context),
     merge: createMergeService(context, switching),
+    mergeTools: createMergeToolsService(context),
     pendingChanges: createPendingChangesService(context),
     repositories: createRepositoriesService(context),
     review: createReviewService(context),

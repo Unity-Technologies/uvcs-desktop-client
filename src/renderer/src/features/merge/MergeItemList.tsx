@@ -8,7 +8,7 @@ import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { ConflictStatusChip } from './ConflictStatusChip';
 import type { MergeLabels } from './mergeDescription';
 import { needsDecision, type MergeItem, type MergeListRow } from './mergeItems';
-import { describeChange, directoryConflictStatus, fileConflictStatus } from './mergeStatus';
+import { describeChange, directoryConflictStatus, fileConflictStatus, fileConflictTool } from './mergeStatus';
 import styles from './MergeItemList.module.css';
 
 const ROW_HEIGHT = 30;
@@ -113,7 +113,7 @@ function ItemRow({ item, labels }: { item: MergeItem; labels: MergeLabels }) {
           <StatusBadge tone="changed" title="Will be changed: both sides changed it" />
           <PathLabel path={item.state.file.path} />
           <span className={styles.status}>
-            <ConflictStatusChip status={fileConflictStatus(item.state)} labels={labels} />
+            <ConflictStatusChip status={fileConflictStatus(item.state)} labels={labels} tool={fileConflictTool(item.state)} />
           </span>
         </>
       );

@@ -1,9 +1,8 @@
 import { readFile, writeFile } from 'node:fs/promises';
-import { basename, dirname } from 'node:path';
 import type { ContentApi } from '@shared/api/content';
 import type { ContentSource, FileContent } from '@shared/domain/content';
-import { removedItemSpec } from '../cm/removedItemSpec';
 import { EMPTY_CONTENT, toFileContent } from '../files/fileContent';
+import { saveContent } from '../files/saveContent';
 import { withTempPath } from '../files/tempFile';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
@@ -17,14 +16,15 @@ export function createContentService({ cm, reviews }: ServiceContext): ContentAp
         const absolutePath = toAbsolutePath(workspacePath, source.path);
         return toFileContent(await readFile(absolutePath), absolutePath);
       }
-      case 'workspaceBase':
-        return downloadLoadedRevision(workspacePath, source.path);
       case 'reviewSnapshot':
         return reviews.readSnapshot(workspacePath, source.path);
+      case 'workspaceBase':
       case 'revision':
-        return downloadRevision(workspacePath, `revid:${source.revisionId}`, source.fileName);
       case 'spec':
-        return downloadRevision(workspacePath, source.spec, source.fileName ?? source.spec.split('#')[0]!);
+        return withTempPath(async (outputFile) => {
+          await saveContent(cm, workspacePath, source, outputFile);
+          return toFileContent(await readFile(outputFile), fileNameOf(source));
+        });
     }
   }
 
@@ -32,27 +32,12 @@ export function createContentService({ cm, reviews }: ServiceContext): ContentAp
     await writeFile(toAbsolutePath(workspacePath, path), text, 'utf8');
   }
 
-  async function downloadLoadedRevision(workspacePath: string, path: string): Promise<FileContent> {
-    const absolutePath = toAbsolutePath(workspacePath, path);
-    try {
-      return await downloadRevision(workspacePath, absolutePath, path);
-    } catch (error) {
-      // `cm rm` takes the item out of the workspace tree, so its path stops resolving: find it through its folder.
-      try {
-        const xml = await cm.query(['fileinfo', dirname(absolutePath), absolutePath, '--xml'], { cwd: workspacePath });
-        return await downloadRevision(workspacePath, removedItemSpec(xml, basename(absolutePath)), path);
-      } catch {
-        throw error;
-      }
-    }
-  }
-
-  function downloadRevision(workspacePath: string, revisionSpec: string, fileName: string): Promise<FileContent> {
-    return withTempPath(async (outputFile) => {
-      await cm.query(['cat', revisionSpec, `--file=${outputFile}`], { cwd: workspacePath });
-      return toFileContent(await readFile(outputFile), fileName);
-    });
-  }
-
   return { read, writeWorkspaceFile };
+}
+
+/** The name that tells images and syntax apart: the spec's path when the source names no file. */
+function fileNameOf(source: Extract<ContentSource, { kind: 'workspaceBase' | 'revision' | 'spec' }>): string {
+  if (source.kind === 'workspaceBase') return source.path;
+  if (source.kind === 'revision') return source.fileName;
+  return source.fileName ?? source.spec.split('#')[0]!;
 }

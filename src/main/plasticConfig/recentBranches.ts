@@ -1,7 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
-import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname } from 'node:path';
 import { MAIN_BRANCH_GUID } from '@shared/domain/branch';
+import { plasticConfigFile } from './configFolder';
 import { readRecentBranches, withRecentBranch } from './recentBranchesConf';
 
 /**
@@ -38,10 +38,6 @@ async function readConf(): Promise<string> {
   }
 }
 
-/** Where the official client keeps its settings (`UserConfigFolder`): `PLASTIC_HOME`, else the user's `plastic4` folder. */
 function confFile(): string {
-  const folder =
-    process.env.PLASTIC_HOME ||
-    (process.platform === 'win32' ? join(process.env.LOCALAPPDATA ?? join(homedir(), 'AppData', 'Local'), 'plastic4') : join(homedir(), '.plastic4'));
-  return join(folder, 'plasticgui.conf');
+  return plasticConfigFile('plasticgui.conf');
 }

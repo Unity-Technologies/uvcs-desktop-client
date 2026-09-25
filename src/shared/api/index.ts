@@ -13,6 +13,7 @@ import type { LabelsApi } from './labels';
 import type { LeftChangesApi } from './leftChanges';
 import type { LocksApi } from './locks';
 import type { MergeApi } from './merge';
+import type { MergeToolsApi } from './mergeTools';
 import type { PendingChangesApi } from './pendingChanges';
 import type { RepositoriesApi } from './repositories';
 import type { ReviewApi } from './review';
@@ -43,6 +44,7 @@ export interface UvcsApi {
   leftChanges: LeftChangesApi;
   locks: LocksApi;
   merge: MergeApi;
+  mergeTools: MergeToolsApi;
   pendingChanges: PendingChangesApi;
   repositories: RepositoriesApi;
   review: ReviewApi;

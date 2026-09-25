@@ -20,11 +20,13 @@ interface IncomingListProps {
   /** Paths that changed locally too; resolved ones are no longer pending. */
   conflictPaths: ReadonlySet<string>;
   pendingConflictPaths: ReadonlySet<string>;
+  /** The merge tool each file is open in, while it is. */
+  openToolByPath: ReadonlyMap<string, string>;
   selection: IncomingSelection | null;
   onSelect: (selection: IncomingSelection) => void;
 }
 
-export function IncomingList({ changesets, files, conflictPaths, pendingConflictPaths, selection, onSelect }: IncomingListProps) {
+export function IncomingList({ changesets, files, conflictPaths, pendingConflictPaths, openToolByPath, selection, onSelect }: IncomingListProps) {
   const conflicting = files.filter((file) => conflictPaths.has(file.path));
   const others = files.filter((file) => !conflictPaths.has(file.path));
   const isSelectedFile = (path: string): boolean => selection?.kind === 'file' && selection.path === path;
@@ -58,7 +60,9 @@ export function IncomingList({ changesets, files, conflictPaths, pendingConflict
       data-selected={isSelectedFile(file.path)}
       onClick={() => onSelect({ kind: 'file', path: file.path })}
     >
-      {conflictPaths.has(file.path) ? (
+      {openToolByPath.has(file.path) ? (
+        <StatusBadge tone="conflict" title={`Open in ${openToolByPath.get(file.path)}…`} letter="…" />
+      ) : conflictPaths.has(file.path) ? (
         <StatusBadge
           tone={pendingConflictPaths.has(file.path) ? 'conflict' : 'added'}
           title={pendingConflictPaths.has(file.path) ? 'Changed locally too: needs merging' : 'Merged'}

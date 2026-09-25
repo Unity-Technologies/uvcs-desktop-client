@@ -13,3 +13,9 @@
   background: var(--accent-soft);
   color: var(--accent-text);
 }
+
+.or {
+  padding: 0 var(--space-1);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}

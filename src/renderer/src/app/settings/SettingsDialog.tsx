@@ -1,4 +1,4 @@
-import { Check, FileDiff, GitCommitVertical, HardDrive, Palette, Users } from 'lucide-react';
+import { Check, FileDiff, GitCommitVertical, GitMerge, HardDrive, Palette, Users } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
 import type { AppSettings } from '@shared/domain/settings';
@@ -13,16 +13,18 @@ import { setReviewMode } from '../../features/review/reviewModeSetting';
 import { useSession } from '../workspace/sessionStore';
 import { AccountsPane } from './AccountsPane';
 import { DefaultWorkspaceRootField } from './DefaultWorkspaceRootField';
+import { MergeToolsPane } from './MergeToolsPane';
 import { THEMES } from './themes';
 import { useSettings, useUpdateSettings } from './useSettings';
 import styles from './SettingsDialog.module.css';
 
-export type SettingsSection = 'appearance' | 'pendingChanges' | 'checkin' | 'workspaces' | 'accounts';
+export type SettingsSection = 'appearance' | 'pendingChanges' | 'checkin' | 'merge' | 'workspaces' | 'accounts';
 
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
   { id: 'appearance', label: 'Appearance', icon: <Palette size={15} /> },
   { id: 'pendingChanges', label: 'Pending changes', icon: <FileDiff size={15} /> },
   { id: 'checkin', label: 'Check in', icon: <GitCommitVertical size={15} /> },
+  { id: 'merge', label: 'Merge', icon: <GitMerge size={15} /> },
   { id: 'workspaces', label: 'Workspaces', icon: <HardDrive size={15} /> },
   { id: 'accounts', label: 'Accounts', icon: <Users size={15} /> },
 ];
@@ -57,6 +59,7 @@ function SettingsDialog({ initialSection, onClose }: { initialSection: SettingsS
           )}
           {section === 'pendingChanges' && <PendingChangesPane settings={settings} updateSettings={updateSettings} />}
           {section === 'checkin' && <CheckinPane settings={settings} updateSettings={updateSettings} />}
+          {section === 'merge' && <MergeToolsPane />}
           {section === 'workspaces' && <WorkspacesPane settings={settings} updateSettings={updateSettings} />}
           {section === 'accounts' && <AccountsPane />}
         </div>

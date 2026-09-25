@@ -18,6 +18,7 @@ export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixe
   const { viewport, size, palette } = scene;
   drawn.reviewChips.reset();
   drawn.branchHeaders.reset();
+  drawn.cutBranchComments.reset();
   drawn.captions.reset();
   const draw: DrawContext = { ctx, scene, visible: visibleArea(scene), detail: detailLevel(viewport.zoom, scene.options), pixelRatio, drawn };
   const screen = (): void => ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);

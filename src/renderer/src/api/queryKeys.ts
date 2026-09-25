@@ -13,5 +13,6 @@ export const queryKeys = {
   repositories: (server: string) => ['repositories', server] as const,
   profiles: ['profiles'] as const,
   accounts: ['accounts'] as const,
+  mergeTools: ['mergeTools'] as const,
   inWorkspace: (workspacePath: string, ...parts: unknown[]) => [...workspaceKey(workspacePath), ...parts] as const,
 };
