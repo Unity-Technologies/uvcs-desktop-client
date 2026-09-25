@@ -3,7 +3,7 @@
   height: 34px;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  background: var(--bg-subtle);
+  background: var(--bg-surface);
   box-shadow: var(--shadow-sm);
   color: var(--text-primary);
   cursor: default;
