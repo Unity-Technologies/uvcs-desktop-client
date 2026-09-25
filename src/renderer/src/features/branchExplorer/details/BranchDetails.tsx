@@ -1,9 +1,10 @@
 import { FileDiff, GitBranch, GitMerge } from 'lucide-react';
-import { shortBranchName, spec } from '@shared/domain/specs';
+import { spec } from '@shared/domain/specs';
 import { pluralize } from '../../../lib/text';
 import { Button } from '../../../ui/Button';
 import { DetailsPanel, DetailsSection, DetailsText } from '../../../ui/DetailsPanel';
 import { PropertyList } from '../../../ui/PropertyList';
+import { ChangedFilesSection } from '../../changesets/ChangedFilesSection';
 import { graphActions } from '../graphActions';
 import type { GraphLayout, Lane } from '../model/layoutGraph';
 import { BranchName } from './BranchName';
@@ -26,7 +27,7 @@ export function BranchDetails({ lane, layout, workspacePath, goToChangeset, sele
       icon={<GitBranch />}
       kind="Branch"
       context={branch.parent || undefined}
-      title={<BranchName name={shortBranchName(branch.name)} />}
+      title={<BranchName name={branch.name} short />}
       author={{ user: branch.owner, date: branch.date }}
       actions={
         <>
@@ -64,6 +65,7 @@ export function BranchDetails({ lane, layout, workspacePath, goToChangeset, sele
           ]}
         />
       </DetailsSection>
+      <ChangedFilesSection target={{ kind: 'branch', branch: branch.name }} onOpen={(path) => graphActions.diffBranch(branch.name, path)} />
     </DetailsPanel>
   );
 }

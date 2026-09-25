@@ -1,27 +1,16 @@
 import { FileDiff, GitCommitVertical, Tag } from 'lucide-react';
-import { useMemo } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import { spec } from '@shared/domain/specs';
-import { PathLabel } from '../../components/PathLabel';
-import { StatusBadge } from '../../components/StatusBadge';
 import { formatDateTime } from '../../lib/formatDate';
-import { pluralize } from '../../lib/text';
 import { Button } from '../../ui/Button';
-import { DetailsBadge, DetailsEmpty, DetailsPanel, DetailsSection, DetailsText } from '../../ui/DetailsPanel';
+import { DetailsBadge, DetailsPanel, DetailsSection, DetailsText } from '../../ui/DetailsPanel';
 import { PropertyList } from '../../ui/PropertyList';
-import { Spinner } from '../../ui/Spinner';
 import { AttributesEditor } from '../attributes/AttributesEditor';
-import { describeDiffEntry, diffEntryTone } from '../diff/diffEntrySources';
-import { useDiffEntries } from '../diff/useDiffEntries';
 import { useLabels } from '../labels/useLabels';
+import { ChangedFilesSection } from './ChangedFilesSection';
 import { openChangesetDiff } from './changesetOperations';
-import styles from './ChangesetDetails.module.css';
-
-const MAX_LISTED_FILES = 300;
 
 export function ChangesetDetails({ changeset }: { changeset: Changeset }) {
-  const target = useMemo(() => ({ kind: 'changeset' as const, changesetId: changeset.id }), [changeset.id]);
-  const { data: entries, error } = useDiffEntries(target);
   const { data: labels } = useLabels();
   const changesetLabels = labels?.filter((label) => label.changeset === changeset.id) ?? [];
   const [summary, ...rest] = changeset.comment.split('\n');
@@ -52,22 +41,7 @@ export function ChangesetDetails({ changeset }: { changeset: Changeset }) {
         </DetailsSection>
       )}
 
-      <DetailsSection title={entries ? `${pluralize(entries.length, 'file')} changed` : 'Files changed'}>
-        {error && <DetailsEmpty>{error.message}</DetailsEmpty>}
-        {!entries && !error && <Spinner />}
-        {entries?.length === 0 && <DetailsEmpty>No file changes.</DetailsEmpty>}
-        <div className={styles.files}>
-          {entries?.slice(0, MAX_LISTED_FILES).map((entry) => (
-            <button key={entry.path} className={styles.file} onClick={() => openChangesetDiff(changeset, entry.path)}>
-              <StatusBadge tone={diffEntryTone(entry)} title={describeDiffEntry(entry)} />
-              <PathLabel path={entry.path} oldPath={entry.oldPath} strikethrough={entry.status === 'deleted'} />
-            </button>
-          ))}
-        </div>
-        {entries && entries.length > MAX_LISTED_FILES && (
-          <DetailsEmpty>And {entries.length - MAX_LISTED_FILES} more — open the diff to see them all.</DetailsEmpty>
-        )}
-      </DetailsSection>
+      <ChangedFilesSection target={{ kind: 'changeset', changesetId: changeset.id }} onOpen={(path) => openChangesetDiff(changeset, path)} />
 
       <DetailsSection title="Details">
         <PropertyList

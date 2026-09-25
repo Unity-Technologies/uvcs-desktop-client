@@ -18,8 +18,8 @@ export function mergeFromLabel(label: Label): void {
   navigation.openPage({ kind: 'merge', request: { kind: 'merge', sourceSpec: spec.label(label.name) } });
 }
 
-export function showLabelChanges(label: Label): void {
-  navigation.openPage({ kind: 'diff', title: `Label ${label.name}`, target: { kind: 'changeset', changesetId: label.changeset } });
+export function showLabelChanges(label: Label, focusPath?: string): void {
+  navigation.openPage({ kind: 'diff', title: `Label ${label.name}`, target: { kind: 'changeset', changesetId: label.changeset }, focusPath });
 }
 
 /** Compares two labels, older one on the left. */

@@ -33,10 +33,11 @@
   background: var(--accent);
 }
 
+/* The same colors as the graph draws the branch with (hueToColor). */
 .branchDot[data-hue] {
-  background: hsl(var(--branch-hue) 62% 50%);
+  background: hsl(var(--branch-hue) 60% 42%);
 }
 
-.branchDot[data-hue] {
-  background: hsl(var(--branch-hue) 70% 66%);
+:global([data-theme='dark']) .branchDot[data-hue] {
+  background: hsl(var(--branch-hue) 58% 62%);
 }

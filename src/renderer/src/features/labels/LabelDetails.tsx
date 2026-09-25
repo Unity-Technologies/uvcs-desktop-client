@@ -6,6 +6,7 @@ import { Button } from '../../ui/Button';
 import { DetailsPanel, DetailsSection, DetailsText } from '../../ui/DetailsPanel';
 import { PropertyList } from '../../ui/PropertyList';
 import { AttributesEditor } from '../attributes/AttributesEditor';
+import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { mergeFromLabel, showLabelChanges, switchToLabel } from './labelOperations';
 
 export function LabelDetails({ workspacePath, label }: { workspacePath: string; label: Label }) {
@@ -33,6 +34,7 @@ export function LabelDetails({ workspacePath, label }: { workspacePath: string; 
       <DetailsSection title="Comment">
         <DetailsText text={label.comment} placeholder="No comment" />
       </DetailsSection>
+      <ChangedFilesSection target={{ kind: 'changeset', changesetId: label.changeset }} onOpen={(path) => showLabelChanges(label, path)} />
       <DetailsSection title="Properties">
         <PropertyList
           properties={[
