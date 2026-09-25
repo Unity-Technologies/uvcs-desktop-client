@@ -16,6 +16,7 @@ export interface CmRunOptions {
 }
 
 type CommandLogListener = (entry: CommandLogEntry) => void;
+type CommandStartedListener = (command: { args: readonly string[]; cwd: string; finished: Promise<unknown> }) => void;
 
 /**
  * The single entry point to the `cm` CLI.
@@ -25,6 +26,7 @@ type CommandLogListener = (entry: CommandLogEntry) => void;
 export class CmClient {
   private readonly shellPool: CmShellPool;
   private readonly logListeners = new Set<CommandLogListener>();
+  private readonly startListeners = new Set<CommandStartedListener>();
   private nextCommandId = 1;
 
   constructor(private readonly cmPath: string) {
@@ -34,6 +36,11 @@ export class CmClient {
   onCommandLogged(listener: CommandLogListener): () => void {
     this.logListeners.add(listener);
     return () => this.logListeners.delete(listener);
+  }
+
+  onCommandStarted(listener: CommandStartedListener): () => void {
+    this.startListeners.add(listener);
+    return () => this.startListeners.delete(listener);
   }
 
   /** Runs a quick, non-interactive command. Prefer this for reads. */
@@ -59,9 +66,11 @@ export class CmClient {
   private async run(args: string[], options: CmRunOptions, useShell: boolean): Promise<string> {
     const cwd = options.cwd ?? homedir();
     const startedAt = Date.now();
-    const result = useShell
-      ? await this.shellPool.run(cwd, args)
-      : await runCmProcess(this.cmPath, args, { cwd, signal: options.signal, killSignal: options.killSignal, onOutputLine: options.onOutputLine });
+    const finished = useShell
+      ? this.shellPool.run(cwd, args)
+      : runCmProcess(this.cmPath, args, { cwd, signal: options.signal, killSignal: options.killSignal, onOutputLine: options.onOutputLine });
+    this.startListeners.forEach((listener) => listener({ args, cwd, finished }));
+    const result = await finished;
 
     this.log(args, cwd, startedAt, result, useShell);
 

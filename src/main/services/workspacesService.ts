@@ -1,4 +1,4 @@
-import type { CreateWorkspaceRequest, WorkspacesApi } from '@shared/api/workspaces';
+import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
 import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
 import { resolveWorkspaceRepositories } from '../cm/workspaceRepositories';
@@ -71,9 +71,9 @@ export function createWorkspacesService({ cm, operations, watcher }: ServiceCont
     });
   }
 
-  async function watch(workspacePath: string): Promise<void> {
+  async function watch(workspacePath: string): Promise<WatchCoverage> {
     cm.warmUp(workspacePath);
-    watcher.watch(workspacePath);
+    return watcher.watch(workspacePath);
   }
 
   function switchTo(workspacePath: string, targetSpec: string, operationId: string): Promise<void> {
