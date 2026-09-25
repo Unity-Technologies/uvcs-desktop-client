@@ -1,0 +1,42 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  height: 280px;
+  margin: 0 calc(-1 * var(--space-2));
+  overflow: auto;
+}
+
+.branch {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  height: 30px;
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  text-align: left;
+}
+
+.branch[data-highlighted='true'] {
+  background: var(--accent-soft);
+}
+
+.icon {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.name {
+  flex: none;
+  font-weight: 500;
+}
+
+.comment {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

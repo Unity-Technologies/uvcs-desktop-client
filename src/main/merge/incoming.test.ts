@@ -1,0 +1,46 @@
+import { describe, expect, it } from 'vitest';
+import type { DiffEntry } from '@shared/domain/diff';
+import type { PendingChange } from '@shared/domain/pendingChanges';
+import { findUpdateBlockers, findUpdateConflicts } from './incoming';
+
+function incoming(path: string, status: DiffEntry['status'], itemType: DiffEntry['itemType'] = 'file'): DiffEntry {
+  return { path, status, itemType, baseRevisionId: 10, revisionId: 20 };
+}
+
+function local(path: string, kinds: PendingChange['kinds']): PendingChange {
+  return { path, kinds, itemType: 'file', size: 0, lastModified: '' };
+}
+
+describe('findUpdateBlockers', () => {
+  it('reports local changes to items the branch deleted or moved', () => {
+    const moved: DiffEntry = { ...incoming('src/new-name.txt', 'moved'), oldPath: 'src/old-name.txt' };
+    expect(
+      findUpdateBlockers([incoming('src/gone.txt', 'deleted'), moved, incoming('src/a.txt', 'changed')], [
+        local('src/gone.txt', ['changed']),
+        local('src/old-name.txt', ['checkedOut']),
+        local('src/a.txt', ['changed']),
+      ]),
+    ).toEqual(['src/gone.txt', 'src/old-name.txt']);
+  });
+});
+
+describe('findUpdateConflicts', () => {
+  it('reports files changed both locally and on the branch', () => {
+    const conflicts = findUpdateConflicts(
+      [incoming('src/a.txt', 'changed'), incoming('src/b.txt', 'changed'), incoming('img.png', 'changed', 'binaryFile')],
+      [local('src/a.txt', ['checkedOut', 'changed']), local('img.png', ['changed'])],
+    );
+    expect(conflicts).toEqual([
+      { path: 'src/a.txt', isBinary: false, baseRevisionId: 10, incomingRevisionId: 20 },
+      { path: 'img.png', isBinary: true, baseRevisionId: 10, incomingRevisionId: 20 },
+    ]);
+  });
+
+  it('ignores local changes that do not touch the content', () => {
+    expect(findUpdateConflicts([incoming('src/a.txt', 'changed')], [local('src/a.txt', ['moved'])])).toEqual([]);
+  });
+
+  it('ignores incoming additions and directories', () => {
+    expect(findUpdateConflicts([incoming('new.txt', 'added'), incoming('src', 'changed', 'directory')], [local('src', ['changed'])])).toEqual([]);
+  });
+});

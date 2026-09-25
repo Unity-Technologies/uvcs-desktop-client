@@ -15,10 +15,15 @@ export async function withTempFile<T>(content: string, work: (filePath: string) 
 }
 
 /** Runs `work` with a fresh temporary file path that it may create; the file is always deleted afterwards. */
-export async function withTempPath<T>(work: (filePath: string) => Promise<T>): Promise<T> {
+export function withTempPath<T>(work: (filePath: string) => Promise<T>): Promise<T> {
+  return withTempDirectory((directory) => work(join(directory, 'content')));
+}
+
+/** Runs `work` with a fresh temporary directory, always deleted afterwards. */
+export async function withTempDirectory<T>(work: (directory: string) => Promise<T>): Promise<T> {
   const directory = await mkdtemp(join(tmpdir(), 'uvcs-'));
   try {
-    return await work(join(directory, 'content'));
+    return await work(directory);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

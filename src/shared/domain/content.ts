@@ -6,8 +6,11 @@ export type ContentSource =
   | { kind: 'workspaceBase'; path: string }
   /** `fileName` is used to recognize images and pick syntax highlighting. */
   | { kind: 'revision'; revisionId: number; fileName: string }
-  /** Any `cm cat` spec, e.g. `serverpath:/src/a.ts#cs:12`. */
-  | { kind: 'spec'; spec: string };
+  /**
+   * Any `cm cat` spec, e.g. `serverpath:/src/a.ts#cs:12`. `fileName` recognizes images when
+   * the spec has no path in it (e.g. `itemid:27#cs:12`).
+   */
+  | { kind: 'spec'; spec: string; fileName?: string };
 
 export interface FileContent {
   /** UTF-8 text, when the content is text. */

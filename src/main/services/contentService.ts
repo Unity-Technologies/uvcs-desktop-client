@@ -20,7 +20,7 @@ export function createContentService({ cm }: ServiceContext): ContentApi {
       case 'revision':
         return downloadRevision(workspacePath, `revid:${source.revisionId}`, source.fileName);
       case 'spec':
-        return downloadRevision(workspacePath, source.spec, source.spec.split('#')[0]);
+        return downloadRevision(workspacePath, source.spec, source.fileName ?? source.spec.split('#')[0]!);
     }
   }
 
