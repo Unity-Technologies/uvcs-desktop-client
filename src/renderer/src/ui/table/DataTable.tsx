@@ -35,6 +35,8 @@ interface DataTableProps<Row> {
   onRowKeyDown?: (event: KeyboardEvent, focusedRow: Row) => void;
   /** Scrolls this row into view whenever it changes, e.g. after revealing a search result. */
   revealKey?: string | null;
+  /** Selects the first row whenever no shown row is selected, so a details panel next to the table always has something to show. */
+  selectFirstRow?: boolean;
 }
 
 export function DataTable<Row>({
@@ -49,6 +51,7 @@ export function DataTable<Row>({
   initialSort,
   onRowKeyDown,
   revealKey,
+  selectFirstRow = false,
 }: DataTableProps<Row>) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [sort, setSort] = useState(initialSort);
@@ -70,6 +73,14 @@ export function DataTable<Row>({
     if (index !== -1) virtualizer.scrollToIndex(index, { align: 'auto' });
     // Only when the requested row changes (or appears), not on every re-render of the rows.
   }, [revealKey, orderedKeys.length]);
+
+  const firstKey = orderedKeys[0];
+  const anchorShown = selection.anchor !== null && rowsByKey.has(selection.anchor);
+  useEffect(() => {
+    if (!selectFirstRow || firstKey === undefined || anchorShown) return;
+    setFocusedKey(firstKey);
+    onSelectionChange({ selected: new Set([firstKey]), anchor: firstKey });
+  }, [selectFirstRow, firstKey, anchorShown, onSelectionChange]);
 
   const selectedRows = (): Row[] => orderedKeys.filter((key) => selection.selected.has(key)).map((key) => rowsByKey.get(key)!);
 
