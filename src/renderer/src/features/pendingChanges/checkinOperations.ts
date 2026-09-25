@@ -45,14 +45,17 @@ export async function checkinChanges({ workspacePath, changes, comment, warnOnEm
   return true;
 }
 
-export async function shelveChanges(workspacePath: string, changes: PendingChange[], comment: string): Promise<void> {
+/** Shelves the given changes. Resolves to true when a shelve was created. */
+export async function shelveChanges(workspacePath: string, changes: PendingChange[], comment: string): Promise<boolean> {
   const shelveComment = comment.trim() || (await prompt({ title: 'Shelve changes', label: 'Comment', confirmLabel: 'Shelve' }));
-  if (!shelveComment) return;
+  if (!shelveComment) return false;
 
   const shelveId = await runAction(workspacePath, "Couldn't shelve the changes", () =>
     api.pendingChanges.shelve(workspacePath, changes.map((change) => change.path), shelveComment),
   );
-  if (shelveId !== undefined) toast.success(`Shelved as shelve ${shelveId}`, 'Your changes are still in the workspace.');
+  if (shelveId === undefined) return false;
+  toast.success(`Shelved as shelve ${shelveId}`, 'Your changes are still in the workspace.');
+  return true;
 }
 
 export function undoUnchangedCheckouts(workspacePath: string): Promise<void | undefined> {

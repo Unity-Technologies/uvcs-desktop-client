@@ -44,7 +44,7 @@ export function PendingChangesView() {
 
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
-  const [checkingIn, setCheckingIn] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   const { visible: changes, query, bar: filterBar } = useChangeFilter(snapshot?.changes ?? NO_CHANGES, changePath, changeTone);
   const isIncluded = (change: PendingChange): boolean => isCheckinCandidate(change) && !draft.excludedPaths.has(change.path);
@@ -71,14 +71,24 @@ export function PendingChangesView() {
       return next;
     });
 
-  const checkin = async (): Promise<void> => {
-    setCheckingIn(true);
-    const done = await checkinChanges({ workspacePath, changes: included, comment: checkinComment(draft), warnOnEmptyComment: settings.warnOnEmptyComment });
-    setCheckingIn(false);
+  const runBusy = async (operation: () => Promise<boolean>): Promise<boolean> => {
+    setBusy(true);
+    try {
+      return await operation();
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const checkin = async (): Promise<boolean> => {
+    const done = await runBusy(() =>
+      checkinChanges({ workspacePath, changes: included, comment: checkinComment(draft), warnOnEmptyComment: settings.warnOnEmptyComment }),
+    );
     if (done) {
       reset(workspacePath);
       setSelection(EMPTY_SELECTION);
     }
+    return done;
   };
 
   const header = (
@@ -172,10 +182,9 @@ export function PendingChangesView() {
               includedCount={included.length}
               branchName={workspace?.selector.name ?? ''}
               recentComments={settings.recentComments}
-              busy={checkingIn}
-              onCheckin={() => void checkin()}
-              onShelve={() => void shelveChanges(workspacePath, included, checkinComment(draft))}
-              onUndoUnchanged={() => void undoUnchangedCheckouts(workspacePath)}
+              busy={busy}
+              onCheckin={checkin}
+              onShelve={() => runBusy(() => shelveChanges(workspacePath, included, checkinComment(draft)))}
             />
           </div>
         }
