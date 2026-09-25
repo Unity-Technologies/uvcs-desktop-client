@@ -17,7 +17,7 @@ export function Sidebar() {
   const rail = useSidebarCollapsed();
 
   return (
-    <SidebarColumn rail={rail}>
+    <SidebarColumn rail={rail} joinsTopBar>
       <WorkspaceSwitcher currentPath={workspacePath}>
         <button
           className={styles.workspace}

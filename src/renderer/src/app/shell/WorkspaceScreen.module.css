@@ -15,7 +15,6 @@
   flex: 1;
   flex-direction: column;
   min-width: 0;
-  border-left: 1px solid var(--border-subtle);
   background: var(--bg-surface);
   overflow: hidden;
 }
@@ -25,6 +24,8 @@
   display: flex;
   flex: 1;
   min-height: 0;
+  /* The sidebar's edge starts under the title bar, which runs across the window unbroken. */
+  border-left: 1px solid var(--border-subtle);
 }
 
 .layer {

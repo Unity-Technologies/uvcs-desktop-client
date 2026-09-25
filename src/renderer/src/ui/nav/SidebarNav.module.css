@@ -14,6 +14,13 @@
   -webkit-app-region: drag;
 }
 
+/* One title bar across the window: the band over the sidebar (with the window buttons) wears the top bar's sheen and edge. */
+.dragRegion[data-joins-top-bar='true'] {
+  margin: 0 calc(-1 * var(--space-2)) var(--space-2);
+  border-bottom: 1px solid var(--border-default);
+  background: linear-gradient(180deg, var(--toolbar-top), var(--toolbar-bottom));
+}
+
 .groups {
   display: flex;
   flex: 1;
