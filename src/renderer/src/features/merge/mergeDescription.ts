@@ -74,6 +74,18 @@ export function mergeTitle(request: MergeRequest, destination: string): MergeTit
   }
 }
 
+/** What the page says once the merge ran: "Merge complete", "Shelve applied". */
+export function completionTitle(request: MergeRequest): string {
+  switch (request.kind) {
+    case 'merge':
+      return request.sourceSpec.startsWith('sh:') ? 'Shelve applied' : 'Merge complete';
+    case 'cherryPick':
+      return 'Cherry pick complete';
+    case 'subtractive':
+      return 'Changes undone';
+  }
+}
+
 export function mergeTitleText({ verb, source, preposition, destination }: MergeTitle): string {
   return `${verb} ${source} ${preposition} ${destination}`;
 }

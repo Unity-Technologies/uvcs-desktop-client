@@ -4,6 +4,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { SplitPane } from '../../ui/SplitPane';
 import { conflictedFilesOf } from './conflictedFiles';
 import { MergeDetail } from './MergeDetail';
+import type { MergeCompletion } from './MergeCompleted';
 import { mergeLabels } from './mergeDescription';
 import { MergeHeader } from './MergeHeader';
 import { MergeItemList } from './MergeItemList';
@@ -18,10 +19,11 @@ interface MergeSessionProps {
   workspacePath: string;
   request: MergeRequest;
   plan: MergePlan;
+  onCompleted: (completion: MergeCompletion) => void;
 }
 
 /** The decisions for one merge plan, from the first conflict to "Complete merge". */
-export function MergeSession({ workspacePath, request, plan }: MergeSessionProps) {
+export function MergeSession({ workspacePath, request, plan, onCompleted }: MergeSessionProps) {
   const labels = useMemo(() => mergeLabels(request, plan), [request, plan]);
   const conflictedFiles = useMemo(() => conflictedFilesOf(plan, request), [plan, request]);
   const { states: fileStates, decide, reset } = useFileConflicts(workspacePath, conflictedFiles, labels);
@@ -59,8 +61,9 @@ export function MergeSession({ workspacePath, request, plan }: MergeSessionProps
   const merge = async (): Promise<void> => {
     if (!resolutions) return;
     setMerging(true);
-    await completeMerge(workspacePath, request, resolutions);
+    const result = await completeMerge(workspacePath, request, resolutions);
     setMerging(false);
+    if (result) onCompleted({ result, labels, changeCount: plan.changes.length, conflictCount: conflictStatuses.length });
   };
 
   return (
