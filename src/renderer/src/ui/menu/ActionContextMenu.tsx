@@ -27,9 +27,14 @@ export function ActionContextMenu({ entries, children, onCloseAutoFocus }: Actio
       <ContextMenu.Trigger asChild>{children}</ContextMenu.Trigger>
       <ContextMenu.Portal>
         <ContextMenu.Content className={styles.content} onCloseAutoFocus={onCloseAutoFocus}>
-          <MenuEntries entries={entries()} primitives={primitives} />
+          <OpenedEntries entries={entries} />
         </ContextMenu.Content>
       </ContextMenu.Portal>
     </ContextMenu.Root>
   );
+}
+
+/** Asks for the entries as the menu opens, even when nothing else re-rendered since what it opens on changed. */
+function OpenedEntries({ entries }: { entries: () => MenuEntry[] }) {
+  return <MenuEntries entries={entries()} primitives={primitives} />;
 }
