@@ -1,13 +1,13 @@
-import { Plus, X } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useState } from 'react';
 import type { AttributeValue } from '@shared/domain/attribute';
 import { api } from '../../api/client';
 import { runAction } from '../../app/operations/runOperation';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { Button } from '../../ui/Button';
-import { DetailsEmpty, DetailsSection } from '../../ui/DetailsPanel';
-import { IconButton } from '../../ui/IconButton';
+import { DetailsEmpty, DetailsSection, DetailsSkeleton } from '../../ui/DetailsPanel';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
+import { AttributeRow } from './AttributeRow';
 import { useAttributeTypes, useAttributeValues } from './useAttributes';
 import styles from './AttributesEditor.module.css';
 
@@ -17,12 +17,12 @@ import styles from './AttributesEditor.module.css';
  */
 export function AttributesEditor({ objectSpec }: { objectSpec: string }) {
   const workspacePath = useWorkspacePath();
-  const { data: values = [] } = useAttributeValues(objectSpec);
+  const { data: values } = useAttributeValues(objectSpec);
   const { data: types = [] } = useAttributeTypes();
   const [adding, setAdding] = useState<string | null>(null);
 
-  const unused = types.filter((type) => !values.some((value) => value.name === type.name));
-  const rows: AttributeValue[] = adding ? [...values, { name: adding, value: '' }] : values;
+  const unused = types.filter((type) => !values?.some((value) => value.name === type.name));
+  const rows: AttributeValue[] = adding ? [...(values ?? []), { name: adding, value: '' }] : (values ?? []);
 
   const save = async (attribute: string, value: string): Promise<void> => {
     setAdding(null);
@@ -47,7 +47,9 @@ export function AttributesEditor({ objectSpec }: { objectSpec: string }) {
         )
       }
     >
-      {rows.length === 0 ? (
+      {!values ? (
+        <DetailsSkeleton rows={2} />
+      ) : rows.length === 0 ? (
         <DetailsEmpty>No attributes yet.</DetailsEmpty>
       ) : (
         <div className={styles.list}>
@@ -55,7 +57,7 @@ export function AttributesEditor({ objectSpec }: { objectSpec: string }) {
             <AttributeRow
               key={row.name}
               attribute={row}
-              startEditing={row.name === adding}
+              isNew={row.name === adding}
               onSave={(value) => void save(row.name, value)}
               onCancel={() => row.name === adding && setAdding(null)}
               onRemove={() => void remove(row.name)}
@@ -64,54 +66,5 @@ export function AttributesEditor({ objectSpec }: { objectSpec: string }) {
         </div>
       )}
     </DetailsSection>
-  );
-}
-
-interface AttributeRowProps {
-  attribute: AttributeValue;
-  startEditing: boolean;
-  onSave: (value: string) => void;
-  onCancel: () => void;
-  onRemove: () => void;
-}
-
-function AttributeRow({ attribute, startEditing, onSave, onCancel, onRemove }: AttributeRowProps) {
-  const [draft, setDraft] = useState<string | null>(startEditing ? '' : null);
-
-  const finish = (): void => {
-    if (draft !== null && draft !== attribute.value) onSave(draft);
-    else onCancel();
-    setDraft(null);
-  };
-
-  return (
-    <div className={styles.row}>
-      <span className={styles.name}>{attribute.name}</span>
-      {draft === null ? (
-        <button className={styles.value} onClick={() => setDraft(attribute.value)} data-tip="Click to edit">
-          {attribute.value || <span className={styles.placeholder}>Empty</span>}
-        </button>
-      ) : (
-        <textarea
-          className={styles.editor}
-          value={draft}
-          autoFocus
-          rows={Math.min(6, Math.max(1, draft.split('\n').length))}
-          onChange={(event) => setDraft(event.target.value)}
-          onBlur={finish}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter' && !event.shiftKey) {
-              event.preventDefault();
-              finish();
-            } else if (event.key === 'Escape') {
-              event.stopPropagation();
-              setDraft(null);
-              onCancel();
-            }
-          }}
-        />
-      )}
-      {!startEditing && <IconButton size="small" icon={<X size={12} />} label={`Remove ${attribute.name}`} onClick={onRemove} />}
-    </div>
   );
 }

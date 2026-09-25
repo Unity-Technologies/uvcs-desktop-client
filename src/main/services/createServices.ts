@@ -1,6 +1,7 @@
 import type { UvcsApi } from '@shared/api';
 import { LeftChangesFinder } from '../workspace/leftChanges';
 import { SwitchShelveRecords } from '../workspace/switchShelveRecords';
+import { createAccountsService } from './accountsService';
 import { createAnnotateService } from './annotateService';
 import { createAttributesService } from './attributesService';
 import { createBranchExplorerService } from './branchExplorerService';
@@ -17,6 +18,7 @@ import { createLocksService } from './locksService';
 import { createMergeService } from './mergeService';
 import { createPendingChangesService } from './pendingChangesService';
 import { createRepositoriesService } from './repositoriesService';
+import { createReviewService } from './reviewService';
 import { createSettingsService } from './settingsService';
 import { createShelvesService } from './shelvesService';
 import { createSyncService } from './syncService';
@@ -29,6 +31,7 @@ export function createServices(context: ServiceContext): UvcsApi {
   const switching: SwitchContext = { switchShelves, leftChanges: new LeftChangesFinder(context.cm, switchShelves) };
 
   return {
+    accounts: createAccountsService(context),
     annotate: createAnnotateService(context),
     attributes: createAttributesService(context),
     branchExplorer: createBranchExplorerService(context),
@@ -45,6 +48,7 @@ export function createServices(context: ServiceContext): UvcsApi {
     merge: createMergeService(context, switching),
     pendingChanges: createPendingChangesService(context),
     repositories: createRepositoriesService(context),
+    review: createReviewService(context),
     settings: createSettingsService(context),
     shelves: createShelvesService(context),
     sync: createSyncService(context),

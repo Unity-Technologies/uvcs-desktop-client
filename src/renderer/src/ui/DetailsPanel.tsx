@@ -1,12 +1,16 @@
+import { MoreHorizontal } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Avatar } from './Avatar';
-import { RelativeTime } from './RelativeTime';
+import { withoutAction, type MenuEntry } from '../lib/actions';
 import { displayName } from '../lib/userName';
+import { Avatar } from './Avatar';
+import { IconButton } from './IconButton';
+import { ActionDropdownMenu } from './menu/ActionDropdownMenu';
+import { RelativeTime } from './RelativeTime';
 import styles from './DetailsPanel.module.css';
 
 interface DetailsPanelProps {
   icon: ReactNode;
-  /** What the object is, e.g. "Branch" or "Changeset". */
+  /** What the object is, e.g. "Branch" or "Changeset 12". */
   kind: string;
   /** The object's short name, e.g. the last segment of a branch path. */
   title: ReactNode;
@@ -16,15 +20,23 @@ interface DetailsPanelProps {
   author?: { user: string; date: string };
   /** Small status pills such as "Current" or "Hidden". */
   badges?: ReactNode;
-  /** The main things to do with the object; the first one should be the primary button. */
-  actions?: ReactNode;
+  /** The one main thing to do with the object, the same as double-clicking or pressing Enter on it: usually "Open diff". */
+  primaryAction?: ReactNode;
+  /** The object's context menu, behind a "More actions" button next to the primary action. */
+  menu?: MenuEntry[];
+  /** The menu entry the primary action repeats, left out of the menu. */
+  primaryActionId?: string;
+  /** The body fills the panel without padding or scrolling, e.g. for a diff. */
+  fill?: boolean;
   children?: ReactNode;
 }
 
 /** The side panel describing the object selected in a list or graph. */
-export function DetailsPanel({ icon, kind, title, context, author, badges, actions, children }: DetailsPanelProps) {
+export function DetailsPanel({ icon, kind, title, context, author, badges, primaryAction, menu = [], primaryActionId, fill = false, children }: DetailsPanelProps) {
+  const moreActions = primaryActionId ? withoutAction(menu, primaryActionId) : menu;
+
   return (
-    <aside className={styles.panel}>
+    <aside className={styles.panel} data-fill={fill}>
       <header className={styles.hero}>
         <div className={styles.kindRow}>
           <span className={styles.icon}>{icon}</span>
@@ -52,7 +64,16 @@ export function DetailsPanel({ icon, kind, title, context, author, badges, actio
             {badges}
           </div>
         )}
-        {actions && <div className={styles.actions}>{actions}</div>}
+        {(primaryAction || moreActions.length > 0) && (
+          <div className={styles.actions}>
+            <div className={styles.primaryAction}>{primaryAction}</div>
+            {moreActions.length > 0 && (
+              <ActionDropdownMenu entries={moreActions}>
+                <IconButton variant="secondary" icon={<MoreHorizontal size={15} />} label="More actions" />
+              </ActionDropdownMenu>
+            )}
+          </div>
+        )}
       </header>
       <div className={styles.body}>{children}</div>
     </aside>
@@ -97,4 +118,24 @@ export function DetailsText({ text, placeholder }: { text: string; placeholder: 
 /** A friendly message inside a section, e.g. "No attributes yet". */
 export function DetailsEmpty({ children }: { children: ReactNode }) {
   return <p className={styles.placeholder}>{children}</p>;
+}
+
+/** Placeholder rows while a section loads. */
+export function DetailsSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <div className={styles.skeleton} aria-busy="true" aria-label="Loading">
+      {Array.from({ length: rows }, (_, index) => (
+        <span key={index} className={styles.skeletonRow} />
+      ))}
+    </div>
+  );
+}
+
+/** A value that takes you somewhere else in the app, e.g. the parent changeset. */
+export function DetailsLink({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+  return (
+    <button className={styles.link} onClick={onClick}>
+      {children}
+    </button>
+  );
 }

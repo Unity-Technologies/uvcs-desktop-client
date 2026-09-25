@@ -11,7 +11,8 @@ export interface PendingChangesApi {
   list(workspacePath: string, filter: PendingChangesFilter): Promise<PendingChangesSnapshot>;
   checkin(workspacePath: string, request: CheckinRequest, operationId: string): Promise<CheckinResult>;
   undo(workspacePath: string, paths: string[]): Promise<void>;
-  undoUnchanged(workspacePath: string): Promise<void>;
+  /** Undoes the checkouts whose contents didn't change: of the given paths, or of the whole workspace. */
+  undoUnchanged(workspacePath: string, paths?: string[]): Promise<void>;
   add(workspacePath: string, paths: string[]): Promise<void>;
   remove(workspacePath: string, paths: string[]): Promise<void>;
   checkout(workspacePath: string, paths: string[]): Promise<void>;

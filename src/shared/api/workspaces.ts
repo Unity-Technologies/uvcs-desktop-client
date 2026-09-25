@@ -1,5 +1,5 @@
 import type { PendingChangesAction, SwitchPreflight, SwitchResult } from '../domain/switchWithChanges';
-import type { WorkspaceInfo, WorkspaceSummary } from '../domain/workspace';
+import type { WorkspaceInfo, WorkspaceSelector, WorkspaceSummary } from '../domain/workspace';
 
 export interface CreateWorkspaceRequest {
   name: string;
@@ -16,6 +16,8 @@ export type WatchCoverage = 'full' | 'partial';
 export interface WorkspacesApi {
   list(): Promise<WorkspaceSummary[]>;
   info(workspacePath: string): Promise<WorkspaceInfo>;
+  /** The comment of the branch, changeset, label or shelve the workspace is loaded from; empty if it has none. */
+  workingObjectComment(workspacePath: string, selector: WorkspaceSelector): Promise<string>;
   /**
    * Which repository each workspace works on (`name@server`), or null when it can't be told quickly
    * (missing folder, unreachable server). Costs one `cm` call per workspace, so only the first 10 paths

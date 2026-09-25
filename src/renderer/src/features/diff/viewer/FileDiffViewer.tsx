@@ -17,6 +17,10 @@ interface FileDiffViewerProps {
   title?: ReactNode;
   /** Explains why both versions are identical, e.g. "Moved without content changes". */
   identicalDescription?: string;
+  /** Controls about what to compare, e.g. against the loaded revision or the reviewed copy. */
+  compareControls?: ReactNode;
+  /** Reverting blocks brought the workspace file back to its loaded revision. */
+  onMatchesBase?: () => void;
 }
 
 /**
@@ -25,7 +29,7 @@ interface FileDiffViewerProps {
  * Switching files keeps the previous diff on screen until the next one loads; a spinner
  * only shows up when loading is slow.
  */
-export function FileDiffViewer({ workspacePath, original, modified, fileName, title, identicalDescription }: FileDiffViewerProps) {
+export function FileDiffViewer({ workspacePath, original, modified, fileName, title, identicalDescription, compareControls, onMatchesBase }: FileDiffViewerProps) {
   const contents = useDiffContents(workspacePath, original, modified);
   const spin = useSpinDelay(contents.isPending || contents.isPlaceholderData);
 
@@ -48,6 +52,8 @@ export function FileDiffViewer({ workspacePath, original, modified, fileName, ti
       fileName={fileName}
       title={title}
       identicalDescription={identicalDescription}
+      compareControls={compareControls}
+      onMatchesBase={onMatchesBase}
     />
   );
 }

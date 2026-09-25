@@ -1,4 +1,4 @@
-import { Check, FileDiff, GitCommitVertical, HardDrive, Palette } from 'lucide-react';
+import { Check, FileDiff, GitCommitVertical, HardDrive, Palette, Users } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
 import type { AppSettings } from '@shared/domain/settings';
@@ -9,18 +9,20 @@ import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { NavItem } from '../../ui/nav/SidebarNav';
 import { SegmentedControl } from '../../ui/SegmentedControl';
+import { AccountsPane } from './AccountsPane';
 import { DefaultWorkspaceRootField } from './DefaultWorkspaceRootField';
 import { THEMES } from './themes';
 import { useSettings, useUpdateSettings } from './useSettings';
 import styles from './SettingsDialog.module.css';
 
-export type SettingsSection = 'appearance' | 'pendingChanges' | 'checkin' | 'workspaces';
+export type SettingsSection = 'appearance' | 'pendingChanges' | 'checkin' | 'workspaces' | 'accounts';
 
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
   { id: 'appearance', label: 'Appearance', icon: <Palette size={15} /> },
   { id: 'pendingChanges', label: 'Pending changes', icon: <FileDiff size={15} /> },
   { id: 'checkin', label: 'Check in', icon: <GitCommitVertical size={15} /> },
   { id: 'workspaces', label: 'Workspaces', icon: <HardDrive size={15} /> },
+  { id: 'accounts', label: 'Accounts', icon: <Users size={15} /> },
 ];
 
 export function openSettingsDialog(): void {
@@ -49,6 +51,7 @@ function SettingsDialog({ initialSection, onClose }: { initialSection: SettingsS
           {section === 'pendingChanges' && <PendingChangesPane settings={settings} updateSettings={updateSettings} />}
           {section === 'checkin' && <CheckinPane settings={settings} updateSettings={updateSettings} />}
           {section === 'workspaces' && <WorkspacesPane settings={settings} updateSettings={updateSettings} />}
+          {section === 'accounts' && <AccountsPane />}
         </div>
       </div>
     </Dialog>
@@ -170,6 +173,14 @@ function WorkspacesPane({ settings, updateSettings }: PaneProps) {
           label="Restore left changes automatically when I come back"
           checked={settings.restoreLeftChangesAutomatically}
           onChange={(restoreLeftChangesAutomatically) => updateSettings({ restoreLeftChangesAutomatically })}
+        />
+      </SettingsGroup>
+
+      <SettingsGroup title="Incoming changes">
+        <Checkbox
+          label="Notify me when someone checks in to my branch while the app is in the background"
+          checked={settings.notifyOnIncoming}
+          onChange={(notifyOnIncoming) => updateSettings({ notifyOnIncoming })}
         />
       </SettingsGroup>
     </>

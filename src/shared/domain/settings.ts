@@ -30,6 +30,8 @@ export interface AppSettings {
   restoreLeftChangesAutomatically: boolean;
   /** The shelves created while switching with pending changes, until they are restored or discarded. */
   switchShelves: SwitchShelveRecord[];
+  /** Show an OS notification when someone checks in to the loaded branch while the window is in the background. */
+  notifyOnIncoming: boolean;
   /** Null until the window is first moved or resized. */
   windowBounds: SavedWindowBounds | null;
 }
@@ -45,5 +47,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   pendingChangesOnSwitch: 'ask',
   restoreLeftChangesAutomatically: true,
   switchShelves: [],
+  notifyOnIncoming: false,
   windowBounds: null,
 };

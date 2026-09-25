@@ -4,6 +4,8 @@ export type ContentSource =
   | { kind: 'workspaceFile'; path: string }
   /** The revision the workspace has loaded for a path, before local changes. */
   | { kind: 'workspaceBase'; path: string }
+  /** The text of a workspace file when it was marked as reviewed. */
+  | { kind: 'reviewSnapshot'; path: string }
   /** `fileName` is used to recognize images and pick syntax highlighting. */
   | { kind: 'revision'; revisionId: number; fileName: string }
   /**

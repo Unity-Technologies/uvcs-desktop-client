@@ -1,5 +1,7 @@
-import { Clock, Cloud, GitBranch, HardDrive, Layers, Server, Settings } from 'lucide-react';
+import { Clock, GitBranch, Layers, Settings } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { ServerIcon } from '../../components/ServerIcon';
+import { describeServer } from '../../lib/servers';
 import { NavFooter, NavGroup, NavGroups, NavItem, Sidebar } from '../../ui/nav/SidebarNav';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { openSettingsDialog } from '../settings/SettingsDialog';
@@ -38,7 +40,7 @@ export function HomeSidebar({ section, onSelect }: HomeSidebarProps) {
           {isLoading && <CenteredSpinner />}
           {servers?.map((profile) => {
             const { label, detail } = describeServer(profile.server);
-            return item({ kind: 'server', server: profile.server }, serverIcon(profile.server), label, detail);
+            return item({ kind: 'server', server: profile.server }, <ServerIcon server={profile.server} />, label, detail);
           })}
         </NavGroup>
       </NavGroups>
@@ -48,18 +50,4 @@ export function HomeSidebar({ section, onSelect }: HomeSidebarProps) {
       </NavFooter>
     </Sidebar>
   );
-}
-
-/** `acme@cloud` → organization "acme" on Unity Cloud; `local` → this computer. */
-function describeServer(server: string): { label: string; detail?: string } {
-  if (server === 'local') return { label: 'This computer' };
-  const [organization, host] = server.split('@');
-  if (host === 'cloud' || host === 'unity') return { label: organization ?? server, detail: 'Cloud' };
-  return { label: server };
-}
-
-function serverIcon(server: string): ReactNode {
-  if (server === 'local') return <HardDrive size={15} />;
-  if (/@(cloud|unity)$/.test(server)) return <Cloud size={15} />;
-  return <Server size={15} />;
 }

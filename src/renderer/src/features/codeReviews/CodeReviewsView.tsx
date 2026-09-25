@@ -4,6 +4,8 @@ import { CODE_REVIEW_STATUSES, MAX_LISTED_CODE_REVIEWS, type CodeReview, type Co
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { ListWithDetails } from '../../components/ListWithDetails';
+import { NoSelection } from '../../components/NoSelection';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
@@ -16,6 +18,7 @@ import { ChoiceChip } from '../../ui/ChoiceChip';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { CodeReviewDetails } from './CodeReviewDetails';
 import { codeReviewMenu } from './codeReviewMenu';
 import { describeTarget, openReview } from './codeReviewOperations';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
@@ -146,21 +149,35 @@ export function CodeReviewsView() {
     );
   }
 
+  const selected = visible.find((review) => reviewKey(review) === selection.anchor);
+
   return (
     <>
       {header}
-      <HighlightQuery query={search}>
-        <DataTable
-          rows={visible}
-          columns={COLUMNS}
-          rowKey={(review) => String(review.id)}
-          selection={selection}
-          onSelectionChange={setSelection}
-          onActivate={openReview}
-          contextMenu={(rows) => codeReviewMenu(workspacePath, rows)}
-          initialSort={{ columnId: 'date', descending: true }}
-        />
-      </HighlightQuery>
+      <ListWithDetails
+        list={
+          <HighlightQuery query={search}>
+            <DataTable
+              rows={visible}
+              columns={COLUMNS}
+              rowKey={reviewKey}
+              selection={selection}
+              onSelectionChange={setSelection}
+              selectFirstRow
+              onActivate={(review) => openReview(review)}
+              contextMenu={(rows) => codeReviewMenu(workspacePath, rows)}
+              initialSort={{ columnId: 'date', descending: true }}
+            />
+          </HighlightQuery>
+        }
+        details={
+          selected ? <CodeReviewDetails key={selected.id} review={selected} menu={codeReviewMenu(workspacePath, [selected])} /> : <NoSelection noun="code review" />
+        }
+      />
     </>
   );
+}
+
+function reviewKey(review: CodeReview): string {
+  return String(review.id);
 }

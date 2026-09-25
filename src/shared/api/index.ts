@@ -1,3 +1,4 @@
+import type { AccountsApi } from './accounts';
 import type { AnnotateApi } from './annotate';
 import type { AttributesApi } from './attributes';
 import type { BranchExplorerApi } from './branchExplorer';
@@ -14,6 +15,7 @@ import type { LocksApi } from './locks';
 import type { MergeApi } from './merge';
 import type { PendingChangesApi } from './pendingChanges';
 import type { RepositoriesApi } from './repositories';
+import type { ReviewApi } from './review';
 import type { SettingsApi } from './settings';
 import type { ShelvesApi } from './shelves';
 import type { SyncApi } from './sync';
@@ -25,6 +27,7 @@ import type { WorkspacesApi } from './workspaces';
  * Each area is exposed over IPC as `<area>.<method>`.
  */
 export interface UvcsApi {
+  accounts: AccountsApi;
   annotate: AnnotateApi;
   attributes: AttributesApi;
   branchExplorer: BranchExplorerApi;
@@ -41,6 +44,7 @@ export interface UvcsApi {
   merge: MergeApi;
   pendingChanges: PendingChangesApi;
   repositories: RepositoriesApi;
+  review: ReviewApi;
   settings: SettingsApi;
   shelves: ShelvesApi;
   sync: SyncApi;

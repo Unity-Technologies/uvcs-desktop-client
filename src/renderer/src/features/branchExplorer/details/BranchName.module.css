@@ -1,27 +1,3 @@
-.panel {
-  display: flex;
-  flex: none;
-  flex-direction: column;
-  width: 320px;
-  border-left: 1px solid var(--border-subtle);
-  background: var(--bg-subtle);
-  animation: var(--keyframes-fade-in) var(--duration-fast);
-}
-
-.link {
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--accent);
-  font: inherit;
-  text-align: left;
-  overflow-wrap: anywhere;
-}
-
-.link:hover {
-  text-decoration: underline;
-}
-
 .branchDot {
   display: inline-block;
   flex: none;

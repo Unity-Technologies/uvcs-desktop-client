@@ -12,5 +12,6 @@ export const queryKeys = {
   user: ['user'] as const,
   repositories: (server: string) => ['repositories', server] as const,
   profiles: ['profiles'] as const,
+  accounts: ['accounts'] as const,
   inWorkspace: (workspacePath: string, ...parts: unknown[]) => [...workspaceKey(workspacePath), ...parts] as const,
 };

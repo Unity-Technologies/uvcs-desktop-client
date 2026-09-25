@@ -1,16 +1,17 @@
-import { FilePlus, FolderPlus, FolderTree, RefreshCw, Search } from 'lucide-react';
+import { FilePlus, FolderPlus, RefreshCw, Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { ListWithDetails } from '../../components/ListWithDetails';
+import { NoSelection } from '../../components/NoSelection';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { SearchField } from '../../ui/SearchField';
 import { CenteredSpinner } from '../../ui/Spinner';
-import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { usePendingChanges } from '../pendingChanges/usePendingChanges';
 import { useExpandedDirectories, useExpandedDirectoriesStore } from './expandedDirectoriesStore';
@@ -86,11 +87,8 @@ export function FilesView() {
   return (
     <>
       {header}
-      <SplitPane
-        initialSize={680}
-        minSize={420}
-        maxSize={1200}
-        first={
+      <ListWithDetails
+        list={
           <HighlightQuery query={filter}>
             <FileTreeTable
               rows={rows}
@@ -105,11 +103,17 @@ export function FilesView() {
             />
           </HighlightQuery>
         }
-        second={
+        details={
           focused ? (
-            <ItemDetailsPane key={focused.path} workspacePath={workspacePath} item={focused} pendingChange={pendingIndex.changeAt(focused.path)} />
+            <ItemDetailsPane
+              key={focused.path}
+              workspacePath={workspacePath}
+              item={focused}
+              pendingChange={pendingIndex.changeAt(focused.path)}
+              menu={fileMenu(workspacePath, [focused], pendingIndex)}
+            />
           ) : (
-            <EmptyState icon={<FolderTree size={22} />} title="Select a file" description="See its details, pending changes and last change here." />
+            <NoSelection noun="file" />
           )
         }
       />

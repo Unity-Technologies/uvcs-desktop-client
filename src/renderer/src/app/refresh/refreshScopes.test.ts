@@ -15,6 +15,9 @@ describe('refresh scopes', () => {
     expect(isAffectedByFileChanges(key('explorer', 'directory', 'src'))).toBe(true);
     expect(isAffectedByFileChanges(key('content', { kind: 'workspaceFile', path: 'a.txt' }))).toBe(true);
     expect(isAffectedByFileChanges(key('content', { kind: 'revision', revisionId: 4 }))).toBe(false);
+    expect(isAffectedByFileChanges(key('diffContents', { kind: 'workspaceBase', path: 'a.txt' }, { kind: 'workspaceFile', path: 'a.txt' }))).toBe(true);
+    expect(isAffectedByFileChanges(key('diffContents', { kind: 'revision', revisionId: 3 }, { kind: 'revision', revisionId: 4 }))).toBe(false);
+    expect(isAffectedByFileChanges(key('review'))).toBe(true);
     expect(isAffectedByFileChanges(key('explorer', 'allPaths'))).toBe(false);
     expect(isAffectedByFileChanges(key('branchExplorer', {}))).toBe(false);
   });

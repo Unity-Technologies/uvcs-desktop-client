@@ -1,0 +1,32 @@
+/* The top bar's bordered controls (the branch pill and the segments next to it): a quiet field that firms up on hover. */
+.control {
+  height: 30px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-primary);
+  cursor: default;
+  outline: none;
+  transition:
+    background var(--duration-fast),
+    border-color var(--duration-fast),
+    box-shadow var(--duration-fast);
+}
+
+.control:is(button):hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+
+.control:is(button):active:not(:disabled),
+.control[data-state='open'] {
+  border-color: var(--border-strong);
+  background: var(--bg-active);
+  box-shadow: none;
+}
+
+.control:focus-visible {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}

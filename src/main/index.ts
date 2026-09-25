@@ -5,12 +5,14 @@ import { locateCm } from './cm/locateCm';
 import { registerApi } from './ipc/registerApi';
 import { sendEvent } from './ipc/sendEvent';
 import { OperationTracker } from './operations/OperationTracker';
+import { ReviewStore } from './review/ReviewStore';
 import { createServices } from './services/createServices';
 import { SettingsStore } from './settings/SettingsStore';
 import { changesWorkspace } from './watch/changesWorkspace';
 import { WorkspaceWatcher } from './watch/WorkspaceWatcher';
 import { installAppMenu } from './window/appMenu';
 import { createMainWindow } from './window/createMainWindow';
+import { focusMainWindow } from './window/focusMainWindow';
 import { handleRecentDocumentRequests } from './window/recentDocuments';
 
 const cm = new CmClient(locateCm);
@@ -32,6 +34,7 @@ function start(): void {
     createServices({
       cm,
       operations,
+      reviews: new ReviewStore(join(app.getPath('userData'), 'review-snapshots')),
       settings,
       watcher,
     }),
@@ -53,13 +56,6 @@ if (app.isPackaged && !app.requestSingleInstanceLock()) {
   // Registered before the app is ready: opening a recent workspace from the Dock can be what launches it.
   handleRecentDocumentRequests();
   app.whenReady().then(start);
-}
-
-function focusMainWindow(): void {
-  const window = BrowserWindow.getAllWindows()[0];
-  if (!window) return;
-  if (window.isMinimized()) window.restore();
-  window.focus();
 }
 
 app.on('window-all-closed', () => {
