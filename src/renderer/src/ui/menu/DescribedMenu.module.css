@@ -1,0 +1,72 @@
+.content {
+  min-width: 240px;
+  max-width: 340px;
+  padding: var(--space-1);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
+  z-index: 900;
+}
+
+/* Animate only while open, like the other menus (see Menu.module.css). */
+.content[data-state='open'] {
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+}
+
+.title {
+  padding: 6px var(--space-2) 4px;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px var(--space-2);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+
+.item[data-highlighted] {
+  background: var(--bg-hover);
+}
+
+.item[data-disabled] {
+  opacity: 0.45;
+}
+
+.icon {
+  display: flex;
+  flex: none;
+  width: 16px;
+  color: var(--text-secondary);
+}
+
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.3;
+}
+
+.label {
+  font-size: var(--text-md);
+  font-weight: var(--weight-medium);
+}
+
+.description {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.check {
+  flex: none;
+  color: var(--accent-text);
+}
