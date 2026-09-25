@@ -1,8 +1,9 @@
 import type { GraphLabel, MergeLink } from '@shared/domain/branchExplorer';
 import type { CodeReview } from '@shared/domain/codeReview';
 import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
+import type { DrawnTargets } from './drawContext';
 import { distanceToCurve, linkCurve, type Point } from './curves';
-import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, COLUMN_WIDTH, columnX, GRAPH_PADDING, HEADER_HEIGHT, HEADER_MAX_WIDTH, headerTop, NODE_RADIUS, ROW_HEIGHT, rowY } from './geometry';
+import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, COLUMN_WIDTH, columnX, GRAPH_PADDING, NODE_RADIUS, ROW_HEIGHT, rowY } from './geometry';
 import { estimatedLabelWidth, LABEL_HEIGHT, labelTop } from './labelPlacement';
 import { laneShape } from './laneShape';
 
@@ -25,9 +26,24 @@ export function nodePoint(layout: GraphLayout, changesetId: number): Point | nul
   return node ? { x: columnX(node.column), y: rowY(node.row) } : null;
 }
 
-/** Finds what is under a world-space point, most specific first. */
-export function hitTest(layout: GraphLayout, point: Point): GraphTarget | null {
-  return hitChangeset(layout, point) ?? hitLabel(layout, point) ?? hitMergeLink(layout, point) ?? hitLane(layout, point);
+/**
+ * Finds what is under a world-space point, most specific first. What moves with the view or is cut to its room
+ * (code review chips, branch headers pinned to the edge, comments) is hit where the last frame drew it.
+ * Code review chips only react to clicks: for anything else, `chips: false` makes them part of their header.
+ */
+export function hitTest(layout: GraphLayout, point: Point, drawn: DrawnTargets | null = null, { chips = true } = {}): GraphTarget | null {
+  const chip = chips ? drawn?.reviewChips.at(point) : null;
+  if (chip) return { kind: 'codeReview', review: chip.item };
+  const header = drawn?.branchHeaders.at(point);
+  if (header) return { kind: 'branch', lane: header.item };
+  const caption = drawn?.captions.at(point);
+  return (
+    hitChangeset(layout, point) ??
+    hitLabel(layout, point) ??
+    (caption ? { kind: 'changeset', id: caption.item.changeset.id } : null) ??
+    hitMergeLink(layout, point) ??
+    hitLane(layout, point)
+  );
 }
 
 function hitChangeset(layout: GraphLayout, point: Point): GraphTarget | null {
@@ -68,15 +84,12 @@ function hitMergeLink(layout: GraphLayout, point: Point): GraphTarget | null {
   return null;
 }
 
-/** A branch is its band, plus the header card above the start of the band. */
+/** A branch is its band (its header card is hit where it was drawn). */
 function hitLane(layout: GraphLayout, point: Point): GraphTarget | null {
-  const row = Math.round((point.y - GRAPH_PADDING.top + ROW_HEIGHT / 3) / ROW_HEIGHT);
+  const row = Math.round((point.y - GRAPH_PADDING.top) / ROW_HEIGHT);
   const lane = layout.lanesByRow.get(row)?.find((candidate) => {
     const shape = laneShape(candidate);
-    const onBand = Math.abs(point.y - shape.y) <= BAND_HEIGHT / 2 && point.x >= shape.left && point.x <= shape.right;
-    const top = headerTop(shape.y);
-    const onHeader = point.y >= top && point.y <= top + HEADER_HEIGHT && point.x >= shape.left && point.x <= shape.left + HEADER_MAX_WIDTH;
-    return onBand || onHeader;
+    return Math.abs(point.y - shape.y) <= BAND_HEIGHT / 2 && point.x >= shape.left && point.x <= shape.right;
   });
   return lane ? { kind: 'branch', lane } : null;
 }

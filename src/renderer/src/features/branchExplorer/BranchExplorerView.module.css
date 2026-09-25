@@ -4,67 +4,50 @@
   min-height: 0;
 }
 
-.search {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.searchCount {
-  margin: 0 4px 0 8px;
-  color: var(--text-tertiary);
-  font-size: var(--text-xs);
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.focusBanner {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: var(--space-1);
-  padding: 6px var(--space-4);
-  border-bottom: 1px solid var(--border-subtle);
+.focusChip {
+  display: inline-flex;
+  align-items: stretch;
+  height: 24px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: var(--radius-full);
   background: var(--accent-soft);
   font-size: var(--text-sm);
 }
 
+.focusSeed {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0 6px 0 10px;
+  border: none;
+  background: none;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.focusSeed:hover,
+.focusSeed[data-state='open'] {
+  background: var(--bg-hover);
+}
+
 .focusIcon {
   flex: none;
-  margin-right: 2px;
   color: var(--accent-text);
 }
 
-.hopsButton {
+/* The way out, its own target behind a divider. */
+.focusExit {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  margin-left: var(--space-1);
-  padding: 1px 6px 1px 8px;
-  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
-  border-radius: var(--radius-full);
-  background: var(--bg-surface);
-  color: var(--text-primary);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
-}
-
-.hopsButton:hover,
-.hopsButton[data-state='open'] {
-  border-color: var(--accent);
-}
-
-.clearFocus {
-  display: flex;
-  margin-left: auto;
-  padding: 2px;
+  padding: 0 8px 0 6px;
   border: none;
-  border-radius: var(--radius-sm);
+  border-left: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
   background: none;
   color: var(--text-secondary);
 }
 
-.clearFocus:hover {
+.focusExit:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
 }
@@ -88,9 +71,15 @@
 }
 
 .filterPill[data-active='true'] {
-  border-color: transparent;
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--text-primary);
+}
+
+/* What a filter is set to, after its name: "Branches 2", "View Relevant only". */
+.filterValue {
+  color: var(--accent-text);
+  font-weight: 600;
 }
 
 .filterChevron {

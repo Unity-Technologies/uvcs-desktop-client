@@ -16,3 +16,8 @@ export function branchHue(branchName: string): number | null {
 export function hueToColor(hue: number, isDark: boolean): string {
   return isDark ? `hsl(${hue} 58% 62%)` : `hsl(${hue} 60% 42%)`;
 }
+
+/** Text in a branch's hue, readable on the branch's own light tint. */
+export function hueToInk(hue: number, isDark: boolean): string {
+  return isDark ? `hsl(${hue} 75% 74%)` : `hsl(${hue} 70% 30%)`;
+}

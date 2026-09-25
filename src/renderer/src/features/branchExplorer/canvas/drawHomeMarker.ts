@@ -1,43 +1,46 @@
 import type { NodeLayout } from '../model/layoutGraph';
 import type { DrawContext } from './drawContext';
 import { columnX, rowY } from './geometry';
+import { strokeHouse } from './houseGlyph';
 
-const BADGE_RADIUS = 7.5;
-
-/** Marks the changeset the workspace is on: an accent ring and a small house badge at its top-right. */
-export function drawHomeMarker({ ctx, scene }: DrawContext, node: NodeLayout, nodeRadius: number): void {
-  const x = columnX(node.column);
-  const y = rowY(node.row);
-  const { accent, accentContrast, background } = scene.palette;
+/**
+ * "You are here": a small house pinned to the workspace changeset's shoulder, a badge rather than a ring so it never
+ * looks like the selection. Like a map pin it is drawn at screen size with a floor and a ceiling: findable zoomed far
+ * out, never ballooning zoomed in. Once it would outgrow the changeset it marks, it becomes the changeset: a solid dot.
+ */
+export function drawHomeMarker({ ctx, scene, pixelRatio }: DrawContext, node: NodeLayout, nodeRadius: number): void {
+  const { viewport, palette } = scene;
+  const radius = Math.min(10, Math.max(4, 8 * viewport.zoom));
+  const nodeScreenRadius = nodeRadius * viewport.zoom;
+  const x = columnX(node.column) * viewport.zoom + viewport.panX;
+  const y = rowY(node.row) * viewport.zoom + viewport.panY;
 
   ctx.save();
-  ctx.strokeStyle = accent;
-  ctx.lineWidth = 2;
+  ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  if (radius >= nodeScreenRadius * 1.4) {
+    ctx.beginPath();
+    ctx.arc(x, y, Math.max(3.5, nodeScreenRadius + 1.5), 0, Math.PI * 2);
+    ctx.fillStyle = palette.accent;
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = palette.background;
+    ctx.stroke();
+    ctx.restore();
+    return;
+  }
+
+  // On the shoulder, snapped to the half-pixel grid so the symmetric glyph rasterizes symmetric.
+  const snap = (value: number): number => Math.round(value * pixelRatio * 2) / (pixelRatio * 2);
+  const shoulder = nodeScreenRadius * 0.8 + 2;
+  const badgeX = snap(x + shoulder);
+  const badgeY = snap(y - shoulder);
   ctx.beginPath();
-  ctx.arc(x, y, nodeRadius + 6, 0, Math.PI * 2);
+  ctx.arc(badgeX, badgeY, radius, 0, Math.PI * 2);
+  ctx.fillStyle = palette.surfaceRaised;
+  ctx.fill();
+  ctx.lineWidth = Math.max(1, radius * 0.2);
+  ctx.strokeStyle = palette.accent;
   ctx.stroke();
-
-  const badgeX = x + nodeRadius * 0.8 + 3;
-  const badgeY = y - nodeRadius * 0.8 - 3;
-  ctx.fillStyle = background;
-  ctx.beginPath();
-  ctx.arc(badgeX, badgeY, BADGE_RADIUS + 1.5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = accent;
-  ctx.beginPath();
-  ctx.arc(badgeX, badgeY, BADGE_RADIUS, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = accentContrast;
-  ctx.beginPath();
-  ctx.moveTo(badgeX - 4, badgeY);
-  ctx.lineTo(badgeX, badgeY - 3.8);
-  ctx.lineTo(badgeX + 4, badgeY);
-  ctx.lineTo(badgeX + 2.7, badgeY);
-  ctx.lineTo(badgeX + 2.7, badgeY + 3.4);
-  ctx.lineTo(badgeX - 2.7, badgeY + 3.4);
-  ctx.lineTo(badgeX - 2.7, badgeY);
-  ctx.closePath();
-  ctx.fill();
+  if (radius >= 5.5) strokeHouse(ctx, badgeX, badgeY, radius / 13, palette.accent, Math.max(1.1, (1.7 * radius) / 13));
   ctx.restore();
 }

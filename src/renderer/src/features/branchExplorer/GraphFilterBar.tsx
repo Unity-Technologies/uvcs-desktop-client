@@ -5,6 +5,8 @@ import { displayName } from '../../lib/userName';
 import { Button } from '../../ui/Button';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { BranchFilterPopover } from './BranchFilterPopover';
+import { FocusChip } from './FocusChip';
+import type { GraphFocus } from './model/filterGraph';
 import { useBranchExplorerPreferences } from './branchExplorerStore';
 import { ZOOM_STEP } from './canvas/zoom';
 import { DATE_RANGES } from './model/dateRanges';
@@ -19,10 +21,14 @@ interface GraphFilterBarProps {
   onZoom: (factor: number) => void;
   onFit: () => void;
   onGoHome: () => void;
+  /** The branch whose relatives the graph shows, if any. */
+  focus: GraphFocus | null;
+  onFocusHopsChange: (hops: number) => void;
+  onExitFocus: () => void;
 }
 
-/** Compact dropdowns for what to show: branches, authors, time range and view options. */
-export function GraphFilterBar({ branches, authors, onZoom, onFit, onGoHome }: GraphFilterBarProps) {
+/** Compact dropdowns for what to show: branches, authors, time range and view options, then the focus if any. */
+export function GraphFilterBar({ branches, authors, onZoom, onFit, onGoHome, focus, onFocusHopsChange, onExitFocus }: GraphFilterBarProps) {
   const preferences = useBranchExplorerPreferences();
   const { set } = preferences;
   const check = (value: boolean) => (value ? Check : undefined);
@@ -67,12 +73,15 @@ export function GraphFilterBar({ branches, authors, onZoom, onFit, onGoHome }: G
     <div className={styles.filterBar}>
       <BranchFilterPopover branches={branches} />
       <FilterPill entries={authorsMenu} active={preferences.highlightedAuthor !== null}>
-        {preferences.highlightedAuthor ? displayName(preferences.highlightedAuthor) : 'Authors'}
+        Authors
+        {preferences.highlightedAuthor && <span className={styles.filterValue}>{displayName(preferences.highlightedAuthor)}</span>}
       </FilterPill>
       <FilterPill entries={dateMenu}>{DATE_RANGES.find((range) => range.id === preferences.dateRange)?.label}</FilterPill>
       <FilterPill entries={viewMenu} active={preferences.structureOnly}>
-        {preferences.structureOnly ? 'View · Relevant only' : 'View'}
+        View
+        {preferences.structureOnly && <span className={styles.filterValue}>Relevant only</span>}
       </FilterPill>
+      {focus && <FocusChip focus={focus} onHopsChange={onFocusHopsChange} onExit={onExitFocus} />}
     </div>
   );
 }

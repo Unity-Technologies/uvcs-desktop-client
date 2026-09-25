@@ -1,7 +1,8 @@
 import { COLUMN_WIDTH, GRAPH_PADDING } from './geometry';
-import { detailLevel, type DrawContext, type DrawnReviewChip, type GraphScene, type VisibleArea } from './drawContext';
+import { detailLevel, type DrawContext, type DrawnTargets, type GraphScene, type VisibleArea } from './drawContext';
 import { drawBranchHeaders, drawCompactBranchNames } from './drawBranchHeaders';
-import { drawDateRuler, drawDaySeparators } from './drawDateRuler';
+import { drawCaptions } from './drawCaptions';
+import { drawDateRuler, drawDaySeparators, measureDayMarks } from './drawDateRuler';
 import { drawLabels } from './drawLabels';
 import { drawLanes } from './drawLanes';
 import { drawMergeLinks } from './drawMergeLinks';
@@ -9,32 +10,42 @@ import { drawNodes } from './drawNodes';
 import { toWorld } from './viewport';
 
 /**
- * Draws one frame, back to front: day separators, branch bands, links, changesets, labels and
+ * Draws one frame, back to front: day separators, branch bands, links, changesets, their comments, labels and
  * branch headers, then the date ruler on top. Only what is on screen is drawn, so large histories stay smooth.
- * Returns where the code review chips landed.
+ * Fills `drawn` with where the pointer targets landed.
  */
-export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixelRatio: number): DrawnReviewChip[] {
+export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixelRatio: number, drawn: DrawnTargets): void {
   const { viewport, size, palette } = scene;
-  const draw: DrawContext = { ctx, scene, visible: visibleArea(scene), detail: detailLevel(viewport.zoom, scene.options), reviewChips: [] };
+  drawn.reviewChips.reset();
+  drawn.branchHeaders.reset();
+  drawn.captions.reset();
+  const draw: DrawContext = { ctx, scene, visible: visibleArea(scene), detail: detailLevel(viewport.zoom, scene.options), pixelRatio, drawn };
+  const screen = (): void => ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  const world = (): void =>
+    ctx.setTransform(pixelRatio * viewport.zoom, 0, 0, pixelRatio * viewport.zoom, pixelRatio * viewport.panX, pixelRatio * viewport.panY);
 
-  ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+  measureDayMarks(draw);
+  screen();
   ctx.fillStyle = palette.background;
   ctx.fillRect(0, 0, size.width, size.height);
   drawDaySeparators(draw);
 
-  ctx.setTransform(pixelRatio * viewport.zoom, 0, 0, pixelRatio * viewport.zoom, pixelRatio * viewport.panX, pixelRatio * viewport.panY);
+  world();
   drawLanes(draw);
   drawMergeLinks(draw);
   drawNodes(draw);
+  screen();
+  drawCaptions(draw);
+
   if (draw.detail.text) {
+    world();
     drawLabels(draw);
     drawBranchHeaders(draw);
+    screen();
+  } else {
+    drawCompactBranchNames(draw);
   }
-
-  ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-  if (!draw.detail.text) drawCompactBranchNames(draw);
   drawDateRuler(draw);
-  return draw.reviewChips;
 }
 
 function visibleArea({ viewport, size }: GraphScene): VisibleArea {

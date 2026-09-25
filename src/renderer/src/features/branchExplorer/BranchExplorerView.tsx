@@ -16,7 +16,6 @@ import { GraphCanvas, type GraphCanvasHandle, type GraphHighlights } from './can
 import type { GraphTarget } from './canvas/graphTargets';
 import { ZOOM_STEP } from './canvas/zoom';
 import { DetailsPanel } from './details/DetailsPanel';
-import { FocusBanner } from './FocusBanner';
 import { graphActions } from './graphActions';
 import { graphMenu } from './graphMenu';
 import { selectionFor, type GraphSelection } from './graphSelection';
@@ -93,11 +92,11 @@ export function BranchExplorerView() {
       homeChangeset,
       currentBranch,
       highlightedAuthor,
-      search: search.trim() ? searchHighlight(searchHits, searchHits[activeHitIndex] ?? null) : null,
+      search: search.trim() && fullLayout ? searchHighlight(fullLayout, searchHits, searchHits[activeHitIndex] ?? null) : null,
       options: { showComments, showAvatars },
       reviews: reviews ?? NO_REVIEWS,
     }),
-    [selection, homeChangeset, currentBranch, highlightedAuthor, search, searchHits, activeHitIndex, showComments, showAvatars, reviews],
+    [selection, homeChangeset, currentBranch, highlightedAuthor, search, fullLayout, searchHits, activeHitIndex, showComments, showAvatars, reviews],
   );
 
   const goToChangeset = useCallback((id: number) => {
@@ -235,7 +234,16 @@ export function BranchExplorerView() {
         </>
       }
     >
-      <GraphFilterBar branches={branchNames} authors={authors} onZoom={zoomBy} onFit={fit} onGoHome={goHome} />
+      <GraphFilterBar
+        branches={branchNames}
+        authors={authors}
+        onZoom={zoomBy}
+        onFit={fit}
+        onGoHome={goHome}
+        focus={focus}
+        onFocusHopsChange={(hops) => focus && focusOn(focus.branch, hops)}
+        onExitFocus={() => setFocus(null)}
+      />
     </ViewHeader>
   );
 
@@ -266,7 +274,6 @@ export function BranchExplorerView() {
   return (
     <>
       {header}
-      {focus && <FocusBanner focus={focus} onHopsChange={(hops) => focusOn(focus.branch, hops)} onExit={() => setFocus(null)} />}
       <div className={styles.body} onKeyDown={onKeyDown}>
         <div className="visually-hidden" aria-live="polite" aria-atomic="true">
           {describeSelection(layout, selection, homeChangeset)}

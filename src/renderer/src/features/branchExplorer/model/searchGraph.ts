@@ -8,6 +8,8 @@ export interface SearchHighlight {
   changesets: ReadonlySet<number>;
   branches: ReadonlySet<string>;
   labels: ReadonlySet<string>;
+  /** Branches holding a hit (their name, a label or a changeset): their headers stay lit while the rest fade. */
+  litBranches: ReadonlySet<string>;
   active: SearchHit | null;
 }
 
@@ -39,16 +41,23 @@ export function searchGraph(layout: GraphLayout, rawQuery: string): SearchHit[] 
   return found.sort((a, b) => a.column - b.column || a.order - b.order).map(({ hit }) => hit);
 }
 
-export function searchHighlight(hits: readonly SearchHit[], active: SearchHit | null): SearchHighlight {
+export function searchHighlight(layout: GraphLayout, hits: readonly SearchHit[], active: SearchHit | null): SearchHighlight {
   const changesets = new Set<number>();
   const branches = new Set<string>();
   const labels = new Set<string>();
+  const litBranches = new Set<string>();
   for (const hit of hits) {
+    if (hit.kind === 'branch') {
+      branches.add(hit.name);
+      litBranches.add(hit.name);
+      continue;
+    }
     if (hit.kind === 'changeset') changesets.add(hit.id);
-    else if (hit.kind === 'branch') branches.add(hit.name);
     else labels.add(hit.name);
+    const branch = layout.nodes.get(hit.kind === 'changeset' ? hit.id : hit.changeset)?.changeset.branch;
+    if (branch !== undefined) litBranches.add(branch);
   }
-  return { changesets, branches, labels, active };
+  return { changesets, branches, labels, litBranches, active };
 }
 
 /** A stable identity for a hit, e.g. to replay the arrival animation only when the current hit changes. */

@@ -36,3 +36,41 @@
   color: var(--text-tertiary);
   font-size: var(--text-xs);
 }
+
+/*
+ * The card that completes a cut caption (or unfolds a branch header), laid exactly over it: its box metrics are
+ * mirrored in captionCard.ts (CARD_*). It only fades in: moving would break the "completes in place" illusion.
+ */
+.card {
+  position: absolute;
+  width: max-content;
+  padding: 6px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-md);
+  pointer-events: none;
+  animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
+  z-index: 10;
+}
+
+/* pre-wrap like canvas text, which never collapses spaces. */
+.subject {
+  line-height: 1.45;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+.cardBody {
+  margin-top: 5px;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 14;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

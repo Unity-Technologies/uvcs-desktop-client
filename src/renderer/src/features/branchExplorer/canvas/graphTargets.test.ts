@@ -1,12 +1,19 @@
 import { describe, expect, it } from 'vitest';
+import type { CodeReview } from '@shared/domain/codeReview';
 import { sampleHistory } from '../model/graphFixtures';
 import { layoutGraph } from '../model/layoutGraph';
 import { columnX, headerTop } from './geometry';
+import type { DrawnTargets } from './drawContext';
+import { DrawnBoxes } from './drawnBoxes';
 import { hitTest, nodePoint } from './graphTargets';
 import { labelTop } from './labelPlacement';
 import { laneShape } from './laneShape';
 
 const layout = layoutGraph(sampleHistory());
+
+function drawnTargets(): DrawnTargets {
+  return { reviewChips: new DrawnBoxes(), branchHeaders: new DrawnBoxes(), captions: new DrawnBoxes() };
+}
 
 describe('hitTest', () => {
   it('finds a changeset under the pointer', () => {
@@ -32,9 +39,30 @@ describe('hitTest', () => {
     expect(hitTest(layout, { x: (a.x + b.x) / 2, y: a.y })).toMatchObject({ kind: 'branch', lane: { branch: { name: '/main/a' } } });
   });
 
-  it('finds a branch from its header card', () => {
-    const shape = laneShape(layout.lanesByBranch.get('/main/a')!);
-    expect(hitTest(layout, { x: shape.left + 10, y: headerTop(shape.y) + 5 })).toMatchObject({ kind: 'branch', lane: { branch: { name: '/main/a' } } });
+  it('finds a branch from its header card where it was drawn, pinned to the edge or not', () => {
+    const lane = layout.lanesByBranch.get('/main/a')!;
+    const shape = laneShape(lane);
+    const drawn = drawnTargets();
+    drawn.branchHeaders.add(lane, shape.left + 300, headerTop(shape.y), 120, 22);
+    expect(hitTest(layout, { x: shape.left + 310, y: headerTop(shape.y) + 5 }, drawn)).toMatchObject({ kind: 'branch', lane: { branch: { name: '/main/a' } } });
+    expect(hitTest(layout, { x: shape.left + 10, y: headerTop(shape.y) + 5 }, drawn)).toBeNull();
+  });
+
+  it('finds a changeset from its comment', () => {
+    const node = layout.nodes.get(4)!;
+    const drawn = drawnTargets();
+    drawn.captions.add(node, columnX(node.column) - 20, 500, 80, 14);
+    expect(hitTest(layout, { x: columnX(node.column) + 40, y: 505 }, drawn)).toEqual({ kind: 'changeset', id: 4 });
+  });
+
+  it('opens a code review from its chip on click only', () => {
+    const lane = layout.lanesByBranch.get('/main/a')!;
+    const review = { id: 7 } as CodeReview;
+    const drawn = drawnTargets();
+    drawn.branchHeaders.add(lane, 0, 0, 200, 22);
+    drawn.reviewChips.add(review, 100, 3, 50, 15);
+    expect(hitTest(layout, { x: 110, y: 10 }, drawn)).toEqual({ kind: 'codeReview', review });
+    expect(hitTest(layout, { x: 110, y: 10 }, drawn, { chips: false })).toMatchObject({ kind: 'branch' });
   });
 
   it('returns null on empty space', () => {

@@ -1,12 +1,12 @@
 import type { GraphLayout, NodeLayout } from '../model/layoutGraph';
 import { BAND_HEIGHT, HEADER_SPAN_COLUMNS, headerTop, rowY } from './geometry';
 
-/** Labels are drawn as pills stacked above their changeset. */
-export const LABEL_HEIGHT = 18;
+/** Labels are drawn as chips stacked above their changeset. */
+export const LABEL_HEIGHT = 16;
 const LABEL_GAP = 4;
-const LABEL_PADDING = 9;
+const LABEL_PADDING = 7;
 /** Average glyph width of the label font, to size pills where no canvas is at hand (hit testing). */
-const AVERAGE_GLYPH_WIDTH = 6.3;
+const AVERAGE_GLYPH_WIDTH = 6;
 
 /**
  * Top of the `index`-th label of a changeset. Labels sit just above the band, except on the first

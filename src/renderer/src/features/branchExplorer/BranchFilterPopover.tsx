@@ -34,7 +34,8 @@ export function BranchFilterPopover({ branches }: { branches: readonly string[] 
     <Popover.Root onOpenChange={(open) => !open && setSearch('')}>
       <Popover.Trigger asChild>
         <Button size="small" className={viewStyles.filterPill} data-active={activeCount > 0}>
-          {activeCount > 0 ? `Branches · ${activeCount}` : 'Branches'}
+          Branches
+          {activeCount > 0 && <span className={viewStyles.filterValue}>{activeCount}</span>}
           <ChevronDown size={12} className={viewStyles.filterChevron} />
         </Button>
       </Popover.Trigger>
