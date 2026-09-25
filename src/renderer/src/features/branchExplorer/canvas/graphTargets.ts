@@ -2,6 +2,7 @@ import type { GraphLabel, MergeLink } from '@shared/domain/branchExplorer';
 import type { CodeReview } from '@shared/domain/codeReview';
 import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
 import type { DrawnTargets } from './drawContext';
+import type { DrawnBox } from './drawnBoxes';
 import { distanceToCurve, linkCurve, type Point } from './curves';
 import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, COLUMN_WIDTH, columnX, GRAPH_PADDING, NODE_RADIUS, ROW_HEIGHT, rowY } from './geometry';
 import { estimatedLabelWidth, LABEL_HEIGHT, labelTop } from './labelPlacement';
@@ -17,6 +18,36 @@ export type GraphTarget =
   | { kind: 'mergeLink'; link: MergeLink }
   /** The code review chip in a branch's header card. */
   | { kind: 'codeReview'; review: CodeReview };
+
+/** What gets a card by the pointer: everything but branches. */
+export type PointerCardTarget = Exclude<GraphTarget, { kind: 'branch' }>;
+
+/**
+ * The hover card for what the pointer is on. A changeset's card completes its comment over its caption, whether the
+ * pointer is on the node or on the caption: one card, so moving between them never closes it (a changeset whose
+ * caption isn't drawn gets its card by the pointer). A branch gets no card: its two-line header already says it all,
+ * and a card there would cover the changesets the pointer is heading to. Only a header's comment line that doesn't
+ * show the whole comment gets a plain tooltip with it, like any clipped label in the app, while the pointer is on
+ * that line. Anything else gets its card by the pointer.
+ * The boxes are the last frame's, reused by the next one: read them right away.
+ */
+export type HoverCard =
+  | { kind: 'caption'; target: Extract<GraphTarget, { kind: 'changeset' }>; caption: DrawnBox<NodeLayout> }
+  | { kind: 'pointer'; target: PointerCardTarget }
+  | { kind: 'clippedText'; key: string; text: string };
+
+export function hoverCardFor(target: GraphTarget | null, point: Point, drawn: DrawnTargets | null): HoverCard | null {
+  if (!target) return null;
+  if (target.kind === 'changeset') {
+    const caption = drawn?.captions.find((node) => node.changeset.id === target.id);
+    return caption ? { kind: 'caption', target, caption } : { kind: 'pointer', target };
+  }
+  if (target.kind === 'branch') {
+    const { branch } = target.lane;
+    return drawn?.cutBranchComments.at(point)?.item === target.lane ? { kind: 'clippedText', key: branch.name, text: branch.comment.trim() } : null;
+  }
+  return { kind: 'pointer', target };
+}
 
 const NODE_HIT_RADIUS = NODE_RADIUS + 4;
 const LINE_HIT_DISTANCE = 6;

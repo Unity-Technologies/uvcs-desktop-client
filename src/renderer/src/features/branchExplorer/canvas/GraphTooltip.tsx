@@ -3,20 +3,21 @@ import { formatRelativeDate } from '../../../lib/formatDate';
 import type { GraphLayout } from '../model/layoutGraph';
 import { MERGE_LINK_NAMES } from '../model/mergeLinkNames';
 import { useLayoutEffect, useRef } from 'react';
-import { captionCardPosition, captionMetrics, cardMaxWidth, keepInside } from './captionCard';
+import { captionCardCorner, captionCardMaxWidth, keepInside } from './captionCard';
 import { summaryOf } from './fitText';
 import type { GraphPalette } from './graphPalette';
-import type { GraphTarget } from './graphTargets';
+import type { PointerCardTarget } from './graphTargets';
 import styles from './GraphTooltip.module.css';
 
 /**
- * Where a tooltip opens: over a changeset's caption (the card's first line lays exactly on it, so the cut comment
- * appears to complete itself in place), just below a branch header (the pill unfolding), or next to the pointer.
+ * Where a tooltip opens: over a changeset's caption (the card's first line lays exactly on it, in the caption's
+ * font and color, so the cut comment appears to complete itself in place), or next to the pointer. `x` and
+ * `baseline` are the caption's first glyph.
  */
-export type TooltipAnchor = { kind: 'caption'; x: number; middle: number } | { kind: 'below'; x: number; top: number };
+export type TooltipAnchor = { kind: 'caption'; x: number; baseline: number; color: string };
 
 interface GraphTooltipProps {
-  target: GraphTarget;
+  target: PointerCardTarget;
   layout: GraphLayout;
   palette: GraphPalette;
   /** The pointer, for tooltips without an anchor. */
@@ -28,30 +29,49 @@ interface GraphTooltipProps {
 
 /** Near the right edge a pointer tooltip opens to the left of the pointer, so it is never squeezed. */
 const POINTER_TOOLTIP_ROOM = 360;
+/** Set after the font shorthand, which resets it. */
+const SUBJECT_LINE_HEIGHT = 1.45;
+
+/** Marks the cards the pointer can move into to select and copy their text: the canvas leaves them alone. */
+export const HOVER_CARD_ATTRIBUTE = 'data-hover-card';
 
 export function GraphTooltip({ target, layout, palette, x, y, anchor, containerWidth }: GraphTooltipProps) {
   const cardRef = useRef<HTMLDivElement>(null);
-  // Once the card knows its width, it moves just enough to stay inside the canvas, before it is painted.
+  const textOriginRef = useRef<HTMLSpanElement>(null);
+  // Before it is painted, the card over a caption measures where its text landed and moves it onto the caption's
+  // glyphs (whatever the font's metrics and line box do); then any card moves just enough to stay inside the canvas.
   useLayoutEffect(() => {
     const card = cardRef.current;
-    if (card) card.style.left = `${keepInside(card.offsetLeft, card.offsetWidth, containerWidth)}px`;
+    if (!card) return;
+    const origin = textOriginRef.current;
+    if (origin && anchor?.kind === 'caption') {
+      const box = card.getBoundingClientRect();
+      const text = origin.getBoundingClientRect();
+      const corner = captionCardCorner(anchor, { x: text.left - box.left, y: text.bottom - box.top });
+      card.style.left = `${corner.left}px`;
+      card.style.top = `${corner.top}px`;
+    }
+    card.style.left = `${keepInside(card.offsetLeft, card.offsetWidth, containerWidth)}px`;
   });
 
   if (anchor?.kind === 'caption' && target.kind === 'changeset') {
     const changeset = layout.nodes.get(target.id)?.changeset;
     if (!changeset) return null;
-    const maxWidth = cardMaxWidth(window.innerWidth);
-    const position = captionCardPosition(anchor, captionMetrics(palette.fonts.caption, palette.captionFontSize), palette.captionFontSize);
+    const maxWidth = captionCardMaxWidth(anchor.x, containerWidth, window.innerWidth);
     const summary = summaryOf(changeset.comment);
     const body = changeset.comment.slice(changeset.comment.indexOf(summary) + summary.length).trim();
     return (
-      <div ref={cardRef} className={styles.card} style={{ ...position, maxWidth }}>
+      <div ref={cardRef} className={styles.card} style={{ left: anchor.x, top: anchor.baseline, maxWidth }} {...{ [HOVER_CARD_ATTRIBUTE]: true }}>
         {/* Same font, size and color as the caption it lays over: a heavier or brighter line would read as the text jumping. */}
-        <div className={styles.subject} style={{ font: palette.fonts.caption }}>
+        <div className={styles.subject} style={{ font: palette.fonts.caption, lineHeight: SUBJECT_LINE_HEIGHT, color: anchor.color }}>
+          {/* An empty inline block sits on the baseline, where the caption's first glyph starts. */}
+          <span ref={textOriginRef} className={styles.textOrigin} />
           {summary}
         </div>
+        {/* Wrapped in a card narrowed by the edge, the line breaks between its parts, never inside one. */}
         <div className={styles.meta}>
-          Changeset {changeset.id} · {displayName(changeset.owner)} · {formatRelativeDate(changeset.date)}
+          <span className={styles.metaPart}>Changeset {changeset.id}</span> · <span className={styles.metaPart}>{displayName(changeset.owner)}</span> ·{' '}
+          <span className={styles.metaPart}>{formatRelativeDate(changeset.date)}</span>
         </div>
         {body && <div className={styles.cardBody}>{body}</div>}
       </div>
@@ -60,16 +80,6 @@ export function GraphTooltip({ target, layout, palette, x, y, anchor, containerW
 
   const content = tooltipContent(target, layout);
   if (!content) return null;
-  if (anchor?.kind === 'below') {
-    return (
-      <div ref={cardRef} className={styles.card} style={{ left: anchor.x, top: anchor.top, maxWidth: cardMaxWidth(window.innerWidth) }}>
-        <div className={styles.title}>{content.title}</div>
-        {content.body && <div className={styles.cardBody}>{content.body}</div>}
-        {content.meta && <div className={styles.meta}>{content.meta}</div>}
-      </div>
-    );
-  }
-
   const flip = x > containerWidth - POINTER_TOOLTIP_ROOM;
   return (
     <div className={styles.tooltip} data-flip={flip} style={{ left: flip ? x - 14 : x + 14, top: y + 14 }}>
@@ -80,7 +90,7 @@ export function GraphTooltip({ target, layout, palette, x, y, anchor, containerW
   );
 }
 
-function tooltipContent(target: GraphTarget, layout: GraphLayout): { title: string; body?: string; meta?: string } | null {
+function tooltipContent(target: PointerCardTarget, layout: GraphLayout): { title: string; body?: string; meta?: string } | null {
   switch (target.kind) {
     case 'changeset': {
       const changeset = layout.nodes.get(target.id)?.changeset;
@@ -99,12 +109,6 @@ function tooltipContent(target: GraphTarget, layout: GraphLayout): { title: stri
         meta: 'Click to show them',
       };
     }
-    case 'branch':
-      return {
-        title: target.lane.branch.name,
-        body: target.lane.branch.comment || undefined,
-        meta: `Created by ${displayName(target.lane.branch.owner)} · ${formatRelativeDate(target.lane.branch.date)}`,
-      };
     case 'label':
       return {
         title: `Label ${target.label.name}`,

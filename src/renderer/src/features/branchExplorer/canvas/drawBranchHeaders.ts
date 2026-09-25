@@ -23,13 +23,16 @@ const PINNED_INSET = 8;
 /** Heights of the search marks behind the name and the comment. */
 const NAME_MARK_HEIGHT = 15;
 const COMMENT_MARK_HEIGHT = 13;
+/** For the pointer, the comment line starts halfway between the two lines and runs to the pill's bottom edge. */
+const COMMENT_LINE_TOP = (HEADER_NAME_MIDDLE + HEADER_COMMENT_MIDDLE) / 2;
 
 /**
  * A pill above each band, tinted in the branch's color, in two lines like the official client's: the branch name
  * with its code review, then the comment, smaller and muted (a branch without a comment gets a one-line pill). It
  * grows to the longer line, up to a few columns and never into the next branch on its row. While the start of a band
  * is scrolled away, its pill stays pinned to the left edge (floating, with a shadow) so the branch stays
- * identifiable. Records where each pill landed for the pointer.
+ * identifiable. Records where each pill landed for the pointer, and where its comment line lies when it doesn't show
+ * the whole comment.
  */
 export function drawBranchHeaders(draw: DrawContext): void {
   const { scene, visible } = draw;
@@ -138,6 +141,7 @@ function contentWidth(draw: DrawContext, lane: Lane): number {
   return lead + Math.max(name + (chip ? GAP + chip : 0), comment);
 }
 
+/** Draws a branch's pill, recording its comment line when that doesn't show the whole comment. */
 function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, width: number, height: number, pinned: boolean): void {
   const { ctx, scene } = draw;
   const { palette, search } = scene;
@@ -204,6 +208,10 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
     const commentMiddle = top + HEADER_COMMENT_MIDDLE;
     ctx.font = palette.fonts.branchComment;
     const text = fitText(ctx, comment, right - textLeft);
+    // Only the first line shows: more lines are hidden text too.
+    if (text !== comment || lane.branch.comment.trim() !== comment) {
+      draw.drawn.cutBranchComments.add(lane, textLeft, top + COMMENT_LINE_TOP, textWidth(ctx, text), height - COMMENT_LINE_TOP);
+    }
     drawSearchMarks(draw, text, textLeft, commentMiddle, COMMENT_MARK_HEIGHT);
     ctx.fillStyle = palette.textTertiary;
     ctx.fillText(text, textLeft, commentMiddle + 0.5);
