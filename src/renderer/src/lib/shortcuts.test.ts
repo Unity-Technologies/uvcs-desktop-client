@@ -26,6 +26,15 @@ describe('matchesShortcut', () => {
     expect(matchesShortcut(press(' ', 'Space'), 'space')).toBe(true);
   });
 
+  it('names the paging and edge keys, with and without modifiers', () => {
+    expect(matchesShortcut(press('PageDown', 'PageDown'), 'pagedown')).toBe(true);
+    expect(matchesShortcut(press('Home', 'Home', { shiftKey: true }), 'shift+home')).toBe(true);
+    expect(matchesShortcut(press('Home', 'Home', { shiftKey: true }), 'home')).toBe(false);
+    expect(matchesShortcut(press('ArrowLeft', 'ArrowLeft', { metaKey: true }), 'mod+left')).toBe(true);
+    expect(matchesShortcut(press('ArrowLeft', 'ArrowLeft', { metaKey: true }), 'left')).toBe(false);
+    expect(matchesShortcut(press(']', 'BracketRight'), ']')).toBe(true);
+  });
+
   it('reads digits by their key position, so Shift doesn’t change them', () => {
     expect(matchesShortcut(press('!', 'Digit1', { metaKey: true, shiftKey: true }), 'mod+shift+1')).toBe(true);
     expect(matchesShortcut(press('1', 'Digit1', { metaKey: true }), 'mod+shift+1')).toBe(false);

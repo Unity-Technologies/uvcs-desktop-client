@@ -50,7 +50,9 @@ export function DetailsPanel({ icon, kind, title, context, author, badges, prima
             </>
           )}
         </div>
-        <h2 className={`${styles.title} selectable`}>{title}</h2>
+        <h2 className={`${styles.title} selectable`} data-tip-overflow data-tip={typeof title === 'string' ? title : undefined}>
+          {title}
+        </h2>
         {(author || badges) && (
           <div className={styles.metaRow}>
             {author && (

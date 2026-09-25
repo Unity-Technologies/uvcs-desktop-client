@@ -7,10 +7,10 @@ import type { GraphLayout } from '../model/layoutGraph';
 import type { DrawnTargets, GraphScene } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
 import { drawGraph } from './drawGraph';
-import { graphSize, headerTop } from './geometry';
+import { COLUMN_WIDTH, graphSize } from './geometry';
 import { hitTest, nodePoint, type GraphTarget } from './graphTargets';
 import { GraphTooltip, type TooltipAnchor } from './GraphTooltip';
-import { laneShape } from './laneShape';
+import { laneHeaderTop, laneShape } from './laneShape';
 import { useGraphPalette } from './useGraphPalette';
 import { useGraphViewport } from './useGraphViewport';
 import { useSearchPing } from './useSearchPing';
@@ -21,12 +21,18 @@ import styles from './GraphCanvas.module.css';
 /** Scene fields owned by the view; the canvas adds the viewport, size, palette, hover state and animations. */
 export type GraphHighlights = Pick<
   GraphScene,
-  'selectedChangeset' | 'selectedBranch' | 'homeChangeset' | 'currentBranch' | 'highlightedAuthor' | 'search' | 'options' | 'reviews'
+  'selectedChangeset' | 'selectedBranch' | 'homeChangeset' | 'currentBranch' | 'highlightedAuthor' | 'search' | 'searchQuery' | 'options' | 'reviews'
 >;
 
 export interface GraphCanvasHandle {
   /** Scrolls just enough to show the changeset. */
   revealChangeset: (id: number) => void;
+  /** Glides just enough to show the changeset: the view following the keyboard. */
+  followChangeset: (id: number) => void;
+  /** How many columns a screen holds at the current zoom. */
+  columnsOnScreen: () => number;
+  /** Opens the context menu of a changeset or branch where it is drawn, as a right click on it would. */
+  openContextMenu: (target: GraphTarget) => void;
   /** Scrolls just enough to show the branch's header card. */
   revealBranch: (name: string) => void;
   centerOnChangeset: (id: number) => void;
@@ -153,7 +159,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         const lane = layout.lanesByBranch.get(name);
         if (!lane) return null;
         const shape = laneShape(lane);
-        return { x: shape.left + HEADER_REVEAL_INSET, y: headerTop(shape.y) };
+        return { x: shape.left + HEADER_REVEAL_INSET, y: laneHeaderTop(lane) };
       };
       return {
         frameChangeset: (id) => frame(nodePoint(layout, id)),
@@ -165,6 +171,27 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         revealBranch: (name) => {
           const point = headerPoint(name);
           if (point) reveal(point.x, point.y);
+        },
+        followChangeset: (id) => {
+          const point = nodePoint(layout, id);
+          if (!point) return;
+          setHover(null);
+          const current = view.viewportRef.current;
+          const next = revealPoint(current, point.x, point.y, sizeRef.current);
+          if (next !== current) view.glideTo(next);
+        },
+        columnsOnScreen: () => sizeRef.current.width / (COLUMN_WIDTH * view.viewportRef.current.zoom),
+        openContextMenu: (target) => {
+          const canvas = canvasRef.current;
+          const point = target.kind === 'changeset' ? nodePoint(layout, target.id) : target.kind === 'branch' ? headerPoint(target.lane.branch.name) : null;
+          if (!canvas || !point) return;
+          const { zoom, panX, panY } = view.viewportRef.current;
+          const bounds = canvas.getBoundingClientRect();
+          contextTargetRef.current = target;
+          setHover(null);
+          canvas.dispatchEvent(
+            new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: bounds.left + point.x * zoom + panX, clientY: bounds.top + point.y * zoom + panY }),
+          );
         },
         centerOnChangeset: (id) => {
           const point = nodePoint(layout, id);
@@ -296,7 +323,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         tabIndex={0}
         role="application"
         aria-roledescription="graph"
-        aria-label="Branch Explorer. Arrow keys walk the changesets, Enter diffs the selection, H goes to the workspace changeset."
+        aria-label="Branch Explorer. Arrow keys walk the changesets, Home and End go to the ends of the branch, Enter diffs the selection, H goes to the workspace changeset. Question mark lists every shortcut."
         {...MAIN_FOCUS}
         data-hovering={hover !== null}
         onPointerDown={onPointerDown}

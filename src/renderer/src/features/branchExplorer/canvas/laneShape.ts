@@ -1,5 +1,6 @@
 import type { Lane } from '../model/layoutGraph';
-import { BAND_HEIGHT, COLUMN_WIDTH, columnX, NODE_RADIUS, rowY } from './geometry';
+import { summaryOf } from './fitText';
+import { BAND_HEIGHT, COLUMN_WIDTH, columnX, headerHeight, headerTop, NODE_RADIUS, rowY } from './geometry';
 
 /** Where the band of a branch without changesets starts, after its base changeset on the parent's band. */
 const EMPTY_BRANCH_OFFSET = COLUMN_WIDTH * 0.6;
@@ -24,4 +25,14 @@ export function laneShape(lane: Lane): LaneShape {
   }
   const left = columnX(lane.firstOwnColumn) - BAND_INSET;
   return { left, right: Math.max(columnX(lane.endColumn) + BAND_INSET, left + MINIMUM_WIDTH), y };
+}
+
+/** A lane's header card is two lines when the branch has a comment, one otherwise. */
+export function laneHeaderHeight(lane: Lane): number {
+  return headerHeight(summaryOf(lane.branch.comment) !== '');
+}
+
+/** Top of a lane's header card. */
+export function laneHeaderTop(lane: Lane): number {
+  return headerTop(rowY(lane.row), laneHeaderHeight(lane));
 }
