@@ -82,24 +82,25 @@ export function buildChangeRows({ changes, changelists, layout, grouping, isChec
   return rows;
 }
 
-/** Horizontal step of each level: a folder inside a folder, or anything inside a changelist. */
-export const INDENT = 16;
-/** Room a row's disclosure chevron takes (icon and gap), kept empty on change rows so checkboxes line up. */
-export const CHEVRON_SLOT = 19;
-
-/** Whether some rows expand and collapse, which gives every row a chevron column. */
-export function hasDisclosureRows(rows: ChangeRow[]): boolean {
-  return rows.some((row) => row.type !== 'change');
-}
+/**
+ * One level of depth: a checkbox and the gap after it, which is also the room a chevron takes (icon, its margins and the
+ * gap). A folder's chevron sits in its siblings' checkbox column, so its checkbox lines up with their status badges and
+ * its children's checkboxes line up under its own.
+ */
+export const LEVEL_INDENT = 21;
 
 /**
- * How far a row's content starts from the left edge. A change's checkbox sits one level right of its folder's or
- * changelist's checkbox, and top-level checkboxes all share one column.
+ * How far a row's content starts from the left edge. Top-level files stay flush whether the list is flat or a tree;
+ * everything inside a folder or a changelist is one level right of it.
  */
-export function rowIndent(row: ChangeRow, { grouped, disclosure }: { grouped: boolean; disclosure: boolean }): number {
+export function rowIndent(row: ChangeRow, grouped: boolean): number {
   if (row.type === 'group') return 0;
-  const levels = row.depth + (grouped ? 1 : 0);
-  return levels * INDENT + (row.type === 'change' && disclosure ? CHEVRON_SLOT : 0);
+  return (row.depth + (grouped ? 1 : 0)) * LEVEL_INDENT;
+}
+
+/** Changelist headers lead the rows: the top-level checkboxes are theirs, after their chevrons. */
+export function topLevelCheckboxInset(rows: ChangeRow[]): number {
+  return rows.some((row) => row.type === 'group') ? LEVEL_INDENT : 0;
 }
 
 export function changeKey(change: PendingChange): string {

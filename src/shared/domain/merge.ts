@@ -122,6 +122,16 @@ export interface MergeResolutions {
 export interface MergeResult {
   /** The changeset created by a server-side merge. Workspace merges leave pending changes instead. */
   changesetId?: number;
+  /**
+   * Someone checked in on the destination branch while the server-side merge ran. Its changeset was left beside
+   * the new head: merge it into the branch (`followUpMerge`) to finish.
+   */
+  destinationMoved?: boolean;
+}
+
+/** The merge that finishes a server-side merge whose destination moved: its changeset into the branch. */
+export function followUpMerge(result: MergeResult, destinationBranch: string): MergeRequest {
+  return { kind: 'merge', sourceSpec: `cs:${result.changesetId}`, destinationBranch };
 }
 
 /**

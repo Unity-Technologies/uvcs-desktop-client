@@ -163,3 +163,11 @@ export function parseCreatedChangeset(output: string): number | undefined {
   const created = /^CHANGESET\u001fcs:(\d+)@/m.exec(output);
   return created ? Number(created[1]) : undefined;
 }
+
+/**
+ * `MERGE_NEEDED 12 /main repo server`, printed by a merge into a server branch that someone checked in on meanwhile:
+ * the merge's changeset is left beside the new head, and has to be merged into the branch to finish.
+ */
+export function parseDestinationMoved(output: string): boolean {
+  return /^MERGE_NEEDED\u001f/m.test(output);
+}

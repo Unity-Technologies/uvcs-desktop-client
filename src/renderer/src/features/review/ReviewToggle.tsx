@@ -1,6 +1,6 @@
 import { CircleCheck } from 'lucide-react';
-import { Tooltip } from '../../../ui/Tooltip';
-import type { ReviewStatus } from './reviewProgress';
+import { Tooltip } from '../../ui/Tooltip';
+import type { ReviewStatus } from './reviewStatus';
 import styles from './ReviewToggle.module.css';
 
 const LABELS: Record<ReviewStatus, string> = {
@@ -12,17 +12,15 @@ const LABELS: Record<ReviewStatus, string> = {
 interface ReviewToggleProps {
   status: ReviewStatus;
   onToggle: () => void;
-  /** Lets the row reveal the toggle on hover while the file is unreviewed. */
-  className?: string;
 }
 
 /** The check at the end of a pending change row: whether the file was reviewed, and a click to change it. */
-export function ReviewToggle({ status, onToggle, className }: ReviewToggleProps) {
+export function ReviewToggle({ status, onToggle }: ReviewToggleProps) {
   return (
     <Tooltip content={LABELS[status]} shortcut="r">
       <button
         type="button"
-        className={`${styles.toggle} ${className ?? ''}`}
+        className={styles.toggle}
         data-status={status}
         aria-label={LABELS[status]}
         aria-pressed={status === 'reviewed'}

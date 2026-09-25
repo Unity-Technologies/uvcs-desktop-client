@@ -17,6 +17,3 @@
   font-size: var(--text-sm);
 }
 
-.spinning {
-  animation: var(--keyframes-spin) 0.8s linear infinite;
-}

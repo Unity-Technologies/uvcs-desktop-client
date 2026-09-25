@@ -9,6 +9,8 @@ import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { NavItem } from '../../ui/nav/SidebarNav';
 import { SegmentedControl } from '../../ui/SegmentedControl';
+import { setReviewMode } from '../../features/review/reviewModeSetting';
+import { useSession } from '../workspace/sessionStore';
 import { AccountsPane } from './AccountsPane';
 import { DefaultWorkspaceRootField } from './DefaultWorkspaceRootField';
 import { THEMES } from './themes';
@@ -106,12 +108,23 @@ function AppearancePane({ settings, updateSettings }: PaneProps) {
 function PendingChangesPane({ settings, updateSettings }: PaneProps) {
   const filter = settings.pendingChanges;
   const updateFilter = (changes: Partial<PendingChangesFilter>): void => updateSettings({ pendingChanges: { ...filter, ...changes } });
+  const workspacePath = useSession((state) => state.workspacePath);
 
   return (
     <>
       <SettingsGroup title="Refresh">
         <Checkbox label="Refresh automatically when files change" checked={settings.autoRefresh} onChange={(autoRefresh) => updateSettings({ autoRefresh })} />
       </SettingsGroup>
+
+      {workspacePath && (
+        <SettingsGroup title="Review">
+          <Checkbox
+            label="Review mode in this workspace: mark files as you review them, in Changes and every diff (R)"
+            checked={settings.reviewModeWorkspaces.includes(workspacePath)}
+            onChange={(on) => void setReviewMode(workspacePath, on)}
+          />
+        </SettingsGroup>
+      )}
 
       <SettingsGroup title="What to show">
         <Checkbox label="Private files" checked={filter.showPrivate} onChange={(showPrivate) => updateFilter({ showPrivate })} />

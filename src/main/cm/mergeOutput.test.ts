@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeMergeProgress, directoryConflictIdentity, MERGE_FIELD_SEPARATOR, parseCreatedChangeset, parseMergePlan } from './mergeOutput';
+import { describeMergeProgress, directoryConflictIdentity, MERGE_FIELD_SEPARATOR, parseCreatedChangeset, parseDestinationMoved, parseMergePlan } from './mergeOutput';
 
 /** Real `cm merge --machinereadable --printcontributors` output, written with `|` for readability. */
 function output(...lines: string[]): string {
@@ -106,5 +106,14 @@ describe('parseCreatedChangeset', () => {
   it('reads the changeset created by a merge into a server branch', () => {
     expect(parseCreatedChangeset(output("CHANGESET|cs:7@/main/t3@sandbox-merge@local (mount:'/')"))).toBe(7);
     expect(parseCreatedChangeset('nothing')).toBeUndefined();
+  });
+});
+
+describe('parseDestinationMoved', () => {
+  it('tells when someone checked in on the destination while merging into it', () => {
+    const raced = output("CHANGESET|cs:12@/main@mtask-repo@local (mount:'/')", 'MERGE_NEEDED|12|/main|mtask-repo|local');
+    expect(parseDestinationMoved(raced)).toBe(true);
+    expect(parseCreatedChangeset(raced)).toBe(12);
+    expect(parseDestinationMoved(output("CHANGESET|cs:7@/main/t3@sandbox-merge@local (mount:'/')"))).toBe(false);
   });
 });

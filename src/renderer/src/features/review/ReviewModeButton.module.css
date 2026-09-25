@@ -1,0 +1,10 @@
+.button {
+  transition:
+    background var(--duration-fast),
+    color var(--duration-fast);
+}
+
+.button[aria-pressed='true'] {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
