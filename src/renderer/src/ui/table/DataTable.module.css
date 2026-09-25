@@ -76,6 +76,12 @@
   text-overflow: ellipsis;
 }
 
+.text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .secondary {
   color: var(--text-secondary);
 }

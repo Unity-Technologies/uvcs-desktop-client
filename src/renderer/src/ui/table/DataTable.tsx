@@ -5,6 +5,7 @@ import type { MenuEntry } from '../../lib/actions';
 import { isMac } from '../../lib/platform';
 import { selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
 import { ActionContextMenu } from '../menu/ActionContextMenu';
+import { cellText } from './cellText';
 import styles from './DataTable.module.css';
 
 export interface Column<Row> {
@@ -168,7 +169,7 @@ export function DataTable<Row>({
                   className={[styles.cell, column.secondary && styles.secondary, column.align === 'end' && styles.end].filter(Boolean).join(' ')}
                   style={columnStyle(column)}
                 >
-                  {column.render(row)}
+                  {cellText(column.render(row))}
                 </div>
               ))}
             </div>
