@@ -43,9 +43,18 @@ describe('collectResolutions for workspace merges', () => {
 });
 
 describe('collectResolutions for server merges', () => {
-  it('lets the server merge files that merge automatically', () => {
-    const resolutions = collectResolutions({ plan, fileStates: [automatic], directoryResolutions: [{ choice: 'destination' }], intoServerBranch: true, comment: 'Merge' });
-    expect(resolutions?.files['/auto.txt']).toEqual({ choice: 'text', text: 'merged' });
+  it('needs a side for files that merge automatically too, since only an external tool could combine them on the server', () => {
+    expect(needsServerFilePolicy([automatic])).toBe(true);
+    expect(collectResolutions({ plan, fileStates: [automatic], directoryResolutions: [{ choice: 'destination' }], intoServerBranch: true })).toBeNull();
+    const resolutions = collectResolutions({
+      plan,
+      fileStates: [automatic],
+      directoryResolutions: [{ choice: 'destination' }],
+      intoServerBranch: true,
+      serverFilePolicy: 'destination',
+      comment: 'Merge',
+    });
+    expect(resolutions?.files['/auto.txt']).toEqual({ choice: 'destination' });
     expect(resolutions?.comment).toBe('Merge');
   });
 
