@@ -2,7 +2,10 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import type { ContentSource, FileContent } from '@shared/domain/content';
 import { api } from '../../../api/client';
 import { queryKeys } from '../../../api/queryKeys';
-import { queryClient } from '../../../app/queryClient';
+import { IMMUTABLE_QUERY, queryClient } from '../../../app/queryClient';
+
+/** Going back to a diff within the hour shows it at once, without keeping every file ever opened in memory. */
+const REVISION_CACHE_MS = 60 * 60_000;
 
 export interface DiffContents {
   original: ContentSource;
@@ -23,7 +26,7 @@ export function useDiffContents(workspacePath: string, original: ContentSource, 
       const [left, right] = await Promise.all([readContent(workspacePath, original), readContent(workspacePath, modified)]);
       return { original, modified, left, right };
     },
-    staleTime: isLive(original) || isLive(modified) ? 0 : Infinity,
+    ...contentCaching([original, modified]),
     placeholderData: keepPreviousData,
   });
 }
@@ -33,8 +36,22 @@ function readContent(workspacePath: string, source: ContentSource): Promise<File
   return queryClient.fetchQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'content', source),
     queryFn: () => api.content.read(workspacePath, source),
-    staleTime: isLive(source) ? 0 : Infinity,
+    ...contentCaching([source]),
   });
+}
+
+/**
+ * Live contents are read again whenever asked. A revision by id never changes: read once, kept an hour after its last
+ * use, skipped by refreshes. Others (the loaded revision, specs) stay until an operation refreshes the workspace.
+ */
+function contentCaching(sources: ContentSource[]) {
+  if (sources.some(isLive)) return { staleTime: 0 };
+  if (sources.every(isRevision)) return { staleTime: Infinity, gcTime: REVISION_CACHE_MS, meta: IMMUTABLE_QUERY };
+  return { staleTime: Infinity };
+}
+
+function isRevision(source: ContentSource): boolean {
+  return source.kind === 'revision' || source.kind === 'empty';
 }
 
 /** Workspace files change under us, and so does the reviewed copy on every new review; revisions never do. */
