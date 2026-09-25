@@ -33,6 +33,7 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
   return (
     <>
       <ViewHeader
+        inTitleBar
         title={server === 'local' ? 'This computer' : server}
         subtitle={repositories ? `${repositories.length} repositories` : undefined}
         actions={

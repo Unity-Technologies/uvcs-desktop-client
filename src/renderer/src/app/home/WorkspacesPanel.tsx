@@ -39,6 +39,7 @@ export function WorkspacesPanel({ mode, onOpen, onOpenFolder, onShowAll }: Works
   return (
     <>
       <ViewHeader
+        inTitleBar
         title={mode === 'recent' ? 'Recent workspaces' : 'All workspaces'}
         subtitle={workspaces && mode === 'all' ? `${workspaces.length} workspaces` : undefined}
         actions={
