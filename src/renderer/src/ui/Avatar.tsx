@@ -3,12 +3,12 @@ import { displayName, initials, userHue } from '../lib/userName';
 import { Highlight } from './Highlight';
 import styles from './Avatar.module.css';
 
-/** The user's Gravatar when they have one; otherwise their initials on a stable color. */
-export function Avatar({ user, size = 20 }: { user: string; size?: number }) {
+/** The user's Gravatar when they have one; otherwise their initials on a stable color. The tooltip is their name unless `tip` says otherwise (null: none). */
+export function Avatar({ user, size = 20, tip = displayName(user) }: { user: string; size?: number; tip?: string | null }) {
   const image = useAvatarImage(user);
 
   return (
-    <span className={styles.avatar} data-tip={displayName(user)} style={{ width: size, height: size }}>
+    <span className={styles.avatar} data-tip={tip ?? undefined} style={{ width: size, height: size }}>
       {image ? (
         <img className={styles.image} src={image.src} alt="" draggable={false} />
       ) : (
