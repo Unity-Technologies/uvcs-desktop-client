@@ -8,6 +8,8 @@ import {
   PenLine,
   Plus,
   ScanText,
+  Square,
+  SquareCheckBig,
   Trash2,
   Undo2,
 } from 'lucide-react';
@@ -15,7 +17,7 @@ import type { Changelist, FilterRuleList, PendingChange } from '@shared/domain/p
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { SEPARATOR, tidyMenu, type MenuEntry, type Submenu } from '../../lib/actions';
-import { categoryOf, isControlled } from './changeCategories';
+import { categoryOf, existsOnDisk, isCheckinCandidate, isControlled } from './changeCategories';
 import { moveToChangelistSubmenu } from './changelistMenu';
 import {
   absolutePath,
@@ -26,27 +28,55 @@ import {
   deletePrivateFiles,
   extensionOf,
   FILTER_LIST_FILES,
+  openWithDefaultApp,
   undoChanges,
 } from './pendingChangeOperations';
 
+/** Whether each change goes into the next check-in, and a way to change it. */
+interface CheckinInclusion {
+  isIncluded: (change: PendingChange) => boolean;
+  setIncluded: (changes: PendingChange[], included: boolean) => void;
+}
+
 /** The context menu for the selected pending changes. */
-export function pendingChangeMenu(workspacePath: string, changes: PendingChange[], changelists: Changelist[]): MenuEntry[] {
+export function pendingChangeMenu(
+  workspacePath: string,
+  changes: PendingChange[],
+  changelists: Changelist[],
+  { isIncluded, setIncluded }: CheckinInclusion,
+): MenuEntry[] {
   if (changes.length === 0) return [];
 
   const single = changes.length === 1 ? changes[0]! : null;
+  const candidates = changes.filter(isCheckinCandidate);
+  const excluded = candidates.filter((change) => !isIncluded(change));
+  const included = candidates.filter(isIncluded);
   const privateChanges = changes.filter((change) => categoryOf(change) === 'private');
   const controlledChanges = changes.filter(isControlled);
   const checkoutCandidates = controlledChanges.filter((change) => !change.kinds.includes('checkedOut') && !change.kinds.includes('added'));
-  const existsOnDisk = single && !single.kinds.includes('deleted') && !single.kinds.includes('locallyDeleted');
+  const onDisk = single && existsOnDisk(single);
 
   return tidyMenu([
-    existsOnDisk && {
+    excluded.length > 0 && {
+      id: 'include',
+      label: 'Include in check-in',
+      icon: SquareCheckBig,
+      run: () => setIncluded(excluded, true),
+    },
+    included.length > 0 && {
+      id: 'exclude',
+      label: 'Exclude from check-in',
+      icon: Square,
+      run: () => setIncluded(included, false),
+    },
+    SEPARATOR,
+    onDisk && {
       id: 'open',
       label: 'Open',
       icon: AppWindow,
-      run: () => void api.system.openPath(absolutePath(workspacePath, single.path)),
+      run: () => openWithDefaultApp(workspacePath, single),
     },
-    existsOnDisk && {
+    onDisk && {
       id: 'reveal',
       label: 'Reveal in file manager',
       icon: FolderSearch,

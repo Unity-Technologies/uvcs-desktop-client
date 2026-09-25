@@ -6,7 +6,7 @@ import { copyToClipboard } from '../../lib/copyToClipboard';
 import { pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
-import { isControlled } from './changeCategories';
+import { existsOnDisk, isControlled } from './changeCategories';
 import { askUndoChanges } from './UndoChangesDialog';
 import { BACKUP_SHELVE_COMMENT } from './undoPlan';
 
@@ -46,6 +46,11 @@ export async function undoChanges(workspacePath: string, changes: PendingChange[
     label: 'View',
     run: () => navigation.openPage({ kind: 'diff', title: `Shelve ${shelveId}`, target: { kind: 'shelve', shelveId } }),
   });
+}
+
+/** Opens the file with the app the OS associates with it; deleted items have nothing on disk to open. */
+export function openWithDefaultApp(workspacePath: string, change: PendingChange): void {
+  if (existsOnDisk(change)) void api.system.openPath(absolutePath(workspacePath, change.path));
 }
 
 export async function deletePrivateFiles(workspacePath: string, changes: Pick<PendingChange, 'path'>[]): Promise<void> {

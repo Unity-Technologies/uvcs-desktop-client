@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { buildChangeRows, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { buildChangeRows, CHEVRON_SLOT, hasDisclosureRows, INDENT, rowIndent, type ChangesGrouping, type ChangesLayout } from './changeRows';
 
 function change(path: string, kinds: PendingChange['kinds'], changelist?: string): PendingChange {
   return { path, kinds, itemType: 'file', size: 0, lastModified: '', changelist };
@@ -60,5 +60,26 @@ describe('buildChangeRows', () => {
       collapsed: new Set(['directory:all:src']),
     });
     expect(rows.map((row) => row.key)).toEqual(['directory:all:src', 'change:z.ts']);
+  });
+});
+
+describe('rowIndent', () => {
+  it('keeps a flat list flush, with no chevron column', () => {
+    const rows = buildChangeRows(base);
+    expect(hasDisclosureRows(rows)).toBe(false);
+    expect(rowIndent(rows[0]!, { grouped: false, disclosure: false })).toBe(0);
+  });
+
+  it('puts a change one level right of its changelist checkbox', () => {
+    const rows = buildChangeRows({ ...base, grouping: 'changelist' });
+    const layout = { grouped: true, disclosure: hasDisclosureRows(rows) };
+    expect(rowIndent(rows[0]!, layout)).toBe(0);
+    expect(rowIndent(rows[1]!, layout)).toBe(INDENT + CHEVRON_SLOT);
+  });
+
+  it('puts a change one level right of its folder checkbox in a tree', () => {
+    const rows = buildChangeRows({ ...base, changes: [changes[3]!], layout: 'tree' });
+    const indents = rows.map((row) => rowIndent(row, { grouped: false, disclosure: true }));
+    expect(indents).toEqual([0, INDENT, 2 * INDENT + CHEVRON_SLOT]);
   });
 });

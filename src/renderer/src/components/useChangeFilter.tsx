@@ -20,6 +20,8 @@ interface ChangeFilterResult<T> {
   visible: T[];
   /** The text typed, for highlighting matches. */
   query: string;
+  /** Empties the text and turns every status chip off. */
+  clear: () => void;
   /** The filter field followed by one toggle chip per status. */
   bar: ReactNode;
 }
@@ -36,6 +38,11 @@ export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tone
     () => items.filter((item) => matchesChangeFilter(pathOf(item), toneOf(item), { query, tones: activeTones })),
     [items, pathOf, toneOf, query, activeTones],
   );
+
+  const clear = (): void => {
+    setQuery('');
+    setChosenTones(new Set());
+  };
 
   const toggle = (tone: StatusTone): void =>
     setChosenTones((current) => {
@@ -58,5 +65,5 @@ export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tone
     </div>
   );
 
-  return { visible, query, bar };
+  return { visible, query, clear, bar };
 }

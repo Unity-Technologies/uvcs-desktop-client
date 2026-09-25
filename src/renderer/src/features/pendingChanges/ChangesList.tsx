@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronRight, Folder, MoreHorizontal } from 'lucide-react';
-import { useMemo, useRef, type KeyboardEvent } from 'react';
+import { useMemo, useRef, useState, type CSSProperties, type DragEvent, type KeyboardEvent, type MouseEvent } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -10,13 +10,15 @@ import { selectOnArrow, selectOnClick, type SelectionState } from '../../lib/sel
 import { Checkbox } from '../../ui/Checkbox';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
-import { describeKinds, isCheckinCandidate } from './changeCategories';
+import { describeKinds, isCheckinCandidate, isControlled } from './changeCategories';
 import { changeTone } from './changeTone';
-import type { ChangeRow } from './changeRows';
+import { changesToMove } from './changelistMoves';
+import { hasDisclosureRows, rowIndent, type ChangeRow } from './changeRows';
 import styles from './ChangesList.module.css';
 
 const ROW_HEIGHT = 28;
-const INDENT = 16;
+/** Data type of a drag carrying selected changes; the changes themselves stay in a ref, since only this list reads them. */
+const CHANGES_DRAG_TYPE = 'application/x-uvcs-pending-changes';
 
 interface ChangesListProps {
   rows: ChangeRow[];
@@ -24,7 +26,10 @@ interface ChangesListProps {
   onSelectionChange: (selection: SelectionState) => void;
   onToggleIncluded: (row: ChangeRow, included: boolean) => void;
   onToggleCollapsed: (rowKey: string) => void;
+  /** Enter or double-click on a change. */
   onOpen: (change: PendingChange) => void;
+  /** Dropping changes on a changelist header; changelist headers are only drop targets when this is set. */
+  onMoveToChangelist?: (changes: PendingChange[], changelist: string | null) => void;
   contextMenu: (selected: PendingChange[]) => MenuEntry[];
   changelistMenu: (changelist: Changelist) => MenuEntry[];
 }
@@ -36,13 +41,22 @@ export function ChangesList({
   onToggleIncluded,
   onToggleCollapsed,
   onOpen,
+  onMoveToChangelist,
   contextMenu,
   changelistMenu,
 }: ChangesListProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const changeRows = useMemo(() => rows.filter((row) => row.type === 'change'), [rows]);
   const orderedKeys = useMemo(() => changeRows.map((row) => row.key), [changeRows]);
-  const focusedKey = selection.anchor;
+  // The row keyboard moves go from; Shift extends the selection from the anchor to it.
+  const [focusedKey, setFocusedKey] = useState<string | null>(null);
+  const focused = focusedKey !== null && orderedKeys.includes(focusedKey) ? focusedKey : selection.anchor;
+  const indentLayout = { grouped: rows.some((row) => row.type === 'group'), disclosure: hasDisclosureRows(rows) };
+
+  const dragged = useRef<PendingChange[] | null>(null);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
+  // A plain press on a row of a multi-selection keeps the selection until release, so the whole of it can be dragged.
+  const narrowOnClick = useRef<string | null>(null);
 
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -53,11 +67,19 @@ export function ChangesList({
 
   const selectedChanges = (): PendingChange[] => changeRows.filter((row) => selection.selected.has(row.key)).map((row) => row.change);
 
+  const moveSteps = (key: string): number | undefined => {
+    const page = Math.max(1, Math.floor((viewportRef.current?.clientHeight ?? 0) / ROW_HEIGHT) - 1);
+    const steps: Record<string, number> = { ArrowDown: 1, ArrowUp: -1, PageDown: page, PageUp: -page, Home: -Infinity, End: Infinity };
+    return steps[key];
+  };
+
   const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    const step = moveSteps(event.key);
+    if (step !== undefined) {
       event.preventDefault();
-      const moved = selectOnArrow(selection, orderedKeys, event.key === 'ArrowDown' ? 1 : -1, event.shiftKey, focusedKey);
+      const moved = selectOnArrow(selection, orderedKeys, step, event.shiftKey, focused);
       if (!moved) return;
+      setFocusedKey(moved.focused);
       onSelectionChange(moved.state);
       virtualizer.scrollToIndex(rows.findIndex((row) => row.key === moved.focused));
     } else if (event.key === ' ') {
@@ -68,19 +90,68 @@ export function ChangesList({
     } else if (event.key === 'a' && (isMac ? event.metaKey : event.ctrlKey)) {
       event.preventDefault();
       onSelectionChange({ selected: new Set(orderedKeys), anchor: orderedKeys[0] ?? null });
-    } else if (event.key === 'Enter' && focusedKey) {
-      const focused = changeRows.find((row) => row.key === focusedKey);
-      if (focused) onOpen(focused.change);
+    } else if (event.key === 'Enter' && focused) {
+      const focusedRow = changeRows.find((row) => row.key === focused);
+      if (focusedRow) onOpen(focusedRow.change);
     }
   };
 
-  const onRowMouseDown = (row: ChangeRow, event: React.MouseEvent): void => {
+  const onRowMouseDown = (row: ChangeRow, event: MouseEvent): void => {
     if (row.type !== 'change') {
       if (event.button === 0) onToggleCollapsed(row.key);
       return;
     }
     if (event.button === 2 && selection.selected.has(row.key)) return;
-    onSelectionChange(selectOnClick(selection, row.key, orderedKeys, { shift: event.shiftKey, toggle: isMac ? event.metaKey : event.ctrlKey }));
+    const toggle = isMac ? event.metaKey : event.ctrlKey;
+    if (event.button === 0 && !event.shiftKey && !toggle && selection.selected.size > 1 && selection.selected.has(row.key)) {
+      narrowOnClick.current = row.key;
+      return;
+    }
+    setFocusedKey(row.key);
+    onSelectionChange(selectOnClick(selection, row.key, orderedKeys, { shift: event.shiftKey, toggle }));
+  };
+
+  const onRowClick = (row: ChangeRow): void => {
+    if (narrowOnClick.current !== row.key) return;
+    narrowOnClick.current = null;
+    setFocusedKey(row.key);
+    onSelectionChange({ selected: new Set([row.key]), anchor: row.key });
+  };
+
+  const onDragStart = (row: ChangeRow, event: DragEvent): void => {
+    if (row.type !== 'change') return;
+    narrowOnClick.current = null;
+    const changes = selection.selected.has(row.key) ? selectedChanges() : [row.change];
+    if (!selection.selected.has(row.key)) onSelectionChange({ selected: new Set([row.key]), anchor: row.key });
+    dragged.current = changes.filter(isControlled);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData(CHANGES_DRAG_TYPE, String(dragged.current.length));
+  };
+
+  const endDrag = (): void => {
+    dragged.current = null;
+    setDropTarget(null);
+  };
+
+  const dropHandlers = (row: ChangeRow) => {
+    if (row.type !== 'group' || !onMoveToChangelist) return {};
+    const target = row.changelist?.name ?? null;
+    return {
+      onDragOver: (event: DragEvent) => {
+        if (!dragged.current || changesToMove(dragged.current, target).length === 0) return;
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+        setDropTarget(row.key);
+      },
+      onDragLeave: (event: DragEvent) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropTarget(null);
+      },
+      onDrop: (event: DragEvent) => {
+        event.preventDefault();
+        if (dragged.current) onMoveToChangelist(changesToMove(dragged.current, target), target);
+        endDrag();
+      },
+    };
   };
 
   return (
@@ -89,15 +160,22 @@ export function ChangesList({
         <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
           {virtualizer.getVirtualItems().map((item) => {
             const row = rows[item.index]!;
+            const draggable = Boolean(onMoveToChangelist) && row.type === 'change' && isControlled(row.change);
             return (
               <div
                 key={row.key}
                 className={styles.row}
                 data-type={row.type}
                 data-selected={selection.selected.has(row.key)}
-                style={{ top: item.start, height: ROW_HEIGHT }}
+                data-drop-target={dropTarget === row.key}
+                style={{ top: item.start, height: ROW_HEIGHT, '--row-indent': `${rowIndent(row, indentLayout)}px` } as CSSProperties}
                 onMouseDown={(event) => onRowMouseDown(row, event)}
+                onClick={() => onRowClick(row)}
                 onDoubleClick={() => row.type === 'change' && onOpen(row.change)}
+                draggable={draggable}
+                onDragStart={draggable ? (event) => onDragStart(row, event) : undefined}
+                onDragEnd={draggable ? endDrag : undefined}
+                {...dropHandlers(row)}
               >
                 <RowContent row={row} onToggleIncluded={onToggleIncluded} changelistMenu={changelistMenu} />
               </div>
@@ -138,7 +216,6 @@ function RowContent({ row, onToggleIncluded, changelistMenu }: RowContentProps) 
     case 'directory':
       return (
         <>
-          <span style={{ width: row.depth * INDENT }} />
           <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
           <Checkbox checked={row.checkState} onChange={(checked) => onToggleIncluded(row, checked)} />
           <Folder size={14} className={styles.folder} />
@@ -150,7 +227,6 @@ function RowContent({ row, onToggleIncluded, changelistMenu }: RowContentProps) 
       const deleted = change.kinds.includes('deleted') || change.kinds.includes('locallyDeleted');
       return (
         <>
-          <span style={{ width: row.depth * INDENT + 17 }} />
           {isCheckinCandidate(change) ? (
             <Checkbox checked={row.checked} onChange={(checked) => onToggleIncluded(row, checked)} />
           ) : (
