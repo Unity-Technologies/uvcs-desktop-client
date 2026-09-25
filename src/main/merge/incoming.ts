@@ -1,20 +1,40 @@
 import type { Changeset } from '@shared/domain/changeset';
 import type { DiffEntry } from '@shared/domain/diff';
-import type { IncomingChanges, IncomingSummary, UpdateConflict } from '@shared/domain/incoming';
+import type { IncomingChanges, IncomingSummary, LoadedBranch, UpdateConflict } from '@shared/domain/incoming';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import { DIFF_FORMAT, parseDiffEntries } from '../cm/diffEntries';
 import { findRecords, toChangeset } from '../cm/findObjects';
-import { findArgs } from '../cm/findQuery';
+import { escapeQueryValue, findArgs } from '../cm/findQuery';
+import { parseRecords, recordFormat } from '../cm/formatRecords';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readWorkspaceStatus } from '../cm/workspaceStatus';
 
 const LOCAL_CONTENT_CHANGES = new Set(['changed', 'checkedOut', 'replaced']);
 
-export async function readIncomingSummary(cm: CmClient, workspacePath: string): Promise<IncomingSummary> {
-  const { summary } = await readIncomingChangesets(cm, workspacePath);
-  return summary;
+/**
+ * How many changesets the branch has after the loaded one. Polled, so it is a single `cm find` returning only
+ * changeset numbers; the renderer tells where the workspace stands (its workspace info follows `.plastic`).
+ */
+export async function readIncomingSummary(cm: CmClient, workspacePath: string, { branch, loadedChangeset }: LoadedBranch): Promise<IncomingSummary> {
+  if (!branch) return { branch: null, loadedChangeset, headChangeset: loadedChangeset, changesetCount: 0 };
+  const output = await cm.query(incomingChangesetIdsArgs(branch, loadedChangeset), { cwd: workspacePath });
+  return summarizeIncoming(branch, loadedChangeset, parseRecords(output).map(([id]) => Number(id)));
+}
+
+export function incomingChangesetIdsArgs(branch: string, loadedChangeset: number): string[] {
+  return [
+    'find',
+    'changeset',
+    `where changesetid > ${loadedChangeset} and branch = '${escapeQueryValue(branch)}'`,
+    `--format=${recordFormat(['changesetid'])}`,
+    '--nototal',
+  ];
+}
+
+export function summarizeIncoming(branch: string, loadedChangeset: number, incomingIds: number[]): IncomingSummary {
+  return { branch, loadedChangeset, headChangeset: incomingIds.reduce((head, id) => Math.max(head, id), loadedChangeset), changesetCount: incomingIds.length };
 }
 
 export async function readIncomingChanges(cm: CmClient, workspacePath: string): Promise<IncomingChanges> {

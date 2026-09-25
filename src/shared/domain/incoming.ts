@@ -2,6 +2,13 @@ import type { Changeset } from './changeset';
 import type { DiffEntry } from './diff';
 import type { FileConflictResolution } from './merge';
 
+/** Where the workspace stands, as its workspace info tells: what the incoming check compares the branch head with. */
+export interface LoadedBranch {
+  /** Null when the workspace is not loaded from a branch. */
+  branch: string | null;
+  loadedChangeset: number;
+}
+
 /** A cheap check of how far behind its branch head the workspace is. */
 export interface IncomingSummary {
   /** Null when the workspace is not loaded from a branch (e.g. a label), so nothing comes in. */

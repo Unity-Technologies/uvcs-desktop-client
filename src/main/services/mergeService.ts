@@ -21,7 +21,7 @@ export function createMergeService({ cm, operations }: ServiceContext, { switchS
         if (shelve && !request.destinationBranch) await leftChanges.finishAppliedShelve(workspacePath, Number(shelve[1]));
         return result;
       }),
-    incomingSummary: (workspacePath) => readIncomingSummary(cm, workspacePath),
+    incomingSummary: (workspacePath, loaded) => readIncomingSummary(cm, workspacePath, loaded),
     incomingChanges: (workspacePath) => readIncomingChanges(cm, workspacePath),
     updateResolvingConflicts: (workspacePath, resolutions, operationId) =>
       operations.run(operationId, (context) => updateWithMerge(cm, workspacePath, resolutions, backupsRoot, context)),

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { findUpdateBlockers, findUpdateConflicts } from './incoming';
+import { findUpdateBlockers, findUpdateConflicts, incomingChangesetIdsArgs, summarizeIncoming } from './incoming';
 
 function incoming(path: string, status: DiffEntry['status'], itemType: DiffEntry['itemType'] = 'file'): DiffEntry {
   return { path, status, itemType, baseRevisionId: 10, revisionId: 20 };
@@ -42,5 +42,18 @@ describe('findUpdateConflicts', () => {
 
   it('ignores incoming additions and directories', () => {
     expect(findUpdateConflicts([incoming('new.txt', 'added'), incoming('src', 'changed', 'directory')], [local('src', ['changed'])])).toEqual([]);
+  });
+});
+
+describe('the incoming summary', () => {
+  it('asks only for the numbers of the changesets after the loaded one on the branch', () => {
+    const [find, object, where, format, ...rest] = incomingChangesetIdsArgs("/main/o'brien", 41);
+    expect([find, object, where, rest]).toEqual(['find', 'changeset', "where changesetid > 41 and branch = '/main/o''brien'", ['--nototal']]);
+    expect(format).toMatch(/^--format=\{changesetid\}/);
+  });
+
+  it('counts them and takes the newest as the head', () => {
+    expect(summarizeIncoming('/main', 41, [45, 43, 44])).toEqual({ branch: '/main', loadedChangeset: 41, headChangeset: 45, changesetCount: 3 });
+    expect(summarizeIncoming('/main', 41, [])).toEqual({ branch: '/main', loadedChangeset: 41, headChangeset: 41, changesetCount: 0 });
   });
 });

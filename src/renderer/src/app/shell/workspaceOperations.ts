@@ -1,13 +1,11 @@
-import type { IncomingSummary } from '@shared/domain/incoming';
 import type { PendingChangesAction } from '@shared/domain/switchWithChanges';
 import { api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
 import { askSwitchWithChanges } from '../../features/branches/SwitchWithChangesDialog';
 import { planSwitch } from '../../features/branches/switchOptions';
 import { explainUpdateConflicts } from '../../features/incoming/updateOperations';
+import { recheckIncoming } from '../../features/incoming/useIncomingSummary';
 import { toast, useToastStore } from '../../ui/toast/toastStore';
 import { refuseWhileBusy, runAction, runOperation } from '../operations/runOperation';
-import { queryClient } from '../queryClient';
 import { switchToast } from './switchToast';
 
 export function updateWorkspace(workspacePath: string): Promise<void | undefined> {
@@ -23,9 +21,7 @@ export function updateWorkspace(workspacePath: string): Promise<void | undefined
 
 /** Updates the workspace, after asking the server whether there is anything new; says so when there isn't. */
 export async function updateUnlessUpToDate(workspacePath: string): Promise<void> {
-  const summaryKey = queryKeys.inWorkspace(workspacePath, 'incoming', 'summary');
-  await queryClient.refetchQueries({ queryKey: summaryKey });
-  const summary = queryClient.getQueryData<IncomingSummary>(summaryKey);
+  const summary = await recheckIncoming(workspacePath).catch(() => undefined);
   if (summary?.branch && summary.changesetCount === 0) toast.info('Already up to date', `Your workspace has everything on ${summary.branch}.`);
   else await updateWorkspace(workspacePath);
 }

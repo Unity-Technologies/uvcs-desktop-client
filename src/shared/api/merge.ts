@@ -1,4 +1,4 @@
-import type { IncomingChanges, IncomingSummary, ShelvedForUpdate, UpdateResolutions, UpdateResult } from '../domain/incoming';
+import type { IncomingChanges, IncomingSummary, LoadedBranch, ShelvedForUpdate, UpdateResolutions, UpdateResult } from '../domain/incoming';
 import type { MergePlan, MergeRequest, MergeResolutions, MergeResult } from '../domain/merge';
 
 export interface MergeApi {
@@ -9,7 +9,8 @@ export interface MergeApi {
    * merges into a server branch create a changeset.
    */
   run(workspacePath: string, request: MergeRequest, resolutions: MergeResolutions, operationId: string): Promise<MergeResult>;
-  incomingSummary(workspacePath: string): Promise<IncomingSummary>;
+  /** One light `cm find` for the changesets on `loaded.branch` after the loaded one; polled, so it reads nothing else. */
+  incomingSummary(workspacePath: string, loaded: LoadedBranch): Promise<IncomingSummary>;
   incomingChanges(workspacePath: string): Promise<IncomingChanges>;
   /** Updates the workspace, merging locally changed files that also changed on the branch. */
   updateResolvingConflicts(workspacePath: string, resolutions: UpdateResolutions, operationId: string): Promise<UpdateResult>;
