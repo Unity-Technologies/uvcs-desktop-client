@@ -1,6 +1,6 @@
 import { CircleDot, MessageSquareCode, Plus, RefreshCw, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { CODE_REVIEW_STATUSES, type CodeReview, type CodeReviewFilter, type CodeReviewStatus } from '@shared/domain/codeReview';
+import { CODE_REVIEW_STATUSES, MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewFilter, type CodeReviewStatus } from '@shared/domain/codeReview';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -20,6 +20,8 @@ import { describeTarget, openReview } from './codeReviewOperations';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { openCreateCodeReviewDialog } from './CreateCodeReviewDialog';
 import { useCodeReviews } from './useCodeReviews';
+import { SincePicker } from '../../components/SincePicker';
+import { sinceDateFor, type SincePreset } from '../../lib/sincePresets';
 import styles from './CodeReviewsView.module.css';
 
 type StatusFilter = CodeReviewStatus | 'any';
@@ -56,8 +58,13 @@ export function CodeReviewsView() {
   const [scope, setScope] = useState<CodeReviewFilter['scope']>('all');
   const [status, setStatus] = useState<StatusFilter>('any');
   const [search, setSearch] = useState('');
+  const [since, setSince] = useState<SincePreset>('last3Months');
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
-  const { data: reviews, isLoading, isFetching, error } = useCodeReviews({ scope, status: status === 'any' ? undefined : status });
+  const { data: reviews, isLoading, isFetching, error } = useCodeReviews({
+    scope,
+    status: status === 'any' ? undefined : status,
+    sinceDate: sinceDateFor(since),
+  });
 
   const visible = (reviews ?? []).filter((review) => `${review.title} ${review.id}`.toLowerCase().includes(search.toLowerCase()));
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : '';
@@ -79,7 +86,7 @@ export function CodeReviewsView() {
   const header = (
     <ViewHeader
       title="Code reviews"
-      subtitle={reviews && `${reviews.length} ${reviews.length === 1 ? 'review' : 'reviews'}`}
+      subtitle={reviews && (reviews.length >= MAX_LISTED_CODE_REVIEWS ? `Newest ${reviews.length}` : `${reviews.length} ${reviews.length === 1 ? 'review' : 'reviews'}`)}
       actions={
         <>
           <IconButton
@@ -94,6 +101,7 @@ export function CodeReviewsView() {
       }
     >
       <SearchField value={search} onChange={setSearch} placeholder="Filter reviews" />
+      <SincePicker value={since} onChange={setSince} />
       <ChoiceChip<CodeReviewFilter['scope']>
         value={scope}
         onChange={setScope}

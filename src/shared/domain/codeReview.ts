@@ -21,7 +21,12 @@ export interface CodeReview {
 export interface CodeReviewFilter {
   scope: 'all' | 'createdByMe' | 'assignedToMe';
   status?: CodeReviewStatus;
+  /** `YYYY-MM-DD`; only reviews created on or after it. */
+  sinceDate?: string;
 }
+
+/** Repositories can hold thousands of reviews; lists show the newest ones up to this many. */
+export const MAX_LISTED_CODE_REVIEWS = 300;
 
 export interface CreateCodeReviewRequest {
   /** `br:/main/task` or `cs:12`. */

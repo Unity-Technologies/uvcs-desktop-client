@@ -1,25 +1,21 @@
 import type { CodeReviewsApi } from '@shared/api/codeReviews';
-import type { CodeReview, CodeReviewFilter } from '@shared/domain/codeReview';
+import { MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewFilter } from '@shared/domain/codeReview';
+import type { QueryFilter } from '@shared/domain/query';
+import { branchNamesById } from '../cm/branchNamesById';
 import { parseCodeReviews, type RawCodeReview } from '../cm/codeReviewsXml';
-import { findRecords, toBranch } from '../cm/findObjects';
 import { escapeQueryValue, findArgs } from '../cm/findQuery';
 import type { ServiceContext } from './ServiceContext';
 
 export function createCodeReviewsService({ cm }: ServiceContext): CodeReviewsApi {
-  async function find(workspacePath: string, conditions: string[], owner?: string): Promise<CodeReview[]> {
-    const xml = await cm.query(findArgs('review', { owner }, 'date desc', conditions), { cwd: workspacePath });
+  async function find(workspacePath: string, conditions: string[], filter: QueryFilter): Promise<CodeReview[]> {
+    const xml = await cm.query(findArgs('review', filter, 'date desc', conditions), { cwd: workspacePath });
     return resolveTargets(workspacePath, parseCodeReviews(xml));
   }
 
-  /** Branch targets come as object ids; look their names up in a single query. */
+  /** `cm` reports branch targets only by object id; the names come from a few batched lookups. */
   async function resolveTargets(workspacePath: string, reviews: RawCodeReview[]): Promise<CodeReview[]> {
-    const branchIds = [...new Set(reviews.filter((review) => review.targetType === 'branch').map((review) => review.targetId))];
-    const branchNames = new Map<number, string>();
-    if (branchIds.length > 0) {
-      const where = `where ${branchIds.map((id) => `id = ${id}`).join(' or ')}`;
-      const xml = await cm.query(['find', 'branch', where, '--xml', '--nototal'], { cwd: workspacePath });
-      findRecords(xml, 'BRANCH').map(toBranch).forEach((branch) => branchNames.set(branch.id, branch.name));
-    }
+    const branchIds = reviews.filter((review) => review.targetType === 'branch').map((review) => review.targetId);
+    const branchNames = branchIds.length > 0 ? await branchNamesById(cm, workspacePath, branchIds) : new Map<number, string>();
 
     return reviews.map(({ targetType, targetId, ...review }) => ({
       ...review,
@@ -38,11 +34,15 @@ export function createCodeReviewsService({ cm }: ServiceContext): CodeReviewsApi
         ...(filter.scope === 'assignedToMe' ? ["assignee = 'me'"] : []),
         ...(filter.status ? [`status = '${escapeQueryValue(filter.status)}'`] : []),
       ];
-      return find(workspacePath, conditions, filter.scope === 'createdByMe' ? 'me' : undefined);
+      return find(workspacePath, conditions, {
+        owner: filter.scope === 'createdByMe' ? 'me' : undefined,
+        sinceDate: filter.sinceDate,
+        limit: MAX_LISTED_CODE_REVIEWS,
+      });
     },
 
     async get(workspacePath, reviewId) {
-      const [review] = await find(workspacePath, [`id = ${reviewId}`]);
+      const [review] = await find(workspacePath, [`id = ${reviewId}`], {});
       if (!review) throw new Error(`Code review ${reviewId} was not found.`);
       return review;
     },
