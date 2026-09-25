@@ -5,7 +5,6 @@ import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { pluralize } from '../../lib/text';
-import { Button } from '../../ui/Button';
 import { DetailsEmpty, DetailsSection, DetailsSkeleton } from '../../ui/DetailsPanel';
 import { HighlightQuery } from '../../ui/Highlight';
 import { diffEntryKey } from '../diff/DiffEntryList';
@@ -21,8 +20,8 @@ interface ChangedFilesSectionProps {
   target: DiffTarget;
   /** For a branch, its head: the list is reused until the branch moves. */
   branchHead?: number;
-  /** Opens the full diff, focused on a file when given one. */
-  onOpen: (focusPath?: string) => void;
+  /** Opens the full diff, focused on the file. */
+  onOpen: (focusPath: string) => void;
 }
 
 /**
@@ -36,14 +35,8 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
   const { visible, query, bar } = useChangeFilter(entries ?? [], diffEntryKey, diffEntryTone);
 
   return (
-    <DetailsSection
-      title={entries ? `${pluralize(entries.length, 'file')} changed` : 'Changed files'}
-      action={
-        <Button variant="ghost" size="small" onClick={() => onOpen()}>
-          Open diff
-        </Button>
-      }
-    >
+    // No "Open diff" here: the panel's primary action right above opens it.
+    <DetailsSection title={entries ? `${pluralize(entries.length, 'file')} changed` : 'Changed files'}>
       {!entries && !requested && (
         <button className={styles.show} onClick={() => setRequested(true)}>
           <ChevronRight size={14} />
