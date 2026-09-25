@@ -27,3 +27,9 @@ export async function rememberRecentWorkspace(workspacePath: string): Promise<vo
   const recentWorkspacePaths = [workspacePath, ...settings.recentWorkspacePaths.filter((path) => path !== workspacePath)].slice(0, 10);
   queryClient.setQueryData(queryKeys.settings, await api.settings.update({ recentWorkspacePaths }));
 }
+
+/** Drops a workspace from the recent list, e.g. once it's removed or its folder is gone. */
+export async function forgetRecentWorkspace(workspacePath: string): Promise<void> {
+  const { recentWorkspacePaths } = await api.settings.get();
+  queryClient.setQueryData(queryKeys.settings, await api.settings.update({ recentWorkspacePaths: recentWorkspacePaths.filter((path) => path !== workspacePath) }));
+}

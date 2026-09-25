@@ -1,4 +1,3 @@
-import { existsSync } from 'node:fs';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
 import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
@@ -87,9 +86,5 @@ export function createWorkspacesService({ cm, operations, watcher }: ServiceCont
     return operations.read(lookupId, ({ signal }) => resolveWorkspaceRepositories(cm, workspacePaths, signal));
   }
 
-  async function missingFolders(workspacePaths: string[]): Promise<string[]> {
-    return workspacePaths.filter((path) => !existsSync(path));
-  }
-
-  return { list, info, repositoriesOf, missingFolders, findRoot, create, rename, remove, update, watch, switchTo };
+  return { list, info, repositoriesOf, findRoot, create, rename, remove, update, watch, switchTo };
 }

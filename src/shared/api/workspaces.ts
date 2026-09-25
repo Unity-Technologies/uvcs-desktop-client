@@ -22,8 +22,6 @@ export interface WorkspacesApi {
    * `system.cancelOperation(lookupId)` stops the lookups, e.g. when the list leaves the screen.
    */
   repositoriesOf(workspacePaths: string[], lookupId: string): Promise<Record<string, string | null>>;
-  /** The paths whose folder no longer exists on disk. */
-  missingFolders(workspacePaths: string[]): Promise<string[]>;
   /** Returns the workspace root containing the given directory, or null. */
   findRoot(directory: string): Promise<string | null>;
   create(request: CreateWorkspaceRequest): Promise<WorkspaceSummary>;

@@ -44,11 +44,3 @@ export function useRepositories(server: string | null) {
   });
 }
 
-/** Which of the given workspaces no longer have their folder on disk. */
-export function useMissingWorkspaceFolders(paths: string[]) {
-  return useQuery({
-    queryKey: ['missingWorkspaceFolders', paths],
-    queryFn: async () => new Set(await api.workspaces.missingFolders(paths)),
-    enabled: paths.length > 0,
-  });
-}

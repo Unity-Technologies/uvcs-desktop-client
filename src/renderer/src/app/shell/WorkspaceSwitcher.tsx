@@ -1,19 +1,19 @@
 import * as Popover from '@radix-ui/react-popover';
-import { FolderOpen, FolderPlus, Layers } from 'lucide-react';
+import { FolderOpen, FolderPlus, Layers, X } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactElement } from 'react';
-import type { WorkspaceSummary } from '@shared/domain/workspace';
+import type { MenuEntry } from '../../lib/actions';
 import { navigationTarget } from '../../lib/listNavigation';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { toast } from '../../ui/toast/toastStore';
 import { openCreateWorkspaceDialog } from '../home/dialogs/CreateWorkspaceDialog';
 import { workspaceMenu } from '../home/homeMenus';
-import { useSettings } from '../settings/useSettings';
+import { forgetRecentWorkspace, useSettings } from '../settings/useSettings';
 import { useSession } from '../workspace/sessionStore';
 import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
-import { useMissingWorkspaceFolders, useRecentWorkspaceRepositories, useWorkspaceList } from '../workspace/workspaceQueries';
-import { workspaceSwitcherList } from './workspaceSwitcherList';
+import { useRecentWorkspaceRepositories, useWorkspaceList } from '../workspace/workspaceQueries';
+import { workspaceSwitcherList, type SwitcherWorkspace } from './workspaceSwitcherList';
 import styles from './WorkspaceSwitcher.module.css';
 
 /** Quick switch to any workspace, recent ones first, without going back to the home screen. */
@@ -60,9 +60,8 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
   const listRef = useRef<HTMLDivElement>(null);
   const movedByKeyboard = useRef(false);
   const { recentWorkspacePaths } = useSettings();
-  const { data: workspaces = [] } = useWorkspaceList();
+  const { data: workspaces } = useWorkspaceList();
   const { data: repositories } = useRecentWorkspaceRepositories(workspaces);
-  const { data: missing } = useMissingWorkspaceFolders(workspaces.map((workspace) => workspace.path));
 
   const { recent, others } = workspaceSwitcherList(workspaces, recentWorkspacePaths, currentPath, repositories, filter);
   const flat = [...recent, ...others];
@@ -73,10 +72,15 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
     listRef.current?.querySelector('[data-highlighted="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [highlighted]);
 
-  const choose = (workspace: WorkspaceSummary): void => {
-    if (missing?.has(workspace.path)) toast.error(`The folder of ${workspace.name} is missing`, new Error(`${workspace.path} no longer exists.`));
+  const choose = (workspace: SwitcherWorkspace): void => {
+    if (workspace.missing) toast.error(`${workspace.name} is gone`, new Error(`${workspace.path} is no longer a workspace. Right-click it to remove it from the list.`));
     else onChoose(workspace.path);
   };
+
+  const menu = (workspace: SwitcherWorkspace): MenuEntry[] =>
+    workspace.missing
+      ? [{ id: 'forget', label: 'Remove from recent', icon: X, run: () => void forgetRecentWorkspace(workspace.path) }]
+      : workspaceMenu(workspace, onChoose);
 
   const onKeyDown = (event: KeyboardEvent): void => {
     const target = navigationTarget(event.key, highlighted, flat.length);
@@ -90,15 +94,14 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
     }
   };
 
-  const row = (workspace: WorkspaceSummary, index: number) => {
+  const row = (workspace: SwitcherWorkspace, index: number) => {
     const repository = repositories?.[workspace.path];
-    const isMissing = missing?.has(workspace.path) ?? false;
     return (
-      <ActionContextMenu key={workspace.guid} entries={() => workspaceMenu(workspace, (path) => onChoose(path))}>
+      <ActionContextMenu key={workspace.guid} entries={() => menu(workspace)}>
         <button
           className={styles.item}
           data-highlighted={index === highlighted}
-          data-missing={isMissing}
+          data-missing={workspace.missing}
           onMouseEnter={() => setHighlighted(index)}
           onClick={() => choose(workspace)}
         >
@@ -111,9 +114,9 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
               <Highlight text={workspace.path} />
             </span>
           </span>
-          {isMissing ? (
-            <span className={styles.missing} data-tip="The folder was moved or deleted. Right-click to remove the workspace.">
-              Folder missing
+          {workspace.missing ? (
+            <span className={styles.missing} data-tip="Its folder was moved or deleted. Right-click to remove it from the list.">
+              Missing
             </span>
           ) : (
             repository && (
