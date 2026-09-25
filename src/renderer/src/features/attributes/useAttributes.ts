@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
+import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useSettled } from '../../lib/useSettled';
 import { defaultValuesIn, suggestedValues } from './attributeValues';
@@ -11,6 +12,7 @@ export function useAttributeTypes() {
   return useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'attributeTypes'),
     queryFn: () => api.attributes.listTypes(workspacePath),
+    ...SLOW_CHANGING_QUERY,
   });
 }
 
