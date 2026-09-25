@@ -116,7 +116,7 @@ function sortByPath(changes: PendingChange[]): PendingChange[] {
 }
 
 /** A flat list reads by kind of change first, in the order of the filter chips; a tree has to follow the folders. */
-function sortByStatus(changes: PendingChange[]): PendingChange[] {
+export function sortByStatus(changes: PendingChange[]): PendingChange[] {
   return [...changes].sort((a, b) => compareTones(changeTone(a), changeTone(b)) || a.path.localeCompare(b.path));
 }
 

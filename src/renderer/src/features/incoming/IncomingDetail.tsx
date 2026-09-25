@@ -37,7 +37,6 @@ export function IncomingFileDiff({ workspacePath, file }: { workspacePath: strin
 
   return (
     <FileDiffViewer
-      key={file.path}
       workspacePath={workspacePath}
       original={version(file.baseRevisionId)}
       modified={version(file.revisionId)}

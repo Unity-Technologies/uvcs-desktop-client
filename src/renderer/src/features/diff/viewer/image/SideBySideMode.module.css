@@ -1,0 +1,9 @@
+.panes {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.panes > * + * {
+  border-left: 1px solid var(--border-default);
+}

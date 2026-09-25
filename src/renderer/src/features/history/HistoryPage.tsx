@@ -8,21 +8,44 @@ import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { firstLine, pluralize } from '../../lib/text';
 import { UserLabel } from '../../ui/Avatar';
 import { EmptyState } from '../../ui/EmptyState';
+import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
+import { SearchField } from '../../ui/SearchField';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { SplitPane } from '../../ui/SplitPane';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { historyMenu } from './historyMenu';
-import { RevisionComparison } from './RevisionComparison';
+import { RevisionDetails } from './RevisionDetails';
+import { matchesRevisionSearch } from './revisionSearch';
 import { useItemHistory } from './useItemHistory';
+import styles from './HistoryPage.module.css';
 
 const revisionKey = (revision: ItemRevision): string => String(revision.changesetId);
 
 const COLUMNS: Column<ItemRevision>[] = [
-  { id: 'changeset', header: 'Changeset', width: 96, render: (revision) => <span className="mono">{revision.changesetId}</span> },
-  { id: 'comment', header: 'Comment', grow: 3, render: (revision) => firstLine(revision.comment) || '—' },
-  { id: 'branch', header: 'Branch', width: 160, secondary: true, render: (revision) => revision.branch },
+  { id: 'changeset', header: 'Changeset', width: 96, render: (revision) => <span className="mono"><Highlight text={String(revision.changesetId)} /></span> },
+  {
+    id: 'comment',
+    header: 'Comment',
+    grow: 3,
+    render: (revision) => (
+      <span className={styles.clipped}>
+        <Highlight text={firstLine(revision.comment) || '—'} />
+      </span>
+    ),
+  },
+  {
+    id: 'branch',
+    header: 'Branch',
+    width: 160,
+    secondary: true,
+    render: (revision) => (
+      <span className={styles.clipped}>
+        <Highlight text={revision.branch} />
+      </span>
+    ),
+  },
   { id: 'owner', header: 'Author', width: 160, render: (revision) => <UserLabel user={revision.owner} /> },
   { id: 'date', header: 'Date', width: 120, secondary: true, render: (revision) => <RelativeTime date={revision.date} /> },
   { id: 'size', header: 'Size', width: 80, align: 'end', secondary: true, render: (revision) => formatSize(revision.size) },
@@ -31,7 +54,9 @@ const COLUMNS: Column<ItemRevision>[] = [
 export function HistoryPage({ page }: PageProps<'history'>) {
   const workspacePath = useWorkspacePath();
   const { data: revisions, error } = useItemHistory(page.path);
+  const [search, setSearch] = useState('');
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
+  const visible = useMemo(() => (revisions ?? []).filter((revision) => matchesRevisionSearch(revision, search)), [revisions, search]);
   const selected = useMemo(() => (revisions ?? []).filter((revision) => selection.selected.has(revisionKey(revision))), [revisions, selection]);
   const newestKey = revisions?.[0] && revisionKey(revisions[0]);
 
@@ -39,7 +64,11 @@ export function HistoryPage({ page }: PageProps<'history'>) {
     if (selection.anchor === null && newestKey) setSelection({ selected: new Set([newestKey]), anchor: newestKey });
   }, [selection.anchor, newestKey]);
 
-  const header = <ViewHeader title={page.path} subtitle={revisions && pluralize(revisions.length, 'revision')} />;
+  const header = (
+    <ViewHeader title={page.path} subtitle={revisions && pluralize(revisions.length, 'revision')}>
+      {revisions && revisions.length > 0 && <SearchField value={search} onChange={setSearch} placeholder="Filter by comment, author, changeset, branch" width={320} />}
+    </ViewHeader>
+  );
 
   if (error) return <>{header}<EmptyState title="Couldn't load the history" description={error.message} /></>;
   if (!revisions) return <>{header}<CenteredSpinner /></>;
@@ -54,16 +83,22 @@ export function HistoryPage({ page }: PageProps<'history'>) {
         minSize={120}
         maxSize={700}
         first={
-          <DataTable
-            rows={revisions}
-            columns={COLUMNS}
-            rowKey={revisionKey}
-            selection={selection}
-            onSelectionChange={setSelection}
-            contextMenu={(rows) => historyMenu({ workspacePath, path: page.path }, rows)}
-          />
+          visible.length === 0 ? (
+            <EmptyState icon={<History size={22} />} title="No matching revisions" description="No comment, author, changeset or branch contains this text." />
+          ) : (
+            <HighlightQuery query={search}>
+              <DataTable
+                rows={visible}
+                columns={COLUMNS}
+                rowKey={revisionKey}
+                selection={selection}
+                onSelectionChange={setSelection}
+                contextMenu={(rows) => historyMenu({ workspacePath, path: page.path }, rows)}
+              />
+            </HighlightQuery>
+          )
         }
-        second={<RevisionComparison path={page.path} revisions={revisions} selected={selected} />}
+        second={<RevisionDetails path={page.path} revisions={revisions} selected={selected} />}
       />
     </>
   );

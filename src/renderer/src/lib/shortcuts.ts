@@ -12,6 +12,7 @@ const MAC_SYMBOLS: Record<string, string> = {
   backspace: '⌫',
   delete: '⌦',
   escape: 'Esc',
+  tab: '⇥',
   up: '↑',
   down: '↓',
   left: '←',
