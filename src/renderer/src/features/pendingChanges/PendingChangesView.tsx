@@ -16,6 +16,7 @@ import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { ChangeDiffPanel } from './ChangeDiffPanel';
 import { ChangesList } from './ChangesList';
+import { ChangesSummaryBar } from './ChangesSummaryBar';
 import { CheckinPanel } from './CheckinPanel';
 import { checkinChanges, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
 import { isCheckinCandidate } from './changeCategories';
@@ -24,6 +25,7 @@ import { changelistMenu } from './changelistMenu';
 import { changeTone } from './changeTone';
 import { checkinComment, useCheckinDraft, useCheckinDraftStore } from './checkinDraftStore';
 import { pendingChangeMenu } from './pendingChangeMenu';
+import { undoChanges } from './pendingChangeOperations';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { usePendingChanges } from './usePendingChanges';
 import styles from './PendingChangesView.module.css';
@@ -142,6 +144,14 @@ export function PendingChangesView() {
         maxSize={720}
         first={
           <div className={styles.listPane}>
+            <ChangesSummaryBar
+              changes={changes}
+              totalCount={snapshot?.changes.length ?? 0}
+              isIncluded={isIncluded}
+              onSetIncluded={(selected, include) => setIncluded(workspacePath, selected.map((change) => change.path), include)}
+              onUndo={(selected) => void undoChanges(workspacePath, selected)}
+              onUndoUnchanged={() => void undoUnchangedCheckouts(workspacePath)}
+            />
             {filterBar}
             <HighlightQuery query={query}>
               <ChangesList

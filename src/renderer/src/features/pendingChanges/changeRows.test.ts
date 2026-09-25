@@ -17,13 +17,13 @@ const base = {
 };
 
 describe('buildChangeRows', () => {
-  it('lists every change under one header, sorted by path', () => {
+  it('lists every change without a header, sorted by path', () => {
     const rows = buildChangeRows(base);
-    expect(rows.map((row) => row.key)).toEqual(['all', 'change:new.txt', 'change:src/a.ts', 'change:src/b.ts', 'change:src/lib/c.ts']);
+    expect(rows.map((row) => row.key)).toEqual(['change:new.txt', 'change:src/a.ts', 'change:src/b.ts', 'change:src/lib/c.ts']);
   });
 
   it('reports a mixed check state when only some changes are checked', () => {
-    const rows = buildChangeRows({ ...base, isChecked: (item) => item.path === 'src/a.ts' });
+    const rows = buildChangeRows({ ...base, grouping: 'changelist', isChecked: (item) => item.path === 'src/b.ts' });
     expect(rows[0]).toMatchObject({ type: 'group', checkState: 'mixed' });
   });
 
@@ -46,7 +46,6 @@ describe('buildChangeRows', () => {
   it('nests changes under their folders in tree layout', () => {
     const rows = buildChangeRows({ ...base, changes: [changes[3]!], layout: 'tree' });
     expect(rows.map((row) => [row.type, row.type === 'group' ? -1 : row.depth])).toEqual([
-      ['group', -1],
       ['directory', 0],
       ['directory', 1],
       ['change', 2],
@@ -60,6 +59,6 @@ describe('buildChangeRows', () => {
       layout: 'tree',
       collapsed: new Set(['directory:all:src']),
     });
-    expect(rows.map((row) => row.key)).toEqual(['all', 'directory:all:src', 'change:z.ts']);
+    expect(rows.map((row) => row.key)).toEqual(['directory:all:src', 'change:z.ts']);
   });
 });

@@ -1,7 +1,7 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import type { CheckState } from '../../ui/Checkbox';
 
-/** A header grouping changes: all of them, or a changelist. */
+/** A changelist header. */
 interface GroupRow {
   type: 'group';
   key: string;
@@ -56,13 +56,16 @@ interface Group {
   changes: PendingChange[];
 }
 
-/** Flattens pending changes into the rows of the list: group headers, optional folders and changes. */
+/** Flattens pending changes into the rows of the list: changelist headers, optional folders and changes. */
 export function buildChangeRows({ changes, changelists, layout, grouping, isChecked, collapsed }: BuildRowsInput): ChangeRow[] {
-  const groups = grouping === 'none' ? [allChanges(changes)] : groupByChangelist(changes, changelists);
   const rows: ChangeRow[] = [];
+  if (grouping === 'none') {
+    appendChangeRows(rows, sortByPath(changes), 'all', layout, isChecked, collapsed);
+    return rows;
+  }
 
-  for (const group of groups) {
-    const sorted = [...group.changes].sort((a, b) => a.path.localeCompare(b.path));
+  for (const group of groupByChangelist(changes, changelists)) {
+    const sorted = sortByPath(group.changes);
     rows.push({
       type: 'group',
       key: group.key,
@@ -72,13 +75,7 @@ export function buildChangeRows({ changes, changelists, layout, grouping, isChec
       checkState: combinedCheckState(sorted, isChecked),
       collapsed: collapsed.has(group.key),
     });
-    if (collapsed.has(group.key)) continue;
-
-    if (layout === 'list') {
-      sorted.forEach((change) => rows.push({ type: 'change', key: changeKey(change), change, depth: 0, checked: isChecked(change) }));
-    } else {
-      appendTreeRows(rows, sorted, group.key, isChecked, collapsed);
-    }
+    if (!collapsed.has(group.key)) appendChangeRows(rows, sorted, group.key, layout, isChecked, collapsed);
   }
   return rows;
 }
@@ -92,8 +89,23 @@ export function changesUnderRow(row: ChangeRow): PendingChange[] {
   return row.type === 'change' ? [row.change] : row.changes;
 }
 
-function allChanges(changes: PendingChange[]): Group {
-  return { key: 'all', label: 'All changes', changes };
+function sortByPath(changes: PendingChange[]): PendingChange[] {
+  return [...changes].sort((a, b) => a.path.localeCompare(b.path));
+}
+
+function appendChangeRows(
+  rows: ChangeRow[],
+  changes: PendingChange[],
+  groupKey: string,
+  layout: ChangesLayout,
+  isChecked: (change: PendingChange) => boolean,
+  collapsed: ReadonlySet<string>,
+): void {
+  if (layout === 'tree') {
+    appendTreeRows(rows, changes, groupKey, isChecked, collapsed);
+    return;
+  }
+  changes.forEach((change) => rows.push({ type: 'change', key: changeKey(change), change, depth: 0, checked: isChecked(change) }));
 }
 
 function groupByChangelist(changes: PendingChange[], changelists: Changelist[]): Group[] {
