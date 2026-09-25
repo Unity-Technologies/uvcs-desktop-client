@@ -3,21 +3,27 @@ import styles from './ViewHeader.module.css';
 
 interface ViewHeaderProps {
   title: string;
+  /** Short context next to the title, e.g. a count. */
   subtitle?: ReactNode;
-  /** Filters, search boxes and other controls shown next to the title. */
+  /** Search boxes and filters, shown on their own row under the title. */
   children?: ReactNode;
+  /** Buttons at the right of the title; put the view's primary action last. */
   actions?: ReactNode;
 }
 
+/**
+ * The header every view shares: title and actions on the first row, filters on the second.
+ * Keeping the same structure everywhere makes each screen predictable at a glance.
+ */
 export function ViewHeader({ title, subtitle, children, actions }: ViewHeaderProps) {
   return (
     <header className={styles.header}>
-      <div className={styles.titles}>
+      <div className={styles.titleRow}>
         <h1 className={styles.title}>{title}</h1>
         {subtitle && <div className={styles.subtitle}>{subtitle}</div>}
+        <div className={styles.actions}>{actions}</div>
       </div>
-      <div className={styles.controls}>{children}</div>
-      <div className={styles.actions}>{actions}</div>
+      {children && <div className={styles.toolbar}>{children}</div>}
     </header>
   );
 }

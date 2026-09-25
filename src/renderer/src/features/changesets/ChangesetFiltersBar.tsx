@@ -1,7 +1,7 @@
-import { CalendarDays, Check, ChevronDown, GitBranch, User } from 'lucide-react';
-import { Button } from '../../ui/Button';
-import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
+import { CalendarDays, GitBranch, User } from 'lucide-react';
+import { ChoiceChip } from '../../ui/ChoiceChip';
 import { SearchField } from '../../ui/SearchField';
+import { ToggleChip } from '../../ui/ToggleChip';
 import { DATE_PRESET_LABELS, type ChangesetFilterState, type DatePreset } from './changesetFilters';
 
 interface ChangesetFiltersBarProps {
@@ -16,38 +16,22 @@ export function ChangesetFiltersBar({ filter, onChange }: ChangesetFiltersBarPro
   return (
     <>
       <SearchField value={filter.search} onChange={(search) => update({ search })} placeholder="Search comment, author, branch or number" width={300} />
-      <ActionDropdownMenu
-        align="start"
-        entries={presets.map((preset) => ({
-          id: preset,
-          label: DATE_PRESET_LABELS[preset],
-          icon: preset === filter.datePreset ? Check : undefined,
-          run: () => update({ datePreset: preset }),
-        }))}
-      >
-        <Button variant="ghost" size="small" icon={<CalendarDays size={13} />}>
-          {DATE_PRESET_LABELS[filter.datePreset]}
-          <ChevronDown size={12} />
-        </Button>
-      </ActionDropdownMenu>
-      <Button
-        variant={filter.onlyMine ? 'secondary' : 'ghost'}
-        size="small"
-        icon={<User size={13} />}
-        aria-pressed={filter.onlyMine}
-        onClick={() => update({ onlyMine: !filter.onlyMine })}
-      >
+      <ChoiceChip<DatePreset>
+        value={filter.datePreset}
+        choices={presets.map((preset) => ({ value: preset, label: DATE_PRESET_LABELS[preset] }))}
+        onChange={(datePreset) => update({ datePreset })}
+        icon={<CalendarDays size={13} />}
+      />
+      <ToggleChip pressed={filter.onlyMine} icon={<User size={13} />} onChange={(onlyMine) => update({ onlyMine })}>
         Mine
-      </Button>
-      <Button
-        variant={filter.onlyCurrentBranch ? 'secondary' : 'ghost'}
-        size="small"
+      </ToggleChip>
+      <ToggleChip
+        pressed={filter.onlyCurrentBranch}
         icon={<GitBranch size={13} />}
-        aria-pressed={filter.onlyCurrentBranch}
-        onClick={() => update({ onlyCurrentBranch: !filter.onlyCurrentBranch })}
+        onChange={(onlyCurrentBranch) => update({ onlyCurrentBranch })}
       >
         This branch
-      </Button>
+      </ToggleChip>
     </>
   );
 }

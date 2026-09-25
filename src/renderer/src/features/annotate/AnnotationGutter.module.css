@@ -68,7 +68,7 @@
 
 .changeset {
   flex: none;
-  color: var(--accent);
+  color: var(--accent-text);
   font-family: var(--font-mono);
 }
 

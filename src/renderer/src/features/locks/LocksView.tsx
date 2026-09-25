@@ -1,4 +1,4 @@
-import { Copy, Lock as LockIcon, LockOpen, RefreshCw, Trash2 } from 'lucide-react';
+import { Copy, Lock as LockIcon, LockOpen, RefreshCw, Trash2, User } from 'lucide-react';
 import { useState } from 'react';
 import type { Lock } from '@shared/domain/lock';
 import { PathLabel } from '../../components/PathLabel';
@@ -12,7 +12,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
-import { SegmentedControl } from '../../ui/SegmentedControl';
+import { ToggleChip } from '../../ui/ToggleChip';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
@@ -62,26 +62,21 @@ export function LocksView() {
       subtitle={locks && `${locks.length} ${locks.length === 1 ? 'lock' : 'locks'}`}
       actions={
         <>
-          <Button icon={<LockOpen size={14} />} disabled={releasable.length === 0} onClick={() => void releaseLocks(workspacePath, releasable)}>
-            Release
-          </Button>
           <IconButton
             icon={<RefreshCw size={14} className={isFetching ? styles.spinning : undefined} />}
             label="Refresh"
             onClick={() => void invalidateWorkspace(workspacePath)}
           />
+          <Button icon={<LockOpen size={14} />} disabled={releasable.length === 0} onClick={() => void releaseLocks(workspacePath, releasable)}>
+            Release
+          </Button>
         </>
       }
     >
       <SearchField value={filter} onChange={setFilter} placeholder="Filter locks" />
-      <SegmentedControl<Scope>
-        value={scope}
-        onChange={setScope}
-        segments={[
-          { value: 'all', label: 'Everyone' },
-          { value: 'mine', label: 'Mine' },
-        ]}
-      />
+      <ToggleChip pressed={scope === 'mine'} icon={<User size={13} />} onChange={(mine) => setScope(mine ? 'mine' : 'all')}>
+        Mine
+      </ToggleChip>
     </ViewHeader>
   );
 

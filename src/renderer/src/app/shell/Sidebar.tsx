@@ -1,8 +1,9 @@
 import { ChevronsUpDown, Settings } from 'lucide-react';
+import { NavFooter, NavGroup, NavGroups, NavItem, Sidebar as SidebarColumn } from '../../ui/nav/SidebarNav';
 import { useNavigation } from '../navigation/navigationStore';
 import { VIEWS, type ViewDefinition } from '../navigation/viewRegistry';
-import { useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
 import { openSettingsDialog } from '../settings/SettingsDialog';
+import { useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import styles from './Sidebar.module.css';
 
@@ -13,8 +14,7 @@ export function Sidebar() {
   const workspacePath = useWorkspacePath();
 
   return (
-    <nav className={styles.sidebar}>
-      <div className={styles.dragRegion} />
+    <SidebarColumn>
       <WorkspaceSwitcher currentPath={workspacePath}>
         <button className={styles.workspace} aria-label="Switch workspace">
           <span className={styles.workspaceIcon}>{workspace?.name.charAt(0).toUpperCase()}</span>
@@ -26,41 +26,37 @@ export function Sidebar() {
         </button>
       </WorkspaceSwitcher>
 
-      <div className={styles.groups}>
+      <NavGroups>
         {GROUPS.map((group) => (
-          <div key={group} className={styles.group}>
-            <div className={styles.groupLabel}>{group}</div>
+          <NavGroup key={group} label={group}>
             {VIEWS.filter((view) => view.group === group).map((view) => (
-              <SidebarItem key={view.id} view={view} />
+              <SidebarViewItem key={view.id} view={view} />
             ))}
-          </div>
+          </NavGroup>
         ))}
-      </div>
+      </NavGroups>
 
-      <button className={styles.item} onClick={openSettingsDialog}>
-        <Settings size={15} className={styles.itemIcon} />
-        <span className={styles.itemLabel}>Settings</span>
-      </button>
-    </nav>
+      <NavFooter>
+        <NavItem icon={<Settings size={15} />} label="Settings" onClick={openSettingsDialog} />
+      </NavFooter>
+    </SidebarColumn>
   );
 }
 
-function SidebarItem({ view }: { view: ViewDefinition }) {
+function SidebarViewItem({ view }: { view: ViewDefinition }) {
   const { view: activeView, pages, goToView } = useNavigation();
   const badge = view.useBadge?.();
   const Icon = view.icon;
   const active = activeView === view.id;
 
   return (
-    <button
-      className={styles.item}
-      data-active={active}
-      data-dimmed={active && pages.length > 0}
+    <NavItem
+      icon={<Icon size={15} />}
+      label={view.label}
+      badge={badge}
+      active={active}
+      dimmed={active && pages.length > 0}
       onClick={() => goToView(view.id)}
-    >
-      <Icon size={15} className={styles.itemIcon} />
-      <span className={styles.itemLabel}>{view.label}</span>
-      {badge ? <span className={styles.badge}>{badge > 999 ? '999+' : badge}</span> : null}
-    </button>
+    />
   );
 }

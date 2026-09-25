@@ -81,7 +81,7 @@ export function BranchesView() {
         actions={
           <>
             <IconButton icon={<RefreshCw size={14} className={isFetching ? 'spinning' : undefined} />} label="Refresh" onClick={() => void invalidateWorkspace(workspacePath)} />
-            <Button icon={<GitBranchPlus size={14} />} onClick={newBranch} disabled={!branches?.length}>
+            <Button variant="primary" icon={<GitBranchPlus size={14} />} onClick={newBranch} disabled={!branches?.length}>
               New branch
             </Button>
           </>

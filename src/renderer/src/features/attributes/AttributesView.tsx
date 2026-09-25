@@ -48,7 +48,7 @@ export function AttributesView() {
         actions={
           <>
             <IconButton icon={<RefreshCw size={14} className={isFetching ? 'spinning' : undefined} />} label="Refresh" onClick={() => void invalidateWorkspace(workspacePath)} />
-            <Button icon={<Plus size={14} />} onClick={() => openCreateAttributeDialog(workspacePath)}>
+            <Button variant="primary" icon={<Plus size={14} />} onClick={() => openCreateAttributeDialog(workspacePath)}>
               New attribute
             </Button>
           </>

@@ -1,4 +1,4 @@
-import { MessageSquareCode, Plus, RefreshCw } from 'lucide-react';
+import { CircleDot, MessageSquareCode, Plus, RefreshCw, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { CODE_REVIEW_STATUSES, type CodeReview, type CodeReviewFilter, type CodeReviewStatus } from '@shared/domain/codeReview';
 import { useCommands, type Command } from '../../app/commands/commandStore';
@@ -11,7 +11,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
-import { SegmentedControl } from '../../ui/SegmentedControl';
+import { ChoiceChip } from '../../ui/ChoiceChip';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
@@ -93,20 +93,24 @@ export function CodeReviewsView() {
         </>
       }
     >
-      <SearchField value={search} onChange={setSearch} placeholder="Filter reviews" width={180} />
-      <SegmentedControl<CodeReviewFilter['scope']>
+      <SearchField value={search} onChange={setSearch} placeholder="Filter reviews" />
+      <ChoiceChip<CodeReviewFilter['scope']>
         value={scope}
         onChange={setScope}
-        segments={[
-          { value: 'all', label: 'All' },
+        icon={<Users size={13} />}
+        neutralValue="all"
+        choices={[
+          { value: 'all', label: 'Everyone' },
           { value: 'createdByMe', label: 'Created by me' },
           { value: 'assignedToMe', label: 'Assigned to me' },
         ]}
       />
-      <SegmentedControl<StatusFilter>
+      <ChoiceChip<StatusFilter>
         value={status}
         onChange={setStatus}
-        segments={[{ value: 'any', label: 'Any status' }, ...CODE_REVIEW_STATUSES.map((value) => ({ value, label: value }))]}
+        icon={<CircleDot size={13} />}
+        neutralValue="any"
+        choices={[{ value: 'any', label: 'Any status' }, ...CODE_REVIEW_STATUSES.map((value) => ({ value, label: value }))]}
       />
     </ViewHeader>
   );

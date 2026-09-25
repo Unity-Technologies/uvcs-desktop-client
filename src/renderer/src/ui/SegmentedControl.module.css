@@ -2,25 +2,27 @@
   display: inline-flex;
   padding: 2px;
   border-radius: var(--radius-md);
-  background: var(--bg-hover);
+  background: var(--bg-active);
 }
 
 .segment {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 22px;
+  height: 24px;
   padding: 0 var(--space-2);
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
 }
 
 .segment[aria-checked='true'] {
   background: var(--bg-surface-raised);
   color: var(--text-primary);
-  box-shadow: var(--shadow-sm);
+  box-shadow:
+    0 0 0 1px var(--border-default),
+    var(--shadow-sm);
 }

@@ -25,7 +25,7 @@
 
 .folder {
   flex: none;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .file {
