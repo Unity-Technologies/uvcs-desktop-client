@@ -52,7 +52,7 @@ export function BranchFilterPopover({ branches }: { branches: readonly string[] 
             <SearchField value={search} onChange={setSearch} placeholder="Filter branches" width="100%" autoFocus />
             <div className={styles.summary}>
               <span>
-                {chosenCount} of {branches.length} shown
+                {chosenCount} of {branches.length} checked
               </span>
               <span className={styles.bulk}>
                 <button type="button" className={styles.link} onClick={() => choose(matching, true)} disabled={matching.length === 0}>
