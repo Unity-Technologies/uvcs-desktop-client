@@ -54,9 +54,9 @@ export function DetailsHeading({ name, comment = '', onSave }: DetailsHeadingPro
       />
       <div className={styles.actions}>
         {comment.trim() && (
-          <IconButton size="small" icon={<Copy size={12} />} label="Copy comment" onClick={() => copyToClipboard(comment.trim(), 'Comment')} />
+          <IconButton size="small" icon={<Copy size={12} strokeWidth={1.75} />} label="Copy comment" onClick={() => copyToClipboard(comment.trim(), 'Comment')} />
         )}
-        {edit && <IconButton size="small" icon={<Pencil size={12} />} label="Edit comment" onClick={edit} />}
+        {edit && <IconButton size="small" icon={<Pencil size={12} strokeWidth={1.75} />} label="Edit comment" onClick={edit} />}
       </div>
     </div>
   );
