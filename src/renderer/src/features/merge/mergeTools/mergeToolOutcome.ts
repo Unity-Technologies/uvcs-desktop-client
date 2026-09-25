@@ -24,7 +24,7 @@ export interface OutcomeMessage {
   detail?: string;
 }
 
-/** What to tell the user once the tool closed, in the merge page's words: nothing is written until the merge completes. */
+/** What to tell the user once the tool closed, in the merge page's words. */
 export function toolOutcomeMessage(outcome: MergeToolOutcome, tool: string, fileName: string, labels: MergeLabels): OutcomeMessage {
   switch (outcome.kind) {
     case 'resolved': {
@@ -33,10 +33,10 @@ export function toolOutcomeMessage(outcome: MergeToolOutcome, tool: string, file
         return {
           kind: 'info',
           title: `${fileName} still has ${pluralize(left, 'conflict')}`,
-          detail: `${tool} saved it with conflict markers left. Pick a side for each, or open it in ${tool} again.`,
+          detail: `${tool} saved it with conflict markers left.`,
         };
       }
-      return { kind: 'success', title: `Resolved ${fileName} in ${tool}`, detail: 'It will be written as you saved it when you complete the merge.' };
+      return { kind: 'success', title: `Resolved ${fileName} in ${tool}` };
     }
     case 'keptSide': {
       const role = outcome.side === 'source' ? labels.roles.source : labels.roles.destination;

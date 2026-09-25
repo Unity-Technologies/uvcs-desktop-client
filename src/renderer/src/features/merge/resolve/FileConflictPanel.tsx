@@ -2,6 +2,7 @@ import { ChevronDown, FileCheck2, PencilLine, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import type { FileContent } from '@shared/domain/content';
 import { PathLabel } from '../../../components/PathLabel';
+import { pluralize } from '../../../lib/text';
 import { Button } from '../../../ui/Button';
 import { EmptyState } from '../../../ui/EmptyState';
 import { ActionDropdownMenu } from '../../../ui/menu/ActionDropdownMenu';
@@ -15,7 +16,7 @@ import { MergeToolButton, type ConflictToolActions } from '../mergeTools/MergeTo
 import { MergeToolOpenBanner } from '../mergeTools/MergeToolOpenBanner';
 import { fileConflictStatus, fileConflictTool } from '../mergeStatus';
 import { chosenConflictChoice, decisionFor, hasConflicts, type ConflictChoice } from './conflictChoices';
-import { ConflictChoiceBar } from './ConflictChoiceBar';
+import { KeepChoices } from './KeepChoices';
 import { ConflictHunks } from './ConflictHunks';
 import type { FileConflictDecision } from './fileConflictDecision';
 import { HandEditor } from './HandEditor';
@@ -65,30 +66,57 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
     setEditingFrom(undefined);
   };
 
+  const toolButton = (
+    <MergeToolButton
+      state={state}
+      actions={toolActions}
+      onEditInApp={canMergeLines ? () => choose('byHand') : undefined}
+      // The primary action while the file waits for the user; once decided, completing the merge takes over.
+      variant={state.resolution ? 'secondary' : 'primary'}
+    />
+  );
+
   return (
     <div className={styles.panel}>
-      <div className={styles.header}>
-        <PathLabel path={state.file.path} fitContent />
-        <ConflictStatusChip status={status} labels={labels} tool={fileConflictTool(state)} />
-        <div className={styles.spacer} />
-        {canMergeLines && !withConflicts && !state.openTool && (
-          <ActionDropdownMenu
-            entries={[
-              { id: 'destination', label: `Keep ${destination.version} (${labels.destination})`, icon: FileCheck2, run: () => onDecide({ kind: 'wholeFile', side: 'destination' }) },
-              { id: 'source', label: `Keep ${source.version} (${labels.source})`, icon: FileCheck2, run: () => onDecide({ kind: 'wholeFile', side: 'source' }) },
-              ...(state.decidedByUser ? [{ id: 'startOver', label: 'Back to the automatic merge', icon: RotateCcw, run: onStartOver }] : []),
-            ]}
-          >
-            <Button size="small" icon={<ChevronDown size={13} />} aria-label="Override the automatic merge" data-tip="Override the automatic merge" />
-          </ActionDropdownMenu>
+      <div className={styles.toolbar}>
+        <div className={styles.file}>
+          <PathLabel path={state.file.path} fitContent />
+          <ConflictStatusChip status={status} labels={labels} tool={fileConflictTool(state)} />
+        </div>
+        {!editing && !state.openTool && state.status === 'ready' && (
+          <div className={styles.controls} role="group" aria-label="Resolve this conflict">
+            {state.isBinary && toolButton}
+            {canMergeLines && withConflicts && (
+              <>
+                {toolButton}
+                <KeepChoices
+                  labels={labels}
+                  chosen={chosenConflictChoice(status, state.decision, state.document)}
+                  onChoose={choose}
+                  onStartOver={state.decidedByUser ? onStartOver : undefined}
+                />
+              </>
+            )}
+            {canMergeLines && !withConflicts && (
+              <ActionDropdownMenu
+                entries={[
+                  { id: 'destination', label: `Keep ${destination.version} (${labels.destination})`, icon: FileCheck2, run: () => onDecide({ kind: 'wholeFile', side: 'destination' }) },
+                  { id: 'source', label: `Keep ${source.version} (${labels.source})`, icon: FileCheck2, run: () => onDecide({ kind: 'wholeFile', side: 'source' }) },
+                  ...(state.decidedByUser ? [{ id: 'startOver', label: 'Back to the automatic merge', icon: RotateCcw, run: onStartOver }] : []),
+                ]}
+              >
+                <Button size="small" icon={<ChevronDown size={13} />} aria-label="Override the automatic merge" data-tip="Override the automatic merge" />
+              </ActionDropdownMenu>
+            )}
+          </div>
         )}
       </div>
 
-      {editing ? (
+      {editing && (
         <div className={styles.editBanner} role="status">
           <PencilLine size={13} />
           <span className={styles.bannerText}>
-            You're editing <strong>{fileName(state)}</strong> in the app. Leave no conflict markers; it's written to your workspace when you complete the merge.
+            Editing <strong>{fileName(state)}</strong>: remove every conflict marker.
           </span>
           <Button size="small" variant="ghost" onClick={discardEdits}>
             Discard edits
@@ -97,39 +125,19 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
             Done
           </Button>
         </div>
-      ) : (
-        canMergeLines && (
-          <>
-            {state.openTool ? (
-              <MergeToolOpenBanner fileName={fileName(state)} open={state.openTool} />
-            ) : (
-              withConflicts && (
-                <ConflictChoiceBar
-                  labels={labels}
-                  toolButton={<MergeToolButton state={state} actions={toolActions} onEditInApp={() => choose('byHand')} />}
-                  chosen={chosenConflictChoice(status, state.decision, state.document)}
-                  onChoose={choose}
-                  onStartOver={state.decidedByUser ? onStartOver : undefined}
-                />
-              )
-            )}
-            <div className={styles.viewBar}>
-              <SegmentedControl<PanelView> value={view} onChange={setChosenView} segments={viewSegments(state, labels)} />
-              <span className={styles.helper} data-tip={viewHelper(view, state, labels)}>
-                {viewHelper(view, state, labels)}
-              </span>
-            </div>
-          </>
-        )
       )}
+      {state.openTool && <MergeToolOpenBanner fileName={fileName(state)} open={state.openTool} />}
 
-      {state.openTool && state.isBinary && <MergeToolOpenBanner fileName={fileName(state)} open={state.openTool} />}
+      {canMergeLines && !editing && (
+        <div className={styles.viewBar}>
+          <SegmentedControl<PanelView> value={view} onChange={setChosenView} segments={viewSegments(state, labels)} />
+        </div>
+      )}
 
       <ConflictBody
         workspacePath={workspacePath}
         state={state}
         labels={labels}
-        toolActions={toolActions}
         view={view}
         editing={editing}
         onDecide={onDecide}
@@ -163,37 +171,28 @@ function viewSegments(state: FileConflictState, labels: MergeLabels) {
   const { source, destination } = labels.roles;
   return [
     state.remainingConflicts > 0
-      ? { value: 'conflicts' as const, label: 'Conflicts', title: 'The lines both sides changed, with a choice for each' }
-      : { value: 'changes' as const, label: 'Changes', title: `${capitalize(destination.version)} now → after the merge` },
-    { value: 'destination' as const, label: destination.name, title: `${capitalize(destination.version)} (${labels.destination}) against the base` },
-    { value: 'source' as const, label: source.name, title: `${capitalize(source.version)} (${labels.source}) against the base` },
-    ...(hasBase(state) ? [{ value: 'base' as const, label: 'Base', title: 'The common ancestor both sides started from' }] : []),
+      ? {
+          value: 'conflicts' as const,
+          label: (
+            <>
+              Conflicts<span className={styles.count}>{state.remainingConflicts}</span>
+            </>
+          ),
+          title: `${pluralize(state.remainingConflicts, 'conflict')} left`,
+        }
+      : { value: 'changes' as const, label: 'Changes', title: `${destination.name} now → after the merge` },
+    { value: 'destination' as const, label: destination.name, title: `Base → ${labels.destination}` },
+    { value: 'source' as const, label: source.name, title: `Base → ${labels.source}` },
+    ...(hasBase(state) ? [{ value: 'base' as const, label: 'Base', title: 'Common ancestor' }] : []),
   ];
 }
 
-function viewHelper(view: PanelView, state: FileConflictState, labels: MergeLabels): string {
-  const { source, destination } = labels.roles;
-  switch (view) {
-    case 'conflicts':
-      if (state.openTool) return `Read-only while ${state.openTool.toolName} has the file open.`;
-      return `${state.remainingConflicts} ${state.remainingConflicts === 1 ? 'conflict' : 'conflicts'} left: pick a side for each, or resolve the whole file above.`;
-    case 'changes':
-      return `${capitalize(destination.version)} now → after the merge.`;
-    case 'destination':
-      return `What changed in ${destination.version} since the base.`;
-    case 'source':
-      return `What changed in ${source.version} since the base.`;
-    case 'base':
-      return 'The version both sides started from.';
-  }
-}
-
-interface ConflictBodyProps extends FileConflictPanelProps {
+interface ConflictBodyProps extends Omit<FileConflictPanelProps, 'toolActions'> {
   view: PanelView;
   editing: boolean;
 }
 
-function ConflictBody({ workspacePath, state, labels, toolActions, view, editing, onDecide }: ConflictBodyProps) {
+function ConflictBody({ workspacePath, state, labels, view, editing, onDecide }: ConflictBodyProps) {
   const { file, decision, contents } = state;
 
   if (state.status === 'loading') return <CenteredSpinner />;
@@ -206,7 +205,6 @@ function ConflictBody({ workspacePath, state, labels, toolActions, view, editing
         labels={labels}
         chosen={decision?.kind === 'wholeFile' ? decision.side : undefined}
         onChoose={(side) => onDecide({ kind: 'wholeFile', side })}
-        toolButton={state.openTool ? undefined : <MergeToolButton state={state} actions={toolActions} variant="secondary" />}
       />
     );
   }
@@ -218,7 +216,7 @@ function ConflictBody({ workspacePath, state, labels, toolActions, view, editing
   switch (view) {
     case 'conflicts':
       // The merge tool has the file: picking sides here meanwhile would be overwritten by what it saves.
-      if (state.openTool) return <ReadOnlyText path={file.path} text={decision?.kind === 'text' ? decision.text : ''} />;
+      if (state.openTool) return <ConflictHunks path={file.path} text={decision?.kind === 'text' ? decision.text : ''} labels={labels} />;
       return (
         <ConflictHunks
           path={file.path}
@@ -234,7 +232,11 @@ function ConflictBody({ workspacePath, state, labels, toolActions, view, editing
           // The merged result lives in memory: nothing to read it from, nor to edit in place.
           contents={{ original: file.destination, modified: { kind: 'empty' }, left: contents.destination, right: textContent(mergedText(state) ?? '') }}
           fileName={file.path}
-          title={<span className={styles.diffTitle}>{labels.destination} now → after the merge</span>}
+          title={
+            <span className={styles.diffTitle} data-tip={labels.destination}>
+              {labels.roles.destination.name} now → after the merge
+            </span>
+          }
           identicalDescription={`The merge leaves ${labels.roles.destination.version} of this file as it is.`}
         />
       );
@@ -246,7 +248,11 @@ function ConflictBody({ workspacePath, state, labels, toolActions, view, editing
           original={file.base}
           modified={view === 'source' ? file.source : file.destination}
           fileName={file.path}
-          title={<span className={styles.diffTitle}>Base → {view === 'source' ? labels.source : labels.destination}</span>}
+          title={
+            <span className={styles.diffTitle} data-tip={view === 'source' ? labels.source : labels.destination}>
+              Base → {view === 'source' ? labels.roles.source.name : labels.roles.destination.name}
+            </span>
+          }
         />
       );
     case 'base':
@@ -267,8 +273,4 @@ function textToEdit(state: FileConflictState): string {
 
 function textContent(text: string): FileContent {
   return { text, isBinary: false, size: new TextEncoder().encode(text).length };
-}
-
-function capitalize(text: string): string {
-  return text.charAt(0).toUpperCase() + text.slice(1);
 }

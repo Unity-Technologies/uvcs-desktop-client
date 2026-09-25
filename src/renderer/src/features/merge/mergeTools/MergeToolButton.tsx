@@ -62,7 +62,7 @@ export function MergeToolButton({ state, actions, onEditInApp, variant = 'primar
   if (!primary) {
     if (state.isBinary) return null;
     return (
-      <SplitButton variant={variant} icon={<FolderOpen size={13} />} menu={menu} menuLabel="More ways to resolve" tip="No merge tool was found here: pick the app to resolve conflicts in" onClick={() => void addApp()}>
+      <SplitButton variant={variant} icon={<FolderOpen size={13} />} menu={menu} menuLabel="More ways to resolve" tip="No merge tool found" onClick={() => void addApp()}>
         Choose a merge app…
       </SplitButton>
     );
@@ -73,7 +73,6 @@ export function MergeToolButton({ state, actions, onEditInApp, variant = 'primar
       icon={<AppWindow size={13} />}
       menu={menu}
       menuLabel="Other merge tools"
-      tip={`Open the three versions in ${primary.name}; save the result there and close it to come back`}
       onClick={() => resolve(primary)}
     >
       Resolve in {primary.name}

@@ -103,6 +103,7 @@ function ItemRow({ item, labels }: { item: MergeItem; labels: MergeLabels }) {
               status={directoryConflictStatus(item.resolution)}
               labels={labels}
               explanation={item.resolution ? undefined : `${item.conflict.title}: ${item.conflict.explanation}`}
+              compact
             />
           </span>
         </>
@@ -113,7 +114,7 @@ function ItemRow({ item, labels }: { item: MergeItem; labels: MergeLabels }) {
           <StatusBadge tone="changed" title="Will be changed: both sides changed it" />
           <PathLabel path={item.state.file.path} />
           <span className={styles.status}>
-            <ConflictStatusChip status={fileConflictStatus(item.state)} labels={labels} tool={fileConflictTool(item.state)} />
+            <ConflictStatusChip status={fileConflictStatus(item.state)} labels={labels} tool={fileConflictTool(item.state)} compact />
           </span>
         </>
       );

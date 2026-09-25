@@ -1,5 +1,7 @@
 import { FolderTree } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { RENAMEABLE_CONFLICTS, type ConflictSide, type DirectoryConflict, type DirectoryConflictResolution } from '@shared/domain/merge';
+import { PathLabel } from '../../../components/PathLabel';
 import { TextField } from '../../../ui/TextField';
 import type { MergeLabels } from '../mergeDescription';
 import { suggestRename } from './renameSuggestion';
@@ -12,7 +14,7 @@ interface DirectoryConflictPanelProps {
   onResolve: (resolution: DirectoryConflictResolution) => void;
 }
 
-/** Explains a structural conflict (moves, deletes, adds) in plain words and offers the valid ways out. */
+/** A structural conflict (moves, deletes, adds) and the valid ways out. */
 export function DirectoryConflictPanel({ conflict, labels, resolution, onResolve }: DirectoryConflictPanelProps) {
   const canKeepBoth = RENAMEABLE_CONFLICTS.has(conflict.type);
   const renameTo = resolution?.choice === 'rename' ? resolution.newName : suggestRename(conflict.destination.path, labels.destination);
@@ -30,34 +32,29 @@ export function DirectoryConflictPanel({ conflict, labels, resolution, onResolve
         </div>
       </header>
 
-      <div className={styles.sides}>
-        <SideSummary label={`${source.name} · ${labels.source}`} side={conflict.source} />
-        <SideSummary label={`${destination.name} · ${labels.destination}`} side={conflict.destination} />
-      </div>
-
       <div className={styles.options} role="radiogroup" aria-label="How to resolve">
         <Option
           selected={resolution?.choice === 'source'}
-          title={`Keep ${source.name.toLowerCase()}: the change from ${labels.source}`}
-          detail={conflict.source.description}
+          title={`Keep ${source.name.toLowerCase()}`}
+          detail={<SideDetail side={conflict.source} branch={labels.source} />}
           onSelect={() => onResolve({ choice: 'source' })}
         />
         <Option
           selected={resolution?.choice === 'destination'}
-          title={`Keep ${destination.name.toLowerCase()}: the change from ${labels.destination}`}
-          detail={conflict.destination.description}
+          title={`Keep ${destination.name.toLowerCase()}`}
+          detail={<SideDetail side={conflict.destination} branch={labels.destination} />}
           onSelect={() => onResolve({ choice: 'destination' })}
         />
         {canKeepBoth && (
           <Option
             selected={resolution?.choice === 'rename'}
             title="Keep both"
-            detail={`The ${labels.destination} item gets a new name.`}
+            detail={`${destination.name} gets a new name`}
             onSelect={() => onResolve({ choice: 'rename', newName: renameTo })}
           >
             {resolution?.choice === 'rename' && (
               <TextField
-                label="New name for the destination item"
+                label={`New name for ${destination.name.toLowerCase()}`}
                 value={resolution.newName}
                 onChange={(event) => onResolve({ choice: 'rename', newName: event.target.value })}
                 error={/[\\/]/.test(resolution.newName) || !resolution.newName.trim() ? 'Enter a file name without folders.' : undefined}
@@ -70,21 +67,22 @@ export function DirectoryConflictPanel({ conflict, labels, resolution, onResolve
   );
 }
 
-function SideSummary({ label, side }: { label: string; side: ConflictSide }) {
+/** "Added /shared.cfg   /main/…/task": what the side did, and where. */
+function SideDetail({ side, branch }: { side: ConflictSide; branch: string }) {
   return (
-    <div className={styles.side}>
-      <span className={styles.sideLabel}>{label}</span>
+    <>
       <span className={styles.sideDescription}>{side.description}</span>
-    </div>
+      <PathLabel path={branch} />
+    </>
   );
 }
 
 interface OptionProps {
   selected: boolean;
   title: string;
-  detail: string;
+  detail: ReactNode;
   onSelect: () => void;
-  children?: React.ReactNode;
+  children?: ReactNode;
 }
 
 function Option({ selected, title, detail, onSelect, children }: OptionProps) {

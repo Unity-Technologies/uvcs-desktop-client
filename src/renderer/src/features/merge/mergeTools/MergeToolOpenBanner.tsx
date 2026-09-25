@@ -11,7 +11,7 @@ export function MergeToolOpenBanner({ fileName, open }: { fileName: string; open
     <div className={styles.banner} role="status">
       <Spinner size={13} />
       <span className={styles.text}>
-        <strong>{fileName}</strong> is open in {open.toolName}. Save the result there and close it to come back here.
+        Waiting for {open.toolName}: save and close <strong>{fileName}</strong> there.
       </span>
       {open.canBringToFront && (
         <Button size="small" icon={<AppWindow size={13} />} onClick={() => void api.mergeTools.bringToFront(open.sessionId)}>
@@ -21,7 +21,7 @@ export function MergeToolOpenBanner({ fileName, open }: { fileName: string; open
       <Button
         size="small"
         variant="ghost"
-        data-tip={`Stop waiting for ${open.toolName}: what you already saved there is taken, and nothing after`}
+        data-tip="Takes what was saved so far"
         onClick={() => void api.mergeTools.stopWaiting(open.sessionId)}
       >
         Stop waiting

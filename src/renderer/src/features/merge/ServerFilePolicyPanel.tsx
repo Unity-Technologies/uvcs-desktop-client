@@ -26,8 +26,8 @@ export function ServerFilePolicyPanel({ path, fileCount, labels, policy, onChoos
         {policy ? `Keeping ${policy === 'source' ? labels.source : labels.destination} for every conflicting file` : `${path} changed on both sides`}
       </h2>
       <p className={styles.text}>
-        This merge runs on the server, where files can't be combined. Choose which version to keep for all {fileCount} conflicting{' '}
-        {fileCount === 1 ? 'file' : 'files'}, or switch your workspace to {labels.destination} and merge there to combine them line by line.
+        Server merges can't combine files: keep one version for all {fileCount} conflicting {fileCount === 1 ? 'file' : 'files'}, or merge in a workspace
+        to combine them.
       </p>
       <div className={styles.actions}>
         <Button variant={policy === 'destination' ? 'primary' : 'secondary'} onClick={() => onChoose('destination')}>
