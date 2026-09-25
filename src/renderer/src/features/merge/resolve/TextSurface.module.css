@@ -5,10 +5,3 @@
   background: var(--bg-surface);
   user-select: text;
 }
-
-.conflictActions {
-  display: flex;
-  gap: var(--space-1);
-  padding: 4px 8px;
-  font-family: var(--font-ui);
-}

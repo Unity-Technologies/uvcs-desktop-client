@@ -1,6 +1,6 @@
 import { File } from '@pierre/diffs/react';
 import { usePierreOptions } from './usePierreOptions';
-import styles from './MergedTextEditor.module.css';
+import styles from './TextSurface.module.css';
 
 /** A whole version of a file, highlighted and read-only. */
 export function ReadOnlyText({ path, text }: { path: string; text: string }) {
