@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { invalidateWorkspace } from '../../app/queryClient';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { NoSelection } from '../../components/NoSelection';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
@@ -25,10 +25,14 @@ import { ItemDetailsPane } from './ItemDetailsPane';
 import { itemStatus, PendingChangesIndex } from './itemStatus';
 import { GO_TO_FILE_SHORTCUT, useFileCommands } from './useFileCommands';
 import { useTreeListings } from './useTreeListings';
+import { WorkspaceRootDetails } from './WorkspaceRootDetails';
+import { isWorkspaceRoot, workspaceRootItem } from './workspaceRoot';
 
 /** The workspace explorer: every file on disk with its version-control status. */
 export function FilesView() {
   const workspacePath = useWorkspacePath();
+  const { data: workspace } = useWorkspaceInfo();
+  const [rootExpanded, setRootExpanded] = useState(true);
   const expanded = useExpandedDirectories(workspacePath);
   const { toggle, expand } = useExpandedDirectoriesStore();
   const { data: pendingChanges } = usePendingChanges();
@@ -42,7 +46,8 @@ export function FilesView() {
     expanded,
   );
   const pendingIndex = useMemo(() => new PendingChangesIndex(pendingChanges?.changes ?? []), [pendingChanges]);
-  const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter }), [childrenByDirectory, expanded, filter]);
+  const root = useMemo(() => workspace && { item: workspaceRootItem(workspace), expanded: rootExpanded }, [workspace, rootExpanded]);
+  const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter, root }), [childrenByDirectory, expanded, filter, root]);
   const selectedItems = useMemo(() => rows.filter((row) => selection.selected.has(row.item.path)).map((row) => row.item), [rows, selection]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
 
@@ -94,7 +99,7 @@ export function FilesView() {
               rows={rows}
               selection={selection}
               onSelectionChange={setSelection}
-              onToggleDirectory={(directory) => toggle(workspacePath, directory)}
+              onToggleDirectory={(directory) => (directory === '' ? setRootExpanded((shown) => !shown) : toggle(workspacePath, directory))}
               onOpenFile={(item) => openItem(workspacePath, item)}
               contextMenu={(items) => fileMenu(workspacePath, items, pendingIndex)}
               statusOf={(item) => itemStatus(item, pendingIndex)}
@@ -104,7 +109,9 @@ export function FilesView() {
           </HighlightQuery>
         }
         details={
-          focused ? (
+          focused && workspace && isWorkspaceRoot(focused) ? (
+            <WorkspaceRootDetails workspace={workspace} menu={fileMenu(workspacePath, [focused], pendingIndex)} />
+          ) : focused ? (
             <ItemDetailsPane
               key={focused.path}
               workspacePath={workspacePath}

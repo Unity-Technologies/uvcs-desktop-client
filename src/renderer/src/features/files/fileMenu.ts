@@ -11,12 +11,14 @@ import {
   PenLine,
   Plus,
   ScanText,
+  SquareTerminal,
   TextCursorInput,
   Trash2,
   Undo2,
 } from 'lucide-react';
 import type { TreeItem } from '@shared/domain/explorer';
 import { navigation } from '../../app/navigation/navigationStore';
+import { openTerminalIn } from '../../app/workspace/workspaceShellActions';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { filterRulesSubmenu } from '../pendingChanges/pendingChangeMenu';
 import { absolutePath, copyPaths, undoChanges } from '../pendingChanges/pendingChangeOperations';
@@ -33,6 +35,7 @@ import {
 } from './fileOperations';
 import { useFilesViewStore } from './filesViewStore';
 import type { PendingChangesIndex } from './itemStatus';
+import { isWorkspaceRoot } from './workspaceRoot';
 
 export const FILE_SHORTCUTS = {
   rename: 'f2',
@@ -55,10 +58,18 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
   const checkoutCandidates = controlled.filter((item) => !item.isCheckedOut && !pendingChanges.changeAt(item.path));
   const controlledFiles = controlled.filter((item) => item.itemType !== 'directory');
   const directory = targetDirectoryFor(single ?? undefined);
+  // The workspace root can't be renamed or deleted from here.
+  const hasRoot = items.some(isWorkspaceRoot);
 
   return tidyMenu([
     single && single.itemType !== 'directory' && { id: 'open', label: 'Open', icon: AppWindow, run: () => openItem(workspacePath, single) },
     single && { id: 'reveal', label: 'Reveal in file manager', icon: FolderSearch, run: () => revealItem(workspacePath, single) },
+    single?.itemType === 'directory' && {
+      id: 'terminal',
+      label: 'Open terminal here',
+      icon: SquareTerminal,
+      run: () => openTerminalIn(absolutePath(workspacePath, single.path)),
+    },
     SEPARATOR,
     single && !single.isPrivate && single.itemType !== 'directory' && {
       id: 'changes',
@@ -67,7 +78,8 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
       shortcut: FILE_SHORTCUTS.showChanges,
       run: () => useFilesViewStore.getState().setDetailsTab('changes'),
     },
-    single && !single.isPrivate && {
+    // The root changes with every changeset: its history is the whole repository's.
+    single && !single.isPrivate && !hasRoot && {
       id: 'history',
       label: 'View history',
       icon: History,
@@ -97,8 +109,8 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
       run: () => void undoChanges(workspacePath, changed),
     },
     SEPARATOR,
-    single && { id: 'rename', label: 'Rename…', icon: TextCursorInput, shortcut: FILE_SHORTCUTS.rename, run: () => void renameItem(workspacePath, single) },
-    { id: 'delete', label: 'Delete', icon: Trash2, danger: true, shortcut: FILE_SHORTCUTS.delete, run: () => void deleteItems(workspacePath, items) },
+    single && !hasRoot && { id: 'rename', label: 'Rename…', icon: TextCursorInput, shortcut: FILE_SHORTCUTS.rename, run: () => void renameItem(workspacePath, single) },
+    !hasRoot && { id: 'delete', label: 'Delete', icon: Trash2, danger: true, shortcut: FILE_SHORTCUTS.delete, run: () => void deleteItems(workspacePath, items) },
     SEPARATOR,
     single && {
       id: 'newFile',
@@ -123,7 +135,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
         { id: 'type.txt', label: 'Text', run: () => void changeRevisionType(workspacePath, controlledFiles, 'txt') },
       ],
     },
-    single && filterRulesSubmenu(workspacePath, single.path),
+    single && !hasRoot && filterRulesSubmenu(workspacePath, single.path),
     {
       label: 'Copy',
       icon: Copy,

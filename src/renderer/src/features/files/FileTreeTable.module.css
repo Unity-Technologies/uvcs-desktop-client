@@ -33,20 +33,30 @@
   transform: rotate(90deg);
 }
 
-.folderIcon {
-  flex: none;
-  color: var(--accent-text);
-}
-
-.fileIcon {
-  flex: none;
-  color: var(--text-tertiary);
+/* The name keeps its width while an xlink chip after it can give way, and is only cut once the chip is gone. */
+.text {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 
 .label {
+  flex: none;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Room for the chip's icon at least. */
+.text:has(.xlink) > .label {
+  max-width: calc(100% - 30px);
+}
+
+.label[data-root='true'] {
+  font-weight: var(--weight-medium);
 }
 
 .label[data-private='true'] {
@@ -60,4 +70,29 @@
   height: 6px;
   border-radius: 50%;
   background: var(--change-changed);
+}
+
+.xlink {
+  display: inline-flex;
+  flex: 0 1 auto;
+  min-width: 24px;
+  overflow: hidden;
+  align-items: center;
+  gap: 3px;
+  height: 16px;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--bg-active);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.xlink > svg {
+  flex: none;
+}
+
+.xlinkTarget {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
