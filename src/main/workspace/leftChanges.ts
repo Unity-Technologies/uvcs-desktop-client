@@ -36,6 +36,14 @@ export class LeftChangesFinder {
     ];
   }
 
+  /** Whether this app's records have changes waiting on what the workspace is on now. Reads no server data. */
+  async hasOwnWaiting(workspacePath: string): Promise<boolean> {
+    const workspace = await readWorkspaceIdentity(this.cm, workspacePath);
+    return this.records
+      .forWorkspace(workspace.guid)
+      .some((record) => record.repository === workspace.repository && waitsOn(record) === selectorSpec(workspace.selector));
+  }
+
   /**
    * Applies the shelve if it merges cleanly, then puts the changelists back and deletes the shelve.
    * Shelves left by another app are adopted into the records, so finishing them in the merge view cleans up too.
@@ -108,12 +116,13 @@ export class LeftChangesFinder {
 
   /** Automatic shelves left on the current selector by another app or workspace (the ones this app recorded are its own). */
   private async foreignShelves(workspacePath: string, workspace: WorkspaceIdentity, shelves: Shelve[]): Promise<Shelve[]> {
+    const unrecorded = shelves.filter((shelve) => !this.records.find({ shelveId: shelve.id, repository: workspace.repository }));
+    // Without such shelves there is nothing to match: the selector's object id would cost a server lookup for nothing.
+    if (unrecorded.length === 0) return [];
     const objectRef = await selectorObjectRef(this.cm, workspacePath, workspace.selector);
     if (!objectRef) return [];
     const comment = automaticShelveComment(objectRef);
-    return shelves
-      .filter((shelve) => shelve.comment === comment && !this.records.find({ shelveId: shelve.id, repository: workspace.repository }))
-      .sort((a, b) => b.id - a.id);
+    return unrecorded.filter((shelve) => shelve.comment === comment).sort((a, b) => b.id - a.id);
   }
 
   private async toForeignLeftChanges(workspacePath: string, workspace: WorkspaceIdentity, shelve: Shelve): Promise<LeftChanges> {

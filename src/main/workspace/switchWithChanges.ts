@@ -211,6 +211,8 @@ async function bringChanges(deps: SwitchDependencies, workspacePath: string, rec
 async function restoreOnArrival(deps: SwitchDependencies, workspacePath: string, context: OperationContext): Promise<RestoredChanges | undefined> {
   if (!deps.settings.get().restoreLeftChangesAutomatically) return undefined;
   try {
+    // Only this app's own left changes are restored: without any waiting here, the server has nothing to tell.
+    if (!(await deps.leftChanges.hasOwnWaiting(workspacePath))) return undefined;
     const left = await deps.leftChanges.find(workspacePath);
     const [only] = left;
     if (left.length !== 1 || !only || only.foreign || only.mode !== 'leave') return undefined;
