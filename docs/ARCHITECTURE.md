@@ -117,6 +117,13 @@ renderer/src/
 - **Mutations**: `runOperation` (progress toast, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
+- **Keyboard**: every shortcut is declared in `lib/shortcutRegistry.ts` and bound through `hotkey(id)`; the shortcuts sheet
+  (`?`, ⌘/) lists the registry, and a test rejects shortcut literals anywhere else and menu accelerators that differ. Views
+  get ⌘1… in sidebar order (`viewShortcut`).
+- **Focus**: the list, tree or graph a view or page works on carries `MAIN_FOCUS` (`lib/mainFocus.ts`). `useMainFocus`
+  focuses it after navigating and whenever focus falls to the document (a dialog, menu or popover closed), and hands it
+  list keys pressed while nothing has focus. Views keep their list's selection while away (`useViewSelection`). Lists
+  expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
 - **List and details**: `ListWithDetails` (one remembered details width for every view) around a `DetailsPanel`: hero, the
   default action (what Enter does on the row) plus the row's context menu behind "More actions", then Comment, changed files,
@@ -125,7 +132,9 @@ renderer/src/
 - **Branch switcher**: groups and orders branches like the official Desktop client (`branchSwitcherGroups`): /main by its
   well-known GUID, the workspace's recent branches, then the rest newest first. Recent branches are the official client's,
   read from and written to its `plasticgui.conf` (`main/plasticConfig`) on every switch, so both apps list the same ones.
-- **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in components.
+- **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in components. Text tokens keep 4.5:1
+  and focus rings 3:1 (`styles/tokens.test.ts`); focus shows with `--focus-ring-visible`, or `--focus-ring-inset` on rows
+  and panes (over their content when it would paint over the ring).
 
 ## Server budget
 
