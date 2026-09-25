@@ -1,19 +1,18 @@
 import * as Popover from '@radix-ui/react-popover';
-import { FolderOpen, FolderPlus, Layers, X } from 'lucide-react';
+import { FolderOpen, FolderPlus, Layers } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactElement } from 'react';
-import type { MenuEntry } from '../../lib/actions';
 import { navigationTarget } from '../../lib/listNavigation';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
-import { toast } from '../../ui/toast/toastStore';
 import { openCreateWorkspaceDialog } from '../home/dialogs/CreateWorkspaceDialog';
-import { workspaceMenu } from '../home/homeMenus';
-import { forgetRecentWorkspace, useSettings } from '../settings/useSettings';
+import { missingWorkspaceMenu, workspaceMenu } from '../home/homeMenus';
+import { unlistedRecentPaths, type WorkspaceEntry } from '../home/recentWorkspaces';
+import { useSettings } from '../settings/useSettings';
 import { useSession } from '../workspace/sessionStore';
 import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
-import { useRecentWorkspaceRepositories, useWorkspaceList } from '../workspace/workspaceQueries';
-import { workspaceSwitcherList, type SwitcherWorkspace } from './workspaceSwitcherList';
+import { useMissingWorkspacePaths, useRecentWorkspaceRepositories, useWorkspaceList } from '../workspace/workspaceQueries';
+import { workspaceSwitcherList } from './workspaceSwitcherList';
 import styles from './WorkspaceSwitcher.module.css';
 
 /** Quick switch to any workspace, recent ones first, without going back to the home screen. */
@@ -60,10 +59,11 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
   const listRef = useRef<HTMLDivElement>(null);
   const movedByKeyboard = useRef(false);
   const { recentWorkspacePaths } = useSettings();
-  const { data: workspaces } = useWorkspaceList();
+  const { data: workspaces = [] } = useWorkspaceList();
   const { data: repositories } = useRecentWorkspaceRepositories(workspaces);
+  const { data: missingPaths = [] } = useMissingWorkspacePaths(unlistedRecentPaths(workspaces, recentWorkspacePaths));
 
-  const { recent, others } = workspaceSwitcherList(workspaces, recentWorkspacePaths, currentPath, repositories, filter);
+  const { recent, others } = workspaceSwitcherList(workspaces, recentWorkspacePaths, missingPaths, currentPath, repositories, filter);
   const flat = [...recent, ...others];
 
   useEffect(() => {
@@ -72,15 +72,6 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
     listRef.current?.querySelector('[data-highlighted="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [highlighted]);
 
-  const choose = (workspace: SwitcherWorkspace): void => {
-    if (workspace.missing) toast.error(`${workspace.name} is gone`, new Error(`${workspace.path} is no longer a workspace. Right-click it to remove it from the list.`));
-    else onChoose(workspace.path);
-  };
-
-  const menu = (workspace: SwitcherWorkspace): MenuEntry[] =>
-    workspace.missing
-      ? [{ id: 'forget', label: 'Remove from recent', icon: X, run: () => void forgetRecentWorkspace(workspace.path) }]
-      : workspaceMenu(workspace, onChoose);
 
   const onKeyDown = (event: KeyboardEvent): void => {
     const target = navigationTarget(event.key, highlighted, flat.length);
@@ -90,20 +81,21 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
       setHighlighted(target);
     } else if (event.key === 'Enter' && flat[highlighted]) {
       event.preventDefault();
-      choose(flat[highlighted]);
+      onChoose(flat[highlighted].workspace.path);
     }
   };
 
-  const row = (workspace: SwitcherWorkspace, index: number) => {
+  // A missing workspace opens too: the workspace screen offers to locate, recreate or forget it.
+  const row = ({ workspace, missing }: WorkspaceEntry, index: number) => {
     const repository = repositories?.[workspace.path];
     return (
-      <ActionContextMenu key={workspace.guid} entries={() => menu(workspace)}>
+      <ActionContextMenu key={workspace.guid} entries={() => (missing ? missingWorkspaceMenu : workspaceMenu)(workspace, onChoose)}>
         <button
           className={styles.item}
           data-highlighted={index === highlighted}
-          data-missing={workspace.missing}
+          data-missing={missing}
           onMouseEnter={() => setHighlighted(index)}
-          onClick={() => choose(workspace)}
+          onClick={() => onChoose(workspace.path)}
         >
           <span className={styles.icon}>{workspace.name.charAt(0).toUpperCase()}</span>
           <span className={styles.text}>
@@ -114,8 +106,8 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
               <Highlight text={workspace.path} />
             </span>
           </span>
-          {workspace.missing ? (
-            <span className={styles.missing} data-tip="Its folder was moved or deleted. Right-click to remove it from the list.">
+          {missing ? (
+            <span className={styles.missing} data-tip="Its folder can't be found">
               Missing
             </span>
           ) : (
@@ -148,9 +140,9 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
         {flat.length === 0 && <div className={styles.empty}>{filter ? 'No matching workspaces' : 'No other workspaces'}</div>}
         <HighlightQuery query={filter}>
           {recent.length > 0 && <div className={styles.groupTitle}>Recent</div>}
-          {recent.map((workspace, index) => row(workspace, index))}
+          {recent.map((entry, index) => row(entry, index))}
           {others.length > 0 && <div className={styles.groupTitle}>{recent.length > 0 ? 'Other workspaces' : 'Workspaces'}</div>}
-          {others.map((workspace, index) => row(workspace, recent.length + index))}
+          {others.map((entry, index) => row(entry, recent.length + index))}
         </HighlightQuery>
       </div>
     </>
