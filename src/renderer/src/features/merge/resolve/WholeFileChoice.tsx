@@ -2,14 +2,14 @@ import { Check } from 'lucide-react';
 import type { FileContent } from '@shared/domain/content';
 import { formatSize } from '../../../lib/formatDate';
 import type { ConflictContents } from './useFileConflicts';
-import type { ConflictLabels } from './threeWayMerge';
+import type { MergeLabels } from '../mergeDescription';
 import styles from './WholeFileChoice.module.css';
 
 type Side = 'source' | 'destination';
 
 interface WholeFileChoiceProps {
   contents: ConflictContents;
-  labels: ConflictLabels;
+  labels: MergeLabels;
   chosen: Side | undefined;
   onChoose: (side: Side) => void;
 }
@@ -20,8 +20,20 @@ export function WholeFileChoice({ contents, labels, chosen, onChoose }: WholeFil
     <div className={styles.choices}>
       <p className={styles.intro}>This file can't be merged line by line. Choose the version to keep.</p>
       <div className={styles.options}>
-        <VersionCard title={`Keep ${labels.destination}`} subtitle="Current version" content={contents.destination} selected={chosen === 'destination'} onSelect={() => onChoose('destination')} />
-        <VersionCard title={`Keep ${labels.source}`} subtitle="Incoming version" content={contents.source} selected={chosen === 'source'} onSelect={() => onChoose('source')} />
+        <VersionCard
+          title={`Keep ${labels.roles.destination.name.toLowerCase()}`}
+          subtitle={labels.destination}
+          content={contents.destination}
+          selected={chosen === 'destination'}
+          onSelect={() => onChoose('destination')}
+        />
+        <VersionCard
+          title={`Keep ${labels.roles.source.name.toLowerCase()}`}
+          subtitle={labels.source}
+          content={contents.source}
+          selected={chosen === 'source'}
+          onSelect={() => onChoose('source')}
+        />
       </div>
     </div>
   );

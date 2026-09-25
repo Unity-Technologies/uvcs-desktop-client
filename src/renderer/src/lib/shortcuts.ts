@@ -18,9 +18,20 @@ const MAC_SYMBOLS: Record<string, string> = {
   left: '←',
   right: '→',
   plus: '+',
+  pageup: 'Page Up',
+  pagedown: 'Page Down',
 };
 
-const OTHER_NAMES: Record<string, string> = { mod: 'Ctrl', ctrl: 'Ctrl', alt: 'Alt', shift: 'Shift', enter: 'Enter', plus: '+' };
+const OTHER_NAMES: Record<string, string> = {
+  mod: 'Ctrl',
+  ctrl: 'Ctrl',
+  alt: 'Alt',
+  shift: 'Shift',
+  enter: 'Enter',
+  plus: '+',
+  pageup: 'Page Up',
+  pagedown: 'Page Down',
+};
 
 export function formatShortcut(shortcut: string): string[] {
   return shortcut.split('+').map((key) => {

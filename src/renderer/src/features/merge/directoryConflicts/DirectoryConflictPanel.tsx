@@ -1,13 +1,13 @@
 import { FolderTree } from 'lucide-react';
 import { RENAMEABLE_CONFLICTS, type ConflictSide, type DirectoryConflict, type DirectoryConflictResolution } from '@shared/domain/merge';
 import { TextField } from '../../../ui/TextField';
-import type { ConflictLabels } from '../resolve/threeWayMerge';
+import type { MergeLabels } from '../mergeDescription';
 import { suggestRename } from './renameSuggestion';
 import styles from './DirectoryConflictPanel.module.css';
 
 interface DirectoryConflictPanelProps {
   conflict: DirectoryConflict;
-  labels: ConflictLabels;
+  labels: MergeLabels;
   resolution: DirectoryConflictResolution | undefined;
   onResolve: (resolution: DirectoryConflictResolution) => void;
 }
@@ -16,6 +16,7 @@ interface DirectoryConflictPanelProps {
 export function DirectoryConflictPanel({ conflict, labels, resolution, onResolve }: DirectoryConflictPanelProps) {
   const canKeepBoth = RENAMEABLE_CONFLICTS.has(conflict.type);
   const renameTo = resolution?.choice === 'rename' ? resolution.newName : suggestRename(conflict.destination.path, labels.destination);
+  const { source, destination } = labels.roles;
 
   return (
     <div className={styles.panel}>
@@ -30,20 +31,20 @@ export function DirectoryConflictPanel({ conflict, labels, resolution, onResolve
       </header>
 
       <div className={styles.sides}>
-        <SideSummary label={labels.source} side={conflict.source} />
-        <SideSummary label={labels.destination} side={conflict.destination} />
+        <SideSummary label={`${source.name} · ${labels.source}`} side={conflict.source} />
+        <SideSummary label={`${destination.name} · ${labels.destination}`} side={conflict.destination} />
       </div>
 
       <div className={styles.options} role="radiogroup" aria-label="How to resolve">
         <Option
           selected={resolution?.choice === 'source'}
-          title={`Keep the change from ${labels.source}`}
+          title={`Keep ${source.name.toLowerCase()}: the change from ${labels.source}`}
           detail={conflict.source.description}
           onSelect={() => onResolve({ choice: 'source' })}
         />
         <Option
           selected={resolution?.choice === 'destination'}
-          title={`Keep the change from ${labels.destination}`}
+          title={`Keep ${destination.name.toLowerCase()}: the change from ${labels.destination}`}
           detail={conflict.destination.description}
           onSelect={() => onResolve({ choice: 'destination' })}
         />

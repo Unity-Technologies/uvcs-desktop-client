@@ -5,7 +5,10 @@ import type { MergeChangeKind } from '@shared/domain/merge';
 import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge, type StatusTone } from '../../components/StatusBadge';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
+import { ConflictStatusChip } from './ConflictStatusChip';
+import type { MergeLabels } from './mergeDescription';
 import { needsDecision, type MergeItem, type MergeListRow } from './mergeItems';
+import { describeChange, directoryConflictStatus, fileConflictStatus } from './mergeStatus';
 import styles from './MergeItemList.module.css';
 
 const ROW_HEIGHT = 30;
@@ -20,11 +23,12 @@ const CHANGE_TONES: Record<MergeChangeKind, StatusTone> = {
 
 interface MergeItemListProps {
   rows: MergeListRow[];
+  labels: MergeLabels;
   selectedKey: string | null;
   onSelect: (key: string) => void;
 }
 
-export function MergeItemList({ rows, selectedKey, onSelect }: MergeItemListProps) {
+export function MergeItemList({ rows, labels, selectedKey, onSelect }: MergeItemListProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const itemKeys = rows.filter((row) => row.type === 'item').map((row) => row.key);
   const virtualizer = useVirtualizer({ count: rows.length, getScrollElement: () => viewportRef.current, estimateSize: () => ROW_HEIGHT, overscan: 12 });
@@ -69,11 +73,13 @@ export function MergeItemList({ rows, selectedKey, onSelect }: MergeItemListProp
             >
               {row.type === 'section' ? (
                 <>
-                  <span className={styles.sectionLabel}>{row.label}</span>
+                  <span className={styles.sectionLabel} data-tip={row.explanation}>
+                    {row.label}
+                  </span>
                   <span className={styles.count}>{row.count}</span>
                 </>
               ) : (
-                <ItemRow item={row.item} />
+                <ItemRow item={row.item} labels={labels} />
               )}
             </div>
           );
@@ -83,38 +89,38 @@ export function MergeItemList({ rows, selectedKey, onSelect }: MergeItemListProp
   );
 }
 
-function ItemRow({ item }: { item: MergeItem }) {
-  const pending = needsDecision(item);
-
+function ItemRow({ item, labels }: { item: MergeItem; labels: MergeLabels }) {
   switch (item.kind) {
     case 'directoryConflict':
       return (
         <>
-          <span className={styles.directoryIcon} data-pending={pending}>
+          <span className={styles.directoryIcon} data-pending={needsDecision(item)} data-tip={item.conflict.title}>
             <FolderTree size={13} />
           </span>
           <PathLabel path={item.conflict.destination.path.replace(/^\//, '')} />
-          <span className={styles.tag} data-pending={pending}>
-            {pending ? item.conflict.title : 'Decided'}
+          <span className={styles.status}>
+            <ConflictStatusChip
+              status={directoryConflictStatus(item.resolution)}
+              labels={labels}
+              explanation={item.resolution ? undefined : `${item.conflict.title}: ${item.conflict.explanation}`}
+            />
           </span>
         </>
       );
-    case 'fileConflict': {
-      const { state } = item;
+    case 'fileConflict':
       return (
         <>
-          <StatusBadge tone={pending ? 'conflict' : 'added'} title={pending ? 'Needs a decision' : 'Resolved'} letter={pending ? '!' : '✓'} />
-          <PathLabel path={state.file.path} />
-          <span className={styles.tag} data-pending={pending}>
-            {state.status !== 'ready' ? '…' : state.mergedAutomatically ? 'Auto-merged' : pending ? 'Needs you' : 'Resolved'}
+          <StatusBadge tone="changed" title="Will be changed: both sides changed it" />
+          <PathLabel path={item.state.file.path} />
+          <span className={styles.status}>
+            <ConflictStatusChip status={fileConflictStatus(item.state)} labels={labels} />
           </span>
         </>
       );
-    }
     case 'change':
       return (
         <>
-          <StatusBadge tone={CHANGE_TONES[item.change.kind]} title={item.change.kind} />
+          <StatusBadge tone={CHANGE_TONES[item.change.kind]} title={describeChange(item.change, labels)} />
           <PathLabel path={item.change.path.replace(/^\//, '')} oldPath={item.change.oldPath?.replace(/^\//, '')} strikethrough={item.change.kind === 'deleted'} />
         </>
       );

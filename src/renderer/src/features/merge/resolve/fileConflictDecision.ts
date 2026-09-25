@@ -3,8 +3,11 @@ import { countConflictRegions, hasConflictMarkers, type ConflictDocument } from 
 
 /** What the user has decided so far for a conflicting file. */
 export type FileConflictDecision =
-  /** Working on the merged text; it is resolved once no conflict markers are left. */
-  | { kind: 'text'; text: string }
+  /**
+   * Working on the merged text; it is resolved once no conflict markers are left. `edited`: typed by hand, rather
+   * than a side picked for each conflict.
+   */
+  | { kind: 'text'; text: string; edited?: boolean }
   /** Take one version of the whole file. */
   | { kind: 'wholeFile'; side: 'source' | 'destination' };
 

@@ -63,6 +63,16 @@ The app never lets `cm` open its merge or diff tool; every conflict is resolved 
   `cm diff` always has `--format`. `main/cm/noExternalUi.test.ts` checks these statically.
 - `cm` processes run with stdin closed, so a console prompt fails instead of hanging.
 
+## Merge page
+
+The merge page (`features/merge`) is a preview until "Complete merge": it says so ("Preview", "Nothing has changed yet"),
+and every status reads as what the merge will do, never as done (`mergeStatus`): "Will merge automatically", "Needs your
+decision", then the user's choice ("Keeping yours", "Keeping incoming", "Combined", "Edited by you"), one chip in the list
+and the file header, explained by its tooltip. Sides are "Yours"/"Incoming" in a workspace and "Destination"/"Source" when
+merging into a server branch (`mergeLabels`), always next to their branch. A conflicting file is read-only: it opens on
+what the merge changes in the destination (or on the result while conflicts remain), can show each contributor and the
+base, and is only edited after "Edit merged result…". Once merged, the page states where the result went.
+
 ## Switching with pending changes
 
 `cm switch` only ever runs on a clean workspace (`main/workspace/switchWithChanges.ts`), whatever client.conf's

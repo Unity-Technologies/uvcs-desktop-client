@@ -17,6 +17,7 @@ function fileState(resolved: boolean): FileConflictState {
     file: { key: '/a.txt', path: 'a.txt', base: { kind: 'empty' }, source: { kind: 'empty' }, destination: { kind: 'empty' } },
     status: 'ready',
     isBinary: false,
+    decidedByUser: resolved,
     resolution: resolved ? { choice: 'source' } : null,
     mergedAutomatically: false,
     remainingConflicts: resolved ? 0 : 1,

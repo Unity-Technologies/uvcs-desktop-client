@@ -7,7 +7,7 @@ import type { GraphLayout } from '../model/layoutGraph';
 import type { DrawnTargets, GraphScene } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
 import { drawGraph } from './drawGraph';
-import { graphSize } from './geometry';
+import { COLUMN_WIDTH, graphSize } from './geometry';
 import { hitTest, nodePoint, type GraphTarget } from './graphTargets';
 import { GraphTooltip, type TooltipAnchor } from './GraphTooltip';
 import { laneHeaderTop, laneShape } from './laneShape';
@@ -27,6 +27,12 @@ export type GraphHighlights = Pick<
 export interface GraphCanvasHandle {
   /** Scrolls just enough to show the changeset. */
   revealChangeset: (id: number) => void;
+  /** Glides just enough to show the changeset: the view following the keyboard. */
+  followChangeset: (id: number) => void;
+  /** How many columns a screen holds at the current zoom. */
+  columnsOnScreen: () => number;
+  /** Opens the context menu of a changeset or branch where it is drawn, as a right click on it would. */
+  openContextMenu: (target: GraphTarget) => void;
   /** Scrolls just enough to show the branch's header card. */
   revealBranch: (name: string) => void;
   centerOnChangeset: (id: number) => void;
@@ -166,6 +172,27 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           const point = headerPoint(name);
           if (point) reveal(point.x, point.y);
         },
+        followChangeset: (id) => {
+          const point = nodePoint(layout, id);
+          if (!point) return;
+          setHover(null);
+          const current = view.viewportRef.current;
+          const next = revealPoint(current, point.x, point.y, sizeRef.current);
+          if (next !== current) view.glideTo(next);
+        },
+        columnsOnScreen: () => sizeRef.current.width / (COLUMN_WIDTH * view.viewportRef.current.zoom),
+        openContextMenu: (target) => {
+          const canvas = canvasRef.current;
+          const point = target.kind === 'changeset' ? nodePoint(layout, target.id) : target.kind === 'branch' ? headerPoint(target.lane.branch.name) : null;
+          if (!canvas || !point) return;
+          const { zoom, panX, panY } = view.viewportRef.current;
+          const bounds = canvas.getBoundingClientRect();
+          contextTargetRef.current = target;
+          setHover(null);
+          canvas.dispatchEvent(
+            new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: bounds.left + point.x * zoom + panX, clientY: bounds.top + point.y * zoom + panY }),
+          );
+        },
         centerOnChangeset: (id) => {
           const point = nodePoint(layout, id);
           if (point) view.jumpTo(centerOn(view.viewportRef.current, point.x, point.y, sizeRef.current));
@@ -296,7 +323,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         tabIndex={0}
         role="application"
         aria-roledescription="graph"
-        aria-label="Branch Explorer. Arrow keys walk the changesets, Enter diffs the selection, H goes to the workspace changeset."
+        aria-label="Branch Explorer. Arrow keys walk the changesets, Home and End go to the ends of the branch, Enter diffs the selection, H goes to the workspace changeset. Question mark lists every shortcut."
         {...MAIN_FOCUS}
         data-hovering={hover !== null}
         onPointerDown={onPointerDown}

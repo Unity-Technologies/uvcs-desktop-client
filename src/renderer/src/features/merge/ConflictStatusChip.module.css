@@ -1,0 +1,29 @@
+.chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  padding: 0 7px;
+  border-radius: var(--radius-full);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  line-height: 18px;
+  white-space: nowrap;
+}
+
+.chip[data-tone='pending'] {
+  background: color-mix(in srgb, var(--status-conflict) 13%, transparent);
+  color: var(--status-conflict);
+}
+
+.chip[data-tone='automatic'] {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.chip[data-tone='decided'] {
+  background: color-mix(in srgb, var(--status-added) 13%, transparent);
+  color: var(--status-added);
+}
