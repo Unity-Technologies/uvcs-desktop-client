@@ -20,6 +20,13 @@
   font-style: italic;
 }
 
+.commentCell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
 .comment {
   overflow: hidden;
   text-overflow: ellipsis;
