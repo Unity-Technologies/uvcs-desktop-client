@@ -1,0 +1,57 @@
+.canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: block;
+}
+
+.toleranceSlider {
+  width: 130px;
+}
+
+/* The value slot reserves three digits, so the centered pill keeps one exact
+   width as the slider sweeps 0 → 9 → 99 — it must never shift under the
+   cursor mid-drag. */
+.toleranceReadout {
+  width: 3ch;
+  text-align: right;
+}
+
+/* Region navigation: secondary wayfinding, not a control bar — quieter and
+   shorter than the tolerance pill. */
+.regionNav {
+  gap: 5px;
+  padding: var(--space-1) 10px;
+}
+
+/* Keep "2 of 12" from nudging the arrows while stepping through regions. */
+.regionCount {
+  min-width: 52px;
+  text-align: center;
+}
+
+/* Focus ring around the active changed region. Border width is set inline,
+   counter-scaled against the world transform (~2 screen px at any zoom). */
+.regionFocus {
+  position: absolute;
+  border-style: solid;
+  border-color: var(--accent);
+  pointer-events: none;
+}
+
+.computing {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-md);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  transform: translateX(-50%);
+}

@@ -6,6 +6,12 @@ export interface CreateWorkspaceRequest {
   repository: string;
 }
 
+/**
+ * How much of a workspace the watcher sees. `full`: every change on disk. `partial` (Linux, or where a recursive
+ * watch fails): the workspace root and `.plastic` only, so edits in subfolders need another refresh trigger.
+ */
+export type WatchCoverage = 'full' | 'partial';
+
 export interface WorkspacesApi {
   list(): Promise<WorkspaceSummary[]>;
   info(workspacePath: string): Promise<WorkspaceInfo>;
@@ -26,8 +32,8 @@ export interface WorkspacesApi {
   remove(workspacePath: string): Promise<void>;
   /** Downloads the latest changes of the loaded branch. */
   update(workspacePath: string, operationId: string): Promise<void>;
-  /** Emits `workspaceChanged` events when files change on disk. Replaces any previous watch. */
-  watch(workspacePath: string): Promise<void>;
+  /** Emits `workspaceChanged` events when the workspace changes on disk. Replaces any previous watch. */
+  watch(workspacePath: string): Promise<WatchCoverage>;
   /** Switches to a branch, changeset, label or shelve spec. */
   switchTo(workspacePath: string, targetSpec: string, operationId: string): Promise<void>;
 }

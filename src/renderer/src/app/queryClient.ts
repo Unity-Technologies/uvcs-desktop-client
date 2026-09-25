@@ -1,10 +1,15 @@
 import { QueryClient } from '@tanstack/react-query';
 import { workspaceKey } from '../api/queryKeys';
+import { trackWindowFocus } from './refresh/trackWindowFocus';
+
+trackWindowFocus();
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 15_000,
+      // Coming back to the window refreshes what is on screen if it is older than this; local views are kept
+      // fresh by the workspace watcher instead (see useWorkspaceWatcher).
+      staleTime: 30_000,
       retry: false,
       refetchOnWindowFocus: true,
     },

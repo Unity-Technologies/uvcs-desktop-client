@@ -11,9 +11,14 @@ export function useWorkspacePath(): string {
 }
 
 export function useWorkspaceInfo() {
-  const workspacePath = useWorkspacePath();
+  return useWorkspaceInfoOf(useWorkspacePath());
+}
+
+/** Like `useWorkspaceInfo`, for code that also runs without a workspace (null). */
+export function useWorkspaceInfoOf(workspacePath: string | null) {
   return useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'info'),
-    queryFn: () => api.workspaces.info(workspacePath),
+    queryKey: queryKeys.inWorkspace(workspacePath ?? '', 'info'),
+    queryFn: () => api.workspaces.info(workspacePath!),
+    enabled: workspacePath !== null,
   });
 }

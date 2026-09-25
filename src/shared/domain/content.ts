@@ -18,5 +18,7 @@ export interface FileContent {
   /** Data URL, when the content is an image. */
   imageDataUrl?: string;
   isBinary: boolean;
+  /** Too big to show: text over the diff cap, or an image over the preview cap. */
+  tooLarge?: 'text' | 'image';
   size: number;
 }

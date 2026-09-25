@@ -9,22 +9,23 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { useBranchExplorerPreferences } from './branchExplorerStore';
 import { GraphCanvas, type GraphCanvasHandle, type GraphHighlights } from './canvas/GraphCanvas';
 import type { GraphTarget } from './canvas/graphTargets';
+import { ZOOM_STEP } from './canvas/zoom';
 import { DetailsPanel } from './details/DetailsPanel';
 import { graphActions } from './graphActions';
 import { graphMenu } from './graphMenu';
 import { selectionFor, type GraphSelection } from './graphSelection';
 import { GraphFilterBar } from './GraphFilterBar';
+import { GraphNavControls } from './GraphNavControls';
 import { GraphSearch } from './GraphSearch';
 import { filterGraph } from './model/filterGraph';
 import { layoutGraph } from './model/layoutGraph';
 import { neighborChangeset, type GraphDirection } from './model/navigateGraph';
-import { searchGraph } from './model/searchGraph';
+import { searchGraph, searchHighlight, type SearchHit } from './model/searchGraph';
 import { useBranchExplorerCommands } from './useBranchExplorerCommands';
 import { useBranchExplorerData } from './useBranchExplorerData';
 import styles from './BranchExplorerView.module.css';
 
 const ARROW_DIRECTIONS: Record<string, GraphDirection> = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
-const ZOOM_STEP = 1.25;
 
 export function BranchExplorerView() {
   const workspacePath = useWorkspacePath();
@@ -57,11 +58,10 @@ export function BranchExplorerView() {
       homeChangeset,
       currentBranch,
       highlightedAuthor,
-      searchHits: new Set(searchHits),
-      activeSearchHit: searchHits[activeHitIndex] ?? null,
+      search: search.trim() ? searchHighlight(searchHits, searchHits[activeHitIndex] ?? null) : null,
       options: { showComments, showAvatars },
     }),
-    [selection, homeChangeset, currentBranch, highlightedAuthor, searchHits, activeHitIndex, showComments, showAvatars],
+    [selection, homeChangeset, currentBranch, highlightedAuthor, search, searchHits, activeHitIndex, showComments, showAvatars],
   );
 
   const goToChangeset = useCallback((id: number) => {
@@ -76,6 +76,7 @@ export function BranchExplorerView() {
   }, [homeChangeset]);
 
   const fit = useCallback(() => canvasRef.current?.fit(), []);
+  const zoomBy = useCallback((factor: number) => canvasRef.current?.zoomBy(factor), []);
   useInitialFocus(layout, homeChangeset, canvasRef);
   useBranchExplorerCommands({ goHome, fit });
 
@@ -84,7 +85,16 @@ export function BranchExplorerView() {
     const next =
       activeHitIndex === -1 ? (direction === 1 ? 0 : searchHits.length - 1) : (activeHitIndex + direction + searchHits.length) % searchHits.length;
     setActiveHitIndex(next);
-    goToChangeset(searchHits[next]!);
+    goToHit(searchHits[next]!);
+  };
+
+  const goToHit = (hit: SearchHit): void => {
+    if (hit.kind === 'branch') {
+      setSelection({ kind: 'branch', name: hit.name });
+      canvasRef.current?.revealBranch(hit.name);
+    } else {
+      goToChangeset(hit.kind === 'label' ? hit.changeset : hit.id);
+    }
   };
 
   const changeSearch = (value: string): void => {
@@ -108,9 +118,9 @@ export function BranchExplorerView() {
     } else if (event.key === 'Home' || event.key === 'h') {
       goHome();
     } else if (event.key === '+' || event.key === '=') {
-      canvasRef.current?.zoomBy(ZOOM_STEP);
+      zoomBy(ZOOM_STEP);
     } else if (event.key === '-') {
-      canvasRef.current?.zoomBy(1 / ZOOM_STEP);
+      zoomBy(1 / ZOOM_STEP);
     } else if (event.key === '0') {
       fit();
     } else if (event.key === 'Enter' && selection?.kind === 'changeset') {
@@ -140,7 +150,7 @@ export function BranchExplorerView() {
         </>
       }
     >
-      <GraphFilterBar authors={authors} onZoom={(factor) => canvasRef.current?.zoomBy(factor)} onFit={fit} onGoHome={goHome} />
+      <GraphFilterBar authors={authors} onZoom={zoomBy} onFit={fit} onGoHome={goHome} />
     </ViewHeader>
   );
 
@@ -174,7 +184,9 @@ export function BranchExplorerView() {
           onSelect={(target) => setSelection(selectionFor(target))}
           onActivate={activate}
           contextMenu={(target) => graphMenu(target, { workspacePath, layout, goToChangeset, showRelatedTo: setRelatedTo })}
-        />
+        >
+          <GraphNavControls onGoHome={goHome} onFit={fit} onZoom={zoomBy} />
+        </GraphCanvas>
         {detailsOpen && (
           <DetailsPanel
             selection={selection}

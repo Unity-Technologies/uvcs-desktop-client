@@ -1,10 +1,13 @@
-import type { Icon } from '../../lib/actions';
+import type { StatusTone } from '../../components/StatusBadge';
+import type { Icon, MenuEntry } from '../../lib/actions';
+import type { SectionId } from './paletteScope';
 
 export interface SearchResult {
   /** Unique across all groups. */
   id: string;
   icon: Icon;
   label: string;
+  /** Dimmed after the label, e.g. a file's folder or who made a changeset and when. */
   detail?: string;
   shortcut?: string;
   /** Fuzzy-matched character positions to highlight; without them, the words of the query are highlighted. */
@@ -12,17 +15,44 @@ export interface SearchResult {
   detailMatches?: number[];
   /** How well it matches, from 0 to 1 (see `fuzzyMatchQuality`). Actions such as "search for more" have none. */
   quality?: number;
+  /** A file's pending change, shown as its status letter. */
+  status?: { tone: StatusTone; title: string };
+  /** The branch the workspace is on. */
+  isCurrent?: boolean;
+  /** Everything else that can be done with it (Tab), the same menu it has in its own view. */
+  menu?: () => MenuEntry[];
   run: () => void;
   /** Runs without closing the palette, e.g. to search for more. */
   keepOpen?: boolean;
+  /** Stays visible in a collapsed section, e.g. "search all changesets" after the matches. */
+  pinned?: boolean;
   /** Spins the icon while something is in progress. */
   busy?: boolean;
   disabled?: boolean;
 }
 
 export interface SearchGroup {
+  section: SectionId;
   heading: string;
   results: SearchResult[];
+}
+
+export interface ShownGroup extends SearchGroup {
+  /** Results held back until the section is expanded ("N more"). */
+  more: number;
+}
+
+/** Rows a section shows until it is expanded, so every kind of thing fits on screen at once. */
+export const COLLAPSED_ROWS = 5;
+
+/** Caps every section not in `expanded` at `COLLAPSED_ROWS`, plus its pinned results. */
+export function collapseGroups(groups: SearchGroup[], expanded: ReadonlySet<SectionId> | 'all'): ShownGroup[] {
+  return groups.map((group) => {
+    if (expanded === 'all' || expanded.has(group.section)) return { ...group, more: 0 };
+    const unpinned = group.results.filter((result) => !result.pinned);
+    const results = [...unpinned.slice(0, COLLAPSED_ROWS), ...group.results.filter((result) => result.pinned)];
+    return { ...group, results, more: group.results.length - results.length };
+  });
 }
 
 /** From here on a match is clearly what was meant, so much weaker matches elsewhere would only be noise. */

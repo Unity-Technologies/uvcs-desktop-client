@@ -1,0 +1,152 @@
+/* The pan/zoom surface. Touch-action off: the pointer gestures are ours. */
+.viewport {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+}
+
+.viewport:active {
+  cursor: grabbing;
+}
+
+/* The composed frame both revisions share, moved by one GPU transform.
+   Deliberately NOT `will-change: transform`: that pins the element to a
+   permanent composited layer which Chromium rasterizes at its *transformed*
+   size — at 64× a 1125×750 image becomes a 72000×48000px texture, and two of
+   them (swipe's before+after worlds) blow past the tile-memory budget, so
+   Chromium drops tiles and the picture tears/blinks mid-zoom. Without
+   will-change the transform still composites (the glide transition promotes
+   it for its duration), but rasterization stays viewport-tiled — only visible
+   tiles are painted, bounded at any zoom. */
+.world {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform-origin: 0 0;
+}
+
+.world[data-gliding] {
+  transition: transform 280ms var(--ease-out);
+}
+
+/* The transparency backdrop: a viewport-filling, untransformed twin painting
+   constant 16px screen tiles, clipped to the world's screen rect (geometry
+   set inline by stage.tsx World). Never on the transformed element — Chromium
+   rasterizes the gradient at layout resolution, so counter-scaled tiles alias
+   and fade at deep zooms; and never sized to the full scaled world rect — at
+   deep zoom that element exhausts tile memory. Viewport-bounded + clipped is
+   safe at any zoom. */
+.checkerboard {
+  position: absolute;
+  inset: 0;
+  background: repeating-conic-gradient(var(--bg-active) 0% 25%, transparent 0% 50%) 0 0;
+  background-size: 16px 16px;
+  pointer-events: none;
+}
+
+/* Mirrors the world's glide: the clip rect interpolates on the same curve as
+   its translate/scale (both linear in scale), so backdrop and artwork move as
+   one. The pattern phase (background-position) snaps — identical tiles make
+   the jump invisible. */
+.checkerboard[data-gliding] {
+  transition: clip-path 280ms var(--ease-out);
+}
+
+.world[data-pixelated] img,
+.world[data-pixelated] canvas {
+  image-rendering: pixelated;
+}
+
+/* One revision in the frame. The hairline tint says which side is which
+   without stealing attention (red = before, green = after — diff colors). */
+.layer {
+  position: absolute;
+  display: block;
+  user-select: none;
+}
+
+.layerOld {
+  outline: 1px solid color-mix(in srgb, var(--status-deleted) 55%, transparent);
+}
+
+.layerNew {
+  outline: 1px solid color-mix(in srgb, var(--status-added) 55%, transparent);
+}
+
+.sideChip {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-md);
+  color: var(--status-deleted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  pointer-events: none;
+}
+
+.sideChip[data-side='new'] {
+  color: var(--status-added);
+}
+
+.sideChip[data-corner='right'] {
+  right: 10px;
+  left: auto;
+}
+
+.pill {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-md);
+  transform: translateX(-50%);
+}
+
+/* The second row stacks under the first; it takes the top spot when the first is hidden. */
+.pill[data-row='1'] {
+  top: 46px;
+}
+
+.pill input[type='range'] {
+  accent-color: var(--accent);
+}
+
+.pillLabel {
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+}
+
+.pillValue {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.pill .pillButton {
+  width: 24px;
+  border-radius: var(--radius-full);
+}
+
+/* A bare triangle next to a slider reads as a chevron, not a button: the
+   pill's one real action keeps a bordered circle, a couple px larger. */
+.pill .pillButtonProminent {
+  width: 26px;
+  height: 26px;
+  border-color: var(--border-default);
+  background: var(--bg-surface);
+}

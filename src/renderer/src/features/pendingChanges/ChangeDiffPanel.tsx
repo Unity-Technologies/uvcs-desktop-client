@@ -22,7 +22,6 @@ export function ChangeDiffPanel({ workspacePath, change }: { workspacePath: stri
   const { original, modified } = changeDiffSources(change);
   return (
     <FileDiffViewer
-      key={change.path}
       workspacePath={workspacePath}
       original={original}
       modified={modified}

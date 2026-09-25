@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { centerOn, fitToScreen, MAX_ZOOM, openingViewport, revealPoint, toWorld, zoomAt } from './viewport';
+import { centerOn, clampViewport, fitToScreen, MAX_ZOOM, openingViewport, OVERSCROLL, revealPoint, toWorld, zoomAt } from './viewport';
 
 const screen = { width: 800, height: 600 };
 
@@ -43,5 +43,30 @@ describe('viewport', () => {
     const viewport = { panX: 0, panY: 0, zoom: 1 };
     expect(revealPoint(viewport, 300, 300, screen)).toBe(viewport);
     expect(revealPoint(viewport, 3000, 300, screen).panX).toBe(400 - 3000);
+  });
+
+  it('pins a graph smaller than the screen to the top left', () => {
+    const small = { width: 400, height: 300 };
+    expect(clampViewport({ panX: 500, panY: -200, zoom: 1 }, small, screen)).toEqual({ panX: 0, panY: 0, zoom: 1 });
+    expect(clampViewport({ panX: 500, panY: 400, zoom: 0.5 }, small, screen)).toEqual({ panX: 0, panY: 14, zoom: 0.5 });
+  });
+
+  it('lets a larger graph overscroll a little, but never scroll off screen', () => {
+    const large = { width: 3000, height: 2000 };
+    expect(clampViewport({ panX: 900, panY: 500, zoom: 1 }, large, screen)).toMatchObject({ panX: OVERSCROLL, panY: 0 });
+    expect(clampViewport({ panX: -9000, panY: -9000, zoom: 1 }, large, screen)).toMatchObject({
+      panX: 800 - 3000 - OVERSCROLL,
+      panY: 600 - 2000 - OVERSCROLL / 2,
+    });
+  });
+
+  it('leaves a viewport that is already in bounds untouched', () => {
+    const viewport = { panX: -100, panY: -100, zoom: 1 };
+    expect(clampViewport(viewport, { width: 3000, height: 2000 }, screen)).toBe(viewport);
+  });
+
+  it('clamps each axis on its own', () => {
+    const wide = { width: 3000, height: 300 };
+    expect(clampViewport({ panX: -500, panY: 250, zoom: 1 }, wide, screen)).toEqual({ panX: -500, panY: 0, zoom: 1 });
   });
 });

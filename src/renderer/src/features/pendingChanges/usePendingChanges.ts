@@ -10,12 +10,17 @@ export function pendingChangesKey(workspacePath: string) {
 }
 
 export function usePendingChanges() {
-  const workspacePath = useWorkspacePath();
+  return usePendingChangesOf(useWorkspacePath());
+}
+
+/** Like `usePendingChanges`, for code that also runs without a workspace (null). */
+export function usePendingChangesOf(workspacePath: string | null) {
   const { pendingChanges: filter } = useSettings();
   return useQuery({
-    queryKey: [...pendingChangesKey(workspacePath), filter],
-    queryFn: () => api.pendingChanges.list(workspacePath, filter),
+    queryKey: [...pendingChangesKey(workspacePath ?? ''), filter],
+    queryFn: () => api.pendingChanges.list(workspacePath!, filter),
     placeholderData: (previous) => previous,
+    enabled: workspacePath !== null,
   });
 }
 

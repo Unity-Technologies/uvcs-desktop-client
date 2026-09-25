@@ -4,6 +4,7 @@ import { formatDateTime } from '../../lib/formatDate';
 import { Button } from '../../ui/Button';
 import { DetailsPanel, DetailsSection, DetailsText } from '../../ui/DetailsPanel';
 import { PropertyList } from '../../ui/PropertyList';
+import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { applyShelve, deleteShelve, showShelveChanges } from './shelveOperations';
 
 export function ShelveDetails({ workspacePath, shelve }: { workspacePath: string; shelve: Shelve }) {
@@ -31,6 +32,7 @@ export function ShelveDetails({ workspacePath, shelve }: { workspacePath: string
       <DetailsSection title="Comment">
         <DetailsText text={shelve.comment} placeholder="No comment" />
       </DetailsSection>
+      <ChangedFilesSection target={{ kind: 'shelve', shelveId: shelve.id }} onOpen={(path) => showShelveChanges(shelve, path)} />
       <DetailsSection title="Properties">
         <PropertyList
           properties={[

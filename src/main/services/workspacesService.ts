@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs';
-import type { CreateWorkspaceRequest, WorkspacesApi } from '@shared/api/workspaces';
+import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
 import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
 import { resolveWorkspaceRepositories } from '../cm/workspaceRepositories';
@@ -72,9 +72,9 @@ export function createWorkspacesService({ cm, operations, watcher }: ServiceCont
     });
   }
 
-  async function watch(workspacePath: string): Promise<void> {
+  async function watch(workspacePath: string): Promise<WatchCoverage> {
     cm.warmUp(workspacePath);
-    watcher.watch(workspacePath);
+    return watcher.watch(workspacePath);
   }
 
   function switchTo(workspacePath: string, targetSpec: string, operationId: string): Promise<void> {
@@ -84,7 +84,7 @@ export function createWorkspacesService({ cm, operations, watcher }: ServiceCont
   }
 
   function repositoriesOf(workspacePaths: string[], lookupId: string): Promise<Record<string, string | null>> {
-    return operations.run(lookupId, ({ signal }) => resolveWorkspaceRepositories(cm, workspacePaths, signal));
+    return operations.read(lookupId, ({ signal }) => resolveWorkspaceRepositories(cm, workspacePaths, signal));
   }
 
   async function missingFolders(workspacePaths: string[]): Promise<string[]> {

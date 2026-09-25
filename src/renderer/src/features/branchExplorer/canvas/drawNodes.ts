@@ -1,7 +1,8 @@
 import type { NodeLayout } from '../model/layoutGraph';
 import { drawAvatar, drawDot } from './drawAvatar';
-import type { DrawContext } from './drawContext';
+import { DIMMED_ALPHA, isChangesetDimmed, type DrawContext } from './drawContext';
 import { drawHomeMarker } from './drawHomeMarker';
+import { drawNodeHit } from './drawSearchHit';
 import { fitText, summaryOf } from './fitText';
 import { BAND_HEIGHT, COLUMN_WIDTH, columnX, NODE_RADIUS, rowY } from './geometry';
 import { branchColor } from './graphPalette';
@@ -55,7 +56,7 @@ function drawParentLink(draw: DrawContext, node: NodeLayout): void {
   ctx.save();
   ctx.strokeStyle = branchColor(scene.palette, node.changeset.branch);
   ctx.fillStyle = ctx.strokeStyle;
-  ctx.globalAlpha = 0.6;
+  ctx.globalAlpha = isChangesetDimmed(scene, node.changeset) ? DIMMED_ALPHA : 0.6;
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(fromX + (detail.text ? ARROW_SIZE : 0), y);
@@ -84,8 +85,11 @@ function drawNode(draw: DrawContext, node: NodeLayout): void {
   const color = branchColor(palette, node.changeset.branch);
 
   ctx.save();
-  ctx.globalAlpha = scene.highlightedAuthor && node.changeset.owner !== scene.highlightedAuthor ? 0.25 : 1;
-  if (scene.searchHits.has(id)) drawHalo(ctx, x, y, radius + (scene.activeSearchHit === id ? 9 : 7), palette.searchHit, 0.4);
+  ctx.globalAlpha = isChangesetDimmed(scene, node.changeset) ? DIMMED_ALPHA : 1;
+  if (scene.search?.changesets.has(id)) {
+    const current = scene.search.active?.kind === 'changeset' && scene.search.active.id === id;
+    drawNodeHit(ctx, x, y, radius, palette.searchHit, current, scene.searchPing);
+  }
   if (selected) drawHalo(ctx, x, y, radius + 8, palette.accent, 0.22);
 
   if (detail.avatars) {
@@ -126,7 +130,7 @@ function drawComment({ ctx, scene }: DrawContext, node: NodeLayout): void {
   const maxWidth = next === -1 ? LAST_COMMENT_WIDTH : columnX(next) - COMMENT_INSET - left - 8;
 
   ctx.save();
-  ctx.globalAlpha = scene.highlightedAuthor && node.changeset.owner !== scene.highlightedAuthor ? 0.3 : 1;
+  ctx.globalAlpha = isChangesetDimmed(scene, node.changeset) ? DIMMED_ALPHA : 1;
   ctx.font = `400 10.5px ${scene.palette.fontUi}`;
   ctx.fillStyle = scene.selectedChangeset === node.changeset.id ? scene.palette.textPrimary : scene.palette.textSecondary;
   ctx.textBaseline = 'middle';
