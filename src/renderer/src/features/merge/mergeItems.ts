@@ -40,8 +40,8 @@ export function toListRows(items: MergeItem[]): MergeListRow[] {
   const conflicts = items.filter(isConflict);
   const changes = items.filter((item) => !isConflict(item));
   return [
-    ...section('conflicts', 'Conflicts', 'Changed on both sides. Each one needs a result before the merge can complete; many merge automatically.', conflicts),
-    ...section('changes', 'Changes to apply', 'Changed on one side only: they will apply as they are.', changes),
+    ...section('conflicts', 'Conflicts', 'Changed on both sides', conflicts),
+    ...section('changes', 'Changes to apply', 'Changed on one side only', changes),
   ];
 }
 

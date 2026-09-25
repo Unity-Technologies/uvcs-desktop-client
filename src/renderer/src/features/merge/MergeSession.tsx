@@ -11,7 +11,7 @@ import { MergeItemList } from './MergeItemList';
 import { buildMergeItems, needsDecision, toListRows } from './mergeItems';
 import { completeMerge } from './mergeOperations';
 import { collectResolutions, needsServerFilePolicy, type ServerFilePolicy } from './mergeResolutions';
-import { conflictStatusOf, summarizePlan } from './mergeStatus';
+import { conflictStatusOf, planProgress, summarizePlan } from './mergeStatus';
 import { useFileConflicts, type FileConflictState } from './resolve/useFileConflicts';
 import styles from './MergeSession.module.css';
 
@@ -72,6 +72,7 @@ export function MergeSession({ workspacePath, request, plan, onCompleted }: Merg
         request={request}
         plan={plan}
         labels={labels}
+        progress={planProgress(conflictStatuses)}
         summary={summarizePlan(plan.changes.length, conflictStatuses)}
         intoServerBranch={intoServerBranch}
         comment={comment}

@@ -1,39 +1,17 @@
+/* One row: what merges into what, where it stands and the way out; notices only when there is something to say. */
 .header {
   display: flex;
   flex: none;
   flex-direction: column;
-  gap: var(--space-3);
-  padding: var(--space-4) var(--space-4) var(--space-3);
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--border-subtle);
 }
 
-.top {
+.row {
   display: flex;
   align-items: center;
   gap: var(--space-3);
-}
-
-.icon {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-lg);
-  background: var(--accent-soft);
-  color: var(--accent-text);
-}
-
-.titles {
-  flex: 1;
-  min-width: 0;
-}
-
-.titleRow {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
   min-width: 0;
 }
 
@@ -43,31 +21,25 @@
   align-items: center;
   gap: 4px;
   padding: 0 7px;
-  border: 1px solid var(--border-default);
   border-radius: var(--radius-full);
+  background: var(--bg-hover);
   color: var(--text-secondary);
   font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  letter-spacing: 0.02em;
-  line-height: 18px;
-  text-transform: uppercase;
+  font-weight: var(--weight-medium);
+  line-height: 20px;
 }
 
+/* Takes the room left in the row and is fitted to it (fitMergeTitle): what it doesn't use stays after it. */
 .title {
   display: flex;
+  flex: 1 1 0;
   gap: 0.3em;
   min-width: 0;
   margin: 0;
   overflow: hidden;
   font-size: var(--text-lg);
-  font-weight: 600;
+  font-weight: var(--weight-semibold);
   white-space: nowrap;
-}
-
-.guidance {
-  margin: 3px 0 0;
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
 }
 
 .notice {
@@ -79,12 +51,6 @@
   background: color-mix(in srgb, var(--status-changed) 12%, transparent);
   color: var(--text-primary);
   font-size: var(--text-sm);
-}
-
-.actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
 }
 
 .comment {
@@ -102,11 +68,17 @@
   box-shadow: var(--focus-ring);
 }
 
+.titleWord {
+  flex: none;
+}
+
 .spacer {
   flex: 1;
 }
 
 .status {
-  color: var(--text-tertiary);
+  flex: none;
+  color: var(--text-secondary);
   font-size: var(--text-sm);
+  white-space: nowrap;
 }

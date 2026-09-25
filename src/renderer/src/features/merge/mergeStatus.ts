@@ -87,35 +87,35 @@ export function presentStatus(status: ConflictStatus, labels: MergeLabels, tool 
   const { source, destination } = labels.roles;
   switch (status) {
     case 'reading':
-      return { label: 'Reading…', tone: 'muted', explanation: 'Reading the base, incoming and destination versions of this file.' };
+      return { label: 'Reading…', tone: 'muted', explanation: 'Reading the three versions' };
     case 'unreadable':
-      return { label: "Can't read", tone: 'pending', explanation: "Couldn't read the versions of this file to merge them." };
+      return { label: "Can't read", tone: 'pending', explanation: "Couldn't read the versions to merge" };
     case 'automatic':
       return {
         label: 'Will merge automatically',
         tone: 'automatic',
-        explanation: `Both sides changed this file, in different places, so their changes combine without asking you. To override, keep ${destination.version} or ${source.version} from the file's menu. Nothing is written until you complete the merge.`,
+        explanation: 'Both sides changed it, in different places',
       };
     case 'needsDecision':
       return {
         label: 'Needs your decision',
         tone: 'pending',
-        explanation: `Both sides changed the same lines. Resolve it in a merge tool, or pick a side for each conflict or for the whole file: keep ${destination.version}, keep ${source.version} or keep both.`,
+        explanation: 'Both sides changed the same lines',
       };
     case 'keepingDestination':
-      return { label: `Keeping ${destination.name.toLowerCase()}`, tone: 'decided', explanation: `The result will be ${destination.version} (${labels.destination}), as you chose.` };
+      return { label: `Keeping ${destination.name.toLowerCase()}`, tone: 'decided', explanation: labels.destination };
     case 'keepingSource':
-      return { label: `Keeping ${source.name.toLowerCase()}`, tone: 'decided', explanation: `The result will be ${source.version} (${labels.source}), as you chose.` };
+      return { label: `Keeping ${source.name.toLowerCase()}`, tone: 'decided', explanation: labels.source };
     case 'keepingBoth':
-      return { label: 'Keeping both', tone: 'decided', explanation: `Both items stay; the one from ${labels.destination} gets a new name.` };
+      return { label: 'Keeping both', tone: 'decided', explanation: `${destination.name} renamed` };
     case 'combined':
-      return { label: 'Combined', tone: 'decided', explanation: 'The result takes lines from both sides, as you chose for its conflicts.' };
+      return { label: 'Combined', tone: 'decided', explanation: 'Lines from both sides' };
     case 'edited':
-      return { label: 'Edited by you', tone: 'decided', explanation: 'You resolved the conflicts by hand. The file will be written as you left it.' };
+      return { label: 'Edited by you', tone: 'decided', explanation: 'Edited in the app' };
     case 'resolvedInTool':
-      return { label: `Resolved in ${tool}`, tone: 'decided', explanation: `You resolved it in ${tool}. The file will be written as you saved it there when you complete the merge.` };
+      return { label: `Resolved in ${tool}`, tone: 'decided', explanation: `Saved in ${tool}` };
     case 'openInTool':
-      return { label: `Open in ${tool}…`, tone: 'pending', explanation: `Waiting for you to save the result in ${tool} and close it.` };
+      return { label: `Open in ${tool}…`, tone: 'pending', explanation: `Save and close it in ${tool}` };
   }
 }
 
@@ -143,7 +143,7 @@ export function summarizePlan(changeCount: number, statuses: ConflictStatus[]): 
 
   const count = (wanted: (status: ConflictStatus) => boolean): number => statuses.filter(wanted).length;
   const automatic = count((status) => status === 'automatic');
-  const waiting = count((status) => status === 'needsDecision' || status === 'unreadable' || status === 'reading' || status === 'openInTool');
+  const waiting = count(isWaiting);
   const decided = statuses.length - automatic - waiting;
   const parts = [
     automatic > 0 && `${automatic} will merge automatically`,
@@ -151,4 +151,16 @@ export function summarizePlan(changeCount: number, statuses: ConflictStatus[]): 
     waiting > 0 && `${waiting} ${waiting === 1 ? 'needs' : 'need'} your decision`,
   ].filter(Boolean);
   return `${changes} · ${statuses.length} ${statuses.length === 1 ? 'conflict' : 'conflicts'}: ${parts.join(', ')}`;
+}
+
+/** The header's few words, "2 conflicts to decide" or "Ready to merge"; its tooltip says the rest (`summarizePlan`). */
+export function planProgress(statuses: ConflictStatus[]): string {
+  const waiting = statuses.filter(isWaiting).length;
+  if (waiting === 0) return 'Ready to merge';
+  return `${waiting} ${waiting === 1 ? 'conflict' : 'conflicts'} to decide`;
+}
+
+/** Whether a conflict still stands in the way of completing the merge. */
+function isWaiting(status: ConflictStatus): boolean {
+  return status === 'needsDecision' || status === 'unreadable' || status === 'reading' || status === 'openInTool';
 }
