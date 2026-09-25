@@ -92,7 +92,7 @@ export function pendingChangeMenu(workspacePath: string, changes: PendingChange[
       run: () => void deletePrivateFiles(workspacePath, privateChanges),
     },
     SEPARATOR,
-    single && filterRulesSubmenu(workspacePath, single),
+    single && filterRulesSubmenu(workspacePath, single.path),
     {
       label: 'Copy',
       icon: Copy,
@@ -108,11 +108,12 @@ export function pendingChangeMenu(workspacePath: string, changes: PendingChange[
   ]);
 }
 
-function filterRulesSubmenu(workspacePath: string, change: PendingChange): Submenu {
-  const extension = extensionOf(change.path);
+/** Adds an item, or all files with its extension, to the ignore, cloaked or hidden-changes rules. */
+export function filterRulesSubmenu(workspacePath: string, path: string): Submenu {
+  const extension = extensionOf(path);
   const patternsFor = (list: FilterRuleList): MenuEntry[] =>
     tidyMenu([
-      { id: `${list}.path`, label: `This item (/${change.path})`, run: () => void addFilterRule(workspacePath, list, `/${change.path}`) },
+      { id: `${list}.path`, label: `This item (/${path})`, run: () => void addFilterRule(workspacePath, list, `/${path}`) },
       extension !== null && { id: `${list}.extension`, label: `All ${extension} files`, run: () => void addFilterRule(workspacePath, list, `*${extension}`) },
     ]);
 

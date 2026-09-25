@@ -1,0 +1,23 @@
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.status[data-status='Locked'] {
+  background: color-mix(in srgb, var(--status-deleted) 14%, transparent);
+  color: var(--status-deleted);
+}
+
+.status[data-status='Retained'] {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.spinning {
+  animation: spin 0.8s linear infinite;
+}

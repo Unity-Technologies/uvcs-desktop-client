@@ -19,6 +19,7 @@ export function SegmentedControl<Value extends string>({ value, segments, onChan
       {segments.map((segment) => (
         <button
           key={segment.value}
+          type="button"
           role="radio"
           aria-checked={segment.value === value}
           title={segment.title}

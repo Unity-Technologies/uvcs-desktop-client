@@ -1,0 +1,25 @@
+import { ExternalLink, Trash2, UserPlus } from 'lucide-react';
+import { CODE_REVIEW_STATUSES, type CodeReview } from '@shared/domain/codeReview';
+import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
+import { deleteReviews, openReview, reassignReview, setReviewStatus } from './codeReviewOperations';
+
+export function codeReviewMenu(workspacePath: string, reviews: CodeReview[]): MenuEntry[] {
+  const single = reviews.length === 1 ? reviews[0]! : null;
+
+  return tidyMenu([
+    single && { id: 'open', label: 'Open review', icon: ExternalLink, run: () => openReview(single) },
+    SEPARATOR,
+    single && {
+      label: 'Set status',
+      entries: CODE_REVIEW_STATUSES.map((status) => ({
+        id: `status.${status}`,
+        label: status,
+        disabled: status === single.status,
+        run: () => void setReviewStatus(workspacePath, single, status),
+      })),
+    },
+    single && { id: 'assign', label: 'Assign reviewer…', icon: UserPlus, run: () => void reassignReview(workspacePath, single) },
+    SEPARATOR,
+    { id: 'delete', label: reviews.length === 1 ? 'Delete review' : `Delete ${reviews.length} reviews`, icon: Trash2, danger: true, run: () => void deleteReviews(workspacePath, reviews) },
+  ]);
+}

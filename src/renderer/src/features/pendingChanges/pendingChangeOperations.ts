@@ -25,7 +25,7 @@ export async function undoChanges(workspacePath: string, changes: PendingChange[
   await runAction(workspacePath, "Couldn't undo the changes", () => api.pendingChanges.undo(workspacePath, controlled.map((change) => change.path)));
 }
 
-export async function deletePrivateFiles(workspacePath: string, changes: PendingChange[]): Promise<void> {
+export async function deletePrivateFiles(workspacePath: string, changes: Pick<PendingChange, 'path'>[]): Promise<void> {
   const confirmed = await confirm({
     title: changes.length === 1 ? `Move ${fileName(changes[0]!.path)} to the trash?` : `Move ${changes.length} files to the trash?`,
     message: 'These files are not under version control. You can restore them from the trash.',
