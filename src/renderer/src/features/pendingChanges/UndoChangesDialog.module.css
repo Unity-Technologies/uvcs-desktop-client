@@ -1,0 +1,48 @@
+.consequences {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin: 0;
+  padding-left: var(--space-5);
+  color: var(--text-secondary);
+}
+
+/* Every affected file, so a bulk undo is never a leap of faith. */
+.files {
+  display: flex;
+  flex-direction: column;
+  max-height: 220px;
+  padding: var(--space-1);
+  overflow: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+}
+
+.file {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 var(--space-1);
+  min-width: 0;
+}
+
+.more {
+  padding: var(--space-1);
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.backup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hint {
+  padding-left: 23px;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}

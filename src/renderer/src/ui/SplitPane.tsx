@@ -1,4 +1,5 @@
 import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { trackPointerDrag } from '../lib/pointerDrag';
 import styles from './SplitPane.module.css';
 
 interface SplitPaneProps {
@@ -27,21 +28,12 @@ export function SplitPane({
   const horizontal = direction === 'horizontal';
 
   const startDrag = (event: React.PointerEvent): void => {
-    event.preventDefault();
     const bounds = containerRef.current!.getBoundingClientRect();
-    const onMove = (move: PointerEvent): void => {
+    trackPointerDrag(event, horizontal ? 'col-resize' : 'row-resize', (move) => {
       const fromStart = horizontal ? move.clientX - bounds.left : move.clientY - bounds.top;
       const offset = sizedPane === 'first' ? fromStart : (horizontal ? bounds.width : bounds.height) - fromStart;
       setSize(Math.min(maxSize, Math.max(minSize, offset)));
-    };
-    const onUp = (): void => {
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      document.body.style.cursor = '';
-    };
-    document.body.style.cursor = horizontal ? 'col-resize' : 'row-resize';
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
+    });
   };
 
   const sizedStyle: CSSProperties = horizontal ? { width: size } : { height: size };

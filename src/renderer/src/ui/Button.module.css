@@ -22,6 +22,11 @@
   pointer-events: none;
 }
 
+/* Looks disabled but still takes hover, so its tooltip can say why it can't be used. */
+.button[aria-disabled='true'] {
+  opacity: 0.45;
+}
+
 .small {
   height: 24px;
   padding: 0 var(--space-2);
@@ -41,7 +46,7 @@
   box-shadow: var(--shadow-sm);
 }
 
-.primary:hover {
+.primary:hover:not([aria-disabled='true']) {
   background: var(--accent-hover);
 }
 

@@ -1,4 +1,4 @@
-import { CheckCircle2, GitMerge, List, ListTree, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { CheckCircle2, Files, GitMerge, List, ListTree, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { invalidateWorkspace } from '../../app/queryClient';
@@ -14,18 +14,22 @@ import { SegmentedControl } from '../../ui/SegmentedControl';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { useChangeset } from '../changesets/useChangeset';
 import { ChangeDiffPanel } from './ChangeDiffPanel';
 import { ChangesList } from './ChangesList';
 import { ChangesSummaryBar } from './ChangesSummaryBar';
 import { CheckinPanel } from './CheckinPanel';
+import { HiddenCheckedNotice, NoFilterMatches } from './FilterNotices';
+import { mergeSourceChangeset, uploadSize } from './checkinButton';
 import { checkinChanges, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
 import { isCheckinCandidate } from './changeCategories';
-import { buildChangeRows, changeKey, changesUnderRow, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { buildChangeRows, changeKey, changesUnderRow, CHEVRON_SLOT, hasDisclosureRows, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
 import { changelistMenu } from './changelistMenu';
+import { moveToChangelist } from './changelistOperations';
 import { changeTone } from './changeTone';
 import { checkinComment, useCheckinDraft, useCheckinDraftStore } from './checkinDraftStore';
 import { pendingChangeMenu } from './pendingChangeMenu';
-import { undoChanges } from './pendingChangeOperations';
+import { openWithDefaultApp, undoChanges } from './pendingChangeOperations';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { usePendingChanges } from './usePendingChanges';
 import styles from './PendingChangesView.module.css';
@@ -46,13 +50,19 @@ export function PendingChangesView() {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [busy, setBusy] = useState(false);
 
-  const { visible: changes, query, bar: filterBar } = useChangeFilter(snapshot?.changes ?? NO_CHANGES, changePath, changeTone);
+  const allChanges = snapshot?.changes ?? NO_CHANGES;
+  const { visible: changes, query, clear: clearFilter, bar: filterBar } = useChangeFilter(allChanges, changePath, changeTone);
   const isIncluded = (change: PendingChange): boolean => isCheckinCandidate(change) && !draft.excludedPaths.has(change.path);
-  const included = changes.filter(isIncluded);
+  // Check in takes every checked change, including those the filter hides: the filter only narrows what is shown.
+  const included = allChanges.filter(isIncluded);
+  const shown = new Set(changes);
+  const hiddenIncludedCount = included.filter((change) => !shown.has(change)).length;
+  const selectedCount = changes.filter((change) => selection.selected.has(changeKey(change))).length;
   const changelists = snapshot?.changelists ?? [];
   const rows = buildChangeRows({ changes, changelists, layout, grouping, isChecked: isIncluded, collapsed });
   const focused = changes.find((change) => changeKey(change) === selection.anchor);
-  const mergeChanges = changes.filter((change) => change.mergeInfo);
+  const mergeChanges = allChanges.filter((change) => change.mergeInfo);
+  const { data: mergeSource } = useChangeset(mergeSourceChangeset(mergeChanges));
   const firstChangeKey = rows.find((row) => row.type === 'change')?.key;
 
   // Keep something selected, so the diff pane is useful from the start and after the selected file goes away.
@@ -60,8 +70,14 @@ export function PendingChangesView() {
     if (!focused && firstChangeKey) setSelection({ selected: new Set([firstChangeKey]), anchor: firstChangeKey });
   }, [focused, firstChangeKey]);
 
-  const toggleIncluded = (row: ChangeRow, include: boolean): void =>
-    setIncluded(workspacePath, changesUnderRow(row).map((change) => change.path), include);
+  const setIncludedChanges = (selected: PendingChange[], include: boolean): void =>
+    setIncluded(workspacePath, selected.map((change) => change.path), include);
+  const toggleIncluded = (row: ChangeRow, include: boolean): void => setIncludedChanges(changesUnderRow(row), include);
+
+  // Checking in completes a pending merge: start its comment with where the merge comes from.
+  useEffect(() => {
+    if (mergeSource && !draft.summary && !draft.description) setMessage(workspacePath, { summary: `Merged from ${mergeSource.branch}` });
+  }, [mergeSource?.id]);
 
   const toggleCollapsed = (key: string): void =>
     setCollapsed((current) => {
@@ -158,29 +174,40 @@ export function PendingChangesView() {
               changes={changes}
               totalCount={snapshot?.changes.length ?? 0}
               isIncluded={isIncluded}
-              onSetIncluded={(selected, include) => setIncluded(workspacePath, selected.map((change) => change.path), include)}
+              onSetIncluded={setIncludedChanges}
               onUndo={(selected) => void undoChanges(workspacePath, selected)}
               onUndoUnchanged={() => void undoUnchangedCheckouts(workspacePath)}
+              checkboxInset={hasDisclosureRows(rows) ? CHEVRON_SLOT : 0}
             />
             {filterBar}
-            <HighlightQuery query={query}>
-              <ChangesList
-                rows={rows}
-                selection={selection}
-                onSelectionChange={setSelection}
-                onToggleIncluded={toggleIncluded}
-                onToggleCollapsed={toggleCollapsed}
-                onOpen={(change) => setSelection({ selected: new Set([changeKey(change)]), anchor: changeKey(change) })}
-                contextMenu={(selected) => pendingChangeMenu(workspacePath, selected, changelists)}
-                changelistMenu={(changelist) => changelistMenu(workspacePath, changelist)}
-              />
-            </HighlightQuery>
+            {changes.length === 0 ? (
+              <NoFilterMatches onClear={clearFilter} />
+            ) : (
+              <HighlightQuery query={query}>
+                <ChangesList
+                  rows={rows}
+                  selection={selection}
+                  onSelectionChange={setSelection}
+                  onToggleIncluded={toggleIncluded}
+                  onToggleCollapsed={toggleCollapsed}
+                  onOpen={(change) => openWithDefaultApp(workspacePath, change)}
+                  onMoveToChangelist={
+                    grouping === 'changelist' ? (moved, changelist) => void moveToChangelist(workspacePath, changelist, moved) : undefined
+                  }
+                  contextMenu={(selected) => pendingChangeMenu(workspacePath, selected, changelists, { isIncluded, setIncluded: setIncludedChanges })}
+                  changelistMenu={(changelist) => changelistMenu(workspacePath, changelist)}
+                />
+              </HighlightQuery>
+            )}
+            {hiddenIncludedCount > 0 && <HiddenCheckedNotice count={hiddenIncludedCount} onClear={clearFilter} />}
             <CheckinPanel
               summary={draft.summary}
               description={draft.description}
               onMessageChange={(message) => setMessage(workspacePath, message)}
               includedCount={included.length}
+              uploadBytes={uploadSize(included)}
               branchName={workspace?.selector.name ?? ''}
+              merging={mergeChanges.length > 0}
               recentComments={settings.recentComments}
               busy={busy}
               onCheckin={checkin}
@@ -189,7 +216,9 @@ export function PendingChangesView() {
           </div>
         }
         second={
-          focused ? (
+          selectedCount > 1 ? (
+            <EmptyState icon={<Files size={24} />} title={`${selectedCount} files selected`} description="Select a single file to see its diff." />
+          ) : focused ? (
             <ChangeDiffPanel workspacePath={workspacePath} change={focused} />
           ) : (
             <EmptyState title="Select a change" description="Pick a file on the left to see what changed." />
