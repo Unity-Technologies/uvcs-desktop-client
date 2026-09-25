@@ -65,7 +65,7 @@ export function createWorkspacesService({ cm, operations, watcher }: ServiceCont
           onOutputLine: reportProgress,
         });
       } catch (error) {
-        if (error instanceof CmError && error.message.includes('--dontmerge')) throw new Error(UPDATE_NEEDS_MERGE);
+        if (error instanceof CmError && error.message.includes('--dontmerge')) throw error.withMessage(UPDATE_NEEDS_MERGE);
         throw error;
       }
     });

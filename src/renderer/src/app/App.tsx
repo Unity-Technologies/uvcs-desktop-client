@@ -6,6 +6,7 @@ import { CommandPalette } from './commands/CommandPalette';
 import { CommandShortcuts } from './commands/CommandShortcuts';
 import { useAppCommands } from './commands/useAppCommands';
 import { useMenuCommands } from './commands/useMenuCommands';
+import { errorDetailsAction } from './errors/errorDetailsAction';
 import { HomeScreen } from './home/HomeScreen';
 import { queryClient } from './queryClient';
 import { useTheme } from './settings/useTheme';
@@ -21,7 +22,7 @@ export function App() {
       <CommandPalette />
       <CommandShortcuts />
       <DialogHost />
-      <ToastHost />
+      <ToastHost errorAction={errorDetailsAction} />
       <TooltipLayer />
     </QueryClientProvider>
   );

@@ -5,12 +5,14 @@ import { useCommandLogStore } from './commandLogStore';
 import styles from './CommandLogPanel.module.css';
 
 export function CommandLogPanel() {
-  const { entries, clear, toggle } = useCommandLogStore();
+  const { entries, revealedId, clear, toggle } = useCommandLogStore();
   const listRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
-  }, [entries.length]);
+    const revealed = revealedId !== null && listRef.current?.querySelector(`[data-entry-id="${revealedId}"]`);
+    if (revealed) revealed.scrollIntoView({ block: 'center' });
+    else listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+  }, [entries.length, revealedId]);
 
   return (
     <section className={styles.panel}>
@@ -23,7 +25,13 @@ export function CommandLogPanel() {
       </header>
       <div ref={listRef} className={`${styles.list} selectable`}>
         {entries.map((entry) => (
-          <div key={entry.id} className={styles.entry} data-failed={entry.exitCode !== 0}>
+          <div
+            key={entry.id}
+            className={styles.entry}
+            data-entry-id={entry.id}
+            data-failed={entry.exitCode !== 0}
+            data-revealed={entry.id === revealedId}
+          >
             <span className={styles.duration}>{entry.durationMs} ms</span>
             <span className={styles.command}>{entry.commandLine}</span>
             <button className={styles.copy} onClick={() => void navigator.clipboard.writeText(entry.commandLine)} data-tip="Copy command">
