@@ -9,6 +9,7 @@ import { useAppCommands } from './commands/useAppCommands';
 import { useMenuCommands } from './commands/useMenuCommands';
 import { errorDetailsAction } from './errors/errorDetailsAction';
 import { HomeScreen } from './home/HomeScreen';
+import { OperationCard } from './operations/OperationCard';
 import { queryClient } from './queryClient';
 import { useSettingsFromOtherWindows } from './settings/useSettings';
 import { useTheme } from './settings/useTheme';
@@ -26,7 +27,7 @@ export function App() {
       <CommandPalette />
       <CommandShortcuts />
       <DialogHost />
-      <ToastHost errorAction={errorDetailsAction} />
+      <ToastHost errorAction={errorDetailsAction} renderOperation={(toast, dismiss) => <OperationCard toast={toast} dismiss={dismiss} />} />
       <TooltipLayer />
     </QueryClientProvider>
   );

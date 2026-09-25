@@ -30,7 +30,8 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
       chunks.push(text);
       if (!options.onOutputLine) return;
 
-      const lines = (pendingLine + text).split(/\r?\n/);
+      // A progress line rewritten in place (`\r`) counts as a line of its own.
+      const lines = (pendingLine + text).split(/\r\n|\r|\n/);
       pendingLine = lines.pop() ?? '';
       lines.forEach(options.onOutputLine);
     };

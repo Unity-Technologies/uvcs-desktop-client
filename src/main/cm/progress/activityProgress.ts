@@ -1,25 +1,21 @@
-const ITEM_OPERATIONS: Record<string, string> = {
-  U: 'Updating',
-  C: 'Creating',
-  D: 'Deleting',
-  M: 'Moving',
-};
+import type { ProgressReader } from './progressReader';
 
-/** Turns raw `cm` progress output into a short human-readable line, or null to skip it. */
-export function describeProgressLine(line: string): string | null {
+/**
+ * Commands without a progress format of their own (push, pull, sync): their stage lines become the stage, their item
+ * lines (`<U:/w/a.txt>`) the detail, and the rest is shown as is.
+ */
+export const readActivityProgress: ProgressReader = (previous, line) => {
   const trimmed = line.trim();
-  if (!trimmed) return null;
+  if (!trimmed || /^(CI_START|CHANGESET )/.test(trimmed)) return previous;
+
+  const item = /^<[A-Z]:(.*)>$/.exec(trimmed);
+  if (item) return { ...working(previous?.stageLabel ?? 'Working'), currentItem: item[1] };
 
   const stage = /^<STAGE:(.*)>$/.exec(trimmed) ?? /^STAGE (.+)$/.exec(trimmed);
-  if (stage) return stage[1]!.trim() || null;
+  const label = stage ? stage[1]!.trim() : trimmed;
+  return label ? working(label) : previous;
+};
 
-  const item = /^<([A-Z]):(.*)>$/.exec(trimmed);
-  if (item) return `${ITEM_OPERATIONS[item[1]!] ?? 'Processing'} ${fileName(item[2]!)}`;
-
-  if (/^(CI_START|CHANGESET )/.test(trimmed)) return null;
-  return trimmed;
-}
-
-function fileName(path: string): string {
-  return path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
+function working(stageLabel: string) {
+  return { stage: 'working', stageLabel, fraction: null } as const;
 }

@@ -1,3 +1,4 @@
+import type { OperationProgress } from './domain/operation';
 import type { AppSettings } from './domain/settings';
 
 export interface CommandLogEntry {
@@ -12,9 +13,9 @@ export interface CommandLogEntry {
   output: string;
 }
 
-export interface OperationProgress {
+export interface OperationProgressEvent {
   operationId: string;
-  line: string;
+  progress: OperationProgress;
 }
 
 /** What changed on disk in a workspace since the last event. */
@@ -34,7 +35,7 @@ export interface WorkspaceChange {
 export interface UvcsEvents {
   commandLogged: CommandLogEntry;
   workspaceChanged: WorkspaceChange & { workspacePath: string };
-  operationProgress: OperationProgress;
+  operationProgress: OperationProgressEvent;
   /** The settings changed, in this window or another one. */
   settingsChanged: AppSettings;
   /** A workspace was picked from the OS recent documents; `system.takeRequestedWorkspace` tells which. */

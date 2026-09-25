@@ -3,12 +3,11 @@ import { dirname, join } from 'node:path';
 import type { UpdateConflict, UpdateResolutions, UpdateResult } from '@shared/domain/incoming';
 import type { CmClient } from '../cm/CmClient';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
+import { readUpdateProgress } from '../cm/progress/updateProgress';
+import { UPDATE_ARGS } from '../cm/updateArgs';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
 import { readIncomingChanges } from './incoming';
-
-/** `--dontmerge`: never launch an external merge tool. Conflicts with local changes are resolved in the Incoming view. */
-export const UPDATE_ARGS = ['update', '--machinereadable', '--noinput', '--dontmerge'];
 
 /**
  * Updates a workspace whose local changes collide with incoming ones, without an external merge tool:
@@ -27,7 +26,7 @@ export async function updateWithMerge(
   const { conflicts, blockedPaths } = await readIncomingChanges(cm, workspacePath);
   if (blockedPaths.length > 0) throw new Error(`Check in, shelve or undo your changes to ${blockedPaths.join(', ')} first: the branch deleted or moved them.`);
   const update = (): Promise<string> =>
-    cm.execute(UPDATE_ARGS, { cwd: workspacePath, signal: context.signal, onOutputLine: context.reportProgress });
+    cm.execute(UPDATE_ARGS, { cwd: workspacePath, signal: context.signal, onOutputLine: context.progressOf(readUpdateProgress) });
 
   if (conflicts.length === 0) {
     await update();

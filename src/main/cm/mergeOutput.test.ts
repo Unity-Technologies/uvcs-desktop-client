@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeMergeProgress, directoryConflictIdentity, MERGE_FIELD_SEPARATOR, parseCreatedChangeset, parseDestinationMoved, parseMergePlan } from './mergeOutput';
+import { directoryConflictIdentity, MERGE_FIELD_SEPARATOR, parseCreatedChangeset, parseDestinationMoved, parseMergePlan } from './mergeOutput';
 
 /** Real `cm merge --machinereadable --printcontributors` output, written with `|` for readability. */
 function output(...lines: string[]): string {
@@ -88,17 +88,6 @@ describe('directoryConflictIdentity', () => {
     const [first] = parseMergePlan(PREVIEW).directoryConflicts;
     const [again] = parseMergePlan(PREVIEW).directoryConflicts;
     expect(directoryConflictIdentity(first!)).toBe(directoryConflictIdentity(again!));
-  });
-});
-
-describe('describeMergeProgress', () => {
-  it('describes the files being merged', () => {
-    expect(describeMergeProgress(output('DO_MERGE|/private/tmp/w/src/auto.txt'))).toBe('Merging auto.txt');
-    expect(describeMergeProgress(output('DO_MOVED|/w/a.txt|/w/b.txt'))).toBe('Moving a.txt');
-  });
-
-  it('skips preview records', () => {
-    expect(describeMergeProgress(output('FILE_CONFLICT|/a|1|2|3|4'))).toBeNull();
   });
 });
 

@@ -1,17 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { describeProgressLine } from './describeProgressLine';
+import { readActivityProgress } from './activityProgress';
+import { readProgress } from './progressReader';
 
-describe('describeProgressLine', () => {
-  it('shows update stages as plain text', () => {
-    expect(describeProgressLine('<STAGE:Performing switch operation...>')).toBe('Performing switch operation...');
+describe('readActivityProgress', () => {
+  it('shows stages as plain text', () => {
+    expect(readProgress(readActivityProgress, ['<STAGE:Performing switch operation...>'])).toEqual({
+      stage: 'working',
+      stageLabel: 'Performing switch operation...',
+      fraction: null,
+    });
+    expect(readProgress(readActivityProgress, ['STAGE Uploading file data'])?.stageLabel).toBe('Uploading file data');
   });
 
-  it('describes item operations with their file name', () => {
-    expect(describeProgressLine('<U:/work/src/readme.md>')).toBe('Updating readme.md');
+  it('keeps the stage and shows item paths as the detail', () => {
+    expect(readProgress(readActivityProgress, ['Pulling', '<U:/work/src/readme.md>'])).toEqual({
+      stage: 'working',
+      stageLabel: 'Pulling',
+      fraction: null,
+      currentItem: '/work/src/readme.md',
+    });
   });
 
-  it('shows checkin stages and skips the result lines', () => {
-    expect(describeProgressLine('STAGE Uploading file data')).toBe('Uploading file data');
-    expect(describeProgressLine("CHANGESET cs:4@br:/main@repo@local (mount:'/')")).toBeNull();
+  it('skips the result lines', () => {
+    expect(readProgress(readActivityProgress, ['Pulling', "CHANGESET cs:4@br:/main@repo@local (mount:'/')"])?.stageLabel).toBe('Pulling');
   });
 });

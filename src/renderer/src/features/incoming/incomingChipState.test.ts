@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IncomingChanges, IncomingSummary } from '@shared/domain/incoming';
+import { nextProgressBar, SWEEP } from '../../app/operations/progressBar';
 import { incomingChipState } from './incomingChipState';
 
 const summary = (changesetCount: number, branch: string | null = '/main'): IncomingSummary => ({
@@ -38,13 +39,14 @@ describe('incomingChipState', () => {
   });
 
   it('shows the stage of a running update, even when nothing was incoming', () => {
-    const running = { id: '1', workspacePath: '/w', kind: 'update' as const, title: 'Updating workspace', detail: 'Creating f1.bin' };
-    expect(incomingChipState(summary(0), undefined, running)).toEqual({ kind: 'updating', stage: 'Creating f1.bin' });
-    expect(incomingChipState(summary(3), undefined, { ...running, detail: null })).toEqual({ kind: 'updating', stage: 'Starting' });
+    const progress = { stage: 'downloading' as const, stageLabel: 'Downloading', current: 1, total: 4, bytesDone: 1024, bytesTotal: 4096, fraction: 0.25 };
+    const running = { id: '1', workspacePath: '/w', kind: 'update' as const, title: 'Updating workspace', progress, bar: nextProgressBar(SWEEP, progress, 0) };
+    expect(incomingChipState(summary(0), undefined, running)).toEqual({ kind: 'updating', stage: '25% · 1.0 of 4.0 KB', ring: 0.25 });
+    expect(incomingChipState(summary(3), undefined, { ...running, progress: null, bar: SWEEP })).toEqual({ kind: 'updating', stage: 'Starting', ring: null });
   });
 
   it('ignores other operations', () => {
-    const running = { id: '1', workspacePath: '/w', kind: 'switch' as const, title: 'Switching to /main/task', detail: null };
+    const running = { id: '1', workspacePath: '/w', kind: 'switch' as const, title: 'Switching to /main/task', progress: null, bar: SWEEP };
     expect(incomingChipState(summary(0), undefined, running)).toBeNull();
   });
 });

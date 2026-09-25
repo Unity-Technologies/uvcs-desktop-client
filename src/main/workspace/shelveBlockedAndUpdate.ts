@@ -2,9 +2,10 @@ import type { ShelvedForUpdate } from '@shared/domain/incoming';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
+import { readUpdateProgress } from '../cm/progress/updateProgress';
+import { UPDATE_ARGS } from '../cm/updateArgs';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { readIncomingChanges } from '../merge/incoming';
-import { UPDATE_ARGS } from '../merge/updateWithMerge';
 import type { OperationContext } from '../operations/OperationTracker';
 import type { LeftChangesFinder } from './leftChanges';
 import { changedPaths, shelvedChangelists, SWITCH_STATUS_ARGS } from './pendingSnapshot';
@@ -40,8 +41,8 @@ export async function shelveBlockedAndUpdate(deps: ShelveForUpdateDependencies, 
   const blocked = new Set(incoming.blockedPaths);
   const changes = snapshot.changes.filter((change) => blocked.has(change.path));
 
-  context.reportProgress('Shelving the files the branch deleted or moved…');
-  const shelve = await createSwitchShelve(cm, workspacePath, changes, objectRef, incoming.blockedPaths);
+  context.beginStep('Shelving the blocking files', 1, 2);
+  const shelve = await createSwitchShelve(cm, workspacePath, changes, objectRef, context, incoming.blockedPaths);
   const record: SwitchShelveRecord = {
     workspaceGuid: workspace.guid,
     shelveId: shelve.id,
@@ -62,8 +63,8 @@ export async function shelveBlockedAndUpdate(deps: ShelveForUpdateDependencies, 
     await cm.query(['undo', ...incoming.blockedPaths.map((path) => toAbsolutePath(workspacePath, path))], { cwd: workspacePath });
     if (incoming.conflicts.length > 0) return { ...result, updated: false };
 
-    context.reportProgress('Updating…');
-    await cm.execute(UPDATE_ARGS, { cwd: workspacePath, onOutputLine: context.reportProgress });
+    context.beginStep('Updating', 2, 2);
+    await cm.execute(UPDATE_ARGS, { cwd: workspacePath, onOutputLine: context.progressOf(readUpdateProgress) });
     return { ...result, updated: true };
   } catch (error) {
     throw await putBack(deps, workspacePath, record, error, context);

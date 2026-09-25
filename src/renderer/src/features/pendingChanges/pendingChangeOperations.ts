@@ -1,7 +1,7 @@
 import type { FilterRuleList, PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
-import { runAction, runVoidAction } from '../../app/operations/runOperation';
+import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
 import { copyToClipboard } from '../../lib/copyToClipboard';
 import { pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
@@ -27,9 +27,15 @@ export async function undoChanges(workspacePath: string, changes: PendingChange[
   let backupShelveId: number | undefined;
   if (answer.backup) {
     // Backup before undo: if the shelve fails, nothing is undone.
-    backupShelveId = await runAction(workspacePath, "Couldn't shelve a backup, so nothing was undone", () =>
-      api.pendingChanges.shelve(workspacePath, paths, BACKUP_SHELVE_COMMENT),
-    );
+    backupShelveId = await runOperation({
+      title: `Backing up ${pluralize(controlled.length, 'change')}`,
+      workspacePath,
+      run: (operationId) => api.pendingChanges.shelve(workspacePath, paths, BACKUP_SHELVE_COMMENT, operationId),
+      onFailure: (error) => {
+        toast.error("Couldn't shelve a backup, so nothing was undone", error);
+        return true;
+      },
+    });
     if (backupShelveId === undefined) return;
   }
 

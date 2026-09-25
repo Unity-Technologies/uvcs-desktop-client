@@ -1,11 +1,11 @@
 import type { SwitchResult } from '@shared/domain/switchWithChanges';
 import { spec } from '@shared/domain/specs';
 import { pluralize } from '../../lib/text';
-import type { Toast } from '../../ui/toast/toastStore';
+import type { OperationSuccess } from '../operations/runOperation';
 import { navigation } from '../navigation/navigationStore';
 
 /** What to tell the user after a switch, depending on what happened to their changes. */
-export function switchToast(result: SwitchResult, targetName: string): Omit<Toast, 'id'> {
+export function switchToast(result: SwitchResult, targetName: string): OperationSuccess {
   const restoredCount = 'restored' in result ? result.restored?.count : undefined;
   const restored = restoredCount ? `Restored the ${pluralize(restoredCount, 'change')} you left here.` : undefined;
   const viewChanges = { label: 'View', run: () => navigation.goToView('changes') };

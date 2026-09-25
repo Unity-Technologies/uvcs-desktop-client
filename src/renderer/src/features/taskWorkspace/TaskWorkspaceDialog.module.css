@@ -79,18 +79,38 @@
 
 .stepText {
   display: flex;
+  flex: 1;
   flex-direction: column;
   min-width: 0;
   line-height: 20px;
 }
 
 .stepDetail {
-  overflow: hidden;
+  display: flex;
+  gap: var(--space-2);
   color: var(--text-tertiary);
   font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
   line-height: 16px;
-  text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.stepStage {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* A fixed width: the stage words stay put while the number grows. */
+.stepPercent {
+  flex: none;
+  width: 4ch;
+  text-align: right;
+}
+
+.stepTrack {
+  margin: 4px 0 2px;
 }
 
 .failure {

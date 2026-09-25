@@ -1,9 +1,11 @@
 import { TerminalSquare } from 'lucide-react';
 import { PathLabel } from '../../components/PathLabel';
 import { useIncomingSummary } from '../../features/incoming/useIncomingSummary';
-import { Spinner } from '../../ui/Spinner';
+import { ProgressRing } from '../../ui/ProgressRing';
 import { navigation } from '../navigation/navigationStore';
-import { useRunningOperation } from '../operations/runningOperationsStore';
+import { describeProgress } from '../operations/describeProgress';
+import { ringValue } from '../operations/progressBar';
+import { useRunningOperation, type RunningOperation } from '../operations/runningOperationsStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
 import { ranInWorkspace } from './commandLogScope';
 import { useCommandLogStore } from './commandLogStore';
@@ -32,11 +34,7 @@ export function StatusBar() {
     <footer className={styles.statusBar} data-busy={Boolean(running)}>
       <div className={styles.context}>
         {running ? (
-          <>
-            <Spinner size={10} />
-            <span className={styles.activity}>{running.title}</span>
-            {running.detail && <span className={styles.detail}>{running.detail}</span>}
-          </>
+          <RunningActivity operation={running} />
         ) : (
           context && (
             <>
@@ -73,5 +71,19 @@ export function StatusBar() {
         {failure ? <span className={styles.failedDot} /> : <TerminalSquare size={12} />}
       </button>
     </footer>
+  );
+}
+
+/** The running operation in a line: a ring filling with the bar, the title, then the percentage (fixed width) and the stage. */
+function RunningActivity({ operation }: { operation: RunningOperation }) {
+  const { bar, progress } = operation;
+  const text = describeProgress(progress);
+  return (
+    <>
+      <ProgressRing value={ringValue(bar)} size={11} />
+      <span className={styles.activity}>{operation.title}</span>
+      <span className={styles.percent}>{bar.mode === 'sweep' ? null : text.percent}</span>
+      <span className={styles.detail}>{text.stage}</span>
+    </>
   );
 }
