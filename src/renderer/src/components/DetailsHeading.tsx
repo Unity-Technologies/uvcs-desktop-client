@@ -1,4 +1,5 @@
-import { Pencil } from 'lucide-react';
+import { Copy, Pencil } from 'lucide-react';
+import { copyToClipboard } from '../lib/copyToClipboard';
 import { useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { joinComment, looksLikeMarkdown, splitComment, type CommentParts } from '../lib/comment';
 import { hotkey } from '../lib/shortcutRegistry';
@@ -35,7 +36,7 @@ export function DetailsHeading({ name, comment = '', onSave }: DetailsHeadingPro
   }
 
   return (
-    <div className={styles.heading} data-editable={Boolean(edit)}>
+    <div className={styles.heading} data-actions={Boolean(edit || comment.trim())}>
       <Folded
         title={
           name ??
@@ -51,9 +52,12 @@ export function DetailsHeading({ name, comment = '', onSave }: DetailsHeadingPro
         description={parts.description}
         onAddDescription={name !== undefined && !parts.description ? edit : undefined}
       />
-      {edit && (
-        <IconButton size="small" className={styles.edit} icon={<Pencil size={12} />} label="Edit comment" onClick={edit} />
-      )}
+      <div className={styles.actions}>
+        {comment.trim() && (
+          <IconButton size="small" icon={<Copy size={12} />} label="Copy comment" onClick={() => copyToClipboard(comment.trim(), 'Comment')} />
+        )}
+        {edit && <IconButton size="small" icon={<Pencil size={12} />} label="Edit comment" onClick={edit} />}
+      </div>
     </div>
   );
 }

@@ -3,21 +3,23 @@
   min-width: 0;
 }
 
-/* Room for the pencil at the end of the title's first line. */
-.heading[data-editable='true'] .title {
-  padding-right: 26px;
+/* Room for the copy and edit buttons at the end of the title's first line. */
+.heading[data-actions='true'] .title {
+  padding-right: 48px;
 }
 
-.edit {
+.actions {
   position: absolute;
   top: -1px;
   right: -4px;
+  display: flex;
+  gap: 2px;
   opacity: 0;
   transition: opacity var(--duration-fast);
 }
 
-.heading:hover .edit,
-.edit:focus-visible {
+.heading:hover .actions,
+.actions:focus-within {
   opacity: 1;
 }
 
