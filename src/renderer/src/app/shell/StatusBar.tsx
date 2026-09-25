@@ -7,13 +7,14 @@ import { useRunningOperation } from '../operations/runningOperationsStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
 import { ranInWorkspace } from './commandLogScope';
 import { useCommandLogStore } from './commandLogStore';
+import { isUnseenFailure } from './unseenFailure';
 import { workspaceContext } from './workspaceContext';
 import styles from './StatusBar.module.css';
 
 /**
  * A quiet line at the bottom: where the workspace is and what is running on the left, the command log on the right.
  * The last `cm` command is only a faint hint, shown on hover and while something runs; a failed one leaves a red dot
- * until the command log (which the hint opens) has been looked at.
+ * until the command log (which the hint opens) has been looked at, unless the operation that ran it dealt with it.
  */
 export function StatusBar() {
   const workspacePath = useWorkspacePath();
@@ -22,7 +23,7 @@ export function StatusBar() {
   const running = useRunningOperation(workspacePath);
   const lastCommand = useCommandLogStore((state) => state.entries.findLast((entry) => ranInWorkspace(entry, workspacePath)));
   const failure = useCommandLogStore((state) =>
-    state.open ? undefined : state.entries.findLast((entry) => entry.exitCode !== 0 && entry.id > state.seenUpTo && ranInWorkspace(entry, workspacePath)),
+    state.open ? undefined : state.entries.findLast((entry) => isUnseenFailure(entry, state.seenUpTo, state.handledIds) && ranInWorkspace(entry, workspacePath)),
   );
   const toggleCommandLog = useCommandLogStore((state) => state.toggle);
   const context = info && workspaceContext(info, summary);

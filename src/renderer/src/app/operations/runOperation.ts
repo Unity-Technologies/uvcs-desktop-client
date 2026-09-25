@@ -1,4 +1,5 @@
-import { api } from '../../api/client';
+import { ApiError, api } from '../../api/client';
+import { useCommandLogStore } from '../shell/commandLogStore';
 import { invalidateWorkspace } from '../queryClient';
 import { toast, useToastStore, type ToastAction } from '../../ui/toast/toastStore';
 import { describeProgressLine } from './describeProgressLine';
@@ -15,7 +16,10 @@ interface OperationOptions<T> {
   cancellable?: boolean;
   /** Set for operations that change the loaded revisions: they don't start while another operation runs on the workspace. */
   kind?: WorkspaceChangingOperation;
-  /** Explains a failure it recognizes in its own way (returns true); otherwise the failure shows as an error toast. */
+  /**
+   * Explains a failure it recognizes in its own way (returns true), which then isn't flagged as a failure in the status
+   * bar; otherwise the failure shows as an error toast.
+   */
   onFailure?: (error: unknown) => boolean;
 }
 
@@ -61,13 +65,19 @@ export async function runOperation<T>({
     return result;
   } catch (error) {
     toasts.dismiss(toastId);
-    if (!onFailure?.(error)) toast.error(`${title} failed`, error);
+    if (onFailure?.(error)) markHandled(error);
+    else toast.error(`${title} failed`, error);
     return undefined;
   } finally {
     stopListening();
     operations.finish(operationId);
     void invalidateWorkspace(workspacePath);
   }
+}
+
+/** A failure the operation explained in its own way is no failure to point at in the status bar. */
+function markHandled(error: unknown): void {
+  if (error instanceof ApiError && error.command) useCommandLogStore.getState().markHandled(error.command.logEntryId);
 }
 
 /**
