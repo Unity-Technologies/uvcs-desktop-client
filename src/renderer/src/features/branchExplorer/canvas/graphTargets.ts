@@ -1,7 +1,9 @@
 import type { GraphLabel, MergeLink } from '@shared/domain/branchExplorer';
 import type { GraphLayout, Lane } from '../model/layoutGraph';
 import { distanceToCurve, linkCurve, type Point } from './curves';
-import { COLUMN_WIDTH, columnX, GRAPH_PADDING, NODE_RADIUS, ROW_HEIGHT, rowY } from './geometry';
+import { BAND_HEIGHT, COLUMN_WIDTH, columnX, GRAPH_PADDING, HEADER_HEIGHT, HEADER_MAX_WIDTH, headerTop, NODE_RADIUS, ROW_HEIGHT, rowY } from './geometry';
+import { estimatedLabelWidth, LABEL_HEIGHT, labelTop } from './labelPlacement';
+import { laneShape } from './laneShape';
 
 /** Something the pointer can be on. */
 export type GraphTarget =
@@ -10,21 +12,12 @@ export type GraphTarget =
   | { kind: 'branch'; lane: Lane }
   | { kind: 'mergeLink'; link: MergeLink };
 
-/** Labels are drawn as tags stacked above their changeset. */
-export const LABEL_HEIGHT = 16;
-export const LABEL_GAP = 3;
-const LABEL_HALF_WIDTH = 34;
-
-const NODE_HIT_RADIUS = NODE_RADIUS + 5;
+const NODE_HIT_RADIUS = NODE_RADIUS + 4;
 const LINE_HIT_DISTANCE = 6;
 
 export function nodePoint(layout: GraphLayout, changesetId: number): Point | null {
   const node = layout.nodes.get(changesetId);
   return node ? { x: columnX(node.column), y: rowY(node.row) } : null;
-}
-
-export function labelTop(changesetY: number, index: number): number {
-  return changesetY - NODE_RADIUS - 6 - (index + 1) * (LABEL_HEIGHT + LABEL_GAP);
 }
 
 /** Finds what is under a world-space point, most specific first. */
@@ -42,13 +35,14 @@ function hitChangeset(layout: GraphLayout, point: Point): GraphTarget | null {
 function hitLabel(layout: GraphLayout, point: Point): GraphTarget | null {
   const node = layout.nodesByColumn[Math.round((point.x - GRAPH_PADDING.left) / COLUMN_WIDTH)];
   const labels = node ? layout.labelsByChangeset.get(node.changeset.id) : undefined;
-  if (!node || !labels || Math.abs(columnX(node.column) - point.x) > LABEL_HALF_WIDTH) return null;
+  if (!node || !labels) return null;
 
-  const index = labels.findIndex((_, position) => {
-    const top = labelTop(rowY(node.row), position);
-    return point.y >= top && point.y <= top + LABEL_HEIGHT;
+  const label = labels.find((candidate, index) => {
+    const top = labelTop(layout, node, index);
+    const halfWidth = estimatedLabelWidth(candidate.name) / 2;
+    return point.y >= top && point.y <= top + LABEL_HEIGHT && Math.abs(columnX(node.column) - point.x) <= halfWidth;
   });
-  return index === -1 ? null : { kind: 'label', label: labels[index]! };
+  return label ? { kind: 'label', label } : null;
 }
 
 function hitMergeLink(layout: GraphLayout, point: Point): GraphTarget | null {
@@ -65,11 +59,15 @@ function hitMergeLink(layout: GraphLayout, point: Point): GraphTarget | null {
   return null;
 }
 
+/** A branch is its band, plus the header card above the start of the band. */
 function hitLane(layout: GraphLayout, point: Point): GraphTarget | null {
-  const row = Math.round((point.y - GRAPH_PADDING.top) / ROW_HEIGHT);
-  if (Math.abs(rowY(row) - point.y) > ROW_HEIGHT / 3) return null;
-  const lane = layout.lanesByRow
-    .get(row)
-    ?.find((candidate) => point.x >= columnX(candidate.startColumn) - COLUMN_WIDTH * 3 && point.x <= columnX(candidate.endColumn) + COLUMN_WIDTH / 2);
+  const row = Math.round((point.y - GRAPH_PADDING.top + ROW_HEIGHT / 3) / ROW_HEIGHT);
+  const lane = layout.lanesByRow.get(row)?.find((candidate) => {
+    const shape = laneShape(candidate);
+    const onBand = Math.abs(point.y - shape.y) <= BAND_HEIGHT / 2 && point.x >= shape.left && point.x <= shape.right;
+    const top = headerTop(shape.y);
+    const onHeader = point.y >= top && point.y <= top + HEADER_HEIGHT && point.x >= shape.left && point.x <= shape.left + HEADER_MAX_WIDTH;
+    return onBand || onHeader;
+  });
   return lane ? { kind: 'branch', lane } : null;
 }

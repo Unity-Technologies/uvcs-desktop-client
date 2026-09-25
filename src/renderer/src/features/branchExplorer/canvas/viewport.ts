@@ -29,10 +29,16 @@ export function centerOn(viewport: Viewport, worldX: number, worldY: number, scr
   return { ...viewport, panX: screen.width / 2 - worldX * viewport.zoom, panY: screen.height / 2 - worldY * viewport.zoom };
 }
 
+/**
+ * Room kept at the top when zoomed out: the graph's own top padding shrinks with the zoom, and
+ * would no longer clear the date ruler and the branch names above the first band.
+ */
+const FIT_TOP_MARGIN = 28;
+
 /** Zooms out (never in beyond 1:1) so the whole graph fits on screen, centered horizontally and aligned to the top. */
 export function fitToScreen(content: Size, screen: Size): Viewport {
-  const zoom = clamp(Math.min(screen.width / content.width, screen.height / content.height, 1), MIN_ZOOM, MAX_ZOOM);
-  return { zoom, panX: (screen.width - content.width * zoom) / 2, panY: 0 };
+  const zoom = clamp(Math.min(screen.width / content.width, (screen.height - FIT_TOP_MARGIN) / content.height, 1), MIN_ZOOM, MAX_ZOOM);
+  return { zoom, panX: (screen.width - content.width * zoom) / 2, panY: FIT_TOP_MARGIN * (1 - zoom) };
 }
 
 /** Where the focus point sits horizontally when opening a graph wider than the screen: recent history on the right. */

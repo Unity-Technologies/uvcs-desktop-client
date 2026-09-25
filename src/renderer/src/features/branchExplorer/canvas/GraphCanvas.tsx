@@ -12,7 +12,10 @@ import { centerOn, fitToScreen, openingViewport, revealPoint, toWorld, zoomAt, t
 import styles from './GraphCanvas.module.css';
 
 /** Scene fields owned by the view; the canvas adds the viewport, size, palette and hover state. */
-export type GraphHighlights = Pick<GraphScene, 'selectedChangeset' | 'selectedBranch' | 'homeChangeset' | 'searchHits' | 'activeSearchHit'>;
+export type GraphHighlights = Pick<
+  GraphScene,
+  'selectedChangeset' | 'selectedBranch' | 'homeChangeset' | 'currentBranch' | 'highlightedAuthor' | 'searchHits' | 'activeSearchHit' | 'options'
+>;
 
 export interface GraphCanvasHandle {
   /** Scrolls just enough to show the changeset. */

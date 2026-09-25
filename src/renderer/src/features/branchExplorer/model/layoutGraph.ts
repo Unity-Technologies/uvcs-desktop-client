@@ -12,6 +12,8 @@ export interface Lane {
   row: number;
   startColumn: number;
   endColumn: number;
+  /** Column of the branch's first visible changeset; null when none of its changesets is visible. */
+  firstOwnColumn: number | null;
   /** The changeset the branch starts from, when it is visible (it lives on another lane). */
   baseChangeset: number | null;
 }
@@ -30,7 +32,7 @@ export interface GraphLayout {
 }
 
 /** Free columns kept between two lanes sharing a row, so they never look connected. */
-const LANE_GAP = 2;
+const LANE_GAP = 3;
 
 /**
  * Lays out history as lanes: changesets ordered left to right by id (parents always come first),
@@ -85,6 +87,7 @@ function buildLanes(branches: GraphBranch[], changesets: GraphChangeset[], colum
         branch,
         startColumn: Math.min(...ownColumns, baseColumn ?? Number.POSITIVE_INFINITY),
         endColumn: Math.max(...ownColumns, baseColumn ?? Number.NEGATIVE_INFINITY),
+        firstOwnColumn: ownColumns.length > 0 ? Math.min(...ownColumns) : null,
         baseChangeset: isOnOtherBranch ? baseChangeset : null,
       },
     ];

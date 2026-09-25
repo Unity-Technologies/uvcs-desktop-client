@@ -1,49 +1,114 @@
-import type { GraphLabel } from '@shared/domain/branchExplorer';
 import type { NodeLayout } from '../model/layoutGraph';
+import { drawAvatar, drawDot } from './drawAvatar';
 import type { DrawContext } from './drawContext';
-import { columnX, NODE_RADIUS, rowY } from './geometry';
+import { drawHomeMarker } from './drawHomeMarker';
+import { fitText, summaryOf } from './fitText';
+import { BAND_HEIGHT, COLUMN_WIDTH, columnX, NODE_RADIUS, rowY } from './geometry';
 import { branchColor } from './graphPalette';
-import { LABEL_HEIGHT, labelTop } from './graphTargets';
+import { nextColumnOnRow } from './rowNeighbors';
 
+const DOT_RADIUS = 5;
+const ARROW_SIZE = 4;
+/** Comments start a little left of their changeset and may use the free space up to the next one on the row. */
+const COMMENT_INSET = COLUMN_WIDTH / 2 - 6;
+const LAST_COMMENT_WIDTH = 220;
+
+/** Changesets with the links to their parents, their comments and the workspace marker. */
 export function drawNodes(draw: DrawContext): void {
-  const { scene, visible } = draw;
+  const nodes = visibleNodes(draw);
+  nodes.forEach((node) => drawParentLink(draw, node));
+  nodes.forEach((node) => drawNode(draw, node));
+  if (draw.detail.comments) nodes.forEach((node) => drawComment(draw, node));
+
+  const home = draw.scene.homeChangeset !== null ? draw.scene.layout.nodes.get(draw.scene.homeChangeset) : undefined;
+  if (home && nodes.includes(home)) drawHomeMarker(draw, home, radiusFor(draw));
+}
+
+function visibleNodes({ scene, visible }: DrawContext): NodeLayout[] {
   const { nodesByColumn } = scene.layout;
   const lastColumn = Math.min(visible.lastColumn, nodesByColumn.length - 1);
-
+  const nodes: NodeLayout[] = [];
   for (let column = visible.firstColumn; column <= lastColumn; column++) {
     const node = nodesByColumn[column]!;
     const y = rowY(node.row);
-    if (y < visible.top - 60 || y > visible.bottom + 20) continue;
-
-    drawNode(draw, node);
-    const labels = scene.layout.labelsByChangeset.get(node.changeset.id);
-    if (labels && draw.showText) labels.forEach((label, index) => drawLabel(draw, node, label, index));
-    if (node.changeset.id === scene.homeChangeset) drawHomeMarker(draw, node);
+    if (y >= visible.top - BAND_HEIGHT && y <= visible.bottom + BAND_HEIGHT * 2) nodes.push(node);
   }
+  return nodes;
 }
 
-function drawNode({ ctx, scene }: DrawContext, node: NodeLayout): void {
+function radiusFor({ detail }: DrawContext): number {
+  return detail.avatars ? NODE_RADIUS : DOT_RADIUS;
+}
+
+/** The line along the band to the previous changeset of the same branch, with an arrow pointing to it. */
+function drawParentLink(draw: DrawContext, node: NodeLayout): void {
+  const { ctx, scene, detail } = draw;
+  const parent = scene.layout.nodes.get(node.changeset.parent);
+  if (!parent || parent.changeset.branch !== node.changeset.branch) return;
+
+  const radius = radiusFor(draw);
+  const y = rowY(node.row);
+  const fromX = columnX(parent.column) + radius + 2;
+  const toX = columnX(node.column) - radius - 2;
+  if (toX <= fromX) return;
+
+  ctx.save();
+  ctx.strokeStyle = branchColor(scene.palette, node.changeset.branch);
+  ctx.fillStyle = ctx.strokeStyle;
+  ctx.globalAlpha = 0.6;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(fromX + (detail.text ? ARROW_SIZE : 0), y);
+  ctx.lineTo(toX, y);
+  ctx.stroke();
+  if (detail.text) {
+    ctx.beginPath();
+    ctx.moveTo(fromX, y);
+    ctx.lineTo(fromX + ARROW_SIZE * 1.6, y - ARROW_SIZE);
+    ctx.lineTo(fromX + ARROW_SIZE * 1.6, y + ARROW_SIZE);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+function drawNode(draw: DrawContext, node: NodeLayout): void {
+  const { ctx, scene, detail } = draw;
+  const { palette } = scene;
   const x = columnX(node.column);
   const y = rowY(node.row);
   const id = node.changeset.id;
   const hovered = scene.hoveredChangeset === id;
-  const radius = hovered ? NODE_RADIUS + 1.5 : NODE_RADIUS;
+  const selected = scene.selectedChangeset === id;
+  const radius = radiusFor(draw) + (hovered ? 1 : 0);
+  const color = branchColor(palette, node.changeset.branch);
 
-  if (scene.searchHits.has(id)) drawHalo(ctx, x, y, radius + (scene.activeSearchHit === id ? 6 : 4), scene.palette.searchHit, 0.35);
-  if (scene.selectedChangeset === id) drawHalo(ctx, x, y, radius + 5, scene.palette.accent, 0.3);
+  ctx.save();
+  ctx.globalAlpha = scene.highlightedAuthor && node.changeset.owner !== scene.highlightedAuthor ? 0.25 : 1;
+  if (scene.searchHits.has(id)) drawHalo(ctx, x, y, radius + (scene.activeSearchHit === id ? 9 : 7), palette.searchHit, 0.4);
+  if (selected) drawHalo(ctx, x, y, radius + 8, palette.accent, 0.22);
 
-  ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.fillStyle = branchColor(scene.palette, node.changeset.branch);
-  ctx.fill();
-  ctx.lineWidth = 2;
-  ctx.strokeStyle = scene.selectedChangeset === id ? scene.palette.accent : scene.palette.surface;
-  ctx.stroke();
+  if (detail.avatars) {
+    drawAvatar(ctx, {
+      x,
+      y,
+      radius,
+      owner: node.changeset.owner,
+      ringColor: selected ? palette.accent : color,
+      ringWidth: hovered || selected ? 3 : 2.25,
+      outlineColor: palette.background,
+      showInitials: detail.text,
+      font: `600 9.5px ${palette.fontUi}`,
+    });
+  } else {
+    drawDot(ctx, x, y, radius, selected ? palette.accent : color, palette.background);
+  }
+  ctx.restore();
 }
 
 function drawHalo(ctx: CanvasRenderingContext2D, x: number, y: number, radius: number, color: string, alpha: number): void {
   ctx.save();
-  ctx.globalAlpha = alpha;
+  ctx.globalAlpha *= alpha;
   ctx.fillStyle = color;
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
@@ -51,53 +116,27 @@ function drawHalo(ctx: CanvasRenderingContext2D, x: number, y: number, radius: n
   ctx.restore();
 }
 
-function drawLabel({ ctx, scene }: DrawContext, node: NodeLayout, label: GraphLabel, index: number): void {
-  const x = columnX(node.column);
-  const top = labelTop(rowY(node.row), index);
-  ctx.save();
-  ctx.font = `600 10px ${scene.palette.fontUi}`;
-  const width = ctx.measureText(label.name).width + 12;
+/** The comment's first line under the changeset, shortened to the room before the next changeset on the row. */
+function drawComment({ ctx, scene }: DrawContext, node: NodeLayout): void {
+  const summary = summaryOf(node.changeset.comment);
+  if (!summary) return;
 
-  ctx.fillStyle = scene.palette.labelBackground;
-  ctx.beginPath();
-  ctx.roundRect(x - width / 2, top, width, LABEL_HEIGHT, 4);
-  ctx.fill();
-  ctx.fillStyle = scene.palette.labelText;
-  ctx.textAlign = 'center';
+  const left = columnX(node.column) - COMMENT_INSET;
+  const next = nextColumnOnRow(scene.layout, node.column);
+  const maxWidth = next === -1 ? LAST_COMMENT_WIDTH : columnX(next) - COMMENT_INSET - left - 8;
+
+  ctx.save();
+  ctx.globalAlpha = scene.highlightedAuthor && node.changeset.owner !== scene.highlightedAuthor ? 0.3 : 1;
+  ctx.font = `400 10.5px ${scene.palette.fontUi}`;
+  ctx.fillStyle = scene.selectedChangeset === node.changeset.id ? scene.palette.textPrimary : scene.palette.textSecondary;
   ctx.textBaseline = 'middle';
-  ctx.fillText(label.name, x, top + LABEL_HEIGHT / 2 + 0.5);
-  ctx.restore();
-}
-
-/** Marks the changeset the workspace is on: a ring and a small house badge below it. */
-function drawHomeMarker({ ctx, scene }: DrawContext, node: NodeLayout): void {
-  const x = columnX(node.column);
-  const y = rowY(node.row);
-  const { accent, surface } = scene.palette;
-
-  ctx.save();
-  ctx.strokeStyle = accent;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.arc(x, y, NODE_RADIUS + 4, 0, Math.PI * 2);
-  ctx.stroke();
-
-  const badgeY = y + NODE_RADIUS + 14;
-  ctx.fillStyle = accent;
-  ctx.beginPath();
-  ctx.arc(x, badgeY, 8, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = surface;
-  ctx.beginPath();
-  ctx.moveTo(x - 4.5, badgeY - 0.5);
-  ctx.lineTo(x, badgeY - 4.5);
-  ctx.lineTo(x + 4.5, badgeY - 0.5);
-  ctx.lineTo(x + 3, badgeY - 0.5);
-  ctx.lineTo(x + 3, badgeY + 3.5);
-  ctx.lineTo(x - 3, badgeY + 3.5);
-  ctx.lineTo(x - 3, badgeY - 0.5);
-  ctx.closePath();
-  ctx.fill();
+  const text = fitText(ctx, summary, maxWidth);
+  const y = rowY(node.row) + BAND_HEIGHT / 2 + 12;
+  // A halo in the background color keeps the text readable where links cross it.
+  ctx.strokeStyle = scene.palette.background;
+  ctx.lineWidth = 3;
+  ctx.lineJoin = 'round';
+  ctx.strokeText(text, left, y);
+  ctx.fillText(text, left, y);
   ctx.restore();
 }

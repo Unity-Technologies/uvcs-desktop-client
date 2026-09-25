@@ -1,35 +1,38 @@
 import { COLUMN_WIDTH, GRAPH_PADDING } from './geometry';
-import { TEXT_ZOOM_THRESHOLD, type DrawContext, type GraphScene, type VisibleArea } from './drawContext';
-import { drawDateHeader } from './drawDateHeader';
+import { detailLevel, type DrawContext, type GraphScene, type VisibleArea } from './drawContext';
+import { drawBranchHeaders, drawCompactBranchNames } from './drawBranchHeaders';
+import { drawDateRuler, drawDaySeparators } from './drawDateRuler';
+import { drawLabels } from './drawLabels';
 import { drawLanes } from './drawLanes';
 import { drawMergeLinks } from './drawMergeLinks';
 import { drawNodes } from './drawNodes';
 import { toWorld } from './viewport';
 
-/** Draws one frame. Only what is on screen is drawn, so large histories stay smooth. */
+/**
+ * Draws one frame, back to front: day separators, branch bands, links, changesets, labels and
+ * branch headers, then the date ruler on top. Only what is on screen is drawn, so large histories stay smooth.
+ */
 export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixelRatio: number): void {
   const { viewport, size, palette } = scene;
+  const draw: DrawContext = { ctx, scene, visible: visibleArea(scene), detail: detailLevel(viewport.zoom, scene.options) };
 
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
   ctx.fillStyle = palette.background;
   ctx.fillRect(0, 0, size.width, size.height);
+  drawDaySeparators(draw);
 
-  ctx.setTransform(
-    pixelRatio * viewport.zoom,
-    0,
-    0,
-    pixelRatio * viewport.zoom,
-    pixelRatio * viewport.panX,
-    pixelRatio * viewport.panY,
-  );
-
-  const draw: DrawContext = { ctx, scene, visible: visibleArea(scene), showText: viewport.zoom >= TEXT_ZOOM_THRESHOLD };
+  ctx.setTransform(pixelRatio * viewport.zoom, 0, 0, pixelRatio * viewport.zoom, pixelRatio * viewport.panX, pixelRatio * viewport.panY);
   drawLanes(draw);
   drawMergeLinks(draw);
   drawNodes(draw);
+  if (draw.detail.text) {
+    drawLabels(draw);
+    drawBranchHeaders(draw);
+  }
 
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-  drawDateHeader(draw);
+  if (!draw.detail.text) drawCompactBranchNames(draw);
+  drawDateRuler(draw);
 }
 
 function visibleArea({ viewport, size }: GraphScene): VisibleArea {

@@ -1,18 +1,24 @@
 import type { MergeLinkType } from '@shared/domain/branchExplorer';
 import { branchHue, hueToColor } from '../model/branchHue';
 
-/** Colors and fonts for drawing, resolved from the app's CSS variables so the graph follows the theme. */
+/** Colors and fonts for drawing, resolved from the app's CSS variables so the graph follows the theme and accent. */
 export interface GraphPalette {
   isDark: boolean;
   background: string;
-  surface: string;
+  surfaceRaised: string;
+  border: string;
+  textPrimary: string;
+  textSecondary: string;
   textTertiary: string;
   gridLine: string;
   accent: string;
+  accentContrast: string;
+  current: string;
   searchHit: string;
   labelBackground: string;
   labelText: string;
-  mergeLinks: Record<MergeLinkType, string>;
+  /** Link colors for everything but plain merges, which take the source branch's color. */
+  mergeLinks: Record<Exclude<MergeLinkType, 'merge'>, string>;
   fontUi: string;
 }
 
@@ -23,15 +29,19 @@ export function readGraphPalette(element: Element): GraphPalette {
   return {
     isDark: document.documentElement.dataset.theme === 'dark',
     background: variable('--bg-surface'),
-    surface: variable('--bg-surface'),
+    surfaceRaised: variable('--bg-surface-raised'),
+    border: variable('--border-default'),
+    textPrimary: variable('--text-primary'),
+    textSecondary: variable('--text-secondary'),
     textTertiary: variable('--text-tertiary'),
     gridLine: variable('--border-subtle'),
     accent: variable('--accent'),
+    accentContrast: variable('--accent-contrast'),
+    current: variable('--status-added'),
     searchHit: variable('--search-highlight'),
     labelBackground: variable('--label-bg'),
     labelText: variable('--label-text'),
     mergeLinks: {
-      merge: variable('--status-added'),
       interval: variable('--status-added'),
       cherryPick: variable('--status-changed'),
       intervalCherryPick: variable('--status-changed'),
