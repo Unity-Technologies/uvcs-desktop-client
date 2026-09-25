@@ -6,6 +6,7 @@ import {
   EyeOff,
   FileDiff,
   GitBranchPlus,
+  GitGraph,
   GitMerge,
   GitPullRequestArrow,
   MessageSquareCode,
@@ -16,6 +17,7 @@ import type { Branch } from '@shared/domain/branch';
 import { spec } from '@shared/domain/specs';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { copyToClipboard } from '../../lib/copyToClipboard';
+import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import {
   cherryPickFromBranch,
   deleteBranches,
@@ -80,6 +82,12 @@ export function branchMenu(workspacePath: string, branches: Branch[], currentBra
       label: 'Show branch changes',
       icon: FileDiff,
       run: () => diffBranch(single.name),
+    },
+    single && {
+      id: 'showInBranchExplorer',
+      label: 'Show in Branch Explorer',
+      icon: GitGraph,
+      run: () => showInBranchExplorer({ kind: 'branch', name: single.name, date: single.date }),
     },
     single && {
       id: 'codeReview',

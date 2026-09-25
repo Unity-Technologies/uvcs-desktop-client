@@ -9,9 +9,19 @@ export interface CmProcessOptions {
   onOutputLine?: (line: string) => void;
 }
 
+/**
+ * Runs one `cm` command in its own process. Its stdin is closed, so a command that stops to ask
+ * something on the console (credentials, "are you sure?") fails at once instead of hanging.
+ */
 export function runCmProcess(cmPath: string, args: string[], options: CmProcessOptions): Promise<CmResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(cmPath, args, { cwd: options.cwd, signal: options.signal, killSignal: options.killSignal, windowsHide: true });
+    const child = spawn(cmPath, args, {
+      cwd: options.cwd,
+      signal: options.signal,
+      killSignal: options.killSignal,
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
     const chunks: string[] = [];
     let pendingLine = '';
 

@@ -1,9 +1,10 @@
-import { AppWindow, Copy, Download, FileDiff, RotateCcw, ScanText } from 'lucide-react';
+import { AppWindow, Copy, Download, FileDiff, GitGraph, RotateCcw, ScanText } from 'lucide-react';
 import type { ItemRevision } from '@shared/domain/history';
 import { navigation } from '../../app/navigation/navigationStore';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { copyToClipboard } from '../../lib/copyToClipboard';
 import { fileNameOf } from '../../lib/text';
+import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { openChangesetDiff } from '../changesets/changesetOperations';
 import { openRevision, revertItemTo, saveRevisionAs } from './revisionOperations';
 
@@ -23,6 +24,12 @@ export function historyMenu({ workspacePath, path }: HistoryMenuContext, selecte
       label: `Diff changeset ${revision.changesetId}`,
       icon: FileDiff,
       run: () => openChangesetDiff({ id: revision.changesetId }, path),
+    },
+    revision && {
+      id: 'showInBranchExplorer',
+      label: 'Show changeset in Branch Explorer',
+      icon: GitGraph,
+      run: () => showInBranchExplorer({ kind: 'changeset', id: revision.changesetId, date: revision.date }),
     },
     isFile && {
       id: 'annotate',

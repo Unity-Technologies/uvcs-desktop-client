@@ -13,6 +13,35 @@
   -webkit-app-region: no-drag;
 }
 
+/* The branch pill and the incoming segment read as one split control: shared borders, outer corners only. */
+.branchControls {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.branchControls > * {
+  position: relative;
+}
+
+.branchControls > :not(:last-child) {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.branchControls > :not(:first-child) {
+  margin-left: -1px;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+/* The hovered or focused segment's firmer border sits above its neighbour's. */
+.branchControls > :hover,
+.branchControls > :focus-visible,
+.branchControls > [data-state='open'] {
+  z-index: 1;
+}
+
 .topBar > .spacer {
   flex: 1;
   -webkit-app-region: drag;

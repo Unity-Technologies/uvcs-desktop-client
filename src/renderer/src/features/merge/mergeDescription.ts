@@ -37,6 +37,8 @@ export function mergeTitle(request: MergeRequest, destination: string): string {
         ? `Cherry pick ${describeSpec(request.intervalOriginSpec)}…${source} into ${destination}`
         : `Cherry pick ${source} into ${destination}`;
     case 'subtractive':
-      return `Undo ${source} on ${destination}`;
+      return request.intervalOriginSpec
+        ? `Undo ${describeSpec(request.intervalOriginSpec)}…${source} on ${destination}`
+        : `Undo ${source} on ${destination}`;
   }
 }

@@ -4,6 +4,7 @@ import {
   FileDiff,
   FolderTree,
   GitBranchPlus,
+  GitGraph,
   GitMerge,
   GitPullRequestArrow,
   MessageSquareCode,
@@ -18,6 +19,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import { navigation } from '../../app/navigation/navigationStore';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { copyToClipboard } from '../../lib/copyToClipboard';
+import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { openCreateBranchDialog } from '../branches/CreateBranchDialog';
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
 import { openCreateLabelDialog } from '../labels/CreateLabelDialog';
@@ -59,6 +61,12 @@ function singleChangesetMenu({ workspacePath, loadedChangeset, loadedBranch }: C
       icon: FolderTree,
       run: () => navigation.openPage({ kind: 'browseRepository', changesetId: changeset.id }),
     },
+    {
+      id: 'showInBranchExplorer',
+      label: 'Show in Branch Explorer',
+      icon: GitGraph,
+      run: () => showInBranchExplorer({ kind: 'changeset', id: changeset.id, date: changeset.date }),
+    },
     SEPARATOR,
     { id: 'switch', label: 'Switch workspace to this changeset', icon: ArrowRightLeft, run: () => void switchToChangeset(workspacePath, changeset) },
     {
@@ -95,7 +103,7 @@ function singleChangesetMenu({ workspacePath, loadedChangeset, loadedBranch }: C
       id: 'revert',
       label: 'Revert workspace to this changeset…',
       icon: RotateCcw,
-      run: () => void revertWorkspaceToChangeset(workspacePath, changeset),
+      run: () => revertWorkspaceToChangeset(changeset, loadedChangeset),
     },
     SEPARATOR,
     { id: 'editComment', label: 'Edit comment…', icon: MessageSquareText, run: () => void editChangesetComment(workspacePath, changeset) },

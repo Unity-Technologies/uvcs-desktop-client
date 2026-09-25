@@ -1,4 +1,4 @@
-import { EyeOff, Filter, Home, Maximize } from 'lucide-react';
+import { EyeOff, Filter, FoldHorizontal, Home, Maximize } from 'lucide-react';
 import { useMemo } from 'react';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { useBranchExplorerPreferences } from './branchExplorerStore';
@@ -10,7 +10,7 @@ interface BranchExplorerCommandHandlers {
 
 /** Palette commands available while the Branch Explorer is open. */
 export function useBranchExplorerCommands({ goHome, fit }: BranchExplorerCommandHandlers): void {
-  const { onlyRelatedToCurrent, hideMergedBranches, set } = useBranchExplorerPreferences();
+  const { onlyRelatedToCurrent, hideMergedBranches, structureOnly, set } = useBranchExplorerPreferences();
 
   const commands = useMemo<Command[]>(
     () => [
@@ -30,8 +30,15 @@ export function useBranchExplorerCommands({ goHome, fit }: BranchExplorerCommand
         icon: EyeOff,
         run: () => set({ hideMergedBranches: !hideMergedBranches }),
       },
+      {
+        id: 'branchExplorer.structureOnly',
+        group: 'Branch Explorer',
+        label: structureOnly ? 'Show all changesets' : 'Show only relevant changesets',
+        icon: FoldHorizontal,
+        run: () => set({ structureOnly: !structureOnly }),
+      },
     ],
-    [goHome, fit, onlyRelatedToCurrent, hideMergedBranches, set],
+    [goHome, fit, onlyRelatedToCurrent, hideMergedBranches, structureOnly, set],
   );
 
   useCommands(commands);

@@ -1,5 +1,5 @@
 import type { Branch } from '@shared/domain/branch';
-import type { BranchGroup } from './BranchSearchList';
+import type { BranchGroup } from './branchSearchRows';
 
 /**
  * The branch switcher's groups: the top-level branches, the recently used ones, then all the rest by name.

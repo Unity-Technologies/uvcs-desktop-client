@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { centerOn, clampViewport, fitToScreen, MAX_ZOOM, openingViewport, OVERSCROLL, revealPoint, toWorld, zoomAt } from './viewport';
+import { centerOn, clampViewport, fitToScreen, frameOn, interpolateViewport, MAX_ZOOM, openingViewport, OVERSCROLL, revealPoint, toWorld, zoomAt } from './viewport';
 
 const screen = { width: 800, height: 600 };
 
@@ -68,5 +68,26 @@ describe('viewport', () => {
   it('clamps each axis on its own', () => {
     const wide = { width: 3000, height: 300 };
     expect(clampViewport({ panX: -500, panY: 250, zoom: 1 }, wide, screen)).toEqual({ panX: -500, panY: 0, zoom: 1 });
+  });
+
+  it('frames a point in the middle, zooming in when too small to read', () => {
+    const framed = frameOn({ panX: 0, panY: 0, zoom: 0.3 }, 1000, 500, screen);
+    expect(framed.zoom).toBe(0.8);
+    expect(toWorld(framed, 400, 300)).toEqual({ x: 1000, y: 500 });
+    expect(frameOn({ panX: 0, panY: 0, zoom: 1.5 }, 0, 0, screen).zoom).toBe(1.5);
+  });
+
+  it('glides the middle of the screen in a straight line', () => {
+    const from = centerOn({ panX: 0, panY: 0, zoom: 1 }, 0, 0, screen);
+    const to = centerOn({ panX: 0, panY: 0, zoom: 2 }, 100, 50, screen);
+    expect(interpolateViewport(from, to, 0, screen)).toEqual(from);
+    const halfway = interpolateViewport(from, to, 0.5, screen);
+    expect(halfway.zoom).toBeCloseTo(Math.SQRT2);
+    const middle = toWorld(halfway, 400, 300);
+    expect(middle.x).toBeCloseTo(50);
+    expect(middle.y).toBeCloseTo(25);
+    const end = interpolateViewport(from, to, 1, screen);
+    expect(end.panX).toBeCloseTo(to.panX);
+    expect(end.panY).toBeCloseTo(to.panY);
   });
 });

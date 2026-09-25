@@ -1,5 +1,11 @@
 .trigger {
-  max-width: 420px;
+  flex: 0 1 auto;
+  max-width: 360px;
+  min-width: 140px;
+}
+
+.noComment {
+  opacity: 0.75;
 }
 
 .chevron {
@@ -10,7 +16,8 @@
 .popover {
   display: flex;
   flex-direction: column;
-  width: 380px;
+  width: 460px;
+  max-width: calc(100vw - 24px);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
   background: var(--bg-surface-raised);

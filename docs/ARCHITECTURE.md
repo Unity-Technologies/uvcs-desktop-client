@@ -26,6 +26,28 @@ src/
 - Never parse human-readable output when a machine format exists.
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.
 
+## No external tools, ever
+
+The app never lets `cm` open its merge or diff tool; every conflict is resolved in the app's merge page.
+
+- `cm merge --merge` always carries `--nointeractiveresolution` and an explicit decision for every conflicting file
+  (`fileConflictArgs`): workspace merges keep the destination and the app writes the resolutions; merges into a
+  server branch keep one side for all files.
+- Shelves are applied as merges from `sh:N` (never `cm shelveset apply`); `cm update` keeps `--dontmerge`;
+  `cm diff` always has `--format`. `main/cm/noExternalUi.test.ts` checks these statically.
+- `cm` processes run with stdin closed, so a console prompt fails instead of hanging.
+
+## Switching with pending changes
+
+`cm switch` only ever runs on a clean workspace (`main/workspace/switchWithChanges.ts`), whatever client.conf's
+`PendingChangesOnSwitchAction` says. The renderer's single entry point is `switchWorkspace`
+(`app/shell/workspaceOperations.ts`): preflight, then ask (or follow the setting) whether to leave the changes or
+bring them along. The main process shelves them with the official automatic-shelve comment, checks the shelve holds
+them all, records it in the settings (`switchShelves`), undoes, moves added files aside (leave), switches, and
+merges the shelve on the target (bring). Failures put the changes back. Left shelves (the app's and the official
+client's) are offered again by the "Welcome back" banner in Changes (`features/leftChanges`), or restored
+automatically on arrival when they apply cleanly.
+
 ## Renderer
 
 ```
@@ -44,12 +66,16 @@ renderer/src/
   - `main/watch/WorkspaceWatcher` watches the open workspace (recursive on macOS/Windows; the root and `.plastic` only on Linux),
     skips `ignore.conf` folders and `.plastic` lock/temp files, coalesces bursts (300 ms quiet, 2 s max wait) and drops what the
     app's own writes cause (`changesWorkspace` commands and tracked operations): the renderer refreshes after those anyway.
-  - `workspaceChanged` tells file edits (pending changes, files view; if auto refresh is on) from `.plastic` rewrites by any tool
-    (workspace info; everything when the loaded changeset or branch moved). See `app/shell/useWorkspaceWatcher.ts` and `app/refresh/`.
+  - `workspaceChanged` tells file edits (pending changes, review marks, files view, open diffs of workspace files; if auto refresh is on)
+    from `.plastic` rewrites by any tool (workspace info; everything when the loaded changeset or branch moved). See
+    `app/shell/useWorkspaceWatcher.ts` and `app/refresh/`. A diff being edited holds still and offers to reload instead.
+  - Locks live on the server, where nothing reports changes: pending changes re-read them along with the changes, at most every 30 s.
   - Window focus (wired to real focus in `trackWindowFocus`) refetches stale server views; local views skip it while the watcher sees everything.
   - Incoming: `useIncomingSummary` polls every minute with focus, every five minutes behind other apps, never hidden, and on focus if
     older than 20 s. A branch head moved by someone else refreshes the repository views.
   - Use `refreshQueries` for event-driven refreshes: it never cancels a fetch in flight, it queues one follow-up.
+- **Review marks**: `main/review/ReviewStore` keeps, per workspace, the fingerprint of each file marked reviewed (and a copy of its text,
+  read as the `reviewSnapshot` content source) under `<userData>/review-snapshots/`; marks of paths that leave the pending changes are dropped.
 - **Mutations**: `runOperation` (progress toast, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.

@@ -1,6 +1,7 @@
 import { ChevronRight, EyeOff, GitBranch, GitBranchPlus, List, ListTree, RefreshCw, User } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
+import type { CodeReview } from '@shared/domain/codeReview';
 import { spec } from '@shared/domain/specs';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -20,6 +21,8 @@ import { CenteredSpinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ToggleChip } from '../../ui/ToggleChip';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { CodeReviewChip } from '../codeReviews/CodeReviewChip';
+import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
 import { BranchDetails } from './BranchDetails';
 import { branchMenu } from './branchMenu';
 import { switchToBranch } from './branchOperations';
@@ -72,7 +75,8 @@ export function BranchesView() {
     });
   };
 
-  const columns = useBranchColumns(layout, currentBranch, toggleCollapsed);
+  const { data: reviews } = useReviewsByBranch(branches !== undefined);
+  const columns = useBranchColumns(layout, currentBranch, toggleCollapsed, reviews);
 
   return (
     <>
@@ -150,7 +154,12 @@ function filterBranches(branches: Branch[], search: string): Branch[] {
   return branches.filter((branch) => `${branch.name} ${branch.comment} ${branch.owner}`.toLowerCase().includes(needle));
 }
 
-function useBranchColumns(layout: BranchesLayout, currentBranch: string | undefined, onToggleCollapsed: (name: string) => void): Column<BranchTreeRow>[] {
+function useBranchColumns(
+  layout: BranchesLayout,
+  currentBranch: string | undefined,
+  onToggleCollapsed: (name: string) => void,
+  reviews: ReadonlyMap<string, CodeReview> | undefined,
+): Column<BranchTreeRow>[] {
   return useMemo(() => {
     const sortable = layout === 'list';
     return [
@@ -159,7 +168,9 @@ function useBranchColumns(layout: BranchesLayout, currentBranch: string | undefi
         header: 'Name',
         grow: 2,
         sortValue: sortable ? (row) => row.branch.name : undefined,
-        render: (row) => <BranchNameCell row={row} isCurrent={row.branch.name === currentBranch} onToggleCollapsed={onToggleCollapsed} />,
+        render: (row) => (
+          <BranchNameCell row={row} isCurrent={row.branch.name === currentBranch} review={reviews?.get(row.branch.name)} onToggleCollapsed={onToggleCollapsed} />
+        ),
       },
       { id: 'comment', header: 'Comment', grow: 2, secondary: true, render: (row) => <Highlight text={row.branch.comment} /> },
       {
@@ -178,10 +189,18 @@ function useBranchColumns(layout: BranchesLayout, currentBranch: string | undefi
         render: (row) => <RelativeTime date={row.branch.date} />,
       },
     ];
-  }, [layout, currentBranch, onToggleCollapsed]);
+  }, [layout, currentBranch, onToggleCollapsed, reviews]);
 }
 
-function BranchNameCell({ row, isCurrent, onToggleCollapsed }: { row: BranchTreeRow; isCurrent: boolean; onToggleCollapsed: (name: string) => void }) {
+interface BranchNameCellProps {
+  row: BranchTreeRow;
+  isCurrent: boolean;
+  /** The branch's newest code review, if it has one. */
+  review: CodeReview | undefined;
+  onToggleCollapsed: (name: string) => void;
+}
+
+function BranchNameCell({ row, isCurrent, review, onToggleCollapsed }: BranchNameCellProps) {
   return (
     <span className={styles.name} style={{ paddingLeft: row.depth * 16 }}>
       {row.hasChildren ? (
@@ -201,6 +220,7 @@ function BranchNameCell({ row, isCurrent, onToggleCollapsed }: { row: BranchTree
         <Highlight text={row.depth > 0 ? row.branch.name.slice(row.branch.name.lastIndexOf('/')) : row.branch.name} />
       </span>
       {isCurrent && <span className={styles.current}>Current</span>}
+      {review && <CodeReviewChip review={review} />}
       {row.branch.isHidden && <EyeOff size={12} className={styles.hiddenIcon} />}
     </span>
   );

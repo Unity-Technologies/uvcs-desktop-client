@@ -11,8 +11,10 @@ export function TopBar() {
 
   return (
     <div className={styles.topBar}>
-      <WorkingObjectButton />
-      <IncomingChip />
+      <div className={styles.branchControls}>
+        <WorkingObjectButton />
+        <IncomingChip />
+      </div>
       <div className={styles.spacer} />
       <button className={styles.search} data-tip="Fuzzy search files, branches, labels, changesets, shelves, code reviews and commands" onClick={() => setCommandPaletteOpen(true)}>
         <Search size={13} />

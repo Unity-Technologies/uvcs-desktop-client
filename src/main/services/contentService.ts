@@ -8,7 +8,7 @@ import { withTempPath } from '../files/tempFile';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
 
-export function createContentService({ cm }: ServiceContext): ContentApi {
+export function createContentService({ cm, reviews }: ServiceContext): ContentApi {
   async function read(workspacePath: string, source: ContentSource): Promise<FileContent> {
     switch (source.kind) {
       case 'empty':
@@ -19,6 +19,8 @@ export function createContentService({ cm }: ServiceContext): ContentApi {
       }
       case 'workspaceBase':
         return downloadLoadedRevision(workspacePath, source.path);
+      case 'reviewSnapshot':
+        return reviews.readSnapshot(workspacePath, source.path);
       case 'revision':
         return downloadRevision(workspacePath, `revid:${source.revisionId}`, source.fileName);
       case 'spec':

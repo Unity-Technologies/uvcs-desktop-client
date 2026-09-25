@@ -32,7 +32,7 @@ export function MergeSession({ workspacePath, request, plan }: MergeSessionProps
 
   const intoServerBranch = Boolean(request.destinationBranch);
   const serverPolicyNeeded = intoServerBranch && needsServerFilePolicy(fileStates);
-  const decidedFileStates = serverPolicyNeeded && serverFilePolicy ? withServerPolicy(fileStates, serverFilePolicy) : fileStates;
+  const decidedFileStates = serverPolicyNeeded ? withServerPolicy(fileStates, serverFilePolicy) : fileStates;
   const items = buildMergeItems(plan, decidedFileStates, directoryResolutions);
   const rows = toListRows(items);
   const pendingCount = items.filter(needsDecision).length;
@@ -108,7 +108,7 @@ export function MergeSession({ workspacePath, request, plan }: MergeSessionProps
   );
 }
 
-/** Once a server merge keeps one side for every conflicting file, none of them waits for the user anymore. */
-function withServerPolicy(fileStates: FileConflictState[], policy: ServerFilePolicy): FileConflictState[] {
-  return fileStates.map((state) => ({ ...state, resolution: { choice: policy }, mergedAutomatically: false }));
+/** A server merge's files all wait for the side to keep; once it is chosen, none of them waits anymore. */
+function withServerPolicy(fileStates: FileConflictState[], policy: ServerFilePolicy | undefined): FileConflictState[] {
+  return fileStates.map((state) => ({ ...state, resolution: policy ? { choice: policy } : null, mergedAutomatically: false }));
 }

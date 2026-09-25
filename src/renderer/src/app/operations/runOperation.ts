@@ -30,11 +30,7 @@ export async function runOperation<T>({
   cancellable = true,
   kind,
 }: OperationOptions<T>): Promise<T | undefined> {
-  const running = runningOperationOf(workspacePath);
-  if (kind && running) {
-    toast.info(`${running.title} is still running`, 'Wait for it to finish, or cancel it, before starting something else.');
-    return undefined;
-  }
+  if (kind && refuseWhileBusy(workspacePath)) return undefined;
 
   const operationId = crypto.randomUUID();
   const operations = useRunningOperationsStore.getState();
@@ -69,6 +65,16 @@ export async function runOperation<T>({
     operations.finish(operationId);
     void invalidateWorkspace(workspacePath);
   }
+}
+
+/**
+ * Tells the user and returns true when another operation runs on the workspace, so one that changes the loaded
+ * revisions must not start. Check it before asking anything about such an operation.
+ */
+export function refuseWhileBusy(workspacePath: string): boolean {
+  const running = runningOperationOf(workspacePath);
+  if (running) toast.info(`${running.title} is still running`, 'Wait for it to finish, or cancel it, before starting something else.');
+  return Boolean(running);
 }
 
 /** Runs a quick action, reporting failures; refreshes the workspace views afterwards. */

@@ -1,15 +1,22 @@
 import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { app } from 'electron';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
 import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
+import { readWorkingObjectComment } from '../cm/workingObjectComment';
 import { resolveWorkspaceRepositories } from '../cm/workspaceRepositories';
 import { readWorkspaceStatus } from '../cm/workspaceStatus';
 import { CmError } from '../cm/CmError';
-import type { ServiceContext } from './ServiceContext';
+import { readSwitchPreflight } from '../workspace/switchPreflight';
+import { switchWithChanges } from '../workspace/switchWithChanges';
+import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const UPDATE_NEEDS_MERGE = 'Some of your local changes collide with incoming ones. Open Incoming to merge them while updating.';
 
-export function createWorkspacesService({ cm, operations, watcher }: ServiceContext): WorkspacesApi {
+export function createWorkspacesService({ cm, operations, watcher, settings }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
+  const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups') };
+
   async function list(): Promise<WorkspaceSummary[]> {
     const output = await cm.query(['workspace', 'list', `--format=${recordFormat(['wkname', 'path', 'wkid'])}`]);
     const workspaces = parseRecords(output).map(([name = '', path = '', guid = '']) => ({ name, path, guid }));
@@ -77,12 +84,6 @@ export function createWorkspacesService({ cm, operations, watcher }: ServiceCont
     return watcher.watch(workspacePath);
   }
 
-  function switchTo(workspacePath: string, targetSpec: string, operationId: string): Promise<void> {
-    return operations.run(operationId, async ({ signal, reportProgress }) => {
-      await cm.execute(['switch', targetSpec, '--noinput'], { cwd: workspacePath, signal, onOutputLine: reportProgress });
-    });
-  }
-
   function repositoriesOf(workspacePaths: string[], lookupId: string): Promise<Record<string, string | null>> {
     return operations.read(lookupId, ({ signal }) => resolveWorkspaceRepositories(cm, workspacePaths, signal));
   }
@@ -90,6 +91,7 @@ export function createWorkspacesService({ cm, operations, watcher }: ServiceCont
   return {
     list,
     info,
+    workingObjectComment: (workspacePath, selector) => readWorkingObjectComment(cm, workspacePath, selector),
     repositoriesOf,
     findMissing: async (paths) => paths.filter((path) => !existsSync(path)),
     findRoot,
@@ -98,6 +100,8 @@ export function createWorkspacesService({ cm, operations, watcher }: ServiceCont
     remove,
     update,
     watch,
-    switchTo,
+    switchPreflight: (workspacePath, targetSpec) => readSwitchPreflight(cm, switchShelves, workspacePath, targetSpec),
+    switchTo: (workspacePath, targetSpec, operationId, pendingChanges) =>
+      operations.run(operationId, (context) => switchWithChanges(switchDependencies, workspacePath, targetSpec, pendingChanges, context)),
   };
 }

@@ -2,7 +2,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import type { MergeRequest } from '@shared/domain/merge';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
-import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
+import { runAction, runVoidAction } from '../../app/operations/runOperation';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
@@ -35,7 +35,7 @@ export async function mergeChangesetTo(changeset: Changeset): Promise<void> {
   if (destinationBranch) openMerge({ kind: 'merge', sourceSpec: `cs:${changeset.id}`, destinationBranch });
 }
 
-export function switchToChangeset(workspacePath: string, changeset: Changeset): Promise<void | undefined> {
+export function switchToChangeset(workspacePath: string, changeset: Changeset): Promise<boolean> {
   return switchWorkspace(workspacePath, `cs:${changeset.id}`, `changeset ${changeset.id}`);
 }
 
@@ -74,19 +74,10 @@ export async function deleteChangeset(workspacePath: string, changeset: Changese
   if (deleted) toast.success(`Deleted changeset ${changeset.id}`);
 }
 
-export async function revertWorkspaceToChangeset(workspacePath: string, changeset: Changeset): Promise<void> {
-  const confirmed = await confirm({
-    title: `Revert your workspace to changeset ${changeset.id}?`,
-    message: 'Every change made after it is undone as pending changes. Nothing is checked in until you do it from Changes.',
-    confirmLabel: 'Revert workspace',
-  });
-  if (!confirmed) return;
-
-  await runOperation({
-    title: `Reverting to changeset ${changeset.id}`,
-    workspacePath,
-    run: (operationId) => api.changesets.revertWorkspaceTo(workspacePath, changeset.id, operationId),
-    successMessage: () => `Workspace contents now match changeset ${changeset.id}`,
-    successAction: () => ({ label: 'Review', run: () => navigation.goToView('changes') }),
-  });
+/**
+ * Makes the workspace match an older changeset of the loaded branch: a subtractive merge of everything after it,
+ * reviewed in the merge view like any other merge, so conflicts are resolved there.
+ */
+export function revertWorkspaceToChangeset(changeset: Changeset, loadedChangeset: number): void {
+  openMerge({ kind: 'subtractive', sourceSpec: `cs:${loadedChangeset}`, intervalOriginSpec: `cs:${changeset.id}` });
 }

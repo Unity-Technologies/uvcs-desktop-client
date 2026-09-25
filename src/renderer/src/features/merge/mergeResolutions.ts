@@ -28,7 +28,7 @@ export function collectResolutions({
 
   const files: Record<string, FileConflictResolution> = {};
   for (const state of fileStates) {
-    const resolution = intoServerBranch ? serverResolution(state, serverFilePolicy) : state.resolution;
+    const resolution = intoServerBranch ? serverResolution(serverFilePolicy) : state.resolution;
     if (!resolution) return null;
     files[state.file.key] = resolution;
   }
@@ -36,12 +36,14 @@ export function collectResolutions({
   return { directoryConflicts: directoryConflicts as DirectoryConflictResolution[], files, comment };
 }
 
-/** Whether some conflicting file can't be merged automatically, so a server merge must pick a side for all. */
+/**
+ * Whether a server merge must pick a side for all its conflicting files. It always must when there are any:
+ * `cm` could only combine them with its external merge tool, which this app never opens.
+ */
 export function needsServerFilePolicy(fileStates: FileConflictState[]): boolean {
-  return fileStates.some((state) => state.status === 'ready' && !state.mergedAutomatically);
+  return fileStates.length > 0;
 }
 
-function serverResolution(state: FileConflictState, policy: ServerFilePolicy | undefined): FileConflictResolution | null {
-  if (policy) return { choice: policy };
-  return state.mergedAutomatically ? state.resolution : null;
+function serverResolution(policy: ServerFilePolicy | undefined): FileConflictResolution | null {
+  return policy ? { choice: policy } : null;
 }

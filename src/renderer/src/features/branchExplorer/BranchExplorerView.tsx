@@ -1,56 +1,88 @@
-import { GitGraph, RefreshCw, X } from 'lucide-react';
+import { GitGraph, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import type { CodeReview } from '@shared/domain/codeReview';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { openReview } from '../codeReviews/codeReviewOperations';
+import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
 import { useBranchExplorerPreferences } from './branchExplorerStore';
 import { GraphCanvas, type GraphCanvasHandle, type GraphHighlights } from './canvas/GraphCanvas';
 import type { GraphTarget } from './canvas/graphTargets';
 import { ZOOM_STEP } from './canvas/zoom';
 import { DetailsPanel } from './details/DetailsPanel';
+import { FocusBanner } from './FocusBanner';
 import { graphActions } from './graphActions';
 import { graphMenu } from './graphMenu';
 import { selectionFor, type GraphSelection } from './graphSelection';
 import { GraphFilterBar } from './GraphFilterBar';
 import { GraphNavControls } from './GraphNavControls';
 import { GraphSearch } from './GraphSearch';
-import { filterGraph } from './model/filterGraph';
+import { filterGraph, type GraphFocus } from './model/filterGraph';
 import { layoutGraph } from './model/layoutGraph';
 import { neighborChangeset, type GraphDirection } from './model/navigateGraph';
 import { searchGraph, searchHighlight, type SearchHit } from './model/searchGraph';
 import { useBranchExplorerCommands } from './useBranchExplorerCommands';
 import { useBranchExplorerData } from './useBranchExplorerData';
+import { useRevealRequest } from './useRevealRequest';
 import styles from './BranchExplorerView.module.css';
+
+const NO_REVIEWS: ReadonlyMap<string, CodeReview> = new Map();
 
 const ARROW_DIRECTIONS: Record<string, GraphDirection> = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
 
 export function BranchExplorerView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
-  const { data, isLoading, isFetching, error } = useBranchExplorerData();
-  const { hideMergedBranches, onlyRelatedToCurrent, detailsOpen, highlightedAuthor, showComments, showAvatars } = useBranchExplorerPreferences();
+  const { data, isLoading, isFetching, isPlaceholderData, error } = useBranchExplorerData();
+  const preferences = useBranchExplorerPreferences();
+  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, structureOnly, detailsOpen, highlightedAuthor, showComments, showAvatars, revealRequest } =
+    preferences;
 
   const canvasRef = useRef<GraphCanvasHandle>(null);
   const [selection, setSelection] = useState<GraphSelection | null>(null);
-  const [relatedTo, setRelatedTo] = useState<string | null>(null);
+  const [focus, setFocus] = useState<GraphFocus | null>(null);
+  /** How far the last focus reached; the next one starts there. */
+  const [focusHops, setFocusHops] = useState(1);
   const [search, setSearch] = useState('');
+  /** Changesets the user expanded out of "+N" nodes. */
+  const [expanded, setExpanded] = useState<ReadonlySet<number>>(new Set());
   /** -1 until the user steps through the matches. */
   const [activeHitIndex, setActiveHitIndex] = useState(-1);
 
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : null;
   const homeChangeset = workspace?.loadedChangeset ?? null;
 
-  const layout = useMemo(() => {
+  const filtered = useMemo(() => {
     if (!data) return null;
-    const focus = relatedTo ?? (onlyRelatedToCurrent ? currentBranch : null);
-    return layoutGraph(filterGraph(data, { relatedTo: focus, hideMergedBranches, currentBranch }));
-  }, [data, relatedTo, onlyRelatedToCurrent, hideMergedBranches, currentBranch]);
+    const related = focus ?? (onlyRelatedToCurrent && currentBranch ? { branch: currentBranch, hops: 1 } : null);
+    const chosen = visibleBranches && new Set(visibleBranches);
+    return filterGraph(data, { focus: related, visibleBranches: chosen, hideMergedBranches, currentBranch });
+  }, [data, focus, onlyRelatedToCurrent, visibleBranches, hideMergedBranches, currentBranch]);
 
-  const searchHits = useMemo(() => (layout ? searchGraph(layout, search) : []), [layout, search]);
+  // Search looks at every changeset, so "Only relevant changesets" can keep what it finds.
+  const fullLayout = useMemo(() => filtered && layoutGraph(filtered), [filtered]);
+  const searchHits = useMemo(() => (fullLayout ? searchGraph(fullLayout, search) : []), [fullLayout, search]);
+  const selectedChangeset = selection?.kind === 'changeset' ? selection.id : null;
+  const layout = useMemo(() => {
+    if (!filtered || !structureOnly) return fullLayout;
+    const keep = new Set(expanded);
+    if (homeChangeset !== null) keep.add(homeChangeset);
+    if (selectedChangeset !== null) keep.add(selectedChangeset);
+    for (const hit of searchHits) if (hit.kind === 'changeset') keep.add(hit.id);
+    if (revealRequest?.kind === 'changeset') keep.add(revealRequest.id);
+    if (revealRequest?.kind === 'label') keep.add(revealRequest.changeset);
+    return layoutGraph(filtered, { keep });
+  }, [filtered, fullLayout, structureOnly, expanded, homeChangeset, selectedChangeset, searchHits, revealRequest]);
+
   const authors = useMemo(() => [...new Set(data?.changesets.map((changeset) => changeset.owner))].sort(), [data]);
+  const branchNames = useMemo(() => (data?.branches.map((branch) => branch.name) ?? []).sort(), [data]);
+  // Asked for once the graph is in, so it never waits on the reviews.
+  const { data: reviews } = useReviewsByBranch(data !== undefined);
   const highlights = useMemo<GraphHighlights>(
     () => ({
       selectedChangeset: selection?.kind === 'changeset' ? selection.id : null,
@@ -60,14 +92,25 @@ export function BranchExplorerView() {
       highlightedAuthor,
       search: search.trim() ? searchHighlight(searchHits, searchHits[activeHitIndex] ?? null) : null,
       options: { showComments, showAvatars },
+      reviews: reviews ?? NO_REVIEWS,
     }),
-    [selection, homeChangeset, currentBranch, highlightedAuthor, search, searchHits, activeHitIndex, showComments, showAvatars],
+    [selection, homeChangeset, currentBranch, highlightedAuthor, search, searchHits, activeHitIndex, showComments, showAvatars, reviews],
   );
 
   const goToChangeset = useCallback((id: number) => {
     setSelection({ kind: 'changeset', id });
     canvasRef.current?.revealChangeset(id);
   }, []);
+
+  const focusOn = (branch: string, hops: number): void => {
+    setFocus({ branch, hops });
+    setFocusHops(hops);
+  };
+
+  const clearFilters = (): void => {
+    setFocus(null);
+    preferences.set({ onlyRelatedToCurrent: false, hideMergedBranches: false, visibleBranches: null, highlightedAuthor: null });
+  };
 
   const goHome = useCallback(() => {
     if (homeChangeset === null) return;
@@ -77,8 +120,23 @@ export function BranchExplorerView() {
 
   const fit = useCallback(() => canvasRef.current?.fit(), []);
   const zoomBy = useCallback((factor: number) => canvasRef.current?.zoomBy(factor), []);
-  useInitialFocus(layout, homeChangeset, canvasRef);
+  useInitialFocus(layout, homeChangeset, canvasRef, structureOnly);
   useBranchExplorerCommands({ goHome, fit });
+  useRevealRequest({
+    layout,
+    settled: !isFetching && !isPlaceholderData,
+    filtersActive: focus !== null || onlyRelatedToCurrent || hideMergedBranches || visibleBranches !== null || highlightedAuthor !== null,
+    clearFilters,
+    reveal: (hit) => {
+      if (hit.kind === 'branch') {
+        setSelection({ kind: 'branch', name: hit.name });
+        canvasRef.current?.frameBranch(hit.name);
+      } else {
+        setSelection({ kind: 'changeset', id: hit.id });
+        canvasRef.current?.frameChangeset(hit.id);
+      }
+    },
+  });
 
   const stepSearch = (direction: 1 | -1): void => {
     if (searchHits.length === 0) return;
@@ -100,6 +158,12 @@ export function BranchExplorerView() {
   const changeSearch = (value: string): void => {
     setSearch(value);
     setActiveHitIndex(-1);
+  };
+
+  const select = (target: GraphTarget | null): void => {
+    if (target?.kind === 'codeReview') openReview(target.review);
+    else if (target?.kind === 'collapsed') setExpanded((current) => new Set([...current, ...target.node.collapsed!.map((changeset) => changeset.id)]));
+    else setSelection(selectionFor(target));
   };
 
   const activate = (target: GraphTarget): void => {
@@ -126,14 +190,16 @@ export function BranchExplorerView() {
     } else if (event.key === 'Enter' && selection?.kind === 'changeset') {
       graphActions.diffChangeset(selection.id);
     } else if (event.key === 'Escape') {
-      setSelection(null);
+      // Esc steps back: first out of the selection, then out of the focus.
+      if (selection) setSelection(null);
+      else setFocus(null);
     }
   };
 
   const header = (
     <ViewHeader
       title="Branch Explorer"
-      subtitle={layout && `${layout.columnCount} changesets · ${layout.lanes.length} branches`}
+      subtitle={layout && filtered && `${filtered.changesets.length} changesets · ${layout.lanes.length} branches`}
       actions={
         <>
           <GraphSearch
@@ -150,12 +216,25 @@ export function BranchExplorerView() {
         </>
       }
     >
-      <GraphFilterBar authors={authors} onZoom={zoomBy} onFit={fit} onGoHome={goHome} />
+      <GraphFilterBar branches={branchNames} authors={authors} onZoom={zoomBy} onFit={fit} onGoHome={goHome} />
     </ViewHeader>
   );
 
   if (isLoading) return <>{header}<CenteredSpinner /></>;
   if (error) return <>{header}<EmptyState title="Couldn't load the history" description={error.message} /></>;
+  if (layout && layout.columnCount === 0 && data && data.changesets.length > 0) {
+    return (
+      <>
+        {header}
+        <EmptyState
+          icon={<GitGraph size={22} />}
+          title="The filters hide every branch"
+          description="Check some branches in the Branches filter, or show everything again."
+          action={<Button onClick={clearFilters}>Clear filters</Button>}
+        />
+      </>
+    );
+  }
   if (!layout || layout.columnCount === 0) {
     return (
       <>
@@ -168,22 +247,15 @@ export function BranchExplorerView() {
   return (
     <>
       {header}
-      {relatedTo && (
-        <div className={styles.focusBanner}>
-          Showing branches related to <strong>{relatedTo}</strong>
-          <button className={styles.clearFocus} onClick={() => setRelatedTo(null)} aria-label="Show all branches">
-            <X size={13} />
-          </button>
-        </div>
-      )}
+      {focus && <FocusBanner focus={focus} onHopsChange={(hops) => focusOn(focus.branch, hops)} onExit={() => setFocus(null)} />}
       <div className={styles.body} onKeyDown={onKeyDown}>
         <GraphCanvas
           ref={canvasRef}
           layout={layout}
           highlights={highlights}
-          onSelect={(target) => setSelection(selectionFor(target))}
+          onSelect={select}
           onActivate={activate}
-          contextMenu={(target) => graphMenu(target, { workspacePath, layout, goToChangeset, showRelatedTo: setRelatedTo })}
+          contextMenu={(target) => graphMenu(target, { workspacePath, layout, goToChangeset, showRelatedTo: (name) => focusOn(name, focusHops) })}
         >
           <GraphNavControls onGoHome={goHome} onFit={fit} onZoom={zoomBy} />
         </GraphCanvas>
@@ -202,16 +274,20 @@ export function BranchExplorerView() {
   );
 }
 
-/** The first time the graph appears, bring the workspace changeset (or the latest history) into view. */
+/**
+ * The first time the graph appears, and whenever "Only relevant changesets" reshapes it, bring the
+ * workspace changeset (or the latest history) into view.
+ */
 function useInitialFocus(
   layout: ReturnType<typeof layoutGraph> | null,
   homeChangeset: number | null,
   canvasRef: React.RefObject<GraphCanvasHandle | null>,
+  structureOnly: boolean,
 ): void {
-  const focused = useRef(false);
+  const focusedFor = useRef<boolean | null>(null);
   useEffect(() => {
-    if (focused.current || !layout || layout.columnCount === 0 || !canvasRef.current) return;
-    focused.current = true;
+    if (focusedFor.current === structureOnly || !layout || layout.columnCount === 0 || !canvasRef.current) return;
+    focusedFor.current = structureOnly;
     const target = homeChangeset !== null && layout.nodes.has(homeChangeset) ? homeChangeset : layout.nodesByColumn.at(-1)!.changeset.id;
     canvasRef.current.showOpeningView(target);
   }, [layout, homeChangeset, canvasRef]);

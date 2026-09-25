@@ -37,7 +37,7 @@ function readContent(workspacePath: string, source: ContentSource): Promise<File
   });
 }
 
-/** Workspace files change under us; revisions never do. */
+/** Workspace files change under us, and so does the reviewed copy on every new review; revisions never do. */
 function isLive(source: ContentSource): boolean {
-  return source.kind === 'workspaceFile';
+  return source.kind === 'workspaceFile' || source.kind === 'reviewSnapshot';
 }

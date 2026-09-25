@@ -1,3 +1,4 @@
+import { AlertTriangle, ArrowDownToLine } from 'lucide-react';
 import type { IncomingChanges } from '@shared/domain/incoming';
 import { firstLine, pluralize } from '../../lib/text';
 import { displayName } from '../../lib/userName';
@@ -23,13 +24,17 @@ export function IncomingCard({ state, changes, actions }: IncomingCardProps) {
   return (
     <div className={styles.card}>
       <header className={styles.header}>
+        <ArrowDownToLine size={14} className={styles.headerIcon} />
         <span className={styles.title}>{pluralize(state.count, 'new changeset')}</span>
         <span className={styles.branch}>on {state.branch}</span>
       </header>
       {state.kind === 'conflicts' && (
         <p className={styles.conflicts}>
-          {pluralize(state.conflictCount, 'file')} you changed {state.conflictCount === 1 ? 'was' : 'were'} also changed there. Merge them
-          in Incoming to update.
+          <AlertTriangle size={14} className={styles.conflictsIcon} />
+          <span>
+            {pluralize(state.conflictCount, 'file')} you changed {state.conflictCount === 1 ? 'was' : 'were'} also changed there. Merge them
+            in Incoming to update.
+          </span>
         </p>
       )}
       <ul className={styles.list}>
