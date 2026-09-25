@@ -1,0 +1,32 @@
+.trigger {
+  max-width: 420px;
+  color: var(--text-primary);
+}
+
+.selector {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chevron {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.popover {
+  display: flex;
+  flex-direction: column;
+  width: 380px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  animation: pop-in var(--duration-fast) var(--ease-out);
+  z-index: 900;
+}
+
+/* Radix keeps closing content mounted while an animation runs; without one it unmounts at once. */
+.popover[data-state='closed'] {
+  animation: none;
+}

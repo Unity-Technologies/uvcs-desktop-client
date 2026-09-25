@@ -67,3 +67,15 @@ export async function runAction<T>(workspacePath: string, failureTitle: string, 
     void invalidateWorkspace(workspacePath);
   }
 }
+
+/**
+ * Like `runAction` for actions without a result: resolves to whether it succeeded,
+ * since `undefined` can't tell a failure from a successful `void` action.
+ */
+export async function runVoidAction(workspacePath: string, failureTitle: string, action: () => Promise<void>): Promise<boolean> {
+  const succeeded = await runAction(workspacePath, failureTitle, async () => {
+    await action();
+    return true;
+  });
+  return succeeded === true;
+}

@@ -10,6 +10,11 @@
   z-index: 900;
 }
 
+/* Radix keeps closing content mounted while an animation runs; without one it unmounts at once. */
+.content[data-state='closed'] {
+  animation: none;
+}
+
 .item {
   display: flex;
   align-items: center;
