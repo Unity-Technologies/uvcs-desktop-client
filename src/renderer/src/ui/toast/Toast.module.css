@@ -11,6 +11,10 @@
 }
 
 .toast {
+  --toast-tint: var(--status-moved);
+  position: relative;
+  /* Clips the countdown bar to the rounded corners. */
+  overflow: hidden;
   display: flex;
   align-items: flex-start;
   gap: var(--space-3);
@@ -21,6 +25,38 @@
   box-shadow: var(--shadow-lg);
   animation: var(--keyframes-pop-in) var(--duration-normal) var(--ease-out);
   pointer-events: auto;
+}
+
+.toast[data-kind='success'] {
+  --toast-tint: var(--status-added);
+}
+
+.toast[data-kind='error'] {
+  --toast-tint: var(--status-deleted);
+}
+
+/* Time left, along the bottom edge. Its animationend dismisses the toast, so pausing it on hover holds the toast open. */
+.countdown {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  background: var(--toast-tint);
+  transform-origin: left;
+  animation-name: toast-countdown;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+.toast:hover .countdown {
+  animation-play-state: paused;
+}
+
+@keyframes toast-countdown {
+  to {
+    transform: scaleX(0);
+  }
 }
 
 .icon {

@@ -22,7 +22,8 @@ interface ToastStore {
   dismiss: (id: number) => void;
 }
 
-const AUTO_DISMISS_MS: Record<ToastKind, number | null> = {
+/** How long each kind stays up. The toast's countdown bar runs the timer, so hovering it holds the toast open. */
+export const AUTO_DISMISS_MS: Record<ToastKind, number | null> = {
   info: 4000,
   success: 4000,
   error: 9000,
@@ -31,27 +32,16 @@ const AUTO_DISMISS_MS: Record<ToastKind, number | null> = {
 
 let nextToastId = 1;
 
-export const useToastStore = create<ToastStore>((set, get) => {
-  const scheduleDismiss = (id: number, kind: ToastKind): void => {
-    const delay = AUTO_DISMISS_MS[kind];
-    if (delay !== null) setTimeout(() => get().dismiss(id), delay);
-  };
-
-  return {
-    toasts: [],
-    show: (toast) => {
-      const id = nextToastId++;
-      set((state) => ({ toasts: [...state.toasts, { ...toast, id }] }));
-      scheduleDismiss(id, toast.kind);
-      return id;
-    },
-    update: (id, changes) => {
-      set((state) => ({ toasts: state.toasts.map((toast) => (toast.id === id ? { ...toast, ...changes } : toast)) }));
-      if (changes.kind) scheduleDismiss(id, changes.kind);
-    },
-    dismiss: (id) => set((state) => ({ toasts: state.toasts.filter((toast) => toast.id !== id) })),
-  };
-});
+export const useToastStore = create<ToastStore>((set) => ({
+  toasts: [],
+  show: (toast) => {
+    const id = nextToastId++;
+    set((state) => ({ toasts: [...state.toasts, { ...toast, id }] }));
+    return id;
+  },
+  update: (id, changes) => set((state) => ({ toasts: state.toasts.map((toast) => (toast.id === id ? { ...toast, ...changes } : toast)) })),
+  dismiss: (id) => set((state) => ({ toasts: state.toasts.filter((toast) => toast.id !== id) })),
+}));
 
 export const toast = {
   info: (title: string, detail?: string) => useToastStore.getState().show({ kind: 'info', title, detail }),

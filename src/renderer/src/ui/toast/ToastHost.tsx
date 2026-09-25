@@ -1,6 +1,6 @@
 import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
 import { Spinner } from '../Spinner';
-import { useToastStore, type ToastKind } from './toastStore';
+import { AUTO_DISMISS_MS, useToastStore, type ToastKind } from './toastStore';
 import styles from './Toast.module.css';
 
 const ICONS: Record<ToastKind, React.ReactNode> = {
@@ -16,7 +16,7 @@ export function ToastHost() {
   return (
     <div className={styles.host} role="status" aria-live="polite">
       {toasts.map((toast) => (
-        <div key={toast.id} className={styles.toast}>
+        <div key={toast.id} className={styles.toast} data-kind={toast.kind}>
           <span className={styles.icon}>{ICONS[toast.kind]}</span>
           <div className={styles.text}>
             <div className={styles.title}>{toast.title}</div>
@@ -37,6 +37,16 @@ export function ToastHost() {
             <button className={styles.close} onClick={() => dismiss(toast.id)} aria-label="Dismiss">
               <X size={13} />
             </button>
+          )}
+          {/* The bar is the timer: dismissal fires when it runs out, so the two can't drift apart. Keyed on the kind so a
+              finished progress toast starts its countdown fresh. */}
+          {AUTO_DISMISS_MS[toast.kind] !== null && (
+            <span
+              key={toast.kind}
+              className={styles.countdown}
+              style={{ animationDuration: `${AUTO_DISMISS_MS[toast.kind]}ms` }}
+              onAnimationEnd={() => dismiss(toast.id)}
+            />
           )}
         </div>
       ))}
