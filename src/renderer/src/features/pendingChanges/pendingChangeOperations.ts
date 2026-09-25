@@ -1,6 +1,7 @@
 import type { FilterRuleList, PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
-import { runAction } from '../../app/operations/runOperation';
+import { runAction, runVoidAction } from '../../app/operations/runOperation';
+import { copyToClipboard } from '../../lib/copyToClipboard';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 import { isControlled } from './changeCategories';
@@ -50,8 +51,8 @@ export function checkout(workspacePath: string, changes: PendingChange[]): Promi
 }
 
 export async function addFilterRule(workspacePath: string, list: FilterRuleList, pattern: string): Promise<void> {
-  const added = await runAction(workspacePath, "Couldn't update the rules", () => api.pendingChanges.addFilterRule(workspacePath, list, pattern));
-  if (added !== undefined) toast.success(`Added “${pattern}” to ${FILTER_LIST_FILES[list]}`);
+  const added = await runVoidAction(workspacePath, "Couldn't update the rules", () => api.pendingChanges.addFilterRule(workspacePath, list, pattern));
+  if (added) toast.success(`Added “${pattern}” to ${FILTER_LIST_FILES[list]}`);
 }
 
 export const FILTER_LIST_FILES: Record<FilterRuleList, string> = {
@@ -61,8 +62,7 @@ export const FILTER_LIST_FILES: Record<FilterRuleList, string> = {
 };
 
 export function copyPaths(paths: string[]): void {
-  void navigator.clipboard.writeText(paths.join('\n'));
-  toast.info(paths.length === 1 ? 'Path copied' : `${paths.length} paths copied`);
+  copyToClipboard(paths.join('\n'), paths.length === 1 ? 'Path' : `${paths.length} paths`);
 }
 
 export function fileName(path: string): string {

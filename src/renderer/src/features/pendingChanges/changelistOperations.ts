@@ -1,6 +1,6 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
-import { runAction } from '../../app/operations/runOperation';
+import { runAction, runVoidAction } from '../../app/operations/runOperation';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 
@@ -20,10 +20,10 @@ export async function moveToNewChangelist(workspacePath: string, changes: Pendin
   const name = await prompt({ title: 'New changelist', label: 'Name', confirmLabel: 'Create' });
   if (!name) return;
 
-  const created = await runAction(workspacePath, "Couldn't create the changelist", () =>
+  const created = await runVoidAction(workspacePath, "Couldn't create the changelist", () =>
     api.pendingChanges.createChangelist(workspacePath, { name, description: '' }),
   );
-  if (created !== undefined && changes.length > 0) await moveToChangelist(workspacePath, name, changes);
+  if (created && changes.length > 0) await moveToChangelist(workspacePath, name, changes);
 }
 
 export async function renameChangelist(workspacePath: string, changelist: Changelist): Promise<void> {
