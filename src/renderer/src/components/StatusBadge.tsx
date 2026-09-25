@@ -17,7 +17,12 @@ export const STATUS_LETTERS: Record<StatusTone, string> = {
 export function StatusBadge({ tone, title, letter }: { tone: StatusTone; title: string; letter?: string }) {
   return (
     <span className={styles.badge} data-tone={tone} data-tip={title}>
-      {letter ?? STATUS_LETTERS[tone]}
+      <StatusLetter letter={letter ?? STATUS_LETTERS[tone]} />
     </span>
   );
+}
+
+/** A status letter trimmed to its cap height, so it sits in the optical center of whatever box holds it. */
+export function StatusLetter({ letter }: { letter: string }) {
+  return <span className={styles.letter}>{letter}</span>;
 }

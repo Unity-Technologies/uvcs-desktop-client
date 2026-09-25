@@ -9,6 +9,13 @@
   font-size: 10px;
   font-weight: 700;
   font-family: var(--font-mono);
+  line-height: 1;
+}
+
+/* Trimming the line box to the capital letters leaves no ascender or descender space to push the glyph off center. */
+.letter {
+  display: block;
+  text-box: trim-both cap alphabetic;
 }
 
 .badge[data-tone='added'] {

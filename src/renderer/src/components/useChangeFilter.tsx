@@ -2,7 +2,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { SearchField } from '../ui/SearchField';
 import { Tooltip } from '../ui/Tooltip';
 import { matchesChangeFilter, offeredTones } from './changeFilter';
-import { STATUS_LETTERS, type StatusTone } from './StatusBadge';
+import { STATUS_LETTERS, StatusLetter, type StatusTone } from './StatusBadge';
 import styles from './useChangeFilter.module.css';
 
 const TONE_LABELS: Record<StatusTone, string> = {
@@ -51,7 +51,7 @@ export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tone
       {tones.map((tone) => (
         <Tooltip key={tone} content={TONE_LABELS[tone]}>
           <button type="button" className={styles.chip} data-tone={tone} aria-pressed={activeTones.has(tone)} aria-label={TONE_LABELS[tone]} onClick={() => toggle(tone)}>
-            {STATUS_LETTERS[tone]}
+            <StatusLetter letter={STATUS_LETTERS[tone]} />
           </button>
         </Tooltip>
       ))}

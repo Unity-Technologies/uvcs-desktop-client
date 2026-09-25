@@ -1,5 +1,7 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
+import { compareTones } from '../../components/changeFilter';
 import type { CheckState } from '../../ui/Checkbox';
+import { changeTone } from './changeTone';
 
 /** A changelist header. */
 interface GroupRow {
@@ -60,7 +62,7 @@ interface Group {
 export function buildChangeRows({ changes, changelists, layout, grouping, isChecked, collapsed }: BuildRowsInput): ChangeRow[] {
   const rows: ChangeRow[] = [];
   if (grouping === 'none') {
-    appendChangeRows(rows, sortByPath(changes), 'all', layout, isChecked, collapsed);
+    appendChangeRows(rows, changes, 'all', layout, isChecked, collapsed);
     return rows;
   }
 
@@ -93,6 +95,11 @@ function sortByPath(changes: PendingChange[]): PendingChange[] {
   return [...changes].sort((a, b) => a.path.localeCompare(b.path));
 }
 
+/** A flat list reads by kind of change first, in the order of the filter chips; a tree has to follow the folders. */
+function sortByStatus(changes: PendingChange[]): PendingChange[] {
+  return [...changes].sort((a, b) => compareTones(changeTone(a), changeTone(b)) || a.path.localeCompare(b.path));
+}
+
 function appendChangeRows(
   rows: ChangeRow[],
   changes: PendingChange[],
@@ -102,10 +109,10 @@ function appendChangeRows(
   collapsed: ReadonlySet<string>,
 ): void {
   if (layout === 'tree') {
-    appendTreeRows(rows, changes, groupKey, isChecked, collapsed);
+    appendTreeRows(rows, sortByPath(changes), groupKey, isChecked, collapsed);
     return;
   }
-  changes.forEach((change) => rows.push({ type: 'change', key: changeKey(change), change, depth: 0, checked: isChecked(change) }));
+  sortByStatus(changes).forEach((change) => rows.push({ type: 'change', key: changeKey(change), change, depth: 0, checked: isChecked(change) }));
 }
 
 function groupByChangelist(changes: PendingChange[], changelists: Changelist[]): Group[] {
