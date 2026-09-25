@@ -38,7 +38,7 @@ export function isAffectedByLoadedChangeset(key: QueryKey): boolean {
 }
 
 /** Repository objects a checkin by someone else doesn't touch. */
-const UNTOUCHED_BY_CHECKINS = ['labels', 'shelves', 'attributeTypes', 'attributeUsedValues', 'codeReviews', 'leftChanges'];
+const UNTOUCHED_BY_CHECKINS = ['labels', 'shelves', 'attributeTypes', 'attributeValues', 'attributeUsedValues', 'codeReviews', 'leftChanges'];
 
 /**
  * This workspace checked in, updated, or merged from a branch or changeset: everything but the objects those leave

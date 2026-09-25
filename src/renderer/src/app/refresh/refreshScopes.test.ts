@@ -51,6 +51,7 @@ describe('refresh scopes', () => {
     expect(isAffectedByNewChangesets(key('labels', {}))).toBe(false);
     expect(isAffectedByNewChangesets(key('shelves', {}))).toBe(false);
     expect(isAffectedByNewChangesets(key('attributeTypes'))).toBe(false);
+    expect(isAffectedByNewChangesets(key('attributeValues', 'br:/main/task'))).toBe(false);
     expect(isAffectedByNewChangesets(key('codeReviews', { scope: 'all' }))).toBe(false);
   });
 
