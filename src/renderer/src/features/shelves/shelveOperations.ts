@@ -3,7 +3,7 @@ import type { Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
-import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
+import { runOperation, runRead, runVoidAction } from '../../app/operations/runOperation';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 
@@ -13,7 +13,7 @@ import { toast } from '../../ui/toast/toastStore';
  */
 export async function applyShelve(workspacePath: string, shelve: Shelve): Promise<void> {
   const request: MergeRequest = { kind: 'merge', sourceSpec: spec.shelve(shelve.id) };
-  const plan = await runAction(workspacePath, "Couldn't check the shelve", () => api.merge.preview(workspacePath, request));
+  const plan = await runRead("Couldn't check the shelve", () => api.merge.preview(workspacePath, request));
   if (!plan) return;
 
   if (plan.status === 'pendingChanges') {

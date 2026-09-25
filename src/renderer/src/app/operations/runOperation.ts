@@ -122,6 +122,19 @@ export async function runAction<T>(workspacePath: string, failureTitle: string, 
 }
 
 /**
+ * Runs a read, or an action that leaves the workspace and repository as they were (opening a file), reporting
+ * failures. Unlike `runAction`, it refreshes nothing: nothing changed.
+ */
+export async function runRead<T>(failureTitle: string, read: () => Promise<T>): Promise<T | undefined> {
+  try {
+    return await read();
+  } catch (error) {
+    toast.error(failureTitle, error);
+    return undefined;
+  }
+}
+
+/**
  * Like `runAction` for actions without a result: resolves to whether it succeeded,
  * since `undefined` can't tell a failure from a successful `void` action.
  */

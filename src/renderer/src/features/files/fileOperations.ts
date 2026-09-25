@@ -1,6 +1,6 @@
 import type { RevisionType, TreeItem } from '@shared/domain/explorer';
 import { api } from '../../api/client';
-import { runAction } from '../../app/operations/runOperation';
+import { runAction, runRead } from '../../app/operations/runOperation';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { absolutePath, deletePrivateFiles, fileName } from '../pendingChanges/pendingChangeOperations';
@@ -8,7 +8,7 @@ import { useFilesViewStore } from './filesViewStore';
 import { parentOf } from './fileTreeRows';
 
 export function openItem(workspacePath: string, item: Pick<TreeItem, 'path'>): void {
-  void runAction(workspacePath, "Couldn't open the file", () => api.system.openPath(absolutePath(workspacePath, item.path)));
+  void runRead("Couldn't open the file", () => api.system.openPath(absolutePath(workspacePath, item.path)));
 }
 
 export function revealItem(workspacePath: string, item: Pick<TreeItem, 'path'>): void {

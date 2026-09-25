@@ -2,7 +2,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import { ApiError, api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
-import { runAction, runOperation } from '../../app/operations/runOperation';
+import { runAction, runOperation, runRead } from '../../app/operations/runOperation';
 import { queryClient } from '../../app/queryClient';
 import { firstLine } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
@@ -73,7 +73,7 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
  */
 async function catchUpAndCheckin(options: CheckinOptions, rejection: CheckinRejection | null): Promise<boolean> {
   const { workspacePath, changes } = options;
-  const incoming = await runAction(workspacePath, "Couldn't check what came in", () => api.merge.incomingChanges(workspacePath));
+  const incoming = await runRead("Couldn't check what came in", () => api.merge.incomingChanges(workspacePath));
   if (!incoming?.branch) return false;
   // Someone updated the workspace since the incoming check: nothing to catch up with.
   if (!rejection && incoming.changesets.length === 0) return checkinChanges(options);
