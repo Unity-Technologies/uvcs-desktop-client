@@ -2,6 +2,7 @@ import { Copy, FolderOpen, FolderPlus, FolderSearch, PenLine, Trash2, X } from '
 import type { RepositorySummary } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { SEPARATOR, type MenuEntry } from '../../lib/actions';
+import { forgetRecentWorkspace } from '../settings/useSettings';
 import { copyRepositorySpec, deleteRepository, removeWorkspace, renameRepository, renameWorkspace, revealWorkspace } from './homeOperations';
 
 export function workspaceMenu(workspace: WorkspaceSummary, open: (path: string) => void): MenuEntry[] {
@@ -11,6 +12,14 @@ export function workspaceMenu(workspace: WorkspaceSummary, open: (path: string) 
     SEPARATOR,
     { id: 'rename', label: 'Rename…', icon: PenLine, run: () => void renameWorkspace(workspace) },
     { id: 'remove', label: 'Remove workspace…', icon: X, danger: true, run: () => void removeWorkspace(workspace) },
+  ];
+}
+
+export function missingWorkspaceMenu(workspace: WorkspaceSummary, open: (path: string) => void): MenuEntry[] {
+  return [
+    { id: 'open', label: 'Locate or recreate…', icon: FolderSearch, run: () => open(workspace.path) },
+    SEPARATOR,
+    { id: 'forget', label: 'Remove from list', icon: X, run: () => void forgetRecentWorkspace(workspace.path) },
   ];
 }
 

@@ -1,5 +1,5 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { Archive, Check, ChevronDown, GitCommitHorizontal, History } from 'lucide-react';
+import { Archive, Check, ChevronDown, GitCommitHorizontal, GitMerge, History } from 'lucide-react';
 import { useState } from 'react';
 import type { Icon } from '../../lib/actions';
 import { useShortcut } from '../../lib/useShortcut';
@@ -7,17 +7,25 @@ import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import menuStyles from '../../ui/menu/Menu.module.css';
-import styles from './CheckinPanel.module.css';
+import { ResizeHandle } from '../../ui/ResizeHandle';
+import { checkinButtonLabel, checkinDisabledReason, type CheckinMode } from './checkinButton';
 import { splitComment } from './checkinDraftStore';
+import { usePendingChangesViewStore } from './pendingChangesViewStore';
+import styles from './CheckinPanel.module.css';
 
-export type CheckinMode = 'checkin' | 'shelve';
+const DESCRIPTION_MIN_HEIGHT = 32;
+const DESCRIPTION_MAX_HEIGHT = 360;
 
 interface CheckinPanelProps {
   summary: string;
   description: string;
   onMessageChange: (message: { summary?: string; description?: string }) => void;
   includedCount: number;
+  /** Bytes the included changes upload. */
+  uploadBytes: number;
   branchName: string;
+  /** A merge is pending: checking in completes it. */
+  merging: boolean;
   recentComments: string[];
   busy: boolean;
   onCheckin: () => Promise<boolean>;
@@ -31,27 +39,32 @@ export function CheckinPanel({
   description,
   onMessageChange,
   includedCount,
+  uploadBytes,
   branchName,
+  merging,
   recentComments,
   busy,
   onCheckin,
   onShelve,
 }: CheckinPanelProps) {
   const [mode, setMode] = useState<CheckinMode>('checkin');
-  const canAct = includedCount > 0 && !busy;
-  const { title: verb, icon: ModeIcon } = describeMode(mode);
+  const { descriptionHeight, setDescriptionHeight } = usePendingChangesViewStore();
+  const disabledReason = checkinDisabledReason(mode, includedCount);
+  const canAct = disabledReason === null && !busy;
+  const { icon: ModeIcon } = describeMode(mode);
+  const label = checkinButtonLabel({ mode, includedCount, branchName, uploadBytes, merging });
 
   // A shelve is a detour: once it's done, the panel is back to checking in.
   const act = async (): Promise<void> => {
+    if (!canAct) return;
     if (mode === 'checkin') await onCheckin();
     else if (await onShelve()) setMode('checkin');
   };
   useShortcut('mod+enter', () => void act(), canAct);
 
-  const changes = `${includedCount} ${includedCount === 1 ? 'change' : 'changes'}`;
-
   return (
     <div className={styles.panel}>
+      <ResizeHandle size={descriptionHeight} min={DESCRIPTION_MIN_HEIGHT} max={DESCRIPTION_MAX_HEIGHT} onResize={setDescriptionHeight} />
       <div className={styles.summaryField}>
         <input
           className={styles.summary}
@@ -75,25 +88,30 @@ export function CheckinPanel({
       <textarea
         className={styles.description}
         placeholder="Description (optional)"
+        style={{ height: descriptionHeight }}
         value={description}
         onChange={(event) => onMessageChange({ description: event.target.value })}
         spellCheck
       />
       <div className={styles.actions}>
+        {/* aria-disabled rather than disabled, so hovering still shows the tooltip saying why. */}
         <Button
           variant="primary"
           className={styles.act}
-          icon={<ModeIcon size={14} />}
-          disabled={!canAct}
+          icon={merging && mode === 'checkin' ? <GitMerge size={14} /> : <ModeIcon size={14} />}
+          aria-disabled={!canAct}
+          data-tip={disabledReason ?? label.tip}
+          data-tip-shortcut={canAct ? 'mod+enter' : undefined}
           loading={busy}
           onClick={() => void act()}
         >
-          {includedCount === 0 ? `Nothing to ${verb.toLowerCase()}` : `${verb} ${changes}`}
-          {mode === 'checkin' && <span className={styles.branch}>to {branchName}</span>}
+          <span className={styles.action}>{label.action}</span>
+          {label.target && <span className={styles.target}>{label.target}</span>}
+          {label.size && <span className={styles.size}>· {label.size}</span>}
         </Button>
         <DropdownMenu.Root modal={false}>
           <DropdownMenu.Trigger asChild>
-            <Button variant="primary" className={styles.modeButton} icon={<ChevronDown size={14} />} disabled={busy} aria-label="Change mode" />
+            <Button variant="primary" className={styles.modeButton} icon={<ChevronDown size={14} />} disabled={!canAct} aria-label="Change mode" />
           </DropdownMenu.Trigger>
           <DropdownMenu.Portal>
             <DropdownMenu.Content className={`${menuStyles.content} ${styles.modeMenu}`} align="end" side="top" sideOffset={4}>

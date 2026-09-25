@@ -8,7 +8,8 @@ import { PageFrame } from './PageFrame';
 import { Sidebar } from './Sidebar';
 import { StatusBar } from './StatusBar';
 import { TopBar } from './TopBar';
-import { useCommandLogStore } from './commandLogStore';
+import { useCommandLogHost, useCommandLogStore } from './commandLogStore';
+import { useWindowTitle } from './useWindowTitle';
 import { useWorkspaceCommands } from './useWorkspaceCommands';
 import { useWorkspaceWatcher } from './useWorkspaceWatcher';
 import styles from './WorkspaceScreen.module.css';
@@ -16,8 +17,10 @@ import styles from './WorkspaceScreen.module.css';
 export function WorkspaceScreen() {
   const { view, pages } = useNavigation();
   const commandLogOpen = useCommandLogStore((state) => state.open);
+  useCommandLogHost();
   useWorkspaceWatcher();
   useWorkspaceCommands();
+  useWindowTitle();
   useMergeCommands();
 
   const ActiveView = viewDefinition(view).component;

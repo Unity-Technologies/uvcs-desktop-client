@@ -1,0 +1,116 @@
+/* The chip's color: calm green for changesets to take, red when they collide with local changes. */
+.chip {
+  --tone: var(--status-added);
+
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 2px;
+  height: 30px;
+  min-width: 0;
+  max-width: 340px;
+  padding: 2px;
+  border: 1px solid color-mix(in srgb, var(--tone) 35%, transparent);
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--tone) 9%, var(--bg-surface));
+  color: color-mix(in srgb, var(--tone) 80%, var(--text-primary));
+  animation: chip-in 240ms var(--ease-out);
+}
+
+.chip[data-tone='conflicts'] {
+  --tone: var(--status-conflict);
+}
+
+.chip[data-tone='updating'] {
+  --tone: var(--text-tertiary);
+
+  color: var(--text-secondary);
+}
+
+@keyframes chip-in {
+  from {
+    opacity: 0;
+    transform: translateX(-6px) scale(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip {
+    animation: none;
+  }
+}
+
+.body {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-full);
+  background: none;
+  color: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+button.body:hover,
+button.body[data-state='open'] {
+  background: color-mix(in srgb, var(--tone) 12%, transparent);
+}
+
+.text {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+}
+
+.label {
+  flex: none;
+}
+
+.stage {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-weight: var(--weight-regular);
+  text-overflow: ellipsis;
+}
+
+.primary {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  height: 100%;
+  padding: 0 10px;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--tone);
+  color: var(--accent-contrast);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-semibold);
+}
+
+.primary:hover {
+  filter: brightness(1.08);
+}
+
+.primary:disabled {
+  opacity: 0.7;
+}
+
+.card {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
+  z-index: 900;
+}
+
+.card[data-state='open'] {
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+}
