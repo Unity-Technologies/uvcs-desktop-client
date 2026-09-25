@@ -1,4 +1,4 @@
-import type { CodeReview, CodeReviewStatus, CodeReviewTarget } from '@shared/domain/codeReview';
+import type { CodeReview, CodeReviewStatus, CodeReviewSummary, CodeReviewTarget } from '@shared/domain/codeReview';
 import type { DiffTarget } from '@shared/domain/diff';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -6,11 +6,11 @@ import { runAction } from '../../app/operations/runOperation';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 
-export function setReviewStatus(workspacePath: string, review: CodeReview, status: CodeReviewStatus): Promise<unknown> {
+export function setReviewStatus(workspacePath: string, review: CodeReviewSummary, status: CodeReviewStatus): Promise<unknown> {
   return runAction(workspacePath, "Couldn't change the review status", () => api.codeReviews.update(workspacePath, review.id, { status }));
 }
 
-export async function reassignReview(workspacePath: string, review: CodeReview): Promise<void> {
+export async function reassignReview(workspacePath: string, review: CodeReviewSummary): Promise<void> {
   const assignee = await prompt({
     title: 'Assign review',
     label: 'Reviewer',
@@ -23,7 +23,7 @@ export async function reassignReview(workspacePath: string, review: CodeReview):
 }
 
 /** Resolves to true when the reviews were deleted. */
-export async function deleteReviews(workspacePath: string, reviews: CodeReview[]): Promise<boolean> {
+export async function deleteReviews(workspacePath: string, reviews: CodeReviewSummary[]): Promise<boolean> {
   const confirmed = await confirm({
     title: reviews.length === 1 ? `Delete “${reviews[0]!.title}”?` : `Delete ${reviews.length} code reviews?`,
     message: 'The reviewed changes are kept. This cannot be undone.',

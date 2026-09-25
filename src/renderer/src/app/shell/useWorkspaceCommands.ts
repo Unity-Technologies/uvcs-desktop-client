@@ -1,4 +1,6 @@
-import { ArrowDownToLine, FolderOpen, Keyboard, Moon, RefreshCw, TerminalSquare } from 'lucide-react';
+import { ArrowDownToLine, FolderOpen, Keyboard, Monitor, Moon, RefreshCw, Sun, TerminalSquare } from 'lucide-react';
+import type { ThemePreference } from '@shared/domain/settings';
+import type { Icon } from '../../lib/actions';
 import { useMemo } from 'react';
 import { useCommands, type Command } from '../commands/commandStore';
 import { openShortcutsDialog } from '../commands/ShortcutsDialog';
@@ -10,6 +12,12 @@ import { useSession } from '../workspace/sessionStore';
 import { useWorkspacePath } from '../workspace/useWorkspace';
 import { useCommandLogStore } from './commandLogStore';
 import { updateWorkspace } from './workspaceOperations';
+
+const THEMES: { theme: ThemePreference; label: string; icon: Icon }[] = [
+  { theme: 'system', label: 'Use system theme', icon: Monitor },
+  { theme: 'light', label: 'Use light theme', icon: Sun },
+  { theme: 'dark', label: 'Use dark theme', icon: Moon },
+];
 
 /** Commands available everywhere inside a workspace. */
 export function useWorkspaceCommands(): void {
@@ -68,13 +76,16 @@ export function useWorkspaceCommands(): void {
         shortcut: 'mod+/',
         run: openShortcutsDialog,
       },
-      {
-        id: 'app.theme',
+      ...THEMES.map(({ theme: choice, label, icon }) => ({
+        id: `app.theme.${choice}`,
         group: 'App',
-        label: theme === 'dark' ? 'Use light theme' : 'Use dark theme',
-        icon: Moon,
-        run: () => updateSettings({ theme: theme === 'dark' ? 'light' : 'dark' }),
-      },
+        label,
+        icon,
+        keywords: ['theme', 'appearance'],
+        // The theme in use is not offered again.
+        disabled: choice === theme,
+        run: () => updateSettings({ theme: choice }),
+      })),
     ],
     [workspacePath, closeWorkspace, theme, updateSettings],
   );

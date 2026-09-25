@@ -17,14 +17,19 @@ interface ActionDropdownMenuProps {
   entries: MenuEntry[];
   align?: 'start' | 'end';
   children: ReactElement;
+  /** Opens and closes it from outside too, e.g. from the keyboard; uncontrolled without it. */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** Where focus goes once it closes, instead of back to the trigger. */
+  onCloseAutoFocus?: (event: Event) => void;
 }
 
-export function ActionDropdownMenu({ entries, align = 'end', children }: ActionDropdownMenuProps) {
+export function ActionDropdownMenu({ entries, align = 'end', children, open, onOpenChange, onCloseAutoFocus }: ActionDropdownMenuProps) {
   return (
-    <DropdownMenu.Root modal={false}>
+    <DropdownMenu.Root modal={false} open={open} onOpenChange={onOpenChange}>
       <DropdownMenu.Trigger asChild>{children}</DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content className={styles.content} align={align} sideOffset={4}>
+        <DropdownMenu.Content className={styles.content} align={align} sideOffset={4} onCloseAutoFocus={onCloseAutoFocus}>
           <MenuEntries entries={entries} primitives={primitives} />
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
