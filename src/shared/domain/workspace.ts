@@ -23,6 +23,14 @@ export interface WorkspaceInfo {
   loadedChangeset: number;
 }
 
+/** What a workspace works on, as its selector file says: `cm` reads and rewrites it, the app only reads it. */
+export interface WorkspaceHead {
+  /** `name@server`. */
+  repository: string;
+  /** Null when the file loads something the app doesn't name (e.g. a custom selector). */
+  selector: WorkspaceSelector | null;
+}
+
 /** Another workspace at a glance: what it's loaded from and how many pending changes it has. */
 export interface WorkspaceGlance {
   /** `name@server`. */

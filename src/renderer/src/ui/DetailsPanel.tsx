@@ -131,6 +131,29 @@ export function DetailsSkeleton({ rows = 3 }: { rows?: number }) {
   );
 }
 
+/** The whole panel while the list it describes loads: the hero's shape, then two sections. */
+export function DetailsPanelSkeleton() {
+  return (
+    <aside className={styles.panel} aria-busy="true" aria-label="Loading">
+      <header className={styles.hero}>
+        <DetailsSkeleton rows={3} />
+      </header>
+      <div className={styles.body}>
+        {[2, 4].map((rows) => (
+          <section key={rows} className={styles.section}>
+            <div className={styles.sectionHeader}>
+              <span className={styles.skeletonRow} style={{ width: 64 }} />
+            </div>
+            <div className={styles.card}>
+              <DetailsSkeleton rows={rows} />
+            </div>
+          </section>
+        ))}
+      </div>
+    </aside>
+  );
+}
+
 /** A value that takes you somewhere else in the app, e.g. the parent changeset. */
 export function DetailsLink({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   return (

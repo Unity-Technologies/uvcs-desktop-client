@@ -55,3 +55,19 @@
   flex: none;
   color: var(--text-tertiary);
 }
+
+.workspace[data-rail='true'] {
+  justify-content: center;
+  padding: 4px 0;
+  border-color: transparent;
+  background: none;
+}
+
+.workspace[data-rail='true']:hover {
+  border-color: var(--border-default);
+}
+
+.workspace[data-rail='true'] .workspaceText,
+.workspace[data-rail='true'] .workspaceChevron {
+  display: none;
+}

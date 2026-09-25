@@ -5,7 +5,7 @@
   justify-content: center;
   padding-top: 12vh;
   background: var(--overlay);
-  animation: var(--keyframes-fade-in) var(--duration-fast);
+  animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
   z-index: 850;
 }
 

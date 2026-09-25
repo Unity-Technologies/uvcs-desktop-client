@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
 import { useRepositories, useServers } from '../app/workspace/workspaceQueries';
+import { splitRepositorySpec } from '../lib/servers';
 import { SelectField } from '../ui/TextField';
 import styles from './RepositoryPicker.module.css';
 
@@ -15,7 +16,7 @@ interface RepositoryPickerProps {
 
 /** Picks a server, then one of its repositories. */
 export function RepositoryPicker({ value, onChange, exclude, label = 'Repository' }: RepositoryPickerProps) {
-  const [server, setServer] = useState(() => (value ? serverOf(value) : 'local'));
+  const [server, setServer] = useState(() => (value ? splitRepositorySpec(value).server : 'local'));
   const { data: servers } = useServers();
   const { data: repositories, isLoading, error } = useRepositories(server);
   const choices = (repositories ?? []).filter((repository) => repository.spec !== exclude);
@@ -31,7 +32,7 @@ export function RepositoryPicker({ value, onChange, exclude, label = 'Repository
       </SelectField>
       <SelectField
         label={label}
-        value={value && serverOf(value) === server ? value : ''}
+        value={value && splitRepositorySpec(value).server === server ? value : ''}
         disabled={isLoading || Boolean(error)}
         error={error?.message}
         onChange={(event) => {
@@ -50,9 +51,4 @@ export function RepositoryPicker({ value, onChange, exclude, label = 'Repository
       </SelectField>
     </div>
   );
-}
-
-/** Repository names never contain `@`, so the server is everything after the first one. */
-function serverOf(repositorySpec: string): string {
-  return repositorySpec.slice(repositorySpec.indexOf('@') + 1);
 }

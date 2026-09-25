@@ -6,7 +6,7 @@
   max-width: 720px;
   padding: var(--space-6);
   overflow: auto;
-  animation: fade-in var(--duration-fast);
+  animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
 }
 
 .header {

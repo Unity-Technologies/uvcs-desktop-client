@@ -14,11 +14,12 @@ const MAX_RESOLVED_WORKSPACES = 10;
  * Repository of the recently used workspaces. Each lookup is a `cm` call, so this is limited to
  * the few recent ones and resolved once per session, never for the whole workspace list.
  * The lookups stop when nothing on screen needs them anymore (e.g. leaving the home screen).
+ * Paths in `alreadyKnown` (e.g. told by their `.plastic` folder) are skipped.
  */
-export function useRecentWorkspaceRepositories(workspaces: WorkspaceSummary[] | undefined) {
+export function useRecentWorkspaceRepositories(workspaces: WorkspaceSummary[] | undefined, alreadyKnown: Record<string, unknown> = {}) {
   const { recentWorkspacePaths } = useSettings();
-  const known = new Set((workspaces ?? []).map((workspace) => workspace.path));
-  const paths = recentWorkspacePaths.filter((path) => known.has(path)).slice(0, MAX_RESOLVED_WORKSPACES);
+  const listed = new Set((workspaces ?? []).map((workspace) => workspace.path));
+  const paths = recentWorkspacePaths.filter((path) => listed.has(path) && !(path in alreadyKnown)).slice(0, MAX_RESOLVED_WORKSPACES);
   return useQuery({
     queryKey: ['workspaceRepositories', paths],
     queryFn: ({ signal }) => {
@@ -28,6 +29,19 @@ export function useRecentWorkspaceRepositories(workspaces: WorkspaceSummary[] | 
     },
     enabled: paths.length > 0,
     staleTime: Infinity,
+  });
+}
+
+/**
+ * Repository and branch of every listed workspace, read from their `.plastic` folders (no `cm` call). Re-read whenever
+ * the list shows again, since switching a workspace elsewhere changes its branch.
+ */
+export function useWorkspaceHeads(workspaces: WorkspaceSummary[] | undefined) {
+  const paths = (workspaces ?? []).map((workspace) => workspace.path);
+  return useQuery({
+    queryKey: ['workspaceHeads', paths],
+    queryFn: () => api.workspaces.heads(paths),
+    enabled: paths.length > 0,
   });
 }
 

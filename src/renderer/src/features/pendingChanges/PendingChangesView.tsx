@@ -10,7 +10,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { SegmentedControl } from '../../ui/SegmentedControl';
-import { CenteredSpinner } from '../../ui/Spinner';
+import { ListSkeleton } from '../../ui/Skeleton';
 import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { useChangeset } from '../changesets/useChangeset';
@@ -187,7 +187,7 @@ export function PendingChangesView() {
     </ViewHeader>
   );
 
-  if (isLoading) return <>{header}<CenteredSpinner /></>;
+  if (isLoading) return <>{header}<ListSkeleton rowHeight={28} /></>;
   if (error) return <>{header}<EmptyState title="Couldn't read pending changes" description={error.message} /></>;
 
   if (snapshot?.changes.length === 0) {

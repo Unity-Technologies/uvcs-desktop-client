@@ -1,5 +1,5 @@
 import type { PendingChangesAction, SwitchPreflight, SwitchResult } from '../domain/switchWithChanges';
-import type { NewFolderCheck, WorkspaceGlance, WorkspaceInfo, WorkspaceSelector, WorkspaceSummary } from '../domain/workspace';
+import type { NewFolderCheck, WorkspaceGlance, WorkspaceHead, WorkspaceInfo, WorkspaceSelector, WorkspaceSummary } from '../domain/workspace';
 
 export interface CreateWorkspaceRequest {
   name: string;
@@ -25,6 +25,11 @@ export interface WorkspacesApi {
    * `system.cancelOperation(lookupId)` stops the lookups, e.g. when the list leaves the screen.
    */
   repositoriesOf(workspacePaths: string[], lookupId: string): Promise<Record<string, string | null>>;
+  /**
+   * The repository and branch (or changeset, label, shelve) of each workspace, read from its `.plastic` folder: no `cm`
+   * call, cheap enough for every listed workspace. Workspaces whose folder can't tell are left out.
+   */
+  heads(workspacePaths: string[]): Promise<Record<string, WorkspaceHead>>;
   /** The paths whose folder doesn't exist (deleted, moved, or on a drive that isn't mounted). No `cm` call. */
   findMissing(paths: string[]): Promise<string[]>;
   /** Returns the workspace root containing the given directory, or null. A workspace moved on disk is re-registered at its new place. */
