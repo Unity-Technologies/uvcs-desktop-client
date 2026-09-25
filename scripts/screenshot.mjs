@@ -11,6 +11,7 @@
 //   type:<text>            type text into the focused element
 //   wait:<ms>              wait
 //   theme:dark|light       force a theme
+//   size:<width>x<height>  resize the window (1400x880 by default)
 import { _electron as electron } from 'playwright-core';
 
 const [output = '/tmp/uvcs.png', ...steps] = process.argv.slice(2);
@@ -65,6 +66,11 @@ for (const step of steps) {
       // Emulates the OS appearance, so everything that follows it (code panes included) switches too.
       await window.emulateMedia({ colorScheme: value });
       break;
+    case 'size': {
+      const [width, height] = value.split('x').map(Number);
+      await window.setViewportSize({ width, height });
+      break;
+    }
     default:
       throw new Error(`Unknown step ${step}`);
   }

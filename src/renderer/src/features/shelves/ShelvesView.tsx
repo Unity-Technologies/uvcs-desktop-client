@@ -42,8 +42,8 @@ const COLUMNS: Column<Shelve>[] = [
     grow: 3,
     render: (shelve) => (shelve.comment ? <Highlight text={shelve.comment} /> : <span className={styles.noComment}>No comment</span>),
   },
-  { id: 'parent', header: 'Based on', width: 100, align: 'end', secondary: true, sortValue: (shelve) => shelve.parentChangeset, render: (shelve) => `cs:${shelve.parentChangeset}` },
-  { id: 'owner', header: 'Created by', width: 180, sortValue: (shelve) => shelve.owner, render: (shelve) => <UserLabel user={shelve.owner} /> },
+  { id: 'parent', header: 'Based on', width: 100, align: 'end', secondary: true, hideBelow: 600, sortValue: (shelve) => shelve.parentChangeset, render: (shelve) => `cs:${shelve.parentChangeset}` },
+  { id: 'owner', header: 'Created by', width: 180, hideBelow: 760, sortValue: (shelve) => shelve.owner, render: (shelve) => <UserLabel user={shelve.owner} /> },
   { id: 'date', header: 'Created', width: 130, secondary: true, sortValue: (shelve) => shelve.date, render: (shelve) => <RelativeTime date={shelve.date} /> },
 ];
 

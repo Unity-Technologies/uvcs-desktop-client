@@ -27,18 +27,29 @@ export function mergeLabels(request: MergeRequest, plan: MergePlan | undefined):
   };
 }
 
-export function mergeTitle(request: MergeRequest, destination: string): string {
+/** A merge page's title in parts, so each name can be shortened on its own: "Merge" "/main/task" "into" "/main". */
+export interface MergeTitle {
+  verb: string;
+  source: string;
+  preposition: string;
+  destination: string;
+}
+
+export function mergeTitle(request: MergeRequest, destination: string): MergeTitle {
   const source = describeSpec(request.sourceSpec);
+  const interval = request.intervalOriginSpec ? `${describeSpec(request.intervalOriginSpec)}…${source}` : source;
   switch (request.kind) {
     case 'merge':
-      return request.sourceSpec.startsWith('sh:') ? `Apply ${source} to ${destination}` : `Merge ${source} into ${destination}`;
+      return request.sourceSpec.startsWith('sh:')
+        ? { verb: 'Apply', source, preposition: 'to', destination }
+        : { verb: 'Merge', source, preposition: 'into', destination };
     case 'cherryPick':
-      return request.intervalOriginSpec
-        ? `Cherry pick ${describeSpec(request.intervalOriginSpec)}…${source} into ${destination}`
-        : `Cherry pick ${source} into ${destination}`;
+      return { verb: 'Cherry pick', source: interval, preposition: 'into', destination };
     case 'subtractive':
-      return request.intervalOriginSpec
-        ? `Undo ${describeSpec(request.intervalOriginSpec)}…${source} on ${destination}`
-        : `Undo ${source} on ${destination}`;
+      return { verb: 'Undo', source: interval, preposition: 'on', destination };
   }
+}
+
+export function mergeTitleText({ verb, source, preposition, destination }: MergeTitle): string {
+  return `${verb} ${source} ${preposition} ${destination}`;
 }

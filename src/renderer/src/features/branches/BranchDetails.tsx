@@ -2,6 +2,7 @@ import { FileDiff, GitBranch } from 'lucide-react';
 import type { Branch } from '@shared/domain/branch';
 import { shortBranchName, spec } from '@shared/domain/specs';
 import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
+import { PathLabel } from '../../components/PathLabel';
 import { PLAIN_LINKS, type ObjectLinks } from '../../components/objectLinks';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
@@ -33,7 +34,7 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
     <DetailsPanel
       icon={<GitBranch />}
       kind="Branch"
-      context={branch.parent || undefined}
+      context={branch.parent && <PathLabel path={branch.parent} fitContent />}
       title={shortBranchName(branch.name)}
       author={{ user: branch.owner, date: branch.date }}
       badges={

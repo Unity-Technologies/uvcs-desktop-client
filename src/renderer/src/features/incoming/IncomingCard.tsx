@@ -1,5 +1,6 @@
 import { AlertTriangle, ArrowDownToLine } from 'lucide-react';
 import type { IncomingChanges } from '@shared/domain/incoming';
+import { PathLabel } from '../../components/PathLabel';
 import { firstLine, pluralize } from '../../lib/text';
 import { displayName } from '../../lib/userName';
 import { Avatar } from '../../ui/Avatar';
@@ -26,7 +27,9 @@ export function IncomingCard({ state, changes, actions }: IncomingCardProps) {
       <header className={styles.header}>
         <ArrowDownToLine size={14} className={styles.headerIcon} />
         <span className={styles.title}>{pluralize(state.count, 'new changeset')}</span>
-        <span className={styles.branch}>on {state.branch}</span>
+        <span className={styles.branch}>
+          on <PathLabel path={state.branch} fitContent />
+        </span>
       </header>
       {state.kind === 'conflicts' && (
         <p className={styles.conflicts}>

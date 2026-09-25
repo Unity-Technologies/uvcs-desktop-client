@@ -17,6 +17,14 @@ export interface DisplayMeta {
   hunks: DisplayHunk[];
 }
 
+export type DiffSide = 'deletions' | 'additions';
+
+/** A removed line (numbered in the original) or an added one (numbered in the modified file). */
+export interface ChangedLine {
+  side: DiffSide;
+  lineNumber: number;
+}
+
 export interface ChangeBlock {
   index: number;
   /** First original line of the block; where the added lines go when nothing was removed. */
@@ -25,8 +33,6 @@ export interface ChangeBlock {
   /** First modified line of the block; where the removed lines were when nothing was added. */
   newStart: number;
   newLines: number;
-  /** The rendered line the block's actions attach to: the line just above it, else its first line. */
-  anchor: { side: 'additions' | 'deletions'; lineNumber: number };
 }
 
 export function listChangeBlocks(meta: DisplayMeta): ChangeBlock[] {
@@ -34,36 +40,49 @@ export function listChangeBlocks(meta: DisplayMeta): ChangeBlock[] {
   for (const hunk of meta.hunks) {
     let oldLine = hunk.deletionStart;
     let newLine = hunk.additionStart;
-    let contextAbove = false;
     for (const part of hunk.hunkContent) {
       if (part.type === 'context') {
         oldLine += part.lines;
         newLine += part.lines;
-        contextAbove = part.lines > 0;
         continue;
       }
-      const anchor: ChangeBlock['anchor'] = contextAbove
-        ? { side: 'additions', lineNumber: newLine - 1 }
-        : part.additions > 0
-          ? { side: 'additions', lineNumber: newLine }
-          : { side: 'deletions', lineNumber: oldLine };
-      blocks.push({ index: blocks.length, oldStart: oldLine, oldLines: part.deletions, newStart: newLine, newLines: part.additions, anchor });
+      blocks.push({ index: blocks.length, oldStart: oldLine, oldLines: part.deletions, newStart: newLine, newLines: part.additions });
       oldLine += part.deletions;
       newLine += part.additions;
-      contextAbove = false;
     }
   }
   return blocks;
 }
 
-/** The modified text with one block put back as it was in the original. */
-export function revertChangeBlock(meta: DisplayMeta, block: ChangeBlock): string {
-  // A side with no lines at all numbers its hunk from 0, not 1.
-  const oldIndex = Math.max(0, block.oldStart - 1);
-  const newIndex = Math.max(0, block.newStart - 1);
+/** The block's removed lines, then its added ones: the order a unified diff shows them in. */
+export function blockLines(block: ChangeBlock): ChangedLine[] {
   return [
-    ...meta.additionLines.slice(0, newIndex),
-    ...meta.deletionLines.slice(oldIndex, oldIndex + block.oldLines),
-    ...meta.additionLines.slice(newIndex + block.newLines),
-  ].join('');
+    ...Array.from({ length: block.oldLines }, (_, offset): ChangedLine => ({ side: 'deletions', lineNumber: block.oldStart + offset })),
+    ...Array.from({ length: block.newLines }, (_, offset): ChangedLine => ({ side: 'additions', lineNumber: block.newStart + offset })),
+  ];
+}
+
+/**
+ * A change as the diff shows it: blocks with no unchanged line between them, which read as one (the diff may split
+ * a replacement into an insertion and a change, for instance).
+ */
+export interface ChangeRegion {
+  index: number;
+  /** Its changed lines, in the order the unified view shows them. */
+  lines: ChangedLine[];
+}
+
+export function listChangeRegions(blocks: ChangeBlock[]): ChangeRegion[] {
+  const regions: ChangeRegion[] = [];
+  blocks.forEach((block, index) => {
+    const previous = blocks[index - 1];
+    const adjoins = previous && previous.oldStart + previous.oldLines === block.oldStart && previous.newStart + previous.newLines === block.newStart;
+    if (adjoins) regions.at(-1)!.lines.push(...blockLines(block));
+    else regions.push({ index: regions.length, lines: blockLines(block) });
+  });
+  return regions;
+}
+
+export function regionContaining(regions: ChangeRegion[], line: ChangedLine): ChangeRegion | undefined {
+  return regions.find((region) => region.lines.some((candidate) => candidate.side === line.side && candidate.lineNumber === line.lineNumber));
 }

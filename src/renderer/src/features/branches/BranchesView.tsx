@@ -7,6 +7,7 @@ import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { NoSelection } from '../../components/NoSelection';
+import { PathLabel } from '../../components/PathLabel';
 import { SincePicker } from '../../components/SincePicker';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { sinceDateFor } from '../../lib/sincePresets';
@@ -178,6 +179,7 @@ function useBranchColumns(
         id: 'owner',
         header: 'Created by',
         width: 180,
+        hideBelow: 700,
         sortValue: sortable ? (row) => row.branch.owner : undefined,
         render: (row) => <UserLabel user={row.branch.owner} />,
       },
@@ -218,7 +220,7 @@ function BranchNameCell({ row, isCurrent, review, onToggleCollapsed }: BranchNam
         <GitBranch size={13} className={styles.branchIcon} />
       )}
       <span className={styles.label} data-hidden={row.branch.isHidden}>
-        <Highlight text={row.depth > 0 ? row.branch.name.slice(row.branch.name.lastIndexOf('/')) : row.branch.name} />
+        {row.depth > 0 ? <Highlight text={row.branch.name.slice(row.branch.name.lastIndexOf('/'))} /> : <PathLabel path={row.branch.name} fitContent />}
       </span>
       {isCurrent && <span className={styles.current}>Current</span>}
       {review && <CodeReviewChip review={review} />}

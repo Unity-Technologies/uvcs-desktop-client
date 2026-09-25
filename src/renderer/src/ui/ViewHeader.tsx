@@ -9,15 +9,17 @@ interface ViewHeaderProps {
   children?: ReactNode;
   /** Buttons at the right of the title; put the view's primary action last. */
   actions?: ReactNode;
+  /** Sits in the window's title area (no top bar above it), so its empty space moves the window. */
+  inTitleBar?: boolean;
 }
 
 /**
  * The header every view shares: title and actions on the first row, filters on the second.
  * Keeping the same structure everywhere makes each screen predictable at a glance.
  */
-export function ViewHeader({ title, subtitle, children, actions }: ViewHeaderProps) {
+export function ViewHeader({ title, subtitle, children, actions, inTitleBar }: ViewHeaderProps) {
   return (
-    <header className={styles.header}>
+    <header className={styles.header} data-title-bar={inTitleBar}>
       <div className={styles.titleRow}>
         <h1 className={styles.title}>{title}</h1>
         {subtitle && <div className={styles.subtitle}>{subtitle}</div>}

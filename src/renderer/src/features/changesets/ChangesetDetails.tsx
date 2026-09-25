@@ -2,6 +2,7 @@ import { FileDiff, GitCommitVertical, Home, Tag } from 'lucide-react';
 import type { Changeset } from '@shared/domain/changeset';
 import { spec } from '@shared/domain/specs';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { PathLabel } from '../../components/PathLabel';
 import { PLAIN_LINKS, type ObjectLinks } from '../../components/objectLinks';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
@@ -36,7 +37,7 @@ export function ChangesetDetails({ changeset, menu, links = PLAIN_LINKS, relatio
     <DetailsPanel
       icon={<GitCommitVertical />}
       kind={`Changeset ${changeset.id}`}
-      context={changeset.branch}
+      context={<PathLabel path={changeset.branch} fitContent />}
       title={firstLine(changeset.comment) || 'No comment'}
       author={{ user: changeset.owner, date: changeset.date }}
       badges={

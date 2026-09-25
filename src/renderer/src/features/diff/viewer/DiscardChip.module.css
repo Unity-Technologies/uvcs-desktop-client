@@ -1,0 +1,39 @@
+/* Fills the hovered line's number cell; the chip sits at its start, in the room made before the number. */
+.slot {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding-inline: 2px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+}
+
+.chip:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
+
+.chip[data-kind='remove']:hover {
+  color: var(--change-deleted);
+  border-color: var(--change-deleted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chip {
+    animation: none;
+  }
+}

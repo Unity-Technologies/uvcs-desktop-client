@@ -6,6 +6,7 @@ import type { SelectorKind, WorkspaceInfo, WorkspaceSelector } from '@shared/dom
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { useRunningOperation } from '../../app/operations/runningOperationsStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { PathLabel } from '../../components/PathLabel';
 import { workingObjectName } from '../../components/workingObject';
 import type { Icon } from '../../lib/actions';
 import { Button } from '../../ui/Button';
@@ -49,7 +50,7 @@ export function WorkingObjectButton() {
         <ToolbarPill
           className={styles.trigger}
           icon={switching ? <Spinner size={13} /> : <SelectorIcon size={15} />}
-          label={switching ? `${switching}…` : title}
+          label={switching ? `${switching}…` : workspace?.selector.kind === 'branch' ? <PathLabel path={title} fitContent tooltip={false} /> : title}
           sub={switching || comment === undefined ? undefined : firstLine || <span className={styles.noComment}>No comment</span>}
           data-tip={switching ? undefined : title}
           data-tip-sub={switching ? undefined : comment?.trim() || undefined}

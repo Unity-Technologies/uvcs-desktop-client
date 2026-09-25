@@ -2,12 +2,13 @@ import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, GitBranch } from 'luc
 import { useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { PathLabel } from '../../components/PathLabel';
 import { RepositoryPicker } from '../../components/RepositoryPicker';
 import { EMPTY_SELECTION } from '../../lib/selection';
 import { Button } from '../../ui/Button';
 import { prompt } from '../../ui/dialog/prompt';
 import { EmptyState } from '../../ui/EmptyState';
-import { Highlight, HighlightQuery } from '../../ui/Highlight';
+import { HighlightQuery } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
 import { CenteredSpinner } from '../../ui/Spinner';
@@ -45,7 +46,7 @@ export function RepositorySyncPanel({ localRepository }: { localRepository: stri
   };
 
   const columns: Column<Branch>[] = [
-    { id: 'name', header: 'Branch', grow: 2, render: (branch) => <Highlight text={branch.name} />, sortValue: (branch) => branch.name },
+    { id: 'name', header: 'Branch', grow: 2, render: (branch) => <PathLabel path={branch.name} />, sortValue: (branch) => branch.name },
     { id: 'owner', header: 'Created by', grow: 1, render: (branch) => <UserLabel user={branch.owner} /> },
     { id: 'date', header: 'Created', width: 130, secondary: true, render: (branch) => <RelativeTime date={branch.date} />, sortValue: (branch) => branch.date },
     {

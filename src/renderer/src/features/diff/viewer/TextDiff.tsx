@@ -1,12 +1,10 @@
-import { parseDiffFromFile, type DiffLineAnnotation } from '@pierre/diffs';
 import { Editor } from '@pierre/diffs/edit';
 import { EditProvider, MultiFileDiff } from '@pierre/diffs/react';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
-import { BlockRevertBar } from './BlockRevertBar';
-import { listChangeBlocks, revertChangeBlock } from './changeBlocks';
 import { useDiffPreferences } from './diffPreferencesStore';
 import { pierreDiffOptions, pierreThemeName } from './pierreOptions';
+import { useBlockDiscard, type DiscardRequest } from './useBlockDiscard';
 import { useSyntaxHighlighter } from './useSyntaxHighlighter';
 import styles from './TextDiff.module.css';
 
@@ -19,51 +17,41 @@ interface TextDiffProps {
   editing?: boolean;
   /** Receives the modified side's text after every edit. */
   onEdit?: (text: string) => void;
-  /** Offers to revert each change block; receives the modified text with that block put back as it was. */
-  onRevertBlock?: (text: string) => void;
+  /** Offers to discard changes (whole or line by line); receives the modified text with them taken back. */
+  onDiscard?: (request: DiscardRequest) => void;
+  /** Undoes the last discard (⌘Z in the diff). */
+  onUndoDiscard?: () => void;
 }
-
-/** Annotations carry the index of the change block they stand for. */
-type BlockIndex = number;
 
 const createEditor: React.ComponentProps<typeof EditProvider>['createEditor'] = (type, options, key) => new Editor(type, options, key);
 
 /** Syntax-highlighted text diff, side by side or unified, optionally editable on the modified side. */
-export function TextDiff({ original, modified, fileName, editing = false, onEdit, onRevertBlock }: TextDiffProps) {
+export function TextDiff({ original, modified, fileName, editing = false, onEdit, onDiscard, onUndoDiscard }: TextDiffProps) {
   const theme = useResolvedTheme();
   const { layout, collapseUnchanged, wrapLines } = useDiffPreferences();
+  const container = useRef<HTMLDivElement>(null);
   // Stable inputs: new objects would make Pierre reload the files and drop an ongoing edit.
   const oldFile = useMemo(() => ({ name: fileName, contents: original }), [fileName, original]);
   const newFile = useMemo(() => ({ name: fileName, contents: modified }), [fileName, modified]);
+  const discard = useBlockDiscard({ enabled: Boolean(onDiscard) && !editing, oldFile, newFile, layout, containerRef: container, onDiscard, onUndo: onUndoDiscard });
   const options = useMemo(
-    () => pierreDiffOptions<BlockIndex>({ theme, layout, collapseUnchanged, wrapLines }),
-    [theme, layout, collapseUnchanged, wrapLines],
+    () => ({ ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }), ...discard.options }),
+    [theme, layout, collapseUnchanged, wrapLines, discard.options],
   );
-  const revertable = Boolean(onRevertBlock) && !editing;
-  // The same diff Pierre computes for display, so each block lines up with what is shown.
-  const meta = useMemo(() => (revertable ? parseDiffFromFile(oldFile, newFile) : null), [revertable, oldFile, newFile]);
-  const blocks = useMemo(() => (meta ? listChangeBlocks(meta) : []), [meta]);
-  const annotations = useMemo<DiffLineAnnotation<BlockIndex>[]>(() => blocks.map((block) => ({ ...block.anchor, metadata: block.index })), [blocks]);
   const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);
 
   // Usually a few milliseconds, and only the first time a language shows up.
   if (!canHighlight) return <div className={styles.diff} />;
 
-  const renderBlockBar = ({ metadata }: DiffLineAnnotation<BlockIndex>) => {
-    const block = blocks[metadata];
-    if (!meta || !block || !onRevertBlock) return null;
-    return <BlockRevertBar block={block} onRevert={() => onRevertBlock(revertChangeBlock(meta, block))} />;
-  };
-
   return (
-    <div className={styles.diff}>
+    <div ref={container} className={styles.diff} tabIndex={-1} onKeyDown={discard.onKeyDown} onPointerDown={discard.onPointerDown}>
       <EditProvider createEditor={createEditor}>
-        <MultiFileDiff<BlockIndex>
+        <MultiFileDiff
           oldFile={oldFile}
           newFile={newFile}
           options={options}
-          lineAnnotations={annotations}
-          renderAnnotation={renderBlockBar}
+          selectedLines={discard.selectedLines}
+          renderGutterUtility={discard.renderGutterUtility}
           edit={editing}
           onEditChange={(event) => onEdit?.(event.editor.getText())}
           onEditComplete={() => 'reject'}
@@ -71,6 +59,7 @@ export function TextDiff({ original, modified, fileName, editing = false, onEdit
           style={{ minHeight: '100%' }}
         />
       </EditProvider>
+      {discard.overlay}
     </div>
   );
 }

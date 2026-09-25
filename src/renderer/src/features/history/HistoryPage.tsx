@@ -5,6 +5,7 @@ import type { Label } from '@shared/domain/label';
 import type { PageProps } from '../../app/navigation/pages';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { LabelChips } from '../../components/LabelChips';
+import { PathLabel } from '../../components/PathLabel';
 import { formatSize } from '../../lib/formatDate';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { firstLine, pluralize } from '../../lib/text';
@@ -49,7 +50,7 @@ function historyColumns(labelsByChangeset: ReadonlyMap<number, readonly Label[]>
       secondary: true,
       render: (revision) => (
         <span className={styles.clipped}>
-          <Highlight text={revision.branch} />
+          <PathLabel path={revision.branch} />
         </span>
       ),
     },

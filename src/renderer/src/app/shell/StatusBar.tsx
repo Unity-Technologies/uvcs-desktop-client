@@ -1,4 +1,5 @@
 import { TerminalSquare } from 'lucide-react';
+import { PathLabel } from '../../components/PathLabel';
 import { useIncomingSummary } from '../../features/incoming/useIncomingSummary';
 import { Spinner } from '../../ui/Spinner';
 import { navigation } from '../navigation/navigationStore';
@@ -39,7 +40,10 @@ export function StatusBar() {
         ) : (
           context && (
             <>
-              <span>{context.position}</span>
+              <span className={styles.position}>
+                {context.position}
+                {context.branch && <PathLabel path={context.branch} fitContent />}
+              </span>
               {context.sync && <span className={styles.separator}>·</span>}
               {context.behind > 0 ? (
                 <button className={styles.behind} onClick={() => navigation.goToView('incoming')} data-tip="Review the incoming changesets">
