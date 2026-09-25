@@ -7,7 +7,8 @@ interface SearchFieldProps {
   onChange: (value: string) => void;
   placeholder?: string;
   autoFocus?: boolean;
-  width?: number;
+  /** Pixels, or any CSS width such as `100%`. */
+  width?: number | string;
 }
 
 export const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(function SearchField(

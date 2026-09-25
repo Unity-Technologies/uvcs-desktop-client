@@ -1,0 +1,104 @@
+import type { Changeset } from '@shared/domain/changeset';
+import type { MergeRequest } from '@shared/domain/merge';
+import { api } from '../../api/client';
+import { navigation } from '../../app/navigation/navigationStore';
+import { runAction, runOperation } from '../../app/operations/runOperation';
+import { switchWorkspace } from '../../app/shell/workspaceOperations';
+import { confirm } from '../../ui/dialog/confirm';
+import { prompt } from '../../ui/dialog/prompt';
+import { toast } from '../../ui/toast/toastStore';
+import { askForChangesetComment } from './EditCommentDialog';
+
+export function openChangesetDiff(changeset: Pick<Changeset, 'id'>, focusPath?: string): void {
+  navigation.openPage({ kind: 'diff', title: `Changeset ${changeset.id}`, target: { kind: 'changeset', changesetId: changeset.id }, focusPath });
+}
+
+/** Compares the state after the older changeset with the state after the newer one. */
+export function openRangeDiff(older: Changeset, newer: Changeset): void {
+  navigation.openPage({
+    kind: 'diff',
+    title: `Changesets ${older.id} → ${newer.id}`,
+    target: { kind: 'range', fromSpec: `cs:${older.id}`, toSpec: `cs:${newer.id}` },
+  });
+}
+
+export function openMerge(request: MergeRequest): void {
+  navigation.openPage({ kind: 'merge', request });
+}
+
+export async function mergeChangesetTo(changeset: Changeset): Promise<void> {
+  const destinationBranch = await prompt({
+    title: `Merge changeset ${changeset.id} to…`,
+    label: 'Destination branch',
+    description: 'The merge happens on the server; your workspace is not touched.',
+    initialValue: '/main',
+    confirmLabel: 'Continue',
+  });
+  if (destinationBranch) openMerge({ kind: 'merge', sourceSpec: `cs:${changeset.id}`, destinationBranch });
+}
+
+export function switchToChangeset(workspacePath: string, changeset: Changeset): Promise<void | undefined> {
+  return switchWorkspace(workspacePath, `cs:${changeset.id}`, `changeset ${changeset.id}`);
+}
+
+export async function labelChangeset(workspacePath: string, changeset: Changeset): Promise<void> {
+  const labelName = await prompt({ title: `Label changeset ${changeset.id}`, label: 'Label name', confirmLabel: 'Create label' });
+  if (!labelName) return;
+
+  const labeled = await runAction(workspacePath, "Couldn't create the label", () =>
+    api.changesets.applyLabel(workspacePath, changeset.id, labelName, ''),
+  );
+  if (labeled !== undefined) toast.success(`Labeled changeset ${changeset.id} as ${labelName}`);
+}
+
+export async function editChangesetComment(workspacePath: string, changeset: Changeset): Promise<void> {
+  const comment = await askForChangesetComment(changeset.id, changeset.comment);
+  if (comment === undefined) return;
+  await runAction(workspacePath, "Couldn't update the comment", () => api.changesets.editComment(workspacePath, changeset.id, comment));
+}
+
+export async function moveChangesetToBranch(workspacePath: string, changeset: Changeset): Promise<void> {
+  const branch = await prompt({
+    title: `Move changeset ${changeset.id} to another branch`,
+    label: 'Destination branch',
+    description: 'The changeset and all its descendants on this branch will move. The branch is created if it does not exist.',
+    initialValue: `${changeset.branch}/`,
+    confirmLabel: 'Move changeset',
+  });
+  if (!branch) return;
+
+  const moved = await runAction(workspacePath, "Couldn't move the changeset", () =>
+    api.changesets.moveToBranch(workspacePath, changeset.id, branch),
+  );
+  if (moved !== undefined) toast.success(`Moved changeset ${changeset.id} to ${branch}`);
+}
+
+export async function deleteChangeset(workspacePath: string, changeset: Changeset): Promise<void> {
+  const confirmed = await confirm({
+    title: `Delete changeset ${changeset.id}?`,
+    message: 'Only the last changeset of a branch can be deleted, and it is gone for good.',
+    confirmLabel: 'Delete changeset',
+    danger: true,
+  });
+  if (!confirmed) return;
+
+  const deleted = await runAction(workspacePath, "Couldn't delete the changeset", () => api.changesets.remove(workspacePath, changeset.id));
+  if (deleted !== undefined) toast.success(`Deleted changeset ${changeset.id}`);
+}
+
+export async function revertWorkspaceToChangeset(workspacePath: string, changeset: Changeset): Promise<void> {
+  const confirmed = await confirm({
+    title: `Revert your workspace to changeset ${changeset.id}?`,
+    message: 'Every change made after it is undone as pending changes. Nothing is checked in until you do it from Changes.',
+    confirmLabel: 'Revert workspace',
+  });
+  if (!confirmed) return;
+
+  await runOperation({
+    title: `Reverting to changeset ${changeset.id}`,
+    workspacePath,
+    run: (operationId) => api.changesets.revertWorkspaceTo(workspacePath, changeset.id, operationId),
+    successMessage: () => `Workspace contents now match changeset ${changeset.id}`,
+    successAction: () => ({ label: 'Review', run: () => navigation.goToView('changes') }),
+  });
+}

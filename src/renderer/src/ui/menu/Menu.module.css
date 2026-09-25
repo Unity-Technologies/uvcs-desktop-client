@@ -6,8 +6,15 @@
   border-radius: var(--radius-lg);
   background: var(--bg-surface-raised);
   box-shadow: var(--shadow-lg);
-  animation: pop-in var(--duration-fast) var(--ease-out);
   z-index: 900;
+}
+
+/*
+ * Animate only while open. Radix keeps a closing menu mounted until its animation ends, so an
+ * animation that also applies to the closed state can leave a closed menu stuck on screen.
+ */
+.content[data-state='open'] {
+  animation: pop-in var(--duration-fast) var(--ease-out);
 }
 
 .item {

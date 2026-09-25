@@ -1,0 +1,18 @@
+.scroller {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: var(--bg-surface);
+}
+
+.columns {
+  display: flex;
+  align-items: flex-start;
+  min-width: 100%;
+}
+
+.code {
+  flex: 1;
+  min-width: 0;
+  user-select: text;
+}

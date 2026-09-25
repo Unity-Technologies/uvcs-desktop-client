@@ -1,0 +1,15 @@
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-right: var(--space-2);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.scale {
+  width: 64px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 10%, transparent), var(--accent));
+}

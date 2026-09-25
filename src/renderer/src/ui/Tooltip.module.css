@@ -9,6 +9,10 @@
   color: var(--text-inverse);
   font-size: var(--text-sm);
   box-shadow: var(--shadow-md);
-  animation: fade-in var(--duration-fast) var(--ease-out);
   z-index: 1000;
+}
+
+/* Animate only while open, so Radix never waits on an animation to unmount a closed tooltip. */
+.tooltip:not([data-state='closed']) {
+  animation: fade-in var(--duration-fast) var(--ease-out);
 }
