@@ -37,8 +37,15 @@ export function isAffectedByLoadedChangeset(key: QueryKey): boolean {
   return area(key) !== 'info';
 }
 
-/** New changesets on the server: repository views (history, branches, incoming...), not the disk or the check that told. */
+/** Repository objects a checkin by someone else doesn't touch. */
+const UNTOUCHED_BY_CHECKINS = ['labels', 'shelves', 'attributeTypes', 'attributeUsedValues', 'codeReviews', 'leftChanges'];
+
+/**
+ * New changesets on the server: repository views (history, branches, incoming...), not the disk, the check that told,
+ * nor the lists of objects checkins don't create (every label or shelve is a heavy read on big repositories).
+ */
 export function isAffectedByNewChangesets(key: QueryKey): boolean {
   if ((LOCAL_AREAS as readonly unknown[]).includes(area(key)) || area(key) === 'content') return false;
+  if (UNTOUCHED_BY_CHECKINS.includes(area(key) as string)) return false;
   return !(area(key) === 'incoming' && detail(key) === 'summary');
 }

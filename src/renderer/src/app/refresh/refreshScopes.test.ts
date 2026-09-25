@@ -41,4 +41,13 @@ describe('refresh scopes', () => {
     expect(isAffectedByNewChangesets(key('pendingChanges'))).toBe(false);
     expect(isAffectedByNewChangesets(key('content', { kind: 'revision' }))).toBe(false);
   });
+
+  it('leaves the lists of objects checkins do not create alone on new changesets', () => {
+    expect(isAffectedByNewChangesets(key('branches', {}))).toBe(true);
+    expect(isAffectedByNewChangesets(key('changesets', {}))).toBe(true);
+    expect(isAffectedByNewChangesets(key('labels', {}))).toBe(false);
+    expect(isAffectedByNewChangesets(key('shelves', {}))).toBe(false);
+    expect(isAffectedByNewChangesets(key('attributeTypes'))).toBe(false);
+    expect(isAffectedByNewChangesets(key('codeReviews', { scope: 'all' }))).toBe(false);
+  });
 });
