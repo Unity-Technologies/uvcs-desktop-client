@@ -15,9 +15,11 @@ import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { useChangeset } from '../changesets/useChangeset';
 import { LeftChangesBanner } from '../leftChanges/LeftChangesBanner';
+import { MergeTaskSuggestion } from '../mergeTask/MergeTaskSuggestion';
 import { ChangeDiffPanel } from './ChangeDiffPanel';
 import { ChangesList } from './ChangesList';
 import { ChangesSummaryBar } from './ChangesSummaryBar';
+import { CheckinAfterUpdateNotice } from './CheckinAfterUpdateNotice';
 import { CheckinPanel } from './CheckinPanel';
 import { HiddenCheckedNotice, NoFilterMatches } from './FilterNotices';
 import { LockedByOthersNotice } from './locks/LockedByOthersNotice';
@@ -26,6 +28,7 @@ import { usePendingLocks } from './locks/usePendingLocks';
 import { ReviewModeButton } from '../review/ReviewModeButton';
 import { usePendingReview } from './review/usePendingReview';
 import { mergeSourceChangeset, uploadSize } from './checkinButton';
+import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinChanges, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
 import { isCheckinCandidate } from './changeCategories';
 import { buildChangeRows, changeKey, changesUnderRow, topLevelCheckboxInset, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
@@ -69,6 +72,13 @@ export function PendingChangesView() {
   const included = allChanges.filter(isIncluded);
   const shown = new Set(changes);
   const hiddenIncludedCount = included.filter((change) => !shown.has(change)).length;
+  const rejectedCheckin = useCheckinAfterUpdateStore((state) => state.rejected[workspacePath]);
+  const forgetRejectedCheckin = useCheckinAfterUpdateStore((state) => state.forget);
+  const checkinAfterUpdate = checkinAfterUpdateMessage(
+    rejectedCheckin,
+    { branch: workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined, loadedChangeset: workspace?.loadedChangeset },
+    included.length,
+  );
   const selectedCount = changes.filter((change) => selection.selected.has(changeKey(change))).length;
   const changelists = snapshot?.changelists ?? [];
   const rows = buildChangeRows({ changes, changelists, layout, grouping, isChecked: isIncluded, collapsed });
@@ -162,6 +172,7 @@ export function PendingChangesView() {
           icon={<CheckCircle2 size={24} />}
           title="No pending changes"
           description={`Your workspace matches ${workspace?.selector.name ?? 'the repository'}. Changes you make to files show up here automatically.`}
+          action={workspace?.selector.kind === 'branch' && <MergeTaskSuggestion workspacePath={workspacePath} branchName={workspace.selector.name} />}
         />
       </>
     );
@@ -221,6 +232,14 @@ export function PendingChangesView() {
             )}
             {hiddenIncludedCount > 0 && <HiddenCheckedNotice count={hiddenIncludedCount} onClear={clearFilter} />}
             <LockedByOthersNotice changes={included} locks={locks} />
+            {checkinAfterUpdate && (
+              <CheckinAfterUpdateNotice
+                message={checkinAfterUpdate}
+                busy={busy}
+                onCheckin={() => void checkin()}
+                onDismiss={() => forgetRejectedCheckin(workspacePath)}
+              />
+            )}
             <CheckinPanel
               summary={draft.summary}
               description={draft.description}

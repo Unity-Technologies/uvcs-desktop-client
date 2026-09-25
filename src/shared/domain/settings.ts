@@ -34,6 +34,8 @@ export interface AppSettings {
   reviewModeWorkspaces: string[];
   /** The offer to turn on review mode after a burst of changes was dismissed or taken: it never shows again. */
   reviewModeHintDone: boolean;
+  /** Show an OS notification when someone checks in to the loaded branch while the window is in the background. */
+  notifyOnIncoming: boolean;
   /** Null until the window is first moved or resized. */
   windowBounds: SavedWindowBounds | null;
 }
@@ -51,5 +53,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   switchShelves: [],
   reviewModeWorkspaces: [],
   reviewModeHintDone: false,
+  notifyOnIncoming: false,
   windowBounds: null,
 };

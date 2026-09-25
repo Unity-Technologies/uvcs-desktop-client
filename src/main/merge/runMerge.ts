@@ -11,7 +11,7 @@ import {
 } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
-import { describeMergeProgress, directoryConflictIdentity, parseCreatedChangeset, parseMergePlan } from '../cm/mergeOutput';
+import { describeMergeProgress, directoryConflictIdentity, parseCreatedChangeset, parseDestinationMoved, parseMergePlan } from '../cm/mergeOutput';
 import { withTempDirectory } from '../files/tempFile';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
@@ -67,7 +67,9 @@ export async function runMerge(
     await resolveDirectoryConflicts(plan, resolutions.directoryConflicts, (resolution) => run([...mergeArgs, ...resolveConflictArgs(resolution)]));
     const output = await run(mergeArgs);
 
-    if (request.destinationBranch) return { changesetId: parseCreatedChangeset(output) };
+    if (request.destinationBranch) {
+      return { changesetId: parseCreatedChangeset(output), ...(parseDestinationMoved(output) && { destinationMoved: true }) };
+    }
 
     context.reportProgress('Writing resolved files');
     await writeFileResolutions(cm, workspacePath, request, plan, resolutions.files);

@@ -1,43 +1,41 @@
-import { Archive, ArchiveRestore, FileDiff, Trash2 } from 'lucide-react';
+import { Archive, FileDiff } from 'lucide-react';
 import type { Shelve } from '@shared/domain/shelve';
+import { spec } from '@shared/domain/specs';
+import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
+import { firstLine } from '../../lib/text';
 import { Button } from '../../ui/Button';
-import { DetailsPanel, DetailsSection, DetailsText } from '../../ui/DetailsPanel';
+import { DetailsComment } from '../../ui/DetailsComment';
+import { DetailsPanel, DetailsSection } from '../../ui/DetailsPanel';
 import { PropertyList } from '../../ui/PropertyList';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
-import { applyShelve, deleteShelve, showShelveChanges } from './shelveOperations';
+import { showShelveChanges } from './shelveOperations';
 
-export function ShelveDetails({ workspacePath, shelve }: { workspacePath: string; shelve: Shelve }) {
+export function ShelveDetails({ shelve, menu }: { shelve: Shelve; menu: MenuEntry[] }) {
   return (
     <DetailsPanel
       icon={<Archive />}
-      kind="Shelve"
-      context={`On top of changeset ${shelve.parentChangeset}`}
-      title={`Shelve ${shelve.id}`}
+      kind={`Shelve ${shelve.id}`}
+      context={`On changeset ${shelve.parentChangeset}`}
+      title={firstLine(shelve.comment) || 'No comment'}
       author={{ user: shelve.owner, date: shelve.date }}
-      actions={
-        <>
-          <Button variant="primary" icon={<ArchiveRestore size={14} />} onClick={() => void applyShelve(workspacePath, shelve)}>
-            Apply
-          </Button>
-          <Button icon={<FileDiff size={14} />} onClick={() => showShelveChanges(shelve)}>
-            Changes
-          </Button>
-          <Button variant="ghost" icon={<Trash2 size={14} />} onClick={() => void deleteShelve(workspacePath, shelve)}>
-            Delete
-          </Button>
-        </>
+      primaryAction={
+        <Button variant="primary" icon={<FileDiff size={14} />} onClick={() => showShelveChanges(shelve)}>
+          Open diff
+        </Button>
       }
+      menu={menu}
+      primaryActionId="diff"
     >
-      <DetailsSection title="Comment">
-        <DetailsText text={shelve.comment} placeholder="No comment" />
-      </DetailsSection>
+      <DetailsComment text={shelve.comment} />
       <ChangedFilesSection target={{ kind: 'shelve', shelveId: shelve.id }} onOpen={(path) => showShelveChanges(shelve, path)} />
-      <DetailsSection title="Properties">
+      <DetailsSection title="Details">
         <PropertyList
           properties={[
             { label: 'Created', value: formatDateTime(shelve.date) },
-            { label: 'Based on', value: `Changeset ${shelve.parentChangeset}` },
+            { label: 'Based on', value: `Changeset ${shelve.parentChangeset}`, copyText: spec.changeset(shelve.parentChangeset) },
+            { label: 'Repository', value: shelve.repository },
+            { label: 'GUID', value: shelve.guid, mono: true, copyText: shelve.guid },
           ]}
         />
       </DetailsSection>

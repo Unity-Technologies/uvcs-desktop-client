@@ -15,6 +15,8 @@ interface OperationOptions<T> {
   cancellable?: boolean;
   /** Set for operations that change the loaded revisions: they don't start while another operation runs on the workspace. */
   kind?: WorkspaceChangingOperation;
+  /** Explains a failure it recognizes in its own way (returns true); otherwise the failure shows as an error toast. */
+  onFailure?: (error: unknown) => boolean;
 }
 
 /**
@@ -29,6 +31,7 @@ export async function runOperation<T>({
   successAction,
   cancellable = true,
   kind,
+  onFailure,
 }: OperationOptions<T>): Promise<T | undefined> {
   if (kind && refuseWhileBusy(workspacePath)) return undefined;
 
@@ -58,7 +61,7 @@ export async function runOperation<T>({
     return result;
   } catch (error) {
     toasts.dismiss(toastId);
-    toast.error(`${title} failed`, error);
+    if (!onFailure?.(error)) toast.error(`${title} failed`, error);
     return undefined;
   } finally {
     stopListening();

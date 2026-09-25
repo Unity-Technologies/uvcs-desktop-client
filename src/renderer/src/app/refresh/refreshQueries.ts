@@ -1,16 +1,16 @@
 import type { Query, QueryFilters } from '@tanstack/react-query';
-import { queryClient } from '../queryClient';
+import { isRefreshable, queryClient } from '../queryClient';
 
 const followUpScheduled = new WeakSet<Query>();
 
 /**
- * Marks the matching queries stale and refetches the ones on screen, keeping their data meanwhile. Unlike
+ * Marks the matching queries stale (but immutable ones) and refetches the ones on screen, keeping their data meanwhile. Unlike
  * `invalidateQueries`, a fetch in flight is not cancelled and restarted (its `cm` command would keep running
  * anyway): it may predate the change, so one more fetch follows it, and further calls fold into that one.
  * Resolves once the refetches are done.
  */
 export function refreshQueries(filters: QueryFilters): Promise<void> {
-  return Promise.all(queryClient.getQueryCache().findAll(filters).map(refreshQuery)).then(() => undefined);
+  return Promise.all(queryClient.getQueryCache().findAll(filters).filter(isRefreshable).map(refreshQuery)).then(() => undefined);
 }
 
 function refreshQuery(query: Query): Promise<void> {

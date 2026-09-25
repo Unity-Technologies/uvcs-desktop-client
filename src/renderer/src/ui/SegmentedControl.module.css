@@ -5,6 +5,15 @@
   background: var(--bg-active);
 }
 
+.control[data-stretch='true'] {
+  display: flex;
+}
+
+.control[data-stretch='true'] > .segment {
+  flex: 1;
+  justify-content: center;
+}
+
 .segment {
   display: inline-flex;
   align-items: center;

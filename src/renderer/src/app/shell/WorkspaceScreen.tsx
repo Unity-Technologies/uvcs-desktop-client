@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import { CenteredSpinner } from '../../ui/Spinner';
+import { useIncomingNotificationClicks } from '../../features/incoming/incomingNotifications';
 import { useMergeCommands } from '../../features/merge/useMergeCommands';
 import { useNavigation } from '../navigation/navigationStore';
 import { viewDefinition } from '../navigation/viewRegistry';
@@ -22,6 +23,7 @@ export function WorkspaceScreen() {
   useWorkspaceCommands();
   useWindowTitle();
   useMergeCommands();
+  useIncomingNotificationClicks();
 
   const ActiveView = viewDefinition(view).component;
   const topPage = pages.at(-1);

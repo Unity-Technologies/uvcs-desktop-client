@@ -1,5 +1,5 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { api } from '../../api/client';
+import { ApiError, api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation } from '../../app/operations/runOperation';
@@ -7,6 +7,10 @@ import { queryClient } from '../../app/queryClient';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
+import { updateToIncoming } from '../incoming/updateOperations';
+import { useCheckinAfterUpdateStore } from './checkinAfterUpdate';
+import { checkinRejection, overlappingPaths, type CheckinRejection } from './checkinRejection';
+import { askCatchUpForCheckin } from './CheckinRejectedDialog';
 
 const MAX_RECENT_COMMENTS = 15;
 
@@ -17,8 +21,12 @@ interface CheckinOptions {
   warnOnEmptyComment: boolean;
 }
 
-/** Checks in the given changes. Resolves to true when a changeset was created. */
-export async function checkinChanges({ workspacePath, changes, comment, warnOnEmptyComment }: CheckinOptions): Promise<boolean> {
+/**
+ * Checks in the given changes. Resolves to true when a changeset was created. When someone checked in to the branch
+ * meanwhile, offers to update and check in again (or to review what came in first).
+ */
+export async function checkinChanges(options: CheckinOptions): Promise<boolean> {
+  const { workspacePath, changes, comment, warnOnEmptyComment } = options;
   if (!comment.trim() && warnOnEmptyComment) {
     const proceed = await confirm({
       title: 'Check in without a comment?',
@@ -28,6 +36,7 @@ export async function checkinChanges({ workspacePath, changes, comment, warnOnEm
     if (!proceed) return false;
   }
 
+  const rejected: { rejection?: CheckinRejection } = {};
   const result = await runOperation({
     title: `Checking in ${changes.length} ${changes.length === 1 ? 'change' : 'changes'}`,
     workspacePath,
@@ -38,11 +47,40 @@ export async function checkinChanges({ workspacePath, changes, comment, warnOnEm
       label: 'View',
       run: () => navigation.openPage({ kind: 'diff', title: `Changeset ${created.changesetId}`, target: { kind: 'changeset', changesetId: created.changesetId } }),
     }),
+    onFailure: (error) => {
+      rejected.rejection = (error instanceof ApiError && checkinRejection(error.command)) || undefined;
+      return rejected.rejection !== undefined;
+    },
   });
-  if (!result) return false;
+  if (!result) return rejected.rejection ? catchUpAndCheckin(options, rejected.rejection) : false;
 
+  useCheckinAfterUpdateStore.getState().forget(workspacePath);
   if (comment.trim()) await rememberComment(comment.trim());
   return true;
+}
+
+/**
+ * The branch moved on since the workspace was updated. When what came in touches none of the files being checked in
+ * and updating needs no decision, updates and checks in the same files with the same comment. Otherwise leads to
+ * Incoming; once the workspace is updated, Changes offers to check in.
+ */
+async function catchUpAndCheckin(options: CheckinOptions, rejection: CheckinRejection): Promise<boolean> {
+  const { workspacePath, changes } = options;
+  const incoming = await runAction(workspacePath, "Couldn't check what came in", () => api.merge.incomingChanges(workspacePath));
+  if (!incoming?.branch) return false;
+
+  const overlapping = overlappingPaths(incoming.files, changes.map((change) => change.path));
+  const needsReview = overlapping.length + incoming.conflicts.length + incoming.blockedPaths.length > 0;
+  const choice = await askCatchUpForCheckin({ incoming, overlapping, needsReview });
+  if (!choice) return false;
+
+  useCheckinAfterUpdateStore.getState().remember(workspacePath, { branch: incoming.branch, loadedChangeset: rejection.loadedChangeset });
+  if (choice === 'review') {
+    navigation.goToView('incoming');
+    return false;
+  }
+  if (!(await updateToIncoming(workspacePath, incoming))) return false;
+  return checkinChanges({ ...options, warnOnEmptyComment: false });
 }
 
 /** Shelves the given changes. Resolves to true when a shelve was created. */

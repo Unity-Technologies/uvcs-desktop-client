@@ -74,6 +74,11 @@ export function createCodeReviewsService({ cm }: ServiceContext): CodeReviewsApi
         ['codereview', '-e', String(reviewId), ...(status ? [`--status=${status}`] : []), ...(assignee !== undefined ? [`--assignee=${assignee}`] : [])],
         { cwd: workspacePath },
       );
+      // `cm` succeeds without changing the status of a review nobody is assigned to.
+      const [updated] = status ? await findRaw(workspacePath, [`id = ${reviewId}`], {}) : [];
+      if (updated && updated.status !== status) {
+        throw new Error("cm didn't change the status: it ignores status changes on reviews nobody is assigned to. Assign the review, then try again.");
+      }
     },
 
     async remove(workspacePath, reviewIds) {

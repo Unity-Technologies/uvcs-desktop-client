@@ -28,7 +28,7 @@ export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
       <ReviewHeader review={review} />
       <div className={styles.changes}>
         {diffTarget ? (
-          <DiffPage page={{ kind: 'diff', title: review.title, target: diffTarget }} />
+          <DiffPage page={{ kind: 'diff', title: review.title, target: diffTarget, focusPath: page.focusPath }} />
         ) : (
           <EmptyState title="The reviewed changes are not available" description={describeTarget(review.target)} />
         )}

@@ -11,7 +11,7 @@ export type Page =
   /** `focusPath` preselects a file in the diff. */
   | { kind: 'diff'; title: string; target: DiffTarget; focusPath?: string }
   | { kind: 'merge'; request: MergeRequest }
-  | { kind: 'codeReview'; reviewId: number }
+  | { kind: 'codeReview'; reviewId: number; focusPath?: string }
   | { kind: 'browseRepository'; changesetId: number };
 
 export type PageKind = Page['kind'];

@@ -1,46 +1,41 @@
-import { ArrowRightLeft, FileDiff, GitMerge, Tag } from 'lucide-react';
+import { FileDiff, Tag } from 'lucide-react';
 import type { Label } from '@shared/domain/label';
 import { spec } from '@shared/domain/specs';
+import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
 import { Button } from '../../ui/Button';
-import { DetailsPanel, DetailsSection, DetailsText } from '../../ui/DetailsPanel';
+import { DetailsComment } from '../../ui/DetailsComment';
+import { DetailsPanel, DetailsSection } from '../../ui/DetailsPanel';
 import { PropertyList } from '../../ui/PropertyList';
 import { AttributesEditor } from '../attributes/AttributesEditor';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
-import { mergeFromLabel, showLabelChanges, switchToLabel } from './labelOperations';
+import { showLabelChanges } from './labelOperations';
 
-export function LabelDetails({ workspacePath, label }: { workspacePath: string; label: Label }) {
+export function LabelDetails({ label, menu }: { label: Label; menu: MenuEntry[] }) {
   return (
     <DetailsPanel
       icon={<Tag />}
       kind="Label"
-      context={`Changeset ${label.changeset} · ${label.branch}`}
+      context={label.branch}
       title={label.name}
       author={{ user: label.owner, date: label.date }}
-      actions={
-        <>
-          <Button variant="primary" icon={<ArrowRightLeft size={14} />} onClick={() => void switchToLabel(workspacePath, label)}>
-            Switch
-          </Button>
-          <Button icon={<GitMerge size={14} />} onClick={() => mergeFromLabel(label)}>
-            Merge
-          </Button>
-          <Button icon={<FileDiff size={14} />} onClick={() => showLabelChanges(label)}>
-            Changes
-          </Button>
-        </>
+      primaryAction={
+        <Button variant="primary" icon={<FileDiff size={14} />} onClick={() => showLabelChanges(label)}>
+          Open diff
+        </Button>
       }
+      menu={menu}
+      primaryActionId="diff"
     >
-      <DetailsSection title="Comment">
-        <DetailsText text={label.comment} placeholder="No comment" />
-      </DetailsSection>
+      <DetailsComment text={label.comment} />
       <ChangedFilesSection target={{ kind: 'changeset', changesetId: label.changeset }} onOpen={(path) => showLabelChanges(label, path)} />
-      <DetailsSection title="Properties">
+      <DetailsSection title="Details">
         <PropertyList
           properties={[
             { label: 'Created', value: formatDateTime(label.date) },
-            { label: 'Changeset', value: label.changeset, copyText: `cs:${label.changeset}` },
+            { label: 'Changeset', value: `Changeset ${label.changeset}`, copyText: spec.changeset(label.changeset) },
             { label: 'Branch', value: label.branch },
+            { label: 'Repository', value: label.repository },
           ]}
         />
       </DetailsSection>

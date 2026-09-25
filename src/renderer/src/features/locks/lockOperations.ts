@@ -4,6 +4,11 @@ import { runAction } from '../../app/operations/runOperation';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 
+/** Retained locks are already released; they go away when the change reaches the destination branch. */
+export function isReleasable(lock: Lock): boolean {
+  return lock.status === 'Locked';
+}
+
 function describe(locks: Lock[]): string {
   return locks.length === 1 ? locks[0]!.path : `${locks.length} locks`;
 }
