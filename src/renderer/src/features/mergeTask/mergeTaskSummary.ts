@@ -1,6 +1,6 @@
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
-import type { CodeReview } from '@shared/domain/codeReview';
+import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { MergePlan } from '@shared/domain/merge';
 import { firstLine, pluralize } from '../../lib/text';
 
@@ -53,7 +53,7 @@ export function defaultMergeComment(branch: Pick<Branch, 'name' | 'comment'>): s
 }
 
 /** Whether the merge can also mark the branch's review as reviewed: there is one, and it isn't yet. */
-export function canMarkReviewed(review: CodeReview | undefined): review is CodeReview {
+export function canMarkReviewed(review: CodeReviewSummary | undefined): review is CodeReviewSummary {
   return review !== undefined && review.status !== 'Reviewed';
 }
 

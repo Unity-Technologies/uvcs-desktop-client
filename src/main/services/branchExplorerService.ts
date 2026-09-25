@@ -42,7 +42,7 @@ export function createBranchExplorerService({ cm }: ServiceContext, { branchName
     );
     const allBranches = parseBranches(branchesOutput, hiddenNames);
     // The code review chips name branches by id (often finished tasks, hidden): these lists answer them.
-    branchNames.remember(workspacePath, [...allBranches, ...hidden]);
+    branchNames.remember(workspacePath, [...allBranches, ...hidden], { complete: true });
     const branches = allBranches.filter((branch) => query.includeHidden || !branch.isHidden);
 
     return {

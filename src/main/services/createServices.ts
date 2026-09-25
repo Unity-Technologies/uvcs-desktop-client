@@ -1,6 +1,6 @@
 import type { UvcsApi } from '@shared/api';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
-import { branchNamesById } from '../cm/branchNamesById';
+import { readBranchNames } from '../cm/branchNames';
 import { LeftChangesFinder } from '../workspace/leftChanges';
 import { SwitchShelveRecords } from '../workspace/switchShelveRecords';
 import { createAccountsService } from './accountsService';
@@ -32,7 +32,7 @@ import type { BranchNamesContext, ServiceContext, SwitchContext } from './Servic
 export function createServices(context: ServiceContext): UvcsApi {
   const switchShelves = new SwitchShelveRecords(context.settings);
   const switching: SwitchContext = { switchShelves, leftChanges: new LeftChangesFinder(context.cm, switchShelves) };
-  const naming: BranchNamesContext = { branchNames: new BranchNamesCache((workspacePath, ids) => branchNamesById(context.cm, workspacePath, ids)) };
+  const naming: BranchNamesContext = { branchNames: new BranchNamesCache((workspacePath) => readBranchNames(context.cm, workspacePath)) };
 
   return {
     accounts: createAccountsService(context),

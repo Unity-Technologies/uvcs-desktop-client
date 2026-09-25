@@ -1,4 +1,4 @@
-import type { CodeReview, CodeReviewStatus } from '@shared/domain/codeReview';
+import type { CodeReviewStatus, CodeReviewSummary } from '@shared/domain/codeReview';
 
 /** Short status names for chips next to a branch name. */
 export const SHORT_STATUS: Record<CodeReviewStatus, string> = {
@@ -7,11 +7,11 @@ export const SHORT_STATUS: Record<CodeReviewStatus, string> = {
   'Rework required': 'Rework',
 };
 
-/** The newest review of each branch, from reviews listed newest first. */
-export function latestReviewByBranch(reviews: readonly CodeReview[]): ReadonlyMap<string, CodeReview> {
-  const byBranch = new Map<string, CodeReview>();
+/** The newest review of each branch, by branch object id, from reviews listed newest first. */
+export function latestReviewByBranch(reviews: readonly CodeReviewSummary[]): ReadonlyMap<number, CodeReviewSummary> {
+  const byBranch = new Map<number, CodeReviewSummary>();
   for (const review of reviews) {
-    if (review.target.kind === 'branch' && !byBranch.has(review.target.branch)) byBranch.set(review.target.branch, review);
+    if (review.targetBranchId !== undefined && !byBranch.has(review.targetBranchId)) byBranch.set(review.targetBranchId, review);
   }
   return byBranch;
 }

@@ -8,18 +8,25 @@ export type CodeReviewTarget =
   /** A target that could not be resolved, e.g. a deleted branch. */
   | { kind: 'unknown'; description: string };
 
-export interface CodeReview {
+/**
+ * A review as `cm find review` lists it. A branch target comes as the branch's object id: enough to find the review of
+ * a branch already read (branch lists have ids), while its name takes the list of every branch (`CodeReview`).
+ */
+export interface CodeReviewSummary {
   id: number;
   title: string;
   status: CodeReviewStatus;
   owner: string;
   assignee: string;
   date: string;
-  target: CodeReviewTarget;
+  /** Object id of the reviewed branch; none for other targets. */
+  targetBranchId?: number;
 }
 
-/** A review without its target, which takes extra `cm` lookups to resolve (branches come back as object ids). */
-export type CodeReviewSummary = Omit<CodeReview, 'target'>;
+/** A review with its target named. */
+export interface CodeReview extends CodeReviewSummary {
+  target: CodeReviewTarget;
+}
 
 export interface CodeReviewFilter {
   scope: 'all' | 'createdByMe' | 'assignedToMe';

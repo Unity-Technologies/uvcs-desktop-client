@@ -1,4 +1,4 @@
-import type { CodeReview } from '@shared/domain/codeReview';
+import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { Lane } from '../model/layoutGraph';
 import { GHOST_ALPHA, type DrawContext } from './drawContext';
 import { drawRectCorona, drawRectGlow } from './drawSearchHit';
@@ -106,7 +106,7 @@ function roomBeforeNextLane({ scene }: DrawContext, lane: Lane, left: number): n
 /** What a card's texts measure in world px, kept per lane: the fonts are the theme's and don't change with the zoom. */
 interface CardMetrics {
   palette: GraphPalette;
-  review: CodeReview | undefined;
+  review: CodeReviewSummary | undefined;
   name: number;
   chip: number;
   comment: number;
@@ -117,7 +117,7 @@ const metricsByLane = new WeakMap<Lane, CardMetrics>();
 function cardMetrics(draw: DrawContext, lane: Lane): CardMetrics {
   const { ctx, scene } = draw;
   const { palette } = scene;
-  const review = scene.reviews.get(lane.branch.name);
+  const review = scene.reviews.get(lane.branch.id);
   const known = metricsByLane.get(lane);
   if (known?.palette === palette && known.review === review) return known;
 
@@ -188,7 +188,7 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
 
   // First line: the name, cut from the middle so the leaf stays, then its code review.
   const nameMiddle = top + HEADER_NAME_MIDDLE;
-  const review = scene.reviews.get(name);
+  const review = scene.reviews.get(lane.branch.id);
   const chipWidth = cardMetrics(draw, lane).chip;
   ctx.textBaseline = 'middle';
   ctx.font = palette.fonts.branchName;

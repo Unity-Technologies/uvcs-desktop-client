@@ -27,7 +27,7 @@ import { mergeTaskRequest, useMergeTaskPreview } from './useMergeTaskPreview';
 import { ReviewStatusNote } from './ReviewStatusNote';
 import styles from './MergeTaskDialog.module.css';
 
-export type MergeTaskBranch = Pick<Branch, 'name' | 'parent' | 'comment'>;
+export type MergeTaskBranch = Pick<Branch, 'id' | 'name' | 'parent' | 'comment'>;
 
 /** Finishes a task branch: merges it to its parent (or another branch) on the server, or shows how to solve its conflicts. */
 export function openMergeTaskDialog(workspacePath: string, branch: MergeTaskBranch): void {
@@ -51,7 +51,7 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
 
   const request = mergeTaskRequest(sourceSpec, destination);
   const preview = useMergeTaskPreview(workspacePath, request);
-  const review = useReviewsByBranch().data?.get(branch.name);
+  const review = useReviewsByBranch().data?.get(branch.id);
   const changesetCount = useChangesetsToMerge(workspacePath, branch.name, sourceSpec, preview.data);
   const outcome = preview.data && mergeTaskOutcome(preview.data);
   const fromTaskBranch = sourceSpec === spec.branch(branch.name);

@@ -1,5 +1,5 @@
 import type { GraphLabel, MergeLink } from '@shared/domain/branchExplorer';
-import type { CodeReview } from '@shared/domain/codeReview';
+import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
 import type { DrawnTargets } from './drawContext';
 import type { DrawnBox } from './drawnBoxes';
@@ -17,7 +17,7 @@ export type GraphTarget =
   | { kind: 'branch'; lane: Lane }
   | { kind: 'mergeLink'; link: MergeLink }
   /** The code review chip in a branch's header card. */
-  | { kind: 'codeReview'; review: CodeReview };
+  | { kind: 'codeReview'; review: CodeReviewSummary };
 
 /**
  * The hover card for what the pointer is on. A changeset's card completes its comment over its caption, whether the

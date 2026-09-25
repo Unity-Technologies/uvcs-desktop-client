@@ -1,5 +1,5 @@
 import type { GraphChangeset } from '@shared/domain/branchExplorer';
-import type { CodeReview } from '@shared/domain/codeReview';
+import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
 import type { SearchHighlight } from '../model/searchGraph';
 import type { DrawnBoxes } from './drawnBoxes';
@@ -38,12 +38,12 @@ export interface GraphScene {
   /** Progress of the ping around the current search hit: 0 just landed, 1 settled. */
   searchPing: number;
   /** The newest code review of each branch, shown as a chip in its header card. */
-  reviews: ReadonlyMap<string, CodeReview>;
+  reviews: ReadonlyMap<number, CodeReviewSummary>;
 }
 
 /** Where the pointer targets were drawn in the last frame (world coordinates). Owned by the canvas, refilled by every frame. */
 export interface DrawnTargets {
-  reviewChips: DrawnBoxes<CodeReview>;
+  reviewChips: DrawnBoxes<CodeReviewSummary>;
   /** Branch header cards where they are drawn, pinned to the left edge or not. */
   branchHeaders: DrawnBoxes<Lane>;
   /** Changeset comments, as wide as the text drawn. */

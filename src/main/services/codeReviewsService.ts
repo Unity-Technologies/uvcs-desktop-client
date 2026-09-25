@@ -1,5 +1,5 @@
 import type { CodeReviewsApi } from '@shared/api/codeReviews';
-import { MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewFilter } from '@shared/domain/codeReview';
+import { MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewFilter, type CodeReviewSummary, type CodeReviewTarget } from '@shared/domain/codeReview';
 import type { QueryFilter } from '@shared/domain/query';
 import { parseCodeReviews, type RawCodeReview } from '../cm/codeReviewsXml';
 import { escapeQueryValue, findArgs } from '../cm/findQuery';
@@ -29,21 +29,16 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
   }
 
   /**
-   * `cm` reports branch targets only by object id; the names come from the branch lists already read, or from a few
-   * batched lookups, remembered a while.
+   * `cm` reports branch targets only by object id; the names come from the branch lists already read, or from the
+   * names of every branch, read once in a while (`BranchNamesCache`).
    */
   async function resolveTargets(workspacePath: string, reviews: RawCodeReview[]): Promise<CodeReview[]> {
     const branchIds = reviews.filter((review) => review.targetType === 'branch').map((review) => review.targetId);
     const names = branchIds.length > 0 ? await branchNames.resolve(workspacePath, branchIds) : new Map<number, string>();
 
-    return reviews.map(({ targetType, targetId, ...review }) => ({
-      ...review,
-      target:
-        targetType === 'changeset'
-          ? { kind: 'changeset', changesetId: targetId }
-          : targetType === 'branch' && names.has(targetId)
-            ? { kind: 'branch', branch: names.get(targetId)! }
-            : { kind: 'unknown', description: `${targetType} ${targetId}` },
+    return reviews.map((review) => ({
+      ...summaryOf(review),
+      target: targetOf(review, names),
     }));
   }
 
@@ -53,8 +48,7 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
     },
 
     async listSummaries(workspacePath, filter) {
-      const reviews = await findListed(workspacePath, filter);
-      return reviews.map(({ targetType: _targetType, targetId: _targetId, ...summary }) => summary);
+      return (await findListed(workspacePath, filter)).map(summaryOf);
     },
 
     async get(workspacePath, reviewId) {
@@ -87,4 +81,15 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
       await cm.query(['codereview', '-d', ...reviewIds.map(String)], { cwd: workspacePath });
     },
   };
+}
+
+/** The review as listed, its branch target by object id. */
+function summaryOf({ targetType, targetId, ...summary }: RawCodeReview): CodeReviewSummary {
+  return targetType === 'branch' ? { ...summary, targetBranchId: targetId } : summary;
+}
+
+function targetOf({ targetType, targetId }: RawCodeReview, branchNames: ReadonlyMap<number, string>): CodeReviewTarget {
+  if (targetType === 'changeset') return { kind: 'changeset', changesetId: targetId };
+  const branch = targetType === 'branch' ? branchNames.get(targetId) : undefined;
+  return branch !== undefined ? { kind: 'branch', branch } : { kind: 'unknown', description: `${targetType} ${targetId}` };
 }

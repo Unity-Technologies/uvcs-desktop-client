@@ -1,6 +1,6 @@
 import { Check, ChevronRight, EyeOff, GitBranch } from 'lucide-react';
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
-import type { CodeReview } from '@shared/domain/codeReview';
+import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { PathLabel } from '../../components/PathLabel';
 import { textMeasurer } from '../../lib/measureText';
 import { CodeReviewChip } from '../codeReviews/CodeReviewChip';
@@ -16,7 +16,7 @@ interface BranchNameCellProps {
   row: BranchTreeRow;
   isCurrent: boolean;
   /** The branch's newest code review, if it has one. */
-  review: CodeReview | undefined;
+  review: CodeReviewSummary | undefined;
   onToggleCollapsed: (name: string) => void;
 }
 

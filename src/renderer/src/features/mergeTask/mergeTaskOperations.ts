@@ -1,4 +1,4 @@
-import type { CodeReview } from '@shared/domain/codeReview';
+import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { MergeRequest, MergeResult } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
@@ -14,7 +14,7 @@ interface FinishTaskOptions {
   taskBranch: string;
   comment: string;
   /** Marked as reviewed once merged. */
-  review?: CodeReview;
+  review?: CodeReviewSummary;
   hideBranch: boolean;
 }
 

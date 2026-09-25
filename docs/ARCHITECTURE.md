@@ -219,15 +219,18 @@ and many people use the same server. Every `cm` command other than local reads (
   incoming check, the branch the workspace is on) wait for it, and when the operation gave them another key they are only
   marked stale: they are read under the new key as they show, never once more under the old one. Event-driven refreshes
   are scoped too: someone else's checkin leaves labels, shelves, attributes, reviews and the workspace's own annotations alone.
-- **Reuse**: what a command already returned answers later questions instead of another command. Branch lists (the
-  Branches view, the Branch Explorer with its hidden branches) name the branches code reviews point to by id
-  (`BranchNamesCache.remember`); the palette takes the newest reviews from the branch chips; the top bar takes the branch
-  comment from the branch query. Pending changes ask which locks are mine only when some lock holds one of them; left
+- **Reuse**: what a command already returned answers later questions instead of another command. Code reviews name
+  their branch by object id: the branch chips (Branch Explorer, Branches, finishing a task) match it against the ids
+  their branch lists already carry, and share one review list with the palette; the Code reviews view and page name it
+  from the branch lists already read (`BranchNamesCache.remember`), or else read every branch's id and name once
+  (`readBranchNames`, two light queries, kept ten minutes). The top bar takes the branch comment from the branch query. Pending changes ask which locks are mine only when some lock holds one of them; left
   changes look the selector's object id up only when an automatic shelve by another client could match it, and arriving
   from a switch looks for changes to restore only when this app left some there.
 - **Queries**: list everything only when the view needs everything, and then read it rarely. Otherwise filter on the
-  server: a date (`sinceDate`), a `limit`, one object by name or id (`api.branches.get`), batched id lookups
-  (`branchNamesById`, remembered by `BranchNamesCache`). Prefer `--format` with just the fields needed over `--xml`.
+  server: a date (`sinceDate`), a `limit`, one object by name or id (`api.branches.get`). Never OR ids together
+  (`where id = 1 or id = 2 …`, checked by `noOredIdLookups.test.ts`): take names and details from the query that lists
+  the objects (`--format` fields, `{id}` in branch lists), or from one bounded query the view needs anyway. Prefer
+  `--format` with just the fields needed over `--xml`.
   Equivalent filters must share one query key (`compactFilter`). A parse failure must fail, never degrade to an empty
   filter (`parseWorkspaceStatus`): `cm find changeset where changesetid > -1` reads the whole repository.
 - **Guard**: development builds warn in the console (`[server budget]`) when the same server command runs more than
