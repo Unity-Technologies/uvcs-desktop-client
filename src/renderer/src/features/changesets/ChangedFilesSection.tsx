@@ -1,3 +1,5 @@
+import { ChevronRight } from 'lucide-react';
+import { useState } from 'react';
 import type { DiffTarget } from '@shared/domain/diff';
 import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge } from '../../components/StatusBadge';
@@ -17,26 +19,39 @@ const FILTER_FROM = 8;
 
 interface ChangedFilesSectionProps {
   target: DiffTarget;
+  /** For a branch, its head: the list is reused until the branch moves. */
+  branchHead?: number;
   /** Opens the full diff, focused on a file when given one. */
   onOpen: (focusPath?: string) => void;
 }
 
-/** The "N files changed" card of a details panel: what a changeset, branch, label, shelve or code review changed. */
-export function ChangedFilesSection({ target, onOpen }: ChangedFilesSectionProps) {
-  const { data: entries, error } = useDiffEntries(target);
+/**
+ * The changed files card of a details panel: what a changeset, branch, label, shelve or code review changed.
+ * Selecting an object never runs `cm diff` (it is heavy on big changes and servers): the list loads when asked
+ * for, and stays cached, so it shows right away when that object is selected again.
+ */
+export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFilesSectionProps) {
+  const [requested, setRequested] = useState(false);
+  const { data: entries, error } = useDiffEntries(target, { enabled: requested, branchHead });
   const { visible, query, bar } = useChangeFilter(entries ?? [], diffEntryKey, diffEntryTone);
 
   return (
     <DetailsSection
-      title={entries ? `${pluralize(entries.length, 'file')} changed` : 'Files changed'}
+      title={entries ? `${pluralize(entries.length, 'file')} changed` : 'Changed files'}
       action={
         <Button variant="ghost" size="small" onClick={() => onOpen()}>
           Open diff
         </Button>
       }
     >
+      {!entries && !requested && (
+        <button className={styles.show} onClick={() => setRequested(true)}>
+          <ChevronRight size={14} />
+          Show changed files
+        </button>
+      )}
       {error && <DetailsEmpty>{error.message}</DetailsEmpty>}
-      {!entries && !error && <DetailsSkeleton />}
+      {!entries && requested && !error && <DetailsSkeleton />}
       {entries?.length === 0 && <DetailsEmpty>No file changes.</DetailsEmpty>}
       {entries && entries.length > FILTER_FROM && <div className={styles.filter}>{bar}</div>}
       {entries && entries.length > 0 && visible.length === 0 && <DetailsEmpty>No files match the filter.</DetailsEmpty>}

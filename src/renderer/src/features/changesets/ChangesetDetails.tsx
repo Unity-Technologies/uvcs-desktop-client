@@ -11,7 +11,7 @@ import { DetailsComment } from '../../ui/DetailsComment';
 import { DetailsBadge, DetailsPanel, DetailsSection } from '../../ui/DetailsPanel';
 import { PropertyList, type Property } from '../../ui/PropertyList';
 import { AttributesEditor } from '../attributes/AttributesEditor';
-import { useLabels } from '../labels/useLabels';
+import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
 import { ChangedFilesSection } from './ChangedFilesSection';
 import { openChangesetDiff, saveChangesetComment } from './changesetOperations';
 
@@ -29,8 +29,7 @@ interface ChangesetDetailsProps {
 
 export function ChangesetDetails({ changeset, menu, links = PLAIN_LINKS, relations = [] }: ChangesetDetailsProps) {
   const { data: workspace } = useWorkspaceInfo();
-  const { data: labels } = useLabels();
-  const changesetLabels = labels?.filter((label) => label.changeset === changeset.id) ?? [];
+  const changesetLabels = useLabelsByChangeset().get(changeset.id) ?? [];
   const workspacePath = useWorkspacePath();
 
   return (

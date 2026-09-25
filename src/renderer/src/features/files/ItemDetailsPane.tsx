@@ -6,6 +6,7 @@ import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime, formatSize } from '../../lib/formatDate';
+import { useSettled } from '../../lib/useSettled';
 import { DetailsBadge, DetailsPanel, DetailsSection } from '../../ui/DetailsPanel';
 import { PropertyList, type Property } from '../../ui/PropertyList';
 import { SegmentedControl } from '../../ui/SegmentedControl';
@@ -75,10 +76,11 @@ export function ItemDetailsPane({ workspacePath, item, pendingChange, menu }: It
 }
 
 function ItemProperties({ workspacePath, item, pendingChange }: Omit<ItemDetailsPaneProps, 'menu'>) {
+  const settled = useSettled();
   const { data: details } = useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'explorer', 'details', item.path),
     queryFn: () => api.explorer.details(workspacePath, item.path),
-    enabled: !item.isPrivate,
+    enabled: !item.isPrivate && settled,
   });
 
   const properties: Property[] = [
