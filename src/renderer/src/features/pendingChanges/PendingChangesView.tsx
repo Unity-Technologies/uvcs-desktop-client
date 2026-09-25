@@ -6,6 +6,7 @@ import { openSettingsDialogAt } from '../../app/settings/SettingsDialog';
 import { useSettings } from '../../app/settings/useSettings';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
+import { joinComment } from '../../lib/comment';
 import { EMPTY_SELECTION } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
@@ -41,7 +42,7 @@ import { buildChangeRows, changeKey, changesUnderRow, topLevelCheckboxInset, typ
 import { changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
 import { changeTone } from './changeTone';
-import { checkinComment, useCheckinDraft, useCheckinDraftStore } from './checkinDraftStore';
+import { useCheckinDraft, useCheckinDraftStore } from './checkinDraftStore';
 import { pendingChangeMenu } from './pendingChangeMenu';
 import { addFilterRule, openWithDefaultApp, undoChanges } from './pendingChangeOperations';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
@@ -145,7 +146,7 @@ export function PendingChangesView() {
       checkinChanges({
         workspacePath,
         changes: included,
-        comment: checkinComment(draft),
+        comment: joinComment(draft),
         warnOnEmptyComment: settings.warnOnEmptyComment,
         updateFirst: behind !== null,
       }),
@@ -298,7 +299,7 @@ export function PendingChangesView() {
               recentComments={settings.recentComments}
               busy={busy}
               onCheckin={checkin}
-              onShelve={() => runBusy(() => shelveChanges(workspacePath, included, checkinComment(draft)))}
+              onShelve={() => runBusy(() => shelveChanges(workspacePath, included, joinComment(draft)))}
             />
           </div>
         }
