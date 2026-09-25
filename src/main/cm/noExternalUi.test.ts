@@ -1,10 +1,11 @@
 import { readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { join, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * The app never opens an external tool (cm's merge or diff tool): every conflict is resolved in its own
- * merge view. This scans the `cm` argument lists written in the main process for the commands that could.
+ * No external tool opens by itself: `cm` never gets to open its merge or diff tool, and a merge tool opens only when
+ * the user asks for it on one conflicting file, through `merge/mergeTools/launch.ts`. This scans the `cm` argument
+ * lists written in the main process for the commands that could open one, and who starts processes at all.
  */
 
 const MAIN_DIRECTORY = join(__dirname, '..');
@@ -54,6 +55,7 @@ function closingBracket(source: string, open: number): number {
 }
 
 const allSources = sourceFiles(MAIN_DIRECTORY).map((file) => ({ file, source: readFileSync(file, 'utf8') }));
+const relative = (file: string): string => file.slice(MAIN_DIRECTORY.length + 1).split(sep).join('/');
 const allArgLists = allSources.flatMap(({ file, source }) => findArgLists(source, file));
 const describeList = (list: CmArgs): string => `${list.file}: ${list.text}`;
 
@@ -92,5 +94,17 @@ describe('cm commands never open an external tool', () => {
 
   it('only diffs with --format, since a plain `cm diff` of a file opens the diff tool', () => {
     expect(allArgLists.filter((list) => list.command === 'diff' && !list.text.includes('--format')).map(describeList)).toEqual([]);
+  });
+});
+
+describe('merge tools open only on the user’s request', () => {
+  it('starts processes only to run cm, open a terminal, or run a merge tool the user picked', () => {
+    const spawning = allSources.filter(({ source }) => source.includes("'node:child_process'")).map(({ file }) => relative(file));
+    expect(spawning.sort()).toEqual(['cm/CmShellSession.ts', 'cm/runCmProcess.ts', 'merge/mergeTools/launch.ts', 'system/openTerminal.ts']);
+  });
+
+  it('launches merge tools only from the service behind "Resolve in…"', () => {
+    const launching = allSources.filter(({ source }) => /from '[./]*(merge\/)?mergeTools\/launch'/.test(source)).map(({ file }) => relative(file));
+    expect(launching).toEqual(['services/mergeToolsService.ts']);
   });
 });

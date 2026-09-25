@@ -37,6 +37,11 @@ export class CmClient {
     this.shellPool = new CmShellPool(this.cmPath);
   }
 
+  /** Where `cm` was found: the official GUI and its merge tool are installed next to it. */
+  get executable(): string {
+    return this.cmPath;
+  }
+
   /** Looks for `cm` again, e.g. after the user installed it while the app was running. */
   relocate(): void {
     const cmPath = this.locate();
