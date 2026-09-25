@@ -4,6 +4,7 @@ import { BAND_HEIGHT, NODE_RADIUS } from './geometry';
 import { branchColor } from './graphPalette';
 import { nodePoint } from './graphTargets';
 import { laneShape, type LaneShape } from './laneShape';
+import { boundsOf, crossesView } from './linkVisibility';
 
 const ELBOW_RADIUS = 16;
 
@@ -13,10 +14,9 @@ export function drawLanes(draw: DrawContext): void {
   for (const lane of scene.layout.lanes) {
     const shape = laneShape(lane);
     const base = lane.baseChangeset !== null ? nodePoint(scene.layout, lane.baseChangeset) : null;
-    const left = Math.min(shape.left, base?.x ?? shape.left);
-    const top = Math.min(shape.y, base?.y ?? shape.y) - BAND_HEIGHT;
-    const offScreen = shape.right < visible.left || left > visible.right || shape.y + BAND_HEIGHT < visible.top || top > visible.bottom;
-    if (offScreen) continue;
+    // The band and the whole elbow down from its base: the elbow stays while it crosses the screen.
+    const bounds = boundsOf([{ x: shape.left, y: shape.y }, { x: shape.right, y: shape.y }, ...(base ? [base] : [])]);
+    if (!crossesView(bounds, visible, BAND_HEIGHT)) continue;
 
     const color = branchColor(scene.palette, lane.branch.name);
     if (base) drawBranchStart(draw, base, shape, color);
