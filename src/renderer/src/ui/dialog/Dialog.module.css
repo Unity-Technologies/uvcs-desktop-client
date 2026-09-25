@@ -1,7 +1,9 @@
+/* Blurring what's behind keeps the eye on the dialog. The command palette stays unblurred: it is a quick jump, not a task. */
 .overlay {
   position: fixed;
   inset: 0;
   background: var(--overlay);
+  backdrop-filter: blur(3px);
   animation: var(--keyframes-fade-in) var(--duration-normal);
   z-index: 800;
 }
