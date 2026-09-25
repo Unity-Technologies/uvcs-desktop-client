@@ -1,5 +1,6 @@
 import { useAvatarImage } from '../lib/avatars/avatarImages';
-import { displayName, initials, userHue } from '../lib/userName';
+import { stableHue } from '../lib/stableHue';
+import { displayName, initials } from '../lib/userName';
 import { Highlight } from './Highlight';
 import styles from './Avatar.module.css';
 
@@ -14,7 +15,7 @@ export function Avatar({ user, size = 20, tip = displayName(user) }: { user: str
       ) : (
         // SVG centers the letters exactly at any size, unlike text in a sized box.
         <svg viewBox="0 0 100 100" className={styles.initials} aria-hidden>
-          <circle cx="50" cy="50" r="50" fill={`hsl(${userHue(user)} 55% 50%)`} />
+          <circle cx="50" cy="50" r="50" fill={`hsl(${stableHue(user)} 55% 50%)`} />
           <text x="50" y="50" dy="0.35em" textAnchor="middle" fontSize="40" fontWeight="600" fill="#fff">
             {initials(user)}
           </text>

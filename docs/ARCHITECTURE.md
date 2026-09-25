@@ -126,6 +126,9 @@ renderer/src/
   well-known GUID, the workspace's recent branches, then the rest newest first. Recent branches are the official client's,
   read from and written to its `plasticgui.conf` (`main/plasticConfig`) on every switch, so both apps list the same ones.
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in components.
+  - Motion uses the `--duration-*` and `--ease-*` tokens and the shared keyframes of `styles/global.css` (through
+    `--keyframes-*`); reduced motion zeroes the durations, so only loops (spinners, skeleton pulses) opt out themselves.
+  - Lists that load show skeletons at their real row height (`ui/Skeleton`, `TableSkeleton`, `ListWithDetailsSkeleton`).
 
 ## Server budget
 
@@ -141,6 +144,8 @@ and many people use the same server. Every `cm` command other than local reads (
   that hardly change by themselves and are heavy to read use `SLOW_CHANGING_QUERY` (every branch, every label, attribute
   types, the working object's comment, the palette's lists): five minutes, and focus never re-reads them. The Branch
   Explorer is kept five minutes and focus never re-reads all history. Local views skip focus while the watcher sees the disk.
+- **Home**: the repository and branch of every listed workspace come from its `.plastic/plastic.selector` file
+  (`workspaces.heads`); `cm` is asked only about recent workspaces whose file can't tell.
 - **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`), `cm diff`
   runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id) are
   cached (`IMMUTABLE_QUERY`) and skipped by refreshes.
