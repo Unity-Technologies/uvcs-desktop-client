@@ -1,12 +1,11 @@
-import { Archive, ChevronDown, FileDiff, Trash2 } from 'lucide-react';
+import { Archive, FileDiff, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { LeftChanges } from '@shared/domain/switchWithChanges';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { tidyMenu } from '../../lib/actions';
 import { formatRelativeDate } from '../../lib/formatDate';
 import { pluralize } from '../../lib/text';
-import { Button } from '../../ui/Button';
-import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
+import { SplitButton } from '../../ui/SplitButton';
 import { discardLeftChanges, restoreLeftChanges, reviewLeftChanges } from './leftChangesOperations';
 import { useLeftChanges } from './useLeftChanges';
 import styles from './LeftChangesBanner.module.css';
@@ -50,14 +49,9 @@ export function LeftChangesBanner() {
         <strong className={styles.title}>{bannerTitle(newest)}</strong>
         <span className={styles.detail}>{bannerDetail(newest)}</span>
       </div>
-      <div className={styles.split}>
-        <Button variant="primary" size="small" className={styles.main} loading={busy} onClick={() => void run(() => restoreLeftChanges(workspacePath, newest))}>
-          Restore
-        </Button>
-        <ActionDropdownMenu entries={menu}>
-          <Button variant="primary" size="small" className={styles.caret} icon={<ChevronDown size={14} />} disabled={busy} aria-label="More options" />
-        </ActionDropdownMenu>
-      </div>
+      <SplitButton variant="primary" loading={busy} menu={menu} menuLabel="More options" onClick={() => void run(() => restoreLeftChanges(workspacePath, newest))}>
+        Restore
+      </SplitButton>
     </div>
   );
 }
