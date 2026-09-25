@@ -192,6 +192,8 @@ export function DataTable<Row>({
               aria-selected={selection.selected.has(key)}
               className={styles.row}
               data-selected={selection.selected.has(key)}
+              data-joins-above={selection.selected.has(key) && selection.selected.has(orderedKeys[item.index - 1] ?? '')}
+              data-joins-below={selection.selected.has(key) && selection.selected.has(orderedKeys[item.index + 1] ?? '')}
               data-focused={key === focused}
               style={{ top: item.start, height: rowHeight }}
               onMouseDown={(event) => onRowMouseDown(key, event)}
