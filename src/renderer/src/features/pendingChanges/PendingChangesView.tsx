@@ -27,6 +27,7 @@ import { RefreshButton } from './RefreshButton';
 import { usePendingLocks } from './locks/usePendingLocks';
 import { useIncomingSummary } from '../incoming/useIncomingSummary';
 import { ReviewModeButton } from '../review/ReviewModeButton';
+import { reviewProgress } from '../review/reviewStatus';
 import { usePendingReview } from './review/usePendingReview';
 import { BulkPrivateNotice, confirmBulkPrivateCheckin } from './BulkPrivateNotice';
 import { bulkPrivateFiles } from './bulkPrivate';
@@ -88,6 +89,7 @@ export function PendingChangesView() {
     included.length,
   );
   const bulkPrivate = bulkPrivateFiles(included);
+  const reviewed = reviewProgress(included, review.statusOf);
   const successMoment = useSuccessMomentStore((state) => state.moments[workspacePath]);
   const clearSuccessMoment = useSuccessMomentStore((state) => state.clear);
   const selectedCount = changes.filter((change) => selection.selected.has(changeKey(change))).length;
@@ -291,6 +293,7 @@ export function PendingChangesView() {
               merging={mergeChanges.length > 0}
               behindCount={behind?.count ?? 0}
               behindDescription={behind && behindDescription(behind)}
+              allReviewed={review.on && reviewed.total > 0 && reviewed.reviewed === reviewed.total}
               recentComments={settings.recentComments}
               busy={busy}
               onCheckin={checkin}

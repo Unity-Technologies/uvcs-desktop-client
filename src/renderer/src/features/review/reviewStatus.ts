@@ -29,3 +29,10 @@ export function reviewProgress<T>(items: readonly T[], statusOf: ReviewStatusOf<
 export function shouldMarkReviewed<T>(items: readonly T[], statusOf: ReviewStatusOf<T>): boolean {
   return items.some((item) => needsReview(statusOf, item));
 }
+
+/** A folder's mark: reviewed once every file in it is; null when it holds nothing to review. */
+export function groupReviewStatus<T>(items: readonly T[], statusOf: ReviewStatusOf<T>): ReviewStatus | null {
+  const { total, reviewed } = reviewProgress(items, statusOf);
+  if (total === 0) return null;
+  return reviewed === total ? 'reviewed' : 'unreviewed';
+}

@@ -122,14 +122,14 @@
   line-height: 16px;
 }
 
-/* Reviewed files step back, so what's left to look at stands out. */
-.row[data-review='reviewed'] > :not(.trailing, :first-child) {
+/* Reviewed files and folders step back, so what's left to look at stands out; their checkboxes and chevrons don't. */
+.row[data-review='reviewed'] > :not(.trailing, .chevron, button) {
   opacity: 0.6;
 }
 
 /* Entering or leaving review mode, reviewed files ease back and forth. */
 @media (prefers-reduced-motion: no-preference) {
-  .row[data-type='change'] > :not(.trailing, :first-child) {
+  .row:is([data-type='change'], [data-type='directory']) > :not(.trailing, .chevron, button) {
     transition: opacity var(--duration-normal);
   }
 }

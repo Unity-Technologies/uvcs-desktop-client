@@ -31,6 +31,8 @@ interface CheckinPanelProps {
   behindCount: number;
   /** Under the button while behind, e.g. "1 new changeset from Ana on this branch". */
   behindDescription: string | null;
+  /** Review mode is on and every included change is reviewed. */
+  allReviewed: boolean;
   recentComments: string[];
   busy: boolean;
   onCheckin: () => Promise<boolean>;
@@ -49,6 +51,7 @@ export function CheckinPanel({
   merging,
   behindCount,
   behindDescription,
+  allReviewed,
   recentComments,
   busy,
   onCheckin,
@@ -59,7 +62,7 @@ export function CheckinPanel({
   const disabledReason = checkinDisabledReason(mode, includedCount);
   const canAct = disabledReason === null && !busy;
   const { icon: ModeIcon } = describeMode(mode);
-  const label = checkinButtonLabel({ mode, includedCount, branchName, uploadBytes, merging, behindCount });
+  const label = checkinButtonLabel({ mode, includedCount, branchName, uploadBytes, merging, behindCount, allReviewed });
   const updatesFirst = mode === 'checkin' && includedCount > 0 && behindCount > 0 && !merging;
 
   // A shelve is a detour: once it's done, the panel is back to checking in.

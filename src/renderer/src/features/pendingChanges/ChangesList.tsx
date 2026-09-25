@@ -16,6 +16,7 @@ import { rowIndent, type ChangeRow } from './changeRows';
 import { LockChip } from './locks/LockChip';
 import type { PendingLocks } from './locks/pendingLocks';
 import { isReviewKey, toggleReviewedFromKey } from '../review/reviewKey';
+import { groupReviewStatus, type ReviewStatus } from '../review/reviewStatus';
 import { ReviewToggle } from '../review/ReviewToggle';
 import { SinceReviewDot } from '../review/SinceReviewDot';
 import type { ListReview } from '../review/useReviewMode';
@@ -149,7 +150,7 @@ export function ChangesList({
                 data-type={row.type}
                 data-selected={selection.selected.has(row.key)}
                 data-drop-target={dropTarget === row.key}
-                data-review={review.on && row.type === 'change' ? (review.statusOf(row.change) ?? undefined) : undefined}
+                data-review={review.on ? (rowReviewStatus(row, review) ?? undefined) : undefined}
                 style={{ top: item.start, height: ROW_HEIGHT, '--row-indent': `${rowIndent(row, grouped)}px` } as CSSProperties}
                 onMouseDown={(event) => onRowMouseDown(row, event)}
                 onClick={() => onRowClick(row)}
@@ -171,6 +172,12 @@ export function ChangesList({
       </div>
     </ActionContextMenu>
   );
+}
+
+/** A file's mark, or a folder's once every file in it is reviewed; changelist headers have none. */
+function rowReviewStatus(row: ChangeRow, review: ListReview<PendingChange>): ReviewStatus | null {
+  if (row.type === 'change') return review.statusOf(row.change);
+  return row.type === 'directory' ? groupReviewStatus(row.changes, review.statusOf) : null;
 }
 
 type RowContentProps = { row: ChangeRow } & Pick<ChangesListProps, 'onToggleIncluded' | 'changelistMenu' | 'review' | 'locks'>;
@@ -195,15 +202,22 @@ function RowContent({ row, onToggleIncluded, changelistMenu, review, locks }: Ro
           <span className={styles.count}>{row.changes.length}</span>
         </>
       );
-    case 'directory':
+    case 'directory': {
+      const folderStatus = review.on ? rowReviewStatus(row, review) : null;
       return (
         <>
           <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
           <Checkbox checked={row.checkState} onChange={(checked) => onToggleIncluded(row, checked)} />
           <Folder size={14} className={styles.folder} />
           <span className={styles.directoryName}>{row.name}</span>
+          {folderStatus && (
+            <span className={styles.trailing}>
+              <ReviewToggle folder status={folderStatus} onToggle={() => review.toggle(row.changes)} />
+            </span>
+          )}
         </>
       );
+    }
     case 'change': {
       const { change } = row;
       const deleted = change.kinds.includes('deleted') || change.kinds.includes('locallyDeleted');

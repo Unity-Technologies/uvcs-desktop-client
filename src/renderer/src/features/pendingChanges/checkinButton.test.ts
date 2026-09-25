@@ -22,7 +22,7 @@ describe('uploadSize', () => {
 });
 
 describe('checkinButtonLabel', () => {
-  const base = { mode: 'checkin' as const, includedCount: 4, branchName: '/main', uploadBytes: 1_150_000, merging: false, behindCount: 0 };
+  const base = { mode: 'checkin' as const, includedCount: 4, branchName: '/main', uploadBytes: 1_150_000, merging: false, behindCount: 0, allReviewed: false };
 
   const wordings = (label: ReturnType<typeof checkinButtonLabel>): string[] =>
     label.forms.map(({ action, target, size }) => [action, target, size].filter(Boolean).join(' | '));
@@ -62,7 +62,16 @@ describe('checkinButtonLabel', () => {
     expect(label.tip).toBe('Update, then check in to /main');
   });
 
-  it('never updates first for a merge', () => {
+  it('says the changes are reviewed once all of them are', () => {
+    expect(wordings(checkinButtonLabel({ ...base, uploadBytes: 0, allReviewed: true }))).toEqual([
+      'Check in reviewed changes | to /main',
+      'Check in reviewed changes',
+      'Check in 4',
+    ]);
+  });
+
+  it('prefers updating first over the reviewed wording, and never updates for a merge', () => {
+    expect(wordings(checkinButtonLabel({ ...base, uploadBytes: 0, behindCount: 2, allReviewed: true }))[0]).toBe('Update & check in 4 changes | to /main');
     expect(wordings(checkinButtonLabel({ ...base, uploadBytes: 0, behindCount: 2, merging: true }))[0]).toBe('Check in merge | to /main');
   });
 
