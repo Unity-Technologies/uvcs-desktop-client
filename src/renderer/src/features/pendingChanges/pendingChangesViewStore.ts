@@ -13,10 +13,15 @@ export const usePendingChangesViewStore = create<PendingChangesViewStore>()(
   persist(
     (set) => ({
       layout: 'list',
-      grouping: 'status',
+      grouping: 'none',
       setLayout: (layout) => set({ layout }),
       setGrouping: (grouping) => set({ grouping }),
     }),
-    { name: 'pending-changes-view' },
+    {
+      name: 'pending-changes-view',
+      version: 1,
+      // Version 0 could group by status, which the status filter chips replaced.
+      migrate: (persisted) => ({ ...(persisted as PendingChangesViewStore), grouping: (persisted as PendingChangesViewStore).grouping === 'changelist' ? 'changelist' : 'none' }),
+    },
   ),
 );

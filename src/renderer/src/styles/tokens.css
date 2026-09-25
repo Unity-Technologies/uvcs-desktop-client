@@ -63,6 +63,13 @@
   --status-private: #6e7781;
   --status-conflict: #cf222e;
 
+  /* File change badges, in the colors and letters of the Plastic desktop GUI. */
+  --change-added: #1a7f37;
+  --change-changed: #1f6feb;
+  --change-deleted: #cf222e;
+  --change-moved: #8250df;
+  --change-permissions: #d1640a;
+
   --bg-app: #f6f8fa;
   --bg-sidebar: #f6f8fa;
   --bg-surface: #ffffff;
@@ -111,6 +118,12 @@
   --status-moved: #39c5cf;
   --status-private: #8b949e;
   --status-conflict: #f85149;
+
+  --change-added: #3fb950;
+  --change-changed: #58a6ff;
+  --change-deleted: #f85149;
+  --change-moved: #bc8cff;
+  --change-permissions: #f0883e;
 
   --bg-app: #0d1117;
   --bg-sidebar: #0d1117;

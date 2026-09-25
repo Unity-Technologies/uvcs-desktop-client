@@ -1,8 +1,7 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import type { CheckState } from '../../ui/Checkbox';
-import { CATEGORIES, CATEGORY_ORDER, categoryOf } from './changeCategories';
 
-/** A header grouping changes: a status category or a changelist. */
+/** A header grouping changes: all of them, or a changelist. */
 interface GroupRow {
   type: 'group';
   key: string;
@@ -36,7 +35,7 @@ interface ChangeItemRow {
 export type ChangeRow = GroupRow | DirectoryRow | ChangeItemRow;
 
 export type ChangesLayout = 'list' | 'tree';
-export type ChangesGrouping = 'status' | 'changelist';
+export type ChangesGrouping = 'none' | 'changelist';
 
 export const DEFAULT_CHANGELIST_LABEL = 'Default changelist';
 
@@ -59,7 +58,7 @@ interface Group {
 
 /** Flattens pending changes into the rows of the list: group headers, optional folders and changes. */
 export function buildChangeRows({ changes, changelists, layout, grouping, isChecked, collapsed }: BuildRowsInput): ChangeRow[] {
-  const groups = grouping === 'status' ? groupByStatus(changes) : groupByChangelist(changes, changelists);
+  const groups = grouping === 'none' ? [allChanges(changes)] : groupByChangelist(changes, changelists);
   const rows: ChangeRow[] = [];
 
   for (const group of groups) {
@@ -93,12 +92,8 @@ export function changesUnderRow(row: ChangeRow): PendingChange[] {
   return row.type === 'change' ? [row.change] : row.changes;
 }
 
-function groupByStatus(changes: PendingChange[]): Group[] {
-  return CATEGORY_ORDER.map((category) => ({
-    key: `status:${category}`,
-    label: CATEGORIES[category].label,
-    changes: changes.filter((change) => categoryOf(change) === category),
-  })).filter((group) => group.changes.length > 0);
+function allChanges(changes: PendingChange[]): Group {
+  return { key: 'all', label: 'All changes', changes };
 }
 
 function groupByChangelist(changes: PendingChange[], changelists: Changelist[]): Group[] {

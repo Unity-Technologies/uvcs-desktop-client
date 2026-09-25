@@ -1,14 +1,15 @@
 import { CheckCircle2, GitMerge, List, ListTree, RefreshCw, SlidersHorizontal } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { invalidateWorkspace } from '../../app/queryClient';
-import { openSettingsDialog } from '../../app/settings/SettingsDialog';
+import { useChangeFilter } from '../../components/useChangeFilter';
+import { openSettingsDialogAt } from '../../app/settings/SettingsDialog';
 import { useSettings } from '../../app/settings/useSettings';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
+import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
-import { SearchField } from '../../ui/SearchField';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { SplitPane } from '../../ui/SplitPane';
@@ -20,11 +21,15 @@ import { checkinChanges, shelveChanges, undoUnchangedCheckouts } from './checkin
 import { isCheckinCandidate } from './changeCategories';
 import { buildChangeRows, changeKey, changesUnderRow, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
 import { changelistMenu } from './changelistMenu';
+import { changeTone } from './changeTone';
 import { useCheckinDraft, useCheckinDraftStore } from './checkinDraftStore';
 import { pendingChangeMenu } from './pendingChangeMenu';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { usePendingChanges } from './usePendingChanges';
 import styles from './PendingChangesView.module.css';
+
+const NO_CHANGES: PendingChange[] = [];
+const changePath = (change: PendingChange): string => change.path;
 
 export function PendingChangesView() {
   const workspacePath = useWorkspacePath();
@@ -35,15 +40,11 @@ export function PendingChangesView() {
   const draft = useCheckinDraft(workspacePath);
   const { setComment, setIncluded, reset } = useCheckinDraftStore();
 
-  const [filter, setFilter] = useState('');
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [checkingIn, setCheckingIn] = useState(false);
 
-  const changes = useMemo(
-    () => (snapshot?.changes ?? []).filter((change) => change.path.toLowerCase().includes(filter.toLowerCase())),
-    [snapshot, filter],
-  );
+  const { visible: changes, query, bar: filterBar } = useChangeFilter(snapshot?.changes ?? NO_CHANGES, changePath, changeTone);
   const isIncluded = (change: PendingChange): boolean => isCheckinCandidate(change) && !draft.excludedPaths.has(change.path);
   const included = changes.filter(isIncluded);
   const changelists = snapshot?.changelists ?? [];
@@ -85,16 +86,15 @@ export function PendingChangesView() {
       actions={
         <>
           <IconButton icon={<RefreshCw size={14} className={isFetching ? styles.spinning : undefined} />} label="Refresh" shortcut="mod+r" onClick={() => void invalidateWorkspace(workspacePath)} />
-          <IconButton icon={<SlidersHorizontal size={14} />} label="What to show" onClick={openSettingsDialog} />
+          <IconButton icon={<SlidersHorizontal size={14} />} label="What to show" onClick={() => openSettingsDialogAt('pendingChanges')} />
         </>
       }
     >
-      <SearchField value={filter} onChange={setFilter} placeholder="Filter changes" />
       <SegmentedControl<ChangesGrouping>
         value={grouping}
         onChange={setGrouping}
         segments={[
-          { value: 'status', label: 'Status' },
+          { value: 'none', label: 'Files' },
           { value: 'changelist', label: 'Changelists' },
         ]}
       />
@@ -142,16 +142,19 @@ export function PendingChangesView() {
         maxSize={720}
         first={
           <div className={styles.listPane}>
-            <ChangesList
-              rows={rows}
-              selection={selection}
-              onSelectionChange={setSelection}
-              onToggleIncluded={toggleIncluded}
-              onToggleCollapsed={toggleCollapsed}
-              onOpen={(change) => setSelection({ selected: new Set([changeKey(change)]), anchor: changeKey(change) })}
-              contextMenu={(selected) => pendingChangeMenu(workspacePath, selected, changelists)}
-              changelistMenu={(changelist) => changelistMenu(workspacePath, changelist)}
-            />
+            {filterBar}
+            <HighlightQuery query={query}>
+              <ChangesList
+                rows={rows}
+                selection={selection}
+                onSelectionChange={setSelection}
+                onToggleIncluded={toggleIncluded}
+                onToggleCollapsed={toggleCollapsed}
+                onOpen={(change) => setSelection({ selected: new Set([changeKey(change)]), anchor: changeKey(change) })}
+                contextMenu={(selected) => pendingChangeMenu(workspacePath, selected, changelists)}
+                changelistMenu={(changelist) => changelistMenu(workspacePath, changelist)}
+              />
+            </HighlightQuery>
             <CheckinPanel
               comment={draft.comment}
               onCommentChange={(comment) => setComment(workspacePath, comment)}

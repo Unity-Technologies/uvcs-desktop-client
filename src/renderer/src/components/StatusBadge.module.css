@@ -12,24 +12,31 @@
 }
 
 .badge[data-tone='added'] {
-  background: color-mix(in srgb, var(--status-added) 16%, transparent);
-  color: var(--status-added);
+  background: color-mix(in srgb, var(--change-added) 16%, transparent);
+  color: var(--change-added);
 }
 
 .badge[data-tone='changed'] {
-  background: color-mix(in srgb, var(--status-changed) 16%, transparent);
-  color: var(--status-changed);
+  background: color-mix(in srgb, var(--change-changed) 16%, transparent);
+  color: var(--change-changed);
 }
 
 .badge[data-tone='deleted'],
 .badge[data-tone='conflict'] {
-  background: color-mix(in srgb, var(--status-deleted) 16%, transparent);
-  color: var(--status-deleted);
+  background: color-mix(in srgb, var(--change-deleted) 16%, transparent);
+  color: var(--change-deleted);
 }
 
 .badge[data-tone='moved'] {
-  background: color-mix(in srgb, var(--status-moved) 16%, transparent);
-  color: var(--status-moved);
+  background: color-mix(in srgb, var(--change-moved) 16%, transparent);
+  color: var(--change-moved);
+}
+
+.badge[data-tone='permissions'] {
+  width: auto;
+  padding: 0 2px;
+  background: color-mix(in srgb, var(--change-permissions) 16%, transparent);
+  color: var(--change-permissions);
 }
 
 .badge[data-tone='private'],

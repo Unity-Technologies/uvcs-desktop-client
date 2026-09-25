@@ -2,30 +2,22 @@ import type { ChangeKind, PendingChange } from '@shared/domain/pendingChanges';
 
 export type ChangeCategory = 'changed' | 'added' | 'deleted' | 'moved' | 'private' | 'ignored' | 'cloaked' | 'hidden';
 
-interface CategoryInfo {
-  label: string;
-  /** Kinds that put a change in this category; earlier categories win. */
-  kinds: ChangeKind[];
-}
-
-export const CATEGORIES: Record<ChangeCategory, CategoryInfo> = {
-  added: { label: 'Added', kinds: ['added', 'copied'] },
-  deleted: { label: 'Deleted', kinds: ['deleted', 'locallyDeleted'] },
-  moved: { label: 'Moved', kinds: ['moved', 'locallyMoved'] },
-  changed: { label: 'Changed', kinds: ['checkedOut', 'changed', 'replaced'] },
-  private: { label: 'Private', kinds: ['private'] },
-  ignored: { label: 'Ignored', kinds: ['ignored'] },
-  cloaked: { label: 'Cloaked', kinds: ['cloaked'] },
-  hidden: { label: 'Hidden changes', kinds: ['hiddenChanged'] },
+/** Kinds that put a change in each category; earlier categories in `CATEGORY_PRECEDENCE` win. */
+const CATEGORY_KINDS: Record<ChangeCategory, ChangeKind[]> = {
+  added: ['added', 'copied'],
+  deleted: ['deleted', 'locallyDeleted'],
+  moved: ['moved', 'locallyMoved'],
+  changed: ['checkedOut', 'changed', 'replaced'],
+  private: ['private'],
+  ignored: ['ignored'],
+  cloaked: ['cloaked'],
+  hidden: ['hiddenChanged'],
 };
-
-/** The order categories are shown in. */
-export const CATEGORY_ORDER: ChangeCategory[] = ['changed', 'added', 'deleted', 'moved', 'private', 'ignored', 'cloaked', 'hidden'];
 
 const CATEGORY_PRECEDENCE: ChangeCategory[] = ['added', 'deleted', 'moved', 'changed', 'private', 'ignored', 'cloaked', 'hidden'];
 
 export function categoryOf(change: PendingChange): ChangeCategory {
-  return CATEGORY_PRECEDENCE.find((category) => CATEGORIES[category].kinds.some((kind) => change.kinds.includes(kind))) ?? 'changed';
+  return CATEGORY_PRECEDENCE.find((category) => CATEGORY_KINDS[category].some((kind) => change.kinds.includes(kind))) ?? 'changed';
 }
 
 /** Whether the file content differs from the loaded revision (as opposed to only being moved, added...). */

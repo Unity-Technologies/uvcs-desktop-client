@@ -1,22 +1,23 @@
 import styles from './StatusBadge.module.css';
 
-export type StatusTone = 'added' | 'changed' | 'deleted' | 'moved' | 'private' | 'conflict' | 'muted';
+export type StatusTone = 'added' | 'changed' | 'deleted' | 'moved' | 'permissions' | 'private' | 'conflict' | 'muted';
 
-const LETTERS: Record<StatusTone, string> = {
+export const STATUS_LETTERS: Record<StatusTone, string> = {
   added: 'A',
-  changed: 'M',
+  changed: 'C',
   deleted: 'D',
-  moved: 'R',
-  private: '?',
+  moved: 'M',
+  permissions: 'FS',
+  private: 'P',
   conflict: '!',
   muted: '·',
 };
 
-/** A small colored letter describing what happened to a file. */
+/** A small colored letter describing what happened to a file, as in the Plastic desktop GUI. */
 export function StatusBadge({ tone, title, letter }: { tone: StatusTone; title: string; letter?: string }) {
   return (
     <span className={styles.badge} data-tone={tone} title={title}>
-      {letter ?? LETTERS[tone]}
+      {letter ?? STATUS_LETTERS[tone]}
     </span>
   );
 }

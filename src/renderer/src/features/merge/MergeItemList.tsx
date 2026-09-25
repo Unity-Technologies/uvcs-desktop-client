@@ -14,7 +14,7 @@ const CHANGE_TONES: Record<MergeChangeKind, StatusTone> = {
   changed: 'changed',
   deleted: 'deleted',
   moved: 'moved',
-  permissions: 'muted',
+  permissions: 'permissions',
 };
 
 interface MergeItemListProps {

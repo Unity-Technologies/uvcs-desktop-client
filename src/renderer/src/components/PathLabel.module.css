@@ -1,29 +1,23 @@
+/* The width must come from the container, not the content: trimming would otherwise shrink it and refit forever. */
 .path {
   display: flex;
-  align-items: baseline;
-  gap: 6px;
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
 }
 
+.directory {
+  flex: 0 1 auto;
+  overflow: hidden;
+  color: var(--text-tertiary);
+}
+
 .name {
   flex: none;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .name[data-strikethrough='true'] {
   text-decoration: line-through;
   color: var(--text-secondary);
-}
-
-.directory {
-  overflow: hidden;
-  color: var(--text-tertiary);
-  font-size: var(--text-sm);
-  text-overflow: ellipsis;
-  direction: rtl;
-  text-align: left;
 }

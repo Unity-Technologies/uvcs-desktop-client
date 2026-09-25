@@ -11,23 +11,15 @@ const base = {
   changes,
   changelists: [],
   layout: 'list' as ChangesLayout,
-  grouping: 'status' as ChangesGrouping,
+  grouping: 'none' as ChangesGrouping,
   isChecked: () => true,
   collapsed: new Set<string>(),
 };
 
 describe('buildChangeRows', () => {
-  it('groups changes by status in a stable order', () => {
+  it('lists every change under one header, sorted by path', () => {
     const rows = buildChangeRows(base);
-    expect(rows.map((row) => row.key)).toEqual([
-      'status:changed',
-      'change:src/a.ts',
-      'change:src/b.ts',
-      'status:added',
-      'change:src/lib/c.ts',
-      'status:private',
-      'change:new.txt',
-    ]);
+    expect(rows.map((row) => row.key)).toEqual(['all', 'change:new.txt', 'change:src/a.ts', 'change:src/b.ts', 'change:src/lib/c.ts']);
   });
 
   it('reports a mixed check state when only some changes are checked', () => {
@@ -66,8 +58,8 @@ describe('buildChangeRows', () => {
       ...base,
       changes: [change('src/a.ts', ['changed']), change('src/b.ts', ['changed']), change('z.ts', ['changed'])],
       layout: 'tree',
-      collapsed: new Set(['directory:status:changed:src']),
+      collapsed: new Set(['directory:all:src']),
     });
-    expect(rows.map((row) => row.key)).toEqual(['status:changed', 'directory:status:changed:src', 'change:z.ts']);
+    expect(rows.map((row) => row.key)).toEqual(['all', 'directory:all:src', 'change:z.ts']);
   });
 });
