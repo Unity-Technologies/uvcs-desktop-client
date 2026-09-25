@@ -3,6 +3,7 @@ import type { FileDiffOptions } from '@pierre/diffs/react';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode, type RefObject } from 'react';
 import { createStore } from 'zustand/vanilla';
 import { matchesShortcut } from '../../../lib/shortcuts';
+import type { LineDiffOptions } from './comparisonMethod';
 import { listChangeBlocks, listChangeRegions, type ChangedLine, type DisplayMeta } from './changeBlocks';
 import { DiscardChip, type HoveredLineStore } from './DiscardChip';
 import { describeDiscard } from './discardAction';
@@ -23,6 +24,8 @@ interface BlockDiscardOptions {
   enabled: boolean;
   oldFile: FileContents;
   newFile: FileContents;
+  /** How the diff shown compares lines (its comparison method), so the blocks are the ones on screen. */
+  parseDiffOptions: LineDiffOptions;
   layout: 'split' | 'unified';
   /** The scrolling element around the diff: its keys drive the actions, and it holds the diff's shadow root. */
   containerRef: RefObject<HTMLElement | null>;
@@ -54,9 +57,9 @@ const RESTORED_MS = 900;
  * In the diff, ⌥↓/⌥↑ pick the next or previous change, ⌥⌘Z discards the picked lines, ⌘Z undoes the last discard and
  * Esc drops the pick.
  */
-export function useBlockDiscard({ enabled, oldFile, newFile, layout, containerRef, onDiscard, onUndo }: BlockDiscardOptions) {
+export function useBlockDiscard({ enabled, oldFile, newFile, parseDiffOptions, layout, containerRef, onDiscard, onUndo }: BlockDiscardOptions) {
   // The same diff Pierre computes for display, so every block lines up with what is shown.
-  const meta = useMemo(() => (enabled ? parseDiffFromFile(oldFile, newFile) : null), [enabled, oldFile, newFile]);
+  const meta = useMemo(() => (enabled ? parseDiffFromFile(oldFile, newFile, parseDiffOptions) : null), [enabled, oldFile, newFile, parseDiffOptions]);
   const blocks = useMemo(() => (meta ? listChangeBlocks(meta) : []), [meta]);
   const regions = useMemo(() => listChangeRegions(blocks), [blocks]);
   const [hovered] = useState<HoveredLineStore>(() => createStore<ChangedLine | null>(() => null));

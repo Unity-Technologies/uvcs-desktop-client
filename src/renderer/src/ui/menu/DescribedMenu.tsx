@@ -42,6 +42,8 @@ export function DescribedMenu({ items, title, align = 'end', children }: Describ
                 className={styles.item}
                 disabled={item.disabled}
                 data-tip={item.tip}
+                role={item.checked === undefined ? undefined : 'menuitemradio'}
+                aria-checked={item.checked}
                 onSelect={() => setTimeout(item.run, 0)}
               >
                 <span className={styles.icon}>{ItemIcon && <ItemIcon size={15} />}</span>

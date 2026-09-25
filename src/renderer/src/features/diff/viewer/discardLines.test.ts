@@ -1,10 +1,14 @@
 import { parseDiffFromFile } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
 import { blockLines, listChangeBlocks, type ChangedLine, type DisplayMeta } from './changeBlocks';
+import { lineDiffOptions, type ComparisonMethod } from './comparisonMethod';
 import { discardLines } from './discardLines';
 
 const diff = (original: string, modified: string): DisplayMeta =>
   parseDiffFromFile({ name: 'a.cs', contents: original }, { name: 'a.cs', contents: modified });
+
+const diffUnder = (method: ComparisonMethod, original: string, modified: string): DisplayMeta =>
+  parseDiffFromFile({ name: 'a.cs', contents: original }, { name: 'a.cs', contents: modified }, lineDiffOptions(method));
 
 const lines = (...items: string[]) => items.map((item) => `${item}\n`).join('');
 const TWENTY = Array.from({ length: 20 }, (_, index) => `line ${index + 1}`);
@@ -108,5 +112,24 @@ describe('discardLines, some lines', () => {
 
   it('changes nothing when no line is chosen', () => {
     expect(discardText(meta, [])).toBe(lines('a', 'X', 'Y', 'd'));
+  });
+});
+
+describe('discardLines, with changes the comparison method hides', () => {
+  it('restores the original line as it was and leaves the hidden line ending changes alone', () => {
+    const meta = diffUnder('ignoreEol', 'a\nb\nc\n', 'a\r\nB\r\nc\r\n');
+    expect(listChangeBlocks(meta)).toHaveLength(1);
+    expect(discardBlock(meta, 0)).toBe('a\r\nb\nc\r\n');
+  });
+
+  it('restores the original line and keeps the hidden reindentation of the others', () => {
+    const meta = diffUnder('ignoreWhitespace', 'if (x)\n    y = 1;\n    z = 2;\n', 'if (x)\n\ty = 1;\n\tz = 3;\n');
+    expect(listChangeBlocks(meta)).toEqual([{ index: 0, oldStart: 3, oldLines: 1, newStart: 3, newLines: 1 }]);
+    expect(discardBlock(meta, 0)).toBe('if (x)\n\ty = 1;\n    z = 2;\n');
+  });
+
+  it('removes an added line among lines whose line endings changed', () => {
+    const meta = diffUnder('ignoreEolAndWhitespace', 'a\nb\n', 'a \r\nnew\r\nb\r\n');
+    expect(discardText(meta, [addedLine(2)])).toBe('a \r\nb\r\n');
   });
 });
