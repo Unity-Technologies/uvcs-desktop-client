@@ -5,10 +5,12 @@ import { useShortcut } from '../../lib/useShortcut';
 import { Button } from '../../ui/Button';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import styles from './CheckinPanel.module.css';
+import { splitComment } from './checkinDraftStore';
 
 interface CheckinPanelProps {
-  comment: string;
-  onCommentChange: (comment: string) => void;
+  summary: string;
+  description: string;
+  onMessageChange: (message: { summary?: string; description?: string }) => void;
   includedCount: number;
   branchName: string;
   recentComments: string[];
@@ -19,8 +21,9 @@ interface CheckinPanelProps {
 }
 
 export function CheckinPanel({
-  comment,
-  onCommentChange,
+  summary,
+  description,
+  onMessageChange,
   includedCount,
   branchName,
   recentComments,
@@ -44,7 +47,7 @@ export function CheckinPanel({
             entries: recentComments.map((recent, index) => ({
               id: `recent.${index}`,
               label: recent.split('\n')[0]!,
-              run: () => onCommentChange(recent),
+              run: () => onMessageChange(splitComment(recent)),
             })),
           },
         ]
@@ -53,11 +56,18 @@ export function CheckinPanel({
 
   return (
     <div className={styles.panel}>
+      <input
+        className={styles.summary}
+        placeholder="Summary"
+        value={summary}
+        onChange={(event) => onMessageChange({ summary: event.target.value })}
+        spellCheck
+      />
       <textarea
-        className={styles.comment}
-        placeholder="Describe your changes…"
-        value={comment}
-        onChange={(event) => onCommentChange(event.target.value)}
+        className={styles.description}
+        placeholder="Description (optional)"
+        value={description}
+        onChange={(event) => onMessageChange({ description: event.target.value })}
         spellCheck
       />
       <div className={styles.actions}>

@@ -22,7 +22,7 @@ import { isCheckinCandidate } from './changeCategories';
 import { buildChangeRows, changeKey, changesUnderRow, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
 import { changelistMenu } from './changelistMenu';
 import { changeTone } from './changeTone';
-import { useCheckinDraft, useCheckinDraftStore } from './checkinDraftStore';
+import { checkinComment, useCheckinDraft, useCheckinDraftStore } from './checkinDraftStore';
 import { pendingChangeMenu } from './pendingChangeMenu';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { usePendingChanges } from './usePendingChanges';
@@ -38,7 +38,7 @@ export function PendingChangesView() {
   const settings = useSettings();
   const { layout, setLayout, grouping, setGrouping } = usePendingChangesViewStore();
   const draft = useCheckinDraft(workspacePath);
-  const { setComment, setIncluded, reset } = useCheckinDraftStore();
+  const { setMessage, setIncluded, reset } = useCheckinDraftStore();
 
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
@@ -71,7 +71,7 @@ export function PendingChangesView() {
 
   const checkin = async (): Promise<void> => {
     setCheckingIn(true);
-    const done = await checkinChanges({ workspacePath, changes: included, comment: draft.comment, warnOnEmptyComment: settings.warnOnEmptyComment });
+    const done = await checkinChanges({ workspacePath, changes: included, comment: checkinComment(draft), warnOnEmptyComment: settings.warnOnEmptyComment });
     setCheckingIn(false);
     if (done) {
       reset(workspacePath);
@@ -156,14 +156,15 @@ export function PendingChangesView() {
               />
             </HighlightQuery>
             <CheckinPanel
-              comment={draft.comment}
-              onCommentChange={(comment) => setComment(workspacePath, comment)}
+              summary={draft.summary}
+              description={draft.description}
+              onMessageChange={(message) => setMessage(workspacePath, message)}
               includedCount={included.length}
               branchName={workspace?.selector.name ?? ''}
               recentComments={settings.recentComments}
               busy={checkingIn}
               onCheckin={() => void checkin()}
-              onShelve={() => void shelveChanges(workspacePath, included, draft.comment)}
+              onShelve={() => void shelveChanges(workspacePath, included, checkinComment(draft))}
               onUndoUnchanged={() => void undoUnchangedCheckouts(workspacePath)}
             />
           </div>

@@ -1,16 +1,17 @@
 import { create } from 'zustand';
 
 interface CheckinDraft {
-  comment: string;
+  summary: string;
+  description: string;
   /** Paths the user unchecked. New changes are included by default, so we remember exclusions. */
   excludedPaths: ReadonlySet<string>;
 }
 
-const EMPTY_DRAFT: CheckinDraft = { comment: '', excludedPaths: new Set() };
+const EMPTY_DRAFT: CheckinDraft = { summary: '', description: '', excludedPaths: new Set() };
 
 interface CheckinDraftStore {
   drafts: Record<string, CheckinDraft>;
-  setComment: (workspacePath: string, comment: string) => void;
+  setMessage: (workspacePath: string, message: { summary?: string; description?: string }) => void;
   setIncluded: (workspacePath: string, paths: string[], included: boolean) => void;
   reset: (workspacePath: string) => void;
 }
@@ -22,7 +23,7 @@ export const useCheckinDraftStore = create<CheckinDraftStore>((set) => {
 
   return {
     drafts: {},
-    setComment: (workspacePath, comment) => updateDraft(workspacePath, (draft) => ({ ...draft, comment })),
+    setMessage: (workspacePath, message) => updateDraft(workspacePath, (draft) => ({ ...draft, ...message })),
     setIncluded: (workspacePath, paths, included) =>
       updateDraft(workspacePath, (draft) => {
         const excludedPaths = new Set(draft.excludedPaths);
@@ -35,4 +36,15 @@ export const useCheckinDraftStore = create<CheckinDraftStore>((set) => {
 
 export function useCheckinDraft(workspacePath: string): CheckinDraft {
   return useCheckinDraftStore((state) => state.drafts[workspacePath] ?? EMPTY_DRAFT);
+}
+
+/** The checkin comment: the summary line, then a blank line and the description when there is one. */
+export function checkinComment({ summary, description }: Pick<CheckinDraft, 'summary' | 'description'>): string {
+  return [summary.trim(), description.trim()].filter(Boolean).join('\n\n');
+}
+
+/** Splits a stored comment back into its summary line and description. */
+export function splitComment(comment: string): Pick<CheckinDraft, 'summary' | 'description'> {
+  const [summary = '', ...rest] = comment.split('\n');
+  return { summary, description: rest.join('\n').replace(/^\n+/, '') };
 }
