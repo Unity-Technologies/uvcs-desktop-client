@@ -11,11 +11,12 @@ import {
   Trash2,
   Undo2,
 } from 'lucide-react';
-import type { FilterRuleList, PendingChange } from '@shared/domain/pendingChanges';
+import type { Changelist, FilterRuleList, PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { SEPARATOR, tidyMenu, type MenuEntry, type Submenu } from '../../lib/actions';
 import { categoryOf, isControlled } from './changeCategories';
+import { moveToChangelistSubmenu } from './changelistMenu';
 import {
   absolutePath,
   addFilterRule,
@@ -29,7 +30,7 @@ import {
 } from './pendingChangeOperations';
 
 /** The context menu for the selected pending changes. */
-export function pendingChangeMenu(workspacePath: string, changes: PendingChange[]): MenuEntry[] {
+export function pendingChangeMenu(workspacePath: string, changes: PendingChange[], changelists: Changelist[]): MenuEntry[] {
   if (changes.length === 0) return [];
 
   const single = changes.length === 1 ? changes[0]! : null;
@@ -92,6 +93,7 @@ export function pendingChangeMenu(workspacePath: string, changes: PendingChange[
       run: () => void deletePrivateFiles(workspacePath, privateChanges),
     },
     SEPARATOR,
+    moveToChangelistSubmenu(workspacePath, changes, changelists),
     single && filterRulesSubmenu(workspacePath, single),
     {
       label: 'Copy',

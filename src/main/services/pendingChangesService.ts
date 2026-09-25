@@ -2,6 +2,7 @@ import { appendFile, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { PendingChangesApi } from '@shared/api/pendingChanges';
 import type {
+  Changelist,
   CheckinRequest,
   CheckinResult,
   FilterRuleList,
@@ -19,12 +20,15 @@ const FILTER_RULE_FILES: Record<FilterRuleList, string> = {
   hidden: 'hidden_changes.conf',
 };
 
+const DEFAULT_CHANGELIST = 'Default';
 const CREATED_CHANGESET_LINE = /^CHANGESET cs:(\d+)@br:([^@]+)@/m;
 const CREATED_SHELVE = /sh:(\d+)/;
 
 export function createPendingChangesService({ cm, operations }: ServiceContext): PendingChangesApi {
   async function list(workspacePath: string, filter: PendingChangesFilter): Promise<PendingChangesSnapshot> {
-    const xml = await cm.query(['status', '--xml', '--iscochanged', ...searchTypes(filter)], { cwd: workspacePath });
+    const xml = await cm.query(['status', '--xml', '--iscochanged', '--changelists', ...searchTypes(filter)], {
+      cwd: workspacePath,
+    });
     return parsePendingChanges(xml);
   }
 
@@ -95,7 +99,44 @@ export function createPendingChangesService({ cm, operations }: ServiceContext):
     });
   }
 
-  return { list, checkin, undo, undoUnchanged, add, remove, checkout, addFilterRule, shelve };
+  async function createChangelist(workspacePath: string, { name, description }: Changelist): Promise<void> {
+    await cm.query(['changelist', 'create', name, description, '--persistent'], { cwd: workspacePath });
+  }
+
+  async function editChangelist(workspacePath: string, name: string, changes: Changelist): Promise<void> {
+    if (changes.description) {
+      await cm.query(['changelist', 'edit', name, 'description', changes.description], { cwd: workspacePath });
+    }
+    if (changes.name !== name) {
+      await cm.query(['changelist', 'edit', name, 'rename', changes.name], { cwd: workspacePath });
+    }
+  }
+
+  async function deleteChangelist(workspacePath: string, name: string): Promise<void> {
+    await cm.query(['changelist', 'delete', name], { cwd: workspacePath });
+  }
+
+  async function moveToChangelist(workspacePath: string, name: string | null, paths: string[]): Promise<void> {
+    await cm.query(['changelist', name ?? DEFAULT_CHANGELIST, 'add', ...absolutePaths(workspacePath, paths)], {
+      cwd: workspacePath,
+    });
+  }
+
+  return {
+    list,
+    checkin,
+    undo,
+    undoUnchanged,
+    add,
+    remove,
+    checkout,
+    addFilterRule,
+    shelve,
+    createChangelist,
+    editChangelist,
+    deleteChangelist,
+    moveToChangelist,
+  };
 }
 
 function searchTypes(filter: PendingChangesFilter): string[] {

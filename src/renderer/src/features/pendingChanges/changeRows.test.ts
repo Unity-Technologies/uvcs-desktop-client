@@ -1,36 +1,60 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { buildChangeRows } from './changeRows';
+import { buildChangeRows, type ChangesGrouping, type ChangesLayout } from './changeRows';
 
-function change(path: string, kinds: PendingChange['kinds']): PendingChange {
-  return { path, kinds, itemType: 'file', size: 0, lastModified: '' };
+function change(path: string, kinds: PendingChange['kinds'], changelist?: string): PendingChange {
+  return { path, kinds, itemType: 'file', size: 0, lastModified: '', changelist };
 }
 
-const changes = [change('src/b.ts', ['changed']), change('src/a.ts', ['checkedOut', 'changed']), change('new.txt', ['private']), change('src/lib/c.ts', ['added'])];
+const changes = [change('src/b.ts', ['changed']), change('src/a.ts', ['checkedOut', 'changed'], 'UI'), change('new.txt', ['private']), change('src/lib/c.ts', ['added'])];
+const base = {
+  changes,
+  changelists: [],
+  layout: 'list' as ChangesLayout,
+  grouping: 'status' as ChangesGrouping,
+  isChecked: () => true,
+  collapsed: new Set<string>(),
+};
 
 describe('buildChangeRows', () => {
-  it('groups changes by category in a stable order', () => {
-    const rows = buildChangeRows({ changes, layout: 'list', isChecked: () => true, collapsed: new Set() });
+  it('groups changes by status in a stable order', () => {
+    const rows = buildChangeRows(base);
     expect(rows.map((row) => row.key)).toEqual([
-      'category:changed',
+      'status:changed',
       'change:src/a.ts',
       'change:src/b.ts',
-      'category:added',
+      'status:added',
       'change:src/lib/c.ts',
-      'category:private',
+      'status:private',
       'change:new.txt',
     ]);
   });
 
   it('reports a mixed check state when only some changes are checked', () => {
-    const rows = buildChangeRows({ changes, layout: 'list', isChecked: (item) => item.path === 'src/a.ts', collapsed: new Set() });
-    expect(rows[0]).toMatchObject({ type: 'category', checkState: 'mixed' });
+    const rows = buildChangeRows({ ...base, isChecked: (item) => item.path === 'src/a.ts' });
+    expect(rows[0]).toMatchObject({ type: 'group', checkState: 'mixed' });
+  });
+
+  it('groups by changelist, keeping empty user changelists visible', () => {
+    const rows = buildChangeRows({
+      ...base,
+      grouping: 'changelist',
+      changelists: [
+        { name: 'UI', description: '' },
+        { name: 'Empty', description: '' },
+      ],
+    });
+    expect(rows.filter((row) => row.type === 'group').map((row) => [row.key, row.type === 'group' && row.changes.length])).toEqual([
+      ['changelist:', 3],
+      ['changelist:UI', 1],
+      ['changelist:Empty', 0],
+    ]);
   });
 
   it('nests changes under their folders in tree layout', () => {
-    const rows = buildChangeRows({ changes: [changes[3]!], layout: 'tree', isChecked: () => true, collapsed: new Set() });
-    expect(rows.map((row) => [row.type, row.type === 'change' ? row.depth : row.type === 'directory' ? row.depth : -1])).toEqual([
-      ['category', -1],
+    const rows = buildChangeRows({ ...base, changes: [changes[3]!], layout: 'tree' });
+    expect(rows.map((row) => [row.type, row.type === 'group' ? -1 : row.depth])).toEqual([
+      ['group', -1],
       ['directory', 0],
       ['directory', 1],
       ['change', 2],
@@ -39,11 +63,11 @@ describe('buildChangeRows', () => {
 
   it('hides the contents of collapsed folders', () => {
     const rows = buildChangeRows({
+      ...base,
       changes: [change('src/a.ts', ['changed']), change('src/b.ts', ['changed']), change('z.ts', ['changed'])],
       layout: 'tree',
-      isChecked: () => true,
-      collapsed: new Set(['directory:changed:src']),
+      collapsed: new Set(['directory:status:changed:src']),
     });
-    expect(rows.map((row) => row.key)).toEqual(['category:changed', 'directory:changed:src', 'change:z.ts']);
+    expect(rows.map((row) => row.key)).toEqual(['status:changed', 'directory:status:changed:src', 'change:z.ts']);
   });
 });

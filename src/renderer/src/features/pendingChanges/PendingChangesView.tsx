@@ -18,7 +18,8 @@ import { ChangesList } from './ChangesList';
 import { CheckinPanel } from './CheckinPanel';
 import { checkinChanges, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
 import { isCheckinCandidate } from './changeCategories';
-import { buildChangeRows, changeKey, changesUnderRow, type ChangeRow, type ChangesLayout } from './changeRows';
+import { buildChangeRows, changeKey, changesUnderRow, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { changelistMenu } from './changelistMenu';
 import { useCheckinDraft, useCheckinDraftStore } from './checkinDraftStore';
 import { pendingChangeMenu } from './pendingChangeMenu';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
@@ -30,7 +31,7 @@ export function PendingChangesView() {
   const { data: workspace } = useWorkspaceInfo();
   const { data: snapshot, isLoading, isFetching, error } = usePendingChanges();
   const settings = useSettings();
-  const { layout, setLayout } = usePendingChangesViewStore();
+  const { layout, setLayout, grouping, setGrouping } = usePendingChangesViewStore();
   const draft = useCheckinDraft(workspacePath);
   const { setComment, setIncluded, reset } = useCheckinDraftStore();
 
@@ -45,7 +46,8 @@ export function PendingChangesView() {
   );
   const isIncluded = (change: PendingChange): boolean => isCheckinCandidate(change) && !draft.excludedPaths.has(change.path);
   const included = changes.filter(isIncluded);
-  const rows = buildChangeRows({ changes, layout, isChecked: isIncluded, collapsed });
+  const changelists = snapshot?.changelists ?? [];
+  const rows = buildChangeRows({ changes, changelists, layout, grouping, isChecked: isIncluded, collapsed });
   const focused = changes.find((change) => changeKey(change) === selection.anchor);
   const mergeChanges = changes.filter((change) => change.mergeInfo);
   const firstChangeKey = rows.find((row) => row.type === 'change')?.key;
@@ -56,7 +58,7 @@ export function PendingChangesView() {
   }, [focused, firstChangeKey]);
 
   const toggleIncluded = (row: ChangeRow, include: boolean): void =>
-    setIncluded(workspacePath, changesUnderRow(row, changes).map((change) => change.path), include);
+    setIncluded(workspacePath, changesUnderRow(row).map((change) => change.path), include);
 
   const toggleCollapsed = (key: string): void =>
     setCollapsed((current) => {
@@ -88,6 +90,14 @@ export function PendingChangesView() {
       }
     >
       <SearchField value={filter} onChange={setFilter} placeholder="Filter changes" />
+      <SegmentedControl<ChangesGrouping>
+        value={grouping}
+        onChange={setGrouping}
+        segments={[
+          { value: 'status', label: 'Status' },
+          { value: 'changelist', label: 'Changelists' },
+        ]}
+      />
       <SegmentedControl<ChangesLayout>
         value={layout}
         onChange={setLayout}
@@ -139,7 +149,8 @@ export function PendingChangesView() {
               onToggleIncluded={toggleIncluded}
               onToggleCollapsed={toggleCollapsed}
               onOpen={(change) => setSelection({ selected: new Set([changeKey(change)]), anchor: changeKey(change) })}
-              contextMenu={(selected) => pendingChangeMenu(workspacePath, selected)}
+              contextMenu={(selected) => pendingChangeMenu(workspacePath, selected, changelists)}
+              changelistMenu={(changelist) => changelistMenu(workspacePath, changelist)}
             />
             <CheckinPanel
               comment={draft.comment}

@@ -28,6 +28,7 @@ export function ChangeDiffPanel({ workspacePath, change }: { workspacePath: stri
       modified={modified}
       fileName={change.path}
       title={title}
+      identicalDescription={change.oldPath ? `Moved from ${change.oldPath} without content changes.` : undefined}
     />
   );
 }

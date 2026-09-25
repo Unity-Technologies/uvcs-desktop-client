@@ -1,4 +1,5 @@
 import type {
+  Changelist,
   CheckinRequest,
   CheckinResult,
   FilterRuleList,
@@ -17,4 +18,9 @@ export interface PendingChangesApi {
   /** Appends a pattern to `ignore.conf`, `cloaked.conf` or `hidden_changes.conf`. */
   addFilterRule(workspacePath: string, list: FilterRuleList, pattern: string): Promise<void>;
   shelve(workspacePath: string, paths: string[], comment: string): Promise<number>;
+  createChangelist(workspacePath: string, changelist: Changelist): Promise<void>;
+  editChangelist(workspacePath: string, name: string, changes: Changelist): Promise<void>;
+  deleteChangelist(workspacePath: string, name: string): Promise<void>;
+  /** Moves changes into a changelist, or back to the default one when `name` is null. */
+  moveToChangelist(workspacePath: string, name: string | null, paths: string[]): Promise<void>;
 }

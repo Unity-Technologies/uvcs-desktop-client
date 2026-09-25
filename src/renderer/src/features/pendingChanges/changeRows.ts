@@ -1,46 +1,84 @@
-import type { PendingChange } from '@shared/domain/pendingChanges';
+import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import type { CheckState } from '../../ui/Checkbox';
-import { CATEGORIES, CATEGORY_ORDER, categoryOf, type ChangeCategory } from './changeCategories';
+import { CATEGORIES, CATEGORY_ORDER, categoryOf } from './changeCategories';
 
-export type ChangeRow =
-  | { type: 'category'; key: string; category: ChangeCategory; label: string; count: number; checkState: CheckState; collapsed: boolean }
-  | { type: 'directory'; key: string; category: ChangeCategory; path: string; name: string; depth: number; checkState: CheckState; collapsed: boolean }
-  | { type: 'change'; key: string; change: PendingChange; depth: number; checked: boolean };
+/** A header grouping changes: a status category or a changelist. */
+interface GroupRow {
+  type: 'group';
+  key: string;
+  label: string;
+  /** Set when the group is a user changelist. */
+  changelist?: Changelist;
+  changes: PendingChange[];
+  checkState: CheckState;
+  collapsed: boolean;
+}
+
+interface DirectoryRow {
+  type: 'directory';
+  key: string;
+  path: string;
+  name: string;
+  depth: number;
+  changes: PendingChange[];
+  checkState: CheckState;
+  collapsed: boolean;
+}
+
+interface ChangeItemRow {
+  type: 'change';
+  key: string;
+  change: PendingChange;
+  depth: number;
+  checked: boolean;
+}
+
+export type ChangeRow = GroupRow | DirectoryRow | ChangeItemRow;
 
 export type ChangesLayout = 'list' | 'tree';
+export type ChangesGrouping = 'status' | 'changelist';
+
+export const DEFAULT_CHANGELIST_LABEL = 'Default changelist';
 
 interface BuildRowsInput {
   changes: PendingChange[];
+  changelists: Changelist[];
   layout: ChangesLayout;
+  grouping: ChangesGrouping;
   isChecked: (change: PendingChange) => boolean;
-  /** Keys of collapsed categories and directories. */
+  /** Keys of collapsed groups and directories. */
   collapsed: ReadonlySet<string>;
 }
 
-/** Flattens pending changes into the rows of the list: category headers, optional folders and changes. */
-export function buildChangeRows({ changes, layout, isChecked, collapsed }: BuildRowsInput): ChangeRow[] {
+interface Group {
+  key: string;
+  label: string;
+  changelist?: Changelist;
+  changes: PendingChange[];
+}
+
+/** Flattens pending changes into the rows of the list: group headers, optional folders and changes. */
+export function buildChangeRows({ changes, changelists, layout, grouping, isChecked, collapsed }: BuildRowsInput): ChangeRow[] {
+  const groups = grouping === 'status' ? groupByStatus(changes) : groupByChangelist(changes, changelists);
   const rows: ChangeRow[] = [];
 
-  for (const category of CATEGORY_ORDER) {
-    const inCategory = changes.filter((change) => categoryOf(change) === category).sort((a, b) => a.path.localeCompare(b.path));
-    if (inCategory.length === 0) continue;
-
-    const key = `category:${category}`;
+  for (const group of groups) {
+    const sorted = [...group.changes].sort((a, b) => a.path.localeCompare(b.path));
     rows.push({
-      type: 'category',
-      key,
-      category,
-      label: CATEGORIES[category].label,
-      count: inCategory.length,
-      checkState: combinedCheckState(inCategory, isChecked),
-      collapsed: collapsed.has(key),
+      type: 'group',
+      key: group.key,
+      label: group.label,
+      changelist: group.changelist,
+      changes: sorted,
+      checkState: combinedCheckState(sorted, isChecked),
+      collapsed: collapsed.has(group.key),
     });
-    if (collapsed.has(key)) continue;
+    if (collapsed.has(group.key)) continue;
 
     if (layout === 'list') {
-      inCategory.forEach((change) => rows.push({ type: 'change', key: changeKey(change), change, depth: 0, checked: isChecked(change) }));
+      sorted.forEach((change) => rows.push({ type: 'change', key: changeKey(change), change, depth: 0, checked: isChecked(change) }));
     } else {
-      appendTreeRows(rows, inCategory, category, isChecked, collapsed);
+      appendTreeRows(rows, sorted, group.key, isChecked, collapsed);
     }
   }
   return rows;
@@ -50,10 +88,39 @@ export function changeKey(change: PendingChange): string {
   return `change:${change.path}`;
 }
 
+/** The changes a row stands for: all changes in a group or folder, or the change itself. */
+export function changesUnderRow(row: ChangeRow): PendingChange[] {
+  return row.type === 'change' ? [row.change] : row.changes;
+}
+
+function groupByStatus(changes: PendingChange[]): Group[] {
+  return CATEGORY_ORDER.map((category) => ({
+    key: `status:${category}`,
+    label: CATEGORIES[category].label,
+    changes: changes.filter((change) => categoryOf(change) === category),
+  })).filter((group) => group.changes.length > 0);
+}
+
+function groupByChangelist(changes: PendingChange[], changelists: Changelist[]): Group[] {
+  const defaultGroup: Group = {
+    key: 'changelist:',
+    label: DEFAULT_CHANGELIST_LABEL,
+    changes: changes.filter((change) => !change.changelist),
+  };
+  const userGroups = changelists.map((changelist) => ({
+    key: `changelist:${changelist.name}`,
+    label: changelist.name,
+    changelist,
+    changes: changes.filter((change) => change.changelist === changelist.name),
+  }));
+  // Empty user changelists stay visible so they can be used as drop targets for "Move to changelist".
+  return [defaultGroup, ...userGroups].filter((group) => group.changes.length > 0 || group.changelist);
+}
+
 function appendTreeRows(
   rows: ChangeRow[],
   changes: PendingChange[],
-  category: ChangeCategory,
+  groupKey: string,
   isChecked: (change: PendingChange) => boolean,
   collapsed: ReadonlySet<string>,
 ): void {
@@ -61,21 +128,19 @@ function appendTreeRows(
   let hiddenBelow: string | null = null;
 
   for (const change of changes) {
-    const segments = change.path.split('/');
-    const directories = segments.slice(0, -1);
-
     if (hiddenBelow && change.path.startsWith(`${hiddenBelow}/`)) continue;
     hiddenBelow = null;
 
+    const directories = change.path.split('/').slice(0, -1);
     let collapsedHere = false;
     directories.forEach((name, depth) => {
       if (collapsedHere) return;
       const path = directories.slice(0, depth + 1).join('/');
-      const key = `directory:${category}:${path}`;
+      const key = `directory:${groupKey}:${path}`;
       if (!emittedDirectories.has(path)) {
         emittedDirectories.add(path);
         const inside = changes.filter((candidate) => candidate.path.startsWith(`${path}/`));
-        rows.push({ type: 'directory', key, category, path, name, depth, checkState: combinedCheckState(inside, isChecked), collapsed: collapsed.has(key) });
+        rows.push({ type: 'directory', key, path, name, depth, changes: inside, checkState: combinedCheckState(inside, isChecked), collapsed: collapsed.has(key) });
       }
       if (collapsed.has(key)) {
         collapsedHere = true;
@@ -87,20 +152,8 @@ function appendTreeRows(
   }
 }
 
-export function combinedCheckState(changes: PendingChange[], isChecked: (change: PendingChange) => boolean): CheckState {
+function combinedCheckState(changes: PendingChange[], isChecked: (change: PendingChange) => boolean): CheckState {
   const checkedCount = changes.filter(isChecked).length;
   if (checkedCount === 0) return false;
   return checkedCount === changes.length ? true : 'mixed';
-}
-
-/** The changes a category or directory row stands for. */
-export function changesUnderRow(row: ChangeRow, changes: PendingChange[]): PendingChange[] {
-  switch (row.type) {
-    case 'category':
-      return changes.filter((change) => categoryOf(change) === row.category);
-    case 'directory':
-      return changes.filter((change) => categoryOf(change) === row.category && change.path.startsWith(`${row.path}/`));
-    case 'change':
-      return [row.change];
-  }
 }

@@ -1,7 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ChevronRight, Folder } from 'lucide-react';
+import { ChevronRight, Folder, MoreHorizontal } from 'lucide-react';
 import { useMemo, useRef, type KeyboardEvent } from 'react';
-import type { PendingChange } from '@shared/domain/pendingChanges';
+import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge } from '../../components/StatusBadge';
 import type { MenuEntry } from '../../lib/actions';
@@ -9,6 +9,7 @@ import { isMac } from '../../lib/platform';
 import { selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
 import { Checkbox } from '../../ui/Checkbox';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
+import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { describeKinds, isCheckinCandidate } from './changeCategories';
 import { changeTone } from './changeTone';
 import type { ChangeRow } from './changeRows';
@@ -25,9 +26,19 @@ interface ChangesListProps {
   onToggleCollapsed: (rowKey: string) => void;
   onOpen: (change: PendingChange) => void;
   contextMenu: (selected: PendingChange[]) => MenuEntry[];
+  changelistMenu: (changelist: Changelist) => MenuEntry[];
 }
 
-export function ChangesList({ rows, selection, onSelectionChange, onToggleIncluded, onToggleCollapsed, onOpen, contextMenu }: ChangesListProps) {
+export function ChangesList({
+  rows,
+  selection,
+  onSelectionChange,
+  onToggleIncluded,
+  onToggleCollapsed,
+  onOpen,
+  contextMenu,
+  changelistMenu,
+}: ChangesListProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const changeRows = useMemo(() => rows.filter((row) => row.type === 'change'), [rows]);
   const orderedKeys = useMemo(() => changeRows.map((row) => row.key), [changeRows]);
@@ -88,7 +99,7 @@ export function ChangesList({ rows, selection, onSelectionChange, onToggleInclud
                 onMouseDown={(event) => onRowMouseDown(row, event)}
                 onDoubleClick={() => row.type === 'change' && onOpen(row.change)}
               >
-                <RowContent row={row} onToggleIncluded={onToggleIncluded} />
+                <RowContent row={row} onToggleIncluded={onToggleIncluded} changelistMenu={changelistMenu} />
               </div>
             );
           })}
@@ -98,15 +109,30 @@ export function ChangesList({ rows, selection, onSelectionChange, onToggleInclud
   );
 }
 
-function RowContent({ row, onToggleIncluded }: { row: ChangeRow; onToggleIncluded: ChangesListProps['onToggleIncluded'] }) {
+interface RowContentProps {
+  row: ChangeRow;
+  onToggleIncluded: ChangesListProps['onToggleIncluded'];
+  changelistMenu: ChangesListProps['changelistMenu'];
+}
+
+function RowContent({ row, onToggleIncluded, changelistMenu }: RowContentProps) {
   switch (row.type) {
-    case 'category':
+    case 'group':
       return (
         <>
           <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
           <Checkbox checked={row.checkState} onChange={(checked) => onToggleIncluded(row, checked)} />
-          <span className={styles.categoryLabel}>{row.label}</span>
-          <span className={styles.count}>{row.count}</span>
+          <span className={styles.groupLabel} title={row.changelist?.description}>
+            {row.label}
+          </span>
+          {row.changelist && (
+            <ActionDropdownMenu entries={changelistMenu(row.changelist)}>
+              <button className={styles.groupMenu} onMouseDown={(event) => event.stopPropagation()} aria-label="Changelist actions">
+                <MoreHorizontal size={14} />
+              </button>
+            </ActionDropdownMenu>
+          )}
+          <span className={styles.count}>{row.changes.length}</span>
         </>
       );
     case 'directory':

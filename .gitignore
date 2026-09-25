@@ -5,3 +5,4 @@ dist
 .DS_Store
 # Playwright CLI output (may contain credentials)
 .playwright-cli/
+.claude/worktrees/

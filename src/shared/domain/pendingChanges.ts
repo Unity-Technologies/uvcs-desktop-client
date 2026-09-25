@@ -28,10 +28,19 @@ export interface PendingChange {
   /** e.g. `Merge from 2`, when the change comes from a pending merge. */
   mergeInfo?: string;
   similarityPercent?: number;
+  /** The changelist the change belongs to; undefined for the default changelist. */
+  changelist?: string;
+}
+
+export interface Changelist {
+  name: string;
+  description: string;
 }
 
 export interface PendingChangesSnapshot {
   changes: PendingChange[];
+  /** User changelists (the default one is implicit). */
+  changelists: Changelist[];
   loadedChangeset: number;
 }
 

@@ -22,10 +22,12 @@ interface FileDiffViewerProps {
   fileName: string;
   /** Shown at the left of the toolbar, e.g. the file path and its status. */
   title?: ReactNode;
+  /** Explains why both versions are identical, e.g. "Moved without content changes". */
+  identicalDescription?: string;
 }
 
 /** Compares two versions of a file, choosing a text, image or binary presentation. */
-export function FileDiffViewer({ workspacePath, original, modified, fileName, title }: FileDiffViewerProps) {
+export function FileDiffViewer({ workspacePath, original, modified, fileName, title, identicalDescription }: FileDiffViewerProps) {
   const { layout, collapseUnchanged, setLayout, setCollapseUnchanged } = useDiffPreferences();
   const navigator = useRef<DiffNavigator | null>(null);
   const originalContent = useContent(workspacePath, original);
@@ -73,7 +75,7 @@ export function FileDiffViewer({ workspacePath, original, modified, fileName, ti
         <CenteredSpinner />
       ) : isText ? (
         left.text === right.text ? (
-          <EmptyState title="No content changes" description="The contents of both versions are identical." />
+          <EmptyState title="No content changes" description={identicalDescription ?? 'The contents of both versions are identical.'} />
         ) : (
           <TextDiff
             original={left.text ?? ''}
