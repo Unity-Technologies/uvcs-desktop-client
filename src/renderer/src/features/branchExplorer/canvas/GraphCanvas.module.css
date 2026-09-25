@@ -1,0 +1,24 @@
+.container {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  outline: none;
+  cursor: grab;
+}
+
+.container[data-hovering='true'] {
+  cursor: pointer;
+}
+
+.container[data-panning='true'] {
+  cursor: grabbing;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}

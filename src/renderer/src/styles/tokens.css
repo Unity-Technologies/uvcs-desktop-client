@@ -74,6 +74,9 @@
   --diff-removed-bg: rgba(229, 83, 75, 0.1);
   --diff-removed-strong: rgba(229, 83, 75, 0.26);
   --overlay: rgba(20, 20, 30, 0.28);
+  --label-bg: rgba(232, 164, 0, 0.14);
+  --label-text: #9a6b00;
+  --search-highlight: #e8a400;
 }
 
 [data-theme='dark'] {
@@ -106,4 +109,7 @@
   --diff-removed-bg: rgba(248, 97, 89, 0.11);
   --diff-removed-strong: rgba(248, 97, 89, 0.3);
   --overlay: rgba(0, 0, 0, 0.5);
+  --label-bg: rgba(245, 196, 81, 0.16);
+  --label-text: #f5c451;
+  --search-highlight: #f5c451;
 }
