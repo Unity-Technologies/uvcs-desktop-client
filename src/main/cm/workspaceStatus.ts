@@ -18,21 +18,33 @@ export interface WorkspaceStatus {
 
 /** What the workspace is loaded from, read with `cm status --header --xml`. */
 export async function readWorkspaceStatus(cm: CmClient, workspacePath: string): Promise<WorkspaceStatus> {
-  const xml = await cm.query(['status', '--header', '--xml'], { cwd: workspacePath });
+  return parseWorkspaceStatus(await cm.query(['status', '--header', '--xml'], { cwd: workspacePath }));
+}
+
+/**
+ * Parses `cm status --header --xml`. Output without the selector or the changeset is an error rather than an empty
+ * status: queries built from an empty branch or changeset -1 would ask the server for the whole repository.
+ */
+export function parseWorkspaceStatus(xml: string): WorkspaceStatus {
   const status = child(parseXml(xml, []), 'StatusOutput');
   const workspaceStatus = child(child(status, 'WorkspaceStatus'), 'Status');
   const repSpec = child(workspaceStatus, 'RepSpec');
   const repositoryName = text(repSpec?.Name);
   const server = text(repSpec?.Server);
+  const configName = text(status?.WkConfigName);
+  const loadedChangeset = integer(workspaceStatus?.Changeset);
+  if (!repositoryName || !configName || loadedChangeset < 0) {
+    throw new Error(`Unexpected output from cm status: ${xml.trim().slice(0, 200) || '(empty)'}`);
+  }
 
   return {
     repositoryName,
     server,
     selector: {
       kind: SELECTOR_KINDS[text(status?.WkConfigType)] ?? 'branch',
-      name: selectorName(text(status?.WkConfigName), repositoryName, server),
+      name: selectorName(configName, repositoryName, server),
     },
-    loadedChangeset: integer(workspaceStatus?.Changeset),
+    loadedChangeset,
   };
 }
 
