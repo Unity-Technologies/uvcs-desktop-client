@@ -4,6 +4,7 @@ import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { askSwitchWithChanges } from '../../features/branches/SwitchWithChangesDialog';
 import { planSwitch } from '../../features/branches/switchOptions';
+import { explainUpdateConflicts } from '../../features/incoming/updateOperations';
 import { toast, useToastStore } from '../../ui/toast/toastStore';
 import { refuseWhileBusy, runAction, runOperation } from '../operations/runOperation';
 import { queryClient } from '../queryClient';
@@ -16,6 +17,7 @@ export function updateWorkspace(workspacePath: string): Promise<void | undefined
     kind: 'update',
     run: (operationId) => api.workspaces.update(workspacePath, operationId),
     successMessage: () => 'Workspace is up to date',
+    onFailure: explainUpdateConflicts,
   });
 }
 

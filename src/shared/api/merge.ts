@@ -1,4 +1,4 @@
-import type { IncomingChanges, IncomingSummary, UpdateResolutions, UpdateResult } from '../domain/incoming';
+import type { IncomingChanges, IncomingSummary, ShelvedForUpdate, UpdateResolutions, UpdateResult } from '../domain/incoming';
 import type { MergePlan, MergeRequest, MergeResolutions, MergeResult } from '../domain/merge';
 
 export interface MergeApi {
@@ -13,4 +13,9 @@ export interface MergeApi {
   incomingChanges(workspacePath: string): Promise<IncomingChanges>;
   /** Updates the workspace, merging locally changed files that also changed on the branch. */
   updateResolvingConflicts(workspacePath: string, resolutions: UpdateResolutions, operationId: string): Promise<UpdateResult>;
+  /**
+   * Shelves the locally changed files the branch deleted or moved (they block the update), undoes them and updates.
+   * The shelve waits in Changes to be restored.
+   */
+  shelveBlockedAndUpdate(workspacePath: string, operationId: string): Promise<ShelvedForUpdate>;
 }

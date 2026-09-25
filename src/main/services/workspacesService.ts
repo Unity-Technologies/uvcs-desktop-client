@@ -8,6 +8,7 @@ import { readWorkingObjectComment } from '../cm/workingObjectComment';
 import { resolveWorkspaceRepositories } from '../cm/workspaceRepositories';
 import { readWorkspaceStatus } from '../cm/workspaceStatus';
 import { CmError } from '../cm/CmError';
+import { UPDATE_ARGS } from '../merge/updateWithMerge';
 import { readSwitchPreflight } from '../workspace/switchPreflight';
 import { switchWithChanges } from '../workspace/switchWithChanges';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
@@ -65,9 +66,8 @@ export function createWorkspacesService({ cm, operations, watcher, settings }: S
 
   function update(workspacePath: string, operationId: string): Promise<void> {
     return operations.run(operationId, async ({ signal, reportProgress }) => {
-      // --dontmerge: never launch an external merge tool. Conflicts with local changes are resolved in the Incoming view.
       try {
-        await cm.execute(['update', '--machinereadable', '--noinput', '--dontmerge'], {
+        await cm.execute(UPDATE_ARGS, {
           cwd: workspacePath,
           signal,
           onOutputLine: reportProgress,

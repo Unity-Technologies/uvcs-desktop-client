@@ -175,6 +175,14 @@ function WorkspacesPane({ settings, updateSettings }: PaneProps) {
           onChange={(restoreLeftChangesAutomatically) => updateSettings({ restoreLeftChangesAutomatically })}
         />
       </SettingsGroup>
+
+      <SettingsGroup title="Incoming changes">
+        <Checkbox
+          label="Notify me when someone checks in to my branch while the app is in the background"
+          checked={settings.notifyOnIncoming}
+          onChange={(notifyOnIncoming) => updateSettings({ notifyOnIncoming })}
+        />
+      </SettingsGroup>
     </>
   );
 }

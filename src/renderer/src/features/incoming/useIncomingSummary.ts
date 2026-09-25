@@ -7,6 +7,7 @@ import { branchHeadMovedOnServer } from '../../app/refresh/headChanges';
 import { refreshQueries } from '../../app/refresh/refreshQueries';
 import { isAffectedByNewChangesets } from '../../app/refresh/refreshScopes';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { notifyIncoming } from './incomingNotifications';
 import { incomingPollInterval } from './incomingPollInterval';
 
 /** Coming back to the window checks again if the last check is older than this. */
@@ -15,7 +16,8 @@ const RECHECK_ON_FOCUS_AFTER_MS = 20_000;
 /**
  * How many changesets the loaded branch has that the workspace doesn't. Incoming changes happen on the server, so
  * this is polled (every minute while the window has focus, every five behind other apps, never while hidden) and
- * checked again on focus. When someone else checks in to the branch, the repository views refresh too.
+ * checked again on focus. When someone else checks in to the branch, the repository views refresh too, and an OS
+ * notification can tell the user (off by default).
  */
 export function useIncomingSummary() {
   const workspacePath = useWorkspacePath();
@@ -34,6 +36,7 @@ async function checkIncoming(workspacePath: string, queryKey: readonly unknown[]
   const after = await api.merge.incomingSummary(workspacePath);
   if (before && branchHeadMovedOnServer(before, after)) {
     void refreshQueries({ queryKey: workspaceKey(workspacePath), predicate: (query) => isAffectedByNewChangesets(query.queryKey) });
+    void notifyIncoming(workspacePath, before, after);
   }
   return after;
 }
