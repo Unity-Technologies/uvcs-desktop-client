@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import type { UvcsBridge } from '@shared/bridge';
 import { EVENT_CHANNEL, INVOKE_CHANNEL } from '@shared/ipc';
 
@@ -14,6 +14,8 @@ const bridge: UvcsBridge = {
   },
 
   platform: process.platform,
+
+  pathForFile: (file) => webUtils.getPathForFile(file),
 };
 
 contextBridge.exposeInMainWorld('uvcs', bridge);

@@ -4,12 +4,14 @@ import type { CmResult } from './CmResult';
 export interface CmProcessOptions {
   cwd?: string;
   signal?: AbortSignal;
+  /** Signal sent when `signal` aborts. Use SIGKILL for lookups that may hang on a credentials prompt. */
+  killSignal?: NodeJS.Signals;
   onOutputLine?: (line: string) => void;
 }
 
 export function runCmProcess(cmPath: string, args: string[], options: CmProcessOptions): Promise<CmResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(cmPath, args, { cwd: options.cwd, signal: options.signal, windowsHide: true });
+    const child = spawn(cmPath, args, { cwd: options.cwd, signal: options.signal, killSignal: options.killSignal, windowsHide: true });
     const chunks: string[] = [];
     let pendingLine = '';
 

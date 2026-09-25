@@ -1,6 +1,36 @@
-import { Construction } from 'lucide-react';
-import { EmptyState } from '../../ui/EmptyState';
+import { useState } from 'react';
+import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
+import { SegmentedControl } from '../../ui/SegmentedControl';
+import { CenteredSpinner } from '../../ui/Spinner';
+import { ViewHeader } from '../../ui/ViewHeader';
+import { GitSyncPanel } from './GitSyncPanel';
+import { RepositorySyncPanel } from './RepositorySyncPanel';
+
+type SyncMode = 'repository' | 'git';
 
 export function SyncView() {
-  return <EmptyState icon={<Construction size={22} />} title="Sync" description="This area is being built." />;
+  const [mode, setMode] = useState<SyncMode>('repository');
+  const { data: workspace } = useWorkspaceInfo();
+
+  return (
+    <>
+      <ViewHeader title="Sync" subtitle={workspace?.repository}>
+        <SegmentedControl<SyncMode>
+          value={mode}
+          onChange={setMode}
+          segments={[
+            { value: 'repository', label: 'Another repository' },
+            { value: 'git', label: 'Git' },
+          ]}
+        />
+      </ViewHeader>
+      {!workspace ? (
+        <CenteredSpinner />
+      ) : mode === 'repository' ? (
+        <RepositorySyncPanel localRepository={workspace.repository} />
+      ) : (
+        <GitSyncPanel localRepository={workspace.repository} />
+      )}
+    </>
+  );
 }

@@ -2,6 +2,7 @@ import type { CreateWorkspaceRequest, WorkspacesApi } from '@shared/api/workspac
 import type { SelectorKind, WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
 import { child, integer, parseXml, text } from '../cm/parseXml';
+import { resolveWorkspaceRepositories } from '../cm/workspaceRepositories';
 import type { ServiceContext } from './ServiceContext';
 
 const SELECTOR_KINDS: Record<string, SelectorKind> = {
@@ -14,7 +15,9 @@ const SELECTOR_KINDS: Record<string, SelectorKind> = {
 export function createWorkspacesService({ cm, operations, watcher }: ServiceContext): WorkspacesApi {
   async function list(): Promise<WorkspaceSummary[]> {
     const output = await cm.query(['workspace', 'list', `--format=${recordFormat(['wkname', 'path', 'wkid'])}`]);
-    return parseRecords(output).map(([name, path, guid]) => ({ name, path, guid }));
+    const workspaces = parseRecords(output).map(([name = '', path = '', guid = '']) => ({ name, path, guid }));
+    // The client registry can list the same workspace several times; show each folder once.
+    return [...new Map(workspaces.map((workspace) => [workspace.path, workspace])).values()];
   }
 
   async function info(workspacePath: string): Promise<WorkspaceInfo> {
@@ -88,5 +91,5 @@ export function createWorkspacesService({ cm, operations, watcher }: ServiceCont
     });
   }
 
-  return { list, info, findRoot, create, rename, remove, update, watch, switchTo };
+  return { list, info, repositoriesOf: (paths) => resolveWorkspaceRepositories(cm, paths), findRoot, create, rename, remove, update, watch, switchTo };
 }

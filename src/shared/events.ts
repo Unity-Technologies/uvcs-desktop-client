@@ -20,6 +20,8 @@ export interface UvcsEvents {
   commandLogged: CommandLogEntry;
   workspaceChanged: { workspacePath: string };
   operationProgress: OperationProgress;
+  /** A native menu item was chosen; runs the registered command with this id. */
+  menuCommand: { commandId: string };
 }
 
 export type UvcsEventName = keyof UvcsEvents;

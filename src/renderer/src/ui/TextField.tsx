@@ -1,4 +1,4 @@
-import { forwardRef, useId, type InputHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { forwardRef, useId, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
 import styles from './Field.module.css';
 
 interface FieldChrome {
@@ -38,6 +38,19 @@ export const TextArea = forwardRef<HTMLTextAreaElement, FieldChrome & TextareaHT
     return (
       <FieldFrame id={id} label={label} hint={hint} error={error}>
         <textarea ref={ref} id={id} className={[styles.input, styles.textarea, className].filter(Boolean).join(' ')} {...rest} />
+      </FieldFrame>
+    );
+  },
+);
+
+export const SelectField = forwardRef<HTMLSelectElement, FieldChrome & SelectHTMLAttributes<HTMLSelectElement>>(
+  function SelectField({ label, hint, error, className, children, ...rest }, ref) {
+    const id = useId();
+    return (
+      <FieldFrame id={id} label={label} hint={hint} error={error}>
+        <select ref={ref} id={id} className={[styles.input, styles.select, className].filter(Boolean).join(' ')} {...rest}>
+          {children}
+        </select>
       </FieldFrame>
     );
   },
