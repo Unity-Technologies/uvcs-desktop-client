@@ -2,6 +2,7 @@ import { existsSync } from 'node:fs';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
 import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
+import { readWorkingObjectComment } from '../cm/workingObjectComment';
 import { resolveWorkspaceRepositories } from '../cm/workspaceRepositories';
 import { readWorkspaceStatus } from '../cm/workspaceStatus';
 import { CmError } from '../cm/CmError';
@@ -90,6 +91,7 @@ export function createWorkspacesService({ cm, operations, watcher }: ServiceCont
   return {
     list,
     info,
+    workingObjectComment: (workspacePath, selector) => readWorkingObjectComment(cm, workspacePath, selector),
     repositoriesOf,
     findMissing: async (paths) => paths.filter((path) => !existsSync(path)),
     findRoot,

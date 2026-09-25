@@ -3,26 +3,24 @@ import styles from './ToolbarPill.module.css';
 
 interface ToolbarPillProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon: ReactNode;
-  /** What the pill is or does, e.g. "Branch". */
+  /** The value it shows, e.g. the branch name. */
   label: ReactNode;
-  /** Its value or state on the second line, e.g. "/main/task". */
-  sub: ReactNode;
-  /** Which line stands out: `sub` for pills that show a value (a branch) under a small caption. */
-  emphasis?: 'label' | 'sub';
+  /** A muted line under it, e.g. the branch comment; the label centers alone without it. */
+  sub?: ReactNode;
   trailing?: ReactNode;
 }
 
-/** A two-line toolbar button: a label over a line of state, so the button explains itself at a glance. */
+/** A bordered two-line toolbar field: a value over a muted line that describes it, like a select showing its choice. */
 export const ToolbarPill = forwardRef<HTMLButtonElement, ToolbarPillProps>(function ToolbarPill(
-  { icon, label, sub, emphasis = 'label', trailing, className, type = 'button', ...rest },
+  { icon, label, sub, trailing, className, type = 'button', ...rest },
   ref,
 ) {
   return (
-    <button ref={ref} type={type} className={[styles.pill, className].filter(Boolean).join(' ')} data-emphasis={emphasis} {...rest}>
+    <button ref={ref} type={type} className={[styles.pill, className].filter(Boolean).join(' ')} {...rest}>
       <span className={styles.icon}>{icon}</span>
       <span className={styles.stack}>
         <span className={styles.label}>{label}</span>
-        <span className={styles.sub}>{sub}</span>
+        {sub && <span className={styles.sub}>{sub}</span>}
       </span>
       {trailing}
     </button>
