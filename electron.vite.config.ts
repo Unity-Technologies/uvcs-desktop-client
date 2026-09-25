@@ -15,6 +15,8 @@ export default defineConfig({
   },
   renderer: {
     plugins: [react()],
+    // Pierre diffs tokenizes with Shiki; pre-bundle it for the browser.
+    optimizeDeps: { include: ['@pierre/diffs', '@pierre/diffs/react', '@pierre/diffs/edit'] },
     resolve: {
       alias: { ...sharedAlias, '@renderer': resolve(__dirname, 'src/renderer/src') },
     },

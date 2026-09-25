@@ -1,0 +1,31 @@
+import type { FileDiffOptions } from '@pierre/diffs/react';
+import type { ResolvedTheme } from '../../../app/settings/useResolvedTheme';
+
+/**
+ * Pierre derives every diff tint from `--diffs-bg`; seeding it with our surface color makes
+ * diffs blend with the app in both themes while keeping Pierre's syntax and add/remove colors.
+ */
+const SURFACE_CSS = ':host{--diffs-bg:var(--bg-surface);background-color:var(--bg-surface)}';
+
+interface DiffAppearance {
+  theme: ResolvedTheme;
+  layout: 'split' | 'unified';
+  collapseUnchanged: boolean;
+  wrapLines: boolean;
+}
+
+export function pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }: DiffAppearance): FileDiffOptions<undefined, undefined> {
+  return {
+    theme: theme === 'dark' ? 'pierre-dark' : 'pierre-light',
+    themeType: theme,
+    diffStyle: layout,
+    overflow: wrapLines ? 'wrap' : 'scroll',
+    diffIndicators: 'bars',
+    hunkSeparators: 'line-info-basic',
+    lineDiffType: 'word',
+    expandUnchanged: !collapseUnchanged,
+    disableFileHeader: true,
+    stickyHeader: false,
+    unsafeCSS: SURFACE_CSS,
+  };
+}

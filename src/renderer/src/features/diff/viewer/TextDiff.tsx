@@ -1,92 +1,50 @@
-import { goToNextChunk, goToPreviousChunk, MergeView, unifiedMergeView } from '@codemirror/merge';
-import { EditorState, type Extension } from '@codemirror/state';
-import { EditorView, lineNumbers } from '@codemirror/view';
-import { useEffect, useRef, useState } from 'react';
-import { editorTheme } from './codeMirrorTheme';
-import type { DiffLayout } from './diffPreferencesStore';
-import { loadLanguageForFile } from './languageForFile';
+import { Editor } from '@pierre/diffs/edit';
+import { EditProvider, MultiFileDiff } from '@pierre/diffs/react';
+import { useMemo } from 'react';
+import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
+import { useDiffPreferences } from './diffPreferencesStore';
+import { pierreDiffOptions } from './pierreOptions';
 import styles from './TextDiff.module.css';
 
 interface TextDiffProps {
   original: string;
   modified: string;
+  /** Used for the language of the syntax highlighting. */
   fileName: string;
-  layout: DiffLayout;
-  collapseUnchanged: boolean;
-  /** Receives the controls to jump between changes each time the editor is (re)created. */
-  onNavigatorReady?: (navigator: DiffNavigator) => void;
+  /** Lets the user type into the modified side. */
+  editing?: boolean;
+  /** Receives the modified side's text after every edit. */
+  onEdit?: (text: string) => void;
 }
 
-export interface DiffNavigator {
-  next: () => void;
-  previous: () => void;
-}
+const createEditor: React.ComponentProps<typeof EditProvider>['createEditor'] = (type, options, key) => new Editor(type, options, key);
 
-const COLLAPSE = { margin: 3, minSize: 6 };
+/** Syntax-highlighted text diff, side by side or unified, optionally editable on the modified side. */
+export function TextDiff({ original, modified, fileName, editing = false, onEdit }: TextDiffProps) {
+  const theme = useResolvedTheme();
+  const { layout, collapseUnchanged, wrapLines } = useDiffPreferences();
+  // Stable inputs: new objects would make Pierre reload the files and drop an ongoing edit.
+  const oldFile = useMemo(() => ({ name: fileName, contents: original }), [fileName, original]);
+  const newFile = useMemo(() => ({ name: fileName, contents: modified }), [fileName, modified]);
+  const options = useMemo(
+    () => pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }),
+    [theme, layout, collapseUnchanged, wrapLines],
+  );
 
-/** Read-only text diff with syntax highlighting, side by side or unified. */
-export function TextDiff({ original, modified, fileName, layout, collapseUnchanged, onNavigatorReady }: TextDiffProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const language = useLanguage(fileName);
-
-  useEffect(() => {
-    const parent = containerRef.current;
-    if (!parent || language === undefined) return;
-
-    const extensions: Extension[] = [
-      lineNumbers(),
-      editorTheme,
-      EditorState.readOnly.of(true),
-      EditorView.editable.of(false),
-      ...(language ? [language] : []),
-    ];
-    const collapse = collapseUnchanged ? COLLAPSE : undefined;
-
-    if (layout === 'split') {
-      const view = new MergeView({
-        a: { doc: original, extensions },
-        b: { doc: modified, extensions },
-        parent,
-        collapseUnchanged: collapse,
-        gutter: true,
-      });
-      onNavigatorReady?.(navigatorFor(view.b));
-      return () => view.destroy();
-    }
-
-    const view = new EditorView({
-      parent,
-      doc: modified,
-      extensions: [...extensions, unifiedMergeView({ original, collapseUnchanged: collapse, mergeControls: false, gutter: true })],
-    });
-    onNavigatorReady?.(navigatorFor(view));
-    return () => view.destroy();
-  }, [original, modified, layout, collapseUnchanged, language, onNavigatorReady]);
-
-  return <div ref={containerRef} className={styles.diff} />;
-}
-
-function navigatorFor(view: EditorView): DiffNavigator {
-  return {
-    next: () => goToNextChunk(view),
-    previous: () => goToPreviousChunk(view),
-  };
-}
-
-/** `undefined` while loading, `null` when the file type has no highlighting. */
-function useLanguage(fileName: string): Extension | null | undefined {
-  const [language, setLanguage] = useState<Extension | null | undefined>(undefined);
-
-  useEffect(() => {
-    let cancelled = false;
-    setLanguage(undefined);
-    loadLanguageForFile(fileName)
-      .then((loaded) => !cancelled && setLanguage(loaded))
-      .catch(() => !cancelled && setLanguage(null));
-    return () => {
-      cancelled = true;
-    };
-  }, [fileName]);
-
-  return language;
+  return (
+    <div className={styles.diff}>
+      <EditProvider createEditor={createEditor}>
+        <MultiFileDiff
+          oldFile={oldFile}
+          newFile={newFile}
+          options={options}
+          edit={editing}
+          onEditChange={(event) => onEdit?.(event.editor.getText())}
+          onEditComplete={() => 'reject'}
+          disableWorkerPool
+          style={{ minHeight: '100%' }}
+        />
+      </EditProvider>
+    </div>
+  );
 }

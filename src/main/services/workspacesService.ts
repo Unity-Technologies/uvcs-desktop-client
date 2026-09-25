@@ -14,7 +14,9 @@ const SELECTOR_KINDS: Record<string, SelectorKind> = {
 export function createWorkspacesService({ cm, operations, watcher }: ServiceContext): WorkspacesApi {
   async function list(): Promise<WorkspaceSummary[]> {
     const output = await cm.query(['workspace', 'list', `--format=${recordFormat(['wkname', 'path', 'wkid'])}`]);
-    return parseRecords(output).map(([name, path, guid]) => ({ name, path, guid }));
+    const workspaces = parseRecords(output).map(([name, path, guid]) => ({ name, path, guid }));
+    // The registry can list a workspace more than once; show each one once.
+    return workspaces.filter((workspace, index) => workspaces.findIndex((other) => other.guid === workspace.guid) === index);
   }
 
   async function info(workspacePath: string): Promise<WorkspaceInfo> {

@@ -1,17 +1,19 @@
 import { useQuery } from '@tanstack/react-query';
-import { ChevronDown, ChevronUp, Columns2, FoldVertical, Rows2 } from 'lucide-react';
-import { useCallback, useRef, type ReactNode } from 'react';
+import { Columns2, FoldVertical, Pencil, Rows2, WrapText } from 'lucide-react';
+import type { ReactNode } from 'react';
 import type { ContentSource, FileContent } from '@shared/domain/content';
 import { api } from '../../../api/client';
 import { queryKeys } from '../../../api/queryKeys';
 import { formatSize } from '../../../lib/formatDate';
 import { useShortcut } from '../../../lib/useShortcut';
+import { Button } from '../../../ui/Button';
 import { EmptyState } from '../../../ui/EmptyState';
 import { IconButton } from '../../../ui/IconButton';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { useDiffPreferences } from './diffPreferencesStore';
 import { ImageDiff } from './ImageDiff';
-import { TextDiff, type DiffNavigator } from './TextDiff';
+import { TextDiff } from './TextDiff';
+import { useFileEditing } from './useFileEditing';
 import styles from './FileDiffViewer.module.css';
 
 interface FileDiffViewerProps {
@@ -26,46 +28,65 @@ interface FileDiffViewerProps {
   identicalDescription?: string;
 }
 
-/** Compares two versions of a file, choosing a text, image or binary presentation. */
+/**
+ * Compares two versions of a file, choosing a text, image or binary presentation.
+ * When the modified side is a file in the workspace, it can be edited in place.
+ */
 export function FileDiffViewer({ workspacePath, original, modified, fileName, title, identicalDescription }: FileDiffViewerProps) {
-  const { layout, collapseUnchanged, setLayout, setCollapseUnchanged } = useDiffPreferences();
-  const navigator = useRef<DiffNavigator | null>(null);
+  const { layout, collapseUnchanged, wrapLines, setLayout, setCollapseUnchanged, setWrapLines } = useDiffPreferences();
   const originalContent = useContent(workspacePath, original);
   const modifiedContent = useContent(workspacePath, modified);
-
-  const onNavigatorReady = useCallback((ready: DiffNavigator) => {
-    navigator.current = ready;
-  }, []);
-  useShortcut('alt+down', () => navigator.current?.next());
-  useShortcut('alt+up', () => navigator.current?.previous());
+  const editablePath = modified.kind === 'workspaceFile' ? modified.path : null;
+  const editing = useFileEditing(workspacePath, editablePath);
 
   const error = originalContent.error ?? modifiedContent.error;
   const left = originalContent.data;
   const right = modifiedContent.data;
-  const isText = left && right && !left.isBinary && !right.isBinary;
+  const isText = Boolean(left && right && !left.isBinary && !right.isBinary);
+  const canEdit = isText && editablePath !== null;
+
+  useShortcut('mod+s', () => void editing.save(), editing.editing);
+  useShortcut('mod+e', editing.start, canEdit && !editing.editing);
 
   return (
     <div className={styles.viewer}>
       <div className={styles.toolbar}>
         <div className={styles.title}>{title}</div>
-        {isText && (
+        {editing.editing ? (
           <>
-            <IconButton size="small" icon={<ChevronUp size={14} />} label="Previous change" shortcut="alt+up" onClick={() => navigator.current?.previous()} />
-            <IconButton size="small" icon={<ChevronDown size={14} />} label="Next change" shortcut="alt+down" onClick={() => navigator.current?.next()} />
-            <IconButton
-              size="small"
-              icon={<FoldVertical size={14} />}
-              label={collapseUnchanged ? 'Show all lines' : 'Collapse unchanged lines'}
-              variant={collapseUnchanged ? 'secondary' : 'ghost'}
-              onClick={() => setCollapseUnchanged(!collapseUnchanged)}
-            />
-            <IconButton
-              size="small"
-              icon={layout === 'split' ? <Rows2 size={14} /> : <Columns2 size={14} />}
-              label={layout === 'split' ? 'Unified view' : 'Side-by-side view'}
-              onClick={() => setLayout(layout === 'split' ? 'unified' : 'split')}
-            />
+            <Button size="small" variant="ghost" onClick={editing.discard}>
+              {editing.dirty ? 'Discard edits' : 'Done'}
+            </Button>
+            <Button size="small" variant="primary" disabled={!editing.dirty} onClick={() => void editing.save()}>
+              Save
+            </Button>
           </>
+        ) : (
+          isText && (
+            <>
+              {canEdit && <IconButton size="small" icon={<Pencil size={13} />} label="Edit this file" shortcut="mod+e" onClick={editing.start} />}
+              <IconButton
+                size="small"
+                icon={<FoldVertical size={14} />}
+                label={collapseUnchanged ? 'Show all lines' : 'Collapse unchanged lines'}
+                variant={collapseUnchanged ? 'secondary' : 'ghost'}
+                onClick={() => setCollapseUnchanged(!collapseUnchanged)}
+              />
+              <IconButton
+                size="small"
+                icon={<WrapText size={14} />}
+                label={wrapLines ? "Don't wrap lines" : 'Wrap lines'}
+                variant={wrapLines ? 'secondary' : 'ghost'}
+                onClick={() => setWrapLines(!wrapLines)}
+              />
+              <IconButton
+                size="small"
+                icon={layout === 'split' ? <Rows2 size={14} /> : <Columns2 size={14} />}
+                label={layout === 'split' ? 'Unified view' : 'Side-by-side view'}
+                onClick={() => setLayout(layout === 'split' ? 'unified' : 'split')}
+              />
+            </>
+          )
         )}
       </div>
 
@@ -74,17 +95,14 @@ export function FileDiffViewer({ workspacePath, original, modified, fileName, ti
       ) : !left || !right ? (
         <CenteredSpinner />
       ) : isText ? (
-        left.text === right.text ? (
-          <EmptyState title="No content changes" description={identicalDescription ?? 'The contents of both versions are identical.'} />
-        ) : (
-          <TextDiff
-            original={left.text ?? ''}
-            modified={right.text ?? ''}
-            fileName={fileName}
-            layout={layout}
-            collapseUnchanged={collapseUnchanged}
-            onNavigatorReady={onNavigatorReady}
+        left.text === right.text && !editing.editing ? (
+          <EmptyState
+            title="No content changes"
+            description={identicalDescription ?? 'The contents of both versions are identical.'}
+            action={canEdit && <Button icon={<Pencil size={13} />} onClick={editing.start}>Edit file</Button>}
           />
+        ) : (
+          <TextDiff original={left.text ?? ''} modified={right.text ?? ''} fileName={fileName} editing={editing.editing} onEdit={editing.change} />
         )
       ) : left.imageDataUrl || right.imageDataUrl ? (
         <ImageDiff originalUrl={left.imageDataUrl} modifiedUrl={right.imageDataUrl} />

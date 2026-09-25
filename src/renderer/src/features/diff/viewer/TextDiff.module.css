@@ -2,22 +2,6 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
+  background: var(--bg-surface);
   user-select: text;
-}
-
-.diff :global(.cm-mergeView) {
-  height: 100%;
-  overflow: auto;
-}
-
-.diff :global(.cm-mergeViewEditors) {
-  min-height: 100%;
-}
-
-.diff :global(.cm-mergeViewEditor:first-child) {
-  border-right: 1px solid var(--border-subtle);
-}
-
-.diff > :global(.cm-editor) {
-  height: 100%;
 }

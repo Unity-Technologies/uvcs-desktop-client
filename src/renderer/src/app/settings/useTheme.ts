@@ -1,21 +1,10 @@
-import { useEffect, useState } from 'react';
-import { useSettings } from './useSettings';
+import { useEffect } from 'react';
+import { useResolvedTheme } from './useResolvedTheme';
 
-const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-/** Applies the theme preference to the document, following the OS when set to "system". */
+/** Applies the resolved theme to the document so the CSS tokens switch with it. */
 export function useTheme(): void {
-  const { theme } = useSettings();
-  const [systemIsDark, setSystemIsDark] = useState(darkQuery.matches);
-
+  const theme = useResolvedTheme();
   useEffect(() => {
-    const onChange = (event: MediaQueryListEvent): void => setSystemIsDark(event.matches);
-    darkQuery.addEventListener('change', onChange);
-    return () => darkQuery.removeEventListener('change', onChange);
-  }, []);
-
-  const resolved = theme === 'system' ? (systemIsDark ? 'dark' : 'light') : theme;
-  useEffect(() => {
-    document.documentElement.dataset.theme = resolved;
-  }, [resolved]);
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
 }
