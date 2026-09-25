@@ -43,6 +43,8 @@ import { checkinComment, useCheckinDraft, useCheckinDraftStore } from './checkin
 import { pendingChangeMenu } from './pendingChangeMenu';
 import { addFilterRule, openWithDefaultApp, undoChanges } from './pendingChangeOperations';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
+import { SuccessCard } from './SuccessCard';
+import { isOutlivedByChanges, successMomentLeft, useSuccessMomentStore } from './successMoment';
 import { usePendingChanges } from './usePendingChanges';
 import styles from './PendingChangesView.module.css';
 
@@ -86,6 +88,8 @@ export function PendingChangesView() {
     included.length,
   );
   const bulkPrivate = bulkPrivateFiles(included);
+  const successMoment = useSuccessMomentStore((state) => state.moments[workspacePath]);
+  const clearSuccessMoment = useSuccessMomentStore((state) => state.clear);
   const selectedCount = changes.filter((change) => selection.selected.has(changeKey(change))).length;
   const changelists = snapshot?.changelists ?? [];
   const rows = buildChangeRows({ changes, changelists, layout, grouping, isChecked: isIncluded, collapsed });
@@ -95,6 +99,11 @@ export function PendingChangesView() {
   const firstChangeKey = rows.find((row) => row.type === 'change')?.key;
   // Checking in completes a pending merge as it is; updating first is for plain check-ins.
   const behind = mergeChanges.length > 0 ? null : behindBranch(incomingSummary, branchName);
+
+  // The next change ends the success moment, even before its time is up.
+  useEffect(() => {
+    if (successMoment && isOutlivedByChanges(successMoment, dataUpdatedAt, allChanges.length)) clearSuccessMoment(workspacePath);
+  }, [successMoment, dataUpdatedAt, allChanges.length]);
 
   // Keep something selected, so the diff pane is useful from the start and after the selected file goes away.
   useEffect(() => {
@@ -184,12 +193,21 @@ export function PendingChangesView() {
       <>
         {header}
         <LeftChangesBanner />
-        <EmptyState
-          icon={<CheckCircle2 size={24} />}
-          title="No pending changes"
-          description={`Your workspace matches ${workspace?.selector.name ?? 'the repository'}. Changes you make to files show up here automatically.`}
-          action={workspace?.selector.kind === 'branch' && <MergeTaskSuggestion workspacePath={workspacePath} branchName={workspace.selector.name} />}
-        />
+        {successMoment && workspace && successMomentLeft(successMoment, Date.now()) > 0 ? (
+          <SuccessCard
+            moment={successMoment}
+            repositoryName={workspace.repositoryName}
+            server={workspace.server}
+            onDone={() => clearSuccessMoment(workspacePath)}
+          />
+        ) : (
+          <EmptyState
+            icon={<CheckCircle2 size={24} />}
+            title="No pending changes"
+            description={`Your workspace matches ${workspace?.selector.name ?? 'the repository'}. Changes you make to files show up here automatically.`}
+            action={workspace?.selector.kind === 'branch' && <MergeTaskSuggestion workspacePath={workspacePath} branchName={workspace.selector.name} />}
+          />
+        )}
       </>
     );
   }

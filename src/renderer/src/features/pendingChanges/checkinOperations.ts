@@ -4,6 +4,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation } from '../../app/operations/runOperation';
 import { queryClient } from '../../app/queryClient';
+import { firstLine } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
@@ -11,6 +12,7 @@ import { updateToIncoming } from '../incoming/updateOperations';
 import { useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinRejection, overlappingPaths, type CheckinRejection } from './checkinRejection';
 import { askCatchUpForCheckin } from './CheckinRejectedDialog';
+import { useSuccessMomentStore } from './successMoment';
 
 const MAX_RECENT_COMMENTS = 15;
 
@@ -59,6 +61,7 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
   if (!result) return rejected.rejection ? catchUpAndCheckin(options, rejected.rejection) : false;
 
   useCheckinAfterUpdateStore.getState().forget(workspacePath);
+  useSuccessMomentStore.getState().show(workspacePath, { verb: 'Checked in', changesetId: result.changesetId, branch: result.branch, detail: firstLine(comment) || undefined });
   if (comment.trim()) await rememberComment(comment.trim());
   return true;
 }
