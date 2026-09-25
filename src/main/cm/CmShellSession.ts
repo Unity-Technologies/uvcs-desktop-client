@@ -2,9 +2,13 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import type { CmResult } from './CmResult';
 import { toShellCommandLine } from './shellCommandLine';
 
-const COMMAND_RESULT_LINE = /(?:^|\n)CommandResult (-?\d+)\r?\n/;
+const COMMAND_RESULT_LINE = /(?:^|\n)CommandResult (-?\d+)\r?\n/g;
+/** Enough to hold the longest `CommandResult <code>` line, so a line split across chunks is still found. */
+const RESULT_LINE_ROOM = 32;
 /** A trailing line without a newline that looks like a question, e.g. "Select your system [0-1]:". */
 const PROMPT_LIKE_TAIL = /^[^<].*(\[[^\]]*\]|[:?])\s*$/;
+/** Longer last lines are output (e.g. `--format` records), not a question. */
+const MAX_PROMPT_LENGTH = 300;
 const PROMPT_STALL_MS = 1500;
 const COMMAND_TIMEOUT_MS = 120_000;
 
@@ -27,6 +31,8 @@ export class CmShellSession {
   private readonly queue: PendingCommand[] = [];
   private running: PendingCommand | null = null;
   private buffer = '';
+  /** Characters received so far, to tell whether output came in while a prompt timer was pending. */
+  private received = 0;
   private promptTimer: NodeJS.Timeout | null = null;
   private timeoutTimer: NodeJS.Timeout | null = null;
 
@@ -72,8 +78,10 @@ export class CmShellSession {
     if (this.process) return this.process;
 
     const child = spawn(this.cmPath, ['shell'], { cwd: this.cwd, windowsHide: true });
-    child.stdout.on('data', (data: Buffer) => this.onOutput(data.toString('utf8')));
-    child.stderr.on('data', (data: Buffer) => this.onOutput(data.toString('utf8')));
+    // What a killed process still had in its pipes must not end up in the output of the next command.
+    const onData = (data: Buffer) => child === this.process && this.onOutput(data.toString('utf8'));
+    child.stdout.on('data', onData);
+    child.stderr.on('data', onData);
     child.on('error', (error) => this.onProcessEnded(child, error));
     child.on('close', () => this.onProcessEnded(child, new Error('cm shell exited unexpectedly')));
     this.process = child;
@@ -82,8 +90,12 @@ export class CmShellSession {
 
   private onOutput(text: string): void {
     this.buffer += text;
+    this.received += text.length;
     this.watchForPrompt();
 
+    // Only the new text (and the end of the previous chunk) can hold the result line: huge outputs arrive in
+    // hundreds of chunks, and scanning the whole buffer each time blocks the main process.
+    COMMAND_RESULT_LINE.lastIndex = Math.max(0, this.buffer.length - text.length - RESULT_LINE_ROOM);
     const match = COMMAND_RESULT_LINE.exec(this.buffer);
     if (!match || !this.running) return;
 
@@ -96,11 +108,21 @@ export class CmShellSession {
   private watchForPrompt(): void {
     if (this.promptTimer) clearTimeout(this.promptTimer);
     this.promptTimer = null;
-    const lastLine = this.buffer.slice(this.buffer.lastIndexOf('\n') + 1);
+    const tail = this.buffer.slice(-MAX_PROMPT_LENGTH - 1);
+    const newline = tail.lastIndexOf('\n');
+    if (newline < 0 && this.buffer.length > MAX_PROMPT_LENGTH) return;
+    const lastLine = tail.slice(newline + 1);
     if (!lastLine || !PROMPT_LIKE_TAIL.test(lastLine)) return;
 
+    // Output that just paused mid-line on a `:` (a date, a path) is not a prompt. When the main process was busy,
+    // the timer can fire before the output that came meanwhile is read: `setImmediate` reads it first.
+    const receivedBefore = this.received;
     this.promptTimer = setTimeout(
-      () => this.abortRunning(`cm is waiting for input ("${lastLine.trim()}"). Check your credentials for this server.`),
+      () =>
+        setImmediate(() => {
+          if (this.received !== receivedBefore || !this.running) return;
+          this.abortRunning(`cm is waiting for input ("${lastLine.trim()}"). Check your credentials for this server.`);
+        }),
       PROMPT_STALL_MS,
     );
   }
