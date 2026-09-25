@@ -1,4 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
+import { useState } from 'react';
 import { DialogHost } from '../ui/dialog/DialogHost';
 import { ToastHost } from '../ui/toast/ToastHost';
 import { TooltipLayer } from '../ui/TooltipLayer';
@@ -11,7 +12,8 @@ import { HomeScreen } from './home/HomeScreen';
 import { queryClient } from './queryClient';
 import { useTheme } from './settings/useTheme';
 import { CmUnavailableScreen } from './startup/CmUnavailableScreen';
-import { useCmAvailability } from './startup/useCmAvailability';
+import { SetupProblemScreen } from './startup/SetupProblemScreen';
+import { useCmAvailability, useSetupCheck } from './startup/useCmAvailability';
 import { useSession } from './workspace/sessionStore';
 import { WorkspaceGate } from './workspace/WorkspaceGate';
 
@@ -34,7 +36,20 @@ function Root() {
   useMenuCommands();
   const workspacePath = useSession((state) => state.workspacePath);
   const cm = useCmAvailability();
+  const setup = useSetupCheck(cm.isSuccess);
+  const [setupProblemDismissed, dismissSetupProblem] = useState(false);
 
-  if (cm.error) return <CmUnavailableScreen reason={cm.error.message} onRetry={() => void cm.refetch()} />;
+  if (cm.error) return <CmUnavailableScreen reason={cm.error.message} checking={cm.isFetching} onRecheck={() => void cm.refetch()} />;
+  // The app shows meanwhile: the check takes a moment, or up to its timeout when the server doesn't answer.
+  if (setup.data && !setupProblemDismissed) {
+    return (
+      <SetupProblemScreen
+        problem={setup.data}
+        checking={setup.isFetching}
+        onRetry={() => void setup.refetch()}
+        onContinue={() => dismissSetupProblem(true)}
+      />
+    );
+  }
   return workspacePath ? <WorkspaceGate key={workspacePath} /> : <HomeScreen />;
 }

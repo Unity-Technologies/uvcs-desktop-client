@@ -24,11 +24,23 @@ type CommandLogListener = (entry: CommandLogEntry) => void;
  * or can be cancelled run as dedicated processes.
  */
 export class CmClient {
-  private readonly shellPool: CmShellPool;
+  private cmPath: string;
+  private shellPool: CmShellPool;
   private readonly logListeners = new Set<CommandLogListener>();
   private nextCommandId = 1;
 
-  constructor(private readonly cmPath: string) {
+  /** `locate` finds the `cm` executable; it runs again on `relocate()`. */
+  constructor(private readonly locate: () => string) {
+    this.cmPath = locate();
+    this.shellPool = new CmShellPool(this.cmPath);
+  }
+
+  /** Looks for `cm` again, e.g. after the user installed it while the app was running. */
+  relocate(): void {
+    const cmPath = this.locate();
+    if (cmPath === this.cmPath) return;
+    this.shellPool.disposeAll();
+    this.cmPath = cmPath;
     this.shellPool = new CmShellPool(cmPath);
   }
 
