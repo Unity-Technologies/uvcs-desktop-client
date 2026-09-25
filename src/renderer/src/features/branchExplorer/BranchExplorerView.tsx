@@ -26,7 +26,7 @@ import { filterGraph, type GraphFocus } from './model/filterGraph';
 import { layoutGraph } from './model/layoutGraph';
 import { describeSelection } from './model/describeSelection';
 import { neighborChangeset, startingChangeset, type GraphDirection } from './model/navigateGraph';
-import { searchGraph, searchHighlight, type SearchHit } from './model/searchGraph';
+import { firstHitIndex, searchGraph, searchHighlight, type SearchHit } from './model/searchGraph';
 import { useBranchExplorerCommands } from './useBranchExplorerCommands';
 import { useBranchExplorerData } from './useBranchExplorerData';
 import { useRevealRequest } from './useRevealRequest';
@@ -148,7 +148,7 @@ export function BranchExplorerView() {
   const stepSearch = (direction: 1 | -1): void => {
     if (searchHits.length === 0) return;
     const next =
-      activeHitIndex === -1 ? (direction === 1 ? 0 : searchHits.length - 1) : (activeHitIndex + direction + searchHits.length) % searchHits.length;
+      activeHitIndex === -1 ? (direction === 1 ? firstHitIndex(searchHits, search) : searchHits.length - 1) : (activeHitIndex + direction + searchHits.length) % searchHits.length;
     setActiveHitIndex(next);
     goToHit(searchHits[next]!);
   };
