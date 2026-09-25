@@ -20,19 +20,45 @@
   flex: 1;
 }
 
-.chip {
+.viewBar {
+  display: flex;
   flex: none;
-  padding: 1px 8px;
-  border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--status-conflict) 14%, transparent);
-  color: var(--status-conflict);
-  font-size: var(--text-xs);
-  font-weight: 600;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: 6px var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
 }
 
-.chip[data-tone='resolved'] {
-  background: color-mix(in srgb, var(--status-added) 14%, transparent);
-  color: var(--status-added);
+.helper {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.editBanner {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--accent-soft);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+}
+
+.editBanner > svg {
+  flex: none;
+  color: var(--accent-text);
+}
+
+.bannerText {
+  flex: 1;
+  min-width: 0;
 }
 
 .diffTitle {
