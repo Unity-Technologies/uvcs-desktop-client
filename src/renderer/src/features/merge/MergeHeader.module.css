@@ -22,7 +22,7 @@
   height: 36px;
   border-radius: var(--radius-lg);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .titles {
