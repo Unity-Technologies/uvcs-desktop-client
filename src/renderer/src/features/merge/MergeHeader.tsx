@@ -49,9 +49,9 @@ export function MergeHeader({
   // Stable while the request is, so the title is fitted again only when it changes or its room does.
   const title = useMemo(() => mergeTitle(request, labels.destination), [request, labels.destination]);
 
-  // One primary action at a time: while conflicts wait, resolving them is (in the file's toolbar); then completing.
+  // Always the page's final action, so it keeps its primary look; faded until every conflict is decided.
   const mergeButton = (
-    <Button variant={canMerge ? 'primary' : 'secondary'} disabled={!canMerge} loading={merging} onClick={onMerge}>
+    <Button variant="primary" disabled={!canMerge} loading={merging} onClick={onMerge}>
       {/* The title names the whole destination; the button keeps its leaf, leaving room for the rest of the row. */}
       {intoServerBranch ? `Merge into ${shortBranchName(labels.destination)}` : 'Complete merge'}
       <Kbd keys={hotkey('merge')} />
