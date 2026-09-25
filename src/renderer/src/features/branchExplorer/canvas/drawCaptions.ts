@@ -3,6 +3,7 @@ import { DIMMED_ALPHA, isChangesetDimmed, type DrawContext } from './drawContext
 import { fitText, summaryOf, textWidth } from './fitText';
 import { captionLeft, captionMiddle, captionRoom } from './captionPlacement';
 import { rowY } from './geometry';
+import { captionMetrics } from './captionCard';
 
 /** Captions never grow wider than this on screen, the workspace changeset's a little more: it's the one people look for. */
 const MAX_SCREEN_WIDTH = 240;
@@ -15,8 +16,8 @@ const CAPTION_REACH = 48;
 
 /**
  * The first line of each changeset's comment under it. Drawn in screen coordinates at a fixed size, like map
- * labels, so the tooltip that completes a cut caption can lay the same text exactly over it. Records where
- * each caption was drawn, as wide as its text, for the pointer.
+ * labels, on whole device pixels, so the card that completes a cut caption can lay the same text exactly over it.
+ * Records each caption's text box (as wide as the text, as tall as the font) for the pointer and the card.
  */
 export function drawCaptions(draw: DrawContext): void {
   const { ctx, scene, visible, detail } = draw;
@@ -26,7 +27,7 @@ export function drawCaptions(draw: DrawContext): void {
 
   ctx.save();
   ctx.font = palette.fonts.caption;
-  ctx.textBaseline = 'middle';
+  ctx.textBaseline = 'alphabetic';
   ctx.lineJoin = 'round';
   ctx.lineWidth = 3;
   ctx.strokeStyle = palette.background;
@@ -39,12 +40,12 @@ export function drawCaptions(draw: DrawContext): void {
 }
 
 function drawCaption(draw: DrawContext, node: NodeLayout): void {
-  const { ctx, scene, detail } = draw;
+  const { ctx, scene, detail, pixelRatio } = draw;
   const { layout, palette, viewport } = scene;
   const summary = !node.collapsed && summaryOf(node.changeset.comment);
   if (!summary) return;
 
-  const left = captionLeft(node) * viewport.zoom + viewport.panX;
+  const left = snap(captionLeft(node) * viewport.zoom + viewport.panX, pixelRatio);
   const cap = node.changeset.id === scene.homeChangeset ? HOME_MAX_SCREEN_WIDTH : MAX_SCREEN_WIDTH;
   const maxWidth = Math.min(captionRoom(layout, node) * viewport.zoom, cap, scene.size.width - left - EDGE_MARGIN);
   if (maxWidth <= 12) return;
@@ -53,19 +54,24 @@ function drawCaption(draw: DrawContext, node: NodeLayout): void {
   // A lone ellipsis says nothing.
   if (text.length < 2) return;
 
-  const middle = captionMiddle(node, viewport);
+  // DOM text sits on a whole device pixel: the canvas's must too, or the card's glyphs land a fraction off.
+  const metrics = captionMetrics(palette.fonts.caption, palette.captionFontSize);
+  const baseline = snap(captionMiddle(node, viewport) + metrics.middleToBaseline, pixelRatio);
   ctx.globalAlpha = detail.captions * (isChangesetDimmed(scene, node.changeset) ? DIMMED_ALPHA : 1);
   ctx.fillStyle = scene.selectedChangeset === node.changeset.id ? palette.textPrimary : palette.textSecondary;
   // A halo in the background color keeps the text readable where links cross it.
-  ctx.strokeText(text, left, middle);
-  ctx.fillText(text, left, middle);
+  ctx.strokeText(text, left, baseline);
+  ctx.fillText(text, left, baseline);
 
-  const height = palette.captionFontSize + 4;
   draw.drawn.captions.add(
     node,
     (left - viewport.panX) / viewport.zoom,
-    (middle - height / 2 - viewport.panY) / viewport.zoom,
+    (baseline - metrics.ascent - viewport.panY) / viewport.zoom,
     textWidth(ctx, text) / viewport.zoom,
-    height / viewport.zoom,
+    (metrics.ascent + metrics.descent) / viewport.zoom,
   );
+}
+
+function snap(screen: number, pixelRatio: number): number {
+  return Math.round(screen * pixelRatio) / pixelRatio;
 }

@@ -1,4 +1,4 @@
-/** Font metrics of the caption face, to lay DOM text exactly over canvas text. */
+/** Font metrics of the caption face: where its baseline goes and how tall its text box is. */
 export interface CaptionMetrics {
   /** Font-box ascent and descent: what CSS line layout uses as the content area. */
   ascent: number;
@@ -7,14 +7,13 @@ export interface CaptionMetrics {
   middleToBaseline: number;
 }
 
-/** The card's box, mirrored from GraphTooltip.module.css (.card): they offset its first glyph from its corner. */
-export const CARD_BORDER = 1;
-export const CARD_PADDING_X = 9;
-export const CARD_PADDING_Y = 6;
-export const CARD_LINE_HEIGHT = 1.45;
+/** From the card's corner to its text, mirrored from GraphTooltip.module.css (.card: border and padding). */
+const CARD_INSET_X = 1 + 9;
 /** A comfortable reading measure on large windows, never more than a quarter of a small one. */
 const CARD_MAX_WIDTH = 420;
 const CARD_MIN_WIDTH = 300;
+/** Narrower than this, a card over a caption near the right edge moves left rather than wrap in a thin column. */
+const CAPTION_CARD_MIN_ROOM = 200;
 const EDGE_MARGIN = 8;
 
 export function cardMaxWidth(windowWidth: number): number {
@@ -22,17 +21,21 @@ export function cardMaxWidth(windowWidth: number): number {
 }
 
 /**
- * Where the card that completes a cut caption goes, so its first line lands exactly on the caption's glyphs and
- * the text appears to complete itself in place. The canvas anchors the caption at its middle; a DOM line puts its
- * text at half-leading plus ascent: both meet at the alphabetic baseline.
+ * How wide the card over a caption may grow. Its text must start exactly on the caption's first glyph, so near the
+ * right edge it wraps in the room left instead of moving; only when that room is too narrow to read does it move.
  */
-export function captionCardPosition(caption: { x: number; middle: number }, metrics: CaptionMetrics, fontSize: number): { left: number; top: number } {
-  const halfLeading = (fontSize * CARD_LINE_HEIGHT - (metrics.ascent + metrics.descent)) / 2;
-  const baseline = caption.middle + metrics.middleToBaseline;
-  return {
-    left: caption.x - CARD_BORDER - CARD_PADDING_X,
-    top: baseline - metrics.ascent - halfLeading - CARD_PADDING_Y - CARD_BORDER,
-  };
+export function captionCardMaxWidth(captionX: number, containerWidth: number, windowWidth: number): number {
+  const widest = cardMaxWidth(windowWidth);
+  const room = containerWidth - EDGE_MARGIN - (captionX - CARD_INSET_X);
+  return room >= CAPTION_CARD_MIN_ROOM ? Math.min(widest, room) : widest;
+}
+
+/**
+ * Where the card over a caption goes so that its text, measured `origin` in from its corner, starts on the
+ * caption's first glyph and sits on its baseline: the cut comment appears to complete itself in place.
+ */
+export function captionCardCorner(caption: { x: number; baseline: number }, origin: { x: number; y: number }): { left: number; top: number } {
+  return { left: caption.x - origin.x, top: caption.baseline - origin.y };
 }
 
 /** A card's left edge moved just enough to keep it inside the canvas: alignment yields to visibility at the edges. */

@@ -1,14 +1,27 @@
 import { describe, expect, it } from 'vitest';
-import { CARD_BORDER, CARD_LINE_HEIGHT, CARD_PADDING_X, CARD_PADDING_Y, captionCardPosition, cardMaxWidth, keepInside } from './captionCard';
+import { captionCardCorner, captionCardMaxWidth, cardMaxWidth, keepInside } from './captionCard';
 
-const metrics = { ascent: 11, descent: 3, middleToBaseline: 4 };
+describe('captionCardCorner', () => {
+  it('puts the text of the card on the caption: same first glyph, same baseline', () => {
+    const origin = { x: 10, y: 17.5 };
+    const { left, top } = captionCardCorner({ x: 200, baseline: 104 }, origin);
+    expect(left + origin.x).toBe(200);
+    expect(top + origin.y).toBe(104);
+  });
+});
 
-describe('captionCardPosition', () => {
-  it('puts the first line of the card on the caption: same baseline, same first glyph', () => {
-    const { left, top } = captionCardPosition({ x: 200, middle: 100 }, metrics, 12);
-    expect(left + CARD_BORDER + CARD_PADDING_X).toBe(200);
-    const halfLeading = (12 * CARD_LINE_HEIGHT - 14) / 2;
-    expect(top + CARD_BORDER + CARD_PADDING_Y + halfLeading + metrics.ascent).toBe(104);
+describe('captionCardMaxWidth', () => {
+  it('lets the card grow to a reading measure away from the edge', () => {
+    expect(captionCardMaxWidth(100, 1200, 1600)).toBe(400);
+  });
+
+  it('wraps a card near the right edge in the room left, so its text stays on the caption', () => {
+    const width = captionCardMaxWidth(900, 1200, 1600);
+    expect(900 - 10 + width).toBe(1200 - 8);
+  });
+
+  it('gives up the alignment when the room left is too narrow to read', () => {
+    expect(captionCardMaxWidth(1100, 1200, 1600)).toBe(400);
   });
 });
 

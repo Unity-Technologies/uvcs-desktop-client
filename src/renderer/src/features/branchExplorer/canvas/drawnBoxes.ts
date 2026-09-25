@@ -7,6 +7,8 @@ export interface DrawnBox<T> {
   y: number;
   width: number;
   height: number;
+  /** Its text was cut to fit (a middle-trimmed name, an ellipsized comment). */
+  cut: boolean;
 }
 
 /**
@@ -21,7 +23,7 @@ export class DrawnBoxes<T> {
     this.count = 0;
   }
 
-  add(item: T, x: number, y: number, width: number, height: number): void {
+  add(item: T, x: number, y: number, width: number, height: number, cut = false): void {
     const box = this.boxes[this.count];
     if (box) {
       box.item = item;
@@ -29,8 +31,9 @@ export class DrawnBoxes<T> {
       box.y = y;
       box.width = width;
       box.height = height;
+      box.cut = cut;
     } else {
-      this.boxes.push({ item, x, y, width, height });
+      this.boxes.push({ item, x, y, width, height, cut });
     }
     this.count++;
   }
