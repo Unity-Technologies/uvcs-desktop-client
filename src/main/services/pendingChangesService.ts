@@ -57,8 +57,9 @@ export function createPendingChangesService({ cm, operations }: ServiceContext):
     await cm.query(['undo', ...absolutePaths(workspacePath, paths)], { cwd: workspacePath });
   }
 
-  async function undoUnchanged(workspacePath: string): Promise<void> {
-    await cm.query(['undo', '--unchanged', '-r', workspacePath], { cwd: workspacePath });
+  async function undoUnchanged(workspacePath: string, paths?: string[]): Promise<void> {
+    const targets = paths ? absolutePaths(workspacePath, paths) : ['-r', workspacePath];
+    await cm.query(['undo', '--unchanged', ...targets], { cwd: workspacePath });
   }
 
   async function add(workspacePath: string, paths: string[]): Promise<void> {

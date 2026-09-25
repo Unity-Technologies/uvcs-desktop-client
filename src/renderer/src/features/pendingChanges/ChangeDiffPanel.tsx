@@ -2,10 +2,14 @@ import { History } from 'lucide-react';
 import { useState } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { ReviewMark } from '@shared/domain/review';
+import { api } from '../../api/client';
+import { runVoidAction } from '../../app/operations/runOperation';
 import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge } from '../../components/StatusBadge';
+import { fileNameOf } from '../../lib/text';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
+import { toast } from '../../ui/toast/toastStore';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
 import { describeKinds } from './changeCategories';
 import { changeDiffSources } from './changeDiffSources';
@@ -59,6 +63,15 @@ export function ChangeDiffPanel({ workspacePath, change, reviewMark }: ChangeDif
       title={title}
       identicalDescription={sinceReview ? 'The file is back to how it was when you reviewed it.' : change.oldPath ? `Moved from ${change.oldPath} without content changes.` : undefined}
       compareControls={compareControls}
+      onMatchesBase={change.kinds.includes('checkedOut') ? () => offerUndoCheckout(workspacePath, change.path) : undefined}
     />
   );
+}
+
+/** Reverting its last block left a checked-out file as it was loaded: offer to drop the checkout too. */
+function offerUndoCheckout(workspacePath: string, path: string): void {
+  toast.success(`${fileNameOf(path)} is back to its loaded revision`, undefined, {
+    label: 'Undo checkout',
+    run: () => void runVoidAction(workspacePath, "Couldn't undo the checkout", () => api.pendingChanges.undoUnchanged(workspacePath, [path])),
+  });
 }
