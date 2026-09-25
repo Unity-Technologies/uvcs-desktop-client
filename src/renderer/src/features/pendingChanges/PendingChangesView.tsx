@@ -14,6 +14,7 @@ import { SegmentedControl } from '../../ui/SegmentedControl';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { LeftChangesBanner } from '../leftChanges/LeftChangesBanner';
 import { ChangeDiffPanel } from './ChangeDiffPanel';
 import { ChangesList } from './ChangesList';
 import { ChangesSummaryBar } from './ChangesSummaryBar';
@@ -128,6 +129,7 @@ export function PendingChangesView() {
     return (
       <>
         {header}
+        <LeftChangesBanner />
         <EmptyState
           icon={<CheckCircle2 size={24} />}
           title="No pending changes"
@@ -140,6 +142,7 @@ export function PendingChangesView() {
   return (
     <>
       {header}
+      <LeftChangesBanner />
       {mergeChanges.length > 0 && (
         <div className={styles.mergeBanner}>
           <GitMerge size={14} />

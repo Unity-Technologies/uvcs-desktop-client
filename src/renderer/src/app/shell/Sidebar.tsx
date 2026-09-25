@@ -46,6 +46,7 @@ export function Sidebar() {
 function SidebarViewItem({ view }: { view: ViewDefinition }) {
   const { view: activeView, pages, goToView } = useNavigation();
   const badge = view.useBadge?.();
+  const dot = view.useDot?.();
   const Icon = view.icon;
   const active = activeView === view.id;
 
@@ -54,6 +55,7 @@ function SidebarViewItem({ view }: { view: ViewDefinition }) {
       icon={<Icon size={15} />}
       label={view.label}
       badge={badge}
+      dot={dot}
       active={active}
       dimmed={active && pages.length > 0}
       onClick={() => goToView(view.id)}

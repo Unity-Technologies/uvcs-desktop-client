@@ -1,4 +1,5 @@
 import { DEFAULT_PENDING_CHANGES_FILTER, type PendingChangesFilter } from './pendingChanges';
+import type { PendingChangesOnSwitch, SwitchShelveRecord } from './switchWithChanges';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
@@ -14,6 +15,12 @@ export interface AppSettings {
   autoRefresh: boolean;
   /** Folder new workspaces are created in; empty means the home folder. */
   defaultWorkspaceRoot: string;
+  /** What to do with pending changes when switching the workspace. */
+  pendingChangesOnSwitch: PendingChangesOnSwitch;
+  /** Restore the changes left on a branch when switching back to it, if they apply cleanly. */
+  restoreLeftChangesAutomatically: boolean;
+  /** The shelves created while switching with pending changes, until they are restored or discarded. */
+  switchShelves: SwitchShelveRecord[];
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -24,4 +31,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   recentComments: [],
   autoRefresh: true,
   defaultWorkspaceRoot: '',
+  pendingChangesOnSwitch: 'ask',
+  restoreLeftChangesAutomatically: true,
+  switchShelves: [],
 };

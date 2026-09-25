@@ -35,7 +35,7 @@ export async function mergeChangesetTo(changeset: Changeset): Promise<void> {
   if (destinationBranch) openMerge({ kind: 'merge', sourceSpec: `cs:${changeset.id}`, destinationBranch });
 }
 
-export function switchToChangeset(workspacePath: string, changeset: Changeset): Promise<void | undefined> {
+export function switchToChangeset(workspacePath: string, changeset: Changeset): Promise<boolean> {
   return switchWorkspace(workspacePath, `cs:${changeset.id}`, `changeset ${changeset.id}`);
 }
 

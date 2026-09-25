@@ -10,7 +10,7 @@ import { toast } from '../../ui/toast/toastStore';
 import { openCreateBranchDialog } from '../branches/CreateBranchDialog';
 import { pickLabel } from './LabelPickerDialog';
 
-export function switchToLabel(workspacePath: string, label: Label): Promise<void | undefined> {
+export function switchToLabel(workspacePath: string, label: Label): Promise<boolean> {
   return switchWorkspace(workspacePath, spec.label(label.name), `label ${label.name}`);
 }
 

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import type { ComponentType } from 'react';
 import { useIncomingChangesCount } from '../../features/incoming/useIncomingChangesCount';
+import { useHasLeftChanges } from '../../features/leftChanges/useLeftChanges';
 import { usePendingChangesCount } from '../../features/pendingChanges/usePendingChanges';
 import type { Icon } from '../../lib/actions';
 import { lazyComponent } from '../../lib/lazyComponent';
@@ -42,10 +43,12 @@ export interface ViewDefinition {
   component: ComponentType;
   /** A hook returning a count to show next to the view in the sidebar. */
   useBadge?: () => number | undefined;
+  /** A hook telling whether something waits in the view, shown as a dot. */
+  useDot?: () => boolean;
 }
 
 export const VIEWS: ViewDefinition[] = [
-  { id: 'changes', label: 'Changes', icon: FileDiff, group: 'Workspace', shortcut: 'mod+1', component: PendingChangesView, useBadge: usePendingChangesCount },
+  { id: 'changes', label: 'Changes', icon: FileDiff, group: 'Workspace', shortcut: 'mod+1', component: PendingChangesView, useBadge: usePendingChangesCount, useDot: useHasLeftChanges },
   { id: 'incoming', label: 'Incoming', icon: ArrowDownToLine, group: 'Workspace', component: IncomingChangesView, useBadge: useIncomingChangesCount },
   { id: 'files', label: 'Files', icon: FolderTree, group: 'Workspace', shortcut: 'mod+2', component: FilesView },
   { id: 'branchExplorer', label: 'Branch Explorer', icon: GitGraph, group: 'History', shortcut: 'mod+3', component: BranchExplorerView },
