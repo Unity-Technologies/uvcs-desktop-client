@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { QueryFilter } from '@shared/domain/query';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
-import { queryClient, SLOW_CHANGING_QUERY } from '../../app/queryClient';
+import { keyedByWorkspaceInfo, queryClient, SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { compactFilter } from '../../lib/compactFilter';
 
@@ -31,5 +31,11 @@ export function fetchBranch(workspacePath: string, name: string) {
 }
 
 export function branchQuery(workspacePath: string, name: string) {
-  return { queryKey: queryKeys.inWorkspace(workspacePath, 'branches', 'byName', name), queryFn: () => api.branches.get(workspacePath, name) };
+  return {
+    queryKey: queryKeys.inWorkspace(workspacePath, 'branches', 'byName', name),
+    queryFn: () => api.branches.get(workspacePath, name),
+    // Views show the branch the workspace is on (its comment, whether it is a finished task): once it switches away,
+    // the old branch isn't read again, only marked stale.
+    meta: keyedByWorkspaceInfo('selector'),
+  };
 }
