@@ -1,11 +1,5 @@
 .trigger {
   max-width: 420px;
-  color: var(--text-primary);
-}
-
-.selector {
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .chevron {

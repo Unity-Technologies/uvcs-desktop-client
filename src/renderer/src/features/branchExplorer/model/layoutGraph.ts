@@ -1,7 +1,7 @@
 import type { BranchExplorerData, GraphBranch, GraphChangeset, GraphLabel, MergeLink } from '@shared/domain/branchExplorer';
+import { collapseLinearRuns, structuralChangesets, type ShownChangeset } from './structureOnly';
 
-export interface NodeLayout {
-  changeset: GraphChangeset;
+export interface NodeLayout extends ShownChangeset {
   column: number;
   row: number;
 }
@@ -19,8 +19,9 @@ export interface Lane {
 }
 
 export interface GraphLayout {
+  /** The node of every changeset; changesets in a collapsed run all map to the run's node. */
   nodes: ReadonlyMap<number, NodeLayout>;
-  /** Every changeset has its own column, so a column identifies at most one node. */
+  /** Every node has its own column, so a column identifies at most one node. */
   nodesByColumn: readonly NodeLayout[];
   lanes: readonly Lane[];
   lanesByBranch: ReadonlyMap<string, Lane>;
@@ -34,24 +35,32 @@ export interface GraphLayout {
 /** Free columns kept between two lanes sharing a row, so they never look connected. */
 const LANE_GAP = 3;
 
+/** "Only relevant changesets": everything but the structural changesets and these collapses into "+N" nodes. */
+export interface StructureOnly {
+  keep: ReadonlySet<number>;
+}
+
 /**
  * Lays out history as lanes: changesets ordered left to right by id (parents always come first),
  * one lane per branch, child branches below their parents, packed into shared rows when they don't overlap.
  */
-export function layoutGraph(data: BranchExplorerData): GraphLayout {
-  const changesets = [...data.changesets].sort((a, b) => a.id - b.id);
-  const columnOf = new Map(changesets.map((changeset, column) => [changeset.id, column]));
-  const lanes = placeLanes(buildLanes(data.branches, changesets, columnOf));
+export function layoutGraph(data: BranchExplorerData, structureOnly?: StructureOnly): GraphLayout {
+  const sorted = [...data.changesets].sort((a, b) => a.id - b.id);
+  const shown = structureOnly
+    ? collapseLinearRuns(sorted, new Set([...structuralChangesets(data), ...structureOnly.keep]))
+    : sorted.map((changeset) => ({ changeset, collapsed: null }));
+  const columnOf = new Map(shown.flatMap(({ changeset, collapsed }, column) => (collapsed ?? [changeset]).map((member) => [member.id, column] as const)));
+  const lanes = placeLanes(buildLanes(data.branches, shown.map(({ changeset }) => changeset), columnOf));
   const lanesByBranch = new Map(lanes.map((lane) => [lane.branch.name, lane]));
 
-  const nodesByColumn = changesets.map((changeset, column) => ({
-    changeset,
+  const nodesByColumn = shown.map((node, column) => ({
+    ...node,
     column,
-    row: lanesByBranch.get(changeset.branch)?.row ?? 0,
+    row: lanesByBranch.get(node.changeset.branch)?.row ?? 0,
   }));
 
   return {
-    nodes: new Map(nodesByColumn.map((node) => [node.changeset.id, node])),
+    nodes: new Map(nodesByColumn.flatMap((node) => (node.collapsed ?? [node.changeset]).map((member) => [member.id, node] as const))),
     nodesByColumn,
     lanes,
     lanesByBranch,
@@ -61,7 +70,7 @@ export function layoutGraph(data: BranchExplorerData): GraphLayout {
       data.labels.filter((label) => columnOf.has(label.changeset)),
       (label) => label.changeset,
     ),
-    columnCount: changesets.length,
+    columnCount: shown.length,
     rowCount: Math.max(0, ...lanes.map((lane) => lane.row + 1)),
   };
 }

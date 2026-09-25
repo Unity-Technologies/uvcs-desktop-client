@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { CmError } from './CmError';
 import { describeLockedItems, explainLockedItems, parseLockedItems } from './lockedItems';
 
+const command = (commandLine: string) => ({ commandLine, exitCode: 1, output: '', logEntryId: 1 });
+
 // As the server formats ITEMS_ALREADY_LOCKED (ItemsAlreadyLockedErrorBuilder): the header, then one line per item.
 const ONE_LOCKED = 'These items are exclusively checked out by: \n/art/Hero.fbx (wk:ana-wk owner:ana)\n';
 const TWO_LOCKED = 'These items are exclusively checked out by: \r\n/art/Hero.fbx (wk:ana-wk owner:ana)\r\n/art/Level (1).unity (wk:build owner:bob@corp.com)\r\n';
@@ -41,12 +43,15 @@ describe('describeLockedItems', () => {
 
 describe('explainLockedItems', () => {
   it('rewrites lock failures and keeps the command line', async () => {
-    const failing = () => Promise.reject(new CmError(ONE_LOCKED, 'cm checkout /w/art/Hero.fbx', 1));
-    await expect(explainLockedItems('checked out', failing)).rejects.toMatchObject({ message: expect.stringContaining('locked by ana'), commandLine: 'cm checkout /w/art/Hero.fbx' });
+    const failing = () => Promise.reject(new CmError(ONE_LOCKED, command('cm checkout /w/art/Hero.fbx')));
+    await expect(explainLockedItems('checked out', failing)).rejects.toMatchObject({
+      message: expect.stringContaining('locked by ana'),
+      command: { commandLine: 'cm checkout /w/art/Hero.fbx' },
+    });
   });
 
   it('passes other failures through', async () => {
-    const error = new CmError('Something else', 'cm checkout', 1);
+    const error = new CmError('Something else', command('cm checkout'));
     await expect(explainLockedItems('checked out', () => Promise.reject(error))).rejects.toBe(error);
   });
 });

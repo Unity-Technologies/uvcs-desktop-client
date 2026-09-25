@@ -1,0 +1,21 @@
+.chips {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 16px;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--label-bg);
+  color: var(--label-text);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  white-space: nowrap;
+}

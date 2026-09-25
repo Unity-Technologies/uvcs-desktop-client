@@ -2,6 +2,8 @@
 export const COLUMN_WIDTH = 64;
 export const ROW_HEIGHT = 104;
 export const NODE_RADIUS = 11;
+/** Half the width of a "+N" node, the widest it gets. */
+export const COLLAPSED_NODE_HALF_WIDTH = 20;
 /** Branches are drawn as rounded bands the changesets sit on. */
 export const BAND_HEIGHT = 30;
 /** Every branch has a header card (name and comment) sitting on top of its band. */

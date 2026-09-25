@@ -1,3 +1,5 @@
+import type { CodeReview } from '@shared/domain/codeReview';
+import { SHORT_STATUS } from '../../codeReviews/reviewsByBranch';
 import type { Lane } from '../model/layoutGraph';
 import { DIMMED_ALPHA, type DrawContext } from './drawContext';
 import { drawRectHit } from './drawSearchHit';
@@ -91,6 +93,8 @@ function measureContent(draw: DrawContext, lane: Lane): number {
   ctx.font = nameFont(draw);
   let width = DOT_SIZE + GAP + ctx.measureText(lane.branch.name).width;
   if (draw.scene.currentBranch === lane.branch.name) width += GAP + currentBadgeWidth(draw);
+  const review = draw.scene.reviews.get(lane.branch.name);
+  if (review) width += GAP + reviewChipWidth(draw, review);
   const comment = summaryOf(lane.branch.comment);
   if (comment) {
     ctx.font = commentFont(draw);
@@ -135,16 +139,23 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
   const right = left + width - PADDING;
   ctx.textBaseline = 'middle';
   const badgeWidth = current ? currentBadgeWidth(draw) : 0;
+  const review = scene.reviews.get(lane.branch.name);
+  const chipWidth = review ? reviewChipWidth(draw, review) : 0;
+  const reserved = (badgeWidth ? badgeWidth + GAP : 0) + (chipWidth ? chipWidth + GAP : 0);
 
   ctx.font = nameFont(draw);
   ctx.fillStyle = palette.textPrimary;
-  const name = fitText(ctx, lane.branch.name, right - x - (badgeWidth ? badgeWidth + GAP : 0));
+  const name = fitText(ctx, lane.branch.name, right - x - reserved);
   ctx.fillText(name, x, middle + 0.5);
   x += ctx.measureText(name).width + GAP;
 
   if (current) {
     drawCurrentBadge(draw, x, middle, badgeWidth);
     x += badgeWidth + GAP;
+  }
+  if (review && x + chipWidth <= right + PADDING / 2) {
+    drawReviewChip(draw, review, x, middle, chipWidth, scene.hoveredReview === review.id);
+    x += chipWidth + GAP;
   }
 
   const comment = summaryOf(lane.branch.comment);
@@ -154,6 +165,39 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
     ctx.fillText(fitText(ctx, comment, right - x - GAP / 2), x + GAP / 2, middle + 0.5);
   }
   ctx.restore();
+}
+
+const CHIP_HEIGHT = 15;
+const CHIP_DOT = 5;
+
+function reviewChipWidth(draw: DrawContext, review: CodeReview): number {
+  const { ctx } = draw;
+  ctx.save();
+  ctx.font = badgeFont(draw);
+  const width = ctx.measureText(SHORT_STATUS[review.status]).width + CHIP_DOT + 13;
+  ctx.restore();
+  return width;
+}
+
+/** The branch's code review status, colored like the badges elsewhere; recorded so a click on it opens the review. */
+function drawReviewChip(draw: DrawContext, review: CodeReview, left: number, middle: number, width: number, hovered: boolean): void {
+  const { ctx, scene } = draw;
+  const color = scene.palette.reviewStatus[review.status];
+  const top = middle - CHIP_HEIGHT / 2;
+  ctx.save();
+  ctx.fillStyle = color;
+  ctx.globalAlpha = hovered ? 0.28 : 0.16;
+  ctx.beginPath();
+  ctx.roundRect(left, top, width, CHIP_HEIGHT, CHIP_HEIGHT / 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  ctx.beginPath();
+  ctx.arc(left + 5 + CHIP_DOT / 2, middle, CHIP_DOT / 2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.font = badgeFont(draw);
+  ctx.fillText(SHORT_STATUS[review.status], left + 8 + CHIP_DOT, middle + 0.5);
+  ctx.restore();
+  draw.reviewChips.push({ review, x: left, y: top, width, height: CHIP_HEIGHT });
 }
 
 function badgeFont({ scene }: DrawContext): string {

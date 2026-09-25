@@ -2,6 +2,15 @@ import { DEFAULT_PENDING_CHANGES_FILTER, type PendingChangesFilter } from './pen
 
 export type ThemePreference = 'system' | 'light' | 'dark';
 
+/** Where the main window was last, to reopen it there. */
+export interface SavedWindowBounds {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  maximized: boolean;
+}
+
 export interface AppSettings {
   theme: ThemePreference;
   recentWorkspacePaths: string[];
@@ -14,6 +23,8 @@ export interface AppSettings {
   autoRefresh: boolean;
   /** Folder new workspaces are created in; empty means the home folder. */
   defaultWorkspaceRoot: string;
+  /** Null until the window is first moved or resized. */
+  windowBounds: SavedWindowBounds | null;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -24,4 +35,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   recentComments: [],
   autoRefresh: true,
   defaultWorkspaceRoot: '',
+  windowBounds: null,
 };

@@ -1,4 +1,5 @@
 import type { MergeLinkType } from '@shared/domain/branchExplorer';
+import type { CodeReviewStatus } from '@shared/domain/codeReview';
 import { branchHue, hueToColor } from '../model/branchHue';
 
 /** Colors and fonts for drawing, resolved from the app's CSS variables so the graph follows the theme and accent. */
@@ -19,6 +20,8 @@ export interface GraphPalette {
   labelText: string;
   /** Link colors for everything but plain merges, which take the source branch's color. */
   mergeLinks: Record<Exclude<MergeLinkType, 'merge'>, string>;
+  /** Code review chips, colored like the status badges elsewhere. */
+  reviewStatus: Record<CodeReviewStatus, string>;
   fontUi: string;
 }
 
@@ -47,6 +50,11 @@ export function readGraphPalette(element: Element): GraphPalette {
       intervalCherryPick: variable('--status-changed'),
       subtractive: variable('--status-deleted'),
       intervalSubtractive: variable('--status-deleted'),
+    },
+    reviewStatus: {
+      'Under review': variable('--status-moved'),
+      Reviewed: variable('--status-added'),
+      'Rework required': variable('--status-changed'),
     },
     fontUi: variable('--font-ui'),
   };

@@ -1,5 +1,7 @@
 import type { Changeset } from '@shared/domain/changeset';
+import type { Label } from '@shared/domain/label';
 import { shortBranchName } from '@shared/domain/specs';
+import { LabelChips } from '../../components/LabelChips';
 import { firstLine } from '../../lib/text';
 import { UserLabel } from '../../ui/Avatar';
 import { Highlight } from '../../ui/Highlight';
@@ -8,7 +10,7 @@ import type { Column } from '../../ui/table/DataTable';
 import styles from './ChangesetsView.module.css';
 
 /** Columns of the changesets table; `loadedChangeset` is highlighted as the workspace's current one. */
-export function changesetColumns(loadedChangeset: number | undefined): Column<Changeset>[] {
+export function changesetColumns(loadedChangeset: number | undefined, labelsByChangeset: ReadonlyMap<number, readonly Label[]>): Column<Changeset>[] {
   return [
     {
       id: 'id',
@@ -26,14 +28,18 @@ export function changesetColumns(loadedChangeset: number | undefined): Column<Ch
       id: 'comment',
       header: 'Comment',
       grow: 3,
-      render: (changeset) =>
-        firstLine(changeset.comment) ? (
-          <span className={styles.comment}>
-            <Highlight text={firstLine(changeset.comment)} />
-          </span>
-        ) : (
-          <span className={styles.noComment}>No comment</span>
-        ),
+      render: (changeset) => (
+        <span className={styles.commentCell}>
+          <LabelChips labels={labelsByChangeset.get(changeset.id)} />
+          {firstLine(changeset.comment) ? (
+            <span className={styles.comment}>
+              <Highlight text={firstLine(changeset.comment)} />
+            </span>
+          ) : (
+            <span className={styles.noComment}>No comment</span>
+          )}
+        </span>
+      ),
     },
     {
       id: 'branch',

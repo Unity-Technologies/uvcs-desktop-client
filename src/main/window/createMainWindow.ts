@@ -1,15 +1,21 @@
 import { join } from 'node:path';
 import { BrowserWindow, nativeTheme, shell } from 'electron';
+import type { SettingsStore } from '../settings/SettingsStore';
+import { loadWindowBounds, saveWindowBounds } from './savedWindowBounds';
+import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from './windowBounds';
 
 const DARK_BACKGROUND = '#16171b';
 const LIGHT_BACKGROUND = '#ffffff';
 
-export function createMainWindow(): BrowserWindow {
+/** Opens the main window where it was last (fitted to the current displays). The page title becomes the window title. */
+export function createMainWindow(settings: SettingsStore): BrowserWindow {
+  const { bounds, maximized } = loadWindowBounds(settings);
   const window = new BrowserWindow({
     width: 1400,
     height: 900,
-    minWidth: 960,
-    minHeight: 600,
+    ...bounds,
+    minWidth: MIN_WINDOW_WIDTH,
+    minHeight: MIN_WINDOW_HEIGHT,
     show: false,
     title: 'Unity Version Control',
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
@@ -22,7 +28,12 @@ export function createMainWindow(): BrowserWindow {
     },
   });
 
-  window.once('ready-to-show', () => window.show());
+  saveWindowBounds(window, settings);
+  window.once('ready-to-show', () => {
+    // Maximizing also shows the window, so it waits until the page can paint.
+    if (maximized) window.maximize();
+    window.show();
+  });
   window.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url);
     return { action: 'deny' };

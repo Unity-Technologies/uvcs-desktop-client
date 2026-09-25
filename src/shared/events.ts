@@ -30,6 +30,8 @@ export interface UvcsEvents {
   commandLogged: CommandLogEntry;
   workspaceChanged: WorkspaceChange & { workspacePath: string };
   operationProgress: OperationProgress;
+  /** A workspace was picked from the OS recent documents; `system.takeRequestedWorkspace` tells which. */
+  workspaceOpenRequested: Record<string, never>;
   /** A native menu item was chosen; runs the registered command with this id. */
   menuCommand: { commandId: string };
 }

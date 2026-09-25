@@ -2,6 +2,7 @@ import { api } from '../../api/client';
 import { invalidateWorkspace } from '../queryClient';
 import { toast, useToastStore, type ToastAction } from '../../ui/toast/toastStore';
 import { describeProgressLine } from './describeProgressLine';
+import { runningOperationOf, useRunningOperationsStore, type WorkspaceChangingOperation } from './runningOperationsStore';
 
 interface OperationOptions<T> {
   /** Shown while running, e.g. "Updating workspace". */
@@ -12,6 +13,8 @@ interface OperationOptions<T> {
   successMessage?: (result: T) => string | null;
   successAction?: (result: T) => ToastAction | undefined;
   cancellable?: boolean;
+  /** Set for operations that change the loaded revisions: they don't start while another operation runs on the workspace. */
+  kind?: WorkspaceChangingOperation;
 }
 
 /**
@@ -25,8 +28,17 @@ export async function runOperation<T>({
   successMessage,
   successAction,
   cancellable = true,
+  kind,
 }: OperationOptions<T>): Promise<T | undefined> {
+  const running = runningOperationOf(workspacePath);
+  if (kind && running) {
+    toast.info(`${running.title} is still running`, 'Wait for it to finish, or cancel it, before starting something else.');
+    return undefined;
+  }
+
   const operationId = crypto.randomUUID();
+  const operations = useRunningOperationsStore.getState();
+  operations.start({ id: operationId, workspacePath, kind, title, detail: null });
   const toasts = useToastStore.getState();
   const toastId = toasts.show({
     kind: 'progress',
@@ -37,7 +49,9 @@ export async function runOperation<T>({
   const stopListening = window.uvcs.on('operationProgress', (progress) => {
     if (progress.operationId !== operationId) return;
     const detail = describeProgressLine(progress.line);
-    if (detail) toasts.update(toastId, { detail });
+    if (!detail) return;
+    toasts.update(toastId, { detail });
+    operations.report(operationId, detail);
   });
 
   try {
@@ -52,6 +66,7 @@ export async function runOperation<T>({
     return undefined;
   } finally {
     stopListening();
+    operations.finish(operationId);
     void invalidateWorkspace(workspacePath);
   }
 }

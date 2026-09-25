@@ -1,4 +1,5 @@
 import type { GraphChangeset } from '@shared/domain/branchExplorer';
+import type { CodeReview } from '@shared/domain/codeReview';
 import type { GraphLayout } from '../model/layoutGraph';
 import type { SearchHighlight } from '../model/searchGraph';
 import type { GraphPalette } from './graphPalette';
@@ -20,6 +21,8 @@ export interface GraphScene {
   selectedChangeset: number | null;
   selectedBranch: string | null;
   hoveredChangeset: number | null;
+  /** The code review whose chip is under the pointer. */
+  hoveredReview: number | null;
   homeChangeset: number | null;
   /** The branch the workspace is on, emphasized. */
   currentBranch: string | null;
@@ -29,6 +32,17 @@ export interface GraphScene {
   search: SearchHighlight | null;
   /** Progress of the ping around the current search hit: 0 just landed, 1 settled. */
   searchPing: number;
+  /** The newest code review of each branch, shown as a chip in its header card. */
+  reviews: ReadonlyMap<string, CodeReview>;
+}
+
+/** A code review chip where it was drawn this frame (world coordinates), so a click on it can open the review. */
+export interface DrawnReviewChip {
+  review: CodeReview;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }
 
 /** Opacity of what the author filter or a search pushes into the background. */
@@ -63,6 +77,8 @@ export interface DrawContext {
   scene: GraphScene;
   visible: VisibleArea;
   detail: DetailLevel;
+  /** Filled while drawing. */
+  reviewChips: DrawnReviewChip[];
 }
 
 export function detailLevel(zoom: number, options: GraphViewOptions): DetailLevel {

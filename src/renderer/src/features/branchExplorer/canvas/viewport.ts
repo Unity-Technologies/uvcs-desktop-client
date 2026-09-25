@@ -89,6 +89,26 @@ export function revealPoint(viewport: Viewport, worldX: number, worldY: number, 
   return inside ? viewport : centerOn(viewport, worldX, worldY, screen);
 }
 
+/** Framing something zooms in at least this far, so it is readable. */
+const FRAME_MIN_ZOOM = 0.8;
+
+/** Centers a world point, zooming in if the graph is too small to read there. */
+export function frameOn(viewport: Viewport, worldX: number, worldY: number, screen: Size): Viewport {
+  return centerOn({ ...viewport, zoom: Math.max(viewport.zoom, FRAME_MIN_ZOOM) }, worldX, worldY, screen);
+}
+
+/**
+ * The viewport `t` (0 to 1) of the way between two, moving the point at the middle of the screen in
+ * a straight line and the zoom at a steady rate, so a glide never swings off to the side.
+ */
+export function interpolateViewport(from: Viewport, to: Viewport, t: number, screen: Size): Viewport {
+  const middle = (viewport: Viewport): { x: number; y: number } => toWorld(viewport, screen.width / 2, screen.height / 2);
+  const start = middle(from);
+  const end = middle(to);
+  const zoom = from.zoom * (to.zoom / from.zoom) ** t;
+  return centerOn({ panX: 0, panY: 0, zoom }, start.x + (end.x - start.x) * t, start.y + (end.y - start.y) * t, screen);
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }

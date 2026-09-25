@@ -1,0 +1,29 @@
+import type { IncomingChanges, IncomingSummary } from '@shared/domain/incoming';
+import type { RunningOperation } from '../../app/operations/runningOperationsStore';
+
+export type IncomingChipState =
+  | { kind: 'updating'; stage: string }
+  /** New changesets that don't touch anything changed locally (or not known yet: `checked` is false). */
+  | { kind: 'incoming'; branch: string; count: number; checked: boolean }
+  /** New changesets that change files also changed locally: they have to be merged, never updated blindly. */
+  | { kind: 'conflicts'; branch: string; count: number; conflictCount: number };
+
+/**
+ * What the incoming chip shows next to the branch: nothing when the workspace is up to date or not on a branch,
+ * the new changesets (and whether they collide with local changes) otherwise, and the stage of a running update.
+ */
+export function incomingChipState(
+  summary: IncomingSummary | undefined,
+  changes: IncomingChanges | undefined,
+  running: RunningOperation | undefined,
+): IncomingChipState | null {
+  if (running?.kind === 'update') return { kind: 'updating', stage: running.detail ?? 'Starting' };
+  if (!summary?.branch || summary.changesetCount === 0) return null;
+
+  const { branch, changesetCount: count } = summary;
+  // Changes read for an older head don't tell about the changesets that came in since.
+  if (!changes || changes.headChangeset !== summary.headChangeset) return { kind: 'incoming', branch, count, checked: false };
+
+  const conflictCount = changes.conflicts.length + changes.blockedPaths.length;
+  return conflictCount > 0 ? { kind: 'conflicts', branch, count, conflictCount } : { kind: 'incoming', branch, count, checked: true };
+}

@@ -1,13 +1,14 @@
-import { Check, FileDiff, GitCommitVertical, HardDrive, Monitor, Moon, Palette, Sun } from 'lucide-react';
+import { Check, FileDiff, GitCommitVertical, HardDrive, Palette } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
-import type { AppSettings, ThemePreference } from '@shared/domain/settings';
+import type { AppSettings } from '@shared/domain/settings';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { NavItem } from '../../ui/nav/SidebarNav';
 import { DefaultWorkspaceRootField } from './DefaultWorkspaceRootField';
+import { THEMES } from './themes';
 import { useSettings, useUpdateSettings } from './useSettings';
 import styles from './SettingsDialog.module.css';
 
@@ -66,18 +67,13 @@ function SettingsGroup({ title, children }: { title: string; children: ReactNode
   );
 }
 
-const THEMES: { value: ThemePreference; label: string; description: string; icon: ReactNode }[] = [
-  { value: 'system', label: 'System', description: 'Match the OS appearance', icon: <Monitor size={18} /> },
-  { value: 'light', label: 'Light', description: 'Bright surfaces', icon: <Sun size={18} /> },
-  { value: 'dark', label: 'Dark', description: 'Dim surfaces for low light', icon: <Moon size={18} /> },
-];
-
 function AppearancePane({ settings, updateSettings }: PaneProps) {
   return (
     <SettingsGroup title="Theme">
       <div className={styles.choices} role="radiogroup" aria-label="Theme">
         {THEMES.map((theme) => {
           const selected = settings.theme === theme.value;
+          const ThemeIcon = theme.icon;
           return (
             <button
               key={theme.value}
@@ -88,7 +84,7 @@ function AppearancePane({ settings, updateSettings }: PaneProps) {
               data-selected={selected}
               onClick={() => updateSettings({ theme: theme.value })}
             >
-              {theme.icon}
+              <ThemeIcon size={18} />
               <span className={styles.choiceText}>
                 <span className={styles.choiceLabel}>{theme.label}</span>
                 <span className={styles.choiceDescription}>{theme.description}</span>

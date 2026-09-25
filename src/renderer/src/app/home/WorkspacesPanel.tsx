@@ -8,8 +8,9 @@ import { SearchField } from '../../ui/SearchField';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { useSettings } from '../settings/useSettings';
-import { useWorkspaceList, useRecentWorkspaceRepositories } from '../workspace/workspaceQueries';
+import { useMissingWorkspacePaths, useRecentWorkspaceRepositories, useWorkspaceList } from '../workspace/workspaceQueries';
 import { openCreateWorkspaceDialog } from './dialogs/CreateWorkspaceDialog';
+import { recentWorkspaceEntries, unlistedRecentPaths, type WorkspaceEntry } from './recentWorkspaces';
 import { WorkspaceRow } from './WorkspaceRow';
 import styles from './Home.module.css';
 
@@ -25,10 +26,15 @@ export function WorkspacesPanel({ mode, onOpen, onOpenFolder, onShowAll }: Works
   const { recentWorkspacePaths } = useSettings();
   const { data: workspaces, isLoading, error } = useWorkspaceList();
   const { data: repositories } = useRecentWorkspaceRepositories(workspaces);
-
-  const shown = (mode === 'recent' ? inRecentOrder(workspaces ?? [], recentWorkspacePaths) : sortedByName(workspaces ?? [])).filter(
-    (workspace) => matches(workspace, repositories?.[workspace.path], filter),
+  const { data: missingPaths = [] } = useMissingWorkspacePaths(
+    mode === 'recent' && workspaces ? unlistedRecentPaths(workspaces, recentWorkspacePaths) : [],
   );
+
+  const entries: WorkspaceEntry[] =
+    mode === 'recent'
+      ? recentWorkspaceEntries(workspaces ?? [], recentWorkspacePaths, missingPaths)
+      : sortedByName(workspaces ?? []).map((workspace) => ({ workspace, missing: false }));
+  const shown = entries.filter(({ workspace }) => matches(workspace, repositories?.[workspace.path], filter));
 
   return (
     <>
@@ -56,8 +62,14 @@ export function WorkspacesPanel({ mode, onOpen, onOpenFolder, onShowAll }: Works
           <EmptyWorkspaces mode={mode} filtered={filter !== ''} onShowAll={onShowAll} onOpen={onOpen} />
         )}
         <HighlightQuery query={filter}>
-          {shown.map((workspace) => (
-            <WorkspaceRow key={workspace.guid} workspace={workspace} repository={repositories?.[workspace.path]} onOpen={onOpen} />
+          {shown.map(({ workspace, missing }) => (
+            <WorkspaceRow
+              key={workspace.guid}
+              workspace={workspace}
+              repository={repositories?.[workspace.path]}
+              missing={missing}
+              onOpen={onOpen}
+            />
           ))}
         </HighlightQuery>
       </div>
@@ -89,10 +101,6 @@ function EmptyWorkspaces({ mode, filtered, onShowAll, onOpen }: { mode: 'recent'
       }
     />
   );
-}
-
-function inRecentOrder(workspaces: WorkspaceSummary[], recentPaths: string[]): WorkspaceSummary[] {
-  return recentPaths.flatMap((path) => workspaces.find((workspace) => workspace.path === path) ?? []);
 }
 
 function sortedByName(workspaces: WorkspaceSummary[]): WorkspaceSummary[] {
