@@ -55,6 +55,10 @@ export async function renameLabel(workspacePath: string, label: Label): Promise<
   await runAction(workspacePath, "Couldn't rename the label", () => api.labels.rename(workspacePath, label.name, newName));
 }
 
+export function saveLabelComment(workspacePath: string, label: Label, comment: string): Promise<void | undefined> {
+  return runAction(workspacePath, "Couldn't update the comment", () => api.labels.editComment(workspacePath, label, comment));
+}
+
 export async function deleteLabels(workspacePath: string, labels: Label[]): Promise<void> {
   const confirmed = await confirm({
     title: labels.length === 1 ? `Delete label ${labels[0]!.name}?` : `Delete ${labels.length} labels?`,

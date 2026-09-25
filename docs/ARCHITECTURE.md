@@ -170,7 +170,9 @@ renderer/src/
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
   description, or the object's name with the comment below; edited in place where cm can edit it); a meta row (author ·
   date · spec to copy · branch chip); attribute chips (`AttributeChips`); properties and relations behind "More details";
-  then the changes pane under a remembered splitter (`DetailsChangesPane`). Selecting a row must stay cheap: `cm diff`
+  then the changes pane under a remembered splitter (`DetailsChangesPane`). cm edits changeset, attribute and label
+  comments (a label's by applying it again to its changeset, `labelCommentArgs`); branch and shelve comments stay
+  read-only: no `cm` command or client API edits them. Selecting a row must stay cheap: `cm diff`
   runs only on request (`ChangedFilesSection`), other lookups wait for the selection to settle (`useSettled`), and
   immutable results are cached (`IMMUTABLE_QUERY`).
 - **Branch switcher**: groups and orders branches like the official Desktop client (`branchSwitcherGroups`): /main by its
