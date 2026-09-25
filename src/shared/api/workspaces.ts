@@ -21,7 +21,9 @@ export interface WorkspacesApi {
    * are looked up: pass the few workspaces on screen (e.g. the recent ones), never the whole list.
    */
   repositoriesOf(workspacePaths: string[]): Promise<Record<string, string | null>>;
-  /** Returns the workspace root containing the given directory, or null. */
+  /** The paths whose folder doesn't exist (deleted, moved, or on a drive that isn't mounted). No `cm` call. */
+  findMissing(paths: string[]): Promise<string[]>;
+  /** Returns the workspace root containing the given directory, or null. A workspace moved on disk is re-registered at its new place. */
   findRoot(directory: string): Promise<string | null>;
   create(request: CreateWorkspaceRequest): Promise<WorkspaceSummary>;
   rename(workspacePath: string, newName: string): Promise<void>;

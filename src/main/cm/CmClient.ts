@@ -1,8 +1,9 @@
 import { homedir } from 'node:os';
 import type { CommandLogEntry } from '@shared/events';
-import { CmError, SILENT_FAILURE_MESSAGE } from './CmError';
+import { CmError } from './CmError';
 import type { CmResult } from './CmResult';
 import { CmShellPool } from './CmShellPool';
+import { extractErrorMessage } from './errorMessage';
 import { runCmProcess } from './runCmProcess';
 import { canRunInShell } from './shellCommandLine';
 
@@ -24,12 +25,24 @@ type CommandStartedListener = (command: { args: readonly string[]; cwd: string; 
  * or can be cancelled run as dedicated processes.
  */
 export class CmClient {
-  private readonly shellPool: CmShellPool;
+  private cmPath: string;
+  private shellPool: CmShellPool;
   private readonly logListeners = new Set<CommandLogListener>();
   private readonly startListeners = new Set<CommandStartedListener>();
   private nextCommandId = 1;
 
-  constructor(private readonly cmPath: string) {
+  /** `locate` finds the `cm` executable; it runs again on `relocate()`. */
+  constructor(private readonly locate: () => string) {
+    this.cmPath = locate();
+    this.shellPool = new CmShellPool(this.cmPath);
+  }
+
+  /** Looks for `cm` again, e.g. after the user installed it while the app was running. */
+  relocate(): void {
+    const cmPath = this.locate();
+    if (cmPath === this.cmPath) return;
+    this.shellPool.disposeAll();
+    this.cmPath = cmPath;
     this.shellPool = new CmShellPool(cmPath);
   }
 
@@ -72,15 +85,20 @@ export class CmClient {
     this.startListeners.forEach((listener) => listener({ args, cwd, finished }));
     const result = await finished;
 
-    this.log(args, cwd, startedAt, result, useShell);
+    const entry = this.log(args, cwd, startedAt, result, useShell);
 
     if (result.exitCode !== 0) {
-      throw new CmError(extractErrorMessage(result.output), `cm ${args.join(' ')}`, result.exitCode);
+      throw new CmError(extractErrorMessage(result.output), {
+        commandLine: entry.commandLine,
+        exitCode: entry.exitCode,
+        output: entry.output,
+        logEntryId: entry.id,
+      });
     }
     return result.output;
   }
 
-  private log(args: string[], cwd: string, startedAt: number, result: CmResult, viaShell: boolean): void {
+  private log(args: string[], cwd: string, startedAt: number, result: CmResult, viaShell: boolean): CommandLogEntry {
     const entry: CommandLogEntry = {
       id: this.nextCommandId++,
       commandLine: `cm ${args.join(' ')}`,
@@ -92,10 +110,6 @@ export class CmClient {
       output: result.exitCode === 0 ? '' : result.output.trim(),
     };
     this.logListeners.forEach((listener) => listener(entry));
+    return entry;
   }
-}
-
-function extractErrorMessage(output: string): string {
-  const lines = output.trim().split('\n').map((line) => line.trim()).filter(Boolean);
-  return lines.at(-1)?.replace(/^Error:\s*/, '') ?? SILENT_FAILURE_MESSAGE;
 }

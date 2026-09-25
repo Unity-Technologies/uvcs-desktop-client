@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
 import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
@@ -65,7 +66,7 @@ export function createWorkspacesService({ cm, operations, watcher }: ServiceCont
           onOutputLine: reportProgress,
         });
       } catch (error) {
-        if (error instanceof CmError && error.message.includes('--dontmerge')) throw new Error(UPDATE_NEEDS_MERGE);
+        if (error instanceof CmError && error.message.includes('--dontmerge')) throw error.withMessage(UPDATE_NEEDS_MERGE);
         throw error;
       }
     });
@@ -82,5 +83,17 @@ export function createWorkspacesService({ cm, operations, watcher }: ServiceCont
     });
   }
 
-  return { list, info, repositoriesOf: (paths) => resolveWorkspaceRepositories(cm, paths), findRoot, create, rename, remove, update, watch, switchTo };
+  return {
+    list,
+    info,
+    repositoriesOf: (paths) => resolveWorkspaceRepositories(cm, paths),
+    findMissing: async (paths) => paths.filter((path) => !existsSync(path)),
+    findRoot,
+    create,
+    rename,
+    remove,
+    update,
+    watch,
+    switchTo,
+  };
 }

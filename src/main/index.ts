@@ -12,7 +12,7 @@ import { WorkspaceWatcher } from './watch/WorkspaceWatcher';
 import { installAppMenu } from './window/appMenu';
 import { createMainWindow } from './window/createMainWindow';
 
-const cm = new CmClient(locateCm());
+const cm = new CmClient(locateCm);
 
 function start(): void {
   cm.warmUp();

@@ -1,0 +1,4 @@
+/* Secondary to the dialog's own buttons, so it sits apart on the left. */
+.showInLog {
+  margin-right: auto;
+}

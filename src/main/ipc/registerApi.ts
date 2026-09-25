@@ -1,6 +1,6 @@
 import { ipcMain } from 'electron';
 import type { UvcsApi } from '@shared/api';
-import { INVOKE_CHANNEL, type InvokeRequest, type InvokeResponse } from '@shared/ipc';
+import { INVOKE_CHANNEL, type InvokeRequest, type InvokeResponse, type RemoteError } from '@shared/ipc';
 import { CmError } from '../cm/CmError';
 
 type AnyMethod = (...args: unknown[]) => Promise<unknown>;
@@ -26,8 +26,8 @@ export function registerApi(api: UvcsApi): void {
   });
 }
 
-function toRemoteError(error: unknown): { message: string; commandLine?: string } {
-  if (error instanceof CmError) return { message: error.message, commandLine: error.commandLine };
+function toRemoteError(error: unknown): RemoteError {
+  if (error instanceof CmError) return { message: error.message, command: error.command };
   if (error instanceof Error) return { message: error.message };
   return { message: String(error) };
 }
