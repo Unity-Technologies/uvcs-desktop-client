@@ -1,10 +1,11 @@
 import { Editor } from '@pierre/diffs/edit';
-import { EditProvider, MultiFileDiff } from '@pierre/diffs/react';
+import { EditProvider, File, MultiFileDiff } from '@pierre/diffs/react';
 import { useMemo, useRef } from 'react';
 import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
 import { lineDiffOptions, type ComparisonMethod } from './comparisonMethod';
 import { useDiffPreferences } from './diffPreferencesStore';
-import { pierreDiffOptions, pierreThemeName } from './pierreOptions';
+import { editsWholeFile } from './editsWholeFile';
+import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
 import { useBlockDiscard, type DiscardRequest } from './useBlockDiscard';
 import { useShadowStyle } from './useShadowStyle';
 import { useSyntaxHighlighter } from './useSyntaxHighlighter';
@@ -17,7 +18,7 @@ interface TextDiffProps {
   fileName: string;
   /** Which differences count; the text shown is always the original. */
   comparisonMethod: ComparisonMethod;
-  /** Lets the user type into the modified side. */
+  /** Lets the user type into the modified side (the whole file when the diff has no lines to show). */
   editing?: boolean;
   /** Receives the modified side's text after every edit. */
   onEdit?: (text: string) => void;
@@ -46,6 +47,8 @@ export function TextDiff({ original, modified, fileName, comparisonMethod, editi
     () => ({ ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }), parseDiffOptions, ...discard.options }),
     [theme, layout, collapseUnchanged, wrapLines, parseDiffOptions, discard.options],
   );
+  const wholeFile = useMemo(() => editing && editsWholeFile(original, modified, comparisonMethod), [editing, original, modified, comparisonMethod]);
+  const fileOptions = useMemo(() => pierreFileOptions({ theme, wrapLines }), [theme, wrapLines]);
   const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);
   useShadowStyle(container, SCROLLER_FOCUS_CSS);
 
@@ -56,20 +59,24 @@ export function TextDiff({ original, modified, fileName, comparisonMethod, editi
     <div className={styles.frame}>
       <div ref={container} className={styles.diff} tabIndex={0} role="region" aria-label={`Diff of ${fileName}`} onKeyDown={discard.onKeyDown} onPointerDown={discard.onPointerDown}>
         <EditProvider createEditor={createEditor}>
-          <MultiFileDiff
-            // Pierre computes the diff once per pair of files, whatever the options say later.
-            key={comparisonMethod}
-            oldFile={oldFile}
-            newFile={newFile}
-            options={options}
-            selectedLines={discard.selectedLines}
-            renderGutterUtility={discard.renderGutterUtility}
-            edit={editing}
-            onEditChange={(event) => onEdit?.(event.editor.getText())}
-            onEditComplete={() => 'reject'}
-            disableWorkerPool
-            style={{ minHeight: '100%' }}
-          />
+          {wholeFile ? (
+            <File file={newFile} options={fileOptions} edit onEditChange={(event) => onEdit?.(event.file.contents)} disableWorkerPool style={{ minHeight: '100%' }} />
+          ) : (
+            <MultiFileDiff
+              // Pierre computes the diff once per pair of files, whatever the options say later.
+              key={comparisonMethod}
+              oldFile={oldFile}
+              newFile={newFile}
+              options={options}
+              selectedLines={discard.selectedLines}
+              renderGutterUtility={discard.renderGutterUtility}
+              edit={editing}
+              onEditChange={(event) => onEdit?.(event.editor.getText())}
+              onEditComplete={() => 'reject'}
+              disableWorkerPool
+              style={{ minHeight: '100%' }}
+            />
+          )}
         </EditProvider>
         {discard.overlay}
       </div>
