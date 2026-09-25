@@ -1,0 +1,49 @@
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.searchCount {
+  margin: 0 4px 0 8px;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.focusBanner {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 6px var(--space-4);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--accent-soft);
+  font-size: var(--text-sm);
+}
+
+.clearFocus {
+  display: flex;
+  margin-left: var(--space-1);
+  padding: 2px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+}
+
+.clearFocus:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.spinning {
+  animation: spin 0.8s linear infinite;
+}
