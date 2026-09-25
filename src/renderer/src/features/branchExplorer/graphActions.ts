@@ -2,13 +2,13 @@ import type { MergeKind } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
 import { navigation } from '../../app/navigation/navigationStore';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
-import { diffBranch } from '../branches/branchOperations';
+import { diffBranch, switchToBranch } from '../branches/branchOperations';
 import { toast } from '../../ui/toast/toastStore';
 
 /** Operations started from the Branch Explorer; each one delegates to the view or flow that owns it. */
 export const graphActions = {
   switchToChangeset: (workspacePath: string, id: number) => void switchWorkspace(workspacePath, spec.changeset(id), `changeset ${id}`),
-  switchToBranch: (workspacePath: string, name: string) => void switchWorkspace(workspacePath, spec.branch(name), name),
+  switchToBranch: (workspacePath: string, name: string) => void switchToBranch(workspacePath, name),
   switchToLabel: (workspacePath: string, name: string) => void switchWorkspace(workspacePath, spec.label(name), `label ${name}`),
 
   merge: (kind: MergeKind, sourceSpec: string) => navigation.openPage({ kind: 'merge', request: { kind, sourceSpec } }),

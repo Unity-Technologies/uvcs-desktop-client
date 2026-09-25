@@ -122,6 +122,9 @@ renderer/src/
   default action (what Enter does on the row) plus the row's context menu behind "More actions", then Comment, changed files,
   Details, Attributes, Relations. Selecting a row must stay cheap: `cm diff` runs only on request (`ChangedFilesSection`),
   other lookups wait for the selection to settle (`useSettled`), and immutable results are cached (`IMMUTABLE_QUERY`).
+- **Branch switcher**: groups and orders branches like the official Desktop client (`branchSwitcherGroups`): /main by its
+  well-known GUID, the workspace's recent branches, then the rest newest first. Recent branches are the official client's,
+  read from and written to its `plasticgui.conf` (`main/plasticConfig`) on every switch, so both apps list the same ones.
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in components.
 
 ## Server budget

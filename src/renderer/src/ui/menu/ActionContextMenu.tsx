@@ -17,14 +17,16 @@ interface ActionContextMenuProps {
   /** Built lazily when the menu opens, so it always reflects the current selection. */
   entries: () => MenuEntry[];
   children: ReactNode;
+  /** Where focus goes once the menu closes; back to the row it opened on by default. */
+  onCloseAutoFocus?: (event: Event) => void;
 }
 
-export function ActionContextMenu({ entries, children }: ActionContextMenuProps) {
+export function ActionContextMenu({ entries, children, onCloseAutoFocus }: ActionContextMenuProps) {
   return (
     <ContextMenu.Root modal={false}>
       <ContextMenu.Trigger asChild>{children}</ContextMenu.Trigger>
       <ContextMenu.Portal>
-        <ContextMenu.Content className={styles.content}>
+        <ContextMenu.Content className={styles.content} onCloseAutoFocus={onCloseAutoFocus}>
           <MenuEntries entries={entries()} primitives={primitives} />
         </ContextMenu.Content>
       </ContextMenu.Portal>
