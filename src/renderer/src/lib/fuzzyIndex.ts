@@ -97,10 +97,14 @@ function scoreText(haystack: string, needle: string): number {
   return Math.max(scoreFrom(haystack, needle, 0, nameStart), nameStart > 0 ? scoreFrom(haystack, needle, nameStart, nameStart) : 0);
 }
 
-/** Collects the matched indexes into `positions` when given; ranking leaves it out to avoid allocations. */
+/**
+ * Collects the matched indexes into `positions` when given; ranking leaves it out to avoid allocations.
+ * Starts where the query appears whole, if it does: picking its first letters earlier would break the run.
+ */
 function scoreFrom(haystack: string, needle: string, start: number, nameStart: number, positions?: number[]): number {
   let score = 1;
-  let position = start - 1;
+  const run = haystack.indexOf(needle, start);
+  let position = (run === -1 ? start : run) - 1;
 
   for (const char of needle) {
     const found = haystack.indexOf(char, position + 1);

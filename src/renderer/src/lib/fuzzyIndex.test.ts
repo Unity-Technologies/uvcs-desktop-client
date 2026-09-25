@@ -23,6 +23,11 @@ describe('createFuzzyIndex', () => {
     expect(createFuzzyIndex(texts).rank('pendingchangesview', 1)).toEqual([1]);
   });
 
+  it('prefers the query found whole, even where its first letter shows up earlier', () => {
+    const texts = ['/main/1x00874', '/main/scm1100874'];
+    expect(createFuzzyIndex(texts).rank('100874', 2)).toEqual([1, 0]);
+  });
+
   it('breaks ties with the shorter file name first', () => {
     const texts = ['a/ViewTests.cs', 'a/b/c/View.cs'];
     expect(createFuzzyIndex(texts).rank('view', 2)).toEqual([1, 0]);
@@ -40,6 +45,11 @@ describe('createFuzzyIndex', () => {
 describe('fuzzyMatchPositions', () => {
   it('returns the matched indexes, preferring a run in the file name', () => {
     expect(fuzzyMatchPositions('plastic/src/PendingView.cs', 'pview')).toEqual([12, 19, 20, 21, 22]);
+  });
+
+  it('marks the query where it appears whole, digits inside a name too', () => {
+    expect(fuzzyMatchPositions('/main/scm1100874', '100874')).toEqual([10, 11, 12, 13, 14, 15]);
+    expect(fuzzyMatchPositions('/main/SCM1008742', 'scm1008')).toEqual([6, 7, 8, 9, 10, 11, 12]);
   });
 
   it('returns nothing when the text does not match', () => {
