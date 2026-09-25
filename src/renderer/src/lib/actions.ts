@@ -39,3 +39,19 @@ export function tidyMenu(entries: (MenuEntry | false | null | undefined)[]): Men
 export function withoutAction(entries: MenuEntry[], id: string): MenuEntry[] {
   return tidyMenu(entries.filter((entry) => typeof entry !== 'object' || !('id' in entry) || entry.id !== id));
 }
+
+/** The menu with `before` run ahead of every action but `keep`, e.g. closing the popup that shows it before a dialog opens. */
+export function runningFirst(entries: MenuEntry[], before: () => void, keep: string[] = []): MenuEntry[] {
+  return entries.map((entry) => {
+    if (entry === SEPARATOR) return entry;
+    if (isSubmenu(entry)) return { ...entry, entries: runningFirst(entry.entries, before, keep) };
+    if (keep.includes(entry.id)) return entry;
+    return {
+      ...entry,
+      run: () => {
+        before();
+        entry.run();
+      },
+    };
+  });
+}

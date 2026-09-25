@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchesChangeFilter, offeredTones } from './changeFilter';
+import { countTones, formatToneCount, matchesChangeFilter, offeredTones } from './changeFilter';
 
 describe('offeredTones', () => {
   it('always offers the common statuses and adds the others only when present', () => {
@@ -22,5 +22,19 @@ describe('matchesChangeFilter', () => {
     const filter = { query: '', tones: new Set(['added', 'deleted'] as const) };
     expect(matchesChangeFilter('a', 'deleted', filter)).toBe(true);
     expect(matchesChangeFilter('a', 'changed', filter)).toBe(false);
+  });
+});
+
+describe('countTones', () => {
+  it('counts the changes of each status', () => {
+    expect(countTones(['changed', 'private', 'changed', 'added'])).toEqual(new Map([['changed', 2], ['private', 1], ['added', 1]]));
+  });
+});
+
+describe('formatToneCount', () => {
+  it('groups thousands, then shortens to k', () => {
+    expect(formatToneCount(3)).toBe('3');
+    expect(formatToneCount(3000)).toBe('3,000');
+    expect(formatToneCount(12_345)).toBe('12k');
   });
 });

@@ -1,12 +1,30 @@
-import type { ReactNode } from 'react';
+import { createContext, useContext, type ReactNode } from 'react';
+import { isMac } from '../../lib/platform';
 import styles from './SidebarNav.module.css';
 
+/** Wide enough for the macOS window buttons, which sit over the rail's top. */
+const RAIL_WIDTH = isMac ? 76 : 56;
+
+const RailContext = createContext(false);
+
+/** Whether the sidebar around shows as its icon rail: items show their icon only, with their label as a tooltip. */
+export function useInRail(): boolean {
+  return useContext(RailContext);
+}
+
+interface SidebarProps {
+  children: ReactNode;
+  width?: number;
+  /** Folded into a rail of icons. */
+  rail?: boolean;
+}
+
 /** The column that holds an app sidebar: a draggable title-bar area, then the content. */
-export function Sidebar({ children, width = 216 }: { children: ReactNode; width?: number }) {
+export function Sidebar({ children, width = 216, rail = false }: SidebarProps) {
   return (
-    <nav className={styles.sidebar} style={{ width }}>
+    <nav className={styles.sidebar} data-rail={rail} style={{ width: rail ? RAIL_WIDTH : width }}>
       <div className={styles.dragRegion} />
-      {children}
+      <RailContext.Provider value={rail}>{children}</RailContext.Provider>
     </nav>
   );
 }
@@ -32,12 +50,26 @@ interface NavItemProps {
   active?: boolean;
   /** Active, but a page is open on top of it. */
   dimmed?: boolean;
+  /** Keyboard shortcut shown in the rail's tooltip. */
+  shortcut?: string;
   onClick: () => void;
 }
 
-export function NavItem({ icon, label, detail, badge, dot = false, active = false, dimmed = false, onClick }: NavItemProps) {
+export function NavItem({ icon, label, detail, badge, dot = false, active = false, dimmed = false, shortcut, onClick }: NavItemProps) {
+  const rail = useInRail();
+  const tip = rail ? [label, detail, badge ? `${badge}` : undefined].filter(Boolean).join(' · ') : undefined;
+
   return (
-    <button type="button" className={styles.item} data-active={active} data-dimmed={dimmed} onClick={onClick}>
+    <button
+      type="button"
+      className={styles.item}
+      data-active={active}
+      data-dimmed={dimmed}
+      data-tip={tip}
+      data-tip-shortcut={rail ? shortcut : undefined}
+      aria-label={rail ? label : undefined}
+      onClick={onClick}
+    >
       <span className={styles.icon}>{icon}</span>
       <span className={styles.label}>{label}</span>
       {detail && <span className={styles.detail}>{detail}</span>}

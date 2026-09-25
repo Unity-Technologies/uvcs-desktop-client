@@ -10,7 +10,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { SegmentedControl } from '../../ui/SegmentedControl';
-import { CenteredSpinner } from '../../ui/Spinner';
+import { ListSkeleton } from '../../ui/Skeleton';
 import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { useChangeset } from '../changesets/useChangeset';
@@ -25,8 +25,13 @@ import { HiddenCheckedNotice, NoFilterMatches } from './FilterNotices';
 import { LockedByOthersNotice } from './locks/LockedByOthersNotice';
 import { RefreshButton } from './RefreshButton';
 import { usePendingLocks } from './locks/usePendingLocks';
+import { useIncomingSummary } from '../incoming/useIncomingSummary';
 import { ReviewModeButton } from '../review/ReviewModeButton';
+import { reviewProgress } from '../review/reviewStatus';
 import { usePendingReview } from './review/usePendingReview';
+import { BulkPrivateNotice, confirmBulkPrivateCheckin } from './BulkPrivateNotice';
+import { bulkPrivateFiles } from './bulkPrivate';
+import { behindBranch, behindDescription } from './checkinBehind';
 import { mergeSourceChangeset, uploadSize } from './checkinButton';
 import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinChanges, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
@@ -37,8 +42,10 @@ import { moveToChangelist } from './changelistOperations';
 import { changeTone } from './changeTone';
 import { checkinComment, useCheckinDraft, useCheckinDraftStore } from './checkinDraftStore';
 import { pendingChangeMenu } from './pendingChangeMenu';
-import { openWithDefaultApp, undoChanges } from './pendingChangeOperations';
+import { addFilterRule, openWithDefaultApp, undoChanges } from './pendingChangeOperations';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
+import { SuccessCard } from './SuccessCard';
+import { isOutlivedByChanges, successMomentLeft, useSuccessMomentStore } from './successMoment';
 import { usePendingChanges } from './usePendingChanges';
 import styles from './PendingChangesView.module.css';
 
@@ -49,6 +56,7 @@ export function PendingChangesView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
   const { data: snapshot, isLoading, isFetching, isPlaceholderData, dataUpdatedAt, error } = usePendingChanges();
+  const { data: incomingSummary } = useIncomingSummary();
   const settings = useSettings();
   const { layout, setLayout, grouping, setGrouping } = usePendingChangesViewStore();
   const draft = useCheckinDraft(workspacePath);
@@ -72,13 +80,18 @@ export function PendingChangesView() {
   const included = allChanges.filter(isIncluded);
   const shown = new Set(changes);
   const hiddenIncludedCount = included.filter((change) => !shown.has(change)).length;
+  const branchName = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
   const rejectedCheckin = useCheckinAfterUpdateStore((state) => state.rejected[workspacePath]);
   const forgetRejectedCheckin = useCheckinAfterUpdateStore((state) => state.forget);
   const checkinAfterUpdate = checkinAfterUpdateMessage(
     rejectedCheckin,
-    { branch: workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined, loadedChangeset: workspace?.loadedChangeset },
+    { branch: branchName, loadedChangeset: workspace?.loadedChangeset },
     included.length,
   );
+  const bulkPrivate = bulkPrivateFiles(included);
+  const reviewed = reviewProgress(included, review.statusOf);
+  const successMoment = useSuccessMomentStore((state) => state.moments[workspacePath]);
+  const clearSuccessMoment = useSuccessMomentStore((state) => state.clear);
   const selectedCount = changes.filter((change) => selection.selected.has(changeKey(change))).length;
   const changelists = snapshot?.changelists ?? [];
   const rows = buildChangeRows({ changes, changelists, layout, grouping, isChecked: isIncluded, collapsed });
@@ -86,6 +99,13 @@ export function PendingChangesView() {
   const mergeChanges = allChanges.filter((change) => change.mergeInfo);
   const { data: mergeSource } = useChangeset(mergeSourceChangeset(mergeChanges));
   const firstChangeKey = rows.find((row) => row.type === 'change')?.key;
+  // Checking in completes a pending merge as it is; updating first is for plain check-ins.
+  const behind = mergeChanges.length > 0 ? null : behindBranch(incomingSummary, branchName);
+
+  // The next change ends the success moment, even before its time is up.
+  useEffect(() => {
+    if (successMoment && isOutlivedByChanges(successMoment, dataUpdatedAt, allChanges.length)) clearSuccessMoment(workspacePath);
+  }, [successMoment, dataUpdatedAt, allChanges.length]);
 
   // Keep something selected, so the diff pane is useful from the start and after the selected file goes away.
   useEffect(() => {
@@ -119,8 +139,15 @@ export function PendingChangesView() {
   };
 
   const checkin = async (): Promise<boolean> => {
+    if (bulkPrivate && !(await confirmBulkPrivateCheckin(bulkPrivate))) return false;
     const done = await runBusy(() =>
-      checkinChanges({ workspacePath, changes: included, comment: checkinComment(draft), warnOnEmptyComment: settings.warnOnEmptyComment }),
+      checkinChanges({
+        workspacePath,
+        changes: included,
+        comment: checkinComment(draft),
+        warnOnEmptyComment: settings.warnOnEmptyComment,
+        updateFirst: behind !== null,
+      }),
     );
     if (done) {
       reset(workspacePath);
@@ -160,7 +187,7 @@ export function PendingChangesView() {
     </ViewHeader>
   );
 
-  if (isLoading) return <>{header}<CenteredSpinner /></>;
+  if (isLoading) return <>{header}<ListSkeleton rowHeight={28} /></>;
   if (error) return <>{header}<EmptyState title="Couldn't read pending changes" description={error.message} /></>;
 
   if (snapshot?.changes.length === 0) {
@@ -168,12 +195,21 @@ export function PendingChangesView() {
       <>
         {header}
         <LeftChangesBanner />
-        <EmptyState
-          icon={<CheckCircle2 size={24} />}
-          title="No pending changes"
-          description={`Your workspace matches ${workspace?.selector.name ?? 'the repository'}. Changes you make to files show up here automatically.`}
-          action={workspace?.selector.kind === 'branch' && <MergeTaskSuggestion workspacePath={workspacePath} branchName={workspace.selector.name} />}
-        />
+        {successMoment && workspace && successMomentLeft(successMoment, Date.now()) > 0 ? (
+          <SuccessCard
+            moment={successMoment}
+            repositoryName={workspace.repositoryName}
+            server={workspace.server}
+            onDone={() => clearSuccessMoment(workspacePath)}
+          />
+        ) : (
+          <EmptyState
+            icon={<CheckCircle2 size={24} />}
+            title="No pending changes"
+            description={`Your workspace matches ${workspace?.selector.name ?? 'the repository'}. Changes you make to files show up here automatically.`}
+            action={workspace?.selector.kind === 'branch' && <MergeTaskSuggestion workspacePath={workspacePath} branchName={workspace.selector.name} />}
+          />
+        )}
       </>
     );
   }
@@ -232,6 +268,13 @@ export function PendingChangesView() {
             )}
             {hiddenIncludedCount > 0 && <HiddenCheckedNotice count={hiddenIncludedCount} onClear={clearFilter} />}
             <LockedByOthersNotice changes={included} locks={locks} />
+            {bulkPrivate && (
+              <BulkPrivateNotice
+                bulk={bulkPrivate}
+                onExclude={() => setIncludedChanges(bulkPrivate.changes, false)}
+                onIgnoreFolder={(folder) => void addFilterRule(workspacePath, 'ignore', `/${folder}`)}
+              />
+            )}
             {checkinAfterUpdate && (
               <CheckinAfterUpdateNotice
                 message={checkinAfterUpdate}
@@ -248,6 +291,9 @@ export function PendingChangesView() {
               uploadBytes={uploadSize(included)}
               branchName={workspace?.selector.name ?? ''}
               merging={mergeChanges.length > 0}
+              behindCount={behind?.count ?? 0}
+              behindDescription={behind && behindDescription(behind)}
+              allReviewed={review.on && reviewed.total > 0 && reviewed.reviewed === reviewed.total}
               recentComments={settings.recentComments}
               busy={busy}
               onCheckin={checkin}

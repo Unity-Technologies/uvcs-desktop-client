@@ -8,6 +8,7 @@ const summary = (changesetCount: number, branch: string | null = '/main'): Incom
   loadedChangeset: 10,
   headChangeset: 10 + changesetCount,
   changesetCount,
+  authors: [],
 });
 const changes = (conflicts: number, blocked = 0, headChangeset = 13): IncomingChanges => ({
   ...summary(3),

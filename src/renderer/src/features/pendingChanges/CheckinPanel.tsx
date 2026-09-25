@@ -1,5 +1,5 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { Archive, Check, ChevronDown, GitCommitHorizontal, GitMerge, History } from 'lucide-react';
+import { Archive, ArrowDownToLine, Check, ChevronDown, GitCommitHorizontal, GitMerge, History } from 'lucide-react';
 import { useState } from 'react';
 import type { Icon } from '../../lib/actions';
 import { useShortcut } from '../../lib/useShortcut';
@@ -27,6 +27,12 @@ interface CheckinPanelProps {
   branchName: string;
   /** A merge is pending: checking in completes it. */
   merging: boolean;
+  /** Changesets on the branch the workspace doesn't have: checking in updates first. */
+  behindCount: number;
+  /** Under the button while behind, e.g. "1 new changeset from Ana on this branch". */
+  behindDescription: string | null;
+  /** Review mode is on and every included change is reviewed. */
+  allReviewed: boolean;
   recentComments: string[];
   busy: boolean;
   onCheckin: () => Promise<boolean>;
@@ -43,6 +49,9 @@ export function CheckinPanel({
   uploadBytes,
   branchName,
   merging,
+  behindCount,
+  behindDescription,
+  allReviewed,
   recentComments,
   busy,
   onCheckin,
@@ -53,7 +62,8 @@ export function CheckinPanel({
   const disabledReason = checkinDisabledReason(mode, includedCount);
   const canAct = disabledReason === null && !busy;
   const { icon: ModeIcon } = describeMode(mode);
-  const label = checkinButtonLabel({ mode, includedCount, branchName, uploadBytes, merging });
+  const label = checkinButtonLabel({ mode, includedCount, branchName, uploadBytes, merging, behindCount, allReviewed });
+  const updatesFirst = mode === 'checkin' && includedCount > 0 && behindCount > 0 && !merging;
 
   // A shelve is a detour: once it's done, the panel is back to checking in.
   const act = async (): Promise<void> => {
@@ -99,7 +109,7 @@ export function CheckinPanel({
         <Button
           variant="primary"
           className={styles.act}
-          icon={merging && mode === 'checkin' ? <GitMerge size={14} /> : <ModeIcon size={14} />}
+          icon={merging && mode === 'checkin' ? <GitMerge size={14} /> : updatesFirst ? <ArrowDownToLine size={14} /> : <ModeIcon size={14} />}
           aria-disabled={!canAct}
           data-tip={disabledReason ?? label.tip}
           data-tip-shortcut={canAct ? 'mod+enter' : undefined}
@@ -132,6 +142,7 @@ export function CheckinPanel({
           </DropdownMenu.Portal>
         </DropdownMenu.Root>
       </div>
+      {updatesFirst && behindDescription && <div className={styles.behind}>{behindDescription}</div>}
     </div>
   );
 }

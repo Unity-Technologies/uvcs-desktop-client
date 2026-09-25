@@ -20,6 +20,18 @@ export function offeredTones(present: ReadonlySet<StatusTone>): StatusTone[] {
   return TONE_ORDER.filter((tone) => ALWAYS_OFFERED.has(tone) || present.has(tone));
 }
 
+/** How many changes have each status, for the counts on the chips. */
+export function countTones(tones: readonly StatusTone[]): Map<StatusTone, number> {
+  const counts = new Map<StatusTone, number>();
+  for (const tone of tones) counts.set(tone, (counts.get(tone) ?? 0) + 1);
+  return counts;
+}
+
+/** A chip's count, short enough for a narrow list: `3`, `3,000`, `12k`. */
+export function formatToneCount(count: number): string {
+  return count < 10_000 ? count.toLocaleString('en-US') : `${Math.floor(count / 1000)}k`;
+}
+
 export function matchesChangeFilter(path: string, tone: StatusTone, { query, tones }: ChangeFilter): boolean {
   return (tones.size === 0 || tones.has(tone)) && path.toLowerCase().includes(query.trim().toLowerCase());
 }

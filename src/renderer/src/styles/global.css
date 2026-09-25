@@ -90,6 +90,8 @@ textarea:focus-visible {
   cursor: text;
 }
 
+/* Shared keyframes: reference them from CSS modules through the --keyframes-* tokens. */
+
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -106,5 +108,44 @@ textarea:focus-visible {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+/* A view or page arriving: fades in while rising a few pixels. */
+@keyframes view-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* A list row that just appeared (a new pending change): fades in over a brief accent tint. */
+@keyframes row-enter {
+  from {
+    opacity: 0;
+    background-color: var(--accent-soft);
+  }
+  40% {
+    opacity: 1;
+    background-color: var(--accent-soft);
+  }
+}
+
+/* Skeletons breathing while their content loads. */
+@keyframes pulse {
+  from {
+    opacity: 0.45;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-instant: 0ms;
+    --duration-fast: 0ms;
+    --duration-normal: 0ms;
+    --duration-slow: 0ms;
   }
 }

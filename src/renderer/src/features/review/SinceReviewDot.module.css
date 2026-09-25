@@ -4,7 +4,7 @@
   height: 6px;
   border-radius: var(--radius-full);
   background: var(--status-changed);
-  animation: var(--keyframes-fade-in) var(--duration-normal);
+  animation: var(--keyframes-fade-in) var(--duration-normal) var(--ease-out);
 }
 
 @media (prefers-reduced-motion: reduce) {

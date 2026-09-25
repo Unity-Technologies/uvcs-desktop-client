@@ -1,5 +1,6 @@
 import { avatarImageFor } from '../../../lib/avatars/avatarImages';
-import { initials, userHue } from '../../../lib/userName';
+import { stableHue } from '../../../lib/stableHue';
+import { initials } from '../../../lib/userName';
 
 interface AvatarStyle {
   x: number;
@@ -32,7 +33,7 @@ export function drawAvatar(ctx: CanvasRenderingContext2D, style: AvatarStyle): v
 
   ctx.beginPath();
   ctx.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.fillStyle = `hsl(${userHue(style.owner)} 52% 50%)`;
+  ctx.fillStyle = `hsl(${stableHue(style.owner)} 52% 50%)`;
   ctx.fill();
 
   const image = avatarImageFor(style.owner);

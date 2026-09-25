@@ -21,4 +21,13 @@ describe('lineChangeStats', () => {
   it('counts insertions and deletions in different places', () => {
     expect(lineChangeStats('a\nb\nc\nd\n', 'x\na\nb\nd\ny\n')).toEqual({ added: 2, removed: 1 });
   });
+
+  it('counts only the changes the comparison method recognizes', () => {
+    const original = 'a\n  b\nc\n';
+    const modified = 'a\r\n\tb\r\nC\r\n';
+    expect(lineChangeStats(original, modified)).toEqual({ added: 3, removed: 3 });
+    expect(lineChangeStats(original, modified, 'ignoreEol')).toEqual({ added: 2, removed: 2 });
+    expect(lineChangeStats(original, modified, 'ignoreWhitespace')).toEqual({ added: 3, removed: 3 });
+    expect(lineChangeStats(original, modified, 'ignoreEolAndWhitespace')).toEqual({ added: 1, removed: 1 });
+  });
 });

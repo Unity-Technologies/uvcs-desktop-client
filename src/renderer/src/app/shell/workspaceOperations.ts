@@ -2,28 +2,33 @@ import type { PendingChangesAction } from '@shared/domain/switchWithChanges';
 import { api } from '../../api/client';
 import { askSwitchWithChanges } from '../../features/branches/SwitchWithChangesDialog';
 import { planSwitch } from '../../features/branches/switchOptions';
-import { explainUpdateConflicts } from '../../features/incoming/updateOperations';
+import { explainUpdateConflicts, showUpdatedMoment } from '../../features/incoming/updateOperations';
 import { recheckIncoming } from '../../features/incoming/useIncomingSummary';
 import { toast } from '../../ui/toast/toastStore';
 import { refuseWhileBusy, runAction, runOperation } from '../operations/runOperation';
 import { switchToast } from './switchToast';
 
-export function updateWorkspace(workspacePath: string): Promise<void | undefined> {
-  return runOperation({
+/** Resolves to whether it updated. */
+export async function updateWorkspace(workspacePath: string): Promise<boolean> {
+  const updated = await runOperation({
     title: 'Updating workspace',
     workspacePath,
     kind: 'update',
-    run: (operationId) => api.workspaces.update(workspacePath, operationId),
+    run: async (operationId) => {
+      await api.workspaces.update(workspacePath, operationId);
+      return true;
+    },
     successMessage: () => 'Workspace is up to date',
     onFailure: explainUpdateConflicts,
   });
+  return updated === true;
 }
 
 /** Updates the workspace, after asking the server whether there is anything new; says so when there isn't. */
 export async function updateUnlessUpToDate(workspacePath: string): Promise<void> {
   const summary = await recheckIncoming(workspacePath).catch(() => undefined);
   if (summary?.branch && summary.changesetCount === 0) toast.info('Already up to date', `Your workspace has everything on ${summary.branch}.`);
-  else await updateWorkspace(workspacePath);
+  else if ((await updateWorkspace(workspacePath)) && summary) showUpdatedMoment(workspacePath, summary);
 }
 
 /**

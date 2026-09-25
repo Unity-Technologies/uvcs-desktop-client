@@ -8,7 +8,7 @@ import { useRunningOperation } from '../../app/operations/runningOperationsStore
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { PathLabel } from '../../components/PathLabel';
 import { workingObjectName } from '../../components/workingObject';
-import type { Icon } from '../../lib/actions';
+import { runningFirst, type Icon } from '../../lib/actions';
 import { Button } from '../../ui/Button';
 import { ringValue } from '../../app/operations/progressBar';
 import { ProgressRing } from '../../ui/ProgressRing';
@@ -19,7 +19,7 @@ import { BranchSearchList } from './BranchSearchList';
 import { branchSwitcherGroups } from './branchSwitcherGroups';
 import { useBranchSwitcher } from './branchSwitcherStore';
 import { newBranchFromWorkspace } from './newBranchFromWorkspace';
-import { useRecentBranches } from './recentBranchesStore';
+import { useRecentBranchGuids } from './recentBranches';
 import { useBranches } from './useBranches';
 import { useWorkingObjectComment } from './useWorkingObjectComment';
 import styles from './WorkingObjectButton.module.css';
@@ -77,9 +77,9 @@ function workingObjectTitle(selector: WorkspaceSelector): string {
 
 function BranchSwitcher({ workspace, onDone }: { workspace: WorkspaceInfo; onDone: () => void }) {
   const { data: branches = [] } = useBranches();
-  const recentNames = useRecentBranches(workspace.path);
+  const recentGuids = useRecentBranchGuids(workspace.path);
   const currentBranch = workspace.selector.kind === 'branch' ? workspace.selector.name : undefined;
-  const groups = useMemo(() => branchSwitcherGroups(branches, recentNames), [branches, recentNames]);
+  const groups = useMemo(() => branchSwitcherGroups(branches, recentGuids), [branches, recentGuids]);
 
   const pick = (branch: Branch): void => {
     onDone();
@@ -92,7 +92,8 @@ function BranchSwitcher({ workspace, onDone }: { workspace: WorkspaceInfo; onDon
       currentBranch={currentBranch}
       placeholder="Switch to branch…"
       onPick={pick}
-      menu={(branch) => branchMenu(workspace.path, [branch], currentBranch)}
+      // Actions close the popup first (dialogs and pages open without it on top); copying keeps it open.
+      menu={(branch) => runningFirst(branchMenu(workspace.path, [branch], currentBranch), onDone, ['copy', 'copySpec'])}
       action={
         <Button
           size="small"

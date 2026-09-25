@@ -1,0 +1,23 @@
+.mark {
+  display: block;
+  flex: none;
+}
+
+.from {
+  stop-color: var(--accent-hover);
+}
+
+.to {
+  stop-color: var(--accent);
+}
+
+.glyph {
+  fill: none;
+  stroke: var(--accent-contrast);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.glyph circle {
+  fill: var(--accent);
+}

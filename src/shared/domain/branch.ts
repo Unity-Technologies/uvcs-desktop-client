@@ -19,3 +19,6 @@ export interface CreateBranchRequest {
   startingPoint?: string;
   comment: string;
 }
+
+/** Every repository's `/main` has this GUID, whatever it's called: the official client's "Main branch". */
+export const MAIN_BRANCH_GUID = '5fc2d7c8-05e1-4987-9dd9-74eaec7c27eb';

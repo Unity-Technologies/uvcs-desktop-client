@@ -6,12 +6,13 @@ import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { SearchField } from '../../ui/SearchField';
-import { CenteredSpinner } from '../../ui/Spinner';
+import { ListSkeleton } from '../../ui/Skeleton';
 import { ViewHeader } from '../../ui/ViewHeader';
-import { useRepositories, useWorkspaceList, useRecentWorkspaceRepositories } from '../workspace/workspaceQueries';
+import { useRepositories } from '../workspace/workspaceQueries';
 import { openCreateRepositoryDialog } from './dialogs/CreateRepositoryDialog';
 import { openCreateWorkspaceDialog } from './dialogs/CreateWorkspaceDialog';
 import { RepositoryRow } from './RepositoryRow';
+import { useWorkspaceEntries } from './useWorkspaceEntries';
 import styles from './Home.module.css';
 
 interface RepositoriesPanelProps {
@@ -22,12 +23,11 @@ interface RepositoriesPanelProps {
 export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
   const [filter, setFilter] = useState('');
   const { data: repositories, isLoading, isFetching, error, refetch } = useRepositories(server);
-  const { data: workspaces } = useWorkspaceList();
-  const { data: workspaceRepositories } = useRecentWorkspaceRepositories(workspaces);
+  const { all: workspaceEntries } = useWorkspaceEntries('');
 
   const shown = (repositories ?? []).filter((repository) => repository.name.toLowerCase().includes(filter.toLowerCase()));
   const workspacesOf = (repository: RepositorySummary) =>
-    (workspaces ?? []).filter((workspace) => workspaceRepositories?.[workspace.path] === repository.spec);
+    workspaceEntries.filter((entry) => entry.repository === repository.spec).map((entry) => entry.workspace);
   const createWorkspace = (repository: RepositorySummary): void => openCreateWorkspaceDialog({ repository, onCreated: onOpen });
 
   return (
@@ -49,7 +49,7 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
       </ViewHeader>
 
       <div className={styles.list}>
-        {isLoading && <CenteredSpinner />}
+        {isLoading && <ListSkeleton rowHeight={48} />}
         {error && (
           <EmptyState
             title={`Couldn't reach ${server}`}
