@@ -30,6 +30,6 @@ export function fetchBranch(workspacePath: string, name: string) {
   return queryClient.fetchQuery({ ...branchQuery(workspacePath, name), staleTime: SLOW_CHANGING_QUERY.staleTime });
 }
 
-function branchQuery(workspacePath: string, name: string) {
+export function branchQuery(workspacePath: string, name: string) {
   return { queryKey: queryKeys.inWorkspace(workspacePath, 'branches', 'byName', name), queryFn: () => api.branches.get(workspacePath, name) };
 }
