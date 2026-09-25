@@ -5,13 +5,17 @@
   "description": "A modern desktop client for Unity Version Control, powered by the cm CLI.",
   "private": true,
   "main": "out/main/index.js",
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
     "start": "electron-vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
-    "app:debug": "electron . --remote-debugging-port=${UVCS_CDP_PORT:-9333}"
+    "app:debug": "electron . --remote-debugging-port=${UVCS_CDP_PORT:-9333}",
+    "postinstall": "install-electron"
   },
   "devDependencies": {
     "@playwright/cli": "^0.1.21",

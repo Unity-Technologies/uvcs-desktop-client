@@ -1,24 +1,30 @@
 # Unity Version Control — Desktop
 
 A fast, modern desktop client for Unity Version Control (Plastic SCM), built with Electron, React and TypeScript.
-It has no backend of its own: every operation is a `cm` command, so it works with any server your `cm` is configured for.
+It has no backend of its own: every operation is a `cm` command, so it works with any server your `cm` can reach.
 
 ## Requirements
 
-- Unity Version Control installed, with `cm` on your `PATH` (or set `UVCS_CM_PATH`), signed in at least once.
-- Node.js 22+.
+- **Node.js 22.12 or newer.**
+- **Unity Version Control** installed, and signed in at least once (open the official client or run `cm` once).
+  The app finds `cm` in the standard install locations and on your `PATH`; set `UVCS_CM_PATH` to use another one.
 
-## Develop
+## Run it
 
 ```sh
-npm install
-npm run dev          # app with hot reload
-npm run typecheck
-npm test
-npm run build && npm start
+git clone https://github.com/danipen/uvcs-desktop-client.git
+cd uvcs-desktop-client
+npm install      # also downloads the Electron binary
+npm run dev      # starts the app with hot reload
 ```
 
-Every `cm` command the app runs is visible in the command log (⌘⇧L). Open the command palette with ⌘K;
-⌘/ lists all keyboard shortcuts.
+## Other commands
 
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for how the code is organized.
+| Command                      | What it does                                   |
+| ---------------------------- | ---------------------------------------------- |
+| `npm run build && npm start` | Builds the app into `out/` and runs that build |
+| `npm run typecheck`          | Type-checks the main and renderer code         |
+| `npm test`                   | Runs the unit tests                            |
+
+In the app, ⌘K searches everything, ⌘/ lists the keyboard shortcuts, and ⌘⇧L shows every `cm` command it ran (Ctrl on Windows and Linux).
+[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains how the code is organized.
