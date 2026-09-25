@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { QueryFilter } from '@shared/domain/query';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
-import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
+import { queryClient, SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { compactFilter } from '../../lib/compactFilter';
 
@@ -22,9 +22,14 @@ export function useBranches(filter: QueryFilter = {}) {
 /** One branch by name, without reading the whole list. */
 export function useBranch(name: string) {
   const workspacePath = useWorkspacePath();
-  return useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'branches', 'byName', name),
-    queryFn: () => api.branches.get(workspacePath, name),
-    ...SLOW_CHANGING_QUERY,
-  });
+  return useQuery({ ...branchQuery(workspacePath, name), ...SLOW_CHANGING_QUERY });
+}
+
+/** The same branch for code outside components; shares the cache (and a read in flight) with `useBranch`. */
+export function fetchBranch(workspacePath: string, name: string) {
+  return queryClient.fetchQuery({ ...branchQuery(workspacePath, name), staleTime: SLOW_CHANGING_QUERY.staleTime });
+}
+
+function branchQuery(workspacePath: string, name: string) {
+  return { queryKey: queryKeys.inWorkspace(workspacePath, 'branches', 'byName', name), queryFn: () => api.branches.get(workspacePath, name) };
 }
