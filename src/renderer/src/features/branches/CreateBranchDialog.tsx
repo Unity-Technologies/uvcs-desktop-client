@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import type { PendingChangesAction, SwitchPreflight } from '@shared/domain/switchWithChanges';
 import { api } from '../../api/client';
-import { runVoidAction } from '../../app/operations/runOperation';
 import { invalidateWorkspace } from '../../app/queryClient';
+import { isAffectedByNewBranch } from '../../app/refresh/refreshScopes';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
@@ -60,19 +60,16 @@ function CreateBranchDialog({ workspacePath, origins, onClose }: { workspacePath
   const create = async (): Promise<void> => {
     if (!name.trim() || error) return;
     setCreating(true);
-    const createBranch = () => api.branches.create(workspacePath, { name: fullName, startingPoint: origin.startingPoint, comment });
-    // Switching right away refreshes every view when done: refreshing for the new branch before would be wasted.
-    const switching = switchAfter && !blockedByMerge;
-    const created = switching ? await createWithoutRefresh(createBranch) : await runVoidAction(workspacePath, "Couldn't create the branch", createBranch);
+    const created = await createBranch(() => api.branches.create(workspacePath, { name: fullName, startingPoint: origin.startingPoint, comment }));
     setCreating(false);
     if (!created) return;
 
     onClose();
-    if (!switchAfter) return;
-    const switched = switching && (await switchToBranch(workspacePath, fullName, action ?? undefined));
+    // Switching refreshes every view when done; otherwise only the branch lists need to.
+    const switched = switchAfter && !blockedByMerge && (await switchToBranch(workspacePath, fullName, action ?? undefined));
     if (switched) return;
-    if (switching) void invalidateWorkspace(workspacePath);
-    announceNotSwitched(workspacePath, fullName, pending?.preflight.sourceName);
+    void invalidateWorkspace(workspacePath, isAffectedByNewBranch);
+    if (switchAfter) announceNotSwitched(workspacePath, fullName, pending?.preflight.sourceName);
   };
 
   return (
@@ -146,9 +143,9 @@ function usePendingChangesPlan(workspacePath: string, parentBranch: string): Pen
   return state;
 }
 
-async function createWithoutRefresh(createBranch: () => Promise<void>): Promise<boolean> {
+async function createBranch(create: () => Promise<void>): Promise<boolean> {
   try {
-    await createBranch();
+    await create();
     return true;
   } catch (error) {
     toast.error("Couldn't create the branch", error);

@@ -45,6 +45,11 @@ export function isAffectedByOwnCheckin(key: QueryKey): boolean {
   return !UNTOUCHED_BY_CHECKINS.includes(area(key) as string);
 }
 
+/** A branch was created: the lists of branches, not what the workspace has loaded. */
+export function isAffectedByNewBranch(key: QueryKey): boolean {
+  return area(key) === 'branches' || area(key) === 'branchExplorer';
+}
+
 /** Changes were shelved, and stay in the workspace: only the lists of shelves change. */
 export function isAffectedByShelving(key: QueryKey): boolean {
   return area(key) === 'shelves';

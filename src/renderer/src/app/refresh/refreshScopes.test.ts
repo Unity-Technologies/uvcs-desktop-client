@@ -3,6 +3,7 @@ import {
   isAffectedByFileChanges,
   isAffectedByLoadedChangeset,
   isAffectedByMovedPaths,
+  isAffectedByNewBranch,
   isAffectedByNewChangesets,
   isAffectedByOwnCheckin,
   isAffectedByShelving,
@@ -67,5 +68,12 @@ describe('refresh scopes', () => {
     expect(isAffectedByShelving(key('shelves', { owner: 'me' }))).toBe(true);
     expect(isAffectedByShelving(key('pendingChanges'))).toBe(false);
     expect(isAffectedByShelving(key('info'))).toBe(false);
+  });
+
+  it('refreshes the branch lists and the Branch Explorer when a branch is created', () => {
+    expect(isAffectedByNewBranch(key('branches', {}))).toBe(true);
+    expect(isAffectedByNewBranch(key('branchExplorer', { sinceDate: '2026-08-26' }))).toBe(true);
+    expect(isAffectedByNewBranch(key('pendingChanges'))).toBe(false);
+    expect(isAffectedByNewBranch(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(false);
   });
 });
