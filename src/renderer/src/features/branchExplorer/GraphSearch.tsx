@@ -11,7 +11,7 @@ interface GraphSearchProps {
   onStep: (direction: 1 | -1) => void;
 }
 
-/** Finds changesets by number, comment, author, branch or label; Enter steps through the matches. */
+/** Finds changesets by number, comment or author, and branches and labels by name; Enter steps through the matches. */
 export function GraphSearch({ search, onSearchChange, position, onStep }: GraphSearchProps) {
   return (
     <div
@@ -29,7 +29,7 @@ export function GraphSearch({ search, onSearchChange, position, onStep }: GraphS
           <IconButton size="small" icon={<ChevronDown size={14} />} label="Next match" shortcut="enter" onClick={() => onStep(1)} />
         </>
       )}
-      <SearchField value={search} onChange={onSearchChange} placeholder="Find changesets…" width={220} />
+      <SearchField value={search} onChange={onSearchChange} placeholder="Find in graph…" width={220} />
     </div>
   );
 }

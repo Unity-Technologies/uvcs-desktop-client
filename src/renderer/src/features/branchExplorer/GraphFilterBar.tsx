@@ -5,6 +5,7 @@ import { displayName } from '../../lib/userName';
 import { Button } from '../../ui/Button';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { useBranchExplorerPreferences } from './branchExplorerStore';
+import { ZOOM_STEP } from './canvas/zoom';
 import { DATE_RANGES } from './model/dateRanges';
 import styles from './BranchExplorerView.module.css';
 
@@ -15,8 +16,6 @@ interface GraphFilterBarProps {
   onFit: () => void;
   onGoHome: () => void;
 }
-
-const ZOOM_STEP = 1.25;
 
 /** Compact dropdowns for what to show: branches, authors, time range and view options. */
 export function GraphFilterBar({ authors, onZoom, onFit, onGoHome }: GraphFilterBarProps) {
@@ -59,7 +58,7 @@ export function GraphFilterBar({ authors, onZoom, onFit, onGoHome }: GraphFilter
     { id: 'avatars', label: 'Show avatars', icon: check(preferences.showAvatars), run: () => set({ showAvatars: !preferences.showAvatars }) },
     { id: 'details', label: 'Show details panel', icon: check(preferences.detailsOpen), run: () => set({ detailsOpen: !preferences.detailsOpen }) },
     SEPARATOR,
-    { id: 'zoomIn', label: 'Zoom in', shortcut: '+', run: () => onZoom(ZOOM_STEP) },
+    { id: 'zoomIn', label: 'Zoom in', shortcut: 'plus', run: () => onZoom(ZOOM_STEP) },
     { id: 'zoomOut', label: 'Zoom out', shortcut: '-', run: () => onZoom(1 / ZOOM_STEP) },
     { id: 'fit', label: 'Fit to window', shortcut: '0', run: onFit },
     { id: 'home', label: 'Go to workspace changeset', shortcut: 'h', run: onGoHome },
