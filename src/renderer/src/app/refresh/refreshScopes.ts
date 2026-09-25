@@ -38,7 +38,26 @@ export function isAffectedByLoadedChangeset(key: QueryKey): boolean {
 }
 
 /** Repository objects a checkin by someone else doesn't touch. */
-const UNTOUCHED_BY_CHECKINS = ['labels', 'shelves', 'attributeTypes', 'attributeUsedValues', 'codeReviews', 'leftChanges'];
+const UNTOUCHED_BY_CHECKINS = ['labels', 'shelves', 'attributeTypes', 'attributeValues', 'attributeUsedValues', 'codeReviews', 'leftChanges'];
+
+/**
+ * This workspace checked in, updated, or merged from a branch or changeset: everything but the objects those leave
+ * alone, and changesets already read (only editing a comment changes one).
+ */
+export function isAffectedByCheckinOrUpdate(key: QueryKey): boolean {
+  if (area(key) === 'changesets' && detail(key) === 'byId') return false;
+  return !UNTOUCHED_BY_CHECKINS.includes(area(key) as string);
+}
+
+/** A branch was created: the lists of branches, not what the workspace has loaded. */
+export function isAffectedByNewBranch(key: QueryKey): boolean {
+  return area(key) === 'branches' || area(key) === 'branchExplorer';
+}
+
+/** Changes were shelved, and stay in the workspace: only the lists of shelves change. */
+export function isAffectedByShelving(key: QueryKey): boolean {
+  return area(key) === 'shelves';
+}
 
 /**
  * New changesets on the server: repository views (history, branches, incoming...), not the disk, the check that told,
@@ -46,6 +65,8 @@ const UNTOUCHED_BY_CHECKINS = ['labels', 'shelves', 'attributeTypes', 'attribute
  */
 export function isAffectedByNewChangesets(key: QueryKey): boolean {
   if ((LOCAL_AREAS as readonly unknown[]).includes(area(key)) || area(key) === 'content') return false;
+  // The workspace's own version of a file (no revision spec) changes with the workspace, not with others' checkins.
+  if (area(key) === 'annotate' && key[4] == null) return false;
   if (UNTOUCHED_BY_CHECKINS.includes(area(key) as string)) return false;
   return !(area(key) === 'incoming' && detail(key) === 'summary');
 }

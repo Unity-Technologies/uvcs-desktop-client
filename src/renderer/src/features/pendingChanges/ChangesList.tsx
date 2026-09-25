@@ -175,6 +175,8 @@ export function ChangesList({
                 className={styles.row}
                 data-type={row.type}
                 data-selected={selection.selected.has(row.key)}
+                data-joins-above={selection.selected.has(row.key) && selection.selected.has(rows[item.index - 1]?.key ?? '')}
+                data-joins-below={selection.selected.has(row.key) && selection.selected.has(rows[item.index + 1]?.key ?? '')}
                 data-focused={row.key === focused}
                 data-arrived={arrived.has(row.key) || undefined}
                 data-drop-target={dropTarget === row.key}

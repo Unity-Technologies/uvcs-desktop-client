@@ -3,7 +3,7 @@ import type { IncomingSummary, LoadedBranch } from '@shared/domain/incoming';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { queryKeys, workspaceKey } from '../../api/queryKeys';
-import { queryClient } from '../../app/queryClient';
+import { keyedByWorkspaceInfo, queryClient } from '../../app/queryClient';
 import { branchHeadMovedOnServer } from '../../app/refresh/headChanges';
 import { refreshQueries } from '../../app/refresh/refreshQueries';
 import { isAffectedByNewChangesets } from '../../app/refresh/refreshScopes';
@@ -36,6 +36,7 @@ export function useIncomingSummary() {
     refetchOnMount: false,
     refetchInterval: () => incomingPollInterval(document.visibilityState === 'visible', document.hasFocus()),
     refetchIntervalInBackground: true,
+    meta: keyedByWorkspaceInfo('loadedChangeset'),
   });
 }
 

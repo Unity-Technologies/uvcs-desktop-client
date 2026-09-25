@@ -5,11 +5,11 @@ import { parseRecords, recordFormat } from './formatRecords';
  * `cm find ... --format` layouts for the Branch Explorer. Formatted records are much lighter than XML,
  * which matters for repositories with tens of thousands of branches.
  */
-export const BRANCH_FORMAT = recordFormat(['name', 'parent', 'owner', 'date', 'changeset', 'comment']);
+export const BRANCH_FORMAT = recordFormat(['id', 'name', 'parent', 'owner', 'date', 'changeset', 'comment']);
 export const CHANGESET_FORMAT = recordFormat(['changesetid', 'branch', 'parent', 'date', 'owner', 'comment']);
 export const MERGE_FORMAT = recordFormat(['type', 'srcchangeset', 'dstchangeset']);
 export const LABEL_FORMAT = recordFormat(['name', 'changeset', 'owner', 'date', 'comment']);
-export const NAME_FORMAT = recordFormat(['name']);
+export const HIDDEN_BRANCH_FORMAT = recordFormat(['id', 'name']);
 
 /** ISO 8601 round-trip dates, so the renderer can parse them. */
 export const DATE_FORMAT = 'o';
@@ -36,7 +36,8 @@ const MERGE_LINK_TYPES: Record<string, MergeLinkType> = {
 };
 
 export function parseBranches(output: string, hiddenNames: ReadonlySet<string>): GraphBranch[] {
-  return parseRecords(output).map(([name = '', parent = '', owner = '', date = '', head = '', comment = '']) => ({
+  return parseRecords(output).map(([id = '', name = '', parent = '', owner = '', date = '', head = '', comment = '']) => ({
+    id: toInteger(id),
     name,
     parent,
     owner,
@@ -75,8 +76,9 @@ export function parseLabels(output: string): GraphLabel[] {
   }));
 }
 
-export function parseNames(output: string): Set<string> {
-  return new Set(parseRecords(output).map(([name = '']) => name));
+/** Hidden branches, by object id and name. */
+export function parseHiddenBranches(output: string): { id: number; name: string }[] {
+  return parseRecords(output).map(([id = '', name = '']) => ({ id: toInteger(id), name }));
 }
 
 function toInteger(value: string): number {

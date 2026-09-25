@@ -10,6 +10,15 @@ export function loadedChangesetChanged(before: LoadedState, after: LoadedState):
   );
 }
 
+/** The part of the workspace info that a query's key holds (`WORKSPACE_INFO_KEYED`). */
+export type WorkspaceInfoPart = 'selector' | 'loadedChangeset';
+
+/** Whether a query keyed by `part` of the workspace info has another key now. */
+export function workspaceInfoKeyMoved(part: WorkspaceInfoPart, before: LoadedState, after: LoadedState): boolean {
+  if (part === 'loadedChangeset') return loadedChangesetChanged(before, after);
+  return before.selector.kind !== after.selector.kind || before.selector.name !== after.selector.name;
+}
+
 /**
  * Someone else checked in to the loaded branch: its head moved while the workspace stayed where it was.
  * Our own checkins and updates move the loaded changeset too, and refresh everything by themselves.

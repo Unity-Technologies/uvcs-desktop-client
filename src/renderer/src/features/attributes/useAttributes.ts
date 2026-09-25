@@ -16,7 +16,10 @@ export function useAttributeTypes() {
   });
 }
 
-/** Attribute values of a branch, changeset or label spec, e.g. `br:/main/task`; asked for once the selection settles. */
+/**
+ * Attribute values of a branch, changeset or label spec, e.g. `br:/main/task`; asked for once the selection settles.
+ * They change by edits, which refresh them, so coming back to the object doesn't ask again for a few minutes.
+ */
 export function useAttributeValues(objectSpec: string) {
   const workspacePath = useWorkspacePath();
   const settled = useSettled();
@@ -24,6 +27,7 @@ export function useAttributeValues(objectSpec: string) {
     queryKey: queryKeys.inWorkspace(workspacePath, 'attributeValues', objectSpec),
     queryFn: () => api.attributes.valuesOf(workspacePath, objectSpec),
     enabled: settled,
+    ...SLOW_CHANGING_QUERY,
   });
 }
 

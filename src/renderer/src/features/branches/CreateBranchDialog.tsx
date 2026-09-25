@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import type { PendingChangesAction, SwitchPreflight } from '@shared/domain/switchWithChanges';
 import { api } from '../../api/client';
-import { runVoidAction } from '../../app/operations/runOperation';
+import { invalidateWorkspace } from '../../app/queryClient';
+import { isAffectedByNewBranch } from '../../app/refresh/refreshScopes';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { OptionCards } from '../../ui/OptionCards';
 import { TextArea, TextField } from '../../ui/TextField';
-import { useToastStore } from '../../ui/toast/toastStore';
+import { toast, useToastStore } from '../../ui/toast/toastStore';
 import { switchToBranch } from './branchOperations';
 import { validateBranchName } from './branchNames';
 import { PendingChangesChoice } from './PendingChangesChoice';
@@ -59,16 +60,16 @@ function CreateBranchDialog({ workspacePath, origins, onClose }: { workspacePath
   const create = async (): Promise<void> => {
     if (!name.trim() || error) return;
     setCreating(true);
-    const created = await runVoidAction(workspacePath, "Couldn't create the branch", () =>
-      api.branches.create(workspacePath, { name: fullName, startingPoint: origin.startingPoint, comment }),
-    );
+    const created = await createBranch(() => api.branches.create(workspacePath, { name: fullName, startingPoint: origin.startingPoint, comment }));
     setCreating(false);
     if (!created) return;
 
     onClose();
-    if (!switchAfter) return;
-    const switched = !blockedByMerge && (await switchToBranch(workspacePath, fullName, action ?? undefined));
-    if (!switched) announceNotSwitched(workspacePath, fullName, pending?.preflight.sourceName);
+    // Switching refreshes every view when done; otherwise only the branch lists need to.
+    const switched = switchAfter && !blockedByMerge && (await switchToBranch(workspacePath, fullName, action ?? undefined));
+    if (switched) return;
+    void invalidateWorkspace(workspacePath, isAffectedByNewBranch);
+    if (switchAfter) announceNotSwitched(workspacePath, fullName, pending?.preflight.sourceName);
   };
 
   return (
@@ -140,6 +141,16 @@ function usePendingChangesPlan(workspacePath: string, parentBranch: string): Pen
     };
   }, [workspacePath, parentBranch]);
   return state;
+}
+
+async function createBranch(create: () => Promise<void>): Promise<boolean> {
+  try {
+    await create();
+    return true;
+  } catch (error) {
+    toast.error("Couldn't create the branch", error);
+    return false;
+  }
 }
 
 function announceNotSwitched(workspacePath: string, branch: string, sourceName: string | undefined): void {

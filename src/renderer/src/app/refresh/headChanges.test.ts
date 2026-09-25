@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { IncomingSummary } from '@shared/domain/incoming';
-import { branchHeadMovedOnServer, loadedChangesetChanged } from './headChanges';
+import { branchHeadMovedOnServer, loadedChangesetChanged, workspaceInfoKeyMoved } from './headChanges';
 
 const onMain = (loadedChangeset: number) => ({ selector: { kind: 'branch' as const, name: '/main' }, loadedChangeset });
 const summary = (loadedChangeset: number, headChangeset: number): IncomingSummary => ({
@@ -9,6 +9,21 @@ const summary = (loadedChangeset: number, headChangeset: number): IncomingSummar
   headChangeset,
   changesetCount: headChangeset - loadedChangeset,
   authors: [],
+});
+
+describe('workspaceInfoKeyMoved', () => {
+  const onTask = { selector: { kind: 'branch' as const, name: '/main/task' }, loadedChangeset: 4 };
+
+  it('moves selector keys on a switch only', () => {
+    expect(workspaceInfoKeyMoved('selector', onMain(3), onMain(4))).toBe(false);
+    expect(workspaceInfoKeyMoved('selector', onMain(4), onTask)).toBe(true);
+  });
+
+  it('moves keys of where the workspace stands on a checkin, an update or a switch', () => {
+    expect(workspaceInfoKeyMoved('loadedChangeset', onMain(3), onMain(3))).toBe(false);
+    expect(workspaceInfoKeyMoved('loadedChangeset', onMain(3), onMain(4))).toBe(true);
+    expect(workspaceInfoKeyMoved('loadedChangeset', onMain(4), onTask)).toBe(true);
+  });
 });
 
 describe('loadedChangesetChanged', () => {

@@ -5,7 +5,8 @@ import { planSwitch } from '../../features/branches/switchOptions';
 import { explainUpdateConflicts, showUpdatedMoment } from '../../features/incoming/updateOperations';
 import { recheckIncoming } from '../../features/incoming/useIncomingSummary';
 import { toast } from '../../ui/toast/toastStore';
-import { refuseWhileBusy, runAction, runOperation } from '../operations/runOperation';
+import { refuseWhileBusy, runOperation, runRead } from '../operations/runOperation';
+import { isAffectedByCheckinOrUpdate } from '../refresh/refreshScopes';
 import { switchToast } from './switchToast';
 
 /** Resolves to whether it updated. */
@@ -14,6 +15,7 @@ export async function updateWorkspace(workspacePath: string): Promise<boolean> {
     title: 'Updating workspace',
     workspacePath,
     kind: 'update',
+    affects: isAffectedByCheckinOrUpdate,
     run: async (operationId) => {
       await api.workspaces.update(workspacePath, operationId);
       return true;
@@ -60,7 +62,7 @@ export async function switchWorkspace(
 
 /** Undefined: nothing to decide. Null: the user cancelled, or the switch isn't possible. */
 async function choosePendingChangesAction(workspacePath: string, targetSpec: string, displayName: string): Promise<PendingChangesAction | undefined | null> {
-  const preflight = await runAction(workspacePath, `Couldn't switch to ${displayName}`, () => api.workspaces.switchPreflight(workspacePath, targetSpec));
+  const preflight = await runRead(`Couldn't switch to ${displayName}`, () => api.workspaces.switchPreflight(workspacePath, targetSpec));
   if (!preflight) return null;
 
   const { pendingChangesOnSwitch } = await api.settings.get();

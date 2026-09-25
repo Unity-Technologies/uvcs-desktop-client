@@ -3,7 +3,10 @@ import {
   isAffectedByFileChanges,
   isAffectedByLoadedChangeset,
   isAffectedByMovedPaths,
+  isAffectedByNewBranch,
   isAffectedByNewChangesets,
+  isAffectedByCheckinOrUpdate,
+  isAffectedByShelving,
   isAffectedByWorkspaceState,
 } from './refreshScopes';
 
@@ -48,6 +51,33 @@ describe('refresh scopes', () => {
     expect(isAffectedByNewChangesets(key('labels', {}))).toBe(false);
     expect(isAffectedByNewChangesets(key('shelves', {}))).toBe(false);
     expect(isAffectedByNewChangesets(key('attributeTypes'))).toBe(false);
+    expect(isAffectedByNewChangesets(key('attributeValues', 'br:/main/task'))).toBe(false);
     expect(isAffectedByNewChangesets(key('codeReviews', { scope: 'all' }))).toBe(false);
+    expect(isAffectedByNewChangesets(key('annotate', 'src/a.ts', undefined))).toBe(false);
+    expect(isAffectedByNewChangesets(key('history', 'src/a.ts'))).toBe(true);
+  });
+
+  it("refreshes after this workspace's checkin or update all but the objects they leave alone", () => {
+    expect(isAffectedByCheckinOrUpdate(key('pendingChanges'))).toBe(true);
+    expect(isAffectedByCheckinOrUpdate(key('info'))).toBe(true);
+    expect(isAffectedByCheckinOrUpdate(key('incoming', 'summary', { branch: '/main', loadedChangeset: 4 }))).toBe(true);
+    expect(isAffectedByCheckinOrUpdate(key('changesets', {}))).toBe(true);
+    expect(isAffectedByCheckinOrUpdate(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(false);
+    expect(isAffectedByCheckinOrUpdate(key('labels', {}))).toBe(false);
+    expect(isAffectedByCheckinOrUpdate(key('shelves', { owner: 'me' }))).toBe(false);
+    expect(isAffectedByCheckinOrUpdate(key('changesets', 'byId', 4))).toBe(false);
+  });
+
+  it('refreshes only the shelve lists after shelving changes that stay in the workspace', () => {
+    expect(isAffectedByShelving(key('shelves', { owner: 'me' }))).toBe(true);
+    expect(isAffectedByShelving(key('pendingChanges'))).toBe(false);
+    expect(isAffectedByShelving(key('info'))).toBe(false);
+  });
+
+  it('refreshes the branch lists and the Branch Explorer when a branch is created', () => {
+    expect(isAffectedByNewBranch(key('branches', {}))).toBe(true);
+    expect(isAffectedByNewBranch(key('branchExplorer', { sinceDate: '2026-08-26' }))).toBe(true);
+    expect(isAffectedByNewBranch(key('pendingChanges'))).toBe(false);
+    expect(isAffectedByNewBranch(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(false);
   });
 });

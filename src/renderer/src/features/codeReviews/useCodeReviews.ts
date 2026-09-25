@@ -22,15 +22,21 @@ export function useCodeReview(reviewId: number) {
   });
 }
 
+/** The newest reviews of the repository as `cm` lists them, branch targets by id; `text` narrows them by title. */
+export function reviewSummariesKey(workspacePath: string, text?: string): readonly unknown[] {
+  return queryKeys.inWorkspace(workspacePath, 'codeReviews', 'summaries', { scope: 'all', text });
+}
+
 /**
- * The newest review of each branch, for status chips next to branch names. Cached for a few minutes;
+ * The newest review of each branch by branch id, for status chips next to branch names (the lists showing them know
+ * their branches' ids, so no name is looked up). The command palette lists the same reviews. Cached for a few minutes;
  * `enabled` lets a view ask only once its own data is in, so the chips never delay it.
  */
 export function useReviewsByBranch(enabled = true) {
   const workspacePath = useWorkspacePath();
   return useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'codeReviews', 'byBranch'),
-    queryFn: () => api.codeReviews.list(workspacePath, { scope: 'all' }),
+    queryKey: reviewSummariesKey(workspacePath),
+    queryFn: () => api.codeReviews.listSummaries(workspacePath, { scope: 'all' }),
     select: latestReviewByBranch,
     staleTime: 5 * 60_000,
     enabled,

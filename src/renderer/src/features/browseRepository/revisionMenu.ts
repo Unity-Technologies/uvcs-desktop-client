@@ -2,7 +2,7 @@ import { AppWindow, Copy, Download, History } from 'lucide-react';
 import type { TreeItem } from '@shared/domain/explorer';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
-import { runAction } from '../../app/operations/runOperation';
+import { runRead } from '../../app/operations/runOperation';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { toast } from '../../ui/toast/toastStore';
 import { copyPaths } from '../pendingChanges/pendingChangeOperations';
@@ -23,10 +23,10 @@ export function revisionMenu(workspacePath: string, items: TreeItem[]): MenuEntr
 }
 
 export function openRevision(workspacePath: string, item: TreeItem): void {
-  void runAction(workspacePath, `Couldn't open ${item.name}`, () => api.explorer.openRevision(workspacePath, item.revisionId, item.name));
+  void runRead(`Couldn't open ${item.name}`, () => api.explorer.openRevision(workspacePath, item.revisionId, item.name));
 }
 
 async function saveRevisionAs(workspacePath: string, item: TreeItem): Promise<void> {
-  const saved = await runAction(workspacePath, `Couldn't save ${item.name}`, () => api.explorer.saveRevisionAs(workspacePath, item.revisionId, item.name));
+  const saved = await runRead(`Couldn't save ${item.name}`, () => api.explorer.saveRevisionAs(workspacePath, item.revisionId, item.name));
   if (saved) toast.success(`Saved ${item.name}`);
 }

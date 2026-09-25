@@ -1,7 +1,7 @@
 import { EyeOff, GitBranch, GitBranchPlus, List, ListTree, RefreshCw, User } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
-import type { CodeReview } from '@shared/domain/codeReview';
+import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { spec } from '@shared/domain/specs';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -158,7 +158,7 @@ function useBranchColumns(
   layout: BranchesLayout,
   currentBranch: string | undefined,
   onToggleCollapsed: (name: string) => void,
-  reviews: ReadonlyMap<string, CodeReview> | undefined,
+  reviews: ReadonlyMap<number, CodeReviewSummary> | undefined,
 ): Column<BranchTreeRow>[] {
   return useMemo(() => {
     const sortable = layout === 'list';
@@ -169,7 +169,7 @@ function useBranchColumns(
         grow: 2,
         sortValue: sortable ? (row) => row.branch.name : undefined,
         render: (row) => (
-          <BranchNameCell row={row} isCurrent={row.branch.name === currentBranch} review={reviews?.get(row.branch.name)} onToggleCollapsed={onToggleCollapsed} />
+          <BranchNameCell row={row} isCurrent={row.branch.name === currentBranch} review={reviews?.get(row.branch.id)} onToggleCollapsed={onToggleCollapsed} />
         ),
       },
       { id: 'comment', header: 'Comment', grow: 2, secondary: true, render: (row) => <Highlight text={row.branch.comment} /> },

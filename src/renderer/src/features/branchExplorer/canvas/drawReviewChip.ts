@@ -1,4 +1,4 @@
-import type { CodeReview } from '@shared/domain/codeReview';
+import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { SHORT_STATUS } from '../../codeReviews/reviewsByBranch';
 import type { DrawContext } from './drawContext';
 import { textWidth } from './fitText';
@@ -8,7 +8,7 @@ const PAD_X = 4;
 const GLYPH = 8;
 const GLYPH_GAP = 3;
 
-export function reviewChipWidth({ ctx, scene }: DrawContext, review: CodeReview): number {
+export function reviewChipWidth({ ctx, scene }: DrawContext, review: CodeReviewSummary): number {
   ctx.save();
   ctx.font = scene.palette.fonts.badge;
   const width = PAD_X * 2 + GLYPH + GLYPH_GAP + textWidth(ctx, SHORT_STATUS[review.status]);
@@ -21,7 +21,7 @@ export function reviewChipWidth({ ctx, scene }: DrawContext, review: CodeReview)
  * and name in the status color (a check once reviewed, a dot otherwise). No patch of its own, so it reads as part of
  * the tinted pill at any zoom; hovering it lights a soft patch, as it opens the review. Recorded for the pointer.
  */
-export function drawReviewChip(draw: DrawContext, review: CodeReview, left: number, middle: number, width: number, hovered: boolean): void {
+export function drawReviewChip(draw: DrawContext, review: CodeReviewSummary, left: number, middle: number, width: number, hovered: boolean): void {
   const { ctx, scene } = draw;
   const color = scene.palette.reviewStatus[review.status];
   const top = middle - CHIP_HEIGHT / 2;

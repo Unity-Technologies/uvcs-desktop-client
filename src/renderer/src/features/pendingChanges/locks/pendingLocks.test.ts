@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Lock } from '@shared/domain/lock';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { lockedByOthersMessage, pendingLocks } from './pendingLocks';
+import { lockedByOthersMessage, locksPendingChanges, pendingLocks } from './pendingLocks';
 
 const change = (path: string): PendingChange => ({ path, kinds: ['checkedOut'], itemType: 'binaryFile', size: 0, lastModified: '' });
 
@@ -25,6 +25,18 @@ describe('pendingLocks', () => {
 
   it('counts my lock from another workspace as held by someone else', () => {
     expect(pendingLocks([change('art/Mine.psd')], [], all).get('art/Mine.psd')?.mine).toBe(false);
+  });
+});
+
+describe('locksPendingChanges', () => {
+  const all = [lock('a', '/art/Hero.fbx', 'ana'), lock('r', '/art/Old.fbx', 'bob', 'Retained')];
+
+  it('is true when a held lock is on a pending change', () => {
+    expect(locksPendingChanges([change('art/Hero.fbx')], all)).toBe(true);
+  });
+
+  it('ignores retained locks and locks on files that are not pending', () => {
+    expect(locksPendingChanges([change('art/Old.fbx'), change('art/Other.fbx')], all)).toBe(false);
   });
 });
 

@@ -1,6 +1,6 @@
 import { GitGraph, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import type { CodeReview } from '@shared/domain/codeReview';
+import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { spec } from '@shared/domain/specs';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -45,7 +45,7 @@ import { useBranchExplorerData } from './useBranchExplorerData';
 import { useRevealRequest } from './useRevealRequest';
 import styles from './BranchExplorerView.module.css';
 
-const NO_REVIEWS: ReadonlyMap<string, CodeReview> = new Map();
+const NO_REVIEWS: ReadonlyMap<number, CodeReviewSummary> = new Map();
 
 const ARROW_DIRECTIONS: Record<string, GraphDirection> = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
 

@@ -6,12 +6,15 @@ import { escapeQueryValue, findArgs } from '../cm/findQuery';
 import { findRecords, toBranch } from '../cm/findObjects';
 import { withTempFile } from '../files/tempFile';
 import { loadRecentBranches, saveRecentBranch } from '../plasticConfig/recentBranches';
-import type { ServiceContext } from './ServiceContext';
+import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 
-export function createBranchesService({ cm }: ServiceContext): BranchesApi {
+export function createBranchesService({ cm }: ServiceContext, { branchNames }: BranchNamesContext): BranchesApi {
   async function find(workspacePath: string, filter: QueryFilter, conditions: string[]): Promise<Branch[]> {
     const xml = await cm.query(findArgs('branch', { ...filter, branch: undefined }, 'date desc', conditions), { cwd: workspacePath });
-    return findRecords(xml, 'BRANCH').map(toBranch);
+    const branches = findRecords(xml, 'BRANCH').map(toBranch);
+    // The code review chips name branches by id: this list answers them.
+    branchNames.remember(workspacePath, branches);
+    return branches;
   }
 
   async function list(workspacePath: string, filter: QueryFilter): Promise<Branch[]> {

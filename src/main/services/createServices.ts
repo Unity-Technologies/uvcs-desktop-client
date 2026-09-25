@@ -1,4 +1,6 @@
 import type { UvcsApi } from '@shared/api';
+import { BranchNamesCache } from '../cm/BranchNamesCache';
+import { readBranchNames } from '../cm/branchNames';
 import { LeftChangesFinder } from '../workspace/leftChanges';
 import { SwitchShelveRecords } from '../workspace/switchShelveRecords';
 import { createAccountsService } from './accountsService';
@@ -26,20 +28,21 @@ import { createSyncService } from './syncService';
 import { createSystemService } from './systemService';
 import { createWindowsService } from './windowsService';
 import { createWorkspacesService } from './workspacesService';
-import type { ServiceContext, SwitchContext } from './ServiceContext';
+import type { BranchNamesContext, ServiceContext, SwitchContext } from './ServiceContext';
 
 export function createServices(context: ServiceContext): UvcsApi {
   const switchShelves = new SwitchShelveRecords(context.settings);
   const switching: SwitchContext = { switchShelves, leftChanges: new LeftChangesFinder(context.cm, switchShelves) };
+  const naming: BranchNamesContext = { branchNames: new BranchNamesCache((workspacePath) => readBranchNames(context.cm, workspacePath)) };
 
   return {
     accounts: createAccountsService(context),
     annotate: createAnnotateService(context),
     attributes: createAttributesService(context),
-    branchExplorer: createBranchExplorerService(context),
-    branches: createBranchesService(context),
+    branchExplorer: createBranchExplorerService(context, naming),
+    branches: createBranchesService(context, naming),
     changesets: createChangesetsService(context),
-    codeReviews: createCodeReviewsService(context),
+    codeReviews: createCodeReviewsService(context, naming),
     content: createContentService(context),
     diff: createDiffService(context),
     explorer: createExplorerService(context),

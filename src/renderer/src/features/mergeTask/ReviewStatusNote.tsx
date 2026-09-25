@@ -1,9 +1,9 @@
 import { CircleDot, RotateCcw } from 'lucide-react';
-import type { CodeReview } from '@shared/domain/codeReview';
+import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import styles from './MergeTaskDialog.module.css';
 
 /** Warns that the branch's review isn't finished: in red when it asks for rework, neutral while under review. */
-export function ReviewStatusNote({ review, onOpen }: { review: CodeReview; onOpen: () => void }) {
+export function ReviewStatusNote({ review, onOpen }: { review: CodeReviewSummary; onOpen: () => void }) {
   const rework = review.status === 'Rework required';
   return (
     <p className={styles.review} data-rework={rework}>
