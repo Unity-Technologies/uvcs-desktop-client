@@ -1,4 +1,4 @@
-import { ArrowDownToLine, FolderOpen, Keyboard, ListChecks, Monitor, Moon, RefreshCw, Sun, TerminalSquare } from 'lucide-react';
+import { ArrowDownToLine, FolderOpen, Keyboard, ListChecks, Monitor, Moon, Pause, Play, RefreshCw, Sun, TerminalSquare } from 'lucide-react';
 import type { ThemePreference } from '@shared/domain/settings';
 import { setReviewMode } from '../../features/review/reviewModeSetting';
 import type { Icon } from '../../lib/actions';
@@ -24,7 +24,7 @@ const THEMES: { theme: ThemePreference; label: string; icon: Icon }[] = [
 export function useWorkspaceCommands(): void {
   const workspacePath = useWorkspacePath();
   const closeWorkspace = useSession((state) => state.closeWorkspace);
-  const { theme, reviewModeWorkspaces } = useSettings();
+  const { theme, reviewModeWorkspaces, autoRefresh } = useSettings();
   const reviewing = reviewModeWorkspaces.includes(workspacePath);
   const updateSettings = useUpdateSettings();
 
@@ -53,6 +53,14 @@ export function useWorkspaceCommands(): void {
         icon: RefreshCw,
         shortcut: 'mod+r',
         run: () => void invalidateWorkspace(workspacePath),
+      },
+      {
+        id: 'workspace.autoRefresh',
+        group: 'Workspace',
+        label: autoRefresh ? 'Pause automatic refresh' : 'Resume automatic refresh',
+        icon: autoRefresh ? Pause : Play,
+        keywords: ['refresh', 'watch', 'live'],
+        run: () => updateSettings({ autoRefresh: !autoRefresh }),
       },
       {
         id: 'workspace.reviewMode',
@@ -97,7 +105,7 @@ export function useWorkspaceCommands(): void {
         run: () => updateSettings({ theme: choice }),
       })),
     ],
-    [workspacePath, closeWorkspace, theme, reviewing, updateSettings],
+    [workspacePath, closeWorkspace, theme, reviewing, autoRefresh, updateSettings],
   );
 
   useCommands(commands);

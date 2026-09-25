@@ -66,7 +66,7 @@ renderer/src/
   - `main/watch/WorkspaceWatcher` watches the open workspace (recursive on macOS/Windows; the root and `.plastic` only on Linux),
     skips `ignore.conf` folders and `.plastic` lock/temp files, coalesces bursts (300 ms quiet, 2 s max wait) and drops what the
     app's own writes cause (`changesWorkspace` commands and tracked operations): the renderer refreshes after those anyway.
-  - `workspaceChanged` tells file edits (pending changes, review marks, files view, open diffs of workspace files; if auto refresh is on)
+  - `workspaceChanged` tells file edits (pending changes, review marks, files view, open diffs of workspace files; if auto refresh is on, and once when it's turned back on)
     from `.plastic` rewrites by any tool (workspace info; everything when the loaded changeset or branch moved). See
     `app/shell/useWorkspaceWatcher.ts` and `app/refresh/`. A diff being edited holds still and offers to reload instead.
   - Locks live on the server, where nothing reports changes: pending changes re-read them along with the changes, at most every 30 s.

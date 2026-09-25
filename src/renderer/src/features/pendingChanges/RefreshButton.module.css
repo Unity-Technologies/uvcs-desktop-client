@@ -1,0 +1,9 @@
+.spinning {
+  animation: var(--keyframes-spin) 0.8s linear infinite;
+}
+
+.paused {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-regular);
+}

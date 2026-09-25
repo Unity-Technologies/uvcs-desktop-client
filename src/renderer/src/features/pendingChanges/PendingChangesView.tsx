@@ -1,7 +1,6 @@
-import { CheckCircle2, Files, GitMerge, List, ListTree, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { CheckCircle2, Files, GitMerge, List, ListTree, SlidersHorizontal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { invalidateWorkspace } from '../../app/queryClient';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { openSettingsDialogAt } from '../../app/settings/SettingsDialog';
 import { useSettings } from '../../app/settings/useSettings';
@@ -21,8 +20,8 @@ import { ChangesList } from './ChangesList';
 import { ChangesSummaryBar } from './ChangesSummaryBar';
 import { CheckinPanel } from './CheckinPanel';
 import { HiddenCheckedNotice, NoFilterMatches } from './FilterNotices';
-import { LiveRefreshToggle } from './LiveRefreshToggle';
 import { LockedByOthersNotice } from './locks/LockedByOthersNotice';
+import { RefreshButton } from './RefreshButton';
 import { usePendingLocks } from './locks/usePendingLocks';
 import { ReviewModeButton } from '../review/ReviewModeButton';
 import { usePendingReview } from './review/usePendingReview';
@@ -126,9 +125,8 @@ export function PendingChangesView() {
       subtitle={snapshot && `${snapshot.changes.filter(isCheckinCandidate).length} pending`}
       actions={
         <>
-          <LiveRefreshToggle />
           <ReviewModeButton workspacePath={workspacePath} />
-          <IconButton icon={<RefreshCw size={14} className={isFetching ? styles.spinning : undefined} />} label="Refresh" shortcut="mod+r" onClick={() => void invalidateWorkspace(workspacePath)} />
+          <RefreshButton workspacePath={workspacePath} fetching={isFetching} />
           <IconButton icon={<SlidersHorizontal size={14} />} label="What to show" onClick={() => openSettingsDialogAt('pendingChanges')} />
         </>
       }

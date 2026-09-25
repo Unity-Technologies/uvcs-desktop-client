@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { WatchCoverage } from '@shared/api/workspaces';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import type { WorkspaceChange } from '@shared/events';
@@ -35,6 +35,13 @@ export function useWorkspaceWatcher(): void {
     void api.workspaces.watch(workspacePath).then(setCoverage);
   }, [workspacePath]);
 
+  // Edits made while automatic refresh was off went unnoticed: catch up once when it's back on.
+  const autoRefreshed = useRef(autoRefresh);
+  useEffect(() => {
+    if (autoRefresh && !autoRefreshed.current) void refreshQueries(inWorkspace(workspacePath, isAffectedByFileChanges));
+    autoRefreshed.current = autoRefresh;
+  }, [workspacePath, autoRefresh]);
+
   useEffect(() => {
     const watched = autoRefresh && coverage === 'full';
     for (const area of LOCAL_AREAS) queryClient.setQueryDefaults(queryKeys.inWorkspace(workspacePath, area), { refetchOnWindowFocus: !watched });
@@ -45,11 +52,14 @@ export function useWorkspaceWatcher(): void {
   });
 }
 
-async function refreshForChange(workspacePath: string, change: WorkspaceChange, autoRefresh: boolean): Promise<void> {
-  const inWorkspace = (affected: (key: readonly unknown[]) => boolean) => ({
+function inWorkspace(workspacePath: string, affected: (key: readonly unknown[]) => boolean) {
+  return {
     queryKey: workspaceKey(workspacePath),
     predicate: ({ queryKey }: { queryKey: readonly unknown[] }) => affected(queryKey),
-  });
+  };
+}
+
+async function refreshForChange(workspacePath: string, change: WorkspaceChange, autoRefresh: boolean): Promise<void> {
   // `.plastic` rewrites are rare, discrete events, so they refresh even without auto refresh, which guards
   // against streams of file edits. The paths are cheap: re-read only if something shows them, now or later.
   const affected = (key: readonly unknown[]) =>
@@ -59,9 +69,9 @@ async function refreshForChange(workspacePath: string, change: WorkspaceChange, 
 
   const infoKey = queryKeys.inWorkspace(workspacePath, 'info');
   const before = queryClient.getQueryData<WorkspaceInfo>(infoKey);
-  await refreshQueries(inWorkspace(affected));
+  await refreshQueries(inWorkspace(workspacePath, affected));
   const after = queryClient.getQueryData<WorkspaceInfo>(infoKey);
   if (change.metadata && before && after && loadedChangesetChanged(before, after)) {
-    void refreshQueries(inWorkspace((key) => isAffectedByLoadedChangeset(key) && !affected(key)));
+    void refreshQueries(inWorkspace(workspacePath, (key) => isAffectedByLoadedChangeset(key) && !affected(key)));
   }
 }
