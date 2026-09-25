@@ -23,5 +23,13 @@ export interface WorkspaceInfo {
   loadedChangeset: number;
 }
 
+/** Another workspace at a glance: what it's loaded from and how many pending changes it has. */
+export interface WorkspaceGlance {
+  /** `name@server`. */
+  repository: string;
+  selector: WorkspaceSelector;
+  pendingCount: number;
+}
+
 /** Whether a folder can hold a new workspace: `available` when it doesn't exist or is empty. */
 export type NewFolderCheck = 'available' | 'notEmpty' | 'notAFolder';

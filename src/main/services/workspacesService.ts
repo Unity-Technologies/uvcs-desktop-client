@@ -6,6 +6,7 @@ import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shar
 import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
+import { readWorkspaceGlance } from '../cm/workspaceGlance';
 import { resolveWorkspaceRepositories } from '../cm/workspaceRepositories';
 import { readWorkspaceStatus } from '../cm/workspaceStatus';
 import { CmError } from '../cm/CmError';
@@ -120,6 +121,7 @@ export function createWorkspacesService({ cm, operations, watchers, settings }: 
     update,
     watch,
     unwatch: async () => watchers.release(callerId()),
+    glance: (workspacePath) => readWorkspaceGlance(cm, workspacePath),
     checkNewFolder: checkNewWorkspaceFolder,
     switchNewWorkspace,
     discardNew,

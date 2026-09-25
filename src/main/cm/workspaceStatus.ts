@@ -18,7 +18,11 @@ export interface WorkspaceStatus {
 
 /** What the workspace is loaded from, read with `cm status --header --xml`. */
 export async function readWorkspaceStatus(cm: CmClient, workspacePath: string): Promise<WorkspaceStatus> {
-  const xml = await cm.query(['status', '--header', '--xml'], { cwd: workspacePath });
+  return parseWorkspaceStatus(await cm.query(['status', '--header', '--xml'], { cwd: workspacePath }));
+}
+
+/** The header of `cm status --xml`, with or without the changes. */
+export function parseWorkspaceStatus(xml: string): WorkspaceStatus {
   const status = child(parseXml(xml, []), 'StatusOutput');
   const workspaceStatus = child(child(status, 'WorkspaceStatus'), 'Status');
   const repSpec = child(workspaceStatus, 'RepSpec');

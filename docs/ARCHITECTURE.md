@@ -64,7 +64,8 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   computed there too, and every window gets the result (`settingsChanged`).
 - "New workspace for a task" (`features/taskWorkspace`) creates a child of /main at its head (or takes an existing branch),
   a workspace next to the current one, and switches it (a plain `cm switch`: it's empty); a failure removes the new
-  workspace and keeps the branch.
+  workspace and keeps the branch. The switcher shows the branch and pending changes of the other workspaces of the same
+  repository with one local `cm status` each, only while it's open (`workspaces.glance`).
 
 ## Two developers on one branch
 

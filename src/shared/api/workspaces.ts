@@ -1,5 +1,5 @@
 import type { PendingChangesAction, SwitchPreflight, SwitchResult } from '../domain/switchWithChanges';
-import type { NewFolderCheck, WorkspaceInfo, WorkspaceSelector, WorkspaceSummary } from '../domain/workspace';
+import type { NewFolderCheck, WorkspaceGlance, WorkspaceInfo, WorkspaceSelector, WorkspaceSummary } from '../domain/workspace';
 
 export interface CreateWorkspaceRequest {
   name: string;
@@ -42,6 +42,11 @@ export interface WorkspacesApi {
   watch(workspacePath: string): Promise<WatchCoverage>;
   /** The calling window shows no workspace anymore (back to the home screen). */
   unwatch(): Promise<void>;
+  /**
+   * What another workspace is loaded from and how many pending changes it has: one local `cm status` (it reads the
+   * workspace on disk, never the server). For a few workspaces on screen, e.g. while the switcher is open.
+   */
+  glance(workspacePath: string): Promise<WorkspaceGlance>;
   /** Whether a new workspace can go in this folder. No `cm` call. */
   checkNewFolder(path: string): Promise<NewFolderCheck>;
   /** Loads `targetSpec` in a workspace just created (nothing pending, nothing loaded): a plain `cm switch`. */

@@ -12,15 +12,17 @@ import { useSettings } from '../settings/useSettings';
 import { useSession } from '../workspace/sessionStore';
 import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
+import { useWorkspaceInfo } from '../workspace/useWorkspace';
 import { useMissingWorkspacePaths, useRecentWorkspaceRepositories, useWorkspaceList } from '../workspace/workspaceQueries';
 import { copyWorkspacePath, openTerminalIn } from '../workspace/workspaceShellActions';
 import { currentWorkspaceMenu } from './currentWorkspaceMenu';
+import { WorkspaceGlance } from './WorkspaceGlance';
 import { workspaceSwitcherList } from './workspaceSwitcherList';
 import styles from './WorkspaceSwitcher.module.css';
 
 /**
- * Quick switch to any workspace, recent ones first, without going back to the home screen.
- * Right-clicking the card offers the open workspace's actions.
+ * Quick switch to any workspace, recent ones first, without going back to the home screen. Workspaces of the same
+ * repository show their branch and pending changes. Right-clicking the card offers the open workspace's actions.
  */
 export function WorkspaceSwitcher({ currentPath, children }: { currentPath: string; children: ReactElement }) {
   const [open, setOpen] = useState(false);
@@ -83,6 +85,7 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
   const { recentWorkspacePaths } = useSettings();
   const { data: workspaces = [] } = useWorkspaceList();
   const { data: repositories } = useRecentWorkspaceRepositories(workspaces);
+  const currentRepository = useWorkspaceInfo().data?.repository;
   const { data: missingPaths = [] } = useMissingWorkspacePaths(unlistedRecentPaths(workspaces, recentWorkspacePaths));
 
   const { recent, others } = workspaceSwitcherList(workspaces, recentWorkspacePaths, missingPaths, currentPath, repositories, filter);
@@ -132,6 +135,8 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
             <span className={styles.missing} data-tip="Its folder can't be found">
               Missing
             </span>
+          ) : repository && repository === currentRepository ? (
+            <WorkspaceGlance workspacePath={workspace.path} />
           ) : (
             repository && (
               <span className={styles.repository}>
