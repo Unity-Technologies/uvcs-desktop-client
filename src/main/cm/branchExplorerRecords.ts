@@ -9,7 +9,7 @@ export const BRANCH_FORMAT = recordFormat(['id', 'name', 'parent', 'owner', 'dat
 export const CHANGESET_FORMAT = recordFormat(['changesetid', 'branch', 'parent', 'date', 'owner', 'comment']);
 export const MERGE_FORMAT = recordFormat(['type', 'srcchangeset', 'dstchangeset']);
 export const LABEL_FORMAT = recordFormat(['name', 'changeset', 'owner', 'date', 'comment']);
-export const NAME_FORMAT = recordFormat(['name']);
+export const HIDDEN_BRANCH_FORMAT = recordFormat(['id', 'name']);
 
 /** ISO 8601 round-trip dates, so the renderer can parse them. */
 export const DATE_FORMAT = 'o';
@@ -76,8 +76,9 @@ export function parseLabels(output: string): GraphLabel[] {
   }));
 }
 
-export function parseNames(output: string): Set<string> {
-  return new Set(parseRecords(output).map(([name = '']) => name));
+/** Hidden branches, by object id and name. */
+export function parseHiddenBranches(output: string): { id: number; name: string }[] {
+  return parseRecords(output).map(([id = '', name = '']) => ({ id: toInteger(id), name }));
 }
 
 function toInteger(value: string): number {

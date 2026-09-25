@@ -6,12 +6,12 @@ import {
   DATE_FORMAT,
   LABEL_FORMAT,
   MERGE_FORMAT,
-  NAME_FORMAT,
+  HIDDEN_BRANCH_FORMAT,
   parseBranches,
   parseChangesets,
   parseLabels,
   parseMergeLinks,
-  parseNames,
+  parseHiddenBranches,
   roundTripDate,
 } from '../cm/branchExplorerRecords';
 import { whereClause } from '../cm/findQuery';
@@ -29,19 +29,20 @@ export function createBranchExplorerService({ cm }: ServiceContext, { branchName
     // instead of waiting in line behind the pooled `cm shell` sessions.
     const [branchesOutput, hiddenOutput, changesetsOutput, mergesOutput, labelsOutput] = await Promise.all([
       cm.query(find('branch', '', BRANCH_FORMAT), options),
-      cm.query(find('branch', "where hidden = 'true'", NAME_FORMAT), options),
+      cm.query(find('branch', "where hidden = 'true'", HIDDEN_BRANCH_FORMAT), options),
       cm.query(find('changeset', inRange, CHANGESET_FORMAT), options),
       cm.execute(find('merge', inRange, MERGE_FORMAT), options),
       cm.query(find('label', inRange, LABEL_FORMAT), options),
     ]);
 
-    const hiddenNames = parseNames(hiddenOutput);
+    const hidden = parseHiddenBranches(hiddenOutput);
+    const hiddenNames = new Set(hidden.map((branch) => branch.name));
     const changesets = parseChangesets(changesetsOutput).filter(
       (changeset) => query.includeHidden || !hiddenNames.has(changeset.branch),
     );
     const allBranches = parseBranches(branchesOutput, hiddenNames);
-    // The code review chips name branches by id: this list answers them.
-    branchNames.remember(workspacePath, allBranches);
+    // The code review chips name branches by id (often finished tasks, hidden): these lists answer them.
+    branchNames.remember(workspacePath, [...allBranches, ...hidden]);
     const branches = allBranches.filter((branch) => query.includeHidden || !branch.isHidden);
 
     return {

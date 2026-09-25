@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseBranches, parseChangesets, parseLabels, parseMergeLinks, roundTripDate } from './branchExplorerRecords';
+import { parseBranches, parseChangesets, parseHiddenBranches, parseLabels, parseMergeLinks, roundTripDate } from './branchExplorerRecords';
 
 const F = '\u001f';
 const R = '\u001e';
@@ -19,6 +19,10 @@ describe('branch explorer records', () => {
         isHidden: true,
       },
     ]);
+  });
+
+  it('parses hidden branches with their object ids', () => {
+    expect(parseHiddenBranches(`37${F}/main/task1${R}\n`)).toEqual([{ id: 37, name: '/main/task1' }]);
   });
 
   it('parses changesets, keeping -1 for the root parent', () => {
