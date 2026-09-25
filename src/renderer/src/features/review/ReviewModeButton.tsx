@@ -1,5 +1,5 @@
 import { ListChecks } from 'lucide-react';
-import { IconButton } from '../../../ui/IconButton';
+import { IconButton } from '../../ui/IconButton';
 import { setReviewMode, useReviewModeOn } from './reviewModeSetting';
 import styles from './ReviewModeButton.module.css';
 

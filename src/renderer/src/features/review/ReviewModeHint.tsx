@@ -1,6 +1,6 @@
 import { ListChecks, X } from 'lucide-react';
-import { Button } from '../../../ui/Button';
-import { IconButton } from '../../../ui/IconButton';
+import { Button } from '../../ui/Button';
+import { IconButton } from '../../ui/IconButton';
 import styles from './ReviewStrip.module.css';
 
 interface ReviewModeHintProps {

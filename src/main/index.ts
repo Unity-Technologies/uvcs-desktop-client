@@ -5,6 +5,7 @@ import { locateCm } from './cm/locateCm';
 import { registerApi } from './ipc/registerApi';
 import { sendEvent } from './ipc/sendEvent';
 import { OperationTracker } from './operations/OperationTracker';
+import { DiffReviewStore } from './review/DiffReviewStore';
 import { ReviewStore } from './review/ReviewStore';
 import { createServices } from './services/createServices';
 import { SettingsStore } from './settings/SettingsStore';
@@ -34,6 +35,7 @@ function start(): void {
       cm,
       operations,
       reviews: new ReviewStore(join(app.getPath('userData'), 'review-snapshots')),
+      diffReviews: new DiffReviewStore(join(app.getPath('userData'), 'review-snapshots', 'diffs')),
       settings,
       watcher,
     }),

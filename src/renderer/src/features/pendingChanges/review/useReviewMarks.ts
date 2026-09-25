@@ -4,7 +4,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../../api/client';
 import { queryKeys } from '../../../api/queryKeys';
 import { queryClient } from '../../../app/queryClient';
-import type { ReviewMarks } from './reviewProgress';
+import type { ReviewMarks } from './pendingReviewStatus';
 
 export function reviewMarksKey(workspacePath: string) {
   return queryKeys.inWorkspace(workspacePath, 'review');

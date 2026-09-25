@@ -31,8 +31,10 @@ interface DataTableProps<Row> {
   contextMenu?: (selectedRows: Row[]) => MenuEntry[];
   rowHeight?: number;
   initialSort?: { columnId: string; descending: boolean };
-  /** Keys the table does not handle itself (e.g. ←/→ to collapse or expand a tree row). */
-  onRowKeyDown?: (event: KeyboardEvent, focusedRow: Row) => void;
+  /** Keys the table does not handle itself (e.g. ←/→ to collapse or expand a tree row); `moveBy` moves the selection like the arrows. */
+  onRowKeyDown?: (event: KeyboardEvent, focusedRow: Row, moveBy: (step: number) => void) => void;
+  /** J and K move like ↓ and ↑, for lists read one row after another (e.g. reviewing files). */
+  letterMoves?: boolean;
   /** Scrolls this row into view whenever it changes, e.g. after revealing a search result. */
   revealKey?: string | null;
   /** Selects the first row whenever no shown row is selected, so a details panel next to the table always has something to show. */
@@ -50,6 +52,7 @@ export function DataTable<Row>({
   rowHeight = 30,
   initialSort,
   onRowKeyDown,
+  letterMoves = false,
   revealKey,
   selectFirstRow = false,
 }: DataTableProps<Row>) {
@@ -84,14 +87,21 @@ export function DataTable<Row>({
 
   const selectedRows = (): Row[] => orderedKeys.filter((key) => selection.selected.has(key)).map((key) => rowsByKey.get(key)!);
 
+  const moveBy = (step: number, extend: boolean): void => {
+    const moved = selectOnArrow(selection, orderedKeys, step, extend, focusedKey);
+    if (!moved) return;
+    setFocusedKey(moved.focused);
+    onSelectionChange(moved.state);
+    virtualizer.scrollToIndex(orderedKeys.indexOf(moved.focused));
+  };
+
   const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    const plain = !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
+    const steps: Record<string, number> = { ArrowDown: 1, ArrowUp: -1, ...(letterMoves && plain && { j: 1, k: -1 }) };
+    const step = steps[event.key];
+    if (step !== undefined) {
       event.preventDefault();
-      const moved = selectOnArrow(selection, orderedKeys, event.key === 'ArrowDown' ? 1 : -1, event.shiftKey, focusedKey);
-      if (!moved) return;
-      setFocusedKey(moved.focused);
-      onSelectionChange(moved.state);
-      virtualizer.scrollToIndex(orderedKeys.indexOf(moved.focused));
+      moveBy(step, event.shiftKey);
     } else if (event.key === 'Enter' && focusedKey && onActivate) {
       onActivate(rowsByKey.get(focusedKey)!);
     } else if (event.key === 'a' && (isMac ? event.metaKey : event.ctrlKey)) {
@@ -99,7 +109,7 @@ export function DataTable<Row>({
       onSelectionChange({ selected: new Set(orderedKeys), anchor: orderedKeys[0] ?? null });
     } else {
       const focusedRow = rowsByKey.get(focusedKey ?? selection.anchor ?? '');
-      if (focusedRow) onRowKeyDown?.(event, focusedRow);
+      if (focusedRow) onRowKeyDown?.(event, focusedRow, (step) => moveBy(step, false));
     }
   };
 

@@ -1,9 +1,9 @@
 import { CircleCheck, Eraser, ListChecks, MoreHorizontal, X } from 'lucide-react';
 import type { CSSProperties } from 'react';
-import { IconButton } from '../../../ui/IconButton';
-import { ActionDropdownMenu } from '../../../ui/menu/ActionDropdownMenu';
-import { ToggleChip } from '../../../ui/ToggleChip';
-import type { ReviewProgress } from './reviewProgress';
+import { IconButton } from '../../ui/IconButton';
+import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
+import { ToggleChip } from '../../ui/ToggleChip';
+import type { ReviewProgress } from './reviewStatus';
 import styles from './ReviewStrip.module.css';
 
 interface ReviewBarProps {

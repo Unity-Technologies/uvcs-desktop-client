@@ -24,8 +24,8 @@ import { HiddenCheckedNotice, NoFilterMatches } from './FilterNotices';
 import { LiveRefreshToggle } from './LiveRefreshToggle';
 import { LockedByOthersNotice } from './locks/LockedByOthersNotice';
 import { usePendingLocks } from './locks/usePendingLocks';
-import { ReviewModeButton } from './review/ReviewModeButton';
-import { useReviewMode } from './review/useReviewMode';
+import { ReviewModeButton } from '../review/ReviewModeButton';
+import { usePendingReview } from './review/usePendingReview';
 import { mergeSourceChangeset, uploadSize } from './checkinButton';
 import { checkinChanges, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
 import { isCheckinCandidate } from './changeCategories';
@@ -57,7 +57,7 @@ export function PendingChangesView() {
   const [busy, setBusy] = useState(false);
 
   const allChanges = snapshot?.changes ?? NO_CHANGES;
-  const review = useReviewMode(workspacePath, allChanges, snapshot !== undefined && !isPlaceholderData);
+  const review = usePendingReview(workspacePath, allChanges, snapshot !== undefined && !isPlaceholderData);
   const locks = usePendingLocks(workspacePath, workspace?.repository, allChanges, dataUpdatedAt);
   const { visible: filtered, query, clear: clearTextFilter, bar: filterBar } = useChangeFilter(allChanges, changePath, changeTone);
   const changes = review.narrow(filtered);
@@ -213,11 +213,10 @@ export function PendingChangesView() {
                     grouping === 'changelist' ? (moved, changelist) => void moveToChangelist(workspacePath, changelist, moved) : undefined
                   }
                   contextMenu={(selected) =>
-                    pendingChangeMenu(workspacePath, selected, changelists, { isIncluded, setIncluded: setIncludedChanges }, { marks: review.marks, toggle: review.toggle })
+                    pendingChangeMenu(workspacePath, selected, changelists, { isIncluded, setIncluded: setIncludedChanges }, review)
                   }
                   changelistMenu={(changelist) => changelistMenu(workspacePath, changelist)}
-                  reviewMarks={review.on ? review.marks : null}
-                  onToggleReviewed={review.toggle}
+                  review={review}
                   locks={locks}
                 />
               </HighlightQuery>

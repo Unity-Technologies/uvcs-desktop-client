@@ -19,6 +19,9 @@
   opacity: 0;
 }
 
+/* An unreviewed file's check appears where the pointer or the selection is (list rows carry data-selected). */
+[data-selected]:hover .toggle,
+[data-selected='true'] .toggle,
 .toggle:focus-visible {
   opacity: 1;
 }

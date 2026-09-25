@@ -1,9 +1,9 @@
 import type { AppSettings } from '@shared/domain/settings';
-import { api } from '../../../api/client';
-import { queryKeys } from '../../../api/queryKeys';
-import { queryClient } from '../../../app/queryClient';
-import { saveSettings, useSettings } from '../../../app/settings/useSettings';
-import { toast } from '../../../ui/toast/toastStore';
+import { api } from '../../api/client';
+import { queryKeys } from '../../api/queryKeys';
+import { queryClient } from '../../app/queryClient';
+import { saveSettings, useSettings } from '../../app/settings/useSettings';
+import { toast } from '../../ui/toast/toastStore';
 import { withReviewMode } from './reviewModeWorkspaces';
 
 export function useReviewModeOn(workspacePath: string): boolean {

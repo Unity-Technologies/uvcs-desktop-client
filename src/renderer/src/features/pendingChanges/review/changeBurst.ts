@@ -1,5 +1,5 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { isReviewable } from './reviewProgress';
+import { isReviewable } from './pendingReviewStatus';
 
 /** So many files changing within the window is worth reviewing file by file, e.g. an agent editing the code. */
 export const BURST_FILES = 8;

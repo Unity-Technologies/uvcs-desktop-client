@@ -9,7 +9,7 @@ import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { NavItem } from '../../ui/nav/SidebarNav';
 import { SegmentedControl } from '../../ui/SegmentedControl';
-import { setReviewMode } from '../../features/pendingChanges/review/reviewModeSetting';
+import { setReviewMode } from '../../features/review/reviewModeSetting';
 import { useSession } from '../workspace/sessionStore';
 import { DefaultWorkspaceRootField } from './DefaultWorkspaceRootField';
 import { THEMES } from './themes';
@@ -116,7 +116,7 @@ function PendingChangesPane({ settings, updateSettings }: PaneProps) {
       {workspacePath && (
         <SettingsGroup title="Review">
           <Checkbox
-            label="Review mode in this workspace: mark files as you review them (R)"
+            label="Review mode in this workspace: mark files as you review them, in Changes and every diff (R)"
             checked={settings.reviewModeWorkspaces.includes(workspacePath)}
             onChange={(on) => void setReviewMode(workspacePath, on)}
           />

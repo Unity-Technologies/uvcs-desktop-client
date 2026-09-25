@@ -2,8 +2,10 @@ import type { ReactNode } from 'react';
 import type { DiffTarget } from '@shared/domain/diff';
 import { EmptyState } from '../../ui/EmptyState';
 import { CenteredSpinner } from '../../ui/Spinner';
+import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ChangesetSummary } from '../changesets/ChangesetSummary';
 import { useChangeset } from '../changesets/useChangeset';
+import { ReviewModeButton } from '../review/ReviewModeButton';
 import { DiffBrowser } from './DiffBrowser';
 import { useDiffEntries } from './useDiffEntries';
 import styles from './TargetDiff.module.css';
@@ -16,6 +18,7 @@ interface TargetDiffProps {
 }
 
 export function TargetDiff({ target, toolbar, focusPath }: TargetDiffProps) {
+  const workspacePath = useWorkspacePath();
   const { data: entries, error } = useDiffEntries(target);
 
   return (
@@ -25,11 +28,12 @@ export function TargetDiff({ target, toolbar, focusPath }: TargetDiffProps) {
           <TargetDescription target={target} />
         </div>
         {toolbar}
+        <ReviewModeButton workspacePath={workspacePath} />
       </header>
       {error ? (
         <EmptyState title="Couldn't calculate the differences" description={error.message} />
       ) : entries ? (
-        <DiffBrowser key={JSON.stringify(target)} entries={entries} initialPath={focusPath} />
+        <DiffBrowser key={JSON.stringify(target)} target={target} entries={entries} initialPath={focusPath} />
       ) : (
         <CenteredSpinner />
       )}

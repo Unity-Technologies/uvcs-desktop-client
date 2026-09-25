@@ -1,6 +1,6 @@
 import { ArrowDownToLine, FolderOpen, Keyboard, ListChecks, Monitor, Moon, RefreshCw, Sun, TerminalSquare } from 'lucide-react';
 import type { ThemePreference } from '@shared/domain/settings';
-import { setReviewMode } from '../../features/pendingChanges/review/reviewModeSetting';
+import { setReviewMode } from '../../features/review/reviewModeSetting';
 import type { Icon } from '../../lib/actions';
 import { useMemo } from 'react';
 import { useCommands, type Command } from '../commands/commandStore';
@@ -60,11 +60,7 @@ export function useWorkspaceCommands(): void {
         label: 'Toggle review mode',
         icon: ListChecks,
         keywords: ['review', 'reviewed', 'mark'],
-        // Turning it on is about to review: show the changes to review.
-        run: () => {
-          void setReviewMode(workspacePath, !reviewing);
-          if (!reviewing) navigation.goToView('changes');
-        },
+        run: () => void setReviewMode(workspacePath, !reviewing),
       },
       {
         id: 'workspace.open',
