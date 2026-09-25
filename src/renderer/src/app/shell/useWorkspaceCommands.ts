@@ -11,7 +11,7 @@ import { useSettings, useUpdateSettings } from '../settings/useSettings';
 import { useSession } from '../workspace/sessionStore';
 import { useWorkspacePath } from '../workspace/useWorkspace';
 import { useCommandLogStore } from './commandLogStore';
-import { updateWorkspace } from './workspaceOperations';
+import { updateUnlessUpToDate } from './workspaceOperations';
 
 const THEMES: { theme: ThemePreference; label: string; icon: Icon }[] = [
   { theme: 'system', label: 'Use system theme', icon: Monitor },
@@ -42,7 +42,7 @@ export function useWorkspaceCommands(): void {
         label: 'Update workspace',
         icon: ArrowDownToLine,
         shortcut: 'mod+shift+u',
-        run: () => void updateWorkspace(workspacePath),
+        run: () => void updateUnlessUpToDate(workspacePath),
       },
       {
         id: 'workspace.refresh',
