@@ -4,6 +4,8 @@ import { ToastHost } from '../ui/toast/ToastHost';
 import { TooltipProvider } from '../ui/Tooltip';
 import { CommandPalette } from './commands/CommandPalette';
 import { CommandShortcuts } from './commands/CommandShortcuts';
+import { useAppCommands } from './commands/useAppCommands';
+import { useMenuCommands } from './commands/useMenuCommands';
 import { HomeScreen } from './home/HomeScreen';
 import { queryClient } from './queryClient';
 import { useTheme } from './settings/useTheme';
@@ -28,6 +30,8 @@ export function App() {
 
 function Root() {
   useTheme();
+  useAppCommands();
+  useMenuCommands();
   const workspacePath = useSession((state) => state.workspacePath);
   const cm = useCmAvailability();
 

@@ -5,6 +5,7 @@ import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { SegmentedControl } from '../../ui/SegmentedControl';
+import { DefaultWorkspaceRootField } from './DefaultWorkspaceRootField';
 import { useSettings, useUpdateSettings } from './useSettings';
 import styles from './SettingsDialog.module.css';
 
@@ -62,6 +63,14 @@ function SettingsDialog({ onClose }: { onClose: () => void }) {
           />
           <span className={styles.sliderValue}>{settings.pendingChanges.moveSimilarityPercent}%</span>
         </label>
+      </section>
+
+      <section className={styles.section}>
+        <h2 className={styles.heading}>New workspaces</h2>
+        <DefaultWorkspaceRootField
+          value={settings.defaultWorkspaceRoot}
+          onChange={(defaultWorkspaceRoot) => updateSettings({ defaultWorkspaceRoot })}
+        />
       </section>
 
       <section className={styles.section}>

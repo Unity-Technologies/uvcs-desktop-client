@@ -1,0 +1,5 @@
+.picker {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  gap: var(--space-3);
+}

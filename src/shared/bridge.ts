@@ -6,4 +6,6 @@ export interface UvcsBridge {
   invoke(request: InvokeRequest): Promise<InvokeResponse>;
   on<Name extends UvcsEventName>(name: Name, listener: (payload: UvcsEvents[Name]) => void): () => void;
   platform: string;
+  /** The file-system path of a file or folder dropped onto the window. */
+  pathForFile(file: File): string;
 }

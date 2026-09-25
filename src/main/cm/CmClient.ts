@@ -10,6 +10,8 @@ export interface CmRunOptions {
   /** Working directory; `cm` resolves the workspace and repository from it. */
   cwd?: string;
   signal?: AbortSignal;
+  /** Signal sent to the process when `signal` aborts (default SIGTERM). */
+  killSignal?: NodeJS.Signals;
   onOutputLine?: (line: string) => void;
 }
 
@@ -54,7 +56,7 @@ export class CmClient {
     const startedAt = Date.now();
     const result = useShell
       ? await this.shellPool.run(cwd, args)
-      : await runCmProcess(this.cmPath, args, { cwd, signal: options.signal, onOutputLine: options.onOutputLine });
+      : await runCmProcess(this.cmPath, args, { cwd, signal: options.signal, killSignal: options.killSignal, onOutputLine: options.onOutputLine });
 
     this.log(args, cwd, startedAt, result, useShell);
 

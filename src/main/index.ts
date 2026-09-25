@@ -8,6 +8,7 @@ import { OperationTracker } from './operations/OperationTracker';
 import { createServices } from './services/createServices';
 import { SettingsStore } from './settings/SettingsStore';
 import { WorkspaceWatcher } from './watch/WorkspaceWatcher';
+import { installAppMenu } from './window/appMenu';
 import { createMainWindow } from './window/createMainWindow';
 
 const cm = new CmClient(locateCm());
@@ -24,6 +25,7 @@ function start(): void {
     }),
   );
 
+  installAppMenu();
   createMainWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow();

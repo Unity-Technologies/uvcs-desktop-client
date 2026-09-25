@@ -9,6 +9,12 @@ export interface CreateWorkspaceRequest {
 export interface WorkspacesApi {
   list(): Promise<WorkspaceSummary[]>;
   info(workspacePath: string): Promise<WorkspaceInfo>;
+  /**
+   * Which repository each workspace works on (`name@server`), or null when it can't be told quickly
+   * (missing folder, unreachable server). Costs one `cm` call per workspace, so only the first 10 paths
+   * are looked up: pass the few workspaces on screen (e.g. the recent ones), never the whole list.
+   */
+  repositoriesOf(workspacePaths: string[]): Promise<Record<string, string | null>>;
   /** Returns the workspace root containing the given directory, or null. */
   findRoot(directory: string): Promise<string | null>;
   create(request: CreateWorkspaceRequest): Promise<WorkspaceSummary>;

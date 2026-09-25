@@ -6,6 +6,7 @@ export interface SystemApi {
   openExternal(url: string): Promise<void>;
   /** Moves files to the OS trash, so deleting private files can be undone. */
   moveToTrash(paths: string[]): Promise<void>;
-  pickDirectory(title: string): Promise<string | null>;
+  pickDirectory(title: string, defaultPath?: string): Promise<string | null>;
+  homeDirectory(): Promise<string>;
   cancelOperation(operationId: string): Promise<void>;
 }

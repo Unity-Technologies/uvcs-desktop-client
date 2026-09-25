@@ -1,0 +1,90 @@
+.panel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.target {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-4);
+  margin: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-app);
+}
+
+.endpoint {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.endpointLabel {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.endpointName {
+  display: flex;
+  align-items: center;
+  height: var(--control-height);
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  background: var(--bg-active);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.direction {
+  flex: none;
+  margin-bottom: 5px;
+  color: var(--accent);
+}
+
+.picker {
+  flex: 1;
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-4) var(--space-2);
+}
+
+.hint {
+  flex: 1;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.rowActions {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.gitForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: min(620px, 100%);
+  padding: var(--space-6);
+}
+
+.explanation {
+  margin: 0;
+  color: var(--text-secondary);
+}
+
+.credentials {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}

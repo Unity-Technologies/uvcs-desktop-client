@@ -1,23 +1,22 @@
 import { ChevronsUpDown, Settings } from 'lucide-react';
 import { useNavigation } from '../navigation/navigationStore';
 import { VIEWS, type ViewDefinition } from '../navigation/viewRegistry';
-import { useWorkspaceInfo } from '../workspace/useWorkspace';
-import { useSession } from '../workspace/sessionStore';
+import { useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
 import { openSettingsDialog } from '../settings/SettingsDialog';
-import { Tooltip } from '../../ui/Tooltip';
+import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import styles from './Sidebar.module.css';
 
 const GROUPS: ViewDefinition['group'][] = ['Workspace', 'History', 'Collaborate'];
 
 export function Sidebar() {
   const { data: workspace } = useWorkspaceInfo();
-  const closeWorkspace = useSession((state) => state.closeWorkspace);
+  const workspacePath = useWorkspacePath();
 
   return (
     <nav className={styles.sidebar}>
       <div className={styles.dragRegion} />
-      <Tooltip content="Switch workspace" side="right">
-        <button className={styles.workspace} onClick={closeWorkspace}>
+      <WorkspaceSwitcher currentPath={workspacePath}>
+        <button className={styles.workspace} aria-label="Switch workspace">
           <span className={styles.workspaceIcon}>{workspace?.name.charAt(0).toUpperCase()}</span>
           <span className={styles.workspaceText}>
             <span className={styles.workspaceName}>{workspace?.name ?? '…'}</span>
@@ -25,7 +24,7 @@ export function Sidebar() {
           </span>
           <ChevronsUpDown size={14} className={styles.workspaceChevron} />
         </button>
-      </Tooltip>
+      </WorkspaceSwitcher>
 
       <div className={styles.groups}>
         {GROUPS.map((group) => (

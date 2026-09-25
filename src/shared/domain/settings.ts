@@ -12,6 +12,8 @@ export interface AppSettings {
   recentComments: string[];
   /** Automatically refresh pending changes when files change on disk. */
   autoRefresh: boolean;
+  /** Folder new workspaces are created in; empty means the home folder. */
+  defaultWorkspaceRoot: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -21,4 +23,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   warnOnEmptyComment: true,
   recentComments: [],
   autoRefresh: true,
+  defaultWorkspaceRoot: '',
 };

@@ -1,3 +1,4 @@
+import { homedir } from 'node:os';
 import { dialog, shell } from 'electron';
 import type { SystemApi } from '@shared/api/system';
 import type { ServiceContext } from './ServiceContext';
@@ -15,10 +16,11 @@ export function createSystemService({ cm, operations }: ServiceContext): SystemA
     moveToTrash: async (paths) => {
       for (const path of paths) await shell.trashItem(path);
     },
-    pickDirectory: async (title) => {
-      const result = await dialog.showOpenDialog({ title, properties: ['openDirectory', 'createDirectory'] });
+    pickDirectory: async (title, defaultPath) => {
+      const result = await dialog.showOpenDialog({ title, defaultPath, properties: ['openDirectory', 'createDirectory'] });
       return result.canceled ? null : (result.filePaths[0] ?? null);
     },
+    homeDirectory: async () => homedir(),
     cancelOperation: async (operationId) => operations.cancel(operationId),
   };
 }
