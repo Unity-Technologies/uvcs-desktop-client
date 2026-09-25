@@ -1,6 +1,7 @@
 import {
   ArrowRightLeft,
   Cherry,
+  Braces,
   Copy,
   Eye,
   EyeOff,
@@ -15,7 +16,7 @@ import {
   Pencil,
   Trash2,
 } from 'lucide-react';
-import type { Branch } from '@shared/domain/branch';
+import { MAIN_BRANCH_GUID, type Branch } from '@shared/domain/branch';
 import { shortBranchName, spec } from '@shared/domain/specs';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { copyToClipboard } from '../../lib/copyToClipboard';
@@ -116,6 +117,12 @@ export function branchMenu(workspacePath: string, branches: Branch[], currentBra
     SEPARATOR,
     single && { id: 'rename', label: 'Rename…', icon: Pencil, run: () => void renameBranch(workspacePath, single) },
     single && { id: 'copy', label: 'Copy name', icon: Copy, run: () => copyToClipboard(single.name, 'Branch name') },
+    single && {
+      id: 'copySpec',
+      label: 'Copy branch spec',
+      icon: Braces,
+      run: () => copyToClipboard(`${spec.branch(single.name)}@${single.repository}`, 'Branch spec'),
+    },
     visible.length > 0 && {
       id: 'hide',
       label: visible.length === 1 ? 'Hide' : `Hide ${visible.length} branches`,
@@ -129,11 +136,13 @@ export function branchMenu(workspacePath: string, branches: Branch[], currentBra
       run: () => void setBranchesHidden(workspacePath, hidden, false),
     },
     SEPARATOR,
-    !branches.some((branch) => branch.name === currentBranch) && {
+    {
       id: 'delete',
       label: single ? 'Delete…' : `Delete ${branches.length} branches…`,
       icon: Trash2,
       danger: true,
+      // Neither the branch the workspace is on nor /main can go.
+      disabled: branches.some((branch) => branch.name === currentBranch || branch.guid.toLowerCase() === MAIN_BRANCH_GUID),
       run: () => void deleteBranches(workspacePath, branches),
     },
   ]);

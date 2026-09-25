@@ -5,6 +5,7 @@ import { shortBranchName } from '@shared/domain/specs';
 import { escapeQueryValue, findArgs } from '../cm/findQuery';
 import { findRecords, toBranch } from '../cm/findObjects';
 import { withTempFile } from '../files/tempFile';
+import { loadRecentBranches, saveRecentBranch } from '../plasticConfig/recentBranches';
 import type { ServiceContext } from './ServiceContext';
 
 export function createBranchesService({ cm }: ServiceContext): BranchesApi {
@@ -49,7 +50,19 @@ export function createBranchesService({ cm }: ServiceContext): BranchesApi {
     await cm.query(['branch', hidden ? 'hide' : 'unhide', ...branches.map((branch) => `br:${branch}`)], { cwd: workspacePath });
   }
 
-  return { list, get, create, rename, delete: remove, setHidden };
+  async function workspaceGuid(workspacePath: string): Promise<string> {
+    return (await cm.query(['getworkspacefrompath', workspacePath, '--format={guid}'])).trim();
+  }
+
+  async function recent(workspacePath: string): Promise<string[]> {
+    return loadRecentBranches(await workspaceGuid(workspacePath));
+  }
+
+  async function rememberRecent(workspacePath: string, branchGuid: string): Promise<void> {
+    await saveRecentBranch(await workspaceGuid(workspacePath), branchGuid);
+  }
+
+  return { list, get, create, rename, delete: remove, setHidden, recent, rememberRecent };
 }
 
 /** Without a starting point, `cm` starts the branch at the head of its parent. */
