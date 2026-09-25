@@ -167,7 +167,7 @@ renderer/src/
     app's own writes cause (`changesWorkspace` commands and tracked operations): the renderer refreshes after those anyway.
   - `workspaceChanged` tells file edits (pending changes, review marks, files view, open diffs of workspace files; if auto refresh is on, and once when it's turned back on)
     from `.plastic` rewrites by any tool (workspace info; everything when the loaded changeset or branch moved). See
-    `app/shell/useWorkspaceWatcher.ts` and `app/refresh/`. A diff being edited holds still and offers to reload instead.
+    `app/shell/useWorkspaceWatcher.ts` and `app/refresh/`. A diff with unsaved edits holds still and offers to reload instead.
   - Locks live on the server, where nothing reports changes: pending changes re-read them along with the changes, at most every 30 s.
   - Window focus (wired to real focus in `trackWindowFocus`) refetches stale server views; local views skip it while the watcher sees everything.
   - Incoming: `useIncomingSummary` polls every minute with focus, every five minutes behind other apps, never hidden, and on focus if
@@ -179,9 +179,24 @@ renderer/src/
   by the diff's name (`cs:42`, `br:/main/task`, `sh:3`) and the revision reviewed, so a branch's file is changed since its review once
   another revision shows; the least recently reviewed diffs are forgotten. `features/review` holds the shared list pieces.
   Marks only show in review mode, a per-workspace setting (`reviewModeWorkspaces`, off by default); leaving it keeps the marks.
-- **Discarding changes**: a workspace file's diff against its loaded revision (or reviewed copy) discards a whole change
-  from a chip in the gutter, or just the lines picked by their numbers (`features/diff/viewer/useBlockDiscard`). The new
-  text is computed in the renderer (`discardLines`), shown at once and written; each file keeps an undo stack for the session.
+- **Editing in the diff**: a workspace file shown against its own past (loaded revision, reviewed copy, or nothing for an
+  added file: `canEditInPlace`) is typed into directly on its modified side, like the official client; every other diff
+  (history, merges, conflicts) is read-only, with no caret. Pierre's editor holds the text and its undo (⌘Z while typing);
+  `useFileBuffer` keeps what the disk doesn't have yet: Discard and Save (⌘S) show in the header as soon as there is some.
+  Without unsaved edits the diff follows the disk; with some it holds still and says the file changed on disk. A file with
+  no lines to show (no content changes, empty, only ignored differences) is typed into whole, under a note. ⌘E puts the
+  caret in the text and Esc leaves it for the file list; keys the editor handles never reach the app's shortcuts. Read and
+  edit look the same: the editor is always on, so nothing in the diff moves when typing starts.
+- **Leaving unsaved edits**: `app/navigation/leaveGuard` lets unsaved edits guard the way out. Selecting another file
+  (`selectAfterLeaving`), another view (`goToView`) or checking in asks Save / Don't save / Cancel first; a diff that goes
+  away without asking saves its edits, so work is never lost.
+- **Discarding changes**: a workspace file's diff against its loaded revision (or reviewed copy) discards changes from
+  its gutter (`features/diff/viewer/useBlockDiscard`): hovering a changed line offers that one line (− removes an added
+  line, ↶ restores a removed one) and a chip on the change's top edge the whole change. Line numbers pick lines (click,
+  Shift+click, drag, shown as they're picked; only changed lines' numbers react) and the chip then acts on them
+  ("Restore 3 lines", ⌥⌘Z); Esc or a click elsewhere drops the pick. The new text is computed in the renderer
+  (`discardLines`). Without unsaved edits it's shown at once and written, and each file keeps an undo stack for the
+  session (⌘Z in the diff); with some, it's one more edit in the editor, unsaved, and ⌘Z takes it back like typing.
 - **Comparison method**: every text diff compares lines under the official client's methods (Ignore EOLs, Ignore
   whitespaces, both, Recognize all; one global preference, Recognize all by default). Lines are compared trimmed
   (`features/diff/viewer/comparisonMethod`) through a line comparator handed to Pierre and `diff`, so the diff still
