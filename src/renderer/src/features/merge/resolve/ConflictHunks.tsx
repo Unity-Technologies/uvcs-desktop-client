@@ -64,13 +64,13 @@ function HunkChoices({ labels, conflictIndex, onChoose }: { labels: MergeLabels;
   const { source, destination } = labels.roles;
   return (
     <span className={styles.choices} role="group" aria-label={`Resolve conflict ${conflictIndex + 1}`}>
-      <Button size="small" variant="ghost" data-tip={`From ${labels.destination}`} onClick={() => onChoose('current')}>
+      <Button size="small" variant="secondary" data-tip={`From ${labels.destination}`} onClick={() => onChoose('current')}>
         Keep {destination.name.toLowerCase()}
       </Button>
-      <Button size="small" variant="ghost" data-tip={`From ${labels.source}`} onClick={() => onChoose('incoming')}>
+      <Button size="small" variant="secondary" data-tip={`From ${labels.source}`} onClick={() => onChoose('incoming')}>
         Keep {source.name.toLowerCase()}
       </Button>
-      <Button size="small" variant="ghost" data-tip={`${destination.name} first, then ${source.name.toLowerCase()}`} onClick={() => onChoose('both')}>
+      <Button size="small" variant="secondary" data-tip={`${destination.name} first, then ${source.name.toLowerCase()}`} onClick={() => onChoose('both')}>
         Keep both
       </Button>
     </span>
