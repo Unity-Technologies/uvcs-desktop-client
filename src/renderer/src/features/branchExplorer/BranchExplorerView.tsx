@@ -16,7 +16,6 @@ import { GraphCanvas, type GraphCanvasHandle, type GraphHighlights } from './can
 import type { GraphTarget } from './canvas/graphTargets';
 import { ZOOM_STEP } from './canvas/zoom';
 import { DetailsPanel } from './details/DetailsPanel';
-import { FocusBanner } from './FocusBanner';
 import { graphActions } from './graphActions';
 import { graphMenu } from './graphMenu';
 import { selectionFor, type GraphSelection } from './graphSelection';
@@ -223,7 +222,16 @@ export function BranchExplorerView() {
         </>
       }
     >
-      <GraphFilterBar branches={branchNames} authors={authors} onZoom={zoomBy} onFit={fit} onGoHome={goHome} />
+      <GraphFilterBar
+        branches={branchNames}
+        authors={authors}
+        onZoom={zoomBy}
+        onFit={fit}
+        onGoHome={goHome}
+        focus={focus}
+        onFocusHopsChange={(hops) => focus && focusOn(focus.branch, hops)}
+        onExitFocus={() => setFocus(null)}
+      />
     </ViewHeader>
   );
 
@@ -254,7 +262,6 @@ export function BranchExplorerView() {
   return (
     <>
       {header}
-      {focus && <FocusBanner focus={focus} onHopsChange={(hops) => focusOn(focus.branch, hops)} onExit={() => setFocus(null)} />}
       <div className={styles.body} onKeyDown={onKeyDown}>
         <ListWithDetails
           hideDetails={!detailsOpen}
