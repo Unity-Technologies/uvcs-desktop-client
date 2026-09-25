@@ -1,0 +1,24 @@
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: var(--space-3);
+  align-items: baseline;
+}
+
+.label {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.value {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}

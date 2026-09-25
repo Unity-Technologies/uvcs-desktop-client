@@ -1,0 +1,63 @@
+.name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.chevron,
+.chevronSpace {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+}
+
+.chevron {
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-tertiary);
+  transition: transform var(--duration-fast);
+}
+
+.chevron:hover {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+.chevron[data-expanded='true'] {
+  transform: rotate(90deg);
+}
+
+.folderIcon {
+  flex: none;
+  color: var(--accent);
+}
+
+.fileIcon {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.label[data-private='true'] {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.changesDot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--status-changed);
+}

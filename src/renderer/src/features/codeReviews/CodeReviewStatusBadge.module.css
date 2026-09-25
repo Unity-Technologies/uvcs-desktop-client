@@ -1,0 +1,25 @@
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 8px;
+  border-radius: var(--radius-full);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.badge[data-status='Under review'] {
+  background: color-mix(in srgb, var(--status-moved) 14%, transparent);
+  color: var(--status-moved);
+}
+
+.badge[data-status='Reviewed'] {
+  background: color-mix(in srgb, var(--status-added) 14%, transparent);
+  color: var(--status-added);
+}
+
+.badge[data-status='Rework required'] {
+  background: color-mix(in srgb, var(--status-changed) 16%, transparent);
+  color: var(--status-changed);
+}

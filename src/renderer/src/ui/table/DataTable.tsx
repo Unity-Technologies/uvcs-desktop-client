@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowDown, ArrowUp } from 'lucide-react';
-import { useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { MenuEntry } from '../../lib/actions';
 import { isMac } from '../../lib/platform';
 import { selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
@@ -31,6 +31,10 @@ interface DataTableProps<Row> {
   contextMenu?: (selectedRows: Row[]) => MenuEntry[];
   rowHeight?: number;
   initialSort?: { columnId: string; descending: boolean };
+  /** Keys the table does not handle itself (e.g. ←/→ to collapse or expand a tree row). */
+  onRowKeyDown?: (event: KeyboardEvent, focusedRow: Row) => void;
+  /** Scrolls this row into view whenever it changes, e.g. after revealing a search result. */
+  revealKey?: string | null;
 }
 
 export function DataTable<Row>({
@@ -43,6 +47,8 @@ export function DataTable<Row>({
   contextMenu,
   rowHeight = 30,
   initialSort,
+  onRowKeyDown,
+  revealKey,
 }: DataTableProps<Row>) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const [sort, setSort] = useState(initialSort);
@@ -59,6 +65,12 @@ export function DataTable<Row>({
     overscan: 12,
   });
 
+  useEffect(() => {
+    const index = revealKey ? orderedKeys.indexOf(revealKey) : -1;
+    if (index !== -1) virtualizer.scrollToIndex(index, { align: 'auto' });
+    // Only when the requested row changes (or appears), not on every re-render of the rows.
+  }, [revealKey, orderedKeys.length]);
+
   const selectedRows = (): Row[] => orderedKeys.filter((key) => selection.selected.has(key)).map((key) => rowsByKey.get(key)!);
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -74,6 +86,9 @@ export function DataTable<Row>({
     } else if (event.key === 'a' && (isMac ? event.metaKey : event.ctrlKey)) {
       event.preventDefault();
       onSelectionChange({ selected: new Set(orderedKeys), anchor: orderedKeys[0] ?? null });
+    } else {
+      const focusedRow = rowsByKey.get(focusedKey ?? selection.anchor ?? '');
+      if (focusedRow) onRowKeyDown?.(event, focusedRow);
     }
   };
 
