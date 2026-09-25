@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import type { BranchChoice } from './model/branchChoice';
 import type { DateRangeId } from './model/dateRanges';
 
 interface BranchExplorerPreferences {
@@ -8,6 +9,8 @@ interface BranchExplorerPreferences {
   showHiddenBranches: boolean;
   /** Show only the branches related to the workspace branch. */
   onlyRelatedToCurrent: boolean;
+  /** The branches picked in the Branches filter. Not remembered: branches differ between repositories. */
+  visibleBranches: BranchChoice;
   /** Fade out changesets by anyone else. Not remembered: authors differ between repositories. */
   highlightedAuthor: string | null;
   showComments: boolean;
@@ -23,6 +26,7 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
       hideMergedBranches: false,
       showHiddenBranches: false,
       onlyRelatedToCurrent: false,
+      visibleBranches: null,
       highlightedAuthor: null,
       showComments: true,
       showAvatars: true,
@@ -31,7 +35,7 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
     }),
     {
       name: 'branch-explorer-preferences',
-      partialize: ({ highlightedAuthor: _notRemembered, set: _action, ...remembered }) => remembered,
+      partialize: ({ visibleBranches: _branches, highlightedAuthor: _author, set: _action, ...remembered }) => remembered,
     },
   ),
 );

@@ -29,9 +29,34 @@
   font-size: var(--text-sm);
 }
 
+.focusIcon {
+  flex: none;
+  margin-right: 2px;
+  color: var(--accent-text);
+}
+
+.hopsButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: var(--space-1);
+  padding: 1px 6px 1px 8px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+
+.hopsButton:hover,
+.hopsButton[data-state='open'] {
+  border-color: var(--accent);
+}
+
 .clearFocus {
   display: flex;
-  margin-left: var(--space-1);
+  margin-left: auto;
   padding: 2px;
   border: none;
   border-radius: var(--radius-sm);

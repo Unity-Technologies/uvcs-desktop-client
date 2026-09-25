@@ -4,12 +4,15 @@ import { SEPARATOR, type MenuEntry } from '../../lib/actions';
 import { displayName } from '../../lib/userName';
 import { Button } from '../../ui/Button';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
+import { BranchFilterPopover } from './BranchFilterPopover';
 import { useBranchExplorerPreferences } from './branchExplorerStore';
 import { ZOOM_STEP } from './canvas/zoom';
 import { DATE_RANGES } from './model/dateRanges';
 import styles from './BranchExplorerView.module.css';
 
 interface GraphFilterBarProps {
+  /** Every branch in the loaded history, by name. */
+  branches: readonly string[];
   /** Everyone who authored a changeset in the loaded history. */
   authors: string[];
   onZoom: (factor: number) => void;
@@ -18,22 +21,10 @@ interface GraphFilterBarProps {
 }
 
 /** Compact dropdowns for what to show: branches, authors, time range and view options. */
-export function GraphFilterBar({ authors, onZoom, onFit, onGoHome }: GraphFilterBarProps) {
+export function GraphFilterBar({ branches, authors, onZoom, onFit, onGoHome }: GraphFilterBarProps) {
   const preferences = useBranchExplorerPreferences();
   const { set } = preferences;
   const check = (value: boolean) => (value ? Check : undefined);
-
-  const branchFilterCount = [preferences.onlyRelatedToCurrent, preferences.hideMergedBranches, preferences.showHiddenBranches].filter(Boolean).length;
-  const branchesMenu: MenuEntry[] = [
-    {
-      id: 'related',
-      label: 'Only branches related to mine',
-      icon: check(preferences.onlyRelatedToCurrent),
-      run: () => set({ onlyRelatedToCurrent: !preferences.onlyRelatedToCurrent }),
-    },
-    { id: 'merged', label: 'Hide merged branches', icon: check(preferences.hideMergedBranches), run: () => set({ hideMergedBranches: !preferences.hideMergedBranches }) },
-    { id: 'hidden', label: 'Show hidden branches', icon: check(preferences.showHiddenBranches), run: () => set({ showHiddenBranches: !preferences.showHiddenBranches }) },
-  ];
 
   const authorsMenu: MenuEntry[] = [
     { id: 'everyone', label: 'Everyone', icon: check(preferences.highlightedAuthor === null), run: () => set({ highlightedAuthor: null }) },
@@ -66,9 +57,7 @@ export function GraphFilterBar({ authors, onZoom, onFit, onGoHome }: GraphFilter
 
   return (
     <div className={styles.filterBar}>
-      <FilterPill entries={branchesMenu} active={branchFilterCount > 0}>
-        {branchFilterCount > 0 ? `Branches · ${branchFilterCount}` : 'Branches'}
-      </FilterPill>
+      <BranchFilterPopover branches={branches} />
       <FilterPill entries={authorsMenu} active={preferences.highlightedAuthor !== null}>
         {preferences.highlightedAuthor ? displayName(preferences.highlightedAuthor) : 'Authors'}
       </FilterPill>

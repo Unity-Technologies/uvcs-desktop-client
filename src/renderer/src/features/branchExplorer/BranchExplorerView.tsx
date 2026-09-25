@@ -1,7 +1,8 @@
-import { GitGraph, RefreshCw, X } from 'lucide-react';
+import { GitGraph, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
 import { CenteredSpinner } from '../../ui/Spinner';
@@ -11,13 +12,14 @@ import { GraphCanvas, type GraphCanvasHandle, type GraphHighlights } from './can
 import type { GraphTarget } from './canvas/graphTargets';
 import { ZOOM_STEP } from './canvas/zoom';
 import { DetailsPanel } from './details/DetailsPanel';
+import { FocusBanner } from './FocusBanner';
 import { graphActions } from './graphActions';
 import { graphMenu } from './graphMenu';
 import { selectionFor, type GraphSelection } from './graphSelection';
 import { GraphFilterBar } from './GraphFilterBar';
 import { GraphNavControls } from './GraphNavControls';
 import { GraphSearch } from './GraphSearch';
-import { filterGraph } from './model/filterGraph';
+import { filterGraph, type GraphFocus } from './model/filterGraph';
 import { layoutGraph } from './model/layoutGraph';
 import { neighborChangeset, type GraphDirection } from './model/navigateGraph';
 import { searchGraph, searchHighlight, type SearchHit } from './model/searchGraph';
@@ -31,11 +33,14 @@ export function BranchExplorerView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
   const { data, isLoading, isFetching, error } = useBranchExplorerData();
-  const { hideMergedBranches, onlyRelatedToCurrent, detailsOpen, highlightedAuthor, showComments, showAvatars } = useBranchExplorerPreferences();
+  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, detailsOpen, highlightedAuthor, showComments, showAvatars, set: setPreferences } =
+    useBranchExplorerPreferences();
 
   const canvasRef = useRef<GraphCanvasHandle>(null);
   const [selection, setSelection] = useState<GraphSelection | null>(null);
-  const [relatedTo, setRelatedTo] = useState<string | null>(null);
+  const [focus, setFocus] = useState<GraphFocus | null>(null);
+  /** How far the last focus reached; the next one starts there. */
+  const [focusHops, setFocusHops] = useState(1);
   const [search, setSearch] = useState('');
   /** -1 until the user steps through the matches. */
   const [activeHitIndex, setActiveHitIndex] = useState(-1);
@@ -45,12 +50,14 @@ export function BranchExplorerView() {
 
   const layout = useMemo(() => {
     if (!data) return null;
-    const focus = relatedTo ?? (onlyRelatedToCurrent ? currentBranch : null);
-    return layoutGraph(filterGraph(data, { relatedTo: focus, hideMergedBranches, currentBranch }));
-  }, [data, relatedTo, onlyRelatedToCurrent, hideMergedBranches, currentBranch]);
+    const related = focus ?? (onlyRelatedToCurrent && currentBranch ? { branch: currentBranch, hops: 1 } : null);
+    const chosen = visibleBranches && new Set(visibleBranches);
+    return layoutGraph(filterGraph(data, { focus: related, visibleBranches: chosen, hideMergedBranches, currentBranch }));
+  }, [data, focus, onlyRelatedToCurrent, visibleBranches, hideMergedBranches, currentBranch]);
 
   const searchHits = useMemo(() => (layout ? searchGraph(layout, search) : []), [layout, search]);
   const authors = useMemo(() => [...new Set(data?.changesets.map((changeset) => changeset.owner))].sort(), [data]);
+  const branchNames = useMemo(() => (data?.branches.map((branch) => branch.name) ?? []).sort(), [data]);
   const highlights = useMemo<GraphHighlights>(
     () => ({
       selectedChangeset: selection?.kind === 'changeset' ? selection.id : null,
@@ -68,6 +75,16 @@ export function BranchExplorerView() {
     setSelection({ kind: 'changeset', id });
     canvasRef.current?.revealChangeset(id);
   }, []);
+
+  const focusOn = (branch: string, hops: number): void => {
+    setFocus({ branch, hops });
+    setFocusHops(hops);
+  };
+
+  const clearFilters = (): void => {
+    setFocus(null);
+    setPreferences({ onlyRelatedToCurrent: false, hideMergedBranches: false, visibleBranches: null, highlightedAuthor: null });
+  };
 
   const goHome = useCallback(() => {
     if (homeChangeset === null) return;
@@ -126,7 +143,9 @@ export function BranchExplorerView() {
     } else if (event.key === 'Enter' && selection?.kind === 'changeset') {
       graphActions.diffChangeset(selection.id);
     } else if (event.key === 'Escape') {
-      setSelection(null);
+      // Esc steps back: first out of the selection, then out of the focus.
+      if (selection) setSelection(null);
+      else setFocus(null);
     }
   };
 
@@ -150,12 +169,25 @@ export function BranchExplorerView() {
         </>
       }
     >
-      <GraphFilterBar authors={authors} onZoom={zoomBy} onFit={fit} onGoHome={goHome} />
+      <GraphFilterBar branches={branchNames} authors={authors} onZoom={zoomBy} onFit={fit} onGoHome={goHome} />
     </ViewHeader>
   );
 
   if (isLoading) return <>{header}<CenteredSpinner /></>;
   if (error) return <>{header}<EmptyState title="Couldn't load the history" description={error.message} /></>;
+  if (layout && layout.columnCount === 0 && data && data.changesets.length > 0) {
+    return (
+      <>
+        {header}
+        <EmptyState
+          icon={<GitGraph size={22} />}
+          title="The filters hide every branch"
+          description="Check some branches in the Branches filter, or show everything again."
+          action={<Button onClick={clearFilters}>Clear filters</Button>}
+        />
+      </>
+    );
+  }
   if (!layout || layout.columnCount === 0) {
     return (
       <>
@@ -168,14 +200,7 @@ export function BranchExplorerView() {
   return (
     <>
       {header}
-      {relatedTo && (
-        <div className={styles.focusBanner}>
-          Showing branches related to <strong>{relatedTo}</strong>
-          <button className={styles.clearFocus} onClick={() => setRelatedTo(null)} aria-label="Show all branches">
-            <X size={13} />
-          </button>
-        </div>
-      )}
+      {focus && <FocusBanner focus={focus} onHopsChange={(hops) => focusOn(focus.branch, hops)} onExit={() => setFocus(null)} />}
       <div className={styles.body} onKeyDown={onKeyDown}>
         <GraphCanvas
           ref={canvasRef}
@@ -183,7 +208,7 @@ export function BranchExplorerView() {
           highlights={highlights}
           onSelect={(target) => setSelection(selectionFor(target))}
           onActivate={activate}
-          contextMenu={(target) => graphMenu(target, { workspacePath, layout, goToChangeset, showRelatedTo: setRelatedTo })}
+          contextMenu={(target) => graphMenu(target, { workspacePath, layout, goToChangeset, showRelatedTo: (name) => focusOn(name, focusHops) })}
         >
           <GraphNavControls onGoHome={goHome} onFit={fit} onZoom={zoomBy} />
         </GraphCanvas>
