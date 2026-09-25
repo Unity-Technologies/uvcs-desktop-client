@@ -7,7 +7,7 @@ import { queryClient } from '../../app/queryClient';
 import { firstLine } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
-import { toast } from '../../ui/toast/toastStore';
+import { pluralize } from '../../lib/text';
 import { updateToIncoming } from '../incoming/updateOperations';
 import { useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinRejection, overlappingPaths, type CheckinRejection } from './checkinRejection';
@@ -44,9 +44,8 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
 
   const rejected: { rejection?: CheckinRejection } = {};
   const result = await runOperation({
-    title: `Checking in ${changes.length} ${changes.length === 1 ? 'change' : 'changes'}`,
+    title: `Checking in ${pluralize(changes.length, 'change')}`,
     workspacePath,
-    cancellable: false,
     run: (operationId) => api.pendingChanges.checkin(workspacePath, { paths: changes.map((change) => change.path), comment }, operationId),
     successMessage: (created) => `Created changeset ${created.changesetId} on ${created.branch}`,
     successAction: (created) => ({
@@ -84,9 +83,11 @@ async function catchUpAndCheckin(options: CheckinOptions, rejection: CheckinReje
   const choice = !rejection && !needsReview ? 'updateAndCheckin' : await askCatchUpForCheckin({ incoming, overlapping, needsReview, rejected: rejection !== null });
   if (!choice) return false;
 
-  const loadedChangeset = rejection?.loadedChangeset ?? incoming.loadedChangeset;
-  useCheckinAfterUpdateStore.getState().remember(workspacePath, { branch: incoming.branch, loadedChangeset });
   if (choice === 'review') {
+    // Changes offers to check in once the workspace updated past where it was. The automatic path checks in by itself,
+    // so it remembers nothing: the offer would show while that checkin runs.
+    const loadedChangeset = rejection?.loadedChangeset ?? incoming.loadedChangeset;
+    useCheckinAfterUpdateStore.getState().remember(workspacePath, { branch: incoming.branch, loadedChangeset });
     navigation.goToView('incoming');
     return false;
   }
@@ -99,12 +100,13 @@ export async function shelveChanges(workspacePath: string, changes: PendingChang
   const shelveComment = comment.trim() || (await prompt({ title: 'Shelve changes', label: 'Comment', confirmLabel: 'Shelve' }));
   if (!shelveComment) return false;
 
-  const shelveId = await runAction(workspacePath, "Couldn't shelve the changes", () =>
-    api.pendingChanges.shelve(workspacePath, changes.map((change) => change.path), shelveComment),
-  );
-  if (shelveId === undefined) return false;
-  toast.success(`Shelved as shelve ${shelveId}`, 'Your changes are still in the workspace.');
-  return true;
+  const shelveId = await runOperation({
+    title: `Shelving ${pluralize(changes.length, 'change')}`,
+    workspacePath,
+    run: (operationId) => api.pendingChanges.shelve(workspacePath, changes.map((change) => change.path), shelveComment, operationId),
+    success: (id) => ({ title: `Shelved as shelve ${id}`, detail: 'Your changes are still in the workspace.' }),
+  });
+  return shelveId !== undefined;
 }
 
 export function undoUnchangedCheckouts(workspacePath: string): Promise<void | undefined> {

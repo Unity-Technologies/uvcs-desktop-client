@@ -4,7 +4,7 @@ import { askSwitchWithChanges } from '../../features/branches/SwitchWithChangesD
 import { planSwitch } from '../../features/branches/switchOptions';
 import { explainUpdateConflicts, showUpdatedMoment } from '../../features/incoming/updateOperations';
 import { recheckIncoming } from '../../features/incoming/useIncomingSummary';
-import { toast, useToastStore } from '../../ui/toast/toastStore';
+import { toast } from '../../ui/toast/toastStore';
 import { refuseWhileBusy, runAction, runOperation } from '../operations/runOperation';
 import { switchToast } from './switchToast';
 
@@ -53,11 +53,9 @@ export async function switchWorkspace(
     run: (operationId) => api.workspaces.switchTo(workspacePath, targetSpec, operationId, action),
     // Once changes are shelved, stopping halfway would leave them in limbo.
     cancellable: !action,
+    success: (switched) => switchToast(switched, displayName),
   });
-  if (!result) return false;
-
-  useToastStore.getState().show(switchToast(result, displayName));
-  return true;
+  return Boolean(result);
 }
 
 /** Undefined: nothing to decide. Null: the user cancelled, or the switch isn't possible. */

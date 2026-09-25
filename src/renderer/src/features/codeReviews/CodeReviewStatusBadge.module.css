@@ -22,6 +22,10 @@
   height: 10px;
 }
 
+.badge[data-icon-only='true'] {
+  padding: 0 4px;
+}
+
 /* A compact badge made clickable. */
 .chip {
   display: inline-flex;

@@ -9,6 +9,7 @@ import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { pluralize } from '../../lib/text';
 import { useHoverCard } from '../../lib/useHoverCard';
 import { Button } from '../../ui/Button';
+import { ProgressRing } from '../../ui/ProgressRing';
 import { Spinner } from '../../ui/Spinner';
 import { toast } from '../../ui/toast/toastStore';
 import { IncomingCard } from './IncomingCard';
@@ -60,7 +61,7 @@ export function IncomingChip() {
   if (state.kind === 'updating') {
     return (
       <div className={`${styles.chip} ${styles.updating}`} role="status">
-        <Spinner size={13} />
+        <ProgressRing value={state.ring} size={13} />
         <span className={styles.label}>Updating</span>
         <span className={styles.stage}>{state.stage}</span>
       </div>

@@ -1,5 +1,4 @@
 import { Suspense, useRef } from 'react';
-import { CenteredSpinner } from '../../ui/Spinner';
 import { useIncomingNotificationClicks } from '../../features/incoming/incomingNotifications';
 import { useMergeCommands } from '../../features/merge/useMergeCommands';
 import { useNavigation } from '../navigation/navigationStore';
@@ -9,6 +8,7 @@ import { PageFrame } from './PageFrame';
 import { Sidebar } from './Sidebar';
 import { StatusBar } from './StatusBar';
 import { TopBar } from './TopBar';
+import { ViewFallback } from './ViewFallback';
 import { useCommandLogHost, useCommandLogStore } from './commandLogStore';
 import { useMainFocus } from './useMainFocus';
 import { useWindowTitle } from './useWindowTitle';
@@ -28,7 +28,8 @@ export function WorkspaceScreen() {
   const contentRef = useRef<HTMLDivElement>(null);
   useMainFocus(contentRef);
 
-  const ActiveView = viewDefinition(view).component;
+  const activeView = viewDefinition(view);
+  const ActiveView = activeView.component;
   const topPage = pages.at(-1);
 
   return (
@@ -41,7 +42,7 @@ export function WorkspaceScreen() {
             {/* Views stay mounted under pages so going back keeps their scroll and selection. Keyed by the view so
                 each one arrives with the view transition. */}
             <div key={view} className={styles.layer} hidden={Boolean(topPage)}>
-              <Suspense fallback={<CenteredSpinner />}>
+              <Suspense fallback={<ViewFallback view={activeView} />}>
                 <ActiveView key={view} />
               </Suspense>
             </div>

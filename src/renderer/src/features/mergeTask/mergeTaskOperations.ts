@@ -7,6 +7,7 @@ import { toast } from '../../ui/toast/toastStore';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { switchToBranch } from '../branches/branchOperations';
 import { openMerge } from '../merge/mergeOperations';
+import { useFinishedTasksStore } from './finishedTask';
 
 interface FinishTaskOptions {
   /** The task branch, e.g. `/main/t1`. */
@@ -19,7 +20,8 @@ interface FinishTaskOptions {
 
 /**
  * Merges the task on the server; the preview had no conflicts, so there is nothing to decide. Resolves to the result
- * (with `destinationMoved` when a second merge is needed), or undefined when it failed.
+ * (with `destinationMoved` when a second merge is needed), or undefined when it failed. Once merged, Changes shows where
+ * it landed and what to do next (`FinishedTaskCard`).
  */
 export async function mergeTaskOnServer(workspacePath: string, request: MergeRequest, options: FinishTaskOptions): Promise<MergeResult | undefined> {
   const destination = request.destinationBranch!;
@@ -38,6 +40,9 @@ export async function mergeTaskOnServer(workspacePath: string, request: MergeReq
     await runAction(workspacePath, "Couldn't hide the branch", () => api.branches.setHidden(workspacePath, [options.taskBranch], true));
   }
   const changesetId = result.changesetId;
+  if (changesetId !== undefined) {
+    useFinishedTasksStore.getState().remember(workspacePath, { branch: options.taskBranch, destination, changesetId, hidden: options.hideBranch });
+  }
   toast.success(
     `Merged ${options.taskBranch} into ${destination}${changesetId === undefined ? '' : ` (cs:${changesetId})`}`,
     undefined,

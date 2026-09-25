@@ -139,20 +139,6 @@ function parseSide([operationCode, firstPath, ...rest]: string[], description: s
   return [{ operation, path: firstPath!, description }, rest];
 }
 
-const PROGRESS_VERBS: Record<string, string> = {
-  DO_MERGE: 'Merging',
-  DO_COPIED: 'Copying',
-  DO_MOVED: 'Moving',
-  DO_DELETED: 'Deleting',
-};
-
-/** Turns a line printed while merging into a progress message, or null when it is not about progress. */
-export function describeMergeProgress(line: string): string | null {
-  const [record, path] = line.split(MERGE_FIELD_SEPARATOR);
-  const verb = PROGRESS_VERBS[record!];
-  return verb && path ? `${verb} ${path.split(/[\\/]/).at(-1)}` : null;
-}
-
 /** Identifies a directory conflict across successive `cm merge` runs, which renumber the remaining ones. */
 export function directoryConflictIdentity(conflict: DirectoryConflict): string {
   return [conflict.type, conflict.itemId, conflict.source.path, conflict.destination.path].join('|');

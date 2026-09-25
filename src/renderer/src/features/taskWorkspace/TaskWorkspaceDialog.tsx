@@ -5,6 +5,8 @@ import type { NewFolderCheck } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { LocationField } from '../../app/home/dialogs/LocationField';
+import { describeProgress } from '../../app/operations/describeProgress';
+import { nextProgressBar, SWEEP } from '../../app/operations/progressBar';
 import { invalidateWorkspace, queryClient } from '../../app/queryClient';
 import { useOpenWorkspace } from '../../app/workspace/useOpenWorkspace';
 import { useWorkspaceInfoOf } from '../../app/workspace/useWorkspace';
@@ -21,7 +23,7 @@ import { pickBranch } from '../branches/BranchPickerDialog';
 import { describeTaskFailure, setUpTaskWorkspace, taskSteps, type TaskStep, type TaskStepState, type TaskWorkspacePlan } from './setUpTaskWorkspace';
 import { taskWorkspaceActions } from './taskWorkspaceActions';
 import { defaultTaskFolder, suggestTaskBranchName, TASK_PARENT_BRANCH, taskWorkspaceName } from './taskWorkspaceNaming';
-import { TaskStepList } from './TaskStepList';
+import { TaskStepList, type TaskStepProgress } from './TaskStepList';
 import styles from './TaskWorkspaceDialog.module.css';
 
 interface TaskWorkspaceOptions {
@@ -57,7 +59,7 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
   const [steps, setSteps] = useState<TaskStep[]>([]);
   const [states, setStates] = useState<Partial<Record<TaskStep, TaskStepState>>>({});
   const [labels, setLabels] = useState<Record<TaskStep, string>>();
-  const [detail, setDetail] = useState<string | null>(null);
+  const [switchProgress, setSwitchProgress] = useState<TaskStepProgress | null>(null);
   const [failure, setFailure] = useState<{ message: string; reason: string } | null>(null);
   const operationId = useRef<string | null>(null);
 
@@ -95,9 +97,11 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
     setSteps(taskSteps(plan.newBranch));
     setLabels({ branch: `Create branch ${plan.branch}`, workspace: `Create workspace ${plan.workspaceName}`, switch: `Switch it to ${plan.branch}` });
     setStates({});
-    setDetail(null);
+    setSwitchProgress(null);
     operationId.current = crypto.randomUUID();
-    const actions = taskWorkspaceActions(workspacePath, operationId.current, setDetail);
+    const actions = taskWorkspaceActions(workspacePath, operationId.current, (progress) =>
+      setSwitchProgress((previous) => ({ text: describeProgress(progress), bar: nextProgressBar(previous?.bar ?? SWEEP, progress, performance.now()) })),
+    );
     const outcome = await setUpTaskWorkspace(plan, actions, (step, state) => setStates((current) => ({ ...current, [step]: state })));
     operationId.current = null;
     void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
@@ -180,7 +184,7 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
 
       <Checkbox label="Open in a new window" checked={newWindow} onChange={setNewWindow} disabled={running} />
 
-      {labels && <TaskStepList steps={steps} states={states} labels={labels} detail={detail} />}
+      {labels && <TaskStepList steps={steps} states={states} labels={labels} progress={switchProgress} />}
       {failure && (
         <div className={styles.failure} role="alert">
           <p>{failure.message}</p>

@@ -1,0 +1,101 @@
+.track {
+  position: relative;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--bg-active);
+}
+
+/* Width through a transform: it glides on the compositor, linearly, for as long as the next report takes. */
+.fill {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--tone, var(--accent)) 70%, transparent), var(--tone, var(--accent)));
+  transform: scaleX(var(--value, 0));
+  transform-origin: left;
+  transition-property: transform;
+  transition-timing-function: linear;
+}
+
+/* A new fill grows from zero. */
+@starting-style {
+  .fill {
+    transform: scaleX(0);
+  }
+}
+
+/* Nothing tells how far along it is: a soft segment sweeps across. */
+.fill[data-mode='sweep'] {
+  inset: 0 auto 0 0;
+  width: 35%;
+  transform: none;
+  animation: sweep 1.3s var(--ease-out) infinite;
+}
+
+@keyframes sweep {
+  from {
+    translate: -100% 0;
+  }
+  to {
+    translate: 290% 0;
+  }
+}
+
+/* The measured part is done but the work isn't: full, with a light passing over it. */
+.fill[data-mode='busy']::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.35) 50%, transparent 100%);
+  background-size: 40% 100%;
+  background-repeat: no-repeat;
+  animation: shimmer 1.4s linear infinite;
+}
+
+@keyframes shimmer {
+  from {
+    background-position: -40% 0;
+  }
+  to {
+    background-position: 140% 0;
+  }
+}
+
+/* Done: full in the outcome's color (`--tone`), running out as the time left. */
+.countdown {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--tone, var(--accent));
+  transform-origin: left;
+  animation-name: countdown;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes countdown {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fill {
+    transition: none;
+  }
+
+  .fill[data-mode='busy']::after {
+    animation: none;
+  }
+
+  /* A still, half-lit track instead of the sweep. */
+  .fill[data-mode='sweep'] {
+    width: 100%;
+    animation: none;
+    opacity: 0.35;
+  }
+}

@@ -1,0 +1,207 @@
+/* Same surface as a toast, laid out in fixed rows so changing numbers never move anything. */
+.card {
+  --tone: var(--accent);
+
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: var(--space-3) var(--space-3) 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
+  font-variant-numeric: tabular-nums;
+  animation: var(--keyframes-pop-in) var(--duration-normal) var(--ease-out);
+  pointer-events: auto;
+}
+
+.card[data-state='success'] {
+  --tone: var(--status-added);
+}
+
+.card[data-state='info'] {
+  --tone: var(--status-moved);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 20px;
+}
+
+.icon {
+  display: flex;
+  flex: none;
+  width: 16px;
+  justify-content: center;
+}
+
+.doneIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--tone);
+  color: var(--bg-surface-raised);
+  animation: done-pop 420ms var(--ease-out);
+}
+
+@keyframes done-pop {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.18);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: var(--weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Done, the message may need more than a line: it no longer changes, so wrapping moves nothing. */
+.card:not([data-state='running']) .title {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.steps {
+  display: flex;
+  flex: none;
+  gap: 3px;
+}
+
+.pip {
+  width: 10px;
+  height: 4px;
+  border-radius: var(--radius-full);
+  background: var(--border-default);
+  transition: background-color var(--duration-normal);
+}
+
+.pip[data-state='done'] {
+  background: var(--tone);
+}
+
+.pip[data-state='current'] {
+  background: var(--tone);
+  animation: pip-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pip-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
+.action {
+  flex: none;
+  padding: 2px 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.action:disabled {
+  background: var(--bg-active);
+  color: var(--text-tertiary);
+}
+
+.close {
+  display: flex;
+  flex: none;
+  padding: 2px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-tertiary);
+}
+
+.close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* Indented under the title, past the icon. */
+.stageRow,
+.metaRow {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-height: 16px;
+  padding-left: 24px;
+  font-size: var(--text-sm);
+  line-height: 16px;
+}
+
+.stage {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card:not([data-state='running']) .stage {
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+/* Right-aligned in a fixed width: "9%" to "100%" never pushes the stage words. */
+.percent {
+  flex: none;
+  width: 4ch;
+  color: var(--text-tertiary);
+  text-align: right;
+}
+
+.track {
+  margin-left: 24px;
+}
+
+/* Hovering holds the card: its countdown waits. */
+.card:hover [data-countdown] {
+  animation-play-state: paused;
+}
+
+.metaRow {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.amount {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.remaining {
+  flex: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .doneIcon,
+  .pip[data-state='current'] {
+    animation: none;
+  }
+}

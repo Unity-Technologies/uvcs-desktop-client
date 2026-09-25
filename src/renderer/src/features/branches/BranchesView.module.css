@@ -1,5 +1,6 @@
 .name {
   display: flex;
+  flex: 1;
   align-items: center;
   gap: 6px;
   min-width: 0;
@@ -25,9 +26,11 @@
   color: var(--text-tertiary);
 }
 
-/* Leaves the name to the row, so it gives way down to the branch's leaf and the chips after it are cut first. */
+/* The name gives way down to the branch's leaf, then ends in an ellipsis: the chips after it are never cut. */
 .label {
-  display: contents;
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
   font-weight: 500;
 }
 
@@ -36,7 +39,10 @@
 }
 
 .current {
+  display: inline-flex;
   flex: none;
+  align-items: center;
+  height: 16px;
   padding: 0 6px;
   border-radius: var(--radius-full);
   background: var(--accent-soft);
@@ -44,6 +50,15 @@
   font-size: var(--text-xs);
   font-weight: 600;
   line-height: 16px;
+}
+
+.current[data-compact='true'] {
+  padding: 0 4px;
+}
+
+.chip {
+  display: inline-flex;
+  flex: none;
 }
 
 .hiddenIcon {

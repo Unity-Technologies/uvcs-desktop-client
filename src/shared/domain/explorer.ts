@@ -18,6 +18,20 @@ export interface TreeItem {
   /** The revision before `revisionId`; -1 when this is the first one. */
   parentRevisionId: number;
   itemId: number;
+  /** Set for a directory that is an xlink: where it points. */
+  xlink?: XlinkTarget;
+}
+
+/** Where an xlinked directory points: a changeset (and path) of another repository. */
+export interface XlinkTarget {
+  /** Writable xlinks (`wxlink`) take changes made under them; read-only ones don't. */
+  writable: boolean;
+  /** The directory of the target repository it shows, e.g. `/` or `/testprograms`. */
+  path: string;
+  changeset: number;
+  /** The target repository's name, e.g. `nervathirdparty`. */
+  repository: string;
+  server: string;
 }
 
 /** Extra information about a workspace item, from `cm fileinfo`. */

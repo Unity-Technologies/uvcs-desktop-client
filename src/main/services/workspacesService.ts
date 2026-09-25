@@ -5,6 +5,8 @@ import { app } from 'electron';
 import type { CreateWorkspaceRequest, WatchCoverage, WorkspacesApi } from '@shared/api/workspaces';
 import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
+import { readUpdateProgress } from '../cm/progress/updateProgress';
+import { switchArgs, UPDATE_ARGS } from '../cm/updateArgs';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
 import { readWorkspaceGlance } from '../cm/workspaceGlance';
 import { resolveWorkspaceRepositories } from '../cm/workspaceRepositories';
@@ -12,7 +14,6 @@ import { readWorkspaceStatus } from '../cm/workspaceStatus';
 import { CmError } from '../cm/CmError';
 import { checkNewWorkspaceFolder } from '../files/newWorkspaceFolder';
 import { callerId } from '../ipc/caller';
-import { UPDATE_ARGS } from '../merge/updateWithMerge';
 import { readWorkspaceHeads } from '../workspace/selectorFile';
 import { readSwitchPreflight } from '../workspace/switchPreflight';
 import { switchWithChanges } from '../workspace/switchWithChanges';
@@ -74,13 +75,9 @@ export function createWorkspacesService({ cm, operations, watchers, settings }: 
   }
 
   function update(workspacePath: string, operationId: string): Promise<void> {
-    return operations.run(operationId, async ({ signal, reportProgress }) => {
+    return operations.run(operationId, async ({ signal, progressOf }) => {
       try {
-        await cm.execute(UPDATE_ARGS, {
-          cwd: workspacePath,
-          signal,
-          onOutputLine: reportProgress,
-        });
+        await cm.execute(UPDATE_ARGS, { cwd: workspacePath, signal, onOutputLine: progressOf(readUpdateProgress) });
       } catch (error) {
         if (error instanceof CmError && error.message.includes('--dontmerge')) throw error.withMessage(UPDATE_NEEDS_MERGE);
         throw error;
@@ -94,8 +91,8 @@ export function createWorkspacesService({ cm, operations, watchers, settings }: 
   }
 
   function switchNewWorkspace(workspacePath: string, targetSpec: string, operationId: string): Promise<void> {
-    return operations.run(operationId, async ({ signal, reportProgress }) => {
-      await cm.execute(['switch', targetSpec, '--noinput'], { cwd: workspacePath, signal, onOutputLine: reportProgress });
+    return operations.run(operationId, async ({ signal, progressOf }) => {
+      await cm.execute(switchArgs(targetSpec), { cwd: workspacePath, signal, onOutputLine: progressOf(readUpdateProgress) });
     });
   }
 

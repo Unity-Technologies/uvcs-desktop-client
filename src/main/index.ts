@@ -45,7 +45,7 @@ function start(): void {
   // The renderer refreshes its views after its own operations and writes; the watchers skip what they cause.
   cm.onCommandStarted(({ args, cwd, finished }) => changesWorkspace(args) && watchers.ignoreOwnWrite(finished, cwd));
   const operations = new OperationTracker(
-    (operationId, line) => sendEventToCaller('operationProgress', { operationId, line }),
+    (operationId, progress) => sendEventToCaller('operationProgress', { operationId, progress }),
     (finished) => {
       const caller = currentCaller();
       watchers.ignoreOwnWrite(finished, caller && watchers.workspaceOf(caller.id));

@@ -14,10 +14,12 @@ interface BuildFileTreeRowsInput {
   expanded: ReadonlySet<string>;
   /** Case-insensitive name filter; directories stay visible when something inside them matches. */
   filter?: string;
+  /** The workspace root as the top row (path `''`), everything else under it. */
+  root?: { item: TreeItem; expanded: boolean };
 }
 
 /** Flattens the listed part of a file tree into visible rows, directories first. */
-export function buildFileTreeRows({ childrenByDirectory, expanded, filter = '' }: BuildFileTreeRowsInput): FileTreeRow[] {
+export function buildFileTreeRows({ childrenByDirectory, expanded, filter = '', root }: BuildFileTreeRowsInput): FileTreeRow[] {
   const needle = filter.trim().toLowerCase();
   const rows: FileTreeRow[] = [];
 
@@ -32,7 +34,12 @@ export function buildFileTreeRows({ childrenByDirectory, expanded, filter = '' }
     }
   };
 
-  visit('', 0);
+  if (!root) {
+    visit('', 0);
+    return rows;
+  }
+  rows.push({ item: root.item, depth: 0, isExpanded: root.expanded, isLoading: root.expanded && !childrenByDirectory.has('') });
+  if (root.expanded) visit('', 1);
   return rows;
 }
 

@@ -10,7 +10,8 @@ import { PathLabel } from '../../components/PathLabel';
 import { workingObjectName } from '../../components/workingObject';
 import { runningFirst, type Icon } from '../../lib/actions';
 import { Button } from '../../ui/Button';
-import { Spinner } from '../../ui/Spinner';
+import { ringValue } from '../../app/operations/progressBar';
+import { ProgressRing } from '../../ui/ProgressRing';
 import { ToolbarPill } from '../../ui/ToolbarPill';
 import { branchMenu } from './branchMenu';
 import { switchToBranch } from './branchOperations';
@@ -42,6 +43,7 @@ export function WorkingObjectButton() {
   useBranchCommands(workspace);
 
   const switching = running?.kind === 'switch' ? running.title : null;
+  const switchBar = running?.kind === 'switch' ? running.bar : null;
   const SelectorIcon = SELECTOR_ICONS[workspace?.selector.kind ?? 'branch'];
   const title = workspace ? workingObjectTitle(workspace.selector) : '…';
   const { data: comment } = useWorkingObjectComment(workspace);
@@ -52,7 +54,7 @@ export function WorkingObjectButton() {
       <Popover.Trigger asChild>
         <ToolbarPill
           className={styles.trigger}
-          icon={switching ? <Spinner size={13} /> : <SelectorIcon size={15} />}
+          icon={switchBar ? <ProgressRing value={ringValue(switchBar)} size={14} /> : <SelectorIcon size={15} />}
           label={switching ? `${switching}…` : workspace?.selector.kind === 'branch' ? <PathLabel path={title} fitContent tooltip={false} /> : title}
           sub={switching || comment === undefined ? undefined : firstLine || <span className={styles.noComment}>No comment</span>}
           data-tip={switching ? undefined : title}
