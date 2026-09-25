@@ -27,18 +27,21 @@ interface NavItemProps {
   detail?: string;
   /** A count at the right, e.g. pending changes. */
   badge?: number;
+  /** A dot at the right: something waits there. */
+  dot?: boolean;
   active?: boolean;
   /** Active, but a page is open on top of it. */
   dimmed?: boolean;
   onClick: () => void;
 }
 
-export function NavItem({ icon, label, detail, badge, active = false, dimmed = false, onClick }: NavItemProps) {
+export function NavItem({ icon, label, detail, badge, dot = false, active = false, dimmed = false, onClick }: NavItemProps) {
   return (
     <button type="button" className={styles.item} data-active={active} data-dimmed={dimmed} onClick={onClick}>
       <span className={styles.icon}>{icon}</span>
       <span className={styles.label}>{label}</span>
       {detail && <span className={styles.detail}>{detail}</span>}
+      {dot && <span className={styles.dot} />}
       {badge ? <span className={styles.badge}>{badge > 999 ? '999+' : badge}</span> : null}
     </button>
   );

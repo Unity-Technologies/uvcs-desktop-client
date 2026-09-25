@@ -5,15 +5,21 @@ import { readIncomingChanges, readIncomingSummary } from '../merge/incoming';
 import { previewMerge } from '../merge/previewMerge';
 import { runMerge } from '../merge/runMerge';
 import { updateWithMerge } from '../merge/updateWithMerge';
-import type { ServiceContext } from './ServiceContext';
+import type { ServiceContext, SwitchContext } from './ServiceContext';
 
-export function createMergeService({ cm, operations }: ServiceContext): MergeApi {
+export function createMergeService({ cm, operations }: ServiceContext, { leftChanges }: SwitchContext): MergeApi {
   const backupsRoot = join(app.getPath('userData'), 'update-backups');
 
   return {
     preview: (workspacePath, request) => previewMerge(cm, workspacePath, request),
     run: (workspacePath, request, resolutions, operationId) =>
-      operations.run(operationId, (context) => runMerge(cm, workspacePath, request, resolutions, context)),
+      operations.run(operationId, async (context) => {
+        const result = await runMerge(cm, workspacePath, request, resolutions, context);
+        // A switch shelve applied from the merge view (its conflicts resolved) has done its job.
+        const shelve = /^sh:(\d+)$/.exec(request.sourceSpec);
+        if (shelve && !request.destinationBranch) await leftChanges.finishAppliedShelve(workspacePath, Number(shelve[1]));
+        return result;
+      }),
     incomingSummary: (workspacePath) => readIncomingSummary(cm, workspacePath),
     incomingChanges: (workspacePath) => readIncomingChanges(cm, workspacePath),
     updateResolvingConflicts: (workspacePath, resolutions, operationId) =>

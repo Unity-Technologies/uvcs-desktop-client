@@ -2,11 +2,13 @@ import { Check, FileDiff, GitCommitVertical, HardDrive, Palette } from 'lucide-r
 import { useState, type ReactNode } from 'react';
 import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
 import type { AppSettings } from '@shared/domain/settings';
+import type { PendingChangesOnSwitch } from '@shared/domain/switchWithChanges';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { NavItem } from '../../ui/nav/SidebarNav';
+import { SegmentedControl } from '../../ui/SegmentedControl';
 import { DefaultWorkspaceRootField } from './DefaultWorkspaceRootField';
 import { THEMES } from './themes';
 import { useSettings, useUpdateSettings } from './useSettings';
@@ -149,8 +151,27 @@ function CheckinPane({ settings, updateSettings }: PaneProps) {
 
 function WorkspacesPane({ settings, updateSettings }: PaneProps) {
   return (
-    <SettingsGroup title="Folder for new workspaces">
-      <DefaultWorkspaceRootField value={settings.defaultWorkspaceRoot} onChange={(defaultWorkspaceRoot) => updateSettings({ defaultWorkspaceRoot })} />
-    </SettingsGroup>
+    <>
+      <SettingsGroup title="Folder for new workspaces">
+        <DefaultWorkspaceRootField value={settings.defaultWorkspaceRoot} onChange={(defaultWorkspaceRoot) => updateSettings({ defaultWorkspaceRoot })} />
+      </SettingsGroup>
+
+      <SettingsGroup title="When switching with pending changes">
+        <SegmentedControl<PendingChangesOnSwitch>
+          value={settings.pendingChangesOnSwitch}
+          onChange={(pendingChangesOnSwitch) => updateSettings({ pendingChangesOnSwitch })}
+          segments={[
+            { value: 'ask', label: 'Ask' },
+            { value: 'leave', label: 'Always leave them' },
+            { value: 'bring', label: 'Always bring them' },
+          ]}
+        />
+        <Checkbox
+          label="Restore left changes automatically when I come back"
+          checked={settings.restoreLeftChangesAutomatically}
+          onChange={(restoreLeftChangesAutomatically) => updateSettings({ restoreLeftChangesAutomatically })}
+        />
+      </SettingsGroup>
+    </>
   );
 }

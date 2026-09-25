@@ -9,6 +9,7 @@ import type { DiffApi } from './diff';
 import type { ExplorerApi } from './explorer';
 import type { HistoryApi } from './history';
 import type { LabelsApi } from './labels';
+import type { LeftChangesApi } from './leftChanges';
 import type { LocksApi } from './locks';
 import type { MergeApi } from './merge';
 import type { PendingChangesApi } from './pendingChanges';
@@ -35,6 +36,7 @@ export interface UvcsApi {
   explorer: ExplorerApi;
   history: HistoryApi;
   labels: LabelsApi;
+  leftChanges: LeftChangesApi;
   locks: LocksApi;
   merge: MergeApi;
   pendingChanges: PendingChangesApi;

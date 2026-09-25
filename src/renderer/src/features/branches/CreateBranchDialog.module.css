@@ -1,0 +1,6 @@
+.note {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+}

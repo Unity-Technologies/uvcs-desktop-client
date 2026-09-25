@@ -1,3 +1,4 @@
+import type { PendingChangesAction, SwitchPreflight, SwitchResult } from '../domain/switchWithChanges';
 import type { WorkspaceInfo, WorkspaceSummary } from '../domain/workspace';
 
 export interface CreateWorkspaceRequest {
@@ -34,6 +35,12 @@ export interface WorkspacesApi {
   update(workspacePath: string, operationId: string): Promise<void>;
   /** Emits `workspaceChanged` events when the workspace changes on disk. Replaces any previous watch. */
   watch(workspacePath: string): Promise<WatchCoverage>;
-  /** Switches to a branch, changeset, label or shelve spec. */
-  switchTo(workspacePath: string, targetSpec: string, operationId: string): Promise<void>;
+  /** What the workspace's pending changes allow before switching it to `targetSpec`. */
+  switchPreflight(workspacePath: string, targetSpec: string): Promise<SwitchPreflight>;
+  /**
+   * Switches to a branch, changeset, label or shelve spec. `cm switch` only ever runs on a clean workspace:
+   * pending changes are shelved first, then left behind or brought along as `pendingChanges` says.
+   * Unchanged checkouts are simply undone. Fails if there are other pending changes and no `pendingChanges`.
+   */
+  switchTo(workspacePath: string, targetSpec: string, operationId: string, pendingChanges?: PendingChangesAction): Promise<SwitchResult>;
 }

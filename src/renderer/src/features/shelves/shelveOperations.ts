@@ -1,3 +1,4 @@
+import type { MergeRequest } from '@shared/domain/merge';
 import type { Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
@@ -7,28 +8,32 @@ import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 
 /**
- * Applies a shelve to the workspace. When files changed since it was created, the user is sent
- * to the merge view to resolve the conflicts instead of applying blindly.
+ * Applies a shelve to the workspace as a merge from it, never with `cm shelveset apply` (it would open
+ * the external merge tool on conflicts). Shelves that conflict open the merge view instead.
  */
 export async function applyShelve(workspacePath: string, shelve: Shelve): Promise<void> {
-  const preview = await runAction(workspacePath, "Couldn't check the shelve", () => api.shelves.previewApply(workspacePath, shelve.id));
-  if (!preview) return;
+  const request: MergeRequest = { kind: 'merge', sourceSpec: spec.shelve(shelve.id) };
+  const plan = await runAction(workspacePath, "Couldn't check the shelve", () => api.merge.preview(workspacePath, request));
+  if (!plan) return;
 
-  if (preview.conflictedPaths.length > 0) {
-    const resolve = await confirm({
-      title: `Shelve ${shelve.id} has conflicts`,
-      message: `${describeCount(preview.conflictedPaths.length)} changed since the shelve was created: ${preview.conflictedPaths.join(', ')}. Resolve them in the merge view?`,
-      confirmLabel: 'Resolve conflicts',
-    });
-    if (resolve) navigation.openPage({ kind: 'merge', request: { kind: 'merge', sourceSpec: spec.shelve(shelve.id) } });
+  if (plan.status === 'pendingChanges') {
+    toast.info(`Shelve ${shelve.id} wasn't applied`, 'Check in, shelve or undo your current changes first, then apply it.');
+    return;
+  }
+  if (plan.status !== 'ready') {
+    toast.info(`Shelve ${shelve.id} has nothing new to apply`);
+    return;
+  }
+  if (plan.fileConflicts.length > 0 || plan.directoryConflicts.length > 0) {
+    navigation.openPage({ kind: 'merge', request });
     return;
   }
 
   await runOperation({
     title: `Applying shelve ${shelve.id}`,
     workspacePath,
-    run: (operationId) => api.shelves.apply(workspacePath, shelve.id, operationId),
-    successMessage: () => `Applied shelve ${shelve.id} (${describeCount(preview.changedPaths.length)})`,
+    run: (operationId) => api.merge.run(workspacePath, request, { directoryConflicts: [], files: {} }, operationId),
+    successMessage: () => `Applied shelve ${shelve.id} (${describeCount(plan.changes.length)})`,
     successAction: () => ({ label: 'View changes', run: () => navigation.goToView('changes') }),
   });
 }

@@ -103,7 +103,7 @@ function singleChangesetMenu({ workspacePath, loadedChangeset, loadedBranch }: C
       id: 'revert',
       label: 'Revert workspace to this changeset…',
       icon: RotateCcw,
-      run: () => void revertWorkspaceToChangeset(workspacePath, changeset),
+      run: () => revertWorkspaceToChangeset(changeset, loadedChangeset),
     },
     SEPARATOR,
     { id: 'editComment', label: 'Edit comment…', icon: MessageSquareText, run: () => void editChangesetComment(workspacePath, changeset) },
