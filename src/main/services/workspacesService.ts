@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import type { CreateWorkspaceRequest, WorkspacesApi } from '@shared/api/workspaces';
 import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
@@ -82,5 +83,17 @@ export function createWorkspacesService({ cm, operations, watcher }: ServiceCont
     });
   }
 
-  return { list, info, repositoriesOf: (paths) => resolveWorkspaceRepositories(cm, paths), findRoot, create, rename, remove, update, watch, switchTo };
+  return {
+    list,
+    info,
+    repositoriesOf: (paths) => resolveWorkspaceRepositories(cm, paths),
+    findMissing: async (paths) => paths.filter((path) => !existsSync(path)),
+    findRoot,
+    create,
+    rename,
+    remove,
+    update,
+    watch,
+    switchTo,
+  };
 }

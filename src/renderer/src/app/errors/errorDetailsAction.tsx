@@ -2,7 +2,6 @@ import { ApiError } from '../../api/client';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import type { ToastAction } from '../../ui/toast/toastStore';
 import { useCommandLogStore } from '../shell/commandLogStore';
-import { useSession } from '../workspace/sessionStore';
 import { ErrorDialog } from './ErrorDialog';
 
 /** The "Details" button of an error toast, for failures of a `cm` command. */
@@ -27,6 +26,6 @@ export function errorDetailsAction(title: string, error: unknown): ToastAction |
 
 /** The log panel lives in the workspace screen, and it keeps only the latest commands. */
 function canShowInLog(entryId: number): boolean {
-  const inWorkspace = useSession.getState().workspacePath !== null;
-  return inWorkspace && useCommandLogStore.getState().entries.some((entry) => entry.id === entryId);
+  const { hosted, entries } = useCommandLogStore.getState();
+  return hosted && entries.some((entry) => entry.id === entryId);
 }

@@ -10,10 +10,10 @@ import { errorDetailsAction } from './errors/errorDetailsAction';
 import { HomeScreen } from './home/HomeScreen';
 import { queryClient } from './queryClient';
 import { useTheme } from './settings/useTheme';
-import { WorkspaceScreen } from './shell/WorkspaceScreen';
 import { CmUnavailableScreen } from './startup/CmUnavailableScreen';
 import { useCmAvailability } from './startup/useCmAvailability';
 import { useSession } from './workspace/sessionStore';
+import { WorkspaceGate } from './workspace/WorkspaceGate';
 
 export function App() {
   return (
@@ -36,5 +36,5 @@ function Root() {
   const cm = useCmAvailability();
 
   if (cm.error) return <CmUnavailableScreen reason={cm.error.message} onRetry={() => void cm.refetch()} />;
-  return workspacePath ? <WorkspaceScreen key={workspacePath} /> : <HomeScreen />;
+  return workspacePath ? <WorkspaceGate key={workspacePath} /> : <HomeScreen />;
 }
