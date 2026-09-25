@@ -1,13 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
+import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 
-const POLL_INTERVAL_MS = 60_000;
-
 /**
- * Changes left on what the workspace is on now, waiting to be restored. Looked up again when the selector
- * changes, on focus and every minute (shelves can be left or deleted by other apps).
+ * Changes left on what the workspace is on now, waiting to be restored. Keyed by the selector, so they are looked up
+ * again whenever the workspace moves (whoever switched it: the workspace info follows `.plastic`). Never polled:
+ * this app's switches and restores refresh it, and shelves left or deleted by other apps show within five minutes.
  */
 export function useLeftChanges() {
   const workspacePath = useWorkspacePath();
@@ -16,8 +16,7 @@ export function useLeftChanges() {
     queryKey: queryKeys.inWorkspace(workspacePath, 'leftChanges', workspace?.selector),
     queryFn: () => api.leftChanges.find(workspacePath),
     enabled: Boolean(workspace),
-    refetchInterval: POLL_INTERVAL_MS,
-    refetchOnWindowFocus: true,
+    staleTime: SLOW_CHANGING_QUERY.staleTime,
   });
 }
 
