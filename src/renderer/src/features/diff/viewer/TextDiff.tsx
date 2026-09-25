@@ -33,7 +33,7 @@ export function TextDiff({ original, modified, fileName, editing = false, onEdit
   // Stable inputs: new objects would make Pierre reload the files and drop an ongoing edit.
   const oldFile = useMemo(() => ({ name: fileName, contents: original }), [fileName, original]);
   const newFile = useMemo(() => ({ name: fileName, contents: modified }), [fileName, modified]);
-  const discard = useBlockDiscard({ enabled: Boolean(onDiscard) && !editing, oldFile, newFile, containerRef: container, onDiscard, onUndo: onUndoDiscard });
+  const discard = useBlockDiscard({ enabled: Boolean(onDiscard) && !editing, oldFile, newFile, layout, containerRef: container, onDiscard, onUndo: onUndoDiscard });
   const options = useMemo(
     () => ({ ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }), ...discard.options }),
     [theme, layout, collapseUnchanged, wrapLines, discard.options],
@@ -50,6 +50,7 @@ export function TextDiff({ original, modified, fileName, editing = false, onEdit
           oldFile={oldFile}
           newFile={newFile}
           options={options}
+          selectedLines={discard.selectedLines}
           renderGutterUtility={discard.renderGutterUtility}
           edit={editing}
           onEditChange={(event) => onEdit?.(event.editor.getText())}
@@ -58,6 +59,7 @@ export function TextDiff({ original, modified, fileName, editing = false, onEdit
           style={{ minHeight: '100%' }}
         />
       </EditProvider>
+      {discard.overlay}
     </div>
   );
 }

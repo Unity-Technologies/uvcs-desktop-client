@@ -27,6 +27,11 @@ describe('lineMarksCss', () => {
     expect(css).toContain(':is([data-additions],[data-unified]) :is([data-line="2"],[data-column-number="2"],[data-line="5"],[data-column-number="5"])');
   });
 
+  it('keeps the other side from looking picked when the picked lines are all on one side', () => {
+    expect(lineMarksCss({ pickedSide: 'additions' })).toBe('[data-deletions] [data-selected-line][data-selected-line]{--mix-selection-light:100%;--mix-selection-dark:100%}');
+    expect(lineMarksCss({ pickedSide: 'deletions' })).toContain('[data-additions] [data-selected-line]');
+  });
+
   it('only moves for whoever wants motion', () => {
     expect(lineMarksCss({ restoredAt: [1] })).toMatch(/^@media \(prefers-reduced-motion:no-preference\)\{.*discard-restored/);
   });

@@ -1,0 +1,62 @@
+.bar {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-md);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+}
+
+.discard,
+.clear {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.discard {
+  padding: 0 6px 0 8px;
+  font-weight: var(--weight-medium);
+}
+
+.discard:hover {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.discard[data-kind='remove']:hover {
+  background: var(--diff-removed-bg);
+  color: var(--change-deleted);
+}
+
+.clear {
+  justify-content: center;
+  width: 22px;
+  padding: 0;
+  color: var(--text-tertiary);
+}
+
+.clear:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    animation: none;
+  }
+}

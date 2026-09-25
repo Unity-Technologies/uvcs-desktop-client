@@ -1,4 +1,4 @@
-import type { ChangedLine } from './changeBlocks';
+import type { ChangedLine, DiffSide } from './changeBlocks';
 
 /** Lines of a diff to call out while discarding changes. */
 export interface LineMarks {
@@ -8,14 +8,19 @@ export interface LineMarks {
   leaving?: ChangedLine[];
   /** Lines just brought back (1-based, in the modified file), briefly lit. */
   restoredAt?: number[];
+  /** The picked lines are all on this side: side by side, the other side's rows shouldn't look picked. */
+  pickedSide?: DiffSide;
 }
 
 /**
  * CSS for the marks, to go inside the diff's shadow root. It targets the rows `@pierre/diffs` renders (a gutter cell and
  * a content row per line, with its type and number), the same in the split and unified layouts.
  */
-export function lineMarksCss({ preview = [], leaving = [], restoredAt = [] }: LineMarks): string {
+export function lineMarksCss({ preview = [], leaving = [], restoredAt = [], pickedSide }: LineMarks): string {
   const rules: string[] = [];
+  // Mixing the picked color in at 100% of the line's own leaves the line as it was.
+  const otherSide = pickedSide === 'deletions' ? 'additions' : 'deletions';
+  if (pickedSide) rules.push(`[data-${otherSide}] [data-selected-line][data-selected-line]{--mix-selection-light:100%;--mix-selection-dark:100%}`);
   // Motion only for whoever wants it; the marks themselves stay.
   const animated: string[] = [];
   const going = preview.filter((line) => line.side === 'additions');
