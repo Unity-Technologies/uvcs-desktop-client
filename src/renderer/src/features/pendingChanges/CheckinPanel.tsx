@@ -9,6 +9,7 @@ import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import menuStyles from '../../ui/menu/Menu.module.css';
 import { ResizeHandle } from '../../ui/ResizeHandle';
 import { checkinButtonLabel, checkinDisabledReason, type CheckinMode } from './checkinButton';
+import { CheckinButtonWording } from './CheckinButtonWording';
 import { splitComment } from './checkinDraftStore';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import styles from './CheckinPanel.module.css';
@@ -105,9 +106,7 @@ export function CheckinPanel({
           loading={busy}
           onClick={() => void act()}
         >
-          <span className={styles.action}>{label.action}</span>
-          {label.target && <span className={styles.target}>{label.target}</span>}
-          {label.size && <span className={styles.size}>· {label.size}</span>}
+          <CheckinButtonWording forms={label.forms} />
         </Button>
         <DropdownMenu.Root modal={false}>
           <DropdownMenu.Trigger asChild>
