@@ -5,6 +5,7 @@ import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
 import { useDiffPreferences } from './diffPreferencesStore';
 import { pierreDiffOptions, pierreThemeName } from './pierreOptions';
 import { useBlockDiscard, type DiscardRequest } from './useBlockDiscard';
+import { useShadowStyle } from './useShadowStyle';
 import { useSyntaxHighlighter } from './useSyntaxHighlighter';
 import styles from './TextDiff.module.css';
 
@@ -23,6 +24,9 @@ interface TextDiffProps {
   onUndoDiscard?: () => void;
 }
 
+/** Each side's code scrolls sideways, so Tab stops there to scroll it with the arrows: show where it stopped. */
+const SCROLLER_FOCUS_CSS = '[data-code]:focus-visible { outline: var(--focus-outline); outline-offset: -2px; }';
+
 const createEditor: React.ComponentProps<typeof EditProvider>['createEditor'] = (type, options, key) => new Editor(type, options, key);
 
 /** Syntax-highlighted text diff, side by side or unified, optionally editable on the modified side. */
@@ -39,27 +43,30 @@ export function TextDiff({ original, modified, fileName, editing = false, onEdit
     [theme, layout, collapseUnchanged, wrapLines, discard.options],
   );
   const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);
+  useShadowStyle(container, SCROLLER_FOCUS_CSS);
 
   // Usually a few milliseconds, and only the first time a language shows up.
   if (!canHighlight) return <div className={styles.diff} />;
 
   return (
-    <div ref={container} className={styles.diff} tabIndex={-1} onKeyDown={discard.onKeyDown} onPointerDown={discard.onPointerDown}>
-      <EditProvider createEditor={createEditor}>
-        <MultiFileDiff
-          oldFile={oldFile}
-          newFile={newFile}
-          options={options}
-          selectedLines={discard.selectedLines}
-          renderGutterUtility={discard.renderGutterUtility}
-          edit={editing}
-          onEditChange={(event) => onEdit?.(event.editor.getText())}
-          onEditComplete={() => 'reject'}
-          disableWorkerPool
-          style={{ minHeight: '100%' }}
-        />
-      </EditProvider>
-      {discard.overlay}
+    <div className={styles.frame}>
+      <div ref={container} className={styles.diff} tabIndex={0} role="region" aria-label={`Diff of ${fileName}`} onKeyDown={discard.onKeyDown} onPointerDown={discard.onPointerDown}>
+        <EditProvider createEditor={createEditor}>
+          <MultiFileDiff
+            oldFile={oldFile}
+            newFile={newFile}
+            options={options}
+            selectedLines={discard.selectedLines}
+            renderGutterUtility={discard.renderGutterUtility}
+            edit={editing}
+            onEditChange={(event) => onEdit?.(event.editor.getText())}
+            onEditComplete={() => 'reject'}
+            disableWorkerPool
+            style={{ minHeight: '100%' }}
+          />
+        </EditProvider>
+        {discard.overlay}
+      </div>
     </div>
   );
 }

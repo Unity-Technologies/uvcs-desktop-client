@@ -13,6 +13,23 @@
 
 .diff:focus-visible {
   box-shadow: none;
-  outline: var(--focus-outline);
-  outline-offset: -2px;
+}
+
+/* The ring sits on a frame around the scrolling diff: drawn on the diff itself, its lines would paint over it. */
+.frame {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.frame:has(> .diff:focus-visible)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  box-shadow: var(--focus-ring-inset);
+  pointer-events: none;
 }
