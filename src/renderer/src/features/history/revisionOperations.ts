@@ -1,5 +1,5 @@
 import { api } from '../../api/client';
-import { runAction, runVoidAction } from '../../app/operations/runOperation';
+import { runVoidAction } from '../../app/operations/runOperation';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 
