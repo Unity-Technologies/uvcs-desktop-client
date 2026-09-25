@@ -32,10 +32,6 @@
   outline: none;
 }
 
-.input:focus-visible {
-  box-shadow: none;
-}
-
 .list {
   overflow: auto;
   padding: var(--space-2);
