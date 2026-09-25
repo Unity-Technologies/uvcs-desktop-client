@@ -1,0 +1,15 @@
+.programRow {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+}
+
+.programRow > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+.args {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}

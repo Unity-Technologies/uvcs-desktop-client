@@ -11,7 +11,9 @@ import { FileDiffViewer } from '../../diff/viewer/FileDiffViewer';
 import { LoadedFileDiff } from '../../diff/viewer/LoadedFileDiff';
 import { ConflictStatusChip } from '../ConflictStatusChip';
 import type { MergeLabels } from '../mergeDescription';
-import { fileConflictStatus } from '../mergeStatus';
+import { MergeToolButton, type ConflictToolActions } from '../mergeTools/MergeToolButton';
+import { MergeToolOpenBanner } from '../mergeTools/MergeToolOpenBanner';
+import { fileConflictStatus, fileConflictTool } from '../mergeStatus';
 import { chosenConflictChoice, decisionFor, hasConflicts, type ConflictChoice } from './conflictChoices';
 import { ConflictChoiceBar } from './ConflictChoiceBar';
 import { ConflictHunks } from './ConflictHunks';
@@ -32,15 +34,17 @@ interface FileConflictPanelProps {
   workspacePath: string;
   state: FileConflictState;
   labels: MergeLabels;
+  toolActions: ConflictToolActions;
   onDecide: (decision: FileConflictDecision) => void;
   onStartOver: () => void;
 }
 
 /**
- * One file changed on both sides, read-only. Conflicts are decided one by one, or for the whole file (keep a version,
- * keep both, or resolve by hand); a file that merges automatically can only be overridden by keeping one version.
+ * One file changed on both sides, read-only. Conflicts are resolved in a merge tool the user picks, decided one by one,
+ * or for the whole file (keep a version or both; editing the text in the app stays in the tool menu); a file that
+ * merges automatically can only be overridden by keeping one version.
  */
-export function FileConflictPanel({ workspacePath, state, labels, onDecide, onStartOver }: FileConflictPanelProps) {
+export function FileConflictPanel({ workspacePath, state, labels, toolActions, onDecide, onStartOver }: FileConflictPanelProps) {
   const [chosenView, setChosenView] = useState<PanelView>();
   /** While resolving by hand: the user's decision before, to put back if they discard their edits. */
   const [editingFrom, setEditingFrom] = useState<{ decision: FileConflictDecision | undefined }>();
@@ -65,9 +69,9 @@ export function FileConflictPanel({ workspacePath, state, labels, onDecide, onSt
     <div className={styles.panel}>
       <div className={styles.header}>
         <PathLabel path={state.file.path} fitContent />
-        <ConflictStatusChip status={status} labels={labels} />
+        <ConflictStatusChip status={status} labels={labels} tool={fileConflictTool(state)} />
         <div className={styles.spacer} />
-        {canMergeLines && !withConflicts && (
+        {canMergeLines && !withConflicts && !state.openTool && (
           <ActionDropdownMenu
             entries={[
               { id: 'destination', label: `Keep ${destination.version} (${labels.destination})`, icon: FileCheck2, run: () => onDecide({ kind: 'wholeFile', side: 'destination' }) },
@@ -84,7 +88,7 @@ export function FileConflictPanel({ workspacePath, state, labels, onDecide, onSt
         <div className={styles.editBanner} role="status">
           <PencilLine size={13} />
           <span className={styles.bannerText}>
-            You're resolving <strong>{state.file.path.split('/').pop()}</strong> by hand. Leave no conflict markers; it's written to your workspace when you complete the merge.
+            You're editing <strong>{fileName(state)}</strong> in the app. Leave no conflict markers; it's written to your workspace when you complete the merge.
           </span>
           <Button size="small" variant="ghost" onClick={discardEdits}>
             Discard edits
@@ -96,13 +100,18 @@ export function FileConflictPanel({ workspacePath, state, labels, onDecide, onSt
       ) : (
         canMergeLines && (
           <>
-            {withConflicts && (
-              <ConflictChoiceBar
-                labels={labels}
-                chosen={chosenConflictChoice(status, state.decision, state.document)}
-                onChoose={choose}
-                onStartOver={state.decidedByUser ? onStartOver : undefined}
-              />
+            {state.openTool ? (
+              <MergeToolOpenBanner fileName={fileName(state)} open={state.openTool} />
+            ) : (
+              withConflicts && (
+                <ConflictChoiceBar
+                  labels={labels}
+                  toolButton={<MergeToolButton state={state} actions={toolActions} onEditInApp={() => choose('byHand')} />}
+                  chosen={chosenConflictChoice(status, state.decision, state.document)}
+                  onChoose={choose}
+                  onStartOver={state.decidedByUser ? onStartOver : undefined}
+                />
+              )
             )}
             <div className={styles.viewBar}>
               <SegmentedControl<PanelView> value={view} onChange={setChosenView} segments={viewSegments(state, labels)} />
@@ -114,7 +123,18 @@ export function FileConflictPanel({ workspacePath, state, labels, onDecide, onSt
         )
       )}
 
-      <ConflictBody workspacePath={workspacePath} state={state} labels={labels} view={view} editing={editing} onDecide={onDecide} onStartOver={onStartOver} />
+      {state.openTool && state.isBinary && <MergeToolOpenBanner fileName={fileName(state)} open={state.openTool} />}
+
+      <ConflictBody
+        workspacePath={workspacePath}
+        state={state}
+        labels={labels}
+        toolActions={toolActions}
+        view={view}
+        editing={editing}
+        onDecide={onDecide}
+        onStartOver={onStartOver}
+      />
     </div>
   );
 }
@@ -155,6 +175,7 @@ function viewHelper(view: PanelView, state: FileConflictState, labels: MergeLabe
   const { source, destination } = labels.roles;
   switch (view) {
     case 'conflicts':
+      if (state.openTool) return `Read-only while ${state.openTool.toolName} has the file open.`;
       return `${state.remainingConflicts} ${state.remainingConflicts === 1 ? 'conflict' : 'conflicts'} left: pick a side for each, or resolve the whole file above.`;
     case 'changes':
       return `${capitalize(destination.version)} now → after the merge.`;
@@ -172,7 +193,7 @@ interface ConflictBodyProps extends FileConflictPanelProps {
   editing: boolean;
 }
 
-function ConflictBody({ workspacePath, state, labels, view, editing, onDecide }: ConflictBodyProps) {
+function ConflictBody({ workspacePath, state, labels, toolActions, view, editing, onDecide }: ConflictBodyProps) {
   const { file, decision, contents } = state;
 
   if (state.status === 'loading') return <CenteredSpinner />;
@@ -185,6 +206,7 @@ function ConflictBody({ workspacePath, state, labels, view, editing, onDecide }:
         labels={labels}
         chosen={decision?.kind === 'wholeFile' ? decision.side : undefined}
         onChoose={(side) => onDecide({ kind: 'wholeFile', side })}
+        toolButton={state.openTool ? undefined : <MergeToolButton state={state} actions={toolActions} variant="secondary" />}
       />
     );
   }
@@ -195,6 +217,8 @@ function ConflictBody({ workspacePath, state, labels, view, editing, onDecide }:
 
   switch (view) {
     case 'conflicts':
+      // The merge tool has the file: picking sides here meanwhile would be overwritten by what it saves.
+      if (state.openTool) return <ReadOnlyText path={file.path} text={decision?.kind === 'text' ? decision.text : ''} />;
       return (
         <ConflictHunks
           path={file.path}
@@ -228,6 +252,10 @@ function ConflictBody({ workspacePath, state, labels, view, editing, onDecide }:
     case 'base':
       return <ReadOnlyText path={file.path} text={contents.base.text ?? ''} />;
   }
+}
+
+function fileName(state: FileConflictState): string {
+  return state.file.path.split('/').pop()!;
 }
 
 /** Resolving by hand starts from where the file stands: the merged text with its conflict markers, or the result chosen. */

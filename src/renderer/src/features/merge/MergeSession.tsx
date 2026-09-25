@@ -26,7 +26,7 @@ interface MergeSessionProps {
 export function MergeSession({ workspacePath, request, plan, onCompleted }: MergeSessionProps) {
   const labels = useMemo(() => mergeLabels(request, plan), [request, plan]);
   const conflictedFiles = useMemo(() => conflictedFilesOf(plan, request), [plan, request]);
-  const { states: fileStates, decide, reset } = useFileConflicts(workspacePath, conflictedFiles, labels);
+  const { states: fileStates, decide, reset, resolveInTool, resolveAllInTool } = useFileConflicts(workspacePath, conflictedFiles, labels);
   const [directoryResolutions, setDirectoryResolutions] = useState<(DirectoryConflictResolution | undefined)[]>([]);
   const [serverFilePolicy, setServerFilePolicy] = useState<ServerFilePolicy>();
   const [comment, setComment] = useState(`Merge from ${labels.source}`);
@@ -99,6 +99,7 @@ export function MergeSession({ workspacePath, request, plan, onCompleted }: Merg
                 policy: serverFilePolicy,
                 onChoose: setServerFilePolicy,
               }}
+              toolActions={{ resolveIn: (key, tool) => void resolveInTool(key, tool), resolveAllIn: (tool) => void resolveAllInTool(tool), states: fileStates }}
               onDecideFile={decide}
               onStartOverFile={reset}
               onResolveDirectory={resolveDirectoryConflict}

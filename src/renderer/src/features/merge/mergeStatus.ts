@@ -19,7 +19,11 @@ export type ConflictStatus =
   | 'keepingBoth'
   /** Merged text that takes something from each side, as the user picked. */
   | 'combined'
-  | 'edited';
+  | 'edited'
+  /** Saved in a merge tool. */
+  | 'resolvedInTool'
+  /** A merge tool has the file open, waiting for the user to save and close it. */
+  | 'openInTool';
 
 /** How a status reads: `pending` waits for the user, `automatic` needs nothing, `decided` follows the user's choice. */
 export type StatusTone = 'muted' | 'pending' | 'automatic' | 'decided';
@@ -34,10 +38,12 @@ export interface StatusPresentation {
 export function fileConflictStatus(state: FileConflictState): ConflictStatus {
   if (state.status === 'loading') return 'reading';
   if (state.status === 'error') return 'unreadable';
+  if (state.openTool) return 'openInTool';
   if (state.mergedAutomatically) return 'automatic';
 
   const { resolution, decision, contents } = state;
   if (!resolution) return 'needsDecision';
+  if (decision?.tool) return 'resolvedInTool';
   if (resolution.choice === 'destination') return 'keepingDestination';
   if (resolution.choice === 'source') return 'keepingSource';
   if (decision?.kind === 'text' && decision.edited) return 'edited';
@@ -71,7 +77,13 @@ export function directoryConflictStatus(resolution: DirectoryConflictResolution 
   }
 }
 
-export function presentStatus(status: ConflictStatus, labels: MergeLabels): StatusPresentation {
+/** The merge tool a file's status speaks of: the one it's open in, or the one that resolved it. */
+export function fileConflictTool(state: FileConflictState): string | undefined {
+  return state.openTool?.toolName ?? state.decision?.tool;
+}
+
+/** `tool`: the merge tool of `openInTool` and `resolvedInTool`. */
+export function presentStatus(status: ConflictStatus, labels: MergeLabels, tool = 'the merge tool'): StatusPresentation {
   const { source, destination } = labels.roles;
   switch (status) {
     case 'reading':
@@ -88,7 +100,7 @@ export function presentStatus(status: ConflictStatus, labels: MergeLabels): Stat
       return {
         label: 'Needs your decision',
         tone: 'pending',
-        explanation: `Both sides changed the same lines. Pick a side for each conflict, or for the whole file: keep ${destination.version}, keep ${source.version}, keep both, or resolve it by hand.`,
+        explanation: `Both sides changed the same lines. Resolve it in a merge tool, or pick a side for each conflict or for the whole file: keep ${destination.version}, keep ${source.version} or keep both.`,
       };
     case 'keepingDestination':
       return { label: `Keeping ${destination.name.toLowerCase()}`, tone: 'decided', explanation: `The result will be ${destination.version} (${labels.destination}), as you chose.` };
@@ -100,6 +112,10 @@ export function presentStatus(status: ConflictStatus, labels: MergeLabels): Stat
       return { label: 'Combined', tone: 'decided', explanation: 'The result takes lines from both sides, as you chose for its conflicts.' };
     case 'edited':
       return { label: 'Edited by you', tone: 'decided', explanation: 'You resolved the conflicts by hand. The file will be written as you left it.' };
+    case 'resolvedInTool':
+      return { label: `Resolved in ${tool}`, tone: 'decided', explanation: `You resolved it in ${tool}. The file will be written as you saved it there when you complete the merge.` };
+    case 'openInTool':
+      return { label: `Open in ${tool}…`, tone: 'pending', explanation: `Waiting for you to save the result in ${tool} and close it.` };
   }
 }
 
@@ -127,7 +143,7 @@ export function summarizePlan(changeCount: number, statuses: ConflictStatus[]): 
 
   const count = (wanted: (status: ConflictStatus) => boolean): number => statuses.filter(wanted).length;
   const automatic = count((status) => status === 'automatic');
-  const waiting = count((status) => status === 'needsDecision' || status === 'unreadable' || status === 'reading');
+  const waiting = count((status) => status === 'needsDecision' || status === 'unreadable' || status === 'reading' || status === 'openInTool');
   const decided = statuses.length - automatic - waiting;
   const parts = [
     automatic > 0 && `${automatic} will merge automatically`,

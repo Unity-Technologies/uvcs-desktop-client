@@ -63,12 +63,13 @@ interface IncomingSessionProps {
 
 function IncomingSession({ workspacePath, incoming, header }: IncomingSessionProps) {
   const conflictedFiles = useMemo(() => updateConflictFiles(incoming.conflicts), [incoming.conflicts]);
-  const { states, decide, reset } = useFileConflicts(workspacePath, conflictedFiles, UPDATE_LABELS);
+  const { states, decide, reset, resolveInTool, resolveAllInTool } = useFileConflicts(workspacePath, conflictedFiles, UPDATE_LABELS);
   const [selection, setSelection] = useState<IncomingSelection | null>(null);
   const [updating, setUpdating] = useState(false);
 
   const conflictPaths = useMemo(() => new Set(incoming.conflicts.map((conflict) => conflict.path)), [incoming.conflicts]);
   const pendingConflictPaths = new Set(states.filter((state) => !state.resolution).map((state) => state.file.key));
+  const openToolByPath = new Map(states.flatMap((state) => (state.openTool ? [[state.file.key, state.openTool.toolName] as const] : [])));
   const resolutions = collectUpdateResolutions(states);
 
   // Start with the first file that needs merging, or the newest changeset.
@@ -117,6 +118,7 @@ function IncomingSession({ workspacePath, incoming, header }: IncomingSessionPro
             files={incoming.files}
             conflictPaths={conflictPaths}
             pendingConflictPaths={pendingConflictPaths}
+            openToolByPath={openToolByPath}
             selection={selection}
             onSelect={setSelection}
           />
@@ -128,6 +130,7 @@ function IncomingSession({ workspacePath, incoming, header }: IncomingSessionPro
               workspacePath={workspacePath}
               state={selectedConflict}
               labels={UPDATE_LABELS}
+              toolActions={{ resolveIn: (key, tool) => void resolveInTool(key, tool), resolveAllIn: (tool) => void resolveAllInTool(tool), states }}
               onDecide={(decision) => decide(selectedConflict.file.key, decision)}
               onStartOver={() => reset(selectedConflict.file.key)}
             />
