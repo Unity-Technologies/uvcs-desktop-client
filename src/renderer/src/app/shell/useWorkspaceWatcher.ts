@@ -1,3 +1,4 @@
+import type { Query } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import type { WatchCoverage } from '@shared/api/workspaces';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
@@ -5,7 +6,7 @@ import type { WorkspaceChange } from '@shared/events';
 import { api } from '../../api/client';
 import { queryKeys, workspaceKey } from '../../api/queryKeys';
 import { useUvcsEvent } from '../../api/useUvcsEvent';
-import { queryClient } from '../queryClient';
+import { isKeyedByMovedInfo, isRefreshable, queryClient } from '../queryClient';
 import { loadedChangesetChanged } from '../refresh/headChanges';
 import { refreshQueries } from '../refresh/refreshQueries';
 import {
@@ -77,6 +78,13 @@ async function refreshForChange(workspacePath: string, change: WorkspaceChange, 
   await refreshQueries(inWorkspace(workspacePath, affected));
   const after = queryClient.getQueryData<WorkspaceInfo>(infoKey);
   if (change.metadata && before && after && loadedChangesetChanged(before, after)) {
-    void refreshQueries(inWorkspace(workspacePath, (key) => isAffectedByLoadedChangeset(key) && !affected(key)));
+    const rest = (query: Query) => isAffectedByLoadedChangeset(query.queryKey) && !affected(query.queryKey);
+    // Views keyed by what moved are read under their new key as they show, not once more under the old one.
+    void queryClient.invalidateQueries({
+      queryKey: workspaceKey(workspacePath),
+      predicate: (query) => rest(query) && isRefreshable(query) && isKeyedByMovedInfo(query, before, after),
+      refetchType: 'none',
+    });
+    void refreshQueries({ queryKey: workspaceKey(workspacePath), predicate: (query) => rest(query) && !isKeyedByMovedInfo(query, before, after) });
   }
 }

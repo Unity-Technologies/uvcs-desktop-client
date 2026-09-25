@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
-import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
+import { keyedByWorkspaceInfo, SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 
 /**
@@ -17,6 +17,7 @@ export function useLeftChanges() {
     queryFn: () => api.leftChanges.find(workspacePath),
     enabled: Boolean(workspace),
     staleTime: SLOW_CHANGING_QUERY.staleTime,
+    meta: keyedByWorkspaceInfo('selector'),
   });
 }
 
