@@ -13,8 +13,15 @@ import { TargetDiff } from './TargetDiff';
 
 type BranchDiffMode = 'wholeBranch' | 'byChangeset';
 
+interface BranchDiffProps {
+  branch: string;
+  branchHead?: number;
+  /** The file to open on, in the whole branch and in each of its changesets. */
+  focusPath?: string;
+}
+
 /** A branch's changes, either all at once or one changeset at a time. */
-export function BranchDiff({ branch }: { branch: string }) {
+export function BranchDiff({ branch, branchHead, focusPath }: BranchDiffProps) {
   const [mode, setMode] = useState<BranchDiffMode>('wholeBranch');
   const modeToggle = (
     <SegmentedControl<BranchDiffMode>
@@ -27,8 +34,8 @@ export function BranchDiff({ branch }: { branch: string }) {
     />
   );
 
-  if (mode === 'wholeBranch') return <TargetDiff target={{ kind: 'branch', branch }} toolbar={modeToggle} />;
-  return <ChangesetByChangeset branch={branch} toolbar={modeToggle} />;
+  if (mode === 'wholeBranch') return <TargetDiff target={{ kind: 'branch', branch }} branchHead={branchHead} toolbar={modeToggle} focusPath={focusPath} />;
+  return <ChangesetByChangeset branch={branch} toolbar={modeToggle} focusPath={focusPath} />;
 }
 
 const CHANGESET_COLUMNS: Column<Changeset>[] = [
@@ -37,7 +44,7 @@ const CHANGESET_COLUMNS: Column<Changeset>[] = [
   { id: 'date', header: 'Date', width: 110, secondary: true, render: (changeset) => <RelativeTime date={changeset.date} /> },
 ];
 
-function ChangesetByChangeset({ branch, toolbar }: { branch: string; toolbar: React.ReactNode }) {
+function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; toolbar: React.ReactNode; focusPath?: string }) {
   const filter = useMemo(() => ({ branch }), [branch]);
   const { data: changesets, error } = useChangesets(filter);
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
@@ -69,7 +76,7 @@ function ChangesetByChangeset({ branch, toolbar }: { branch: string; toolbar: Re
         selectedId === null ? (
           <EmptyState title="This branch has no changesets" />
         ) : (
-          <TargetDiff target={{ kind: 'changeset', changesetId: selectedId }} toolbar={toolbar} />
+          <TargetDiff target={{ kind: 'changeset', changesetId: selectedId }} toolbar={toolbar} focusPath={focusPath} />
         )
       }
     />

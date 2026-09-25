@@ -98,7 +98,7 @@ function branchMenu(lane: Lane, { workspacePath, layout, goToChangeset, showRela
       icon: GitPullRequest,
       run: () => openMergeTaskDialog(workspacePath, lane.branch),
     },
-    { id: 'diff', label: 'Diff branch', icon: FileDiff, run: () => graphActions.diffBranch(name) },
+    { id: 'diff', label: 'Diff branch', icon: FileDiff, run: () => graphActions.diffBranch(lane.branch) },
     SEPARATOR,
     layout.nodes.has(head) && { id: 'head', label: 'Go to head changeset', icon: ArrowRightToLine, run: () => goToChangeset(head) },
     lane.baseChangeset !== null && {

@@ -127,7 +127,7 @@ export function BranchesView() {
                 selection={selection}
                 onSelectionChange={setSelection}
                 selectFirstRow
-                onActivate={(row) => diffBranch(row.branch.name)}
+                onActivate={(row) => diffBranch(row.branch)}
                 contextMenu={(selectedRows) => branchMenu(workspacePath, selectedRows.map((row) => row.branch), currentBranch)}
               />
             </HighlightQuery>

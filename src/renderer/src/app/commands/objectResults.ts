@@ -101,7 +101,7 @@ export function branchResult(branch: Branch, context: ResultContext): SearchResu
     detailMatches: [],
     isCurrent: branch.name === currentBranch,
     menu: () => branchMenu(workspacePath, [branch], currentBranch),
-    run: () => diffBranch(branch.name),
+    run: () => diffBranch(branch),
   };
 }
 

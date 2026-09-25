@@ -15,11 +15,13 @@ interface TargetDiffProps {
   target: DiffTarget;
   toolbar?: ReactNode;
   focusPath?: string;
+  /** For a branch, the head it's diffed at (see `useDiffEntries`). */
+  branchHead?: number;
 }
 
-export function TargetDiff({ target, toolbar, focusPath }: TargetDiffProps) {
+export function TargetDiff({ target, toolbar, focusPath, branchHead }: TargetDiffProps) {
   const workspacePath = useWorkspacePath();
-  const { data: entries, error } = useDiffEntries(target);
+  const { data: entries, error } = useDiffEntries(target, { branchHead });
 
   return (
     <div className={styles.diff}>

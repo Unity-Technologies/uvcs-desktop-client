@@ -35,7 +35,7 @@ interface DataTableProps<Row> {
   onRowKeyDown?: (event: KeyboardEvent, focusedRow: Row, moveBy: (step: number) => void) => void;
   /** J and K move like ↓ and ↑, for lists read one row after another (e.g. reviewing files). */
   letterMoves?: boolean;
-  /** Scrolls this row into view whenever it changes, e.g. after revealing a search result. */
+  /** Scrolls this row into view (centered) whenever it changes, e.g. after revealing a search result. */
   revealKey?: string | null;
   /** Selects the first row whenever no shown row is selected, so a details panel next to the table always has something to show. */
   selectFirstRow?: boolean;
@@ -73,7 +73,12 @@ export function DataTable<Row>({
 
   useEffect(() => {
     const index = revealKey ? orderedKeys.indexOf(revealKey) : -1;
-    if (index !== -1) virtualizer.scrollToIndex(index, { align: 'auto' });
+    const viewport = viewportRef.current;
+    if (index === -1 || !viewport) return;
+    const top = index * rowHeight;
+    const inView = top >= viewport.scrollTop && top + rowHeight <= viewport.scrollTop + viewport.clientHeight;
+    // A row out of view lands in the middle: context around it, and room for the layout above to settle (a header loading).
+    if (!inView) virtualizer.scrollToIndex(index, { align: 'center' });
     // Only when the requested row changes (or appears), not on every re-render of the rows.
   }, [revealKey, orderedKeys.length]);
 

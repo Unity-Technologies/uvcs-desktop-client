@@ -12,12 +12,14 @@ import { FileDiffViewer } from './viewer/FileDiffViewer';
 import { describeDiffEntry, diffEntrySources, diffEntryTone } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
 import { diffEntryMenu } from './diffEntryMenu';
+import { entryToFocus } from './diffFocus';
 import { reviewedRevisionToCompare, type DiffReviewMarks } from './review/diffReview';
 import { useDiffReview } from './review/useDiffReview';
 
 interface DiffBrowserProps {
   target: DiffTarget;
   entries: DiffEntry[];
+  /** The file to open on (by its path, or its old path for a move); the first file when it isn't in the diff. */
   initialPath?: string;
 }
 
@@ -25,9 +27,10 @@ interface DiffBrowserProps {
 export function DiffBrowser({ target, entries, initialPath }: DiffBrowserProps) {
   const workspacePath = useWorkspacePath();
   const review = useDiffReview(target, entries);
-  const [selection, setSelection] = useState<SelectionState>(() =>
-    initialPath ? { selected: new Set([initialPath]), anchor: initialPath } : EMPTY_SELECTION,
-  );
+  const [selection, setSelection] = useState<SelectionState>(() => {
+    const initial = entryToFocus(entries, initialPath);
+    return initial ? { selected: new Set([diffEntryKey(initial)]), anchor: diffEntryKey(initial) } : EMPTY_SELECTION;
+  });
   const focused = entries.find((entry) => diffEntryKey(entry) === selection.anchor);
   const firstKey = entries[0] && diffEntryKey(entries[0]);
 

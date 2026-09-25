@@ -77,6 +77,8 @@ export function DiffEntryList({ entries, selection, onSelectionChange, contextMe
           rowKey={diffEntryKey}
           selection={selection}
           onSelectionChange={onSelectionChange}
+          // The diff may open on a file far down a long list (the one clicked in a details panel), and filtering keeps it in view.
+          revealKey={selection.anchor}
           contextMenu={contextMenu}
           rowHeight={28}
           letterMoves

@@ -65,6 +65,7 @@ export async function mergeTo(sourceSpec: string, sourceName: string): Promise<v
   navigation.openPage({ kind: 'merge', request: { kind: 'merge', sourceSpec, destinationBranch: destination } });
 }
 
-export function diffBranch(branch: string, focusPath?: string): void {
-  navigation.openPage({ kind: 'diff', title: `Branch ${branch}`, target: { kind: 'branch', branch }, focusPath });
+/** Diffs the branch at the head it's known at, so the diff its details panel already read is reused. */
+export function diffBranch({ name, headChangeset }: Pick<Branch, 'name' | 'headChangeset'>, focusPath?: string): void {
+  navigation.openPage({ kind: 'diff', title: `Branch ${name}`, target: { kind: 'branch', branch: name }, focusPath, branchHead: headChangeset });
 }

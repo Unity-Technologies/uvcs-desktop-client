@@ -43,7 +43,7 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
         </>
       }
       primaryAction={
-        <Button variant="primary" icon={<FileDiff size={14} />} onClick={() => diffBranch(branch.name)}>
+        <Button variant="primary" icon={<FileDiff size={14} />} onClick={() => diffBranch(branch)}>
           Open diff
         </Button>
       }
@@ -51,7 +51,7 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
       primaryActionId="diff"
     >
       <DetailsComment text={branch.comment} />
-      <ChangedFilesSection target={{ kind: 'branch', branch: branch.name }} branchHead={branch.headChangeset} onOpen={(path) => diffBranch(branch.name, path)} />
+      <ChangedFilesSection target={{ kind: 'branch', branch: branch.name }} branchHead={branch.headChangeset} onOpen={(path) => diffBranch(branch, path)} />
       <DetailsSection title="Details">
         <PropertyList
           properties={[

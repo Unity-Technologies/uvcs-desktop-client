@@ -90,7 +90,7 @@ export function branchMenu(workspacePath: string, branches: Branch[], currentBra
       id: 'diff',
       label: 'Show branch changes',
       icon: FileDiff,
-      run: () => diffBranch(single.name),
+      run: () => diffBranch(single),
     },
     single && {
       id: 'showInBranchExplorer',
