@@ -1,6 +1,6 @@
 /* The top bar's bordered controls (the branch pill and the segments next to it): a quiet field that firms up on hover. */
 .control {
-  height: 34px;
+  height: 36px;
   border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
   background: var(--bg-surface);

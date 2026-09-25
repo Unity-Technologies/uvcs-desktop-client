@@ -23,7 +23,7 @@
   flex: 1;
   flex-direction: column;
   justify-content: center;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 
@@ -43,5 +43,5 @@
 .sub {
   color: var(--text-tertiary);
   font-size: var(--text-xs);
-  line-height: 14px;
+  line-height: 13px;
 }
