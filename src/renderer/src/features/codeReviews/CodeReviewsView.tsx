@@ -5,6 +5,7 @@ import { useCommands, type Command } from '../../app/commands/commandStore';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
+import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
 import { NoSelection } from '../../components/NoSelection';
 import { PathLabel } from '../../components/PathLabel';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
@@ -16,7 +17,6 @@ import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
 import { ChoiceChip } from '../../ui/ChoiceChip';
-import { CenteredSpinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { CodeReviewDetails } from './CodeReviewDetails';
@@ -140,7 +140,7 @@ export function CodeReviewsView() {
     </ViewHeader>
   );
 
-  if (isLoading) return <>{header}<CenteredSpinner /></>;
+  if (isLoading) return <>{header}<ListWithDetailsSkeleton columns={COLUMNS} /></>;
   if (error) return <>{header}<EmptyState title="Couldn't read the code reviews" description={error.message} /></>;
   if (visible.length === 0) {
     return (

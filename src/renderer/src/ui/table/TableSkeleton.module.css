@@ -1,0 +1,4 @@
+/* The insets of a real row, including the scrollbar gutter the table keeps, so the columns line up with the header. */
+.row {
+  margin: 0 calc(var(--space-1) + 10px) 0 var(--space-1);
+}

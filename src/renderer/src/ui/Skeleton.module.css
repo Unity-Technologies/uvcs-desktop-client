@@ -1,0 +1,41 @@
+/* Placeholders shaped like the content they stand for, shown while it loads. They appear after a short beat (a quick
+   load never flashes them) and fade toward the bottom. */
+.rows {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  animation: var(--keyframes-fade-in) var(--duration-normal) var(--duration-fast) var(--ease-out) both;
+  mask-image: linear-gradient(to bottom, #000 35%, transparent);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+}
+
+.listRow {
+  gap: var(--space-2);
+  margin: 0 var(--space-1);
+  padding: 0 var(--space-2);
+}
+
+.bar {
+  display: block;
+  flex: none;
+  max-width: 100%;
+  height: 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-active);
+  animation: var(--keyframes-pulse) 1.2s ease-in-out infinite alternate;
+}
+
+.mark {
+  width: 14px;
+  height: 14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar {
+    animation: none;
+  }
+}

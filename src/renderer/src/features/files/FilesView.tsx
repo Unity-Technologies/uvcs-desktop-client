@@ -11,7 +11,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { SearchField } from '../../ui/SearchField';
-import { CenteredSpinner } from '../../ui/Spinner';
+import { ListSkeleton } from '../../ui/Skeleton';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { usePendingChanges } from '../pendingChanges/usePendingChanges';
 import { useExpandedDirectories, useExpandedDirectoriesStore } from './expandedDirectoriesStore';
@@ -81,7 +81,7 @@ export function FilesView() {
     </ViewHeader>
   );
 
-  if (isLoadingRoot) return <>{header}<CenteredSpinner /></>;
+  if (isLoadingRoot) return <>{header}<ListSkeleton rowHeight={28} /></>;
   if (error) return <>{header}<EmptyState title="Couldn't list the workspace" description={error.message} /></>;
 
   return (

@@ -2,6 +2,7 @@ import { Lock as LockIcon, LockOpen, RefreshCw, User } from 'lucide-react';
 import { useState } from 'react';
 import type { Lock } from '@shared/domain/lock';
 import { ListWithDetails } from '../../components/ListWithDetails';
+import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
 import { NoSelection } from '../../components/NoSelection';
 import { PathLabel } from '../../components/PathLabel';
 import { invalidateWorkspace } from '../../app/queryClient';
@@ -15,7 +16,6 @@ import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
 import { ToggleChip } from '../../ui/ToggleChip';
-import { CenteredSpinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { LockDetails } from './LockDetails';
@@ -84,7 +84,7 @@ export function LocksView() {
     </ViewHeader>
   );
 
-  if (isLoading) return <>{header}<CenteredSpinner /></>;
+  if (isLoading) return <>{header}<ListWithDetailsSkeleton columns={COLUMNS} /></>;
   if (error) return <>{header}<EmptyState title="Couldn't read the locks" description={error.message} /></>;
   if (visible.length === 0) {
     return (
