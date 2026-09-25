@@ -2,11 +2,10 @@ import { useQueries } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ContentSource, FileContent } from '@shared/domain/content';
 import type { FileConflictResolution } from '@shared/domain/merge';
-import type { MergeTool } from '@shared/domain/mergeTools';
+import type { MergeTool, MergeToolOutcome } from '@shared/domain/mergeTools';
 import { api } from '../../../api/client';
 import { queryKeys } from '../../../api/queryKeys';
 import type { MergeLabels } from '../mergeDescription';
-import { waitsForTool } from '../mergeTools/mergeToolOutcome';
 import { resolveInMergeTool, type OpenTool } from '../mergeTools/resolveInMergeTool';
 import { initialDecision, remainingConflicts, resolutionOf, type FileConflictDecision } from './fileConflictDecision';
 import { buildConflictDocument, type ConflictDocument } from './threeWayMerge';
@@ -86,37 +85,32 @@ export function useFileConflicts(workspacePath: string, files: ConflictedFile[],
     setDecisions(({ [key]: _discarded, ...rest }) => rest);
   }, []);
 
-  /** Opens the file in the tool; its decision follows what the user saves there. False if they didn't save. */
+  /**
+   * Opens the file in the tool; its decision follows what the user saves there. Null when it can't open (the file
+   * isn't there or is open already); `quiet` leaves telling how it went to the caller.
+   */
   const resolveInTool = useCallback(
-    async (key: string, tool: MergeTool): Promise<boolean> => {
+    async (key: string, tool: MergeTool, quiet = false): Promise<MergeToolOutcome | null> => {
       const state = latest.current.states.find((candidate) => candidate.file.key === key);
-      if (!state || latest.current.openTools[key]) return false;
-      const decision = await resolveInMergeTool(workspacePath, state, tool, labels, (open) =>
-        setOpenTools(({ [key]: _closed, ...others }) => (open ? { ...others, [key]: open } : others)),
+      if (!state || latest.current.openTools[key]) return null;
+      const { outcome, decision } = await resolveInMergeTool(
+        workspacePath,
+        state,
+        tool,
+        labels,
+        (open) => setOpenTools(({ [key]: _closed, ...others }) => (open ? { ...others, [key]: open } : others)),
+        quiet,
       );
       if (decision) decide(key, decision);
-      return Boolean(decision);
+      return outcome;
     },
     [workspacePath, labels, decide],
-  );
-
-  /** Every file still waiting for the user, one after the other, until one closes without saving. */
-  const resolveAllInTool = useCallback(
-    async (tool: MergeTool): Promise<void> => {
-      const keys = latest.current.states.filter((state) => waitsForTool(state, tool)).map((state) => state.file.key);
-      for (const key of keys) {
-        const state = latest.current.states.find((candidate) => candidate.file.key === key);
-        if (!state || !waitsForTool(state, tool)) continue;
-        if (!(await resolveInTool(key, tool))) return;
-      }
-    },
-    [resolveInTool],
   );
 
   // Leaving the merge stops waiting for the tools still open: what they save afterwards has nowhere to go.
   useEffect(() => () => Object.values(latest.current.openTools).forEach((open) => void api.mergeTools.stopWaiting(open.sessionId)), []);
 
-  return { states, decide, reset, resolveInTool, resolveAllInTool };
+  return { states, decide, reset, resolveInTool };
 }
 
 function loadFile(versions: { data?: FileContent; error: Error | null }[], labels: MergeLabels): LoadedFile {

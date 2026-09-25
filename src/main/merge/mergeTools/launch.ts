@@ -28,6 +28,14 @@ export function launchMergeTool(executable: string, args: string[], signal: Abor
       reject(new Error(`Couldn't start ${executable}: ${error.code === 'ENOENT' ? 'it is not there anymore' : error.message}`));
     });
     child.once('close', (exitCode) => resolve({ exitCode, errorOutput: errorOutput.trim() }));
+    // Stopped: done once it exits, without waiting for what it started and still holds its output (a launcher script's
+    // app), which would keep the file "open" after the user moved on.
+    child.once('exit', () => {
+      if (!signal.aborted) return;
+      child.stdout.destroy();
+      child.stderr.destroy();
+      resolve({ exitCode: null, errorOutput: errorOutput.trim() });
+    });
   });
 }
 

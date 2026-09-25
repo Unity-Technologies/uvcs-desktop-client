@@ -31,8 +31,8 @@ export function MergeCompleted({ request, completion }: { request: MergeRequest;
       <p className={styles.what}>{mergeTitleText(mergeTitle(request, labels.destination))}</p>
       <p className={styles.next}>
         {intoServerBranch
-          ? `Created changeset ${result.changesetId} on ${labels.destination}. Your workspace didn't change.`
-          : 'The result is in your workspace as pending changes. Nothing is checked in yet: review them in Changes, then check in to record the merge.'}
+          ? `Created changeset ${result.changesetId} on ${labels.destination}.`
+          : 'The result is in your pending changes, ready to check in.'}
       </p>
       <p className={styles.counts}>{counts.join(' · ')}</p>
       <div className={styles.actions}>

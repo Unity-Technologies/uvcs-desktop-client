@@ -1,5 +1,5 @@
 import { CheckCircle2, GitBranch, RefreshCw } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { IncomingChanges, UpdateResolutions } from '@shared/domain/incoming';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -11,6 +11,8 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { ChangesetDetails } from '../changesets/ChangesetDetails';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { FileConflictPanel } from '../merge/resolve/FileConflictPanel';
+import { ResolveRunControl, useRunOffer } from '../merge/mergeTools/ResolveRunControl';
+import { useResolveRun } from '../merge/mergeTools/useResolveRun';
 import { useFileConflicts } from '../merge/resolve/useFileConflicts';
 import { IncomingFileDiff } from './IncomingDetail';
 import { IncomingList, type IncomingSelection } from './IncomingList';
@@ -63,8 +65,14 @@ interface IncomingSessionProps {
 
 function IncomingSession({ workspacePath, incoming, header }: IncomingSessionProps) {
   const conflictedFiles = useMemo(() => updateConflictFiles(incoming.conflicts), [incoming.conflicts]);
-  const { states, decide, reset, resolveInTool, resolveAllInTool } = useFileConflicts(workspacePath, conflictedFiles, UPDATE_LABELS);
+  const { states, decide, reset, resolveInTool } = useFileConflicts(workspacePath, conflictedFiles, UPDATE_LABELS);
   const [selection, setSelection] = useState<IncomingSelection | null>(null);
+  // Resolving the files one by one: the selection follows while the user stays on the file it opened.
+  const followRun = useCallback((key: string, previousKey: string | undefined) => {
+    setSelection((current) => (!previousKey || (current?.kind === 'file' && current.path === previousKey) ? { kind: 'file', path: key } : current));
+  }, []);
+  const run = useResolveRun({ states, labels: UPDATE_LABELS, resolveInTool, onOpen: followRun, onEnd: () => undefined });
+  const runPlans = useRunOffer(states, run);
   const [updating, setUpdating] = useState(false);
 
   const conflictPaths = useMemo(() => new Set(incoming.conflicts.map((conflict) => conflict.path)), [incoming.conflicts]);
@@ -107,6 +115,7 @@ function IncomingSession({ workspacePath, incoming, header }: IncomingSessionPro
         updating={updating}
         onUpdate={() => void update()}
         onShelveBlockedAndUpdate={() => void whileUpdating(() => shelveBlockedAndUpdate(workspacePath))}
+        run={run.progress || runPlans.length > 0 ? <ResolveRunControl states={states} run={run} plans={runPlans} /> : undefined}
       />
       <SplitPane
         initialSize={360}
@@ -130,7 +139,7 @@ function IncomingSession({ workspacePath, incoming, header }: IncomingSessionPro
               workspacePath={workspacePath}
               state={selectedConflict}
               labels={UPDATE_LABELS}
-              toolActions={{ resolveIn: (key, tool) => void resolveInTool(key, tool), resolveAllIn: (tool) => void resolveAllInTool(tool), states }}
+              toolActions={{ resolveIn: (key, tool) => void resolveInTool(key, tool), run: run.progress, runOffered: runPlans.length > 0 }}
               onDecide={(decision) => decide(selectedConflict.file.key, decision)}
               onStartOver={() => reset(selectedConflict.file.key)}
             />

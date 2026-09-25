@@ -1,0 +1,46 @@
+/* Reads like the segmented controls: one track, the choice made raised. */
+.group {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  padding: 2px;
+  border-radius: var(--radius-md);
+  background: var(--bg-active);
+}
+
+/* A plain label before the track, so it never reads as one of the choices. */
+.keep {
+  flex: none;
+  margin-right: calc(-1 * var(--space-1));
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.choice {
+  height: 22px;
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+.choice:hover {
+  color: var(--text-primary);
+}
+
+.choice:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
+}
+
+.choice[aria-pressed='true'] {
+  background: var(--bg-surface-raised);
+  color: var(--accent-text);
+  box-shadow:
+    0 0 0 1px var(--border-default),
+    var(--shadow-sm);
+}

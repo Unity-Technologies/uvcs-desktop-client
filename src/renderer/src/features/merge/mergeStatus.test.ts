@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
 import { mergeLabels } from './mergeDescription';
-import { describeChange, directoryConflictStatus, fileConflictStatus, presentStatus, summarizePlan } from './mergeStatus';
+import { describeChange, directoryConflictStatus, fileConflictStatus, planProgress, presentStatus, summarizePlan } from './mergeStatus';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 const text = (value: string): FileContent => ({ text: value, isBinary: false, size: value.length });
@@ -52,7 +52,7 @@ describe('presentStatus', () => {
   it('speaks of what the merge will do, in the words of the side', () => {
     expect(presentStatus('automatic', workspaceLabels).label).toBe('Will merge automatically');
     expect(presentStatus('keepingDestination', workspaceLabels).label).toBe('Keeping yours');
-    expect(presentStatus('keepingSource', workspaceLabels).explanation).toContain('(/main)');
+    expect(presentStatus('keepingSource', workspaceLabels).explanation).toBe('/main');
     const serverLabels = mergeLabels({ kind: 'merge', sourceSpec: 'br:/main/task', destinationBranch: '/main' }, undefined);
     expect(presentStatus('keepingDestination', serverLabels).label).toBe('Keeping destination');
   });
@@ -70,5 +70,14 @@ describe('summarizePlan', () => {
     expect(summarizePlan(1, [])).toBe('1 change to apply · no conflicts');
     expect(summarizePlan(598, ['automatic', 'needsDecision'])).toBe('598 changes to apply · 2 conflicts: 1 will merge automatically, 1 needs your decision');
     expect(summarizePlan(3, ['combined', 'keepingSource', 'automatic'])).toBe('3 changes to apply · 3 conflicts: 1 will merge automatically, 2 decided');
+  });
+});
+
+describe('planProgress', () => {
+  it('counts what still stands in the way, or says the merge is ready', () => {
+    expect(planProgress([])).toBe('Ready to merge');
+    expect(planProgress(['automatic', 'keepingSource'])).toBe('Ready to merge');
+    expect(planProgress(['automatic', 'needsDecision'])).toBe('1 conflict to decide');
+    expect(planProgress(['needsDecision', 'openInTool', 'combined'])).toBe('2 conflicts to decide');
   });
 });

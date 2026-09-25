@@ -76,3 +76,15 @@
 .list:focus-visible:has(.row[data-selected='true']) {
   box-shadow: none;
 }
+
+/* The file open in the merge tool while resolving one by one: marked wherever the selection is. */
+.row[data-running]::before {
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: 0;
+  width: 3px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+  content: '';
+}

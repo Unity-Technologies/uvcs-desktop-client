@@ -24,16 +24,26 @@ interface ConflictStatusChipProps {
   explanation?: string;
   /** The merge tool the file is open in, or was resolved in. */
   tool?: string;
+  /** Just the icon, its label in the tooltip: in the list, where the file's header says it in words. */
+  compact?: boolean;
 }
 
-/** Where a conflict stands, the same in the list and in the file's header; its tooltip explains it. */
-export function ConflictStatusChip({ status, labels, explanation, tool }: ConflictStatusChipProps) {
+/** Where a conflict stands: a chip in the file's header, an icon in the list; its tooltip explains it. */
+export function ConflictStatusChip({ status, labels, explanation, tool, compact = false }: ConflictStatusChipProps) {
   const presentation = presentStatus(status, labels, tool);
   const Icon = ICONS[status];
+  const tip = explanation ?? presentation.explanation;
+  if (compact) {
+    return (
+      <span className={styles.icon} data-tone={presentation.tone} data-tip={presentation.label} data-tip-sub={tip} role="img" aria-label={presentation.label}>
+        <Icon size={13} strokeWidth={2.2} />
+      </span>
+    );
+  }
   return (
-    <span className={styles.chip} data-tone={presentation.tone} data-tip={explanation ?? presentation.explanation}>
+    <span className={styles.chip} data-tone={presentation.tone} data-tip={tip}>
       <Icon size={11} strokeWidth={2.4} />
-      {presentation.label}
+      <span data-chip-label>{presentation.label}</span>
     </span>
   );
 }

@@ -1,0 +1,66 @@
+.trigger {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 22px;
+  padding: 0 6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.trigger:hover,
+.trigger[data-state='open'] {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.arrow {
+  flex: none;
+}
+
+.card {
+  z-index: 900;
+  width: min(420px, calc(100vw - 32px));
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-sm);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  gap: 0 var(--space-3);
+  margin: 0;
+}
+
+.row {
+  display: contents;
+}
+
+.role,
+.changeset,
+.branch {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  height: 26px;
+  margin: 0;
+}
+
+.role {
+  color: var(--text-secondary);
+}
+
+.changeset {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}

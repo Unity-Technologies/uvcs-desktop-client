@@ -27,3 +27,25 @@
   background: color-mix(in srgb, var(--status-added) 13%, transparent);
   color: var(--status-added);
 }
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--text-tertiary);
+}
+
+.icon[data-tone='pending'] {
+  color: var(--status-conflict);
+}
+
+.icon[data-tone='automatic'] {
+  color: var(--accent-text);
+}
+
+.icon[data-tone='decided'] {
+  color: var(--status-added);
+}

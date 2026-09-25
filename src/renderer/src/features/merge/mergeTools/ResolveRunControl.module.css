@@ -1,0 +1,70 @@
+/* The run in the merge header: calm, one line, where the status and the primary action were. */
+.strip {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  max-width: 560px;
+  height: var(--control-height);
+  padding: 0 4px 0 var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--accent-soft);
+  color: var(--text-primary);
+  font-size: var(--text-sm);
+  animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
+}
+
+.strip[data-paused] {
+  background: color-mix(in srgb, var(--status-changed) 14%, transparent);
+}
+
+.icon {
+  flex: none;
+  color: var(--status-changed);
+}
+
+.text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.position {
+  color: var(--text-secondary);
+}
+
+.position strong {
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+}
+
+.steps {
+  display: flex;
+  flex: none;
+  gap: 3px;
+}
+
+.step {
+  width: 6px;
+  height: 6px;
+  border-radius: var(--radius-full);
+  background: var(--border-default);
+}
+
+.step[data-step='passed'] {
+  background: var(--accent);
+}
+
+/* The file open: pulses while the tool has it. */
+.step[data-step='open'] {
+  background: var(--accent);
+  animation: var(--keyframes-pulse) 900ms var(--ease-in-out) infinite alternate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step[data-step='open'] {
+    animation: none;
+  }
+}

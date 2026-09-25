@@ -36,7 +36,9 @@ export function TooltipLayer() {
       pointer.current = { x: event.clientX, y: event.clientY };
     };
     const onOver = (event: MouseEvent): void => {
-      const found = findTip(event.target as Element | null);
+      // Inside a shadow root (the diff viewers), the target is the host: look from the node really hovered first.
+      const origin = event.composedPath()[0];
+      const found = (origin instanceof Element && origin !== event.target ? findTip(origin) : null) ?? findTip(event.target as Element | null);
       if (!found) return hide();
       clearTimeout(timer.current);
       timer.current = setTimeout(() => setTip({ ...found, pointerX: pointer.current.x, pointerY: pointer.current.y }), TOOLTIP_SHOW_DELAY);
