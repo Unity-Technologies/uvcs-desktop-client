@@ -87,22 +87,30 @@ user asks for it on one conflicting file ("Resolve in…"), and the app keeps th
 
 ## Merge page
 
-The merge page (`features/merge`) is a preview until "Complete merge": it says so ("Preview", "Nothing has changed yet"),
-and every status reads as what the merge will do, never as done (`mergeStatus`): "Will merge automatically", "Needs your
-decision", then the user's choice ("Keeping yours", "Keeping incoming", "Combined", "Edited by you"), one chip in the list
-and the file header, explained by its tooltip ("Open in VS Code…", "Resolved in VS Code" for merge tools). Sides
-are "Yours"/"Incoming" in a workspace and "Destination"/"Source" when merging into a server branch (`mergeLabels`), always next to their branch. A conflicting file is read-only, with short
-one-line views: "Conflicts" while any is left (each with Keep yours / Keep incoming / Keep both), then "Changes" (the
-destination now → after the merge), "Yours", "Incoming" and "Base". A file with conflicts leads with "Resolve in
-<tool>" (`MergeToolButton`, a split button: the other tools found, "Resolve all N files in <tool>, one by one", "Choose
-another app…", "Edit the text in the app" and the settings behind the caret; picking a tool there makes it the
-preferred one), then whole-file choices (`conflictChoices`): Keep yours, Keep incoming, Keep both. While a tool has the
-file, a banner says so (Bring to front, Stop waiting), its conflicts are read-only and the merge can't complete; a
-toast tells how it ended. Editing the text in the app opens a banner with Done and Discard edits; the choice shows
-picked and "Changes" shows what it produces. Binary conflicts offer only tools that merge binaries (the UVCS one). The
-Incoming view resolves update conflicts with the same panel; server-branch merges keep one side for every file. A file that merges
-automatically is never edited; its menu only overrides it by keeping one version. Once merged, the page states where
-the result went.
+The merge page (`features/merge`) is a preview until "Complete merge". Its header is one row: a "Preview" pill (its
+tooltip: nothing is written until then), the title fitted as a whole (`fitMergeTitle`: the words stay, the branches give
+way from their middle), the changesets it combines ("cs:3 → cs:5"; a click lists them with the base), where it stands
+("2 conflicts to decide", the full summary in its tooltip) and Complete merge, the primary action only once nothing waits.
+Every status reads as what the merge will do, never as done (`mergeStatus`): "Will merge automatically", "Needs your
+decision", then the user's choice ("Keeping yours", "Keeping incoming", "Combined", "Edited by you"; "Open in VS Code…",
+"Resolved in VS Code" for merge tools): an icon in the list and a chip in the file's toolbar, with a short tooltip. Sides
+are "Yours"/"Incoming" in a workspace and "Destination"/"Source" when merging into a server branch (`mergeLabels`), always
+next to their branch. Copy stays short: labels name things, tooltips define them, no sentence restates what the page shows.
+
+A conflicting file is read-only. Its toolbar holds the file, its status and the ways out: "Resolve in <tool>"
+(`MergeToolButton`, a split button, primary while the file waits: the other tools found, "Resolve all N files in <tool>,
+one by one", "Choose another app…", "Edit the text in the app" and the settings behind the caret; picking a tool there
+makes it the preferred one), then "Keep Yours | Incoming | Both" for the whole file (`KeepChoices`, `conflictChoices`)
+and Start over. Below, short one-line views: "Conflicts" with the count left, then "Changes" (the destination now → after
+the merge), "Yours", "Incoming" and "Base". Conflicts read as labeled blocks instead of conflict markers
+(`conflictHunkCss` over Pierre's view): a header naming the destination's side with Keep yours / Keep incoming / Keep both
+for that conflict, its lines, the source's label and its lines. While a tool has the file, a banner says so (Bring to
+front, Stop waiting), its conflicts show without choices and the merge can't complete; a toast tells how it ended.
+Editing the text in the app opens a banner with Done and Discard edits; the choice shows picked and "Changes" shows what
+it produces. Binary conflicts offer only tools that merge binaries (the UVCS one) and the two versions to keep. The
+Incoming view resolves update conflicts with the same panel; server-branch merges keep one side for every file. A file
+that merges automatically is never edited; its menu only overrides it by keeping one version. Once merged, the page
+states where the result went.
 
 ## Switching with pending changes
 
