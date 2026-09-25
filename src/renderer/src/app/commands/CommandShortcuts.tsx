@@ -1,0 +1,26 @@
+import { useEffect } from 'react';
+import { matchesShortcut } from '../../lib/shortcuts';
+import { allCommands } from './commandStore';
+
+function isTyping(target: EventTarget | null): boolean {
+  return target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+}
+
+/** Runs registered commands when their shortcut is pressed. Plain-key shortcuts are ignored while typing. */
+export function CommandShortcuts() {
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent): void => {
+      const usesModifier = event.metaKey || event.ctrlKey || event.altKey;
+      if (!usesModifier && isTyping(event.target)) return;
+
+      const command = allCommands().find((candidate) => candidate.shortcut && !candidate.disabled && matchesShortcut(event, candidate.shortcut));
+      if (!command) return;
+      event.preventDefault();
+      command.run();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
+  return null;
+}

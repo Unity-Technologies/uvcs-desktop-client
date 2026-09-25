@@ -1,0 +1,14 @@
+.tooltip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 320px;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--text-primary);
+  color: var(--text-inverse);
+  font-size: var(--text-sm);
+  box-shadow: var(--shadow-md);
+  animation: fade-in var(--duration-fast) var(--ease-out);
+  z-index: 1000;
+}

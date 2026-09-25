@@ -1,0 +1,39 @@
+.badge {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+
+.badge[data-tone='added'] {
+  background: color-mix(in srgb, var(--status-added) 16%, transparent);
+  color: var(--status-added);
+}
+
+.badge[data-tone='changed'] {
+  background: color-mix(in srgb, var(--status-changed) 16%, transparent);
+  color: var(--status-changed);
+}
+
+.badge[data-tone='deleted'],
+.badge[data-tone='conflict'] {
+  background: color-mix(in srgb, var(--status-deleted) 16%, transparent);
+  color: var(--status-deleted);
+}
+
+.badge[data-tone='moved'] {
+  background: color-mix(in srgb, var(--status-moved) 16%, transparent);
+  color: var(--status-moved);
+}
+
+.badge[data-tone='private'],
+.badge[data-tone='muted'] {
+  background: var(--bg-hover);
+  color: var(--text-tertiary);
+}

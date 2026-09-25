@@ -1,0 +1,85 @@
+.list {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-1) 0;
+  overflow: auto;
+  outline: none;
+}
+
+.row {
+  position: absolute;
+  left: var(--space-1);
+  right: var(--space-1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-sm);
+}
+
+.row:hover {
+  background: var(--bg-hover);
+}
+
+.row[data-selected='true'] {
+  background: var(--bg-selected);
+}
+
+.list:focus .row[data-selected='true'] {
+  background: var(--bg-selected-strong);
+}
+
+.row[data-type='category'] {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.chevron {
+  flex: none;
+  color: var(--text-tertiary);
+  transform: rotate(90deg);
+  transition: transform var(--duration-fast);
+}
+
+.chevron[data-collapsed='true'] {
+  transform: none;
+}
+
+.categoryLabel {
+  flex: 1;
+}
+
+.count {
+  color: var(--text-tertiary);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.folder {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.directoryName {
+  overflow: hidden;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.checkboxPlaceholder {
+  flex: none;
+  width: 15px;
+}
+
+.tag {
+  flex: none;
+  margin-left: auto;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--bg-hover);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  line-height: 16px;
+}

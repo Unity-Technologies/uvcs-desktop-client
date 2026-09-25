@@ -1,0 +1,32 @@
+import { ArrowDownToLine, Command as CommandIcon, TerminalSquare } from 'lucide-react';
+import { WorkingObjectButton } from '../../features/branches/WorkingObjectButton';
+import { IconButton } from '../../ui/IconButton';
+import { Button } from '../../ui/Button';
+import { Kbd } from '../../ui/Kbd';
+import { useCommandPalette } from '../commands/commandPaletteStore';
+import { useWorkspacePath } from '../workspace/useWorkspace';
+import { useCommandLogStore } from './commandLogStore';
+import { updateWorkspace } from './workspaceOperations';
+import styles from './TopBar.module.css';
+
+export function TopBar() {
+  const workspacePath = useWorkspacePath();
+  const toggleCommandLog = useCommandLogStore((state) => state.toggle);
+  const setCommandPaletteOpen = useCommandPalette((state) => state.setOpen);
+
+  return (
+    <div className={styles.topBar}>
+      <WorkingObjectButton />
+      <div className={styles.spacer} />
+      <button className={styles.search} onClick={() => setCommandPaletteOpen(true)}>
+        <CommandIcon size={13} />
+        <span>Search commands</span>
+        <Kbd keys="mod+k" />
+      </button>
+      <IconButton icon={<TerminalSquare size={15} />} label="Command log" shortcut="mod+shift+l" onClick={toggleCommandLog} />
+      <Button icon={<ArrowDownToLine size={14} />} onClick={() => void updateWorkspace(workspacePath)}>
+        Update
+      </Button>
+    </div>
+  );
+}

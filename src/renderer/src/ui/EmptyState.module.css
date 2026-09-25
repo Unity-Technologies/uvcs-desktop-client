@@ -1,0 +1,38 @@
+.empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  height: 100%;
+  padding: var(--space-8);
+  text-align: center;
+  animation: fade-in var(--duration-normal);
+}
+
+.icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-xl);
+  background: var(--bg-hover);
+  color: var(--text-tertiary);
+}
+
+.title {
+  font-size: var(--text-lg);
+  font-weight: 600;
+}
+
+.description {
+  max-width: 360px;
+  color: var(--text-secondary);
+}
+
+.action {
+  margin-top: var(--space-3);
+}

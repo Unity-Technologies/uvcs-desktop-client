@@ -1,0 +1,28 @@
+import { useMutation, useQuery } from '@tanstack/react-query';
+import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
+import { api } from '../../api/client';
+import { queryKeys } from '../../api/queryKeys';
+import { queryClient } from '../queryClient';
+
+export function useSettings(): AppSettings {
+  const { data } = useQuery({ queryKey: queryKeys.settings, queryFn: () => api.settings.get(), staleTime: Infinity });
+  return data ?? DEFAULT_SETTINGS;
+}
+
+export function useUpdateSettings() {
+  return useMutation({
+    mutationFn: (changes: Partial<AppSettings>) => api.settings.update(changes),
+    onMutate: (changes) => {
+      const current = queryClient.getQueryData<AppSettings>(queryKeys.settings) ?? DEFAULT_SETTINGS;
+      queryClient.setQueryData(queryKeys.settings, { ...current, ...changes });
+    },
+    onSuccess: (saved) => queryClient.setQueryData(queryKeys.settings, saved),
+  }).mutate;
+}
+
+/** Remembers a workspace at the top of the recent list. */
+export async function rememberRecentWorkspace(workspacePath: string): Promise<void> {
+  const settings = await api.settings.get();
+  const recentWorkspacePaths = [workspacePath, ...settings.recentWorkspacePaths.filter((path) => path !== workspacePath)].slice(0, 10);
+  queryClient.setQueryData(queryKeys.settings, await api.settings.update({ recentWorkspacePaths }));
+}

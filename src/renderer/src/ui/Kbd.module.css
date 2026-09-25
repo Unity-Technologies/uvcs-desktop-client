@@ -1,0 +1,16 @@
+.kbd {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.kbd kbd {
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  font-family: var(--font-ui);
+  font-size: 10.5px;
+  line-height: 16px;
+  text-align: center;
+  opacity: 0.85;
+}

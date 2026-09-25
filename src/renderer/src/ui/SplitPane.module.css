@@ -1,0 +1,52 @@
+.split {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+.split[data-direction='vertical'] {
+  flex-direction: column;
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  flex: none;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.rest {
+  flex: 1;
+}
+
+.handle {
+  position: relative;
+  flex: none;
+  width: 1px;
+  background: var(--border-subtle);
+  cursor: col-resize;
+}
+
+.handle::after {
+  content: '';
+  position: absolute;
+  inset: 0 -4px;
+  z-index: 1;
+}
+
+.handle:hover {
+  background: var(--accent);
+}
+
+.split[data-direction='vertical'] > .handle {
+  width: auto;
+  height: 1px;
+  cursor: row-resize;
+}
+
+.split[data-direction='vertical'] > .handle::after {
+  inset: -4px 0;
+}

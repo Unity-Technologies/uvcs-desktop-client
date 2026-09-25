@@ -1,0 +1,83 @@
+.host {
+  position: fixed;
+  right: var(--space-4);
+  bottom: 36px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 360px;
+  z-index: 950;
+  pointer-events: none;
+}
+
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
+  animation: pop-in var(--duration-normal) var(--ease-out);
+  pointer-events: auto;
+}
+
+.icon {
+  display: flex;
+  padding-top: 1px;
+}
+
+.infoIcon {
+  color: var(--status-moved);
+}
+
+.successIcon {
+  color: var(--status-added);
+}
+
+.errorIcon {
+  color: var(--status-deleted);
+}
+
+.text {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-weight: 500;
+}
+
+.detail {
+  margin-top: 2px;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+  max-height: 120px;
+  overflow: auto;
+}
+
+.action {
+  padding: 2px 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 500;
+  font-size: var(--text-sm);
+}
+
+.close {
+  display: flex;
+  padding: 2px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-tertiary);
+}
+
+.close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}

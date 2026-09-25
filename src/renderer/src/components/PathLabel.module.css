@@ -1,0 +1,29 @@
+.path {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.name {
+  flex: none;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.name[data-strikethrough='true'] {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+
+.directory {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+}

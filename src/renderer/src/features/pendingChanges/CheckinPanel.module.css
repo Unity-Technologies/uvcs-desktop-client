@@ -1,0 +1,42 @@
+.panel {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.comment {
+  height: 84px;
+  padding: var(--space-2) 10px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+}
+
+.comment:focus {
+  border-color: var(--accent);
+  box-shadow: var(--focus-ring);
+}
+
+.actions {
+  display: flex;
+  gap: var(--space-1);
+}
+
+.checkin {
+  flex: 1;
+  height: 32px;
+  min-width: 0;
+}
+
+.branch {
+  overflow: hidden;
+  opacity: 0.75;
+  font-weight: 400;
+  text-overflow: ellipsis;
+}
