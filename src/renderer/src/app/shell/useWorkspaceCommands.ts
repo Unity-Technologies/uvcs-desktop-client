@@ -1,5 +1,6 @@
-import { ArrowDownToLine, FolderOpen, Keyboard, Monitor, Moon, RefreshCw, Sun, TerminalSquare } from 'lucide-react';
+import { ArrowDownToLine, FolderOpen, Keyboard, ListChecks, Monitor, Moon, RefreshCw, Sun, TerminalSquare } from 'lucide-react';
 import type { ThemePreference } from '@shared/domain/settings';
+import { setReviewMode } from '../../features/pendingChanges/review/reviewModeSetting';
 import type { Icon } from '../../lib/actions';
 import { useMemo } from 'react';
 import { useCommands, type Command } from '../commands/commandStore';
@@ -23,7 +24,8 @@ const THEMES: { theme: ThemePreference; label: string; icon: Icon }[] = [
 export function useWorkspaceCommands(): void {
   const workspacePath = useWorkspacePath();
   const closeWorkspace = useSession((state) => state.closeWorkspace);
-  const { theme } = useSettings();
+  const { theme, reviewModeWorkspaces } = useSettings();
+  const reviewing = reviewModeWorkspaces.includes(workspacePath);
   const updateSettings = useUpdateSettings();
 
   const commands = useMemo<Command[]>(
@@ -51,6 +53,18 @@ export function useWorkspaceCommands(): void {
         icon: RefreshCw,
         shortcut: 'mod+r',
         run: () => void invalidateWorkspace(workspacePath),
+      },
+      {
+        id: 'workspace.reviewMode',
+        group: 'Workspace',
+        label: 'Toggle review mode',
+        icon: ListChecks,
+        keywords: ['review', 'reviewed', 'mark'],
+        // Turning it on is about to review: show the changes to review.
+        run: () => {
+          void setReviewMode(workspacePath, !reviewing);
+          if (!reviewing) navigation.goToView('changes');
+        },
       },
       {
         id: 'workspace.open',
@@ -87,7 +101,7 @@ export function useWorkspaceCommands(): void {
         run: () => updateSettings({ theme: choice }),
       })),
     ],
-    [workspacePath, closeWorkspace, theme, updateSettings],
+    [workspacePath, closeWorkspace, theme, reviewing, updateSettings],
   );
 
   useCommands(commands);

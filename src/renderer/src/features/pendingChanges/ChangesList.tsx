@@ -12,7 +12,7 @@ import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { describeKinds, isCheckinCandidate } from './changeCategories';
 import { changeTone } from './changeTone';
-import { hasDisclosureRows, rowIndent, type ChangeRow } from './changeRows';
+import { rowIndent, type ChangeRow } from './changeRows';
 import { LockChip } from './locks/LockChip';
 import type { PendingLocks } from './locks/pendingLocks';
 import { ReviewToggle } from './review/ReviewToggle';
@@ -36,8 +36,9 @@ interface ChangesListProps {
   onMoveToChangelist?: (changes: PendingChange[], changelist: string | null) => void;
   contextMenu: (selected: PendingChange[]) => MenuEntry[];
   changelistMenu: (changelist: Changelist) => MenuEntry[];
-  reviewMarks: ReviewMarks;
-  /** The row's check, or R on the selection: marks the changes reviewed, or clears their marks. */
+  /** Null outside review mode: no checks, no "changed since review" dots. */
+  reviewMarks: ReviewMarks | null;
+  /** The row's check, or R on the selection: marks the changes reviewed, or clears their marks (and turns review mode on). */
   onToggleReviewed: (changes: PendingChange[]) => void;
   locks: PendingLocks;
 }
@@ -62,7 +63,7 @@ export function ChangesList({
   // The row keyboard moves go from; Shift extends the selection from the anchor to it.
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
   const focused = focusedKey !== null && orderedKeys.includes(focusedKey) ? focusedKey : selection.anchor;
-  const indentLayout = { grouped: rows.some((row) => row.type === 'group'), disclosure: hasDisclosureRows(rows) };
+  const grouped = rows.some((row) => row.type === 'group');
 
   // A plain press on a row of a multi-selection keeps the selection until release, so the whole of it can be dragged.
   const narrowOnClick = useRef<string | null>(null);
@@ -102,7 +103,7 @@ export function ChangesList({
       const selected = selectedChanges().filter(isReviewable);
       if (selected.length === 0) return;
       // Marking one file moves on to the next, so a review goes R, R, R down the list.
-      const advance = selected.length === 1 && shouldMarkReviewed(selected, reviewMarks);
+      const advance = selected.length === 1 && (!reviewMarks || shouldMarkReviewed(selected, reviewMarks));
       onToggleReviewed(selected);
       if (advance) moveBy(1, false);
     } else if (event.key === ' ') {
@@ -154,8 +155,8 @@ export function ChangesList({
                 data-type={row.type}
                 data-selected={selection.selected.has(row.key)}
                 data-drop-target={dropTarget === row.key}
-                data-review={row.type === 'change' && isReviewable(row.change) ? reviewStatus(reviewMarks, row.change) : undefined}
-                style={{ top: item.start, height: ROW_HEIGHT, '--row-indent': `${rowIndent(row, indentLayout)}px` } as CSSProperties}
+                data-review={reviewMarks && row.type === 'change' && isReviewable(row.change) ? reviewStatus(reviewMarks, row.change) : undefined}
+                style={{ top: item.start, height: ROW_HEIGHT, '--row-indent': `${rowIndent(row, grouped)}px` } as CSSProperties}
                 onMouseDown={(event) => onRowMouseDown(row, event)}
                 onClick={() => onRowClick(row)}
                 onDoubleClick={() => row.type === 'change' && onOpen(row.change)}
@@ -222,13 +223,13 @@ function RowContent({ row, onToggleIncluded, changelistMenu, reviewMarks, onTogg
             <span className={styles.checkboxPlaceholder} />
           )}
           <StatusBadge tone={changeTone(change)} title={describeKinds(change)} />
-          {hasChangesSinceReview(reviewMarks, change) && <span className={styles.sinceReviewDot} data-tip="Changed since you reviewed it" />}
+          {reviewMarks && hasChangesSinceReview(reviewMarks, change) && <span className={styles.sinceReviewDot} data-tip="Changed since you reviewed it" />}
           <PathLabel path={change.path} nameOnly={row.depth > 0} oldPath={change.oldPath} strikethrough={deleted} />
           <span className={styles.trailing}>
             {change.mergeInfo && <span className={styles.tag}>{change.mergeInfo}</span>}
             {change.kinds.includes('moved') && change.kinds.includes('changed') && <span className={styles.tag}>modified</span>}
             {lock && <LockChip path={change.path} lock={lock} />}
-            {isReviewable(change) && (
+            {reviewMarks && isReviewable(change) && (
               <ReviewToggle status={reviewStatus(reviewMarks, change)} onToggle={() => onToggleReviewed([change])} className={styles.reviewToggle} />
             )}
           </span>

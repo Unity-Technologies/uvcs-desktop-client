@@ -43,6 +43,8 @@
 
 .chevron {
   flex: none;
+  /* As wide as a checkbox, so a folder's chevron fills its siblings' checkbox column. */
+  margin: 0 1px;
   color: var(--text-tertiary);
   transform: rotate(90deg);
   transition: transform var(--duration-fast);
@@ -131,6 +133,13 @@
   opacity: 0.6;
 }
 
+/* Entering or leaving review mode, reviewed files ease back and forth. */
+@media (prefers-reduced-motion: no-preference) {
+  .row[data-type='change'] > :not(.trailing, :first-child) {
+    transition: opacity var(--duration-normal);
+  }
+}
+
 /* Changed since the review, with the reviewed text kept to compare against. */
 .sinceReviewDot {
   flex: none;
@@ -138,4 +147,11 @@
   height: 6px;
   border-radius: var(--radius-full);
   background: var(--status-changed);
+  animation: var(--keyframes-fade-in) var(--duration-normal);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sinceReviewDot {
+    animation: none;
+  }
 }

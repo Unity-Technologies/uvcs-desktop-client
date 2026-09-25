@@ -30,6 +30,10 @@ export interface AppSettings {
   restoreLeftChangesAutomatically: boolean;
   /** The shelves created while switching with pending changes, until they are restored or discarded. */
   switchShelves: SwitchShelveRecord[];
+  /** The workspaces whose Changes show review marks, progress and the Unreviewed filter. Off everywhere at first. */
+  reviewModeWorkspaces: string[];
+  /** The offer to turn on review mode after a burst of changes was dismissed or taken: it never shows again. */
+  reviewModeHintDone: boolean;
   /** Null until the window is first moved or resized. */
   windowBounds: SavedWindowBounds | null;
 }
@@ -45,5 +49,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   pendingChangesOnSwitch: 'ask',
   restoreLeftChangesAutomatically: true,
   switchShelves: [],
+  reviewModeWorkspaces: [],
+  reviewModeHintDone: false,
   windowBounds: null,
 };

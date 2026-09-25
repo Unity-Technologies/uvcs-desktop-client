@@ -24,11 +24,12 @@ import { HiddenCheckedNotice, NoFilterMatches } from './FilterNotices';
 import { LiveRefreshToggle } from './LiveRefreshToggle';
 import { LockedByOthersNotice } from './locks/LockedByOthersNotice';
 import { usePendingLocks } from './locks/usePendingLocks';
+import { ReviewModeButton } from './review/ReviewModeButton';
 import { useReviewMode } from './review/useReviewMode';
 import { mergeSourceChangeset, uploadSize } from './checkinButton';
 import { checkinChanges, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
 import { isCheckinCandidate } from './changeCategories';
-import { buildChangeRows, changeKey, changesUnderRow, CHEVRON_SLOT, hasDisclosureRows, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { buildChangeRows, changeKey, changesUnderRow, topLevelCheckboxInset, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
 import { changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
 import { changeTone } from './changeTone';
@@ -126,6 +127,7 @@ export function PendingChangesView() {
       actions={
         <>
           <LiveRefreshToggle />
+          <ReviewModeButton workspacePath={workspacePath} />
           <IconButton icon={<RefreshCw size={14} className={isFetching ? styles.spinning : undefined} />} label="Refresh" shortcut="mod+r" onClick={() => void invalidateWorkspace(workspacePath)} />
           <IconButton icon={<SlidersHorizontal size={14} />} label="What to show" onClick={() => openSettingsDialogAt('pendingChanges')} />
         </>
@@ -192,7 +194,7 @@ export function PendingChangesView() {
               onSetIncluded={setIncludedChanges}
               onUndo={(selected) => void undoChanges(workspacePath, selected)}
               onUndoUnchanged={() => void undoUnchangedCheckouts(workspacePath)}
-              checkboxInset={hasDisclosureRows(rows) ? CHEVRON_SLOT : 0}
+              checkboxInset={topLevelCheckboxInset(rows)}
             />
             {review.bar}
             {filterBar}
@@ -214,7 +216,7 @@ export function PendingChangesView() {
                     pendingChangeMenu(workspacePath, selected, changelists, { isIncluded, setIncluded: setIncludedChanges }, { marks: review.marks, toggle: review.toggle })
                   }
                   changelistMenu={(changelist) => changelistMenu(workspacePath, changelist)}
-                  reviewMarks={review.marks}
+                  reviewMarks={review.on ? review.marks : null}
                   onToggleReviewed={review.toggle}
                   locks={locks}
                 />

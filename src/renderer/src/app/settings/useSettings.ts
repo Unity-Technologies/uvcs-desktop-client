@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -9,15 +9,17 @@ export function useSettings(): AppSettings {
   return data ?? DEFAULT_SETTINGS;
 }
 
-export function useUpdateSettings() {
-  return useMutation({
-    mutationFn: (changes: Partial<AppSettings>) => api.settings.update(changes),
-    onMutate: (changes) => {
-      const current = queryClient.getQueryData<AppSettings>(queryKeys.settings) ?? DEFAULT_SETTINGS;
-      queryClient.setQueryData(queryKeys.settings, { ...current, ...changes });
-    },
-    onSuccess: (saved) => queryClient.setQueryData(queryKeys.settings, saved),
-  }).mutate;
+const updateSettings = (changes: Partial<AppSettings>): void => void saveSettings(changes);
+
+export function useUpdateSettings(): (changes: Partial<AppSettings>) => void {
+  return updateSettings;
+}
+
+/** Saves settings from anywhere, hooks or not: the change shows right away and the store confirms it. */
+export async function saveSettings(changes: Partial<AppSettings>): Promise<void> {
+  const current = queryClient.getQueryData<AppSettings>(queryKeys.settings) ?? DEFAULT_SETTINGS;
+  queryClient.setQueryData(queryKeys.settings, { ...current, ...changes });
+  queryClient.setQueryData(queryKeys.settings, await api.settings.update(changes));
 }
 
 /** Remembers a workspace at the top of the recent list, the app's and the OS's. */

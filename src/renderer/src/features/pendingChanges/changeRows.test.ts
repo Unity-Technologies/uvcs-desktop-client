@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { buildChangeRows, CHEVRON_SLOT, hasDisclosureRows, INDENT, rowIndent, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { buildChangeRows, LEVEL_INDENT, rowIndent, topLevelCheckboxInset, type ChangesGrouping, type ChangesLayout } from './changeRows';
 
 function change(path: string, kinds: PendingChange['kinds'], changelist?: string): PendingChange {
   return { path, kinds, itemType: 'file', size: 0, lastModified: '', changelist };
@@ -64,22 +64,28 @@ describe('buildChangeRows', () => {
 });
 
 describe('rowIndent', () => {
-  it('keeps a flat list flush, with no chevron column', () => {
+  it('keeps a flat list flush, with the select-all checkbox in the same column', () => {
     const rows = buildChangeRows(base);
-    expect(hasDisclosureRows(rows)).toBe(false);
-    expect(rowIndent(rows[0]!, { grouped: false, disclosure: false })).toBe(0);
+    expect(rows.map((row) => rowIndent(row, false))).toEqual([0, 0, 0, 0]);
+    expect(topLevelCheckboxInset(rows)).toBe(0);
   });
 
-  it('puts a change one level right of its changelist checkbox', () => {
-    const rows = buildChangeRows({ ...base, grouping: 'changelist' });
-    const layout = { grouped: true, disclosure: hasDisclosureRows(rows) };
-    expect(rowIndent(rows[0]!, layout)).toBe(0);
-    expect(rowIndent(rows[1]!, layout)).toBe(INDENT + CHEVRON_SLOT);
+  it('keeps top-level files where the flat list has them when it becomes a tree', () => {
+    const rows = buildChangeRows({ ...base, layout: 'tree' });
+    const rootFile = rows.find((row) => row.type === 'change' && row.depth === 0)!;
+    expect(rowIndent(rootFile, false)).toBe(0);
+    expect(topLevelCheckboxInset(rows)).toBe(0);
   });
 
-  it('puts a change one level right of its folder checkbox in a tree', () => {
+  it("puts a folder's chevron in its siblings' checkbox column and its children under its checkbox", () => {
     const rows = buildChangeRows({ ...base, changes: [changes[3]!], layout: 'tree' });
-    const indents = rows.map((row) => rowIndent(row, { grouped: false, disclosure: true }));
-    expect(indents).toEqual([0, INDENT, 2 * INDENT + CHEVRON_SLOT]);
+    expect(rows.map((row) => rowIndent(row, false))).toEqual([0, LEVEL_INDENT, 2 * LEVEL_INDENT]);
+  });
+
+  it("puts a change under its changelist's checkbox, which the select-all checkbox lines up with", () => {
+    const rows = buildChangeRows({ ...base, grouping: 'changelist' });
+    expect(rowIndent(rows[0]!, true)).toBe(0);
+    expect(rowIndent(rows[1]!, true)).toBe(LEVEL_INDENT);
+    expect(topLevelCheckboxInset(rows)).toBe(LEVEL_INDENT);
   });
 });
