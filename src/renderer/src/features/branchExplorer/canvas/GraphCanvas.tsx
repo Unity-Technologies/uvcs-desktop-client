@@ -3,7 +3,7 @@ import type { MenuEntry } from '../../../lib/actions';
 import { subscribeToAvatars } from '../../../lib/avatars/avatarImages';
 import { ActionContextMenu } from '../../../ui/menu/ActionContextMenu';
 import type { GraphLayout } from '../model/layoutGraph';
-import type { GraphScene } from './drawContext';
+import type { DrawnReviewChip, GraphScene } from './drawContext';
 import { drawGraph } from './drawGraph';
 import { graphSize, headerTop } from './geometry';
 import { hitTest, nodePoint, type GraphTarget } from './graphTargets';
@@ -19,7 +19,7 @@ import styles from './GraphCanvas.module.css';
 /** Scene fields owned by the view; the canvas adds the viewport, size, palette, hover state and animations. */
 export type GraphHighlights = Pick<
   GraphScene,
-  'selectedChangeset' | 'selectedBranch' | 'homeChangeset' | 'currentBranch' | 'highlightedAuthor' | 'search' | 'options'
+  'selectedChangeset' | 'selectedBranch' | 'homeChangeset' | 'currentBranch' | 'highlightedAuthor' | 'search' | 'options' | 'reviews'
 >;
 
 export interface GraphCanvasHandle {
@@ -53,6 +53,8 @@ const DRAG_THRESHOLD = 4;
 const DOUBLE_CLICK_ZOOM = 1.4;
 /** Where in a header card a reveal aims: far enough in to show the start of the name. */
 const HEADER_REVEAL_INSET = 60;
+/** How far from the right edge a tooltip still fits to the right of the pointer. */
+const TOOLTIP_ROOM = 360;
 
 export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(function GraphCanvas(
   { layout, highlights, onSelect, onActivate, contextMenu, children },
@@ -69,16 +71,19 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const [hover, setHover] = useState<{ target: GraphTarget; x: number; y: number } | null>(null);
 
   const hoveredChangeset = hover?.target.kind === 'changeset' ? hover.target.id : hover?.target.kind === 'collapsed' ? hover.target.node.changeset.id : null;
-  const sceneRef = useRef({ layout, highlights, palette, hoveredChangeset });
-  sceneRef.current = { layout, highlights, palette, hoveredChangeset };
+  const hoveredReview = hover?.target.kind === 'codeReview' ? hover.target.review.id : null;
+  const sceneRef = useRef({ layout, highlights, palette, hoveredChangeset, hoveredReview });
+  sceneRef.current = { layout, highlights, palette, hoveredChangeset, hoveredReview };
+  /** Where the code review chips were drawn in the last frame. */
+  const reviewChipsRef = useRef<DrawnReviewChip[]>([]);
 
   const scheduleDraw = useCallback(() => {
     cancelAnimationFrame(frameRef.current);
     frameRef.current = requestAnimationFrame(() => {
       const ctx = canvasRef.current?.getContext('2d');
-      const { layout: currentLayout, highlights: currentHighlights, palette: currentPalette, hoveredChangeset: hovered } = sceneRef.current;
+      const { layout: currentLayout, highlights: currentHighlights, palette: currentPalette, hoveredChangeset: hovered, hoveredReview: hoveredChip } = sceneRef.current;
       if (!ctx || !currentPalette || sizeRef.current.width === 0) return;
-      drawGraph(
+      reviewChipsRef.current = drawGraph(
         ctx,
         {
           ...currentHighlights,
@@ -87,6 +92,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           size: sizeRef.current,
           palette: currentPalette,
           hoveredChangeset: hovered,
+          hoveredReview: hoveredChip,
           searchPing: searchPingRef.current,
         },
         window.devicePixelRatio,
@@ -105,7 +111,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   );
   const searchPingRef = useSearchPing(highlights.search?.active ?? null, scheduleDraw);
 
-  useEffect(scheduleDraw, [layout, highlights, palette, hoveredChangeset, scheduleDraw]);
+  useEffect(scheduleDraw, [layout, highlights, palette, hoveredChangeset, hoveredReview, scheduleDraw]);
   // A filter can shrink or grow the graph: keep it on screen.
   useEffect(() => view.keepInBounds(), [layout, view]);
   // Avatars arrive in the background; repaint as each one lands.
@@ -196,9 +202,12 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     return { x: clientX - bounds.left, y: clientY - bounds.top };
   };
 
-  const targetAt = (clientX: number, clientY: number): GraphTarget | null => {
+  /** Code review chips only react to clicks; for anything else they are part of their branch's card. */
+  const targetAt = (clientX: number, clientY: number, withChips = true): GraphTarget | null => {
     const point = localPoint(clientX, clientY);
-    return hitTest(layout, toWorld(view.viewportRef.current, point.x, point.y));
+    const world = toWorld(view.viewportRef.current, point.x, point.y);
+    const chip = withChips && reviewChipsRef.current.find((drawn) => world.x >= drawn.x && world.x <= drawn.x + drawn.width && world.y >= drawn.y && world.y <= drawn.y + drawn.height);
+    return chip ? { kind: 'codeReview', review: chip.review } : hitTest(layout, world);
   };
 
   /** Floating controls over the canvas handle their own pointer events. */
@@ -208,7 +217,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     if (!onCanvas(event)) return;
     containerRef.current?.focus();
     if (event.button === 2) {
-      contextTargetRef.current = targetAt(event.clientX, event.clientY);
+      contextTargetRef.current = targetAt(event.clientX, event.clientY, false);
       onSelect(contextTargetRef.current);
       return;
     }
@@ -249,7 +258,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
 
   const onDoubleClick = (event: React.MouseEvent): void => {
     if (!onCanvas(event)) return;
-    const target = targetAt(event.clientX, event.clientY);
+    const target = targetAt(event.clientX, event.clientY, false);
     if (target) return onActivate(target);
     const point = localPoint(event.clientX, event.clientY);
     view.zoomStep(point.x, point.y, DOUBLE_CLICK_ZOOM);
@@ -272,7 +281,9 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         onDoubleClick={onDoubleClick}
       >
         <canvas ref={canvasRef} className={styles.canvas} />
-        {hover && <GraphTooltip target={hover.target} layout={layout} x={hover.x} y={hover.y} />}
+        {hover && (
+          <GraphTooltip target={hover.target} layout={layout} x={hover.x} y={hover.y} flip={hover.x > sizeRef.current.width - TOOLTIP_ROOM} />
+        )}
         {children}
       </div>
     </ActionContextMenu>

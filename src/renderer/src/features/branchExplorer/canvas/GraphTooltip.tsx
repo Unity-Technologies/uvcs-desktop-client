@@ -10,14 +10,16 @@ interface GraphTooltipProps {
   layout: GraphLayout;
   x: number;
   y: number;
+  /** Near the right edge the tooltip opens to the left of the pointer, so it is never squeezed. */
+  flip: boolean;
 }
 
-export function GraphTooltip({ target, layout, x, y }: GraphTooltipProps) {
+export function GraphTooltip({ target, layout, x, y, flip }: GraphTooltipProps) {
   const content = tooltipContent(target, layout);
   if (!content) return null;
 
   return (
-    <div className={styles.tooltip} style={{ left: x + 14, top: y + 14 }}>
+    <div className={styles.tooltip} data-flip={flip} style={{ left: flip ? x - 14 : x + 14, top: y + 14 }}>
       <div className={styles.title}>{content.title}</div>
       {content.body && <div className={styles.body}>{content.body}</div>}
       {content.meta && <div className={styles.meta}>{content.meta}</div>}
@@ -55,6 +57,12 @@ function tooltipContent(target: GraphTarget, layout: GraphLayout): { title: stri
         title: `Label ${target.label.name}`,
         body: target.label.comment || undefined,
         meta: `Changeset ${target.label.changeset} · ${displayName(target.label.owner)}`,
+      };
+    case 'codeReview':
+      return {
+        title: target.review.title,
+        body: `Code review ${target.review.id} · ${target.review.status}`,
+        meta: 'Click to open the review',
       };
     case 'mergeLink':
       return {

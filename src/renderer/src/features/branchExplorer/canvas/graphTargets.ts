@@ -1,4 +1,5 @@
 import type { GraphLabel, MergeLink } from '@shared/domain/branchExplorer';
+import type { CodeReview } from '@shared/domain/codeReview';
 import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
 import { distanceToCurve, linkCurve, type Point } from './curves';
 import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, COLUMN_WIDTH, columnX, GRAPH_PADDING, HEADER_HEIGHT, HEADER_MAX_WIDTH, headerTop, NODE_RADIUS, ROW_HEIGHT, rowY } from './geometry';
@@ -12,7 +13,9 @@ export type GraphTarget =
   | { kind: 'collapsed'; node: NodeLayout }
   | { kind: 'label'; label: GraphLabel }
   | { kind: 'branch'; lane: Lane }
-  | { kind: 'mergeLink'; link: MergeLink };
+  | { kind: 'mergeLink'; link: MergeLink }
+  /** The code review chip in a branch's header card. */
+  | { kind: 'codeReview'; review: CodeReview };
 
 const NODE_HIT_RADIUS = NODE_RADIUS + 4;
 const LINE_HIT_DISTANCE = 6;

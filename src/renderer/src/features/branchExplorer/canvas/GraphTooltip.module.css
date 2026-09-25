@@ -1,5 +1,6 @@
 .tooltip {
   position: absolute;
+  width: max-content;
   max-width: 340px;
   padding: 8px 10px;
   border: 1px solid var(--border-default);
@@ -9,6 +10,10 @@
   pointer-events: none;
   animation: var(--keyframes-fade-in) var(--duration-fast);
   z-index: 10;
+}
+
+.tooltip[data-flip='true'] {
+  transform: translateX(-100%);
 }
 
 .title {

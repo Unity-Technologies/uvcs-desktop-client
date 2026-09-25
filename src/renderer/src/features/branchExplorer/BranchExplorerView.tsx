@@ -1,5 +1,6 @@
 import { GitGraph, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import type { CodeReview } from '@shared/domain/codeReview';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { Button } from '../../ui/Button';
@@ -7,6 +8,8 @@ import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { openReview } from '../codeReviews/codeReviewOperations';
+import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
 import { useBranchExplorerPreferences } from './branchExplorerStore';
 import { GraphCanvas, type GraphCanvasHandle, type GraphHighlights } from './canvas/GraphCanvas';
 import type { GraphTarget } from './canvas/graphTargets';
@@ -27,6 +30,8 @@ import { useBranchExplorerCommands } from './useBranchExplorerCommands';
 import { useBranchExplorerData } from './useBranchExplorerData';
 import { useRevealRequest } from './useRevealRequest';
 import styles from './BranchExplorerView.module.css';
+
+const NO_REVIEWS: ReadonlyMap<string, CodeReview> = new Map();
 
 const ARROW_DIRECTIONS: Record<string, GraphDirection> = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
 
@@ -76,6 +81,8 @@ export function BranchExplorerView() {
 
   const authors = useMemo(() => [...new Set(data?.changesets.map((changeset) => changeset.owner))].sort(), [data]);
   const branchNames = useMemo(() => (data?.branches.map((branch) => branch.name) ?? []).sort(), [data]);
+  // Asked for once the graph is in, so it never waits on the reviews.
+  const { data: reviews } = useReviewsByBranch(data !== undefined);
   const highlights = useMemo<GraphHighlights>(
     () => ({
       selectedChangeset: selection?.kind === 'changeset' ? selection.id : null,
@@ -85,8 +92,9 @@ export function BranchExplorerView() {
       highlightedAuthor,
       search: search.trim() ? searchHighlight(searchHits, searchHits[activeHitIndex] ?? null) : null,
       options: { showComments, showAvatars },
+      reviews: reviews ?? NO_REVIEWS,
     }),
-    [selection, homeChangeset, currentBranch, highlightedAuthor, search, searchHits, activeHitIndex, showComments, showAvatars],
+    [selection, homeChangeset, currentBranch, highlightedAuthor, search, searchHits, activeHitIndex, showComments, showAvatars, reviews],
   );
 
   const goToChangeset = useCallback((id: number) => {
@@ -153,7 +161,8 @@ export function BranchExplorerView() {
   };
 
   const select = (target: GraphTarget | null): void => {
-    if (target?.kind === 'collapsed') setExpanded((current) => new Set([...current, ...target.node.collapsed!.map((changeset) => changeset.id)]));
+    if (target?.kind === 'codeReview') openReview(target.review);
+    else if (target?.kind === 'collapsed') setExpanded((current) => new Set([...current, ...target.node.collapsed!.map((changeset) => changeset.id)]));
     else setSelection(selectionFor(target));
   };
 

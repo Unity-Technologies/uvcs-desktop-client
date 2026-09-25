@@ -1,5 +1,5 @@
 import { COLUMN_WIDTH, GRAPH_PADDING } from './geometry';
-import { detailLevel, type DrawContext, type GraphScene, type VisibleArea } from './drawContext';
+import { detailLevel, type DrawContext, type DrawnReviewChip, type GraphScene, type VisibleArea } from './drawContext';
 import { drawBranchHeaders, drawCompactBranchNames } from './drawBranchHeaders';
 import { drawDateRuler, drawDaySeparators } from './drawDateRuler';
 import { drawLabels } from './drawLabels';
@@ -11,10 +11,11 @@ import { toWorld } from './viewport';
 /**
  * Draws one frame, back to front: day separators, branch bands, links, changesets, labels and
  * branch headers, then the date ruler on top. Only what is on screen is drawn, so large histories stay smooth.
+ * Returns where the code review chips landed.
  */
-export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixelRatio: number): void {
+export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixelRatio: number): DrawnReviewChip[] {
   const { viewport, size, palette } = scene;
-  const draw: DrawContext = { ctx, scene, visible: visibleArea(scene), detail: detailLevel(viewport.zoom, scene.options) };
+  const draw: DrawContext = { ctx, scene, visible: visibleArea(scene), detail: detailLevel(viewport.zoom, scene.options), reviewChips: [] };
 
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
   ctx.fillStyle = palette.background;
@@ -33,6 +34,7 @@ export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixe
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
   if (!draw.detail.text) drawCompactBranchNames(draw);
   drawDateRuler(draw);
+  return draw.reviewChips;
 }
 
 function visibleArea({ viewport, size }: GraphScene): VisibleArea {
