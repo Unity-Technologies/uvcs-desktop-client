@@ -1,0 +1,4 @@
+.clipped {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

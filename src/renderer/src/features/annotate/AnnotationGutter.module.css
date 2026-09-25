@@ -18,16 +18,8 @@
 
 .cell {
   display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 10px 0 0;
-  border: none;
-  background: none;
+  align-items: stretch;
   color: var(--text-secondary);
-  font-size: 11px;
-  text-align: left;
-  white-space: nowrap;
-  overflow: hidden;
 }
 
 .cell[data-block-start='true'] {
@@ -37,6 +29,40 @@
 .cell:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
+}
+
+.open {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 10px 0 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font-size: 11px;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.before {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  margin-right: 4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-tertiary);
+}
+
+button.before:hover {
+  background: var(--bg-active);
+  color: var(--accent-text);
 }
 
 .age {
