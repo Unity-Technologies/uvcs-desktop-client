@@ -43,8 +43,10 @@
   color: var(--accent-text);
 }
 
+/* In a narrow list the label gives way first, so the filter and the actions stay whole. */
 .label {
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   font-variant-numeric: tabular-nums;
@@ -52,13 +54,12 @@
 }
 
 .strip[data-hint] .label {
-  flex: 0 1 auto;
   color: var(--text-primary);
 }
 
 .meter {
   flex: 1;
-  min-width: 24px;
+  min-width: 16px;
   max-width: 120px;
   height: 4px;
   border-radius: var(--radius-full);

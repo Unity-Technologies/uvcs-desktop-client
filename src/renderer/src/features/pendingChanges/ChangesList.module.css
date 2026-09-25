@@ -122,8 +122,10 @@
   line-height: 16px;
 }
 
-/* Reviewed files and folders step back, so what's left to look at stands out; their checkboxes and chevrons don't. */
-.row[data-review='reviewed'] > :not(.trailing, .chevron, button) {
+/* Reviewed files and folders step back, so what's left to look at stands out; their checkboxes and chevrons don't.
+   Their chips ("modified", the merge) step back too: only the review check stays bright, as in the diff lists. */
+.row[data-review='reviewed'] > :not(.trailing, .chevron, button),
+.row[data-review='reviewed'] .tag {
   opacity: 0.6;
 }
 
