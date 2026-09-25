@@ -5,6 +5,7 @@ import {
   isAffectedByMovedPaths,
   isAffectedByNewChangesets,
   isAffectedByOwnCheckin,
+  isAffectedByShelving,
   isAffectedByWorkspaceState,
 } from './refreshScopes';
 
@@ -60,5 +61,11 @@ describe('refresh scopes', () => {
     expect(isAffectedByOwnCheckin(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(false);
     expect(isAffectedByOwnCheckin(key('labels', {}))).toBe(false);
     expect(isAffectedByOwnCheckin(key('shelves', { owner: 'me' }))).toBe(false);
+  });
+
+  it('refreshes only the shelve lists after shelving changes that stay in the workspace', () => {
+    expect(isAffectedByShelving(key('shelves', { owner: 'me' }))).toBe(true);
+    expect(isAffectedByShelving(key('pendingChanges'))).toBe(false);
+    expect(isAffectedByShelving(key('info'))).toBe(false);
   });
 });

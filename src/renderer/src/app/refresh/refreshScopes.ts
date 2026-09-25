@@ -45,6 +45,11 @@ export function isAffectedByOwnCheckin(key: QueryKey): boolean {
   return !UNTOUCHED_BY_CHECKINS.includes(area(key) as string);
 }
 
+/** Changes were shelved, and stay in the workspace: only the lists of shelves change. */
+export function isAffectedByShelving(key: QueryKey): boolean {
+  return area(key) === 'shelves';
+}
+
 /**
  * New changesets on the server: repository views (history, branches, incoming...), not the disk, the check that told,
  * nor the lists of objects checkins don't create (every label or shelve is a heavy read on big repositories).

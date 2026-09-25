@@ -2,6 +2,7 @@ import type { FilterRuleList, PendingChange } from '@shared/domain/pendingChange
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
+import { isAffectedByShelving } from '../../app/refresh/refreshScopes';
 import { copyToClipboard } from '../../lib/copyToClipboard';
 import { pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
@@ -31,6 +32,7 @@ export async function undoChanges(workspacePath: string, changes: PendingChange[
       title: `Backing up ${pluralize(controlled.length, 'change')}`,
       workspacePath,
       run: (operationId) => api.pendingChanges.shelve(workspacePath, paths, BACKUP_SHELVE_COMMENT, operationId),
+      affects: isAffectedByShelving,
       onFailure: (error) => {
         toast.error("Couldn't shelve a backup, so nothing was undone", error);
         return true;

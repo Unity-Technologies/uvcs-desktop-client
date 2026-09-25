@@ -4,7 +4,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation, runRead } from '../../app/operations/runOperation';
 import { queryClient } from '../../app/queryClient';
-import { isAffectedByOwnCheckin } from '../../app/refresh/refreshScopes';
+import { isAffectedByOwnCheckin, isAffectedByShelving } from '../../app/refresh/refreshScopes';
 import { firstLine } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
@@ -106,6 +106,7 @@ export async function shelveChanges(workspacePath: string, changes: PendingChang
     title: `Shelving ${pluralize(changes.length, 'change')}`,
     workspacePath,
     run: (operationId) => api.pendingChanges.shelve(workspacePath, changes.map((change) => change.path), shelveComment, operationId),
+    affects: isAffectedByShelving,
     success: (id) => ({ title: `Shelved as shelve ${id}`, detail: 'Your changes are still in the workspace.' }),
   });
   return shelveId !== undefined;
