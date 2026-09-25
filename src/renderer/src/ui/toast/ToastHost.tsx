@@ -21,15 +21,21 @@ export function ToastHost({ errorAction }: ToastHostProps) {
     toast.action ?? (toast.kind === 'error' && toast.error !== undefined ? errorAction?.(toast.title, toast.error) : undefined);
 
   return (
-    <div className={styles.host} role="status" aria-live="polite">
+    <div className={styles.host}>
       {toasts.map((toast) => {
         const action = actionOf(toast);
+        // Failures interrupt; the rest, operation progress included, wait for a pause.
         return (
-          <div key={toast.id} className={styles.toast} data-kind={toast.kind}>
+          <div key={toast.id} className={styles.toast} data-kind={toast.kind} role={toast.kind === 'error' ? 'alert' : 'status'}>
             <span className={styles.icon}>{ICONS[toast.kind]}</span>
             <div className={styles.text}>
               <div className={styles.title}>{toast.title}</div>
-              {toast.detail && <div className={`${styles.detail} selectable`}>{toast.detail}</div>}
+              {/* A running operation's detail changes with every line of progress: too chatty to be read out. */}
+              {toast.detail && (
+                <div className={`${styles.detail} selectable`} aria-live={toast.kind === 'progress' ? 'off' : undefined}>
+                  {toast.detail}
+                </div>
+              )}
             </div>
             {action && (
               <button

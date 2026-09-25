@@ -11,6 +11,7 @@ export function CodeReviewChip({ review }: { review: CodeReview }) {
       className={styles.chip}
       data-tip={review.title}
       data-tip-sub={`Code review ${review.id} · ${review.status} · click to open`}
+      aria-label={`Open code review ${review.id}: ${review.title}`}
       onMouseDown={(event) => event.stopPropagation()}
       onDoubleClick={(event) => event.stopPropagation()}
       onClick={(event) => {
