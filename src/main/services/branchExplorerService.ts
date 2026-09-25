@@ -15,10 +15,10 @@ import {
   roundTripDate,
 } from '../cm/branchExplorerRecords';
 import { whereClause } from '../cm/findQuery';
-import type { ServiceContext } from './ServiceContext';
+import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 import { relevantBranches } from './relevantBranches';
 
-export function createBranchExplorerService({ cm }: ServiceContext): BranchExplorerApi {
+export function createBranchExplorerService({ cm }: ServiceContext, { branchNames }: BranchNamesContext): BranchExplorerApi {
   async function load(workspacePath: string, query: BranchExplorerQuery) {
     const find = (object: string, where: string, format: string): string[] =>
       ['find', object, where, `--format=${format}`, `--dateformat=${DATE_FORMAT}`, '--nototal'].filter(Boolean);
@@ -39,7 +39,10 @@ export function createBranchExplorerService({ cm }: ServiceContext): BranchExplo
     const changesets = parseChangesets(changesetsOutput).filter(
       (changeset) => query.includeHidden || !hiddenNames.has(changeset.branch),
     );
-    const branches = parseBranches(branchesOutput, hiddenNames).filter((branch) => query.includeHidden || !branch.isHidden);
+    const allBranches = parseBranches(branchesOutput, hiddenNames);
+    // The code review chips name branches by id: this list answers them.
+    branchNames.remember(workspacePath, allBranches);
+    const branches = allBranches.filter((branch) => query.includeHidden || !branch.isHidden);
 
     return {
       branches: relevantBranches(branches, changesets, query.sinceDate),

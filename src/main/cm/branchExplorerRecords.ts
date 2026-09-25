@@ -5,7 +5,7 @@ import { parseRecords, recordFormat } from './formatRecords';
  * `cm find ... --format` layouts for the Branch Explorer. Formatted records are much lighter than XML,
  * which matters for repositories with tens of thousands of branches.
  */
-export const BRANCH_FORMAT = recordFormat(['name', 'parent', 'owner', 'date', 'changeset', 'comment']);
+export const BRANCH_FORMAT = recordFormat(['id', 'name', 'parent', 'owner', 'date', 'changeset', 'comment']);
 export const CHANGESET_FORMAT = recordFormat(['changesetid', 'branch', 'parent', 'date', 'owner', 'comment']);
 export const MERGE_FORMAT = recordFormat(['type', 'srcchangeset', 'dstchangeset']);
 export const LABEL_FORMAT = recordFormat(['name', 'changeset', 'owner', 'date', 'comment']);
@@ -36,7 +36,8 @@ const MERGE_LINK_TYPES: Record<string, MergeLinkType> = {
 };
 
 export function parseBranches(output: string, hiddenNames: ReadonlySet<string>): GraphBranch[] {
-  return parseRecords(output).map(([name = '', parent = '', owner = '', date = '', head = '', comment = '']) => ({
+  return parseRecords(output).map(([id = '', name = '', parent = '', owner = '', date = '', head = '', comment = '']) => ({
+    id: toInteger(id),
     name,
     parent,
     owner,

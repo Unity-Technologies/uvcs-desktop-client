@@ -19,6 +19,8 @@ export interface GraphChangeset {
 }
 
 export interface GraphBranch {
+  /** Object id, as code reviews name their branches. */
+  id: number;
   name: string;
   /** Full name of the parent branch; empty for top-level branches. */
   parent: string;

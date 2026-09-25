@@ -2,7 +2,7 @@ import type { BranchExplorerData, GraphBranch, GraphChangeset, MergeLink } from 
 
 /** Test helpers to describe small histories tersely. */
 export function branch(name: string, parent = '', headChangeset = 0): GraphBranch {
-  return { name, parent, headChangeset, owner: 'jane@example.com', date: '2026-09-01T00:00:00Z', comment: '', isHidden: false };
+  return { id: 0, name, parent, headChangeset, owner: 'jane@example.com', date: '2026-09-01T00:00:00Z', comment: '', isHidden: false };
 }
 
 export function changeset(id: number, branchName: string, parent: number, comment = ''): GraphChangeset {

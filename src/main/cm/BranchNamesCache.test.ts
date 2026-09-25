@@ -45,4 +45,12 @@ describe('BranchNamesCache', () => {
     await cache.resolve('/b', [1]);
     expect(lookups).toEqual([[1], [1]]);
   });
+
+  it('resolves names read with a branch list without asking the server', async () => {
+    const { cache, lookups } = setup();
+    cache.remember('/wk', [{ id: 7, name: '/main/task' }]);
+
+    expect(await cache.resolve('/wk', [7, 8])).toEqual(new Map([[7, '/main/task'], [8, '/main/b8']]));
+    expect(lookups).toEqual([[8]]);
+  });
 });

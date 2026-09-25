@@ -1,15 +1,11 @@
 import type { CodeReviewsApi } from '@shared/api/codeReviews';
 import { MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewFilter } from '@shared/domain/codeReview';
 import type { QueryFilter } from '@shared/domain/query';
-import { BranchNamesCache } from '../cm/BranchNamesCache';
-import { branchNamesById } from '../cm/branchNamesById';
 import { parseCodeReviews, type RawCodeReview } from '../cm/codeReviewsXml';
 import { escapeQueryValue, findArgs } from '../cm/findQuery';
-import type { ServiceContext } from './ServiceContext';
+import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 
-export function createCodeReviewsService({ cm }: ServiceContext): CodeReviewsApi {
-  const branchNames = new BranchNamesCache((workspacePath, ids) => branchNamesById(cm, workspacePath, ids));
-
+export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }: BranchNamesContext): CodeReviewsApi {
   async function findRaw(workspacePath: string, conditions: string[], filter: QueryFilter): Promise<RawCodeReview[]> {
     const xml = await cm.query(findArgs('review', filter, 'date desc', conditions), { cwd: workspacePath });
     return parseCodeReviews(xml);
@@ -32,7 +28,10 @@ export function createCodeReviewsService({ cm }: ServiceContext): CodeReviewsApi
     });
   }
 
-  /** `cm` reports branch targets only by object id; the names come from a few batched lookups, remembered a while. */
+  /**
+   * `cm` reports branch targets only by object id; the names come from the branch lists already read, or from a few
+   * batched lookups, remembered a while.
+   */
   async function resolveTargets(workspacePath: string, reviews: RawCodeReview[]): Promise<CodeReview[]> {
     const branchIds = reviews.filter((review) => review.targetType === 'branch').map((review) => review.targetId);
     const names = branchIds.length > 0 ? await branchNames.resolve(workspacePath, branchIds) : new Map<number, string>();

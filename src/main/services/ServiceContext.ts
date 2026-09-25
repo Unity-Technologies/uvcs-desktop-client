@@ -1,3 +1,4 @@
+import type { BranchNamesCache } from '../cm/BranchNamesCache';
 import type { CmClient } from '../cm/CmClient';
 import type { OperationTracker } from '../operations/OperationTracker';
 import type { DiffReviewStore } from '../review/DiffReviewStore';
@@ -17,6 +18,14 @@ export interface ServiceContext {
   settings: SettingsStore;
   watchers: WorkspaceWatchers;
   windows: WorkspaceWindows;
+}
+
+/**
+ * Branch names by object id (code reviews name their branches by id), shared by the services that read branches
+ * so a list already read answers the lookups.
+ */
+export interface BranchNamesContext {
+  branchNames: BranchNamesCache;
 }
 
 /** What switching with pending changes shares across services: its shelve records and the left-changes lookup. */

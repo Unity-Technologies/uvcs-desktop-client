@@ -3,7 +3,7 @@ import type { GraphBranch, GraphChangeset } from '@shared/domain/branchExplorer'
 import { relevantBranches } from './relevantBranches';
 
 function branch(name: string, parent: string, date = '2020-01-01'): GraphBranch {
-  return { name, parent, date, owner: '', comment: '', headChangeset: 0, isHidden: false };
+  return { id: 0, name, parent, date, owner: '', comment: '', headChangeset: 0, isHidden: false };
 }
 
 function changeset(id: number, branchName: string): GraphChangeset {

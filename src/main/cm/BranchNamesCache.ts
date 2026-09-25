@@ -15,8 +15,14 @@ export class BranchNamesCache {
     private readonly now: () => number = Date.now,
   ) {}
 
+  /** Names read along with something else (a branch list), so resolving them later costs nothing. */
+  remember(workspacePath: string, branches: readonly { id: number; name: string }[]): void {
+    const readAt = this.now();
+    for (const { id, name } of branches) this.entries.set(entryKey(workspacePath, id), { name, readAt });
+  }
+
   async resolve(workspacePath: string, ids: number[]): Promise<Map<number, string>> {
-    const key = (id: number) => `${workspacePath}\n${id}`;
+    const key = (id: number) => entryKey(workspacePath, id);
     const isFresh = (id: number) => {
       const entry = this.entries.get(key(id));
       return entry !== undefined && this.now() - entry.readAt < MAX_AGE_MS;
@@ -36,4 +42,8 @@ export class BranchNamesCache {
     }
     return names;
   }
+}
+
+function entryKey(workspacePath: string, id: number): string {
+  return `${workspacePath}\n${id}`;
 }
