@@ -52,7 +52,7 @@ export function MenuEntries({ entries, primitives }: { entries: MenuEntry[]; pri
         key={entry.id}
         className={[styles.item, entry.danger && styles.danger].filter(Boolean).join(' ')}
         disabled={entry.disabled}
-        onSelect={entry.run}
+        onSelect={() => runAfterMenuCloses(entry.run)}
       >
         <span className={styles.icon}>{ActionIcon && <ActionIcon size={14} />}</span>
         <span className={styles.label}>{entry.label}</span>
@@ -64,4 +64,12 @@ export function MenuEntries({ entries, primitives }: { entries: MenuEntry[]; pri
       </Item>
     );
   });
+}
+
+/**
+ * Menu actions often open dialogs. Running them after the menu has closed and restored focus
+ * keeps the menu from lingering on screen and stealing the dialog's keyboard input.
+ */
+function runAfterMenuCloses(action: () => void): void {
+  setTimeout(action, 0);
 }
