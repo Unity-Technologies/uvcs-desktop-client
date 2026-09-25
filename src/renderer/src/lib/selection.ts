@@ -32,18 +32,21 @@ export function selectOnClick(
   return { selected: new Set([key]), anchor: key };
 }
 
-/** Moves the selection one step with the arrow keys; Shift extends it from the anchor. */
+/**
+ * Moves the selection `step` items from the focused one (arrows: ±1, PageUp/PageDown: ±a page, Home/End: ±Infinity),
+ * clamped to the ends; Shift extends it from the anchor.
+ */
 export function selectOnArrow(
   state: SelectionState,
   orderedKeys: readonly string[],
-  direction: 1 | -1,
+  step: number,
   extend: boolean,
   focusedKey: string | null,
 ): { state: SelectionState; focused: string } | null {
   if (orderedKeys.length === 0) return null;
 
   const currentIndex = focusedKey === null ? -1 : orderedKeys.indexOf(focusedKey);
-  const nextIndex = Math.min(orderedKeys.length - 1, Math.max(0, currentIndex + direction));
+  const nextIndex = Math.min(orderedKeys.length - 1, Math.max(0, currentIndex + step));
   const next = orderedKeys[nextIndex]!;
 
   if (extend && state.anchor !== null) {

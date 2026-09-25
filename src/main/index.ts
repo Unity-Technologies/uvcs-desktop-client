@@ -13,7 +13,7 @@ import { installAppMenu } from './window/appMenu';
 import { createMainWindow } from './window/createMainWindow';
 import { handleRecentDocumentRequests } from './window/recentDocuments';
 
-const cm = new CmClient(locateCm());
+const cm = new CmClient(locateCm);
 
 function start(): void {
   cm.warmUp();

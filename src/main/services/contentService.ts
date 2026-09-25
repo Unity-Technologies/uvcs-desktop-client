@@ -1,6 +1,8 @@
 import { readFile, writeFile } from 'node:fs/promises';
+import { basename, dirname } from 'node:path';
 import type { ContentApi } from '@shared/api/content';
 import type { ContentSource, FileContent } from '@shared/domain/content';
+import { removedItemSpec } from '../cm/removedItemSpec';
 import { EMPTY_CONTENT, toFileContent } from '../files/fileContent';
 import { withTempPath } from '../files/tempFile';
 import { toAbsolutePath } from '../files/workspacePaths';
@@ -16,7 +18,7 @@ export function createContentService({ cm }: ServiceContext): ContentApi {
         return toFileContent(await readFile(absolutePath), absolutePath);
       }
       case 'workspaceBase':
-        return downloadRevision(workspacePath, toAbsolutePath(workspacePath, source.path), source.path);
+        return downloadLoadedRevision(workspacePath, source.path);
       case 'revision':
         return downloadRevision(workspacePath, `revid:${source.revisionId}`, source.fileName);
       case 'spec':
@@ -26,6 +28,21 @@ export function createContentService({ cm }: ServiceContext): ContentApi {
 
   async function writeWorkspaceFile(workspacePath: string, path: string, text: string): Promise<void> {
     await writeFile(toAbsolutePath(workspacePath, path), text, 'utf8');
+  }
+
+  async function downloadLoadedRevision(workspacePath: string, path: string): Promise<FileContent> {
+    const absolutePath = toAbsolutePath(workspacePath, path);
+    try {
+      return await downloadRevision(workspacePath, absolutePath, path);
+    } catch (error) {
+      // `cm rm` takes the item out of the workspace tree, so its path stops resolving: find it through its folder.
+      try {
+        const xml = await cm.query(['fileinfo', dirname(absolutePath), absolutePath, '--xml'], { cwd: workspacePath });
+        return await downloadRevision(workspacePath, removedItemSpec(xml, basename(absolutePath)), path);
+      } catch {
+        throw error;
+      }
+    }
   }
 
   function downloadRevision(workspacePath: string, revisionSpec: string, fileName: string): Promise<FileContent> {

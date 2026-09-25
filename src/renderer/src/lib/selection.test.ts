@@ -32,4 +32,15 @@ describe('selectOnArrow', () => {
     const result = selectOnArrow({ selected: new Set(['b']), anchor: 'b' }, keys, 1, true, 'b');
     expect([...(result?.state.selected ?? [])]).toEqual(['b', 'c']);
   });
+
+  it('jumps a page or to either end, clamped', () => {
+    expect(selectOnArrow(EMPTY_SELECTION, keys, 2, false, 'a')?.focused).toBe('c');
+    expect(selectOnArrow(EMPTY_SELECTION, keys, 10, false, 'a')?.focused).toBe('d');
+    expect(selectOnArrow(EMPTY_SELECTION, keys, -Infinity, false, 'c')?.focused).toBe('a');
+  });
+
+  it('extends to the end from the anchor with shift', () => {
+    const result = selectOnArrow({ selected: new Set(['b']), anchor: 'b' }, keys, Infinity, true, 'b');
+    expect([...(result?.state.selected ?? [])]).toEqual(['b', 'c', 'd']);
+  });
 });

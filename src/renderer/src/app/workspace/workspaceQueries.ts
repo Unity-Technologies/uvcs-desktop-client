@@ -31,6 +31,15 @@ export function useRecentWorkspaceRepositories(workspaces: WorkspaceSummary[] | 
   });
 }
 
+/** Which of these recent paths (ones `cm` doesn't list) lost their folder. */
+export function useMissingWorkspacePaths(paths: string[]) {
+  return useQuery({
+    queryKey: ['missingWorkspacePaths', paths],
+    queryFn: () => api.workspaces.findMissing(paths),
+    enabled: paths.length > 0,
+  });
+}
+
 export function useServers() {
   return useQuery({ queryKey: queryKeys.profiles, queryFn: () => api.repositories.servers(), staleTime: Infinity });
 }

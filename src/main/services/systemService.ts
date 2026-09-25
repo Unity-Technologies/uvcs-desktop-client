@@ -1,12 +1,18 @@
 import { homedir } from 'node:os';
 import { app, dialog, shell } from 'electron';
 import type { SystemApi } from '@shared/api/system';
+import { checkSetup } from '../cm/setupCheck';
 import { takeRequestedWorkspace } from '../window/recentDocuments';
 import type { ServiceContext } from './ServiceContext';
 
 export function createSystemService({ cm, operations }: ServiceContext): SystemApi {
   return {
-    cmVersion: async () => (await cm.query(['version'])).trim(),
+    cmVersion: async () => {
+      cm.relocate();
+      // Its own process: `cm shell` refuses to start until cm is configured, and that is reported by checkSetup.
+      return (await cm.execute(['version'])).trim();
+    },
+    checkSetup: () => checkSetup(cm),
     currentUser: async () => (await cm.query(['whoami'])).trim(),
     openPath: async (path) => {
       const error = await shell.openPath(path);

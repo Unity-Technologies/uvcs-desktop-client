@@ -1,8 +1,11 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
 import { runAction, runVoidAction } from '../../app/operations/runOperation';
+import { pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
+import { toast } from '../../ui/toast/toastStore';
+import { DEFAULT_CHANGELIST_LABEL } from './changeRows';
 
 /**
  * Only added and checked-out items can live in a changelist, so locally changed files are
@@ -10,10 +13,11 @@ import { prompt } from '../../ui/dialog/prompt';
  */
 export async function moveToChangelist(workspacePath: string, changelist: string | null, changes: PendingChange[]): Promise<void> {
   const needsCheckout = changes.filter((change) => change.kinds.includes('changed') && !change.kinds.includes('checkedOut'));
-  await runAction(workspacePath, "Couldn't move the changes", async () => {
+  const moved = await runVoidAction(workspacePath, "Couldn't move the changes", async () => {
     if (needsCheckout.length > 0) await api.pendingChanges.checkout(workspacePath, needsCheckout.map((change) => change.path));
     await api.pendingChanges.moveToChangelist(workspacePath, changelist, changes.map((change) => change.path));
   });
+  if (moved) toast.success(`Moved ${pluralize(changes.length, 'change')} to ${changelist ?? DEFAULT_CHANGELIST_LABEL}`);
 }
 
 export async function moveToNewChangelist(workspacePath: string, changes: PendingChange[]): Promise<void> {

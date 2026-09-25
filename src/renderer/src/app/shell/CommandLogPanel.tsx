@@ -13,14 +13,16 @@ const SCOPES: { value: CommandLogScope; label: string; title: string }[] = [
 ];
 
 export function CommandLogPanel() {
-  const { entries, scope, setScope, clear, toggle } = useCommandLogStore();
+  const { entries, revealedId, scope, setScope, clear, toggle } = useCommandLogStore();
   const workspacePath = useWorkspacePath();
   const listRef = useRef<HTMLDivElement>(null);
   const shown = scope === 'all' ? entries : entries.filter((entry) => ranInWorkspace(entry, workspacePath));
 
   useEffect(() => {
-    listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
-  }, [shown.length]);
+    const revealed = revealedId !== null && listRef.current?.querySelector(`[data-entry-id="${revealedId}"]`);
+    if (revealed) revealed.scrollIntoView({ block: 'center' });
+    else listRef.current?.scrollTo({ top: listRef.current.scrollHeight });
+  }, [shown.length, revealedId]);
 
   return (
     <section className={styles.panel}>
@@ -34,7 +36,13 @@ export function CommandLogPanel() {
       </header>
       <div ref={listRef} className={`${styles.list} selectable`}>
         {shown.map((entry) => (
-          <div key={entry.id} className={styles.entry} data-failed={entry.exitCode !== 0}>
+          <div
+            key={entry.id}
+            className={styles.entry}
+            data-entry-id={entry.id}
+            data-failed={entry.exitCode !== 0}
+            data-revealed={entry.id === revealedId}
+          >
             <span className={styles.duration}>{entry.durationMs} ms</span>
             <span className={styles.command}>
               {entry.commandLine}

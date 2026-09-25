@@ -50,6 +50,10 @@
   background: var(--bg-hover);
 }
 
+.entry[data-revealed='true'] {
+  background: var(--bg-selected);
+}
+
 .duration {
   color: var(--text-tertiary);
   text-align: right;
