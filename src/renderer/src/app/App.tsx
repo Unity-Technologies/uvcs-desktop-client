@@ -13,6 +13,7 @@ import { WorkspaceScreen } from './shell/WorkspaceScreen';
 import { CmUnavailableScreen } from './startup/CmUnavailableScreen';
 import { useCmAvailability } from './startup/useCmAvailability';
 import { useSession } from './workspace/sessionStore';
+import { useRequestedWorkspace } from './workspace/useRequestedWorkspace';
 
 export function App() {
   return (
@@ -31,6 +32,7 @@ function Root() {
   useTheme();
   useAppCommands();
   useMenuCommands();
+  useRequestedWorkspace();
   const workspacePath = useSession((state) => state.workspacePath);
   const cm = useCmAvailability();
 

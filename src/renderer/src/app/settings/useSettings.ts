@@ -20,8 +20,9 @@ export function useUpdateSettings() {
   }).mutate;
 }
 
-/** Remembers a workspace at the top of the recent list. */
+/** Remembers a workspace at the top of the recent list, the app's and the OS's. */
 export async function rememberRecentWorkspace(workspacePath: string): Promise<void> {
+  void api.system.addRecentDocument(workspacePath);
   const settings = await api.settings.get();
   const recentWorkspacePaths = [workspacePath, ...settings.recentWorkspacePaths.filter((path) => path !== workspacePath)].slice(0, 10);
   queryClient.setQueryData(queryKeys.settings, await api.settings.update({ recentWorkspacePaths }));

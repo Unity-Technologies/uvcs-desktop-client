@@ -9,6 +9,7 @@ import { Sidebar } from './Sidebar';
 import { StatusBar } from './StatusBar';
 import { TopBar } from './TopBar';
 import { useCommandLogStore } from './commandLogStore';
+import { useWindowTitle } from './useWindowTitle';
 import { useWorkspaceCommands } from './useWorkspaceCommands';
 import { useWorkspaceWatcher } from './useWorkspaceWatcher';
 import styles from './WorkspaceScreen.module.css';
@@ -18,6 +19,7 @@ export function WorkspaceScreen() {
   const commandLogOpen = useCommandLogStore((state) => state.open);
   useWorkspaceWatcher();
   useWorkspaceCommands();
+  useWindowTitle();
   useMergeCommands();
 
   const ActiveView = viewDefinition(view).component;

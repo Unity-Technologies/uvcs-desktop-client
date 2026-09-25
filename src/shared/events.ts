@@ -21,6 +21,8 @@ export interface UvcsEvents {
   /** `pathsChanged`: items were added, deleted or moved on disk, not only edited. */
   workspaceChanged: { workspacePath: string; pathsChanged: boolean };
   operationProgress: OperationProgress;
+  /** A workspace was picked from the OS recent documents; `system.takeRequestedWorkspace` tells which. */
+  workspaceOpenRequested: Record<string, never>;
   /** A native menu item was chosen; runs the registered command with this id. */
   menuCommand: { commandId: string };
 }
