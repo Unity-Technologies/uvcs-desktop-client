@@ -9,6 +9,7 @@ import { useShortcut } from '../../../lib/useShortcut';
 import { Button } from '../../../ui/Button';
 import { EmptyState } from '../../../ui/EmptyState';
 import { IconButton } from '../../../ui/IconButton';
+import { PaneToolbar, PaneToolbarGroup } from '../../../ui/PaneToolbar';
 import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { useDiffPreferences, type DiffLayout } from './diffPreferencesStore';
@@ -57,22 +58,21 @@ export function FileDiffViewer({ workspacePath, original, modified, fileName, ti
 
   return (
     <div className={styles.viewer}>
-      <div className={styles.toolbar}>
-        <div className={styles.title}>{title}</div>
+      <PaneToolbar title={title}>
         {editing.editing ? (
-          <div className={styles.group}>
+          <PaneToolbarGroup>
             <Button size="small" variant="ghost" onClick={editing.discard}>
               {editing.dirty ? 'Discard edits' : 'Done'}
             </Button>
             <Button size="small" variant="primary" disabled={!editing.dirty} onClick={() => void editing.save()}>
               Save
             </Button>
-          </div>
+          </PaneToolbarGroup>
         ) : (
           isText && (
             <>
               {stats && (stats.added > 0 || stats.removed > 0) && <LineStats {...stats} />}
-              <div className={styles.group}>
+              <PaneToolbarGroup>
                 {canEdit && <IconButton size="small" icon={<Pencil size={13} />} label="Edit this file" shortcut="mod+e" onClick={editing.start} />}
                 <IconButton
                   size="small"
@@ -88,7 +88,7 @@ export function FileDiffViewer({ workspacePath, original, modified, fileName, ti
                   variant={wrapLines ? 'secondary' : 'ghost'}
                   onClick={() => setWrapLines(!wrapLines)}
                 />
-              </div>
+              </PaneToolbarGroup>
               <SegmentedControl<DiffLayout>
                 value={layout}
                 onChange={setLayout}
@@ -100,7 +100,7 @@ export function FileDiffViewer({ workspacePath, original, modified, fileName, ti
             </>
           )
         )}
-      </div>
+      </PaneToolbar>
 
       {error ? (
         <EmptyState title="Couldn't load this file" description={error.message} />
