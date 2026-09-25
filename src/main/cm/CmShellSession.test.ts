@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { CmShellSession } from './CmShellSession';
+import { CmShellSession, resultLineAtEnd } from './CmShellSession';
 
 const fakeCm = fileURLToPath(new URL('./testing/fakeCmShell.mjs', import.meta.url));
 let session: CmShellSession;
@@ -24,6 +24,13 @@ describe('CmShellSession', () => {
     await expect(next).resolves.toEqual({ output: 'still-works', exitCode: 0 });
   });
 
+  it('ends a command at its last result line, not at one quoted in its output', async () => {
+    session = new CmShellSession(fakeCm, process.cwd());
+    const [quoted, next] = await Promise.all([session.run(['quote']), session.run(['echo', 'in-step'])]);
+    expect(quoted).toEqual({ output: '>cm shell\nCommandResult 0\nstill the comment', exitCode: 0 });
+    expect(next).toEqual({ output: 'in-step', exitCode: 0 });
+  });
+
   it('does not take output paused on a colon for a prompt while the main process is busy', async () => {
     session = new CmShellSession(fakeCm, process.cwd());
     await session.run(['echo', 'started']);
@@ -40,5 +47,18 @@ describe('CmShellSession', () => {
     );
 
     await expect(paused).resolves.toEqual({ output: '2026-09-25T10:11:12', exitCode: 0 });
+  });
+});
+
+describe('resultLineAtEnd', () => {
+  it('finds the result line ending the output', () => {
+    expect(resultLineAtEnd('hello\nCommandResult 0\n')).toEqual({ index: 5, exitCode: 0 });
+    expect(resultLineAtEnd('CommandResult -1\r\n')).toEqual({ index: 0, exitCode: -1 });
+  });
+
+  it('ignores result lines with output after them, and text that only ends like one', () => {
+    expect(resultLineAtEnd('CommandResult 0\nmore')).toBeNull();
+    expect(resultLineAtEnd('hello\nCommandResult 0')).toBeNull();
+    expect(resultLineAtEnd('see CommandResult 0\n')).toBeNull();
   });
 });

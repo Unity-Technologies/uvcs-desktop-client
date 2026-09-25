@@ -2,9 +2,9 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import type { CmResult } from './CmResult';
 import { toShellCommandLine } from './shellCommandLine';
 
-const COMMAND_RESULT_LINE = /(?:^|\n)CommandResult (-?\d+)\r?\n/g;
-/** Enough to hold the longest `CommandResult <code>` line, so a line split across chunks is still found. */
-const RESULT_LINE_ROOM = 32;
+const RESULT_LINE = /^CommandResult (-?\d+)\r?\n$/;
+/** Longer than any `CommandResult <code>` line. */
+const RESULT_LINE_ROOM = 40;
 /** A trailing line without a newline that looks like a question, e.g. "Select your system [0-1]:". */
 const PROMPT_LIKE_TAIL = /^[^<].*(\[[^\]]*\]|[:?])\s*$/;
 /** Longer last lines are output (e.g. `--format` records), not a question. */
@@ -79,9 +79,10 @@ export class CmShellSession {
 
     const child = spawn(this.cmPath, ['shell'], { cwd: this.cwd, windowsHide: true });
     // What a killed process still had in its pipes must not end up in the output of the next command.
-    const onData = (data: Buffer) => child === this.process && this.onOutput(data.toString('utf8'));
-    child.stdout.on('data', onData);
-    child.stderr.on('data', onData);
+    const onData = (text: string) => child === this.process && this.onOutput(text);
+    // Decoded by the streams, so a character split between two chunks stays whole.
+    child.stdout.setEncoding('utf8').on('data', onData);
+    child.stderr.setEncoding('utf8').on('data', onData);
     child.on('error', (error) => this.onProcessEnded(child, error));
     child.on('close', () => this.onProcessEnded(child, new Error('cm shell exited unexpectedly')));
     this.process = child;
@@ -92,16 +93,23 @@ export class CmShellSession {
     this.buffer += text;
     this.received += text.length;
     this.watchForPrompt();
+    if (!this.running || !resultLineAtEnd(this.buffer)) return;
 
-    // Only the new text (and the end of the previous chunk) can hold the result line: huge outputs arrive in
-    // hundreds of chunks, and scanning the whole buffer each time blocks the main process.
-    COMMAND_RESULT_LINE.lastIndex = Math.max(0, this.buffer.length - text.length - RESULT_LINE_ROOM);
-    const match = COMMAND_RESULT_LINE.exec(this.buffer);
-    if (!match || !this.running) return;
+    // A comment can hold a `CommandResult 0` line too (codice's do): the real one is the last output, with nothing
+    // more in the pipe. `setImmediate` lets output already waiting be read first.
+    const receivedBefore = this.received;
+    setImmediate(() => {
+      if (this.received === receivedBefore) this.finishIfDone();
+    });
+  }
 
-    const output = this.buffer.slice(0, match.index).replace(/\r\n/g, '\n');
-    this.buffer = this.buffer.slice(match.index + match[0].length);
-    this.finishRunning().resolve({ output, exitCode: Number(match[1]) });
+  private finishIfDone(): void {
+    const result = resultLineAtEnd(this.buffer);
+    if (!result || !this.running) return;
+
+    const output = this.buffer.slice(0, result.index).replace(/\r\n/g, '\n');
+    this.buffer = '';
+    this.finishRunning().resolve({ output, exitCode: result.exitCode });
     this.runNext();
   }
 
@@ -158,4 +166,18 @@ export class CmShellSession {
     this.promptTimer = null;
     this.timeoutTimer = null;
   }
+}
+
+/**
+ * The `CommandResult <code>` line `cm shell` ends each command's output with, when the buffer ends with it: where it
+ * starts and the exit code. Only the end is looked at, so huge outputs arriving in hundreds of chunks stay cheap.
+ */
+export function resultLineAtEnd(buffer: string): { index: number; exitCode: number } | null {
+  const tailStart = Math.max(0, buffer.length - RESULT_LINE_ROOM);
+  const lineInTail = buffer.slice(tailStart).lastIndexOf('CommandResult ');
+  if (lineInTail < 0) return null;
+  const index = tailStart + lineInTail;
+  if (index > 0 && buffer[index - 1] !== '\n') return null;
+  const match = RESULT_LINE.exec(buffer.slice(index));
+  return match ? { index: index > 0 ? index - 1 : 0, exitCode: Number(match[1]) } : null;
 }
