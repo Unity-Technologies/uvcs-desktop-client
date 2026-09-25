@@ -3,8 +3,9 @@ import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { SELECTOR_KIND_LABELS, workingObjectName } from '../../components/workingObject';
 
 export interface WorkspaceContext {
-  /** Where the workspace is, e.g. "cs:11 on /main". */
+  /** Where the workspace is, e.g. "cs:11 on", followed by the branch; "cs:11 · Label v1.0" off a branch. */
   position: string;
+  branch: string | null;
   /** How it compares to its branch: "up to date", "3 behind"; null while unknown or off a branch. */
   sync: string | null;
   behind: number;
@@ -16,11 +17,12 @@ export function workspaceContext(info: WorkspaceInfo, summary: IncomingSummary |
   if (info.selector.kind !== 'branch') {
     const name = workingObjectName(info.selector);
     const position = name === changeset ? changeset : `${changeset} · ${SELECTOR_KIND_LABELS[info.selector.kind]} ${name}`;
-    return { position, sync: null, behind: 0 };
+    return { position, branch: null, sync: null, behind: 0 };
   }
 
-  const position = `${changeset} on ${info.selector.name}`;
-  if (!summary || summary.branch !== info.selector.name) return { position, sync: null, behind: 0 };
+  const position = `${changeset} on`;
+  const branch = info.selector.name;
+  if (!summary || summary.branch !== branch) return { position, branch, sync: null, behind: 0 };
   const behind = summary.changesetCount;
-  return { position, sync: behind === 0 ? 'up to date' : `${behind} behind`, behind };
+  return { position, branch, sync: behind === 0 ? 'up to date' : `${behind} behind`, behind };
 }

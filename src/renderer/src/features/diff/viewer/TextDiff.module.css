@@ -1,7 +1,12 @@
 .diff {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow: auto;
   background: var(--bg-surface);
   user-select: text;
+}
+
+.diff:focus {
+  outline: none;
 }

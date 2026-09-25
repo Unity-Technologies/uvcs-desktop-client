@@ -46,6 +46,7 @@ export function changesetColumns(loadedChangeset: number | undefined, labelsByCh
       header: 'Branch',
       width: 130,
       secondary: true,
+      hideBelow: 560,
       sortValue: (changeset) => changeset.branch,
       render: (changeset) => (
         <span data-tip-overflow data-tip={changeset.branch}>
@@ -53,7 +54,7 @@ export function changesetColumns(loadedChangeset: number | undefined, labelsByCh
         </span>
       ),
     },
-    { id: 'owner', header: 'Author', width: 150, sortValue: (changeset) => changeset.owner, render: (changeset) => <UserLabel user={changeset.owner} /> },
+    { id: 'owner', header: 'Author', width: 150, hideBelow: 700, sortValue: (changeset) => changeset.owner, render: (changeset) => <UserLabel user={changeset.owner} /> },
     {
       id: 'date',
       header: 'Date',

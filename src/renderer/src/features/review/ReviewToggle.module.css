@@ -7,6 +7,7 @@
   background: none;
   color: var(--text-tertiary);
   cursor: pointer;
+  animation: var(--keyframes-fade-in) var(--duration-normal);
 }
 
 .toggle:hover {
@@ -18,6 +19,9 @@
   opacity: 0;
 }
 
+/* An unreviewed file's check appears where the pointer or the selection is (list rows carry data-selected). */
+[data-selected]:hover .toggle,
+[data-selected='true'] .toggle,
 .toggle:focus-visible {
   opacity: 1;
 }
@@ -29,4 +33,10 @@
 /* Reviewed once, but the file moved on: the mark still shows, in the color of a change waiting to be looked at. */
 .toggle[data-status='changedSinceReview'] {
   color: var(--status-changed);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toggle {
+    animation: none;
+  }
 }

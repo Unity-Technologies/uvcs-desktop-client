@@ -1,5 +1,6 @@
 import { ArrowRight } from 'lucide-react';
 import type { MergeContributor, MergeContributors } from '@shared/domain/merge';
+import { PathLabel } from '../../components/PathLabel';
 import styles from './ContributorsDiagram.module.css';
 
 /** Where the merge starts from (the common ancestor) and the two versions it combines. */
@@ -38,7 +39,11 @@ function Node({ role, contributor, tone, name }: NodeProps) {
       <span className={styles.role}>{role}</span>
       {/* A shelve has no changeset of its own (cm reports a negative one) nor a branch. */}
       {contributor.changesetId >= 0 && <span className={styles.changeset}>{contributor.changesetId}</span>}
-      {label && <span className={styles.branch}>{label}</span>}
+      {label && (
+        <span className={styles.branch}>
+          <PathLabel path={label} fitContent tooltip={false} />
+        </span>
+      )}
     </span>
   );
 }

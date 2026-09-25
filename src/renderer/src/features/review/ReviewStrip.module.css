@@ -1,13 +1,33 @@
-.bar {
+/* The slim strip above the list in review mode (progress), or offering it (the hint). */
+.strip {
   display: flex;
   flex: none;
   align-items: center;
   gap: var(--space-2);
   height: 34px;
   padding: 0 var(--space-2) 0 var(--space-3);
+  overflow: hidden;
   border-bottom: 1px solid var(--border-subtle);
   color: var(--text-secondary);
   font-size: var(--text-sm);
+  animation: strip-in var(--duration-normal) var(--ease-out);
+}
+
+.strip[data-hint] {
+  background: var(--accent-soft);
+}
+
+@keyframes strip-in {
+  from {
+    height: 0;
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .strip {
+    animation: none;
+  }
 }
 
 .icon {
@@ -15,14 +35,25 @@
   color: var(--text-tertiary);
 }
 
-.bar[data-done='true'] .icon {
+.strip[data-done='true'] .icon {
   color: var(--change-added);
+}
+
+.strip[data-hint] .icon {
+  color: var(--accent-text);
 }
 
 .label {
   flex: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+
+.strip[data-hint] .label {
+  flex: 0 1 auto;
+  color: var(--text-primary);
 }
 
 .meter {
@@ -34,6 +65,10 @@
   background: linear-gradient(to right, var(--change-added) var(--progress), var(--bg-active) var(--progress));
 }
 
-.bar > :last-child {
+.push {
   margin-left: auto;
+}
+
+.action {
+  color: var(--accent-text);
 }

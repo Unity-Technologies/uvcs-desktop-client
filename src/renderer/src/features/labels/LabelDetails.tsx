@@ -1,6 +1,7 @@
 import { FileDiff, Tag } from 'lucide-react';
 import type { Label } from '@shared/domain/label';
 import { spec } from '@shared/domain/specs';
+import { PathLabel } from '../../components/PathLabel';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
 import { Button } from '../../ui/Button';
@@ -16,7 +17,7 @@ export function LabelDetails({ label, menu }: { label: Label; menu: MenuEntry[] 
     <DetailsPanel
       icon={<Tag />}
       kind="Label"
-      context={label.branch}
+      context={<PathLabel path={label.branch} fitContent />}
       title={label.name}
       author={{ user: label.owner, date: label.date }}
       primaryAction={

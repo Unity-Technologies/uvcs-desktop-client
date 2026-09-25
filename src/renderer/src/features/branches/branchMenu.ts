@@ -15,7 +15,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { Branch } from '@shared/domain/branch';
-import { spec } from '@shared/domain/specs';
+import { shortBranchName, spec } from '@shared/domain/specs';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { copyToClipboard } from '../../lib/copyToClipboard';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
@@ -64,7 +64,8 @@ export function branchMenu(workspacePath: string, branches: Branch[], currentBra
     SEPARATOR,
     single && !isCurrent && {
       id: 'merge',
-      label: `Merge into ${currentBranch ?? 'workspace'}`,
+      // The leaf reads whole in a menu; the branch pill names the full branch.
+      label: `Merge into ${currentBranch ? shortBranchName(currentBranch) : 'workspace'}`,
       icon: GitMerge,
       run: () => mergeFromBranch(single.name),
     },
@@ -90,7 +91,7 @@ export function branchMenu(workspacePath: string, branches: Branch[], currentBra
       id: 'diff',
       label: 'Show branch changes',
       icon: FileDiff,
-      run: () => diffBranch(single.name),
+      run: () => diffBranch(single),
     },
     single && {
       id: 'showInBranchExplorer',

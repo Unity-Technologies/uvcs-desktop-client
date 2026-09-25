@@ -8,8 +8,11 @@ import type { MergeRequest } from '@shared/domain/merge';
 export type Page =
   | { kind: 'history'; path: string }
   | { kind: 'annotate'; path: string; revisionSpec?: string }
-  /** `focusPath` preselects a file in the diff. */
-  | { kind: 'diff'; title: string; target: DiffTarget; focusPath?: string }
+  /**
+   * `focusPath` preselects a file in the diff. `branchHead`, for a branch, is the head it was seen at: the diff is
+   * then the one a details panel may already have read, not a second `cm diff`.
+   */
+  | { kind: 'diff'; title: string; target: DiffTarget; focusPath?: string; branchHead?: number }
   | { kind: 'merge'; request: MergeRequest }
   | { kind: 'codeReview'; reviewId: number; focusPath?: string }
   | { kind: 'browseRepository'; changesetId: number };

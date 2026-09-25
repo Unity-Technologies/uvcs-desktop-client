@@ -1,7 +1,6 @@
-import { CheckCircle2, Files, GitMerge, List, ListTree, RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { CheckCircle2, Files, GitMerge, List, ListTree, SlidersHorizontal } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { invalidateWorkspace } from '../../app/queryClient';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { openSettingsDialogAt } from '../../app/settings/SettingsDialog';
 import { useSettings } from '../../app/settings/useSettings';
@@ -23,15 +22,16 @@ import { ChangesSummaryBar } from './ChangesSummaryBar';
 import { CheckinAfterUpdateNotice } from './CheckinAfterUpdateNotice';
 import { CheckinPanel } from './CheckinPanel';
 import { HiddenCheckedNotice, NoFilterMatches } from './FilterNotices';
-import { LiveRefreshToggle } from './LiveRefreshToggle';
 import { LockedByOthersNotice } from './locks/LockedByOthersNotice';
+import { RefreshButton } from './RefreshButton';
 import { usePendingLocks } from './locks/usePendingLocks';
-import { useReviewMode } from './review/useReviewMode';
+import { ReviewModeButton } from '../review/ReviewModeButton';
+import { usePendingReview } from './review/usePendingReview';
 import { mergeSourceChangeset, uploadSize } from './checkinButton';
 import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinChanges, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
 import { isCheckinCandidate } from './changeCategories';
-import { buildChangeRows, changeKey, changesUnderRow, CHEVRON_SLOT, hasDisclosureRows, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { buildChangeRows, changeKey, changesUnderRow, topLevelCheckboxInset, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
 import { changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
 import { changeTone } from './changeTone';
@@ -59,7 +59,7 @@ export function PendingChangesView() {
   const [busy, setBusy] = useState(false);
 
   const allChanges = snapshot?.changes ?? NO_CHANGES;
-  const review = useReviewMode(workspacePath, allChanges, snapshot !== undefined && !isPlaceholderData);
+  const review = usePendingReview(workspacePath, allChanges, snapshot !== undefined && !isPlaceholderData);
   const locks = usePendingLocks(workspacePath, workspace?.repository, allChanges, dataUpdatedAt);
   const { visible: filtered, query, clear: clearTextFilter, bar: filterBar } = useChangeFilter(allChanges, changePath, changeTone);
   const changes = review.narrow(filtered);
@@ -135,8 +135,8 @@ export function PendingChangesView() {
       subtitle={snapshot && `${snapshot.changes.filter(isCheckinCandidate).length} pending`}
       actions={
         <>
-          <LiveRefreshToggle />
-          <IconButton icon={<RefreshCw size={14} className={isFetching ? styles.spinning : undefined} />} label="Refresh" shortcut="mod+r" onClick={() => void invalidateWorkspace(workspacePath)} />
+          <ReviewModeButton workspacePath={workspacePath} />
+          <RefreshButton workspacePath={workspacePath} fetching={isFetching} />
           <IconButton icon={<SlidersHorizontal size={14} />} label="What to show" onClick={() => openSettingsDialogAt('pendingChanges')} />
         </>
       }
@@ -203,7 +203,7 @@ export function PendingChangesView() {
               onSetIncluded={setIncludedChanges}
               onUndo={(selected) => void undoChanges(workspacePath, selected)}
               onUndoUnchanged={() => void undoUnchangedCheckouts(workspacePath)}
-              checkboxInset={hasDisclosureRows(rows) ? CHEVRON_SLOT : 0}
+              checkboxInset={topLevelCheckboxInset(rows)}
             />
             {review.bar}
             {filterBar}
@@ -222,11 +222,10 @@ export function PendingChangesView() {
                     grouping === 'changelist' ? (moved, changelist) => void moveToChangelist(workspacePath, changelist, moved) : undefined
                   }
                   contextMenu={(selected) =>
-                    pendingChangeMenu(workspacePath, selected, changelists, { isIncluded, setIncluded: setIncludedChanges }, { marks: review.marks, toggle: review.toggle })
+                    pendingChangeMenu(workspacePath, selected, changelists, { isIncluded, setIncluded: setIncludedChanges }, review)
                   }
                   changelistMenu={(changelist) => changelistMenu(workspacePath, changelist)}
-                  reviewMarks={review.marks}
-                  onToggleReviewed={review.toggle}
+                  review={review}
                   locks={locks}
                 />
               </HighlightQuery>

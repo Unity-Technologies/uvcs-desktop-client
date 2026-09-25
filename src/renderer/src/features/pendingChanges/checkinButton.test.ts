@@ -24,24 +24,40 @@ describe('uploadSize', () => {
 describe('checkinButtonLabel', () => {
   const base = { mode: 'checkin' as const, includedCount: 4, branchName: '/main', uploadBytes: 1_150_000, merging: false };
 
-  it('names the count, the branch and the upload size', () => {
-    expect(checkinButtonLabel(base)).toMatchObject({ action: 'Check in 4 changes', target: 'to /main', size: '1.1 MB' });
+  const wordings = (label: ReturnType<typeof checkinButtonLabel>): string[] =>
+    label.forms.map(({ action, target, size }) => [action, target, size].filter(Boolean).join(' | '));
+
+  it('names the count, the branch and the upload size, then drops them one by one', () => {
+    expect(wordings(checkinButtonLabel(base))).toEqual(['Check in 4 changes | to /main | 1.1 MB', 'Check in 4 changes | to /main', 'Check in 4 changes', 'Check in 4']);
+  });
+
+  it('shortens a child branch to its leaf before dropping it', () => {
+    expect(wordings(checkinButtonLabel({ ...base, branchName: '/main/scm1008874/scm1008874d', uploadBytes: 0 }))).toEqual([
+      'Check in 4 changes | to /main/scm1008874/scm1008874d',
+      'Check in 4 changes | to scm1008874d',
+      'Check in 4 changes',
+      'Check in 4',
+    ]);
+  });
+
+  it('names the whole branch in the tooltip', () => {
+    expect(checkinButtonLabel({ ...base, branchName: '/main/task' }).tip).toBe('Check in to /main/task');
   });
 
   it('leaves the size out when nothing is uploaded', () => {
-    expect(checkinButtonLabel({ ...base, includedCount: 1, uploadBytes: 0 })).toMatchObject({ action: 'Check in 1 change', size: null });
+    expect(wordings(checkinButtonLabel({ ...base, includedCount: 1, uploadBytes: 0 }))[0]).toBe('Check in 1 change | to /main');
   });
 
   it('says there is nothing to check in', () => {
-    expect(checkinButtonLabel({ ...base, includedCount: 0 })).toMatchObject({ action: 'Nothing to check in', target: null, size: null });
+    expect(wordings(checkinButtonLabel({ ...base, includedCount: 0 }))).toEqual(['Nothing to check in']);
   });
 
   it('checks in a merge', () => {
-    expect(checkinButtonLabel({ ...base, merging: true })).toMatchObject({ action: 'Check in merge', target: 'to /main' });
+    expect(wordings(checkinButtonLabel({ ...base, merging: true }))).toEqual(['Check in merge | to /main | 1.1 MB', 'Check in merge | to /main', 'Check in merge']);
   });
 
   it('shelves without naming the branch', () => {
-    expect(checkinButtonLabel({ ...base, mode: 'shelve' })).toMatchObject({ action: 'Shelve 4 changes', target: null });
+    expect(wordings(checkinButtonLabel({ ...base, mode: 'shelve' }))).toEqual(['Shelve 4 changes | 1.1 MB', 'Shelve 4 changes', 'Shelve 4']);
   });
 });
 

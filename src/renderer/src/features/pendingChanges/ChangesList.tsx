@@ -12,11 +12,13 @@ import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { describeKinds, isCheckinCandidate } from './changeCategories';
 import { changeTone } from './changeTone';
-import { hasDisclosureRows, rowIndent, type ChangeRow } from './changeRows';
+import { rowIndent, type ChangeRow } from './changeRows';
 import { LockChip } from './locks/LockChip';
 import type { PendingLocks } from './locks/pendingLocks';
-import { ReviewToggle } from './review/ReviewToggle';
-import { hasChangesSinceReview, isReviewable, reviewStatus, shouldMarkReviewed, type ReviewMarks } from './review/reviewProgress';
+import { isReviewKey, toggleReviewedFromKey } from '../review/reviewKey';
+import { ReviewToggle } from '../review/ReviewToggle';
+import { SinceReviewDot } from '../review/SinceReviewDot';
+import type { ListReview } from '../review/useReviewMode';
 import { useChangelistDrop } from './useChangelistDrop';
 import styles from './ChangesList.module.css';
 
@@ -36,9 +38,8 @@ interface ChangesListProps {
   onMoveToChangelist?: (changes: PendingChange[], changelist: string | null) => void;
   contextMenu: (selected: PendingChange[]) => MenuEntry[];
   changelistMenu: (changelist: Changelist) => MenuEntry[];
-  reviewMarks: ReviewMarks;
-  /** The row's check, or R on the selection: marks the changes reviewed, or clears their marks. */
-  onToggleReviewed: (changes: PendingChange[]) => void;
+  /** The row's check and R on the selection; outside review mode, no checks or "changed since review" dots, and R turns it on. */
+  review: ListReview<PendingChange>;
   locks: PendingLocks;
 }
 
@@ -52,8 +53,7 @@ export function ChangesList({
   onMoveToChangelist,
   contextMenu,
   changelistMenu,
-  reviewMarks,
-  onToggleReviewed,
+  review,
   locks,
 }: ChangesListProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -62,7 +62,7 @@ export function ChangesList({
   // The row keyboard moves go from; Shift extends the selection from the anchor to it.
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
   const focused = focusedKey !== null && orderedKeys.includes(focusedKey) ? focusedKey : selection.anchor;
-  const indentLayout = { grouped: rows.some((row) => row.type === 'group'), disclosure: hasDisclosureRows(rows) };
+  const grouped = rows.some((row) => row.type === 'group');
 
   // A plain press on a row of a multi-selection keeps the selection until release, so the whole of it can be dragged.
   const narrowOnClick = useRef<string | null>(null);
@@ -97,14 +97,9 @@ export function ChangesList({
     if (step !== undefined) {
       event.preventDefault();
       moveBy(step, event.shiftKey);
-    } else if (event.key === 'r' && plain) {
+    } else if (isReviewKey(event)) {
       event.preventDefault();
-      const selected = selectedChanges().filter(isReviewable);
-      if (selected.length === 0) return;
-      // Marking one file moves on to the next, so a review goes R, R, R down the list.
-      const advance = selected.length === 1 && shouldMarkReviewed(selected, reviewMarks);
-      onToggleReviewed(selected);
-      if (advance) moveBy(1, false);
+      toggleReviewedFromKey(review, selectedChanges(), () => moveBy(1, false));
     } else if (event.key === ' ') {
       event.preventDefault();
       const selectedRows = changeRows.filter((row) => selection.selected.has(row.key));
@@ -154,8 +149,8 @@ export function ChangesList({
                 data-type={row.type}
                 data-selected={selection.selected.has(row.key)}
                 data-drop-target={dropTarget === row.key}
-                data-review={row.type === 'change' && isReviewable(row.change) ? reviewStatus(reviewMarks, row.change) : undefined}
-                style={{ top: item.start, height: ROW_HEIGHT, '--row-indent': `${rowIndent(row, indentLayout)}px` } as CSSProperties}
+                data-review={review.on && row.type === 'change' ? (review.statusOf(row.change) ?? undefined) : undefined}
+                style={{ top: item.start, height: ROW_HEIGHT, '--row-indent': `${rowIndent(row, grouped)}px` } as CSSProperties}
                 onMouseDown={(event) => onRowMouseDown(row, event)}
                 onClick={() => onRowClick(row)}
                 onDoubleClick={() => row.type === 'change' && onOpen(row.change)}
@@ -166,8 +161,7 @@ export function ChangesList({
                   row={row}
                   onToggleIncluded={onToggleIncluded}
                   changelistMenu={changelistMenu}
-                  reviewMarks={reviewMarks}
-                  onToggleReviewed={onToggleReviewed}
+                  review={review}
                   locks={locks}
                 />
               </div>
@@ -179,9 +173,9 @@ export function ChangesList({
   );
 }
 
-type RowContentProps = { row: ChangeRow } & Pick<ChangesListProps, 'onToggleIncluded' | 'changelistMenu' | 'reviewMarks' | 'onToggleReviewed' | 'locks'>;
+type RowContentProps = { row: ChangeRow } & Pick<ChangesListProps, 'onToggleIncluded' | 'changelistMenu' | 'review' | 'locks'>;
 
-function RowContent({ row, onToggleIncluded, changelistMenu, reviewMarks, onToggleReviewed, locks }: RowContentProps) {
+function RowContent({ row, onToggleIncluded, changelistMenu, review, locks }: RowContentProps) {
   switch (row.type) {
     case 'group':
       return (
@@ -214,6 +208,7 @@ function RowContent({ row, onToggleIncluded, changelistMenu, reviewMarks, onTogg
       const { change } = row;
       const deleted = change.kinds.includes('deleted') || change.kinds.includes('locallyDeleted');
       const lock = locks.get(change.path);
+      const reviewStatus = review.on ? review.statusOf(change) : null;
       return (
         <>
           {isCheckinCandidate(change) ? (
@@ -222,15 +217,13 @@ function RowContent({ row, onToggleIncluded, changelistMenu, reviewMarks, onTogg
             <span className={styles.checkboxPlaceholder} />
           )}
           <StatusBadge tone={changeTone(change)} title={describeKinds(change)} />
-          {hasChangesSinceReview(reviewMarks, change) && <span className={styles.sinceReviewDot} data-tip="Changed since you reviewed it" />}
+          {reviewStatus === 'changedSinceReview' && <SinceReviewDot />}
           <PathLabel path={change.path} nameOnly={row.depth > 0} oldPath={change.oldPath} strikethrough={deleted} />
           <span className={styles.trailing}>
             {change.mergeInfo && <span className={styles.tag}>{change.mergeInfo}</span>}
             {change.kinds.includes('moved') && change.kinds.includes('changed') && <span className={styles.tag}>modified</span>}
             {lock && <LockChip path={change.path} lock={lock} />}
-            {isReviewable(change) && (
-              <ReviewToggle status={reviewStatus(reviewMarks, change)} onToggle={() => onToggleReviewed([change])} className={styles.reviewToggle} />
-            )}
+            {reviewStatus && <ReviewToggle status={reviewStatus} onToggle={() => review.toggle([change])} />}
           </span>
         </>
       );

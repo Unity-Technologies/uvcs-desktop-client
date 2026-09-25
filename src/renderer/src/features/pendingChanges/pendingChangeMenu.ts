@@ -1,6 +1,5 @@
 import {
   AppWindow,
-  CircleCheck,
   Copy,
   EyeOff,
   FileClock,
@@ -20,7 +19,8 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { SEPARATOR, tidyMenu, type MenuEntry, type Submenu } from '../../lib/actions';
 import { categoryOf, existsOnDisk, isCheckinCandidate, isControlled } from './changeCategories';
 import { moveToChangelistSubmenu } from './changelistMenu';
-import { isReviewable, shouldMarkReviewed, type ReviewMarks } from './review/reviewProgress';
+import { reviewMenuEntry } from '../review/reviewMenuEntry';
+import type { ListReview } from '../review/useReviewMode';
 import {
   absolutePath,
   addFilterRule,
@@ -40,12 +40,6 @@ interface CheckinInclusion {
   setIncluded: (changes: PendingChange[], included: boolean) => void;
 }
 
-/** Review marks, and a way to toggle them. */
-interface ReviewToggling {
-  marks: ReviewMarks;
-  toggle: (changes: PendingChange[]) => void;
-}
-
 /** The context menu for the selected pending changes. */
 export function pendingChangeMenu(
   workspacePath: string,
@@ -54,7 +48,7 @@ export function pendingChangeMenu(
   /** Offers to include or exclude the changes; left out where there is no check-in to pick for (the command palette). */
   inclusion?: CheckinInclusion,
   /** Offers to mark the changes reviewed or clear their marks; left out where there are no marks (the command palette). */
-  review?: ReviewToggling,
+  review?: ListReview<PendingChange>,
 ): MenuEntry[] {
   if (changes.length === 0) return [];
 
@@ -66,7 +60,7 @@ export function pendingChangeMenu(
 
   return tidyMenu([
     ...(inclusion ? inclusionEntries(changes, inclusion) : []),
-    review && reviewEntry(changes, review),
+    review && reviewMenuEntry(changes, review),
     SEPARATOR,
     onDisk && {
       id: 'open',
@@ -147,19 +141,6 @@ function inclusionEntries(changes: PendingChange[], { isIncluded, setIncluded }:
     excluded.length > 0 && { id: 'include', label: 'Include in check-in', icon: SquareCheckBig, run: () => setIncluded(excluded, true) },
     included.length > 0 && { id: 'exclude', label: 'Exclude from check-in', icon: Square, run: () => setIncluded(included, false) },
   ]);
-}
-
-function reviewEntry(changes: PendingChange[], { marks, toggle }: ReviewToggling): MenuEntry | null {
-  const reviewable = changes.filter(isReviewable);
-  if (reviewable.length === 0) return null;
-  const mark = shouldMarkReviewed(reviewable, marks);
-  return {
-    id: 'review',
-    label: mark ? 'Mark as reviewed' : 'Clear review mark',
-    icon: CircleCheck,
-    shortcut: 'r',
-    run: () => toggle(reviewable),
-  };
 }
 
 /** Adds an item, or all files with its extension, to the ignore, cloaked or hidden-changes rules. */

@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowDown, ArrowUp } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { MenuEntry } from '../../lib/actions';
 import { isMac } from '../../lib/platform';
 import { selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
@@ -16,6 +16,8 @@ export interface Column<Row> {
   grow?: number;
   align?: 'start' | 'end';
   secondary?: boolean;
+  /** Hidden while the table is narrower than this, so the flexible columns (a comment, a name) keep room to be read. */
+  hideBelow?: number;
   render: (row: Row) => ReactNode;
   sortValue?: (row: Row) => string | number;
 }
@@ -31,9 +33,11 @@ interface DataTableProps<Row> {
   contextMenu?: (selectedRows: Row[]) => MenuEntry[];
   rowHeight?: number;
   initialSort?: { columnId: string; descending: boolean };
-  /** Keys the table does not handle itself (e.g. ←/→ to collapse or expand a tree row). */
-  onRowKeyDown?: (event: KeyboardEvent, focusedRow: Row) => void;
-  /** Scrolls this row into view whenever it changes, e.g. after revealing a search result. */
+  /** Keys the table does not handle itself (e.g. ←/→ to collapse or expand a tree row); `moveBy` moves the selection like the arrows. */
+  onRowKeyDown?: (event: KeyboardEvent, focusedRow: Row, moveBy: (step: number) => void) => void;
+  /** J and K move like ↓ and ↑, for lists read one row after another (e.g. reviewing files). */
+  letterMoves?: boolean;
+  /** Scrolls this row into view (centered) whenever it changes, e.g. after revealing a search result. */
   revealKey?: string | null;
   /** Selects the first row whenever no shown row is selected, so a details panel next to the table always has something to show. */
   selectFirstRow?: boolean;
@@ -50,14 +54,27 @@ export function DataTable<Row>({
   rowHeight = 30,
   initialSort,
   onRowKeyDown,
+  letterMoves = false,
   revealKey,
   selectFirstRow = false,
 }: DataTableProps<Row>) {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
+  const [tableWidth, setTableWidth] = useState(Infinity);
   const [sort, setSort] = useState(initialSort);
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
 
   const sortedRows = useMemo(() => sortRows(rows, columns, sort), [rows, columns, sort]);
+  const shownColumns = columns.filter((column) => !column.hideBelow || tableWidth >= column.hideBelow);
+
+  const hidesColumns = columns.some((column) => column.hideBelow);
+  useLayoutEffect(() => {
+    const table = tableRef.current;
+    if (!table || !hidesColumns) return;
+    const observer = new ResizeObserver(() => setTableWidth(table.clientWidth));
+    observer.observe(table);
+    return () => observer.disconnect();
+  }, [hidesColumns]);
   const orderedKeys = useMemo(() => sortedRows.map(rowKey), [sortedRows, rowKey]);
   const rowsByKey = useMemo(() => new Map(sortedRows.map((row) => [rowKey(row), row])), [sortedRows, rowKey]);
 
@@ -70,7 +87,12 @@ export function DataTable<Row>({
 
   useEffect(() => {
     const index = revealKey ? orderedKeys.indexOf(revealKey) : -1;
-    if (index !== -1) virtualizer.scrollToIndex(index, { align: 'auto' });
+    const viewport = viewportRef.current;
+    if (index === -1 || !viewport) return;
+    const top = index * rowHeight;
+    const inView = top >= viewport.scrollTop && top + rowHeight <= viewport.scrollTop + viewport.clientHeight;
+    // A row out of view lands in the middle: context around it, and room for the layout above to settle (a header loading).
+    if (!inView) virtualizer.scrollToIndex(index, { align: 'center' });
     // Only when the requested row changes (or appears), not on every re-render of the rows.
   }, [revealKey, orderedKeys.length]);
 
@@ -84,14 +106,21 @@ export function DataTable<Row>({
 
   const selectedRows = (): Row[] => orderedKeys.filter((key) => selection.selected.has(key)).map((key) => rowsByKey.get(key)!);
 
+  const moveBy = (step: number, extend: boolean): void => {
+    const moved = selectOnArrow(selection, orderedKeys, step, extend, focusedKey);
+    if (!moved) return;
+    setFocusedKey(moved.focused);
+    onSelectionChange(moved.state);
+    virtualizer.scrollToIndex(orderedKeys.indexOf(moved.focused));
+  };
+
   const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+    const plain = !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
+    const steps: Record<string, number> = { ArrowDown: 1, ArrowUp: -1, ...(letterMoves && plain && { j: 1, k: -1 }) };
+    const step = steps[event.key];
+    if (step !== undefined) {
       event.preventDefault();
-      const moved = selectOnArrow(selection, orderedKeys, event.key === 'ArrowDown' ? 1 : -1, event.shiftKey, focusedKey);
-      if (!moved) return;
-      setFocusedKey(moved.focused);
-      onSelectionChange(moved.state);
-      virtualizer.scrollToIndex(orderedKeys.indexOf(moved.focused));
+      moveBy(step, event.shiftKey);
     } else if (event.key === 'Enter' && focusedKey && onActivate) {
       onActivate(rowsByKey.get(focusedKey)!);
     } else if (event.key === 'a' && (isMac ? event.metaKey : event.ctrlKey)) {
@@ -99,7 +128,7 @@ export function DataTable<Row>({
       onSelectionChange({ selected: new Set(orderedKeys), anchor: orderedKeys[0] ?? null });
     } else {
       const focusedRow = rowsByKey.get(focusedKey ?? selection.anchor ?? '');
-      if (focusedRow) onRowKeyDown?.(event, focusedRow);
+      if (focusedRow) onRowKeyDown?.(event, focusedRow, (step) => moveBy(step, false));
     }
   };
 
@@ -133,7 +162,7 @@ export function DataTable<Row>({
               onMouseDown={(event) => onRowMouseDown(key, event)}
               onDoubleClick={() => onActivate?.(row)}
             >
-              {columns.map((column) => (
+              {shownColumns.map((column) => (
                 <div
                   key={column.id}
                   className={[styles.cell, column.secondary && styles.secondary, column.align === 'end' && styles.end].filter(Boolean).join(' ')}
@@ -150,9 +179,9 @@ export function DataTable<Row>({
   );
 
   return (
-    <div className={styles.table} tabIndex={0} onKeyDown={onKeyDown}>
+    <div ref={tableRef} className={styles.table} tabIndex={0} onKeyDown={onKeyDown}>
       <div className={styles.header}>
-        {columns.map((column) => (
+        {shownColumns.map((column) => (
           <button
             key={column.id}
             className={[styles.headerCell, column.sortValue && styles.sortable, column.align === 'end' && styles.end].filter(Boolean).join(' ')}

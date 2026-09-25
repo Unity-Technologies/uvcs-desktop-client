@@ -59,7 +59,6 @@
 }
 
 .act {
-  container-type: inline-size;
   flex: 1;
   height: 32px;
   min-width: 0;
@@ -76,41 +75,28 @@
   border-bottom-left-radius: 0;
 }
 
-/* When the panel is narrow the branch goes first, then the size; the action is cut last. */
-.action,
-.target {
+/* CheckinButtonWording picks a wording that fits; the ellipsis is only a last resort for a very narrow panel. */
+.wording {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+}
+
+.action {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
-.action {
-  flex: 0 1 auto;
-}
-
-.target {
-  flex: 0 1000 auto;
+.target,
+.size {
+  flex: none;
   opacity: 0.75;
   font-weight: 400;
 }
 
 .size {
-  flex: none;
-  opacity: 0.75;
-  font-weight: 400;
   font-variant-numeric: tabular-nums;
-}
-
-@container (max-width: 270px) {
-  .target {
-    display: none;
-  }
-}
-
-@container (max-width: 205px) {
-  .size {
-    display: none;
-  }
 }
 
 .modeMenu {

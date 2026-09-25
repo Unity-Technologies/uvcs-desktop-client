@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
-import { ELLIPSIS, trimToFit } from '../lib/trimToFit';
+import { textMeasurer } from '../lib/measureText';
+import { positionsInTrimmed, trimFolderToFit } from '../lib/trimToFit';
 import { Highlight } from '../ui/Highlight';
 import styles from './PathLabel.module.css';
 
@@ -12,43 +13,62 @@ interface PathLabelProps {
   strikethrough?: boolean;
   /** Fuzzy-matched positions in `path` to highlight; otherwise the words of the surrounding `HighlightQuery` are. */
   matches?: readonly number[];
+  /**
+   * As wide as the whole path (up to its container) and no narrower than the name, where the container wraps the
+   * label rather than sizing it.
+   */
+  fitContent?: boolean;
+  /** False where the element around it has a tooltip naming the path already. */
+  tooltip?: boolean;
 }
 
 /**
- * `src/app/main.ts` rendered as a dimmed folder followed by the file name. When it doesn't fit, the folder is cut
- * in the middle of the path so the name always stays whole. The cut is measured rather than left to CSS
- * `text-overflow`, which leaves a ragged gap before the name.
+ * `src/app/main.ts` rendered as a dimmed folder followed by the file name; branches read the same way, the parent
+ * branches dimmed before the leaf. When it doesn't fit, whole folders are dropped from the middle
+ * (`src/…/app/main.ts`) so the name always stays whole. The cut is measured rather than left to CSS `text-overflow`,
+ * which would cut the name first.
  */
-export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches }: PathLabelProps) {
+export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fitContent, tooltip = true }: PathLabelProps) {
   const nameStart = path.lastIndexOf('/') + 1;
   const name = path.slice(nameStart);
   const directory = nameOnly ? '' : path.slice(0, nameStart);
   const ref = useRef<HTMLSpanElement>(null);
   const [shownDirectory, setShownDirectory] = useState(directory);
+  const [contentSize, setContentSize] = useState<{ width: number; minWidth: string; flexShrink: number }>();
 
   // Fit before paint, so recycled rows of a virtual list don't flash, and again whenever the container resizes.
   useLayoutEffect(() => {
     const element = ref.current;
-    if (!element || !directory) return setShownDirectory(directory);
+    if (!element) return;
     const fit = (): void => {
       const measure = textMeasurer(element);
-      // clientWidth is rounded; the extra pixel keeps a rounded-up width from clipping the fitted text.
-      setShownDirectory(trimToFit(directory, element.clientWidth - measure(name) - 1, measure));
+      // Widths are rounded; the extra pixel keeps a rounded-up width from clipping the fitted text.
+      if (fitContent) {
+        const nameWidth = Math.ceil(measure(name)) + 1;
+        // Next to other labels, the one with the most folder to drop gives way first.
+        setContentSize({ width: Math.ceil(measure(directory)) + nameWidth, minWidth: `min(${nameWidth}px, 100%)`, flexShrink: measure(directory) });
+      }
+      setShownDirectory(directory && trimFolderToFit(directory, element.clientWidth - measure(name) - 1, measure));
     };
     fit();
     const observer = new ResizeObserver(fit);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [directory, name]);
+  }, [directory, name, fitContent]);
 
   const trimmed = shownDirectory !== directory;
-  const keptLength = trimmed ? shownDirectory.length - ELLIPSIS.length : directory.length;
 
   return (
-    <span ref={ref} className={styles.path} data-tip={oldPath ? `${oldPath} → ${path}` : trimmed ? path : undefined}>
+    <span
+      ref={ref}
+      className={styles.path}
+      data-fit-content={fitContent}
+      style={fitContent ? contentSize : undefined}
+      data-tip={!tooltip ? undefined : oldPath ? `${oldPath} → ${path}` : trimmed ? path : undefined}
+    >
       {shownDirectory && (
         <span className={styles.directory}>
-          <Highlight text={shownDirectory} positions={matches?.filter((position) => position < keptLength)} />
+          <Highlight text={shownDirectory} positions={matches && positionsInTrimmed(directory, shownDirectory, matches.filter((position) => position < nameStart))} />
         </span>
       )}
       <span className={styles.name} data-strikethrough={strikethrough}>
@@ -56,16 +76,4 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches }: P
       </span>
     </span>
   );
-}
-
-let canvasContext: CanvasRenderingContext2D | null = null;
-
-function textMeasurer(element: HTMLElement): (text: string) => number {
-  canvasContext ??= document.createElement('canvas').getContext('2d');
-  const context = canvasContext;
-  if (!context) return (text) => text.length * 8;
-  const style = getComputedStyle(element);
-  context.font = `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
-  context.letterSpacing = style.letterSpacing === 'normal' ? '0px' : style.letterSpacing;
-  return (text) => context.measureText(text).width;
 }

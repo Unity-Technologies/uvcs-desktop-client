@@ -173,7 +173,7 @@ export function BranchExplorerView() {
   const activate = (target: GraphTarget): void => {
     const selected = selectionFor(target);
     if (selected?.kind === 'changeset') graphActions.diffChangeset(selected.id);
-    if (selected?.kind === 'branch') graphActions.diffBranch(selected.name);
+    if (target.kind === 'branch') graphActions.diffBranch(target.lane.branch);
   };
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -194,7 +194,8 @@ export function BranchExplorerView() {
     } else if (event.key === 'Enter' && selection?.kind === 'changeset') {
       graphActions.diffChangeset(selection.id);
     } else if (event.key === 'Enter' && selection?.kind === 'branch') {
-      graphActions.diffBranch(selection.name);
+      const lane = layout.lanesByBranch.get(selection.name);
+      if (lane) graphActions.diffBranch(lane.branch);
     } else if (event.key === 'Escape') {
       // Esc steps back: first out of the selection, then out of the focus.
       if (selection) setSelection(null);

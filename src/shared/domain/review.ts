@@ -8,3 +8,9 @@ export interface ReviewMark {
   /** A copy of the reviewed text was kept, so the changes since the review can be shown. */
   hasSnapshot: boolean;
 }
+
+/** A file marked as reviewed in a committed diff (a changeset, a branch, a shelve...): the revision that was reviewed. */
+export interface DiffReviewMark {
+  path: string;
+  revisionId: number;
+}

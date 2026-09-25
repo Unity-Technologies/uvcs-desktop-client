@@ -1,5 +1,6 @@
-import { ArrowDownToLine, FolderOpen, Keyboard, Monitor, Moon, RefreshCw, Sun, TerminalSquare } from 'lucide-react';
+import { ArrowDownToLine, FolderOpen, Keyboard, ListChecks, Monitor, Moon, Pause, Play, RefreshCw, Sun, TerminalSquare } from 'lucide-react';
 import type { ThemePreference } from '@shared/domain/settings';
+import { setReviewMode } from '../../features/review/reviewModeSetting';
 import type { Icon } from '../../lib/actions';
 import { useMemo } from 'react';
 import { useCommands, type Command } from '../commands/commandStore';
@@ -23,7 +24,8 @@ const THEMES: { theme: ThemePreference; label: string; icon: Icon }[] = [
 export function useWorkspaceCommands(): void {
   const workspacePath = useWorkspacePath();
   const closeWorkspace = useSession((state) => state.closeWorkspace);
-  const { theme } = useSettings();
+  const { theme, reviewModeWorkspaces, autoRefresh } = useSettings();
+  const reviewing = reviewModeWorkspaces.includes(workspacePath);
   const updateSettings = useUpdateSettings();
 
   const commands = useMemo<Command[]>(
@@ -51,6 +53,22 @@ export function useWorkspaceCommands(): void {
         icon: RefreshCw,
         shortcut: 'mod+r',
         run: () => void invalidateWorkspace(workspacePath),
+      },
+      {
+        id: 'workspace.autoRefresh',
+        group: 'Workspace',
+        label: autoRefresh ? 'Pause automatic refresh' : 'Resume automatic refresh',
+        icon: autoRefresh ? Pause : Play,
+        keywords: ['refresh', 'watch', 'live'],
+        run: () => updateSettings({ autoRefresh: !autoRefresh }),
+      },
+      {
+        id: 'workspace.reviewMode',
+        group: 'Workspace',
+        label: 'Toggle review mode',
+        icon: ListChecks,
+        keywords: ['review', 'reviewed', 'mark'],
+        run: () => void setReviewMode(workspacePath, !reviewing),
       },
       {
         id: 'workspace.open',
@@ -87,7 +105,7 @@ export function useWorkspaceCommands(): void {
         run: () => updateSettings({ theme: choice }),
       })),
     ],
-    [workspacePath, closeWorkspace, theme, updateSettings],
+    [workspacePath, closeWorkspace, theme, reviewing, autoRefresh, updateSettings],
   );
 
   useCommands(commands);

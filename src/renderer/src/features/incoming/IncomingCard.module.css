@@ -21,6 +21,9 @@
 }
 
 .branch {
+  display: flex;
+  gap: 0.3em;
+  min-width: 0;
   overflow: hidden;
   color: var(--text-tertiary);
   font-size: var(--text-sm);

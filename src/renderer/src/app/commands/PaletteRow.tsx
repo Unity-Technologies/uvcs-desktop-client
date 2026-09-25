@@ -1,5 +1,6 @@
 import { Command as Cmdk } from 'cmdk';
 import { Ellipsis } from 'lucide-react';
+import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge } from '../../components/StatusBadge';
 import { Highlight } from '../../ui/Highlight';
 import { Kbd } from '../../ui/Kbd';
@@ -39,7 +40,11 @@ export function PaletteRow({ result, selected, menuOpen, onMenuOpenChange, onRun
       </span>
       <span className={styles.main}>
         <span className={styles.label}>
-          <Highlight text={result.label} positions={result.labelMatches} />
+          {result.labelIsBranch ? (
+            <PathLabel path={result.label} matches={result.labelMatches} fitContent />
+          ) : (
+            <Highlight text={result.label} positions={result.labelMatches} />
+          )}
         </span>
         {result.detail && (
           <span className={styles.detail}>

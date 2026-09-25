@@ -19,7 +19,7 @@ interface FileDiffViewerProps {
   identicalDescription?: string;
   /** Controls about what to compare, e.g. against the loaded revision or the reviewed copy. */
   compareControls?: ReactNode;
-  /** Reverting blocks brought the workspace file back to its loaded revision. */
+  /** Discarding changes brought the workspace file back to its loaded revision. */
   onMatchesBase?: () => void;
 }
 

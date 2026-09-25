@@ -7,14 +7,24 @@
   white-space: nowrap;
 }
 
-.directory {
+/* Its width is set to the whole path's, so the container is sized by that, never by the trimmed text. */
+.path[data-fit-content='true'] {
   flex: 0 1 auto;
+  max-width: 100%;
+}
+
+.directory {
+  flex: 0 1000 auto;
   overflow: hidden;
   color: var(--text-tertiary);
 }
 
+/* Only a name too long on its own (its folder already gone) is cut. */
 .name {
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .name[data-strikethrough='true'] {

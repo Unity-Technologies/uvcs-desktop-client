@@ -1,23 +1,36 @@
 import { FileSearch } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { DiffEntry } from '@shared/domain/diff';
+import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { SplitPane } from '../../ui/SplitPane';
+import { SinceReviewButton } from '../review/SinceReviewButton';
 import { FileDiffViewer } from './viewer/FileDiffViewer';
 import { describeDiffEntry, diffEntrySources, diffEntryTone } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
 import { diffEntryMenu } from './diffEntryMenu';
+import { entryToFocus } from './diffFocus';
+import { reviewedRevisionToCompare, type DiffReviewMarks } from './review/diffReview';
+import { useDiffReview } from './review/useDiffReview';
+
+interface DiffBrowserProps {
+  target: DiffTarget;
+  entries: DiffEntry[];
+  /** The file to open on (by its path, or its old path for a move); the first file when it isn't in the diff. */
+  initialPath?: string;
+}
 
 /** A list of changed files next to the diff of the selected one. */
-export function DiffBrowser({ entries, initialPath }: { entries: DiffEntry[]; initialPath?: string }) {
+export function DiffBrowser({ target, entries, initialPath }: DiffBrowserProps) {
   const workspacePath = useWorkspacePath();
-  const [selection, setSelection] = useState<SelectionState>(() =>
-    initialPath ? { selected: new Set([initialPath]), anchor: initialPath } : EMPTY_SELECTION,
-  );
+  const review = useDiffReview(target, entries);
+  const [selection, setSelection] = useState<SelectionState>(() => {
+    const initial = entryToFocus(entries, initialPath);
+    return initial ? { selected: new Set([diffEntryKey(initial)]), anchor: diffEntryKey(initial) } : EMPTY_SELECTION;
+  });
   const focused = entries.find((entry) => diffEntryKey(entry) === selection.anchor);
   const firstKey = entries[0] && diffEntryKey(entries[0]);
 
@@ -39,31 +52,41 @@ export function DiffBrowser({ entries, initialPath }: { entries: DiffEntry[]; in
           entries={entries}
           selection={selection}
           onSelectionChange={setSelection}
-          contextMenu={(selected) => diffEntryMenu(workspacePath, selected)}
+          contextMenu={(selected) => diffEntryMenu(workspacePath, selected, review)}
+          review={review}
         />
       }
-      second={focused ? <EntryDiff workspacePath={workspacePath} entry={focused} /> : null}
+      second={focused ? <EntryDiff workspacePath={workspacePath} entry={focused} reviewMarks={review.marks} /> : null}
     />
   );
 }
 
-function EntryDiff({ workspacePath, entry }: { workspacePath: string; entry: DiffEntry }) {
+function EntryDiff({ workspacePath, entry, reviewMarks }: { workspacePath: string; entry: DiffEntry; reviewMarks: DiffReviewMarks }) {
+  // Per file: "Since review" is a way to look at one file, not a mode that follows the selection.
+  const [sinceReviewPath, setSinceReviewPath] = useState<string | null>(null);
+
   if (entry.itemType === 'directory') {
     return <EmptyState title={entry.path} description={`Directory · ${describeDiffEntry(entry)}`} />;
   }
 
-  const { original, modified } = diffEntrySources(entry);
+  const reviewedRevision = reviewedRevisionToCompare(reviewMarks, entry);
+  const sinceReview = reviewedRevision !== null && sinceReviewPath === entry.path;
+  const sources = diffEntrySources(entry);
   return (
     <FileDiffViewer
       workspacePath={workspacePath}
-      original={original}
-      modified={modified}
+      original={sinceReview ? { kind: 'revision', revisionId: reviewedRevision, fileName: entry.path } : sources.original}
+      modified={sources.modified}
       fileName={entry.path}
       title={
         <>
           <StatusBadge tone={diffEntryTone(entry)} title={describeDiffEntry(entry)} />
           <PathLabel path={entry.path} oldPath={entry.oldPath} />
         </>
+      }
+      identicalDescription={sinceReview ? 'The file is back to how it was when you reviewed it.' : undefined}
+      compareControls={
+        reviewedRevision !== null && <SinceReviewButton pressed={sinceReview} onChange={(pressed) => setSinceReviewPath(pressed ? entry.path : null)} />
       }
     />
   );
