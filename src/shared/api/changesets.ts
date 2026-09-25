@@ -9,9 +9,4 @@ export interface ChangesetsApi {
   /** Moves the changeset and its descendants to another branch (full name, e.g. `/main/fix`). */
   moveToBranch(workspacePath: string, changesetId: number, branch: string): Promise<void>;
   remove(workspacePath: string, changesetId: number): Promise<void>;
-  /**
-   * Makes the workspace contents match a previous changeset of the loaded branch, as pending changes:
-   * a subtractive merge of everything after it.
-   */
-  revertWorkspaceTo(workspacePath: string, changesetId: number, operationId: string): Promise<void>;
 }

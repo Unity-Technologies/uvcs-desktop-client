@@ -8,10 +8,3 @@ export interface Shelve {
   parentChangeset: number;
   repository: string;
 }
-
-export interface ShelveApplyPreview {
-  /** Server paths the shelve changes, e.g. `/src/app.ts`. */
-  changedPaths: string[];
-  /** Server paths also changed since the shelve was created; applying them needs a merge. */
-  conflictedPaths: string[];
-}
