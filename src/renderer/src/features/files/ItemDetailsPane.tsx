@@ -49,6 +49,7 @@ export function ItemDetailsPane({ workspacePath, item, pendingChange, menu }: It
           <SegmentedControl<DetailsTab>
             value={detailsTab}
             onChange={setDetailsTab}
+            stretch
             segments={[
               { value: 'details', label: 'Details' },
               { value: 'changes', label: pendingChange ? 'Pending changes' : 'Last change' },
