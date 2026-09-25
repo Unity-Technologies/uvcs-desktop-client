@@ -1,0 +1,97 @@
+/* A find bar in one field: icon, text, the match counter and flush previous / next / clear buttons. */
+.field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 300px;
+  height: var(--control-height);
+  padding: 0 3px 0 8px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  transition:
+    border-color var(--duration-fast),
+    box-shadow var(--duration-fast),
+    background var(--duration-fast);
+}
+
+.field:focus-within {
+  border-color: var(--accent);
+  background: var(--bg-input);
+  box-shadow: var(--focus-ring);
+}
+
+.field[data-active='true'] {
+  background: var(--bg-input);
+}
+
+/* Nothing found: the field says so itself, in the counter's place and on its border. */
+.field[data-empty='true'] {
+  border-color: var(--status-deleted);
+}
+
+.field[data-empty='true']:focus-within {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-deleted) 25%, transparent);
+}
+
+.icon {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: none;
+  background: transparent;
+  outline: none;
+}
+
+.input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.count {
+  flex: none;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  /* Stepping "3/66" to "4/66" must not shift the buttons. */
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.field[data-empty='true'] .count {
+  color: var(--status-deleted);
+}
+
+.actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+}
+
+/* Quiet steppers: no box until hovered, and only the one under the pointer lights up. */
+.step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+}
+
+.step:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.step:disabled {
+  color: var(--text-tertiary);
+  opacity: 0.45;
+}
