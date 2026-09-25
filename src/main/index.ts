@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { app, BrowserWindow } from 'electron';
 import { CmClient } from './cm/CmClient';
 import { locateCm } from './cm/locateCm';
+import { warnOnRepeatedServerCommands } from './cm/repeatedCommands';
 import { registerApi } from './ipc/registerApi';
 import { sendEvent } from './ipc/sendEvent';
 import { OperationTracker } from './operations/OperationTracker';
@@ -20,6 +21,7 @@ const cm = new CmClient(locateCm);
 function start(): void {
   cm.warmUp();
   cm.onCommandLogged((entry) => sendEvent('commandLogged', entry));
+  if (!app.isPackaged) warnOnRepeatedServerCommands(cm);
   const settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'));
 
   // The renderer refreshes its views after its own operations and writes; the watcher skips what they cause.
