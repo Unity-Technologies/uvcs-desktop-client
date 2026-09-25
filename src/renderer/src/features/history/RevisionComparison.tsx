@@ -20,7 +20,6 @@ export function RevisionComparison({ path, newer, older, leading }: RevisionComp
 
   return (
     <FileDiffViewer
-      key={`${older?.revisionId}-${newer.revisionId}`}
       workspacePath={workspacePath}
       original={older ? revisionSource(older, path) : { kind: 'empty' }}
       modified={revisionSource(newer, path)}

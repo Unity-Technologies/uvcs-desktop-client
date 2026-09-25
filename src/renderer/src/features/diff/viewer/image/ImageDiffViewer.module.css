@@ -1,0 +1,22 @@
+/* The stage fills the pane and never scrolls: it owns panning. Every control
+   floats over it so the pixels keep all the room. */
+.pane {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  outline: none; /* a focus ring would frame the whole pane; keys still work */
+}
+
+.pane:focus-visible {
+  box-shadow: none;
+}
+
+.stage {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}

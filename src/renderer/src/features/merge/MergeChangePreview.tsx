@@ -21,7 +21,6 @@ export function MergeChangePreview({ workspacePath, request, change, contributor
   const { original, modified } = versionsToCompare(change, contributors, request);
   return (
     <FileDiffViewer
-      key={change.path}
       workspacePath={workspacePath}
       original={original}
       modified={modified}

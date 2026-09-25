@@ -1,0 +1,70 @@
+.swipe {
+  position: relative;
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.reveal {
+  position: absolute;
+  inset: 0;
+}
+
+/* The divider is a 14px invisible strip — the whole line drags like a
+   splitter, with comfortable tolerance — drawing the visible 2px line via
+   ::before. Whole CSS pixels only for the line: it sits at arbitrary
+   subpixel offsets while dragging, so a fractional width rasterizes as 1 or
+   2 device pixels depending on position and visibly flickers. No shadow
+   halo either (it read as gray bars beside the line). */
+.divider {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 2;
+  width: 14px;
+  margin-left: -7px;
+  cursor: ew-resize;
+  touch-action: none;
+}
+
+.divider::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--accent);
+}
+
+/* Purely visual — the strip owns the pointer; fades away at far-out zoom
+   levels where 32px would cover the whole picture. */
+.handle {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  /* Same weight as the divider line, so knob and line read as one tool. */
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: var(--bg-surface-raised);
+  color: var(--accent);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  transition: opacity 140ms ease;
+}
+
+/* The tint must stay opaque: --accent-soft alone is translucent and would let
+   the divider line show through the knob. */
+.divider:hover .handle {
+  background: color-mix(in srgb, var(--accent) 16%, var(--bg-surface-raised));
+}
+
+.handle[data-hidden] {
+  opacity: 0;
+}
