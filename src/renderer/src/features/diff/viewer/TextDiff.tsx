@@ -3,7 +3,8 @@ import { EditProvider, MultiFileDiff } from '@pierre/diffs/react';
 import { useMemo } from 'react';
 import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
 import { useDiffPreferences } from './diffPreferencesStore';
-import { pierreDiffOptions } from './pierreOptions';
+import { pierreDiffOptions, pierreThemeName } from './pierreOptions';
+import { useSyntaxHighlighter } from './useSyntaxHighlighter';
 import styles from './TextDiff.module.css';
 
 interface TextDiffProps {
@@ -30,6 +31,10 @@ export function TextDiff({ original, modified, fileName, editing = false, onEdit
     () => pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }),
     [theme, layout, collapseUnchanged, wrapLines],
   );
+  const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);
+
+  // Usually a few milliseconds, and only the first time a language shows up.
+  if (!canHighlight) return <div className={styles.diff} />;
 
   return (
     <div className={styles.diff}>
