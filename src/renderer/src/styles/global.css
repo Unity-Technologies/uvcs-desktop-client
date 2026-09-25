@@ -108,3 +108,13 @@ textarea:focus-visible {
     transform: rotate(360deg);
   }
 }
+
+/* Read by screen readers, not shown: announcements and labels a visible layout already conveys. */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

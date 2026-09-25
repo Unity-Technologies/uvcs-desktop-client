@@ -1,6 +1,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState, type ReactNode } from 'react';
 import type { MenuEntry } from '../../../lib/actions';
 import { subscribeToAvatars } from '../../../lib/avatars/avatarImages';
+import { MAIN_FOCUS } from '../../../lib/mainFocus';
 import { ActionContextMenu } from '../../../ui/menu/ActionContextMenu';
 import type { GraphLayout } from '../model/layoutGraph';
 import type { DrawnReviewChip, GraphScene } from './drawContext';
@@ -36,6 +37,8 @@ export interface GraphCanvasHandle {
   fit: () => void;
   /** Glides the zoom by `factor` around the middle of the canvas. */
   zoomBy: (factor: number) => void;
+  /** Gives the keyboard back to the graph. */
+  focus: () => void;
 }
 
 interface GraphCanvasProps {
@@ -170,6 +173,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         },
         fit: () => view.jumpTo(fitToScreen(graphSize(layout.columnCount, layout.rowCount), sizeRef.current)),
         zoomBy: (factor) => view.zoomStep(center().x, center().y, factor),
+        focus: () => containerRef.current?.focus(),
       };
     },
     [layout, view],
@@ -270,6 +274,10 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         ref={containerRef}
         className={styles.container}
         tabIndex={0}
+        role="application"
+        aria-roledescription="graph"
+        aria-label="Branch Explorer. Arrow keys walk the changesets, Enter diffs the selection, H goes to the workspace changeset."
+        {...MAIN_FOCUS}
         data-hovering={hover !== null}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}

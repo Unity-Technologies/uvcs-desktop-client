@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import type { Ref } from 'react';
 import { IconButton } from '../../ui/IconButton';
 import { SearchField } from '../../ui/SearchField';
 import styles from './BranchExplorerView.module.css';
@@ -10,13 +11,25 @@ interface GraphSearchProps {
   /** Null while there is no search; `current` is 0 before stepping through the matches. */
   position: { current: number; total: number } | null;
   onStep: (direction: 1 | -1) => void;
+  inputRef: Ref<HTMLInputElement>;
+  /** Escape: back to the graph, keeping the search. */
+  onLeave: () => void;
 }
 
-/** Finds changesets by number, comment or author, and branches and labels by name; Enter steps through the matches. */
-export function GraphSearch({ search, onSearchChange, position, onStep }: GraphSearchProps) {
+/**
+ * Finds changesets by number, comment or author, and branches and labels by name; Enter steps through the matches
+ * and Escape goes back to the graph, on the match it reached.
+ */
+export function GraphSearch({ search, onSearchChange, position, onStep, inputRef, onLeave }: GraphSearchProps) {
   return (
     <div
       className={styles.search}
+      onKeyDownCapture={(event) => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        event.stopPropagation();
+        onLeave();
+      }}
       onKeyDown={(event) => {
         if (event.key !== 'Enter') return;
         event.preventDefault();
@@ -30,7 +43,7 @@ export function GraphSearch({ search, onSearchChange, position, onStep }: GraphS
           <IconButton size="small" icon={<ChevronDown size={14} />} label="Next match" shortcut={hotkey('graphNextMatch')} onClick={() => onStep(1)} />
         </>
       )}
-      <SearchField value={search} onChange={onSearchChange} placeholder="Find in graph…" width={220} />
+      <SearchField ref={inputRef} value={search} onChange={onSearchChange} placeholder="Find in graph…" width={220} />
     </div>
   );
 }

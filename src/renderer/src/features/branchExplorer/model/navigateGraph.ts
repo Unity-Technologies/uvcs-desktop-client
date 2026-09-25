@@ -45,3 +45,16 @@ function closestOnRow(layout: GraphLayout, from: NodeLayout, step: 1 | -1): numb
   }
   return null;
 }
+
+/**
+ * Where the arrow keys start when no changeset is selected: a selected branch's latest changeset on screen,
+ * otherwise the workspace changeset, otherwise the latest changeset.
+ */
+export function startingChangeset(layout: GraphLayout, selectedBranch: string | null, homeChangeset: number | null): number | null {
+  if (selectedBranch !== null) {
+    const latestOnBranch = layout.nodesByColumn.findLast((node) => node.changeset.branch === selectedBranch);
+    if (latestOnBranch) return latestOnBranch.changeset.id;
+  }
+  if (homeChangeset !== null && layout.nodes.has(homeChangeset)) return homeChangeset;
+  return layout.nodesByColumn.at(-1)?.changeset.id ?? null;
+}
