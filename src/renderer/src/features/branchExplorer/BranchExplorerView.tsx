@@ -106,6 +106,7 @@ export function BranchExplorerView() {
       currentBranch,
       highlightedAuthor,
       search: search.trim() && fullLayout ? searchHighlight(fullLayout, searchHits, searchHits[activeHitIndex] ?? null) : null,
+      searchQuery: search.trim(),
       options: { showComments, showAvatars },
       reviews: reviews ?? NO_REVIEWS,
     }),

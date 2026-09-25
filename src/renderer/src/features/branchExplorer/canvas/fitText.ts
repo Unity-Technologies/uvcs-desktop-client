@@ -47,7 +47,15 @@ function cached(key: string, fit: () => string): string {
   return fitted;
 }
 
-/** The first line of a comment, which is its summary. */
+const summaries = new Map<string, string>();
+
+/** The first line of a comment, which is its summary. Asked for on every frame, so remembered. */
 export function summaryOf(comment: string): string {
-  return comment.split('\n', 1)[0]!.trim();
+  if (!comment) return '';
+  let summary = summaries.get(comment);
+  if (summary === undefined) {
+    if (summaries.size > MAX_CACHED) summaries.clear();
+    summaries.set(comment, (summary = comment.split('\n', 1)[0]!.trim()));
+  }
+  return summary;
 }

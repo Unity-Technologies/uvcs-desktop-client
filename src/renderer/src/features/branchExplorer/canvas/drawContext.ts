@@ -33,6 +33,8 @@ export interface GraphScene {
   highlightedAuthor: string | null;
   /** While searching, what matched; everything else fades. */
   search: SearchHighlight | null;
+  /** What was typed in the search, its words marked in the branch headers while `search` is set. */
+  searchQuery: string;
   /** Progress of the ping around the current search hit: 0 just landed, 1 settled. */
   searchPing: number;
   /** The newest code review of each branch, shown as a chip in its header card. */

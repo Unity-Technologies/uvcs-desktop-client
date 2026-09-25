@@ -7,10 +7,10 @@ import type { GraphLayout } from '../model/layoutGraph';
 import type { DrawnTargets, GraphScene } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
 import { drawGraph } from './drawGraph';
-import { COLUMN_WIDTH, graphSize, headerTop } from './geometry';
+import { COLUMN_WIDTH, graphSize } from './geometry';
 import { hitTest, nodePoint, type GraphTarget } from './graphTargets';
 import { GraphTooltip, type TooltipAnchor } from './GraphTooltip';
-import { laneShape } from './laneShape';
+import { laneHeaderTop, laneShape } from './laneShape';
 import { useGraphPalette } from './useGraphPalette';
 import { useGraphViewport } from './useGraphViewport';
 import { useSearchPing } from './useSearchPing';
@@ -21,7 +21,7 @@ import styles from './GraphCanvas.module.css';
 /** Scene fields owned by the view; the canvas adds the viewport, size, palette, hover state and animations. */
 export type GraphHighlights = Pick<
   GraphScene,
-  'selectedChangeset' | 'selectedBranch' | 'homeChangeset' | 'currentBranch' | 'highlightedAuthor' | 'search' | 'options' | 'reviews'
+  'selectedChangeset' | 'selectedBranch' | 'homeChangeset' | 'currentBranch' | 'highlightedAuthor' | 'search' | 'searchQuery' | 'options' | 'reviews'
 >;
 
 export interface GraphCanvasHandle {
@@ -159,7 +159,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         const lane = layout.lanesByBranch.get(name);
         if (!lane) return null;
         const shape = laneShape(lane);
-        return { x: shape.left + HEADER_REVEAL_INSET, y: headerTop(shape.y) };
+        return { x: shape.left + HEADER_REVEAL_INSET, y: laneHeaderTop(lane) };
       };
       return {
         frameChangeset: (id) => frame(nodePoint(layout, id)),

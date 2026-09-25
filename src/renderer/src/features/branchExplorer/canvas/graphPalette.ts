@@ -88,7 +88,7 @@ export function readGraphPalette(element: Element): GraphPalette {
     fontUi,
     fonts: {
       branchName: `600 11.5px ${fontUi}`,
-      branchComment: `400 11px ${fontUi}`,
+      branchComment: `400 10.5px ${fontUi}`,
       compactBranchName: `600 10.5px ${fontUi}`,
       badge: `600 9.5px ${fontUi}`,
       label: `600 10px ${fontUi}`,
