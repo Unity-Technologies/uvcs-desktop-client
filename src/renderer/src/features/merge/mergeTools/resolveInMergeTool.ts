@@ -13,10 +13,16 @@ export interface OpenTool {
   canBringToFront: boolean;
 }
 
+/** How a merge tool session ended, and the decision it makes: what the user saved, if anything. */
+export interface MergeToolSession {
+  outcome: MergeToolOutcome;
+  decision: FileConflictDecision | undefined;
+}
+
 /**
  * Opens one conflicting file in a merge tool and waits for it: `onOpen` reports it open, then closed (null). The
  * result file starts as the file stands in the app (the automatic merge with its markers, or the user's picks), so the
- * tool shows where things are. Tells the user how it went; the decision is what they saved, if anything.
+ * tool shows where things are. Tells the user how it went, unless `quiet` (resolving one by one tells it as a whole).
  */
 export async function resolveInMergeTool(
   workspacePath: string,
@@ -24,7 +30,8 @@ export async function resolveInMergeTool(
   tool: MergeTool,
   labels: MergeLabels,
   onOpen: (open: OpenTool | null) => void,
-): Promise<FileConflictDecision | undefined> {
+  quiet = false,
+): Promise<MergeToolSession> {
   const sessionId = crypto.randomUUID();
   const fileName = state.file.path.split('/').pop()!;
   onOpen({ sessionId, toolName: tool.name, canBringToFront: tool.canBringToFront });
@@ -46,10 +53,12 @@ export async function resolveInMergeTool(
     onOpen(null);
   }
 
-  const message = toolOutcomeMessage(outcome, tool.name, fileName, labels);
-  if (message.kind === 'error') toast.error(message.title, message.detail);
-  else toast[message.kind](message.title, message.detail);
-  return decisionFromTool(outcome, tool.name);
+  if (!quiet) {
+    const message = toolOutcomeMessage(outcome, tool.name, fileName, labels);
+    if (message.kind === 'error') toast.error(message.title, message.detail);
+    else toast[message.kind](message.title, message.detail);
+  }
+  return { outcome, decision: decisionFromTool(outcome, tool.name) };
 }
 
 function startText(state: FileConflictState): string {

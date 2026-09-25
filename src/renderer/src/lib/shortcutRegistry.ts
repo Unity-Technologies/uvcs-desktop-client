@@ -102,6 +102,8 @@ export const SHORTCUTS = {
   annotate: { area: 'Files', label: 'Annotate', keys: ['mod+t'] },
 
   merge: { area: 'Merge', label: 'Merge', keys: ['mod+enter'] },
+  resolveAllInTool: { area: 'Merge', label: 'Resolve the conflicts in the merge tool, one by one', keys: ['mod+shift+enter'] },
+  stopResolvingInTool: { area: 'Merge', label: 'Stop resolving one by one', keys: ['escape'] },
 
   paletteMove: { area: 'Command palette', label: 'Move', keys: ['up', 'down'] },
   paletteOpen: { area: 'Command palette', label: 'Open', keys: ['enter'] },

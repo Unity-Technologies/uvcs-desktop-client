@@ -1,4 +1,5 @@
 import { AlertTriangle, ArrowDownToLine } from 'lucide-react';
+import type { ReactNode } from 'react';
 import type { IncomingChanges } from '@shared/domain/incoming';
 import { navigation } from '../../app/navigation/navigationStore';
 import { Button } from '../../ui/Button';
@@ -12,10 +13,12 @@ interface UpdateBarProps {
   onUpdate: () => void;
   /** Shelves the files the branch deleted or moved, then updates. */
   onShelveBlockedAndUpdate: () => void;
+  /** Resolving the conflicting files one by one in a merge tool: the offer, or the run under way. */
+  run?: ReactNode;
 }
 
 /** Explains what updating will do (or what stops it) and offers to do it. */
-export function UpdateBar({ incoming, pendingConflictCount, canUpdate, updating, onUpdate, onShelveBlockedAndUpdate }: UpdateBarProps) {
+export function UpdateBar({ incoming, pendingConflictCount, canUpdate, updating, onUpdate, onShelveBlockedAndUpdate, run }: UpdateBarProps) {
   if (incoming.blockedPaths.length > 0) {
     return (
       <div className={styles.bar} data-tone="blocked">
@@ -46,7 +49,8 @@ export function UpdateBar({ incoming, pendingConflictCount, canUpdate, updating,
     <div className={styles.bar}>
       <ArrowDownToLine size={15} className={styles.icon} />
       <span className={styles.text}>{message}</span>
-      <Button variant="primary" loading={updating} disabled={!canUpdate} onClick={onUpdate}>
+      {run}
+      <Button variant={run && !canUpdate ? 'secondary' : 'primary'} loading={updating} disabled={!canUpdate} onClick={onUpdate}>
         {incoming.conflicts.length === 0 ? 'Update workspace' : 'Update and apply merges'}
       </Button>
     </div>

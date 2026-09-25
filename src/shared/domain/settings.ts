@@ -45,6 +45,11 @@ export interface AppSettings {
   customMergeTools: CustomMergeTool[];
   /** The user's arguments for a merge tool, by its id, instead of its own. */
   mergeToolArgs: Record<string, string[]>;
+  /**
+   * Resolving files one by one, a file closed in the merge tool without saving pauses the run to ask whether to go on;
+   * off, the next file opens at once.
+   */
+  askWhenMergeToolClosesUnsaved: boolean;
   /** Null until the window is first moved or resized. */
   windowBounds: SavedWindowBounds | null;
 }
@@ -67,5 +72,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   mergeTool: AUTO_MERGE_TOOL,
   customMergeTools: [],
   mergeToolArgs: {},
+  askWhenMergeToolClosesUnsaved: true,
   windowBounds: null,
 };

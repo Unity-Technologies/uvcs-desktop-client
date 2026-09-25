@@ -1,5 +1,5 @@
 import { AlertTriangle, ArrowDownToLine, Eye } from 'lucide-react';
-import { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useLayoutEffect, useMemo, useRef, useState, type ReactNode, type Ref } from 'react';
 import type { MergePlan, MergeRequest } from '@shared/domain/merge';
 import { shortBranchName } from '@shared/domain/specs';
 import { updateWorkspace } from '../../app/shell/workspaceOperations';
@@ -30,6 +30,12 @@ interface MergeHeaderProps {
   canMerge: boolean;
   merging: boolean;
   onMerge: () => void;
+  /**
+   * Resolving the files one by one in a merge tool: the offer, the primary action while it shows, or the run under
+   * way, which takes the status's place.
+   */
+  run?: { control: ReactNode; running: boolean };
+  mergeButtonRef?: Ref<HTMLButtonElement>;
 }
 
 export function MergeHeader({
@@ -44,14 +50,17 @@ export function MergeHeader({
   canMerge,
   merging,
   onMerge,
+  run,
+  mergeButtonRef,
 }: MergeHeaderProps) {
   useShortcut(hotkey('merge'), onMerge, canMerge);
   // Stable while the request is, so the title is fitted again only when it changes or its room does.
   const title = useMemo(() => mergeTitle(request, labels.destination), [request, labels.destination]);
 
-  // Always the page's final action, so it keeps its primary look; faded until every conflict is decided.
+  // The page's final action, so it keeps its primary look, faded until every conflict is decided; it steps back while
+  // resolving them one by one is the way forward.
   const mergeButton = (
-    <Button variant="primary" disabled={!canMerge} loading={merging} onClick={onMerge}>
+    <Button ref={mergeButtonRef} variant={run?.control && !canMerge ? 'secondary' : 'primary'} disabled={!canMerge} loading={merging} onClick={onMerge}>
       {/* The title names the whole destination; the button keeps its leaf, leaving room for the rest of the row. */}
       {intoServerBranch ? `Merge into ${shortBranchName(labels.destination)}` : 'Complete merge'}
       <Kbd keys={hotkey('merge')} />
@@ -67,9 +76,12 @@ export function MergeHeader({
         </span>
         <MergeHeading title={title} />
         {plan.contributors && <MergeContributors contributors={plan.contributors} labels={labels} />}
-        <span className={styles.status} data-tip={summary}>
-          {progress}
-        </span>
+        {!run?.running && (
+          <span className={styles.status} data-tip={summary}>
+            {progress}
+          </span>
+        )}
+        {run?.control}
         {!intoServerBranch && mergeButton}
       </div>
 

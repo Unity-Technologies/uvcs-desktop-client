@@ -71,8 +71,9 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
       state={state}
       actions={toolActions}
       onEditInApp={canMergeLines ? () => choose('byHand') : undefined}
-      // The primary action while the file waits for the user; once decided, completing the merge takes over.
-      variant={state.resolution ? 'secondary' : 'primary'}
+      // The primary action while the file waits for the user, unless the page offers resolving them all (or is at it);
+      // once decided, completing the merge takes over.
+      variant={state.resolution || toolActions.runOffered || toolActions.run ? 'secondary' : 'primary'}
     />
   );
 
@@ -126,7 +127,9 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
           </Button>
         </div>
       )}
-      {state.openTool && <MergeToolOpenBanner fileName={fileName(state)} open={state.openTool} />}
+      {state.openTool && (
+        <MergeToolOpenBanner fileName={fileName(state)} open={state.openTool} run={toolActions.run?.currentKey === state.file.key ? toolActions.run : null} />
+      )}
 
       {canMergeLines && !editing && (
         <div className={styles.viewBar}>

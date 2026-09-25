@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { FolderTree } from 'lucide-react';
-import { useId, useRef, type KeyboardEvent } from 'react';
+import { useId, useImperativeHandle, useRef, type KeyboardEvent, type Ref } from 'react';
 import type { MergeChangeKind } from '@shared/domain/merge';
 import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge, type StatusTone } from '../../components/StatusBadge';
@@ -25,11 +25,15 @@ interface MergeItemListProps {
   rows: MergeListRow[];
   labels: MergeLabels;
   selectedKey: string | null;
+  /** The file open in the merge tool while resolving one by one. */
+  runKey?: string | null;
   onSelect: (key: string) => void;
+  ref?: Ref<HTMLDivElement>;
 }
 
-export function MergeItemList({ rows, labels, selectedKey, onSelect }: MergeItemListProps) {
+export function MergeItemList({ rows, labels, selectedKey, runKey, onSelect, ref }: MergeItemListProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
+  useImperativeHandle(ref, () => viewportRef.current!, []);
   const itemKeys = rows.filter((row) => row.type === 'item').map((row) => row.key);
   const virtualizer = useVirtualizer({ count: rows.length, getScrollElement: () => viewportRef.current, estimateSize: () => ROW_HEIGHT, overscan: 12 });
   const idPrefix = useId();
@@ -68,6 +72,7 @@ export function MergeItemList({ rows, labels, selectedKey, onSelect }: MergeItem
               className={styles.row}
               data-type={row.type}
               data-selected={row.key === selectedKey}
+              data-running={row.key === runKey || undefined}
               style={{ top: virtualRow.start, height: ROW_HEIGHT }}
               onMouseDown={() => row.type === 'item' && onSelect(row.key)}
             >

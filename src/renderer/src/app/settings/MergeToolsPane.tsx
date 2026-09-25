@@ -4,21 +4,22 @@ import { AUTO_MERGE_TOOL, formatArgs, parseArgs, type MergeTool } from '@shared/
 import { addMergeToolAndPick, PLACEHOLDER_HINT } from '../../features/merge/mergeTools/CustomMergeToolDialog';
 import { preferMergeTool, removeCustomMergeTool, setMergeToolArgs, useMergeTools } from '../../features/merge/mergeTools/useMergeTools';
 import { Button } from '../../ui/Button';
+import { Checkbox } from '../../ui/Checkbox';
 import { TextField } from '../../ui/TextField';
-import { useSettings } from './useSettings';
+import { saveSettings, useSettings } from './useSettings';
 import styles from './SettingsDialog.module.css';
 
 /** Which merge tool "Resolve in…" opens, and how it's called. */
 export function MergeToolsPane() {
   const { tools, preferred } = useMergeTools();
-  const choice = useSettings().mergeTool;
+  const { mergeTool: choice, askWhenMergeToolClosesUnsaved } = useSettings();
   const automatic = choice === AUTO_MERGE_TOOL || !tools.some((tool) => tool.id === choice);
 
   return (
     <>
       <p className={styles.note}>
-        A merge tool opens only when you ask, on one conflicting file, and the file takes what you save there. Merges and updates never open one by
-        themselves.
+        A merge tool opens only when you ask, on one conflicting file or on each in turn, and the file takes what you save
+        there. Merges and updates never open one by themselves.
       </p>
       <section className={styles.section}>
         <h2 className={styles.heading}>Resolve conflicts in</h2>
@@ -46,6 +47,14 @@ export function MergeToolsPane() {
         </Button>
       </section>
       {preferred && <ToolArguments key={`${preferred.id}:${preferred.args.join('\0')}`} tool={preferred} />}
+      <section className={styles.section}>
+        <h2 className={styles.heading}>Resolving one by one</h2>
+        <Checkbox
+          label="Ask before opening the next file when one is closed without saving"
+          checked={askWhenMergeToolClosesUnsaved}
+          onChange={(ask) => void saveSettings({ askWhenMergeToolClosesUnsaved: ask })}
+        />
+      </section>
     </>
   );
 }
