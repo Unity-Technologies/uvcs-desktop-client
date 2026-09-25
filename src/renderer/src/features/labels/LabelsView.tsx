@@ -4,6 +4,7 @@ import type { Label } from '@shared/domain/label';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
+import { NoSelection } from '../../components/NoSelection';
 import { PathLabel } from '../../components/PathLabel';
 import { SincePicker } from '../../components/SincePicker';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
@@ -22,7 +23,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { openCreateLabelDialog } from './CreateLabelDialog';
 import { LabelDetails } from './LabelDetails';
 import { labelMenu } from './labelMenu';
-import { switchToLabel } from './labelOperations';
+import { showLabelChanges } from './labelOperations';
 import { useLabelsViewStore } from './labelsViewStore';
 import { useLabels } from './useLabels';
 import styles from './LabelsView.module.css';
@@ -102,17 +103,13 @@ export function LabelsView() {
                 selection={selection}
                 onSelectionChange={setSelection}
                 selectFirstRow
-                onActivate={(label) => void switchToLabel(workspacePath, label)}
+                onActivate={(label) => showLabelChanges(label)}
                 contextMenu={(selectedLabels) => labelMenu(workspacePath, selectedLabels)}
               />
             </HighlightQuery>
           }
           details={
-            selected ? (
-              <LabelDetails workspacePath={workspacePath} label={selected} />
-            ) : (
-              <EmptyState title="No label selected" description="Select a label to see its details, or two labels to compare them." />
-            )
+            selected ? <LabelDetails key={selected.name} label={selected} menu={labelMenu(workspacePath, [selected])} /> : <NoSelection noun="label" />
           }
         />
       )}

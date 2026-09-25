@@ -34,6 +34,8 @@ export interface UvcsEvents {
   workspaceOpenRequested: Record<string, never>;
   /** A native menu item was chosen; runs the registered command with this id. */
   menuCommand: { commandId: string };
+  /** An incoming-changes notification was clicked; the window is already focused. */
+  incomingNotificationClicked: { workspacePath: string };
 }
 
 export type UvcsEventName = keyof UvcsEvents;

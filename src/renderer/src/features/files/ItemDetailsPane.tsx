@@ -1,64 +1,87 @@
 import { useQuery } from '@tanstack/react-query';
+import { File, Folder } from 'lucide-react';
 import type { TreeItem } from '@shared/domain/explorer';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
+import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime, formatSize } from '../../lib/formatDate';
-import { UserLabel } from '../../ui/Avatar';
+import { useSettled } from '../../lib/useSettled';
+import { DetailsBadge, DetailsPanel, DetailsSection } from '../../ui/DetailsPanel';
 import { PropertyList, type Property } from '../../ui/PropertyList';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { ChangeDiffPanel } from '../pendingChanges/ChangeDiffPanel';
 import { describeKinds } from '../pendingChanges/changeCategories';
 import { useFilesViewStore, type DetailsTab } from './filesViewStore';
 import { RevisionChanges } from './RevisionChanges';
-import styles from './ItemDetailsPane.module.css';
 
 interface ItemDetailsPaneProps {
   workspacePath: string;
   item: TreeItem;
   pendingChange?: PendingChange;
+  /** The item's context menu, offered behind "More actions". */
+  menu: MenuEntry[];
 }
 
-export function ItemDetailsPane({ workspacePath, item, pendingChange }: ItemDetailsPaneProps) {
+/** A file's changes are one diff rather than a list of files, so the panel switches between its details and that diff. */
+export function ItemDetailsPane({ workspacePath, item, pendingChange, menu }: ItemDetailsPaneProps) {
   const { detailsTab, setDetailsTab } = useFilesViewStore();
+  const hasChanges = !item.isPrivate && item.itemType !== 'directory';
+  const showChanges = hasChanges && detailsTab === 'changes';
+  const nameStart = item.path.lastIndexOf('/') + 1;
 
   return (
-    <div className={styles.pane}>
-      <div className={styles.header}>
-        <span className={styles.name} data-tip-overflow data-tip={item.path}>
-          {item.name}
-        </span>
-        {!item.isPrivate && (
+    <DetailsPanel
+      icon={item.itemType === 'directory' ? <Folder /> : <File />}
+      kind={item.itemType === 'directory' ? 'Folder' : 'File'}
+      context={`/${item.path.slice(0, nameStart)}`}
+      title={item.name}
+      author={item.owner && !item.isPrivate ? { user: item.owner, date: item.date } : undefined}
+      badges={
+        pendingChange ? (
+          <DetailsBadge tone="warning">{describeKinds(pendingChange)}</DetailsBadge>
+        ) : item.isPrivate ? (
+          <DetailsBadge>Private</DetailsBadge>
+        ) : undefined
+      }
+      primaryAction={
+        hasChanges && (
           <SegmentedControl<DetailsTab>
             value={detailsTab}
             onChange={setDetailsTab}
+            stretch
             segments={[
               { value: 'details', label: 'Details' },
               { value: 'changes', label: pendingChange ? 'Pending changes' : 'Last change' },
             ]}
           />
-        )}
-      </div>
-      {detailsTab === 'changes' && !item.isPrivate ? (
+        )
+      }
+      menu={menu}
+      primaryActionId={hasChanges ? 'changes' : undefined}
+      fill={showChanges}
+    >
+      {showChanges ? (
         pendingChange ? (
           <ChangeDiffPanel workspacePath={workspacePath} change={pendingChange} />
         ) : (
           <RevisionChanges workspacePath={workspacePath} item={item} />
         )
       ) : (
-        <div className={styles.details}>
+        <DetailsSection title="Details">
           <ItemProperties workspacePath={workspacePath} item={item} pendingChange={pendingChange} />
-        </div>
+        </DetailsSection>
       )}
-    </div>
+    </DetailsPanel>
   );
 }
 
-function ItemProperties({ workspacePath, item, pendingChange }: ItemDetailsPaneProps) {
+function ItemProperties({ workspacePath, item, pendingChange }: Omit<ItemDetailsPaneProps, 'menu'>) {
+  const settled = useSettled();
   const { data: details } = useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'explorer', 'details', item.path),
     queryFn: () => api.explorer.details(workspacePath, item.path),
-    enabled: !item.isPrivate,
+    enabled: !item.isPrivate && settled,
   });
 
   const properties: Property[] = [
@@ -72,7 +95,6 @@ function ItemProperties({ workspacePath, item, pendingChange }: ItemDetailsPaneP
     properties.push(
       { label: 'Changeset', value: item.changeset > 0 ? item.changeset : '' },
       { label: 'Branch', value: item.branch },
-      { label: 'Owner', value: item.owner && <UserLabel user={item.owner} /> },
       { label: 'Revision', value: item.revisionId > 0 ? item.revisionId : '' },
       { label: 'Repository', value: details?.repository },
       { label: 'Changelist', value: details?.changelist },

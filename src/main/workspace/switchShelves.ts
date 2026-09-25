@@ -14,18 +14,25 @@ import { runMerge } from '../merge/runMerge';
 import type { OperationContext } from '../operations/OperationTracker';
 import { missingFromShelve } from './pendingSnapshot';
 
-const XLINK_CHANGES = "Changes inside Xlinks can't be shelved for a switch yet. Check them in first.";
+const XLINK_CHANGES = "Changes inside Xlinks can't be shelved yet. Check them in first.";
 
 /**
- * Shelves every pending change with the official automatic-shelve comment, and checks that the shelve
- * really holds them all before anything is undone. Otherwise the shelves are deleted and it fails.
+ * Shelves the pending changes with the official automatic-shelve comment (every change, or just the given paths),
+ * and checks that the shelve really holds them all before anything is undone. Otherwise the shelves are deleted and it fails.
  */
-export async function createSwitchShelve(cm: CmClient, workspacePath: string, changes: PendingChange[], objectRef: string): Promise<CreatedShelve> {
+export async function createSwitchShelve(
+  cm: CmClient,
+  workspacePath: string,
+  changes: PendingChange[],
+  objectRef: string,
+  onlyPaths?: string[],
+): Promise<CreatedShelve> {
+  const targets = onlyPaths?.map((path) => toAbsolutePath(workspacePath, path)) ?? [];
   const output = await withTempFile(automaticShelveComment(objectRef), (commentsFile) =>
-    cm.execute(['shelveset', 'create', '--all', `-commentsfile=${commentsFile}`], { cwd: workspacePath }),
+    cm.execute(['shelveset', 'create', ...targets, '--all', `-commentsfile=${commentsFile}`], { cwd: workspacePath }),
   );
   const created = parseCreatedShelves(output);
-  if (created.length === 0) throw new Error('The shelve finished but no shelve was reported, so nothing was switched.');
+  if (created.length === 0) throw new Error('The shelve finished but no shelve was reported, so the workspace was left as it was.');
   if (created.length > 1) {
     await deleteShelves(cm, workspacePath, created);
     throw new Error(XLINK_CHANGES);
@@ -36,7 +43,7 @@ export async function createSwitchShelve(cm: CmClient, workspacePath: string, ch
   const missing = missingFromShelve(changes, new Set(entries.flatMap((entry) => (entry.oldPath ? [entry.path, entry.oldPath] : [entry.path]))));
   if (missing.length > 0) {
     await deleteShelves(cm, workspacePath, created);
-    throw new Error(`Some changes couldn't be shelved (${missing.slice(0, 3).join(', ')}), so nothing was switched. Check them in first.`);
+    throw new Error(`Some changes couldn't be shelved (${missing.slice(0, 3).join(', ')}), so the workspace was left as it was. Check them in first.`);
   }
   return shelve;
 }

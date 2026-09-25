@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent }
 import type { CodeReview } from '@shared/domain/codeReview';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { ListWithDetails } from '../../components/ListWithDetails';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
@@ -160,6 +161,9 @@ export function BranchExplorerView() {
     setActiveHitIndex(-1);
   };
 
+  const menuFor = (target: GraphTarget | null) =>
+    graphMenu(target, { workspacePath, layout: layout!, goToChangeset, showRelatedTo: (name) => focusOn(name, focusHops) });
+
   const select = (target: GraphTarget | null): void => {
     if (target?.kind === 'codeReview') openReview(target.review);
     else if (target?.kind === 'collapsed') setExpanded((current) => new Set([...current, ...target.node.collapsed!.map((changeset) => changeset.id)]));
@@ -189,6 +193,8 @@ export function BranchExplorerView() {
       fit();
     } else if (event.key === 'Enter' && selection?.kind === 'changeset') {
       graphActions.diffChangeset(selection.id);
+    } else if (event.key === 'Enter' && selection?.kind === 'branch') {
+      graphActions.diffBranch(selection.name);
     } else if (event.key === 'Escape') {
       // Esc steps back: first out of the selection, then out of the focus.
       if (selection) setSelection(null);
@@ -249,26 +255,30 @@ export function BranchExplorerView() {
       {header}
       {focus && <FocusBanner focus={focus} onHopsChange={(hops) => focusOn(focus.branch, hops)} onExit={() => setFocus(null)} />}
       <div className={styles.body} onKeyDown={onKeyDown}>
-        <GraphCanvas
-          ref={canvasRef}
-          layout={layout}
-          highlights={highlights}
-          onSelect={select}
-          onActivate={activate}
-          contextMenu={(target) => graphMenu(target, { workspacePath, layout, goToChangeset, showRelatedTo: (name) => focusOn(name, focusHops) })}
-        >
-          <GraphNavControls onGoHome={goHome} onFit={fit} onZoom={zoomBy} />
-        </GraphCanvas>
-        {detailsOpen && (
-          <DetailsPanel
-            selection={selection}
-            layout={layout}
-            workspacePath={workspacePath}
-            homeChangeset={homeChangeset}
-            goToChangeset={goToChangeset}
-            selectBranch={(name) => setSelection({ kind: 'branch', name })}
-          />
-        )}
+        <ListWithDetails
+          hideDetails={!detailsOpen}
+          list={
+            <GraphCanvas
+              ref={canvasRef}
+              layout={layout}
+              highlights={highlights}
+              onSelect={select}
+              onActivate={activate}
+              contextMenu={menuFor}
+            >
+              <GraphNavControls onGoHome={goHome} onFit={fit} onZoom={zoomBy} />
+            </GraphCanvas>
+          }
+          details={
+            <DetailsPanel
+              selection={selection}
+              layout={layout}
+              menuFor={menuFor}
+              goToChangeset={goToChangeset}
+              selectBranch={(name) => setSelection({ kind: 'branch', name })}
+            />
+          }
+        />
       </div>
     </>
   );

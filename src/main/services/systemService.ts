@@ -2,6 +2,7 @@ import { homedir } from 'node:os';
 import { app, dialog, shell } from 'electron';
 import type { SystemApi } from '@shared/api/system';
 import { checkSetup } from '../cm/setupCheck';
+import { showIncomingNotification } from '../window/incomingNotification';
 import { takeRequestedWorkspace } from '../window/recentDocuments';
 import type { ServiceContext } from './ServiceContext';
 
@@ -31,5 +32,6 @@ export function createSystemService({ cm, operations }: ServiceContext): SystemA
     cancelOperation: async (operationId) => operations.cancel(operationId),
     addRecentDocument: async (workspacePath) => app.addRecentDocument(workspacePath),
     takeRequestedWorkspace: async () => takeRequestedWorkspace(),
+    notifyIncoming: async (workspacePath, message) => showIncomingNotification(workspacePath, message),
   };
 }

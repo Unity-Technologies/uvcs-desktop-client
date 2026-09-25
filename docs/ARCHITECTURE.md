@@ -48,6 +48,16 @@ merges the shelve on the target (bring). Failures put the changes back. Left she
 client's) are offered again by the "Welcome back" banner in Changes (`features/leftChanges`), or restored
 automatically on arrival when they apply cleanly.
 
+## Two developers on one branch
+
+- `cm` rejects every checkin once the branch head moved ("A merge is needed from changeset…"), even without overlapping
+  files. `checkinChanges` recognizes it (`checkinRejection`) and asks (`CheckinRejectedDialog`): when what came in touches
+  none of the files and needs no merge, it updates (the guarded update) and checks in again with the same files and comment;
+  otherwise it leads to Incoming, and Changes offers to check in once the workspace updated past the rejection.
+- An update stopped by colliding local changes (`--dontmerge`) shows a toast leading to Incoming (`explainUpdateConflicts`).
+- Local changes to files the branch deleted or moved block the update. `shelveBlockedAndUpdate` shelves just those files
+  as a switch shelve record (`reason: 'update'`), undoes them and updates; the "Welcome back" banner offers them back.
+
 ## Renderer
 
 ```
@@ -80,6 +90,10 @@ renderer/src/
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
+- **List and details**: `ListWithDetails` (one remembered details width for every view) around a `DetailsPanel`: hero, the
+  default action (what Enter does on the row) plus the row's context menu behind "More actions", then Comment, changed files,
+  Details, Attributes, Relations. Selecting a row must stay cheap: `cm diff` runs only on request (`ChangedFilesSection`),
+  other lookups wait for the selection to settle (`useSettled`), and immutable results are cached (`IMMUTABLE_QUERY`).
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in components.
 
 ## Conventions

@@ -4,6 +4,7 @@ import type { Shelve } from '@shared/domain/shelve';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
+import { NoSelection } from '../../components/NoSelection';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { UserLabel } from '../../ui/Avatar';
 import { EmptyState } from '../../ui/EmptyState';
@@ -99,7 +100,7 @@ export function ShelvesView() {
             </HighlightQuery>
           }
           details={
-            selected ? <ShelveDetails workspacePath={workspacePath} shelve={selected} /> : <EmptyState title="No shelve selected" description="Select a shelve to see its details. Double-click it to open its changes." />
+            selected ? <ShelveDetails key={selected.id} shelve={selected} menu={shelveMenu(workspacePath, [selected])} /> : <NoSelection noun="shelve" />
           }
         />
       )}

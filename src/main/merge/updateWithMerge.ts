@@ -7,7 +7,8 @@ import { toAbsolutePath } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
 import { readIncomingChanges } from './incoming';
 
-const UPDATE_ARGS = ['update', '--machinereadable', '--noinput', '--dontmerge'];
+/** `--dontmerge`: never launch an external merge tool. Conflicts with local changes are resolved in the Incoming view. */
+export const UPDATE_ARGS = ['update', '--machinereadable', '--noinput', '--dontmerge'];
 
 /**
  * Updates a workspace whose local changes collide with incoming ones, without an external merge tool:
