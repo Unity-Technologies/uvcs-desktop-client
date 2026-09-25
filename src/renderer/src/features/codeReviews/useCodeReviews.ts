@@ -22,6 +22,11 @@ export function useCodeReview(reviewId: number) {
   });
 }
 
+/** The newest reviews of the repository, as the branch chips read them (`useReviewsByBranch`). */
+export function reviewsByBranchKey(workspacePath: string): readonly unknown[] {
+  return queryKeys.inWorkspace(workspacePath, 'codeReviews', 'byBranch');
+}
+
 /**
  * The newest review of each branch, for status chips next to branch names. Cached for a few minutes;
  * `enabled` lets a view ask only once its own data is in, so the chips never delay it.
@@ -29,7 +34,7 @@ export function useCodeReview(reviewId: number) {
 export function useReviewsByBranch(enabled = true) {
   const workspacePath = useWorkspacePath();
   return useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'codeReviews', 'byBranch'),
+    queryKey: reviewsByBranchKey(workspacePath),
     queryFn: () => api.codeReviews.list(workspacePath, { scope: 'all' }),
     select: latestReviewByBranch,
     staleTime: 5 * 60_000,

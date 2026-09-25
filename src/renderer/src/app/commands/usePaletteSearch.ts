@@ -2,10 +2,12 @@ import { useQuery } from '@tanstack/react-query';
 import { LoaderCircle, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
+import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { QueryFilter } from '@shared/domain/query';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { useRecentBranchGuids } from '../../features/branches/recentBranches';
+import { reviewsByBranchKey } from '../../features/codeReviews/useCodeReviews';
 import { useWorkspacePaths } from '../../features/files/useWorkspacePaths';
 import { isCheckinCandidate } from '../../features/pendingChanges/changeCategories';
 import { sortByStatus } from '../../features/pendingChanges/changeRows';
@@ -85,7 +87,14 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
     staleTime: STALE_TIME,
   });
   const shelves = useQuery({ queryKey: shelvesKey(path, recentShelvesFilter), queryFn: () => api.shelves.list(path, recentShelvesFilter), ...cached });
-  const codeReviews = useQuery({ queryKey: codeReviewsKey(path, undefined), queryFn: () => api.codeReviews.listSummaries(path, { scope: 'all' }), ...cached });
+  const codeReviews = useQuery({
+    queryKey: codeReviewsKey(path, undefined),
+    queryFn: () => api.codeReviews.listSummaries(path, { scope: 'all' }),
+    ...cached,
+    // The same newest reviews the branch chips read: taken from there when already read.
+    initialData: () => queryClient.getQueryData<CodeReviewSummary[]>(reviewsByBranchKey(path)),
+    initialDataUpdatedAt: () => queryClient.getQueryState(reviewsByBranchKey(path))?.dataUpdatedAt,
+  });
 
   // Server searches, once typing pauses, only for the sections in scope.
   const serverTerm = useDebouncedValue(term, SERVER_SEARCH_DELAY_MS);
