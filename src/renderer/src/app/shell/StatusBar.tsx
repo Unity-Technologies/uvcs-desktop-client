@@ -9,6 +9,7 @@ import { ranInWorkspace } from './commandLogScope';
 import { useCommandLogStore } from './commandLogStore';
 import { workspaceContext } from './workspaceContext';
 import styles from './StatusBar.module.css';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 /**
  * A quiet line at the bottom: where the workspace is and what is running on the left, the command log on the right.
@@ -61,7 +62,7 @@ export function StatusBar() {
         data-failed={Boolean(failure)}
         onClick={toggleCommandLog}
         data-tip={failure ? 'A command failed: show the command log' : 'Show the command log'}
-        data-tip-shortcut="mod+shift+l"
+        data-tip-shortcut={hotkey('commandLog')}
         aria-label="Command log"
       >
         {hint && (

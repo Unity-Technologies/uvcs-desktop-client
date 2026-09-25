@@ -33,15 +33,16 @@ import {
 } from './fileOperations';
 import { useFilesViewStore } from './filesViewStore';
 import type { PendingChangesIndex } from './itemStatus';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 export const FILE_SHORTCUTS = {
-  rename: 'f2',
-  delete: 'mod+backspace',
-  newFile: 'mod+shift+n',
-  newFolder: 'mod+shift+d',
-  history: 'mod+y',
-  annotate: 'mod+t',
-  showChanges: 'mod+d',
+  rename: hotkey('renameFile'),
+  delete: hotkey('deleteFile'),
+  newFile: hotkey('newFile'),
+  newFolder: hotkey('newFolder'),
+  history: hotkey('fileHistory'),
+  annotate: hotkey('annotate'),
+  showChanges: hotkey('listDiff'),
 };
 
 /** The context menu of the selected items in the Files view. */

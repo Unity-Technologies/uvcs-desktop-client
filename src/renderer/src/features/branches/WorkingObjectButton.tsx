@@ -22,6 +22,7 @@ import { useRecentBranchGuids } from './recentBranches';
 import { useBranches } from './useBranches';
 import { useWorkingObjectComment } from './useWorkingObjectComment';
 import styles from './WorkingObjectButton.module.css';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 const SELECTOR_ICONS: Record<SelectorKind, Icon> = {
   branch: GitBranch,
@@ -54,7 +55,7 @@ export function WorkingObjectButton() {
           sub={switching || comment === undefined ? undefined : firstLine || <span className={styles.noComment}>No comment</span>}
           data-tip={switching ? undefined : title}
           data-tip-sub={switching ? undefined : comment?.trim() || undefined}
-          data-tip-shortcut={switching ? undefined : 'mod+shift+w'}
+          data-tip-shortcut={switching ? undefined : hotkey('switchBranch')}
           trailing={<ChevronDown size={14} className={styles.chevron} />}
         />
       </Popover.Trigger>
@@ -98,7 +99,7 @@ function BranchSwitcher({ workspace, onDone }: { workspace: WorkspaceInfo; onDon
           variant="secondary"
           icon={<GitBranchPlus size={13} />}
           data-tip="New branch from what the workspace is loaded from"
-          data-tip-shortcut="mod+b"
+          data-tip-shortcut={hotkey('newBranch')}
           onClick={() => {
             onDone();
             newBranchFromWorkspace(workspace);
@@ -120,7 +121,7 @@ function useBranchCommands(workspace: WorkspaceInfo | undefined): void {
         group: 'Branch',
         label: 'Switch branch…',
         icon: GitBranch,
-        shortcut: 'mod+shift+w',
+        shortcut: hotkey('switchBranch'),
         run: () => setOpen(true),
       },
       {
@@ -128,7 +129,7 @@ function useBranchCommands(workspace: WorkspaceInfo | undefined): void {
         group: 'Branch',
         label: 'New branch…',
         icon: GitBranchPlus,
-        shortcut: 'mod+b',
+        shortcut: hotkey('newBranch'),
         disabled: !workspace,
         run: () => workspace && newBranchFromWorkspace(workspace),
       },

@@ -4,6 +4,7 @@ import { Button } from './Button';
 import { DetailsSection, DetailsText } from './DetailsPanel';
 import { Kbd } from './Kbd';
 import styles from './DetailsComment.module.css';
+import { hotkey } from '../lib/shortcutRegistry';
 
 interface DetailsCommentProps {
   text: string;
@@ -75,7 +76,7 @@ export function DetailsComment({ text, onSave }: DetailsCommentProps) {
           />
           <div className={styles.footer}>
             <span className={styles.hint}>
-              <Kbd keys="mod+enter" /> to save
+              <Kbd keys={hotkey('saveComment')} /> to save
             </span>
             <Button size="small" variant="ghost" onClick={() => setDraft(null)} disabled={saving}>
               Cancel

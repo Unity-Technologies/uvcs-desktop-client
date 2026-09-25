@@ -1,11 +1,10 @@
-import { ArrowDownToLine, Copy, FolderGit2, FolderOpen, Keyboard, ListChecks, Monitor, Moon, Pause, Play, RefreshCw, SquareTerminal, Sun, TerminalSquare } from 'lucide-react';
+import { ArrowDownToLine, Copy, FolderGit2, FolderOpen, ListChecks, Monitor, Moon, Pause, Play, RefreshCw, SquareTerminal, Sun, TerminalSquare } from 'lucide-react';
 import type { ThemePreference } from '@shared/domain/settings';
 import { setReviewMode } from '../../features/review/reviewModeSetting';
 import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorkspaceDialog';
 import type { Icon } from '../../lib/actions';
 import { useMemo } from 'react';
 import { useCommands, type Command } from '../commands/commandStore';
-import { openShortcutsDialog } from '../commands/ShortcutsDialog';
 import { navigation } from '../navigation/navigationStore';
 import { VIEWS } from '../navigation/viewRegistry';
 import { invalidateWorkspace } from '../queryClient';
@@ -15,6 +14,7 @@ import { useWorkspacePath } from '../workspace/useWorkspace';
 import { copyWorkspacePath, openTerminalIn } from '../workspace/workspaceShellActions';
 import { useCommandLogStore } from './commandLogStore';
 import { updateUnlessUpToDate } from './workspaceOperations';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 const THEMES: { theme: ThemePreference; label: string; icon: Icon }[] = [
   { theme: 'system', label: 'Use system theme', icon: Monitor },
@@ -45,7 +45,7 @@ export function useWorkspaceCommands(): void {
         group: 'Workspace',
         label: 'Update workspace',
         icon: ArrowDownToLine,
-        shortcut: 'mod+shift+u',
+        shortcut: hotkey('updateWorkspace'),
         run: () => void updateUnlessUpToDate(workspacePath),
       },
       {
@@ -53,7 +53,7 @@ export function useWorkspaceCommands(): void {
         group: 'Workspace',
         label: 'Refresh',
         icon: RefreshCw,
-        shortcut: 'mod+r',
+        shortcut: hotkey('refresh'),
         run: () => void invalidateWorkspace(workspacePath),
       },
       {
@@ -77,7 +77,7 @@ export function useWorkspaceCommands(): void {
         group: 'Workspace',
         label: 'Open another workspace…',
         icon: FolderOpen,
-        shortcut: 'mod+shift+o',
+        shortcut: hotkey('openWorkspace'),
         run: closeWorkspace,
       },
       {
@@ -109,16 +109,8 @@ export function useWorkspaceCommands(): void {
         group: 'App',
         label: 'Toggle command log',
         icon: TerminalSquare,
-        shortcut: 'mod+shift+l',
+        shortcut: hotkey('commandLog'),
         run: () => useCommandLogStore.getState().toggle(),
-      },
-      {
-        id: 'app.shortcuts',
-        group: 'App',
-        label: 'Keyboard shortcuts',
-        icon: Keyboard,
-        shortcut: 'mod+/',
-        run: openShortcutsDialog,
       },
       ...THEMES.map(({ theme: choice, label, icon }) => ({
         id: `app.theme.${choice}`,

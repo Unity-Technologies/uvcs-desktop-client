@@ -58,6 +58,7 @@ function SidebarViewItem({ view }: { view: ViewDefinition }) {
       dot={dot}
       active={active}
       dimmed={active && pages.length > 0}
+      shortcut={view.shortcut}
       onClick={() => goToView(view.id)}
     />
   );

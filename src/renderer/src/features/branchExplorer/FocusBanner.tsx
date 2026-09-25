@@ -3,6 +3,7 @@ import type { MenuEntry } from '../../lib/actions';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import type { GraphFocus } from './model/filterGraph';
 import styles from './BranchExplorerView.module.css';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 const FOCUS_HOPS: { hops: number; label: string }[] = [
   { hops: 1, label: 'Direct relatives' },
@@ -36,7 +37,7 @@ export function FocusBanner({ focus, onHopsChange, onExit }: FocusBannerProps) {
           <ChevronDown size={12} />
         </button>
       </ActionDropdownMenu>
-      <button className={styles.clearFocus} onClick={onExit} aria-label="Show all branches" data-tip="Show all branches" data-tip-shortcut="escape">
+      <button className={styles.clearFocus} onClick={onExit} aria-label="Show all branches" data-tip="Show all branches" data-tip-shortcut={hotkey('graphClear')}>
         <X size={13} />
       </button>
     </div>

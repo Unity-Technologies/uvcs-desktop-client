@@ -25,6 +25,7 @@ import { ItemDetailsPane } from './ItemDetailsPane';
 import { itemStatus, PendingChangesIndex } from './itemStatus';
 import { GO_TO_FILE_SHORTCUT, useFileCommands } from './useFileCommands';
 import { useTreeListings } from './useTreeListings';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 /** The workspace explorer: every file on disk with its version-control status. */
 export function FilesView() {
@@ -73,7 +74,7 @@ export function FilesView() {
           <IconButton icon={<Search size={14} />} label="Go to file" shortcut={GO_TO_FILE_SHORTCUT} onClick={openGoToFile} />
           <IconButton icon={<FilePlus size={14} />} label="New file" shortcut={FILE_SHORTCUTS.newFile} onClick={() => createInSelection('file')} />
           <IconButton icon={<FolderPlus size={14} />} label="New folder" shortcut={FILE_SHORTCUTS.newFolder} onClick={() => createInSelection('directory')} />
-          <IconButton icon={<RefreshCw size={14} />} label="Refresh" shortcut="mod+r" onClick={() => void invalidateWorkspace(workspacePath)} />
+          <IconButton icon={<RefreshCw size={14} />} label="Refresh" shortcut={hotkey('refresh')} onClick={() => void invalidateWorkspace(workspacePath)} />
         </>
       }
     >

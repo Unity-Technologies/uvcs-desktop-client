@@ -15,6 +15,7 @@ import { useSettings, useUpdateSettings } from '../settings/useSettings';
 import { useAccounts } from './accounts';
 import { cloudDashboardUrl, organizationName, signInMethod } from './serverAccount';
 import styles from './AccountMenu.module.css';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 interface AccountMenuProps {
   server: string;
@@ -89,10 +90,10 @@ export function AccountMenu({ server, identity, onDone }: AccountMenuProps) {
             segments={THEMES.map(({ value, label, icon: ThemeIcon }) => ({ value, label: <ThemeIcon size={13} />, title: label }))}
           />
         </div>
-        <MenuRow icon={<Settings size={14} />} onClick={closeThen(openSettingsDialog)} trailing={<Kbd keys="mod+," />}>
+        <MenuRow icon={<Settings size={14} />} onClick={closeThen(openSettingsDialog)} trailing={<Kbd keys={hotkey('settings')} />}>
           Settings…
         </MenuRow>
-        <MenuRow icon={<Keyboard size={14} />} onClick={closeThen(openShortcutsDialog)} trailing={<Kbd keys="mod+/" />}>
+        <MenuRow icon={<Keyboard size={14} />} onClick={closeThen(openShortcutsDialog)} trailing={<Kbd keys={hotkey('shortcuts')} />}>
           Keyboard shortcuts
         </MenuRow>
       </div>

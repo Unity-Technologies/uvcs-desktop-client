@@ -35,19 +35,24 @@ export function matchesShortcut(event: KeyboardEvent, shortcut: string): boolean
   const wantsMod = keys.includes('mod');
   const modPressed = isMac ? event.metaKey : event.ctrlKey;
 
+  // A symbol typed with Shift (`?`, `+`) is matched by the character, whatever Shift took to type it.
+  const shiftMatters = !SHIFTED_SYMBOLS.has(key);
+
   return (
     wantsMod === modPressed &&
-    keys.includes('shift') === event.shiftKey &&
+    (!shiftMatters || keys.includes('shift') === event.shiftKey) &&
     keys.includes('alt') === event.altKey &&
     (isMac ? keys.includes('ctrl') === event.ctrlKey : true) &&
     normalizeKey(event) === key
   );
 }
 
+const SHIFTED_SYMBOLS = new Set(['?', 'plus']);
+
 function normalizeKey(event: KeyboardEvent): string {
   if (event.code.startsWith('Digit')) return event.code.slice(5);
   if (event.code.startsWith('Key')) return event.code.slice(3).toLowerCase();
-  const named: Record<string, string> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', '+': 'plus' };
+  const named: Record<string, string> = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right', '+': 'plus', ' ': 'space' };
   return named[event.key] ?? event.key.toLowerCase();
 }
 

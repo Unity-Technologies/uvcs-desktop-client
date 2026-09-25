@@ -13,6 +13,7 @@ import { CheckinButtonWording } from './CheckinButtonWording';
 import { splitComment } from './checkinDraftStore';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import styles from './CheckinPanel.module.css';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 const DESCRIPTION_MIN_HEIGHT = 32;
 const DESCRIPTION_MAX_HEIGHT = 360;
@@ -61,7 +62,7 @@ export function CheckinPanel({
     if (mode === 'checkin') await onCheckin();
     else if (await onShelve()) setMode('checkin');
   };
-  useShortcut('mod+enter', () => void act(), canAct);
+  useShortcut(hotkey('checkin'), () => void act(), canAct);
 
   return (
     <div className={styles.panel}>
@@ -102,7 +103,7 @@ export function CheckinPanel({
           icon={merging && mode === 'checkin' ? <GitMerge size={14} /> : <ModeIcon size={14} />}
           aria-disabled={!canAct}
           data-tip={disabledReason ?? label.tip}
-          data-tip-shortcut={canAct ? 'mod+enter' : undefined}
+          data-tip-shortcut={canAct ? hotkey('checkin') : undefined}
           loading={busy}
           onClick={() => void act()}
         >

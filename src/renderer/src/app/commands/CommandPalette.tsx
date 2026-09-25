@@ -14,14 +14,16 @@ import { collapseGroups, COLLAPSED_ROWS, rankGroups, type SearchGroup, type Sear
 import { usePaletteSearch } from './usePaletteSearch';
 import { useWorkspaceResults } from './useWorkspaceResults';
 import styles from './CommandPalette.module.css';
+import { hotkeys } from '../../lib/shortcutRegistry';
 
 const MAX_COMMANDS = 50;
 
 export function CommandPalette() {
   const { isOpen: open, setOpen, toggle } = useCommandPalette();
 
-  useShortcut('mod+k', toggle);
-  useShortcut('mod+shift+p', () => setOpen(true));
+  const [toggleKey, openKey] = hotkeys('commandPalette');
+  useShortcut(toggleKey, toggle);
+  useShortcut(openKey, () => setOpen(true));
 
   return open ? <OpenPalette close={() => setOpen(false)} /> : null;
 }

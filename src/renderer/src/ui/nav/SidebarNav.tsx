@@ -32,12 +32,23 @@ interface NavItemProps {
   active?: boolean;
   /** Active, but a page is open on top of it. */
   dimmed?: boolean;
+  /** Shown in its tooltip. */
+  shortcut?: string;
   onClick: () => void;
 }
 
-export function NavItem({ icon, label, detail, badge, dot = false, active = false, dimmed = false, onClick }: NavItemProps) {
+export function NavItem({ icon, label, detail, badge, dot = false, active = false, dimmed = false, shortcut, onClick }: NavItemProps) {
   return (
-    <button type="button" className={styles.item} data-active={active} data-dimmed={dimmed} onClick={onClick}>
+    <button
+      type="button"
+      className={styles.item}
+      data-active={active}
+      data-dimmed={dimmed}
+      aria-current={active ? 'page' : undefined}
+      data-tip={shortcut && label}
+      data-tip-shortcut={shortcut}
+      onClick={onClick}
+    >
       <span className={styles.icon}>{icon}</span>
       <span className={styles.label}>{label}</span>
       {detail && <span className={styles.detail}>{detail}</span>}

@@ -5,6 +5,7 @@ import { Kbd } from '../../ui/Kbd';
 import { AccountButton } from '../account/AccountButton';
 import { useCommandPalette } from '../commands/commandPaletteStore';
 import styles from './TopBar.module.css';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 export function TopBar() {
   const setCommandPaletteOpen = useCommandPalette((state) => state.setOpen);
@@ -19,7 +20,7 @@ export function TopBar() {
       <button className={styles.search} data-tip="Fuzzy search files, branches, labels, changesets, shelves, code reviews and commands" onClick={() => setCommandPaletteOpen(true)}>
         <Search size={13} />
         <span>Search everything</span>
-        <Kbd keys="mod+k" />
+        <Kbd keys={hotkey('commandPalette')} />
       </button>
       <AccountButton />
     </div>

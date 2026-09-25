@@ -5,6 +5,7 @@ import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { prompt } from '../../ui/dialog/prompt';
 import { openMerge } from './mergeOperations';
 import { pickBranch } from '../branches/BranchPickerDialog';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 /** Palette commands to start any kind of merge. */
 export function useMergeCommands(): void {
@@ -18,7 +19,7 @@ export function useMergeCommands(): void {
         group: 'Merge',
         label: 'Merge from branch…',
         icon: GitMerge,
-        shortcut: 'mod+shift+m',
+        shortcut: hotkey('mergeFromBranch'),
         run: async () => {
           const branch = await pickBranch({ title: 'Merge from branch', exclude: currentBranch });
           if (branch) openMerge({ kind: 'merge', sourceSpec: `br:${branch}` });

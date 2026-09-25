@@ -2,6 +2,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { IconButton } from '../../ui/IconButton';
 import { SearchField } from '../../ui/SearchField';
 import styles from './BranchExplorerView.module.css';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 interface GraphSearchProps {
   search: string;
@@ -25,8 +26,8 @@ export function GraphSearch({ search, onSearchChange, position, onStep }: GraphS
       {position && (
         <>
           <span className={styles.searchCount}>{describePosition(position)}</span>
-          <IconButton size="small" icon={<ChevronUp size={14} />} label="Previous match" shortcut="shift+enter" onClick={() => onStep(-1)} />
-          <IconButton size="small" icon={<ChevronDown size={14} />} label="Next match" shortcut="enter" onClick={() => onStep(1)} />
+          <IconButton size="small" icon={<ChevronUp size={14} />} label="Previous match" shortcut={hotkey('graphPreviousMatch')} onClick={() => onStep(-1)} />
+          <IconButton size="small" icon={<ChevronDown size={14} />} label="Next match" shortcut={hotkey('graphNextMatch')} onClick={() => onStep(1)} />
         </>
       )}
       <SearchField value={search} onChange={onSearchChange} placeholder="Find in graph…" width={220} />

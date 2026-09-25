@@ -4,6 +4,7 @@ import { IconButton } from '../../../../ui/IconButton';
 import { type AnchorMode, zoomLabel } from './imageDiff';
 import type { PanZoom } from './usePanZoom';
 import styles from './ZoomControls.module.css';
+import { hotkey } from '../../../../lib/shortcutRegistry';
 
 interface ZoomControlsProps {
   panZoom: PanZoom;
@@ -19,10 +20,10 @@ export function ZoomControls({ panZoom, anchor, onAnchorChange }: ZoomControlsPr
       <button type="button" className={styles.percent} data-tip="Zoom to fit" onClick={panZoom.zoomToFit}>
         {zoomLabel(panZoom.transform.scale)}
       </button>
-      <ZoomButton icon={<ZoomIn size={15} />} label="Zoom in" shortcut="=" onClick={panZoom.zoomIn} />
-      <ZoomButton icon={<ZoomOut size={15} />} label="Zoom out" shortcut="-" onClick={panZoom.zoomOut} />
-      <ZoomButton icon={<Maximize size={15} />} label="Zoom to fit" shortcut="0" active={panZoom.fitted} onClick={panZoom.zoomToFit} />
-      <ZoomButton icon={<Scan size={15} />} label="Actual size" shortcut="1" onClick={panZoom.zoomToActualSize} />
+      <ZoomButton icon={<ZoomIn size={15} />} label="Zoom in" shortcut={hotkey('imageZoomIn')} onClick={panZoom.zoomIn} />
+      <ZoomButton icon={<ZoomOut size={15} />} label="Zoom out" shortcut={hotkey('imageZoomOut')} onClick={panZoom.zoomOut} />
+      <ZoomButton icon={<Maximize size={15} />} label="Zoom to fit" shortcut={hotkey('imageFit')} active={panZoom.fitted} onClick={panZoom.zoomToFit} />
+      <ZoomButton icon={<Scan size={15} />} label="Actual size" shortcut={hotkey('imageActualSize')} onClick={panZoom.zoomToActualSize} />
       {anchor && (
         <>
           <div className={styles.separator} />

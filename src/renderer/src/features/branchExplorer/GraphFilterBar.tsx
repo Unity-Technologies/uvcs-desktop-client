@@ -9,6 +9,7 @@ import { useBranchExplorerPreferences } from './branchExplorerStore';
 import { ZOOM_STEP } from './canvas/zoom';
 import { DATE_RANGES } from './model/dateRanges';
 import styles from './BranchExplorerView.module.css';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 interface GraphFilterBarProps {
   /** Every branch in the loaded history, by name. */
@@ -56,10 +57,10 @@ export function GraphFilterBar({ branches, authors, onZoom, onFit, onGoHome }: G
     { id: 'avatars', label: 'Show avatars', icon: check(preferences.showAvatars), run: () => set({ showAvatars: !preferences.showAvatars }) },
     { id: 'details', label: 'Show details panel', icon: check(preferences.detailsOpen), run: () => set({ detailsOpen: !preferences.detailsOpen }) },
     SEPARATOR,
-    { id: 'zoomIn', label: 'Zoom in', shortcut: 'plus', run: () => onZoom(ZOOM_STEP) },
-    { id: 'zoomOut', label: 'Zoom out', shortcut: '-', run: () => onZoom(1 / ZOOM_STEP) },
-    { id: 'fit', label: 'Fit to window', shortcut: '0', run: onFit },
-    { id: 'home', label: 'Go to workspace changeset', shortcut: 'h', run: onGoHome },
+    { id: 'zoomIn', label: 'Zoom in', shortcut: hotkey('graphZoomIn'), run: () => onZoom(ZOOM_STEP) },
+    { id: 'zoomOut', label: 'Zoom out', shortcut: hotkey('graphZoomOut'), run: () => onZoom(1 / ZOOM_STEP) },
+    { id: 'fit', label: 'Fit to window', shortcut: hotkey('graphFit'), run: onFit },
+    { id: 'home', label: 'Go to workspace changeset', shortcut: hotkey('graphHome'), run: onGoHome },
   ];
 
   return (

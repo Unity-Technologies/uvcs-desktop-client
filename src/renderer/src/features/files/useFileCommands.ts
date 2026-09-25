@@ -7,8 +7,9 @@ import { prompt } from '../../ui/dialog/prompt';
 import { FILE_SHORTCUTS } from './fileMenu';
 import { createItem, deleteItems, renameItem, targetDirectoryFor } from './fileOperations';
 import { useFilesViewStore } from './filesViewStore';
+import { hotkey } from '../../lib/shortcutRegistry';
 
-export const GO_TO_FILE_SHORTCUT = 'mod+p';
+export const GO_TO_FILE_SHORTCUT = hotkey('goToFile');
 
 async function browseRepositoryAtChangeset(): Promise<void> {
   const answer = await prompt({ title: 'Browse repository', label: 'Changeset number', confirmLabel: 'Browse' });

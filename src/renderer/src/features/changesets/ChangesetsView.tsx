@@ -19,6 +19,7 @@ import { ChangesetFiltersBar } from './ChangesetFiltersBar';
 import { changesetMenu } from './changesetMenu';
 import { openChangesetDiff, openRangeDiff } from './changesetOperations';
 import { useChangesets } from './useChangesets';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 const changesetKey = (changeset: Changeset): string => String(changeset.id);
 
@@ -51,7 +52,7 @@ export function ChangesetsView() {
           id: 'changesets.diff',
           group: 'Changesets',
           label: selected.length === 2 ? 'Diff selected changesets' : 'Diff selected changeset',
-          shortcut: 'mod+d',
+          shortcut: hotkey('listDiff'),
           disabled: selected.length === 0 || selected.length > 2,
           run: () => (selected.length === 2 ? openRangeDiff(...sortedPair(selected)) : openChangesetDiff(selected[0]!)),
         },
