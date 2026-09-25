@@ -20,16 +20,24 @@ interface ListedItem {
   title: string;
 }
 
-/** The files a task merge changes, or the ones in conflict (`conflicts`). */
-export function MergeTaskFileList({ plan, conflicts = false }: { plan: MergePlan; conflicts?: boolean }) {
+interface MergeTaskFileListProps {
+  plan: MergePlan;
+  /** Lists the files in conflict instead of the changes. */
+  conflicts?: boolean;
+  /** Opens a file's diff (its path without the leading slash). */
+  onOpen: (path: string) => void;
+}
+
+/** The files a task merge changes, or the ones in conflict (`conflicts`); clicking one opens its diff. */
+export function MergeTaskFileList({ plan, conflicts = false, onOpen }: MergeTaskFileListProps) {
   const items = conflicts ? conflictItems(plan) : changeItems(plan);
   return (
     <div className={styles.files}>
       {items.slice(0, MAX_LISTED).map((item) => (
-        <div key={`${item.tone}:${item.path}`} className={styles.file}>
+        <button key={`${item.tone}:${item.path}`} type="button" className={styles.file} onClick={() => onOpen(item.path)} data-tip="Show the diff">
           <StatusBadge tone={item.tone} title={item.title} />
-          <PathLabel path={item.path} oldPath={item.oldPath} strikethrough={item.tone === 'deleted'} />
-        </div>
+          <PathLabel path={item.path} oldPath={item.oldPath} strikethrough={item.tone === 'deleted'} tooltip={false} />
+        </button>
       ))}
       {items.length > MAX_LISTED && <div className={styles.more}>And {items.length - MAX_LISTED} more</div>}
     </div>

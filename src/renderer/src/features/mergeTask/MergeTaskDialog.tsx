@@ -6,6 +6,7 @@ import type { MergePlan } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
+import { navigation } from '../../app/navigation/navigationStore';
 import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
@@ -15,6 +16,7 @@ import { OptionCards } from '../../ui/OptionCards';
 import { Spinner } from '../../ui/Spinner';
 import { TextArea } from '../../ui/TextField';
 import { pickBranch } from '../branches/BranchPickerDialog';
+import { openChangesetDiff } from '../changesets/changesetOperations';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
 import { destinationMovedExplanation, openMerge } from '../merge/mergeOperations';
@@ -97,6 +99,13 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
     else void resolveOnDestination(workspacePath, currentBranch, sourceSpec, destination);
   };
 
+  // The diff of what the task brings: the whole branch, or the changeset merged next.
+  const openFileDiff = (path: string): void => {
+    onClose();
+    if (fromTaskBranch) navigation.openPage({ kind: 'diff', title: `Branch ${branch.name}`, target: { kind: 'branch', branch: branch.name }, focusPath: path });
+    else openChangesetDiff({ id: Number(sourceSpec.slice('cs:'.length)) }, path);
+  };
+
   const keepOneSideOnServer = (): void => {
     onClose();
     openMerge(request);
@@ -159,7 +168,7 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
             <CheckCircle2 size={15} />
             {cleanSummary(changesetCount, preview.data.changes.length, destination)}
           </p>
-          <MergeTaskFileList plan={preview.data} />
+          <MergeTaskFileList plan={preview.data} onOpen={openFileDiff} />
           <TextArea label="Comment" value={comment} onChange={(event) => setComment(event.target.value)} />
           {canMarkReviewed(review) && (
             <Checkbox label={`Mark the code review as reviewed (“${review.title}”)`} checked={markReviewed} onChange={setMarkReviewed} />
@@ -177,7 +186,7 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
             {branch.name} and {destination} changed the same files. The server can’t ask you how to combine them, so resolve
             them in your workspace, then merge again.
           </p>
-          <MergeTaskFileList plan={preview.data} conflicts />
+          <MergeTaskFileList plan={preview.data} conflicts onOpen={openFileDiff} />
           {fromTaskBranch && (
             <OptionCards<ConflictPath>
               label="How to resolve them"
