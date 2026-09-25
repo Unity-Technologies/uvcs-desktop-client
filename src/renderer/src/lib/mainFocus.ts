@@ -24,7 +24,9 @@ export function focusMain(root: ParentNode): boolean {
 
 /** Something else holds the keyboard: a dialog, a menu, a popover or a text field. */
 export function isKeyboardTaken(): boolean {
-  const active = document.activeElement;
+  let active = document.activeElement;
+  // A text field inside a shadow root (the diff's editor) shows as its host.
+  while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
   if (active instanceof HTMLElement && (active.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName))) return true;
   return document.querySelector('[role="dialog"], [role="alertdialog"], [role="menu"], [data-radix-popper-content-wrapper]') !== null;
 }

@@ -2,7 +2,9 @@ import { useEffect } from 'react';
 import { matchesShortcut } from '../../lib/shortcuts';
 import { allCommands } from './commandStore';
 
-function isTyping(target: EventTarget | null): boolean {
+/** The element typed into, also inside a shadow root (the diff's editor), where `event.target` is its host. */
+function isTyping(event: KeyboardEvent): boolean {
+  const target = event.composedPath()[0];
   return target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
 }
 
@@ -11,7 +13,7 @@ export function CommandShortcuts() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
       const usesModifier = event.metaKey || event.ctrlKey || event.altKey;
-      if (!usesModifier && isTyping(event.target)) return;
+      if (!usesModifier && isTyping(event)) return;
 
       const command = allCommands().find((candidate) => candidate.shortcut && !candidate.disabled && matchesShortcut(event, candidate.shortcut));
       if (!command) return;
