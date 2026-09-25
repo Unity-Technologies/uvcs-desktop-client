@@ -1,4 +1,5 @@
 import type { UvcsApi } from '@shared/api';
+import { createAccountsService } from './accountsService';
 import { createAnnotateService } from './annotateService';
 import { createAttributesService } from './attributesService';
 import { createBranchExplorerService } from './branchExplorerService';
@@ -23,6 +24,7 @@ import type { ServiceContext } from './ServiceContext';
 
 export function createServices(context: ServiceContext): UvcsApi {
   return {
+    accounts: createAccountsService(context),
     annotate: createAnnotateService(context),
     attributes: createAttributesService(context),
     branchExplorer: createBranchExplorerService(context),

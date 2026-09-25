@@ -1,3 +1,4 @@
+import type { AccountsApi } from './accounts';
 import type { AnnotateApi } from './annotate';
 import type { AttributesApi } from './attributes';
 import type { BranchExplorerApi } from './branchExplorer';
@@ -24,6 +25,7 @@ import type { WorkspacesApi } from './workspaces';
  * Each area is exposed over IPC as `<area>.<method>`.
  */
 export interface UvcsApi {
+  accounts: AccountsApi;
   annotate: AnnotateApi;
   attributes: AttributesApi;
   branchExplorer: BranchExplorerApi;
