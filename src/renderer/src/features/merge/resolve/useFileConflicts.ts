@@ -33,6 +33,8 @@ export interface FileConflictState {
   /** The automatic three-way merge, for text files. */
   document?: ConflictDocument;
   decision?: FileConflictDecision;
+  /** The decision is the user's, not the one the file started with. */
+  decidedByUser: boolean;
   resolution: FileConflictResolution | null;
   /** Merged with no conflicting regions and not touched by the user. */
   mergedAutomatically: boolean;
@@ -94,7 +96,7 @@ function loadFile(versions: { data?: FileContent; error: Error | null }[], label
 }
 
 function toState(file: ConflictedFile, loaded: LoadedFile, userDecision: FileConflictDecision | undefined): FileConflictState {
-  const waiting = { file, isBinary: false, resolution: null, mergedAutomatically: false, remainingConflicts: 0 };
+  const waiting = { file, isBinary: false, decidedByUser: false, resolution: null, mergedAutomatically: false, remainingConflicts: 0 };
   if (loaded.status === 'loading') return { ...waiting, status: 'loading' };
   if (loaded.status === 'error') return { ...waiting, status: 'error', error: loaded.error };
 
@@ -106,6 +108,7 @@ function toState(file: ConflictedFile, loaded: LoadedFile, userDecision: FileCon
     isBinary: !loaded.document,
     document: loaded.document,
     decision,
+    decidedByUser: Boolean(userDecision),
     resolution: resolutionOf(decision),
     mergedAutomatically: !userDecision && loaded.document?.conflictCount === 0,
     remainingConflicts: remainingConflicts(decision),

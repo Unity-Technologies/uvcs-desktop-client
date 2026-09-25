@@ -4,18 +4,22 @@ import { spec } from '@shared/domain/specs';
 import { PathLabel } from '../../components/PathLabel';
 import { EmptyState } from '../../ui/EmptyState';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
+import type { MergeLabels } from './mergeDescription';
+import { describeChange } from './mergeStatus';
+import styles from './MergeChangePreview.module.css';
 
 interface MergeChangePreviewProps {
   workspacePath: string;
   request: MergeRequest;
   change: MergeChange;
   contributors: MergeContributors | undefined;
+  labels: MergeLabels;
 }
 
-/** What a cleanly-applying change does: the version before against the version it leads to. */
-export function MergeChangePreview({ workspacePath, request, change, contributors }: MergeChangePreviewProps) {
+/** What a cleanly-applying change will do: the version before against the version it leads to. */
+export function MergeChangePreview({ workspacePath, request, change, contributors, labels }: MergeChangePreviewProps) {
   if (!contributors || change.kind === 'permissions') {
-    return <EmptyState title={change.path} description="Only the file permissions change." />;
+    return <EmptyState title={change.path} description="Only the file permissions will change." />;
   }
 
   const { original, modified } = versionsToCompare(change, contributors, request);
@@ -25,7 +29,12 @@ export function MergeChangePreview({ workspacePath, request, change, contributor
       original={original}
       modified={modified}
       fileName={change.path}
-      title={<PathLabel path={change.path.replace(/^\//, '')} oldPath={change.oldPath?.replace(/^\//, '')} />}
+      title={
+        <span className={styles.title}>
+          <PathLabel path={change.path.replace(/^\//, '')} oldPath={change.oldPath?.replace(/^\//, '')} />
+          <span className={styles.outcome}>{describeChange(change, labels)}</span>
+        </span>
+      }
     />
   );
 }

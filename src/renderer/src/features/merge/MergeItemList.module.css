@@ -59,20 +59,10 @@
   color: var(--status-conflict);
 }
 
-.tag {
+.status {
+  display: flex;
   flex: none;
   margin-left: auto;
-  padding: 0 6px;
-  border-radius: var(--radius-full);
-  background: var(--bg-hover);
-  color: var(--text-tertiary);
-  font-size: var(--text-xs);
-  line-height: 16px;
-}
-
-.tag[data-pending='true'] {
-  background: color-mix(in srgb, var(--status-conflict) 14%, transparent);
-  color: var(--status-conflict);
 }
 
 .list:focus-visible .row[data-selected='true'] {

@@ -17,6 +17,7 @@ function state(key: string, options: Partial<FileConflictState>): FileConflictSt
     file: { key, path: key, base: { kind: 'empty' }, source: { kind: 'empty' }, destination: { kind: 'empty' } },
     status: 'ready',
     isBinary: false,
+    decidedByUser: false,
     resolution: null,
     mergedAutomatically: false,
     remainingConflicts: 0,

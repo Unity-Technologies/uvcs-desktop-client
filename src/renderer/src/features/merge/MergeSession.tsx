@@ -10,6 +10,7 @@ import { MergeItemList } from './MergeItemList';
 import { buildMergeItems, needsDecision, toListRows } from './mergeItems';
 import { completeMerge } from './mergeOperations';
 import { collectResolutions, needsServerFilePolicy, type ServerFilePolicy } from './mergeResolutions';
+import { conflictStatusOf, summarizePlan } from './mergeStatus';
 import { useFileConflicts, type FileConflictState } from './resolve/useFileConflicts';
 import styles from './MergeSession.module.css';
 
@@ -35,7 +36,6 @@ export function MergeSession({ workspacePath, request, plan }: MergeSessionProps
   const decidedFileStates = serverPolicyNeeded ? withServerPolicy(fileStates, serverFilePolicy) : fileStates;
   const items = buildMergeItems(plan, decidedFileStates, directoryResolutions);
   const rows = toListRows(items);
-  const pendingCount = items.filter(needsDecision).length;
   const resolutions = collectResolutions({
     plan,
     fileStates,
@@ -54,6 +54,8 @@ export function MergeSession({ workspacePath, request, plan }: MergeSessionProps
   const resolveDirectoryConflict = (index: number, resolution: DirectoryConflictResolution): void =>
     setDirectoryResolutions((current) => Object.assign([...current], { [index]: resolution }));
 
+  const conflictStatuses = items.map(conflictStatusOf).filter((status) => status !== null);
+
   const merge = async (): Promise<void> => {
     if (!resolutions) return;
     setMerging(true);
@@ -67,7 +69,7 @@ export function MergeSession({ workspacePath, request, plan }: MergeSessionProps
         request={request}
         plan={plan}
         labels={labels}
-        pendingCount={pendingCount}
+        summary={summarizePlan(plan.changes.length, conflictStatuses)}
         intoServerBranch={intoServerBranch}
         comment={comment}
         onCommentChange={setComment}
@@ -79,7 +81,7 @@ export function MergeSession({ workspacePath, request, plan }: MergeSessionProps
         initialSize={360}
         minSize={240}
         maxSize={640}
-        first={<MergeItemList rows={rows} selectedKey={selectedKey} onSelect={setSelectedKey} />}
+        first={<MergeItemList rows={rows} labels={labels} selectedKey={selectedKey} onSelect={setSelectedKey} />}
         second={
           selected ? (
             <MergeDetail
@@ -96,7 +98,6 @@ export function MergeSession({ workspacePath, request, plan }: MergeSessionProps
               }}
               onDecideFile={decide}
               onStartOverFile={reset}
-              directoryResolution={selected.kind === 'directoryConflict' ? directoryResolutions[selected.index] : undefined}
               onResolveDirectory={resolveDirectoryConflict}
             />
           ) : (

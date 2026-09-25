@@ -5,19 +5,18 @@ import type { MergeItem } from './mergeItems';
 import type { ServerFilePolicy } from './mergeResolutions';
 import { FileConflictPanel } from './resolve/FileConflictPanel';
 import type { FileConflictDecision } from './resolve/fileConflictDecision';
-import type { ConflictLabels } from './resolve/threeWayMerge';
+import type { MergeLabels } from './mergeDescription';
 import { ServerFilePolicyPanel } from './ServerFilePolicyPanel';
 
 interface MergeDetailProps {
   workspacePath: string;
   item: MergeItem;
   plan: MergePlan;
-  labels: ConflictLabels;
+  labels: MergeLabels;
   request: MergeRequest;
   serverPolicy: { needed: boolean; fileCount: number; policy: ServerFilePolicy | undefined; onChoose: (policy: ServerFilePolicy) => void };
   onDecideFile: (key: string, decision: FileConflictDecision) => void;
   onStartOverFile: (key: string) => void;
-  directoryResolution: DirectoryConflictResolution | undefined;
   onResolveDirectory: (index: number, resolution: DirectoryConflictResolution) => void;
 }
 
@@ -31,7 +30,6 @@ export function MergeDetail({
   serverPolicy,
   onDecideFile,
   onStartOverFile,
-  directoryResolution,
   onResolveDirectory,
 }: MergeDetailProps) {
   switch (item.kind) {
@@ -41,7 +39,7 @@ export function MergeDetail({
           key={item.key}
           conflict={item.conflict}
           labels={labels}
-          resolution={directoryResolution}
+          resolution={item.resolution}
           onResolve={(resolution) => onResolveDirectory(item.index, resolution)}
         />
       );
@@ -68,6 +66,6 @@ export function MergeDetail({
         />
       );
     case 'change':
-      return <MergeChangePreview workspacePath={workspacePath} request={request} change={item.change} contributors={plan.contributors} />;
+      return <MergeChangePreview workspacePath={workspacePath} request={request} change={item.change} contributors={plan.contributors} labels={labels} />;
   }
 }

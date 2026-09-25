@@ -19,11 +19,35 @@ export function describeSpec(objectSpec: string): string {
   }
 }
 
+/** What a side is called in words, next to (or instead of) its branch name. */
+export interface SideRole {
+  /** "Yours", "Incoming". */
+  name: string;
+  /** "your version", "the incoming version". */
+  version: string;
+}
+
+/** Branch names for the conflict markers, and the words the page calls each side by. */
+export interface MergeLabels extends ConflictLabels {
+  roles: { source: SideRole; destination: SideRole };
+}
+
+/** In a workspace the destination is the user's own version; merging into a server branch, neither side is. */
+export const WORKSPACE_ROLES: MergeLabels['roles'] = {
+  source: { name: 'Incoming', version: 'the incoming version' },
+  destination: { name: 'Yours', version: 'your version' },
+};
+const SERVER_ROLES: MergeLabels['roles'] = {
+  source: { name: 'Source', version: 'the source version' },
+  destination: { name: 'Destination', version: 'the destination version' },
+};
+
 /** How the two sides are named everywhere in the merge: branch names when known. */
-export function mergeLabels(request: MergeRequest, plan: MergePlan | undefined): ConflictLabels {
+export function mergeLabels(request: MergeRequest, plan: MergePlan | undefined): MergeLabels {
   return {
     source: request.sourceSpec.startsWith('cs:') ? plan?.contributors?.source.branch || describeSpec(request.sourceSpec) : describeSpec(request.sourceSpec),
     destination: request.destinationBranch ?? plan?.contributors?.destination.branch ?? 'your workspace',
+    roles: request.destinationBranch ? SERVER_ROLES : WORKSPACE_ROLES,
   };
 }
 
