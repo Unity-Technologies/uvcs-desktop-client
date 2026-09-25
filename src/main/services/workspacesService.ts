@@ -1,16 +1,12 @@
 import type { CreateWorkspaceRequest, WorkspacesApi } from '@shared/api/workspaces';
-import type { SelectorKind, WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
+import type { WorkspaceInfo, WorkspaceSummary } from '@shared/domain/workspace';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
-import { child, integer, parseXml, text } from '../cm/parseXml';
 import { resolveWorkspaceRepositories } from '../cm/workspaceRepositories';
+import { readWorkspaceStatus } from '../cm/workspaceStatus';
+import { CmError } from '../cm/CmError';
 import type { ServiceContext } from './ServiceContext';
 
-const SELECTOR_KINDS: Record<string, SelectorKind> = {
-  Branch: 'branch',
-  Changeset: 'changeset',
-  Label: 'label',
-  Shelve: 'shelve',
-};
+const UPDATE_NEEDS_MERGE = 'Some of your local changes collide with incoming ones. Open Incoming to merge them while updating.';
 
 export function createWorkspacesService({ cm, operations, watcher }: ServiceContext): WorkspacesApi {
   async function list(): Promise<WorkspaceSummary[]> {
@@ -21,28 +17,16 @@ export function createWorkspacesService({ cm, operations, watcher }: ServiceCont
   }
 
   async function info(workspacePath: string): Promise<WorkspaceInfo> {
-    const [statusXml, nameOutput] = await Promise.all([
-      cm.query(['status', '--header', '--xml'], { cwd: workspacePath }),
+    const [status, nameOutput] = await Promise.all([
+      readWorkspaceStatus(cm, workspacePath),
       cm.query(['getworkspacefrompath', workspacePath, '--format={wkname}']),
     ]);
-    const status = child(parseXml(statusXml, []), 'StatusOutput');
-    const workspaceStatus = child(child(status, 'WorkspaceStatus'), 'Status');
-    const repSpec = child(workspaceStatus, 'RepSpec');
-    const repositoryName = text(repSpec?.Name);
-    const server = text(repSpec?.Server);
-    const configName = text(status?.WkConfigName);
 
     return {
       name: nameOutput.trim(),
       path: workspacePath,
-      repository: `${repositoryName}@${server}`,
-      repositoryName,
-      server,
-      selector: {
-        kind: SELECTOR_KINDS[text(status?.WkConfigType)] ?? 'branch',
-        name: configName.slice(0, configName.lastIndexOf(`@${repositoryName}@`)) || configName,
-      },
-      loadedChangeset: integer(workspaceStatus?.Changeset),
+      repository: `${status.repositoryName}@${status.server}`,
+      ...status,
     };
   }
 
@@ -73,11 +57,17 @@ export function createWorkspacesService({ cm, operations, watcher }: ServiceCont
 
   function update(workspacePath: string, operationId: string): Promise<void> {
     return operations.run(operationId, async ({ signal, reportProgress }) => {
-      await cm.execute(['update', '--machinereadable', '--noinput'], {
-        cwd: workspacePath,
-        signal,
-        onOutputLine: reportProgress,
-      });
+      // --dontmerge: never launch an external merge tool. Conflicts with local changes are resolved in the Incoming view.
+      try {
+        await cm.execute(['update', '--machinereadable', '--noinput', '--dontmerge'], {
+          cwd: workspacePath,
+          signal,
+          onOutputLine: reportProgress,
+        });
+      } catch (error) {
+        if (error instanceof CmError && error.message.includes('--dontmerge')) throw new Error(UPDATE_NEEDS_MERGE);
+        throw error;
+      }
     });
   }
 

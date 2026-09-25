@@ -43,6 +43,13 @@ textarea {
   box-shadow: var(--focus-ring);
 }
 
+/* Text fields show focus with their own border (see Field.module.css); borderless ones, such as
+   the search box of a popover, only need the caret. */
+input:focus-visible,
+textarea:focus-visible {
+  box-shadow: none;
+}
+
 ::selection {
   background: var(--bg-selected-strong);
 }

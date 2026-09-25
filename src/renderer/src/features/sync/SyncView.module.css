@@ -44,7 +44,7 @@
 .direction {
   flex: none;
   margin-bottom: 5px;
-  color: var(--accent);
+  color: var(--accent-text);
 }
 
 .picker {

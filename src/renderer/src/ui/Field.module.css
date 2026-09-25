@@ -66,8 +66,7 @@
 
 .search .input {
   padding-left: 28px;
-  background: var(--bg-hover);
-  border-color: transparent;
+  background: var(--bg-subtle);
 }
 
 .search .input:focus {

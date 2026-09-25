@@ -3,8 +3,8 @@
   flex: none;
   align-items: center;
   gap: var(--space-2);
-  height: 44px;
-  padding: 0 var(--space-3);
+  height: var(--topbar-height);
+  padding: 0 var(--space-3) 0 var(--space-2);
   border-bottom: 1px solid var(--border-subtle);
   -webkit-app-region: drag;
 }
@@ -22,13 +22,19 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  height: 26px;
+  width: 240px;
+  height: var(--control-height);
   padding: 0 6px 0 10px;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-md);
-  background: var(--bg-hover);
+  background: var(--bg-subtle);
   color: var(--text-tertiary);
   font-size: var(--text-sm);
+}
+
+.search > span:first-of-type {
+  flex: 1;
+  text-align: left;
 }
 
 .search:hover {

@@ -10,6 +10,10 @@
   --text-xl: 20px;
   --text-2xl: 26px;
 
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
@@ -18,15 +22,17 @@
   --space-6: 24px;
   --space-8: 32px;
 
-  --radius-sm: 5px;
-  --radius-md: 7px;
-  --radius-lg: 10px;
-  --radius-xl: 14px;
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 12px;
   --radius-full: 999px;
 
   --row-height: 30px;
   --control-height: 28px;
-  --topbar-height: 48px;
+  --topbar-height: 44px;
+  --view-header-height: 48px;
+  --toolbar-height: 40px;
 
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   /* Keyframes live in global.css; CSS modules reference them through these variables
@@ -37,84 +43,100 @@
   --duration-fast: 120ms;
   --duration-normal: 200ms;
 
-  --accent: #6d5dfc;
-  --accent-hover: #5e4ef0;
   --accent-contrast: #ffffff;
-  --accent-soft: rgba(109, 93, 252, 0.12);
-  --focus-ring: 0 0 0 3px rgba(109, 93, 252, 0.35);
-
-  --status-added: #2fa36b;
-  --status-changed: #d9922e;
-  --status-deleted: #e5534b;
-  --status-moved: #3d8bfd;
-  --status-private: #8a8f98;
-  --status-conflict: #e5534b;
 }
 
 :root,
 [data-theme='light'] {
   color-scheme: light;
-  --bg-app: #f6f6f8;
-  --bg-sidebar: #efeff3;
+
+  --accent: #0969da;
+  --accent-hover: #0860c7;
+  --accent-soft: rgba(9, 105, 218, 0.1);
+  --accent-text: #0969da;
+  --focus-ring: 0 0 0 3px rgba(9, 105, 218, 0.3);
+
+  --status-added: #1a7f37;
+  --status-changed: #bf8700;
+  --status-deleted: #cf222e;
+  --status-moved: #0e7c86;
+  --status-private: #6e7781;
+  --status-conflict: #cf222e;
+
+  --bg-app: #f6f8fa;
+  --bg-sidebar: #f6f8fa;
   --bg-surface: #ffffff;
   --bg-surface-raised: #ffffff;
-  --bg-hover: rgba(20, 20, 40, 0.05);
-  --bg-active: rgba(20, 20, 40, 0.08);
-  --bg-selected: rgba(109, 93, 252, 0.12);
-  --bg-selected-strong: rgba(109, 93, 252, 0.2);
+  --bg-subtle: #f6f8fa;
+  --bg-hover: rgba(31, 35, 40, 0.05);
+  --bg-active: rgba(31, 35, 40, 0.08);
+  --bg-selected: rgba(9, 105, 218, 0.08);
+  --bg-selected-strong: rgba(9, 105, 218, 0.14);
   --bg-input: #ffffff;
-  --bg-code: #fbfbfc;
-  --border-subtle: rgba(20, 20, 40, 0.07);
-  --border-default: rgba(20, 20, 40, 0.12);
-  --border-strong: rgba(20, 20, 40, 0.2);
-  --text-primary: #17181c;
-  --text-secondary: #5d606b;
-  --text-tertiary: #8b8e98;
+  --bg-code: #f6f8fa;
+  --border-subtle: #eaeef2;
+  --border-default: #d0d7de;
+  --border-strong: #afb8c1;
+  --text-primary: #1f2328;
+  --text-secondary: #59636e;
+  --text-tertiary: #818b98;
   --text-inverse: #ffffff;
-  --shadow-sm: 0 1px 2px rgba(15, 15, 30, 0.06);
-  --shadow-md: 0 4px 16px rgba(15, 15, 30, 0.1), 0 1px 3px rgba(15, 15, 30, 0.06);
-  --shadow-lg: 0 18px 50px rgba(15, 15, 30, 0.18), 0 2px 8px rgba(15, 15, 30, 0.08);
-  --diff-added-bg: rgba(47, 163, 107, 0.12);
-  --diff-added-strong: rgba(47, 163, 107, 0.28);
-  --diff-removed-bg: rgba(229, 83, 75, 0.1);
-  --diff-removed-strong: rgba(229, 83, 75, 0.26);
-  --overlay: rgba(20, 20, 30, 0.28);
-  --label-bg: rgba(232, 164, 0, 0.14);
-  --label-text: #9a6b00;
-  --search-highlight: #e8a400;
+  --shadow-sm: 0 1px 0 rgba(31, 35, 40, 0.04);
+  --shadow-md: 0 3px 12px rgba(31, 35, 40, 0.12), 0 1px 3px rgba(31, 35, 40, 0.06);
+  --shadow-lg: 0 12px 40px rgba(31, 35, 40, 0.16), 0 2px 6px rgba(31, 35, 40, 0.08);
+  --diff-added-bg: rgba(26, 127, 55, 0.1);
+  --diff-added-strong: rgba(26, 127, 55, 0.24);
+  --diff-removed-bg: rgba(207, 34, 46, 0.08);
+  --diff-removed-strong: rgba(207, 34, 46, 0.22);
+  --overlay: rgba(31, 35, 40, 0.3);
+  --label-bg: rgba(191, 135, 0, 0.12);
+  --label-text: #8a6100;
+  --search-highlight: #d4a72c;
 }
 
 [data-theme='dark'] {
   color-scheme: dark;
-  --bg-app: #111216;
-  --bg-sidebar: #16171c;
-  --bg-surface: #1a1b20;
-  --bg-surface-raised: #22232a;
-  --bg-hover: rgba(255, 255, 255, 0.05);
-  --bg-active: rgba(255, 255, 255, 0.08);
-  --bg-selected: rgba(130, 118, 255, 0.18);
-  --bg-selected-strong: rgba(130, 118, 255, 0.3);
-  --bg-input: #15161a;
-  --bg-code: #16171b;
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.1);
-  --border-strong: rgba(255, 255, 255, 0.18);
-  --text-primary: #ececf1;
-  --text-secondary: #a2a4ae;
-  --text-tertiary: #6f727c;
-  --text-inverse: #111216;
-  --accent: #8276ff;
-  --accent-hover: #9186ff;
-  --accent-soft: rgba(130, 118, 255, 0.16);
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
-  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.45), 0 1px 3px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.6), 0 2px 8px rgba(0, 0, 0, 0.4);
-  --diff-added-bg: rgba(63, 185, 120, 0.12);
-  --diff-added-strong: rgba(63, 185, 120, 0.3);
-  --diff-removed-bg: rgba(248, 97, 89, 0.11);
-  --diff-removed-strong: rgba(248, 97, 89, 0.3);
-  --overlay: rgba(0, 0, 0, 0.5);
-  --label-bg: rgba(245, 196, 81, 0.16);
-  --label-text: #f5c451;
-  --search-highlight: #f5c451;
+
+  --accent: #1f6feb;
+  --accent-hover: #388bfd;
+  --accent-soft: rgba(56, 139, 253, 0.15);
+  --accent-text: #4493f8;
+  --focus-ring: 0 0 0 3px rgba(56, 139, 253, 0.4);
+
+  --status-added: #3fb950;
+  --status-changed: #d29922;
+  --status-deleted: #f85149;
+  --status-moved: #39c5cf;
+  --status-private: #8b949e;
+  --status-conflict: #f85149;
+
+  --bg-app: #0d1117;
+  --bg-sidebar: #0d1117;
+  --bg-surface: #151b23;
+  --bg-surface-raised: #1c2330;
+  --bg-subtle: #0f141b;
+  --bg-hover: rgba(177, 186, 196, 0.08);
+  --bg-active: rgba(177, 186, 196, 0.12);
+  --bg-selected: rgba(56, 139, 253, 0.12);
+  --bg-selected-strong: rgba(56, 139, 253, 0.2);
+  --bg-input: #0d1117;
+  --bg-code: #0f141b;
+  --border-subtle: #212830;
+  --border-default: #30363d;
+  --border-strong: #484f58;
+  --text-primary: #e6edf3;
+  --text-secondary: #9198a1;
+  --text-tertiary: #6e7681;
+  --text-inverse: #0d1117;
+  --shadow-sm: 0 1px 0 rgba(1, 4, 9, 0.3);
+  --shadow-md: 0 6px 20px rgba(1, 4, 9, 0.5), 0 1px 3px rgba(1, 4, 9, 0.35);
+  --shadow-lg: 0 16px 48px rgba(1, 4, 9, 0.65), 0 2px 8px rgba(1, 4, 9, 0.4);
+  --diff-added-bg: rgba(46, 160, 67, 0.14);
+  --diff-added-strong: rgba(46, 160, 67, 0.32);
+  --diff-removed-bg: rgba(248, 81, 73, 0.12);
+  --diff-removed-strong: rgba(248, 81, 73, 0.3);
+  --overlay: rgba(1, 4, 9, 0.6);
+  --label-bg: rgba(210, 153, 34, 0.16);
+  --label-text: #e3b341;
+  --search-highlight: #e3b341;
 }

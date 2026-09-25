@@ -2,14 +2,14 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  height: 24px;
-  padding: 0 var(--space-2);
-  border: 1px solid var(--border-subtle);
+  height: var(--control-height);
+  padding: 0 10px;
+  border: 1px solid var(--border-default);
   border-radius: var(--radius-full);
   background: transparent;
   color: var(--text-secondary);
   font-size: var(--text-sm);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   white-space: nowrap;
   transition:
     background var(--duration-fast),
@@ -22,7 +22,12 @@
 }
 
 .chip[aria-pressed='true'] {
-  border-color: transparent;
+  border-color: color-mix(in srgb, var(--accent) 35%, transparent);
   background: var(--accent-soft);
-  color: var(--accent);
+  color: var(--accent-text);
+}
+
+.chevron {
+  margin-right: -2px;
+  opacity: 0.7;
 }

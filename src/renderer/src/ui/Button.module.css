@@ -8,7 +8,7 @@
   border: 1px solid transparent;
   border-radius: var(--radius-md);
   font-size: var(--text-md);
-  font-weight: 500;
+  font-weight: var(--weight-medium);
   white-space: nowrap;
   cursor: default;
   transition:
@@ -36,6 +36,7 @@
 
 .primary {
   background: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 80%, black);
   color: var(--accent-contrast);
   box-shadow: var(--shadow-sm);
 }
@@ -51,7 +52,7 @@
 }
 
 .secondary:hover {
-  background: var(--bg-hover);
+  background: var(--bg-subtle);
   border-color: var(--border-strong);
 }
 
@@ -67,7 +68,7 @@
 
 .danger {
   background: var(--status-deleted);
-  color: #fff;
+  color: var(--accent-contrast);
 }
 
 .danger:hover {

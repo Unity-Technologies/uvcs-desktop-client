@@ -1,5 +1,6 @@
-import { Clock, Cloud, HardDrive, Layers, Server, Settings } from 'lucide-react';
+import { Clock, Cloud, GitBranch, HardDrive, Layers, Server, Settings } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { NavFooter, NavGroup, NavGroups, NavItem, Sidebar } from '../../ui/nav/SidebarNav';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { openSettingsDialog } from '../settings/SettingsDialog';
 import { useServers } from '../workspace/workspaceQueries';
@@ -15,43 +16,37 @@ export function HomeSidebar({ section, onSelect }: HomeSidebarProps) {
   const { data: servers, isLoading } = useServers();
 
   const item = (target: HomeSection, icon: ReactNode, label: string, detail?: string) => (
-    <button key={label} className={styles.sidebarItem} data-active={isSameSection(section, target)} onClick={() => onSelect(target)}>
-      {icon}
-      <span className={styles.sidebarLabel}>{label}</span>
-      {detail && <span className={styles.sidebarDetail}>{detail}</span>}
-    </button>
+    <NavItem key={label} icon={icon} label={label} detail={detail} active={isSameSection(section, target)} onClick={() => onSelect(target)} />
   );
 
   return (
-    <nav className={styles.sidebar}>
-      <div className={styles.dragRegion} />
+    <Sidebar width={232}>
       <div className={styles.brand}>
-        <span className={styles.logo}>◆</span>
+        <span className={styles.logo}>
+          <GitBranch size={15} />
+        </span>
         <span className={styles.brandName}>Unity Version Control</span>
       </div>
 
-      <div className={styles.sidebarGroup}>
-        <div className={styles.sidebarGroupLabel}>Workspaces</div>
-        {item({ kind: 'recent' }, <Clock size={15} />, 'Recent')}
-        {item({ kind: 'all' }, <Layers size={15} />, 'All workspaces')}
-      </div>
+      <NavGroups>
+        <NavGroup label="Workspaces">
+          {item({ kind: 'recent' }, <Clock size={15} />, 'Recent')}
+          {item({ kind: 'all' }, <Layers size={15} />, 'All workspaces')}
+        </NavGroup>
 
-      <div className={styles.sidebarGroup}>
-        <div className={styles.sidebarGroupLabel}>Repositories</div>
-        {isLoading && <CenteredSpinner />}
-        {servers?.map((profile) => {
-          const { label, detail } = describeServer(profile.server);
-          return item({ kind: 'server', server: profile.server }, serverIcon(profile.server), label, detail);
-        })}
-      </div>
+        <NavGroup label="Repositories">
+          {isLoading && <CenteredSpinner />}
+          {servers?.map((profile) => {
+            const { label, detail } = describeServer(profile.server);
+            return item({ kind: 'server', server: profile.server }, serverIcon(profile.server), label, detail);
+          })}
+        </NavGroup>
+      </NavGroups>
 
-      <div className={styles.sidebarFooter}>
-        <button className={styles.sidebarItem} onClick={openSettingsDialog}>
-          <Settings size={15} />
-          <span className={styles.sidebarLabel}>Settings</span>
-        </button>
-      </div>
-    </nav>
+      <NavFooter>
+        <NavItem icon={<Settings size={15} />} label="Settings" onClick={openSettingsDialog} />
+      </NavFooter>
+    </Sidebar>
   );
 }
 

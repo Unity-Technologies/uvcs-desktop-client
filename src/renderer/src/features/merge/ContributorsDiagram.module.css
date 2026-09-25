@@ -1,0 +1,70 @@
+.diagram {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-xs);
+}
+
+.pair {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.node {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-raised);
+  white-space: nowrap;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+}
+
+.node[data-tone='source'] .dot {
+  background: var(--status-moved);
+}
+
+.node[data-tone='destination'] .dot {
+  background: var(--accent);
+}
+
+.role {
+  color: var(--text-tertiary);
+  font-weight: 600;
+}
+
+.changeset {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.branch {
+  max-width: 180px;
+  overflow: hidden;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+}
+
+.arrow {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.result {
+  padding: 0 8px;
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-weight: 600;
+  line-height: 20px;
+}
