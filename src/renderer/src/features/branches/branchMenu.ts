@@ -8,6 +8,7 @@ import {
   GitBranchPlus,
   GitMerge,
   GitPullRequestArrow,
+  MessageSquareCode,
   Pencil,
   Trash2,
 } from 'lucide-react';
@@ -25,6 +26,7 @@ import {
   setBranchesHidden,
   switchToBranch,
 } from './branchOperations';
+import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
 import { openCreateBranchDialog } from './CreateBranchDialog';
 
 /** The context menu for the selected branches. `currentBranch` is the branch the workspace is on. */
@@ -78,6 +80,12 @@ export function branchMenu(workspacePath: string, branches: Branch[], currentBra
       label: 'Show branch changes',
       icon: FileDiff,
       run: () => diffBranch(single.name),
+    },
+    single && {
+      id: 'codeReview',
+      label: 'Create code review…',
+      icon: MessageSquareCode,
+      run: () => openCreateCodeReviewDialog(workspacePath, { kind: 'branch', value: single.name }),
     },
     SEPARATOR,
     single && { id: 'rename', label: 'Rename…', icon: Pencil, run: () => void renameBranch(workspacePath, single) },
