@@ -1,4 +1,5 @@
 import { useRef } from 'react';
+import { focusAfterMenu } from './menu/focusAfterMenu';
 
 /**
  * For a Radix popover opened from anywhere (a shortcut, the palette): closing gives focus back to what had it when
@@ -12,11 +13,12 @@ export function useReturnFocus(open: boolean): { onCloseAutoFocus: (event: Event
   wasOpen.current = open;
 
   return {
-    onCloseAutoFocus: (event) => {
-      const element = previous.current;
-      if (!(element instanceof HTMLElement) || element === document.body || !element.isConnected) return;
-      event.preventDefault();
-      element.focus({ preventScroll: true });
-    },
+    onCloseAutoFocus: (event) =>
+      focusAfterMenu(event, () => {
+        const element = previous.current;
+        if (!(element instanceof HTMLElement) || element === document.body || !element.isConnected) return;
+        event.preventDefault();
+        element.focus({ preventScroll: true });
+      }),
   };
 }
