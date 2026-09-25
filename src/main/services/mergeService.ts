@@ -2,6 +2,7 @@ import { join } from 'node:path';
 import { app } from 'electron';
 import type { MergeApi } from '@shared/api/merge';
 import { readIncomingChanges, readIncomingSummary } from '../merge/incoming';
+import { findMergedInto } from '../merge/mergedInto';
 import { previewMerge } from '../merge/previewMerge';
 import { runMerge } from '../merge/runMerge';
 import { updateWithMerge } from '../merge/updateWithMerge';
@@ -21,6 +22,7 @@ export function createMergeService({ cm, operations }: ServiceContext, { switchS
         if (shelve && !request.destinationBranch) await leftChanges.finishAppliedShelve(workspacePath, Number(shelve[1]));
         return result;
       }),
+    mergedInto: (workspacePath, sourceChangeset, destinationBranch) => findMergedInto(cm, workspacePath, sourceChangeset, destinationBranch),
     incomingSummary: (workspacePath, loaded) => readIncomingSummary(cm, workspacePath, loaded),
     incomingChanges: (workspacePath) => readIncomingChanges(cm, workspacePath),
     updateResolvingConflicts: (workspacePath, resolutions, operationId) =>
