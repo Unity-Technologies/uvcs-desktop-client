@@ -5,7 +5,7 @@
   min-height: 0;
   overflow: hidden;
   outline: none;
-  cursor: grab;
+  cursor: default;
 }
 
 .container[data-hovering='true'] {
