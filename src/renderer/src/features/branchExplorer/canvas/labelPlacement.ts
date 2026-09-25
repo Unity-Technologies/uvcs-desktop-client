@@ -1,5 +1,6 @@
 import type { GraphLayout, NodeLayout } from '../model/layoutGraph';
-import { BAND_HEIGHT, HEADER_SPAN_COLUMNS, headerTop, rowY } from './geometry';
+import { BAND_HEIGHT, HEADER_SPAN_COLUMNS, rowY } from './geometry';
+import { laneHeaderTop } from './laneShape';
 
 /** Labels are drawn as chips stacked above their changeset. */
 export const LABEL_HEIGHT = 16;
@@ -16,7 +17,7 @@ export function labelTop(layout: GraphLayout, node: NodeLayout, index: number): 
   const y = rowY(node.row);
   const lane = layout.lanesByBranch.get(node.changeset.branch);
   const underHeader = lane?.firstOwnColumn != null && node.column - lane.firstOwnColumn < HEADER_SPAN_COLUMNS;
-  const bottom = underHeader ? headerTop(y) - LABEL_GAP : y - BAND_HEIGHT / 2 - LABEL_GAP;
+  const bottom = underHeader ? laneHeaderTop(lane) - LABEL_GAP : y - BAND_HEIGHT / 2 - LABEL_GAP;
   return bottom - (index + 1) * LABEL_HEIGHT - index * LABEL_GAP;
 }
 
