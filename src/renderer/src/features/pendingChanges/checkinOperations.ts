@@ -74,8 +74,10 @@ async function catchUpAndCheckin(options: CheckinOptions, rejection: CheckinReje
   const choice = await askCatchUpForCheckin({ incoming, overlapping, needsReview });
   if (!choice) return false;
 
-  useCheckinAfterUpdateStore.getState().remember(workspacePath, { branch: incoming.branch, loadedChangeset: rejection.loadedChangeset });
   if (choice === 'review') {
+    // Changes offers to check in once the workspace updated past the rejection. The automatic path checks in by itself,
+    // so it remembers nothing: the offer would show while that checkin runs.
+    useCheckinAfterUpdateStore.getState().remember(workspacePath, { branch: incoming.branch, loadedChangeset: rejection.loadedChangeset });
     navigation.goToView('incoming');
     return false;
   }
