@@ -1,12 +1,15 @@
-import { followUpMerge, type MergeRequest, type MergeResolutions } from '@shared/domain/merge';
+import { followUpMerge, type MergeRequest, type MergeResolutions, type MergeResult } from '@shared/domain/merge';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runOperation } from '../../app/operations/runOperation';
 import { isAffectedByCheckinOrUpdate } from '../../app/refresh/refreshScopes';
 import { toast } from '../../ui/toast/toastStore';
 
-/** Runs the merge; workspace merges then show the pending changes to check in. */
-export async function completeMerge(workspacePath: string, request: MergeRequest, resolutions: MergeResolutions): Promise<void> {
+/**
+ * Runs the merge. Resolves with its result for the page to tell what happened, or null when there's nothing more to
+ * show there: it failed, or a server merge's destination moved and the merge that finishes it opens instead.
+ */
+export async function completeMerge(workspacePath: string, request: MergeRequest, resolutions: MergeResolutions): Promise<MergeResult | null> {
   const result = await runOperation({
     title: 'Merging',
     workspacePath,
@@ -18,19 +21,17 @@ export async function completeMerge(workspacePath: string, request: MergeRequest
         ? merged.destinationMoved
           ? null
           : `Created changeset ${merged.changesetId} on ${request.destinationBranch}`
-        : 'Merged. Review the result and check it in.',
+        : 'Merge applied to your workspace',
   });
-  if (!result) return;
+  if (!result) return null;
 
-  if (!request.destinationBranch) {
-    navigation.goToView('changes');
-    return;
-  }
-  navigation.goBack();
-  if (result.destinationMoved) {
+  if (request.destinationBranch && result.destinationMoved) {
+    navigation.goBack();
     toast.info(`${request.destinationBranch} moved while merging`, destinationMovedExplanation(result.changesetId, request.destinationBranch));
     openMerge(followUpMerge(result, request.destinationBranch));
+    return null;
   }
+  return result;
 }
 
 export function openMerge(request: MergeRequest): void {

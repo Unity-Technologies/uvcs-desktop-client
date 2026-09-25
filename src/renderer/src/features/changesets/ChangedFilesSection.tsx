@@ -1,11 +1,12 @@
 import { ChevronRight } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { DiffTarget } from '@shared/domain/diff';
 import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge } from '../../components/StatusBadge';
 import { useChangeFilter } from '../../components/useChangeFilter';
+import { moveRovingFocus, ROVING_ITEM } from '../../lib/rovingFocus';
 import { pluralize } from '../../lib/text';
-import { DetailsEmpty, DetailsSection, DetailsSkeleton } from '../../ui/DetailsPanel';
+import { DetailsChangesPane, DetailsEmpty, DetailsSkeleton } from '../../ui/DetailsPanel';
 import { HighlightQuery } from '../../ui/Highlight';
 import { diffEntryKey } from '../diff/DiffEntryList';
 import { describeDiffEntry, diffEntryTone } from '../diff/diffEntrySources';
@@ -25,7 +26,7 @@ interface ChangedFilesSectionProps {
 }
 
 /**
- * The changed files card of a details panel: what a changeset, branch, label, shelve or code review changed.
+ * The changes pane of a details panel: what a changeset, branch, label, shelve or code review changed.
  * Selecting an object never runs `cm diff` (it is heavy on big changes and servers): the list loads when asked
  * for, and stays cached, so it shows right away when that object is selected again.
  */
@@ -33,32 +34,37 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
   const [requested, setRequested] = useState(false);
   const { data: entries, error } = useDiffEntries(target, { enabled: requested, branchHead });
   const { visible, query, bar } = useChangeFilter(entries ?? [], diffEntryKey, diffEntryTone);
+  const listRef = useRef<HTMLDivElement>(null);
 
   return (
-    // No "Open diff" here: the panel's primary action right above opens it.
-    <DetailsSection title={entries ? `${pluralize(entries.length, 'file')} changed` : 'Changed files'}>
-      {!entries && !requested && (
-        <button className={styles.show} onClick={() => setRequested(true)}>
-          <ChevronRight size={14} />
-          Show changed files
-        </button>
+    // No "Open diff" here: the panel's primary action at the top opens it.
+    <DetailsChangesPane title={entries ? `${pluralize(entries.length, 'file')} changed` : 'Changes'} expanded={Boolean(entries?.length)}>
+      <div className={styles.content}>
+        {!entries && !requested && (
+          <button className={styles.show} onClick={() => setRequested(true)}>
+            <ChevronRight size={14} />
+            Show changed files
+          </button>
+        )}
+        {error && <DetailsEmpty>{error.message}</DetailsEmpty>}
+        {!entries && requested && !error && <DetailsSkeleton />}
+        {entries?.length === 0 && <DetailsEmpty>No file changes.</DetailsEmpty>}
+        {entries && entries.length > FILTER_FROM && <div className={styles.filter}>{bar}</div>}
+        {entries && entries.length > 0 && visible.length === 0 && <DetailsEmpty>No files match the filter.</DetailsEmpty>}
+      </div>
+      {entries && entries.length > 0 && (
+        <HighlightQuery query={query}>
+          <div ref={listRef} className={styles.files} onKeyDown={(event) => listRef.current && moveRovingFocus(listRef.current, event)}>
+            {visible.slice(0, MAX_LISTED_FILES).map((entry) => (
+              <button key={entry.path} className={styles.file} onClick={() => onOpen(entry.path)} {...ROVING_ITEM}>
+                <StatusBadge tone={diffEntryTone(entry)} title={describeDiffEntry(entry)} />
+                <PathLabel path={entry.path} oldPath={entry.oldPath} strikethrough={entry.status === 'deleted'} />
+              </button>
+            ))}
+            {visible.length > MAX_LISTED_FILES && <DetailsEmpty>And {visible.length - MAX_LISTED_FILES} more — open the diff to see them all.</DetailsEmpty>}
+          </div>
+        </HighlightQuery>
       )}
-      {error && <DetailsEmpty>{error.message}</DetailsEmpty>}
-      {!entries && requested && !error && <DetailsSkeleton />}
-      {entries?.length === 0 && <DetailsEmpty>No file changes.</DetailsEmpty>}
-      {entries && entries.length > FILTER_FROM && <div className={styles.filter}>{bar}</div>}
-      {entries && entries.length > 0 && visible.length === 0 && <DetailsEmpty>No files match the filter.</DetailsEmpty>}
-      <HighlightQuery query={query}>
-        <div className={styles.files}>
-          {visible.slice(0, MAX_LISTED_FILES).map((entry) => (
-            <button key={entry.path} className={styles.file} onClick={() => onOpen(entry.path)}>
-              <StatusBadge tone={diffEntryTone(entry)} title={describeDiffEntry(entry)} />
-              <PathLabel path={entry.path} oldPath={entry.oldPath} strikethrough={entry.status === 'deleted'} />
-            </button>
-          ))}
-        </div>
-      </HighlightQuery>
-      {visible.length > MAX_LISTED_FILES && <DetailsEmpty>And {visible.length - MAX_LISTED_FILES} more — open the diff to see them all.</DetailsEmpty>}
-    </DetailsSection>
+    </DetailsChangesPane>
   );
 }

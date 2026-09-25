@@ -7,6 +7,12 @@ describe('matchesAllWords', () => {
     expect(matchesAllWords('Fix merge crash on Windows', 'merge linux')).toBe(false);
   });
 
+  it('finds a word anywhere inside a name, digits too', () => {
+    expect(matchesAllWords('/main/scm1008742', '100874')).toBe(true);
+    expect(matchesAllWords('/main/SCM1008742', 'Main/scm 742')).toBe(true);
+    expect(matchesAllWords('/main/scm1008874', '100874')).toBe(false);
+  });
+
   it('matches nothing for a blank query', () => {
     expect(matchesAllWords('anything', '   ')).toBe(false);
   });

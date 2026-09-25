@@ -2,6 +2,7 @@ import type { GraphLabel, MergeLink } from '@shared/domain/branchExplorer';
 import type { CodeReview } from '@shared/domain/codeReview';
 import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
 import type { DrawnTargets } from './drawContext';
+import type { DrawnBox } from './drawnBoxes';
 import { distanceToCurve, linkCurve, type Point } from './curves';
 import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, COLUMN_WIDTH, columnX, GRAPH_PADDING, NODE_RADIUS, ROW_HEIGHT, rowY } from './geometry';
 import { estimatedLabelWidth, LABEL_HEIGHT, labelTop } from './labelPlacement';
@@ -17,6 +18,31 @@ export type GraphTarget =
   | { kind: 'mergeLink'; link: MergeLink }
   /** The code review chip in a branch's header card. */
   | { kind: 'codeReview'; review: CodeReview };
+
+/**
+ * The hover card for what the pointer is on. A changeset's card completes its comment over its caption, whether the
+ * pointer is on the node or on the caption: one card, so moving between them never closes it (a changeset whose
+ * caption isn't drawn gets its card by the pointer). A branch gets no card: its two-line header already says it all,
+ * and a card there would cover the changesets the pointer is heading to. Only a header whose name or comment was cut
+ * gets a plain tooltip by the pointer, from the header itself. Anything else gets its card by the pointer.
+ * The boxes are the last frame's, reused by the next one: read them right away.
+ */
+export type HoverCard =
+  | { kind: 'caption'; target: Extract<GraphTarget, { kind: 'changeset' }>; caption: DrawnBox<NodeLayout> }
+  | { kind: 'pointer'; target: GraphTarget };
+
+export function hoverCardFor(target: GraphTarget | null, point: Point, drawn: DrawnTargets | null): HoverCard | null {
+  if (!target) return null;
+  if (target.kind === 'changeset') {
+    const caption = drawn?.captions.find((node) => node.changeset.id === target.id);
+    return caption ? { kind: 'caption', target, caption } : { kind: 'pointer', target };
+  }
+  if (target.kind === 'branch') {
+    const header = drawn?.branchHeaders.at(point);
+    return header?.item === target.lane && header.cut ? { kind: 'pointer', target } : null;
+  }
+  return { kind: 'pointer', target };
+}
 
 const NODE_HIT_RADIUS = NODE_RADIUS + 4;
 const LINE_HIT_DISTANCE = 6;

@@ -21,4 +21,12 @@ describe('DrawnBoxes', () => {
     expect(boxes.find((item) => item === 'old')).toBeNull();
     expect(boxes.find((item) => item === 'new')?.x).toBe(20);
   });
+
+  it('remembers whether the text drawn in a box was cut', () => {
+    const boxes = new DrawnBoxes<string>();
+    boxes.add('cut', 0, 0, 10, 10, true);
+    boxes.reset();
+    boxes.add('whole', 0, 0, 10, 10);
+    expect(boxes.at({ x: 5, y: 5 })).toMatchObject({ item: 'whole', cut: false });
+  });
 });

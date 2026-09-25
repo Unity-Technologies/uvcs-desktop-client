@@ -5,7 +5,7 @@ import { layoutGraph } from '../model/layoutGraph';
 import { columnX, headerTop } from './geometry';
 import type { DrawnTargets } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
-import { hitTest, nodePoint } from './graphTargets';
+import { hitTest, hoverCardFor, nodePoint } from './graphTargets';
 import { labelTop } from './labelPlacement';
 import { laneShape } from './laneShape';
 
@@ -67,5 +67,70 @@ describe('hitTest', () => {
 
   it('returns null on empty space', () => {
     expect(hitTest(layout, { x: -500, y: -500 })).toBeNull();
+  });
+});
+
+describe('hoverCardFor', () => {
+  const cardAt = (point: { x: number; y: number }, drawn: DrawnTargets | null = null) => hoverCardFor(hitTest(layout, point, drawn), point, drawn);
+
+  function withCaption(id: number): { drawn: DrawnTargets; caption: { x: number; y: number } } {
+    const node = layout.nodes.get(id)!;
+    const drawn = drawnTargets();
+    const top = nodePoint(layout, id)!.y + 30;
+    drawn.captions.add(node, columnX(node.column) - 20, top, 80, 14);
+    return { drawn, caption: { x: columnX(node.column) + 40, y: top + 7 } };
+  }
+
+  it('opens one card over the caption from the changeset and from its caption alike', () => {
+    const { drawn, caption } = withCaption(4);
+    const fromNode = cardAt(nodePoint(layout, 4)!, drawn);
+    const fromCaption = cardAt(caption, drawn);
+    expect(fromNode).toMatchObject({ kind: 'caption', target: { kind: 'changeset', id: 4 }, caption: { y: caption.y - 7 } });
+    expect(fromCaption).toEqual(fromNode);
+  });
+
+  it('opens a changeset card by the pointer when its caption is not drawn (zoomed out, comments hidden)', () => {
+    expect(cardAt(nodePoint(layout, 4)!)).toEqual({ kind: 'pointer', target: { kind: 'changeset', id: 4 } });
+  });
+
+  it('has no card for a branch band: its header already names it', () => {
+    const a = nodePoint(layout, 2)!;
+    const b = nodePoint(layout, 4)!;
+    const between = { x: (a.x + b.x) / 2, y: a.y };
+    expect(hitTest(layout, between)).toMatchObject({ kind: 'branch' });
+    expect(cardAt(between)).toBeNull();
+  });
+
+
+  it('shows a plain tooltip on a branch header only when its name or comment was cut', () => {
+    const lane = layout.lanesByBranch.get('/main/a')!;
+    const shape = laneShape(lane);
+    const onHeader = { x: shape.left + 10, y: headerTop(shape.y) + 5 };
+    const whole = drawnTargets();
+    whole.branchHeaders.add(lane, shape.left, headerTop(shape.y), 120, 22);
+    expect(cardAt(onHeader, whole)).toBeNull();
+
+    const cut = drawnTargets();
+    cut.branchHeaders.add(lane, shape.left, headerTop(shape.y), 120, 22, true);
+    expect(cardAt(onHeader, cut)).toMatchObject({ kind: 'pointer', target: { lane: { branch: { name: '/main/a' } } } });
+  });
+
+  it('never shows a cut header tooltip from its band', () => {
+    const lane = layout.lanesByBranch.get('/main/a')!;
+    const shape = laneShape(lane);
+    const drawn = drawnTargets();
+    drawn.branchHeaders.add(lane, shape.left, headerTop(shape.y), 120, 22, true);
+    const a = nodePoint(layout, 2)!;
+    const b = nodePoint(layout, 4)!;
+    expect(cardAt({ x: (a.x + b.x) / 2, y: a.y }, drawn)).toBeNull();
+  });
+
+  it('opens a card by the pointer for labels', () => {
+    const node = layout.nodes.get(6)!;
+    expect(cardAt({ x: columnX(node.column), y: labelTop(layout, node, 0) + 5 })).toMatchObject({ kind: 'pointer', target: { kind: 'label' } });
+  });
+
+  it('has no card on empty space', () => {
+    expect(cardAt({ x: -500, y: -500 })).toBeNull();
   });
 });

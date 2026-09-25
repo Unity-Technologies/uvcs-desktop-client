@@ -1,9 +1,12 @@
 import { GitGraph, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { CodeReview } from '@shared/domain/codeReview';
+import { spec } from '@shared/domain/specs';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
+import { hotkey, hotkeys, type ShortcutId } from '../../lib/shortcutRegistry';
+import { matchesShortcut } from '../../lib/shortcuts';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
@@ -25,8 +28,18 @@ import { GraphSearch } from './GraphSearch';
 import { filterGraph, type GraphFocus } from './model/filterGraph';
 import { layoutGraph } from './model/layoutGraph';
 import { describeSelection } from './model/describeSelection';
-import { neighborChangeset, startingChangeset, type GraphDirection } from './model/navigateGraph';
-import { searchGraph, searchHighlight, type SearchHit } from './model/searchGraph';
+import {
+  branchBase,
+  branchEnd,
+  graphEnd,
+  mergeDestination,
+  mergeSource,
+  neighborChangeset,
+  pageChangeset,
+  startingChangeset,
+  type GraphDirection,
+} from './model/navigateGraph';
+import { firstHitIndex, searchGraph, searchHighlight, type SearchHit } from './model/searchGraph';
 import { useBranchExplorerCommands } from './useBranchExplorerCommands';
 import { useBranchExplorerData } from './useBranchExplorerData';
 import { useRevealRequest } from './useRevealRequest';
@@ -93,6 +106,7 @@ export function BranchExplorerView() {
       currentBranch,
       highlightedAuthor,
       search: search.trim() && fullLayout ? searchHighlight(fullLayout, searchHits, searchHits[activeHitIndex] ?? null) : null,
+      searchQuery: search.trim(),
       options: { showComments, showAvatars },
       reviews: reviews ?? NO_REVIEWS,
     }),
@@ -147,7 +161,7 @@ export function BranchExplorerView() {
   const stepSearch = (direction: 1 | -1): void => {
     if (searchHits.length === 0) return;
     const next =
-      activeHitIndex === -1 ? (direction === 1 ? 0 : searchHits.length - 1) : (activeHitIndex + direction + searchHits.length) % searchHits.length;
+      activeHitIndex === -1 ? (direction === 1 ? firstHitIndex(searchHits, search) : searchHits.length - 1) : (activeHitIndex + direction + searchHits.length) % searchHits.length;
     setActiveHitIndex(next);
     goToHit(searchHits[next]!);
   };
@@ -182,34 +196,84 @@ export function BranchExplorerView() {
   };
 
   const onKeyDown = (event: KeyboardEvent): void => {
-    if (!layout || event.target instanceof HTMLInputElement) return;
-    const direction = ARROW_DIRECTIONS[event.key];
-    if (direction) {
-      event.preventDefault();
+    if (!layout || ownsKey(event.target, event.key)) return;
+    const selectedId = selection?.kind === 'changeset' ? selection.id : null;
+    /** The selected branch, or the branch of the selected changeset. */
+    const branchName = selection?.kind === 'branch' ? selection.name : selectedId !== null ? (layout.nodes.get(selectedId)?.changeset.branch ?? null) : null;
+    const lane = branchName !== null ? layout.lanesByBranch.get(branchName) : undefined;
+    // Keyboard moves glide the view along, just enough to keep the selection in sight.
+    const moveTo = (id: number | null): void => {
+      if (id === null) return;
+      setSelection({ kind: 'changeset', id });
+      canvasRef.current?.followChangeset(id);
+    };
+    const fromChangeset = (move: (id: number) => number | null) => (): void => moveTo(selectedId !== null ? move(selectedId) : null);
+    const walk = (direction: GraphDirection) => (): void =>
       // Without a selected changeset, the first arrow picks where to start.
-      const next =
-        selection?.kind === 'changeset'
-          ? neighborChangeset(layout, selection.id, direction)
-          : startingChangeset(layout, selection?.kind === 'branch' ? selection.name : null, homeChangeset);
-      if (next !== null) goToChangeset(next);
-    } else if (event.key === 'Home' || event.key === 'h') {
-      goHome();
-    } else if (event.key === '+' || event.key === '=') {
-      zoomBy(ZOOM_STEP);
-    } else if (event.key === '-') {
-      zoomBy(1 / ZOOM_STEP);
-    } else if (event.key === '0') {
-      fit();
-    } else if (event.key === 'Enter' && selection?.kind === 'changeset') {
-      graphActions.diffChangeset(selection.id);
-    } else if (event.key === 'Enter' && selection?.kind === 'branch') {
-      const lane = layout.lanesByBranch.get(selection.name);
-      if (lane) graphActions.diffBranch(lane.branch);
-    } else if (event.key === 'Escape') {
-      // Esc steps back: first out of the selection, then out of the focus.
-      if (selection) setSelection(null);
-      else setFocus(null);
-    }
+      moveTo(selectedId !== null ? neighborChangeset(layout, selectedId, direction) : startingChangeset(layout, branchName, homeChangeset));
+    const branchEdge = (edge: 'first' | 'last') => (): void => {
+      // With nothing selected, Home keeps its old meaning: the workspace changeset.
+      if (branchName !== null) moveTo(branchEnd(layout, branchName, edge));
+      else if (edge === 'first') goHome();
+    };
+    const page = (step: 1 | -1) => (): void => {
+      const from = selectedId ?? startingChangeset(layout, branchName, homeChangeset);
+      if (from === null) return;
+      // A page keeps a column of the last screen in sight.
+      const columns = Math.max(1, (canvasRef.current?.columnsOnScreen() ?? 1) - 1);
+      moveTo(pageChangeset(layout, from, step, columns));
+    };
+
+    const bindings: [ShortcutId, () => void][] = [
+      ['graphWalk', () => walk(ARROW_DIRECTIONS[event.key]!)()],
+      ['graphBranchFirst', branchEdge('first')],
+      ['graphBranchLast', branchEdge('last')],
+      ['graphOldest', () => moveTo(graphEnd(layout, 'first'))],
+      ['graphNewest', () => moveTo(graphEnd(layout, 'last'))],
+      ['graphPageBack', page(-1)],
+      ['graphPageForward', page(1)],
+      ['graphMergeSource', fromChangeset((id) => mergeSource(layout, id))],
+      ['graphMergeDestination', fromChangeset((id) => mergeDestination(layout, id))],
+      ['graphBranchBase', () => moveTo(branchName !== null ? branchBase(layout, branchName) : null)],
+      ['graphOpen', () => (selectedId !== null ? graphActions.diffChangeset(selectedId) : lane && graphActions.diffBranch(lane.branch))],
+      ['graphOpenBranch', () => lane && graphActions.diffBranch(lane.branch)],
+      [
+        'graphMerge',
+        () => {
+          if (selectedId !== null) graphActions.merge('merge', spec.changeset(selectedId));
+          else if (selection?.kind === 'branch') graphActions.merge('merge', spec.branch(selection.name));
+        },
+      ],
+      ['graphDetails', () => preferences.set({ detailsOpen: !detailsOpen })],
+      [
+        'graphContextMenu',
+        () => {
+          if (selectedId !== null) canvasRef.current?.openContextMenu({ kind: 'changeset', id: layout.nodes.get(selectedId)?.changeset.id ?? selectedId });
+          else if (selection?.kind === 'branch' && lane) canvasRef.current?.openContextMenu({ kind: 'branch', lane });
+        },
+      ],
+      // ⌘F is the palette command's; the view adds the plain key.
+      ['graphFind', find],
+      ['graphHome', goHome],
+      ['graphZoomIn', () => zoomBy(ZOOM_STEP)],
+      ['graphZoomOut', () => zoomBy(1 / ZOOM_STEP)],
+      ['graphFit', fit],
+      [
+        'graphClear',
+        () => {
+          // Esc steps back: first out of the selection, then out of the focus.
+          if (selection) setSelection(null);
+          else setFocus(null);
+        },
+      ],
+    ];
+    const pressed = (id: ShortcutId): boolean =>
+      (id === 'graphContextMenu' && event.key === 'ContextMenu') ||
+      hotkeys(id).some((key) => !(id === 'graphFind' && key === hotkey('graphFind')) && matchesShortcut(event.nativeEvent, key));
+    const binding = bindings.find(([id]) => pressed(id));
+    if (!binding) return;
+    event.preventDefault();
+    binding[1]();
   };
 
   const header = (
@@ -305,6 +369,13 @@ export function BranchExplorerView() {
       </div>
     </>
   );
+}
+
+/** Fields keep every key (the search, an edited comment); buttons and links keep the keys that press them. */
+function ownsKey(target: EventTarget, key: string): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return true;
+  return ['BUTTON', 'A'].includes(target.tagName) && (key === 'Enter' || key === ' ');
 }
 
 /**

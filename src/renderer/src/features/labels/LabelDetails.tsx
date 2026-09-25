@@ -1,46 +1,42 @@
 import { FileDiff, Tag } from 'lucide-react';
 import type { Label } from '@shared/domain/label';
 import { spec } from '@shared/domain/specs';
-import { PathLabel } from '../../components/PathLabel';
+import { DetailsHeading } from '../../components/DetailsHeading';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
 import { Button } from '../../ui/Button';
-import { DetailsComment } from '../../ui/DetailsComment';
-import { DetailsPanel, DetailsSection } from '../../ui/DetailsPanel';
-import { PropertyList } from '../../ui/PropertyList';
-import { AttributesEditor } from '../attributes/AttributesEditor';
+import { DetailsCopyable, DetailsPanel } from '../../ui/DetailsPanel';
+import { AttributeChips } from '../attributes/AttributeChips';
+import { BranchChip } from '../branches/BranchChip';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
-import { showLabelChanges } from './labelOperations';
+import { saveLabelComment, showLabelChanges } from './labelOperations';
 
-export function LabelDetails({ label, menu }: { label: Label; menu: MenuEntry[] }) {
+export function LabelDetails({ workspacePath, label, menu }: { workspacePath: string; label: Label; menu: MenuEntry[] }) {
   return (
     <DetailsPanel
       icon={<Tag />}
       kind="Label"
-      context={<PathLabel path={label.branch} fitContent />}
-      title={label.name}
+      heading={<DetailsHeading name={label.name} comment={label.comment} onSave={(comment) => saveLabelComment(workspacePath, label, comment)} />}
       author={{ user: label.owner, date: label.date }}
+      meta={[
+        <DetailsCopyable key="changeset" text={spec.changeset(label.changeset)} what="Changeset spec" />,
+        <BranchChip key="branch" name={label.branch} />,
+      ]}
+      attributes={<AttributeChips key={label.name} objectSpec={spec.label(label.name)} />}
       primaryAction={
-        <Button variant="primary" icon={<FileDiff size={14} />} onClick={() => showLabelChanges(label)}>
+        <Button variant="primary" size="small" icon={<FileDiff size={13} />} onClick={() => showLabelChanges(label)}>
           Open diff
         </Button>
       }
       menu={menu}
       primaryActionId="diff"
-    >
-      <DetailsComment text={label.comment} />
-      <ChangedFilesSection target={{ kind: 'changeset', changesetId: label.changeset }} onOpen={(path) => showLabelChanges(label, path)} />
-      <DetailsSection title="Details">
-        <PropertyList
-          properties={[
-            { label: 'Created', value: formatDateTime(label.date) },
-            { label: 'Changeset', value: `Changeset ${label.changeset}`, copyText: spec.changeset(label.changeset) },
-            { label: 'Branch', value: label.branch },
-            { label: 'Repository', value: label.repository },
-          ]}
-        />
-      </DetailsSection>
-      <AttributesEditor key={label.name} objectSpec={spec.label(label.name)} />
-    </DetailsPanel>
+      properties={[
+        { label: 'Created', value: formatDateTime(label.date) },
+        { label: 'Changeset', value: `Changeset ${label.changeset}`, copyText: spec.changeset(label.changeset) },
+        { label: 'Branch', value: label.branch },
+        { label: 'Repository', value: label.repository },
+      ]}
+      changes={<ChangedFilesSection target={{ kind: 'changeset', changesetId: label.changeset }} onOpen={(path) => showLabelChanges(label, path)} />}
+    />
   );
 }

@@ -61,7 +61,7 @@ export function GraphFilterBar({ branches, authors, onZoom, onFit, onGoHome, foc
     SEPARATOR,
     { id: 'comments', label: 'Show comments', icon: check(preferences.showComments), run: () => set({ showComments: !preferences.showComments }) },
     { id: 'avatars', label: 'Show avatars', icon: check(preferences.showAvatars), run: () => set({ showAvatars: !preferences.showAvatars }) },
-    { id: 'details', label: 'Show details panel', icon: check(preferences.detailsOpen), run: () => set({ detailsOpen: !preferences.detailsOpen }) },
+    { id: 'details', label: 'Show details panel', icon: check(preferences.detailsOpen), shortcut: hotkey('graphDetails'), run: () => set({ detailsOpen: !preferences.detailsOpen }) },
     SEPARATOR,
     { id: 'zoomIn', label: 'Zoom in', shortcut: hotkey('graphZoomIn'), run: () => onZoom(ZOOM_STEP) },
     { id: 'zoomOut', label: 'Zoom out', shortcut: hotkey('graphZoomOut'), run: () => onZoom(1 / ZOOM_STEP) },

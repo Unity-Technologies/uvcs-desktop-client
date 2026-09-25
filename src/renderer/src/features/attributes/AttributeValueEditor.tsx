@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { attributeTone } from './attributeValues';
-import styles from './AttributesEditor.module.css';
+import styles from './AttributeChips.module.css';
 
 const MAX_ROWS = 12;
 

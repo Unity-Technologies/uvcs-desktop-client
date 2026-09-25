@@ -25,10 +25,10 @@ export function Avatar({ user, size = 20, tip = displayName(user) }: { user: str
   );
 }
 
-export function UserLabel({ user }: { user: string }) {
+export function UserLabel({ user, avatar = true }: { user: string; /** Off where the row already leads with the avatar. */ avatar?: boolean }) {
   return (
     <span className={styles.userLabel}>
-      <Avatar user={user} size={18} />
+      {avatar && <Avatar user={user} size={18} />}
       <span className={styles.name}>
         <Highlight text={displayName(user)} />
       </span>

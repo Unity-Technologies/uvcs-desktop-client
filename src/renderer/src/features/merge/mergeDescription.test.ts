@@ -22,7 +22,14 @@ describe('describeSpec', () => {
 
 describe('mergeLabels', () => {
   it('names each side by its branch', () => {
-    expect(mergeLabels({ kind: 'cherryPick', sourceSpec: 'cs:3' }, plan)).toEqual({ source: '/main/task', destination: '/main' });
+    expect(mergeLabels({ kind: 'cherryPick', sourceSpec: 'cs:3' }, plan)).toMatchObject({ source: '/main/task', destination: '/main' });
+  });
+
+  it('calls the workspace side yours, and neither side when merging on the server', () => {
+    const intoWorkspace = mergeLabels({ kind: 'merge', sourceSpec: 'br:/main/task' }, plan);
+    expect([intoWorkspace.roles.destination.name, intoWorkspace.roles.source.name]).toEqual(['Yours', 'Incoming']);
+    const intoBranch = mergeLabels({ kind: 'merge', sourceSpec: 'br:/main', destinationBranch: '/main/release' }, plan);
+    expect([intoBranch.roles.destination.name, intoBranch.roles.source.name]).toEqual(['Destination', 'Source']);
   });
 
   it('uses the server branch for merges into a branch', () => {

@@ -37,14 +37,3 @@ export const useCheckinDraftStore = create<CheckinDraftStore>((set) => {
 export function useCheckinDraft(workspacePath: string): CheckinDraft {
   return useCheckinDraftStore((state) => state.drafts[workspacePath] ?? EMPTY_DRAFT);
 }
-
-/** The checkin comment: the summary line, then a blank line and the description when there is one. */
-export function checkinComment({ summary, description }: Pick<CheckinDraft, 'summary' | 'description'>): string {
-  return [summary.trim(), description.trim()].filter(Boolean).join('\n\n');
-}
-
-/** Splits a stored comment back into its summary line and description. */
-export function splitComment(comment: string): Pick<CheckinDraft, 'summary' | 'description'> {
-  const [summary = '', ...rest] = comment.split('\n');
-  return { summary, description: rest.join('\n').replace(/^\n+/, '') };
-}

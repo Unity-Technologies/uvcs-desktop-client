@@ -10,6 +10,7 @@ import { ListWithDetails } from '../../components/ListWithDetails';
 import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
 import { NoSelection } from '../../components/NoSelection';
 import { SincePicker } from '../../components/SincePicker';
+import { matchesAllWords } from '../../lib/matchesAllWords';
 import { sinceDateFor } from '../../lib/sincePresets';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
@@ -149,9 +150,8 @@ function rowKey(row: BranchTreeRow): string {
 }
 
 function filterBranches(branches: Branch[], search: string): Branch[] {
-  const needle = search.trim().toLowerCase();
-  if (!needle) return branches;
-  return branches.filter((branch) => `${branch.name} ${branch.comment} ${branch.owner}`.toLowerCase().includes(needle));
+  if (!search.trim()) return branches;
+  return branches.filter((branch) => matchesAllWords(`${branch.name}\n${branch.comment}\n${branch.owner}`, search));
 }
 
 function useBranchColumns(

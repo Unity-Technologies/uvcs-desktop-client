@@ -1,4 +1,4 @@
-import type { FileDiffOptions } from '@pierre/diffs/react';
+import type { FileDiffOptions, FileOptions } from '@pierre/diffs/react';
 import type { ResolvedTheme } from '../../../app/settings/useResolvedTheme';
 
 /**
@@ -30,6 +30,17 @@ export function pierreDiffOptions<LAnnotation = undefined>({ theme, layout, coll
     expandUnchanged: !collapseUnchanged,
     disableFileHeader: true,
     stickyHeader: false,
+    unsafeCSS: PIERRE_SURFACE_CSS,
+  };
+}
+
+/** The same look for one file on its own, e.g. edited while its diff has no lines to show. */
+export function pierreFileOptions({ theme, wrapLines }: Pick<DiffAppearance, 'theme' | 'wrapLines'>): FileOptions<undefined, undefined> {
+  return {
+    theme: pierreThemeName(theme),
+    themeType: theme,
+    overflow: wrapLines ? 'wrap' : 'scroll',
+    disableFileHeader: true,
     unsafeCSS: PIERRE_SURFACE_CSS,
   };
 }

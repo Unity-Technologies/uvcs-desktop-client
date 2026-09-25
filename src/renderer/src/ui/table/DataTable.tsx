@@ -45,6 +45,8 @@ interface DataTableProps<Row> {
   selectFirstRow?: boolean;
   /** What the rows are, for screen readers (e.g. "Changesets"). */
   label?: string;
+  /** Hides the column titles from sight (screen readers still get them), for a single self-explaining column. */
+  hideHeader?: boolean;
 }
 
 export function DataTable<Row>({
@@ -62,6 +64,7 @@ export function DataTable<Row>({
   revealKey,
   selectFirstRow = false,
   label,
+  hideHeader = false,
 }: DataTableProps<Row>) {
   const rowIdPrefix = useId();
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -225,7 +228,7 @@ export function DataTable<Row>({
       onKeyDown={onKeyDown}
       {...MAIN_FOCUS}
     >
-      <div className={styles.header} role="row" aria-rowindex={1}>
+      <div className={hideHeader ? 'visually-hidden' : styles.header} role="row" aria-rowindex={1}>
         {shownColumns.map((column) => (
           <button
             key={column.id}

@@ -4,6 +4,8 @@ import type { ReactNode } from 'react';
 export interface ObjectLinks {
   changeset: (id: number) => ReactNode;
   branch: (name: string) => ReactNode;
+  /** Goes to a branch from its chip in the meta row; without it the chip shows the branch in the Branch Explorer. */
+  selectBranch?: (name: string) => void;
 }
 
 export const PLAIN_LINKS: ObjectLinks = {

@@ -1,17 +1,18 @@
 import { FileDiff, GitBranch } from 'lucide-react';
+import { Fragment } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import { shortBranchName, spec } from '@shared/domain/specs';
 import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
-import { PathLabel } from '../../components/PathLabel';
+import { DetailsHeading } from '../../components/DetailsHeading';
 import { PLAIN_LINKS, type ObjectLinks } from '../../components/objectLinks';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
 import { Button } from '../../ui/Button';
-import { DetailsComment } from '../../ui/DetailsComment';
-import { DetailsBadge, DetailsPanel, DetailsSection } from '../../ui/DetailsPanel';
-import { PropertyList, type Property } from '../../ui/PropertyList';
-import { AttributesEditor } from '../attributes/AttributesEditor';
+import { DetailsBadge, DetailsPanel } from '../../ui/DetailsPanel';
+import type { Property } from '../../ui/PropertyList';
+import { AttributeChips } from '../attributes/AttributeChips';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
+import { BranchChip } from './BranchChip';
 import { diffBranch } from './branchOperations';
 
 /** A branch as lists and the Branch Explorer know it; the graph doesn't read the repository or ids. */
@@ -34,42 +35,38 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
     <DetailsPanel
       icon={<GitBranch />}
       kind="Branch"
-      context={branch.parent && <PathLabel path={branch.parent} fitContent />}
-      title={shortBranchName(branch.name)}
+      heading={<DetailsHeading name={shortBranchName(branch.name)} comment={branch.comment} />}
       author={{ user: branch.owner, date: branch.date }}
+      meta={[
+        branch.parent && (
+          <Fragment key="parent">
+            from <BranchChip name={branch.parent} onSelect={links.selectBranch} />
+          </Fragment>
+        ),
+      ]}
       badges={
         <>
           {isCurrent && <DetailsBadge tone="success">Current</DetailsBadge>}
           {branch.isHidden && <DetailsBadge>Hidden</DetailsBadge>}
         </>
       }
+      attributes={<AttributeChips key={branch.name} objectSpec={spec.branch(branch.name)} />}
       primaryAction={
-        <Button variant="primary" icon={<FileDiff size={14} />} onClick={() => diffBranch(branch)}>
+        <Button variant="primary" size="small" icon={<FileDiff size={13} />} onClick={() => diffBranch(branch)}>
           Open diff
         </Button>
       }
       menu={menu}
       primaryActionId="diff"
-    >
-      <DetailsComment text={branch.comment} />
-      <ChangedFilesSection target={{ kind: 'branch', branch: branch.name }} branchHead={branch.headChangeset} onOpen={(path) => diffBranch(branch, path)} />
-      <DetailsSection title="Details">
-        <PropertyList
-          properties={[
-            { label: 'Full name', value: branch.name, mono: true, copyText: branch.name },
-            { label: 'Created', value: formatDateTime(branch.date) },
-            { label: 'Parent', value: branch.parent && links.branch(branch.parent) },
-            { label: 'Head', value: links.changeset(branch.headChangeset), copyText: spec.changeset(branch.headChangeset) },
-            { label: 'Repository', value: branch.repository },
-          ]}
-        />
-      </DetailsSection>
-      <AttributesEditor key={branch.name} objectSpec={spec.branch(branch.name)} />
-      {relations.length > 0 && (
-        <DetailsSection title="Relations">
-          <PropertyList properties={relations} />
-        </DetailsSection>
-      )}
-    </DetailsPanel>
+      properties={[
+        { label: 'Full name', value: branch.name, mono: true, copyText: branch.name },
+        { label: 'Created', value: formatDateTime(branch.date) },
+        { label: 'Parent', value: branch.parent && links.branch(branch.parent) },
+        { label: 'Head', value: links.changeset(branch.headChangeset), copyText: spec.changeset(branch.headChangeset) },
+        { label: 'Repository', value: branch.repository },
+        ...relations,
+      ]}
+      changes={<ChangedFilesSection target={{ kind: 'branch', branch: branch.name }} branchHead={branch.headChangeset} onOpen={(path) => diffBranch(branch, path)} />}
+    />
   );
 }

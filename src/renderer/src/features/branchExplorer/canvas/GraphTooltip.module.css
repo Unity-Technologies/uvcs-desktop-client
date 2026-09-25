@@ -38,8 +38,9 @@
 }
 
 /*
- * The card that completes a cut caption (or unfolds a branch header), laid exactly over it: its box metrics are
- * mirrored in captionCard.ts (CARD_*). It only fades in: moving would break the "completes in place" illusion.
+ * The card that completes a cut caption (or unfolds a cut branch header), laid exactly over it: its border and
+ * padding are mirrored in captionCard.ts (CARD_INSET_X). It only fades in: moving would break the "completes in
+ * place" illusion. The pointer can move into it to select and copy its text.
  */
 .card {
   position: absolute;
@@ -49,17 +50,24 @@
   border-radius: var(--radius-sm);
   background: var(--bg-surface-raised);
   box-shadow: var(--shadow-md);
-  pointer-events: none;
+  user-select: text;
+  cursor: auto;
   animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
   z-index: 10;
 }
 
-/* pre-wrap like canvas text, which never collapses spaces. */
+/* pre-wrap like canvas text, which never collapses spaces. The font, line height and color are the caption's. */
 .subject {
-  line-height: 1.45;
-  color: var(--text-secondary);
   white-space: pre-wrap;
   overflow-wrap: break-word;
+}
+
+.metaPart {
+  white-space: nowrap;
+}
+
+.textOrigin {
+  display: inline-block;
 }
 
 .cardBody {

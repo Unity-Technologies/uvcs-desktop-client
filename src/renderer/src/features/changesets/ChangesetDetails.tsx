@@ -2,16 +2,15 @@ import { FileDiff, GitCommitVertical, Home, Tag } from 'lucide-react';
 import type { Changeset } from '@shared/domain/changeset';
 import { spec } from '@shared/domain/specs';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { PathLabel } from '../../components/PathLabel';
+import { DetailsHeading } from '../../components/DetailsHeading';
 import { PLAIN_LINKS, type ObjectLinks } from '../../components/objectLinks';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
-import { firstLine } from '../../lib/text';
 import { Button } from '../../ui/Button';
-import { DetailsComment } from '../../ui/DetailsComment';
-import { DetailsBadge, DetailsPanel, DetailsSection } from '../../ui/DetailsPanel';
-import { PropertyList, type Property } from '../../ui/PropertyList';
-import { AttributesEditor } from '../attributes/AttributesEditor';
+import { DetailsBadge, DetailsCopyable, DetailsPanel } from '../../ui/DetailsPanel';
+import type { Property } from '../../ui/PropertyList';
+import { AttributeChips } from '../attributes/AttributeChips';
+import { BranchChip } from '../branches/BranchChip';
 import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
 import { ChangedFilesSection } from './ChangedFilesSection';
 import { openChangesetDiff, saveChangesetComment } from './changesetOperations';
@@ -36,10 +35,13 @@ export function ChangesetDetails({ changeset, menu, links = PLAIN_LINKS, relatio
   return (
     <DetailsPanel
       icon={<GitCommitVertical />}
-      kind={`Changeset ${changeset.id}`}
-      context={<PathLabel path={changeset.branch} fitContent />}
-      title={firstLine(changeset.comment) || 'No comment'}
+      kind="Changeset"
+      heading={<DetailsHeading comment={changeset.comment} onSave={(comment) => saveChangesetComment(workspacePath, changeset, comment)} />}
       author={{ user: changeset.owner, date: changeset.date }}
+      meta={[
+        <DetailsCopyable key="id" text={spec.changeset(changeset.id)} what="Changeset spec" />,
+        <BranchChip key="branch" name={changeset.branch} onSelect={links.selectBranch} />,
+      ]}
       badges={
         <>
           {changeset.id === workspace?.loadedChangeset && (
@@ -56,33 +58,23 @@ export function ChangesetDetails({ changeset, menu, links = PLAIN_LINKS, relatio
           ))}
         </>
       }
+      attributes={<AttributeChips key={changeset.id} objectSpec={spec.changeset(changeset.id)} />}
       primaryAction={
-        <Button variant="primary" icon={<FileDiff size={14} />} onClick={() => openChangesetDiff(changeset)}>
+        <Button variant="primary" size="small" icon={<FileDiff size={13} />} onClick={() => openChangesetDiff(changeset)}>
           Open diff
         </Button>
       }
       menu={menu}
       primaryActionId="diff"
-    >
-      <DetailsComment text={changeset.comment} onSave={(comment) => saveChangesetComment(workspacePath, changeset, comment)} />
-      <ChangedFilesSection target={{ kind: 'changeset', changesetId: changeset.id }} onOpen={(path) => openChangesetDiff(changeset, path)} />
-      <DetailsSection title="Details">
-        <PropertyList
-          properties={[
-            { label: 'Created', value: formatDateTime(changeset.date) },
-            { label: 'Branch', value: links.branch(changeset.branch) },
-            { label: 'Parent', value: changeset.parent >= 0 ? links.changeset(changeset.parent) : '', copyText: spec.changeset(changeset.parent) },
-            { label: 'Repository', value: changeset.repository },
-            { label: 'GUID', value: changeset.guid, mono: true, copyText: changeset.guid },
-          ]}
-        />
-      </DetailsSection>
-      <AttributesEditor key={changeset.id} objectSpec={spec.changeset(changeset.id)} />
-      {relations.length > 0 && (
-        <DetailsSection title="Relations">
-          <PropertyList properties={relations} />
-        </DetailsSection>
-      )}
-    </DetailsPanel>
+      properties={[
+        { label: 'Created', value: formatDateTime(changeset.date) },
+        { label: 'Branch', value: links.branch(changeset.branch) },
+        { label: 'Parent', value: changeset.parent >= 0 ? links.changeset(changeset.parent) : '', copyText: spec.changeset(changeset.parent) },
+        { label: 'Repository', value: changeset.repository },
+        { label: 'GUID', value: changeset.guid, mono: true, copyText: changeset.guid },
+        ...relations,
+      ]}
+      changes={<ChangedFilesSection target={{ kind: 'changeset', changesetId: changeset.id }} onOpen={(path) => openChangesetDiff(changeset, path)} />}
+    />
   );
 }

@@ -63,6 +63,20 @@ The app never lets `cm` open its merge or diff tool; every conflict is resolved 
   `cm diff` always has `--format`. `main/cm/noExternalUi.test.ts` checks these statically.
 - `cm` processes run with stdin closed, so a console prompt fails instead of hanging.
 
+## Merge page
+
+The merge page (`features/merge`) is a preview until "Complete merge": it says so ("Preview", "Nothing has changed yet"),
+and every status reads as what the merge will do, never as done (`mergeStatus`): "Will merge automatically", "Needs your
+decision", then the user's choice ("Keeping yours", "Keeping incoming", "Combined", "Edited by you"), one chip in the list
+and the file header, explained by its tooltip. Sides are "Yours"/"Incoming" in a workspace and "Destination"/"Source" when
+merging into a server branch (`mergeLabels`), always next to their branch. A conflicting file is read-only, with short
+one-line views: "Conflicts" while any is left (each with Keep yours / Keep incoming / Keep both), then "Changes" (the
+destination now → after the merge), "Yours", "Incoming" and "Base". A file with conflicts offers whole-file choices
+(`conflictChoices`): Keep yours, Keep incoming, Keep both, or "Resolve by hand…", the only way to edit text, under a
+banner with Done and Discard edits; the choice shows picked and "Changes" shows what it produces. A file that merges
+automatically is never edited; its menu only overrides it by keeping one version. Once merged, the page states where
+the result went.
+
 ## Switching with pending changes
 
 `cm switch` only ever runs on a clean workspace (`main/workspace/switchWithChanges.ts`), whatever client.conf's
@@ -156,10 +170,16 @@ renderer/src/
   list keys pressed while nothing has focus. Views keep their list's selection while away (`useViewSelection`). Lists
   expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
-- **List and details**: `ListWithDetails` (one remembered details width for every view) around a `DetailsPanel`: hero, the
-  default action (what Enter does on the row) plus the row's context menu behind "More actions", then Comment, changed files,
-  Details, Attributes, Relations. Selecting a row must stay cheap: `cm diff` runs only on request (`ChangedFilesSection`),
-  other lookups wait for the selection to settle (`useSettled`), and immutable results are cached (`IMMUTABLE_QUERY`).
+- **List and details**: `ListWithDetails` (one remembered details width for every view) around a `DetailsPanel`. Every
+  kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
+  context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
+  description, or the object's name with the comment below; edited in place where cm can edit it); a meta row (author ·
+  date · spec to copy · branch chip); attribute chips (`AttributeChips`); properties and relations behind "More details";
+  then the changes pane under a remembered splitter (`DetailsChangesPane`). cm edits changeset, attribute and label
+  comments (a label's by applying it again to its changeset, `labelCommentArgs`); branch and shelve comments stay
+  read-only: no `cm` command or client API edits them. Selecting a row must stay cheap: `cm diff`
+  runs only on request (`ChangedFilesSection`), other lookups wait for the selection to settle (`useSettled`), and
+  immutable results are cached (`IMMUTABLE_QUERY`).
 - **Branch switcher**: groups and orders branches like the official Desktop client (`branchSwitcherGroups`): /main by its
   well-known GUID, the workspace's recent branches, then the rest newest first. Recent branches are the official client's,
   read from and written to its `plasticgui.conf` (`main/plasticConfig`) on every switch, so both apps list the same ones.
