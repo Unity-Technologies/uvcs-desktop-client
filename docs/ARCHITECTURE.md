@@ -116,6 +116,10 @@ renderer/src/
 - **Discarding changes**: a workspace file's diff against its loaded revision (or reviewed copy) discards a whole change
   from a chip in the gutter, or just the lines picked by their numbers (`features/diff/viewer/useBlockDiscard`). The new
   text is computed in the renderer (`discardLines`), shown at once and written; each file keeps an undo stack for the session.
+- **Comparison method**: every text diff compares lines under the official client's methods (Ignore EOLs, Ignore
+  whitespaces, both, Recognize all; one global preference, Recognize all by default). Lines are compared trimmed
+  (`features/diff/viewer/comparisonMethod`) through a line comparator handed to Pierre and `diff`, so the diff still
+  shows and discards the original text. `cm` commands keep their own comparison: merges don't change with it.
 - **Mutations**: `runOperation` (progress toast, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
