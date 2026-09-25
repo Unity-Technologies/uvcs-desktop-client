@@ -221,6 +221,7 @@ function useChangesetsToMerge(workspacePath: string, branchName: string, sourceS
     queryKey: queryKeys.inWorkspace(workspacePath, 'changesets', { branch: branchName }),
     queryFn: () => api.changesets.list(workspacePath, { branch: branchName }),
     enabled: fromBranch,
+    refetchOnWindowFocus: false,
   });
   return fromBranch && changesets && plan ? countChangesetsToMerge(changesets, plan, branchName) : undefined;
 }

@@ -8,13 +8,11 @@ export function mergeTaskRequest(sourceSpec: string, destinationBranch: string):
   return { kind: 'merge', sourceSpec, destinationBranch };
 }
 
-/** What merging the task would do. Shared by the Changes suggestion and the dialog it opens, so the dialog opens ready. */
-export function useMergeTaskPreview(workspacePath: string, request: MergeRequest, enabled = true) {
+/** What merging the task would do. Asks the server only while the dialog is open: once when it opens, and when asked to. */
+export function useMergeTaskPreview(workspacePath: string, request: MergeRequest) {
   return useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'mergeTaskPreview', request),
     queryFn: () => api.merge.preview(workspacePath, request),
-    staleTime: 60_000,
     refetchOnWindowFocus: false,
-    enabled,
   });
 }
