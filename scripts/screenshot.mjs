@@ -54,7 +54,8 @@ for (const step of steps) {
       await window.waitForTimeout(Number(value));
       break;
     case 'theme':
-      await window.evaluate((theme) => (document.documentElement.dataset.theme = theme), value);
+      // Emulates the OS appearance, so everything that follows it (code panes included) switches too.
+      await window.emulateMedia({ colorScheme: value });
       break;
     default:
       throw new Error(`Unknown step ${step}`);
