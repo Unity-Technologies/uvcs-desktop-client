@@ -28,6 +28,30 @@ src/
 - A `cm shell` command ends at the `CommandResult <code>` line that ends its output, with nothing more in the pipe
   (`CmShellSession`): comments can quote such lines, and a misread end shifts every later command by one output.
 
+## Operation progress
+
+Long operations report a structured `OperationProgress` (`shared/domain/operation.ts`): a stage (`preparing`,
+`calculating`, `downloading`, `uploading`, `applying`, `confirming`, `finishing`, or `working` in the app's words),
+stable stage words, files and bytes done and to do, a fraction (or null), the file at hand, whether stopping is still
+safe, and the step of a multi-command operation (shelve, undo, switch, bring). Never a raw `cm` line.
+
+- Each command's output is read by a pure `ProgressReader` (`main/cm/progress/`), passed as
+  `onOutputLine: context.progressOf(reader)`; the `OperationTracker` adds the step (`context.beginStep`) and throttles to
+  ten reports a second, stage changes at once.
+- `cm update`/`cm switch` run with `--forcedetailedprogress` (`cm/updateArgs.ts`): `cm` prints its bytes-and-files line
+  only to a terminal otherwise, and `--machinereadable` turns it off. It rewrites the line with `\r` every 200 ms, so
+  `runCmProcess` splits lines at `\r` too. The words are localized: readers go by the line's shape.
+- `cm checkin --machinereadable` reports uploaded bytes only every 5 s with redirected output; `cm merge` prints its plan,
+  then a record per change applied in a burst, then downloads silently; `cm shelveset create` only names its stages.
+- Stopping is offered only while it leaves things as they were: a killed update or switch leaves the workspace half
+  updated with partial files as private `.private.0` copies, and a checkin killed while confirming may be half recorded;
+  killed while uploading, nothing is committed.
+- The renderer keeps each operation's progress and its bar motion (`runningOperationsStore`, `progressBar`): the bar
+  glides linearly towards where the next report should land at the current pace (never backwards, at most halfway into
+  what's left), sweeps while nothing is measured, and stays full and shimmering while wrapping up. `OperationCard` draws
+  it in fixed rows and widths, then turns into the success message in place; the status bar, the branch pill and the
+  incoming chip show the same operation with a `ProgressRing`.
+
 ## No external tools, ever
 
 The app never lets `cm` open its merge or diff tool; every conflict is resolved in the app's merge page.
@@ -114,7 +138,7 @@ renderer/src/
 - **Discarding changes**: a workspace file's diff against its loaded revision (or reviewed copy) discards a whole change
   from a chip in the gutter, or just the lines picked by their numbers (`features/diff/viewer/useBlockDiscard`). The new
   text is computed in the renderer (`discardLines`), shown at once and written; each file keeps an undo stack for the session.
-- **Mutations**: `runOperation` (progress toast, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
+- **Mutations**: `runOperation` (progress card, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
