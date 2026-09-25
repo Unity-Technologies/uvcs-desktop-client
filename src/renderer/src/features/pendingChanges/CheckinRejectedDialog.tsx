@@ -18,6 +18,8 @@ interface CheckinRejectedRequest {
   overlapping: string[];
   /** Updating needs a decision first: files changed on both sides, or files the branch deleted or moved. */
   needsReview: boolean;
+  /** `cm` refused the checkin; otherwise the incoming check told before trying. */
+  rejected: boolean;
 }
 
 /** Explains that the branch moved on and offers the way forward. Resolves with the choice, or undefined if cancelled. */
@@ -25,7 +27,7 @@ export function askCatchUpForCheckin(request: CheckinRejectedRequest): Promise<C
   return askDialog<CatchUpChoice>((finish) => <CheckinRejectedDialog {...request} onFinish={finish} />);
 }
 
-function CheckinRejectedDialog({ incoming, overlapping, needsReview, onFinish }: CheckinRejectedRequest & { onFinish: (choice: CatchUpChoice | undefined) => void }) {
+function CheckinRejectedDialog({ incoming, overlapping, needsReview, rejected, onFinish }: CheckinRejectedRequest & { onFinish: (choice: CatchUpChoice | undefined) => void }) {
   const primary: CatchUpChoice = needsReview ? 'review' : 'updateAndCheckin';
   const shown = incoming.changesets.slice(0, SHOWN_CHANGESETS);
   const more = incoming.changesets.length - shown.length;
@@ -46,8 +48,8 @@ function CheckinRejectedDialog({ incoming, overlapping, needsReview, onFinish }:
       }
     >
       <p className={styles.message}>
-        Your workspace is at changeset {incoming.loadedChangeset}; the branch is now at {incoming.headChangeset}. Update first, then check in again.
-        Your comment is kept.
+        Your workspace is at changeset {incoming.loadedChangeset}; the branch is now at {incoming.headChangeset}. Update first, then check in
+        {rejected && ' again'}. Your comment is kept.
       </p>
       <ul className={styles.changesets}>
         {shown.map((changeset) => (

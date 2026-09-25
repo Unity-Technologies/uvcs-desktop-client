@@ -7,6 +7,7 @@ import { drawNodeHit } from './drawSearchHit';
 import { fitText, summaryOf } from './fitText';
 import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, COLUMN_WIDTH, columnX, NODE_RADIUS, rowY } from './geometry';
 import { branchColor } from './graphPalette';
+import { hasParentOffGraph, parentLinksInView } from './parentLinks';
 import { nextColumnOnRow } from './rowNeighbors';
 
 const DOT_RADIUS = 5;
@@ -14,11 +15,14 @@ const ARROW_SIZE = 4;
 /** Comments start a little left of their changeset and may use the free space up to the next one on the row. */
 const COMMENT_INSET = COLUMN_WIDTH / 2 - 6;
 const LAST_COMMENT_WIDTH = 220;
+/** How far the dashed line of a changeset whose parent is off the graph reaches past the changeset. */
+const OFF_GRAPH_STUB_LENGTH = 22;
 
 /** Changesets with the links to their parents, their comments and the workspace marker. */
 export function drawNodes(draw: DrawContext): void {
   const nodes = visibleNodes(draw);
-  nodes.forEach((node) => drawParentLink(draw, node));
+  parentLinksInView(draw.scene.layout, draw.visible, NODE_RADIUS).forEach(({ parent, child }) => drawParentLink(draw, parent, child));
+  nodes.filter((node) => hasParentOffGraph(draw.scene.layout, node)).forEach((node) => drawOffGraphStub(draw, node));
   nodes.forEach((node) => drawNode(draw, node));
   if (draw.detail.comments) nodes.forEach((node) => drawComment(draw, node));
 
@@ -43,11 +47,8 @@ function radiusFor({ detail }: DrawContext): number {
 }
 
 /** The line along the band to the previous changeset of the same branch, with an arrow pointing to it. */
-function drawParentLink(draw: DrawContext, node: NodeLayout): void {
+function drawParentLink(draw: DrawContext, parent: NodeLayout, node: NodeLayout): void {
   const { ctx, scene, detail } = draw;
-  const parent = scene.layout.nodes.get(node.changeset.parent);
-  if (!parent || parent.changeset.branch !== node.changeset.branch) return;
-
   const radius = radiusFor(draw);
   const y = rowY(node.row);
   const fromX = columnX(parent.column) + (parent.collapsed && detail.text ? COLLAPSED_NODE_HALF_WIDTH - 4 : radius) + 2;
@@ -71,6 +72,25 @@ function drawParentLink(draw: DrawContext, node: NodeLayout): void {
     ctx.closePath();
     ctx.fill();
   }
+  ctx.restore();
+}
+
+/** A short dashed line leading left from a changeset whose parent is not in the graph (as gitgrove does). */
+function drawOffGraphStub(draw: DrawContext, node: NodeLayout): void {
+  const { ctx, scene } = draw;
+  const x = columnX(node.column) - radiusFor(draw) - 2;
+  const y = rowY(node.row);
+
+  ctx.save();
+  ctx.strokeStyle = branchColor(scene.palette, node.changeset.branch);
+  ctx.globalAlpha = isChangesetDimmed(scene, node.changeset) ? DIMMED_ALPHA : 0.6;
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'butt';
+  ctx.setLineDash([3, 3]);
+  ctx.beginPath();
+  ctx.moveTo(x - OFF_GRAPH_STUB_LENGTH, y);
+  ctx.lineTo(x, y);
+  ctx.stroke();
   ctx.restore();
 }
 

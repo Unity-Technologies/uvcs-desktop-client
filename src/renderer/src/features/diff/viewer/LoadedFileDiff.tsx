@@ -12,6 +12,8 @@ import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { absolutePath } from '../../pendingChanges/pendingChangeOperations';
 import { canDiscardChanges } from './canDiscardChanges';
+import { comparisonMethodLabel, type ComparisonMethod } from './comparisonMethod';
+import { ComparisonMethodMenu } from './ComparisonMethodMenu';
 import { diffPresentation } from './diffPresentation';
 import { useDiffPreferences, type DiffLayout } from './diffPreferencesStore';
 import { PaneToolbarGroup } from '../../../ui/PaneToolbar';
@@ -19,7 +21,8 @@ import { DiffViewerFrame } from './DiffViewerFrame';
 import { discardInFile, undoLastDiscard, type DiscardTarget } from './discardInFile';
 import { FileChangedNotice } from './FileChangedNotice';
 import { IMAGE_DIFF_MODES, type ImageDiffMode } from './image/imageDiffModes';
-import { lineChangeStats } from './lineChangeStats';
+import { IGNORED_DIFFERENCE_TITLES, ignoredDifference } from './ignoredDifference';
+import { hasLineChanges, lineChangeStats } from './lineChangeStats';
 import { LineStats } from './LineStats';
 import type { DiscardRequest } from './useBlockDiscard';
 import type { DiffContents } from './useDiffContents';
@@ -44,7 +47,8 @@ interface LoadedFileDiffProps {
 
 /** One loaded pair of file versions, with the toolbar that fits how it's shown. */
 export function LoadedFileDiff({ workspacePath, contents, fileName, title, identicalDescription, compareControls, onMatchesBase }: LoadedFileDiffProps) {
-  const { layout, collapseUnchanged, wrapLines, imageMode, setLayout, setCollapseUnchanged, setWrapLines, setImageMode } = useDiffPreferences();
+  const { layout, collapseUnchanged, wrapLines, comparisonMethod, imageMode, setLayout, setCollapseUnchanged, setWrapLines, setComparisonMethod, setImageMode } =
+    useDiffPreferences();
   const editablePath = contents.modified.kind === 'workspaceFile' ? contents.modified.path : null;
   const editing = useFileEditing(workspacePath, editablePath);
   // The file follows the disk, except while it's being edited: then it stays as it was when editing started.
@@ -59,7 +63,12 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const presentation = diffPresentation(left, right);
   const isText = presentation.kind === 'text';
   const canEdit = isText && editablePath !== null;
-  const stats = useMemo(() => (isText ? lineChangeStats(left.text ?? '', right.text ?? '') : null), [isText, left.text, right.text]);
+  const stats = useMemo(
+    () => (isText ? lineChangeStats(left.text ?? '', right.text ?? '', comparisonMethod) : null),
+    [isText, left.text, right.text, comparisonMethod],
+  );
+  // Different texts the comparison method shows as equal, e.g. only their line endings changed.
+  const onlyIgnoredChanges = presentation.kind === 'text' && !presentation.identical && stats !== null && !hasLineChanges(stats);
   const openFile = editablePath === null ? undefined : () => void api.system.openPath(absolutePath(workspacePath, editablePath));
 
   useShortcut('mod+s', () => void editing.save(), editing.editing);
@@ -89,9 +98,10 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   ) : isText ? (
     <>
       {compareControls}
-      {stats && (stats.added > 0 || stats.removed > 0) && <LineStats {...stats} />}
+      {stats && hasLineChanges(stats) && <LineStats {...stats} />}
       <PaneToolbarGroup>
         {canEdit && <IconButton size="small" icon={<Pencil size={13} />} label="Edit this file" shortcut="mod+e" onClick={startEditing} />}
+        <ComparisonMethodMenu value={comparisonMethod} onChange={setComparisonMethod} />
         <IconButton
           size="small"
           icon={<FoldVertical size={14} />}
@@ -133,15 +143,32 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
     body = (
       <>
         {changedOnDisk && <FileChangedNotice onReload={editing.discard} />}
-        <TextDiffBody original={left.text} modified={right.text} fileName={fileName} editing onEdit={editing.change} />
+        <TextDiffBody original={left.text} modified={right.text} fileName={fileName} comparisonMethod={comparisonMethod} editing onEdit={editing.change} />
       </>
     );
   } else if (presentation.kind === 'text' && presentation.empty) {
     body = <EmptyState icon={<FileText size={22} />} title="Empty file" description="This file has no content." action={editAction} />;
   } else if (presentation.kind === 'text' && presentation.identical) {
     body = <EmptyState title="No content changes" description={identicalDescription ?? 'The contents of both versions are identical.'} action={editAction} />;
+  } else if (onlyIgnoredChanges) {
+    body = (
+      <EmptyState
+        title={IGNORED_DIFFERENCE_TITLES[ignoredDifference(left.text ?? '', right.text ?? '')]}
+        description={`The comparison method, ${comparisonMethodLabel(comparisonMethod)}, hides these changes.`}
+        action={<Button onClick={() => setComparisonMethod('recognizeAll')}>Recognize all</Button>}
+      />
+    );
   } else if (presentation.kind === 'text') {
-    body = <TextDiffBody original={left.text} modified={right.text} fileName={fileName} onDiscard={onDiscard} onUndoDiscard={onUndoDiscard} />;
+    body = (
+      <TextDiffBody
+        original={left.text}
+        modified={right.text}
+        fileName={fileName}
+        comparisonMethod={comparisonMethod}
+        onDiscard={onDiscard}
+        onUndoDiscard={onUndoDiscard}
+      />
+    );
   } else if (presentation.kind === 'tooLarge') {
     body = (
       <EmptyState
@@ -171,19 +198,21 @@ interface TextDiffBodyProps {
   original?: string;
   modified?: string;
   fileName: string;
+  comparisonMethod: ComparisonMethod;
   editing?: boolean;
   onEdit?: (text: string) => void;
   onDiscard?: (request: DiscardRequest) => void;
   onUndoDiscard?: () => void;
 }
 
-function TextDiffBody({ original, modified, fileName, editing = false, onEdit = () => {}, onDiscard, onUndoDiscard }: TextDiffBodyProps) {
+function TextDiffBody({ original, modified, fileName, comparisonMethod, editing = false, onEdit = () => {}, onDiscard, onUndoDiscard }: TextDiffBodyProps) {
   return (
     <Suspense fallback={<CenteredSpinner />}>
       <TextDiff
         original={original ?? ''}
         modified={modified ?? ''}
         fileName={fileName}
+        comparisonMethod={comparisonMethod}
         editing={editing}
         onEdit={onEdit}
         onDiscard={onDiscard}

@@ -6,6 +6,7 @@ import { spec } from '@shared/domain/specs';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
+import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
 import { NoSelection } from '../../components/NoSelection';
 import { SincePicker } from '../../components/SincePicker';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
@@ -18,7 +19,6 @@ import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
 import { SegmentedControl } from '../../ui/SegmentedControl';
-import { ListSkeleton } from '../../ui/ListSkeleton';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ToggleChip } from '../../ui/ToggleChip';
 import { ViewHeader } from '../../ui/ViewHeader';
@@ -110,7 +110,7 @@ export function BranchesView() {
         />
       </ViewHeader>
       {isLoading ? (
-        <ListSkeleton />
+        <ListWithDetailsSkeleton columns={columns} />
       ) : error ? (
         <EmptyState title="Couldn't load branches" description={error.message} />
       ) : rows.length === 0 ? (

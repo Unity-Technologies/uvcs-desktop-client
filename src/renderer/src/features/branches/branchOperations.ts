@@ -9,11 +9,11 @@ import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
 import { pickBranch } from './BranchPickerDialog';
-import { useRecentBranchesStore } from './recentBranchesStore';
+import { rememberRecentBranch } from './recentBranches';
 
 /** Resolves to whether the workspace switched. `pendingChanges` is the choice already made for the pending changes, if any. */
 export function switchToBranch(workspacePath: string, branch: string, pendingChanges?: PendingChangesAction): Promise<boolean> {
-  useRecentBranchesStore.getState().remember(workspacePath, branch);
+  void rememberRecentBranch(workspacePath, branch);
   return switchWorkspace(workspacePath, spec.branch(branch), branch, pendingChanges);
 }
 

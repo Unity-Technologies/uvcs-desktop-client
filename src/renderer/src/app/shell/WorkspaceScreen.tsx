@@ -36,8 +36,9 @@ export function WorkspaceScreen() {
         <main className={styles.main}>
           <TopBar />
           <div className={styles.content}>
-            {/* Views stay mounted under pages so going back keeps their scroll and selection. */}
-            <div className={styles.layer} hidden={Boolean(topPage)}>
+            {/* Views stay mounted under pages so going back keeps their scroll and selection. Keyed by the view so
+                each one arrives with the view transition. */}
+            <div key={view} className={styles.layer} hidden={Boolean(topPage)}>
               <Suspense fallback={<ViewFallback view={activeView} />}>
                 <ActiveView key={view} />
               </Suspense>

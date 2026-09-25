@@ -4,6 +4,7 @@ import type { Shelve } from '@shared/domain/shelve';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
+import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
 import { NoSelection } from '../../components/NoSelection';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { UserLabel } from '../../ui/Avatar';
@@ -12,7 +13,6 @@ import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
-import { CenteredSpinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ToggleChip } from '../../ui/ToggleChip';
 import { ViewHeader } from '../../ui/ViewHeader';
@@ -73,7 +73,7 @@ export function ShelvesView() {
         </ToggleChip>
       </ViewHeader>
       {isLoading ? (
-        <CenteredSpinner />
+        <ListWithDetailsSkeleton columns={COLUMNS} />
       ) : error ? (
         <EmptyState title="Couldn't load shelves" description={error.message} />
       ) : visible.length === 0 ? (

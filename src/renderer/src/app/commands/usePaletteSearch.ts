@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { LoaderCircle, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
+import type { Branch } from '@shared/domain/branch';
 import type { QueryFilter } from '@shared/domain/query';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
-import { useRecentBranches } from '../../features/branches/recentBranchesStore';
+import { useRecentBranchGuids } from '../../features/branches/recentBranches';
 import { useWorkspacePaths } from '../../features/files/useWorkspacePaths';
 import { isCheckinCandidate } from '../../features/pendingChanges/changeCategories';
 import { sortByStatus } from '../../features/pendingChanges/changeRows';
@@ -73,7 +74,7 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
   const files = useWorkspacePaths(path, enabled);
   const pendingChanges = usePendingChangesOf(workspacePath);
   const workspace = useWorkspaceInfoOf(workspacePath);
-  const recentBranches = useRecentBranches(path);
+  const recentBranches = useRecentBranchGuids(path, enabled);
   const branches = useQuery({ queryKey: branchesKey(path, {}), queryFn: () => api.branches.list(path, {}), ...cached });
   const labels = useQuery({ queryKey: labelsKey(path, {}), queryFn: () => api.labels.list(path, {}), ...cached });
   const changesets = useQuery({
@@ -138,9 +139,12 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
 
     const listGroups = (): SearchGroup[] => {
       // The current branch, the ones switched to lately, then the newest.
-      const first = [context.currentBranch, ...recentBranches];
-      const rank = (name: string): number => (first.includes(name) ? first.indexOf(name) : first.length);
-      const sortedBranches = (branches.data ?? []).map((branch, order) => ({ branch, order })).sort((a, b) => rank(a.branch.name) - rank(b.branch.name) || a.order - b.order);
+      const rank = (branch: Branch): number => {
+        if (branch.name === context.currentBranch) return 0;
+        const recent = recentBranches.indexOf(branch.guid.toLowerCase());
+        return recent === -1 ? recentBranches.length + 1 : recent + 1;
+      };
+      const sortedBranches = (branches.data ?? []).map((branch, order) => ({ branch, order })).sort((a, b) => rank(a.branch) - rank(b.branch) || a.order - b.order);
       return [
         {
           section: 'branches',

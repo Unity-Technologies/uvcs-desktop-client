@@ -5,7 +5,18 @@
   min-height: 0;
   overflow: auto;
   background: var(--bg-subtle);
-  animation: var(--keyframes-fade-in) var(--duration-fast);
+}
+
+/* Selecting another row remounts the panel: its surfaces stay put while the content fades in, so the change reads as a
+   crossfade instead of a flash. */
+.hero > *,
+.body {
+  animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
+}
+
+/* Standing in for a panel whose list loads: it shows after the same beat as the list's skeleton rows. */
+.panel[aria-busy='true'] {
+  animation: var(--keyframes-fade-in) var(--duration-normal) var(--duration-fast) var(--ease-out) both;
 }
 
 .hero {
@@ -209,7 +220,7 @@
   height: 12px;
   border-radius: var(--radius-sm);
   background: var(--bg-active);
-  animation: pulse 1.2s ease-in-out infinite alternate;
+  animation: var(--keyframes-pulse) 1.2s ease-in-out infinite alternate;
 }
 
 .skeletonRow:nth-child(3n + 2) {
@@ -220,12 +231,9 @@
   width: 86%;
 }
 
-@keyframes pulse {
-  from {
-    opacity: 0.45;
-  }
-  to {
-    opacity: 1;
+@media (prefers-reduced-motion: reduce) {
+  .skeletonRow {
+    animation: none;
   }
 }
 

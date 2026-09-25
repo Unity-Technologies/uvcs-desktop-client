@@ -1,11 +1,12 @@
-import type { IncomingChanges, UpdateResolutions } from '@shared/domain/incoming';
+import type { IncomingChanges, IncomingSummary, UpdateResolutions } from '@shared/domain/incoming';
 import { spec } from '@shared/domain/specs';
 import { ApiError, api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runOperation } from '../../app/operations/runOperation';
 import { pluralize } from '../../lib/text';
 import { useToastStore } from '../../ui/toast/toastStore';
-import { updatedMessage } from './updatedMessage';
+import { useSuccessMomentStore } from '../pendingChanges/successMoment';
+import { changesetsFrom, updatedMessage } from './updatedMessage';
 import { updateStoppedByConflicts } from './updateFailure';
 
 /**
@@ -25,7 +26,20 @@ export async function updateToIncoming(workspacePath: string, incoming: Incoming
     successAction: () => ({ label: 'View', run: () => viewIncoming(incoming) }),
     onFailure: explainUpdateConflicts,
   });
+  if (updated === true) showUpdatedMoment(workspacePath, incoming);
   return updated === true;
+}
+
+/** Changes shows what the update brought for a few seconds, as it does after a check-in. */
+export function showUpdatedMoment(workspacePath: string, { branch, loadedChangeset, headChangeset, changesetCount, authors }: IncomingSummary): void {
+  if (!branch || changesetCount === 0) return;
+  useSuccessMomentStore.getState().show(workspacePath, {
+    verb: 'Updated to',
+    changesetId: headChangeset,
+    branch,
+    fromChangeset: loadedChangeset,
+    detail: changesetsFrom(changesetCount, authors),
+  });
 }
 
 /**

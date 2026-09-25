@@ -13,6 +13,7 @@ import { CmError } from '../cm/CmError';
 import { checkNewWorkspaceFolder } from '../files/newWorkspaceFolder';
 import { callerId } from '../ipc/caller';
 import { UPDATE_ARGS } from '../merge/updateWithMerge';
+import { readWorkspaceHeads } from '../workspace/selectorFile';
 import { readSwitchPreflight } from '../workspace/switchPreflight';
 import { switchWithChanges } from '../workspace/switchWithChanges';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
@@ -113,6 +114,7 @@ export function createWorkspacesService({ cm, operations, watchers, settings }: 
     info,
     workingObjectComment: (workspacePath, selector) => readWorkingObjectComment(cm, workspacePath, selector),
     repositoriesOf,
+    heads: readWorkspaceHeads,
     findMissing: async (paths) => paths.filter((path) => !existsSync(path)),
     findRoot,
     create,

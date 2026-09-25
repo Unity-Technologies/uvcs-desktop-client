@@ -66,6 +66,17 @@
   border-bottom-right-radius: 0;
 }
 
+/* Under the button while it updates first: what the update brings. */
+.behind {
+  margin-top: calc(var(--space-1) * -1);
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .modeButton {
   width: 32px;
   height: 32px;

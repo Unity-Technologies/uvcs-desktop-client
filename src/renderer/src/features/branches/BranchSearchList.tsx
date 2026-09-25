@@ -30,6 +30,7 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
   const [query, setQuery] = useState('');
   const [highlighted, setHighlighted] = useState(0);
   const listRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const movedByKeyboard = useRef(false);
 
   const { rows, branches } = useMemo(() => branchSearchRows(groups, query), [groups, query]);
@@ -49,6 +50,13 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
   }, [highlighted, rows, virtualizer]);
 
   const onKeyDown = (event: KeyboardEvent): void => {
+    // Keys pressed in a row's context menu (a portal) bubble here too: they belong to the menu.
+    if (!event.currentTarget.contains(event.target as Node)) return;
+    if (menu && (event.key === 'ContextMenu' || (event.key === 'F10' && event.shiftKey))) {
+      event.preventDefault();
+      openRowMenu(highlighted);
+      return;
+    }
     const target = navigationTarget(event.key, highlighted, branches.length);
     if (target !== null) {
       event.preventDefault();
@@ -60,11 +68,20 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
     }
   };
 
+  /** The context menu of a row from the keyboard, opened where a right click on it would. */
+  const openRowMenu = (index: number): void => {
+    const row = listRef.current?.querySelector<HTMLElement>(`[data-branch-index="${index}"]`);
+    if (!row) return;
+    const bounds = row.getBoundingClientRect();
+    row.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: bounds.left + 24, clientY: bounds.bottom - 4 }));
+  };
+
   return (
     <div className={styles.container} onKeyDown={onKeyDown}>
       <div className={styles.search}>
         <Search size={14} className={styles.searchIcon} />
         <input
+          ref={inputRef}
           className={styles.input}
           value={query}
           placeholder={placeholder}
@@ -101,13 +118,22 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
                   branch={row.branch}
                   current={row.branch.name === currentBranch}
                   highlighted={row.index === highlighted}
+                  data-branch-index={row.index}
                   style={position}
                   onMouseEnter={() => setHighlighted(row.index)}
                   onClick={() => onPick(row.branch)}
                 />
               );
               return menu ? (
-                <ActionContextMenu key={row.branch.name} entries={() => menu(row.branch)}>
+                <ActionContextMenu
+                  key={row.branch.name}
+                  entries={() => menu(row.branch)}
+                  // Back to the filter, so typing and the arrow keys carry on.
+                  onCloseAutoFocus={(event) => {
+                    event.preventDefault();
+                    inputRef.current?.focus();
+                  }}
+                >
                   {item}
                 </ActionContextMenu>
               ) : (
