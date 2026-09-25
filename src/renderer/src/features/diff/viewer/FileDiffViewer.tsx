@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { Columns2, FoldVertical, Pencil, Rows2, WrapText } from 'lucide-react';
-import { Suspense, type ReactNode } from 'react';
+import { Suspense, useMemo, type ReactNode } from 'react';
 import type { ContentSource, FileContent } from '@shared/domain/content';
 import { api } from '../../../api/client';
 import { queryKeys } from '../../../api/queryKeys';
@@ -9,9 +9,12 @@ import { useShortcut } from '../../../lib/useShortcut';
 import { Button } from '../../../ui/Button';
 import { EmptyState } from '../../../ui/EmptyState';
 import { IconButton } from '../../../ui/IconButton';
+import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { CenteredSpinner } from '../../../ui/Spinner';
-import { useDiffPreferences } from './diffPreferencesStore';
+import { useDiffPreferences, type DiffLayout } from './diffPreferencesStore';
 import { ImageDiff } from './ImageDiff';
+import { lineChangeStats } from './lineChangeStats';
+import { LineStats } from './LineStats';
 import { lazyComponent } from '../../../lib/lazyComponent';
 import { useFileEditing } from './useFileEditing';
 import styles from './FileDiffViewer.module.css';
@@ -47,6 +50,7 @@ export function FileDiffViewer({ workspacePath, original, modified, fileName, ti
   const right = modifiedContent.data;
   const isText = Boolean(left && right && !left.isBinary && !right.isBinary);
   const canEdit = isText && editablePath !== null;
+  const stats = useMemo(() => (isText ? lineChangeStats(left?.text ?? '', right?.text ?? '') : null), [isText, left?.text, right?.text]);
 
   useShortcut('mod+s', () => void editing.save(), editing.editing);
   useShortcut('mod+e', editing.start, canEdit && !editing.editing);
@@ -56,37 +60,42 @@ export function FileDiffViewer({ workspacePath, original, modified, fileName, ti
       <div className={styles.toolbar}>
         <div className={styles.title}>{title}</div>
         {editing.editing ? (
-          <>
+          <div className={styles.group}>
             <Button size="small" variant="ghost" onClick={editing.discard}>
               {editing.dirty ? 'Discard edits' : 'Done'}
             </Button>
             <Button size="small" variant="primary" disabled={!editing.dirty} onClick={() => void editing.save()}>
               Save
             </Button>
-          </>
+          </div>
         ) : (
           isText && (
             <>
-              {canEdit && <IconButton size="small" icon={<Pencil size={13} />} label="Edit this file" shortcut="mod+e" onClick={editing.start} />}
-              <IconButton
-                size="small"
-                icon={<FoldVertical size={14} />}
-                label={collapseUnchanged ? 'Show all lines' : 'Collapse unchanged lines'}
-                variant={collapseUnchanged ? 'secondary' : 'ghost'}
-                onClick={() => setCollapseUnchanged(!collapseUnchanged)}
-              />
-              <IconButton
-                size="small"
-                icon={<WrapText size={14} />}
-                label={wrapLines ? "Don't wrap lines" : 'Wrap lines'}
-                variant={wrapLines ? 'secondary' : 'ghost'}
-                onClick={() => setWrapLines(!wrapLines)}
-              />
-              <IconButton
-                size="small"
-                icon={layout === 'split' ? <Rows2 size={14} /> : <Columns2 size={14} />}
-                label={layout === 'split' ? 'Unified view' : 'Side-by-side view'}
-                onClick={() => setLayout(layout === 'split' ? 'unified' : 'split')}
+              {stats && (stats.added > 0 || stats.removed > 0) && <LineStats {...stats} />}
+              <div className={styles.group}>
+                {canEdit && <IconButton size="small" icon={<Pencil size={13} />} label="Edit this file" shortcut="mod+e" onClick={editing.start} />}
+                <IconButton
+                  size="small"
+                  icon={<FoldVertical size={14} />}
+                  label={collapseUnchanged ? 'Show all lines' : 'Collapse unchanged lines'}
+                  variant={collapseUnchanged ? 'secondary' : 'ghost'}
+                  onClick={() => setCollapseUnchanged(!collapseUnchanged)}
+                />
+                <IconButton
+                  size="small"
+                  icon={<WrapText size={14} />}
+                  label={wrapLines ? "Don't wrap lines" : 'Wrap lines'}
+                  variant={wrapLines ? 'secondary' : 'ghost'}
+                  onClick={() => setWrapLines(!wrapLines)}
+                />
+              </div>
+              <SegmentedControl<DiffLayout>
+                value={layout}
+                onChange={setLayout}
+                segments={[
+                  { value: 'split', label: <><Columns2 size={13} /> Split</>, title: 'Side-by-side view' },
+                  { value: 'unified', label: <><Rows2 size={13} /> Unified</>, title: 'Unified view' },
+                ]}
               />
             </>
           )
