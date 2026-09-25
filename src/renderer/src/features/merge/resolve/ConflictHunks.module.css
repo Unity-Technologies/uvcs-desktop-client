@@ -1,6 +1,44 @@
-.conflictActions {
+/* Slotted into the row Pierre keeps above each conflict: the destination's label, with the choices on the right. */
+.hunkHeader {
   display: flex;
-  gap: var(--space-1);
-  padding: 4px 8px;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
   font-family: var(--font-ui);
+}
+
+.side {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.role {
+  flex: none;
+  color: var(--diffs-addition-base, var(--status-added));
+  font-weight: var(--weight-semibold);
+}
+
+.branch {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.choices {
+  display: flex;
+  flex: none;
+  gap: 2px;
+  margin-left: auto;
+}
+
+.choices > button {
+  height: 22px;
+  padding-inline: var(--space-2);
+  font-size: var(--text-xs);
 }
