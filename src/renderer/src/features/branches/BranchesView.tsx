@@ -1,4 +1,4 @@
-import { ChevronRight, EyeOff, GitBranch, GitBranchPlus, List, ListTree, RefreshCw, User } from 'lucide-react';
+import { EyeOff, GitBranch, GitBranchPlus, List, ListTree, RefreshCw, User } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import type { CodeReview } from '@shared/domain/codeReview';
@@ -7,7 +7,6 @@ import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { NoSelection } from '../../components/NoSelection';
-import { PathLabel } from '../../components/PathLabel';
 import { SincePicker } from '../../components/SincePicker';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { sinceDateFor } from '../../lib/sincePresets';
@@ -19,20 +18,19 @@ import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
 import { SegmentedControl } from '../../ui/SegmentedControl';
-import { CenteredSpinner } from '../../ui/Spinner';
+import { ListSkeleton } from '../../ui/ListSkeleton';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ToggleChip } from '../../ui/ToggleChip';
 import { ViewHeader } from '../../ui/ViewHeader';
-import { CodeReviewChip } from '../codeReviews/CodeReviewChip';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
 import { BranchDetails } from './BranchDetails';
+import { BranchNameCell } from './BranchNameCell';
 import { branchMenu } from './branchMenu';
 import { diffBranch } from './branchOperations';
 import { useBranchesViewStore, type BranchesLayout } from './branchesViewStore';
 import { buildBranchTree, type BranchTreeRow } from './branchTree';
 import { openCreateBranchDialog } from './CreateBranchDialog';
 import { useBranches } from './useBranches';
-import styles from './BranchesView.module.css';
 
 export function BranchesView() {
   const workspacePath = useWorkspacePath();
@@ -112,7 +110,7 @@ export function BranchesView() {
         />
       </ViewHeader>
       {isLoading ? (
-        <CenteredSpinner />
+        <ListSkeleton />
       ) : error ? (
         <EmptyState title="Couldn't load branches" description={error.message} />
       ) : rows.length === 0 ? (
@@ -193,38 +191,4 @@ function useBranchColumns(
       },
     ];
   }, [layout, currentBranch, onToggleCollapsed, reviews]);
-}
-
-interface BranchNameCellProps {
-  row: BranchTreeRow;
-  isCurrent: boolean;
-  /** The branch's newest code review, if it has one. */
-  review: CodeReview | undefined;
-  onToggleCollapsed: (name: string) => void;
-}
-
-function BranchNameCell({ row, isCurrent, review, onToggleCollapsed }: BranchNameCellProps) {
-  return (
-    <span className={styles.name} style={{ paddingLeft: row.depth * 16 }}>
-      {row.hasChildren ? (
-        <button
-          className={styles.chevron}
-          data-collapsed={row.collapsed}
-          aria-label={row.collapsed ? 'Expand' : 'Collapse'}
-          onMouseDown={(event) => event.stopPropagation()}
-          onClick={() => onToggleCollapsed(row.branch.name)}
-        >
-          <ChevronRight size={13} />
-        </button>
-      ) : (
-        <GitBranch size={13} className={styles.branchIcon} />
-      )}
-      <span className={styles.label} data-hidden={row.branch.isHidden}>
-        {row.depth > 0 ? <Highlight text={row.branch.name.slice(row.branch.name.lastIndexOf('/'))} /> : <PathLabel path={row.branch.name} fitContent />}
-      </span>
-      {isCurrent && <span className={styles.current}>Current</span>}
-      {review && <CodeReviewChip review={review} />}
-      {row.branch.isHidden && <EyeOff size={12} className={styles.hiddenIcon} />}
-    </span>
-  );
 }
