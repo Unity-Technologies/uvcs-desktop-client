@@ -5,7 +5,7 @@ export interface ExplorerApi {
   listDirectory(workspacePath: string, directory: string): Promise<TreeItem[]>;
   /** Children of a directory in the repository at a changeset, without a workspace. */
   listRepositoryDirectory(workspacePath: string, changesetId: number, directory: string): Promise<TreeItem[]>;
-  /** Every path in the workspace, for quick "go to file" searches. */
+  /** Every path in the workspace, private ones included, for quick "go to file" searches. Read from disk, not `cm`. */
   listAllPaths(workspacePath: string): Promise<{ path: string; isDirectory: boolean }[]>;
   details(workspacePath: string, path: string): Promise<ItemDetails>;
   addRecursive(workspacePath: string, paths: string[]): Promise<void>;

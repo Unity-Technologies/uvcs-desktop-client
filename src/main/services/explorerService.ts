@@ -4,9 +4,9 @@ import { join } from 'node:path';
 import { dialog, shell } from 'electron';
 import type { ExplorerApi } from '@shared/api/explorer';
 import type { RevisionType } from '@shared/domain/explorer';
-import { parseRecords, recordFormat } from '../cm/formatRecords';
 import { parseItemDetails } from '../cm/itemDetailsXml';
 import { parseTreeItems } from '../cm/treeItemsXml';
+import { listWorkspacePaths } from '../files/listWorkspacePaths';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
 
@@ -22,13 +22,6 @@ export function createExplorerService({ cm }: ServiceContext): ExplorerApi {
   async function listRepositoryDirectory(workspacePath: string, changesetId: number, directory: string) {
     const xml = await cm.query(['ls', `/${directory}`, `--tree=cs:${changesetId}`, '--xml'], inWorkspace(workspacePath));
     return parseTreeItems(xml);
-  }
-
-  async function listAllPaths(workspacePath: string) {
-    const output = await cm.query(['ls', workspacePath, '-R', `--format=${recordFormat(['wkpath', 'type'])}`], inWorkspace(workspacePath));
-    return parseRecords(output)
-      .filter(([path]) => path)
-      .map(([path, type]) => ({ path: path!.replace(/\\/g, '/'), isDirectory: type === 'dir' }));
   }
 
   async function details(workspacePath: string, path: string) {
@@ -78,7 +71,7 @@ export function createExplorerService({ cm }: ServiceContext): ExplorerApi {
   return {
     listDirectory,
     listRepositoryDirectory,
-    listAllPaths,
+    listAllPaths: listWorkspacePaths,
     details,
     addRecursive,
     move,

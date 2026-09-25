@@ -22,7 +22,7 @@ function start(): void {
       cm,
       operations: new OperationTracker((operationId, line) => sendEvent('operationProgress', { operationId, line })),
       settings: new SettingsStore(join(app.getPath('userData'), 'settings.json')),
-      watcher: new WorkspaceWatcher((workspacePath) => sendEvent('workspaceChanged', { workspacePath })),
+      watcher: new WorkspaceWatcher((workspacePath, pathsChanged) => sendEvent('workspaceChanged', { workspacePath, pathsChanged })),
     }),
   );
 

@@ -1,14 +1,12 @@
-import { useQuery } from '@tanstack/react-query';
 import { File, Folder } from 'lucide-react';
 import { useMemo, useState, type KeyboardEvent } from 'react';
-import { api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
 import { PathLabel } from '../../components/PathLabel';
+import { createFuzzyIndex, fuzzyMatchPositions } from '../../lib/fuzzyIndex';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { SearchField } from '../../ui/SearchField';
 import { CenteredSpinner } from '../../ui/Spinner';
-import { rankPaths } from './rankPaths';
+import { useWorkspacePaths } from './useWorkspacePaths';
 import styles from './GoToFileDialog.module.css';
 
 const MAX_RESULTS = 60;
@@ -21,15 +19,12 @@ export function goToFile(workspacePath: string): Promise<string | undefined> {
 function GoToFileDialog({ workspacePath, finish }: { workspacePath: string; finish: (path: string | undefined) => void }) {
   const [query, setQuery] = useState('');
   const [highlighted, setHighlighted] = useState(0);
-  const { data: entries, isLoading } = useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'explorer', 'allPaths'),
-    queryFn: () => api.explorer.listAllPaths(workspacePath),
-    staleTime: 60_000,
-  });
+  const { data: entries, isLoading } = useWorkspacePaths(workspacePath);
 
   const directories = useMemo(() => new Set(entries?.filter((entry) => entry.isDirectory).map((entry) => entry.path)), [entries]);
   const allPaths = useMemo(() => entries?.map((entry) => entry.path) ?? [], [entries]);
-  const results = useMemo(() => rankPaths(allPaths, query, MAX_RESULTS), [allPaths, query]);
+  const index = useMemo(() => createFuzzyIndex(allPaths), [allPaths]);
+  const results = useMemo(() => index.rank(query, MAX_RESULTS).map((position) => allPaths[position]!), [index, allPaths, query]);
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -51,7 +46,7 @@ function GoToFileDialog({ workspacePath, finish }: { workspacePath: string; fini
             setQuery(value);
             setHighlighted(0);
           }}
-          placeholder="Type part of a file or folder name"
+          placeholder="Fuzzy search files and folders"
           autoFocus
           width={570}
         />
@@ -69,7 +64,7 @@ function GoToFileDialog({ workspacePath, finish }: { workspacePath: string; fini
             onClick={() => finish(path)}
           >
             {directories.has(path) ? <Folder size={14} className={styles.folder} /> : <File size={14} className={styles.file} />}
-            <PathLabel path={path} />
+            <PathLabel path={path} matches={fuzzyMatchPositions(path, query)} />
           </button>
         ))}
       </div>

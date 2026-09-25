@@ -18,7 +18,8 @@ export interface OperationProgress {
 /** Events pushed from the main process to the renderer. */
 export interface UvcsEvents {
   commandLogged: CommandLogEntry;
-  workspaceChanged: { workspacePath: string };
+  /** `pathsChanged`: items were added, deleted or moved on disk, not only edited. */
+  workspaceChanged: { workspacePath: string; pathsChanged: boolean };
   operationProgress: OperationProgress;
   /** A native menu item was chosen; runs the registered command with this id. */
   menuCommand: { commandId: string };
