@@ -24,6 +24,11 @@ export const COMPARISON_METHODS: ComparisonMethodOption[] = [
   { value: 'recognizeAll', label: 'Recognize all', description: 'Every character counts' },
 ];
 
+/** Whether CRLF, LF and CR compare equal under `method`. */
+export function ignoresLineEndings(method: ComparisonMethod): boolean {
+  return method === 'ignoreEol' || method === 'ignoreEolAndWhitespace';
+}
+
 export function comparisonMethodLabel(method: ComparisonMethod): string {
   return COMPARISON_METHODS.find((option) => option.value === method)!.label;
 }

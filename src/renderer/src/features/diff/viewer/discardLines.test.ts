@@ -119,7 +119,7 @@ describe('discardLines, with changes the comparison method hides', () => {
   it('restores the original line with the line endings of the modified file', () => {
     const meta = diffUnder('ignoreEol', 'a\nb\nc\n', 'a\r\nB\r\nc\r\n');
     expect(listChangeBlocks(meta)).toHaveLength(1);
-    expect(discardBlock(meta, 0)).toBe('a\r\nb\r\nc\r\n');
+    expect(discardLines(meta, blockLines(listChangeBlocks(meta)[0]!), 'ignoreEol').text).toBe('a\r\nb\r\nc\r\n');
   });
 
   it('restores the original line and keeps the hidden reindentation of the others', () => {
@@ -130,29 +130,38 @@ describe('discardLines, with changes the comparison method hides', () => {
 
   it('removes an added line among lines whose line endings changed', () => {
     const meta = diffUnder('ignoreEolAndWhitespace', 'a\nb\n', 'a \r\nnew\r\nb\r\n');
-    expect(discardText(meta, [addedLine(2)])).toBe('a \r\nb\r\n');
+    expect(discardLines(meta, [addedLine(2)], 'ignoreEolAndWhitespace').text).toBe('a \r\nb\r\n');
   });
 });
 
-describe("discardLines keeps the modified file's line endings", () => {
-  for (const method of ['ignoreEol', 'recognizeAll'] as const) {
-    it(`gives LF lines restored into a CRLF file CRLF (${method})`, () => {
-      const meta = diffUnder(method, 'a\nb\nc\nd', 'a\r\nB\r\nc\r\nD');
-      const text = discardText(meta, listChangeBlocks(meta).flatMap(blockLines));
+describe('discardLines and line endings', () => {
+  const discardAll = (meta: DisplayMeta, method: ComparisonMethod) => discardLines(meta, listChangeBlocks(meta).flatMap(blockLines), method).text;
+
+  it('makes a file whose line endings changed identical to the original when they show (Recognize all)', () => {
+    expect(discardAll(diffUnder('recognizeAll', 'a\nb\nc\n', 'a\r\nb\r\nc\r\n'), 'recognizeAll')).toBe('a\nb\nc\n');
+    expect(discardAll(diffUnder('recognizeAll', 'a\r\nb\r\n', 'a\nb\n'), 'recognizeAll')).toBe('a\r\nb\r\n');
+    expect(discardAll(diffUnder('ignoreWhitespace', 'a\nb\n', 'a\r\nb\r\n'), 'ignoreWhitespace')).toBe('a\nb\n');
+  });
+
+  it('restores lines exactly as they were when line endings show, even among other changes', () => {
+    const meta = diffUnder('recognizeAll', 'a\nb\nc\nd', 'a\r\nB\r\nc\r\nD');
+    expect(discardAll(meta, 'recognizeAll')).toBe('a\nb\nc\nd');
+  });
+
+  for (const method of ['ignoreEol', 'ignoreEolAndWhitespace'] as const) {
+    it(`gives LF lines restored into a CRLF file CRLF when line endings are hidden (${method})`, () => {
+      const text = discardAll(diffUnder(method, 'a\nb\nc\nd', 'a\r\nB\r\nc\r\nD'), method);
       expect(text).toBe('a\r\nb\r\nc\r\nd');
-      expect(text).not.toMatch(/[^\r]\n/);
     });
 
-    it(`gives CRLF lines restored into an LF file LF (${method})`, () => {
-      const meta = diffUnder(method, 'a\r\nb\r\nc\r\n', 'a\nB\nc\nx');
-      const text = discardText(meta, listChangeBlocks(meta).flatMap(blockLines));
+    it(`gives CRLF lines restored into an LF file LF when line endings are hidden (${method})`, () => {
+      const text = discardAll(diffUnder(method, 'a\r\nb\r\nc\r\n', 'a\nB\nc\nx'), method);
       expect(text).toBe('a\nb\nc\n');
-      expect(text).not.toContain('\r');
     });
   }
 
-  it('follows the most common line ending of a file that mixes them', () => {
-    const meta = diff('a\nb\nc\nd\n', 'a\r\nB\r\nc\r\nd\n');
-    expect(discardBlock(meta, 0)).toBe('a\r\nb\r\nc\r\nd\n');
+  it('follows the most common line ending of a file that mixes them when line endings are hidden', () => {
+    const meta = diffUnder('ignoreEol', 'a\nb\nc\nd\n', 'a\r\nB\r\nc\r\nd\n');
+    expect(discardLines(meta, blockLines(listChangeBlocks(meta)[0]!), 'ignoreEol').text).toBe('a\r\nb\r\nc\r\nd\n');
   });
 });

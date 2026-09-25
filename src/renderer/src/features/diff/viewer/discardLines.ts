@@ -1,4 +1,5 @@
 import { listChangeBlocks, type ChangedLine, type DisplayMeta } from './changeBlocks';
+import { ignoresLineEndings, type ComparisonMethod } from './comparisonMethod';
 
 export interface DiscardResult {
   text: string;
@@ -9,10 +10,12 @@ export interface DiscardResult {
 /**
  * The modified text with some of its changes taken back: the chosen removed lines come back where they were and the
  * chosen added lines go. Within a block, the lines that come back go before the added lines that stay, as a diff
- * shows them. The modified file's line break convention wins: lines that come back take its most common line break
- * (whatever the comparison method hid), and one that had none (the end of a file) gets it when something now follows.
+ * shows them. Lines come back as they were when the diff shows line endings (`method`); when it hides them, they take
+ * the modified file's most common line break, so the file doesn't end up mixing them. A line that had none (the end
+ * of a file) gets that line break when something now follows it.
  */
-export function discardLines(meta: DisplayMeta, lines: ChangedLine[]): DiscardResult {
+export function discardLines(meta: DisplayMeta, lines: ChangedLine[], method: ComparisonMethod = 'recognizeAll'): DiscardResult {
+  const adoptLineBreaks = ignoresLineEndings(method);
   const lineBreak = dominantLineBreak(meta.additionLines) ?? dominantLineBreak(meta.deletionLines) ?? '\n';
   const restored = new Set(lines.filter((line) => line.side === 'deletions').map((line) => line.lineNumber));
   const removed = new Set(lines.filter((line) => line.side === 'additions').map((line) => line.lineNumber));
@@ -26,7 +29,7 @@ export function discardLines(meta: DisplayMeta, lines: ChangedLine[]): DiscardRe
     result.push(...meta.additionLines.slice(next, newIndex));
     meta.deletionLines.slice(oldIndex, oldIndex + block.oldLines).forEach((line, offset) => {
       if (!restored.has(oldIndex + offset + 1)) return;
-      restoredAt.push(result.push(line.replace(/\r?\n$/, lineBreak)));
+      restoredAt.push(result.push(adoptLineBreaks ? line.replace(/\r?\n$/, lineBreak) : line));
     });
     meta.additionLines.slice(newIndex, newIndex + block.newLines).forEach((line, offset) => removed.has(newIndex + offset + 1) || result.push(line));
     next = newIndex + block.newLines;

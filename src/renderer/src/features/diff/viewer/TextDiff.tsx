@@ -37,7 +37,7 @@ export function TextDiff({ original, modified, fileName, comparisonMethod, editi
   const oldFile = useMemo(() => ({ name: fileName, contents: original }), [fileName, original]);
   const newFile = useMemo(() => ({ name: fileName, contents: modified }), [fileName, modified]);
   const parseDiffOptions = lineDiffOptions(comparisonMethod);
-  const discard = useBlockDiscard({ enabled: Boolean(onDiscard) && !editing, oldFile, newFile, parseDiffOptions, layout, containerRef: container, onDiscard, onUndo: onUndoDiscard });
+  const discard = useBlockDiscard({ enabled: Boolean(onDiscard) && !editing, oldFile, newFile, comparisonMethod, layout, containerRef: container, onDiscard, onUndo: onUndoDiscard });
   const options = useMemo(
     () => ({ ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }), parseDiffOptions, ...discard.options }),
     [theme, layout, collapseUnchanged, wrapLines, parseDiffOptions, discard.options],
