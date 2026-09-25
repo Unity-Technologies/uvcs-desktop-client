@@ -93,6 +93,9 @@
   --bg-surface: #ffffff;
   --bg-surface-raised: #ffffff;
   --bg-subtle: #f6f8fa;
+  /* The window's top bar: a faint top-to-bottom sheen, like a native title bar. */
+  --toolbar-top: #fbfcfd;
+  --toolbar-bottom: #eef0f4;
   --bg-hover: rgba(31, 35, 40, 0.05);
   --bg-active: rgba(31, 35, 40, 0.08);
   --bg-selected: rgba(9, 105, 218, 0.08);
@@ -152,6 +155,8 @@
   --bg-surface: #151b23;
   --bg-surface-raised: #1c2330;
   --bg-subtle: #0f141b;
+  --toolbar-top: #1b222c;
+  --toolbar-bottom: #151b23;
   --bg-hover: rgba(177, 186, 196, 0.08);
   --bg-active: rgba(177, 186, 196, 0.12);
   --bg-selected: rgba(56, 139, 253, 0.12);
