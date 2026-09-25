@@ -1,6 +1,7 @@
-import { ArrowDownToLine, FolderOpen, Moon, RefreshCw, TerminalSquare } from 'lucide-react';
+import { ArrowDownToLine, FolderOpen, Keyboard, Moon, RefreshCw, TerminalSquare } from 'lucide-react';
 import { useMemo } from 'react';
 import { useCommands, type Command } from '../commands/commandStore';
+import { openShortcutsDialog } from '../commands/ShortcutsDialog';
 import { navigation } from '../navigation/navigationStore';
 import { VIEWS } from '../navigation/viewRegistry';
 import { invalidateWorkspace } from '../queryClient';
@@ -58,6 +59,14 @@ export function useWorkspaceCommands(): void {
         icon: TerminalSquare,
         shortcut: 'mod+shift+l',
         run: () => useCommandLogStore.getState().toggle(),
+      },
+      {
+        id: 'app.shortcuts',
+        group: 'App',
+        label: 'Keyboard shortcuts',
+        icon: Keyboard,
+        shortcut: 'mod+/',
+        run: openShortcutsDialog,
       },
       {
         id: 'app.theme',

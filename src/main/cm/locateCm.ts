@@ -7,7 +7,10 @@ const WELL_KNOWN_LOCATIONS: Record<string, string[]> = {
   win32: ['C:\\Program Files\\PlasticSCM5\\client\\cm.exe', 'C:\\Program Files\\Unity VCS\\client\\cm.exe'],
 };
 
+/** Finds the `cm` executable. `UVCS_CM_PATH` overrides the search. */
 export function locateCm(): string {
+  if (process.env.UVCS_CM_PATH) return process.env.UVCS_CM_PATH;
+
   const executable = process.platform === 'win32' ? 'cm.exe' : 'cm';
   const fromPath = (process.env.PATH ?? '')
     .split(delimiter)

@@ -8,6 +8,8 @@ import { HomeScreen } from './home/HomeScreen';
 import { queryClient } from './queryClient';
 import { useTheme } from './settings/useTheme';
 import { WorkspaceScreen } from './shell/WorkspaceScreen';
+import { CmUnavailableScreen } from './startup/CmUnavailableScreen';
+import { useCmAvailability } from './startup/useCmAvailability';
 import { useSession } from './workspace/sessionStore';
 
 export function App() {
@@ -27,5 +29,9 @@ export function App() {
 function Root() {
   useTheme();
   const workspacePath = useSession((state) => state.workspacePath);
+  const cm = useCmAvailability();
+
+  if (cm.error) return <CmUnavailableScreen reason={cm.error.message} onRetry={() => void cm.refetch()} />;
+  if (!cm.data) return null;
   return workspacePath ? <WorkspaceScreen key={workspacePath} /> : <HomeScreen />;
 }

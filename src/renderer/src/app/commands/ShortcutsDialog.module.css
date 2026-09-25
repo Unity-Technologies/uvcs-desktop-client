@@ -1,0 +1,27 @@
+.columns {
+  columns: 2;
+  column-gap: var(--space-6);
+}
+
+.columns section {
+  break-inside: avoid;
+  margin-bottom: var(--space-4);
+}
+
+.heading {
+  margin: 0 0 var(--space-1);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  height: 26px;
+  color: var(--text-secondary);
+}
