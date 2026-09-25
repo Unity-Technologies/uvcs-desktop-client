@@ -1,8 +1,9 @@
-import { GitGraph, X } from 'lucide-react';
+import { GitGraph, RefreshCw, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { EmptyState } from '../../ui/EmptyState';
+import { IconButton } from '../../ui/IconButton';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { useBranchExplorerPreferences } from './branchExplorerStore';
@@ -12,7 +13,8 @@ import { DetailsPanel } from './details/DetailsPanel';
 import { graphActions } from './graphActions';
 import { graphMenu } from './graphMenu';
 import { selectionFor, type GraphSelection } from './graphSelection';
-import { GraphSearchAndFilters, GraphViewControls } from './GraphToolbar';
+import { GraphFilterBar } from './GraphFilterBar';
+import { GraphSearch } from './GraphSearch';
 import { filterGraph } from './model/filterGraph';
 import { layoutGraph } from './model/layoutGraph';
 import { neighborChangeset, type GraphDirection } from './model/navigateGraph';
@@ -28,7 +30,7 @@ export function BranchExplorerView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
   const { data, isLoading, isFetching, error } = useBranchExplorerData();
-  const { hideMergedBranches, onlyRelatedToCurrent, detailsOpen } = useBranchExplorerPreferences();
+  const { hideMergedBranches, onlyRelatedToCurrent, detailsOpen, highlightedAuthor, showComments, showAvatars } = useBranchExplorerPreferences();
 
   const canvasRef = useRef<GraphCanvasHandle>(null);
   const [selection, setSelection] = useState<GraphSelection | null>(null);
@@ -47,15 +49,19 @@ export function BranchExplorerView() {
   }, [data, relatedTo, onlyRelatedToCurrent, hideMergedBranches, currentBranch]);
 
   const searchHits = useMemo(() => (layout ? searchGraph(layout, search) : []), [layout, search]);
+  const authors = useMemo(() => [...new Set(data?.changesets.map((changeset) => changeset.owner))].sort(), [data]);
   const highlights = useMemo<GraphHighlights>(
     () => ({
       selectedChangeset: selection?.kind === 'changeset' ? selection.id : null,
       selectedBranch: selection?.kind === 'branch' ? selection.name : null,
       homeChangeset,
+      currentBranch,
+      highlightedAuthor,
       searchHits: new Set(searchHits),
       activeSearchHit: searchHits[activeHitIndex] ?? null,
+      options: { showComments, showAvatars },
     }),
-    [selection, homeChangeset, searchHits, activeHitIndex],
+    [selection, homeChangeset, currentBranch, highlightedAuthor, searchHits, activeHitIndex, showComments, showAvatars],
   );
 
   const goToChangeset = useCallback((id: number) => {
@@ -119,21 +125,22 @@ export function BranchExplorerView() {
       title="Branch Explorer"
       subtitle={layout && `${layout.columnCount} changesets · ${layout.lanes.length} branches`}
       actions={
-        <GraphViewControls
-          onZoom={(factor) => canvasRef.current?.zoomBy(factor)}
-          onFit={fit}
-          onGoHome={goHome}
-          onRefresh={() => void invalidateWorkspace(workspacePath)}
-          refreshing={isFetching}
-        />
+        <>
+          <GraphSearch
+            search={search}
+            onSearchChange={changeSearch}
+            position={search.trim() ? { current: activeHitIndex + 1, total: searchHits.length } : null}
+            onStep={stepSearch}
+          />
+          <IconButton
+            icon={<RefreshCw size={14} className={isFetching ? styles.spinning : undefined} />}
+            label="Refresh"
+            onClick={() => void invalidateWorkspace(workspacePath)}
+          />
+        </>
       }
     >
-      <GraphSearchAndFilters
-        search={search}
-        onSearchChange={changeSearch}
-        searchPosition={search.trim() ? { current: activeHitIndex + 1, total: searchHits.length } : null}
-        onSearchStep={stepSearch}
-      />
+      <GraphFilterBar authors={authors} onZoom={(factor) => canvasRef.current?.zoomBy(factor)} onFit={fit} onGoHome={goHome} />
     </ViewHeader>
   );
 

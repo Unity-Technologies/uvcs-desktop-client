@@ -1,70 +1,61 @@
-import { shortBranchName } from '@shared/domain/specs';
 import type { Lane } from '../model/layoutGraph';
 import type { DrawContext } from './drawContext';
-import { branchStartCurve } from './curves';
-import { COLUMN_WIDTH, columnX, rowY } from './geometry';
+import { BAND_HEIGHT, NODE_RADIUS } from './geometry';
 import { branchColor } from './graphPalette';
 import { nodePoint } from './graphTargets';
+import { laneShape, type LaneShape } from './laneShape';
 
-const LANE_WIDTH = 3;
-/** How far into its lane a branch's start curve lands after leaving the base changeset. */
-const START_OFFSET = COLUMN_WIDTH * 0.6;
-/** Even an empty branch gets a short visible stub. */
-const MINIMUM_LENGTH = COLUMN_WIDTH * 0.4;
+const ELBOW_RADIUS = 16;
 
-/** The horizontal part of a lane, in world coordinates. */
-function laneLine(lane: Lane): { startX: number; endX: number; y: number } {
-  const startX = columnX(lane.startColumn) + (lane.baseChangeset !== null ? START_OFFSET : 0);
-  return { startX, endX: Math.max(columnX(lane.endColumn), startX + MINIMUM_LENGTH), y: rowY(lane.row) };
-}
-
+/** Branch bands, and the elbow each branch draws from its base changeset on the parent's band. */
 export function drawLanes(draw: DrawContext): void {
   const { scene, visible } = draw;
   for (const lane of scene.layout.lanes) {
-    const line = laneLine(lane);
-    const offScreen =
-      line.endX < visible.left - 40 || columnX(lane.startColumn) > visible.right + 40 || line.y < visible.top - 60 || line.y > visible.bottom + 60;
+    const shape = laneShape(lane);
+    const base = lane.baseChangeset !== null ? nodePoint(scene.layout, lane.baseChangeset) : null;
+    const left = Math.min(shape.left, base?.x ?? shape.left);
+    const top = Math.min(shape.y, base?.y ?? shape.y) - BAND_HEIGHT;
+    const offScreen = shape.right < visible.left || left > visible.right || shape.y + BAND_HEIGHT < visible.top || top > visible.bottom;
     if (offScreen) continue;
 
     const color = branchColor(scene.palette, lane.branch.name);
-    const selected = scene.selectedBranch === lane.branch.name;
-    drawLaneLine(draw, lane, color, selected);
-    if (draw.showText) drawCaption(draw, lane, color, selected);
+    if (base) drawBranchStart(draw, base, shape, color);
+    drawBand(draw, lane, shape, color);
   }
 }
 
-function drawLaneLine({ ctx, scene }: DrawContext, lane: Lane, color: string, selected: boolean): void {
-  const { startX, endX, y } = laneLine(lane);
-  const base = lane.baseChangeset !== null ? nodePoint(scene.layout, lane.baseChangeset) : null;
+function drawBand({ ctx, scene }: DrawContext, lane: Lane, shape: LaneShape, color: string): void {
+  const isCurrent = scene.currentBranch === lane.branch.name;
+  const isSelected = scene.selectedBranch === lane.branch.name;
+  const height = BAND_HEIGHT;
 
   ctx.save();
-  ctx.lineCap = 'round';
-  ctx.strokeStyle = color;
-  ctx.globalAlpha = selected ? 0.9 : 0.45;
-  ctx.lineWidth = selected ? LANE_WIDTH + 2 : LANE_WIDTH;
   ctx.beginPath();
-  if (base) {
-    const [from, c1, c2, to] = branchStartCurve(base, { x: startX, y });
-    ctx.moveTo(from.x, from.y);
-    ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, to.x, to.y);
-  } else {
-    ctx.moveTo(startX, y);
-  }
-  ctx.lineTo(endX, y);
+  ctx.roundRect(shape.left, shape.y - height / 2, shape.right - shape.left, height, height / 2);
+  ctx.fillStyle = color;
+  ctx.globalAlpha = (scene.palette.isDark ? 0.14 : 0.1) + (isCurrent ? 0.08 : 0) + (isSelected ? 0.06 : 0);
+  ctx.fill();
+  ctx.strokeStyle = color;
+  ctx.globalAlpha = isSelected ? 0.95 : isCurrent ? 0.75 : 0.3;
+  ctx.lineWidth = isSelected || isCurrent ? 1.5 : 1;
   ctx.stroke();
   ctx.restore();
 }
 
-/** The branch name under its lane, kept visible at the left edge while the lane is on screen. */
-function drawCaption({ ctx, scene, visible }: DrawContext, lane: Lane, color: string, selected: boolean): void {
-  const { startX, endX, y } = laneLine(lane);
-  const stickyLeft = visible.left + 12 / scene.viewport.zoom;
-  const x = Math.max(startX, Math.min(stickyLeft, endX - 60));
+/** Down from the base changeset, a rounded turn, then right into the band. */
+function drawBranchStart({ ctx }: DrawContext, base: { x: number; y: number }, shape: LaneShape, color: string): void {
+  const radius = Math.max(4, Math.min(ELBOW_RADIUS, shape.left - base.x, shape.y - base.y - NODE_RADIUS));
 
   ctx.save();
-  ctx.font = `${selected ? 600 : 500} 11px ${scene.palette.fontUi}`;
-  ctx.fillStyle = color;
-  ctx.textBaseline = 'middle';
-  ctx.fillText(lane.branch.parent ? shortBranchName(lane.branch.name) : lane.branch.name, x, y + 20);
+  ctx.strokeStyle = color;
+  ctx.globalAlpha = 0.75;
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(base.x, base.y + NODE_RADIUS);
+  ctx.lineTo(base.x, shape.y - radius);
+  ctx.arcTo(base.x, shape.y, base.x + radius, shape.y, radius);
+  ctx.lineTo(shape.left, shape.y);
+  ctx.stroke();
   ctx.restore();
 }

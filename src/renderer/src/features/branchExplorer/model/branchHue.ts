@@ -1,4 +1,8 @@
-const BRANCH_HUES = [258, 200, 152, 28, 330, 180, 48, 290, 6, 120];
+/**
+ * Calm, clearly distinct hues for branches: greens, oranges, teals, roses and ambers first,
+ * so the accent-colored `/main` stays the only strong blue and nothing leans purple.
+ */
+const BRANCH_HUES = [152, 24, 188, 344, 42, 128, 8, 200, 96, 318];
 
 /** A stable hue per branch name, so a branch keeps its color everywhere. `/main` uses the accent color instead (null). */
 export function branchHue(branchName: string): number | null {
@@ -10,5 +14,5 @@ export function branchHue(branchName: string): number | null {
 
 /** Lightness and saturation tuned for each theme's background. */
 export function hueToColor(hue: number, isDark: boolean): string {
-  return isDark ? `hsl(${hue} 70% 66%)` : `hsl(${hue} 62% 50%)`;
+  return isDark ? `hsl(${hue} 58% 62%)` : `hsl(${hue} 60% 42%)`;
 }
