@@ -1,0 +1,52 @@
+.name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.chevron {
+  display: flex;
+  flex: none;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--text-tertiary);
+  transform: rotate(90deg);
+  transition: transform var(--duration-fast);
+}
+
+.chevron[data-collapsed='true'] {
+  transform: none;
+}
+
+.branchIcon {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.label {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+
+.label[data-hidden='true'] {
+  color: var(--text-tertiary);
+}
+
+.current {
+  flex: none;
+  padding: 0 6px;
+  border-radius: var(--radius-full);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.hiddenIcon {
+  flex: none;
+  color: var(--text-tertiary);
+}

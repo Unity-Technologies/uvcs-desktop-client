@@ -73,6 +73,11 @@ textarea {
   font-size: 12px;
 }
 
+/* For refresh icons while their data is being fetched. */
+.spinning {
+  animation: spin 0.8s linear infinite;
+}
+
 .selectable {
   user-select: text;
   cursor: text;

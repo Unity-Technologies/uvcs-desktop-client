@@ -1,0 +1,14 @@
+.name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+}
+
+.icon {
+  flex: none;
+  color: var(--text-tertiary);
+}
