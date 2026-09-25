@@ -3,7 +3,7 @@ import { formatRelativeDate } from '../../../lib/formatDate';
 import type { GraphLayout } from '../model/layoutGraph';
 import { MERGE_LINK_NAMES } from '../model/mergeLinkNames';
 import { useLayoutEffect, useRef } from 'react';
-import { captionCardCorner, captionCardMaxWidth, cardMaxWidth, keepInside } from './captionCard';
+import { captionCardCorner, captionCardMaxWidth, keepInside } from './captionCard';
 import { summaryOf } from './fitText';
 import type { GraphPalette } from './graphPalette';
 import type { GraphTarget } from './graphTargets';
@@ -14,7 +14,7 @@ import styles from './GraphTooltip.module.css';
  * font and color, so the cut comment appears to complete itself in place), just below a branch header whose text
  * was cut (the pill unfolding), or next to the pointer. `x` and `baseline` are the caption's first glyph.
  */
-export type TooltipAnchor = { kind: 'caption'; x: number; baseline: number; color: string } | { kind: 'below'; x: number; top: number };
+export type TooltipAnchor = { kind: 'caption'; x: number; baseline: number; color: string };
 
 interface GraphTooltipProps {
   target: GraphTarget;
@@ -80,21 +80,6 @@ export function GraphTooltip({ target, layout, palette, x, y, anchor, containerW
 
   const content = tooltipContent(target, layout);
   if (!content) return null;
-  if (anchor?.kind === 'below') {
-    return (
-      <div
-        ref={cardRef}
-        className={styles.card}
-        style={{ left: anchor.x, top: anchor.top, maxWidth: cardMaxWidth(window.innerWidth) }}
-        {...{ [HOVER_CARD_ATTRIBUTE]: true }}
-      >
-        <div className={styles.title}>{content.title}</div>
-        {content.body && <div className={styles.cardBody}>{content.body}</div>}
-        {content.meta && <div className={styles.meta}>{content.meta}</div>}
-      </div>
-    );
-  }
-
   const flip = x > containerWidth - POINTER_TOOLTIP_ROOM;
   return (
     <div className={styles.tooltip} data-flip={flip} style={{ left: flip ? x - 14 : x + 14, top: y + 14 }}>

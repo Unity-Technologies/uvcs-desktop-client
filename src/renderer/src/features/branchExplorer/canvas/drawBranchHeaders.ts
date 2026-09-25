@@ -43,8 +43,8 @@ export function drawBranchHeaders(draw: DrawContext): void {
     const width = Math.max(MIN_WIDTH, Math.min(room, contentWidth(draw, lane) + PADDING * 2));
     const pinnedLeft = visible.left + PINNED_INSET / scene.viewport.zoom;
     const left = Math.max(shape.left, Math.min(pinnedLeft, shape.right - width));
-    const cut = drawCard(draw, lane, left, top, width, height, left > shape.left + 0.5);
-    draw.drawn.branchHeaders.add(lane, left, top, width, height, cut);
+    drawCard(draw, lane, left, top, width, height, left > shape.left + 0.5);
+    draw.drawn.branchHeaders.add(lane, left, top, width, height);
   }
 }
 
@@ -88,7 +88,6 @@ export function drawCompactBranchNames(draw: DrawContext): void {
       (bottom - COMPACT_NAME_HEIGHT - viewport.panY) / viewport.zoom,
       textWidth(ctx, name) / viewport.zoom,
       COMPACT_NAME_HEIGHT / viewport.zoom,
-      name !== lane.branch.name,
     );
   }
   ctx.restore();
@@ -139,8 +138,8 @@ function contentWidth(draw: DrawContext, lane: Lane): number {
   return lead + Math.max(name + (chip ? GAP + chip : 0), comment);
 }
 
-/** Draws a branch's pill; says whether its name or comment had to be cut to fit. */
-function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, width: number, height: number, pinned: boolean): boolean {
+/** Draws a branch's pill. */
+function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, width: number, height: number, pinned: boolean): void {
   const { ctx, scene } = draw;
   const { palette, search } = scene;
   const name = lane.branch.name;
@@ -202,13 +201,10 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
 
   // Second line: the comment's summary, smaller and muted, cut at the end.
   const comment = summaryOf(lane.branch.comment);
-  let cut = fitted !== name;
   if (comment) {
     const commentMiddle = top + HEADER_COMMENT_MIDDLE;
     ctx.font = palette.fonts.branchComment;
     const text = fitText(ctx, comment, right - textLeft);
-    // Only the first line shows: more lines are hidden text too.
-    cut ||= text !== comment || lane.branch.comment.trim() !== comment;
     drawSearchMarks(draw, text, textLeft, commentMiddle, COMMENT_MARK_HEIGHT);
     ctx.fillStyle = palette.textTertiary;
     ctx.fillText(text, textLeft, commentMiddle + 0.5);
@@ -217,7 +213,6 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
   ctx.restore();
 
   if (search?.active?.kind === 'branch' && search.active.name === name) drawRectCorona(draw, left, top, width, height, CARD_RADIUS);
-  return cut;
 }
 
 /** The first part of the current branch's pill in solid accent, the home glyph knocked out of it. */

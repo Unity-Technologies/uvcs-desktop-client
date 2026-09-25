@@ -71,7 +71,7 @@ describe('hitTest', () => {
 });
 
 describe('hoverCardFor', () => {
-  const cardAt = (point: { x: number; y: number }, drawn: DrawnTargets | null = null) => hoverCardFor(hitTest(layout, point, drawn), point, drawn);
+  const cardAt = (point: { x: number; y: number }, drawn: DrawnTargets | null = null) => hoverCardFor(hitTest(layout, point, drawn), drawn);
 
   function withCaption(id: number): { drawn: DrawnTargets; caption: { x: number; y: number } } {
     const node = layout.nodes.get(id)!;
@@ -101,24 +101,12 @@ describe('hoverCardFor', () => {
     expect(cardAt(between)).toBeNull();
   });
 
-  it('unfolds a branch header only when its name or comment was cut', () => {
-    const lane = layout.lanesByBranch.get('/main/a')!;
-    const shape = laneShape(lane);
-    const onHeader = { x: shape.left + 10, y: headerTop(shape.y) + 5 };
-    const whole = drawnTargets();
-    whole.branchHeaders.add(lane, shape.left, headerTop(shape.y), 120, 22);
-    expect(cardAt(onHeader, whole)).toBeNull();
 
-    const cut = drawnTargets();
-    cut.branchHeaders.add(lane, shape.left, headerTop(shape.y), 120, 22, true);
-    expect(cardAt(onHeader, cut)).toMatchObject({ kind: 'header', target: { lane: { branch: { name: '/main/a' } } } });
-  });
-
-  it('never unfolds a cut header from its band', () => {
+  it('has no card on a branch header or its band', () => {
     const lane = layout.lanesByBranch.get('/main/a')!;
     const shape = laneShape(lane);
     const drawn = drawnTargets();
-    drawn.branchHeaders.add(lane, shape.left, headerTop(shape.y), 120, 22, true);
+    drawn.branchHeaders.add(lane, shape.left, headerTop(shape.y), 120, 22);
     const a = nodePoint(layout, 2)!;
     const b = nodePoint(layout, 4)!;
     expect(cardAt({ x: (a.x + b.x) / 2, y: a.y }, drawn)).toBeNull();

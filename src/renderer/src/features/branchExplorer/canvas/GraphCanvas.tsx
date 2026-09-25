@@ -65,8 +65,6 @@ const DRAG_THRESHOLD = 4;
 const DOUBLE_CLICK_ZOOM = 1.4;
 /** Where in a header card a reveal aims: far enough in to show the start of the name. */
 const HEADER_REVEAL_INSET = 60;
-/** A branch header's card opens this far below the pill. */
-const BELOW_HEADER_GAP = 6;
 
 export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(function GraphCanvas(
   { layout, highlights, onSelect, onActivate, contextMenu, children },
@@ -273,10 +271,6 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         color: (selected ? current.palette?.textPrimary : current.palette?.textSecondary) ?? '',
       };
     }
-    if (subject.kind === 'header') {
-      const { header } = subject;
-      return { kind: 'below', x: header.x * zoom + panX, top: (header.y + header.height) * zoom + panY + BELOW_HEADER_GAP };
-    }
     return null;
   };
 
@@ -330,7 +324,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     const point = localPoint(event.clientX, event.clientY);
     const target = onCanvas(event) ? targetAt(event.clientX, event.clientY) : null;
     setHovered(target);
-    const subject = hoverCardFor(target, toWorld(view.viewportRef.current, point.x, point.y), drawnRef.current);
+    const subject = hoverCardFor(target, drawnRef.current);
     if (!subject) return hoverCard.requestClose();
     const anchor = anchorFor(subject);
     hoverCard.show({ key: hoverCardKey(subject.target), target: subject.target, anchor, ...point }, anchor === null);

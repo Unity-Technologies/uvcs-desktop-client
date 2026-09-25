@@ -22,25 +22,21 @@ export type GraphTarget =
 /**
  * The hover card for what the pointer is on. A changeset's card completes its comment over its caption, whether the
  * pointer is on the node or on the caption: one card, so moving between them never closes it (a changeset whose
- * caption isn't drawn gets its card by the pointer). A branch gets none, its two-line header already says it all,
- * unless the pointer is on a header whose name or comment was cut. Anything else gets its card by the pointer.
+ * caption isn't drawn gets its card by the pointer). A branch gets none: its two-line header already says it all, and
+ * a card there would cover the changesets the pointer is heading to. Anything else gets its card by the pointer.
  * The boxes are the last frame's, reused by the next one: read them right away.
  */
 export type HoverCard =
   | { kind: 'caption'; target: Extract<GraphTarget, { kind: 'changeset' }>; caption: DrawnBox<NodeLayout> }
-  | { kind: 'header'; target: Extract<GraphTarget, { kind: 'branch' }>; header: DrawnBox<Lane> }
   | { kind: 'pointer'; target: GraphTarget };
 
-export function hoverCardFor(target: GraphTarget | null, point: Point, drawn: DrawnTargets | null): HoverCard | null {
+export function hoverCardFor(target: GraphTarget | null, drawn: DrawnTargets | null): HoverCard | null {
   if (!target) return null;
   if (target.kind === 'changeset') {
     const caption = drawn?.captions.find((node) => node.changeset.id === target.id);
     return caption ? { kind: 'caption', target, caption } : { kind: 'pointer', target };
   }
-  if (target.kind === 'branch') {
-    const header = drawn?.branchHeaders.at(point);
-    return header?.item === target.lane && header.cut ? { kind: 'header', target, header } : null;
-  }
+  if (target.kind === 'branch') return null;
   return { kind: 'pointer', target };
 }
 
