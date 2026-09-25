@@ -7,6 +7,7 @@ import { ListWithDetails } from '../../components/ListWithDetails';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { UserLabel } from '../../ui/Avatar';
 import { EmptyState } from '../../ui/EmptyState';
+import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
@@ -30,11 +31,16 @@ const COLUMNS: Column<Shelve>[] = [
     render: (shelve) => (
       <span className={styles.id}>
         <Archive size={13} className={styles.icon} />
-        {shelve.id}
+        <Highlight text={String(shelve.id)} />
       </span>
     ),
   },
-  { id: 'comment', header: 'Comment', grow: 3, render: (shelve) => shelve.comment || <span className={styles.noComment}>No comment</span> },
+  {
+    id: 'comment',
+    header: 'Comment',
+    grow: 3,
+    render: (shelve) => (shelve.comment ? <Highlight text={shelve.comment} /> : <span className={styles.noComment}>No comment</span>),
+  },
   { id: 'parent', header: 'Based on', width: 100, align: 'end', secondary: true, sortValue: (shelve) => shelve.parentChangeset, render: (shelve) => `cs:${shelve.parentChangeset}` },
   { id: 'owner', header: 'Created by', width: 180, sortValue: (shelve) => shelve.owner, render: (shelve) => <UserLabel user={shelve.owner} /> },
   { id: 'date', header: 'Created', width: 130, secondary: true, sortValue: (shelve) => shelve.date, render: (shelve) => <RelativeTime date={shelve.date} /> },
@@ -79,16 +85,18 @@ export function ShelvesView() {
                 description="Shelve pending changes from the Changes view to save them without checking in."
               />
             ) : (
-              <DataTable
-                rows={visible}
-                columns={COLUMNS}
-                rowKey={shelveKey}
-                selection={selection}
-                onSelectionChange={setSelection}
-                onActivate={showShelveChanges}
-                contextMenu={(selectedShelves) => shelveMenu(workspacePath, selectedShelves)}
-                initialSort={{ columnId: 'id', descending: true }}
-              />
+              <HighlightQuery query={search.trim()}>
+                <DataTable
+                  rows={visible}
+                  columns={COLUMNS}
+                  rowKey={shelveKey}
+                  selection={selection}
+                  onSelectionChange={setSelection}
+                  onActivate={showShelveChanges}
+                  contextMenu={(selectedShelves) => shelveMenu(workspacePath, selectedShelves)}
+                  initialSort={{ columnId: 'id', descending: true }}
+                />
+              </HighlightQuery>
             )
           }
           details={

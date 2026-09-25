@@ -10,6 +10,7 @@ import { sinceDateFor } from '../../lib/sincePresets';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
+import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
@@ -34,13 +35,13 @@ const COLUMNS: Column<Label>[] = [
     render: (label) => (
       <span className={styles.name}>
         <Tag size={13} className={styles.icon} />
-        {label.name}
+        <Highlight text={label.name} />
       </span>
     ),
   },
   { id: 'changeset', header: 'Changeset', width: 100, align: 'end', sortValue: (label) => label.changeset, render: (label) => label.changeset },
-  { id: 'branch', header: 'Branch', grow: 1, secondary: true, sortValue: (label) => label.branch, render: (label) => label.branch },
-  { id: 'comment', header: 'Comment', grow: 2, secondary: true, render: (label) => label.comment },
+  { id: 'branch', header: 'Branch', grow: 1, secondary: true, sortValue: (label) => label.branch, render: (label) => <Highlight text={label.branch} /> },
+  { id: 'comment', header: 'Comment', grow: 2, secondary: true, render: (label) => <Highlight text={label.comment} /> },
   { id: 'owner', header: 'Created by', width: 180, sortValue: (label) => label.owner, render: (label) => <UserLabel user={label.owner} /> },
   { id: 'date', header: 'Created', width: 130, secondary: true, sortValue: (label) => label.date, render: (label) => <RelativeTime date={label.date} /> },
 ];
@@ -93,15 +94,17 @@ export function LabelsView() {
                 action={<Button onClick={() => openCreateLabelDialog(workspacePath)}>Label your workspace changeset</Button>}
               />
             ) : (
-              <DataTable
-                rows={visible}
-                columns={COLUMNS}
-                rowKey={labelKey}
-                selection={selection}
-                onSelectionChange={setSelection}
-                onActivate={(label) => void switchToLabel(workspacePath, label)}
-                contextMenu={(selectedLabels) => labelMenu(workspacePath, selectedLabels)}
-              />
+              <HighlightQuery query={search}>
+                <DataTable
+                  rows={visible}
+                  columns={COLUMNS}
+                  rowKey={labelKey}
+                  selection={selection}
+                  onSelectionChange={setSelection}
+                  onActivate={(label) => void switchToLabel(workspacePath, label)}
+                  contextMenu={(selectedLabels) => labelMenu(workspacePath, selectedLabels)}
+                />
+              </HighlightQuery>
             )
           }
           details={

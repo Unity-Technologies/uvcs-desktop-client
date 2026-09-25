@@ -9,6 +9,7 @@ import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
+import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
@@ -98,15 +99,17 @@ export function LocksView() {
   return (
     <>
       {header}
-      <DataTable
-        rows={visible}
-        columns={COLUMNS}
-        rowKey={lockKey}
-        selection={selection}
-        onSelectionChange={setSelection}
-        contextMenu={(rows) => lockMenu(workspacePath, rows)}
-        initialSort={{ columnId: 'date', descending: true }}
-      />
+      <HighlightQuery query={filter}>
+        <DataTable
+          rows={visible}
+          columns={COLUMNS}
+          rowKey={lockKey}
+          selection={selection}
+          onSelectionChange={setSelection}
+          contextMenu={(rows) => lockMenu(workspacePath, rows)}
+          initialSort={{ columnId: 'date', descending: true }}
+        />
+      </HighlightQuery>
     </>
   );
 }

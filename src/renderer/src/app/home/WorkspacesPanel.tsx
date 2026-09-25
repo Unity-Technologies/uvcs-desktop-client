@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
+import { HighlightQuery } from '../../ui/Highlight';
 import { SearchField } from '../../ui/SearchField';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { ViewHeader } from '../../ui/ViewHeader';
@@ -54,9 +55,11 @@ export function WorkspacesPanel({ mode, onOpen, onOpenFolder, onShowAll }: Works
         {workspaces && shown.length === 0 && (
           <EmptyWorkspaces mode={mode} filtered={filter !== ''} onShowAll={onShowAll} onOpen={onOpen} />
         )}
-        {shown.map((workspace) => (
-          <WorkspaceRow key={workspace.guid} workspace={workspace} repository={repositories?.[workspace.path]} onOpen={onOpen} />
-        ))}
+        <HighlightQuery query={filter}>
+          {shown.map((workspace) => (
+            <WorkspaceRow key={workspace.guid} workspace={workspace} repository={repositories?.[workspace.path]} onOpen={onOpen} />
+          ))}
+        </HighlightQuery>
       </div>
     </>
   );

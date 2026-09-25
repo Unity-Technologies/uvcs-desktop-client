@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { Label } from '@shared/domain/label';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
+import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { SearchField } from '../../ui/SearchField';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { useLabels } from './useLabels';
@@ -28,16 +29,20 @@ function LabelPickerDialog({ title, exclude, finish }: PickLabelOptions & { fini
     <Dialog title={title} width={460} onClose={() => finish(undefined)}>
       <SearchField value={search} onChange={setSearch} placeholder="Find a label" autoFocus width={420} />
       {labels ? (
-        <div className={styles.list}>
-          {visible.map((label) => (
-            <button key={label.id} type="button" className={styles.item} onClick={() => finish(label)}>
-              <Tag size={13} className={styles.icon} />
-              <span className={styles.name}>{label.name}</span>
-              <span className={styles.changeset}>cs:{label.changeset}</span>
-            </button>
-          ))}
-          {visible.length === 0 && <div className={styles.empty}>No labels found.</div>}
-        </div>
+        <HighlightQuery query={search}>
+          <div className={styles.list}>
+            {visible.map((label) => (
+              <button key={label.id} type="button" className={styles.item} onClick={() => finish(label)}>
+                <Tag size={13} className={styles.icon} />
+                <span className={styles.name}>
+                  <Highlight text={label.name} />
+                </span>
+                <span className={styles.changeset}>cs:{label.changeset}</span>
+              </button>
+            ))}
+            {visible.length === 0 && <div className={styles.empty}>No labels found.</div>}
+          </div>
+        </HighlightQuery>
       ) : (
         <CenteredSpinner />
       )}

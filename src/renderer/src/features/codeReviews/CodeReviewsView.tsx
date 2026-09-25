@@ -8,6 +8,7 @@ import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
+import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
@@ -33,8 +34,10 @@ const COLUMNS: Column<CodeReview>[] = [
     grow: 3,
     render: (review) => (
       <span className={styles.title}>
-        <span className={styles.id}>#{review.id}</span>
-        {review.title}
+        <span className={styles.id}>
+          #<Highlight text={String(review.id)} />
+        </span>
+        <Highlight text={review.title} />
       </span>
     ),
     sortValue: (review) => review.title.toLowerCase(),
@@ -146,16 +149,18 @@ export function CodeReviewsView() {
   return (
     <>
       {header}
-      <DataTable
-        rows={visible}
-        columns={COLUMNS}
-        rowKey={(review) => String(review.id)}
-        selection={selection}
-        onSelectionChange={setSelection}
-        onActivate={openReview}
-        contextMenu={(rows) => codeReviewMenu(workspacePath, rows)}
-        initialSort={{ columnId: 'date', descending: true }}
-      />
+      <HighlightQuery query={search}>
+        <DataTable
+          rows={visible}
+          columns={COLUMNS}
+          rowKey={(review) => String(review.id)}
+          selection={selection}
+          onSelectionChange={setSelection}
+          onActivate={openReview}
+          contextMenu={(rows) => codeReviewMenu(workspacePath, rows)}
+          initialSort={{ columnId: 'date', descending: true }}
+        />
+      </HighlightQuery>
     </>
   );
 }

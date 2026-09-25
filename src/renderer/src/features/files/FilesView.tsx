@@ -6,6 +6,7 @@ import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
+import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { SearchField } from '../../ui/SearchField';
 import { CenteredSpinner } from '../../ui/Spinner';
@@ -90,17 +91,19 @@ export function FilesView() {
         minSize={420}
         maxSize={1200}
         first={
-          <FileTreeTable
-            rows={rows}
-            selection={selection}
-            onSelectionChange={setSelection}
-            onToggleDirectory={(directory) => toggle(workspacePath, directory)}
-            onOpenFile={(item) => openItem(workspacePath, item)}
-            contextMenu={(items) => fileMenu(workspacePath, items, pendingIndex)}
-            statusOf={(item) => itemStatus(item, pendingIndex)}
-            hasChangesInside={(directory) => pendingIndex.hasChangesInside(directory)}
-            revealPath={revealPath}
-          />
+          <HighlightQuery query={filter}>
+            <FileTreeTable
+              rows={rows}
+              selection={selection}
+              onSelectionChange={setSelection}
+              onToggleDirectory={(directory) => toggle(workspacePath, directory)}
+              onOpenFile={(item) => openItem(workspacePath, item)}
+              contextMenu={(items) => fileMenu(workspacePath, items, pendingIndex)}
+              statusOf={(item) => itemStatus(item, pendingIndex)}
+              hasChangesInside={(directory) => pendingIndex.hasChangesInside(directory)}
+              revealPath={revealPath}
+            />
+          </HighlightQuery>
         }
         second={
           focused ? (

@@ -7,6 +7,7 @@ import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { SplitPane } from '../../ui/SplitPane';
+import { HighlightQuery } from '../../ui/Highlight';
 import { DataTable } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { changesetColumns } from './changesetColumns';
@@ -81,15 +82,17 @@ export function ChangesetsView() {
           minSize={420}
           maxSize={1400}
           first={
-            <DataTable
-              rows={visible}
-              columns={columns}
-              rowKey={changesetKey}
-              selection={selection}
-              onSelectionChange={setSelection}
-              onActivate={openChangesetDiff}
-              contextMenu={(rows) => changesetMenu(menuContext, rows)}
-            />
+            <HighlightQuery query={filter.search}>
+              <DataTable
+                rows={visible}
+                columns={columns}
+                rowKey={changesetKey}
+                selection={selection}
+                onSelectionChange={setSelection}
+                onActivate={openChangesetDiff}
+                contextMenu={(rows) => changesetMenu(menuContext, rows)}
+              />
+            </HighlightQuery>
           }
           second={
             focused ? (

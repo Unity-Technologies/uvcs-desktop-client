@@ -1,5 +1,6 @@
 import { useAvatarImage } from '../lib/avatars/avatarImages';
 import { displayName, initials, userHue } from '../lib/userName';
+import { Highlight } from './Highlight';
 import styles from './Avatar.module.css';
 
 /** The user's Gravatar when they have one; otherwise their initials on a stable color. */
@@ -27,7 +28,9 @@ export function UserLabel({ user }: { user: string }) {
   return (
     <span className={styles.userLabel}>
       <Avatar user={user} size={18} />
-      <span className={styles.name}>{displayName(user)}</span>
+      <span className={styles.name}>
+        <Highlight text={displayName(user)} />
+      </span>
     </span>
   );
 }

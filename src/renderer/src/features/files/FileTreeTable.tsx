@@ -5,6 +5,7 @@ import type { MenuEntry } from '../../lib/actions';
 import { formatSize } from '../../lib/formatDate';
 import type { SelectionState } from '../../lib/selection';
 import { Avatar } from '../../ui/Avatar';
+import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { Spinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
@@ -127,7 +128,7 @@ function NameCell({ row, status, changesInside, onToggle }: NameCellProps) {
       )}
       <ItemIcon item={item} expanded={row.isExpanded} />
       <span className={styles.label} data-private={item.isPrivate}>
-        {item.name}
+        <Highlight text={item.name} />
       </span>
       {status && <StatusBadge tone={status.tone} title={status.label} />}
       {!status && changesInside && <span className={styles.changesDot} title="Contains pending changes" />}

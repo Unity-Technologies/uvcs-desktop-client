@@ -1,6 +1,7 @@
 import { GitBranch, Search } from 'lucide-react';
 import { useMemo, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { Branch } from '@shared/domain/branch';
+import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import styles from './BranchSearchList.module.css';
 
 export interface BranchGroup {
@@ -57,30 +58,34 @@ export function BranchSearchList({ groups, onPick, currentBranch, placeholder = 
           }}
         />
       </div>
-      <div className={styles.list}>
-        {flat.length === 0 && <div className={styles.empty}>No branches match “{query}”.</div>}
-        {visibleGroups.map((group, groupIndex) => (
-          <div key={group.title}>
-            <div className={styles.groupTitle}>{group.title}</div>
-            {group.branches.map((branch, branchIndex) => {
-              const index = groupOffsets[groupIndex]! + branchIndex;
-              return (
-                <button
-                  key={`${group.title}:${branch.name}`}
-                  className={styles.item}
-                  data-highlighted={index === highlighted}
-                  onMouseEnter={() => setHighlighted(index)}
-                  onClick={() => onPick(branch)}
-                >
-                  <GitBranch size={13} className={styles.icon} />
-                  <span className={styles.name}>{branch.name}</span>
-                  {branch.name === currentBranch && <span className={styles.current}>Current</span>}
-                </button>
-              );
-            })}
-          </div>
-        ))}
-      </div>
+      <HighlightQuery query={query}>
+        <div className={styles.list}>
+          {flat.length === 0 && <div className={styles.empty}>No branches match “{query}”.</div>}
+          {visibleGroups.map((group, groupIndex) => (
+            <div key={group.title}>
+              <div className={styles.groupTitle}>{group.title}</div>
+              {group.branches.map((branch, branchIndex) => {
+                const index = groupOffsets[groupIndex]! + branchIndex;
+                return (
+                  <button
+                    key={`${group.title}:${branch.name}`}
+                    className={styles.item}
+                    data-highlighted={index === highlighted}
+                    onMouseEnter={() => setHighlighted(index)}
+                    onClick={() => onPick(branch)}
+                  >
+                    <GitBranch size={13} className={styles.icon} />
+                    <span className={styles.name}>
+                      <Highlight text={branch.name} />
+                    </span>
+                    {branch.name === currentBranch && <span className={styles.current}>Current</span>}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </HighlightQuery>
       {footer && <div className={styles.footer}>{footer}</div>}
     </div>
   );

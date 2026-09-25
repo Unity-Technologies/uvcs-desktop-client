@@ -4,6 +4,7 @@ import type { RepositorySummary } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { displayName } from '../../lib/userName';
 import { Button } from '../../ui/Button';
+import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { repositoryMenu } from './homeMenus';
@@ -33,7 +34,9 @@ export function RepositoryRow({ repository, workspaces, onOpen, onCreateWorkspac
               <Database size={15} />
             </span>
             <span className={styles.rowText}>
-              <span className={styles.rowTitle}>{repository.name}</span>
+              <span className={styles.rowTitle}>
+                <Highlight text={repository.name} />
+              </span>
               <span className={styles.rowSubtitle}>
                 {[
                   workspaces.length > 0 && `${workspaces.length} recent workspace${workspaces.length === 1 ? '' : 's'}`,
@@ -62,14 +65,17 @@ export function RepositoryRow({ repository, workspaces, onOpen, onCreateWorkspac
       </ActionContextMenu>
 
       {expanded && (
-        <div className={styles.nested}>
-          {workspaces.map((workspace) => (
-            <WorkspaceRow key={workspace.guid} workspace={workspace} onOpen={onOpen} compact />
-          ))}
-          <button className={styles.nestedAction} onClick={() => onCreateWorkspace(repository)}>
-            + New workspace for {repository.name}
-          </button>
-        </div>
+        // The filter matches repository names only, not their workspaces.
+        <HighlightQuery query="">
+          <div className={styles.nested}>
+            {workspaces.map((workspace) => (
+              <WorkspaceRow key={workspace.guid} workspace={workspace} onOpen={onOpen} compact />
+            ))}
+            <button className={styles.nestedAction} onClick={() => onCreateWorkspace(repository)}>
+              + New workspace for {repository.name}
+            </button>
+          </div>
+        </HighlightQuery>
       )}
     </div>
   );

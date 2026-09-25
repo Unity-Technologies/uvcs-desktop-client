@@ -7,6 +7,7 @@ import { EMPTY_SELECTION } from '../../lib/selection';
 import { Button } from '../../ui/Button';
 import { prompt } from '../../ui/dialog/prompt';
 import { EmptyState } from '../../ui/EmptyState';
+import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
 import { CenteredSpinner } from '../../ui/Spinner';
@@ -44,7 +45,7 @@ export function RepositorySyncPanel({ localRepository }: { localRepository: stri
   };
 
   const columns: Column<Branch>[] = [
-    { id: 'name', header: 'Branch', grow: 2, render: (branch) => branch.name, sortValue: (branch) => branch.name },
+    { id: 'name', header: 'Branch', grow: 2, render: (branch) => <Highlight text={branch.name} />, sortValue: (branch) => branch.name },
     { id: 'owner', header: 'Created by', grow: 1, render: (branch) => <UserLabel user={branch.owner} /> },
     { id: 'date', header: 'Created', width: 130, secondary: true, render: (branch) => <RelativeTime date={branch.date} />, sortValue: (branch) => branch.date },
     {
@@ -100,22 +101,24 @@ export function RepositorySyncPanel({ localRepository }: { localRepository: stri
       ) : shown.length === 0 ? (
         <EmptyState title="No branches" />
       ) : (
-        <DataTable
-          rows={shown}
-          columns={columns}
-          rowKey={(branch) => branch.name}
-          selection={selection}
-          onSelectionChange={setSelection}
-          initialSort={{ columnId: 'name', descending: false }}
-          contextMenu={(selected) =>
-            selected.length === 1 && remote
-              ? [
-                  { id: 'push', label: `Push to ${remote}`, icon: ArrowUpFromLine, run: () => push(selected[0]!.name) },
-                  { id: 'pull', label: `Pull from ${remote}`, icon: ArrowDownToLine, run: () => pull(selected[0]!.name) },
-                ]
-              : []
-          }
-        />
+        <HighlightQuery query={filter}>
+          <DataTable
+            rows={shown}
+            columns={columns}
+            rowKey={(branch) => branch.name}
+            selection={selection}
+            onSelectionChange={setSelection}
+            initialSort={{ columnId: 'name', descending: false }}
+            contextMenu={(selected) =>
+              selected.length === 1 && remote
+                ? [
+                    { id: 'push', label: `Push to ${remote}`, icon: ArrowUpFromLine, run: () => push(selected[0]!.name) },
+                    { id: 'pull', label: `Pull from ${remote}`, icon: ArrowDownToLine, run: () => pull(selected[0]!.name) },
+                  ]
+                : []
+            }
+          />
+        </HighlightQuery>
       )}
     </div>
   );

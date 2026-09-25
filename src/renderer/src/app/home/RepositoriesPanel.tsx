@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
+import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { SearchField } from '../../ui/SearchField';
 import { CenteredSpinner } from '../../ui/Spinner';
@@ -62,15 +63,17 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
             description={filter ? undefined : 'Create one to start versioning a project.'}
           />
         )}
-        {shown.map((repository) => (
-          <RepositoryRow
-            key={repository.spec}
-            repository={repository}
-            workspaces={workspacesOf(repository)}
-            onOpen={onOpen}
-            onCreateWorkspace={createWorkspace}
-          />
-        ))}
+        <HighlightQuery query={filter}>
+          {shown.map((repository) => (
+            <RepositoryRow
+              key={repository.spec}
+              repository={repository}
+              workspaces={workspacesOf(repository)}
+              onOpen={onOpen}
+              onCreateWorkspace={createWorkspace}
+            />
+          ))}
+        </HighlightQuery>
       </div>
     </>
   );

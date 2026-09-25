@@ -6,6 +6,7 @@ import type { PageProps } from '../../app/navigation/pages';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
+import { HighlightQuery } from '../../ui/Highlight';
 import { SearchField } from '../../ui/SearchField';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { SplitPane } from '../../ui/SplitPane';
@@ -51,14 +52,16 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
         minSize={380}
         maxSize={1100}
         first={
-          <FileTreeTable
-            rows={rows}
-            selection={selection}
-            onSelectionChange={setSelection}
-            onToggleDirectory={(directory) => toggle(treeId, directory)}
-            onOpenFile={(item) => openRevision(workspacePath, item)}
-            contextMenu={(items) => revisionMenu(workspacePath, items)}
-          />
+          <HighlightQuery query={filter}>
+            <FileTreeTable
+              rows={rows}
+              selection={selection}
+              onSelectionChange={setSelection}
+              onToggleDirectory={(directory) => toggle(treeId, directory)}
+              onOpenFile={(item) => openRevision(workspacePath, item)}
+              contextMenu={(items) => revisionMenu(workspacePath, items)}
+            />
+          </HighlightQuery>
         }
         second={
           focused ? (

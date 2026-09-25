@@ -12,6 +12,7 @@ import { Button } from '../../ui/Button';
 import { DetailsPanel, DetailsSection, DetailsText } from '../../ui/DetailsPanel';
 import { PropertyList } from '../../ui/PropertyList';
 import { EmptyState } from '../../ui/EmptyState';
+import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
@@ -23,8 +24,18 @@ import { openCreateAttributeDialog } from './CreateAttributeDialog';
 import { useAttributeTypes } from './useAttributes';
 
 const COLUMNS: Column<AttributeType>[] = [
-  { id: 'name', header: 'Name', grow: 1, sortValue: (type) => type.name, render: (type) => <strong>{type.name}</strong> },
-  { id: 'comment', header: 'Comment', grow: 3, secondary: true, render: (type) => type.comment },
+  {
+    id: 'name',
+    header: 'Name',
+    grow: 1,
+    sortValue: (type) => type.name,
+    render: (type) => (
+      <strong>
+        <Highlight text={type.name} />
+      </strong>
+    ),
+  },
+  { id: 'comment', header: 'Comment', grow: 3, secondary: true, render: (type) => <Highlight text={type.comment} /> },
   { id: 'owner', header: 'Created by', width: 180, sortValue: (type) => type.owner, render: (type) => <UserLabel user={type.owner} /> },
   { id: 'date', header: 'Created', width: 130, secondary: true, sortValue: (type) => type.date, render: (type) => <RelativeTime date={type.date} /> },
 ];
@@ -72,15 +83,17 @@ export function AttributesView() {
                 action={<Button onClick={() => openCreateAttributeDialog(workspacePath)}>New attribute</Button>}
               />
             ) : (
-              <DataTable
-                rows={visible}
-                columns={COLUMNS}
-                rowKey={(type) => type.name}
-                selection={selection}
-                onSelectionChange={setSelection}
-                onActivate={(type) => void editAttributeComment(workspacePath, type)}
-                contextMenu={(selectedTypes) => attributeTypeMenu(workspacePath, selectedTypes)}
-              />
+              <HighlightQuery query={search.trim()}>
+                <DataTable
+                  rows={visible}
+                  columns={COLUMNS}
+                  rowKey={(type) => type.name}
+                  selection={selection}
+                  onSelectionChange={setSelection}
+                  onActivate={(type) => void editAttributeComment(workspacePath, type)}
+                  contextMenu={(selectedTypes) => attributeTypeMenu(workspacePath, selectedTypes)}
+                />
+              </HighlightQuery>
             )
           }
           details={selected ? <AttributeTypeDetails workspacePath={workspacePath} type={selected} /> : <EmptyState title="Select an attribute" />}

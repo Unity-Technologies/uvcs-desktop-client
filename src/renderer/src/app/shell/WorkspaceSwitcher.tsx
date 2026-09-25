@@ -1,6 +1,7 @@
 import * as Popover from '@radix-ui/react-popover';
 import { Layers } from 'lucide-react';
 import { useState, type ReactElement } from 'react';
+import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { useSettings } from '../settings/useSettings';
 import { useSession } from '../workspace/sessionStore';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
@@ -41,15 +42,21 @@ export function WorkspaceSwitcher({ currentPath, children }: { currentPath: stri
           />
           <div className={styles.list}>
             {recent.length === 0 && <div className={styles.empty}>No other recent workspaces</div>}
-            {recent.map((workspace) => (
-              <button key={workspace.guid} className={styles.item} onClick={() => choose(workspace.path)}>
-                <span className={styles.icon}>{workspace.name.charAt(0).toUpperCase()}</span>
-                <span className={styles.text}>
-                  <span className={styles.name}>{workspace.name}</span>
-                  <span className={styles.path}>{workspace.path}</span>
-                </span>
-              </button>
-            ))}
+            <HighlightQuery query={filter}>
+              {recent.map((workspace) => (
+                <button key={workspace.guid} className={styles.item} onClick={() => choose(workspace.path)}>
+                  <span className={styles.icon}>{workspace.name.charAt(0).toUpperCase()}</span>
+                  <span className={styles.text}>
+                    <span className={styles.name}>
+                      <Highlight text={workspace.name} />
+                    </span>
+                    <span className={styles.path}>
+                      <Highlight text={workspace.path} />
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </HighlightQuery>
           </div>
           <button className={styles.all} onClick={closeWorkspace}>
             <Layers size={14} />

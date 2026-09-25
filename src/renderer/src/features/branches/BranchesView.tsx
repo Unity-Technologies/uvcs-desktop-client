@@ -11,6 +11,7 @@ import { sinceDateFor } from '../../lib/sincePresets';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
+import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
@@ -114,15 +115,17 @@ export function BranchesView() {
             rows.length === 0 ? (
               <EmptyState icon={<GitBranch size={22} />} title="No branches found" description="Try a different filter or date range." />
             ) : (
-              <DataTable
-                rows={rows}
-                columns={columns}
-                rowKey={rowKey}
-                selection={selection}
-                onSelectionChange={setSelection}
-                onActivate={(row) => row.branch.name !== currentBranch && void switchToBranch(workspacePath, row.branch.name)}
-                contextMenu={(selectedRows) => branchMenu(workspacePath, selectedRows.map((row) => row.branch), currentBranch)}
-              />
+              <HighlightQuery query={search}>
+                <DataTable
+                  rows={rows}
+                  columns={columns}
+                  rowKey={rowKey}
+                  selection={selection}
+                  onSelectionChange={setSelection}
+                  onActivate={(row) => row.branch.name !== currentBranch && void switchToBranch(workspacePath, row.branch.name)}
+                  contextMenu={(selectedRows) => branchMenu(workspacePath, selectedRows.map((row) => row.branch), currentBranch)}
+                />
+              </HighlightQuery>
             )
           }
           details={
@@ -159,7 +162,7 @@ function useBranchColumns(layout: BranchesLayout, currentBranch: string | undefi
         sortValue: sortable ? (row) => row.branch.name : undefined,
         render: (row) => <BranchNameCell row={row} isCurrent={row.branch.name === currentBranch} onToggleCollapsed={onToggleCollapsed} />,
       },
-      { id: 'comment', header: 'Comment', grow: 2, secondary: true, render: (row) => row.branch.comment },
+      { id: 'comment', header: 'Comment', grow: 2, secondary: true, render: (row) => <Highlight text={row.branch.comment} /> },
       {
         id: 'owner',
         header: 'Created by',
@@ -196,7 +199,7 @@ function BranchNameCell({ row, isCurrent, onToggleCollapsed }: { row: BranchTree
         <GitBranch size={13} className={styles.branchIcon} />
       )}
       <span className={styles.label} data-hidden={row.branch.isHidden}>
-        {row.depth > 0 ? row.branch.name.slice(row.branch.name.lastIndexOf('/')) : row.branch.name}
+        <Highlight text={row.depth > 0 ? row.branch.name.slice(row.branch.name.lastIndexOf('/')) : row.branch.name} />
       </span>
       {isCurrent && <span className={styles.current}>Current</span>}
       {row.branch.isHidden && <EyeOff size={12} className={styles.hiddenIcon} />}
