@@ -2,6 +2,7 @@ import { ChevronRight, Database, MoreHorizontal } from 'lucide-react';
 import { useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
+import { ROVING_ITEM } from '../../lib/rovingFocus';
 import { displayName } from '../../lib/userName';
 import { Button } from '../../ui/Button';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
@@ -28,7 +29,7 @@ export function RepositoryRow({ repository, workspaces, onOpen, onCreateWorkspac
     <div className={styles.repository}>
       <ActionContextMenu entries={menu}>
         <div className={styles.row}>
-          <button className={styles.rowMain} onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>
+          <button className={styles.rowMain} onClick={() => setExpanded(!expanded)} aria-expanded={expanded} {...ROVING_ITEM}>
             <ChevronRight size={14} className={styles.chevron} data-expanded={expanded} />
             <span className={styles.rowIcon}>
               <Database size={15} />

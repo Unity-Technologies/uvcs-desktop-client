@@ -1,6 +1,7 @@
 import { Database, Plus, RefreshCw } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
+import { focusFirstItem, moveRovingFocus } from '../../lib/rovingFocus';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
@@ -21,6 +22,8 @@ interface RepositoriesPanelProps {
 
 export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
   const [filter, setFilter] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const { data: repositories, isLoading, isFetching, error, refetch } = useRepositories(server);
   const { data: workspaces } = useWorkspaceList();
   const { data: workspaceRepositories } = useRecentWorkspaceRepositories(workspaces);
@@ -45,10 +48,19 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
           </>
         }
       >
-        <SearchField value={filter} onChange={setFilter} placeholder="Find a repository" autoFocus />
+        <SearchField
+          ref={searchRef}
+          value={filter}
+          onChange={setFilter}
+          placeholder="Find a repository"
+          autoFocus
+          onKeyDown={(event) => {
+            if (event.key === 'ArrowDown' && focusFirstItem(listRef.current)) event.preventDefault();
+          }}
+        />
       </ViewHeader>
 
-      <div className={styles.list}>
+      <div ref={listRef} className={styles.list} onKeyDown={(event) => moveRovingFocus(event.currentTarget, event, () => searchRef.current?.focus())}>
         {isLoading && <CenteredSpinner />}
         {error && (
           <EmptyState

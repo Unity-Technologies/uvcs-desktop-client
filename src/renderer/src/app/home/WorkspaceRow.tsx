@@ -1,6 +1,7 @@
 import { MoreHorizontal } from 'lucide-react';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { Button } from '../../ui/Button';
+import { ROVING_ITEM } from '../../lib/rovingFocus';
 import { Highlight } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
@@ -23,7 +24,7 @@ export function WorkspaceRow({ workspace, repository, missing = false, onOpen, c
   return (
     <ActionContextMenu entries={menu}>
       <div className={styles.row} data-compact={compact} data-missing={missing}>
-        <button className={styles.rowMain} onClick={() => onOpen(workspace.path)}>
+        <button className={styles.rowMain} onClick={() => onOpen(workspace.path)} {...ROVING_ITEM}>
           <span className={styles.rowIcon}>{workspace.name.charAt(0).toUpperCase()}</span>
           <span className={styles.rowText}>
             <span className={styles.rowTitle}>

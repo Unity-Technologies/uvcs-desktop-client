@@ -1,5 +1,5 @@
 import { Search } from 'lucide-react';
-import { forwardRef } from 'react';
+import { forwardRef, type KeyboardEvent } from 'react';
 import styles from './Field.module.css';
 
 interface SearchFieldProps {
@@ -9,10 +9,12 @@ interface SearchFieldProps {
   autoFocus?: boolean;
   /** Pixels, or any CSS width such as `100%`. */
   width?: number | string;
+  /** Keys the field doesn't handle itself (it clears on Escape), e.g. ↓ into the list it filters. */
+  onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
 }
 
 export const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(function SearchField(
-  { value, onChange, placeholder = 'Filter', autoFocus, width = 220 },
+  { value, onChange, placeholder = 'Filter', autoFocus, width = 220, onKeyDown },
   ref,
 ) {
   return (
@@ -30,6 +32,8 @@ export const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(functi
           if (event.key === 'Escape' && value) {
             event.stopPropagation();
             onChange('');
+          } else {
+            onKeyDown?.(event);
           }
         }}
       />

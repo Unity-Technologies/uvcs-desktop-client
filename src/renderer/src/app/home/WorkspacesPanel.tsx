@@ -1,6 +1,7 @@
 import { Clock, FolderOpen, FolderPlus, Layers } from 'lucide-react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
+import { focusFirstItem, moveRovingFocus } from '../../lib/rovingFocus';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
@@ -23,6 +24,8 @@ interface WorkspacesPanelProps {
 
 export function WorkspacesPanel({ mode, onOpen, onOpenFolder, onShowAll }: WorkspacesPanelProps) {
   const [filter, setFilter] = useState('');
+  const searchRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const { recentWorkspacePaths } = useSettings();
   const { data: workspaces, isLoading, error } = useWorkspaceList();
   const { data: repositories } = useRecentWorkspaceRepositories(workspaces);
@@ -53,10 +56,21 @@ export function WorkspacesPanel({ mode, onOpen, onOpenFolder, onShowAll }: Works
           </>
         }
       >
-        <SearchField value={filter} onChange={setFilter} placeholder="Find a workspace" autoFocus />
+        <SearchField
+          ref={searchRef}
+          value={filter}
+          onChange={setFilter}
+          placeholder="Find a workspace"
+          autoFocus
+          onKeyDown={(event) => {
+            // Down goes into the list; Enter opens the first match.
+            if (event.key === 'ArrowDown' && focusFirstItem(listRef.current)) event.preventDefault();
+            else if (event.key === 'Enter' && shown[0]) onOpen(shown[0].workspace.path);
+          }}
+        />
       </ViewHeader>
 
-      <div className={styles.list}>
+      <div ref={listRef} className={styles.list} onKeyDown={(event) => moveRovingFocus(event.currentTarget, event, () => searchRef.current?.focus())}>
         {isLoading && <CenteredSpinner />}
         {error && <EmptyState title="Couldn't list workspaces" description={error.message} />}
         {workspaces && shown.length === 0 && (
