@@ -1,13 +1,15 @@
 import type { GraphLabel, MergeLink } from '@shared/domain/branchExplorer';
-import type { GraphLayout, Lane } from '../model/layoutGraph';
+import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
 import { distanceToCurve, linkCurve, type Point } from './curves';
-import { BAND_HEIGHT, COLUMN_WIDTH, columnX, GRAPH_PADDING, HEADER_HEIGHT, HEADER_MAX_WIDTH, headerTop, NODE_RADIUS, ROW_HEIGHT, rowY } from './geometry';
+import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, COLUMN_WIDTH, columnX, GRAPH_PADDING, HEADER_HEIGHT, HEADER_MAX_WIDTH, headerTop, NODE_RADIUS, ROW_HEIGHT, rowY } from './geometry';
 import { estimatedLabelWidth, LABEL_HEIGHT, labelTop } from './labelPlacement';
 import { laneShape } from './laneShape';
 
 /** Something the pointer can be on. */
 export type GraphTarget =
   | { kind: 'changeset'; id: number }
+  /** A "+N" node standing for changesets collapsed by "Only relevant changesets". */
+  | { kind: 'collapsed'; node: NodeLayout }
   | { kind: 'label'; label: GraphLabel }
   | { kind: 'branch'; lane: Lane }
   | { kind: 'mergeLink'; link: MergeLink };
@@ -28,6 +30,10 @@ export function hitTest(layout: GraphLayout, point: Point): GraphTarget | null {
 function hitChangeset(layout: GraphLayout, point: Point): GraphTarget | null {
   const node = layout.nodesByColumn[Math.round((point.x - GRAPH_PADDING.left) / COLUMN_WIDTH)];
   if (!node) return null;
+  if (node.collapsed) {
+    const inside = Math.abs(columnX(node.column) - point.x) <= COLLAPSED_NODE_HALF_WIDTH && Math.abs(rowY(node.row) - point.y) <= NODE_HIT_RADIUS;
+    return inside ? { kind: 'collapsed', node } : null;
+  }
   const distance = Math.hypot(columnX(node.column) - point.x, rowY(node.row) - point.y);
   return distance <= NODE_HIT_RADIUS ? { kind: 'changeset', id: node.changeset.id } : null;
 }

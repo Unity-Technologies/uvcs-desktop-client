@@ -65,7 +65,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const palette = useGraphPalette(containerRef);
   const [hover, setHover] = useState<{ target: GraphTarget; x: number; y: number } | null>(null);
 
-  const hoveredChangeset = hover?.target.kind === 'changeset' ? hover.target.id : null;
+  const hoveredChangeset = hover?.target.kind === 'changeset' ? hover.target.id : hover?.target.kind === 'collapsed' ? hover.target.node.changeset.id : null;
   const sceneRef = useRef({ layout, highlights, palette, hoveredChangeset });
   sceneRef.current = { layout, highlights, palette, hoveredChangeset };
 

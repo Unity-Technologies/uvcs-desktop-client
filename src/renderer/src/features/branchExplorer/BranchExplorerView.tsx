@@ -33,8 +33,8 @@ export function BranchExplorerView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
   const { data, isLoading, isFetching, error } = useBranchExplorerData();
-  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, detailsOpen, highlightedAuthor, showComments, showAvatars, set: setPreferences } =
-    useBranchExplorerPreferences();
+  const preferences = useBranchExplorerPreferences();
+  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, structureOnly, detailsOpen, highlightedAuthor, showComments, showAvatars } = preferences;
 
   const canvasRef = useRef<GraphCanvasHandle>(null);
   const [selection, setSelection] = useState<GraphSelection | null>(null);
@@ -42,20 +42,34 @@ export function BranchExplorerView() {
   /** How far the last focus reached; the next one starts there. */
   const [focusHops, setFocusHops] = useState(1);
   const [search, setSearch] = useState('');
+  /** Changesets the user expanded out of "+N" nodes. */
+  const [expanded, setExpanded] = useState<ReadonlySet<number>>(new Set());
   /** -1 until the user steps through the matches. */
   const [activeHitIndex, setActiveHitIndex] = useState(-1);
 
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : null;
   const homeChangeset = workspace?.loadedChangeset ?? null;
 
-  const layout = useMemo(() => {
+  const filtered = useMemo(() => {
     if (!data) return null;
     const related = focus ?? (onlyRelatedToCurrent && currentBranch ? { branch: currentBranch, hops: 1 } : null);
     const chosen = visibleBranches && new Set(visibleBranches);
-    return layoutGraph(filterGraph(data, { focus: related, visibleBranches: chosen, hideMergedBranches, currentBranch }));
+    return filterGraph(data, { focus: related, visibleBranches: chosen, hideMergedBranches, currentBranch });
   }, [data, focus, onlyRelatedToCurrent, visibleBranches, hideMergedBranches, currentBranch]);
 
-  const searchHits = useMemo(() => (layout ? searchGraph(layout, search) : []), [layout, search]);
+  // Search looks at every changeset, so "Only relevant changesets" can keep what it finds.
+  const fullLayout = useMemo(() => filtered && layoutGraph(filtered), [filtered]);
+  const searchHits = useMemo(() => (fullLayout ? searchGraph(fullLayout, search) : []), [fullLayout, search]);
+  const selectedChangeset = selection?.kind === 'changeset' ? selection.id : null;
+  const layout = useMemo(() => {
+    if (!filtered || !structureOnly) return fullLayout;
+    const keep = new Set(expanded);
+    if (homeChangeset !== null) keep.add(homeChangeset);
+    if (selectedChangeset !== null) keep.add(selectedChangeset);
+    for (const hit of searchHits) if (hit.kind === 'changeset') keep.add(hit.id);
+    return layoutGraph(filtered, { keep });
+  }, [filtered, fullLayout, structureOnly, expanded, homeChangeset, selectedChangeset, searchHits]);
+
   const authors = useMemo(() => [...new Set(data?.changesets.map((changeset) => changeset.owner))].sort(), [data]);
   const branchNames = useMemo(() => (data?.branches.map((branch) => branch.name) ?? []).sort(), [data]);
   const highlights = useMemo<GraphHighlights>(
@@ -83,7 +97,7 @@ export function BranchExplorerView() {
 
   const clearFilters = (): void => {
     setFocus(null);
-    setPreferences({ onlyRelatedToCurrent: false, hideMergedBranches: false, visibleBranches: null, highlightedAuthor: null });
+    preferences.set({ onlyRelatedToCurrent: false, hideMergedBranches: false, visibleBranches: null, highlightedAuthor: null });
   };
 
   const goHome = useCallback(() => {
@@ -94,7 +108,7 @@ export function BranchExplorerView() {
 
   const fit = useCallback(() => canvasRef.current?.fit(), []);
   const zoomBy = useCallback((factor: number) => canvasRef.current?.zoomBy(factor), []);
-  useInitialFocus(layout, homeChangeset, canvasRef);
+  useInitialFocus(layout, homeChangeset, canvasRef, structureOnly);
   useBranchExplorerCommands({ goHome, fit });
 
   const stepSearch = (direction: 1 | -1): void => {
@@ -117,6 +131,11 @@ export function BranchExplorerView() {
   const changeSearch = (value: string): void => {
     setSearch(value);
     setActiveHitIndex(-1);
+  };
+
+  const select = (target: GraphTarget | null): void => {
+    if (target?.kind === 'collapsed') setExpanded((current) => new Set([...current, ...target.node.collapsed!.map((changeset) => changeset.id)]));
+    else setSelection(selectionFor(target));
   };
 
   const activate = (target: GraphTarget): void => {
@@ -152,7 +171,7 @@ export function BranchExplorerView() {
   const header = (
     <ViewHeader
       title="Branch Explorer"
-      subtitle={layout && `${layout.columnCount} changesets · ${layout.lanes.length} branches`}
+      subtitle={layout && filtered && `${filtered.changesets.length} changesets · ${layout.lanes.length} branches`}
       actions={
         <>
           <GraphSearch
@@ -206,7 +225,7 @@ export function BranchExplorerView() {
           ref={canvasRef}
           layout={layout}
           highlights={highlights}
-          onSelect={(target) => setSelection(selectionFor(target))}
+          onSelect={select}
           onActivate={activate}
           contextMenu={(target) => graphMenu(target, { workspacePath, layout, goToChangeset, showRelatedTo: (name) => focusOn(name, focusHops) })}
         >
@@ -227,16 +246,20 @@ export function BranchExplorerView() {
   );
 }
 
-/** The first time the graph appears, bring the workspace changeset (or the latest history) into view. */
+/**
+ * The first time the graph appears, and whenever "Only relevant changesets" reshapes it, bring the
+ * workspace changeset (or the latest history) into view.
+ */
 function useInitialFocus(
   layout: ReturnType<typeof layoutGraph> | null,
   homeChangeset: number | null,
   canvasRef: React.RefObject<GraphCanvasHandle | null>,
+  structureOnly: boolean,
 ): void {
-  const focused = useRef(false);
+  const focusedFor = useRef<boolean | null>(null);
   useEffect(() => {
-    if (focused.current || !layout || layout.columnCount === 0 || !canvasRef.current) return;
-    focused.current = true;
+    if (focusedFor.current === structureOnly || !layout || layout.columnCount === 0 || !canvasRef.current) return;
+    focusedFor.current = structureOnly;
     const target = homeChangeset !== null && layout.nodes.has(homeChangeset) ? homeChangeset : layout.nodesByColumn.at(-1)!.changeset.id;
     canvasRef.current.showOpeningView(target);
   }, [layout, homeChangeset, canvasRef]);

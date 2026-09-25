@@ -45,6 +45,13 @@ export function GraphFilterBar({ branches, authors, onZoom, onFit, onGoHome }: G
   }));
 
   const viewMenu: MenuEntry[] = [
+    {
+      id: 'structureOnly',
+      label: 'Only relevant changesets',
+      icon: check(preferences.structureOnly),
+      run: () => set({ structureOnly: !preferences.structureOnly }),
+    },
+    SEPARATOR,
     { id: 'comments', label: 'Show comments', icon: check(preferences.showComments), run: () => set({ showComments: !preferences.showComments }) },
     { id: 'avatars', label: 'Show avatars', icon: check(preferences.showAvatars), run: () => set({ showAvatars: !preferences.showAvatars }) },
     { id: 'details', label: 'Show details panel', icon: check(preferences.detailsOpen), run: () => set({ detailsOpen: !preferences.detailsOpen }) },
@@ -62,7 +69,9 @@ export function GraphFilterBar({ branches, authors, onZoom, onFit, onGoHome }: G
         {preferences.highlightedAuthor ? displayName(preferences.highlightedAuthor) : 'Authors'}
       </FilterPill>
       <FilterPill entries={dateMenu}>{DATE_RANGES.find((range) => range.id === preferences.dateRange)?.label}</FilterPill>
-      <FilterPill entries={viewMenu}>View</FilterPill>
+      <FilterPill entries={viewMenu} active={preferences.structureOnly}>
+        {preferences.structureOnly ? 'View · Relevant only' : 'View'}
+      </FilterPill>
     </div>
   );
 }

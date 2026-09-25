@@ -36,6 +36,14 @@ function tooltipContent(target: GraphTarget, layout: GraphLayout): { title: stri
         meta: `${displayName(changeset.owner)} · ${formatRelativeDate(changeset.date)}`,
       };
     }
+    case 'collapsed': {
+      const run = target.node.collapsed!;
+      return {
+        title: `${run.length} changesets on ${target.node.changeset.branch}`,
+        body: `Changesets ${run[0]!.id} to ${run.at(-1)!.id}, hidden by “Only relevant changesets”.`,
+        meta: 'Click to show them',
+      };
+    }
     case 'branch':
       return {
         title: target.lane.branch.name,

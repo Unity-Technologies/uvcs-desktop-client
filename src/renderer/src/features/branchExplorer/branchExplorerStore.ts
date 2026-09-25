@@ -13,6 +13,8 @@ interface BranchExplorerPreferences {
   visibleBranches: BranchChoice;
   /** Fade out changesets by anyone else. Not remembered: authors differ between repositories. */
   highlightedAuthor: string | null;
+  /** Only the changesets that shape the diagram; the linear runs between them collapse into "+N" nodes. */
+  structureOnly: boolean;
   showComments: boolean;
   showAvatars: boolean;
   detailsOpen: boolean;
@@ -28,6 +30,7 @@ export const useBranchExplorerPreferences = create<BranchExplorerPreferences>()(
       onlyRelatedToCurrent: false,
       visibleBranches: null,
       highlightedAuthor: null,
+      structureOnly: false,
       showComments: true,
       showAvatars: true,
       detailsOpen: true,

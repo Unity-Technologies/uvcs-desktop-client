@@ -1,10 +1,11 @@
 import type { NodeLayout } from '../model/layoutGraph';
 import { drawAvatar, drawDot } from './drawAvatar';
+import { drawCollapsedNode } from './drawCollapsedNode';
 import { DIMMED_ALPHA, isChangesetDimmed, type DrawContext } from './drawContext';
 import { drawHomeMarker } from './drawHomeMarker';
 import { drawNodeHit } from './drawSearchHit';
 import { fitText, summaryOf } from './fitText';
-import { BAND_HEIGHT, COLUMN_WIDTH, columnX, NODE_RADIUS, rowY } from './geometry';
+import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, COLUMN_WIDTH, columnX, NODE_RADIUS, rowY } from './geometry';
 import { branchColor } from './graphPalette';
 import { nextColumnOnRow } from './rowNeighbors';
 
@@ -49,7 +50,7 @@ function drawParentLink(draw: DrawContext, node: NodeLayout): void {
 
   const radius = radiusFor(draw);
   const y = rowY(node.row);
-  const fromX = columnX(parent.column) + radius + 2;
+  const fromX = columnX(parent.column) + (parent.collapsed && detail.text ? COLLAPSED_NODE_HALF_WIDTH - 4 : radius) + 2;
   const toX = columnX(node.column) - radius - 2;
   if (toX <= fromX) return;
 
@@ -80,6 +81,7 @@ function drawNode(draw: DrawContext, node: NodeLayout): void {
   const y = rowY(node.row);
   const id = node.changeset.id;
   const hovered = scene.hoveredChangeset === id;
+  if (node.collapsed) return drawCollapsedNode(draw, node, hovered);
   const selected = scene.selectedChangeset === id;
   const radius = radiusFor(draw) + (hovered ? 1 : 0);
   const color = branchColor(palette, node.changeset.branch);
@@ -122,7 +124,7 @@ function drawHalo(ctx: CanvasRenderingContext2D, x: number, y: number, radius: n
 
 /** The comment's first line under the changeset, shortened to the room before the next changeset on the row. */
 function drawComment({ ctx, scene }: DrawContext, node: NodeLayout): void {
-  const summary = summaryOf(node.changeset.comment);
+  const summary = !node.collapsed && summaryOf(node.changeset.comment);
   if (!summary) return;
 
   const left = columnX(node.column) - COMMENT_INSET;
