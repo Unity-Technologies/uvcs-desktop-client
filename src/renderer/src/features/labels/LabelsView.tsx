@@ -109,7 +109,7 @@ export function LabelsView() {
             </HighlightQuery>
           }
           details={
-            selected ? <LabelDetails key={selected.name} label={selected} menu={labelMenu(workspacePath, [selected])} /> : <NoSelection noun="label" />
+            selected ? <LabelDetails key={selected.name} workspacePath={workspacePath} label={selected} menu={labelMenu(workspacePath, [selected])} /> : <NoSelection noun="label" />
           }
         />
       )}

@@ -12,5 +12,7 @@ export interface LabelsApi {
   list(workspacePath: string, filter: QueryFilter): Promise<Label[]>;
   create(workspacePath: string, request: CreateLabelRequest): Promise<void>;
   rename(workspacePath: string, label: string, newName: string): Promise<void>;
+  /** Replaces the label's comment; it can't be emptied. */
+  editComment(workspacePath: string, label: Pick<Label, 'name' | 'changeset' | 'repository'>, comment: string): Promise<void>;
   delete(workspacePath: string, labels: string[]): Promise<void>;
 }

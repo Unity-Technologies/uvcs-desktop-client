@@ -82,13 +82,13 @@ export function presentStatus(status: ConflictStatus, labels: MergeLabels): Stat
       return {
         label: 'Will merge automatically',
         tone: 'automatic',
-        explanation: 'Both sides changed this file, in different places, so their changes combine without asking you. Nothing is written until you complete the merge.',
+        explanation: `Both sides changed this file, in different places, so their changes combine without asking you. To override, keep ${destination.version} or ${source.version} from the file's menu. Nothing is written until you complete the merge.`,
       };
     case 'needsDecision':
       return {
         label: 'Needs your decision',
         tone: 'pending',
-        explanation: 'Both sides changed the same part. Pick a side for each conflict, keep a whole version, or edit the merged result.',
+        explanation: `Both sides changed the same lines. Pick a side for each conflict, or for the whole file: keep ${destination.version}, keep ${source.version}, keep both, or resolve it by hand.`,
       };
     case 'keepingDestination':
       return { label: `Keeping ${destination.name.toLowerCase()}`, tone: 'decided', explanation: `The result will be ${destination.version} (${labels.destination}), as you chose.` };
@@ -97,9 +97,9 @@ export function presentStatus(status: ConflictStatus, labels: MergeLabels): Stat
     case 'keepingBoth':
       return { label: 'Keeping both', tone: 'decided', explanation: `Both items stay; the one from ${labels.destination} gets a new name.` };
     case 'combined':
-      return { label: 'Combined', tone: 'decided', explanation: 'The result takes changes from both sides, as you picked for each conflict.' };
+      return { label: 'Combined', tone: 'decided', explanation: 'The result takes lines from both sides, as you chose for its conflicts.' };
     case 'edited':
-      return { label: 'Edited by you', tone: 'decided', explanation: 'You edited the merged result by hand. It will be written as you left it.' };
+      return { label: 'Edited by you', tone: 'decided', explanation: 'You resolved the conflicts by hand. The file will be written as you left it.' };
   }
 }
 

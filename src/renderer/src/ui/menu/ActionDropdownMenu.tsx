@@ -3,6 +3,7 @@ import type { ReactElement } from 'react';
 import type { MenuEntry } from '../../lib/actions';
 import { MenuEntries, type MenuPrimitives } from './MenuEntries';
 import styles from './Menu.module.css';
+import { focusAfterMenu } from './focusAfterMenu';
 
 const primitives: MenuPrimitives = {
   Item: DropdownMenu.Item,
@@ -29,7 +30,7 @@ export function ActionDropdownMenu({ entries, align = 'end', children, open, onO
     <DropdownMenu.Root modal={false} open={open} onOpenChange={onOpenChange}>
       <DropdownMenu.Trigger asChild>{children}</DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content className={styles.content} align={align} sideOffset={4} onCloseAutoFocus={onCloseAutoFocus}>
+        <DropdownMenu.Content className={styles.content} align={align} sideOffset={4} onCloseAutoFocus={(event) => focusAfterMenu(event, onCloseAutoFocus)}>
           <MenuEntries entries={entries} primitives={primitives} />
         </DropdownMenu.Content>
       </DropdownMenu.Portal>

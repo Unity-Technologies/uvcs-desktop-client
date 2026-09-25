@@ -4,6 +4,7 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  container-type: inline-size;
 }
 
 .header {
@@ -13,6 +14,7 @@
   gap: var(--space-2);
   height: 44px;
   padding: 0 var(--space-3);
+  overflow: hidden;
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -30,13 +32,34 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
+/* The views never shrink: the line next to them gives way. */
+.viewBar > [role='radiogroup'] {
+  flex: none;
+}
+
 .helper {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   color: var(--text-tertiary);
   font-size: var(--text-sm);
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Too narrow for the line next to the views (their tooltips say what each shows); the views get tighter. */
+@container (max-width: 420px) {
+  .helper {
+    display: none;
+  }
+
+  .viewBar {
+    padding-inline: var(--space-2);
+  }
+
+  .viewBar > [role='radiogroup'] > button {
+    padding-inline: 6px;
+  }
 }
 
 .editBanner {
@@ -62,6 +85,10 @@
 }
 
 .diffTitle {
+  min-width: 0;
+  overflow: hidden;
   color: var(--text-secondary);
   font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

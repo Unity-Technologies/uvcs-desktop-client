@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import type { MenuEntry } from '../../lib/actions';
 import { MenuEntries, type MenuPrimitives } from './MenuEntries';
 import styles from './Menu.module.css';
+import { focusAfterMenu } from './focusAfterMenu';
 
 const primitives: MenuPrimitives = {
   Item: ContextMenu.Item,
@@ -26,7 +27,7 @@ export function ActionContextMenu({ entries, children, onCloseAutoFocus }: Actio
     <ContextMenu.Root modal={false}>
       <ContextMenu.Trigger asChild>{children}</ContextMenu.Trigger>
       <ContextMenu.Portal>
-        <ContextMenu.Content className={styles.content} onCloseAutoFocus={onCloseAutoFocus}>
+        <ContextMenu.Content className={styles.content} onCloseAutoFocus={(event) => focusAfterMenu(event, onCloseAutoFocus)}>
           <OpenedEntries entries={entries} />
         </ContextMenu.Content>
       </ContextMenu.Portal>

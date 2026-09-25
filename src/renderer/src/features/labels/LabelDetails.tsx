@@ -9,14 +9,14 @@ import { DetailsCopyable, DetailsPanel } from '../../ui/DetailsPanel';
 import { AttributeChips } from '../attributes/AttributeChips';
 import { BranchChip } from '../branches/BranchChip';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
-import { showLabelChanges } from './labelOperations';
+import { saveLabelComment, showLabelChanges } from './labelOperations';
 
-export function LabelDetails({ label, menu }: { label: Label; menu: MenuEntry[] }) {
+export function LabelDetails({ workspacePath, label, menu }: { workspacePath: string; label: Label; menu: MenuEntry[] }) {
   return (
     <DetailsPanel
       icon={<Tag />}
       kind="Label"
-      heading={<DetailsHeading name={label.name} comment={label.comment} />}
+      heading={<DetailsHeading name={label.name} comment={label.comment} onSave={(comment) => saveLabelComment(workspacePath, label, comment)} />}
       author={{ user: label.owner, date: label.date }}
       meta={[
         <DetailsCopyable key="changeset" text={spec.changeset(label.changeset)} what="Changeset spec" />,

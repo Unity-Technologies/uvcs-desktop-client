@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildConflictDocument, countConflictRegions, hasConflictMarkers, resolveConflictRegion, splitLines } from './threeWayMerge';
+import { buildConflictDocument, countConflictRegions, hasConflictMarkers, resolveConflictRegion, resolveEveryConflictRegion, splitLines } from './threeWayMerge';
 
 const labels = { source: '/main/task', destination: '/main' };
 const BASE = 'line1\nline2\nline3\nline4\nline5\n';
@@ -59,6 +59,10 @@ describe('resolveConflictRegion', () => {
 
   it('keeps both sides, current first', () => {
     expect(resolveConflictRegion(buildConflictDocument('a\n', 'S\n', 'D\n', labels).text, 0, 'both')).toBe('D\nS\n');
+  });
+
+  it('resolves every region the same way at once', () => {
+    expect(resolveEveryConflictRegion(twoConflicts, 'both')).toBe('a\nD1\nS1\nc\nD2\nS2\ne\n');
   });
 
   it('keeps Windows line endings inside the region', () => {

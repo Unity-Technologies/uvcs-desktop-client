@@ -82,6 +82,13 @@ export function resolveConflictRegion(text: string, conflictIndex: number, choic
   return output.join('');
 }
 
+/** Resolves every conflict region the same way. */
+export function resolveEveryConflictRegion(text: string, choice: ConflictRegionChoice): string {
+  let resolved = text;
+  while (countConflictRegions(resolved) > 0) resolved = resolveConflictRegion(resolved, 0, choice);
+  return resolved;
+}
+
 /** How many conflict regions are still open in the text. */
 export function countConflictRegions(text: string): number {
   return splitLines(text).filter((line) => line.startsWith(MARKER_START)).length;
