@@ -131,6 +131,6 @@ function findTip(target: Element | null): Omit<Tip, 'pointerX' | 'pointerY'> | n
 
 /** True when the element's text is clipped, or any descendant's is. */
 function isClipped(element: HTMLElement): boolean {
-  if (element.scrollWidth > element.clientWidth + 1) return true;
+  if (element.scrollWidth > element.clientWidth + 1 || element.scrollHeight > element.clientHeight + 1) return true;
   return [...element.querySelectorAll('*')].some((child) => child.scrollWidth > child.clientWidth + 1);
 }

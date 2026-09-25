@@ -72,12 +72,16 @@
 }
 
 .title {
+  display: -webkit-box;
   margin: 0;
-  font-size: var(--text-xl);
+  overflow: hidden;
+  font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
-  line-height: 1.25;
-  letter-spacing: -0.01em;
+  line-height: 1.35;
   overflow-wrap: anywhere;
+  /* A long comment reads in full in the Comment section below; the title only names the object. */
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .metaRow {
