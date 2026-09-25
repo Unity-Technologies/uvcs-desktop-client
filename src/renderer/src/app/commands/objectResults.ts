@@ -95,6 +95,7 @@ export function branchResult(branch: Branch, context: ResultContext): SearchResu
     id: `branch:${branch.id}`,
     icon: GitBranch,
     label: branch.name,
+    labelIsBranch: true,
     labelMatches: fuzzyMatchPositions(branch.name, term),
     quality: term ? fuzzyMatchQuality(branch.name, term) : undefined,
     detail: `${displayName(branch.owner)} · ${formatRelativeDate(branch.date)}`,

@@ -7,6 +7,12 @@
   white-space: nowrap;
 }
 
+/* Its width is set to the whole path's, so the container is sized by that, never by the trimmed text. */
+.path[data-fit-content='true'] {
+  flex: 0 1 auto;
+  max-width: 100%;
+}
+
 .directory {
   flex: 0 1 auto;
   overflow: hidden;

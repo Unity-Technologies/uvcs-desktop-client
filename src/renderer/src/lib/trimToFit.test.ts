@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { trimToFit } from './trimToFit';
+import { positionsInTrimmed, trimFolderToFit, trimToFit } from './trimToFit';
 
 const measure = (text: string): number => Array.from(text).length;
 
@@ -18,5 +18,43 @@ describe('trimToFit', () => {
 
   it('never splits a surrogate pair', () => {
     expect(trimToFit('a😀bcd', 3, measure)).toBe('a😀…');
+  });
+});
+
+describe('trimFolderToFit', () => {
+  const branchParent = '/main/child-br-cr-sample/empty-branch2/child_1/';
+
+  it('keeps a folder that fits', () => {
+    expect(trimFolderToFit(branchParent, 100, measure)).toBe(branchParent);
+  });
+
+  it('drops middle segments, keeping the first and as many of the last as fit', () => {
+    expect(trimFolderToFit(branchParent, 30, measure)).toBe('/main/…/empty-branch2/child_1/');
+    expect(trimFolderToFit(branchParent, 20, measure)).toBe('/main/…/child_1/');
+    expect(trimFolderToFit(branchParent, 10, measure)).toBe('/main/…/');
+  });
+
+  it('works on relative paths', () => {
+    expect(trimFolderToFit('Assets/Scripts/Gameplay/', 20, measure)).toBe('Assets/…/Gameplay/');
+  });
+
+  it('cuts the end when not even the first segment fits', () => {
+    expect(trimFolderToFit(branchParent, 6, measure)).toBe('/main…');
+    expect(trimFolderToFit('/', 0, measure)).toBe('');
+  });
+});
+
+describe('positionsInTrimmed', () => {
+  it('keeps positions of text shown whole', () => {
+    expect(positionsInTrimmed('src/app/', 'src/app/', [0, 4])).toEqual([0, 4]);
+  });
+
+  it('moves positions after a cut in the middle and drops the cut ones', () => {
+    // '/main/' + '…' + '/child_1/' out of '/main/child-br/empty/child_1/'.
+    expect(positionsInTrimmed('/main/child-br/empty/child_1/', '/main/…/child_1/', [1, 6, 21])).toEqual([1, 8]);
+  });
+
+  it('drops positions cut from the end', () => {
+    expect(positionsInTrimmed('src/app/main/', 'src/a…', [0, 4, 6])).toEqual([0, 4]);
   });
 });

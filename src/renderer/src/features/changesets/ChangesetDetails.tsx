@@ -1,6 +1,7 @@
 import { FileDiff, GitCommitVertical, Tag } from 'lucide-react';
 import type { Changeset } from '@shared/domain/changeset';
 import { spec } from '@shared/domain/specs';
+import { PathLabel } from '../../components/PathLabel';
 import { formatDateTime } from '../../lib/formatDate';
 import { Button } from '../../ui/Button';
 import { DetailsBadge, DetailsPanel, DetailsSection, DetailsText } from '../../ui/DetailsPanel';
@@ -20,7 +21,7 @@ export function ChangesetDetails({ changeset }: { changeset: Changeset }) {
     <DetailsPanel
       icon={<GitCommitVertical />}
       kind={`Changeset ${changeset.id}`}
-      context={changeset.branch}
+      context={<PathLabel path={changeset.branch} />}
       title={summary || 'No comment'}
       author={{ user: changeset.owner, date: changeset.date }}
       badges={changesetLabels.map((label) => (

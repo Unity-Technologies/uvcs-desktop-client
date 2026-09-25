@@ -4,6 +4,7 @@ import type { Label } from '@shared/domain/label';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
+import { PathLabel } from '../../components/PathLabel';
 import { SincePicker } from '../../components/SincePicker';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { sinceDateFor } from '../../lib/sincePresets';
@@ -40,7 +41,7 @@ const COLUMNS: Column<Label>[] = [
     ),
   },
   { id: 'changeset', header: 'Changeset', width: 100, align: 'end', sortValue: (label) => label.changeset, render: (label) => label.changeset },
-  { id: 'branch', header: 'Branch', grow: 1, secondary: true, sortValue: (label) => label.branch, render: (label) => <Highlight text={label.branch} /> },
+  { id: 'branch', header: 'Branch', grow: 1, secondary: true, sortValue: (label) => label.branch, render: (label) => <PathLabel path={label.branch} /> },
   { id: 'comment', header: 'Comment', grow: 2, secondary: true, render: (label) => <Highlight text={label.comment} /> },
   { id: 'owner', header: 'Created by', width: 180, sortValue: (label) => label.owner, render: (label) => <UserLabel user={label.owner} /> },
   { id: 'date', header: 'Created', width: 130, secondary: true, sortValue: (label) => label.date, render: (label) => <RelativeTime date={label.date} /> },

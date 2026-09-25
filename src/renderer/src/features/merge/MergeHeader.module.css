@@ -31,11 +31,12 @@
 }
 
 .title {
+  display: flex;
+  gap: 0.3em;
   margin: 0;
   overflow: hidden;
   font-size: var(--text-lg);
   font-weight: 600;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 

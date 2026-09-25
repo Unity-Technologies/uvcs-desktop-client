@@ -20,6 +20,13 @@
   white-space: nowrap;
 }
 
+/* "cs:11 on" and the branch, which gives way first when the bar is narrow. */
+.position {
+  display: flex;
+  gap: 0.3em;
+  min-width: 0;
+}
+
 .activity {
   color: var(--text-secondary);
 }

@@ -1,6 +1,7 @@
 import { GitBranch } from 'lucide-react';
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import type { Branch } from '@shared/domain/branch';
+import { PathLabel } from '../../components/PathLabel';
 import { formatDateTime, formatRelativeDate } from '../../lib/formatDate';
 import { Highlight } from '../../ui/Highlight';
 import styles from './BranchSearchList.module.css';
@@ -25,7 +26,7 @@ export const BranchSearchItem = forwardRef<HTMLButtonElement, BranchSearchItemPr
       <GitBranch size={14} className={styles.icon} />
       <span className={styles.text}>
         <span className={styles.name}>
-          <Highlight text={branch.name} />
+          <PathLabel path={branch.name} />
         </span>
         {firstLine && (
           // A clipped or multi-line comment shows in full on hover.

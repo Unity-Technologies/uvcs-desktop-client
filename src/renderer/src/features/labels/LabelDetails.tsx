@@ -1,6 +1,7 @@
 import { ArrowRightLeft, FileDiff, GitMerge, Tag } from 'lucide-react';
 import type { Label } from '@shared/domain/label';
 import { spec } from '@shared/domain/specs';
+import { PathLabel } from '../../components/PathLabel';
 import { formatDateTime } from '../../lib/formatDate';
 import { Button } from '../../ui/Button';
 import { DetailsPanel, DetailsSection, DetailsText } from '../../ui/DetailsPanel';
@@ -13,8 +14,8 @@ export function LabelDetails({ workspacePath, label }: { workspacePath: string; 
   return (
     <DetailsPanel
       icon={<Tag />}
-      kind="Label"
-      context={`Changeset ${label.changeset} · ${label.branch}`}
+      kind={`Label on changeset ${label.changeset}`}
+      context={<PathLabel path={label.branch} />}
       title={label.name}
       author={{ user: label.owner, date: label.date }}
       actions={

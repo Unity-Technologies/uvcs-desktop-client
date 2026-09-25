@@ -7,6 +7,8 @@ export interface SearchResult {
   id: string;
   icon: Icon;
   label: string;
+  /** The label is a branch name: its parent branches are dimmed and give way before its leaf. */
+  labelIsBranch?: boolean;
   /** Dimmed after the label, e.g. a file's folder or who made a changeset and when. */
   detail?: string;
   shortcut?: string;

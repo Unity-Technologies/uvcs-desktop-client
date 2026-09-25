@@ -2,12 +2,13 @@ import { AlertTriangle, ArrowDownToLine, GitMerge } from 'lucide-react';
 import type { MergePlan, MergeRequest } from '@shared/domain/merge';
 import { updateWorkspace } from '../../app/shell/workspaceOperations';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { PathLabel } from '../../components/PathLabel';
 import { useShortcut } from '../../lib/useShortcut';
 import { Button } from '../../ui/Button';
 import { Kbd } from '../../ui/Kbd';
 import { useIncomingSummary } from '../incoming/useIncomingSummary';
 import { ContributorsDiagram } from './ContributorsDiagram';
-import { mergeTitle } from './mergeDescription';
+import { mergeTitle, mergeTitleText, type MergeTitle } from './mergeDescription';
 import type { ConflictLabels } from './resolve/threeWayMerge';
 import styles from './MergeHeader.module.css';
 
@@ -46,7 +47,7 @@ export function MergeHeader({
           <GitMerge size={18} />
         </span>
         <div className={styles.titles}>
-          <h1 className={styles.title}>{mergeTitle(request, labels.destination)}</h1>
+          <MergeHeading title={mergeTitle(request, labels.destination)} />
           <p className={styles.summary}>{summarize(plan, conflictCount, pendingCount)}</p>
         </div>
         {plan.contributors && <ContributorsDiagram contributors={plan.contributors} sourceName={labels.source} />}
@@ -80,6 +81,18 @@ export function MergeHeader({
         </Button>
       </div>
     </header>
+  );
+}
+
+/** "Merge /main/…/task into /main": each name gives way from its middle, the words around them stay whole. */
+function MergeHeading({ title }: { title: MergeTitle }) {
+  return (
+    <h1 className={styles.title} data-tip={mergeTitleText(title)}>
+      {title.verb}
+      <PathLabel path={title.source} fitContent tooltip={false} />
+      {title.preposition}
+      <PathLabel path={title.destination} fitContent tooltip={false} />
+    </h1>
   );
 }
 

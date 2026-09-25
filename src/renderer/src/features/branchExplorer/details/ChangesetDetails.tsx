@@ -1,5 +1,6 @@
 import { FileDiff, GitCommitVertical, GitMerge, Home, Tag } from 'lucide-react';
 import { spec } from '@shared/domain/specs';
+import { PathLabel } from '../../../components/PathLabel';
 import { Button } from '../../../ui/Button';
 import { DetailsBadge, DetailsPanel, DetailsSection, DetailsText } from '../../../ui/DetailsPanel';
 import { PropertyList, type Property } from '../../../ui/PropertyList';
@@ -39,7 +40,7 @@ export function ChangesetDetails({ node, layout, workspacePath, isHome, goToChan
     <DetailsPanel
       icon={<GitCommitVertical />}
       kind={`Changeset ${changeset.id}`}
-      context={changeset.branch}
+      context={<PathLabel path={changeset.branch} />}
       title={changeset.comment.split('\n')[0] || 'No comment'}
       author={{ user: changeset.owner, date: changeset.date }}
       badges={

@@ -1,6 +1,7 @@
 import { ArrowRightLeft, FileDiff, GitBranch, GitMerge } from 'lucide-react';
 import type { Branch } from '@shared/domain/branch';
 import { shortBranchName, spec } from '@shared/domain/specs';
+import { PathLabel } from '../../components/PathLabel';
 import { formatDateTime } from '../../lib/formatDate';
 import { Button } from '../../ui/Button';
 import { DetailsBadge, DetailsPanel, DetailsSection, DetailsText } from '../../ui/DetailsPanel';
@@ -20,7 +21,7 @@ export function BranchDetails({ workspacePath, branch, isCurrent }: BranchDetail
     <DetailsPanel
       icon={<GitBranch />}
       kind="Branch"
-      context={branch.parent || undefined}
+      context={branch.parent && <PathLabel path={branch.parent} />}
       title={shortBranchName(branch.name)}
       author={{ user: branch.owner, date: branch.date }}
       badges={

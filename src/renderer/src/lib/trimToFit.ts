@@ -1,10 +1,12 @@
 export const ELLIPSIS = '…';
 
+type Measure = (text: string) => number;
+
 /**
  * The longest prefix of `text` that, followed by an ellipsis, fits in `maxWidth`: `text` itself when it fits,
  * '' when not even the ellipsis does. Cuts between code points, so surrogate pairs stay whole.
  */
-export function trimToFit(text: string, maxWidth: number, measure: (text: string) => number): string {
+export function trimToFit(text: string, maxWidth: number, measure: Measure): string {
   if (measure(text) <= maxWidth) return text;
   if (measure(ELLIPSIS) > maxWidth) return '';
   const chars = Array.from(text);
@@ -16,4 +18,31 @@ export function trimToFit(text: string, maxWidth: number, measure: (text: string
     else tooWide = middle;
   }
   return chars.slice(0, fits).join('') + ELLIPSIS;
+}
+
+/**
+ * A folder (ending in `/`) shortened to fit by dropping whole segments from its middle, so what is left still reads
+ * as a path: `/main/…/child_1/` for `/main/child-br/empty-branch2/child_1/`. Keeps the first segment and as many of
+ * the last ones as fit; when not even `/main/…/` does, cuts the end like `trimToFit`.
+ */
+export function trimFolderToFit(folder: string, maxWidth: number, measure: Measure): string {
+  if (measure(folder) <= maxWidth) return folder;
+  const headEnd = folder.indexOf('/', folder.startsWith('/') ? 1 : 0) + 1;
+  const segments = folder.slice(headEnd, -1).split('/');
+  const head = folder.slice(0, headEnd) + ELLIPSIS + '/';
+  for (let kept = segments.length - 1; headEnd > 0 && kept >= 0; kept--) {
+    const shortened = head + segments.slice(segments.length - kept).map((segment) => `${segment}/`).join('');
+    if (measure(shortened) <= maxWidth) return shortened;
+  }
+  return trimToFit(folder, maxWidth, measure);
+}
+
+/** Where character positions of `text` (search matches) land once it is shortened to `shown`; cut ones are left out. */
+export function positionsInTrimmed(text: string, shown: string, positions: readonly number[]): number[] {
+  if (shown === text) return [...positions];
+  let kept = 0;
+  while (kept < shown.length && shown[kept] === text[kept]) kept++;
+  const tailStart = text.length - (shown.length - kept - ELLIPSIS.length);
+  const shift = kept + ELLIPSIS.length - tailStart;
+  return positions.flatMap((position) => (position < kept ? [position] : position >= tailStart ? [position + shift] : []));
 }
