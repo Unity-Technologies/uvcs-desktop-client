@@ -8,7 +8,8 @@ import type { MergeRequest } from '@shared/domain/merge';
 export type Page =
   | { kind: 'history'; path: string }
   | { kind: 'annotate'; path: string; revisionSpec?: string }
-  | { kind: 'diff'; title: string; target: DiffTarget }
+  /** `focusPath` preselects a file in the diff. */
+  | { kind: 'diff'; title: string; target: DiffTarget; focusPath?: string }
   | { kind: 'merge'; request: MergeRequest }
   | { kind: 'codeReview'; reviewId: number }
   | { kind: 'browseRepository'; changesetId: number };

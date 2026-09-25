@@ -1,6 +1,109 @@
-import { Construction } from 'lucide-react';
+import { GitCommitVertical } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import type { Changeset } from '@shared/domain/changeset';
+import { useCommands, type Command } from '../../app/commands/commandStore';
+import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
+import { CenteredSpinner } from '../../ui/Spinner';
+import { SplitPane } from '../../ui/SplitPane';
+import { DataTable } from '../../ui/table/DataTable';
+import { ViewHeader } from '../../ui/ViewHeader';
+import { changesetColumns } from './changesetColumns';
+import { ChangesetDetails } from './ChangesetDetails';
+import { DEFAULT_CHANGESET_FILTER, matchesSearch, toQueryFilter, type ChangesetFilterState } from './changesetFilters';
+import { ChangesetFiltersBar } from './ChangesetFiltersBar';
+import { changesetMenu } from './changesetMenu';
+import { openChangesetDiff, openRangeDiff } from './changesetOperations';
+import { useChangesets } from './useChangesets';
+
+const changesetKey = (changeset: Changeset): string => String(changeset.id);
 
 export function ChangesetsView() {
-  return <EmptyState icon={<Construction size={22} />} title="Changesets" description="This area is being built." />;
+  const workspacePath = useWorkspacePath();
+  const { data: workspace } = useWorkspaceInfo();
+  const [filter, setFilter] = useState<ChangesetFilterState>(DEFAULT_CHANGESET_FILTER);
+  const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
+
+  const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
+  // The search is applied locally; only the other filters trigger a new `cm find`.
+  const { datePreset, onlyMine, onlyCurrentBranch } = filter;
+  const queryFilter = useMemo(
+    () => toQueryFilter({ datePreset, onlyMine, onlyCurrentBranch }, currentBranch, new Date()),
+    [datePreset, onlyMine, onlyCurrentBranch, currentBranch],
+  );
+  const { data: changesets, isLoading, error } = useChangesets(queryFilter);
+
+  const visible = useMemo(() => (changesets ?? []).filter((changeset) => matchesSearch(changeset, filter.search)), [changesets, filter.search]);
+  const selected = visible.filter((changeset) => selection.selected.has(changesetKey(changeset)));
+  const focused = visible.find((changeset) => changesetKey(changeset) === selection.anchor);
+  const columns = useMemo(() => changesetColumns(workspace?.loadedChangeset), [workspace?.loadedChangeset]);
+  const menuContext = { workspacePath, loadedChangeset: workspace?.loadedChangeset, loadedBranch: currentBranch };
+  const newestKey = visible[0] && changesetKey(visible[0]);
+
+  useEffect(() => {
+    if (!focused && newestKey) setSelection({ selected: new Set([newestKey]), anchor: newestKey });
+  }, [focused, newestKey]);
+
+  useCommands(
+    useMemo<Command[]>(
+      () => [
+        {
+          id: 'changesets.diff',
+          group: 'Changesets',
+          label: selected.length === 2 ? 'Diff selected changesets' : 'Diff selected changeset',
+          shortcut: 'mod+d',
+          disabled: selected.length === 0 || selected.length > 2,
+          run: () => (selected.length === 2 ? openRangeDiff(...sortedPair(selected)) : openChangesetDiff(selected[0]!)),
+        },
+      ],
+      [selected],
+    ),
+  );
+
+  const header = (
+    <ViewHeader title="Changesets" subtitle={changesets && `${visible.length} shown`}>
+      <ChangesetFiltersBar filter={filter} onChange={setFilter} />
+    </ViewHeader>
+  );
+
+  if (error) return <>{header}<EmptyState title="Couldn't load changesets" description={error.message} /></>;
+  if (isLoading) return <>{header}<CenteredSpinner /></>;
+
+  return (
+    <>
+      {header}
+      {visible.length === 0 ? (
+        <EmptyState icon={<GitCommitVertical size={22} />} title="No changesets" description="Nothing matches these filters. Try a longer time range." />
+      ) : (
+        <SplitPane
+          initialSize={Math.round(window.innerWidth * 0.55)}
+          minSize={420}
+          maxSize={1400}
+          first={
+            <DataTable
+              rows={visible}
+              columns={columns}
+              rowKey={changesetKey}
+              selection={selection}
+              onSelectionChange={setSelection}
+              onActivate={openChangesetDiff}
+              contextMenu={(rows) => changesetMenu(menuContext, rows)}
+            />
+          }
+          second={
+            focused ? (
+              <ChangesetDetails key={focused.id} changeset={focused} />
+            ) : (
+              <EmptyState title="Select a changeset" description="See its comment and the files it changed. Double-click to open the full diff." />
+            )
+          }
+        />
+      )}
+    </>
+  );
+}
+
+function sortedPair(changesets: Changeset[]): [Changeset, Changeset] {
+  return [...changesets].sort((a, b) => a.id - b.id) as [Changeset, Changeset];
 }

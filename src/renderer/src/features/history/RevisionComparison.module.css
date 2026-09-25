@@ -1,0 +1,10 @@
+.title {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.title strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}

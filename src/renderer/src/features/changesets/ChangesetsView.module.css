@@ -1,0 +1,26 @@
+.changesetId {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.current {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.noComment {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.comment {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

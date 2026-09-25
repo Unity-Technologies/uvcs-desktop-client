@@ -21,5 +21,5 @@
 }
 
 .spinning {
-  animation: spin 0.8s linear infinite;
+  animation: var(--keyframes-spin) 0.8s linear infinite;
 }
