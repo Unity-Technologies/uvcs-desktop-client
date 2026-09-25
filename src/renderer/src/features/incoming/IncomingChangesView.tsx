@@ -8,13 +8,15 @@ import { IconButton } from '../../ui/IconButton';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { ChangesetDetails } from '../changesets/ChangesetDetails';
+import { changesetMenu } from '../changesets/changesetMenu';
 import { FileConflictPanel } from '../merge/resolve/FileConflictPanel';
 import { useFileConflicts } from '../merge/resolve/useFileConflicts';
-import { IncomingChangesetDetail, IncomingFileDiff } from './IncomingDetail';
+import { IncomingFileDiff } from './IncomingDetail';
 import { IncomingList, type IncomingSelection } from './IncomingList';
 import { UpdateBar } from './UpdateBar';
 import { UPDATE_LABELS, updateConflictFiles } from './updateConflictFiles';
-import { updateResolvingConflicts, updateToIncoming } from './updateOperations';
+import { shelveBlockedAndUpdate, updateResolvingConflicts, updateToIncoming } from './updateOperations';
 import { useIncomingChanges } from './useIncomingChanges';
 
 export function IncomingChangesView() {
@@ -76,12 +78,19 @@ function IncomingSession({ workspacePath, incoming, header }: IncomingSessionPro
     setSelection(firstConflict ? { kind: 'file', path: firstConflict.path } : { kind: 'changeset', id: incoming.changesets[0]!.id });
   }, [selection, incoming]);
 
-  const update = async (): Promise<void> => {
+  const whileUpdating = async (work: () => Promise<unknown>): Promise<void> => {
     setUpdating(true);
-    if (incoming.conflicts.length === 0) await updateToIncoming(workspacePath, incoming);
-    else if (resolutions) await updateResolvingConflicts(workspacePath, resolutions);
-    setUpdating(false);
+    try {
+      await work();
+    } finally {
+      setUpdating(false);
+    }
   };
+  const update = (): Promise<void> =>
+    whileUpdating(async () => {
+      if (incoming.conflicts.length === 0) await updateToIncoming(workspacePath, incoming);
+      else if (resolutions) await updateResolvingConflicts(workspacePath, resolutions);
+    });
 
   const selectedChangeset = selection?.kind === 'changeset' ? incoming.changesets.find((changeset) => changeset.id === selection.id) : undefined;
   const selectedFile = selection?.kind === 'file' ? incoming.files.find((file) => file.path === selection.path) : undefined;
@@ -96,6 +105,7 @@ function IncomingSession({ workspacePath, incoming, header }: IncomingSessionPro
         canUpdate={incoming.conflicts.length === 0 || Boolean(resolutions)}
         updating={updating}
         onUpdate={() => void update()}
+        onShelveBlockedAndUpdate={() => void whileUpdating(() => shelveBlockedAndUpdate(workspacePath))}
       />
       <SplitPane
         initialSize={360}
@@ -124,7 +134,11 @@ function IncomingSession({ workspacePath, incoming, header }: IncomingSessionPro
           ) : selectedFile ? (
             <IncomingFileDiff workspacePath={workspacePath} file={selectedFile} />
           ) : selectedChangeset ? (
-            <IncomingChangesetDetail changeset={selectedChangeset} />
+            <ChangesetDetails
+              key={selectedChangeset.id}
+              changeset={selectedChangeset}
+              menu={changesetMenu({ workspacePath, loadedChangeset: incoming.loadedChangeset, loadedBranch: incoming.branch ?? undefined }, [selectedChangeset])}
+            />
           ) : (
             <EmptyState title="Select a changeset or a file" />
           )

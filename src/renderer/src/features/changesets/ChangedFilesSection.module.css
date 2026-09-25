@@ -1,3 +1,7 @@
+.filter {
+  margin: calc(-1 * var(--space-2)) calc(-1 * var(--space-2)) var(--space-1);
+}
+
 .files {
   display: flex;
   flex-direction: column;
@@ -17,5 +21,24 @@
 }
 
 .file:hover {
+  background: var(--bg-hover);
+}
+.show {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  width: calc(100% + 2 * var(--space-2));
+  min-height: 28px;
+  margin: calc(-1 * var(--space-1)) calc(-1 * var(--space-2));
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--accent-text);
+  font: inherit;
+  text-align: left;
+}
+
+.show:hover {
   background: var(--bg-hover);
 }

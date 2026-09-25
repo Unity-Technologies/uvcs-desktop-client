@@ -1,4 +1,3 @@
-import { History } from 'lucide-react';
 import { useState } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { ReviewMark } from '@shared/domain/review';
@@ -7,10 +6,10 @@ import { runVoidAction } from '../../app/operations/runOperation';
 import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge } from '../../components/StatusBadge';
 import { fileNameOf } from '../../lib/text';
-import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { toast } from '../../ui/toast/toastStore';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
+import { SinceReviewButton } from '../review/SinceReviewButton';
 import { describeKinds } from './changeCategories';
 import { changeDiffSources } from './changeDiffSources';
 import { changeTone } from './changeTone';
@@ -42,16 +41,7 @@ export function ChangeDiffPanel({ workspacePath, change, reviewMark }: ChangeDif
   const sources = changeDiffSources(change);
   const original = sinceReview ? { kind: 'reviewSnapshot' as const, path: change.path } : sources.original;
   const compareControls = canCompareWithReview && (
-    <Button
-      size="small"
-      variant={sinceReview ? 'secondary' : 'ghost'}
-      icon={<History size={13} />}
-      aria-pressed={sinceReview}
-      data-tip={sinceReview ? 'Show all the changes to this file' : 'Show only what changed since you reviewed this file'}
-      onClick={() => setSinceReviewPath(sinceReview ? null : change.path)}
-    >
-      Since review
-    </Button>
+    <SinceReviewButton pressed={sinceReview} onChange={(pressed) => setSinceReviewPath(pressed ? change.path : null)} />
   );
 
   return (

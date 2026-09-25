@@ -10,19 +10,26 @@ interface UpdateBarProps {
   canUpdate: boolean;
   updating: boolean;
   onUpdate: () => void;
+  /** Shelves the files the branch deleted or moved, then updates. */
+  onShelveBlockedAndUpdate: () => void;
 }
 
 /** Explains what updating will do (or what stops it) and offers to do it. */
-export function UpdateBar({ incoming, pendingConflictCount, canUpdate, updating, onUpdate }: UpdateBarProps) {
+export function UpdateBar({ incoming, pendingConflictCount, canUpdate, updating, onUpdate, onShelveBlockedAndUpdate }: UpdateBarProps) {
   if (incoming.blockedPaths.length > 0) {
     return (
       <div className={styles.bar} data-tone="blocked">
         <AlertTriangle size={15} className={styles.icon} />
         <span className={styles.text}>
-          {incoming.branch} deleted or moved files you changed locally ({incoming.blockedPaths.join(', ')}). Check in, shelve or undo those
-          changes before updating.
+          {incoming.branch} deleted or moved {incoming.blockedPaths.length === 1 ? 'a file' : 'files'} you changed ({incoming.blockedPaths.join(', ')}).
+          Shelve {incoming.blockedPaths.length === 1 ? 'it' : 'them'} to update; you can restore your changes from Changes afterwards.
         </span>
-        <Button onClick={() => navigation.goToView('changes')}>Go to Changes</Button>
+        <Button disabled={updating} onClick={() => navigation.goToView('changes')}>
+          Go to Changes
+        </Button>
+        <Button variant="primary" loading={updating} onClick={onShelveBlockedAndUpdate}>
+          Shelve {incoming.blockedPaths.length === 1 ? 'that file' : 'those files'} and update
+        </Button>
       </div>
     );
   }

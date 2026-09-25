@@ -4,6 +4,9 @@ import { CODE_REVIEW_STATUSES, MAX_LISTED_CODE_REVIEWS, type CodeReview, type Co
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { ListWithDetails } from '../../components/ListWithDetails';
+import { NoSelection } from '../../components/NoSelection';
+import { PathLabel } from '../../components/PathLabel';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
@@ -16,6 +19,7 @@ import { ChoiceChip } from '../../ui/ChoiceChip';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { CodeReviewDetails } from './CodeReviewDetails';
 import { codeReviewMenu } from './codeReviewMenu';
 import { describeTarget, openReview } from './codeReviewOperations';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
@@ -37,18 +41,28 @@ const COLUMNS: Column<CodeReview>[] = [
         <span className={styles.id}>
           #<Highlight text={String(review.id)} />
         </span>
-        <Highlight text={review.title} />
+        <span className={styles.titleText}>
+          <Highlight text={review.title} />
+        </span>
       </span>
     ),
     sortValue: (review) => review.title.toLowerCase(),
   },
   { id: 'status', header: 'Status', width: 150, render: (review) => <CodeReviewStatusBadge status={review.status} />, sortValue: (review) => review.status },
-  { id: 'target', header: 'Changes', grow: 1, secondary: true, render: (review) => describeTarget(review.target) },
-  { id: 'owner', header: 'Author', grow: 1, render: (review) => <UserLabel user={review.owner} />, sortValue: (review) => review.owner },
+  {
+    id: 'target',
+    header: 'Changes',
+    grow: 1,
+    secondary: true,
+    hideBelow: 820,
+    render: (review) => (review.target.kind === 'branch' ? <PathLabel path={review.target.branch} /> : describeTarget(review.target)),
+  },
+  { id: 'owner', header: 'Author', grow: 1, hideBelow: 600, render: (review) => <UserLabel user={review.owner} />, sortValue: (review) => review.owner },
   {
     id: 'assignee',
     header: 'Reviewer',
     grow: 1,
+    hideBelow: 700,
     render: (review) => (review.assignee ? <UserLabel user={review.assignee} /> : <span className={styles.unassigned}>Unassigned</span>),
     sortValue: (review) => review.assignee,
   },
@@ -146,21 +160,35 @@ export function CodeReviewsView() {
     );
   }
 
+  const selected = visible.find((review) => reviewKey(review) === selection.anchor);
+
   return (
     <>
       {header}
-      <HighlightQuery query={search}>
-        <DataTable
-          rows={visible}
-          columns={COLUMNS}
-          rowKey={(review) => String(review.id)}
-          selection={selection}
-          onSelectionChange={setSelection}
-          onActivate={openReview}
-          contextMenu={(rows) => codeReviewMenu(workspacePath, rows)}
-          initialSort={{ columnId: 'date', descending: true }}
-        />
-      </HighlightQuery>
+      <ListWithDetails
+        list={
+          <HighlightQuery query={search}>
+            <DataTable
+              rows={visible}
+              columns={COLUMNS}
+              rowKey={reviewKey}
+              selection={selection}
+              onSelectionChange={setSelection}
+              selectFirstRow
+              onActivate={(review) => openReview(review)}
+              contextMenu={(rows) => codeReviewMenu(workspacePath, rows)}
+              initialSort={{ columnId: 'date', descending: true }}
+            />
+          </HighlightQuery>
+        }
+        details={
+          selected ? <CodeReviewDetails key={selected.id} review={selected} menu={codeReviewMenu(workspacePath, [selected])} /> : <NoSelection noun="code review" />
+        }
+      />
     </>
   );
+}
+
+function reviewKey(review: CodeReview): string {
+  return String(review.id);
 }

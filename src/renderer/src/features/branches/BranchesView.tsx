@@ -6,6 +6,8 @@ import { spec } from '@shared/domain/specs';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
+import { NoSelection } from '../../components/NoSelection';
+import { PathLabel } from '../../components/PathLabel';
 import { SincePicker } from '../../components/SincePicker';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { sinceDateFor } from '../../lib/sincePresets';
@@ -25,7 +27,7 @@ import { CodeReviewChip } from '../codeReviews/CodeReviewChip';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
 import { BranchDetails } from './BranchDetails';
 import { branchMenu } from './branchMenu';
-import { switchToBranch } from './branchOperations';
+import { diffBranch } from './branchOperations';
 import { useBranchesViewStore, type BranchesLayout } from './branchesViewStore';
 import { buildBranchTree, type BranchTreeRow } from './branchTree';
 import { openCreateBranchDialog } from './CreateBranchDialog';
@@ -126,16 +128,16 @@ export function BranchesView() {
                 selection={selection}
                 onSelectionChange={setSelection}
                 selectFirstRow
-                onActivate={(row) => row.branch.name !== currentBranch && void switchToBranch(workspacePath, row.branch.name)}
+                onActivate={(row) => diffBranch(row.branch.name)}
                 contextMenu={(selectedRows) => branchMenu(workspacePath, selectedRows.map((row) => row.branch), currentBranch)}
               />
             </HighlightQuery>
           }
           details={
             selected ? (
-              <BranchDetails workspacePath={workspacePath} branch={selected} isCurrent={selected.name === currentBranch} />
+              <BranchDetails key={selected.name} branch={selected} menu={branchMenu(workspacePath, [selected], currentBranch)} />
             ) : (
-              <EmptyState title="No branch selected" description="Select a branch to see its details. Double-click it to switch to it." />
+              <NoSelection noun="branch" />
             )
           }
         />
@@ -177,6 +179,7 @@ function useBranchColumns(
         id: 'owner',
         header: 'Created by',
         width: 180,
+        hideBelow: 700,
         sortValue: sortable ? (row) => row.branch.owner : undefined,
         render: (row) => <UserLabel user={row.branch.owner} />,
       },
@@ -217,7 +220,7 @@ function BranchNameCell({ row, isCurrent, review, onToggleCollapsed }: BranchNam
         <GitBranch size={13} className={styles.branchIcon} />
       )}
       <span className={styles.label} data-hidden={row.branch.isHidden}>
-        <Highlight text={row.depth > 0 ? row.branch.name.slice(row.branch.name.lastIndexOf('/')) : row.branch.name} />
+        {row.depth > 0 ? <Highlight text={row.branch.name.slice(row.branch.name.lastIndexOf('/'))} /> : <PathLabel path={row.branch.name} fitContent />}
       </span>
       {isCurrent && <span className={styles.current}>Current</span>}
       {review && <CodeReviewChip review={review} />}

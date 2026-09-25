@@ -48,6 +48,16 @@ merges the shelve on the target (bring). Failures put the changes back. Left she
 client's) are offered again by the "Welcome back" banner in Changes (`features/leftChanges`), or restored
 automatically on arrival when they apply cleanly.
 
+## Two developers on one branch
+
+- `cm` rejects every checkin once the branch head moved ("A merge is needed from changeset…"), even without overlapping
+  files. `checkinChanges` recognizes it (`checkinRejection`) and asks (`CheckinRejectedDialog`): when what came in touches
+  none of the files and needs no merge, it updates (the guarded update) and checks in again with the same files and comment;
+  otherwise it leads to Incoming, and Changes offers to check in once the workspace updated past the rejection.
+- An update stopped by colliding local changes (`--dontmerge`) shows a toast leading to Incoming (`explainUpdateConflicts`).
+- Local changes to files the branch deleted or moved block the update. `shelveBlockedAndUpdate` shelves just those files
+  as a switch shelve record (`reason: 'update'`), undoes them and updates; the "Welcome back" banner offers them back.
+
 ## Renderer
 
 ```
@@ -66,7 +76,7 @@ renderer/src/
   - `main/watch/WorkspaceWatcher` watches the open workspace (recursive on macOS/Windows; the root and `.plastic` only on Linux),
     skips `ignore.conf` folders and `.plastic` lock/temp files, coalesces bursts (300 ms quiet, 2 s max wait) and drops what the
     app's own writes cause (`changesWorkspace` commands and tracked operations): the renderer refreshes after those anyway.
-  - `workspaceChanged` tells file edits (pending changes, review marks, files view, open diffs of workspace files; if auto refresh is on)
+  - `workspaceChanged` tells file edits (pending changes, review marks, files view, open diffs of workspace files; if auto refresh is on, and once when it's turned back on)
     from `.plastic` rewrites by any tool (workspace info; everything when the loaded changeset or branch moved). See
     `app/shell/useWorkspaceWatcher.ts` and `app/refresh/`. A diff being edited holds still and offers to reload instead.
   - Locks live on the server, where nothing reports changes: pending changes re-read them along with the changes, at most every 30 s.
@@ -76,6 +86,10 @@ renderer/src/
   - Use `refreshQueries` for event-driven refreshes: it never cancels a fetch in flight, it queues one follow-up.
 - **Review marks**: `main/review/ReviewStore` keeps, per workspace, the fingerprint of each file marked reviewed (and a copy of its text,
   read as the `reviewSnapshot` content source) under `<userData>/review-snapshots/`; marks of paths that leave the pending changes are dropped.
+  Committed diffs (changeset, branch, shelve, range, code review) keep marks too, in `main/review/DiffReviewStore`: per repository,
+  by the diff's name (`cs:42`, `br:/main/task`, `sh:3`) and the revision reviewed, so a branch's file is changed since its review once
+  another revision shows; the least recently reviewed diffs are forgotten. `features/review` holds the shared list pieces.
+  Marks only show in review mode, a per-workspace setting (`reviewModeWorkspaces`, off by default); leaving it keeps the marks.
 - **Discarding changes**: a workspace file's diff against its loaded revision (or reviewed copy) discards a whole change
   from a chip in the gutter, or just the lines picked by their numbers (`features/diff/viewer/useBlockDiscard`). The new
   text is computed in the renderer (`discardLines`), shown at once and written; each file keeps an undo stack for the session.
@@ -83,6 +97,10 @@ renderer/src/
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
+- **List and details**: `ListWithDetails` (one remembered details width for every view) around a `DetailsPanel`: hero, the
+  default action (what Enter does on the row) plus the row's context menu behind "More actions", then Comment, changed files,
+  Details, Attributes, Relations. Selecting a row must stay cheap: `cm diff` runs only on request (`ChangedFilesSection`),
+  other lookups wait for the selection to settle (`useSettled`), and immutable results are cached (`IMMUTABLE_QUERY`).
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in components.
 
 ## Conventions

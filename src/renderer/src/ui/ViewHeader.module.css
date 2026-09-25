@@ -5,6 +5,15 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
+/* Double-clicking the empty space zooms the window, as in any macOS title bar; the controls stay clickable. */
+.header[data-title-bar='true'] {
+  -webkit-app-region: drag;
+}
+
+.header[data-title-bar='true'] :is(button, input, select, textarea, a) {
+  -webkit-app-region: no-drag;
+}
+
 .titleRow {
   display: flex;
   align-items: center;

@@ -19,7 +19,7 @@ export async function restoreLeftChanges(workspacePath: string, left: LeftChange
 
   switch (result.kind) {
     case 'restored':
-      toast.success(`Restored ${pluralize(result.count, 'change')} you left on ${result.sourceName}`, undefined, {
+      toast.success(restoredMessage(left, result.count, result.sourceName), undefined, {
         label: 'View',
         run: () => navigation.goToView('changes'),
       });
@@ -32,6 +32,10 @@ export async function restoreLeftChanges(workspacePath: string, left: LeftChange
       navigation.openPage({ kind: 'merge', request: { kind: 'merge', sourceSpec: spec.shelve(result.shelveId) } });
       break;
   }
+}
+
+function restoredMessage(left: LeftChanges, count: number, sourceName: string): string {
+  return left.reason === 'update' ? `Restored ${pluralize(count, 'change')} you put aside` : `Restored ${pluralize(count, 'change')} you left on ${sourceName}`;
 }
 
 export function reviewLeftChanges(left: LeftChanges): void {

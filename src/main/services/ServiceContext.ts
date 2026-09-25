@@ -1,5 +1,6 @@
 import type { CmClient } from '../cm/CmClient';
 import type { OperationTracker } from '../operations/OperationTracker';
+import type { DiffReviewStore } from '../review/DiffReviewStore';
 import type { ReviewStore } from '../review/ReviewStore';
 import type { SettingsStore } from '../settings/SettingsStore';
 import type { WorkspaceWatcher } from '../watch/WorkspaceWatcher';
@@ -11,6 +12,7 @@ export interface ServiceContext {
   cm: CmClient;
   operations: OperationTracker;
   reviews: ReviewStore;
+  diffReviews: DiffReviewStore;
   settings: SettingsStore;
   watcher: WorkspaceWatcher;
 }

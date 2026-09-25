@@ -1,0 +1,19 @@
+.branchDot {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  vertical-align: middle;
+  background: var(--accent);
+}
+
+/* The same colors as the graph draws the branch with (hueToColor). */
+.branchDot[data-hue] {
+  background: hsl(var(--branch-hue) 60% 42%);
+}
+
+:global([data-theme='dark']) .branchDot[data-hue] {
+  background: hsl(var(--branch-hue) 58% 62%);
+}

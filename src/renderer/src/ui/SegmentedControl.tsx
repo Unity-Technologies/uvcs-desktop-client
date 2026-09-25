@@ -11,11 +11,13 @@ interface SegmentedControlProps<Value extends string> {
   value: Value;
   segments: Segment<Value>[];
   onChange: (value: Value) => void;
+  /** Fills the width it is given, sharing it equally between the segments. */
+  stretch?: boolean;
 }
 
-export function SegmentedControl<Value extends string>({ value, segments, onChange }: SegmentedControlProps<Value>) {
+export function SegmentedControl<Value extends string>({ value, segments, onChange, stretch = false }: SegmentedControlProps<Value>) {
   return (
-    <div className={styles.control} role="radiogroup">
+    <div className={styles.control} role="radiogroup" data-stretch={stretch}>
       {segments.map((segment) => (
         <button
           key={segment.value}

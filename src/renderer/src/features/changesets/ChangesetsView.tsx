@@ -4,9 +4,10 @@ import type { Changeset } from '@shared/domain/changeset';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
+import { ListWithDetails } from '../../components/ListWithDetails';
+import { NoSelection } from '../../components/NoSelection';
 import { EmptyState } from '../../ui/EmptyState';
 import { CenteredSpinner } from '../../ui/Spinner';
-import { SplitPane } from '../../ui/SplitPane';
 import { HighlightQuery } from '../../ui/Highlight';
 import { DataTable } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
@@ -74,11 +75,8 @@ export function ChangesetsView() {
       {visible.length === 0 ? (
         <EmptyState icon={<GitCommitVertical size={22} />} title="No changesets" description="Nothing matches these filters. Try a longer time range." />
       ) : (
-        <SplitPane
-          initialSize={Math.round(window.innerWidth * 0.55)}
-          minSize={420}
-          maxSize={1400}
-          first={
+        <ListWithDetails
+          list={
             <HighlightQuery query={filter.search}>
               <DataTable
                 rows={visible}
@@ -92,12 +90,8 @@ export function ChangesetsView() {
               />
             </HighlightQuery>
           }
-          second={
-            focused ? (
-              <ChangesetDetails key={focused.id} changeset={focused} />
-            ) : (
-              <EmptyState title="Select a changeset" description="See its comment and the files it changed. Double-click to open the full diff." />
-            )
+          details={
+            focused ? <ChangesetDetails key={focused.id} changeset={focused} menu={changesetMenu(menuContext, [focused])} /> : <NoSelection noun="changeset" />
           }
         />
       )}

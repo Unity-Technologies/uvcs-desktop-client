@@ -46,7 +46,7 @@ export const useToastStore = create<ToastStore>((set) => ({
 }));
 
 export const toast = {
-  info: (title: string, detail?: string) => useToastStore.getState().show({ kind: 'info', title, detail }),
+  info: (title: string, detail?: string, action?: ToastAction) => useToastStore.getState().show({ kind: 'info', title, detail, action }),
   success: (title: string, detail?: string, action?: ToastAction) =>
     useToastStore.getState().show({ kind: 'success', title, detail, action }),
   /** `error` is an exception, or a sentence that explains the failure. */

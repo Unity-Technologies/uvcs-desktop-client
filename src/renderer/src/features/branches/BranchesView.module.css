@@ -25,10 +25,10 @@
   color: var(--text-tertiary);
 }
 
+/* Leaves the name to the row, so it gives way down to the branch's leaf and the chips after it are cut first. */
 .label {
-  overflow: hidden;
+  display: contents;
   font-weight: 500;
-  text-overflow: ellipsis;
 }
 
 .label[data-hidden='true'] {

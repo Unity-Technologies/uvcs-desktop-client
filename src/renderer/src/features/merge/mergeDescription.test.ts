@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MergePlan } from '@shared/domain/merge';
-import { describeSpec, mergeLabels, mergeTitle } from './mergeDescription';
+import { describeSpec, mergeLabels, mergeTitle, mergeTitleText } from './mergeDescription';
 
 const plan: MergePlan = {
   status: 'ready',
@@ -31,10 +31,15 @@ describe('mergeLabels', () => {
 });
 
 describe('mergeTitle', () => {
+  it('keeps the names apart from the words around them', () => {
+    expect(mergeTitle({ kind: 'merge', sourceSpec: 'br:/main/task' }, '/main')).toEqual({ verb: 'Merge', source: '/main/task', preposition: 'into', destination: '/main' });
+  });
+
   it('describes each kind of merge', () => {
-    expect(mergeTitle({ kind: 'merge', sourceSpec: 'br:/main/task' }, '/main')).toBe('Merge /main/task into /main');
-    expect(mergeTitle({ kind: 'merge', sourceSpec: 'sh:2' }, '/main')).toBe('Apply shelve 2 to /main');
-    expect(mergeTitle({ kind: 'cherryPick', sourceSpec: 'cs:9', intervalOriginSpec: 'cs:5' }, '/main')).toBe('Cherry pick changeset 5…changeset 9 into /main');
-    expect(mergeTitle({ kind: 'subtractive', sourceSpec: 'cs:7' }, '/main')).toBe('Undo changeset 7 on /main');
+    const title = (...args: Parameters<typeof mergeTitle>): string => mergeTitleText(mergeTitle(...args));
+    expect(title({ kind: 'merge', sourceSpec: 'br:/main/task' }, '/main')).toBe('Merge /main/task into /main');
+    expect(title({ kind: 'merge', sourceSpec: 'sh:2' }, '/main')).toBe('Apply shelve 2 to /main');
+    expect(title({ kind: 'cherryPick', sourceSpec: 'cs:9', intervalOriginSpec: 'cs:5' }, '/main')).toBe('Cherry pick changeset 5…changeset 9 into /main');
+    expect(title({ kind: 'subtractive', sourceSpec: 'cs:7' }, '/main')).toBe('Undo changeset 7 on /main');
   });
 });

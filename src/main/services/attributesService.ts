@@ -2,9 +2,13 @@ import type { AttributesApi } from '@shared/api/attributes';
 import type { AttributeType, AttributeValue } from '@shared/domain/attribute';
 import { escapeQueryValue } from '../cm/findQuery';
 import { findRecords } from '../cm/findObjects';
+import { parseRecords, recordFormat } from '../cm/formatRecords';
 import { integer, text } from '../cm/parseXml';
 import { withTempFile } from '../files/tempFile';
 import type { ServiceContext } from './ServiceContext';
+
+/** Enough to see which values an attribute takes without reading every release note ever written. */
+const USED_VALUES_SAMPLE = 500;
 
 export function createAttributesService({ cm }: ServiceContext): AttributesApi {
   async function listTypes(workspacePath: string): Promise<AttributeType[]> {
@@ -42,6 +46,12 @@ export function createAttributesService({ cm }: ServiceContext): AttributesApi {
     return findRecords(xml, 'ATTRIBUTE').map((record) => ({ name: text(record.NAME), value: text(record.VALUE) }));
   }
 
+  async function usedValues(workspacePath: string, attribute: string): Promise<string[]> {
+    const query = `where type = '${escapeQueryValue(attribute)}' limit ${USED_VALUES_SAMPLE}`;
+    const output = await cm.query(['find', 'attribute', query, `--format=${recordFormat(['value'])}`, '--nototal'], { cwd: workspacePath });
+    return parseRecords(output).map(([value]) => value ?? '');
+  }
+
   function setValue(workspacePath: string, objectSpec: string, attribute: string, value: string): Promise<void> {
     // Values may span several lines (e.g. Markdown), so they always travel through a file.
     return withTempFile(value, async (valueFile) => {
@@ -53,5 +63,5 @@ export function createAttributesService({ cm }: ServiceContext): AttributesApi {
     await cm.query(['attribute', 'unset', `att:${attribute}`, objectSpec], { cwd: workspacePath });
   }
 
-  return { listTypes, createType, renameType, editTypeComment, deleteType, valuesOf, setValue, unsetValue };
+  return { listTypes, createType, renameType, editTypeComment, deleteType, valuesOf, usedValues, setValue, unsetValue };
 }

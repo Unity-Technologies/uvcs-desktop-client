@@ -8,13 +8,14 @@ import {
   GitBranchPlus,
   GitGraph,
   GitMerge,
+  GitPullRequest,
   GitPullRequestArrow,
   MessageSquareCode,
   Pencil,
   Trash2,
 } from 'lucide-react';
 import type { Branch } from '@shared/domain/branch';
-import { spec } from '@shared/domain/specs';
+import { shortBranchName, spec } from '@shared/domain/specs';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { copyToClipboard } from '../../lib/copyToClipboard';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
@@ -29,6 +30,8 @@ import {
   switchToBranch,
 } from './branchOperations';
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
+import { openMergeTaskDialog } from '../mergeTask/MergeTaskDialog';
+import { isTaskBranch } from '../mergeTask/mergeTaskSummary';
 import { openCreateBranchDialog } from './CreateBranchDialog';
 
 /** The context menu for the selected branches. `currentBranch` is the branch the workspace is on. */
@@ -61,9 +64,16 @@ export function branchMenu(workspacePath: string, branches: Branch[], currentBra
     SEPARATOR,
     single && !isCurrent && {
       id: 'merge',
-      label: `Merge into ${currentBranch ?? 'workspace'}`,
+      // The leaf reads whole in a menu; the branch pill names the full branch.
+      label: `Merge into ${currentBranch ? shortBranchName(currentBranch) : 'workspace'}`,
       icon: GitMerge,
       run: () => mergeFromBranch(single.name),
+    },
+    single && isTaskBranch(single) && {
+      id: 'mergeTask',
+      label: `Merge to ${single.parent}…`,
+      icon: GitPullRequest,
+      run: () => openMergeTaskDialog(workspacePath, single),
     },
     single && {
       id: 'mergeTo',

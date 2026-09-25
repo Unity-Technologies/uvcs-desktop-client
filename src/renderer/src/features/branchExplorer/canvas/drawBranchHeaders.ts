@@ -3,7 +3,7 @@ import { SHORT_STATUS } from '../../codeReviews/reviewsByBranch';
 import type { Lane } from '../model/layoutGraph';
 import { DIMMED_ALPHA, type DrawContext } from './drawContext';
 import { drawRectHit } from './drawSearchHit';
-import { fitText, summaryOf } from './fitText';
+import { fitBranchName, fitText, summaryOf } from './fitText';
 import { BAND_HEIGHT, HEADER_HEIGHT, HEADER_MAX_WIDTH, headerTop, ROW_HEIGHT } from './geometry';
 import { branchColor } from './graphPalette';
 import { laneShape } from './laneShape';
@@ -59,7 +59,7 @@ export function drawCompactBranchNames(draw: DrawContext): void {
     const right = shape.right * viewport.zoom + viewport.panX;
     const room = Math.max(60, roomBeforeNextLane(draw, lane, shape.left) * viewport.zoom);
     const bottom = (shape.y - BAND_HEIGHT / 2) * viewport.zoom + viewport.panY - 3;
-    const name = fitText(ctx, lane.branch.name, Math.min(room, Math.max(60, right - left + 80)));
+    const name = fitBranchName(ctx, lane.branch.name, Math.min(room, Math.max(60, right - left + 80)));
     ctx.globalAlpha = scene.search && !scene.search.branches.has(lane.branch.name) ? DIMMED_ALPHA : 1;
     ctx.strokeStyle = palette.background;
     ctx.lineWidth = 3;
@@ -145,7 +145,7 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
 
   ctx.font = nameFont(draw);
   ctx.fillStyle = palette.textPrimary;
-  const name = fitText(ctx, lane.branch.name, right - x - reserved);
+  const name = fitBranchName(ctx, lane.branch.name, right - x - reserved);
   ctx.fillText(name, x, middle + 0.5);
   x += ctx.measureText(name).width + GAP;
 

@@ -1,10 +1,11 @@
-import { Copy, Lock as LockIcon, LockOpen, RefreshCw, Trash2, User } from 'lucide-react';
+import { Lock as LockIcon, LockOpen, RefreshCw, User } from 'lucide-react';
 import { useState } from 'react';
 import type { Lock } from '@shared/domain/lock';
+import { ListWithDetails } from '../../components/ListWithDetails';
+import { NoSelection } from '../../components/NoSelection';
 import { PathLabel } from '../../components/PathLabel';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { tidyMenu, SEPARATOR, type MenuEntry } from '../../lib/actions';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
@@ -17,8 +18,9 @@ import { ToggleChip } from '../../ui/ToggleChip';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
-import { copyPaths } from '../pendingChanges/pendingChangeOperations';
-import { releaseLocks, removeLocks } from './lockOperations';
+import { LockDetails } from './LockDetails';
+import { lockMenu } from './lockMenu';
+import { isReleasable, releaseLocks } from './lockOperations';
 import { useLocks } from './useLocks';
 import styles from './LocksView.module.css';
 
@@ -56,6 +58,7 @@ export function LocksView() {
   const visible = (locks ?? []).filter((lock) => `${lock.path} ${lock.owner}`.toLowerCase().includes(filter.toLowerCase()));
   const selected = visible.filter((lock) => selection.selected.has(lockKey(lock)));
   const releasable = selected.filter(isReleasable);
+  const focused = visible.find((lock) => lockKey(lock) === selection.anchor);
 
   const header = (
     <ViewHeader
@@ -99,34 +102,27 @@ export function LocksView() {
   return (
     <>
       {header}
-      <HighlightQuery query={filter}>
-        <DataTable
-          rows={visible}
-          columns={COLUMNS}
-          rowKey={lockKey}
-          selection={selection}
-          onSelectionChange={setSelection}
-          contextMenu={(rows) => lockMenu(workspacePath, rows)}
-          initialSort={{ columnId: 'date', descending: true }}
-        />
-      </HighlightQuery>
+      <ListWithDetails
+        list={
+          <HighlightQuery query={filter}>
+            <DataTable
+              rows={visible}
+              columns={COLUMNS}
+              rowKey={lockKey}
+              selection={selection}
+              onSelectionChange={setSelection}
+              selectFirstRow
+              contextMenu={(rows) => lockMenu(workspacePath, rows)}
+              initialSort={{ columnId: 'date', descending: true }}
+            />
+          </HighlightQuery>
+        }
+        details={
+          focused ? <LockDetails key={lockKey(focused)} workspacePath={workspacePath} lock={focused} menu={lockMenu(workspacePath, [focused])} /> : <NoSelection noun="lock" />
+        }
+      />
     </>
   );
-}
-
-/** Retained locks are already released; they go away when the change reaches the destination branch. */
-function isReleasable(lock: Lock): boolean {
-  return lock.status === 'Locked';
-}
-
-function lockMenu(workspacePath: string, locks: Lock[]): MenuEntry[] {
-  const releasable = locks.filter(isReleasable);
-  return tidyMenu([
-    releasable.length > 0 && { id: 'release', label: 'Release lock', icon: LockOpen, run: () => void releaseLocks(workspacePath, releasable) },
-    { id: 'remove', label: 'Remove lock', icon: Trash2, danger: true, run: () => void removeLocks(workspacePath, locks) },
-    SEPARATOR,
-    { id: 'copy', label: 'Copy path', icon: Copy, run: () => copyPaths(locks.map((lock) => lock.path)) },
-  ]);
 }
 
 function lockKey(lock: Lock): string {

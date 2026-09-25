@@ -34,3 +34,8 @@ export function tidyMenu(entries: (MenuEntry | false | null | undefined)[]): Men
     (entry, index) => entry !== SEPARATOR || (index > 0 && index < present.length - 1 && present[index - 1] !== SEPARATOR),
   );
 }
+
+/** The menu without the action `id`, e.g. the one a details panel already offers as its primary button. */
+export function withoutAction(entries: MenuEntry[], id: string): MenuEntry[] {
+  return tidyMenu(entries.filter((entry) => typeof entry !== 'object' || !('id' in entry) || entry.id !== id));
+}
