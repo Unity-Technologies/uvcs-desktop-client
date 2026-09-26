@@ -1,4 +1,4 @@
-import { AppWindow, Columns2, EyeOff, FileText, FoldVertical, RefreshCw, Rows2, WrapText } from 'lucide-react';
+import { AppWindow, Columns2, EyeOff, FileText, FoldVertical, Gauge, RefreshCw, Rows2, WrapText } from 'lucide-react';
 import { Suspense, useMemo, type ReactNode, type RefObject } from 'react';
 import type { FileContent } from '@shared/domain/content';
 import { api } from '../../../api/client';
@@ -27,6 +27,7 @@ import { IMAGE_DIFF_MODES, type ImageDiffMode } from './image/imageDiffModes';
 import { IGNORED_DIFFERENCE_TITLES, ignoredDifference } from './ignoredDifference';
 import { hasLineChanges, lineChangeStats } from './lineChangeStats';
 import { LineStats } from './LineStats';
+import { highlightsSyntax } from './syntaxHighlighting';
 import type { DiscardRequest } from './useBlockDiscard';
 import type { DiffContents } from './useDiffContents';
 import { useFileBuffer } from './useFileBuffer';
@@ -145,19 +146,25 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   );
 
   const recognizeAll = <Button size="small" onClick={() => setComparisonMethod('recognizeAll')}>Recognize all</Button>;
+  const plainTextNote = isText && !highlightsSyntax(left.text ?? '', right.text ?? '') && (
+    <DiffNotice tone="info" icon={<Gauge size={13} />}>Syntax highlighting is off for a file this large.</DiffNotice>
+  );
   const textDiff = (
-    <TextDiffBody
-      original={left.text}
-      modified={right.text}
-      current={current}
-      fileName={fileName}
-      comparisonMethod={comparisonMethod}
-      editable={editable}
-      editorRef={buffer.editor}
-      onEdit={buffer.onEdit}
-      onDiscard={onDiscard}
-      onUndoDiscard={onUndoDiscard}
-    />
+    <>
+      {plainTextNote}
+      <TextDiffBody
+        original={left.text}
+        modified={right.text}
+        current={current}
+        fileName={fileName}
+        comparisonMethod={comparisonMethod}
+        editable={editable}
+        editorRef={buffer.editor}
+        onEdit={buffer.onEdit}
+        onDiscard={onDiscard}
+        onUndoDiscard={onUndoDiscard}
+      />
+    </>
   );
 
   let body: ReactNode;
