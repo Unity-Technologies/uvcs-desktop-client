@@ -94,14 +94,9 @@ export function diskText(shown: string, disk: string): string {
  * say which of its LFs were CRs, so it compares as shown.
  */
 export function crAgainstLf(original: string, modified: string): boolean {
-  const a = bareLineBreaks(original);
-  const b = bareLineBreaks(modified);
-  return (a === 'cr' && b === 'lf') || (a === 'lf' && b === 'cr');
-}
-
-function bareLineBreaks(text: string): 'cr' | 'lf' | 'both' | 'none' {
-  const cr = hasLoneCr(text);
-  const lf = BARE_LF.test(text);
-  if (cr && lf) return 'both';
-  return cr ? 'cr' : lf ? 'lf' : 'none';
+  const originalCr = hasLoneCr(original);
+  // Most texts have no lone CR on either side: no need to look for LFs then.
+  if (originalCr === hasLoneCr(modified)) return false;
+  const [cr, other] = originalCr ? [original, modified] : [modified, original];
+  return !BARE_LF.test(cr) && BARE_LF.test(other);
 }
