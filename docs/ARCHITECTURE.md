@@ -220,9 +220,14 @@ renderer/src/
   line, ↶ restores a removed one) and a chip at the right end of the change's top edge (in the pane of its new code, clear
   of the line numbers and of the start of the line above) the whole change. Line numbers pick lines (click,
   Shift+click, drag, shown as they're picked; only changed lines' numbers react) and the chip then acts on them
-  ("Restore 3 lines", ⌥⌘Z); Esc or a click elsewhere drops the pick. The new text is computed in the renderer
-  (`discardLines`). Without unsaved edits it's shown at once and written, and each file keeps an undo stack for the
-  session (⌘Z in the diff); with some, it's one more edit in the editor, unsaved, and ⌘Z takes it back like typing.
+  ("Restore 3 lines", ⌥⌘Z); picked lines show no line button of their own, and Esc or a click elsewhere drops the
+  pick. After a discard the line that slides under the still pointer is hovered anew, so clicking on removes the lines
+  below one by one (a click within 150 ms of the last is the rest of a double click). While typing, the chip stays
+  hidden until typing pauses. The diff's focus ring is for the keyboard only (`usePointerFocusMark`: clicks mark what
+  they focus, since Chromium shows `:focus-visible` once any key, even Shift, is pressed). The new text is computed in
+  the renderer (`discardLines`). Without unsaved edits it's shown at once and written, and each file keeps an undo
+  stack for the session (⌘Z in the diff); with some, it's one more edit in the editor, unsaved, and ⌘Z takes it back
+  like typing.
 - **Comparison method**: every text diff compares lines under the official client's methods (Ignore EOLs, Ignore
   whitespaces, both, Recognize all; one global preference, Recognize all by default). Lines are compared trimmed
   (`features/diff/viewer/comparisonMethod`) through a line comparator handed to Pierre and `diff`, so the diff still
