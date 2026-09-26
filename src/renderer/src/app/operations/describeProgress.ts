@@ -7,32 +7,46 @@ export interface ProgressText {
   percent: string | null;
   /** "34 of 120 MB", or null when no bytes are involved. */
   amount: string | null;
+  /** "124 of 530 files", or null when nothing is counted. */
+  count: string | null;
 }
 
-const COUNTED: Partial<Record<OperationProgress['stage'], (current: string, total: string) => string>> = {
-  downloading: (current, total) => `Downloading ${current} of ${total} files`,
-  applying: (current, total) => `Applying ${current} of ${total} changes`,
+const COUNTED: Partial<Record<OperationProgress['stage'], { verb: string; noun: string }>> = {
+  downloading: { verb: 'Downloading', noun: 'files' },
+  applying: { verb: 'Applying', noun: 'changes' },
 };
 
-/** What the progress card says about where an operation is. */
+/**
+ * What the progress card says about where an operation is. An update's percentage weighs bytes and files together
+ * (`updateProgress`), so it can sit between "0.8 of 0.8 GB" and "1 of 8,001 files": where both show, they show together.
+ */
 export function describeProgress(progress: OperationProgress | null): ProgressText {
-  if (!progress) return { stage: 'Starting', percent: null, amount: null };
+  if (!progress) return { stage: 'Starting', percent: null, amount: null, count: null };
   const counted = COUNTED[progress.stage];
   // Counts go with a measured stage: a merge downloading its files still has its count of changes, all applied.
   const hasCounts = progress.fraction !== null && progress.current !== undefined && progress.total !== undefined && progress.total > 0;
+  const count = counted && hasCounts ? `${formatCount(progress.current!)} of ${formatCount(progress.total!)} ${counted.noun}` : null;
   // A step says more than a command getting ready ("Switching" rather than "Preparing").
   const words = progress.step && progress.stage === 'preparing' ? progress.step.label : progress.stageLabel;
   return {
-    stage: counted && hasCounts ? counted(formatCount(progress.current!), formatCount(progress.total!)) : words,
+    stage: counted && count ? `${counted.verb} ${count}` : words,
     percent: progress.fraction === null ? null : `${Math.floor(progress.fraction * 100)}%`,
     amount: progress.bytesTotal ? formatAmount(progress.bytesDone ?? 0, progress.bytesTotal) : null,
+    count,
   };
 }
 
-/** A short line for tight places (the incoming chip): "43% · 0.8 of 1.9 GB", or the stage words. */
+/** Everything measured, for a tooltip: "0.8 of 1.9 GB · 124 of 1,530 files", or null. */
+export function describeMeasures(text: ProgressText): string | null {
+  return [text.amount, text.count].filter(Boolean).join(' · ') || null;
+}
+
+/** A short line for tight places (the incoming chip): "43% · 124 of 1,530 files", "43% · 0.8 of 1.9 GB", or the stage words. */
 export function describeProgressBriefly(progress: OperationProgress | null): string {
   const text = describeProgress(progress);
-  return text.percent ? `${text.percent} · ${text.amount ?? text.stage}` : text.stage;
+  if (!text.percent) return text.stage;
+  // Files rather than bytes when there are both: bytes alone ("0.8 of 0.8 GB") would contradict the percentage.
+  return `${text.percent} · ${text.amount && text.count ? text.count : (text.amount ?? text.stage)}`;
 }
 
 /** What an operation did, from its last progress: "530 files updated · 1.9 GB", "1.9 GB uploaded", "12 changes applied". */

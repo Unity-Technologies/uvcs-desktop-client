@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { describeCompletion, describeProgress, describeProgressBriefly, formatAmount, itemInWorkspace } from './describeProgress';
+import { describeCompletion, describeMeasures, describeProgress, describeProgressBriefly, formatAmount, itemInWorkspace } from './describeProgress';
 
 const GB = 1024 ** 3;
 const MB = 1024 ** 2;
@@ -8,7 +8,14 @@ describe('describeProgress', () => {
   it('counts the files being downloaded, with the bytes apart', () => {
     expect(
       describeProgress({ stage: 'downloading', stageLabel: 'Downloading', current: 124, total: 1530, bytesDone: 0.8 * GB, bytesTotal: 1.87 * GB, fraction: 0.43 }),
-    ).toEqual({ stage: 'Downloading 124 of 1,530 files', percent: '43%', amount: '0.8 of 1.9 GB' });
+    ).toEqual({ stage: 'Downloading 124 of 1,530 files', percent: '43%', amount: '0.8 of 1.9 GB', count: '124 of 1,530 files' });
+  });
+
+  it('shows the bytes and the files together where a percentage between them could puzzle', () => {
+    const text = describeProgress({ stage: 'downloading', stageLabel: 'Downloading', current: 1, total: 8001, bytesDone: 800 * MB, bytesTotal: 800.08 * MB, fraction: 0.44 });
+    expect(describeMeasures(text)).toBe('800 of 800 MB · 1 of 8,001 files');
+    expect(describeMeasures(describeProgress({ stage: 'uploading', stageLabel: 'Uploading', bytesDone: 34 * MB, bytesTotal: 120 * MB, fraction: 0.28 }))).toBe('34 of 120 MB');
+    expect(describeMeasures(describeProgress({ stage: 'calculating', stageLabel: 'Calculating changes', fraction: null }))).toBeNull();
   });
 
   it('counts the changes a merge applies', () => {
@@ -20,6 +27,7 @@ describe('describeProgress', () => {
       stage: 'Calculating changes',
       percent: null,
       amount: null,
+      count: null,
     });
     expect(describeProgress({ stage: 'working', stageLabel: 'Shelving your changes', fraction: null, step: { label: 'Shelving your changes', index: 1, count: 4 } }).stage).toBe(
       'Shelving your changes',
@@ -42,10 +50,11 @@ describe('describeProgress', () => {
 });
 
 describe('describeProgressBriefly', () => {
-  it('leads with the percentage and the bytes', () => {
+  it('leads with the percentage and the files, or the bytes', () => {
     expect(describeProgressBriefly({ stage: 'downloading', stageLabel: 'Downloading', current: 1, total: 9, bytesDone: 34 * MB, bytesTotal: 120 * MB, fraction: 0.28 })).toBe(
-      '28% · 34 of 120 MB',
+      '28% · 1 of 9 files',
     );
+    expect(describeProgressBriefly({ stage: 'uploading', stageLabel: 'Uploading', bytesDone: 34 * MB, bytesTotal: 120 * MB, fraction: 0.28 })).toBe('28% · 34 of 120 MB');
     expect(describeProgressBriefly({ stage: 'applying', stageLabel: 'Applying changes', current: 3, total: 12, fraction: 0.25 })).toBe('25% · Applying 3 of 12 changes');
   });
 

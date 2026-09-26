@@ -33,7 +33,7 @@ export const readUpdateProgress: ProgressReader = (previous, line) => {
   const bytesTotal = parseSize(totals[2]!, totals[3]!);
   const current = Number(totals[4]);
   const total = Number(totals[5]);
-  const fraction = bytesTotal ? Math.min(1, (bytesDone ?? 0) / bytesTotal) : total ? current / total : null;
+  const fraction = workDone(bytesDone ?? 0, bytesTotal ?? 0, current, total);
   const finished = current >= total && (bytesDone ?? 0) >= (bytesTotal ?? 0);
   return {
     // Files are being written from here on: stopping halfway would leave the workspace half updated.
@@ -46,3 +46,17 @@ export const readUpdateProgress: ProgressReader = (previous, line) => {
     cancellable: false,
   };
 };
+
+/**
+ * What writing a file costs besides its bytes, as if it weighed this much more. `cm`'s own percentage goes by bytes
+ * alone, and it downloads the big files first: with one big file among thousands of small ones it reads 99% while it
+ * has written 1 of 8,001 files, then spends most of the time writing the small ones (real output in the tests).
+ */
+const FILE_WEIGHT = 128 * 1024;
+
+/** How far along an update is, by bytes and files together: both only grow, so it never goes back. */
+function workDone(bytesDone: number, bytesTotal: number, current: number, total: number): number | null {
+  const all = bytesTotal + total * FILE_WEIGHT;
+  if (!all) return null;
+  return Math.min(1, (Math.min(bytesDone, bytesTotal) + Math.min(current, total) * FILE_WEIGHT) / all);
+}

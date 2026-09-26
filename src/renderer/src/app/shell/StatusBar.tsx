@@ -5,7 +5,7 @@ import { copyToClipboard } from '../../lib/copyToClipboard';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { ProgressRing } from '../../ui/ProgressRing';
 import { navigation } from '../navigation/navigationStore';
-import { describeProgress } from '../operations/describeProgress';
+import { describeMeasures, describeProgress } from '../operations/describeProgress';
 import { ringValue } from '../operations/progressBar';
 import { useRunningOperation, type RunningOperation } from '../operations/runningOperationsStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
@@ -87,12 +87,15 @@ function SyncItem({ sync }: { sync: SyncState }) {
   );
 }
 
-/** The running operation in a line: a ring filling with the bar, the title, then the percentage (fixed width) and the stage. */
+/**
+ * The running operation in a line: a ring filling with the bar, the title, then the percentage (fixed width) and the
+ * stage; the bytes it has no room for go in the tooltip, with the files.
+ */
 function RunningActivity({ operation }: { operation: RunningOperation }) {
   const { bar, progress } = operation;
   const text = describeProgress(progress);
   return (
-    <span className={`${styles.item} ${styles.running}`} role="status">
+    <span className={`${styles.item} ${styles.running}`} role="status" data-tip={describeMeasures(text) ?? undefined}>
       <ProgressRing value={ringValue(bar)} size={12} />
       <span className={styles.activity}>{operation.title}</span>
       <span className={styles.percent}>{bar.mode === 'sweep' ? null : text.percent}</span>

@@ -16,7 +16,32 @@ const SWITCH = [
   '',
 ];
 
+/**
+ * Real output of `cm update --forcedetailedprogress` in a workspace getting one 800 MB file and 8,000 small ones, a
+ * line every 200 ms ("files" cut to fit 80 columns). `cm` writes the big file first, so its percentage (by bytes) reads
+ * 99% with 1 of 8,001 files written, then 100% "Finished" while most of them are still being written.
+ */
+const ONE_BIG_MANY_SMALL = [
+  'Unity VCS is updating your workspace. Wait a moment, please...',
+  '- Calculating    [########............]  41%  ',
+  '\\ Calculating    [###################.]  99%  ',
+  '- Updating       [###################.]  99%     800/800.08 MB -    1/8001 fil',
+  '\\ Updating       [###################.]  99%     800/800.08 MB -    1/8001 fil',
+  '| Finished       [####################] 100%  800.08/800.08 MB - 2609/8001 fil',
+  '/ Finished       [####################] 100%  800.08/800.08 MB - 3890/8001 fil',
+  '- Finished       [####################] 100%  800.08/800.08 MB - 4986/8001 fil',
+  '\\ Finished       [####################] 100%  800.08/800.08 MB - 5924/8001 fil',
+  '| Finished       [####################] 100%  800.08/800.08 MB - 6709/8001 fil',
+  '/ Finished       [####################] 100%  800.08/800.08 MB - 7401/8001 fil',
+  '- Finished       [####################] 100%  800.08/800.08 MB - 8001/8001 fil',
+  '\\ Finished       [####################] 100%  800.08/800.08 MB - 8001/8001 fil',
+  '',
+];
+
 const GB = 1024 ** 3;
+const MB = 1024 ** 2;
+/** What each file weighs in besides its bytes. */
+const FILE = 128 * 1024;
 
 describe('readUpdateProgress', () => {
   it('prepares, cancellable, until the progress line shows up', () => {
@@ -36,14 +61,38 @@ describe('readUpdateProgress', () => {
       total: 3020,
       bytesDone: Math.round(0.75 * GB),
       bytesTotal: Math.round(1.87 * GB),
-      fraction: expect.closeTo(0.75 / 1.87, 6),
+      fraction: expect.closeTo((0.75 * GB + 8 * FILE) / (1.87 * GB + 3020 * FILE), 6),
       currentItem: undefined,
       cancellable: false,
     });
   });
 
-  it('measures by bytes: the small files come last and fast', () => {
-    expect(readProgress(readUpdateProgress, SWITCH.slice(0, 8))?.fraction).toBeCloseTo(0.9947, 3);
+  it('measures mostly by bytes while the files are big', () => {
+    expect(readProgress(readUpdateProgress, SWITCH.slice(0, 8))?.fraction).toBeCloseTo(0.83, 2);
+  });
+
+  it("doesn't read 99% with 1 of 8,001 files written: each file weighs in besides its bytes", () => {
+    expect(readProgress(readUpdateProgress, ONE_BIG_MANY_SMALL.slice(0, 4))).toMatchObject({
+      stage: 'downloading',
+      current: 1,
+      total: 8001,
+      bytesDone: 800 * MB,
+      fraction: expect.closeTo(0.44, 2),
+    });
+    // `cm` says "Finished" by bytes: the files still being written keep it downloading.
+    expect(readProgress(readUpdateProgress, ONE_BIG_MANY_SMALL.slice(0, 6))).toMatchObject({
+      stage: 'downloading',
+      current: 2609,
+      fraction: expect.closeTo(0.63, 2),
+    });
+  });
+
+  it('only moves forwards, and ends full', () => {
+    for (const lines of [SWITCH, ONE_BIG_MANY_SMALL]) {
+      const fractions = lines.map((_, index) => readProgress(readUpdateProgress, lines.slice(0, index + 1))?.fraction ?? 0);
+      expect(fractions).toEqual([...fractions].sort((a, b) => a - b));
+      expect(fractions.at(-1)).toBe(1);
+    }
   });
 
   it('finishes once every byte and file is there, and keeps it through the trailing lines', () => {
