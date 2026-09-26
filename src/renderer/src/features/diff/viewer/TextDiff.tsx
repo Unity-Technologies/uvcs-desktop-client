@@ -14,6 +14,7 @@ import type { LineDiff } from './lineDiff';
 import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
 import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
 import { PaneScrollbars } from './PaneScrollbars';
+import { installPierreLineComparison } from './pierreLineComparison';
 import { replacementEdit } from './replacementEdit';
 import { shownDiff, type DiffSides } from './shownDiff';
 import { syntaxHighlighting } from './syntaxHighlighting';
@@ -26,6 +27,9 @@ import { shownText } from '../../../lib/lineBreaks';
 import { syntaxLanguage } from '../../../lib/syntaxLanguage';
 
 const BOTH_SIDES: DiffSides = { original: true, modified: true };
+
+// Typing re-diffs the text in Pierre: under the comparison method, like the diff it starts from.
+installPierreLineComparison();
 
 /**
  * The texts are the files' own, their lines broken by LF, CRLF or lone CRs. Pierre is given them as shown, lone CRs as
@@ -100,7 +104,7 @@ export function TextDiff({ original, modified, current, diff, wholeFile = false,
   const latest = useRef({ current, diff });
   latest.current = { current, diff };
   // Stable inputs: new objects would make Pierre load the files again. While the text is typed into, Pierre works out
-  // the diff itself (with the same options); a diff shown anew (another comparison method, the
+  // the diff itself (with the same options, `pierreLineComparison`); a diff shown anew (another comparison method, the
   // whole file or its diff, the file saved or changed on disk) starts from the text as it is now, unsaved edits included.
   const newFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: shownText(latest.current.current) }), [fileName, modified, comparisonMethod, wholeFile]);
   const fileDiff = useMemo(
