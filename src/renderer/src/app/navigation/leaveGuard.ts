@@ -1,3 +1,4 @@
+import { api } from '../../api/client';
 import type { SelectionState } from '../../lib/selection';
 
 /** Settles what would be lost (asks, saves or drops it); resolves false when the user chooses to stay. */
@@ -5,6 +6,8 @@ export type LeaveGuard = () => Promise<boolean>;
 
 let current: LeaveGuard | null = null;
 let asking: Promise<boolean> | null = null;
+// The guard let the page go: closing the window, quitting or reloading goes on without asking again.
+let unloading = false;
 
 /**
  * Something on screen that can't be left as it is, such as a file with unsaved edits, guards the way out: showing
@@ -12,6 +15,7 @@ let asking: Promise<boolean> | null = null;
  */
 export function guardLeaving(guard: LeaveGuard): () => void {
   current = guard;
+  unloading = false;
   return () => {
     if (current === guard) current = null;
   };
@@ -47,4 +51,23 @@ function ask(guard: LeaveGuard): Promise<boolean> {
     asking = null;
   });
   return asking;
+}
+
+/**
+ * Closing the window, quitting or reloading the page asks too while something guards the way out: the page holds the
+ * unloading back, the main process brings the window forward and asks (`leaveRequested`), and whatever unloaded it
+ * goes on once the guard lets go (`windows.continueLeaving`); Cancel keeps the window as it is.
+ */
+export function guardUnloading(): void {
+  window.addEventListener('beforeunload', (event) => {
+    if (!current || unloading) return;
+    event.preventDefault();
+    event.returnValue = '';
+  });
+  window.uvcs.on('leaveRequested', () => {
+    void settleBeforeLeaving().then((canLeave) => {
+      if (canLeave) unloading = true;
+      return api.windows.continueLeaving(canLeave);
+    });
+  });
 }

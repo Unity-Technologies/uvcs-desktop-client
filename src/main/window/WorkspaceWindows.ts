@@ -2,6 +2,7 @@ import { BrowserWindow } from 'electron';
 import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
 import { createMainWindow } from './createMainWindow';
+import { askBeforeUnloading } from './leaveRequests';
 
 interface WorkspaceWindowsOptions {
   settings: SettingsStore;
@@ -28,6 +29,7 @@ export class WorkspaceWindows {
     const cascadeFrom = BrowserWindow.getFocusedWindow() ?? this.all().at(-1);
     const window = createMainWindow(this.options.settings, cascadeFrom);
     const viewer = window.webContents.id;
+    askBeforeUnloading(window);
     if (workspacePath) this.requested.set(viewer, workspacePath);
 
     const changed = (): void => this.options.onWindowsChanged();

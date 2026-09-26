@@ -6,4 +6,6 @@ export interface WindowsApi {
   focusWorkspace(workspacePath: string): Promise<boolean>;
   /** Opens a new window on the home screen. */
   openHome(): Promise<void>;
+  /** Answers `leaveRequested`: the window closes, the app quits or the page reloads as asked; nothing when false. */
+  continueLeaving(canLeave: boolean): Promise<void>;
 }

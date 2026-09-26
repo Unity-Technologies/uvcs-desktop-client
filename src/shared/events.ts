@@ -44,6 +44,8 @@ export interface UvcsEvents {
   menuCommand: { commandId: string };
   /** An incoming-changes notification was clicked; the window is already focused. */
   incomingNotificationClicked: { workspacePath: string };
+  /** Closing the window, quitting or reloading waits for unsaved edits: settle them, then `windows.continueLeaving`. */
+  leaveRequested: Record<string, never>;
 }
 
 export type UvcsEventName = keyof UvcsEvents;
