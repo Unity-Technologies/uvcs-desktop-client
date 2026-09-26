@@ -14,7 +14,9 @@ import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
 import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
 import { PaneScrollbars } from './PaneScrollbars';
 import { replacementEdit } from './replacementEdit';
-import { shownDiff } from './shownDiff';
+import { shownDiff, type DiffSides } from './shownDiff';
+
+const BOTH_SIDES: DiffSides = { original: true, modified: true };
 import { highlightsSyntax } from './syntaxHighlighting';
 import { useBlockDiscard, type DiscardRequest } from './useBlockDiscard';
 import { POINTER_FOCUS_ATTRIBUTE, usePointerFocusMark } from './usePointerFocusMark';
@@ -33,6 +35,8 @@ interface TextDiffProps {
   fileName: string;
   /** Which differences count; the text shown is always the original. */
   comparisonMethod: ComparisonMethod;
+  /** Which sides are real versions: an added or private item shows alone, without an empty side next to it. */
+  sides?: DiffSides;
   /** The modified side is typed into directly (the whole file when the diff has no lines to show). */
   editable?: boolean;
   /** Receives the editor, to act on its text. */
@@ -67,7 +71,7 @@ function editorFactory(onCreate: (editor: Editor) => void): CreateEditor {
 }
 
 /** Syntax-highlighted text diff, side by side or unified, optionally typed into on the modified side. */
-export function TextDiff({ original, modified, current, fileName, comparisonMethod, editable = false, editorRef, onEdit, onDiscard, onUndoDiscard }: TextDiffProps) {
+export function TextDiff({ original, modified, current, fileName, comparisonMethod, sides = BOTH_SIDES, editable = false, editorRef, onEdit, onDiscard, onUndoDiscard }: TextDiffProps) {
   const theme = useResolvedTheme();
   const { layout, collapseUnchanged, wrapLines } = useDiffPreferences();
   const container = useRef<HTMLDivElement | null>(null);
@@ -92,7 +96,7 @@ export function TextDiff({ original, modified, current, fileName, comparisonMeth
   const newFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: currentText.current }), [fileName, modified, comparisonMethod, wholeFile]);
   const currentFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: current }), [fileName, current]);
   const parseDiffOptions = lineDiffOptions(comparisonMethod);
-  const fileDiff = useMemo(() => shownDiff(oldFile, newFile, parseDiffOptions), [oldFile, newFile, parseDiffOptions]);
+  const fileDiff = useMemo(() => shownDiff(oldFile, newFile, parseDiffOptions, sides), [oldFile, newFile, parseDiffOptions, sides.original, sides.modified]);
   const discard = useBlockDiscard({ enabled: Boolean(onDiscard), oldFile, newFile: currentFile, comparisonMethod, layout, containerRef: container, onDiscard, onUndo: onUndoDiscard });
   // Pierre shows files with more lines than this as plain text.
   const tokenizeMaxLength = highlightsSyntax(original, modified) ? undefined : 0;

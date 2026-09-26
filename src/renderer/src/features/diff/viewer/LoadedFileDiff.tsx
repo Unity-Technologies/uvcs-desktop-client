@@ -1,5 +1,6 @@
 import { AppWindow, Code, Columns2, EyeOff, FileText, FoldVertical, Gauge, ImageIcon, RefreshCw, Rows2, WrapText } from 'lucide-react';
 import { Suspense, useMemo, type ReactNode, type RefObject } from 'react';
+import type { DiffSides } from './shownDiff';
 import type { FileContent } from '@shared/domain/content';
 import { api } from '../../../api/client';
 import { formatSize } from '../../../lib/formatDate';
@@ -69,6 +70,10 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
     setRepresentation,
   } = useDiffPreferences();
   const editablePath = canEditInPlace(contents.original, contents.modified) ? contents.modified.path : null;
+  const sides = useMemo(
+    () => ({ original: contents.original.kind !== 'empty', modified: contents.modified.kind !== 'empty' }),
+    [contents.original.kind, contents.modified.kind],
+  );
   const buffer = useFileBuffer({ workspacePath, contents, path: editablePath, onMatchesBase });
   const { left, right, original, modified } = buffer.shown;
   const current = buffer.unsaved ?? right.text ?? '';
@@ -189,6 +194,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
         current={current}
         fileName={fileName}
         comparisonMethod={comparisonMethod}
+        sides={sides}
         editable={editable}
         editorRef={buffer.editor}
         onEdit={buffer.onEdit}
@@ -267,6 +273,7 @@ interface TextDiffBodyProps {
   current: string;
   fileName: string;
   comparisonMethod: ComparisonMethod;
+  sides: DiffSides;
   editable: boolean;
   editorRef: RefObject<EditorHandle | null>;
   onEdit: (text: string) => void;

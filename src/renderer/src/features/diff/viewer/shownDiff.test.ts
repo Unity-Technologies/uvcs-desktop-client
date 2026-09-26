@@ -3,7 +3,8 @@ import { lineDiffOptions } from './comparisonMethod';
 import { shownDiff } from './shownDiff';
 
 const file = (contents: string) => ({ name: 'agent.cs.meta', contents });
-const diff = (original: string, modified: string) => shownDiff(file(original), file(modified), lineDiffOptions('recognizeAll'));
+const both = { original: true, modified: true };
+const diff = (original: string, modified: string, sides = both) => shownDiff(file(original), file(modified), lineDiffOptions('recognizeAll'), sides);
 const markers = (original: string, modified: string) =>
   diff(original, modified).hunks.map(({ noEOFCRDeletions, noEOFCRAdditions }) => ({ noEOFCRDeletions, noEOFCRAdditions }));
 
@@ -19,6 +20,11 @@ describe('shownDiff', () => {
     const shown = diff('gone\n', '');
     expect(shown.type).toBe('change');
     expect(shown.deletionLines).toEqual(['gone\n']);
+  });
+
+  it('shows an added or private item alone, and a deleted one', () => {
+    expect(diff('', 'new\n', { original: false, modified: true }).type).toBe('new');
+    expect(diff('gone\n', '', { original: true, modified: false }).type).toBe('deleted');
   });
 
   it('leaves other diffs as Pierre reads them', () => {
