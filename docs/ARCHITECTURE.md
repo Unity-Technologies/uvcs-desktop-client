@@ -208,7 +208,9 @@ renderer/src/
   Without unsaved edits the diff follows the disk; with some it holds still and says the file changed on disk. A file with
   no lines to show (no content changes, empty, only ignored differences) is typed into whole, under a note. ⌘E puts the
   caret in the text and Esc leaves it for the file list; keys the editor handles never reach the app's shortcuts. Read and
-  edit look the same: the editor is always on, so nothing in the diff moves when typing starts.
+  edit look the same: the editor is always on, so nothing in the diff moves when typing starts. Each pane of code
+  scrolls sideways on its own and its bar would sit at the end of the file, so `PaneScrollbars` keeps one per pane at
+  the bottom of the view (diffs, the whole-file editor, merge resolution).
 - **Leaving unsaved edits**: `app/navigation/leaveGuard` lets unsaved edits guard the way out. Selecting another file
   (`selectAfterLeaving`), another view (`goToView`) or checking in asks Save / Don't save / Cancel first; a diff that goes
   away without asking saves its edits, so work is never lost. Closing the window, quitting (⌘Q, whichever window has

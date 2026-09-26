@@ -1,6 +1,7 @@
 import { UnresolvedFile } from '@pierre/diffs/react';
-import { useMemo } from 'react';
+import { useMemo, useRef } from 'react';
 import { Button } from '../../../ui/Button';
+import { PaneScrollbars } from '../../diff/viewer/PaneScrollbars';
 import type { MergeLabels } from '../mergeDescription';
 import { conflictHunkCss, shortenBranch } from './conflictHunkCss';
 import { resolveConflictRegion, type ConflictRegionChoice } from './threeWayMerge';
@@ -23,6 +24,7 @@ interface ConflictHunksProps {
  */
 export function ConflictHunks({ path, text, labels, onChange }: ConflictHunksProps) {
   const pierreOptions = usePierreOptions();
+  const surfaceRef = useRef<HTMLDivElement>(null);
   const { source, destination } = labels.roles;
   const options = useMemo(
     () => ({
@@ -37,7 +39,7 @@ export function ConflictHunks({ path, text, labels, onChange }: ConflictHunksPro
   );
 
   return (
-    <div className={surface.surface}>
+    <div ref={surfaceRef} className={surface.surface}>
       {/* The component keeps its own copy of the conflicts, so it is recreated whenever the text changes. */}
       <UnresolvedFile
         key={contentKey(text)}
@@ -56,6 +58,7 @@ export function ConflictHunks({ path, text, labels, onChange }: ConflictHunksPro
           </div>
         )}
       />
+      <PaneScrollbars containerRef={surfaceRef} />
     </div>
   );
 }

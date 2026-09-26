@@ -10,6 +10,7 @@ import { useDiffPreferences } from './diffPreferencesStore';
 import type { EditorHandle } from './editorHandle';
 import { editsWholeFile } from './editsWholeFile';
 import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
+import { PaneScrollbars } from './PaneScrollbars';
 import { replacementEdit } from './replacementEdit';
 import { useBlockDiscard, type DiscardRequest } from './useBlockDiscard';
 import { POINTER_FOCUS_ATTRIBUTE, usePointerFocusMark } from './usePointerFocusMark';
@@ -170,6 +171,7 @@ export function TextDiff({ original, modified, current, fileName, comparisonMeth
             />
           )}
         </EditProvider>
+        <PaneScrollbars containerRef={container} />
         {discard.overlay}
       </div>
     </div>
