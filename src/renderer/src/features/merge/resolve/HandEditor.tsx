@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { PaneScrollbars } from '../../diff/viewer/PaneScrollbars';
 import { usePierreOptions } from './usePierreOptions';
 import styles from './TextSurface.module.css';
+import { syntaxLanguage } from '../../../lib/syntaxLanguage';
 
 interface HandEditorProps {
   path: string;
@@ -23,7 +24,7 @@ export function HandEditor({ path, text, onChange }: HandEditorProps) {
   return (
     <div ref={surface} className={styles.surface}>
       <EditProvider createEditor={createEditor}>
-        <File file={{ name: path, contents: initialText }} disableWorkerPool options={options} edit onEditChange={(event) => onChange(event.file.contents)} />
+        <File file={{ name: path, lang: syntaxLanguage(path), contents: initialText }} disableWorkerPool options={options} edit onEditChange={(event) => onChange(event.file.contents)} />
       </EditProvider>
       <PaneScrollbars containerRef={surface} />
     </div>

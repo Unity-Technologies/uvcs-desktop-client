@@ -7,6 +7,7 @@ import type { AnnotationRow } from './annotationRows';
 import { useResolvedTheme } from '../../app/settings/useResolvedTheme';
 import { PIERRE_SURFACE_CSS, pierreThemeName } from '../diff/viewer/pierreOptions';
 import styles from './AnnotatedCode.module.css';
+import { syntaxLanguage } from '../../lib/syntaxLanguage';
 
 /**
  * Pierre's line height and top padding, pinned so the gutter can lay out its rows with the same geometry.
@@ -32,7 +33,7 @@ interface AnnotatedCodeProps {
  */
 export function AnnotatedCode({ code, path, rows, columns, onOpenChangeset, annotateBefore }: AnnotatedCodeProps) {
   const theme = useResolvedTheme();
-  const file = useMemo(() => ({ name: fileNameOf(path), contents: code }), [path, code]);
+  const file = useMemo(() => ({ name: fileNameOf(path), lang: syntaxLanguage(path), contents: code }), [path, code]);
   const options = useMemo(
     () => ({
       theme: pierreThemeName(theme),

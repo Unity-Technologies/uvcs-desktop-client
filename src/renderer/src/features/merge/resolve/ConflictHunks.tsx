@@ -8,6 +8,7 @@ import { resolveConflictRegion, type ConflictRegionChoice } from './threeWayMerg
 import { usePierreOptions } from './usePierreOptions';
 import styles from './ConflictHunks.module.css';
 import surface from './TextSurface.module.css';
+import { syntaxLanguage } from '../../../lib/syntaxLanguage';
 
 interface ConflictHunksProps {
   path: string;
@@ -43,7 +44,7 @@ export function ConflictHunks({ path, text, labels, onChange }: ConflictHunksPro
       {/* The component keeps its own copy of the conflicts, so it is recreated whenever the text changes. */}
       <UnresolvedFile
         key={contentKey(text)}
-        file={{ name: path, contents: text }}
+        file={{ name: path, lang: syntaxLanguage(path), contents: text }}
         disableWorkerPool
         options={options}
         renderMergeConflictUtility={(action) => (

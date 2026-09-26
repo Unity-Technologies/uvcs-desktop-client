@@ -1,5 +1,6 @@
-import { getFiletypeFromFileName, getHighlighterIfLoaded, preloadHighlighter, type DiffsThemeNames } from '@pierre/diffs';
+import { getHighlighterIfLoaded, preloadHighlighter, type DiffsThemeNames } from '@pierre/diffs';
 import { useEffect, useState } from 'react';
+import { syntaxLanguage } from '../../../lib/syntaxLanguage';
 
 /**
  * True once Pierre's shared highlighter has the theme and the file's language loaded. Mounting a diff before that
@@ -7,7 +8,7 @@ import { useEffect, useState } from 'react';
  * (e.g. the second side arriving), so a first diff of a new language could stay unhighlighted.
  */
 export function useSyntaxHighlighter(theme: DiffsThemeNames, fileName: string): boolean {
-  const language = getFiletypeFromFileName(fileName);
+  const language = syntaxLanguage(fileName);
   const isLoaded = (): boolean => getHighlighterIfLoaded({ theme, lang: language }) !== undefined;
   const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const key = `${theme}:${language}`;
