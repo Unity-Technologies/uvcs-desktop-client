@@ -7,4 +7,5 @@
   font-size: var(--text-xs);
   cursor: default;
   user-select: none;
+  white-space: nowrap;
 }
