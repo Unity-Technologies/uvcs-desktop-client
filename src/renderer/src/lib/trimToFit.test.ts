@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { positionsInTrimmed, trimFolderToFit, trimToFit } from './trimToFit';
+import { positionsInTrimmed, trimFolderToFit, trimMiddleToFit, trimToFit } from './trimToFit';
 
 const measure = (text: string): number => Array.from(text).length;
 
@@ -18,6 +18,22 @@ describe('trimToFit', () => {
 
   it('never splits a surrogate pair', () => {
     expect(trimToFit('a😀bcd', 3, measure)).toBe('a😀…');
+  });
+});
+
+describe('trimMiddleToFit', () => {
+  it('keeps text that fits', () => {
+    expect(trimMiddleToFit('cm status', 9, measure)).toBe('cm status');
+  });
+
+  it('cuts the middle, keeping both ends', () => {
+    expect(trimMiddleToFit('cm update /work/game', 9, measure)).toBe('cm u…game');
+    expect(trimMiddleToFit('cm update /work/game', 10, measure)).toBe('cm up…game');
+  });
+
+  it('returns nothing when not even the ellipsis fits', () => {
+    expect(trimMiddleToFit('cm status', 0, measure)).toBe('');
+    expect(trimMiddleToFit('cm status', 1, measure)).toBe('…');
   });
 });
 
