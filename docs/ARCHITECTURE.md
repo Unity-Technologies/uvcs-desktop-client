@@ -211,10 +211,14 @@ renderer/src/
   edit look the same: the editor is always on, so nothing in the diff moves when typing starts.
 - **Leaving unsaved edits**: `app/navigation/leaveGuard` lets unsaved edits guard the way out. Selecting another file
   (`selectAfterLeaving`), another view (`goToView`) or checking in asks Save / Don't save / Cancel first; a diff that goes
-  away without asking saves its edits, so work is never lost.
+  away without asking saves its edits, so work is never lost. Closing the window, quitting (⌘Q, whichever window has
+  focus) or reloading asks the same (`guardUnloading`): the page holds its `beforeunload` back, the main process brings
+  its window forward and sends `leaveRequested` (`main/window/leaveRequests`), and once the edits are saved or dropped
+  `windows.continueLeaving` closes the window, quits or reloads; Cancel keeps the window and stops the quit.
 - **Discarding changes**: a workspace file's diff against its loaded revision (or reviewed copy) discards changes from
   its gutter (`features/diff/viewer/useBlockDiscard`): hovering a changed line offers that one line (− removes an added
-  line, ↶ restores a removed one) and a chip on the change's top edge the whole change. Line numbers pick lines (click,
+  line, ↶ restores a removed one) and a chip at the right end of the change's top edge (in the pane of its new code, clear
+  of the line numbers and of the start of the line above) the whole change. Line numbers pick lines (click,
   Shift+click, drag, shown as they're picked; only changed lines' numbers react) and the chip then acts on them
   ("Restore 3 lines", ⌥⌘Z); Esc or a click elsewhere drops the pick. The new text is computed in the renderer
   (`discardLines`). Without unsaved edits it's shown at once and written, and each file keeps an undo stack for the
