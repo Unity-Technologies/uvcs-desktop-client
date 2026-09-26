@@ -1,5 +1,6 @@
 import { FileDiff, ScanText } from 'lucide-react';
 import { useState } from 'react';
+import { canAnnotate } from '@shared/domain/annotate';
 import type { ItemRevision } from '@shared/domain/history';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
@@ -41,6 +42,9 @@ export function RevisionDetails({ path, revisions, selected }: RevisionDetailsPr
       />
     );
   }
+
+  // Binary revisions have nothing to annotate: only their diff (an image comparison, or their sizes) shows.
+  if (!canAnnotate(newer.itemType)) return <RevisionComparison path={path} newer={newer} older={older} />;
 
   const viewSwitch = (
     <SegmentedControl<RevisionView>

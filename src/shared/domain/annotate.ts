@@ -1,3 +1,10 @@
+import type { ItemType } from './pendingChanges';
+
+/** `cm annotate` reads text files only ("The filetype of … is not supported to show differences"). */
+export function canAnnotate(itemType: ItemType): boolean {
+  return itemType === 'file';
+}
+
 export interface AnnotatedLine {
   lineNumber: number;
   content: string;

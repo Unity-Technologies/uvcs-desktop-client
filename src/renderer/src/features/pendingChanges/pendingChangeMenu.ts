@@ -13,11 +13,12 @@ import {
   Trash2,
   Undo2,
 } from 'lucide-react';
+import { canAnnotate } from '@shared/domain/annotate';
 import type { Changelist, FilterRuleList, PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { SEPARATOR, tidyMenu, type MenuEntry, type Submenu } from '../../lib/actions';
-import { categoryOf, existsOnDisk, isCheckinCandidate, isControlled } from './changeCategories';
+import { categoryOf, existsOnDisk, hasRevisions, isCheckinCandidate, isControlled } from './changeCategories';
 import { moveToChangelistSubmenu } from './changelistMenu';
 import { reviewMenuEntry } from '../review/reviewMenuEntry';
 import type { ListReview } from '../review/useReviewMode';
@@ -75,13 +76,13 @@ export function pendingChangeMenu(
       run: () => void api.system.revealInFileManager(absolutePath(workspacePath, single.path)),
     },
     SEPARATOR,
-    single && isControlled(single) && {
+    single && hasRevisions(single) && {
       id: 'history',
       label: 'View history',
       icon: History,
       run: () => navigation.openPage({ kind: 'history', path: single.path }),
     },
-    single && isControlled(single) && single.itemType !== 'directory' && {
+    single && hasRevisions(single) && canAnnotate(single.itemType) && {
       id: 'annotate',
       label: 'Annotate',
       icon: ScanText,

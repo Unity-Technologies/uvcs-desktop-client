@@ -16,6 +16,7 @@ import {
   Trash2,
   Undo2,
 } from 'lucide-react';
+import { canAnnotate } from '@shared/domain/annotate';
 import type { TreeItem } from '@shared/domain/explorer';
 import { navigation } from '../../app/navigation/navigationStore';
 import { openTerminalIn } from '../../app/workspace/workspaceShellActions';
@@ -87,7 +88,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
       shortcut: FILE_SHORTCUTS.history,
       run: () => navigation.openPage({ kind: 'history', path: single.path }),
     },
-    single && !single.isPrivate && single.itemType !== 'directory' && {
+    single && !single.isPrivate && canAnnotate(single.itemType) && {
       id: 'annotate',
       label: 'Annotate',
       icon: ScanText,
