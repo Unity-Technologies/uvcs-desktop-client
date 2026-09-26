@@ -9,25 +9,18 @@ export interface DiscardAction {
   label: string;
   /** Once done, for a toast: "Restored 2 lines". */
   done: string;
-  /** What happens to the file, for a tooltip. */
-  description: string;
 }
 
 export function describeDiscard(lines: ChangedLine[]): DiscardAction {
   const removed = lines.filter((line) => line.side === 'deletions').length;
   const added = lines.length - removed;
   if (added === 0) {
-    return { kind: 'restore', label: `Restore ${count(removed)}`, done: `Restored ${count(removed)}`, description: `Put back ${removed === 1 ? 'the removed line' : `the ${removed} removed lines`}` };
+    return { kind: 'restore', label: `Restore ${count(removed)}`, done: `Restored ${count(removed)}` };
   }
   if (removed === 0) {
-    return { kind: 'remove', label: `Remove ${count(added)}`, done: `Removed ${count(added)}`, description: `Delete ${added === 1 ? 'the added line' : `the ${added} added lines`}` };
+    return { kind: 'remove', label: `Remove ${count(added)}`, done: `Removed ${count(added)}` };
   }
-  return {
-    kind: 'revert',
-    label: `Revert ${count(lines.length)}`,
-    done: `Reverted ${count(lines.length)}`,
-    description: `Replace ${added === 1 ? 'this line' : `these ${added} lines`} with the original ${removed === 1 ? 'one' : count(removed)}`,
-  };
+  return { kind: 'revert', label: `Revert ${count(lines.length)}`, done: `Reverted ${count(lines.length)}` };
 }
 
 /** The action of a whole change: "Revert change" when it replaces lines, otherwise what it does ("Remove 2 lines"). */
@@ -38,7 +31,7 @@ export function wholeChangeLabel(lines: ChangedLine[]): string {
 
 /** The action of one changed line: an added line goes, a removed one comes back. */
 export function lineActionLabel({ side }: ChangedLine): string {
-  return side === 'additions' ? 'Remove this line' : 'Restore this line';
+  return side === 'additions' ? 'Remove line' : 'Restore line';
 }
 
 function count(lines: number): string {

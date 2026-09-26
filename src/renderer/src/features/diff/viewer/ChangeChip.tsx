@@ -59,8 +59,8 @@ export function ChangeChip({ containerRef, regions, hovered, picked, layout, onP
       style={position}
       data-kind={action.kind}
       data-picked={picked ? '' : undefined}
-      data-tip={action.description}
-      data-tip-sub={picked ? 'Esc or a click elsewhere drops the picked lines' : 'Tip: click a line number to pick that line, Shift+click another to pick the lines between'}
+      data-tip={picked ? 'Esc or a click elsewhere unpicks the lines' : 'Drag or Shift+click line numbers to pick lines'}
+      data-tip-shortcut={picked ? hotkey('discardLines') : undefined}
       onPointerEnter={() => {
         setOnChip(true);
         onPreview(lines);

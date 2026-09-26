@@ -22,14 +22,25 @@
   animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
 }
 
+/* Tints go over the solid surface: nothing behind may show through. */
 .button:hover {
   color: var(--accent);
   border-color: var(--accent);
+  background: linear-gradient(var(--accent-soft), var(--accent-soft)) var(--bg-surface-raised);
+}
+
+.button:active {
+  background: linear-gradient(var(--bg-selected-strong), var(--bg-selected-strong)) var(--bg-surface-raised);
 }
 
 .button[data-kind='remove']:hover {
   color: var(--change-deleted);
   border-color: var(--change-deleted);
+  background: linear-gradient(var(--diff-removed-bg), var(--diff-removed-bg)) var(--bg-surface-raised);
+}
+
+.button[data-kind='remove']:active {
+  background: linear-gradient(var(--diff-removed-strong), var(--diff-removed-strong)) var(--bg-surface-raised);
 }
 
 @media (prefers-reduced-motion: reduce) {
