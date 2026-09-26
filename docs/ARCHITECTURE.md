@@ -216,6 +216,9 @@ renderer/src/
   in view (Pierre's `Virtualizer` on the diff's scrolling element), and past `syntaxHighlighting`'s limit (both
   versions together) a diff is plain text under a note: Shiki reads whole files on the main thread, and a 50,000-line
   file took 19 s to open whole and 30 s as a diff (now 0.2 s and 0.3 s).
+  Every diff follows Split/Unified, one from or to an empty file (an added file, an empty base) too: `shownDiff` keeps
+  both sides where Pierre would show a new or deleted file in one column, and the empty side is hatched like any added
+  lines. "No newline at end of file" shows only where the final line break is what changed (`noNewlineMarker`).
 - **Leaving unsaved edits**: `app/navigation/leaveGuard` lets unsaved edits guard the way out. Selecting another file
   (`selectAfterLeaving`), another view (`goToView`) or checking in asks Save / Don't save / Cancel first; a diff that goes
   away without asking saves its edits, so work is never lost. Closing the window, quitting (⌘Q, whichever window has

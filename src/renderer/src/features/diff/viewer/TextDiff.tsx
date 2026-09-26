@@ -1,6 +1,6 @@
 import { Virtualizer } from '@pierre/diffs';
 import { Editor } from '@pierre/diffs/edit';
-import { EditProvider, File, MultiFileDiff, VirtualizerContext } from '@pierre/diffs/react';
+import { EditProvider, File, FileDiff, VirtualizerContext } from '@pierre/diffs/react';
 import { useCallback, useImperativeHandle, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
 import { focusMain } from '../../../lib/mainFocus';
@@ -10,9 +10,11 @@ import { lineDiffOptions, type ComparisonMethod } from './comparisonMethod';
 import { useDiffPreferences } from './diffPreferencesStore';
 import type { EditorHandle } from './editorHandle';
 import { editsWholeFile } from './editsWholeFile';
+import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
 import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
 import { PaneScrollbars } from './PaneScrollbars';
 import { replacementEdit } from './replacementEdit';
+import { shownDiff } from './shownDiff';
 import { highlightsSyntax } from './syntaxHighlighting';
 import { useBlockDiscard, type DiscardRequest } from './useBlockDiscard';
 import { POINTER_FOCUS_ATTRIBUTE, usePointerFocusMark } from './usePointerFocusMark';
@@ -89,6 +91,7 @@ export function TextDiff({ original, modified, current, fileName, comparisonMeth
   const newFile = useMemo(() => ({ name: fileName, contents: currentText.current }), [fileName, modified, comparisonMethod, wholeFile]);
   const currentFile = useMemo(() => ({ name: fileName, contents: current }), [fileName, current]);
   const parseDiffOptions = lineDiffOptions(comparisonMethod);
+  const fileDiff = useMemo(() => shownDiff(oldFile, newFile, parseDiffOptions), [oldFile, newFile, parseDiffOptions]);
   const discard = useBlockDiscard({ enabled: Boolean(onDiscard), oldFile, newFile: currentFile, comparisonMethod, layout, containerRef: container, onDiscard, onUndo: onUndoDiscard });
   // Pierre shows files with more lines than this as plain text.
   const tokenizeMaxLength = highlightsSyntax(original, modified) ? undefined : 0;
@@ -98,7 +101,7 @@ export function TextDiff({ original, modified, current, fileName, comparisonMeth
   );
   const fileOptions = useMemo(() => ({ ...pierreFileOptions({ theme, wrapLines }), tokenizeMaxLength }), [theme, wrapLines, tokenizeMaxLength]);
   const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);
-  useShadowStyle(container, SHADOW_CSS);
+  useShadowStyle(container, showsNoNewlineMarker(original, current) ? SHADOW_CSS : `${SHADOW_CSS}\n${HIDE_NO_NEWLINE_CSS}`);
   const pointerFocus = usePointerFocusMark();
 
   const isTyping = (): boolean => {
@@ -171,11 +174,10 @@ export function TextDiff({ original, modified, current, fileName, comparisonMeth
               <File file={newFile} options={fileOptions} edit onEditChange={(event) => onEdit?.(event.file.contents)} disableWorkerPool style={{ minHeight: '100%' }} />
             </VirtualizerContext.Provider>
           ) : (
-            <MultiFileDiff
+            <FileDiff
               // Pierre computes the diff once per pair of files, whatever the options say later.
               key={comparisonMethod}
-              oldFile={oldFile}
-              newFile={newFile}
+              fileDiff={fileDiff}
               options={options}
               selectedLines={discard.selectedLines}
               renderGutterUtility={discard.renderGutterUtility}
