@@ -1,6 +1,7 @@
 import { Editor } from '@pierre/diffs/edit';
 import { EditProvider, File } from '@pierre/diffs/react';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { PaneScrollbars } from '../../diff/viewer/PaneScrollbars';
 import { usePierreOptions } from './usePierreOptions';
 import styles from './TextSurface.module.css';
 
@@ -17,12 +18,14 @@ const createEditor: React.ComponentProps<typeof EditProvider>['createEditor'] = 
 export function HandEditor({ path, text, onChange }: HandEditorProps) {
   const options = usePierreOptions();
   const [initialText] = useState(text);
+  const surface = useRef<HTMLDivElement>(null);
 
   return (
-    <div className={styles.surface}>
+    <div ref={surface} className={styles.surface}>
       <EditProvider createEditor={createEditor}>
         <File file={{ name: path, contents: initialText }} disableWorkerPool options={options} edit onEditChange={(event) => onChange(event.file.contents)} />
       </EditProvider>
+      <PaneScrollbars containerRef={surface} />
     </div>
   );
 }

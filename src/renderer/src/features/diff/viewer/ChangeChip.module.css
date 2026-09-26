@@ -21,16 +21,25 @@
   animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
 }
 
+/* Tints go over the solid surface: over code, nothing behind may show through. */
 .chip:hover {
   border-color: var(--accent);
-  background: var(--accent-soft);
+  background: linear-gradient(var(--accent-soft), var(--accent-soft)) var(--bg-surface-raised);
   color: var(--accent-text);
+}
+
+.chip:active {
+  background: linear-gradient(var(--bg-selected-strong), var(--bg-selected-strong)) var(--bg-surface-raised);
 }
 
 .chip[data-kind='remove']:hover {
   border-color: var(--change-deleted);
-  background: var(--diff-removed-bg);
+  background: linear-gradient(var(--diff-removed-bg), var(--diff-removed-bg)) var(--bg-surface-raised);
   color: var(--change-deleted);
+}
+
+.chip[data-kind='remove']:active {
+  background: linear-gradient(var(--diff-removed-strong), var(--diff-removed-strong)) var(--bg-surface-raised);
 }
 
 /* Lines are picked: the chip is the one action, so it stands out. */

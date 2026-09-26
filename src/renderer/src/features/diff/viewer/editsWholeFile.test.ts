@@ -19,6 +19,7 @@ describe('editsWholeFile', () => {
   it('edits a changed or added file in the diff', () => {
     expect(editsWholeFile('one\ntwo\n', 'one\n2\n', 'recognizeAll')).toBe(false);
     expect(editsWholeFile('', 'added\n', 'recognizeAll')).toBe(false);
+    expect(editsWholeFile('', 'typed into an empty file', 'ignoreEolAndWhitespace')).toBe(false);
     expect(editsWholeFile('one\ntwo\n', 'one\r\ntwo\r\n', 'recognizeAll')).toBe(false);
   });
 });

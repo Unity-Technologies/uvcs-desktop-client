@@ -1,6 +1,6 @@
 import { parseDiffFromFile } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
-import { blockLines, listChangeBlocks, listChangeRegions, regionContaining, type DisplayMeta } from './changeBlocks';
+import { blockLines, listChangeBlocks, listChangeRegions, regionContaining, sameRegions, type DisplayMeta } from './changeBlocks';
 
 const diff = (original: string, modified: string): DisplayMeta =>
   parseDiffFromFile({ name: 'a.ts', contents: original }, { name: 'a.ts', contents: modified });
@@ -39,6 +39,19 @@ describe('listChangeRegions', () => {
       { index: 0, lines: [added(9), removed(9), added(10)] },
       { index: 1, lines: [removed(14)] },
     ]);
+  });
+});
+
+describe('sameRegions', () => {
+  const regionsOf = (modified: string) => listChangeRegions(listChangeBlocks(diff(lines('a', 'b', 'c', 'd'), modified)));
+
+  it('holds while typing within a changed line', () => {
+    expect(sameRegions(regionsOf(lines('a', 'B', 'c', 'd')), regionsOf(lines('a', 'Bx', 'c', 'd')))).toBe(true);
+  });
+
+  it('ends once the change covers other lines', () => {
+    expect(sameRegions(regionsOf(lines('a', 'B', 'c', 'd')), regionsOf(lines('a', 'B', 'C', 'd')))).toBe(false);
+    expect(sameRegions(regionsOf(lines('a', 'B', 'c', 'd')), regionsOf(lines('a', 'B', 'c', 'd', 'e')))).toBe(false);
   });
 });
 

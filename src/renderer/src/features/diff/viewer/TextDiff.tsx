@@ -1,6 +1,7 @@
+import { Virtualizer } from '@pierre/diffs';
 import { Editor } from '@pierre/diffs/edit';
-import { EditProvider, File, MultiFileDiff } from '@pierre/diffs/react';
-import { useImperativeHandle, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
+import { EditProvider, File, MultiFileDiff, VirtualizerContext } from '@pierre/diffs/react';
+import { useCallback, useImperativeHandle, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
 import { focusMain } from '../../../lib/mainFocus';
 import { matchesShortcut } from '../../../lib/shortcuts';
@@ -10,8 +11,11 @@ import { useDiffPreferences } from './diffPreferencesStore';
 import type { EditorHandle } from './editorHandle';
 import { editsWholeFile } from './editsWholeFile';
 import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
+import { PaneScrollbars } from './PaneScrollbars';
 import { replacementEdit } from './replacementEdit';
+import { highlightsSyntax } from './syntaxHighlighting';
 import { useBlockDiscard, type DiscardRequest } from './useBlockDiscard';
+import { POINTER_FOCUS_ATTRIBUTE, usePointerFocusMark } from './usePointerFocusMark';
 import { useShadowStyle } from './useShadowStyle';
 import { useSyntaxHighlighter } from './useSyntaxHighlighter';
 import styles from './TextDiff.module.css';
@@ -39,11 +43,12 @@ interface TextDiffProps {
 }
 
 /**
- * Each side's code scrolls sideways, so Tab stops there to scroll it with the arrows: show where it stopped. The
- * caret's line keeps its diff color (the editor would tint it blue, like picked lines): its number shows it.
+ * Each side's code scrolls sideways, so Tab stops there to scroll it with the arrows: show where it stopped (after the
+ * keyboard took it there, not a click). The caret's line keeps its diff color (the editor would tint it blue, like
+ * picked lines): its number shows it.
  */
 const SHADOW_CSS = [
-  '[data-code]:focus-visible { outline: var(--focus-outline); outline-offset: -2px; }',
+  `[data-code]:focus-visible:not([${POINTER_FOCUS_ATTRIBUTE}]) { outline: var(--focus-outline); outline-offset: -2px; }`,
   '[data-editor-active-line]:not([data-selected-line]) { --diffs-editor-active-line-source-mix: 100%; --mix-selection-light: 100%; --mix-selection-dark: 100%; }',
 ].join('\n');
 
@@ -62,7 +67,17 @@ function editorFactory(onCreate: (editor: Editor) => void): CreateEditor {
 export function TextDiff({ original, modified, current, fileName, comparisonMethod, editable = false, editorRef, onEdit, onDiscard, onUndoDiscard }: TextDiffProps) {
   const theme = useResolvedTheme();
   const { layout, collapseUnchanged, wrapLines } = useDiffPreferences();
-  const container = useRef<HTMLDivElement>(null);
+  const container = useRef<HTMLDivElement | null>(null);
+  // The whole file renders only the lines in view (and highlights them as they come): files can be huge.
+  const [virtualizer] = useState(() => new Virtualizer());
+  const setContainer = useCallback(
+    (element: HTMLDivElement | null) => {
+      container.current = element;
+      if (element) virtualizer.setup(element);
+      else virtualizer.cleanUp();
+    },
+    [virtualizer],
+  );
   const editor = useRef<Editor | null>(null);
   const [createEditor] = useState(() => editorFactory((created) => (editor.current = created)));
   const wholeFile = useMemo(() => editable && editsWholeFile(original, modified, comparisonMethod), [editable, original, modified, comparisonMethod]);
@@ -75,13 +90,16 @@ export function TextDiff({ original, modified, current, fileName, comparisonMeth
   const currentFile = useMemo(() => ({ name: fileName, contents: current }), [fileName, current]);
   const parseDiffOptions = lineDiffOptions(comparisonMethod);
   const discard = useBlockDiscard({ enabled: Boolean(onDiscard), oldFile, newFile: currentFile, comparisonMethod, layout, containerRef: container, onDiscard, onUndo: onUndoDiscard });
+  // Pierre shows files with more lines than this as plain text.
+  const tokenizeMaxLength = highlightsSyntax(original, modified) ? undefined : 0;
   const options = useMemo(
-    () => ({ ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }), parseDiffOptions, ...discard.options }),
-    [theme, layout, collapseUnchanged, wrapLines, parseDiffOptions, discard.options],
+    () => ({ ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }), parseDiffOptions, tokenizeMaxLength, ...discard.options }),
+    [theme, layout, collapseUnchanged, wrapLines, parseDiffOptions, tokenizeMaxLength, discard.options],
   );
-  const fileOptions = useMemo(() => pierreFileOptions({ theme, wrapLines }), [theme, wrapLines]);
+  const fileOptions = useMemo(() => ({ ...pierreFileOptions({ theme, wrapLines }), tokenizeMaxLength }), [theme, wrapLines, tokenizeMaxLength]);
   const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);
   useShadowStyle(container, SHADOW_CSS);
+  const pointerFocus = usePointerFocusMark();
 
   const isTyping = (): boolean => {
     const active = container.current?.querySelector('diffs-container')?.shadowRoot?.activeElement;
@@ -133,7 +151,7 @@ export function TextDiff({ original, modified, current, fileName, comparisonMeth
   return (
     <div className={styles.frame}>
       <div
-        ref={container}
+        ref={setContainer}
         className={styles.diff}
         tabIndex={0}
         role="region"
@@ -141,10 +159,17 @@ export function TextDiff({ original, modified, current, fileName, comparisonMeth
         onKeyDownCapture={onKeyDownCapture}
         onKeyDown={onKeyDown}
         onPointerDown={discard.onPointerDown}
+        onPointerDownCapture={pointerFocus.onPointerDownCapture}
+        onPointerMove={discard.onPointerMove}
+        onPointerLeave={discard.onPointerLeave}
+        onFocus={pointerFocus.onFocus}
+        onBlur={pointerFocus.onBlur}
       >
         <EditProvider createEditor={createEditor}>
           {wholeFile ? (
-            <File file={newFile} options={fileOptions} edit onEditChange={(event) => onEdit?.(event.file.contents)} disableWorkerPool style={{ minHeight: '100%' }} />
+            <VirtualizerContext.Provider value={virtualizer}>
+              <File file={newFile} options={fileOptions} edit onEditChange={(event) => onEdit?.(event.file.contents)} disableWorkerPool style={{ minHeight: '100%' }} />
+            </VirtualizerContext.Provider>
           ) : (
             <MultiFileDiff
               // Pierre computes the diff once per pair of files, whatever the options say later.
@@ -162,6 +187,7 @@ export function TextDiff({ original, modified, current, fileName, comparisonMeth
             />
           )}
         </EditProvider>
+        <PaneScrollbars containerRef={container} />
         {discard.overlay}
       </div>
     </div>

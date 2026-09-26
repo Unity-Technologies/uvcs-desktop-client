@@ -5,7 +5,7 @@ import { createStore } from 'zustand/vanilla';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { lineDiffOptions, type ComparisonMethod } from './comparisonMethod';
-import { listChangeBlocks, listChangeRegions, type ChangedLine, type DisplayMeta } from './changeBlocks';
+import { listChangeBlocks, listChangeRegions, sameRegions, type ChangedLine, type ChangeRegion, type DisplayMeta } from './changeBlocks';
 import { CHANGE_CHIP_ATTRIBUTE, ChangeChip } from './ChangeChip';
 import { describeDiscard } from './discardAction';
 import { discardLines } from './discardLines';
@@ -60,6 +60,13 @@ const GUTTER_CSS = [
 
 const LEAVE_MS = 120;
 const RESTORED_MS = 900;
+/**
+ * After a discard, the next line slides under the pointer and its button shows, to click again. Clicks this soon after
+ * one discard or the button showing are the rest of a double click, not a new discard.
+ */
+const REPEAT_MS = 150;
+/** How long typing has to pause for the change's chip to come back. */
+const TYPING_IDLE_MS = 400;
 
 /**
  * Discarding changes from a workspace file's diff. Hovering a changed line offers, in its gutter, to discard just that
@@ -74,9 +81,20 @@ export function useBlockDiscard({ enabled, oldFile, newFile, comparisonMethod, l
     [enabled, oldFile, newFile, comparisonMethod],
   );
   const blocks = useMemo(() => (meta ? listChangeBlocks(meta) : []), [meta]);
-  const regions = useMemo(() => listChangeRegions(blocks), [blocks]);
+  // The same changes stay the same objects while typing within them, so their chip stays put.
+  const lastRegions = useRef<ChangeRegion[]>([]);
+  const regions = useMemo(() => {
+    const listed = listChangeRegions(blocks);
+    if (!sameRegions(listed, lastRegions.current)) lastRegions.current = listed;
+    return lastRegions.current;
+  }, [blocks]);
+  const typing = useTyping(containerRef, newFile);
   const [hovered] = useState<HoveredLineStore>(() => createStore<ChangedLine | null>(() => null));
   const [pick, setPick] = useState<LinePick | null>(null);
+  // Where the diff puts the gutter buttons (it moves the same one from line to line).
+  const utilitySlot = useRef<Element | null>(null);
+  // The pointer's last place over the diff, to find what's under it once the lines move without it.
+  const pointer = useRef<{ x: number; y: number } | null>(null);
   // A pick belongs to the text it was made on.
   const picked = pick && pick.meta === meta && pick.lines.length > 0 ? pick : null;
   const [marks, setMarks] = useState<LineMarks>({});
@@ -104,8 +122,11 @@ export function useBlockDiscard({ enabled, oldFile, newFile, comparisonMethod, l
       onLineSelectionStart: pickRange,
       onLineSelectionChange: pickRange,
       onLineSelected: pickRange,
-      onLineEnter: ({ lineType, annotationSide, lineNumber }) =>
-        hovered.setState(lineType === 'change-addition' || lineType === 'change-deletion' ? { side: annotationSide, lineNumber } : null, true),
+      onLineEnter: ({ lineType, annotationSide, lineNumber, numberElement }) => {
+        const changed = lineType === 'change-addition' || lineType === 'change-deletion';
+        if (changed) utilitySlot.current = keepUtilityOn(numberElement, utilitySlot.current);
+        hovered.setState(changed ? { side: annotationSide, lineNumber } : null, true);
+      },
       onLineLeave: () => hovered.setState(null, true),
     };
   }, [enabled, hovered]);
@@ -124,6 +145,21 @@ export function useBlockDiscard({ enabled, oldFile, newFile, comparisonMethod, l
   useEffect(() => () => clearTimeout(restoredTimer.current), []);
   // Lines on their way out can't be discarded again (a double click, a repeated key).
   const leaving = useRef(false);
+  const lastDiscardAt = useRef(-Infinity);
+  const hoverAgain = useRef(false);
+
+  // The discarded lines are gone: the line now under the pointer is hovered, so a click there goes on discarding.
+  useEffect(() => {
+    if (!hoverAgain.current) return;
+    hoverAgain.current = false;
+    let frame = requestAnimationFrame(() => {
+      frame = requestAnimationFrame(() => {
+        hoverUnderPointer(containerRef.current, pointer.current);
+        lastDiscardAt.current = performance.now();
+      });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [meta, containerRef]);
 
   const discard = async (lines: ChangedLine[]): Promise<void> => {
     if (!meta || !onDiscard || lines.length === 0 || leaving.current) return;
@@ -135,9 +171,11 @@ export function useBlockDiscard({ enabled, oldFile, newFile, comparisonMethod, l
     }
     const { text, restoredAt } = discardLines(meta, lines, comparisonMethod);
     setPick(null);
-    // What was clicked goes with the lines: keep the diff's keys (⌘Z) working, and wait for the pointer to move.
+    // What was clicked goes with the lines: keep the diff's keys (⌘Z) working.
     containerRef.current?.focus({ preventScroll: true });
     hovered.setState(null, true);
+    lastDiscardAt.current = performance.now();
+    hoverAgain.current = true;
     setMarks({ restoredAt });
     onDiscard({ text, done: describeDiscard(lines).done });
     clearTimeout(restoredTimer.current);
@@ -187,14 +225,25 @@ export function useBlockDiscard({ enabled, oldFile, newFile, comparisonMethod, l
     if (!inText && !containerRef.current?.contains(document.activeElement)) containerRef.current?.focus({ preventScroll: true });
   };
 
+  const onPointerMove = (event: PointerEvent): void => {
+    pointer.current = { x: event.clientX, y: event.clientY };
+    typing.stop();
+  };
+  const onPointerLeave = (): void => {
+    pointer.current = null;
+  };
+
   const preview = (lines: ChangedLine[] | null): void => setMarks(lines ? { preview: lines } : {});
+  const discardClicked = (lines: ChangedLine[]): void => {
+    if (performance.now() - lastDiscardAt.current >= REPEAT_MS) void discard(lines);
+  };
   const actionable = enabled && Boolean(onDiscard);
 
   return {
     options,
     selectedLines: enabled ? (picked?.range ?? null) : undefined,
-    renderGutterUtility: actionable ? (): ReactNode => <LineDiscardButton hovered={hovered} onPreview={preview} onDiscard={(lines) => void discard(lines)} /> : undefined,
-    overlay: actionable && (
+    renderGutterUtility: actionable ? (): ReactNode => <LineDiscardButton hovered={hovered} picked={picked?.lines ?? null} onPreview={preview} onDiscard={discardClicked} /> : undefined,
+    overlay: actionable && !typing.active && (
       <ChangeChip
         containerRef={containerRef}
         regions={regions}
@@ -202,13 +251,52 @@ export function useBlockDiscard({ enabled, oldFile, newFile, comparisonMethod, l
         picked={picked?.lines ?? null}
         layout={layout}
         onPreview={preview}
-        onDiscard={(lines) => void discard(lines)}
+        onDiscard={discardClicked}
       />
     ),
     onKeyDown,
     dropPickFirst,
     onPointerDown,
+    onPointerMove,
+    onPointerLeave,
   };
+}
+
+/**
+ * Whether the text is being typed into (it changed with the caret in it, a moment ago): the change's chip stays out of
+ * the way meanwhile, as the lines move under it. Moving the pointer brings it back.
+ */
+function useTyping(containerRef: RefObject<HTMLElement | null>, text: FileContents): { active: boolean; stop: () => void } {
+  const [active, setActive] = useState(false);
+  useEffect(() => {
+    const focused = containerRef.current?.querySelector('diffs-container')?.shadowRoot?.activeElement;
+    if (!(focused instanceof HTMLElement && focused.isContentEditable)) return setActive(false);
+    setActive(true);
+    const timer = setTimeout(() => setActive(false), TYPING_IDLE_MS);
+    return () => clearTimeout(timer);
+  }, [containerRef, text]);
+  return { active, stop: () => setActive(false) };
+}
+
+/**
+ * The diff keeps its gutter button on the last picked line while lines are picked; the button of a line hovered
+ * outside the pick goes on that line instead.
+ */
+function keepUtilityOn(numberCell: HTMLElement, known: Element | null): Element | null {
+  const slot = (numberCell.getRootNode() as ParentNode).querySelector('[data-gutter-utility-slot]') ?? known;
+  if (slot && slot.parentElement !== numberCell) numberCell.append(slot);
+  return slot;
+}
+
+/**
+ * Hovers what is under the pointer anew, as if it had moved: the diff only follows the pointer, so lines sliding under
+ * a still pointer would stay unhovered. It's told the pointer left first, as the line it knew may be gone or another.
+ */
+function hoverUnderPointer(container: HTMLElement | null, at: { x: number; y: number } | null): void {
+  const root = container?.querySelector('diffs-container')?.shadowRoot;
+  if (!root || !at) return;
+  for (const pre of root.querySelectorAll('pre')) pre.dispatchEvent(new window.PointerEvent('pointerleave', { pointerType: 'mouse' }));
+  root.elementFromPoint(at.x, at.y)?.dispatchEvent(new window.PointerEvent('pointermove', { pointerType: 'mouse', clientX: at.x, clientY: at.y, bubbles: true, composed: true }));
 }
 
 function isSameLine(a: ChangedLine, b: ChangedLine | undefined): boolean {
