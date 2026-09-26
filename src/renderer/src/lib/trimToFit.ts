@@ -21,6 +21,27 @@ export function trimToFit(text: string, maxWidth: number, measure: Measure): str
 }
 
 /**
+ * `text` with its middle cut out to fit in `maxWidth`, keeping as much of both ends as fits (the start one character
+ * longer when they can't be even): `cm upd…/work/game` still tells the command and what it ran on. '' when not even the
+ * ellipsis fits.
+ */
+export function trimMiddleToFit(text: string, maxWidth: number, measure: Measure): string {
+  if (measure(text) <= maxWidth) return text;
+  if (measure(ELLIPSIS) > maxWidth) return '';
+  const chars = Array.from(text);
+  const shortened = (kept: number): string =>
+    chars.slice(0, Math.ceil(kept / 2)).join('') + ELLIPSIS + chars.slice(chars.length - Math.floor(kept / 2)).join('');
+  let fits = 0;
+  let tooWide = chars.length;
+  while (tooWide - fits > 1) {
+    const middle = (fits + tooWide) >> 1;
+    if (measure(shortened(middle)) <= maxWidth) fits = middle;
+    else tooWide = middle;
+  }
+  return shortened(fits);
+}
+
+/**
  * A folder (ending in `/`) shortened to fit by dropping whole segments from its middle, so what is left still reads
  * as a path: `/main/…/child_1/` for `/main/child-br/empty-branch2/child_1/`. Keeps the first segment and as many of
  * the last ones as fit; when not even `/main/…/` does, just `…/`, or nothing.

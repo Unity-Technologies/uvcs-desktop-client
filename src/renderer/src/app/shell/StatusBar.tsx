@@ -1,23 +1,26 @@
-import { TerminalSquare } from 'lucide-react';
-import { PathLabel } from '../../components/PathLabel';
+import { spec } from '@shared/domain/specs';
+import { ArrowDownToLine, Check, GitCommitVertical, TerminalSquare } from 'lucide-react';
 import { useIncomingSummary } from '../../features/incoming/useIncomingSummary';
+import { copyToClipboard } from '../../lib/copyToClipboard';
+import { hotkey } from '../../lib/shortcutRegistry';
 import { ProgressRing } from '../../ui/ProgressRing';
 import { navigation } from '../navigation/navigationStore';
 import { describeProgress } from '../operations/describeProgress';
 import { ringValue } from '../operations/progressBar';
 import { useRunningOperation, type RunningOperation } from '../operations/runningOperationsStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
+import { CommandHint } from './CommandHint';
 import { ranInWorkspace } from './commandLogScope';
 import { useCommandLogStore } from './commandLogStore';
 import { isUnseenFailure } from './unseenFailure';
-import { workspaceContext } from './workspaceContext';
+import { workspaceContext, type SyncState } from './workspaceContext';
 import styles from './StatusBar.module.css';
-import { hotkey } from '../../lib/shortcutRegistry';
 
 /**
- * A quiet line at the bottom: where the workspace is and what is running on the left, the command log on the right.
- * The last `cm` command is only a faint hint, shown on hover and while something runs; a failed one leaves a red dot
- * until the command log (which the hint opens) has been looked at, unless the operation that ran it dealt with it.
+ * A quiet line at the bottom. On the left, the loaded changeset (the branch is the top bar's), then what is running or
+ * whether the branch moved on. On the right, the command log: the last `cm` command is only a faint hint, shown on
+ * hover and while something runs; a failed one leaves a red dot until the log (which the hint opens) has been looked
+ * at, unless the operation that ran it dealt with it.
  */
 export function StatusBar() {
   const workspacePath = useWorkspacePath();
@@ -35,26 +38,18 @@ export function StatusBar() {
   return (
     <footer className={styles.statusBar} data-busy={Boolean(running)}>
       <div className={styles.context}>
-        {running ? (
-          <RunningActivity operation={running} />
-        ) : (
-          context && (
-            <>
-              <span className={styles.position}>
-                {context.position}
-                {context.branch && <PathLabel path={context.branch} fitContent />}
-              </span>
-              {context.sync && <span className={styles.separator}>·</span>}
-              {context.behind > 0 ? (
-                <button className={styles.behind} onClick={() => navigation.goToView('incoming')} data-tip="Review the incoming changesets">
-                  {context.sync}
-                </button>
-              ) : (
-                context.sync && <span>{context.sync}</span>
-              )}
-            </>
-          )
+        {context && info && (
+          <button
+            className={styles.item}
+            onClick={() => copyToClipboard(spec.changeset(info.loadedChangeset), 'Changeset spec')}
+            data-tip={context.description}
+            data-tip-sub={`${context.repository} · Click to copy ${context.changeset}`}
+          >
+            <GitCommitVertical size={12} className={styles.icon} />
+            <span className={styles.changeset}>{context.changeset}</span>
+          </button>
         )}
+        {running ? <RunningActivity operation={running} /> : context?.sync && <SyncItem sync={context.sync} />}
       </div>
       <button
         className={styles.log}
@@ -64,15 +59,31 @@ export function StatusBar() {
         data-tip-shortcut={hotkey('commandLog')}
         aria-label="Command log"
       >
-        {hint && (
-          <span className={styles.hint}>
-            {hint.commandLine}
-            <span className={styles.duration}>{hint.durationMs} ms</span>
-          </span>
-        )}
-        {failure ? <span className={styles.failedDot} /> : <TerminalSquare size={12} />}
+        {hint && <CommandHint entry={hint} />}
+        <span className={styles.logIcon}>
+          <TerminalSquare size={12} />
+          {failure && <span className={styles.failedDot} />}
+        </span>
       </button>
     </footer>
+  );
+}
+
+/** "Up to date", quietly; changesets to come in lead to Incoming. */
+function SyncItem({ sync }: { sync: SyncState }) {
+  if (sync.kind === 'upToDate') {
+    return (
+      <span className={styles.item} data-tip={sync.tip}>
+        <Check size={12} className={styles.upToDate} />
+        {sync.label}
+      </span>
+    );
+  }
+  return (
+    <button className={`${styles.item} ${styles.incoming}`} onClick={() => navigation.goToView('incoming')} data-tip={sync.tip}>
+      <ArrowDownToLine size={12} />
+      {sync.label}
+    </button>
   );
 }
 
@@ -81,11 +92,11 @@ function RunningActivity({ operation }: { operation: RunningOperation }) {
   const { bar, progress } = operation;
   const text = describeProgress(progress);
   return (
-    <>
-      <ProgressRing value={ringValue(bar)} size={11} />
+    <span className={`${styles.item} ${styles.running}`} role="status">
+      <ProgressRing value={ringValue(bar)} size={12} />
       <span className={styles.activity}>{operation.title}</span>
       <span className={styles.percent}>{bar.mode === 'sweep' ? null : text.percent}</span>
       <span className={styles.detail}>{text.stage}</span>
-    </>
+    </span>
   );
 }

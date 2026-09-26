@@ -4,34 +4,90 @@
   align-items: center;
   gap: var(--space-3);
   height: 24px;
-  padding: 0 var(--space-3);
+  padding: 0 var(--space-2);
   border-top: 1px solid var(--border-subtle);
   background: var(--bg-sidebar);
   color: var(--text-tertiary);
   font-size: var(--text-xs);
+  white-space: nowrap;
 }
 
 .context {
   display: flex;
-  flex: 1;
+  flex: 1 1 auto;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1);
   min-width: 0;
-  white-space: nowrap;
 }
 
-/* "cs:11 on" and the branch, which gives way first when the bar is narrow. */
-.position {
+/* A segment led by its icon; clickable ones light up on hover like the log button. */
+.item {
   display: flex;
-  gap: 0.3em;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  height: 18px;
+  padding: 0 6px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: inherit;
+  font-size: inherit;
+  line-height: 1;
+}
+
+button.item {
+  transition: background-color var(--duration-fast), color var(--duration-fast);
+}
+
+button.item:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+button.item:focus-visible,
+.log:focus-visible {
+  box-shadow: var(--focus-ring-visible);
+  outline: none;
+}
+
+.icon {
+  flex: none;
+  opacity: 0.8;
+}
+
+.changeset {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.upToDate {
+  flex: none;
+  color: var(--status-added);
+}
+
+.incoming {
+  color: var(--accent-text);
+}
+
+button.incoming:hover {
+  color: var(--accent-text);
+}
+
+/* The one segment that gives way when narrow: its stage is cut first. */
+.running {
+  flex: 0 1 auto;
   min-width: 0;
 }
 
 .activity {
+  flex: none;
   color: var(--text-secondary);
 }
 
 .detail {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
 }
@@ -48,27 +104,13 @@
   display: none;
 }
 
-.separator {
-  opacity: 0.6;
-}
-
-.behind {
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--accent-text);
-  font-size: inherit;
-}
-
-.behind:hover {
-  text-decoration: underline;
-}
-
+/* Gives way before anything on the left (its hint first), down to its icon. */
 .log {
   display: flex;
+  flex: 0 1000 auto;
   align-items: center;
   gap: 6px;
-  min-width: 0;
+  min-width: 24px;
   max-width: 45%;
   height: 18px;
   padding: 0 6px;
@@ -77,6 +119,7 @@
   background: none;
   color: inherit;
   font-size: inherit;
+  transition: background-color var(--duration-fast), color var(--duration-fast);
 }
 
 .log:hover {
@@ -86,10 +129,10 @@
 
 /* The last command is a hint, not content: it shows while the pointer is on the bar or something runs. */
 .hint {
-  overflow: hidden;
+  display: flex;
+  min-width: 0;
+  gap: 6px;
   opacity: 0;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   transition: opacity var(--duration-normal);
 }
 
@@ -99,19 +142,36 @@
   opacity: 1;
 }
 
+.commandLine {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+}
+
+.duration {
+  flex: none;
+  opacity: 0.7;
+}
+
 .log[data-failed='true'] {
   color: var(--status-deleted);
 }
 
-.duration {
-  margin-left: 6px;
-  opacity: 0.7;
+.logIcon {
+  position: relative;
+  display: flex;
+  flex: none;
 }
 
 .failedDot {
-  flex: none;
-  width: 7px;
-  height: 7px;
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: var(--status-deleted);
+  box-shadow: 0 0 0 1.5px var(--bg-sidebar);
 }
