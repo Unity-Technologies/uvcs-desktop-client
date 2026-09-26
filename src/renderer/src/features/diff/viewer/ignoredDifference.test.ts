@@ -5,6 +5,8 @@ describe('ignoredDifference', () => {
   it('names a change of line endings, a missing final one included', () => {
     expect(ignoredDifference('a\nb\n', 'a\r\nb\r\n')).toBe('lineEndings');
     expect(ignoredDifference('a\nb\n', 'a\nb')).toBe('lineEndings');
+    expect(ignoredDifference('a\rb\r', 'a\nb\n')).toBe('lineEndings');
+    expect(ignoredDifference('a\rb\r', 'a\r\nb\r\n')).toBe('lineEndings');
   });
 
   it('names a change of spaces and tabs at the ends of lines', () => {

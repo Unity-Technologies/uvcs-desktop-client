@@ -1,4 +1,5 @@
 import { diff3Merge } from 'node-diff3';
+import { dominantLineBreak, endsWithLineBreak, splitLines } from '../../../lib/lineBreaks';
 
 /** Names shown on the conflict markers. The destination is "current", the source is "incoming". */
 export interface ConflictLabels {
@@ -16,17 +17,16 @@ const MARKER_START = '<<<<<<< ';
 const MARKER_SEPARATOR = '=======';
 const MARKER_END = '>>>>>>> ';
 
-/** Splits text into lines that keep their line terminators, so joining them gives the text back exactly. */
-export function splitLines(text: string): string[] {
-  return text.match(/[^\n]*\n|[^\n]+$/g) ?? [];
-}
-
 /**
- * Three-way merge by lines. Changes made on only one side (or identically on both) are applied;
- * overlapping changes are written between conflict markers, destination first, for the user to decide.
+ * Three-way merge by lines (broken by LF, CRLF or lone CRs, each line keeping its own). Changes made on only one side
+ * (or identically on both) are applied; overlapping changes are written between conflict markers, destination first,
+ * for the user to decide. The markers end with the destination's most common line break, so a file of lone CRs stays one.
  */
 export function buildConflictDocument(base: string, source: string, destination: string, labels: ConflictLabels): ConflictDocument {
-  const regions = diff3Merge(splitLines(destination), splitLines(base), splitLines(source), { excludeFalseConflicts: true });
+  const [destinationLines, baseLines, sourceLines] = [destination, base, source].map(splitLines) as [string[], string[], string[]];
+  const lineBreak = dominantLineBreak(destinationLines) ?? dominantLineBreak(sourceLines) ?? dominantLineBreak(baseLines) ?? '\n';
+  const regions = diff3Merge(destinationLines, baseLines, sourceLines, { excludeFalseConflicts: true });
+  const ended = (text: string): string => (text === '' || endsWithLineBreak(text) ? text : text + lineBreak);
   let conflictCount = 0;
 
   const text = regions
@@ -35,11 +35,11 @@ export function buildConflictDocument(base: string, source: string, destination:
       if (!region.conflict) return '';
       conflictCount++;
       return [
-        `${MARKER_START}${labels.destination}\n`,
-        ensureTrailingNewline(region.conflict.a.join('')),
-        `${MARKER_SEPARATOR}\n`,
-        ensureTrailingNewline(region.conflict.b.join('')),
-        `${MARKER_END}${labels.source}\n`,
+        `${MARKER_START}${labels.destination}${lineBreak}`,
+        ended(region.conflict.a.join('')),
+        `${MARKER_SEPARATOR}${lineBreak}`,
+        ended(region.conflict.b.join('')),
+        `${MARKER_END}${labels.source}${lineBreak}`,
       ].join('');
     })
     .join('');
@@ -92,8 +92,4 @@ export function resolveEveryConflictRegion(text: string, choice: ConflictRegionC
 /** How many conflict regions are still open in the text. */
 export function countConflictRegions(text: string): number {
   return splitLines(text).filter((line) => line.startsWith(MARKER_START)).length;
-}
-
-function ensureTrailingNewline(text: string): string {
-  return text === '' || text.endsWith('\n') ? text : `${text}\n`;
 }

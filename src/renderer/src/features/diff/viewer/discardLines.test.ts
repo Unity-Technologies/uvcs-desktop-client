@@ -2,7 +2,8 @@ import { parseDiffFromFile } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
 import { blockLines, listChangeBlocks, type ChangedLine, type DisplayMeta } from './changeBlocks';
 import { lineDiffOptions, type ComparisonMethod } from './comparisonMethod';
-import { discardLines } from './discardLines';
+import { crAgainstLf, shownText } from '../../../lib/lineBreaks';
+import { discardLines, withOwnLines } from './discardLines';
 
 const diff = (original: string, modified: string): DisplayMeta =>
   parseDiffFromFile({ name: 'a.cs', contents: original }, { name: 'a.cs', contents: modified });
@@ -163,5 +164,53 @@ describe('discardLines and line endings', () => {
   it('follows the most common line ending of a file that mixes them when line endings are hidden', () => {
     const meta = diffUnder('ignoreEol', 'a\nb\nc\nd\n', 'a\r\nB\r\nc\r\nd\n');
     expect(discardLines(meta, blockLines(listChangeBlocks(meta)[0]!), 'ignoreEol').text).toBe('a\r\nb\r\nc\r\nd\n');
+  });
+});
+
+describe('discardLines in files with lone CRs', () => {
+  /** As the viewer does it: Pierre diffs the texts shown with lone CRs as LFs, the discard takes the files' own lines. */
+  const discardIn = (original: string, modified: string, pick: (meta: DisplayMeta) => ChangedLine[], method: ComparisonMethod = 'recognizeAll') => {
+    const meta = parseDiffFromFile(
+      { name: 'a.cs', contents: shownText(original) },
+      { name: 'a.cs', contents: shownText(modified) },
+      lineDiffOptions(method, crAgainstLf(original, modified)),
+    );
+    return discardLines(withOwnLines(meta, original, modified), pick(meta), method).text;
+  };
+  const everything = (meta: DisplayMeta) => listChangeBlocks(meta).flatMap(blockLines);
+  const mac = (...items: string[]) => items.map((item) => `${item}\r`).join('');
+
+  it('sees one changed line in a file of lone CRs, and reverts it keeping every CR', () => {
+    const original = mac(...TWENTY);
+    const changed = [...TWENTY];
+    changed[6] = 'line 7 changed';
+    const modified = mac(...changed);
+    expect(listChangeBlocks(diffUnder('recognizeAll', shownText(original), shownText(modified)))).toEqual([{ index: 0, oldStart: 7, oldLines: 1, newStart: 7, newLines: 1 }]);
+    expect(discardIn(original, modified, everything)).toBe(original);
+  });
+
+  it('removes and restores single lines of a file of lone CRs', () => {
+    expect(discardIn(mac('a', 'b', 'c'), mac('a', 'X', 'Y', 'c'), () => [addedLine(3)])).toBe(mac('a', 'X', 'c'));
+    expect(discardIn(mac('a', 'b', 'c'), mac('a', 'X', 'Y', 'c'), () => [removedLine(2)])).toBe(mac('a', 'b', 'X', 'Y', 'c'));
+  });
+
+  it('gives a restored last line without a line break a CR when lines follow it', () => {
+    expect(discardIn('a\rb', mac('a', 'b', 'c'), () => [removedLine(2)])).toBe(mac('a', 'b', 'b', 'c'));
+  });
+
+  it("keeps each line's own line break in a file that mixes CR, LF and CRLF", () => {
+    const original = 'a\r\nb\nc\rd\r\n';
+    expect(discardIn(original, 'a\r\nB\nc\rD\r\n', everything)).toBe(original);
+    expect(discardIn(original, 'a\r\nb\nc\rX\rd\r\n', everything)).toBe(original);
+  });
+
+  it('turns a file of lone CRs made LF back to CRs when line endings show', () => {
+    expect(discardIn(mac('a', 'b'), 'a\nb\n', everything)).toBe(mac('a', 'b'));
+    expect(discardIn('a\nb\n', mac('a', 'b'), everything)).toBe('a\nb\n');
+  });
+
+  it('gives restored lines the lone CRs of the file when line endings are hidden', () => {
+    expect(discardIn('a\nb\nc\n', mac('a', 'B', 'c'), everything, 'ignoreEol')).toBe(mac('a', 'b', 'c'));
+    expect(discardIn(mac('a', 'b', 'c'), 'a\r\nB\r\nc\r\n', everything, 'ignoreEol')).toBe('a\r\nb\r\nc\r\n');
   });
 });

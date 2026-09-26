@@ -1,6 +1,7 @@
 import { parseDiffFromFile } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
 import { listChangeBlocks } from './changeBlocks';
+import { crAgainstLf, shownText } from '../../../lib/lineBreaks';
 import { comparedPart, lineDiffOptions, type ComparisonMethod } from './comparisonMethod';
 
 const blocksUnder = (method: ComparisonMethod, original: string, modified: string) =>
@@ -54,5 +55,37 @@ describe('the diff under each comparison method', () => {
   it('keeps showing real changes among ignored ones, at their own lines', () => {
     const modified = 'a\r\nB\r\nc\r\n';
     expect(blocksUnder('ignoreEol', lf, modified)).toEqual([{ index: 0, oldStart: 2, oldLines: 1, newStart: 2, newLines: 1 }]);
+  });
+});
+
+describe('the diff of texts with lone CRs, shown as LFs', () => {
+  const shownBlocksUnder = (method: ComparisonMethod, original: string, modified: string) =>
+    listChangeBlocks(
+      parseDiffFromFile(
+        { name: 'a.cs', contents: shownText(original) },
+        { name: 'a.cs', contents: shownText(modified) },
+        lineDiffOptions(method, crAgainstLf(original, modified)),
+      ),
+    );
+  const cr = 'a\rb\rc\r';
+
+  it('compares CR, LF and CRLF equal when ignoring EOLs', () => {
+    for (const method of ['ignoreEol', 'ignoreEolAndWhitespace'] as const) {
+      expect(shownBlocksUnder(method, cr, 'a\nb\nc\n')).toEqual([]);
+      expect(shownBlocksUnder(method, cr, 'a\r\nb\r\nc\r\n')).toEqual([]);
+      expect(shownBlocksUnder(method, 'a\nb\nc\n', cr)).toEqual([]);
+    }
+  });
+
+  it('tells CR from LF and CRLF when line endings count', () => {
+    for (const method of ['recognizeAll', 'ignoreWhitespace'] as const) {
+      expect(shownBlocksUnder(method, cr, 'a\nb\nc\n')).toHaveLength(1);
+      expect(shownBlocksUnder(method, cr, 'a\r\nb\r\nc\r\n')).toHaveLength(1);
+      expect(shownBlocksUnder(method, cr, cr)).toEqual([]);
+    }
+  });
+
+  it('keeps a missing final line break apart from the line endings that changed', () => {
+    expect(shownBlocksUnder('recognizeAll', 'a\rb', 'a\nb')).toEqual([{ index: 0, oldStart: 1, oldLines: 1, newStart: 1, newLines: 1 }]);
   });
 });

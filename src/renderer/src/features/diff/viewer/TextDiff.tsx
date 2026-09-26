@@ -24,8 +24,13 @@ import { POINTER_FOCUS_ATTRIBUTE, usePointerFocusMark } from './usePointerFocusM
 import { useShadowStyle } from './useShadowStyle';
 import { useSyntaxHighlighter } from './useSyntaxHighlighter';
 import styles from './TextDiff.module.css';
+import { crAgainstLf, shownText } from '../../../lib/lineBreaks';
 import { syntaxLanguage } from '../../../lib/syntaxLanguage';
 
+/**
+ * The texts are the files' own, their lines broken by LF, CRLF or lone CRs. Pierre is given them as shown, lone CRs as
+ * LFs (`shownText`), and the editor holds them so: what it reports goes back to the file's own line breaks upstream.
+ */
 interface TextDiffProps {
   original: string;
   /** The modified text the diff starts from; changing it replaces what the editor holds. */
@@ -93,12 +98,24 @@ export function TextDiff({ original, modified, current, fileName, comparisonMeth
   currentText.current = current;
   // Stable inputs: new objects would make Pierre load the files again. A diff shown anew (another comparison method,
   // the whole file or its diff) starts from the text as it is now, unsaved edits included.
-  const oldFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: original }), [fileName, original]);
-  const newFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: currentText.current }), [fileName, modified, comparisonMethod, wholeFile]);
-  const currentFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: current }), [fileName, current]);
-  const parseDiffOptions = lineDiffOptions(comparisonMethod);
+  const oldFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: shownText(original) }), [fileName, original]);
+  const newFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: shownText(currentText.current) }), [fileName, modified, comparisonMethod, wholeFile]);
+  const currentFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: shownText(current) }), [fileName, current]);
+  const lfsDiffer = useMemo(() => crAgainstLf(original, modified), [original, modified]);
+  const parseDiffOptions = lineDiffOptions(comparisonMethod, lfsDiffer);
   const fileDiff = useMemo(() => shownDiff(oldFile, newFile, parseDiffOptions, sides), [oldFile, newFile, parseDiffOptions, sides.original, sides.modified]);
-  const discard = useBlockDiscard({ enabled: Boolean(onDiscard), oldFile, newFile: currentFile, comparisonMethod, layout, containerRef: container, onDiscard, onUndo: onUndoDiscard });
+  const discard = useBlockDiscard({
+    enabled: Boolean(onDiscard),
+    oldFile,
+    newFile: currentFile,
+    texts: { original, modified: current },
+    comparisonMethod,
+    parseDiffOptions,
+    layout,
+    containerRef: container,
+    onDiscard,
+    onUndo: onUndoDiscard,
+  });
   // A big read-only diff renders only the lines in view, shows as plain text at once and highlights in Pierre's
   // workers; past what's worth it, Pierre shows files with more lines than `tokenizeMaxLength` as plain text.
   const highlighting = syntaxHighlighting(original, modified, editable);
@@ -123,7 +140,7 @@ export function TextDiff({ original, modified, current, fileName, comparisonMeth
     editorRef,
     () => ({
       setText: (text) => {
-        const edit = editor.current && replacementEdit(editor.current.getText(), text);
+        const edit = editor.current && replacementEdit(editor.current.getText(), shownText(text));
         if (edit) editor.current!.applyEdits([edit]);
       },
       undo: () => editor.current?.undo(),

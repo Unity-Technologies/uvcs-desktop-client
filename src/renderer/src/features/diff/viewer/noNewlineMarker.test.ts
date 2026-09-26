@@ -7,6 +7,11 @@ describe('showsNoNewlineMarker', () => {
     expect(showsNoNewlineMarker('a\nb', 'a\nb\r\n')).toBe(true);
   });
 
+  it('takes a lone CR for a line break', () => {
+    expect(showsNoNewlineMarker('a\rb\r', 'a\rb')).toBe(true);
+    expect(showsNoNewlineMarker('a\rb\r', 'a\rc\r')).toBe(false);
+  });
+
   it('hides it when neither side ends with a line break', () => {
     expect(showsNoNewlineMarker('a\nb', 'a\nc')).toBe(false);
   });

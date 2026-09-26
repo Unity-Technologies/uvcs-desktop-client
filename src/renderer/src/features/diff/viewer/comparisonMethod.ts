@@ -57,17 +57,36 @@ export type LineDiffOptions = Pick<DiffLinesOptionsNonabortable, 'ignoreWhitespa
 /**
  * `diff` compares tokens with a `comparator` option when given one (every diff, lines included), though it only types
  * it for array diffs. Its `ignoreWhitespace` trims every whitespace, line breaks included: none of the official methods.
+ * `lfsDiffer`: the texts are shown with lone CRs as LFs, and one side's LFs were all CRs while the other's were LFs
+ * (`crAgainstLf`), so two lines ending with a LF differ unless the method ignores line endings.
  */
-function comparingUnder(method: ComparisonMethod): LineDiffOptions {
-  const comparator = (left: string, right: string): boolean => comparedPart(left, method) === comparedPart(right, method);
+function comparingUnder(method: ComparisonMethod, lfsDiffer: boolean): LineDiffOptions {
+  const comparator =
+    lfsDiffer && !ignoresLineEndings(method)
+      ? (left: string, right: string): boolean => {
+          const compared = comparedPart(left, method);
+          return compared === comparedPart(right, method) && !endsWithBareLf(compared);
+        }
+      : (left: string, right: string): boolean => comparedPart(left, method) === comparedPart(right, method);
   return { comparator } as LineDiffOptions;
+}
+
+function endsWithBareLf(line: string): boolean {
+  return line.endsWith('\n') && !line.endsWith('\r\n');
 }
 
 // Built once: options holding the same comparator stay equal between renders, so the diff isn't recomputed.
 const OPTIONS = Object.fromEntries(
-  COMPARISON_METHODS.map(({ value: method }): [ComparisonMethod, LineDiffOptions] => [method, method === 'recognizeAll' ? {} : comparingUnder(method)]),
+  COMPARISON_METHODS.map(({ value: method }): [ComparisonMethod, LineDiffOptions] => [method, method === 'recognizeAll' ? {} : comparingUnder(method, false)]),
+) as Record<ComparisonMethod, LineDiffOptions>;
+const OPTIONS_LFS_DIFFER = Object.fromEntries(
+  COMPARISON_METHODS.map(({ value: method }): [ComparisonMethod, LineDiffOptions] => [method, ignoresLineEndings(method) ? OPTIONS[method] : comparingUnder(method, true)]),
 ) as Record<ComparisonMethod, LineDiffOptions>;
 
-export function lineDiffOptions(method: ComparisonMethod): LineDiffOptions {
-  return OPTIONS[method];
+/**
+ * How to diff texts shown with lone CRs as LFs (`shownText`) under `method`; `lfsDiffer` when their LFs stand for
+ * different line breaks (`crAgainstLf` of the texts as they are).
+ */
+export function lineDiffOptions(method: ComparisonMethod, lfsDiffer = false): LineDiffOptions {
+  return (lfsDiffer ? OPTIONS_LFS_DIFFER : OPTIONS)[method];
 }

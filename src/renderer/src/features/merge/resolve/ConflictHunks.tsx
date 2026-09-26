@@ -8,6 +8,7 @@ import { resolveConflictRegion, type ConflictRegionChoice } from './threeWayMerg
 import { usePierreOptions } from './usePierreOptions';
 import styles from './ConflictHunks.module.css';
 import surface from './TextSurface.module.css';
+import { shownText } from '../../../lib/lineBreaks';
 import { syntaxLanguage } from '../../../lib/syntaxLanguage';
 
 interface ConflictHunksProps {
@@ -20,7 +21,7 @@ interface ConflictHunksProps {
 }
 
 /**
- * The merged file, read-only. Each conflict reads as two labeled blocks instead of raw markers: a header naming the
+ * The merged file, read-only, shown with lone CRs as LFs; choices resolve the text with its own line breaks. Each conflict reads as two labeled blocks instead of raw markers: a header naming the
  * destination's side with the choices for this conflict, its lines, then the source's side and its lines.
  */
 export function ConflictHunks({ path, text, labels, onChange }: ConflictHunksProps) {
@@ -44,7 +45,7 @@ export function ConflictHunks({ path, text, labels, onChange }: ConflictHunksPro
       {/* The component keeps its own copy of the conflicts, so it is recreated whenever the text changes. */}
       <UnresolvedFile
         key={contentKey(text)}
-        file={{ name: path, lang: syntaxLanguage(path), contents: text }}
+        file={{ name: path, lang: syntaxLanguage(path), contents: shownText(text) }}
         disableWorkerPool
         options={options}
         renderMergeConflictUtility={(action) => (

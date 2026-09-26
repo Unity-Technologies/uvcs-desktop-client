@@ -245,6 +245,12 @@ renderer/src/
   whitespaces, both, Recognize all; one global preference, Recognize all by default). Lines are compared trimmed
   (`features/diff/viewer/comparisonMethod`) through a line comparator handed to Pierre and `diff`, so the diff still
   shows and discards the original text. `cm` commands keep their own comparison: merges don't change with it.
+- **Line breaks**: lines end with LF, CRLF or the lone CR of classic Mac files (`lib/lineBreaks`). Pierre and `diff`
+  break lines only at LF, so everything they get (diffs, the editors, conflicts, whole versions) shows each lone CR as
+  a LF (`shownText`), with the same lines. Everything else keeps the files' own text: the editor's text goes back to
+  the file's line breaks as it's typed (`diskText`: kept lines keep theirs, new ones take the file's most common),
+  discards and merges split lines at all three, and one side of lone CRs against one of LFs still differs under the
+  methods that recognize line endings (`crAgainstLf`); a file mixing both can't tell which of its LFs were CRs.
 - **Images written as text**: an SVG reads as both (`toFileContent` ships its text and a data URL; past the text cap,
   only the image), so its diff shows rendered or as text, with a "Code | Image" switch in the header remembered per
   extension (`representations`, rendered by default). The text keeps every text feature (editing, discarding, the

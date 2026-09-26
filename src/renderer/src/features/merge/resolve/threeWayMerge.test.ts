@@ -1,16 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { buildConflictDocument, countConflictRegions, hasConflictMarkers, resolveConflictRegion, resolveEveryConflictRegion, splitLines } from './threeWayMerge';
+import { buildConflictDocument, countConflictRegions, hasConflictMarkers, resolveConflictRegion, resolveEveryConflictRegion } from './threeWayMerge';
 
 const labels = { source: '/main/task', destination: '/main' };
 const BASE = 'line1\nline2\nline3\nline4\nline5\n';
-
-describe('splitLines', () => {
-  it('keeps line terminators so the text can be rebuilt exactly', () => {
-    expect(splitLines('a\r\nb\nc')).toEqual(['a\r\n', 'b\n', 'c']);
-    expect(splitLines('')).toEqual([]);
-    expect(splitLines('a\nb\n').join('')).toBe('a\nb\n');
-  });
-});
 
 describe('buildConflictDocument', () => {
   it('applies non-overlapping changes from both sides without conflicts', () => {
@@ -42,6 +34,24 @@ describe('buildConflictDocument', () => {
     const document = buildConflictDocument('a\r\nb\r\n', 'a\r\nb\r\nc\r\n', 'z\r\nb\r\n', labels);
     expect(document.text).toBe('z\r\nb\r\nc\r\n');
   });
+
+  it('merges files of lone CRs line by line, keeping their CRs', () => {
+    const document = buildConflictDocument('a\rb\rc\rd\r', 'a\rb\rc\rD\r', 'A\rb\rc\rd\r', labels);
+    expect(document).toEqual({ text: 'A\rb\rc\rD\r', conflictCount: 0 });
+  });
+
+  it('ends the markers of a file of lone CRs with CRs, so resolving leaves only CRs', () => {
+    const document = buildConflictDocument('a\rb\rc\r', 'a\rS\rc\r', 'a\rD', labels);
+    expect(document.text).toBe('a\r<<<<<<< /main\rD\r=======\rS\rc\r>>>>>>> /main/task\r');
+    expect(countConflictRegions(document.text)).toBe(1);
+    expect(resolveConflictRegion(document.text, 0, 'incoming')).toBe('a\rS\rc\r');
+    expect(resolveEveryConflictRegion(document.text, 'both')).toBe('a\rD\rS\rc\r');
+  });
+
+  it("keeps each line's own line break in a file mixing CR, LF and CRLF", () => {
+    const base = 'a\r\nb\nc\rd\r';
+    expect(buildConflictDocument(base, 'a\r\nb\nc\rD\r', 'A\r\nb\nc\rd\r', labels).text).toBe('A\r\nb\nc\rD\r');
+  });
 });
 
 describe('resolveConflictRegion', () => {
@@ -72,6 +82,10 @@ describe('resolveConflictRegion', () => {
 });
 
 describe('hasConflictMarkers', () => {
+  it('finds markers on lines broken by lone CRs', () => {
+    expect(hasConflictMarkers('ok\r<<<<<<< dst\rD\r=======\rS\r>>>>>>> src\r')).toBe(true);
+  });
+
   it('only matches markers at the start of a line', () => {
     expect(hasConflictMarkers('const x = "<<<<<<< not a marker";\n')).toBe(false);
     expect(hasConflictMarkers('ok\n>>>>>>> destination\n')).toBe(true);

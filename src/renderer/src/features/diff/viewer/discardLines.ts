@@ -1,4 +1,5 @@
 import { listChangeBlocks, type ChangedLine, type DisplayMeta } from './changeBlocks';
+import { dominantLineBreak, endsWithLineBreak, lineBreakOf, splitLines } from '../../../lib/lineBreaks';
 import { ignoresLineEndings, type ComparisonMethod } from './comparisonMethod';
 
 export interface DiscardResult {
@@ -12,7 +13,8 @@ export interface DiscardResult {
  * chosen added lines go. Within a block, the lines that come back go before the added lines that stay, as a diff
  * shows them. Lines come back as they were when the diff shows line endings (`method`); when it hides them, they take
  * the modified file's most common line break, so the file doesn't end up mixing them. A line that had none (the end
- * of a file) gets that line break when something now follows it.
+ * of a file) gets that line break when something now follows it. Line breaks are LF, CRLF or a lone CR: give it
+ * the files' own lines (`withOwnLines`), not the ones Pierre shows with lone CRs as LFs.
  */
 export function discardLines(meta: DisplayMeta, lines: ChangedLine[], method: ComparisonMethod = 'recognizeAll'): DiscardResult {
   const adoptLineBreaks = ignoresLineEndings(method);
@@ -29,24 +31,24 @@ export function discardLines(meta: DisplayMeta, lines: ChangedLine[], method: Co
     result.push(...meta.additionLines.slice(next, newIndex));
     meta.deletionLines.slice(oldIndex, oldIndex + block.oldLines).forEach((line, offset) => {
       if (!restored.has(oldIndex + offset + 1)) return;
-      restoredAt.push(result.push(adoptLineBreaks ? line.replace(/\r?\n$/, lineBreak) : line));
+      restoredAt.push(result.push(adoptLineBreaks ? withLineBreak(line, lineBreak) : line));
     });
     meta.additionLines.slice(newIndex, newIndex + block.newLines).forEach((line, offset) => removed.has(newIndex + offset + 1) || result.push(line));
     next = newIndex + block.newLines;
   }
   result.push(...meta.additionLines.slice(next));
 
-  const text = result.map((line, index) => (index < result.length - 1 && !line.endsWith('\n') ? line + lineBreak : line)).join('');
+  const text = result.map((line, index) => (index < result.length - 1 && !endsWithLineBreak(line) ? line + lineBreak : line)).join('');
   return { text, restoredAt };
 }
 
-function dominantLineBreak(lines: string[]): string | undefined {
-  let crlf = 0;
-  let lf = 0;
-  for (const line of lines) {
-    if (line.endsWith('\r\n')) crlf++;
-    else if (line.endsWith('\n')) lf++;
-  }
-  if (crlf === 0 && lf === 0) return undefined;
-  return crlf > lf ? '\r\n' : '\n';
+/** The diff shown (lone CRs as LFs) over the texts' own lines, each with its own line break: the same lines, one by one. */
+export function withOwnLines(meta: DisplayMeta, original: string, modified: string): DisplayMeta {
+  return { ...meta, deletionLines: splitLines(original), additionLines: splitLines(modified) };
+}
+
+/** The line with `lineBreak` in place of its own; a line without one stays so. */
+function withLineBreak(line: string, lineBreak: string): string {
+  const own = lineBreakOf(line);
+  return own ? line.slice(0, line.length - own.length) + lineBreak : line;
 }

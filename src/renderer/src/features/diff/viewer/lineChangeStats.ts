@@ -1,4 +1,5 @@
 import { diffLines } from 'diff';
+import { crAgainstLf, shownText } from '../../../lib/lineBreaks';
 import { lineDiffOptions, type ComparisonMethod } from './comparisonMethod';
 
 export interface LineChangeStats {
@@ -6,11 +7,14 @@ export interface LineChangeStats {
   removed: number;
 }
 
-/** How many lines the modified text adds and removes compared with the original, as the diff shows them under `method`. */
+/**
+ * How many lines the modified text adds and removes compared with the original, as the diff shows them under `method`
+ * (lone CRs break lines too).
+ */
 export function lineChangeStats(original: string, modified: string, method: ComparisonMethod = 'recognizeAll'): LineChangeStats {
   let added = 0;
   let removed = 0;
-  for (const change of diffLines(original, modified, lineDiffOptions(method))) {
+  for (const change of diffLines(shownText(original), shownText(modified), lineDiffOptions(method, crAgainstLf(original, modified)))) {
     if (change.added) added += change.count;
     else if (change.removed) removed += change.count;
   }

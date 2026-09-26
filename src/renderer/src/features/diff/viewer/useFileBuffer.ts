@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { api } from '../../../api/client';
 import { guardLeaving } from '../../../app/navigation/leaveGuard';
+import { diskText } from '../../../lib/lineBreaks';
 import { fileNameOf } from '../../../lib/text';
 import { toast } from '../../../ui/toast/toastStore';
 import type { EditorHandle } from './editorHandle';
@@ -11,13 +12,13 @@ import type { DiffContents } from './useDiffContents';
 export interface FileBuffer {
   /** The contents the diff was given: the file as read, held still while it has unsaved edits. */
   shown: DiffContents;
-  /** The text typed into the diff that the disk doesn't have yet; null when there is none. */
+  /** The text typed into the diff that the disk doesn't have yet, with the file's own line breaks; null when there is none. */
   unsaved: string | null;
   /** The file changed on disk while it had unsaved edits. */
   changedOnDisk: boolean;
   /** The editor holding the text, once the diff shows it. */
   editor: RefObject<EditorHandle | null>;
-  /** Takes every change of the editor's text. */
+  /** Takes every change of the editor's text (lone CRs shown as LFs). */
   onEdit: (text: string) => void;
   /** Writes the unsaved text; false when that failed. */
   save: () => Promise<boolean>;
@@ -119,7 +120,9 @@ export function useFileBuffer({ workspacePath, contents, path, onMatchesBase }: 
     unsaved,
     changedOnDisk,
     editor,
-    onEdit: (text) => {
+    onEdit: (shown) => {
+      // The editor shows a file of lone CRs with LFs: its lines keep their own line breaks, new ones take the file's.
+      const text = diskText(shown, latest.current.saved);
       const next = text === latest.current.saved ? null : text;
       latest.current.unsaved = next;
       setUnsaved(next);
