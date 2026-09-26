@@ -1,6 +1,6 @@
 import { Virtualizer } from '@pierre/diffs';
 import { Editor } from '@pierre/diffs/edit';
-import { EditProvider, File, MultiFileDiff, VirtualizerContext } from '@pierre/diffs/react';
+import { EditProvider, File, MultiFileDiff, VirtualizerContext, WorkerPoolContext } from '@pierre/diffs/react';
 import { useCallback, useImperativeHandle, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
 import { focusMain } from '../../../lib/mainFocus';
@@ -10,10 +10,11 @@ import { lineDiffOptions, type ComparisonMethod } from './comparisonMethod';
 import { useDiffPreferences } from './diffPreferencesStore';
 import type { EditorHandle } from './editorHandle';
 import { editsWholeFile } from './editsWholeFile';
+import { highlightWorkers } from './highlightWorkers';
 import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
 import { PaneScrollbars } from './PaneScrollbars';
 import { replacementEdit } from './replacementEdit';
-import { highlightsSyntax } from './syntaxHighlighting';
+import { syntaxHighlighting } from './syntaxHighlighting';
 import { useBlockDiscard, type DiscardRequest } from './useBlockDiscard';
 import { POINTER_FOCUS_ATTRIBUTE, usePointerFocusMark } from './usePointerFocusMark';
 import { useShadowStyle } from './useShadowStyle';
@@ -69,7 +70,7 @@ export function TextDiff({ original, modified, current, fileName, comparisonMeth
   const theme = useResolvedTheme();
   const { layout, collapseUnchanged, wrapLines } = useDiffPreferences();
   const container = useRef<HTMLDivElement | null>(null);
-  // The whole file renders only the lines in view (and highlights them as they come): files can be huge.
+  // The whole file (and a big read-only diff) renders only the lines in view: files can be huge.
   const [virtualizer] = useState(() => new Virtualizer());
   const setContainer = useCallback(
     (element: HTMLDivElement | null) => {
@@ -91,8 +92,12 @@ export function TextDiff({ original, modified, current, fileName, comparisonMeth
   const currentFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: current }), [fileName, current]);
   const parseDiffOptions = lineDiffOptions(comparisonMethod);
   const discard = useBlockDiscard({ enabled: Boolean(onDiscard), oldFile, newFile: currentFile, comparisonMethod, layout, containerRef: container, onDiscard, onUndo: onUndoDiscard });
-  // Pierre shows files with more lines than this as plain text.
-  const tokenizeMaxLength = highlightsSyntax(original, modified) ? undefined : 0;
+  // A big read-only diff renders only the lines in view, shows as plain text at once and highlights in Pierre's
+  // workers; past what's worth it, Pierre shows files with more lines than `tokenizeMaxLength` as plain text.
+  const highlighting = syntaxHighlighting(original, modified, editable);
+  const tokenizeMaxLength = highlighting === 'off' ? 0 : undefined;
+  const workers = highlighting === 'background' ? highlightWorkers() : undefined;
+  const virtualized = !editable && highlighting !== 'inline';
   const options = useMemo(
     () => ({ ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }), parseDiffOptions, tokenizeMaxLength, ...discard.options }),
     [theme, layout, collapseUnchanged, wrapLines, parseDiffOptions, tokenizeMaxLength, discard.options],
@@ -172,20 +177,25 @@ export function TextDiff({ original, modified, current, fileName, comparisonMeth
               <File file={newFile} options={fileOptions} edit onEditChange={(event) => onEdit?.(event.file.contents)} disableWorkerPool style={{ minHeight: '100%' }} />
             </VirtualizerContext.Provider>
           ) : (
-            <MultiFileDiff
-              // Pierre computes the diff once per pair of files, whatever the options say later.
-              key={comparisonMethod}
-              oldFile={oldFile}
-              newFile={newFile}
-              options={options}
-              selectedLines={discard.selectedLines}
-              renderGutterUtility={discard.renderGutterUtility}
-              edit={editable}
-              onEditChange={(event) => onEdit?.(event.editor.getText())}
-              onEditComplete={() => 'reject'}
-              disableWorkerPool
-              style={{ minHeight: '100%' }}
-            />
+            <VirtualizerContext.Provider value={virtualized ? virtualizer : undefined}>
+              <WorkerPoolContext.Provider value={workers}>
+                <MultiFileDiff
+                  // Pierre computes the diff once per pair of files, whatever the options say later, and takes the
+                  // workers and virtualizer when it's created (neither for an editable diff: typing doesn't start it anew).
+                  key={`${comparisonMethod}:${editable ? 'editable' : highlighting}`}
+                  oldFile={oldFile}
+                  newFile={newFile}
+                  options={options}
+                  selectedLines={discard.selectedLines}
+                  renderGutterUtility={discard.renderGutterUtility}
+                  edit={editable}
+                  onEditChange={(event) => onEdit?.(event.editor.getText())}
+                  onEditComplete={() => 'reject'}
+                  disableWorkerPool={!workers}
+                  style={{ minHeight: '100%' }}
+                />
+              </WorkerPoolContext.Provider>
+            </VirtualizerContext.Provider>
           )}
         </EditProvider>
         <PaneScrollbars containerRef={container} />

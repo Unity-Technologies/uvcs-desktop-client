@@ -14,7 +14,10 @@
   background: var(--label-bg);
 }
 
+/* A note just tells: slimmer and quieter than a line that asks something. */
 .notice[data-tone='info'] {
+  min-height: 26px;
+  padding-block: 2px;
   background: var(--bg-subtle);
   color: var(--text-secondary);
 }

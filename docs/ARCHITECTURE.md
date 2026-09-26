@@ -213,9 +213,11 @@ renderer/src/
   edit look the same: the editor is always on, so nothing in the diff moves when typing starts. Each pane of code
   scrolls sideways on its own and its bar would sit at the end of the file, so `PaneScrollbars` keeps one per pane at
   the bottom of the view (diffs, the whole-file editor, merge resolution). The whole-file editor renders only the lines
-  in view (Pierre's `Virtualizer` on the diff's scrolling element), and past `syntaxHighlighting`'s limit (both
-  versions together) a diff is plain text under a note: Shiki reads whole files on the main thread, and a 50,000-line
-  file took 19 s to open whole and 30 s as a diff (now 0.2 s and 0.3 s).
+  in view (Pierre's `Virtualizer` on the diff's scrolling element). Shiki reads whole files at once, never just the
+  lines in view, so `syntaxHighlighting` picks by size (both versions together): up to 400 KB on the main thread; a
+  read-only diff up to 4 MB also renders only the lines in view, shows as plain text at once and highlights in Pierre's
+  workers (`highlightWorkers`, a 50,000-line diff in 6 s); anything bigger, and an editable diff past 400 KB (Pierre
+  highlights editors on the main thread, pool or not), is plain text, with a quiet "Plain text" in the header.
 - **Leaving unsaved edits**: `app/navigation/leaveGuard` lets unsaved edits guard the way out. Selecting another file
   (`selectAfterLeaving`), another view (`goToView`) or checking in asks Save / Don't save / Cancel first; a diff that goes
   away without asking saves its edits, so work is never lost. Closing the window, quitting (⌘Q, whichever window has

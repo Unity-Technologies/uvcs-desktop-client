@@ -1,11 +1,28 @@
 /**
- * How much text (both versions together) a diff highlights. Highlighting reads whole files at once, on the main thread,
- * at about 1.4 s a megabyte, and an editable diff highlights both versions twice: past this (about 2.5 s), a diff opens
- * as plain text instead of freezing the app.
+ * How a diff is syntax highlighted: `inline` on the main thread before it shows, `background` in Pierre's workers
+ * after it shows as plain text, or `off` (plain text).
+ */
+export type SyntaxHighlighting = 'inline' | 'background' | 'off';
+
+/**
+ * How much text (both versions together) is highlighted on the main thread. Shiki reads whole files at once and the
+ * app waits, about 1.7 s a megabyte for an editable diff: past this (about 0.8 s), a diff doesn't freeze the app.
  */
 export const MAX_HIGHLIGHTED_CHARS = 400_000;
 
-/** Whether a diff of these texts (or a file edited on its own, with its loaded version) is syntax highlighted. */
-export function highlightsSyntax(original: string, modified: string): boolean {
-  return original.length + modified.length <= MAX_HIGHLIGHTED_CHARS;
+/**
+ * How much text a read-only diff highlights in the background. The workers take about 2 s a megabyte and 150 MB of
+ * memory a megabyte, and the app pauses about 0.13 s a megabyte to take the highlighted lines in: past this (about 8 s,
+ * half a second and 600 MB), plain text. Text past 10 MB a side (`MAX_TEXT_BYTES`) doesn't reach a diff at all.
+ */
+export const MAX_BACKGROUND_HIGHLIGHTED_CHARS = 4_000_000;
+
+/**
+ * How a diff of these texts is highlighted. Pierre highlights an editable diff (and the whole-file editor) on the main
+ * thread whatever the workers could do, so only read-only diffs go to the background.
+ */
+export function syntaxHighlighting(original: string, modified: string, editable: boolean): SyntaxHighlighting {
+  const size = original.length + modified.length;
+  if (size <= MAX_HIGHLIGHTED_CHARS) return 'inline';
+  return !editable && size <= MAX_BACKGROUND_HIGHLIGHTED_CHARS ? 'background' : 'off';
 }

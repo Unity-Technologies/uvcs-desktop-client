@@ -1,0 +1,10 @@
+.indicator {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  cursor: default;
+  user-select: none;
+}
