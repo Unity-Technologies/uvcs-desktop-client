@@ -83,6 +83,14 @@ export function listChangeRegions(blocks: ChangeBlock[]): ChangeRegion[] {
   return regions;
 }
 
+/** Whether two lists of changes cover the same lines: typing within a changed line leaves its change as it was. */
+export function sameRegions(a: ChangeRegion[], b: ChangeRegion[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every((region, index) => region.lines.length === b[index]!.lines.length && region.lines.every((line, at) => line.side === b[index]!.lines[at]!.side && line.lineNumber === b[index]!.lines[at]!.lineNumber))
+  );
+}
+
 export function regionContaining(regions: ChangeRegion[], line: ChangedLine): ChangeRegion | undefined {
   return regions.find((region) => region.lines.some((candidate) => candidate.side === line.side && candidate.lineNumber === line.lineNumber));
 }

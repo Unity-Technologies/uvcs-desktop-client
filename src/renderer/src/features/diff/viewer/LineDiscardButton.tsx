@@ -10,15 +10,17 @@ export type HoveredLineStore = StoreApi<ChangedLine | null>;
 
 interface LineDiscardButtonProps {
   hovered: HoveredLineStore;
+  /** Lines picked in the gutter: the change's chip acts on them, so they show no button of their own. */
+  picked: ChangedLine[] | null;
   /** The line the button would discard while the pointer is on it, to preview the result. */
   onPreview: (lines: ChangedLine[] | null) => void;
   onDiscard: (lines: ChangedLine[]) => void;
 }
 
 /** In the gutter of the changed line under the pointer: removes that one added line, or restores that one removed line. */
-export function LineDiscardButton({ hovered, onPreview, onDiscard }: LineDiscardButtonProps) {
+export function LineDiscardButton({ hovered, picked, onPreview, onDiscard }: LineDiscardButtonProps) {
   const line = useStore(hovered);
-  if (!line) return null;
+  if (!line || picked?.some((each) => each.side === line.side && each.lineNumber === line.lineNumber)) return null;
 
   const label = lineActionLabel(line);
   return (

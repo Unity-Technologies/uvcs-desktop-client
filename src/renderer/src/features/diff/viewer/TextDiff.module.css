@@ -25,7 +25,8 @@
   min-height: 0;
 }
 
-.frame:has(> .diff:focus-visible)::after {
+/* For the keyboard only: not after a click in the diff (`usePointerFocusMark`). */
+.frame:has(> .diff:focus-visible:not([data-pointer-focus]))::after {
   content: '';
   position: absolute;
   inset: 0;

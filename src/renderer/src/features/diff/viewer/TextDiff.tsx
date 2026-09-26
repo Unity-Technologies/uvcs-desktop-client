@@ -12,6 +12,7 @@ import { editsWholeFile } from './editsWholeFile';
 import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
 import { replacementEdit } from './replacementEdit';
 import { useBlockDiscard, type DiscardRequest } from './useBlockDiscard';
+import { POINTER_FOCUS_ATTRIBUTE, usePointerFocusMark } from './usePointerFocusMark';
 import { useShadowStyle } from './useShadowStyle';
 import { useSyntaxHighlighter } from './useSyntaxHighlighter';
 import styles from './TextDiff.module.css';
@@ -39,11 +40,12 @@ interface TextDiffProps {
 }
 
 /**
- * Each side's code scrolls sideways, so Tab stops there to scroll it with the arrows: show where it stopped. The
- * caret's line keeps its diff color (the editor would tint it blue, like picked lines): its number shows it.
+ * Each side's code scrolls sideways, so Tab stops there to scroll it with the arrows: show where it stopped (after the
+ * keyboard took it there, not a click). The caret's line keeps its diff color (the editor would tint it blue, like
+ * picked lines): its number shows it.
  */
 const SHADOW_CSS = [
-  '[data-code]:focus-visible { outline: var(--focus-outline); outline-offset: -2px; }',
+  `[data-code]:focus-visible:not([${POINTER_FOCUS_ATTRIBUTE}]) { outline: var(--focus-outline); outline-offset: -2px; }`,
   '[data-editor-active-line]:not([data-selected-line]) { --diffs-editor-active-line-source-mix: 100%; --mix-selection-light: 100%; --mix-selection-dark: 100%; }',
 ].join('\n');
 
@@ -82,6 +84,7 @@ export function TextDiff({ original, modified, current, fileName, comparisonMeth
   const fileOptions = useMemo(() => pierreFileOptions({ theme, wrapLines }), [theme, wrapLines]);
   const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);
   useShadowStyle(container, SHADOW_CSS);
+  const pointerFocus = usePointerFocusMark();
 
   const isTyping = (): boolean => {
     const active = container.current?.querySelector('diffs-container')?.shadowRoot?.activeElement;
@@ -141,6 +144,11 @@ export function TextDiff({ original, modified, current, fileName, comparisonMeth
         onKeyDownCapture={onKeyDownCapture}
         onKeyDown={onKeyDown}
         onPointerDown={discard.onPointerDown}
+        onPointerDownCapture={pointerFocus.onPointerDownCapture}
+        onPointerMove={discard.onPointerMove}
+        onPointerLeave={discard.onPointerLeave}
+        onFocus={pointerFocus.onFocus}
+        onBlur={pointerFocus.onBlur}
       >
         <EditProvider createEditor={createEditor}>
           {wholeFile ? (
