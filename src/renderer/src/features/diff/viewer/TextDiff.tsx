@@ -21,6 +21,7 @@ import { POINTER_FOCUS_ATTRIBUTE, usePointerFocusMark } from './usePointerFocusM
 import { useShadowStyle } from './useShadowStyle';
 import { useSyntaxHighlighter } from './useSyntaxHighlighter';
 import styles from './TextDiff.module.css';
+import { syntaxLanguage } from '../../../lib/syntaxLanguage';
 
 interface TextDiffProps {
   original: string;
@@ -87,9 +88,9 @@ export function TextDiff({ original, modified, current, fileName, comparisonMeth
   currentText.current = current;
   // Stable inputs: new objects would make Pierre load the files again. A diff shown anew (another comparison method,
   // the whole file or its diff) starts from the text as it is now, unsaved edits included.
-  const oldFile = useMemo(() => ({ name: fileName, contents: original }), [fileName, original]);
-  const newFile = useMemo(() => ({ name: fileName, contents: currentText.current }), [fileName, modified, comparisonMethod, wholeFile]);
-  const currentFile = useMemo(() => ({ name: fileName, contents: current }), [fileName, current]);
+  const oldFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: original }), [fileName, original]);
+  const newFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: currentText.current }), [fileName, modified, comparisonMethod, wholeFile]);
+  const currentFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: current }), [fileName, current]);
   const parseDiffOptions = lineDiffOptions(comparisonMethod);
   const fileDiff = useMemo(() => shownDiff(oldFile, newFile, parseDiffOptions), [oldFile, newFile, parseDiffOptions]);
   const discard = useBlockDiscard({ enabled: Boolean(onDiscard), oldFile, newFile: currentFile, comparisonMethod, layout, containerRef: container, onDiscard, onUndo: onUndoDiscard });
