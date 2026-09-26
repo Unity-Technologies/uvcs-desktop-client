@@ -4,6 +4,7 @@
 // itself.
 
 import { useEffect, useState } from 'react';
+import { decodedSize } from './decodedSize';
 
 export interface DecodedImage {
   /** The data URL, ready for <img src>. */
@@ -20,9 +21,6 @@ export type DecodeState =
   | { status: 'ready'; image: DecodedImage }
   | { status: 'error' };
 
-/** SVGs without width/height decode as 0×0; give them a sane canvas. */
-const FALLBACK_SIZE = { width: 300, height: 150 };
-
 export function useDecodedImage(dataUrl: string | null | undefined): DecodeState {
   const [state, setState] = useState<DecodeState>({ status: 'idle' });
 
@@ -36,15 +34,8 @@ export function useDecodedImage(dataUrl: string | null | undefined): DecodeState
     const img = new Image();
     img.onload = () => {
       if (stale) return;
-      setState({
-        status: 'ready',
-        image: {
-          src: dataUrl,
-          el: img,
-          width: img.naturalWidth || FALLBACK_SIZE.width,
-          height: img.naturalHeight || FALLBACK_SIZE.height,
-        },
-      });
+      const size = decodedSize({ width: img.naturalWidth, height: img.naturalHeight }, dataUrl.startsWith('data:image/svg+xml'));
+      setState({ status: 'ready', image: { src: dataUrl, el: img, ...size } });
     };
     img.onerror = () => {
       if (!stale) setState({ status: 'error' });

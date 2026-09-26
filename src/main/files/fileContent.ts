@@ -20,6 +20,13 @@ const IMAGE_MIME_TYPES: Record<string, string> = {
   '.webp': 'image/webp',
   '.ico': 'image/x-icon',
 };
+/**
+ * Images written as text: shown both as a text diff and rendered (the renderer only ever paints them through `<img>`,
+ * where scripts don't run and nothing outside the file loads).
+ */
+const TEXT_IMAGE_MIME_TYPES: Record<string, string> = {
+  '.svg': 'image/svg+xml',
+};
 
 export const EMPTY_CONTENT: FileContent = { text: '', isBinary: false, size: 0 };
 
@@ -34,9 +41,20 @@ export function toFileContent(bytes: Buffer, fileName: string): FileContent {
     return { isBinary: true, size: bytes.length, imageDataUrl: `data:${imageMimeType};base64,${bytes.toString('base64')}` };
   }
 
+  const textImageMimeType = TEXT_IMAGE_MIME_TYPES[extname(fileName).toLowerCase()];
+  if (textImageMimeType) return toTextImageContent(bytes, textImageMimeType);
+
   if (looksBinary(bytes)) return { isBinary: true, size: bytes.length };
   if (bytes.length > MAX_TEXT_BYTES) return { isBinary: true, size: bytes.length, tooLarge: 'text' };
   return { isBinary: false, size: bytes.length, text: bytes.toString('utf8') };
+}
+
+/** Text and image while the text is small enough to diff; past that (or not text, e.g. UTF-16), an image only. */
+function toTextImageContent(bytes: Buffer, mimeType: string): FileContent {
+  if (bytes.length > MAX_IMAGE_BYTES) return { isBinary: true, size: bytes.length, tooLarge: 'image' };
+  const imageDataUrl = `data:${mimeType};base64,${bytes.toString('base64')}`;
+  if (looksBinary(bytes) || bytes.length > MAX_TEXT_BYTES) return { isBinary: true, size: bytes.length, imageDataUrl };
+  return { isBinary: false, size: bytes.length, text: bytes.toString('utf8'), imageDataUrl };
 }
 
 function looksBinary(bytes: Buffer): boolean {

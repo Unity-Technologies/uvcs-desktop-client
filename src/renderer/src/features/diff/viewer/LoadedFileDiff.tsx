@@ -1,4 +1,4 @@
-import { AppWindow, Columns2, EyeOff, FileText, FoldVertical, RefreshCw, Rows2, WrapText } from 'lucide-react';
+import { AppWindow, Code, Columns2, EyeOff, FileText, FoldVertical, ImageIcon, RefreshCw, Rows2, WrapText } from 'lucide-react';
 import { Suspense, useMemo, type ReactNode, type RefObject } from 'react';
 import type { FileContent } from '@shared/domain/content';
 import { api } from '../../../api/client';
@@ -12,12 +12,12 @@ import { IconButton } from '../../../ui/IconButton';
 import { PaneToolbarGroup } from '../../../ui/PaneToolbar';
 import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { CenteredSpinner } from '../../../ui/Spinner';
-import { absolutePath } from '../../pendingChanges/pendingChangeOperations';
+import { absolutePath, extensionOf } from '../../pendingChanges/pendingChangeOperations';
 import { canDiscardChanges } from './canDiscardChanges';
 import { canEditInPlace } from './canEditInPlace';
 import { comparisonMethodLabel, type ComparisonMethod } from './comparisonMethod';
 import { ComparisonMethodMenu } from './ComparisonMethodMenu';
-import { diffPresentation } from './diffPresentation';
+import { diffPresentation, hasTwoRepresentations, type Representation } from './diffPresentation';
 import { useDiffPreferences, type DiffLayout } from './diffPreferencesStore';
 import { DiffNotice } from './DiffNotice';
 import { DiffViewerFrame } from './DiffViewerFrame';
@@ -53,15 +53,31 @@ interface LoadedFileDiffProps {
  * past is typed into directly, like in any editor: Discard and Save show up as soon as it has unsaved edits.
  */
 export function LoadedFileDiff({ workspacePath, contents, fileName, title, identicalDescription, compareControls, onMatchesBase }: LoadedFileDiffProps) {
-  const { layout, collapseUnchanged, wrapLines, comparisonMethod, imageMode, setLayout, setCollapseUnchanged, setWrapLines, setComparisonMethod, setImageMode } =
-    useDiffPreferences();
+  const {
+    layout,
+    collapseUnchanged,
+    wrapLines,
+    comparisonMethod,
+    imageMode,
+    representations,
+    setLayout,
+    setCollapseUnchanged,
+    setWrapLines,
+    setComparisonMethod,
+    setImageMode,
+    setRepresentation,
+  } = useDiffPreferences();
   const editablePath = canEditInPlace(contents.original, contents.modified) ? contents.modified.path : null;
   const buffer = useFileBuffer({ workspacePath, contents, path: editablePath, onMatchesBase });
   const { left, right, original, modified } = buffer.shown;
   const current = buffer.unsaved ?? right.text ?? '';
   const dirty = buffer.unsaved !== null;
 
-  const presentation = diffPresentation(left, right);
+  // Files that are text and an image at once (SVG) show rendered unless the user picked the text for their type.
+  const twoRepresentations = hasTwoRepresentations(left, right);
+  const extension = extensionOf(fileName)?.toLowerCase() ?? '';
+  const representation = representations[extension] ?? 'image';
+  const presentation = diffPresentation(left, right, representation);
   const isText = presentation.kind === 'text';
   const editable = isText && editablePath !== null;
   const shownStats = useMemo(
@@ -101,6 +117,17 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
     </PaneToolbarGroup>
   );
 
+  const representationControl = twoRepresentations && (
+    <SegmentedControl<Representation>
+      value={representation}
+      onChange={(value) => setRepresentation(extension, value)}
+      segments={[
+        { value: 'text', label: <><Code size={13} /> Code</>, title: 'Compare the text' },
+        { value: 'image', label: <><ImageIcon size={13} /> Image</>, title: 'Compare the rendered images' },
+      ]}
+    />
+  );
+
   const controls = isText ? (
     <>
       {compareControls}
@@ -131,17 +158,21 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
         ]}
       />
       {unsavedControls}
+      {representationControl}
     </>
   ) : (
-    // Single-sided images (added or deleted) are previews: no modes to offer.
-    presentation.kind === 'image' &&
-    presentation.comparable && (
-      <SegmentedControl<ImageDiffMode>
-        value={imageMode}
-        onChange={setImageMode}
-        segments={IMAGE_DIFF_MODES.map((mode) => ({ value: mode.value, label: <>{mode.icon} {mode.label}</>, title: mode.title }))}
-      />
-    )
+    <>
+      {/* Single-sided images (added or deleted) are previews: no modes to offer. */}
+      {presentation.kind === 'image' && presentation.comparable && (
+        <SegmentedControl<ImageDiffMode>
+          value={imageMode}
+          onChange={setImageMode}
+          segments={IMAGE_DIFF_MODES.map((mode) => ({ value: mode.value, label: <>{mode.icon} {mode.label}</>, title: mode.title }))}
+        />
+      )}
+      {unsavedControls}
+      {representationControl}
+    </>
   );
 
   const recognizeAll = <Button size="small" onClick={() => setComparisonMethod('recognizeAll')}>Recognize all</Button>;
@@ -209,7 +240,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   } else if (presentation.kind === 'image') {
     body = (
       <Suspense fallback={<CenteredSpinner />}>
-        <ImageDiffViewer original={left} modified={right} mode={imageMode} />
+        <ImageDiffViewer original={left} modified={dirty ? renderedEdits(right, current) : right} mode={imageMode} />
       </Suspense>
     );
   } else {
@@ -242,6 +273,13 @@ function TextDiffBody({ original, modified, ...rest }: TextDiffBodyProps) {
       <TextDiff original={original ?? ''} modified={modified ?? ''} {...rest} />
     </Suspense>
   );
+}
+
+/** The unsaved text of a file that is also an image (SVG), rendered in place of the one on disk. */
+function renderedEdits(saved: FileContent, text: string): FileContent {
+  const mimeType = saved.imageDataUrl?.slice('data:'.length, saved.imageDataUrl.indexOf(';'));
+  if (!mimeType) return saved;
+  return { ...saved, text, size: new TextEncoder().encode(text).length, imageDataUrl: `data:${mimeType};charset=utf-8,${encodeURIComponent(text)}` };
 }
 
 function sizeChange(left: FileContent, right: FileContent): string {

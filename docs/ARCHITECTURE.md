@@ -227,6 +227,11 @@ renderer/src/
   whitespaces, both, Recognize all; one global preference, Recognize all by default). Lines are compared trimmed
   (`features/diff/viewer/comparisonMethod`) through a line comparator handed to Pierre and `diff`, so the diff still
   shows and discards the original text. `cm` commands keep their own comparison: merges don't change with it.
+- **Images written as text**: an SVG reads as both (`toFileContent` ships its text and a data URL; past the text cap,
+  only the image), so its diff shows rendered or as text, with a "Code | Image" switch in the header remembered per
+  extension (`representations`, rendered by default). The text keeps every text feature (editing, discarding, the
+  comparison method); the image every image mode, with unsaved edits rendered. SVG is only ever painted through `<img>`
+  (no scripts, nothing fetched), and one declaring a huge size is drawn within 16 MP (`decodedSize`).
 - **Mutations**: `runOperation` (progress card, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.

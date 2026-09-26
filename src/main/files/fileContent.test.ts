@@ -28,4 +28,23 @@ describe('toFileContent', () => {
     const size = MAX_IMAGE_BYTES + 1;
     expect(toFileContent(Buffer.alloc(size), 'huge.png')).toEqual({ isBinary: true, size, tooLarge: 'image' });
   });
+
+  it('reads an SVG both as text and as an image', () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg"/>';
+    expect(toFileContent(Buffer.from(svg), 'Icons/logo.SVG')).toEqual({
+      isBinary: false,
+      size: svg.length,
+      text: svg,
+      imageDataUrl: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`,
+    });
+  });
+
+  it('keeps only the image of an SVG too large to diff as text, and nothing of one over the image cap', () => {
+    const large = toFileContent(Buffer.alloc(MAX_TEXT_BYTES + 1, 'a'), 'map.svg');
+    expect(large).toMatchObject({ isBinary: true, size: MAX_TEXT_BYTES + 1 });
+    expect(large.text).toBeUndefined();
+    expect(large.imageDataUrl).toMatch(/^data:image\/svg\+xml;base64,/);
+    const size = MAX_IMAGE_BYTES + 1;
+    expect(toFileContent(Buffer.alloc(size, 'a'), 'huge.svg')).toEqual({ isBinary: true, size, tooLarge: 'image' });
+  });
 });

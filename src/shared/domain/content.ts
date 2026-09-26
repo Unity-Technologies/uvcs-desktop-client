@@ -17,7 +17,7 @@ export type ContentSource =
 export interface FileContent {
   /** UTF-8 text, when the content is text. */
   text?: string;
-  /** Data URL, when the content is an image. */
+  /** Data URL, when the content is an image (an SVG has its `text` too). */
   imageDataUrl?: string;
   isBinary: boolean;
   /** Too big to show: text over the diff cap, or an image over the preview cap. */
