@@ -27,9 +27,11 @@ export const CHANGE_CHIP_ATTRIBUTE = 'data-change-chip';
 /** How long the chip stays once the pointer leaves its change, to be reached. */
 const GRACE_MS = 250;
 const CHIP_HEIGHT = 20;
+/** The room between the chip and the right edge of its pane. */
+const CHIP_INSET = 8;
 
 /**
- * The header of a change: a chip on its top edge, over the code, while the pointer is on the change. It reverts the
+ * The header of a change: a chip at the right end of its top edge, while the pointer is on the change. It reverts the
  * whole change ("Revert change"), or, once lines are picked in the gutter, just those ("Restore 3 lines").
  */
 export function ChangeChip({ containerRef, regions, hovered, picked, layout, onPreview, onDiscard }: ChangeChipProps) {
@@ -82,8 +84,10 @@ function useHoveredRegion(hovered: HoveredLineStore, regions: ChangeRegion[]): C
 }
 
 /**
- * Where the chip goes, in the container's scrolled content: on the change's top edge, where its code starts (on the
- * modified side, side by side, unless it only removes lines), or on its bottom edge when nothing is above it.
+ * Where the chip goes, in the container's scrolled content: right-aligned in the pane of the change's code (the
+ * modified side, side by side, unless it only removes lines), on its top edge, or on its bottom edge when nothing is
+ * above it. The right end of a line is where code is least likely to be, and the line numbers and the start of the
+ * line above (or its "N unmodified lines") stay in sight. `left` is the chip's right edge (it's moved back by its width).
  */
 function useChipPosition(containerRef: RefObject<HTMLElement | null>, region: ChangeRegion | undefined, layout: 'split' | 'unified'): { top: number; left: number } | null {
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
@@ -97,12 +101,14 @@ function useChipPosition(containerRef: RefObject<HTMLElement | null>, region: Ch
       const first = numberCell(root, lines[0]!, layout);
       const last = numberCell(root, lines.at(-1)!, layout);
       if (!first || !last) return setPosition(null);
+      const pane = first.closest('[data-code]');
+      if (!pane) return setPosition(null);
       const view = container.getBoundingClientRect();
       const top = first.getBoundingClientRect().top - view.top + container.scrollTop;
       const above = top - CHIP_HEIGHT;
       setPosition({
         top: above >= 0 ? above : last.getBoundingClientRect().bottom - view.top + container.scrollTop,
-        left: first.getBoundingClientRect().right - view.left + container.scrollLeft + 4,
+        left: pane.getBoundingClientRect().right - view.left + container.scrollLeft - CHIP_INSET,
       });
     };
     place();

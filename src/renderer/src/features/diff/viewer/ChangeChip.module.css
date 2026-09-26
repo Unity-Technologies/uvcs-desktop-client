@@ -1,6 +1,7 @@
-/* Sits on the change's top edge, over the code of the line above it. */
+/* Sits at the right end of the change's top edge, its right edge at `left`. */
 .chip {
   position: absolute;
+  translate: -100% 0;
   z-index: 2;
   display: inline-flex;
   align-items: center;
