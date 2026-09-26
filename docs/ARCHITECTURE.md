@@ -243,8 +243,11 @@ renderer/src/
   like typing.
 - **Comparison method**: every text diff compares lines under the official client's methods (Ignore EOLs, Ignore
   whitespaces, both, Recognize all; one global preference, Recognize all by default). Lines are compared trimmed
-  (`features/diff/viewer/comparisonMethod`) through a line comparator handed to Pierre and `diff`, so the diff still
-  shows and discards the original text. `cm` commands keep their own comparison: merges don't change with it.
+  (`features/diff/viewer/comparisonMethod`) through a line comparator, so the diff still shows and discards the
+  original text. One function computes the diff of two texts under a method (`lineDiff`, Pierre's `parseDiffFromFile`
+  with the comparator as `parseDiffOptions`), and everything reads that one result: what the diff shows (`shownDiff`),
+  the +N −M, whether the file is typed into whole ("Only whitespace differs"), and the blocks and lines discards act on.
+  `cm` commands keep their own comparison: merges don't change with it.
 - **Line breaks**: lines end with LF, CRLF or the lone CR of classic Mac files (`lib/lineBreaks`). Pierre and `diff`
   break lines only at LF, so everything they get (diffs, the editors, conflicts, whole versions) shows each lone CR as
   a LF (`shownText`), with the same lines. Everything else keeps the files' own text: the editor's text goes back to

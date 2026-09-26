@@ -1,10 +1,10 @@
-import { parseDiffFromFile, type FileContents, type SelectedLineRange } from '@pierre/diffs';
+import type { SelectedLineRange } from '@pierre/diffs';
 import type { FileDiffOptions } from '@pierre/diffs/react';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode, type RefObject } from 'react';
 import { createStore } from 'zustand/vanilla';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkey } from '../../../lib/shortcutRegistry';
-import type { ComparisonMethod, LineDiffOptions } from './comparisonMethod';
+import type { ComparisonMethod } from './comparisonMethod';
 import { listChangeBlocks, listChangeRegions, sameRegions, type ChangedLine, type ChangeRegion, type DisplayMeta } from './changeBlocks';
 import { CHANGE_CHIP_ATTRIBUTE, ChangeChip } from './ChangeChip';
 import { describeDiscard } from './discardAction';
@@ -23,16 +23,12 @@ export interface DiscardRequest {
 interface BlockDiscardOptions {
   /** Off: the diff shows no actions (read-only). */
   enabled: boolean;
-  /** The files as Pierre shows them (lone CRs as LFs). */
-  oldFile: FileContents;
-  /** The modified text as it is now, unsaved edits included. */
-  newFile: FileContents;
-  /** Both texts with their own line breaks, which the discarded text keeps. */
+  /** The diff shown, of the original and the modified text as it is now, unsaved edits included (`lineDiff`). */
+  diff: DisplayMeta;
+  /** Both texts with their own line breaks, which the discarded text keeps; the modified one as it is now. */
   texts: { original: string; modified: string };
-  /** How the diff shown compares lines, so the blocks are the ones on screen. */
+  /** How the diff compares lines: the line breaks lines come back with depend on it. */
   comparisonMethod: ComparisonMethod;
-  /** The options the diff shown is computed with (`lineDiffOptions`). */
-  parseDiffOptions: LineDiffOptions;
   layout: 'split' | 'unified';
   /** The scrolling element around the diff: its keys drive the actions, and it holds the diff's shadow root. */
   containerRef: RefObject<HTMLElement | null>;
@@ -79,12 +75,9 @@ const TYPING_IDLE_MS = 400;
  * drag, all shown as they're picked) narrows the change's chip to those lines. In the diff, ⌥↓/⌥↑ pick the next or
  * previous change, ⌥⌘Z discards the picked lines, ⌘Z undoes the last discard and Esc (or a click elsewhere) drops the pick.
  */
-export function useBlockDiscard({ enabled, oldFile, newFile, texts, comparisonMethod, parseDiffOptions, layout, containerRef, onDiscard, onUndo }: BlockDiscardOptions) {
-  // The same diff Pierre computes for display, so every block lines up with what is shown.
-  const meta = useMemo(
-    () => (enabled ? parseDiffFromFile(oldFile, newFile, parseDiffOptions) : null),
-    [enabled, oldFile, newFile, parseDiffOptions],
-  );
+export function useBlockDiscard({ enabled, diff, texts, comparisonMethod, layout, containerRef, onDiscard, onUndo }: BlockDiscardOptions) {
+  // The diff on screen, so every block lines up with what is shown.
+  const meta = enabled ? diff : null;
   const blocks = useMemo(() => (meta ? listChangeBlocks(meta) : []), [meta]);
   // The same changes stay the same objects while typing within them, so their chip stays put.
   const lastRegions = useRef<ChangeRegion[]>([]);
@@ -93,7 +86,7 @@ export function useBlockDiscard({ enabled, oldFile, newFile, texts, comparisonMe
     if (!sameRegions(listed, lastRegions.current)) lastRegions.current = listed;
     return lastRegions.current;
   }, [blocks]);
-  const typing = useTyping(containerRef, newFile);
+  const typing = useTyping(containerRef, texts.modified);
   const [hovered] = useState<HoveredLineStore>(() => createStore<ChangedLine | null>(() => null));
   const [pick, setPick] = useState<LinePick | null>(null);
   // Where the diff puts the gutter buttons (it moves the same one from line to line).
@@ -271,7 +264,7 @@ export function useBlockDiscard({ enabled, oldFile, newFile, texts, comparisonMe
  * Whether the text is being typed into (it changed with the caret in it, a moment ago): the change's chip stays out of
  * the way meanwhile, as the lines move under it. Moving the pointer brings it back.
  */
-function useTyping(containerRef: RefObject<HTMLElement | null>, text: FileContents): { active: boolean; stop: () => void } {
+function useTyping(containerRef: RefObject<HTMLElement | null>, text: string): { active: boolean; stop: () => void } {
   const [active, setActive] = useState(false);
   useEffect(() => {
     const focused = containerRef.current?.querySelector('diffs-container')?.shadowRoot?.activeElement;

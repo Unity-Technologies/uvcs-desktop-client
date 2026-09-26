@@ -6,26 +6,26 @@ import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
 import { focusMain } from '../../../lib/mainFocus';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkey } from '../../../lib/shortcutRegistry';
-import { lineDiffOptions, type ComparisonMethod } from './comparisonMethod';
+import type { ComparisonMethod } from './comparisonMethod';
 import { useDiffPreferences } from './diffPreferencesStore';
 import type { EditorHandle } from './editorHandle';
-import { editsWholeFile } from './editsWholeFile';
 import { highlightWorkers } from './highlightWorkers';
+import type { LineDiff } from './lineDiff';
 import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
 import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
 import { PaneScrollbars } from './PaneScrollbars';
 import { replacementEdit } from './replacementEdit';
 import { shownDiff, type DiffSides } from './shownDiff';
-
-const BOTH_SIDES: DiffSides = { original: true, modified: true };
 import { syntaxHighlighting } from './syntaxHighlighting';
 import { useBlockDiscard, type DiscardRequest } from './useBlockDiscard';
 import { POINTER_FOCUS_ATTRIBUTE, usePointerFocusMark } from './usePointerFocusMark';
 import { useShadowStyle } from './useShadowStyle';
 import { useSyntaxHighlighter } from './useSyntaxHighlighter';
 import styles from './TextDiff.module.css';
-import { crAgainstLf, shownText } from '../../../lib/lineBreaks';
+import { shownText } from '../../../lib/lineBreaks';
 import { syntaxLanguage } from '../../../lib/syntaxLanguage';
+
+const BOTH_SIDES: DiffSides = { original: true, modified: true };
 
 /**
  * The texts are the files' own, their lines broken by LF, CRLF or lone CRs. Pierre is given them as shown, lone CRs as
@@ -37,13 +37,17 @@ interface TextDiffProps {
   modified: string;
   /** The modified text as it is now, with unsaved edits: what discards and a diff shown anew start from. */
   current: string;
+  /** The diff of `original` and `current` under `comparisonMethod` (`lineDiff`): shown, and discarded from. */
+  diff: LineDiff;
+  /** The modified side is typed into whole, without a diff: the diff has no lines to show. */
+  wholeFile?: boolean;
   /** Used for the language of the syntax highlighting. */
   fileName: string;
   /** Which differences count; the text shown is always the original. */
   comparisonMethod: ComparisonMethod;
   /** Which sides are real versions: an added or private item shows alone, without an empty side next to it. */
   sides?: DiffSides;
-  /** The modified side is typed into directly (the whole file when the diff has no lines to show). */
+  /** The modified side is typed into directly. */
   editable?: boolean;
   /** Receives the editor, to act on its text. */
   editorRef?: RefObject<EditorHandle | null>;
@@ -77,7 +81,7 @@ function editorFactory(onCreate: (editor: Editor) => void): CreateEditor {
 }
 
 /** Syntax-highlighted text diff, side by side or unified, optionally typed into on the modified side. */
-export function TextDiff({ original, modified, current, fileName, comparisonMethod, sides = BOTH_SIDES, editable = false, editorRef, onEdit, onDiscard, onUndoDiscard }: TextDiffProps) {
+export function TextDiff({ original, modified, current, diff, wholeFile = false, fileName, comparisonMethod, sides = BOTH_SIDES, editable = false, editorRef, onEdit, onDiscard, onUndoDiscard }: TextDiffProps) {
   const theme = useResolvedTheme();
   const { layout, collapseUnchanged, wrapLines } = useDiffPreferences();
   const container = useRef<HTMLDivElement | null>(null);
@@ -93,24 +97,22 @@ export function TextDiff({ original, modified, current, fileName, comparisonMeth
   );
   const editor = useRef<Editor | null>(null);
   const [createEditor] = useState(() => editorFactory((created) => (editor.current = created)));
-  const wholeFile = useMemo(() => editable && editsWholeFile(original, modified, comparisonMethod), [editable, original, modified, comparisonMethod]);
-  const currentText = useRef(current);
-  currentText.current = current;
-  // Stable inputs: new objects would make Pierre load the files again. A diff shown anew (another comparison method,
-  // the whole file or its diff) starts from the text as it is now, unsaved edits included.
-  const oldFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: shownText(original) }), [fileName, original]);
-  const newFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: shownText(currentText.current) }), [fileName, modified, comparisonMethod, wholeFile]);
-  const currentFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: shownText(current) }), [fileName, current]);
-  const lfsDiffer = useMemo(() => crAgainstLf(original, modified), [original, modified]);
-  const parseDiffOptions = lineDiffOptions(comparisonMethod, lfsDiffer);
-  const fileDiff = useMemo(() => shownDiff(oldFile, newFile, parseDiffOptions, sides), [oldFile, newFile, parseDiffOptions, sides.original, sides.modified]);
+  const latest = useRef({ current, diff });
+  latest.current = { current, diff };
+  // Stable inputs: new objects would make Pierre load the files again. While the text is typed into, Pierre works out
+  // the diff itself (with the same options); a diff shown anew (another comparison method, the
+  // whole file or its diff, the file saved or changed on disk) starts from the text as it is now, unsaved edits included.
+  const newFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: shownText(latest.current.current) }), [fileName, modified, comparisonMethod, wholeFile]);
+  const fileDiff = useMemo(
+    () => shownDiff(latest.current.diff.meta, sides, original, latest.current.current),
+    [fileName, original, modified, comparisonMethod, wholeFile, sides.original, sides.modified],
+  );
+  const parseDiffOptions = diff.options;
   const discard = useBlockDiscard({
     enabled: Boolean(onDiscard),
-    oldFile,
-    newFile: currentFile,
+    diff: diff.meta,
     texts: { original, modified: current },
     comparisonMethod,
-    parseDiffOptions,
     layout,
     containerRef: container,
     onDiscard,

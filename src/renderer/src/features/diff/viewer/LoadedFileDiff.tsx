@@ -26,7 +26,7 @@ import { discardInFile, undoLastDiscard, type DiscardTarget } from './discardInF
 import type { EditorHandle } from './editorHandle';
 import { IMAGE_DIFF_MODES, type ImageDiffMode } from './image/imageDiffModes';
 import { IGNORED_DIFFERENCE_TITLES, ignoredDifference } from './ignoredDifference';
-import { hasLineChanges, lineChangeStats } from './lineChangeStats';
+import { hasLineChanges, lineDiff, type LineDiff } from './lineDiff';
 import { LineStats } from './LineStats';
 import { PlainTextIndicator } from './PlainTextIndicator';
 import { syntaxHighlighting } from './syntaxHighlighting';
@@ -87,17 +87,18 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const presentation = diffPresentation(left, right, representation);
   const isText = presentation.kind === 'text';
   const editable = isText && editablePath !== null;
-  const shownStats = useMemo(
-    () => (isText ? lineChangeStats(left.text ?? '', right.text ?? '', comparisonMethod) : null),
-    [isText, left.text, right.text, comparisonMethod],
+  // The one diff of the texts under the comparison method (`lineDiff`): of the file as read, and as it is now with
+  // unsaved edits. The header counts the latter, and the diff shows and discards from it.
+  const savedDiff = useMemo(
+    () => (isText ? lineDiff(left.text ?? '', right.text ?? '', comparisonMethod, fileName) : null),
+    [isText, left.text, right.text, comparisonMethod, fileName],
   );
-  // The header counts what the diff shows now, unsaved edits included.
-  const stats = useMemo(
-    () => (isText ? (current === right.text ? shownStats : lineChangeStats(left.text ?? '', current, comparisonMethod)) : null),
-    [isText, left.text, right.text, current, comparisonMethod, shownStats],
+  const currentDiff = useMemo(
+    () => (isText && current !== right.text ? lineDiff(left.text ?? '', current, comparisonMethod, fileName) : savedDiff),
+    [isText, left.text, right.text, current, comparisonMethod, fileName, savedDiff],
   );
   // Different texts the comparison method shows as equal, e.g. only their line endings changed.
-  const onlyIgnoredChanges = presentation.kind === 'text' && !presentation.identical && shownStats !== null && !hasLineChanges(shownStats);
+  const onlyIgnoredChanges = presentation.kind === 'text' && !presentation.identical && savedDiff !== null && !hasLineChanges(savedDiff);
   const openFile = editablePath === null ? undefined : () => void api.system.openPath(absolutePath(workspacePath, editablePath));
 
   useShortcut(hotkey('saveFile'), () => void buffer.save(), dirty);
@@ -142,7 +143,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
     <>
       {compareControls}
       {plainText && <PlainTextIndicator />}
-      {stats && hasLineChanges(stats) && <LineStats {...stats} />}
+      {currentDiff && hasLineChanges(currentDiff) && <LineStats added={currentDiff.added} removed={currentDiff.removed} />}
       <PaneToolbarGroup>
         <ComparisonMethodMenu value={comparisonMethod} onChange={setComparisonMethod} />
         <IconButton
@@ -187,11 +188,14 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   );
 
   const recognizeAll = <Button size="small" onClick={() => setComparisonMethod('recognizeAll')}>Recognize all</Button>;
-  const textDiff = (
+  const textDiff = currentDiff && (
     <TextDiffBody
       original={left.text}
       modified={right.text}
       current={current}
+      diff={currentDiff}
+      // Typed into whole when the file as read shows no lines: nothing changed, it's empty, or only ignored differences.
+      wholeFile={editable && savedDiff !== null && !hasLineChanges(savedDiff)}
       fileName={fileName}
       comparisonMethod={comparisonMethod}
       sides={sides}
@@ -270,6 +274,8 @@ interface TextDiffBodyProps {
   original?: string;
   modified?: string;
   current: string;
+  diff: LineDiff;
+  wholeFile: boolean;
   fileName: string;
   comparisonMethod: ComparisonMethod;
   sides: DiffSides;

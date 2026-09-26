@@ -1,11 +1,9 @@
-import { parseDiffFromFile } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
 import { listChangeBlocks } from './changeBlocks';
-import { crAgainstLf, shownText } from '../../../lib/lineBreaks';
-import { comparedPart, lineDiffOptions, type ComparisonMethod } from './comparisonMethod';
+import { comparedPart, type ComparisonMethod } from './comparisonMethod';
+import { lineDiff } from './lineDiff';
 
-const blocksUnder = (method: ComparisonMethod, original: string, modified: string) =>
-  listChangeBlocks(parseDiffFromFile({ name: 'a.cs', contents: original }, { name: 'a.cs', contents: modified }, lineDiffOptions(method)));
+const blocksUnder = (method: ComparisonMethod, original: string, modified: string) => listChangeBlocks(lineDiff(original, modified, method, 'a.cs').meta);
 
 describe('comparedPart', () => {
   it('keeps every character when recognizing all', () => {
@@ -59,14 +57,7 @@ describe('the diff under each comparison method', () => {
 });
 
 describe('the diff of texts with lone CRs, shown as LFs', () => {
-  const shownBlocksUnder = (method: ComparisonMethod, original: string, modified: string) =>
-    listChangeBlocks(
-      parseDiffFromFile(
-        { name: 'a.cs', contents: shownText(original) },
-        { name: 'a.cs', contents: shownText(modified) },
-        lineDiffOptions(method, crAgainstLf(original, modified)),
-      ),
-    );
+  const shownBlocksUnder = blocksUnder;
   const cr = 'a\rb\rc\r';
 
   it('compares CR, LF and CRLF equal when ignoring EOLs', () => {

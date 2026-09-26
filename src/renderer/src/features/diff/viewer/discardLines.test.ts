@@ -1,15 +1,16 @@
 import { parseDiffFromFile } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
 import { blockLines, listChangeBlocks, type ChangedLine, type DisplayMeta } from './changeBlocks';
-import { lineDiffOptions, type ComparisonMethod } from './comparisonMethod';
-import { crAgainstLf, shownText } from '../../../lib/lineBreaks';
+import type { ComparisonMethod } from './comparisonMethod';
+import { lineDiff, lineDiffOptions } from './lineDiff';
+import { shownText } from '../../../lib/lineBreaks';
 import { discardLines, withOwnLines } from './discardLines';
 
 const diff = (original: string, modified: string): DisplayMeta =>
   parseDiffFromFile({ name: 'a.cs', contents: original }, { name: 'a.cs', contents: modified });
 
 const diffUnder = (method: ComparisonMethod, original: string, modified: string): DisplayMeta =>
-  parseDiffFromFile({ name: 'a.cs', contents: original }, { name: 'a.cs', contents: modified }, lineDiffOptions(method));
+  parseDiffFromFile({ name: 'a.cs', contents: original }, { name: 'a.cs', contents: modified }, lineDiffOptions(original, modified, method));
 
 const lines = (...items: string[]) => items.map((item) => `${item}\n`).join('');
 const TWENTY = Array.from({ length: 20 }, (_, index) => `line ${index + 1}`);
@@ -170,11 +171,7 @@ describe('discardLines and line endings', () => {
 describe('discardLines in files with lone CRs', () => {
   /** As the viewer does it: Pierre diffs the texts shown with lone CRs as LFs, the discard takes the files' own lines. */
   const discardIn = (original: string, modified: string, pick: (meta: DisplayMeta) => ChangedLine[], method: ComparisonMethod = 'recognizeAll') => {
-    const meta = parseDiffFromFile(
-      { name: 'a.cs', contents: shownText(original) },
-      { name: 'a.cs', contents: shownText(modified) },
-      lineDiffOptions(method, crAgainstLf(original, modified)),
-    );
+    const meta = lineDiff(original, modified, method, 'a.cs').meta;
     return discardLines(withOwnLines(meta, original, modified), pick(meta), method).text;
   };
   const everything = (meta: DisplayMeta) => listChangeBlocks(meta).flatMap(blockLines);

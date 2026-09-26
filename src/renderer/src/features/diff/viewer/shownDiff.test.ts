@@ -1,10 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { lineDiffOptions } from './comparisonMethod';
+import { lineDiff } from './lineDiff';
 import { shownDiff } from './shownDiff';
 
-const file = (contents: string) => ({ name: 'agent.cs.meta', contents });
 const both = { original: true, modified: true };
-const diff = (original: string, modified: string, sides = both) => shownDiff(file(original), file(modified), lineDiffOptions('recognizeAll'), sides);
+const diff = (original: string, modified: string, sides = both) => shownDiff(lineDiff(original, modified, 'recognizeAll', 'agent.cs.meta').meta, sides, original, modified);
 const markers = (original: string, modified: string) =>
   diff(original, modified).hunks.map(({ noEOFCRDeletions, noEOFCRAdditions }) => ({ noEOFCRDeletions, noEOFCRAdditions }));
 
