@@ -35,6 +35,11 @@ export function isControlled(change: PendingChange): boolean {
   return !['private', 'ignored', 'cloaked'].includes(categoryOf(change));
 }
 
+/** Whether the item has revisions to show (history, annotations): added and copied items get their first at checkin. */
+export function hasRevisions(change: PendingChange): boolean {
+  return isControlled(change) && categoryOf(change) !== 'added';
+}
+
 /** Changes that are checked in by default. Ignored, cloaked and hidden files are only shown for reference. */
 export function isCheckinCandidate(change: PendingChange): boolean {
   return !['ignored', 'cloaked', 'hidden'].includes(categoryOf(change));

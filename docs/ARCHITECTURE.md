@@ -218,6 +218,9 @@ renderer/src/
   read-only diff up to 4 MB also renders only the lines in view, shows as plain text at once and highlights in Pierre's
   workers (`highlightWorkers`, a 50,000-line diff in 6 s); anything bigger, and an editable diff past 400 KB (Pierre
   highlights editors on the main thread, pool or not), is plain text, with a quiet "Plain text" in the header.
+  Every diff follows Split/Unified, one from or to an empty file (an added file, an empty base) too: `shownDiff` keeps
+  both sides where Pierre would show a new or deleted file in one column, and the empty side is hatched like any added
+  lines. "No newline at end of file" shows only where the final line break is what changed (`noNewlineMarker`).
 - **Leaving unsaved edits**: `app/navigation/leaveGuard` lets unsaved edits guard the way out. Selecting another file
   (`selectAfterLeaving`), another view (`goToView`) or checking in asks Save / Don't save / Cancel first; a diff that goes
   away without asking saves its edits, so work is never lost. Closing the window, quitting (⌘Q, whichever window has

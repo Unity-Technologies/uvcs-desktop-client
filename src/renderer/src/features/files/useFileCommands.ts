@@ -1,5 +1,6 @@
 import { FileDiff, FilePlus, FolderPlus, FolderTree, History, ScanText, Search, TextCursorInput, Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
+import { canAnnotate } from '@shared/domain/annotate';
 import type { TreeItem } from '@shared/domain/explorer';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -84,7 +85,7 @@ export function useFileCommands(workspacePath: string, selected: TreeItem[], onG
         label: 'Annotate selected file',
         icon: ScanText,
         shortcut: FILE_SHORTCUTS.annotate,
-        disabled: !isControlledFile,
+        disabled: !single || single.isPrivate || !canAnnotate(single.itemType),
         run: () => single && navigation.openPage({ kind: 'annotate', path: single.path }),
       },
       {
