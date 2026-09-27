@@ -37,6 +37,7 @@ import { isTaskBranch } from '../mergeTask/mergeTaskSummary';
 import { openTaskWorkspaceDialog } from '../taskWorkspace/TaskWorkspaceDialog';
 import { openCreateBranchDialog } from './CreateBranchDialog';
 import { MERGE_INTO_WORKSPACE, serverMergeLabel } from './mergeMenuLabels';
+import { hotkey } from '../../lib/shortcutRegistry';
 
 /** The context menu for the selected branches. `currentBranch` is the branch the workspace is on. */
 export function branchMenu(workspacePath: string, branches: Branch[], currentBranch: string | undefined): MenuEntry[] {
@@ -115,7 +116,7 @@ export function branchMenu(workspacePath: string, branches: Branch[], currentBra
       run: () => openCreateCodeReviewDialog(workspacePath, { kind: 'branch', value: single.name }),
     },
     SEPARATOR,
-    single && { id: 'rename', label: 'Rename…', icon: Pencil, run: () => void renameBranch(workspacePath, single) },
+    single && { id: 'rename', label: 'Rename…', icon: Pencil, shortcut: hotkey('rename'), run: () => void renameBranch(workspacePath, single) },
     single && { id: 'copy', label: 'Copy name', icon: Copy, run: () => copyToClipboard(single.name, 'Branch name') },
     single && {
       id: 'copySpec',

@@ -1,5 +1,6 @@
 import { Fragment } from 'react';
-import { SHORTCUT_AREAS, SHORTCUTS, type ShortcutArea } from '../../lib/shortcutRegistry';
+import { isMac } from '../../lib/platform';
+import { SHORTCUT_AREAS, SHORTCUTS, shortcutKeys, type ShortcutArea } from '../../lib/shortcutRegistry';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
@@ -35,7 +36,10 @@ function sheetAreas(): [ShortcutArea, SheetRow[]][] {
     'Go to',
     VIEWS.map((view) => ({ label: view.label, keys: [view.shortcut] })),
   );
-  for (const shortcut of Object.values(SHORTCUTS)) rows.get(shortcut.area)!.push(shortcut);
+  for (const shortcut of Object.values(SHORTCUTS)) {
+    const keys = shortcutKeys(shortcut, isMac);
+    if (keys.length > 0) rows.get(shortcut.area)!.push({ label: shortcut.label, keys });
+  }
   return [...rows].filter(([, areaRows]) => areaRows.length > 0);
 }
 

@@ -4,6 +4,7 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByShelving } from '../../app/refresh/refreshScopes';
 import { copyToClipboard } from '../../lib/copyToClipboard';
+import { TRASH_NAME } from '../../lib/platform';
 import { formatCount, pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
@@ -64,9 +65,9 @@ export function openWithDefaultApp(workspacePath: string, change: PendingChange)
 
 export async function deletePrivateFiles(workspacePath: string, changes: Pick<PendingChange, 'path'>[]): Promise<void> {
   const confirmed = await confirm({
-    title: changes.length === 1 ? `Move ${fileName(changes[0]!.path)} to the trash?` : `Move ${formatCount(changes.length)} files to the trash?`,
-    message: 'These files are not under version control. You can restore them from the trash.',
-    confirmLabel: 'Move to trash',
+    title: changes.length === 1 ? `Move ${fileName(changes[0]!.path)} to the ${TRASH_NAME}?` : `Move ${formatCount(changes.length)} files to the ${TRASH_NAME}?`,
+    message: `These files are not under version control. You can restore them from the ${TRASH_NAME}.`,
+    confirmLabel: `Move to ${TRASH_NAME}`,
     danger: true,
   });
   if (!confirmed) return;

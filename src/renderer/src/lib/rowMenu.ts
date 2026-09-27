@@ -10,6 +10,11 @@ export function isRowMenuKey(event: KeyboardEvent): boolean {
   return event.key === 'ContextMenu' || hotkeys('rowActions').some((key) => matchesShortcut(event.nativeEvent, key));
 }
 
+/** The keys that open a list's context menu at its focused row: the context-menu key, or Shift+F10 (Windows, Linux). */
+export function isListMenuKey(event: KeyboardEvent): boolean {
+  return event.key === 'ContextMenu' || hotkeys('listContextMenu').some((key) => matchesShortcut(event.nativeEvent, key));
+}
+
 /** Opens an element's context menu from the keyboard, where a right click on it would. */
 export function openContextMenuOf(element: HTMLElement | null): void {
   if (!element) return;
