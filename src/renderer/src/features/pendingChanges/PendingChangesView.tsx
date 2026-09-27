@@ -21,6 +21,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { useChangeset } from '../changesets/useChangeset';
 import { LeftChangesBanner } from '../leftChanges/LeftChangesBanner';
 import { MergeTaskSuggestion } from '../mergeTask/MergeTaskSuggestion';
+import { MyShelvesButton } from '../shelves/MyShelvesButton';
 import { ChangeDiffPanel } from './ChangeDiffPanel';
 import { ChangesList } from './ChangesList';
 import { ChangesSummaryBar } from './ChangesSummaryBar';
@@ -208,6 +209,7 @@ export function PendingChangesView() {
       subtitle={snapshot && !empty && `${formatCount(pendingCount)} pending`}
       actions={
         <>
+          <MyShelvesButton />
           <ReviewModeButton workspacePath={workspacePath} />
           <RefreshButton workspacePath={workspacePath} fetching={isFetching} />
           <IconButton icon={<SlidersHorizontal size={14} />} label="What to show" onClick={() => openSettingsDialogAt('pendingChanges')} />
