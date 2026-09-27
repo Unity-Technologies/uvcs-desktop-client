@@ -31,7 +31,7 @@ export function useFileCommands(workspacePath: string, selected: TreeItem[], pen
     const hasRevisions = Boolean(single && hasRevisionsToShow(single, pendingChanges));
 
     return [
-      { id: 'files.goTo', group: 'Files', label: 'Go to file…', icon: Search, shortcut: GO_TO_FILE_SHORTCUT, run: onGoToFile },
+      { id: 'files.goTo', group: 'Files', label: 'Go to file…', icon: Search, shortcut: GO_TO_FILE_SHORTCUT, run: () => onGoToFile() },
       {
         id: 'files.browseRepository',
         group: 'Files',
