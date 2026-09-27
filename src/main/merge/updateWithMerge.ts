@@ -35,7 +35,7 @@ export async function updateWithMerge(
     return { backupDirectory: null };
   }
 
-  const unresolved = conflicts.filter((conflict) => !resolutions[conflict.path]);
+  const unresolved = unresolvedConflicts(conflicts, resolutions);
   if (unresolved.length > 0) throw new Error(`Resolve ${unresolved.map((conflict) => conflict.path).join(', ')} before updating.`);
 
   const backupDirectory = join(backupsRoot, new Date().toISOString().replace(/[:.]/g, '-'));
@@ -67,6 +67,11 @@ export async function updateWithMerge(
   if (toCheckOut.length > 0) await cm.query(['checkout', ...toCheckOut], { cwd: workspacePath });
 
   return { backupDirectory };
+}
+
+/** The files that need merging to update and have no resolution yet. */
+export function unresolvedConflicts(conflicts: UpdateConflict[], resolutions: UpdateResolutions | null): UpdateConflict[] {
+  return conflicts.filter((conflict) => !resolutions?.[conflict.path]);
 }
 
 async function readCheckedOutPaths(cm: CmClient, workspacePath: string): Promise<Set<string>> {
