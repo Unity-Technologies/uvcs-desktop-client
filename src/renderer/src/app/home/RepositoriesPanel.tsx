@@ -1,6 +1,7 @@
 import { Database, Plus, RefreshCw } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
+import { matchesAllWords } from '../../lib/matchesAllWords';
 import { focusFirstItem, moveRovingFocus } from '../../lib/rovingFocus';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
@@ -31,7 +32,7 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
   const { data: repositories, isLoading, isFetching, error, refetch } = useRepositories(server);
   const { all: workspaceEntries } = useWorkspaceEntries('');
 
-  const shown = (repositories ?? []).filter((repository) => repository.name.toLowerCase().includes(filter.toLowerCase()));
+  const shown = (repositories ?? []).filter((repository) => !filter.trim() || matchesAllWords(repository.name, filter));
   const workspacesOf = (repository: RepositorySummary) =>
     workspaceEntries.filter((entry) => entry.repository === repository.spec).map((entry) => entry.workspace);
   const createWorkspace = (repository: RepositorySummary): void => openCreateWorkspaceDialog({ repository, onCreated: onOpen });

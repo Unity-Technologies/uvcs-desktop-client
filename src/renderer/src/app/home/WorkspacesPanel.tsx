@@ -45,11 +45,7 @@ export function WorkspacesPanel({ onOpen, onOpenFolder }: WorkspacesPanelProps) 
           onChange={setFilter}
           placeholder="Find a workspace"
           autoFocus
-          onKeyDown={(event) => {
-            if (event.key !== 'ArrowDown') return;
-            event.preventDefault();
-            listRef.current?.focusFirst();
-          }}
+          onKeyDown={(event) => listRef.current?.takeSearchKey(event)}
         />
       </ViewHeader>
 
@@ -66,9 +62,7 @@ export function WorkspacesPanel({ onOpen, onOpenFolder }: WorkspacesPanelProps) 
               {
                 id: 'all',
                 entries: all,
-                empty: filter ? (
-                  <EmptyState title="No matching workspaces" />
-                ) : (
+                empty: (
                   <EmptyState
                     icon={<Layers size={22} />}
                     title="No workspaces yet"
@@ -82,6 +76,7 @@ export function WorkspacesPanel({ onOpen, onOpenFolder }: WorkspacesPanelProps) 
                 ),
               },
             ]}
+            noMatches={<EmptyState title="No matching workspaces" />}
           />
         )}
       </div>
