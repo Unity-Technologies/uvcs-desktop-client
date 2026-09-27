@@ -8,8 +8,8 @@ export interface CreateWorkspaceRequest {
 }
 
 /**
- * How much of a workspace the watcher sees. `full`: every change on disk. `partial` (Linux, or where a recursive
- * watch fails): the workspace root and `.plastic` only, so edits in subfolders need another refresh trigger.
+ * How much of a workspace the watcher sees. `full`: every change on disk. `partial` (a recursive watch failed, or a
+ * Linux tree past the folders it can watch one by one): some folders only, so edits elsewhere need another refresh trigger.
  */
 export type WatchCoverage = 'full' | 'partial';
 
