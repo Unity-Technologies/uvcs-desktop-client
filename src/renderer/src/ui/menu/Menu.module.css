@@ -9,6 +9,11 @@
   z-index: 900;
 }
 
+/* A menu takes focus to move through its items, which show where the keyboard is: the menu itself shows no ring. */
+.content:focus-visible {
+  box-shadow: var(--shadow-lg);
+}
+
 /*
  * Animate only while open. Radix keeps a closing menu mounted until its animation ends, so an
  * animation that also applies to the closed state can leave a closed menu stuck on screen.
@@ -39,6 +44,11 @@
 
 .item.danger:not([data-highlighted]) {
   color: var(--status-deleted);
+}
+
+/* Highlighted like the delete button it leads to. */
+.item.danger[data-highlighted] {
+  background: var(--danger);
 }
 
 .icon {

@@ -24,9 +24,9 @@ import styles from './GoToFileDialog.module.css';
 
 const MAX_RESULTS = 60;
 
-/** Asks for a file or folder by (fuzzy) name. Resolves to its path, or undefined if dismissed. */
-export function goToFile(workspacePath: string): Promise<string | undefined> {
-  return askDialog<string>((finish) => <GoToFileDialog workspacePath={workspacePath} finish={finish} />);
+/** Asks for a file or folder by (fuzzy) name, starting from `initialQuery`. Resolves to its path, or undefined if dismissed. */
+export function goToFile(workspacePath: string, initialQuery = ''): Promise<string | undefined> {
+  return askDialog<string>((finish) => <GoToFileDialog workspacePath={workspacePath} initialQuery={initialQuery} finish={finish} />);
 }
 
 /** The listing of the directory holding `path`, shared with the Files view. */
@@ -35,8 +35,14 @@ function directoryQuery(workspacePath: string, path: string) {
   return { queryKey: queryKeys.inWorkspace(workspacePath, 'explorer', 'directory', directory), queryFn: () => api.explorer.listDirectory(workspacePath, directory) };
 }
 
-function GoToFileDialog({ workspacePath, finish }: { workspacePath: string; finish: (path: string | undefined) => void }) {
-  const [query, setQuery] = useState('');
+interface GoToFileDialogProps {
+  workspacePath: string;
+  initialQuery: string;
+  finish: (path: string | undefined) => void;
+}
+
+function GoToFileDialog({ workspacePath, initialQuery, finish }: GoToFileDialogProps) {
+  const [query, setQuery] = useState(initialQuery);
   const [highlighted, setHighlighted] = useState(0);
   /** The result whose actions are open (Tab), once its item is read. */
   const [actionsFor, setActionsFor] = useState<TreeItem | null>(null);

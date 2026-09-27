@@ -1,4 +1,5 @@
 import type { WorkspaceSelector, WorkspaceSummary } from '@shared/domain/workspace';
+import { matchesAllWords } from '../../lib/matchesAllWords';
 import { lastSegment } from '../../lib/paths';
 
 export interface WorkspaceEntry {
@@ -25,4 +26,9 @@ export function recentWorkspaceEntries(workspaces: WorkspaceSummary[], recentPat
     // Its name went with the folder; the folder name usually matches it.
     return missingPaths.includes(path) ? [{ workspace: { name: lastSegment(path), path, guid: path }, missing: true }] : [];
   });
+}
+
+/** Whether a workspace is found by the home screen's search: every word of it in its name, path, repository or branch. */
+export function entryMatches({ workspace, repository, selector }: WorkspaceEntry, filter: string): boolean {
+  return !filter.trim() || matchesAllWords(`${workspace.name} ${workspace.path} ${repository ?? ''} ${selector?.name ?? ''}`, filter);
 }

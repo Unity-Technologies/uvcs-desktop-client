@@ -8,14 +8,14 @@ import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { Spinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
-import type { FileTreeRow } from './fileTreeRows';
+import { treeArrowMove } from '../../lib/treeArrowMove';
+import { fileTreeArrowRows, indentOf, type FileTreeRow } from './fileTreeRows';
 import { ItemIcon } from './ItemIcon';
 import { iconOverlay, type ItemStatus } from './itemStatus';
 import { isWorkspaceRoot } from './workspaceRoot';
 import { XlinkChip } from './XlinkChip';
 import styles from './FileTreeTable.module.css';
 
-const INDENT = 16;
 /** Stable, so the table doesn't re-key every row on each render (a selection change). */
 const rowKey = (row: FileTreeRow): string => row.item.path;
 
@@ -27,7 +27,7 @@ interface FileTreeTableProps {
   /** Double click or Enter on a file. */
   onOpenFile: (item: TreeItem) => void;
   contextMenu: (selected: TreeItem[]) => MenuEntry[];
-  /** Pending status per item; the Status column is hidden when omitted. */
+  /** Pending status per item, for a workspace tree; without it the tree is a repository's: no Status column, no up-to-date checks. */
   statusOf?: (item: TreeItem) => ItemStatus | null;
   /** Marks directories that contain pending changes. */
   hasChangesInside?: (directory: string) => boolean;
@@ -51,7 +51,7 @@ export function FileTreeTable({
       id: 'name',
       header: 'Name',
       render: (row) => (
-        <NameCell row={row} status={statusOf?.(row.item) ?? null} changesInside={hasChangesInside?.(row.item.path) ?? false} onToggle={onToggleDirectory} />
+        <NameCell row={row} status={statusOf?.(row.item) ?? null} inWorkspace={statusOf !== undefined} changesInside={hasChangesInside?.(row.item.path) ?? false} onToggle={onToggleDirectory} />
       ),
     },
     ...(statusOf
@@ -64,28 +64,48 @@ export function FileTreeTable({
       align: 'end',
       secondary: true,
       hideBelow: 560,
-      render: (row) => (hasKnownSize(row.item) ? formatSize(row.item.size) : ''),
+      render: (row) => {
+        const onDisk = statusOf?.(row.item)?.onDisk;
+        return onDisk ? formatSize(onDisk.size) : hasKnownSize(row.item) ? formatSize(row.item.size) : '';
+      },
     },
-    { id: 'date', header: 'Modified', width: 116, secondary: true, hideBelow: 520, render: (row) => row.item.date && <RelativeTime date={row.item.date} /> },
+    {
+      id: 'date',
+      header: 'Modified',
+      width: 116,
+      secondary: true,
+      hideBelow: 520,
+      render: (row) => {
+        const date = statusOf?.(row.item)?.onDisk?.date || row.item.date;
+        return date && <RelativeTime date={date} />;
+      },
+    },
     {
       id: 'changeset',
       header: 'Changeset',
       width: 88,
-      align: 'end',
       secondary: true,
       hideBelow: 640,
-      render: (row) => (row.item.changeset > 0 ? row.item.changeset : ''),
+      // Inside a box in the text's font, the mono number sits on the other columns' baseline instead of centered higher.
+      render: (row) =>
+        row.item.changeset > 0 ? (
+          <span>
+            <span className="mono">{row.item.changeset}</span>
+          </span>
+        ) : (
+          ''
+        ),
     },
     { id: 'owner', header: 'By', width: 44, hideBelow: 600, render: (row) => row.item.owner && <Avatar user={row.item.owner} size={18} /> },
   ];
 
-  const onRowKeyDown = (event: React.KeyboardEvent, row: FileTreeRow): void => {
-    if (row.item.itemType !== 'directory') return;
-    const shouldToggle = (event.key === 'ArrowRight' && !row.isExpanded) || (event.key === 'ArrowLeft' && row.isExpanded);
-    if (shouldToggle) {
-      event.preventDefault();
-      onToggleDirectory(row.item.path);
-    }
+  const onRowKeyDown = (event: React.KeyboardEvent, row: FileTreeRow, moveBy: (step: number) => void): void => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    const move = treeArrowMove(fileTreeArrowRows(rows), rows.indexOf(row), event.key);
+    if (!move) return;
+    event.preventDefault();
+    if (move.kind === 'toggle') onToggleDirectory(row.item.path);
+    else moveBy(move.step);
   };
 
   return (
@@ -107,16 +127,17 @@ export function FileTreeTable({
 interface NameCellProps {
   row: FileTreeRow;
   status: ItemStatus | null;
+  inWorkspace: boolean;
   changesInside: boolean;
   onToggle: (directory: string) => void;
 }
 
-function NameCell({ row, status, changesInside, onToggle }: NameCellProps) {
+function NameCell({ row, status, inWorkspace, changesInside, onToggle }: NameCellProps) {
   const { item } = row;
   const isDirectory = item.itemType === 'directory';
 
   return (
-    <span className={styles.name} style={{ paddingLeft: row.depth * INDENT }}>
+    <span className={styles.name} style={{ paddingLeft: indentOf(row.depth) }}>
       {isDirectory ? (
         <button
           className={styles.chevron}
@@ -131,7 +152,7 @@ function NameCell({ row, status, changesInside, onToggle }: NameCellProps) {
       ) : (
         <span className={styles.chevronSpace} />
       )}
-      <ItemIcon item={item} expanded={row.isExpanded} overlay={iconOverlay(item, status)} />
+      <ItemIcon item={item} expanded={row.isExpanded} overlay={iconOverlay(item, status, inWorkspace)} />
       <span className={styles.text}>
         <span className={styles.label} data-private={item.isPrivate} data-root={isWorkspaceRoot(item)}>
           <Highlight text={item.name} />

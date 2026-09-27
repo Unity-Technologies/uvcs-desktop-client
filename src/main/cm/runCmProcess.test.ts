@@ -1,0 +1,21 @@
+import { describe, expect, it } from 'vitest';
+import { runCmProcess } from './runCmProcess';
+
+/** Runs a Node script standing in for `cm`. */
+const runScript = (script: string, onOutputLine?: (line: string) => void) => runCmProcess(process.execPath, ['-e', script], { onOutputLine });
+
+describe('runCmProcess', () => {
+  it('keeps a character whole when its bytes arrive in two chunks', async () => {
+    const script = "const b = Buffer.from('é\\n'); process.stdout.write(b.subarray(0, 1)); setTimeout(() => process.stdout.write(b.subarray(1)), 100);";
+    const lines: string[] = [];
+    await expect(runScript(script, (line) => lines.push(line))).resolves.toEqual({ output: 'é\n', exitCode: 0 });
+    expect(lines).toEqual(['é']);
+  });
+
+  it('reports lines ended by a line break or rewritten with \\r, and the last one unended', async () => {
+    const lines: string[] = [];
+    const result = await runScript("process.stdout.write('a\\r\\nb\\rc\\nd')", (line) => lines.push(line));
+    expect(lines).toEqual(['a', 'b', 'c', 'd']);
+    expect(result.exitCode).toBe(0);
+  });
+});

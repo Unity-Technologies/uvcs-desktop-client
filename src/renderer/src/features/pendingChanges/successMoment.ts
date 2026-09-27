@@ -32,6 +32,19 @@ export const useSuccessMomentStore = create<SuccessMomentStore>((set) => ({
     }),
 }));
 
+/** What Changes says once a changeset lands, on its card or in a toast: "Checked in cs:4 on /main/task001". */
+export function checkedInMessage(changesetId: number, branch: string): string {
+  return `Checked in cs:${changesetId} on ${branch}`;
+}
+
+/**
+ * Whether checking in `checkedIn` of the `pending` changes leaves Changes empty, where the success card tells it: then
+ * no toast says it too. A check-in that leaves changes behind is told by a toast.
+ */
+export function successCardTellsCheckin(checkedIn: number, pending: number): boolean {
+  return checkedIn === pending;
+}
+
 /** Milliseconds the moment still shows; zero once it's over. */
 export function successMomentLeft(moment: SuccessMoment, now: number): number {
   return Math.max(0, moment.at + SUCCESS_MOMENT_MS - now);

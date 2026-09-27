@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { suggestsBackup, undoConsequences } from './undoPlan';
+import { offersBackup, suggestsBackup, undoConsequences } from './undoPlan';
 
 function change(path: string, kinds: PendingChange['kinds'], itemType: PendingChange['itemType'] = 'file'): PendingChange {
   return { path, kinds, itemType, size: 1, lastModified: '' };
@@ -44,5 +44,20 @@ describe('suggestsBackup', () => {
 
   it('suggests a backup for many changes of any kind', () => {
     expect(suggestsBackup(Array.from({ length: 11 }, (_, index) => change(`${index}.ts`, ['moved'])))).toBe(true);
+  });
+});
+
+describe('offersBackup', () => {
+  it('offers no backup when undoing only releases checkouts without edits, however many', () => {
+    expect(offersBackup([change('a.ts', ['checkedOut'])])).toBe(false);
+    expect(offersBackup(Array.from({ length: 11 }, (_, index) => change(`${index}.ts`, ['checkedOut'])))).toBe(false);
+  });
+
+  it('offers one as soon as anything else would be undone', () => {
+    expect(offersBackup([change('a.ts', ['checkedOut']), change('b.ts', ['moved'])])).toBe(true);
+  });
+
+  it('offers none for links alone, which cannot be shelved', () => {
+    expect(offersBackup([change('link', ['added'], 'symlink')])).toBe(false);
   });
 });

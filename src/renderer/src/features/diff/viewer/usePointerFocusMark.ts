@@ -1,4 +1,5 @@
 import { useEffect, useRef, type FocusEvent, type PointerEvent } from 'react';
+import { isKeyboardFocusKey } from '../../../lib/inputModality';
 
 /**
  * Marks what took the focus in the diff by a click (or kept it through one). Its ring is for the keyboard only:
@@ -6,13 +7,6 @@ import { useEffect, useRef, type FocusEvent, type PointerEvent } from 'react';
  * so the diff's rings skip marked elements.
  */
 export const POINTER_FOCUS_ATTRIBUTE = 'data-pointer-focus';
-
-const MODIFIERS = new Set(['Shift', 'Control', 'Alt', 'Meta', 'CapsLock']);
-
-/** Whether a key pressed after a click makes focus arriving next the keyboard's: a modifier (the Shift of a Shift+click) doesn't. */
-export function isKeyboardFocusKey(key: string): boolean {
-  return !MODIFIERS.has(key);
-}
 
 export function usePointerFocusMark(): { onPointerDownCapture: (event: PointerEvent) => void; onFocus: (event: FocusEvent) => void; onBlur: (event: FocusEvent) => void } {
   // Whether the last thing the user did was with the pointer: then focus arriving now came from it (or from code acting on it).

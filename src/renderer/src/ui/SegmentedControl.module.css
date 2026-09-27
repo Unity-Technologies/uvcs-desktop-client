@@ -27,12 +27,22 @@
   font-size: var(--text-sm);
   font-weight: var(--weight-medium);
   white-space: nowrap;
+  transition: color var(--duration-fast);
+}
+
+.segment:hover {
+  color: var(--text-primary);
 }
 
 .segment[aria-checked='true'] {
-  background: var(--bg-surface-raised);
+  background: var(--bg-segment-checked);
   color: var(--text-primary);
   box-shadow:
     0 0 0 1px var(--border-default),
     var(--shadow-sm);
+}
+
+/* The checked segment's own shadow is more specific than the global ring. */
+.segment[aria-checked='true']:focus-visible {
+  box-shadow: var(--focus-ring-visible);
 }

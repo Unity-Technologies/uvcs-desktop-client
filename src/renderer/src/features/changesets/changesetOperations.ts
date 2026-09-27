@@ -31,6 +31,7 @@ export async function mergeChangesetTo(changeset: Changeset): Promise<void> {
   const destinationBranch = await pickBranch({
     title: `Merge changeset ${changeset.id} to…`,
     description: 'The merge happens on the server; your workspace is not touched.',
+    exclude: changeset.branch,
   });
   if (destinationBranch) openMerge({ kind: 'merge', sourceSpec: `cs:${changeset.id}`, destinationBranch });
 }

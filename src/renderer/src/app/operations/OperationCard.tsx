@@ -44,7 +44,7 @@ export function OperationCard({ toast, dismiss }: OperationCardProps) {
         {toast.action && (
           <button
             className={styles.action}
-            disabled={!done && !stoppable}
+            disabled={toast.action.disabled || (!done && !stoppable)}
             data-tip={!done && !stoppable ? "It can't be stopped now without leaving the workspace halfway" : undefined}
             onClick={() => {
               toast.action!.run();

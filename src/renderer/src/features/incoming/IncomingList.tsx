@@ -5,6 +5,7 @@ import type { DiffEntry, DiffStatus } from '@shared/domain/diff';
 import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge, type StatusTone } from '../../components/StatusBadge';
 import { navigationTarget } from '../../lib/listNavigation';
+import { firstLine } from '../../lib/text';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { Avatar } from '../../ui/Avatar';
 import { RelativeTime } from '../../ui/RelativeTime';
@@ -20,15 +21,19 @@ interface IncomingListProps {
   /** Paths that changed locally too; resolved ones are no longer pending. */
   conflictPaths: ReadonlySet<string>;
   pendingConflictPaths: ReadonlySet<string>;
+  /** Paths changed locally that the branch deleted or moved (by their old path): they block the update. */
+  blockedPaths: ReadonlySet<string>;
   /** The merge tool each file is open in, while it is. */
   openToolByPath: ReadonlyMap<string, string>;
   selection: IncomingSelection | null;
   onSelect: (selection: IncomingSelection) => void;
 }
 
-export function IncomingList({ changesets, files, conflictPaths, pendingConflictPaths, openToolByPath, selection, onSelect }: IncomingListProps) {
-  const conflicting = files.filter((file) => conflictPaths.has(file.path));
-  const others = files.filter((file) => !conflictPaths.has(file.path));
+export function IncomingList({ changesets, files, conflictPaths, pendingConflictPaths, blockedPaths, openToolByPath, selection, onSelect }: IncomingListProps) {
+  const isBlocking = (file: DiffEntry): boolean => blockedPaths.has(file.oldPath ?? file.path);
+  const collides = (file: DiffEntry): boolean => conflictPaths.has(file.path) || isBlocking(file);
+  const conflicting = files.filter(collides);
+  const others = files.filter((file) => !collides(file));
   const isSelectedFile = (path: string): boolean => selection?.kind === 'file' && selection.path === path;
   const idPrefix = useId();
   // In the order shown, for the arrows.
@@ -62,6 +67,8 @@ export function IncomingList({ changesets, files, conflictPaths, pendingConflict
     >
       {openToolByPath.has(file.path) ? (
         <StatusBadge tone="conflict" title={`Open in ${openToolByPath.get(file.path)}…`} letter="…" />
+      ) : isBlocking(file) ? (
+        <StatusBadge tone="conflict" title={`Changed locally, ${file.status === 'deleted' ? 'deleted' : 'moved'} on the branch: shelve it to update`} />
       ) : conflictPaths.has(file.path) ? (
         <StatusBadge
           tone={pendingConflictPaths.has(file.path) ? 'conflict' : 'added'}
@@ -104,10 +111,10 @@ export function IncomingList({ changesets, files, conflictPaths, pendingConflict
           >
             <GitCommitVertical size={14} className={styles.changesetIcon} />
             <span className={styles.changesetText}>
-              <span className={styles.comment}>{changeset.comment || 'No comment'}</span>
+              <span className={styles.comment}>{firstLine(changeset.comment) || 'No comment'}</span>
               <span className={styles.meta}>
                 <Avatar user={changeset.owner} size={14} />
-                {changeset.id} · <RelativeTime date={changeset.date} />
+                cs:{changeset.id} · <RelativeTime date={changeset.date} />
               </span>
             </span>
           </button>

@@ -339,6 +339,14 @@
   font-weight: var(--weight-semibold);
 }
 
+.serverMonogram {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  letter-spacing: -0.02em;
+}
+
 .row[data-compact='true'] .avatar {
   font-size: var(--text-xs);
 }
@@ -369,6 +377,9 @@
 }
 
 .rowRepository {
+  /* Gives way before the workspace's own name does, which is what tells rows apart. */
+  flex-shrink: 1000;
+  min-width: 0;
   overflow: hidden;
   color: var(--text-tertiary);
   font-size: var(--text-sm);
@@ -424,12 +435,13 @@
   font-weight: var(--weight-medium);
 }
 
-.rowMenu {
+.rowMenu,
+.rowCreate {
   opacity: 0;
 }
 
-.row:hover .rowMenu,
-.row:focus-within .rowMenu,
+.row:hover :is(.rowMenu, .rowCreate),
+.row:focus-within :is(.rowMenu, .rowCreate),
 .rowMenu[data-state='open'] {
   opacity: 1;
 }

@@ -8,6 +8,7 @@ import { selectAfterLeaving } from '../../app/navigation/leaveGuard';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { NoSelection } from '../../components/NoSelection';
+import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
@@ -66,10 +67,11 @@ export function FilesView() {
   }, [revealRequest, expand, workspacePath]);
 
   const openGoToFile = useCallback(
-    () => void goToFile(workspacePath).then((path) => path && useFilesViewStore.getState().requestReveal(path)),
+    (query?: string) => void goToFile(workspacePath, query).then((path) => path && useFilesViewStore.getState().requestReveal(path)),
     [workspacePath],
   );
-  useFileCommands(workspacePath, selectedItems, openGoToFile);
+  useFileCommands(workspacePath, selectedItems, pendingIndex, openGoToFile);
+  const nothingMatches = shownFilter.trim() !== '' && rows.every((row) => isWorkspaceRoot(row.item));
 
   const createInSelection = (kind: 'file' | 'directory'): void => void createItem(workspacePath, targetDirectoryFor(focused), kind);
 
@@ -79,7 +81,7 @@ export function FilesView() {
       subtitle={workspacePath}
       actions={
         <>
-          <IconButton icon={<Search size={14} />} label="Go to file" shortcut={GO_TO_FILE_SHORTCUT} onClick={openGoToFile} />
+          <IconButton icon={<Search size={14} />} label="Go to file" shortcut={GO_TO_FILE_SHORTCUT} onClick={() => openGoToFile()} />
           <IconButton icon={<FilePlus size={14} />} label="New file" shortcut={FILE_SHORTCUTS.newFile} onClick={() => createInSelection('file')} />
           <IconButton icon={<FolderPlus size={14} />} label="New folder" shortcut={FILE_SHORTCUTS.newFolder} onClick={() => createInSelection('directory')} />
           <IconButton icon={<RefreshCw size={14} />} label="Refresh" shortcut={hotkey('refresh')} onClick={() => void invalidateWorkspace(workspacePath)} />
@@ -98,19 +100,27 @@ export function FilesView() {
       {header}
       <ListWithDetails
         list={
-          <HighlightQuery query={shownFilter}>
-            <FileTreeTable
-              rows={rows}
-              selection={selection}
-              onSelectionChange={(next) => selectAfterLeaving(selection, next, setSelection)}
-              onToggleDirectory={(directory) => (directory === '' ? setRootExpanded((shown) => !shown) : toggle(workspacePath, directory))}
-              onOpenFile={(item) => openItem(workspacePath, item)}
-              contextMenu={(items) => fileMenu(workspacePath, items, pendingIndex)}
-              statusOf={(item) => itemStatus(item, pendingIndex)}
-              hasChangesInside={(directory) => pendingIndex.hasChangesInside(directory)}
-              revealPath={revealPath}
+          nothingMatches ? (
+            <EmptyState
+              icon={<Search size={22} />}
+              title={`Nothing in the open folders matches “${shownFilter.trim()}”`}
+              action={<Button onClick={() => openGoToFile(filter.trim())}>Search all files</Button>}
             />
-          </HighlightQuery>
+          ) : (
+            <HighlightQuery query={shownFilter}>
+              <FileTreeTable
+                rows={rows}
+                selection={selection}
+                onSelectionChange={(next) => selectAfterLeaving(selection, next, setSelection)}
+                onToggleDirectory={(directory) => (directory === '' ? setRootExpanded((shown) => !shown) : toggle(workspacePath, directory))}
+                onOpenFile={(item) => openItem(workspacePath, item)}
+                contextMenu={(items) => fileMenu(workspacePath, items, pendingIndex)}
+                statusOf={(item) => itemStatus(item, pendingIndex)}
+                hasChangesInside={(directory) => pendingIndex.hasChangesInside(directory)}
+                revealPath={revealPath}
+              />
+            </HighlightQuery>
+          )
         }
         details={
           focused && workspace && isWorkspaceRoot(focused) ? (

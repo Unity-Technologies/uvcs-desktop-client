@@ -9,6 +9,7 @@ import { toast } from '../../ui/toast/toastStore';
 import { queryClient } from '../queryClient';
 import { forgetRecentWorkspace } from '../settings/useSettings';
 import { DeleteRepositoryDialog } from './dialogs/DeleteRepositoryDialog';
+import { isRepositoryNameTaken, isWorkspaceNameTaken } from './workspaceNaming';
 
 async function runAndRefresh(failureTitle: string, action: () => Promise<unknown>, queryKey: readonly unknown[]): Promise<boolean> {
   try {
@@ -23,7 +24,14 @@ async function runAndRefresh(failureTitle: string, action: () => Promise<unknown
 }
 
 export async function renameWorkspace(workspace: WorkspaceSummary): Promise<void> {
-  const newName = await prompt({ title: 'Rename workspace', label: 'Name', initialValue: workspace.name, confirmLabel: 'Rename' });
+  const names = (queryClient.getQueryData<WorkspaceSummary[]>(queryKeys.workspaces) ?? []).map((listed) => listed.name);
+  const newName = await prompt({
+    title: 'Rename workspace',
+    label: 'Name',
+    initialValue: workspace.name,
+    confirmLabel: 'Rename',
+    validate: (name) => (isWorkspaceNameTaken(name, names, workspace.name) ? 'There is already a workspace with this name.' : undefined),
+  });
   if (!newName) return;
   await runAndRefresh("Couldn't rename the workspace", () => api.workspaces.rename(workspace.path, newName), queryKeys.workspaces);
 }
@@ -46,7 +54,14 @@ export function revealWorkspace(workspace: WorkspaceSummary): void {
 }
 
 export async function renameRepository(repository: RepositorySummary): Promise<void> {
-  const newName = await prompt({ title: 'Rename repository', label: 'Name', initialValue: repository.name, confirmLabel: 'Rename' });
+  const names = (queryClient.getQueryData<RepositorySummary[]>(queryKeys.repositories(repository.server)) ?? []).map((listed) => listed.name);
+  const newName = await prompt({
+    title: 'Rename repository',
+    label: 'Name',
+    initialValue: repository.name,
+    confirmLabel: 'Rename',
+    validate: (name) => (isRepositoryNameTaken(name, names) ? 'There is already a repository with this name.' : undefined),
+  });
   if (!newName) return;
   await runAndRefresh(
     "Couldn't rename the repository",

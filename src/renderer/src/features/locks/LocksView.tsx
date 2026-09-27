@@ -21,6 +21,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { LockDetails } from './LockDetails';
 import { lockMenu } from './lockMenu';
 import { isReleasable, releaseLocks } from './lockOperations';
+import { locksEmptyState } from './locksEmptyState';
 import { useLocks } from './useLocks';
 import styles from './LocksView.module.css';
 
@@ -41,9 +42,9 @@ const COLUMNS: Column<Lock>[] = [
     sortValue: (lock) => lock.status,
   },
   { id: 'owner', header: 'Owner', grow: 1, render: (lock) => <UserLabel user={lock.owner} />, sortValue: (lock) => lock.owner },
-  { id: 'holder', header: 'Held on', grow: 1, secondary: true, render: (lock) => lock.holderBranch, sortValue: (lock) => lock.holderBranch },
-  { id: 'destination', header: 'Released on', width: 120, secondary: true, render: (lock) => lock.destinationBranch },
-  { id: 'workspace', header: 'Workspace', grow: 1, secondary: true, render: (lock) => lock.workspace },
+  { id: 'holder', header: 'Held on', grow: 1, secondary: true, render: (lock) => <PathLabel path={lock.holderBranch} />, sortValue: (lock) => lock.holderBranch },
+  { id: 'destination', header: 'Released on', width: 120, secondary: true, hideBelow: 900, render: (lock) => lock.destinationBranch },
+  { id: 'workspace', header: 'Workspace', grow: 1, secondary: true, hideBelow: 1000, render: (lock) => lock.workspace },
   { id: 'date', header: 'Locked', width: 120, secondary: true, render: (lock) => <RelativeTime date={lock.date} />, sortValue: (lock) => lock.date },
 ];
 
@@ -55,7 +56,7 @@ export function LocksView() {
   const [selection, setSelection] = useViewSelection('locks');
   const { data: locks, isLoading, error, isFetching } = useLocks(scope === 'mine');
 
-  const visible = (locks ?? []).filter((lock) => `${lock.path} ${lock.owner}`.toLowerCase().includes(filter.toLowerCase()));
+  const visible = (locks ?? []).filter((lock) => `${lock.path} ${lock.owner}`.toLowerCase().includes(filter.trim().toLowerCase()));
   const selected = visible.filter((lock) => selection.selected.has(lockKey(lock)));
   const releasable = selected.filter(isReleasable);
   const focused = visible.find((lock) => lockKey(lock) === selection.anchor);
@@ -63,7 +64,7 @@ export function LocksView() {
   const header = (
     <ViewHeader
       title="Locks"
-      subtitle={locks && `${locks.length} ${locks.length === 1 ? 'lock' : 'locks'}`}
+      count={locks?.length}
       actions={
         <>
           <IconButton
@@ -87,13 +88,15 @@ export function LocksView() {
   if (isLoading) return <>{header}<ListWithDetailsSkeleton columns={COLUMNS} /></>;
   if (error) return <>{header}<EmptyState title="Couldn't read the locks" description={error.message} /></>;
   if (visible.length === 0) {
+    const empty = locksEmptyState({ searching: filter.trim() !== '', onlyMine: scope === 'mine' });
     return (
       <>
         {header}
         <EmptyState
           icon={<LockIcon size={22} />}
-          title={filter ? 'No matching locks' : 'Nothing is locked'}
-          description="Files matching the server's lock rules are locked when someone checks them out, so nobody else edits them at the same time."
+          title={empty.title}
+          description={empty.description}
+          action={empty.offerEveryone && <Button onClick={() => setScope('all')}>Show everyone's locks</Button>}
         />
       </>
     );

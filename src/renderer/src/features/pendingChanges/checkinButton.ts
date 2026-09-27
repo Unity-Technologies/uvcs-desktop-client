@@ -1,6 +1,6 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { formatSize } from '../../lib/formatDate';
-import { fileNameOf, pluralize } from '../../lib/text';
+import { fileNameOf, formatCount, pluralize } from '../../lib/text';
 import { categoryOf, existsOnDisk, hasContentChanges } from './changeCategories';
 
 export type CheckinMode = 'checkin' | 'shelve';
@@ -49,17 +49,17 @@ export function checkinButtonLabel({ mode, includedCount, branchName, uploadByte
   const size = includedCount > 0 && uploadBytes > 0 ? formatSize(uploadBytes) : null;
   if (mode === 'shelve') {
     if (includedCount === 0) return { forms: [{ action: 'Nothing to shelve', target: null, size: null }], tip: 'Shelve' };
-    return { forms: shorterForms(`Shelve ${pluralize(includedCount, 'change')}`, `Shelve ${includedCount}`, '', size), tip: 'Shelve' };
+    return { forms: shorterForms(`Shelve ${pluralize(includedCount, 'change')}`, `Shelve ${formatCount(includedCount)}`, '', size), tip: 'Shelve' };
   }
   if (includedCount === 0) return { forms: [{ action: 'Nothing to check in', target: null, size: null }], tip: 'Check in' };
   const tip = branchName ? `Check in to ${branchName}` : 'Check in';
   if (merging) return { forms: shorterForms('Check in merge', null, branchName, size), tip };
   if (behindCount > 0) {
     const behindTip = branchName ? `Update, then check in to ${branchName}` : 'Update, then check in';
-    return { forms: shorterForms(`Update & check in ${pluralize(includedCount, 'change')}`, `Update & check in ${includedCount}`, branchName, size), tip: behindTip };
+    return { forms: shorterForms(`Update & check in ${pluralize(includedCount, 'change')}`, `Update & check in ${formatCount(includedCount)}`, branchName, size), tip: behindTip };
   }
-  if (allReviewed) return { forms: shorterForms('Check in reviewed changes', `Check in ${includedCount}`, branchName, size), tip };
-  return { forms: shorterForms(`Check in ${pluralize(includedCount, 'change')}`, `Check in ${includedCount}`, branchName, size), tip };
+  if (allReviewed) return { forms: shorterForms('Check in reviewed changes', `Check in ${formatCount(includedCount)}`, branchName, size), tip };
+  return { forms: shorterForms(`Check in ${pluralize(includedCount, 'change')}`, `Check in ${formatCount(includedCount)}`, branchName, size), tip };
 }
 
 function shorterForms(action: string, shortAction: string | null, branchName: string, size: string | null): CheckinButtonText[] {
@@ -76,10 +76,14 @@ function shorterForms(action: string, shortAction: string | null, branchName: st
   return forms.filter((form): form is CheckinButtonText => Boolean(form));
 }
 
-/** Why the check-in button can't be used right now, for its tooltip; null when it can. */
-export function checkinDisabledReason(mode: CheckinMode, includedCount: number): string | null {
-  if (includedCount > 0) return null;
-  return mode === 'checkin' ? 'Select changes to check in' : 'Select changes to shelve';
+/**
+ * Why the check-in button can't be used right now, for its tooltip; null when it can. `count` is what the mode takes
+ * of the `includedCount` changes checked: a shelve leaves private files and links out (`isShelvable`).
+ */
+export function checkinDisabledReason(mode: CheckinMode, count: number, includedCount: number): string | null {
+  if (count > 0) return null;
+  if (mode === 'checkin') return 'Select changes to check in';
+  return includedCount > 0 ? "Private files and links can't be shelved" : 'Select changes to shelve';
 }
 
 /** The changeset a pending merge comes from, read from the "Merge from 12" tag of its changes. */

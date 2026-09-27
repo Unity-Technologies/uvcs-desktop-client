@@ -17,6 +17,11 @@ describe('parseDiffEntries', () => {
     ]);
   });
 
+  it('sorts numbered files as people read them', () => {
+    const output = ['file_10.txt', 'file_2.txt', 'File_1.txt', 'file_100.txt'].map((name) => record('A', `"/${name}"`, '""', '-1', '5', 'F')).join('');
+    expect(parseDiffEntries(output).map((entry) => entry.path)).toEqual(['File_1.txt', 'file_2.txt', 'file_10.txt', 'file_100.txt']);
+  });
+
   it('shows the same revision on both sides of a pure move', () => {
     const [moved] = parseDiffEntries(record('M', '"/docs/changelog.md"', '"/docs/notes.md"', '-1', '14', 'F'));
     expect(moved).toMatchObject({ status: 'moved', oldPath: 'docs/notes.md', baseRevisionId: 14, revisionId: 14 });
@@ -27,5 +32,15 @@ describe('parseDiffEntries', () => {
     expect(parseDiffEntries(output)).toEqual([
       { status: 'moved', path: 'src/arith.ts', oldPath: 'src/math.ts', itemType: 'file', baseRevisionId: 55, revisionId: 69 },
     ]);
+  });
+
+  it('reads a 100,000-file diff in linear time', () => {
+    let output = '';
+    for (let index = 0; index < 100_000; index++) output += record('C', `"/src/folder${index % 100}/file_${(index * 7919) % 100_000}.ts"`, '""', '12', '13', 'F');
+    const start = performance.now();
+    const entries = parseDiffEntries(output);
+    // About 1 s here, most of it sorting by path.
+    expect(performance.now() - start).toBeLessThan(2000);
+    expect(entries).toHaveLength(100_000);
   });
 });

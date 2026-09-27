@@ -1,20 +1,13 @@
-import { XMLParser } from 'fast-xml-parser';
+import { readXmlTree, type XmlNode } from './xmlTree';
 
-type XmlNode = Record<string, unknown>;
+export type { XmlNode };
 
 /**
  * Parses `cm` XML output. Values stay as strings (comments like "123" must not become numbers)
  * and the given element names always come back as arrays, even with a single child.
  */
 export function parseXml(xml: string, arrayElements: string[]): XmlNode {
-  const arrays = new Set(arrayElements);
-  const parser = new XMLParser({
-    ignoreAttributes: true,
-    parseTagValue: false,
-    trimValues: true,
-    isArray: (name) => arrays.has(name),
-  });
-  return parser.parse(xml.slice(xml.indexOf('<'))) as XmlNode;
+  return readXmlTree(xml.slice(xml.indexOf('<')), new Set(arrayElements));
 }
 
 export function text(node: unknown): string {

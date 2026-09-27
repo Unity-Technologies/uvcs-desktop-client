@@ -51,4 +51,15 @@ describe('branch explorer records', () => {
       { name: 'v1.0', changeset: 3, owner: 'jane', date: '2026-09-01', comment: 'First' },
     ]);
   });
+
+  it('reads 280,000 changesets (codice) in linear time', () => {
+    let output = '';
+    for (let id = 0; id < 280_000; id++) output += `${id}${F}/main/task${id % 20_000}${F}${id - 1}${F}2026-09-25T10:11:12.0000000+02:00${F}jane${F}comment ${id}${R}\n`;
+    const start = performance.now();
+    const changesets = parseChangesets(output);
+    // About 0.1 s here.
+    expect(performance.now() - start).toBeLessThan(2000);
+    expect(changesets).toHaveLength(280_000);
+  });
 });
+

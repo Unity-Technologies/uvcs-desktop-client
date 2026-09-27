@@ -19,6 +19,7 @@ import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { openCreateBranchDialog } from '../branches/CreateBranchDialog';
 import { openCreateLabelDialog } from '../labels/CreateLabelDialog';
 import { openMergeTaskDialog } from '../mergeTask/MergeTaskDialog';
+import { serverMergeLabel } from '../branches/mergeMenuLabels';
 import { isTaskBranch } from '../mergeTask/mergeTaskSummary';
 import type { GraphTarget } from './canvas/graphTargets';
 import { graphActions } from './graphActions';
@@ -30,6 +31,8 @@ interface GraphMenuContext {
   /** Selects and scrolls to a changeset. */
   goToChangeset: (id: number) => void;
   showRelatedTo: (branchName: string) => void;
+  /** Selects and reveals a branch created from the menu, once the graph has it. */
+  revealCreatedBranch: (name: string) => void;
 }
 
 export function graphMenu(target: GraphTarget | null, context: GraphMenuContext): MenuEntry[] {
@@ -57,7 +60,7 @@ export function graphMenu(target: GraphTarget | null, context: GraphMenuContext)
   }
 }
 
-function changesetMenu(id: number, { workspacePath, layout, goToChangeset }: GraphMenuContext): MenuEntry[] {
+function changesetMenu(id: number, { workspacePath, layout, goToChangeset, revealCreatedBranch }: GraphMenuContext): MenuEntry[] {
   const changeset = layout.nodes.get(id)?.changeset;
   const parent = changeset?.parent ?? -1;
   return tidyMenu([
@@ -69,11 +72,11 @@ function changesetMenu(id: number, { workspacePath, layout, goToChangeset }: Gra
       label: 'Create branch from here…',
       icon: GitBranchPlus,
       run: () =>
-        openCreateBranchDialog(workspacePath, {
+        void openCreateBranchDialog(workspacePath, {
           parentBranch: changeset.branch,
           startingPoint: spec.changeset(id),
           startingPointLabel: `changeset ${id}`,
-        }),
+        }).then((name) => name && revealCreatedBranch(name)),
     },
     { id: 'label', label: 'Label this changeset…', icon: Tag, run: () => openCreateLabelDialog(workspacePath, id) },
     SEPARATOR,
@@ -94,7 +97,7 @@ function branchMenu(lane: Lane, { workspacePath, layout, goToChangeset, showRela
     { id: 'merge', label: 'Merge from this branch', icon: GitMerge, run: () => graphActions.merge('merge', spec.branch(name)) },
     isTaskBranch(lane.branch) && {
       id: 'mergeTask',
-      label: `Merge to ${lane.branch.parent}…`,
+      label: serverMergeLabel(lane.branch.parent),
       icon: GitPullRequest,
       run: () => openMergeTaskDialog(workspacePath, lane.branch),
     },
