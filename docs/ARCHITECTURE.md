@@ -395,6 +395,9 @@ renderer/src/
   read-only: no `cm` command or client API edits them. Selecting a row must stay cheap: `cm diff`
   runs only on request (`ChangedFilesSection`), other lookups wait for the selection to settle (`useSettled`), and
   immutable results are cached (`IMMUTABLE_QUERY`).
+- **Branch Explorer canvas**: the world is drawn relative to a per-frame origin near the screen (`OriginPen`, `draw.pen`, the
+  world transform carrying the origin in doubles) and bands only as far as the screen, so the canvas, which keeps points in
+  float32, never sees the millions of px of a whole history (jagged circles and pills zoomed in otherwise); hit tests stay in world doubles.
 - **Branch switcher**: groups and orders branches like the official Desktop client (`branchSwitcherGroups`): /main by its
   well-known GUID, the workspace's recent branches, then the rest newest first. Recent branches are the official client's,
   read from and written to its `plasticgui.conf` (`main/plasticConfig`) on every switch, so both apps list the same ones.

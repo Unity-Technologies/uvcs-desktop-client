@@ -28,7 +28,7 @@ function linkColor({ scene }: DrawContext, link: MergeLink): string {
 }
 
 function drawLink(draw: DrawContext, link: MergeLink, curve: Curve): void {
-  const { ctx, scene } = draw;
+  const { ctx, pen, scene } = draw;
   const emphasized = involves(link, scene.selectedChangeset) || involves(link, scene.hoveredChangeset);
   // While searching, a link stays lit only between two hits; the rest recede with the changesets they join.
   const { search } = scene;
@@ -43,11 +43,11 @@ function drawLink(draw: DrawContext, link: MergeLink, curve: Curve): void {
   ctx.lineCap = 'round';
   ctx.setLineDash(mergeLinkDash(link.type));
   ctx.beginPath();
-  ctx.moveTo(from.x, from.y);
-  ctx.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, to.x, to.y);
+  pen.moveTo(from.x, from.y);
+  pen.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, to.x, to.y);
   ctx.stroke();
   ctx.setLineDash(NO_DASH);
-  drawArrowHead(ctx, curve, draw.detail.avatars ? NODE_RADIUS + 4 : DOT_RADIUS + 3);
+  drawArrowHead(draw, curve, draw.detail.avatars ? NODE_RADIUS + 4 : DOT_RADIUS + 3);
   ctx.restore();
 }
 
@@ -58,7 +58,7 @@ function involves(link: MergeLink, changeset: number | null): boolean {
 }
 
 /** An arrow touching the destination changeset, aligned with the end of the curve. */
-function drawArrowHead(ctx: CanvasRenderingContext2D, curve: Curve, distanceFromCenter: number): void {
+function drawArrowHead({ ctx, pen }: DrawContext, curve: Curve, distanceFromCenter: number): void {
   const tip = pointOnCurve(curve, 1);
   const before = pointOnCurve(curve, 0.95);
   const angle = Math.atan2(tip.y - before.y, tip.x - before.x);
@@ -66,9 +66,9 @@ function drawArrowHead(ctx: CanvasRenderingContext2D, curve: Curve, distanceFrom
   const y = tip.y - Math.sin(angle) * distanceFromCenter;
 
   ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(x - ARROW_SIZE * Math.cos(angle - 0.42), y - ARROW_SIZE * Math.sin(angle - 0.42));
-  ctx.lineTo(x - ARROW_SIZE * Math.cos(angle + 0.42), y - ARROW_SIZE * Math.sin(angle + 0.42));
+  pen.moveTo(x, y);
+  pen.lineTo(x - ARROW_SIZE * Math.cos(angle - 0.42), y - ARROW_SIZE * Math.sin(angle - 0.42));
+  pen.lineTo(x - ARROW_SIZE * Math.cos(angle + 0.42), y - ARROW_SIZE * Math.sin(angle + 0.42));
   ctx.closePath();
   ctx.fill();
 }

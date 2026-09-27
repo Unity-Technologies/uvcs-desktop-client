@@ -23,61 +23,62 @@ function castGlow({ ctx, scene, pixelRatio }: DrawContext, current: boolean): vo
 }
 
 export function drawNodeGlow(draw: DrawContext, x: number, y: number, radius: number, current: boolean): void {
-  const { ctx } = draw;
+  const { ctx, pen } = draw;
   ctx.save();
   castGlow(draw, current);
   ctx.beginPath();
-  ctx.arc(x, y, radius, 0, Math.PI * 2);
+  pen.arc(x, y, radius, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 }
 
 /** The current hit's ring, and while it arrives a short sonar ping (two staggered rings) that draws the eye to it. */
-export function drawNodeCorona({ ctx, scene }: DrawContext, x: number, y: number, radius: number): void {
+export function drawNodeCorona({ ctx, pen, scene }: DrawContext, x: number, y: number, radius: number): void {
   ctx.save();
   ctx.strokeStyle = scene.palette.searchHit;
   ctx.globalAlpha = 1;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(x, y, radius + CORONA_GAP, 0, Math.PI * 2);
+  pen.arc(x, y, radius + CORONA_GAP, 0, Math.PI * 2);
   ctx.stroke();
   for (const ring of pingRings(scene.searchPing)) {
     ctx.globalAlpha = ring.alpha;
     ctx.lineWidth = ring.width;
     ctx.beginPath();
-    ctx.arc(x, y, radius + CORONA_GAP + ring.grow, 0, Math.PI * 2);
+    pen.arc(x, y, radius + CORONA_GAP + ring.grow, 0, Math.PI * 2);
     ctx.stroke();
   }
   ctx.restore();
 }
 
 export function drawRectGlow(draw: DrawContext, x: number, y: number, width: number, height: number, cornerRadius: number, current: boolean): void {
-  const { ctx } = draw;
+  const { ctx, pen } = draw;
   ctx.save();
   castGlow(draw, current);
   ctx.beginPath();
-  ctx.roundRect(x, y, width, height, cornerRadius);
+  pen.roundRect(x, y, width, height, cornerRadius);
   ctx.fill();
   ctx.restore();
 }
 
 /** The rectangular twin of the node corona, for branch headers and labels. */
-export function drawRectCorona({ ctx, scene }: DrawContext, x: number, y: number, width: number, height: number, cornerRadius: number): void {
+export function drawRectCorona(draw: DrawContext, x: number, y: number, width: number, height: number, cornerRadius: number): void {
+  const { ctx, scene } = draw;
   ctx.save();
   ctx.strokeStyle = scene.palette.searchHit;
   ctx.globalAlpha = 1;
   ctx.lineWidth = 2;
-  strokeGrown(ctx, x, y, width, height, cornerRadius, RECT_CORONA_GAP);
+  strokeGrown(draw, x, y, width, height, cornerRadius, RECT_CORONA_GAP);
   for (const ring of pingRings(scene.searchPing)) {
     ctx.globalAlpha = ring.alpha;
     ctx.lineWidth = ring.width;
-    strokeGrown(ctx, x, y, width, height, cornerRadius, RECT_CORONA_GAP + ring.grow);
+    strokeGrown(draw, x, y, width, height, cornerRadius, RECT_CORONA_GAP + ring.grow);
   }
   ctx.restore();
 }
 
-function strokeGrown(ctx: CanvasRenderingContext2D, x: number, y: number, width: number, height: number, cornerRadius: number, grow: number): void {
+function strokeGrown({ ctx, pen }: DrawContext, x: number, y: number, width: number, height: number, cornerRadius: number, grow: number): void {
   ctx.beginPath();
-  ctx.roundRect(x - grow, y - grow, width + grow * 2, height + grow * 2, cornerRadius + grow);
+  pen.roundRect(x - grow, y - grow, width + grow * 2, height + grow * 2, cornerRadius + grow);
   ctx.stroke();
 }
