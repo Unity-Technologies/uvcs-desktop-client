@@ -128,10 +128,11 @@ export function hotkeys(id: ShortcutId): readonly string[] {
 }
 
 /**
- * The shortcut of the view at `position` in the sidebar: ⌘1…⌘9, then ⇧⌘1, ⇧⌘2…, so the keys read in sidebar
- * order and every view has one. ⌘0 is left to the View menu's Actual Size.
+ * The shortcut of the view at `position` in the sidebar: ⌘1…⌘9, then ⌥⌘1, ⌥⌘2… on macOS (whose ⇧⌘3, ⇧⌘4 and ⇧⌘5
+ * take screenshots before the app sees them) and Ctrl+Shift+1… elsewhere (Ctrl+Alt is AltGr, which types characters),
+ * so the keys read in sidebar order and every view has one. ⌘0 is left to the View menu's Actual Size.
  */
-export function viewShortcut(position: number): string {
+export function viewShortcut(position: number, mac: boolean): string {
   if (position < 9) return `mod+${position + 1}`;
-  return `mod+shift+${position - 8}`;
+  return `mod+${mac ? 'alt' : 'shift'}+${position - 8}`;
 }
