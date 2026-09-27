@@ -40,7 +40,7 @@ import { mergeSourceChangeset } from './checkinButton';
 import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinChanges, confirmCheckinWithoutComment, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
 import { isCheckinCandidate, matchesBranch } from './changeCategories';
-import { changeKey, changesUnderRow, collapseRows, layoutChangeRows, sortForLayout, topLevelCheckboxInset, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { changeKey, changesUnderRow, collapseRows, layoutChangeRows, topLevelCheckboxInset, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
 import { changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
 import { changeTone } from './changeTone';
@@ -52,6 +52,7 @@ import { SuccessCard } from './SuccessCard';
 import { isOutlivedByChanges, successCardTellsCheckin, successMomentLeft, useSuccessMomentStore } from './successMoment';
 import { usePendingChanges } from './usePendingChanges';
 import { useCheckinSelection } from './useCheckinSelection';
+import { useSortedChanges } from './useSortedChanges';
 import styles from './PendingChangesView.module.css';
 
 const NO_CHANGES: PendingChange[] = [];
@@ -83,7 +84,7 @@ export function PendingChangesView() {
   const review = usePendingReview(workspacePath, allChanges, snapshot !== undefined && !isPlaceholderData);
   const locks = usePendingLocks(workspacePath, workspace?.repository, allChanges, dataUpdatedAt);
   // Sorted once for the layout; filtering keeps the order, so typing in the filter or opening a folder never sorts again.
-  const sorted = useMemo(() => sortForLayout(allChanges, layout), [allChanges, layout]);
+  const sorted = useSortedChanges(allChanges, layout);
   const { visible: filtered, query, clear: clearTextFilter, bar: filterBar } = useChangeFilter(sorted, changePath, changeTone);
   const changes = useMemo(() => review.narrow(filtered), [review.narrow, filtered]);
   const clearFilter = (): void => {

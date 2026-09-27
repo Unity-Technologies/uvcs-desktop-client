@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { treeArrowMove } from '../../lib/treeArrowMove';
-import { changesUnderRow, changeTreeArrowRows, collapseRows, comparePaths, layoutChangeRows, LEVEL_INDENT, menuTargetOf, rowCheckState, rowIndent, topLevelCheckboxInset, treeLevel, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { changesUnderRow, changeTreeArrowRows, collapseRows, comparePaths, inPreviousOrder, layoutChangeRows, LEVEL_INDENT, menuTargetOf, rowCheckState, rowIndent, sortForLayout, topLevelCheckboxInset, treeLevel, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
 
 /** The rows the list shows. */
 function buildChangeRows({ collapsed, ...layout }: Parameters<typeof layoutChangeRows>[0] & { collapsed: ReadonlySet<string> }): ChangeRow[] {
@@ -297,5 +297,22 @@ describe('buildChangeRows at scale', () => {
     expect(timed('list', 'none')).toBeLessThan(1000);
     expect(timed('tree', 'none')).toBeLessThan(1000);
     expect(timed('tree', 'changelist')).toBeLessThan(1000);
+  });
+});
+
+describe('inPreviousOrder', () => {
+  const [a, b, c, d] = [change('a', ['changed']), change('b', ['changed']), change('c', ['private']), change('d', ['added'])];
+
+  it('keeps the changes read before where they were and puts the others after them', () => {
+    expect(inPreviousOrder([d, c, a], [a, b, c])).toEqual([a, c, d]);
+    expect(inPreviousOrder([c, a], [a, c])).toEqual([a, c]);
+  });
+
+  it('sorts to the same order as sorting afresh', () => {
+    const many = Array.from({ length: 20_000 }, (_, index) => change(`src/f${index % 50}/file${(index * 7919) % 20_000}.ts`, index % 3 ? ['changed'] : ['private']));
+    const sorted = sortForLayout(many, 'list');
+    const reread = many.map((item, index) => (index % 10 ? item : { ...item, lastModified: 'later' }));
+    const fresh = sortForLayout(reread, 'list');
+    expect(sortForLayout(inPreviousOrder(reread, sorted), 'list')).toEqual(fresh);
   });
 });
