@@ -1,0 +1,6 @@
+.mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  color: var(--accent-text);
+}
