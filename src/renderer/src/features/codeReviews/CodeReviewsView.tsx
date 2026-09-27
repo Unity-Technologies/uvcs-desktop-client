@@ -114,6 +114,8 @@ export function CodeReviewsView() {
     setCreatedKey(null);
   }, [shownKeys, createdKey, setSelection]);
   useCommands(commands);
+  const selected = visible.find((review) => reviewKey(review) === selection.anchor);
+  useCopyCommand('Code reviews', 'Code review', selection.selected.size === 1 && selected ? codeReviewCopyTexts(selected) : undefined);
   const newReview = commands[0]!.run;
 
   const header = (
@@ -188,8 +190,6 @@ export function CodeReviewsView() {
     );
   }
 
-  const selected = visible.find((review) => reviewKey(review) === selection.anchor);
-  useCopyCommand('Code reviews', 'Code review', selection.selected.size === 1 && selected ? codeReviewCopyTexts(selected) : undefined);
 
   return (
     <>
