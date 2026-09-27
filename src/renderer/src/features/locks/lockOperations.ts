@@ -22,8 +22,8 @@ export async function releaseLocks(workspacePath: string, locks: Lock[]): Promis
 /** Deletes the locks entirely. Only server administrators can do this. */
 export async function removeLocks(workspacePath: string, locks: Lock[]): Promise<void> {
   const confirmed = await confirm({
-    title: `Remove ${lockSubject(locks)}?`,
-    message: 'The lock goes away even if its changes have not reached the destination branch. Only administrators can remove locks.',
+    title: locks.length === 1 ? 'Remove lock?' : `Remove ${locks.length} locks?`,
+    message: `This removes ${lockSubject(locks)} even if the changes have not reached the destination branch. Only administrators can remove locks.`,
     confirmLabel: 'Remove',
     danger: true,
   });
