@@ -50,7 +50,7 @@ interface DataTableProps<Row> {
   label?: string;
   /** Hides the column titles from sight (screen readers still get them), for a single self-explaining column. */
   hideHeader?: boolean;
-  /** A hairline between rows, for tall rows of several lines that would otherwise run together. */
+  /** Rows as a list of entries, for tall rows of several lines in a list without column titles: each fills the width, with a hairline between. */
   divided?: boolean;
 }
 
@@ -247,6 +247,7 @@ export function DataTable<Row>({
     <div
       ref={tableRef}
       className={styles.table}
+      data-divided={divided || undefined}
       tabIndex={0}
       role="grid"
       aria-label={label}

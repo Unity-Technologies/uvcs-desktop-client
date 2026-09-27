@@ -60,6 +60,11 @@
 
 /* Divided rows read as a list of entries: each fills the list's width, its highlight too, with a hairline between
    each and under the last. The inset of other rows becomes padding, so the text stays where it is. */
+/* No column titles to line up with a scrollbar that isn't there: the rows reach the edge until the list scrolls. */
+.table[data-divided] .viewport {
+  scrollbar-gutter: auto;
+}
+
 .row[data-divided] {
   margin: 0;
   padding: 0 var(--space-1);
