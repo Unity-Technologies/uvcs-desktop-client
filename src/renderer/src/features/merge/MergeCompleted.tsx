@@ -2,7 +2,7 @@ import { CheckCircle2 } from 'lucide-react';
 import type { MergeRequest, MergeResult } from '@shared/domain/merge';
 import { navigation } from '../../app/navigation/navigationStore';
 import { Button } from '../../ui/Button';
-import { completionTitle, mergeTitle, mergeTitleText, type MergeLabels } from './mergeDescription';
+import { completionCounts, completionTitle, mergeTitle, mergeTitleText, type MergeLabels } from './mergeDescription';
 import styles from './MergeCompleted.module.css';
 
 /** What the merge page keeps once the merge ran, when the plan it showed is gone. */
@@ -17,10 +17,7 @@ export interface MergeCompletion {
 export function MergeCompleted({ request, completion }: { request: MergeRequest; completion: MergeCompletion }) {
   const { result, labels, changeCount, conflictCount } = completion;
   const intoServerBranch = Boolean(request.destinationBranch);
-  const counts = [
-    `${changeCount} ${changeCount === 1 ? 'change' : 'changes'} applied`,
-    conflictCount > 0 && `${conflictCount} ${conflictCount === 1 ? 'conflict' : 'conflicts'} resolved`,
-  ].filter(Boolean);
+  const counts = completionCounts(changeCount, conflictCount);
 
   return (
     <div className={styles.completed}>
@@ -34,7 +31,7 @@ export function MergeCompleted({ request, completion }: { request: MergeRequest;
           ? `Created changeset ${result.changesetId} on ${labels.destination}.`
           : 'The result is in your pending changes, ready to check in.'}
       </p>
-      <p className={styles.counts}>{counts.join(' · ')}</p>
+      {counts && <p className={styles.counts}>{counts}</p>}
       <div className={styles.actions}>
         {intoServerBranch ? (
           <Button variant="primary" onClick={navigation.goBack}>
