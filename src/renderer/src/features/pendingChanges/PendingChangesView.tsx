@@ -39,7 +39,7 @@ import { behindBranch, behindDescription } from './checkinBehind';
 import { mergeSourceChangeset, uploadSize } from './checkinButton';
 import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinChanges, confirmCheckinWithoutComment, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
-import { isCheckinCandidate, isShelvable } from './changeCategories';
+import { isCheckinCandidate, isShelvable, matchesBranch } from './changeCategories';
 import { buildChangeRows, changeKey, changesUnderRow, topLevelCheckboxInset, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
 import { changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
@@ -285,6 +285,12 @@ export function PendingChangesView() {
             )}
             {hiddenIncludedCount > 0 && <HiddenCheckedNotice count={hiddenIncludedCount} onClear={clearFilter} />}
             <LockedByOthersNotice changes={included} locks={locks} />
+            {/* Files never checked in don't make a task unfinished: finishing it is offered as on a clean workspace. */}
+            {branchName && matchesBranch(allChanges) && (
+              <div className={styles.taskSuggestion}>
+                <MergeTaskSuggestion workspacePath={workspacePath} branchName={branchName} />
+              </div>
+            )}
             {bulkPrivate && (
               <BulkPrivateNotice
                 bulk={bulkPrivate}

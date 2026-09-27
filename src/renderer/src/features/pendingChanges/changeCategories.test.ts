@@ -1,8 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import type { ChangeKind, PendingChange } from '@shared/domain/pendingChanges';
-import { hasRevisions, isShelvable } from './changeCategories';
+import { hasRevisions, isShelvable, matchesBranch } from './changeCategories';
 
 const change = (...kinds: ChangeKind[]): PendingChange => ({ path: 'a.txt', kinds, itemType: 'file', size: 1, lastModified: '' });
+
+describe('matchesBranch', () => {
+  it('holds while only files never checked in are pending', () => {
+    expect(matchesBranch([change('private'), change('ignored'), change('cloaked')])).toBe(true);
+    expect(matchesBranch([change('private'), change('checkedOut', 'changed')])).toBe(false);
+    expect(matchesBranch([change('added')])).toBe(false);
+  });
+});
 
 describe('isShelvable', () => {
   it('takes what is under version control, links aside: cm would shelve the files they point to', () => {
