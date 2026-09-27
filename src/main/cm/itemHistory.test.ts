@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { itemHistoryTarget, itemRevisionsArgs, parseHistoryRecords, parseItemHistory } from './itemHistory';
+import { itemHistoryTarget, itemRevisionsArgs, parseHistoryRecords, parseItemHistory, parseWorkspaceRevision } from './itemHistory';
 
 const revision = (changeset: number, comment: string, type = 'txt'): string => `
   <Revision>
@@ -102,5 +102,17 @@ describe('itemHistoryTarget', () => {
   it("reads the workspace's file, or the repository path in a changeset", () => {
     expect(itemHistoryTarget('/work', 'src/a.cs')).toBe(join('/work', 'src', 'a.cs'));
     expect(itemHistoryTarget('/work', 'src/a.cs', 42)).toBe('serverpath:/src/a.cs#cs:42');
+  });
+});
+
+describe('parseWorkspaceRevision', () => {
+  it("reads the item's own revision, listed before a directory's children", () => {
+    expect(parseWorkspaceRevision('100\n')).toBe(100);
+    expect(parseWorkspaceRevision('102\n100\n101\n')).toBe(102);
+  });
+
+  it('finds none for an item the workspace has no revision of', () => {
+    expect(parseWorkspaceRevision('')).toBeUndefined();
+    expect(parseWorkspaceRevision('-1\n')).toBeUndefined();
   });
 });

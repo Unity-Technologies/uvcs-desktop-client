@@ -3,7 +3,15 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { dialog, shell } from 'electron';
 import type { HistoryApi } from '@shared/api/history';
-import { itemHistoryArgs, itemHistoryTarget, itemRevisionsArgs, parseHistoryRecords, parseItemHistory } from '../cm/itemHistory';
+import {
+  itemHistoryArgs,
+  itemHistoryTarget,
+  itemRevisionsArgs,
+  parseHistoryRecords,
+  parseItemHistory,
+  parseWorkspaceRevision,
+  workspaceRevisionArgs,
+} from '../cm/itemHistory';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
 
@@ -14,9 +22,14 @@ export function createHistoryService({ cm }: ServiceContext): HistoryApi {
 
   return {
     async forItem(workspacePath, path, changesetId) {
+      // Read alongside the history: which of its revisions the workspace has, from the workspace itself.
+      const workspaceRevision =
+        changesetId === undefined
+          ? cm.query(workspaceRevisionArgs(toAbsolutePath(workspacePath, path)), { cwd: workspacePath }).then(parseWorkspaceRevision, () => undefined)
+          : Promise.resolve(undefined);
       const records = parseHistoryRecords(await cm.query(itemHistoryArgs(itemHistoryTarget(workspacePath, path, changesetId)), { cwd: workspacePath }));
       const revisionsArgs = itemRevisionsArgs(records);
-      return parseItemHistory(records, revisionsArgs ? await cm.query(revisionsArgs, { cwd: workspacePath }) : '');
+      return parseItemHistory(records, revisionsArgs ? await cm.query(revisionsArgs, { cwd: workspacePath }) : '', await workspaceRevision);
     },
 
     async revertTo(workspacePath, path, changesetId) {
