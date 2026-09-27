@@ -1,5 +1,6 @@
 import { GitGraph, RefreshCw } from 'lucide-react';
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { spec } from '@shared/domain/specs';
 import { invalidateWorkspace } from '../../app/queryClient';
@@ -27,6 +28,7 @@ import { GraphNavControls } from './GraphNavControls';
 import { GraphSearch } from './GraphSearch';
 import { filterGraph, type GraphFocus } from './model/filterGraph';
 import { layoutGraph } from './model/layoutGraph';
+import { rememberedPerHistory } from './model/rememberedPerHistory';
 import { describeSelection } from './model/describeSelection';
 import {
   branchBase,
@@ -75,15 +77,18 @@ export function BranchExplorerView() {
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : null;
   const homeChangeset = workspace?.loadedChangeset ?? null;
 
+  // Remembered with the history, so coming back to the view draws at once.
   const filtered = useMemo(() => {
     if (!data) return null;
     const related = focus ?? (onlyRelatedToCurrent && currentBranch ? { branch: currentBranch, hops: 1 } : null);
-    const chosen = visibleBranches && new Set(visibleBranches);
-    return filterGraph(data, { focus: related, visibleBranches: chosen, hideMergedBranches, currentBranch });
+    return rememberedPerHistory(data, 'filtered', [related?.branch, related?.hops, visibleBranches, hideMergedBranches, currentBranch], () => {
+      const chosen = visibleBranches && new Set(visibleBranches);
+      return filterGraph(data, { focus: related, visibleBranches: chosen, hideMergedBranches, currentBranch });
+    });
   }, [data, focus, onlyRelatedToCurrent, visibleBranches, hideMergedBranches, currentBranch]);
 
   // Search looks at every changeset, so "Only relevant changesets" can keep what it finds.
-  const fullLayout = useMemo(() => filtered && layoutGraph(filtered), [filtered]);
+  const fullLayout = useMemo(() => filtered && rememberedPerHistory(filtered, 'layout', [], () => layoutGraph(filtered)), [filtered]);
   const searchHits = useSearchHits(fullLayout, shownSearch);
   const selectedChangeset = selection?.kind === 'changeset' ? selection.id : null;
   const layout = useMemo(() => {
@@ -97,8 +102,8 @@ export function BranchExplorerView() {
     return layoutGraph(filtered, { keep });
   }, [filtered, fullLayout, structureOnly, expanded, homeChangeset, selectedChangeset, searchHits, revealRequest]);
 
-  const authors = useMemo(() => [...new Set(data?.changesets.map((changeset) => changeset.owner))].sort(), [data]);
-  const branchNames = useMemo(() => (data?.branches.map((branch) => branch.name) ?? []).sort(), [data]);
+  const authors = useMemo(() => (data ? rememberedPerHistory(data, 'authors', [], () => authorsOf(data)) : []), [data]);
+  const branchNames = useMemo(() => (data ? rememberedPerHistory(data, 'branchNames', [], () => data.branches.map((branch) => branch.name).sort()) : []), [data]);
   // Asked for once the graph is in, so it never waits on the reviews.
   const { data: reviews } = useReviewsByBranch(data !== undefined);
   // What the hits light up, found once per search: selecting and stepping through the hits only moves `active`.
@@ -384,6 +389,12 @@ export function BranchExplorerView() {
       </div>
     </>
   );
+}
+
+function authorsOf(data: BranchExplorerData): string[] {
+  const authors = new Set<string>();
+  for (const changeset of data.changesets) authors.add(changeset.owner);
+  return [...authors].sort();
 }
 
 /** Fields keep every key (the search, an edited comment); buttons and links keep the keys that press them. */
