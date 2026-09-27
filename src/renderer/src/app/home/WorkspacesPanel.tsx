@@ -1,5 +1,6 @@
 import { FolderOpen, FolderPlus, Layers } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { pluralize } from '../../lib/text';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { SearchField } from '../../ui/SearchField';
@@ -27,7 +28,7 @@ export function WorkspacesPanel({ onOpen, onOpenFolder }: WorkspacesPanelProps) 
       <ViewHeader
         inTitleBar
         title="All workspaces"
-        subtitle={workspaces && `${workspaces.length} workspaces`}
+        subtitle={workspaces && pluralize(workspaces.length, 'workspace')}
         actions={
           <>
             <Button icon={<FolderOpen size={14} />} onClick={onOpenFolder}>

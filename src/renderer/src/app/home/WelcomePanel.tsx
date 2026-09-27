@@ -32,8 +32,7 @@ export function WelcomePanel({ onOpen, onOpenFolder, onBrowseRepositories }: Wel
         <div className={styles.firstRun}>
           <Clock size={16} />
           <span>
-            <strong>Nothing here yet.</strong> The workspaces you open come back here, so picking up where you left off is one click
-            away.
+            <strong>Nothing here yet.</strong> The workspaces you open show up here, one click away.
           </span>
         </div>
       ),
