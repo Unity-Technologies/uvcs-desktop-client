@@ -2,6 +2,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import type { ContentApi } from '@shared/api/content';
 import type { ContentSource, FileContent } from '@shared/domain/content';
 import { EMPTY_CONTENT, toFileContent } from '../files/fileContent';
+import { explainLockedFile } from '../files/lockedFile';
 import { saveContent } from '../files/saveContent';
 import { withTempPath } from '../files/tempFile';
 import { toAbsolutePath } from '../files/workspacePaths';
@@ -14,7 +15,10 @@ export function createContentService({ cm, reviews }: ServiceContext): ContentAp
         return EMPTY_CONTENT;
       case 'workspaceFile': {
         const absolutePath = toAbsolutePath(workspacePath, source.path);
-        return toFileContent(await readFile(absolutePath), absolutePath);
+        const bytes = await readFile(absolutePath).catch((error: unknown) => {
+          throw explainLockedFile(error, absolutePath);
+        });
+        return toFileContent(bytes, absolutePath);
       }
       case 'reviewSnapshot':
         return reviews.readSnapshot(workspacePath, source.path);
@@ -29,7 +33,10 @@ export function createContentService({ cm, reviews }: ServiceContext): ContentAp
   }
 
   async function writeWorkspaceFile(workspacePath: string, path: string, text: string): Promise<void> {
-    await writeFile(toAbsolutePath(workspacePath, path), text, 'utf8');
+    const absolutePath = toAbsolutePath(workspacePath, path);
+    await writeFile(absolutePath, text, 'utf8').catch((error: unknown) => {
+      throw explainLockedFile(error, absolutePath);
+    });
   }
 
   return { read, writeWorkspaceFile };
