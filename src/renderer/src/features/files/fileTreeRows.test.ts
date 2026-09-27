@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TreeItem } from '@shared/domain/explorer';
-import { ancestorsOf, buildFileTreeRows, indentOf, parentOf } from './fileTreeRows';
+import { ancestorsOf, buildFileTreeRows, indentOf, parentOf, treeArrowMove } from './fileTreeRows';
 
 function item(path: string, itemType: TreeItem['itemType'] = 'file'): TreeItem {
   return {
@@ -84,5 +84,22 @@ describe('indentOf', () => {
     expect(indentOf(8)).toBe(128);
     expect(indentOf(9)).toBe(132);
     expect(indentOf(20)).toBe(176);
+  });
+});
+
+describe('treeArrowMove', () => {
+  const rows = buildFileTreeRows({ childrenByDirectory: tree, expanded: new Set(['src']) });
+  const at = (path: string) => rows.findIndex((row) => row.item.path === path);
+
+  it('opens a closed folder, then steps into it', () => {
+    expect(treeArrowMove(rows, at('Assets'), 'ArrowRight')).toEqual({ kind: 'toggle' });
+    expect(treeArrowMove(rows, at('src'), 'ArrowRight')).toEqual({ kind: 'moveBy', step: 1 });
+    expect(treeArrowMove(rows, at('src/a.ts'), 'ArrowRight')).toBeNull();
+  });
+
+  it('closes an open folder, and goes from a child up to its folder', () => {
+    expect(treeArrowMove(rows, at('src'), 'ArrowLeft')).toEqual({ kind: 'toggle' });
+    expect(treeArrowMove(rows, at('src/b.ts'), 'ArrowLeft')).toEqual({ kind: 'moveBy', step: at('src') - at('src/b.ts') });
+    expect(treeArrowMove(rows, at('readme.md'), 'ArrowLeft')).toBeNull();
   });
 });

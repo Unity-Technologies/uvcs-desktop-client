@@ -8,7 +8,7 @@ import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { Spinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
-import { indentOf, type FileTreeRow } from './fileTreeRows';
+import { indentOf, treeArrowMove, type FileTreeRow } from './fileTreeRows';
 import { ItemIcon } from './ItemIcon';
 import { iconOverlay, type ItemStatus } from './itemStatus';
 import { isWorkspaceRoot } from './workspaceRoot';
@@ -75,13 +75,13 @@ export function FileTreeTable({
     { id: 'owner', header: 'By', width: 44, hideBelow: 600, render: (row) => row.item.owner && <Avatar user={row.item.owner} size={18} /> },
   ];
 
-  const onRowKeyDown = (event: React.KeyboardEvent, row: FileTreeRow): void => {
-    if (row.item.itemType !== 'directory') return;
-    const shouldToggle = (event.key === 'ArrowRight' && !row.isExpanded) || (event.key === 'ArrowLeft' && row.isExpanded);
-    if (shouldToggle) {
-      event.preventDefault();
-      onToggleDirectory(row.item.path);
-    }
+  const onRowKeyDown = (event: React.KeyboardEvent, row: FileTreeRow, moveBy: (step: number) => void): void => {
+    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+    const move = treeArrowMove(rows, rows.indexOf(row), event.key);
+    if (!move) return;
+    event.preventDefault();
+    if (move.kind === 'toggle') onToggleDirectory(row.item.path);
+    else moveBy(move.step);
   };
 
   return (
