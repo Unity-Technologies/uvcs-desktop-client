@@ -1,11 +1,7 @@
 import type { GitSyncRequest, ReplicationRequest, ReplicationSummary } from '@shared/domain/replication';
 import { api } from '../../api/client';
 import { runOperation } from '../../app/operations/runOperation';
-
-function describeTransfer(summary: ReplicationSummary): string {
-  if (summary.changesets === 0) return 'already up to date';
-  return `${summary.changesets} ${summary.changesets === 1 ? 'changeset' : 'changesets'}`;
-}
+import { replicationMessage } from './replicationMessage';
 
 /** Sends `branch` from the workspace repository (`request.from`) to `request.to`. */
 export function pushBranch(workspacePath: string, request: ReplicationRequest): Promise<ReplicationSummary | undefined> {
@@ -13,7 +9,7 @@ export function pushBranch(workspacePath: string, request: ReplicationRequest): 
     title: `Pushing ${request.branch} to ${request.to}`,
     workspacePath,
     run: (operationId) => api.sync.push(workspacePath, request, operationId),
-    successMessage: (summary) => `Pushed ${request.branch} to ${request.to}: ${describeTransfer(summary)}`,
+    successMessage: (summary) => replicationMessage('push', request, summary),
   });
 }
 
@@ -23,7 +19,7 @@ export function pullBranch(workspacePath: string, request: ReplicationRequest): 
     title: `Pulling ${request.branch} from ${request.from}`,
     workspacePath,
     run: (operationId) => api.sync.pull(workspacePath, request, operationId),
-    successMessage: (summary) => `Pulled ${request.branch} from ${request.from}: ${describeTransfer(summary)}`,
+    successMessage: (summary) => replicationMessage('pull', request, summary),
   });
 }
 

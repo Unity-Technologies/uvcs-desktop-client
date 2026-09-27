@@ -1,4 +1,4 @@
-import type { ShelvedForUpdate } from '@shared/domain/incoming';
+import type { ShelvedForUpdate, UpdateResolutions } from '@shared/domain/incoming';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
@@ -6,6 +6,7 @@ import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { UPDATE_ARGS } from '../cm/updateArgs';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { readIncomingChanges } from '../merge/incoming';
+import { unresolvedConflicts, updateWithMerge } from '../merge/updateWithMerge';
 import type { OperationContext } from '../operations/OperationTracker';
 import type { LeftChangesFinder } from './leftChanges';
 import { changedPaths, shelvedChangelists, SWITCH_STATUS_ARGS } from './pendingSnapshot';
@@ -19,16 +20,24 @@ export interface ShelveForUpdateDependencies {
   cm: CmClient;
   records: SwitchShelveRecords;
   leftChanges: LeftChangesFinder;
+  /** Where updating with merged files saves the local versions (`updateWithMerge`). */
+  backupsRoot: string;
 }
 
 /**
  * Updates past incoming changesets that deleted or moved files changed locally, which `cm update` can't merge:
  * 1. Shelve just those files with the automatic-shelve comment, check the shelve holds them, and record it like
  *    changes left on a switch, so Changes offers them back (restoring merges the shelve without any external tool).
- * 2. Undo them and update, unless other files still need merging: Incoming then shows only those.
+ * 2. Undo them and update, writing the user's merge of the files changed on both sides (`resolutions`), unless some of
+ *    those have none yet: Incoming then shows only them.
  * If the update fails, the files are put back.
  */
-export async function shelveBlockedAndUpdate(deps: ShelveForUpdateDependencies, workspacePath: string, context: OperationContext): Promise<ShelvedForUpdate> {
+export async function shelveBlockedAndUpdate(
+  deps: ShelveForUpdateDependencies,
+  workspacePath: string,
+  resolutions: UpdateResolutions | null,
+  context: OperationContext,
+): Promise<ShelvedForUpdate> {
   const { cm, records } = deps;
   const incoming = await readIncomingChanges(cm, workspacePath);
   if (incoming.blockedPaths.length === 0) throw new Error('Nothing blocks the update anymore: update from Incoming.');
@@ -61,11 +70,12 @@ export async function shelveBlockedAndUpdate(deps: ShelveForUpdateDependencies, 
   // From here on the changes live in the shelve: a failure puts them back.
   try {
     await cm.query(['undo', ...incoming.blockedPaths.map((path) => toAbsolutePath(workspacePath, path))], { cwd: workspacePath });
-    if (incoming.conflicts.length > 0) return { ...result, updated: false };
+    if (unresolvedConflicts(incoming.conflicts, resolutions).length > 0) return { ...result, updated: false, backupDirectory: null };
 
     context.beginStep('Updating', 2, 2);
+    if (incoming.conflicts.length > 0) return { ...result, updated: true, ...(await updateWithMerge(cm, workspacePath, resolutions!, deps.backupsRoot, context)) };
     await cm.execute(UPDATE_ARGS, { cwd: workspacePath, onOutputLine: context.progressOf(readUpdateProgress) });
-    return { ...result, updated: true };
+    return { ...result, updated: true, backupDirectory: null };
   } catch (error) {
     throw await putBack(deps, workspacePath, record, error, context);
   }
