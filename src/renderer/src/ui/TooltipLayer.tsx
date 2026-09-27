@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
+import { followTip, type TipText } from './followTip';
 import { TooltipBubble } from './TooltipBubble';
 
-interface Tip {
-  text: string;
-  /** Dimmed second line (`data-tip-sub`). */
-  sub?: string;
-  /** Shortcut shown as key caps (`data-tip-shortcut`). */
-  shortcut?: string;
+/** `sub` is `data-tip-sub`, `shortcut` is `data-tip-shortcut`. */
+interface FoundTip extends TipText {
+  /** The element the tip is read from: followed while it shows. */
+  host: Element;
+}
+
+interface Tip extends FoundTip {
   /** Pointer position at show time: the tip is anchored to the cursor. */
   pointerX: number;
   pointerY: number;
@@ -20,7 +22,8 @@ const CLIPPED_SEARCH_DEPTH = 4;
 /**
  * The app's one tooltip. Any element with `data-tip` shows it on hover, quickly and styled, instead of the slow
  * system `title`. `data-tip-overflow` shows it only while the element's text is clipped. Labels cut off by CSS
- * `text-overflow: ellipsis` reveal their full text without any attribute.
+ * `text-overflow: ellipsis` reveal their full text without any attribute. While it shows, it follows its element: new
+ * words under the still pointer (the status bar after a switch) show at once, and it goes when the element does.
  */
 export function TooltipLayer() {
   const [tip, setTip] = useState<Tip | null>(null);
@@ -59,23 +62,34 @@ export function TooltipLayer() {
     };
   }, []);
 
-  return tip && <TooltipBubble {...tip} />;
+  const host = tip?.host;
+  useEffect(() => {
+    if (!host) return;
+    const follow = (): void => setTip((shown) => shown && followTip(shown, host.isConnected ? findTip(host) : null));
+    const observer = new MutationObserver(follow);
+    observer.observe(host, { attributes: true, attributeFilter: ['data-tip', 'data-tip-sub', 'data-tip-shortcut', 'data-state'] });
+    // The element may leave with any of its ancestors.
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [host]);
+
+  return tip && <TooltipBubble text={tip.text} sub={tip.sub} shortcut={tip.shortcut} pointerX={tip.pointerX} pointerY={tip.pointerY} />;
 }
 
-function findTip(target: Element | null): Omit<Tip, 'pointerX' | 'pointerY'> | null {
+function findTip(target: Element | null): FoundTip | null {
   const host = target?.closest<HTMLElement>('[data-tip]');
   if (host) {
     const text = host.getAttribute('data-tip');
     // A menu or popover trigger that is open already shows what it does.
     if (!text || host.dataset.state === 'open' || (host.hasAttribute('data-tip-overflow') && !isClipped(host))) return null;
-    return { text, sub: host.getAttribute('data-tip-sub') ?? undefined, shortcut: host.getAttribute('data-tip-shortcut') ?? undefined };
+    return { text, sub: host.getAttribute('data-tip-sub') ?? undefined, shortcut: host.getAttribute('data-tip-shortcut') ?? undefined, host };
   }
 
   let element = target instanceof HTMLElement ? target : null;
   for (let depth = 0; element && depth < CLIPPED_SEARCH_DEPTH; depth++, element = element.parentElement) {
     if (element.scrollWidth > element.clientWidth + 1 && getComputedStyle(element).textOverflow === 'ellipsis') {
       const text = element.textContent?.trim();
-      return text ? { text } : null;
+      return text ? { text, host: element } : null;
     }
   }
   return null;
