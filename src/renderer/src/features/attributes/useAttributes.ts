@@ -31,16 +31,21 @@ export function useAttributeValues(objectSpec: string) {
   });
 }
 
-/** Values to offer while editing an attribute: its declared defaults, then the ones it takes elsewhere. Fetched only while `enabled`. */
-export function useAttributeSuggestions(attribute: string, enabled: boolean): string[] {
+/** The values an attribute takes on branches, changesets and labels (a sample of them). Fetched only while `enabled`. */
+export function useAttributeUsedValues(attribute: string, enabled: boolean) {
   const workspacePath = useWorkspacePath();
-  const { data: types } = useAttributeTypes();
-  const { data: used } = useQuery({
+  return useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'attributeUsedValues', attribute),
     queryFn: () => api.attributes.usedValues(workspacePath, attribute),
     enabled,
     staleTime: 60_000,
   });
+}
+
+/** Values to offer while editing an attribute: its declared defaults, then the ones it takes elsewhere. Fetched only while `enabled`. */
+export function useAttributeSuggestions(attribute: string, enabled: boolean): string[] {
+  const { data: types } = useAttributeTypes();
+  const { data: used } = useAttributeUsedValues(attribute, enabled);
   const comment = types?.find((type) => type.name === attribute)?.comment ?? '';
   return useMemo(() => suggestedValues(defaultValuesIn(comment), used ?? []), [comment, used]);
 }

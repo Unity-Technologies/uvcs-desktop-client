@@ -16,7 +16,7 @@
 
 .titleRow {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: var(--space-3);
 }
 
@@ -65,8 +65,12 @@
 }
 
 .hint {
+  overflow: hidden;
+  min-width: 0;
   color: var(--text-tertiary);
   font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .changes {

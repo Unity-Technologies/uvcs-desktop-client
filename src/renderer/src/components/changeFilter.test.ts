@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countTones, matchesChangeFilter, offeredTones } from './changeFilter';
+import { changeFilterPlaceholder, countTones, matchesChangeFilter, offeredTones } from './changeFilter';
 
 describe('offeredTones', () => {
   it('always offers the common statuses and adds the others only when present', () => {
@@ -28,5 +28,13 @@ describe('matchesChangeFilter', () => {
 describe('countTones', () => {
   it('counts the changes of each status', () => {
     expect(countTones(['changed', 'private', 'changed', 'added'])).toEqual(new Map([['changed', 2], ['private', 1], ['added', 1]]));
+  });
+});
+
+describe('changeFilterPlaceholder', () => {
+  it('counts the files in the right number', () => {
+    expect(changeFilterPlaceholder(1)).toBe('Filter 1 file');
+    expect(changeFilterPlaceholder(0)).toBe('Filter 0 files');
+    expect(changeFilterPlaceholder(1204)).toBe('Filter 1,204 files');
   });
 });

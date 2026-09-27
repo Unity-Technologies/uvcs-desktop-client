@@ -5,8 +5,8 @@ import type { SwitchChoice } from './switchOptions';
 interface PendingChangesChoiceProps {
   /** Where the changes are now, e.g. `/main/t1`. */
   source: string;
-  /** Where the workspace is going, e.g. `/main/t2` or "the new branch". */
-  destination: string;
+  /** Where the workspace is going, e.g. `/main/t2`; null for a branch not named yet. */
+  destination: string | null;
   choice: Pick<SwitchChoice, 'leave' | 'bring'>;
   value: PendingChangesAction | null;
   onChange: (value: PendingChangesAction) => void;
@@ -19,6 +19,7 @@ interface PendingChangesChoiceProps {
  * a branch and switching to it): leave them behind in a shelve, or bring them along.
  */
 export function PendingChangesChoice({ source, destination, choice, value, onChange, heading = false }: PendingChangesChoiceProps) {
+  const where = destination ?? 'the new branch';
   const cards: OptionCard<PendingChangesAction>[] = [
     {
       value: 'leave',
@@ -28,8 +29,8 @@ export function PendingChangesChoice({ source, destination, choice, value, onCha
     },
     {
       value: 'bring',
-      title: <>Bring them to <code>{destination}</code></>,
-      description: choice.bring.disabledReason ?? `Shelved, then applied on ${destination}. If a file conflicts, you decide how to merge it.`,
+      title: <>Bring them to {destination === null ? where : <code>{destination}</code>}</>,
+      description: choice.bring.disabledReason ?? `Shelved, then applied on ${where}. If a file conflicts, you decide how to merge it.`,
       disabled: !choice.bring.enabled,
     },
   ];

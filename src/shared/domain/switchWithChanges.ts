@@ -30,13 +30,22 @@ export interface SwitchPreflight {
   leftShelveCount: number;
 }
 
-export type SwitchResult =
+export type SwitchResult = (
   | { kind: 'switched'; restored?: RestoredChanges }
   | { kind: 'undidUnchangedCheckouts'; count: number; restored?: RestoredChanges }
   | { kind: 'left'; shelveId: number; count: number; sourceName: string; restored?: RestoredChanges }
   | { kind: 'brought' }
   /** Switched, but the changes wait in the shelve until the user resolves how they merge on the target. */
-  | { kind: 'bringPending'; shelveId: number; conflictCount: number };
+  | { kind: 'bringPending'; shelveId: number; conflictCount: number }
+) & { renamedPrivates?: RenamedPrivateFile[] };
+
+/** A private file in the way of a file the switch wrote: `cm` kept it next to it, under another name. */
+export interface RenamedPrivateFile {
+  /** Workspace path, e.g. `src/a.txt`. */
+  path: string;
+  /** e.g. `src/a.txt.private.0`. */
+  renamedTo: string;
+}
 
 /** Changes left on the target earlier and restored automatically on arrival. */
 export interface RestoredChanges {

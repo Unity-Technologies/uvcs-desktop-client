@@ -3,8 +3,9 @@ import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { MenuEntry } from '../../lib/actions';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
+import { compareSortValues } from '../../lib/naturalCompare';
 import { isMac } from '../../lib/platform';
-import { selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
+import { selectOnArrow, selectOnClick, successorKey, type SelectionState } from '../../lib/selection';
 import { ActionContextMenu } from '../menu/ActionContextMenu';
 import { cellText } from './cellText';
 import styles from './DataTable.module.css';
@@ -41,7 +42,7 @@ interface DataTableProps<Row> {
   letterMoves?: boolean;
   /** Scrolls this row into view (centered) whenever it changes, e.g. after revealing a search result. */
   revealKey?: string | null;
-  /** Selects the first row whenever no shown row is selected, so a details panel next to the table always has something to show. */
+  /** Selects a row whenever no shown row is selected (the first, or the one that took the place of a selected row that went away), so a details panel next to the table always has something to show. */
   selectFirstRow?: boolean;
   /** What the rows are, for screen readers (e.g. "Changesets"). */
   label?: string;
@@ -119,11 +120,17 @@ export function DataTable<Row>({
 
   const firstKey = orderedKeys[0];
   const anchorShown = selection.anchor !== null && rowsByKey.has(selection.anchor);
+  // The rows before they last changed: where a selected row that went away was.
+  const previousKeys = useRef<readonly string[]>([]);
   useEffect(() => {
     if (!selectFirstRow || firstKey === undefined || anchorShown) return;
-    setFocusedKey(firstKey);
-    onSelectionChange({ selected: new Set([firstKey]), anchor: firstKey });
+    const next = successorKey(previousKeys.current, orderedKeys, selection.anchor) ?? firstKey;
+    setFocusedKey(next);
+    onSelectionChange({ selected: new Set([next]), anchor: next });
   }, [selectFirstRow, firstKey, anchorShown, onSelectionChange]);
+  useEffect(() => {
+    previousKeys.current = orderedKeys;
+  }, [orderedKeys]);
 
   const selectedRows = (): Row[] => orderedKeys.filter((key) => selection.selected.has(key)).map((key) => rowsByKey.get(key)!);
 
@@ -260,9 +267,5 @@ function sortRows<Row>(rows: readonly Row[], columns: Column<Row>[], sort: { col
   if (!sort || !sortValue) return rows;
 
   const direction = sort.descending ? -1 : 1;
-  return [...rows].sort((a, b) => {
-    const left = sortValue(a);
-    const right = sortValue(b);
-    return (left < right ? -1 : left > right ? 1 : 0) * direction;
-  });
+  return [...rows].sort((a, b) => compareSortValues(sortValue(a), sortValue(b)) * direction);
 }

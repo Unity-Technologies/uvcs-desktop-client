@@ -3,6 +3,7 @@ import { Button } from '../Button';
 import { TextField } from '../TextField';
 import { Dialog } from './Dialog';
 import { askDialog } from './dialogStore';
+import { promptAnswer } from './promptAnswer';
 
 interface PromptOptions {
   title: string;
@@ -10,6 +11,8 @@ interface PromptOptions {
   initialValue?: string;
   confirmLabel: string;
   description?: string;
+  /** Why the value can't be used, shown under the field while it can't; undefined when it can. */
+  validate?: (value: string) => string | undefined;
 }
 
 /** Asks for a single line of text, e.g. a new name. Resolves to `undefined` if cancelled. */
@@ -23,27 +26,29 @@ function PromptDialog({
   initialValue = '',
   confirmLabel,
   description,
+  validate,
   finish,
 }: PromptOptions & { finish: (value: string | undefined) => void }) {
   const [value, setValue] = useState(initialValue);
-  const trimmed = value.trim();
+  const answer = promptAnswer(value, initialValue);
+  const error = answer ? validate?.(answer) : undefined;
 
   return (
     <Dialog
       title={title}
       description={description}
       onClose={() => finish(undefined)}
-      onSubmit={() => trimmed && finish(trimmed)}
+      onSubmit={() => answer && !error && finish(answer)}
       footer={
         <>
           <Button onClick={() => finish(undefined)}>Cancel</Button>
-          <Button type="submit" variant="primary" disabled={!trimmed || trimmed === initialValue}>
+          <Button type="submit" variant="primary" disabled={!answer || Boolean(error)}>
             {confirmLabel}
           </Button>
         </>
       }
     >
-      <TextField label={label} value={value} onChange={(event) => setValue(event.target.value)} autoFocus onFocus={(event) => event.target.select()} />
+      <TextField label={label} value={value} error={error} onChange={(event) => setValue(event.target.value)} autoFocus onFocus={(event) => event.target.select()} />
     </Dialog>
   );
 }

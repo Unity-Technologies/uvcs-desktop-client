@@ -23,4 +23,25 @@ describe('fitMergeTitle', () => {
   it('never makes a short branch longer', () => {
     expect(fitMergeTitle({ ...title, destination: '/main' }, fixed + 1, measure).destination).toBe('/main');
   });
+
+  it('cuts the middle of the names when even they are too wide, the wider first, and keeps the words', () => {
+    const long = { verb: 'Merge', source: '/main/feature-with-a-long-name', preposition: 'into', destination: '/main' };
+    const fitted = fitMergeTitle(long, fixed + 20, measure);
+    expect(fitted).toMatchObject({ verb: 'Merge', preposition: 'into', destination: '/main' });
+    expect(fitted.source).toBe('…/featur…g-name');
+    expect(measure(fitted.source) + measure(fitted.destination)).toBeLessThanOrEqual(20);
+  });
+
+  it('shares the room when both names are too wide', () => {
+    const both = { verb: 'Merge', source: '/main/aaaaaaaaaaaaaaaaaaaa', preposition: 'into', destination: '/main/bbbbbbbbbbbbbbbbbbbb' };
+    const fitted = fitMergeTitle(both, fixed + 20, measure);
+    expect(measure(fitted.source) + measure(fitted.destination)).toBeLessThanOrEqual(20);
+    expect(fitted.source).toMatch(/^…\/a+…a+$/);
+    expect(fitted.destination).toMatch(/^…\/b+…b+$/);
+  });
+
+  it('keeps a few characters each side of the cut however narrow the room', () => {
+    const long = { verb: 'Merge', source: '/main/feature-with-a-long-name', preposition: 'into', destination: '/main' };
+    expect(fitMergeTitle(long, fixed + 2, measure).source).toBe('…/fea…ame');
+  });
 });

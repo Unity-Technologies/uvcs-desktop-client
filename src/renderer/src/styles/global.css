@@ -77,7 +77,7 @@ textarea:focus-visible {
 
 .mono {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 
 /* For refresh icons while their data is being fetched. */

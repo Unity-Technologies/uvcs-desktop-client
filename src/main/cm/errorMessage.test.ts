@@ -85,6 +85,11 @@ describe('extractErrorMessage', () => {
     expect(extractErrorMessage(output)).toMatch(/^Unity VCS client is not correctly configured/);
   });
 
+  it('skips the empty result an --xml command prints after its error', () => {
+    const output = 'The item /work/doc does not exist in the workspace.\n<?xml version="1.0" encoding="utf-8"?>\n<RevisionHistoriesResult />\n';
+    expect(extractErrorMessage(output)).toBe('The item /work/doc does not exist in the workspace.');
+  });
+
   it('falls back to a generic message when nothing was printed', () => {
     expect(extractErrorMessage('\n')).toBe(SILENT_FAILURE_MESSAGE);
   });

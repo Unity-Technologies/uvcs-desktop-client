@@ -27,7 +27,7 @@ export class LeftChangesFinder {
   async find(workspacePath: string): Promise<LeftChanges[]> {
     const workspace = await readWorkspaceIdentity(this.cm, workspacePath);
     const shelves = await this.automaticShelves(workspacePath);
-    const own = this.liveRecords(workspace, shelves).filter((record) => waitsOn(record) === selectorSpec(workspace.selector));
+    const own = this.liveRecords(workspace, shelves).flatMap((record) => waitingOn(record, selectorSpec(workspace.selector)) ?? []);
     const foreign = await this.foreignShelves(workspacePath, workspace, shelves);
 
     return [
@@ -41,7 +41,7 @@ export class LeftChangesFinder {
     const workspace = await readWorkspaceIdentity(this.cm, workspacePath);
     return this.records
       .forWorkspace(workspace.guid)
-      .some((record) => record.repository === workspace.repository && waitsOn(record) === selectorSpec(workspace.selector));
+      .some((record) => record.repository === workspace.repository && waitingOn(record, selectorSpec(workspace.selector)));
   }
 
   /**
@@ -158,9 +158,14 @@ export class LeftChangesFinder {
   }
 }
 
-/** Left changes wait where they were made; changes being brought wait on the target until their conflicts are resolved. */
-function waitsOn(record: SwitchShelveRecord): string {
-  return record.mode === 'leave' ? record.source.spec : record.target.spec;
+/**
+ * The record as its changes wait on `spec`, if they do. Left changes wait where they were made. Changes being brought
+ * wait on the target until their conflicts are resolved, and where they were made too, as left there: the user went
+ * back instead.
+ */
+function waitingOn(record: SwitchShelveRecord, spec: string): SwitchShelveRecord | undefined {
+  if (record.source.spec === spec) return { ...record, mode: 'leave' };
+  return record.mode === 'bring' && record.target.spec === spec ? record : undefined;
 }
 
 function toLeftChanges(record: SwitchShelveRecord): LeftChanges {

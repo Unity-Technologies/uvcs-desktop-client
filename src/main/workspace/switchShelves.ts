@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, readlink, rm, symlink, writeFile } from 'node:fs/promises';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { MergeRequest } from '@shared/domain/merge';
 import type { PendingChange } from '@shared/domain/pendingChanges';
@@ -8,6 +8,8 @@ import type { CmClient } from '../cm/CmClient';
 import { DIFF_FORMAT, parseDiffEntries } from '../cm/diffEntries';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readShelveProgress } from '../cm/progress/shelveProgress';
+import { onLinksThemselves } from '../cm/symlinkArgs';
+import { waitForNextSecond } from '../files/nextSecond';
 import { withTempFile } from '../files/tempFile';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { previewMerge } from '../merge/previewMerge';
@@ -85,17 +87,27 @@ export async function applyShelveCleanly(cm: CmClient, workspacePath: string, sh
 /**
  * A merge from a shelve "replaces" the files it brings with the shelve's revisions, which are gone once the shelve
  * is deleted: reading the file's base (its diff) would then fail. Before deleting a shelve whose merge is done, those
- * files become plain checkouts with the same content. Only right after that merge: every replaced file comes from it.
+ * files become plain checkouts with the same content (links with the same target). Only right after that merge: every
+ * replaced file comes from it.
  */
 export async function detachReplacedFiles(cm: CmClient, workspacePath: string): Promise<void> {
   const { changes } = parsePendingChanges(await cm.query(['status', '--xml', '--controlledchanged'], { cwd: workspacePath }));
-  const paths = changes
+  const items = changes
     .filter((change) => change.kinds.includes('replaced') && !change.kinds.includes('moved') && change.itemType !== 'directory')
-    .map((change) => toAbsolutePath(workspacePath, change.path));
-  if (paths.length === 0) return;
+    .map((change) => ({ path: toAbsolutePath(workspacePath, change.path), link: change.itemType === 'symlink' }));
+  if (items.length === 0) return;
 
-  const contents = await Promise.all(paths.map((path) => readFile(path)));
-  await cm.query(['undo', ...paths], { cwd: workspacePath });
-  await Promise.all(paths.map((path, index) => writeFile(path, contents[index]!)));
-  await cm.query(['checkout', ...paths], { cwd: workspacePath });
+  const paths = items.map((item) => item.path);
+  // A link's content is where it points: reading or writing the file would go through to its target.
+  const contents = await Promise.all(items.map((item) => (item.link ? readlink(item.path) : readFile(item.path))));
+  await cm.query(onLinksThemselves('undo', ...paths), { cwd: workspacePath });
+  // In a later second than the undo wrote them: rewritten with as many bytes within that second, they'd look unchanged.
+  await waitForNextSecond();
+  await Promise.all(items.map((item, index) => (item.link ? relink(item.path, contents[index] as string) : writeFile(item.path, contents[index]!))));
+  await cm.query(onLinksThemselves('checkout', ...paths), { cwd: workspacePath });
+}
+
+async function relink(path: string, target: string): Promise<void> {
+  await rm(path, { force: true });
+  await symlink(target, path);
 }

@@ -116,6 +116,16 @@ describe('LeftChangesFinder', () => {
     expect(commands).toContain("find branch where name = 'task1' --xml --nototal");
   });
 
+  it('offers changes still waiting to be brought elsewhere as left here, once the workspace is back where they were made', async () => {
+    const { cm } = fakeCm(shelves({ id: 2, comment: LEFT_ON_TASK1 }));
+    const bringing: SwitchShelveRecord = { ...ownRecord(2, 'br:/main/task1'), mode: 'bring' };
+
+    expect(await new LeftChangesFinder(cm, recordsOf([bringing])).find('/work')).toEqual([
+      expect.objectContaining({ shelveId: 2, mode: 'leave', sourceName: '/main/task1', targetName: '/main' }),
+    ]);
+    expect(await new LeftChangesFinder(cm, recordsOf([bringing])).hasOwnWaiting('/work')).toBe(true);
+  });
+
   it("tells whether this app left changes on what the workspace is on, without asking the server", async () => {
     const { cm, commands } = fakeCm(shelves());
 

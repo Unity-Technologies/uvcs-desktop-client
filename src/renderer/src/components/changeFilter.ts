@@ -27,6 +27,11 @@ export function countTones(tones: readonly StatusTone[]): Map<StatusTone, number
   return counts;
 }
 
+/** The filter field's placeholder: "Filter 1 file", "Filter 1,204 files". */
+export function changeFilterPlaceholder(count: number): string {
+  return `Filter ${count.toLocaleString('en-US')} ${count === 1 ? 'file' : 'files'}`;
+}
+
 export function matchesChangeFilter(path: string, tone: StatusTone, { query, tones }: ChangeFilter): boolean {
   return (tones.size === 0 || tones.has(tone)) && path.toLowerCase().includes(query.trim().toLowerCase());
 }

@@ -43,6 +43,35 @@ export function buildFileTreeRows({ childrenByDirectory, expanded, filter = '', 
   return rows;
 }
 
+/** What ← or → does on the row at `index`, as in any tree: open or close a folder, or step into it or out to its parent. */
+export type TreeArrowMove = { kind: 'toggle' } | { kind: 'moveBy'; step: number };
+
+export function treeArrowMove(rows: readonly FileTreeRow[], index: number, key: 'ArrowLeft' | 'ArrowRight'): TreeArrowMove | null {
+  const row = rows[index];
+  if (!row) return null;
+  const isDirectory = row.item.itemType === 'directory';
+  if (key === 'ArrowRight') {
+    if (!isDirectory) return null;
+    if (!row.isExpanded) return { kind: 'toggle' };
+    return (rows[index + 1]?.depth ?? -1) > row.depth ? { kind: 'moveBy', step: 1 } : null;
+  }
+  if (isDirectory && row.isExpanded) return { kind: 'toggle' };
+  for (let parent = index - 1; parent >= 0; parent--) {
+    if (rows[parent]!.depth < row.depth) return { kind: 'moveBy', step: parent - index };
+  }
+  return null;
+}
+
+const INDENT = 16;
+/** Levels indented in full; deeper ones step in by a quarter, so names deep in a tree keep room to show. */
+const FULL_INDENT_LEVELS = 8;
+
+/** How far a row at `depth` is indented, in pixels. */
+export function indentOf(depth: number): number {
+  const full = Math.min(depth, FULL_INDENT_LEVELS);
+  return full * INDENT + (depth - full) * (INDENT / 4);
+}
+
 export function sortItems(items: TreeItem[]): TreeItem[] {
   return [...items].sort((a, b) => {
     const directoryFirst = Number(b.itemType === 'directory') - Number(a.itemType === 'directory');

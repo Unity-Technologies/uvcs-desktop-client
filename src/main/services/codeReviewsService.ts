@@ -90,6 +90,8 @@ function summaryOf({ targetType, targetId, ...summary }: RawCodeReview): CodeRev
 
 function targetOf({ targetType, targetId }: RawCodeReview, branchNames: ReadonlyMap<number, string>): CodeReviewTarget {
   if (targetType === 'changeset') return { kind: 'changeset', changesetId: targetId };
+  if (targetType === 'shelve') return { kind: 'shelve', shelveId: targetId };
   const branch = targetType === 'branch' ? branchNames.get(targetId) : undefined;
-  return branch !== undefined ? { kind: 'branch', branch } : { kind: 'unknown', description: `${targetType} ${targetId}` };
+  if (branch !== undefined) return { kind: 'branch', branch };
+  return { kind: 'unknown', description: targetType === 'branch' ? 'an unknown branch' : 'changes of an unknown kind' };
 }

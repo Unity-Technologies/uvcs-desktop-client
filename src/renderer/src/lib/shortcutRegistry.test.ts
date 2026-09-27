@@ -39,7 +39,7 @@ describe('shortcut registry', () => {
   });
 
   it('shows the native menu accelerators of the keys the renderer binds', () => {
-    const items = [...readFileSync(APP_MENU, 'utf8').matchAll(/commandItem\('[^']+', '([^']+)', '([^']+)'\)/g)];
+    const items = [...readFileSync(APP_MENU, 'utf8').matchAll(/commandItem\('[^']+', '([^']+)', '([^']+)'[,)]/g)];
     expect(items.length).toBeGreaterThan(0);
     for (const [, commandId, accelerator] of items) {
       const shortcut = Object.values(SHORTCUTS).find((candidate) => 'commandId' in candidate && candidate.commandId === commandId);
@@ -56,9 +56,11 @@ describe('shortcut registry', () => {
     const global = Object.values(SHORTCUTS)
       .filter((shortcut) => shortcut.area === 'General' && !shortcut.label.startsWith('Save'))
       .flatMap((shortcut) => shortcut.keys);
-    const views = Array.from({ length: 14 }, (_, position) => viewShortcut(position));
-    const keys = [...global, ...views];
-    expect(new Set(keys).size).toBe(keys.length);
+    for (const mac of [true, false]) {
+      const views = Array.from({ length: 14 }, (_, position) => viewShortcut(position, mac));
+      const keys = [...global, ...views];
+      expect(new Set(keys).size).toBe(keys.length);
+    }
   });
 
   it('writes keys the formatter and matcher understand', () => {
@@ -67,21 +69,19 @@ describe('shortcut registry', () => {
 });
 
 describe('viewShortcut', () => {
-  it('numbers the views in sidebar order, then with Shift, leaving ⌘0 to Actual Size', () => {
-    expect(Array.from({ length: 12 }, (_, position) => viewShortcut(position))).toEqual([
-      'mod+1',
-      'mod+2',
-      'mod+3',
-      'mod+4',
-      'mod+5',
-      'mod+6',
-      'mod+7',
-      'mod+8',
-      'mod+9',
-      'mod+shift+1',
-      'mod+shift+2',
-      'mod+shift+3',
-    ]);
+  const first = ['mod+1', 'mod+2', 'mod+3', 'mod+4', 'mod+5', 'mod+6', 'mod+7', 'mod+8', 'mod+9'];
+
+  it('numbers the views in sidebar order, then with Option on macOS, leaving ⌘0 to Actual Size', () => {
+    expect(Array.from({ length: 12 }, (_, position) => viewShortcut(position, true))).toEqual([...first, 'mod+alt+1', 'mod+alt+2', 'mod+alt+3']);
+  });
+
+  it('never gives a view the chords macOS keeps for screenshots (⇧⌘3, ⇧⌘4, ⇧⌘5)', () => {
+    const views = Array.from({ length: 14 }, (_, position) => viewShortcut(position, true));
+    for (const screenshot of ['mod+shift+3', 'mod+shift+4', 'mod+shift+5']) expect(views).not.toContain(screenshot);
+  });
+
+  it('goes on with Shift elsewhere, where Ctrl+Alt is AltGr', () => {
+    expect(Array.from({ length: 12 }, (_, position) => viewShortcut(position, false))).toEqual([...first, 'mod+shift+1', 'mod+shift+2', 'mod+shift+3']);
   });
 });
 

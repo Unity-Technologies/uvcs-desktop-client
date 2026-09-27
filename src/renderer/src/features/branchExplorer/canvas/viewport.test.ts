@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { centerOn, clampViewport, fitToScreen, frameOn, interpolateViewport, MAX_ZOOM, openingViewport, OVERSCROLL, revealPoint, toWorld, zoomAt } from './viewport';
+import { centerOn, clampViewport, fitToScreen, frameOn, interpolateViewport, MAX_ZOOM, MIN_ZOOM, openingViewport, OVERSCROLL, revealPoint, toWorld, zoomAt } from './viewport';
 
 const screen = { width: 800, height: 600 };
 
@@ -25,6 +25,23 @@ describe('viewport', () => {
   it('fits content without zooming in past 1:1', () => {
     expect(fitToScreen({ width: 400, height: 300 }, screen).zoom).toBe(1);
     expect(fitToScreen({ width: 1600, height: 300 }, screen).zoom).toBe(0.5);
+  });
+
+  it('fits what fits to the top left, wherever the view was', () => {
+    expect(fitToScreen({ width: 1600, height: 300 }, screen, { panX: -700, panY: 0, zoom: 1 }).panX).toBe(0);
+  });
+
+  it('zooms a history too long to fit out around the middle of the view, not back to its oldest end', () => {
+    const current = { panX: -20000, panY: 0, zoom: 1 };
+    const middle = toWorld(current, 400, 0).x;
+    const fitted = fitToScreen({ width: 50000, height: 300 }, screen, current);
+    expect(fitted.zoom).toBe(MIN_ZOOM);
+    expect(toWorld(fitted, 400, 0).x).toBeCloseTo(middle);
+  });
+
+  it('never fits past either end of a long history', () => {
+    expect(fitToScreen({ width: 50000, height: 300 }, screen, { panX: 0, panY: 0, zoom: 1 }).panX).toBe(0);
+    expect(fitToScreen({ width: 50000, height: 300 }, screen, { panX: -49200, panY: 0, zoom: 1 }).panX).toBeCloseTo(800 - 50000 * MIN_ZOOM);
   });
 
   it('opens small graphs fitted and wide graphs with the focus on the right', () => {

@@ -32,15 +32,16 @@
   color: var(--text-primary);
 }
 
-.choice:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring-visible);
-}
-
 .choice[aria-pressed='true'] {
   background: var(--bg-surface-raised);
   color: var(--accent-text);
   box-shadow:
     0 0 0 1px var(--border-default),
     var(--shadow-sm);
+}
+
+.choice:focus-visible,
+.choice[aria-pressed='true']:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring-visible);
 }

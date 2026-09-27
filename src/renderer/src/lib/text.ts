@@ -7,7 +7,7 @@ export function fileNameOf(path: string): string {
   return path.split('/').filter(Boolean).at(-1) ?? path;
 }
 
-/** A count as the app writes it: "3,008". */
+/** A count as the app shows it: 20,412. */
 export function formatCount(count: number): string {
   return count.toLocaleString('en-US');
 }

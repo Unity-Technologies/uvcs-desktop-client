@@ -8,6 +8,7 @@ import { ListWithDetails } from '../../components/ListWithDetails';
 import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
 import { NoSelection } from '../../components/NoSelection';
 import { UserLabel } from '../../ui/Avatar';
+import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
@@ -20,6 +21,7 @@ import { ShelveDetails } from './ShelveDetails';
 import { shelveMenu } from './shelveMenu';
 import { showShelveChanges } from './shelveOperations';
 import { useShelves } from './useShelves';
+import { shelvesEmptyState } from './shelvesEmptyState';
 import { useShelvesViewStore } from './shelvesViewStore';
 import styles from './ShelvesView.module.css';
 
@@ -64,7 +66,7 @@ export function ShelvesView() {
     <>
       <ViewHeader
         title="Shelves"
-        subtitle={shelves && `${shelves.length}`}
+        count={shelves?.length}
         actions={<IconButton icon={<RefreshCw size={14} className={isFetching ? 'spinning' : undefined} />} label="Refresh" onClick={() => void invalidateWorkspace(workspacePath)} />}
       >
         <SearchField value={search} onChange={setSearch} placeholder="Filter shelves" />
@@ -77,11 +79,7 @@ export function ShelvesView() {
       ) : error ? (
         <EmptyState title="Couldn't load shelves" description={error.message} />
       ) : visible.length === 0 ? (
-        <EmptyState
-          icon={<Archive size={22} />}
-          title="No shelves"
-          description="Shelve pending changes from the Changes view to save them without checking in."
-        />
+        <ShelvesEmpty searching={search.trim() !== ''} onlyMine={onlyMine} onShowEveryone={() => setOnlyMine(false)} />
       ) : (
         <ListWithDetails
           list={
@@ -105,6 +103,18 @@ export function ShelvesView() {
         />
       )}
     </>
+  );
+}
+
+function ShelvesEmpty({ searching, onlyMine, onShowEveryone }: { searching: boolean; onlyMine: boolean; onShowEveryone: () => void }) {
+  const { title, description, offerEveryone } = shelvesEmptyState({ searching, onlyMine });
+  return (
+    <EmptyState
+      icon={<Archive size={22} />}
+      title={title}
+      description={description}
+      action={offerEveryone && <Button onClick={onShowEveryone}>Show everyone's shelves</Button>}
+    />
   );
 }
 

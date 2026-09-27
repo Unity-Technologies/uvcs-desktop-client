@@ -40,10 +40,16 @@ function pinnedTop(zoom: number): number {
   return FIT_TOP_MARGIN * Math.max(0, 1 - zoom);
 }
 
-/** Zooms out (never in beyond 1:1) so the whole graph fits on screen, aligned to the top left. */
-export function fitToScreen(content: Size, screen: Size): Viewport {
+/**
+ * Zooms out (never in beyond 1:1) so the whole graph fits on screen, aligned to the top left. A history too long to
+ * fit even at the smallest zoom zooms out around the middle of `current` instead of jumping to its oldest end.
+ */
+export function fitToScreen(content: Size, screen: Size, current?: Viewport): Viewport {
   const zoom = clamp(Math.min(screen.width / content.width, (screen.height - FIT_TOP_MARGIN) / content.height, 1), MIN_ZOOM, MAX_ZOOM);
-  return { zoom, panX: 0, panY: pinnedTop(zoom) };
+  const width = content.width * zoom;
+  if (!current || width <= screen.width) return { zoom, panX: 0, panY: pinnedTop(zoom) };
+  const middle = toWorld(current, screen.width / 2, 0).x;
+  return { zoom, panX: clamp(screen.width / 2 - middle * zoom, screen.width - width, 0), panY: pinnedTop(zoom) };
 }
 
 /** How far a graph larger than the screen can be dragged past its edges. */

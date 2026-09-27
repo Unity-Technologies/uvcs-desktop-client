@@ -1,8 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { formatCount, pluralize } from '../lib/text';
 import { SearchField } from '../ui/SearchField';
 import { Tooltip } from '../ui/Tooltip';
-import { countTones, matchesChangeFilter, offeredTones } from './changeFilter';
+import { changeFilterPlaceholder, countTones, matchesChangeFilter, offeredTones } from './changeFilter';
 import { STATUS_LETTERS, StatusLetter, type StatusTone } from './StatusBadge';
 import styles from './useChangeFilter.module.css';
 
@@ -56,10 +55,10 @@ export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tone
 
   const bar = (
     <div className={styles.bar}>
-      <SearchField value={query} onChange={setQuery} placeholder={`Filter ${pluralize(items.length, 'file')}`} width="100%" />
+      <SearchField value={query} onChange={setQuery} placeholder={changeFilterPlaceholder(items.length)} width="100%" />
       {tones.map((tone) => {
         const count = counts.get(tone) ?? 0;
-        const label = count > 0 ? `${TONE_LABELS[tone]} (${formatCount(count)})` : TONE_LABELS[tone];
+        const label = count > 0 ? `${TONE_LABELS[tone]} (${count.toLocaleString('en-US')})` : TONE_LABELS[tone];
         return (
           <Tooltip key={tone} content={label}>
             <button type="button" className={styles.chip} data-tone={tone} data-empty={count === 0} aria-pressed={activeTones.has(tone)} aria-label={label} onClick={() => toggle(tone)}>

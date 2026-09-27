@@ -1,13 +1,24 @@
-import type { CodeReview, CodeReviewStatus, CodeReviewSummary, CodeReviewTarget } from '@shared/domain/codeReview';
-import type { DiffTarget } from '@shared/domain/diff';
+import type { CodeReview, CodeReviewStatus, CodeReviewSummary } from '@shared/domain/codeReview';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction } from '../../app/operations/runOperation';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
+import { needsReviewerForStatus } from './reviewStatus';
 
-export function setReviewStatus(workspacePath: string, review: CodeReviewSummary, status: CodeReviewStatus): Promise<unknown> {
-  return runAction(workspacePath, "Couldn't change the review status", () => api.codeReviews.update(workspacePath, review.id, { status }));
+/** `cm` keeps the status of a review nobody is assigned to, so one without a reviewer asks for one and sets both at once. */
+export async function setReviewStatus(workspacePath: string, review: CodeReviewSummary, status: CodeReviewStatus): Promise<void> {
+  let assignee: string | undefined;
+  if (needsReviewerForStatus(review)) {
+    assignee = await prompt({
+      title: `Mark as “${status}”`,
+      label: 'Reviewer',
+      description: 'A review needs a reviewer before its status can change.',
+      confirmLabel: 'Assign and mark',
+    });
+    if (assignee === undefined) return;
+  }
+  await runAction(workspacePath, "Couldn't change the review status", () => api.codeReviews.update(workspacePath, review.id, { status, assignee }));
 }
 
 export async function reassignReview(workspacePath: string, review: CodeReviewSummary): Promise<void> {
@@ -41,27 +52,4 @@ export async function deleteReviews(workspacePath: string, reviews: CodeReviewSu
 
 export function openReview(review: Pick<CodeReview, 'id'>, focusPath?: string): void {
   navigation.openPage({ kind: 'codeReview', reviewId: review.id, focusPath });
-}
-
-export function describeTarget(target: CodeReviewTarget): string {
-  switch (target.kind) {
-    case 'branch':
-      return target.branch;
-    case 'changeset':
-      return `Changeset ${target.changesetId}`;
-    case 'unknown':
-      return target.description;
-  }
-}
-
-/** What to diff to review the changes, or null when the target is unknown. */
-export function reviewDiffTarget(target: CodeReviewTarget): DiffTarget | null {
-  switch (target.kind) {
-    case 'branch':
-      return { kind: 'branch', branch: target.branch };
-    case 'changeset':
-      return { kind: 'changeset', changesetId: target.changesetId };
-    case 'unknown':
-      return null;
-  }
 }

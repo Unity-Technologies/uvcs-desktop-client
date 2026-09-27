@@ -1,6 +1,9 @@
 .layout {
   display: flex;
   gap: var(--space-4);
+  /* One height for every section, so the dialog and its Done button stay put while moving between them; within the
+     dialog's own 76vh, less its header, padding and footer. */
+  height: min(460px, calc(76vh - 172px));
   min-height: 300px;
 }
 
@@ -20,6 +23,10 @@
   flex-direction: column;
   gap: var(--space-5);
   min-width: 0;
+  /* A long section scrolls by itself, the sections staying in view; the padding keeps focus rings from being clipped. */
+  margin: -3px;
+  padding: 3px;
+  overflow-y: auto;
 }
 
 .section {

@@ -58,6 +58,12 @@
   display: flex;
 }
 
+/* The focused half's ring shows over the other half, as in a SplitButton. */
+.actions > :focus-visible {
+  position: relative;
+  z-index: 1;
+}
+
 .act {
   flex: 1;
   height: 32px;
