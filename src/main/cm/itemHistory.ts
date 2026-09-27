@@ -45,8 +45,18 @@ export function itemRevisionsArgs(records: XmlNode[]): string[] | null {
   ];
 }
 
+/** The revision of the item the workspace has (`cm ls` reads the workspace, not the server): the item itself comes first. */
+export function workspaceRevisionArgs(absolutePath: string): string[] {
+  return onLinksThemselves('ls', absolutePath, '--format={revid}');
+}
+
+export function parseWorkspaceRevision(output: string): number | undefined {
+  const revisionId = Number.parseInt(output.trim().split('\n')[0] ?? '', 10);
+  return Number.isNaN(revisionId) || revisionId < 0 ? undefined : revisionId;
+}
+
 /** Combines the history's records with the revisions `itemRevisionsArgs` found, each list newest first. */
-export function parseItemHistory(records: XmlNode[], revisionsOutput: string): ItemHistory {
+export function parseItemHistory(records: XmlNode[], revisionsOutput: string, workspaceRevisionId?: number): ItemHistory {
   const revisionsByChangeset = new Map(
     parseRecords(revisionsOutput).map(([changeset, id, parent]) => [Number(changeset), { id: Number(id), parent: Number(parent) }]),
   );
@@ -68,6 +78,7 @@ export function parseItemHistory(records: XmlNode[], revisionsOutput: string): I
         }),
       )
       .sort(newestFirst),
+    ...(workspaceRevisionId !== undefined && { workspaceRevisionId }),
   };
 }
 

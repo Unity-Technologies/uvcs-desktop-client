@@ -19,6 +19,8 @@ export const SHORTCUT_AREAS = [
   'Diff',
   'Branch Explorer',
   'Files',
+  'History',
+  'Annotate',
   'Merge',
   'Command palette',
   'Image diff',
@@ -123,6 +125,17 @@ export const SHORTCUTS = {
   filesFindClear: { area: 'Files', label: 'Clear the find and go back to the tree', keys: ['escape'] },
   fileViewer: { area: 'Files', label: "Into the selected file's content, or back to the tree", keys: ['f6'] },
   leaveFileViewer: { area: 'Files', label: "Back to the tree from the file's content", keys: ['escape'] },
+
+  historyToggleView: { area: 'History', label: 'Diff or annotate the revision', keys: ['mod+shift+t'] },
+  historyEnterPane: { area: 'History', label: 'Into the diff or annotation', keys: ['mod+e'] },
+  historyLeavePane: { area: 'History', label: 'Back to the revisions', keys: ['escape'] },
+
+  annotateNextBlock: { area: 'Annotate', label: 'Next block of lines', keys: ['alt+down'] },
+  annotatePreviousBlock: { area: 'Annotate', label: 'Previous block of lines', keys: ['alt+up'] },
+  annotateNextSameChangeset: { area: 'Annotate', label: 'Next block from the same changeset', keys: ['alt+shift+down'] },
+  annotatePreviousSameChangeset: { area: 'Annotate', label: 'Previous block from the same changeset', keys: ['alt+shift+up'] },
+  annotateShowRevision: { area: 'Annotate', label: "Show the block's revision", keys: ['enter'] },
+  annotateBlockDetails: { area: 'Annotate', label: "The block's changeset and actions", keys: ['space'] },
 
   merge: { area: 'Merge', label: 'Merge', keys: ['mod+enter'] },
   resolveAllInTool: { area: 'Merge', label: 'Resolve the conflicts in the merge tool, one by one', keys: ['mod+shift+enter'] },

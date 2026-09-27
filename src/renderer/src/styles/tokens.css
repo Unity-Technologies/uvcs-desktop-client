@@ -69,6 +69,14 @@
   /* For panes whose content paints over an inset shadow (a canvas, a diff): outlines paint on top. Offset it by -2px.
      Filled controls (primary buttons, checked boxes) offset it by 2px, or it would melt into their fill. */
   --focus-outline: 2px solid var(--focus-color);
+
+  /* The annotation's age strip, from the oldest changesets of a file (1) to its newest (5): the accent fading into
+     the page, so recent work stands out in either theme. */
+  --annotate-age-1: color-mix(in srgb, var(--accent) 14%, transparent);
+  --annotate-age-2: color-mix(in srgb, var(--accent) 32%, transparent);
+  --annotate-age-3: color-mix(in srgb, var(--accent) 52%, transparent);
+  --annotate-age-4: color-mix(in srgb, var(--accent) 74%, transparent);
+  --annotate-age-5: var(--accent);
 }
 
 :root,

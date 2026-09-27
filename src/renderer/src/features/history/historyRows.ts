@@ -19,3 +19,9 @@ export function historyRowKey(row: HistoryRow): string {
 export function changesetOf(row: HistoryRow): number {
   return row.kind === 'revision' ? row.revision.changesetId : row.change.changesetId;
 }
+
+/** The row of the revision `changesetId` made, to select it from elsewhere (an annotated line); null when it made none. */
+export function revisionRowKey(rows: readonly HistoryRow[], changesetId: number): string | null {
+  const row = rows.find((candidate) => candidate.kind === 'revision' && candidate.revision.changesetId === changesetId);
+  return row ? historyRowKey(row) : null;
+}

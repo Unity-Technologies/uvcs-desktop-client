@@ -1,32 +1,34 @@
-import { FileDiff, ScanText } from 'lucide-react';
-import { useState } from 'react';
+import { ArrowLeft, FileDiff, ScanText } from 'lucide-react';
 import { canAnnotate } from '@shared/domain/annotate';
 import type { ItemRevision } from '@shared/domain/history';
+import { hotkey } from '../../lib/shortcutRegistry';
 import { useSettledValue } from '../../lib/useSettled';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { SegmentedControl } from '../../ui/SegmentedControl';
-import { AnnotationPane } from '../annotate/AnnotationPane';
+import { AnnotationPane, type AnnotationHistory } from '../annotate/AnnotationPane';
 import { openChangesetDiff } from '../changesets/changesetOperations';
 import { parentRevision } from './parentRevision';
 import { RevisionComparison } from './RevisionComparison';
-
-type RevisionView = 'diff' | 'annotate';
+import { shownRevisionView, useRevisionView, type RevisionView } from './revisionView';
 
 interface RevisionDetailsProps {
   path: string;
   /** All revisions, newest first. */
   revisions: ItemRevision[];
   selected: ItemRevision[];
+  /** Walks back from a revision "Annotate before this change" selected. */
+  onBack?: () => void;
+  history: AnnotationHistory;
 }
 
 /**
- * The selected revision as a diff or annotated. One selected revision is compared with the one it was made from;
- * two selected revisions with each other, and the newer one is annotated.
- * Directories have no content, so their changeset is offered instead.
+ * The selected revision as a diff or annotated, in one pane with a switch between the two (remembered). One selected
+ * revision is compared with the one it was made from; two selected revisions with each other, and the newer one is
+ * annotated. Directories have no content, so their changeset is offered instead.
  */
-export function RevisionDetails({ path, revisions, selected }: RevisionDetailsProps) {
-  const [view, setView] = useState<RevisionView>('diff');
+export function RevisionDetails({ path, revisions, selected, onBack, history }: RevisionDetailsProps) {
+  const { view: picked, setView } = useRevisionView();
   const compared = comparedRevisions(revisions, selected);
   // Arrowing through the history doesn't read (`cm cat`, `cm annotate`) every revision it passes.
   const [newer, older] = useSettledValue(compared, compared.map((revision) => revision?.revisionId).join(':'));
@@ -47,24 +49,33 @@ export function RevisionDetails({ path, revisions, selected }: RevisionDetailsPr
     );
   }
 
-  // Binary revisions have nothing to annotate: only their diff (an image comparison, or their sizes) shows.
-  if (!canAnnotate(newer.itemType)) return <RevisionComparison path={path} newer={newer} older={older} />;
-
-  const viewSwitch = (
-    <SegmentedControl<RevisionView>
-      value={view}
-      onChange={setView}
-      segments={[
-        { value: 'diff', label: <><FileDiff size={13} /> Diff</>, title: 'What this revision changed' },
-        { value: 'annotate', label: <><ScanText size={13} /> Annotate</>, title: 'Who last changed each line, as of this revision' },
-      ]}
-    />
+  const view = shownRevisionView(picked, newer.itemType);
+  const leading = (
+    <>
+      {/* Binary revisions have nothing to annotate: only their diff (an image comparison, or their sizes) shows. */}
+      {canAnnotate(newer.itemType) && (
+        <SegmentedControl<RevisionView>
+          value={view}
+          onChange={setView}
+          label="Show the revision as"
+          segments={[
+            { value: 'diff', label: <><FileDiff size={13} /> Diff</>, title: 'What this revision changed', shortcut: hotkey('historyToggleView') },
+            { value: 'annotate', label: <><ScanText size={13} /> Annotate</>, title: 'Who last changed each line, as of this revision', shortcut: hotkey('historyToggleView') },
+          ]}
+        />
+      )}
+      {onBack && (
+        <Button size="small" variant="ghost" icon={<ArrowLeft size={13} />} data-tip="The revision annotated before" onClick={onBack}>
+          Back
+        </Button>
+      )}
+    </>
   );
 
   return view === 'diff' ? (
-    <RevisionComparison path={path} newer={newer} older={older} leading={viewSwitch} />
+    <RevisionComparison path={path} newer={newer} older={older} leading={leading} />
   ) : (
-    <AnnotationPane key={newer.idSpec} path={path} revision={newer} revisions={revisions} leading={viewSwitch} />
+    <AnnotationPane path={path} revision={newer} revisions={revisions} leading={leading} history={history} />
   );
 }
 

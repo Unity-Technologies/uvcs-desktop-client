@@ -3,9 +3,17 @@
   min-height: 0;
   overflow: auto;
   background: var(--bg-surface);
+  outline: none;
+}
+
+/* The ring paints over the content, which covers an inset shadow. */
+.scroller:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: -2px;
 }
 
 .columns {
+  position: relative;
   display: flex;
   align-items: flex-start;
   min-width: 100%;

@@ -1,19 +1,8 @@
-.commentCell {
+/* The selected revision: its header, then the diff or annotation filling the rest. */
+.pane {
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex: 1;
+  flex-direction: column;
   min-width: 0;
-}
-
-.clipped {
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* A move or removal: what cm says happened, told apart from the changesets' own comments. */
-.pathChange {
-  overflow: hidden;
-  color: var(--text-secondary);
-  font-style: italic;
-  text-overflow: ellipsis;
+  min-height: 0;
 }

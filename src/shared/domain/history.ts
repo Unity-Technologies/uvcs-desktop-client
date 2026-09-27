@@ -32,4 +32,6 @@ export interface ItemPathChange {
 export interface ItemHistory {
   revisions: ItemRevision[];
   pathChanges: ItemPathChange[];
+  /** The revision the workspace has, for the history of a workspace file; none for a private or deleted one. */
+  workspaceRevisionId?: number;
 }
