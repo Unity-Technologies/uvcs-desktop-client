@@ -29,7 +29,7 @@ import { BranchNameCell } from './BranchNameCell';
 import { branchMenu } from './branchMenu';
 import { diffBranch } from './branchOperations';
 import { useBranchesViewStore, type BranchesLayout } from './branchesViewStore';
-import { buildBranchTree, type BranchTreeRow } from './branchTree';
+import { buildBranchTree, sortBranchesByName, type BranchTreeRow } from './branchTree';
 import { openCreateBranchDialog } from './CreateBranchDialog';
 import { newBranchFromWorkspace } from './newBranchFromWorkspace';
 import { useBranches } from './useBranches';
@@ -49,7 +49,9 @@ export function BranchesView() {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
 
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
-  const matching = useMemo(() => filterBranches(branches ?? [], search), [branches, search]);
+  // The tree lists siblings by name: sorted once per read, so typing a filter only filters.
+  const listed = useMemo(() => (layout === 'tree' ? sortBranchesByName(branches ?? []) : (branches ?? [])), [layout, branches]);
+  const matching = useMemo(() => filterBranches(listed, search), [listed, search]);
   const rows = useMemo(
     () => (layout === 'tree' ? buildBranchTree(matching, collapsed) : matching.map((branch) => ({ branch, depth: 0, hasChildren: false, collapsed: false }))),
     [layout, matching, collapsed],
