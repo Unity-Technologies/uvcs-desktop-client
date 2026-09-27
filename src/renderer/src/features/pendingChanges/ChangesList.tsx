@@ -36,7 +36,8 @@ interface ChangesListProps {
   rows: ChangeRow[];
   selection: SelectionState;
   onSelectionChange: (selection: SelectionState) => void;
-  onToggleIncluded: (row: ChangeRow, included: boolean) => void;
+  /** Checks or unchecks what the rows stand for, all at once. */
+  onToggleIncluded: (rows: ChangeRow[], included: boolean) => void;
   onToggleCollapsed: (rowKey: string) => void;
   /** Enter or double-click on a change. */
   onOpen: (change: PendingChange) => void;
@@ -67,17 +68,19 @@ export function ChangesList({
   const orderedKeys = useMemo(() => changeRows.map((row) => row.key), [changeRows]);
   // The keyboard moves through every row, folders and changelists too, so ← and → can close and open them.
   const rowKeys = useMemo(() => rows.map((row) => row.key), [rows]);
+  // Every arrow key renders the list: rows are found by key, never searched for.
+  const rowIndexes = useMemo(() => new Map(rowKeys.map((key, index) => [key, index])), [rowKeys]);
   // The row keyboard moves go from; Shift extends the selection from the anchor to it.
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
-  const focused = focusedKey !== null && rowKeys.includes(focusedKey) ? focusedKey : selection.anchor;
-  const grouped = rows.some((row) => row.type === 'group');
+  const focused = focusedKey !== null && rowIndexes.has(focusedKey) ? focusedKey : selection.anchor;
+  const grouped = useMemo(() => rows.some((row) => row.type === 'group'), [rows]);
   // Files that just appeared among the changes (saved, created) fade in once.
   const [arrivals] = useState(() => new Arrivals(ARRIVAL_WINDOW_MS));
   const arrived = arrivals.update(orderedKeys, performance.now());
   // Folders or changelists make it a tree for screen readers; otherwise it's a plain list of files.
-  const isTree = rows.some((row) => row.type !== 'change');
+  const isTree = changeRows.length < rows.length;
   const rowIdPrefix = useId();
-  const focusedIndex = focused === null ? -1 : rows.findIndex((row) => row.key === focused);
+  const focusedIndex = focused === null ? -1 : (rowIndexes.get(focused) ?? -1);
   const focusedRow = rows[focusedIndex];
 
   // A plain press on a row of a multi-selection keeps the selection until release, so the whole of it can be dragged.
@@ -111,7 +114,7 @@ export function ChangesList({
     if (!moved) return;
     setFocusedKey(moved.focused);
     onSelectionChange(moved.state);
-    virtualizer.scrollToIndex(rows.findIndex((row) => row.key === moved.focused));
+    virtualizer.scrollToIndex(rowIndexes.get(moved.focused) ?? -1);
   };
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -133,11 +136,11 @@ export function ChangesList({
       event.preventDefault();
       const selectedRows = changeRows.filter((row) => selection.selected.has(row.key));
       if (selectedRows.length === 0 && focusedRow && focusedRow.type !== 'change' && focusedRow.checkState !== null) {
-        onToggleIncluded(focusedRow, focusedRow.checkState !== true);
+        onToggleIncluded([focusedRow], focusedRow.checkState !== true);
         return;
       }
       const include = selectedRows.some((row) => !row.checked);
-      selectedRows.forEach((row) => onToggleIncluded(row, include));
+      onToggleIncluded(selectedRows, include);
     } else if (event.key === 'a' && (isMac ? event.metaKey : event.ctrlKey)) {
       event.preventDefault();
       onSelectionChange({ selected: new Set(orderedKeys), anchor: orderedKeys[0] ?? null });
@@ -287,7 +290,7 @@ function RowContent({ row, onToggleIncluded, changelistMenu, review, locks }: Ro
       return (
         <>
           {isCheckinCandidate(change) ? (
-            <Checkbox checked={row.checked} onChange={(checked) => onToggleIncluded(row, checked)} ariaLabel="Include in the check in" focusable={false} />
+            <Checkbox checked={row.checked} onChange={(checked) => onToggleIncluded([row], checked)} ariaLabel="Include in the check in" focusable={false} />
           ) : (
             <span className={styles.checkboxPlaceholder} />
           )}
@@ -309,5 +312,5 @@ function RowContent({ row, onToggleIncluded, changelistMenu, review, locks }: Ro
 /** A changelist's or folder's checkbox, or its room when nothing in it can be checked in. */
 function RowCheckbox({ row, label, onToggleIncluded }: { row: ChangeRow & { checkState: CheckState | null }; label: string } & Pick<ChangesListProps, 'onToggleIncluded'>) {
   if (row.checkState === null) return <span className={styles.checkboxPlaceholder} />;
-  return <Checkbox checked={row.checkState} onChange={(checked) => onToggleIncluded(row, checked)} ariaLabel={`Include ${label}`} focusable={false} />;
+  return <Checkbox checked={row.checkState} onChange={(checked) => onToggleIncluded([row], checked)} ariaLabel={`Include ${label}`} focusable={false} />;
 }

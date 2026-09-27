@@ -26,4 +26,26 @@ describe('Arrivals', () => {
     arrivals.update([], 100);
     expect(arrivals.update(['a'], 2000)).toEqual(new Set());
   });
+
+  it('lets arrivals expire when given the same keys again', () => {
+    const arrivals = new Arrivals(400);
+    arrivals.update(['a'], 0);
+    const keys = ['a', 'b'];
+    expect(arrivals.update(keys, 1000)).toEqual(new Set(['b']));
+    expect(arrivals.update(keys, 1300)).toEqual(new Set(['b']));
+    expect(arrivals.update(keys, 1400)).toEqual(new Set());
+  });
+
+  it('goes through the keys again only when they change', () => {
+    const arrivals = new Arrivals(400);
+    let reads = 0;
+    const keys = new Proxy(Array.from({ length: 100_000 }, (_, index) => `k${index}`), {
+      get: (target, property, receiver) => {
+        if (property === Symbol.iterator) reads++;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    for (let now = 0; now < 50; now++) arrivals.update(keys, now);
+    expect(reads).toBe(1);
+  });
 });

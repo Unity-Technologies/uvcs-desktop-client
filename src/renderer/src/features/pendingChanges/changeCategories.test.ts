@@ -1,8 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import type { ChangeKind, PendingChange } from '@shared/domain/pendingChanges';
-import { hasRevisions, isShelvable, matchesBranch } from './changeCategories';
+import { categoryOf, hasRevisions, isShelvable, matchesBranch } from './changeCategories';
 
 const change = (...kinds: ChangeKind[]): PendingChange => ({ path: 'a.txt', kinds, itemType: 'file', size: 1, lastModified: '' });
+
+describe('categoryOf', () => {
+  it('takes the first category of any of its kinds, in precedence order', () => {
+    expect(categoryOf(change('checkedOut', 'changed'))).toBe('changed');
+    expect(categoryOf(change('changed', 'moved'))).toBe('moved');
+    expect(categoryOf(change('moved', 'deleted'))).toBe('deleted');
+    expect(categoryOf(change('checkedOut', 'copied'))).toBe('added');
+    expect(categoryOf(change('locallyMoved'))).toBe('moved');
+    expect(categoryOf(change('private'))).toBe('private');
+    expect(categoryOf(change('hiddenChanged', 'cloaked'))).toBe('cloaked');
+  });
+
+  it('reads a change of no known kind as changed', () => {
+    expect(categoryOf(change())).toBe('changed');
+  });
+});
 
 describe('matchesBranch', () => {
   it('holds while only files never checked in are pending', () => {

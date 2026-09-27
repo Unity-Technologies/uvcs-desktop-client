@@ -36,7 +36,8 @@ export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tone
   // A chip can go away while chosen (the last private file is added); never keep filtering by a hidden chip.
   const activeTones = useMemo(() => new Set([...chosenTones].filter((tone) => tones.includes(tone))), [chosenTones, tones]);
   const visible = useMemo(
-    () => items.filter((item) => matchesChangeFilter(pathOf(item), toneOf(item), { query, tones: activeTones })),
+    // Nothing to filter by keeps the very list: what is worked out from it isn't worked out again.
+    () => (query.trim() === '' && activeTones.size === 0 ? items : items.filter((item) => matchesChangeFilter(pathOf(item), toneOf(item), { query, tones: activeTones }))),
     [items, pathOf, toneOf, query, activeTones],
   );
 

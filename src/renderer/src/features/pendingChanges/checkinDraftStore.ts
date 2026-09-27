@@ -35,6 +35,18 @@ export const useCheckinDraftStore = create<CheckinDraftStore>((set) => {
   };
 });
 
-export function useCheckinDraft(workspacePath: string): CheckinDraft {
-  return useCheckinDraftStore((state) => state.drafts[workspacePath] ?? EMPTY_DRAFT);
+/** The draft as it is now, for what reads it once (checking in) rather than showing it. */
+export function checkinDraftOf(workspacePath: string): CheckinDraft {
+  return useCheckinDraftStore.getState().drafts[workspacePath] ?? EMPTY_DRAFT;
+}
+
+/** The comment alone: typing it renders only what shows it, not the list of changes. */
+export function useCheckinMessage(workspacePath: string): { summary: string; description: string } {
+  const summary = useCheckinDraftStore((state) => (state.drafts[workspacePath] ?? EMPTY_DRAFT).summary);
+  const description = useCheckinDraftStore((state) => (state.drafts[workspacePath] ?? EMPTY_DRAFT).description);
+  return { summary, description };
+}
+
+export function useExcludedPaths(workspacePath: string): ReadonlySet<string> {
+  return useCheckinDraftStore((state) => (state.drafts[workspacePath] ?? EMPTY_DRAFT).excludedPaths);
 }

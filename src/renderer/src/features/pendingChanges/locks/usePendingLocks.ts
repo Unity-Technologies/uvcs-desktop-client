@@ -25,7 +25,8 @@ export function usePendingLocks(workspacePath: string, repository: string | unde
     placeholderData: keepPreviousData,
   });
   const { data: all } = useQuery(query('all', false, enabled));
-  const needsMine = enabled && all !== undefined && locksPendingChanges(changes, all);
+  const anyLocked = useMemo(() => all !== undefined && locksPendingChanges(changes, all), [changes, all]);
+  const needsMine = enabled && anyLocked;
   const { data: mine } = useQuery(query('mine', true, needsMine));
 
   useEffect(() => {
