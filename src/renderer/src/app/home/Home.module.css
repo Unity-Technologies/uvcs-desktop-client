@@ -369,6 +369,9 @@
 }
 
 .rowRepository {
+  /* Gives way before the workspace's own name does, which is what tells rows apart. */
+  flex-shrink: 1000;
+  min-width: 0;
   overflow: hidden;
   color: var(--text-tertiary);
   font-size: var(--text-sm);
