@@ -15,6 +15,14 @@ export function isListMenuKey(event: KeyboardEvent): boolean {
   return event.key === 'ContextMenu' || hotkeys('listContextMenu').some((key) => matchesShortcut(event.nativeEvent, key));
 }
 
+/**
+ * Keeps the browser from opening the context menu again at the list's middle once the context-menu key comes back up
+ * (Windows and Linux send it on release; Shift+F10 on press, which opening the menu at the row already takes).
+ */
+export function holdBackMenuKeyRelease(event: KeyboardEvent): void {
+  if (event.key === 'ContextMenu') event.preventDefault();
+}
+
 /** Opens an element's context menu from the keyboard, where a right click on it would. */
 export function openContextMenuOf(element: HTMLElement | null): void {
   if (!element) return;
