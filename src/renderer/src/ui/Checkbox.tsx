@@ -1,4 +1,5 @@
 import { Check, Minus } from 'lucide-react';
+import { submitsForm } from './checkboxKeys';
 import styles from './Checkbox.module.css';
 
 export type CheckState = boolean | 'mixed';
@@ -26,6 +27,11 @@ export function Checkbox({ checked, onChange, label, ariaLabel, focusable = true
       className={styles.box}
       data-state={checked === 'mixed' ? 'mixed' : checked ? 'checked' : 'unchecked'}
       onMouseDown={(event) => event.stopPropagation()}
+      onKeyDown={(event) => {
+        if (!submitsForm(event.key)) return;
+        event.preventDefault();
+        event.currentTarget.form?.requestSubmit();
+      }}
       onClick={(event) => {
         event.stopPropagation();
         onChange(checked !== true);
