@@ -41,6 +41,20 @@ function workspacePathOf(lock: Lock): string {
   return lock.path.replace(/^\//, '');
 }
 
+/** What a lock mark says: who holds the lock and where, then what it means for the check-in. */
+export function describeLock(lock: PendingLock): { label: string; detail: string } {
+  if (lock.mine) {
+    return {
+      label: 'Locked by you',
+      detail: `Exclusively checked out${lock.workspace ? ` in ${lock.workspace}` : ''}: nobody else can check it out until you check it in or undo it`,
+    };
+  }
+  return {
+    label: `Locked by ${lock.owner}${lock.workspace ? ` in ${lock.workspace}` : ''}`,
+    detail: "You can't check it in until the lock is released",
+  };
+}
+
 /** Explains why some changes can't be checked in, e.g. "Hero.fbx is locked by ana — …". */
 export function lockedByOthersMessage(locked: { path: string; lock: PendingLock }[]): string {
   if (locked.length === 1) {

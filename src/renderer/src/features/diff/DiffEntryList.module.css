@@ -4,32 +4,3 @@
   flex-direction: column;
   min-height: 0;
 }
-
-.tag {
-  flex: none;
-  padding: 0 6px;
-  border-radius: var(--radius-full);
-  background: var(--bg-hover);
-  color: var(--text-tertiary);
-  font-size: var(--text-xs);
-  line-height: 16px;
-}
-
-.path {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-/* Reviewed files step back, so what's left to look at stands out. */
-.path[data-review='reviewed'] {
-  opacity: 0.6;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .path {
-    transition: opacity var(--duration-normal);
-  }
-}

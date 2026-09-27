@@ -52,3 +52,21 @@
   margin-left: auto;
   padding-left: 6px;
 }
+
+.status {
+  display: flex;
+}
+
+/* A reviewed file steps back, so what's left to look at stands out; its review mark doesn't. */
+.row[data-faded] > :is(.icon, .label),
+.row[data-faded] .status {
+  opacity: 0.6;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .icon,
+  .label,
+  .status {
+    transition: opacity var(--duration-normal);
+  }
+}

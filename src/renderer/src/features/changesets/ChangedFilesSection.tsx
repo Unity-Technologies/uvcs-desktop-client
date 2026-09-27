@@ -1,8 +1,7 @@
 import { ChevronRight } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { DiffTarget } from '@shared/domain/diff';
-import { PathLabel } from '../../components/PathLabel';
-import { StatusBadge } from '../../components/StatusBadge';
+import { ItemPathRow } from '../../components/ItemPathRow';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { moveRovingFocus, ROVING_ITEM } from '../../lib/rovingFocus';
 import { pluralize } from '../../lib/text';
@@ -57,8 +56,7 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
           <div ref={listRef} className={styles.files} onKeyDown={(event) => listRef.current && moveRovingFocus(listRef.current, event)}>
             {visible.slice(0, MAX_LISTED_FILES).map((entry) => (
               <button key={entry.path} className={styles.file} onClick={() => onOpen(entry.path)} {...ROVING_ITEM}>
-                <StatusBadge tone={diffEntryTone(entry)} title={describeDiffEntry(entry)} />
-                <PathLabel path={entry.path} oldPath={entry.oldPath} strikethrough={entry.status === 'deleted'} />
+                <ItemPathRow path={entry.path} itemType={entry.itemType} oldPath={entry.oldPath} status={{ tone: diffEntryTone(entry), label: describeDiffEntry(entry) }} />
               </button>
             ))}
             {visible.length > MAX_LISTED_FILES && <DetailsEmpty>And {visible.length - MAX_LISTED_FILES} more — open the diff to see them all.</DetailsEmpty>}

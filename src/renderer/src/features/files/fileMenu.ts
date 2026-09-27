@@ -35,6 +35,13 @@ export const FILE_SHORTCUTS = {
   showChanges: hotkey('listDiff'),
 };
 
+/** The file annotated beside the tree, in the diff's place (from Go to file's actions too: the tree selects it). */
+function showAnnotated(path: string): void {
+  const view = useFilesViewStore.getState();
+  view.setDetailsTab('annotate');
+  view.requestReveal(path);
+}
+
 /** The context menu of the selected items in the Files view. */
 export function fileMenu(workspacePath: string, items: TreeItem[], pendingChanges: PendingChangesIndex): MenuEntry[] {
   if (items.length === 0) return [];
@@ -66,7 +73,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
     single &&
       hasRevisionsToShow(single, pendingChanges) &&
       canAnnotate(single.itemType) &&
-      menuAction('annotate', () => navigation.openPage({ kind: 'annotate', path: single.path }), { shortcut: FILE_SHORTCUTS.annotate }),
+      menuAction('annotate', () => showAnnotated(single.path), { shortcut: FILE_SHORTCUTS.annotate }),
     menuAction('locks', () => navigation.goToView('locks')),
     single && menuAction('reveal', () => revealItem(workspacePath, single)),
     single?.itemType === 'directory' && menuAction('terminal', () => openTerminalIn(absolutePath(workspacePath, single.path))),

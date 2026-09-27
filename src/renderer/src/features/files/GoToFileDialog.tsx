@@ -1,10 +1,10 @@
-import { Ellipsis, File, Folder } from 'lucide-react';
+import { Ellipsis } from 'lucide-react';
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { TreeItem } from '@shared/domain/explorer';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
-import { PathLabel } from '../../components/PathLabel';
+import { ItemPathRow } from '../../components/ItemPathRow';
 import { runningFirst } from '../../lib/actions';
 import { createFuzzyIndex, fuzzyMatchPositions } from '../../lib/fuzzyIndex';
 import { parentDirectory } from '../../lib/paths';
@@ -16,8 +16,10 @@ import { KeyHints } from '../../ui/KeyHints';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { SearchField } from '../../ui/SearchField';
 import { CenteredSpinner } from '../../ui/Spinner';
+import { changeStatus } from '../pendingChanges/changeTone';
 import { usePendingChanges } from '../pendingChanges/usePendingChanges';
 import { fileMenu } from './fileMenu';
+import { itemDecoration } from './itemDecoration';
 import { PendingChangesIndex } from './itemStatus';
 import { useWorkspacePaths } from './useWorkspacePaths';
 import styles from './GoToFileDialog.module.css';
@@ -51,6 +53,7 @@ function GoToFileDialog({ workspacePath, initialQuery, finish }: GoToFileDialogP
   const { data: pendingChanges } = usePendingChanges();
 
   const directories = useMemo(() => new Set(entries?.filter((entry) => entry.isDirectory).map((entry) => entry.path)), [entries]);
+  const pendingIndex = useMemo(() => new PendingChangesIndex(pendingChanges?.changes ?? []), [pendingChanges]);
   const allPaths = useMemo(() => entries?.map((entry) => entry.path) ?? [], [entries]);
   const index = useMemo(() => createFuzzyIndex(allPaths), [allPaths]);
   const results = useMemo(() => index.rank(query, MAX_RESULTS).map((position) => allPaths[position]!), [index, allPaths, query]);
@@ -61,7 +64,7 @@ function GoToFileDialog({ workspacePath, initialQuery, finish }: GoToFileDialogP
     setActionsFor(listing.find((item) => item.path === path) ?? null);
   };
   const actions = (item: TreeItem) =>
-    runningFirst(fileMenu(workspacePath, [item], new PendingChangesIndex(pendingChanges?.changes ?? [])), () => finish(undefined));
+    runningFirst(fileMenu(workspacePath, [item], pendingIndex), () => finish(undefined));
 
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -98,8 +101,7 @@ function GoToFileDialog({ workspacePath, initialQuery, finish }: GoToFileDialogP
         {results.map((path, index) => (
           <div key={path} className={styles.resultRow} data-highlighted={index === highlighted} onMouseEnter={() => setHighlighted(index)}>
             <button type="button" className={styles.result} onClick={() => finish(path)}>
-              {directories.has(path) ? <Folder size={14} className={styles.folder} /> : <File size={14} className={styles.file} />}
-              <PathLabel path={path} matches={fuzzyMatchPositions(path, query)} />
+              <ResultRow path={path} isDirectory={directories.has(path)} matches={fuzzyMatchPositions(path, query)} pendingIndex={pendingIndex} />
             </button>
             {index === highlighted && (
               <ActionDropdownMenu
@@ -121,5 +123,21 @@ function GoToFileDialog({ workspacePath, initialQuery, finish }: GoToFileDialogP
       </div>
       <KeyHints hints={[{ keys: hotkey('rowActions'), label: 'actions' }]} />
     </Dialog>
+  );
+}
+
+/** A result as the Files tree shows its item: icon, path, status letter. */
+function ResultRow({ path, isDirectory, matches, pendingIndex }: { path: string; isDirectory: boolean; matches: number[]; pendingIndex: PendingChangesIndex }) {
+  const change = pendingIndex.changeAt(path);
+  const { status, presence } = itemDecoration({ isPrivate: false }, change ? changeStatus(change) : null);
+  return (
+    <ItemPathRow
+      path={path}
+      itemType={isDirectory ? 'directory' : 'file'}
+      matches={matches}
+      status={status}
+      changesInside={isDirectory && pendingIndex.hasChangesInside(path)}
+      presence={presence}
+    />
   );
 }

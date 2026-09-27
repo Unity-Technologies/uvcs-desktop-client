@@ -2,7 +2,6 @@ import { ChevronRight } from 'lucide-react';
 import type { TreeItem } from '@shared/domain/explorer';
 import type { MenuEntry } from '../../lib/actions';
 import type { SelectionState } from '../../lib/selection';
-import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { Spinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
@@ -12,13 +11,14 @@ import { treeArrowMove } from '../../lib/treeArrowMove';
 import { fileTreeArrowRows, indentOf, type FileTreeRow } from './fileTreeRows';
 import { ItemIcon } from '../../components/ItemIcon';
 import { ItemRow } from '../../components/ItemRow';
+import { PathLabel } from '../../components/PathLabel';
 import { ItemStatusMark } from '../../components/ItemStatusMark';
-import { LockChip } from '../pendingChanges/locks/LockChip';
+import { LockMark } from '../pendingChanges/locks/LockMark';
 import { itemDecoration, type ItemDecoration } from './itemDecoration';
 import type { ItemStatus } from './itemStatus';
 import type { PendingLock } from '../pendingChanges/locks/pendingLocks';
 import { isWorkspaceRoot } from './workspaceRoot';
-import { XlinkChip } from './XlinkChip';
+import { XlinkMark } from './XlinkMark';
 import styles from './FileTreeTable.module.css';
 
 /** Below this width the tree shows names only: a deep path's name needs the room more than its date. */
@@ -44,8 +44,8 @@ interface FileTreeTableProps {
   revealPath?: string | null;
   /** Items cut to move elsewhere, shown ghosted. */
   isCut?: (item: TreeItem) => boolean;
-  /** "/" in the tree: to the view's find field. */
-  onFind?: () => void;
+  /** "/" in the tree: Go to file. */
+  onGoToFile?: () => void;
 }
 
 /** A virtualized, lazily expanded file tree: each item's icon, badge and name, and when it last changed. */
@@ -61,7 +61,7 @@ export function FileTreeTable({
   hasChangesInside,
   revealPath,
   isCut,
-  onFind,
+  onGoToFile,
 }: FileTreeTableProps) {
   // Name and when it last changed: the rest (size, changeset, author, comment) is the selected item's, on its pane.
   const columns: Column<FileTreeRow>[] = [
@@ -93,10 +93,10 @@ export function FileTreeTable({
   ];
 
   const onRowKeyDown = (event: React.KeyboardEvent, row: FileTreeRow, moveBy: (step: number) => void): void => {
-    // ⌘F is the palette command's; the tree adds the plain key.
-    if (onFind && hotkeys('filesFind').some((key) => key !== hotkey('filesFind') && matchesShortcut(event.nativeEvent, key))) {
+    // ⌘F is the view's, anywhere in it; the tree adds the plain key.
+    if (onGoToFile && hotkeys('filesGoToFile').some((key) => key !== hotkey('filesGoToFile') && matchesShortcut(event.nativeEvent, key))) {
       event.preventDefault();
-      onFind();
+      onGoToFile();
       return;
     }
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
@@ -157,14 +157,17 @@ function NameCell({ row, decoration, lock, changesInside, isCut, onToggle }: Nam
       <ItemRow
         icon={<ItemIcon itemType={item.itemType} name={item.name} />}
         label={
+          // Cut in the middle, as every path is, keeping the extension; the root is named by its workspace.
+          <span className={styles.label} data-root={isWorkspaceRoot(item)}>
+            <PathLabel path={isWorkspaceRoot(item) ? item.name : item.path} nameOnly fitContent />
+          </span>
+        }
+        extras={
           <>
-            <span className={styles.label} data-root={isWorkspaceRoot(item)}>
-              <Highlight text={item.name} />
-            </span>
-            {item.xlink && <XlinkChip xlink={item.xlink} />}
+            {item.xlink && <XlinkMark xlink={item.xlink} />}
+            {lock && <LockMark lock={lock} />}
           </>
         }
-        extras={lock && <LockChip path={item.path} lock={lock} />}
         status={<ItemStatusMark status={status} changesInside={changesInside && !isWorkspaceRoot(item)} />}
         presence={presence}
         deleted={status?.tone === 'deleted'}

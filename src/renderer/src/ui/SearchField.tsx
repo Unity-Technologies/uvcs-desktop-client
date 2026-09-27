@@ -11,26 +11,20 @@ interface SearchFieldProps {
   width?: number | string;
   /** Keys the field doesn't handle, e.g. ↓ to move into the list it filters. */
   onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
-  /** Escape emptied the field. */
-  onCleared?: () => void;
-  /** Its tooltip and the shortcut that reaches it. */
-  tip?: string;
-  shortcut?: string;
 }
 
 export const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(function SearchField(
-  { value, onChange, placeholder = 'Filter', autoFocus, width = 220, onKeyDown, onCleared, tip, shortcut },
+  { value, onChange, placeholder = 'Filter', autoFocus, width = 220, onKeyDown },
   ref,
 ) {
   return (
-    <div className={styles.search} style={{ width }} data-tip={tip} data-tip-shortcut={shortcut}>
+    <div className={styles.search} style={{ width }}>
       <Search size={13} className={styles.searchIcon} />
       <input
         ref={ref}
         className={styles.input}
         value={value}
         placeholder={placeholder}
-        aria-label={tip ?? placeholder}
         autoFocus={autoFocus}
         spellCheck={false}
         onChange={(event) => onChange(event.target.value)}
@@ -38,7 +32,6 @@ export const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(functi
           if (event.key === 'Escape' && value) {
             event.stopPropagation();
             onChange('');
-            onCleared?.();
           } else {
             onKeyDown?.(event);
           }

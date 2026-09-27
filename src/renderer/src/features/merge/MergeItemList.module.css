@@ -42,29 +42,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.directoryIcon {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--status-added) 16%, transparent);
-  color: var(--status-added);
-}
-
-.directoryIcon[data-pending='true'] {
-  background: color-mix(in srgb, var(--status-conflict) 16%, transparent);
-  color: var(--status-conflict);
-}
-
-.status {
-  display: flex;
-  flex: none;
-  margin-left: auto;
-}
-
 .list:focus-visible .row[data-selected='true'] {
   box-shadow: var(--focus-ring-inset);
 }

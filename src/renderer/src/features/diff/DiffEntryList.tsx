@@ -1,15 +1,14 @@
 import type { KeyboardEvent } from 'react';
 import type { DiffEntry } from '@shared/domain/diff';
-import { PathLabel } from '../../components/PathLabel';
+import { ItemPathRow } from '../../components/ItemPathRow';
+import { ItemTag } from '../../components/ItemTag';
 import { useChangeFilter } from '../../components/useChangeFilter';
-import { StatusBadge } from '../../components/StatusBadge';
 import type { MenuEntry } from '../../lib/actions';
 import type { SelectionState } from '../../lib/selection';
 import { HighlightQuery } from '../../ui/Highlight';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { isReviewKey, toggleReviewedFromKey } from '../review/reviewKey';
 import { ReviewToggle } from '../review/ReviewToggle';
-import { SinceReviewDot } from '../review/SinceReviewDot';
 import type { ReviewMode } from '../review/useReviewMode';
 import { describeDiffEntry, diffEntryTone, isMovedAndChanged } from './diffEntrySources';
 import styles from './DiffEntryList.module.css';
@@ -26,29 +25,30 @@ export const diffEntryKey = (entry: DiffEntry): string => entry.path;
 
 function columns({ on, statusOf, toggle }: ReviewMode<DiffEntry>): Column<DiffEntry>[] {
   const reviewStatus = (entry: DiffEntry) => (on ? statusOf(entry) : null);
-  // The status sits next to the path, as in the pending changes: a column of its own would space them a cell apart.
-  const pathColumn: Column<DiffEntry> = {
-    id: 'path',
-    header: 'File',
-    render: (entry) => (
-      <span className={styles.path} data-review={reviewStatus(entry) ?? undefined}>
-        <StatusBadge tone={diffEntryTone(entry)} title={describeDiffEntry(entry)} />
-        {reviewStatus(entry) === 'changedSinceReview' && <SinceReviewDot />}
-        <PathLabel path={entry.path} oldPath={entry.oldPath} strikethrough={entry.status === 'deleted'} />
-        {isMovedAndChanged(entry) && <span className={styles.tag}>modified</span>}
-      </span>
-    ),
-  };
-  const reviewColumn: Column<DiffEntry> = {
-    id: 'review',
-    header: '',
-    width: 30,
-    render: (entry) => {
-      const status = reviewStatus(entry);
-      return status && <ReviewToggle status={status} onToggle={() => toggle([entry])} />;
+  return [
+    {
+      id: 'path',
+      header: 'File',
+      render: (entry) => {
+        const status = reviewStatus(entry);
+        return (
+          <ItemPathRow
+            path={entry.path}
+            itemType={entry.itemType}
+            oldPath={entry.oldPath}
+            status={{ tone: diffEntryTone(entry), label: describeDiffEntry(entry) }}
+            faded={status === 'reviewed'}
+            extras={
+              <>
+                {isMovedAndChanged(entry) && <ItemTag>modified</ItemTag>}
+                {status && <ReviewToggle status={status} onToggle={() => toggle([entry])} />}
+              </>
+            }
+          />
+        );
+      },
     },
-  };
-  return on ? [pathColumn, reviewColumn] : [pathColumn];
+  ];
 }
 
 /** The files of a diff: filterable, and in review mode marked as they are reviewed. */

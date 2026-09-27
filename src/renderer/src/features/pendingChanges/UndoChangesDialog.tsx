@@ -1,14 +1,12 @@
 import { useState } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { PathLabel } from '../../components/PathLabel';
-import { StatusBadge } from '../../components/StatusBadge';
+import { ItemPathRow } from '../../components/ItemPathRow';
 import { fileNameOf, formatCount, pluralize } from '../../lib/text';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
-import { describeKinds } from './changeCategories';
-import { changeTone } from './changeTone';
+import { changePresence, changeStatus } from './changeTone';
 import { offersBackup, suggestsBackup, UNDO_LIST_MAX, undoConsequences } from './undoPlan';
 import styles from './UndoChangesDialog.module.css';
 
@@ -51,8 +49,7 @@ function UndoChangesDialog({ changes, finish }: { changes: PendingChange[]; fini
       <div className={styles.files}>
         {listed.map((change) => (
           <div key={change.path} className={styles.file}>
-            <StatusBadge tone={changeTone(change)} title={describeKinds(change)} />
-            <PathLabel path={change.path} oldPath={change.oldPath} />
+            <ItemPathRow path={change.path} itemType={change.itemType} oldPath={change.oldPath} status={changeStatus(change)} presence={changePresence(change)} />
           </div>
         ))}
         {more > 0 && <div className={styles.more}>…and {formatCount(more)} more</div>}

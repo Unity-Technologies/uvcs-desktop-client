@@ -10,6 +10,7 @@ import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { ChangesetDetails } from '../changesets/ChangesetDetails';
 import { changesetMenu } from '../changesets/changesetMenu';
+import { fileConflictStatus, fileConflictTool } from '../merge/mergeStatus';
 import { FileConflictPanel } from '../merge/resolve/FileConflictPanel';
 import { ResolveRunControl, useRunOffer } from '../merge/mergeTools/ResolveRunControl';
 import { useResolveRun } from '../merge/mergeTools/useResolveRun';
@@ -79,7 +80,7 @@ function IncomingSession({ workspacePath, incoming, header }: IncomingSessionPro
   const conflictPaths = useMemo(() => new Set(incoming.conflicts.map((conflict) => conflict.path)), [incoming.conflicts]);
   const blockedPaths = useMemo(() => new Set(incoming.blockedPaths), [incoming.blockedPaths]);
   const pendingConflictPaths = new Set(states.filter((state) => !state.resolution).map((state) => state.file.key));
-  const openToolByPath = new Map(states.flatMap((state) => (state.openTool ? [[state.file.key, state.openTool.toolName] as const] : [])));
+  const conflictStates = new Map(states.map((state) => [state.file.key, { status: fileConflictStatus(state), tool: fileConflictTool(state) }]));
   const resolutions = collectUpdateResolutions(states);
 
   // Start with the first file that needs merging, or the newest changeset.
@@ -128,9 +129,8 @@ function IncomingSession({ workspacePath, incoming, header }: IncomingSessionPro
             changesets={incoming.changesets}
             files={incoming.files}
             conflictPaths={conflictPaths}
-            pendingConflictPaths={pendingConflictPaths}
+            conflictStates={conflictStates}
             blockedPaths={blockedPaths}
-            openToolByPath={openToolByPath}
             selection={selection}
             onSelect={setSelection}
           />

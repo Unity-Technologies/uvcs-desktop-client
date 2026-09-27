@@ -1,7 +1,7 @@
 import { StatusBadge, type StatusTone } from './StatusBadge';
 import styles from './ItemStatusMark.module.css';
 
-interface ItemStatusMarkProps {
+export interface ItemStatusMarkProps {
   /** The item's own status, for what is notable only (a pending change, a checkout): nothing marks an item up to date. */
   status?: { tone: StatusTone; label: string } | null;
   /** A folder holding changes somewhere below it, marked where its own status letter would be. */

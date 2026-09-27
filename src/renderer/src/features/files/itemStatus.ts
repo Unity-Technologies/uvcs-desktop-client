@@ -1,8 +1,8 @@
 import type { TreeItem } from '@shared/domain/explorer';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { StatusTone } from '../../components/StatusBadge';
-import { describeKinds, existsOnDisk } from '../pendingChanges/changeCategories';
-import { changeTone } from '../pendingChanges/changeTone';
+import { existsOnDisk } from '../pendingChanges/changeCategories';
+import { changeStatus } from '../pendingChanges/changeTone';
 
 export interface ItemStatus {
   tone: StatusTone;
@@ -53,11 +53,6 @@ export function itemStatus(item: TreeItem, index: PendingChangesIndex): ItemStat
   if (item.isPrivate) return { tone: 'private', label: 'Private' };
   if (item.isCheckedOut) return { tone: 'changed', label: 'Checked out' };
   return null;
-}
-
-/** The status of a pending change, for anything that shows an item by its path alone (a find result). */
-export function changeStatus(change: PendingChange): ItemStatus {
-  return { tone: changeTone(change), label: describeKinds(change) };
 }
 
 /** A file's size and date on disk, from its pending change; undefined for folders and files it deletes. */
