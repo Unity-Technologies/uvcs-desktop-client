@@ -25,8 +25,10 @@ interface BlockDiscardOptions {
   enabled: boolean;
   /** The diff shown, of the original and the modified text as it is now, unsaved edits included (`lineDiff`). */
   diff: DisplayMeta;
-  /** Both texts with their own line breaks, which the discarded text keeps; the modified one as it is now. */
+  /** Both texts of `diff` with their own line breaks, which the discarded text keeps. */
   texts: { original: string; modified: string };
+  /** The modified text as typed, ahead of `texts.modified` until a big text is diffed again: nothing is discarded meanwhile. */
+  typed: string;
   /** How the diff compares lines: the line breaks lines come back with depend on it. */
   comparisonMethod: ComparisonMethod;
   layout: 'split' | 'unified';
@@ -75,7 +77,7 @@ const TYPING_IDLE_MS = 400;
  * drag, all shown as they're picked) narrows the change's chip to those lines. In the diff, ⌥↓/⌥↑ pick the next or
  * previous change, ⌥⌘Z discards the picked lines, ⌘Z undoes the last discard and Esc (or a click elsewhere) drops the pick.
  */
-export function useBlockDiscard({ enabled, diff, texts, comparisonMethod, layout, containerRef, onDiscard, onUndo }: BlockDiscardOptions) {
+export function useBlockDiscard({ enabled, diff, texts, typed, comparisonMethod, layout, containerRef, onDiscard, onUndo }: BlockDiscardOptions) {
   // The diff on screen, so every block lines up with what is shown.
   const meta = enabled ? diff : null;
   const blocks = useMemo(() => (meta ? listChangeBlocks(meta) : []), [meta]);
@@ -86,7 +88,7 @@ export function useBlockDiscard({ enabled, diff, texts, comparisonMethod, layout
     if (!sameRegions(listed, lastRegions.current)) lastRegions.current = listed;
     return lastRegions.current;
   }, [blocks]);
-  const typing = useTyping(containerRef, texts.modified);
+  const typing = useTyping(containerRef, typed);
   const [hovered] = useState<HoveredLineStore>(() => createStore<ChangedLine | null>(() => null));
   const [pick, setPick] = useState<LinePick | null>(null);
   // Where the diff puts the gutter buttons (it moves the same one from line to line).
@@ -168,7 +170,7 @@ export function useBlockDiscard({ enabled, diff, texts, comparisonMethod, layout
   }, [meta, containerRef]);
 
   const discard = async (lines: ChangedLine[]): Promise<void> => {
-    if (!meta || !onDiscard || lines.length === 0 || leaving.current) return;
+    if (!meta || !onDiscard || lines.length === 0 || leaving.current || typed !== texts.modified) return;
     if (!prefersReducedMotion()) {
       leaving.current = true;
       setMarks({ leaving: lines });

@@ -4,6 +4,7 @@ import { followsLayout, type DiffSides } from './shownDiff';
 import type { FileContent } from '@shared/domain/content';
 import { api } from '../../../api/client';
 import { formatSize } from '../../../lib/formatDate';
+import { useDebouncedValue } from '../../../lib/useDebouncedValue';
 import { lazyComponent } from '../../../lib/lazyComponent';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { useShortcut } from '../../../lib/useShortcut';
@@ -21,6 +22,7 @@ import { ComparisonMethodMenu } from './ComparisonMethodMenu';
 import { diffPresentation, hasTwoRepresentations, showsLines, type Representation } from './diffPresentation';
 import { useDiffPreferences, type DiffLayout } from './diffPreferencesStore';
 import { DiffNotice } from './DiffNotice';
+import { diffsEveryKeystroke, TYPING_PAUSE_MS } from './diffWhileTyping';
 import { DiffViewerFrame } from './DiffViewerFrame';
 import { discardInFile, undoLastDiscard, type DiscardTarget } from './discardInFile';
 import type { EditorHandle } from './editorHandle';
@@ -90,14 +92,17 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const isText = presentation.kind === 'text';
   const editable = isText && editablePath !== null;
   // The one diff of the texts under the comparison method (`lineDiff`): of the file as read, and as it is now with
-  // unsaved edits. The header counts the latter, and the diff shows and discards from it.
+  // unsaved edits. The header counts the latter, and the diff shows and discards from it. A big text typed into is
+  // diffed again once typing pauses (`diffedText`), not at every keystroke.
   const savedDiff = useMemo(
     () => (isText ? lineDiff(left.text ?? '', right.text ?? '', comparisonMethod, fileName) : null),
     [isText, left.text, right.text, comparisonMethod, fileName],
   );
+  const pausedText = useDebouncedValue(current, TYPING_PAUSE_MS);
+  const diffedText = current === right.text || diffsEveryKeystroke(left.text ?? '', current) ? current : pausedText;
   const currentDiff = useMemo(
-    () => (isText && current !== right.text ? lineDiff(left.text ?? '', current, comparisonMethod, fileName) : savedDiff),
-    [isText, left.text, right.text, current, comparisonMethod, fileName, savedDiff],
+    () => (isText && diffedText !== right.text ? lineDiff(left.text ?? '', diffedText, comparisonMethod, fileName) : savedDiff),
+    [isText, left.text, right.text, diffedText, comparisonMethod, fileName, savedDiff],
   );
   // Typed into whole when the file as read shows no lines: nothing changed, it's empty, or only ignored differences.
   const wholeFile = typedIntoWhole(editable, savedDiff);
@@ -214,6 +219,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       modified={right.text}
       current={current}
       diff={currentDiff}
+      diffedText={diffedText}
       wholeFile={wholeFile}
       fileName={fileName}
       comparisonMethod={comparisonMethod}
@@ -310,6 +316,7 @@ interface TextDiffBodyProps {
   modified?: string;
   current: string;
   diff: LineDiff;
+  diffedText: string;
   wholeFile: boolean;
   fileName: string;
   comparisonMethod: ComparisonMethod;

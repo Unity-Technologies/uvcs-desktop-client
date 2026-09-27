@@ -235,9 +235,12 @@ renderer/src/
   lines in view, so `syntaxHighlighting` picks by size (both versions together): up to 400 KB on the main thread; a
   read-only diff up to 4 MB also renders only the lines in view, shows as plain text at once and highlights in Pierre's
   workers (`highlightWorkers`, a 50,000-line diff in 6 s); anything bigger, and an editable diff past 400 KB (Pierre
-  highlights editors on the main thread, pool or not), is plain text, with a quiet "Large file" in the header (its
-  tooltip says why); such a diff is the "text" language (`highlightedLanguage`), or the editor would color
-  the lines typed into it.
+  highlights editors on the main thread, pool or not), is plain text and renders only the lines in view too (Pierre
+  renders a plain text diff whole at every render: `pierrePlainTextRender` keeps it), with a quiet "Large file" in the
+  header (its tooltip says why); such a diff is the "text" language (`highlightedLanguage`),
+  or the editor would color the lines typed into it. Past 1 MB (both versions), the text typed into is diffed again
+  once typing pauses, not at every keystroke (`diffsEveryKeystroke`): the +N −M and the lines discards act on follow
+  then, as Pierre's recoloring does; nothing is discarded until they do.
   Every diff of two versions follows Split/Unified, one from or to an empty version (an empty base, a file emptied)
   too: `shownDiff` keeps both sides where Pierre would show a new or deleted file in one column, and the empty side is
   hatched like any added lines. An item with one version only (added, private, deleted; a revision that created the
@@ -272,6 +275,9 @@ renderer/src/
   original text. One function computes the diff of two texts under a method (`lineDiff`, Pierre's `parseDiffFromFile`
   with the comparator as `parseDiffOptions`), and everything reads that one result: what the diff shows (`shownDiff`),
   the +N −M, whether the file is typed into whole ("Only whitespace differs"), and the blocks and lines discards act on.
+  Every line diff (`diff`'s, Pierre's too) compares lines by id, each line's key read once, and runs Myers' algorithm
+  only within a budget (`boundedLineDiff`, `boundedDiff`): past it, lines found once in each text anchor them (patience
+  diff) and what's between is diffed on its own, so a rewritten or much-changed file takes linear time, not minutes.
   While the file is typed into, Pierre re-diffs it itself, with the same `parseDiffOptions`: `pierreLineComparison`
   patches the places Pierre 1.5.1 doesn't (its `FileDiff` never hands them to the renderer that re-diffs each
   keystroke, a keystroke's shortcut takes lines equal only when they're the same text, and text typed back to the
@@ -341,7 +347,7 @@ and many people use the same server. Every `cm` command other than local reads (
   Explorer is kept five minutes and focus never re-reads all history. Local views skip focus while the watcher sees the disk.
 - **Home**: the repository and branch of every listed workspace come from its `.plastic/plastic.selector` file
   (`workspaces.heads`); `cm` is asked only about recent workspaces whose file can't tell.
-- **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`; `useSettledValue` for details that stay on screen as the selection moves, like a history's diff), `cm diff`
+- **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`; `useSettledValue` for details that stay on screen as the selection moves, like a history's diff or any file's diff, `useDiffContents`, which shows a pair read before at once), `cm diff`
   runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id, specs
   pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`; the last 100 off screen, `boundUnusedQueries`) and skipped by refreshes.
   An object opened from a list already read starts from it (`useChangeset`) and is asked for only once that list is stale.

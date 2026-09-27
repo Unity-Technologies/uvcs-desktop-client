@@ -16,6 +16,7 @@ import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
 import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
 import { PaneScrollbars } from './PaneScrollbars';
 import { installPierreLineComparison } from './pierreLineComparison';
+import { installPierrePlainTextRender } from './pierrePlainTextRender';
 import { replacementEdit } from './replacementEdit';
 import { caretLineCss, shownDiff, type DiffSides } from './shownDiff';
 import { highlightedLanguage, syntaxHighlighting } from './syntaxHighlighting';
@@ -30,6 +31,8 @@ const BOTH_SIDES: DiffSides = { original: true, modified: true };
 
 // Typing re-diffs the text in Pierre: under the comparison method, like the diff it starts from.
 installPierreLineComparison();
+// A diff shown as plain text renders once, not again for every few rows scrolled into view.
+installPierrePlainTextRender();
 
 /**
  * The texts are the files' own, their lines broken by LF, CRLF or lone CRs. Pierre is given them as shown, lone CRs as
@@ -39,10 +42,15 @@ interface TextDiffProps {
   original: string;
   /** The modified text the diff starts from; changing it replaces what the editor holds. */
   modified: string;
-  /** The modified text as it is now, with unsaved edits: what discards and a diff shown anew start from. */
+  /** The modified text as it is now, with unsaved edits. */
   current: string;
-  /** The diff of `original` and `current` under `comparisonMethod` (`lineDiff`): shown, and discarded from. */
+  /** The diff of `original` and `diffedText` under `comparisonMethod` (`lineDiff`): shown, and discarded from. */
   diff: LineDiff;
+  /**
+   * The modified text `diff` is of, what discards and a diff shown anew start from: `current`, or while a big text is
+   * typed into, the text as it was when typing last paused (`diffsEveryKeystroke`).
+   */
+  diffedText: string;
   /** The modified side is typed into whole, without a diff: the diff has no lines to show. */
   wholeFile?: boolean;
   /** Used for the language of the syntax highlighting. */
@@ -87,7 +95,7 @@ function editorFactory(onCreate: (editor: Editor) => void): CreateEditor {
 }
 
 /** Syntax-highlighted text diff, side by side or unified, optionally typed into on the modified side. */
-export function TextDiff({ original, modified, current, diff, wholeFile = false, fileName, comparisonMethod, sides = BOTH_SIDES, editable = false, editorRef, onEdit, onDiscard, onUndoDiscard }: TextDiffProps) {
+export function TextDiff({ original, modified, current, diff, diffedText, wholeFile = false, fileName, comparisonMethod, sides = BOTH_SIDES, editable = false, editorRef, onEdit, onDiscard, onUndoDiscard }: TextDiffProps) {
   const theme = useResolvedTheme();
   const { layout, collapseUnchanged, wrapLines } = useDiffPreferences();
   const container = useRef<HTMLDivElement | null>(null);
@@ -103,12 +111,12 @@ export function TextDiff({ original, modified, current, diff, wholeFile = false,
   );
   const editor = useRef<Editor | null>(null);
   const [createEditor] = useState(() => editorFactory((created) => (editor.current = created)));
-  const latest = useRef({ current, diff });
-  latest.current = { current, diff };
+  const latest = useRef({ current: diffedText, diff });
+  latest.current = { current: diffedText, diff };
   // Stable inputs: new objects would make Pierre load the files again. While the text is typed into, Pierre works out
   // the diff itself (with the same options, `pierreLineComparison`); a diff shown anew (another comparison method, the
   // whole file or its diff, the file saved or changed on disk) starts from the text as it is now, unsaved edits included.
-  // A big read-only diff renders only the lines in view, shows as plain text at once and highlights in Pierre's
+  // A big diff renders only the lines in view; a read-only one shows as plain text at once and highlights in Pierre's
   // workers; past what's worth it, Pierre shows files with more lines than `tokenizeMaxLength` as plain text.
   const highlighting = syntaxHighlighting(original, modified, editable);
   const lang = highlightedLanguage(highlighting, fileName);
@@ -121,7 +129,8 @@ export function TextDiff({ original, modified, current, diff, wholeFile = false,
   const discard = useBlockDiscard({
     enabled: Boolean(onDiscard),
     diff: diff.meta,
-    texts: { original, modified: current },
+    texts: { original, modified: diffedText },
+    typed: current,
     comparisonMethod,
     layout,
     containerRef: container,
@@ -130,14 +139,14 @@ export function TextDiff({ original, modified, current, diff, wholeFile = false,
   });
   const tokenizeMaxLength = highlighting === 'off' ? 0 : undefined;
   const workers = highlighting === 'background' ? highlightWorkers() : undefined;
-  const virtualized = !editable && highlighting !== 'inline';
+  const virtualized = highlighting !== 'inline';
   const options = useMemo(
     () => ({ ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }), parseDiffOptions, tokenizeMaxLength, ...discard.options }),
     [theme, layout, collapseUnchanged, wrapLines, parseDiffOptions, tokenizeMaxLength, discard.options],
   );
   const fileOptions = useMemo(() => ({ ...pierreFileOptions({ theme, wrapLines }), tokenizeMaxLength }), [theme, wrapLines, tokenizeMaxLength]);
   const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);
-  useShadowStyle(container, [SHADOW_CSS, showsNoNewlineMarker(original, current) ? '' : HIDE_NO_NEWLINE_CSS, editable ? caretLineCss(shownText(current)) : ''].join('\n'));
+  useShadowStyle(container, [SHADOW_CSS, showsNoNewlineMarker(original, diffedText) ? '' : HIDE_NO_NEWLINE_CSS, editable ? caretLineCss(shownText(diffedText)) : ''].join('\n'));
   const pointerFocus = usePointerFocusMark();
 
   const isTyping = (): boolean => {
@@ -210,8 +219,8 @@ export function TextDiff({ original, modified, current, diff, wholeFile = false,
               <WorkerPoolContext.Provider value={workers}>
                 <FileDiff
                   // Pierre computes the diff once per pair of files, whatever the options say later, and takes the
-                  // workers and virtualizer when it's created (neither for an editable diff: typing doesn't start it anew).
-                  key={`${comparisonMethod}:${editable ? 'editable' : highlighting}`}
+                  // workers (never for an editable diff) and virtualizer when it's created; typing doesn't start it anew.
+                  key={`${comparisonMethod}:${editable ? 'editable' : highlighting}:${virtualized}`}
                   fileDiff={fileDiff}
                   options={options}
                   selectedLines={discard.selectedLines}

@@ -11,6 +11,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSpinDelay } from '../../../../lib/useSpinDelay';
 import { Spinner } from '../../../../ui/Spinner';
 import { type AnchorMode, countAbove, isWholeFrameRegion, MAX_TOLERANCE } from './imageDiff';
+import { compositionKey } from './compositionKey';
 import { computeImageDiff, type DiffComputation, rethresholdImageDiff } from './imageDiffSession';
 import { rasterize } from './rasterize';
 import { Pill, PillButton, PillLabel, PillValue, Viewport, World } from './stage';
@@ -44,8 +45,6 @@ interface DifferencesModeProps {
   cache: { current: DiffComposition | null };
   onStats: (stats: DiffStats) => void;
 }
-
-const compositionKey = (oldImage: DecodedImage, newImage: DecodedImage, anchor: AnchorMode) => `${oldImage.src} ${newImage.src} ${anchor}`;
 
 export function DifferencesMode({ oldImage, newImage, frame, panZoom, anchor, threshold, onThresholdChange, cache, onStats }: DifferencesModeProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
