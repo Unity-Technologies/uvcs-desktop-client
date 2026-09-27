@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
 import { useRepositories, useServers } from '../app/workspace/workspaceQueries';
-import { splitRepositorySpec } from '../lib/servers';
+import { serverChoiceLabel, splitRepositorySpec } from '../lib/servers';
 import { SelectField } from '../ui/TextField';
 import styles from './RepositoryPicker.module.css';
 
@@ -26,7 +26,7 @@ export function RepositoryPicker({ value, onChange, exclude, label = 'Repository
       <SelectField label="Server" value={server} onChange={(event) => setServer(event.target.value)}>
         {(servers?.map((profile) => profile.server) ?? [server]).map((name) => (
           <option key={name} value={name}>
-            {name}
+            {serverChoiceLabel(name)}
           </option>
         ))}
       </SelectField>

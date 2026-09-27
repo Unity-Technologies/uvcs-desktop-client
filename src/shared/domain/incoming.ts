@@ -61,4 +61,6 @@ export interface ShelvedForUpdate {
   count: number;
   /** False when other files still need merging: the workspace waits for them in Incoming. */
   updated: boolean;
+  /** Where the local versions of the merged files were saved, when it updated merging some. */
+  backupDirectory: string | null;
 }

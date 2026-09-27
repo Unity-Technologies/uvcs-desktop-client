@@ -39,7 +39,7 @@ export function RepositorySyncPanel({ localRepository }: { localRepository: stri
       title: 'Pull a branch',
       description: `Brings a branch that only exists in ${remote} into ${localRepository}.`,
       label: 'Branch name',
-      initialValue: '/main',
+      initialValue: '/main/',
       confirmLabel: 'Pull',
     });
     if (branch) pull(branch.startsWith('/') ? branch : `/${branch}`);

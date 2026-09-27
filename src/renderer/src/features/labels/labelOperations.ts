@@ -3,11 +3,13 @@ import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runVoidAction } from '../../app/operations/runOperation';
+import { isAffectedByLabels } from '../../app/refresh/refreshScopes';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
 import { openCreateBranchDialog } from '../branches/CreateBranchDialog';
+import { validateLabelName } from './labelNames';
 import { pickLabel } from './LabelPickerDialog';
 
 export function switchToLabel(workspacePath: string, label: Label): Promise<boolean> {
@@ -50,13 +52,14 @@ export function createBranchFromLabel(workspacePath: string, label: Label): void
 }
 
 export async function renameLabel(workspacePath: string, label: Label): Promise<void> {
-  const newName = await prompt({ title: 'Rename label', label: 'New name', initialValue: label.name, confirmLabel: 'Rename' });
+  const newName = await prompt({ title: 'Rename label', label: 'New name', initialValue: label.name, confirmLabel: 'Rename', validate: validateLabelName });
   if (!newName) return;
-  await runAction(workspacePath, "Couldn't rename the label", () => api.labels.rename(workspacePath, label.name, newName));
+  await runAction(workspacePath, "Couldn't rename the label", () => api.labels.rename(workspacePath, label.name, newName), isAffectedByLabels);
 }
 
-export function saveLabelComment(workspacePath: string, label: Label, comment: string): Promise<void | undefined> {
-  return runAction(workspacePath, "Couldn't update the comment", () => api.labels.editComment(workspacePath, label, comment));
+/** Resolves to whether it saved, so a comment that couldn't be saved stays in its editor. */
+export function saveLabelComment(workspacePath: string, label: Label, comment: string): Promise<boolean> {
+  return runVoidAction(workspacePath, "Couldn't update the comment", () => api.labels.editComment(workspacePath, label, comment), isAffectedByLabels);
 }
 
 export async function deleteLabels(workspacePath: string, labels: Label[]): Promise<void> {
@@ -70,6 +73,7 @@ export async function deleteLabels(workspacePath: string, labels: Label[]): Prom
 
   const deleted = await runVoidAction(workspacePath, "Couldn't delete the label", () =>
     api.labels.delete(workspacePath, labels.map((label) => label.name)),
+    isAffectedByLabels,
   );
   if (deleted) toast.success(labels.length === 1 ? `Deleted label ${labels[0]!.name}` : `Deleted ${labels.length} labels`);
 }

@@ -35,6 +35,19 @@ export function isControlled(change: PendingChange): boolean {
   return !['private', 'ignored', 'cloaked'].includes(categoryOf(change));
 }
 
+/** Whether the workspace is its branch but for files never checked in (private, ignored, cloaked). */
+export function matchesBranch(changes: PendingChange[]): boolean {
+  return !changes.some(isControlled);
+}
+
+/**
+ * Whether a shelve can take the change: `cm shelveset create` shelves only what is under version control, and follows
+ * a link it is given to the file it points to (it has no `--symlink`).
+ */
+export function isShelvable(change: PendingChange): boolean {
+  return isControlled(change) && change.itemType !== 'symlink';
+}
+
 /** Whether the item has revisions to show (history, annotations): added and copied items get their first at checkin. */
 export function hasRevisions(change: PendingChange): boolean {
   return isControlled(change) && categoryOf(change) !== 'added';

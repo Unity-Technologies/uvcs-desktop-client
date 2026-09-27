@@ -23,8 +23,8 @@ import styles from './AnnotationPane.module.css';
 
 interface AnnotationPaneProps {
   path: string;
-  /** Revision to annotate, e.g. `src/app.ts#cs:12`; the one loaded in the workspace when omitted. */
-  revisionSpec?: string;
+  /** Revision to annotate; the one loaded in the workspace when omitted. */
+  revision?: ItemRevision;
   /** The file's history, newest first. Lets each change be walked back to the file as it was before it. */
   revisions?: ItemRevision[];
   /** Shown first in the toolbar, e.g. a view switch. */
@@ -32,13 +32,15 @@ interface AnnotationPaneProps {
 }
 
 /** Who last changed each line of a file, with a toolbar to pick the details and walk back through older revisions. */
-export function AnnotationPane({ path, revisionSpec, revisions, leading }: AnnotationPaneProps) {
+export function AnnotationPane({ path, revision, revisions, leading }: AnnotationPaneProps) {
   const workspacePath = useWorkspacePath();
   const { columns, toggleColumn } = useAnnotateOptions();
   // Revisions reached with "Annotate before this change"; Back returns to the previous one.
   const [trail, setTrail] = useState<ItemRevision[]>([]);
   const walkedTo = trail.at(-1);
-  const spec = walkedTo?.spec ?? revisionSpec;
+  const shown = walkedTo ?? revision;
+  // By revision id: the path spec finds nothing in the changesets before the file moved.
+  const spec = shown?.idSpec;
 
   const { data: annotation, error } = useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'annotate', path, spec),
@@ -59,7 +61,7 @@ export function AnnotationPane({ path, revisionSpec, revisions, leading }: Annot
     [revisions],
   );
 
-  const revisionLabel = walkedTo ? `cs:${walkedTo.changesetId}` : revisionSpec?.split('#').at(-1);
+  const revisionLabel = shown && `cs:${shown.changesetId}`;
 
   return (
     <div className={styles.pane}>

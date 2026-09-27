@@ -19,16 +19,29 @@ export interface ToolFiles {
 }
 
 /**
+ * Sooner than anyone opens a file, looks at it and closes it: a tool that fails this fast, saying why on stderr, never
+ * showed the file (`opendiff` before the Xcode license is accepted, a bad option).
+ */
+const FAILED_TO_OPEN_SECONDS = 3;
+
+/**
  * What the tool did, told by the result file: only KDiff3, Beyond Compare and the UVCS tool say by their exit code
  * whether the user saved, and a user who stops waiting may well have saved already (VS Code waits for its tab to
  * close). Text comes back as saved; a binary must be one of its two versions, which is all a merge can keep of it.
  */
 export function judgeToolResult(files: ToolFiles, run: ToolRun): MergeToolOutcome {
   const { start, result } = files;
-  if (!result || (start && result.equals(start))) return { kind: 'unchanged', exitCode: run.exitCode, errorOutput: run.errorOutput };
+  if (!result || (start && result.equals(start))) {
+    const failedToOpen = run.exitCode !== null && run.exitCode !== 0 && run.errorOutput && run.seconds < FAILED_TO_OPEN_SECONDS;
+    return failedToOpen ? { kind: 'failed', message: lastLine(run.errorOutput) } : { kind: 'unchanged', exitCode: run.exitCode, errorOutput: run.errorOutput };
+  }
   if (start) return { kind: 'resolved', text: result.toString('utf8') };
 
   if (result.equals(files.incoming)) return { kind: 'keptSide', side: 'source' };
   if (result.equals(files.yours)) return { kind: 'keptSide', side: 'destination' };
   return { kind: 'failed', message: 'The tool saved a file that is neither version. A binary file can only keep one of them.' };
+}
+
+function lastLine(text: string): string {
+  return text.split('\n').filter((line) => line.trim()).at(-1)!.trim();
 }

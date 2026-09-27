@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cloudOrganization, describeServer, isCloudServer, splitRepositorySpec } from './servers';
+import { cloudOrganization, describeServer, isCloudServer, serverChoiceLabel, splitRepositorySpec } from './servers';
 
 describe('servers', () => {
   it('tells cloud organizations from on-premises servers', () => {
@@ -15,6 +15,12 @@ describe('servers', () => {
     expect(describeServer('acme@cloud')).toEqual({ label: 'acme', detail: 'Cloud' });
     expect(describeServer('*@cloud')).toEqual({ label: 'Any cloud organization', detail: 'Cloud' });
     expect(describeServer('host:8087')).toEqual({ label: 'host:8087' });
+  });
+
+  it('names a server as a choice as the sidebar does', () => {
+    expect(serverChoiceLabel('local')).toBe('This computer');
+    expect(serverChoiceLabel('acme@cloud')).toBe('acme · Cloud');
+    expect(serverChoiceLabel('ssl://host:8088')).toBe('ssl://host:8088');
   });
 
   it('splits a repository spec at its first @', () => {

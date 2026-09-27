@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MergePlan } from '@shared/domain/merge';
-import { describeSpec, mergeLabels, mergeTitle, mergeTitleText } from './mergeDescription';
+import { completionCounts, describeSpec, mergeLabels, mergeTitle, mergeTitleText } from './mergeDescription';
 
 const plan: MergePlan = {
   status: 'ready',
@@ -48,5 +48,14 @@ describe('mergeTitle', () => {
     expect(title({ kind: 'merge', sourceSpec: 'sh:2' }, '/main')).toBe('Apply shelve 2 to /main');
     expect(title({ kind: 'cherryPick', sourceSpec: 'cs:9', intervalOriginSpec: 'cs:5' }, '/main')).toBe('Cherry pick changeset 5…changeset 9 into /main');
     expect(title({ kind: 'subtractive', sourceSpec: 'cs:7' }, '/main')).toBe('Undo changeset 7 on /main');
+  });
+});
+
+describe('completionCounts', () => {
+  it('counts what the merge did, leaving out what it did none of', () => {
+    expect(completionCounts(3, 2)).toBe('3 changes applied · 2 conflicts resolved');
+    expect(completionCounts(0, 17)).toBe('17 conflicts resolved');
+    expect(completionCounts(1, 0)).toBe('1 change applied');
+    expect(completionCounts(0, 0)).toBe('');
   });
 });

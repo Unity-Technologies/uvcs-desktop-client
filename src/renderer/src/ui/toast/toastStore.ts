@@ -5,6 +5,8 @@ export type ToastKind = 'info' | 'success' | 'error' | 'progress';
 export interface ToastAction {
   label: string;
   run: () => void;
+  /** Shown but not pressable, e.g. "Stopping…" once Cancel was pressed. */
+  disabled?: boolean;
 }
 
 export interface Toast {

@@ -44,13 +44,18 @@ describe('parseMergePlan', () => {
     ]);
   });
 
-  it('reads the changes that apply cleanly, including moves', () => {
+  it('reads the changes that apply cleanly, including moves, by path', () => {
     expect(plan.changes).toEqual([
-      { kind: 'changed', path: '/src/clean.txt' },
       { kind: 'added', path: '/docs/extra.md' },
-      { kind: 'moved', path: '/new/name.txt', oldPath: '/old/name.txt' },
       { kind: 'deleted', path: '/gone.txt' },
+      { kind: 'moved', path: '/new/name.txt', oldPath: '/old/name.txt' },
+      { kind: 'changed', path: '/src/clean.txt' },
     ]);
+  });
+
+  it('lists conflicting files by path, whatever order cm prints them in', () => {
+    const shuffled = parseMergePlan(output('FILE_CONFLICT|/src/b/Component08.tsx|1|2|4|21', 'FILE_CONFLICT|/src/app.ts|1|2|4|22', 'FILE_CONFLICT|/src/b/Component01.tsx|1|2|4|23'));
+    expect(shuffled.fileConflicts.map((conflict) => conflict.path)).toEqual(['/src/app.ts', '/src/b/Component01.tsx', '/src/b/Component08.tsx']);
   });
 
   it('reads both sides of directory conflicts, with old and new paths for moves', () => {

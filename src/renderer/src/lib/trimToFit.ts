@@ -58,6 +58,27 @@ export function trimFolderToFit(folder: string, maxWidth: number, measure: Measu
   return measure(`${ELLIPSIS}/`) <= maxWidth ? `${ELLIPSIS}/` : '';
 }
 
+/** The fewest characters of a name worth showing after a `…/`; with less room the name gets it all. */
+const MIN_NAME_CHARS = 4;
+
+/**
+ * A path (`/main/task/login`, `src/app/main.ts`) as a folder and a name shortened to fit, always the same way: whole
+ * folders go from the middle of the folder first (`/main/…/login`), then the folder down to `…/`, and only then the
+ * name, from its middle so both ends still tell it apart (`…/ghost-mo…fix`). The `…/` stays while the name keeps a few
+ * characters, so a shortened path never reads as a top-level one.
+ */
+export function fitPath(folder: string, name: string, maxWidth: number, measure: Measure): { folder: string; name: string } {
+  const nameWidth = measure(name);
+  if (!folder) return { folder, name: trimMiddleToFit(name, maxWidth, measure) };
+  const trimmedFolder = trimFolderToFit(folder, maxWidth - nameWidth, measure);
+  if (trimmedFolder) return { folder: trimmedFolder, name };
+
+  const hint = `${ELLIPSIS}/`;
+  const roomForName = maxWidth - measure(hint);
+  if (roomForName < measure(Array.from(name).slice(0, MIN_NAME_CHARS).join('') + ELLIPSIS)) return { folder: '', name: trimMiddleToFit(name, maxWidth, measure) };
+  return { folder: hint, name: trimMiddleToFit(name, roomForName, measure) };
+}
+
 /** Where character positions of `text` (search matches) land once it is shortened to `shown`; cut ones are left out. */
 export function positionsInTrimmed(text: string, shown: string, positions: readonly number[]): number[] {
   if (shown === text) return [...positions];

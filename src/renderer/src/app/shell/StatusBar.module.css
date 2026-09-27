@@ -137,6 +137,7 @@ button.incoming:hover {
 }
 
 .statusBar:hover .hint,
+.log:focus-visible .hint,
 .statusBar[data-busy='true'] .hint,
 .log[data-failed='true'] .hint {
   opacity: 1;

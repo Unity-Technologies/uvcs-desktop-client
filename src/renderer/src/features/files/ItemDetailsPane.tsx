@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { File, Folder } from 'lucide-react';
+import { File, FileSymlink, Folder } from 'lucide-react';
 import type { TreeItem } from '@shared/domain/explorer';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
@@ -12,8 +12,10 @@ import { DetailsBadge, DetailsPanel, DetailsSection } from '../../ui/DetailsPane
 import { PropertyList, type Property } from '../../ui/PropertyList';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { ChangeDiffPanel } from '../pendingChanges/ChangeDiffPanel';
-import { describeKinds } from '../pendingChanges/changeCategories';
+import { describeKinds, isControlled } from '../pendingChanges/changeCategories';
 import { useFilesViewStore, type DetailsTab } from './filesViewStore';
+import { onDiskState } from './itemStatus';
+import { itemTypeLabel } from './itemType';
 import { RevisionChanges } from './RevisionChanges';
 
 interface ItemDetailsPaneProps {
@@ -33,16 +35,16 @@ export function ItemDetailsPane({ workspacePath, item, pendingChange, menu }: It
 
   return (
     <DetailsPanel
-      icon={item.itemType === 'directory' ? <Folder /> : <File />}
-      kind={item.itemType === 'directory' ? 'Folder' : 'File'}
-      context={`/${item.path.slice(0, nameStart)}`}
+      icon={item.itemType === 'directory' ? <Folder /> : item.itemType === 'symlink' ? <FileSymlink /> : <File />}
+      kind={item.itemType === 'directory' ? 'Folder' : item.itemType === 'symlink' ? 'Link' : 'File'}
+      context={nameStart > 0 ? `/${item.path.slice(0, nameStart)}` : undefined}
       heading={<DetailsHeading name={item.name} />}
       author={item.owner && !item.isPrivate ? { user: item.owner, date: item.date } : undefined}
       badges={
-        pendingChange ? (
+        pendingChange && isControlled(pendingChange) ? (
           <DetailsBadge tone="warning">{describeKinds(pendingChange)}</DetailsBadge>
-        ) : item.isPrivate ? (
-          <DetailsBadge>Private</DetailsBadge>
+        ) : pendingChange || item.isPrivate ? (
+          <DetailsBadge>{pendingChange ? describeKinds(pendingChange) : 'Private'}</DetailsBadge>
         ) : undefined
       }
       primaryAction={
@@ -84,12 +86,15 @@ function ItemProperties({ workspacePath, item, pendingChange }: Omit<ItemDetails
     enabled: !item.isPrivate && settled,
   });
 
+  const onDisk = pendingChange && onDiskState(item, pendingChange);
+  const modified = onDisk?.date || item.date;
   const properties: Property[] = [
     { label: 'Path', value: `/${item.path}`, mono: true, copyText: `/${item.path}` },
     { label: 'Status', value: pendingChange ? describeKinds(pendingChange) : item.isPrivate ? 'Private' : 'Up to date' },
-    { label: 'Type', value: item.itemType === 'directory' ? 'Folder' : item.itemType === 'binaryFile' ? 'Binary file' : 'Text file' },
-    { label: 'Size', value: item.itemType === 'directory' ? '' : formatSize(item.size) },
-    { label: 'Modified', value: item.date && formatDateTime(item.date) },
+    { label: 'Type', value: itemTypeLabel(item.itemType) },
+    { label: 'Link to', value: item.symlinkTarget, mono: true },
+    { label: 'Size', value: item.itemType === 'directory' ? '' : formatSize(onDisk?.size ?? item.size) },
+    { label: 'Modified', value: modified && formatDateTime(modified) },
   ];
   if (!item.isPrivate) {
     properties.push(

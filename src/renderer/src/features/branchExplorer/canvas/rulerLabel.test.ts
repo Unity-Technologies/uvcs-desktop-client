@@ -17,4 +17,8 @@ describe('rulerLabelX', () => {
   it('keeps a small inset from the start of a pinned day', () => {
     expect(rulerLabelX(-50, 20000, 40, 20)).toBe(6);
   });
+
+  it('starts a day coming in from the right edge at its boundary, not cut to its last digits', () => {
+    expect(rulerLabelX(980, Number.POSITIVE_INFINITY, 50, 1000)).toBe(986);
+  });
 });

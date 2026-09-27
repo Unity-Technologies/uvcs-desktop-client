@@ -6,6 +6,7 @@ import { displayName } from '../../lib/userName';
 import { Avatar } from '../../ui/Avatar';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { Spinner } from '../../ui/Spinner';
+import { collisionNote } from './collisionMessages';
 import type { IncomingChipState } from './incomingChipState';
 import styles from './IncomingCard.module.css';
 
@@ -34,10 +35,7 @@ export function IncomingCard({ state, changes, actions }: IncomingCardProps) {
       {state.kind === 'conflicts' && (
         <p className={styles.conflicts}>
           <AlertTriangle size={14} className={styles.conflictsIcon} />
-          <span>
-            {pluralize(state.conflictCount, 'file')} you changed {state.conflictCount === 1 ? 'was' : 'were'} also changed there. Merge them
-            in Incoming to update.
-          </span>
+          <span>{collisionNote(state.mergeCount, state.blockedCount)}</span>
         </p>
       )}
       <ul className={styles.list}>

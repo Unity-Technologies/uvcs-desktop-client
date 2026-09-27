@@ -1,3 +1,4 @@
+import { existsSync } from 'node:fs';
 import { copyFile, writeFile } from 'node:fs/promises';
 import { basename, dirname } from 'node:path';
 import type { ContentSource } from '@shared/domain/content';
@@ -23,13 +24,21 @@ export async function saveContent(cm: CmClient, workspacePath: string, source: E
 
 async function saveLoadedRevision(cm: CmClient, workspacePath: string, path: string, target: string): Promise<void> {
   const absolutePath = toAbsolutePath(workspacePath, path);
+  const byPath = () => saveRevision(cm, workspacePath, absolutePath, target);
+  // `cm rm` takes the item out of the workspace tree, so its path stops resolving: find it through its folder.
+  const throughFolder = async () => {
+    const xml = await cm.query(['fileinfo', dirname(absolutePath), absolutePath, '--xml'], { cwd: workspacePath });
+    const removed = removedItemSpec(xml, basename(absolutePath));
+    // Nothing loaded (an added file, or one the branch deleted): its loaded version is empty.
+    await (removed ? saveRevision(cm, workspacePath, removed, target) : writeFile(target, ''));
+  };
+  // A file gone from disk was most likely removed: its folder first, so no `cm cat` fails (in red, in the command log).
+  const [first, then] = existsSync(absolutePath) ? [byPath, throughFolder] : [throughFolder, byPath];
   try {
-    await saveRevision(cm, workspacePath, absolutePath, target);
+    await first();
   } catch (error) {
-    // `cm rm` takes the item out of the workspace tree, so its path stops resolving: find it through its folder.
     try {
-      const xml = await cm.query(['fileinfo', dirname(absolutePath), absolutePath, '--xml'], { cwd: workspacePath });
-      await saveRevision(cm, workspacePath, removedItemSpec(xml, basename(absolutePath)), target);
+      await then();
     } catch {
       throw error;
     }

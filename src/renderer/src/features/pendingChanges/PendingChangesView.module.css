@@ -17,3 +17,14 @@
   font-size: var(--text-sm);
 }
 
+
+/* Holds the task's merge suggestion or finished card, and goes away when it shows neither. */
+.taskSuggestion {
+  flex: none;
+  padding: var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border-subtle);
+}
+
+.taskSuggestion:empty {
+  display: none;
+}

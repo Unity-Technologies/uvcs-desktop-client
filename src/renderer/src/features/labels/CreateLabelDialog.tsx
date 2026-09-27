@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { api } from '../../api/client';
 import { runVoidAction } from '../../app/operations/runOperation';
+import { isAffectedByLabels } from '../../app/refresh/refreshScopes';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
@@ -8,6 +9,7 @@ import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { TextArea, TextField } from '../../ui/TextField';
 import { toast } from '../../ui/toast/toastStore';
+import { validateLabelName } from './labelNames';
 
 /**
  * Opens the "new label" dialog. Pass `changesetId` to label a specific changeset (e.g. from the
@@ -23,13 +25,14 @@ function CreateLabelDialog({ workspacePath, changesetId, onClose }: { workspaceP
   const [switchAfter, setSwitchAfter] = useState(false);
   const [creating, setCreating] = useState(false);
   const trimmed = name.trim();
-  const error = /[\s@#:/\\]/.test(trimmed) ? 'Labels cannot contain spaces or @ # : / \\ characters.' : undefined;
+  const error = validateLabelName(trimmed);
 
   const create = async (): Promise<void> => {
     if (!trimmed || error) return;
     setCreating(true);
     const created = await runVoidAction(workspacePath, "Couldn't create the label", () =>
       api.labels.create(workspacePath, { name: trimmed, changesetId, comment }),
+      isAffectedByLabels,
     );
     setCreating(false);
     if (!created) return;

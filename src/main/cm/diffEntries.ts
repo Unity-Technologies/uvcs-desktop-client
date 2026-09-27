@@ -22,7 +22,8 @@ export function parseDiffEntries(output: string): DiffEntry[] {
     entriesByPath.set(entry.path, existing ? mergeEntries(existing, entry) : entry);
   }
 
-  return [...entriesByPath.values()].sort((a, b) => a.path.localeCompare(b.path));
+  // As people read them: file_2 before file_10.
+  return [...entriesByPath.values()].sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true, sensitivity: 'base' }));
 }
 
 function toDiffEntry([statusCode = '', path = '', sourcePath = '', baseRevision = '', revision = '', typeCode = '']: string[]): DiffEntry | null {

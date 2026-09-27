@@ -1,0 +1,27 @@
+/* A box in the text's font around the mono number: the number sits on the text's baseline, not centered higher. */
+.numberCell {
+  white-space: nowrap;
+}
+
+.number {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.noComment {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.commentCell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.clipped {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

@@ -26,17 +26,13 @@ export const diffEntryKey = (entry: DiffEntry): string => entry.path;
 
 function columns({ on, statusOf, toggle }: ReviewMode<DiffEntry>): Column<DiffEntry>[] {
   const reviewStatus = (entry: DiffEntry) => (on ? statusOf(entry) : null);
-  const statusColumn: Column<DiffEntry> = {
-    id: 'status',
-    header: '',
-    width: 36,
-    render: (entry) => <StatusBadge tone={diffEntryTone(entry)} title={describeDiffEntry(entry)} />,
-  };
+  // The status sits next to the path, as in the pending changes: a column of its own would space them a cell apart.
   const pathColumn: Column<DiffEntry> = {
     id: 'path',
     header: 'File',
     render: (entry) => (
       <span className={styles.path} data-review={reviewStatus(entry) ?? undefined}>
+        <StatusBadge tone={diffEntryTone(entry)} title={describeDiffEntry(entry)} />
         {reviewStatus(entry) === 'changedSinceReview' && <SinceReviewDot />}
         <PathLabel path={entry.path} oldPath={entry.oldPath} strikethrough={entry.status === 'deleted'} />
         {isMovedAndChanged(entry) && <span className={styles.tag}>modified</span>}
@@ -52,7 +48,7 @@ function columns({ on, statusOf, toggle }: ReviewMode<DiffEntry>): Column<DiffEn
       return status && <ReviewToggle status={status} onToggle={() => toggle([entry])} />;
     },
   };
-  return on ? [statusColumn, pathColumn, reviewColumn] : [statusColumn, pathColumn];
+  return on ? [pathColumn, reviewColumn] : [pathColumn];
 }
 
 /** The files of a diff: filterable, and in review mode marked as they are reviewed. */

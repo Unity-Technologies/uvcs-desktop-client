@@ -28,6 +28,8 @@
   border-radius: var(--radius-md);
   background: var(--bg-input);
   outline: none;
+  /* A placeholder longer than the field ends in an ellipsis rather than a cut word. */
+  text-overflow: ellipsis;
   transition:
     border-color var(--duration-fast),
     box-shadow var(--duration-fast);
@@ -37,9 +39,17 @@
   color: var(--text-tertiary);
 }
 
+.input:hover:not(:focus, :disabled) {
+  border-color: var(--border-strong);
+}
+
 .input:focus {
   border-color: var(--accent);
   box-shadow: var(--focus-ring);
+}
+
+.input:disabled {
+  opacity: 0.6;
 }
 
 .textarea {

@@ -1,5 +1,5 @@
 import { EyeOff, GitBranch, GitBranchPlus, List, ListTree, RefreshCw, User } from 'lucide-react';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { spec } from '@shared/domain/specs';
@@ -31,6 +31,7 @@ import { diffBranch } from './branchOperations';
 import { useBranchesViewStore, type BranchesLayout } from './branchesViewStore';
 import { buildBranchTree, type BranchTreeRow } from './branchTree';
 import { openCreateBranchDialog } from './CreateBranchDialog';
+import { newBranchFromWorkspace } from './newBranchFromWorkspace';
 import { useBranches } from './useBranches';
 
 export function BranchesView() {
@@ -53,26 +54,34 @@ export function BranchesView() {
     () => (layout === 'tree' ? buildBranchTree(matching, collapsed) : matching.map((branch) => ({ branch, depth: 0, hasChildren: false, collapsed: false }))),
     [layout, matching, collapsed],
   );
-  const selected = matching.find((branch) => branch.name === selection.anchor);
+  const selected = matching.find((branch) => rowKey({ branch }) === selection.anchor);
+  // What collapsing reads, so the columns (and their sort) don't change with every selection.
+  const latest = useRef({ selected, matching, setSelection });
+  latest.current = { selected, matching, setSelection };
 
-  const toggleCollapsed = useCallback(
-    (name: string): void =>
-      setCollapsed((current) => {
-        const next = new Set(current);
-        if (next.has(name)) next.delete(name);
-        else next.add(name);
-        return next;
-      }),
-    [],
-  );
+  const toggleCollapsed = useCallback((name: string): void => {
+    setCollapsed((current) => {
+      const next = new Set(current);
+      if (next.has(name)) next.delete(name);
+      else next.add(name);
+      return next;
+    });
+    // Collapsing the branch a selected child hangs from selects it instead.
+    const { selected: shown, matching: branches, setSelection: select } = latest.current;
+    const collapsing = branches.find((branch) => branch.name === name);
+    if (collapsing && shown?.name.startsWith(`${name}/`)) select({ selected: new Set([rowKey({ branch: collapsing })]), anchor: rowKey({ branch: collapsing }) });
+  }, []);
 
+  // From the selected branch's head, or else from what the workspace has loaded (nothing listed, a label loaded).
   const newBranch = (): void => {
-    const parent = selected ?? matching.find((branch) => branch.name === currentBranch);
-    if (!parent) return;
+    if (!selected) {
+      if (workspace) void newBranchFromWorkspace(workspace);
+      return;
+    }
     openCreateBranchDialog(workspacePath, {
-      parentBranch: parent.name,
-      startingPoint: spec.changeset(parent.headChangeset),
-      startingPointLabel: `the head of ${parent.name} (changeset ${parent.headChangeset})`,
+      parentBranch: selected.name,
+      startingPoint: spec.changeset(selected.headChangeset),
+      startingPointLabel: `the head of ${selected.name} (changeset ${selected.headChangeset})`,
     });
   };
 
@@ -83,11 +92,11 @@ export function BranchesView() {
     <>
       <ViewHeader
         title="Branches"
-        subtitle={branches && `${branches.length}`}
+        count={branches?.length}
         actions={
           <>
             <IconButton icon={<RefreshCw size={14} className={isFetching ? 'spinning' : undefined} />} label="Refresh" onClick={() => void invalidateWorkspace(workspacePath)} />
-            <Button variant="primary" icon={<GitBranchPlus size={14} />} onClick={newBranch} disabled={!branches?.length}>
+            <Button variant="primary" icon={<GitBranchPlus size={14} />} onClick={newBranch} disabled={!workspace}>
               New branch
             </Button>
           </>
@@ -145,8 +154,9 @@ export function BranchesView() {
   );
 }
 
-function rowKey(row: BranchTreeRow): string {
-  return row.branch.name;
+/** By id, so a renamed branch stays selected. */
+function rowKey(row: Pick<BranchTreeRow, 'branch'>): string {
+  return String(row.branch.id);
 }
 
 function filterBranches(branches: Branch[], search: string): Branch[] {
@@ -172,7 +182,8 @@ function useBranchColumns(
           <BranchNameCell row={row} isCurrent={row.branch.name === currentBranch} review={reviews?.get(row.branch.id)} onToggleCollapsed={onToggleCollapsed} />
         ),
       },
-      { id: 'comment', header: 'Comment', grow: 2, secondary: true, render: (row) => <Highlight text={row.branch.comment} /> },
+      // Gives its room to the name in a narrow list: the details panel shows the comment anyway.
+      { id: 'comment', header: 'Comment', grow: 2, secondary: true, hideBelow: 560, render: (row) => <Highlight text={row.branch.comment} /> },
       {
         id: 'owner',
         header: 'Created by',

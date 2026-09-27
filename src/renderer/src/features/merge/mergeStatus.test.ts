@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
 import { mergeLabels } from './mergeDescription';
-import { describeChange, directoryConflictStatus, fileConflictStatus, planProgress, presentStatus, summarizePlan } from './mergeStatus';
+import { changeTone, describeChange, directoryConflictStatus, fileConflictStatus, planProgress, presentStatus, summarizePlan } from './mergeStatus';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 const text = (value: string): FileContent => ({ text: value, isBinary: false, size: value.length });
@@ -79,5 +79,12 @@ describe('planProgress', () => {
     expect(planProgress(['automatic', 'keepingSource'])).toBe('Ready to merge');
     expect(planProgress(['automatic', 'needsDecision'])).toBe('1 conflict to decide');
     expect(planProgress(['needsDecision', 'openInTool', 'combined'])).toBe('2 conflicts to decide');
+  });
+});
+
+describe('changeTone', () => {
+  it('badges a clean change by its kind', () => {
+    expect(changeTone({ kind: 'moved', path: '/b.ts', oldPath: '/a.ts' })).toBe('moved');
+    expect(changeTone({ kind: 'permissions', path: '/run.sh' })).toBe('permissions');
   });
 });
