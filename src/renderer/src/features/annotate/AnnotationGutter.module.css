@@ -58,6 +58,13 @@
   border-radius: var(--radius-sm);
   background: none;
   color: var(--text-tertiary);
+  /* Shown on the hovered block only: on every block it reads as a column of noise. */
+  opacity: 0;
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.cell:hover .before {
+  opacity: 1;
 }
 
 button.before:hover {
