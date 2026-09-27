@@ -1,4 +1,4 @@
-import { AppWindow, Code, Columns2, EyeOff, FileText, FoldVertical, ImageIcon, RefreshCw, Rows2, WrapText } from 'lucide-react';
+import { AppWindow, Code, Columns2, EyeOff, FileText, FoldVertical, ImageIcon, Pilcrow, RefreshCw, Rows2, WrapText } from 'lucide-react';
 import { Suspense, useMemo, type ReactNode, type RefObject } from 'react';
 import type { DiffSides } from './shownDiff';
 import type { FileContent } from '@shared/domain/content';
@@ -25,7 +25,7 @@ import { DiffViewerFrame } from './DiffViewerFrame';
 import { discardInFile, undoLastDiscard, type DiscardTarget } from './discardInFile';
 import type { EditorHandle } from './editorHandle';
 import { IMAGE_DIFF_MODES, type ImageDiffMode } from './image/imageDiffModes';
-import { IGNORED_DIFFERENCE_TITLES, ignoredDifference } from './ignoredDifference';
+import { IGNORED_DIFFERENCE_TITLES, ignoredDifference, methodHidingEveryChange } from './ignoredDifference';
 import { hasLineChanges, lineDiff, type LineDiff } from './lineDiff';
 import { LineStats } from './LineStats';
 import { PlainTextIndicator } from './PlainTextIndicator';
@@ -103,6 +103,12 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const wholeFile = typedIntoWhole(editable, savedDiff);
   // Different texts the comparison method shows as equal, e.g. only their line endings changed.
   const onlyIgnoredChanges = presentation.kind === 'text' && !presentation.identical && savedDiff !== null && !hasLineChanges(savedDiff);
+  // The other way round: changes that are all what another method ignores, e.g. every line ending changed. Of the file
+  // as read, so the line saying so stays put while it's typed into.
+  const hidingMethod = useMemo(
+    () => (savedDiff && hasLineChanges(savedDiff) ? methodHidingEveryChange(left.text ?? '', right.text ?? '', comparisonMethod) : null),
+    [savedDiff, left.text, right.text, comparisonMethod],
+  );
   const openFile = editablePath === null ? undefined : () => void api.system.openPath(absolutePath(workspacePath, editablePath));
 
   useShortcut(hotkey('saveFile'), () => void buffer.save(), dirty);
@@ -123,7 +129,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       <Button size="small" variant="ghost" data-tip="Go back to the file on disk" onClick={buffer.discard}>
         Discard
       </Button>
-      <Button size="small" variant="primary" data-tip="Save the file" data-tip-shortcut={hotkey('saveFile')} onClick={() => void buffer.save()}>
+      <Button size="small" variant="primary" data-tip={buffer.changedOnDisk ? "Save your version over the one on disk" : "Save the file"} data-tip-shortcut={hotkey('saveFile')} onClick={() => void buffer.save()}>
         Save
       </Button>
     </PaneToolbarGroup>
@@ -218,6 +224,12 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
     />
   );
 
+  const hidingNote = hidingMethod && (
+    <DiffNotice tone="info" icon={<Pilcrow size={13} />} action={<Button size="small" onClick={() => setComparisonMethod(hidingMethod)}>{comparisonMethodLabel(hidingMethod)}</Button>}>
+      {IGNORED_DIFFERENCE_TITLES[ignoredDifference(left.text ?? '', right.text ?? '')]}.
+    </DiffNotice>
+  );
+
   let body: ReactNode;
   if (editable) {
     // Typed into even with no lines to show: then the whole file, under a line that says why.
@@ -239,9 +251,10 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       <>
         {buffer.changedOnDisk && (
           <DiffNotice tone="attention" icon={<RefreshCw size={13} />} action={<Button size="small" onClick={buffer.discard}>Reload</Button>}>
-            File changed on disk. Reload to see the new version; your unsaved edits are discarded.
+            File changed on disk. Reload to take the new version and drop your edits, or save yours over it.
           </DiffNotice>
         )}
+        {hidingNote}
         {note}
         {textDiff}
       </>
@@ -259,7 +272,12 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       />
     );
   } else if (presentation.kind === 'text') {
-    body = textDiff;
+    body = (
+      <>
+        {hidingNote}
+        {textDiff}
+      </>
+    );
   } else if (presentation.kind === 'tooLarge') {
     body = (
       <EmptyState
