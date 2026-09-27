@@ -16,7 +16,7 @@ interface ScreenMessageProps {
 export function ScreenMessage({ icon, tone = 'neutral', title, children, actions, footer }: ScreenMessageProps) {
   return (
     <div className={styles.screen}>
-      <div className={styles.dragRegion} data-drag-region />
+      <div className={styles.dragRegion} />
       <div className={styles.card}>
         <div className={styles.icon} data-tone={tone}>
           {icon}

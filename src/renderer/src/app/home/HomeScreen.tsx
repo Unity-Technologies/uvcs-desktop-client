@@ -25,7 +25,7 @@ export function HomeScreen() {
     <div className={styles.home} onDragOver={drop.onDragOver} onDragLeave={drop.onDragLeave} onDrop={drop.onDrop}>
       <HomeSidebar section={section} onSelect={setSection} />
       <main className={styles.main}>
-        <div className={styles.dragRegion} data-drag-region />
+        <div className={styles.dragRegion} />
         <div className={styles.panel} key={section.kind === 'server' ? section.server : section.kind}>
           {section.kind === 'server' ? (
             <RepositoriesPanel server={section.server} onOpen={open} />

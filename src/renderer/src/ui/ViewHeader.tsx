@@ -22,7 +22,7 @@ interface ViewHeaderProps {
  */
 export function ViewHeader({ title, count, subtitle, children, actions, inTitleBar }: ViewHeaderProps) {
   return (
-    <header className={styles.header} data-title-bar={inTitleBar} data-drag-region={inTitleBar || undefined}>
+    <header className={styles.header} data-title-bar={inTitleBar}>
       <div className={styles.titleRow}>
         <h1 className={styles.title}>{title}</h1>
         {count !== undefined && <div className={styles.subtitle}>{formatCount(count)}</div>}

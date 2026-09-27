@@ -36,7 +36,7 @@ describe('`:has()` rules', () => {
   it('tells such a rule from a narrow one', () => {
     expect(selectorsRestylingEverything("html:has([role='dialog']) * { color: red; }")).toHaveLength(1);
     expect(selectorsRestylingEverything('.list:has(> .row) > * { color: red; }')).toHaveLength(1);
-    expect(selectorsRestylingEverything("html:has([role='dialog']) [data-drag-region] { color: red; }")).toEqual([]);
+    expect(selectorsRestylingEverything("html:has([role='dialog']) .titleBar { color: red; }")).toEqual([]);
     expect(selectorsRestylingEverything('.row:has(.name:focus-visible) { color: red; }')).toEqual([]);
   });
 });
