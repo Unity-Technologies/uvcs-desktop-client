@@ -1,6 +1,7 @@
 import { homedir } from 'node:os';
 import type { CommandLogEntry } from '@shared/events';
 import { CmError } from './CmError';
+import { isShellResultLine, processCommand, shellCommandResult } from './commandLineLimit';
 import type { CmResult } from './CmResult';
 import { CmShellPool } from './CmShellPool';
 import { extractErrorMessage } from './errorMessage';
@@ -84,9 +85,7 @@ export class CmClient {
   private async run(args: string[], options: CmRunOptions, useShell: boolean): Promise<string> {
     const cwd = options.cwd ?? homedir();
     const startedAt = Date.now();
-    const finished = useShell
-      ? this.shellPool.run(cwd, args)
-      : runCmProcess(this.cmPath, args, { cwd, signal: options.signal, killSignal: options.killSignal, onOutputLine: options.onOutputLine });
+    const finished = useShell ? this.shellPool.run(cwd, args) : this.runProcess(args, cwd, options);
     this.startListeners.forEach((listener) => listener({ args, cwd, finished }));
     const result = await finished;
 
@@ -101,6 +100,15 @@ export class CmClient {
       });
     }
     return result.output;
+  }
+
+  /** A process of its own; a command line too long to start one with (thousands of paths) goes to a `cm shell` of its own. */
+  private async runProcess(args: string[], cwd: string, { signal, killSignal, onOutputLine }: CmRunOptions): Promise<CmResult> {
+    const { args: started, input } = processCommand(args);
+    if (input === undefined) return runCmProcess(this.cmPath, started, { cwd, signal, killSignal, onOutputLine });
+    const outputLine = onOutputLine && ((line: string) => !isShellResultLine(line) && onOutputLine(line));
+    const result = await runCmProcess(this.cmPath, started, { cwd, signal, killSignal, onOutputLine: outputLine, input });
+    return shellCommandResult(result.output);
   }
 
   private log(args: string[], cwd: string, startedAt: number, result: CmResult, viaShell: boolean): CommandLogEntry {
