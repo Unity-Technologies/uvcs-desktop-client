@@ -3,6 +3,7 @@ import { canAnnotate } from '@shared/domain/annotate';
 import type { Changelist, FilterRuleList, PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
+import { annotatedHistory } from '../history/annotatedHistory';
 import { tidyMenu, type MenuEntry } from '../../lib/actions';
 import { groupedMenu, type GroupedEntry } from '../../lib/menuGroups';
 import { copySubmenu } from '../../components/copyMenu';
@@ -62,7 +63,7 @@ export function pendingChangeMenu(
     single &&
       hasRevisions(single) &&
       canAnnotate(single.itemType) &&
-      menuAction('annotate', () => navigation.openPage({ kind: 'annotate', path: single.path })),
+      menuAction('annotate', () => navigation.openPage(annotatedHistory({ path: single.path }))),
     onDisk && menuAction('reveal', () => void api.system.revealInFileManager(absolutePath(workspacePath, single.path))),
     itemCopySubmenu(workspacePath, changes.map((change) => change.path)),
     moveToChangelistSubmenu(workspacePath, changes, changelists),

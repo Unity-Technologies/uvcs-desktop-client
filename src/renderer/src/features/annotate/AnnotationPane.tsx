@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { ArrowLeft, Calendar, GitCommitVertical, User } from 'lucide-react';
-import { useMemo, useState, type ReactNode } from 'react';
+import { Calendar, GitCommitVertical, User } from 'lucide-react';
+import { useMemo, type ReactNode } from 'react';
 import type { ItemRevision } from '@shared/domain/history';
 import { isPinnedSpec } from '@shared/domain/specs';
 import { api } from '../../api/client';
@@ -9,7 +9,6 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { IMMUTABLE_QUERY } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { pluralize } from '../../lib/text';
-import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
 import { PaneToolbar, PaneToolbarGroup } from '../../ui/PaneToolbar';
@@ -24,6 +23,8 @@ import styles from './AnnotationPane.module.css';
 
 /** The history list an annotation sits beside, which then says which revision is annotated. */
 export interface AnnotationHistory {
+  /** The file's history, newest first. Lets each change be walked back to the file as it was before it. */
+  revisions: ItemRevision[];
   /** Selects the revision a block's changeset made: clicking the block, Enter, "Show in history". */
   select: (changesetId: number) => void;
   /** Selects the revision to annotate "before this change". */
@@ -34,13 +35,11 @@ interface AnnotationPaneProps {
   path: string;
   /** Revision to annotate; the one loaded in the workspace when omitted. */
   revision?: ItemRevision;
-  /** The file's history, newest first. Lets each change be walked back to the file as it was before it. */
-  revisions?: ItemRevision[];
   /** Shown first in the toolbar, e.g. a view switch. */
   leading?: ReactNode;
   /**
-   * Beside a history list, blocks lead to their revisions there. Without one, "Show in history" opens the file's
-   * history, and walking back stays in the pane, with Back.
+   * Beside a history list, blocks lead to their revisions there, and each change walks back to the revision before
+   * it. Without one, "Show in history" opens the file's history.
    */
   history?: AnnotationHistory;
   /** Where the path is read (browsing a changeset), for the history "Show in history" opens. */
@@ -48,15 +47,11 @@ interface AnnotationPaneProps {
 }
 
 /** Who last changed each line of a file, with a toolbar to pick the details and walk back through older revisions. */
-export function AnnotationPane({ path, revision, revisions, leading, history, changesetId }: AnnotationPaneProps) {
+export function AnnotationPane({ path, revision, leading, history, changesetId }: AnnotationPaneProps) {
   const workspacePath = useWorkspacePath();
   const { columns, toggleColumn } = useAnnotateOptions();
-  // Revisions reached with "Annotate before this change" without a history list; Back returns to the previous one.
-  const [trail, setTrail] = useState<ItemRevision[]>([]);
-  const walkedTo = trail.at(-1);
-  const shown = walkedTo ?? revision;
   // By revision id: the path spec finds nothing in the changesets before the file moved.
-  const spec = shown?.idSpec;
+  const spec = revision?.idSpec;
 
   const { data: annotation, error } = useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'annotate', path, spec),
@@ -70,15 +65,14 @@ export function AnnotationPane({ path, revision, revisions, leading, history, ch
   const links = useMemo<BlockLinks>(
     () => ({
       openChangeset: (id) => openChangesetDiff({ id }, path),
-      showInHistory: history?.select ?? ((id) => navigation.openPage({ kind: 'history', path, changesetId, selectChangeset: id })),
+      showInHistory: history?.select ?? ((id) => navigation.openPage({ kind: 'history', path, changesetId, select: { changesetId: id } })),
       selectsInHistory: history !== undefined,
-      revisionBefore: revisions && ((id) => revisionBefore(revisions, id)),
-      annotateBefore: history?.annotate ?? ((before) => setTrail((current) => [...current, before])),
+      walkBack: history && { revisionBefore: (id) => revisionBefore(history.revisions, id), annotateBefore: history.annotate },
     }),
-    [path, history, revisions, changesetId],
+    [path, history, changesetId],
   );
 
-  const revisionLabel = shown && `cs:${shown.changesetId}`;
+  const revisionLabel = revision && `cs:${revision.changesetId}`;
 
   return (
     <div className={styles.pane}>
@@ -86,11 +80,6 @@ export function AnnotationPane({ path, revision, revisions, leading, history, ch
         title={
           <>
             {leading}
-            {walkedTo && (
-              <Button size="small" variant="ghost" icon={<ArrowLeft size={13} />} onClick={() => setTrail((current) => current.slice(0, -1))}>
-                Back
-              </Button>
-            )}
             <span className={styles.caption}>
               {revisionLabel && <strong>{revisionLabel}</strong>}
               {revisionLabel && annotation && ' · '}

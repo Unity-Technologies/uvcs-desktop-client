@@ -30,6 +30,7 @@ import { firstLine } from '../../lib/text';
 import { wordMatchRanges } from '../../lib/textMatchRanges';
 import { displayName } from '../../lib/userName';
 import { navigation } from '../navigation/navigationStore';
+import { annotatedHistory } from '../../features/history/annotatedHistory';
 import type { SearchResult } from './searchResults';
 
 /** What the palette's results need to know about the workspace, and the typed search (empty to list without matching). */
@@ -74,7 +75,7 @@ function workspaceFileMenu(workspacePath: string, entry: { path: string; isDirec
   return groupedMenu([
     !entry.isDirectory && menuAction('open', () => openItem(workspacePath, entry)),
     menuAction('history', () => navigation.openPage({ kind: 'history', path: entry.path })),
-    !entry.isDirectory && menuAction('annotate', () => navigation.openPage({ kind: 'annotate', path: entry.path })),
+    !entry.isDirectory && menuAction('annotate', () => navigation.openPage(annotatedHistory({ path: entry.path }))),
     menuAction('reveal', () => revealItem(workspacePath, entry)),
     itemCopySubmenu(workspacePath, [entry.path]),
   ]);

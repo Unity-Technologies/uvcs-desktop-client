@@ -2,7 +2,6 @@ import { lazyComponent } from '../../lib/lazyComponent';
 import type { Page } from './pages';
 
 // Pages load when first opened so the app starts fast.
-const AnnotatePage = lazyComponent(() => import('../../features/annotate/AnnotatePage').then((module) => module.AnnotatePage));
 const BrowseRepositoryPage = lazyComponent(() => import('../../features/browseRepository/BrowseRepositoryPage').then((module) => module.BrowseRepositoryPage));
 const CodeReviewPage = lazyComponent(() => import('../../features/codeReviews/CodeReviewPage').then((module) => module.CodeReviewPage));
 const DiffPage = lazyComponent(() => import('../../features/diff/DiffPage').then((module) => module.DiffPage));
@@ -13,8 +12,6 @@ export function PageContent({ page }: { page: Page }) {
   switch (page.kind) {
     case 'history':
       return <HistoryPage page={page} />;
-    case 'annotate':
-      return <AnnotatePage page={page} />;
     case 'diff':
       return <DiffPage page={page} />;
     case 'merge':
@@ -30,8 +27,6 @@ export function pageTitle(page: Page): string {
   switch (page.kind) {
     case 'history':
       return `History of ${fileName(page.path)}`;
-    case 'annotate':
-      return `Annotate ${fileName(page.path)}`;
     case 'diff':
       return page.title;
     case 'merge':
