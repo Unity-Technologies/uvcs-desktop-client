@@ -88,7 +88,8 @@ export function createWorkspacesService({ cm, operations, watchers, settings, he
   async function discardNew(workspacePath: string): Promise<void> {
     await cm.query(['workspace', 'delete', workspacePath]);
     if (!createdFolders.delete(workspacePath)) return;
-    await rm(workspacePath, { recursive: true, force: true });
+    // Windows keeps files the watcher or a scan still holds for a moment.
+    await rm(workspacePath, { recursive: true, force: true, maxRetries: 5 });
   }
 
   function repositoriesOf(workspacePaths: string[], lookupId: string): Promise<Record<string, string | null>> {

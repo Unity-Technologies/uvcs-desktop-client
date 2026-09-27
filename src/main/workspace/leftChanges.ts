@@ -76,7 +76,7 @@ export class LeftChangesFinder {
     await deleteShelves(this.cm, workspacePath, keys.map(({ shelveId, repository }) => ({ id: shelveId, repository })));
     for (const key of keys) {
       const backup = this.records.find(key)?.backup;
-      if (backup) await rm(backup.directory, { recursive: true, force: true });
+      if (backup) await rm(backup.directory, { recursive: true, force: true, maxRetries: 5 });
     }
     this.records.remove(keys);
   }
