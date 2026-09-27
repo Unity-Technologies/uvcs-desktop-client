@@ -11,6 +11,7 @@ import { Avatar } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
+import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { SearchField } from '../../ui/SearchField';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { SkeletonBar, SkeletonRows, skeletonWidth } from '../../ui/Skeleton';
@@ -127,44 +128,52 @@ export function MyShelvesList({ workspacePath, scope, onScopeChange, recent, onD
       ) : shown.length === 0 ? (
         <div className={styles.empty}>{shelvesEmptyMessage(scope, filtering)}</div>
       ) : (
-        <ul ref={listRef} className={styles.list} aria-label={scope === 'mine' ? 'Your shelves' : "Everyone's shelves"}>
-          {shown.map(({ shelve, title, detail, author, mine, left }) => (
-            <li key={shelve.id} className={styles.row}>
-              <button
-                type="button"
-                className={styles.open}
-                data-shelve-row
-                data-tip={left ? 'Show the changes left here' : 'Show the shelved changes'}
-                onClick={() => {
-                  onDone();
-                  showShelveChanges(shelve);
-                }}
-              >
-                {author !== null && <Avatar user={shelve.owner} size={20} tip={null} />}
-                <span className={styles.text}>
-                  <span className={styles.title}>{title}</span>
-                  <span className={styles.detail}>
-                    {author !== null && <span className={mine ? styles.me : styles.author}>{author} · </span>}
-                    {detail}
+        <HighlightQuery query={filter}>
+          <ul ref={listRef} className={styles.list} aria-label={scope === 'mine' ? 'Your shelves' : "Everyone's shelves"}>
+            {shown.map(({ shelve, title, spec, detail, author, mine, left }) => (
+              <li key={shelve.id} className={styles.row}>
+                <button
+                  type="button"
+                  className={styles.open}
+                  data-shelve-row
+                  data-tip={left ? 'Show the changes left here' : 'Show the shelved changes'}
+                  onClick={() => {
+                    onDone();
+                    showShelveChanges(shelve);
+                  }}
+                >
+                  {author !== null && <Avatar user={shelve.owner} size={20} tip={null} />}
+                  <span className={styles.text}>
+                    <span className={styles.title}>
+                      <Highlight text={title} />
+                    </span>
+                    <span className={styles.detail}>
+                      {author !== null && (
+                        <span className={mine ? styles.me : styles.author}>
+                          <Highlight text={author} /> ·{' '}
+                        </span>
+                      )}
+                      <Highlight text={spec} /> · {detail}
+                    </span>
                   </span>
-                </span>
-              </button>
-              <Button
-                size="small"
-                data-tip={left ? 'Apply the changes and delete the shelve' : 'Merge the shelved changes here; the shelve stays'}
-                onClick={() => {
-                  onDone();
-                  void applyShelve(workspacePath, shelve.id, left);
-                }}
-              >
-                {left ? 'Restore' : 'Apply'}
-              </Button>
-              <ActionDropdownMenu entries={runningFirst(withoutAction(shelveMenu(workspacePath, [shelve], { left, mine }), 'apply'), onDone, COPY_ENTRY_IDS)}>
-                <IconButton size="small" icon={<MoreHorizontal size={14} />} label="More actions" />
-              </ActionDropdownMenu>
-            </li>
-          ))}
-        </ul>
+                </button>
+                <Button
+                  size="small"
+                  data-tip={left ? 'Apply the changes and delete the shelve' : 'Merge the shelved changes here; the shelve stays'}
+                  onClick={() => {
+                    onDone();
+                    void applyShelve(workspacePath, shelve.id, left);
+                  }}
+                >
+                  {left ? 'Restore' : 'Apply'}
+                </Button>
+                <ActionDropdownMenu entries={runningFirst(withoutAction(shelveMenu(workspacePath, [shelve], { left, mine }), 'apply'), onDone, COPY_ENTRY_IDS)}>
+                  <IconButton size="small" icon={<MoreHorizontal size={14} />} label="More actions" />
+                </ActionDropdownMenu>
+              </li>
+            ))}
+          </ul>
+        </HighlightQuery>
       )}
       <div className={styles.footer}>
         <span className={styles.note}>{note}</span>

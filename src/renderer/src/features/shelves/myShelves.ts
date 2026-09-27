@@ -1,6 +1,7 @@
 import { AUTOMATIC_SHELVE_COMMENT, type Shelve } from '@shared/domain/shelve';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import { formatRelativeDate } from '../../lib/formatDate';
+import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { firstLine, pluralize } from '../../lib/text';
 import { displayName } from '../../lib/userName';
 
@@ -8,7 +9,9 @@ import { displayName } from '../../lib/userName';
 export interface MyShelve {
   shelve: Shelve;
   title: string;
-  /** e.g. "sh:12 · 2 hours ago · 3 changes": how many only when this app shelved them and counted. */
+  /** "sh:12", first on the line under the title. */
+  spec: string;
+  /** What follows it, e.g. "2 hours ago · 3 changes": how many only when this app shelved them and counted. */
   detail: string;
   /** Who shelved it, where the list shows everyone's: "You", or their name. */
   author: string | null;
@@ -41,7 +44,8 @@ export function myShelves(shelves: Shelve[], records: SwitchShelveRecord[], { ev
     return {
       shelve,
       title: leftByRecord ? leftTitle(record) : automatic ? 'Left when switching' : firstLine(shelve.comment) || '(no comment)',
-      detail: [`sh:${shelve.id}`, formatRelativeDate(shelve.date, now), count].filter(Boolean).join(' · '),
+      spec: `sh:${shelve.id}`,
+      detail: [formatRelativeDate(shelve.date, now), count].filter(Boolean).join(' · '),
       author: everyone ? (mine ? 'You' : displayName(shelve.owner)) : null,
       mine,
       left,
@@ -57,11 +61,9 @@ function leftTitle(record: SwitchShelveRecord): string {
   return record.reason === 'update' ? `Put aside to update ${record.source.name}` : `Left on ${record.source.name}`;
 }
 
-/** Whether the shelve shows for the text typed: in its number, its comment, what it's called here or its author, in any case. */
-export function matchesShelveFilter({ shelve, title, author }: MyShelve, filter: string): boolean {
-  const needle = filter.trim().toLowerCase();
-  const owner = author === null ? '' : `${author} ${shelve.owner}`;
-  return `sh:${shelve.id} ${title} ${shelve.comment} ${owner}`.toLowerCase().includes(needle);
+/** Whether the shelve shows for the words typed: each in its number, its comment, what it's called here or its author, in any case. */
+export function matchesShelveFilter({ shelve, title, spec, author }: MyShelve, filter: string): boolean {
+  return matchesWordFilter([spec, title, shelve.comment, ...(author === null ? [] : [author, shelve.owner])], filter);
 }
 
 /** The recent shelves and the older ones a search found, each once, newest first. */
