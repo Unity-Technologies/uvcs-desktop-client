@@ -1,0 +1,38 @@
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.separator {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+/* Each folder gives way from the start of the path, so the one the item is in stays readable. */
+.folder {
+  flex: 0 1 auto;
+  min-width: 2ch;
+  height: 20px;
+  padding: 0 3px;
+  overflow: hidden;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+}
+
+.folder:last-of-type {
+  flex-shrink: 0;
+  max-width: 100%;
+}
+
+.folder:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}

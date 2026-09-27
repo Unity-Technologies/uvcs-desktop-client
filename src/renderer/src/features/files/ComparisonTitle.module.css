@@ -1,0 +1,48 @@
+/* One line: the comment gives way first, then the rest, each cut with an ellipsis. */
+.comparison {
+  display: flex;
+  align-items: baseline;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.title {
+  flex: none;
+  color: var(--text-primary);
+  font-weight: var(--weight-medium);
+}
+
+.detail {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+}
+
+.comment {
+  flex: 0 100 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--text-secondary);
+  text-overflow: ellipsis;
+}
+
+.detail::before,
+.comment::before {
+  content: ' · ';
+  white-space: pre;
+}
+
+.changeset {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent-text);
+  font: inherit;
+  font-family: var(--font-mono);
+}
+
+.changeset:hover {
+  text-decoration: underline;
+}

@@ -1,21 +1,21 @@
-import { FolderTree } from 'lucide-react';
 import { useDeferredValue, useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import type { PageProps } from '../../app/navigation/pages';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { ListWithDetails } from '../../components/ListWithDetails';
+import { NoSelection } from '../../components/NoSelection';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
-import { useSettledValue } from '../../lib/useSettled';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
 import { SearchField } from '../../ui/SearchField';
 import { CenteredSpinner } from '../../ui/Spinner';
-import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { useExpandedDirectories, useExpandedDirectoriesStore } from '../files/expandedDirectoriesStore';
 import { FileTreeTable } from '../files/FileTreeTable';
+import { FILE_TREE_WIDTH } from '../files/fileTreeWidth';
 import { buildFileTreeRows } from '../files/fileTreeRows';
-import { RevisionChanges } from '../files/RevisionChanges';
+import { ItemDetailsPane } from '../files/ItemDetailsPane';
 import { useTreeListings } from '../files/useTreeListings';
 import { openRevision, revisionMenu } from './revisionMenu';
 
@@ -37,8 +37,11 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
   );
   const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter: shownFilter }), [childrenByDirectory, expanded, shownFilter]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
-  // Arrowing through the tree doesn't read (`cm cat`) the revisions of every file it passes.
-  const shownItem = useSettledValue(focused, focused?.path ?? '');
+  const [revealPath, setRevealPath] = useState<string | null>(null);
+  const selectFolder = (path: string): void => {
+    setSelection({ selected: new Set([path]), anchor: path });
+    setRevealPath(path);
+  };
 
   const header = (
     <ViewHeader title={`Repository at changeset ${page.changesetId}`} subtitle="Read-only">
@@ -52,11 +55,11 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
   return (
     <>
       {header}
-      <SplitPane
-        initialSize={700}
-        minSize={380}
-        maxSize={1100}
-        first={
+      <ListWithDetails
+        widthKey="browseRepositoryTree"
+        widthLimits={FILE_TREE_WIDTH}
+        sized="list"
+        list={
           <HighlightQuery query={shownFilter}>
             <FileTreeTable
               rows={rows}
@@ -65,14 +68,21 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
               onToggleDirectory={(directory) => toggle(treeId, directory)}
               onOpenFile={(item) => openRevision(workspacePath, item)}
               contextMenu={(items) => revisionMenu(workspacePath, page.changesetId, items)}
+              revealPath={revealPath}
             />
           </HighlightQuery>
         }
-        second={
-          shownItem ? (
-            <RevisionChanges workspacePath={workspacePath} item={shownItem} />
+        details={
+          focused ? (
+            <ItemDetailsPane
+              workspacePath={workspacePath}
+              item={focused}
+              menu={revisionMenu(workspacePath, page.changesetId, [focused])}
+              onSelectFolder={selectFolder}
+              folderContents={childrenByDirectory.get(focused.path)}
+            />
           ) : (
-            <EmptyState icon={<FolderTree size={22} />} title="Select a file" description="See what its revision changed." />
+            <NoSelection noun="file" />
           )
         }
       />
