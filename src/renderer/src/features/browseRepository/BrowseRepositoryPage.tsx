@@ -59,7 +59,7 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
               onSelectionChange={setSelection}
               onToggleDirectory={(directory) => toggle(treeId, directory)}
               onOpenFile={(item) => openRevision(workspacePath, item)}
-              contextMenu={(items) => revisionMenu(workspacePath, items)}
+              contextMenu={(items) => revisionMenu(workspacePath, page.changesetId, items)}
             />
           </HighlightQuery>
         }

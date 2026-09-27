@@ -7,6 +7,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { AnnotationPane } from '../annotate/AnnotationPane';
 import { openChangesetDiff } from '../changesets/changesetOperations';
+import { parentRevision } from './parentRevision';
 import { RevisionComparison } from './RevisionComparison';
 
 type RevisionView = 'diff' | 'annotate';
@@ -19,7 +20,7 @@ interface RevisionDetailsProps {
 }
 
 /**
- * The selected revision as a diff or annotated. One selected revision is compared with the one before it;
+ * The selected revision as a diff or annotated. One selected revision is compared with the one it was made from;
  * two selected revisions with each other, and the newer one is annotated.
  * Directories have no content, so their changeset is offered instead.
  */
@@ -71,5 +72,5 @@ function comparedRevisions(revisions: ItemRevision[], selected: ItemRevision[]):
   }
   const newer = selected[0];
   if (!newer) return [undefined, undefined];
-  return [newer, revisions[revisions.indexOf(newer) + 1]];
+  return [newer, parentRevision(revisions, newer)];
 }

@@ -4,6 +4,7 @@ import { historyRowKey, historyRows } from './historyRows';
 
 const revision = (changesetId: number): ItemRevision => ({
   revisionId: changesetId * 10,
+  parentRevisionId: -1,
   changesetId,
   branch: '/main',
   owner: 'jane@example.com',

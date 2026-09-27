@@ -85,7 +85,7 @@ function historyColumns(labelsByChangeset: ReadonlyMap<number, readonly Label[]>
 
 export function HistoryPage({ page }: PageProps<'history'>) {
   const workspacePath = useWorkspacePath();
-  const { data: history, error } = useItemHistory(page.path);
+  const { data: history, error } = useItemHistory(page.path, page.changesetId);
   const [search, setSearch] = useState('');
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
   const rows = useMemo(() => (history ? historyRows(history) : []), [history]);
@@ -131,7 +131,7 @@ export function HistoryPage({ page }: PageProps<'history'>) {
                 rowKey={historyRowKey}
                 selection={selection}
                 onSelectionChange={setSelection}
-                contextMenu={(selected) => historyMenu({ workspacePath, path: page.path }, selected)}
+                contextMenu={(selected) => historyMenu({ workspacePath, path: page.path, changesetId: page.changesetId }, selected)}
               />
             </HighlightQuery>
           )

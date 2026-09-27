@@ -5,6 +5,7 @@ import { matchesHistorySearch } from './historySearch';
 
 const revision: ItemRevision = {
   revisionId: 7,
+  parentRevisionId: 5,
   changesetId: 42,
   branch: '/main/task-12',
   owner: 'jane.doe@example.com',

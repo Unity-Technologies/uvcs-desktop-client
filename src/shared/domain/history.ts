@@ -3,6 +3,8 @@ import type { ItemType } from './pendingChanges';
 /** One revision of a file or directory, as listed by its history. */
 export interface ItemRevision {
   revisionId: number;
+  /** The revision it was made from (-1 for the one that added the item): on another branch, often not the one listed below it. */
+  parentRevisionId: number;
   changesetId: number;
   branch: string;
   owner: string;

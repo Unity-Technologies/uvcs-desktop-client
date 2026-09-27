@@ -1,35 +1,60 @@
 import type { ItemHistory, ItemPathChange, ItemRevision } from '@shared/domain/history';
 import type { ItemType } from '@shared/domain/pendingChanges';
 import { repositorySpec, spec } from '@shared/domain/specs';
+import { toAbsolutePath } from '../files/workspacePaths';
+import { escapeQueryValue } from './findQuery';
 import { parseRecords, recordFormat } from './formatRecords';
 import { child, children, integer, parseXml, text, type XmlNode } from './parseXml';
-
-/**
- * `cm history --xml` has no revision ids, so a second `--format` call maps changesets to revisions. Moves and removals
- * have no item id there: their ids aren't the item's revisions.
- */
-export const REVISION_IDS_FORMAT = recordFormat(['changesetid', 'id', 'itemid']);
 
 const ITEM_TYPES: Record<string, ItemType> = { txt: 'file', bin: 'binaryFile', dir: 'directory' };
 
 /**
- * Combines `cm history --moveddeleted --xml` with the revision ids, newest first. A move or removal is a record without
- * a revision type, whose branch field holds what `cm` says it did.
+ * What `cm history` reads: the workspace's file, or with `changesetId` the item at that repository path in that
+ * changeset, which the workspace may not have (moved, deleted, not loaded).
  */
-export function parseItemHistory(xml: string, revisionIdsOutput: string): ItemHistory {
-  const revisionIdsByChangeset = new Map(
-    parseRecords(revisionIdsOutput)
-      .filter(([, , itemId]) => itemId !== '')
-      .map(([changeset, id]) => [Number(changeset), Number(id)]),
-  );
+export function itemHistoryTarget(workspacePath: string, path: string, changesetId?: number): string {
+  return changesetId === undefined ? toAbsolutePath(workspacePath, path) : spec.serverPathAtChangeset(`/${path}`, changesetId);
+}
+
+/** The item's revisions, moves and removals. */
+export function itemHistoryArgs(target: string): string[] {
+  return ['history', target, '--moveddeleted', '--xml'];
+}
+
+/** The records of `cm history --xml`: a move or removal is one without a revision type, whose branch field says what it did. */
+export function parseHistoryRecords(xml: string): XmlNode[] {
   const histories = child(child(parseXml(xml, ['RevisionHistory', 'Revision']), 'RevisionHistoriesResult'), 'RevisionHistories');
-  const records = children(histories, 'RevisionHistory').flatMap((history) => children(child(history, 'Revisions'), 'Revision'));
+  return children(histories, 'RevisionHistory').flatMap((history) => children(child(history, 'Revisions'), 'Revision'));
+}
+
+/**
+ * `cm history` has neither revision ids nor parents: one `cm find revision` of the item it names adds both. Null for a
+ * history without revisions.
+ */
+export function itemRevisionsArgs(records: XmlNode[]): string[] | null {
+  const revision = records.find((record) => text(record.ItemId) !== '');
+  if (!revision) return null;
+  const repository = repositorySpec(text(revision.Repository), text(revision.Server));
+  return [
+    'find',
+    'revision',
+    `where itemid = ${integer(revision.ItemId)} on repository '${escapeQueryValue(repository)}'`,
+    `--format=${recordFormat(['changeset', 'id', 'parent'])}`,
+    '--nototal',
+  ];
+}
+
+/** Combines the history's records with the revisions `itemRevisionsArgs` found, each list newest first. */
+export function parseItemHistory(records: XmlNode[], revisionsOutput: string): ItemHistory {
+  const revisionsByChangeset = new Map(
+    parseRecords(revisionsOutput).map(([changeset, id, parent]) => [Number(changeset), { id: Number(id), parent: Number(parent) }]),
+  );
   const newestFirst = <T extends { changesetId: number }>(a: T, b: T): number => b.changesetId - a.changesetId;
 
   return {
     revisions: records
       .filter((record) => text(record.RevisionType) !== '')
-      .map((record) => toRevision(record, revisionIdsByChangeset))
+      .map((record) => toRevision(record, revisionsByChangeset.get(integer(record.ChangesetNumber))))
       .sort(newestFirst),
     pathChanges: records
       .filter((record) => text(record.RevisionType) === '')
@@ -45,14 +70,14 @@ export function parseItemHistory(xml: string, revisionIdsOutput: string): ItemHi
   };
 }
 
-function toRevision(record: XmlNode, revisionIdsByChangeset: ReadonlyMap<number, number>): ItemRevision {
-  const changesetId = integer(record.ChangesetNumber);
-  const revisionId = revisionIdsByChangeset.get(changesetId) ?? -1;
+function toRevision(record: XmlNode, ids: { id: number; parent: number } | undefined): ItemRevision {
+  const revisionId = ids?.id ?? -1;
   const pathSpec = text(record.RevisionSpec);
   const repository = text(record.Repository);
   return {
     revisionId,
-    changesetId,
+    parentRevisionId: ids?.parent ?? -1,
+    changesetId: integer(record.ChangesetNumber),
     branch: text(record.Branch),
     owner: text(record.Owner),
     date: text(record.CreationDate),
