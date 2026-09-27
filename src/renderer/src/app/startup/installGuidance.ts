@@ -8,9 +8,10 @@ export interface InstallGuidance {
   command: string;
 }
 
+/** Unity's documented setup (install-uvcs-on-linux): the key in its own keyring, named by `signed-by` (`apt-key` is gone). */
 const LINUX_COMMAND = [
-  'echo "deb https://www.plasticscm.com/plasticrepo/stable/ubuntu/ ./" | sudo tee /etc/apt/sources.list.d/plasticscm-stable.list',
-  'wget -qO - https://www.plasticscm.com/plasticrepo/stable/ubuntu/Release.key | sudo apt-key add -',
+  'wget -qO - https://www.plasticscm.com/plasticrepo/stable/ubuntu/Release.key | gpg --dearmor | sudo tee /usr/share/keyrings/plasticscm-stable.gpg > /dev/null',
+  'echo "deb [signed-by=/usr/share/keyrings/plasticscm-stable.gpg] https://www.plasticscm.com/plasticrepo/stable/ubuntu ./" | sudo tee /etc/apt/sources.list.d/plasticscm-stable.list',
   'sudo apt-get update && sudo apt-get install plasticscm-client-core',
 ].join('\n');
 
