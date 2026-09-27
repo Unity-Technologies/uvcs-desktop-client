@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { buildChangeRows, changesUnderRow, comparePaths, LEVEL_INDENT, menuTargetOf, rowIndent,topLevelCheckboxInset, treeLevel, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { buildChangeRows, changesUnderRow, comparePaths, LEVEL_INDENT, menuTargetOf, rowIndent, topLevelCheckboxInset, treeLevel, type ChangesGrouping, type ChangesLayout } from './changeRows';
 
 function change(path: string, kinds: PendingChange['kinds'], changelist?: string): PendingChange {
   return { path, kinds, itemType: 'file', size: 0, lastModified: '', changelist };
 }
 
 const changes = [change('src/b.ts', ['changed']), change('src/a.ts', ['checkedOut', 'changed'], 'UI'), change('new.txt', ['private']), change('src/lib/c.ts', ['added'])];
+/** src/b.ts and src/lib/c.ts: a folder in a folder. */
+const nested = [changes[3]!, changes[0]!];
 const base = {
   changes,
   changelists: [],
@@ -44,12 +46,40 @@ describe('buildChangeRows', () => {
   });
 
   it('nests changes under their folders in tree layout', () => {
-    const rows = buildChangeRows({ ...base, changes: [changes[3]!], layout: 'tree' });
-    expect(rows.map((row) => [row.type, row.type === 'group' ? -1 : row.depth])).toEqual([
-      ['directory', 0],
-      ['directory', 1],
-      ['change', 2],
+    const rows = buildChangeRows({ ...base, changes: nested, layout: 'tree' });
+    expect(rows.map((row) => [row.key, row.type === 'group' ? -1 : row.depth])).toEqual([
+      ['directory:all:src', 0],
+      ['change:src/b.ts', 1],
+      ['directory:all:src/lib', 1],
+      ['change:src/lib/c.ts', 2],
     ]);
+  });
+
+  it('shows folders that only hold the next one as one row, named by their path', () => {
+    const paths = ['deep/very/long/a.ts', 'deep/very/long/b.ts', 'deep/very/other/c.ts', 'z.ts'];
+    const rows = buildChangeRows({ ...base, changes: paths.map((path) => change(path, ['changed'])), layout: 'tree' });
+    expect(rows.map((row) => [row.key, row.type === 'directory' ? row.name : '', row.type === 'group' ? -1 : row.depth])).toEqual([
+      ['directory:all:deep/very', 'deep/very', 0],
+      ['directory:all:deep/very/long', 'long', 1],
+      ['change:deep/very/long/a.ts', '', 2],
+      ['change:deep/very/long/b.ts', '', 2],
+      ['directory:all:deep/very/other', 'other', 1],
+      ['change:deep/very/other/c.ts', '', 2],
+      ['change:z.ts', '', 0],
+    ]);
+    const collapsedChain = buildChangeRows({ ...base, changes: paths.map((path) => change(path, ['changed'])), layout: 'tree', collapsed: new Set(['directory:all:deep/very']) });
+    expect(collapsedChain.map((row) => row.key)).toEqual(['directory:all:deep/very', 'change:z.ts']);
+  });
+
+  it('ends a row of folders at a folder that is a change itself, so it keeps its status', () => {
+    const folder = { ...change('a/new', ['added']), itemType: 'directory' as const };
+    const rows = buildChangeRows({ ...base, changes: [folder, change('a/new/x/f.ts', ['added'])], layout: 'tree' });
+    expect(rows.map((row) => [row.key, row.type === 'directory' ? row.name : ''])).toEqual([
+      ['directory:all:a/new', 'a/new'],
+      ['directory:all:a/new/x', 'x'],
+      ['change:a/new/x/f.ts', ''],
+    ]);
+    expect(rows[0]).toMatchObject({ change: folder });
   });
 
   it('shows a folder that is a change itself as the row of its folder, holding its own change and its files', () => {
@@ -141,8 +171,8 @@ describe('rowIndent', () => {
   });
 
   it("puts a folder's chevron in its siblings' checkbox column and its children under its checkbox", () => {
-    const rows = buildChangeRows({ ...base, changes: [changes[3]!], layout: 'tree' });
-    expect(rows.map((row) => rowIndent(row, false))).toEqual([0, LEVEL_INDENT, 2 * LEVEL_INDENT]);
+    const rows = buildChangeRows({ ...base, changes: nested, layout: 'tree' });
+    expect(rows.map((row) => rowIndent(row, false))).toEqual([0, LEVEL_INDENT, LEVEL_INDENT, 2 * LEVEL_INDENT]);
   });
 
   it("puts a change under its changelist's checkbox, which the select-all checkbox lines up with", () => {
@@ -155,17 +185,18 @@ describe('rowIndent', () => {
 
 describe('treeLevel', () => {
   it('puts folders and files under their changelist, one level per folder', () => {
-    const rows = buildChangeRows({ ...base, changes: [changes[3]!], layout: 'tree', grouping: 'changelist' });
+    const rows = buildChangeRows({ ...base, changes: nested, layout: 'tree', grouping: 'changelist' });
     expect(rows.map((row) => [row.type, treeLevel(row, true)])).toEqual([
       ['group', 1],
       ['directory', 2],
+      ['change', 3],
       ['directory', 3],
       ['change', 4],
     ]);
   });
 
   it('starts at the first level without changelists', () => {
-    const rows = buildChangeRows({ ...base, changes: [changes[3]!], layout: 'tree' });
-    expect(rows.map((row) => treeLevel(row, false))).toEqual([1, 2, 3]);
+    const rows = buildChangeRows({ ...base, changes: nested, layout: 'tree' });
+    expect(rows.map((row) => treeLevel(row, false))).toEqual([1, 2, 2, 3]);
   });
 });

@@ -249,7 +249,9 @@ function RowContent({ row, onToggleIncluded, changelistMenu, review, locks }: Ro
           <Checkbox checked={row.checkState} onChange={(checked) => onToggleIncluded(row, checked)} ariaLabel={`Include ${row.name}`} focusable={false} />
           {row.change && <StatusBadge tone={changeTone(row.change)} title={describeKinds(row.change)} />}
           <Folder size={14} className={styles.folder} />
-          <span className={styles.directoryName}>{row.name}</span>
+          <span className={styles.directoryName} data-tip={row.name.includes('/') ? row.name : undefined}>
+            {row.name}
+          </span>
           {folderStatus && (
             <span className={styles.trailing}>
               <ReviewToggle folder status={folderStatus} onToggle={() => review.toggle(row.changes)} />

@@ -196,44 +196,58 @@ function appendTreeRows(
 ): void {
   const byPath = new Map(changes.map((change) => [change.path, change]));
   const folders = new Set(changes.flatMap((change) => foldersAbove(change.path)));
-  const emittedDirectories = new Set<string>();
+  // The row showing each folder: folders that only hold the next one share its row ("deep/very/long").
+  const folderRows = new Map<string, DirectoryRow>();
   let hiddenBelow: string | null = null;
 
   changes.forEach((change, index) => {
     if (hiddenBelow && change.path.startsWith(`${hiddenBelow}/`)) return;
     hiddenBelow = null;
 
+    const segments = change.path.split('/');
+    const pathAt = (level: number): string => segments.slice(0, level + 1).join('/');
     // A folder that is a change itself and holds others is their folder's row, not one more row next to it.
     const isFolder = folders.has(change.path);
-    const directories = change.path.split('/').slice(0, isFolder ? undefined : -1);
-    let collapsedHere = false;
-    directories.forEach((name, depth) => {
-      if (collapsedHere) return;
-      const path = directories.slice(0, depth + 1).join('/');
-      const key = `directory:${groupKey}:${path}`;
-      if (!emittedDirectories.has(path)) {
-        emittedDirectories.add(path);
-        const inside = changesInFolder(changes, index, path);
-        rows.push({
+    const folderCount = isFolder ? segments.length : segments.length - 1;
+    let depth = 0;
+    for (let level = 0; level < folderCount; level++) {
+      let row = folderRows.get(pathAt(level));
+      if (!row) {
+        const inside = changesInFolder(changes, index, pathAt(level));
+        let last = level;
+        while (last + 1 < folderCount && !byPath.has(pathAt(last)) && holdsOnly(inside, pathAt(last + 1))) last++;
+        const path = pathAt(last);
+        const key = `directory:${groupKey}:${path}`;
+        row = {
           type: 'directory',
           key,
           path,
-          name,
+          name: segments.slice(level, last + 1).join('/'),
           depth,
           change: byPath.get(path),
           changes: inside,
           checkState: combinedCheckState(inside, isChecked),
           collapsed: collapsed.has(key),
-        });
+        };
+        rows.push(row);
+        for (let chained = level; chained <= last; chained++) folderRows.set(pathAt(chained), row);
       }
-      if (collapsed.has(key)) {
-        collapsedHere = true;
-        hiddenBelow = path;
+      if (row.collapsed) {
+        hiddenBelow = row.path;
+        return;
       }
-    });
+      level = row.path.split('/').length - 1;
+      depth = row.depth + 1;
+    }
 
-    if (!collapsedHere && !isFolder) rows.push({ type: 'change', key: changeKey(change), change, depth: directories.length, checked: isChecked(change) });
+    if (!isFolder) rows.push({ type: 'change', key: changeKey(change), change, depth, checked: isChecked(change) });
   });
+}
+
+/** Whether all a folder holds is `child`, one of its folders, or in it. */
+function holdsOnly(inside: PendingChange[], child: string): boolean {
+  // Sorted by `comparePaths`, the first and the last change tell for all of them.
+  return [inside[0]!, inside.at(-1)!].every((change) => change.path === child || change.path.startsWith(`${child}/`));
 }
 
 /** The changes in a folder, first met at `first`: sorted by `comparePaths`, they are the ones right after it. */
