@@ -5,6 +5,7 @@ import { checkSetup } from '../cm/setupCheck';
 import { callerId } from '../ipc/caller';
 import { GravatarCache } from '../system/gravatar';
 import { openTerminal } from '../system/openTerminal';
+import { untilSucceeded } from '../system/untilSucceeded';
 import { showIncomingNotification } from '../window/incomingNotification';
 import type { ServiceContext } from './ServiceContext';
 
@@ -15,13 +16,17 @@ export function createSystemService({ cm, operations, windows, settings }: Servi
     return { type: response.headers.get('content-type') ?? 'image/png', bytes: new Uint8Array(await response.arrayBuffer()) };
   });
 
+  // Every window asks when it opens: once `cm` runs and reaches its server, later windows take that answer.
+  const cmVersion = untilSucceeded(async () => {
+    cm.relocate();
+    // Its own process: `cm shell` refuses to start until cm is configured, and that is reported by checkSetup.
+    return (await cm.execute(['version'])).trim();
+  });
+  const setupProblem = untilSucceeded(() => checkSetup(cm), (problem) => problem === null);
+
   return {
-    cmVersion: async () => {
-      cm.relocate();
-      // Its own process: `cm shell` refuses to start until cm is configured, and that is reported by checkSetup.
-      return (await cm.execute(['version'])).trim();
-    },
-    checkSetup: () => checkSetup(cm),
+    cmVersion,
+    checkSetup: setupProblem,
     currentUser: async () => (await cm.query(['whoami'])).trim(),
     openPath: async (path) => {
       const error = await shell.openPath(path);
