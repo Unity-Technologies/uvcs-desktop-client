@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
 import { api } from '../../../api/client';
+import { serverChoiceLabel } from '../../../lib/servers';
 import { queryKeys } from '../../../api/queryKeys';
 import { Button } from '../../../ui/Button';
 import { Checkbox } from '../../../ui/Checkbox';
@@ -98,7 +99,7 @@ function CreateRepositoryDialog({ server: initialServer, onWorkspaceCreated, onC
       <SelectField label="Server" value={server} disabled={Boolean(created)} onChange={(event) => setServer(event.target.value)}>
         {(servers?.map((profile) => profile.server) ?? [server]).map((serverName) => (
           <option key={serverName} value={serverName}>
-            {serverName}
+            {serverChoiceLabel(serverName)}
           </option>
         ))}
       </SelectField>
