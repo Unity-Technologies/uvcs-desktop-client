@@ -39,7 +39,7 @@ describe('shortcut registry', () => {
   });
 
   it('shows the native menu accelerators of the keys the renderer binds', () => {
-    const items = [...readFileSync(APP_MENU, 'utf8').matchAll(/commandItem\('[^']+', '([^']+)', '([^']+)'\)/g)];
+    const items = [...readFileSync(APP_MENU, 'utf8').matchAll(/commandItem\('[^']+', '([^']+)', '([^']+)'[,)]/g)];
     expect(items.length).toBeGreaterThan(0);
     for (const [, commandId, accelerator] of items) {
       const shortcut = Object.values(SHORTCUTS).find((candidate) => 'commandId' in candidate && candidate.commandId === commandId);

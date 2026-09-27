@@ -41,6 +41,7 @@ export const SHORTCUTS = {
   mergeFromBranch: { area: 'General', label: 'Merge from branch', keys: ['mod+shift+m'] },
   goToFile: { area: 'General', label: 'Go to file', keys: ['mod+p'] },
   openWorkspace: { area: 'General', label: 'Open another workspace', keys: ['mod+shift+o'], commandId: 'workspace.open' },
+  newWindow: { area: 'General', label: 'New window', keys: ['mod+n'], commandId: 'app.newWindow' },
   commandLog: { area: 'General', label: 'Command log', keys: ['mod+shift+l'], commandId: 'app.commandLog' },
   toggleSidebar: { area: 'General', label: 'Fold or unfold the sidebar', keys: ['mod+\\'] },
   saveComment: { area: 'General', label: 'Save an edited comment', keys: ['mod+enter'] },

@@ -3,6 +3,7 @@ import { Button } from '../Button';
 import { TextField } from '../TextField';
 import { Dialog } from './Dialog';
 import { askDialog } from './dialogStore';
+import { promptAnswer } from './promptAnswer';
 
 interface PromptOptions {
   title: string;
@@ -29,19 +30,19 @@ function PromptDialog({
   finish,
 }: PromptOptions & { finish: (value: string | undefined) => void }) {
   const [value, setValue] = useState(initialValue);
-  const trimmed = value.trim();
-  const error = trimmed ? validate?.(trimmed) : undefined;
+  const answer = promptAnswer(value, initialValue);
+  const error = answer ? validate?.(answer) : undefined;
 
   return (
     <Dialog
       title={title}
       description={description}
       onClose={() => finish(undefined)}
-      onSubmit={() => trimmed && !error && finish(trimmed)}
+      onSubmit={() => answer && !error && finish(answer)}
       footer={
         <>
           <Button onClick={() => finish(undefined)}>Cancel</Button>
-          <Button type="submit" variant="primary" disabled={!trimmed || trimmed === initialValue || Boolean(error)}>
+          <Button type="submit" variant="primary" disabled={!answer || Boolean(error)}>
             {confirmLabel}
           </Button>
         </>

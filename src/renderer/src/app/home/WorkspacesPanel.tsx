@@ -1,5 +1,6 @@
 import { FolderOpen, FolderPlus, Layers } from 'lucide-react';
 import { useRef, useState } from 'react';
+import { pluralize } from '../../lib/text';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { SearchField } from '../../ui/SearchField';
@@ -27,7 +28,7 @@ export function WorkspacesPanel({ onOpen, onOpenFolder }: WorkspacesPanelProps) 
       <ViewHeader
         inTitleBar
         title="All workspaces"
-        subtitle={workspaces && `${workspaces.length} workspaces`}
+        subtitle={workspaces && pluralize(workspaces.length, 'workspace')}
         actions={
           <>
             <Button icon={<FolderOpen size={14} />} onClick={onOpenFolder}>
@@ -45,11 +46,7 @@ export function WorkspacesPanel({ onOpen, onOpenFolder }: WorkspacesPanelProps) 
           onChange={setFilter}
           placeholder="Find a workspace"
           autoFocus
-          onKeyDown={(event) => {
-            if (event.key !== 'ArrowDown') return;
-            event.preventDefault();
-            listRef.current?.focusFirst();
-          }}
+          onKeyDown={(event) => listRef.current?.takeSearchKey(event)}
         />
       </ViewHeader>
 
@@ -66,9 +63,7 @@ export function WorkspacesPanel({ onOpen, onOpenFolder }: WorkspacesPanelProps) 
               {
                 id: 'all',
                 entries: all,
-                empty: filter ? (
-                  <EmptyState title="No matching workspaces" />
-                ) : (
+                empty: (
                   <EmptyState
                     icon={<Layers size={22} />}
                     title="No workspaces yet"
@@ -82,6 +77,7 @@ export function WorkspacesPanel({ onOpen, onOpenFolder }: WorkspacesPanelProps) 
                 ),
               },
             ]}
+            noMatches={<EmptyState title="No matching workspaces" />}
           />
         )}
       </div>
