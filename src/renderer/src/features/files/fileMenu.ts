@@ -21,6 +21,7 @@ import type { TreeItem } from '@shared/domain/explorer';
 import { navigation } from '../../app/navigation/navigationStore';
 import { openTerminalIn } from '../../app/workspace/workspaceShellActions';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
+import { REVEAL_LABEL } from '../../lib/platform';
 import { filterRulesSubmenu } from '../pendingChanges/pendingChangeMenu';
 import { absolutePath, copyPaths, undoChanges } from '../pendingChanges/pendingChangeOperations';
 import {
@@ -62,7 +63,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
 
   return tidyMenu([
     single && single.itemType !== 'directory' && { id: 'open', label: 'Open', icon: AppWindow, run: () => openItem(workspacePath, single) },
-    single && { id: 'reveal', label: 'Reveal in file manager', icon: FolderSearch, run: () => revealItem(workspacePath, single) },
+    single && { id: 'reveal', label: REVEAL_LABEL, icon: FolderSearch, run: () => revealItem(workspacePath, single) },
     single?.itemType === 'directory' && {
       id: 'terminal',
       label: 'Open terminal here',

@@ -25,6 +25,7 @@ import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { formatRelativeDate } from '../../lib/formatDate';
 import { fuzzyMatchPositions, fuzzyMatchQuality } from '../../lib/fuzzyIndex';
 import { wordMatchQuality } from '../../lib/matchesAllWords';
+import { REVEAL_LABEL } from '../../lib/platform';
 import { firstLine } from '../../lib/text';
 import { wordMatchRanges } from '../../lib/textMatchRanges';
 import { displayName } from '../../lib/userName';
@@ -73,7 +74,7 @@ export function fileResult(entry: { path: string; isDirectory: boolean }, contex
 function workspaceFileMenu(workspacePath: string, entry: { path: string; isDirectory: boolean }): MenuEntry[] {
   return tidyMenu([
     !entry.isDirectory && { id: 'open', label: 'Open', icon: AppWindow, run: () => openItem(workspacePath, entry) },
-    { id: 'reveal', label: 'Reveal in file manager', icon: FolderSearch, run: () => revealItem(workspacePath, entry) },
+    { id: 'reveal', label: REVEAL_LABEL, icon: FolderSearch, run: () => revealItem(workspacePath, entry) },
     SEPARATOR,
     { id: 'history', label: 'View history', icon: History, run: () => navigation.openPage({ kind: 'history', path: entry.path }) },
     !entry.isDirectory && { id: 'annotate', label: 'Annotate', icon: ScanText, run: () => navigation.openPage({ kind: 'annotate', path: entry.path }) },
