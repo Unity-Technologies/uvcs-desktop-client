@@ -1,10 +1,10 @@
 import type { Lane } from '../model/layoutGraph';
 import { STRUCTURE_DIMMED_ALPHA, type DrawContext } from './drawContext';
-import { BAND_HEIGHT, NODE_RADIUS } from './geometry';
+import { BAND_HEIGHT, NODE_RADIUS, nodePoint } from './geometry';
 import { branchColor } from './graphPalette';
-import { nodePoint } from './graphTargets';
 import { laneShape, type LaneShape } from './laneShape';
 import { boundsOf, crossesView } from './linkVisibility';
+import { lanesAcross } from './spansInView';
 
 const ELBOW_RADIUS = 16;
 /** The selection wraps the band like it wraps a changeset: a soft halo and an accent ring. */
@@ -14,12 +14,13 @@ const SELECTION_RING = 3;
 /** Branch bands, and the elbow each branch draws from its base changeset on the parent's band. */
 export function drawLanes(draw: DrawContext): void {
   const { scene, visible } = draw;
-  for (const lane of scene.layout.lanes) {
+  const margin = BAND_HEIGHT + SELECTION_HALO;
+  for (const lane of lanesAcross(scene.layout, visible.left - margin, visible.right + margin)) {
     const shape = laneShape(lane);
     const base = lane.baseChangeset !== null ? nodePoint(scene.layout, lane.baseChangeset) : null;
     // The band and the whole elbow down from its base: the elbow stays while it crosses the screen.
     const bounds = boundsOf([{ x: shape.left, y: shape.y }, { x: shape.right, y: shape.y }, ...(base ? [base] : [])]);
-    if (!crossesView(bounds, visible, BAND_HEIGHT + SELECTION_HALO)) continue;
+    if (!crossesView(bounds, visible, margin)) continue;
 
     const color = branchColor(scene.palette, lane.branch.name);
     if (base) drawBranchStart(draw, lane, base, shape, color);

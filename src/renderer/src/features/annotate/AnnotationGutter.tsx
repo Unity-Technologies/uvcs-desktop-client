@@ -7,6 +7,7 @@ import { firstLine } from '../../lib/text';
 import { Avatar } from '../../ui/Avatar';
 import type { AnnotateColumns } from './annotateOptionsStore';
 import type { AnnotationRow } from './annotationRows';
+import type { RowRange } from './visibleRows';
 import styles from './AnnotationGutter.module.css';
 
 /** Walks the annotation back to the file as it was before a line's change. */
@@ -20,17 +21,21 @@ interface AnnotationGutterProps {
   rows: AnnotationRow[];
   columns: AnnotateColumns;
   lineHeight: number;
+  /** The rows in view: only they are rendered, the rest keep their room. */
+  range: RowRange;
   onOpenChangeset: (changesetId: number) => void;
   annotateBefore?: AnnotateBefore;
 }
 
 /** One cell per code line: an age strip on every line, and who/what/when on the first line of each block. */
-export function AnnotationGutter({ rows, columns, lineHeight, onOpenChangeset, annotateBefore }: AnnotationGutterProps) {
+export function AnnotationGutter({ rows, columns, lineHeight, range, onOpenChangeset, annotateBefore }: AnnotationGutterProps) {
   const showsDetails = columns.author || columns.changeset || columns.date;
 
   return (
     <div className={styles.gutter} data-compact={!showsDetails} aria-hidden="true">
-      {rows.map((row, index) => {
+      <div style={{ height: range.first * lineHeight }} />
+      {rows.slice(range.first, range.end).map((row, offset) => {
+        const index = range.first + offset;
         const { changeset } = row;
         const showsBlock = row.isBlockStart && showsDetails;
         return (
@@ -65,6 +70,7 @@ export function AnnotationGutter({ rows, columns, lineHeight, onOpenChangeset, a
           </div>
         );
       })}
+      <div style={{ height: (rows.length - range.end) * lineHeight }} />
     </div>
   );
 }

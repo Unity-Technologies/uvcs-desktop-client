@@ -18,6 +18,28 @@ export function isAffectedByFileChanges(key: QueryKey): boolean {
   return area(key) === 'content' && isWorkspaceFile(detail(key));
 }
 
+/**
+ * Files changed in these folders (null: anywhere): what `isAffectedByFileChanges` refreshes, but of the Files view only
+ * the listings of those folders and of the ones above them (a folder's row tells what it holds), and the details of
+ * those folders and of their items. With hundreds of folders open, an edit re-reads a few listings, not all of them.
+ */
+export function isAffectedByFileChangesIn(folders: readonly string[] | null): (key: QueryKey) => boolean {
+  if (folders === null) return isAffectedByFileChanges;
+  const holdsChanges = (directory: string) => folders.some((folder) => isSameOrInside(folder, directory));
+  return (key) => {
+    if (area(key) !== 'explorer') return isAffectedByFileChanges(key);
+    const path = key[4] as string;
+    if (detail(key) === 'directory') return holdsChanges(path);
+    if (detail(key) === 'details') return holdsChanges(path) || folders.includes(path.slice(0, Math.max(0, path.lastIndexOf('/'))));
+    return false;
+  };
+}
+
+/** Whether `path` is `folder` or inside it (`''` is the workspace root). */
+function isSameOrInside(path: string, folder: string): boolean {
+  return folder === '' || path === folder || path.startsWith(`${folder}/`);
+}
+
 function isWorkspaceFile(source: unknown): boolean {
   return (source as { kind?: string } | undefined)?.kind === 'workspaceFile';
 }

@@ -32,7 +32,7 @@ import type { BranchNamesContext, ServiceContext, SwitchContext } from './Servic
 
 export function createServices(context: ServiceContext): UvcsApi {
   const switchShelves = new SwitchShelveRecords(context.settings);
-  const switching: SwitchContext = { switchShelves, leftChanges: new LeftChangesFinder(context.cm, switchShelves) };
+  const switching: SwitchContext = { switchShelves, leftChanges: new LeftChangesFinder(context.cm, switchShelves, context.headers) };
   const naming: BranchNamesContext = { branchNames: new BranchNamesCache((workspacePath) => readBranchNames(context.cm, workspacePath)) };
 
   return {

@@ -3,6 +3,7 @@ import type { ContentSource, FileContent } from '@shared/domain/content';
 import { api } from '../../../api/client';
 import { queryKeys } from '../../../api/queryKeys';
 import { IMMUTABLE_QUERY, queryClient } from '../../../app/queryClient';
+import { useSettledValue } from '../../../lib/useSettled';
 import { isImmutableContent } from './immutableContent';
 
 /** Going back to a diff within the hour shows it at once, without keeping every file ever opened in memory. */
@@ -18,11 +19,17 @@ export interface DiffContents {
 /**
  * Both versions of a file, loaded as one pair so they always arrive together. While another
  * file loads, the previous pair stays as placeholder data: fast navigation swaps diffs
- * instead of flashing a spinner.
+ * instead of flashing a spinner. A pair already read shows at once; one not read yet as the selection
+ * settles on it (`useSettledValue`): holding ↓ through a list of files reads none of the files it passes, each one
+ * or two `cm cat`s.
  */
 export function useDiffContents(workspacePath: string, original: ContentSource, modified: ContentSource) {
+  const queryKey = queryKeys.inWorkspace(workspacePath, 'diffContents', original, modified);
+  const pair = JSON.stringify(queryKey);
+  const settled = useSettledValue(pair, pair) === pair;
   return useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'diffContents', original, modified),
+    queryKey,
+    enabled: settled || queryClient.getQueryData(queryKey) !== undefined,
     queryFn: async (): Promise<DiffContents> => {
       const [left, right] = await Promise.all([readContent(workspacePath, original), readContent(workspacePath, modified)]);
       return { original, modified, left, right };

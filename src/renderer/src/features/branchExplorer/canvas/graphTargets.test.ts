@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { sampleHistory } from '../model/graphFixtures';
 import { layoutGraph } from '../model/layoutGraph';
-import { COLUMN_WIDTH, columnX, headerTop } from './geometry';
+import { COLUMN_WIDTH, columnX, headerTop, nodePoint } from './geometry';
 import type { DrawnTargets } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
-import { hitTest, hoverCardFor, nodePoint } from './graphTargets';
+import { hitTest, hoverCardFor } from './graphTargets';
 import { labelChips } from './labelPlacement';
 import { laneShape } from './laneShape';
 

@@ -1,10 +1,11 @@
 import { FolderTree } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import type { PageProps } from '../../app/navigation/pages';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
+import { useSettledValue } from '../../lib/useSettled';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
 import { SearchField } from '../../ui/SearchField';
@@ -25,6 +26,8 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
   const expanded = useExpandedDirectories(treeId);
   const toggle = useExpandedDirectoriesStore((state) => state.toggle);
   const [filter, setFilter] = useState('');
+  // The field shows each keystroke at once; tens of thousands of open rows are filtered right after.
+  const shownFilter = useDeferredValue(filter);
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
 
   const { childrenByDirectory, isLoadingRoot, error } = useTreeListings(
@@ -32,8 +35,10 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
     (directory) => api.explorer.listRepositoryDirectory(workspacePath, page.changesetId, directory),
     expanded,
   );
-  const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter }), [childrenByDirectory, expanded, filter]);
+  const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter: shownFilter }), [childrenByDirectory, expanded, shownFilter]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
+  // Arrowing through the tree doesn't read (`cm cat`) the revisions of every file it passes.
+  const shownItem = useSettledValue(focused, focused?.path ?? '');
 
   const header = (
     <ViewHeader title={`Repository at changeset ${page.changesetId}`} subtitle="Read-only">
@@ -52,7 +57,7 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
         minSize={380}
         maxSize={1100}
         first={
-          <HighlightQuery query={filter}>
+          <HighlightQuery query={shownFilter}>
             <FileTreeTable
               rows={rows}
               selection={selection}
@@ -64,8 +69,8 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
           </HighlightQuery>
         }
         second={
-          focused ? (
-            <RevisionChanges workspacePath={workspacePath} item={focused} />
+          shownItem ? (
+            <RevisionChanges workspacePath={workspacePath} item={shownItem} />
           ) : (
             <EmptyState icon={<FolderTree size={22} />} title="Select a file" description="See what its revision changed." />
           )

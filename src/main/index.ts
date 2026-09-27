@@ -16,17 +16,24 @@ import { WorkspaceWatchers } from './watch/WorkspaceWatchers';
 import { installAppMenu } from './window/appMenu';
 import { handleRecentDocumentRequests } from './window/recentDocuments';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
+import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
 
 const cm = new CmClient(locateCm);
 const settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'));
+// Rewriting a workspace, by the app or any tool, forgets what was read of it.
+const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
 
-// Each window shows one workspace; windows on the same workspace share its watcher.
-const watchers = new WorkspaceWatchers((viewers, workspacePath, change) => {
-  for (const viewer of viewers) {
-    const target = webContents.fromId(viewer);
-    if (target) sendEventTo(target, 'workspaceChanged', { workspacePath, ...change });
-  }
-});
+// Each window shows one workspace; windows on the same workspace share its watcher and its `cm shell` sessions.
+const watchers = new WorkspaceWatchers(
+  (viewers, workspacePath, change) => {
+    if (change.metadata) headers.forget(workspacePath);
+    for (const viewer of viewers) {
+      const target = webContents.fromId(viewer);
+      if (target) sendEventTo(target, 'workspaceChanged', { workspacePath, ...change });
+    }
+  },
+  (workspacePath) => cm.release(workspacePath),
+);
 const windows = new WorkspaceWindows({
   settings,
   workspaceOf: (viewer) => watchers.workspaceOf(viewer),
@@ -44,8 +51,12 @@ function start(): void {
 
   // The renderer refreshes its views after its own operations and writes; the watchers skip what they cause.
   cm.onCommandStarted(({ args, cwd, finished }) => {
-    if (changesWorkspace(args)) watchers.ignoreOwnWrite(finished, cwd);
-    else if (rewritesChangelists(args)) watchers.ignoreOwnWrite(finished, cwd, 'changelists');
+    if (rewritesChangelists(args)) watchers.ignoreOwnWrite(finished, cwd, 'changelists');
+    if (!changesWorkspace(args)) return;
+    watchers.ignoreOwnWrite(finished, cwd);
+    headers.forget();
+    const forget = () => headers.forget();
+    void finished.then(forget, forget);
   });
   const operations = new OperationTracker(
     (operationId, progress) => sendEventToCaller('operationProgress', { operationId, progress }),
@@ -64,6 +75,7 @@ function start(): void {
       settings,
       watchers,
       windows,
+      headers,
     }),
   );
 

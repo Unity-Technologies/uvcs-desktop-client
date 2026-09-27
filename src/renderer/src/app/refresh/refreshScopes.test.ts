@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   isAffectedByFileChanges,
+  isAffectedByFileChangesIn,
   isAffectedByLoadedChangeset,
   isAffectedByMovedPaths,
   isAffectedByAttributes,
@@ -97,5 +98,22 @@ describe('refresh scopes', () => {
     expect(isAffectedByAttributes(key('attributeUsedValues', 'status'))).toBe(true);
     expect(isAffectedByAttributes(key('branches', {}))).toBe(false);
     expect(isAffectedByAttributes(key('info'))).toBe(false);
+  });
+
+  it('re-reads only the listings and details a change in some folders touches', () => {
+    const inDeep = isAffectedByFileChangesIn(['src/deep']);
+    expect(inDeep(key('explorer', 'directory', 'src/deep'))).toBe(true);
+    expect(inDeep(key('explorer', 'directory', 'src'))).toBe(true);
+    expect(inDeep(key('explorer', 'directory', ''))).toBe(true);
+    expect(inDeep(key('explorer', 'directory', 'src/deeper'))).toBe(false);
+    expect(inDeep(key('explorer', 'directory', 'src/deep/inner'))).toBe(false);
+    expect(inDeep(key('explorer', 'directory', 'docs'))).toBe(false);
+    expect(inDeep(key('explorer', 'details', 'src/deep/a.ts'))).toBe(true);
+    expect(inDeep(key('explorer', 'details', 'src'))).toBe(true);
+    expect(inDeep(key('explorer', 'details', 'docs/a.md'))).toBe(false);
+    expect(inDeep(key('explorer', 'allPaths'))).toBe(false);
+    expect(inDeep(key('pendingChanges', 'all'))).toBe(true);
+    expect(isAffectedByFileChangesIn([''])(key('explorer', 'details', 'readme.md'))).toBe(true);
+    expect(isAffectedByFileChangesIn(null)(key('explorer', 'directory', 'docs'))).toBe(true);
   });
 });

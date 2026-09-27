@@ -4,6 +4,7 @@ import { join, relative, sep } from 'node:path';
 import type { WatchCoverage } from '@shared/api/workspaces';
 import type { WorkspaceChange } from '@shared/events';
 import { ChangeBatcher } from './ChangeBatcher';
+import { changedFolder } from './changedFolder';
 import { classifyChange, isChangelistFile } from './classifyChange';
 import { NO_IGNORE_RULES, parseIgnoreRules, type IgnoreRules } from './ignoreRules';
 
@@ -85,11 +86,13 @@ export class WorkspaceWatcher {
     const kind = classifyChange(relativePath, this.ignoreRules);
     if (!kind || this.ownWrites.active()) return;
     if (isChangelistFile(relativePath) && this.ownChangelistWrites.active()) return;
+    const folder = changedFolder(relativePath);
     this.batcher.add({
       content: kind === 'content',
       // Node reports additions, deletions and moves as 'rename'; content edits as 'change'.
       pathsChanged: kind === 'content' && event === 'rename',
       metadata: kind === 'metadata',
+      folders: kind === 'metadata' ? [] : folder === null ? null : [folder],
     });
   }
 

@@ -1,5 +1,5 @@
-import { matchesAllWords } from '../../../lib/matchesAllWords';
 import type { GraphLayout } from './layoutGraph';
+import { changesetMatcher, nameMatcher, narrows, searchWords } from './searchWords';
 
 /** Something a search found. A branch or label name finds the branch or label itself, not the changesets it holds. */
 export type SearchHit = { kind: 'changeset'; id: number } | { kind: 'branch'; name: string } | { kind: 'label'; name: string; changeset: number };
@@ -14,31 +14,53 @@ export interface SearchHighlight {
   active: SearchHit | null;
 }
 
+/** A search already run, which a narrower one can start from. */
+export interface GraphSearchResult {
+  query: string;
+  hits: readonly SearchHit[];
+}
+
 /**
  * Everything matching a search, left to right (the order Enter steps through). Branch and label names, and
  * changesets' comments and owners, match when they hold every word of the query anywhere, in any case
  * (`100874` finds /main/scm1008742). A number (`42` or `cs:42`) also finds that changeset.
+ * Given the previous search of the same layout, a query that narrows it (typing on) only looks at the changesets
+ * that one found.
  */
-export function searchGraph(layout: GraphLayout, rawQuery: string): SearchHit[] {
+export function searchGraph(layout: GraphLayout, rawQuery: string, previous?: GraphSearchResult | null): SearchHit[] {
   const query = rawQuery.trim();
   if (!query) return [];
 
   const changesetNumber = exactChangesetNumber(query);
-  const matches = (text: string): boolean => matchesAllWords(text, query);
-  // Within a column: the branch header first, then the labels above the changeset, then the changeset.
-  const found: { hit: SearchHit; column: number; order: number }[] = [];
+  const words = searchWords(query);
+  const matches = nameMatcher(words);
+  const matchesChangeset = changesetMatcher(words);
+
+  // Left to right; within a column the branch header first, then the labels above the changeset, then the changeset.
+  // Changesets are found in column order: the branches and labels found are sorted, then merged in.
+  const named: { hit: SearchHit; column: number; order: number }[] = [];
   for (const lane of layout.lanes) {
-    if (matches(lane.branch.name)) found.push({ hit: { kind: 'branch', name: lane.branch.name }, column: lane.firstOwnColumn ?? lane.startColumn, order: 0 });
+    if (matches(lane.branch.name)) named.push({ hit: { kind: 'branch', name: lane.branch.name }, column: lane.firstOwnColumn ?? lane.startColumn, order: 0 });
   }
-  for (const { changeset, column } of layout.nodesByColumn) {
-    for (const label of layout.labelsByChangeset.get(changeset.id) ?? []) {
-      if (matches(label.name)) found.push({ hit: { kind: 'label', name: label.name, changeset: changeset.id }, column, order: 1 });
-    }
-    if (changeset.id === changesetNumber || matches(`${changeset.comment}\n${changeset.owner}`)) {
-      found.push({ hit: { kind: 'changeset', id: changeset.id }, column, order: 2 });
-    }
+  for (const [changeset, labels] of layout.labelsByChangeset) {
+    const column = layout.nodes.get(changeset)!.column;
+    for (const label of labels) if (matches(label.name)) named.push({ hit: { kind: 'label', name: label.name, changeset }, column, order: 1 });
   }
-  return found.sort((a, b) => a.column - b.column || a.order - b.order).map(({ hit }) => hit);
+  named.sort((a, b) => a.column - b.column || a.order - b.order);
+
+  // A number finds its changeset whatever the text says, so it never narrows.
+  const candidates =
+    previous && changesetNumber === undefined && narrows(previous.query, query)
+      ? previous.hits.flatMap((hit) => (hit.kind === 'changeset' ? [layout.nodes.get(hit.id)!] : []))
+      : layout.nodesByColumn;
+  const found: SearchHit[] = [];
+  let nextNamed = 0;
+  for (const { changeset, column } of candidates) {
+    while (nextNamed < named.length && named[nextNamed]!.column <= column) found.push(named[nextNamed++]!.hit);
+    if (changeset.id === changesetNumber || matchesChangeset(changeset.comment, changeset.owner)) found.push({ kind: 'changeset', id: changeset.id });
+  }
+  while (nextNamed < named.length) found.push(named[nextNamed++]!.hit);
+  return found;
 }
 
 /** Where the first Enter lands: on the changeset a number names, wherever it is among the hits, otherwise on the first. */

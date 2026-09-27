@@ -4,8 +4,11 @@
  */
 export type BranchChoice = readonly string[] | null;
 
-export function isBranchChosen(choice: BranchChoice, name: string): boolean {
-  return choice === null || choice.includes(name);
+/** Whether a branch is chosen, asked of every branch in the list: the choice becomes a set once. */
+export function branchChooser(choice: BranchChoice): (name: string) => boolean {
+  if (choice === null) return () => true;
+  const chosen = new Set(choice);
+  return (name) => chosen.has(name);
 }
 
 /** Checks or unchecks some branches; checking the last unchecked one goes back to "every branch". */

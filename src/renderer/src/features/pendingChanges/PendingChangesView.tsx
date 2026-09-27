@@ -9,7 +9,7 @@ import { selectAfterLeaving, settleBeforeLeaving } from '../../app/navigation/le
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { joinComment } from '../../lib/comment';
 import { EMPTY_SELECTION } from '../../lib/selection';
-import { useSteadyValue } from '../../lib/useSteadyValue';
+import { useSettledValue } from '../../lib/useSettled';
 import { formatCount, pluralize } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
@@ -115,7 +115,7 @@ export function PendingChangesView() {
   const checkboxInset = useMemo(() => topLevelCheckboxInset(rows), [rows]);
   const focused = selection.anchor === null ? undefined : changesByKey.get(selection.anchor);
   // Holding ↓ moves through the list at once; the diff (a read and an editor to lay out) follows where it stops.
-  const diffChange = useSteadyValue(focused) ?? focused;
+  const diffChange = useSettledValue(focused, selection.anchor ?? '') ?? focused;
   // A folder or changelist the keyboard (or a click) is on.
   const focusedFolder = focused ? undefined : rows.find((row) => row.type !== 'change' && row.key === selection.anchor);
   const { mergeChanges, pendingCount, onlyNeverCheckedIn } = useMemo(

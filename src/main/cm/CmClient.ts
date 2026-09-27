@@ -2,6 +2,7 @@ import { homedir } from 'node:os';
 import type { CommandLogEntry } from '@shared/events';
 import { CmError } from './CmError';
 import { isShellResultLine, processCommand, shellCommandResult } from './commandLineLimit';
+import { clipForLog, MAX_LOGGED_COMMAND_LINE, MAX_LOGGED_OUTPUT } from './clipForLog';
 import type { CmResult } from './CmResult';
 import { CmShellPool } from './CmShellPool';
 import { extractErrorMessage } from './errorMessage';
@@ -78,6 +79,11 @@ export class CmClient {
     this.shellPool.warmUp(cwd);
   }
 
+  /** Ends the `cm shell` sessions of a working directory no window shows anymore (each holds tens of MB). */
+  release(cwd: string): void {
+    this.shellPool.release(cwd);
+  }
+
   dispose(): void {
     this.shellPool.disposeAll();
   }
@@ -111,18 +117,22 @@ export class CmClient {
     return shellCommandResult(result.output);
   }
 
+  /** Logs the command, clipped (`clipForLog`); returns it whole, for the error that reports it. */
   private log(args: string[], cwd: string, startedAt: number, result: CmResult, viaShell: boolean): CommandLogEntry {
+    const commandLine = `cm ${args.join(' ')}`;
+    const output = result.exitCode === 0 ? '' : result.output.trim();
     const entry: CommandLogEntry = {
       id: this.nextCommandId++,
-      commandLine: `cm ${args.join(' ')}`,
+      commandLine,
       cwd,
       startedAt,
       durationMs: Date.now() - startedAt,
       exitCode: result.exitCode,
       viaShell,
-      output: result.exitCode === 0 ? '' : result.output.trim(),
+      output,
     };
-    this.logListeners.forEach((listener) => listener(entry));
+    const logged = { ...entry, commandLine: clipForLog(commandLine, MAX_LOGGED_COMMAND_LINE), output: clipForLog(output, MAX_LOGGED_OUTPUT) };
+    this.logListeners.forEach((listener) => listener(logged));
     return entry;
   }
 }

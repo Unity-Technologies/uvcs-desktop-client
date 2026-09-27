@@ -2,6 +2,7 @@ import { Copy, FolderOpen, FolderPlus, FolderSearch, PenLine, SquareTerminal, Tr
 import type { RepositorySummary } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { SEPARATOR, type MenuEntry } from '../../lib/actions';
+import { REVEAL_LABEL } from '../../lib/platform';
 import { forgetRecentWorkspace } from '../settings/useSettings';
 import { copyWorkspacePath, openTerminalIn } from '../workspace/workspaceShellActions';
 import { copyRepositorySpec, deleteRepository, removeWorkspace, renameRepository, renameWorkspace, revealWorkspace } from './homeOperations';
@@ -9,7 +10,7 @@ import { copyRepositorySpec, deleteRepository, removeWorkspace, renameRepository
 export function workspaceMenu(workspace: WorkspaceSummary, open: (path: string) => void): MenuEntry[] {
   return [
     { id: 'open', label: 'Open', icon: FolderOpen, run: () => open(workspace.path) },
-    { id: 'reveal', label: 'Reveal in file manager', icon: FolderSearch, run: () => revealWorkspace(workspace) },
+    { id: 'reveal', label: REVEAL_LABEL, icon: FolderSearch, run: () => revealWorkspace(workspace) },
     { id: 'terminal', label: 'Open terminal here', icon: SquareTerminal, run: () => openTerminalIn(workspace.path) },
     { id: 'copyPath', label: 'Copy path', icon: Copy, run: () => copyWorkspacePath(workspace.path) },
     SEPARATOR,

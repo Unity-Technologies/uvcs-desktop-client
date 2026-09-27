@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { branch, changeset, sampleHistory } from './graphFixtures';
-import { layoutGraph } from './layoutGraph';
+import { branch, changeset, largeHistory, sampleHistory } from './graphFixtures';
+import { layoutGraph, layoutKeeping } from './layoutGraph';
 
 describe('layoutGraph', () => {
   it('gives every changeset its own column, in id order', () => {
@@ -47,5 +47,41 @@ describe('layoutGraph', () => {
     const layout = layoutGraph({ ...data, mergeLinks: [...data.mergeLinks, { type: 'merge', sourceChangeset: 99, destinationChangeset: 6 }] });
     expect(layout.mergeLinks).toHaveLength(1);
     expect(layout.labelsByChangeset.get(6)?.map((label) => label.name)).toEqual(['v1']);
+  });
+});
+
+describe('layoutKeeping', () => {
+  it('lays out exactly what keeping one more changeset lays out, reusing the layout when it already shows on its own', () => {
+    const data = largeHistory(3_000, 600);
+    const keep = new Set([40, 41]);
+    const base = { keep, layout: layoutGraph(data, { keep }) };
+    let reused = 0;
+    for (let id = 0; id < 3_000; id += 7) {
+      const layout = layoutKeeping(data, base, id);
+      if (layout === base.layout) reused++;
+      expect(layout.nodesByColumn).toEqual(layoutGraph(data, { keep: new Set([...keep, id]) }).nodesByColumn);
+    }
+    expect(reused).toBeGreaterThan(0);
+    expect(layoutKeeping(data, base, null)).toBe(base.layout);
+  });
+});
+
+describe('layoutGraph at scale', () => {
+  it('lays out a branch with more changesets than a function takes arguments', () => {
+    const changesets = Array.from({ length: 200_000 }, (_, id) => changeset(id, '/main', id - 1));
+    const lane = layoutGraph({ branches: [branch('/main', '', 199_999)], changesets, mergeLinks: [], labels: [] }).lanesByBranch.get('/main');
+    expect(lane).toMatchObject({ startColumn: 0, endColumn: 199_999, firstOwnColumn: 0 });
+  });
+
+  it('places 20,000 branches of 100,000 changesets well within a second, never closer than the gap', () => {
+    const data = largeHistory(100_000, 20_000);
+    const started = performance.now();
+    const layout = layoutGraph(data);
+    expect(performance.now() - started).toBeLessThan(1000);
+    expect(layout.lanes).toHaveLength(20_000);
+    for (const lanes of layout.lanesByRow.values()) {
+      const sorted = [...lanes].sort((a, b) => a.startColumn - b.startColumn);
+      sorted.slice(1).forEach((lane, index) => expect(lane.startColumn - sorted[index]!.endColumn).toBeGreaterThan(3));
+    }
   });
 });

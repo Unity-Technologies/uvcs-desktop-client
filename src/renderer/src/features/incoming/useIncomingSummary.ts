@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useSyncExternalStore } from 'react';
 import type { IncomingSummary, LoadedBranch } from '@shared/domain/incoming';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { api } from '../../api/client';
@@ -26,6 +27,7 @@ export function useIncomingSummary() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
   const loaded = workspace && loadedBranchOf(workspace);
+  const pollInterval = useSyncExternalStore(onPresenceChange, currentPollInterval);
   return useQuery({
     queryKey: incomingSummaryKey(workspacePath, loaded),
     queryFn: ({ queryKey }) => checkIncoming(workspacePath, loaded!, queryKey),
@@ -34,10 +36,24 @@ export function useIncomingSummary() {
     refetchOnWindowFocus: true,
     // Many components show it; the poll and the focus check keep it fresh, not their mounting.
     refetchOnMount: false,
-    refetchInterval: () => incomingPollInterval(document.visibilityState === 'visible', document.hasFocus()),
+    // Given as a value, so a window that gets hidden or loses focus re-arms its timer at once: the one armed before would still fire.
+    refetchInterval: pollInterval,
     refetchIntervalInBackground: true,
     meta: keyedByWorkspaceInfo('loadedChangeset'),
   });
+}
+
+const currentPollInterval = () => incomingPollInterval(document.visibilityState === 'visible', document.hasFocus());
+
+function onPresenceChange(changed: () => void): () => void {
+  window.addEventListener('focus', changed);
+  window.addEventListener('blur', changed);
+  document.addEventListener('visibilitychange', changed);
+  return () => {
+    window.removeEventListener('focus', changed);
+    window.removeEventListener('blur', changed);
+    document.removeEventListener('visibilitychange', changed);
+  };
 }
 
 /** Checks the server now, e.g. before updating. Undefined while the workspace info is unknown. */
