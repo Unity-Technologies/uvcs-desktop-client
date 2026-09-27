@@ -3,7 +3,7 @@ import type { RepositorySummary } from '@shared/domain/repository';
 import { api } from '../../../api/client';
 import { queryKeys } from '../../../api/queryKeys';
 import { RepositoryPicker } from '../../../components/RepositoryPicker';
-import { joinPath, lastSegment } from '../../../lib/paths';
+import { lastSegment } from '../../../lib/paths';
 import { Button } from '../../../ui/Button';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { openDialog } from '../../../ui/dialog/dialogStore';
@@ -12,7 +12,7 @@ import { toast } from '../../../ui/toast/toastStore';
 import { queryClient } from '../../queryClient';
 import { useWorkspaceList } from '../../workspace/workspaceQueries';
 import { useDefaultWorkspaceRoot } from '../useDefaultWorkspaceRoot';
-import { suggestWorkspaceName } from '../workspaceNaming';
+import { defaultWorkspacePath, suggestWorkspaceName } from '../workspaceNaming';
 import { LocationField } from './LocationField';
 
 interface CreateWorkspaceOptions {
@@ -39,7 +39,7 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
   const [chosenPath, setChosenPath] = useState(initialPath);
   const [creating, setCreating] = useState(false);
 
-  const path = chosenPath ?? (root && name ? joinPath(root, name) : '');
+  const path = chosenPath ?? defaultWorkspacePath(root, name);
   const nameTaken = takenNames.some((taken) => taken.toLowerCase() === name.trim().toLowerCase());
   const canCreate = Boolean(repository && name.trim() && path && !nameTaken && !creating);
 
