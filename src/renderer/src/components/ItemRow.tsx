@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import styles from './ItemRow.module.css';
 
-/** Whether an item is under version control: private and ignored items step back instead of wearing a mark. */
+/** Whether an item is under version control: private items' names step back, ignored items step back whole. */
 export type ItemPresence = 'controlled' | 'private' | 'ignored';
 
 interface ItemRowProps {
@@ -22,7 +22,8 @@ interface ItemRowProps {
 
 /**
  * A file or folder in a list: its icon and name, then at the end of the row whatever it carries and its status, the
- * way every list of items reads (Files, Changes, a changeset's files). Private items dim, ignored ones further.
+ * way every list of items reads (Files, Changes, a changeset's files). Private items' names are quieter, never their
+ * icon, so a private item never looks disabled; ignored items grey out, icon and name.
  */
 export function ItemRow({ icon, label, extras, status, presence = 'controlled', deleted = false, faded = false }: ItemRowProps) {
   return (

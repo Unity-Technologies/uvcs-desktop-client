@@ -11,13 +11,10 @@
   flex: none;
 }
 
-/* Build output and caches come by the folder, so dimming reads better than a mark on each of them. */
-.row[data-presence='private'] > .icon {
-  opacity: 0.55;
-}
-
+/* Private items keep their icon as it is (their P letter tells them); ignored ones lose its color and step back. */
 .row[data-presence='ignored'] > .icon {
-  opacity: 0.35;
+  opacity: 0.5;
+  filter: grayscale(1);
 }
 
 .label {
