@@ -1,5 +1,6 @@
 import type { CommandLogEntry } from '@shared/events';
 import { useLayoutEffect, useRef, useState } from 'react';
+import { withControlPictures } from '../../lib/controlPictures';
 import { textMeasurer } from '../../lib/measureText';
 import { trimMiddleToFit } from '../../lib/trimToFit';
 import styles from './StatusBar.module.css';
@@ -10,7 +11,7 @@ import styles from './StatusBar.module.css';
  */
 export function CommandHint({ entry }: { entry: CommandLogEntry }) {
   const ref = useRef<HTMLSpanElement>(null);
-  const text = entry.commandLine;
+  const text = withControlPictures(entry.commandLine);
   const [fit, setFit] = useState<{ shown: string; width?: number }>({ shown: text });
   // The font stays; reading it again for every command would restyle the page each time.
   const measureRef = useRef<(text: string) => number>(null);
