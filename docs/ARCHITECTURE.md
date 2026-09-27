@@ -408,10 +408,23 @@ renderer/src/
   read-only: no `cm` command or client API edits them. Selecting a row must stay cheap: `cm diff`
   runs only on request (`ChangedFilesSection`), other lookups wait for the selection to settle (`useSettled`), and
   immutable results are cached (`IMMUTABLE_QUERY`).
-- **Item rows**: every list of files and folders reads the same (`components/`): `ItemRow` lays out the icon, the name
-  (cut first), extras (lock chips, review marks, +N −M) and, last on the row, `ItemStatusMark`: the status letter of
-  Changes (`StatusBadge`) for what is notable only (a pending change, a checkout), or a dot for a folder with changes
-  inside; nothing marks an item up to date. Private items dim, ignored ones further, deleted ones are struck through.
+- **Item rows**: every list of files and folders reads the same (`components/`): Files and Browse repository, Changes
+  (after its checkbox), the files of every diff and details panel, the merge page, a task merge, Incoming, Go to file,
+  the Undo dialog. `ItemRow` lays out the icon, the name (cut first, in the middle as every path is: `PathLabel`), extras
+  and, last on the row in one column, `ItemStatusMark`: the status letter (`StatusBadge`, the same tones and letters
+  everywhere; its tooltip says what it means there), or a dot for a folder with changes inside. `ItemPathRow` is an item
+  named by its path, the folders dimmed. Extras go in one order: tags (`ItemTag`: "modified", a merge), where a conflict
+  stands (the merge page's icons, `ConflictStatusChip`, in Incoming too), the review mark, then `ItemMark`s by the
+  letter, a quiet icon whose words are in its tooltip (`LockMark`: "Locked by ana in art-wk", someone else's in the
+  alert tone; `XlinkMark`: "Xlink to nervathirdparty@17568"). Private items dim, ignored ones further, deleted ones are
+  struck through, reviewed ones fade (`faded`) but for their review mark. Files marks what is notable only (a pending
+  change, a checkout) and dims private items instead of lettering them, as they come by the folder; a list of changes
+  letters every row, P included, as its filter chips do. In Changes every folder holds changes, so only its own change
+  marks it. The merge page's letter is what the merge does to the item (a directory conflict's, what the source did);
+  `cm merge` names no item types, so a path with others under it is a folder (`mergeItemTypes`). Locks are read for
+  pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. The Changes list renders
+  its file and folder rows memoized with stable callbacks: holding ↓ over 100,000 changes re-renders none of them
+  (0.5-0.6 ms a step).
   `ItemIcon` is Lucide's (ISC, tree-shaken, already the app's icon set): a solid slate folder, or a filled neutral page
   with the file's family as its glyph (`fileKind`: code, data, text, image, media, archive, Unity asset, binary; Unity's
   `.meta` files dim), in the `--icon-*` tokens; color is left to statuses. Native icons (`app.getFileIcon`) were
@@ -423,18 +436,18 @@ renderer/src/
   (`itemComparison`), its toolbar saying what it compares: a pending change against the loaded revision as in Changes
   ("Your changes · vs cs:12": editable, discards), an up-to-date file's last change against its parent revision (the
   listing names it, as History's `parentRevision` finds first: "Last change · cs:12 on /main by Ana · 2 days ago ·
-  comment"), a file with no revision whole against nothing ("New file", "Private file"). "Annotate" beside it
-  toggles the file annotated (kept as the selection moves), its revision by id in its repository (`itemRevision`), or
+  comment"), a file with no revision whole against nothing ("New file", "Private file"). "Annotate" beside it (⌘T,
+  the menu's Annotate; the Annotate page stays for other views) toggles the file annotated (kept as the selection
+  moves), its revision by id in its repository (`itemRevision`), or
   as on disk while it has changes. A folder shows what it holds and its last change. The diff and `cm` lookups wait for
   the selection to settle (`useSettledValue`, without remounting); revisions are cached immutable. F6 moves the keys
   into the diff to scroll it, F6 or Esc back to the tree, which keeps `MAIN_FOCUS`. Browse repository shows its tree
   the same way, every item as its revision (with a filter of its open folders).
-- **Files: finding**: ⌘F (Ctrl+F) or / in the tree focuses the find field, which finds files and folders in the whole
-  workspace: Go to file's list of every path on disk (`useWorkspacePaths`, read once when something is first looked for,
-  no `cm`) ranked by `fuzzyIndex` as the query is typed (deferred; about 20 ms a keystroke over 100k paths), the best
-  200 listed flat with their paths, statuses and matches in the tree's place (`FileFindResults`). ↓ or Enter moves
-  into them; the selected one shows its details once its folder's listing (the tree's query) is read; Enter reveals it
-  in the tree, expanding its folders; Esc clears the find and gives the keys back to the tree.
+- **Files: finding**: one way to find a file, Go to file (⌘P anywhere; in Files also ⌘F or Ctrl+F, where the legacy
+  client finds files, and / from the tree: `filesGoToFile`; the header's search button): a fuzzy search (`fuzzyIndex`)
+  over every path on disk (`useWorkspacePaths`, read once, no `cm`), its results as the tree's rows. The one picked is
+  revealed in the tree, its folders expanded, and selected with its diff. A find field of the view's own duplicated it
+  and was removed.
 - **Files: moving items**: ⌘X (Ctrl+X) cuts the selected items (`cutItemsStore`: only the outermost, never the root),
   ghosted with a hint in the header; cutting again replaces them, and they stay cut across views until pasted, Esc
   (never one a menu, dialog or field took) or another workspace. ⌘V moves them into the selected folder or the
