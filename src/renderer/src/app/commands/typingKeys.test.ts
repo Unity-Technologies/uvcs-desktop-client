@@ -1,10 +1,11 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 let belongsToField: typeof import('./typingKeys').belongsToField;
+let copiesSelectedText: typeof import('./typingKeys').copiesSelectedText;
 
 beforeAll(async () => {
   vi.stubGlobal('window', { uvcs: { platform: 'darwin' } });
-  ({ belongsToField } = await import('./typingKeys'));
+  ({ belongsToField, copiesSelectedText } = await import('./typingKeys'));
 });
 
 const key = (key: string, modifiers: { metaKey?: boolean; ctrlKey?: boolean; altKey?: boolean } = {}) => ({
@@ -46,5 +47,20 @@ describe('belongsToField', () => {
   it('takes the platform’s modifier for the text chords', () => {
     expect(belongsToField(key('z', { ctrlKey: true }), true)).toBe(false);
     expect(belongsToField(key('z', { metaKey: true }), false)).toBe(false);
+  });
+});
+
+describe('copiesSelectedText', () => {
+  const copy = (mac: boolean) => ({ ...key('c', mac ? { metaKey: true } : { ctrlKey: true }), shiftKey: false });
+
+  it("leaves ⌘C and Ctrl+C to the page's copy while text is selected", () => {
+    expect(copiesSelectedText(copy(true), 'cs:42', true)).toBe(true);
+    expect(copiesSelectedText(copy(false), 'cs:42', false)).toBe(true);
+  });
+
+  it('lets them copy the selected row when no text is selected, and leaves other chords alone', () => {
+    expect(copiesSelectedText(copy(true), '', true)).toBe(false);
+    expect(copiesSelectedText({ ...copy(true), shiftKey: true }, 'cs:42', true)).toBe(false);
+    expect(copiesSelectedText({ ...copy(true), key: 'x' }, 'cs:42', true)).toBe(false);
   });
 });

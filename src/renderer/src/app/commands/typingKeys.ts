@@ -19,3 +19,8 @@ export function belongsToField(event: Pick<KeyboardEvent, 'key' | 'metaKey' | 'c
   const textChords = mac ? MAC_TEXT_CHORDS : OTHER_TEXT_CHORDS;
   return isModPressed(event, mac) && !event.altKey && textChords.has(event.key.toLowerCase());
 }
+
+/** Whether a key copies text selected on the page (⌘C, Ctrl+C), which no command takes: the page's copy runs. */
+export function copiesSelectedText(event: Pick<KeyboardEvent, 'key' | 'metaKey' | 'ctrlKey' | 'altKey' | 'shiftKey'>, selectedText: string, mac = isMac): boolean {
+  return selectedText !== '' && isModPressed(event, mac) && !event.altKey && !event.shiftKey && event.key.toLowerCase() === 'c';
+}

@@ -31,6 +31,8 @@ import { useCodeReviews } from './useCodeReviews';
 import { SincePicker } from '../../components/SincePicker';
 import { sinceDateFor, type SincePreset } from '../../lib/sincePresets';
 import styles from './CodeReviewsView.module.css';
+import { codeReviewCopyTexts } from './codeReviewMenu';
+import { useCopyCommand } from '../../app/commands/useCopyCommand';
 
 type StatusFilter = CodeReviewStatus | 'any';
 
@@ -187,6 +189,7 @@ export function CodeReviewsView() {
   }
 
   const selected = visible.find((review) => reviewKey(review) === selection.anchor);
+  useCopyCommand('Code reviews', 'Code review', selection.selected.size === 1 && selected ? codeReviewCopyTexts(selected) : undefined);
 
   return (
     <>
