@@ -1,5 +1,6 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import type { CmResult } from './CmResult';
+import { OutputBuffer } from './OutputBuffer';
 import { toShellCommandLine } from './shellCommandLine';
 
 const RESULT_LINE = /^CommandResult (-?\d+)\r?\n$/;
@@ -30,7 +31,7 @@ export class CmShellSession {
   private process: ChildProcessWithoutNullStreams | null = null;
   private readonly queue: PendingCommand[] = [];
   private running: PendingCommand | null = null;
-  private buffer = '';
+  private readonly buffer = new OutputBuffer(MAX_PROMPT_LENGTH + 1);
   /** Characters received so far, to tell whether output came in while a prompt timer was pending. */
   private received = 0;
   private promptTimer: NodeJS.Timeout | null = null;
@@ -90,10 +91,10 @@ export class CmShellSession {
   }
 
   private onOutput(text: string): void {
-    this.buffer += text;
+    this.buffer.append(text);
     this.received += text.length;
     this.watchForPrompt();
-    if (!this.running || !resultLineAtEnd(this.buffer)) return;
+    if (!this.running || !resultLineAtEnd(this.buffer.tail)) return;
 
     // A comment can hold a `CommandResult 0` line too (codice's do): the real one is the last output, with nothing
     // more in the pipe. `setImmediate` lets output already waiting be read first.
@@ -104,11 +105,13 @@ export class CmShellSession {
   }
 
   private finishIfDone(): void {
-    const result = resultLineAtEnd(this.buffer);
+    const { tail, length } = this.buffer;
+    const result = resultLineAtEnd(tail);
     if (!result || !this.running) return;
 
-    const output = this.buffer.slice(0, result.index).replace(/\r\n/g, '\n');
-    this.buffer = '';
+    // Not a regular expression: V8 keeps the last string one ran on, which would hold the whole output in memory.
+    const output = this.buffer.textBefore(length - tail.length + result.index).replaceAll('\r\n', '\n');
+    this.buffer.clear();
     this.finishRunning().resolve({ output, exitCode: result.exitCode });
     this.runNext();
   }
@@ -116,7 +119,7 @@ export class CmShellSession {
   private watchForPrompt(): void {
     if (this.promptTimer) clearTimeout(this.promptTimer);
     this.promptTimer = null;
-    const tail = this.buffer.slice(-MAX_PROMPT_LENGTH - 1);
+    const { tail } = this.buffer;
     const newline = tail.lastIndexOf('\n');
     if (newline < 0 && this.buffer.length > MAX_PROMPT_LENGTH) return;
     const lastLine = tail.slice(newline + 1);
@@ -139,7 +142,7 @@ export class CmShellSession {
   private abortRunning(reason: string): void {
     const child = this.process;
     this.process = null;
-    this.buffer = '';
+    this.buffer.clear();
     child?.kill('SIGKILL');
     if (this.running) this.finishRunning().reject(new Error(reason));
     this.runNext();
@@ -155,7 +158,7 @@ export class CmShellSession {
   private onProcessEnded(child: ChildProcessWithoutNullStreams, error: Error): void {
     if (child !== this.process) return;
     this.process = null;
-    this.buffer = '';
+    this.buffer.clear();
     if (this.running) this.finishRunning().reject(error);
     this.runNext();
   }
