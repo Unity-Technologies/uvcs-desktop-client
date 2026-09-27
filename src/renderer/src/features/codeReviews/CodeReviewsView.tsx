@@ -103,7 +103,8 @@ export function CodeReviewsView() {
   const header = (
     <ViewHeader
       title="Code reviews"
-      subtitle={reviews && (reviews.length >= MAX_LISTED_CODE_REVIEWS ? `Newest ${reviews.length}` : `${reviews.length} ${reviews.length === 1 ? 'review' : 'reviews'}`)}
+      count={reviews?.length}
+      subtitle={reviews && reviews.length >= MAX_LISTED_CODE_REVIEWS && 'newest'}
       actions={
         <>
           <IconButton

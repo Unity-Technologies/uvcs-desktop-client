@@ -62,7 +62,7 @@ export function ChangesetsView() {
   );
 
   const header = (
-    <ViewHeader title="Changesets" subtitle={changesets && `${visible.length} shown`}>
+    <ViewHeader title="Changesets" count={changesets && visible.length}>
       <ChangesetFiltersBar filter={filter} onChange={setFilter} />
     </ViewHeader>
   );

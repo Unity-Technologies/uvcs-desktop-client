@@ -41,7 +41,7 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
       <ViewHeader
         inTitleBar
         title={server === 'local' ? 'This computer' : server}
-        subtitle={repositories ? `${repositories.length} repositories` : undefined}
+        count={repositories?.length}
         actions={
           <>
             <IconButton icon={<RefreshCw size={14} />} label="Refresh" loading={isFetching} onClick={() => void refetch()} />

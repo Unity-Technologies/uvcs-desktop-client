@@ -27,7 +27,7 @@ export function WorkspacesPanel({ onOpen, onOpenFolder }: WorkspacesPanelProps) 
       <ViewHeader
         inTitleBar
         title="All workspaces"
-        subtitle={workspaces && `${workspaces.length} workspaces`}
+        count={workspaces?.length}
         actions={
           <>
             <Button icon={<FolderOpen size={14} />} onClick={onOpenFolder}>

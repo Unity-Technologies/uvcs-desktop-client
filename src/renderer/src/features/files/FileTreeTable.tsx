@@ -69,10 +69,9 @@ export function FileTreeTable({
       id: 'changeset',
       header: 'Changeset',
       width: 88,
-      align: 'end',
       secondary: true,
       hideBelow: 640,
-      render: (row) => (row.item.changeset > 0 ? row.item.changeset : ''),
+      render: (row) => (row.item.changeset > 0 ? <span className="mono">{row.item.changeset}</span> : ''),
     },
     { id: 'owner', header: 'By', width: 44, hideBelow: 600, render: (row) => row.item.owner && <Avatar user={row.item.owner} size={18} /> },
   ];
