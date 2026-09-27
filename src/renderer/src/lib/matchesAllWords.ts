@@ -7,6 +7,14 @@ export function matchesAllWords(text: string, query: string): boolean {
   return words.every((word) => haystack.includes(word));
 }
 
+/**
+ * A list filter over the texts a row shows: every word of the query in one of them (a blank query keeps every row).
+ * `Highlight` marks the same words in each, so what is marked is what made the row match.
+ */
+export function matchesWordFilter(texts: readonly string[], query: string): boolean {
+  return !query.trim() || matchesAllWords(texts.join('\n'), query);
+}
+
 /** How convincing a word match is, from 0 to 1, on the same scale as `fuzzyMatchQuality`. */
 export function wordMatchQuality(text: string, query: string): number {
   if (!matchesAllWords(text, query)) return 0;

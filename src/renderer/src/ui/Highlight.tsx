@@ -9,6 +9,11 @@ export function HighlightQuery({ query, children }: { query: string; children: R
   return <HighlightQueryContext.Provider value={query}>{children}</HighlightQueryContext.Provider>;
 }
 
+/** The filter text of the surrounding `HighlightQuery`, for labels that work out their own positions (a path cut to fit). */
+export function useHighlightQuery(): string {
+  return useContext(HighlightQueryContext);
+}
+
 interface HighlightProps {
   text: string;
   /** Exact character positions to highlight (e.g. of a fuzzy match); otherwise the words of the surrounding `HighlightQuery`. */
@@ -17,7 +22,7 @@ interface HighlightProps {
 
 /** `text` with the parts matching the current filter marked, so users see why a row matched. */
 export function Highlight({ text, positions }: HighlightProps) {
-  const query = useContext(HighlightQueryContext);
+  const query = useHighlightQuery();
   const ranges = positions ? positionRanges(positions) : wordMatchRanges(text, query);
   if (ranges.length === 0) return <>{text}</>;
   return <>{renderRanges(text, ranges)}</>;

@@ -1,7 +1,8 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { textMeasurer } from '../lib/measureText';
 import { fitPath, positionsInTrimmed } from '../lib/trimToFit';
-import { Highlight } from '../ui/Highlight';
+import { wordMatchPositions } from '../lib/textMatchRanges';
+import { Highlight, useHighlightQuery } from '../ui/Highlight';
 import styles from './PathLabel.module.css';
 
 interface PathLabelProps {
@@ -11,7 +12,10 @@ interface PathLabelProps {
   /** Previous path of a moved item. */
   oldPath?: string;
   strikethrough?: boolean;
-  /** Fuzzy-matched positions in `path` to highlight; otherwise the words of the surrounding `HighlightQuery` are. */
+  /**
+   * Fuzzy-matched positions in `path` to highlight; otherwise the words of the surrounding `HighlightQuery` are, found in
+   * the whole path (the name alone with `nameOnly`) before it's cut to fit, so a cut path marks what made it match.
+   */
   matches?: readonly number[];
   /**
    * As wide as the whole path (up to its container) and no narrower than the name, where the container wraps the
@@ -57,8 +61,10 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fit
     return () => observer.disconnect();
   }, [directory, name, fitContent]);
 
+  const query = useHighlightQuery();
+  const positions = matches ?? (nameOnly ? wordMatchPositions(name, query).map((position) => position + nameStart) : wordMatchPositions(path, query));
   const trimmed = shown.folder !== directory || shown.name !== name;
-  const nameMatches = matches?.filter((position) => position >= nameStart).map((position) => position - nameStart);
+  const nameMatches = positions.filter((position) => position >= nameStart).map((position) => position - nameStart);
 
   return (
     <span
@@ -70,11 +76,11 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fit
     >
       {shown.folder && (
         <span className={styles.directory}>
-          <Highlight text={shown.folder} positions={matches && positionsInTrimmed(directory, shown.folder, matches.filter((position) => position < nameStart))} />
+          <Highlight text={shown.folder} positions={positionsInTrimmed(directory, shown.folder, positions.filter((position) => position < nameStart))} />
         </span>
       )}
       <span className={styles.name} data-strikethrough={strikethrough}>
-        <Highlight text={shown.name} positions={nameMatches && positionsInTrimmed(name, shown.name, nameMatches)} />
+        <Highlight text={shown.name} positions={positionsInTrimmed(name, shown.name, nameMatches)} />
       </span>
     </span>
   );

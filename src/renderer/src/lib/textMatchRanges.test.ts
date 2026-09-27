@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { positionRanges, wordMatchRanges } from './textMatchRanges';
+import { positionRanges, wordMatchPositions, wordMatchRanges } from './textMatchRanges';
 
 describe('wordMatchRanges', () => {
   it('finds every occurrence of every word, ignoring case', () => {
@@ -26,5 +26,15 @@ describe('positionRanges', () => {
       [5, 6],
       [7, 9],
     ]);
+  });
+});
+
+describe('wordMatchPositions', () => {
+  it('lists every character of every word found', () => {
+    expect(wordMatchPositions('src/app/login.ts', 'app log')).toEqual([4, 5, 6, 8, 9, 10]);
+  });
+
+  it('is empty for a blank query', () => {
+    expect(wordMatchPositions('src/app', ' ')).toEqual([]);
   });
 });
