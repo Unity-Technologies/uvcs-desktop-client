@@ -18,6 +18,18 @@ npm install      # also downloads the Electron binary
 npm run dev      # starts the app with hot reload
 ```
 
+### On Linux
+
+- Electron needs the usual desktop libraries (`libnss3`, `libgtk-3-0t64`, `libgbm1`, `libasound2t64` on
+  Ubuntu 24.04; a desktop install has them).
+- Chromium's sandbox helper must belong to root with the setuid bit, or Electron won't start (Ubuntu 24.04 restricts
+  unprivileged user namespaces). After `npm install`:
+  `sudo chown root:root node_modules/electron/dist/chrome-sandbox && sudo chmod 4755 node_modules/electron/dist/chrome-sandbox`.
+- Without a display (CI, SSH), run it on a virtual one: `xvfb-run -a -s "-screen 0 1600x1000x24" npm start`.
+- Workspaces are watched a folder at a time, one inotify watch each (folders `ignore.conf` names are skipped). A tree
+  of more than 10,000 folders, or a full `fs.inotify.max_user_watches`, is watched in part: raise the limit with
+  `sudo sysctl fs.inotify.max_user_watches=524288` (and in `/etc/sysctl.d/` to keep it).
+
 ## Other commands
 
 | Command                      | What it does                                   |
