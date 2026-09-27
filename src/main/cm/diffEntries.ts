@@ -8,6 +8,9 @@ export const DIFF_FORMAT = recordFormat(['status', 'path', 'srccmpath', 'baserev
 const STATUSES: Record<string, DiffStatus> = { A: 'added', C: 'changed', D: 'deleted', M: 'moved' };
 const ITEM_TYPES: Record<string, ItemType> = { F: 'file', B: 'binaryFile', D: 'directory', X: 'xlink' };
 
+/** As people read them: file_2 before file_10. One collator: `localeCompare` with options builds one per call. */
+const PATH_ORDER = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
 /**
  * Parses `cm diff` records. `cm` reports a moved-and-changed item twice (M and C), so entries
  * are merged by path: the result is "moved" but keeps the content change's revisions.
@@ -22,8 +25,7 @@ export function parseDiffEntries(output: string): DiffEntry[] {
     entriesByPath.set(entry.path, existing ? mergeEntries(existing, entry) : entry);
   }
 
-  // As people read them: file_2 before file_10.
-  return [...entriesByPath.values()].sort((a, b) => a.path.localeCompare(b.path, undefined, { numeric: true, sensitivity: 'base' }));
+  return [...entriesByPath.values()].sort((a, b) => PATH_ORDER.compare(a.path, b.path));
 }
 
 function toDiffEntry([statusCode = '', path = '', sourcePath = '', baseRevision = '', revision = '', typeCode = '']: string[]): DiffEntry | null {

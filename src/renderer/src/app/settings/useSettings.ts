@@ -1,12 +1,14 @@
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { useUvcsEvent } from '../../api/useUvcsEvent';
 import { queryClient } from '../queryClient';
 
+export const settingsQuery = queryOptions({ queryKey: queryKeys.settings, queryFn: () => api.settings.get(), staleTime: Infinity });
+
 export function useSettings(): AppSettings {
-  const { data } = useQuery({ queryKey: queryKeys.settings, queryFn: () => api.settings.get(), staleTime: Infinity });
+  const { data } = useQuery(settingsQuery);
   return data ?? DEFAULT_SETTINGS;
 }
 

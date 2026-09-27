@@ -25,8 +25,7 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
     const chunks: string[] = [];
     let pendingLine = '';
 
-    const collect = (data: Buffer): void => {
-      const text = data.toString('utf8');
+    const collect = (text: string): void => {
       chunks.push(text);
       if (!options.onOutputLine) return;
 
@@ -36,8 +35,9 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
       lines.forEach(options.onOutputLine);
     };
 
-    child.stdout.on('data', collect);
-    child.stderr.on('data', collect);
+    // Decoded by the streams, so a character split between two chunks stays whole.
+    child.stdout.setEncoding('utf8').on('data', collect);
+    child.stderr.setEncoding('utf8').on('data', collect);
     child.on('error', reject);
     child.on('close', (code) => {
       if (pendingLine) options.onOutputLine?.(pendingLine);

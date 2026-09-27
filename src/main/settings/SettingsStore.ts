@@ -23,9 +23,12 @@ export class SettingsStore {
   }
 
   update(changes: Partial<AppSettings>): AppSettings {
-    this.settings = { ...this.settings, ...changes };
+    const json = JSON.stringify({ ...this.settings, ...changes }, null, 2);
     mkdirSync(dirname(this.filePath), { recursive: true });
-    writeFileSync(this.filePath, JSON.stringify(this.settings, null, 2));
+    writeFileSync(this.filePath, json);
+    // Read back rather than kept as given: values parsed from `cm` output (a switch shelve's repository) are slices
+    // of the whole output, which V8 would keep in memory with them.
+    this.settings = JSON.parse(json) as AppSettings;
     this.listeners.forEach((listener) => listener(this.settings, changes));
     return this.settings;
   }

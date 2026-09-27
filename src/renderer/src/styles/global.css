@@ -98,9 +98,16 @@ textarea:focus-visible {
 
 /* While a popover, menu or dialog is open, the title bar's drag regions take clicks like the rest of the page:
    Chromium hands a press in a drag region to the window, so the page never sees it and the overlay stays open.
-   Only the regions (`data-drag-region`) are restyled: with `*` here, every DOM change anywhere restyled the whole page. */
-html:has([data-radix-popper-content-wrapper], [role='dialog']) [data-drag-region] {
-  -webkit-app-region: no-drag !important;
+   The `:has()` only sets a property on the root, which every element reads through a style query: a `:has()` rule
+   styling every element itself restyled the whole document on every DOM change (each row a list shows). */
+html:has([data-radix-popper-content-wrapper], [role='dialog']) {
+  --overlay-open: 1;
+}
+
+@container style(--overlay-open: 1) {
+  * {
+    -webkit-app-region: no-drag !important;
+  }
 }
 
 /* Shared keyframes: reference them from CSS modules through the --keyframes-* tokens. */

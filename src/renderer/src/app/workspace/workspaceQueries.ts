@@ -1,11 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { useSettings } from '../settings/useSettings';
 
+export const workspaceListQuery = queryOptions({ queryKey: queryKeys.workspaces, queryFn: () => api.workspaces.list() });
+
 export function useWorkspaceList() {
-  return useQuery({ queryKey: queryKeys.workspaces, queryFn: () => api.workspaces.list() });
+  return useQuery(workspaceListQuery);
 }
 
 const MAX_RESOLVED_WORKSPACES = 10;
@@ -54,8 +56,10 @@ export function useMissingWorkspacePaths(paths: string[]) {
   });
 }
 
+export const serversQuery = queryOptions({ queryKey: queryKeys.profiles, queryFn: () => api.repositories.servers(), staleTime: Infinity });
+
 export function useServers() {
-  return useQuery({ queryKey: queryKeys.profiles, queryFn: () => api.repositories.servers(), staleTime: Infinity });
+  return useQuery(serversQuery);
 }
 
 export function useRepositories(server: string | null) {
