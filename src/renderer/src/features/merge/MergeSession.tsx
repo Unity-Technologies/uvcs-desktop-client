@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import type { DirectoryConflictResolution, MergePlan, MergeRequest } from '@shared/domain/merge';
 import { EmptyState } from '../../ui/EmptyState';
 import { SplitPane } from '../../ui/SplitPane';
@@ -40,9 +40,13 @@ export function MergeSession({ workspacePath, request, plan, onCompleted }: Merg
 
   const intoServerBranch = Boolean(request.destinationBranch);
   const serverPolicyNeeded = intoServerBranch && needsServerFilePolicy(fileStates);
-  const decidedFileStates = serverPolicyNeeded ? withServerPolicy(fileStates, serverFilePolicy) : fileStates;
-  const items = buildMergeItems(plan, decidedFileStates, directoryResolutions);
-  const rows = toListRows(items);
+  // Thousands of items: built again only when a decision changes, not for every file selected or key typed.
+  const items = useMemo(
+    () => buildMergeItems(plan, serverPolicyNeeded ? withServerPolicy(fileStates, serverFilePolicy) : fileStates, directoryResolutions),
+    [plan, serverPolicyNeeded, fileStates, serverFilePolicy, directoryResolutions],
+  );
+  const rows = useMemo(() => toListRows(items), [items]);
+  const conflictStatuses = useMemo(() => items.map(conflictStatusOf).filter((status) => status !== null), [items]);
   const resolutions = collectResolutions({
     plan,
     fileStates,
@@ -52,6 +56,9 @@ export function MergeSession({ workspacePath, request, plan, onCompleted }: Merg
     comment,
   });
   const selected = items.find((item) => item.key === selectedKey);
+  // The list follows the keys at once; the file behind it (a few hundred ms to highlight a file of a few thousand
+  // lines) follows once they stop coming, instead of every file an arrow key passes through holding the list back.
+  const shown = useDeferredValue(selected);
   latestItems.current = items;
 
   // The selection follows the run while the user stays on the file it opened; looking elsewhere doesn't stop it.
@@ -78,8 +85,6 @@ export function MergeSession({ workspacePath, request, plan, onCompleted }: Merg
 
   const resolveDirectoryConflict = (index: number, resolution: DirectoryConflictResolution): void =>
     setDirectoryResolutions((current) => Object.assign([...current], { [index]: resolution }));
-
-  const conflictStatuses = items.map(conflictStatusOf).filter((status) => status !== null);
 
   const merge = async (): Promise<void> => {
     if (!resolutions) return;
@@ -119,10 +124,10 @@ export function MergeSession({ workspacePath, request, plan, onCompleted }: Merg
             onSelect={setSelectedKey}
           />}
         second={
-          selected ? (
+          shown ? (
             <MergeDetail
               workspacePath={workspacePath}
-              item={selected}
+              item={shown}
               plan={plan}
               labels={labels}
               request={request}

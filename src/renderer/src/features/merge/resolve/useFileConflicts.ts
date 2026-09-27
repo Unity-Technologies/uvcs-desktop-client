@@ -49,15 +49,19 @@ export interface FileConflictState {
 export function useFileConflicts(workspacePath: string, files: ConflictedFile[], labels: MergeLabels) {
   const [decisions, setDecisions] = useState<Record<string, FileConflictDecision>>({});
   const [openTools, setOpenTools] = useState<Record<string, OpenTool>>({});
-  const queries = useQueries({
-    queries: files
-      .flatMap((file) => [file.base, file.source, file.destination])
-      .map((source) => ({
-        queryKey: queryKeys.inWorkspace(workspacePath, 'content', source),
-        queryFn: () => api.content.read(workspacePath, source),
-        staleTime: Infinity,
-      })),
-  });
+  // Kept while the files are: three queries a file, which TanStack hashes and subscribes to again whenever they're new.
+  const contentQueries = useMemo(
+    () =>
+      files
+        .flatMap((file) => [file.base, file.source, file.destination])
+        .map((source) => ({
+          queryKey: queryKeys.inWorkspace(workspacePath, 'content', source),
+          queryFn: () => api.content.read(workspacePath, source),
+          staleTime: Infinity,
+        })),
+    [workspacePath, files],
+  );
+  const queries = useQueries({ queries: contentQueries });
 
   // `queries` is a new array on every render, so `loadedVersion` stands for it in the dependencies.
   const loadedVersion = queries.map((query) => `${query.status}:${query.dataUpdatedAt}`).join('|');
