@@ -64,7 +64,7 @@ export function PendingChangesView() {
   const settings = useSettings();
   const { layout, setLayout, grouping, setGrouping } = usePendingChangesViewStore();
   const draft = useCheckinDraft(workspacePath);
-  const { setMessage, setIncluded, reset } = useCheckinDraftStore();
+  const { setMessage, setIncluded, clearMessage } = useCheckinDraftStore();
 
   const [selection, setSelection] = useViewSelection('changes');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
@@ -156,7 +156,7 @@ export function PendingChangesView() {
       }),
     );
     if (done) {
-      reset(workspacePath);
+      clearMessage(workspacePath);
       setSelection(EMPTY_SELECTION);
     }
     return done;

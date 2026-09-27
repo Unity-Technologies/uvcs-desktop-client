@@ -13,7 +13,8 @@ interface CheckinDraftStore {
   drafts: Record<string, CheckinDraft>;
   setMessage: (workspacePath: string, message: { summary?: string; description?: string }) => void;
   setIncluded: (workspacePath: string, paths: string[], included: boolean) => void;
-  reset: (workspacePath: string) => void;
+  /** After a check-in: the comment goes, the files left out stay left out. */
+  clearMessage: (workspacePath: string) => void;
 }
 
 /** The checkin comment and file selection, kept per workspace while the user moves between views. */
@@ -30,7 +31,7 @@ export const useCheckinDraftStore = create<CheckinDraftStore>((set) => {
         paths.forEach((path) => (included ? excludedPaths.delete(path) : excludedPaths.add(path)));
         return { ...draft, excludedPaths };
       }),
-    reset: (workspacePath) => updateDraft(workspacePath, () => EMPTY_DRAFT),
+    clearMessage: (workspacePath) => updateDraft(workspacePath, (draft) => ({ ...draft, summary: '', description: '' })),
   };
 });
 
