@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_BACKGROUND_HIGHLIGHTED_CHARS, MAX_HIGHLIGHTED_CHARS, syntaxHighlighting } from './syntaxHighlighting';
+import { highlightedLanguage, MAX_BACKGROUND_HIGHLIGHTED_CHARS, MAX_HIGHLIGHTED_CHARS, syntaxHighlighting } from './syntaxHighlighting';
 
 describe('syntaxHighlighting', () => {
   it('highlights files of any usual size before showing them', () => {
@@ -18,5 +18,16 @@ describe('syntaxHighlighting', () => {
 
   it('shows huge files as plain text', () => {
     expect(syntaxHighlighting('', 'x'.repeat(MAX_BACKGROUND_HIGHLIGHTED_CHARS + 1), false)).toBe('off');
+  });
+});
+
+describe('highlightedLanguage', () => {
+  it("is the file's language while it's highlighted", () => {
+    expect(highlightedLanguage('inline', 'app.ts')).toBe('typescript');
+    expect(highlightedLanguage('background', 'icon.svg')).toBe('xml');
+  });
+
+  it('is plain text otherwise, so lines typed into a plain-text diff stay plain', () => {
+    expect(highlightedLanguage('off', 'app.ts')).toBe('text');
   });
 });

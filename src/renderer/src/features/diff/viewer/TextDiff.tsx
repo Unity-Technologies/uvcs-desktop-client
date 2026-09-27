@@ -17,14 +17,13 @@ import { PaneScrollbars } from './PaneScrollbars';
 import { installPierreLineComparison } from './pierreLineComparison';
 import { replacementEdit } from './replacementEdit';
 import { caretLineCss, shownDiff, type DiffSides } from './shownDiff';
-import { syntaxHighlighting } from './syntaxHighlighting';
+import { highlightedLanguage, syntaxHighlighting } from './syntaxHighlighting';
 import { useBlockDiscard, type DiscardRequest } from './useBlockDiscard';
 import { POINTER_FOCUS_ATTRIBUTE, usePointerFocusMark } from './usePointerFocusMark';
 import { useShadowStyle } from './useShadowStyle';
 import { useSyntaxHighlighter } from './useSyntaxHighlighter';
 import styles from './TextDiff.module.css';
 import { shownText } from '../../../lib/lineBreaks';
-import { syntaxLanguage } from '../../../lib/syntaxLanguage';
 
 const BOTH_SIDES: DiffSides = { original: true, modified: true };
 
@@ -106,10 +105,14 @@ export function TextDiff({ original, modified, current, diff, wholeFile = false,
   // Stable inputs: new objects would make Pierre load the files again. While the text is typed into, Pierre works out
   // the diff itself (with the same options, `pierreLineComparison`); a diff shown anew (another comparison method, the
   // whole file or its diff, the file saved or changed on disk) starts from the text as it is now, unsaved edits included.
-  const newFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: shownText(latest.current.current) }), [fileName, modified, comparisonMethod, wholeFile]);
+  // A big read-only diff renders only the lines in view, shows as plain text at once and highlights in Pierre's
+  // workers; past what's worth it, Pierre shows files with more lines than `tokenizeMaxLength` as plain text.
+  const highlighting = syntaxHighlighting(original, modified, editable);
+  const lang = highlightedLanguage(highlighting, fileName);
+  const newFile = useMemo(() => ({ name: fileName, lang, contents: shownText(latest.current.current) }), [fileName, lang, modified, comparisonMethod, wholeFile]);
   const fileDiff = useMemo(
-    () => shownDiff(latest.current.diff.meta, sides, original, latest.current.current, editable),
-    [fileName, original, modified, comparisonMethod, wholeFile, sides.original, sides.modified, editable],
+    () => ({ ...shownDiff(latest.current.diff.meta, sides, original, latest.current.current, editable), lang }),
+    [fileName, lang, original, modified, comparisonMethod, wholeFile, sides.original, sides.modified, editable],
   );
   const parseDiffOptions = diff.options;
   const discard = useBlockDiscard({
@@ -122,9 +125,6 @@ export function TextDiff({ original, modified, current, diff, wholeFile = false,
     onDiscard,
     onUndo: onUndoDiscard,
   });
-  // A big read-only diff renders only the lines in view, shows as plain text at once and highlights in Pierre's
-  // workers; past what's worth it, Pierre shows files with more lines than `tokenizeMaxLength` as plain text.
-  const highlighting = syntaxHighlighting(original, modified, editable);
   const tokenizeMaxLength = highlighting === 'off' ? 0 : undefined;
   const workers = highlighting === 'background' ? highlightWorkers() : undefined;
   const virtualized = !editable && highlighting !== 'inline';

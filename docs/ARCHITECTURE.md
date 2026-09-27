@@ -218,7 +218,8 @@ renderer/src/
   read-only diff up to 4 MB also renders only the lines in view, shows as plain text at once and highlights in Pierre's
   workers (`highlightWorkers`, a 50,000-line diff in 6 s); anything bigger, and an editable diff past 400 KB (Pierre
   highlights editors on the main thread, pool or not), is plain text, with a quiet "Large file · no syntax
-  highlighting" in the header.
+  highlighting" in the header; such a diff is the "text" language (`highlightedLanguage`), or the editor would color
+  the lines typed into it.
   Every diff follows Split/Unified, one from or to an empty file (an added file, an empty base) too: `shownDiff` keeps
   both sides where Pierre would show a new or deleted file in one column, and the empty side is hatched like any added
   lines. "No newline at end of file" shows only where the final line break is what changed (`noNewlineMarker`); a diff

@@ -1,3 +1,6 @@
+import type { SupportedLanguages } from '@pierre/diffs';
+import { syntaxLanguage } from '../../../lib/syntaxLanguage';
+
 /**
  * How a diff is syntax highlighted: `inline` on the main thread before it shows, `background` in Pierre's workers
  * after it shows as plain text, or `off` (plain text).
@@ -25,4 +28,12 @@ export function syntaxHighlighting(original: string, modified: string, editable:
   const size = original.length + modified.length;
   if (size <= MAX_HIGHLIGHTED_CHARS) return 'inline';
   return !editable && size <= MAX_BACKGROUND_HIGHLIGHTED_CHARS ? 'background' : 'off';
+}
+
+/**
+ * The language to give Pierre for a diff highlighted so: plain text is the "text" language too, since the editor colors
+ * the lines it renders again as they're typed by the language, whatever the diff around them shows.
+ */
+export function highlightedLanguage(highlighting: SyntaxHighlighting, fileName: string): SupportedLanguages {
+  return highlighting === 'off' ? 'text' : syntaxLanguage(fileName);
 }
