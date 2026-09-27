@@ -4,9 +4,21 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { runAction } from '../../app/operations/runOperation';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
+import { needsReviewerForStatus } from './reviewStatus';
 
-export function setReviewStatus(workspacePath: string, review: CodeReviewSummary, status: CodeReviewStatus): Promise<unknown> {
-  return runAction(workspacePath, "Couldn't change the review status", () => api.codeReviews.update(workspacePath, review.id, { status }));
+/** `cm` keeps the status of a review nobody is assigned to, so one without a reviewer asks for one and sets both at once. */
+export async function setReviewStatus(workspacePath: string, review: CodeReviewSummary, status: CodeReviewStatus): Promise<void> {
+  let assignee: string | undefined;
+  if (needsReviewerForStatus(review)) {
+    assignee = await prompt({
+      title: `Mark as “${status}”`,
+      label: 'Reviewer',
+      description: 'A review needs a reviewer before its status can change.',
+      confirmLabel: 'Assign and mark',
+    });
+    if (assignee === undefined) return;
+  }
+  await runAction(workspacePath, "Couldn't change the review status", () => api.codeReviews.update(workspacePath, review.id, { status, assignee }));
 }
 
 export async function reassignReview(workspacePath: string, review: CodeReviewSummary): Promise<void> {
