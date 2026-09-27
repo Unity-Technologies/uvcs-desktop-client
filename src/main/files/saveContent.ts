@@ -28,7 +28,9 @@ async function saveLoadedRevision(cm: CmClient, workspacePath: string, path: str
   // `cm rm` takes the item out of the workspace tree, so its path stops resolving: find it through its folder.
   const throughFolder = async () => {
     const xml = await cm.query(['fileinfo', dirname(absolutePath), absolutePath, '--xml'], { cwd: workspacePath });
-    await saveRevision(cm, workspacePath, removedItemSpec(xml, basename(absolutePath)), target);
+    const removed = removedItemSpec(xml, basename(absolutePath));
+    // Nothing loaded (an added file, or one the branch deleted): its loaded version is empty.
+    await (removed ? saveRevision(cm, workspacePath, removed, target) : writeFile(target, ''));
   };
   // A file gone from disk was most likely removed: its folder first, so no `cm cat` fails (in red, in the command log).
   const [first, then] = existsSync(absolutePath) ? [byPath, throughFolder] : [throughFolder, byPath];

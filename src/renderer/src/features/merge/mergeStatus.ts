@@ -1,4 +1,5 @@
 import type { DirectoryConflictResolution, MergeChange } from '@shared/domain/merge';
+import type { StatusTone as ChangeTone } from '../../components/StatusBadge';
 import type { MergeLabels } from './mergeDescription';
 import type { MergeItem } from './mergeItems';
 import type { FileConflictState } from './resolve/useFileConflicts';
@@ -120,6 +121,11 @@ export function presentStatus(status: ConflictStatus, labels: MergeLabels, tool 
 }
 
 /** A change that applies cleanly, in future words: "Will be added", with why (only one side touched it). */
+/** The badge of a change that applies cleanly: its kind. */
+export function changeTone(change: MergeChange): ChangeTone {
+  return change.kind;
+}
+
 export function describeChange(change: MergeChange, labels: MergeLabels): string {
   const source = labels.roles.source.name.toLowerCase();
   switch (change.kind) {
