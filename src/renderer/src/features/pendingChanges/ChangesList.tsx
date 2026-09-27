@@ -9,12 +9,12 @@ import { Arrivals } from '../../lib/arrivals';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { isMac } from '../../lib/platform';
 import { selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
-import { Checkbox } from '../../ui/Checkbox';
+import { Checkbox, type CheckState } from '../../ui/Checkbox';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { describeKinds, isCheckinCandidate } from './changeCategories';
 import { changeTone } from './changeTone';
-import { rowIndent, treeLevel, type ChangeRow } from './changeRows';
+import { menuTargetOf, rowIndent, treeLevel, type ChangeRow } from './changeRows';
 import { LockChip } from './locks/LockChip';
 import type { PendingLocks } from './locks/pendingLocks';
 import { isReviewKey, toggleReviewedFromKey } from '../review/reviewKey';
@@ -78,6 +78,8 @@ export function ChangesList({
 
   // A plain press on a row of a multi-selection keeps the selection until release, so the whole of it can be dragged.
   const narrowOnClick = useRef<string | null>(null);
+  // A folder or changelist right-clicked: the menu is for what it holds, not for the files selected elsewhere.
+  const menuRow = useRef<ChangeRow | null>(null);
 
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -87,6 +89,11 @@ export function ChangesList({
   });
 
   const selectedChanges = (): PendingChange[] => changeRows.filter((row) => selection.selected.has(row.key)).map((row) => row.change);
+  const menuEntries = (): MenuEntry[] => {
+    const target = menuTargetOf(menuRow.current);
+    if (target === null) return contextMenu(selectedChanges());
+    return Array.isArray(target) ? contextMenu(target) : changelistMenu(target);
+  };
   const { dragProps, dropProps, dropTarget } = useChangelistDrop({ selection, onSelectionChange, selectedChanges, onMoveToChangelist });
 
   const moveSteps = (key: string): number | undefined => {
@@ -149,7 +156,7 @@ export function ChangesList({
   };
 
   return (
-    <ActionContextMenu entries={() => contextMenu(selectedChanges())}>
+    <ActionContextMenu entries={menuEntries}>
       <div
         ref={viewportRef}
         className={styles.list}
@@ -159,6 +166,7 @@ export function ChangesList({
         aria-multiselectable
         aria-activedescendant={focusedIndex === -1 ? undefined : `${rowIdPrefix}-${focusedIndex}`}
         onKeyDown={onKeyDown}
+        onContextMenuCapture={() => (menuRow.current = null)}
         {...MAIN_FOCUS}
       >
         <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
@@ -185,6 +193,7 @@ export function ChangesList({
                 onMouseDown={(event) => onRowMouseDown(row, event)}
                 onClick={() => onRowClick(row)}
                 onDoubleClick={() => row.type === 'change' && onOpen(row.change)}
+                onContextMenu={() => row.type !== 'change' && (menuRow.current = row)}
                 {...dragProps(row)}
                 {...dropProps(row)}
               >
@@ -218,7 +227,7 @@ function RowContent({ row, onToggleIncluded, changelistMenu, review, locks }: Ro
       return (
         <>
           <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
-          <Checkbox checked={row.checkState} onChange={(checked) => onToggleIncluded(row, checked)} ariaLabel={`Include ${row.label}`} focusable={false} />
+          <RowCheckbox row={row} label={row.label} onToggleIncluded={onToggleIncluded} />
           <span className={styles.groupLabel} data-tip={row.changelist?.description}>
             {row.label}
           </span>
@@ -237,9 +246,12 @@ function RowContent({ row, onToggleIncluded, changelistMenu, review, locks }: Ro
       return (
         <>
           <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
-          <Checkbox checked={row.checkState} onChange={(checked) => onToggleIncluded(row, checked)} ariaLabel={`Include ${row.name}`} focusable={false} />
+          <RowCheckbox row={row} label={row.name} onToggleIncluded={onToggleIncluded} />
+          {row.change && <StatusBadge tone={changeTone(row.change)} title={describeKinds(row.change)} />}
           <Folder size={14} className={styles.folder} />
-          <span className={styles.directoryName}>{row.name}</span>
+          <span className={styles.directoryName} data-tip={row.name.includes('/') ? row.name : undefined}>
+            {row.name}
+          </span>
           {folderStatus && (
             <span className={styles.trailing}>
               <ReviewToggle folder status={folderStatus} onToggle={() => review.toggle(row.changes)} />
@@ -273,4 +285,10 @@ function RowContent({ row, onToggleIncluded, changelistMenu, review, locks }: Ro
       );
     }
   }
+}
+
+/** A changelist's or folder's checkbox, or its room when nothing in it can be checked in. */
+function RowCheckbox({ row, label, onToggleIncluded }: { row: ChangeRow & { checkState: CheckState | null }; label: string } & Pick<ChangesListProps, 'onToggleIncluded'>) {
+  if (row.checkState === null) return <span className={styles.checkboxPlaceholder} />;
+  return <Checkbox checked={row.checkState} onChange={(checked) => onToggleIncluded(row, checked)} ariaLabel={`Include ${label}`} focusable={false} />;
 }

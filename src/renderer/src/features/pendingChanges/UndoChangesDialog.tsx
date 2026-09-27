@@ -2,14 +2,14 @@ import { useState } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge } from '../../components/StatusBadge';
-import { fileNameOf, pluralize } from '../../lib/text';
+import { fileNameOf, formatCount, pluralize } from '../../lib/text';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { describeKinds } from './changeCategories';
 import { changeTone } from './changeTone';
-import { suggestsBackup, UNDO_LIST_MAX, undoConsequences } from './undoPlan';
+import { offersBackup, suggestsBackup, UNDO_LIST_MAX, undoConsequences } from './undoPlan';
 import styles from './UndoChangesDialog.module.css';
 
 export interface UndoAnswer {
@@ -23,13 +23,14 @@ export function askUndoChanges(changes: PendingChange[]): Promise<UndoAnswer | u
 }
 
 function UndoChangesDialog({ changes, finish }: { changes: PendingChange[]; finish: (answer: UndoAnswer | undefined) => void }) {
-  const [backup, setBackup] = useState(() => suggestsBackup(changes));
+  const canBackup = offersBackup(changes);
+  const [backup, setBackup] = useState(() => canBackup && suggestsBackup(changes));
   const listed = changes.slice(0, UNDO_LIST_MAX);
   const more = changes.length - listed.length;
 
   return (
     <Dialog
-      title={changes.length === 1 ? `Undo changes to ${fileNameOf(changes[0]!.path)}?` : `Undo ${changes.length} changes?`}
+      title={changes.length === 1 ? `Undo changes to ${fileNameOf(changes[0]!.path)}?` : `Undo ${formatCount(changes.length)} changes?`}
       width={540}
       onClose={() => finish(undefined)}
       onSubmit={() => finish({ backup })}
@@ -54,14 +55,16 @@ function UndoChangesDialog({ changes, finish }: { changes: PendingChange[]; fini
             <PathLabel path={change.path} oldPath={change.oldPath} />
           </div>
         ))}
-        {more > 0 && <div className={styles.more}>…and {more} more</div>}
+        {more > 0 && <div className={styles.more}>…and {formatCount(more)} more</div>}
       </div>
-      <div className={styles.backup}>
-        <Checkbox checked={backup} onChange={setBackup} label="Shelve a backup first" />
-        <span className={styles.hint}>
-          {backup ? 'If you need the changes back, apply the shelve from Shelves.' : 'Without a backup, this cannot be undone.'}
-        </span>
-      </div>
+      {canBackup && (
+        <div className={styles.backup}>
+          <Checkbox checked={backup} onChange={setBackup} label="Shelve a backup first" />
+          <span className={styles.hint}>
+            {backup ? 'If you need the changes back, apply the shelve from Shelves.' : 'Without a backup, this cannot be undone.'}
+          </span>
+        </div>
+      )}
     </Dialog>
   );
 }

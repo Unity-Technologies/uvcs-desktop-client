@@ -1,6 +1,7 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { compareTones } from '../../components/changeFilter';
 import type { CheckState } from '../../ui/Checkbox';
+import { isCheckinCandidate } from './changeCategories';
 import { changeTone } from './changeTone';
 
 /** A changelist header. */
@@ -11,7 +12,8 @@ interface GroupRow {
   /** Set when the group is a user changelist. */
   changelist?: Changelist;
   changes: PendingChange[];
-  checkState: CheckState;
+  /** Null when nothing in it can be checked in. */
+  checkState: CheckState | null;
   collapsed: boolean;
 }
 
@@ -21,8 +23,12 @@ interface DirectoryRow {
   path: string;
   name: string;
   depth: number;
+  /** The folder's own change, when it is one (a new private folder, an added or a deleted one). */
+  change?: PendingChange;
+  /** Every change in the folder, its own included. */
   changes: PendingChange[];
-  checkState: CheckState;
+  /** Null when nothing in it can be checked in. */
+  checkState: CheckState | null;
   collapsed: boolean;
 }
 
@@ -118,13 +124,39 @@ export function changesUnderRow(row: ChangeRow): PendingChange[] {
   return row.type === 'change' ? [row.change] : row.changes;
 }
 
+/**
+ * Folder by folder, so everything in a folder comes right after it: comparing whole paths puts "a-b.txt" between "a"
+ * and "a/c.txt", and "src/b" between "Src/a" and "Src/c".
+ */
+export function comparePaths(a: string, b: string): number {
+  return compareSegments(a.split('/'), b.split('/'));
+}
+
+function compareSegments(a: string[], b: string[]): number {
+  for (let index = 0; index < Math.min(a.length, b.length); index++) {
+    const order = collator.compare(a[index]!, b[index]!);
+    if (order !== 0) return order;
+  }
+  return a.length - b.length;
+}
+
+/** `localeCompare`'s order, many times faster over thousands of paths. */
+const collator = new Intl.Collator();
+
+/** What the menu of a right-clicked row is for: a changelist, the changes in a folder or the default changelist, or the selected files (null). */
+export function menuTargetOf(row: ChangeRow | null): Changelist | PendingChange[] | null {
+  if (!row || row.type === 'change') return null;
+  return row.type === 'group' && row.changelist ? row.changelist : row.changes;
+}
+
 function sortByPath(changes: PendingChange[]): PendingChange[] {
-  return [...changes].sort((a, b) => a.path.localeCompare(b.path));
+  const segments = new Map(changes.map((change) => [change, change.path.split('/')]));
+  return [...changes].sort((a, b) => compareSegments(segments.get(a)!, segments.get(b)!));
 }
 
 /** A flat list reads by kind of change first, in the order of the filter chips; a tree has to follow the folders. */
 export function sortByStatus(changes: PendingChange[]): PendingChange[] {
-  return [...changes].sort((a, b) => compareTones(changeTone(a), changeTone(b)) || a.path.localeCompare(b.path));
+  return [...changes].sort((a, b) => compareTones(changeTone(a), changeTone(b)) || collator.compare(a.path, b.path));
 }
 
 function appendChangeRows(
@@ -165,36 +197,80 @@ function appendTreeRows(
   isChecked: (change: PendingChange) => boolean,
   collapsed: ReadonlySet<string>,
 ): void {
-  const emittedDirectories = new Set<string>();
+  const byPath = new Map(changes.map((change) => [change.path, change]));
+  const folders = new Set(changes.flatMap((change) => foldersAbove(change.path)));
+  // The row showing each folder: folders that only hold the next one share its row ("deep/very/long").
+  const folderRows = new Map<string, DirectoryRow>();
   let hiddenBelow: string | null = null;
 
-  for (const change of changes) {
-    if (hiddenBelow && change.path.startsWith(`${hiddenBelow}/`)) continue;
+  changes.forEach((change, index) => {
+    if (hiddenBelow && change.path.startsWith(`${hiddenBelow}/`)) return;
     hiddenBelow = null;
 
-    const directories = change.path.split('/').slice(0, -1);
-    let collapsedHere = false;
-    directories.forEach((name, depth) => {
-      if (collapsedHere) return;
-      const path = directories.slice(0, depth + 1).join('/');
-      const key = `directory:${groupKey}:${path}`;
-      if (!emittedDirectories.has(path)) {
-        emittedDirectories.add(path);
-        const inside = changes.filter((candidate) => candidate.path.startsWith(`${path}/`));
-        rows.push({ type: 'directory', key, path, name, depth, changes: inside, checkState: combinedCheckState(inside, isChecked), collapsed: collapsed.has(key) });
+    const segments = change.path.split('/');
+    const pathAt = (level: number): string => segments.slice(0, level + 1).join('/');
+    // A folder that is a change itself and holds others is their folder's row, not one more row next to it.
+    const isFolder = folders.has(change.path);
+    const folderCount = isFolder ? segments.length : segments.length - 1;
+    let depth = 0;
+    for (let level = 0; level < folderCount; level++) {
+      let row = folderRows.get(pathAt(level));
+      if (!row) {
+        const inside = changesInFolder(changes, index, pathAt(level));
+        let last = level;
+        while (last + 1 < folderCount && !byPath.has(pathAt(last)) && holdsOnly(inside, pathAt(last + 1))) last++;
+        const path = pathAt(last);
+        const key = `directory:${groupKey}:${path}`;
+        row = {
+          type: 'directory',
+          key,
+          path,
+          name: segments.slice(level, last + 1).join('/'),
+          depth,
+          change: byPath.get(path),
+          changes: inside,
+          checkState: combinedCheckState(inside, isChecked),
+          collapsed: collapsed.has(key),
+        };
+        rows.push(row);
+        for (let chained = level; chained <= last; chained++) folderRows.set(pathAt(chained), row);
       }
-      if (collapsed.has(key)) {
-        collapsedHere = true;
-        hiddenBelow = path;
+      if (row.collapsed) {
+        hiddenBelow = row.path;
+        return;
       }
-    });
+      level = row.path.split('/').length - 1;
+      depth = row.depth + 1;
+    }
 
-    if (!collapsedHere) rows.push({ type: 'change', key: changeKey(change), change, depth: directories.length, checked: isChecked(change) });
-  }
+    if (!isFolder) rows.push({ type: 'change', key: changeKey(change), change, depth, checked: isChecked(change) });
+  });
 }
 
-function combinedCheckState(changes: PendingChange[], isChecked: (change: PendingChange) => boolean): CheckState {
-  const checkedCount = changes.filter(isChecked).length;
+/** Whether all a folder holds is `child`, one of its folders, or in it. */
+function holdsOnly(inside: PendingChange[], child: string): boolean {
+  // Sorted by `comparePaths`, the first and the last change tell for all of them.
+  return [inside[0]!, inside.at(-1)!].every((change) => change.path === child || change.path.startsWith(`${child}/`));
+}
+
+/** The changes in a folder, first met at `first`: sorted by `comparePaths`, they are the ones right after it. */
+function changesInFolder(sorted: PendingChange[], first: number, folder: string): PendingChange[] {
+  let end = first;
+  while (end < sorted.length && (sorted[end]!.path === folder || sorted[end]!.path.startsWith(`${folder}/`))) end++;
+  return sorted.slice(first, end);
+}
+
+/** "a/b/c.txt" is in "a" and "a/b". */
+function foldersAbove(path: string): string[] {
+  const parts = path.split('/');
+  return parts.slice(1).map((_, index) => parts.slice(0, index + 1).join('/'));
+}
+
+/** Over the changes a folder or changelist holds that can go into a check-in; null when none can (only ignored files). */
+function combinedCheckState(changes: PendingChange[], isChecked: (change: PendingChange) => boolean): CheckState | null {
+  const candidates = changes.filter(isCheckinCandidate);
+  if (candidates.length === 0) return null;
+  const checkedCount = candidates.filter(isChecked).length;
   if (checkedCount === 0) return false;
-  return checkedCount === changes.length ? true : 'mixed';
+  return checkedCount === candidates.length ? true : 'mixed';
 }

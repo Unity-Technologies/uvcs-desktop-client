@@ -9,6 +9,7 @@ import type {
   PendingChangesFilter,
   PendingChangesSnapshot,
 } from '@shared/domain/pendingChanges';
+import { checkinArgs } from '../cm/checkinArgs';
 import { explainLockedItems } from '../cm/lockedItems';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readCheckinProgress } from '../cm/progress/checkinProgress';
@@ -39,17 +40,11 @@ export function createPendingChangesService({ cm, operations }: ServiceContext):
     return operations.run(operationId, ({ signal, progressOf }) =>
       withTempFile(request.comment, async (commentsFile) => {
         const output = await explainLockedItems('checked in', () =>
-          cm.execute(
-            [
-              'checkin',
-              ...absolutePaths(workspacePath, request.paths),
-              '--all',
-              '--private',
-              `-commentsfile=${commentsFile}`,
-              '--machinereadable',
-            ],
-            { cwd: workspacePath, signal, onOutputLine: progressOf(readCheckinProgress) },
-          ),
+          cm.execute(checkinArgs(absolutePaths(workspacePath, request.paths), commentsFile), {
+            cwd: workspacePath,
+            signal,
+            onOutputLine: progressOf(readCheckinProgress),
+          }),
         );
         const created = CREATED_CHANGESET_LINE.exec(output);
         if (!created) throw new Error('The checkin finished but no changeset was reported.');

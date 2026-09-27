@@ -1,6 +1,6 @@
 import { CheckCircle2, Files, GitMerge, List, ListTree, SlidersHorizontal } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import type { PendingChange } from '@shared/domain/pendingChanges';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { openSettingsDialogAt } from '../../app/settings/SettingsDialog';
 import { useSettings } from '../../app/settings/useSettings';
@@ -9,6 +9,7 @@ import { selectAfterLeaving, settleBeforeLeaving } from '../../app/navigation/le
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { joinComment } from '../../lib/comment';
 import { EMPTY_SELECTION } from '../../lib/selection';
+import { formatCount } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
@@ -37,8 +38,8 @@ import { bulkPrivateFiles } from './bulkPrivate';
 import { behindBranch, behindDescription } from './checkinBehind';
 import { mergeSourceChangeset, uploadSize } from './checkinButton';
 import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkinAfterUpdate';
-import { checkinChanges, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
-import { isCheckinCandidate } from './changeCategories';
+import { checkinChanges, confirmCheckinWithoutComment, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
+import { isCheckinCandidate, isShelvable, matchesBranch } from './changeCategories';
 import { buildChangeRows, changeKey, changesUnderRow, topLevelCheckboxInset, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
 import { changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
@@ -53,6 +54,7 @@ import { usePendingChanges } from './usePendingChanges';
 import styles from './PendingChangesView.module.css';
 
 const NO_CHANGES: PendingChange[] = [];
+const NO_CHANGELISTS: Changelist[] = [];
 const changePath = (change: PendingChange): string => change.path;
 
 export function PendingChangesView() {
@@ -63,11 +65,12 @@ export function PendingChangesView() {
   const settings = useSettings();
   const { layout, setLayout, grouping, setGrouping } = usePendingChangesViewStore();
   const draft = useCheckinDraft(workspacePath);
-  const { setMessage, setIncluded, reset } = useCheckinDraftStore();
+  const { setMessage, setIncluded, clearMessage } = useCheckinDraftStore();
 
   const [selection, setSelection] = useViewSelection('changes');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const summaryRef = useRef<HTMLInputElement>(null);
 
   const allChanges = snapshot?.changes ?? NO_CHANGES;
   const review = usePendingReview(workspacePath, allChanges, snapshot !== undefined && !isPlaceholderData);
@@ -91,13 +94,18 @@ export function PendingChangesView() {
     { branch: branchName, loadedChangeset: workspace?.loadedChangeset },
     included.length,
   );
+  const shelvable = included.filter(isShelvable);
   const bulkPrivate = bulkPrivateFiles(included);
   const reviewed = reviewProgress(included, review.statusOf);
   const successMoment = useSuccessMomentStore((state) => state.moments[workspacePath]);
   const clearSuccessMoment = useSuccessMomentStore((state) => state.clear);
   const selectedCount = changes.filter((change) => selection.selected.has(changeKey(change))).length;
-  const changelists = snapshot?.changelists ?? [];
-  const rows = buildChangeRows({ changes, changelists, layout, grouping, isChecked: isIncluded, collapsed });
+  const changelists = snapshot?.changelists ?? NO_CHANGELISTS;
+  // Typing the comment renders the view again: thousands of changes are laid out again only when they or their layout change.
+  const rows = useMemo(
+    () => buildChangeRows({ changes, changelists, layout, grouping, isChecked: isIncluded, collapsed }),
+    [changes, changelists, layout, grouping, draft.excludedPaths, collapsed],
+  );
   const focused = changes.find((change) => changeKey(change) === selection.anchor);
   const mergeChanges = allChanges.filter((change) => change.mergeInfo);
   const { data: mergeSource } = useChangeset(mergeSourceChangeset(mergeChanges));
@@ -142,29 +150,29 @@ export function PendingChangesView() {
   };
 
   const checkin = async (): Promise<boolean> => {
+    const comment = joinComment(draft);
+    if (!comment.trim() && settings.warnOnEmptyComment && !(await confirmCheckinWithoutComment())) {
+      // Writing one is the way on.
+      summaryRef.current?.focus();
+      return false;
+    }
     // Checking in takes the files as they are on disk: unsaved edits are saved first, or dropped, or it waits.
     if (!(await settleBeforeLeaving())) return false;
     if (bulkPrivate && !(await confirmBulkPrivateCheckin(bulkPrivate))) return false;
-    const done = await runBusy(() =>
-      checkinChanges({
-        workspacePath,
-        changes: included,
-        comment: joinComment(draft),
-        warnOnEmptyComment: settings.warnOnEmptyComment,
-        updateFirst: behind !== null,
-      }),
-    );
+    const done = await runBusy(() => checkinChanges({ workspacePath, changes: included, comment, updateFirst: behind !== null }));
     if (done) {
-      reset(workspacePath);
+      clearMessage(workspacePath);
       setSelection(EMPTY_SELECTION);
     }
     return done;
   };
 
+  // With nothing pending, the empty state says so: no count, no ways to lay out a list that isn't there.
+  const empty = snapshot?.changes.length === 0;
   const header = (
     <ViewHeader
       title="Changes"
-      subtitle={snapshot && `${snapshot.changes.filter(isCheckinCandidate).length} pending`}
+      subtitle={snapshot && !empty && `${formatCount(snapshot.changes.filter(isCheckinCandidate).length)} pending`}
       actions={
         <>
           <ReviewModeButton workspacePath={workspacePath} />
@@ -173,29 +181,33 @@ export function PendingChangesView() {
         </>
       }
     >
-      <SegmentedControl<ChangesGrouping>
-        value={grouping}
-        onChange={setGrouping}
-        segments={[
-          { value: 'none', label: 'Files' },
-          { value: 'changelist', label: 'Changelists' },
-        ]}
-      />
-      <SegmentedControl<ChangesLayout>
-        value={layout}
-        onChange={setLayout}
-        segments={[
-          { value: 'list', label: <List size={13} />, title: 'List' },
-          { value: 'tree', label: <ListTree size={13} />, title: 'Tree' },
-        ]}
-      />
+      {!empty && (
+        <>
+          <SegmentedControl<ChangesGrouping>
+            value={grouping}
+            onChange={setGrouping}
+            segments={[
+              { value: 'none', label: 'Files' },
+              { value: 'changelist', label: 'Changelists' },
+            ]}
+          />
+          <SegmentedControl<ChangesLayout>
+            value={layout}
+            onChange={setLayout}
+            segments={[
+              { value: 'list', label: <List size={13} />, title: 'List' },
+              { value: 'tree', label: <ListTree size={13} />, title: 'Tree' },
+            ]}
+          />
+        </>
+      )}
     </ViewHeader>
   );
 
   if (isLoading) return <>{header}<ListSkeleton rowHeight={28} /></>;
   if (error) return <>{header}<EmptyState title="Couldn't read pending changes" description={error.message} /></>;
 
-  if (snapshot?.changes.length === 0) {
+  if (empty) {
     return (
       <>
         {header}
@@ -273,6 +285,12 @@ export function PendingChangesView() {
             )}
             {hiddenIncludedCount > 0 && <HiddenCheckedNotice count={hiddenIncludedCount} onClear={clearFilter} />}
             <LockedByOthersNotice changes={included} locks={locks} />
+            {/* Files never checked in don't make a task unfinished: finishing it is offered as on a clean workspace. */}
+            {branchName && matchesBranch(allChanges) && (
+              <div className={styles.taskSuggestion}>
+                <MergeTaskSuggestion workspacePath={workspacePath} branchName={branchName} />
+              </div>
+            )}
             {bulkPrivate && (
               <BulkPrivateNotice
                 bulk={bulkPrivate}
@@ -289,11 +307,13 @@ export function PendingChangesView() {
               />
             )}
             <CheckinPanel
+              summaryRef={summaryRef}
               summary={draft.summary}
               description={draft.description}
               onMessageChange={(message) => setMessage(workspacePath, message)}
               includedCount={included.length}
               uploadBytes={uploadSize(included)}
+              shelvable={{ count: shelvable.length, uploadBytes: uploadSize(shelvable) }}
               branchName={workspace?.selector.name ?? ''}
               merging={mergeChanges.length > 0}
               behindCount={behind?.count ?? 0}
@@ -302,13 +322,13 @@ export function PendingChangesView() {
               recentComments={settings.recentComments}
               busy={busy}
               onCheckin={checkin}
-              onShelve={() => runBusy(() => shelveChanges(workspacePath, included, joinComment(draft)))}
+              onShelve={() => runBusy(() => shelveChanges(workspacePath, shelvable, joinComment(draft)))}
             />
           </div>
         }
         second={
           selectedCount > 1 ? (
-            <EmptyState icon={<Files size={24} />} title={`${selectedCount} files selected`} description="Select a single file to see its diff." />
+            <EmptyState icon={<Files size={24} />} title={`${formatCount(selectedCount)} files selected`} description="Select a single file to see its diff." />
           ) : focused ? (
             <ChangeDiffPanel workspacePath={workspacePath} change={focused} reviewMark={review.marks.get(focused.path)} />
           ) : (

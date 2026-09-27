@@ -1,4 +1,5 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
+import { formatCount } from '../../lib/text';
 import { categoryOf } from './changeCategories';
 
 /** More private files than this in one check-in is rarely on purpose: build output, caches, generated code. */
@@ -39,7 +40,7 @@ export function bulkPrivateFiles(included: PendingChange[]): BulkPrivate | null 
 export function bulkPrivateMessage({ fileCount, folders }: BulkPrivate): string {
   const named = folders.slice(0, NAMED_FOLDERS).map((folder) => `${folder}/`);
   const where = named.length === 0 ? '' : ` (${named.join(', ')}${folders.length > NAMED_FOLDERS ? '…' : ''})`;
-  return `${fileCount.toLocaleString('en-US')} private ${fileCount === 1 ? 'file is' : 'files are'} included${where}`;
+  return `${formatCount(fileCount)} private ${fileCount === 1 ? 'file is' : 'files are'} included${where}`;
 }
 
 function outermostPrivateFolder(path: string, privateFolders: ReadonlySet<string>): string | undefined {
