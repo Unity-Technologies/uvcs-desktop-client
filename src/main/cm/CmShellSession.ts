@@ -1,7 +1,8 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import type { CmResult } from './CmResult';
+import { changesWorkspace } from '../watch/changesWorkspace';
 import { OutputBuffer } from './OutputBuffer';
-import { toShellCommandLine } from './shellCommandLine';
+import { SHELL_ARGS, toShellCommandLine } from './shellCommandLine';
 
 const RESULT_LINE = /^CommandResult (-?\d+)\r?\n$/;
 /** Longer than any `CommandResult <code>` line. */
@@ -11,12 +12,15 @@ const PROMPT_LIKE_TAIL = /^[^<].*(\[[^\]]*\]|[:?])\s*$/;
 /** Longer last lines are output (e.g. `--format` records), not a question. */
 const MAX_PROMPT_LENGTH = 300;
 const PROMPT_STALL_MS = 1500;
-const COMMAND_TIMEOUT_MS = 120_000;
+const READ_TIMEOUT_MS = 120_000;
+/** Undoing, adding or checking out 20,000 files takes minutes; a stalled prompt is caught long before either timeout. */
+const WRITE_TIMEOUT_MS = 30 * 60_000;
 /** Local and instant: its answer tells the process is up. */
 const STARTUP_PROBE = ['version'];
 
 interface PendingCommand {
   commandLine: string;
+  timeoutMs: number;
   resolve: (result: CmResult) => void;
   reject: (error: Error) => void;
 }
@@ -67,7 +71,7 @@ export class CmShellSession {
 
   run(args: string[]): Promise<CmResult> {
     return new Promise((resolve, reject) => {
-      this.queue.push({ commandLine: toShellCommandLine(args), resolve, reject });
+      this.queue.push({ commandLine: toShellCommandLine(args), timeoutMs: shellCommandTimeoutMs(args), resolve, reject });
       this.runNext();
     });
   }
@@ -85,14 +89,14 @@ export class CmShellSession {
     if (this.running || this.queue.length === 0) return;
 
     this.running = this.queue.shift()!;
-    this.timeoutTimer = setTimeout(() => this.abortRunning('The cm command took too long and was stopped.'), COMMAND_TIMEOUT_MS);
+    this.timeoutTimer = setTimeout(() => this.abortRunning('The cm command took too long and was stopped.'), this.running.timeoutMs);
     this.ensureProcess().stdin.write(`${this.running.commandLine}\n`);
   }
 
   private ensureProcess(): ChildProcessWithoutNullStreams {
     if (this.process) return this.process;
 
-    const child = spawn(this.cmPath, ['shell'], { cwd: this.cwd, windowsHide: true });
+    const child = spawn(this.cmPath, SHELL_ARGS, { cwd: this.cwd, windowsHide: true });
     this.answered = false;
     // What a killed process still had in its pipes must not end up in the output of the next command.
     const onData = (text: string) => child === this.process && this.onOutput(text);
@@ -125,7 +129,9 @@ export class CmShellSession {
     if (!result || !this.running) return;
 
     // Not a regular expression: V8 keeps the last string one ran on, which would hold the whole output in memory.
-    const output = this.buffer.textBefore(length - tail.length + result.index).replaceAll('\r\n', '\n');
+    // Windows ends lines with CRLF: the last one's CR stays before the result line's LF.
+    const text = this.buffer.textBefore(length - tail.length + result.index).replaceAll('\r\n', '\n');
+    const output = text.endsWith('\r') ? text.slice(0, -1) : text;
     this.buffer.clear();
     this.answered = true;
     this.finishRunning().resolve({ output, exitCode: result.exitCode });
@@ -185,6 +191,11 @@ export class CmShellSession {
     this.promptTimer = null;
     this.timeoutTimer = null;
   }
+}
+
+/** How long a command may run: reads are quick, while writes to thousands of files take minutes. */
+export function shellCommandTimeoutMs(args: readonly string[]): number {
+  return changesWorkspace(args) ? WRITE_TIMEOUT_MS : READ_TIMEOUT_MS;
 }
 
 /**
