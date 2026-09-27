@@ -10,6 +10,8 @@ export interface Action {
   shortcut?: string;
   danger?: boolean;
   disabled?: boolean;
+  /** Why it's disabled, as its tooltip in menus. */
+  disabledReason?: string;
   run: () => void;
 }
 

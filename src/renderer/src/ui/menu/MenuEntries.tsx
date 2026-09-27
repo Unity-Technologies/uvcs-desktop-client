@@ -8,6 +8,7 @@ type Primitive = ComponentType<{
   children?: ReactNode;
   className?: string;
   disabled?: boolean;
+  'data-tip'?: string;
   onSelect?: () => void;
   sideOffset?: number;
 }>;
@@ -52,6 +53,7 @@ export function MenuEntries({ entries, primitives }: { entries: MenuEntry[]; pri
         key={entry.id}
         className={[styles.item, entry.danger && styles.danger].filter(Boolean).join(' ')}
         disabled={entry.disabled}
+        data-tip={entry.disabled ? entry.disabledReason : undefined}
         onSelect={() => runAfterMenuCloses(entry.run)}
       >
         <span className={styles.icon}>{ActionIcon && <ActionIcon size={14} />}</span>
