@@ -109,7 +109,8 @@ export class CmShellSession {
     const result = resultLineAtEnd(tail);
     if (!result || !this.running) return;
 
-    const output = this.buffer.textBefore(length - tail.length + result.index).replace(/\r\n/g, '\n');
+    // Not a regular expression: V8 keeps the last string one ran on, which would hold the whole output in memory.
+    const output = this.buffer.textBefore(length - tail.length + result.index).replaceAll('\r\n', '\n');
     this.buffer.clear();
     this.finishRunning().resolve({ output, exitCode: result.exitCode });
     this.runNext();

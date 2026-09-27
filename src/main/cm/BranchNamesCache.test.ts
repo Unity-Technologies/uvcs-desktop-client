@@ -15,6 +15,11 @@ function setup(branches = [1, 2, 3].map((id) => ({ id, name: `/main/b${id}` })))
 }
 
 describe('BranchNamesCache', () => {
+  it('keeps names as they were, whatever their characters', async () => {
+    const { cache } = setup([{ id: 1, name: '/main/tâche-日本-🌿' }]);
+    expect(await cache.resolve('/wk', [1])).toEqual(new Map([[1, '/main/tâche-日本-🌿']]));
+  });
+
   it('reads every branch name once, when an id is unknown', async () => {
     const { cache, reads } = setup();
     expect(await cache.resolve('/wk', [1, 2])).toEqual(new Map([[1, '/main/b1'], [2, '/main/b2']]));

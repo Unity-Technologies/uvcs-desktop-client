@@ -2,7 +2,6 @@ export type XmlNode = Record<string, unknown>;
 
 const ENTITIES: Record<string, string> = { lt: '<', gt: '>', amp: '&', quot: '"', apos: "'" };
 const ENTITY = /&(lt|gt|amp|quot|apos);/g;
-const NAME_END = /[\s/>]/g;
 
 interface OpenElement {
   name: string;
@@ -46,8 +45,7 @@ export function readXmlTree(xml: string, arrays: ReadonlySet<string>): XmlNode {
       position = end + 1;
       if (stack.length > 1) close(stack.pop()!, stack[stack.length - 1]!, arrays);
     } else {
-      NAME_END.lastIndex = tagStart + 1;
-      const nameEnd = NAME_END.exec(xml)?.index ?? xml.length;
+      const nameEnd = nameEndOf(xml, tagStart + 1);
       const name = xml.slice(tagStart + 1, nameEnd);
       const end = tagEnd(xml, nameEnd);
       position = end + 1;
@@ -82,6 +80,18 @@ function close(element: OpenElement, parent: OpenElement, arrays: ReadonlySet<st
   } else {
     siblings[element.name] = [existing, value];
   }
+}
+
+/**
+ * Where a tag's name ends. Not a regular expression: V8 keeps the last string a regular expression ran on, which
+ * would hold the whole output in memory until the next one runs.
+ */
+function nameEndOf(xml: string, from: number): number {
+  for (let index = from; index < xml.length; index++) {
+    const code = xml.charCodeAt(index);
+    if (code === 0x3e /* > */ || code === 0x2f /* / */ || code <= 0x20) return index;
+  }
+  return xml.length;
 }
 
 /** Where a start tag ends: its `>`, skipping any inside quoted attribute values. */
