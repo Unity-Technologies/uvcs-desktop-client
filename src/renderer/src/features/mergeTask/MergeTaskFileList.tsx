@@ -1,21 +1,17 @@
-import type { MergeChangeKind, MergePlan } from '@shared/domain/merge';
-import { PathLabel } from '../../components/PathLabel';
-import { StatusBadge, type StatusTone } from '../../components/StatusBadge';
+import type { MergePlan } from '@shared/domain/merge';
+import type { ItemType } from '@shared/domain/pendingChanges';
+import { ItemPathRow } from '../../components/ItemPathRow';
+import type { StatusTone } from '../../components/StatusBadge';
+import { mergeItemTypes } from '../merge/mergeItemTypes';
+import { changeTone } from '../merge/mergeStatus';
 import styles from './MergeTaskDialog.module.css';
 
 const MAX_LISTED = 300;
 
-const CHANGE_TONES: Record<MergeChangeKind, StatusTone> = {
-  added: 'added',
-  changed: 'changed',
-  deleted: 'deleted',
-  moved: 'moved',
-  permissions: 'permissions',
-};
-
 interface ListedItem {
   path: string;
   oldPath?: string;
+  itemType: ItemType;
   tone: StatusTone;
   title: string;
 }
@@ -35,8 +31,7 @@ export function MergeTaskFileList({ plan, conflicts = false, onOpen }: MergeTask
     <div className={styles.files}>
       {items.slice(0, MAX_LISTED).map((item) => (
         <button key={`${item.tone}:${item.path}`} type="button" className={styles.file} onClick={() => onOpen(item.path)} data-tip="Show the diff">
-          <StatusBadge tone={item.tone} title={item.title} />
-          <PathLabel path={item.path} oldPath={item.oldPath} strikethrough={item.tone === 'deleted'} tooltip={false} />
+          <ItemPathRow path={item.path} itemType={item.itemType} oldPath={item.oldPath} status={{ tone: item.tone, label: item.title }} tooltip={false} />
         </button>
       ))}
       {items.length > MAX_LISTED && <div className={styles.more}>And {items.length - MAX_LISTED} more</div>}
@@ -44,19 +39,28 @@ export function MergeTaskFileList({ plan, conflicts = false, onOpen }: MergeTask
   );
 }
 
+const CHANGE_TITLES = { added: 'Added', changed: 'Changed', deleted: 'Deleted', moved: 'Moved', permissions: 'Only its file permissions change' };
+
 function changeItems(plan: MergePlan): ListedItem[] {
+  const typeOf = mergeItemTypes(plan.changes.map((change) => change.path));
   return plan.changes.map((change) => ({
     path: withoutRoot(change.path),
     oldPath: change.oldPath && withoutRoot(change.oldPath),
-    tone: CHANGE_TONES[change.kind],
-    title: change.kind,
+    itemType: typeOf(change.path),
+    tone: changeTone(change),
+    title: CHANGE_TITLES[change.kind],
   }));
 }
 
 function conflictItems(plan: MergePlan): ListedItem[] {
   return [
-    ...plan.directoryConflicts.map((conflict) => ({ path: withoutRoot(conflict.destination.path), tone: 'conflict' as const, title: conflict.title })),
-    ...plan.fileConflicts.map((conflict) => ({ path: withoutRoot(conflict.path), tone: 'conflict' as const, title: 'Changed on both branches' })),
+    ...plan.directoryConflicts.map((conflict) => ({
+      path: withoutRoot(conflict.destination.path),
+      itemType: conflict.isDirectory ? ('directory' as const) : ('file' as const),
+      tone: 'conflict' as const,
+      title: conflict.title,
+    })),
+    ...plan.fileConflicts.map((conflict) => ({ path: withoutRoot(conflict.path), itemType: 'file' as const, tone: 'conflict' as const, title: 'Changed on both branches' })),
   ];
 }
 

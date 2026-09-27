@@ -2,37 +2,38 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { GitCommitVertical } from 'lucide-react';
 import { useId, useMemo, useRef, type KeyboardEvent } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
-import type { DiffEntry, DiffStatus } from '@shared/domain/diff';
-import { PathLabel } from '../../components/PathLabel';
-import { StatusBadge, type StatusTone } from '../../components/StatusBadge';
+import type { DiffEntry } from '@shared/domain/diff';
+import { ItemPathRow } from '../../components/ItemPathRow';
 import { navigationTarget } from '../../lib/listNavigation';
 import { firstLine } from '../../lib/text';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { Avatar } from '../../ui/Avatar';
 import { RelativeTime } from '../../ui/RelativeTime';
+import { describeDiffEntry, diffEntryTone } from '../diff/diffEntrySources';
+import { ConflictStatusChip } from '../merge/ConflictStatusChip';
+import type { ConflictStatus } from '../merge/mergeStatus';
+import { UPDATE_LABELS } from './updateConflictFiles';
 import { incomingRows, selectionKey, type IncomingRow, type IncomingSelection } from './incomingRows';
 import styles from './IncomingList.module.css';
 
-const TONES: Record<DiffStatus, StatusTone> = { added: 'added', changed: 'changed', deleted: 'deleted', moved: 'moved' };
 /** Estimates until each row is measured: a section header, a changeset (two lines) and a file. */
 const ESTIMATED_HEIGHTS: Record<IncomingRow['type'], number> = { section: 29, changeset: 49, file: 28 };
 
 interface IncomingListProps {
   changesets: Changeset[];
   files: DiffEntry[];
-  /** Paths that changed locally too; resolved ones are no longer pending. */
+  /** Paths that changed locally too. */
   conflictPaths: ReadonlySet<string>;
-  pendingConflictPaths: ReadonlySet<string>;
+  /** Where each of those stands, once its versions are read, as on the merge page; the merge tool it's open in or was resolved in. */
+  conflictStates: ReadonlyMap<string, { status: ConflictStatus; tool?: string }>;
   /** Paths changed locally that the branch deleted or moved (by their old path): they block the update. */
   blockedPaths: ReadonlySet<string>;
-  /** The merge tool each file is open in, while it is. */
-  openToolByPath: ReadonlyMap<string, string>;
   selection: IncomingSelection | null;
   onSelect: (selection: IncomingSelection) => void;
 }
 
 /** Hundreds of changesets and thousands of files: only the rows in view render. */
-export function IncomingList({ changesets, files, conflictPaths, pendingConflictPaths, blockedPaths, openToolByPath, selection, onSelect }: IncomingListProps) {
+export function IncomingList({ changesets, files, conflictPaths, conflictStates, blockedPaths, selection, onSelect }: IncomingListProps) {
   const { rows, entries, rowIndexOf } = useMemo(() => incomingRows(changesets, files, conflictPaths, blockedPaths), [changesets, files, conflictPaths, blockedPaths]);
   const viewportRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
@@ -59,6 +60,17 @@ export function IncomingList({ changesets, files, conflictPaths, pendingConflict
     virtualizer.scrollToIndex(target === 0 ? 0 : rowIndexOf.get(entry.key)!);
   };
 
+  // Where a file changed on both sides stands, as on the merge page: the letter stays what the branch did to it.
+  const conflictMark = (file: DiffEntry) => {
+    if (isBlocking(file)) {
+      const explanation = `Changed locally, ${file.status === 'deleted' ? 'deleted' : 'moved'} on the branch: shelve it to update`;
+      return <ConflictStatusChip status="needsDecision" labels={UPDATE_LABELS} explanation={explanation} compact />;
+    }
+    if (!conflictPaths.has(file.path)) return null;
+    const conflict = conflictStates.get(file.path);
+    return <ConflictStatusChip status={conflict?.status ?? 'reading'} labels={UPDATE_LABELS} tool={conflict?.tool} compact />;
+  };
+
   const fileRow = (file: DiffEntry, key: string, entryIndex: number) => (
     <button
       id={`${idPrefix}-${entryIndex}`}
@@ -69,20 +81,13 @@ export function IncomingList({ changesets, files, conflictPaths, pendingConflict
       data-selected={key === selectedKey}
       onClick={() => onSelect({ kind: 'file', path: file.path })}
     >
-      {openToolByPath.has(file.path) ? (
-        <StatusBadge tone="conflict" title={`Open in ${openToolByPath.get(file.path)}…`} letter="…" />
-      ) : isBlocking(file) ? (
-        <StatusBadge tone="conflict" title={`Changed locally, ${file.status === 'deleted' ? 'deleted' : 'moved'} on the branch: shelve it to update`} />
-      ) : conflictPaths.has(file.path) ? (
-        <StatusBadge
-          tone={pendingConflictPaths.has(file.path) ? 'conflict' : 'added'}
-          title={pendingConflictPaths.has(file.path) ? 'Changed locally too: needs merging' : 'Merged'}
-          letter={pendingConflictPaths.has(file.path) ? '!' : '✓'}
-        />
-      ) : (
-        <StatusBadge tone={TONES[file.status]} title={file.status} />
-      )}
-      <PathLabel path={file.path} oldPath={file.oldPath} strikethrough={file.status === 'deleted'} />
+      <ItemPathRow
+        path={file.path}
+        itemType={file.itemType}
+        oldPath={file.oldPath}
+        status={{ tone: diffEntryTone(file), label: describeDiffEntry(file) }}
+        extras={conflictMark(file)}
+      />
     </button>
   );
 

@@ -1,12 +1,12 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { FolderTree } from 'lucide-react';
-import { useId, useImperativeHandle, useRef, type KeyboardEvent, type Ref } from 'react';
-import { PathLabel } from '../../components/PathLabel';
-import { StatusBadge } from '../../components/StatusBadge';
+import { useId, useImperativeHandle, useMemo, useRef, type KeyboardEvent, type Ref } from 'react';
+import type { ItemType } from '@shared/domain/pendingChanges';
+import { ItemPathRow } from '../../components/ItemPathRow';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { ConflictStatusChip } from './ConflictStatusChip';
 import type { MergeLabels } from './mergeDescription';
-import { needsDecision, type MergeItem, type MergeListRow } from './mergeItems';
+import type { MergeItem, MergeListRow } from './mergeItems';
+import { mergeItemTypes } from './mergeItemTypes';
 import { changeTone, describeChange, directoryConflictStatus, fileConflictStatus, fileConflictTool } from './mergeStatus';
 import styles from './MergeItemList.module.css';
 
@@ -26,6 +26,7 @@ export function MergeItemList({ rows, labels, selectedKey, runKey, onSelect, ref
   const viewportRef = useRef<HTMLDivElement>(null);
   useImperativeHandle(ref, () => viewportRef.current!, []);
   const itemKeys = rows.filter((row) => row.type === 'item').map((row) => row.key);
+  const typeOf = useMemo(() => mergeItemTypes(rows.flatMap((row) => (row.type === 'item' && row.item.kind === 'change' ? [row.item.change.path] : []))), [rows]);
   const virtualizer = useVirtualizer({ count: rows.length, getScrollElement: () => viewportRef.current, estimateSize: () => ROW_HEIGHT, overscan: 12 });
   const idPrefix = useId();
   const selectedIndex = rows.findIndex((row) => row.key === selectedKey);
@@ -75,7 +76,7 @@ export function MergeItemList({ rows, labels, selectedKey, runKey, onSelect, ref
                   <span className={styles.count}>{row.count}</span>
                 </>
               ) : (
-                <ItemRow item={row.item} labels={labels} />
+                <MergeItemRow item={row.item} labels={labels} typeOf={typeOf} />
               )}
             </div>
           );
@@ -85,41 +86,48 @@ export function MergeItemList({ rows, labels, selectedKey, runKey, onSelect, ref
   );
 }
 
-function ItemRow({ item, labels }: { item: MergeItem; labels: MergeLabels }) {
+/** Every item as in any list of changed files: what the merge does to it as its letter, where its conflict stands before. */
+function MergeItemRow({ item, labels, typeOf }: { item: MergeItem; labels: MergeLabels; typeOf: (path: string) => ItemType }) {
   switch (item.kind) {
-    case 'directoryConflict':
+    case 'directoryConflict': {
+      const { conflict } = item;
       return (
-        <>
-          <span className={styles.directoryIcon} data-pending={needsDecision(item)} data-tip={item.conflict.title}>
-            <FolderTree size={13} />
-          </span>
-          <PathLabel path={item.conflict.destination.path.replace(/^\//, '')} />
-          <span className={styles.status}>
+        <ItemPathRow
+          path={withoutRoot(conflict.destination.path)}
+          itemType={conflict.isDirectory ? 'directory' : 'file'}
+          status={{ tone: conflict.source.operation, label: `${conflict.title}: ${conflict.source.description}` }}
+          extras={
             <ConflictStatusChip
               status={directoryConflictStatus(item.resolution)}
               labels={labels}
-              explanation={item.resolution ? undefined : `${item.conflict.title}: ${item.conflict.explanation}`}
+              explanation={item.resolution ? undefined : `${conflict.title}: ${conflict.explanation}`}
               compact
             />
-          </span>
-        </>
+          }
+        />
       );
+    }
     case 'fileConflict':
       return (
-        <>
-          <StatusBadge tone="changed" title="Will be changed: both sides changed it" />
-          <PathLabel path={item.state.file.path} />
-          <span className={styles.status}>
-            <ConflictStatusChip status={fileConflictStatus(item.state)} labels={labels} tool={fileConflictTool(item.state)} compact />
-          </span>
-        </>
+        <ItemPathRow
+          path={withoutRoot(item.state.file.path)}
+          itemType="file"
+          status={{ tone: 'changed', label: 'Will be changed: both sides changed it' }}
+          extras={<ConflictStatusChip status={fileConflictStatus(item.state)} labels={labels} tool={fileConflictTool(item.state)} compact />}
+        />
       );
     case 'change':
       return (
-        <>
-          <StatusBadge tone={changeTone(item.change)} title={describeChange(item.change, labels)} />
-          <PathLabel path={item.change.path.replace(/^\//, '')} oldPath={item.change.oldPath?.replace(/^\//, '')} strikethrough={item.change.kind === 'deleted'} />
-        </>
+        <ItemPathRow
+          path={withoutRoot(item.change.path)}
+          itemType={typeOf(item.change.path)}
+          oldPath={item.change.oldPath && withoutRoot(item.change.oldPath)}
+          status={{ tone: changeTone(item.change), label: describeChange(item.change, labels) }}
+        />
       );
   }
+}
+
+function withoutRoot(path: string): string {
+  return path.replace(/^\//, '');
 }
