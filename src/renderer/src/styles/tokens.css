@@ -57,7 +57,8 @@
   --focus-ring-visible: 0 0 0 2px var(--focus-color);
   /* For lists, rows and panes, whose outer edge a parent would clip. */
   --focus-ring-inset: inset 0 0 0 2px var(--focus-color);
-  /* For panes whose content paints over an inset shadow (a canvas, a diff): outlines paint on top. Offset it by -2px. */
+  /* For panes whose content paints over an inset shadow (a canvas, a diff): outlines paint on top. Offset it by -2px.
+     Filled controls (primary buttons, checked boxes) offset it by 2px, or it would melt into their fill. */
   --focus-outline: 2px solid var(--focus-color);
 }
 

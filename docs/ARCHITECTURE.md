@@ -299,7 +299,8 @@ renderer/src/
   read from and written to its `plasticgui.conf` (`main/plasticConfig`) on every switch, so both apps list the same ones.
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in components.
   - Text tokens keep 4.5:1 and focus rings 3:1 (`styles/tokens.test.ts`); focus shows with `--focus-ring-visible`, or
-    `--focus-ring-inset` on rows and panes (over their content when it would paint over the ring).
+    `--focus-ring-inset` on rows and panes (over their content when it would paint over the ring); filled controls
+    draw `--focus-outline` 2px out, and state rules with a shadow of their own restore the ring (`focusRings.test.ts`).
   - Motion uses the `--duration-*` and `--ease-*` tokens and the shared keyframes of `styles/global.css` (through
     `--keyframes-*`); reduced motion zeroes the durations, so only loops (spinners, skeleton pulses) opt out themselves.
   - Lists that load show skeletons at their real row height (`ui/Skeleton`, `TableSkeleton`, `ListWithDetailsSkeleton`).
