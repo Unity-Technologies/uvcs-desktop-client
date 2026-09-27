@@ -1,8 +1,9 @@
 import { watch, type FSWatcher } from 'node:fs';
 import { readFile } from 'node:fs/promises';
-import { join, relative, sep } from 'node:path';
+import { join, relative } from 'node:path';
 import type { WatchCoverage } from '@shared/api/workspaces';
 import type { WorkspaceChange } from '@shared/events';
+import { isSameOrInside } from '../files/pathContainment';
 import { ChangeBatcher } from './ChangeBatcher';
 import { changedFolder } from './changedFolder';
 import { classifyChange, isChangelistFile } from './classifyChange';
@@ -31,22 +32,23 @@ export class WorkspaceWatcher {
   constructor(
     readonly workspacePath: string,
     onChanged: (change: WorkspaceChange) => void,
+    private readonly platform: NodeJS.Platform = process.platform,
   ) {
     this.batcher = new ChangeBatcher((change) => !this.stopped && onChanged(change), QUIET_MS, MAX_WAIT_MS);
   }
 
   start(): WatchCoverage {
     void this.loadIgnoreRules();
-    if (RECURSIVE_WATCH_PLATFORMS.has(process.platform) && this.tryWatch(this.workspacePath, true)) return 'full';
+    if (RECURSIVE_WATCH_PLATFORMS.has(this.platform) && this.tryWatch(this.workspacePath, true)) return 'full';
     // Without recursion, edits in subfolders go unnoticed; the root and `.plastic` still report checkins, switches...
     this.tryWatch(this.workspacePath, false);
     this.tryWatch(join(this.workspacePath, '.plastic'), false);
     return 'partial';
   }
 
-  /** Whether a command run in `cwd` works on this workspace. */
+  /** Whether a command run in `cwd` works on this workspace (`C:\Work` and `c:\work` are one folder on Windows). */
   covers(cwd: string): boolean {
-    return cwd === this.workspacePath || cwd.startsWith(this.workspacePath.endsWith(sep) ? this.workspacePath : this.workspacePath + sep);
+    return isSameOrInside(this.workspacePath, cwd, this.platform);
   }
 
   /** Ignores changes until `write` settles; with `changelists`, only the rewrites of the changelist files. */
@@ -86,12 +88,13 @@ export class WorkspaceWatcher {
     const kind = classifyChange(relativePath, this.ignoreRules);
     if (!kind || this.ownWrites.active()) return;
     if (isChangelistFile(relativePath) && this.ownChangelistWrites.active()) return;
-    const folder = changedFolder(relativePath);
+    const folder = changedFolder(relativePath, this.platform);
+    const anything = kind === 'anything';
     this.batcher.add({
-      content: kind === 'content',
+      content: kind === 'content' || anything,
       // Node reports additions, deletions and moves as 'rename'; content edits as 'change'.
-      pathsChanged: kind === 'content' && event === 'rename',
-      metadata: kind === 'metadata',
+      pathsChanged: (kind === 'content' && event === 'rename') || anything,
+      metadata: kind === 'metadata' || anything,
       folders: kind === 'metadata' ? [] : folder === null ? null : [folder],
     });
   }

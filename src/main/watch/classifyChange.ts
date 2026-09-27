@@ -5,16 +5,18 @@ import { isIgnored, type IgnoreRules } from './ignoreRules';
  * - `content`: a file or directory of the workspace changed; only the pending changes can differ.
  * - `metadata`: `cm` rewrote the workspace state in `.plastic` (checkin, update, switch, undo, add, checkout,
  *   changelists), whoever ran it: this app, a terminal, the official GUI or the Unity plugin.
+ * - `anything`: the platform didn't say which item. Windows drops the names when a burst of changes (an update, a
+ *   build) overflows what it keeps for the watcher, so `.plastic` may have changed too.
  * - null: noise, e.g. the lock files every `cm` read takes, temp files, or ignored folders.
  */
-export type ChangeKind = 'content' | 'metadata' | null;
+export type ChangeKind = 'content' | 'metadata' | 'anything' | null;
 
 /** Written by `cm` whenever the loaded tree, the selector or the list of changed items changes. */
 const WORKSPACE_STATE_FILES = new Set(['plastic.selector', 'plastic.wktree', 'plastic.changes']);
 
 /** `relativePath` as reported by `fs.watch`; either separator. Undefined when the platform can't tell. */
 export function classifyChange(relativePath: string | undefined, ignoreRules: IgnoreRules): ChangeKind {
-  if (!relativePath) return 'content';
+  if (!relativePath) return 'anything';
   const path = relativePath.replaceAll('\\', '/');
   if (path === '.plastic') return null;
   if (path.startsWith('.plastic/')) {
