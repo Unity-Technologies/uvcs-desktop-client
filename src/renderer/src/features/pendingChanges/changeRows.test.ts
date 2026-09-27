@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { buildChangeRows, LEVEL_INDENT, rowIndent, topLevelCheckboxInset, treeLevel, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { buildChangeRows, changesUnderRow, comparePaths, LEVEL_INDENT, menuTargetOf, rowIndent,topLevelCheckboxInset, treeLevel, type ChangesGrouping, type ChangesLayout } from './changeRows';
 
 function change(path: string, kinds: PendingChange['kinds'], changelist?: string): PendingChange {
   return { path, kinds, itemType: 'file', size: 0, lastModified: '', changelist };
@@ -52,6 +52,31 @@ describe('buildChangeRows', () => {
     ]);
   });
 
+  it('shows a folder that is a change itself as the row of its folder, holding its own change and its files', () => {
+    const folder = { ...change('privs', ['private']), itemType: 'directory' as const };
+    const rows = buildChangeRows({ ...base, changes: [change('privs/a.txt', ['private']), folder, change('private.txt', ['private'])], layout: 'tree', isChecked: (item) => item !== folder });
+    expect(rows.map((row) => row.key)).toEqual(['change:private.txt', 'directory:all:privs', 'change:privs/a.txt']);
+    expect(rows[1]).toMatchObject({ change: folder, checkState: 'mixed' });
+    expect(changesUnderRow(rows[1]!).map((item) => item.path)).toEqual(['privs', 'privs/a.txt']);
+  });
+
+  it('keeps a folder that is a change but holds none a row of its own', () => {
+    const folder = { ...change('empty', ['added']), itemType: 'directory' as const };
+    const rows = buildChangeRows({ ...base, changes: [folder], layout: 'tree' });
+    expect(rows.map((row) => row.key)).toEqual(['change:empty']);
+  });
+
+  it('keeps each folder of the tree in one place, whatever sorts between its path and its files', () => {
+    const paths = ['a/c.txt', 'a-b.txt', 'a/b.txt', 'Src/c.ts', 'src/b.ts', 'Src/a.ts'];
+    const rows = buildChangeRows({ ...base, changes: paths.map((path) => change(path, ['changed'])), layout: 'tree' });
+    const directories = rows.filter((row) => row.type === 'directory').map((row) => row.key);
+    expect(new Set(directories).size).toBe(directories.length);
+    const underA = rows.findIndex((row) => row.key === 'directory:all:a');
+    expect(rows.slice(underA + 1, underA + 3).map((row) => row.key)).toEqual(['change:a/b.txt', 'change:a/c.txt']);
+    const underSrc = rows.findIndex((row) => row.key === 'directory:all:Src');
+    expect(rows.slice(underSrc + 1, underSrc + 3).map((row) => row.key)).toEqual(['change:Src/a.ts', 'change:Src/c.ts']);
+  });
+
   it('hides the contents of collapsed folders', () => {
     const rows = buildChangeRows({
       ...base,
@@ -60,6 +85,33 @@ describe('buildChangeRows', () => {
       collapsed: new Set(['directory:all:src']),
     });
     expect(rows.map((row) => row.key)).toEqual(['directory:all:src', 'change:z.ts']);
+  });
+});
+
+describe('comparePaths', () => {
+  it('puts everything in a folder right after it', () => {
+    expect(['a-b.txt', 'a/c.txt', 'a', 'ab'].sort(comparePaths)).toEqual(['a', 'a/c.txt', 'a-b.txt', 'ab']);
+  });
+});
+
+describe('menuTargetOf', () => {
+  const rows = buildChangeRows({
+    ...base,
+    layout: 'tree',
+    grouping: 'changelist',
+    changelists: [{ name: 'UI', description: '' }],
+  });
+  const row = (key: string) => rows.find((candidate) => candidate.key === key)!;
+
+  it("opens a folder's or the default changelist's menu on the changes in it, not on the selected files", () => {
+    expect((menuTargetOf(row('directory:changelist::src')) as PendingChange[]).map((item) => item.path)).toEqual(['src/b.ts', 'src/lib/c.ts']);
+    expect((menuTargetOf(row('changelist:')) as PendingChange[]).length).toBe(3);
+  });
+
+  it("opens a changelist's own menu on its header, and the selection's on a file", () => {
+    expect(menuTargetOf(row('changelist:UI'))).toEqual({ name: 'UI', description: '' });
+    expect(menuTargetOf(row('change:src/b.ts'))).toBeNull();
+    expect(menuTargetOf(null)).toBeNull();
   });
 });
 
