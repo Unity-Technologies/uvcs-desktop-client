@@ -17,17 +17,17 @@ interface Match {
  */
 export function createFuzzyIndex(texts: readonly string[]): FuzzyIndex {
   const lowered = texts.map((text) => text.toLowerCase());
-  // Where each lowered text's last segment starts, and each text's last segment's length (with its slash), for ties.
-  const nameStarts = Int32Array.from(lowered, (text) => text.lastIndexOf('/') + 1);
-  const nameLengths = Int32Array.from(texts, (text) => text.length - text.lastIndexOf('/'));
+  // Where each lowered text's last segment starts, found the first time a ranking looks at it (-1 until then).
+  const nameStarts = new Int32Array(texts.length).fill(-1);
   // Each needle extends the one before it; each holds every text it matched and its best ones.
   const typed: { needle: string; matched: number[]; limit: number; best: number[] }[] = [];
 
   function isBetter(a: Match, b: Match): boolean {
     if (a.score !== b.score) return a.score > b.score;
-    const nameLengthA = nameLengths[a.index]!;
-    const nameLengthB = nameLengths[b.index]!;
-    return nameLengthA !== nameLengthB ? nameLengthA < nameLengthB : texts[a.index]!.length < texts[b.index]!.length;
+    const [textA, textB] = [texts[a.index]!, texts[b.index]!];
+    const nameLengthA = textA.length - textA.lastIndexOf('/');
+    const nameLengthB = textB.length - textB.lastIndexOf('/');
+    return nameLengthA !== nameLengthB ? nameLengthA < nameLengthB : textA.length < textB.length;
   }
 
   return {
@@ -47,7 +47,10 @@ export function createFuzzyIndex(texts: readonly string[]): FuzzyIndex {
       const best: Match[] = [];
       for (let candidate = 0; candidate < count; candidate++) {
         const index = candidates ? candidates[candidate]! : candidate;
-        const score = scoreText(lowered[index]!, needle, chars, nameStarts[index]!);
+        const text = lowered[index]!;
+        let nameStart = nameStarts[index]!;
+        if (nameStart === -1) nameStart = nameStarts[index] = text.lastIndexOf('/') + 1;
+        const score = scoreText(text, needle, chars, nameStart);
         if (score === 0) continue;
         matched.push(index);
 
