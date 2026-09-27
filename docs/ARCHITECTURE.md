@@ -21,6 +21,8 @@ src/
      A session takes about a second to answer its first command, so until one in that directory has, the query runs as a
      process of its own.
    - `execute()` for long or cancellable work (update, switch, checkin, merge): a dedicated process that streams progress lines.
+   - A command line too long to start a process with (a checkin or shelve of thousands of paths: Windows takes 32,767
+     characters) is written to a `cm shell` of its own instead (`processCommand`): still one command, never split.
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), shown in the command log panel.
 
 ## Parsing `cm` output
@@ -205,6 +207,7 @@ renderer/src/
   - `main/watch/WorkspaceWatcher` watches an open workspace (recursive on macOS/Windows; the root and `.plastic` only on Linux),
     skips `ignore.conf` folders and `.plastic` lock/temp files, coalesces bursts (300 ms quiet, 2 s max wait) and drops what the
     app's own writes cause (`changesWorkspace` commands and tracked operations): the renderer refreshes after those anyway.
+    `cm status --changelists` writes the changelist files back on every read, so those rewrites count as its own too (`rewritesChangelists`).
   - `workspaceChanged` tells file edits (pending changes, review marks, files view, open diffs of workspace files; if auto refresh is on, and once when it's turned back on)
     from `.plastic` rewrites by any tool (workspace info; everything when the loaded changeset or branch moved). See
     `app/shell/useWorkspaceWatcher.ts` and `app/refresh/`. A diff with unsaved edits holds still and offers to reload instead.
@@ -341,7 +344,7 @@ and many people use the same server. Every `cm` command other than local reads (
   Explorer is kept five minutes and focus never re-reads all history. Local views skip focus while the watcher sees the disk.
 - **Home**: the repository and branch of every listed workspace come from its `.plastic/plastic.selector` file
   (`workspaces.heads`); `cm` is asked only about recent workspaces whose file can't tell.
-- **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`), `cm diff`
+- **Selection**: arrowing through rows costs nothing (holding ↓ in Changes, the diff waits for where it stops: `useSteadyValue`); details ask once the selection settles (`useSettled`), `cm diff`
   runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id, specs
   pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`) and skipped by refreshes.
   An object opened from a list already read starts from it (`useChangeset`) and is asked for only once that list is stale.
