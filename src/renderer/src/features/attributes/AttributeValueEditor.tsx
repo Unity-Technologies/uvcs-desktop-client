@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { matchesWordFilter } from '../../lib/matchesAllWords';
+import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { attributeTone } from './attributeValues';
 import styles from './AttributeChips.module.css';
 
@@ -16,8 +18,8 @@ interface AttributeValueEditorProps {
 export function AttributeValueEditor({ initialValue, suggestions, onSave, onCancel }: AttributeValueEditorProps) {
   const [draft, setDraft] = useState(initialValue);
   // Until the user types, every suggestion shows: the selected value is replaced by the first keystroke anyway.
-  const needle = draft === initialValue ? '' : draft.trim().toLowerCase();
-  const offered = suggestions.filter((suggestion) => suggestion !== draft.trim() && suggestion.toLowerCase().includes(needle));
+  const typed = draft === initialValue ? '' : draft;
+  const offered = suggestions.filter((suggestion) => suggestion !== draft.trim() && matchesWordFilter([suggestion], typed));
 
   const finish = (value: string): void => (value !== initialValue ? onSave(value) : onCancel());
 
@@ -42,8 +44,9 @@ export function AttributeValueEditor({ initialValue, suggestions, onSave, onCanc
         }}
       />
       {offered.length > 0 && (
-        <div className={styles.suggestions}>
-          {offered.map((suggestion) => (
+        <HighlightQuery query={typed}>
+          <div className={styles.suggestions}>
+            {offered.map((suggestion) => (
             <button
               key={suggestion}
               className={styles.pillButton}
@@ -52,11 +55,12 @@ export function AttributeValueEditor({ initialValue, suggestions, onSave, onCanc
               onClick={() => finish(suggestion)}
             >
               <span className={styles.pill} data-tone={attributeTone(suggestion)}>
-                {suggestion}
+                <Highlight text={suggestion} />
               </span>
             </button>
           ))}
-        </div>
+          </div>
+        </HighlightQuery>
       )}
       <span className={styles.hint}>↵ save · ⇧↵ new line · Esc cancel</span>
     </div>

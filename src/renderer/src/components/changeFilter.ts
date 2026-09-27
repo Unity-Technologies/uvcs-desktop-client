@@ -1,3 +1,4 @@
+import { matchesWordFilter } from '../lib/matchesAllWords';
 import type { StatusTone } from './StatusBadge';
 
 export interface ChangeFilter {
@@ -33,5 +34,5 @@ export function changeFilterPlaceholder(count: number): string {
 }
 
 export function matchesChangeFilter(path: string, tone: StatusTone, { query, tones }: ChangeFilter): boolean {
-  return (tones.size === 0 || tones.has(tone)) && path.toLowerCase().includes(query.trim().toLowerCase());
+  return (tones.size === 0 || tones.has(tone)) && matchesWordFilter([path], query);
 }

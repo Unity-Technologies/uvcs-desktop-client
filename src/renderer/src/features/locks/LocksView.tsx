@@ -11,7 +11,9 @@ import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
-import { HighlightQuery } from '../../ui/Highlight';
+import { Highlight, HighlightQuery } from '../../ui/Highlight';
+import { matchesWordFilter } from '../../lib/matchesAllWords';
+import { userFilterTexts } from '../../lib/userName';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
@@ -43,10 +45,15 @@ const COLUMNS: Column<Lock>[] = [
   },
   { id: 'owner', header: 'Owner', grow: 1, render: (lock) => <UserLabel user={lock.owner} />, sortValue: (lock) => lock.owner },
   { id: 'holder', header: 'Held on', grow: 1, secondary: true, render: (lock) => <PathLabel path={lock.holderBranch} />, sortValue: (lock) => lock.holderBranch },
-  { id: 'destination', header: 'Released on', width: 120, secondary: true, hideBelow: 900, render: (lock) => lock.destinationBranch },
-  { id: 'workspace', header: 'Workspace', grow: 1, secondary: true, hideBelow: 1000, render: (lock) => lock.workspace },
+  { id: 'destination', header: 'Released on', width: 120, secondary: true, hideBelow: 900, render: (lock) => <Highlight text={lock.destinationBranch} /> },
+  { id: 'workspace', header: 'Workspace', grow: 1, secondary: true, hideBelow: 1000, render: (lock) => <Highlight text={lock.workspace} /> },
   { id: 'date', header: 'Locked', width: 120, secondary: true, render: (lock) => <RelativeTime date={lock.date} />, sortValue: (lock) => lock.date },
 ];
+
+/** What the row shows: the item, its owner, the branches it's held on and released on, and the workspace. */
+function lockFilterTexts(lock: Lock): string[] {
+  return [lock.path, ...userFilterTexts(lock.owner), lock.holderBranch, lock.destinationBranch, lock.workspace];
+}
 
 /** Exclusive checkouts on the repository: who holds what, and releasing them. */
 export function LocksView() {
@@ -56,7 +63,7 @@ export function LocksView() {
   const [selection, setSelection] = useViewSelection('locks');
   const { data: locks, isLoading, error, isFetching } = useLocks(scope === 'mine');
 
-  const visible = (locks ?? []).filter((lock) => `${lock.path} ${lock.owner}`.toLowerCase().includes(filter.trim().toLowerCase()));
+  const visible = (locks ?? []).filter((lock) => matchesWordFilter(lockFilterTexts(lock), filter));
   const selected = visible.filter((lock) => selection.selected.has(lockKey(lock)));
   const releasable = selected.filter(isReleasable);
   const focused = visible.find((lock) => lockKey(lock) === selection.anchor);

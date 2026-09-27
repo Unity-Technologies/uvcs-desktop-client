@@ -3,7 +3,6 @@ import { GitBranch } from 'lucide-react';
 import { shortBranchName } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { workingObjectName } from '../../components/workingObject';
-import { Highlight } from '../../ui/Highlight';
 import styles from './WorkspaceGlance.module.css';
 
 /** Read again when the switcher reopens after this long; forgotten as soon after it closes. */
@@ -29,9 +28,8 @@ export function WorkspaceGlance({ workspacePath }: { workspacePath: string }) {
     <span className={styles.glance}>
       <span className={styles.branch} data-tip={fullName}>
         <GitBranch size={11} />
-        <span className={styles.branchName}>
-          <Highlight text={shownName} />
-        </span>
+        {/* Not what the switcher's filter matches, so never marked. */}
+        <span className={styles.branchName}>{shownName}</span>
       </span>
       {glance.pendingCount > 0 && (
         <span className={styles.pending} data-tip={glance.pendingCount === 1 ? '1 pending change' : `${glance.pendingCount} pending changes`}>

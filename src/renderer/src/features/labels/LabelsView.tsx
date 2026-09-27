@@ -10,7 +10,8 @@ import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleto
 import { NoSelection } from '../../components/NoSelection';
 import { PathLabel } from '../../components/PathLabel';
 import { SincePicker } from '../../components/SincePicker';
-import { matchesAllWords } from '../../lib/matchesAllWords';
+import { matchesWordFilter } from '../../lib/matchesAllWords';
+import { userFilterTexts } from '../../lib/userName';
 import { sinceDateFor } from '../../lib/sincePresets';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
@@ -61,7 +62,7 @@ export function LabelsView() {
   const [selection, setSelection] = useViewSelection('labels');
 
   const visible = useMemo(
-    () => (search.trim() ? (labels ?? []).filter((label) => matchesAllWords(`${label.name}\n${label.comment}\n${label.branch}\n${label.owner}`, search)) : (labels ?? [])),
+    () => (search.trim() ? (labels ?? []).filter((label) => matchesWordFilter([label.name, label.comment, label.branch, ...userFilterTexts(label.owner)], search)) : (labels ?? [])),
     [labels, search],
   );
   const selected = visible.find((label) => labelKey(label) === selection.anchor);

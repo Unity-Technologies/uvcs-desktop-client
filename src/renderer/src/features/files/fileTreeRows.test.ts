@@ -50,6 +50,11 @@ describe('buildFileTreeRows', () => {
     expect(rows.map((row) => row.item.path)).toEqual(['src', 'src/a.ts']);
   });
 
+  it('needs every word of the filter in one name', () => {
+    expect(buildFileTreeRows({ childrenByDirectory: tree, expanded: new Set(['src']), filter: 'ts a.' }).map((row) => row.item.path)).toEqual(['src', 'src/a.ts']);
+    expect(buildFileTreeRows({ childrenByDirectory: tree, expanded: new Set(['src']), filter: 'src a.ts' })).toEqual([]);
+  });
+
   it('puts everything under the workspace root when there is one, filtered or not', () => {
     const root = { item: item('', 'directory'), expanded: true };
     const rows = buildFileTreeRows({ childrenByDirectory: tree, expanded: new Set(['src']), filter: 'a.ts', root });

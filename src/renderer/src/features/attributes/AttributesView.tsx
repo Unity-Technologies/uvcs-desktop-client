@@ -8,7 +8,8 @@ import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
 import { NoSelection } from '../../components/NoSelection';
-import { matchesAllWords } from '../../lib/matchesAllWords';
+import { matchesWordFilter } from '../../lib/matchesAllWords';
+import { userFilterTexts } from '../../lib/userName';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
@@ -46,7 +47,7 @@ export function AttributesView() {
   const [selection, setSelection] = useViewSelection('attributes');
 
   const visible = useMemo(
-    () => (search.trim() ? (types ?? []).filter((type) => matchesAllWords(`${type.name}\n${type.comment}\n${type.owner}`, search)) : (types ?? [])),
+    () => (search.trim() ? (types ?? []).filter((type) => matchesWordFilter([type.name, type.comment, ...userFilterTexts(type.owner)], search)) : (types ?? [])),
     [types, search],
   );
   const selected = visible.find((type) => typeKey(type) === selection.anchor);

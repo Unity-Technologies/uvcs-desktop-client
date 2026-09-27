@@ -14,6 +14,8 @@ import { SearchField } from '../../ui/SearchField';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { UserLabel } from '../../ui/Avatar';
+import { matchesWordFilter } from '../../lib/matchesAllWords';
+import { userFilterTexts } from '../../lib/userName';
 import { useBranches } from '../branches/useBranches';
 import { pullBranch, pushBranch } from './syncOperations';
 import { useSyncTargetStore } from './syncTargetStore';
@@ -67,7 +69,7 @@ export function RepositorySyncPanel({ localRepository }: { localRepository: stri
     },
   ];
 
-  const shown = (branches ?? []).filter((branch) => branch.name.toLowerCase().includes(filter.toLowerCase()));
+  const shown = (branches ?? []).filter((branch) => matchesWordFilter([branch.name, ...userFilterTexts(branch.owner)], filter));
 
   return (
     <div className={styles.panel}>

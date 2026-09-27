@@ -18,6 +18,11 @@ describe('matchesChangeFilter', () => {
     expect(matchesChangeFilter('src/App.ts', 'added', { query: 'lib', tones: new Set() })).toBe(false);
   });
 
+  it('takes each word on its own, as the rows highlight them', () => {
+    expect(matchesChangeFilter('src/ui/LoginButton.tsx', 'added', { query: 'button src', tones: new Set() })).toBe(true);
+    expect(matchesChangeFilter('src/ui/LoginButton.tsx', 'added', { query: 'button lib', tones: new Set() })).toBe(false);
+  });
+
   it('keeps only the chosen statuses', () => {
     const filter = { query: '', tones: new Set(['added', 'deleted'] as const) };
     expect(matchesChangeFilter('a', 'deleted', filter)).toBe(true);
