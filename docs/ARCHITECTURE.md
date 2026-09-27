@@ -223,8 +223,9 @@ renderer/src/
   lines in view, so `syntaxHighlighting` picks by size (both versions together): up to 400 KB on the main thread; a
   read-only diff up to 4 MB also renders only the lines in view, shows as plain text at once and highlights in Pierre's
   workers (`highlightWorkers`, a 50,000-line diff in 6 s); anything bigger, and an editable diff past 400 KB (Pierre
-  highlights editors on the main thread, pool or not), is plain text and renders only the lines in view too, with a
-  quiet "Large file" in the header (its tooltip says why); such a diff is the "text" language (`highlightedLanguage`),
+  highlights editors on the main thread, pool or not), is plain text and renders only the lines in view too (Pierre
+  renders a plain text diff whole at every render: `pierrePlainTextRender` keeps it), with a quiet "Large file" in the
+  header (its tooltip says why); such a diff is the "text" language (`highlightedLanguage`),
   or the editor would color the lines typed into it. Past 1 MB (both versions), the text typed into is diffed again
   once typing pauses, not at every keystroke (`diffsEveryKeystroke`): the +N −M and the lines discards act on follow
   then, as Pierre's recoloring does; nothing is discarded until they do.

@@ -16,6 +16,7 @@ import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
 import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
 import { PaneScrollbars } from './PaneScrollbars';
 import { installPierreLineComparison } from './pierreLineComparison';
+import { installPierrePlainTextRender } from './pierrePlainTextRender';
 import { replacementEdit } from './replacementEdit';
 import { caretLineCss, shownDiff, type DiffSides } from './shownDiff';
 import { highlightedLanguage, syntaxHighlighting } from './syntaxHighlighting';
@@ -30,6 +31,8 @@ const BOTH_SIDES: DiffSides = { original: true, modified: true };
 
 // Typing re-diffs the text in Pierre: under the comparison method, like the diff it starts from.
 installPierreLineComparison();
+// A diff shown as plain text renders once, not again for every few rows scrolled into view.
+installPierrePlainTextRender();
 
 /**
  * The texts are the files' own, their lines broken by LF, CRLF or lone CRs. Pierre is given them as shown, lone CRs as
