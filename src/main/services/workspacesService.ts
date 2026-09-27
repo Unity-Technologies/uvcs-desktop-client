@@ -10,7 +10,6 @@ import { switchArgs, UPDATE_ARGS } from '../cm/updateArgs';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
 import { readWorkspaceGlance } from '../cm/workspaceGlance';
 import { resolveWorkspaceRepositories } from '../cm/workspaceRepositories';
-import { readWorkspaceStatus } from '../cm/workspaceStatus';
 import { CmError } from '../cm/CmError';
 import { checkNewWorkspaceFolder } from '../files/newWorkspaceFolder';
 import { callerId } from '../ipc/caller';
@@ -21,7 +20,7 @@ import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const UPDATE_NEEDS_MERGE = 'Some of your local changes collide with incoming ones. Open Incoming to merge them while updating.';
 
-export function createWorkspacesService({ cm, operations, watchers, settings }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
+export function createWorkspacesService({ cm, operations, watchers, settings, headers }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): WorkspacesApi {
   const switchDependencies = { cm, settings, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'switch-backups') };
   /** Folders `create` made (they didn't exist or were empty): the only ones `discardNew` may delete. */
   const createdFolders = new Set<string>();
@@ -34,13 +33,10 @@ export function createWorkspacesService({ cm, operations, watchers, settings }: 
   }
 
   async function info(workspacePath: string): Promise<WorkspaceInfo> {
-    const [status, nameOutput] = await Promise.all([
-      readWorkspaceStatus(cm, workspacePath),
-      cm.query(['getworkspacefrompath', workspacePath, '--format={wkname}'], { cwd: workspacePath }),
-    ]);
+    const [status, { name }] = await Promise.all([headers.status(workspacePath), headers.names(workspacePath)]);
 
     return {
-      name: nameOutput.trim(),
+      name,
       path: workspacePath,
       repository: `${status.repositoryName}@${status.server}`,
       ...status,
@@ -68,6 +64,7 @@ export function createWorkspacesService({ cm, operations, watchers, settings }: 
   async function rename(workspacePath: string, newName: string): Promise<void> {
     const currentName = (await info(workspacePath)).name;
     await cm.query(['workspace', 'rename', currentName, newName]);
+    headers.forget(workspacePath);
   }
 
   async function remove(workspacePath: string): Promise<void> {

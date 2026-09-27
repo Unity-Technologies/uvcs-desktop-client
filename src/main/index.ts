@@ -16,13 +16,17 @@ import { WorkspaceWatchers } from './watch/WorkspaceWatchers';
 import { installAppMenu } from './window/appMenu';
 import { handleRecentDocumentRequests } from './window/recentDocuments';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
+import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
 
 const cm = new CmClient(locateCm);
 const settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'));
+// Rewriting a workspace, by the app or any tool, forgets what was read of it.
+const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
 
 // Each window shows one workspace; windows on the same workspace share its watcher and its `cm shell` sessions.
 const watchers = new WorkspaceWatchers(
   (viewers, workspacePath, change) => {
+    if (change.metadata) headers.forget(workspacePath);
     for (const viewer of viewers) {
       const target = webContents.fromId(viewer);
       if (target) sendEventTo(target, 'workspaceChanged', { workspacePath, ...change });
@@ -46,7 +50,13 @@ function start(): void {
   settings.onChanged((changed, changes) => Object.keys(changes).some((key) => key !== 'windowBounds') && sendEvent('settingsChanged', changed));
 
   // The renderer refreshes its views after its own operations and writes; the watchers skip what they cause.
-  cm.onCommandStarted(({ args, cwd, finished }) => changesWorkspace(args) && watchers.ignoreOwnWrite(finished, cwd));
+  cm.onCommandStarted(({ args, cwd, finished }) => {
+    if (!changesWorkspace(args)) return;
+    watchers.ignoreOwnWrite(finished, cwd);
+    headers.forget();
+    const forget = () => headers.forget();
+    void finished.then(forget, forget);
+  });
   const operations = new OperationTracker(
     (operationId, progress) => sendEventToCaller('operationProgress', { operationId, progress }),
     (finished) => {
@@ -64,6 +74,7 @@ function start(): void {
       settings,
       watchers,
       windows,
+      headers,
     }),
   );
 

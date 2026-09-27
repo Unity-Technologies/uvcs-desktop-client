@@ -68,7 +68,7 @@ function fakeCm(shelvesXml: string) {
     async query(args: string[]) {
       commands.push(args.join(' '));
       if (args[0] === 'status') return STATUS_HEADER;
-      if (args[0] === 'getworkspacefrompath') return `${WORKSPACE_GUID}\n`;
+      if (args[0] === 'getworkspacefrompath') return `work\u001f${WORKSPACE_GUID}\u001e\n`;
       if (args[0] === 'find' && args[1] === 'shelve') return shelvesXml;
       if (args[0] === 'find' && args[1] === 'branch') return TASK1_BRANCH;
       if (args[0] === 'diff') return '';
