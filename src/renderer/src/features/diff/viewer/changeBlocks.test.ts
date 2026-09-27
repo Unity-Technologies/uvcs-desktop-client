@@ -1,6 +1,6 @@
 import { parseDiffFromFile } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
-import { blockLines, listChangeBlocks, listChangeRegions, regionContaining, sameRegions, type DisplayMeta } from './changeBlocks';
+import { blockLines, isChanged, listChangeBlocks, listChangeRegions, regionContaining, sameRegions, type DisplayMeta } from './changeBlocks';
 
 const diff = (original: string, modified: string): DisplayMeta =>
   parseDiffFromFile({ name: 'a.ts', contents: original }, { name: 'a.ts', contents: modified });
@@ -67,5 +67,21 @@ describe('regionContaining', () => {
   it('finds nothing for an unchanged line', () => {
     expect(regionContaining(regions, added(3))).toBeUndefined();
     expect(regionContaining(regions, removed(4))).toBeUndefined();
+  });
+});
+
+describe('isChanged', () => {
+  const blocks = [
+    { index: 0, oldStart: 4, oldLines: 2, newStart: 4, newLines: 1 },
+    { index: 1, oldStart: 9, oldLines: 0, newStart: 8, newLines: 2 },
+  ];
+
+  it("takes a block's removed and added lines as changed", () => {
+    expect([removed(4), removed(5), added(4), added(8), added(9)].every((line) => isChanged(blocks, line))).toBe(true);
+  });
+
+  it('takes no other line as changed, however the diff shows it for a moment', () => {
+    // Pierre recolors lines a moment after typing stops, and shows the editor's empty last line as added.
+    expect([removed(6), added(5), added(10), removed(9)].some((line) => isChanged(blocks, line))).toBe(false);
   });
 });

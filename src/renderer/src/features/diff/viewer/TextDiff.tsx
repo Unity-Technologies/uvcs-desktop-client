@@ -16,7 +16,7 @@ import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreO
 import { PaneScrollbars } from './PaneScrollbars';
 import { installPierreLineComparison } from './pierreLineComparison';
 import { replacementEdit } from './replacementEdit';
-import { shownDiff, type DiffSides } from './shownDiff';
+import { caretLineCss, shownDiff, type DiffSides } from './shownDiff';
 import { syntaxHighlighting } from './syntaxHighlighting';
 import { useBlockDiscard, type DiscardRequest } from './useBlockDiscard';
 import { POINTER_FOCUS_ATTRIBUTE, usePointerFocusMark } from './usePointerFocusMark';
@@ -108,8 +108,8 @@ export function TextDiff({ original, modified, current, diff, wholeFile = false,
   // whole file or its diff, the file saved or changed on disk) starts from the text as it is now, unsaved edits included.
   const newFile = useMemo(() => ({ name: fileName, lang: syntaxLanguage(fileName), contents: shownText(latest.current.current) }), [fileName, modified, comparisonMethod, wholeFile]);
   const fileDiff = useMemo(
-    () => shownDiff(latest.current.diff.meta, sides, original, latest.current.current),
-    [fileName, original, modified, comparisonMethod, wholeFile, sides.original, sides.modified],
+    () => shownDiff(latest.current.diff.meta, sides, original, latest.current.current, editable),
+    [fileName, original, modified, comparisonMethod, wholeFile, sides.original, sides.modified, editable],
   );
   const parseDiffOptions = diff.options;
   const discard = useBlockDiscard({
@@ -134,7 +134,7 @@ export function TextDiff({ original, modified, current, diff, wholeFile = false,
   );
   const fileOptions = useMemo(() => ({ ...pierreFileOptions({ theme, wrapLines }), tokenizeMaxLength }), [theme, wrapLines, tokenizeMaxLength]);
   const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);
-  useShadowStyle(container, showsNoNewlineMarker(original, current) ? SHADOW_CSS : `${SHADOW_CSS}\n${HIDE_NO_NEWLINE_CSS}`);
+  useShadowStyle(container, [SHADOW_CSS, showsNoNewlineMarker(original, current) ? '' : HIDE_NO_NEWLINE_CSS, editable ? caretLineCss(shownText(current)) : ''].join('\n'));
   const pointerFocus = usePointerFocusMark();
 
   const isTyping = (): boolean => {

@@ -91,6 +91,14 @@ export function sameRegions(a: ChangeRegion[], b: ChangeRegion[]): boolean {
   );
 }
 
+/** Whether a line is one of the blocks' changed lines. */
+export function isChanged(blocks: ChangeBlock[], { side, lineNumber }: ChangedLine): boolean {
+  return blocks.some((block) => {
+    const [start, count] = side === 'deletions' ? [block.oldStart, block.oldLines] : [block.newStart, block.newLines];
+    return lineNumber >= start && lineNumber < start + count;
+  });
+}
+
 export function regionContaining(regions: ChangeRegion[], line: ChangedLine): ChangeRegion | undefined {
   return regions.find((region) => region.lines.some((candidate) => candidate.side === line.side && candidate.lineNumber === line.lineNumber));
 }

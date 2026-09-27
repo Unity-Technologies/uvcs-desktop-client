@@ -5,7 +5,7 @@ import { createStore } from 'zustand/vanilla';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import type { ComparisonMethod } from './comparisonMethod';
-import { listChangeBlocks, listChangeRegions, sameRegions, type ChangedLine, type ChangeRegion, type DisplayMeta } from './changeBlocks';
+import { isChanged, listChangeBlocks, listChangeRegions, sameRegions, type ChangedLine, type ChangeRegion, type DisplayMeta } from './changeBlocks';
 import { CHANGE_CHIP_ATTRIBUTE, ChangeChip } from './ChangeChip';
 import { describeDiscard } from './discardAction';
 import { discardLines, withOwnLines } from './discardLines';
@@ -121,13 +121,21 @@ export function useBlockDiscard({ enabled, diff, texts, comparisonMethod, layout
       onLineSelectionChange: pickRange,
       onLineSelected: pickRange,
       onLineEnter: ({ lineType, annotationSide, lineNumber, numberElement }) => {
-        const changed = lineType === 'change-addition' || lineType === 'change-deletion';
+        // Only lines the diff has as changed: Pierre recolors lines a moment after typing stops, and shows the editor's
+        // empty last line as added after a change that removes more lines than it adds.
+        const changed = (lineType === 'change-addition' || lineType === 'change-deletion') && isChanged(latest.current.blocks, { side: annotationSide, lineNumber });
         if (changed) utilitySlot.current = keepUtilityOn(numberElement, utilitySlot.current);
         hovered.setState(changed ? { side: annotationSide, lineNumber } : null, true);
       },
       onLineLeave: () => hovered.setState(null, true),
     };
   }, [enabled, hovered]);
+
+  // Typing moves lines under a still pointer: a line hovered before that may not be a changed line any more.
+  useEffect(() => {
+    const line = hovered.getState();
+    if (line && !isChanged(blocks, line)) hovered.setState(null, true);
+  }, [blocks, hovered]);
 
   // A click anywhere outside the diff drops the pick too.
   useEffect(() => {

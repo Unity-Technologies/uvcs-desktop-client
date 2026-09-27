@@ -221,7 +221,10 @@ renderer/src/
   highlighting" in the header.
   Every diff follows Split/Unified, one from or to an empty file (an added file, an empty base) too: `shownDiff` keeps
   both sides where Pierre would show a new or deleted file in one column, and the empty side is hatched like any added
-  lines. "No newline at end of file" shows only where the final line break is what changed (`noNewlineMarker`).
+  lines. "No newline at end of file" shows only where the final line break is what changed (`noNewlineMarker`); a diff
+  typed into keeps the marker rows, hidden, since Pierre recolors the rows it rendered only while there are as many as
+  the diff has. The editor's line for the caret after the last line break (the one line of an empty text) looks like
+  an unchanged empty line (`caretLineCss`): Pierre shows it as added after a change that removes more than it adds.
 - **Leaving unsaved edits**: `app/navigation/leaveGuard` lets unsaved edits guard the way out. Selecting another file
   (`selectAfterLeaving`), another view (`goToView`) or checking in asks Save / Don't save / Cancel first; a diff that goes
   away without asking saves its edits, so work is never lost. Closing the window, quitting (⌘Q, whichever window has
@@ -234,7 +237,9 @@ renderer/src/
   of the line numbers and of the start of the line above) the whole change. Line numbers pick lines (click,
   Shift+click, drag, shown as they're picked; only changed lines' numbers react) and the chip then acts on them
   ("Restore 3 lines", ⌥⌘Z); picked lines show no line button of their own, and Esc or a click elsewhere drops the
-  pick. After a discard the line that slides under the still pointer is hovered anew, so clicking on removes the lines
+  pick. Only lines the diff has as changed offer a button, as Pierre recolors lines a moment after typing stops and a
+  hovered line may stop being one as the text changes under the pointer. After a discard the line that slides under
+  the still pointer is hovered anew, so clicking on removes the lines
   below one by one (a click within 150 ms of the last is the rest of a double click). While typing, the chip stays
   hidden until typing pauses. The diff's focus ring is for the keyboard only (`usePointerFocusMark`: clicks mark what
   they focus, since Chromium shows `:focus-visible` once any key, even Shift, is pressed). The new text is computed in

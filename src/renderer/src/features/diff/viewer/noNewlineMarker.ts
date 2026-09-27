@@ -10,7 +10,7 @@ export function showsNoNewlineMarker(original: string, modified: string): boolea
 }
 
 /**
- * Hides the marker rows and their gutter gaps (`metadata` gaps are only drawn for them) that Pierre works out again
- * while the file is typed into; `shownDiff` leaves them out of the diff it starts from.
+ * Hides the marker rows and their gutter gaps (`metadata` gaps are only drawn for them): a diff typed into keeps them,
+ * as Pierre works them out again at every keystroke; `shownDiff` leaves them out of a read-only one.
  */
 export const HIDE_NO_NEWLINE_CSS = '[data-no-newline], [data-gutter-buffer="metadata"] { display: none; }';
