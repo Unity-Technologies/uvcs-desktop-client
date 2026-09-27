@@ -4,8 +4,9 @@ import type { ResolvedTheme } from '../../../app/settings/useResolvedTheme';
 /**
  * Pierre derives every diff tint from `--diffs-bg`; seeding it with our surface color makes
  * diffs blend with the app in both themes while keeping Pierre's syntax and add/remove colors.
+ * Code takes the app's code font, whose stack has each OS's (Pierre's own knows neither Cascadia nor DejaVu).
  */
-export const PIERRE_SURFACE_CSS = ':host{--diffs-bg:var(--bg-surface);background-color:var(--bg-surface)}';
+export const PIERRE_SURFACE_CSS = ':host{--diffs-bg:var(--bg-surface);background-color:var(--bg-surface);--diffs-font-family:var(--font-mono)}';
 
 interface DiffAppearance {
   theme: ResolvedTheme;
