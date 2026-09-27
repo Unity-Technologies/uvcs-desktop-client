@@ -3,12 +3,12 @@ import { textMeasurer } from '../../lib/measureText';
 import type { CheckinButtonText } from './checkinButton';
 import styles from './CheckinPanel.module.css';
 
-/** The gap between the action, the target and the size, as in the stylesheet. */
+/** The gap between the action, the size and the target, as in the stylesheet. */
 const PART_GAP = 6;
 
 /**
- * The check-in button's text: the longest of its wordings that fits the button, so it loses the size, then the
- * branch, before a word is ever cut. Sits directly in the button, whose width it measures.
+ * The check-in button's text: the longest of its wordings that fits the button, so it loses the branch, then words,
+ * then the size, before a word is ever cut. Sits directly in the button, whose width it measures.
  */
 export function CheckinButtonWording({ forms }: { forms: CheckinButtonText[] }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -27,7 +27,7 @@ export function CheckinButtonWording({ forms }: { forms: CheckinButtonText[] }) 
       const measureAction = textMeasurer(label);
       const measureDimmed = textMeasurer(label, '400');
       const width = ({ action, target, size }: CheckinButtonText): number =>
-        measureAction(action) + (target ? PART_GAP + measureDimmed(target) : 0) + (size ? PART_GAP + measureDimmed(`· ${size}`) : 0);
+        measureAction(action) + (size ? PART_GAP + measureDimmed(`(${size})`) : 0) + (target ? PART_GAP + measureDimmed(target) : 0);
       const index = forms.findIndex((form) => width(form) <= room);
       setShown(index === -1 ? forms.length - 1 : index);
     };
@@ -42,8 +42,8 @@ export function CheckinButtonWording({ forms }: { forms: CheckinButtonText[] }) 
   return (
     <span ref={ref} className={styles.wording}>
       <span className={styles.action}>{action}</span>
+      {size && <span className={styles.size}>({size})</span>}
       {target && <span className={styles.target}>{target}</span>}
-      {size && <span className={styles.size}>· {size}</span>}
     </span>
   );
 }
