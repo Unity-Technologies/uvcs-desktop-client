@@ -1,4 +1,5 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
+import { formatCount } from '../../lib/text';
 import { categoryOf, hasContentChanges } from './changeCategories';
 
 /** Rows listed in the undo confirmation before collapsing the rest into "…and N more". */
@@ -14,6 +15,16 @@ function losesTextEdits(change: PendingChange): boolean {
   return change.itemType === 'file' && hasContentChanges(change) && categoryOf(change) !== 'added';
 }
 
+/** A checkout without edits: undoing it only releases the file. */
+function isUnchangedCheckout(change: PendingChange): boolean {
+  return categoryOf(change) === 'changed' && !hasContentChanges(change);
+}
+
+/** Whether a backup could keep anything: releasing checkouts without edits leaves nothing to shelve. */
+export function offersBackup(changes: PendingChange[]): boolean {
+  return !changes.every(isUnchangedCheckout);
+}
+
 /** Whether the "Shelve a backup first" box starts ticked. */
 export function suggestsBackup(changes: PendingChange[]): boolean {
   return changes.length > BACKUP_SUGGESTED_ABOVE || changes.some(losesTextEdits);
@@ -26,17 +37,17 @@ export function undoConsequences(changes: PendingChange[]): string[] {
   const deleted = count((change) => categoryOf(change) === 'deleted');
   const moved = count((change) => categoryOf(change) === 'moved');
   const edited = count((change) => hasContentChanges(change) && categoryOf(change) !== 'added');
-  const unchangedCheckouts = count((change) => categoryOf(change) === 'changed' && !hasContentChanges(change));
+  const unchangedCheckouts = count(isUnchangedCheckout);
 
   return [
-    edited > 0 && (edited === 1 ? 'Local edits to 1 file are lost.' : `Local edits to ${edited} files are lost.`),
+    edited > 0 && (edited === 1 ? 'Local edits to 1 file are lost.' : `Local edits to ${formatCount(edited)} files are lost.`),
     added > 0 &&
       (added === 1
         ? '1 added item becomes a private file and stays on disk.'
-        : `${added} added items become private files and stay on disk.`),
-    moved > 0 && (moved === 1 ? '1 moved item goes back to its old path.' : `${moved} moved items go back to their old paths.`),
-    deleted > 0 && (deleted === 1 ? '1 deleted item is restored.' : `${deleted} deleted items are restored.`),
+        : `${formatCount(added)} added items become private files and stay on disk.`),
+    moved > 0 && (moved === 1 ? '1 moved item goes back to its old path.' : `${formatCount(moved)} moved items go back to their old paths.`),
+    deleted > 0 && (deleted === 1 ? '1 deleted item is restored.' : `${formatCount(deleted)} deleted items are restored.`),
     unchangedCheckouts > 0 &&
-      (unchangedCheckouts === 1 ? '1 checkout without edits is released.' : `${unchangedCheckouts} checkouts without edits are released.`),
+      (unchangedCheckouts === 1 ? '1 checkout without edits is released.' : `${formatCount(unchangedCheckouts)} checkouts without edits are released.`),
   ].filter((line): line is string => typeof line === 'string');
 }
