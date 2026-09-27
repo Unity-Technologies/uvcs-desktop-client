@@ -4,8 +4,8 @@ import { diffPresentation, hasTwoRepresentations, showsLines } from './diffPrese
 
 const missing: FileContent = { text: '', isBinary: false, size: 0 };
 const text = (value: string): FileContent => ({ text: value, isBinary: false, size: value.length });
-const svg = (value: string): FileContent => ({ ...text(value), imageDataUrl: `data:image/svg+xml;base64,${btoa(value)}` });
-const image = (size: number): FileContent => ({ isBinary: true, size, imageDataUrl: 'data:image/png;base64,AA==' });
+const svg = (value: string): FileContent => ({ ...text(value), image: { bytes: new TextEncoder().encode(value), mimeType: 'image/svg+xml' } });
+const image = (size: number): FileContent => ({ isBinary: true, size, image: { bytes: new Uint8Array(size), mimeType: 'image/png' } });
 
 describe('diffPresentation', () => {
   it('shows an added 0-byte file as empty, not as identical', () => {

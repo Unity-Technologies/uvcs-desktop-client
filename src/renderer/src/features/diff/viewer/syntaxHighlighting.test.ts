@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { highlightedLanguage, MAX_BACKGROUND_HIGHLIGHTED_CHARS, MAX_HIGHLIGHTED_CHARS, syntaxHighlighting } from './syntaxHighlighting';
+import { highlightedLanguage, MAX_BACKGROUND_HIGHLIGHTED_CHARS, MAX_HIGHLIGHTED_CHARS, MAX_READ_ONLY_HIGHLIGHTED_CHARS, syntaxHighlighting } from './syntaxHighlighting';
 
 describe('syntaxHighlighting', () => {
-  it('highlights files of any usual size before showing them', () => {
+  it('highlights an editable diff of any usual size before showing it', () => {
     expect(syntaxHighlighting('a'.repeat(200_000), 'b'.repeat(200_000), true)).toBe('inline');
-    expect(syntaxHighlighting('', 'x'.repeat(MAX_HIGHLIGHTED_CHARS), false)).toBe('inline');
   });
 
-  it('highlights a big read-only diff in the background, counting both versions', () => {
+  it('highlights a small read-only diff before showing it, and a bigger one in the background, counting both versions', () => {
+    expect(syntaxHighlighting('', 'x'.repeat(MAX_READ_ONLY_HIGHLIGHTED_CHARS), false)).toBe('inline');
+    expect(syntaxHighlighting('a'.repeat(MAX_READ_ONLY_HIGHLIGHTED_CHARS / 2), 'b'.repeat(MAX_READ_ONLY_HIGHLIGHTED_CHARS / 2 + 1), false)).toBe('background');
     expect(syntaxHighlighting('a'.repeat(MAX_HIGHLIGHTED_CHARS / 2), 'b'.repeat(MAX_HIGHLIGHTED_CHARS / 2 + 1), false)).toBe('background');
     expect(syntaxHighlighting('', 'x'.repeat(MAX_BACKGROUND_HIGHLIGHTED_CHARS), false)).toBe('background');
   });

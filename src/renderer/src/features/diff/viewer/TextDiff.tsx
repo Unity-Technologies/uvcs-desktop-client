@@ -140,9 +140,11 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const tokenizeMaxLength = highlighting === 'off' ? 0 : undefined;
   const workers = highlighting === 'background' ? highlightWorkers() : undefined;
   const virtualized = highlighting !== 'inline';
+  // An editable diff renders its tokens as the editor does (`useTokenTransformer`, which Pierre turns on once the editor
+  // attaches) from the first render: otherwise the file is highlighted twice as it opens, before and after.
   const options = useMemo(
-    () => ({ ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }), parseDiffOptions, tokenizeMaxLength, ...discard.options }),
-    [theme, layout, collapseUnchanged, wrapLines, parseDiffOptions, tokenizeMaxLength, discard.options],
+    () => ({ ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }), parseDiffOptions, tokenizeMaxLength, useTokenTransformer: editable, ...discard.options }),
+    [theme, layout, collapseUnchanged, wrapLines, parseDiffOptions, tokenizeMaxLength, editable, discard.options],
   );
   const fileOptions = useMemo(() => ({ ...pierreFileOptions({ theme, wrapLines }), tokenizeMaxLength }), [theme, wrapLines, tokenizeMaxLength]);
   const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);

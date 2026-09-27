@@ -83,6 +83,8 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const { left, right, original, modified } = buffer.shown;
   const current = buffer.unsaved ?? right.text ?? '';
   const dirty = buffer.unsaved !== null;
+  // One image per state of the text: a new one is encoded, and painted from a new blob URL.
+  const shownImage = useMemo(() => (dirty ? renderedEdits(right, current) : right), [dirty, right, current]);
 
   // Files that are text and an image at once (SVG) show rendered unless the user picked the text for their type.
   const twoRepresentations = hasTwoRepresentations(left, right);
@@ -297,7 +299,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   } else if (presentation.kind === 'image') {
     body = (
       <Suspense fallback={<CenteredSpinner />}>
-        <ImageDiffViewer original={left} modified={dirty ? renderedEdits(right, current) : right} mode={imageMode} />
+        <ImageDiffViewer original={left} modified={shownImage} mode={imageMode} />
       </Suspense>
     );
   } else {

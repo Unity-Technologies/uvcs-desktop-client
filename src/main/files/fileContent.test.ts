@@ -19,9 +19,11 @@ describe('toFileContent', () => {
     expect(toFileContent(Buffer.alloc(size, 'a'), 'big.log')).toEqual({ isBinary: true, size, tooLarge: 'text' });
   });
 
-  it('encodes images as data URLs, recognized by extension', () => {
+  it('keeps the bytes of images, recognized by extension', () => {
     const content = toFileContent(Buffer.from([137, 80, 78, 71]), 'Textures/Hero.PNG');
-    expect(content.imageDataUrl).toBe('data:image/png;base64,iVBORw==');
+    expect(content.image?.mimeType).toBe('image/png');
+    expect([...content.image!.bytes]).toEqual([137, 80, 78, 71]);
+    expect(Buffer.isBuffer(content.image!.bytes)).toBe(false);
   });
 
   it('does not encode images over the cap', () => {
@@ -35,7 +37,7 @@ describe('toFileContent', () => {
       isBinary: false,
       size: svg.length,
       text: svg,
-      imageDataUrl: `data:image/svg+xml;base64,${Buffer.from(svg).toString('base64')}`,
+      image: { bytes: new Uint8Array(Buffer.from(svg)), mimeType: 'image/svg+xml' },
     });
   });
 
@@ -43,7 +45,8 @@ describe('toFileContent', () => {
     const large = toFileContent(Buffer.alloc(MAX_TEXT_BYTES + 1, 'a'), 'map.svg');
     expect(large).toMatchObject({ isBinary: true, size: MAX_TEXT_BYTES + 1 });
     expect(large.text).toBeUndefined();
-    expect(large.imageDataUrl).toMatch(/^data:image\/svg\+xml;base64,/);
+    expect(large.image?.mimeType).toBe('image/svg+xml');
+    expect(large.image?.bytes.length).toBe(MAX_TEXT_BYTES + 1);
     const size = MAX_IMAGE_BYTES + 1;
     expect(toFileContent(Buffer.alloc(size, 'a'), 'huge.svg')).toEqual({ isBinary: true, size, tooLarge: 'image' });
   });

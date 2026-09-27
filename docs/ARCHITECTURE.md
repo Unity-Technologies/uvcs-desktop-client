@@ -238,9 +238,12 @@ renderer/src/
   scrolls sideways on its own and its bar would sit at the end of the file, so `PaneScrollbars` keeps one per pane at
   the bottom of the view (diffs, the whole-file editor, merge resolution). The whole-file editor renders only the lines
   in view (Pierre's `Virtualizer` on the diff's scrolling element). Shiki reads whole files at once, never just the
-  lines in view, so `syntaxHighlighting` picks by size (both versions together): up to 400 KB on the main thread; a
-  read-only diff up to 4 MB also renders only the lines in view, shows as plain text at once and highlights in Pierre's
-  workers (`highlightWorkers`, a 50,000-line diff in 6 s); anything bigger, and an editable diff past 400 KB (Pierre
+  lines in view, so `syntaxHighlighting` picks by size (both versions together), at 1.5 to 4 ms a KB on the main
+  thread: an editable diff up to 400 KB highlights there (0.1 s for 2 x 16 KB, 0.57 s for 2 x 156 KB; highlighted once,
+  with the editor's token transformer from the first render); a read-only diff only up to 20 KB (about 0.1 s), and up
+  to 4 MB it renders only the lines in view, shows as plain text at once and takes its colors from Pierre's workers
+  (`highlightWorkers`: 0.2 s for 2 x 16 KB, 1.2 s for 2 x 156 KB, 12 s for 2 x 1.6 MB); anything bigger, and an
+  editable diff past 400 KB (Pierre
   highlights editors on the main thread, pool or not), is plain text and renders only the lines in view too (Pierre
   renders a plain text diff whole at every render: `pierrePlainTextRender` keeps it), with a quiet "Large file" in the
   header (its tooltip says why); such a diff is the "text" language (`highlightedLanguage`),
@@ -298,7 +301,10 @@ renderer/src/
   the file's line breaks as it's typed (`diskText`: kept lines keep theirs, new ones take the file's most common),
   discards and merges split lines at all three, and one side of lone CRs against one of LFs still differs under the
   methods that recognize line endings (`crAgainstLf`); a file mixing both can't tell which of its LFs were CRs.
-- **Images written as text**: an SVG reads as both (`toFileContent` ships its text and a data URL; past the text cap,
+- **Images**: an image's bytes cross IPC as binary (`FileContent.image`, a `Uint8Array` and its type, 40 MB a side at
+  most) and are painted from a blob URL that lives while it's shown (`useImageUrl`), never a data URL (35 MB of text for
+  a 25 MB PNG, decoded again at every paint).
+- **Images written as text**: an SVG reads as both (`toFileContent` ships its text and its image; past the text cap,
   only the image), so its diff shows rendered or as text, with a "Code | Image" switch in the header remembered per
   extension (`representations`, rendered by default). The text keeps every text feature (editing, discarding, the
   comparison method); the image every image mode, with unsaved edits rendered. SVG is only ever painted through `<img>`

@@ -1,12 +1,12 @@
 import { extname } from 'node:path';
-import type { FileContent } from '@shared/domain/content';
+import type { FileContent, ImageBytes } from '@shared/domain/content';
 
 /** Past this, a text diff is too slow to compute and too long to read. */
 export const MAX_TEXT_BYTES = 10 * 1024 * 1024;
 /**
- * Hard cap per image side. Images cross the IPC boundary base64-encoded (~1.37×), so this
- * bounds the renderer payload at ~55 MB worst case: large enough for any reviewable asset,
- * small enough to never stall the bridge.
+ * Hard cap per image side. Images cross the IPC boundary as their bytes, so this bounds the
+ * renderer payload at 40 MB a side: large enough for any reviewable asset, small enough to
+ * never stall the bridge.
  */
 export const MAX_IMAGE_BYTES = 40 * 1024 * 1024;
 const BINARY_SNIFF_BYTES = 8000;
@@ -38,7 +38,7 @@ export function toFileContent(bytes: Buffer, fileName: string): FileContent {
   const imageMimeType = IMAGE_MIME_TYPES[extname(fileName).toLowerCase()];
   if (imageMimeType) {
     if (bytes.length > MAX_IMAGE_BYTES) return { isBinary: true, size: bytes.length, tooLarge: 'image' };
-    return { isBinary: true, size: bytes.length, imageDataUrl: `data:${imageMimeType};base64,${bytes.toString('base64')}` };
+    return { isBinary: true, size: bytes.length, image: imageBytes(bytes, imageMimeType) };
   }
 
   const textImageMimeType = TEXT_IMAGE_MIME_TYPES[extname(fileName).toLowerCase()];
@@ -52,9 +52,14 @@ export function toFileContent(bytes: Buffer, fileName: string): FileContent {
 /** Text and image while the text is small enough to diff; past that (or not text, e.g. UTF-16), an image only. */
 function toTextImageContent(bytes: Buffer, mimeType: string): FileContent {
   if (bytes.length > MAX_IMAGE_BYTES) return { isBinary: true, size: bytes.length, tooLarge: 'image' };
-  const imageDataUrl = `data:${mimeType};base64,${bytes.toString('base64')}`;
-  if (looksBinary(bytes) || bytes.length > MAX_TEXT_BYTES) return { isBinary: true, size: bytes.length, imageDataUrl };
-  return { isBinary: false, size: bytes.length, text: bytes.toString('utf8'), imageDataUrl };
+  const image = imageBytes(bytes, mimeType);
+  if (looksBinary(bytes) || bytes.length > MAX_TEXT_BYTES) return { isBinary: true, size: bytes.length, image };
+  return { isBinary: false, size: bytes.length, text: bytes.toString('utf8'), image };
+}
+
+/** The bytes as a plain `Uint8Array`: IPC copies them as binary (a `Buffer` would arrive as one too, pool slice and all). */
+function imageBytes(bytes: Buffer, mimeType: string): ImageBytes {
+  return { bytes: new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength), mimeType };
 }
 
 function looksBinary(bytes: Buffer): boolean {

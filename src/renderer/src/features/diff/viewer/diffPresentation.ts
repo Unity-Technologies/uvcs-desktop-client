@@ -14,8 +14,8 @@ export type Representation = 'text' | 'image';
 
 /** Both versions read as text and render as images (or one is missing): the user picks how to see them. */
 export function hasTwoRepresentations(left: FileContent, right: FileContent): boolean {
-  if (left.isBinary || right.isBinary || !(left.imageDataUrl || right.imageDataUrl)) return false;
-  return [left, right].every((side) => side.imageDataUrl || side.size === 0);
+  if (left.isBinary || right.isBinary || !(left.image || right.image)) return false;
+  return [left, right].every((side) => side.image || side.size === 0);
 }
 
 /** `representation` only matters to files that have both (`hasTwoRepresentations`); others show as what they are. */
@@ -26,7 +26,7 @@ export function diffPresentation(left: FileContent, right: FileContent, represen
   if (!left.isBinary && !right.isBinary) {
     return { kind: 'text', empty: left.size === 0 && right.size === 0, identical: left.text === right.text };
   }
-  if (left.imageDataUrl || right.imageDataUrl) return imagePresentation(left, right);
+  if (left.image || right.image) return imagePresentation(left, right);
   return { kind: 'binary' };
 }
 
@@ -40,5 +40,5 @@ export function showsLines(presentation: DiffPresentation, editable: boolean): b
 }
 
 function imagePresentation(left: FileContent, right: FileContent): DiffPresentation {
-  return { kind: 'image', comparable: Boolean(left.imageDataUrl && right.imageDataUrl) };
+  return { kind: 'image', comparable: Boolean(left.image && right.image) };
 }

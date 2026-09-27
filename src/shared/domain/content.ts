@@ -14,11 +14,17 @@ export type ContentSource =
    */
   | { kind: 'spec'; spec: string; fileName?: string };
 
+/** An image's file bytes and type, as read: they cross IPC as binary, and the renderer paints them from a blob URL. */
+export interface ImageBytes {
+  bytes: Uint8Array;
+  mimeType: string;
+}
+
 export interface FileContent {
   /** UTF-8 text, when the content is text. */
   text?: string;
-  /** Data URL, when the content is an image (an SVG has its `text` too). */
-  imageDataUrl?: string;
+  /** The image, when the content is one (an SVG has its `text` too). */
+  image?: ImageBytes;
   isBinary: boolean;
   /** Too big to show: text over the diff cap, or an image over the preview cap. */
   tooLarge?: 'text' | 'image';
