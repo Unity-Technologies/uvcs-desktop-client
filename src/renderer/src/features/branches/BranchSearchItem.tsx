@@ -2,6 +2,7 @@ import { GitBranch } from 'lucide-react';
 import { forwardRef, type ButtonHTMLAttributes } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import { PathLabel } from '../../components/PathLabel';
+import { WorkspaceMark } from '../../components/WorkspaceMark';
 import { formatDateTime, formatRelativeDate } from '../../lib/formatDate';
 import { Highlight } from '../../ui/Highlight';
 import styles from './BranchSearchList.module.css';
@@ -35,7 +36,7 @@ export const BranchSearchItem = forwardRef<HTMLButtonElement, BranchSearchItemPr
           </span>
         )}
       </span>
-      {current && <span className={styles.current}>Current</span>}
+      {current && <WorkspaceMark on="branch" />}
       <span className={styles.date} data-tip={`Created ${formatDateTime(branch.date)}`}>
         {formatRelativeDate(branch.date)}
       </span>

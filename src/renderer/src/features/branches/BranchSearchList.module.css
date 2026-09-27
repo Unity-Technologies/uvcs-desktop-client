@@ -112,17 +112,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.current {
-  flex: none;
-  padding: 0 6px;
-  border-radius: var(--radius-full);
-  background: var(--accent-soft);
-  color: var(--accent-text);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-  line-height: 16px;
-}
-
 .empty {
   padding: var(--space-4);
   color: var(--text-tertiary);
