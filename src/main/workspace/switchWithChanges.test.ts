@@ -43,6 +43,7 @@ interface Scenario {
 function workspaceWith(workspacePath: string, scenario: Scenario = {}) {
   let branch = '/main/task1';
   let pending = true;
+  let undoArgs: string[] = [];
   const executed: string[] = [];
   const cm = {
     async query(args: string[]) {
@@ -57,6 +58,7 @@ function workspaceWith(workspacePath: string, scenario: Scenario = {}) {
     },
     async execute(args: string[]) {
       executed.push(args.slice(0, 2).join(' '));
+      if (args[0] === 'undo') undoArgs = args;
       if (args[0] === 'undo') pending = false;
       if (args[0] === 'switch') {
         const target = args[1]!.replace(/^br:/, '');
@@ -85,7 +87,7 @@ function workspaceWith(workspacePath: string, scenario: Scenario = {}) {
     leftChanges: { finish } as unknown as LeftChangesFinder,
     backupsRoot: join(workspacePath, '..', 'backups'),
   };
-  return { deps, executed, records, finish, branch: () => branch };
+  return { deps, executed, records, finish, branch: () => branch, undoArgs: () => undoArgs };
 }
 
 const context: OperationContext = {
@@ -116,6 +118,13 @@ describe('switchWithChanges', () => {
     expect(await switchWithChanges(deps, workspacePath, 'br:/main/task2', 'bring', context)).toEqual({ kind: 'brought' });
     expect(addedFileDuringSwitch).toBe(false);
     expect(finish).toHaveBeenCalledWith(workspacePath, expect.objectContaining({ backup: expect.objectContaining({ paths: ['src/new.txt'] }) }));
+  });
+
+  it('undoes the shelved changes of links themselves, or a checked-out link would stay pending and stop the switch', async () => {
+    const { deps, undoArgs } = workspaceWith(workspacePath);
+
+    await switchWithChanges(deps, workspacePath, 'br:/main/task2', 'leave', context);
+    expect(undoArgs()).toEqual(['undo', '-r', workspacePath, '--symlink']);
   });
 
   it('goes back to the source when the switch fails halfway, and puts the changes back there', async () => {

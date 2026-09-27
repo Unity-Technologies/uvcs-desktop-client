@@ -4,6 +4,7 @@ import type { PendingChangesAction, RenamedPrivateFile, RestoredChanges, SwitchR
 import type { CmClient } from '../cm/CmClient';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
+import { onLinksThemselves } from '../cm/symlinkArgs';
 import { switchArgs } from '../cm/updateArgs';
 import { readWorkspaceStatus } from '../cm/workspaceStatus';
 import type { OperationContext } from '../operations/OperationTracker';
@@ -74,7 +75,7 @@ async function switchFrom(
   }
   if (summary.inMerge) throw new Error(IN_MERGE);
   if (summary.unchangedCheckoutsOnly) {
-    await cm.query(['undo', '--unchanged', '-r', workspacePath], { cwd: workspacePath });
+    await cm.query(onLinksThemselves('undo', '--unchanged', '-r', workspacePath), { cwd: workspacePath });
     await switchTo();
     return { kind: 'undidUnchangedCheckouts', count: summary.pendingCount, restored: await restoreOnArrival(deps, workspacePath, committed) };
   }
@@ -141,7 +142,8 @@ async function shelveAndSwitch(
   // From here on the changes live in the shelve: any failure puts them back.
   try {
     context.beginStep('Undoing them here', 2, steps);
-    await cm.execute(['undo', '-r', workspacePath], { cwd: workspacePath });
+    // Links too: without `--symlink` a checked-out link stays pending (and its target would be undone instead).
+    await cm.execute(onLinksThemselves('undo', '-r', workspacePath), { cwd: workspacePath });
     await moveNewItemsAside(deps, workspacePath, snapshot, record);
     await assertClean(cm, workspacePath);
 
