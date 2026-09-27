@@ -3,11 +3,11 @@ import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { MenuEntry } from '../../lib/actions';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
-import { compareSortValues } from '../../lib/naturalCompare';
 import { isMac } from '../../lib/platform';
 import { focusedKeyOf, selectOnArrow, selectOnClick, successorKey, type SelectionState } from '../../lib/selection';
 import { ActionContextMenu } from '../menu/ActionContextMenu';
 import { cellText } from './cellText';
+import { sortRows, type SortRanks } from './sortRows';
 import styles from './DataTable.module.css';
 
 export interface Column<Row> {
@@ -75,7 +75,16 @@ export function DataTable<Row>({
   // The row keyboard moves go from; until one is moved to, the selection's anchor (e.g. a selection kept from an earlier visit).
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
 
-  const sortedRows = useMemo(() => sortRows(rows, columns, sort), [rows, columns, sort]);
+  const sortValue = columns.find((column) => column.id === sort?.columnId)?.sortValue;
+  // Kept per column, so filtering a sorted list re-sorts it by number (`sortRows`).
+  const sortRanks = useRef<{ sortValue?: Column<Row>['sortValue']; ranks?: SortRanks }>({});
+  const sortedRows = useMemo(() => {
+    if (!sort || !sortValue) return rows;
+    const kept = sortRanks.current.sortValue === sortValue ? sortRanks.current.ranks : undefined;
+    const sorted = sortRows(rows, sortValue, sort.descending, kept);
+    sortRanks.current = { sortValue, ranks: sorted.ranks };
+    return sorted.rows;
+  }, [rows, sortValue, sort]);
   const shownColumns = columns.filter((column) => !column.hideBelow || tableWidth >= column.hideBelow);
 
   const hidesColumns = columns.some((column) => column.hideBelow);
@@ -260,12 +269,4 @@ export function DataTable<Row>({
 
 export function columnStyle<Row>(column: Column<Row>): React.CSSProperties {
   return column.width ? { width: column.width, flex: 'none' } : { flex: column.grow ?? 1, minWidth: 80 };
-}
-
-function sortRows<Row>(rows: readonly Row[], columns: Column<Row>[], sort: { columnId: string; descending: boolean } | undefined): readonly Row[] {
-  const sortValue = columns.find((column) => column.id === sort?.columnId)?.sortValue;
-  if (!sort || !sortValue) return rows;
-
-  const direction = sort.descending ? -1 : 1;
-  return [...rows].sort((a, b) => compareSortValues(sortValue(a), sortValue(b)) * direction);
 }
