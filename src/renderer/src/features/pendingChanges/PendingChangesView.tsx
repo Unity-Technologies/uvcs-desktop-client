@@ -36,7 +36,7 @@ import { usePendingReview } from './review/usePendingReview';
 import { BulkPrivateNotice, confirmBulkPrivateCheckin } from './BulkPrivateNotice';
 import { bulkPrivateFiles } from './bulkPrivate';
 import { behindBranch, behindDescription } from './checkinBehind';
-import { mergeSourceChangeset, uploadSize } from './checkinButton';
+import { mergeSourceChangeset, shelvableChanges, uploadSize } from './checkinButton';
 import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinChanges, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
 import { isCheckinCandidate } from './changeCategories';
@@ -93,6 +93,7 @@ export function PendingChangesView() {
     { branch: branchName, loadedChangeset: workspace?.loadedChangeset },
     included.length,
   );
+  const shelvable = shelvableChanges(included);
   const bulkPrivate = bulkPrivateFiles(included);
   const reviewed = reviewProgress(included, review.statusOf);
   const successMoment = useSuccessMomentStore((state) => state.moments[workspacePath]);
@@ -300,6 +301,7 @@ export function PendingChangesView() {
               onMessageChange={(message) => setMessage(workspacePath, message)}
               includedCount={included.length}
               uploadBytes={uploadSize(included)}
+              shelvable={{ count: shelvable.length, uploadBytes: uploadSize(shelvable) }}
               branchName={workspace?.selector.name ?? ''}
               merging={mergeChanges.length > 0}
               behindCount={behind?.count ?? 0}
@@ -308,7 +310,7 @@ export function PendingChangesView() {
               recentComments={settings.recentComments}
               busy={busy}
               onCheckin={checkin}
-              onShelve={() => runBusy(() => shelveChanges(workspacePath, included, joinComment(draft)))}
+              onShelve={() => runBusy(() => shelveChanges(workspacePath, shelvable, joinComment(draft)))}
             />
           </div>
         }

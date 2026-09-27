@@ -25,6 +25,8 @@ interface CheckinPanelProps {
   includedCount: number;
   /** Bytes the included changes upload. */
   uploadBytes: number;
+  /** What a shelve takes of the included changes: private files stay out. */
+  shelvable: { count: number; uploadBytes: number };
   branchName: string;
   /** A merge is pending: checking in completes it. */
   merging: boolean;
@@ -48,6 +50,7 @@ export function CheckinPanel({
   onMessageChange,
   includedCount,
   uploadBytes,
+  shelvable,
   branchName,
   merging,
   behindCount,
@@ -60,10 +63,19 @@ export function CheckinPanel({
 }: CheckinPanelProps) {
   const [mode, setMode] = useState<CheckinMode>('checkin');
   const { descriptionHeight, setDescriptionHeight } = usePendingChangesViewStore();
-  const disabledReason = checkinDisabledReason(mode, includedCount);
+  const count = mode === 'shelve' ? shelvable.count : includedCount;
+  const disabledReason = checkinDisabledReason(mode, count, includedCount);
   const canAct = disabledReason === null && !busy;
   const { icon: ModeIcon } = describeMode(mode);
-  const label = checkinButtonLabel({ mode, includedCount, branchName, uploadBytes, merging, behindCount, allReviewed });
+  const label = checkinButtonLabel({
+    mode,
+    includedCount: count,
+    branchName,
+    uploadBytes: mode === 'shelve' ? shelvable.uploadBytes : uploadBytes,
+    merging,
+    behindCount,
+    allReviewed,
+  });
   const updatesFirst = mode === 'checkin' && includedCount > 0 && behindCount > 0 && !merging;
 
   // A shelve is a detour: once it's done, the panel is back to checking in.
@@ -121,7 +133,7 @@ export function CheckinPanel({
         </Button>
         <DropdownMenu.Root modal={false}>
           <DropdownMenu.Trigger asChild>
-            <Button variant="primary" className={styles.modeButton} icon={<ChevronDown size={14} />} disabled={!canAct} aria-label="Change mode" />
+            <Button variant="primary" className={styles.modeButton} icon={<ChevronDown size={14} />} disabled={busy} aria-label="Change mode" />
           </DropdownMenu.Trigger>
           <DropdownMenu.Portal>
             <DropdownMenu.Content className={`${menuStyles.content} ${styles.modeMenu}`} align="end" side="top" sideOffset={4}>
