@@ -8,6 +8,7 @@ import { parseItemDetails } from '../cm/itemDetailsXml';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { parseTreeItems } from '../cm/treeItemsXml';
 import { listWorkspacePaths } from '../files/listWorkspacePaths';
+import { renamePrivate } from '../files/renamePrivate';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
 
@@ -36,6 +37,10 @@ export function createExplorerService({ cm }: ServiceContext): ExplorerApi {
 
   async function move(workspacePath: string, fromPath: string, toPath: string) {
     await cm.query(['move', ...absolute(workspacePath, [fromPath, toPath])], inWorkspace(workspacePath));
+  }
+
+  async function renameItemOnDisk(workspacePath: string, fromPath: string, toPath: string) {
+    await renamePrivate(toAbsolutePath(workspacePath, fromPath), toAbsolutePath(workspacePath, toPath));
   }
 
   async function create(workspacePath: string, path: string, kind: 'file' | 'directory') {
@@ -78,6 +83,7 @@ export function createExplorerService({ cm }: ServiceContext): ExplorerApi {
     details,
     addRecursive,
     move,
+    renamePrivate: renameItemOnDisk,
     create,
     changeRevisionType,
     saveRevisionAs,

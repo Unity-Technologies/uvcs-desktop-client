@@ -67,7 +67,8 @@ export async function renameItem(workspacePath: string, item: TreeItem): Promise
 
   const newPath = parent ? `${parent}/${newName}` : newName;
   await runAction(workspacePath, `Couldn't rename ${item.name}`, async () => {
-    await api.explorer.move(workspacePath, item.path, newPath);
+    if (item.isPrivate) await api.explorer.renamePrivate(workspacePath, item.path, newPath);
+    else await api.explorer.move(workspacePath, item.path, newPath);
     useFilesViewStore.getState().requestReveal(newPath);
   });
 }

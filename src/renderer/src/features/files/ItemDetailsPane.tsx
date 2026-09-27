@@ -12,7 +12,7 @@ import { DetailsBadge, DetailsPanel, DetailsSection } from '../../ui/DetailsPane
 import { PropertyList, type Property } from '../../ui/PropertyList';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { ChangeDiffPanel } from '../pendingChanges/ChangeDiffPanel';
-import { describeKinds } from '../pendingChanges/changeCategories';
+import { describeKinds, isControlled } from '../pendingChanges/changeCategories';
 import { useFilesViewStore, type DetailsTab } from './filesViewStore';
 import { itemTypeLabel } from './itemType';
 import { RevisionChanges } from './RevisionChanges';
@@ -40,10 +40,10 @@ export function ItemDetailsPane({ workspacePath, item, pendingChange, menu }: It
       heading={<DetailsHeading name={item.name} />}
       author={item.owner && !item.isPrivate ? { user: item.owner, date: item.date } : undefined}
       badges={
-        pendingChange ? (
+        pendingChange && isControlled(pendingChange) ? (
           <DetailsBadge tone="warning">{describeKinds(pendingChange)}</DetailsBadge>
-        ) : item.isPrivate ? (
-          <DetailsBadge>Private</DetailsBadge>
+        ) : pendingChange || item.isPrivate ? (
+          <DetailsBadge>{pendingChange ? describeKinds(pendingChange) : 'Private'}</DetailsBadge>
         ) : undefined
       }
       primaryAction={
