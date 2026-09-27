@@ -19,6 +19,7 @@ import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { openCreateBranchDialog } from '../branches/CreateBranchDialog';
 import { openCreateLabelDialog } from '../labels/CreateLabelDialog';
 import { openMergeTaskDialog } from '../mergeTask/MergeTaskDialog';
+import { serverMergeLabel } from '../branches/mergeMenuLabels';
 import { isTaskBranch } from '../mergeTask/mergeTaskSummary';
 import type { GraphTarget } from './canvas/graphTargets';
 import { graphActions } from './graphActions';
@@ -94,7 +95,7 @@ function branchMenu(lane: Lane, { workspacePath, layout, goToChangeset, showRela
     { id: 'merge', label: 'Merge from this branch', icon: GitMerge, run: () => graphActions.merge('merge', spec.branch(name)) },
     isTaskBranch(lane.branch) && {
       id: 'mergeTask',
-      label: `Merge to ${lane.branch.parent}…`,
+      label: serverMergeLabel(lane.branch.parent),
       icon: GitPullRequest,
       run: () => openMergeTaskDialog(workspacePath, lane.branch),
     },
