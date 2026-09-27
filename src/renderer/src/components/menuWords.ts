@@ -56,7 +56,7 @@ import {
 } from 'lucide-react';
 import type { Action, Icon, MenuEntry, Submenu } from '../lib/actions';
 import type { GroupedEntry, MenuGroup } from '../lib/menuGroups';
-import { REVEAL_LABEL } from '../lib/platform';
+import { OPEN_FOLDER_LABEL, REVEAL_LABEL } from '../lib/platform';
 import { MERGE_INTO_WORKSPACE, serverMergeLabel } from '../features/branches/mergeMenuLabels';
 
 /** A concept of the menus: the group it goes in, its icon, and its words where they are the same for every object. */
@@ -144,6 +144,7 @@ export const MENU_WORDS = {
   openRevision: word('external', AppWindow, 'Open this revision'),
   saveAs: word('external', Download, 'Save this revision as…'),
   reveal: word('external', FolderSearch, REVEAL_LABEL),
+  openFolder: word('external', FolderOpen, OPEN_FOLDER_LABEL),
   terminal: word('external', SquareTerminal, 'Open terminal here'),
 
   // The clipboard: Cut, Copy, Paste, as everywhere.

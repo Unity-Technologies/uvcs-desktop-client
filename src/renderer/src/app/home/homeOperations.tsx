@@ -49,8 +49,9 @@ export async function removeWorkspace(workspace: WorkspaceSummary): Promise<void
   if (removed) await forgetRecentWorkspace(workspace.path);
 }
 
-export function revealWorkspace(workspace: WorkspaceSummary): void {
-  void api.system.revealInFileManager(workspace.path);
+/** Opens the workspace's folder itself in the file manager, not its parent with it selected. */
+export function openWorkspaceFolder(workspace: WorkspaceSummary): void {
+  void api.system.openPath(workspace.path);
 }
 
 export async function renameRepository(repository: RepositorySummary): Promise<void> {

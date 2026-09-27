@@ -1,5 +1,6 @@
 import { canAnnotate } from '@shared/domain/annotate';
 import type { TreeItem } from '@shared/domain/explorer';
+import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { openTerminalIn } from '../../app/workspace/workspaceShellActions';
 import type { MenuEntry } from '../../lib/actions';
@@ -75,7 +76,9 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
       canAnnotate(single.itemType) &&
       menuAction('annotate', () => showAnnotated(single.path), { shortcut: FILE_SHORTCUTS.annotate }),
     menuAction('locks', () => navigation.goToView('locks')),
-    single && menuAction('reveal', () => revealItem(workspacePath, single)),
+    // The workspace opens as a folder; an item shows selected in the folder that holds it.
+    single && isWorkspaceRoot(single) && menuAction('openFolder', () => void api.system.openPath(workspacePath)),
+    single && !isWorkspaceRoot(single) && menuAction('reveal', () => revealItem(workspacePath, single)),
     single?.itemType === 'directory' && menuAction('terminal', () => openTerminalIn(absolutePath(workspacePath, single.path))),
     // Cut and Paste move items into another folder.
     !hasRoot && cutAction(workspacePath, items),
