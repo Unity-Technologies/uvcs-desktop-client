@@ -295,7 +295,10 @@ renderer/src/
   the file's line breaks as it's typed (`diskText`: kept lines keep theirs, new ones take the file's most common),
   discards and merges split lines at all three, and one side of lone CRs against one of LFs still differs under the
   methods that recognize line endings (`crAgainstLf`); a file mixing both can't tell which of its LFs were CRs.
-- **Images written as text**: an SVG reads as both (`toFileContent` ships its text and a data URL; past the text cap,
+- **Images**: an image's bytes cross IPC as binary (`FileContent.image`, a `Uint8Array` and its type, 40 MB a side at
+  most) and are painted from a blob URL that lives while it's shown (`useImageUrl`), never a data URL (35 MB of text for
+  a 25 MB PNG, decoded again at every paint).
+- **Images written as text**: an SVG reads as both (`toFileContent` ships its text and its image; past the text cap,
   only the image), so its diff shows rendered or as text, with a "Code | Image" switch in the header remembered per
   extension (`representations`, rendered by default). The text keeps every text feature (editing, discarding, the
   comparison method); the image every image mode, with unsaved edits rendered. SVG is only ever painted through `<img>`

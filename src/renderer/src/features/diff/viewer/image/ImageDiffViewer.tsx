@@ -39,8 +39,8 @@ interface ImageDiffViewerProps {
 
 /** Mount one per pair of images: blend, stats and the heatmap cache belong to the pair. */
 export function ImageDiffViewer({ original, modified, mode }: ImageDiffViewerProps) {
-  const oldState = useDecodedImage(original.imageDataUrl);
-  const newState = useDecodedImage(modified.imageDataUrl);
+  const oldState = useDecodedImage(original.image);
+  const newState = useDecodedImage(modified.image);
   const { imageAnchor: anchor, imageTolerance, setImageAnchor, setImageTolerance } = useDiffPreferences();
   const threshold = Math.min(MAX_TOLERANCE, Math.max(0, Math.round(imageTolerance)));
   // Onion blend lives here (not in the mode) so a trip through other modes
@@ -52,7 +52,7 @@ export function ImageDiffViewer({ original, modified, mode }: ImageDiffViewerPro
 
   const oldImage = oldState.status === 'ready' ? oldState.image : null;
   const newImage = newState.status === 'ready' ? newState.image : null;
-  const isDiff = Boolean(original.imageDataUrl && modified.imageDataUrl);
+  const isDiff = Boolean(original.image && modified.image);
   const sizesDiffer = !!oldImage && !!newImage && (oldImage.width !== newImage.width || oldImage.height !== newImage.height);
 
   // The composed frame both revisions are laid out in (max of both sizes).
