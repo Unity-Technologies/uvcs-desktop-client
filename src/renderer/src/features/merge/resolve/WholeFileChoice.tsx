@@ -2,7 +2,7 @@ import { Check } from 'lucide-react';
 import type { FileContent } from '@shared/domain/content';
 import { PathLabel } from '../../../components/PathLabel';
 import { formatSize } from '../../../lib/formatDate';
-import type { ConflictContents } from './useFileConflicts';
+import type { ConflictContents } from './loadedConflict';
 import type { MergeLabels } from '../mergeDescription';
 import styles from './WholeFileChoice.module.css';
 
