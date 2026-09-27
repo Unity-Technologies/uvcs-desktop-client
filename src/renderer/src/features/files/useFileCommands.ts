@@ -22,7 +22,13 @@ async function browseRepositoryAtChangeset(): Promise<void> {
 }
 
 /** Palette commands and shortcuts of the Files view, acting on the current selection. */
-export function useFileCommands(workspacePath: string, selected: TreeItem[], pendingChanges: PendingChangesIndex, onGoToFile: () => void): void {
+export function useFileCommands(
+  workspacePath: string,
+  selected: TreeItem[],
+  pendingChanges: PendingChangesIndex,
+  onGoToFile: () => void,
+  onFind: () => void,
+): void {
   const commands = useMemo<Command[]>(() => {
     const single = selected.length === 1 ? selected[0]! : undefined;
     const isControlledFile = Boolean(single && !single.isPrivate && single.itemType !== 'directory');
@@ -32,6 +38,7 @@ export function useFileCommands(workspacePath: string, selected: TreeItem[], pen
 
     return [
       { id: 'files.goTo', group: 'Files', label: 'Go to file…', icon: Search, shortcut: GO_TO_FILE_SHORTCUT, run: () => onGoToFile() },
+      { id: 'files.find', group: 'Files', label: 'Find files', icon: Search, shortcut: hotkey('filesFind'), run: onFind },
       {
         id: 'files.browseRepository',
         group: 'Files',
@@ -101,7 +108,7 @@ export function useFileCommands(workspacePath: string, selected: TreeItem[], pen
         run: () => useFilesViewStore.getState().setDetailsTab('changes'),
       },
     ];
-  }, [workspacePath, selected, pendingChanges, onGoToFile]);
+  }, [workspacePath, selected, pendingChanges, onGoToFile, onFind]);
 
   useCommands(commands);
 }

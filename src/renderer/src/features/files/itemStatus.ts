@@ -46,13 +46,18 @@ export class PendingChangesIndex {
 export function itemStatus(item: TreeItem, index: PendingChangesIndex): ItemStatus | null {
   const change = index.changeAt(item.path);
   if (change) {
-    const status = { tone: changeTone(change), label: describeKinds(change) };
+    const status = changeStatus(change);
     const onDisk = onDiskState(item, change);
     return onDisk ? { ...status, onDisk } : status;
   }
   if (item.isPrivate) return { tone: 'private', label: 'Private' };
   if (item.isCheckedOut) return { tone: 'changed', label: 'Checked out' };
   return null;
+}
+
+/** The status of a pending change, for anything that shows an item by its path alone (a find result). */
+export function changeStatus(change: PendingChange): ItemStatus {
+  return { tone: changeTone(change), label: describeKinds(change) };
 }
 
 /** A file's size and date on disk, from its pending change; undefined for folders and files it deletes. */
