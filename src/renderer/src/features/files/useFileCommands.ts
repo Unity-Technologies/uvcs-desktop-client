@@ -27,7 +27,6 @@ export function useFileCommands(
   selected: TreeItem[],
   pendingChanges: PendingChangesIndex,
   onGoToFile: () => void,
-  onFind: () => void,
 ): void {
   const commands = useMemo<Command[]>(() => {
     const single = selected.length === 1 ? selected[0]! : undefined;
@@ -38,7 +37,6 @@ export function useFileCommands(
 
     return [
       { id: 'files.goTo', group: 'Files', label: 'Go to file…', icon: Search, shortcut: GO_TO_FILE_SHORTCUT, run: () => onGoToFile() },
-      { id: 'files.find', group: 'Files', label: 'Find files', icon: Search, shortcut: hotkey('filesFind'), run: onFind },
       {
         id: 'files.browseRepository',
         group: 'Files',
@@ -92,11 +90,16 @@ export function useFileCommands(
       {
         id: 'files.annotate',
         group: 'Files',
-        label: 'Annotate selected file',
+        label: 'Annotate selected file, or back to its diff',
         icon: ScanText,
         shortcut: FILE_SHORTCUTS.annotate,
         disabled: !single || !hasRevisions || !canAnnotate(single.itemType),
-        run: () => single && hasRevisions && canAnnotate(single.itemType) && navigation.openPage({ kind: 'annotate', path: single.path }),
+        // The pane's Annotate toggle: the file annotated, or back to its diff.
+        run: () => {
+          if (!single || !hasRevisions || !canAnnotate(single.itemType)) return;
+          const view = useFilesViewStore.getState();
+          view.setDetailsTab(view.detailsTab === 'annotate' ? 'changes' : 'annotate');
+        },
       },
       {
         id: 'files.showChanges',
@@ -108,7 +111,7 @@ export function useFileCommands(
         run: () => useFilesViewStore.getState().setDetailsTab('changes'),
       },
     ];
-  }, [workspacePath, selected, pendingChanges, onGoToFile, onFind]);
+  }, [workspacePath, selected, pendingChanges, onGoToFile]);
 
   useCommands(commands);
 }

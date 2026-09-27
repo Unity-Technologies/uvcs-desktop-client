@@ -18,7 +18,7 @@ interface ItemPathRowProps {
   /** Its status letter at the end of the row; a deleted item's name is struck through. */
   status?: ItemStatusMarkProps['status'];
   changesInside?: boolean;
-  /** Just left of the status, in this order: tags ("modified", a merge), conflict states, locks, review marks. */
+  /** Just left of the status, in this order: tags ("modified", a merge), where a conflict stands, the review mark, then marks (`ItemMark`: an xlink, a lock) by the letter. */
   extras?: ReactNode;
   presence?: ItemPresence;
   faded?: boolean;

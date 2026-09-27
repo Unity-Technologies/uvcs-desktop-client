@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Lock } from '@shared/domain/lock';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { lockedByOthersMessage, locksPendingChanges, pendingLocks } from './pendingLocks';
+import { describeLock, lockedByOthersMessage, locksPendingChanges, pendingLocks } from './pendingLocks';
 
 const change = (path: string): PendingChange => ({ path, kinds: ['checkedOut'], itemType: 'binaryFile', size: 0, lastModified: '' });
 
@@ -52,5 +52,15 @@ describe('lockedByOthersMessage', () => {
     expect(lockedByOthersMessage([{ path: 'a', lock: locked }, { path: 'b', lock: locked }])).toBe(
       "2 changed files are locked by others — you can't check them in until the locks are released",
     );
+  });
+});
+
+describe('describeLock', () => {
+  it('says who holds a lock and where', () => {
+    expect(describeLock({ mine: true, owner: 'me', workspace: 'wk' }).label).toBe('Locked by you');
+    expect(describeLock({ mine: false, owner: 'ana', workspace: 'art-wk' })).toEqual({
+      label: 'Locked by ana in art-wk',
+      detail: "You can't check it in until the lock is released",
+    });
   });
 });

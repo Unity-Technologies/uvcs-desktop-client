@@ -19,7 +19,7 @@ import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { changePresence, changeStatus, changeTone } from './changeTone';
 import { changeTreeArrowRows, menuTargetOf, rowCheckState, rowIndent, treeLevel, type ChangeRow } from './changeRows';
-import { LockChip } from './locks/LockChip';
+import { LockMark } from './locks/LockMark';
 import type { PendingLocks } from './locks/pendingLocks';
 import { isReviewKey, toggleReviewedFromKey } from '../review/reviewKey';
 import { groupReviewStatus, type ReviewStatus, type ReviewStatusOf } from '../review/reviewStatus';
@@ -349,8 +349,8 @@ function RowContent({ row, checkState, reviewStatus, onToggleIncluded, changelis
               <>
                 {change.mergeInfo && <ItemTag>{change.mergeInfo}</ItemTag>}
                 {change.kinds.includes('moved') && change.kinds.includes('changed') && <ItemTag>modified</ItemTag>}
-                {lock && <LockChip path={change.path} lock={lock} />}
                 {reviewStatus && <ReviewToggle status={reviewStatus} onToggle={() => review.toggle([change])} />}
+                {lock && <LockMark lock={lock} />}
               </>
             }
           />

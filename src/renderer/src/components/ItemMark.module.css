@@ -1,0 +1,13 @@
+.mark {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  color: var(--text-tertiary);
+}
+
+.mark[data-tone='alert'] {
+  color: var(--change-deleted);
+}

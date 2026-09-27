@@ -9,7 +9,7 @@ interface ItemRowProps {
   icon: ReactNode;
   /** Its name or path (a `PathLabel`, a highlighted name...), cut with an ellipsis before anything after it. */
   label: ReactNode;
-  /** Just left of the status: lock chips, review marks, +N −M. */
+  /** Just left of the status, in `ItemPathRow`'s order: tags, conflict states, the review mark, then `ItemMark`s (xlink, lock). */
   extras?: ReactNode;
   /** At the end of the row, one column down the list whatever the depth: an `ItemStatusMark`. */
   status?: ReactNode;
