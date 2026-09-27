@@ -2,7 +2,8 @@
   display: flex;
   flex: none;
   flex-direction: column;
-  height: 220px;
+  /* A short window keeps room for the view above it. */
+  height: min(220px, 25vh);
   border-top: 1px solid var(--border-default);
   background: var(--bg-code);
 }

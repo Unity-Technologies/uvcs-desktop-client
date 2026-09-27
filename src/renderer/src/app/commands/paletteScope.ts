@@ -30,3 +30,14 @@ export function parseScope(query: string): { scope: PaletteScope; text: string }
 export function isInScope(section: SectionId, scope: PaletteScope): boolean {
   return scope === 'all' || SECTIONS_IN_SCOPE[scope].includes(section);
 }
+
+/** What a section is waiting for: its list still loading, or its server search running or waiting for typing to pause. */
+export interface SectionLoad {
+  section: SectionId;
+  waiting: boolean;
+}
+
+/** Whether the palette is still searching: only sections in scope count, so `>` answers at once from the commands. */
+export function isSearching(loads: SectionLoad[], scope: PaletteScope): boolean {
+  return loads.some(({ section, waiting }) => waiting && isInScope(section, scope));
+}

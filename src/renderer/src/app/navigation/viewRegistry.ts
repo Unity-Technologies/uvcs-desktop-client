@@ -18,6 +18,7 @@ import { useHasLeftChanges } from '../../features/leftChanges/useLeftChanges';
 import { usePendingChangesCount } from '../../features/pendingChanges/usePendingChanges';
 import type { Icon } from '../../lib/actions';
 import { lazyComponent } from '../../lib/lazyComponent';
+import { isMac } from '../../lib/platform';
 import { viewShortcut } from '../../lib/shortcutRegistry';
 import type { ViewId } from './views';
 
@@ -40,7 +41,7 @@ export interface ViewDefinition {
   label: string;
   icon: Icon;
   group: 'Workspace' | 'History' | 'Collaborate';
-  /** ⌘1, ⌘2… in sidebar order. */
+  /** ⌘1, ⌘2… in sidebar order (`viewShortcut`). */
   shortcut: string;
   component: ComponentType;
   /** A hook returning a count to show next to the view in the sidebar. */
@@ -65,7 +66,7 @@ const SIDEBAR_VIEWS: Omit<ViewDefinition, 'shortcut'>[] = [
 ];
 
 /** In sidebar order: the sidebar lists them group by group, in this order. */
-export const VIEWS: ViewDefinition[] = SIDEBAR_VIEWS.map((view, position) => ({ ...view, shortcut: viewShortcut(position) }));
+export const VIEWS: ViewDefinition[] = SIDEBAR_VIEWS.map((view, position) => ({ ...view, shortcut: viewShortcut(position, isMac) }));
 
 export function viewDefinition(id: ViewId): ViewDefinition {
   return VIEWS.find((view) => view.id === id)!;
