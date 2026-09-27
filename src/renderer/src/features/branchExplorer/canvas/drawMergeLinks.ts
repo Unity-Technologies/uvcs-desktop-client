@@ -1,6 +1,6 @@
 import type { MergeLink } from '@shared/domain/branchExplorer';
 import { STRUCTURE_DIMMED_ALPHA, type DrawContext } from './drawContext';
-import { linkCurve, pointOnCurve, type Curve } from './curves';
+import { arrivalAt, linkCurve, type Curve } from './curves';
 import { NODE_RADIUS, nodePoint } from './geometry';
 import { branchColor, mergeLinkDash } from './graphPalette';
 import { boundsOf, crossesView } from './linkVisibility';
@@ -57,13 +57,9 @@ function involves(link: MergeLink, changeset: number | null): boolean {
   return changeset === link.sourceChangeset || changeset === link.destinationChangeset;
 }
 
-/** An arrow touching the destination changeset, aligned with the end of the curve. */
+/** An arrow touching the destination changeset, on the curve where it arrives and aligned with it. */
 function drawArrowHead({ ctx, pen }: DrawContext, curve: Curve, distanceFromCenter: number): void {
-  const tip = pointOnCurve(curve, 1);
-  const before = pointOnCurve(curve, 0.95);
-  const angle = Math.atan2(tip.y - before.y, tip.x - before.x);
-  const x = tip.x - Math.cos(angle) * distanceFromCenter;
-  const y = tip.y - Math.sin(angle) * distanceFromCenter;
+  const { x, y, angle } = arrivalAt(curve, distanceFromCenter);
 
   ctx.beginPath();
   pen.moveTo(x, y);
