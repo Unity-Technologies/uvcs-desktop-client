@@ -40,9 +40,7 @@
     "@tanstack/react-virtual": "^3.14.13",
     "cmdk": "^1.1.1",
     "diff": "^9.0.0",
-    "fast-xml-parser": "^5.11.1",
     "lucide-react": "^1.48.0",
-    "node-diff3": "^3.2.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "zustand": "^5.0.15"
