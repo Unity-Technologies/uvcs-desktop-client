@@ -177,9 +177,19 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   other way (a plain `cm shelveset create`), asked for each time: the panel goes back to checking in after a shelve.
 - **The list** is one `cm find shelve` by owner and date (`useMyShelves`, `SLOW_CHANGING_QUERY`), refreshed by shelve
   operations; the count comes from it. Typing filters it, and after three letters one bounded server search by comment
-  (`useMyShelvesSearch`) finds older ones. A row opens the shelve's diff, which shows its comment and Apply as the page's
+  (`useShelvesSearch`, `shelvesScope`) finds older ones. A row opens the shelve's diff, which shows its comment and Apply as the page's
   primary action (`ShelveDiffActions`; only for a shelve a list already read). Apply is on the row; Apply and delete,
   code review, copy and delete are behind "More actions".
+- **Everyone's** shelves are the other side of "Mine | Everyone" at the top (a radio group: Tab reaches it, ← → switch;
+  ⇧⌘S again in the list; "Everyone's shelves…" in the palette). Every opening starts on Mine, which the button counts,
+  and reads nothing more until Everyone is picked: then one `cm find shelve` by the same date alone
+  (`useEveryonesShelves`; on codice@cloud 128 shelves in three months, 0.1 s, 60 KB), cached and refreshed like Mine's.
+  `cm` can't sort shelves and `limit` keeps the oldest, so dates bound these queries, not limits: the list renders the
+  newest 200 ("Newest 200 of N · filter to find others"), and the server search of everyone's goes back a year
+  (limit 100 as a ceiling, "More may match" when reached). Rows name the author with their avatar ("You" for the
+  user's own), and the filter matches authors in what is listed: `cm` matches owners only whole. Someone else's shelve
+  is applied, shown, reviewed or copied, never deleted or restored from here (nor from its diff); the Shelves view
+  keeps those. "All shelves" opens it with the same scope and filter.
 - **Applying** (`shelves.apply`, `LeftChangesFinder.apply`) merges from `sh:N` at once when nothing conflicts, without
   leaving Changes; only conflicts open the merge view (whose `deleteShelve` finishes the same way). `cm` refuses to merge
   into a workspace with pending changes (unless client.conf's `MergeWithPendingChanges`), so the app offers to shelve
@@ -408,7 +418,7 @@ and many people use the same server. Every `cm` command other than local reads (
   for an event, a focus or an operation.
 - **Focus**: the incoming check if older than 20 s, and the server views on screen once stale (30 s by default). Lists
   that hardly change by themselves and are heavy to read use `SLOW_CHANGING_QUERY` (every branch, every label, attribute
-  types, attribute values, the working object's comment, the palette's lists, the user's recent shelves in Changes): five minutes, and focus never re-reads them. The Branch
+  types, attribute values, the working object's comment, the palette's lists, the recent shelves in Changes, the user's and everyone's): five minutes, and focus never re-reads them. The Branch
   Explorer is kept five minutes and focus never re-reads all history. Local views skip focus while the watcher sees the disk.
 - **Home**: the repository and branch of every listed workspace come from its `.plastic/plastic.selector` file
   (`workspaces.heads`); `cm` is asked only about recent workspaces whose file can't tell.

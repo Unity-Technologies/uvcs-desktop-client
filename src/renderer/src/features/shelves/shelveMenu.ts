@@ -5,8 +5,11 @@ import { copyToClipboard } from '../../lib/copyToClipboard';
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
 import { applyShelve, deleteShelve, showShelveChanges } from './shelveOperations';
 
-/** `left`: changes a switch or an update left, which are restored (applied, then deleted) rather than applied. */
-export function shelveMenu(workspacePath: string, shelves: Shelve[], { left = false } = {}): MenuEntry[] {
+/**
+ * `left`: changes a switch or an update left, which are restored (applied, then deleted) rather than applied.
+ * `mine: false`: someone else's, which Changes applies without deleting and never deletes.
+ */
+export function shelveMenu(workspacePath: string, shelves: Shelve[], { left = false, mine = true } = {}): MenuEntry[] {
   if (shelves.length !== 1) return [];
   const shelve = shelves[0]!;
 
@@ -14,7 +17,7 @@ export function shelveMenu(workspacePath: string, shelves: Shelve[], { left = fa
     left
       ? { id: 'apply', label: 'Restore', icon: ArchiveRestore, run: () => void applyShelve(workspacePath, shelve.id, true) }
       : { id: 'apply', label: 'Apply to workspace', icon: ArchiveRestore, run: () => void applyShelve(workspacePath, shelve.id, false) },
-    !left && { id: 'applyAndDelete', label: 'Apply and delete', icon: ArchiveRestore, run: () => void applyShelve(workspacePath, shelve.id, true) },
+    !left && mine && { id: 'applyAndDelete', label: 'Apply and delete', icon: ArchiveRestore, run: () => void applyShelve(workspacePath, shelve.id, true) },
     { id: 'diff', label: 'Show shelved changes', icon: FileDiff, run: () => showShelveChanges(shelve) },
     {
       id: 'codeReview',
@@ -25,6 +28,6 @@ export function shelveMenu(workspacePath: string, shelves: Shelve[], { left = fa
     SEPARATOR,
     { id: 'copy', label: 'Copy shelve spec', icon: Copy, run: () => copyToClipboard(`sh:${shelve.id}`, 'Shelve spec') },
     SEPARATOR,
-    { id: 'delete', label: 'Delete…', icon: Trash2, danger: true, run: () => void deleteShelve(workspacePath, shelve.id) },
+    mine && { id: 'delete', label: 'Delete…', icon: Trash2, danger: true, run: () => void deleteShelve(workspacePath, shelve.id) },
   ]);
 }

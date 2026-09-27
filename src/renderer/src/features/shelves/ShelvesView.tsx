@@ -1,5 +1,5 @@
 import { Archive, RefreshCw, User } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
 import { invalidateWorkspace } from '../../app/queryClient';
@@ -40,9 +40,8 @@ const COLUMNS: Column<Shelve>[] = [
 
 export function ShelvesView() {
   const workspacePath = useWorkspacePath();
-  const { onlyMine, setOnlyMine } = useShelvesViewStore();
+  const { onlyMine, setOnlyMine, search, setSearch } = useShelvesViewStore();
   const { data: shelves, isLoading, isFetching, error } = useShelves({ owner: onlyMine ? 'me' : undefined });
-  const [search, setSearch] = useState('');
   const [selection, setSelection] = useViewSelection('shelves');
 
   const visible = useMemo(() => {
