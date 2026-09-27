@@ -92,7 +92,7 @@ export function PendingChangesView() {
     clearTextFilter();
     review.showAll();
   };
-  const { isIncluded, included, uploadBytes, shelvable, shelvableBytes, bulkPrivate } = useCheckinSelection(allChanges, excludedPaths);
+  const { isIncluded, included, upload, shelvable, shelvableUpload, bulkPrivate } = useCheckinSelection(allChanges, excludedPaths);
   // The changes shown are some of all of them: the checked ones they leave out are the rest.
   const hiddenIncludedCount = useMemo(() => included.length - changes.filter(isIncluded).length, [changes, included, isIncluded]);
   const branchName = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
@@ -346,8 +346,8 @@ export function PendingChangesView() {
               summaryRef={summaryRef}
               workspacePath={workspacePath}
               includedCount={included.length}
-              uploadBytes={uploadBytes}
-              shelvable={{ count: shelvable.length, uploadBytes: shelvableBytes }}
+              upload={upload}
+              shelvable={{ count: shelvable.length, upload: shelvableUpload }}
               branchName={workspace?.selector.name ?? ''}
               merging={mergeChanges.length > 0}
               behindCount={behind?.count ?? 0}

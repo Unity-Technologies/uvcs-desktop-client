@@ -14,6 +14,7 @@ import { checkinButtonLabel, checkinDisabledReason, type CheckinMode } from './c
 import { CheckinButtonWording } from './CheckinButtonWording';
 import { useCheckinDraftStore, useCheckinMessage } from './checkinDraftStore';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
+import { describeUpload, type UploadSummary } from './uploadSummary';
 import styles from './CheckinPanel.module.css';
 import { hotkey } from '../../lib/shortcutRegistry';
 
@@ -26,10 +27,10 @@ interface CheckinPanelProps {
   /** Whose draft comment the fields show and edit. */
   workspacePath: string;
   includedCount: number;
-  /** Bytes the included changes upload. */
-  uploadBytes: number;
+  /** What the included changes upload. */
+  upload: UploadSummary;
   /** What a shelve takes of the included changes: private files stay out. */
-  shelvable: { count: number; uploadBytes: number };
+  shelvable: { count: number; upload: UploadSummary };
   branchName: string;
   /** A merge is pending: checking in completes it. */
   merging: boolean;
@@ -52,7 +53,7 @@ export function CheckinPanel({
   summaryRef,
   workspacePath,
   includedCount,
-  uploadBytes,
+  upload,
   shelvable,
   branchName,
   merging,
@@ -76,11 +77,12 @@ export function CheckinPanel({
   const disabledReason = checkinDisabledReason(mode, count, includedCount);
   const canAct = disabledReason === null && !busy;
   const { icon: ModeIcon } = describeMode(mode);
+  const uploaded = shelving ? shelvable.upload : upload;
   const label = checkinButtonLabel({
     mode,
     includedCount: count,
     branchName,
-    uploadBytes: shelving ? shelvable.uploadBytes : uploadBytes,
+    uploadBytes: uploaded.bytes,
     merging,
     behindCount,
     allReviewed,
@@ -144,6 +146,7 @@ export function CheckinPanel({
           icon={merging && mode === 'checkin' ? <GitMerge size={14} /> : updatesFirst ? <ArrowDownToLine size={14} /> : <ModeIcon size={14} />}
           aria-disabled={!canAct}
           data-tip={disabledReason ?? label.tip}
+          data-tip-sub={canAct ? (describeUpload(uploaded) ?? undefined) : undefined}
           data-tip-shortcut={canAct ? hotkey('checkin') : undefined}
           loading={busy}
           onClick={() => void act()}

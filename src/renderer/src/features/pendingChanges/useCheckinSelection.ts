@@ -2,16 +2,16 @@ import { useCallback, useMemo } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { bulkPrivateFiles, type BulkPrivate } from './bulkPrivate';
 import { isCheckinCandidate, isShelvable } from './changeCategories';
-import { uploadSize } from './checkinButton';
+import { uploadSummary, type UploadSummary } from './uploadSummary';
 
 interface CheckinSelection {
   isIncluded: (change: PendingChange) => boolean;
   /** Every checked change, including those the filter hides: the filter only narrows what is shown. */
   included: PendingChange[];
-  uploadBytes: number;
+  upload: UploadSummary;
   /** What a shelve takes of them: private files stay out. */
   shelvable: PendingChange[];
-  shelvableBytes: number;
+  shelvableUpload: UploadSummary;
   bulkPrivate: BulkPrivate | null;
 }
 
@@ -27,9 +27,9 @@ export function useCheckinSelection(allChanges: PendingChange[], excludedPaths: 
     return {
       isIncluded,
       included,
-      uploadBytes: uploadSize(included),
+      upload: uploadSummary(included),
       shelvable,
-      shelvableBytes: uploadSize(shelvable),
+      shelvableUpload: uploadSummary(shelvable),
       bulkPrivate: bulkPrivateFiles(included),
     };
   }, [allChanges, isIncluded]);

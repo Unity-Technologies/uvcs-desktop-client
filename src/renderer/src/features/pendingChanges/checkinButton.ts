@@ -1,17 +1,8 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { formatSize } from '../../lib/formatDate';
 import { fileNameOf, formatCount, pluralize } from '../../lib/text';
-import { categoryOf, existsOnDisk, hasContentChanges } from './changeCategories';
 
 export type CheckinMode = 'checkin' | 'shelve';
-
-/** The size of the content a check-in uploads: new files and edited ones. Moves, deletions and folders upload nothing. */
-export function uploadSize(changes: PendingChange[]): number {
-  return changes
-    .filter((change) => change.itemType !== 'directory' && existsOnDisk(change))
-    .filter((change) => hasContentChanges(change) || ['added', 'private'].includes(categoryOf(change)))
-    .reduce((total, change) => total + change.size, 0);
-}
 
 interface CheckinButtonState {
   mode: CheckinMode;
@@ -28,11 +19,11 @@ interface CheckinButtonState {
   keepShelved?: boolean;
 }
 
-/** One wording of the button: the action, then "to /main" and the upload size, dimmed. */
+/** One wording of the button: the action, then the upload size and "to task", dimmed. */
 export interface CheckinButtonText {
   action: string;
-  target: string | null;
   size: string | null;
+  target: string | null;
 }
 
 interface CheckinButtonLabel {
@@ -43,18 +34,19 @@ interface CheckinButtonLabel {
 }
 
 /**
- * What the check-in button says, e.g. "Check in 4 changes" "to /main/task" "1.1 MB"; as it narrows, without the size,
- * with the branch's leaf only ("to task"), without the branch and finally "Check in 4". Behind the branch head it
- * updates first ("Update & check in 4 changes"); once every change is reviewed, "Check in reviewed changes".
+ * What the check-in button says, e.g. "Check in 4 changes (1.1 MB) to task": the branch by its leaf, whole in the
+ * tooltip. As it narrows, the branch goes first, then the words ("Check in 4"), and the size last: the top bar names
+ * the branch, while nothing else tells what the check-in uploads. Behind the branch head it updates first
+ * ("Update & check in 4 changes"); once every change is reviewed, "Check in reviewed changes".
  */
 export function checkinButtonLabel({ mode, includedCount, branchName, uploadBytes, merging, behindCount, allReviewed, keepShelved }: CheckinButtonState): CheckinButtonLabel {
   const size = includedCount > 0 && uploadBytes > 0 ? formatSize(uploadBytes) : null;
   if (mode === 'shelve') {
     const tip = keepShelved ? 'Shelve a copy; the changes stay here' : 'Shelve, then undo the changes here';
-    if (includedCount === 0) return { forms: [{ action: 'Nothing to shelve', target: null, size: null }], tip };
+    if (includedCount === 0) return { forms: [{ action: 'Nothing to shelve', size: null, target: null }], tip };
     return { forms: shorterForms(`Shelve ${pluralize(includedCount, 'change')}`, `Shelve ${formatCount(includedCount)}`, '', size), tip };
   }
-  if (includedCount === 0) return { forms: [{ action: 'Nothing to check in', target: null, size: null }], tip: 'Check in' };
+  if (includedCount === 0) return { forms: [{ action: 'Nothing to check in', size: null, target: null }], tip: 'Check in' };
   const tip = branchName ? `Check in to ${branchName}` : 'Check in';
   if (merging) return { forms: shorterForms('Check in merge', null, branchName, size), tip };
   if (behindCount > 0) {
@@ -66,17 +58,19 @@ export function checkinButtonLabel({ mode, includedCount, branchName, uploadByte
 }
 
 function shorterForms(action: string, shortAction: string | null, branchName: string, size: string | null): CheckinButtonText[] {
-  const target = branchName ? `to ${branchName}` : null;
-  // A top-level branch is its own leaf.
-  const leafTarget = branchName.lastIndexOf('/') > 0 ? `to ${fileNameOf(branchName)}` : null;
+  const target = branchName ? `to ${fileNameOf(branchName)}` : null;
+  const short = shortAction ?? action;
   const forms = [
-    { action, target, size },
-    size && { action, target, size: null },
-    leafTarget && { action, target: leafTarget, size: null },
-    target && { action, target: null, size: null },
-    shortAction && { action: shortAction, target: null, size: null },
+    { action, size, target },
+    { action, size, target: null },
+    { action: short, size, target: null },
+    { action: short, size: null, target: null },
   ];
-  return forms.filter((form): form is CheckinButtonText => Boolean(form));
+  return forms.filter((form, index) => forms.findIndex((other) => sameText(other, form)) === index);
+}
+
+function sameText(a: CheckinButtonText, b: CheckinButtonText): boolean {
+  return a.action === b.action && a.size === b.size && a.target === b.target;
 }
 
 /**
