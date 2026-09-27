@@ -40,6 +40,28 @@ describe('createFuzzyIndex', () => {
   it('returns the first texts when the query is empty', () => {
     expect(rank('  ', 2)).toEqual(['src/core/mod1.ts', 'src/ui/widgets/Button.tsx']);
   });
+
+  it('ranks each query as a fresh index would, typing on, deleting back or starting over', () => {
+    const texts = Array.from({ length: 3000 }, (_, index) => `src/${['core', 'ui', 'net'][index % 3]}/part${index % 97}/file${index}.ts`);
+    const typed = createFuzzyIndex(texts);
+    for (const query of ['f', 'fi', 'fil', 'file1', 'file12', 'file1', 'ui', 'uip', 'u p 3', 'net/part9', 'n', 'xyz', 'xyzw', 'x']) {
+      expect(typed.rank(query, 20), query).toEqual(createFuzzyIndex(texts).rank(query, 20));
+    }
+  });
+
+  it('types on and deletes back through 200,000 paths looking only at what still matches', () => {
+    const texts = Array.from({ length: 200_000 }, (_, index) => `assets/level${index % 50}/props/prop${index}.prefab`);
+    const index = createFuzzyIndex(texts);
+    for (const query of ['p', 'pr', 'pro', 'prop', 'prop1', 'prop19', 'prop199', 'prop1999']) index.rank(query, 10);
+    // Each letter typed looks through the few paths left, each deleted answers from memory: all 200,000 every time
+    // would take seconds.
+    const start = performance.now();
+    for (let digit = 0; digit < 1000; digit++) {
+      expect(index.rank(`prop1999${digit % 10}`, 10).length).toBeGreaterThan(0);
+      expect(index.rank('prop1999', 10)).toHaveLength(10);
+    }
+    expect(performance.now() - start).toBeLessThan(1000);
+  });
 });
 
 describe('fuzzyMatchPositions', () => {

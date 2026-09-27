@@ -6,8 +6,20 @@
   outline: none;
 }
 
-.section + .section {
-  margin-top: var(--space-2);
+/* Only the rows in view are there, each where it belongs. */
+.rows {
+  position: relative;
+}
+
+.slot {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+}
+
+.slot[data-section-start='true'] {
+  padding-top: var(--space-2);
 }
 
 .sectionHeader {

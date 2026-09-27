@@ -9,7 +9,7 @@ export interface CommandLogEntry {
   durationMs: number;
   exitCode: number;
   viaShell: boolean;
-  /** Output is kept only for failed commands, to help diagnose them. */
+  /** Output is kept only for failed commands, to help diagnose them. It and the command line are clipped (`clipForLog`). */
   output: string;
 }
 
@@ -26,6 +26,15 @@ export interface WorkspaceChange {
   pathsChanged: boolean;
   /** `cm` rewrote the workspace state in `.plastic` (checkin, update, switch, undo...), whoever ran it. */
   metadata: boolean;
+}
+
+/** What two changes in a row changed, as one. */
+export function mergeChanges(first: WorkspaceChange, second: WorkspaceChange): WorkspaceChange {
+  return {
+    content: first.content || second.content,
+    pathsChanged: first.pathsChanged || second.pathsChanged,
+    metadata: first.metadata || second.metadata,
+  };
 }
 
 /**

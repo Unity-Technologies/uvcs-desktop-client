@@ -3,7 +3,7 @@ import { AlertTriangle, ArrowDownToLine } from 'lucide-react';
 import { useRef, useState, type MouseEvent } from 'react';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
-import { useRunningOperation } from '../../app/operations/runningOperationsStore';
+import { useRunningOperationOfKind } from '../../app/operations/runningOperationsStore';
 import { queryClient } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { pluralize } from '../../lib/text';
@@ -28,7 +28,7 @@ export function IncomingChip() {
   const { data: summary } = useIncomingSummary();
   const hasIncoming = Boolean(summary?.branch && summary.changesetCount > 0);
   const { data: changes } = useIncomingChanges({ enabled: hasIncoming });
-  const running = useRunningOperation(workspacePath);
+  const running = useRunningOperationOfKind(workspacePath, 'update');
   const state = incomingChipState(summary, changes, running);
   const card = useHoverCard();
   const [verifying, setVerifying] = useState(false);

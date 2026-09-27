@@ -2,6 +2,7 @@ import { FileDiff, ScanText } from 'lucide-react';
 import { useState } from 'react';
 import { canAnnotate } from '@shared/domain/annotate';
 import type { ItemRevision } from '@shared/domain/history';
+import { useSettledValue } from '../../lib/useSettled';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { SegmentedControl } from '../../ui/SegmentedControl';
@@ -26,7 +27,9 @@ interface RevisionDetailsProps {
  */
 export function RevisionDetails({ path, revisions, selected }: RevisionDetailsProps) {
   const [view, setView] = useState<RevisionView>('diff');
-  const [newer, older] = comparedRevisions(revisions, selected);
+  const compared = comparedRevisions(revisions, selected);
+  // Arrowing through the history doesn't read (`cm cat`, `cm annotate`) every revision it passes.
+  const [newer, older] = useSettledValue(compared, compared.map((revision) => revision?.revisionId).join(':'));
 
   if (!newer) return <EmptyState title="Select a revision" description="Select two revisions to compare them with each other." />;
 

@@ -1,6 +1,7 @@
 import { QueryClient, type Query } from '@tanstack/react-query';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { queryKeys, workspaceKey } from '../api/queryKeys';
+import { boundUnusedQueries } from './boundUnusedQueries';
 import { workspaceInfoKeyMoved, type WorkspaceInfoPart } from './refresh/headChanges';
 import { trackWindowFocus } from './refresh/trackWindowFocus';
 
@@ -50,6 +51,11 @@ export function isKeyedByMovedInfo(query: Query, before: WorkspaceInfo | undefin
 export function isRefreshable(query: Query): boolean {
   return query.meta?.immutable !== true;
 }
+
+/** Immutable results kept once off screen: the objects opened last (a changeset's files, a revision's text). */
+const MAX_UNUSED_IMMUTABLE = 100;
+
+boundUnusedQueries(queryClient.getQueryCache(), MAX_UNUSED_IMMUTABLE, (query) => !isRefreshable(query));
 
 /**
  * Refreshes every view of a workspace; call it after anything that changes the workspace or its repository.

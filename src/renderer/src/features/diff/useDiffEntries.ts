@@ -21,7 +21,7 @@ export function useDiffEntries(target: DiffTarget | null, { enabled = true, bran
     queryFn: () => api.diff.entries(workspacePath, target!),
     enabled: enabled && target !== null,
     staleTime: immutable ? Infinity : 15_000,
-    // Kept for the session: coming back to an object shows its files without asking the server again.
+    // Kept (the last objects opened, `MAX_UNUSED_IMMUTABLE`): coming back to one shows its files without asking the server again.
     gcTime: immutable ? Infinity : undefined,
     meta: immutable ? IMMUTABLE_QUERY : undefined,
   });

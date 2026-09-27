@@ -53,9 +53,10 @@ safe, and the step of a multi-command operation (shelve, undo, switch, bring). N
   killed while uploading, nothing is committed.
 - The renderer keeps each operation's progress and its bar motion (`runningOperationsStore`, `progressBar`): the bar
   glides linearly towards where the next report should land at the current pace (never backwards, at most halfway into
-  what's left), sweeps while nothing is measured, and stays full and shimmering while wrapping up. `OperationCard` draws
-  it in fixed rows and widths, then turns into the success message in place; the status bar, the branch pill and the
-  incoming chip show the same operation with a `ProgressRing`.
+  what's left), sweeps while nothing is measured, and stays full and shimmering while wrapping up, all of it moved
+  by transforms on the compositor. `OperationCard` draws it in fixed rows and widths, then turns into the success
+  message in place; the status bar, the branch pill (a switch) and the incoming chip (an update) show the same
+  operation with a `ProgressRing`. A report renders only these (`useRunningOperationOfKind` for the pill and the chip).
 
 ## No external tool opens by itself
 
@@ -131,6 +132,14 @@ Incoming view resolves update conflicts with the same panel and run (in its upda
 that merges automatically is never edited; its menu only overrides it by keeping one version. Once merged, the page
 states where the result went.
 
+Merges hold hundreds of conflicting files and thousands of changes. Every conflicting file's three versions load at
+once (its status needs its automatic merge); each file merges once, when its versions are in (`loadConflict`), and
+keeps its state while nothing about it changes (`buildStates`). The three-way merge (`diff3`) draws node-diff3's diff3
+regions over Myers diffs of each side, whose time goes by the lines changed (lockfiles repeat lines by the thousand).
+The list and Incoming render only the rows in view; the file behind the selection follows it deferred, so arrowing
+never waits for a file to highlight. Conflicts, Base and the hand editor follow the diffs' size rule
+(`syntaxHighlighting`), and Base (when big) and the hand editor render only the lines in view.
+
 ## Switching with pending changes
 
 `cm switch` only ever runs on a clean workspace (`main/workspace/switchWithChanges.ts`), whatever client.conf's
@@ -158,6 +167,8 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   windows showing it; own writes are ignored in the workspace they touch.
 - Settings are written in main, one change at a time; values computed from the stored ones (the recent workspaces) are
   computed there too, and every window gets the result (`settingsChanged`).
+- What a window checks as it opens (`cm version`, `cm checkconnection`) runs until it succeeds once; later windows take
+  that answer (`untilSucceeded`). A problem is checked again by the next window, and by Retry.
 - "New workspace for a task" (`features/taskWorkspace`) creates a child of /main at its head (or takes an existing branch),
   a workspace next to the current one, and switches it (a plain `cm switch`: it's empty); a failure removes the new
   workspace and keeps the branch. The switcher shows the branch and pending changes of the other workspaces of the same
@@ -197,6 +208,7 @@ renderer/src/
   - `workspaceChanged` tells file edits (pending changes, review marks, files view, open diffs of workspace files; if auto refresh is on, and once when it's turned back on)
     from `.plastic` rewrites by any tool (workspace info; everything when the loaded changeset or branch moved). See
     `app/shell/useWorkspaceWatcher.ts` and `app/refresh/`. A diff with unsaved edits holds still and offers to reload instead.
+    A hidden window (minimized, covered, on another desktop) keeps the changes and refreshes once, when it shows again.
   - Locks live on the server, where nothing reports changes: pending changes re-read them along with the changes, at most every 30 s.
   - Window focus (wired to real focus in `trackWindowFocus`) refetches stale server views; local views skip it while the watcher sees everything.
   - Incoming: `useIncomingSummary` polls every minute with focus, every five minutes behind other apps, never hidden, and on focus if
@@ -335,10 +347,9 @@ and many people use the same server. Every `cm` command other than local reads (
   Explorer is kept five minutes and focus never re-reads all history. Local views skip focus while the watcher sees the disk.
 - **Home**: the repository and branch of every listed workspace come from its `.plastic/plastic.selector` file
   (`workspaces.heads`); `cm` is asked only about recent workspaces whose file can't tell.
-- **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`), a file's
-  diff reads its versions once the selection stays on it 150 ms or at once when read before (`useDiffContents`), `cm diff`
+- **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`; `useSettledValue` for details that stay on screen as the selection moves, like a history's diff or any file's diff, `useDiffContents`, which shows a pair read before at once), `cm diff`
   runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id, specs
-  pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`) and skipped by refreshes.
+  pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`; the last 100 off screen, `boundUnusedQueries`) and skipped by refreshes.
   An object opened from a list already read starts from it (`useChangeset`) and is asked for only once that list is stale.
 - **After an operation**: `invalidateWorkspace` refetches what is on screen and marks the rest stale, scoped to what the
   operation can change (`refreshScopes.ts`, `runOperation({ affects })`, `runAction(..., affects)`): a checkin, an update

@@ -1,9 +1,10 @@
-import { Copy, Trash2, X } from 'lucide-react';
+import { Trash2, X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { pluralize } from '../../lib/text';
 import { IconButton } from '../../ui/IconButton';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { useWorkspacePath } from '../workspace/useWorkspace';
+import { CommandLogEntryRow } from './CommandLogEntryRow';
 import { ranInWorkspace } from './commandLogScope';
 import { useCommandLogStore, type CommandLogScope } from './commandLogStore';
 import styles from './CommandLogPanel.module.css';
@@ -37,23 +38,12 @@ export function CommandLogPanel() {
       </header>
       <div ref={listRef} className={`${styles.list} selectable`}>
         {shown.map((entry) => (
-          <div
+          <CommandLogEntryRow
             key={entry.id}
-            className={styles.entry}
-            data-entry-id={entry.id}
-            data-failed={entry.exitCode !== 0}
-            data-revealed={entry.id === revealedId}
-          >
-            <span className={styles.duration}>{entry.durationMs} ms</span>
-            <span className={styles.command}>
-              {entry.commandLine}
-              {scope === 'all' && !ranInWorkspace(entry, workspacePath) && <span className={styles.cwd}>in {entry.cwd}</span>}
-            </span>
-            <button className={styles.copy} onClick={() => void navigator.clipboard.writeText(entry.commandLine)} data-tip="Copy command" aria-label="Copy command">
-              <Copy size={11} />
-            </button>
-            {entry.output && <pre className={styles.output}>{entry.output}</pre>}
-          </div>
+            entry={entry}
+            revealed={entry.id === revealedId}
+            cwd={scope === 'all' && !ranInWorkspace(entry, workspacePath) ? entry.cwd : undefined}
+          />
         ))}
       </div>
     </section>

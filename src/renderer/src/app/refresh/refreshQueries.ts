@@ -10,12 +10,19 @@ const followUpScheduled = new WeakSet<Query>();
  * Resolves once the refetches are done.
  */
 export function refreshQueries(filters: QueryFilters): Promise<void> {
-  return Promise.all(queryClient.getQueryCache().findAll(filters).filter(isRefreshable).map(refreshQuery)).then(() => undefined);
+  const queries = queryClient.getQueryCache().findAll(filters).filter(isRefreshable);
+  const idle = new Set(queries.filter((query) => query.state.fetchStatus !== 'fetching'));
+  const fetching = queries.filter((query) => !idle.has(query));
+  return Promise.all([refetch(idle), ...fetching.map(followUp)]).then(() => undefined);
 }
 
-function refreshQuery(query: Query): Promise<void> {
-  const refetch = () => queryClient.invalidateQueries({ queryKey: query.queryKey, exact: true }, { cancelRefetch: false });
-  if (query.state.fetchStatus !== 'fetching') return refetch();
+/** One pass over the cache for them all: a pass per query (by its key) hashed every key in the cache for each one. */
+function refetch(queries: ReadonlySet<Query>): Promise<void> {
+  if (queries.size === 0) return Promise.resolve();
+  return queryClient.invalidateQueries({ predicate: (query) => queries.has(query) }, { cancelRefetch: false });
+}
+
+function followUp(query: Query): Promise<void> {
   if (followUpScheduled.has(query)) return Promise.resolve();
 
   followUpScheduled.add(query);
@@ -24,7 +31,7 @@ function refreshQuery(query: Query): Promise<void> {
       if (event.query !== query || query.state.fetchStatus === 'fetching') return;
       unsubscribe();
       followUpScheduled.delete(query);
-      void refetch().then(resolve);
+      void refetch(new Set([query])).then(resolve);
     });
   });
 }
