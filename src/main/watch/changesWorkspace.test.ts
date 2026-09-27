@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changesWorkspace } from './changesWorkspace';
+import { changesWorkspace, rewritesChangelists } from './changesWorkspace';
 
 describe('changesWorkspace', () => {
   it('recognizes commands that rewrite the workspace', () => {
@@ -16,5 +16,13 @@ describe('changesWorkspace', () => {
     expect(changesWorkspace(['shelveset', 'apply', 'sh:3', '--preview'])).toBe(false);
     expect(changesWorkspace(['changelist'])).toBe(false);
     expect(changesWorkspace(['label', 'create', 'lb:v1'])).toBe(false);
+  });
+});
+
+describe('rewritesChangelists', () => {
+  it('recognizes the status read that writes the changelist files back', () => {
+    expect(rewritesChangelists(['status', '--xml', '--iscochanged', '--changelists', '--private'])).toBe(true);
+    expect(rewritesChangelists(['status', '--short'])).toBe(false);
+    expect(rewritesChangelists(['changelist'])).toBe(false);
   });
 });

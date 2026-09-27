@@ -4,7 +4,7 @@ import { join, relative, sep } from 'node:path';
 import type { WatchCoverage } from '@shared/api/workspaces';
 import type { WorkspaceChange } from '@shared/events';
 import { ChangeBatcher } from './ChangeBatcher';
-import { classifyChange } from './classifyChange';
+import { classifyChange, isChangelistFile } from './classifyChange';
 import { NO_IGNORE_RULES, parseIgnoreRules, type IgnoreRules } from './ignoreRules';
 
 const QUIET_MS = 300;
@@ -22,8 +22,8 @@ const RECURSIVE_WATCH_PLATFORMS = new Set<NodeJS.Platform>(['darwin', 'win32']);
 export class WorkspaceWatcher {
   private watchers: FSWatcher[] = [];
   private ignoreRules: IgnoreRules = NO_IGNORE_RULES;
-  private ownWritesRunning = 0;
-  private quietUntil = 0;
+  private readonly ownWrites = new OwnWrites();
+  private readonly ownChangelistWrites = new OwnWrites();
   private stopped = false;
   private readonly batcher: ChangeBatcher;
 
@@ -48,16 +48,14 @@ export class WorkspaceWatcher {
     return cwd === this.workspacePath || cwd.startsWith(this.workspacePath.endsWith(sep) ? this.workspacePath : this.workspacePath + sep);
   }
 
-  /** Ignores changes until `write` settles. */
-  ignoreOwnWrite(write: Promise<unknown>): void {
-    this.ownWritesRunning++;
+  /** Ignores changes until `write` settles; with `changelists`, only the rewrites of the changelist files. */
+  ignoreOwnWrite(write: Promise<unknown>, only?: 'changelists'): void {
+    if (only === 'changelists') {
+      this.ownChangelistWrites.track(write);
+      return;
+    }
+    this.ownWrites.track(write);
     this.batcher.cancel();
-    void write
-      .catch(() => undefined)
-      .finally(() => {
-        this.ownWritesRunning--;
-        this.quietUntil = Date.now() + AFTER_OWN_WRITE_GRACE_MS;
-      });
   }
 
   stop(): void {
@@ -85,7 +83,8 @@ export class WorkspaceWatcher {
     if (this.stopped) return;
     if (relativePath === 'ignore.conf') void this.loadIgnoreRules();
     const kind = classifyChange(relativePath, this.ignoreRules);
-    if (!kind || this.ownWritesRunning > 0 || Date.now() < this.quietUntil) return;
+    if (!kind || this.ownWrites.active()) return;
+    if (isChangelistFile(relativePath) && this.ownChangelistWrites.active()) return;
     this.batcher.add({
       content: kind === 'content',
       // Node reports additions, deletions and moves as 'rename'; content edits as 'change'.
@@ -97,5 +96,25 @@ export class WorkspaceWatcher {
   private async loadIgnoreRules(): Promise<void> {
     const ignoreConf = await readFile(join(this.workspacePath, 'ignore.conf'), 'utf8').catch(() => '');
     this.ignoreRules = parseIgnoreRules(ignoreConf);
+  }
+}
+
+/** Own writes in progress, and the moment their last events should have arrived by. */
+class OwnWrites {
+  private running = 0;
+  private quietUntil = 0;
+
+  track(write: Promise<unknown>): void {
+    this.running++;
+    void write
+      .catch(() => undefined)
+      .finally(() => {
+        this.running--;
+        this.quietUntil = Date.now() + AFTER_OWN_WRITE_GRACE_MS;
+      });
+  }
+
+  active(): boolean {
+    return this.running > 0 || Date.now() < this.quietUntil;
   }
 }
