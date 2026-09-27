@@ -1,4 +1,5 @@
 import { ArchiveRestore, Copy, MoreHorizontal, Trash2 } from 'lucide-react';
+import { useWorkspaceUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
 import { useSettings } from '../../app/settings/useSettings';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -14,22 +15,24 @@ import { applyShelve, deleteShelve } from './shelveOperations';
 /**
  * A shelve's diff previews what applying it brings: Apply (Restore for changes a switch left) is right there, and
  * leads to Changes once done. Only for a shelve a list already read, so opening the diff reads nothing more.
+ * Someone else's is only applied: never deleted from here.
  */
 export function ShelveDiffActions({ shelveId }: { shelveId: number }) {
   const workspacePath = useWorkspacePath();
   const { switchShelves } = useSettings();
+  const me = useWorkspaceUser();
   const shelve = cachedShelve(workspacePath, shelveId);
   if (!shelve) return null;
 
-  const left = myShelves([shelve], switchShelves)[0]?.left === true;
+  const { left, mine } = myShelves([shelve], switchShelves, { everyone: true, me })[0]!;
   const apply = async (deleteShelve: boolean): Promise<void> => {
     if (await applyShelve(workspacePath, shelveId, deleteShelve)) navigation.goToView('changes');
   };
   const menu = tidyMenu([
-    !left && { id: 'applyAndDelete', label: 'Apply and delete', icon: ArchiveRestore, run: () => void apply(true) },
+    !left && mine && { id: 'applyAndDelete', label: 'Apply and delete', icon: ArchiveRestore, run: () => void apply(true) },
     { id: 'copy', label: 'Copy shelve spec', icon: Copy, run: () => copyToClipboard(`sh:${shelveId}`, 'Shelve spec') },
     SEPARATOR,
-    {
+    mine && {
       id: 'delete',
       label: 'Delete…',
       icon: Trash2,

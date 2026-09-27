@@ -70,6 +70,7 @@ export const SHORTCUTS = {
   checkin: { area: 'Changes', label: 'Check in', keys: ['mod+enter'] },
   toggleIncluded: { area: 'Changes', label: 'Include or exclude from the check in', keys: ['space'] },
   myShelves: { area: 'Changes', label: 'Your shelves', keys: ['mod+shift+s'] },
+  shelvesScope: { area: 'Changes', label: "Your shelves or everyone's, in the shelves list", keys: ['mod+shift+s'] },
   review: { area: 'Changes', label: 'Mark reviewed and go to the next file', keys: ['r'] },
   nextFile: { area: 'Changes', label: 'Next file', keys: ['j'] },
   previousFile: { area: 'Changes', label: 'Previous file', keys: ['k'] },
