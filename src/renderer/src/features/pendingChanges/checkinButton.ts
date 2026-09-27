@@ -1,7 +1,7 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { formatSize } from '../../lib/formatDate';
 import { fileNameOf, formatCount, pluralize } from '../../lib/text';
-import { categoryOf, existsOnDisk, hasContentChanges, isControlled } from './changeCategories';
+import { categoryOf, existsOnDisk, hasContentChanges } from './changeCategories';
 
 export type CheckinMode = 'checkin' | 'shelve';
 
@@ -78,17 +78,12 @@ function shorterForms(action: string, shortAction: string | null, branchName: st
 
 /**
  * Why the check-in button can't be used right now, for its tooltip; null when it can. `count` is what the mode takes
- * of the `includedCount` changes checked: a shelve leaves private files out.
+ * of the `includedCount` changes checked: a shelve leaves private files and links out (`isShelvable`).
  */
 export function checkinDisabledReason(mode: CheckinMode, count: number, includedCount: number): string | null {
   if (count > 0) return null;
   if (mode === 'checkin') return 'Select changes to check in';
-  return includedCount > 0 ? "Private files can't be shelved" : 'Select changes to shelve';
-}
-
-/** What a shelve takes of the changes checked: `cm` shelves only what is under version control. */
-export function shelvableChanges(changes: PendingChange[]): PendingChange[] {
-  return changes.filter(isControlled);
+  return includedCount > 0 ? "Private files and links can't be shelved" : 'Select changes to shelve';
 }
 
 /** The changeset a pending merge comes from, read from the "Merge from 12" tag of its changes. */

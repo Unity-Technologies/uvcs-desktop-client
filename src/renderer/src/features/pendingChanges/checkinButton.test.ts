@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { checkinButtonLabel, checkinDisabledReason, mergeSourceChangeset, shelvableChanges, uploadSize } from './checkinButton';
+import { checkinButtonLabel, checkinDisabledReason, mergeSourceChangeset, uploadSize } from './checkinButton';
 
 function change(path: string, kinds: PendingChange['kinds'], size: number, extra: Partial<PendingChange> = {}): PendingChange {
   return { path, kinds, itemType: 'file', size, lastModified: '', ...extra };
@@ -92,15 +92,8 @@ describe('checkinDisabledReason', () => {
   });
 
   it('says why a shelve of only private files is not possible', () => {
-    expect(checkinDisabledReason('shelve', 0, 3)).toBe("Private files can't be shelved");
+    expect(checkinDisabledReason('shelve', 0, 3)).toBe("Private files and links can't be shelved");
     expect(checkinDisabledReason('shelve', 1, 3)).toBeNull();
-  });
-});
-
-describe('shelvableChanges', () => {
-  it('leaves out what is not under version control, which cm cannot shelve', () => {
-    const changes = [change('a.ts', ['changed'], 1), change('new.ts', ['added'], 1), change('notes.txt', ['private'], 1), change('bin/x', ['ignored'], 1)];
-    expect(shelvableChanges(changes).map((item) => item.path)).toEqual(['a.ts', 'new.ts']);
   });
 });
 

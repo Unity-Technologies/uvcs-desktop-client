@@ -36,10 +36,10 @@ import { usePendingReview } from './review/usePendingReview';
 import { BulkPrivateNotice, confirmBulkPrivateCheckin } from './BulkPrivateNotice';
 import { bulkPrivateFiles } from './bulkPrivate';
 import { behindBranch, behindDescription } from './checkinBehind';
-import { mergeSourceChangeset, shelvableChanges, uploadSize } from './checkinButton';
+import { mergeSourceChangeset, uploadSize } from './checkinButton';
 import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinChanges, confirmCheckinWithoutComment, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
-import { isCheckinCandidate } from './changeCategories';
+import { isCheckinCandidate, isShelvable } from './changeCategories';
 import { buildChangeRows, changeKey, changesUnderRow, topLevelCheckboxInset, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
 import { changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
@@ -94,7 +94,7 @@ export function PendingChangesView() {
     { branch: branchName, loadedChangeset: workspace?.loadedChangeset },
     included.length,
   );
-  const shelvable = shelvableChanges(included);
+  const shelvable = included.filter(isShelvable);
   const bulkPrivate = bulkPrivateFiles(included);
   const reviewed = reviewProgress(included, review.statusOf);
   const successMoment = useSuccessMomentStore((state) => state.moments[workspacePath]);

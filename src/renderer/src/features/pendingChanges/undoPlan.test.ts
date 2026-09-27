@@ -56,4 +56,8 @@ describe('offersBackup', () => {
   it('offers one as soon as anything else would be undone', () => {
     expect(offersBackup([change('a.ts', ['checkedOut']), change('b.ts', ['moved'])])).toBe(true);
   });
+
+  it('offers none for links alone, which cannot be shelved', () => {
+    expect(offersBackup([change('link', ['added'], 'symlink')])).toBe(false);
+  });
 });

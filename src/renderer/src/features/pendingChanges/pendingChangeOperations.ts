@@ -7,7 +7,7 @@ import { copyToClipboard } from '../../lib/copyToClipboard';
 import { formatCount, pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
-import { existsOnDisk, isControlled } from './changeCategories';
+import { existsOnDisk, isControlled, isShelvable } from './changeCategories';
 import { askUndoChanges } from './UndoChangesDialog';
 import { BACKUP_SHELVE_COMMENT } from './undoPlan';
 
@@ -28,10 +28,11 @@ export async function undoChanges(workspacePath: string, changes: PendingChange[
   let backupShelveId: number | undefined;
   if (answer.backup) {
     // Backup before undo: if the shelve fails, nothing is undone.
+    const backedUp = controlled.filter(isShelvable).map((change) => change.path);
     backupShelveId = await runOperation({
       title: `Backing up ${pluralize(controlled.length, 'change')}`,
       workspacePath,
-      run: (operationId) => api.pendingChanges.shelve(workspacePath, paths, BACKUP_SHELVE_COMMENT, operationId),
+      run: (operationId) => api.pendingChanges.shelve(workspacePath, backedUp, BACKUP_SHELVE_COMMENT, operationId),
       affects: isAffectedByShelving,
       onFailure: (error) => {
         toast.error("Couldn't shelve a backup, so nothing was undone", error);

@@ -1,6 +1,6 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { formatCount } from '../../lib/text';
-import { categoryOf, hasContentChanges } from './changeCategories';
+import { categoryOf, hasContentChanges, isShelvable } from './changeCategories';
 
 /** Rows listed in the undo confirmation before collapsing the rest into "…and N more". */
 export const UNDO_LIST_MAX = 250;
@@ -20,9 +20,9 @@ function isUnchangedCheckout(change: PendingChange): boolean {
   return categoryOf(change) === 'changed' && !hasContentChanges(change);
 }
 
-/** Whether a backup could keep anything: releasing checkouts without edits leaves nothing to shelve. */
+/** Whether a backup could keep anything: releasing checkouts without edits leaves nothing to shelve, and links can't be. */
 export function offersBackup(changes: PendingChange[]): boolean {
-  return !changes.every(isUnchangedCheckout);
+  return changes.some((change) => isShelvable(change) && !isUnchangedCheckout(change));
 }
 
 /** Whether the "Shelve a backup first" box starts ticked. */

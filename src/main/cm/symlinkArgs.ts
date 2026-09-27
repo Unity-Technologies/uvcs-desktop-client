@@ -1,5 +1,5 @@
 /** The commands that follow a symbolic link to its target unless told `--symlink`. */
-type LinkFollowingCommand = 'ls' | 'fileinfo' | 'history' | 'checkout' | 'undo';
+type LinkFollowingCommand = 'ls' | 'fileinfo' | 'history' | 'checkout' | 'undo' | 'checkin';
 
 /**
  * `cm` arguments that act on a symbolic link itself, as every other item is acted on: without `--symlink`, undoing a
