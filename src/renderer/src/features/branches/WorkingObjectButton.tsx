@@ -4,7 +4,7 @@ import { useMemo } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import type { SelectorKind, WorkspaceInfo, WorkspaceSelector } from '@shared/domain/workspace';
 import { useCommands, type Command } from '../../app/commands/commandStore';
-import { useRunningOperation } from '../../app/operations/runningOperationsStore';
+import { useRunningOperationOfKind } from '../../app/operations/runningOperationsStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { PathLabel } from '../../components/PathLabel';
 import { workingObjectName } from '../../components/workingObject';
@@ -37,13 +37,13 @@ const SELECTOR_ICONS: Record<SelectorKind, Icon> = {
 export function WorkingObjectButton() {
   const { data: workspace } = useWorkspaceInfo();
   const workspacePath = useWorkspacePath();
-  const running = useRunningOperation(workspacePath);
+  const runningSwitch = useRunningOperationOfKind(workspacePath, 'switch');
   const { isOpen, setOpen } = useBranchSwitcher();
   const returnFocus = useReturnFocus(isOpen);
   useBranchCommands(workspace);
 
-  const switching = running?.kind === 'switch' ? running.title : null;
-  const switchBar = running?.kind === 'switch' ? running.bar : null;
+  const switching = runningSwitch?.title ?? null;
+  const switchBar = runningSwitch?.bar ?? null;
   const SelectorIcon = SELECTOR_ICONS[workspace?.selector.kind ?? 'branch'];
   const title = workspace ? workingObjectTitle(workspace.selector) : '…';
   const { data: comment } = useWorkingObjectComment(workspace);
