@@ -60,7 +60,12 @@ export function cherryPickFromBranch(branch: string): void {
 
 /** Merges `sourceSpec` into a branch the user picks, on the server, without touching the workspace. */
 export async function mergeTo(sourceSpec: string, sourceName: string): Promise<void> {
-  const destination = await pickBranch({ title: `Merge ${sourceName} to…`, description: 'The merge happens on the server; your workspace is not touched.' });
+  const destination = await pickBranch({
+    title: `Merge ${sourceName} to…`,
+    description: 'The merge happens on the server; your workspace is not touched.',
+    // A branch can't be merged into itself.
+    exclude: sourceSpec === spec.branch(sourceName) ? sourceName : undefined,
+  });
   if (!destination) return;
   navigation.openPage({ kind: 'merge', request: { kind: 'merge', sourceSpec, destinationBranch: destination } });
 }
