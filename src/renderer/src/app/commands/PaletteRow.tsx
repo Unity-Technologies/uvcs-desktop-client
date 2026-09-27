@@ -1,5 +1,6 @@
 import { Command as Cmdk } from 'cmdk';
 import { Ellipsis } from 'lucide-react';
+import { COPY_ENTRY_IDS } from '../../components/copyMenu';
 import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge } from '../../components/StatusBadge';
 import { runningFirst } from '../../lib/actions';
@@ -10,7 +11,7 @@ import type { SearchResult } from './searchResults';
 import styles from './CommandPalette.module.css';
 
 /** Copying from a row's actions keeps the palette open, as in the branch switcher; every other action closes it first. */
-const KEEP_OPEN = ['copy', 'copySpec', 'copyPath'];
+const KEEP_OPEN = COPY_ENTRY_IDS;
 
 interface PaletteRowProps {
   result: SearchResult;

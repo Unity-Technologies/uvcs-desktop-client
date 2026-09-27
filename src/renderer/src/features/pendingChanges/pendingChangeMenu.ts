@@ -1,26 +1,13 @@
-import {
-  AppWindow,
-  Copy,
-  EyeClosed,
-  EyeOff,
-  FileClock,
-  FolderSearch,
-  History,
-  PenLine,
-  Plus,
-  ScanText,
-  Square,
-  SquareCheckBig,
-  Trash2,
-  Undo2,
-} from 'lucide-react';
+import { EyeClosed, EyeOff, FileClock } from 'lucide-react';
 import { canAnnotate } from '@shared/domain/annotate';
 import type { Changelist, FilterRuleList, PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
-import { tidyMenu, type Action, type MenuEntry, type Submenu } from '../../lib/actions';
-import { groupedMenu } from '../../lib/menuGroups';
-import { REVEAL_LABEL, TRASH_NAME } from '../../lib/platform';
+import { tidyMenu, type MenuEntry } from '../../lib/actions';
+import { groupedMenu, type GroupedEntry } from '../../lib/menuGroups';
+import { copySubmenu } from '../../components/copyMenu';
+import { menuAction, menuSubmenu } from '../../components/menuWords';
+import { TRASH_NAME } from '../../lib/platform';
 import { formatCount } from '../../lib/text';
 import { categoryOf, existsOnDisk, hasRevisions, isCheckinCandidate, isControlled } from './changeCategories';
 import { moveToChangelistSubmenu } from './changelistMenu';
@@ -31,7 +18,6 @@ import {
   addFilterRule,
   addToSourceControl,
   checkout,
-  copyPaths,
   deletePrivateFiles,
   extensionOf,
   FILTER_LIST_FILES,
@@ -63,83 +49,50 @@ export function pendingChangeMenu(
   const checkoutCandidates = controlledChanges.filter((change) => !change.kinds.includes('checkedOut') && !change.kinds.includes('added'));
   const onDisk = single && existsOnDisk(single);
 
-  return groupedMenu({
-    primary: [onDisk && { id: 'open', label: 'Open', icon: AppWindow, run: () => openWithDefaultApp(workspacePath, single) }],
-    act: [
-      ...(inclusion ? inclusionEntries(changes, inclusion) : []),
-      review && reviewMenuEntry(changes, review),
-      privateChanges.length > 0 && {
-        id: 'add',
+  return groupedMenu([
+    onDisk && menuAction('open', () => openWithDefaultApp(workspacePath, single)),
+    ...(inclusion ? inclusionEntries(changes, inclusion) : []),
+    review && reviewMenuEntry(changes, review),
+    privateChanges.length > 0 &&
+      menuAction('add', () => void addToSourceControl(workspacePath, privateChanges), {
         label: privateChanges.length === 1 ? 'Add to version control' : `Add ${formatCount(privateChanges.length)} items to version control`,
-        icon: Plus,
-        run: () => void addToSourceControl(workspacePath, privateChanges),
-      },
-      checkoutCandidates.length > 0 && { id: 'checkout', label: 'Check out', icon: PenLine, run: () => void checkout(workspacePath, checkoutCandidates) },
-    ],
-    navigate: [
-      single && hasRevisions(single) && {
-        id: 'history',
-        label: 'View history',
-        icon: History,
-        run: () => navigation.openPage({ kind: 'history', path: single.path }),
-      },
-      single && hasRevisions(single) && canAnnotate(single.itemType) && {
-        id: 'annotate',
-        label: 'Annotate',
-        icon: ScanText,
-        run: () => navigation.openPage({ kind: 'annotate', path: single.path }),
-      },
-    ],
-    external: [
-      onDisk && {
-        id: 'reveal',
-        label: REVEAL_LABEL,
-        icon: FolderSearch,
-        run: () => void api.system.revealInFileManager(absolutePath(workspacePath, single.path)),
-      },
-    ],
-    copy: copyPathEntries(workspacePath, changes.map((change) => change.path)),
-    edit: [moveToChangelistSubmenu(workspacePath, changes, changelists), single && filterRulesSubmenu(workspacePath, single.path)],
-    danger: [
-      controlledChanges.length > 0 && {
-        id: 'undo',
+      }),
+    checkoutCandidates.length > 0 && menuAction('checkout', () => void checkout(workspacePath, checkoutCandidates)),
+    single && hasRevisions(single) && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path })),
+    single &&
+      hasRevisions(single) &&
+      canAnnotate(single.itemType) &&
+      menuAction('annotate', () => navigation.openPage({ kind: 'annotate', path: single.path })),
+    onDisk && menuAction('reveal', () => void api.system.revealInFileManager(absolutePath(workspacePath, single.path))),
+    itemCopySubmenu(workspacePath, changes.map((change) => change.path)),
+    moveToChangelistSubmenu(workspacePath, changes, changelists),
+    single && filterRulesSubmenu(workspacePath, single.path),
+    controlledChanges.length > 0 &&
+      menuAction('undo', () => void undoChanges(workspacePath, controlledChanges), {
         label: controlledChanges.length === 1 ? 'Undo changes…' : `Undo ${formatCount(controlledChanges.length)} changes…`,
-        icon: Undo2,
-        danger: true,
-        run: () => void undoChanges(workspacePath, controlledChanges),
-      },
-      privateChanges.length > 0 && {
-        id: 'trash',
-        label: `Move to ${TRASH_NAME}…`,
-        icon: Trash2,
-        danger: true,
-        run: () => void deletePrivateFiles(workspacePath, privateChanges),
-      },
-    ],
-  });
-}
-
-/** Include the unchecked changes in the next check-in, or exclude the checked ones. */
-function inclusionEntries(changes: PendingChange[], { isIncluded, setIncluded }: CheckinInclusion): MenuEntry[] {
-  const candidates = changes.filter(isCheckinCandidate);
-  const excluded = candidates.filter((change) => !isIncluded(change));
-  const included = candidates.filter(isIncluded);
-  return tidyMenu([
-    excluded.length > 0 && { id: 'include', label: 'Include in check-in', icon: SquareCheckBig, run: () => setIncluded(excluded, true) },
-    included.length > 0 && { id: 'exclude', label: 'Exclude from check-in', icon: Square, run: () => setIncluded(included, false) },
+      }),
+    privateChanges.length > 0 && menuAction('trash', () => void deletePrivateFiles(workspacePath, privateChanges), { label: `Move to ${TRASH_NAME}…` }),
   ]);
 }
 
-/** Copying the workspace paths of the selected items, relative or full. */
-export function copyPathEntries(workspacePath: string, paths: string[]): Action[] {
+/** Include the unchecked changes in the next check-in, or exclude the checked ones. */
+function inclusionEntries(changes: PendingChange[], { isIncluded, setIncluded }: CheckinInclusion): GroupedEntry[] {
+  const candidates = changes.filter(isCheckinCandidate);
+  const excluded = candidates.filter((change) => !isIncluded(change));
+  const included = candidates.filter(isIncluded);
   return [
-    { id: 'copy.relative', label: 'Copy relative path', icon: Copy, run: () => copyPaths(paths) },
-    { id: 'copy.absolute', label: 'Copy full path', icon: Copy, run: () => copyPaths(paths.map((path) => absolutePath(workspacePath, path))) },
+    ...(excluded.length > 0 ? [menuAction('include', () => setIncluded(excluded, true))] : []),
+    ...(included.length > 0 ? [menuAction('exclude', () => setIncluded(included, false))] : []),
   ];
 }
 
+/** The "Copy" submenu of workspace items: their paths, relative to the workspace or full. */
+export function itemCopySubmenu(workspacePath: string, paths: string[]): GroupedEntry | null {
+  return copySubmenu('', { path: paths.join('\n'), fullPath: paths.map((path) => absolutePath(workspacePath, path)).join('\n') }, { count: paths.length });
+}
+
 /** Adds an item, or all files with its extension, to the ignore, cloaked or hidden-changes rules. */
-export function filterRulesSubmenu(workspacePath: string, path: string): Submenu {
+export function filterRulesSubmenu(workspacePath: string, path: string): GroupedEntry {
   const extension = extensionOf(path);
   const patternsFor = (list: FilterRuleList): MenuEntry[] =>
     tidyMenu([
@@ -147,13 +100,9 @@ export function filterRulesSubmenu(workspacePath: string, path: string): Submenu
       extension !== null && { id: `${list}.extension`, label: `All ${extension} files`, run: () => void addFilterRule(workspacePath, list, `*${extension}`) },
     ]);
 
-  return {
-    label: 'Ignore, cloak or hide',
-    icon: EyeOff,
-    entries: [
-      { label: `Add to ${FILTER_LIST_FILES.ignore}`, icon: EyeOff, entries: patternsFor('ignore') },
-      { label: `Add to ${FILTER_LIST_FILES.cloaked}`, icon: FileClock, entries: patternsFor('cloaked') },
-      { label: `Add to ${FILTER_LIST_FILES.hidden}`, icon: EyeClosed, entries: patternsFor('hidden') },
-    ],
-  };
+  return menuSubmenu('filterRules', [
+    { label: `Add to ${FILTER_LIST_FILES.ignore}`, icon: EyeOff, entries: patternsFor('ignore') },
+    { label: `Add to ${FILTER_LIST_FILES.cloaked}`, icon: FileClock, entries: patternsFor('cloaked') },
+    { label: `Add to ${FILTER_LIST_FILES.hidden}`, icon: EyeClosed, entries: patternsFor('hidden') },
+  ]);
 }

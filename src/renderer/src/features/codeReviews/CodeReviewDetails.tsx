@@ -13,6 +13,7 @@ import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { openReview } from './codeReviewOperations';
 import { describeTarget, reviewDiffTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
+import { copiedWhat } from '../../components/copyMenu';
 
 export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: MenuEntry[] }) {
   const diffTarget = reviewDiffTarget(review.target);
@@ -25,10 +26,10 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
       heading={<DetailsHeading name={review.title} />}
       author={{ user: review.owner, date: review.date }}
       meta={[
-        <DetailsCopyable key="id" text={`#${review.id}`} copyText={String(review.id)} what="Code review id" />,
+        <DetailsCopyable key="id" text={`#${review.id}`} copyText={String(review.id)} what={copiedWhat('Code review', 'number')} />,
         target.kind === 'branch' && <BranchChip key="target" name={target.branch} />,
-        target.kind === 'changeset' && <DetailsCopyable key="target" text={spec.changeset(target.changesetId)} what="Changeset spec" />,
-        target.kind === 'shelve' && <DetailsCopyable key="target" text={spec.shelve(target.shelveId)} what="Shelve spec" />,
+        target.kind === 'changeset' && <DetailsCopyable key="target" text={spec.changeset(target.changesetId)} what={copiedWhat('Changeset', 'spec')} />,
+        target.kind === 'shelve' && <DetailsCopyable key="target" text={spec.shelve(target.shelveId)} what={copiedWhat('Shelve', 'spec')} />,
         review.assignee && (
           <Fragment key="reviewer">
             for <UserLabel user={review.assignee} />
@@ -42,7 +43,7 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
         </Button>
       }
       menu={menu}
-      primaryActionId="open"
+      primaryActionId="openReview"
       properties={[
         { label: 'Reviewer', value: review.assignee ? <UserLabel user={review.assignee} /> : 'Unassigned' },
         { label: 'Changes', value: describeTarget(target) },

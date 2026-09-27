@@ -15,6 +15,7 @@ import { BranchChip } from '../branches/BranchChip';
 import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
 import { ChangedFilesSection } from './ChangedFilesSection';
 import { openChangesetDiff, saveChangesetComment } from './changesetOperations';
+import { copiedWhat } from '../../components/copyMenu';
 
 interface ChangesetDetailsProps {
   changeset: ChangesetInfo;
@@ -37,7 +38,7 @@ export function ChangesetDetails({ changeset, menu, links = PLAIN_LINKS, relatio
       heading={<DetailsHeading comment={changeset.comment} onSave={(comment) => saveChangesetComment(workspacePath, changeset, comment)} />}
       author={{ user: changeset.owner, date: changeset.date }}
       meta={[
-        <DetailsCopyable key="id" text={spec.changeset(changeset.id)} what="Changeset spec" />,
+        <DetailsCopyable key="id" text={spec.changeset(changeset.id)} what={copiedWhat('Changeset', 'spec')} />,
         <BranchChip key="branch" name={changeset.branch} onSelect={links.selectBranch} />,
       ]}
       badges={

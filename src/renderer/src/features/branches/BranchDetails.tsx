@@ -1,6 +1,6 @@
 import { FileDiff, GitBranch, House } from 'lucide-react';
 import { Fragment } from 'react';
-import type { Branch } from '@shared/domain/branch';
+import type { BranchInfo } from '@shared/domain/branch';
 import { shortBranchName, spec } from '@shared/domain/specs';
 import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { DetailsHeading } from '../../components/DetailsHeading';
@@ -14,9 +14,6 @@ import { AttributeChips } from '../attributes/AttributeChips';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { BranchChip } from './BranchChip';
 import { diffBranch } from './branchOperations';
-
-/** A branch as lists and the Branch Explorer know it; the graph doesn't read the repository or ids. */
-export type BranchInfo = Omit<Branch, 'id' | 'guid' | 'repository'> & Partial<Pick<Branch, 'repository'>>;
 
 interface BranchDetailsProps {
   branch: BranchInfo;

@@ -1,7 +1,7 @@
-import { AppWindow, Copy, Download, FileDiff, GitGraph, RotateCcw, ScanText } from 'lucide-react';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { MenuEntry } from '../../lib/actions';
-import { copyToClipboard } from '../../lib/copyToClipboard';
+import { copySubmenu } from '../../components/copyMenu';
+import { menuAction } from '../../components/menuWords';
 import { groupedMenu } from '../../lib/menuGroups';
 import { fileNameOf } from '../../lib/text';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
@@ -23,46 +23,16 @@ export function historyMenu({ workspacePath, path, changesetId: at }: HistoryMen
   const isFile = revision !== null && revision.itemType !== 'directory';
   const name = fileNameOf(path);
 
-  return groupedMenu({
-    primary: [
-      row && {
-        id: 'changesetDiff',
-        label: `Open diff of changeset ${changesetId}`,
-        icon: FileDiff,
-        run: () => openChangesetDiff({ id: changesetOf(row) }, path),
-      },
-    ],
-    act: [
-      isFile && at === undefined && {
-        id: 'revert',
-        label: 'Revert file to this revision…',
-        icon: RotateCcw,
-        run: () => void revertItemTo(workspacePath, path, revision.changesetId),
-      },
-    ],
-    navigate: [
-      isFile && {
-        id: 'annotate',
-        label: 'Annotate this revision',
-        icon: ScanText,
-        run: () => navigation.openPage({ kind: 'annotate', path, revision, changesetId: at }),
-      },
-      row && {
-        id: 'showInBranchExplorer',
-        label: 'Show in Branch Explorer',
-        icon: GitGraph,
-        run: () => showInBranchExplorer({ kind: 'changeset', id: changesetOf(row), date: row.kind === 'revision' ? row.revision.date : row.change.date }),
-      },
-    ],
-    external: [
-      isFile && { id: 'open', label: 'Open this revision', icon: AppWindow, run: () => void openRevision(workspacePath, revision.revisionId, name) },
-      isFile && {
-        id: 'save',
-        label: 'Save this revision as…',
-        icon: Download,
-        run: () => void saveRevisionAs(workspacePath, revision.revisionId, name),
-      },
-    ],
-    copy: [revision && { id: 'copySpec', label: 'Copy revision spec', icon: Copy, run: () => copyToClipboard(revision.spec, 'Revision spec') }],
-  });
+  return groupedMenu([
+    row && menuAction('changesetDiff', () => openChangesetDiff({ id: changesetOf(row) }, path), { label: `Open diff of changeset ${changesetId}` }),
+    isFile && at === undefined && menuAction('revert', () => void revertItemTo(workspacePath, path, revision.changesetId), { label: 'Revert file to this revision…' }),
+    isFile && menuAction('annotateRevision', () => navigation.openPage({ kind: 'annotate', path, revision, changesetId: at })),
+    row &&
+      menuAction('showInBranchExplorer', () =>
+        showInBranchExplorer({ kind: 'changeset', id: changesetOf(row), date: row.kind === 'revision' ? row.revision.date : row.change.date }),
+      ),
+    isFile && menuAction('openRevision', () => void openRevision(workspacePath, revision.revisionId, name)),
+    isFile && menuAction('saveAs', () => void saveRevisionAs(workspacePath, revision.revisionId, name)),
+    revision && copySubmenu('Revision', { path, spec: revision.spec }),
+  ]);
 }

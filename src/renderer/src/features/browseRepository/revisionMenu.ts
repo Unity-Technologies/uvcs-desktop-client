@@ -1,24 +1,29 @@
-import { AppWindow, Copy, Download, History } from 'lucide-react';
 import type { TreeItem } from '@shared/domain/explorer';
+import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runRead } from '../../app/operations/runOperation';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { toast } from '../../ui/toast/toastStore';
-import { copyPaths } from '../pendingChanges/pendingChangeOperations';
+import { copySubmenu } from '../../components/copyMenu';
+import { menuAction } from '../../components/menuWords';
 
 /** The context menu of items in the repository tree of a changeset (not in the workspace). */
 export function revisionMenu(workspacePath: string, changesetId: number, items: TreeItem[]): MenuEntry[] {
   const single = items.length === 1 ? items[0]! : null;
   const file = single && single.itemType !== 'directory' ? single : null;
 
-  return groupedMenu({
-    primary: [file && { id: 'open', label: 'Open this revision', icon: AppWindow, run: () => openRevision(workspacePath, file) }],
-    navigate: [single && { id: 'history', label: 'View history', icon: History, run: () => navigation.openPage({ kind: 'history', path: single.path, changesetId }) }],
-    external: [file && { id: 'saveAs', label: 'Save this revision as…', icon: Download, run: () => void saveRevisionAs(workspacePath, file) }],
-    copy: [{ id: 'copy', label: 'Copy repository path', icon: Copy, run: () => copyPaths(items.map((item) => `/${item.path}`)) }],
-  });
+  return groupedMenu([
+    single && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path, changesetId })),
+    file && menuAction('openRevision', () => openRevision(workspacePath, file)),
+    file && menuAction('saveAs', () => void saveRevisionAs(workspacePath, file)),
+    copySubmenu(
+      '',
+      { serverPath: items.map((item) => `/${item.path}`).join('\n'), spec: single && spec.serverPathAtChangeset(`/${single.path}`, changesetId) },
+      { count: items.length },
+    ),
+  ]);
 }
 
 export function openRevision(workspacePath: string, item: TreeItem): void {

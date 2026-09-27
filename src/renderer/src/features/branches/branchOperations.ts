@@ -19,7 +19,7 @@ export function switchToBranch(workspacePath: string, branch: string, pendingCha
   return switchWorkspace(workspacePath, spec.branch(branch), branch, pendingChanges);
 }
 
-export async function renameBranch(workspacePath: string, branch: Branch): Promise<void> {
+export async function renameBranch(workspacePath: string, branch: Pick<Branch, 'name'>): Promise<void> {
   const newName = await prompt({
     title: 'Rename branch',
     label: 'New name',
@@ -32,7 +32,7 @@ export async function renameBranch(workspacePath: string, branch: Branch): Promi
   await runAction(workspacePath, "Couldn't rename the branch", () => api.branches.rename(workspacePath, branch.name, newName));
 }
 
-export async function deleteBranches(workspacePath: string, branches: Branch[]): Promise<void> {
+export async function deleteBranches(workspacePath: string, branches: Pick<Branch, 'name'>[]): Promise<void> {
   const confirmed = await confirm({
     title: branches.length === 1 ? `Delete ${branches[0]!.name}?` : `Delete ${branches.length} branches?`,
     message: 'Only empty branches can be deleted. This cannot be undone.',
@@ -48,7 +48,7 @@ export async function deleteBranches(workspacePath: string, branches: Branch[]):
   if (deleted) toast.success(branches.length === 1 ? `Deleted ${branches[0]!.name}` : `Deleted ${branches.length} branches`);
 }
 
-export function setBranchesHidden(workspacePath: string, branches: Branch[], hidden: boolean): Promise<void | undefined> {
+export function setBranchesHidden(workspacePath: string, branches: Pick<Branch, 'name'>[], hidden: boolean): Promise<void | undefined> {
   return runAction(
     workspacePath,
     `Couldn't ${hidden ? 'hide' : 'unhide'} the branch`,
