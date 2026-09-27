@@ -1,7 +1,8 @@
-import { Check, ChevronRight, EyeOff, GitBranch } from 'lucide-react';
+import { ChevronRight, EyeOff, GitBranch } from 'lucide-react';
 import { useLayoutEffect, useRef, useState, type RefObject } from 'react';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { PathLabel } from '../../components/PathLabel';
+import { WorkspaceMark } from '../../components/WorkspaceMark';
 import { textMeasurer } from '../../lib/measureText';
 import { CodeReviewChip } from '../codeReviews/CodeReviewChip';
 import type { BranchTreeRow } from './branchTree';
@@ -29,7 +30,7 @@ export function BranchNameCell({ row, isCurrent, review, onToggleCollapsed }: Br
   const { branch } = row;
   const shownName = row.depth > 0 ? branch.name.slice(branch.name.lastIndexOf('/') + 1) : branch.name;
   const ref = useRef<HTMLSpanElement>(null);
-  const compact = useCompactChips(ref, shownName, row.depth * INDENT, `${isCurrent}:${review?.status}:${branch.isHidden}`);
+  const compact = useCompactChips(ref, shownName, row.depth * INDENT, `${review?.status}:${branch.isHidden}`);
 
   return (
     <span ref={ref} className={styles.name} style={{ paddingLeft: row.depth * INDENT }}>
@@ -49,11 +50,7 @@ export function BranchNameCell({ row, isCurrent, review, onToggleCollapsed }: Br
       <span className={styles.label} data-hidden={branch.isHidden}>
         <PathLabel path={shownName} fitContent />
       </span>
-      {isCurrent && (
-        <span className={styles.current} data-chip data-compact={compact} data-tip={compact ? 'Current branch' : undefined}>
-          {compact ? <Check size={10} /> : 'Current'}
-        </span>
-      )}
+      {isCurrent && <WorkspaceMark on="branch" />}
       {review && (
         <span className={styles.chip} data-chip>
           <CodeReviewChip review={review} iconOnly={compact} />

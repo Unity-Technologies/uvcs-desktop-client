@@ -1,4 +1,4 @@
-import { FileDiff, GitBranch } from 'lucide-react';
+import { FileDiff, GitBranch, House } from 'lucide-react';
 import { Fragment } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import { shortBranchName, spec } from '@shared/domain/specs';
@@ -46,7 +46,12 @@ export function BranchDetails({ branch, menu, links = PLAIN_LINKS, relations = [
       ]}
       badges={
         <>
-          {isCurrent && <DetailsBadge tone="success">Current</DetailsBadge>}
+          {isCurrent && (
+            <DetailsBadge tone="accent" tip="Your workspace is on this branch">
+              <House size={10} />
+              Workspace
+            </DetailsBadge>
+          )}
           {branch.isHidden && <DetailsBadge>Hidden</DetailsBadge>}
         </>
       }
