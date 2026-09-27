@@ -260,6 +260,9 @@ renderer/src/
   original text. One function computes the diff of two texts under a method (`lineDiff`, Pierre's `parseDiffFromFile`
   with the comparator as `parseDiffOptions`), and everything reads that one result: what the diff shows (`shownDiff`),
   the +N −M, whether the file is typed into whole ("Only whitespace differs"), and the blocks and lines discards act on.
+  Every line diff (`diff`'s, Pierre's too) compares lines by id, each line's key read once, and runs Myers' algorithm
+  only within a budget (`boundedLineDiff`, `boundedDiff`): past it, lines found once in each text anchor them (patience
+  diff) and what's between is diffed on its own, so a rewritten or much-changed file takes linear time, not minutes.
   While the file is typed into, Pierre re-diffs it itself, with the same `parseDiffOptions`: `pierreLineComparison`
   patches the places Pierre 1.5.1 doesn't (its `FileDiff` never hands them to the renderer that re-diffs each
   keystroke, a keystroke's shortcut takes lines equal only when they're the same text, and text typed back to the

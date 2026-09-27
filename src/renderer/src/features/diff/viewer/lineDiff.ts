@@ -2,7 +2,11 @@ import { parseDiffFromFile, type FileDiffMetadata } from '@pierre/diffs';
 import type { DiffLinesOptionsNonabortable } from 'diff';
 import { crAgainstLf, shownText, splitLines } from '../../../lib/lineBreaks';
 import { syntaxLanguage } from '../../../lib/syntaxLanguage';
+import { installBoundedLineDiff, type LineKey } from './boundedLineDiff';
 import { COMPARISON_METHODS, comparedPart, ignoresLineEndings, type ComparisonMethod } from './comparisonMethod';
+
+// Every line diff, this one's and Pierre's while typing, compares each line's key once and stays fast on big texts.
+installBoundedLineDiff((comparator) => COMPARATOR_KEYS.get(comparator));
 
 /** Options for `diff`'s line diffs, which `@pierre/diffs` takes as `parseDiffOptions`. */
 export type LineDiffOptions = Pick<DiffLinesOptionsNonabortable, 'ignoreWhitespace' | 'stripTrailingCr'>;
@@ -73,11 +77,13 @@ export function lineDiffOptions(original: string, current: string, method: Compa
  * For options that compare lines as equal that aren't the same text, what of a line they compare (null: equal to no
  * other). Pierre assumes equal lines are the same text in a shortcut while typing (`pierreLineComparison`).
  */
-export function looseLineKey(options: LineDiffOptions | undefined): ((line: string) => string | null) | undefined {
+export function looseLineKey(options: LineDiffOptions | undefined): LineKey | undefined {
   return options && LOOSE_KEYS.get(options);
 }
 
-const LOOSE_KEYS = new WeakMap<LineDiffOptions, (line: string) => string | null>();
+const LOOSE_KEYS = new WeakMap<LineDiffOptions, LineKey>();
+/** What of a line each comparator compares, so a diff reads it once per line (`installBoundedLineDiff`). */
+const COMPARATOR_KEYS = new WeakMap<(left: string, right: string) => boolean, LineKey>();
 
 function comparingUnder(method: ComparisonMethod, lfsDiffer: boolean): LineDiffOptions {
   const key =
@@ -91,6 +97,7 @@ function comparingUnder(method: ComparisonMethod, lfsDiffer: boolean): LineDiffO
     const compared = key(left);
     return compared !== null && compared === key(right);
   };
+  COMPARATOR_KEYS.set(comparator, key);
   const options = { comparator } as LineDiffOptions;
   // Recognizing all compares the text itself (lone CRs apart from LFs, at most): equal lines are the same text.
   if (method !== 'recognizeAll') LOOSE_KEYS.set(options, key);
