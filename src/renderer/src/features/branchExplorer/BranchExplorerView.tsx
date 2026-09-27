@@ -27,7 +27,7 @@ import { GraphFilterBar } from './GraphFilterBar';
 import { GraphNavControls } from './GraphNavControls';
 import { GraphSearch } from './GraphSearch';
 import { filterGraph, type GraphFocus } from './model/filterGraph';
-import { layoutGraph } from './model/layoutGraph';
+import { layoutGraph, layoutKeeping } from './model/layoutGraph';
 import { rememberedPerHistory } from './model/rememberedPerHistory';
 import { describeSelection } from './model/describeSelection';
 import {
@@ -91,16 +91,20 @@ export function BranchExplorerView() {
   const fullLayout = useMemo(() => filtered && rememberedPerHistory(filtered, 'layout', [], () => layoutGraph(filtered)), [filtered]);
   const searchHits = useSearchHits(fullLayout, shownSearch);
   const selectedChangeset = selection?.kind === 'changeset' ? selection.id : null;
-  const layout = useMemo(() => {
-    if (!filtered || !structureOnly) return fullLayout;
+  const structure = useMemo(() => {
+    if (!filtered || !structureOnly) return null;
     const keep = new Set(expanded);
     if (homeChangeset !== null) keep.add(homeChangeset);
-    if (selectedChangeset !== null) keep.add(selectedChangeset);
     for (const hit of searchHits) if (hit.kind === 'changeset') keep.add(hit.id);
     if (revealRequest?.kind === 'changeset') keep.add(revealRequest.id);
     if (revealRequest?.kind === 'label') keep.add(revealRequest.changeset);
-    return layoutGraph(filtered, { keep });
-  }, [filtered, fullLayout, structureOnly, expanded, homeChangeset, selectedChangeset, searchHits, revealRequest]);
+    return { keep, layout: layoutGraph(filtered, { keep }) };
+  }, [filtered, structureOnly, expanded, homeChangeset, searchHits, revealRequest]);
+  // The selection is kept out of the "+N" nodes too.
+  const layout = useMemo(
+    () => (filtered && structure ? layoutKeeping(filtered, structure, selectedChangeset) : fullLayout),
+    [filtered, structure, selectedChangeset, fullLayout],
+  );
 
   const authors = useMemo(() => (data ? rememberedPerHistory(data, 'authors', [], () => authorsOf(data)) : []), [data]);
   const branchNames = useMemo(() => (data ? rememberedPerHistory(data, 'branchNames', [], () => data.branches.map((branch) => branch.name).sort()) : []), [data]);

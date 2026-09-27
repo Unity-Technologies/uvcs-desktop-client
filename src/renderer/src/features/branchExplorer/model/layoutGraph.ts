@@ -82,6 +82,17 @@ export function layoutGraph(data: BranchExplorerData, structureOnly?: StructureO
   };
 }
 
+/**
+ * The "only relevant changesets" layout keeping one more changeset (the selection) out of the "+N" nodes. Keeping a
+ * changeset that already shows on its own (or isn't in the history) changes nothing, so the layout without it is the
+ * one: arrowing along the graph lays nothing out again.
+ */
+export function layoutKeeping(data: BranchExplorerData, base: { keep: ReadonlySet<number>; layout: GraphLayout }, id: number | null): GraphLayout {
+  const node = id === null ? undefined : base.layout.nodes.get(id);
+  if (!node || node.collapsed === null) return base.layout;
+  return layoutGraph(data, { keep: new Set([...base.keep, id!]) });
+}
+
 type UnplacedLane = Omit<Lane, 'row'>;
 
 function buildLanes(branches: GraphBranch[], changesets: GraphChangeset[], columnOf: Map<number, number>): UnplacedLane[] {

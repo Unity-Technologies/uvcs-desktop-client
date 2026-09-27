@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { branch, changeset, largeHistory, sampleHistory } from './graphFixtures';
-import { layoutGraph } from './layoutGraph';
+import { layoutGraph, layoutKeeping } from './layoutGraph';
 
 describe('layoutGraph', () => {
   it('gives every changeset its own column, in id order', () => {
@@ -47,6 +47,22 @@ describe('layoutGraph', () => {
     const layout = layoutGraph({ ...data, mergeLinks: [...data.mergeLinks, { type: 'merge', sourceChangeset: 99, destinationChangeset: 6 }] });
     expect(layout.mergeLinks).toHaveLength(1);
     expect(layout.labelsByChangeset.get(6)?.map((label) => label.name)).toEqual(['v1']);
+  });
+});
+
+describe('layoutKeeping', () => {
+  it('lays out exactly what keeping one more changeset lays out, reusing the layout when it already shows on its own', () => {
+    const data = largeHistory(3_000, 600);
+    const keep = new Set([40, 41]);
+    const base = { keep, layout: layoutGraph(data, { keep }) };
+    let reused = 0;
+    for (let id = 0; id < 3_000; id += 7) {
+      const layout = layoutKeeping(data, base, id);
+      if (layout === base.layout) reused++;
+      expect(layout.nodesByColumn).toEqual(layoutGraph(data, { keep: new Set([...keep, id]) }).nodesByColumn);
+    }
+    expect(reused).toBeGreaterThan(0);
+    expect(layoutKeeping(data, base, null)).toBe(base.layout);
   });
 });
 
