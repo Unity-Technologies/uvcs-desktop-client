@@ -51,7 +51,7 @@ function radiusFor({ detail }: DrawContext): number {
 
 /** The line along the band to the previous changeset of the same branch, with an arrow pointing to it. */
 function drawParentLink(draw: DrawContext, parent: NodeLayout, node: NodeLayout): void {
-  const { ctx, scene, detail } = draw;
+  const { ctx, pen, scene, detail } = draw;
   const radius = radiusFor(draw);
   const y = rowY(node.row);
   const fromX = columnX(parent.column) + (parent.collapsed && detail.text ? COLLAPSED_NODE_HALF_WIDTH - 4 : radius) + 2;
@@ -67,14 +67,14 @@ function drawParentLink(draw: DrawContext, parent: NodeLayout, node: NodeLayout)
   else ctx.globalAlpha = isChangesetDimmed(scene, node.changeset) ? DIMMED_ALPHA : 0.7;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(fromX + (detail.text ? ARROW_SIZE : 0), y);
-  ctx.lineTo(toX, y);
+  pen.moveTo(fromX + (detail.text ? ARROW_SIZE : 0), y);
+  pen.lineTo(toX, y);
   ctx.stroke();
   if (detail.text) {
     ctx.beginPath();
-    ctx.moveTo(fromX, y);
-    ctx.lineTo(fromX + ARROW_SIZE * 1.6, y - ARROW_SIZE);
-    ctx.lineTo(fromX + ARROW_SIZE * 1.6, y + ARROW_SIZE);
+    pen.moveTo(fromX, y);
+    pen.lineTo(fromX + ARROW_SIZE * 1.6, y - ARROW_SIZE);
+    pen.lineTo(fromX + ARROW_SIZE * 1.6, y + ARROW_SIZE);
     ctx.closePath();
     ctx.fill();
   }
@@ -85,7 +85,7 @@ const STUB_DASH = [3, 3];
 
 /** A short dashed line leading left from a changeset whose parent is not in the graph (as gitgrove does). */
 function drawOffGraphStub(draw: DrawContext, node: NodeLayout): void {
-  const { ctx, scene } = draw;
+  const { ctx, pen, scene } = draw;
   const x = columnX(node.column) - radiusFor(draw) - 2;
   const y = rowY(node.row);
 
@@ -96,14 +96,14 @@ function drawOffGraphStub(draw: DrawContext, node: NodeLayout): void {
   ctx.lineCap = 'butt';
   ctx.setLineDash(STUB_DASH);
   ctx.beginPath();
-  ctx.moveTo(x - OFF_GRAPH_STUB_LENGTH, y);
-  ctx.lineTo(x, y);
+  pen.moveTo(x - OFF_GRAPH_STUB_LENGTH, y);
+  pen.lineTo(x, y);
   ctx.stroke();
   ctx.restore();
 }
 
 function drawNode(draw: DrawContext, node: NodeLayout): void {
-  const { ctx, scene, detail } = draw;
+  const { ctx, pen, scene, detail } = draw;
   const { palette, search } = scene;
   const x = columnX(node.column);
   const y = rowY(node.row);
@@ -126,7 +126,7 @@ function drawNode(draw: DrawContext, node: NodeLayout): void {
     ctx.shadowOffsetY = 1.5 * draw.pixelRatio * scene.viewport.zoom;
   }
   ctx.beginPath();
-  ctx.arc(x, y, radius + (detail.avatars ? ringWidth + 1.5 : 2), 0, Math.PI * 2);
+  pen.arc(x, y, radius + (detail.avatars ? ringWidth + 1.5 : 2), 0, Math.PI * 2);
   ctx.fill();
   ctx.shadowColor = 'transparent';
 
@@ -134,14 +134,14 @@ function drawNode(draw: DrawContext, node: NodeLayout): void {
   if (selected) {
     ctx.fillStyle = palette.accentSoft;
     ctx.beginPath();
-    ctx.arc(x, y, radius + SELECTION_HALO, 0, Math.PI * 2);
+    pen.arc(x, y, radius + SELECTION_HALO, 0, Math.PI * 2);
     ctx.fill();
   }
 
   ctx.globalAlpha = isChangesetDimmed(scene, node.changeset) ? DIMMED_ALPHA : 1;
   const color = branchColor(palette, node.changeset.branch);
   if (detail.avatars) {
-    drawAvatar(ctx, {
+    drawAvatar(draw, {
       x,
       y,
       radius,
@@ -153,7 +153,7 @@ function drawNode(draw: DrawContext, node: NodeLayout): void {
       font: palette.fonts.initials,
     });
   } else {
-    drawDot(ctx, x, y, radius + (hovered ? 1 : 0), color, palette.background);
+    drawDot(draw, x, y, radius + (hovered ? 1 : 0), color, palette.background);
   }
   ctx.restore();
 
@@ -161,12 +161,12 @@ function drawNode(draw: DrawContext, node: NodeLayout): void {
   else if (selected) drawSelectionRing(draw, x, y, radius);
 }
 
-function drawSelectionRing({ ctx, scene, detail }: DrawContext, x: number, y: number, radius: number): void {
+function drawSelectionRing({ ctx, pen, scene, detail }: DrawContext, x: number, y: number, radius: number): void {
   ctx.save();
   ctx.strokeStyle = scene.palette.accent;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(x, y, radius + (detail.avatars ? SELECTION_RING + 1 : SELECTION_RING - 1), 0, Math.PI * 2);
+  pen.arc(x, y, radius + (detail.avatars ? SELECTION_RING + 1 : SELECTION_RING - 1), 0, Math.PI * 2);
   ctx.stroke();
   ctx.restore();
 }

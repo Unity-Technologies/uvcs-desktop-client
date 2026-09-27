@@ -12,7 +12,7 @@ const CHIP_RADIUS = 4;
  * chip counting a hit among the labels that didn't fit.
  */
 export function drawLabels(draw: DrawContext): void {
-  const { ctx, scene, visible } = draw;
+  const { ctx, pen, scene, visible } = draw;
   const { layout, palette, search } = scene;
   const lastColumn = Math.min(visible.lastColumn, layout.nodesByColumn.length - 1);
 
@@ -38,7 +38,7 @@ export function drawLabels(draw: DrawContext): void {
       const ink = search && !hit ? GHOST_ALPHA : 1;
       ctx.globalAlpha = 1;
       ctx.beginPath();
-      ctx.roundRect(left, top, width, LABEL_HEIGHT, CHIP_RADIUS);
+      pen.roundRect(left, top, width, LABEL_HEIGHT, CHIP_RADIUS);
       ctx.fillStyle = palette.surfaceRaised;
       ctx.fill();
       ctx.globalAlpha = ink;
@@ -49,7 +49,7 @@ export function drawLabels(draw: DrawContext): void {
       ctx.stroke();
       ctx.globalAlpha = ink;
       ctx.fillStyle = palette.labelText;
-      ctx.fillText(text, x, top + LABEL_HEIGHT / 2 + 0.5);
+      pen.fillText(text, x, top + LABEL_HEIGHT / 2 + 0.5);
       if (current) drawRectCorona(draw, left, top, width, LABEL_HEIGHT, CHIP_RADIUS);
     }
   }

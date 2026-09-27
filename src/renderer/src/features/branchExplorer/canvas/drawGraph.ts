@@ -7,11 +7,16 @@ import { drawLabels } from './drawLabels';
 import { drawLanes } from './drawLanes';
 import { drawMergeLinks } from './drawMergeLinks';
 import { drawNodes } from './drawNodes';
+import { OriginPen, originFor } from './pen';
 import { toWorld } from './viewport';
+
+/** The world pen, aimed anew at every frame instead of allocated. */
+const worldPen = new OriginPen();
 
 /**
  * Draws one frame, back to front: day separators, branch bands, links, changesets, their comments, labels and
  * branch headers, then the date ruler on top. Only what is on screen is drawn, so large histories stay smooth.
+ * The world is drawn relative to an origin near the screen (`OriginPen`), so the canvas only ever sees small numbers.
  * Fills `drawn` with where the pointer targets landed.
  */
 export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixelRatio: number, drawn: DrawnTargets): void {
@@ -20,10 +25,20 @@ export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixe
   drawn.branchHeaders.reset();
   drawn.cutBranchComments.reset();
   drawn.captions.reset();
-  const draw: DrawContext = { ctx, scene, visible: visibleArea(scene), detail: detailLevel(viewport.zoom, scene.options), pixelRatio, drawn };
-  const screen = (): void => ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
-  const world = (): void =>
-    ctx.setTransform(pixelRatio * viewport.zoom, 0, 0, pixelRatio * viewport.zoom, pixelRatio * viewport.panX, pixelRatio * viewport.panY);
+  const visible = visibleArea(scene);
+  const draw: DrawContext = { ctx, pen: ctx, scene, visible, detail: detailLevel(viewport.zoom, scene.options), pixelRatio, drawn };
+  const originX = originFor(visible.left);
+  const originY = originFor(visible.top);
+  worldPen.aim(ctx, originX, originY);
+  const screen = (): void => {
+    ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    draw.pen = ctx;
+  };
+  const world = (): void => {
+    const { zoom, panX, panY } = viewport;
+    ctx.setTransform(pixelRatio * zoom, 0, 0, pixelRatio * zoom, pixelRatio * (panX + originX * zoom), pixelRatio * (panY + originY * zoom));
+    draw.pen = worldPen;
+  };
 
   measureDayMarks(draw);
   screen();

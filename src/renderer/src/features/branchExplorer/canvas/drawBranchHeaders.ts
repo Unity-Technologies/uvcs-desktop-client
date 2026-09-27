@@ -146,7 +146,7 @@ function contentWidth(draw: DrawContext, lane: Lane): number {
 
 /** Draws a branch's pill, recording its comment line when that doesn't show the whole comment. */
 function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, width: number, height: number, pinned: boolean): void {
-  const { ctx, scene } = draw;
+  const { ctx, pen, scene } = draw;
   const { palette, search } = scene;
   const name = lane.branch.name;
   const selected = scene.selectedBranch === name;
@@ -161,7 +161,7 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
 
   // The opaque base never fades: a see-through pill lets the lines behind bleed through its text.
   ctx.beginPath();
-  ctx.roundRect(left, top, width, height, CARD_RADIUS);
+  pen.roundRect(left, top, width, height, CARD_RADIUS);
   if (pinned && !isHit) {
     ctx.shadowColor = palette.isDark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(31, 35, 40, 0.22)';
     ctx.shadowBlur = 6 * draw.pixelRatio * scene.viewport.zoom;
@@ -200,7 +200,7 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
   const fitted = fitBranchName(ctx, name, right - x - (chipWidth ? chipWidth + GAP : 0));
   drawSearchMarks(draw, fitted, x, nameMiddle, NAME_MARK_HEIGHT);
   ctx.fillStyle = current ? palette.accentText : branchInk(palette, name);
-  ctx.fillText(fitted, x, nameMiddle + 0.5);
+  pen.fillText(fitted, x, nameMiddle + 0.5);
   redrawMarkedLetters(draw, fitted, x, nameMiddle + 0.5);
   x += textWidth(ctx, fitted) + GAP;
   if (review && x + chipWidth <= right + PADDING / 2) drawReviewChip(draw, review, x, nameMiddle, chipWidth, scene.hoveredReview === review.id);
@@ -217,7 +217,7 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
     }
     drawSearchMarks(draw, text, textLeft, commentMiddle, COMMENT_MARK_HEIGHT);
     ctx.fillStyle = palette.textTertiary;
-    ctx.fillText(text, textLeft, commentMiddle + 0.5);
+    pen.fillText(text, textLeft, commentMiddle + 0.5);
     redrawMarkedLetters(draw, text, textLeft, commentMiddle + 0.5);
   }
   ctx.restore();
@@ -226,16 +226,16 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
 }
 
 /** The first part of the current branch's pill in solid accent, the home glyph knocked out of it. */
-function drawHomeCap({ ctx, scene }: DrawContext, left: number, top: number, height: number): void {
+function drawHomeCap({ ctx, pen, scene }: DrawContext, left: number, top: number, height: number): void {
   const { palette } = scene;
   ctx.save();
   ctx.beginPath();
-  ctx.rect(left, top, HOME_CAP_WIDTH, height);
+  pen.rect(left, top, HOME_CAP_WIDTH, height);
   ctx.clip();
   ctx.beginPath();
-  ctx.roundRect(left, top, HOME_CAP_WIDTH + CARD_RADIUS * 2, height, CARD_RADIUS);
+  pen.roundRect(left, top, HOME_CAP_WIDTH + CARD_RADIUS * 2, height, CARD_RADIUS);
   ctx.fillStyle = palette.accent;
   ctx.fill();
   ctx.restore();
-  strokeHouse(ctx, left + HOME_CAP_WIDTH / 2, top + height / 2, 0.72, palette.accentContrast, 1.3);
+  strokeHouse(ctx, left + HOME_CAP_WIDTH / 2, top + height / 2, 0.72, palette.accentContrast, 1.3, pen);
 }

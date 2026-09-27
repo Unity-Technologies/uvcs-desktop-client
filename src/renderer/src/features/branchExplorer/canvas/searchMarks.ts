@@ -63,13 +63,13 @@ function currentMarks({ ctx, scene }: DrawContext, text: string): readonly Mark[
 export function drawSearchMarks(draw: DrawContext, text: string, x: number, middle: number, height: number): void {
   const marks = currentMarks(draw, text);
   if (marks.length === 0) return;
-  const { ctx, scene } = draw;
+  const { ctx, pen, scene } = draw;
   const fill = ctx.fillStyle;
   const alpha = ctx.globalAlpha;
   ctx.fillStyle = scene.palette.searchHit;
   ctx.globalAlpha = alpha * (scene.palette.isDark ? 0.5 : 0.45);
   ctx.beginPath();
-  for (const mark of marks) ctx.roundRect(x + mark.left - 1, middle - height / 2, mark.width + 2, height, 2);
+  for (const mark of marks) pen.roundRect(x + mark.left - 1, middle - height / 2, mark.width + 2, height, 2);
   ctx.fill();
   ctx.fillStyle = fill;
   ctx.globalAlpha = alpha;
@@ -79,9 +79,9 @@ export function drawSearchMarks(draw: DrawContext, text: string, x: number, midd
 export function redrawMarkedLetters(draw: DrawContext, text: string, x: number, y: number): void {
   const marks = currentMarks(draw, text);
   if (marks.length === 0) return;
-  const { ctx, scene } = draw;
+  const { ctx, pen, scene } = draw;
   const fill = ctx.fillStyle;
   ctx.fillStyle = scene.palette.textPrimary;
-  for (const mark of marks) ctx.fillText(mark.text, x + mark.left, y);
+  for (const mark of marks) pen.fillText(mark.text, x + mark.left, y);
   ctx.fillStyle = fill;
 }
