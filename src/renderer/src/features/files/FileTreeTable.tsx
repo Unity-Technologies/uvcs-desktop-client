@@ -32,6 +32,8 @@ interface FileTreeTableProps {
   /** Marks directories that contain pending changes. */
   hasChangesInside?: (directory: string) => boolean;
   revealPath?: string | null;
+  /** Items cut to move elsewhere, shown ghosted. */
+  isCut?: (item: TreeItem) => boolean;
 }
 
 /** A virtualized, lazily expanded file tree with revision columns. */
@@ -45,13 +47,14 @@ export function FileTreeTable({
   statusOf,
   hasChangesInside,
   revealPath,
+  isCut,
 }: FileTreeTableProps) {
   const columns: Column<FileTreeRow>[] = [
     {
       id: 'name',
       header: 'Name',
       render: (row) => (
-        <NameCell row={row} status={statusOf?.(row.item) ?? null} inWorkspace={statusOf !== undefined} changesInside={hasChangesInside?.(row.item.path) ?? false} onToggle={onToggleDirectory} />
+        <NameCell row={row} status={statusOf?.(row.item) ?? null} inWorkspace={statusOf !== undefined} changesInside={hasChangesInside?.(row.item.path) ?? false} isCut={isCut?.(row.item) ?? false} onToggle={onToggleDirectory} />
       ),
     },
     ...(statusOf
@@ -129,15 +132,16 @@ interface NameCellProps {
   status: ItemStatus | null;
   inWorkspace: boolean;
   changesInside: boolean;
+  isCut: boolean;
   onToggle: (directory: string) => void;
 }
 
-function NameCell({ row, status, inWorkspace, changesInside, onToggle }: NameCellProps) {
+function NameCell({ row, status, inWorkspace, changesInside, isCut, onToggle }: NameCellProps) {
   const { item } = row;
   const isDirectory = item.itemType === 'directory';
 
   return (
-    <span className={styles.name} style={{ paddingLeft: indentOf(row.depth) }}>
+    <span className={styles.name} style={{ paddingLeft: indentOf(row.depth) }} data-cut={isCut || undefined}>
       {isDirectory ? (
         <button
           className={styles.chevron}

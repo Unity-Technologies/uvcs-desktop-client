@@ -101,8 +101,16 @@ export function changeRevisionType(workspacePath: string, items: TreeItem[], typ
 
 /** The names in a folder, as far as its listing is read. */
 function listedNames(workspacePath: string, directory: string): string[] {
-  const listing = queryClient.getQueryData<TreeItem[]>(queryKeys.inWorkspace(workspacePath, 'explorer', 'directory', directory));
-  return listing?.map((item) => item.name) ?? [];
+  return listedItems(workspacePath, directory)?.map((item) => item.name) ?? [];
+}
+
+/** A folder's listing, if it was read. */
+export function listedItems(workspacePath: string, directory: string): TreeItem[] | undefined {
+  return queryClient.getQueryData<TreeItem[]>(directoryListingKey(workspacePath, directory));
+}
+
+export function directoryListingKey(workspacePath: string, directory: string) {
+  return queryKeys.inWorkspace(workspacePath, 'explorer', 'directory', directory);
 }
 
 /** The directory new items go into: the selected directory itself, or the parent of the selected file. */
