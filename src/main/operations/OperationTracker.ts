@@ -5,8 +5,8 @@ import { ProgressThrottle } from './ProgressThrottle';
 
 export interface OperationContext {
   signal: AbortSignal;
-  /** What the operation does, in the app's words, while no command reports it: "Writing resolved files". */
-  reportProgress: (activity: string) => void;
+  /** What the operation does, in the app's words, while no command reports it: "Writing resolved files", with how many of how many items when it counts them. */
+  reportProgress: (activity: string, count?: { current: number; total: number }) => void;
   /** Starts a step of an operation made of several commands (shelve, undo, switch, bring the changes back). */
   beginStep: (label: string, index: number, count: number) => void;
   /** An `onOutputLine` that reads a command's progress with `reader` and reports it. */
@@ -51,7 +51,7 @@ export class OperationTracker {
     try {
       const finished = work({
         signal: controller.signal,
-        reportProgress: (activity) => report(working(activity)),
+        reportProgress: (activity, count) => report(working(activity, count)),
         beginStep: (label, index, count) => {
           step = { label, index, count };
           report(working(label));
@@ -80,6 +80,7 @@ export class OperationTracker {
   }
 }
 
-function working(stageLabel: string): CommandProgress {
-  return { stage: 'working', stageLabel, fraction: null };
+function working(stageLabel: string, count?: { current: number; total: number }): CommandProgress {
+  if (!count || count.total === 0) return { stage: 'working', stageLabel, fraction: null };
+  return { stage: 'working', stageLabel, ...count, fraction: count.current / count.total };
 }

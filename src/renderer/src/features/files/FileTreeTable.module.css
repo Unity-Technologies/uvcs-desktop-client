@@ -96,3 +96,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* Cut to move elsewhere: ghosted until pasted or cancelled. */
+.name[data-cut] > :not(.chevron, .chevronSpace) {
+  opacity: var(--opacity-ghost);
+}

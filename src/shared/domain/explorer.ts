@@ -50,3 +50,10 @@ export interface ItemDetails {
 }
 
 export type RevisionType = 'bin' | 'txt';
+
+/** An item to move into another folder (workspace-relative paths): controlled ones with `cm move`, private ones on disk. */
+export interface ItemMove {
+  from: string;
+  to: string;
+  isPrivate: boolean;
+}
