@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { treeArrowMove } from '../../lib/treeArrowMove';
-import { buildChangeRows, changesUnderRow, changeTreeArrowRows, comparePaths, LEVEL_INDENT, menuTargetOf, rowCheckState, rowIndent, topLevelCheckboxInset, treeLevel, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { changesUnderRow, changeTreeArrowRows, collapseRows, comparePaths, layoutChangeRows, LEVEL_INDENT, menuTargetOf, rowCheckState, rowIndent, topLevelCheckboxInset, treeLevel, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
+
+/** The rows the list shows. */
+function buildChangeRows({ collapsed, ...layout }: Parameters<typeof layoutChangeRows>[0] & { collapsed: ReadonlySet<string> }): ChangeRow[] {
+  return collapseRows(layoutChangeRows(layout), collapsed);
+}
 
 function change(path: string, kinds: PendingChange['kinds'], changelist?: string): PendingChange {
   return { path, kinds, itemType: 'file', size: 0, lastModified: '', changelist };
@@ -142,6 +147,29 @@ describe('buildChangeRows', () => {
       collapsed: new Set(['directory:all:src']),
     });
     expect(rows.map((row) => row.key)).toEqual(['directory:all:src', 'change:z.ts']);
+  });
+
+  it('leaves out what collapsed changelists and folders hold, and nothing after them', () => {
+    const layout = layoutChangeRows({ ...base, changes, layout: 'tree', grouping: 'changelist', changelists: [{ name: 'UI', description: '' }] });
+    expect(layout.map((row) => row.key)).toEqual([
+      'changelist:',
+      'change:new.txt',
+      'directory:changelist::src',
+      'change:src/b.ts',
+      'directory:changelist::src/lib',
+      'change:src/lib/c.ts',
+      'changelist:UI',
+      'directory:changelist:UI:src',
+      'change:src/a.ts',
+    ]);
+    const shown = collapseRows(layout, new Set(['directory:changelist::src', 'directory:changelist::src/lib', 'changelist:UI']));
+    expect(shown.map((row) => [row.key, row.type !== 'change' && row.collapsed])).toEqual([
+      ['changelist:', false],
+      ['change:new.txt', false],
+      ['directory:changelist::src', true],
+      ['changelist:UI', true],
+    ]);
+    expect(collapseRows(layout, new Set())).toBe(layout);
   });
 });
 

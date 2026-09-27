@@ -40,7 +40,7 @@ import { mergeSourceChangeset } from './checkinButton';
 import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinChanges, confirmCheckinWithoutComment, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
 import { isCheckinCandidate, matchesBranch } from './changeCategories';
-import { buildChangeRows, changeKey, changesUnderRow, sortForLayout, topLevelCheckboxInset, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { changeKey, changesUnderRow, collapseRows, layoutChangeRows, sortForLayout, topLevelCheckboxInset, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
 import { changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
 import { changeTone } from './changeTone';
@@ -91,10 +91,8 @@ export function PendingChangesView() {
     review.showAll();
   };
   const { isIncluded, included, uploadBytes, shelvable, shelvableBytes, bulkPrivate } = useCheckinSelection(allChanges, excludedPaths);
-  const hiddenIncludedCount = useMemo(() => {
-    const shown = new Set(changes);
-    return included.filter((change) => !shown.has(change)).length;
-  }, [changes, included]);
+  // The changes shown are some of all of them: the checked ones they leave out are the rest.
+  const hiddenIncludedCount = useMemo(() => included.length - changes.filter(isIncluded).length, [changes, included, isIncluded]);
   const branchName = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
   const rejectedCheckin = useCheckinAfterUpdateStore((state) => state.rejected[workspacePath]);
   const forgetRejectedCheckin = useCheckinAfterUpdateStore((state) => state.forget);
@@ -111,10 +109,8 @@ export function PendingChangesView() {
   const selectedCount = countSelected(selection.selected, changesByKey);
   const changelists = snapshot?.changelists ?? NO_CHANGELISTS;
   // Selecting a row or checking one renders the view again: thousands of changes are laid out again only when they or their layout change.
-  const rows = useMemo(
-    () => buildChangeRows({ changes, changelists, layout, grouping, collapsed }),
-    [changes, changelists, layout, grouping, collapsed],
-  );
+  const allRows = useMemo(() => layoutChangeRows({ changes, changelists, layout, grouping }), [changes, changelists, layout, grouping]);
+  const rows = useMemo(() => collapseRows(allRows, collapsed), [allRows, collapsed]);
   const checkboxInset = useMemo(() => topLevelCheckboxInset(rows), [rows]);
   const focused = selection.anchor === null ? undefined : changesByKey.get(selection.anchor);
   // Holding ↓ moves through the list at once; the diff (a read and an editor to lay out) follows where it stops.

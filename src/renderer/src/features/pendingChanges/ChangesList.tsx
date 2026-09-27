@@ -67,12 +67,9 @@ export function ChangesList({
   locks,
 }: ChangesListProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
-  const changeRows = useMemo(() => rows.filter((row) => row.type === 'change'), [rows]);
-  const orderedKeys = useMemo(() => changeRows.map((row) => row.key), [changeRows]);
-  // The keyboard moves through every row, folders and changelists too, so ← and → can close and open them.
-  const rowKeys = useMemo(() => rows.map((row) => row.key), [rows]);
+  // The keyboard moves through every row (`rowKeys`), folders and changelists too, so ← and → can close and open them.
   // Every arrow key renders the list: rows are found by key, never searched for.
-  const rowIndexes = useMemo(() => new Map(rowKeys.map((key, index) => [key, index])), [rowKeys]);
+  const { changeRows, orderedKeys, rowKeys, rowIndexes } = useMemo(() => indexRows(rows), [rows]);
   // The row keyboard moves go from; Shift extends the selection from the anchor to it.
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
   const focused = focusedKey !== null && rowIndexes.has(focusedKey) ? focusedKey : selection.anchor;
@@ -242,6 +239,22 @@ export function ChangesList({
       </div>
     </ActionContextMenu>
   );
+}
+
+/** The rows of files and their keys, every row's key, and where each key is: in one pass over tens of thousands of rows. */
+function indexRows(rows: ChangeRow[]) {
+  const changeRows: (ChangeRow & { type: 'change' })[] = [];
+  const orderedKeys: string[] = [];
+  const rowKeys: string[] = [];
+  const rowIndexes = new Map<string, number>();
+  rows.forEach((row, index) => {
+    rowKeys.push(row.key);
+    rowIndexes.set(row.key, index);
+    if (row.type !== 'change') return;
+    changeRows.push(row);
+    orderedKeys.push(row.key);
+  });
+  return { changeRows, orderedKeys, rowKeys, rowIndexes };
 }
 
 /** A file's mark, or a folder's once every file in it is reviewed; changelist headers have none. */

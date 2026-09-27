@@ -43,13 +43,11 @@ export type ChangesGrouping = 'none' | 'changelist';
 
 export const DEFAULT_CHANGELIST_LABEL = 'Default changelist';
 
-interface BuildRowsInput {
+interface LayoutInput {
   changes: PendingChange[];
   changelists: Changelist[];
   layout: ChangesLayout;
   grouping: ChangesGrouping;
-  /** Keys of collapsed groups and directories. */
-  collapsed: ReadonlySet<string>;
 }
 
 interface Group {
@@ -60,13 +58,14 @@ interface Group {
 }
 
 /**
- * Flattens pending changes into the rows of the list: changelist headers, optional folders and changes. What is checked
- * is left to `rowCheckState`, so checking files doesn't lay tens of thousands of rows out again.
+ * Flattens pending changes into the rows of the list: changelist headers, optional folders and changes. Every row, as
+ * if nothing was collapsed: opening or closing a folder only leaves rows out (`collapseRows`). What is checked is left
+ * to `rowCheckState`: checking files doesn't lay tens of thousands of rows out again either.
  */
-export function buildChangeRows({ changes, changelists, layout, grouping, collapsed }: BuildRowsInput): ChangeRow[] {
+export function layoutChangeRows({ changes, changelists, layout, grouping }: LayoutInput): ChangeRow[] {
   const rows: ChangeRow[] = [];
   if (grouping === 'none') {
-    appendChangeRows(rows, changes, 'all', layout, collapsed);
+    appendChangeRows(rows, changes, 'all', layout);
     return rows;
   }
 
@@ -78,11 +77,33 @@ export function buildChangeRows({ changes, changelists, layout, grouping, collap
       label: group.label,
       changelist: group.changelist,
       changes: sorted,
-      collapsed: collapsed.has(group.key),
+      collapsed: false,
     });
-    if (!collapsed.has(group.key)) appendChangeRows(rows, sorted, group.key, layout, collapsed);
+    appendChangeRows(rows, sorted, group.key, layout);
   }
   return rows;
+}
+
+/** The rows laid out by `layoutChangeRows` but for what collapsed changelists and folders hold. */
+export function collapseRows(rows: ChangeRow[], collapsed: ReadonlySet<string>): ChangeRow[] {
+  if (collapsed.size === 0) return rows;
+  // Changelists, when there are any, lead the rows.
+  const grouped = rows[0]?.type === 'group';
+  const shown: ChangeRow[] = [];
+  // The level of the collapsed row whose contents are being left out.
+  let hiddenBelow = Infinity;
+  for (const row of rows) {
+    const level = treeLevel(row, grouped);
+    if (level > hiddenBelow) continue;
+    hiddenBelow = Infinity;
+    if (row.type !== 'change' && collapsed.has(row.key)) {
+      shown.push({ ...row, collapsed: true });
+      hiddenBelow = level;
+    } else {
+      shown.push(row);
+    }
+  }
+  return shown;
 }
 
 /**
@@ -118,8 +139,16 @@ export function topLevelCheckboxInset(rows: ChangeRow[]): number {
   return rows.some((row) => row.type === 'group') ? LEVEL_INDENT : 0;
 }
 
+/** Kept per change: lists of tens of thousands of rows look keys up in maps and sets, which hash each new string again. */
+const changeKeys = new WeakMap<PendingChange, string>();
+
 export function changeKey(change: PendingChange): string {
-  return `change:${change.path}`;
+  let key = changeKeys.get(change);
+  if (key === undefined) {
+    key = `change:${change.path}`;
+    changeKeys.set(change, key);
+  }
+  return key;
 }
 
 /** The changes a row stands for: all changes in a group or folder, or the change itself. */
@@ -171,7 +200,7 @@ function sortByPath(changes: PendingChange[]): PendingChange[] {
 
 /**
  * The order the rows show changes in. Sorting what is already in order takes one comparison a change, so a view that
- * hands `buildChangeRows` changes kept in this order (filtered, but not reordered) lays them out again without sorting.
+ * hands `layoutChangeRows` changes kept in this order (filtered, but not reordered) lays them out again without sorting.
  */
 export function sortForLayout(changes: PendingChange[], layout: ChangesLayout): PendingChange[] {
   return layout === 'tree' ? sortByPath(changes) : sortByStatus(changes);
@@ -184,10 +213,10 @@ export function sortByStatus(changes: PendingChange[]): PendingChange[] {
   return [...changes].sort((a, b) => compareTones(tones.get(a)!, tones.get(b)!) || collator.compare(a.path, b.path));
 }
 
-function appendChangeRows(rows: ChangeRow[], changes: PendingChange[], groupKey: string, layout: ChangesLayout, collapsed: ReadonlySet<string>): void {
+function appendChangeRows(rows: ChangeRow[], changes: PendingChange[], groupKey: string, layout: ChangesLayout): void {
   const sorted = sortForLayout(changes, layout);
   if (layout === 'tree') {
-    appendTreeRows(rows, sorted, groupKey, collapsed);
+    appendTreeRows(rows, sorted, groupKey);
     return;
   }
   sorted.forEach((change) => rows.push({ type: 'change', key: changeKey(change), change, depth: 0 }));
@@ -209,7 +238,7 @@ function groupByChangelist(changes: PendingChange[], changelists: Changelist[]):
   return [defaultGroup, ...userGroups].filter((group) => group.changes.length > 0 || group.changelist);
 }
 
-function appendTreeRows(rows: ChangeRow[], changes: PendingChange[], groupKey: string, collapsed: ReadonlySet<string>): void {
+function appendTreeRows(rows: ChangeRow[], changes: PendingChange[], groupKey: string): void {
   const byPath = new Map(changes.map((change) => [change.path, change]));
   // Each change's path and the folders above it ("a", "a/b", "a/b/c.txt"), built once: every level is looked up by them.
   const prefixes = changes.map((change) => pathPrefixes(change.path));
@@ -219,12 +248,8 @@ function appendTreeRows(rows: ChangeRow[], changes: PendingChange[], groupKey: s
   const folderRows = new Map<string, DirectoryRow>();
   // The level of the innermost folder each row shows.
   const lastLevels = new Map<DirectoryRow, number>();
-  let hiddenBelow: string | null = null;
 
   changes.forEach((change, index) => {
-    if (hiddenBelow && change.path.startsWith(`${hiddenBelow}/`)) return;
-    hiddenBelow = null;
-
     const paths = prefixes[index]!;
     const pathAt = (level: number): string => paths[level]!;
     // A folder that is a change itself and holds others is their folder's row, not one more row next to it.
@@ -247,15 +272,11 @@ function appendTreeRows(rows: ChangeRow[], changes: PendingChange[], groupKey: s
           depth,
           change: byPath.get(path),
           changes: inside,
-          collapsed: collapsed.has(key),
+          collapsed: false,
         };
         rows.push(row);
         lastLevels.set(row, last);
         for (let chained = level; chained <= last; chained++) folderRows.set(pathAt(chained), row);
-      }
-      if (row.collapsed) {
-        hiddenBelow = row.path;
-        return;
       }
       level = lastLevels.get(row)!;
       depth = row.depth + 1;
