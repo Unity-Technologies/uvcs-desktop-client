@@ -160,6 +160,27 @@ describe('comparePaths', () => {
   it('puts everything in a folder right after it', () => {
     expect(['a-b.txt', 'a/c.txt', 'a', 'ab'].sort(comparePaths)).toEqual(['a', 'a/c.txt', 'a-b.txt', 'ab']);
   });
+
+  it('orders like comparing name by name in the language order', () => {
+    const collator = new Intl.Collator();
+    const nameByName = (a: string, b: string): number => {
+      const [namesA, namesB] = [a.split('/'), b.split('/')];
+      for (let index = 0; index < Math.min(namesA.length, namesB.length); index++) {
+        const order = collator.compare(namesA[index]!, namesB[index]!);
+        if (order !== 0) return order;
+      }
+      return namesA.length - namesB.length;
+    };
+    const paths = ['src/b', 'Src/c', 'Src/a', 'src/a/x', 'src/B.txt', 'src', 'src-old/a', 'src/a b', 'x/file10', 'x/file2', 'x/File1', 'é/a', 'e/b', 'a/b', 'a/b/c'];
+    for (const a of paths) for (const b of paths) expect(Math.sign(comparePaths(a, b)), `${a} vs ${b}`).toBe(Math.sign(nameByName(a, b)));
+  });
+
+  it('goes on past names that differ only in their Unicode form', () => {
+    const composed = 'caf\u00e9';
+    const decomposed = 'cafe\u0301';
+    expect(comparePaths(`${composed}/b`, `${decomposed}/a`)).toBeGreaterThan(0);
+    expect(comparePaths(`${composed}/a`, `${decomposed}/a`)).toBe(0);
+  });
 });
 
 describe('menuTargetOf', () => {
@@ -225,5 +246,25 @@ describe('treeLevel', () => {
   it('starts at the first level without changelists', () => {
     const rows = buildChangeRows({ ...base, changes: nested, layout: 'tree' });
     expect(rows.map((row) => treeLevel(row, false))).toEqual([1, 2, 2, 3]);
+  });
+});
+
+describe('buildChangeRows at scale', () => {
+  // 100,000 changes, deep and flat: 20 × 10 × 5 folders of 50 files, and one folder of 50,000.
+  const many = Array.from({ length: 100_000 }, (_, index) =>
+    index % 2
+      ? change(`src/m${index % 20}/p${index % 10}/s${index % 5}/f${index}.cs`, index % 3 ? ['changed'] : ['checkedOut', 'changed'])
+      : change(`flat/asset${index}.txt`, index % 4 ? ['private'] : ['added']),
+  );
+  const timed = (layout: ChangesLayout, grouping: ChangesGrouping): number => {
+    const started = performance.now();
+    buildChangeRows({ ...base, changes: many, layout, grouping });
+    return performance.now() - started;
+  };
+
+  it('lays out a list, a tree and changelists of 100,000 changes in well under a second each', () => {
+    expect(timed('list', 'none')).toBeLessThan(1000);
+    expect(timed('tree', 'none')).toBeLessThan(1000);
+    expect(timed('tree', 'changelist')).toBeLessThan(1000);
   });
 });

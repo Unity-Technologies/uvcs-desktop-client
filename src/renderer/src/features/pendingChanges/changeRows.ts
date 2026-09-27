@@ -74,7 +74,7 @@ export function buildChangeRows({ changes, changelists, layout, grouping, isChec
   }
 
   for (const group of groupByChangelist(changes, changelists)) {
-    const sorted = sortByPath(group.changes);
+    const sorted = sortForLayout(group.changes, layout);
     rows.push({
       type: 'group',
       key: group.key,
@@ -136,7 +136,20 @@ export function changesUnderRow(row: ChangeRow): PendingChange[] {
  * and "a/c.txt", and "src/b" between "Src/a" and "Src/c".
  */
 export function comparePaths(a: string, b: string): number {
-  return compareSegments(a.split('/'), b.split('/'));
+  // Up to the first character they differ in, the folders are the same: only the names there are compared.
+  let differ = 0;
+  const shorter = Math.min(a.length, b.length);
+  while (differ < shorter && a.charCodeAt(differ) === b.charCodeAt(differ)) differ++;
+  if (differ === a.length && differ === b.length) return 0;
+  const start = a.lastIndexOf('/', differ - 1) + 1;
+  const order = collator.compare(segmentAt(a, start), segmentAt(b, start));
+  // Names the collator takes as equal (other Unicode forms of the same text) leave it to the rest of the paths.
+  return order !== 0 ? order : compareSegments(a.split('/'), b.split('/'));
+}
+
+function segmentAt(path: string, start: number): string {
+  const end = path.indexOf('/', start);
+  return path.slice(start, end === -1 ? undefined : end);
 }
 
 function compareSegments(a: string[], b: string[]): number {
@@ -157,13 +170,22 @@ export function menuTargetOf(row: ChangeRow | null): Changelist | PendingChange[
 }
 
 function sortByPath(changes: PendingChange[]): PendingChange[] {
-  const segments = new Map(changes.map((change) => [change, change.path.split('/')]));
-  return [...changes].sort((a, b) => compareSegments(segments.get(a)!, segments.get(b)!));
+  return [...changes].sort((a, b) => comparePaths(a.path, b.path));
+}
+
+/**
+ * The order the rows show changes in. Sorting what is already in order takes one comparison a change, so a view that
+ * hands `buildChangeRows` changes kept in this order (filtered, but not reordered) lays them out again without sorting.
+ */
+export function sortForLayout(changes: PendingChange[], layout: ChangesLayout): PendingChange[] {
+  return layout === 'tree' ? sortByPath(changes) : sortByStatus(changes);
 }
 
 /** A flat list reads by kind of change first, in the order of the filter chips; a tree has to follow the folders. */
 export function sortByStatus(changes: PendingChange[]): PendingChange[] {
-  return [...changes].sort((a, b) => compareTones(changeTone(a), changeTone(b)) || collator.compare(a.path, b.path));
+  // Each change's status once, not twice a comparison: tens of thousands of changes take a million comparisons.
+  const tones = new Map(changes.map((change) => [change, changeTone(change)]));
+  return [...changes].sort((a, b) => compareTones(tones.get(a)!, tones.get(b)!) || collator.compare(a.path, b.path));
 }
 
 function appendChangeRows(
@@ -174,11 +196,12 @@ function appendChangeRows(
   isChecked: (change: PendingChange) => boolean,
   collapsed: ReadonlySet<string>,
 ): void {
+  const sorted = sortForLayout(changes, layout);
   if (layout === 'tree') {
-    appendTreeRows(rows, sortByPath(changes), groupKey, isChecked, collapsed);
+    appendTreeRows(rows, sorted, groupKey, isChecked, collapsed);
     return;
   }
-  sortByStatus(changes).forEach((change) => rows.push({ type: 'change', key: changeKey(change), change, depth: 0, checked: isChecked(change) }));
+  sorted.forEach((change) => rows.push({ type: 'change', key: changeKey(change), change, depth: 0, checked: isChecked(change) }));
 }
 
 function groupByChangelist(changes: PendingChange[], changelists: Changelist[]): Group[] {
@@ -205,20 +228,25 @@ function appendTreeRows(
   collapsed: ReadonlySet<string>,
 ): void {
   const byPath = new Map(changes.map((change) => [change.path, change]));
-  const folders = new Set(changes.flatMap((change) => foldersAbove(change.path)));
+  // Each change's path and the folders above it ("a", "a/b", "a/b/c.txt"), built once: every level is looked up by them.
+  const prefixes = changes.map((change) => pathPrefixes(change.path));
+  const folders = new Set<string>();
+  for (const paths of prefixes) for (let level = 0; level < paths.length - 1; level++) folders.add(paths[level]!);
   // The row showing each folder: folders that only hold the next one share its row ("deep/very/long").
   const folderRows = new Map<string, DirectoryRow>();
+  // The level of the innermost folder each row shows.
+  const lastLevels = new Map<DirectoryRow, number>();
   let hiddenBelow: string | null = null;
 
   changes.forEach((change, index) => {
     if (hiddenBelow && change.path.startsWith(`${hiddenBelow}/`)) return;
     hiddenBelow = null;
 
-    const segments = change.path.split('/');
-    const pathAt = (level: number): string => segments.slice(0, level + 1).join('/');
+    const paths = prefixes[index]!;
+    const pathAt = (level: number): string => paths[level]!;
     // A folder that is a change itself and holds others is their folder's row, not one more row next to it.
     const isFolder = folders.has(change.path);
-    const folderCount = isFolder ? segments.length : segments.length - 1;
+    const folderCount = isFolder ? paths.length : paths.length - 1;
     let depth = 0;
     for (let level = 0; level < folderCount; level++) {
       let row = folderRows.get(pathAt(level));
@@ -232,7 +260,7 @@ function appendTreeRows(
           type: 'directory',
           key,
           path,
-          name: segments.slice(level, last + 1).join('/'),
+          name: level === 0 ? path : path.slice(pathAt(level - 1).length + 1),
           depth,
           change: byPath.get(path),
           changes: inside,
@@ -240,13 +268,14 @@ function appendTreeRows(
           collapsed: collapsed.has(key),
         };
         rows.push(row);
+        lastLevels.set(row, last);
         for (let chained = level; chained <= last; chained++) folderRows.set(pathAt(chained), row);
       }
       if (row.collapsed) {
         hiddenBelow = row.path;
         return;
       }
-      level = row.path.split('/').length - 1;
+      level = lastLevels.get(row)!;
       depth = row.depth + 1;
     }
 
@@ -262,22 +291,30 @@ function holdsOnly(inside: PendingChange[], child: string): boolean {
 
 /** The changes in a folder, first met at `first`: sorted by `comparePaths`, they are the ones right after it. */
 function changesInFolder(sorted: PendingChange[], first: number, folder: string): PendingChange[] {
+  const inside = `${folder}/`;
   let end = first;
-  while (end < sorted.length && (sorted[end]!.path === folder || sorted[end]!.path.startsWith(`${folder}/`))) end++;
+  while (end < sorted.length && (sorted[end]!.path === folder || sorted[end]!.path.startsWith(inside))) end++;
   return sorted.slice(first, end);
 }
 
-/** "a/b/c.txt" is in "a" and "a/b". */
-function foldersAbove(path: string): string[] {
-  const parts = path.split('/');
-  return parts.slice(1).map((_, index) => parts.slice(0, index + 1).join('/'));
+/** "a/b/c.txt" is in "a" and "a/b": ["a", "a/b", "a/b/c.txt"]. */
+function pathPrefixes(path: string): string[] {
+  const prefixes: string[] = [];
+  for (let end = path.indexOf('/'); end !== -1; end = path.indexOf('/', end + 1)) prefixes.push(path.slice(0, end));
+  prefixes.push(path);
+  return prefixes;
 }
 
 /** Over the changes a folder or changelist holds that can go into a check-in; null when none can (only ignored files). */
 function combinedCheckState(changes: PendingChange[], isChecked: (change: PendingChange) => boolean): CheckState | null {
-  const candidates = changes.filter(isCheckinCandidate);
-  if (candidates.length === 0) return null;
-  const checkedCount = candidates.filter(isChecked).length;
-  if (checkedCount === 0) return false;
-  return checkedCount === candidates.length ? true : 'mixed';
+  let candidates = 0;
+  let checked = 0;
+  for (const change of changes) {
+    if (!isCheckinCandidate(change)) continue;
+    candidates++;
+    if (isChecked(change)) checked++;
+  }
+  if (candidates === 0) return null;
+  if (checked === 0) return false;
+  return checked === candidates ? true : 'mixed';
 }
