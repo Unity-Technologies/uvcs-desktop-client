@@ -23,7 +23,7 @@ interface FileTreeTableProps {
   /** Double click or Enter on a file. */
   onOpenFile: (item: TreeItem) => void;
   contextMenu: (selected: TreeItem[]) => MenuEntry[];
-  /** Pending status per item; the Status column is hidden when omitted. */
+  /** Pending status per item, for a workspace tree; without it the tree is a repository's: no Status column, no up-to-date checks. */
   statusOf?: (item: TreeItem) => ItemStatus | null;
   /** Marks directories that contain pending changes. */
   hasChangesInside?: (directory: string) => boolean;
@@ -47,7 +47,7 @@ export function FileTreeTable({
       id: 'name',
       header: 'Name',
       render: (row) => (
-        <NameCell row={row} status={statusOf?.(row.item) ?? null} changesInside={hasChangesInside?.(row.item.path) ?? false} onToggle={onToggleDirectory} />
+        <NameCell row={row} status={statusOf?.(row.item) ?? null} inWorkspace={statusOf !== undefined} changesInside={hasChangesInside?.(row.item.path) ?? false} onToggle={onToggleDirectory} />
       ),
     },
     ...(statusOf
@@ -82,7 +82,15 @@ export function FileTreeTable({
       width: 88,
       secondary: true,
       hideBelow: 640,
-      render: (row) => (row.item.changeset > 0 ? <span className="mono">{row.item.changeset}</span> : ''),
+      // Inside a box in the text's font, the mono number sits on the other columns' baseline instead of centered higher.
+      render: (row) =>
+        row.item.changeset > 0 ? (
+          <span>
+            <span className="mono">{row.item.changeset}</span>
+          </span>
+        ) : (
+          ''
+        ),
     },
     { id: 'owner', header: 'By', width: 44, hideBelow: 600, render: (row) => row.item.owner && <Avatar user={row.item.owner} size={18} /> },
   ];
@@ -115,11 +123,12 @@ export function FileTreeTable({
 interface NameCellProps {
   row: FileTreeRow;
   status: ItemStatus | null;
+  inWorkspace: boolean;
   changesInside: boolean;
   onToggle: (directory: string) => void;
 }
 
-function NameCell({ row, status, changesInside, onToggle }: NameCellProps) {
+function NameCell({ row, status, inWorkspace, changesInside, onToggle }: NameCellProps) {
   const { item } = row;
   const isDirectory = item.itemType === 'directory';
 
@@ -139,7 +148,7 @@ function NameCell({ row, status, changesInside, onToggle }: NameCellProps) {
       ) : (
         <span className={styles.chevronSpace} />
       )}
-      <ItemIcon item={item} expanded={row.isExpanded} overlay={iconOverlay(item, status)} />
+      <ItemIcon item={item} expanded={row.isExpanded} overlay={iconOverlay(item, status, inWorkspace)} />
       <span className={styles.text}>
         <span className={styles.label} data-private={item.isPrivate} data-root={isWorkspaceRoot(item)}>
           <Highlight text={item.name} />

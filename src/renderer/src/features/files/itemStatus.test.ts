@@ -15,6 +15,11 @@ describe('iconOverlay', () => {
     expect(iconOverlay({ isPrivate: true }, null)).toBe('private');
     expect(iconOverlay({ isPrivate: false }, null)).toBe('controlled');
   });
+
+  it("leaves the check out of a repository tree, where everything is controlled, but keeps xlinks", () => {
+    expect(iconOverlay({ isPrivate: false }, null, false)).toBe('none');
+    expect(iconOverlay({ isPrivate: false, xlink }, null, false)).toBe('xlink');
+  });
 });
 
 describe('itemStatus', () => {

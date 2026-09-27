@@ -7,7 +7,7 @@ import { LabelChips } from '../../components/LabelChips';
 import { PathLabel } from '../../components/PathLabel';
 import { formatSize } from '../../lib/formatDate';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
-import { firstLine, pluralize } from '../../lib/text';
+import { firstLine } from '../../lib/text';
 import { UserLabel } from '../../ui/Avatar';
 import { EmptyState } from '../../ui/EmptyState';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
@@ -103,7 +103,7 @@ export function HistoryPage({ page }: PageProps<'history'>) {
   }, [selection.anchor, newestKey]);
 
   const header = (
-    <ViewHeader title={page.path} subtitle={history && pluralize(history.revisions.length, 'revision')}>
+    <ViewHeader title={page.path} count={history?.revisions.length}>
       {rows.length > 0 && <SearchField value={search} onChange={setSearch} placeholder="Filter by comment, author, changeset, branch" width={320} />}
     </ViewHeader>
   );
