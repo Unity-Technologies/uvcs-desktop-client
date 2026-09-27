@@ -13,6 +13,15 @@ export interface AppMenuContext {
 }
 
 /**
+ * The accelerator a menu item shows. Off macOS, Chromium's menus spell a few keys out ("Ctrl+Comma", "Ctrl+Period")
+ * where the rest of the app shows the key (Ctrl+,); those items show none, their shortcut still works (the renderer
+ * owns the keys) and the tooltips, palette and shortcuts sheet tell it.
+ */
+export function shownAccelerator(accelerator: string, isMac: boolean): string | undefined {
+  return !isMac && /\+[,.]$/.test(accelerator) ? undefined : accelerator;
+}
+
+/**
  * The menu bar of each OS: on macOS the app menu holds About, Settings and Quit; Windows and Linux have none, so
  * Settings and Exit (Windows) or Quit (Linux) end the File menu and About ends Help. Off macOS, `&` marks the letter
  * Alt opens an item with (the menu bar shows it underlined); macOS has no such letters, so they're dropped there.
@@ -21,7 +30,8 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
   const { platform, isPackaged, windowItems, newWindow, openDocumentation } = context;
   const isMac = platform === 'darwin';
   const label = (text: string): string => (isMac ? text.replaceAll('&', '') : text);
-  const commandItem: AppMenuContext['commandItem'] = (text, ...rest) => context.commandItem(label(text), ...rest);
+  const commandItem: AppMenuContext['commandItem'] = (text, commandId, accelerator, withoutWindow) =>
+    context.commandItem(label(text), commandId, accelerator && shownAccelerator(accelerator, isMac), withoutWindow);
   const separator: MenuItemConstructorOptions = { type: 'separator' };
 
   const template: MenuItemConstructorOptions[] = [
