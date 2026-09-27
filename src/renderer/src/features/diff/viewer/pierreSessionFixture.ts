@@ -34,6 +34,13 @@ export async function typedIntoPierre(original: string, modified: string, method
     type(index: number, text: string): void {
       renderer.updateRenderCache(new Map([[index, [[0, '', text]]]]), 'light');
     },
+    /**
+     * Types over line `index` as the editor reports it when it re-tokenizes from there: `lines` from it on. Whether
+     * the renderer asks for the diff to be rendered whole.
+     */
+    retokenize(index: number, lines: string[]): boolean {
+      return renderer.updateRenderCache(new Map(lines.map((text, offset) => [index + offset, [[0, '', text]]])), 'light');
+    },
     /** The editor's text is now `text` (lone CRs shown as LFs), as it reports an edit that moves lines. */
     replace(text: string): void {
       const lines = shownText(text).match(/[^\n]*\n|[^\n]+$/g) ?? [];

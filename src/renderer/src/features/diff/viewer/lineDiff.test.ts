@@ -127,5 +127,13 @@ describe('one diff, typed or saved, counted or discarded', () => {
         if (method === 'recognizeAll') expect(text).toBe(original);
       });
     }
+
+    it(`${method}: types a character into a file of lone CRs made LFs and deletes it`, async () => {
+      const crs = original.replaceAll('\n', '\r');
+      const session = await typedIntoPierre(crs, original, method);
+      session.type(editedLine, 'gamma deltax');
+      session.type(editedLine, 'gamma delta');
+      expect(changesOf(session.diff)).toEqual(changesOf(lineDiff(crs, original, method, 'file.ts').meta));
+    });
   }
 });
