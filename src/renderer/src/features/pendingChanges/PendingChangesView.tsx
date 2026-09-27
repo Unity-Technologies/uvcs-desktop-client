@@ -168,10 +168,12 @@ export function PendingChangesView() {
     return done;
   };
 
+  // With nothing pending, the empty state says so: no count, no ways to lay out a list that isn't there.
+  const empty = snapshot?.changes.length === 0;
   const header = (
     <ViewHeader
       title="Changes"
-      subtitle={snapshot && `${formatCount(snapshot.changes.filter(isCheckinCandidate).length)} pending`}
+      subtitle={snapshot && !empty && `${formatCount(snapshot.changes.filter(isCheckinCandidate).length)} pending`}
       actions={
         <>
           <ReviewModeButton workspacePath={workspacePath} />
@@ -180,29 +182,33 @@ export function PendingChangesView() {
         </>
       }
     >
-      <SegmentedControl<ChangesGrouping>
-        value={grouping}
-        onChange={setGrouping}
-        segments={[
-          { value: 'none', label: 'Files' },
-          { value: 'changelist', label: 'Changelists' },
-        ]}
-      />
-      <SegmentedControl<ChangesLayout>
-        value={layout}
-        onChange={setLayout}
-        segments={[
-          { value: 'list', label: <List size={13} />, title: 'List' },
-          { value: 'tree', label: <ListTree size={13} />, title: 'Tree' },
-        ]}
-      />
+      {!empty && (
+        <>
+          <SegmentedControl<ChangesGrouping>
+            value={grouping}
+            onChange={setGrouping}
+            segments={[
+              { value: 'none', label: 'Files' },
+              { value: 'changelist', label: 'Changelists' },
+            ]}
+          />
+          <SegmentedControl<ChangesLayout>
+            value={layout}
+            onChange={setLayout}
+            segments={[
+              { value: 'list', label: <List size={13} />, title: 'List' },
+              { value: 'tree', label: <ListTree size={13} />, title: 'Tree' },
+            ]}
+          />
+        </>
+      )}
     </ViewHeader>
   );
 
   if (isLoading) return <>{header}<ListSkeleton rowHeight={28} /></>;
   if (error) return <>{header}<EmptyState title="Couldn't read pending changes" description={error.message} /></>;
 
-  if (snapshot?.changes.length === 0) {
+  if (empty) {
     return (
       <>
         {header}

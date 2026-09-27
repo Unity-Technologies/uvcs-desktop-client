@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import { formatCount } from '../lib/text';
+import { formatCount, pluralize } from '../lib/text';
 import { SearchField } from '../ui/SearchField';
 import { Tooltip } from '../ui/Tooltip';
 import { countTones, matchesChangeFilter, offeredTones } from './changeFilter';
@@ -56,7 +56,7 @@ export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tone
 
   const bar = (
     <div className={styles.bar}>
-      <SearchField value={query} onChange={setQuery} placeholder={`Filter ${formatCount(items.length)} files`} width="100%" />
+      <SearchField value={query} onChange={setQuery} placeholder={`Filter ${pluralize(items.length, 'file')}`} width="100%" />
       {tones.map((tone) => {
         const count = counts.get(tone) ?? 0;
         const label = count > 0 ? `${TONE_LABELS[tone]} (${formatCount(count)})` : TONE_LABELS[tone];
