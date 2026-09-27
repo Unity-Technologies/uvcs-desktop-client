@@ -39,7 +39,15 @@ export function useAppCommands(): void {
         shortcut: SIDEBAR_SHORTCUT,
         run: toggleSidebar,
       },
-      { id: 'app.newWindow', group: 'App', label: 'New window', icon: AppWindow, keywords: ['window'], run: () => void api.windows.openHome() },
+      {
+        id: 'app.newWindow',
+        group: 'App',
+        label: 'New window',
+        icon: AppWindow,
+        keywords: ['window'],
+        shortcut: hotkey('newWindow'),
+        run: () => void api.windows.openHome(),
+      },
     ],
     [],
   );
