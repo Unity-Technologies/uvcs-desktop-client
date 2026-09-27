@@ -1,4 +1,5 @@
 import type { MergePlan, MergeRequest } from '@shared/domain/merge';
+import { pluralize } from '../../lib/text';
 import type { ConflictLabels } from './resolve/threeWayMerge';
 
 /** `br:/main/task` → `/main/task`, `cs:12` → `changeset 12`, `lb:v1` → `label v1`, `sh:3` → `shelve 3`. */
@@ -84,6 +85,13 @@ export function completionTitle(request: MergeRequest): string {
     case 'subtractive':
       return 'Changes undone';
   }
+}
+
+/** What a finished merge did, e.g. "3 changes applied · 2 conflicts resolved"; what it didn't do goes unsaid. */
+export function completionCounts(changeCount: number, conflictCount: number): string {
+  return [changeCount > 0 && `${pluralize(changeCount, 'change')} applied`, conflictCount > 0 && `${pluralize(conflictCount, 'conflict')} resolved`]
+    .filter(Boolean)
+    .join(' · ');
 }
 
 export function mergeTitleText({ verb, source, preposition, destination }: MergeTitle): string {

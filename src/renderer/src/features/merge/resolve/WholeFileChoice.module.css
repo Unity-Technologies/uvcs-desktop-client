@@ -51,10 +51,9 @@
   object-fit: contain;
 }
 
-.size {
+.noPreview {
+  display: flex;
   color: var(--text-tertiary);
-  font-size: var(--text-xl);
-  font-weight: 600;
 }
 
 .caption {
