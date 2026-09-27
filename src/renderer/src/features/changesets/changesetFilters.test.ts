@@ -57,6 +57,7 @@ describe('noChangesetsHint', () => {
 describe('changesetsCount', () => {
   it('says when any time stopped at its cap', () => {
     expect(changesetsCount(12, 2000, 'all')).toBe('12 shown of the newest 2,000');
+    expect(changesetsCount(2000, 2000, 'all')).toBe('The newest 2,000');
     expect(changesetsCount(12, 40, 'all')).toBe('12 shown');
     expect(changesetsCount(2000, 2000, 'month')).toBe('2000 shown');
   });

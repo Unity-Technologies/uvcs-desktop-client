@@ -17,7 +17,7 @@ export function ChangesetFiltersBar({ filter, onChange, currentBranch }: Changes
 
   return (
     <>
-      <SearchField value={filter.search} onChange={(search) => update({ search })} placeholder="Search comment, author, branch or number" width={300} />
+      <SearchField value={filter.search} onChange={(search) => update({ search })} placeholder="Filter by comment, author, changeset, branch" width={320} />
       <ChoiceChip<DatePreset>
         value={filter.datePreset}
         choices={presets.map((preset) => ({ value: preset, label: DATE_PRESET_LABELS[preset] }))}

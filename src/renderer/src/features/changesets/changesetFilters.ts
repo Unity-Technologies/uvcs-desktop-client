@@ -60,7 +60,9 @@ export function noChangesetsHint({ search, datePreset }: ChangesetFilterState): 
 
 /** The header's count; "Any time" says when it stopped at its cap, so a missing old changeset isn't a surprise. */
 export function changesetsCount(shown: number, read: number, datePreset: DatePreset): string {
-  return datePreset === 'all' && read >= ANY_TIME_LIMIT ? `${shown} shown of the newest ${ANY_TIME_LIMIT.toLocaleString('en-US')}` : `${shown} shown`;
+  if (datePreset !== 'all' || read < ANY_TIME_LIMIT) return `${shown} shown`;
+  const newest = `newest ${ANY_TIME_LIMIT.toLocaleString('en-US')}`;
+  return shown === read ? `The ${newest}` : `${shown} shown of the ${newest}`;
 }
 
 function isoDateDaysBefore(today: Date, days: number): string {
