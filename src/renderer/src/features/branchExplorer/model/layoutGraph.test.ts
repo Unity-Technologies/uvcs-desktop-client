@@ -63,7 +63,8 @@ describe('layoutKeeping', () => {
     }
     expect(reused).toBeGreaterThan(0);
     expect(layoutKeeping(data, base, null)).toBe(base.layout);
-  });
+    // 430 whole layouts to compare against: about a second here, several on a slower machine running the suite.
+  }, 30_000);
 });
 
 describe('layoutGraph at scale', () => {

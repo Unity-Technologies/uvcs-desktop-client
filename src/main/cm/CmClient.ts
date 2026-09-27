@@ -116,7 +116,7 @@ export class CmClient {
 
   /** A process of its own; a command line too long to start one with (thousands of paths) goes to a `cm shell` of its own. */
   private async runProcess(args: string[], cwd: string, { signal, killSignal, onOutputLine }: CmRunOptions): Promise<CmResult> {
-    const { args: started, input } = processCommand(args);
+    const { args: started, input } = processCommand(args, this.platform);
     if (input === undefined) return runCmProcess(this.cmPath, started, { cwd, signal, killSignal, onOutputLine });
     const outputLine = onOutputLine && ((line: string) => !isShellResultLine(line) && onOutputLine(line));
     const result = await runCmProcess(this.cmPath, started, { cwd, signal, killSignal, onOutputLine: outputLine, input });

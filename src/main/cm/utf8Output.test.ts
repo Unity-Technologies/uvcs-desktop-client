@@ -1,5 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { withUtf8Output } from './utf8Output';
+import { printsInConsoleCodePage, withUtf8Output } from './utf8Output';
+
+describe('printsInConsoleCodePage', () => {
+  it('is what cm prints as text, not as XML, find output asked in UTF-8 or a file cat writes', () => {
+    expect(printsInConsoleCodePage(['diff', 'cs:3', '--format={path}'])).toBe(true);
+    expect(printsInConsoleCodePage(['merge', 'br:/main/task', '--machinereadable'])).toBe(true);
+    expect(printsInConsoleCodePage(['status', '--xml', '--encoding=utf-8'])).toBe(false);
+    expect(printsInConsoleCodePage(['diff', 'cs:3', '--xml'])).toBe(false);
+    expect(printsInConsoleCodePage(withUtf8Output(['find', 'branch', '--format={name}']))).toBe(false);
+    expect(printsInConsoleCodePage(['cat', 'revid:3', '--file=/tmp/a'])).toBe(false);
+  });
+});
 
 describe('withUtf8Output', () => {
   it('asks the commands that can print UTF-8 to do so: find always, the others with --xml', () => {
