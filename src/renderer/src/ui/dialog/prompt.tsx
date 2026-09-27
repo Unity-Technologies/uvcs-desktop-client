@@ -11,6 +11,8 @@ interface PromptOptions {
   initialValue?: string;
   confirmLabel: string;
   description?: string;
+  /** The initial value is a suggestion that can be confirmed as it is, not a current value to change. */
+  acceptInitialValue?: boolean;
   /** Why the value can't be used, shown under the field while it can't; undefined when it can. */
   validate?: (value: string) => string | undefined;
 }
@@ -27,10 +29,11 @@ function PromptDialog({
   confirmLabel,
   description,
   validate,
+  acceptInitialValue,
   finish,
 }: PromptOptions & { finish: (value: string | undefined) => void }) {
   const [value, setValue] = useState(initialValue);
-  const answer = promptAnswer(value, initialValue);
+  const answer = promptAnswer(value, initialValue, { acceptInitialValue });
   const error = answer ? validate?.(answer) : undefined;
 
   return (

@@ -14,4 +14,9 @@ describe('promptAnswer', () => {
     expect(promptAnswer('game', 'game')).toBeUndefined();
     expect(promptAnswer(' game ', 'game')).toBeUndefined();
   });
+
+  it('answers with a suggested value as it is when asked to', () => {
+    expect(promptAnswer('jane', 'jane', { acceptInitialValue: true })).toBe('jane');
+    expect(promptAnswer('  ', 'jane', { acceptInitialValue: true })).toBeUndefined();
+  });
 });
