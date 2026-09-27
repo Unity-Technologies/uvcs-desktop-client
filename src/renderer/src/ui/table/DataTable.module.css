@@ -58,22 +58,30 @@
   background: var(--bg-hover);
 }
 
-/* Divided rows: a hairline on top of each, inset like the rows, gone where a highlight already marks the edge. */
-.row[data-divided='true']::before {
+/* Divided rows read as a list of entries: each fills the list's width, its highlight too, with a hairline between
+   each and under the last. The inset of other rows becomes padding, so the text stays where it is. */
+.row[data-divided] {
+  margin: 0;
+  padding: 0 var(--space-1);
+  border-radius: 0;
+}
+
+.row[data-divided]:not([data-divided='first'])::before,
+.row[data-divided='last']::after {
   content: '';
   position: absolute;
-  top: 0;
-  right: var(--space-2);
-  left: var(--space-2);
+  right: 0;
+  left: 0;
   border-top: 1px solid var(--border-subtle);
   pointer-events: none;
 }
 
-.row[data-divided='true']:hover::before,
-.row[data-divided='true'][data-selected='true']::before,
-.row:hover + .row[data-divided='true']::before,
-.row[data-selected='true'] + .row[data-divided='true']::before {
-  border-top-color: transparent;
+.row[data-divided]::before {
+  top: 0;
+}
+
+.row[data-divided='last']::after {
+  bottom: 0;
 }
 
 .row[data-selected='true'] {
