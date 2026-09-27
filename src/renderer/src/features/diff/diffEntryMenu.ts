@@ -8,17 +8,19 @@ import { fileNameOf } from '../../lib/text';
 import { openRevision, saveRevisionAs } from '../history/revisionOperations';
 import { reviewMenuEntry } from '../review/reviewMenuEntry';
 import type { ListReview } from '../review/useReviewMode';
-import { diffEntryHistory } from './diffEntryHistory';
+import { diffEntryAnnotation, diffEntryHistory } from './diffEntryHistory';
 
-/** Context menu for a file in a diff: mark it reviewed, open or save the newer revision, or jump to its history. */
+/** Context menu for a file in a diff: mark it reviewed, open or save the newer revision, or jump to its history, annotated or not. */
 export function diffEntryMenu(workspacePath: string, target: DiffTarget, entries: DiffEntry[], review: ListReview<DiffEntry>): MenuEntry[] {
   const single = entries.length === 1 ? entries[0]! : null;
   const revisionId = single ? (single.revisionId !== -1 ? single.revisionId : single.baseRevisionId) : -1;
   const isFile = single !== null && single.itemType !== 'directory';
+  const annotated = single && diffEntryAnnotation(target, single);
 
   return groupedMenu([
     reviewMenuEntry(entries, review),
     single && menuAction('history', () => navigation.openPage(diffEntryHistory(target, single))),
+    annotated && menuAction('annotate', () => navigation.openPage(annotated)),
     isFile && menuAction('openRevision', () => void openRevision(workspacePath, revisionId, fileNameOf(single.path))),
     isFile && menuAction('saveAs', () => void saveRevisionAs(workspacePath, revisionId, fileNameOf(single.path))),
     copySubmenu('', { path: entries.map((entry) => entry.path).join('\n') }, { count: entries.length }),
