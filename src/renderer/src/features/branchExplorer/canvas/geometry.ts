@@ -1,3 +1,5 @@
+import type { GraphLayout } from '../model/layoutGraph';
+
 /** World-space measurements of the graph, before zooming. */
 export const COLUMN_WIDTH = 64;
 export const ROW_HEIGHT = 118;
@@ -27,6 +29,12 @@ export function columnX(column: number): number {
 
 export function rowY(row: number): number {
   return GRAPH_PADDING.top + row * ROW_HEIGHT;
+}
+
+/** Where a changeset is drawn, when it is in the layout. */
+export function nodePoint(layout: GraphLayout, changesetId: number): { x: number; y: number } | null {
+  const node = layout.nodes.get(changesetId);
+  return node ? { x: columnX(node.column), y: rowY(node.row) } : null;
 }
 
 export function headerHeight(hasComment: boolean): number {

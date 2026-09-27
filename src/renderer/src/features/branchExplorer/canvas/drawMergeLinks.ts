@@ -1,21 +1,22 @@
 import type { MergeLink } from '@shared/domain/branchExplorer';
 import { STRUCTURE_DIMMED_ALPHA, type DrawContext } from './drawContext';
 import { linkCurve, pointOnCurve, type Curve } from './curves';
-import { NODE_RADIUS } from './geometry';
+import { NODE_RADIUS, nodePoint } from './geometry';
 import { branchColor, mergeLinkDash } from './graphPalette';
-import { nodePoint } from './graphTargets';
 import { boundsOf, crossesView } from './linkVisibility';
+import { mergeLinksAcross } from './spansInView';
 
 const ARROW_SIZE = 7;
 const DOT_RADIUS = 5;
 
 export function drawMergeLinks(draw: DrawContext): void {
   const { scene, visible } = draw;
-  for (const link of scene.layout.mergeLinks) {
+  const margin = NODE_RADIUS + ARROW_SIZE;
+  for (const link of mergeLinksAcross(scene.layout, visible.left - margin, visible.right + margin)) {
     const from = nodePoint(scene.layout, link.sourceChangeset)!;
     const to = nodePoint(scene.layout, link.destinationChangeset)!;
     const curve = linkCurve(from, to);
-    if (crossesView(boundsOf(curve), visible, NODE_RADIUS + ARROW_SIZE)) drawLink(draw, link, curve);
+    if (crossesView(boundsOf(curve), visible, margin)) drawLink(draw, link, curve);
   }
 }
 
