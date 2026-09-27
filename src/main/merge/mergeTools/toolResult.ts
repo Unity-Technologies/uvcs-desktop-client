@@ -10,12 +10,10 @@ export function toolFileNames(path: string): { base: string; yours: string; inco
 }
 
 export interface ToolFiles {
-  /** What the result file held when the tool opened; null when it didn't exist (binaries). */
-  start: Buffer | null;
+  /** What the result file held when the tool opened. */
+  start: Buffer;
   /** What it holds now; null if missing. */
   result: Buffer | null;
-  yours: Buffer;
-  incoming: Buffer;
 }
 
 /**
@@ -27,19 +25,15 @@ const FAILED_TO_OPEN_SECONDS = 3;
 /**
  * What the tool did, told by the result file: only KDiff3, Beyond Compare and the UVCS tool say by their exit code
  * whether the user saved, and a user who stops waiting may well have saved already (VS Code waits for its tab to
- * close). Text comes back as saved; a binary must be one of its two versions, which is all a merge can keep of it.
+ * close), so what it saved comes back as the file's text.
  */
 export function judgeToolResult(files: ToolFiles, run: ToolRun): MergeToolOutcome {
   const { start, result } = files;
-  if (!result || (start && result.equals(start))) {
+  if (!result || result.equals(start)) {
     const failedToOpen = run.exitCode !== null && run.exitCode !== 0 && run.errorOutput && run.seconds < FAILED_TO_OPEN_SECONDS;
     return failedToOpen ? { kind: 'failed', message: lastLine(run.errorOutput) } : { kind: 'unchanged', exitCode: run.exitCode, errorOutput: run.errorOutput };
   }
-  if (start) return { kind: 'resolved', text: result.toString('utf8') };
-
-  if (result.equals(files.incoming)) return { kind: 'keptSide', side: 'source' };
-  if (result.equals(files.yours)) return { kind: 'keptSide', side: 'destination' };
-  return { kind: 'failed', message: 'The tool saved a file that is neither version. A binary file can only keep one of them.' };
+  return { kind: 'resolved', text: result.toString('utf8') };
 }
 
 function lastLine(text: string): string {

@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { dialog } from 'electron';
 import type { MergeToolsApi } from '@shared/api/mergeTools';
 import type { ContentSource } from '@shared/domain/content';
-import type { MergeTool, MergeToolOutcome, MergeToolRequest } from '@shared/domain/mergeTools';
+import type { MergeToolOutcome, MergeToolRequest } from '@shared/domain/mergeTools';
 import { saveContent } from '../files/saveContent';
 import { withTempDirectory } from '../files/tempFile';
 import { appExecutable } from '../merge/mergeTools/appExecutable';
@@ -71,9 +71,6 @@ export function createMergeToolsService({ cm, settings }: ServiceContext): Merge
   async function resolve(workspacePath: string, request: MergeToolRequest): Promise<MergeToolOutcome> {
     const tool = list().tools.find((candidate) => candidate.id === request.toolId);
     if (!tool) return { kind: 'failed', message: "That merge tool isn't installed anymore." };
-    const isBinary = request.startText === null;
-    const args = isBinary ? binaryArgsOf(tool) : tool.args;
-    if (!args) return { kind: 'failed', message: `${tool.name} can't merge binary files.` };
 
     const stop = new AbortController();
     open.set(request.sessionId, { stop, bundle: tool.canBringToFront ? appBundleOf(tool.executable) : null });
@@ -84,12 +81,12 @@ export function createMergeToolsService({ cm, settings }: ServiceContext): Merge
         await save(workspacePath, request.base, file(names.base));
         await save(workspacePath, request.yours, file(names.yours));
         await save(workspacePath, request.incoming, file(names.incoming));
-        if (request.startText !== null) await writeFile(file(names.result), request.startText, 'utf8');
-        const start = request.startText === null ? null : await readFile(file(names.result));
+        await writeFile(file(names.result), request.startText, 'utf8');
+        const start = await readFile(file(names.result));
 
         const run = await launchMergeTool(
           tool.executable,
-          fillArgs(args, {
+          fillArgs(tool.args, {
             base: file(names.base),
             yours: file(names.yours),
             incoming: file(names.incoming),
@@ -101,10 +98,7 @@ export function createMergeToolsService({ cm, settings }: ServiceContext): Merge
           }),
           stop.signal,
         );
-        return judgeToolResult(
-          { start, result: await readIfThere(file(names.result)), yours: await readFile(file(names.yours)), incoming: await readFile(file(names.incoming)) },
-          run,
-        );
+        return judgeToolResult({ start, result: await readIfThere(file(names.result)) }, run);
       });
     } catch (error) {
       return { kind: 'failed', message: error instanceof Error ? error.message : String(error) };
@@ -138,10 +132,6 @@ export function createMergeToolsService({ cm, settings }: ServiceContext): Merge
   };
 }
 
-/** Only the UVCS tool merges binaries, with its own command (`binmerge`). */
-function binaryArgsOf(tool: MergeTool): string[] | undefined {
-  return tool.mergesBinaries ? KNOWN_TOOLS.find((known) => known.id === tool.id)?.binaryArgs : undefined;
-}
 
 async function readIfThere(path: string): Promise<Buffer | null> {
   return existsSync(path) ? readFile(path) : null;

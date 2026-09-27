@@ -14,7 +14,6 @@ export function waitsForTool(state: FileConflictState, tool: MergeTool): boolean
 /** The decision a merge tool's outcome makes; none when nothing was saved. */
 export function decisionFromTool(outcome: MergeToolOutcome, tool: string): FileConflictDecision | undefined {
   if (outcome.kind === 'resolved') return { kind: 'text', text: outcome.text, tool };
-  if (outcome.kind === 'keptSide') return { kind: 'wholeFile', side: outcome.side, tool };
   return undefined;
 }
 
@@ -25,7 +24,7 @@ export interface OutcomeMessage {
 }
 
 /** What to tell the user once the tool closed, in the merge page's words. */
-export function toolOutcomeMessage(outcome: MergeToolOutcome, tool: string, fileName: string, labels: MergeLabels): OutcomeMessage {
+export function toolOutcomeMessage(outcome: MergeToolOutcome, tool: string, fileName: string): OutcomeMessage {
   switch (outcome.kind) {
     case 'resolved': {
       const left = countConflictRegions(outcome.text);
@@ -37,10 +36,6 @@ export function toolOutcomeMessage(outcome: MergeToolOutcome, tool: string, file
         };
       }
       return { kind: 'success', title: `Resolved ${fileName} in ${tool}` };
-    }
-    case 'keptSide': {
-      const role = outcome.side === 'source' ? labels.roles.source : labels.roles.destination;
-      return { kind: 'success', title: `Resolved ${fileName} in ${tool}`, detail: `Keeping ${role.version}.` };
     }
     case 'unchanged':
       if (outcome.exitCode === null) return { kind: 'info', title: `Stopped waiting for ${tool}`, detail: `Nothing was saved, so ${fileName} still needs your decision.` };

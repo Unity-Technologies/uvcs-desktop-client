@@ -13,10 +13,7 @@ const FILES: MergeToolFiles = {
   fileName: 'a.ts',
 };
 
-const commandOf = (id: string, binary = false): string[] => {
-  const tool = KNOWN_TOOLS.find((known) => known.id === id)!;
-  return fillArgs(binary ? tool.binaryArgs! : tool.args, FILES);
-};
+const commandOf = (id: string): string[] => fillArgs(KNOWN_TOOLS.find((known) => known.id === id)!.args, FILES);
 
 describe('fillArgs', () => {
   it('replaces placeholders inside arguments and keeps each one whole, spaces and all', () => {
@@ -45,7 +42,6 @@ describe('known tools', () => {
       '-dn=Yours (/main/task)',
       '-r=/t/a.ts',
     ]);
-    expect(commandOf('uvcs', true)[0]).toBe('binmerge');
     expect(commandOf('uvcs')).not.toContain('-a');
   });
 

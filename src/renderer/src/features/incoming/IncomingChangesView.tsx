@@ -72,7 +72,7 @@ function IncomingSession({ workspacePath, incoming, header }: IncomingSessionPro
   const followRun = useCallback((key: string, previousKey: string | undefined) => {
     setSelection((current) => (!previousKey || (current?.kind === 'file' && current.path === previousKey) ? { kind: 'file', path: key } : current));
   }, []);
-  const run = useResolveRun({ states, labels: UPDATE_LABELS, resolveInTool, onOpen: followRun, onEnd: () => undefined });
+  const run = useResolveRun({ states, resolveInTool, onOpen: followRun, onEnd: () => undefined });
   const runPlans = useRunOffer(states, run);
   const [updating, setUpdating] = useState(false);
 
