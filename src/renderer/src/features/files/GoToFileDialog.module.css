@@ -49,16 +49,6 @@
   color: var(--text-primary);
 }
 
-.folder {
-  flex: none;
-  color: var(--accent-text);
-}
-
-.file {
-  flex: none;
-  color: var(--text-tertiary);
-}
-
 .empty {
   padding: var(--space-6);
   color: var(--text-tertiary);
