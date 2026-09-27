@@ -60,6 +60,17 @@ describe('buildChangeRows', () => {
     expect(changesUnderRow(rows[1]!).map((item) => item.path)).toEqual(['privs', 'privs/a.txt']);
   });
 
+  it('gives each folder every change in it, at every level', () => {
+    const paths = ['src/a.ts', 'src/lib/b.ts', 'src/lib/deep/c.ts', 'src-old.ts', 'z.ts'];
+    const rows = buildChangeRows({ ...base, changes: paths.map((path) => change(path, ['changed'])), layout: 'tree' });
+    const folderContents = rows.filter((row) => row.type === 'directory').map((row) => [row.path, changesUnderRow(row).map((item) => item.path)]);
+    expect(folderContents).toEqual([
+      ['src', ['src/a.ts', 'src/lib/b.ts', 'src/lib/deep/c.ts']],
+      ['src/lib', ['src/lib/b.ts', 'src/lib/deep/c.ts']],
+      ['src/lib/deep', ['src/lib/deep/c.ts']],
+    ]);
+  });
+
   it('keeps a folder that is a change but holds none a row of its own', () => {
     const folder = { ...change('empty', ['added']), itemType: 'directory' as const };
     const rows = buildChangeRows({ ...base, changes: [folder], layout: 'tree' });

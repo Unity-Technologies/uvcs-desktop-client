@@ -126,14 +126,19 @@ export function changesUnderRow(row: ChangeRow): PendingChange[] {
  * and "a/c.txt", and "src/b" between "Src/a" and "Src/c".
  */
 export function comparePaths(a: string, b: string): number {
-  const aParts = a.split('/');
-  const bParts = b.split('/');
-  for (let index = 0; index < Math.min(aParts.length, bParts.length); index++) {
-    const order = aParts[index]!.localeCompare(bParts[index]!);
+  return compareSegments(a.split('/'), b.split('/'));
+}
+
+function compareSegments(a: string[], b: string[]): number {
+  for (let index = 0; index < Math.min(a.length, b.length); index++) {
+    const order = collator.compare(a[index]!, b[index]!);
     if (order !== 0) return order;
   }
-  return aParts.length - bParts.length;
+  return a.length - b.length;
 }
+
+/** `localeCompare`'s order, many times faster over thousands of paths. */
+const collator = new Intl.Collator();
 
 /** What the menu of a right-clicked row is for: a changelist, the changes in a folder or the default changelist, or the selected files (null). */
 export function menuTargetOf(row: ChangeRow | null): Changelist | PendingChange[] | null {
@@ -142,12 +147,13 @@ export function menuTargetOf(row: ChangeRow | null): Changelist | PendingChange[
 }
 
 function sortByPath(changes: PendingChange[]): PendingChange[] {
-  return [...changes].sort((a, b) => comparePaths(a.path, b.path));
+  const segments = new Map(changes.map((change) => [change, change.path.split('/')]));
+  return [...changes].sort((a, b) => compareSegments(segments.get(a)!, segments.get(b)!));
 }
 
 /** A flat list reads by kind of change first, in the order of the filter chips; a tree has to follow the folders. */
 export function sortByStatus(changes: PendingChange[]): PendingChange[] {
-  return [...changes].sort((a, b) => compareTones(changeTone(a), changeTone(b)) || a.path.localeCompare(b.path));
+  return [...changes].sort((a, b) => compareTones(changeTone(a), changeTone(b)) || collator.compare(a.path, b.path));
 }
 
 function appendChangeRows(
@@ -193,8 +199,8 @@ function appendTreeRows(
   const emittedDirectories = new Set<string>();
   let hiddenBelow: string | null = null;
 
-  for (const change of changes) {
-    if (hiddenBelow && change.path.startsWith(`${hiddenBelow}/`)) continue;
+  changes.forEach((change, index) => {
+    if (hiddenBelow && change.path.startsWith(`${hiddenBelow}/`)) return;
     hiddenBelow = null;
 
     // A folder that is a change itself and holds others is their folder's row, not one more row next to it.
@@ -207,7 +213,7 @@ function appendTreeRows(
       const key = `directory:${groupKey}:${path}`;
       if (!emittedDirectories.has(path)) {
         emittedDirectories.add(path);
-        const inside = changes.filter((candidate) => candidate.path === path || candidate.path.startsWith(`${path}/`));
+        const inside = changesInFolder(changes, index, path);
         rows.push({
           type: 'directory',
           key,
@@ -227,7 +233,14 @@ function appendTreeRows(
     });
 
     if (!collapsedHere && !isFolder) rows.push({ type: 'change', key: changeKey(change), change, depth: directories.length, checked: isChecked(change) });
-  }
+  });
+}
+
+/** The changes in a folder, first met at `first`: sorted by `comparePaths`, they are the ones right after it. */
+function changesInFolder(sorted: PendingChange[], first: number, folder: string): PendingChange[] {
+  let end = first;
+  while (end < sorted.length && (sorted[end]!.path === folder || sorted[end]!.path.startsWith(`${folder}/`))) end++;
+  return sorted.slice(first, end);
 }
 
 /** "a/b/c.txt" is in "a" and "a/b". */

@@ -1,6 +1,6 @@
 import { CheckCircle2, Files, GitMerge, List, ListTree, SlidersHorizontal } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import type { PendingChange } from '@shared/domain/pendingChanges';
+import { useEffect, useMemo, useState } from 'react';
+import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { openSettingsDialogAt } from '../../app/settings/SettingsDialog';
 import { useSettings } from '../../app/settings/useSettings';
@@ -54,6 +54,7 @@ import { usePendingChanges } from './usePendingChanges';
 import styles from './PendingChangesView.module.css';
 
 const NO_CHANGES: PendingChange[] = [];
+const NO_CHANGELISTS: Changelist[] = [];
 const changePath = (change: PendingChange): string => change.path;
 
 export function PendingChangesView() {
@@ -97,8 +98,12 @@ export function PendingChangesView() {
   const successMoment = useSuccessMomentStore((state) => state.moments[workspacePath]);
   const clearSuccessMoment = useSuccessMomentStore((state) => state.clear);
   const selectedCount = changes.filter((change) => selection.selected.has(changeKey(change))).length;
-  const changelists = snapshot?.changelists ?? [];
-  const rows = buildChangeRows({ changes, changelists, layout, grouping, isChecked: isIncluded, collapsed });
+  const changelists = snapshot?.changelists ?? NO_CHANGELISTS;
+  // Typing the comment renders the view again: thousands of changes are laid out again only when they or their layout change.
+  const rows = useMemo(
+    () => buildChangeRows({ changes, changelists, layout, grouping, isChecked: isIncluded, collapsed }),
+    [changes, changelists, layout, grouping, draft.excludedPaths, collapsed],
+  );
   const focused = changes.find((change) => changeKey(change) === selection.anchor);
   const mergeChanges = allChanges.filter((change) => change.mergeInfo);
   const { data: mergeSource } = useChangeset(mergeSourceChangeset(mergeChanges));
