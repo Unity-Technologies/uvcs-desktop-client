@@ -65,6 +65,25 @@
   white-space: nowrap;
 }
 
+.label:has(+ .detail) {
+  flex: none;
+  max-width: 50%;
+}
+
+/* What an entry acts on, e.g. what "Copy" copies: dimmed after the label, cut short when long. */
+.detail {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: right;
+  margin-left: var(--space-4);
+  opacity: 0.6;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
 .trailing {
   display: flex;
   margin-left: var(--space-4);

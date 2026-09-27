@@ -1,29 +1,12 @@
-import {
-  AppWindow,
-  Binary,
-  Copy,
-  FileDiff,
-  FilePlus,
-  FolderPlus,
-  FolderSearch,
-  History,
-  Lock,
-  PenLine,
-  Plus,
-  ScanText,
-  SquareTerminal,
-  TextCursorInput,
-  Trash2,
-  Undo2,
-} from 'lucide-react';
 import { canAnnotate } from '@shared/domain/annotate';
 import type { TreeItem } from '@shared/domain/explorer';
 import { navigation } from '../../app/navigation/navigationStore';
 import { openTerminalIn } from '../../app/workspace/workspaceShellActions';
-import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
-import { REVEAL_LABEL } from '../../lib/platform';
-import { filterRulesSubmenu } from '../pendingChanges/pendingChangeMenu';
-import { absolutePath, copyPaths, undoChanges } from '../pendingChanges/pendingChangeOperations';
+import type { MenuEntry } from '../../lib/actions';
+import { groupedMenu } from '../../lib/menuGroups';
+import { menuAction, menuSubmenu } from '../../components/menuWords';
+import { filterRulesSubmenu, itemCopySubmenu } from '../pendingChanges/pendingChangeMenu';
+import { absolutePath, undoChanges } from '../pendingChanges/pendingChangeOperations';
 import {
   addItems,
   changeRevisionType,
@@ -35,7 +18,7 @@ import {
   revealItem,
   targetDirectoryFor,
 } from './fileOperations';
-import { cutPasteMenu } from './cutPasteActions';
+import { cutAction, pasteAction } from './cutPasteActions';
 import { fileMenuTargets, hasRevisionsToShow } from './fileMenuTargets';
 import { useFilesViewStore } from './filesViewStore';
 import type { PendingChangesIndex } from './itemStatus';
@@ -62,93 +45,46 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
   // The workspace root can't be renamed or deleted from here.
   const hasRoot = items.some(isWorkspaceRoot);
 
-  return tidyMenu([
-    single && single.itemType !== 'directory' && { id: 'open', label: 'Open', icon: AppWindow, run: () => openItem(workspacePath, single) },
-    single && { id: 'reveal', label: REVEAL_LABEL, icon: FolderSearch, run: () => revealItem(workspacePath, single) },
-    single?.itemType === 'directory' && {
-      id: 'terminal',
-      label: 'Open terminal here',
-      icon: SquareTerminal,
-      run: () => openTerminalIn(absolutePath(workspacePath, single.path)),
-    },
-    SEPARATOR,
-    single && !single.isPrivate && single.itemType !== 'directory' && {
-      id: 'changes',
-      label: 'Show changes',
-      icon: FileDiff,
-      shortcut: FILE_SHORTCUTS.showChanges,
-      run: () => useFilesViewStore.getState().setDetailsTab('changes'),
-    },
+  return groupedMenu([
+    single && single.itemType !== 'directory' && menuAction('open', () => openItem(workspacePath, single)),
+    privateItems.length > 0 &&
+      menuAction('add', () => void addItems(workspacePath, privateItems), {
+        label: privateItems.some((item) => item.itemType === 'directory') ? 'Add to version control (recursively)' : 'Add to version control',
+      }),
+    checkoutCandidates.length > 0 && menuAction('checkout', () => void checkoutItems(workspacePath, checkoutCandidates)),
+    single && menuAction('newFile', () => void createItem(workspacePath, directory, 'file'), { shortcut: FILE_SHORTCUTS.newFile }),
+    single && menuAction('newFolder', () => void createItem(workspacePath, directory, 'directory'), { shortcut: FILE_SHORTCUTS.newFolder }),
+    single &&
+      !single.isPrivate &&
+      single.itemType !== 'directory' &&
+      menuAction('changes', () => useFilesViewStore.getState().setDetailsTab('changes'), { shortcut: FILE_SHORTCUTS.showChanges }),
     // The root changes with every changeset: its history is the whole repository's.
-    single && hasRevisionsToShow(single, pendingChanges) && !hasRoot && {
-      id: 'history',
-      label: 'View history',
-      icon: History,
-      shortcut: FILE_SHORTCUTS.history,
-      run: () => navigation.openPage({ kind: 'history', path: single.path }),
-    },
-    single && hasRevisionsToShow(single, pendingChanges) && canAnnotate(single.itemType) && {
-      id: 'annotate',
-      label: 'Annotate',
-      icon: ScanText,
-      shortcut: FILE_SHORTCUTS.annotate,
-      run: () => navigation.openPage({ kind: 'annotate', path: single.path }),
-    },
-    SEPARATOR,
-    privateItems.length > 0 && {
-      id: 'add',
-      label: privateItems.some((item) => item.itemType === 'directory') ? 'Add to version control (recursively)' : 'Add to version control',
-      icon: Plus,
-      run: () => void addItems(workspacePath, privateItems),
-    },
-    checkoutCandidates.length > 0 && { id: 'checkout', label: 'Check out', icon: PenLine, run: () => void checkoutItems(workspacePath, checkoutCandidates) },
-    undoable.length > 0 && {
-      id: 'undo',
-      label: undoable.length === 1 ? 'Undo changes' : `Undo ${undoable.length} changes`,
-      icon: Undo2,
-      danger: true,
-      run: () => void undoChanges(workspacePath, undoable),
-    },
-    SEPARATOR,
-    single && !hasRoot && { id: 'rename', label: 'Rename…', icon: TextCursorInput, shortcut: FILE_SHORTCUTS.rename, run: () => void renameItem(workspacePath, single) },
-    !hasRoot && { id: 'delete', label: 'Delete', icon: Trash2, danger: true, shortcut: FILE_SHORTCUTS.delete, run: () => void deleteItems(workspacePath, items) },
-    SEPARATOR,
-    // Clipboard: moving items into another folder.
-    ...cutPasteMenu(workspacePath, items),
-    SEPARATOR,
-    single && {
-      id: 'newFile',
-      label: 'New file…',
-      icon: FilePlus,
-      shortcut: FILE_SHORTCUTS.newFile,
-      run: () => void createItem(workspacePath, directory, 'file'),
-    },
-    single && {
-      id: 'newFolder',
-      label: 'New folder…',
-      icon: FolderPlus,
-      shortcut: FILE_SHORTCUTS.newFolder,
-      run: () => void createItem(workspacePath, directory, 'directory'),
-    },
-    SEPARATOR,
-    typedFiles.length > 0 && {
-      label: 'Revision type',
-      icon: Binary,
-      entries: [
+    single &&
+      hasRevisionsToShow(single, pendingChanges) &&
+      !hasRoot &&
+      menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path }), { shortcut: FILE_SHORTCUTS.history }),
+    single &&
+      hasRevisionsToShow(single, pendingChanges) &&
+      canAnnotate(single.itemType) &&
+      menuAction('annotate', () => navigation.openPage({ kind: 'annotate', path: single.path }), { shortcut: FILE_SHORTCUTS.annotate }),
+    menuAction('locks', () => navigation.goToView('locks')),
+    single && menuAction('reveal', () => revealItem(workspacePath, single)),
+    single?.itemType === 'directory' && menuAction('terminal', () => openTerminalIn(absolutePath(workspacePath, single.path))),
+    // Cut and Paste move items into another folder.
+    !hasRoot && cutAction(workspacePath, items),
+    itemCopySubmenu(workspacePath, items.map((item) => item.path)),
+    pasteAction(workspacePath, items),
+    single && !hasRoot && menuAction('rename', () => void renameItem(workspacePath, single), { shortcut: FILE_SHORTCUTS.rename }),
+    typedFiles.length > 0 &&
+      menuSubmenu('revisionType', [
         { id: 'type.bin', label: 'Binary', run: () => void changeRevisionType(workspacePath, typedFiles, 'bin') },
         { id: 'type.txt', label: 'Text', run: () => void changeRevisionType(workspacePath, typedFiles, 'txt') },
-      ],
-    },
+      ]),
     single && !hasRoot && filterRulesSubmenu(workspacePath, single.path),
-    {
-      label: 'Copy',
-      icon: Copy,
-      entries: [
-        { id: 'copy.relative', label: 'Copy relative path', run: () => copyPaths(items.map((item) => item.path)) },
-        { id: 'copy.absolute', label: 'Copy full path', run: () => copyPaths(items.map((item) => absolutePath(workspacePath, item.path))) },
-      ],
-    },
-    SEPARATOR,
-    { id: 'locks', label: 'Show locks', icon: Lock, run: () => navigation.goToView('locks') },
+    undoable.length > 0 &&
+      menuAction('undo', () => void undoChanges(workspacePath, undoable), {
+        label: undoable.length === 1 ? 'Undo changes…' : `Undo ${undoable.length} changes…`,
+      }),
+    !hasRoot && menuAction('delete', () => void deleteItems(workspacePath, items), { shortcut: FILE_SHORTCUTS.delete }),
   ]);
 }

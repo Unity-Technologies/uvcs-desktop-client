@@ -63,6 +63,7 @@ export const SHORTCUTS = {
   listSelectAll: { area: 'Lists', label: 'Select all', keys: ['mod+a'] },
   rename: { area: 'Lists', label: 'Rename the selected file, branch, label or attribute', keys: ['f2'] },
   listDiff: { area: 'Lists', label: 'Diff the selected changeset or file', keys: ['mod+d'] },
+  listCopy: { area: 'Lists', label: "Copy the selected branch's, changeset's, label's, shelve's or review's name or number", keys: ['mod+c'] },
   listContextMenu: { area: 'Lists', label: 'Actions of the selected rows', keys: ['shift+f10'] },
   listExpand: { area: 'Lists', label: 'Collapse or expand a folder', keys: ['left', 'right'] },
   rowActions: { area: 'Lists', label: 'Actions of the highlighted result (palette, pickers, Go to file)', keys: ['tab', 'shift+f10'] },

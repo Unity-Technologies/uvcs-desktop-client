@@ -20,6 +20,7 @@ import { shelveMenu } from './shelveMenu';
 import { applyShelve, showShelveChanges } from './shelveOperations';
 import { SEARCH_LIMIT, SHOWN_LIMIT, shelvesEmptyMessage, shelvesFilterPlaceholder, shelvesListNote, type ShelvesScope } from './shelvesScope';
 import { useShelvesViewStore } from './shelvesViewStore';
+import { COPY_ENTRY_IDS } from '../../components/copyMenu';
 import { useEveryonesShelves, useShelvesSearch } from './useMyShelves';
 import styles from './MyShelvesList.module.css';
 
@@ -158,7 +159,7 @@ export function MyShelvesList({ workspacePath, scope, onScopeChange, recent, onD
               >
                 {left ? 'Restore' : 'Apply'}
               </Button>
-              <ActionDropdownMenu entries={runningFirst(withoutAction(shelveMenu(workspacePath, [shelve], { left, mine }), 'apply'), onDone, ['copy'])}>
+              <ActionDropdownMenu entries={runningFirst(withoutAction(shelveMenu(workspacePath, [shelve], { left, mine }), 'apply'), onDone, COPY_ENTRY_IDS)}>
                 <IconButton size="small" icon={<MoreHorizontal size={14} />} label="More actions" />
               </ActionDropdownMenu>
             </li>

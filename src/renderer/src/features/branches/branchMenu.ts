@@ -1,26 +1,15 @@
-import {
-  ArrowRightLeft,
-  Cherry,
-  Braces,
-  Copy,
-  Eye,
-  EyeOff,
-  FileDiff,
-  FolderGit2,
-  GitBranchPlus,
-  GitGraph,
-  GitMerge,
-  GitPullRequest,
-  GitPullRequestArrow,
-  MessageSquareCode,
-  Pencil,
-  Trash2,
-} from 'lucide-react';
-import { MAIN_BRANCH_GUID, type Branch } from '@shared/domain/branch';
+import { isMainBranch, type BranchInfo } from '@shared/domain/branch';
 import { spec } from '@shared/domain/specs';
-import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
-import { copyToClipboard } from '../../lib/copyToClipboard';
+import type { MenuEntry } from '../../lib/actions';
+import { groupedMenu } from '../../lib/menuGroups';
+import { hotkey } from '../../lib/shortcutRegistry';
+import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
+import { menuAction, type MenuPlace } from '../../components/menuWords';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
+import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
+import { openMergeTaskDialog } from '../mergeTask/MergeTaskDialog';
+import { isTaskBranch } from '../mergeTask/mergeTaskSummary';
+import { openTaskWorkspaceDialog } from '../taskWorkspace/TaskWorkspaceDialog';
 import {
   cherryPickFromBranch,
   deleteBranches,
@@ -31,120 +20,65 @@ import {
   setBranchesHidden,
   switchToBranch,
 } from './branchOperations';
-import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
-import { openMergeTaskDialog } from '../mergeTask/MergeTaskDialog';
-import { isTaskBranch } from '../mergeTask/mergeTaskSummary';
-import { openTaskWorkspaceDialog } from '../taskWorkspace/TaskWorkspaceDialog';
 import { openCreateBranchDialog } from './CreateBranchDialog';
-import { MERGE_INTO_WORKSPACE, serverMergeLabel } from './mergeMenuLabels';
-import { hotkey } from '../../lib/shortcutRegistry';
+import { serverMergeLabel } from './mergeMenuLabels';
 
-/** The context menu for the selected branches. `currentBranch` is the branch the workspace is on. */
-export function branchMenu(workspacePath: string, branches: Branch[], currentBranch: string | undefined): MenuEntry[] {
+/** What a branch is copied as, first what ⌘C copies: `/main/task`, `br:/main/task`, `br:/main/task@repo@server`. */
+export function branchCopyTexts(branch: Pick<BranchInfo, 'name' | 'comment' | 'repository'>): CopyTexts {
+  return {
+    name: branch.name,
+    spec: spec.branch(branch.name),
+    fullSpec: branch.repository && `${spec.branch(branch.name)}@${branch.repository}`,
+    comment: branch.comment.trim(),
+  };
+}
+
+/**
+ * The menu of the selected branches, the same wherever branches show: the Branches view, the Branch Explorer, the
+ * branch switcher, the top bar, the palette and their details. `currentBranch` is the branch the workspace is on.
+ */
+export function branchMenu(workspacePath: string, branches: BranchInfo[], currentBranch: string | undefined, place: MenuPlace = {}): MenuEntry[] {
   if (branches.length === 0) return [];
 
   const single = branches.length === 1 ? branches[0]! : null;
   const isCurrent = single?.name === currentBranch;
   const hidden = branches.filter((branch) => branch.isHidden);
   const visible = branches.filter((branch) => !branch.isHidden);
+  const other = single && !isCurrent ? single : null;
 
-  return tidyMenu([
-    single && !isCurrent && {
-      id: 'switch',
-      label: 'Switch to this branch',
-      icon: ArrowRightLeft,
-      run: () => void switchToBranch(workspacePath, single.name),
-    },
-    single && !isCurrent && {
-      id: 'taskWorkspace',
-      label: 'Work on this branch in a new workspace…',
-      icon: FolderGit2,
-      run: () => openTaskWorkspaceDialog({ workspacePath, branch: single.name }),
-    },
-    single && {
-      id: 'create',
-      label: 'New child branch…',
-      icon: GitBranchPlus,
-      run: () =>
-        openCreateBranchDialog(workspacePath, {
+  return groupedMenu([
+    single && menuAction('diff', () => diffBranch(single)),
+    other && menuAction('switch', () => void switchToBranch(workspacePath, other.name), { label: 'Switch to this branch' }),
+    other && menuAction('taskWorkspace', () => openTaskWorkspaceDialog({ workspacePath, branch: other.name })),
+    other && menuAction('merge', () => mergeFromBranch(other.name)),
+    single && isTaskBranch(single) && menuAction('mergeTask', () => openMergeTaskDialog(workspacePath, single), { label: serverMergeLabel(single.parent) }),
+    single && menuAction('mergeTo', () => void mergeTo(spec.branch(single.name), single.name)),
+    other && menuAction('cherryPick', () => cherryPickFromBranch(other.name), { label: 'Cherry pick branch changes' }),
+    single &&
+      menuAction('newBranch', () =>
+        void openCreateBranchDialog(workspacePath, {
           parentBranch: single.name,
           startingPoint: spec.changeset(single.headChangeset),
           startingPointLabel: `the head of ${single.name} (changeset ${single.headChangeset})`,
-        }),
-    },
-    SEPARATOR,
-    single && !isCurrent && {
-      id: 'merge',
-      label: MERGE_INTO_WORKSPACE,
-      icon: GitMerge,
-      run: () => mergeFromBranch(single.name),
-    },
-    single && isTaskBranch(single) && {
-      id: 'mergeTask',
-      label: serverMergeLabel(single.parent),
-      icon: GitPullRequest,
-      run: () => openMergeTaskDialog(workspacePath, single),
-    },
-    single && {
-      id: 'mergeTo',
-      label: serverMergeLabel(),
-      icon: GitPullRequestArrow,
-      run: () => void mergeTo(spec.branch(single.name), single.name),
-    },
-    single && !isCurrent && {
-      id: 'cherryPick',
-      label: 'Cherry pick branch changes',
-      icon: Cherry,
-      run: () => cherryPickFromBranch(single.name),
-    },
-    single && {
-      id: 'diff',
-      label: 'Show branch changes',
-      icon: FileDiff,
-      run: () => diffBranch(single),
-    },
-    single && {
-      id: 'showInBranchExplorer',
-      label: 'Show in Branch Explorer',
-      icon: GitGraph,
-      run: () => showInBranchExplorer({ kind: 'branch', name: single.name, date: single.date }),
-    },
-    single && {
-      id: 'codeReview',
-      label: 'Create code review…',
-      icon: MessageSquareCode,
-      run: () => openCreateCodeReviewDialog(workspacePath, { kind: 'branch', value: single.name }),
-    },
-    SEPARATOR,
-    single && { id: 'rename', label: 'Rename…', icon: Pencil, shortcut: hotkey('rename'), run: () => void renameBranch(workspacePath, single) },
-    single && { id: 'copy', label: 'Copy name', icon: Copy, run: () => copyToClipboard(single.name, 'Branch name') },
-    single && {
-      id: 'copySpec',
-      label: 'Copy branch spec',
-      icon: Braces,
-      run: () => copyToClipboard(`${spec.branch(single.name)}@${single.repository}`, 'Branch spec'),
-    },
-    visible.length > 0 && {
-      id: 'hide',
-      label: visible.length === 1 ? 'Hide' : `Hide ${visible.length} branches`,
-      icon: EyeOff,
-      run: () => void setBranchesHidden(workspacePath, visible, true),
-    },
-    hidden.length > 0 && {
-      id: 'unhide',
-      label: hidden.length === 1 ? 'Unhide' : `Unhide ${hidden.length} branches`,
-      icon: Eye,
-      run: () => void setBranchesHidden(workspacePath, hidden, false),
-    },
-    SEPARATOR,
-    {
-      id: 'delete',
-      label: single ? 'Delete…' : `Delete ${branches.length} branches…`,
-      icon: Trash2,
-      danger: true,
+        }).then((name) => name && place.onBranchCreated?.(name)),
+      ),
+    single && menuAction('newCodeReview', () => openCreateCodeReviewDialog(workspacePath, { kind: 'branch', value: single.name })),
+    single && !place.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'branch', name: single.name, date: single.date })),
+    single && copySubmenu('Branch', branchCopyTexts(single), { shortcut: hotkey('listCopy') }),
+    single && menuAction('rename', () => void renameBranch(workspacePath, single), { shortcut: hotkey('rename') }),
+    visible.length > 0 &&
+      menuAction('hide', () => void setBranchesHidden(workspacePath, visible, true), { label: visible.length === 1 ? 'Hide' : `Hide ${visible.length} branches` }),
+    hidden.length > 0 &&
+      menuAction('unhide', () => void setBranchesHidden(workspacePath, hidden, false), { label: hidden.length === 1 ? 'Unhide' : `Unhide ${hidden.length} branches` }),
+    menuAction('delete', () => void deleteBranches(workspacePath, branches), {
+      ...(!single && { label: `Delete ${branches.length} branches…` }),
       // Neither the branch the workspace is on nor /main can go.
-      disabled: branches.some((branch) => branch.name === currentBranch || branch.guid.toLowerCase() === MAIN_BRANCH_GUID),
-      run: () => void deleteBranches(workspacePath, branches),
-    },
+      disabled: branches.some((branch) => branch.name === currentBranch || isMainBranch(branch)),
+      disabledReason: branches.some((branch) => branch.name === currentBranch)
+        ? 'The workspace is on this branch'
+        : branches.some(isMainBranch)
+          ? 'The main branch stays'
+          : undefined,
+    }),
   ]);
 }

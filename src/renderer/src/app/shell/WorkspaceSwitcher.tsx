@@ -34,6 +34,7 @@ export function WorkspaceSwitcher({ currentPath, children }: { currentPath: stri
   const closeWorkspace = useSession((state) => state.closeWorkspace);
   const openWorkspace = useOpenWorkspace();
   const returnFocus = useReturnFocus(open);
+  const workspaceName = useWorkspaceInfo().data?.name;
 
   // Popover actions often open a dialog or a folder picker: close first so focus goes where it should.
   const closeThen = (action: () => void) => () => {
@@ -43,7 +44,7 @@ export function WorkspaceSwitcher({ currentPath, children }: { currentPath: stri
 
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <ActionContextMenu entries={() => currentWorkspaceMenu(currentPath)}>
+      <ActionContextMenu entries={() => currentWorkspaceMenu(currentPath, workspaceName)}>
         <Popover.Trigger asChild>{children}</Popover.Trigger>
       </ActionContextMenu>
       <Popover.Portal>

@@ -3,7 +3,6 @@ import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByShelving } from '../../app/refresh/refreshScopes';
-import { copyToClipboard } from '../../lib/copyToClipboard';
 import { TRASH_NAME } from '../../lib/platform';
 import { formatCount, pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
@@ -97,10 +96,6 @@ export const FILTER_LIST_FILES: Record<FilterRuleList, string> = {
   cloaked: 'cloaked.conf',
   hidden: 'hidden_changes.conf',
 };
-
-export function copyPaths(paths: string[]): void {
-  copyToClipboard(paths.join('\n'), paths.length === 1 ? 'Path' : `${formatCount(paths.length)} paths`);
-}
 
 export function fileName(path: string): string {
   return path.split('/').at(-1) ?? path;

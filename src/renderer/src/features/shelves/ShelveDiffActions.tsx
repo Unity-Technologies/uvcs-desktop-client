@@ -1,16 +1,16 @@
-import { ArchiveRestore, Copy, MoreHorizontal, Trash2 } from 'lucide-react';
+import { ArchiveRestore, MoreHorizontal } from 'lucide-react';
 import { useWorkspaceUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
 import { useSettings } from '../../app/settings/useSettings';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { SEPARATOR, tidyMenu } from '../../lib/actions';
-import { copyToClipboard } from '../../lib/copyToClipboard';
+import { withoutAction } from '../../lib/actions';
 import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { cachedShelve } from './cachedShelve';
 import { myShelves } from './myShelves';
-import { applyShelve, deleteShelve } from './shelveOperations';
+import { shelveMenu } from './shelveMenu';
+import { applyShelve } from './shelveOperations';
 
 /**
  * A shelve's diff previews what applying it brings: Apply (Restore for changes a switch left) is right there, and
@@ -28,20 +28,11 @@ export function ShelveDiffActions({ shelveId }: { shelveId: number }) {
   const apply = async (deleteShelve: boolean): Promise<void> => {
     if (await applyShelve(workspacePath, shelveId, deleteShelve)) navigation.goToView('changes');
   };
-  const menu = tidyMenu([
-    !left && mine && { id: 'applyAndDelete', label: 'Apply and delete', icon: ArchiveRestore, run: () => void apply(true) },
-    { id: 'copy', label: 'Copy shelve spec', icon: Copy, run: () => copyToClipboard(`sh:${shelveId}`, 'Shelve spec') },
-    SEPARATOR,
-    mine && {
-      id: 'delete',
-      label: 'Delete…',
-      icon: Trash2,
-      danger: true,
-      run: async () => {
-        if (await deleteShelve(workspacePath, shelveId)) navigation.goBack();
-      },
-    },
-  ]);
+  // The page is the shelve's diff and its button applies it: the rest of its menu is behind "More actions".
+  const menu = withoutAction(
+    withoutAction(shelveMenu(workspacePath, [shelve], { left, mine, onApplied: () => navigation.goToView('changes'), onDeleted: () => navigation.goBack() }), 'diff'),
+    'apply',
+  );
 
   return (
     <>

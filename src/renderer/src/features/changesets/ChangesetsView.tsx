@@ -20,6 +20,8 @@ import { changesetMenu } from './changesetMenu';
 import { openChangesetDiff, openRangeDiff } from './changesetOperations';
 import { useChangesets } from './useChangesets';
 import { hotkey } from '../../lib/shortcutRegistry';
+import { changesetCopyTexts } from './changesetMenu';
+import { useCopyCommand } from '../../app/commands/useCopyCommand';
 
 const changesetKey = (changeset: Changeset): string => String(changeset.id);
 
@@ -41,6 +43,7 @@ export function ChangesetsView() {
   const visible = useMemo(() => (changesets ?? []).filter((changeset) => matchesSearch(changeset, filter.search)), [changesets, filter.search]);
   const selected = visible.filter((changeset) => selection.selected.has(changesetKey(changeset)));
   const focused = visible.find((changeset) => changesetKey(changeset) === selection.anchor);
+  useCopyCommand('Changesets', 'Changeset', selected.length === 1 ? changesetCopyTexts(workspacePath, selected[0]!) : undefined);
   const labelsByChangeset = useLabelsByChangeset();
   const columns = useMemo(() => changesetColumns(workspace?.loadedChangeset, labelsByChangeset), [workspace?.loadedChangeset, labelsByChangeset]);
   const menuContext = { workspacePath, loadedChangeset: workspace?.loadedChangeset, loadedBranch: currentBranch };

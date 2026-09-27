@@ -82,7 +82,3 @@ export async function deleteRepository(repository: RepositorySummary): Promise<v
   if (deleted) toast.success(`Deleted ${repository.name}`);
 }
 
-export function copyRepositorySpec(repository: RepositorySummary): void {
-  void navigator.clipboard.writeText(repository.spec);
-  toast.info('Repository spec copied', repository.spec);
-}

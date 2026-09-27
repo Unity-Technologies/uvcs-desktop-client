@@ -67,6 +67,7 @@ function RunButton({ plans, run }: { plans: RunPlan[]; run: ResolveRun }) {
       icon: askWhenMergeToolClosesUnsaved ? Check : undefined,
       run: () => void saveSettings({ askWhenMergeToolClosesUnsaved: !askWhenMergeToolClosesUnsaved }),
     },
+    SEPARATOR,
     { id: 'settings', label: 'Merge tool settings…', icon: Settings, run: () => openSettingsDialogAt('merge') },
   ]);
   return (

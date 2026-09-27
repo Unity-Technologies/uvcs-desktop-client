@@ -360,6 +360,19 @@ renderer/src/
   An update or a switch runs alone on its workspace: it waits for any other operation, and the others wait for it (`blockingOperation`).
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
+- **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does), what it
+  does (switch, apply, check out), merges, what it creates, where it leads (history, annotate, browse, Show in Branch
+  Explorer), the OS (open, reveal, terminal), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
+  hiding), and what undoes or deletes it last, in the danger tone; a separator between groups. Entries come from one
+  vocabulary (`components/menuWords`: one id, icon, wording and group per concept) and `groupedMenu` orders them.
+  One builder per kind (`branchMenu`, `changesetMenu`, `labelMenu`, `shelveMenu`, `codeReviewMenu`, `fileMenu`,
+  `pendingChangeMenu`) serves every place the object shows: its view, details' "More actions", the Branch Explorer,
+  the top bar's pill (right-click, `workingObjectMenu`), the switcher, the palette. A place only adds entries, at the
+  end of their group (`withEntries`: the graph's "Go to head changeset"); the Branch Explorer leaves out "Show in
+  Branch Explorer". "Copy ▸" (`copySubmenu`) lists what the object has in one order (name or number, title, paths,
+  spec, full spec with `@repository`, comment, GUID), each with what it copies, and the toast names it ("Branch spec
+  copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected. Items that open a dialog
+  end with "…"; submenus hold real sets of choices. `menuGrammar.test.ts` checks every builder and every place.
 - **Back buttons**: a page goes back with the mouse's back button and, on Windows, the Browser Back key (the `app-command`
   the main process forwards as `navigateBack`), once per press however it arrives (`useBackButtons`).
 - **Keyboard**: every shortcut is declared in `lib/shortcutRegistry.ts` and bound through `hotkey(id)`; the shortcuts sheet

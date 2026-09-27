@@ -40,6 +40,7 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
       submenu: [
         commandItem('New &Window', 'app.newWindow', 'CmdOrCtrl+N', newWindow),
         commandItem('&Open Another Workspace…', 'workspace.open', 'CmdOrCtrl+Shift+O'),
+        separator,
         commandItem('&Update Workspace', 'workspace.update', 'CmdOrCtrl+Shift+U'),
         separator,
         ...(isMac ? [] : [commandItem('&Settings…', 'app.settings', 'CmdOrCtrl+,'), separator]),

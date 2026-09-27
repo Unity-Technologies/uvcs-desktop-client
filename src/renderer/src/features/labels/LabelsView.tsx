@@ -30,6 +30,8 @@ import { renameLabel, showLabelChanges } from './labelOperations';
 import { useLabelsViewStore } from './labelsViewStore';
 import { useLabels } from './useLabels';
 import styles from './LabelsView.module.css';
+import { labelCopyTexts } from './labelMenu';
+import { useCopyCommand } from '../../app/commands/useCopyCommand';
 
 const COLUMNS: Column<Label>[] = [
   {
@@ -64,6 +66,7 @@ export function LabelsView() {
   );
   const selected = visible.find((label) => labelKey(label) === selection.anchor);
   useRenameCommand('Labels', 'label', selection.selected.size === 1 ? selected : undefined, (label) => void renameLabel(workspacePath, label));
+  useCopyCommand('Labels', 'Label', selection.selected.size === 1 && selected ? labelCopyTexts(selected) : undefined);
   const filtered = Boolean(search.trim()) || since !== 'anyTime' || onlyMine;
 
   return (

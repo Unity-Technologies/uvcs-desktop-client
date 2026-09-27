@@ -49,6 +49,7 @@ export function MergeToolButton({ state, actions, onEditInApp, variant = 'primar
     SEPARATOR,
     { id: 'addApp', label: 'Choose another app…', icon: FolderOpen, run: () => void addApp() },
     { id: 'editInApp', label: 'Edit the text in the app', icon: PencilLine, run: onEditInApp },
+    SEPARATOR,
     { id: 'settings', label: 'Merge tool settings…', icon: Settings, run: () => openSettingsDialogAt('merge') },
   ]);
 
