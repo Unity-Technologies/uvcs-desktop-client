@@ -16,7 +16,8 @@ src/
 2. The preload forwards it over one IPC channel; `main/ipc/registerApi.ts` dispatches to the service.
 3. Services (`main/services/<area>Service.ts`) build `cm` arguments and parse the output with helpers in `main/cm/`.
 4. `CmClient` runs the command:
-   - `query()` for short reads: reuses pooled `cm shell` sessions (much faster than spawning `cm`).
+   - `query()` for short reads: reuses pooled `cm shell` sessions (much faster than spawning `cm`), two per working
+     directory; a command takes the first one free, and a directory idle for ten minutes lets its sessions go.
    - `execute()` for long or cancellable work (update, switch, checkin, merge): a dedicated process that streams progress lines.
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), shown in the command log panel.
 
