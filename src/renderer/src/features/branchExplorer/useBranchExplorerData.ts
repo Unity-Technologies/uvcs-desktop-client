@@ -5,6 +5,7 @@ import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useBranchExplorerPreferences } from './branchExplorerStore';
 import { sinceDateFor } from './model/dateRanges';
+import { shareRepeatedStrings } from './model/shareRepeatedStrings';
 
 export function useBranchExplorerData() {
   const workspacePath = useWorkspacePath();
@@ -15,7 +16,7 @@ export function useBranchExplorerData() {
   // repository. Kept for five minutes; window focus re-reads a date range only, never all history (Refresh does).
   return useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'branchExplorer', query),
-    queryFn: () => api.branchExplorer.load(workspacePath, query),
+    queryFn: () => api.branchExplorer.load(workspacePath, query).then(shareRepeatedStrings),
     placeholderData: (previous) => previous,
     staleTime: SLOW_CHANGING_QUERY.staleTime,
     refetchOnWindowFocus: query.sinceDate !== undefined,

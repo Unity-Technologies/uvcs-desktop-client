@@ -56,10 +56,11 @@ export function layoutGraph(data: BranchExplorerData, structureOnly?: StructureO
   const lanes = placeLanes(buildLanes(data.branches, shown.map(({ changeset }) => changeset), columnOf));
   const lanesByBranch = new Map(lanes.map((lane) => [lane.branch.name, lane]));
 
-  const nodesByColumn = shown.map((node, column) => ({
-    ...node,
+  const nodesByColumn = shown.map(({ changeset, collapsed }, column): NodeLayout => ({
+    changeset,
+    collapsed,
     column,
-    row: lanesByBranch.get(node.changeset.branch)?.row ?? 0,
+    row: lanesByBranch.get(changeset.branch)?.row ?? 0,
   }));
 
   const nodes = new Map<number, NodeLayout>();

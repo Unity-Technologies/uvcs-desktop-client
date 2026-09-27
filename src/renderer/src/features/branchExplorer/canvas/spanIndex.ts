@@ -11,15 +11,24 @@ export class SpanIndex {
   private readonly maxRight: Float64Array;
   private readonly size: number;
 
-  constructor(lefts: readonly number[], rights: readonly number[]) {
+  constructor(lefts: ArrayLike<number>, rights: ArrayLike<number>) {
     const count = lefts.length;
-    this.order = Int32Array.from({ length: count }, (_, index) => index).sort((a, b) => lefts[a]! - lefts[b]!);
-    this.lefts = Float64Array.from(this.order, (index) => lefts[index]!);
+    // Plain loops and a plain array: built for up to a changeset each, when a layout first shows.
+    const order: number[] = new Array(count);
+    for (let index = 0; index < count; index++) order[index] = index;
+    order.sort((a, b) => lefts[a]! - lefts[b]!);
     let size = 1;
     while (size < count) size *= 2;
     this.size = size;
+    this.order = new Int32Array(count);
+    this.lefts = new Float64Array(count);
     this.maxRight = new Float64Array(size * 2).fill(Number.NEGATIVE_INFINITY);
-    this.order.forEach((item, position) => (this.maxRight[size + position] = rights[item]!));
+    for (let position = 0; position < count; position++) {
+      const item = order[position]!;
+      this.order[position] = item;
+      this.lefts[position] = lefts[item]!;
+      this.maxRight[size + position] = rights[item]!;
+    }
     for (let node = size - 1; node >= 1; node--) this.maxRight[node] = Math.max(this.maxRight[node * 2]!, this.maxRight[node * 2 + 1]!);
   }
 
