@@ -58,6 +58,24 @@
   background: var(--bg-hover);
 }
 
+/* Divided rows: a hairline on top of each, inset like the rows, gone where a highlight already marks the edge. */
+.row[data-divided='true']::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: var(--space-2);
+  left: var(--space-2);
+  border-top: 1px solid var(--border-subtle);
+  pointer-events: none;
+}
+
+.row[data-divided='true']:hover::before,
+.row[data-divided='true'][data-selected='true']::before,
+.row:hover + .row[data-divided='true']::before,
+.row[data-selected='true'] + .row[data-divided='true']::before {
+  border-top-color: transparent;
+}
+
 .row[data-selected='true'] {
   background: var(--bg-selected);
 }

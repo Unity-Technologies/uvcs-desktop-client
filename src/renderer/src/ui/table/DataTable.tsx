@@ -50,6 +50,8 @@ interface DataTableProps<Row> {
   label?: string;
   /** Hides the column titles from sight (screen readers still get them), for a single self-explaining column. */
   hideHeader?: boolean;
+  /** A hairline between rows, for tall rows of several lines that would otherwise run together. */
+  divided?: boolean;
 }
 
 export function DataTable<Row>({
@@ -68,6 +70,7 @@ export function DataTable<Row>({
   selectFirstRow = false,
   label,
   hideHeader = false,
+  divided = false,
 }: DataTableProps<Row>) {
   const rowIdPrefix = useId();
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -218,6 +221,7 @@ export function DataTable<Row>({
               data-joins-above={selection.selected.has(key) && selection.selected.has(orderedKeys[item.index - 1] ?? '')}
               data-joins-below={selection.selected.has(key) && selection.selected.has(orderedKeys[item.index + 1] ?? '')}
               data-focused={key === focused}
+              data-divided={divided && item.index > 0}
               style={{ top: item.start, height: rowHeight }}
               onMouseDown={(event) => onRowMouseDown(key, event)}
               onDoubleClick={() => onActivate?.(row)}

@@ -41,6 +41,7 @@ export function HistoryList({ rows, selection, onSelectionChange, contextMenu, w
       onSelectionChange={onSelectionChange}
       contextMenu={contextMenu}
       rowHeight={HISTORY_ROW_HEIGHT}
+      divided
       revealKey={revealKey}
       label="Revisions"
       hideHeader
