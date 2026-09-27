@@ -24,6 +24,7 @@ src/
    - `execute()` for long or cancellable work (update, switch, checkin, merge): a dedicated process that streams progress lines.
    - A command line too long to start a process with (a checkin or shelve of thousands of paths: Windows takes 32,767
      characters, quotes included) is written to a `cm shell` of its own instead (`processCommand`): still one command, never split.
+     So is, on Windows, a command that prints text (see Parsing).
    - A pooled command may take two minutes, a workspace write (undo, add, checkout of thousands of files) half an hour.
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), shown in the command log panel.
 
@@ -35,8 +36,10 @@ src/
 - A `cm shell` command ends at the `CommandResult <code>` line that ends its output, with nothing more in the pipe
   (`CmShellSession`): comments can quote such lines, and a misread end shifts every later command by one output.
 - Text crosses as UTF-8 on every OS: `cm shell --encoding=utf-8` reads commands so (Windows would read them in the
-  console's code page), and `find` and `--xml` output is asked for in UTF-8 (`withUtf8Output`). Other output comes in
-  the console's code page on Windows. Windows' CRLF becomes LF before any parser sees the output, and relative paths
+  console's code page), and `find` and `--xml` output is asked for in UTF-8 (`withUtf8Output`). Other output of a
+  process comes in the console's code page on Windows (437, 850: other scripts become `?`), while a `cm shell` prints
+  it in UTF-8, so there a process that prints text (diffs, merges, updates, logs) runs as a `cm shell` of its own
+  (`processCommand`, `printsInConsoleCodePage`); only error messages stay in the code page. Windows' CRLF becomes LF before any parser sees the output, and relative paths
   in `cm status --xml` get forward slashes.
 - On macOS `cm` reads names decomposed (NFD), as it reports them: local paths go to it so (`inCmPathForm`), or
   `cm checkin` of a composed `é.txt` finds no change. Branch names, queries and server paths are left as written.

@@ -54,13 +54,13 @@ describe('createFuzzyIndex', () => {
     const index = createFuzzyIndex(texts);
     for (const query of ['p', 'pr', 'pro', 'prop', 'prop1', 'prop19', 'prop199', 'prop1999']) index.rank(query, 10);
     // Each letter typed looks through the few paths left, each deleted answers from memory: all 200,000 every time
-    // would take seconds.
+    // would take tens of seconds. About 0.45 s on a recent Mac, 1.4 s on a Windows VM running the whole suite.
     const start = performance.now();
     for (let digit = 0; digit < 1000; digit++) {
       expect(index.rank(`prop1999${digit % 10}`, 10).length).toBeGreaterThan(0);
       expect(index.rank('prop1999', 10)).toHaveLength(10);
     }
-    expect(performance.now() - start).toBeLessThan(1000);
+    expect(performance.now() - start).toBeLessThan(3000);
   });
 });
 

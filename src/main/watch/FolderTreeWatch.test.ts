@@ -60,6 +60,8 @@ describe('FolderTreeWatch', () => {
     await settle();
     write('new/deeper/file.txt', 'n');
     await seen('new/deeper/file.txt');
+    // Windows won't move a folder while a watch is open inside it; it watches recursively itself, never with these.
+    if (process.platform === 'win32') return;
 
     renameSync(join(root, 'new'), join(root, 'src', 'moved'));
     await seen('src/moved');

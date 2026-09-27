@@ -21,6 +21,21 @@ describe('processCommand', () => {
     expect(line!.split('texture_').length - 1).toBe(20_000);
   });
 
+  it('on Windows, runs commands that print text in a cm shell of its own, the only way cm prints them in UTF-8', () => {
+    const update = ['update', '--forcedetailedprogress', '--dontmerge'];
+    expect(processCommand(update, 'win32')).toEqual({ args: ['shell', '--encoding=utf-8'], input: 'update --forcedetailedprogress --dontmerge\nexit\n' });
+    expect(processCommand(['diff', 'cs:4', '--format={path}'], 'win32').input).toBe('diff cs:4 --format={path}\nexit\n');
+    expect(processCommand(update, 'linux')).toEqual({ args: update });
+    expect(processCommand(update, 'darwin')).toEqual({ args: update });
+  });
+
+  it('on Windows too, starts commands whose output is UTF-8 anyway, and paths a shell line cannot hold', () => {
+    for (const args of [['status', '--xml'], ['find', 'branch', '--format={name}', '--encoding=utf-8'], ['cat', 'revid:3', '--file=C:\\t\\a']]) {
+      expect(processCommand(args, 'win32')).toEqual({ args });
+    }
+    expect(processCommand(['annotate', 'C:\\wk\\say "hi".txt'], 'win32')).toEqual({ args: ['annotate', 'C:\\wk\\say "hi".txt'] });
+  });
+
   it('measures the whole command line', () => {
     expect(fitsCommandLine(['a'.repeat(MAX_COMMAND_LINE - 1)])).toBe(true);
     expect(fitsCommandLine(['a'.repeat(MAX_COMMAND_LINE / 2), 'b'.repeat(MAX_COMMAND_LINE / 2)])).toBe(false);

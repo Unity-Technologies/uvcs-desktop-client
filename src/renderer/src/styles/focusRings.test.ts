@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { contrastRatio, parseColor, themeTokens } from './contrast';
 
@@ -24,7 +24,7 @@ interface Rule {
 const rules: Rule[] = cssModules(RENDERER).flatMap((path) => {
   const css = readFileSync(path, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].flatMap(([, selectors, body]) =>
-    selectors!.split(',').map((selector) => ({ file: relative(RENDERER, path), selector: selector.trim(), body: body! })),
+    selectors!.split(',').map((selector) => ({ file: relative(RENDERER, path).split(sep).join('/'), selector: selector.trim(), body: body! })),
   );
 });
 

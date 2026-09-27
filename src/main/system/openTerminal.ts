@@ -11,7 +11,8 @@ export async function openTerminal(path: string): Promise<void> {
 
 function launch({ command, args, exits }: TerminalCommand, cwd: string): Promise<boolean> {
   return new Promise((resolve) => {
-    const child = spawn(command, args, { cwd, detached: !exits, stdio: 'ignore' });
+    // A launcher is hidden: its own console (cmd's, running `start`) would flash on Windows. A terminal must show.
+    const child = spawn(command, args, { cwd, detached: !exits, stdio: 'ignore', windowsHide: exits });
     child.once('error', () => resolve(false));
     if (exits) {
       child.once('exit', (code) => resolve(code === 0));

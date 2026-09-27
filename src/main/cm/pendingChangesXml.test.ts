@@ -20,6 +20,14 @@ describe('parsePendingChanges', () => {
     expect(Object.keys(snapshot.changes[1]!)).toEqual(['path', 'kinds', 'itemType', 'size', 'lastModified']);
   });
 
+  it('reads the backslashes cm writes on Windows as forward slashes, and keeps them in names elsewhere', () => {
+    const moved = change('MV', 'src\\ui\\b.ts').replace('<OldPath />', '<OldPath>src\\a.ts</OldPath>');
+    const xml = `${header}<Changes>${moved}</Changes></StatusOutput>`;
+
+    expect(parsePendingChanges(xml, 'win32').changes[0]).toMatchObject({ path: 'src/ui/b.ts', oldPath: 'src/a.ts' });
+    expect(parsePendingChanges(xml, 'linux').changes[0]).toMatchObject({ path: 'src\\ui\\b.ts', oldPath: 'src\\a.ts' });
+  });
+
   it('assigns changes to their changelists', () => {
     const xml = `${header}<Changelists>
       <Changelist><Name>Default</Name><Description>Default</Description><Changes>${change('PR', 'a.txt')}</Changes></Changelist>

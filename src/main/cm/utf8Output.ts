@@ -12,3 +12,13 @@ export function withUtf8Output(args: string[]): string[] {
   if (!encodable || args.some((arg) => arg.startsWith('--encoding'))) return args;
   return [...args, '--encoding=utf-8'];
 }
+
+/**
+ * Whether a process of `cm <args>` prints names, paths or comments as text in the console's code page on Windows,
+ * where only a `cm shell` prints them in UTF-8: `--xml` output is UTF-8 anyway, `find`'s follows `--encoding`, and
+ * `cm cat` writes its file as it is.
+ */
+export function printsInConsoleCodePage(args: readonly string[]): boolean {
+  const [command = ''] = args;
+  return command !== 'cat' && !args.includes('--xml') && !args.some((arg) => arg.startsWith('--encoding'));
+}

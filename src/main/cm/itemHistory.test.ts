@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { itemHistoryTarget, itemRevisionsArgs, parseHistoryRecords, parseItemHistory } from './itemHistory';
 
@@ -99,7 +100,7 @@ describe('itemRevisionsArgs', () => {
 
 describe('itemHistoryTarget', () => {
   it("reads the workspace's file, or the repository path in a changeset", () => {
-    expect(itemHistoryTarget('/work', 'src/a.cs')).toBe('/work/src/a.cs');
+    expect(itemHistoryTarget('/work', 'src/a.cs')).toBe(join('/work', 'src', 'a.cs'));
     expect(itemHistoryTarget('/work', 'src/a.cs', 42)).toBe('serverpath:/src/a.cs#cs:42');
   });
 });

@@ -1,9 +1,9 @@
-#!/usr/bin/env node
-// Stands in for `cm shell` in tests. Commands: `version`, `echo <text>`, `fail`, `prompt` (asks a question and waits),
-// `pause` (writes a line that ends like a question, then the rest of it a moment later), `quote` (output holding a
-// `CommandResult` line of its own, like a changeset comment quoting a `cm shell` session), `crlf <text>` (answers
-// with Windows line breaks, as cm does there).
-import { createInterface } from 'node:readline';
+// Stands in for `cm shell` in tests, started as `node shell` in this folder so it runs the same on every OS.
+// Commands: `version`, `echo <text>`, `fail`, `prompt` (asks a question and waits), `pause` (writes a line that ends
+// like a question, then the rest of it a moment later), `quote` (output holding a `CommandResult` line of its own,
+// like a changeset comment quoting a `cm shell` session), `crlf <text>` (answers with Windows line breaks, as cm
+// does there).
+const { createInterface } = require('node:readline');
 
 const lines = createInterface({ input: process.stdin });
 let waitingForAnswer = false;

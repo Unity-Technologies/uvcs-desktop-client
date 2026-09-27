@@ -11,10 +11,13 @@ describe('terminalCommands', () => {
     expect(terminalCommands('darwin', { TERM_PROGRAM: 'vscode' }, '/wk/game').map(({ args }) => args[1])).toEqual(['Terminal']);
   });
 
-  it('tries Windows Terminal, then PowerShell, then cmd, all started in the folder rather than told it', () => {
+  it('tries Windows Terminal, then PowerShell, then cmd in consoles of their own, all started in the folder rather than told it', () => {
     const commands = terminalCommands('win32', {}, 'C:\\wk\\R&D;game');
-    expect(commands.map(({ command }) => command)).toEqual(['wt.exe', 'pwsh.exe', 'powershell.exe', 'cmd.exe']);
-    expect(commands[0]!.args).toEqual(['-d', '.']);
+    expect(commands).toEqual([
+      { command: 'wt.exe', args: ['-d', '.'], exits: false },
+      { command: 'cmd.exe', args: ['/d', '/c', 'start', 'powershell.exe', '-NoLogo'], exits: true },
+      { command: 'cmd.exe', args: ['/d', '/c', 'start', 'cmd.exe'], exits: true },
+    ]);
     expect(commands.flatMap(({ args }) => args).join(' ')).not.toContain('R&D');
   });
 

@@ -29,7 +29,8 @@ const LINUX_TERMINALS: { command: string; folderArgs: (path: string) => string[]
 /**
  * How to open a terminal in `path`, the preferred way first and the fallbacks after it. Every command also starts in
  * `path`, so none needs it quoted on a command line: Windows Terminal takes `.` (a folder named `a;b` would split its
- * command line), and PowerShell or cmd get a console window of their own.
+ * command line). Without it, cmd's `start` opens Windows PowerShell (always there), else cmd, in a console window of
+ * their own: started by the app, which has no console, they would get none, show nothing and end at once.
  */
 export function terminalCommands(platform: NodeJS.Platform, env: NodeJS.ProcessEnv, path: string): TerminalCommand[] {
   if (platform === 'darwin') {
@@ -39,9 +40,8 @@ export function terminalCommands(platform: NodeJS.Platform, env: NodeJS.ProcessE
   if (platform === 'win32') {
     return [
       { command: 'wt.exe', args: ['-d', '.'], exits: false },
-      { command: 'pwsh.exe', args: ['-NoLogo'], exits: false },
-      { command: 'powershell.exe', args: ['-NoLogo'], exits: false },
-      { command: 'cmd.exe', args: [], exits: false },
+      { command: 'cmd.exe', args: ['/d', '/c', 'start', 'powershell.exe', '-NoLogo'], exits: true },
+      { command: 'cmd.exe', args: ['/d', '/c', 'start', 'cmd.exe'], exits: true },
     ];
   }
   const desktops = (env.XDG_CURRENT_DESKTOP ?? '').split(':');
