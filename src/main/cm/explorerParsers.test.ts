@@ -73,10 +73,13 @@ describe('parseCodeReviews', () => {
         <TARGETTYPE>Branch</TARGETTYPE><TARGET>id:54</TARGET><ASSIGNEE></ASSIGNEE></REVIEW>
       <REVIEW><ID>62</ID><TITLE>Changeset review</TITLE><STATUS>Status Reviewed</STATUS>
         <TARGETTYPE>Changeset</TARGETTYPE><TARGET>2</TARGET></REVIEW>
+      <REVIEW><ID>63</ID><TITLE>Shelve review</TITLE><STATUS>Status Under review</STATUS>
+        <TARGETTYPE>Shelve</TARGETTYPE><TARGET>3</TARGET></REVIEW>
     </PLASTICQUERY>`;
     expect(parseCodeReviews(xml)).toMatchObject([
       { id: 60, status: 'Rework required', targetType: 'branch', targetId: 54, assignee: '' },
       { id: 62, status: 'Reviewed', targetType: 'changeset', targetId: 2 },
+      { id: 63, status: 'Under review', targetType: 'shelve', targetId: 3 },
     ]);
   });
 });
