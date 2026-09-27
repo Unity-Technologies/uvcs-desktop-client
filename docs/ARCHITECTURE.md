@@ -23,7 +23,8 @@ src/
      process of its own.
    - `execute()` for long or cancellable work (update, switch, checkin, merge): a dedicated process that streams progress lines.
    - A command line too long to start a process with (a checkin or shelve of thousands of paths: Windows takes 32,767
-     characters) is written to a `cm shell` of its own instead (`processCommand`): still one command, never split.
+     characters, quotes included) is written to a `cm shell` of its own instead (`processCommand`): still one command, never split.
+   - A pooled command may take two minutes, a workspace write (undo, add, checkout of thousands of files) half an hour.
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), shown in the command log panel.
 
 ## Parsing `cm` output
@@ -33,6 +34,12 @@ src/
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.
 - A `cm shell` command ends at the `CommandResult <code>` line that ends its output, with nothing more in the pipe
   (`CmShellSession`): comments can quote such lines, and a misread end shifts every later command by one output.
+- Text crosses as UTF-8 on every OS: `cm shell --encoding=utf-8` reads commands so (Windows would read them in the
+  console's code page), and `find` and `--xml` output is asked for in UTF-8 (`withUtf8Output`). Other output comes in
+  the console's code page on Windows. Windows' CRLF becomes LF before any parser sees the output, and relative paths
+  in `cm status --xml` get forward slashes.
+- On macOS `cm` reads names decomposed (NFD), as it reports them: local paths go to it so (`inCmPathForm`), or
+  `cm checkin` of a composed `é.txt` finds no change. Branch names, queries and server paths are left as written.
 
 ## Operation progress
 
@@ -82,7 +89,7 @@ and the app keeps the decision.
 
 - Found per OS (`knownTools`, `detectTools`): the UVCS merge tool (the Desktop GUI run as `xmerge`: `macplasticx` in PlasticSCM.app, `plastic.exe` next to `cm.exe`, `plasticgui`), VS Code and its forks,
   JetBrains IDEs, Sublime Merge, KDiff3, Beyond Compare, Meld, P4Merge, Araxis and FileMerge (`opendiff`, only with
-  Xcode), each with the three-way command line of its docs (cross-checked with Git's `mergetools/*`). client.conf's text merge tools that aren't the UVCS one are offered too, by extension
+  Xcode) and WinMerge on Windows, each with the three-way command line of its docs (cross-checked with Git's `mergetools/*`). client.conf's text merge tools that aren't the UVCS one are offered too, by extension
   (`clientConfMergeTools`), and the user can add any program with an arguments template (`{base}` `{yours}`
   `{incoming}` `{result}` and their `…Name`s). Settings keep the preferred tool (`auto`: the UVCS one, else the first
   found), the user's tools and per-tool arguments.
@@ -161,8 +168,9 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
 
 - `main/window/WorkspaceWindows` opens the windows; opening a workspace that another window shows brings that window
   forward instead (`windows.focusWorkspace`, checked by `useOpenWorkspace`). A new window asked to open a workspace
-  takes it at start (`system.takeRequestedWorkspace`). The Window menu lists them; closing the last one keeps the app on
-  macOS, and the Dock icon opens the home screen.
+  takes it at start (`system.takeRequestedWorkspace`), as does a folder the installed app is launched with on Windows
+  and Linux (`workspaceArgument`; a second launch hands it to the running app). The Window menu lists them; closing
+  the last one keeps the app on macOS, and the Dock icon opens the home screen; elsewhere it quits.
 - Each API call runs with its window as the caller (`main/ipc/caller.ts`, followed across `await`s), so its commands
   (`commandLogged`) and operation progress go back to that window only. `workspaces.watch` is the window saying which
   workspace it shows: `main/watch/WorkspaceWatchers` keeps one watcher per shown workspace and sends its changes to the
@@ -204,7 +212,8 @@ renderer/src/
 - **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)`, so `invalidateWorkspace(path)` refreshes everything after an operation
   (or what it can touch: `invalidateWorkspace(path, affected)`, `runOperation({ affects })`).
 - **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check.
-  - `main/watch/WorkspaceWatcher` watches an open workspace (recursive on macOS/Windows; the root and `.plastic` only on Linux),
+  - `main/watch/WorkspaceWatcher` watches an open workspace (recursive on macOS/Windows; the root and `.plastic` only on Linux;
+    an event Windows sends without a name, when a burst overflowed its buffer, refreshes everything),
     skips `ignore.conf` folders and `.plastic` lock/temp files, coalesces bursts (300 ms quiet, 2 s max wait) and drops what the
     app's own writes cause (`changesWorkspace` commands and tracked operations): the renderer refreshes after those anyway.
     `cm status --changelists` writes the changelist files back on every read, so those rewrites count as its own too (`rewritesChangelists`).

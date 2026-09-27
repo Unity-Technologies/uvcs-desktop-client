@@ -7,16 +7,19 @@
 //   dblclick:<text>        double-click it
 //   label:<name>           click the first element with that accessible name (icon buttons, e.g. label:Command log)
 //   hover:<text>           hover the first element showing <text> (tooltips)
-//   key:<keys>             press keys, e.g. key:Meta+3
+//   key:<keys>             press keys, e.g. key:Meta+3 (key:ControlOrMeta+3 on any OS)
 //   type:<text>            type text into the focused element
 //   wait:<ms>              wait
 //   theme:dark|light       force a theme
 //   size:<width>x<height>  resize the window (1400x880 by default)
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { _electron as electron } from 'playwright-core';
 
-const [output = '/tmp/uvcs.png', ...steps] = process.argv.slice(2);
+const [output = join(tmpdir(), 'uvcs.png'), ...steps] = process.argv.slice(2);
 
-const app = await electron.launch({ args: ['.'], cwd: new URL('..', import.meta.url).pathname });
+const app = await electron.launch({ args: ['.'], cwd: fileURLToPath(new URL('..', import.meta.url)) });
 const window = await app.firstWindow();
 await window.setViewportSize({ width: 1400, height: 880 });
 window.on('console', (message) => message.type() === 'error' && console.error('[renderer]', message.text()));
