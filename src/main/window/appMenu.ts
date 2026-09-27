@@ -30,7 +30,8 @@ function windowMenu(windows: WorkspaceWindows, isMac: boolean): MenuItemConstruc
     label: 'Window',
     submenu: [
       { role: 'minimize' },
-      { role: 'zoom' },
+      // Zoom is macOS's; elsewhere the title bar maximizes.
+      ...(isMac ? [{ role: 'zoom' as const }] : []),
       { type: 'separator' },
       ...windows.all().map(
         (window): MenuItemConstructorOptions => ({
@@ -100,7 +101,11 @@ export function installAppMenu(windows: WorkspaceWindows): void {
     windowMenu(windows, isMac),
     {
       role: 'help',
-      submenu: [{ label: 'Unity Version Control Documentation', click: () => void shell.openExternal(DOCUMENTATION_URL) }],
+      submenu: [
+        { label: 'Unity Version Control Documentation', click: () => void shell.openExternal(DOCUMENTATION_URL) },
+        // On macOS About is in the app menu.
+        ...(isMac ? [] : [{ type: 'separator' as const }, { role: 'about' as const }]),
+      ],
     },
   ];
 
