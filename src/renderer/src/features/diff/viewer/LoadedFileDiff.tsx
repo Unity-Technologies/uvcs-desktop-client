@@ -18,7 +18,7 @@ import { canDiscardChanges } from './canDiscardChanges';
 import { canEditInPlace } from './canEditInPlace';
 import { comparisonMethodLabel, type ComparisonMethod } from './comparisonMethod';
 import { ComparisonMethodMenu } from './ComparisonMethodMenu';
-import { diffPresentation, hasTwoRepresentations, type Representation } from './diffPresentation';
+import { diffPresentation, hasTwoRepresentations, showsLines, type Representation } from './diffPresentation';
 import { useDiffPreferences, type DiffLayout } from './diffPreferencesStore';
 import { DiffNotice } from './DiffNotice';
 import { DiffViewerFrame } from './DiffViewerFrame';
@@ -134,8 +134,8 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       value={representation}
       onChange={(value) => setRepresentation(extension, value)}
       segments={[
-        { value: 'text', label: <><Code size={13} /> Code</>, title: 'Compare the text' },
-        { value: 'image', label: <><ImageIcon size={13} /> Image</>, title: 'Compare the rendered images' },
+        { value: 'text', label: <><Code size={13} /> <span data-toolbar-label>Code</span></>, title: 'Compare the text' },
+        { value: 'image', label: <><ImageIcon size={13} /> <span data-toolbar-label>Image</span></>, title: 'Compare the rendered images' },
       ]}
     />
   );
@@ -143,50 +143,58 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   // Said in the header, not over the diff: a note there would stack on "No content changes".
   const plainText = isText && syntaxHighlighting(left.text ?? '', right.text ?? '', editable) === 'off';
 
+  // Nothing to view differently in an empty or unchanged file that only says so.
+  const viewControls = showsLines(presentation, editable);
+  // Discard and Save come first: the controls are right-aligned, so appearing on the first keystroke they move none
+  // of the others.
   const controls = isText ? (
     <>
-      {compareControls}
-      {plainText && <PlainTextIndicator />}
-      {currentDiff && hasLineChanges(currentDiff) && <LineStats added={currentDiff.added} removed={currentDiff.removed} />}
-      <PaneToolbarGroup>
-        <ComparisonMethodMenu value={comparisonMethod} onChange={setComparisonMethod} />
-        <IconButton
-          size="small"
-          icon={<FoldVertical size={14} />}
-          label={collapseUnchanged ? 'Show all lines' : 'Collapse unchanged lines'}
-          variant={collapseUnchanged ? 'secondary' : 'ghost'}
-          onClick={() => setCollapseUnchanged(!collapseUnchanged)}
-        />
-        <IconButton
-          size="small"
-          icon={<WrapText size={14} />}
-          label={wrapLines ? "Don't wrap lines" : 'Wrap lines'}
-          variant={wrapLines ? 'secondary' : 'ghost'}
-          onClick={() => setWrapLines(!wrapLines)}
-        />
-      </PaneToolbarGroup>
-      <SegmentedControl<DiffLayout>
-        value={layout}
-        onChange={setLayout}
-        segments={[
-          { value: 'split', label: <><Columns2 size={13} /> Split</>, title: 'Side-by-side view' },
-          { value: 'unified', label: <><Rows2 size={13} /> Unified</>, title: 'Unified view' },
-        ]}
-      />
       {unsavedControls}
+      {compareControls}
+      {viewControls && (
+        <>
+          {plainText && <PlainTextIndicator />}
+          {currentDiff && hasLineChanges(currentDiff) && <LineStats added={currentDiff.added} removed={currentDiff.removed} />}
+          <PaneToolbarGroup>
+            <ComparisonMethodMenu value={comparisonMethod} onChange={setComparisonMethod} />
+            <IconButton
+              size="small"
+              icon={<FoldVertical size={14} />}
+              label={collapseUnchanged ? 'Show all lines' : 'Collapse unchanged lines'}
+              variant={collapseUnchanged ? 'secondary' : 'ghost'}
+              onClick={() => setCollapseUnchanged(!collapseUnchanged)}
+            />
+            <IconButton
+              size="small"
+              icon={<WrapText size={14} />}
+              label={wrapLines ? "Don't wrap lines" : 'Wrap lines'}
+              variant={wrapLines ? 'secondary' : 'ghost'}
+              onClick={() => setWrapLines(!wrapLines)}
+            />
+          </PaneToolbarGroup>
+          <SegmentedControl<DiffLayout>
+            value={layout}
+            onChange={setLayout}
+            segments={[
+              { value: 'split', label: <><Columns2 size={13} /> <span data-toolbar-label>Split</span></>, title: 'Side-by-side view' },
+              { value: 'unified', label: <><Rows2 size={13} /> <span data-toolbar-label>Unified</span></>, title: 'Unified view' },
+            ]}
+          />
+        </>
+      )}
       {representationControl}
     </>
   ) : (
     <>
+      {unsavedControls}
       {/* Single-sided images (added or deleted) are previews: no modes to offer. */}
       {presentation.kind === 'image' && presentation.comparable && (
         <SegmentedControl<ImageDiffMode>
           value={imageMode}
           onChange={setImageMode}
-          segments={IMAGE_DIFF_MODES.map((mode) => ({ value: mode.value, label: <>{mode.icon} {mode.label}</>, title: mode.title }))}
+          segments={IMAGE_DIFF_MODES.map((mode) => ({ value: mode.value, label: <>{mode.icon} <span data-toolbar-label>{mode.label}</span></>, title: mode.title ?? mode.label }))}
         />
       )}
-      {unsavedControls}
       {representationControl}
     </>
   );

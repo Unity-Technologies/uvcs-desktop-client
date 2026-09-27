@@ -4,4 +4,20 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  container-type: inline-size;
+}
+
+/* Narrow, the header's controls say themselves with their icons (their tooltips keep the words), so the file's path
+   keeps room instead of being pushed out under them. */
+@container (max-width: 720px) {
+  .viewer [data-toolbar-label] {
+    display: none;
+  }
+}
+
+/* Narrower still, what only informs (the line counts, "Large file") gives way to what acts. */
+@container (max-width: 520px) {
+  .viewer [data-toolbar-extra] {
+    display: none;
+  }
 }
