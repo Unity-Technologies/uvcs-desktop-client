@@ -192,6 +192,7 @@ renderer/src/
   - `workspaceChanged` tells file edits (pending changes, review marks, files view, open diffs of workspace files; if auto refresh is on, and once when it's turned back on)
     from `.plastic` rewrites by any tool (workspace info; everything when the loaded changeset or branch moved). See
     `app/shell/useWorkspaceWatcher.ts` and `app/refresh/`. A diff with unsaved edits holds still and offers to reload instead.
+    A hidden window (minimized, covered, on another desktop) keeps the changes and refreshes once, when it shows again.
   - Locks live on the server, where nothing reports changes: pending changes re-read them along with the changes, at most every 30 s.
   - Window focus (wired to real focus in `trackWindowFocus`) refetches stale server views; local views skip it while the watcher sees everything.
   - Incoming: `useIncomingSummary` polls every minute with focus, every five minutes behind other apps, never hidden, and on focus if
