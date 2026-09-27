@@ -5,7 +5,7 @@ const SESSIONS_PER_DIRECTORY = 2;
 /** A directory no command ran in for this long lets its sessions go (a workspace no window shows anymore). */
 export const IDLE_DIRECTORY_MS = 10 * 60_000;
 
-type Session = Pick<CmShellSession, 'pendingCount' | 'start' | 'run' | 'dispose'>;
+type Session = Pick<CmShellSession, 'pendingCount' | 'isReady' | 'start' | 'run' | 'dispose'>;
 type CreateSession = (cwd: string) => Session;
 
 interface Waiting {
@@ -41,11 +41,27 @@ export class CmShellPool {
     });
   }
 
+  /**
+   * Whether a session in the directory answers commands at once. Otherwise they start (about a second), and a query
+   * is quicker as a process of its own meanwhile.
+   */
+  isReady(cwd: string): boolean {
+    this.warmUp(cwd);
+    return this.directories.get(cwd)!.sessions.some((session) => session.isReady);
+  }
+
   /** Starts the sessions for a directory so the first queries there don't pay the startup cost. */
   warmUp(cwd: string): void {
     const directory = this.directory(cwd);
     while (directory.sessions.length < SESSIONS_PER_DIRECTORY) directory.sessions.push(this.createSession(cwd));
-    directory.sessions.forEach((session) => session.start());
+    for (const session of directory.sessions) {
+      // A session answering its first command is free for the commands waiting, and may leave the directory idle.
+      void session.start().then(() => {
+        if (this.directories.get(cwd) !== directory) return;
+        this.dispatch(cwd, directory);
+        this.whenIdle(cwd, directory);
+      });
+    }
     this.whenIdle(cwd, directory);
   }
 

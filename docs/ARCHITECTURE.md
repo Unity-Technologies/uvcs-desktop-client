@@ -18,6 +18,8 @@ src/
 4. `CmClient` runs the command:
    - `query()` for short reads: reuses pooled `cm shell` sessions (much faster than spawning `cm`), two per working
      directory; a command takes the first one free, and a directory idle for ten minutes lets its sessions go.
+     A session takes about a second to answer its first command, so until one in that directory has, the query runs as a
+     process of its own.
    - `execute()` for long or cancellable work (update, switch, checkin, merge): a dedicated process that streams progress lines.
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), shown in the command log panel.
 

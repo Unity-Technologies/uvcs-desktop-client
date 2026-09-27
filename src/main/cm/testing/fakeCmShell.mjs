@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Stands in for `cm shell` in tests. Commands: `echo <text>`, `fail`, `prompt` (asks a question and waits),
+// Stands in for `cm shell` in tests. Commands: `version`, `echo <text>`, `fail`, `prompt` (asks a question and waits),
 // `pause` (writes a line that ends like a question, then the rest of it a moment later), `quote` (output holding a
 // `CommandResult` line of its own, like a changeset comment quoting a `cm shell` session).
 import { createInterface } from 'node:readline';
@@ -14,7 +14,8 @@ lines.on('line', (line) => {
     return;
   }
   const [command, ...rest] = line.split(' ');
-  if (command === 'echo') process.stdout.write(`${rest.join(' ')}\nCommandResult 0\n`);
+  if (command === 'version') process.stdout.write('1.0.0.0\nCommandResult 0\n');
+  else if (command === 'echo') process.stdout.write(`${rest.join(' ')}\nCommandResult 0\n`);
   else if (command === 'fail') process.stdout.write('Something went wrong\nCommandResult 1\n');
   else if (command === 'quote') process.stdout.write('>cm shell\nCommandResult 0\nstill the comment\nCommandResult 0\n');
   else if (command === 'pause') {

@@ -12,6 +12,8 @@ const PROMPT_LIKE_TAIL = /^[^<].*(\[[^\]]*\]|[:?])\s*$/;
 const MAX_PROMPT_LENGTH = 300;
 const PROMPT_STALL_MS = 1500;
 const COMMAND_TIMEOUT_MS = 120_000;
+/** Local and instant: its answer tells the process is up. */
+const STARTUP_PROBE = ['version'];
 
 interface PendingCommand {
   commandLine: string;
@@ -36,6 +38,8 @@ export class CmShellSession {
   private received = 0;
   private promptTimer: NodeJS.Timeout | null = null;
   private timeoutTimer: NodeJS.Timeout | null = null;
+  /** Whether the current process answered a command yet; until then it's starting, which takes about a second. */
+  private answered = false;
 
   constructor(
     private readonly cmPath: string,
@@ -46,9 +50,19 @@ export class CmShellSession {
     return this.queue.length + (this.running ? 1 : 0);
   }
 
-  /** Starts the `cm shell` process ahead of time; its startup is the slowest part of a first query. */
-  start(): void {
+  /** Whether a command sent now runs at once, rather than after the process starts. */
+  get isReady(): boolean {
+    return this.process !== null && this.answered;
+  }
+
+  /**
+   * Starts the `cm shell` process ahead of time, if it isn't running; its startup is the slowest part of a first query.
+   * Settles once the process answered (or failed) its first command.
+   */
+  async start(): Promise<void> {
+    if (this.process) return;
     this.ensureProcess();
+    await this.run(STARTUP_PROBE).catch(() => {});
   }
 
   run(args: string[]): Promise<CmResult> {
@@ -79,6 +93,7 @@ export class CmShellSession {
     if (this.process) return this.process;
 
     const child = spawn(this.cmPath, ['shell'], { cwd: this.cwd, windowsHide: true });
+    this.answered = false;
     // What a killed process still had in its pipes must not end up in the output of the next command.
     const onData = (text: string) => child === this.process && this.onOutput(text);
     // Decoded by the streams, so a character split between two chunks stays whole.
@@ -112,6 +127,7 @@ export class CmShellSession {
     // Not a regular expression: V8 keeps the last string one ran on, which would hold the whole output in memory.
     const output = this.buffer.textBefore(length - tail.length + result.index).replaceAll('\r\n', '\n');
     this.buffer.clear();
+    this.answered = true;
     this.finishRunning().resolve({ output, exitCode: result.exitCode });
     this.runNext();
   }

@@ -63,7 +63,7 @@ export class CmClient {
 
   /** Runs a quick, non-interactive command. Prefer this for reads. */
   query(args: string[], options: CmRunOptions = {}): Promise<string> {
-    const useShell = !options.signal && !options.onOutputLine && canRunInShell(args);
+    const useShell = !options.signal && !options.onOutputLine && canRunInShell(args) && this.shellPool.isReady(options.cwd ?? homedir());
     return this.run(args, options, useShell);
   }
 

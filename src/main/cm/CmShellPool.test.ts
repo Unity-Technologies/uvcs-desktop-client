@@ -7,6 +7,9 @@ class FakeSession {
   static created: FakeSession[] = [];
   readonly ran: string[] = [];
   disposed = false;
+  started = false;
+  answerFirstCommand = (): void => {};
+  private starting: Promise<void> | null = null;
   private readonly running: { command: string; finish: (result: CmResult) => void }[] = [];
 
   constructor(readonly cwd: string) {
@@ -14,10 +17,25 @@ class FakeSession {
   }
 
   get pendingCount(): number {
-    return this.running.length;
+    return this.running.length + (this.starting ? 1 : 0);
   }
 
-  start(): void {}
+  get isReady(): boolean {
+    return this.started;
+  }
+
+  /** Until the test calls `answerFirstCommand`, the session is starting. */
+  start(): Promise<void> {
+    if (this.started) return Promise.resolve();
+    this.starting ??= new Promise((resolve) => {
+      this.answerFirstCommand = () => {
+        this.started = true;
+        this.starting = null;
+        resolve();
+      };
+    });
+    return this.starting;
+  }
 
   run(args: string[]): Promise<CmResult> {
     this.ran.push(args.join(' '));
@@ -88,5 +106,39 @@ describe('CmShellPool', () => {
     expect(session!.disposed).toBe(true);
     void pool.run('/wk', ['status']);
     expect(FakeSession.created).toHaveLength(2);
+  });
+  it('is not ready in a directory until one of its sessions answered, and starts them when asked', () => {
+    expect(pool.isReady('/wk')).toBe(false);
+    expect(FakeSession.created).toHaveLength(2);
+
+    FakeSession.created[1]!.answerFirstCommand();
+    expect(pool.isReady('/wk')).toBe(true);
+    expect(pool.isReady('/other')).toBe(false);
+  });
+
+  it('runs the commands waiting for a starting session as soon as it answered', async () => {
+    pool.warmUp('/wk');
+    const waiting = pool.run('/wk', ['status']);
+    const [first] = FakeSession.created;
+    expect(first!.ran).toEqual([]);
+
+    first!.answerFirstCommand();
+    await settle();
+    expect(first!.ran).toEqual(['status']);
+    first!.finish('status');
+    await expect(waiting).resolves.toMatchObject({ output: 'status' });
+  });
+
+  it('is not ready again once an idle directory let its sessions go, until the new ones answer', async () => {
+    vi.useFakeTimers();
+    pool.isReady('/wk');
+    FakeSession.created.forEach((session) => session.answerFirstCommand());
+    await vi.advanceTimersByTimeAsync(0);
+    expect(pool.isReady('/wk')).toBe(true);
+
+    await vi.advanceTimersByTimeAsync(IDLE_DIRECTORY_MS);
+    expect(FakeSession.created.every((session) => session.disposed)).toBe(true);
+    expect(pool.isReady('/wk')).toBe(false);
+    expect(FakeSession.created).toHaveLength(4);
   });
 });
