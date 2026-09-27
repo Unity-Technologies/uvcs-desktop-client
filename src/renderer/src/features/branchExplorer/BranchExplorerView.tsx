@@ -196,6 +196,8 @@ export function BranchExplorerView() {
   };
 
   const onKeyDown = (event: KeyboardEvent): void => {
+    // Keys pressed in a context or details menu (a portal) bubble here too: they belong to the menu.
+    if (!event.currentTarget.contains(event.target as Node)) return;
     if (!layout || ownsKey(event.target, event.key)) return;
     const selectedId = selection?.kind === 'changeset' ? selection.id : null;
     /** The selected branch, or the branch of the selected changeset. */

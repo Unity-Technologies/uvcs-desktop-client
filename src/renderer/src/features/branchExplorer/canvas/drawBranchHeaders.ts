@@ -1,6 +1,7 @@
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { Lane } from '../model/layoutGraph';
 import { GHOST_ALPHA, type DrawContext } from './drawContext';
+import { compactNameWidth } from './compactNameWidth';
 import { drawRectCorona, drawRectGlow } from './drawSearchHit';
 import { drawReviewChip, reviewChipWidth } from './drawReviewChip';
 import { fitBranchName, fitText, summaryOf, textWidth } from './fitText';
@@ -76,9 +77,9 @@ export function drawCompactBranchNames(draw: DrawContext): void {
 
     const left = Math.max(shape.left * viewport.zoom + viewport.panX, 6);
     const right = shape.right * viewport.zoom + viewport.panX;
-    const room = Math.max(60, roomBeforeNextLane(draw, lane, shape.left) * viewport.zoom);
     const bottom = (shape.y - BAND_HEIGHT / 2) * viewport.zoom + viewport.panY - 3;
-    const name = fitBranchName(ctx, lane.branch.name, Math.min(room, Math.max(60, right - left + 80)));
+    const room = compactNameWidth(left, right, roomBeforeNextLane(draw, lane, shape.left) * viewport.zoom, scene.size.width);
+    const name = fitBranchName(ctx, lane.branch.name, room);
     ctx.globalAlpha = search && !search.litBranches.has(lane.branch.name) ? GHOST_ALPHA : 1;
     drawSearchMarks(draw, name, left, bottom - COMPACT_NAME_HEIGHT / 2 + 1, COMPACT_NAME_HEIGHT + 1);
     ctx.strokeText(name, left, bottom);

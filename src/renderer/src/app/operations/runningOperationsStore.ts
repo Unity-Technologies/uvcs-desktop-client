@@ -42,8 +42,12 @@ export function useRunningOperation(workspacePath: string): RunningOperation | u
   return useRunningOperationsStore((state) => state.operations.find((operation) => operation.workspacePath === workspacePath));
 }
 
-export function runningOperationOf(workspacePath: string): RunningOperation | undefined {
-  return useRunningOperationsStore.getState().operations.find((operation) => operation.workspacePath === workspacePath);
+/**
+ * What keeps an operation from starting on the workspace: for an update or a switch, any other operation on it; for
+ * anything else (a checkin, a shelve, a merge), an update or a switch rewriting its files meanwhile.
+ */
+export function blockingOperation(operations: RunningOperation[], workspacePath: string, changesLoadedRevisions: boolean): RunningOperation | undefined {
+  return operations.find((operation) => operation.workspacePath === workspacePath && (changesLoadedRevisions || operation.kind !== undefined));
 }
 
 export function operationById(id: string): RunningOperation | undefined {

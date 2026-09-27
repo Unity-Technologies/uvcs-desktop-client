@@ -99,4 +99,12 @@ describe('runSummary', () => {
     });
     expect(runSummary({ resolved: 1, total: 3, stopped: true }, planRun(states, uvcs)).title).toBe('Stopped: resolved 1 of 3 in UVCS merge tool');
   });
+
+  it('says only that it stopped when nothing was resolved yet', () => {
+    expect(runSummary({ resolved: 0, total: 12, stopped: true }, planRun(states, uvcs))).toEqual({
+      kind: 'info',
+      title: 'Stopped resolving in UVCS merge tool',
+      detail: '12 still need you.',
+    });
+  });
 });

@@ -41,6 +41,11 @@
   color: var(--status-deleted);
 }
 
+/* Highlighted like the delete button it leads to. */
+.item.danger[data-highlighted] {
+  background: var(--danger);
+}
+
 .icon {
   display: flex;
   flex: none;

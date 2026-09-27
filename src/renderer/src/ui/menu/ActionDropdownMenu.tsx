@@ -30,7 +30,15 @@ export function ActionDropdownMenu({ entries, align = 'end', children, open, onO
     <DropdownMenu.Root modal={false} open={open} onOpenChange={onOpenChange}>
       <DropdownMenu.Trigger asChild>{children}</DropdownMenu.Trigger>
       <DropdownMenu.Portal>
-        <DropdownMenu.Content className={styles.content} align={align} sideOffset={4} onCloseAutoFocus={(event) => focusAfterMenu(event, onCloseAutoFocus)}>
+        <DropdownMenu.Content
+          className={styles.content}
+          align={align}
+          sideOffset={4}
+          onCloseAutoFocus={(event) => focusAfterMenu(event, onCloseAutoFocus)}
+          // React bubbles events out of portals to the trigger's ancestors: an item picked (Enter clicks it too) must not
+          // also click the row the menu belongs to (the palette's Delete… opened the branch as well).
+          onClick={(event) => event.stopPropagation()}
+        >
           <MenuEntries entries={entries} primitives={primitives} />
         </DropdownMenu.Content>
       </DropdownMenu.Portal>

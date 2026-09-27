@@ -75,7 +75,11 @@ export function MergeHeader({
           Preview
         </span>
         <MergeHeading title={title} />
-        {plan.contributors && <MergeContributors contributors={plan.contributors} labels={labels} />}
+        {plan.contributors && (
+          <span className={styles.contributors}>
+            <MergeContributors contributors={plan.contributors} labels={labels} />
+          </span>
+        )}
         {!run?.running && (
           <span className={styles.status} data-tip={summary}>
             {progress}

@@ -19,7 +19,7 @@ export function RevisionChanges({ workspacePath, item }: { workspacePath: string
       original={previous}
       modified={current}
       fileName={item.name}
-      title={item.parentRevisionId > 0 ? `Changed in changeset ${item.changeset}` : `Added in changeset ${item.changeset}`}
+      title={item.parentRevisionId > 0 ? `Changed in cs:${item.changeset}` : `Added in cs:${item.changeset}`}
     />
   );
 }

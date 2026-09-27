@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { SearchField } from '../ui/SearchField';
 import { Tooltip } from '../ui/Tooltip';
-import { countTones, matchesChangeFilter, offeredTones } from './changeFilter';
+import { changeFilterPlaceholder, countTones, matchesChangeFilter, offeredTones } from './changeFilter';
 import { STATUS_LETTERS, StatusLetter, type StatusTone } from './StatusBadge';
 import styles from './useChangeFilter.module.css';
 
@@ -55,7 +55,7 @@ export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tone
 
   const bar = (
     <div className={styles.bar}>
-      <SearchField value={query} onChange={setQuery} placeholder={`Filter ${items.length} files`} width="100%" />
+      <SearchField value={query} onChange={setQuery} placeholder={changeFilterPlaceholder(items.length)} width="100%" />
       {tones.map((tone) => {
         const count = counts.get(tone) ?? 0;
         const label = count > 0 ? `${TONE_LABELS[tone]} (${count.toLocaleString('en-US')})` : TONE_LABELS[tone];

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { PendingChangesAction, SwitchPreflight } from '@shared/domain/switchWithChanges';
 import { api } from '../../api/client';
 import { invalidateWorkspace } from '../../app/queryClient';
-import { isAffectedByNewBranch } from '../../app/refresh/refreshScopes';
+import { isAffectedByBranchList } from '../../app/refresh/refreshScopes';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
@@ -68,8 +68,9 @@ function CreateBranchDialog({ workspacePath, origins, onClose }: { workspacePath
     // Switching refreshes every view when done; otherwise only the branch lists need to.
     const switched = switchAfter && !blockedByMerge && (await switchToBranch(workspacePath, fullName, action ?? undefined));
     if (switched) return;
-    void invalidateWorkspace(workspacePath, isAffectedByNewBranch);
+    void invalidateWorkspace(workspacePath, isAffectedByBranchList);
     if (switchAfter) announceNotSwitched(workspacePath, fullName, pending?.preflight.sourceName);
+    else toast.success(`Created ${fullName}`);
   };
 
   return (
@@ -116,7 +117,7 @@ function CreateBranchDialog({ workspacePath, origins, onClose }: { workspacePath
       {switchAfter && pending?.plan.kind === 'ask' && (
         <PendingChangesChoice
           source={pending.preflight.sourceName}
-          destination={name.trim() ? fullName : 'the new branch'}
+          destination={name.trim() ? fullName : null}
           choice={pending.plan.choice}
           value={action}
           onChange={setAction}

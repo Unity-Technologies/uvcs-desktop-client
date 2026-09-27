@@ -1,5 +1,6 @@
 import type { StatusTone } from '../../components/StatusBadge';
 import type { Icon, MenuEntry } from '../../lib/actions';
+import { pluralize } from '../../lib/text';
 import type { SectionId } from './paletteScope';
 
 export interface SearchResult {
@@ -55,6 +56,13 @@ export function collapseGroups(groups: SearchGroup[], expanded: ReadonlySet<Sect
     const results = [...unpinned.slice(0, COLLAPSED_ROWS), ...group.results.filter((result) => result.pinned)];
     return { ...group, results, more: group.results.length - results.length };
   });
+}
+
+/** The row that expands a collapsed section, in the heading's words: "1 more branch", "3 more pending changes". */
+export function moreLabel({ heading, more }: Pick<ShownGroup, 'heading' | 'more'>): string {
+  const plural = heading.toLowerCase();
+  const singular = plural.endsWith('ches') ? plural.slice(0, -2) : plural.slice(0, -1);
+  return pluralize(more, `more ${singular}`, `more ${plural}`);
 }
 
 /** From here on a match is clearly what was meant, so much weaker matches elsewhere would only be noise. */

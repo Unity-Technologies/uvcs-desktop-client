@@ -1,5 +1,6 @@
 import * as RadixDialog from '@radix-ui/react-dialog';
 import type { CSSProperties, FormEvent, ReactNode } from 'react';
+import { MODAL_DIALOG } from '../../lib/modalDialog';
 import styles from './Dialog.module.css';
 
 interface DialogProps {
@@ -27,6 +28,7 @@ export function Dialog({ title, description, width, onClose, onSubmit, footer, c
           className={styles.content}
           style={{ '--dialog-width': width && `${width}px` } as CSSProperties}
           aria-describedby={undefined}
+          {...MODAL_DIALOG}
         >
           <form onSubmit={submit} style={{ display: 'contents' }}>
             <div className={styles.header}>

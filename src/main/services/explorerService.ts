@@ -1,12 +1,14 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { dialog, shell } from 'electron';
 import type { ExplorerApi } from '@shared/api/explorer';
 import type { RevisionType } from '@shared/domain/explorer';
 import { parseItemDetails } from '../cm/itemDetailsXml';
+import { onLinksThemselves } from '../cm/symlinkArgs';
 import { parseTreeItems } from '../cm/treeItemsXml';
 import { listWorkspacePaths } from '../files/listWorkspacePaths';
+import { renamePrivate } from '../files/renamePrivate';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
 
@@ -15,7 +17,7 @@ export function createExplorerService({ cm }: ServiceContext): ExplorerApi {
   const absolute = (workspacePath: string, paths: string[]) => paths.map((path) => toAbsolutePath(workspacePath, path));
 
   async function listDirectory(workspacePath: string, directory: string) {
-    const xml = await cm.query(['ls', toAbsolutePath(workspacePath, directory), '--xml'], inWorkspace(workspacePath));
+    const xml = await cm.query(onLinksThemselves('ls', toAbsolutePath(workspacePath, directory), '--xml'), inWorkspace(workspacePath));
     return parseTreeItems(xml);
   }
 
@@ -25,7 +27,7 @@ export function createExplorerService({ cm }: ServiceContext): ExplorerApi {
   }
 
   async function details(workspacePath: string, path: string) {
-    const xml = await cm.query(['fileinfo', toAbsolutePath(workspacePath, path), '--xml'], inWorkspace(workspacePath));
+    const xml = await cm.query(onLinksThemselves('fileinfo', toAbsolutePath(workspacePath, path), '--xml'), inWorkspace(workspacePath));
     return parseItemDetails(xml);
   }
 
@@ -37,8 +39,14 @@ export function createExplorerService({ cm }: ServiceContext): ExplorerApi {
     await cm.query(['move', ...absolute(workspacePath, [fromPath, toPath])], inWorkspace(workspacePath));
   }
 
+  async function renameItemOnDisk(workspacePath: string, fromPath: string, toPath: string) {
+    await renamePrivate(toAbsolutePath(workspacePath, fromPath), toAbsolutePath(workspacePath, toPath));
+  }
+
   async function create(workspacePath: string, path: string, kind: 'file' | 'directory') {
     const absolutePath = toAbsolutePath(workspacePath, path);
+    // Folders typed along with the name (`docs/intro.md`) are created too; `cm add` adds them with the item.
+    await mkdir(dirname(absolutePath), { recursive: true });
     if (kind === 'directory') await mkdir(absolutePath);
     else await writeFile(absolutePath, '', { flag: 'wx' });
     await cm.query(['add', '--coparent', absolutePath], inWorkspace(workspacePath));
@@ -75,6 +83,7 @@ export function createExplorerService({ cm }: ServiceContext): ExplorerApi {
     details,
     addRecursive,
     move,
+    renamePrivate: renameItemOnDisk,
     create,
     changeRevisionType,
     saveRevisionAs,

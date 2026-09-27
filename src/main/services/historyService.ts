@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { dialog, shell } from 'electron';
 import type { HistoryApi } from '@shared/api/history';
 import { parseItemHistory, REVISION_IDS_FORMAT } from '../cm/itemHistory';
+import { onLinksThemselves } from '../cm/symlinkArgs';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
 
@@ -16,8 +17,8 @@ export function createHistoryService({ cm }: ServiceContext): HistoryApi {
     async forItem(workspacePath, path) {
       const itemPath = toAbsolutePath(workspacePath, path);
       const [xml, revisionIds] = await Promise.all([
-        cm.query(['history', itemPath, '--xml'], { cwd: workspacePath }),
-        cm.query(['history', itemPath, `--format=${REVISION_IDS_FORMAT}`], { cwd: workspacePath }),
+        cm.query(onLinksThemselves('history', itemPath, '--xml'), { cwd: workspacePath }),
+        cm.query(onLinksThemselves('history', itemPath, `--format=${REVISION_IDS_FORMAT}`), { cwd: workspacePath }),
       ]);
       return parseItemHistory(xml, revisionIds);
     },
