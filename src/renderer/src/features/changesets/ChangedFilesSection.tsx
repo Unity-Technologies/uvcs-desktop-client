@@ -1,14 +1,18 @@
 import { ChevronRight } from 'lucide-react';
 import { useRef, useState } from 'react';
-import type { DiffTarget } from '@shared/domain/diff';
+import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
+import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { moveRovingFocus, ROVING_ITEM } from '../../lib/rovingFocus';
 import { pluralize } from '../../lib/text';
 import { DetailsChangesPane, DetailsEmpty, DetailsSkeleton } from '../../ui/DetailsPanel';
 import { HighlightQuery } from '../../ui/Highlight';
+import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { diffEntryKey } from '../diff/DiffEntryList';
+import { diffEntryMenu } from '../diff/diffEntryMenu';
 import { describeDiffEntry, diffEntryTone } from '../diff/diffEntrySources';
+import { useDiffReview } from '../diff/review/useDiffReview';
 import { useDiffEntries } from '../diff/useDiffEntries';
 import styles from './ChangedFilesSection.module.css';
 
@@ -29,11 +33,16 @@ interface ChangedFilesSectionProps {
  * Selecting an object never runs `cm diff` (it is heavy on big changes and servers): the list loads when asked
  * for, and stays cached, so it shows right away when that object is selected again.
  */
+const NO_ENTRIES: DiffEntry[] = [];
+
 export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFilesSectionProps) {
   const [requested, setRequested] = useState(false);
   const { data: entries, error } = useDiffEntries(target, { enabled: requested, branchHead });
   const { visible, query, bar } = useChangeFilter(entries ?? [], diffEntryKey, diffEntryTone);
   const listRef = useRef<HTMLDivElement>(null);
+  const workspacePath = useWorkspacePath();
+  // The same menu as in the diff, review marks included.
+  const review = useDiffReview(target, entries ?? NO_ENTRIES);
 
   return (
     // No "Open diff" here: the panel's primary action at the top opens it.
@@ -55,9 +64,11 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
         <HighlightQuery query={query}>
           <div ref={listRef} className={styles.files} onKeyDown={(event) => listRef.current && moveRovingFocus(listRef.current, event)}>
             {visible.slice(0, MAX_LISTED_FILES).map((entry) => (
-              <button key={entry.path} className={styles.file} onClick={() => onOpen(entry.path)} {...ROVING_ITEM}>
-                <ItemPathRow path={entry.path} itemType={entry.itemType} oldPath={entry.oldPath} status={{ tone: diffEntryTone(entry), label: describeDiffEntry(entry) }} />
-              </button>
+              <ActionContextMenu key={entry.path} entries={() => diffEntryMenu(workspacePath, target, [entry], review)}>
+                <button className={styles.file} onClick={() => onOpen(entry.path)} {...ROVING_ITEM}>
+                  <ItemPathRow path={entry.path} itemType={entry.itemType} oldPath={entry.oldPath} status={{ tone: diffEntryTone(entry), label: describeDiffEntry(entry) }} />
+                </button>
+              </ActionContextMenu>
             ))}
             {visible.length > MAX_LISTED_FILES && <DetailsEmpty>And {visible.length - MAX_LISTED_FILES} more — open the diff to see them all.</DetailsEmpty>}
           </div>
