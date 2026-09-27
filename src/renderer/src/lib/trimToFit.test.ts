@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { positionsInTrimmed, trimFolderToFit, trimMiddleToFit, trimToFit } from './trimToFit';
+import { folderRoom, positionsInTrimmed, trimFolderToFit, trimMiddleToFit, trimToFit } from './trimToFit';
 
 const measure = (text: string): number => Array.from(text).length;
 
@@ -73,5 +73,16 @@ describe('positionsInTrimmed', () => {
 
   it('drops positions cut from the end', () => {
     expect(positionsInTrimmed('src/app/main/', 'src/a…', [0, 4, 6])).toEqual([0, 4]);
+  });
+});
+
+describe('folderRoom', () => {
+  it('leaves the folder what the name leaves', () => {
+    expect(folderRoom(30, 10, measure)).toBe(20);
+  });
+
+  it("keeps room for …/ beside a name too long on its own", () => {
+    expect(folderRoom(30, 40, measure)).toBe(2);
+    expect(trimFolderToFit('src/very/deep/', folderRoom(30, 40, measure), measure)).toBe('…/');
   });
 });

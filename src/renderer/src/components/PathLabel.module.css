@@ -19,6 +19,10 @@
   color: var(--text-tertiary);
 }
 
+.directory[data-min='true'] {
+  flex-shrink: 0;
+}
+
 /* Only a name too long on its own (its folder already gone) is cut. */
 .name {
   flex: 0 1 auto;

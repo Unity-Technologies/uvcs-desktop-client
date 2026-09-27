@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { textMeasurer } from '../lib/measureText';
-import { positionsInTrimmed, trimFolderToFit } from '../lib/trimToFit';
+import { ELLIPSIS, folderRoom, positionsInTrimmed, trimFolderToFit } from '../lib/trimToFit';
 import { Highlight } from '../ui/Highlight';
 import styles from './PathLabel.module.css';
 
@@ -48,7 +48,7 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fit
         // Next to other labels, the one with the most folder to drop gives way first.
         setContentSize({ width: Math.ceil(measure(directory)) + nameWidth, minWidth: `min(${nameWidth}px, 100%)`, flexShrink: measure(directory) });
       }
-      setShownDirectory(directory && trimFolderToFit(directory, element.clientWidth - measure(name) - 1, measure));
+      setShownDirectory(directory && trimFolderToFit(directory, folderRoom(element.clientWidth, measure(name) + 1, measure), measure));
     };
     fit();
     const observer = new ResizeObserver(fit);
@@ -67,7 +67,8 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fit
       data-tip={!tooltip ? undefined : oldPath ? `${oldPath} → ${path}` : trimmed ? path : undefined}
     >
       {shownDirectory && (
-        <span className={styles.directory}>
+        // Only `…/` left: it stays, and the name gives way.
+        <span className={styles.directory} data-min={shownDirectory === `${ELLIPSIS}/` || undefined}>
           <Highlight text={shownDirectory} positions={matches && positionsInTrimmed(directory, shownDirectory, matches.filter((position) => position < nameStart))} />
         </span>
       )}

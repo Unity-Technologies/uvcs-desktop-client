@@ -67,3 +67,11 @@ export function positionsInTrimmed(text: string, shown: string, positions: reado
   const shift = kept + ELLIPSIS.length - tailStart;
   return positions.flatMap((position) => (position < kept ? [position] : position >= tailStart ? [position + shift] : []));
 }
+
+/**
+ * The room a path label leaves its folder beside its name: what the name leaves, but never less than `…/`, so a name
+ * too long on its own still shows it's in a folder, like the names around it.
+ */
+export function folderRoom(width: number, nameWidth: number, measure: Measure): number {
+  return Math.max(width - nameWidth, measure(`${ELLIPSIS}/`));
+}
