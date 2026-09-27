@@ -54,6 +54,15 @@ export function installAppMenu(windows: WorkspaceWindows): void {
   Menu.setApplicationMenu(menu);
 }
 
+/**
+ * Opens the menu bar's menus as a popup under the window's menu button, where the window has no menu bar (Windows).
+ * `position` is in page pixels, which the View menu's zoom scales.
+ */
+export function popUpAppMenu(window: BrowserWindow, position: { x: number; y: number }): void {
+  const zoom = window.webContents.getZoomFactor();
+  Menu.getApplicationMenu()?.popup({ window, x: Math.round(position.x * zoom), y: Math.round(position.y * zoom) });
+}
+
 function menuItems(menu: Menu): Electron.MenuItem[] {
   return menu.items.flatMap((item) => [item, ...(item.submenu ? menuItems(item.submenu) : [])]);
 }

@@ -1,7 +1,7 @@
 /* Design tokens. Components only use these variables, never raw colors. */
 :root {
   /* Each OS's own UI and code fonts: San Francisco and SF Mono (macOS); Segoe UI Variable (Windows 11), Segoe UI
-     and Cascadia Mono (in Windows 11 and Windows Terminal) or Consolas (Windows 10); the desktop's font on Linux
+     and Cascadia Mono (which Windows Terminal and Visual Studio install) or Consolas; the desktop's font on Linux
      (system-ui: Cantarell or Adwaita Sans on GNOME, Ubuntu, Noto Sans on KDE) and DejaVu Sans Mono, which every
      distribution has. */
   --font-ui:
@@ -37,6 +37,8 @@
   --row-height: 30px;
   --control-height: 28px;
   --topbar-height: 44px;
+  /* What the Windows caption buttons take at the window's top right (they overlay the page there); 0 elsewhere. */
+  --caption-buttons-width: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
   --view-header-height: 48px;
   --toolbar-height: 40px;
 
