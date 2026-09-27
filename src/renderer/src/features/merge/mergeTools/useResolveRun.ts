@@ -4,14 +4,12 @@ import { api } from '../../../api/client';
 import { useSettings } from '../../../app/settings/useSettings';
 import { fileNameOf } from '../../../lib/text';
 import { toast } from '../../../ui/toast/toastStore';
-import type { MergeLabels } from '../mergeDescription';
 import type { FileConflictState } from '../resolve/useFileConflicts';
 import { toolOutcomeMessage, waitsForTool } from './mergeToolOutcome';
 import { planRun, runSummary, type RunPlan, type RunProgress } from './resolveRun';
 
 interface ResolveRunOptions {
   states: FileConflictState[];
-  labels: MergeLabels;
   resolveInTool: (key: string, tool: MergeTool, quiet: boolean) => Promise<MergeToolOutcome | null>;
   /** A file opens in the tool: `previousKey` is the one before it, if any, to follow the run with the selection. */
   onOpen: (key: string, previousKey: string | undefined) => void;
@@ -43,7 +41,7 @@ type Ended = { plan: RunPlan; stopped: boolean; failure?: { outcome: MergeToolOu
  * and closes the one before. Never more than one tool open; files decided meanwhile are skipped; a file closed unsaved
  * asks whether to go on (or goes on, as the settings say); a tool that fails to open stops the run.
  */
-export function useResolveRun({ states, labels, resolveInTool, onOpen, onEnd }: ResolveRunOptions): ResolveRun {
+export function useResolveRun({ states, resolveInTool, onOpen, onEnd }: ResolveRunOptions): ResolveRun {
   const { askWhenMergeToolClosesUnsaved } = useSettings();
   const [progress, setProgress] = useState<RunProgress | null>(null);
   const [ended, setEnded] = useState<Ended>();
@@ -99,7 +97,7 @@ export function useResolveRun({ states, labels, resolveInTool, onOpen, onEnd }: 
     setEnded(undefined);
     const { plan, stopped, failure } = ended;
     if (failure) {
-      const message = toolOutcomeMessage(failure.outcome, plan.tool.name, fileNameOf(failure.path), labels);
+      const message = toolOutcomeMessage(failure.outcome, plan.tool.name, fileNameOf(failure.path));
       const reason = message.detail && !/[.!?]$/.test(message.detail) ? `${message.detail}.` : message.detail;
       toast.error(message.title, [reason, 'Stopped resolving one by one.'].filter(Boolean).join(' '));
     } else {
@@ -108,7 +106,7 @@ export function useResolveRun({ states, labels, resolveInTool, onOpen, onEnd }: 
       toast[summary.kind](summary.title, summary.detail);
     }
     onEnd();
-  }, [ended, states, labels, onEnd]);
+  }, [ended, states, onEnd]);
 
   // Leaving the page ends the run; useFileConflicts stops waiting for the tool still open.
   useEffect(

@@ -23,7 +23,7 @@ export function mergeToolList(sources: MergeToolSources): MergeToolList {
     canBringToFront: sources.platform === 'darwin' && appBundleOf(tool.executable) !== null,
   });
   const known = sources.detected.map(({ tool, executable }) =>
-    withArgs({ id: tool.id, name: tool.name, origin: 'known', executable, defaultArgs: tool.args, mergesBinaries: Boolean(tool.binaryArgs), extensions: null }),
+    withArgs({ id: tool.id, name: tool.name, origin: 'known', executable, defaultArgs: tool.args, extensions: null }),
   );
   const [uvcs, others] = [known.filter((tool) => tool.id === UVCS_TOOL_ID), known.filter((tool) => tool.id !== UVCS_TOOL_ID)];
   const fromClientConf = sources.clientConf.map((tool, index) =>
@@ -33,12 +33,11 @@ export function mergeToolList(sources: MergeToolSources): MergeToolList {
       origin: 'clientConf',
       executable: tool.found,
       defaultArgs: tool.args,
-      mergesBinaries: false,
       extensions: tool.extensions,
     }),
   );
   const custom = sources.custom.map((tool) =>
-    withArgs({ id: tool.id, name: tool.name, origin: 'custom', executable: tool.executable, defaultArgs: tool.args, mergesBinaries: false, extensions: null }),
+    withArgs({ id: tool.id, name: tool.name, origin: 'custom', executable: tool.executable, defaultArgs: tool.args, extensions: null }),
   );
 
   const tools = [...uvcs, ...fromClientConf, ...others, ...custom];

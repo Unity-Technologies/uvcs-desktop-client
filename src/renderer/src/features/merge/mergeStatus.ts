@@ -44,7 +44,7 @@ export function fileConflictStatus(state: FileConflictState): ConflictStatus {
 
   const { resolution, decision, contents } = state;
   if (!resolution) return 'needsDecision';
-  if (decision?.tool) return 'resolvedInTool';
+  if (decision?.kind === 'text' && decision.tool) return 'resolvedInTool';
   if (resolution.choice === 'destination') return 'keepingDestination';
   if (resolution.choice === 'source') return 'keepingSource';
   if (decision?.kind === 'text' && decision.edited) return 'edited';
@@ -80,7 +80,7 @@ export function directoryConflictStatus(resolution: DirectoryConflictResolution 
 
 /** The merge tool a file's status speaks of: the one it's open in, or the one that resolved it. */
 export function fileConflictTool(state: FileConflictState): string | undefined {
-  return state.openTool?.toolName ?? state.decision?.tool;
+  return state.openTool?.toolName ?? (state.decision?.kind === 'text' ? state.decision.tool : undefined);
 }
 
 /** `tool`: the merge tool of `openInTool` and `resolvedInTool`. */

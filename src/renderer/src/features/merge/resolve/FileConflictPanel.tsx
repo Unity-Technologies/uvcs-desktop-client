@@ -70,7 +70,7 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
     <MergeToolButton
       state={state}
       actions={toolActions}
-      onEditInApp={canMergeLines ? () => choose('byHand') : undefined}
+      onEditInApp={() => choose('byHand')}
       // The primary action while the file waits for the user, unless the page offers resolving them all (or is at it);
       // once decided, completing the merge takes over.
       variant={state.resolution || toolActions.runOffered || toolActions.run ? 'secondary' : 'primary'}
@@ -84,10 +84,10 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
           <PathLabel path={state.file.path} fitContent />
           <ConflictStatusChip status={status} labels={labels} tool={fileConflictTool(state)} />
         </div>
-        {!editing && !state.openTool && state.status === 'ready' && (
+        {/* A binary keeps one of its versions, picked on its cards: no merge tool merges it. */}
+        {!editing && !state.openTool && canMergeLines && (
           <div className={styles.controls} role="group" aria-label="Resolve this conflict">
-            {state.isBinary && toolButton}
-            {canMergeLines && withConflicts && (
+            {withConflicts && (
               <>
                 {toolButton}
                 <KeepChoices
@@ -98,7 +98,7 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
                 />
               </>
             )}
-            {canMergeLines && !withConflicts && (
+            {!withConflicts && (
               <ActionDropdownMenu
                 entries={[
                   { id: 'destination', label: `Keep ${destination.version} (${labels.destination})`, icon: FileCheck2, run: () => onDecide({ kind: 'wholeFile', side: 'destination' }) },

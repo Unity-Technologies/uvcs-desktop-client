@@ -80,8 +80,7 @@ and the app keeps the decision.
 `cm` has no way to run its merge tool for one chosen conflict (`--resolveconflict` is for directory conflicts only;
 `--merge` runs it for every file), so the app runs the tool itself, per file (`main/merge/mergeTools`):
 
-- Found per OS (`knownTools`, `detectTools`): the UVCS merge tool (the Desktop GUI run as `xmerge`, `binmerge` for
-  binaries: `macplasticx` in PlasticSCM.app, `plastic.exe` next to `cm.exe`, `plasticgui`), VS Code and its forks,
+- Found per OS (`knownTools`, `detectTools`): the UVCS merge tool (the Desktop GUI run as `xmerge`: `macplasticx` in PlasticSCM.app, `plastic.exe` next to `cm.exe`, `plasticgui`), VS Code and its forks,
   JetBrains IDEs, Sublime Merge, KDiff3, Beyond Compare, Meld, P4Merge, Araxis and FileMerge (`opendiff`, only with
   Xcode), each with the three-way command line of its docs (cross-checked with Git's `mergetools/*`). client.conf's text merge tools that aren't the UVCS one are offered too, by extension
   (`clientConfMergeTools`), and the user can add any program with an arguments template (`{base}` `{yours}`
@@ -91,8 +90,8 @@ and the app keeps the decision.
   file with the file as it stands in the app (the automatic merge with its markers, or the user's picks), runs the
   tool without a shell (`.cmd` launchers through `cmd.exe`, arguments quoted), and waits. Few tools tell saving from
   cancelling by their exit code, so the result file decides (`judgeToolResult`): unchanged means nothing was resolved;
-  saved text becomes the file's decision (markers left count as conflicts left); a binary result must be one of its
-  versions. "Stop waiting" kills the tool process and takes what was saved so far, as soon as it exits: a launcher's
+  saved text becomes the file's decision (markers left count as conflicts left). Text files only: no tool really
+  merges binaries, so a binary keeps one of its versions, picked in the app (`canMergeIn`). "Stop waiting" kills the tool process and takes what was saved so far, as soon as it exits: a launcher's
   app still holding its output doesn't keep the file open.
 - The workspace is never touched: the outcome is a decision like any other, written when the merge completes.
 
@@ -111,7 +110,7 @@ next to their branch. Copy stays short: labels name things, tooltips define them
 While two files or more wait for a decision the preferred tool can open, the header's primary action is "Resolve N
 conflicts in <tool>" (`ResolveRunControl`, ⇧⌘↩; the caret picks another tool, with how many files each opens, and
 whether a file closed unsaved asks before the next): the files open one after the other, each once the one before is
-saved and closed (`useResolveRun`, `resolveRun`). Files the tool can't open (binaries outside the UVCS tool) are left
+saved and closed (`useResolveRun`, `resolveRun`). Files the tool can't open (binaries, types it isn't for) are left
 out and named in its tooltip. While it runs, a strip takes the status's place: a step per file, "Resolving 2 of 5 ·
 app.ts in <tool>", Skip this file (closes it there) and Stop (Esc, confirmed while the tool has a file). The list marks
 the file open and the selection follows it unless the user looks elsewhere, which never stops the run; files decided in
@@ -130,7 +129,7 @@ the merge), "Yours", "Incoming" and "Base". Conflicts read as labeled blocks ins
 for that conflict, its lines, the source's label and its lines. While a tool has the file, a banner says so (Bring to
 front, Stop waiting), its conflicts show without choices and the merge can't complete; a toast tells how it ended.
 Editing the text in the app opens a banner with Done and Discard edits; the choice shows picked and "Changes" shows what
-it produces. Binary conflicts offer only tools that merge binaries (the UVCS one) and the two versions to keep. The
+it produces. Binary conflicts offer only the two versions to keep, as cards, and no merge tool. The
 Incoming view resolves update conflicts with the same panel and run (in its update bar); server-branch merges keep one side for every file. A file
 that merges automatically is never edited; its menu only overrides it by keeping one version. Once merged, the page
 states where the result went.
