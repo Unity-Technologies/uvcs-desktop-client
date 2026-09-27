@@ -52,8 +52,9 @@ export function RepositoryRow({ repository, workspaces, onOpen, onCreateWorkspac
               Open
             </Button>
           ) : (
+            // On every row it would read as a wall of buttons: it shows on the row under the pointer or the keyboard.
             workspaces.length === 0 && (
-              <Button size="small" onClick={() => onCreateWorkspace(repository)}>
+              <Button size="small" className={styles.rowCreate} onClick={() => onCreateWorkspace(repository)}>
                 New workspace
               </Button>
             )

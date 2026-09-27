@@ -3,6 +3,7 @@ import { useRef, useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
 import { matchesAllWords } from '../../lib/matchesAllWords';
 import { focusFirstItem, moveRovingFocus } from '../../lib/rovingFocus';
+import { describeServer } from '../../lib/servers';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
@@ -31,6 +32,8 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const { data: repositories, isLoading, isFetching, error, refetch } = useRepositories(server);
   const { all: workspaceEntries } = useWorkspaceEntries('');
+  // Named as in the sidebar: "This computer", an organization's name.
+  const place = describeServer(server);
 
   const shown = (repositories ?? []).filter((repository) => !filter.trim() || matchesAllWords(repository.name, filter));
   const workspacesOf = (repository: RepositorySummary) =>
@@ -41,8 +44,8 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
     <>
       <ViewHeader
         inTitleBar
-        title={server === 'local' ? 'This computer' : server}
-        subtitle={repositories ? `${repositories.length} repositories` : undefined}
+        title={place.label}
+        subtitle={[place.detail, repositories && `${repositories.length} repositories`].filter(Boolean).join(' · ') || undefined}
         actions={
           <>
             <IconButton icon={<RefreshCw size={14} />} label="Refresh" loading={isFetching} onClick={() => void refetch()} />

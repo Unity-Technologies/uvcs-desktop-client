@@ -427,12 +427,13 @@
   font-weight: var(--weight-medium);
 }
 
-.rowMenu {
+.rowMenu,
+.rowCreate {
   opacity: 0;
 }
 
-.row:hover .rowMenu,
-.row:focus-within .rowMenu,
+.row:hover :is(.rowMenu, .rowCreate),
+.row:focus-within :is(.rowMenu, .rowCreate),
 .rowMenu[data-state='open'] {
   opacity: 1;
 }
