@@ -43,6 +43,16 @@ export function buildFileTreeRows({ childrenByDirectory, expanded, filter = '', 
   return rows;
 }
 
+const INDENT = 16;
+/** Levels indented in full; deeper ones step in by a quarter, so names deep in a tree keep room to show. */
+const FULL_INDENT_LEVELS = 8;
+
+/** How far a row at `depth` is indented, in pixels. */
+export function indentOf(depth: number): number {
+  const full = Math.min(depth, FULL_INDENT_LEVELS);
+  return full * INDENT + (depth - full) * (INDENT / 4);
+}
+
 export function sortItems(items: TreeItem[]): TreeItem[] {
   return [...items].sort((a, b) => {
     const directoryFirst = Number(b.itemType === 'directory') - Number(a.itemType === 'directory');

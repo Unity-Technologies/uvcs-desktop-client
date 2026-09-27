@@ -8,14 +8,12 @@ import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { Spinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
-import type { FileTreeRow } from './fileTreeRows';
+import { indentOf, type FileTreeRow } from './fileTreeRows';
 import { ItemIcon } from './ItemIcon';
 import { iconOverlay, type ItemStatus } from './itemStatus';
 import { isWorkspaceRoot } from './workspaceRoot';
 import { XlinkChip } from './XlinkChip';
 import styles from './FileTreeTable.module.css';
-
-const INDENT = 16;
 
 interface FileTreeTableProps {
   rows: FileTreeRow[];
@@ -114,7 +112,7 @@ function NameCell({ row, status, changesInside, onToggle }: NameCellProps) {
   const isDirectory = item.itemType === 'directory';
 
   return (
-    <span className={styles.name} style={{ paddingLeft: row.depth * INDENT }}>
+    <span className={styles.name} style={{ paddingLeft: indentOf(row.depth) }}>
       {isDirectory ? (
         <button
           className={styles.chevron}
