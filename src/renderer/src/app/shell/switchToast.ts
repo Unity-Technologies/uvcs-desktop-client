@@ -1,15 +1,22 @@
-import type { SwitchResult } from '@shared/domain/switchWithChanges';
+import type { RenamedPrivateFile, SwitchResult } from '@shared/domain/switchWithChanges';
 import { spec } from '@shared/domain/specs';
+import { lastSegment } from '../../lib/paths';
 import { pluralize } from '../../lib/text';
 import type { OperationSuccess } from '../operations/runOperation';
 import { navigation } from '../navigation/navigationStore';
 
 /**
- * What to tell the user after a switch: where the workspace went as the title, what happened to their changes below
- * it. Without anything to say about them, the card's own count of what was written takes that line.
+ * What to tell the user after a switch: where the workspace went as the title, what happened to their changes (and to
+ * private files in the way) below it. Without anything to say about them, the card's own count of what was written
+ * takes that line.
  */
 export function switchToast(result: SwitchResult, targetName: string): OperationSuccess {
-  const title = `Switched to ${targetName}`;
+  const ending = changesEnding(result, `Switched to ${targetName}`);
+  const renamed = renamedPrivatesNote(result.renamedPrivates);
+  return renamed ? { ...ending, detail: sentences(ending.detail, renamed) } : ending;
+}
+
+function changesEnding(result: SwitchResult, title: string): OperationSuccess {
   const restoredCount = 'restored' in result ? result.restored?.count : undefined;
   const restored = restoredCount ? `Restored the ${pluralize(restoredCount, 'change')} you left here.` : undefined;
   const viewChanges = { label: 'View', run: () => navigation.goToView('changes') };
@@ -39,6 +46,14 @@ export function switchToast(result: SwitchResult, targetName: string): Operation
         },
       };
   }
+}
+
+/** Nothing else shows that `cm` kept a private file under another name, next to the file the switch wrote. */
+function renamedPrivatesNote(renamed: RenamedPrivateFile[] = []): string | undefined {
+  const [first] = renamed;
+  if (!first) return undefined;
+  if (renamed.length === 1) return `Your private file ${lastSegment(first.path)} was in the way: it’s kept as ${lastSegment(first.renamedTo)}.`;
+  return `${renamed.length} private files were in the way: they’re kept renamed, as name.private.0.`;
 }
 
 function yourChanges(count: number): string {

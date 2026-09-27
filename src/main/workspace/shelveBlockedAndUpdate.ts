@@ -3,6 +3,7 @@ import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
+import { onLinksThemselves } from '../cm/symlinkArgs';
 import { UPDATE_ARGS } from '../cm/updateArgs';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { readIncomingChanges } from '../merge/incoming';
@@ -69,7 +70,7 @@ export async function shelveBlockedAndUpdate(
 
   // From here on the changes live in the shelve: a failure puts them back.
   try {
-    await cm.query(['undo', ...incoming.blockedPaths.map((path) => toAbsolutePath(workspacePath, path))], { cwd: workspacePath });
+    await cm.query(onLinksThemselves('undo', ...incoming.blockedPaths.map((path) => toAbsolutePath(workspacePath, path))), { cwd: workspacePath });
     if (unresolvedConflicts(incoming.conflicts, resolutions).length > 0) return { ...result, updated: false, backupDirectory: null };
 
     context.beginStep('Updating', 2, 2);
