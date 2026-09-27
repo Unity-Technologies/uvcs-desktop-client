@@ -16,7 +16,19 @@ describe('terminalCommands', () => {
     expect(terminalCommands('win32', {}, 'C:\\wk\\game')[0]!.args).toEqual(['-d', 'C:\\wk\\game']);
   });
 
-  it('uses the Debian alternative on Linux first', () => {
-    expect(terminalCommands('linux', {}, '/wk/game')[0]!.command).toBe('x-terminal-emulator');
+  it("uses the user's default terminal on Linux first, then the desktop's own", () => {
+    const commands = (desktop?: string) => terminalCommands('linux', { XDG_CURRENT_DESKTOP: desktop }, '/wk/game').map(({ command }) => command);
+    expect(commands('ubuntu:GNOME').slice(0, 5)).toEqual(['x-terminal-emulator', 'xdg-terminal-exec', 'gnome-terminal', 'ptyxis', 'kgx']);
+    expect(commands('KDE').slice(0, 3)).toEqual(['x-terminal-emulator', 'xdg-terminal-exec', 'konsole']);
+    expect(commands('XFCE')[2]).toBe('xfce4-terminal');
+    expect(commands()).toEqual(['x-terminal-emulator', 'xdg-terminal-exec', 'gnome-terminal', 'ptyxis', 'kgx', 'konsole', 'xfce4-terminal', 'mate-terminal', 'xterm']);
+  });
+
+  it('tells each Linux terminal the folder, where the working directory may not be used', () => {
+    const args = Object.fromEntries(terminalCommands('linux', {}, '/wk/my game').map(({ command, args }) => [command, args]));
+    expect(args['x-terminal-emulator']).toEqual([]);
+    expect(args['gnome-terminal']).toEqual(['--working-directory=/wk/my game']);
+    expect(args['konsole']).toEqual(['--workdir', '/wk/my game']);
+    expect(args['ptyxis']).toEqual(['--new-window', '--working-directory=/wk/my game']);
   });
 });
