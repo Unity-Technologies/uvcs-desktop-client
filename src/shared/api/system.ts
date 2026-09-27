@@ -8,7 +8,7 @@ export interface SystemApi {
   currentUser(): Promise<string>;
   openPath(path: string): Promise<void>;
   revealInFileManager(path: string): Promise<void>;
-  /** Opens the user's terminal in a folder: $TERM_PROGRAM's app or Terminal on macOS, Windows Terminal or cmd, x-terminal-emulator on Linux. */
+  /** Opens the user's terminal in a folder: $TERM_PROGRAM's app or Terminal on macOS, Windows Terminal or cmd, x-terminal-emulator or the desktop's own terminal on Linux. */
   openTerminal(path: string): Promise<void>;
   openExternal(url: string): Promise<void>;
   /** Moves files to the OS trash, so deleting private files can be undone. */

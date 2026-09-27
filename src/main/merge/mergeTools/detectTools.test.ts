@@ -82,6 +82,11 @@ describe('detectKnownTools', () => {
       ['meld', '/usr/bin/meld'],
     ]);
   });
+
+  it("finds the UVCS merge tool as the Linux package installs it, next to cm, when cm isn't the /usr/bin link", () => {
+    const linux: Whereabouts = { platform: 'linux', env: { PATH: '/home/me/bin' }, home: '/home/me', cmPath: '/opt/plasticscm5/client/cm' };
+    expect(found(linux, ['/usr/bin/plasticgui', '/opt/plasticscm5/client/linplasticx'])).toEqual([['uvcs', '/opt/plasticscm5/client/linplasticx']]);
+  });
 });
 
 describe('locateProgram', () => {
