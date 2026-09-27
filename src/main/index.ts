@@ -83,6 +83,8 @@ function start(): void {
   );
 
   followAppTheme(settings);
+  // Otherwise Windows' About box names the executable's own product (Electron and its version, until it's packaged).
+  app.setAboutPanelOptions({ applicationName: app.name, applicationVersion: app.getVersion() });
   installAppMenu(windows);
   windows.openFirst();
   // macOS keeps the app running with no window; clicking the Dock icon then opens the home screen.
