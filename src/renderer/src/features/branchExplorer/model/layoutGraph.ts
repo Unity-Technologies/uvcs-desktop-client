@@ -49,7 +49,10 @@ export function layoutGraph(data: BranchExplorerData, structureOnly?: StructureO
   const shown = structureOnly
     ? collapseLinearRuns(sorted, new Set([...structuralChangesets(data), ...structureOnly.keep]))
     : sorted.map((changeset) => ({ changeset, collapsed: null }));
-  const columnOf = new Map(shown.flatMap(({ changeset, collapsed }, column) => (collapsed ?? [changeset]).map((member) => [member.id, column] as const)));
+  const columnOf = new Map<number, number>();
+  shown.forEach(({ changeset, collapsed }, column) => {
+    for (const member of collapsed ?? [changeset]) columnOf.set(member.id, column);
+  });
   const lanes = placeLanes(buildLanes(data.branches, shown.map(({ changeset }) => changeset), columnOf));
   const lanesByBranch = new Map(lanes.map((lane) => [lane.branch.name, lane]));
 
@@ -59,8 +62,11 @@ export function layoutGraph(data: BranchExplorerData, structureOnly?: StructureO
     row: lanesByBranch.get(node.changeset.branch)?.row ?? 0,
   }));
 
+  const nodes = new Map<number, NodeLayout>();
+  for (const node of nodesByColumn) for (const member of node.collapsed ?? [node.changeset]) nodes.set(member.id, node);
+
   return {
-    nodes: new Map(nodesByColumn.flatMap((node) => (node.collapsed ?? [node.changeset]).map((member) => [member.id, node] as const))),
+    nodes,
     nodesByColumn,
     lanes,
     lanesByBranch,
@@ -71,7 +77,7 @@ export function layoutGraph(data: BranchExplorerData, structureOnly?: StructureO
       (label) => label.changeset,
     ),
     columnCount: shown.length,
-    rowCount: Math.max(0, ...lanes.map((lane) => lane.row + 1)),
+    rowCount: lanes.reduce((count, lane) => Math.max(count, lane.row + 1), 0),
   };
 }
 
@@ -89,14 +95,16 @@ function buildLanes(branches: GraphBranch[], changesets: GraphChangeset[], colum
     // A branch with no visible changesets and no visible base has nothing to draw.
     if (own.length === 0 && baseColumn === undefined) return [];
 
-    const ownColumns = own.map((changeset) => columnOf.get(changeset.id)!);
+    // Changesets come in column order, so a branch's own columns run from its first changeset to its last.
+    const firstOwnColumn = first ? columnOf.get(first.id)! : null;
+    const lastOwnColumn = first ? columnOf.get(own.at(-1)!.id)! : null;
     const isOnOtherBranch = baseColumn !== undefined && !own.some((changeset) => changeset.id === baseChangeset);
     return [
       {
         branch,
-        startColumn: Math.min(...ownColumns, baseColumn ?? Number.POSITIVE_INFINITY),
-        endColumn: Math.max(...ownColumns, baseColumn ?? Number.NEGATIVE_INFINITY),
-        firstOwnColumn: ownColumns.length > 0 ? Math.min(...ownColumns) : null,
+        startColumn: Math.min(firstOwnColumn ?? Number.POSITIVE_INFINITY, baseColumn ?? Number.POSITIVE_INFINITY),
+        endColumn: Math.max(lastOwnColumn ?? Number.NEGATIVE_INFINITY, baseColumn ?? Number.NEGATIVE_INFINITY),
+        firstOwnColumn,
         baseChangeset: isOnOtherBranch ? baseChangeset : null,
       },
     ];
@@ -112,13 +120,12 @@ function placeLanes(unplaced: UnplacedLane[]): Lane[] {
   );
   const roots = unplaced.filter((lane) => !byName.has(lane.branch.parent)).sort(rootOrder);
 
-  const occupiedByRow: [number, number][][] = [];
+  const occupiedByRow: RowOccupancy[] = [];
   const placed: Lane[] = [];
 
   const place = (lane: UnplacedLane, minimumRow: number): void => {
     let row = minimumRow;
-    while (overlaps(occupiedByRow[row], lane)) row++;
-    (occupiedByRow[row] ??= []).push([lane.startColumn - LANE_GAP, lane.endColumn + LANE_GAP]);
+    while (!occupy((occupiedByRow[row] ??= { starts: [], ends: [] }), lane.startColumn, lane.endColumn)) row++;
     placed.push({ ...lane, row });
 
     const children = [...(childrenOf.get(lane.branch.name) ?? [])].sort((a, b) => a.startColumn - b.startColumn);
@@ -136,8 +143,28 @@ function rootOrder(a: UnplacedLane, b: UnplacedLane): number {
   return aIsMain - bIsMain || a.startColumn - b.startColumn;
 }
 
-function overlaps(intervals: [number, number][] | undefined, lane: UnplacedLane): boolean {
-  return (intervals ?? []).some(([start, end]) => lane.startColumn <= end && lane.endColumn >= start);
+/** The column spans of the lanes in a row, sorted: they never overlap, so their starts and their ends both ascend. */
+interface RowOccupancy {
+  starts: number[];
+  ends: number[];
+}
+
+/**
+ * Takes the span in the row if it stays `LANE_GAP` columns clear of every lane there. A binary search: a row holds
+ * up to thousands of lanes.
+ */
+function occupy(row: RowOccupancy, start: number, end: number): boolean {
+  let low = 0;
+  let high = row.ends.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (row.ends[middle]! + LANE_GAP < start) low = middle + 1;
+    else high = middle;
+  }
+  if (low < row.starts.length && row.starts[low]! - LANE_GAP <= end) return false;
+  row.starts.splice(low, 0, start);
+  row.ends.splice(low, 0, end);
+  return true;
 }
 
 function groupBy<Item, Key>(items: readonly Item[], keyOf: (item: Item) => Key): Map<Key, Item[]> {
