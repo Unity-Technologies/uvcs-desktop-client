@@ -1,14 +1,16 @@
 import { useQueries } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ContentSource, FileContent } from '@shared/domain/content';
+import type { ContentSource } from '@shared/domain/content';
 import type { FileConflictResolution } from '@shared/domain/merge';
 import type { MergeTool, MergeToolOutcome } from '@shared/domain/mergeTools';
 import { api } from '../../../api/client';
 import { queryKeys } from '../../../api/queryKeys';
 import type { MergeLabels } from '../mergeDescription';
 import { resolveInMergeTool, type OpenTool } from '../mergeTools/resolveInMergeTool';
-import { initialDecision, remainingConflicts, resolutionOf, type FileConflictDecision } from './fileConflictDecision';
-import { buildConflictDocument, type ConflictDocument } from './threeWayMerge';
+import type { FileConflictDecision } from './fileConflictDecision';
+import { buildStates, type BuiltStates } from './fileConflictStates';
+import type { ConflictContents } from './loadedConflict';
+import type { ConflictDocument } from './threeWayMerge';
 
 /** A file changed on both sides, and where to read each version from. */
 export interface ConflictedFile {
@@ -19,12 +21,6 @@ export interface ConflictedFile {
   base: ContentSource;
   source: ContentSource;
   destination: ContentSource;
-}
-
-export interface ConflictContents {
-  base: FileContent;
-  source: FileContent;
-  destination: FileContent;
 }
 
 export interface FileConflictState {
@@ -46,8 +42,6 @@ export interface FileConflictState {
   openTool?: OpenTool;
 }
 
-type LoadedFile = { status: 'loading' } | { status: 'error'; error: Error } | { status: 'ready'; contents: ConflictContents; document?: ConflictDocument };
-
 /**
  * Loads the three versions of every conflicting file, merges them automatically where possible
  * and keeps the user's decisions for the rest, including the ones made in a merge tool.
@@ -55,25 +49,32 @@ type LoadedFile = { status: 'loading' } | { status: 'error'; error: Error } | { 
 export function useFileConflicts(workspacePath: string, files: ConflictedFile[], labels: MergeLabels) {
   const [decisions, setDecisions] = useState<Record<string, FileConflictDecision>>({});
   const [openTools, setOpenTools] = useState<Record<string, OpenTool>>({});
-  const queries = useQueries({
-    queries: files
-      .flatMap((file) => [file.base, file.source, file.destination])
-      .map((source) => ({
-        queryKey: queryKeys.inWorkspace(workspacePath, 'content', source),
-        queryFn: () => api.content.read(workspacePath, source),
-        staleTime: Infinity,
-      })),
-  });
+  // Kept while the files are: three queries a file, which TanStack hashes and subscribes to again whenever they're new.
+  const contentQueries = useMemo(
+    () =>
+      files
+        .flatMap((file) => [file.base, file.source, file.destination])
+        .map((source) => ({
+          queryKey: queryKeys.inWorkspace(workspacePath, 'content', source),
+          queryFn: () => api.content.read(workspacePath, source),
+          staleTime: Infinity,
+        })),
+    [workspacePath, files],
+  );
+  const queries = useQueries({ queries: contentQueries });
 
-  // Merging is the expensive part: only redo it when some content finishes loading.
   // `queries` is a new array on every render, so `loadedVersion` stands for it in the dependencies.
   const loadedVersion = queries.map((query) => `${query.status}:${query.dataUpdatedAt}`).join('|');
-  const loadedFiles = useMemo(
-    () => files.map((_, index) => loadFile(queries.slice(index * 3, index * 3 + 3), labels)),
-    [files, labels, loadedVersion],
-  );
-
-  const states = files.map((file, index) => toState(file, loadedFiles[index]!, decisions[file.key], openTools[file.key]));
+  const built = useRef<BuiltStates>(new Map());
+  const states = useMemo(() => {
+    const next = buildStates(
+      files.map((file, index) => ({ file, versions: queries.slice(index * 3, index * 3 + 3), decision: decisions[file.key], openTool: openTools[file.key] })),
+      labels,
+      built.current,
+    );
+    built.current = next.built;
+    return next.states;
+  }, [files, labels, loadedVersion, decisions, openTools]);
   const latest = useRef({ states, openTools });
   latest.current = { states, openTools };
 
@@ -111,40 +112,4 @@ export function useFileConflicts(workspacePath: string, files: ConflictedFile[],
   useEffect(() => () => Object.values(latest.current.openTools).forEach((open) => void api.mergeTools.stopWaiting(open.sessionId)), []);
 
   return { states, decide, reset, resolveInTool };
-}
-
-function loadFile(versions: { data?: FileContent; error: Error | null }[], labels: MergeLabels): LoadedFile {
-  const error = versions.find((version) => version.error)?.error;
-  if (error) return { status: 'error', error };
-
-  const [base, source, destination] = versions.map((version) => version.data);
-  if (!base || !source || !destination) return { status: 'loading' };
-
-  const isBinary = base.isBinary || source.isBinary || destination.isBinary;
-  return {
-    status: 'ready',
-    contents: { base, source, destination },
-    document: isBinary ? undefined : buildConflictDocument(base.text ?? '', source.text ?? '', destination.text ?? '', labels),
-  };
-}
-
-function toState(file: ConflictedFile, loaded: LoadedFile, userDecision: FileConflictDecision | undefined, openTool: OpenTool | undefined): FileConflictState {
-  const waiting = { file, isBinary: false, decidedByUser: false, resolution: null, mergedAutomatically: false, remainingConflicts: 0 };
-  if (loaded.status === 'loading') return { ...waiting, status: 'loading' };
-  if (loaded.status === 'error') return { ...waiting, status: 'error', error: loaded.error };
-
-  const decision = userDecision ?? initialDecision(loaded.document);
-  return {
-    file,
-    status: 'ready',
-    contents: loaded.contents,
-    isBinary: !loaded.document,
-    document: loaded.document,
-    decision,
-    decidedByUser: Boolean(userDecision),
-    resolution: openTool ? null : resolutionOf(decision),
-    mergedAutomatically: !userDecision && loaded.document?.conflictCount === 0,
-    remainingConflicts: remainingConflicts(decision),
-    ...(openTool && { openTool }),
-  };
 }

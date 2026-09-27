@@ -28,6 +28,15 @@ export interface WorkspaceChange {
   metadata: boolean;
 }
 
+/** What two changes in a row changed, as one. */
+export function mergeChanges(first: WorkspaceChange, second: WorkspaceChange): WorkspaceChange {
+  return {
+    content: first.content || second.content,
+    pathsChanged: first.pathsChanged || second.pathsChanged,
+    metadata: first.metadata || second.metadata,
+  };
+}
+
 /**
  * Events pushed from the main process to the renderer. Each window gets the commands and progress of its own
  * API calls, and the changes of the workspace it shows.

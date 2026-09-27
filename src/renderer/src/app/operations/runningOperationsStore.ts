@@ -43,6 +43,19 @@ export function useRunningOperation(workspacePath: string): RunningOperation | u
 }
 
 /**
+ * The oldest operation running on the workspace while it's an update or a switch, as `useRunningOperation`: views that
+ * show only that one don't render again for every progress report of any other.
+ */
+export function useRunningOperationOfKind(workspacePath: string, kind: WorkspaceChangingOperation): RunningOperation | undefined {
+  return useRunningOperationsStore((state) => runningOperationOfKind(state.operations, workspacePath, kind));
+}
+
+export function runningOperationOfKind(operations: RunningOperation[], workspacePath: string, kind: WorkspaceChangingOperation): RunningOperation | undefined {
+  const running = operations.find((operation) => operation.workspacePath === workspacePath);
+  return running?.kind === kind ? running : undefined;
+}
+
+/**
  * What keeps an operation from starting on the workspace: for an update or a switch, any other operation on it; for
  * anything else (a checkin, a shelve, a merge), an update or a switch rewriting its files meanwhile.
  */

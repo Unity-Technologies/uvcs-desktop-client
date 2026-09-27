@@ -1,11 +1,12 @@
 import { Editor } from '@pierre/diffs/edit';
-import { EditProvider, File } from '@pierre/diffs/react';
-import { useMemo, useRef, useState } from 'react';
+import { EditProvider, File, VirtualizerContext } from '@pierre/diffs/react';
+import { useMemo, useState } from 'react';
 import { PaneScrollbars } from '../../diff/viewer/PaneScrollbars';
+import { highlightedLanguage, syntaxHighlighting } from '../../diff/viewer/syntaxHighlighting';
 import { usePierreOptions } from './usePierreOptions';
+import { useSurfaceVirtualizer } from './useSurfaceVirtualizer';
 import styles from './TextSurface.module.css';
 import { diskText, shownText } from '../../../lib/lineBreaks';
-import { syntaxLanguage } from '../../../lib/syntaxLanguage';
 
 interface HandEditorProps {
   path: string;
@@ -18,20 +19,26 @@ const createEditor: React.ComponentProps<typeof EditProvider>['createEditor'] = 
 
 /**
  * Resolving a conflict by hand: the merged text, free to change. The editor owns the document, so its start stays
- * fixed. It holds the text with lone CRs as LFs; the text it reports keeps the file's own line breaks.
+ * fixed. It holds the text with lone CRs as LFs; the text it reports keeps the file's own line breaks. Like the
+ * whole-file editor of a diff, it renders only the lines in view, and a big text is plain (Pierre highlights an
+ * editor on the main thread).
  */
 export function HandEditor({ path, text, onChange }: HandEditorProps) {
-  const options = usePierreOptions();
+  const pierreOptions = usePierreOptions();
   const [initialText] = useState(text);
-  const file = useMemo(() => ({ name: path, lang: syntaxLanguage(path), contents: shownText(initialText) }), [path, initialText]);
-  const surface = useRef<HTMLDivElement>(null);
+  const highlighting = syntaxHighlighting(initialText, '', true);
+  const options = useMemo(() => ({ ...pierreOptions, tokenizeMaxLength: highlighting === 'off' ? 0 : undefined }), [pierreOptions, highlighting]);
+  const file = useMemo(() => ({ name: path, lang: highlightedLanguage(highlighting, path), contents: shownText(initialText) }), [path, highlighting, initialText]);
+  const { virtualizer, surfaceRef, setSurface } = useSurfaceVirtualizer();
 
   return (
-    <div ref={surface} className={styles.surface}>
-      <EditProvider createEditor={createEditor}>
-        <File file={file} disableWorkerPool options={options} edit onEditChange={(event) => onChange(diskText(event.file.contents, initialText))} />
-      </EditProvider>
-      <PaneScrollbars containerRef={surface} />
+    <div ref={setSurface} className={styles.surface}>
+      <VirtualizerContext.Provider value={virtualizer}>
+        <EditProvider createEditor={createEditor}>
+          <File file={file} disableWorkerPool options={options} edit onEditChange={(event) => onChange(diskText(event.file.contents, initialText))} />
+        </EditProvider>
+      </VirtualizerContext.Provider>
+      <PaneScrollbars containerRef={surfaceRef} />
     </div>
   );
 }

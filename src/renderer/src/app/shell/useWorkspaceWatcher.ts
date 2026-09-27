@@ -2,7 +2,7 @@ import type { Query } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import type { WatchCoverage } from '@shared/api/workspaces';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
-import type { WorkspaceChange } from '@shared/events';
+import { mergeChanges, type WorkspaceChange } from '@shared/events';
 import { api } from '../../api/client';
 import { queryKeys, workspaceKey } from '../../api/queryKeys';
 import { useUvcsEvent } from '../../api/useUvcsEvent';
@@ -53,9 +53,28 @@ export function useWorkspaceWatcher(): void {
     }
   }, [workspacePath, autoRefresh, coverage]);
 
-  useUvcsEvent('workspaceChanged', (event) => {
-    if (event.workspacePath === workspacePath) void refreshForChange(workspacePath, event, autoRefresh);
+  // A hidden window (minimized, covered, on another desktop) refreshes once, when it shows again, for all the changes
+  // meanwhile: agents writing in several workspaces would otherwise keep every window re-reading its changes.
+  const held = useRef<{ workspacePath: string; change: WorkspaceChange } | null>(null);
+  useUvcsEvent('workspaceChanged', ({ workspacePath: changedPath, ...change }) => {
+    if (changedPath !== workspacePath) return;
+    if (document.visibilityState === 'visible') {
+      void refreshForChange(workspacePath, change, autoRefresh);
+      return;
+    }
+    const before = held.current?.workspacePath === workspacePath ? held.current.change : null;
+    held.current = { workspacePath, change: before ? mergeChanges(before, change) : change };
   });
+  useEffect(() => {
+    const refreshHeld = () => {
+      if (document.visibilityState !== 'visible' || !held.current) return;
+      const { workspacePath: heldPath, change } = held.current;
+      held.current = null;
+      if (heldPath === workspacePath) void refreshForChange(workspacePath, change, autoRefresh);
+    };
+    document.addEventListener('visibilitychange', refreshHeld);
+    return () => document.removeEventListener('visibilitychange', refreshHeld);
+  }, [workspacePath, autoRefresh]);
 }
 
 function inWorkspace(workspacePath: string, affected: (key: readonly unknown[]) => boolean) {

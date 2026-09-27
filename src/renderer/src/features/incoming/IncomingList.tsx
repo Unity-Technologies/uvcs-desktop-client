@@ -1,5 +1,6 @@
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { GitCommitVertical } from 'lucide-react';
-import { useId, type KeyboardEvent } from 'react';
+import { useId, useMemo, useRef, type KeyboardEvent } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import type { DiffEntry, DiffStatus } from '@shared/domain/diff';
 import { PathLabel } from '../../components/PathLabel';
@@ -9,11 +10,12 @@ import { firstLine } from '../../lib/text';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { Avatar } from '../../ui/Avatar';
 import { RelativeTime } from '../../ui/RelativeTime';
+import { incomingRows, selectionKey, type IncomingRow, type IncomingSelection } from './incomingRows';
 import styles from './IncomingList.module.css';
 
 const TONES: Record<DiffStatus, StatusTone> = { added: 'added', changed: 'changed', deleted: 'deleted', moved: 'moved' };
-
-export type IncomingSelection = { kind: 'changeset'; id: number } | { kind: 'file'; path: string };
+/** Estimates until each row is measured: a section header, a changeset (two lines) and a file. */
+const ESTIMATED_HEIGHTS: Record<IncomingRow['type'], number> = { section: 29, changeset: 49, file: 28 };
 
 interface IncomingListProps {
   changesets: Changeset[];
@@ -29,40 +31,42 @@ interface IncomingListProps {
   onSelect: (selection: IncomingSelection) => void;
 }
 
+/** Hundreds of changesets and thousands of files: only the rows in view render. */
 export function IncomingList({ changesets, files, conflictPaths, pendingConflictPaths, blockedPaths, openToolByPath, selection, onSelect }: IncomingListProps) {
-  const isBlocking = (file: DiffEntry): boolean => blockedPaths.has(file.oldPath ?? file.path);
-  const collides = (file: DiffEntry): boolean => conflictPaths.has(file.path) || isBlocking(file);
-  const conflicting = files.filter(collides);
-  const others = files.filter((file) => !collides(file));
-  const isSelectedFile = (path: string): boolean => selection?.kind === 'file' && selection.path === path;
+  const { rows, entries, rowIndexOf } = useMemo(() => incomingRows(changesets, files, conflictPaths, blockedPaths), [changesets, files, conflictPaths, blockedPaths]);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const virtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => viewportRef.current,
+    estimateSize: (index) => ESTIMATED_HEIGHTS[rows[index]!.type],
+    getItemKey: (index) => rows[index]!.key,
+    overscan: 12,
+  });
   const idPrefix = useId();
-  // In the order shown, for the arrows.
-  const entries: IncomingSelection[] = [
-    ...conflicting.map((file) => ({ kind: 'file' as const, path: file.path })),
-    ...changesets.map((changeset) => ({ kind: 'changeset' as const, id: changeset.id })),
-    ...others.map((file) => ({ kind: 'file' as const, path: file.path })),
-  ];
-  const optionId = (entry: IncomingSelection): string => `${idPrefix}-${entries.findIndex((candidate) => sameEntry(candidate, entry))}`;
-  const selectedIndex = selection ? entries.findIndex((entry) => sameEntry(entry, selection)) : -1;
+  const selectedKey = selection && selectionKey(selection);
+  const selectedRow = selectedKey === null ? undefined : rows[rowIndexOf.get(selectedKey) ?? -1];
+  const selectedIndex = selectedRow && selectedRow.type !== 'section' ? selectedRow.entryIndex : -1;
+  const isBlocking = (file: DiffEntry): boolean => blockedPaths.has(file.oldPath ?? file.path);
 
   const onKeyDown = (event: KeyboardEvent): void => {
     const ends: Record<string, number> = { Home: 0, End: entries.length - 1 };
     const target = ends[event.key] ?? navigationTarget(event.key, selectedIndex, entries.length);
     if (target === null || target === undefined || entries.length === 0) return;
     event.preventDefault();
-    onSelect(entries[target]!);
-    document.getElementById(optionId(entries[target]!))?.scrollIntoView({ block: 'nearest' });
+    const entry = entries[target]!;
+    onSelect(entry.selection);
+    // The first one shows its section's header too.
+    virtualizer.scrollToIndex(target === 0 ? 0 : rowIndexOf.get(entry.key)!);
   };
 
-  const fileRow = (file: DiffEntry) => (
+  const fileRow = (file: DiffEntry, key: string, entryIndex: number) => (
     <button
-      key={file.path}
-      id={optionId({ kind: 'file', path: file.path })}
+      id={`${idPrefix}-${entryIndex}`}
       role="option"
-      aria-selected={isSelectedFile(file.path)}
+      aria-selected={key === selectedKey}
       tabIndex={-1}
       className={styles.row}
-      data-selected={isSelectedFile(file.path)}
+      data-selected={key === selectedKey}
       onClick={() => onSelect({ kind: 'file', path: file.path })}
     >
       {openToolByPath.has(file.path) ? (
@@ -82,8 +86,30 @@ export function IncomingList({ changesets, files, conflictPaths, pendingConflict
     </button>
   );
 
+  const changesetRow = (changeset: Changeset, key: string, entryIndex: number) => (
+    <button
+      id={`${idPrefix}-${entryIndex}`}
+      role="option"
+      aria-selected={key === selectedKey}
+      tabIndex={-1}
+      className={styles.changeset}
+      data-selected={key === selectedKey}
+      onClick={() => onSelect({ kind: 'changeset', id: changeset.id })}
+    >
+      <GitCommitVertical size={14} className={styles.changesetIcon} />
+      <span className={styles.changesetText}>
+        <span className={styles.comment}>{firstLine(changeset.comment) || 'No comment'}</span>
+        <span className={styles.meta}>
+          <Avatar user={changeset.owner} size={14} />
+          cs:{changeset.id} · <RelativeTime date={changeset.date} />
+        </span>
+      </span>
+    </button>
+  );
+
   return (
     <div
+      ref={viewportRef}
       className={styles.list}
       tabIndex={0}
       role="listbox"
@@ -92,56 +118,33 @@ export function IncomingList({ changesets, files, conflictPaths, pendingConflict
       onKeyDown={onKeyDown}
       {...MAIN_FOCUS}
     >
-      {conflicting.length > 0 && (
-        <Section label="Changed on both sides" count={conflicting.length}>
-          {conflicting.map(fileRow)}
-        </Section>
-      )}
-      <Section label="Changesets" count={changesets.length}>
-        {changesets.map((changeset) => (
-          <button
-            key={changeset.id}
-            id={optionId({ kind: 'changeset', id: changeset.id })}
-            role="option"
-            aria-selected={selection?.kind === 'changeset' && selection.id === changeset.id}
-            tabIndex={-1}
-            className={styles.changeset}
-            data-selected={selection?.kind === 'changeset' && selection.id === changeset.id}
-            onClick={() => onSelect({ kind: 'changeset', id: changeset.id })}
-          >
-            <GitCommitVertical size={14} className={styles.changesetIcon} />
-            <span className={styles.changesetText}>
-              <span className={styles.comment}>{firstLine(changeset.comment) || 'No comment'}</span>
-              <span className={styles.meta}>
-                <Avatar user={changeset.owner} size={14} />
-                cs:{changeset.id} · <RelativeTime date={changeset.date} />
-              </span>
-            </span>
-          </button>
-        ))}
-      </Section>
-      {others.length > 0 && (
-        <Section label="Files" count={others.length}>
-          {others.map(fileRow)}
-        </Section>
-      )}
-    </div>
-  );
-}
-
-function sameEntry(a: IncomingSelection, b: IncomingSelection): boolean {
-  return a.kind === 'file' ? b.kind === 'file' && a.path === b.path : b.kind === 'changeset' && a.id === b.id;
-}
-
-function Section({ label, count, children }: { label: string; count: number; children: React.ReactNode }) {
-  const headerId = useId();
-  return (
-    <section className={styles.section} role="group" aria-labelledby={headerId}>
-      <div id={headerId} className={styles.sectionHeader}>
-        <span>{label}</span>
-        <span className={styles.count}>{count}</span>
+      <div className={styles.rows} style={{ height: virtualizer.getTotalSize() }}>
+        {virtualizer.getVirtualItems().map((item) => {
+          const row = rows[item.index]!;
+          return (
+            <div
+              key={row.key}
+              ref={virtualizer.measureElement}
+              data-index={item.index}
+              role="presentation"
+              className={styles.slot}
+              data-section-start={row.type === 'section' && item.index > 0}
+              style={{ transform: `translateY(${item.start}px)` }}
+            >
+              {row.type === 'section' ? (
+                <div className={styles.sectionHeader}>
+                  <span>{row.label}</span>
+                  <span className={styles.count}>{row.count}</span>
+                </div>
+              ) : row.type === 'file' ? (
+                fileRow(row.file, row.key, row.entryIndex)
+              ) : (
+                changesetRow(row.changeset, row.key, row.entryIndex)
+              )}
+            </div>
+          );
+        })}
       </div>
-      {children}
-    </section>
+    </div>
   );
 }
