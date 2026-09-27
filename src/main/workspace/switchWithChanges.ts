@@ -1,6 +1,6 @@
 import { join } from 'node:path';
-import type { PendingChangesSnapshot } from '@shared/domain/pendingChanges';
-import type { PendingChangesAction, RestoredChanges, SwitchResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
+import type { PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
+import type { PendingChangesAction, RenamedPrivateFile, RestoredChanges, SwitchResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
@@ -11,6 +11,7 @@ import type { SettingsStore } from '../settings/SettingsStore';
 import type { LeftChangesFinder } from './leftChanges';
 import { changedPaths, newItemPaths, shelvedChangelists, summarizePending, SWITCH_STATUS_ARGS } from './pendingSnapshot';
 import { moveAside, putBack } from './privateBackups';
+import { renamedPrivateFiles } from './renamedPrivateFiles';
 import { selectorObjectRef } from './selectorObjectRef';
 import { bringDisabledReason, describeSelector, parseSelectorSpec, selectorSpec } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
@@ -45,9 +46,22 @@ export async function switchWithChanges(
   action: PendingChangesAction | undefined,
   context: OperationContext,
 ): Promise<SwitchResult> {
+  const workspace = await readWorkspaceIdentity(deps.cm, workspacePath);
+  const snapshot = parsePendingChanges(await deps.cm.query(SWITCH_STATUS_ARGS, { cwd: workspacePath }));
+  const result = await switchFrom(deps, workspacePath, workspace, snapshot, targetSpec, action, context);
+  return { ...result, renamedPrivates: await privatesRenamedSince(deps.cm, workspacePath, snapshot) };
+}
+
+async function switchFrom(
+  deps: SwitchDependencies,
+  workspacePath: string,
+  workspace: WorkspaceIdentity,
+  snapshot: PendingChangesSnapshot,
+  targetSpec: string,
+  action: PendingChangesAction | undefined,
+  context: OperationContext,
+): Promise<SwitchResult> {
   const { cm } = deps;
-  const workspace = await readWorkspaceIdentity(cm, workspacePath);
-  const snapshot = parsePendingChanges(await cm.query(SWITCH_STATUS_ARGS, { cwd: workspacePath }));
   const summary = summarizePending(snapshot.changes);
   const switchTo = (): Promise<string> =>
     cm.execute(switchArgs(targetSpec), { cwd: workspacePath, signal: context.signal, onOutputLine: context.progressOf(readUpdateProgress) });
@@ -74,6 +88,21 @@ export async function switchWithChanges(
     return { kind: 'left', shelveId: record.shelveId, count: record.paths.length, sourceName: record.source.name, restored };
   }
   return bringChanges(deps, workspacePath, record, committed);
+}
+
+/** Private files can only be in the way when there were some: otherwise nothing more is read. */
+async function privatesRenamedSince(cm: CmClient, workspacePath: string, snapshot: PendingChangesSnapshot): Promise<RenamedPrivateFile[] | undefined> {
+  const privatePaths = (changes: PendingChange[]): string[] => changes.filter((change) => change.kinds.includes('private')).map((change) => change.path);
+  const before = privatePaths(snapshot.changes);
+  if (before.length === 0) return undefined;
+  try {
+    const after = privatePaths(parsePendingChanges(await cm.query(['status', '--xml', '--private'], { cwd: workspacePath })).changes);
+    const renamed = renamedPrivateFiles(before, after);
+    return renamed.length > 0 ? renamed : undefined;
+  } catch {
+    // The switch is done; this only adds to what it tells.
+    return undefined;
+  }
 }
 
 function assertAllowed(action: PendingChangesAction, targetSpec: string, workspace: WorkspaceIdentity): void {
