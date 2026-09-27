@@ -5,7 +5,7 @@ import type { MenuEntry } from '../../lib/actions';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { compareSortValues } from '../../lib/naturalCompare';
 import { isMac } from '../../lib/platform';
-import { selectOnArrow, selectOnClick, successorKey, type SelectionState } from '../../lib/selection';
+import { focusedKeyOf, selectOnArrow, selectOnClick, successorKey, type SelectionState } from '../../lib/selection';
 import { ActionContextMenu } from '../menu/ActionContextMenu';
 import { cellText } from './cellText';
 import styles from './DataTable.module.css';
@@ -88,7 +88,7 @@ export function DataTable<Row>({
   }, [hidesColumns]);
   const orderedKeys = useMemo(() => sortedRows.map(rowKey), [sortedRows, rowKey]);
   const rowsByKey = useMemo(() => new Map(sortedRows.map((row) => [rowKey(row), row])), [sortedRows, rowKey]);
-  const focused = focusedKey !== null && rowsByKey.has(focusedKey) ? focusedKey : selection.anchor;
+  const focused = focusedKeyOf(focusedKey, selection, (key) => rowsByKey.has(key));
   const focusedIndex = focused === null ? -1 : orderedKeys.indexOf(focused);
 
   const virtualizer = useVirtualizer({

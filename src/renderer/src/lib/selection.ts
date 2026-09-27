@@ -11,6 +11,14 @@ interface ClickModifiers {
   toggle: boolean;
 }
 
+/**
+ * The row keyboard moves go from: the one last moved to or clicked while it's shown and selected, else the anchor.
+ * A selection set from outside the list (a row just created) holds no such row, so focus follows it.
+ */
+export function focusedKeyOf(movedTo: string | null, state: SelectionState, isShown: (key: string) => boolean): string | null {
+  return movedTo !== null && isShown(movedTo) && state.selected.has(movedTo) ? movedTo : state.anchor;
+}
+
 /** Applies a click with platform selection semantics: plain, ⌘/Ctrl (toggle) and Shift (range). */
 export function selectOnClick(
   state: SelectionState,

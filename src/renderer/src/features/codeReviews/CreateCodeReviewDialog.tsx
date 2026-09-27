@@ -26,17 +26,18 @@ const SPEC_PREFIX: Record<ReviewTargetKind, string> = { branch: 'br', changeset:
  * Opens the "new code review" dialog. Other features can prefill the target,
  * e.g. from a branch, changeset or shelve context menu.
  */
-export function openCreateCodeReviewDialog(workspacePath: string, initialTarget: ReviewTargetDraft): void {
-  openDialog((close) => <CreateCodeReviewDialog workspacePath={workspacePath} initialTarget={initialTarget} onClose={close} />);
+export function openCreateCodeReviewDialog(workspacePath: string, initialTarget: ReviewTargetDraft, onCreated?: (reviewId: number) => void): void {
+  openDialog((close) => <CreateCodeReviewDialog workspacePath={workspacePath} initialTarget={initialTarget} onClose={close} onCreated={onCreated} />);
 }
 
 interface CreateCodeReviewDialogProps {
   workspacePath: string;
   initialTarget: ReviewTargetDraft;
   onClose: () => void;
+  onCreated?: (reviewId: number) => void;
 }
 
-function CreateCodeReviewDialog({ workspacePath, initialTarget, onClose }: CreateCodeReviewDialogProps) {
+function CreateCodeReviewDialog({ workspacePath, initialTarget, onClose, onCreated }: CreateCodeReviewDialogProps) {
   const branchListId = useId();
   const { data: branches } = useBranches();
   const [targetKind, setTargetKind] = useState<ReviewTargetKind>(initialTarget.kind);
@@ -58,6 +59,7 @@ function CreateCodeReviewDialog({ workspacePath, initialTarget, onClose }: Creat
     if (reviewId === undefined) return;
 
     onClose();
+    onCreated?.(reviewId);
     toast.success(`Created code review ${reviewId}`, undefined, {
       label: 'Open',
       run: () => navigation.openPage({ kind: 'codeReview', reviewId }),

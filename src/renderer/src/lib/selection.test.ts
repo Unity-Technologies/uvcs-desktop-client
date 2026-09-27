@@ -1,5 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_SELECTION, selectOnArrow, selectOnClick, successorKey } from './selection';
+import { EMPTY_SELECTION, focusedKeyOf, selectOnArrow, selectOnClick, successorKey } from './selection';
+
+describe('focusedKeyOf', () => {
+  const shown = (key: string): boolean => ['a', 'b', 'c'].includes(key);
+
+  it('keeps the row moved to inside a range', () => {
+    expect(focusedKeyOf('c', { selected: new Set(['a', 'b', 'c']), anchor: 'a' }, shown)).toBe('c');
+  });
+
+  it('follows a selection set from outside the list', () => {
+    expect(focusedKeyOf('b', { selected: new Set(['a']), anchor: 'a' }, shown)).toBe('a');
+  });
+
+  it('falls back to the anchor when the row moved to is gone', () => {
+    expect(focusedKeyOf('z', { selected: new Set(['z', 'a']), anchor: 'a' }, shown)).toBe('a');
+  });
+});
 
 const keys = ['a', 'b', 'c', 'd'];
 const plain = { shift: false, toggle: false };
