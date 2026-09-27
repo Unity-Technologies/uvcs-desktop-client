@@ -7,6 +7,7 @@ import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
 import { NoSelection } from '../../components/NoSelection';
+import { matchesAllWords } from '../../lib/matchesAllWords';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
@@ -14,6 +15,7 @@ import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
+import { cellText } from '../../ui/table/cellText';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { editAttributeComment } from './attributeOperations';
@@ -21,6 +23,7 @@ import { AttributeTypeDetails } from './AttributeTypeDetails';
 import { attributeTypeMenu } from './attributeTypeMenu';
 import { openCreateAttributeDialog } from './CreateAttributeDialog';
 import { useAttributeTypes } from './useAttributes';
+import styles from './AttributesView.module.css';
 
 const COLUMNS: Column<AttributeType>[] = [
   {
@@ -28,14 +31,10 @@ const COLUMNS: Column<AttributeType>[] = [
     header: 'Name',
     grow: 1,
     sortValue: (type) => type.name,
-    render: (type) => (
-      <strong>
-        <Highlight text={type.name} />
-      </strong>
-    ),
+    render: (type) => <strong className={styles.name}>{cellText(<Highlight text={type.name} />)}</strong>,
   },
   { id: 'comment', header: 'Comment', grow: 3, secondary: true, render: (type) => <Highlight text={type.comment} /> },
-  { id: 'owner', header: 'Created by', width: 180, sortValue: (type) => type.owner, render: (type) => <UserLabel user={type.owner} /> },
+  { id: 'owner', header: 'Created by', width: 180, hideBelow: 700, sortValue: (type) => type.owner, render: (type) => <UserLabel user={type.owner} /> },
   { id: 'date', header: 'Created', width: 130, secondary: true, sortValue: (type) => type.date, render: (type) => <RelativeTime date={type.date} /> },
 ];
 
@@ -45,11 +44,11 @@ export function AttributesView() {
   const [search, setSearch] = useState('');
   const [selection, setSelection] = useViewSelection('attributes');
 
-  const visible = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    return (types ?? []).filter((type) => `${type.name} ${type.comment}`.toLowerCase().includes(needle));
-  }, [types, search]);
-  const selected = visible.find((type) => type.name === selection.anchor);
+  const visible = useMemo(
+    () => (search.trim() ? (types ?? []).filter((type) => matchesAllWords(`${type.name}\n${type.comment}\n${type.owner}`, search)) : (types ?? [])),
+    [types, search],
+  );
+  const selected = visible.find((type) => typeKey(type) === selection.anchor);
 
   return (
     <>
@@ -71,6 +70,8 @@ export function AttributesView() {
         <ListWithDetailsSkeleton columns={COLUMNS} />
       ) : error ? (
         <EmptyState title="Couldn't load attributes" description={error.message} />
+      ) : visible.length === 0 && search.trim() ? (
+        <EmptyState icon={<Tags size={22} />} title="No matching attributes" description="Try a different filter." />
       ) : visible.length === 0 ? (
         <EmptyState
           icon={<Tags size={22} />}
@@ -85,7 +86,7 @@ export function AttributesView() {
               <DataTable
                 rows={visible}
                 columns={COLUMNS}
-                rowKey={(type) => type.name}
+                rowKey={typeKey}
                 selection={selection}
                 onSelectionChange={setSelection}
                 selectFirstRow
@@ -105,4 +106,9 @@ export function AttributesView() {
       )}
     </>
   );
+}
+
+/** By id, so a renamed attribute stays selected. */
+function typeKey(type: AttributeType): string {
+  return String(type.id);
 }
