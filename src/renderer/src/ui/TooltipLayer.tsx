@@ -32,11 +32,20 @@ export function TooltipLayer() {
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pointer = useRef({ x: 0, y: 0 });
   const gate = useRef(new TooltipGate());
+  // Hiding only a tip that was shown: setting null again queues a React update on the layer, kept until it next
+  // renders, for every key, press, scroll and move over the untipped (tens of thousands in a session).
+  const shown = useRef(false);
 
   useEffect(() => {
     const hide = (): void => {
       clearTimeout(timer.current);
+      if (!shown.current) return;
+      shown.current = false;
       setTip(null);
+    };
+    const show = (found: FoundTip): void => {
+      shown.current = true;
+      setTip({ ...found, pointerX: pointer.current.x, pointerY: pointer.current.y });
     };
     const onMove = (event: MouseEvent): void => {
       pointer.current = { x: event.clientX, y: event.clientY };
@@ -49,7 +58,7 @@ export function TooltipLayer() {
       const found = (origin instanceof Element && origin !== event.target ? findTip(origin) : null) ?? findTip(event.target as Element | null);
       if (!found || !gate.current.allowsHover) return hide();
       clearTimeout(timer.current);
-      timer.current = setTimeout(() => setTip({ ...found, pointerX: pointer.current.x, pointerY: pointer.current.y }), TOOLTIP_SHOW_DELAY);
+      timer.current = setTimeout(() => show(found), TOOLTIP_SHOW_DELAY);
     };
 
     const unwire = listenForTooltips({ document, window }, { move: onMove, over: onOver, hide });
