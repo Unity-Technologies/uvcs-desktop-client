@@ -42,7 +42,7 @@ export const SHORTCUTS = {
   goToFile: { area: 'General', label: 'Go to file', keys: ['mod+p'] },
   openWorkspace: { area: 'General', label: 'Open another workspace', keys: ['mod+shift+o'], commandId: 'workspace.open' },
   commandLog: { area: 'General', label: 'Command log', keys: ['mod+shift+l'], commandId: 'app.commandLog' },
-  toggleSidebar: { area: 'General', label: 'Fold or unfold the sidebar', keys: ['mod+\\'] },
+  toggleSidebar: { area: 'General', label: 'Collapse or expand the sidebar', keys: ['mod+\\'] },
   saveComment: { area: 'General', label: 'Save an edited comment', keys: ['mod+enter'] },
 
   listMove: { area: 'Lists', label: 'Move the selection', keys: ['up', 'down'] },
