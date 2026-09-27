@@ -60,9 +60,22 @@ export function FileTreeTable({
       align: 'end',
       secondary: true,
       hideBelow: 560,
-      render: (row) => (hasKnownSize(row.item) ? formatSize(row.item.size) : ''),
+      render: (row) => {
+        const onDisk = statusOf?.(row.item)?.onDisk;
+        return onDisk ? formatSize(onDisk.size) : hasKnownSize(row.item) ? formatSize(row.item.size) : '';
+      },
     },
-    { id: 'date', header: 'Modified', width: 116, secondary: true, hideBelow: 520, render: (row) => row.item.date && <RelativeTime date={row.item.date} /> },
+    {
+      id: 'date',
+      header: 'Modified',
+      width: 116,
+      secondary: true,
+      hideBelow: 520,
+      render: (row) => {
+        const date = statusOf?.(row.item)?.onDisk?.date || row.item.date;
+        return date && <RelativeTime date={date} />;
+      },
+    },
     {
       id: 'changeset',
       header: 'Changeset',

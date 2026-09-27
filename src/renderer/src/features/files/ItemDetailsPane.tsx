@@ -14,6 +14,7 @@ import { SegmentedControl } from '../../ui/SegmentedControl';
 import { ChangeDiffPanel } from '../pendingChanges/ChangeDiffPanel';
 import { describeKinds, isControlled } from '../pendingChanges/changeCategories';
 import { useFilesViewStore, type DetailsTab } from './filesViewStore';
+import { onDiskState } from './itemStatus';
 import { itemTypeLabel } from './itemType';
 import { RevisionChanges } from './RevisionChanges';
 
@@ -85,13 +86,15 @@ function ItemProperties({ workspacePath, item, pendingChange }: Omit<ItemDetails
     enabled: !item.isPrivate && settled,
   });
 
+  const onDisk = pendingChange && onDiskState(item, pendingChange);
+  const modified = onDisk?.date || item.date;
   const properties: Property[] = [
     { label: 'Path', value: `/${item.path}`, mono: true, copyText: `/${item.path}` },
     { label: 'Status', value: pendingChange ? describeKinds(pendingChange) : item.isPrivate ? 'Private' : 'Up to date' },
     { label: 'Type', value: itemTypeLabel(item.itemType) },
     { label: 'Link to', value: item.symlinkTarget, mono: true },
-    { label: 'Size', value: item.itemType === 'directory' ? '' : formatSize(item.size) },
-    { label: 'Modified', value: item.date && formatDateTime(item.date) },
+    { label: 'Size', value: item.itemType === 'directory' ? '' : formatSize(onDisk?.size ?? item.size) },
+    { label: 'Modified', value: modified && formatDateTime(modified) },
   ];
   if (!item.isPrivate) {
     properties.push(
