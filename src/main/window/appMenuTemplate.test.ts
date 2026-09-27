@@ -34,6 +34,13 @@ describe('appMenuTemplate', () => {
     expect(linux.some((item) => item.id === 'app.settings')).toBe(true);
   });
 
+  it('zooms in with Ctrl+= as well off macOS, where Ctrl+Plus takes Shift', () => {
+    for (const platform of ['win32', 'linux'] as const) {
+      expect(itemsOf(platform, 'View').filter((item) => item.role === 'zoomIn')).toEqual([{ role: 'zoomIn' }, { role: 'zoomIn', accelerator: 'Ctrl+=', visible: false }]);
+    }
+    expect(itemsOf('darwin', 'View').filter((item) => item.role === 'zoomIn')).toEqual([{ role: 'zoomIn' }]);
+  });
+
   it('keeps Settings and Quit in the app menu on macOS', () => {
     const appMenu = submenuOf(templateOn('darwin')[0]!);
     expect(appMenu.find((item) => item.id === 'app.settings')).toMatchObject({ label: 'Settings…' });

@@ -47,6 +47,8 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
         separator,
         { role: 'resetZoom' },
         { role: 'zoomIn' },
+        // Ctrl+Plus needs Shift on most keyboards; Windows and Linux browsers zoom in with Ctrl+= too.
+        ...(isMac ? [] : [{ role: 'zoomIn' as const, accelerator: 'Ctrl+=', visible: false }]),
         { role: 'zoomOut' },
         separator,
         { role: 'togglefullscreen' },
