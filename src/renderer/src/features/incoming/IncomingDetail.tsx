@@ -1,6 +1,7 @@
 import type { ContentSource } from '@shared/domain/content';
 import type { DiffEntry } from '@shared/domain/diff';
-import { PathLabel } from '../../components/PathLabel';
+import { describeDiffEntry, diffEntryTone } from '../diff/diffEntrySources';
+import { DiffFileTitle } from '../diff/viewer/DiffFileTitle';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
 
 /** What an incoming change does to a file: the loaded version against the branch head. */
@@ -14,7 +15,7 @@ export function IncomingFileDiff({ workspacePath, file }: { workspacePath: strin
       original={version(file.baseRevisionId)}
       modified={version(file.revisionId)}
       fileName={file.path}
-      title={<PathLabel path={file.path} oldPath={file.oldPath} />}
+      title={<DiffFileTitle tone={diffEntryTone(file)} status={describeDiffEntry(file)} path={file.path} oldPath={file.oldPath} />}
     />
   );
 }

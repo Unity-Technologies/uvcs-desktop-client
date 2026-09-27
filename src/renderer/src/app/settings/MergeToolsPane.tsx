@@ -7,6 +7,7 @@ import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { TextField } from '../../ui/TextField';
 import { saveSettings, useSettings } from './useSettings';
+import { AUTOMATIC_MERGE_TOOL_RULE, automaticMergeToolDescription } from './automaticMergeTool';
 import styles from './SettingsDialog.module.css';
 
 /** Which merge tool "Resolve in…" opens, and how it's called. */
@@ -27,7 +28,8 @@ export function MergeToolsPane() {
           <ToolChoice
             icon={<Sparkles size={18} />}
             label="Automatic"
-            description={preferred && automatic ? `${preferred.name}: the UVCS merge tool when it's installed, else the first found` : "The UVCS merge tool when it's installed, else the first found"}
+            description={automaticMergeToolDescription(automatic ? preferred?.name : undefined)}
+            tip={AUTOMATIC_MERGE_TOOL_RULE}
             selected={automatic}
             onSelect={() => void preferMergeTool(AUTO_MERGE_TOOL)}
           />
@@ -63,17 +65,19 @@ interface ToolChoiceProps {
   icon: React.ReactNode;
   label: string;
   description: string;
+  /** The description's tooltip; the description itself by default, e.g. a path cut off. */
+  tip?: string;
   selected: boolean;
   onSelect: () => void;
 }
 
-function ToolChoice({ icon, label, description, selected, onSelect }: ToolChoiceProps) {
+function ToolChoice({ icon, label, description, tip = description, selected, onSelect }: ToolChoiceProps) {
   return (
     <button type="button" role="radio" aria-checked={selected} className={styles.choice} data-selected={selected} onClick={onSelect}>
       {icon}
       <span className={styles.choiceText}>
         <span className={styles.choiceLabel}>{label}</span>
-        <span className={`${styles.choiceDescription} ${styles.oneLine}`} data-tip={description}>
+        <span className={`${styles.choiceDescription} ${styles.oneLine}`} data-tip={tip}>
           {description}
         </span>
       </span>

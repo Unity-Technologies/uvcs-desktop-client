@@ -18,6 +18,7 @@ import type { Changelist, FilterRuleList, PendingChange } from '@shared/domain/p
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { SEPARATOR, tidyMenu, type MenuEntry, type Submenu } from '../../lib/actions';
+import { formatCount } from '../../lib/text';
 import { categoryOf, existsOnDisk, hasRevisions, isCheckinCandidate, isControlled } from './changeCategories';
 import { moveToChangelistSubmenu } from './changelistMenu';
 import { reviewMenuEntry } from '../review/reviewMenuEntry';
@@ -91,7 +92,7 @@ export function pendingChangeMenu(
     SEPARATOR,
     privateChanges.length > 0 && {
       id: 'add',
-      label: privateChanges.length === 1 ? 'Add to version control' : `Add ${privateChanges.length} items to version control`,
+      label: privateChanges.length === 1 ? 'Add to version control' : `Add ${formatCount(privateChanges.length)} items to version control`,
       icon: Plus,
       run: () => void addToSourceControl(workspacePath, privateChanges),
     },
@@ -103,7 +104,7 @@ export function pendingChangeMenu(
     },
     controlledChanges.length > 0 && {
       id: 'undo',
-      label: controlledChanges.length === 1 ? 'Undo changes' : `Undo ${controlledChanges.length} changes`,
+      label: controlledChanges.length === 1 ? 'Undo changes' : `Undo ${formatCount(controlledChanges.length)} changes`,
       icon: Undo2,
       danger: true,
       run: () => void undoChanges(workspacePath, controlledChanges),

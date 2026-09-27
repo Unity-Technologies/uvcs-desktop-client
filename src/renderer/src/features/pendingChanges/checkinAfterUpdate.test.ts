@@ -5,7 +5,7 @@ const rejected = { branch: '/main/t1', loadedChangeset: 41 };
 
 describe('checkinAfterUpdateMessage', () => {
   it('offers to check in once the workspace updated past the rejection', () => {
-    expect(checkinAfterUpdateMessage(rejected, { branch: '/main/t1', loadedChangeset: 43 }, 4)).toBe('Updated to 43 · Check in your 4 changes now?');
+    expect(checkinAfterUpdateMessage(rejected, { branch: '/main/t1', loadedChangeset: 43 }, 4)).toBe('Updated to cs:43 · Check in your 4 changes now?');
   });
 
   it('waits while the workspace has not updated', () => {

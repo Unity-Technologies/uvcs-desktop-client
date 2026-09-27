@@ -44,14 +44,18 @@ export function defaultValuesIn(comment: string): string[] {
   return [...list.matchAll(/\s*(?:"([^"]*)"|([^,]+))/g)].map((match) => (match[1] ?? match[2] ?? '').trim()).filter(Boolean);
 }
 
-/** What to offer while editing: the declared defaults first, then the short values most used elsewhere. */
-export function suggestedValues(defaults: string[], used: string[]): string[] {
+/** The short values an attribute takes, each once with how many times, most used first; long texts are left out. */
+export function valueCounts(used: string[]): { value: string; count: number }[] {
   const counts = new Map<string, number>();
   for (const value of used) {
     const trimmed = value.trim();
     if (!trimmed || trimmed.includes('\n') || trimmed.length > MAX_SUGGESTION_LENGTH) continue;
     counts.set(trimmed, (counts.get(trimmed) ?? 0) + 1);
   }
-  const byUse = [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([value]) => value);
-  return [...new Set([...defaults, ...byUse])].slice(0, MAX_SUGGESTIONS);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([value, count]) => ({ value, count }));
+}
+
+/** What to offer while editing: the declared defaults first, then the short values most used elsewhere. */
+export function suggestedValues(defaults: string[], used: string[]): string[] {
+  return [...new Set([...defaults, ...valueCounts(used).map(({ value }) => value)])].slice(0, MAX_SUGGESTIONS);
 }

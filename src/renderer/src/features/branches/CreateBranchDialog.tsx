@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react';
 import type { PendingChangesAction, SwitchPreflight } from '@shared/domain/switchWithChanges';
 import { api } from '../../api/client';
 import { invalidateWorkspace } from '../../app/queryClient';
-import { isAffectedByNewBranch } from '../../app/refresh/refreshScopes';
+import { isAffectedByBranchList } from '../../app/refresh/refreshScopes';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
-import { openDialog } from '../../ui/dialog/dialogStore';
+import { askDialog } from '../../ui/dialog/dialogStore';
 import { OptionCards } from '../../ui/OptionCards';
 import { TextArea, TextField } from '../../ui/TextField';
 import { toast, useToastStore } from '../../ui/toast/toastStore';
@@ -27,9 +27,12 @@ export interface NewBranchOrigin {
   card?: { title: string; description: string };
 }
 
-/** `origins` holds one starting point, or several to choose from (the first is the default). */
-export function openCreateBranchDialog(workspacePath: string, ...origins: [NewBranchOrigin, ...NewBranchOrigin[]]): void {
-  openDialog((close) => <CreateBranchDialog workspacePath={workspacePath} origins={origins} onClose={close} />);
+/**
+ * `origins` holds one starting point, or several to choose from (the first is the default). Resolves with the new
+ * branch's full name once it is created (before any switch to it), or undefined if the dialog is dismissed.
+ */
+export function openCreateBranchDialog(workspacePath: string, ...origins: [NewBranchOrigin, ...NewBranchOrigin[]]): Promise<string | undefined> {
+  return askDialog<string>((finish) => <CreateBranchDialog workspacePath={workspacePath} origins={origins} onFinish={finish} />);
 }
 
 interface PendingChangesState {
@@ -37,7 +40,15 @@ interface PendingChangesState {
   plan: SwitchPlan;
 }
 
-function CreateBranchDialog({ workspacePath, origins, onClose }: { workspacePath: string; origins: NewBranchOrigin[]; onClose: () => void }) {
+interface CreateBranchDialogProps {
+  workspacePath: string;
+  origins: NewBranchOrigin[];
+  /** Closes the dialog with the created branch's name, or undefined when dismissed. */
+  onFinish: (created: string | undefined) => void;
+}
+
+function CreateBranchDialog({ workspacePath, origins, onFinish }: CreateBranchDialogProps) {
+  const onClose = (): void => onFinish(undefined);
   const [originIndex, setOriginIndex] = useState(0);
   const origin = origins[originIndex]!;
   const [name, setName] = useState('');
@@ -64,12 +75,13 @@ function CreateBranchDialog({ workspacePath, origins, onClose }: { workspacePath
     setCreating(false);
     if (!created) return;
 
-    onClose();
+    onFinish(fullName);
     // Switching refreshes every view when done; otherwise only the branch lists need to.
     const switched = switchAfter && !blockedByMerge && (await switchToBranch(workspacePath, fullName, action ?? undefined));
     if (switched) return;
-    void invalidateWorkspace(workspacePath, isAffectedByNewBranch);
+    void invalidateWorkspace(workspacePath, isAffectedByBranchList);
     if (switchAfter) announceNotSwitched(workspacePath, fullName, pending?.preflight.sourceName);
+    else toast.success(`Created ${fullName}`);
   };
 
   return (
@@ -116,8 +128,9 @@ function CreateBranchDialog({ workspacePath, origins, onClose }: { workspacePath
       {switchAfter && pending?.plan.kind === 'ask' && (
         <PendingChangesChoice
           source={pending.preflight.sourceName}
-          destination={name.trim() ? fullName : 'the new branch'}
+          destination={name.trim() ? fullName : null}
           choice={pending.plan.choice}
+          count={pending.preflight.pendingCount}
           value={action}
           onChange={setAction}
           heading

@@ -34,6 +34,7 @@ import {
   revealItem,
   targetDirectoryFor,
 } from './fileOperations';
+import { fileMenuTargets, hasRevisionsToShow } from './fileMenuTargets';
 import { useFilesViewStore } from './filesViewStore';
 import type { PendingChangesIndex } from './itemStatus';
 import { isWorkspaceRoot } from './workspaceRoot';
@@ -54,11 +55,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
   if (items.length === 0) return [];
 
   const single = items.length === 1 ? items[0]! : null;
-  const privateItems = items.filter((item) => item.isPrivate);
-  const controlled = items.filter((item) => !item.isPrivate);
-  const changed = items.map((item) => pendingChanges.changeAt(item.path)).filter((change) => change !== undefined);
-  const checkoutCandidates = controlled.filter((item) => !item.isCheckedOut && !pendingChanges.changeAt(item.path));
-  const controlledFiles = controlled.filter((item) => item.itemType !== 'directory');
+  const { privateItems, checkoutCandidates, undoable, typedFiles } = fileMenuTargets(items, pendingChanges);
   const directory = targetDirectoryFor(single ?? undefined);
   // The workspace root can't be renamed or deleted from here.
   const hasRoot = items.some(isWorkspaceRoot);
@@ -81,14 +78,14 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
       run: () => useFilesViewStore.getState().setDetailsTab('changes'),
     },
     // The root changes with every changeset: its history is the whole repository's.
-    single && !single.isPrivate && !hasRoot && {
+    single && hasRevisionsToShow(single, pendingChanges) && !hasRoot && {
       id: 'history',
       label: 'View history',
       icon: History,
       shortcut: FILE_SHORTCUTS.history,
       run: () => navigation.openPage({ kind: 'history', path: single.path }),
     },
-    single && !single.isPrivate && canAnnotate(single.itemType) && {
+    single && hasRevisionsToShow(single, pendingChanges) && canAnnotate(single.itemType) && {
       id: 'annotate',
       label: 'Annotate',
       icon: ScanText,
@@ -103,12 +100,12 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
       run: () => void addItems(workspacePath, privateItems),
     },
     checkoutCandidates.length > 0 && { id: 'checkout', label: 'Check out', icon: PenLine, run: () => void checkoutItems(workspacePath, checkoutCandidates) },
-    changed.length > 0 && {
+    undoable.length > 0 && {
       id: 'undo',
-      label: changed.length === 1 ? 'Undo changes' : `Undo ${changed.length} changes`,
+      label: undoable.length === 1 ? 'Undo changes' : `Undo ${undoable.length} changes`,
       icon: Undo2,
       danger: true,
-      run: () => void undoChanges(workspacePath, changed),
+      run: () => void undoChanges(workspacePath, undoable),
     },
     SEPARATOR,
     single && !hasRoot && { id: 'rename', label: 'Rename…', icon: TextCursorInput, shortcut: FILE_SHORTCUTS.rename, run: () => void renameItem(workspacePath, single) },
@@ -129,12 +126,12 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
       run: () => void createItem(workspacePath, directory, 'directory'),
     },
     SEPARATOR,
-    controlledFiles.length > 0 && {
+    typedFiles.length > 0 && {
       label: 'Revision type',
       icon: Binary,
       entries: [
-        { id: 'type.bin', label: 'Binary', run: () => void changeRevisionType(workspacePath, controlledFiles, 'bin') },
-        { id: 'type.txt', label: 'Text', run: () => void changeRevisionType(workspacePath, controlledFiles, 'txt') },
+        { id: 'type.bin', label: 'Binary', run: () => void changeRevisionType(workspacePath, typedFiles, 'bin') },
+        { id: 'type.txt', label: 'Text', run: () => void changeRevisionType(workspacePath, typedFiles, 'txt') },
       ],
     },
     single && !hasRoot && filterRulesSubmenu(workspacePath, single.path),

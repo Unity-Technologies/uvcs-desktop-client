@@ -13,3 +13,9 @@
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
 }
+
+/* The focused half's ring shows over the other half. */
+.split > :focus-visible {
+  position: relative;
+  z-index: 1;
+}

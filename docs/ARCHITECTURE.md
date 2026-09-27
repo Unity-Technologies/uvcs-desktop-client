@@ -16,7 +16,8 @@ src/
 2. The preload forwards it over one IPC channel; `main/ipc/registerApi.ts` dispatches to the service.
 3. Services (`main/services/<area>Service.ts`) build `cm` arguments and parse the output with helpers in `main/cm/`.
 4. `CmClient` runs the command:
-   - `query()` for short reads: reuses pooled `cm shell` sessions (much faster than spawning `cm`).
+   - `query()` for short reads: reuses pooled `cm shell` sessions (much faster than spawning `cm`), two per working
+     directory; a command takes the first one free, and a directory idle for ten minutes lets its sessions go.
    - `execute()` for long or cancellable work (update, switch, checkin, merge): a dedicated process that streams progress lines.
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), shown in the command log panel.
 
@@ -134,10 +135,12 @@ states where the result went.
 `PendingChangesOnSwitchAction` says. The renderer's single entry point is `switchWorkspace`
 (`app/shell/workspaceOperations.ts`): preflight, then ask (or follow the setting) whether to leave the changes or
 bring them along. The main process shelves them with the official automatic-shelve comment, checks the shelve holds
-them all, records it in the settings (`switchShelves`), undoes, moves added files aside (leave), switches, and
-merges the shelve on the target (bring). Failures put the changes back. Left shelves (the app's and the official
+them all, records it in the settings (`switchShelves`), undoes, moves added files aside (until the shelve brings them
+back), switches, and merges the shelve on the target (bring). Failures put the changes back, switching back first if
+the switch moved the workspace halfway. Left shelves (the app's and the official
 client's) are offered again by the "Welcome back" banner in Changes (`features/leftChanges`), or restored
-automatically on arrival when they apply cleanly.
+automatically on arrival when they apply cleanly. Changes still waiting to be brought (conflicts left for the merge
+view) are offered on the target, and as left ones on the source if the user goes back instead.
 
 ## Windows
 
@@ -222,9 +225,10 @@ renderer/src/
   highlights editors on the main thread, pool or not), is plain text, with a quiet "Large file" in the header (its
   tooltip says why); such a diff is the "text" language (`highlightedLanguage`), or the editor would color
   the lines typed into it.
-  Every diff follows Split/Unified, one from or to an empty file (an added file, an empty base) too: `shownDiff` keeps
-  both sides where Pierre would show a new or deleted file in one column, and the empty side is hatched like any added
-  lines. "No newline at end of file" shows only where the final line break is what changed (`noNewlineMarker`); a diff
+  Every diff of two versions follows Split/Unified, one from or to an empty version (an empty base, a file emptied)
+  too: `shownDiff` keeps both sides where Pierre would show a new or deleted file in one column, and the empty side is
+  hatched like any added lines. An item with one version only (added, private, deleted; a revision that created the
+  file) shows it alone, in one column. "No newline at end of file" shows only where the final line break is what changed (`noNewlineMarker`); a diff
   typed into keeps the marker rows, hidden, since Pierre recolors the rows it rendered only while there are as many as
   the diff has. The editor's line for the caret after the last line break (the one line of an empty text) looks like
   an unchanged empty line (`caretLineCss`): Pierre shows it as added after a change that removes more than it adds.
@@ -275,11 +279,13 @@ renderer/src/
   comparison method); the image every image mode, with unsaved edits rendered. SVG is only ever painted through `<img>`
   (no scripts, nothing fetched), and one declaring a huge size is drawn within 16 MP (`decodedSize`).
 - **Mutations**: `runOperation` (progress card, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
+  An update or a switch runs alone on its workspace: it waits for any other operation, and the others wait for it (`blockingOperation`).
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
 - **Keyboard**: every shortcut is declared in `lib/shortcutRegistry.ts` and bound through `hotkey(id)`; the shortcuts sheet
   (`?`, ⌘/) lists the registry, and a test rejects shortcut literals anywhere else and menu accelerators that differ. Views
-  get ⌘1… in sidebar order (`viewShortcut`).
+  get ⌘1… in sidebar order (`viewShortcut`; past the ninth ⌥⌘1… on macOS, whose ⇧⌘3–5 take screenshots). Window
+  shortcuts and menu commands run once per press and wait while a modal dialog is open (`lib/modalDialog`).
 - **Focus**: the list, tree or graph a view or page works on carries `MAIN_FOCUS` (`lib/mainFocus.ts`). `useMainFocus`
   focuses it after navigating and whenever focus falls to the document (a dialog, menu or popover closed), and hands it
   list keys pressed while nothing has focus. Views keep their list's selection while away (`useViewSelection`). Lists
@@ -300,7 +306,8 @@ renderer/src/
   read from and written to its `plasticgui.conf` (`main/plasticConfig`) on every switch, so both apps list the same ones.
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in components.
   - Text tokens keep 4.5:1 and focus rings 3:1 (`styles/tokens.test.ts`); focus shows with `--focus-ring-visible`, or
-    `--focus-ring-inset` on rows and panes (over their content when it would paint over the ring).
+    `--focus-ring-inset` on rows and panes (over their content when it would paint over the ring); filled controls
+    draw `--focus-outline` 2px out, and state rules with a shadow of their own restore the ring (`focusRings.test.ts`).
   - Motion uses the `--duration-*` and `--ease-*` tokens and the shared keyframes of `styles/global.css` (through
     `--keyframes-*`); reduced motion zeroes the durations, so only loops (spinners, skeleton pulses) opt out themselves.
   - Lists that load show skeletons at their real row height (`ui/Skeleton`, `TableSkeleton`, `ListWithDetailsSkeleton`).
@@ -326,10 +333,11 @@ and many people use the same server. Every `cm` command other than local reads (
   pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`) and skipped by refreshes.
   An object opened from a list already read starts from it (`useChangeset`) and is asked for only once that list is stale.
 - **After an operation**: `invalidateWorkspace` refetches what is on screen and marks the rest stale, scoped to what the
-  operation can change (`refreshScopes.ts`, `runOperation({ affects })`): a checkin, an update or a merge from a branch
-  leave labels, shelves, attributes, reviews, left changes and changesets already read alone; shelving changes that stay
-  in the workspace refreshes only the shelve lists; a new branch only the branch lists and the Branch Explorer. Reads
-  refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
+  operation can change (`refreshScopes.ts`, `runOperation({ affects })`, `runAction(..., affects)`): a checkin, an update
+  or a merge from a branch leave labels, shelves, attributes, reviews, left changes and changesets already read alone;
+  shelving changes that stay in the workspace refreshes only the shelve lists; a new, deleted or hidden branch only the
+  branch lists and the Branch Explorer; a label edit the labels and the graph; an attribute or value edit only the
+  attributes. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
   the last (create a branch and switch to it). Views keyed by the workspace info (`keyedByWorkspaceInfo`: left changes, the
   incoming check, the branch the workspace is on) wait for it, and when the operation gave them another key they are only
   marked stale: they are read under the new key as they show, never once more under the old one. Event-driven refreshes

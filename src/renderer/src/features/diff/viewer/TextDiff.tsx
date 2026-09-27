@@ -66,9 +66,11 @@ interface TextDiffProps {
 /**
  * Each side's code scrolls sideways, so Tab stops there to scroll it with the arrows: show where it stopped (after the
  * keyboard took it there, not a click). The caret's line keeps its diff color (the editor would tint it blue, like
- * picked lines): its number shows it.
+ * picked lines): its number shows it. "No newline at end of file" reads as a note about the line above, not as one
+ * more line of the file.
  */
 const SHADOW_CSS = [
+  '[data-no-newline] span { font-family: var(--font-ui); font-size: var(--text-xs); font-style: italic; }',
   `[data-code]:focus-visible:not([${POINTER_FOCUS_ATTRIBUTE}]) { outline: var(--focus-outline); outline-offset: -2px; }`,
   '[data-editor-active-line]:not([data-selected-line]) { --diffs-editor-active-line-source-mix: 100%; --mix-selection-light: 100%; --mix-selection-dark: 100%; }',
 ].join('\n');

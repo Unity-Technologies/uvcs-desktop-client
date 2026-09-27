@@ -13,7 +13,7 @@ import { updateToIncoming } from '../incoming/updateOperations';
 import { useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinRejection, overlappingPaths, type CheckinRejection } from './checkinRejection';
 import { askCatchUpForCheckin } from './CheckinRejectedDialog';
-import { useSuccessMomentStore } from './successMoment';
+import { checkedInMessage, useSuccessMomentStore } from './successMoment';
 
 const MAX_RECENT_COMMENTS = 15;
 
@@ -21,9 +21,19 @@ interface CheckinOptions {
   workspacePath: string;
   changes: PendingChange[];
   comment: string;
-  warnOnEmptyComment: boolean;
   /** The incoming check saw the branch move on: update (or review what came in) before checking in, not after a rejection. */
   updateFirst?: boolean;
+  /** Every pending change goes in: the success card in the empty Changes tells it, so no toast does. */
+  quiet?: boolean;
+}
+
+/** Asked before a check-in without a comment, when the setting says to. */
+export function confirmCheckinWithoutComment(): Promise<boolean> {
+  return confirm({
+    title: 'Check in without a comment?',
+    message: 'A short description helps your team understand the change later.',
+    confirmLabel: 'Check in anyway',
+  });
 }
 
 /**
@@ -32,16 +42,8 @@ interface CheckinOptions {
  * it does so up front.
  */
 export async function checkinChanges(options: CheckinOptions): Promise<boolean> {
-  const { workspacePath, changes, comment, warnOnEmptyComment } = options;
-  if (!comment.trim() && warnOnEmptyComment) {
-    const proceed = await confirm({
-      title: 'Check in without a comment?',
-      message: 'A short description helps your team understand the change later.',
-      confirmLabel: 'Check in anyway',
-    });
-    if (!proceed) return false;
-  }
-  if (options.updateFirst) return catchUpAndCheckin({ ...options, updateFirst: false, warnOnEmptyComment: false }, null);
+  const { workspacePath, changes, comment } = options;
+  if (options.updateFirst) return catchUpAndCheckin({ ...options, updateFirst: false }, null);
 
   const rejected: { rejection?: CheckinRejection } = {};
   const result = await runOperation({
@@ -49,7 +51,7 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
     workspacePath,
     run: (operationId) => api.pendingChanges.checkin(workspacePath, { paths: changes.map((change) => change.path), comment }, operationId),
     affects: isAffectedByCheckinOrUpdate,
-    successMessage: (created) => `Created changeset ${created.changesetId} on ${created.branch}`,
+    successMessage: (created) => (options.quiet ? null : checkedInMessage(created.changesetId, created.branch)),
     successAction: (created) => ({
       label: 'View',
       run: () => navigation.openPage({ kind: 'diff', title: `Changeset ${created.changesetId}`, target: { kind: 'changeset', changesetId: created.changesetId } }),
@@ -94,7 +96,7 @@ async function catchUpAndCheckin(options: CheckinOptions, rejection: CheckinReje
     return false;
   }
   if (!(await updateToIncoming(workspacePath, incoming))) return false;
-  return checkinChanges({ ...options, warnOnEmptyComment: false });
+  return checkinChanges(options);
 }
 
 /** Shelves the given changes. Resolves to true when a shelve was created. */

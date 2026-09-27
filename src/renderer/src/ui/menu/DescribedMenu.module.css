@@ -9,6 +9,11 @@
   z-index: 900;
 }
 
+/* A menu takes focus to move through its items, which show where the keyboard is: the menu itself shows no ring. */
+.content:focus-visible {
+  box-shadow: var(--shadow-lg);
+}
+
 /* Animate only while open, like the other menus (see Menu.module.css). */
 .content[data-state='open'] {
   animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);

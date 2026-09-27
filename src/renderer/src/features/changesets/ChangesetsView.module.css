@@ -1,33 +1,10 @@
-.changesetId {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  font-variant-numeric: tabular-nums;
-}
-
 .current {
+  display: inline-block;
+  margin-left: 6px;
+  vertical-align: 1px;
   width: 7px;
   height: 7px;
   border-radius: 50%;
   background: var(--accent);
   box-shadow: 0 0 0 3px var(--accent-soft);
-}
-
-.noComment {
-  color: var(--text-tertiary);
-  font-style: italic;
-}
-
-.commentCell {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
-.comment {
-  overflow: hidden;
-  text-overflow: ellipsis;
 }

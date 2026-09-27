@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { textMeasurer } from '../lib/measureText';
-import { positionsInTrimmed, trimFolderToFit } from '../lib/trimToFit';
+import { fitPath, positionsInTrimmed } from '../lib/trimToFit';
 import { Highlight } from '../ui/Highlight';
 import styles from './PathLabel.module.css';
 
@@ -26,14 +26,14 @@ interface PathLabelProps {
  * `src/app/main.ts` rendered as a dimmed folder followed by the file name; branches read the same way, the parent
  * branches dimmed before the leaf. When it doesn't fit, whole folders are dropped from the middle
  * (`src/…/app/main.ts`) so the name always stays whole. The cut is measured rather than left to CSS `text-overflow`,
- * which would cut the name first.
+ * which would cut the name first; a name too long on its own is cut from its middle (`fitPath`).
  */
 export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fitContent, tooltip = true }: PathLabelProps) {
   const nameStart = path.lastIndexOf('/') + 1;
   const name = path.slice(nameStart);
   const directory = nameOnly ? '' : path.slice(0, nameStart);
   const ref = useRef<HTMLSpanElement>(null);
-  const [shownDirectory, setShownDirectory] = useState(directory);
+  const [shown, setShown] = useState({ folder: directory, name });
   const [contentSize, setContentSize] = useState<{ width: number; minWidth: string; flexShrink: number }>();
 
   // Fit before paint, so recycled rows of a virtual list don't flash, and again whenever the container resizes.
@@ -48,7 +48,8 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fit
         // Next to other labels, the one with the most folder to drop gives way first.
         setContentSize({ width: Math.ceil(measure(directory)) + nameWidth, minWidth: `min(${nameWidth}px, 100%)`, flexShrink: measure(directory) });
       }
-      setShownDirectory(directory && trimFolderToFit(directory, element.clientWidth - measure(name) - 1, measure));
+      const fitted = fitPath(directory, name, element.clientWidth - 1, measure);
+      setShown((current) => (current.folder === fitted.folder && current.name === fitted.name ? current : fitted));
     };
     fit();
     const observer = new ResizeObserver(fit);
@@ -56,7 +57,8 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fit
     return () => observer.disconnect();
   }, [directory, name, fitContent]);
 
-  const trimmed = shownDirectory !== directory;
+  const trimmed = shown.folder !== directory || shown.name !== name;
+  const nameMatches = matches?.filter((position) => position >= nameStart).map((position) => position - nameStart);
 
   return (
     <span
@@ -66,13 +68,13 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fit
       style={fitContent ? contentSize : undefined}
       data-tip={!tooltip ? undefined : oldPath ? `${oldPath} → ${path}` : trimmed ? path : undefined}
     >
-      {shownDirectory && (
+      {shown.folder && (
         <span className={styles.directory}>
-          <Highlight text={shownDirectory} positions={matches && positionsInTrimmed(directory, shownDirectory, matches.filter((position) => position < nameStart))} />
+          <Highlight text={shown.folder} positions={matches && positionsInTrimmed(directory, shown.folder, matches.filter((position) => position < nameStart))} />
         </span>
       )}
       <span className={styles.name} data-strikethrough={strikethrough}>
-        <Highlight text={name} positions={matches?.filter((position) => position >= nameStart).map((position) => position - nameStart)} />
+        <Highlight text={shown.name} positions={nameMatches && positionsInTrimmed(name, shown.name, nameMatches)} />
       </span>
     </span>
   );

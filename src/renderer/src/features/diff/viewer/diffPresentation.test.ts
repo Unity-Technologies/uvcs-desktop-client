@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
-import { diffPresentation, hasTwoRepresentations } from './diffPresentation';
+import { diffPresentation, hasTwoRepresentations, showsLines } from './diffPresentation';
 
 const missing: FileContent = { text: '', isBinary: false, size: 0 };
 const text = (value: string): FileContent => ({ text: value, isBinary: false, size: value.length });
@@ -48,5 +48,26 @@ describe('diffPresentation', () => {
     expect(hasTwoRepresentations(image(10), svg('<svg/>'))).toBe(false);
     expect(diffPresentation(text('a'), text('b'), 'image')).toEqual({ kind: 'text', empty: false, identical: false });
     expect(diffPresentation(image(10), svg('<svg/>'), 'text')).toEqual({ kind: 'image', comparable: true });
+  });
+});
+
+describe('showsLines', () => {
+  it('is true for a text diff with changes', () => {
+    expect(showsLines(diffPresentation(text('a'), text('b')), false)).toBe(true);
+  });
+
+  it('is false for an empty or unchanged file only shown, which has only a note', () => {
+    expect(showsLines(diffPresentation(missing, text('')), false)).toBe(false);
+    expect(showsLines(diffPresentation(text('a'), text('a')), false)).toBe(false);
+  });
+
+  it('is true for an empty or unchanged file typed into, which shows whole', () => {
+    expect(showsLines(diffPresentation(missing, text('')), true)).toBe(true);
+    expect(showsLines(diffPresentation(text('a'), text('a')), true)).toBe(true);
+  });
+
+  it('is false for images and binaries', () => {
+    expect(showsLines(diffPresentation(image(10), image(12)), false)).toBe(false);
+    expect(showsLines(diffPresentation({ isBinary: true, size: 3 }, { isBinary: true, size: 4 }), false)).toBe(false);
   });
 });

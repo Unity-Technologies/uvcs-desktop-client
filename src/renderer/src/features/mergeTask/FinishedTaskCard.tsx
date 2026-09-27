@@ -19,7 +19,7 @@ export function FinishedTaskCard({ workspacePath, task }: { workspacePath: strin
   };
 
   const startNext = (): void =>
-    openCreateBranchDialog(workspacePath, {
+    void openCreateBranchDialog(workspacePath, {
       parentBranch: task.destination,
       startingPoint: `cs:${task.changesetId}`,
       startingPointLabel: `changeset ${task.changesetId} (the merge)`,

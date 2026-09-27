@@ -1,11 +1,11 @@
 import type { ContentSource } from '@shared/domain/content';
 import { mergeSourcePoint, type MergeChange, type MergeContributors, type MergeRequest } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
-import { PathLabel } from '../../components/PathLabel';
 import { EmptyState } from '../../ui/EmptyState';
+import { DiffFileTitle } from '../diff/viewer/DiffFileTitle';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
 import type { MergeLabels } from './mergeDescription';
-import { describeChange } from './mergeStatus';
+import { changeTone, describeChange } from './mergeStatus';
 import styles from './MergeChangePreview.module.css';
 
 interface MergeChangePreviewProps {
@@ -31,7 +31,12 @@ export function MergeChangePreview({ workspacePath, request, change, contributor
       fileName={change.path}
       title={
         <span className={styles.title}>
-          <PathLabel path={change.path.replace(/^\//, '')} oldPath={change.oldPath?.replace(/^\//, '')} />
+          <DiffFileTitle
+            tone={changeTone(change)}
+            status={describeChange(change, labels)}
+            path={change.path.replace(/^\//, '')}
+            oldPath={change.oldPath?.replace(/^\//, '')}
+          />
           <span className={styles.outcome}>{describeChange(change, labels)}</span>
         </span>
       }

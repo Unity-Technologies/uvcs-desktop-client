@@ -1,7 +1,5 @@
 import { useState, type DragEvent } from 'react';
-import { api } from '../../api/client';
-import { confirm } from '../../ui/dialog/confirm';
-import { openCreateWorkspaceDialog } from './dialogs/CreateWorkspaceDialog';
+import { openFolder } from '../workspace/openWorkspaceFolder';
 
 interface FolderDropHandlers {
   isDraggingOver: boolean;
@@ -15,20 +13,6 @@ interface FolderDropHandlers {
  */
 export function useFolderDrop(openWorkspace: (path: string) => void): FolderDropHandlers {
   const [isDraggingOver, setDraggingOver] = useState(false);
-
-  const openDroppedFolder = async (folder: string): Promise<void> => {
-    const workspaceRoot = await api.workspaces.findRoot(folder);
-    if (workspaceRoot) {
-      openWorkspace(workspaceRoot);
-      return;
-    }
-    const create = await confirm({
-      title: 'This folder is not a workspace',
-      message: `Create a workspace in ${folder} to version its files?`,
-      confirmLabel: 'Create workspace…',
-    });
-    if (create) openCreateWorkspaceDialog({ path: folder, onCreated: openWorkspace });
-  };
 
   return {
     isDraggingOver,
@@ -44,7 +28,7 @@ export function useFolderDrop(openWorkspace: (path: string) => void): FolderDrop
       event.preventDefault();
       setDraggingOver(false);
       const file = event.dataTransfer.files[0];
-      if (file) void openDroppedFolder(window.uvcs.pathForFile(file));
+      if (file) void openFolder(window.uvcs.pathForFile(file), openWorkspace);
     },
   };
 }

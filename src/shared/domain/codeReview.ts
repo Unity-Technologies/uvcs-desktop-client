@@ -5,6 +5,7 @@ export type CodeReviewStatus = (typeof CODE_REVIEW_STATUSES)[number];
 export type CodeReviewTarget =
   | { kind: 'branch'; branch: string }
   | { kind: 'changeset'; changesetId: number }
+  | { kind: 'shelve'; shelveId: number }
   /** A target that could not be resolved, e.g. a deleted branch. */
   | { kind: 'unknown'; description: string };
 
@@ -41,7 +42,7 @@ export interface CodeReviewFilter {
 export const MAX_LISTED_CODE_REVIEWS = 300;
 
 export interface CreateCodeReviewRequest {
-  /** `br:/main/task` or `cs:12`. */
+  /** `br:/main/task`, `cs:12` or `sh:3`. */
   targetSpec: string;
   title: string;
   assignee?: string;

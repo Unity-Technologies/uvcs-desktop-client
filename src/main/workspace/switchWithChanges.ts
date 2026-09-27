@@ -1,9 +1,10 @@
 import { join } from 'node:path';
-import type { PendingChangesSnapshot } from '@shared/domain/pendingChanges';
-import type { PendingChangesAction, RestoredChanges, SwitchResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
+import type { PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
+import type { PendingChangesAction, RenamedPrivateFile, RestoredChanges, SwitchResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
+import { onLinksThemselves } from '../cm/symlinkArgs';
 import { switchArgs } from '../cm/updateArgs';
 import { readWorkspaceStatus } from '../cm/workspaceStatus';
 import type { OperationContext } from '../operations/OperationTracker';
@@ -11,6 +12,7 @@ import type { SettingsStore } from '../settings/SettingsStore';
 import type { LeftChangesFinder } from './leftChanges';
 import { changedPaths, newItemPaths, shelvedChangelists, summarizePending, SWITCH_STATUS_ARGS } from './pendingSnapshot';
 import { moveAside, putBack } from './privateBackups';
+import { renamedPrivateFiles } from './renamedPrivateFiles';
 import { selectorObjectRef } from './selectorObjectRef';
 import { bringDisabledReason, describeSelector, parseSelectorSpec, selectorSpec } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
@@ -25,7 +27,7 @@ export interface SwitchDependencies {
   settings: SettingsStore;
   records: SwitchShelveRecords;
   leftChanges: LeftChangesFinder;
-  /** Where added files are moved aside while their changes are left on another branch. */
+  /** Where added files are moved aside while their changes are in a switch shelve. */
   backupsRoot: string;
 }
 
@@ -33,7 +35,7 @@ export interface SwitchDependencies {
  * Switches the workspace, taking care of its pending changes. `cm switch` only ever runs on a clean workspace
  * (whatever client.conf's PendingChangesOnSwitchAction says), so `cm` never shelves, re-applies or merges on its own:
  * 1. Shelve every pending change with the official automatic-shelve comment and check the shelve holds them all.
- * 2. Record the shelve, undo the changes, and (leaving) move the added files, now private, out of the way.
+ * 2. Record the shelve, undo the changes, and move the added files, now private, out of the way.
  * 3. Switch. Leaving is done; bringing merges the shelve on the target when it applies cleanly,
  *    or leaves the conflicts for the merge view.
  * If anything fails before the switch lands, the changes are put back where they were.
@@ -45,9 +47,22 @@ export async function switchWithChanges(
   action: PendingChangesAction | undefined,
   context: OperationContext,
 ): Promise<SwitchResult> {
+  const workspace = await readWorkspaceIdentity(deps.cm, workspacePath);
+  const snapshot = parsePendingChanges(await deps.cm.query(SWITCH_STATUS_ARGS, { cwd: workspacePath }));
+  const result = await switchFrom(deps, workspacePath, workspace, snapshot, targetSpec, action, context);
+  return { ...result, renamedPrivates: await privatesRenamedSince(deps.cm, workspacePath, snapshot) };
+}
+
+async function switchFrom(
+  deps: SwitchDependencies,
+  workspacePath: string,
+  workspace: WorkspaceIdentity,
+  snapshot: PendingChangesSnapshot,
+  targetSpec: string,
+  action: PendingChangesAction | undefined,
+  context: OperationContext,
+): Promise<SwitchResult> {
   const { cm } = deps;
-  const workspace = await readWorkspaceIdentity(cm, workspacePath);
-  const snapshot = parsePendingChanges(await cm.query(SWITCH_STATUS_ARGS, { cwd: workspacePath }));
   const summary = summarizePending(snapshot.changes);
   const switchTo = (): Promise<string> =>
     cm.execute(switchArgs(targetSpec), { cwd: workspacePath, signal: context.signal, onOutputLine: context.progressOf(readUpdateProgress) });
@@ -60,7 +75,7 @@ export async function switchWithChanges(
   }
   if (summary.inMerge) throw new Error(IN_MERGE);
   if (summary.unchangedCheckoutsOnly) {
-    await cm.query(['undo', '--unchanged', '-r', workspacePath], { cwd: workspacePath });
+    await cm.query(onLinksThemselves('undo', '--unchanged', '-r', workspacePath), { cwd: workspacePath });
     await switchTo();
     return { kind: 'undidUnchangedCheckouts', count: summary.pendingCount, restored: await restoreOnArrival(deps, workspacePath, committed) };
   }
@@ -74,6 +89,21 @@ export async function switchWithChanges(
     return { kind: 'left', shelveId: record.shelveId, count: record.paths.length, sourceName: record.source.name, restored };
   }
   return bringChanges(deps, workspacePath, record, committed);
+}
+
+/** Private files can only be in the way when there were some: otherwise nothing more is read. */
+async function privatesRenamedSince(cm: CmClient, workspacePath: string, snapshot: PendingChangesSnapshot): Promise<RenamedPrivateFile[] | undefined> {
+  const privatePaths = (changes: PendingChange[]): string[] => changes.filter((change) => change.kinds.includes('private')).map((change) => change.path);
+  const before = privatePaths(snapshot.changes);
+  if (before.length === 0) return undefined;
+  try {
+    const after = privatePaths(parsePendingChanges(await cm.query(['status', '--xml', '--private'], { cwd: workspacePath })).changes);
+    const renamed = renamedPrivateFiles(before, after);
+    return renamed.length > 0 ? renamed : undefined;
+  } catch {
+    // The switch is done; this only adds to what it tells.
+    return undefined;
+  }
 }
 
 function assertAllowed(action: PendingChangesAction, targetSpec: string, workspace: WorkspaceIdentity): void {
@@ -112,14 +142,15 @@ async function shelveAndSwitch(
   // From here on the changes live in the shelve: any failure puts them back.
   try {
     context.beginStep('Undoing them here', 2, steps);
-    await cm.execute(['undo', '-r', workspacePath], { cwd: workspacePath });
-    if (mode === 'leave') await moveNewItemsAside(deps, workspacePath, snapshot, record);
+    // Links too: without `--symlink` a checked-out link stays pending (and its target would be undone instead).
+    await cm.execute(onLinksThemselves('undo', '-r', workspacePath), { cwd: workspacePath });
+    await moveNewItemsAside(deps, workspacePath, snapshot, record);
     await assertClean(cm, workspacePath);
 
     context.beginStep('Switching', 3, steps);
     await cm.execute(switchArgs(targetSpec), { cwd: workspacePath, onOutputLine: context.progressOf(readUpdateProgress) });
   } catch (error) {
-    throw await rollBack(deps, workspacePath, workspace, record, error, context);
+    throw await rollBack(deps, workspacePath, record, error, context);
   }
 
   // Record where the switch really landed, as `cm status` names it, to recognize it later.
@@ -138,8 +169,9 @@ async function sourceObjectRef(cm: CmClient, workspacePath: string, workspace: W
 }
 
 /**
- * Added files stay on disk as private files after the undo, and would show up on the target.
- * They are moved into the app's data folder until the changes are restored.
+ * Added files stay on disk as private files after the undo, and would show up on the target (renamed `.private.0` where
+ * the target has the same path). They are moved into the app's data folder until the shelve brings them back, whether
+ * the changes are left or brought along.
  */
 async function moveNewItemsAside(deps: SwitchDependencies, workspacePath: string, snapshot: PendingChangesSnapshot, record: SwitchShelveRecord): Promise<void> {
   const privatePaths = new Set(
@@ -160,33 +192,40 @@ async function assertClean(cm: CmClient, workspacePath: string): Promise<void> {
 }
 
 /**
- * Puts the changes back on the original changeset: the files moved aside, then the shelve merged back.
- * If that isn't possible the record stays, so the changes are offered for restore on the source.
+ * Puts the changes back where they were made: the workspace back on the source when the switch moved it halfway, the
+ * files moved aside, then the shelve merged back. If that isn't possible the record stays, so the changes are offered
+ * for restore on the source.
  */
-async function rollBack(
-  deps: SwitchDependencies,
-  workspacePath: string,
-  workspace: WorkspaceIdentity,
-  record: SwitchShelveRecord,
-  cause: unknown,
-  context: OperationContext,
-): Promise<Error> {
+async function rollBack(deps: SwitchDependencies, workspacePath: string, record: SwitchShelveRecord, cause: unknown, context: OperationContext): Promise<Error> {
   const reason = (cause instanceof Error ? cause.message : String(cause)).replace(/\.$/, '');
+  let onSource = false;
   try {
-    const now = await readWorkspaceStatus(deps.cm, workspacePath);
-    if (selectorSpec(now.selector) === record.source.spec && now.loadedChangeset === workspace.loadedChangeset) {
+    onSource = await returnToSource(deps.cm, workspacePath, record.source.spec, context);
+    if (onSource) {
       if (record.backup) await putBack(workspacePath, record.backup);
       const outcome = await applyShelveCleanly(deps.cm, workspacePath, record.shelveId, context);
       if (outcome.kind === 'applied') {
         await deps.leftChanges.finish(workspacePath, record);
-        return new Error(`Couldn't switch: ${reason}. Your changes were put back.`);
+        return new Error(`${reason}. Your changes were put back.`);
       }
     }
   } catch {
     // Reported below: the changes are still safe in the shelve.
   }
   deps.records.save({ ...record, mode: 'leave' });
-  return new Error(`Couldn't switch: ${reason}. Your changes are safe in shelve ${record.shelveId}; restore them from Changes.`);
+  const restoreFrom = onSource ? 'restore them from Changes' : `switch back to ${record.source.name} to restore them`;
+  return new Error(`${reason}. Your changes are safe in shelve ${record.shelveId}; ${restoreFrom}.`);
+}
+
+/**
+ * A switch that fails halfway has already moved the workspace to the target, some files updated and others not: it
+ * goes back (nothing is pending by then). Resolves to whether the workspace is on the source.
+ */
+async function returnToSource(cm: CmClient, workspacePath: string, sourceSpec: string, context: OperationContext): Promise<boolean> {
+  const isOnSource = async (): Promise<boolean> => selectorSpec((await readWorkspaceStatus(cm, workspacePath)).selector) === sourceSpec;
+  if (await isOnSource()) return true;
+  await cm.execute(switchArgs(sourceSpec), { cwd: workspacePath, onOutputLine: context.progressOf(readUpdateProgress) });
+  return isOnSource();
 }
 
 async function bringChanges(deps: SwitchDependencies, workspacePath: string, record: SwitchShelveRecord, context: OperationContext): Promise<SwitchResult> {

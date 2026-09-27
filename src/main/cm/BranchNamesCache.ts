@@ -23,7 +23,7 @@ export class BranchNamesCache {
   /** Names read along with something else (a branch list); `complete` when it holds every branch, hidden ones too. */
   remember(workspacePath: string, branches: readonly BranchName[], { complete = false } = {}): void {
     const readAt = this.now();
-    for (const { id, name } of branches) this.entries.set(entryKey(workspacePath, id), { name, readAt });
+    for (const { id, name } of branches) this.entries.set(entryKey(workspacePath, id), { name: ownCopy(name), readAt });
     if (complete) this.completeAt.set(workspacePath, readAt);
   }
 
@@ -59,6 +59,14 @@ export class BranchNamesCache {
     this.reading.set(workspacePath, read);
     return read;
   }
+}
+
+/**
+ * The name as a string of its own. Parsed names are slices of the command's whole output, which V8 keeps alive for as
+ * long as any slice lives: kept here, the 20 MB of a 20,000-branch list would stay in memory for the whole session.
+ */
+function ownCopy(text: string): string {
+  return Buffer.from(text, 'utf8').toString('utf8');
 }
 
 function entryKey(workspacePath: string, id: number): string {

@@ -2,6 +2,7 @@ import { forwardRef, useImperativeHandle, useRef, type KeyboardEvent, type React
 import { focusFirstItem, moveRovingFocus } from '../../lib/rovingFocus';
 import { HighlightQuery } from '../../ui/Highlight';
 import type { WorkspaceEntry } from './recentWorkspaces';
+import { firstMatch, searchedSections } from './searchedSections';
 import { WorkspaceRow } from './WorkspaceRow';
 import styles from './Home.module.css';
 
@@ -12,19 +13,21 @@ export interface WorkspaceListSection {
   /** Shown above its rows; a list of one section can go without. */
   title?: string;
   entries: WorkspaceEntry[];
-  /** Shown instead of the rows when there are none. */
+  /** Shown instead of the rows when there are none, without a search. */
   empty?: ReactNode;
 }
 
 export interface WorkspaceListHandle {
-  /** Moves the keyboard into the list, e.g. on ↓ in the search field above it. */
-  focusFirst: () => void;
+  /** Keys of the search field above the list: ↓ moves into the list, Enter opens the first match. */
+  takeSearchKey: (event: KeyboardEvent<HTMLInputElement>) => void;
 }
 
 interface WorkspaceListProps {
   sections: WorkspaceListSection[];
   /** The search the rows are filtered by, highlighted in them. */
   query: string;
+  /** Shown instead of every section when the search matches nothing. */
+  noMatches: ReactNode;
   onOpen: (path: string) => void;
   /** ↑ on the first row: back to whatever leads into the list (the search field). */
   onLeaveTop?: () => void;
@@ -32,18 +35,31 @@ interface WorkspaceListProps {
 
 /**
  * The home screen's workspaces, in titled sections read as one list: ↑ and ↓ (and Page Up / Down) move between rows
- * across sections, Enter or a click opens one.
+ * across sections, Enter or a click opens one; Enter in the search field opens the first match.
  */
-export const WorkspaceList = forwardRef<WorkspaceListHandle, WorkspaceListProps>(function WorkspaceList({ sections, query, onOpen, onLeaveTop }, ref) {
+export const WorkspaceList = forwardRef<WorkspaceListHandle, WorkspaceListProps>(function WorkspaceList({ sections, query, noMatches, onOpen, onLeaveTop }, ref) {
   const listRef = useRef<HTMLDivElement>(null);
-  useImperativeHandle(ref, () => ({ focusFirst: () => void focusFirstItem(listRef.current, ROWS) }), []);
+  const shown = searchedSections(sections, query);
+  const first = query.trim() ? firstMatch(shown) : undefined;
+  useImperativeHandle(ref, () => ({
+    takeSearchKey: (event) => {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        focusFirstItem(listRef.current, ROWS);
+      } else if (event.key === 'Enter' && first) {
+        event.preventDefault();
+        onOpen(first.workspace.path);
+      }
+    },
+  }));
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => moveRovingFocus(event.currentTarget, event, onLeaveTop, ROWS);
 
   return (
     <HighlightQuery query={query}>
       <div ref={listRef} className={styles.sections} onKeyDown={onKeyDown}>
-        {sections.map((section) => (
+        {shown.length === 0 && noMatches}
+        {shown.map((section) => (
           <section key={section.id} className={styles.section} aria-label={section.title}>
             {section.title && (
               <h2 className={styles.sectionTitle}>

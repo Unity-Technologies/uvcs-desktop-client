@@ -104,6 +104,11 @@
   color: var(--accent-text);
   font-weight: 500;
   font-size: var(--text-sm);
+  transition: background var(--duration-fast);
+}
+
+.action:hover {
+  background: var(--bg-selected-strong);
 }
 
 .close {

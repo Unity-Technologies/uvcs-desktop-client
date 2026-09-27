@@ -1,3 +1,4 @@
+import { useCallback } from 'react';
 import { api } from '../../api/client';
 import { navigation } from '../navigation/navigationStore';
 import { rememberRecentWorkspace } from '../settings/useSettings';
@@ -9,7 +10,7 @@ import { useSession } from './sessionStore';
  */
 export function useOpenWorkspace(): (path: string) => void {
   const openWorkspace = useSession((state) => state.openWorkspace);
-  return (path) => void openUnlessShownElsewhere(path, openWorkspace);
+  return useCallback((path: string) => void openUnlessShownElsewhere(path, openWorkspace), [openWorkspace]);
 }
 
 async function openUnlessShownElsewhere(path: string, openWorkspace: (path: string) => void): Promise<void> {

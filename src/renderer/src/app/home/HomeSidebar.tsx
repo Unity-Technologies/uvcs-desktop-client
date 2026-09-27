@@ -10,6 +10,7 @@ import { useSidebarCollapsed } from '../shell/sidebarStore';
 import { SidebarToggleItem } from '../shell/SidebarToggleItem';
 import { useServers } from '../workspace/workspaceQueries';
 import { isSameSection, type HomeSection } from './homeSection';
+import { ServerMonogram } from './ServerMonogram';
 import styles from './Home.module.css';
 
 interface HomeSidebarProps {
@@ -42,7 +43,9 @@ export function HomeSidebar({ section, onSelect }: HomeSidebarProps) {
           {isLoading && <CenteredSpinner />}
           {servers?.map((profile) => {
             const { label, detail } = describeServer(profile.server);
-            return item({ kind: 'server', server: profile.server }, <ServerIcon server={profile.server} />, label, detail);
+            // Folded, every organization would be the same cloud: their initials tell them apart.
+            const icon = rail && profile.server !== 'local' ? <ServerMonogram label={label} /> : <ServerIcon server={profile.server} />;
+            return item({ kind: 'server', server: profile.server }, icon, label, detail);
           })}
         </NavGroup>
       </NavGroups>

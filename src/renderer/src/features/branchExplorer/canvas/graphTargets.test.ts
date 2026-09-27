@@ -2,11 +2,11 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { sampleHistory } from '../model/graphFixtures';
 import { layoutGraph } from '../model/layoutGraph';
-import { columnX, headerTop } from './geometry';
+import { COLUMN_WIDTH, columnX, headerTop } from './geometry';
 import type { DrawnTargets } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
 import { hitTest, hoverCardFor, nodePoint } from './graphTargets';
-import { labelTop } from './labelPlacement';
+import { labelChips } from './labelPlacement';
 import { laneShape } from './laneShape';
 
 const layout = layoutGraph(sampleHistory());
@@ -22,8 +22,25 @@ describe('hitTest', () => {
 
   it('finds a label tag above its changeset', () => {
     const node = layout.nodes.get(6)!;
-    const target = hitTest(layout, { x: columnX(node.column), y: labelTop(layout, node, 0) + 5 });
-    expect(target).toMatchObject({ kind: 'label', label: { name: 'v1' } });
+    const target = hitTest(layout, { x: columnX(node.column), y: labelChips(layout, node)[0]!.top + 5 });
+    expect(target).toMatchObject({ kind: 'label', label: { name: 'v1' }, more: [] });
+  });
+
+  it('finds a long label over the columns next to its changeset', () => {
+    const labels = [{ name: 'release-candidate-2026-09-long', changeset: 6, owner: '', date: '', comment: '' }];
+    const labeled = layoutGraph({ ...sampleHistory(), labels });
+    const node = labeled.nodes.get(6)!;
+    const target = hitTest(labeled, { x: columnX(node.column) - 1.4 * COLUMN_WIDTH, y: labelChips(labeled, node)[0]!.top + 5 });
+    expect(target).toMatchObject({ kind: 'label', label: { name: 'release-candidate-2026-09-long' } });
+  });
+
+  it('finds a chip counting the labels that did not fit, with them', () => {
+    const labels = ['v2.1', 'v2', 'rc'].map((name) => ({ name, changeset: 2, owner: '', date: '', comment: '' }));
+    const labeled = layoutGraph({ ...sampleHistory(), labels });
+    const node = labeled.nodes.get(2)!;
+    const [chip] = labelChips(labeled, node);
+    const target = hitTest(labeled, { x: columnX(node.column), y: chip!.top + 5 });
+    expect(target).toMatchObject({ kind: 'label', label: { name: 'v2.1' }, more: [{ name: 'v2' }, { name: 'rc' }] });
   });
 
   it('finds a merge link along its curve', () => {
@@ -132,7 +149,7 @@ describe('hoverCardFor', () => {
 
   it('opens a card by the pointer for labels', () => {
     const node = layout.nodes.get(6)!;
-    expect(cardAt({ x: columnX(node.column), y: labelTop(layout, node, 0) + 5 })).toMatchObject({ kind: 'pointer', target: { kind: 'label' } });
+    expect(cardAt({ x: columnX(node.column), y: labelChips(layout, node)[0]!.top + 5 })).toMatchObject({ kind: 'pointer', target: { kind: 'label' } });
   });
 
   it('has no card on empty space', () => {

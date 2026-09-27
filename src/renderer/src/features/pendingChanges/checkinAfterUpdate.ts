@@ -29,9 +29,9 @@ interface LoadedState {
   loadedChangeset: number | undefined;
 }
 
-/** "Updated to 43 · Check in your 4 changes now?" once the workspace updated past a rejected checkin on the same branch. */
+/** "Updated to cs:43 · Check in your 4 changes now?" once the workspace updated past a rejected checkin on the same branch. */
 export function checkinAfterUpdateMessage(rejected: RejectedCheckin | undefined, now: LoadedState, includedCount: number): string | null {
   if (!rejected || includedCount === 0 || now.branch !== rejected.branch) return null;
   if (now.loadedChangeset === undefined || now.loadedChangeset <= rejected.loadedChangeset) return null;
-  return `Updated to ${now.loadedChangeset} · Check in your ${pluralize(includedCount, 'change')} now?`;
+  return `Updated to cs:${now.loadedChangeset} · Check in your ${pluralize(includedCount, 'change')} now?`;
 }

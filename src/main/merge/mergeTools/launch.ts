@@ -10,6 +10,8 @@ export interface ToolRun {
   exitCode: number | null;
   /** The end of what it wrote to stderr, to explain a failure. */
   errorOutput: string;
+  /** How long it ran. */
+  seconds: number;
 }
 
 /**
@@ -18,6 +20,8 @@ export interface ToolRun {
  */
 export function launchMergeTool(executable: string, args: string[], signal: AbortSignal): Promise<ToolRun> {
   const { command, commandArgs, verbatim } = commandLine(process.platform, executable, args);
+  const started = Date.now();
+  const ran = (exitCode: number | null, errorOutput: string): ToolRun => ({ exitCode, errorOutput: errorOutput.trim(), seconds: (Date.now() - started) / 1000 });
   return new Promise((resolve, reject) => {
     const child = spawn(command, commandArgs, { stdio: ['ignore', 'pipe', 'pipe'], windowsVerbatimArguments: verbatim, signal, killSignal: 'SIGTERM' });
     let errorOutput = '';
@@ -27,14 +31,14 @@ export function launchMergeTool(executable: string, args: string[], signal: Abor
       if (error.name === 'AbortError') return;
       reject(new Error(`Couldn't start ${executable}: ${error.code === 'ENOENT' ? 'it is not there anymore' : error.message}`));
     });
-    child.once('close', (exitCode) => resolve({ exitCode, errorOutput: errorOutput.trim() }));
+    child.once('close', (exitCode) => resolve(ran(exitCode, errorOutput)));
     // Stopped: done once it exits, without waiting for what it started and still holds its output (a launcher script's
     // app), which would keep the file "open" after the user moved on.
     child.once('exit', () => {
       if (!signal.aborted) return;
       child.stdout.destroy();
       child.stderr.destroy();
-      resolve({ exitCode: null, errorOutput: errorOutput.trim() });
+      resolve(ran(null, errorOutput));
     });
   });
 }

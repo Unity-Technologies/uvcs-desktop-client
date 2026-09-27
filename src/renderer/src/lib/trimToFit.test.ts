@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { positionsInTrimmed, trimFolderToFit, trimMiddleToFit, trimToFit } from './trimToFit';
+import { fitPath, positionsInTrimmed, trimFolderToFit, trimMiddleToFit, trimToFit } from './trimToFit';
 
 const measure = (text: string): number => Array.from(text).length;
 
@@ -73,5 +73,37 @@ describe('positionsInTrimmed', () => {
 
   it('drops positions cut from the end', () => {
     expect(positionsInTrimmed('src/app/main/', 'src/a…', [0, 4, 6])).toEqual([0, 4]);
+  });
+});
+
+describe('fitPath', () => {
+  const fit = (folder: string, name: string, width: number) => {
+    const { folder: shownFolder, name: shownName } = fitPath(folder, name, width, measure);
+    return shownFolder + shownName;
+  };
+
+  it('keeps a path that fits', () => {
+    expect(fit('/main/', 'login', 11)).toBe('/main/login');
+  });
+
+  it('drops whole folders from the middle first', () => {
+    expect(fit('/main/task/sub/', 'login', 17)).toBe('/main/…/sub/login');
+  });
+
+  it('then keeps …/ before the whole name', () => {
+    expect(fit('/main/', 'bulk-40', 9)).toBe('…/bulk-40');
+  });
+
+  it('cuts a name too long from its middle, still after …/, so the path never reads as top-level', () => {
+    expect(fit('/main/', 'ghost-mode-fix', 11)).toBe('…/ghos…-fix');
+  });
+
+  it('gives the name all the room when …/ would leave it too little', () => {
+    expect(fit('/main/', 'ghost-mode-fix', 6)).toBe('gho…ix');
+  });
+
+  it('cuts a top-level name from its middle', () => {
+    expect(fit('/', 'main', 3)).toBe('m…n');
+    expect(fit('', 'Assets.meta', 7)).toBe('Ass…eta');
   });
 });

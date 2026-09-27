@@ -3,6 +3,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import { spec } from '@shared/domain/specs';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { DetailsHeading } from '../../components/DetailsHeading';
+import { MAX_LABEL_CHIPS } from '../../components/LabelChips';
 import { PLAIN_LINKS, type ObjectLinks } from '../../components/objectLinks';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
@@ -50,12 +51,17 @@ export function ChangesetDetails({ changeset, menu, links = PLAIN_LINKS, relatio
               Workspace
             </DetailsBadge>
           )}
-          {changesetLabels.map((label) => (
-            <DetailsBadge key={label.id} tone="warning">
+          {changesetLabels.slice(0, MAX_LABEL_CHIPS).map((label) => (
+            <DetailsBadge key={label.id} tone="warning" shrinks>
               <Tag size={10} />
-              {label.name}
+              <span>{label.name}</span>
             </DetailsBadge>
           ))}
+          {changesetLabels.length > MAX_LABEL_CHIPS && (
+            <DetailsBadge tone="warning" tip={changesetLabels.slice(MAX_LABEL_CHIPS).map((label) => label.name).join(', ')}>
+              +{changesetLabels.length - MAX_LABEL_CHIPS}
+            </DetailsBadge>
+          )}
         </>
       }
       attributes={<AttributeChips key={changeset.id} objectSpec={spec.changeset(changeset.id)} />}

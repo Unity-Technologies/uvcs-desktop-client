@@ -1,6 +1,6 @@
-import { AppWindow, Code, Columns2, EyeOff, FileText, FoldVertical, ImageIcon, RefreshCw, Rows2, WrapText } from 'lucide-react';
+import { AppWindow, Code, Columns2, EyeOff, FileText, FoldVertical, ImageIcon, Pilcrow, RefreshCw, Rows2, WrapText } from 'lucide-react';
 import { Suspense, useMemo, type ReactNode, type RefObject } from 'react';
-import type { DiffSides } from './shownDiff';
+import { followsLayout, type DiffSides } from './shownDiff';
 import type { FileContent } from '@shared/domain/content';
 import { api } from '../../../api/client';
 import { formatSize } from '../../../lib/formatDate';
@@ -18,14 +18,14 @@ import { canDiscardChanges } from './canDiscardChanges';
 import { canEditInPlace } from './canEditInPlace';
 import { comparisonMethodLabel, type ComparisonMethod } from './comparisonMethod';
 import { ComparisonMethodMenu } from './ComparisonMethodMenu';
-import { diffPresentation, hasTwoRepresentations, type Representation } from './diffPresentation';
+import { diffPresentation, hasTwoRepresentations, showsLines, type Representation } from './diffPresentation';
 import { useDiffPreferences, type DiffLayout } from './diffPreferencesStore';
 import { DiffNotice } from './DiffNotice';
 import { DiffViewerFrame } from './DiffViewerFrame';
 import { discardInFile, undoLastDiscard, type DiscardTarget } from './discardInFile';
 import type { EditorHandle } from './editorHandle';
 import { IMAGE_DIFF_MODES, type ImageDiffMode } from './image/imageDiffModes';
-import { IGNORED_DIFFERENCE_TITLES, ignoredDifference } from './ignoredDifference';
+import { IGNORED_DIFFERENCE_TITLES, ignoredDifference, methodHidingEveryChange } from './ignoredDifference';
 import { hasLineChanges, lineDiff, type LineDiff } from './lineDiff';
 import { LineStats } from './LineStats';
 import { PlainTextIndicator } from './PlainTextIndicator';
@@ -103,6 +103,12 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const wholeFile = typedIntoWhole(editable, savedDiff);
   // Different texts the comparison method shows as equal, e.g. only their line endings changed.
   const onlyIgnoredChanges = presentation.kind === 'text' && !presentation.identical && savedDiff !== null && !hasLineChanges(savedDiff);
+  // The other way round: changes that are all what another method ignores, e.g. every line ending changed. Of the file
+  // as read, so the line saying so stays put while it's typed into.
+  const hidingMethod = useMemo(
+    () => (savedDiff && hasLineChanges(savedDiff) ? methodHidingEveryChange(left.text ?? '', right.text ?? '', comparisonMethod) : null),
+    [savedDiff, left.text, right.text, comparisonMethod],
+  );
   const openFile = editablePath === null ? undefined : () => void api.system.openPath(absolutePath(workspacePath, editablePath));
 
   useShortcut(hotkey('saveFile'), () => void buffer.save(), dirty);
@@ -123,7 +129,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       <Button size="small" variant="ghost" data-tip="Go back to the file on disk" onClick={buffer.discard}>
         Discard
       </Button>
-      <Button size="small" variant="primary" data-tip="Save the file" data-tip-shortcut={hotkey('saveFile')} onClick={() => void buffer.save()}>
+      <Button size="small" variant="primary" data-tip={buffer.changedOnDisk ? "Save your version over the one on disk" : "Save the file"} data-tip-shortcut={hotkey('saveFile')} onClick={() => void buffer.save()}>
         Save
       </Button>
     </PaneToolbarGroup>
@@ -134,8 +140,8 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       value={representation}
       onChange={(value) => setRepresentation(extension, value)}
       segments={[
-        { value: 'text', label: <><Code size={13} /> Code</>, title: 'Compare the text' },
-        { value: 'image', label: <><ImageIcon size={13} /> Image</>, title: 'Compare the rendered images' },
+        { value: 'text', label: <><Code size={13} /> <span data-toolbar-label>Code</span></>, title: 'Compare the text' },
+        { value: 'image', label: <><ImageIcon size={13} /> <span data-toolbar-label>Image</span></>, title: 'Compare the rendered images' },
       ]}
     />
   );
@@ -143,50 +149,60 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   // Said in the header, not over the diff: a note there would stack on "No content changes".
   const plainText = isText && syntaxHighlighting(left.text ?? '', right.text ?? '', editable) === 'off';
 
+  // Nothing to view differently in an empty or unchanged file that only says so.
+  const viewControls = showsLines(presentation, editable);
+  // Discard and Save come first: the controls are right-aligned, so appearing on the first keystroke they move none
+  // of the others.
   const controls = isText ? (
     <>
-      {compareControls}
-      {plainText && <PlainTextIndicator />}
-      {currentDiff && hasLineChanges(currentDiff) && <LineStats added={currentDiff.added} removed={currentDiff.removed} />}
-      <PaneToolbarGroup>
-        <ComparisonMethodMenu value={comparisonMethod} onChange={setComparisonMethod} />
-        <IconButton
-          size="small"
-          icon={<FoldVertical size={14} />}
-          label={collapseUnchanged ? 'Show all lines' : 'Collapse unchanged lines'}
-          variant={collapseUnchanged ? 'secondary' : 'ghost'}
-          onClick={() => setCollapseUnchanged(!collapseUnchanged)}
-        />
-        <IconButton
-          size="small"
-          icon={<WrapText size={14} />}
-          label={wrapLines ? "Don't wrap lines" : 'Wrap lines'}
-          variant={wrapLines ? 'secondary' : 'ghost'}
-          onClick={() => setWrapLines(!wrapLines)}
-        />
-      </PaneToolbarGroup>
-      <SegmentedControl<DiffLayout>
-        value={layout}
-        onChange={setLayout}
-        segments={[
-          { value: 'split', label: <><Columns2 size={13} /> Split</>, title: 'Side-by-side view' },
-          { value: 'unified', label: <><Rows2 size={13} /> Unified</>, title: 'Unified view' },
-        ]}
-      />
       {unsavedControls}
+      {compareControls}
+      {viewControls && (
+        <>
+          {plainText && <PlainTextIndicator />}
+          {currentDiff && hasLineChanges(currentDiff) && <LineStats added={currentDiff.added} removed={currentDiff.removed} />}
+          <PaneToolbarGroup>
+            <ComparisonMethodMenu value={comparisonMethod} onChange={setComparisonMethod} />
+            <IconButton
+              size="small"
+              icon={<FoldVertical size={14} />}
+              label={collapseUnchanged ? 'Show all lines' : 'Collapse unchanged lines'}
+              variant={collapseUnchanged ? 'secondary' : 'ghost'}
+              onClick={() => setCollapseUnchanged(!collapseUnchanged)}
+            />
+            <IconButton
+              size="small"
+              icon={<WrapText size={14} />}
+              label={wrapLines ? "Don't wrap lines" : 'Wrap lines'}
+              variant={wrapLines ? 'secondary' : 'ghost'}
+              onClick={() => setWrapLines(!wrapLines)}
+            />
+          </PaneToolbarGroup>
+          {followsLayout(sides, wholeFile) && (
+            <SegmentedControl<DiffLayout>
+              value={layout}
+              onChange={setLayout}
+              segments={[
+                { value: 'split', label: <><Columns2 size={13} /> <span data-toolbar-label>Split</span></>, title: 'Side-by-side view' },
+                { value: 'unified', label: <><Rows2 size={13} /> <span data-toolbar-label>Unified</span></>, title: 'Unified view' },
+              ]}
+            />
+          )}
+        </>
+      )}
       {representationControl}
     </>
   ) : (
     <>
+      {unsavedControls}
       {/* Single-sided images (added or deleted) are previews: no modes to offer. */}
       {presentation.kind === 'image' && presentation.comparable && (
         <SegmentedControl<ImageDiffMode>
           value={imageMode}
           onChange={setImageMode}
-          segments={IMAGE_DIFF_MODES.map((mode) => ({ value: mode.value, label: <>{mode.icon} {mode.label}</>, title: mode.title }))}
+          segments={IMAGE_DIFF_MODES.map((mode) => ({ value: mode.value, label: <>{mode.icon} <span data-toolbar-label>{mode.label}</span></>, title: mode.title ?? mode.label }))}
         />
       )}
-      {unsavedControls}
       {representationControl}
     </>
   );
@@ -210,6 +226,12 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
     />
   );
 
+  const hidingNote = hidingMethod && (
+    <DiffNotice tone="info" icon={<Pilcrow size={13} />} action={<Button size="small" onClick={() => setComparisonMethod(hidingMethod)}>{comparisonMethodLabel(hidingMethod)}</Button>}>
+      {IGNORED_DIFFERENCE_TITLES[ignoredDifference(left.text ?? '', right.text ?? '')]}.
+    </DiffNotice>
+  );
+
   let body: ReactNode;
   if (editable) {
     // Typed into even with no lines to show: then the whole file, under a line that says why.
@@ -231,9 +253,10 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       <>
         {buffer.changedOnDisk && (
           <DiffNotice tone="attention" icon={<RefreshCw size={13} />} action={<Button size="small" onClick={buffer.discard}>Reload</Button>}>
-            File changed on disk. Reload to see the new version; your unsaved edits are discarded.
+            File changed on disk. Reload to take the new version and drop your edits, or save yours over it.
           </DiffNotice>
         )}
+        {hidingNote}
         {note}
         {textDiff}
       </>
@@ -251,7 +274,12 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       />
     );
   } else if (presentation.kind === 'text') {
-    body = textDiff;
+    body = (
+      <>
+        {hidingNote}
+        {textDiff}
+      </>
+    );
   } else if (presentation.kind === 'tooLarge') {
     body = (
       <EmptyState

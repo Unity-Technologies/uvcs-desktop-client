@@ -17,7 +17,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import { MAIN_BRANCH_GUID, type Branch } from '@shared/domain/branch';
-import { shortBranchName, spec } from '@shared/domain/specs';
+import { spec } from '@shared/domain/specs';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { copyToClipboard } from '../../lib/copyToClipboard';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
@@ -36,6 +36,7 @@ import { openMergeTaskDialog } from '../mergeTask/MergeTaskDialog';
 import { isTaskBranch } from '../mergeTask/mergeTaskSummary';
 import { openTaskWorkspaceDialog } from '../taskWorkspace/TaskWorkspaceDialog';
 import { openCreateBranchDialog } from './CreateBranchDialog';
+import { MERGE_INTO_WORKSPACE, serverMergeLabel } from './mergeMenuLabels';
 
 /** The context menu for the selected branches. `currentBranch` is the branch the workspace is on. */
 export function branchMenu(workspacePath: string, branches: Branch[], currentBranch: string | undefined): MenuEntry[] {
@@ -73,20 +74,19 @@ export function branchMenu(workspacePath: string, branches: Branch[], currentBra
     SEPARATOR,
     single && !isCurrent && {
       id: 'merge',
-      // The leaf reads whole in a menu; the branch pill names the full branch.
-      label: `Merge into ${currentBranch ? shortBranchName(currentBranch) : 'workspace'}`,
+      label: MERGE_INTO_WORKSPACE,
       icon: GitMerge,
       run: () => mergeFromBranch(single.name),
     },
     single && isTaskBranch(single) && {
       id: 'mergeTask',
-      label: `Merge to ${single.parent}…`,
+      label: serverMergeLabel(single.parent),
       icon: GitPullRequest,
       run: () => openMergeTaskDialog(workspacePath, single),
     },
     single && {
       id: 'mergeTo',
-      label: 'Merge to…',
+      label: serverMergeLabel(),
       icon: GitPullRequestArrow,
       run: () => void mergeTo(spec.branch(single.name), single.name),
     },

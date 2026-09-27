@@ -33,4 +33,9 @@ describe('removedItemSpec', () => {
     const xml = fileInfos({ ServerPath: '/sub', RepSpec: 'lib@local', IsXlink: 'false', IsUnderXlink: 'true' }, removed);
     expect(removedItemSpec(xml, 'x.txt')).toBe('serverpath:/sub/x.txt#cs:7@lib@local');
   });
+
+  it('has no spec for an item without a loaded revision, instead of one at changeset -1', () => {
+    const xml = fileInfos({ ServerPath: '/src', RepSpec: 'game@local', IsXlink: 'false' }, { ...removed, RevisionChangeset: '-1', Status: 'added' });
+    expect(removedItemSpec(xml, 'f5.txt')).toBeNull();
+  });
 });
