@@ -416,20 +416,27 @@ renderer/src/
   named by its path, the folders dimmed. Extras go in one order: tags (`ItemTag`: "modified", a merge), where a conflict
   stands (the merge page's icons, `ConflictStatusChip`, in Incoming too), the review mark, then `ItemMark`s by the
   letter, a quiet icon whose words are in its tooltip (`LockMark`: "Locked by ana in art-wk", someone else's in the
-  alert tone; `XlinkMark`: "Xlink to nervathirdparty@17568"). Private items dim, ignored ones further, deleted ones are
-  struck through, reviewed ones fade (`faded`) but for their review mark. Files marks what is notable only (a pending
-  change, a checkout) and dims private items instead of lettering them, as they come by the folder; a list of changes
-  letters every row, P included, as its filter chips do. In Changes every folder holds changes, so only its own change
+  alert tone; `XlinkMark`: "Xlink to nervathirdparty@17568"). Nothing but ignored items dims: a private item keeps
+  its icon, its name a step quieter, and wears its P; ignored (and cloaked) ones grey out, icon and name, with no
+  letter in Files; deleted ones are struck through, reviewed ones fade (`faded`) but for their review mark. Files marks
+  what is notable only (a pending change, a checkout, a private item: `itemDecoration`); a list of changes letters
+  every row, as its filter chips do. In Changes every folder holds changes, so only its own change
   marks it. The merge page's letter is what the merge does to the item (a directory conflict's, what the source did);
   `cm merge` names no item types, so a path with others under it is a folder (`mergeItemTypes`). Locks are read for
   pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. The Changes list renders
   its file and folder rows memoized with stable callbacks: holding ↓ over 100,000 changes re-renders none of them
   (0.5-0.6 ms a step).
-  `ItemIcon` is Lucide's (ISC, tree-shaken, already the app's icon set): a solid slate folder, or a filled neutral page
-  with the file's family as its glyph (`fileKind`: code, data, text, image, media, archive, Unity asset, binary; Unity's
-  `.meta` files dim), in the `--icon-*` tokens; color is left to statuses. Native icons (`app.getFileIcon`) were
-  rejected: macOS answers a generic page for a path not on disk (repository trees, deleted files), they're bitmaps
-  that ignore the app's theme, and every OS draws them differently.
+  `ItemIcon` draws a file's type in Material Icon Theme (`material-icon-theme`, MIT: the icons of VS Code's most
+  installed icon theme), matched as VS Code does, on the file name first, then its longest extension (`fileIconOf`:
+  1,400 extensions and 2,100 names, from C#, C++ and web projects to Docker, CMake and lockfiles), plus what the theme
+  lacks (Unity's serialized assets, Plastic's `.conf` files); its light variants on the light theme. The build emits its
+  file icons (not its folder ones) as files, loaded as rows show them (`materialIconUrl`, about 640 KB on disk);
+  updating the dependency updates them. Folders, and the plain page of a file it has no icon for (a Unity `.meta`, an
+  unknown type), are the theme's shapes in the `--icon-*` tokens. Its colors are the file types' own, as in an editor;
+  statuses stay letters at the end of the row. Rejected: Lucide glyphs (neutral or tinted by family: a gray tree where
+  types look alike), catppuccin (pastels washed out on white), vscode-icons (32 px art, busy at 16), file-icons (one
+  color). Native icons (`app.getFileIcon`) were rejected too: macOS answers a generic page for a path not on disk
+  (repository trees, deleted files), they're bitmaps that ignore the app's theme, and every OS draws them differently.
 - **Files**: the tree keeps its width (400 px at first; on a narrow window it gives way first, keeping 480 px for the
   diff: `FILE_TREE_WIDTH`) and shows names only, with Modified once it's wider than 420 px: size, changeset, author
   and comment are the selected item's, above its diff. A file shows one diff, the most telling for its status

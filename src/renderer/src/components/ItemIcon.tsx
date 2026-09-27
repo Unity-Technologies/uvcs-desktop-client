@@ -1,61 +1,37 @@
-import {
-  File,
-  FileArchive,
-  FileBox,
-  FileBraces,
-  FileCode,
-  FileDigit,
-  FileImage,
-  FilePlay,
-  FileSymlink,
-  FileText,
-  Folder,
-  type LucideIcon,
-} from 'lucide-react';
+import type { CSSProperties } from 'react';
+import { FileSymlink } from 'lucide-react';
 import type { ItemType } from '@shared/domain/pendingChanges';
-import { fileKindOf, type FileKind } from './fileKind';
+import { fileIconOf } from './fileIcon';
+import { materialIconUrl } from './materialIconUrl';
 import styles from './ItemIcon.module.css';
-
-const GLYPHS: Record<FileKind, LucideIcon | null> = {
-  code: FileCode,
-  data: FileBraces,
-  text: FileText,
-  image: FileImage,
-  media: FilePlay,
-  archive: FileArchive,
-  asset: FileBox,
-  binary: FileDigit,
-  meta: null,
-  plain: null,
-};
 
 interface ItemIconProps {
   itemType: ItemType;
-  /** Its file name, whose extension picks the glyph. */
+  /** Its file name, which picks the icon. */
   name: string;
 }
 
-const SIZE = 16;
+const cssUrl = (name: string): string => `url(${materialIconUrl(name)})`;
+/** The theme's folder and page, drawn in the app's own `--icon-*` tokens. */
+const FOLDER = { '--icon-shape': cssUrl('folder') } as CSSProperties;
+const PAGE = { '--icon-shape': cssUrl('file') } as CSSProperties;
 
 /**
- * What an item is, at a glance: a solid folder, or a filled page whose glyph tells the family of the file (code,
- * image, Unity asset...). Color stays for statuses: every file is the same neutral page. Lucide's outlines, filled:
- * a plain page under the glyph's own, so each icon reads solid whatever its glyph leaves open.
+ * What an item is, at a glance: a folder, or its file type's icon in Material Icon Theme (MIT, the icons VS Code's
+ * most installed theme draws), in its own colors, the light variant on light themes. Files it has no icon for (a Unity
+ * `.meta` file, an unknown extension) are a plain page.
  */
 export function ItemIcon({ itemType, name }: ItemIconProps) {
-  if (itemType === 'directory' || itemType === 'xlink') {
+  if (itemType === 'directory' || itemType === 'xlink') return <span className={styles.folder} style={FOLDER} aria-hidden />;
+  if (itemType === 'symlink') {
     return (
       <span className={styles.icon} aria-hidden>
-        <Folder size={SIZE} className={styles.folder} />
+        <FileSymlink size={16} className={styles.symlink} />
       </span>
     );
   }
-  const kind = itemType === 'symlink' ? 'plain' : fileKindOf(name);
-  const Glyph = itemType === 'symlink' ? FileSymlink : (GLYPHS[kind] ?? (itemType === 'binaryFile' ? FileDigit : null));
-  return (
-    <span className={styles.icon} data-kind={kind} aria-hidden>
-      <File size={SIZE} className={styles.page} />
-      {Glyph && <Glyph size={SIZE} className={styles.glyph} />}
-    </span>
-  );
+  const icon = fileIconOf(name);
+  if (!icon) return <span className={styles.page} style={PAGE} aria-hidden />;
+  const colors = { '--icon-dark': cssUrl(icon.dark), '--icon-light': cssUrl(icon.light) } as CSSProperties;
+  return <span className={styles.file} style={colors} aria-hidden />;
 }

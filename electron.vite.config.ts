@@ -19,6 +19,8 @@ export default defineConfig({
     optimizeDeps: { include: ['@pierre/diffs', '@pierre/diffs/react', '@pierre/diffs/edit'] },
     // Pierre's highlighting worker loads its languages in chunks, which only a module worker can.
     worker: { format: 'es' },
+    // File icons stay files, loaded as rows show them, instead of 600 KB of data URLs in the bundle.
+    build: { assetsInlineLimit: (file) => (file.includes('/material-icon-theme/') ? false : undefined) },
     resolve: {
       alias: { ...sharedAlias, '@renderer': resolve(__dirname, 'src/renderer/src') },
     },

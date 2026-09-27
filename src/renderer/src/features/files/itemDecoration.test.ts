@@ -14,9 +14,10 @@ describe('itemDecoration', () => {
     expect(itemDecoration(controlled, { tone: 'moved', label: 'Moved' }).status?.tone).toBe('moved');
   });
 
-  it('dims private and ignored items instead of marking them', () => {
-    expect(itemDecoration({ isPrivate: true }, null)).toEqual({ status: null, presence: 'private' });
-    expect(itemDecoration({ isPrivate: true }, { tone: 'private', label: 'Private' })).toEqual({ status: null, presence: 'private' });
+  it('letters private items P, as Changes does, and greys ignored ones out without a letter', () => {
+    const privateItem = { status: { tone: 'private', label: 'Private' }, presence: 'private' };
+    expect(itemDecoration({ isPrivate: true }, null)).toEqual(privateItem);
+    expect(itemDecoration({ isPrivate: true }, { tone: 'private', label: 'Private' })).toEqual(privateItem);
     expect(itemDecoration({ isPrivate: true }, { tone: 'muted', label: 'Ignored' })).toEqual({ status: null, presence: 'ignored' });
   });
 

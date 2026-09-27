@@ -1,31 +1,35 @@
-.icon {
-  position: relative;
+.icon,
+.folder,
+.page,
+.file {
   display: inline-flex;
   flex: none;
   width: 16px;
   height: 16px;
 }
 
-.icon > svg {
-  position: absolute;
-  inset: 0;
+/* The theme's folder and plain page are shapes only, filled with the tokens: they read on every surface. */
+.folder,
+.page {
+  mask: var(--icon-shape) center / 16px no-repeat;
 }
 
 .folder {
-  color: var(--icon-folder);
-  fill: var(--icon-folder);
+  background: var(--icon-folder);
 }
 
 .page {
-  color: var(--icon-file);
-  fill: var(--icon-file-fill);
+  background: var(--icon-file);
 }
 
-.glyph {
-  color: var(--icon-file);
+.file {
+  background: var(--icon-light) center / 16px no-repeat;
 }
 
-/* Unity writes one next to every asset: they step back so the assets stand out. */
-.icon[data-kind='meta'] {
-  opacity: 0.55;
+:global([data-theme='dark']) .file {
+  background-image: var(--icon-dark);
+}
+
+.symlink {
+  color: var(--icon-file);
 }

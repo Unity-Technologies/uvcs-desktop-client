@@ -113,10 +113,9 @@
   --change-moved: #8250df;
   --change-permissions: #bc4c00;
 
-  /* Item icons: solid slate folders and neutral file pages, so the only strong colors in a tree are its statuses. */
+  /* Item icons the app draws itself: folders, and the plain page of a file with no icon of its type (a Unity .meta). */
   --icon-folder: #6788b4;
   --icon-file: #6e7781;
-  --icon-file-fill: #e3e7eb;
 
   --bg-app: #f6f8fa;
   --bg-sidebar: #f6f8fa;
@@ -188,7 +187,6 @@
 
   --icon-folder: #7f9fcb;
   --icon-file: #9aa3ad;
-  --icon-file-fill: #343c47;
 
   --bg-app: #0d1117;
   --bg-sidebar: #0d1117;
