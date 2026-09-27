@@ -1,4 +1,4 @@
-import { diff3Merge } from 'node-diff3';
+import { diff3Merge } from './diff3';
 import { dominantLineBreak, endsWithLineBreak, splitLines } from '../../../lib/lineBreaks';
 
 /** Names shown on the conflict markers. The destination is "current", the source is "incoming". */
@@ -25,14 +25,13 @@ const MARKER_END = '>>>>>>> ';
 export function buildConflictDocument(base: string, source: string, destination: string, labels: ConflictLabels): ConflictDocument {
   const [destinationLines, baseLines, sourceLines] = [destination, base, source].map(splitLines) as [string[], string[], string[]];
   const lineBreak = dominantLineBreak(destinationLines) ?? dominantLineBreak(sourceLines) ?? dominantLineBreak(baseLines) ?? '\n';
-  const regions = diff3Merge(destinationLines, baseLines, sourceLines, { excludeFalseConflicts: true });
+  const regions = diff3Merge(destinationLines, baseLines, sourceLines);
   const ended = (text: string): string => (text === '' || endsWithLineBreak(text) ? text : text + lineBreak);
   let conflictCount = 0;
 
   const text = regions
     .map((region) => {
-      if (region.ok) return region.ok.join('');
-      if (!region.conflict) return '';
+      if ('ok' in region) return region.ok.join('');
       conflictCount++;
       return [
         `${MARKER_START}${labels.destination}${lineBreak}`,
