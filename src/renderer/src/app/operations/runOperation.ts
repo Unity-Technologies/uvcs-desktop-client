@@ -3,7 +3,7 @@ import { useCommandLogStore } from '../shell/commandLogStore';
 import { invalidateWorkspace } from '../queryClient';
 import { toast, useToastStore, type Toast, type ToastAction } from '../../ui/toast/toastStore';
 import { describeCompletion } from './describeProgress';
-import { operationById, runningOperationOf, useRunningOperationsStore, type WorkspaceChangingOperation } from './runningOperationsStore';
+import { blockingOperation, operationById, useRunningOperationsStore, type WorkspaceChangingOperation } from './runningOperationsStore';
 
 /** How an operation's card ends when it succeeds. */
 export type OperationSuccess = Pick<Toast, 'title' | 'detail' | 'action'> & { kind?: 'success' | 'info' };
@@ -20,7 +20,10 @@ interface OperationOptions<T> {
   success?: (result: T) => OperationSuccess | null;
   /** Whether it may be stopped at all; its progress also tells when it can't be stopped anymore. */
   cancellable?: boolean;
-  /** Set for operations that change the loaded revisions: they don't start while another operation runs on the workspace. */
+  /**
+   * Set for operations that change the loaded revisions: they don't start while another operation runs on the workspace,
+   * and no other one starts while they run.
+   */
   kind?: WorkspaceChangingOperation;
   /**
    * Explains a failure it recognizes in its own way (returns true), which then isn't flagged as a failure in the status
@@ -48,7 +51,7 @@ export async function runOperation<T>({
   onFailure,
   affects,
 }: OperationOptions<T>): Promise<T | undefined> {
-  if (kind && refuseWhileBusy(workspacePath)) return undefined;
+  if (refuseWhileBusy(workspacePath, kind !== undefined)) return undefined;
 
   const operationId = crypto.randomUUID();
   const operations = useRunningOperationsStore.getState();
@@ -103,11 +106,11 @@ function markHandled(error: unknown): void {
 }
 
 /**
- * Tells the user and returns true when another operation runs on the workspace, so one that changes the loaded
- * revisions must not start. Check it before asking anything about such an operation.
+ * Tells the user and returns true when an operation can't start on the workspace now (`blockingOperation`): by
+ * default one that changes the loaded revisions. Check it before asking anything about such an operation.
  */
-export function refuseWhileBusy(workspacePath: string): boolean {
-  const running = runningOperationOf(workspacePath);
+export function refuseWhileBusy(workspacePath: string, changesLoadedRevisions = true): boolean {
+  const running = blockingOperation(useRunningOperationsStore.getState().operations, workspacePath, changesLoadedRevisions);
   if (running) toast.info(`${running.title} is still running`, 'Wait for it to finish, or cancel it, before starting something else.');
   return Boolean(running);
 }
