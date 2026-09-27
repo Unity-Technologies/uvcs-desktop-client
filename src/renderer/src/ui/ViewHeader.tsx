@@ -19,7 +19,7 @@ interface ViewHeaderProps {
  */
 export function ViewHeader({ title, subtitle, children, actions, inTitleBar }: ViewHeaderProps) {
   return (
-    <header className={styles.header} data-title-bar={inTitleBar}>
+    <header className={styles.header} data-title-bar={inTitleBar} data-drag-region={inTitleBar || undefined}>
       <div className={styles.titleRow}>
         <h1 className={styles.title}>{title}</h1>
         {subtitle && <div className={styles.subtitle}>{subtitle}</div>}

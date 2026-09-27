@@ -25,7 +25,7 @@ interface SidebarProps {
 export function Sidebar({ children, width = 216, rail = false, joinsTopBar = false }: SidebarProps) {
   return (
     <nav className={styles.sidebar} data-rail={rail} style={{ width: rail ? RAIL_WIDTH : width }}>
-      <div className={styles.dragRegion} data-joins-top-bar={joinsTopBar} />
+      <div className={styles.dragRegion} data-joins-top-bar={joinsTopBar} data-drag-region />
       <RailContext.Provider value={rail}>{children}</RailContext.Provider>
     </nav>
   );
