@@ -5,6 +5,7 @@ import type { CmClient } from '../cm/CmClient';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { UPDATE_ARGS } from '../cm/updateArgs';
+import { waitForNextSecond } from '../files/nextSecond';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
 import { readIncomingChanges } from './incoming';
@@ -13,7 +14,8 @@ import { readIncomingChanges } from './incoming';
  * Updates a workspace whose local changes collide with incoming ones, without an external merge tool:
  * 1. Back up the local version of every conflicting file (kept afterwards, just in case).
  * 2. Undo those files so the update can proceed, and update.
- * 3. Write each file's resolution and check out again the files that were checked out.
+ * 3. Write each file's resolution (in a later second than `cm` wrote them: `waitForNextSecond`) and check out again
+ *    the files that were checked out.
  * If the update fails, the local versions are put back as they were.
  */
 export async function updateWithMerge(
@@ -33,7 +35,7 @@ export async function updateWithMerge(
     return { backupDirectory: null };
   }
 
-  const unresolved = conflicts.filter((conflict) => !resolutions[conflict.path]);
+  const unresolved = unresolvedConflicts(conflicts, resolutions);
   if (unresolved.length > 0) throw new Error(`Resolve ${unresolved.map((conflict) => conflict.path).join(', ')} before updating.`);
 
   const backupDirectory = join(backupsRoot, new Date().toISOString().replace(/[:.]/g, '-'));
@@ -48,11 +50,13 @@ export async function updateWithMerge(
   try {
     await update();
   } catch (error) {
+    await waitForNextSecond();
     for (const conflict of conflicts) await copyInto(backup(conflict), absolute(conflict));
     throw new Error(`${error instanceof Error ? error.message : String(error)} Your local changes were put back; nothing was lost.`);
   }
 
   context.reportProgress('Writing resolved files');
+  await waitForNextSecond();
   for (const conflict of conflicts) {
     const resolution = resolutions[conflict.path]!;
     if (resolution.choice === 'text') await writeFile(absolute(conflict), resolution.text, 'utf8');
@@ -63,6 +67,11 @@ export async function updateWithMerge(
   if (toCheckOut.length > 0) await cm.query(['checkout', ...toCheckOut], { cwd: workspacePath });
 
   return { backupDirectory };
+}
+
+/** The files that need merging to update and have no resolution yet. */
+export function unresolvedConflicts(conflicts: UpdateConflict[], resolutions: UpdateResolutions | null): UpdateConflict[] {
+  return conflicts.filter((conflict) => !resolutions?.[conflict.path]);
 }
 
 async function readCheckedOutPaths(cm: CmClient, workspacePath: string): Promise<Set<string>> {
