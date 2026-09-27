@@ -1,12 +1,12 @@
-import { mkdtemp, readFile, readlink, rm, stat, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, readlink, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { CmClient } from '../cm/CmClient';
 import { detachReplacedFiles } from './switchShelves';
 
-const replaced = (path: string, revisionType: string): string => `<?xml version="1.0" encoding="utf-8"?><StatusOutput><WorkspaceStatus><Status><Changeset>1</Changeset></Status></WorkspaceStatus><Changes>
-<Change><Type>RP</Type><Path>${path}</Path><OldPath /><MergesInfo /><SimilarityPerUnit>0</SimilarityPerUnit><Size>4</Size><RevisionType>${revisionType}</RevisionType><LastModified>2026-09-25T08:26:09+02:00</LastModified></Change>
+const replaced = (path: string, revisionType: string, type = 'RP'): string => `<?xml version="1.0" encoding="utf-8"?><StatusOutput><WorkspaceStatus><Status><Changeset>1</Changeset></Status></WorkspaceStatus><Changes>
+<Change><Type>${type}</Type><Path>${path}</Path><OldPath /><MergesInfo /><SimilarityPerUnit>0</SimilarityPerUnit><Size>4</Size><RevisionType>${revisionType}</RevisionType><LastModified>2026-09-25T08:26:09+02:00</LastModified></Change>
 </Changes></StatusOutput>`;
 
 /** A `cm` whose undo puts back the loaded revision with `undo`, and that records the commands. */
@@ -40,6 +40,23 @@ describe('detachReplacedFiles', () => {
     expect(commands.map(([command]) => command)).toEqual(['status', 'undo', 'checkout']);
     expect(await readFile(file, 'utf8')).toBe('teh\n');
     expect(Math.floor((await stat(file)).mtimeMs / 1000)).toBeGreaterThan(undoneAtSecond);
+  });
+
+  it('adds back a file the shelve copied over a deletion, so nothing reads its revision once the shelve is deleted', async () => {
+    const workspacePath = await mkdtemp(join(tmpdir(), 'uvcs-detach-'));
+    const file = join(workspacePath, 'src', 'f5.txt');
+    await mkdir(join(workspacePath, 'src'));
+    await writeFile(file, 'kept over the deletion\n');
+    // Like cm: undoing the copy takes the file off the disk.
+    const { cm, commands } = fakeCm(replaced('src/f5.txt', 'enTextFile', 'CO+CP'), () => rm(file));
+
+    await detachReplacedFiles(cm, workspacePath);
+
+    expect(await readFile(file, 'utf8')).toBe('kept over the deletion\n');
+    expect(commands.slice(1)).toEqual([
+      ['undo', file, '--symlink'],
+      ['add', file],
+    ]);
   });
 
   it('keeps a link pointing where the shelve left it, never touching the file it points to', async () => {
