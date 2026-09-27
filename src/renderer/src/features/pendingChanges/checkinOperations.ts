@@ -21,9 +21,17 @@ interface CheckinOptions {
   workspacePath: string;
   changes: PendingChange[];
   comment: string;
-  warnOnEmptyComment: boolean;
   /** The incoming check saw the branch move on: update (or review what came in) before checking in, not after a rejection. */
   updateFirst?: boolean;
+}
+
+/** Asked before a check-in without a comment, when the setting says to. */
+export function confirmCheckinWithoutComment(): Promise<boolean> {
+  return confirm({
+    title: 'Check in without a comment?',
+    message: 'A short description helps your team understand the change later.',
+    confirmLabel: 'Check in anyway',
+  });
 }
 
 /**
@@ -32,16 +40,8 @@ interface CheckinOptions {
  * it does so up front.
  */
 export async function checkinChanges(options: CheckinOptions): Promise<boolean> {
-  const { workspacePath, changes, comment, warnOnEmptyComment } = options;
-  if (!comment.trim() && warnOnEmptyComment) {
-    const proceed = await confirm({
-      title: 'Check in without a comment?',
-      message: 'A short description helps your team understand the change later.',
-      confirmLabel: 'Check in anyway',
-    });
-    if (!proceed) return false;
-  }
-  if (options.updateFirst) return catchUpAndCheckin({ ...options, updateFirst: false, warnOnEmptyComment: false }, null);
+  const { workspacePath, changes, comment } = options;
+  if (options.updateFirst) return catchUpAndCheckin({ ...options, updateFirst: false }, null);
 
   const rejected: { rejection?: CheckinRejection } = {};
   const result = await runOperation({
@@ -94,7 +94,7 @@ async function catchUpAndCheckin(options: CheckinOptions, rejection: CheckinReje
     return false;
   }
   if (!(await updateToIncoming(workspacePath, incoming))) return false;
-  return checkinChanges({ ...options, warnOnEmptyComment: false });
+  return checkinChanges(options);
 }
 
 /** Shelves the given changes. Resolves to true when a shelve was created. */

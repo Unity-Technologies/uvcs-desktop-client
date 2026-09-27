@@ -1,5 +1,5 @@
 import { CheckCircle2, Files, GitMerge, List, ListTree, SlidersHorizontal } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { openSettingsDialogAt } from '../../app/settings/SettingsDialog';
@@ -38,7 +38,7 @@ import { bulkPrivateFiles } from './bulkPrivate';
 import { behindBranch, behindDescription } from './checkinBehind';
 import { mergeSourceChangeset, shelvableChanges, uploadSize } from './checkinButton';
 import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkinAfterUpdate';
-import { checkinChanges, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
+import { checkinChanges, confirmCheckinWithoutComment, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
 import { isCheckinCandidate } from './changeCategories';
 import { buildChangeRows, changeKey, changesUnderRow, topLevelCheckboxInset, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
 import { changelistMenu } from './changelistMenu';
@@ -70,6 +70,7 @@ export function PendingChangesView() {
   const [selection, setSelection] = useViewSelection('changes');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const summaryRef = useRef<HTMLInputElement>(null);
 
   const allChanges = snapshot?.changes ?? NO_CHANGES;
   const review = usePendingReview(workspacePath, allChanges, snapshot !== undefined && !isPlaceholderData);
@@ -149,18 +150,16 @@ export function PendingChangesView() {
   };
 
   const checkin = async (): Promise<boolean> => {
+    const comment = joinComment(draft);
+    if (!comment.trim() && settings.warnOnEmptyComment && !(await confirmCheckinWithoutComment())) {
+      // Writing one is the way on.
+      summaryRef.current?.focus();
+      return false;
+    }
     // Checking in takes the files as they are on disk: unsaved edits are saved first, or dropped, or it waits.
     if (!(await settleBeforeLeaving())) return false;
     if (bulkPrivate && !(await confirmBulkPrivateCheckin(bulkPrivate))) return false;
-    const done = await runBusy(() =>
-      checkinChanges({
-        workspacePath,
-        changes: included,
-        comment: joinComment(draft),
-        warnOnEmptyComment: settings.warnOnEmptyComment,
-        updateFirst: behind !== null,
-      }),
-    );
+    const done = await runBusy(() => checkinChanges({ workspacePath, changes: included, comment, updateFirst: behind !== null }));
     if (done) {
       clearMessage(workspacePath);
       setSelection(EMPTY_SELECTION);
@@ -302,6 +301,7 @@ export function PendingChangesView() {
               />
             )}
             <CheckinPanel
+              summaryRef={summaryRef}
               summary={draft.summary}
               description={draft.description}
               onMessageChange={(message) => setMessage(workspacePath, message)}

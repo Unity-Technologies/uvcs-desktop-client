@@ -1,6 +1,6 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Archive, ArrowDownToLine, Check, ChevronDown, GitCommitHorizontal, GitMerge, History } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type RefObject } from 'react';
 import type { Icon } from '../../lib/actions';
 import { splitComment } from '../../lib/comment';
 import { useShortcut } from '../../lib/useShortcut';
@@ -19,6 +19,8 @@ const DESCRIPTION_MIN_HEIGHT = 32;
 const DESCRIPTION_MAX_HEIGHT = 360;
 
 interface CheckinPanelProps {
+  /** The summary field, for the view to put the caret in. */
+  summaryRef: RefObject<HTMLInputElement | null>;
   summary: string;
   description: string;
   onMessageChange: (message: { summary?: string; description?: string }) => void;
@@ -45,6 +47,7 @@ interface CheckinPanelProps {
 const MODES: CheckinMode[] = ['checkin', 'shelve'];
 
 export function CheckinPanel({
+  summaryRef,
   summary,
   description,
   onMessageChange,
@@ -91,6 +94,7 @@ export function CheckinPanel({
       <ResizeHandle size={descriptionHeight} min={DESCRIPTION_MIN_HEIGHT} max={DESCRIPTION_MAX_HEIGHT} onResize={setDescriptionHeight} />
       <div className={styles.summaryField}>
         <input
+          ref={summaryRef}
           className={styles.summary}
           placeholder={mode === 'shelve' ? 'Shelve summary' : 'Summary'}
           value={summary}
