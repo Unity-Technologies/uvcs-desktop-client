@@ -11,7 +11,7 @@ import { useCommandStore, type Command } from './commandStore';
 import { PaletteFooter } from './PaletteFooter';
 import { PaletteRow } from './PaletteRow';
 import { isInScope, LIST_ORDER, parseScope, type SectionId } from './paletteScope';
-import { collapseGroups, COLLAPSED_ROWS, rankGroups, type SearchGroup, type SearchResult } from './searchResults';
+import { collapseGroups, COLLAPSED_ROWS, moreLabel, rankGroups, type SearchGroup, type SearchResult } from './searchResults';
 import { usePaletteSearch } from './usePaletteSearch';
 import { useWorkspaceResults } from './useWorkspaceResults';
 import styles from './CommandPalette.module.css';
@@ -141,7 +141,7 @@ function OpenPalette({ close }: { close: () => void }) {
                 ))}
                 {group.more > 0 && (
                   <Cmdk.Item value={moreValue(group.section)} className={styles.more} onSelect={() => expand(group.section)}>
-                    {group.more} more {group.heading.toLowerCase()}
+                    {moreLabel(group)}
                   </Cmdk.Item>
                 )}
               </Cmdk.Group>
