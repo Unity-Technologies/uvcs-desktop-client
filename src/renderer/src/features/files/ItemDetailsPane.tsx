@@ -36,7 +36,7 @@ export function ItemDetailsPane({ workspacePath, item, pendingChange, menu }: It
     <DetailsPanel
       icon={item.itemType === 'directory' ? <Folder /> : item.itemType === 'symlink' ? <FileSymlink /> : <File />}
       kind={item.itemType === 'directory' ? 'Folder' : item.itemType === 'symlink' ? 'Link' : 'File'}
-      context={`/${item.path.slice(0, nameStart)}`}
+      context={nameStart > 0 ? `/${item.path.slice(0, nameStart)}` : undefined}
       heading={<DetailsHeading name={item.name} />}
       author={item.owner && !item.isPrivate ? { user: item.owner, date: item.date } : undefined}
       badges={

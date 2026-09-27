@@ -67,7 +67,7 @@ export function FilesView() {
     () => void goToFile(workspacePath).then((path) => path && useFilesViewStore.getState().requestReveal(path)),
     [workspacePath],
   );
-  useFileCommands(workspacePath, selectedItems, openGoToFile);
+  useFileCommands(workspacePath, selectedItems, pendingIndex, openGoToFile);
 
   const createInSelection = (kind: 'file' | 'directory'): void => void createItem(workspacePath, targetDirectoryFor(focused), kind);
 
