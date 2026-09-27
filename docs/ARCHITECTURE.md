@@ -322,7 +322,7 @@ and many people use the same server. Every `cm` command other than local reads (
   (`workspaces.heads`); `cm` is asked only about recent workspaces whose file can't tell.
 - **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`), `cm diff`
   runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id, specs
-  pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`) and skipped by refreshes.
+  pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`; the last 100 off screen, `boundUnusedQueries`) and skipped by refreshes.
   An object opened from a list already read starts from it (`useChangeset`) and is asked for only once that list is stale.
 - **After an operation**: `invalidateWorkspace` refetches what is on screen and marks the rest stale, scoped to what the
   operation can change (`refreshScopes.ts`, `runOperation({ affects })`): a checkin, an update or a merge from a branch
