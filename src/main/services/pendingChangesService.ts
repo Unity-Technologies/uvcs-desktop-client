@@ -12,6 +12,7 @@ import type {
 import { explainLockedItems } from '../cm/lockedItems';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readCheckinProgress } from '../cm/progress/checkinProgress';
+import { onLinksThemselves } from '../cm/symlinkArgs';
 import { withTempFile } from '../files/tempFile';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
@@ -58,7 +59,7 @@ export function createPendingChangesService({ cm, operations }: ServiceContext):
   }
 
   async function undo(workspacePath: string, paths: string[]): Promise<void> {
-    await cm.query(['undo', ...absolutePaths(workspacePath, paths)], { cwd: workspacePath });
+    await cm.query(onLinksThemselves('undo', ...absolutePaths(workspacePath, paths)), { cwd: workspacePath });
   }
 
   async function undoUnchanged(workspacePath: string, paths?: string[]): Promise<void> {
@@ -75,7 +76,7 @@ export function createPendingChangesService({ cm, operations }: ServiceContext):
   }
 
   async function checkout(workspacePath: string, paths: string[]): Promise<void> {
-    await explainLockedItems('checked out', () => cm.query(['checkout', ...absolutePaths(workspacePath, paths)], { cwd: workspacePath }));
+    await explainLockedItems('checked out', () => cm.query(onLinksThemselves('checkout', ...absolutePaths(workspacePath, paths)), { cwd: workspacePath }));
   }
 
   async function addFilterRule(workspacePath: string, list: FilterRuleList, pattern: string): Promise<void> {

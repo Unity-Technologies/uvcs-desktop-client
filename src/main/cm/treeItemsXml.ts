@@ -7,7 +7,7 @@ const ITEM_TYPES: Record<string, ItemType> = {
   dir: 'directory',
   txt: 'file',
   bin: 'binaryFile',
-  sym: 'symlink',
+  link: 'symlink',
   xlink: 'xlink',
 };
 
@@ -15,6 +15,8 @@ const ITEM_TYPES: Record<string, ItemType> = {
  * Parses `cm ls --xml`. The listed directory itself comes back as a `.` entry, which is skipped.
  * Paths are made relative with forward slashes: `--tree` listings return server paths (`/src/a.ts`).
  * Names come from the path: an xlink's `<Name>` is its target (`lib -> xlink -> / 12@lib@server`), read into `xlink`.
+ * Workspace listings take `--symlink` (`onLinksThemselves`): without it a link to a folder reads as that folder,
+ * children and paths included.
  */
 export function parseTreeItems(xml: string): TreeItem[] {
   const items = children(child(child(parseXml(xml, ['LsItem']), 'LsResults'), 'LsItems'), 'LsItem');
@@ -26,6 +28,7 @@ function treeItem(item: Record<string, unknown>): TreeItem {
   const path = text(item.WkPath).replace(/\\/g, '/').replace(/^\//, '');
   const listedName = text(item.Name);
   const xlink = parseXlinkName(listedName);
+  const symlinkTarget = text(item.SymlinkTarget).replace(/^\s*->\s*/, '');
   return {
     path,
     name: path ? path.slice(path.lastIndexOf('/') + 1) : listedName,
@@ -41,6 +44,7 @@ function treeItem(item: Record<string, unknown>): TreeItem {
     parentRevisionId: integer(item.ParentRevId),
     itemId: integer(item.ItemId),
     ...(xlink && { xlink }),
+    ...(symlinkTarget && { symlinkTarget }),
   };
 }
 

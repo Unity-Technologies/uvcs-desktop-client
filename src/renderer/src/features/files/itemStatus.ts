@@ -1,12 +1,14 @@
 import type { TreeItem } from '@shared/domain/explorer';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { StatusTone } from '../../components/StatusBadge';
-import { describeKinds } from '../pendingChanges/changeCategories';
+import { describeKinds, existsOnDisk } from '../pendingChanges/changeCategories';
 import { changeTone } from '../pendingChanges/changeTone';
 
 export interface ItemStatus {
   tone: StatusTone;
   label: string;
+  /** The file as it is on disk, for a file with a pending change: `cm ls` reports its loaded revision (0 bytes once added). */
+  onDisk?: { size: number; date: string };
 }
 
 /** Indexes pending changes so the tree can look up each item's status quickly. */
@@ -34,10 +36,19 @@ export class PendingChangesIndex {
 /** The status shown for a tree item: its own pending change, else private / checked out. */
 export function itemStatus(item: TreeItem, index: PendingChangesIndex): ItemStatus | null {
   const change = index.changeAt(item.path);
-  if (change) return { tone: changeTone(change), label: describeKinds(change) };
+  if (change) {
+    const status = { tone: changeTone(change), label: describeKinds(change) };
+    const onDisk = onDiskState(item, change);
+    return onDisk ? { ...status, onDisk } : status;
+  }
   if (item.isPrivate) return { tone: 'private', label: 'Private' };
   if (item.isCheckedOut) return { tone: 'changed', label: 'Checked out' };
   return null;
+}
+
+/** A file's size and date on disk, from its pending change; undefined for folders and files it deletes. */
+export function onDiskState(item: Pick<TreeItem, 'itemType'>, change: PendingChange): ItemStatus['onDisk'] {
+  return item.itemType !== 'directory' && existsOnDisk(change) ? { size: change.size, date: change.lastModified } : undefined;
 }
 
 /**

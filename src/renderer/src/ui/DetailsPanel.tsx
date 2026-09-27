@@ -20,7 +20,7 @@ interface DetailsPanelProps {
   context?: ReactNode;
   /** The title and description (a `DetailsHeading`). */
   heading: ReactNode;
-  /** Who created it and when, first in the meta row under the heading. */
+  /** Who created it and when (an empty date for what has none yet), first in the meta row under the heading. */
   author?: { user: string; date: string };
   /** More of the meta row after the date: its id to copy, its branch... Separated by dots, wrapping when narrow. */
   meta?: ReactNode[];
@@ -117,8 +117,12 @@ function AuthorLine({ user, date }: { user: string; date: string }) {
     <span className={styles.author}>
       <Avatar user={user} size={18} />
       <span className={styles.authorName}>{displayName(user)}</span>
-      <span className={styles.dot}>·</span>
-      <RelativeTime date={date} />
+      {date && (
+        <>
+          <span className={styles.dot}>·</span>
+          <RelativeTime date={date} />
+        </>
+      )}
     </span>
   );
 }
