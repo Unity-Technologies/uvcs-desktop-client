@@ -25,7 +25,9 @@ export function changesetColumns(loadedChangeset: number | undefined, labelsByCh
       sortValue: (changeset) => changeset.id,
       render: (changeset) => (
         <span className={styles.changesetId}>
-          <Highlight text={String(changeset.id)} />
+          <span className={styles.number}>
+            <Highlight text={String(changeset.id)} />
+          </span>
           {changeset.id === loadedChangeset && <span className={styles.current} data-tip="Loaded in your workspace" />}
         </span>
       ),
@@ -55,7 +57,7 @@ export function changesetColumns(loadedChangeset: number | undefined, labelsByCh
       hideBelow: 560,
       sortValue: (changeset) => changeset.branch,
       render: (changeset) => (
-        <span data-tip-overflow data-tip={changeset.branch}>
+        <span className={styles.clipped} data-tip-overflow data-tip={changeset.branch}>
           <Highlight text={shortBranchName(changeset.branch)} />
         </span>
       ),
