@@ -108,7 +108,7 @@ export function TextDiff({ original, modified, current, diff, wholeFile = false,
   // Stable inputs: new objects would make Pierre load the files again. While the text is typed into, Pierre works out
   // the diff itself (with the same options, `pierreLineComparison`); a diff shown anew (another comparison method, the
   // whole file or its diff, the file saved or changed on disk) starts from the text as it is now, unsaved edits included.
-  // A big read-only diff renders only the lines in view, shows as plain text at once and highlights in Pierre's
+  // A big diff renders only the lines in view; a read-only one shows as plain text at once and highlights in Pierre's
   // workers; past what's worth it, Pierre shows files with more lines than `tokenizeMaxLength` as plain text.
   const highlighting = syntaxHighlighting(original, modified, editable);
   const lang = highlightedLanguage(highlighting, fileName);
@@ -130,7 +130,7 @@ export function TextDiff({ original, modified, current, diff, wholeFile = false,
   });
   const tokenizeMaxLength = highlighting === 'off' ? 0 : undefined;
   const workers = highlighting === 'background' ? highlightWorkers() : undefined;
-  const virtualized = !editable && highlighting !== 'inline';
+  const virtualized = highlighting !== 'inline';
   const options = useMemo(
     () => ({ ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }), parseDiffOptions, tokenizeMaxLength, ...discard.options }),
     [theme, layout, collapseUnchanged, wrapLines, parseDiffOptions, tokenizeMaxLength, discard.options],
@@ -210,8 +210,8 @@ export function TextDiff({ original, modified, current, diff, wholeFile = false,
               <WorkerPoolContext.Provider value={workers}>
                 <FileDiff
                   // Pierre computes the diff once per pair of files, whatever the options say later, and takes the
-                  // workers and virtualizer when it's created (neither for an editable diff: typing doesn't start it anew).
-                  key={`${comparisonMethod}:${editable ? 'editable' : highlighting}`}
+                  // workers (never for an editable diff) and virtualizer when it's created; typing doesn't start it anew.
+                  key={`${comparisonMethod}:${editable ? 'editable' : highlighting}:${virtualized}`}
                   fileDiff={fileDiff}
                   options={options}
                   selectedLines={discard.selectedLines}
