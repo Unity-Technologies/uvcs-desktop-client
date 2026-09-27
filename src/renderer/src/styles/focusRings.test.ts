@@ -44,6 +44,23 @@ describe('focus rings', () => {
     expect(offenders).toEqual([]);
   });
 
+  it('come with the controls that only show on hover, which show for the keyboard too', () => {
+    const offenders = rules
+      .filter((rule) => /opacity:\s*1\b/.test(rule.body))
+      .flatMap((rule) => {
+        const target = /:hover\s+(\.[\w-]+)$/.exec(rule.selector)?.[1];
+        if (!target) return [];
+        const revealed = rules.some(
+          (other) =>
+            other.file === rule.file &&
+            /opacity:\s*1\b/.test(other.body) &&
+            [`${target}:focus-visible`, `${target}:focus-within`, `:focus-visible ${target}`, `:focus-within ${target}`].some((focus) => other.selector.includes(focus)),
+        );
+        return revealed ? [] : [`${rule.file}: ${rule.selector}`];
+      });
+    expect(offenders).toEqual([]);
+  });
+
   it.each(Object.entries(themes))('are drawn apart from an accent fill in the %s theme, where they would melt into it', (_theme, tokens) => {
     expect(contrastRatio(parseColor(tokens['--focus-color']!).rgb, parseColor(tokens['--accent']!).rgb)).toBeLessThan(3);
     for (const selector of ['.primary:focus-visible', '.danger:focus-visible']) {

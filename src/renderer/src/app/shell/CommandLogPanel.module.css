@@ -81,7 +81,8 @@
   opacity: 0;
 }
 
-.entry:hover .copy {
+.entry:hover .copy,
+.copy:focus-visible {
   opacity: 1;
 }
 
