@@ -103,7 +103,8 @@ export const KNOWN_TOOLS: KnownTool[] = [
           ...programFiles(where, 'Unity VCS\\client\\plastic.exe'),
         ];
       }
-      return [posix.join(posix.dirname(where.cmPath), 'plasticgui'), '/opt/plasticscm5/client/plasticgui'];
+      // The Linux package installs it as `linplasticx` next to `cm`, and links `/usr/bin/plasticgui` to it.
+      return [posix.join(posix.dirname(where.cmPath), 'plasticgui'), posix.join(posix.dirname(where.cmPath), 'linplasticx'), '/opt/plasticscm5/client/linplasticx'];
     },
     commands: { darwin: ['plasticgui'], linux: ['plasticgui'], win32: ['plastic.exe'] },
   },
