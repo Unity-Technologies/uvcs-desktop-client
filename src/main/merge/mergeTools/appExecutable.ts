@@ -1,4 +1,4 @@
-import { join } from 'node:path';
+import { posix } from 'node:path';
 import type { ToolFileSystem } from './detectTools';
 
 /**
@@ -8,9 +8,9 @@ import type { ToolFileSystem } from './detectTools';
 export function appExecutable(picked: string, fs: ToolFileSystem & { read(path: string): string | null }): string {
   if (!/\.app\/?$/.test(picked)) return picked;
   const bundle = picked.replace(/\/$/, '');
-  const programs = join(bundle, 'Contents', 'MacOS');
-  const declared = /<key>CFBundleExecutable<\/key>\s*<string>([^<]+)<\/string>/.exec(fs.read(join(bundle, 'Contents', 'Info.plist')) ?? '')?.[1];
+  const programs = posix.join(bundle, 'Contents', 'MacOS');
+  const declared = /<key>CFBundleExecutable<\/key>\s*<string>([^<]+)<\/string>/.exec(fs.read(posix.join(bundle, 'Contents', 'Info.plist')) ?? '')?.[1];
   const named = bundle.split('/').pop()!.replace(/\.app$/, '');
-  const candidates = [declared, named, ...fs.list(programs)].filter((name): name is string => Boolean(name)).map((name) => join(programs, name));
+  const candidates = [declared, named, ...fs.list(programs)].filter((name): name is string => Boolean(name)).map((name) => posix.join(programs, name));
   return candidates.find((candidate) => fs.exists(candidate)) ?? picked;
 }

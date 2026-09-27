@@ -2,21 +2,22 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
 import { CmShellSession, resultLineAtEnd } from './CmShellSession';
 
-const fakeCm = fileURLToPath(new URL('./testing/fakeCmShell.mjs', import.meta.url));
+// `node shell` in the fake's folder, as the session runs `<cm> shell`.
+const fakeCmFolder = fileURLToPath(new URL('./testing/fakeCmShell', import.meta.url));
 let session: CmShellSession;
 
 afterEach(() => session.dispose());
 
 describe('CmShellSession', () => {
   it('runs commands in order and reports their exit codes', async () => {
-    session = new CmShellSession(fakeCm, process.cwd());
+    session = new CmShellSession(process.execPath, fakeCmFolder);
     const [first, second] = await Promise.all([session.run(['echo', 'hello']), session.run(['fail'])]);
     expect(first).toEqual({ output: 'hello', exitCode: 0 });
     expect(second.exitCode).toBe(1);
   });
 
   it('fails a command stuck on a prompt without feeding it the next commands', async () => {
-    session = new CmShellSession(fakeCm, process.cwd());
+    session = new CmShellSession(process.execPath, fakeCmFolder);
     const prompted = session.run(['prompt']);
     const next = session.run(['echo', 'still-works']);
 
@@ -25,14 +26,14 @@ describe('CmShellSession', () => {
   });
 
   it('ends a command at its last result line, not at one quoted in its output', async () => {
-    session = new CmShellSession(fakeCm, process.cwd());
+    session = new CmShellSession(process.execPath, fakeCmFolder);
     const [quoted, next] = await Promise.all([session.run(['quote']), session.run(['echo', 'in-step'])]);
     expect(quoted).toEqual({ output: '>cm shell\nCommandResult 0\nstill the comment', exitCode: 0 });
     expect(next).toEqual({ output: 'in-step', exitCode: 0 });
   });
 
   it('does not take output paused on a colon for a prompt while the main process is busy', async () => {
-    session = new CmShellSession(fakeCm, process.cwd());
+    session = new CmShellSession(process.execPath, fakeCmFolder);
     await session.run(['echo', 'started']);
     const paused = session.run(['pause']);
     await new Promise((resolve) => setTimeout(resolve, 100));
