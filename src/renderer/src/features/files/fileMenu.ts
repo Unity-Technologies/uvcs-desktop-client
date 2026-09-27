@@ -36,6 +36,7 @@ import {
 } from './fileOperations';
 import { useFilesViewStore } from './filesViewStore';
 import type { PendingChangesIndex } from './itemStatus';
+import { hasRevisionType } from './itemType';
 import { isWorkspaceRoot } from './workspaceRoot';
 import { hotkey } from '../../lib/shortcutRegistry';
 
@@ -58,7 +59,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
   const controlled = items.filter((item) => !item.isPrivate);
   const changed = items.map((item) => pendingChanges.changeAt(item.path)).filter((change) => change !== undefined);
   const checkoutCandidates = controlled.filter((item) => !item.isCheckedOut && !pendingChanges.changeAt(item.path));
-  const controlledFiles = controlled.filter((item) => item.itemType !== 'directory');
+  const controlledFiles = controlled.filter((item) => hasRevisionType(item.itemType));
   const directory = targetDirectoryFor(single ?? undefined);
   // The workspace root can't be renamed or deleted from here.
   const hasRoot = items.some(isWorkspaceRoot);

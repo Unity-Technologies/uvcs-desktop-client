@@ -5,6 +5,7 @@ import { dialog, shell } from 'electron';
 import type { ExplorerApi } from '@shared/api/explorer';
 import type { RevisionType } from '@shared/domain/explorer';
 import { parseItemDetails } from '../cm/itemDetailsXml';
+import { onLinksThemselves } from '../cm/symlinkArgs';
 import { parseTreeItems } from '../cm/treeItemsXml';
 import { listWorkspacePaths } from '../files/listWorkspacePaths';
 import { toAbsolutePath } from '../files/workspacePaths';
@@ -15,7 +16,7 @@ export function createExplorerService({ cm }: ServiceContext): ExplorerApi {
   const absolute = (workspacePath: string, paths: string[]) => paths.map((path) => toAbsolutePath(workspacePath, path));
 
   async function listDirectory(workspacePath: string, directory: string) {
-    const xml = await cm.query(['ls', toAbsolutePath(workspacePath, directory), '--xml'], inWorkspace(workspacePath));
+    const xml = await cm.query(onLinksThemselves('ls', toAbsolutePath(workspacePath, directory), '--xml'), inWorkspace(workspacePath));
     return parseTreeItems(xml);
   }
 
@@ -25,7 +26,7 @@ export function createExplorerService({ cm }: ServiceContext): ExplorerApi {
   }
 
   async function details(workspacePath: string, path: string) {
-    const xml = await cm.query(['fileinfo', toAbsolutePath(workspacePath, path), '--xml'], inWorkspace(workspacePath));
+    const xml = await cm.query(onLinksThemselves('fileinfo', toAbsolutePath(workspacePath, path), '--xml'), inWorkspace(workspacePath));
     return parseItemDetails(xml);
   }
 

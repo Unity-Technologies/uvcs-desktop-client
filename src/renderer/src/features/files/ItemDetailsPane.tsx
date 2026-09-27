@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { File, Folder } from 'lucide-react';
+import { File, FileSymlink, Folder } from 'lucide-react';
 import type { TreeItem } from '@shared/domain/explorer';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
@@ -14,6 +14,7 @@ import { SegmentedControl } from '../../ui/SegmentedControl';
 import { ChangeDiffPanel } from '../pendingChanges/ChangeDiffPanel';
 import { describeKinds } from '../pendingChanges/changeCategories';
 import { useFilesViewStore, type DetailsTab } from './filesViewStore';
+import { itemTypeLabel } from './itemType';
 import { RevisionChanges } from './RevisionChanges';
 
 interface ItemDetailsPaneProps {
@@ -33,8 +34,8 @@ export function ItemDetailsPane({ workspacePath, item, pendingChange, menu }: It
 
   return (
     <DetailsPanel
-      icon={item.itemType === 'directory' ? <Folder /> : <File />}
-      kind={item.itemType === 'directory' ? 'Folder' : 'File'}
+      icon={item.itemType === 'directory' ? <Folder /> : item.itemType === 'symlink' ? <FileSymlink /> : <File />}
+      kind={item.itemType === 'directory' ? 'Folder' : item.itemType === 'symlink' ? 'Link' : 'File'}
       context={`/${item.path.slice(0, nameStart)}`}
       heading={<DetailsHeading name={item.name} />}
       author={item.owner && !item.isPrivate ? { user: item.owner, date: item.date } : undefined}
@@ -87,7 +88,8 @@ function ItemProperties({ workspacePath, item, pendingChange }: Omit<ItemDetails
   const properties: Property[] = [
     { label: 'Path', value: `/${item.path}`, mono: true, copyText: `/${item.path}` },
     { label: 'Status', value: pendingChange ? describeKinds(pendingChange) : item.isPrivate ? 'Private' : 'Up to date' },
-    { label: 'Type', value: item.itemType === 'directory' ? 'Folder' : item.itemType === 'binaryFile' ? 'Binary file' : 'Text file' },
+    { label: 'Type', value: itemTypeLabel(item.itemType) },
+    { label: 'Link to', value: item.symlinkTarget, mono: true },
     { label: 'Size', value: item.itemType === 'directory' ? '' : formatSize(item.size) },
     { label: 'Modified', value: item.date && formatDateTime(item.date) },
   ];

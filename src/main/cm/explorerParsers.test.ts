@@ -26,6 +26,17 @@ describe('parseTreeItems', () => {
     expect(items[2]).toMatchObject({ itemType: 'binaryFile', isCheckedOut: true, date: '' });
   });
 
+  it('reads symbolic links as links, with where they point', () => {
+    const xml = `<LsResults><LsItems>
+      <LsItem><Status>Private</Status><Name>linkdir</Name><WkPath>linkdir</WkPath><Size>3</Size><Type>link</Type>
+        <SymlinkTarget> -&gt; src</SymlinkTarget></LsItem>
+      <LsItem><Status>Controlled</Status><Name>main.ts</Name><WkPath>main.ts</WkPath><Type>txt</Type><SymlinkTarget /></LsItem>
+    </LsItems></LsResults>`;
+    const [link, file] = parseTreeItems(xml);
+    expect(link).toMatchObject({ itemType: 'symlink', isPrivate: true, symlinkTarget: 'src' });
+    expect(file).not.toHaveProperty('symlinkTarget');
+  });
+
   it('names an xlink after its path and reads where it points', () => {
     const xml = `<LsResults><LsItems>
       <LsItem><Status>Controlled</Status><Name>third -&gt; wxlink -&gt; / 17568@nervathirdparty@ [relative] codice@cloud</Name>

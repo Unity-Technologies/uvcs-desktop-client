@@ -1,4 +1,4 @@
-import { Check, File, FileImage, Folder, FolderOpen, Link2 } from 'lucide-react';
+import { Check, File, FileImage, FileSymlink, Folder, FolderOpen, Link2 } from 'lucide-react';
 import type { TreeItem } from '@shared/domain/explorer';
 import type { IconOverlay } from './itemStatus';
 import styles from './ItemIcon.module.css';
@@ -24,6 +24,7 @@ function BaseIcon({ item, expanded }: { item: TreeItem; expanded: boolean }) {
     return <Icon size={14} className={styles.folder} />;
   }
   if (item.itemType === 'xlink') return <Link2 size={14} className={styles.file} />;
+  if (item.itemType === 'symlink') return <FileSymlink size={14} className={styles.file} />;
   if (IMAGE_EXTENSION.test(item.name)) return <FileImage size={14} className={styles.file} />;
   return <File size={14} className={styles.file} />;
 }
