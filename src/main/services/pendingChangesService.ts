@@ -1,4 +1,4 @@
-import { appendFile, readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { PendingChangesApi } from '@shared/api/pendingChanges';
 import type {
@@ -16,6 +16,7 @@ import { readCheckinProgress } from '../cm/progress/checkinProgress';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { withTempFile } from '../files/tempFile';
 import { toAbsolutePath } from '../files/workspacePaths';
+import { withRule } from '../workspace/filterRuleFile';
 import type { ServiceContext } from './ServiceContext';
 
 const FILTER_RULE_FILES: Record<FilterRuleList, string> = {
@@ -77,8 +78,7 @@ export function createPendingChangesService({ cm, operations }: ServiceContext):
   async function addFilterRule(workspacePath: string, list: FilterRuleList, pattern: string): Promise<void> {
     const rulesFile = join(workspacePath, FILTER_RULE_FILES[list]);
     const current = await readFile(rulesFile, 'utf8').catch(() => '');
-    const separator = current === '' || current.endsWith('\n') ? '' : '\n';
-    await appendFile(rulesFile, `${separator}${pattern}\n`, 'utf8');
+    await writeFile(rulesFile, withRule(current, pattern), 'utf8');
   }
 
   function shelve(workspacePath: string, paths: string[], comment: string, operationId: string): Promise<number> {
