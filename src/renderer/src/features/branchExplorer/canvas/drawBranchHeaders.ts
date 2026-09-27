@@ -10,6 +10,7 @@ import { BAND_HEIGHT, HEADER_COMMENT_MIDDLE, HEADER_HEIGHT, HEADER_MAX_WIDTH, HE
 import { branchColor, branchInk, type GraphPalette } from './graphPalette';
 import { strokeHouse } from './houseGlyph';
 import { laneHeaderHeight, laneShape } from './laneShape';
+import { lanesAcross } from './spansInView';
 import { drawSearchMarks, redrawMarkedLetters } from './searchMarks';
 
 const PADDING = 8;
@@ -38,7 +39,7 @@ const COMMENT_LINE_TOP = (HEADER_NAME_MIDDLE + HEADER_COMMENT_MIDDLE) / 2;
  */
 export function drawBranchHeaders(draw: DrawContext): void {
   const { scene, visible } = draw;
-  for (const lane of scene.layout.lanes) {
+  for (const lane of lanesAcross(scene.layout, visible.left, visible.right)) {
     const shape = laneShape(lane);
     const height = laneHeaderHeight(lane);
     const top = headerTop(shape.y, height);
@@ -72,7 +73,7 @@ export function drawCompactBranchNames(draw: DrawContext): void {
   ctx.lineJoin = 'round';
   ctx.lineWidth = 3;
   ctx.strokeStyle = palette.background;
-  for (const lane of scene.layout.lanes) {
+  for (const lane of lanesAcross(scene.layout, visible.left, visible.right)) {
     const shape = laneShape(lane);
     if (shape.right < visible.left || shape.left > visible.right || shape.y < visible.top || shape.y > visible.bottom) continue;
 

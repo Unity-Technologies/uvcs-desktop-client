@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import { isBranchChosen, setBranchesChosen } from './branchChoice';
+import { branchChooser, setBranchesChosen } from './branchChoice';
 
 const all = ['/main', '/main/a', '/main/b'];
 
 describe('branch choice', () => {
   it('starts with every branch chosen, including ones not loaded yet', () => {
-    expect(isBranchChosen(null, '/main/new')).toBe(true);
+    expect(branchChooser(null)('/main/new')).toBe(true);
+  });
+
+  it('tells the chosen branches from the rest', () => {
+    const isChosen = branchChooser(['/main', '/main/b']);
+    expect(all.filter(isChosen)).toEqual(['/main', '/main/b']);
   });
 
   it('unchecking one keeps the others', () => {

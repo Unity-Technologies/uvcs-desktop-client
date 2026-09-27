@@ -90,6 +90,21 @@ describe('searchGraph with numbers in names', () => {
     expect(columns).toEqual([...columns].sort((a, b) => a! - b!));
   });
 
+  it('puts a branch before the labels of its first changeset, and those before the changeset', () => {
+    const history = layoutGraph({
+      branches: [branch('/main', '', 1), branch('/main/fix', '/main', 2)],
+      changesets: [changeset(0, '/main', -1, 'fix typo'), changeset(1, '/main', 0), changeset(2, '/main/fix', 1, 'fix it')],
+      mergeLinks: [],
+      labels: ['fix-1', 'fix-2'].map((name) => ({ name, changeset: 2, owner: 'jane@example.com', date: '2026-09-03T00:00:00Z', comment: '' })),
+    });
+    expect(searchGraph(history, 'fix').map((hit) => (hit.kind === 'changeset' ? `cs:${hit.id}` : hit.name))).toEqual(['cs:0', '/main/fix', 'fix-1', 'fix-2', 'cs:2']);
+  });
+
+  it('finds the words of a query spread over a comment and its author', () => {
+    expect(kinds('crash jane')).toEqual(['cs:1']);
+    expect(kinds('JANE example crash')).toEqual(['cs:1']);
+  });
+
   it('lands the first Enter on the changeset a number names', () => {
     const hits = searchGraph(numbered, 'cs:12');
     expect(hits[firstHitIndex(hits, 'cs:12')]).toEqual({ kind: 'changeset', id: 12 });

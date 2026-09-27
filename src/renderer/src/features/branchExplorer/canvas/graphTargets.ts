@@ -4,9 +4,10 @@ import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
 import type { DrawnTargets } from './drawContext';
 import type { DrawnBox } from './drawnBoxes';
 import { distanceToCurve, linkCurve, type Point } from './curves';
-import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, COLUMN_WIDTH, columnX, GRAPH_PADDING, NODE_RADIUS, ROW_HEIGHT, rowY } from './geometry';
+import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, COLUMN_WIDTH, columnX, GRAPH_PADDING, NODE_RADIUS, nodePoint, ROW_HEIGHT, rowY } from './geometry';
 import { estimatedLabelWidth, LABEL_HEIGHT, labelChips } from './labelPlacement';
 import { laneShape } from './laneShape';
+import { mergeLinksAcross } from './spansInView';
 
 /** Something the pointer can be on. */
 export type GraphTarget =
@@ -52,11 +53,6 @@ export function hoverCardFor(target: GraphTarget | null, point: Point, drawn: Dr
 
 const NODE_HIT_RADIUS = NODE_RADIUS + 4;
 const LINE_HIT_DISTANCE = 6;
-
-export function nodePoint(layout: GraphLayout, changesetId: number): Point | null {
-  const node = layout.nodes.get(changesetId);
-  return node ? { x: columnX(node.column), y: rowY(node.row) } : null;
-}
 
 /**
  * Finds what is under a world-space point, most specific first. What moves with the view or is cut to its room
@@ -109,7 +105,7 @@ function hitLabel(layout: GraphLayout, point: Point): GraphTarget | null {
 }
 
 function hitMergeLink(layout: GraphLayout, point: Point): GraphTarget | null {
-  for (const link of layout.mergeLinks) {
+  for (const link of mergeLinksAcross(layout, point.x - LINE_HIT_DISTANCE, point.x + LINE_HIT_DISTANCE)) {
     const from = nodePoint(layout, link.sourceChangeset)!;
     const to = nodePoint(layout, link.destinationChangeset)!;
     const outsideBounds =

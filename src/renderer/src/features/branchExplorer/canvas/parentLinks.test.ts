@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { branch, changeset, sampleHistory } from '../model/graphFixtures';
+import { branch, changeset, largeHistory, sampleHistory } from '../model/graphFixtures';
 import { layoutGraph, type GraphLayout } from '../model/layoutGraph';
 import type { VisibleArea } from './drawContext';
 import { columnX, rowY } from './geometry';
@@ -39,6 +39,24 @@ describe('parentLinksInView', () => {
   it('never links a branch start: that is the elbow from its base', () => {
     const layout = layoutGraph(sampleHistory());
     expect(linkIds(layout, view(0, 7))).not.toContain('1->2');
+  });
+
+  it('finds the lines on screen of a 100,000-changeset history without walking the rest, frame after frame', () => {
+    const layout = layoutGraph(largeHistory(100_000, 20_000));
+    const everyLink = layout.nodesByColumn.flatMap((child) => {
+      const parent = layout.nodes.get(child.changeset.parent);
+      return parent && parent.changeset.branch === child.changeset.branch ? [`${parent.changeset.id}->${child.changeset.id}`] : [];
+    });
+    const screen = view(1_000, 1_030, 0, 80);
+    const expected = everyLink.filter((link) => {
+      const [parent, child] = link.split('->').map((id) => layout.nodes.get(Number(id))!.column);
+      return child! >= 1_000 && parent! <= 1_030;
+    });
+    expect(linkIds(layout, screen)).toEqual(expected);
+
+    const started = performance.now();
+    for (let frame = 0; frame < 2_000; frame++) parentLinksInView(layout, view(frame, frame + 30, 0, 80), 0);
+    expect(performance.now() - started).toBeLessThan(1000);
   });
 });
 
