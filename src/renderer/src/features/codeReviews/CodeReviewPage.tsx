@@ -16,6 +16,8 @@ import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { useCodeReview } from './useCodeReviews';
 import styles from './CodeReviewPage.module.css';
 
+const COMMENTS_HINT = 'Comments are available in the Unity Version Control web dashboard.';
+
 /** A code review: who reviews what, its status, and the changes to review. */
 export function CodeReviewPage({ page }: PageProps<'codeReview'>) {
   const { data: review, isLoading, error } = useCodeReview(page.reviewId);
@@ -76,7 +78,9 @@ function ReviewHeader({ review }: { review: CodeReview }) {
           segments={CODE_REVIEW_STATUSES.map((status) => ({ value: status, label: status }))}
         />
         <div className={styles.spacer} />
-        <span className={styles.hint}>Comments are available in the Unity Version Control web dashboard.</span>
+        <span className={styles.hint} data-tip={COMMENTS_HINT}>
+          {COMMENTS_HINT}
+        </span>
         <Button icon={<UserPlus size={14} />} onClick={() => void reassignReview(workspacePath, review)}>
           Assign
         </Button>
