@@ -1,4 +1,3 @@
-import { join } from 'node:path';
 import type { PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import type { PendingChangesAction, RenamedPrivateFile, RestoredChanges, SwitchResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
@@ -10,13 +9,13 @@ import { readWorkspaceStatus } from '../cm/workspaceStatus';
 import type { OperationContext } from '../operations/OperationTracker';
 import type { SettingsStore } from '../settings/SettingsStore';
 import type { LeftChangesFinder } from './leftChanges';
-import { changedPaths, newItemPaths, shelvedChangelists, summarizePending, SWITCH_STATUS_ARGS } from './pendingSnapshot';
-import { moveAside, putBack } from './privateBackups';
+import { changedPaths, shelvedChangelists, summarizePending, SWITCH_STATUS_ARGS } from './pendingSnapshot';
+import { putBack } from './privateBackups';
 import { renamedPrivateFiles } from './renamedPrivateFiles';
 import { selectorObjectRef } from './selectorObjectRef';
 import { bringDisabledReason, describeSelector, parseSelectorSpec, selectorSpec } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
-import { applyShelveCleanly, createSwitchShelve } from './switchShelves';
+import { applyShelveCleanly, createSwitchShelve, moveNewItemsAside } from './switchShelves';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';
 
 const IN_MERGE = "You're in the middle of a merge. Check it in or undo it before switching.";
@@ -144,7 +143,7 @@ async function shelveAndSwitch(
     context.beginStep('Undoing them here', 2, steps);
     // Links too: without `--symlink` a checked-out link stays pending (and its target would be undone instead).
     await cm.execute(onLinksThemselves('undo', '-r', workspacePath), { cwd: workspacePath });
-    await moveNewItemsAside(deps, workspacePath, snapshot, record);
+    await moveNewItemsAside(cm, records, workspacePath, snapshot.changes, record, deps.backupsRoot);
     await assertClean(cm, workspacePath);
 
     context.beginStep('Switching', 3, steps);
@@ -166,24 +165,6 @@ async function sourceObjectRef(cm: CmClient, workspacePath: string, workspace: W
   const objectRef = await selectorObjectRef(cm, workspacePath, workspace.selector);
   if (!objectRef) throw new Error(`Couldn't find ${describeSelector(workspace.selector)} in the repository, so nothing was switched.`);
   return objectRef;
-}
-
-/**
- * Added files stay on disk as private files after the undo, and would show up on the target (renamed `.private.0` where
- * the target has the same path). They are moved into the app's data folder until the shelve brings them back, whether
- * the changes are left or brought along.
- */
-async function moveNewItemsAside(deps: SwitchDependencies, workspacePath: string, snapshot: PendingChangesSnapshot, record: SwitchShelveRecord): Promise<void> {
-  const privatePaths = new Set(
-    parsePendingChanges(await deps.cm.query(['status', '--xml', '--private'], { cwd: workspacePath })).changes.map((change) => change.path),
-  );
-  const paths = newItemPaths(snapshot.changes).filter((path) => privatePaths.has(path));
-  if (paths.length === 0) return;
-
-  const directory = join(deps.backupsRoot, `${record.createdAt.replace(/[:.]/g, '-')}-sh${record.shelveId}`);
-  record.backup = { directory, paths };
-  deps.records.save(record);
-  await moveAside(workspacePath, paths, directory);
 }
 
 async function assertClean(cm: CmClient, workspacePath: string): Promise<void> {

@@ -6,6 +6,8 @@ import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ChangesetSummary } from '../changesets/ChangesetSummary';
 import { useChangeset } from '../changesets/useChangeset';
 import { ReviewModeButton } from '../review/ReviewModeButton';
+import { cachedShelve } from '../shelves/cachedShelve';
+import { ShelveSummary } from '../shelves/ShelveSummary';
 import { DiffBrowser } from './DiffBrowser';
 import { useDiffEntries } from './useDiffEntries';
 import styles from './TargetDiff.module.css';
@@ -56,8 +58,13 @@ function TargetDescription({ target }: { target: DiffTarget }) {
     case 'branch':
       return <div className={styles.title}>All changes on {target.branch}</div>;
     case 'shelve':
-      return <div className={styles.title}>Shelve {target.shelveId}</div>;
+      return <ShelveDescription shelveId={target.shelveId} />;
   }
+}
+
+function ShelveDescription({ shelveId }: { shelveId: number }) {
+  const shelve = cachedShelve(useWorkspacePath(), shelveId);
+  return shelve ? <ShelveSummary shelve={shelve} /> : <div className={styles.title}>Shelve {shelveId}</div>;
 }
 
 function ChangesetDescription({ changesetId }: { changesetId: number }) {

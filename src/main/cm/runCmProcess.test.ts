@@ -19,6 +19,10 @@ describe('runCmProcess', () => {
     expect(result.exitCode).toBe(0);
   });
 
+  it("gives Windows line breaks as the app's, and leaves the \\r of a rewritten line", async () => {
+    await expect(runScript("process.stdout.write('a\\r\\nb\\rc\\r\\n')")).resolves.toEqual({ output: 'a\nb\rc\n', exitCode: 0 });
+  });
+
   it('hands the command its input and closes it', async () => {
     const script = "let text = ''; process.stdin.on('data', (d) => (text += d)).on('end', () => process.stdout.write(text.toUpperCase()));";
     await expect(runCmProcess(process.execPath, ['-e', script], { input: 'a b\n' })).resolves.toEqual({ output: 'A B\n', exitCode: 0 });

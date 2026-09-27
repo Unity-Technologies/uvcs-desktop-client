@@ -2,6 +2,7 @@ import { FolderOpen } from 'lucide-react';
 import { useState } from 'react';
 import { formatArgs, parseArgs, type MergeTool } from '@shared/domain/mergeTools';
 import { api } from '../../../api/client';
+import { PROGRAM_PLACEHOLDER } from '../../../lib/platform';
 import { Button } from '../../../ui/Button';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { askDialog } from '../../../ui/dialog/dialogStore';
@@ -57,7 +58,7 @@ function CustomMergeToolDialog({ finish }: { finish: (id: string | undefined) =>
       }
     >
       <div className={styles.programRow}>
-        <TextField label="Program" value={executable} placeholder="/path/to/tool" onChange={(event) => setExecutable(event.target.value)} autoFocus />
+        <TextField label="Program" value={executable} placeholder={PROGRAM_PLACEHOLDER} onChange={(event) => setExecutable(event.target.value)} autoFocus />
         <Button icon={<FolderOpen size={13} />} onClick={() => void choose()}>
           Choose…
         </Button>

@@ -1,5 +1,6 @@
 import { cp, mkdir, readdir, readFile, rename, rm, rmdir, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { retryWhileBusy } from '../files/whileBusy';
 import { toAbsolutePath } from '../files/workspacePaths';
 
 /** Moves workspace items (workspace-relative paths) into `directory`, keeping their relative paths. */
@@ -49,10 +50,11 @@ async function sameContent(a: string, b: string): Promise<boolean> {
   return first.equals(second);
 }
 
+/** A file open in another program (an editor, the Unity Editor) blocks moving it on Windows for a while: tried again. */
 async function move(source: string, target: string): Promise<void> {
   await mkdir(dirname(target), { recursive: true });
   try {
-    await rename(source, target);
+    await retryWhileBusy(() => rename(source, target));
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'EXDEV') throw error;
     // Different volumes: copy, then delete.

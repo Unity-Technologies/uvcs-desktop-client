@@ -1,9 +1,18 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
+import type { OperationContext } from '../operations/OperationTracker';
 import type { SettingsStore } from '../settings/SettingsStore';
 import { LeftChangesFinder } from './leftChanges';
 import { SwitchShelveRecords } from './switchShelveRecords';
+import { applyShelveCleanly, deleteShelves, detachReplacedFiles } from './switchShelves';
+
+vi.mock('./switchShelves', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./switchShelves')>()),
+  applyShelveCleanly: vi.fn(),
+  deleteShelves: vi.fn(async () => {}),
+  detachReplacedFiles: vi.fn(async () => {}),
+}));
 
 const WORKSPACE_GUID = 'a0411612-d36e-4eca-b9b5-97acad5969ea';
 
@@ -99,6 +108,15 @@ const ownRecord = (shelveId: number, sourceSpec: string): SwitchShelveRecord => 
   changelists: [],
 });
 
+const shelvedAway = (shelveId: number): SwitchShelveRecord => ({ ...ownRecord(shelveId, 'br:/main/task1'), reason: 'shelve' });
+
+const context: OperationContext = {
+  signal: new AbortController().signal,
+  reportProgress: () => {},
+  beginStep: () => {},
+  progressOf: () => () => {},
+};
+
 describe('LeftChangesFinder', () => {
   it("doesn't look the branch up when no automatic shelve could have been left by another client", async () => {
     const { cm, commands } = fakeCm(shelves({ id: 2, comment: LEFT_ON_TASK1 }));
@@ -132,5 +150,71 @@ describe('LeftChangesFinder', () => {
     expect(await new LeftChangesFinder(cm, recordsOf([ownRecord(2, 'br:/main/task1')])).hasOwnWaiting('/work')).toBe(true);
     expect(await new LeftChangesFinder(cm, recordsOf([ownRecord(2, 'br:/main')])).hasOwnWaiting('/work')).toBe(false);
     expect(commands.every((command) => command.startsWith('status') || command.startsWith('getworkspacefrompath'))).toBe(true);
+  });
+});
+
+describe('shelves the user shelved away', () => {
+  it('are never left changes: "Welcome back" and arriving from a switch leave them alone, and they are kept', async () => {
+    const { cm } = fakeCm(shelves());
+    const records = recordsOf([shelvedAway(5)]);
+    const finder = new LeftChangesFinder(cm, records);
+
+    expect(await finder.find('/work')).toEqual([]);
+    expect(await finder.hasOwnWaiting('/work')).toBe(false);
+    // Their comment is the user's, so the automatic shelves never list them: they aren't forgotten as deleted elsewhere.
+    expect(records.find({ shelveId: 5, repository: 'eco@local' })).toBeDefined();
+  });
+});
+
+describe('LeftChangesFinder.apply', () => {
+  beforeEach(() => {
+    vi.mocked(applyShelveCleanly).mockReset().mockResolvedValue({ kind: 'applied', count: 1 });
+    vi.mocked(deleteShelves).mockClear();
+    vi.mocked(detachReplacedFiles).mockClear();
+  });
+
+  it('keeps the shelve unless asked, forgetting what shelving it away recorded', async () => {
+    const records = recordsOf([shelvedAway(5)]);
+
+    expect(await new LeftChangesFinder(fakeCm(shelves()).cm, records).apply('/work', 5, false, context)).toEqual({ kind: 'applied', count: 1 });
+    expect(deleteShelves).not.toHaveBeenCalled();
+    expect(records.find({ shelveId: 5, repository: 'eco@local' })).toBeUndefined();
+  });
+
+  it("leaves no file on a kept shelve's revision: its diff would show no change at all", async () => {
+    await new LeftChangesFinder(fakeCm(shelves()).cm, recordsOf([])).apply('/work', 9, false, context);
+
+    expect(detachReplacedFiles).toHaveBeenCalled();
+    expect(deleteShelves).not.toHaveBeenCalled();
+  });
+
+  it('deletes any shelve when asked, once the files no longer read their revisions from it', async () => {
+    await new LeftChangesFinder(fakeCm(shelves()).cm, recordsOf([])).apply('/work', 9, true, context);
+
+    expect(detachReplacedFiles).toHaveBeenCalled();
+    expect(deleteShelves).toHaveBeenCalledWith(expect.anything(), '/work', [{ id: 9, repository: 'eco@local' }]);
+  });
+
+  it('always deletes changes left by a switch once back, as restoring them does', async () => {
+    await new LeftChangesFinder(fakeCm(shelves()).cm, recordsOf([ownRecord(2, 'br:/main/task1')])).apply('/work', 2, false, context);
+
+    expect(deleteShelves).toHaveBeenCalledWith(expect.anything(), '/work', [{ id: 2, repository: 'eco@local' }]);
+  });
+
+  it("leaves another workspace's record alone: its moved-aside files and changelists aren't this workspace's", async () => {
+    const elsewhere: SwitchShelveRecord = { ...shelvedAway(5), workspaceGuid: 'another-workspace' };
+    const records = recordsOf([elsewhere]);
+
+    await new LeftChangesFinder(fakeCm(shelves()).cm, records).apply('/work', 5, false, context);
+    expect(records.find({ shelveId: 5, repository: 'eco@local' })).toEqual(elsewhere);
+  });
+
+  it('keeps the record while conflicts wait for the merge view, for when it completes', async () => {
+    vi.mocked(applyShelveCleanly).mockResolvedValue({ kind: 'conflicts', count: 2 });
+    const records = recordsOf([shelvedAway(5)]);
+
+    expect(await new LeftChangesFinder(fakeCm(shelves()).cm, records).apply('/work', 5, true, context)).toEqual({ kind: 'conflicts' });
+    expect(deleteShelves).not.toHaveBeenCalled();
+    expect(records.find({ shelveId: 5, repository: 'eco@local' })).toBeDefined();
   });
 });

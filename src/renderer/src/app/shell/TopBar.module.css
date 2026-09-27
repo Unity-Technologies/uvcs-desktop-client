@@ -4,7 +4,7 @@
   align-items: center;
   gap: var(--space-2);
   height: var(--topbar-height);
-  padding: 0 var(--space-3) 0 var(--space-2);
+  padding: 0 calc(var(--space-3) + var(--caption-buttons-width)) 0 var(--space-2);
   border-bottom: 1px solid var(--border-default);
   background: linear-gradient(180deg, var(--toolbar-top), var(--toolbar-bottom));
   -webkit-app-region: drag;

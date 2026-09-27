@@ -7,7 +7,7 @@ import { StatusBadge } from '../../components/StatusBadge';
 import type { MenuEntry } from '../../lib/actions';
 import { Arrivals } from '../../lib/arrivals';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
-import { isMac } from '../../lib/platform';
+import { isModPressed } from '../../lib/shortcuts';
 import { selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
 import { treeArrowMove } from '../../lib/treeArrowMove';
 import { Checkbox, type CheckState } from '../../ui/Checkbox';
@@ -145,7 +145,7 @@ export function ChangesList({
       }
       const include = selectedRows.some((row) => checkStateOf(row) !== true);
       onToggleIncluded(selectedRows, include);
-    } else if (event.key === 'a' && (isMac ? event.metaKey : event.ctrlKey)) {
+    } else if (event.key === 'a' && isModPressed(event)) {
       event.preventDefault();
       onSelectionChange({ selected: new Set(orderedKeys), anchor: orderedKeys[0] ?? null });
     } else if (event.key === 'Enter' && focusedRow) {
@@ -164,7 +164,7 @@ export function ChangesList({
       return;
     }
     if (event.button === 2 && selection.selected.has(row.key)) return;
-    const toggle = isMac ? event.metaKey : event.ctrlKey;
+    const toggle = isModPressed(event);
     if (event.button === 0 && !event.shiftKey && !toggle && selection.selected.size > 1 && selection.selected.has(row.key)) {
       narrowOnClick.current = row.key;
       return;

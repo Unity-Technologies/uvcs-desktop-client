@@ -5,7 +5,10 @@ import { NO_IGNORE_RULES, parseIgnoreRules } from './ignoreRules';
 describe('classifyChange', () => {
   it('reports workspace files as content', () => {
     expect(classifyChange('src/app.ts', NO_IGNORE_RULES)).toBe('content');
-    expect(classifyChange(undefined, NO_IGNORE_RULES)).toBe('content');
+  });
+
+  it('reports anything when the platform did not name the item (a Windows watcher whose buffer overflowed)', () => {
+    expect(classifyChange(undefined, NO_IGNORE_RULES)).toBe('anything');
   });
 
   it('reports the workspace state files cm rewrites as metadata, on either separator', () => {

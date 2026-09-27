@@ -3,6 +3,7 @@ import type { Label } from '@shared/domain/label';
 import { spec } from '@shared/domain/specs';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { copyToClipboard } from '../../lib/copyToClipboard';
+import { hotkey } from '../../lib/shortcutRegistry';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { mergeTo } from '../branches/branchOperations';
 import { MERGE_INTO_WORKSPACE, serverMergeLabel } from '../branches/mergeMenuLabels';
@@ -41,7 +42,7 @@ export function labelMenu(workspacePath: string, labels: Label[]): MenuEntry[] {
       run: () => showInBranchExplorer({ kind: 'label', name: single.name, changeset: single.changeset, date: single.date }),
     },
     SEPARATOR,
-    single && { id: 'rename', label: 'Rename…', icon: Pencil, run: () => void renameLabel(workspacePath, single) },
+    single && { id: 'rename', label: 'Rename…', icon: Pencil, shortcut: hotkey('rename'), run: () => void renameLabel(workspacePath, single) },
     single && { id: 'copy', label: 'Copy name', icon: Copy, run: () => copyToClipboard(single.name, 'Label name') },
     SEPARATOR,
     {

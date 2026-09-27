@@ -14,6 +14,7 @@ import type { CmClient } from '../cm/CmClient';
 import { directoryConflictIdentity, parseCreatedChangeset, parseDestinationMoved, parseMergePlan } from '../cm/mergeOutput';
 import { readMergeProgress } from '../cm/progress/mergeProgress';
 import { withTempDirectory } from '../files/tempFile';
+import { retryWhileBusy } from '../files/whileBusy';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
 import { fileConflictArgs, MACHINE_READABLE_ARGS, mergeSourceArgs } from './mergeArgs';
@@ -115,7 +116,7 @@ async function writeFileResolutions(
     const target = toAbsolutePath(workspacePath, conflict.path.replace(/^\//, ''));
 
     if (resolution.choice === 'text') {
-      await writeFile(target, resolution.text, 'utf8');
+      await retryWhileBusy(() => writeFile(target, resolution.text, 'utf8'));
     } else if (resolution.choice === 'source') {
       const source = spec.itemAt(conflict.itemId, mergeSourcePoint(request, conflict.sourceChangeset));
       await cm.query(['cat', source, `--file=${target}`], { cwd: workspacePath });

@@ -3,11 +3,13 @@ import type { CommandLogEntry } from '@shared/events';
 import { CmError } from './CmError';
 import { isShellResultLine, processCommand, shellCommandResult } from './commandLineLimit';
 import { clipForLog, MAX_LOGGED_COMMAND_LINE, MAX_LOGGED_OUTPUT } from './clipForLog';
+import { inCmPathForm } from './cmPathForm';
 import type { CmResult } from './CmResult';
 import { CmShellPool } from './CmShellPool';
 import { extractErrorMessage } from './errorMessage';
 import { runCmProcess } from './runCmProcess';
 import { canRunInShell } from './shellCommandLine';
+import { withUtf8Output } from './utf8Output';
 
 export interface CmRunOptions {
   /** Working directory; `cm` resolves the workspace and repository from it. */
@@ -34,7 +36,10 @@ export class CmClient {
   private nextCommandId = 1;
 
   /** `locate` finds the `cm` executable; it runs again on `relocate()`. */
-  constructor(private readonly locate: () => string) {
+  constructor(
+    private readonly locate: () => string,
+    private readonly platform: NodeJS.Platform = process.platform,
+  ) {
     this.cmPath = locate();
     this.shellPool = new CmShellPool(this.cmPath);
   }
@@ -88,8 +93,9 @@ export class CmClient {
     this.shellPool.disposeAll();
   }
 
-  private async run(args: string[], options: CmRunOptions, useShell: boolean): Promise<string> {
+  private async run(requested: string[], options: CmRunOptions, useShell: boolean): Promise<string> {
     const cwd = options.cwd ?? homedir();
+    const args = withUtf8Output(inCmPathForm(requested, cwd, this.platform));
     const startedAt = Date.now();
     const finished = useShell ? this.shellPool.run(cwd, args) : this.runProcess(args, cwd, options);
     this.startListeners.forEach((listener) => listener({ args, cwd, finished }));

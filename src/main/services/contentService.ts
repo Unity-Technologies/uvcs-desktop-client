@@ -4,6 +4,7 @@ import type { ContentSource, FileContent } from '@shared/domain/content';
 import { EMPTY_CONTENT, toFileContent } from '../files/fileContent';
 import { saveContent } from '../files/saveContent';
 import { withTempPath } from '../files/tempFile';
+import { retryWhileBusy } from '../files/whileBusy';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
 
@@ -28,8 +29,9 @@ export function createContentService({ cm, reviews }: ServiceContext): ContentAp
     }
   }
 
+  /** The text as the editor has it, line breaks included (the file's own). Written in place, keeping the file's identity. */
   async function writeWorkspaceFile(workspacePath: string, path: string, text: string): Promise<void> {
-    await writeFile(toAbsolutePath(workspacePath, path), text, 'utf8');
+    await retryWhileBusy(() => writeFile(toAbsolutePath(workspacePath, path), text, 'utf8'));
   }
 
   return { read, writeWorkspaceFile };

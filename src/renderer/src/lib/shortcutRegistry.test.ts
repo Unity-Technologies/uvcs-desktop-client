@@ -1,10 +1,20 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { describe, expect, it } from 'vitest';
-import { SHORTCUT_AREAS, SHORTCUTS, viewShortcut } from './shortcutRegistry';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
+import type * as Registry from './shortcutRegistry';
+
+let SHORTCUT_AREAS: typeof Registry.SHORTCUT_AREAS;
+let SHORTCUTS: typeof Registry.SHORTCUTS;
+let shortcutKeys: typeof Registry.shortcutKeys;
+let viewShortcut: typeof Registry.viewShortcut;
+
+beforeAll(async () => {
+  vi.stubGlobal('window', { uvcs: { platform: 'darwin' } });
+  ({ SHORTCUT_AREAS, SHORTCUTS, shortcutKeys, viewShortcut } = await import('./shortcutRegistry'));
+});
 
 const RENDERER = join(__dirname, '..');
-const APP_MENU = join(RENDERER, '..', '..', 'main', 'window', 'appMenu.ts');
+const APP_MENU = join(RENDERER, '..', '..', 'main', 'window', 'appMenuTemplate.ts');
 
 function sourceFiles(directory: string): string[] {
   return readdirSync(directory).flatMap((name) => {
@@ -22,7 +32,8 @@ const LITERAL_SHORTCUT = [
   /\buseShortcut\(\s*['"`]/,
 ];
 
-const everyKey = Object.values(SHORTCUTS).flatMap((shortcut) => shortcut.keys);
+const everyKey = () => Object.values(SHORTCUTS).flatMap((shortcut) => [...shortcut.keys, ...('keysOffMac' in shortcut ? shortcut.keysOffMac : [])]);
+const keysOn = (mac: boolean) => Object.values(SHORTCUTS).flatMap((shortcut) => shortcutKeys(shortcut, mac));
 
 describe('shortcut registry', () => {
   it('holds every shortcut of the renderer: bindings, tooltips and key caps read their keys from it', () => {
@@ -44,7 +55,7 @@ describe('shortcut registry', () => {
     for (const [, commandId, accelerator] of items) {
       const shortcut = Object.values(SHORTCUTS).find((candidate) => 'commandId' in candidate && candidate.commandId === commandId);
       expect(shortcut, commandId).toBeDefined();
-      expect(toAccelerator(shortcut!.keys[0]), commandId).toBe(accelerator);
+      for (const mac of [true, false]) expect(toAccelerator(shortcutKeys(shortcut!, mac)[0]!), commandId).toBe(accelerator);
     }
   });
 
@@ -53,10 +64,10 @@ describe('shortcut registry', () => {
   });
 
   it('gives global shortcuts and views distinct keys', () => {
-    const global = Object.values(SHORTCUTS)
-      .filter((shortcut) => shortcut.area === 'General' && !shortcut.label.startsWith('Save'))
-      .flatMap((shortcut) => shortcut.keys);
     for (const mac of [true, false]) {
+      const global = Object.values(SHORTCUTS)
+        .filter((shortcut) => shortcut.area === 'General' && !shortcut.label.startsWith('Save'))
+        .flatMap((shortcut) => shortcutKeys(shortcut, mac));
       const views = Array.from({ length: 14 }, (_, position) => viewShortcut(position, mac));
       const keys = [...global, ...views];
       expect(new Set(keys).size).toBe(keys.length);
@@ -64,7 +75,29 @@ describe('shortcut registry', () => {
   });
 
   it('writes keys the formatter and matcher understand', () => {
-    for (const key of everyKey) expect(key).toMatch(/^((mod|ctrl|alt|shift)\+)*([a-z0-9]|f\d+|[-=,/[\]?\\]|plus|space|enter|escape|tab|backspace|up|down|left|right|home|end|pageup|pagedown)$/);
+    for (const key of everyKey()) expect(key).toMatch(/^((mod|ctrl|alt|shift)\+)*([a-z0-9]|f\d+|[-=,/[\]?\\]|plus|space|enter|escape|tab|backspace|delete|up|down|left|right|home|end|pageup|pagedown)$/);
+  });
+
+  it('keeps Ctrl+Alt free off macOS, where it is AltGr and types characters', () => {
+    const views = Array.from({ length: 14 }, (_, position) => viewShortcut(position, false));
+    for (const key of [...keysOn(false), ...views]) expect(key, key).not.toMatch(/(mod|ctrl)\+(shift\+)?alt\+|alt\+(shift\+)?(mod|ctrl)\+/);
+  });
+
+  it('leaves Windows and Linux desktops their own keys', () => {
+    const reserved = ['alt+f4', 'alt+tab', 'alt+space', 'alt+escape', 'mod+escape', 'mod+shift+escape', 'alt+shift', 'f1'];
+    for (const key of keysOn(false)) expect(reserved, key).not.toContain(key);
+  });
+
+  it('takes Windows and Linux conventions where they differ from the Mac', () => {
+    expect(shortcutKeys(SHORTCUTS.back, false)).toEqual(['alt+left']);
+    expect(shortcutKeys(SHORTCUTS.deleteFile, false)).toEqual(['delete']);
+    expect(shortcutKeys(SHORTCUTS.deleteFile, true)).toEqual(['mod+backspace']);
+    expect(shortcutKeys(SHORTCUTS.discardLines, true)).toEqual(['mod+alt+z']);
+  });
+
+  it('opens the menu with F10 off macOS only, where the window has no menu bar of its own on Windows', () => {
+    expect(shortcutKeys(SHORTCUTS.appMenu, false)).toEqual(['f10']);
+    expect(shortcutKeys(SHORTCUTS.appMenu, true)).toEqual([]);
   });
 });
 

@@ -23,7 +23,8 @@ src/
      process of its own.
    - `execute()` for long or cancellable work (update, switch, checkin, merge): a dedicated process that streams progress lines.
    - A command line too long to start a process with (a checkin or shelve of thousands of paths: Windows takes 32,767
-     characters) is written to a `cm shell` of its own instead (`processCommand`): still one command, never split.
+     characters, quotes included) is written to a `cm shell` of its own instead (`processCommand`): still one command, never split.
+   - A pooled command may take two minutes, a workspace write (undo, add, checkout of thousands of files) half an hour.
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), shown in the command log panel.
 
 ## Parsing `cm` output
@@ -33,6 +34,12 @@ src/
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.
 - A `cm shell` command ends at the `CommandResult <code>` line that ends its output, with nothing more in the pipe
   (`CmShellSession`): comments can quote such lines, and a misread end shifts every later command by one output.
+- Text crosses as UTF-8 on every OS: `cm shell --encoding=utf-8` reads commands so (Windows would read them in the
+  console's code page), and `find` and `--xml` output is asked for in UTF-8 (`withUtf8Output`). Other output comes in
+  the console's code page on Windows. Windows' CRLF becomes LF before any parser sees the output, and relative paths
+  in `cm status --xml` get forward slashes.
+- On macOS `cm` reads names decomposed (NFD), as it reports them: local paths go to it so (`inCmPathForm`), or
+  `cm checkin` of a composed `é.txt` finds no change. Branch names, queries and server paths are left as written.
 
 ## Operation progress
 
@@ -82,7 +89,7 @@ and the app keeps the decision.
 
 - Found per OS (`knownTools`, `detectTools`): the UVCS merge tool (the Desktop GUI run as `xmerge`: `macplasticx` in PlasticSCM.app, `plastic.exe` next to `cm.exe`, `plasticgui`), VS Code and its forks,
   JetBrains IDEs, Sublime Merge, KDiff3, Beyond Compare, Meld, P4Merge, Araxis and FileMerge (`opendiff`, only with
-  Xcode), each with the three-way command line of its docs (cross-checked with Git's `mergetools/*`). client.conf's text merge tools that aren't the UVCS one are offered too, by extension
+  Xcode) and WinMerge on Windows, each with the three-way command line of its docs (cross-checked with Git's `mergetools/*`). client.conf's text merge tools that aren't the UVCS one are offered too, by extension
   (`clientConfMergeTools`), and the user can add any program with an arguments template (`{base}` `{yours}`
   `{incoming}` `{result}` and their `…Name`s). Settings keep the preferred tool (`auto`: the UVCS one, else the first
   found), the user's tools and per-tool arguments.
@@ -155,14 +162,40 @@ client's) are offered again by the "Welcome back" banner in Changes (`features/l
 automatically on arrival when they apply cleanly. Changes still waiting to be brought (conflicts left for the merge
 view) are offered on the target, and as left ones on the source if the user goes back instead.
 
+## Shelves in Changes
+
+Changes put aside, whoever put them there, are in one place: "N shelves" in the Changes header (`MyShelvesButton`,
+⇧⌘S, "Your shelves…" in the palette), shown while the user has shelves in this repository from the last three months.
+
+- **Shelving** (the check-in panel's Shelve mode) undoes what it shelves: `shelveAndUndo` (`main/workspace`) is the
+  switch flow's first half. It shelves with the user's comment, checks the shelve holds every change (`createVerifiedShelve`),
+  records it as a switch shelve record with `reason: 'shelve'`, undoes the changes and moves the files they added aside;
+  a failure puts them back. The toast offers Undo (apply and delete). "Keep the changes here", under the comment, is the
+  other way (a plain `cm shelveset create`), asked for each time: the panel goes back to checking in after a shelve.
+- **The list** is one `cm find shelve` by owner and date (`useMyShelves`, `SLOW_CHANGING_QUERY`), refreshed by shelve
+  operations; the count comes from it. Typing filters it, and after three letters one bounded server search by comment
+  (`useMyShelvesSearch`) finds older ones. A row opens the shelve's diff, which shows its comment and Apply as the page's
+  primary action (`ShelveDiffActions`; only for a shelve a list already read). Apply is on the row; Apply and delete,
+  code review, copy and delete are behind "More actions".
+- **Applying** (`shelves.apply`, `LeftChangesFinder.apply`) merges from `sh:N` at once when nothing conflicts, without
+  leaving Changes; only conflicts open the merge view (whose `deleteShelve` finishes the same way). `cm` refuses to merge
+  into a workspace with pending changes (unless client.conf's `MergeWithPendingChanges`), so the app offers to shelve
+  them away first ("Set aside to apply shelve N"). A recorded shelve of this workspace gets its moved-aside files and
+  changelists back; files are detached from the shelve's revisions (`detachReplacedFiles`), kept or deleted, so their
+  diffs show the changes. The shelve stays unless deleted.
+- **Left changes** (a switch or an update put them aside) are rows too, named "Left on /main/task", with Restore
+  (apply, then delete) as in "Welcome back": the banner stays the prompt on the branch they were left on, and shelves
+  shelved away (`reason: 'shelve'`) are never offered there nor restored on arrival.
+
 ## Windows
 
 One window per workspace, so several tasks (often one AI agent each, in its own workspace and branch) run side by side.
 
 - `main/window/WorkspaceWindows` opens the windows; opening a workspace that another window shows brings that window
   forward instead (`windows.focusWorkspace`, checked by `useOpenWorkspace`). A new window asked to open a workspace
-  takes it at start (`system.takeRequestedWorkspace`). The Window menu lists them; closing the last one keeps the app on
-  macOS, and the Dock icon opens the home screen.
+  takes it at start (`system.takeRequestedWorkspace`), as does a folder the installed app is launched with on Windows
+  and Linux (`workspaceArgument`; a second launch hands it to the running app). The Window menu lists them; closing
+  the last one keeps the app on macOS, and the Dock icon opens the home screen; elsewhere it quits.
 - Each API call runs with its window as the caller (`main/ipc/caller.ts`, followed across `await`s), so its commands
   (`commandLogged`) and operation progress go back to that window only. `workspaces.watch` is the window saying which
   workspace it shows: `main/watch/WorkspaceWatchers` keeps one watcher per shown workspace and sends its changes to the
@@ -205,7 +238,8 @@ renderer/src/
   (or what it can touch: `invalidateWorkspace(path, affected)`, `runOperation({ affects })`).
 - **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check.
   - `main/watch/WorkspaceWatcher` watches an open workspace (recursive on macOS/Windows; on Linux a watch per folder,
-    `FolderTreeWatch`, as Node's recursive mode there watches every file and loses files saved by replacing them),
+    `FolderTreeWatch`, as Node's recursive mode there watches every file and loses files saved by replacing them;
+    an event Windows sends without a name, when a burst overflowed its buffer, refreshes everything),
     skips `ignore.conf` folders and `.plastic` lock/temp files, coalesces bursts (300 ms quiet, 2 s max wait) and drops what the
     app's own writes cause (`changesWorkspace` commands and tracked operations): the renderer refreshes after those anyway.
     `cm status --changelists` writes the changelist files back on every read, so those rewrites count as its own too (`rewritesChangelists`).
@@ -313,10 +347,26 @@ renderer/src/
   An update or a switch runs alone on its workspace: it waits for any other operation, and the others wait for it (`blockingOperation`).
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
+- **Back buttons**: a page goes back with the mouse's back button and, on Windows, the Browser Back key (the `app-command`
+  the main process forwards as `navigateBack`), once per press however it arrives (`useBackButtons`).
 - **Keyboard**: every shortcut is declared in `lib/shortcutRegistry.ts` and bound through `hotkey(id)`; the shortcuts sheet
   (`?`, ⌘/) lists the registry, and a test rejects shortcut literals anywhere else and menu accelerators that differ. Views
   get ⌘1… in sidebar order (`viewShortcut`; past the ninth ⌥⌘1… on macOS, whose ⇧⌘3–5 take screenshots). Window
   shortcuts and menu commands run once per press and wait while a modal dialog is open (`lib/modalDialog`).
+  `mod` is ⌘ on macOS and Ctrl elsewhere, shown as symbols in the Mac's order (⇧⌘K) or spelled out (Ctrl+Shift+K,
+  `formatShortcut`). A shortcut takes other keys off macOS where Windows and Linux conventions differ (`keysOffMac`: Alt+←
+  back, Delete deletes) and never Ctrl+Alt there, which is AltGr on European layouts (the test checks it). Letters match
+  by the character typed (Ctrl+Z on a German keyboard), digits by position. F2 renames the selected file, branch, label or
+  attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A field keeps
+  its own text chords, Ctrl+Y (redo) included off macOS (`belongsToField`).
+- **Per OS**: platform differences go through small pure helpers taking the platform (`revealLabel`, `trashName`,
+  `windowChrome`, `appMenuTemplate`, `formatShortcut`), read once in `lib/platform.ts`. Windows draw their title bar per
+  `windowChrome`: macOS insets its traffic lights over the sidebar's top band; Windows hides its title bar and overlays
+  its caption buttons on the top bar (`titleBarOverlay`, clear, symbols in the theme's text color; the page keeps
+  `--caption-buttons-width` free), with a menu button in the band (and Alt or F10) popping up the menu bar's menus;
+  Linux keeps the desktop's frame and menu bar. Native parts follow the app's theme (`followAppTheme`). The menus
+  (`main/window/appMenuTemplate`) have an app menu on macOS only; elsewhere File ends with Settings and Exit (Windows)
+  or Quit (Linux), Help with About, and `&` marks each item's Alt letter.
 - **Focus**: the list, tree or graph a view or page works on carries `MAIN_FOCUS` (`lib/mainFocus.ts`). `useMainFocus`
   focuses it after navigating and whenever focus falls to the document (a dialog, menu or popover closed), and hands it
   list keys pressed while nothing has focus. Views keep their list's selection while away (`useViewSelection`). Lists
@@ -355,7 +405,7 @@ and many people use the same server. Every `cm` command other than local reads (
   for an event, a focus or an operation.
 - **Focus**: the incoming check if older than 20 s, and the server views on screen once stale (30 s by default). Lists
   that hardly change by themselves and are heavy to read use `SLOW_CHANGING_QUERY` (every branch, every label, attribute
-  types, attribute values, the working object's comment, the palette's lists): five minutes, and focus never re-reads them. The Branch
+  types, attribute values, the working object's comment, the palette's lists, the user's recent shelves in Changes): five minutes, and focus never re-reads them. The Branch
   Explorer is kept five minutes and focus never re-reads all history. Local views skip focus while the watcher sees the disk.
 - **Home**: the repository and branch of every listed workspace come from its `.plastic/plastic.selector` file
   (`workspaces.heads`); `cm` is asked only about recent workspaces whose file can't tell.
@@ -366,7 +416,7 @@ and many people use the same server. Every `cm` command other than local reads (
 - **After an operation**: `invalidateWorkspace` refetches what is on screen and marks the rest stale, scoped to what the
   operation can change (`refreshScopes.ts`, `runOperation({ affects })`, `runAction(..., affects)`): a checkin, an update
   or a merge from a branch leave labels, shelves, attributes, reviews, left changes and changesets already read alone;
-  shelving changes that stay in the workspace refreshes only the shelve lists; a new, deleted or hidden branch only the
+  shelving changes that stay in the workspace refreshes only the shelve lists, and shelving them away those and the workspace; a new, deleted or hidden branch only the
   branch lists and the Branch Explorer; a label edit the labels and the graph; an attribute or value edit only the
   attributes. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
   the last (create a branch and switch to it). Views keyed by the workspace info (`keyedByWorkspaceInfo`: left changes, the
@@ -401,3 +451,5 @@ and many people use the same server. Every `cm` command other than local reads (
   - interactive: `npm run build && UVCS_CDP_PORT=9333 npm run app:debug &`, then
     `npx playwright-cli attach --cdp=http://localhost:9333` and use `snapshot`, `click <ref>`, `screenshot`
     (see `.claude/skills/playwright-cli`). Use a distinct port and `-s=<session>` per parallel agent.
+- `UVCS_RENDERER_PLATFORM=win32` (or `linux`) in the environment previews another OS's shortcuts, copy and layout from a
+  Mac (the page only: the menus and window frame stay the Mac's).

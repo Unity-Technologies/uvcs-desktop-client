@@ -1,6 +1,6 @@
 import { rm } from 'node:fs/promises';
 import type { LeftChanges, RestoreResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
-import type { Shelve } from '@shared/domain/shelve';
+import type { Shelve, ShelveApplyResult } from '@shared/domain/shelve';
 import { AUTOMATIC_SHELVE_CONDITION, automaticShelveComment } from '../cm/automaticShelve';
 import type { CmClient } from '../cm/CmClient';
 import { findRecords, toShelve } from '../cm/findObjects';
@@ -63,11 +63,41 @@ export class LeftChangesFinder {
     return { kind: 'restored', count: record.paths.length, sourceName: record.source.name };
   }
 
-  /** After a merge from a shelve: if it was a switch shelve, its changes are back, so it is cleaned up. */
-  async finishAppliedShelve(workspacePath: string, shelveId: number): Promise<void> {
+  /**
+   * Applies any shelve to the workspace when it merges cleanly. What shelving it away took from here (the added files
+   * moved aside, the changelists) comes back as when restoring left changes; the shelve is deleted if asked, and always
+   * when it held changes left by a switch or an update: those are done once back.
+   */
+  async apply(workspacePath: string, shelveId: number, deleteShelve: boolean, context: OperationContext): Promise<ShelveApplyResult> {
     const workspace = await readWorkspaceIdentity(this.headers, workspacePath);
+    const record = this.ownRecord(workspace, shelveId);
+
+    if (record?.backup) await putBack(workspacePath, record.backup);
+    const outcome = await applyShelveCleanly(this.cm, workspacePath, shelveId, context);
+    if (outcome.kind === 'pendingChanges') return { kind: 'pendingChanges' };
+    if (outcome.kind === 'conflicts') return { kind: 'conflicts' };
+
+    await this.finishApplied(workspacePath, workspace, shelveId, deleteShelve);
+    return { kind: 'applied', count: outcome.count };
+  }
+
+  /** After a merge from a shelve (its conflicts resolved in the merge view): cleaned up as `apply` does. */
+  async finishAppliedShelve(workspacePath: string, shelveId: number, deleteShelve: boolean): Promise<void> {
+    const workspace = await readWorkspaceIdentity(this.headers, workspacePath);
+    await this.finishApplied(workspacePath, workspace, shelveId, deleteShelve);
+  }
+
+  private async finishApplied(workspacePath: string, workspace: WorkspaceIdentity, shelveId: number, deleteShelve: boolean): Promise<void> {
+    const record = this.ownRecord(workspace, shelveId);
+    if (record) return this.finish(workspacePath, record, deleteShelve || record.reason !== 'shelve');
+    await detachReplacedFiles(this.cm, workspacePath);
+    if (deleteShelve) await deleteShelves(this.cm, workspacePath, [{ id: shelveId, repository: workspace.repository }]);
+  }
+
+  /** The record of a shelve this workspace made: another workspace's backup and changelists aren't this one's. */
+  private ownRecord(workspace: WorkspaceIdentity, shelveId: number): SwitchShelveRecord | undefined {
     const record = this.records.find({ shelveId, repository: workspace.repository });
-    if (record) await this.finish(workspacePath, record);
+    return record?.workspaceGuid === workspace.guid ? record : undefined;
   }
 
   async discard(workspacePath: string, shelveIds: number[]): Promise<void> {
@@ -76,17 +106,18 @@ export class LeftChangesFinder {
     await deleteShelves(this.cm, workspacePath, keys.map(({ shelveId, repository }) => ({ id: shelveId, repository })));
     for (const key of keys) {
       const backup = this.records.find(key)?.backup;
-      if (backup) await rm(backup.directory, { recursive: true, force: true });
+      if (backup) await rm(backup.directory, { recursive: true, force: true, maxRetries: 5 });
     }
     this.records.remove(keys);
   }
 
-  /** The changes are in the workspace again: back into their changelists, and the shelve and record go away. */
-  async finish(workspacePath: string, record: SwitchShelveRecord): Promise<void> {
+  /** The changes are in the workspace again: back into their changelists, and the record (and the shelve, unless kept) go away. */
+  async finish(workspacePath: string, record: SwitchShelveRecord, deleteShelve = true): Promise<void> {
     if (record.backup) await putBack(workspacePath, record.backup);
+    // Kept or not: a file still on the shelve's revision diffs against it, showing no change at all.
     await detachReplacedFiles(this.cm, workspacePath);
     await this.restoreChangelists(workspacePath, record);
-    await deleteShelves(this.cm, workspacePath, [{ id: record.shelveId, repository: record.repository }]);
+    if (deleteShelve) await deleteShelves(this.cm, workspacePath, [{ id: record.shelveId, repository: record.repository }]);
     this.records.remove([record]);
   }
 
@@ -107,10 +138,13 @@ export class LeftChangesFinder {
     return findRecords(xml, 'SHELVE').map(toShelve);
   }
 
-  /** This workspace's records whose shelves still exist; the others were deleted elsewhere and are forgotten. */
+  /**
+   * This workspace's records of left changes whose shelves still exist; the others were deleted elsewhere and are
+   * forgotten. Shelves the user shelved away carry the user's comment, not the automatic one: they aren't in `shelves`.
+   */
   private liveRecords(workspace: WorkspaceIdentity, shelves: Shelve[]): SwitchShelveRecord[] {
     const existing = new Set(shelves.map((shelve) => shelve.id));
-    const records = this.records.forWorkspace(workspace.guid).filter((record) => record.repository === workspace.repository);
+    const records = this.records.forWorkspace(workspace.guid).filter((record) => record.repository === workspace.repository && isLeftChanges(record));
     const gone = records.filter((record) => !existing.has(record.shelveId));
     if (gone.length > 0) this.records.remove(gone);
     return records.filter((record) => existing.has(record.shelveId));
@@ -165,12 +199,20 @@ export class LeftChangesFinder {
  * wait on the target until their conflicts are resolved, and where they were made too, as left there: the user went
  * back instead.
  */
-function waitingOn(record: SwitchShelveRecord, spec: string): SwitchShelveRecord | undefined {
+function waitingOn(record: SwitchShelveRecord, spec: string): LeftChangesRecord | undefined {
+  if (!isLeftChanges(record)) return undefined;
   if (record.source.spec === spec) return { ...record, mode: 'leave' };
   return record.mode === 'bring' && record.target.spec === spec ? record : undefined;
 }
 
-function toLeftChanges(record: SwitchShelveRecord): LeftChanges {
+type LeftChangesRecord = SwitchShelveRecord & { reason?: LeftChanges['reason'] };
+
+/** Shelved by the app to switch or update, not by the user: only these are "Welcome back"'s, and restored on arrival. */
+function isLeftChanges(record: SwitchShelveRecord): record is LeftChangesRecord {
+  return record.reason !== 'shelve';
+}
+
+function toLeftChanges(record: LeftChangesRecord): LeftChanges {
   return {
     shelveId: record.shelveId,
     sourceName: record.source.name,

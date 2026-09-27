@@ -1,4 +1,5 @@
 import { posix, win32 } from 'node:path';
+import { pathFolders } from '../../system/pathFolders';
 import type { KnownTool, Whereabouts } from './knownTools';
 
 /** The little of the file system detection needs, so tests can stand in for it. */
@@ -53,7 +54,7 @@ function expandWildcard(candidate: string, where: Whereabouts, fs: ToolFileSyste
 
 function findOnPath(names: string[], where: Whereabouts, fs: ToolFileSystem): string | undefined {
   const path = pathFor(where);
-  const folders = (where.env.PATH ?? where.env.Path ?? '').split(path.delimiter).filter(Boolean);
+  const folders = pathFolders(where.env, where.platform);
   for (const name of names) {
     const found = folders.map((folder) => path.join(folder, name)).find((candidate) => fs.exists(candidate));
     if (found) return found;

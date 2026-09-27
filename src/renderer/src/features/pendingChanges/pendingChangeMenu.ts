@@ -18,7 +18,7 @@ import type { Changelist, FilterRuleList, PendingChange } from '@shared/domain/p
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { SEPARATOR, tidyMenu, type MenuEntry, type Submenu } from '../../lib/actions';
-import { REVEAL_LABEL } from '../../lib/platform';
+import { REVEAL_LABEL, TRASH_NAME } from '../../lib/platform';
 import { formatCount } from '../../lib/text';
 import { categoryOf, existsOnDisk, hasRevisions, isCheckinCandidate, isControlled } from './changeCategories';
 import { moveToChangelistSubmenu } from './changelistMenu';
@@ -112,7 +112,7 @@ export function pendingChangeMenu(
     },
     privateChanges.length > 0 && {
       id: 'trash',
-      label: 'Move to trash',
+      label: `Move to ${TRASH_NAME}`,
       icon: Trash2,
       danger: true,
       run: () => void deletePrivateFiles(workspacePath, privateChanges),

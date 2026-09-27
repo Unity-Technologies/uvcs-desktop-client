@@ -11,6 +11,7 @@ import { errorDetailsAction } from './errors/errorDetailsAction';
 import { HomeScreen } from './home/HomeScreen';
 import { OperationCard } from './operations/OperationCard';
 import { queryClient } from './queryClient';
+import { useAppMenuKeys } from './shell/appMenu';
 import { useSettingsFromOtherWindows } from './settings/useSettings';
 import { useTheme } from './settings/useTheme';
 import { useGravatarSetting } from './settings/useGravatarSetting';
@@ -40,6 +41,7 @@ function Root() {
   useSettingsFromOtherWindows();
   useAppCommands();
   useMenuCommands();
+  useAppMenuKeys();
   useRequestedWorkspace();
   const workspacePath = useSession((state) => state.workspacePath);
   const cm = useCmAvailability();

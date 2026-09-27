@@ -1,11 +1,16 @@
-import { join, relative, sep } from 'node:path';
+import { posix, win32 } from 'node:path';
 
-/** Converts a workspace-relative path (forward slashes) into an absolute OS path. */
-export function toAbsolutePath(workspacePath: string, relativePath: string): string {
-  return join(workspacePath, ...relativePath.split('/'));
+/** The path functions of a platform: Windows paths on Windows, whatever OS runs the code. */
+export function pathsOf(platform: NodeJS.Platform): typeof posix {
+  return platform === 'win32' ? win32 : posix;
 }
 
-/** Converts an absolute OS path into a workspace-relative path with forward slashes. */
-export function toRelativePath(workspacePath: string, absolutePath: string): string {
-  return relative(workspacePath, absolutePath).split(sep).join('/');
+/** Converts a workspace-relative path (forward slashes) into an absolute OS path. */
+export function toAbsolutePath(workspacePath: string, relativePath: string, platform: NodeJS.Platform = process.platform): string {
+  return pathsOf(platform).join(workspacePath, ...relativePath.split('/'));
+}
+
+/** A workspace-relative path as `cm` writes it on this OS (`src\app.ts` on Windows), with forward slashes. */
+export function withForwardSlashes(relativePath: string, platform: NodeJS.Platform): string {
+  return platform === 'win32' ? relativePath.replaceAll('\\', '/') : relativePath;
 }

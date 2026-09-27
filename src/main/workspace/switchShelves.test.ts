@@ -59,7 +59,8 @@ describe('detachReplacedFiles', () => {
     ]);
   });
 
-  it('keeps a link pointing where the shelve left it, never touching the file it points to', async () => {
+  // Windows lets only administrators and Developer Mode create links.
+  it.skipIf(process.platform === 'win32')('keeps a link pointing where the shelve left it, never touching the file it points to', async () => {
     const workspacePath = await mkdtemp(join(tmpdir(), 'uvcs-detach-'));
     const link = join(workspacePath, 'link');
     await writeFile(join(workspacePath, 'README.md'), 'readme\n');

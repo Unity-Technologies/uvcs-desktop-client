@@ -1,4 +1,5 @@
 import { homedir } from 'node:os';
+import { normalize } from 'node:path';
 import { app, dialog, net, shell } from 'electron';
 import type { SystemApi } from '@shared/api/system';
 import { checkSetup } from '../cm/setupCheck';
@@ -29,14 +30,15 @@ export function createSystemService({ cm, operations, windows, settings }: Servi
     checkSetup: setupProblem,
     currentUser: async () => (await cm.query(['whoami'])).trim(),
     openPath: async (path) => {
-      const error = await shell.openPath(path);
+      const error = await shell.openPath(normalize(path));
       if (error) throw new Error(error);
     },
-    revealInFileManager: async (path) => shell.showItemInFolder(path),
-    openTerminal: (path) => openTerminal(path),
+    // In the OS's own separators: Explorer finds no item to select in `C:\wk/src/a.cs`.
+    revealInFileManager: async (path) => shell.showItemInFolder(normalize(path)),
+    openTerminal: (path) => openTerminal(normalize(path)),
     openExternal: (url) => shell.openExternal(url),
     moveToTrash: async (paths) => {
-      for (const path of paths) await shell.trashItem(path);
+      for (const path of paths) await shell.trashItem(normalize(path));
     },
     pickDirectory: async (title, defaultPath) => {
       const result = await dialog.showOpenDialog({ title, defaultPath, properties: ['openDirectory', 'createDirectory'] });
