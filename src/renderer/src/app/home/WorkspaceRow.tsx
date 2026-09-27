@@ -34,7 +34,7 @@ export function WorkspaceRow({ workspace, repository, selector, missing = false,
     <ActionContextMenu entries={menu}>
       <div className={styles.row} data-compact={compact} data-missing={missing}>
         <button className={styles.rowMain} data-workspace-row onClick={() => onOpen(workspace.path)}>
-          <RepositoryAvatar name={spec?.name ?? workspace.name} size={compact ? 24 : 32} />
+          <RepositoryAvatar name={spec?.name ?? workspace.name} label={workspace.name} size={compact ? 24 : 32} />
           <span className={styles.rowText}>
             <span className={styles.rowTitle}>
               <span className={styles.rowName}>

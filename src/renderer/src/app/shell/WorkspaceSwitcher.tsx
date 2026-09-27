@@ -2,6 +2,7 @@ import * as Popover from '@radix-ui/react-popover';
 import { Copy, FolderGit2, FolderOpen, FolderPlus, Layers, SquareTerminal } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactElement } from 'react';
 import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorkspaceDialog';
+import { initialOf } from '../../lib/initialOf';
 import { navigationTarget } from '../../lib/listNavigation';
 import { isRowMenuKey, openContextMenuOf } from '../../lib/rowMenu';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -145,7 +146,7 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
           onMouseEnter={() => setHighlightedPath(workspace.path)}
           onClick={() => onChoose(workspace.path)}
         >
-          <span className={styles.icon}>{workspace.name.charAt(0).toUpperCase()}</span>
+          <span className={styles.icon}>{initialOf(workspace.name)}</span>
           <span className={styles.text}>
             <span className={styles.name}>
               <Highlight text={workspace.name} />
