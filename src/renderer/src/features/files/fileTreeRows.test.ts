@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { TreeItem } from '@shared/domain/explorer';
-import { ancestorsOf, buildFileTreeRows, parentOf } from './fileTreeRows';
+import { ancestorsOf, buildFileTreeRows, parentOf, sortItems } from './fileTreeRows';
 
 function item(path: string, itemType: TreeItem['itemType'] = 'file'): TreeItem {
   return {
@@ -63,6 +63,28 @@ describe('buildFileTreeRows', () => {
     expect(buildFileTreeRows({ childrenByDirectory: tree, expanded: new Set(), root: { item: item('', 'directory'), expanded: false } })).toHaveLength(1);
     const [loading] = buildFileTreeRows({ childrenByDirectory: new Map(), expanded: new Set(), root: { item: item('', 'directory'), expanded: true } });
     expect(loading?.isLoading).toBe(true);
+  });
+});
+
+describe('big trees', () => {
+  it('sorts each listing once, however often the rows are rebuilt', () => {
+    const listing = [item('b.ts'), item('a.ts')];
+    expect(sortItems(listing)).toBe(sortItems(listing));
+    expect(listing.map((entry) => entry.path)).toEqual(['b.ts', 'a.ts']);
+  });
+
+  it('filters a deep tree reading each folder once, not once per folder above it', () => {
+    const depth = 30;
+    const chain = Array.from({ length: depth }, (_, level) => Array.from({ length: level + 1 }, (_, index) => `d${index}`).join('/'));
+    const listings = new Map<string, TreeItem[]>([['', [item(chain[0]!, 'directory')]]]);
+    chain.forEach((directory, level) => listings.set(directory, [...(chain[level + 1] ? [item(chain[level + 1]!, 'directory')] : []), item(`${directory}/${level === depth - 1 ? 'target' : 'other'}.ts`)]));
+    let reads = 0;
+    const counted = new Map(listings);
+    counted.get = (key) => (reads++, listings.get(key));
+
+    const rows = buildFileTreeRows({ childrenByDirectory: counted, expanded: new Set(chain), filter: 'target' });
+    expect(rows).toHaveLength(depth + 1);
+    expect(reads).toBeLessThanOrEqual(4 * (depth + 1));
   });
 });
 

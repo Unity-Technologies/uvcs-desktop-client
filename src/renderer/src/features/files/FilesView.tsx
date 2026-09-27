@@ -1,5 +1,5 @@
 import { FilePlus, FolderPlus, RefreshCw, Search } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { invalidateWorkspace } from '../../app/queryClient';
@@ -39,6 +39,8 @@ export function FilesView() {
   const { toggle, expand } = useExpandedDirectoriesStore();
   const { data: pendingChanges } = usePendingChanges();
   const [filter, setFilter] = useState('');
+  // The field shows each keystroke at once; tens of thousands of open rows are filtered right after.
+  const shownFilter = useDeferredValue(filter);
   const [selection, setSelection] = useViewSelection('files');
   const [revealPath, setRevealPath] = useState<string | null>(null);
 
@@ -49,7 +51,7 @@ export function FilesView() {
   );
   const pendingIndex = useMemo(() => new PendingChangesIndex(pendingChanges?.changes ?? []), [pendingChanges]);
   const root = useMemo(() => workspace && { item: workspaceRootItem(workspace), expanded: rootExpanded }, [workspace, rootExpanded]);
-  const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter, root }), [childrenByDirectory, expanded, filter, root]);
+  const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter: shownFilter, root }), [childrenByDirectory, expanded, shownFilter, root]);
   const selectedItems = useMemo(() => rows.filter((row) => selection.selected.has(row.item.path)).map((row) => row.item), [rows, selection]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
 
@@ -96,7 +98,7 @@ export function FilesView() {
       {header}
       <ListWithDetails
         list={
-          <HighlightQuery query={filter}>
+          <HighlightQuery query={shownFilter}>
             <FileTreeTable
               rows={rows}
               selection={selection}
