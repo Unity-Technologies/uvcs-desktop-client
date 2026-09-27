@@ -21,3 +21,12 @@ export function defaultWorkspacePath(root: string | undefined, name: string): st
 export function isRepositoryNameTaken(name: string, repositoryNames: readonly string[]): boolean {
   return repositoryNames.includes(name.trim());
 }
+
+/**
+ * Whether another workspace already goes by `name`. Names that differ only by case count as taken: `cm` would accept
+ * them, but two workspaces told apart by case alone read as one. `ownName` is the workspace's own when renaming it.
+ */
+export function isWorkspaceNameTaken(name: string, workspaceNames: readonly string[], ownName?: string): boolean {
+  const wanted = name.trim().toLowerCase();
+  return workspaceNames.some((taken) => taken !== ownName && taken.toLowerCase() === wanted);
+}

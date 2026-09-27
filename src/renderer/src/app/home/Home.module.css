@@ -339,6 +339,14 @@
   font-weight: var(--weight-semibold);
 }
 
+.serverMonogram {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+  letter-spacing: -0.02em;
+}
+
 .row[data-compact='true'] .avatar {
   font-size: var(--text-xs);
 }

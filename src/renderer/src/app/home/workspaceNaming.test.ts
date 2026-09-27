@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { defaultWorkspacePath, isRepositoryNameTaken, suggestWorkspaceName } from './workspaceNaming';
+import { defaultWorkspacePath, isRepositoryNameTaken, isWorkspaceNameTaken, suggestWorkspaceName } from './workspaceNaming';
 
 describe('suggestWorkspaceName', () => {
   it('uses the last segment of sub-repository names', () => {
@@ -34,5 +34,17 @@ describe('isRepositoryNameTaken', () => {
 
   it('tells names apart by case, as cm does', () => {
     expect(isRepositoryNameTaken('Game', ['game'])).toBe(false);
+  });
+});
+
+describe('isWorkspaceNameTaken', () => {
+  it('finds another workspace by the name, whatever its case and the spaces typed around it', () => {
+    expect(isWorkspaceNameTaken(' Game ', ['game', 'tools'])).toBe(true);
+    expect(isWorkspaceNameTaken('engine', ['game', 'tools'])).toBe(false);
+  });
+
+  it("lets a workspace being renamed change its own name's case", () => {
+    expect(isWorkspaceNameTaken('Game', ['game', 'tools'], 'game')).toBe(false);
+    expect(isWorkspaceNameTaken('tools', ['game', 'tools'], 'game')).toBe(true);
   });
 });
