@@ -182,7 +182,8 @@ function useBranchColumns(
           <BranchNameCell row={row} isCurrent={row.branch.name === currentBranch} review={reviews?.get(row.branch.id)} onToggleCollapsed={onToggleCollapsed} />
         ),
       },
-      { id: 'comment', header: 'Comment', grow: 2, secondary: true, render: (row) => <Highlight text={row.branch.comment} /> },
+      // Gives its room to the name in a narrow list: the details panel shows the comment anyway.
+      { id: 'comment', header: 'Comment', grow: 2, secondary: true, hideBelow: 560, render: (row) => <Highlight text={row.branch.comment} /> },
       {
         id: 'owner',
         header: 'Created by',
