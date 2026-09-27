@@ -225,7 +225,9 @@ renderer/src/
   workers (`highlightWorkers`, a 50,000-line diff in 6 s); anything bigger, and an editable diff past 400 KB (Pierre
   highlights editors on the main thread, pool or not), is plain text and renders only the lines in view too, with a
   quiet "Large file" in the header (its tooltip says why); such a diff is the "text" language (`highlightedLanguage`),
-  or the editor would color the lines typed into it.
+  or the editor would color the lines typed into it. Past 1 MB (both versions), the text typed into is diffed again
+  once typing pauses, not at every keystroke (`diffsEveryKeystroke`): the +N −M and the lines discards act on follow
+  then, as Pierre's recoloring does; nothing is discarded until they do.
   Every diff of two versions follows Split/Unified, one from or to an empty version (an empty base, a file emptied)
   too: `shownDiff` keeps both sides where Pierre would show a new or deleted file in one column, and the empty side is
   hatched like any added lines. An item with one version only (added, private, deleted; a revision that created the
