@@ -19,6 +19,7 @@ export const SHORTCUT_AREAS = [
   'Diff',
   'Branch Explorer',
   'Files',
+  'Annotate',
   'Merge',
   'Command palette',
   'Image diff',
@@ -118,6 +119,13 @@ export const SHORTCUTS = {
   cutItems: { area: 'Files', label: 'Cut, to move into another folder', keys: ['mod+x'] },
   pasteItems: { area: 'Files', label: 'Move the cut items into the selected folder', keys: ['mod+v'] },
   cancelCut: { area: 'Files', label: 'Cancel the cut', keys: ['escape'] },
+
+  annotateNextBlock: { area: 'Annotate', label: 'Next block of lines', keys: ['alt+down'] },
+  annotatePreviousBlock: { area: 'Annotate', label: 'Previous block of lines', keys: ['alt+up'] },
+  annotateNextSameChangeset: { area: 'Annotate', label: 'Next block from the same changeset', keys: ['alt+shift+down'] },
+  annotatePreviousSameChangeset: { area: 'Annotate', label: 'Previous block from the same changeset', keys: ['alt+shift+up'] },
+  annotateShowRevision: { area: 'Annotate', label: "Show the block's revision", keys: ['enter'] },
+  annotateBlockDetails: { area: 'Annotate', label: "The block's changeset and actions", keys: ['space'] },
 
   merge: { area: 'Merge', label: 'Merge', keys: ['mod+enter'] },
   resolveAllInTool: { area: 'Merge', label: 'Resolve the conflicts in the merge tool, one by one', keys: ['mod+shift+enter'] },

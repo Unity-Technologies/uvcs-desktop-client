@@ -1,0 +1,84 @@
+.card {
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 432px;
+  padding: var(--space-3);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
+}
+
+.card[data-state='open'] {
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.who {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.author {
+  overflow: hidden;
+  font-weight: var(--weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.when {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.changeset {
+  flex: none;
+  color: var(--accent-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+}
+
+.comment {
+  max-height: 180px;
+  margin: 0;
+  overflow: auto;
+  color: var(--text-primary);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.noComment {
+  color: var(--text-tertiary);
+  font-style: italic;
+}
+
+.branch {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.merge {
+  color: var(--text-tertiary);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  padding-top: var(--space-1);
+  border-top: 1px solid var(--border-subtle);
+}

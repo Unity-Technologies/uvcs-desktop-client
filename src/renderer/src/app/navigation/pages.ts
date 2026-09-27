@@ -9,9 +9,9 @@ import type { MergeRequest } from '@shared/domain/merge';
 export type Page =
   /**
    * `changesetId` reads `path` as the repository had it then (browsing a changeset), instead of in the workspace, where
-   * the item may have moved or be missing.
+   * the item may have moved or be missing. `selectChangeset` opens on the revision that changeset made.
    */
-  | { kind: 'history'; path: string; changesetId?: number }
+  | { kind: 'history'; path: string; changesetId?: number; selectChangeset?: number }
   /** `revision`, from the file's history, annotates it instead of the loaded one; `changesetId` as in its history. */
   | { kind: 'annotate'; path: string; revision?: ItemRevision; changesetId?: number }
   /**
