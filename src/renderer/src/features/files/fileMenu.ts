@@ -42,7 +42,7 @@ import { isWorkspaceRoot } from './workspaceRoot';
 import { hotkey } from '../../lib/shortcutRegistry';
 
 export const FILE_SHORTCUTS = {
-  rename: hotkey('renameFile'),
+  rename: hotkey('rename'),
   delete: hotkey('deleteFile'),
   newFile: hotkey('newFile'),
   newFolder: hotkey('newFolder'),

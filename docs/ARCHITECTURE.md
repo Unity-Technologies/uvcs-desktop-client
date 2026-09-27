@@ -162,6 +162,31 @@ client's) are offered again by the "Welcome back" banner in Changes (`features/l
 automatically on arrival when they apply cleanly. Changes still waiting to be brought (conflicts left for the merge
 view) are offered on the target, and as left ones on the source if the user goes back instead.
 
+## Shelves in Changes
+
+Changes put aside, whoever put them there, are in one place: "N shelves" in the Changes header (`MyShelvesButton`,
+⇧⌘S, "Your shelves…" in the palette), shown while the user has shelves in this repository from the last three months.
+
+- **Shelving** (the check-in panel's Shelve mode) undoes what it shelves: `shelveAndUndo` (`main/workspace`) is the
+  switch flow's first half. It shelves with the user's comment, checks the shelve holds every change (`createVerifiedShelve`),
+  records it as a switch shelve record with `reason: 'shelve'`, undoes the changes and moves the files they added aside;
+  a failure puts them back. The toast offers Undo (apply and delete). "Keep the changes here", under the comment, is the
+  other way (a plain `cm shelveset create`), asked for each time: the panel goes back to checking in after a shelve.
+- **The list** is one `cm find shelve` by owner and date (`useMyShelves`, `SLOW_CHANGING_QUERY`), refreshed by shelve
+  operations; the count comes from it. Typing filters it, and after three letters one bounded server search by comment
+  (`useMyShelvesSearch`) finds older ones. A row opens the shelve's diff, which shows its comment and Apply as the page's
+  primary action (`ShelveDiffActions`; only for a shelve a list already read). Apply is on the row; Apply and delete,
+  code review, copy and delete are behind "More actions".
+- **Applying** (`shelves.apply`, `LeftChangesFinder.apply`) merges from `sh:N` at once when nothing conflicts, without
+  leaving Changes; only conflicts open the merge view (whose `deleteShelve` finishes the same way). `cm` refuses to merge
+  into a workspace with pending changes (unless client.conf's `MergeWithPendingChanges`), so the app offers to shelve
+  them away first ("Set aside to apply shelve N"). A recorded shelve of this workspace gets its moved-aside files and
+  changelists back; files are detached from the shelve's revisions (`detachReplacedFiles`), kept or deleted, so their
+  diffs show the changes. The shelve stays unless deleted.
+- **Left changes** (a switch or an update put them aside) are rows too, named "Left on /main/task", with Restore
+  (apply, then delete) as in "Welcome back": the banner stays the prompt on the branch they were left on, and shelves
+  shelved away (`reason: 'shelve'`) are never offered there nor restored on arrival.
+
 ## Windows
 
 One window per workspace, so several tasks (often one AI agent each, in its own workspace and branch) run side by side.
@@ -325,6 +350,20 @@ renderer/src/
   (`?`, ⌘/) lists the registry, and a test rejects shortcut literals anywhere else and menu accelerators that differ. Views
   get ⌘1… in sidebar order (`viewShortcut`; past the ninth ⌥⌘1… on macOS, whose ⇧⌘3–5 take screenshots). Window
   shortcuts and menu commands run once per press and wait while a modal dialog is open (`lib/modalDialog`).
+  `mod` is ⌘ on macOS and Ctrl elsewhere, shown as symbols in the Mac's order (⇧⌘K) or spelled out (Ctrl+Shift+K,
+  `formatShortcut`). A shortcut takes other keys off macOS where Windows and Linux conventions differ (`keysOffMac`: Alt+←
+  back, Delete deletes) and never Ctrl+Alt there, which is AltGr on European layouts (the test checks it). Letters match
+  by the character typed (Ctrl+Z on a German keyboard), digits by position. F2 renames the selected file, branch, label or
+  attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A field keeps
+  its own text chords, Ctrl+Y (redo) included off macOS (`belongsToField`).
+- **Per OS**: platform differences go through small pure helpers taking the platform (`revealLabel`, `trashName`,
+  `windowChrome`, `appMenuTemplate`, `formatShortcut`), read once in `lib/platform.ts`. Windows draw their title bar per
+  `windowChrome`: macOS insets its traffic lights over the sidebar's top band; Windows hides its title bar and overlays
+  its caption buttons on the top bar (`titleBarOverlay`, clear, symbols in the theme's text color; the page keeps
+  `--caption-buttons-width` free), with a menu button in the band (and Alt or F10) popping up the menu bar's menus;
+  Linux keeps the desktop's frame and menu bar. Native parts follow the app's theme (`followAppTheme`). The menus
+  (`main/window/appMenuTemplate`) have an app menu on macOS only; elsewhere File ends with Settings and Exit (Windows)
+  or Quit (Linux), Help with About, and `&` marks each item's Alt letter.
 - **Focus**: the list, tree or graph a view or page works on carries `MAIN_FOCUS` (`lib/mainFocus.ts`). `useMainFocus`
   focuses it after navigating and whenever focus falls to the document (a dialog, menu or popover closed), and hands it
   list keys pressed while nothing has focus. Views keep their list's selection while away (`useViewSelection`). Lists
@@ -363,7 +402,7 @@ and many people use the same server. Every `cm` command other than local reads (
   for an event, a focus or an operation.
 - **Focus**: the incoming check if older than 20 s, and the server views on screen once stale (30 s by default). Lists
   that hardly change by themselves and are heavy to read use `SLOW_CHANGING_QUERY` (every branch, every label, attribute
-  types, attribute values, the working object's comment, the palette's lists): five minutes, and focus never re-reads them. The Branch
+  types, attribute values, the working object's comment, the palette's lists, the user's recent shelves in Changes): five minutes, and focus never re-reads them. The Branch
   Explorer is kept five minutes and focus never re-reads all history. Local views skip focus while the watcher sees the disk.
 - **Home**: the repository and branch of every listed workspace come from its `.plastic/plastic.selector` file
   (`workspaces.heads`); `cm` is asked only about recent workspaces whose file can't tell.
@@ -374,7 +413,7 @@ and many people use the same server. Every `cm` command other than local reads (
 - **After an operation**: `invalidateWorkspace` refetches what is on screen and marks the rest stale, scoped to what the
   operation can change (`refreshScopes.ts`, `runOperation({ affects })`, `runAction(..., affects)`): a checkin, an update
   or a merge from a branch leave labels, shelves, attributes, reviews, left changes and changesets already read alone;
-  shelving changes that stay in the workspace refreshes only the shelve lists; a new, deleted or hidden branch only the
+  shelving changes that stay in the workspace refreshes only the shelve lists, and shelving them away those and the workspace; a new, deleted or hidden branch only the
   branch lists and the Branch Explorer; a label edit the labels and the graph; an attribute or value edit only the
   attributes. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
   the last (create a branch and switch to it). Views keyed by the workspace info (`keyedByWorkspaceInfo`: left changes, the
@@ -409,3 +448,5 @@ and many people use the same server. Every `cm` command other than local reads (
   - interactive: `npm run build && UVCS_CDP_PORT=9333 npm run app:debug &`, then
     `npx playwright-cli attach --cdp=http://localhost:9333` and use `snapshot`, `click <ref>`, `screenshot`
     (see `.claude/skills/playwright-cli`). Use a distinct port and `-s=<session>` per parallel agent.
+- `UVCS_RENDERER_PLATFORM=win32` (or `linux`) in the environment previews another OS's shortcuts, copy and layout from a
+  Mac (the page only: the menus and window frame stay the Mac's).

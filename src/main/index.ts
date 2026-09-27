@@ -15,6 +15,7 @@ import { SettingsStore } from './settings/SettingsStore';
 import { changesWorkspace, rewritesChangelists } from './watch/changesWorkspace';
 import { WorkspaceWatchers } from './watch/WorkspaceWatchers';
 import { installAppMenu } from './window/appMenu';
+import { followAppTheme } from './window/followAppTheme';
 import { handleRecentDocumentRequests } from './window/recentDocuments';
 import { workspaceArgument } from './window/workspaceArgument';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
@@ -81,6 +82,7 @@ function start(): void {
     }),
   );
 
+  followAppTheme(settings);
   installAppMenu(windows);
   windows.openFirst();
   // macOS keeps the app running with no window; clicking the Dock icon then opens the home screen.

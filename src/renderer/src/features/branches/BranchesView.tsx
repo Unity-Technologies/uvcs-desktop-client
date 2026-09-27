@@ -3,6 +3,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { spec } from '@shared/domain/specs';
+import { useRenameCommand } from '../../app/commands/useRenameCommand';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
@@ -27,7 +28,7 @@ import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
 import { BranchDetails } from './BranchDetails';
 import { BranchNameCell } from './BranchNameCell';
 import { branchMenu } from './branchMenu';
-import { diffBranch } from './branchOperations';
+import { diffBranch, renameBranch } from './branchOperations';
 import { useBranchesViewStore, type BranchesLayout } from './branchesViewStore';
 import { buildBranchTree, sortBranchesByName, type BranchTreeRow } from './branchTree';
 import { openCreateBranchDialog } from './CreateBranchDialog';
@@ -57,6 +58,7 @@ export function BranchesView() {
     [layout, matching, collapsed],
   );
   const selected = matching.find((branch) => rowKey({ branch }) === selection.anchor);
+  useRenameCommand('Branches', 'branch', selection.selected.size === 1 ? selected : undefined, (branch) => void renameBranch(workspacePath, branch));
   // What collapsing reads, so the columns (and their sort) don't change with every selection.
   const latest = useRef({ selected, matching, setSelection });
   latest.current = { selected, matching, setSelection };

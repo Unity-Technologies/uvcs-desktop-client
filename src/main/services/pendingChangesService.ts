@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { app } from 'electron';
 import type { PendingChangesApi } from '@shared/api/pendingChanges';
 import type {
   Changelist,
@@ -17,7 +18,8 @@ import { onLinksThemselves } from '../cm/symlinkArgs';
 import { withTempFile } from '../files/tempFile';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { withRule } from '../workspace/filterRuleFile';
-import type { ServiceContext } from './ServiceContext';
+import { shelveAndUndo } from '../workspace/shelveAndUndo';
+import type { ServiceContext, SwitchContext } from './ServiceContext';
 
 const FILTER_RULE_FILES: Record<FilterRuleList, string> = {
   ignore: 'ignore.conf',
@@ -29,7 +31,9 @@ const DEFAULT_CHANGELIST = 'Default';
 const CREATED_CHANGESET_LINE = /^CHANGESET cs:(\d+)@br:([^@]+)@/m;
 const CREATED_SHELVE = /sh:(\d+)/;
 
-export function createPendingChangesService({ cm, operations }: ServiceContext): PendingChangesApi {
+export function createPendingChangesService({ cm, operations }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): PendingChangesApi {
+  const shelveAwayDependencies = { cm, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'shelve-backups') };
+
   async function list(workspacePath: string, filter: PendingChangesFilter): Promise<PendingChangesSnapshot> {
     const xml = await cm.query(['status', '--xml', '--iscochanged', '--changelists', ...searchTypes(filter)], {
       cwd: workspacePath,
@@ -135,6 +139,8 @@ export function createPendingChangesService({ cm, operations }: ServiceContext):
     checkout,
     addFilterRule,
     shelve,
+    shelveAndUndo: (workspacePath, paths, comment, operationId) =>
+      operations.run(operationId, (context) => shelveAndUndo(shelveAwayDependencies, workspacePath, paths, comment, context)),
     createChangelist,
     editChangelist,
     deleteChangelist,

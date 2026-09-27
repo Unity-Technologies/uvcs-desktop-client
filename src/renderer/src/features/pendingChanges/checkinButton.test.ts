@@ -82,6 +82,11 @@ describe('checkinButtonLabel', () => {
   it('shelves without naming the branch', () => {
     expect(wordings(checkinButtonLabel({ ...base, mode: 'shelve' }))).toEqual(['Shelve 4 changes | 1.1 MB', 'Shelve 4 changes', 'Shelve 4']);
   });
+
+  it('tells shelving, which undoes the changes, from keeping them', () => {
+    expect(checkinButtonLabel({ ...base, mode: 'shelve' }).tip).toBe('Shelve, then undo the changes here');
+    expect(checkinButtonLabel({ ...base, mode: 'shelve', keepShelved: true }).tip).toBe('Shelve a copy; the changes stay here');
+  });
 });
 
 describe('checkinDisabledReason', () => {

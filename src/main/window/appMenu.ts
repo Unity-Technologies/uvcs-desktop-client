@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from 'electron';
 import { sendEventTo } from '../ipc/sendEvent';
+import { appMenuTemplate } from './appMenuTemplate';
 import { isMenuCommandEnabled } from './workspaceMenuCommands';
 import { focusWindow, type WorkspaceWindows } from './WorkspaceWindows';
 
@@ -23,91 +24,27 @@ function commandItem(label: string, commandId: string, accelerator?: string, wit
   };
 }
 
-/** The Window menu: every open window by the workspace it shows, the focused one checked. */
-function windowMenu(windows: WorkspaceWindows, isMac: boolean): MenuItemConstructorOptions {
+/** The Window menu's list: every open window by the workspace it shows, the focused one checked. */
+function windowItems(windows: WorkspaceWindows): MenuItemConstructorOptions[] {
   const focused = BrowserWindow.getFocusedWindow();
-  return {
-    label: 'Window',
-    submenu: [
-      { role: 'minimize' },
-      // Zoom is macOS's; elsewhere the title bar maximizes.
-      ...(isMac ? [{ role: 'zoom' as const }] : []),
-      { type: 'separator' },
-      ...windows.all().map(
-        (window): MenuItemConstructorOptions => ({
-          label: windows.workspaceIn(window) ? window.getTitle() : 'Home',
-          type: 'checkbox',
-          checked: window === focused,
-          click: () => focusWindow(window),
-        }),
-      ),
-      ...(isMac ? [{ type: 'separator' as const }, { role: 'front' as const }] : []),
-    ],
-  };
+  return windows.all().map((window) => ({
+    label: windows.workspaceIn(window) ? window.getTitle() : 'Home',
+    type: 'checkbox',
+    checked: window === focused,
+    click: () => focusWindow(window),
+  }));
 }
 
 /** Installs the menu bar; call it again when windows open, close, get focus or change title. */
 export function installAppMenu(windows: WorkspaceWindows): void {
-  const isMac = process.platform === 'darwin';
-
-  const template: MenuItemConstructorOptions[] = [
-    ...(isMac
-      ? [
-          {
-            role: 'appMenu' as const,
-            submenu: [
-              { role: 'about' as const },
-              { type: 'separator' as const },
-              commandItem('Settings…', 'app.settings', 'CmdOrCtrl+,'),
-              { type: 'separator' as const },
-              { role: 'services' as const },
-              { type: 'separator' as const },
-              { role: 'hide' as const },
-              { role: 'hideOthers' as const },
-              { role: 'unhide' as const },
-              { type: 'separator' as const },
-              { role: 'quit' as const },
-            ],
-          },
-        ]
-      : []),
-    {
-      label: 'File',
-      submenu: [
-        commandItem('New Window', 'app.newWindow', 'CmdOrCtrl+N', () => windows.open()),
-        commandItem('Open Another Workspace…', 'workspace.open', 'CmdOrCtrl+Shift+O'),
-        commandItem('Update Workspace', 'workspace.update', 'CmdOrCtrl+Shift+U'),
-        { type: 'separator' },
-        ...(isMac ? [] : [commandItem('Settings…', 'app.settings', 'CmdOrCtrl+,'), { type: 'separator' as const }]),
-        isMac ? { role: 'close' } : { role: 'quit' },
-      ],
-    },
-    { role: 'editMenu' },
-    {
-      label: 'View',
-      submenu: [
-        commandItem('Command Palette…', 'app.commandPalette', 'CmdOrCtrl+K'),
-        commandItem('Command Log', 'app.commandLog', 'CmdOrCtrl+Shift+L'),
-        commandItem('Refresh', 'workspace.refresh', 'CmdOrCtrl+R'),
-        { type: 'separator' },
-        { role: 'resetZoom' },
-        { role: 'zoomIn' },
-        { role: 'zoomOut' },
-        { type: 'separator' },
-        { role: 'togglefullscreen' },
-        ...(app.isPackaged ? [] : [{ type: 'separator' as const }, { role: 'reload' as const }, { role: 'toggleDevTools' as const }]),
-      ],
-    },
-    windowMenu(windows, isMac),
-    {
-      role: 'help',
-      submenu: [
-        { label: 'Unity Version Control Documentation', click: () => void shell.openExternal(DOCUMENTATION_URL) },
-        // On macOS About is in the app menu.
-        ...(isMac ? [] : [{ type: 'separator' as const }, { role: 'about' as const }]),
-      ],
-    },
-  ];
+  const template = appMenuTemplate({
+    platform: process.platform,
+    isPackaged: app.isPackaged,
+    commandItem,
+    windowItems: windowItems(windows),
+    newWindow: () => windows.open(),
+    openDocumentation: () => void shell.openExternal(DOCUMENTATION_URL),
+  });
 
   const menu = Menu.buildFromTemplate(template);
   // A window on the home screen (or none) has no workspace commands to run.
@@ -115,6 +52,15 @@ export function installAppMenu(windows: WorkspaceWindows): void {
   const showsWorkspace = Boolean(focused && windows.workspaceIn(focused));
   for (const item of menuItems(menu)) if (item.id && !item.role) item.enabled = isMenuCommandEnabled(item.id, showsWorkspace);
   Menu.setApplicationMenu(menu);
+}
+
+/**
+ * Opens the menu bar's menus as a popup under the window's menu button, where the window has no menu bar (Windows).
+ * `position` is in page pixels, which the View menu's zoom scales.
+ */
+export function popUpAppMenu(window: BrowserWindow, position: { x: number; y: number }): void {
+  const zoom = window.webContents.getZoomFactor();
+  Menu.getApplicationMenu()?.popup({ window, x: Math.round(position.x * zoom), y: Math.round(position.y * zoom) });
 }
 
 function menuItems(menu: Menu): Electron.MenuItem[] {

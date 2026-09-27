@@ -9,14 +9,27 @@
 }
 
 .dragRegion {
+  display: flex;
   flex: none;
+  align-items: center;
   height: var(--topbar-height);
   -webkit-app-region: drag;
+}
+
+.dragRegion > * {
+  -webkit-app-region: no-drag;
+}
+
+/* Under the desktop's own title bar (Linux) there are no traffic lights to make room for: the band only continues
+   the top bar where it joins it. */
+:global([data-chrome='native']) .dragRegion:not([data-joins-top-bar='true']) {
+  height: var(--space-2);
 }
 
 /* One title bar across the window: the band over the sidebar (with the window buttons) wears the top bar's sheen and edge. */
 .dragRegion[data-joins-top-bar='true'] {
   margin: 0 calc(-1 * var(--space-2)) var(--space-2);
+  padding-inline: var(--space-2);
   border-bottom: 1px solid var(--border-default);
   background: linear-gradient(180deg, var(--toolbar-top), var(--toolbar-bottom));
 }

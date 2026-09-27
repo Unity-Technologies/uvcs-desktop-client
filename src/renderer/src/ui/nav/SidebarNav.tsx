@@ -19,13 +19,17 @@ interface SidebarProps {
   rail?: boolean;
   /** Its title-bar area continues the window's top bar (same sheen and bottom edge) instead of the sidebar's colour. */
   joinsTopBar?: boolean;
+  /** Shown at the start of its title-bar area, where macOS has its traffic lights (the window's menu button). */
+  titleBarStart?: ReactNode;
 }
 
 /** The column that holds an app sidebar: a draggable title-bar area, then the content. */
-export function Sidebar({ children, width = 216, rail = false, joinsTopBar = false }: SidebarProps) {
+export function Sidebar({ children, width = 216, rail = false, joinsTopBar = false, titleBarStart }: SidebarProps) {
   return (
     <nav className={styles.sidebar} data-rail={rail} style={{ width: rail ? RAIL_WIDTH : width }}>
-      <div className={styles.dragRegion} data-joins-top-bar={joinsTopBar} />
+      <div className={styles.dragRegion} data-joins-top-bar={joinsTopBar}>
+        {titleBarStart}
+      </div>
       <RailContext.Provider value={rail}>{children}</RailContext.Provider>
     </nav>
   );

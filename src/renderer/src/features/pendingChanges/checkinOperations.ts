@@ -10,6 +10,7 @@ import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { pluralize } from '../../lib/text';
 import { updateToIncoming } from '../incoming/updateOperations';
+import { shelveAway } from '../shelves/shelveOperations';
 import { useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinRejection, overlappingPaths, type CheckinRejection } from './checkinRejection';
 import { askCatchUpForCheckin } from './CheckinRejectedDialog';
@@ -99,10 +100,17 @@ async function catchUpAndCheckin(options: CheckinOptions, rejection: CheckinReje
   return checkinChanges(options);
 }
 
-/** Shelves the given changes. Resolves to true when a shelve was created. */
-export async function shelveChanges(workspacePath: string, changes: PendingChange[], comment: string): Promise<boolean> {
+/**
+ * Shelves the given changes and undoes them, or with `keep` leaves them in the workspace. Resolves to true when a
+ * shelve was created.
+ */
+export async function shelveChanges(workspacePath: string, changes: PendingChange[], comment: string, keep: boolean): Promise<boolean> {
   const shelveComment = comment.trim() || (await prompt({ title: 'Shelve changes', label: 'Comment', confirmLabel: 'Shelve' }));
   if (!shelveComment) return false;
+  if (!keep) {
+    const paths = changes.map((change) => change.path);
+    return (await shelveAway(workspacePath, paths, shelveComment)) !== undefined;
+  }
 
   const shelveId = await runOperation({
     title: `Shelving ${pluralize(changes.length, 'change')}`,

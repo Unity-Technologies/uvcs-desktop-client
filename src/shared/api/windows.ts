@@ -8,4 +8,6 @@ export interface WindowsApi {
   openHome(): Promise<void>;
   /** Answers `leaveRequested`: the window closes, the app quits or the page reloads as asked; nothing when false. */
   continueLeaving(canLeave: boolean): Promise<void>;
+  /** Opens the menu bar's menus at a point of the window (in page pixels), where the window has no menu bar (Windows). */
+  showAppMenu(position: { x: number; y: number }): Promise<void>;
 }

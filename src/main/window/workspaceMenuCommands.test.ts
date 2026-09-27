@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { isMenuCommandEnabled, WORKSPACE_MENU_COMMANDS } from './workspaceMenuCommands';
 
 const read = (path: string) => readFileSync(join(__dirname, path), 'utf8');
-const menuCommands = [...read('appMenu.ts').matchAll(/commandItem\('[^']+', '([^']+)'/g)].map(([, id]) => id);
+const menuCommands = [...read('appMenuTemplate.ts').matchAll(/commandItem\('[^']+', '([^']+)'/g)].map(([, id]) => id);
 const workspaceCommands = new Set([...read('../../renderer/src/app/shell/useWorkspaceCommands.ts').matchAll(/id: '([^']+)'/g)].map(([, id]) => id));
 
 describe('workspace menu commands', () => {

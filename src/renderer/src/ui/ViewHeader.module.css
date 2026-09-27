@@ -5,13 +5,18 @@
   border-bottom: 1px solid var(--border-subtle);
 }
 
-/* Double-clicking the empty space zooms the window, as in any macOS title bar; the controls stay clickable. */
+/* Double-clicking the empty space zooms (macOS) or maximizes (Windows) the window, as any title bar does; the
+   controls stay clickable. */
 .header[data-title-bar='true'] {
   -webkit-app-region: drag;
 }
 
 .header[data-title-bar='true'] :is(button, input, select, textarea, a) {
   -webkit-app-region: no-drag;
+}
+
+.header[data-title-bar='true'] .titleRow {
+  padding-right: calc(var(--space-3) + var(--caption-buttons-width));
 }
 
 .titleRow {
