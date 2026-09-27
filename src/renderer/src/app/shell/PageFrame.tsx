@@ -5,6 +5,7 @@ import { useNavigation } from '../navigation/navigationStore';
 import { PageContent, pageTitle } from '../navigation/pageRegistry';
 import type { Page } from '../navigation/pages';
 import { viewDefinition } from '../navigation/viewRegistry';
+import { useBackButtons } from '../../lib/useBackButtons';
 import { useShortcut } from '../../lib/useShortcut';
 import styles from './PageFrame.module.css';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -13,6 +14,7 @@ export function PageFrame({ page }: { page: Page }) {
   const { view, pages, goBack } = useNavigation();
   const previous = pages.at(-2);
   useShortcut(hotkey('back'), goBack);
+  useBackButtons(goBack);
 
   return (
     <div className={styles.frame}>
