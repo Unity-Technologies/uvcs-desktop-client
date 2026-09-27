@@ -1,5 +1,5 @@
 import { CircleDot, MessageSquareCode, Plus, RefreshCw, Users } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CODE_REVIEW_STATUSES, MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewFilter, type CodeReviewStatus } from '@shared/domain/codeReview';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { invalidateWorkspace } from '../../app/queryClient';
@@ -26,6 +26,7 @@ import { describeTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { openCreateCodeReviewDialog } from './CreateCodeReviewDialog';
 import { codeReviewsEmptyState } from './codeReviewsEmptyState';
+import { selectCreated } from './selectCreated';
 import { useCodeReviews } from './useCodeReviews';
 import { SincePicker } from '../../components/SincePicker';
 import { sinceDateFor, type SincePreset } from '../../lib/sincePresets';
@@ -81,6 +82,7 @@ export function CodeReviewsView() {
   const [search, setSearch] = useState('');
   const [since, setSince] = useState<SincePreset>(DEFAULT_SINCE);
   const [selection, setSelection] = useViewSelection('codeReviews');
+  const [createdKey, setCreatedKey] = useState<string | null>(null);
   const { data: reviews, isLoading, isFetching, error } = useCodeReviews({
     scope,
     status: status === 'any' ? undefined : status,
@@ -96,11 +98,19 @@ export function CodeReviewsView() {
         group: 'Code reviews',
         label: 'New code review…',
         icon: MessageSquareCode,
-        run: () => openCreateCodeReviewDialog(workspacePath, { kind: 'branch', value: currentBranch }),
+        run: () => openCreateCodeReviewDialog(workspacePath, { kind: 'branch', value: currentBranch }, (reviewId) => setCreatedKey(String(reviewId))),
       },
     ],
     [workspacePath, currentBranch],
   );
+  // The review just created is selected once the refreshed list shows it.
+  const shownKeys = visible.map(reviewKey).join('\n');
+  useEffect(() => {
+    const next = selectCreated(shownKeys.split('\n'), createdKey);
+    if (!next) return;
+    setSelection(next);
+    setCreatedKey(null);
+  }, [shownKeys, createdKey, setSelection]);
   useCommands(commands);
   const newReview = commands[0]!.run;
 

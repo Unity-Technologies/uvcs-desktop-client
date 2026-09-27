@@ -1,9 +1,14 @@
 import type { CodeReview, CodeReviewStatus, CodeReviewSummary } from '@shared/domain/codeReview';
+import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { api } from '../../api/client';
+import { queryKeys } from '../../api/queryKeys';
+import { readServerUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
+import { queryClient } from '../../app/queryClient';
 import { runAction } from '../../app/operations/runOperation';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
+import { deleteReviewsQuestion } from './deleteReviewsQuestion';
 import { needsReviewerForStatus } from './reviewStatus';
 
 /** `cm` keeps the status of a review nobody is assigned to, so one without a reviewer asks for one and sets both at once. */
@@ -13,12 +18,20 @@ export async function setReviewStatus(workspacePath: string, review: CodeReviewS
     assignee = await prompt({
       title: `Mark as “${status}”`,
       label: 'Reviewer',
+      initialValue: await suggestedReviewer(workspacePath),
+      acceptInitialValue: true,
       description: 'A review needs a reviewer before its status can change.',
       confirmLabel: 'Assign and mark',
     });
     if (assignee === undefined) return;
   }
   await runAction(workspacePath, "Couldn't change the review status", () => api.codeReviews.update(workspacePath, review.id, { status, assignee }));
+}
+
+/** Whoever changes the status is likely the one reviewing: you on the workspace's server, if already known or quick to read. */
+async function suggestedReviewer(workspacePath: string): Promise<string | undefined> {
+  const server = queryClient.getQueryData<WorkspaceInfo>(queryKeys.inWorkspace(workspacePath, 'info'))?.server;
+  return server ? readServerUser(server).catch(() => undefined) : undefined;
 }
 
 export async function reassignReview(workspacePath: string, review: CodeReviewSummary): Promise<void> {
@@ -36,8 +49,7 @@ export async function reassignReview(workspacePath: string, review: CodeReviewSu
 /** Resolves to true when the reviews were deleted. */
 export async function deleteReviews(workspacePath: string, reviews: CodeReviewSummary[]): Promise<boolean> {
   const confirmed = await confirm({
-    title: reviews.length === 1 ? `Delete “${reviews[0]!.title}”?` : `Delete ${reviews.length} code reviews?`,
-    message: 'The reviewed changes are kept. This cannot be undone.',
+    ...deleteReviewsQuestion(reviews.map((review) => review.title)),
     confirmLabel: 'Delete',
     danger: true,
   });
