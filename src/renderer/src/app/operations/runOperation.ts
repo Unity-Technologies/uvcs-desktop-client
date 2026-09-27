@@ -112,15 +112,20 @@ export function refuseWhileBusy(workspacePath: string): boolean {
   return Boolean(running);
 }
 
-/** Runs a quick action, reporting failures; refreshes the workspace views afterwards. */
-export async function runAction<T>(workspacePath: string, failureTitle: string, action: () => Promise<T>): Promise<T | undefined> {
+/** Runs a quick action, reporting failures; refreshes the views it `affects` afterwards (`refreshScopes`), every view by default. */
+export async function runAction<T>(
+  workspacePath: string,
+  failureTitle: string,
+  action: () => Promise<T>,
+  affects?: (queryKey: readonly unknown[]) => boolean,
+): Promise<T | undefined> {
   try {
     return await action();
   } catch (error) {
     toast.error(failureTitle, error);
     return undefined;
   } finally {
-    void invalidateWorkspace(workspacePath);
+    void invalidateWorkspace(workspacePath, affects);
   }
 }
 
@@ -141,10 +146,20 @@ export async function runRead<T>(failureTitle: string, read: () => Promise<T>): 
  * Like `runAction` for actions without a result: resolves to whether it succeeded,
  * since `undefined` can't tell a failure from a successful `void` action.
  */
-export async function runVoidAction(workspacePath: string, failureTitle: string, action: () => Promise<void>): Promise<boolean> {
-  const succeeded = await runAction(workspacePath, failureTitle, async () => {
-    await action();
-    return true;
-  });
+export async function runVoidAction(
+  workspacePath: string,
+  failureTitle: string,
+  action: () => Promise<void>,
+  affects?: (queryKey: readonly unknown[]) => boolean,
+): Promise<boolean> {
+  const succeeded = await runAction(
+    workspacePath,
+    failureTitle,
+    async () => {
+      await action();
+      return true;
+    },
+    affects,
+  );
   return succeeded === true;
 }

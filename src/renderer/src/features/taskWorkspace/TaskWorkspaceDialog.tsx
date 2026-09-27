@@ -8,7 +8,7 @@ import { LocationField } from '../../app/home/dialogs/LocationField';
 import { describeProgress } from '../../app/operations/describeProgress';
 import { nextProgressBar, SWEEP } from '../../app/operations/progressBar';
 import { invalidateWorkspace, queryClient } from '../../app/queryClient';
-import { isAffectedByNewBranch } from '../../app/refresh/refreshScopes';
+import { isAffectedByBranchList } from '../../app/refresh/refreshScopes';
 import { useOpenWorkspace } from '../../app/workspace/useOpenWorkspace';
 import { useWorkspaceInfoOf } from '../../app/workspace/useWorkspace';
 import { useWorkspaceList } from '../../app/workspace/workspaceQueries';
@@ -106,7 +106,7 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
     const outcome = await setUpTaskWorkspace(plan, actions, (step, state) => setStates((current) => ({ ...current, [step]: state })));
     operationId.current = null;
     void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
-    if (plan.newBranch) void invalidateWorkspace(workspacePath, isAffectedByNewBranch);
+    if (plan.newBranch) void invalidateWorkspace(workspacePath, isAffectedByBranchList);
     setRunning(false);
 
     if (outcome.kind === 'failed') {
