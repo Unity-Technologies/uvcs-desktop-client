@@ -74,6 +74,12 @@ describe('big trees', () => {
     expect(listing.map((entry) => entry.path)).toEqual(['b.ts', 'a.ts']);
   });
 
+  it('lists as the official client does: controlled folders, private folders, controlled files, private files', () => {
+    const privately = (entry: TreeItem): TreeItem => ({ ...entry, isPrivate: true });
+    const listing = [privately(item('notes.txt')), item('b.ts'), privately(item('build', 'directory')), item('Assets', 'directory'), item('lib', 'xlink'), item('a.ts')];
+    expect(sortItems(listing).map((entry) => entry.name)).toEqual(['Assets', 'lib', 'build', 'a.ts', 'b.ts', 'notes.txt']);
+  });
+
   it('filters a deep tree reading each folder once, not once per folder above it', () => {
     const depth = 30;
     const chain = Array.from({ length: depth }, (_, level) => Array.from({ length: level + 1 }, (_, index) => `d${index}`).join('/'));

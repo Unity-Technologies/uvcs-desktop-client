@@ -63,14 +63,21 @@ export function indentOf(depth: number): number {
 const byName = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true }).compare;
 const sortedListings = new WeakMap<readonly TreeItem[], TreeItem[]>();
 
-/** Directories first, then by name. Each listing is sorted once: the tree is rebuilt on every expand and filter keystroke. */
+/**
+ * As the official client lists them: folders (and xlinks) first, then files, each with the controlled ones before the
+ * private ones, then by name. Each listing is sorted once: the tree is rebuilt on every expand and filter keystroke.
+ */
 export function sortItems(items: readonly TreeItem[]): TreeItem[] {
   let sorted = sortedListings.get(items);
   if (!sorted) {
-    sorted = [...items].sort((a, b) => Number(b.itemType === 'directory') - Number(a.itemType === 'directory') || byName(a.name, b.name));
+    sorted = [...items].sort((a, b) => Number(isFolder(b)) - Number(isFolder(a)) || Number(a.isPrivate) - Number(b.isPrivate) || byName(a.name, b.name));
     sortedListings.set(items, sorted);
   }
   return sorted;
+}
+
+function isFolder(item: TreeItem): boolean {
+  return item.itemType === 'directory' || item.itemType === 'xlink';
 }
 
 /** Parent directories of a path, outermost first: `a/b/c.ts` → `['a', 'a/b']`. */
