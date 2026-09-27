@@ -9,13 +9,18 @@ export const POINTER_FOCUS_ATTRIBUTE = 'data-pointer-focus';
 
 const MODIFIERS = new Set(['Shift', 'Control', 'Alt', 'Meta', 'CapsLock']);
 
+/** Whether a key pressed after a click makes focus arriving next the keyboard's: a modifier (the Shift of a Shift+click) doesn't. */
+export function isKeyboardFocusKey(key: string): boolean {
+  return !MODIFIERS.has(key);
+}
+
 export function usePointerFocusMark(): { onPointerDownCapture: (event: PointerEvent) => void; onFocus: (event: FocusEvent) => void; onBlur: (event: FocusEvent) => void } {
   // Whether the last thing the user did was with the pointer: then focus arriving now came from it (or from code acting on it).
   const byPointer = useRef(false);
   useEffect(() => {
     const onPointer = (): void => void (byPointer.current = true);
     const onKey = (event: KeyboardEvent): void => {
-      if (!MODIFIERS.has(event.key)) byPointer.current = false;
+      if (isKeyboardFocusKey(event.key)) byPointer.current = false;
     };
     document.addEventListener('pointerdown', onPointer, true);
     document.addEventListener('keydown', onKey, true);

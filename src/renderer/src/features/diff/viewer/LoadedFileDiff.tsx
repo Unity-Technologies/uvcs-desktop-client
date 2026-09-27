@@ -32,8 +32,9 @@ import { PlainTextIndicator } from './PlainTextIndicator';
 import { syntaxHighlighting } from './syntaxHighlighting';
 import type { DiscardRequest } from './useBlockDiscard';
 import type { DiffContents } from './useDiffContents';
+import { renderedEdits } from './renderedEdits';
 import { useFileBuffer } from './useFileBuffer';
-import { wholeFileNote } from './wholeFileNote';
+import { typedIntoWhole, wholeFileNote } from './wholeFileNote';
 
 // The diff renderer (Pierre + Shiki) is large; load it with the first diff instead of at startup.
 const TextDiff = lazyComponent(() => import('./TextDiff').then((module) => module.TextDiff));
@@ -99,7 +100,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
     [isText, left.text, right.text, current, comparisonMethod, fileName, savedDiff],
   );
   // Typed into whole when the file as read shows no lines: nothing changed, it's empty, or only ignored differences.
-  const wholeFile = editable && savedDiff !== null && !hasLineChanges(savedDiff);
+  const wholeFile = typedIntoWhole(editable, savedDiff);
   // Different texts the comparison method shows as equal, e.g. only their line endings changed.
   const onlyIgnoredChanges = presentation.kind === 'text' && !presentation.identical && savedDiff !== null && !hasLineChanges(savedDiff);
   const openFile = editablePath === null ? undefined : () => void api.system.openPath(absolutePath(workspacePath, editablePath));
@@ -298,13 +299,6 @@ function TextDiffBody({ original, modified, ...rest }: TextDiffBodyProps) {
       <TextDiff original={original ?? ''} modified={modified ?? ''} {...rest} />
     </Suspense>
   );
-}
-
-/** The unsaved text of a file that is also an image (SVG), rendered in place of the one on disk. */
-function renderedEdits(saved: FileContent, text: string): FileContent {
-  const mimeType = saved.imageDataUrl?.slice('data:'.length, saved.imageDataUrl.indexOf(';'));
-  if (!mimeType) return saved;
-  return { ...saved, text, size: new TextEncoder().encode(text).length, imageDataUrl: `data:${mimeType};charset=utf-8,${encodeURIComponent(text)}` };
 }
 
 function sizeChange(left: FileContent, right: FileContent): string {

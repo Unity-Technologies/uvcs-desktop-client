@@ -9,6 +9,7 @@ import { hotkey } from '../../../lib/shortcutRegistry';
 import type { ComparisonMethod } from './comparisonMethod';
 import { useDiffPreferences } from './diffPreferencesStore';
 import type { EditorHandle } from './editorHandle';
+import { escapeWhileTyping } from './escapeWhileTyping';
 import { highlightWorkers } from './highlightWorkers';
 import type { LineDiff } from './lineDiff';
 import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
@@ -159,17 +160,13 @@ export function TextDiff({ original, modified, current, diff, wholeFile = false,
     [],
   );
 
-  // Esc while typing drops the picked lines, then what the editor drops itself (a selection, extra carets), then
-  // leaves the text for the file list. The edits stay.
   const onKeyDownCapture = (event: KeyboardEvent): void => {
     if (!isTyping() || !matchesShortcut(event.nativeEvent, hotkey('leaveEditor'))) return;
-    const selections = editor.current?.getViewState().selections ?? [];
-    const simple = selections.length <= 1 && selections.every(({ start, end }) => start.line === end.line && start.character === end.character);
-    const droppedPick = discard.dropPickFirst(event);
-    if (!droppedPick && !simple) return;
+    const action = escapeWhileTyping(editor.current?.getViewState().selections ?? [], discard.dropPickFirst(event));
+    if (action === 'editor') return;
     event.preventDefault();
     event.stopPropagation();
-    if (droppedPick) return;
+    if (action === 'pick') return;
     editor.current?.blur();
     focusMain(document);
   };
