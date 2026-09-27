@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { WorkspaceChange } from '@shared/events';
 import { WorkspaceWatchers, type Watcher } from './WorkspaceWatchers';
 
-const CHANGE: WorkspaceChange = { content: true, pathsChanged: false, metadata: false };
+const CHANGE: WorkspaceChange = { content: true, pathsChanged: false, metadata: false, folders: [''] };
 
 function setUp() {
   const created: (Watcher & { emit: () => void; stopped: boolean; ignored: number })[] = [];

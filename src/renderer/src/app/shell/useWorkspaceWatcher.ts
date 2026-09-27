@@ -11,6 +11,7 @@ import { loadedChangesetChanged } from '../refresh/headChanges';
 import { refreshQueries } from '../refresh/refreshQueries';
 import {
   isAffectedByFileChanges,
+  isAffectedByFileChangesIn,
   isAffectedByLoadedChangeset,
   isAffectedByMovedPaths,
   isAffectedByWorkspaceState,
@@ -87,9 +88,10 @@ function inWorkspace(workspacePath: string, affected: (key: readonly unknown[]) 
 async function refreshForChange(workspacePath: string, change: WorkspaceChange, autoRefresh: boolean): Promise<void> {
   // `.plastic` rewrites are rare, discrete events, so they refresh even without auto refresh, which guards
   // against streams of file edits. The paths are cheap: re-read only if something shows them, now or later.
+  const fileChanges = isAffectedByFileChangesIn(change.folders);
   const affected = (key: readonly unknown[]) =>
     (change.metadata && isAffectedByWorkspaceState(key)) ||
-    (change.content && autoRefresh && isAffectedByFileChanges(key)) ||
+    (change.content && autoRefresh && fileChanges(key)) ||
     (change.pathsChanged && isAffectedByMovedPaths(key));
 
   const infoKey = queryKeys.inWorkspace(workspacePath, 'info');
