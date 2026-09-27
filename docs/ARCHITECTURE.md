@@ -134,8 +134,9 @@ states where the result went.
 `PendingChangesOnSwitchAction` says. The renderer's single entry point is `switchWorkspace`
 (`app/shell/workspaceOperations.ts`): preflight, then ask (or follow the setting) whether to leave the changes or
 bring them along. The main process shelves them with the official automatic-shelve comment, checks the shelve holds
-them all, records it in the settings (`switchShelves`), undoes, moves added files aside (leave), switches, and
-merges the shelve on the target (bring). Failures put the changes back. Left shelves (the app's and the official
+them all, records it in the settings (`switchShelves`), undoes, moves added files aside (until the shelve brings them
+back), switches, and merges the shelve on the target (bring). Failures put the changes back, switching back first if
+the switch moved the workspace halfway. Left shelves (the app's and the official
 client's) are offered again by the "Welcome back" banner in Changes (`features/leftChanges`), or restored
 automatically on arrival when they apply cleanly.
 
