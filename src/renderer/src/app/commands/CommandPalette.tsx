@@ -10,6 +10,7 @@ import { useCommandPalette } from './commandPaletteStore';
 import { useCommandStore, type Command } from './commandStore';
 import { PaletteFooter } from './PaletteFooter';
 import { PaletteRow } from './PaletteRow';
+import { isPaletteTextKey } from './paletteTextKeys';
 import { isInScope, LIST_ORDER, parseScope, type SectionId } from './paletteScope';
 import { collapseGroups, COLLAPSED_ROWS, moreLabel, rankGroups, type SearchGroup, type SearchResult } from './searchResults';
 import { usePaletteSearch } from './usePaletteSearch';
@@ -119,6 +120,7 @@ function OpenPalette({ close }: { close: () => void }) {
               setExpanded(new Set());
             }}
             spellCheck={false}
+            onKeyDown={keepTextKeys}
             autoFocus
           />
           {isLoading && text && <Spinner size={14} />}
@@ -167,6 +169,11 @@ function useFocusBackOnClose(): void {
       if (previous instanceof HTMLElement && previous !== document.body && previous.isConnected) previous.focus({ preventScroll: true });
     };
   }, [previous]);
+}
+
+/** Home and End in the field are the field's (`isPaletteTextKey`), not cmdk's. */
+function keepTextKeys(event: KeyboardEvent<HTMLInputElement>): void {
+  if (isPaletteTextKey(event)) event.stopPropagation();
 }
 
 function moreValue(section: SectionId): string {

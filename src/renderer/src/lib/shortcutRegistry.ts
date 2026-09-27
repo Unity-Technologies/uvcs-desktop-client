@@ -142,6 +142,7 @@ export const SHORTCUTS = {
 
   paletteMove: { area: 'Command palette', label: 'Move', keys: ['up', 'down'] },
   paletteOpen: { area: 'Command palette', label: 'Open', keys: ['enter'] },
+  paletteEnds: { area: 'Command palette', label: 'First or last result', keys: ['mod+up', 'mod+down', 'ctrl+home', 'ctrl+end'], keysOffMac: ['ctrl+home', 'ctrl+end'] },
 
   imageZoomIn: { area: 'Image diff', label: 'Zoom in', keys: ['='] },
   imageZoomOut: { area: 'Image diff', label: 'Zoom out', keys: ['-'] },
