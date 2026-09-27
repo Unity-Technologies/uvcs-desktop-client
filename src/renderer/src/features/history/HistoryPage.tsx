@@ -1,5 +1,5 @@
 import { History } from 'lucide-react';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { PageProps } from '../../app/navigation/pages';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { detailsWidthOf, useDetailsWidthStore, type DetailsWidthLimits } from '../../components/detailsWidthStore';
@@ -24,7 +24,7 @@ import { matchesHistorySearch } from './historySearch';
 import { PathChangeDetails } from './PathChangeDetails';
 import { RevisionDetails } from './RevisionDetails';
 import { RevisionHeader } from './RevisionHeader';
-import { otherRevisionView, shownRevisionView, useRevisionView } from './revisionView';
+import { otherRevisionView, shownRevisionView, useRevisionView, type RevisionView } from './revisionView';
 import { useItemHistory } from './useItemHistory';
 import styles from './HistoryPage.module.css';
 
@@ -48,7 +48,18 @@ export function HistoryPage({ page }: PageProps<'history'>) {
   const [revealKey, setRevealKey] = useState<string | null>(null);
   const listWidth = useDetailsWidthStore((state) => detailsWidthOf(state, LIST_WIDTH_KEY, LIST_WIDTH));
   const setListWidth = useDetailsWidthStore((state) => state.setWidth);
-  const { view, setView } = useRevisionView();
+  const rememberedView = useRevisionView((state) => state.view);
+  const remember = useRevisionView((state) => state.setView);
+  // Opened to annotate, the page starts annotated without changing what plain histories open with; a pick is remembered.
+  const [openedWith, setOpenedWith] = useState(page.view);
+  const view = openedWith ?? rememberedView;
+  const setView = useCallback(
+    (picked: RevisionView) => {
+      setOpenedWith(undefined);
+      remember(picked);
+    },
+    [remember],
+  );
   const paneRef = useRef<HTMLDivElement>(null);
 
   const rows = useMemo(() => (history ? historyRows(history) : []), [history]);
@@ -58,11 +69,6 @@ export function HistoryPage({ page }: PageProps<'history'>) {
   const focusedRow = rows.find((row) => historyRowKey(row) === selection.anchor);
   const focusedChange = selectedRows.length === 1 && selectedRows[0]!.kind === 'pathChange' ? selectedRows[0]!.change : undefined;
   const initialKey = history && initialHistoryRow(rows, history, page);
-
-  // Opened to annotate: the pane shows the annotation from the start, and stays so for the next history, as if picked.
-  useLayoutEffect(() => {
-    if (page.view) setView(page.view);
-  }, [page.view, setView]);
 
   useEffect(() => {
     if (selection.anchor === null && initialKey) {
@@ -192,6 +198,8 @@ export function HistoryPage({ page }: PageProps<'history'>) {
                 selected={selectedRevisions}
                 onBack={trail.length > 0 ? back : undefined}
                 history={annotationHistory}
+                picked={view}
+                onPick={setView}
               />
             )}
           </div>

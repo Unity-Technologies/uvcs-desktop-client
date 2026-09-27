@@ -466,7 +466,7 @@ renderer/src/
   A history opens on the revision asked for (`select`: by changeset, or by revision id wherever the file was then),
   else the newest (`initialHistoryRow`). Every "Annotate" but the Files view's opens it with `view: 'annotate'`
   (`annotatedHistory`: Changes, the palette, a diff's file at the revision the diff shows, a row's "Annotate this
-  revision" in place), on the workspace's revision unless it names one; the view is then remembered as if picked.
+  revision" in place), on the workspace's revision unless it names one; only a view picked in the page is remembered for the next histories.
   Two selected revisions are compared with each other. The header follows the selection at once; the pane waits for
   it to settle (`useSettledValue`), and every revision's contents and annotation are cached as immutable. The list
   keeps the keyboard; ⌘E goes into the pane and Esc back.

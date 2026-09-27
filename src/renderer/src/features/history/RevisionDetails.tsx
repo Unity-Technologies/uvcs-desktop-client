@@ -10,7 +10,7 @@ import { AnnotationPane, type AnnotationHistory } from '../annotate/AnnotationPa
 import { openChangesetDiff } from '../changesets/changesetOperations';
 import { parentRevision } from './parentRevision';
 import { RevisionComparison } from './RevisionComparison';
-import { shownRevisionView, useRevisionView, type RevisionView } from './revisionView';
+import { shownRevisionView, type RevisionView } from './revisionView';
 
 interface RevisionDetailsProps {
   path: string;
@@ -20,6 +20,9 @@ interface RevisionDetailsProps {
   /** Walks back from a revision "Annotate before this change" selected. */
   onBack?: () => void;
   history: AnnotationHistory;
+  /** The view picked: the page's, which starts as the one it was opened with. */
+  picked: RevisionView;
+  onPick: (view: RevisionView) => void;
 }
 
 /**
@@ -27,8 +30,7 @@ interface RevisionDetailsProps {
  * revision is compared with the one it was made from; two selected revisions with each other, and the newer one is
  * annotated. Directories have no content, so their changeset is offered instead.
  */
-export function RevisionDetails({ path, revisions, selected, onBack, history }: RevisionDetailsProps) {
-  const { view: picked, setView } = useRevisionView();
+export function RevisionDetails({ path, revisions, selected, onBack, history, picked, onPick }: RevisionDetailsProps) {
   const compared = comparedRevisions(revisions, selected);
   // Arrowing through the history doesn't read (`cm cat`, `cm annotate`) every revision it passes.
   const [newer, older] = useSettledValue(compared, compared.map((revision) => revision?.revisionId).join(':'));
@@ -56,7 +58,7 @@ export function RevisionDetails({ path, revisions, selected, onBack, history }: 
       {canAnnotate(newer.itemType) && (
         <SegmentedControl<RevisionView>
           value={view}
-          onChange={setView}
+          onChange={onPick}
           label="Show the revision as"
           segments={[
             { value: 'diff', label: <><FileDiff size={13} /> Diff</>, title: 'What this revision changed', shortcut: hotkey('historyToggleView') },
