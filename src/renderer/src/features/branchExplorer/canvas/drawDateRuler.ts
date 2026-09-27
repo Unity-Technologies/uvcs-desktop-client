@@ -87,7 +87,8 @@ export function drawDateRuler({ ctx, scene }: DrawContext): void {
   ctx.textBaseline = 'middle';
   for (let index = 0; index < markCount; index++) {
     const mark = marks[index]!;
-    const next = index + 1 < markCount ? marks[index + 1]!.x : size.width;
+    // The last day on screen runs past the right edge: its date starts at the day, cut by the edge as it comes in.
+    const next = index + 1 < markCount ? marks[index + 1]!.x : Number.POSITIVE_INFINITY;
     if (next < 6 || mark.x > size.width) continue;
     if (mark.x >= 0) {
       ctx.fillStyle = palette.border;
