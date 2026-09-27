@@ -428,7 +428,13 @@ renderer/src/
   as on disk while it has changes. A folder shows what it holds and its last change. The diff and `cm` lookups wait for
   the selection to settle (`useSettledValue`, without remounting); revisions are cached immutable. F6 moves the keys
   into the diff to scroll it, F6 or Esc back to the tree, which keeps `MAIN_FOCUS`. Browse repository shows its tree
-  the same way, every item as its revision.
+  the same way, every item as its revision (with a filter of its open folders).
+- **Files: finding**: ⌘F (Ctrl+F) or / in the tree focuses the find field, which finds files and folders in the whole
+  workspace: Go to file's list of every path on disk (`useWorkspacePaths`, read once when something is first looked for,
+  no `cm`) ranked by `fuzzyIndex` as the query is typed (deferred; about 20 ms a keystroke over 100k paths), the best
+  200 listed flat with their paths, statuses and matches in the tree's place (`FileFindResults`). ↓ or Enter moves
+  into them; the selected one shows its details once its folder's listing (the tree's query) is read; Enter reveals it
+  in the tree, expanding its folders; Esc clears the find and gives the keys back to the tree.
 - **Files: moving items**: ⌘X (Ctrl+X) cuts the selected items (`cutItemsStore`: only the outermost, never the root),
   ghosted with a hint in the header; cutting again replaces them, and they stay cut across views until pasted, Esc
   (never one a menu, dialog or field took) or another workspace. ⌘V moves them into the selected folder or the

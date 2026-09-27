@@ -6,6 +6,8 @@ import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { Spinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
+import { hotkey, hotkeys } from '../../lib/shortcutRegistry';
+import { matchesShortcut } from '../../lib/shortcuts';
 import { treeArrowMove } from '../../lib/treeArrowMove';
 import { fileTreeArrowRows, indentOf, type FileTreeRow } from './fileTreeRows';
 import { ItemIcon } from '../../components/ItemIcon';
@@ -42,6 +44,8 @@ interface FileTreeTableProps {
   revealPath?: string | null;
   /** Items cut to move elsewhere, shown ghosted. */
   isCut?: (item: TreeItem) => boolean;
+  /** "/" in the tree: to the view's find field. */
+  onFind?: () => void;
 }
 
 /** A virtualized, lazily expanded file tree: each item's icon, badge and name, and when it last changed. */
@@ -57,6 +61,7 @@ export function FileTreeTable({
   hasChangesInside,
   revealPath,
   isCut,
+  onFind,
 }: FileTreeTableProps) {
   // Name and when it last changed: the rest (size, changeset, author, comment) is the selected item's, on its pane.
   const columns: Column<FileTreeRow>[] = [
@@ -88,6 +93,12 @@ export function FileTreeTable({
   ];
 
   const onRowKeyDown = (event: React.KeyboardEvent, row: FileTreeRow, moveBy: (step: number) => void): void => {
+    // ⌘F is the palette command's; the tree adds the plain key.
+    if (onFind && hotkeys('filesFind').some((key) => key !== hotkey('filesFind') && matchesShortcut(event.nativeEvent, key))) {
+      event.preventDefault();
+      onFind();
+      return;
+    }
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
     const move = treeArrowMove(fileTreeArrowRows(rows), rows.indexOf(row), event.key);
     if (!move) return;
