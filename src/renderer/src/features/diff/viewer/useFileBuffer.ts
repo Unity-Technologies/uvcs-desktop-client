@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { api } from '../../../api/client';
 import { guardLeaving } from '../../../app/navigation/leaveGuard';
-import { diskText } from '../../../lib/lineBreaks';
 import { fileNameOf } from '../../../lib/text';
 import { toast } from '../../../ui/toast/toastStore';
 import type { EditorHandle } from './editorHandle';
+import { changedOnDisk, followsDisk, unsavedAfterEdit, unsavedAfterSave } from './fileBuffer';
 import { refreshFileViews, showFileText } from './fileText';
 import { askAboutUnsavedEdits } from './UnsavedEditsDialog';
 import type { DiffContents } from './useDiffContents';
@@ -49,12 +49,12 @@ export function useFileBuffer({ workspacePath, contents, path, onMatchesBase }: 
   const onDisk = contents.right.text ?? '';
 
   // The disk moved on: follow it, unless that would drop unsaved edits (it reached them when they were just saved).
-  if (contents !== shown && (unsaved === null || onDisk === unsaved)) {
+  if (contents !== shown && followsDisk(onDisk, unsaved)) {
     setShown(contents);
     setSaved(onDisk);
     setUnsaved(null);
   }
-  const changedOnDisk = unsaved !== null && onDisk !== saved;
+  const diskMovedOn = changedOnDisk(onDisk, { saved, unsaved });
 
   const latest = useRef({ contents, shown, saved, unsaved });
   latest.current = { contents, shown, saved, unsaved };
@@ -71,8 +71,8 @@ export function useFileBuffer({ workspacePath, contents, path, onMatchesBase }: 
     // Typing may have gone on while it was written: that stays unsaved.
     latest.current.saved = text;
     setSaved(text);
-    setUnsaved((current) => (current === text ? null : current));
-    if (latest.current.unsaved === text) latest.current.unsaved = null;
+    setUnsaved((current) => unsavedAfterSave(current, text));
+    latest.current.unsaved = unsavedAfterSave(latest.current.unsaved, text);
     showFileText(workspacePath, path, text);
     void refreshFileViews(workspacePath);
     if (contents.original.kind === 'workspaceBase' && text === contents.left.text) onMatchesBase?.();
@@ -118,12 +118,10 @@ export function useFileBuffer({ workspacePath, contents, path, onMatchesBase }: 
   return {
     shown,
     unsaved,
-    changedOnDisk,
+    changedOnDisk: diskMovedOn,
     editor,
     onEdit: (shown) => {
-      // The editor shows a file of lone CRs with LFs: its lines keep their own line breaks, new ones take the file's.
-      const text = diskText(shown, latest.current.saved);
-      const next = text === latest.current.saved ? null : text;
+      const next = unsavedAfterEdit(shown, latest.current.saved);
       latest.current.unsaved = next;
       setUnsaved(next);
     },
