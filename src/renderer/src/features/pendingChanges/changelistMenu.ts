@@ -1,6 +1,7 @@
 import { FolderInput, ListPlus, Pencil, Text, Trash2 } from 'lucide-react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { SEPARATOR, tidyMenu, type MenuEntry, type Submenu } from '../../lib/actions';
+import { groupedMenu } from '../../lib/menuGroups';
 import { isControlled } from './changeCategories';
 import { DEFAULT_CHANGELIST_LABEL } from './changeRows';
 import {
@@ -43,10 +44,11 @@ export function moveToChangelistSubmenu(workspacePath: string, changes: PendingC
 
 /** Actions for a changelist header. */
 export function changelistMenu(workspacePath: string, changelist: Changelist): MenuEntry[] {
-  return [
-    { id: 'changelist.rename', label: 'Rename…', icon: Pencil, run: () => void renameChangelist(workspacePath, changelist) },
-    { id: 'changelist.describe', label: 'Edit description…', icon: Text, run: () => void editChangelistDescription(workspacePath, changelist) },
-    SEPARATOR,
-    { id: 'changelist.delete', label: 'Delete changelist', icon: Trash2, danger: true, run: () => void deleteChangelist(workspacePath, changelist) },
-  ];
+  return groupedMenu({
+    edit: [
+      { id: 'changelist.rename', label: 'Rename…', icon: Pencil, run: () => void renameChangelist(workspacePath, changelist) },
+      { id: 'changelist.describe', label: 'Edit description…', icon: Text, run: () => void editChangelistDescription(workspacePath, changelist) },
+    ],
+    danger: [{ id: 'changelist.delete', label: 'Delete changelist…', icon: Trash2, danger: true, run: () => void deleteChangelist(workspacePath, changelist) }],
+  });
 }

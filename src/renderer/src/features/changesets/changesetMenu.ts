@@ -1,5 +1,6 @@
 import {
   ArrowRightLeft,
+  Cherry,
   Copy,
   FileDiff,
   FolderTree,
@@ -17,10 +18,12 @@ import {
 } from 'lucide-react';
 import type { Changeset } from '@shared/domain/changeset';
 import { navigation } from '../../app/navigation/navigationStore';
-import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
+import { SEPARATOR, type MenuEntry } from '../../lib/actions';
 import { copyToClipboard } from '../../lib/copyToClipboard';
+import { groupedMenu } from '../../lib/menuGroups';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { openCreateBranchDialog } from '../branches/CreateBranchDialog';
+import { MERGE_INTO_WORKSPACE, serverMergeLabel } from '../branches/mergeMenuLabels';
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
 import { openCreateLabelDialog } from '../labels/CreateLabelDialog';
 import {
@@ -54,73 +57,79 @@ function singleChangesetMenu({ workspacePath, loadedChangeset, loadedBranch }: C
   const source = `cs:${changeset.id}`;
   const canRevertTo = loadedChangeset !== undefined && changeset.branch === loadedBranch && changeset.id < loadedChangeset;
 
-  return tidyMenu([
-    { id: 'diff', label: 'Diff changeset', icon: FileDiff, shortcut: hotkey('listDiff'), run: () => openChangesetDiff(changeset) },
-    {
-      id: 'browse',
-      label: 'Browse repository at this changeset',
-      icon: FolderTree,
-      run: () => navigation.openPage({ kind: 'browseRepository', changesetId: changeset.id }),
-    },
-    {
-      id: 'showInBranchExplorer',
-      label: 'Show in Branch Explorer',
-      icon: GitGraph,
-      run: () => showInBranchExplorer({ kind: 'changeset', id: changeset.id, date: changeset.date }),
-    },
-    SEPARATOR,
-    { id: 'switch', label: 'Switch workspace to this changeset', icon: ArrowRightLeft, run: () => void switchToChangeset(workspacePath, changeset) },
-    {
-      id: 'createBranch',
-      label: 'Create branch from here…',
-      icon: GitBranchPlus,
-      run: () =>
-        openCreateBranchDialog(workspacePath, {
-          parentBranch: changeset.branch,
-          startingPoint: source,
-          startingPointLabel: `changeset ${changeset.id}`,
-        }),
-    },
-    { id: 'label', label: 'Label this changeset…', icon: Tag, run: () => openCreateLabelDialog(workspacePath, changeset.id) },
-    {
-      id: 'codeReview',
-      label: 'Create code review…',
-      icon: MessageSquareCode,
-      run: () => openCreateCodeReviewDialog(workspacePath, { kind: 'changeset', value: String(changeset.id) }),
-    },
-    SEPARATOR,
-    { id: 'merge', label: 'Merge from this changeset', icon: GitMerge, run: () => openMerge({ kind: 'merge', sourceSpec: source }) },
-    { id: 'cherryPick', label: 'Cherry pick this changeset', icon: GitPullRequestArrow, run: () => openMerge({ kind: 'cherryPick', sourceSpec: source }) },
-    {
-      label: 'Advanced merge',
-      icon: GitMerge,
-      entries: [
-        { id: 'mergeTo', label: 'Merge to another branch…', run: () => void mergeChangesetTo(changeset) },
-        { id: 'subtractive', label: 'Subtractive merge (remove its changes)', icon: Minus, run: () => openMerge({ kind: 'subtractive', sourceSpec: source }) },
-      ],
-    },
-    SEPARATOR,
-    canRevertTo && {
-      id: 'revert',
-      label: 'Revert workspace to this changeset…',
-      icon: RotateCcw,
-      run: () => revertWorkspaceToChangeset(changeset, loadedChangeset),
-    },
-    SEPARATOR,
-    { id: 'editComment', label: 'Edit comment…', icon: MessageSquareText, run: () => void editChangesetComment(workspacePath, changeset) },
-    { id: 'move', label: 'Move to another branch…', icon: MoveRight, run: () => void moveChangesetToBranch(workspacePath, changeset) },
-    { id: 'delete', label: 'Delete changeset…', icon: Trash2, danger: true, run: () => void deleteChangeset(workspacePath, changeset) },
-    SEPARATOR,
-    {
-      label: 'Copy',
-      icon: Copy,
-      entries: [
-        { id: 'copy.id', label: `Copy “cs:${changeset.id}”`, run: () => copyToClipboard(source, 'Changeset spec') },
-        { id: 'copy.guid', label: 'Copy GUID', run: () => copyToClipboard(changeset.guid, 'GUID') },
-        { id: 'copy.comment', label: 'Copy comment', run: () => copyToClipboard(changeset.comment, 'Comment') },
-      ],
-    },
-  ]);
+  return groupedMenu({
+    primary: [{ id: 'diff', label: 'Open diff', icon: FileDiff, shortcut: hotkey('listDiff'), run: () => openChangesetDiff(changeset) }],
+    act: [
+      { id: 'switch', label: 'Switch to this changeset', icon: ArrowRightLeft, run: () => void switchToChangeset(workspacePath, changeset) },
+      canRevertTo && {
+        id: 'revert',
+        label: 'Revert workspace to this changeset…',
+        icon: RotateCcw,
+        run: () => revertWorkspaceToChangeset(changeset, loadedChangeset),
+      },
+      SEPARATOR,
+      { id: 'merge', label: MERGE_INTO_WORKSPACE, icon: GitMerge, run: () => openMerge({ kind: 'merge', sourceSpec: source }) },
+      { id: 'cherryPick', label: 'Cherry pick this changeset', icon: Cherry, run: () => openMerge({ kind: 'cherryPick', sourceSpec: source }) },
+      {
+        label: 'Advanced merge',
+        icon: GitMerge,
+        entries: [
+          { id: 'mergeTo', label: serverMergeLabel(), icon: GitPullRequestArrow, run: () => void mergeChangesetTo(changeset) },
+          { id: 'subtractive', label: 'Subtractive merge (remove its changes)', icon: Minus, run: () => openMerge({ kind: 'subtractive', sourceSpec: source }) },
+        ],
+      },
+    ],
+    create: [
+      {
+        id: 'createBranch',
+        label: 'New branch from here…',
+        icon: GitBranchPlus,
+        run: () =>
+          openCreateBranchDialog(workspacePath, {
+            parentBranch: changeset.branch,
+            startingPoint: source,
+            startingPointLabel: `changeset ${changeset.id}`,
+          }),
+      },
+      { id: 'label', label: 'New label…', icon: Tag, run: () => openCreateLabelDialog(workspacePath, changeset.id) },
+      {
+        id: 'codeReview',
+        label: 'New code review…',
+        icon: MessageSquareCode,
+        run: () => openCreateCodeReviewDialog(workspacePath, { kind: 'changeset', value: String(changeset.id) }),
+      },
+    ],
+    navigate: [
+      {
+        id: 'browse',
+        label: 'Browse repository at this changeset',
+        icon: FolderTree,
+        run: () => navigation.openPage({ kind: 'browseRepository', changesetId: changeset.id }),
+      },
+      {
+        id: 'showInBranchExplorer',
+        label: 'Show in Branch Explorer',
+        icon: GitGraph,
+        run: () => showInBranchExplorer({ kind: 'changeset', id: changeset.id, date: changeset.date }),
+      },
+    ],
+    copy: [
+      {
+        label: 'Copy',
+        icon: Copy,
+        entries: [
+          { id: 'copy.id', label: `Spec “${source}”`, run: () => copyToClipboard(source, 'Changeset spec') },
+          { id: 'copy.guid', label: 'GUID', run: () => copyToClipboard(changeset.guid, 'GUID') },
+          { id: 'copy.comment', label: 'Comment', run: () => copyToClipboard(changeset.comment, 'Comment') },
+        ],
+      },
+    ],
+    edit: [
+      { id: 'editComment', label: 'Edit comment…', icon: MessageSquareText, run: () => void editChangesetComment(workspacePath, changeset) },
+      { id: 'move', label: 'Move to another branch…', icon: MoveRight, run: () => void moveChangesetToBranch(workspacePath, changeset) },
+    ],
+    danger: [{ id: 'delete', label: 'Delete changeset…', icon: Trash2, danger: true, run: () => void deleteChangeset(workspacePath, changeset) }],
+  });
 }
 
 function intervalMenu(selected: Changeset[]): MenuEntry[] {
@@ -129,10 +138,11 @@ function intervalMenu(selected: Changeset[]): MenuEntry[] {
   // The interval origin is exclusive; starting at the older changeset's parent includes it.
   const interval = { sourceSpec: `cs:${newer.id}`, intervalOriginSpec: `cs:${older.parent}` };
 
-  return [
-    { id: 'diffRange', label: `Diff changesets ${older.id} and ${newer.id}`, icon: FileDiff, run: () => openRangeDiff(older, newer) },
-    SEPARATOR,
-    { id: 'cherryPickRange', label: `Cherry pick changesets ${range}`, icon: GitPullRequestArrow, run: () => openMerge({ kind: 'cherryPick', ...interval }) },
-    { id: 'subtractiveRange', label: `Subtractive merge of changesets ${range}`, icon: Minus, run: () => openMerge({ kind: 'subtractive', ...interval }) },
-  ];
+  return groupedMenu({
+    primary: [{ id: 'diffRange', label: `Open diff of changesets ${older.id} and ${newer.id}`, icon: FileDiff, run: () => openRangeDiff(older, newer) }],
+    act: [
+      { id: 'cherryPickRange', label: `Cherry pick changesets ${range}`, icon: Cherry, run: () => openMerge({ kind: 'cherryPick', ...interval }) },
+      { id: 'subtractiveRange', label: `Subtractive merge of changesets ${range}`, icon: Minus, run: () => openMerge({ kind: 'subtractive', ...interval }) },
+    ],
+  });
 }

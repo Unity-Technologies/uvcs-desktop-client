@@ -1,4 +1,4 @@
-import { AppWindow, Archive, Copy, File, Folder, FolderSearch, FolderTree, GitBranch, GitCommitVertical, History, MessageSquareCode, ScanText, Tag } from 'lucide-react';
+import { AppWindow, Archive, File, Folder, FolderSearch, FolderTree, GitBranch, GitCommitVertical, History, MessageSquareCode, ScanText, Tag } from 'lucide-react';
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
@@ -17,12 +17,12 @@ import { labelMenu } from '../../features/labels/labelMenu';
 import { showLabelChanges } from '../../features/labels/labelOperations';
 import { describeKinds } from '../../features/pendingChanges/changeCategories';
 import { changeTone } from '../../features/pendingChanges/changeTone';
-import { pendingChangeMenu } from '../../features/pendingChanges/pendingChangeMenu';
-import { absolutePath, copyPaths } from '../../features/pendingChanges/pendingChangeOperations';
+import { copyPathEntries, pendingChangeMenu } from '../../features/pendingChanges/pendingChangeMenu';
 import { shelveMenu } from '../../features/shelves/shelveMenu';
 import { showShelveChanges } from '../../features/shelves/shelveOperations';
-import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
+import { SEPARATOR, type MenuEntry } from '../../lib/actions';
 import { formatRelativeDate } from '../../lib/formatDate';
+import { groupedMenu } from '../../lib/menuGroups';
 import { fuzzyMatchPositions, fuzzyMatchQuality } from '../../lib/fuzzyIndex';
 import { wordMatchQuality } from '../../lib/matchesAllWords';
 import { REVEAL_LABEL } from '../../lib/platform';
@@ -72,22 +72,15 @@ export function fileResult(entry: { path: string; isDirectory: boolean }, contex
 
 /** For files without pending changes, which the Files view's menu would need their revision details for. */
 function workspaceFileMenu(workspacePath: string, entry: { path: string; isDirectory: boolean }): MenuEntry[] {
-  return tidyMenu([
-    !entry.isDirectory && { id: 'open', label: 'Open', icon: AppWindow, run: () => openItem(workspacePath, entry) },
-    { id: 'reveal', label: REVEAL_LABEL, icon: FolderSearch, run: () => revealItem(workspacePath, entry) },
-    SEPARATOR,
-    { id: 'history', label: 'View history', icon: History, run: () => navigation.openPage({ kind: 'history', path: entry.path }) },
-    !entry.isDirectory && { id: 'annotate', label: 'Annotate', icon: ScanText, run: () => navigation.openPage({ kind: 'annotate', path: entry.path }) },
-    SEPARATOR,
-    {
-      label: 'Copy',
-      icon: Copy,
-      entries: [
-        { id: 'copy.relative', label: 'Copy relative path', run: () => copyPaths([entry.path]) },
-        { id: 'copy.absolute', label: 'Copy full path', run: () => copyPaths([absolutePath(workspacePath, entry.path)]) },
-      ],
-    },
-  ]);
+  return groupedMenu({
+    primary: [!entry.isDirectory && { id: 'open', label: 'Open', icon: AppWindow, run: () => openItem(workspacePath, entry) }],
+    navigate: [
+      { id: 'history', label: 'View history', icon: History, run: () => navigation.openPage({ kind: 'history', path: entry.path }) },
+      !entry.isDirectory && { id: 'annotate', label: 'Annotate', icon: ScanText, run: () => navigation.openPage({ kind: 'annotate', path: entry.path }) },
+    ],
+    external: [{ id: 'reveal', label: REVEAL_LABEL, icon: FolderSearch, run: () => revealItem(workspacePath, entry) }],
+    copy: copyPathEntries(workspacePath, [entry.path]),
+  });
 }
 
 export function branchResult(branch: Branch, context: ResultContext): SearchResult {

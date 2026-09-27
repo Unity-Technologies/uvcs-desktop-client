@@ -1,25 +1,26 @@
 import {
   ArrowLeftToLine,
+  ArrowRightLeft,
   ArrowRightToLine,
+  Cherry,
   Copy,
   CornerLeftUp,
   FileDiff,
   Filter,
-  GitBranch,
   GitCommitVertical,
   GitBranchPlus,
   GitMerge,
   GitPullRequest,
-  GitPullRequestArrow,
   Minus,
   Tag,
 } from 'lucide-react';
 import { spec } from '@shared/domain/specs';
-import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
+import { SEPARATOR, type MenuEntry } from '../../lib/actions';
+import { groupedMenu } from '../../lib/menuGroups';
 import { openCreateBranchDialog } from '../branches/CreateBranchDialog';
 import { openCreateLabelDialog } from '../labels/CreateLabelDialog';
 import { openMergeTaskDialog } from '../mergeTask/MergeTaskDialog';
-import { serverMergeLabel } from '../branches/mergeMenuLabels';
+import { MERGE_INTO_WORKSPACE, serverMergeLabel } from '../branches/mergeMenuLabels';
 import { isTaskBranch } from '../mergeTask/mergeTaskSummary';
 import type { GraphTarget } from './canvas/graphTargets';
 import { graphActions } from './graphActions';
@@ -35,6 +36,7 @@ interface GraphMenuContext {
   revealCreatedBranch: (name: string) => void;
 }
 
+/** The graph's menus follow the lists' (`changesetMenu`, `branchMenu`, `labelMenu`): the same words, icons and order. */
 export function graphMenu(target: GraphTarget | null, context: GraphMenuContext): MenuEntry[] {
   switch (target?.kind) {
     case 'changeset':
@@ -44,17 +46,18 @@ export function graphMenu(target: GraphTarget | null, context: GraphMenuContext)
     case 'label':
       return labelMenu(target.label.name, target.label.changeset, context);
     case 'mergeLink':
-      return [
-        { id: 'source', label: 'Go to source changeset', icon: ArrowLeftToLine, run: () => context.goToChangeset(target.link.sourceChangeset) },
-        {
-          id: 'destination',
-          label: 'Go to destination changeset',
-          icon: ArrowRightToLine,
-          run: () => context.goToChangeset(target.link.destinationChangeset),
-        },
-        SEPARATOR,
-        { id: 'diff', label: 'Diff merged changeset', icon: FileDiff, run: () => graphActions.diffChangeset(target.link.destinationChangeset) },
-      ];
+      return groupedMenu({
+        primary: [{ id: 'diff', label: 'Open diff of the merge', icon: FileDiff, run: () => graphActions.diffChangeset(target.link.destinationChangeset) }],
+        navigate: [
+          { id: 'source', label: 'Go to source changeset', icon: ArrowLeftToLine, run: () => context.goToChangeset(target.link.sourceChangeset) },
+          {
+            id: 'destination',
+            label: 'Go to destination changeset',
+            icon: ArrowRightToLine,
+            run: () => context.goToChangeset(target.link.destinationChangeset),
+          },
+        ],
+      });
     default:
       return [];
   }
@@ -63,66 +66,73 @@ export function graphMenu(target: GraphTarget | null, context: GraphMenuContext)
 function changesetMenu(id: number, { workspacePath, layout, goToChangeset, revealCreatedBranch }: GraphMenuContext): MenuEntry[] {
   const changeset = layout.nodes.get(id)?.changeset;
   const parent = changeset?.parent ?? -1;
-  return tidyMenu([
-    { id: 'diff', label: 'Diff changeset', icon: FileDiff, run: () => graphActions.diffChangeset(id) },
-    { id: 'switch', label: 'Switch workspace to this changeset', icon: GitCommitVertical, run: () => graphActions.switchToChangeset(workspacePath, id) },
-    SEPARATOR,
-    changeset && {
-      id: 'createBranch',
-      label: 'Create branch from here…',
-      icon: GitBranchPlus,
-      run: () =>
-        void openCreateBranchDialog(workspacePath, {
-          parentBranch: changeset.branch,
-          startingPoint: spec.changeset(id),
-          startingPointLabel: `changeset ${id}`,
-        }).then((name) => name && revealCreatedBranch(name)),
-    },
-    { id: 'label', label: 'Label this changeset…', icon: Tag, run: () => openCreateLabelDialog(workspacePath, id) },
-    SEPARATOR,
-    { id: 'merge', label: 'Merge from this changeset', icon: GitMerge, run: () => graphActions.merge('merge', spec.changeset(id)) },
-    { id: 'cherryPick', label: 'Cherry pick this changeset', icon: GitPullRequestArrow, run: () => graphActions.merge('cherryPick', spec.changeset(id)) },
-    { id: 'subtractive', label: 'Subtractive merge…', icon: Minus, run: () => graphActions.merge('subtractive', spec.changeset(id)) },
-    SEPARATOR,
-    layout.nodes.has(parent) && { id: 'parent', label: 'Go to parent changeset', icon: CornerLeftUp, run: () => goToChangeset(parent) },
-    { id: 'copy', label: 'Copy changeset spec', icon: Copy, run: () => graphActions.copy(spec.changeset(id)) },
-  ]);
+  return groupedMenu({
+    primary: [{ id: 'diff', label: 'Open diff', icon: FileDiff, run: () => graphActions.diffChangeset(id) }],
+    act: [
+      { id: 'switch', label: 'Switch to this changeset', icon: ArrowRightLeft, run: () => graphActions.switchToChangeset(workspacePath, id) },
+      SEPARATOR,
+      { id: 'merge', label: MERGE_INTO_WORKSPACE, icon: GitMerge, run: () => graphActions.merge('merge', spec.changeset(id)) },
+      { id: 'cherryPick', label: 'Cherry pick this changeset', icon: Cherry, run: () => graphActions.merge('cherryPick', spec.changeset(id)) },
+      { id: 'subtractive', label: 'Subtractive merge (remove its changes)', icon: Minus, run: () => graphActions.merge('subtractive', spec.changeset(id)) },
+    ],
+    create: [
+      changeset && {
+        id: 'createBranch',
+        label: 'New branch from here…',
+        icon: GitBranchPlus,
+        run: () =>
+          void openCreateBranchDialog(workspacePath, {
+            parentBranch: changeset.branch,
+            startingPoint: spec.changeset(id),
+            startingPointLabel: `changeset ${id}`,
+          }).then((name) => name && revealCreatedBranch(name)),
+      },
+      { id: 'label', label: 'New label…', icon: Tag, run: () => openCreateLabelDialog(workspacePath, id) },
+    ],
+    navigate: [layout.nodes.has(parent) && { id: 'parent', label: 'Go to parent changeset', icon: CornerLeftUp, run: () => goToChangeset(parent) }],
+    copy: [{ id: 'copy', label: 'Copy changeset spec', icon: Copy, run: () => graphActions.copy(spec.changeset(id)) }],
+  });
 }
 
 function branchMenu(lane: Lane, { workspacePath, layout, goToChangeset, showRelatedTo }: GraphMenuContext): MenuEntry[] {
   const name = lane.branch.name;
   const head = lane.branch.headChangeset;
-  return tidyMenu([
-    { id: 'switch', label: 'Switch workspace to this branch', icon: GitBranch, run: () => graphActions.switchToBranch(workspacePath, name) },
-    { id: 'merge', label: 'Merge from this branch', icon: GitMerge, run: () => graphActions.merge('merge', spec.branch(name)) },
-    isTaskBranch(lane.branch) && {
-      id: 'mergeTask',
-      label: serverMergeLabel(lane.branch.parent),
-      icon: GitPullRequest,
-      run: () => openMergeTaskDialog(workspacePath, lane.branch),
-    },
-    { id: 'diff', label: 'Diff branch', icon: FileDiff, run: () => graphActions.diffBranch(lane.branch) },
-    SEPARATOR,
-    layout.nodes.has(head) && { id: 'head', label: 'Go to head changeset', icon: ArrowRightToLine, run: () => goToChangeset(head) },
-    lane.baseChangeset !== null && {
-      id: 'base',
-      label: 'Go to branch base',
-      icon: ArrowLeftToLine,
-      run: () => goToChangeset(lane.baseChangeset!),
-    },
-    { id: 'related', label: 'Show only related branches', icon: Filter, run: () => showRelatedTo(name) },
-    SEPARATOR,
-    { id: 'copy', label: 'Copy branch spec', icon: Copy, run: () => graphActions.copy(spec.branch(name)) },
-  ]);
+  return groupedMenu({
+    primary: [{ id: 'diff', label: 'Open diff', icon: FileDiff, run: () => graphActions.diffBranch(lane.branch) }],
+    act: [
+      { id: 'switch', label: 'Switch to this branch', icon: ArrowRightLeft, run: () => graphActions.switchToBranch(workspacePath, name) },
+      SEPARATOR,
+      { id: 'merge', label: MERGE_INTO_WORKSPACE, icon: GitMerge, run: () => graphActions.merge('merge', spec.branch(name)) },
+      isTaskBranch(lane.branch) && {
+        id: 'mergeTask',
+        label: serverMergeLabel(lane.branch.parent),
+        icon: GitPullRequest,
+        run: () => openMergeTaskDialog(workspacePath, lane.branch),
+      },
+    ],
+    navigate: [
+      layout.nodes.has(head) && { id: 'head', label: 'Go to head changeset', icon: ArrowRightToLine, run: () => goToChangeset(head) },
+      lane.baseChangeset !== null && {
+        id: 'base',
+        label: 'Go to branch base',
+        icon: ArrowLeftToLine,
+        run: () => goToChangeset(lane.baseChangeset!),
+      },
+      { id: 'related', label: 'Show only related branches', icon: Filter, run: () => showRelatedTo(name) },
+    ],
+    copy: [{ id: 'copy', label: 'Copy branch spec', icon: Copy, run: () => graphActions.copy(spec.branch(name)) }],
+  });
 }
 
 function labelMenu(name: string, changeset: number, { workspacePath, goToChangeset }: GraphMenuContext): MenuEntry[] {
-  return [
-    { id: 'switch', label: 'Switch workspace to this label', icon: Tag, run: () => graphActions.switchToLabel(workspacePath, name) },
-    { id: 'merge', label: 'Merge from this label', icon: GitMerge, run: () => graphActions.merge('merge', spec.label(name)) },
-    { id: 'diff', label: 'Diff labeled changeset', icon: FileDiff, run: () => graphActions.diffChangeset(changeset) },
-    SEPARATOR,
-    { id: 'changeset', label: 'Go to labeled changeset', icon: GitCommitVertical, run: () => goToChangeset(changeset) },
-    { id: 'copy', label: 'Copy label spec', icon: Copy, run: () => graphActions.copy(spec.label(name)) },
-  ];
+  return groupedMenu({
+    primary: [{ id: 'diff', label: 'Open diff', icon: FileDiff, run: () => graphActions.diffChangeset(changeset) }],
+    act: [
+      { id: 'switch', label: 'Switch to this label', icon: ArrowRightLeft, run: () => graphActions.switchToLabel(workspacePath, name) },
+      SEPARATOR,
+      { id: 'merge', label: MERGE_INTO_WORKSPACE, icon: GitMerge, run: () => graphActions.merge('merge', spec.label(name)) },
+    ],
+    navigate: [{ id: 'changeset', label: 'Go to labeled changeset', icon: GitCommitVertical, run: () => goToChangeset(changeset) }],
+    copy: [{ id: 'copy', label: 'Copy label spec', icon: Copy, run: () => graphActions.copy(spec.label(name)) }],
+  });
 }

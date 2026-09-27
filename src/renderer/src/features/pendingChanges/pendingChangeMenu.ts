@@ -1,6 +1,7 @@
 import {
   AppWindow,
   Copy,
+  EyeClosed,
   EyeOff,
   FileClock,
   FolderSearch,
@@ -17,7 +18,8 @@ import { canAnnotate } from '@shared/domain/annotate';
 import type { Changelist, FilterRuleList, PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
-import { SEPARATOR, tidyMenu, type MenuEntry, type Submenu } from '../../lib/actions';
+import { tidyMenu, type Action, type MenuEntry, type Submenu } from '../../lib/actions';
+import { groupedMenu } from '../../lib/menuGroups';
 import { REVEAL_LABEL, TRASH_NAME } from '../../lib/platform';
 import { formatCount } from '../../lib/text';
 import { categoryOf, existsOnDisk, hasRevisions, isCheckinCandidate, isControlled } from './changeCategories';
@@ -61,78 +63,60 @@ export function pendingChangeMenu(
   const checkoutCandidates = controlledChanges.filter((change) => !change.kinds.includes('checkedOut') && !change.kinds.includes('added'));
   const onDisk = single && existsOnDisk(single);
 
-  return tidyMenu([
-    ...(inclusion ? inclusionEntries(changes, inclusion) : []),
-    review && reviewMenuEntry(changes, review),
-    SEPARATOR,
-    onDisk && {
-      id: 'open',
-      label: 'Open',
-      icon: AppWindow,
-      run: () => openWithDefaultApp(workspacePath, single),
-    },
-    onDisk && {
-      id: 'reveal',
-      label: REVEAL_LABEL,
-      icon: FolderSearch,
-      run: () => void api.system.revealInFileManager(absolutePath(workspacePath, single.path)),
-    },
-    SEPARATOR,
-    single && hasRevisions(single) && {
-      id: 'history',
-      label: 'View history',
-      icon: History,
-      run: () => navigation.openPage({ kind: 'history', path: single.path }),
-    },
-    single && hasRevisions(single) && canAnnotate(single.itemType) && {
-      id: 'annotate',
-      label: 'Annotate',
-      icon: ScanText,
-      run: () => navigation.openPage({ kind: 'annotate', path: single.path }),
-    },
-    SEPARATOR,
-    privateChanges.length > 0 && {
-      id: 'add',
-      label: privateChanges.length === 1 ? 'Add to version control' : `Add ${formatCount(privateChanges.length)} items to version control`,
-      icon: Plus,
-      run: () => void addToSourceControl(workspacePath, privateChanges),
-    },
-    checkoutCandidates.length > 0 && {
-      id: 'checkout',
-      label: 'Check out',
-      icon: PenLine,
-      run: () => void checkout(workspacePath, checkoutCandidates),
-    },
-    controlledChanges.length > 0 && {
-      id: 'undo',
-      label: controlledChanges.length === 1 ? 'Undo changes' : `Undo ${formatCount(controlledChanges.length)} changes`,
-      icon: Undo2,
-      danger: true,
-      run: () => void undoChanges(workspacePath, controlledChanges),
-    },
-    privateChanges.length > 0 && {
-      id: 'trash',
-      label: `Move to ${TRASH_NAME}`,
-      icon: Trash2,
-      danger: true,
-      run: () => void deletePrivateFiles(workspacePath, privateChanges),
-    },
-    SEPARATOR,
-    moveToChangelistSubmenu(workspacePath, changes, changelists),
-    single && filterRulesSubmenu(workspacePath, single.path),
-    {
-      label: 'Copy',
-      icon: Copy,
-      entries: [
-        { id: 'copy.relative', label: 'Copy relative path', run: () => copyPaths(changes.map((change) => change.path)) },
-        {
-          id: 'copy.absolute',
-          label: 'Copy full path',
-          run: () => copyPaths(changes.map((change) => absolutePath(workspacePath, change.path))),
-        },
-      ],
-    },
-  ]);
+  return groupedMenu({
+    primary: [onDisk && { id: 'open', label: 'Open', icon: AppWindow, run: () => openWithDefaultApp(workspacePath, single) }],
+    act: [
+      ...(inclusion ? inclusionEntries(changes, inclusion) : []),
+      review && reviewMenuEntry(changes, review),
+      privateChanges.length > 0 && {
+        id: 'add',
+        label: privateChanges.length === 1 ? 'Add to version control' : `Add ${formatCount(privateChanges.length)} items to version control`,
+        icon: Plus,
+        run: () => void addToSourceControl(workspacePath, privateChanges),
+      },
+      checkoutCandidates.length > 0 && { id: 'checkout', label: 'Check out', icon: PenLine, run: () => void checkout(workspacePath, checkoutCandidates) },
+    ],
+    navigate: [
+      single && hasRevisions(single) && {
+        id: 'history',
+        label: 'View history',
+        icon: History,
+        run: () => navigation.openPage({ kind: 'history', path: single.path }),
+      },
+      single && hasRevisions(single) && canAnnotate(single.itemType) && {
+        id: 'annotate',
+        label: 'Annotate',
+        icon: ScanText,
+        run: () => navigation.openPage({ kind: 'annotate', path: single.path }),
+      },
+    ],
+    external: [
+      onDisk && {
+        id: 'reveal',
+        label: REVEAL_LABEL,
+        icon: FolderSearch,
+        run: () => void api.system.revealInFileManager(absolutePath(workspacePath, single.path)),
+      },
+    ],
+    copy: copyPathEntries(workspacePath, changes.map((change) => change.path)),
+    edit: [moveToChangelistSubmenu(workspacePath, changes, changelists), single && filterRulesSubmenu(workspacePath, single.path)],
+    danger: [
+      controlledChanges.length > 0 && {
+        id: 'undo',
+        label: controlledChanges.length === 1 ? 'Undo changes…' : `Undo ${formatCount(controlledChanges.length)} changes…`,
+        icon: Undo2,
+        danger: true,
+        run: () => void undoChanges(workspacePath, controlledChanges),
+      },
+      privateChanges.length > 0 && {
+        id: 'trash',
+        label: `Move to ${TRASH_NAME}…`,
+        icon: Trash2,
+        danger: true,
+        run: () => void deletePrivateFiles(workspacePath, privateChanges),
+      },
+    ],
+  });
 }
 
 /** Include the unchecked changes in the next check-in, or exclude the checked ones. */
@@ -144,6 +128,14 @@ function inclusionEntries(changes: PendingChange[], { isIncluded, setIncluded }:
     excluded.length > 0 && { id: 'include', label: 'Include in check-in', icon: SquareCheckBig, run: () => setIncluded(excluded, true) },
     included.length > 0 && { id: 'exclude', label: 'Exclude from check-in', icon: Square, run: () => setIncluded(included, false) },
   ]);
+}
+
+/** Copying the workspace paths of the selected items, relative or full. */
+export function copyPathEntries(workspacePath: string, paths: string[]): Action[] {
+  return [
+    { id: 'copy.relative', label: 'Copy relative path', icon: Copy, run: () => copyPaths(paths) },
+    { id: 'copy.absolute', label: 'Copy full path', icon: Copy, run: () => copyPaths(paths.map((path) => absolutePath(workspacePath, path))) },
+  ];
 }
 
 /** Adds an item, or all files with its extension, to the ignore, cloaked or hidden-changes rules. */
@@ -161,7 +153,7 @@ export function filterRulesSubmenu(workspacePath: string, path: string): Submenu
     entries: [
       { label: `Add to ${FILTER_LIST_FILES.ignore}`, icon: EyeOff, entries: patternsFor('ignore') },
       { label: `Add to ${FILTER_LIST_FILES.cloaked}`, icon: FileClock, entries: patternsFor('cloaked') },
-      { label: `Add to ${FILTER_LIST_FILES.hidden}`, entries: patternsFor('hidden') },
+      { label: `Add to ${FILTER_LIST_FILES.hidden}`, icon: EyeClosed, entries: patternsFor('hidden') },
     ],
   };
 }

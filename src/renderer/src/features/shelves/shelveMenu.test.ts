@@ -14,10 +14,10 @@ const ids = (entries: MenuEntry[]): string[] => entries.flatMap((entry) => (entr
 
 describe('shelveMenu', () => {
   it("offers everything on the user's own shelve", () => {
-    expect(ids(shelveMenu('/ws', [shelve]))).toEqual(['apply', 'applyAndDelete', 'diff', 'codeReview', 'copy', 'delete']);
+    expect(ids(shelveMenu('/ws', [shelve]))).toEqual(['diff', 'apply', 'applyAndDelete', 'codeReview', 'copy', 'delete']);
   });
 
   it("only applies, shows, reviews and copies someone else's: deleting it is theirs to do", () => {
-    expect(ids(shelveMenu('/ws', [shelve], { mine: false }))).toEqual(['apply', 'diff', 'codeReview', 'copy']);
+    expect(ids(shelveMenu('/ws', [shelve], { mine: false }))).toEqual(['diff', 'apply', 'codeReview', 'copy']);
   });
 });

@@ -30,6 +30,7 @@ export function ShelveDiffActions({ shelveId }: { shelveId: number }) {
   };
   const menu = tidyMenu([
     !left && mine && { id: 'applyAndDelete', label: 'Apply and delete', icon: ArchiveRestore, run: () => void apply(true) },
+    SEPARATOR,
     { id: 'copy', label: 'Copy shelve spec', icon: Copy, run: () => copyToClipboard(`sh:${shelveId}`, 'Shelve spec') },
     SEPARATOR,
     mine && {

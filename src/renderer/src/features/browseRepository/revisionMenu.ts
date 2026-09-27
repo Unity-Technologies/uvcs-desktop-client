@@ -3,7 +3,8 @@ import type { TreeItem } from '@shared/domain/explorer';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runRead } from '../../app/operations/runOperation';
-import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
+import type { MenuEntry } from '../../lib/actions';
+import { groupedMenu } from '../../lib/menuGroups';
 import { toast } from '../../ui/toast/toastStore';
 import { copyPaths } from '../pendingChanges/pendingChangeOperations';
 
@@ -12,14 +13,12 @@ export function revisionMenu(workspacePath: string, changesetId: number, items: 
   const single = items.length === 1 ? items[0]! : null;
   const file = single && single.itemType !== 'directory' ? single : null;
 
-  return tidyMenu([
-    file && { id: 'open', label: 'Open this revision', icon: AppWindow, run: () => openRevision(workspacePath, file) },
-    file && { id: 'saveAs', label: 'Save this revision as…', icon: Download, run: () => void saveRevisionAs(workspacePath, file) },
-    SEPARATOR,
-    single && { id: 'history', label: 'View history', icon: History, run: () => navigation.openPage({ kind: 'history', path: single.path, changesetId }) },
-    SEPARATOR,
-    { id: 'copy', label: 'Copy repository path', icon: Copy, run: () => copyPaths(items.map((item) => `/${item.path}`)) },
-  ]);
+  return groupedMenu({
+    primary: [file && { id: 'open', label: 'Open this revision', icon: AppWindow, run: () => openRevision(workspacePath, file) }],
+    navigate: [single && { id: 'history', label: 'View history', icon: History, run: () => navigation.openPage({ kind: 'history', path: single.path, changesetId }) }],
+    external: [file && { id: 'saveAs', label: 'Save this revision as…', icon: Download, run: () => void saveRevisionAs(workspacePath, file) }],
+    copy: [{ id: 'copy', label: 'Copy repository path', icon: Copy, run: () => copyPaths(items.map((item) => `/${item.path}`)) }],
+  });
 }
 
 export function openRevision(workspacePath: string, item: TreeItem): void {

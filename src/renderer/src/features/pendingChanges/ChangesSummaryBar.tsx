@@ -1,6 +1,7 @@
 import { ChevronDown, Undo2 } from 'lucide-react';
 import { useMemo, type CSSProperties } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
+import { SEPARATOR } from '../../lib/actions';
 import { formatCount, pluralize } from '../../lib/text';
 import { Checkbox, type CheckState } from '../../ui/Checkbox';
 import { IconButton } from '../../ui/IconButton';
@@ -47,8 +48,9 @@ export function ChangesSummaryBar({ changes, totalCount, isIncluded, onSetInclud
         />
         <ActionDropdownMenu
           entries={[
-            { id: 'undoAll', label: undoAllLabel, icon: Undo2, danger: true, disabled: undoable.length === 0, run: () => onUndo(undoable) },
-            { id: 'undoUnchanged', label: 'Undo unchanged checkouts', run: onUndoUnchanged },
+            { id: 'undoUnchanged', label: 'Undo unchanged checkouts', icon: Undo2, run: onUndoUnchanged },
+            SEPARATOR,
+            { id: 'undoAll', label: `${undoAllLabel}…`, icon: Undo2, danger: true, disabled: undoable.length === 0, run: () => onUndo(undoable) },
           ]}
         >
           <IconButton size="small" className={styles.undoMore} icon={<ChevronDown size={12} />} label="More ways to undo" />

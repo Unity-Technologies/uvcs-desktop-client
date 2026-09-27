@@ -1,5 +1,5 @@
 import { FileDiff, GitCommitVertical, Home, Tag } from 'lucide-react';
-import type { Changeset } from '@shared/domain/changeset';
+import type { ChangesetInfo } from '@shared/domain/changeset';
 import { spec } from '@shared/domain/specs';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { DetailsHeading } from '../../components/DetailsHeading';
@@ -15,9 +15,6 @@ import { BranchChip } from '../branches/BranchChip';
 import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
 import { ChangedFilesSection } from './ChangedFilesSection';
 import { openChangesetDiff, saveChangesetComment } from './changesetOperations';
-
-/** A changeset as lists and the Branch Explorer know it; the graph doesn't read the GUID and repository. */
-export type ChangesetInfo = Omit<Changeset, 'guid' | 'repository'> & Partial<Pick<Changeset, 'guid' | 'repository'>>;
 
 interface ChangesetDetailsProps {
   changeset: ChangesetInfo;

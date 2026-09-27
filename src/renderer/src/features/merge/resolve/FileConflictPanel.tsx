@@ -2,6 +2,7 @@ import { ChevronDown, FileCheck2, PencilLine, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import type { FileContent } from '@shared/domain/content';
 import { PathLabel } from '../../../components/PathLabel';
+import { SEPARATOR } from '../../../lib/actions';
 import { pluralize } from '../../../lib/text';
 import { Button } from '../../../ui/Button';
 import { EmptyState } from '../../../ui/EmptyState';
@@ -103,7 +104,7 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
                 entries={[
                   { id: 'destination', label: `Keep ${destination.version} (${labels.destination})`, icon: FileCheck2, run: () => onDecide({ kind: 'wholeFile', side: 'destination' }) },
                   { id: 'source', label: `Keep ${source.version} (${labels.source})`, icon: FileCheck2, run: () => onDecide({ kind: 'wholeFile', side: 'source' }) },
-                  ...(state.decidedByUser ? [{ id: 'startOver', label: 'Back to the automatic merge', icon: RotateCcw, run: onStartOver }] : []),
+                  ...(state.decidedByUser ? [SEPARATOR, { id: 'startOver', label: 'Back to the automatic merge', icon: RotateCcw, run: onStartOver }] : []),
                 ]}
               >
                 <Button size="small" icon={<ChevronDown size={13} />} aria-label="Override the automatic merge" data-tip="Override the automatic merge" />

@@ -1,7 +1,6 @@
 import {
   AppWindow,
   Binary,
-  Copy,
   FileDiff,
   FilePlus,
   FolderPlus,
@@ -9,10 +8,10 @@ import {
   History,
   Lock,
   PenLine,
+  Pencil,
   Plus,
   ScanText,
   SquareTerminal,
-  TextCursorInput,
   Trash2,
   Undo2,
 } from 'lucide-react';
@@ -20,10 +19,11 @@ import { canAnnotate } from '@shared/domain/annotate';
 import type { TreeItem } from '@shared/domain/explorer';
 import { navigation } from '../../app/navigation/navigationStore';
 import { openTerminalIn } from '../../app/workspace/workspaceShellActions';
-import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
+import type { MenuEntry } from '../../lib/actions';
+import { groupedMenu } from '../../lib/menuGroups';
 import { REVEAL_LABEL } from '../../lib/platform';
-import { filterRulesSubmenu } from '../pendingChanges/pendingChangeMenu';
-import { absolutePath, copyPaths, undoChanges } from '../pendingChanges/pendingChangeOperations';
+import { copyPathEntries, filterRulesSubmenu } from '../pendingChanges/pendingChangeMenu';
+import { absolutePath, undoChanges } from '../pendingChanges/pendingChangeOperations';
 import {
   addItems,
   changeRevisionType,
@@ -61,90 +61,89 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
   // The workspace root can't be renamed or deleted from here.
   const hasRoot = items.some(isWorkspaceRoot);
 
-  return tidyMenu([
-    single && single.itemType !== 'directory' && { id: 'open', label: 'Open', icon: AppWindow, run: () => openItem(workspacePath, single) },
-    single && { id: 'reveal', label: REVEAL_LABEL, icon: FolderSearch, run: () => revealItem(workspacePath, single) },
-    single?.itemType === 'directory' && {
-      id: 'terminal',
-      label: 'Open terminal here',
-      icon: SquareTerminal,
-      run: () => openTerminalIn(absolutePath(workspacePath, single.path)),
-    },
-    SEPARATOR,
-    single && !single.isPrivate && single.itemType !== 'directory' && {
-      id: 'changes',
-      label: 'Show changes',
-      icon: FileDiff,
-      shortcut: FILE_SHORTCUTS.showChanges,
-      run: () => useFilesViewStore.getState().setDetailsTab('changes'),
-    },
-    // The root changes with every changeset: its history is the whole repository's.
-    single && hasRevisionsToShow(single, pendingChanges) && !hasRoot && {
-      id: 'history',
-      label: 'View history',
-      icon: History,
-      shortcut: FILE_SHORTCUTS.history,
-      run: () => navigation.openPage({ kind: 'history', path: single.path }),
-    },
-    single && hasRevisionsToShow(single, pendingChanges) && canAnnotate(single.itemType) && {
-      id: 'annotate',
-      label: 'Annotate',
-      icon: ScanText,
-      shortcut: FILE_SHORTCUTS.annotate,
-      run: () => navigation.openPage({ kind: 'annotate', path: single.path }),
-    },
-    SEPARATOR,
-    privateItems.length > 0 && {
-      id: 'add',
-      label: privateItems.some((item) => item.itemType === 'directory') ? 'Add to version control (recursively)' : 'Add to version control',
-      icon: Plus,
-      run: () => void addItems(workspacePath, privateItems),
-    },
-    checkoutCandidates.length > 0 && { id: 'checkout', label: 'Check out', icon: PenLine, run: () => void checkoutItems(workspacePath, checkoutCandidates) },
-    undoable.length > 0 && {
-      id: 'undo',
-      label: undoable.length === 1 ? 'Undo changes' : `Undo ${undoable.length} changes`,
-      icon: Undo2,
-      danger: true,
-      run: () => void undoChanges(workspacePath, undoable),
-    },
-    SEPARATOR,
-    single && !hasRoot && { id: 'rename', label: 'Rename…', icon: TextCursorInput, shortcut: FILE_SHORTCUTS.rename, run: () => void renameItem(workspacePath, single) },
-    !hasRoot && { id: 'delete', label: 'Delete', icon: Trash2, danger: true, shortcut: FILE_SHORTCUTS.delete, run: () => void deleteItems(workspacePath, items) },
-    SEPARATOR,
-    single && {
-      id: 'newFile',
-      label: 'New file…',
-      icon: FilePlus,
-      shortcut: FILE_SHORTCUTS.newFile,
-      run: () => void createItem(workspacePath, directory, 'file'),
-    },
-    single && {
-      id: 'newFolder',
-      label: 'New folder…',
-      icon: FolderPlus,
-      shortcut: FILE_SHORTCUTS.newFolder,
-      run: () => void createItem(workspacePath, directory, 'directory'),
-    },
-    SEPARATOR,
-    typedFiles.length > 0 && {
-      label: 'Revision type',
-      icon: Binary,
-      entries: [
-        { id: 'type.bin', label: 'Binary', run: () => void changeRevisionType(workspacePath, typedFiles, 'bin') },
-        { id: 'type.txt', label: 'Text', run: () => void changeRevisionType(workspacePath, typedFiles, 'txt') },
-      ],
-    },
-    single && !hasRoot && filterRulesSubmenu(workspacePath, single.path),
-    {
-      label: 'Copy',
-      icon: Copy,
-      entries: [
-        { id: 'copy.relative', label: 'Copy relative path', run: () => copyPaths(items.map((item) => item.path)) },
-        { id: 'copy.absolute', label: 'Copy full path', run: () => copyPaths(items.map((item) => absolutePath(workspacePath, item.path))) },
-      ],
-    },
-    SEPARATOR,
-    { id: 'locks', label: 'Show locks', icon: Lock, run: () => navigation.goToView('locks') },
-  ]);
+  return groupedMenu({
+    primary: [single && single.itemType !== 'directory' && { id: 'open', label: 'Open', icon: AppWindow, run: () => openItem(workspacePath, single) }],
+    act: [
+      privateItems.length > 0 && {
+        id: 'add',
+        label: privateItems.some((item) => item.itemType === 'directory') ? 'Add to version control (recursively)' : 'Add to version control',
+        icon: Plus,
+        run: () => void addItems(workspacePath, privateItems),
+      },
+      checkoutCandidates.length > 0 && { id: 'checkout', label: 'Check out', icon: PenLine, run: () => void checkoutItems(workspacePath, checkoutCandidates) },
+    ],
+    create: [
+      single && {
+        id: 'newFile',
+        label: 'New file…',
+        icon: FilePlus,
+        shortcut: FILE_SHORTCUTS.newFile,
+        run: () => void createItem(workspacePath, directory, 'file'),
+      },
+      single && {
+        id: 'newFolder',
+        label: 'New folder…',
+        icon: FolderPlus,
+        shortcut: FILE_SHORTCUTS.newFolder,
+        run: () => void createItem(workspacePath, directory, 'directory'),
+      },
+    ],
+    navigate: [
+      single && !single.isPrivate && single.itemType !== 'directory' && {
+        id: 'changes',
+        label: 'Show changes',
+        icon: FileDiff,
+        shortcut: FILE_SHORTCUTS.showChanges,
+        run: () => useFilesViewStore.getState().setDetailsTab('changes'),
+      },
+      // The root changes with every changeset: its history is the whole repository's.
+      single && hasRevisionsToShow(single, pendingChanges) && !hasRoot && {
+        id: 'history',
+        label: 'View history',
+        icon: History,
+        shortcut: FILE_SHORTCUTS.history,
+        run: () => navigation.openPage({ kind: 'history', path: single.path }),
+      },
+      single && hasRevisionsToShow(single, pendingChanges) && canAnnotate(single.itemType) && {
+        id: 'annotate',
+        label: 'Annotate',
+        icon: ScanText,
+        shortcut: FILE_SHORTCUTS.annotate,
+        run: () => navigation.openPage({ kind: 'annotate', path: single.path }),
+      },
+      { id: 'locks', label: 'Show locks', icon: Lock, run: () => navigation.goToView('locks') },
+    ],
+    external: [
+      single && { id: 'reveal', label: REVEAL_LABEL, icon: FolderSearch, run: () => revealItem(workspacePath, single) },
+      single?.itemType === 'directory' && {
+        id: 'terminal',
+        label: 'Open terminal here',
+        icon: SquareTerminal,
+        run: () => openTerminalIn(absolutePath(workspacePath, single.path)),
+      },
+    ],
+    copy: copyPathEntries(workspacePath, items.map((item) => item.path)),
+    edit: [
+      single && !hasRoot && { id: 'rename', label: 'Rename…', icon: Pencil, shortcut: FILE_SHORTCUTS.rename, run: () => void renameItem(workspacePath, single) },
+      typedFiles.length > 0 && {
+        label: 'Revision type',
+        icon: Binary,
+        entries: [
+          { id: 'type.bin', label: 'Binary', run: () => void changeRevisionType(workspacePath, typedFiles, 'bin') },
+          { id: 'type.txt', label: 'Text', run: () => void changeRevisionType(workspacePath, typedFiles, 'txt') },
+        ],
+      },
+      single && !hasRoot && filterRulesSubmenu(workspacePath, single.path),
+    ],
+    danger: [
+      undoable.length > 0 && {
+        id: 'undo',
+        label: undoable.length === 1 ? 'Undo changes…' : `Undo ${undoable.length} changes…`,
+        icon: Undo2,
+        danger: true,
+        run: () => void undoChanges(workspacePath, undoable),
+      },
+      !hasRoot && { id: 'delete', label: 'Delete…', icon: Trash2, danger: true, shortcut: FILE_SHORTCUTS.delete, run: () => void deleteItems(workspacePath, items) },
+    ],
+  });
 }

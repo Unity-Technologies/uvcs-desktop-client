@@ -1,8 +1,9 @@
 import { ArrowRightLeft, Copy, FileDiff, FolderTree, GitBranchPlus, GitCompareArrows, GitGraph, GitMerge, GitPullRequestArrow, Pencil, Trash2 } from 'lucide-react';
 import type { Label } from '@shared/domain/label';
 import { spec } from '@shared/domain/specs';
-import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
+import { SEPARATOR, type MenuEntry } from '../../lib/actions';
 import { copyToClipboard } from '../../lib/copyToClipboard';
+import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { mergeTo } from '../branches/branchOperations';
@@ -24,33 +25,38 @@ export function labelMenu(workspacePath: string, labels: Label[]): MenuEntry[] {
   const single = labels.length === 1 ? labels[0]! : null;
   const pair = labels.length === 2 ? ([labels[0]!, labels[1]!] as const) : null;
 
-  return tidyMenu([
-    single && { id: 'switch', label: 'Switch to this label', icon: ArrowRightLeft, run: () => void switchToLabel(workspacePath, single) },
-    single && { id: 'branch', label: 'New branch from label…', icon: GitBranchPlus, run: () => createBranchFromLabel(workspacePath, single) },
-    SEPARATOR,
-    single && { id: 'merge', label: MERGE_INTO_WORKSPACE, icon: GitMerge, run: () => mergeFromLabel(single) },
-    single && { id: 'mergeTo', label: serverMergeLabel(), icon: GitPullRequestArrow, run: () => void mergeTo(spec.label(single.name), single.name) },
-    SEPARATOR,
-    single && { id: 'diff', label: 'Show labeled changeset', icon: FileDiff, run: () => showLabelChanges(single) },
-    single && { id: 'diffWith', label: 'Compare with another label…', icon: GitCompareArrows, run: () => void diffWithAnotherLabel(single) },
-    pair && { id: 'diffPair', label: 'Compare selected labels', icon: GitCompareArrows, run: () => diffLabels(pair[0], pair[1]) },
-    single && { id: 'browse', label: 'Browse files at this label', icon: FolderTree, run: () => browseLabel(single) },
-    single && {
-      id: 'showInBranchExplorer',
-      label: 'Show in Branch Explorer',
-      icon: GitGraph,
-      run: () => showInBranchExplorer({ kind: 'label', name: single.name, changeset: single.changeset, date: single.date }),
-    },
-    SEPARATOR,
-    single && { id: 'rename', label: 'Rename…', icon: Pencil, shortcut: hotkey('rename'), run: () => void renameLabel(workspacePath, single) },
-    single && { id: 'copy', label: 'Copy name', icon: Copy, run: () => copyToClipboard(single.name, 'Label name') },
-    SEPARATOR,
-    {
-      id: 'delete',
-      label: single ? 'Delete…' : `Delete ${labels.length} labels…`,
-      icon: Trash2,
-      danger: true,
-      run: () => void deleteLabels(workspacePath, labels),
-    },
-  ]);
+  return groupedMenu({
+    primary: [
+      single && { id: 'diff', label: 'Open diff', icon: FileDiff, run: () => showLabelChanges(single) },
+      pair && { id: 'diffPair', label: 'Compare selected labels', icon: GitCompareArrows, run: () => diffLabels(pair[0], pair[1]) },
+    ],
+    act: [
+      single && { id: 'switch', label: 'Switch to this label', icon: ArrowRightLeft, run: () => void switchToLabel(workspacePath, single) },
+      SEPARATOR,
+      single && { id: 'merge', label: MERGE_INTO_WORKSPACE, icon: GitMerge, run: () => mergeFromLabel(single) },
+      single && { id: 'mergeTo', label: serverMergeLabel(), icon: GitPullRequestArrow, run: () => void mergeTo(spec.label(single.name), single.name) },
+    ],
+    create: [single && { id: 'branch', label: 'New branch from here…', icon: GitBranchPlus, run: () => createBranchFromLabel(workspacePath, single) }],
+    navigate: [
+      single && { id: 'diffWith', label: 'Compare with another label…', icon: GitCompareArrows, run: () => void diffWithAnotherLabel(single) },
+      single && { id: 'browse', label: 'Browse repository at this label', icon: FolderTree, run: () => browseLabel(single) },
+      single && {
+        id: 'showInBranchExplorer',
+        label: 'Show in Branch Explorer',
+        icon: GitGraph,
+        run: () => showInBranchExplorer({ kind: 'label', name: single.name, changeset: single.changeset, date: single.date }),
+      },
+    ],
+    copy: [single && { id: 'copy', label: 'Copy name', icon: Copy, run: () => copyToClipboard(single.name, 'Label name') }],
+    edit: [single && { id: 'rename', label: 'Rename…', icon: Pencil, shortcut: hotkey('rename'), run: () => void renameLabel(workspacePath, single) }],
+    danger: [
+      {
+        id: 'delete',
+        label: single ? 'Delete…' : `Delete ${labels.length} labels…`,
+        icon: Trash2,
+        danger: true,
+        run: () => void deleteLabels(workspacePath, labels),
+      },
+    ],
+  });
 }
