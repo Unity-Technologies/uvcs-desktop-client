@@ -5,8 +5,9 @@
  *
  * Keys are written as in `lib/shortcuts.ts` (`mod+shift+k`); the first one is the binding, any others are alternatives.
  * `mod` is ⌘ on macOS and Ctrl elsewhere; a shortcut takes other keys on Windows and Linux (`keysOffMac`) where
- * their conventions differ (Alt+← goes back, Delete deletes) or where the Mac's would be AltGr: Ctrl+Alt types
- * characters on most European layouts (Ctrl+Alt+Z is ż in Polish), so no shortcut uses it there.
+ * their conventions differ (Alt+← goes back, Delete deletes, Ctrl+H is History as in their browsers since Ctrl+Y is
+ * Redo) or where the Mac's would be AltGr: Ctrl+Alt types characters on most European layouts (Ctrl+Alt+Z is ż in
+ * Polish), so no shortcut uses it there.
  */
 import { isMac } from './platform';
 
@@ -111,7 +112,7 @@ export const SHORTCUTS = {
   deleteFile: { area: 'Files', label: 'Delete', keys: ['mod+backspace'], keysOffMac: ['delete'] },
   newFile: { area: 'Files', label: 'New file', keys: ['mod+shift+n'] },
   newFolder: { area: 'Files', label: 'New folder', keys: ['mod+shift+d'] },
-  fileHistory: { area: 'Files', label: 'History', keys: ['mod+y'] },
+  fileHistory: { area: 'Files', label: 'History', keys: ['mod+y'], keysOffMac: ['mod+h'] },
   annotate: { area: 'Files', label: 'Annotate', keys: ['mod+t'] },
 
   merge: { area: 'Merge', label: 'Merge', keys: ['mod+enter'] },

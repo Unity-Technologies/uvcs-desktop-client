@@ -93,6 +93,12 @@ describe('shortcut registry', () => {
     expect(shortcutKeys(SHORTCUTS.deleteFile, false)).toEqual(['delete']);
     expect(shortcutKeys(SHORTCUTS.deleteFile, true)).toEqual(['mod+backspace']);
     expect(shortcutKeys(SHORTCUTS.discardLines, true)).toEqual(['mod+alt+z']);
+    expect(shortcutKeys(SHORTCUTS.fileHistory, false)).toEqual(['mod+h']);
+    expect(shortcutKeys(SHORTCUTS.fileHistory, true)).toEqual(['mod+y']);
+  });
+
+  it('leaves undo and redo to text off macOS, where Ctrl+Y is Redo', () => {
+    for (const key of keysOn(false)) expect(['mod+y', 'mod+shift+z'], key).not.toContain(key);
   });
 
   it('opens the menu with F10 off macOS only, where the window has no menu bar of its own on Windows', () => {
