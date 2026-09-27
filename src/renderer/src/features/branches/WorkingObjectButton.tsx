@@ -1,14 +1,17 @@
 import * as Popover from '@radix-ui/react-popover';
 import { Archive, ChevronDown, GitBranch, GitBranchPlus, GitCommitVertical, Tag } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import type { SelectorKind, WorkspaceInfo, WorkspaceSelector } from '@shared/domain/workspace';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { useRunningOperationOfKind } from '../../app/operations/runningOperationsStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { COPY_ENTRY_IDS } from '../../components/copyMenu';
 import { PathLabel } from '../../components/PathLabel';
 import { workingObjectName } from '../../components/workingObject';
 import { runningFirst, type Icon } from '../../lib/actions';
+import { holdBackMenuKeyRelease, isListMenuKey, openContextMenuOf } from '../../lib/rowMenu';
+import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { Button } from '../../ui/Button';
 import { ringValue } from '../../app/operations/progressBar';
 import { ProgressRing } from '../../ui/ProgressRing';
@@ -22,7 +25,9 @@ import { useBranchSwitcher } from './branchSwitcherStore';
 import { newBranchFromWorkspace } from './newBranchFromWorkspace';
 import { useRecentBranchGuids } from './recentBranches';
 import { useBranches } from './useBranches';
+import { useWorkingObject } from './useWorkingObject';
 import { useWorkingObjectComment } from './useWorkingObjectComment';
+import { workingObjectMenu } from './workingObjectMenu';
 import styles from './WorkingObjectButton.module.css';
 import { hotkey } from '../../lib/shortcutRegistry';
 
@@ -33,7 +38,7 @@ const SELECTOR_ICONS: Record<SelectorKind, Icon> = {
   shelve: Archive,
 };
 
-/** Shows what the workspace is loaded from and lets the user switch branches. */
+/** Shows what the workspace is loaded from and lets the user switch branches; right-click for that object's menu. */
 export function WorkingObjectButton() {
   const { data: workspace } = useWorkspaceInfo();
   const workspacePath = useWorkspacePath();
@@ -48,21 +53,36 @@ export function WorkingObjectButton() {
   const title = workspace ? workingObjectTitle(workspace.selector) : '…';
   const { data: comment } = useWorkingObjectComment(workspace);
   const firstLine = comment?.split('\n', 1)[0]?.trim();
+  // Right-click (or the context-menu key, Shift+F10) offers what the workspace is on, as its list does; what that
+  // needs is read once the pointer or focus is on the pill.
+  const [menuWanted, setMenuWanted] = useState(false);
+  const workingObject = useWorkingObject(workspace, menuWanted);
+  const wantMenu = (): void => setMenuWanted(true);
 
   return (
     <Popover.Root open={isOpen} onOpenChange={setOpen}>
-      <Popover.Trigger asChild>
-        <ToolbarPill
-          className={styles.trigger}
-          icon={switchBar ? <ProgressRing value={ringValue(switchBar)} size={14} /> : <SelectorIcon size={15} />}
-          label={switching ? `${switching}…` : workspace?.selector.kind === 'branch' ? <PathLabel path={title} fitContent tooltip={false} /> : title}
-          sub={switching || comment === undefined ? undefined : firstLine || <span className={styles.noComment}>No comment</span>}
-          data-tip={switching ? undefined : title}
-          data-tip-sub={switching ? undefined : comment?.trim() || undefined}
-          data-tip-shortcut={switching ? undefined : hotkey('switchBranch')}
-          trailing={<ChevronDown size={14} className={styles.chevron} />}
-        />
-      </Popover.Trigger>
+      <ActionContextMenu entries={() => (workspace ? workingObjectMenu(workspace, workingObject) : [])}>
+        <Popover.Trigger asChild>
+          <ToolbarPill
+            onPointerEnter={wantMenu}
+            onFocus={wantMenu}
+            onKeyDown={(event) => {
+              if (!isListMenuKey(event)) return;
+              event.preventDefault();
+              openContextMenuOf(event.currentTarget);
+            }}
+            onKeyUp={holdBackMenuKeyRelease}
+            className={styles.trigger}
+            icon={switchBar ? <ProgressRing value={ringValue(switchBar)} size={14} /> : <SelectorIcon size={15} />}
+            label={switching ? `${switching}…` : workspace?.selector.kind === 'branch' ? <PathLabel path={title} fitContent tooltip={false} /> : title}
+            sub={switching || comment === undefined ? undefined : firstLine || <span className={styles.noComment}>No comment</span>}
+            data-tip={switching ? undefined : title}
+            data-tip-sub={switching ? undefined : comment?.trim() || undefined}
+            data-tip-shortcut={switching ? undefined : hotkey('switchBranch')}
+            trailing={<ChevronDown size={14} className={styles.chevron} />}
+          />
+        </Popover.Trigger>
+      </ActionContextMenu>
       <Popover.Portal>
         <Popover.Content className={styles.popover} align="start" sideOffset={6} {...returnFocus}>
           {workspace && <BranchSwitcher workspace={workspace} onDone={() => setOpen(false)} />}
@@ -96,7 +116,7 @@ function BranchSwitcher({ workspace, onDone }: { workspace: WorkspaceInfo; onDon
       placeholder="Switch to branch…"
       onPick={pick}
       // Actions close the popup first (dialogs and pages open without it on top); copying keeps it open.
-      menu={(branch) => runningFirst(branchMenu(workspace.path, [branch], currentBranch), onDone, ['copy', 'copySpec'])}
+      menu={(branch) => runningFirst(branchMenu(workspace.path, [branch], currentBranch), onDone, COPY_ENTRY_IDS)}
       action={
         <Button
           size="small"
