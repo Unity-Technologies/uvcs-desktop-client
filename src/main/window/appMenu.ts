@@ -69,7 +69,7 @@ export function installAppMenu(windows: WorkspaceWindows): void {
     {
       label: 'File',
       submenu: [
-        commandItem('Open Workspace…', 'workspace.open', 'CmdOrCtrl+Shift+O'),
+        commandItem('Open Another Workspace…', 'workspace.open', 'CmdOrCtrl+Shift+O'),
         commandItem('Update Workspace', 'workspace.update', 'CmdOrCtrl+Shift+U'),
         { type: 'separator' },
         ...(isMac ? [] : [commandItem('Settings…', 'app.settings', 'CmdOrCtrl+,'), { type: 'separator' as const }]),
