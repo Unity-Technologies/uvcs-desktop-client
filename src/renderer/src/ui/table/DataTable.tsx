@@ -3,7 +3,8 @@ import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { MenuEntry } from '../../lib/actions';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
-import { isMac } from '../../lib/platform';
+import { isListMenuKey, openContextMenuOf } from '../../lib/rowMenu';
+import { isModPressed } from '../../lib/shortcuts';
 import { focusedKeyOf, selectOnArrow, selectOnClick, successorKey, type SelectionState } from '../../lib/selection';
 import { ActionContextMenu } from '../menu/ActionContextMenu';
 import { cellText } from './cellText';
@@ -169,9 +170,14 @@ export function DataTable<Row>({
       moveBy(step, event.shiftKey);
     } else if (event.key === 'Enter' && focused && onActivate) {
       onActivate(rowsByKey.get(focused)!);
-    } else if (event.key === 'a' && (isMac ? event.metaKey : event.ctrlKey)) {
+    } else if (event.key === 'a' && isModPressed(event)) {
       event.preventDefault();
       onSelectionChange({ selected: new Set(orderedKeys), anchor: orderedKeys[0] ?? null });
+    } else if (contextMenu && focusedIndex !== -1 && isListMenuKey(event)) {
+      // The menu's trigger is the rows' viewport, which the keyboard's own context-menu event (sent to the focused
+      // table) never reaches.
+      event.preventDefault();
+      openContextMenuOf(document.getElementById(`${rowIdPrefix}-${focusedIndex}`));
     } else {
       const focusedRow = rowsByKey.get(focused ?? '');
       if (focusedRow) onRowKeyDown?.(event, focusedRow, (step) => moveBy(step, false));
@@ -179,7 +185,7 @@ export function DataTable<Row>({
   };
 
   const onRowMouseDown = (key: string, event: React.MouseEvent): void => {
-    const toggle = isMac ? event.metaKey : event.ctrlKey;
+    const toggle = isModPressed(event);
     // Right-clicking inside the selection keeps it, so the context menu acts on all selected rows.
     if (event.button === 2 && selection.selected.has(key)) return;
     setFocusedKey(key);

@@ -1,6 +1,7 @@
 import { Plus, RefreshCw, Tags } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { AttributeType } from '@shared/domain/attribute';
+import { useRenameCommand } from '../../app/commands/useRenameCommand';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
@@ -18,7 +19,7 @@ import { SearchField } from '../../ui/SearchField';
 import { cellText } from '../../ui/table/cellText';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
-import { editAttributeComment } from './attributeOperations';
+import { editAttributeComment, renameAttributeType } from './attributeOperations';
 import { AttributeTypeDetails } from './AttributeTypeDetails';
 import { attributeTypeMenu } from './attributeTypeMenu';
 import { openCreateAttributeDialog } from './CreateAttributeDialog';
@@ -49,6 +50,7 @@ export function AttributesView() {
     [types, search],
   );
   const selected = visible.find((type) => typeKey(type) === selection.anchor);
+  useRenameCommand('Attributes', 'attribute', selection.selected.size === 1 ? selected : undefined, (type) => void renameAttributeType(workspacePath, type));
 
   return (
     <>
