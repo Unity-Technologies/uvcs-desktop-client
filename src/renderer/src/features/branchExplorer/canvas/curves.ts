@@ -27,6 +27,47 @@ export function pointOnCurve([p0, p1, p2, p3]: Curve, t: number): Point {
   return { x: a * p0.x + b * p1.x + c * p2.x + d * p3.x, y: a * p0.y + b * p1.y + c * p2.y + d * p3.y };
 }
 
+/** How far back from the end the search for where a curve arrives steps, before narrowing down. */
+const ARRIVAL_STEP = 1 / 32;
+
+/**
+ * Where the curve comes within `distance` of its end, the last time along it, and the angle it runs at there. An
+ * arrow drawn there sits on the line where it disappears behind the changeset it points at, aligned with it, instead
+ * of along the curve's hidden last stretch (flat, while a link can arrive from far below).
+ */
+export function arrivalAt(curve: Curve, distance: number): Point & { angle: number } {
+  let inside = 1;
+  let outside = 0;
+  for (let t = 1 - ARRIVAL_STEP; t > 0; t -= ARRIVAL_STEP) {
+    if (distanceFromEnd(curve, t) >= distance) {
+      outside = t;
+      break;
+    }
+    inside = t;
+  }
+  for (let step = 0; step < 24; step++) {
+    const middle = (inside + outside) / 2;
+    if (distanceFromEnd(curve, middle) >= distance) outside = middle;
+    else inside = middle;
+  }
+  const t = (inside + outside) / 2;
+  const [p0, p1, p2, p3] = curve;
+  const u = 1 - t;
+  const dx = 3 * u * u * (p1.x - p0.x) + 6 * u * t * (p2.x - p1.x) + 3 * t * t * (p3.x - p2.x);
+  const dy = 3 * u * u * (p1.y - p0.y) + 6 * u * t * (p2.y - p1.y) + 3 * t * t * (p3.y - p2.y);
+  return { ...pointOnCurve(curve, t), angle: Math.atan2(dy, dx) };
+}
+
+/** How far the point at `t` is from the curve's end; allocates nothing, as the arrows ask it often in every frame. */
+function distanceFromEnd([p0, p1, p2, p3]: Curve, t: number): number {
+  const u = 1 - t;
+  const a = u * u * u;
+  const b = 3 * u * u * t;
+  const c = 3 * u * t * t;
+  const d = t * t * t;
+  return Math.hypot(a * p0.x + b * p1.x + c * p2.x + d * p3.x - p3.x, a * p0.y + b * p1.y + c * p2.y + d * p3.y - p3.y);
+}
+
 /** Approximate distance from a point to the curve, good enough for hit testing. */
 export function distanceToCurve(curve: Curve, point: Point, samples = 24): number {
   let best = Number.POSITIVE_INFINITY;

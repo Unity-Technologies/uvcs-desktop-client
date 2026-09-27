@@ -44,16 +44,17 @@ export function branchMenu(workspacePath: string, branches: BranchInfo[], curren
   const isCurrent = single?.name === currentBranch;
   const hidden = branches.filter((branch) => branch.isHidden);
   const visible = branches.filter((branch) => !branch.isHidden);
-  const other = single && !isCurrent ? single : null;
+  // What makes no sense on the branch the workspace is on stays in its place, disabled: every branch menu has one shape.
+  const onCurrent = isCurrent ? { disabled: true, disabledReason: 'The workspace is already on this branch' } : {};
 
   return groupedMenu([
     single && menuAction('diff', () => diffBranch(single)),
-    other && menuAction('switch', () => void switchToBranch(workspacePath, other.name), { label: 'Switch to this branch' }),
-    other && menuAction('taskWorkspace', () => openTaskWorkspaceDialog({ workspacePath, branch: other.name })),
-    other && menuAction('merge', () => mergeFromBranch(other.name)),
+    single && menuAction('switch', () => void switchToBranch(workspacePath, single.name), { label: 'Switch to this branch', ...onCurrent }),
+    single && menuAction('taskWorkspace', () => openTaskWorkspaceDialog({ workspacePath, branch: single.name }), onCurrent),
+    single && menuAction('merge', () => mergeFromBranch(single.name), onCurrent),
     single && isTaskBranch(single) && menuAction('mergeTask', () => openMergeTaskDialog(workspacePath, single), { label: serverMergeLabel(single.parent) }),
     single && menuAction('mergeTo', () => void mergeTo(spec.branch(single.name), single.name)),
-    other && menuAction('cherryPick', () => cherryPickFromBranch(other.name), { label: 'Cherry pick branch changes' }),
+    single && menuAction('cherryPick', () => cherryPickFromBranch(single.name), { label: 'Cherry pick branch changes', ...onCurrent }),
     single &&
       menuAction('newBranch', () =>
         void openCreateBranchDialog(workspacePath, {

@@ -4,6 +4,7 @@ import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
 import type { SearchHighlight } from '../model/searchGraph';
 import type { DrawnBoxes } from './drawnBoxes';
 import type { GraphPalette } from './graphPalette';
+import type { Pen } from './pen';
 import type { Size, Viewport } from './viewport';
 
 /** What the user chose to see in the graph. */
@@ -85,6 +86,11 @@ export interface DetailLevel {
 
 export interface DrawContext {
   ctx: CanvasRenderingContext2D;
+  /**
+   * Places shapes and text in the coordinates of the phase being drawn: world positions while drawing the world,
+   * handed to the canvas relative to the frame's origin (`OriginPen`); the context itself while drawing on the screen.
+   */
+  pen: Pen;
   scene: GraphScene;
   visible: VisibleArea;
   detail: DetailLevel;
