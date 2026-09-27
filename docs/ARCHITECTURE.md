@@ -341,7 +341,7 @@ and many people use the same server. Every `cm` command other than local reads (
   Explorer is kept five minutes and focus never re-reads all history. Local views skip focus while the watcher sees the disk.
 - **Home**: the repository and branch of every listed workspace come from its `.plastic/plastic.selector` file
   (`workspaces.heads`); `cm` is asked only about recent workspaces whose file can't tell.
-- **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`), `cm diff`
+- **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`; `useSettledValue` for details that stay on screen as the selection moves, like a history's diff), `cm diff`
   runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id, specs
   pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`; the last 100 off screen, `boundUnusedQueries`) and skipped by refreshes.
   An object opened from a list already read starts from it (`useChangeset`) and is asked for only once that list is stale.

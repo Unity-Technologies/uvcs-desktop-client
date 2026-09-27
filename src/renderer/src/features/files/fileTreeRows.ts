@@ -23,12 +23,13 @@ interface BuildFileTreeRowsInput {
 export function buildFileTreeRows({ childrenByDirectory, expanded, filter = '', root }: BuildFileTreeRowsInput): FileTreeRow[] {
   const needle = filter.trim().toLowerCase();
   const rows: FileTreeRow[] = [];
+  const matches = needle ? matcherFor(needle, childrenByDirectory) : () => true;
 
   const visit = (directory: string, depth: number): void => {
     for (const item of sortItems(childrenByDirectory.get(directory) ?? [])) {
       const isDirectory = item.itemType === 'directory';
       const isExpanded = isDirectory && expanded.has(item.path);
-      if (needle && !matchesBelow(item, needle, childrenByDirectory)) continue;
+      if (!matches(item)) continue;
 
       rows.push({ item, depth, isExpanded, isLoading: isExpanded && !childrenByDirectory.has(item.path) });
       if (isExpanded) visit(item.path, depth + 1);
@@ -59,11 +60,17 @@ export function indentOf(depth: number): number {
   return full * INDENT + (depth - full) * (INDENT / 4);
 }
 
-export function sortItems(items: TreeItem[]): TreeItem[] {
-  return [...items].sort((a, b) => {
-    const directoryFirst = Number(b.itemType === 'directory') - Number(a.itemType === 'directory');
-    return directoryFirst || a.name.localeCompare(b.name, undefined, { sensitivity: 'base', numeric: true });
-  });
+const byName = new Intl.Collator(undefined, { sensitivity: 'base', numeric: true }).compare;
+const sortedListings = new WeakMap<readonly TreeItem[], TreeItem[]>();
+
+/** Directories first, then by name. Each listing is sorted once: the tree is rebuilt on every expand and filter keystroke. */
+export function sortItems(items: readonly TreeItem[]): TreeItem[] {
+  let sorted = sortedListings.get(items);
+  if (!sorted) {
+    sorted = [...items].sort((a, b) => Number(b.itemType === 'directory') - Number(a.itemType === 'directory') || byName(a.name, b.name));
+    sortedListings.set(items, sorted);
+  }
+  return sorted;
 }
 
 /** Parent directories of a path, outermost first: `a/b/c.ts` → `['a', 'a/b']`. */
@@ -76,7 +83,19 @@ export function parentOf(path: string): string {
   return path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
 }
 
-function matchesBelow(item: TreeItem, needle: string, childrenByDirectory: ReadonlyMap<string, TreeItem[]>): boolean {
-  if (item.name.toLowerCase().includes(needle)) return true;
-  return (childrenByDirectory.get(item.path) ?? []).some((child) => matchesBelow(child, needle, childrenByDirectory));
+/** Whether an item's name, or a name listed anywhere below it, contains the needle; each directory is searched once. */
+function matcherFor(needle: string, childrenByDirectory: ReadonlyMap<string, TreeItem[]>): (item: TreeItem) => boolean {
+  const directoryMatches = new Map<string, boolean>();
+  const matches = (item: TreeItem): boolean => {
+    if (item.name.toLowerCase().includes(needle)) return true;
+    const children = childrenByDirectory.get(item.path);
+    if (!children) return false;
+    let found = directoryMatches.get(item.path);
+    if (found === undefined) {
+      found = children.some(matches);
+      directoryMatches.set(item.path, found);
+    }
+    return found;
+  };
+  return matches;
 }
