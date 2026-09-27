@@ -55,6 +55,33 @@ describe('detectKnownTools', () => {
       ['rider', 'C:\\Program Files\\JetBrains\\JetBrains Rider 2026.2\\bin\\rider64.exe'],
     ]);
   });
+
+  it('finds the Windows tools where their installers put them', () => {
+    expect(
+      found(windows, [
+        'C:\\Program Files\\KDiff3\\bin\\kdiff3.exe',
+        'C:\\Program Files\\WinMerge\\WinMergeU.exe',
+        'C:\\Users\\me\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin\\cursor.cmd',
+        'C:\\Program Files (x86)\\Beyond Compare 4\\BComp.exe',
+      ]),
+    ).toEqual([
+      ['cursor', 'C:\\Users\\me\\AppData\\Local\\Programs\\cursor\\resources\\app\\bin\\cursor.cmd'],
+      ['kdiff3', 'C:\\Program Files\\KDiff3\\bin\\kdiff3.exe'],
+      ['bcompare', 'C:\\Program Files (x86)\\Beyond Compare 4\\BComp.exe'],
+      ['winmerge', 'C:\\Program Files\\WinMerge\\WinMergeU.exe'],
+    ]);
+  });
+
+  it('finds Linux tools on the PATH, and VS Code where its package installs it when the PATH is short', () => {
+    const linux: Whereabouts = { platform: 'linux', env: { PATH: '/usr/bin:/bin' }, home: '/home/me', cmPath: '/usr/bin/cm' };
+    expect(found(linux, ['/usr/bin/plasticgui', '/usr/bin/meld', '/usr/bin/kdiff3', '/usr/share/code/bin/code', '/usr/bin/bcompare'])).toEqual([
+      ['uvcs', '/usr/bin/plasticgui'],
+      ['vscode', '/usr/share/code/bin/code'],
+      ['kdiff3', '/usr/bin/kdiff3'],
+      ['bcompare', '/usr/bin/bcompare'],
+      ['meld', '/usr/bin/meld'],
+    ]);
+  });
 });
 
 describe('locateProgram', () => {
