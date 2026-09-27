@@ -1,6 +1,7 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { compareTones } from '../../components/changeFilter';
 import type { CheckState } from '../../ui/Checkbox';
+import { isCheckinCandidate } from './changeCategories';
 import { changeTone } from './changeTone';
 
 /** A changelist header. */
@@ -11,7 +12,8 @@ interface GroupRow {
   /** Set when the group is a user changelist. */
   changelist?: Changelist;
   changes: PendingChange[];
-  checkState: CheckState;
+  /** Null when nothing in it can be checked in. */
+  checkState: CheckState | null;
   collapsed: boolean;
 }
 
@@ -25,7 +27,8 @@ interface DirectoryRow {
   change?: PendingChange;
   /** Every change in the folder, its own included. */
   changes: PendingChange[];
-  checkState: CheckState;
+  /** Null when nothing in it can be checked in. */
+  checkState: CheckState | null;
   collapsed: boolean;
 }
 
@@ -263,8 +266,11 @@ function foldersAbove(path: string): string[] {
   return parts.slice(1).map((_, index) => parts.slice(0, index + 1).join('/'));
 }
 
-function combinedCheckState(changes: PendingChange[], isChecked: (change: PendingChange) => boolean): CheckState {
-  const checkedCount = changes.filter(isChecked).length;
+/** Over the changes a folder or changelist holds that can go into a check-in; null when none can (only ignored files). */
+function combinedCheckState(changes: PendingChange[], isChecked: (change: PendingChange) => boolean): CheckState | null {
+  const candidates = changes.filter(isCheckinCandidate);
+  if (candidates.length === 0) return null;
+  const checkedCount = candidates.filter(isChecked).length;
   if (checkedCount === 0) return false;
-  return checkedCount === changes.length ? true : 'mixed';
+  return checkedCount === candidates.length ? true : 'mixed';
 }

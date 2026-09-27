@@ -118,6 +118,18 @@ describe('buildChangeRows', () => {
     expect(rows.slice(underSrc + 1, underSrc + 3).map((row) => row.key)).toEqual(['change:Src/a.ts', 'change:Src/c.ts']);
   });
 
+  it('checks folders by what they hold that can be checked in, and offers no check where that is nothing', () => {
+    const rows = buildChangeRows({
+      ...base,
+      changes: [change('bin/out.log', ['ignored']), change('src/a.ts', ['changed']), change('src/build.log', ['ignored'])],
+      layout: 'tree',
+    });
+    expect(rows.filter((row) => row.type === 'directory').map((row) => [row.path, row.type === 'directory' && row.checkState])).toEqual([
+      ['bin', null],
+      ['src', true],
+    ]);
+  });
+
   it('hides the contents of collapsed folders', () => {
     const rows = buildChangeRows({
       ...base,
