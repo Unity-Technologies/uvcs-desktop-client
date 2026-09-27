@@ -158,6 +158,8 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   windows showing it; own writes are ignored in the workspace they touch.
 - Settings are written in main, one change at a time; values computed from the stored ones (the recent workspaces) are
   computed there too, and every window gets the result (`settingsChanged`).
+- What a window checks as it opens (`cm version`, `cm checkconnection`) runs until it succeeds once; later windows take
+  that answer (`untilSucceeded`). A problem is checked again by the next window, and by Retry.
 - "New workspace for a task" (`features/taskWorkspace`) creates a child of /main at its head (or takes an existing branch),
   a workspace next to the current one, and switches it (a plain `cm switch`: it's empty); a failure removes the new
   workspace and keeps the branch. The switcher shows the branch and pending changes of the other workspaces of the same
@@ -197,6 +199,7 @@ renderer/src/
   - `workspaceChanged` tells file edits (pending changes, review marks, files view, open diffs of workspace files; if auto refresh is on, and once when it's turned back on)
     from `.plastic` rewrites by any tool (workspace info; everything when the loaded changeset or branch moved). See
     `app/shell/useWorkspaceWatcher.ts` and `app/refresh/`. A diff with unsaved edits holds still and offers to reload instead.
+    A hidden window (minimized, covered, on another desktop) keeps the changes and refreshes once, when it shows again.
   - Locks live on the server, where nothing reports changes: pending changes re-read them along with the changes, at most every 30 s.
   - Window focus (wired to real focus in `trackWindowFocus`) refetches stale server views; local views skip it while the watcher sees everything.
   - Incoming: `useIncomingSummary` polls every minute with focus, every five minutes behind other apps, never hidden, and on focus if
