@@ -10,6 +10,8 @@ interface PromptOptions {
   initialValue?: string;
   confirmLabel: string;
   description?: string;
+  /** What's wrong with the text, shown under the field while it stands in the way of confirming. */
+  validate?: (value: string) => string | undefined;
 }
 
 /** Asks for a single line of text, e.g. a new name. Resolves to `undefined` if cancelled. */
@@ -23,27 +25,29 @@ function PromptDialog({
   initialValue = '',
   confirmLabel,
   description,
+  validate,
   finish,
 }: PromptOptions & { finish: (value: string | undefined) => void }) {
   const [value, setValue] = useState(initialValue);
   const trimmed = value.trim();
+  const problem = trimmed && trimmed !== initialValue ? validate?.(trimmed) : undefined;
 
   return (
     <Dialog
       title={title}
       description={description}
       onClose={() => finish(undefined)}
-      onSubmit={() => trimmed && finish(trimmed)}
+      onSubmit={() => trimmed && !problem && finish(trimmed)}
       footer={
         <>
           <Button onClick={() => finish(undefined)}>Cancel</Button>
-          <Button type="submit" variant="primary" disabled={!trimmed || trimmed === initialValue}>
+          <Button type="submit" variant="primary" disabled={!trimmed || trimmed === initialValue || problem !== undefined}>
             {confirmLabel}
           </Button>
         </>
       }
     >
-      <TextField label={label} value={value} onChange={(event) => setValue(event.target.value)} autoFocus onFocus={(event) => event.target.select()} />
+      <TextField label={label} value={value} error={problem} onChange={(event) => setValue(event.target.value)} autoFocus onFocus={(event) => event.target.select()} />
     </Dialog>
   );
 }

@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { dialog, shell } from 'electron';
 import type { ExplorerApi } from '@shared/api/explorer';
 import type { RevisionType } from '@shared/domain/explorer';
@@ -40,6 +40,8 @@ export function createExplorerService({ cm }: ServiceContext): ExplorerApi {
 
   async function create(workspacePath: string, path: string, kind: 'file' | 'directory') {
     const absolutePath = toAbsolutePath(workspacePath, path);
+    // Folders typed along with the name (`docs/intro.md`) are created too; `cm add` adds them with the item.
+    await mkdir(dirname(absolutePath), { recursive: true });
     if (kind === 'directory') await mkdir(absolutePath);
     else await writeFile(absolutePath, '', { flag: 'wx' });
     await cm.query(['add', '--coparent', absolutePath], inWorkspace(workspacePath));
