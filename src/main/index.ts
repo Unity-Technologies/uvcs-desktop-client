@@ -3,6 +3,7 @@ import { app, webContents } from 'electron';
 import { CmClient } from './cm/CmClient';
 import { locateCm } from './cm/locateCm';
 import { warnOnRepeatedServerCommands } from './cm/repeatedCommands';
+import { findWorkspaceRoot } from './cm/workspaceRoot';
 import { currentCaller } from './ipc/caller';
 import { registerApi } from './ipc/registerApi';
 import { sendEvent, sendEventTo, sendEventToCaller } from './ipc/sendEvent';
@@ -16,6 +17,7 @@ import { WorkspaceWatchers } from './watch/WorkspaceWatchers';
 import { installAppMenu } from './window/appMenu';
 import { followAppTheme } from './window/followAppTheme';
 import { handleRecentDocumentRequests } from './window/recentDocuments';
+import { workspaceArgument } from './window/workspaceArgument';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
 
@@ -87,14 +89,31 @@ function start(): void {
   app.on('activate', () => windows.all().length === 0 && windows.open());
 }
 
-// One running app per user: a second launch focuses the existing window. Development builds skip
-// this so several instances (e.g. automated UI checks) can run side by side.
+/**
+ * Opens the workspace holding the folder a launch of the installed app names (Windows and Linux pass it as an
+ * argument; macOS as `open-file`). Whether it named one.
+ */
+function openNamedWorkspace(argv: readonly string[], workingDirectory: string): boolean {
+  const folder = app.isPackaged ? workspaceArgument(argv, workingDirectory) : null;
+  if (!folder) return false;
+  void findWorkspaceRoot(cm, folder).then((root) => {
+    if (root) windows.requestWorkspace(root, app.isReady());
+    else if (app.isReady()) windows.focusAny();
+  });
+  return true;
+}
+
+// One running app per user: a second launch focuses the existing window, or opens the workspace it names.
+// Development builds skip this so several instances (e.g. automated UI checks) can run side by side.
 if (app.isPackaged && !app.requestSingleInstanceLock()) {
   app.quit();
 } else {
-  app.on('second-instance', () => windows.focusAny());
+  app.on('second-instance', (_event, argv, workingDirectory) => {
+    if (!openNamedWorkspace(argv, workingDirectory)) windows.focusAny();
+  });
   // Registered before the app is ready: opening a recent workspace from the Dock can be what launches it.
   handleRecentDocumentRequests(windows);
+  openNamedWorkspace(process.argv, process.cwd());
   app.whenReady().then(start);
 }
 

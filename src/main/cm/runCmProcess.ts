@@ -45,7 +45,8 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
     child.on('error', reject);
     child.on('close', (code) => {
       if (pendingLine) options.onOutputLine?.(pendingLine);
-      resolve({ output: chunks.join(''), exitCode: code ?? -1 });
+      // Windows ends lines with CRLF; parsers get LF, as from a `cm shell`.
+      resolve({ output: chunks.join('').replaceAll('\r\n', '\n'), exitCode: code ?? -1 });
     });
   });
 }

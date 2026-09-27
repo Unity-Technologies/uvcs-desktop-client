@@ -1,6 +1,7 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 import { MAIN_BRANCH_GUID } from '@shared/domain/branch';
+import { retryWhileBusy } from '../files/whileBusy';
 import { plasticConfigFile } from './configFolder';
 import { readRecentBranches, withRecentBranch } from './recentBranchesConf';
 
@@ -21,7 +22,8 @@ export function saveRecentBranch(workspaceGuid: string, branchGuid: string): Pro
     await mkdir(dirname(file), { recursive: true });
     const temp = `${file}.${process.pid}.tmp`;
     await writeFile(temp, withRecentBranch(await readConf(), workspaceGuid, branchGuid));
-    await rename(temp, file);
+    // On Windows the official client may be reading it right then.
+    await retryWhileBusy(() => rename(temp, file));
   });
   pendingSave = saved.catch(() => undefined);
   return saved;

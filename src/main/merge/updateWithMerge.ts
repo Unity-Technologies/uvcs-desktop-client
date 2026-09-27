@@ -6,6 +6,7 @@ import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { UPDATE_ARGS } from '../cm/updateArgs';
 import { waitForNextSecond } from '../files/nextSecond';
+import { retryWhileBusy } from '../files/whileBusy';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
 import { readIncomingChanges } from './incoming';
@@ -59,7 +60,7 @@ export async function updateWithMerge(
   await waitForNextSecond();
   for (const conflict of conflicts) {
     const resolution = resolutions[conflict.path]!;
-    if (resolution.choice === 'text') await writeFile(absolute(conflict), resolution.text, 'utf8');
+    if (resolution.choice === 'text') await retryWhileBusy(() => writeFile(absolute(conflict), resolution.text, 'utf8'));
     else if (resolution.choice === 'destination') await copyInto(backup(conflict), absolute(conflict));
   }
 
@@ -85,5 +86,6 @@ async function readCheckedOutPaths(cm: CmClient, workspacePath: string): Promise
  */
 async function copyInto(source: string, target: string): Promise<void> {
   await mkdir(dirname(target), { recursive: true });
-  await writeFile(target, await readFile(source));
+  const content = await readFile(source);
+  await retryWhileBusy(() => writeFile(target, content));
 }

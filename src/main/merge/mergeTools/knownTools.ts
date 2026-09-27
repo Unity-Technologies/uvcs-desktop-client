@@ -48,15 +48,20 @@ const programFiles = (where: Whereabouts, path: string): string[] =>
 const localPrograms = (where: Whereabouts, path: string): string[] =>
   where.env.LOCALAPPDATA ? [win32.join(where.env.LOCALAPPDATA, 'Programs', path)] : [];
 
-function vscodeLike(id: string, name: string, app: string, command: string, windowsFolder: string): KnownTool {
+/** `windowsBin`: where its `.cmd` launcher is in its Windows install folder (`bin`, or Cursor's `resources\app\bin`). */
+function vscodeLike(id: string, name: string, app: string, command: string, windowsFolder: string, windowsBin = 'bin'): KnownTool {
   return {
     id,
     name,
     args: VSCODE_ARGS,
     locations: (where) => {
       if (where.platform === 'darwin') return macApps(where, `${app}.app/Contents/Resources/app/bin/${command}`);
-      if (where.platform === 'win32') return [...localPrograms(where, `${windowsFolder}\\bin\\${command}.cmd`), ...programFiles(where, `${windowsFolder}\\bin\\${command}.cmd`)];
-      return [];
+      if (where.platform === 'win32') {
+        const launcher = `${windowsFolder}\\${windowsBin}\\${command}.cmd`;
+        return [...localPrograms(where, launcher), ...programFiles(where, launcher)];
+      }
+      // Installed from a .deb, .rpm or Snap: on the PATH, or here when the app was started with a short one.
+      return [`/usr/share/${command}/bin/${command}`, `/snap/bin/${command}`];
     },
     commands: { darwin: [command], linux: [command], win32: [`${command}.cmd`] },
   };
@@ -104,7 +109,7 @@ export const KNOWN_TOOLS: KnownTool[] = [
   },
   vscodeLike('vscode', 'Visual Studio Code', 'Visual Studio Code', 'code', 'Microsoft VS Code'),
   vscodeLike('vscodeInsiders', 'VS Code Insiders', 'Visual Studio Code - Insiders', 'code-insiders', 'Microsoft VS Code Insiders'),
-  vscodeLike('cursor', 'Cursor', 'Cursor', 'cursor', 'cursor'),
+  vscodeLike('cursor', 'Cursor', 'Cursor', 'cursor', 'cursor', 'resources\\app\\bin'),
   vscodeLike('windsurf', 'Windsurf', 'Windsurf', 'windsurf', 'Windsurf'),
   jetbrains('rider', 'JetBrains Rider', ['Rider'], 'rider', 'JetBrains Rider'),
   jetbrains('intellij', 'IntelliJ IDEA', ['IntelliJ IDEA', 'IntelliJ IDEA Ultimate', 'IntelliJ IDEA CE'], 'idea', 'IntelliJ IDEA'),
@@ -129,7 +134,8 @@ export const KNOWN_TOOLS: KnownTool[] = [
     args: ['{base}', '{yours}', '{incoming}', '-o', '{result}', '--L1', '{baseName}', '--L2', '{yoursName}', '--L3', '{incomingName}'],
     locations: (where) => {
       if (where.platform === 'darwin') return macApps(where, 'kdiff3.app/Contents/MacOS/kdiff3');
-      if (where.platform === 'win32') return programFiles(where, 'KDiff3\\kdiff3.exe');
+      // Its installer puts it in a `bin` folder since 1.9.
+      if (where.platform === 'win32') return [...programFiles(where, 'KDiff3\\bin\\kdiff3.exe'), ...programFiles(where, 'KDiff3\\kdiff3.exe')];
       return [];
     },
     commands: { darwin: ['kdiff3'], linux: ['kdiff3'], win32: ['kdiff3.exe'] },
@@ -144,6 +150,16 @@ export const KNOWN_TOOLS: KnownTool[] = [
       return [];
     },
     commands: { darwin: ['bcomp'], linux: ['bcompare', 'bcomp'], win32: ['BComp.exe'] },
+  },
+  {
+    // Windows only. Git's `mergetools/winmerge`: yours, base and incoming side by side, yours and incoming read-only,
+    // the automatic merge in the middle, saved to the output.
+    id: 'winmerge',
+    name: 'WinMerge',
+    args: ['-u', '-e', '-wl', '-wr', '-am', '-dl', '{yoursName}', '-dm', '{baseName}', '-dr', '{incomingName}', '{yours}', '{base}', '{incoming}', '-o', '{result}'],
+    locations: (where) =>
+      where.platform === 'win32' ? [...programFiles(where, 'WinMerge\\WinMergeU.exe'), ...localPrograms(where, 'WinMerge\\WinMergeU.exe')] : [],
+    commands: { win32: ['WinMergeU.exe'] },
   },
   {
     id: 'meld',

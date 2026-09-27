@@ -67,9 +67,9 @@ describe('appExecutable', () => {
 describe('commandLine', () => {
   it('runs programs directly, and Windows .cmd launchers through cmd.exe with every argument quoted', () => {
     expect(commandLine('darwin', '/bin/tool', ['a b'])).toEqual({ command: '/bin/tool', commandArgs: ['a b'], verbatim: false });
-    expect(commandLine('win32', 'C:\\VS Code\\bin\\code.cmd', ['--wait', 'C:\\t\\a&b "x".ts'])).toEqual({
+    expect(commandLine('win32', 'C:\\VS Code\\bin\\code.cmd', ['--wait', 'C:\\Users\\R&D\\a^b "x".ts', 'Yours (%PATH%!)', 'C:\\t\\'])).toEqual({
       command: 'cmd.exe',
-      commandArgs: ['/d', '/s', '/c', '""C:\\VS Code\\bin\\code.cmd" "--wait" "C:\\t\\ab x.ts""'],
+      commandArgs: ['/d', '/s', '/c', '""C:\\VS Code\\bin\\code.cmd" "--wait" "C:\\Users\\R&D\\a^b x.ts" "Yours (PATH)" "C:\\t\\\\""'],
       verbatim: true,
     });
   });

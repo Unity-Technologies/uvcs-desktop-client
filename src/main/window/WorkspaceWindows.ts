@@ -19,7 +19,7 @@ interface WorkspaceWindowsOptions {
  */
 export class WorkspaceWindows {
   private readonly requested = new Map<number, string>();
-  /** A workspace picked from the Dock or the jump list before any window existed (it launched the app). */
+  /** A workspace picked from the Dock or named on the command line before any window existed (it launched the app). */
   private launchRequest: string | null = null;
 
   constructor(private readonly options: WorkspaceWindowsOptions) {}
@@ -65,7 +65,7 @@ export class WorkspaceWindows {
   }
 
   /**
-   * A workspace picked from the OS recent documents: its window comes forward, else a window on the home screen
+   * A workspace picked from the OS recent documents or named on the command line: its window comes forward, else a window on the home screen
    * opens it, else a new window does.
    */
   requestWorkspace(workspacePath: string, appReady: boolean): void {

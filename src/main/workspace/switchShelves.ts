@@ -1,4 +1,4 @@
-import { mkdir, readFile, readlink, rm, symlink, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readlink, rename, rm, symlink, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { MergeRequest } from '@shared/domain/merge';
@@ -160,8 +160,14 @@ async function rewrite(path: string, content: Buffer): Promise<void> {
   await writeFile(path, content);
 }
 
+/**
+ * Made next to it, then moved in place: Windows creates links only for administrators and in Developer Mode, and a
+ * link that can't be made leaves the one the undo restored.
+ */
 async function relink(path: string, target: string): Promise<void> {
-  await rm(path, { force: true });
   await mkdir(dirname(path), { recursive: true });
-  await symlink(target, path);
+  const made = `${path}.uvcs-link`;
+  await rm(made, { force: true });
+  await symlink(target, made);
+  await rename(made, path);
 }

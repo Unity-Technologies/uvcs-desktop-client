@@ -72,6 +72,8 @@ export interface UvcsEvents {
   incomingNotificationClicked: { workspacePath: string };
   /** Closing the window, quitting or reloading waits for unsaved edits: settle them, then `windows.continueLeaving`. */
   leaveRequested: Record<string, never>;
+  /** Windows' Back command: a mouse's back button or a keyboard's Browser Back key. */
+  navigateBack: Record<string, never>;
 }
 
 export type UvcsEventName = keyof UvcsEvents;

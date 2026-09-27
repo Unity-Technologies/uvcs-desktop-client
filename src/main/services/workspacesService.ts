@@ -10,6 +10,7 @@ import { switchArgs, UPDATE_ARGS } from '../cm/updateArgs';
 import { readWorkingObjectComment } from '../cm/workingObjectComment';
 import { readWorkspaceGlance } from '../cm/workspaceGlance';
 import { resolveWorkspaceRepositories } from '../cm/workspaceRepositories';
+import { findWorkspaceRoot } from '../cm/workspaceRoot';
 import { CmError } from '../cm/CmError';
 import { checkNewWorkspaceFolder } from '../files/newWorkspaceFolder';
 import { callerId } from '../ipc/caller';
@@ -41,15 +42,6 @@ export function createWorkspacesService({ cm, operations, watchers, settings, he
       repository: `${status.repositoryName}@${status.server}`,
       ...status,
     };
-  }
-
-  async function findRoot(directory: string): Promise<string | null> {
-    try {
-      const output = await cm.query(['getworkspacefrompath', directory, '--format={wkpath}']);
-      return output.trim() || null;
-    } catch {
-      return null;
-    }
   }
 
   async function create(request: CreateWorkspaceRequest): Promise<WorkspaceSummary> {
@@ -96,7 +88,8 @@ export function createWorkspacesService({ cm, operations, watchers, settings, he
   async function discardNew(workspacePath: string): Promise<void> {
     await cm.query(['workspace', 'delete', workspacePath]);
     if (!createdFolders.delete(workspacePath)) return;
-    await rm(workspacePath, { recursive: true, force: true });
+    // Windows keeps files the watcher or a scan still holds for a moment.
+    await rm(workspacePath, { recursive: true, force: true, maxRetries: 5 });
   }
 
   function repositoriesOf(workspacePaths: string[], lookupId: string): Promise<Record<string, string | null>> {
@@ -110,7 +103,7 @@ export function createWorkspacesService({ cm, operations, watchers, settings, he
     repositoriesOf,
     heads: readWorkspaceHeads,
     findMissing: async (paths) => paths.filter((path) => !existsSync(path)),
-    findRoot,
+    findRoot: (directory) => findWorkspaceRoot(cm, directory),
     create,
     rename,
     remove,
