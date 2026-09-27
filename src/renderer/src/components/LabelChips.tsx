@@ -3,14 +3,14 @@ import type { Label } from '@shared/domain/label';
 import { Highlight } from '../ui/Highlight';
 import styles from './LabelChips.module.css';
 
-/** Chips shown before the rest collapse into "+N". */
-const MAX_CHIPS = 2;
+/** Chips shown before the rest collapse into "+N"; the details panels' label badges collapse the same way. */
+export const MAX_LABEL_CHIPS = 2;
 
 /** The labels on a changeset as small chips for list rows; past two, the rest collapse into "+N" with their names in its tooltip. */
 export function LabelChips({ labels }: { labels: readonly Label[] | undefined }) {
   if (!labels || labels.length === 0) return null;
-  const shown = labels.slice(0, MAX_CHIPS);
-  const rest = labels.slice(MAX_CHIPS);
+  const shown = labels.slice(0, MAX_LABEL_CHIPS);
+  const rest = labels.slice(MAX_LABEL_CHIPS);
 
   return (
     <span className={styles.chips}>

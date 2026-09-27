@@ -3,6 +3,7 @@ import type { Lane } from '../model/layoutGraph';
 import { GHOST_ALPHA, type DrawContext } from './drawContext';
 import { compactNameWidth } from './compactNameWidth';
 import { drawRectCorona, drawRectGlow } from './drawSearchHit';
+import { headerCardLeft } from './headerCardLeft';
 import { drawReviewChip, reviewChipWidth } from './drawReviewChip';
 import { fitBranchName, fitText, summaryOf, textWidth } from './fitText';
 import { BAND_HEIGHT, HEADER_COMMENT_MIDDLE, HEADER_HEIGHT, HEADER_MAX_WIDTH, HEADER_NAME_MIDDLE, headerTop, ROW_HEIGHT } from './geometry';
@@ -31,8 +32,8 @@ const COMMENT_LINE_TOP = (HEADER_NAME_MIDDLE + HEADER_COMMENT_MIDDLE) / 2;
  * A pill above each band, tinted in the branch's color, in two lines like the official client's: the branch name
  * with its code review, then the comment, smaller and muted (a branch without a comment gets a one-line pill). It
  * grows to the longer line, up to a few columns and never into the next branch on its row. While the start of a band
- * is scrolled away, its pill stays pinned to the left edge (floating, with a shadow) so the branch stays
- * identifiable. Records where each pill landed for the pointer, and where its comment line lies when it doesn't show
+ * is scrolled away, its pill stays pinned to the left edge (floating, with a shadow), whole for as long as any of
+ * the band shows, so the branch stays identifiable. Records where each pill landed for the pointer, and where its comment line lies when it doesn't show
  * the whole comment.
  */
 export function drawBranchHeaders(draw: DrawContext): void {
@@ -43,10 +44,10 @@ export function drawBranchHeaders(draw: DrawContext): void {
     const top = headerTop(shape.y, height);
     if (shape.right < visible.left || shape.left > visible.right || top > visible.bottom || top + height < visible.top) continue;
 
-    const room = Math.min(HEADER_MAX_WIDTH, roomBeforeNextLane(draw, lane, shape.left));
-    const width = Math.max(MIN_WIDTH, Math.min(room, contentWidth(draw, lane) + PADDING * 2));
+    const roomBeforeNext = roomBeforeNextLane(draw, lane, shape.left);
+    const width = Math.max(MIN_WIDTH, Math.min(HEADER_MAX_WIDTH, roomBeforeNext, contentWidth(draw, lane) + PADDING * 2));
     const pinnedLeft = visible.left + PINNED_INSET / scene.viewport.zoom;
-    const left = Math.max(shape.left, Math.min(pinnedLeft, shape.right - width));
+    const left = headerCardLeft(shape.left, width, pinnedLeft, shape.left + roomBeforeNext);
     drawCard(draw, lane, left, top, width, height, left > shape.left + 0.5);
     draw.drawn.branchHeaders.add(lane, left, top, width, height);
   }
