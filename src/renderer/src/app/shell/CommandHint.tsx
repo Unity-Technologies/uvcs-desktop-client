@@ -12,11 +12,13 @@ export function CommandHint({ entry }: { entry: CommandLogEntry }) {
   const ref = useRef<HTMLSpanElement>(null);
   const text = entry.commandLine;
   const [fit, setFit] = useState<{ shown: string; width?: number }>({ shown: text });
+  // The font stays; reading it again for every command would restyle the page each time.
+  const measureRef = useRef<(text: string) => number>(null);
 
   useLayoutEffect(() => {
     const element = ref.current;
     if (!element) return;
-    const measure = textMeasurer(element);
+    const measure = (measureRef.current ??= textMeasurer(element));
     // Widths are rounded; the extra pixel keeps a rounded-up width from clipping the fitted text.
     const width = Math.ceil(measure(text)) + 1;
     const update = (): void => setFit({ shown: trimMiddleToFit(text, element.clientWidth - 1, measure), width });

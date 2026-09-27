@@ -16,6 +16,9 @@ import { isWorkspaceRoot } from './workspaceRoot';
 import { XlinkChip } from './XlinkChip';
 import styles from './FileTreeTable.module.css';
 
+/** Stable, so the table doesn't re-key every row on each render (a selection change). */
+const rowKey = (row: FileTreeRow): string => row.item.path;
+
 interface FileTreeTableProps {
   rows: FileTreeRow[];
   selection: SelectionState;
@@ -109,7 +112,7 @@ export function FileTreeTable({
     <DataTable
       rows={rows}
       columns={columns}
-      rowKey={(row) => row.item.path}
+      rowKey={rowKey}
       selection={selection}
       onSelectionChange={onSelectionChange}
       onActivate={(row) => (row.item.itemType === 'directory' ? onToggleDirectory(row.item.path) : onOpenFile(row.item))}

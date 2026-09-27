@@ -15,7 +15,8 @@ import { ResolveRunControl, useRunOffer } from '../merge/mergeTools/ResolveRunCo
 import { useResolveRun } from '../merge/mergeTools/useResolveRun';
 import { useFileConflicts } from '../merge/resolve/useFileConflicts';
 import { IncomingFileDiff } from './IncomingDetail';
-import { IncomingList, type IncomingSelection } from './IncomingList';
+import { IncomingList } from './IncomingList';
+import type { IncomingSelection } from './incomingRows';
 import { UpdateBar } from './UpdateBar';
 import { UPDATE_LABELS, updateConflictFiles } from './updateConflictFiles';
 import { shelveBlockedAndUpdate, updateResolvingConflicts, updateToIncoming } from './updateOperations';

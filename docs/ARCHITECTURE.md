@@ -54,9 +54,10 @@ safe, and the step of a multi-command operation (shelve, undo, switch, bring). N
   killed while uploading, nothing is committed.
 - The renderer keeps each operation's progress and its bar motion (`runningOperationsStore`, `progressBar`): the bar
   glides linearly towards where the next report should land at the current pace (never backwards, at most halfway into
-  what's left), sweeps while nothing is measured, and stays full and shimmering while wrapping up. `OperationCard` draws
-  it in fixed rows and widths, then turns into the success message in place; the status bar, the branch pill and the
-  incoming chip show the same operation with a `ProgressRing`.
+  what's left), sweeps while nothing is measured, and stays full and shimmering while wrapping up, all of it moved
+  by transforms on the compositor. `OperationCard` draws it in fixed rows and widths, then turns into the success
+  message in place; the status bar, the branch pill (a switch) and the incoming chip (an update) show the same
+  operation with a `ProgressRing`. A report renders only these (`useRunningOperationOfKind` for the pill and the chip).
 
 ## No external tool opens by itself
 
@@ -131,6 +132,14 @@ it produces. Binary conflicts offer only tools that merge binaries (the UVCS one
 Incoming view resolves update conflicts with the same panel and run (in its update bar); server-branch merges keep one side for every file. A file
 that merges automatically is never edited; its menu only overrides it by keeping one version. Once merged, the page
 states where the result went.
+
+Merges hold hundreds of conflicting files and thousands of changes. Every conflicting file's three versions load at
+once (its status needs its automatic merge); each file merges once, when its versions are in (`loadConflict`), and
+keeps its state while nothing about it changes (`buildStates`). The three-way merge (`diff3`) draws node-diff3's diff3
+regions over Myers diffs of each side, whose time goes by the lines changed (lockfiles repeat lines by the thousand).
+The list and Incoming render only the rows in view; the file behind the selection follows it deferred, so arrowing
+never waits for a file to highlight. Conflicts, Base and the hand editor follow the diffs' size rule
+(`syntaxHighlighting`), and Base (when big) and the hand editor render only the lines in view.
 
 ## Switching with pending changes
 
@@ -333,9 +342,9 @@ and many people use the same server. Every `cm` command other than local reads (
   Explorer is kept five minutes and focus never re-reads all history. Local views skip focus while the watcher sees the disk.
 - **Home**: the repository and branch of every listed workspace come from its `.plastic/plastic.selector` file
   (`workspaces.heads`); `cm` is asked only about recent workspaces whose file can't tell.
-- **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`), `cm diff`
+- **Selection**: arrowing through rows costs nothing; details ask once the selection settles (`useSettled`; `useSettledValue` for details that stay on screen as the selection moves, like a history's diff), `cm diff`
   runs only on request, and immutable results (what a changeset, shelve or branch head changed, revisions by id, specs
-  pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`) and skipped by refreshes.
+  pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`; the last 100 off screen, `boundUnusedQueries`) and skipped by refreshes.
   An object opened from a list already read starts from it (`useChangeset`) and is asked for only once that list is stale.
 - **After an operation**: `invalidateWorkspace` refetches what is on screen and marks the rest stale, scoped to what the
   operation can change (`refreshScopes.ts`, `runOperation({ affects })`, `runAction(..., affects)`): a checkin, an update

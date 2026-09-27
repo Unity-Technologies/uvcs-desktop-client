@@ -42,23 +42,22 @@
   }
 }
 
-/* The measured part is done but the work isn't: full, with a light passing over it. */
+/* The measured part is done but the work isn't: full, with a light passing over it (moved, so it runs on the compositor). */
 .fill[data-mode='busy']::after {
   content: '';
   position: absolute;
-  inset: 0;
+  inset: 0 auto 0 0;
+  width: 40%;
   background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.35) 50%, transparent 100%);
-  background-size: 40% 100%;
-  background-repeat: no-repeat;
   animation: shimmer 1.4s linear infinite;
 }
 
 @keyframes shimmer {
   from {
-    background-position: -40% 0;
+    translate: -60% 0;
   }
   to {
-    background-position: 140% 0;
+    translate: 210% 0;
   }
 }
 
