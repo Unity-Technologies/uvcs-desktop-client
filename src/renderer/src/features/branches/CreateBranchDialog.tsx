@@ -119,6 +119,7 @@ function CreateBranchDialog({ workspacePath, origins, onClose }: { workspacePath
           source={pending.preflight.sourceName}
           destination={name.trim() ? fullName : null}
           choice={pending.plan.choice}
+          count={pending.preflight.pendingCount}
           value={action}
           onChange={setAction}
           heading

@@ -1,5 +1,6 @@
 import type { PendingChangesAction } from '@shared/domain/switchWithChanges';
 import { OptionCards, type OptionCard } from '../../ui/OptionCards';
+import { pendingChangesPronoun } from './pendingChangesWords';
 import type { SwitchChoice } from './switchOptions';
 
 interface PendingChangesChoiceProps {
@@ -8,6 +9,8 @@ interface PendingChangesChoiceProps {
   /** Where the workspace is going, e.g. `/main/t2`; null for a branch not named yet. */
   destination: string | null;
   choice: Pick<SwitchChoice, 'leave' | 'bring'>;
+  /** How many changes there are, so one reads "it" and several "them". */
+  count: number;
   value: PendingChangesAction | null;
   onChange: (value: PendingChangesAction) => void;
   /** Show "Your pending changes" above the cards, where the question isn't asked around them. */
@@ -18,18 +21,19 @@ interface PendingChangesChoiceProps {
  * What happens to pending changes on a switch, in the same words wherever it comes up (switching, creating
  * a branch and switching to it): leave them behind in a shelve, or bring them along.
  */
-export function PendingChangesChoice({ source, destination, choice, value, onChange, heading = false }: PendingChangesChoiceProps) {
+export function PendingChangesChoice({ source, destination, choice, count, value, onChange, heading = false }: PendingChangesChoiceProps) {
   const where = destination ?? 'the new branch';
+  const them = pendingChangesPronoun(count);
   const cards: OptionCard<PendingChangesAction>[] = [
     {
       value: 'leave',
-      title: <>Leave them on <code>{source}</code></>,
-      description: choice.leave.disabledReason ?? 'Saved in a shelve. You’ll be offered to restore them when you come back.',
+      title: <>Leave {them} on <code>{source}</code></>,
+      description: choice.leave.disabledReason ?? `Saved in a shelve. You’ll be offered to restore ${them} when you come back.`,
       disabled: !choice.leave.enabled,
     },
     {
       value: 'bring',
-      title: <>Bring them to {destination === null ? where : <code>{destination}</code>}</>,
+      title: <>Bring {them} to {destination === null ? where : <code>{destination}</code>}</>,
       description: choice.bring.disabledReason ?? `Shelved, then applied on ${where}. If a file conflicts, you decide how to merge it.`,
       disabled: !choice.bring.enabled,
     },
