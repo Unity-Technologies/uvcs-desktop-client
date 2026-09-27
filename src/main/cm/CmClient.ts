@@ -77,6 +77,11 @@ export class CmClient {
     this.shellPool.warmUp(cwd);
   }
 
+  /** Ends the `cm shell` sessions of a working directory no window shows anymore (each holds tens of MB). */
+  release(cwd: string): void {
+    this.shellPool.release(cwd);
+  }
+
   dispose(): void {
     this.shellPool.disposeAll();
   }

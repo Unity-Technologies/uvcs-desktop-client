@@ -20,13 +20,16 @@ import { WorkspaceWindows } from './window/WorkspaceWindows';
 const cm = new CmClient(locateCm);
 const settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'));
 
-// Each window shows one workspace; windows on the same workspace share its watcher.
-const watchers = new WorkspaceWatchers((viewers, workspacePath, change) => {
-  for (const viewer of viewers) {
-    const target = webContents.fromId(viewer);
-    if (target) sendEventTo(target, 'workspaceChanged', { workspacePath, ...change });
-  }
-});
+// Each window shows one workspace; windows on the same workspace share its watcher and its `cm shell` sessions.
+const watchers = new WorkspaceWatchers(
+  (viewers, workspacePath, change) => {
+    for (const viewer of viewers) {
+      const target = webContents.fromId(viewer);
+      if (target) sendEventTo(target, 'workspaceChanged', { workspacePath, ...change });
+    }
+  },
+  (workspacePath) => cm.release(workspacePath),
+);
 const windows = new WorkspaceWindows({
   settings,
   workspaceOf: (viewer) => watchers.workspaceOf(viewer),

@@ -7,7 +7,8 @@ const CHANGE: WorkspaceChange = { content: true, pathsChanged: false, metadata: 
 function setUp() {
   const created: (Watcher & { emit: () => void; stopped: boolean; ignored: number })[] = [];
   const onChanged = vi.fn();
-  const watchers = new WorkspaceWatchers(onChanged, (workspacePath, emit) => {
+  const onStopped = vi.fn();
+  const watchers = new WorkspaceWatchers(onChanged, onStopped, (workspacePath, emit) => {
     const watcher = {
       workspacePath,
       stopped: false,
@@ -21,7 +22,7 @@ function setUp() {
     created.push(watcher);
     return watcher;
   });
-  return { watchers, created, onChanged };
+  return { watchers, created, onChanged, onStopped };
 }
 
 describe('WorkspaceWatchers', () => {
@@ -37,14 +38,16 @@ describe('WorkspaceWatchers', () => {
   });
 
   it('stops watching a workspace once no window shows it', () => {
-    const { watchers, created } = setUp();
+    const { watchers, created, onStopped } = setUp();
     watchers.watch(1, '/wk/a');
     watchers.watch(2, '/wk/a');
 
     watchers.watch(1, '/wk/b');
     expect(created[0]!.stopped).toBe(false);
+    expect(onStopped).not.toHaveBeenCalled();
     watchers.release(2);
     expect(created[0]!.stopped).toBe(true);
+    expect(onStopped).toHaveBeenCalledExactlyOnceWith('/wk/a');
     expect(watchers.workspaceOf(1)).toBe('/wk/b');
     expect(watchers.workspaceOf(2)).toBeUndefined();
   });
