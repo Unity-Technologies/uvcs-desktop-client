@@ -1,4 +1,4 @@
-import { CheckCircle2, Files, GitMerge, List, ListTree, SlidersHorizontal } from 'lucide-react';
+import { CheckCircle2, Files, Folder, GitMerge, List, ListTree, SlidersHorizontal } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { useChangeFilter } from '../../components/useChangeFilter';
@@ -9,7 +9,7 @@ import { selectAfterLeaving, settleBeforeLeaving } from '../../app/navigation/le
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { joinComment } from '../../lib/comment';
 import { EMPTY_SELECTION } from '../../lib/selection';
-import { formatCount } from '../../lib/text';
+import { formatCount, pluralize } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
@@ -49,7 +49,7 @@ import { pendingChangeMenu } from './pendingChangeMenu';
 import { addFilterRule, openWithDefaultApp, undoChanges } from './pendingChangeOperations';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { SuccessCard } from './SuccessCard';
-import { isOutlivedByChanges, successMomentLeft, useSuccessMomentStore } from './successMoment';
+import { isOutlivedByChanges, successCardTellsCheckin, successMomentLeft, useSuccessMomentStore } from './successMoment';
 import { usePendingChanges } from './usePendingChanges';
 import styles from './PendingChangesView.module.css';
 
@@ -107,6 +107,8 @@ export function PendingChangesView() {
     [changes, changelists, layout, grouping, draft.excludedPaths, collapsed],
   );
   const focused = changes.find((change) => changeKey(change) === selection.anchor);
+  // A folder or changelist the keyboard (or a click) is on.
+  const focusedFolder = focused ? undefined : rows.find((row) => row.type !== 'change' && row.key === selection.anchor);
   const mergeChanges = allChanges.filter((change) => change.mergeInfo);
   const { data: mergeSource } = useChangeset(mergeSourceChangeset(mergeChanges));
   const firstChangeKey = rows.find((row) => row.type === 'change')?.key;
@@ -120,8 +122,8 @@ export function PendingChangesView() {
 
   // Keep something selected, so the diff pane is useful from the start and after the selected file goes away.
   useEffect(() => {
-    if (!focused && firstChangeKey) setSelection({ selected: new Set([firstChangeKey]), anchor: firstChangeKey });
-  }, [focused, firstChangeKey]);
+    if (!focused && !focusedFolder && firstChangeKey) setSelection({ selected: new Set([firstChangeKey]), anchor: firstChangeKey });
+  }, [focused, focusedFolder, firstChangeKey]);
 
   const setIncludedChanges = (selected: PendingChange[], include: boolean): void =>
     setIncluded(workspacePath, selected.map((change) => change.path), include);
@@ -159,7 +161,13 @@ export function PendingChangesView() {
     // Checking in takes the files as they are on disk: unsaved edits are saved first, or dropped, or it waits.
     if (!(await settleBeforeLeaving())) return false;
     if (bulkPrivate && !(await confirmBulkPrivateCheckin(bulkPrivate))) return false;
-    const done = await runBusy(() => checkinChanges({ workspacePath, changes: included, comment, updateFirst: behind !== null }));
+    const done = await runBusy(() => checkinChanges({
+        workspacePath,
+        changes: included,
+        comment,
+        updateFirst: behind !== null,
+        quiet: successCardTellsCheckin(included.length, allChanges.length),
+      }),);
     if (done) {
       clearMessage(workspacePath);
       setSelection(EMPTY_SELECTION);
@@ -331,6 +339,12 @@ export function PendingChangesView() {
             <EmptyState icon={<Files size={24} />} title={`${formatCount(selectedCount)} files selected`} description="Select a single file to see its diff." />
           ) : focused ? (
             <ChangeDiffPanel workspacePath={workspacePath} change={focused} reviewMark={review.marks.get(focused.path)} />
+          ) : focusedFolder && focusedFolder.type !== 'change' ? (
+            <EmptyState
+              icon={<Folder size={24} />}
+              title={focusedFolder.type === 'group' ? focusedFolder.label : focusedFolder.path}
+              description={`${pluralize(focusedFolder.changes.length, 'change')}. Select a file to see its diff.`}
+            />
           ) : (
             <EmptyState title="Select a change" description="Pick a file on the left to see what changed." />
           )

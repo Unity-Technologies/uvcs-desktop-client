@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { buildChangeRows, changesUnderRow, comparePaths, LEVEL_INDENT, menuTargetOf, rowIndent, topLevelCheckboxInset, treeLevel, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { treeArrowMove } from '../../lib/treeArrowMove';
+import { buildChangeRows, changesUnderRow, changeTreeArrowRows, comparePaths, LEVEL_INDENT, menuTargetOf, rowIndent, topLevelCheckboxInset, treeLevel, type ChangesGrouping, type ChangesLayout } from './changeRows';
 
 function change(path: string, kinds: PendingChange['kinds'], changelist?: string): PendingChange {
   return { path, kinds, itemType: 'file', size: 0, lastModified: '', changelist };
@@ -138,6 +139,20 @@ describe('buildChangeRows', () => {
       collapsed: new Set(['directory:all:src']),
     });
     expect(rows.map((row) => row.key)).toEqual(['directory:all:src', 'change:z.ts']);
+  });
+});
+
+describe('changeTreeArrowRows', () => {
+  it('lets ← and → close and open changelists and folders, and step between them and their files', () => {
+    const rows = buildChangeRows({ ...base, changes: nested, layout: 'tree', grouping: 'changelist', collapsed: new Set(['directory:changelist::src/lib']) });
+    const arrowRows = changeTreeArrowRows(rows);
+    const at = (key: string) => rows.findIndex((row) => row.key === key);
+    expect(rows.map((row) => row.key)).toEqual(['changelist:', 'directory:changelist::src', 'change:src/b.ts', 'directory:changelist::src/lib']);
+    expect(treeArrowMove(arrowRows, at('directory:changelist::src/lib'), 'ArrowRight')).toEqual({ kind: 'toggle' });
+    expect(treeArrowMove(arrowRows, at('directory:changelist::src'), 'ArrowLeft')).toEqual({ kind: 'toggle' });
+    expect(treeArrowMove(arrowRows, at('change:src/b.ts'), 'ArrowLeft')).toEqual({ kind: 'moveBy', step: -1 });
+    expect(treeArrowMove(arrowRows, at('directory:changelist::src'), 'ArrowRight')).toEqual({ kind: 'moveBy', step: 1 });
+    expect(treeArrowMove(arrowRows, at('directory:changelist::src/lib'), 'ArrowLeft')).toEqual({ kind: 'moveBy', step: -2 });
   });
 });
 

@@ -9,12 +9,13 @@ import { Arrivals } from '../../lib/arrivals';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { isMac } from '../../lib/platform';
 import { selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
+import { treeArrowMove } from '../../lib/treeArrowMove';
 import { Checkbox, type CheckState } from '../../ui/Checkbox';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { describeKinds, isCheckinCandidate } from './changeCategories';
 import { changeTone } from './changeTone';
-import { menuTargetOf, rowIndent, treeLevel, type ChangeRow } from './changeRows';
+import { changeTreeArrowRows, menuTargetOf, rowIndent, treeLevel, type ChangeRow } from './changeRows';
 import { LockChip } from './locks/LockChip';
 import type { PendingLocks } from './locks/pendingLocks';
 import { isReviewKey, toggleReviewedFromKey } from '../review/reviewKey';
@@ -64,9 +65,11 @@ export function ChangesList({
   const viewportRef = useRef<HTMLDivElement>(null);
   const changeRows = useMemo(() => rows.filter((row) => row.type === 'change'), [rows]);
   const orderedKeys = useMemo(() => changeRows.map((row) => row.key), [changeRows]);
+  // The keyboard moves through every row, folders and changelists too, so ← and → can close and open them.
+  const rowKeys = useMemo(() => rows.map((row) => row.key), [rows]);
   // The row keyboard moves go from; Shift extends the selection from the anchor to it.
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
-  const focused = focusedKey !== null && orderedKeys.includes(focusedKey) ? focusedKey : selection.anchor;
+  const focused = focusedKey !== null && rowKeys.includes(focusedKey) ? focusedKey : selection.anchor;
   const grouped = rows.some((row) => row.type === 'group');
   // Files that just appeared among the changes (saved, created) fade in once.
   const [arrivals] = useState(() => new Arrivals(ARRIVAL_WINDOW_MS));
@@ -75,6 +78,7 @@ export function ChangesList({
   const isTree = rows.some((row) => row.type !== 'change');
   const rowIdPrefix = useId();
   const focusedIndex = focused === null ? -1 : rows.findIndex((row) => row.key === focused);
+  const focusedRow = rows[focusedIndex];
 
   // A plain press on a row of a multi-selection keeps the selection until release, so the whole of it can be dragged.
   const narrowOnClick = useRef<string | null>(null);
@@ -103,7 +107,7 @@ export function ChangesList({
   };
 
   const moveBy = (step: number, extend: boolean): void => {
-    const moved = selectOnArrow(selection, orderedKeys, step, extend, focused);
+    const moved = selectOnArrow(selection, rowKeys, step, extend, focused);
     if (!moved) return;
     setFocusedKey(moved.focused);
     onSelectionChange(moved.state);
@@ -116,26 +120,40 @@ export function ChangesList({
     if (step !== undefined) {
       event.preventDefault();
       moveBy(step, event.shiftKey);
+    } else if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && plain) {
+      const move = treeArrowMove(changeTreeArrowRows(rows), focusedIndex, event.key);
+      if (!move) return;
+      event.preventDefault();
+      if (move.kind === 'toggle') onToggleCollapsed(focusedRow!.key);
+      else moveBy(move.step, false);
     } else if (isReviewKey(event)) {
       event.preventDefault();
       toggleReviewedFromKey(review, selectedChanges(), () => moveBy(1, false));
     } else if (event.key === ' ') {
       event.preventDefault();
       const selectedRows = changeRows.filter((row) => selection.selected.has(row.key));
+      if (selectedRows.length === 0 && focusedRow && focusedRow.type !== 'change' && focusedRow.checkState !== null) {
+        onToggleIncluded(focusedRow, focusedRow.checkState !== true);
+        return;
+      }
       const include = selectedRows.some((row) => !row.checked);
       selectedRows.forEach((row) => onToggleIncluded(row, include));
     } else if (event.key === 'a' && (isMac ? event.metaKey : event.ctrlKey)) {
       event.preventDefault();
       onSelectionChange({ selected: new Set(orderedKeys), anchor: orderedKeys[0] ?? null });
-    } else if (event.key === 'Enter' && focused) {
-      const focusedRow = changeRows.find((row) => row.key === focused);
-      if (focusedRow) onOpen(focusedRow.change);
+    } else if (event.key === 'Enter' && focusedRow) {
+      if (focusedRow.type === 'change') onOpen(focusedRow.change);
+      else onToggleCollapsed(focusedRow.key);
     }
   };
 
   const onRowMouseDown = (row: ChangeRow, event: MouseEvent): void => {
     if (row.type !== 'change') {
-      if (event.button === 0) onToggleCollapsed(row.key);
+      if (event.button !== 0) return;
+      // Selected like a file, so the keyboard goes on from it.
+      setFocusedKey(row.key);
+      onSelectionChange({ selected: new Set([row.key]), anchor: row.key });
+      onToggleCollapsed(row.key);
       return;
     }
     if (event.button === 2 && selection.selected.has(row.key)) return;
@@ -166,7 +184,8 @@ export function ChangesList({
         aria-multiselectable
         aria-activedescendant={focusedIndex === -1 ? undefined : `${rowIdPrefix}-${focusedIndex}`}
         onKeyDown={onKeyDown}
-        onContextMenuCapture={() => (menuRow.current = null)}
+        // From the keyboard, the menu is for the folder or changelist focused; a right-click on a row says which below.
+        onContextMenuCapture={() => (menuRow.current = focusedRow && focusedRow.type !== 'change' ? focusedRow : null)}
         {...MAIN_FOCUS}
       >
         <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
@@ -179,7 +198,7 @@ export function ChangesList({
                 role={isTree ? 'treeitem' : 'option'}
                 aria-level={isTree ? treeLevel(row, grouped) : undefined}
                 aria-expanded={row.type === 'change' ? undefined : !row.collapsed}
-                aria-selected={row.type === 'change' ? selection.selected.has(row.key) : undefined}
+                aria-selected={selection.selected.has(row.key)}
                 className={styles.row}
                 data-type={row.type}
                 data-selected={selection.selected.has(row.key)}
@@ -193,7 +212,7 @@ export function ChangesList({
                 onMouseDown={(event) => onRowMouseDown(row, event)}
                 onClick={() => onRowClick(row)}
                 onDoubleClick={() => row.type === 'change' && onOpen(row.change)}
-                onContextMenu={() => row.type !== 'change' && (menuRow.current = row)}
+                onContextMenu={() => (menuRow.current = row.type === 'change' ? null : row)}
                 {...dragProps(row)}
                 {...dropProps(row)}
               >

@@ -1,5 +1,6 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { compareTones } from '../../components/changeFilter';
+import type { TreeArrowRow } from '../../lib/treeArrowMove';
 import type { CheckState } from '../../ui/Checkbox';
 import { isCheckinCandidate } from './changeCategories';
 import { changeTone } from './changeTone';
@@ -108,6 +109,12 @@ export function rowIndent(row: ChangeRow, grouped: boolean): number {
 export function treeLevel(row: ChangeRow, grouped: boolean): number {
   if (row.type === 'group') return 1;
   return row.depth + (grouped ? 2 : 1);
+}
+
+/** The rows as ← and → see them (`treeArrowMove`): changelists and folders open and close. */
+export function changeTreeArrowRows(rows: readonly ChangeRow[]): TreeArrowRow[] {
+  const grouped = rows.some((row) => row.type === 'group');
+  return rows.map((row) => ({ depth: treeLevel(row, grouped), isFolder: row.type !== 'change', isExpanded: row.type !== 'change' && !row.collapsed }));
 }
 
 /** Changelist headers lead the rows: the top-level checkboxes are theirs, after their chevrons. */

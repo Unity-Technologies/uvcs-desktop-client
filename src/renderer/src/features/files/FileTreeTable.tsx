@@ -8,7 +8,8 @@ import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { Spinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
-import { indentOf, treeArrowMove, type FileTreeRow } from './fileTreeRows';
+import { treeArrowMove } from '../../lib/treeArrowMove';
+import { fileTreeArrowRows, indentOf, type FileTreeRow } from './fileTreeRows';
 import { ItemIcon } from './ItemIcon';
 import { iconOverlay, type ItemStatus } from './itemStatus';
 import { isWorkspaceRoot } from './workspaceRoot';
@@ -97,7 +98,7 @@ export function FileTreeTable({
 
   const onRowKeyDown = (event: React.KeyboardEvent, row: FileTreeRow, moveBy: (step: number) => void): void => {
     if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-    const move = treeArrowMove(rows, rows.indexOf(row), event.key);
+    const move = treeArrowMove(fileTreeArrowRows(rows), rows.indexOf(row), event.key);
     if (!move) return;
     event.preventDefault();
     if (move.kind === 'toggle') onToggleDirectory(row.item.path);

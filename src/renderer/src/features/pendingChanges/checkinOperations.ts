@@ -13,7 +13,7 @@ import { updateToIncoming } from '../incoming/updateOperations';
 import { useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinRejection, overlappingPaths, type CheckinRejection } from './checkinRejection';
 import { askCatchUpForCheckin } from './CheckinRejectedDialog';
-import { useSuccessMomentStore } from './successMoment';
+import { checkedInMessage, useSuccessMomentStore } from './successMoment';
 
 const MAX_RECENT_COMMENTS = 15;
 
@@ -23,6 +23,8 @@ interface CheckinOptions {
   comment: string;
   /** The incoming check saw the branch move on: update (or review what came in) before checking in, not after a rejection. */
   updateFirst?: boolean;
+  /** Every pending change goes in: the success card in the empty Changes tells it, so no toast does. */
+  quiet?: boolean;
 }
 
 /** Asked before a check-in without a comment, when the setting says to. */
@@ -49,7 +51,7 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
     workspacePath,
     run: (operationId) => api.pendingChanges.checkin(workspacePath, { paths: changes.map((change) => change.path), comment }, operationId),
     affects: isAffectedByCheckinOrUpdate,
-    successMessage: (created) => `Created changeset ${created.changesetId} on ${created.branch}`,
+    successMessage: (created) => (options.quiet ? null : checkedInMessage(created.changesetId, created.branch)),
     successAction: (created) => ({
       label: 'View',
       run: () => navigation.openPage({ kind: 'diff', title: `Changeset ${created.changesetId}`, target: { kind: 'changeset', changesetId: created.changesetId } }),

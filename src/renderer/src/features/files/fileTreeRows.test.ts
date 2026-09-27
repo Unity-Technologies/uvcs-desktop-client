@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TreeItem } from '@shared/domain/explorer';
-import { ancestorsOf, buildFileTreeRows, indentOf, parentOf, treeArrowMove } from './fileTreeRows';
+import { treeArrowMove } from '../../lib/treeArrowMove';
+import { ancestorsOf, buildFileTreeRows, fileTreeArrowRows, indentOf, parentOf } from './fileTreeRows';
 
 function item(path: string, itemType: TreeItem['itemType'] = 'file'): TreeItem {
   return {
@@ -87,19 +88,20 @@ describe('indentOf', () => {
   });
 });
 
-describe('treeArrowMove', () => {
+describe('fileTreeArrowRows', () => {
   const rows = buildFileTreeRows({ childrenByDirectory: tree, expanded: new Set(['src']) });
+  const arrowRows = fileTreeArrowRows(rows);
   const at = (path: string) => rows.findIndex((row) => row.item.path === path);
 
   it('opens a closed folder, then steps into it', () => {
-    expect(treeArrowMove(rows, at('Assets'), 'ArrowRight')).toEqual({ kind: 'toggle' });
-    expect(treeArrowMove(rows, at('src'), 'ArrowRight')).toEqual({ kind: 'moveBy', step: 1 });
-    expect(treeArrowMove(rows, at('src/a.ts'), 'ArrowRight')).toBeNull();
+    expect(treeArrowMove(arrowRows, at('Assets'), 'ArrowRight')).toEqual({ kind: 'toggle' });
+    expect(treeArrowMove(arrowRows, at('src'), 'ArrowRight')).toEqual({ kind: 'moveBy', step: 1 });
+    expect(treeArrowMove(arrowRows, at('src/a.ts'), 'ArrowRight')).toBeNull();
   });
 
   it('closes an open folder, and goes from a child up to its folder', () => {
-    expect(treeArrowMove(rows, at('src'), 'ArrowLeft')).toEqual({ kind: 'toggle' });
-    expect(treeArrowMove(rows, at('src/b.ts'), 'ArrowLeft')).toEqual({ kind: 'moveBy', step: at('src') - at('src/b.ts') });
-    expect(treeArrowMove(rows, at('readme.md'), 'ArrowLeft')).toBeNull();
+    expect(treeArrowMove(arrowRows, at('src'), 'ArrowLeft')).toEqual({ kind: 'toggle' });
+    expect(treeArrowMove(arrowRows, at('src/b.ts'), 'ArrowLeft')).toEqual({ kind: 'moveBy', step: at('src') - at('src/b.ts') });
+    expect(treeArrowMove(arrowRows, at('readme.md'), 'ArrowLeft')).toBeNull();
   });
 });
