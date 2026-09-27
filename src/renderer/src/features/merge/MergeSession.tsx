@@ -75,7 +75,7 @@ export function MergeSession({ workspacePath, request, plan, onCompleted }: Merg
       mergeButtonRef.current?.focus();
     }
   }, []);
-  const run = useResolveRun({ states: fileStates, labels, resolveInTool, onOpen: followRun, onEnd: afterRun });
+  const run = useResolveRun({ states: fileStates, resolveInTool, onOpen: followRun, onEnd: afterRun });
   const runPlans = useRunOffer(intoServerBranch ? [] : fileStates, run);
 
   // Start on the first thing that needs the user.

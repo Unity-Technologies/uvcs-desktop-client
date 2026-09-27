@@ -10,13 +10,12 @@ const tool = (id: string, changes: Partial<MergeTool> = {}): MergeTool => ({
   executable: id,
   args: [],
   defaultArgs: [],
-  mergesBinaries: false,
   extensions: null,
   canBringToFront: false,
   ...changes,
 });
 const fakeMerge = tool('FakeMerge');
-const uvcs = tool('UVCS merge tool', { mergesBinaries: true });
+const csMerge = tool('CsMerge', { extensions: ['.cs'] });
 
 const file = (path: string, changes: Partial<FileConflictState> = {}): FileConflictState => ({
   file: { key: `/${path}`, path, base: { kind: 'empty' }, source: { kind: 'empty' }, destination: { kind: 'empty' } },
@@ -42,7 +41,6 @@ describe('planRun', () => {
     const plan = planRun(states, fakeMerge);
     expect(plan.keys).toEqual(['/a.ts', '/b.ts']);
     expect(plan.left.map((state) => state.file.path)).toEqual(['logo.png']);
-    expect(planRun(states, uvcs).keys).toEqual(['/a.ts', '/b.ts', '/logo.png']);
   });
 
   it('skips a file already open in a tool', () => {
@@ -52,22 +50,26 @@ describe('planRun', () => {
 
 describe('runPlans', () => {
   it('offers the preferred tool first, then the others that open something', () => {
-    expect(runPlans(states, [uvcs, fakeMerge], 'FakeMerge').map((plan) => plan.tool.id)).toEqual(['FakeMerge', 'UVCS merge tool']);
+    const withCs = [...states, file('c.cs')];
+    expect(runPlans(withCs, [csMerge, fakeMerge], 'FakeMerge').map((plan) => plan.tool.id)).toEqual(['FakeMerge', 'CsMerge']);
   });
 
   it('falls back to the tool that opens the most when the preferred one opens nothing', () => {
+    expect(runPlans([file('a.cs'), file('b.cs')], [csMerge, fakeMerge], 'CsMerge').map((plan) => plan.tool.id)).toEqual(['CsMerge', 'FakeMerge']);
+    expect(runPlans([file('a.ts')], [csMerge, fakeMerge], 'CsMerge').map((plan) => plan.tool.id)).toEqual(['FakeMerge']);
+  });
+
+  it('never runs a tool on binaries, which keep one of their versions', () => {
     const binaries = [file('a.png', { isBinary: true }), file('b.png', { isBinary: true })];
-    expect(runPlans(binaries, [fakeMerge, uvcs], 'FakeMerge').map((plan) => plan.tool.id)).toEqual(['UVCS merge tool']);
-    expect(runPlans(binaries, [fakeMerge], 'FakeMerge')).toEqual([]);
+    expect(runPlans(binaries, [fakeMerge, csMerge], 'FakeMerge')).toEqual([]);
   });
 });
 
 describe('leftOutNote', () => {
   it('says why files stay out of the run', () => {
-    expect(leftOutNote(planRun(states, fakeMerge))).toBe("FakeMerge doesn't merge binary files: logo.png is left to you");
-    expect(leftOutNote(planRun(states, uvcs))).toBeUndefined();
-    const onlyCs = tool('CsMerge', { extensions: ['.cs'] });
-    expect(leftOutNote(planRun([file('a.cs'), file('b.ts'), file('c.ts'), file('d.ts')], onlyCs))).toBe(
+    expect(leftOutNote(planRun(states, fakeMerge))).toBe('Binary files keep one version: logo.png is left to you');
+    expect(leftOutNote(planRun([file('a.ts')], fakeMerge))).toBeUndefined();
+    expect(leftOutNote(planRun([file('a.cs'), file('b.ts'), file('c.ts'), file('d.ts')], csMerge))).toBe(
       "CsMerge doesn't open these files: b.ts, c.ts and 1 other are left to you",
     );
   });
@@ -75,7 +77,7 @@ describe('leftOutNote', () => {
 
 describe('runLabel', () => {
   it('counts the conflicts the run goes through', () => {
-    expect(runLabel(planRun(states, uvcs))).toBe('Resolve 3 conflicts in UVCS merge tool');
+    expect(runLabel(planRun(states, fakeMerge))).toBe('Resolve 2 conflicts in FakeMerge');
   });
 });
 
@@ -86,22 +88,22 @@ describe('runSummary', () => {
     expect(runSummary({ resolved: 2, total: 2, stopped: false }, plan)).toEqual({
       kind: 'success',
       title: 'Resolved both conflicts in FakeMerge',
-      detail: "FakeMerge doesn't merge binary files: logo.png is left to you.",
+      detail: 'Binary files keep one version: logo.png is left to you.',
     });
-    expect(runSummary({ resolved: 5, total: 5, stopped: false }, planRun(states, uvcs))).toEqual({ kind: 'success', title: 'Resolved all 5 conflicts in UVCS merge tool' });
+    expect(runSummary({ resolved: 5, total: 5, stopped: false }, planRun([file('a.ts')], tool('UVCS merge tool')))).toEqual({ kind: 'success', title: 'Resolved all 5 conflicts in UVCS merge tool' });
   });
 
   it('counts what still needs the user, and says when they stopped', () => {
-    expect(runSummary({ resolved: 4, total: 5, stopped: false }, planRun(states, uvcs))).toEqual({
+    expect(runSummary({ resolved: 4, total: 5, stopped: false }, planRun([file('a.ts')], tool('UVCS merge tool')))).toEqual({
       kind: 'info',
       title: 'Resolved 4 of 5 in UVCS merge tool',
       detail: '1 still needs you.',
     });
-    expect(runSummary({ resolved: 1, total: 3, stopped: true }, planRun(states, uvcs)).title).toBe('Stopped: resolved 1 of 3 in UVCS merge tool');
+    expect(runSummary({ resolved: 1, total: 3, stopped: true }, planRun([file('a.ts')], tool('UVCS merge tool'))).title).toBe('Stopped: resolved 1 of 3 in UVCS merge tool');
   });
 
   it('says only that it stopped when nothing was resolved yet', () => {
-    expect(runSummary({ resolved: 0, total: 12, stopped: true }, planRun(states, uvcs))).toEqual({
+    expect(runSummary({ resolved: 0, total: 12, stopped: true }, planRun([file('a.ts')], tool('UVCS merge tool')))).toEqual({
       kind: 'info',
       title: 'Stopped resolving in UVCS merge tool',
       detail: '12 still need you.',

@@ -24,8 +24,8 @@ describe('mergeToolList', () => {
       ['vscode', 'Visual Studio Code'],
       ['custom:1', 'My tool'],
     ]);
-    expect(tools[0]).toMatchObject({ mergesBinaries: true, canBringToFront: true, extensions: null });
-    expect(tools[2]).toMatchObject({ args: ['--wait', '{result}'], defaultArgs: KNOWN_TOOLS[1]!.args, mergesBinaries: false, canBringToFront: false });
+    expect(tools[0]).toMatchObject({ canBringToFront: true, extensions: null });
+    expect(tools[2]).toMatchObject({ args: ['--wait', '{result}'], defaultArgs: KNOWN_TOOLS[1]!.args, canBringToFront: false });
   });
 
   it('prefers the user’s pick while it is there, else the UVCS tool, else the first for every file', () => {

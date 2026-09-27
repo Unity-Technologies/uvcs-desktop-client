@@ -7,37 +7,33 @@ import { decisionFromTool, toolOutcomeMessage, toolVersionNames, waitsForTool } 
 const labels: MergeLabels = { source: '/main', destination: '/main/task', roles: WORKSPACE_ROLES };
 
 describe('decisionFromTool', () => {
-  it('takes saved text or the version kept, marked as the tool’s', () => {
+  it('takes the saved text, marked as the tool’s', () => {
     expect(decisionFromTool({ kind: 'resolved', text: 'x\n' }, 'VS Code')).toEqual({ kind: 'text', text: 'x\n', tool: 'VS Code' });
-    expect(decisionFromTool({ kind: 'keptSide', side: 'source' }, 'UVCS merge tool')).toEqual({ kind: 'wholeFile', side: 'source', tool: 'UVCS merge tool' });
     expect(decisionFromTool({ kind: 'unchanged', exitCode: 0, errorOutput: '' }, 'VS Code')).toBeUndefined();
   });
 });
 
 describe('toolOutcomeMessage', () => {
   it('confirms a clean result, and points at conflicts left in it', () => {
-    expect(toolOutcomeMessage({ kind: 'resolved', text: 'x\n' }, 'VS Code', 'a.ts', labels)).toMatchObject({ kind: 'success', title: 'Resolved a.ts in VS Code' });
-    expect(toolOutcomeMessage({ kind: 'resolved', text: '<<<<<<< a\nx\n=======\ny\n>>>>>>> b\n' }, 'VS Code', 'a.ts', labels)).toMatchObject({
+    expect(toolOutcomeMessage({ kind: 'resolved', text: 'x\n' }, 'VS Code', 'a.ts')).toMatchObject({ kind: 'success', title: 'Resolved a.ts in VS Code' });
+    expect(toolOutcomeMessage({ kind: 'resolved', text: '<<<<<<< a\nx\n=======\ny\n>>>>>>> b\n' }, 'VS Code', 'a.ts')).toMatchObject({
       kind: 'info',
       title: 'a.ts still has 1 conflict',
     });
   });
 
   it('says nothing changed when the tool closed without saving, with its error if it failed', () => {
-    expect(toolOutcomeMessage({ kind: 'unchanged', exitCode: 0, errorOutput: '' }, 'KDiff3', 'a.ts', labels)).toEqual({
+    expect(toolOutcomeMessage({ kind: 'unchanged', exitCode: 0, errorOutput: '' }, 'KDiff3', 'a.ts')).toEqual({
       kind: 'info',
       title: 'KDiff3 closed without saving a.ts',
       detail: 'It still needs your decision.',
     });
-    expect(toolOutcomeMessage({ kind: 'unchanged', exitCode: 2, errorOutput: 'warning\nbad option -x\n' }, 'KDiff3', 'a.ts', labels).detail).toBe(
+    expect(toolOutcomeMessage({ kind: 'unchanged', exitCode: 2, errorOutput: 'warning\nbad option -x\n' }, 'KDiff3', 'a.ts').detail).toBe(
       'It still needs your decision. bad option -x',
     );
-    expect(toolOutcomeMessage({ kind: 'unchanged', exitCode: null, errorOutput: '' }, 'KDiff3', 'a.ts', labels).title).toBe('Stopped waiting for KDiff3');
+    expect(toolOutcomeMessage({ kind: 'unchanged', exitCode: null, errorOutput: '' }, 'KDiff3', 'a.ts').title).toBe('Stopped waiting for KDiff3');
   });
 
-  it('names the version a binary keeps', () => {
-    expect(toolOutcomeMessage({ kind: 'keptSide', side: 'destination' }, 'UVCS merge tool', 'a.png', labels).detail).toBe('Keeping your version.');
-  });
 });
 
 describe('toolVersionNames', () => {
@@ -54,7 +50,6 @@ describe('waitsForTool', () => {
     executable: 'code',
     args: [],
     defaultArgs: [],
-    mergesBinaries: false,
     extensions: null,
     canBringToFront: false,
   };
@@ -75,6 +70,5 @@ describe('waitsForTool', () => {
     expect(waitsForTool(state({ status: 'loading' }), tool)).toBe(false);
     expect(waitsForTool(state({ openTool: { sessionId: 's', toolName: 'VS Code', canBringToFront: false } }), tool)).toBe(false);
     expect(waitsForTool(state({ isBinary: true }), tool)).toBe(false);
-    expect(waitsForTool(state({ isBinary: true }), { ...tool, mergesBinaries: true })).toBe(true);
   });
 });

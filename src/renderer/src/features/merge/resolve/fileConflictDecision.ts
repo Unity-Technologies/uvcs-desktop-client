@@ -8,8 +8,8 @@ export type FileConflictDecision =
    * than a side picked for each conflict; `tool`: the merge tool that saved it.
    */
   | { kind: 'text'; text: string; edited?: boolean; tool?: string }
-  /** Take one version of the whole file; `tool`: picked in a merge tool. */
-  | { kind: 'wholeFile'; side: 'source' | 'destination'; tool?: string };
+  /** Take one version of the whole file. */
+  | { kind: 'wholeFile'; side: 'source' | 'destination' };
 
 /** Text files start from the automatic merge; binary files need an explicit choice. */
 export function initialDecision(document: ConflictDocument | undefined): FileConflictDecision | undefined {

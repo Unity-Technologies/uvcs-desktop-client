@@ -18,8 +18,6 @@ export interface MergeTool {
   args: string[];
   /** The arguments before the user's override, to offer going back to them. */
   defaultArgs: string[];
-  /** Merges binary files too (the UVCS tool); others are offered for text files only. */
-  mergesBinaries: boolean;
   /** Only for these extensions (lowercase, with the dot), as client.conf says; null for every file. */
   extensions: string[] | null;
   /** Its window can be brought forward while it's open (an app bundle on macOS). */
@@ -32,9 +30,12 @@ export interface MergeToolList {
   preferredId: string | null;
 }
 
-/** Whether a tool is offered for a file: binaries only in tools that merge them, and client.conf's by extension. */
+/**
+ * Whether a tool is offered for a file: text files only (a binary keeps one of its versions, picked in the app), and
+ * client.conf's by extension.
+ */
 export function canMergeIn(tool: MergeTool, path: string, isBinary: boolean): boolean {
-  if (isBinary && !tool.mergesBinaries) return false;
+  if (isBinary) return false;
   const name = path.toLowerCase();
   return !tool.extensions || tool.extensions.some((extension) => name.endsWith(extension));
 }
@@ -61,9 +62,9 @@ export interface MergeToolRequest {
   incoming: ContentSource;
   /**
    * What the result file holds when the tool opens (the automatic merge with its conflict markers, or what the user
-   * decided so far); null for binaries. A result left like this means nothing was resolved.
+   * decided so far). A result left like this means nothing was resolved.
    */
-  startText: string | null;
+  startText: string;
   /** How each version is called in the tool's window, e.g. `Yours (/main/task)`. */
   names: { base: string; yours: string; incoming: string };
 }
@@ -75,8 +76,6 @@ export interface MergeToolRequest {
 export type MergeToolOutcome =
   /** A text file saved: its merged text, conflict markers included if the user left some. */
   | { kind: 'resolved'; text: string }
-  /** A binary file saved as one of its versions. */
-  | { kind: 'keptSide'; side: 'source' | 'destination' }
   /** `exitCode` is null when the user stopped waiting; `errorOutput` is the end of what the tool wrote to stderr. */
   | { kind: 'unchanged'; exitCode: number | null; errorOutput: string }
   | { kind: 'failed'; message: string };

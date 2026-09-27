@@ -13,7 +13,7 @@ describe('toolFileNames', () => {
 });
 
 describe('judgeToolResult', () => {
-  const text = { start: bytes('<<<<<<< a\n=======\n>>>>>>> b\n'), yours: bytes('a\n'), incoming: bytes('b\n') };
+  const text = { start: bytes('<<<<<<< a\n=======\n>>>>>>> b\n') };
 
   it('takes the saved text, whatever the exit code says', () => {
     expect(judgeToolResult({ ...text, result: bytes('a\nb\n') }, { exitCode: null, errorOutput: '', seconds: 30 })).toEqual({ kind: 'resolved', text: 'a\nb\n' });
@@ -31,13 +31,5 @@ describe('judgeToolResult', () => {
     expect(judgeToolResult({ ...text, result: text.start }, { exitCode: 1, errorOutput: 'closed', seconds: 8 })).toMatchObject({ kind: 'unchanged' });
     expect(judgeToolResult({ ...text, result: text.start }, { exitCode: 1, errorOutput: '', seconds: 1 })).toMatchObject({ kind: 'unchanged' });
     expect(judgeToolResult({ ...text, result: text.start }, { exitCode: 0, errorOutput: 'noise', seconds: 1 })).toMatchObject({ kind: 'unchanged' });
-  });
-
-  it('turns a binary result into the version it is', () => {
-    const binary = { start: null, yours: bytes('Y'), incoming: bytes('I') };
-    expect(judgeToolResult({ ...binary, result: bytes('I') }, run)).toEqual({ kind: 'keptSide', side: 'source' });
-    expect(judgeToolResult({ ...binary, result: bytes('Y') }, run)).toEqual({ kind: 'keptSide', side: 'destination' });
-    expect(judgeToolResult({ ...binary, result: null }, { exitCode: 1, errorOutput: '', seconds: 1 })).toMatchObject({ kind: 'unchanged' });
-    expect(judgeToolResult({ ...binary, result: bytes('X') }, run)).toMatchObject({ kind: 'failed' });
   });
 });

@@ -44,7 +44,7 @@ export async function resolveInMergeTool(
       base: state.file.base,
       yours: state.file.destination,
       incoming: state.file.source,
-      startText: state.isBinary ? null : startText(state),
+      startText: startText(state),
       names: toolVersionNames(labels),
     });
   } catch (error) {
@@ -54,7 +54,7 @@ export async function resolveInMergeTool(
   }
 
   if (!quiet) {
-    const message = toolOutcomeMessage(outcome, tool.name, fileName, labels);
+    const message = toolOutcomeMessage(outcome, tool.name, fileName);
     if (message.kind === 'error') toast.error(message.title, message.detail);
     else toast[message.kind](message.title, message.detail);
   }

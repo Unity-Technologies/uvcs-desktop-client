@@ -21,12 +21,12 @@ interface MergeToolButtonProps {
   state: FileConflictState;
   actions: ConflictToolActions;
   /** Resolving by hand in the app, kept in the menu for when no tool suits. */
-  onEditInApp?: () => void;
+  onEditInApp: () => void;
   variant?: 'primary' | 'secondary';
 }
 
 /**
- * "Resolve in <tool>": the preferred merge tool the file can open in, with the others found behind the caret. Picking
+ * "Resolve in <tool>", for a text file: the preferred merge tool the file can open in, with the others found behind the caret. Picking
  * one there makes it the preferred one from then on. Nothing opens until the user clicks.
  */
 export function MergeToolButton({ state, actions, onEditInApp, variant = 'primary' }: MergeToolButtonProps) {
@@ -47,13 +47,12 @@ export function MergeToolButton({ state, actions, onEditInApp, variant = 'primar
   const menu: MenuEntry[] = tidyMenu([
     ...fits.map((tool) => ({ id: tool.id, label: tool.name, icon: tool.id === primary?.id ? Check : undefined, run: () => pick(tool) })),
     SEPARATOR,
-    !state.isBinary && { id: 'addApp', label: 'Choose another app…', icon: FolderOpen, run: () => void addApp() },
-    onEditInApp && { id: 'editInApp', label: 'Edit the text in the app', icon: PencilLine, run: onEditInApp },
+    { id: 'addApp', label: 'Choose another app…', icon: FolderOpen, run: () => void addApp() },
+    { id: 'editInApp', label: 'Edit the text in the app', icon: PencilLine, run: onEditInApp },
     { id: 'settings', label: 'Merge tool settings…', icon: Settings, run: () => openSettingsDialogAt('merge') },
   ]);
 
   if (!primary) {
-    if (state.isBinary) return null;
     return (
       <SplitButton
         variant={variant}

@@ -7,10 +7,8 @@ import { posix, win32 } from 'node:path';
 export interface KnownTool {
   id: string;
   name: string;
-  /** Text files; `{result}` is where the tool saves. */
+  /** `{result}` is where the tool saves. */
   args: string[];
-  /** Binary files, for the tools that merge them. */
-  binaryArgs?: string[];
   /** Where it may be installed, in order; a `*` stands for any name in one folder (a version number). */
   locations: (where: Whereabouts) => string[];
   /** Program names to look for on the PATH. */
@@ -29,7 +27,7 @@ export interface Whereabouts {
 }
 
 /**
- * The UVCS merge tool is the Desktop GUI run with `xmerge` (`binmerge` for binaries; `DiffMergeToolConfig.cs`). It
+ * The UVCS merge tool is the Desktop GUI run with `xmerge` (`DiffMergeToolConfig.cs`). It
  * saves to `-r` and exits 0 only when it saved. Source is the incoming side, destination yours. No `-a`: it would
  * close by itself when nothing needs the user.
  */
@@ -91,7 +89,6 @@ export const KNOWN_TOOLS: KnownTool[] = [
     id: UVCS_TOOL_ID,
     name: 'UVCS merge tool',
     args: ['xmerge', ...UVCS_SIDES],
-    binaryArgs: ['binmerge', ...UVCS_SIDES],
     locations: (where) => {
       if (where.platform === 'darwin') return macApps(where, 'PlasticSCM.app/Contents/MacOS/macplasticx');
       if (where.platform === 'win32') {

@@ -32,12 +32,12 @@ export function runPlans(states: FileConflictState[], tools: MergeTool[], prefer
   return first ? [first, ...plans.filter((plan) => plan !== first)] : [];
 }
 
-/** Why some files stay out of the run, e.g. "FakeMerge doesn't merge binary files: logo.png is left to you". */
+/** Why some files stay out of the run, e.g. "Binary files keep one version: logo.png is left to you". */
 export function leftOutNote(plan: RunPlan): string | undefined {
   if (plan.left.length === 0) return undefined;
   const names = listNames(plan.left.map((state) => fileNameOf(state.file.path)));
   const leftToYou = `${names} ${plan.left.length === 1 ? 'is' : 'are'} left to you`;
-  if (plan.left.every((state) => state.isBinary)) return `${plan.tool.name} doesn't merge binary files: ${leftToYou}`;
+  if (plan.left.every((state) => state.isBinary)) return `Binary files keep one version: ${leftToYou}`;
   return `${plan.tool.name} doesn't open ${plan.left.length === 1 ? 'this file' : 'these files'}: ${leftToYou}`;
 }
 

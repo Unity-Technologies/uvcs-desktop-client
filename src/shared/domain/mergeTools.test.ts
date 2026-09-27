@@ -20,7 +20,6 @@ describe('canMergeIn', () => {
     executable: '/opt/UnityYAMLMerge',
     args: [],
     defaultArgs: [],
-    mergesBinaries: false,
     extensions: ['.unity'],
     canBringToFront: false,
   };
@@ -31,8 +30,8 @@ describe('canMergeIn', () => {
     expect(canMergeIn({ ...tool, extensions: null }, 'Assets/Main.cs', false)).toBe(true);
   });
 
-  it('offers binaries only to tools that merge them', () => {
+  it('offers no tool for binaries, which keep one of their versions', () => {
     expect(canMergeIn({ ...tool, extensions: null }, 'a.png', true)).toBe(false);
-    expect(canMergeIn({ ...tool, extensions: null, mergesBinaries: true }, 'a.png', true)).toBe(true);
+    expect(canMergeIn({ ...tool, extensions: ['.png'] }, 'a.png', true)).toBe(false);
   });
 });
