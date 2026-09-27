@@ -33,6 +33,7 @@ import { syntaxHighlighting } from './syntaxHighlighting';
 import type { DiscardRequest } from './useBlockDiscard';
 import type { DiffContents } from './useDiffContents';
 import { useFileBuffer } from './useFileBuffer';
+import { wholeFileNote } from './wholeFileNote';
 
 // The diff renderer (Pierre + Shiki) is large; load it with the first diff instead of at startup.
 const TextDiff = lazyComponent(() => import('./TextDiff').then((module) => module.TextDiff));
@@ -97,6 +98,8 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
     () => (isText && current !== right.text ? lineDiff(left.text ?? '', current, comparisonMethod, fileName) : savedDiff),
     [isText, left.text, right.text, current, comparisonMethod, fileName, savedDiff],
   );
+  // Typed into whole when the file as read shows no lines: nothing changed, it's empty, or only ignored differences.
+  const wholeFile = editable && savedDiff !== null && !hasLineChanges(savedDiff);
   // Different texts the comparison method shows as equal, e.g. only their line endings changed.
   const onlyIgnoredChanges = presentation.kind === 'text' && !presentation.identical && savedDiff !== null && !hasLineChanges(savedDiff);
   const openFile = editablePath === null ? undefined : () => void api.system.openPath(absolutePath(workspacePath, editablePath));
@@ -194,8 +197,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       modified={right.text}
       current={current}
       diff={currentDiff}
-      // Typed into whole when the file as read shows no lines: nothing changed, it's empty, or only ignored differences.
-      wholeFile={editable && savedDiff !== null && !hasLineChanges(savedDiff)}
+      wholeFile={wholeFile}
       fileName={fileName}
       comparisonMethod={comparisonMethod}
       sides={sides}
@@ -210,13 +212,17 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   let body: ReactNode;
   if (editable) {
     // Typed into even with no lines to show: then the whole file, under a line that says why.
+    const noteKind =
+      wholeFile && presentation.kind === 'text'
+        ? wholeFileNote({ empty: presentation.empty, identical: presentation.identical, dirty, unsavedLineChanges: currentDiff !== null && hasLineChanges(currentDiff) })
+        : null;
     const note =
-      dirty ? null
-      : presentation.empty ? <DiffNotice tone="info" icon={<FileText size={13} />}>Empty file. Type to add to it.</DiffNotice>
-      : presentation.identical ? <DiffNotice tone="info" icon={<FileText size={13} />}>No content changes. {identicalDescription ?? 'The contents of both versions are identical.'}</DiffNotice>
-      : onlyIgnoredChanges ? (
+      noteKind === 'empty' ? <DiffNotice tone="info" icon={<FileText size={13} />}>Empty file. Type to add to it.</DiffNotice>
+      : noteKind === 'identical' ? <DiffNotice tone="info" icon={<FileText size={13} />}>No content changes. {identicalDescription ?? 'The contents of both versions are identical.'}</DiffNotice>
+      : noteKind === 'unsaved' ? <DiffNotice tone="info" icon={<FileText size={13} />}>Your edits show as a diff once saved.</DiffNotice>
+      : noteKind === 'ignored' ? (
         <DiffNotice tone="info" icon={<EyeOff size={13} />} action={recognizeAll}>
-          {IGNORED_DIFFERENCE_TITLES[ignoredDifference(left.text ?? '', right.text ?? '')]}. The comparison method, {comparisonMethodLabel(comparisonMethod)}, hides these changes.
+          {IGNORED_DIFFERENCE_TITLES[ignoredDifference(left.text ?? '', current)]}. The comparison method, {comparisonMethodLabel(comparisonMethod)}, hides these changes.
         </DiffNotice>
       )
       : null;

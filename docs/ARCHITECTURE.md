@@ -208,7 +208,8 @@ renderer/src/
   (history, merges, conflicts) is read-only, with no caret. Pierre's editor holds the text and its undo (⌘Z while typing);
   `useFileBuffer` keeps what the disk doesn't have yet: Discard and Save (⌘S) show in the header as soon as there is some.
   Without unsaved edits the diff follows the disk; with some it holds still and says the file changed on disk. A file with
-  no lines to show (no content changes, empty, only ignored differences) is typed into whole, under a note. ⌘E puts the
+  no lines to show (no content changes, empty, only ignored differences) is typed into whole, under a note (kept while
+  it's typed into). ⌘E puts the
   caret in the text and Esc leaves it for the file list; keys the editor handles never reach the app's shortcuts. Read and
   edit look the same: the editor is always on, so nothing in the diff moves when typing starts. Each pane of code
   scrolls sideways on its own and its bar would sit at the end of the file, so `PaneScrollbars` keeps one per pane at
