@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { lineDiff } from './lineDiff';
-import { caretLineCss, shownDiff } from './shownDiff';
+import { caretLineCss, followsLayout, shownDiff } from './shownDiff';
 
 const both = { original: true, modified: true };
 const diff = (original: string, modified: string, sides = both, typedInto = false) =>
@@ -51,5 +51,17 @@ describe('caretLineCss', () => {
 
   it('has nothing to style when the text ends without a line break: its last line is a line of the file', () => {
     expect(caretLineCss('a\nb')).toBe('');
+  });
+});
+
+describe('followsLayout', () => {
+  it('is true for two versions, one of them empty included', () => {
+    expect(followsLayout(both, false)).toBe(true);
+  });
+
+  it('is false for one version alone, or a file typed into whole', () => {
+    expect(followsLayout({ original: false, modified: true }, false)).toBe(false);
+    expect(followsLayout({ original: true, modified: false }, false)).toBe(false);
+    expect(followsLayout(both, true)).toBe(false);
   });
 });

@@ -1,0 +1,10 @@
+/* Quieter than the path: where the file was is context, not what the diff shows. */
+.from {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+}

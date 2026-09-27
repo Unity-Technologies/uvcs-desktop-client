@@ -223,9 +223,10 @@ renderer/src/
   highlights editors on the main thread, pool or not), is plain text, with a quiet "Large file" in the header (its
   tooltip says why); such a diff is the "text" language (`highlightedLanguage`), or the editor would color
   the lines typed into it.
-  Every diff follows Split/Unified, one from or to an empty file (an added file, an empty base) too: `shownDiff` keeps
-  both sides where Pierre would show a new or deleted file in one column, and the empty side is hatched like any added
-  lines. "No newline at end of file" shows only where the final line break is what changed (`noNewlineMarker`); a diff
+  Every diff of two versions follows Split/Unified, one from or to an empty version (an empty base, a file emptied)
+  too: `shownDiff` keeps both sides where Pierre would show a new or deleted file in one column, and the empty side is
+  hatched like any added lines. An item with one version only (added, private, deleted; a revision that created the
+  file) shows it alone, in one column. "No newline at end of file" shows only where the final line break is what changed (`noNewlineMarker`); a diff
   typed into keeps the marker rows, hidden, since Pierre recolors the rows it rendered only while there are as many as
   the diff has. The editor's line for the caret after the last line break (the one line of an empty text) looks like
   an unchanged empty line (`caretLineCss`): Pierre shows it as added after a change that removes more than it adds.

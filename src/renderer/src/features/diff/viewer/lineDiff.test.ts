@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { blockLines, listChangeBlocks } from './changeBlocks';
 import { COMPARISON_METHODS, type ComparisonMethod } from './comparisonMethod';
 import { discardLines, withOwnLines } from './discardLines';
+import { DIFF_TEST_TEXTS } from './diffTestTexts';
 import { differsUnder, hasLineChanges, lineDiff } from './lineDiff';
 import { changesOf, typedIntoPierre } from './pierreSessionFixture';
 import { shownDiff } from './shownDiff';
@@ -68,6 +69,26 @@ describe('differsUnder', () => {
     expect(differsUnder('one\ntwo\n', 'one\r\ntwo\r\n', 'recognizeAll')).toBe(true);
     expect(differsUnder('one\rtwo\r', 'one\rTWO\r', 'recognizeAll')).toBe(true);
     expect(differsUnder('one\rtwo\r', 'one\ntwo\n', 'recognizeAll')).toBe(true);
+  });
+
+  it('tells what the diff tells, under every method, without diffing the texts under one that ignores something', () => {
+    const eolsAndWhitespace = (text: string, eol: string) => text.replace(/\r\n|\r|\n/g, eol).replace(/^( *)/gm, '\t$1');
+    for (const [original, modified] of Object.values(DIFF_TEST_TEXTS)) {
+      const pairs: [string, string][] = [
+        [original, modified],
+        [original, original.replace(/\r\n|\r|\n/g, '\r\n')],
+        [original, original.replace(/\r\n|\r|\n/g, '\n')],
+        [original, original.replace(/\r\n|\r|\n/g, '\r')],
+        [original, original.replace(/ +$/gm, '  ')],
+        [original, eolsAndWhitespace(original, '\n')],
+        [original, original.replace(/\n$/, '')],
+      ];
+      for (const [left, right] of pairs) {
+        for (const { value: method } of COMPARISON_METHODS) {
+          expect(differsUnder(left, right, method), `${JSON.stringify(left)} → ${JSON.stringify(right)} under ${method}`).toBe(hasLineChanges(lineDiff(left, right, method)));
+        }
+      }
+    }
   });
 });
 
