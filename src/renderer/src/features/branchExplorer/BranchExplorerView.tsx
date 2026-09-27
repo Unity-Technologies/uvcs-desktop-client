@@ -1,5 +1,5 @@
 import { GitGraph, RefreshCw } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { spec } from '@shared/domain/specs';
 import { invalidateWorkspace } from '../../app/queryClient';
@@ -43,6 +43,7 @@ import { firstHitIndex, searchGraph, searchHighlight, type SearchHit } from './m
 import { useBranchExplorerCommands } from './useBranchExplorerCommands';
 import { useBranchExplorerData } from './useBranchExplorerData';
 import { useRevealRequest } from './useRevealRequest';
+import { useSearchHits } from './useSearchHits';
 import styles from './BranchExplorerView.module.css';
 
 const NO_REVIEWS: ReadonlyMap<number, CodeReviewSummary> = new Map();
@@ -64,6 +65,8 @@ export function BranchExplorerView() {
   /** How far the last focus reached; the next one starts there. */
   const [focusHops, setFocusHops] = useState(1);
   const [search, setSearch] = useState('');
+  // The field follows every key at once; the graph finds and lights the hits right after, a key behind at most.
+  const shownSearch = useDeferredValue(search);
   /** Changesets the user expanded out of "+N" nodes. */
   const [expanded, setExpanded] = useState<ReadonlySet<number>>(new Set());
   /** -1 until the user steps through the matches. */
@@ -81,7 +84,7 @@ export function BranchExplorerView() {
 
   // Search looks at every changeset, so "Only relevant changesets" can keep what it finds.
   const fullLayout = useMemo(() => filtered && layoutGraph(filtered), [filtered]);
-  const searchHits = useMemo(() => (fullLayout ? searchGraph(fullLayout, search) : []), [fullLayout, search]);
+  const searchHits = useSearchHits(fullLayout, shownSearch);
   const selectedChangeset = selection?.kind === 'changeset' ? selection.id : null;
   const layout = useMemo(() => {
     if (!filtered || !structureOnly) return fullLayout;
@@ -98,6 +101,11 @@ export function BranchExplorerView() {
   const branchNames = useMemo(() => (data?.branches.map((branch) => branch.name) ?? []).sort(), [data]);
   // Asked for once the graph is in, so it never waits on the reviews.
   const { data: reviews } = useReviewsByBranch(data !== undefined);
+  // What the hits light up, found once per search: selecting and stepping through the hits only moves `active`.
+  const searchLit = useMemo(
+    () => (shownSearch.trim() && fullLayout ? searchHighlight(fullLayout, searchHits, null) : null),
+    [shownSearch, fullLayout, searchHits],
+  );
   const highlights = useMemo<GraphHighlights>(
     () => ({
       selectedChangeset: selection?.kind === 'changeset' ? selection.id : null,
@@ -105,12 +113,12 @@ export function BranchExplorerView() {
       homeChangeset,
       currentBranch,
       highlightedAuthor,
-      search: search.trim() && fullLayout ? searchHighlight(fullLayout, searchHits, searchHits[activeHitIndex] ?? null) : null,
-      searchQuery: search.trim(),
+      search: searchLit && { ...searchLit, active: searchHits[activeHitIndex] ?? null },
+      searchQuery: shownSearch.trim(),
       options: { showComments, showAvatars },
       reviews: reviews ?? NO_REVIEWS,
     }),
-    [selection, homeChangeset, currentBranch, highlightedAuthor, search, fullLayout, searchHits, activeHitIndex, showComments, showAvatars, reviews],
+    [selection, homeChangeset, currentBranch, highlightedAuthor, shownSearch, searchLit, searchHits, activeHitIndex, showComments, showAvatars, reviews],
   );
 
   const goToChangeset = useCallback((id: number) => {
@@ -159,11 +167,12 @@ export function BranchExplorerView() {
   });
 
   const stepSearch = (direction: 1 | -1): void => {
-    if (searchHits.length === 0) return;
-    const next =
-      activeHitIndex === -1 ? (direction === 1 ? firstHitIndex(searchHits, search) : searchHits.length - 1) : (activeHitIndex + direction + searchHits.length) % searchHits.length;
+    // Enter right after a key, before the graph caught up with it, steps through what is typed.
+    const hits = shownSearch === search ? searchHits : fullLayout ? searchGraph(fullLayout, search) : [];
+    if (hits.length === 0) return;
+    const next = activeHitIndex === -1 ? (direction === 1 ? firstHitIndex(hits, search) : hits.length - 1) : (activeHitIndex + direction + hits.length) % hits.length;
     setActiveHitIndex(next);
-    goToHit(searchHits[next]!);
+    goToHit(hits[next]!);
   };
 
   const goToHit = (hit: SearchHit): void => {
