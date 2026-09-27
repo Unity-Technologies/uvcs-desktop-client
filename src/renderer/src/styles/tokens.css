@@ -51,6 +51,9 @@
   --duration-fast: 120ms;
   --duration-normal: 200ms;
   --duration-slow: 320ms;
+
+  /* Items that are there but on their way elsewhere (cut, to be moved). */
+  --opacity-ghost: 0.45;
   /* Keyframes live in global.css; CSS modules reference them through these variables
      because modules rename any keyframe name written literally. */
   --keyframes-spin: spin;

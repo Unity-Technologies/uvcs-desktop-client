@@ -35,6 +35,7 @@ import {
   revealItem,
   targetDirectoryFor,
 } from './fileOperations';
+import { cutPasteMenu } from './cutPasteActions';
 import { fileMenuTargets, hasRevisionsToShow } from './fileMenuTargets';
 import { useFilesViewStore } from './filesViewStore';
 import type { PendingChangesIndex } from './itemStatus';
@@ -111,6 +112,9 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
     SEPARATOR,
     single && !hasRoot && { id: 'rename', label: 'Rename…', icon: TextCursorInput, shortcut: FILE_SHORTCUTS.rename, run: () => void renameItem(workspacePath, single) },
     !hasRoot && { id: 'delete', label: 'Delete', icon: Trash2, danger: true, shortcut: FILE_SHORTCUTS.delete, run: () => void deleteItems(workspacePath, items) },
+    SEPARATOR,
+    // Clipboard: moving items into another folder.
+    ...cutPasteMenu(workspacePath, items),
     SEPARATOR,
     single && {
       id: 'newFile',

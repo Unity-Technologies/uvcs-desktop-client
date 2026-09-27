@@ -13,12 +13,13 @@ function isTyping(event: KeyboardEvent): boolean {
 
 /**
  * Runs registered commands when their shortcut is pressed, never behind a modal dialog; one pressed in the palette
- * closes it first. Keys that belong to a field typed into are left to it.
+ * closes it first. Keys that belong to a field typed into are left to it, and keys something already took (Esc
+ * closing a menu) to that.
  */
 export function CommandShortcuts() {
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent): void => {
-      if ((isTyping(event) && belongsToField(event)) || !windowShortcutMayRun(event)) return;
+      if (event.defaultPrevented || (isTyping(event) && belongsToField(event)) || !windowShortcutMayRun(event)) return;
 
       const command = allCommands().find((candidate) => candidate.shortcut && !candidate.disabled && matchesShortcut(event, candidate.shortcut));
       if (!command) return;

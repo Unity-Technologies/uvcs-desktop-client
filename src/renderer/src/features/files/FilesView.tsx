@@ -18,6 +18,8 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { usePendingChanges } from '../pendingChanges/usePendingChanges';
 import { useExpandedDirectories, useExpandedDirectoriesStore } from './expandedDirectoriesStore';
 import { fileMenu, FILE_SHORTCUTS } from './fileMenu';
+import { useCutItems } from './cutItemsStore';
+import { CutHint } from './CutHint';
 import { createItem, openItem, targetDirectoryFor } from './fileOperations';
 import { useFilesViewStore } from './filesViewStore';
 import { FileTreeTable } from './FileTreeTable';
@@ -26,6 +28,7 @@ import { goToFile } from './GoToFileDialog';
 import { ItemDetailsPane } from './ItemDetailsPane';
 import { itemStatus, PendingChangesIndex } from './itemStatus';
 import { GO_TO_FILE_SHORTCUT, useFileCommands } from './useFileCommands';
+import { useCutPasteCommands } from './useCutPasteCommands';
 import { useTreeListings } from './useTreeListings';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { WorkspaceRootDetails } from './WorkspaceRootDetails';
@@ -62,10 +65,10 @@ export function FilesView() {
   const revealRequest = useFilesViewStore((state) => state.revealRequest);
   useEffect(() => {
     if (!revealRequest) return;
-    const { path } = revealRequest;
+    const { path, selected = [path] } = revealRequest;
     expand(workspacePath, ancestorsOf(path));
     setFilter('');
-    setSelection({ selected: new Set([path]), anchor: path });
+    setSelection({ selected: new Set(selected), anchor: path });
     setRevealPath(path);
   }, [revealRequest, expand, workspacePath]);
 
@@ -74,6 +77,9 @@ export function FilesView() {
     [workspacePath],
   );
   useFileCommands(workspacePath, selectedItems, pendingIndex, openGoToFile);
+  useCutPasteCommands(workspacePath, selectedItems);
+  const cutItems = useCutItems(workspacePath);
+  const cutPaths = useMemo(() => new Set(cutItems.map((item) => item.path)), [cutItems]);
   const nothingMatches = shownFilter.trim() !== '' && rows.every((row) => isWorkspaceRoot(row.item));
 
   const createInSelection = (kind: 'file' | 'directory'): void => void createItem(workspacePath, targetDirectoryFor(focused), kind);
@@ -92,6 +98,7 @@ export function FilesView() {
       }
     >
       <SearchField value={filter} onChange={setFilter} placeholder="Filter open folders" />
+      <CutHint workspacePath={workspacePath} />
     </ViewHeader>
   );
 
@@ -121,6 +128,7 @@ export function FilesView() {
                 statusOf={(item) => itemStatus(item, pendingIndex)}
                 hasChangesInside={(directory) => pendingIndex.hasChangesInside(directory)}
                 revealPath={revealPath}
+                isCut={(item) => cutPaths.has(item.path)}
               />
             </HighlightQuery>
           )

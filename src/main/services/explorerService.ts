@@ -3,16 +3,17 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { dialog, shell } from 'electron';
 import type { ExplorerApi } from '@shared/api/explorer';
-import type { RevisionType } from '@shared/domain/explorer';
+import type { ItemMove, RevisionType } from '@shared/domain/explorer';
 import { parseItemDetails } from '../cm/itemDetailsXml';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { parseTreeItems } from '../cm/treeItemsXml';
 import { listWorkspacePaths } from '../files/listWorkspacePaths';
+import { moveArgs, moveItems } from '../files/moveItems';
 import { renamePrivate } from '../files/renamePrivate';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
 
-export function createExplorerService({ cm }: ServiceContext): ExplorerApi {
+export function createExplorerService({ cm, operations }: ServiceContext): ExplorerApi {
   const inWorkspace = (workspacePath: string) => ({ cwd: workspacePath });
   const absolute = (workspacePath: string, paths: string[]) => paths.map((path) => toAbsolutePath(workspacePath, path));
 
@@ -36,7 +37,12 @@ export function createExplorerService({ cm }: ServiceContext): ExplorerApi {
   }
 
   async function move(workspacePath: string, fromPath: string, toPath: string) {
-    await cm.query(['move', ...absolute(workspacePath, [fromPath, toPath])], inWorkspace(workspacePath));
+    await cm.query(moveArgs(workspacePath, { from: fromPath, to: toPath }), inWorkspace(workspacePath));
+  }
+
+  function moveItemsInto(workspacePath: string, moves: ItemMove[], operationId: string) {
+    const mover = { cm: (args: string[]) => cm.query(args, inWorkspace(workspacePath)), renamePrivate };
+    return operations.run(operationId, (context) => moveItems(workspacePath, moves, mover, context));
   }
 
   async function renameItemOnDisk(workspacePath: string, fromPath: string, toPath: string) {
@@ -84,6 +90,7 @@ export function createExplorerService({ cm }: ServiceContext): ExplorerApi {
     addRecursive,
     move,
     renamePrivate: renameItemOnDisk,
+    moveItems: moveItemsInto,
     create,
     changeRevisionType,
     saveRevisionAs,

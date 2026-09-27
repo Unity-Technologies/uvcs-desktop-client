@@ -14,6 +14,12 @@ export function text(node: unknown): string {
   return typeof node === 'string' ? node : '';
 }
 
+/** A date, or `''` where `cm` reports the minimum one (`0001-01-01…`): added items not checked in yet, moved ones. */
+export function dateText(node: unknown): string {
+  const date = text(node);
+  return date.startsWith('0001-') ? '' : date;
+}
+
 export function integer(node: unknown, fallback = -1): number {
   const parsed = Number.parseInt(text(node), 10);
   return Number.isNaN(parsed) ? fallback : parsed;

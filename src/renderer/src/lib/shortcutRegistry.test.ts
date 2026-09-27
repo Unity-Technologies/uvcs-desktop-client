@@ -97,6 +97,14 @@ describe('shortcut registry', () => {
     expect(shortcutKeys(SHORTCUTS.fileHistory, true)).toEqual(['mod+y']);
   });
 
+  it('cuts and pastes files with the clipboard keys of each OS, and cancels with Esc', () => {
+    for (const mac of [true, false]) {
+      expect(shortcutKeys(SHORTCUTS.cutItems, mac)).toEqual(['mod+x']);
+      expect(shortcutKeys(SHORTCUTS.pasteItems, mac)).toEqual(['mod+v']);
+      expect(shortcutKeys(SHORTCUTS.cancelCut, mac)).toEqual(['escape']);
+    }
+  });
+
   it('leaves undo and redo to text off macOS, where Ctrl+Y is Redo', () => {
     for (const key of keysOn(false)) expect(['mod+y', 'mod+shift+z'], key).not.toContain(key);
   });
