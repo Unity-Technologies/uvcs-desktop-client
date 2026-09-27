@@ -17,7 +17,10 @@ export function LabelChips({ labels }: { labels: readonly Label[] | undefined })
       {shown.map((label) => (
         <span key={label.id} className={styles.chip} data-tip={label.comment ? `Label ${label.name}` : undefined} data-tip-sub={label.comment || undefined}>
           <Tag size={9} strokeWidth={2.5} />
-          <Highlight text={label.name} />
+          {/* In a box of its own: the chip's gap would open between the pieces a match splits the name into. */}
+          <span>
+            <Highlight text={label.name} />
+          </span>
         </span>
       ))}
       {rest.length > 0 && (
