@@ -52,12 +52,11 @@
   --keyframes-row-enter: row-enter;
   --keyframes-pulse: pulse;
 
-  --accent-contrast: #ffffff;
-
   --focus-ring-visible: 0 0 0 2px var(--focus-color);
   /* For lists, rows and panes, whose outer edge a parent would clip. */
   --focus-ring-inset: inset 0 0 0 2px var(--focus-color);
-  /* For panes whose content paints over an inset shadow (a canvas, a diff): outlines paint on top. Offset it by -2px. */
+  /* For panes whose content paints over an inset shadow (a canvas, a diff): outlines paint on top. Offset it by -2px.
+     Filled controls (primary buttons, checked boxes) offset it by 2px, or it would melt into their fill. */
   --focus-outline: 2px solid var(--focus-color);
 }
 
@@ -69,10 +68,15 @@
   --accent-hover: #0860c7;
   --accent-soft: rgba(9, 105, 218, 0.1);
   --accent-text: #0969da;
+  /* Text and icons on an --accent or --danger fill. */
+  --accent-contrast: #ffffff;
   /* Text fields: a soft halo around their accent border. */
   --focus-ring: 0 0 0 3px rgba(9, 105, 218, 0.3);
   /* Everything else the keyboard reaches: a ring that stands out (3:1) from what surrounds it. */
   --focus-color: #0969da;
+  /* Buttons that destroy something: filled, with --accent-contrast text. */
+  --danger: #cf222e;
+  --danger-hover: #a40e26;
 
   --status-added: #1a7f37;
   --status-changed: #9a6700;
@@ -101,6 +105,8 @@
   --bg-selected: rgba(9, 105, 218, 0.08);
   --bg-selected-strong: rgba(9, 105, 218, 0.14);
   --bg-input: #ffffff;
+  /* The picked segment of a segmented control: raised above its --bg-active track. */
+  --bg-segment-checked: #ffffff;
   /* Text matching a search or filter; unlike the blue selection, it stays visible on selected rows. */
   --bg-match: rgba(255, 196, 0, 0.38);
   --bg-code: #f6f8fa;
@@ -134,8 +140,11 @@
   --accent-hover: #388bfd;
   --accent-soft: rgba(56, 139, 253, 0.15);
   --accent-text: #4493f8;
+  --accent-contrast: #ffffff;
   --focus-ring: 0 0 0 3px rgba(56, 139, 253, 0.4);
   --focus-color: #4493f8;
+  --danger: #da3633;
+  --danger-hover: #b62324;
 
   --status-added: #3fb950;
   --status-changed: #d29922;
@@ -162,6 +171,7 @@
   --bg-selected: rgba(56, 139, 253, 0.12);
   --bg-selected-strong: rgba(56, 139, 253, 0.2);
   --bg-input: #0d1117;
+  --bg-segment-checked: #303844;
   --bg-match: rgba(210, 153, 34, 0.4);
   --bg-code: #0f141b;
   --border-subtle: #212830;

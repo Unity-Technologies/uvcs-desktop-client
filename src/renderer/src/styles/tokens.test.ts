@@ -37,6 +37,19 @@ describe.each(Object.entries(themes))('%s theme', (_theme, tokens) => {
     expect(contrastRatio(parseColor(tokens['--focus-color']!).rgb, selected)).toBeGreaterThanOrEqual(3);
   });
 
+  it.each(['--accent', '--danger', '--danger-hover'])('writes button labels at 4.5:1 on a %s fill', (fill) => {
+    expect(ratio(tokens, '--accent-contrast', fill)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it('lifts the picked segment above its track, its label reading at 4.5:1', () => {
+    const surface = parseColor(tokens['--bg-surface']!).rgb;
+    const track = composite(parseColor(tokens['--bg-active']!), surface);
+    const checked = parseColor(tokens['--bg-segment-checked']!).rgb;
+    const lightness = (rgb: number[]): number => rgb.reduce((sum, channel) => sum + channel, 0);
+    expect(lightness(checked)).toBeGreaterThan(lightness(track));
+    expect(ratio(tokens, '--text-primary', '--bg-segment-checked')).toBeGreaterThanOrEqual(4.5);
+  });
+
   it('keeps tertiary text quieter than secondary text', () => {
     expect(ratio(tokens, '--text-tertiary', '--bg-surface')).toBeLessThan(ratio(tokens, '--text-secondary', '--bg-surface'));
   });

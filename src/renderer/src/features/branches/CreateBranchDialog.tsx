@@ -117,7 +117,7 @@ function CreateBranchDialog({ workspacePath, origins, onClose }: { workspacePath
       {switchAfter && pending?.plan.kind === 'ask' && (
         <PendingChangesChoice
           source={pending.preflight.sourceName}
-          destination={name.trim() ? fullName : 'the new branch'}
+          destination={name.trim() ? fullName : null}
           choice={pending.plan.choice}
           value={action}
           onChange={setAction}
