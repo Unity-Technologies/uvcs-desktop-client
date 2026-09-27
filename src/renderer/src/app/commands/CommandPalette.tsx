@@ -161,6 +161,9 @@ function useFocusBackOnClose(): void {
   const [previous] = useState(() => document.activeElement);
   useEffect(() => {
     return () => {
+      // Only once it has closed: React's development checks unmount the palette once as it opens, and focusing back
+      // then took the focus from its field (to the button that opened it).
+      if (useCommandPalette.getState().isOpen) return;
       if (previous instanceof HTMLElement && previous !== document.body && previous.isConnected) previous.focus({ preventScroll: true });
     };
   }, [previous]);

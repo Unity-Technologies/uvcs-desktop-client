@@ -17,7 +17,13 @@ export function TopBar() {
         <IncomingChip />
       </div>
       <div className={styles.spacer} />
-      <button className={styles.search} data-tip="Fuzzy search files, branches, labels, changesets, shelves, code reviews and commands" onClick={() => setCommandPaletteOpen(true)}>
+      <button
+        className={styles.search}
+        data-tip="Fuzzy search files, branches, labels, changesets, shelves, code reviews and commands"
+        // Focus stays where it was, for the palette's field to take it and to give it back to on closing.
+        onMouseDown={(event) => event.preventDefault()}
+        onClick={() => setCommandPaletteOpen(true)}
+      >
         <Search size={13} />
         <span>Search everything</span>
         <Kbd keys={hotkey('commandPalette')} />
