@@ -6,21 +6,29 @@
 export class Arrivals {
   private readonly firstSeen = new Map<string, number>();
   private primed = false;
+  private lastKeys: readonly string[] | null = null;
+  /** The last keys' arrivals whose window hadn't passed yet. */
+  private arriving: string[] = [];
 
   constructor(private readonly windowMs: number) {}
 
+  /** Given the same array again (a list rendered for another reason), only the few arrivals are looked at, not every key. */
   update(keys: readonly string[], now: number): ReadonlySet<string> {
-    const arrived = new Set<string>();
-    for (const key of keys) {
-      const seen = this.firstSeen.get(key);
-      if (seen === undefined) {
-        this.firstSeen.set(key, this.primed ? now : -Infinity);
-        if (this.primed) arrived.add(key);
-      } else if (now - seen < this.windowMs) {
-        arrived.add(key);
+    if (keys !== this.lastKeys) {
+      this.lastKeys = keys;
+      this.arriving = [];
+      for (const key of keys) {
+        const seen = this.firstSeen.get(key);
+        if (seen === undefined) {
+          this.firstSeen.set(key, this.primed ? now : -Infinity);
+          if (this.primed) this.arriving.push(key);
+        } else if (seen !== -Infinity) {
+          this.arriving.push(key);
+        }
       }
+      this.primed = true;
     }
-    this.primed = true;
-    return arrived;
+    this.arriving = this.arriving.filter((key) => now - this.firstSeen.get(key)! < this.windowMs);
+    return new Set(this.arriving);
   }
 }

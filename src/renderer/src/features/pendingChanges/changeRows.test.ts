@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { treeArrowMove } from '../../lib/treeArrowMove';
-import { buildChangeRows, changesUnderRow, changeTreeArrowRows, comparePaths, LEVEL_INDENT, menuTargetOf, rowIndent, topLevelCheckboxInset, treeLevel, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { changesUnderRow, changeTreeArrowRows, collapseRows, comparePaths, inPreviousOrder, layoutChangeRows, LEVEL_INDENT, menuTargetOf, rowCheckState, rowIndent, sortForLayout, topLevelCheckboxInset, treeLevel, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
+
+/** The rows the list shows. */
+function buildChangeRows({ collapsed, ...layout }: Parameters<typeof layoutChangeRows>[0] & { collapsed: ReadonlySet<string> }): ChangeRow[] {
+  return collapseRows(layoutChangeRows(layout), collapsed);
+}
 
 function change(path: string, kinds: PendingChange['kinds'], changelist?: string): PendingChange {
   return { path, kinds, itemType: 'file', size: 0, lastModified: '', changelist };
@@ -15,7 +20,6 @@ const base = {
   changelists: [],
   layout: 'list' as ChangesLayout,
   grouping: 'none' as ChangesGrouping,
-  isChecked: () => true,
   collapsed: new Set<string>(),
 };
 
@@ -26,8 +30,9 @@ describe('buildChangeRows', () => {
   });
 
   it('reports a mixed check state when only some changes are checked', () => {
-    const rows = buildChangeRows({ ...base, grouping: 'changelist', isChecked: (item) => item.path === 'src/b.ts' });
-    expect(rows[0]).toMatchObject({ type: 'group', checkState: 'mixed' });
+    const rows = buildChangeRows({ ...base, grouping: 'changelist' });
+    expect(rows[0]).toMatchObject({ type: 'group' });
+    expect(rowCheckState(rows[0]!, (item) => item.path === 'src/b.ts')).toBe('mixed');
   });
 
   it('groups by changelist, keeping empty user changelists visible', () => {
@@ -85,9 +90,10 @@ describe('buildChangeRows', () => {
 
   it('shows a folder that is a change itself as the row of its folder, holding its own change and its files', () => {
     const folder = { ...change('privs', ['private']), itemType: 'directory' as const };
-    const rows = buildChangeRows({ ...base, changes: [change('privs/a.txt', ['private']), folder, change('private.txt', ['private'])], layout: 'tree', isChecked: (item) => item !== folder });
+    const rows = buildChangeRows({ ...base, changes: [change('privs/a.txt', ['private']), folder, change('private.txt', ['private'])], layout: 'tree' });
     expect(rows.map((row) => row.key)).toEqual(['change:private.txt', 'directory:all:privs', 'change:privs/a.txt']);
-    expect(rows[1]).toMatchObject({ change: folder, checkState: 'mixed' });
+    expect(rows[1]).toMatchObject({ change: folder });
+    expect(rowCheckState(rows[1]!, (item) => item !== folder)).toBe('mixed');
     expect(changesUnderRow(rows[1]!).map((item) => item.path)).toEqual(['privs', 'privs/a.txt']);
   });
 
@@ -125,10 +131,12 @@ describe('buildChangeRows', () => {
       changes: [change('bin/out.log', ['ignored']), change('src/a.ts', ['changed']), change('src/build.log', ['ignored'])],
       layout: 'tree',
     });
-    expect(rows.filter((row) => row.type === 'directory').map((row) => [row.path, row.type === 'directory' && row.checkState])).toEqual([
+    expect(rows.filter((row) => row.type === 'directory').map((row) => [row.path, row.type === 'directory' && rowCheckState(row, () => true)])).toEqual([
       ['bin', null],
       ['src', true],
     ]);
+    const files = rows.filter((row) => row.type === 'change');
+    expect(files.map((row) => rowCheckState(row, (item) => item.path !== 'src/a.ts'))).toEqual([null, false, null]);
   });
 
   it('hides the contents of collapsed folders', () => {
@@ -139,6 +147,29 @@ describe('buildChangeRows', () => {
       collapsed: new Set(['directory:all:src']),
     });
     expect(rows.map((row) => row.key)).toEqual(['directory:all:src', 'change:z.ts']);
+  });
+
+  it('leaves out what collapsed changelists and folders hold, and nothing after them', () => {
+    const layout = layoutChangeRows({ ...base, changes, layout: 'tree', grouping: 'changelist', changelists: [{ name: 'UI', description: '' }] });
+    expect(layout.map((row) => row.key)).toEqual([
+      'changelist:',
+      'change:new.txt',
+      'directory:changelist::src',
+      'change:src/b.ts',
+      'directory:changelist::src/lib',
+      'change:src/lib/c.ts',
+      'changelist:UI',
+      'directory:changelist:UI:src',
+      'change:src/a.ts',
+    ]);
+    const shown = collapseRows(layout, new Set(['directory:changelist::src', 'directory:changelist::src/lib', 'changelist:UI']));
+    expect(shown.map((row) => [row.key, row.type !== 'change' && row.collapsed])).toEqual([
+      ['changelist:', false],
+      ['change:new.txt', false],
+      ['directory:changelist::src', true],
+      ['changelist:UI', true],
+    ]);
+    expect(collapseRows(layout, new Set())).toBe(layout);
   });
 });
 
@@ -159,6 +190,27 @@ describe('changeTreeArrowRows', () => {
 describe('comparePaths', () => {
   it('puts everything in a folder right after it', () => {
     expect(['a-b.txt', 'a/c.txt', 'a', 'ab'].sort(comparePaths)).toEqual(['a', 'a/c.txt', 'a-b.txt', 'ab']);
+  });
+
+  it('orders like comparing name by name in the language order', () => {
+    const collator = new Intl.Collator();
+    const nameByName = (a: string, b: string): number => {
+      const [namesA, namesB] = [a.split('/'), b.split('/')];
+      for (let index = 0; index < Math.min(namesA.length, namesB.length); index++) {
+        const order = collator.compare(namesA[index]!, namesB[index]!);
+        if (order !== 0) return order;
+      }
+      return namesA.length - namesB.length;
+    };
+    const paths = ['src/b', 'Src/c', 'Src/a', 'src/a/x', 'src/B.txt', 'src', 'src-old/a', 'src/a b', 'x/file10', 'x/file2', 'x/File1', 'é/a', 'e/b', 'a/b', 'a/b/c'];
+    for (const a of paths) for (const b of paths) expect(Math.sign(comparePaths(a, b)), `${a} vs ${b}`).toBe(Math.sign(nameByName(a, b)));
+  });
+
+  it('goes on past names that differ only in their Unicode form', () => {
+    const composed = 'caf\u00e9';
+    const decomposed = 'cafe\u0301';
+    expect(comparePaths(`${composed}/b`, `${decomposed}/a`)).toBeGreaterThan(0);
+    expect(comparePaths(`${composed}/a`, `${decomposed}/a`)).toBe(0);
   });
 });
 
@@ -225,5 +277,42 @@ describe('treeLevel', () => {
   it('starts at the first level without changelists', () => {
     const rows = buildChangeRows({ ...base, changes: nested, layout: 'tree' });
     expect(rows.map((row) => treeLevel(row, false))).toEqual([1, 2, 2, 3]);
+  });
+});
+
+describe('buildChangeRows at scale', () => {
+  // 100,000 changes, deep and flat: 20 × 10 × 5 folders of 50 files, and one folder of 50,000.
+  const many = Array.from({ length: 100_000 }, (_, index) =>
+    index % 2
+      ? change(`src/m${index % 20}/p${index % 10}/s${index % 5}/f${index}.cs`, index % 3 ? ['changed'] : ['checkedOut', 'changed'])
+      : change(`flat/asset${index}.txt`, index % 4 ? ['private'] : ['added']),
+  );
+  const timed = (layout: ChangesLayout, grouping: ChangesGrouping): number => {
+    const started = performance.now();
+    buildChangeRows({ ...base, changes: many, layout, grouping });
+    return performance.now() - started;
+  };
+
+  it('lays out a list, a tree and changelists of 100,000 changes in well under a second each', () => {
+    expect(timed('list', 'none')).toBeLessThan(1000);
+    expect(timed('tree', 'none')).toBeLessThan(1000);
+    expect(timed('tree', 'changelist')).toBeLessThan(1000);
+  });
+});
+
+describe('inPreviousOrder', () => {
+  const [a, b, c, d] = [change('a', ['changed']), change('b', ['changed']), change('c', ['private']), change('d', ['added'])];
+
+  it('keeps the changes read before where they were and puts the others after them', () => {
+    expect(inPreviousOrder([d, c, a], [a, b, c])).toEqual([a, c, d]);
+    expect(inPreviousOrder([c, a], [a, c])).toEqual([a, c]);
+  });
+
+  it('sorts to the same order as sorting afresh', () => {
+    const many = Array.from({ length: 20_000 }, (_, index) => change(`src/f${index % 50}/file${(index * 7919) % 20_000}.ts`, index % 3 ? ['changed'] : ['private']));
+    const sorted = sortForLayout(many, 'list');
+    const reread = many.map((item, index) => (index % 10 ? item : { ...item, lastModified: 'later' }));
+    const fresh = sortForLayout(reread, 'list');
+    expect(sortForLayout(inPreviousOrder(reread, sorted), 'list')).toEqual(fresh);
   });
 });

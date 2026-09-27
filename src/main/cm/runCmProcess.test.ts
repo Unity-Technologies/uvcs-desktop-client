@@ -18,4 +18,9 @@ describe('runCmProcess', () => {
     expect(lines).toEqual(['a', 'b', 'c', 'd']);
     expect(result.exitCode).toBe(0);
   });
+
+  it('hands the command its input and closes it', async () => {
+    const script = "let text = ''; process.stdin.on('data', (d) => (text += d)).on('end', () => process.stdout.write(text.toUpperCase()));";
+    await expect(runCmProcess(process.execPath, ['-e', script], { input: 'a b\n' })).resolves.toEqual({ output: 'A B\n', exitCode: 0 });
+  });
 });

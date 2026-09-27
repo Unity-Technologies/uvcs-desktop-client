@@ -7,7 +7,7 @@ export interface Watcher {
   readonly workspacePath: string;
   start(): WatchCoverage;
   covers(cwd: string): boolean;
-  ignoreOwnWrite(write: Promise<unknown>): void;
+  ignoreOwnWrite(write: Promise<unknown>, only?: 'changelists'): void;
   stop(): void;
 }
 
@@ -65,10 +65,10 @@ export class WorkspaceWatchers {
     return this.watchedBy.get(viewer);
   }
 
-  /** Ignores what `write` changes in the workspace containing `cwd`, or in every watched one without it. */
-  ignoreOwnWrite(write: Promise<unknown>, cwd?: string): void {
+  /** Ignores what `write` changes (or only its changelist rewrites) in the workspace containing `cwd`, or in every watched one without it. */
+  ignoreOwnWrite(write: Promise<unknown>, cwd?: string, only?: 'changelists'): void {
     for (const { watcher } of this.byPath.values()) {
-      if (cwd === undefined || watcher.covers(cwd)) watcher.ignoreOwnWrite(write);
+      if (cwd === undefined || watcher.covers(cwd)) watcher.ignoreOwnWrite(write, only);
     }
   }
 

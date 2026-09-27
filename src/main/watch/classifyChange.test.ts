@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { classifyChange } from './classifyChange';
+import { classifyChange, isChangelistFile } from './classifyChange';
 import { NO_IGNORE_RULES, parseIgnoreRules } from './ignoreRules';
 
 describe('classifyChange', () => {
@@ -22,5 +22,15 @@ describe('classifyChange', () => {
 
   it('ignores changes in ignored folders', () => {
     expect(classifyChange('Library/ArtifactDB', parseIgnoreRules('Library'))).toBeNull();
+  });
+});
+
+describe('isChangelistFile', () => {
+  it('tells the changelist files from the rest of the workspace state, on either separator', () => {
+    expect(isChangelistFile('.plastic/changelists/art')).toBe(true);
+    expect(isChangelistFile('.plastic\\changelists\\art')).toBe(true);
+    expect(isChangelistFile('.plastic/plastic.changes')).toBe(false);
+    expect(isChangelistFile('changelists/notes.txt')).toBe(false);
+    expect(isChangelistFile(undefined)).toBe(false);
   });
 });

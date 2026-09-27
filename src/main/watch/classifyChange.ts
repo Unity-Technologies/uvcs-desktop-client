@@ -19,7 +19,12 @@ export function classifyChange(relativePath: string | undefined, ignoreRules: Ig
   if (path === '.plastic') return null;
   if (path.startsWith('.plastic/')) {
     const inPlastic = path.slice('.plastic/'.length);
-    return WORKSPACE_STATE_FILES.has(inPlastic) || inPlastic.startsWith('changelists/') ? 'metadata' : null;
+    return WORKSPACE_STATE_FILES.has(inPlastic) || isChangelistFile(path) ? 'metadata' : null;
   }
   return isIgnored(path, ignoreRules) ? null : 'content';
+}
+
+/** One of the files `cm` keeps the persistent changelists in. */
+export function isChangelistFile(relativePath: string | undefined): boolean {
+  return relativePath !== undefined && relativePath.replaceAll('\\', '/').startsWith('.plastic/changelists/');
 }

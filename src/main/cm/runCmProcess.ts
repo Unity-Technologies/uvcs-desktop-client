@@ -7,6 +7,8 @@ export interface CmProcessOptions {
   /** Signal sent when `signal` aborts. Use SIGKILL for lookups that may hang on a credentials prompt. */
   killSignal?: NodeJS.Signals;
   onOutputLine?: (line: string) => void;
+  /** Written to the command's stdin, which is then closed: what it reads, and nothing to answer a prompt with. */
+  input?: string;
 }
 
 /**
@@ -20,8 +22,10 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
       signal: options.signal,
       killSignal: options.killSignal,
       windowsHide: true,
-      stdio: ['ignore', 'pipe', 'pipe'],
+      stdio: 'pipe',
     });
+    // A command that exits without reading its input closes the pipe first.
+    child.stdin.on('error', () => undefined).end(options.input);
     const chunks: string[] = [];
     let pendingLine = '';
 

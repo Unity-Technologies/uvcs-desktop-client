@@ -16,6 +16,8 @@ describe('parsePendingChanges', () => {
     expect(snapshot.changelists).toEqual([]);
     expect(snapshot.changes).toHaveLength(2);
     expect(snapshot.changes[0]).toMatchObject({ path: 'src/b.ts', oldPath: 'src/a.ts', kinds: ['changed', 'moved'] });
+    // Nothing empty goes over IPC for each of tens of thousands of changes.
+    expect(Object.keys(snapshot.changes[1]!)).toEqual(['path', 'kinds', 'itemType', 'size', 'lastModified']);
   });
 
   it('assigns changes to their changelists', () => {

@@ -11,7 +11,7 @@ import { DiffReviewStore } from './review/DiffReviewStore';
 import { ReviewStore } from './review/ReviewStore';
 import { createServices } from './services/createServices';
 import { SettingsStore } from './settings/SettingsStore';
-import { changesWorkspace } from './watch/changesWorkspace';
+import { changesWorkspace, rewritesChangelists } from './watch/changesWorkspace';
 import { WorkspaceWatchers } from './watch/WorkspaceWatchers';
 import { installAppMenu } from './window/appMenu';
 import { handleRecentDocumentRequests } from './window/recentDocuments';
@@ -51,6 +51,7 @@ function start(): void {
 
   // The renderer refreshes its views after its own operations and writes; the watchers skip what they cause.
   cm.onCommandStarted(({ args, cwd, finished }) => {
+    if (rewritesChangelists(args)) watchers.ignoreOwnWrite(finished, cwd, 'changelists');
     if (!changesWorkspace(args)) return;
     watchers.ignoreOwnWrite(finished, cwd);
     headers.forget();

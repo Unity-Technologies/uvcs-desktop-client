@@ -9,6 +9,7 @@ import { selectAfterLeaving, settleBeforeLeaving } from '../../app/navigation/le
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { joinComment } from '../../lib/comment';
 import { EMPTY_SELECTION } from '../../lib/selection';
+import { useSettledValue } from '../../lib/useSettled';
 import { formatCount, pluralize } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
@@ -34,23 +35,24 @@ import { ReviewModeButton } from '../review/ReviewModeButton';
 import { reviewProgress } from '../review/reviewStatus';
 import { usePendingReview } from './review/usePendingReview';
 import { BulkPrivateNotice, confirmBulkPrivateCheckin } from './BulkPrivateNotice';
-import { bulkPrivateFiles } from './bulkPrivate';
 import { behindBranch, behindDescription } from './checkinBehind';
-import { mergeSourceChangeset, uploadSize } from './checkinButton';
+import { mergeSourceChangeset } from './checkinButton';
 import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinChanges, confirmCheckinWithoutComment, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
-import { isCheckinCandidate, isShelvable, matchesBranch } from './changeCategories';
-import { buildChangeRows, changeKey, changesUnderRow, topLevelCheckboxInset, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { isCheckinCandidate, matchesBranch } from './changeCategories';
+import { changeKey, changesUnderRow, collapseRows, layoutChangeRows, topLevelCheckboxInset, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
 import { changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
 import { changeTone } from './changeTone';
-import { useCheckinDraft, useCheckinDraftStore } from './checkinDraftStore';
+import { checkinDraftOf, useCheckinDraftStore, useExcludedPaths } from './checkinDraftStore';
 import { pendingChangeMenu } from './pendingChangeMenu';
 import { addFilterRule, openWithDefaultApp, undoChanges } from './pendingChangeOperations';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { SuccessCard } from './SuccessCard';
 import { isOutlivedByChanges, successCardTellsCheckin, successMomentLeft, useSuccessMomentStore } from './successMoment';
 import { usePendingChanges } from './usePendingChanges';
+import { useCheckinSelection } from './useCheckinSelection';
+import { useSortedChanges } from './useSortedChanges';
 import styles from './PendingChangesView.module.css';
 
 const NO_CHANGES: PendingChange[] = [];
@@ -63,9 +65,15 @@ export function PendingChangesView() {
   const { data: snapshot, isLoading, isFetching, isPlaceholderData, dataUpdatedAt, error } = usePendingChanges();
   const { data: incomingSummary } = useIncomingSummary();
   const settings = useSettings();
-  const { layout, setLayout, grouping, setGrouping } = usePendingChangesViewStore();
-  const draft = useCheckinDraft(workspacePath);
-  const { setMessage, setIncluded, clearMessage } = useCheckinDraftStore();
+  // Only what the view shows: dragging the description's height or typing the comment doesn't render the list again.
+  const layout = usePendingChangesViewStore((state) => state.layout);
+  const setLayout = usePendingChangesViewStore((state) => state.setLayout);
+  const grouping = usePendingChangesViewStore((state) => state.grouping);
+  const setGrouping = usePendingChangesViewStore((state) => state.setGrouping);
+  const excludedPaths = useExcludedPaths(workspacePath);
+  const setMessage = useCheckinDraftStore((state) => state.setMessage);
+  const setIncluded = useCheckinDraftStore((state) => state.setIncluded);
+  const clearMessage = useCheckinDraftStore((state) => state.clearMessage);
 
   const [selection, setSelection] = useViewSelection('changes');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
@@ -75,17 +83,17 @@ export function PendingChangesView() {
   const allChanges = snapshot?.changes ?? NO_CHANGES;
   const review = usePendingReview(workspacePath, allChanges, snapshot !== undefined && !isPlaceholderData);
   const locks = usePendingLocks(workspacePath, workspace?.repository, allChanges, dataUpdatedAt);
-  const { visible: filtered, query, clear: clearTextFilter, bar: filterBar } = useChangeFilter(allChanges, changePath, changeTone);
-  const changes = review.narrow(filtered);
+  // Sorted once for the layout; filtering keeps the order, so typing in the filter or opening a folder never sorts again.
+  const sorted = useSortedChanges(allChanges, layout);
+  const { visible: filtered, query, clear: clearTextFilter, bar: filterBar } = useChangeFilter(sorted, changePath, changeTone);
+  const changes = useMemo(() => review.narrow(filtered), [review.narrow, filtered]);
   const clearFilter = (): void => {
     clearTextFilter();
     review.showAll();
   };
-  const isIncluded = (change: PendingChange): boolean => isCheckinCandidate(change) && !draft.excludedPaths.has(change.path);
-  // Check in takes every checked change, including those the filter hides: the filter only narrows what is shown.
-  const included = allChanges.filter(isIncluded);
-  const shown = new Set(changes);
-  const hiddenIncludedCount = included.filter((change) => !shown.has(change)).length;
+  const { isIncluded, included, uploadBytes, shelvable, shelvableBytes, bulkPrivate } = useCheckinSelection(allChanges, excludedPaths);
+  // The changes shown are some of all of them: the checked ones they leave out are the rest.
+  const hiddenIncludedCount = useMemo(() => included.length - changes.filter(isIncluded).length, [changes, included, isIncluded]);
   const branchName = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
   const rejectedCheckin = useCheckinAfterUpdateStore((state) => state.rejected[workspacePath]);
   const forgetRejectedCheckin = useCheckinAfterUpdateStore((state) => state.forget);
@@ -94,22 +102,30 @@ export function PendingChangesView() {
     { branch: branchName, loadedChangeset: workspace?.loadedChangeset },
     included.length,
   );
-  const shelvable = included.filter(isShelvable);
-  const bulkPrivate = bulkPrivateFiles(included);
-  const reviewed = reviewProgress(included, review.statusOf);
+  const reviewed = useMemo(() => reviewProgress(included, review.statusOf), [included, review.statusOf]);
   const successMoment = useSuccessMomentStore((state) => state.moments[workspacePath]);
   const clearSuccessMoment = useSuccessMomentStore((state) => state.clear);
-  const selectedCount = changes.filter((change) => selection.selected.has(changeKey(change))).length;
+  // Arrowing renders the view on every step: what it asks of the selection is looked up, never searched for.
+  const changesByKey = useMemo(() => new Map(changes.map((change) => [changeKey(change), change])), [changes]);
+  const selectedCount = countSelected(selection.selected, changesByKey);
   const changelists = snapshot?.changelists ?? NO_CHANGELISTS;
-  // Typing the comment renders the view again: thousands of changes are laid out again only when they or their layout change.
-  const rows = useMemo(
-    () => buildChangeRows({ changes, changelists, layout, grouping, isChecked: isIncluded, collapsed }),
-    [changes, changelists, layout, grouping, draft.excludedPaths, collapsed],
-  );
-  const focused = changes.find((change) => changeKey(change) === selection.anchor);
+  // Selecting a row or checking one renders the view again: thousands of changes are laid out again only when they or their layout change.
+  const allRows = useMemo(() => layoutChangeRows({ changes, changelists, layout, grouping }), [changes, changelists, layout, grouping]);
+  const rows = useMemo(() => collapseRows(allRows, collapsed), [allRows, collapsed]);
+  const checkboxInset = useMemo(() => topLevelCheckboxInset(rows), [rows]);
+  const focused = selection.anchor === null ? undefined : changesByKey.get(selection.anchor);
+  // Holding ↓ moves through the list at once; the diff (a read and an editor to lay out) follows where it stops.
+  const diffChange = useSettledValue(focused, selection.anchor ?? '') ?? focused;
   // A folder or changelist the keyboard (or a click) is on.
   const focusedFolder = focused ? undefined : rows.find((row) => row.type !== 'change' && row.key === selection.anchor);
-  const mergeChanges = allChanges.filter((change) => change.mergeInfo);
+  const { mergeChanges, pendingCount, onlyNeverCheckedIn } = useMemo(
+    () => ({
+      mergeChanges: allChanges.filter((change) => change.mergeInfo),
+      pendingCount: allChanges.filter(isCheckinCandidate).length,
+      onlyNeverCheckedIn: matchesBranch(allChanges),
+    }),
+    [allChanges],
+  );
   const { data: mergeSource } = useChangeset(mergeSourceChangeset(mergeChanges));
   const firstChangeKey = rows.find((row) => row.type === 'change')?.key;
   // Checking in completes a pending merge as it is; updating first is for plain check-ins.
@@ -127,10 +143,11 @@ export function PendingChangesView() {
 
   const setIncludedChanges = (selected: PendingChange[], include: boolean): void =>
     setIncluded(workspacePath, selected.map((change) => change.path), include);
-  const toggleIncluded = (row: ChangeRow, include: boolean): void => setIncludedChanges(changesUnderRow(row), include);
+  const toggleIncluded = (rows: ChangeRow[], include: boolean): void => setIncludedChanges(rows.flatMap(changesUnderRow), include);
 
   // Checking in completes a pending merge: start its comment with where the merge comes from.
   useEffect(() => {
+    const draft = checkinDraftOf(workspacePath);
     if (mergeSource && !draft.summary && !draft.description) setMessage(workspacePath, { summary: `Merged from ${mergeSource.branch}` });
   }, [mergeSource?.id]);
 
@@ -152,7 +169,7 @@ export function PendingChangesView() {
   };
 
   const checkin = async (): Promise<boolean> => {
-    const comment = joinComment(draft);
+    const comment = joinComment(checkinDraftOf(workspacePath));
     if (!comment.trim() && settings.warnOnEmptyComment && !(await confirmCheckinWithoutComment())) {
       // Writing one is the way on.
       summaryRef.current?.focus();
@@ -180,7 +197,7 @@ export function PendingChangesView() {
   const header = (
     <ViewHeader
       title="Changes"
-      subtitle={snapshot && !empty && `${formatCount(snapshot.changes.filter(isCheckinCandidate).length)} pending`}
+      subtitle={snapshot && !empty && `${formatCount(pendingCount)} pending`}
       actions={
         <>
           <ReviewModeButton workspacePath={workspacePath} />
@@ -264,7 +281,7 @@ export function PendingChangesView() {
               onSetIncluded={setIncludedChanges}
               onUndo={(selected) => void undoChanges(workspacePath, selected)}
               onUndoUnchanged={() => void undoUnchangedCheckouts(workspacePath)}
-              checkboxInset={topLevelCheckboxInset(rows)}
+              checkboxInset={checkboxInset}
             />
             {review.bar}
             {filterBar}
@@ -276,6 +293,7 @@ export function PendingChangesView() {
                   rows={rows}
                   selection={selection}
                   onSelectionChange={(next) => selectAfterLeaving(selection, next, setSelection)}
+                  isIncluded={isIncluded}
                   onToggleIncluded={toggleIncluded}
                   onToggleCollapsed={toggleCollapsed}
                   onOpen={(change) => openWithDefaultApp(workspacePath, change)}
@@ -294,7 +312,7 @@ export function PendingChangesView() {
             {hiddenIncludedCount > 0 && <HiddenCheckedNotice count={hiddenIncludedCount} onClear={clearFilter} />}
             <LockedByOthersNotice changes={included} locks={locks} />
             {/* Files never checked in don't make a task unfinished: finishing it is offered as on a clean workspace. */}
-            {branchName && matchesBranch(allChanges) && (
+            {branchName && onlyNeverCheckedIn && (
               <div className={styles.taskSuggestion}>
                 <MergeTaskSuggestion workspacePath={workspacePath} branchName={branchName} />
               </div>
@@ -316,12 +334,10 @@ export function PendingChangesView() {
             )}
             <CheckinPanel
               summaryRef={summaryRef}
-              summary={draft.summary}
-              description={draft.description}
-              onMessageChange={(message) => setMessage(workspacePath, message)}
+              workspacePath={workspacePath}
               includedCount={included.length}
-              uploadBytes={uploadSize(included)}
-              shelvable={{ count: shelvable.length, uploadBytes: uploadSize(shelvable) }}
+              uploadBytes={uploadBytes}
+              shelvable={{ count: shelvable.length, uploadBytes: shelvableBytes }}
               branchName={workspace?.selector.name ?? ''}
               merging={mergeChanges.length > 0}
               behindCount={behind?.count ?? 0}
@@ -330,15 +346,15 @@ export function PendingChangesView() {
               recentComments={settings.recentComments}
               busy={busy}
               onCheckin={checkin}
-              onShelve={() => runBusy(() => shelveChanges(workspacePath, shelvable, joinComment(draft)))}
+              onShelve={() => runBusy(() => shelveChanges(workspacePath, shelvable, joinComment(checkinDraftOf(workspacePath))))}
             />
           </div>
         }
         second={
           selectedCount > 1 ? (
             <EmptyState icon={<Files size={24} />} title={`${formatCount(selectedCount)} files selected`} description="Select a single file to see its diff." />
-          ) : focused ? (
-            <ChangeDiffPanel workspacePath={workspacePath} change={focused} reviewMark={review.marks.get(focused.path)} />
+          ) : focused && diffChange ? (
+            <ChangeDiffPanel workspacePath={workspacePath} change={diffChange} reviewMark={review.marks.get(diffChange.path)} />
           ) : focusedFolder && focusedFolder.type !== 'change' ? (
             <EmptyState
               icon={<Folder size={24} />}
@@ -352,4 +368,11 @@ export function PendingChangesView() {
       />
     </>
   );
+}
+
+/** How many of the changes shown are selected: a selection can hold rows the filter now hides, and folders. */
+function countSelected(selected: ReadonlySet<string>, shown: ReadonlyMap<string, PendingChange>): number {
+  let count = 0;
+  for (const key of selected) if (shown.has(key)) count++;
+  return count;
 }

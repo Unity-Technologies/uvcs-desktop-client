@@ -16,8 +16,13 @@ const CATEGORY_KINDS: Record<ChangeCategory, ChangeKind[]> = {
 
 const CATEGORY_PRECEDENCE: ChangeCategory[] = ['added', 'deleted', 'moved', 'changed', 'private', 'ignored', 'cloaked', 'hidden'];
 
+/** Each kind's category, as its place in `CATEGORY_PRECEDENCE`: a list of 100,000 changes asks for thousands of categories a render. */
+const KIND_PRECEDENCE = new Map(CATEGORY_PRECEDENCE.flatMap((category, index) => CATEGORY_KINDS[category].map((kind) => [kind, index] as const)));
+
 export function categoryOf(change: PendingChange): ChangeCategory {
-  return CATEGORY_PRECEDENCE.find((category) => CATEGORY_KINDS[category].some((kind) => change.kinds.includes(kind))) ?? 'changed';
+  let first = CATEGORY_PRECEDENCE.length;
+  for (const kind of change.kinds) first = Math.min(first, KIND_PRECEDENCE.get(kind) ?? first);
+  return CATEGORY_PRECEDENCE[first] ?? 'changed';
 }
 
 /** Whether the file content differs from the loaded revision (as opposed to only being moved, added...). */

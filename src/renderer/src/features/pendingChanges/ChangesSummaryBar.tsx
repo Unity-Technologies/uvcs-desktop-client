@@ -1,5 +1,5 @@
 import { ChevronDown, Undo2 } from 'lucide-react';
-import type { CSSProperties } from 'react';
+import { useMemo, type CSSProperties } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { formatCount, pluralize } from '../../lib/text';
 import { Checkbox, type CheckState } from '../../ui/Checkbox';
@@ -22,10 +22,11 @@ interface ChangesSummaryBarProps {
 
 /** Above the list: include or exclude every shown change, how many there are, and the ways to undo them. */
 export function ChangesSummaryBar({ changes, totalCount, isIncluded, onSetIncluded, onUndo, onUndoUnchanged, checkboxInset }: ChangesSummaryBarProps) {
-  const candidates = changes.filter(isCheckinCandidate);
-  const includedCount = candidates.filter(isIncluded).length;
+  const { candidates, includedCount, undoable } = useMemo(() => {
+    const candidates = changes.filter(isCheckinCandidate);
+    return { candidates, includedCount: candidates.filter(isIncluded).length, undoable: changes.filter(isControlled) };
+  }, [changes, isIncluded]);
   const checkState: CheckState = includedCount === 0 ? false : includedCount === candidates.length ? true : 'mixed';
-  const undoable = changes.filter(isControlled);
   const filtered = changes.length !== totalCount;
   const undoAllLabel = filtered ? `Undo the ${formatCount(undoable.length)} shown changes` : 'Undo all changes';
 

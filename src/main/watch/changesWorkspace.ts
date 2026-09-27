@@ -31,3 +31,11 @@ export function changesWorkspace(args: readonly string[]): boolean {
   if (command === 'changelist') return subcommand !== undefined;
   return false;
 }
+
+/**
+ * `cm status --changelists` writes the changelist files back on every read, reordered: without telling the watcher,
+ * reading the pending changes would look like someone changed their changelists, and read them again, forever.
+ */
+export function rewritesChangelists(args: readonly string[]): boolean {
+  return args[0] === 'status' && args.includes('--changelists');
+}

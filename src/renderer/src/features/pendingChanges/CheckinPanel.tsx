@@ -11,6 +11,7 @@ import menuStyles from '../../ui/menu/Menu.module.css';
 import { ResizeHandle } from '../../ui/ResizeHandle';
 import { checkinButtonLabel, checkinDisabledReason, type CheckinMode } from './checkinButton';
 import { CheckinButtonWording } from './CheckinButtonWording';
+import { useCheckinDraftStore, useCheckinMessage } from './checkinDraftStore';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import styles from './CheckinPanel.module.css';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -21,9 +22,8 @@ const DESCRIPTION_MAX_HEIGHT = 360;
 interface CheckinPanelProps {
   /** The summary field, for the view to put the caret in. */
   summaryRef: RefObject<HTMLInputElement | null>;
-  summary: string;
-  description: string;
-  onMessageChange: (message: { summary?: string; description?: string }) => void;
+  /** Whose draft comment the fields show and edit. */
+  workspacePath: string;
   includedCount: number;
   /** Bytes the included changes upload. */
   uploadBytes: number;
@@ -48,9 +48,7 @@ const MODES: CheckinMode[] = ['checkin', 'shelve'];
 
 export function CheckinPanel({
   summaryRef,
-  summary,
-  description,
-  onMessageChange,
+  workspacePath,
   includedCount,
   uploadBytes,
   shelvable,
@@ -65,7 +63,11 @@ export function CheckinPanel({
   onShelve,
 }: CheckinPanelProps) {
   const [mode, setMode] = useState<CheckinMode>('checkin');
-  const { descriptionHeight, setDescriptionHeight } = usePendingChangesViewStore();
+  const descriptionHeight = usePendingChangesViewStore((state) => state.descriptionHeight);
+  const setDescriptionHeight = usePendingChangesViewStore((state) => state.setDescriptionHeight);
+  const { summary, description } = useCheckinMessage(workspacePath);
+  const setMessage = useCheckinDraftStore((state) => state.setMessage);
+  const onMessageChange = (message: { summary?: string; description?: string }): void => setMessage(workspacePath, message);
   const count = mode === 'shelve' ? shelvable.count : includedCount;
   const disabledReason = checkinDisabledReason(mode, count, includedCount);
   const canAct = disabledReason === null && !busy;

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { saveSettings, useSettings } from '../../app/settings/useSettings';
 import { ReviewBar } from './ReviewBar';
 import { ReviewModeHint } from './ReviewModeHint';
@@ -38,9 +38,12 @@ export function useReviewMode<T>({ workspacePath, items, statusOf: storedStatusO
   const { reviewModeWorkspaces, reviewModeHintDone } = useSettings();
   const on = reviewModeWorkspaces.includes(workspacePath);
   const [onlyUnreviewed, setOnlyUnreviewed] = useState(false);
-  const statusOf: ReviewStatusOf<T> = on ? storedStatusOf : (item) => storedStatusOf(item) && 'unreviewed';
-  const progress = reviewProgress(items, statusOf);
+  // Kept while nothing they depend on changes, so lists of thousands of files work them out again only then.
+  const statusOf = useMemo<ReviewStatusOf<T>>(() => (on ? storedStatusOf : (item) => storedStatusOf(item) && 'unreviewed'), [on, storedStatusOf]);
+  const progress = useMemo(() => reviewProgress(items, statusOf), [items, statusOf]);
+  const hasMarks = useMemo(() => on && items.some((item) => hasMark(statusOf, item)), [on, items, statusOf]);
   const filtering = on && onlyUnreviewed;
+  const narrow = useCallback((shown: T[]) => (filtering ? shown.filter((item) => needsReview(statusOf, item)) : shown), [filtering, statusOf]);
 
   const toggle = (selected: T[]): void => {
     const reviewable = selected.filter((item) => statusOf(item) !== null);
@@ -62,7 +65,7 @@ export function useReviewMode<T>({ workspacePath, items, statusOf: storedStatusO
     on,
     statusOf,
     toggle,
-    narrow: (shown) => (filtering ? shown.filter((item) => needsReview(statusOf, item)) : shown),
+    narrow,
     showAll: () => setOnlyUnreviewed(false),
     bar: on
       ? progress.total > 0 && (
@@ -72,7 +75,7 @@ export function useReviewMode<T>({ workspacePath, items, statusOf: storedStatusO
             onOnlyUnreviewedChange={setOnlyUnreviewed}
             onMarkAll={() => setReviewed(items.filter((item) => needsReview(statusOf, item)), true)}
             onClearMarks={() => setReviewed(items.filter((item) => hasMark(statusOf, item)), false)}
-            hasMarks={items.some((item) => hasMark(statusOf, item))}
+            hasMarks={hasMarks}
             onLeave={() => void setReviewMode(workspacePath, false)}
           />
         )

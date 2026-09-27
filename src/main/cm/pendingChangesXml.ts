@@ -60,26 +60,40 @@ function toPendingChange(node: Record<string, unknown>, changelist: string | und
     .filter((kind): kind is ChangeKind => Boolean(kind));
   const similarity = Number.parseFloat(text(node.SimilarityPerUnit));
 
-  return {
-    path: text(node.Path),
-    oldPath: text(node.OldPath) || undefined,
-    kinds,
-    itemType: ITEM_TYPES[text(node.RevisionType)] ?? 'file',
-    size: integer(node.Size, 0),
-    lastModified: text(node.LastModified),
-    mergeInfo: text(node.MergesInfo).replace(/^\s*\(|\)\s*$/g, '') || undefined,
-    similarityPercent: similarity > 0 ? Math.round(similarity * 100) : undefined,
-    changelist,
-  };
+  return withOptionalFields(
+    { path: text(node.Path), kinds, itemType: ITEM_TYPES[text(node.RevisionType)] ?? 'file', size: integer(node.Size, 0), lastModified: text(node.LastModified) },
+    {
+      oldPath: text(node.OldPath) || undefined,
+      mergeInfo: text(node.MergesInfo).replace(/^\s*\(|\)\s*$/g, '') || undefined,
+      similarityPercent: similarity > 0 ? Math.round(similarity * 100) : undefined,
+      changelist,
+    },
+  );
 }
 
 function mergeChanges(first: PendingChange, second: PendingChange): PendingChange {
-  return {
-    ...first,
-    oldPath: first.oldPath ?? second.oldPath,
-    kinds: [...new Set([...first.kinds, ...second.kinds])],
-    mergeInfo: first.mergeInfo ?? second.mergeInfo,
-    similarityPercent: first.similarityPercent ?? second.similarityPercent,
-    changelist: first.changelist ?? second.changelist,
-  };
+  const { path, kinds, itemType, size, lastModified } = first;
+  return withOptionalFields(
+    { path, kinds: [...new Set([...kinds, ...second.kinds])], itemType, size, lastModified },
+    {
+      oldPath: first.oldPath ?? second.oldPath,
+      mergeInfo: first.mergeInfo ?? second.mergeInfo,
+      similarityPercent: first.similarityPercent ?? second.similarityPercent,
+      changelist: first.changelist ?? second.changelist,
+    },
+  );
+}
+
+type OptionalFields = Pick<PendingChange, 'oldPath' | 'mergeInfo' | 'similarityPercent' | 'changelist'>;
+
+/**
+ * Adds only the optional fields a change has: most have none, and 100,000 changes copied to the window (over IPC,
+ * then into the page) take a quarter longer with four empty fields each.
+ */
+function withOptionalFields(change: PendingChange, optional: OptionalFields): PendingChange {
+  if (optional.oldPath !== undefined) change.oldPath = optional.oldPath;
+  if (optional.mergeInfo !== undefined) change.mergeInfo = optional.mergeInfo;
+  if (optional.similarityPercent !== undefined) change.similarityPercent = optional.similarityPercent;
+  if (optional.changelist !== undefined) change.changelist = optional.changelist;
+  return change;
 }
