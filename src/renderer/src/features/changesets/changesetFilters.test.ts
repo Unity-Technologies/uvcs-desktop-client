@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
+import type { Label } from '@shared/domain/label';
 import { changesetsCap, DEFAULT_CHANGESET_FILTER, matchesSearch, noChangesetsHint, toQueryFilter } from './changesetFilters';
 
 const today = new Date(2026, 8, 25);
@@ -39,6 +40,12 @@ describe('matchesSearch', () => {
 
   it('matches the author as the table shows it', () => {
     expect(matchesSearch(changeset, 'Jane Doe')).toBe(true);
+  });
+
+  it('takes each word on its own, in any order, labels too', () => {
+    expect(matchesSearch(changeset, 'button jane')).toBe(true);
+    expect(matchesSearch(changeset, 'button rocket')).toBe(false);
+    expect(matchesSearch(changeset, 'bl042 login', [{ name: 'BL042' } as Label])).toBe(true);
   });
 });
 

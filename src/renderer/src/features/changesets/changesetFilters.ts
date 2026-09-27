@@ -1,7 +1,9 @@
 import type { Changeset } from '@shared/domain/changeset';
 import type { QueryFilter } from '@shared/domain/query';
 import { formatCount } from '../../lib/text';
-import { displayName } from '../../lib/userName';
+import type { Label } from '@shared/domain/label';
+import { matchesWordFilter } from '../../lib/matchesAllWords';
+import { userFilterTexts } from '../../lib/userName';
 
 export type DatePreset = 'week' | 'twoWeeks' | 'month' | 'quarter' | 'year' | 'all';
 
@@ -43,12 +45,11 @@ export function toQueryFilter(state: Omit<ChangesetFilterState, 'search'>, curre
   };
 }
 
-/** Whether the changeset's number, comment, author (as stored or as shown) or branch contains the search. */
-export function matchesSearch(changeset: Changeset, search: string): boolean {
-  const needle = search.trim().toLowerCase();
-  if (!needle) return true;
-  return [String(changeset.id), changeset.comment, changeset.owner, displayName(changeset.owner), changeset.branch].some((field) =>
-    field.toLowerCase().includes(needle),
+/** Whether each word of the search is in the changeset's number, comment, labels, branch or author (as shown or as stored). */
+export function matchesSearch(changeset: Changeset, search: string, labels: readonly Label[] = []): boolean {
+  return matchesWordFilter(
+    [String(changeset.id), changeset.comment, ...labels.map((label) => label.name), changeset.branch, ...userFilterTexts(changeset.owner)],
+    search,
   );
 }
 

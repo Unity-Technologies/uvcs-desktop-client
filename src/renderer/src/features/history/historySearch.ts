@@ -1,13 +1,13 @@
-import { displayName } from '../../lib/userName';
+import type { Label } from '@shared/domain/label';
+import { matchesWordFilter } from '../../lib/matchesAllWords';
+import { userFilterTexts } from '../../lib/userName';
 import type { HistoryRow } from './historyRows';
 
-/** Whether a history row matches the filter: its changeset number, comment (or move), author or branch contains the text. */
-export function matchesHistorySearch(row: HistoryRow, search: string): boolean {
-  const needle = search.trim().toLowerCase();
-  if (!needle) return true;
-  const fields =
+/** Whether each word of the filter is in the row's changeset number, comment (or move), labels, branch or author. */
+export function matchesHistorySearch(row: HistoryRow, search: string, labels: readonly Label[] = []): boolean {
+  const texts =
     row.kind === 'revision'
-      ? [String(row.revision.changesetId), row.revision.comment, row.revision.owner, displayName(row.revision.owner), row.revision.branch]
-      : [String(row.change.changesetId), row.change.description, row.change.owner, displayName(row.change.owner)];
-  return fields.some((field) => field.toLowerCase().includes(needle));
+      ? [String(row.revision.changesetId), row.revision.comment, ...labels.map((label) => label.name), row.revision.branch, ...userFilterTexts(row.revision.owner)]
+      : [String(row.change.changesetId), row.change.description, ...userFilterTexts(row.change.owner)];
+  return matchesWordFilter(texts, search);
 }

@@ -40,11 +40,14 @@ export function ChangesetsView() {
   );
   const { data: changesets, isLoading, error } = useChangesets(queryFilter);
 
-  const visible = useMemo(() => (changesets ?? []).filter((changeset) => matchesSearch(changeset, filter.search)), [changesets, filter.search]);
+  const labelsByChangeset = useLabelsByChangeset();
+  const visible = useMemo(
+    () => (changesets ?? []).filter((changeset) => matchesSearch(changeset, filter.search, labelsByChangeset.get(changeset.id))),
+    [changesets, filter.search, labelsByChangeset],
+  );
   const selected = visible.filter((changeset) => selection.selected.has(changesetKey(changeset)));
   const focused = visible.find((changeset) => changesetKey(changeset) === selection.anchor);
   useCopyCommand('Changesets', 'Changeset', selected.length === 1 ? changesetCopyTexts(workspacePath, selected[0]!) : undefined);
-  const labelsByChangeset = useLabelsByChangeset();
   const columns = useMemo(() => changesetColumns(workspace?.loadedChangeset, labelsByChangeset), [workspace?.loadedChangeset, labelsByChangeset]);
   const menuContext = { workspacePath, loadedChangeset: workspace?.loadedChangeset, loadedBranch: currentBranch };
 

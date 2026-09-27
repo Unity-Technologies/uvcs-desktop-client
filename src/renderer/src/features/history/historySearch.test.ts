@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemRevision } from '@shared/domain/history';
+import type { Label } from '@shared/domain/label';
 import type { HistoryRow } from './historyRows';
 import { matchesHistorySearch } from './historySearch';
 
@@ -33,6 +34,12 @@ describe('matchesHistorySearch', () => {
 
   it('rejects text found in no field', () => {
     expect(matchesHistorySearch(row, 'rocket')).toBe(false);
+  });
+
+  it('takes each word on its own, labels too', () => {
+    expect(matchesHistorySearch(row, 'jump jane')).toBe(true);
+    expect(matchesHistorySearch(row, 'jump rocket')).toBe(false);
+    expect(matchesHistorySearch(row, 'release jump', [{ name: 'Release-1.0' } as Label])).toBe(true);
   });
 
   it.each(['40', 'hero.cs', 'Bob'])('matches a move by %s', (search) => {
