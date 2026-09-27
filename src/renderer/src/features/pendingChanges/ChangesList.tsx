@@ -15,6 +15,7 @@ import { isModPressed } from '../../lib/shortcuts';
 import { selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
 import { treeArrowMove } from '../../lib/treeArrowMove';
 import { Checkbox, type CheckState } from '../../ui/Checkbox';
+import { Highlight } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { changePresence, changeStatus, changeTone } from './changeTone';
@@ -342,7 +343,7 @@ const ItemRowContent = memo(function ItemRowContent({ row, checkState, reviewSta
           icon={<ItemIcon itemType="directory" name={row.name} />}
           label={
             <span className={styles.directoryName} data-tip={row.name.includes('/') ? row.name : undefined}>
-              {row.name}
+              <Highlight text={row.name} />
             </span>
           }
           extras={reviewStatus && <ReviewToggle folder status={reviewStatus} onToggle={() => actions.toggleReviewed(row.changes)} />}
