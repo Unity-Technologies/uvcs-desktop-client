@@ -77,7 +77,14 @@ export function parseMergePlan(output: string): MergePlan {
   }
 
   if (contributors.source && contributors.destination) plan.contributors = contributors as MergeContributors;
+  // `cm` lists files in no order a person would look for them; directory conflicts keep theirs, which resolving goes by.
+  plan.fileConflicts.sort(byPath);
+  plan.changes.sort(byPath);
   return plan;
+}
+
+function byPath(a: { path: string }, b: { path: string }): number {
+  return a.path.localeCompare(b.path);
 }
 
 function addContributor(contributors: Partial<MergeContributors>, [role, changesetId, , branch]: string[]): void {

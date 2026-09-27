@@ -32,7 +32,14 @@ describe('incomingChipState', () => {
   });
 
   it('counts files changed on both sides, and local changes the branch deleted or moved, as conflicts', () => {
-    expect(incomingChipState(summary(3), changes(2, 1), undefined)).toEqual({ kind: 'conflicts', branch: '/main', count: 3, conflictCount: 3 });
+    expect(incomingChipState(summary(3), changes(2, 1), undefined)).toEqual({
+      kind: 'conflicts',
+      branch: '/main',
+      count: 3,
+      conflictCount: 3,
+      mergeCount: 2,
+      blockedCount: 1,
+    });
   });
 
   it('ignores changes read for an older head', () => {

@@ -1,5 +1,7 @@
 import type { Changeset } from '@shared/domain/changeset';
 import type { QueryFilter } from '@shared/domain/query';
+import { formatCount } from '../../lib/text';
+import { displayName } from '../../lib/userName';
 
 export type DatePreset = 'week' | 'twoWeeks' | 'month' | 'quarter' | 'year' | 'all';
 
@@ -41,10 +43,27 @@ export function toQueryFilter(state: Omit<ChangesetFilterState, 'search'>, curre
   };
 }
 
+/** Whether the changeset's number, comment, author (as stored or as shown) or branch contains the search. */
 export function matchesSearch(changeset: Changeset, search: string): boolean {
   const needle = search.trim().toLowerCase();
   if (!needle) return true;
-  return [String(changeset.id), changeset.comment, changeset.owner, changeset.branch].some((field) => field.toLowerCase().includes(needle));
+  return [String(changeset.id), changeset.comment, changeset.owner, displayName(changeset.owner), changeset.branch].some((field) =>
+    field.toLowerCase().includes(needle),
+  );
+}
+
+/** What to try when nothing shows: the search only looks through what the other filters read. */
+export function noChangesetsHint({ search, datePreset }: ChangesetFilterState): string {
+  const searching = search.trim() !== '';
+  if (datePreset !== 'all') return searching ? 'The search looks within the time range. Try a longer one.' : 'Try a longer time range.';
+  return searching ? `Any time reads the newest ${ANY_TIME_LIMIT.toLocaleString('en-US')} changesets.` : 'Try fewer filters.';
+}
+
+/** What the header says instead of a bare count once Any time stopped at its cap; undefined while the count tells it all. */
+export function changesetsCap(shown: number, read: number, datePreset: DatePreset): string | undefined {
+  if (datePreset !== 'all' || read < ANY_TIME_LIMIT) return undefined;
+  const newest = `newest ${formatCount(ANY_TIME_LIMIT)}`;
+  return shown === read ? `The ${newest}` : `${formatCount(shown)} shown of the ${newest}`;
 }
 
 function isoDateDaysBefore(today: Date, days: number): string {

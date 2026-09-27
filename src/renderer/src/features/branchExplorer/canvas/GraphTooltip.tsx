@@ -110,6 +110,10 @@ function tooltipContent(target: PointerCardTarget, layout: GraphLayout): { title
       };
     }
     case 'label':
+      if (target.more.length > 0) {
+        const labels = [target.label, ...target.more];
+        return { title: `${labels.length} labels`, body: labels.map(({ name }) => name).join(', '), meta: `Changeset ${target.label.changeset}` };
+      }
       return {
         title: `Label ${target.label.name}`,
         body: target.label.comment || undefined,

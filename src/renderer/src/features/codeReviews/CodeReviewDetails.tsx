@@ -10,7 +10,8 @@ import { Button } from '../../ui/Button';
 import { DetailsChangesPane, DetailsCopyable, DetailsEmpty, DetailsPanel } from '../../ui/DetailsPanel';
 import { BranchChip } from '../branches/BranchChip';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
-import { describeTarget, openReview, reviewDiffTarget } from './codeReviewOperations';
+import { openReview } from './codeReviewOperations';
+import { describeTarget, reviewDiffTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 
 export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: MenuEntry[] }) {
@@ -27,6 +28,7 @@ export function CodeReviewDetails({ review, menu }: { review: CodeReview; menu: 
         <DetailsCopyable key="id" text={`#${review.id}`} copyText={String(review.id)} what="Code review id" />,
         target.kind === 'branch' && <BranchChip key="target" name={target.branch} />,
         target.kind === 'changeset' && <DetailsCopyable key="target" text={spec.changeset(target.changesetId)} what="Changeset spec" />,
+        target.kind === 'shelve' && <DetailsCopyable key="target" text={spec.shelve(target.shelveId)} what="Shelve spec" />,
         review.assignee && (
           <Fragment key="reviewer">
             for <UserLabel user={review.assignee} />

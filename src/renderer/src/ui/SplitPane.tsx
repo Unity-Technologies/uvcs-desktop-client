@@ -1,6 +1,7 @@
-import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { trackPointerDrag } from '../lib/pointerDrag';
 import styles from './SplitPane.module.css';
+import { sizedPaneStyle } from './splitPaneSize';
 
 interface SplitPaneProps {
   /** Size in pixels of the sized pane; double-clicking the splitter goes back to it. */
@@ -51,7 +52,7 @@ export function SplitPane({
     });
   };
 
-  const sizedStyle: CSSProperties = horizontal ? { width: size } : { height: size };
+  const sizedStyle = sizedPaneStyle(horizontal, size, minSize);
   const pane = (which: 'first' | 'second', content: ReactNode): ReactNode => {
     if (which !== sizedPane) return <div className={`${styles.pane} ${styles.rest}`}>{content}</div>;
     return hideSized ? null : (

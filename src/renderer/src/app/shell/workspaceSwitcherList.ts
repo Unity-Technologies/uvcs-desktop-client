@@ -31,3 +31,11 @@ export function workspaceSwitcherList(
     .filter(matches);
   return { recent, others };
 }
+
+/**
+ * The row the keyboard is on: the workspace it was put on, wherever the list moved it while loading (recent
+ * workspaces whose folder turned out missing come in above it), else the first.
+ */
+export function highlightedRow(entries: WorkspaceEntry[], path: string | null): number {
+  return Math.max(0, entries.findIndex((entry) => entry.workspace.path === path));
+}

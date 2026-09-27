@@ -1,4 +1,5 @@
 import type { Branch } from '@shared/domain/branch';
+import { naturalCompare } from '../../lib/naturalCompare';
 
 export interface BranchTreeRow {
   branch: Branch;
@@ -36,5 +37,5 @@ export function buildBranchTree(branches: readonly Branch[], collapsed: Readonly
 }
 
 function sortByName(branches: Branch[]): Branch[] {
-  return [...branches].sort((a, b) => a.name.localeCompare(b.name));
+  return [...branches].sort((a, b) => naturalCompare(a.name, b.name));
 }

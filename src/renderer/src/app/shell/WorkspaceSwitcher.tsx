@@ -21,7 +21,7 @@ import { useMissingWorkspacePaths, useRecentWorkspaceRepositories, useWorkspaceL
 import { copyWorkspacePath, openTerminalIn } from '../workspace/workspaceShellActions';
 import { currentWorkspaceMenu } from './currentWorkspaceMenu';
 import { WorkspaceGlance } from './WorkspaceGlance';
-import { workspaceSwitcherList } from './workspaceSwitcherList';
+import { highlightedRow, workspaceSwitcherList } from './workspaceSwitcherList';
 import styles from './WorkspaceSwitcher.module.css';
 
 /**
@@ -84,7 +84,7 @@ export function WorkspaceSwitcher({ currentPath, children }: { currentPath: stri
 
 function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoose: (path: string) => void }) {
   const [filter, setFilter] = useState('');
-  const [highlighted, setHighlighted] = useState(0);
+  const [highlightedPath, setHighlightedPath] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const movedByKeyboard = useRef(false);
   const filterRef = useRef<HTMLInputElement>(null);
@@ -97,6 +97,7 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
 
   const { recent, others } = workspaceSwitcherList(workspaces, recentWorkspacePaths, missingPaths, currentPath, repositories, filter);
   const flat = [...recent, ...others];
+  const highlighted = highlightedRow(flat, highlightedPath);
 
   useEffect(() => {
     if (!movedByKeyboard.current) return;
@@ -110,7 +111,7 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
     if (target !== null) {
       event.preventDefault();
       movedByKeyboard.current = true;
-      setHighlighted(target);
+      setHighlightedPath(flat[target]!.workspace.path);
     } else if (event.key === 'Enter' && flat[highlighted]) {
       event.preventDefault();
       onChoose(flat[highlighted].workspace.path);
@@ -141,7 +142,7 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
           className={styles.item}
           data-highlighted={index === highlighted}
           data-missing={missing}
-          onMouseEnter={() => setHighlighted(index)}
+          onMouseEnter={() => setHighlightedPath(workspace.path)}
           onClick={() => onChoose(workspace.path)}
         >
           <span className={styles.icon}>{workspace.name.charAt(0).toUpperCase()}</span>
@@ -187,7 +188,7 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
         aria-activedescendant={flat[highlighted] ? `${listboxId}-${highlighted}` : undefined}
         onChange={(event) => {
           setFilter(event.target.value);
-          setHighlighted(0);
+          setHighlightedPath(null);
         }}
         onKeyDown={onKeyDown}
         autoFocus

@@ -15,10 +15,26 @@
     border-color var(--duration-fast);
 }
 
+.box:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
 .box[data-state='checked'],
 .box[data-state='mixed'] {
   background: var(--accent);
   border-color: var(--accent);
+}
+
+/* Like filled buttons: a ring flush with the accent fill would melt into it. */
+.box[data-state='checked']:focus-visible,
+.box[data-state='mixed']:focus-visible {
+  box-shadow: none;
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+
+.box:disabled {
+  opacity: 0.45;
 }
 
 .labeled {

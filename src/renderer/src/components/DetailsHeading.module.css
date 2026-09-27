@@ -104,6 +104,11 @@
   gap: var(--space-2);
 }
 
+/* Room between the object's name and the field under it. */
+.title + .editor {
+  margin-top: var(--space-2);
+}
+
 .summaryField,
 .descriptionField {
   width: 100%;

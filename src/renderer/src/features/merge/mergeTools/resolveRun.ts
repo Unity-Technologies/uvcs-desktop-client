@@ -64,12 +64,20 @@ export interface RunEnding {
   stopped: boolean;
 }
 
-/** The toast once the run ends: "Resolved 4 of 5 in FakeMerge", "1 still needs you", and what it left out. */
+/**
+ * The toast once the run ends: "Resolved 4 of 5 in FakeMerge", "1 still needs you", and what it left out; stopped
+ * before any, just that.
+ */
 export function runSummary(ending: RunEnding, plan: RunPlan): { kind: 'success' | 'info'; title: string; detail?: string } {
   const { resolved, total, stopped } = ending;
   const tool = plan.tool.name;
   const waiting = total - resolved;
-  const title = resolved === total ? `Resolved ${allOf(total)} in ${tool}` : `${stopped ? 'Stopped: resolved' : 'Resolved'} ${resolved} of ${total} in ${tool}`;
+  const title =
+    resolved === total
+      ? `Resolved ${allOf(total)} in ${tool}`
+      : stopped && resolved === 0
+        ? `Stopped resolving in ${tool}`
+        : `${stopped ? 'Stopped: resolved' : 'Resolved'} ${resolved} of ${total} in ${tool}`;
   const detail = [waiting > 0 && `${waiting} still ${waiting === 1 ? 'needs' : 'need'} you.`, leftOutNote(plan) && `${leftOutNote(plan)}.`].filter(Boolean).join(' ');
   return { kind: resolved === total ? 'success' : 'info', title, ...(detail && { detail }) };
 }

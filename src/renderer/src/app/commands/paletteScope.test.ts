@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isInScope, parseScope } from './paletteScope';
+import { isInScope, isSearching, parseScope } from './paletteScope';
 
 describe('parseScope', () => {
   it('searches everything without a prefix', () => {
@@ -23,5 +23,23 @@ describe('isInScope', () => {
     expect(isInScope('labels', 'refs')).toBe(true);
     expect(isInScope('files', 'refs')).toBe(false);
     expect(isInScope('files', 'all')).toBe(true);
+  });
+});
+
+describe('isSearching', () => {
+  const loads = [
+    { section: 'commands' as const, waiting: false },
+    { section: 'branches' as const, waiting: true },
+    { section: 'files' as const, waiting: false },
+  ];
+
+  it('waits for any section still loading or searching', () => {
+    expect(isSearching(loads, 'all')).toBe(true);
+    expect(isSearching(loads, 'refs')).toBe(true);
+  });
+
+  it('answers at once when only sections out of scope wait, so `>` never says "Searching…"', () => {
+    expect(isSearching(loads, 'commands')).toBe(false);
+    expect(isSearching(loads, 'files')).toBe(false);
   });
 });

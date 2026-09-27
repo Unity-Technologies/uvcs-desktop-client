@@ -1,4 +1,5 @@
-import { Check } from 'lucide-react';
+import { Check, File, ImageOff } from 'lucide-react';
+import { useState } from 'react';
 import type { FileContent } from '@shared/domain/content';
 import { PathLabel } from '../../../components/PathLabel';
 import { formatSize } from '../../../lib/formatDate';
@@ -48,10 +49,19 @@ interface VersionCardProps {
 }
 
 function VersionCard({ title, subtitle, content, selected, onSelect }: VersionCardProps) {
+  // An image the browser can't decode (a damaged file, a format it doesn't read) shows as what it is, not a broken image.
+  const [undecodableUrl, setUndecodableUrl] = useState<string>();
+  const undecodable = undecodableUrl !== undefined && undecodableUrl === content.imageDataUrl;
   return (
     <button className={styles.card} data-selected={selected} onClick={onSelect}>
       <div className={styles.preview}>
-        {content.imageDataUrl ? <img src={content.imageDataUrl} alt={title} className={styles.image} /> : <span className={styles.size}>{formatSize(content.size)}</span>}
+        {content.imageDataUrl && !undecodable ? (
+          <img src={content.imageDataUrl} alt={title} className={styles.image} onError={() => setUndecodableUrl(content.imageDataUrl)} />
+        ) : (
+          <span className={styles.noPreview} data-tip={content.imageDataUrl ? "Couldn't display this image" : undefined}>
+            {content.imageDataUrl ? <ImageOff size={28} /> : <File size={28} />}
+          </span>
+        )}
       </div>
       <div className={styles.caption}>
         <span className={styles.title}>{title}</span>

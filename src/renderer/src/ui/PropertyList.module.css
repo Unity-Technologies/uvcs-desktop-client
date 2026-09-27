@@ -41,7 +41,8 @@
   transition: opacity var(--duration-fast);
 }
 
-.row:hover .copy {
+.row:hover .copy,
+.copy:focus-visible {
   opacity: 1;
 }
 
