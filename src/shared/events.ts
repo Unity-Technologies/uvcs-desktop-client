@@ -9,7 +9,7 @@ export interface CommandLogEntry {
   durationMs: number;
   exitCode: number;
   viaShell: boolean;
-  /** Output is kept only for failed commands, to help diagnose them. */
+  /** Output is kept only for failed commands, to help diagnose them. It and the command line are clipped (`clipForLog`). */
   output: string;
 }
 
