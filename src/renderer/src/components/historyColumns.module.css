@@ -1,5 +1,8 @@
 /* A box in the text's font around the mono number: the number sits on the text's baseline, not centered higher. */
 .numberCell {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   white-space: nowrap;
 }
 

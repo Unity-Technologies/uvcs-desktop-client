@@ -69,7 +69,7 @@ export function AttributesView() {
         <SearchField value={search} onChange={setSearch} placeholder="Filter attributes" />
       </ViewHeader>
       {isLoading ? (
-        <ListWithDetailsSkeleton columns={COLUMNS} />
+        <ListWithDetailsSkeleton widthKey="attributes" columns={COLUMNS} />
       ) : error ? (
         <EmptyState title="Couldn't load attributes" description={error.message} />
       ) : visible.length === 0 && search.trim() ? (
@@ -82,7 +82,7 @@ export function AttributesView() {
           action={<Button onClick={() => openCreateAttributeDialog(workspacePath)}>New attribute</Button>}
         />
       ) : (
-        <ListWithDetails
+        <ListWithDetails widthKey="attributes"
           list={
             <HighlightQuery query={search.trim()}>
               <DataTable

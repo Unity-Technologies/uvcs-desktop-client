@@ -155,7 +155,7 @@ export function CodeReviewsView() {
     </ViewHeader>
   );
 
-  if (isLoading) return <>{header}<ListWithDetailsSkeleton columns={COLUMNS} /></>;
+  if (isLoading) return <>{header}<ListWithDetailsSkeleton widthKey="codeReviews" columns={COLUMNS} /></>;
   if (error) return <>{header}<EmptyState title="Couldn't read the code reviews" description={error.message} /></>;
   if (visible.length === 0) {
     const empty = codeReviewsEmptyState({ searching: search.trim() !== '', filtered: scope !== 'all' || status !== 'any' || since !== DEFAULT_SINCE });
@@ -191,7 +191,7 @@ export function CodeReviewsView() {
   return (
     <>
       {header}
-      <ListWithDetails
+      <ListWithDetails widthKey="codeReviews"
         list={
           <HighlightQuery query={search}>
             <DataTable

@@ -69,7 +69,7 @@ export function ChangesetsView() {
   );
 
   if (error) return <>{header}<EmptyState title="Couldn't load changesets" description={error.message} /></>;
-  if (isLoading) return <>{header}<ListWithDetailsSkeleton columns={columns} /></>;
+  if (isLoading) return <>{header}<ListWithDetailsSkeleton widthKey="changesets" columns={columns} /></>;
 
   return (
     <>
@@ -77,7 +77,7 @@ export function ChangesetsView() {
       {visible.length === 0 ? (
         <EmptyState icon={<GitCommitVertical size={22} />} title="No changesets" description={noChangesetsHint(filter)} />
       ) : (
-        <ListWithDetails
+        <ListWithDetails widthKey="changesets"
           list={
             <HighlightQuery query={filter.search}>
               <DataTable

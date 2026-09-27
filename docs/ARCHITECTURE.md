@@ -385,7 +385,7 @@ renderer/src/
   list keys pressed while nothing has focus. Views keep their list's selection while away (`useViewSelection`). Lists
   expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
-- **List and details**: `ListWithDetails` (one remembered details width for every view) around a `DetailsPanel`. Every
+- **List and details**: `ListWithDetails` (each view remembers its own details width, `widthKey`; Files gives its details more room) around a `DetailsPanel`. Every
   kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
   description, or the object's name with the comment below; edited in place where cm can edit it); a meta row (author ·

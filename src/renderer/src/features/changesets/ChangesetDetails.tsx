@@ -1,4 +1,4 @@
-import { FileDiff, GitCommitVertical, Home, Tag } from 'lucide-react';
+import { FileDiff, GitCommitVertical, House, Tag } from 'lucide-react';
 import type { Changeset } from '@shared/domain/changeset';
 import { spec } from '@shared/domain/specs';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -46,8 +46,8 @@ export function ChangesetDetails({ changeset, menu, links = PLAIN_LINKS, relatio
       badges={
         <>
           {changeset.id === workspace?.loadedChangeset && (
-            <DetailsBadge tone="success">
-              <Home size={10} />
+            <DetailsBadge tone="accent" tip="Your workspace is on this changeset">
+              <House size={10} />
               Workspace
             </DetailsBadge>
           )}

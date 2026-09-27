@@ -366,7 +366,7 @@ export function BranchExplorerView() {
         <div className="visually-hidden" aria-live="polite" aria-atomic="true">
           {describeSelection(layout, selection, homeChangeset)}
         </div>
-        <ListWithDetails
+        <ListWithDetails widthKey="branchExplorer"
           hideDetails={!detailsOpen}
           list={
             <GraphCanvas

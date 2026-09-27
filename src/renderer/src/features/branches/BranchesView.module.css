@@ -38,24 +38,6 @@
   color: var(--text-tertiary);
 }
 
-.current {
-  display: inline-flex;
-  flex: none;
-  align-items: center;
-  height: 16px;
-  padding: 0 6px;
-  border-radius: var(--radius-full);
-  background: var(--accent-soft);
-  color: var(--accent-text);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  line-height: 16px;
-}
-
-.current[data-compact='true'] {
-  padding: 0 4px;
-}
-
 .chip {
   display: inline-flex;
   flex: none;
