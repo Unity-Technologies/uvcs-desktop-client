@@ -35,7 +35,7 @@
 }
 
 .segment[aria-checked='true'] {
-  background: var(--bg-surface-raised);
+  background: var(--bg-segment-checked);
   color: var(--text-primary);
   box-shadow:
     0 0 0 1px var(--border-default),
