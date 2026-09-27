@@ -9,3 +9,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+/* A move or removal: what cm says happened, told apart from the changesets' own comments. */
+.pathChange {
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-style: italic;
+  text-overflow: ellipsis;
+}

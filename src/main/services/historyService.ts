@@ -16,8 +16,8 @@ export function createHistoryService({ cm }: ServiceContext): HistoryApi {
     async forItem(workspacePath, path) {
       const itemPath = toAbsolutePath(workspacePath, path);
       const [xml, revisionIds] = await Promise.all([
-        cm.query(['history', itemPath, '--xml'], { cwd: workspacePath }),
-        cm.query(['history', itemPath, `--format=${REVISION_IDS_FORMAT}`], { cwd: workspacePath }),
+        cm.query(['history', itemPath, '--moveddeleted', '--xml'], { cwd: workspacePath }),
+        cm.query(['history', itemPath, '--moveddeleted', `--format=${REVISION_IDS_FORMAT}`], { cwd: workspacePath }),
       ]);
       return parseItemHistory(xml, revisionIds);
     },

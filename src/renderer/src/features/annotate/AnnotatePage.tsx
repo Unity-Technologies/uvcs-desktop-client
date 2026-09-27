@@ -7,7 +7,7 @@ import { useItemHistory } from '../history/useItemHistory';
 import { AnnotationPane } from './AnnotationPane';
 
 export function AnnotatePage({ page }: PageProps<'annotate'>) {
-  const { data: revisions } = useItemHistory(page.path);
+  const { data: history } = useItemHistory(page.path);
 
   return (
     <>
@@ -15,7 +15,7 @@ export function AnnotatePage({ page }: PageProps<'annotate'>) {
         title={page.path}
         actions={<IconButton icon={<History size={14} />} label="View history" onClick={() => navigation.openPage({ kind: 'history', path: page.path })} />}
       />
-      <AnnotationPane key={page.revisionSpec} path={page.path} revisionSpec={page.revisionSpec} revisions={revisions} />
+      <AnnotationPane key={page.revision?.idSpec} path={page.path} revision={page.revision} revisions={history?.revisions} />
     </>
   );
 }

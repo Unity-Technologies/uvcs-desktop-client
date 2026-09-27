@@ -1,6 +1,6 @@
 import { XMLParser } from 'fast-xml-parser';
 
-type XmlNode = Record<string, unknown>;
+export type XmlNode = Record<string, unknown>;
 
 /**
  * Parses `cm` XML output. Values stay as strings (comments like "123" must not become numbers)

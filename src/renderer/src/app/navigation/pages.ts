@@ -1,4 +1,5 @@
 import type { DiffTarget } from '@shared/domain/diff';
+import type { ItemRevision } from '@shared/domain/history';
 import type { MergeRequest } from '@shared/domain/merge';
 
 /**
@@ -7,7 +8,8 @@ import type { MergeRequest } from '@shared/domain/merge';
  */
 export type Page =
   | { kind: 'history'; path: string }
-  | { kind: 'annotate'; path: string; revisionSpec?: string }
+  /** `revision`, from the file's history, annotates it instead of the loaded one. */
+  | { kind: 'annotate'; path: string; revision?: ItemRevision }
   /**
    * `focusPath` preselects a file in the diff. `branchHead`, for a branch, is the head it was seen at: the diff is
    * then the one a details panel may already have read, not a second `cm diff`.

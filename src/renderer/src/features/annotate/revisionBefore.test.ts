@@ -12,6 +12,7 @@ const revision = (changesetId: number): ItemRevision => ({
   itemType: 'file',
   size: 1,
   spec: `a.cs#cs:${changesetId}`,
+  idSpec: `revid:${changesetId * 10}@game@local`,
 });
 
 const history = [revision(30), revision(12), revision(5)];

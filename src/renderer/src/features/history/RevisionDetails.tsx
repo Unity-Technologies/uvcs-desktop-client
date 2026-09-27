@@ -60,7 +60,7 @@ export function RevisionDetails({ path, revisions, selected }: RevisionDetailsPr
   return view === 'diff' ? (
     <RevisionComparison path={path} newer={newer} older={older} leading={viewSwitch} />
   ) : (
-    <AnnotationPane key={newer.spec} path={path} revisionSpec={newer.spec} revisions={revisions} leading={viewSwitch} />
+    <AnnotationPane key={newer.idSpec} path={path} revision={newer} revisions={revisions} leading={viewSwitch} />
   );
 }
 

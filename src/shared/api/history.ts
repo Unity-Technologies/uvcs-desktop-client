@@ -1,8 +1,8 @@
-import type { ItemRevision } from '../domain/history';
+import type { ItemHistory } from '../domain/history';
 
 export interface HistoryApi {
-  /** Revisions of a workspace-relative file or directory, newest first. */
-  forItem(workspacePath: string, path: string): Promise<ItemRevision[]>;
+  /** Revisions, moves and removals of a workspace-relative file or directory. */
+  forItem(workspacePath: string, path: string): Promise<ItemHistory>;
   /** Loads the content of a past revision into the workspace as a pending change. */
   revertTo(workspacePath: string, path: string, changesetId: number): Promise<void>;
   /** Asks where to save a revision and writes it there. Resolves to the saved path, or null if cancelled. */
