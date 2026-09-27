@@ -1,93 +1,125 @@
 import { GalleryHorizontalEnd } from 'lucide-react';
-import type { CSSProperties } from 'react';
+import type { MouseEvent } from 'react';
 import type { ItemRevision } from '@shared/domain/history';
-import { formatDateTime, formatRelativeDate } from '../../lib/formatDate';
-import { displayName } from '../../lib/userName';
+import { formatRelativeDate } from '../../lib/formatDate';
 import { firstLine } from '../../lib/text';
 import { Avatar } from '../../ui/Avatar';
 import type { AnnotateColumns } from './annotateOptionsStore';
-import type { AnnotationRow } from './annotationRows';
+import type { AnnotationBlock } from './annotationBlocks';
 import type { RowRange } from './visibleRows';
 import styles from './AnnotationGutter.module.css';
 
-/** Walks the annotation back to the file as it was before a line's change. */
-export interface AnnotateBefore {
-  /** The revision to annotate instead, if the history has one before `changesetId`. */
-  revisionBefore: (changesetId: number) => ItemRevision | undefined;
-  annotate: (revision: ItemRevision) => void;
-}
+/** The attribute naming a block's label, which its card is anchored to. */
+export const BLOCK_LABEL_ATTRIBUTE = 'data-block-label';
 
 interface AnnotationGutterProps {
-  rows: AnnotationRow[];
+  blocks: readonly AnnotationBlock[];
+  /** The blocks in view, as block indexes: only they are rendered, the rest keep their room. */
+  shown: RowRange;
   columns: AnnotateColumns;
   lineHeight: number;
-  /** The rows in view: only they are rendered, the rest keep their room. */
-  range: RowRange;
-  onOpenChangeset: (changesetId: number) => void;
-  annotateBefore?: AnnotateBefore;
+  /** The changeset whose lines stand out: the one hovered, or the keyboard's. */
+  highlighted: number | null;
+  /** The keyboard's block. */
+  active: number;
+  onHover: (block: number | null) => void;
+  /** The pointer is on (a block) or off (null) a block's label, which opens its card. */
+  onHoverLabel: (block: number | null) => void;
+  onClick: (block: number) => void;
+  /** The revision to annotate "before this change" of a block, if the history has one. */
+  revisionBefore?: (changesetId: number) => ItemRevision | undefined;
+  onAnnotateBefore: (revision: ItemRevision) => void;
 }
 
-/** One cell per code line: an age strip on every line, and who/what/when on the first line of each block. */
-export function AnnotationGutter({ rows, columns, lineHeight, range, onOpenChangeset, annotateBefore }: AnnotationGutterProps) {
+/**
+ * One band per block, drawn once for all its lines: the age strip down its left edge and, on its first line, who
+ * changed it, the comment and when. The label sticks to the top while the rest of a tall block is in view, so every
+ * line on screen tells whose it is.
+ */
+export function AnnotationGutter({
+  blocks,
+  shown,
+  columns,
+  lineHeight,
+  highlighted,
+  active,
+  onHover,
+  onHoverLabel,
+  onClick,
+  revisionBefore,
+  onAnnotateBefore,
+}: AnnotationGutterProps) {
   const showsDetails = columns.author || columns.changeset || columns.date;
+  const blockOf = (event: MouseEvent): number | null => {
+    const element = (event.target as Element).closest<HTMLElement>('[data-block]');
+    return element ? Number(element.dataset.block) : null;
+  };
 
   return (
-    <div className={styles.gutter} data-compact={!showsDetails} aria-hidden="true">
-      <div style={{ height: range.first * lineHeight }} />
-      {rows.slice(range.first, range.end).map((row, offset) => {
-        const index = range.first + offset;
-        const { changeset } = row;
-        const showsBlock = row.isBlockStart && showsDetails;
+    <div
+      className={styles.gutter}
+      data-compact={!showsDetails}
+      aria-hidden="true"
+      onMouseOver={(event) => onHover(blockOf(event))}
+      onMouseLeave={() => onHover(null)}
+      onClick={(event) => {
+        const block = blockOf(event);
+        if (block !== null) onClick(block);
+      }}
+    >
+      <div style={{ height: (blocks[shown.first]?.start ?? 0) * lineHeight }} />
+      {blocks.slice(shown.first, shown.end).map((block, offset) => {
+        const index = shown.first + offset;
+        const { changeset } = block;
+        const before = showsDetails ? revisionBefore?.(changeset.changesetId) : undefined;
         return (
           <div
-            key={index}
-            className={styles.cell}
-            data-block-start={row.isBlockStart && index > 0}
-            style={{ height: lineHeight, '--recency': row.recency } as CSSProperties}
+            key={block.start}
+            className={styles.block}
+            data-block={index}
+            data-age={block.age}
+            data-highlighted={changeset.changesetId === highlighted}
+            data-active={index === active}
+            style={{ height: (block.end - block.start) * lineHeight }}
           >
-            <button
-              className={styles.open}
-              data-tip={`${changeset.comment.trim() || 'No comment'}\n\n${displayName(changeset.owner)} · cs:${changeset.changesetId} · ${changeset.branch}\n${formatDateTime(changeset.date)}`}
-              onClick={() => onOpenChangeset(changeset.changesetId)}
-              tabIndex={-1}
-            >
-              <span className={styles.age} />
-              {showsBlock && (
-                <>
-                  {columns.author && <Avatar user={changeset.owner} size={15} />}
-                  <span className={styles.summary}>
-                    {columns.author && <span className={styles.author}>{displayName(changeset.owner)}</span>}
-                    <span className={styles.comment}>{firstLine(changeset.comment)}</span>
-                  </span>
-                  {columns.changeset && <span className={styles.changeset}>{changeset.changesetId}</span>}
-                  {columns.date && <span className={styles.date}>{formatRelativeDate(changeset.date)}</span>}
-                </>
-              )}
-            </button>
-            {showsDetails && annotateBefore && (
-              <AnnotateBeforeButton changesetId={changeset.changesetId} visible={row.isBlockStart} annotateBefore={annotateBefore} />
+            {showsDetails && (
+              <div
+                className={styles.label}
+                style={{ height: lineHeight }}
+                {...{ [BLOCK_LABEL_ATTRIBUTE]: index }}
+                // The card tells all of it: no tooltip for the cut comment.
+                data-tip=""
+                onMouseEnter={() => onHoverLabel(index)}
+                onMouseLeave={() => onHoverLabel(null)}
+              >
+                {/* The face says who, the card names them: a name on every block crowds out the comment. */}
+                {columns.author && <Avatar user={changeset.owner} size={16} tip={null} />}
+                <span className={styles.comment}>{firstLine(changeset.comment) || 'No comment'}</span>
+                {columns.changeset && <span className={styles.changeset}>{changeset.changesetId}</span>}
+                {columns.date && <span className={styles.date}>{formatRelativeDate(changeset.date)}</span>}
+                {/* Always takes its slot, so the dates stay aligned down the gutter whether or not there is an earlier revision. */}
+                {before ? (
+                  <button
+                    className={styles.before}
+                    aria-label="Annotate before this change"
+                    data-tip={`Annotate before this change\nThe file as of cs:${before.changesetId}`}
+                    tabIndex={-1}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onAnnotateBefore(before);
+                    }}
+                  >
+                    <GalleryHorizontalEnd size={13} />
+                  </button>
+                ) : (
+                  <span className={styles.before} />
+                )}
+              </div>
             )}
           </div>
         );
       })}
-      <div style={{ height: (rows.length - range.end) * lineHeight }} />
+      <div style={{ height: (blocks.length > 0 ? blocks.at(-1)!.end - (blocks[shown.end - 1]?.end ?? 0) : 0) * lineHeight }} />
     </div>
-  );
-}
-
-/** Always takes its slot, so the dates stay aligned down the gutter whether or not there is an earlier revision. */
-function AnnotateBeforeButton({ changesetId, visible, annotateBefore }: { changesetId: number; visible: boolean; annotateBefore: AnnotateBefore }) {
-  const revision = visible ? annotateBefore.revisionBefore(changesetId) : undefined;
-  if (!revision) return <span className={styles.before} />;
-  return (
-    <button
-      className={styles.before}
-      data-tip={`Annotate before this change\nThe file as of cs:${revision.changesetId}`}
-      onClick={() => annotateBefore.annotate(revision)}
-      aria-label="Annotate before this change"
-      tabIndex={-1}
-    >
-      <GalleryHorizontalEnd size={13} />
-    </button>
   );
 }

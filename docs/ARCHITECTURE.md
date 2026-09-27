@@ -448,6 +448,29 @@ renderer/src/
   over every path on disk (`useWorkspacePaths`, read once, no `cm`), its results as the tree's rows. The one picked is
   revealed in the tree, its folders expanded, and selected with its diff. A find field of the view's own duplicated it
   and was removed.
+- **History**: a file's history (`features/history`) reads like the other lists beside a file: its revisions and moves
+  on the left (`HistoryList`, two lines a row: avatar and comment, then cs:N · branch · author · date; moves in
+  italics; the workspace's revision with the house, which `cm ls` reads from the workspace alongside `cm history`),
+  as wide as it was left (`detailsWidthStore`, `historyList`), and the selected one on the right: a header of its
+  changeset (`RevisionHeader`: comment, author · date · cs:N to copy · branch chip, Changeset diff, Show in Branch
+  Explorer, the row's menu behind "More actions") over one pane that shows it as a Diff against the revision it was
+  made from (`parentRevision`) or annotated, switched with "Diff | Annotate" (⇧⌘T), remembered (`revisionView`).
+  Two selected revisions are compared with each other. The header follows the selection at once; the pane waits for
+  it to settle (`useSettledValue`), and every revision's contents and annotation are cached as immutable. The list
+  keeps the keyboard; ⌘E goes into the pane and Esc back.
+- **Annotate**: `features/annotate` is shared (the history's pane, the Annotate page, and whatever shows a file) through
+  `AnnotationPane` (`path`, the `revision` to annotate or the workspace's, the file's `revisions` for walking back, a
+  `leading` toolbar slot, and `history` where a history list is beside it). Lines are read in blocks, runs of lines
+  from one changeset (`annotationBlocks`): the gutter labels each once (avatar, comment, changeset, date, "Annotate
+  before this change"), the label sticking to the top while the rest of its block is in view; an age strip in five
+  shades of the accent (`annotationAge`, ranked by date among the file's changesets, `--annotate-age-*`) runs down
+  each block, and a hairline across gutter and code marks where the next starts (`AnnotationRules`, drawn in the
+  same scrolled content, so nothing drifts). Hovering a block highlights every line of its changeset; its label opens
+  a card (`AnnotationCard`: the whole comment, Open changeset, Annotate before, Show in history). Beside a history,
+  clicking a block (or Enter) selects its revision there and walking back selects the revision before, with Back;
+  elsewhere a click pins the card, walking back stays in the pane and Show in history opens the file's history on that
+  revision. ⌥↓ ⌥↑ walk the blocks (with ⇧, those of the same changeset), Space opens the card. The gutter, the rules
+  and Pierre's code render only the lines in view; the code highlights as a read-only diff does (`syntaxHighlighting`).
 - **Files: moving items**: ⌘X (Ctrl+X) cuts the selected items (`cutItemsStore`: only the outermost, never the root),
   ghosted with a hint in the header; cutting again replaces them, and they stay cut across views until pasted, Esc
   (never one a menu, dialog or field took) or another workspace. ⌘V moves them into the selected folder or the

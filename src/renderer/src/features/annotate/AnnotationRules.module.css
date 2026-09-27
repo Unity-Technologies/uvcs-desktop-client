@@ -1,0 +1,22 @@
+/* Over the gutter and the code, starting where their first line does. */
+.rules {
+  position: absolute;
+  inset: var(--diffs-gap-block) 0 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.block {
+  position: absolute;
+  right: 0;
+  left: 0;
+  border-top: 1px solid var(--border-default);
+}
+
+.block[data-first='true'] {
+  border-top-color: transparent;
+}
+
+.block[data-highlighted='true'] {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+}

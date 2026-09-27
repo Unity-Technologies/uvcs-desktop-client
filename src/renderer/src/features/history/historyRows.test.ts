@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemPathChange, ItemRevision } from '@shared/domain/history';
-import { historyRowKey, historyRows } from './historyRows';
+import { historyRowKey, historyRows, revisionRowKey } from './historyRows';
 
 const revision = (changesetId: number): ItemRevision => ({
   revisionId: changesetId * 10,
@@ -21,5 +21,18 @@ describe('historyRows', () => {
   it('interleaves moves with the revisions, newest first, a move below the revision of its changeset', () => {
     const rows = historyRows({ revisions: [revision(9), revision(5), revision(1)], pathChanges: [change(7), change(5)] });
     expect(rows.map(historyRowKey)).toEqual(['9', '7-path', '5', '5-path', '1']);
+  });
+});
+
+describe('revisionRowKey', () => {
+  const rows = historyRows({ revisions: [revision(9), revision(1)], pathChanges: [change(7)] });
+
+  it("finds the row of a changeset's revision", () => {
+    expect(revisionRowKey(rows, 9)).toBe('9');
+  });
+
+  it('finds none for a changeset that only moved the item, or never touched it', () => {
+    expect(revisionRowKey(rows, 7)).toBeNull();
+    expect(revisionRowKey(rows, 4)).toBeNull();
   });
 });

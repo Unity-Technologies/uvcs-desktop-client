@@ -4,6 +4,14 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
+  container-type: inline-size;
+}
+
+/* Narrow, what only informs (the age legend) gives way to what acts. */
+@container (max-width: 600px) {
+  .pane [data-toolbar-extra] {
+    display: none;
+  }
 }
 
 .caption {
@@ -18,19 +26,4 @@
   color: var(--text-primary);
   font-family: var(--font-mono);
   font-weight: 600;
-}
-
-.legend {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-tertiary);
-  font-size: var(--text-xs);
-}
-
-.scale {
-  width: 64px;
-  height: 6px;
-  border-radius: var(--radius-full);
-  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 10%, transparent), var(--accent));
 }

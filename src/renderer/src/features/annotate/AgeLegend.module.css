@@ -1,0 +1,18 @@
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.scale {
+  display: flex;
+  gap: 2px;
+}
+
+.swatch {
+  width: 10px;
+  height: 8px;
+  border-radius: 2px;
+}

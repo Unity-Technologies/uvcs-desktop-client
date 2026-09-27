@@ -3,7 +3,7 @@ import styles from './WorkspaceMark.module.css';
 
 interface WorkspaceMarkProps {
   /** What the workspace is on, for its tooltip. */
-  on: 'changeset' | 'branch';
+  on: 'changeset' | 'branch' | 'revision';
 }
 
 /** "You are here": the house the Branch Explorer draws at the workspace, beside the changeset or branch it's on. */
