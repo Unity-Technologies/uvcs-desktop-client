@@ -187,6 +187,21 @@
   white-space: nowrap;
 }
 
+/* A short name keeps a few letters while a long one gives way. */
+.badge[data-shrinks] {
+  flex: 0 1 auto;
+  min-width: 48px;
+}
+
+.badge[data-shrinks] > svg {
+  flex: none;
+}
+
+.badge[data-shrinks] > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .badge[data-tone='accent'] {
   background: var(--accent-soft);
   color: var(--accent-text);

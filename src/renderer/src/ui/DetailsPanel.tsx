@@ -191,9 +191,17 @@ export function DetailsCopyable({ text, copyText = text, what }: { text: string;
 
 type BadgeTone = 'accent' | 'success' | 'neutral' | 'warning';
 
-export function DetailsBadge({ tone = 'neutral', children }: { tone?: BadgeTone; children: ReactNode }) {
+interface DetailsBadgeProps {
+  tone?: BadgeTone;
+  tip?: string;
+  /** Gives way when the row is full, its text (a `<span>` child) cut with an ellipsis, e.g. a long label name. */
+  shrinks?: boolean;
+  children: ReactNode;
+}
+
+export function DetailsBadge({ tone = 'neutral', tip, shrinks, children }: DetailsBadgeProps) {
   return (
-    <span className={styles.badge} data-tone={tone}>
+    <span className={styles.badge} data-tone={tone} data-tip={tip} data-shrinks={shrinks || undefined}>
       {children}
     </span>
   );
