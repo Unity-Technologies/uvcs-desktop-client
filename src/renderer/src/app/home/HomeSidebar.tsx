@@ -7,6 +7,7 @@ import { NavFooter, NavGroup, NavGroups, NavItem, Sidebar } from '../../ui/nav/S
 import { CenteredSpinner } from '../../ui/Spinner';
 import { openSettingsDialog } from '../settings/SettingsDialog';
 import { useSidebarCollapsed } from '../shell/sidebarStore';
+import { AppMenuButton } from '../shell/AppMenuButton';
 import { SidebarToggleItem } from '../shell/SidebarToggleItem';
 import { useServers } from '../workspace/workspaceQueries';
 import { isSameSection, type HomeSection } from './homeSection';
@@ -27,7 +28,7 @@ export function HomeSidebar({ section, onSelect }: HomeSidebarProps) {
   );
 
   return (
-    <Sidebar width={232} rail={rail}>
+    <Sidebar width={232} rail={rail} titleBarStart={<AppMenuButton />}>
       <div className={styles.brand} data-rail={rail}>
         <AppMark size={28} />
         <span className={styles.brandName}>Unity Version Control</span>

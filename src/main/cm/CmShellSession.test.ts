@@ -1,12 +1,12 @@
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
-import { CmShellSession, resultLineAtEnd } from './CmShellSession';
+import { CmShellSession, resultLineAtEnd, shellCommandTimeoutMs } from './CmShellSession';
 
 // `node shell` in the fake's folder, as the session runs `<cm> shell`.
 const fakeCmFolder = fileURLToPath(new URL('./testing/fakeCmShell', import.meta.url));
 let session: CmShellSession;
 
-afterEach(() => session.dispose());
+afterEach(() => session?.dispose());
 
 describe('CmShellSession', () => {
   it('runs commands in order and reports their exit codes', async () => {
@@ -23,6 +23,11 @@ describe('CmShellSession', () => {
 
     await expect(prompted).rejects.toThrow(/waiting for input/);
     await expect(next).resolves.toEqual({ output: 'still-works', exitCode: 0 });
+  });
+
+  it('reads Windows line breaks as the app\'s, the one before the result line included', async () => {
+    session = new CmShellSession(process.execPath, fakeCmFolder);
+    await expect(session.run(['crlf', 'first'])).resolves.toEqual({ output: 'first\nsecond line', exitCode: 0 });
   });
 
   it('ends a command at its last result line, not at one quoted in its output', async () => {
@@ -48,6 +53,14 @@ describe('CmShellSession', () => {
     );
 
     await expect(paused).resolves.toEqual({ output: '2026-09-25T10:11:12', exitCode: 0 });
+  });
+});
+
+describe('shellCommandTimeoutMs', () => {
+  it('gives writes to thousands of files minutes, where a read gets two', () => {
+    expect(shellCommandTimeoutMs(['status', '--xml'])).toBe(120_000);
+    expect(shellCommandTimeoutMs(['undo', '-r', '/wk'])).toBeGreaterThanOrEqual(30 * 60_000);
+    expect(shellCommandTimeoutMs(['add', '--coparent', '/wk/a'])).toBeGreaterThanOrEqual(30 * 60_000);
   });
 });
 

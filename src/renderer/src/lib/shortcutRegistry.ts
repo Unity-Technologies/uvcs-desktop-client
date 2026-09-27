@@ -4,7 +4,11 @@
  * a shortcut is written anywhere else, so the sheet can't drift from what the keys do.
  *
  * Keys are written as in `lib/shortcuts.ts` (`mod+shift+k`); the first one is the binding, any others are alternatives.
+ * `mod` is ⌘ on macOS and Ctrl elsewhere; a shortcut takes other keys on Windows and Linux (`keysOffMac`) where
+ * their conventions differ (Alt+← goes back, Delete deletes) or where the Mac's would be AltGr: Ctrl+Alt types
+ * characters on most European layouts (Ctrl+Alt+Z is ż in Polish), so no shortcut uses it there.
  */
+import { isMac } from './platform';
 
 export const SHORTCUT_AREAS = [
   'General',
@@ -25,6 +29,10 @@ export interface ShortcutDefinition {
   area: ShortcutArea;
   label: string;
   keys: readonly [string, ...string[]];
+  /** The keys on Windows and Linux, when they aren't `keys`. */
+  keysOffMac?: readonly [string, ...string[]];
+  /** Windows and Linux only. */
+  offMacOnly?: true;
   /** The command a native menu item runs; its accelerator must be the first key. */
   commandId?: string;
 }
@@ -33,7 +41,7 @@ export const SHORTCUTS = {
   commandPalette: { area: 'General', label: 'Command palette', keys: ['mod+k', 'mod+shift+p'], commandId: 'app.commandPalette' },
   shortcuts: { area: 'General', label: 'Keyboard shortcuts', keys: ['?', 'mod+/'] },
   settings: { area: 'General', label: 'Settings', keys: ['mod+,'], commandId: 'app.settings' },
-  back: { area: 'General', label: 'Back', keys: ['mod+['] },
+  back: { area: 'General', label: 'Back', keys: ['mod+['], keysOffMac: ['alt+left'] },
   refresh: { area: 'General', label: 'Refresh', keys: ['mod+r'], commandId: 'workspace.refresh' },
   updateWorkspace: { area: 'General', label: 'Update workspace', keys: ['mod+shift+u'], commandId: 'workspace.update' },
   switchBranch: { area: 'General', label: 'Switch branch', keys: ['mod+shift+w'] },
@@ -44,6 +52,7 @@ export const SHORTCUTS = {
   newWindow: { area: 'General', label: 'New window', keys: ['mod+n'], commandId: 'app.newWindow' },
   commandLog: { area: 'General', label: 'Command log', keys: ['mod+shift+l'], commandId: 'app.commandLog' },
   toggleSidebar: { area: 'General', label: 'Collapse or expand the sidebar', keys: ['mod+\\'] },
+  appMenu: { area: 'General', label: 'Open the menu', keys: ['f10'], offMacOnly: true },
   saveComment: { area: 'General', label: 'Save an edited comment', keys: ['mod+enter'] },
 
   listMove: { area: 'Lists', label: 'Move the selection', keys: ['up', 'down'] },
@@ -51,19 +60,22 @@ export const SHORTCUTS = {
   listEnds: { area: 'Lists', label: 'First or last row', keys: ['home', 'end'] },
   listOpen: { area: 'Lists', label: 'Open', keys: ['enter'] },
   listSelectAll: { area: 'Lists', label: 'Select all', keys: ['mod+a'] },
+  rename: { area: 'Lists', label: 'Rename the selected file, branch, label or attribute', keys: ['f2'] },
   listDiff: { area: 'Lists', label: 'Diff the selected changeset or file', keys: ['mod+d'] },
+  listContextMenu: { area: 'Lists', label: 'Actions of the selected rows', keys: ['shift+f10'] },
   listExpand: { area: 'Lists', label: 'Collapse or expand a folder', keys: ['left', 'right'] },
   rowActions: { area: 'Lists', label: 'Actions of the highlighted result (palette, pickers, Go to file)', keys: ['tab', 'shift+f10'] },
 
   checkin: { area: 'Changes', label: 'Check in', keys: ['mod+enter'] },
   toggleIncluded: { area: 'Changes', label: 'Include or exclude from the check in', keys: ['space'] },
+  myShelves: { area: 'Changes', label: 'Your shelves', keys: ['mod+shift+s'] },
   review: { area: 'Changes', label: 'Mark reviewed and go to the next file', keys: ['r'] },
   nextFile: { area: 'Changes', label: 'Next file', keys: ['j'] },
   previousFile: { area: 'Changes', label: 'Previous file', keys: ['k'] },
 
   nextChange: { area: 'Diff', label: 'Next change', keys: ['alt+down'] },
   previousChange: { area: 'Diff', label: 'Previous change', keys: ['alt+up'] },
-  discardLines: { area: 'Diff', label: 'Discard the picked lines', keys: ['mod+alt+z'] },
+  discardLines: { area: 'Diff', label: 'Discard the picked lines', keys: ['mod+alt+z'], keysOffMac: ['mod+shift+backspace'] },
   undoDiscard: { area: 'Diff', label: 'Undo the last discard or edit', keys: ['mod+z'] },
   clearPickedLines: { area: 'Diff', label: 'Clear the picked lines', keys: ['escape'] },
   editFile: { area: 'Diff', label: 'Type in the file', keys: ['mod+e'] },
@@ -96,8 +108,7 @@ export const SHORTCUTS = {
   graphFit: { area: 'Branch Explorer', label: 'Fit to window', keys: ['0'] },
   graphClear: { area: 'Branch Explorer', label: 'Clear the selection, then the focus', keys: ['escape'] },
 
-  renameFile: { area: 'Files', label: 'Rename', keys: ['f2'] },
-  deleteFile: { area: 'Files', label: 'Delete', keys: ['mod+backspace'] },
+  deleteFile: { area: 'Files', label: 'Delete', keys: ['mod+backspace'], keysOffMac: ['delete'] },
   newFile: { area: 'Files', label: 'New file', keys: ['mod+shift+n'] },
   newFolder: { area: 'Files', label: 'New folder', keys: ['mod+shift+d'] },
   fileHistory: { area: 'Files', label: 'History', keys: ['mod+y'] },
@@ -118,14 +129,20 @@ export const SHORTCUTS = {
 
 export type ShortcutId = keyof typeof SHORTCUTS;
 
+/** Every key of a shortcut on macOS (`mac`) or elsewhere, the binding first; none where it doesn't exist. */
+export function shortcutKeys(shortcut: ShortcutDefinition, mac: boolean): readonly string[] {
+  if (mac) return shortcut.offMacOnly ? [] : shortcut.keys;
+  return shortcut.keysOffMac ?? shortcut.keys;
+}
+
 /** The key that runs a shortcut. */
 export function hotkey(id: ShortcutId): string {
-  return SHORTCUTS[id].keys[0];
+  return hotkeys(id)[0]!;
 }
 
 /** Every key of a shortcut, the binding first. */
 export function hotkeys(id: ShortcutId): readonly string[] {
-  return SHORTCUTS[id].keys;
+  return shortcutKeys(SHORTCUTS[id], isMac);
 }
 
 /**

@@ -1,10 +1,11 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 
 let matchesShortcut: typeof import('./shortcuts').matchesShortcut;
+let formatShortcut: typeof import('./shortcuts').formatShortcut;
 
 beforeAll(async () => {
   vi.stubGlobal('window', { uvcs: { platform: 'darwin' } });
-  ({ matchesShortcut } = await import('./shortcuts'));
+  ({ matchesShortcut, formatShortcut } = await import('./shortcuts'));
 });
 
 function press(key: string, code: string, modifiers: Partial<KeyboardEvent> = {}): KeyboardEvent {
@@ -38,5 +39,56 @@ describe('matchesShortcut', () => {
   it('reads digits by their key position, so Shift doesn’t change them', () => {
     expect(matchesShortcut(press('!', 'Digit1', { metaKey: true, shiftKey: true }), 'mod+shift+1')).toBe(true);
     expect(matchesShortcut(press('1', 'Digit1', { metaKey: true }), 'mod+shift+1')).toBe(false);
+  });
+});
+
+describe('matchesShortcut off macOS', () => {
+  it('takes Ctrl for mod, never the Windows or Super key', () => {
+    expect(matchesShortcut(press('k', 'KeyK', { ctrlKey: true }), 'mod+k', false)).toBe(true);
+    expect(matchesShortcut(press('k', 'KeyK', { metaKey: true }), 'mod+k', false)).toBe(false);
+    expect(matchesShortcut(press('k', 'KeyK', { ctrlKey: true, metaKey: true }), 'mod+k', false)).toBe(false);
+  });
+
+  it('never takes AltGr (Ctrl+Alt on Windows) for Ctrl', () => {
+    expect(matchesShortcut(press('\\', 'Minus', { ctrlKey: true, altKey: true }), 'mod+\\', false)).toBe(false);
+  });
+});
+
+describe('matchesShortcut on other keyboard layouts', () => {
+  it('reads letters by the character the layout types: Ctrl+Z on a German keyboard is the key labelled Z', () => {
+    expect(matchesShortcut(press('z', 'KeyY', { ctrlKey: true }), 'mod+z', false)).toBe(true);
+    expect(matchesShortcut(press('z', 'KeyY', { ctrlKey: true }), 'mod+y', false)).toBe(false);
+    expect(matchesShortcut(press('a', 'KeyQ', { metaKey: true }), 'mod+a')).toBe(true);
+  });
+
+  it('reads letters by position where the layout types no Latin letter', () => {
+    expect(matchesShortcut(press('Ω', 'KeyZ', { metaKey: true, altKey: true }), 'mod+alt+z')).toBe(true);
+    expect(matchesShortcut(press('л', 'KeyK', { ctrlKey: true }), 'mod+k', false)).toBe(true);
+  });
+
+  it('reads digits by position, as AZERTY types them with Shift', () => {
+    expect(matchesShortcut(press('&', 'Digit1', { ctrlKey: true }), 'mod+1', false)).toBe(true);
+  });
+});
+
+describe('formatShortcut', () => {
+  it('shows macOS symbols in its modifier order', () => {
+    expect(formatShortcut('mod+shift+k', true)).toEqual(['⇧', '⌘', 'K']);
+    expect(formatShortcut('mod+alt+z', true)).toEqual(['⌥', '⌘', 'Z']);
+    expect(formatShortcut('mod+enter', true)).toEqual(['⌘', '↩']);
+    expect(formatShortcut('mod+backspace', true)).toEqual(['⌘', '⌫']);
+  });
+
+  it('spells chords out as one cap elsewhere, Ctrl, Alt and Shift first, never a macOS symbol', () => {
+    expect(formatShortcut('mod+shift+k', false)).toEqual(['Ctrl+Shift+K']);
+    expect(formatShortcut('shift+mod+enter', false)).toEqual(['Ctrl+Shift+Enter']);
+    expect(formatShortcut('alt+down', false)).toEqual(['Alt+↓']);
+    expect(formatShortcut('mod+shift+backspace', false)).toEqual(['Ctrl+Shift+Backspace']);
+    expect(formatShortcut('delete', false)).toEqual(['Delete']);
+    expect(formatShortcut('escape', false)).toEqual(['Esc']);
+    expect(formatShortcut('shift+f10', false)).toEqual(['Shift+F10']);
+    expect(formatShortcut('tab', false)).toEqual(['Tab']);
+    expect(formatShortcut('mod+,', false)).toEqual(['Ctrl+,']);
+    expect(formatShortcut('pageup', false)).toEqual(['Page Up']);
   });
 });

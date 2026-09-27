@@ -4,9 +4,9 @@ import type { ContentSource } from '@shared/domain/content';
 import type { FileConflictResolution } from '@shared/domain/merge';
 import type { MergeTool, MergeToolOutcome } from '@shared/domain/mergeTools';
 import { api } from '../../../api/client';
-import { queryKeys } from '../../../api/queryKeys';
 import type { MergeLabels } from '../mergeDescription';
 import { resolveInMergeTool, type OpenTool } from '../mergeTools/resolveInMergeTool';
+import { conflictVersionQuery } from './conflictVersionQuery';
 import type { FileConflictDecision } from './fileConflictDecision';
 import { buildStates, type BuiltStates } from './fileConflictStates';
 import type { ConflictContents } from './loadedConflict';
@@ -54,11 +54,7 @@ export function useFileConflicts(workspacePath: string, files: ConflictedFile[],
     () =>
       files
         .flatMap((file) => [file.base, file.source, file.destination])
-        .map((source) => ({
-          queryKey: queryKeys.inWorkspace(workspacePath, 'content', source),
-          queryFn: () => api.content.read(workspacePath, source),
-          staleTime: Infinity,
-        })),
+        .map((source) => conflictVersionQuery(workspacePath, source)),
     [workspacePath, files],
   );
   const queries = useQueries({ queries: contentQueries });

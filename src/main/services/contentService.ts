@@ -5,6 +5,7 @@ import { EMPTY_CONTENT, toFileContent } from '../files/fileContent';
 import { explainLockedFile } from '../files/lockedFile';
 import { saveContent } from '../files/saveContent';
 import { withTempPath } from '../files/tempFile';
+import { retryWhileBusy } from '../files/whileBusy';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
 
@@ -32,9 +33,10 @@ export function createContentService({ cm, reviews }: ServiceContext): ContentAp
     }
   }
 
+  /** The text as the editor has it, line breaks included (the file's own). Written in place, keeping the file's identity. */
   async function writeWorkspaceFile(workspacePath: string, path: string, text: string): Promise<void> {
     const absolutePath = toAbsolutePath(workspacePath, path);
-    await writeFile(absolutePath, text, 'utf8').catch((error: unknown) => {
+    await retryWhileBusy(() => writeFile(absolutePath, text, 'utf8')).catch((error: unknown) => {
       throw explainLockedFile(error, absolutePath);
     });
   }

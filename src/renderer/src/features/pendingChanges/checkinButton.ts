@@ -24,6 +24,8 @@ interface CheckinButtonState {
   behindCount: number;
   /** Review mode is on and every change checked in is reviewed. */
   allReviewed: boolean;
+  /** Shelving keeps the changes in the workspace instead of undoing them. */
+  keepShelved?: boolean;
 }
 
 /** One wording of the button: the action, then "to /main" and the upload size, dimmed. */
@@ -45,11 +47,12 @@ interface CheckinButtonLabel {
  * with the branch's leaf only ("to task"), without the branch and finally "Check in 4". Behind the branch head it
  * updates first ("Update & check in 4 changes"); once every change is reviewed, "Check in reviewed changes".
  */
-export function checkinButtonLabel({ mode, includedCount, branchName, uploadBytes, merging, behindCount, allReviewed }: CheckinButtonState): CheckinButtonLabel {
+export function checkinButtonLabel({ mode, includedCount, branchName, uploadBytes, merging, behindCount, allReviewed, keepShelved }: CheckinButtonState): CheckinButtonLabel {
   const size = includedCount > 0 && uploadBytes > 0 ? formatSize(uploadBytes) : null;
   if (mode === 'shelve') {
-    if (includedCount === 0) return { forms: [{ action: 'Nothing to shelve', target: null, size: null }], tip: 'Shelve' };
-    return { forms: shorterForms(`Shelve ${pluralize(includedCount, 'change')}`, `Shelve ${formatCount(includedCount)}`, '', size), tip: 'Shelve' };
+    const tip = keepShelved ? 'Shelve a copy; the changes stay here' : 'Shelve, then undo the changes here';
+    if (includedCount === 0) return { forms: [{ action: 'Nothing to shelve', target: null, size: null }], tip };
+    return { forms: shorterForms(`Shelve ${pluralize(includedCount, 'change')}`, `Shelve ${formatCount(includedCount)}`, '', size), tip };
   }
   if (includedCount === 0) return { forms: [{ action: 'Nothing to check in', target: null, size: null }], tip: 'Check in' };
   const tip = branchName ? `Check in to ${branchName}` : 'Check in';

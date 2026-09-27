@@ -1,5 +1,5 @@
 import type { ChangeKind, Changelist, ItemType, PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
-import { fromCmRelativePath } from '../files/workspacePaths';
+import { withForwardSlashes } from '../files/workspacePaths';
 import { child, children, integer, parseXml, text } from './parseXml';
 
 const CHANGE_KINDS: Record<string, ChangeKind> = {
@@ -29,7 +29,7 @@ const ITEM_TYPES: Record<string, ItemType> = {
 
 /**
  * Parses `cm status --xml`, with or without `--changelists`. The same item can be listed
- * several times (e.g. moved and changed), so entries are merged by path.
+ * several times (e.g. moved and changed), so entries are merged by path. Paths come with the OS's separators.
  */
 export function parsePendingChanges(xml: string, platform: NodeJS.Platform = process.platform): PendingChangesSnapshot {
   const status = child(parseXml(xml, ['Change', 'Changelist']), 'StatusOutput');
@@ -62,9 +62,9 @@ function toPendingChange(node: Record<string, unknown>, changelist: string | und
   const similarity = Number.parseFloat(text(node.SimilarityPerUnit));
 
   return withOptionalFields(
-    { path: fromCmRelativePath(text(node.Path), platform), kinds, itemType: ITEM_TYPES[text(node.RevisionType)] ?? 'file', size: integer(node.Size, 0), lastModified: text(node.LastModified) },
+    { path: withForwardSlashes(text(node.Path), platform), kinds, itemType: ITEM_TYPES[text(node.RevisionType)] ?? 'file', size: integer(node.Size, 0), lastModified: text(node.LastModified) },
     {
-      oldPath: fromCmRelativePath(text(node.OldPath), platform) || undefined,
+      oldPath: withForwardSlashes(text(node.OldPath), platform) || undefined,
       mergeInfo: text(node.MergesInfo).replace(/^\s*\(|\)\s*$/g, '') || undefined,
       similarityPercent: similarity > 0 ? Math.round(similarity * 100) : undefined,
       changelist,

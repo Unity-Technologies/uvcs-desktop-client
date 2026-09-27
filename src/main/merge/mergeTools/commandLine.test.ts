@@ -54,6 +54,7 @@ describe('known tools', () => {
     expect(commandOf('meld')).toEqual(['--output=/t/a.ts', '/t/a.YOURS.ts', '/t/a.BASE.ts', '/t/a.INCOMING.ts']);
     expect(commandOf('p4merge')).toEqual(['/t/a.BASE.ts', '/t/a.INCOMING.ts', '/t/a.YOURS.ts', '/t/a.ts']);
     expect(commandOf('araxis')).toEqual(['-wait', '-merge', '-3', '-a1', '/t/a.BASE.ts', '/t/a.YOURS.ts', '/t/a.INCOMING.ts', '/t/a.ts']);
+    expect(commandOf('winmerge')).toEqual(['-u', '-e', '-wl', '-wr', '-am', '-dl', 'Yours (/main/task)', '-dm', 'Base', '-dr', 'Incoming (/main)', '/t/a.YOURS.ts', '/t/a.BASE.ts', '/t/a.INCOMING.ts', '-o', '/t/a.ts']);
     expect(commandOf('opendiff')).toEqual(['/t/a.YOURS.ts', '/t/a.INCOMING.ts', '-ancestor', '/t/a.BASE.ts', '-merge', '/t/a.ts']);
   });
 });

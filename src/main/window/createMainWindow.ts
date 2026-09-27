@@ -1,7 +1,10 @@
 import { join } from 'node:path';
 import { BrowserWindow, nativeTheme, shell } from 'electron';
+import { windowChrome } from '@shared/windowChrome';
+import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
 import { cascadedWindowBounds, loadWindowBounds, saveWindowBounds } from './savedWindowBounds';
+import { titleBarOptions } from './titleBar';
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from './windowBounds';
 
 const DARK_BACKGROUND = '#16171b';
@@ -21,8 +24,7 @@ export function createMainWindow(settings: SettingsStore, cascadeFrom?: BrowserW
     minHeight: MIN_WINDOW_HEIGHT,
     show: false,
     title: 'Unity Version Control',
-    titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
-    trafficLightPosition: { x: 16, y: 16 },
+    ...titleBarOptions(windowChrome(process.platform), nativeTheme.shouldUseDarkColors),
     backgroundColor: nativeTheme.shouldUseDarkColors ? DARK_BACKGROUND : LIGHT_BACKGROUND,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
@@ -36,6 +38,10 @@ export function createMainWindow(settings: SettingsStore, cascadeFrom?: BrowserW
     // Maximizing also shows the window, so it waits until the page can paint.
     if (maximized) window.maximize();
     window.show();
+  });
+  // Windows only: a mouse's back button and a keyboard's Browser Back key come as app commands (elsewhere as mouse buttons).
+  window.on('app-command', (_event, command) => {
+    if (command === 'browser-backward') sendEventTo(window.webContents, 'navigateBack', {});
   });
   window.webContents.setWindowOpenHandler(({ url }) => {
     void shell.openExternal(url);

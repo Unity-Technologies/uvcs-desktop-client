@@ -53,6 +53,13 @@
   box-shadow: var(--focus-ring);
 }
 
+/* Shelving only: keeping the changes in the workspace instead of undoing them. */
+.keep {
+  display: flex;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
 /* One split control: the action half rounds its left, the mode caret its right, joined by a hairline. */
 .actions {
   display: flex;

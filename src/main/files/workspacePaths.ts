@@ -1,16 +1,16 @@
-import { join, relative, sep } from 'node:path';
+import { posix, win32 } from 'node:path';
+
+/** The path functions of a platform: Windows paths on Windows, whatever OS runs the code. */
+export function pathsOf(platform: NodeJS.Platform): typeof posix {
+  return platform === 'win32' ? win32 : posix;
+}
 
 /** Converts a workspace-relative path (forward slashes) into an absolute OS path. */
-export function toAbsolutePath(workspacePath: string, relativePath: string): string {
-  return join(workspacePath, ...relativePath.split('/'));
+export function toAbsolutePath(workspacePath: string, relativePath: string, platform: NodeJS.Platform = process.platform): string {
+  return pathsOf(platform).join(workspacePath, ...relativePath.split('/'));
 }
 
-/** Converts an absolute OS path into a workspace-relative path with forward slashes. */
-export function toRelativePath(workspacePath: string, absolutePath: string): string {
-  return relative(workspacePath, absolutePath).split(sep).join('/');
-}
-
-/** A workspace-relative path as `cm` prints it (with backslashes on Windows) in the app's form, with forward slashes. */
-export function fromCmRelativePath(path: string, platform: NodeJS.Platform = process.platform): string {
-  return platform === 'win32' ? path.replaceAll('\\', '/') : path;
+/** A workspace-relative path as `cm` writes it on this OS (`src\app.ts` on Windows), with forward slashes. */
+export function withForwardSlashes(relativePath: string, platform: NodeJS.Platform): string {
+  return platform === 'win32' ? relativePath.replaceAll('\\', '/') : relativePath;
 }

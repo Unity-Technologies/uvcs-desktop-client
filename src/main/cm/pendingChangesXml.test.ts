@@ -42,6 +42,17 @@ describe('parsePendingChanges', () => {
     ]);
   });
 
+  it('reads the output of cm on Windows: CRLF line breaks and backslashes in paths', () => {
+    const moved = change('MV', 'Assets\\Scripts\\b.cs').replace('<OldPath />', '<OldPath>Assets\\a.cs</OldPath>');
+    const xml = `${header}\r\n<Changes>\r\n${moved}\r\n${change('PR', 'Assets\\new file.txt')}\r\n</Changes>\r\n</StatusOutput>\r\n`;
+    expect(parsePendingChanges(xml, 'win32').changes.map((item) => [item.path, item.oldPath])).toEqual([
+      ['Assets/Scripts/b.cs', 'Assets/a.cs'],
+      ['Assets/new file.txt', undefined],
+    ]);
+    // Elsewhere a backslash is part of a name.
+    expect(parsePendingChanges(xml, 'linux').changes[1]!.path).toBe('Assets\\new file.txt');
+  });
+
   it('reads 100,000 pending changes in linear time', () => {
     const changes = Array.from({ length: 100_000 }, (_, index) => change(index % 3 ? 'CH' : 'PR', `src/folder${index % 100}/file_${index}.ts`)).join('\n');
     const xml = `${header}<Changelists><Changelist><Name>Default</Name><Changes>${changes}</Changes></Changelist></Changelists></StatusOutput>`;

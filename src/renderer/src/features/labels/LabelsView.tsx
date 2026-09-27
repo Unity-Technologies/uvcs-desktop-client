@@ -1,6 +1,7 @@
 import { Plus, RefreshCw, Tag, User } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Label } from '@shared/domain/label';
+import { useRenameCommand } from '../../app/commands/useRenameCommand';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
@@ -25,7 +26,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { openCreateLabelDialog } from './CreateLabelDialog';
 import { LabelDetails } from './LabelDetails';
 import { labelMenu } from './labelMenu';
-import { showLabelChanges } from './labelOperations';
+import { renameLabel, showLabelChanges } from './labelOperations';
 import { useLabelsViewStore } from './labelsViewStore';
 import { useLabels } from './useLabels';
 import styles from './LabelsView.module.css';
@@ -62,6 +63,7 @@ export function LabelsView() {
     [labels, search],
   );
   const selected = visible.find((label) => labelKey(label) === selection.anchor);
+  useRenameCommand('Labels', 'label', selection.selected.size === 1 ? selected : undefined, (label) => void renameLabel(workspacePath, label));
   const filtered = Boolean(search.trim()) || since !== 'anyTime' || onlyMine;
 
   return (
