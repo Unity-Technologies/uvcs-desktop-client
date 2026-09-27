@@ -1,0 +1,24 @@
+/* Under the heading, taking whatever room it leaves: from nothing, so a long diff never squeezes the heading. */
+.viewer {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 240px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.viewer:focus {
+  outline: none;
+}
+
+/* Moved into with F6: a ring over the whole pane, above the code that would paint over an inset one. */
+.viewer:focus-visible::after,
+.viewer:has([data-viewer-focus]:focus-visible)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  box-shadow: var(--focus-ring-inset);
+  pointer-events: none;
+}

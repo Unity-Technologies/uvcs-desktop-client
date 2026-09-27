@@ -2,6 +2,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  width: 100%;
   min-width: 0;
 }
 
@@ -33,15 +34,6 @@
   transform: rotate(90deg);
 }
 
-/* The name keeps its width while an xlink chip after it can give way, and is only cut once the chip is gone. */
-.text {
-  display: flex;
-  flex: 0 1 auto;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-
 .label {
   flex: none;
   max-width: 100%;
@@ -50,26 +42,14 @@
   white-space: nowrap;
 }
 
-/* Room for the chip's icon at least. */
-.text:has(.xlink) > .label {
+/* The name keeps its width while an xlink chip after it can give way, and is only cut once the chip is gone (room for
+   the chip's icon at least). */
+.label:has(+ .xlink) {
   max-width: calc(100% - 30px);
 }
 
 .label[data-root='true'] {
   font-weight: var(--weight-medium);
-}
-
-.label[data-private='true'] {
-  color: var(--text-secondary);
-  font-style: italic;
-}
-
-.changesDot {
-  flex: none;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--change-changed);
 }
 
 .xlink {

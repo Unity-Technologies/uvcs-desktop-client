@@ -8,6 +8,8 @@ interface SplitPaneProps {
   initialSize: number;
   minSize?: number;
   maxSize?: number;
+  /** What the other pane keeps at least as the split narrows, when more than `minSize` (`sizedPaneStyle`). */
+  restMinSize?: number;
   /** Makes the size controlled, e.g. to remember it; `onSizeChange` reports drags and resets. */
   size?: number;
   onSizeChange?: (size: number) => void;
@@ -24,6 +26,7 @@ export function SplitPane({
   initialSize,
   minSize = 160,
   maxSize = 900,
+  restMinSize,
   size: controlledSize,
   onSizeChange,
   direction = 'horizontal',
@@ -52,7 +55,7 @@ export function SplitPane({
     });
   };
 
-  const sizedStyle = sizedPaneStyle(horizontal, size, minSize);
+  const sizedStyle = sizedPaneStyle(horizontal, size, minSize, restMinSize);
   const pane = (which: 'first' | 'second', content: ReactNode): ReactNode => {
     if (which !== sizedPane) return <div className={`${styles.pane} ${styles.rest}`}>{content}</div>;
     return hideSized ? null : (

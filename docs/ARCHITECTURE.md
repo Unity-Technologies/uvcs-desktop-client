@@ -398,7 +398,7 @@ renderer/src/
   list keys pressed while nothing has focus. Views keep their list's selection while away (`useViewSelection`). Lists
   expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
-- **List and details**: `ListWithDetails` (each view remembers its own details width, `widthKey`; Files gives its details more room) around a `DetailsPanel`. Every
+- **List and details**: `ListWithDetails` (each view remembers its own details width, `widthKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. Every
   kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
   description, or the object's name with the comment below; edited in place where cm can edit it); a meta row (author ·
@@ -408,6 +408,27 @@ renderer/src/
   read-only: no `cm` command or client API edits them. Selecting a row must stay cheap: `cm diff`
   runs only on request (`ChangedFilesSection`), other lookups wait for the selection to settle (`useSettled`), and
   immutable results are cached (`IMMUTABLE_QUERY`).
+- **Item rows**: every list of files and folders reads the same (`components/`): `ItemRow` lays out the icon, the name
+  (cut first), extras (lock chips, review marks, +N −M) and, last on the row, `ItemStatusMark`: the status letter of
+  Changes (`StatusBadge`) for what is notable only (a pending change, a checkout), or a dot for a folder with changes
+  inside; nothing marks an item up to date. Private items dim, ignored ones further, deleted ones are struck through.
+  `ItemIcon` is Lucide's (ISC, tree-shaken, already the app's icon set): a solid slate folder, or a filled neutral page
+  with the file's family as its glyph (`fileKind`: code, data, text, image, media, archive, Unity asset, binary; Unity's
+  `.meta` files dim), in the `--icon-*` tokens; color is left to statuses. Native icons (`app.getFileIcon`) were
+  rejected: macOS answers a generic page for a path not on disk (repository trees, deleted files), they're bitmaps
+  that ignore the app's theme, and every OS draws them differently.
+- **Files**: the tree keeps its width (400 px at first; on a narrow window it gives way first, keeping 480 px for the
+  diff: `FILE_TREE_WIDTH`) and shows names only, with Modified once it's wider than 420 px: size, changeset, author
+  and comment are the selected item's, above its diff. A file shows one diff, the most telling for its status
+  (`itemComparison`), its toolbar saying what it compares: a pending change against the loaded revision as in Changes
+  ("Your changes · vs cs:12": editable, discards), an up-to-date file's last change against its parent revision (the
+  listing names it, as History's `parentRevision` finds first: "Last change · cs:12 on /main by Ana · 2 days ago ·
+  comment"), a file with no revision whole against nothing ("New file", "Private file"). "Annotate" beside it
+  toggles the file annotated (kept as the selection moves), its revision by id in its repository (`itemRevision`), or
+  as on disk while it has changes. A folder shows what it holds and its last change. The diff and `cm` lookups wait for
+  the selection to settle (`useSettledValue`, without remounting); revisions are cached immutable. F6 moves the keys
+  into the diff to scroll it, F6 or Esc back to the tree, which keeps `MAIN_FOCUS`. Browse repository shows its tree
+  the same way, every item as its revision.
 - **Files: moving items**: ⌘X (Ctrl+X) cuts the selected items (`cutItemsStore`: only the outermost, never the root),
   ghosted with a hint in the header; cutting again replaces them, and they stay cut across views until pasted, Esc
   (never one a menu, dialog or field took) or another workspace. ⌘V moves them into the selected folder or the

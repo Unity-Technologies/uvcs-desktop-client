@@ -1,25 +1,23 @@
+import type { ReactNode } from 'react';
 import type { ContentSource } from '@shared/domain/content';
 import type { TreeItem } from '@shared/domain/explorer';
-import { EmptyState } from '../../ui/EmptyState';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
 
-/** What the item's current revision changed compared to the one before it. */
-export function RevisionChanges({ workspacePath, item }: { workspacePath: string; item: TreeItem }) {
-  if (item.itemType === 'directory') {
-    return <EmptyState title="This is a folder" description="Select a file to see its changes." />;
-  }
+interface RevisionChangesProps {
+  workspacePath: string;
+  item: TreeItem;
+  /** The toolbar's title: what is compared. */
+  title: ReactNode;
+}
 
+/**
+ * What the item's revision changed: against its parent revision, which the tree's listing names (the one History's
+ * `parentRevision` looks for first), or against nothing for the revision that added it. Both are read once.
+ */
+export function RevisionChanges({ workspacePath, item, title }: RevisionChangesProps) {
   const current: ContentSource = { kind: 'revision', revisionId: item.revisionId, fileName: item.name };
   const previous: ContentSource =
     item.parentRevisionId > 0 ? { kind: 'revision', revisionId: item.parentRevisionId, fileName: item.name } : { kind: 'empty' };
 
-  return (
-    <FileDiffViewer
-      workspacePath={workspacePath}
-      original={previous}
-      modified={current}
-      fileName={item.name}
-      title={item.parentRevisionId > 0 ? `Changed in cs:${item.changeset}` : `Added in cs:${item.changeset}`}
-    />
-  );
+  return <FileDiffViewer workspacePath={workspacePath} original={previous} modified={current} fileName={item.name} title={title} />;
 }

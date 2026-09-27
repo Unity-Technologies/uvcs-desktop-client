@@ -1,5 +1,6 @@
 import { FilePlus, FolderPlus, RefreshCw, Search } from 'lucide-react';
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import type { PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { invalidateWorkspace } from '../../app/queryClient';
@@ -15,6 +16,7 @@ import { IconButton } from '../../ui/IconButton';
 import { SearchField } from '../../ui/SearchField';
 import { ListSkeleton } from '../../ui/Skeleton';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { usePendingLocks } from '../pendingChanges/locks/usePendingLocks';
 import { usePendingChanges } from '../pendingChanges/usePendingChanges';
 import { useExpandedDirectories, useExpandedDirectoriesStore } from './expandedDirectoriesStore';
 import { fileMenu, FILE_SHORTCUTS } from './fileMenu';
@@ -23,6 +25,7 @@ import { CutHint } from './CutHint';
 import { createItem, openItem, targetDirectoryFor } from './fileOperations';
 import { useFilesViewStore } from './filesViewStore';
 import { FileTreeTable } from './FileTreeTable';
+import { FILE_TREE_WIDTH } from './fileTreeWidth';
 import { ancestorsOf, buildFileTreeRows } from './fileTreeRows';
 import { goToFile } from './GoToFileDialog';
 import { ItemDetailsPane } from './ItemDetailsPane';
@@ -34,8 +37,7 @@ import { hotkey } from '../../lib/shortcutRegistry';
 import { WorkspaceRootDetails } from './WorkspaceRootDetails';
 import { isWorkspaceRoot, workspaceRootItem } from './workspaceRoot';
 
-/** A file's details show its content and last change: they get more room than an object's meta. */
-const FILE_DETAILS_WIDTH = { initial: 560, min: 320, max: 1200 };
+const NO_CHANGES: PendingChange[] = [];
 
 /** The workspace explorer: every file on disk with its version-control status. */
 export function FilesView() {
@@ -44,7 +46,7 @@ export function FilesView() {
   const [rootExpanded, setRootExpanded] = useState(true);
   const expanded = useExpandedDirectories(workspacePath);
   const { toggle, expand } = useExpandedDirectoriesStore();
-  const { data: pendingChanges } = usePendingChanges();
+  const { data: pendingChanges, dataUpdatedAt: pendingChangesUpdatedAt } = usePendingChanges();
   const [filter, setFilter] = useState('');
   // The field shows each keystroke at once; tens of thousands of open rows are filtered right after.
   const shownFilter = useDeferredValue(filter);
@@ -57,6 +59,7 @@ export function FilesView() {
     expanded,
   );
   const pendingIndex = useMemo(() => new PendingChangesIndex(pendingChanges?.changes ?? []), [pendingChanges]);
+  const locks = usePendingLocks(workspacePath, workspace?.repository, pendingChanges?.changes ?? NO_CHANGES, pendingChangesUpdatedAt);
   const root = useMemo(() => workspace && { item: workspaceRootItem(workspace), expanded: rootExpanded }, [workspace, rootExpanded]);
   const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter: shownFilter, root }), [childrenByDirectory, expanded, shownFilter, root]);
   const selectedItems = useMemo(() => rows.filter((row) => selection.selected.has(row.item.path)).map((row) => row.item), [rows, selection]);
@@ -81,6 +84,11 @@ export function FilesView() {
   const cutItems = useCutItems(workspacePath);
   const cutPaths = useMemo(() => new Set(cutItems.map((item) => item.path)), [cutItems]);
   const nothingMatches = shownFilter.trim() !== '' && rows.every((row) => isWorkspaceRoot(row.item));
+
+  const selectFolder = (path: string): void => {
+    selectAfterLeaving(selection, { selected: new Set([path]), anchor: path }, setSelection);
+    setRevealPath(path);
+  };
 
   const createInSelection = (kind: 'file' | 'directory'): void => void createItem(workspacePath, targetDirectoryFor(focused), kind);
 
@@ -108,7 +116,10 @@ export function FilesView() {
   return (
     <>
       {header}
-      <ListWithDetails widthKey="files" widthLimits={FILE_DETAILS_WIDTH}
+      <ListWithDetails
+        widthKey="filesTree"
+        widthLimits={FILE_TREE_WIDTH}
+        sized="list"
         list={
           nothingMatches ? (
             <EmptyState
@@ -126,6 +137,7 @@ export function FilesView() {
                 onOpenFile={(item) => openItem(workspacePath, item)}
                 contextMenu={(items) => fileMenu(workspacePath, items, pendingIndex)}
                 statusOf={(item) => itemStatus(item, pendingIndex)}
+                lockOf={(item) => locks.get(item.path)}
                 hasChangesInside={(directory) => pendingIndex.hasChangesInside(directory)}
                 revealPath={revealPath}
                 isCut={(item) => cutPaths.has(item.path)}
@@ -138,11 +150,13 @@ export function FilesView() {
             <WorkspaceRootDetails workspace={workspace} menu={fileMenu(workspacePath, [focused], pendingIndex)} />
           ) : focused ? (
             <ItemDetailsPane
-              key={focused.path}
               workspacePath={workspacePath}
               item={focused}
-              pendingChange={pendingIndex.changeAt(focused.path)}
+              pendingIndex={pendingIndex}
+              lock={locks.get(focused.path)}
               menu={fileMenu(workspacePath, [focused], pendingIndex)}
+              onSelectFolder={selectFolder}
+              folderContents={childrenByDirectory.get(focused.path)}
             />
           ) : (
             <NoSelection noun="file" />

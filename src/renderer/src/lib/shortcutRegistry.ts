@@ -119,6 +119,8 @@ export const SHORTCUTS = {
   cutItems: { area: 'Files', label: 'Cut, to move into another folder', keys: ['mod+x'] },
   pasteItems: { area: 'Files', label: 'Move the cut items into the selected folder', keys: ['mod+v'] },
   cancelCut: { area: 'Files', label: 'Cancel the cut', keys: ['escape'] },
+  fileViewer: { area: 'Files', label: "Into the selected file's content, or back to the tree", keys: ['f6'] },
+  leaveFileViewer: { area: 'Files', label: "Back to the tree from the file's content", keys: ['escape'] },
 
   merge: { area: 'Merge', label: 'Merge', keys: ['mod+enter'] },
   resolveAllInTool: { area: 'Merge', label: 'Resolve the conflicts in the merge tool, one by one', keys: ['mod+shift+enter'] },

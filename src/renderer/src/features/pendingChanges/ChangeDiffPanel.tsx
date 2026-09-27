@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { ReviewMark } from '@shared/domain/review';
 import { api } from '../../api/client';
@@ -19,15 +19,17 @@ interface ChangeDiffPanelProps {
   change: PendingChange;
   /** When the file changed since it was reviewed, the diff can show only that. */
   reviewMark?: ReviewMark;
+  /** Instead of the file's path and status, where the page shows them already (Files). */
+  title?: ReactNode;
 }
 
-export function ChangeDiffPanel({ workspacePath, change, reviewMark }: ChangeDiffPanelProps) {
+export function ChangeDiffPanel({ workspacePath, change, reviewMark, title: ownTitle }: ChangeDiffPanelProps) {
   // Per file: "Since review" is a way to look at one file, not a mode that follows the selection.
   const [sinceReviewPath, setSinceReviewPath] = useState<string | null>(null);
   const canCompareWithReview = reviewMark?.state === 'changedSinceReview' && reviewMark.hasSnapshot;
   const sinceReview = canCompareWithReview && sinceReviewPath === change.path;
 
-  const title = <DiffFileTitle tone={changeTone(change)} status={describeKinds(change)} path={change.path} oldPath={change.oldPath} />;
+  const title = ownTitle ?? <DiffFileTitle tone={changeTone(change)} status={describeKinds(change)} path={change.path} oldPath={change.oldPath} />;
 
   if (change.itemType === 'directory') {
     return <EmptyState title={change.path} description={`Directory · ${describeKinds(change)}`} />;
