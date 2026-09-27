@@ -28,7 +28,8 @@ export function RevisionComparison({ path, newer, older, leading }: RevisionComp
         <>
           {leading}
           <span className={styles.title}>
-            {older ? `cs:${older.changesetId}` : 'Created in'} → <strong>cs:{newer.changesetId}</strong>
+            {older ? `cs:${older.changesetId} → ` : 'Created in '}
+            <strong>cs:{newer.changesetId}</strong>
           </span>
         </>
       }
