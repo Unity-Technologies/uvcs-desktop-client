@@ -1,4 +1,4 @@
-import type { ItemDetails, RevisionType, TreeItem } from '../domain/explorer';
+import type { ItemDetails, ItemMove, RevisionType, TreeItem } from '../domain/explorer';
 
 export interface ExplorerApi {
   /** Children of a workspace directory (`''` is the root), including private items. */
@@ -13,6 +13,8 @@ export interface ExplorerApi {
   move(workspacePath: string, fromPath: string, toPath: string): Promise<void>;
   /** Renames a private item on disk: `cm mv` only moves controlled ones. Fails rather than replace an existing item. */
   renamePrivate(workspacePath: string, fromPath: string, toPath: string): Promise<void>;
+  /** Moves items one after the other, as an operation; stops at the first that fails, and never replaces an existing item. */
+  moveItems(workspacePath: string, moves: ItemMove[], operationId: string): Promise<void>;
   /** Creates an empty file or directory and adds it to version control. */
   create(workspacePath: string, path: string, kind: 'file' | 'directory'): Promise<void>;
   changeRevisionType(workspacePath: string, paths: string[], type: RevisionType): Promise<void>;

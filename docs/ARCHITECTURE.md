@@ -395,6 +395,13 @@ renderer/src/
   read-only: no `cm` command or client API edits them. Selecting a row must stay cheap: `cm diff`
   runs only on request (`ChangedFilesSection`), other lookups wait for the selection to settle (`useSettled`), and
   immutable results are cached (`IMMUTABLE_QUERY`).
+- **Files: moving items**: ⌘X (Ctrl+X) cuts the selected items (`cutItemsStore`: only the outermost, never the root),
+  ghosted with a hint in the header; cutting again replaces them, and they stay cut across views until pasted, Esc
+  (never one a menu, dialog or field took) or another workspace. ⌘V moves them into the selected folder or the
+  selected file's (`pastePlan`, pure): never into themselves, a private folder (controlled items) or onto a name the
+  folder has in any case (those stay, after asking); items already there are left. `explorer.moveItems` runs it as one
+  operation, a `cm move` per controlled item and a rename on disk per private one, refusing any existing target
+  (`cm move` onto a folder moves inside it); then the moved items are selected, with Undo.
 - **Branch switcher**: groups and orders branches like the official Desktop client (`branchSwitcherGroups`): /main by its
   well-known GUID, the workspace's recent branches, then the rest newest first. Recent branches are the official client's,
   read from and written to its `plasticgui.conf` (`main/plasticConfig`) on every switch, so both apps list the same ones.

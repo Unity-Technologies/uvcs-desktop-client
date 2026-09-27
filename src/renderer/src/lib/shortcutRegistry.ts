@@ -115,6 +115,9 @@ export const SHORTCUTS = {
   newFolder: { area: 'Files', label: 'New folder', keys: ['mod+shift+d'] },
   fileHistory: { area: 'Files', label: 'History', keys: ['mod+y'], keysOffMac: ['mod+h'] },
   annotate: { area: 'Files', label: 'Annotate', keys: ['mod+t'] },
+  cutItems: { area: 'Files', label: 'Cut, to move into another folder', keys: ['mod+x'] },
+  pasteItems: { area: 'Files', label: 'Move the cut items into the selected folder', keys: ['mod+v'] },
+  cancelCut: { area: 'Files', label: 'Cancel the cut', keys: ['escape'] },
 
   merge: { area: 'Merge', label: 'Merge', keys: ['mod+enter'] },
   resolveAllInTool: { area: 'Merge', label: 'Resolve the conflicts in the merge tool, one by one', keys: ['mod+shift+enter'] },

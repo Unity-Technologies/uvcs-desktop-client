@@ -1,6 +1,6 @@
 import type { TreeItem } from '@shared/domain/explorer';
 import type { ItemType } from '@shared/domain/pendingChanges';
-import { child, children, integer, parseXml, text } from './parseXml';
+import { child, children, dateText, integer, parseXml, text } from './parseXml';
 import { parseXlinkName } from './xlinkName';
 
 const ITEM_TYPES: Record<string, ItemType> = {
@@ -34,7 +34,7 @@ function treeItem(item: Record<string, unknown>): TreeItem {
     name: path ? path.slice(path.lastIndexOf('/') + 1) : listedName,
     itemType: ITEM_TYPES[text(item.Type)] ?? 'file',
     size: integer(item.Size, 0),
-    date: meaningfulDate(text(item.Date)),
+    date: dateText(item.Date),
     isPrivate: text(item.Status) === 'Private',
     isCheckedOut: text(item.Checkout) !== '',
     changeset: integer(item.Changeset),
@@ -46,9 +46,4 @@ function treeItem(item: Record<string, unknown>): TreeItem {
     ...(xlink && { xlink }),
     ...(symlinkTarget && { symlinkTarget }),
   };
-}
-
-/** Items that are added but not checked in yet report the minimum date (`0001-01-01…`). */
-function meaningfulDate(date: string): string {
-  return date.startsWith('0001-') ? '' : date;
 }
