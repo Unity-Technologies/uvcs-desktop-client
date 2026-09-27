@@ -397,6 +397,11 @@ renderer/src/
   focuses it after navigating and whenever focus falls to the document (a dialog, menu or popover closed), and hands it
   list keys pressed while nothing has focus. Views keep their list's selection while away (`useViewSelection`). Lists
   expose ARIA roles (grid, tree, listbox) with `aria-activedescendant` on the focused container.
+- **Filters**: every list's filter marks what made a row match, by the same rule. A filter field takes each word typed
+  in any order, each found in one of the texts the row shows (`matchesWordFilter`; users by the name shown and as stored,
+  `userFilterTexts`), and `HighlightQuery` marks those words in each cell; a path cut to fit finds them in the whole
+  path first (`PathLabel`, `positionsInTrimmed`). Fuzzy finders (the palette, Go to file) pass the positions they
+  ranked by (`fuzzyMatchPositions`). Text a row shows but its filter doesn't look at is never marked.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
 - **List and details**: `ListWithDetails` (each view remembers its own details width, `widthKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. Every
   kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
