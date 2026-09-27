@@ -9,6 +9,7 @@ import { focusedKeyOf, selectOnArrow, selectOnClick, successorKey, type Selectio
 import { ActionContextMenu } from '../menu/ActionContextMenu';
 import { cellText } from './cellText';
 import { sortRows, type SortRanks } from './sortRows';
+import { visibleColumns } from './visibleColumns';
 import styles from './DataTable.module.css';
 
 export interface Column<Row> {
@@ -86,7 +87,7 @@ export function DataTable<Row>({
     sortRanks.current = { sortValue, ranks: sorted.ranks };
     return sorted.rows;
   }, [rows, sortValue, sort]);
-  const shownColumns = columns.filter((column) => !column.hideBelow || tableWidth >= column.hideBelow);
+  const shownColumns = visibleColumns(columns, tableWidth);
 
   const hidesColumns = columns.some((column) => column.hideBelow);
   useLayoutEffect(() => {

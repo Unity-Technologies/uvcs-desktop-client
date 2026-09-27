@@ -30,6 +30,10 @@ describe.each(Object.entries(themes))('%s theme', (_theme, tokens) => {
     expect(contrastRatio(foreground.rgb, tint)).toBeGreaterThanOrEqual(3);
   });
 
+  it.each(['--icon-folder', '--icon-file'])('draws item icons in %s at 3:1 on every surface', (icon) => {
+    for (const surface of SURFACES) expect(ratio(tokens, icon, surface), surface).toBeGreaterThanOrEqual(3);
+  });
+
   it('draws focus rings at 3:1 on surfaces and on selected rows', () => {
     for (const surface of SURFACES) expect(ratio(tokens, '--focus-color', surface), surface).toBeGreaterThanOrEqual(3);
     const surface = parseColor(tokens['--bg-surface']!).rgb;

@@ -1,0 +1,54 @@
+.row {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.icon {
+  display: flex;
+  flex: none;
+}
+
+/* Build output and caches come by the folder, so dimming reads better than a mark on each of them. */
+.row[data-presence='private'] > .icon {
+  opacity: 0.55;
+}
+
+.row[data-presence='ignored'] > .icon {
+  opacity: 0.35;
+}
+
+.label {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.row[data-presence='private'] > .label {
+  color: var(--text-secondary);
+}
+
+.row[data-presence='ignored'] > .label {
+  color: var(--text-tertiary);
+}
+
+.label[data-deleted] {
+  text-decoration: line-through;
+  text-decoration-color: var(--text-tertiary);
+}
+
+/* The extras, then the status: the status is the row's last column, at the same place on every row. */
+.trailing {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  padding-left: 6px;
+}

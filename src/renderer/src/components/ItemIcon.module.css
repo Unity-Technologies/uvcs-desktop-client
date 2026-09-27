@@ -1,0 +1,31 @@
+.icon {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
+
+.icon > svg {
+  position: absolute;
+  inset: 0;
+}
+
+.folder {
+  color: var(--icon-folder);
+  fill: var(--icon-folder);
+}
+
+.page {
+  color: var(--icon-file);
+  fill: var(--icon-file-fill);
+}
+
+.glyph {
+  color: var(--icon-file);
+}
+
+/* Unity writes one next to every asset: they step back so the assets stand out. */
+.icon[data-kind='meta'] {
+  opacity: 0.55;
+}

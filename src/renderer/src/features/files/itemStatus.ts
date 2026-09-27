@@ -14,13 +14,17 @@ export interface ItemStatus {
 /** Indexes pending changes so the tree can look up each item's status quickly. */
 export class PendingChangesIndex {
   private readonly byPath: Map<string, PendingChange>;
-  private readonly directoriesWithChanges = new Set<string>();
+  /** How many changes each directory holds, at any depth. */
+  private readonly changesInside = new Map<string, number>();
 
   constructor(changes: PendingChange[]) {
     this.byPath = new Map(changes.map((change) => [change.path, change]));
     for (const change of changes) {
       const segments = change.path.split('/');
-      for (let length = 1; length < segments.length; length++) this.directoriesWithChanges.add(segments.slice(0, length).join('/'));
+      for (let length = 1; length < segments.length; length++) {
+        const directory = segments.slice(0, length).join('/');
+        this.changesInside.set(directory, (this.changesInside.get(directory) ?? 0) + 1);
+      }
     }
   }
 
@@ -29,7 +33,12 @@ export class PendingChangesIndex {
   }
 
   hasChangesInside(directory: string): boolean {
-    return this.directoriesWithChanges.has(directory);
+    return this.changesInside.has(directory);
+  }
+
+  /** The changes anywhere below a directory; the workspace root (`''`) holds them all. */
+  countInside(directory: string): number {
+    return directory === '' ? this.byPath.size : (this.changesInside.get(directory) ?? 0);
   }
 }
 
@@ -49,18 +58,4 @@ export function itemStatus(item: TreeItem, index: PendingChangesIndex): ItemStat
 /** A file's size and date on disk, from its pending change; undefined for folders and files it deletes. */
 export function onDiskState(item: Pick<TreeItem, 'itemType'>, change: PendingChange): ItemStatus['onDisk'] {
   return item.itemType !== 'directory' && existsOnDisk(change) ? { size: change.size, date: change.lastModified } : undefined;
-}
-
-/**
- * The mark on an item's icon, as the Plastic desktop GUI overlays them: its pending status, else a link for an xlink,
- * private, or a check for an item under version control and up to date. A repository tree (a changeset browsed, not
- * the workspace) has only controlled items, so the check tells nothing there and is left out.
- */
-export type IconOverlay = StatusTone | 'xlink' | 'controlled' | 'none';
-
-export function iconOverlay(item: Pick<TreeItem, 'isPrivate' | 'xlink'>, status: ItemStatus | null, inWorkspace = true): IconOverlay {
-  if (status) return status.tone;
-  if (item.xlink) return 'xlink';
-  if (item.isPrivate) return 'private';
-  return inWorkspace ? 'controlled' : 'none';
 }

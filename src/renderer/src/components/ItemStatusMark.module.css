@@ -1,0 +1,9 @@
+/* Centered where a letter would be, so a folder's mark lines up with its files'. */
+.changesInside {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin: 0 5px;
+  border-radius: 50%;
+  background: var(--change-changed);
+}
