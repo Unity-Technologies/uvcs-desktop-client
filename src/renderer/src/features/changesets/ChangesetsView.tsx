@@ -14,7 +14,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
 import { changesetColumns } from './changesetColumns';
 import { ChangesetDetails } from './ChangesetDetails';
-import { DEFAULT_CHANGESET_FILTER, matchesSearch, toQueryFilter, type ChangesetFilterState } from './changesetFilters';
+import { changesetsCount, DEFAULT_CHANGESET_FILTER, matchesSearch, noChangesetsHint, toQueryFilter, type ChangesetFilterState } from './changesetFilters';
 import { ChangesetFiltersBar } from './ChangesetFiltersBar';
 import { changesetMenu } from './changesetMenu';
 import { openChangesetDiff, openRangeDiff } from './changesetOperations';
@@ -62,8 +62,8 @@ export function ChangesetsView() {
   );
 
   const header = (
-    <ViewHeader title="Changesets" subtitle={changesets && `${visible.length} shown`}>
-      <ChangesetFiltersBar filter={filter} onChange={setFilter} />
+    <ViewHeader title="Changesets" subtitle={changesets && changesetsCount(visible.length, changesets.length, datePreset)}>
+      <ChangesetFiltersBar filter={filter} onChange={setFilter} currentBranch={currentBranch} />
     </ViewHeader>
   );
 
@@ -74,7 +74,7 @@ export function ChangesetsView() {
     <>
       {header}
       {visible.length === 0 ? (
-        <EmptyState icon={<GitCommitVertical size={22} />} title="No changesets" description="Nothing matches these filters. Try a longer time range." />
+        <EmptyState icon={<GitCommitVertical size={22} />} title="No changesets" description={noChangesetsHint(filter)} />
       ) : (
         <ListWithDetails
           list={

@@ -1,13 +1,18 @@
+/* A box in the text's font around the mono number: the number sits on the text's baseline, not centered higher. */
 .changesetId {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
+  white-space: nowrap;
+}
+
+.number {
   font-family: var(--font-mono);
   font-size: var(--text-sm);
   font-variant-numeric: tabular-nums;
 }
 
 .current {
+  display: inline-block;
+  margin-left: 6px;
+  vertical-align: 1px;
   width: 7px;
   height: 7px;
   border-radius: 50%;
@@ -27,7 +32,8 @@
   min-width: 0;
 }
 
-.comment {
+.comment,
+.clipped {
   overflow: hidden;
   text-overflow: ellipsis;
 }
