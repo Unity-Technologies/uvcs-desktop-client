@@ -257,7 +257,10 @@ renderer/src/
   patches the places Pierre 1.5.1 doesn't (its `FileDiff` never hands them to the renderer that re-diffs each
   keystroke, a keystroke's shortcut takes lines equal only when they're the same text, and text typed back to the
   original's shows no change), re-renders the diff whole when a keystroke leaves rows the diff doesn't have, and its
-  test fails when a Pierre update moves them. `cm` commands keep their own comparison: merges don't change with it.
+  test fails when a Pierre update moves them. `pierreTyping.test.ts` types into diffs of every kind of text (line
+  breaks, final line breaks, whitespace, empty sides) under every method, checking after each keystroke that Pierre's
+  diff is `lineDiff`'s and that the rows on screen are the diff's (`pierreSessionFixture`). `cm` commands keep their own
+  comparison: merges don't change with it.
 - **Line breaks**: lines end with LF, CRLF or the lone CR of classic Mac files (`lib/lineBreaks`). Pierre and `diff`
   break lines only at LF, so everything they get (diffs, the editors, conflicts, whole versions) shows each lone CR as
   a LF (`shownText`), with the same lines. Everything else keeps the files' own text: the editor's text goes back to
