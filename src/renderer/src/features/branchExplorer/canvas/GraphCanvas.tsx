@@ -225,7 +225,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           if (sizeRef.current.width === 0) pendingViewRef.current = show;
           else show();
         },
-        fit: () => view.jumpTo(fitToScreen(graphSize(layout.columnCount, layout.rowCount), sizeRef.current)),
+        fit: () => view.jumpTo(fitToScreen(graphSize(layout.columnCount, layout.rowCount), sizeRef.current, view.viewportRef.current)),
         zoomBy: (factor) => view.zoomStep(center().x, center().y, factor),
         focus: () => containerRef.current?.focus(),
       };
@@ -296,6 +296,8 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     clippedTip.hide();
     containerRef.current?.focus();
     if (event.button === 2) {
+      // The menu covers the hover card's place: it would linger under the menu.
+      clearHover();
       contextTargetRef.current = targetAt(event.clientX, event.clientY, false);
       onSelect(contextTargetRef.current);
       return;
