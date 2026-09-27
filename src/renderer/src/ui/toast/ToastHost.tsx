@@ -44,6 +44,7 @@ export function ToastHost({ errorAction, renderOperation }: ToastHostProps) {
             {action && (
               <button
                 className={styles.action}
+                disabled={action.disabled}
                 onClick={() => {
                   action.run();
                   if (toast.kind !== 'progress') dismiss(toast.id);

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { followTip, type TipText } from './followTip';
 import { TooltipBubble } from './TooltipBubble';
 import { listenForTooltips } from './tooltipEvents';
+import { TooltipGate } from './tooltipGate';
 
 /** `sub` is `data-tip-sub`, `shortcut` is `data-tip-shortcut`. */
 interface FoundTip extends TipText {
@@ -30,6 +31,7 @@ export function TooltipLayer() {
   const [tip, setTip] = useState<Tip | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const pointer = useRef({ x: 0, y: 0 });
+  const gate = useRef(new TooltipGate());
 
   useEffect(() => {
     const hide = (): void => {
@@ -38,20 +40,24 @@ export function TooltipLayer() {
     };
     const onMove = (event: MouseEvent): void => {
       pointer.current = { x: event.clientX, y: event.clientY };
+      gate.current.pointerAt(event.clientX, event.clientY);
     };
+    const onKey = (): void => gate.current.keyPressed();
     const onOver = (event: MouseEvent): void => {
       // Inside a shadow root (the diff viewers), the target is the host: look from the node really hovered first.
       const origin = event.composedPath()[0];
       const found = (origin instanceof Element && origin !== event.target ? findTip(origin) : null) ?? findTip(event.target as Element | null);
-      if (!found) return hide();
+      if (!found || !gate.current.allowsHover) return hide();
       clearTimeout(timer.current);
       timer.current = setTimeout(() => setTip({ ...found, pointerX: pointer.current.x, pointerY: pointer.current.y }), TOOLTIP_SHOW_DELAY);
     };
 
     const unwire = listenForTooltips({ document, window }, { move: onMove, over: onOver, hide });
+    document.addEventListener('keydown', onKey, true);
     return () => {
       clearTimeout(timer.current);
       unwire();
+      document.removeEventListener('keydown', onKey, true);
     };
   }, []);
 

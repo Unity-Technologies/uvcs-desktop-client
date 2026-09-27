@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from 'electron';
 import { sendEventTo } from '../ipc/sendEvent';
+import { isMenuCommandEnabled } from './workspaceMenuCommands';
 import { focusWindow, type WorkspaceWindows } from './WorkspaceWindows';
 
 const DOCUMENTATION_URL = 'https://docs.unity.com/ugs/en-us/manual/devops/manual';
@@ -11,6 +12,7 @@ const DOCUMENTATION_URL = 'https://docs.unity.com/ugs/en-us/manual/devops/manual
  */
 function commandItem(label: string, commandId: string, accelerator?: string, withoutWindow?: () => void): MenuItemConstructorOptions {
   return {
+    id: commandId,
     label,
     accelerator,
     registerAccelerator: false,
@@ -72,7 +74,7 @@ export function installAppMenu(windows: WorkspaceWindows): void {
       label: 'File',
       submenu: [
         commandItem('New Window', 'app.newWindow', 'CmdOrCtrl+N', () => windows.open()),
-        commandItem('Open Workspace…', 'workspace.open', 'CmdOrCtrl+Shift+O'),
+        commandItem('Open Another Workspace…', 'workspace.open', 'CmdOrCtrl+Shift+O'),
         commandItem('Update Workspace', 'workspace.update', 'CmdOrCtrl+Shift+U'),
         { type: 'separator' },
         ...(isMac ? [] : [commandItem('Settings…', 'app.settings', 'CmdOrCtrl+,'), { type: 'separator' as const }]),
@@ -102,5 +104,14 @@ export function installAppMenu(windows: WorkspaceWindows): void {
     },
   ];
 
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  const menu = Menu.buildFromTemplate(template);
+  // A window on the home screen (or none) has no workspace commands to run.
+  const focused = BrowserWindow.getFocusedWindow();
+  const showsWorkspace = Boolean(focused && windows.workspaceIn(focused));
+  for (const item of menuItems(menu)) if (item.id && !item.role) item.enabled = isMenuCommandEnabled(item.id, showsWorkspace);
+  Menu.setApplicationMenu(menu);
+}
+
+function menuItems(menu: Menu): Electron.MenuItem[] {
+  return menu.items.flatMap((item) => [item, ...(item.submenu ? menuItems(item.submenu) : [])]);
 }
