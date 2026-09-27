@@ -31,6 +31,9 @@ import { hotkey } from '../../lib/shortcutRegistry';
 import { WorkspaceRootDetails } from './WorkspaceRootDetails';
 import { isWorkspaceRoot, workspaceRootItem } from './workspaceRoot';
 
+/** A file's details show its content and last change: they get more room than an object's meta. */
+const FILE_DETAILS_WIDTH = { initial: 560, min: 320, max: 1200 };
+
 /** The workspace explorer: every file on disk with its version-control status. */
 export function FilesView() {
   const workspacePath = useWorkspacePath();
@@ -98,7 +101,7 @@ export function FilesView() {
   return (
     <>
       {header}
-      <ListWithDetails
+      <ListWithDetails widthKey="files" widthLimits={FILE_DETAILS_WIDTH}
         list={
           nothingMatches ? (
             <EmptyState

@@ -63,13 +63,13 @@ export function ShelvesView() {
         </ToggleChip>
       </ViewHeader>
       {isLoading ? (
-        <ListWithDetailsSkeleton columns={COLUMNS} />
+        <ListWithDetailsSkeleton widthKey="shelves" columns={COLUMNS} />
       ) : error ? (
         <EmptyState title="Couldn't load shelves" description={error.message} />
       ) : visible.length === 0 ? (
         <ShelvesEmpty searching={search.trim() !== ''} onlyMine={onlyMine} onShowEveryone={() => setOnlyMine(false)} />
       ) : (
-        <ListWithDetails
+        <ListWithDetails widthKey="shelves"
           list={
             <HighlightQuery query={search.trim()}>
               <DataTable

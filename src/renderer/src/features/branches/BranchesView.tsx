@@ -124,13 +124,13 @@ export function BranchesView() {
         />
       </ViewHeader>
       {isLoading ? (
-        <ListWithDetailsSkeleton columns={columns} />
+        <ListWithDetailsSkeleton widthKey="branches" columns={columns} />
       ) : error ? (
         <EmptyState title="Couldn't load branches" description={error.message} />
       ) : rows.length === 0 ? (
         <EmptyState icon={<GitBranch size={22} />} title="No branches found" description="Try a different filter or date range." />
       ) : (
-        <ListWithDetails
+        <ListWithDetails widthKey="branches"
           list={
             <HighlightQuery query={search}>
               <DataTable

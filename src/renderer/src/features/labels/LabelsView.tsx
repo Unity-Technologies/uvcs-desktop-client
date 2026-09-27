@@ -87,7 +87,7 @@ export function LabelsView() {
         </ToggleChip>
       </ViewHeader>
       {isLoading ? (
-        <ListWithDetailsSkeleton columns={COLUMNS} />
+        <ListWithDetailsSkeleton widthKey="labels" columns={COLUMNS} />
       ) : error ? (
         <EmptyState title="Couldn't load labels" description={error.message} />
       ) : visible.length === 0 && filtered ? (
@@ -100,7 +100,7 @@ export function LabelsView() {
           action={<Button onClick={() => openCreateLabelDialog(workspacePath)}>Label your workspace changeset</Button>}
         />
       ) : (
-        <ListWithDetails
+        <ListWithDetails widthKey="labels"
           list={
             <HighlightQuery query={search}>
               <DataTable

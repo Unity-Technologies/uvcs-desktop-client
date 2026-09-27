@@ -85,7 +85,7 @@ export function LocksView() {
     </ViewHeader>
   );
 
-  if (isLoading) return <>{header}<ListWithDetailsSkeleton columns={COLUMNS} /></>;
+  if (isLoading) return <>{header}<ListWithDetailsSkeleton widthKey="locks" columns={COLUMNS} /></>;
   if (error) return <>{header}<EmptyState title="Couldn't read the locks" description={error.message} /></>;
   if (visible.length === 0) {
     const empty = locksEmptyState({ searching: filter.trim() !== '', onlyMine: scope === 'mine' });
@@ -105,7 +105,7 @@ export function LocksView() {
   return (
     <>
       {header}
-      <ListWithDetails
+      <ListWithDetails widthKey="locks"
         list={
           <HighlightQuery query={filter}>
             <DataTable
