@@ -3,12 +3,12 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { ReviewMark } from '@shared/domain/review';
 import { api } from '../../api/client';
 import { runVoidAction } from '../../app/operations/runOperation';
-import { PathLabel } from '../../components/PathLabel';
-import { StatusBadge } from '../../components/StatusBadge';
 import { fileNameOf } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { toast } from '../../ui/toast/toastStore';
+import { DiffFileTitle } from '../diff/viewer/DiffFileTitle';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
+import { ONLY_MOVED } from '../diff/viewer/movedFrom';
 import { SinceReviewButton } from '../review/SinceReviewButton';
 import { describeKinds } from './changeCategories';
 import { changeDiffSources } from './changeDiffSources';
@@ -27,12 +27,7 @@ export function ChangeDiffPanel({ workspacePath, change, reviewMark }: ChangeDif
   const canCompareWithReview = reviewMark?.state === 'changedSinceReview' && reviewMark.hasSnapshot;
   const sinceReview = canCompareWithReview && sinceReviewPath === change.path;
 
-  const title = (
-    <>
-      <StatusBadge tone={changeTone(change)} title={describeKinds(change)} />
-      <PathLabel path={change.path} oldPath={change.oldPath} />
-    </>
-  );
+  const title = <DiffFileTitle tone={changeTone(change)} status={describeKinds(change)} path={change.path} oldPath={change.oldPath} />;
 
   if (change.itemType === 'directory') {
     return <EmptyState title={change.path} description={`Directory · ${describeKinds(change)}`} />;
@@ -51,7 +46,7 @@ export function ChangeDiffPanel({ workspacePath, change, reviewMark }: ChangeDif
       modified={sources.modified}
       fileName={change.path}
       title={title}
-      identicalDescription={sinceReview ? 'The file is back to how it was when you reviewed it.' : change.oldPath ? `Moved from ${change.oldPath} without content changes.` : undefined}
+      identicalDescription={sinceReview ? 'The file is back to how it was when you reviewed it.' : change.oldPath ? ONLY_MOVED : undefined}
       compareControls={compareControls}
       onMatchesBase={change.kinds.includes('checkedOut') ? () => offerUndoCheckout(workspacePath, change.path) : undefined}
     />

@@ -1,14 +1,14 @@
 import { FileSearch } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
-import { PathLabel } from '../../components/PathLabel';
-import { StatusBadge } from '../../components/StatusBadge';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { SplitPane } from '../../ui/SplitPane';
 import { SinceReviewButton } from '../review/SinceReviewButton';
+import { DiffFileTitle } from './viewer/DiffFileTitle';
 import { FileDiffViewer } from './viewer/FileDiffViewer';
+import { ONLY_MOVED } from './viewer/movedFrom';
 import { describeDiffEntry, diffEntrySources, diffEntryTone } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
 import { diffEntryMenu } from './diffEntryMenu';
@@ -78,13 +78,8 @@ function EntryDiff({ workspacePath, entry, reviewMarks }: { workspacePath: strin
       original={sinceReview ? { kind: 'revision', revisionId: reviewedRevision, fileName: entry.path } : sources.original}
       modified={sources.modified}
       fileName={entry.path}
-      title={
-        <>
-          <StatusBadge tone={diffEntryTone(entry)} title={describeDiffEntry(entry)} />
-          <PathLabel path={entry.path} oldPath={entry.oldPath} />
-        </>
-      }
-      identicalDescription={sinceReview ? 'The file is back to how it was when you reviewed it.' : undefined}
+      title={<DiffFileTitle tone={diffEntryTone(entry)} status={describeDiffEntry(entry)} path={entry.path} oldPath={entry.oldPath} />}
+      identicalDescription={sinceReview ? 'The file is back to how it was when you reviewed it.' : entry.oldPath ? ONLY_MOVED : undefined}
       compareControls={
         reviewedRevision !== null && <SinceReviewButton pressed={sinceReview} onChange={(pressed) => setSinceReviewPath(pressed ? entry.path : null)} />
       }
