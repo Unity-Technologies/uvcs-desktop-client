@@ -64,7 +64,7 @@ export function LocksView() {
   const header = (
     <ViewHeader
       title="Locks"
-      subtitle={locks && `${locks.length} ${locks.length === 1 ? 'lock' : 'locks'}`}
+      count={locks?.length}
       actions={
         <>
           <IconButton

@@ -47,7 +47,7 @@
 }
 
 .primary:hover:not([aria-disabled='true']) {
-  background: var(--accent-hover);
+  background: var(--accent-fill-hover);
 }
 
 .primary:active:not([aria-disabled='true']) {

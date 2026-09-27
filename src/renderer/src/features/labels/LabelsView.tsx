@@ -43,7 +43,7 @@ const COLUMNS: Column<Label>[] = [
       </span>
     ),
   },
-  { id: 'changeset', header: 'Changeset', width: 100, align: 'end', sortValue: (label) => label.changeset, render: (label) => label.changeset },
+  { id: 'changeset', header: 'Changeset', width: 100, sortValue: (label) => label.changeset, render: (label) => <span className="mono">{label.changeset}</span> },
   { id: 'branch', header: 'Branch', grow: 1, secondary: true, sortValue: (label) => label.branch, render: (label) => <PathLabel path={label.branch} /> },
   { id: 'comment', header: 'Comment', grow: 2, secondary: true, hideBelow: 640, render: (label) => <Highlight text={label.comment} /> },
   { id: 'owner', header: 'Created by', width: 180, hideBelow: 760, sortValue: (label) => label.owner, render: (label) => <UserLabel user={label.owner} /> },
@@ -68,7 +68,7 @@ export function LabelsView() {
     <>
       <ViewHeader
         title="Labels"
-        subtitle={labels && `${labels.length}`}
+        count={labels?.length}
         actions={
           <>
             <IconButton icon={<RefreshCw size={14} className={isFetching ? 'spinning' : undefined} />} label="Refresh" onClick={() => void invalidateWorkspace(workspacePath)} />

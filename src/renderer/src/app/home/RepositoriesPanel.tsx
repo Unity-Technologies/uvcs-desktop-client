@@ -4,7 +4,6 @@ import type { RepositorySummary } from '@shared/domain/repository';
 import { matchesAllWords } from '../../lib/matchesAllWords';
 import { focusFirstItem, moveRovingFocus } from '../../lib/rovingFocus';
 import { describeServer } from '../../lib/servers';
-import { pluralize } from '../../lib/text';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
@@ -46,7 +45,8 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
       <ViewHeader
         inTitleBar
         title={place.label}
-        subtitle={[place.detail, repositories && pluralize(repositories.length, 'repository', 'repositories')].filter(Boolean).join(' · ') || undefined}
+        subtitle={place.detail}
+        count={repositories?.length}
         actions={
           <>
             <IconButton icon={<RefreshCw size={14} />} label="Refresh" loading={isFetching} onClick={() => void refetch()} />

@@ -54,7 +54,7 @@ export function AttributesView() {
     <>
       <ViewHeader
         title="Attributes"
-        subtitle={types && `${types.length}`}
+        count={types?.length}
         actions={
           <>
             <IconButton icon={<RefreshCw size={14} className={isFetching ? 'spinning' : undefined} />} label="Refresh" onClick={() => void invalidateWorkspace(workspacePath)} />

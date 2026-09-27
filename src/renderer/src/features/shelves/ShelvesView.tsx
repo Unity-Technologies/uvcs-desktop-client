@@ -66,7 +66,7 @@ export function ShelvesView() {
     <>
       <ViewHeader
         title="Shelves"
-        subtitle={shelves && `${shelves.length}`}
+        count={shelves?.length}
         actions={<IconButton icon={<RefreshCw size={14} className={isFetching ? 'spinning' : undefined} />} label="Refresh" onClick={() => void invalidateWorkspace(workspacePath)} />}
       >
         <SearchField value={search} onChange={setSearch} placeholder="Filter shelves" />

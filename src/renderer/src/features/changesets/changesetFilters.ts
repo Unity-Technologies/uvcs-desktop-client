@@ -1,5 +1,6 @@
 import type { Changeset } from '@shared/domain/changeset';
 import type { QueryFilter } from '@shared/domain/query';
+import { formatCount } from '../../lib/text';
 import { displayName } from '../../lib/userName';
 
 export type DatePreset = 'week' | 'twoWeeks' | 'month' | 'quarter' | 'year' | 'all';
@@ -58,11 +59,11 @@ export function noChangesetsHint({ search, datePreset }: ChangesetFilterState): 
   return searching ? `Any time reads the newest ${ANY_TIME_LIMIT.toLocaleString('en-US')} changesets.` : 'Try fewer filters.';
 }
 
-/** The header's count; "Any time" says when it stopped at its cap, so a missing old changeset isn't a surprise. */
-export function changesetsCount(shown: number, read: number, datePreset: DatePreset): string {
-  if (datePreset !== 'all' || read < ANY_TIME_LIMIT) return `${shown} shown`;
-  const newest = `newest ${ANY_TIME_LIMIT.toLocaleString('en-US')}`;
-  return shown === read ? `The ${newest}` : `${shown} shown of the ${newest}`;
+/** What the header says instead of a bare count once Any time stopped at its cap; undefined while the count tells it all. */
+export function changesetsCap(shown: number, read: number, datePreset: DatePreset): string | undefined {
+  if (datePreset !== 'all' || read < ANY_TIME_LIMIT) return undefined;
+  const newest = `newest ${formatCount(ANY_TIME_LIMIT)}`;
+  return shown === read ? `The ${newest}` : `${formatCount(shown)} shown of the ${newest}`;
 }
 
 function isoDateDaysBefore(today: Date, days: number): string {

@@ -14,7 +14,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
 import { changesetColumns } from './changesetColumns';
 import { ChangesetDetails } from './ChangesetDetails';
-import { changesetsCount, DEFAULT_CHANGESET_FILTER, matchesSearch, noChangesetsHint, toQueryFilter, type ChangesetFilterState } from './changesetFilters';
+import { changesetsCap, DEFAULT_CHANGESET_FILTER, matchesSearch, noChangesetsHint, toQueryFilter, type ChangesetFilterState } from './changesetFilters';
 import { ChangesetFiltersBar } from './ChangesetFiltersBar';
 import { changesetMenu } from './changesetMenu';
 import { openChangesetDiff, openRangeDiff } from './changesetOperations';
@@ -61,8 +61,9 @@ export function ChangesetsView() {
     ),
   );
 
+  const cap = changesets && changesetsCap(visible.length, changesets.length, datePreset);
   const header = (
-    <ViewHeader title="Changesets" subtitle={changesets && changesetsCount(visible.length, changesets.length, datePreset)}>
+    <ViewHeader title="Changesets" count={cap ? undefined : changesets && visible.length} subtitle={cap}>
       <ChangesetFiltersBar filter={filter} onChange={setFilter} currentBranch={currentBranch} />
     </ViewHeader>
   );

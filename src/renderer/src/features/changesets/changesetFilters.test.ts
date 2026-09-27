@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
-import { changesetsCount, DEFAULT_CHANGESET_FILTER, matchesSearch, noChangesetsHint, toQueryFilter } from './changesetFilters';
+import { changesetsCap, DEFAULT_CHANGESET_FILTER, matchesSearch, noChangesetsHint, toQueryFilter } from './changesetFilters';
 
 const today = new Date(2026, 8, 25);
 
@@ -54,11 +54,11 @@ describe('noChangesetsHint', () => {
   });
 });
 
-describe('changesetsCount', () => {
-  it('says when any time stopped at its cap', () => {
-    expect(changesetsCount(12, 2000, 'all')).toBe('12 shown of the newest 2,000');
-    expect(changesetsCount(2000, 2000, 'all')).toBe('The newest 2,000');
-    expect(changesetsCount(12, 40, 'all')).toBe('12 shown');
-    expect(changesetsCount(2000, 2000, 'month')).toBe('2000 shown');
+describe('changesetsCap', () => {
+  it('says when any time stopped at its cap, and nothing while the count tells it all', () => {
+    expect(changesetsCap(12, 2000, 'all')).toBe('12 shown of the newest 2,000');
+    expect(changesetsCap(2000, 2000, 'all')).toBe('The newest 2,000');
+    expect(changesetsCap(12, 40, 'all')).toBeUndefined();
+    expect(changesetsCap(2000, 2000, 'month')).toBeUndefined();
   });
 });

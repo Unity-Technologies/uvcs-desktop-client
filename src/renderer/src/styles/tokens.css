@@ -66,6 +66,8 @@
 
   --accent: #0969da;
   --accent-hover: #0860c7;
+  /* A hovered primary button: --accent-hover where that keeps its label at 4.5:1. */
+  --accent-fill-hover: #0860c7;
   --accent-soft: rgba(9, 105, 218, 0.1);
   --accent-text: #0969da;
   /* Text and icons on an --accent or --danger fill. */
@@ -138,6 +140,7 @@
 
   --accent: #1f6feb;
   --accent-hover: #388bfd;
+  --accent-fill-hover: #1b63d4;
   --accent-soft: rgba(56, 139, 253, 0.15);
   --accent-text: #4493f8;
   --accent-contrast: #ffffff;

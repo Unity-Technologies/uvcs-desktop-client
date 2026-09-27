@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { followTip, type TipText } from './followTip';
 import { TooltipBubble } from './TooltipBubble';
+import { listenForTooltips } from './tooltipEvents';
 
 /** `sub` is `data-tip-sub`, `shortcut` is `data-tip-shortcut`. */
 interface FoundTip extends TipText {
@@ -47,18 +48,10 @@ export function TooltipLayer() {
       timer.current = setTimeout(() => setTip({ ...found, pointerX: pointer.current.x, pointerY: pointer.current.y }), TOOLTIP_SHOW_DELAY);
     };
 
-    document.addEventListener('mousemove', onMove);
-    document.addEventListener('mouseover', onOver);
-    document.addEventListener('mousedown', hide, true);
-    window.addEventListener('scroll', hide, true);
-    window.addEventListener('blur', hide);
+    const unwire = listenForTooltips({ document, window }, { move: onMove, over: onOver, hide });
     return () => {
       clearTimeout(timer.current);
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseover', onOver);
-      document.removeEventListener('mousedown', hide, true);
-      window.removeEventListener('scroll', hide, true);
-      window.removeEventListener('blur', hide);
+      unwire();
     };
   }, []);
 

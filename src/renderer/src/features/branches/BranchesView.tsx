@@ -92,7 +92,7 @@ export function BranchesView() {
     <>
       <ViewHeader
         title="Branches"
-        subtitle={branches && `${branches.length}`}
+        count={branches?.length}
         actions={
           <>
             <IconButton icon={<RefreshCw size={14} className={isFetching ? 'spinning' : undefined} />} label="Refresh" onClick={() => void invalidateWorkspace(workspacePath)} />
