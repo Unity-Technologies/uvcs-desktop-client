@@ -13,8 +13,6 @@ interface GroupRow {
   /** Set when the group is a user changelist. */
   changelist?: Changelist;
   changes: PendingChange[];
-  /** Null when nothing in it can be checked in. */
-  checkState: CheckState | null;
   collapsed: boolean;
 }
 
@@ -28,8 +26,6 @@ interface DirectoryRow {
   change?: PendingChange;
   /** Every change in the folder, its own included. */
   changes: PendingChange[];
-  /** Null when nothing in it can be checked in. */
-  checkState: CheckState | null;
   collapsed: boolean;
 }
 
@@ -38,7 +34,6 @@ interface ChangeItemRow {
   key: string;
   change: PendingChange;
   depth: number;
-  checked: boolean;
 }
 
 export type ChangeRow = GroupRow | DirectoryRow | ChangeItemRow;
@@ -53,7 +48,6 @@ interface BuildRowsInput {
   changelists: Changelist[];
   layout: ChangesLayout;
   grouping: ChangesGrouping;
-  isChecked: (change: PendingChange) => boolean;
   /** Keys of collapsed groups and directories. */
   collapsed: ReadonlySet<string>;
 }
@@ -65,11 +59,14 @@ interface Group {
   changes: PendingChange[];
 }
 
-/** Flattens pending changes into the rows of the list: changelist headers, optional folders and changes. */
-export function buildChangeRows({ changes, changelists, layout, grouping, isChecked, collapsed }: BuildRowsInput): ChangeRow[] {
+/**
+ * Flattens pending changes into the rows of the list: changelist headers, optional folders and changes. What is checked
+ * is left to `rowCheckState`, so checking files doesn't lay tens of thousands of rows out again.
+ */
+export function buildChangeRows({ changes, changelists, layout, grouping, collapsed }: BuildRowsInput): ChangeRow[] {
   const rows: ChangeRow[] = [];
   if (grouping === 'none') {
-    appendChangeRows(rows, changes, 'all', layout, isChecked, collapsed);
+    appendChangeRows(rows, changes, 'all', layout, collapsed);
     return rows;
   }
 
@@ -81,10 +78,9 @@ export function buildChangeRows({ changes, changelists, layout, grouping, isChec
       label: group.label,
       changelist: group.changelist,
       changes: sorted,
-      checkState: combinedCheckState(sorted, isChecked),
       collapsed: collapsed.has(group.key),
     });
-    if (!collapsed.has(group.key)) appendChangeRows(rows, sorted, group.key, layout, isChecked, collapsed);
+    if (!collapsed.has(group.key)) appendChangeRows(rows, sorted, group.key, layout, collapsed);
   }
   return rows;
 }
@@ -188,20 +184,13 @@ export function sortByStatus(changes: PendingChange[]): PendingChange[] {
   return [...changes].sort((a, b) => compareTones(tones.get(a)!, tones.get(b)!) || collator.compare(a.path, b.path));
 }
 
-function appendChangeRows(
-  rows: ChangeRow[],
-  changes: PendingChange[],
-  groupKey: string,
-  layout: ChangesLayout,
-  isChecked: (change: PendingChange) => boolean,
-  collapsed: ReadonlySet<string>,
-): void {
+function appendChangeRows(rows: ChangeRow[], changes: PendingChange[], groupKey: string, layout: ChangesLayout, collapsed: ReadonlySet<string>): void {
   const sorted = sortForLayout(changes, layout);
   if (layout === 'tree') {
-    appendTreeRows(rows, sorted, groupKey, isChecked, collapsed);
+    appendTreeRows(rows, sorted, groupKey, collapsed);
     return;
   }
-  sorted.forEach((change) => rows.push({ type: 'change', key: changeKey(change), change, depth: 0, checked: isChecked(change) }));
+  sorted.forEach((change) => rows.push({ type: 'change', key: changeKey(change), change, depth: 0 }));
 }
 
 function groupByChangelist(changes: PendingChange[], changelists: Changelist[]): Group[] {
@@ -220,13 +209,7 @@ function groupByChangelist(changes: PendingChange[], changelists: Changelist[]):
   return [defaultGroup, ...userGroups].filter((group) => group.changes.length > 0 || group.changelist);
 }
 
-function appendTreeRows(
-  rows: ChangeRow[],
-  changes: PendingChange[],
-  groupKey: string,
-  isChecked: (change: PendingChange) => boolean,
-  collapsed: ReadonlySet<string>,
-): void {
+function appendTreeRows(rows: ChangeRow[], changes: PendingChange[], groupKey: string, collapsed: ReadonlySet<string>): void {
   const byPath = new Map(changes.map((change) => [change.path, change]));
   // Each change's path and the folders above it ("a", "a/b", "a/b/c.txt"), built once: every level is looked up by them.
   const prefixes = changes.map((change) => pathPrefixes(change.path));
@@ -264,7 +247,6 @@ function appendTreeRows(
           depth,
           change: byPath.get(path),
           changes: inside,
-          checkState: combinedCheckState(inside, isChecked),
           collapsed: collapsed.has(key),
         };
         rows.push(row);
@@ -279,7 +261,7 @@ function appendTreeRows(
       depth = row.depth + 1;
     }
 
-    if (!isFolder) rows.push({ type: 'change', key: changeKey(change), change, depth, checked: isChecked(change) });
+    if (!isFolder) rows.push({ type: 'change', key: changeKey(change), change, depth });
   });
 }
 
@@ -305,7 +287,12 @@ function pathPrefixes(path: string): string[] {
   return prefixes;
 }
 
-/** Over the changes a folder or changelist holds that can go into a check-in; null when none can (only ignored files). */
+/** A file's check, or a folder's or changelist's over what it holds that can go into a check-in; null when none can (ignored files). */
+export function rowCheckState(row: ChangeRow, isChecked: (change: PendingChange) => boolean): CheckState | null {
+  if (row.type === 'change') return isCheckinCandidate(row.change) ? isChecked(row.change) : null;
+  return combinedCheckState(row.changes, isChecked);
+}
+
 function combinedCheckState(changes: PendingChange[], isChecked: (change: PendingChange) => boolean): CheckState | null {
   let candidates = 0;
   let checked = 0;

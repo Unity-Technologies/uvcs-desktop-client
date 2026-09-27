@@ -110,11 +110,12 @@ export function PendingChangesView() {
   const changesByKey = useMemo(() => new Map(changes.map((change) => [changeKey(change), change])), [changes]);
   const selectedCount = countSelected(selection.selected, changesByKey);
   const changelists = snapshot?.changelists ?? NO_CHANGELISTS;
-  // Selecting a row renders the view again: thousands of changes are laid out again only when they or their layout change.
+  // Selecting a row or checking one renders the view again: thousands of changes are laid out again only when they or their layout change.
   const rows = useMemo(
-    () => buildChangeRows({ changes, changelists, layout, grouping, isChecked: isIncluded, collapsed }),
-    [changes, changelists, layout, grouping, isIncluded, collapsed],
+    () => buildChangeRows({ changes, changelists, layout, grouping, collapsed }),
+    [changes, changelists, layout, grouping, collapsed],
   );
+  const checkboxInset = useMemo(() => topLevelCheckboxInset(rows), [rows]);
   const focused = selection.anchor === null ? undefined : changesByKey.get(selection.anchor);
   // Holding ↓ moves through the list at once; the diff (a read and an editor to lay out) follows where it stops.
   const diffChange = useSteadyValue(focused) ?? focused;
@@ -283,7 +284,7 @@ export function PendingChangesView() {
               onSetIncluded={setIncludedChanges}
               onUndo={(selected) => void undoChanges(workspacePath, selected)}
               onUndoUnchanged={() => void undoUnchangedCheckouts(workspacePath)}
-              checkboxInset={topLevelCheckboxInset(rows)}
+              checkboxInset={checkboxInset}
             />
             {review.bar}
             {filterBar}
@@ -295,6 +296,7 @@ export function PendingChangesView() {
                   rows={rows}
                   selection={selection}
                   onSelectionChange={(next) => selectAfterLeaving(selection, next, setSelection)}
+                  isIncluded={isIncluded}
                   onToggleIncluded={toggleIncluded}
                   onToggleCollapsed={toggleCollapsed}
                   onOpen={(change) => openWithDefaultApp(workspacePath, change)}

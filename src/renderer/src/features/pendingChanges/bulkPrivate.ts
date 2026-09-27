@@ -44,9 +44,8 @@ export function bulkPrivateMessage({ fileCount, folders }: BulkPrivate): string 
 }
 
 function outermostPrivateFolder(path: string, privateFolders: ReadonlySet<string>): string | undefined {
-  const parts = path.split('/');
-  for (let length = 1; length < parts.length; length++) {
-    const folder = parts.slice(0, length).join('/');
+  for (let end = path.indexOf('/'); end !== -1; end = path.indexOf('/', end + 1)) {
+    const folder = path.slice(0, end);
     if (privateFolders.has(folder)) return folder;
   }
   return undefined;

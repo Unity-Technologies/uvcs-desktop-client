@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { treeArrowMove } from '../../lib/treeArrowMove';
-import { buildChangeRows, changesUnderRow, changeTreeArrowRows, comparePaths, LEVEL_INDENT, menuTargetOf, rowIndent, topLevelCheckboxInset, treeLevel, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { buildChangeRows, changesUnderRow, changeTreeArrowRows, comparePaths, LEVEL_INDENT, menuTargetOf, rowCheckState, rowIndent, topLevelCheckboxInset, treeLevel, type ChangesGrouping, type ChangesLayout } from './changeRows';
 
 function change(path: string, kinds: PendingChange['kinds'], changelist?: string): PendingChange {
   return { path, kinds, itemType: 'file', size: 0, lastModified: '', changelist };
@@ -15,7 +15,6 @@ const base = {
   changelists: [],
   layout: 'list' as ChangesLayout,
   grouping: 'none' as ChangesGrouping,
-  isChecked: () => true,
   collapsed: new Set<string>(),
 };
 
@@ -26,8 +25,9 @@ describe('buildChangeRows', () => {
   });
 
   it('reports a mixed check state when only some changes are checked', () => {
-    const rows = buildChangeRows({ ...base, grouping: 'changelist', isChecked: (item) => item.path === 'src/b.ts' });
-    expect(rows[0]).toMatchObject({ type: 'group', checkState: 'mixed' });
+    const rows = buildChangeRows({ ...base, grouping: 'changelist' });
+    expect(rows[0]).toMatchObject({ type: 'group' });
+    expect(rowCheckState(rows[0]!, (item) => item.path === 'src/b.ts')).toBe('mixed');
   });
 
   it('groups by changelist, keeping empty user changelists visible', () => {
@@ -85,9 +85,10 @@ describe('buildChangeRows', () => {
 
   it('shows a folder that is a change itself as the row of its folder, holding its own change and its files', () => {
     const folder = { ...change('privs', ['private']), itemType: 'directory' as const };
-    const rows = buildChangeRows({ ...base, changes: [change('privs/a.txt', ['private']), folder, change('private.txt', ['private'])], layout: 'tree', isChecked: (item) => item !== folder });
+    const rows = buildChangeRows({ ...base, changes: [change('privs/a.txt', ['private']), folder, change('private.txt', ['private'])], layout: 'tree' });
     expect(rows.map((row) => row.key)).toEqual(['change:private.txt', 'directory:all:privs', 'change:privs/a.txt']);
-    expect(rows[1]).toMatchObject({ change: folder, checkState: 'mixed' });
+    expect(rows[1]).toMatchObject({ change: folder });
+    expect(rowCheckState(rows[1]!, (item) => item !== folder)).toBe('mixed');
     expect(changesUnderRow(rows[1]!).map((item) => item.path)).toEqual(['privs', 'privs/a.txt']);
   });
 
@@ -125,10 +126,12 @@ describe('buildChangeRows', () => {
       changes: [change('bin/out.log', ['ignored']), change('src/a.ts', ['changed']), change('src/build.log', ['ignored'])],
       layout: 'tree',
     });
-    expect(rows.filter((row) => row.type === 'directory').map((row) => [row.path, row.type === 'directory' && row.checkState])).toEqual([
+    expect(rows.filter((row) => row.type === 'directory').map((row) => [row.path, row.type === 'directory' && rowCheckState(row, () => true)])).toEqual([
       ['bin', null],
       ['src', true],
     ]);
+    const files = rows.filter((row) => row.type === 'change');
+    expect(files.map((row) => rowCheckState(row, (item) => item.path !== 'src/a.ts'))).toEqual([null, false, null]);
   });
 
   it('hides the contents of collapsed folders', () => {
