@@ -138,7 +138,8 @@ them all, records it in the settings (`switchShelves`), undoes, moves added file
 back), switches, and merges the shelve on the target (bring). Failures put the changes back, switching back first if
 the switch moved the workspace halfway. Left shelves (the app's and the official
 client's) are offered again by the "Welcome back" banner in Changes (`features/leftChanges`), or restored
-automatically on arrival when they apply cleanly.
+automatically on arrival when they apply cleanly. Changes still waiting to be brought (conflicts left for the merge
+view) are offered on the target, and as left ones on the source if the user goes back instead.
 
 ## Windows
 
