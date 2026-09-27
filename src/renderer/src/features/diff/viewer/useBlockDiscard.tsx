@@ -5,7 +5,7 @@ import { createStore } from 'zustand/vanilla';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import type { ComparisonMethod } from './comparisonMethod';
-import { isChanged, listChangeBlocks, listChangeRegions, sameRegions, type ChangedLine, type ChangeRegion, type DisplayMeta } from './changeBlocks';
+import { isChanged, listChangeBlocks, listChangeRegions, nextRegionIndex, sameRegions, type ChangedLine, type ChangeRegion, type DisplayMeta } from './changeBlocks';
 import { CHANGE_CHIP_ATTRIBUTE, ChangeChip } from './ChangeChip';
 import { describeDiscard } from './discardAction';
 import { discardLines, withOwnLines } from './discardLines';
@@ -189,10 +189,8 @@ export function useBlockDiscard({ enabled, diff, texts, comparisonMethod, layout
   };
 
   const moveToChange = (direction: 1 | -1): void => {
-    if (regions.length === 0 || !meta) return;
-    const current = picked ? regions.findIndex((region) => region.lines.some((line) => isSameLine(line, picked.lines[0]))) : -1;
-    const next = current === -1 ? (direction === 1 ? 0 : regions.length - 1) : (current + direction + regions.length) % regions.length;
-    const region = regions[next]!;
+    const region = regions[nextRegionIndex(regions, picked?.lines[0], direction)];
+    if (!region || !meta) return;
     setPick({ meta, range: regionRange(region), lines: region.lines });
     scrollToLine(containerRef.current, region.lines[0]!);
   };
@@ -303,10 +301,6 @@ function hoverUnderPointer(container: HTMLElement | null, at: { x: number; y: nu
   if (!root || !at) return;
   for (const pre of root.querySelectorAll('pre')) pre.dispatchEvent(new window.PointerEvent('pointerleave', { pointerType: 'mouse' }));
   root.elementFromPoint(at.x, at.y)?.dispatchEvent(new window.PointerEvent('pointermove', { pointerType: 'mouse', clientX: at.x, clientY: at.y, bubbles: true, composed: true }));
-}
-
-function isSameLine(a: ChangedLine, b: ChangedLine | undefined): boolean {
-  return a.side === b?.side && a.lineNumber === b.lineNumber;
 }
 
 function isSameRange(a: LineRange, b: LineRange): boolean {

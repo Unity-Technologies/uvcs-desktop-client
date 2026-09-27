@@ -4,6 +4,7 @@ import { useStore } from 'zustand';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { Kbd } from '../../../ui/Kbd';
 import { regionContaining, type ChangedLine, type ChangeRegion } from './changeBlocks';
+import { chipAnchorLines, chipRegion, chipTop } from './chipPlacement';
 import { describeDiscard, wholeChangeLabel } from './discardAction';
 import type { HoveredLineStore } from './LineDiscardButton';
 import styles from './ChangeChip.module.css';
@@ -45,7 +46,7 @@ export function ChangeChip({ containerRef, regions, hovered, picked, layout, onP
     return () => clearTimeout(timer);
   }, [region, onChip]);
 
-  const shownRegion = picked ? regionContaining(regions, picked[0]!) : held && regions.includes(held) ? held : undefined;
+  const shownRegion = chipRegion(regions, picked, held);
   const lines = picked ?? shownRegion?.lines;
   const position = useChipPosition(containerRef, shownRegion, layout);
   if (!lines || !shownRegion || !position) return null;
@@ -97,17 +98,15 @@ function useChipPosition(containerRef: RefObject<HTMLElement | null>, region: Ch
     const root = container?.querySelector('diffs-container')?.shadowRoot;
     if (!container || !root || !region) return setPosition(null);
     const place = (): void => {
-      const lines = layout === 'split' && region.lines.some((line) => line.side === 'additions') ? region.lines.filter((line) => line.side === 'additions') : region.lines;
+      const lines = chipAnchorLines(region, layout);
       const first = numberCell(root, lines[0]!, layout);
       const last = numberCell(root, lines.at(-1)!, layout);
       if (!first || !last) return setPosition(null);
       const pane = first.closest('[data-code]');
       if (!pane) return setPosition(null);
       const view = container.getBoundingClientRect();
-      const top = first.getBoundingClientRect().top - view.top + container.scrollTop;
-      const above = top - CHIP_HEIGHT;
       setPosition({
-        top: above >= 0 ? above : last.getBoundingClientRect().bottom - view.top + container.scrollTop,
+        top: chipTop(first.getBoundingClientRect().top - view.top + container.scrollTop, last.getBoundingClientRect().bottom - view.top + container.scrollTop, CHIP_HEIGHT),
         left: pane.getBoundingClientRect().right - view.left + container.scrollLeft - CHIP_INSET,
       });
     };
