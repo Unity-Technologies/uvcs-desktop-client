@@ -24,16 +24,27 @@ export function createFuzzyIndex(texts: readonly string[]): FuzzyIndex {
     return nameLengthA !== nameLengthB ? nameLengthA < nameLengthB : textA.length < textB.length;
   }
 
+  // What recent queries matched, each extending the one before: a match needs every query character in order, so typing
+  // one more only searches what matched without it, and deleting one goes back to what an earlier query matched.
+  let narrowing: { needle: string; matching: number[] }[] = [];
+
   return {
     rank(query, limit) {
       const needle = toNeedle(query);
       if (!needle) return texts.slice(0, limit).map((_, index) => index);
 
+      narrowing = narrowing.filter((step) => needle.startsWith(step.needle));
+      const candidates = narrowing.at(-1)?.matching;
+      const count = candidates ? candidates.length : lowered.length;
+      const matching: number[] = [];
+
       // Keeps only the best `limit` matches, sorted, instead of sorting every match.
       const best: Match[] = [];
-      for (let index = 0; index < lowered.length; index++) {
+      for (let candidate = 0; candidate < count; candidate++) {
+        const index = candidates ? candidates[candidate]! : candidate;
         const score = scoreText(lowered[index]!, needle);
         if (score === 0) continue;
+        matching.push(index);
 
         const match = { index, score };
         if (best.length === limit && !isBetter(match, best[limit - 1]!)) continue;
@@ -43,6 +54,7 @@ export function createFuzzyIndex(texts: readonly string[]): FuzzyIndex {
         while (position > 0 && isBetter(match, best[position - 1]!)) position--;
         best.splice(position, 0, match);
       }
+      if (narrowing.at(-1)?.needle !== needle) narrowing.push({ needle, matching });
       return best.map((match) => match.index);
     },
   };

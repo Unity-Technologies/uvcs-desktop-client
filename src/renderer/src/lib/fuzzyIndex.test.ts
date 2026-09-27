@@ -40,6 +40,14 @@ describe('createFuzzyIndex', () => {
   it('returns the first texts when the query is empty', () => {
     expect(rank('  ', 2)).toEqual(['src/core/mod1.ts', 'src/ui/widgets/Button.tsx']);
   });
+
+  it('ranks queries typed, deleted and retyped as a fresh index would', () => {
+    const texts = Array.from({ length: 3000 }, (_, index) => `mod${index % 37}/pkg${index % 11}/Item${index}.cs`);
+    const typed = createFuzzyIndex(texts);
+    for (const query of ['m', 'mo', 'mod3', 'mod3pk', 'mod3', 'mod', 'mod1i', 'mod1item2', 'x', '', 'item', 'item9']) {
+      expect(typed.rank(query, 20), query).toEqual(createFuzzyIndex(texts).rank(query, 20));
+    }
+  });
 });
 
 describe('fuzzyMatchPositions', () => {
