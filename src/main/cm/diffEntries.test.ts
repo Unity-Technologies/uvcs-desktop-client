@@ -28,4 +28,14 @@ describe('parseDiffEntries', () => {
       { status: 'moved', path: 'src/arith.ts', oldPath: 'src/math.ts', itemType: 'file', baseRevisionId: 55, revisionId: 69 },
     ]);
   });
+
+  it('reads a 100,000-file diff in linear time', () => {
+    let output = '';
+    for (let index = 0; index < 100_000; index++) output += record('C', `"/src/folder${index % 100}/file_${(index * 7919) % 100_000}.ts"`, '""', '12', '13', 'F');
+    const start = performance.now();
+    const entries = parseDiffEntries(output);
+    // About 0.15 s here.
+    expect(performance.now() - start).toBeLessThan(2000);
+    expect(entries).toHaveLength(100_000);
+  });
 });
