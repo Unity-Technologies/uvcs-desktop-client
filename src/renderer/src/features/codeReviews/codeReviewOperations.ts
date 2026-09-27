@@ -1,5 +1,4 @@
-import type { CodeReview, CodeReviewStatus, CodeReviewSummary, CodeReviewTarget } from '@shared/domain/codeReview';
-import type { DiffTarget } from '@shared/domain/diff';
+import type { CodeReview, CodeReviewStatus, CodeReviewSummary } from '@shared/domain/codeReview';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction } from '../../app/operations/runOperation';
@@ -41,27 +40,4 @@ export async function deleteReviews(workspacePath: string, reviews: CodeReviewSu
 
 export function openReview(review: Pick<CodeReview, 'id'>, focusPath?: string): void {
   navigation.openPage({ kind: 'codeReview', reviewId: review.id, focusPath });
-}
-
-export function describeTarget(target: CodeReviewTarget): string {
-  switch (target.kind) {
-    case 'branch':
-      return target.branch;
-    case 'changeset':
-      return `Changeset ${target.changesetId}`;
-    case 'unknown':
-      return target.description;
-  }
-}
-
-/** What to diff to review the changes, or null when the target is unknown. */
-export function reviewDiffTarget(target: CodeReviewTarget): DiffTarget | null {
-  switch (target.kind) {
-    case 'branch':
-      return { kind: 'branch', branch: target.branch };
-    case 'changeset':
-      return { kind: 'changeset', changesetId: target.changesetId };
-    case 'unknown':
-      return null;
-  }
 }
