@@ -31,6 +31,11 @@ export function shownDiff(diff: FileDiffMetadata, sides: DiffSides, original: st
   return { ...diff, type, hunks };
 }
 
+/** Whether Split/Unified changes how a diff shows: two versions, not one alone (`shownDiff`) nor a file typed into whole. */
+export function followsLayout(sides: DiffSides, wholeFile: boolean): boolean {
+  return sides.original && sides.modified && !wholeFile;
+}
+
 /**
  * The editor always has a line for the caret after the text's last line break, and the one line of an empty text:
  * Pierre shows it as added when the diff's last change removes more lines than it adds (a file emptied, or typed down

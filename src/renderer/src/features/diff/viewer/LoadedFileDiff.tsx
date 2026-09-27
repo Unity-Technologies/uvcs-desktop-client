@@ -1,6 +1,6 @@
 import { AppWindow, Code, Columns2, EyeOff, FileText, FoldVertical, ImageIcon, Pilcrow, RefreshCw, Rows2, WrapText } from 'lucide-react';
 import { Suspense, useMemo, type ReactNode, type RefObject } from 'react';
-import type { DiffSides } from './shownDiff';
+import { followsLayout, type DiffSides } from './shownDiff';
 import type { FileContent } from '@shared/domain/content';
 import { api } from '../../../api/client';
 import { formatSize } from '../../../lib/formatDate';
@@ -178,14 +178,16 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
               onClick={() => setWrapLines(!wrapLines)}
             />
           </PaneToolbarGroup>
-          <SegmentedControl<DiffLayout>
-            value={layout}
-            onChange={setLayout}
-            segments={[
-              { value: 'split', label: <><Columns2 size={13} /> <span data-toolbar-label>Split</span></>, title: 'Side-by-side view' },
-              { value: 'unified', label: <><Rows2 size={13} /> <span data-toolbar-label>Unified</span></>, title: 'Unified view' },
-            ]}
-          />
+          {followsLayout(sides, wholeFile) && (
+            <SegmentedControl<DiffLayout>
+              value={layout}
+              onChange={setLayout}
+              segments={[
+                { value: 'split', label: <><Columns2 size={13} /> <span data-toolbar-label>Split</span></>, title: 'Side-by-side view' },
+                { value: 'unified', label: <><Rows2 size={13} /> <span data-toolbar-label>Unified</span></>, title: 'Unified view' },
+              ]}
+            />
+          )}
         </>
       )}
       {representationControl}
