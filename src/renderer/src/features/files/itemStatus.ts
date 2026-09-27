@@ -53,12 +53,14 @@ export function onDiskState(item: Pick<TreeItem, 'itemType'>, change: PendingCha
 
 /**
  * The mark on an item's icon, as the Plastic desktop GUI overlays them: its pending status, else a link for an xlink,
- * private, or a check for an item under version control and up to date.
+ * private, or a check for an item under version control and up to date. A repository tree (a changeset browsed, not
+ * the workspace) has only controlled items, so the check tells nothing there and is left out.
  */
-export type IconOverlay = StatusTone | 'xlink' | 'controlled';
+export type IconOverlay = StatusTone | 'xlink' | 'controlled' | 'none';
 
-export function iconOverlay(item: Pick<TreeItem, 'isPrivate' | 'xlink'>, status: ItemStatus | null): IconOverlay {
+export function iconOverlay(item: Pick<TreeItem, 'isPrivate' | 'xlink'>, status: ItemStatus | null, inWorkspace = true): IconOverlay {
   if (status) return status.tone;
   if (item.xlink) return 'xlink';
-  return item.isPrivate ? 'private' : 'controlled';
+  if (item.isPrivate) return 'private';
+  return inWorkspace ? 'controlled' : 'none';
 }

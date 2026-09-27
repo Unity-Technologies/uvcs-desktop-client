@@ -48,7 +48,7 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
     <>
       {header}
       <SplitPane
-        initialSize={620}
+        initialSize={700}
         minSize={380}
         maxSize={1100}
         first={

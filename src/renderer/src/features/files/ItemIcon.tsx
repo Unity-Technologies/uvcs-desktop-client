@@ -10,10 +10,12 @@ export function ItemIcon({ item, expanded, overlay }: { item: TreeItem; expanded
   return (
     <span className={styles.icon}>
       <BaseIcon item={item} expanded={expanded} />
-      <span className={styles.overlay} data-overlay={overlay} aria-hidden>
-        {overlay === 'controlled' && <Check size={6} strokeWidth={4} />}
-        {overlay === 'xlink' && <Link2 size={8} strokeWidth={3} />}
-      </span>
+      {overlay !== 'none' && (
+        <span className={styles.overlay} data-overlay={overlay} aria-hidden>
+          {overlay === 'controlled' && <Check size={6} strokeWidth={4} />}
+          {overlay === 'xlink' && <Link2 size={8} strokeWidth={3} />}
+        </span>
+      )}
     </span>
   );
 }
