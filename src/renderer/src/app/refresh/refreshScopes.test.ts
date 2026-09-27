@@ -10,6 +10,7 @@ import {
   isAffectedByNewChangesets,
   isAffectedByCheckinOrUpdate,
   isAffectedByShelving,
+  isAffectedByShelvingAway,
   isAffectedByWorkspaceState,
 } from './refreshScopes';
 
@@ -75,6 +76,15 @@ describe('refresh scopes', () => {
     expect(isAffectedByShelving(key('shelves', { owner: 'me' }))).toBe(true);
     expect(isAffectedByShelving(key('pendingChanges'))).toBe(false);
     expect(isAffectedByShelving(key('info'))).toBe(false);
+  });
+
+  it('refreshes the shelve lists and the workspace, not the repository, after shelving changes away', () => {
+    expect(isAffectedByShelvingAway(key('shelves', { owner: 'me' }))).toBe(true);
+    expect(isAffectedByShelvingAway(key('pendingChanges'))).toBe(true);
+    expect(isAffectedByShelvingAway(key('explorer', 'allPaths'))).toBe(true);
+    expect(isAffectedByShelvingAway(key('diffContents', { kind: 'workspaceFile', path: 'a.txt' }))).toBe(true);
+    expect(isAffectedByShelvingAway(key('changesets', {}))).toBe(false);
+    expect(isAffectedByShelvingAway(key('leftChanges', 'br:/main'))).toBe(false);
   });
 
   it('refreshes the branch lists and the Branch Explorer when a branch is created, deleted or hidden', () => {

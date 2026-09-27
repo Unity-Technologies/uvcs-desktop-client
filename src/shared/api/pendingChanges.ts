@@ -6,6 +6,7 @@ import type {
   PendingChangesFilter,
   PendingChangesSnapshot,
 } from '../domain/pendingChanges';
+import type { ShelvedAway } from '../domain/shelve';
 
 export interface PendingChangesApi {
   list(workspacePath: string, filter: PendingChangesFilter): Promise<PendingChangesSnapshot>;
@@ -18,7 +19,13 @@ export interface PendingChangesApi {
   checkout(workspacePath: string, paths: string[]): Promise<void>;
   /** Appends a pattern to `ignore.conf`, `cloaked.conf` or `hidden_changes.conf`. */
   addFilterRule(workspacePath: string, list: FilterRuleList, pattern: string): Promise<void>;
+  /** Shelves the changes and keeps them in the workspace. Resolves to the shelve's id. */
   shelve(workspacePath: string, paths: string[], comment: string, operationId: string): Promise<number>;
+  /**
+   * Shelves the changes (every pending change when `paths` is null), checks the shelve holds them all, then undoes them
+   * and moves the files they added aside until the shelve is applied.
+   */
+  shelveAndUndo(workspacePath: string, paths: string[] | null, comment: string, operationId: string): Promise<ShelvedAway>;
   createChangelist(workspacePath: string, changelist: Changelist): Promise<void>;
   editChangelist(workspacePath: string, name: string, changes: Changelist): Promise<void>;
   deleteChangelist(workspacePath: string, name: string): Promise<void>;

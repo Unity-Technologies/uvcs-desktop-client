@@ -5,6 +5,7 @@ import type { Icon } from '../../lib/actions';
 import { splitComment } from '../../lib/comment';
 import { useShortcut } from '../../lib/useShortcut';
 import { Button } from '../../ui/Button';
+import { Checkbox } from '../../ui/Checkbox';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import menuStyles from '../../ui/menu/Menu.module.css';
@@ -41,7 +42,8 @@ interface CheckinPanelProps {
   recentComments: string[];
   busy: boolean;
   onCheckin: () => Promise<boolean>;
-  onShelve: () => Promise<boolean>;
+  /** `keep`: the changes stay in the workspace; otherwise they are undone once shelved. */
+  onShelve: (keep: boolean) => Promise<boolean>;
 }
 
 const MODES: CheckinMode[] = ['checkin', 'shelve'];
@@ -63,12 +65,14 @@ export function CheckinPanel({
   onShelve,
 }: CheckinPanelProps) {
   const [mode, setMode] = useState<CheckinMode>('checkin');
+  const [keepShelved, setKeepShelved] = useState(false);
   const descriptionHeight = usePendingChangesViewStore((state) => state.descriptionHeight);
   const setDescriptionHeight = usePendingChangesViewStore((state) => state.setDescriptionHeight);
   const { summary, description } = useCheckinMessage(workspacePath);
   const setMessage = useCheckinDraftStore((state) => state.setMessage);
   const onMessageChange = (message: { summary?: string; description?: string }): void => setMessage(workspacePath, message);
-  const count = mode === 'shelve' ? shelvable.count : includedCount;
+  const shelving = mode === 'shelve';
+  const count = shelving ? shelvable.count : includedCount;
   const disabledReason = checkinDisabledReason(mode, count, includedCount);
   const canAct = disabledReason === null && !busy;
   const { icon: ModeIcon } = describeMode(mode);
@@ -76,18 +80,22 @@ export function CheckinPanel({
     mode,
     includedCount: count,
     branchName,
-    uploadBytes: mode === 'shelve' ? shelvable.uploadBytes : uploadBytes,
+    uploadBytes: shelving ? shelvable.uploadBytes : uploadBytes,
     merging,
     behindCount,
     allReviewed,
+    keepShelved,
   });
   const updatesFirst = mode === 'checkin' && includedCount > 0 && behindCount > 0 && !merging;
 
-  // A shelve is a detour: once it's done, the panel is back to checking in.
+  // A shelve is a detour: once it's done, the panel is back to checking in, and keeping the changes is asked for each time.
   const act = async (): Promise<void> => {
     if (!canAct) return;
     if (mode === 'checkin') await onCheckin();
-    else if (await onShelve()) setMode('checkin');
+    else if (await onShelve(keepShelved)) {
+      setMode('checkin');
+      setKeepShelved(false);
+    }
   };
   useShortcut(hotkey('checkin'), () => void act(), canAct);
 
@@ -98,7 +106,7 @@ export function CheckinPanel({
         <input
           ref={summaryRef}
           className={styles.summary}
-          placeholder={mode === 'shelve' ? 'Shelve summary' : 'Summary'}
+          placeholder={shelving ? 'Shelve summary' : 'Summary'}
           value={summary}
           onChange={(event) => onMessageChange({ summary: event.target.value })}
           spellCheck
@@ -123,6 +131,11 @@ export function CheckinPanel({
         onChange={(event) => onMessageChange({ description: event.target.value })}
         spellCheck
       />
+      {shelving && (
+        <div className={styles.keep} data-tip="Shelve a copy and keep working on the changes, instead of putting them aside">
+          <Checkbox checked={keepShelved} onChange={setKeepShelved} label="Keep the changes here" />
+        </div>
+      )}
       <div className={styles.actions}>
         {/* aria-disabled rather than disabled, so hovering still shows the tooltip saying why. */}
         <Button

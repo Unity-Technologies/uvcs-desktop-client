@@ -12,9 +12,10 @@ import { SwitchShelveRecords } from './switchShelveRecords';
 import { applyShelveCleanly } from './switchShelves';
 import { switchWithChanges, type SwitchDependencies } from './switchWithChanges';
 
-vi.mock('./switchShelves', () => ({
+vi.mock('./switchShelves', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./switchShelves')>()),
   createSwitchShelve: vi.fn(async () => ({ id: 7, repository: 'eco@local' })),
-  applyShelveCleanly: vi.fn(async () => ({ kind: 'applied' })),
+  applyShelveCleanly: vi.fn(async () => ({ kind: 'applied', count: 2 })),
 }));
 
 const header = (branch: string, changeset: number): string => `<?xml version="1.0" encoding="utf-8"?>
@@ -112,7 +113,7 @@ describe('switchWithChanges', () => {
     let addedFileDuringSwitch: boolean | undefined;
     vi.mocked(applyShelveCleanly).mockImplementationOnce(async () => {
       addedFileDuringSwitch = existsSync(join(workspacePath, 'src/new.txt'));
-      return { kind: 'applied' };
+      return { kind: 'applied', count: 2 };
     });
 
     expect(await switchWithChanges(deps, workspacePath, 'br:/main/task2', 'bring', context)).toEqual({ kind: 'brought' });

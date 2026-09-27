@@ -21,6 +21,7 @@ import { ViewHeader } from '../../ui/ViewHeader';
 import { useChangeset } from '../changesets/useChangeset';
 import { LeftChangesBanner } from '../leftChanges/LeftChangesBanner';
 import { MergeTaskSuggestion } from '../mergeTask/MergeTaskSuggestion';
+import { MyShelvesButton } from '../shelves/MyShelvesButton';
 import { ChangeDiffPanel } from './ChangeDiffPanel';
 import { ChangesList } from './ChangesList';
 import { ChangesSummaryBar } from './ChangesSummaryBar';
@@ -192,6 +193,14 @@ export function PendingChangesView() {
     return done;
   };
 
+  // A shelve takes the files as they are on disk, as a checkin does. Shelved away, the changes take their comment along.
+  const shelve = async (keep: boolean): Promise<boolean> => {
+    if (!(await settleBeforeLeaving())) return false;
+    const done = await runBusy(() => shelveChanges(workspacePath, shelvable, joinComment(checkinDraftOf(workspacePath)), keep));
+    if (done && !keep) clearMessage(workspacePath);
+    return done;
+  };
+
   // With nothing pending, the empty state says so: no count, no ways to lay out a list that isn't there.
   const empty = snapshot?.changes.length === 0;
   const header = (
@@ -200,6 +209,7 @@ export function PendingChangesView() {
       subtitle={snapshot && !empty && `${formatCount(pendingCount)} pending`}
       actions={
         <>
+          <MyShelvesButton />
           <ReviewModeButton workspacePath={workspacePath} />
           <RefreshButton workspacePath={workspacePath} fetching={isFetching} />
           <IconButton icon={<SlidersHorizontal size={14} />} label="What to show" onClick={() => openSettingsDialogAt('pendingChanges')} />
@@ -346,7 +356,7 @@ export function PendingChangesView() {
               recentComments={settings.recentComments}
               busy={busy}
               onCheckin={checkin}
-              onShelve={() => runBusy(() => shelveChanges(workspacePath, shelvable, joinComment(checkinDraftOf(workspacePath))))}
+              onShelve={shelve}
             />
           </div>
         }

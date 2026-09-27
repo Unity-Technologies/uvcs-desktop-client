@@ -1,10 +1,10 @@
-/**
+import { AUTOMATIC_SHELVE_COMMENT } from '@shared/domain/shelve';
+
+/*
  * Shelves created while switching with pending changes use the official client's comment, so the official
- * Desktop and `cm` recognize them too (see AutomaticShelveComment.cs in the Plastic sources):
- * `Automatic shelve created during switch operation (from br:<branch id>)`, `(from cs:<changeset number>)`
- * or `(from lb:<label id>)`.
+ * Desktop and `cm` recognize them too: `Automatic shelve created during switch operation (from br:<branch id>)`,
+ * `(from cs:<changeset number>)` or `(from lb:<label id>)`.
  */
-const AUTOMATIC_SHELVE_COMMENT = 'Automatic shelve created during switch operation';
 
 /** `objectRef` is where the changes were made: `br:<branch id>`, `cs:<changeset number>` or `lb:<label id>`. */
 export function automaticShelveComment(objectRef: string): string {
