@@ -8,6 +8,7 @@ import type { CmClient } from '../cm/CmClient';
 import { DIFF_FORMAT, parseDiffEntries } from '../cm/diffEntries';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readShelveProgress } from '../cm/progress/shelveProgress';
+import { waitForNextSecond } from '../files/nextSecond';
 import { withTempFile } from '../files/tempFile';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { previewMerge } from '../merge/previewMerge';
@@ -96,6 +97,8 @@ export async function detachReplacedFiles(cm: CmClient, workspacePath: string): 
 
   const contents = await Promise.all(paths.map((path) => readFile(path)));
   await cm.query(['undo', ...paths], { cwd: workspacePath });
+  // In a later second than the undo wrote them: rewritten with as many bytes within that second, they'd look unchanged.
+  await waitForNextSecond();
   await Promise.all(paths.map((path, index) => writeFile(path, contents[index]!)));
   await cm.query(['checkout', ...paths], { cwd: workspacePath });
 }
