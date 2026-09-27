@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arrivalAt, distanceToCurve, linkCurve } from './curves';
+import { arrivalAt, curveUntil, distanceToCurve, linkCurve, pointOnCurve } from './curves';
 
 describe('arrivalAt', () => {
   it('finds the point that far back along a straight link, pointing along it', () => {
@@ -17,5 +17,16 @@ describe('arrivalAt', () => {
     // Still rising where it meets the changeset (up is negative y), while the curve's own last tangent is flat.
     expect(arrival.angle).toBeLessThan(-0.3);
     expect(arrival.angle).toBeGreaterThan(-Math.PI / 2);
+  });
+});
+
+describe('curveUntil', () => {
+  it('is the curve up to t, ending on the curve where t lands', () => {
+    const curve = linkCurve({ x: 0, y: 300 }, { x: 60, y: 0 });
+    const part = curveUntil(curve, 0.8);
+    expect(part[0]).toEqual(curve[0]);
+    expect(part[3].x).toBeCloseTo(pointOnCurve(curve, 0.8).x, 9);
+    expect(part[3].y).toBeCloseTo(pointOnCurve(curve, 0.8).y, 9);
+    expect(distanceToCurve(curve, pointOnCurve(part, 0.5), 4000)).toBeLessThan(0.05);
   });
 });

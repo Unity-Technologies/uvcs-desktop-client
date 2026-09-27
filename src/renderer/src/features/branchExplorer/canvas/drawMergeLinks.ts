@@ -1,12 +1,13 @@
 import type { MergeLink } from '@shared/domain/branchExplorer';
+import { arrowLength, drawArrowHead, LINE_INTO_HEAD } from './drawArrowHead';
 import { STRUCTURE_DIMMED_ALPHA, type DrawContext } from './drawContext';
-import { arrivalAt, linkCurve, type Curve } from './curves';
+import { arrivalAt, curveUntil, linkCurve, type Curve } from './curves';
 import { NODE_RADIUS, nodePoint } from './geometry';
 import { branchColor, mergeLinkDash } from './graphPalette';
 import { boundsOf, crossesView } from './linkVisibility';
 import { mergeLinksAcross } from './spansInView';
 
-const ARROW_SIZE = 7;
+const ARROW_SIZE = arrowLength(2.5);
 const DOT_RADIUS = 5;
 
 export function drawMergeLinks(draw: DrawContext): void {
@@ -33,21 +34,27 @@ function drawLink(draw: DrawContext, link: MergeLink, curve: Curve): void {
   // While searching, a link stays lit only between two hits; the rest recede with the changesets they join.
   const { search } = scene;
   const lit = !search || (search.changesets.has(link.sourceChangeset) && search.changesets.has(link.destinationChangeset));
-  const [from, c1, c2, to] = curve;
+  const [from] = curve;
 
   ctx.save();
   ctx.strokeStyle = linkColor(draw, link);
   ctx.fillStyle = ctx.strokeStyle;
   ctx.globalAlpha = emphasized ? 1 : lit ? 0.75 : STRUCTURE_DIMMED_ALPHA;
-  ctx.lineWidth = emphasized ? 2.5 : 2;
-  ctx.lineCap = 'round';
+  const lineWidth = emphasized ? 2.5 : 2;
+  const length = arrowLength(lineWidth);
+  const tipDistance = draw.detail.avatars ? NODE_RADIUS + 4 : DOT_RADIUS + 3;
+  const tip = arrivalAt(curve, tipDistance);
+  // The line ends inside the head, never under its tip, so the tip stays sharp and nothing pokes out around it.
+  const [, c1, c2, end] = curveUntil(curve, arrivalAt(curve, tipDistance + length * LINE_INTO_HEAD).t);
+  ctx.lineWidth = lineWidth;
+  ctx.lineCap = 'butt';
   ctx.setLineDash(mergeLinkDash(link.type));
   ctx.beginPath();
   pen.moveTo(from.x, from.y);
-  pen.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, to.x, to.y);
+  pen.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, end.x, end.y);
   ctx.stroke();
   ctx.setLineDash(NO_DASH);
-  drawArrowHead(draw, curve, draw.detail.avatars ? NODE_RADIUS + 4 : DOT_RADIUS + 3);
+  drawArrowHead(draw, tip, tip.angle, length);
   ctx.restore();
 }
 
@@ -55,16 +62,4 @@ const NO_DASH: number[] = [];
 
 function involves(link: MergeLink, changeset: number | null): boolean {
   return changeset === link.sourceChangeset || changeset === link.destinationChangeset;
-}
-
-/** An arrow touching the destination changeset, on the curve where it arrives and aligned with it. */
-function drawArrowHead({ ctx, pen }: DrawContext, curve: Curve, distanceFromCenter: number): void {
-  const { x, y, angle } = arrivalAt(curve, distanceFromCenter);
-
-  ctx.beginPath();
-  pen.moveTo(x, y);
-  pen.lineTo(x - ARROW_SIZE * Math.cos(angle - 0.42), y - ARROW_SIZE * Math.sin(angle - 0.42));
-  pen.lineTo(x - ARROW_SIZE * Math.cos(angle + 0.42), y - ARROW_SIZE * Math.sin(angle + 0.42));
-  ctx.closePath();
-  ctx.fill();
 }

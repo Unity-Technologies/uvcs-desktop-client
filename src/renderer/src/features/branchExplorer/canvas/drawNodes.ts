@@ -1,4 +1,5 @@
 import type { NodeLayout } from '../model/layoutGraph';
+import { arrowLength, drawArrowHead, LINE_INTO_HEAD } from './drawArrowHead';
 import { drawAvatar, drawDot } from './drawAvatar';
 import { drawCollapsedNode } from './drawCollapsedNode';
 import { DIMMED_ALPHA, isChangesetDimmed, STRUCTURE_DIMMED_ALPHA, type DrawContext } from './drawContext';
@@ -9,7 +10,8 @@ import { branchColor } from './graphPalette';
 import { hasParentOffGraph, parentLinksInView } from './parentLinks';
 
 const DOT_RADIUS = 5;
-const ARROW_SIZE = 4;
+/** A parent line's arrowhead, pointing back at the parent: the same head as the merge links'. */
+const PARENT_ARROW = arrowLength(2);
 /** How far the dashed line of a changeset whose parent is off the graph reaches past the changeset. */
 const OFF_GRAPH_STUB_LENGTH = 22;
 /** The selection: a soft halo behind the changeset and an accent ring just outside its branch ring. */
@@ -67,17 +69,10 @@ function drawParentLink(draw: DrawContext, parent: NodeLayout, node: NodeLayout)
   else ctx.globalAlpha = isChangesetDimmed(scene, node.changeset) ? DIMMED_ALPHA : 0.7;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  pen.moveTo(fromX + (detail.text ? ARROW_SIZE : 0), y);
+  pen.moveTo(fromX + (detail.text ? PARENT_ARROW * LINE_INTO_HEAD : 0), y);
   pen.lineTo(toX, y);
   ctx.stroke();
-  if (detail.text) {
-    ctx.beginPath();
-    pen.moveTo(fromX, y);
-    pen.lineTo(fromX + ARROW_SIZE * 1.6, y - ARROW_SIZE);
-    pen.lineTo(fromX + ARROW_SIZE * 1.6, y + ARROW_SIZE);
-    ctx.closePath();
-    ctx.fill();
-  }
+  if (detail.text) drawArrowHead(draw, { x: fromX, y }, Math.PI, PARENT_ARROW);
   ctx.restore();
 }
 
