@@ -13,6 +13,15 @@ export class CmShellPool {
     return this.leastBusySession(cwd).run(args);
   }
 
+  /**
+   * Whether a session in the directory answers commands at once. Otherwise they start (about a second), and a query
+   * is quicker as a process of its own meanwhile.
+   */
+  isReady(cwd: string): boolean {
+    this.warmUp(cwd);
+    return this.sessionsByDirectory.get(cwd)!.some((session) => session.isReady);
+  }
+
   /** Starts the sessions for a directory so the first queries there don't pay the startup cost. */
   warmUp(cwd: string): void {
     const sessions = this.sessionsByDirectory.get(cwd) ?? [];
