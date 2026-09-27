@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchesAllWords, wordMatchQuality } from './matchesAllWords';
+import { matchesAllWords, matchesWordFilter, wordMatchQuality } from './matchesAllWords';
 
 describe('matchesAllWords', () => {
   it('needs every word, in any order and case', () => {
@@ -25,5 +25,19 @@ describe('wordMatchQuality', () => {
     expect(wordMatchQuality('Fix the bamboo plugin', 'bamboo plugin')).toBe(0.8);
     expect(wordMatchQuality('Plugin for bamboo', 'bamboo plugin')).toBe(0.6);
     expect(wordMatchQuality('Unrelated', 'bamboo')).toBe(0);
+  });
+});
+
+describe('matchesWordFilter', () => {
+  it('finds each word in one of the texts, never across two', () => {
+    expect(matchesWordFilter(['Fix login', 'Jane Doe'], 'jane login')).toBe(true);
+    expect(matchesWordFilter(['Fix login', 'Jane Doe'], 'login jane doe')).toBe(true);
+    expect(matchesWordFilter(['Fix login', 'Jane Doe'], 'loginjane')).toBe(false);
+    expect(matchesWordFilter(['Fix login', 'Jane Doe'], 'logout')).toBe(false);
+  });
+
+  it('keeps every row for a blank query', () => {
+    expect(matchesWordFilter(['anything'], '  ')).toBe(true);
+    expect(matchesWordFilter([], '')).toBe(true);
   });
 });

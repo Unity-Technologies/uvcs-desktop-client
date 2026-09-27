@@ -33,6 +33,8 @@ import { sinceDateFor, type SincePreset } from '../../lib/sincePresets';
 import styles from './CodeReviewsView.module.css';
 import { codeReviewCopyTexts } from './codeReviewMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
+import { matchesWordFilter } from '../../lib/matchesAllWords';
+import { userFilterTexts } from '../../lib/userName';
 
 type StatusFilter = CodeReviewStatus | 'any';
 
@@ -62,7 +64,7 @@ const COLUMNS: Column<CodeReview>[] = [
     grow: 1,
     secondary: true,
     hideBelow: 820,
-    render: (review) => (review.target.kind === 'branch' ? <PathLabel path={review.target.branch} /> : describeTarget(review.target)),
+    render: (review) => (review.target.kind === 'branch' ? <PathLabel path={review.target.branch} /> : <Highlight text={describeTarget(review.target)} />),
   },
   { id: 'owner', header: 'Author', grow: 1, hideBelow: 600, render: (review) => <UserLabel user={review.owner} />, sortValue: (review) => review.owner },
   {
@@ -75,6 +77,11 @@ const COLUMNS: Column<CodeReview>[] = [
   },
   { id: 'date', header: 'Created', width: 120, secondary: true, render: (review) => <RelativeTime date={review.date} />, sortValue: (review) => review.date },
 ];
+
+/** What the row shows: its number, title, what it reviews, its author and its reviewer. */
+function reviewFilterTexts(review: CodeReview): string[] {
+  return [String(review.id), review.title, describeTarget(review.target), ...userFilterTexts(review.owner), ...(review.assignee ? userFilterTexts(review.assignee) : [])];
+}
 
 export function CodeReviewsView() {
   const workspacePath = useWorkspacePath();
@@ -91,7 +98,7 @@ export function CodeReviewsView() {
     sinceDate: sinceDateFor(since),
   });
 
-  const visible = (reviews ?? []).filter((review) => `${review.title} ${review.id}`.toLowerCase().includes(search.trim().toLowerCase()));
+  const visible = (reviews ?? []).filter((review) => matchesWordFilter(reviewFilterTexts(review), search));
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : '';
   const commands = useMemo<Command[]>(
     () => [

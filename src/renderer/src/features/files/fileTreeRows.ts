@@ -1,4 +1,5 @@
 import type { TreeItem } from '@shared/domain/explorer';
+import { matchesAllWords } from '../../lib/matchesAllWords';
 import type { TreeArrowRow } from '../../lib/treeArrowMove';
 
 export interface FileTreeRow {
@@ -13,7 +14,7 @@ interface BuildFileTreeRowsInput {
   /** Children per directory path; the root is `''`. Missing entries have not been listed yet. */
   childrenByDirectory: ReadonlyMap<string, TreeItem[]>;
   expanded: ReadonlySet<string>;
-  /** Case-insensitive name filter; directories stay visible when something inside them matches. */
+  /** Words every shown name must hold, in any case; directories stay visible when something inside them matches. */
   filter?: string;
   /** The workspace root as the top row (path `''`), everything else under it. */
   root?: { item: TreeItem; expanded: boolean };
@@ -21,9 +22,8 @@ interface BuildFileTreeRowsInput {
 
 /** Flattens the listed part of a file tree into visible rows, directories first. */
 export function buildFileTreeRows({ childrenByDirectory, expanded, filter = '', root }: BuildFileTreeRowsInput): FileTreeRow[] {
-  const needle = filter.trim().toLowerCase();
   const rows: FileTreeRow[] = [];
-  const matches = needle ? matcherFor(needle, childrenByDirectory) : () => true;
+  const matches = filter.trim() ? matcherFor(filter, childrenByDirectory) : () => true;
 
   const visit = (directory: string, depth: number): void => {
     for (const item of sortItems(childrenByDirectory.get(directory) ?? [])) {
@@ -90,11 +90,11 @@ export function parentOf(path: string): string {
   return path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
 }
 
-/** Whether an item's name, or a name listed anywhere below it, contains the needle; each directory is searched once. */
-function matcherFor(needle: string, childrenByDirectory: ReadonlyMap<string, TreeItem[]>): (item: TreeItem) => boolean {
+/** Whether an item's name, or a name listed anywhere below it, holds every word of the filter; each directory is searched once. */
+function matcherFor(filter: string, childrenByDirectory: ReadonlyMap<string, TreeItem[]>): (item: TreeItem) => boolean {
   const directoryMatches = new Map<string, boolean>();
   const matches = (item: TreeItem): boolean => {
-    if (item.name.toLowerCase().includes(needle)) return true;
+    if (matchesAllWords(item.name, filter)) return true;
     const children = childrenByDirectory.get(item.path);
     if (!children) return false;
     let found = directoryMatches.get(item.path);

@@ -4,6 +4,7 @@ import type { Label } from '@shared/domain/label';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
+import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { SearchField } from '../../ui/SearchField';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { useLabels } from './useLabels';
@@ -23,7 +24,7 @@ export function pickLabel(options: PickLabelOptions): Promise<Label | undefined>
 function LabelPickerDialog({ title, exclude, finish }: PickLabelOptions & { finish: (label: Label | undefined) => void }) {
   const { data: labels } = useLabels();
   const [search, setSearch] = useState('');
-  const visible = (labels ?? []).filter((label) => label.name !== exclude && label.name.toLowerCase().includes(search.toLowerCase()));
+  const visible = (labels ?? []).filter((label) => label.name !== exclude && matchesWordFilter([label.name], search));
 
   return (
     <Dialog title={title} width={460} onClose={() => finish(undefined)}>

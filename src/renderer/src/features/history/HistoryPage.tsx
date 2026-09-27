@@ -16,6 +16,7 @@ import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
 import type { AnnotationHistory } from '../annotate/AnnotationPane';
 import { openChangesetDiff } from '../changesets/changesetOperations';
+import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
 import { HISTORY_ROW_HEIGHT, HistoryList } from './HistoryList';
 import { historyMenu } from './historyMenu';
 import { initialHistoryRow } from './initialHistoryRow';
@@ -63,7 +64,11 @@ export function HistoryPage({ page }: PageProps<'history'>) {
   const paneRef = useRef<HTMLDivElement>(null);
 
   const rows = useMemo(() => (history ? historyRows(history) : []), [history]);
-  const visible = useMemo(() => rows.filter((row) => matchesHistorySearch(row, search)), [rows, search]);
+  const labelsByChangeset = useLabelsByChangeset();
+  const visible = useMemo(
+    () => rows.filter((row) => matchesHistorySearch(row, search, row.kind === 'revision' ? labelsByChangeset.get(row.revision.changesetId) : undefined)),
+    [rows, search, labelsByChangeset],
+  );
   const selectedRows = useMemo(() => rows.filter((row) => selection.selected.has(historyRowKey(row))), [rows, selection]);
   const selectedRevisions = selectedRows.flatMap((row) => (row.kind === 'revision' ? [row.revision] : []));
   const focusedRow = rows.find((row) => historyRowKey(row) === selection.anchor);

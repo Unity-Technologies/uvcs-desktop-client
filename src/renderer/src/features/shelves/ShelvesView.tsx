@@ -25,6 +25,8 @@ import { shelvesEmptyState } from './shelvesEmptyState';
 import { useShelvesViewStore } from './shelvesViewStore';
 import { shelveCopyTexts } from './shelveMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
+import { matchesWordFilter } from '../../lib/matchesAllWords';
+import { userFilterTexts } from '../../lib/userName';
 
 /** Read like the changesets list; where a changeset shows its branch, a shelve shows the changeset it was made on. */
 const COLUMNS: Column<Shelve>[] = [
@@ -46,10 +48,7 @@ export function ShelvesView() {
   const { data: shelves, isLoading, isFetching, error } = useShelves({ owner: onlyMine ? 'me' : undefined });
   const [selection, setSelection] = useViewSelection('shelves');
 
-  const visible = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    return (shelves ?? []).filter((shelve) => `${shelve.id} ${shelve.comment} ${shelve.owner}`.toLowerCase().includes(needle));
-  }, [shelves, search]);
+  const visible = useMemo(() => (shelves ?? []).filter((shelve) => matchesWordFilter(shelveFilterTexts(shelve), search)), [shelves, search]);
   const selected = visible.find((shelve) => shelveKey(shelve) === selection.anchor);
   useCopyCommand('Shelves', 'Shelve', selection.selected.size === 1 && selected ? shelveCopyTexts(selected) : undefined);
 
@@ -107,6 +106,11 @@ function ShelvesEmpty({ searching, onlyMine, onShowEveryone }: { searching: bool
       action={offerEveryone && <Button onClick={onShowEveryone}>Show everyone's shelves</Button>}
     />
   );
+}
+
+/** What the row shows: its number, comment, the changeset it's based on and its author. */
+function shelveFilterTexts(shelve: Shelve): string[] {
+  return [String(shelve.id), shelve.comment, spec.changeset(shelve.parentChangeset), ...userFilterTexts(shelve.owner)];
 }
 
 function shelveKey(shelve: Shelve): string {

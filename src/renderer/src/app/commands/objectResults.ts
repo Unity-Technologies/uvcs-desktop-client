@@ -27,7 +27,7 @@ import { menuAction } from '../../components/menuWords';
 import { fuzzyMatchPositions, fuzzyMatchQuality } from '../../lib/fuzzyIndex';
 import { wordMatchQuality } from '../../lib/matchesAllWords';
 import { firstLine } from '../../lib/text';
-import { wordMatchRanges } from '../../lib/textMatchRanges';
+import { wordMatchPositions, wordMatchRanges } from '../../lib/textMatchRanges';
 import { displayName } from '../../lib/userName';
 import { navigation } from '../navigation/navigationStore';
 import { annotatedHistory } from '../../features/history/annotatedHistory';
@@ -81,14 +81,24 @@ function workspaceFileMenu(workspacePath: string, entry: { path: string; isDirec
   ]);
 }
 
-export function branchResult(branch: Branch, context: ResultContext): SearchResult {
+/**
+ * How a name was found: ranked by the fuzzy index, or, for what a server search brought, by the words typed; its
+ * highlight marks the same letters.
+ */
+export type NameMatch = 'fuzzy' | 'words';
+
+function namePositions(name: string, term: string, match: NameMatch): number[] {
+  return match === 'fuzzy' ? fuzzyMatchPositions(name, term) : wordMatchPositions(name, term);
+}
+
+export function branchResult(branch: Branch, context: ResultContext, match: NameMatch = 'fuzzy'): SearchResult {
   const { workspacePath, term, currentBranch } = context;
   return {
     id: `branch:${branch.id}`,
     icon: GitBranch,
     label: branch.name,
     labelIsBranch: true,
-    labelMatches: fuzzyMatchPositions(branch.name, term),
+    labelMatches: namePositions(branch.name, term, match),
     quality: term ? fuzzyMatchQuality(branch.name, term) : undefined,
     detail: `${displayName(branch.owner)} · ${formatRelativeDate(branch.date)}`,
     detailMatches: [],
@@ -98,13 +108,13 @@ export function branchResult(branch: Branch, context: ResultContext): SearchResu
   };
 }
 
-export function labelResult(label: Label, context: ResultContext): SearchResult {
+export function labelResult(label: Label, context: ResultContext, match: NameMatch = 'fuzzy'): SearchResult {
   const { workspacePath, term } = context;
   return {
     id: `label:${label.id}`,
     icon: Tag,
     label: label.name,
-    labelMatches: fuzzyMatchPositions(label.name, term),
+    labelMatches: namePositions(label.name, term, match),
     quality: term ? fuzzyMatchQuality(label.name, term) : undefined,
     detail: `cs:${label.changeset} · ${formatRelativeDate(label.date)}`,
     detailMatches: [],

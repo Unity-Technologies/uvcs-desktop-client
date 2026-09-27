@@ -36,7 +36,10 @@ export function RepositoryRow({ repository, workspaces, onOpen, onCreateWorkspac
             <RepositoryAvatar name={repository.name} size={32} />
             <span className={styles.rowText}>
               <span className={styles.rowTitle}>
-                <Highlight text={repository.name} />
+                {/* In a box of its own: the title's gap would open between the pieces a match splits the name into. */}
+                <span>
+                  <Highlight text={repository.name} />
+                </span>
               </span>
               <span className={styles.rowSubtitle}>
                 {[

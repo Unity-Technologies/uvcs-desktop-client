@@ -13,6 +13,11 @@ export function wordMatchRanges(text: string, query: string): TextRange[] {
   return mergeRanges(ranges);
 }
 
+/** The characters `wordMatchRanges` marks, one by one: for text shown cut (`positionsInTrimmed`) or split in parts. */
+export function wordMatchPositions(text: string, query: string): number[] {
+  return wordMatchRanges(text, query).flatMap(([start, end]) => Array.from({ length: end - start }, (_, offset) => start + offset));
+}
+
 /** Single character positions (e.g. of a fuzzy match) as ranges, joining neighbours. */
 export function positionRanges(positions: readonly number[]): TextRange[] {
   return mergeRanges(positions.map((position) => [position, position + 1]));

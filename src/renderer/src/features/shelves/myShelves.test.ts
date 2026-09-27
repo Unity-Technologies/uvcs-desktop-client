@@ -35,14 +35,14 @@ const automatic = 'Automatic shelve created during switch operation (from br:7)'
 describe('myShelves', () => {
   it('names a shelve by its comment, keeping the order it is listed in', () => {
     expect(myShelves([shelve(12, 'Half-done login\n\nMore words'), shelve(3, '')], [], MINE, NOW)).toEqual([
-      expect.objectContaining({ title: 'Half-done login', detail: 'sh:12 · 2 hours ago', left: false }),
+      expect.objectContaining({ title: 'Half-done login', spec: 'sh:12', detail: '2 hours ago', left: false }),
       expect.objectContaining({ title: '(no comment)', left: false }),
     ]);
   });
 
   it('names the changes a switch or an update left by where they were, and counts what this app recorded', () => {
     const [switched, updated] = myShelves([shelve(12, automatic), shelve(11, automatic)], [record(12), record(11, 'update')], MINE, NOW);
-    expect(switched).toMatchObject({ title: 'Left on /main/task', detail: 'sh:12 · 2 hours ago · 3 changes', left: true });
+    expect(switched).toMatchObject({ title: 'Left on /main/task', spec: 'sh:12', detail: '2 hours ago · 3 changes', left: true });
     expect(updated).toMatchObject({ title: 'Put aside to update /main/task', left: true });
   });
 
@@ -51,7 +51,7 @@ describe('myShelves', () => {
   });
 
   it('keeps the comment of changes the user shelved away, which apply like any shelve', () => {
-    expect(myShelves([shelve(12, 'Spike')], [record(12, 'shelve')], MINE, NOW)[0]).toMatchObject({ title: 'Spike', detail: 'sh:12 · 2 hours ago · 3 changes', left: false });
+    expect(myShelves([shelve(12, 'Spike')], [record(12, 'shelve')], MINE, NOW)[0]).toMatchObject({ title: 'Spike', spec: 'sh:12', detail: '2 hours ago · 3 changes', left: false });
   });
 
   it("matches records by repository too: shelve numbers repeat across repositories", () => {
@@ -70,7 +70,7 @@ describe('myShelves', () => {
 
   it("applies someone else's left changes like any shelve: theirs to restore, and this app's records are the user's", () => {
     const [theirs] = myShelves([shelve(12, automatic, 'eco@local', 'jane.doe@unity3d.com')], [record(12)], EVERYONE, NOW);
-    expect(theirs).toMatchObject({ title: 'Left when switching', detail: 'sh:12 · 2 hours ago', left: false, mine: false });
+    expect(theirs).toMatchObject({ title: 'Left when switching', spec: 'sh:12', detail: '2 hours ago', left: false, mine: false });
   });
 
   it('takes no shelve for the user\'s while it is not known who they are', () => {
@@ -86,6 +86,12 @@ describe('matchesShelveFilter', () => {
     expect(matchesShelveFilter(row!, 'NEW FORM')).toBe(true);
     expect(matchesShelveFilter(row!, 'sh:12')).toBe(true);
     expect(matchesShelveFilter(row!, 'logout')).toBe(false);
+  });
+
+  it('takes the words in any order, each found in something the row shows', () => {
+    expect(matchesShelveFilter(row!, 'login half')).toBe(true);
+    expect(matchesShelveFilter(row!, 'sh:12 login')).toBe(true);
+    expect(matchesShelveFilter(row!, 'login logout')).toBe(false);
   });
 
   it('finds changes a switch left by where they were left', () => {

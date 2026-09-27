@@ -253,7 +253,7 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
             branchIndex.rank(term, MAX_PER_SECTION).map((index) => branchResult(branches.data![index]!, context)),
             foundBranches.data,
             (branch) => branch.name,
-            (branch) => branchResult(branch, context),
+            (branch) => branchResult(branch, context, 'words'),
           ),
         },
         {
@@ -263,7 +263,7 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
             labelIndex.rank(term, MAX_PER_SECTION).map((index) => labelResult(labels.data![index]!, context)),
             foundLabels.data,
             (label) => label.name,
-            (label) => labelResult(label, context),
+            (label) => labelResult(label, context, 'words'),
           ),
         },
         {

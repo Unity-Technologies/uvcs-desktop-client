@@ -11,7 +11,8 @@ import { ListWithDetails } from '../../components/ListWithDetails';
 import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
 import { NoSelection } from '../../components/NoSelection';
 import { SincePicker } from '../../components/SincePicker';
-import { matchesAllWords } from '../../lib/matchesAllWords';
+import { matchesWordFilter } from '../../lib/matchesAllWords';
+import { userFilterTexts } from '../../lib/userName';
 import { sinceDateFor } from '../../lib/sincePresets';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
@@ -168,7 +169,7 @@ function rowKey(row: Pick<BranchTreeRow, 'branch'>): string {
 
 function filterBranches(branches: Branch[], search: string): Branch[] {
   if (!search.trim()) return branches;
-  return branches.filter((branch) => matchesAllWords(`${branch.name}\n${branch.comment}\n${branch.owner}`, search));
+  return branches.filter((branch) => matchesWordFilter([branch.name, branch.comment, ...userFilterTexts(branch.owner)], search));
 }
 
 function useBranchColumns(
