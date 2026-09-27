@@ -1,6 +1,6 @@
-import type { Lane } from '../model/layoutGraph';
+import type { GraphLayout, Lane } from '../model/layoutGraph';
 import { summaryOf } from './fitText';
-import { BAND_HEIGHT, COLUMN_WIDTH, columnX, headerHeight, headerTop, NODE_RADIUS, rowY } from './geometry';
+import { BAND_HEIGHT, COLUMN_WIDTH, columnX, graphSize, HEADER_MAX_WIDTH, headerHeight, headerTop, NODE_RADIUS, rowY } from './geometry';
 
 /** Where the band of a branch without changesets starts, after its base changeset on the parent's band. */
 const EMPTY_BRANCH_OFFSET = COLUMN_WIDTH * 0.6;
@@ -35,4 +35,25 @@ export function laneHeaderHeight(lane: Lane): number {
 /** Top of a lane's header card. */
 export function laneHeaderTop(lane: Lane): number {
   return headerTop(rowY(lane.row), laneHeaderHeight(lane));
+}
+
+/** Room kept to the right of the widest header card a branch starting near the end can get. */
+const HEADER_END_MARGIN = 16;
+
+const extents = new WeakMap<GraphLayout, { width: number; height: number }>();
+
+/**
+ * How big the graph is in the world: its changesets with their padding, and wide enough for the header card of a
+ * branch starting at the end (a new branch, the latest task) to scroll into view whole. Kept per layout: panning asks
+ * for it every frame.
+ */
+export function graphExtent(layout: GraphLayout): { width: number; height: number } {
+  let extent = extents.get(layout);
+  if (!extent) {
+    const size = graphSize(layout.columnCount, layout.rowCount);
+    let width = size.width;
+    for (const lane of layout.lanes) width = Math.max(width, laneShape(lane).left + HEADER_MAX_WIDTH + HEADER_END_MARGIN);
+    extents.set(layout, (extent = { width, height: size.height }));
+  }
+  return extent;
 }

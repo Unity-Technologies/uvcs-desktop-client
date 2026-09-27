@@ -7,15 +7,17 @@ import { DATE_PRESET_LABELS, type ChangesetFilterState, type DatePreset } from '
 interface ChangesetFiltersBarProps {
   filter: ChangesetFilterState;
   onChange: (filter: ChangesetFilterState) => void;
+  /** The branch the workspace is on; "This branch" shows only while it's on one. */
+  currentBranch: string | undefined;
 }
 
-export function ChangesetFiltersBar({ filter, onChange }: ChangesetFiltersBarProps) {
+export function ChangesetFiltersBar({ filter, onChange, currentBranch }: ChangesetFiltersBarProps) {
   const update = (changes: Partial<ChangesetFilterState>): void => onChange({ ...filter, ...changes });
   const presets = Object.keys(DATE_PRESET_LABELS) as DatePreset[];
 
   return (
     <>
-      <SearchField value={filter.search} onChange={(search) => update({ search })} placeholder="Search comment, author, branch or number" width={300} />
+      <SearchField value={filter.search} onChange={(search) => update({ search })} placeholder="Filter by comment, author, changeset, branch" width={320} />
       <ChoiceChip<DatePreset>
         value={filter.datePreset}
         choices={presets.map((preset) => ({ value: preset, label: DATE_PRESET_LABELS[preset] }))}
@@ -25,13 +27,11 @@ export function ChangesetFiltersBar({ filter, onChange }: ChangesetFiltersBarPro
       <ToggleChip pressed={filter.onlyMine} icon={<User size={13} />} onChange={(onlyMine) => update({ onlyMine })}>
         Mine
       </ToggleChip>
-      <ToggleChip
-        pressed={filter.onlyCurrentBranch}
-        icon={<GitBranch size={13} />}
-        onChange={(onlyCurrentBranch) => update({ onlyCurrentBranch })}
-      >
-        This branch
-      </ToggleChip>
+      {currentBranch && (
+        <ToggleChip pressed={filter.onlyCurrentBranch} icon={<GitBranch size={13} />} onChange={(onlyCurrentBranch) => update({ onlyCurrentBranch })}>
+          This branch
+        </ToggleChip>
+      )}
     </>
   );
 }

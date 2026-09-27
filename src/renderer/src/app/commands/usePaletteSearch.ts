@@ -27,7 +27,7 @@ import {
   shelveResult,
   type ResultContext,
 } from './objectResults';
-import { isInScope, type PaletteScope, type SectionId } from './paletteScope';
+import { isInScope, isSearching, type PaletteScope, type SectionId } from './paletteScope';
 import type { SearchGroup, SearchResult } from './searchResults';
 
 export interface PaletteSearch {
@@ -125,10 +125,20 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
   const labelIndex = useMemo(() => createFuzzyIndex(labels.data?.map((label) => label.name) ?? []), [labels.data]);
   const changes = useMemo(() => sortByStatus((pendingChanges.data?.changes ?? []).filter(isCheckinCandidate)), [pendingChanges.data]);
 
+  const serverWaits = (search: { isFetching: boolean }): boolean => searchesServer && (serverTerm !== term || search.isFetching);
   const isLoading =
     enabled &&
-    ([files, branches, labels, changesets, shelves, codeReviews].some((list) => list.isPending) ||
-      (searchesServer && (serverTerm !== term || [foundBranches, foundLabels, foundShelves, foundCodeReviews].some((search) => search.isFetching))));
+    isSearching(
+      [
+        { section: 'files', waiting: files.isPending },
+        { section: 'branches', waiting: branches.isPending || serverWaits(foundBranches) },
+        { section: 'labels', waiting: labels.isPending || serverWaits(foundLabels) },
+        { section: 'changesets', waiting: changesets.isPending },
+        { section: 'shelves', waiting: shelves.isPending || serverWaits(foundShelves) },
+        { section: 'codeReviews', waiting: codeReviews.isPending || serverWaits(foundCodeReviews) },
+      ],
+      scope,
+    );
 
   const groups = useMemo(() => {
     if (!enabled) return [];

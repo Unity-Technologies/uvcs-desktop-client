@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { ROVING_ITEM } from '../../lib/rovingFocus';
+import { pluralize } from '../../lib/text';
 import { displayName } from '../../lib/userName';
 import { Button } from '../../ui/Button';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
@@ -39,7 +40,7 @@ export function RepositoryRow({ repository, workspaces, onOpen, onCreateWorkspac
               </span>
               <span className={styles.rowSubtitle}>
                 {[
-                  workspaces.length > 0 && `${workspaces.length} workspace${workspaces.length === 1 ? '' : 's'}`,
+                  workspaces.length > 0 && pluralize(workspaces.length, 'workspace'),
                   repository.owner && `created by ${displayName(repository.owner)}`,
                 ]
                   .filter(Boolean)
@@ -52,8 +53,9 @@ export function RepositoryRow({ repository, workspaces, onOpen, onCreateWorkspac
               Open
             </Button>
           ) : (
+            // On every row it would read as a wall of buttons: it shows on the row under the pointer or the keyboard.
             workspaces.length === 0 && (
-              <Button size="small" onClick={() => onCreateWorkspace(repository)}>
+              <Button size="small" className={styles.rowCreate} onClick={() => onCreateWorkspace(repository)}>
                 New workspace
               </Button>
             )

@@ -1,5 +1,6 @@
 import { Trash2, X } from 'lucide-react';
 import { useEffect, useRef } from 'react';
+import { pluralize } from '../../lib/text';
 import { IconButton } from '../../ui/IconButton';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { useWorkspacePath } from '../workspace/useWorkspace';
@@ -29,7 +30,7 @@ export function CommandLogPanel() {
     <section className={styles.panel}>
       <header className={styles.header}>
         <span className={styles.title}>Command log</span>
-        <span className={styles.count}>{shown.length} commands</span>
+        <span className={styles.count}>{pluralize(shown.length, 'command')}</span>
         <div className={styles.spacer} />
         <SegmentedControl value={scope} segments={SCOPES} onChange={setScope} />
         <IconButton size="small" icon={<Trash2 size={13} />} label="Clear" onClick={clear} />

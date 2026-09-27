@@ -3,7 +3,9 @@ import {
   isAffectedByFileChanges,
   isAffectedByLoadedChangeset,
   isAffectedByMovedPaths,
-  isAffectedByNewBranch,
+  isAffectedByAttributes,
+  isAffectedByBranchList,
+  isAffectedByLabels,
   isAffectedByNewChangesets,
   isAffectedByCheckinOrUpdate,
   isAffectedByShelving,
@@ -74,10 +76,26 @@ describe('refresh scopes', () => {
     expect(isAffectedByShelving(key('info'))).toBe(false);
   });
 
-  it('refreshes the branch lists and the Branch Explorer when a branch is created', () => {
-    expect(isAffectedByNewBranch(key('branches', {}))).toBe(true);
-    expect(isAffectedByNewBranch(key('branchExplorer', { sinceDate: '2026-08-26' }))).toBe(true);
-    expect(isAffectedByNewBranch(key('pendingChanges'))).toBe(false);
-    expect(isAffectedByNewBranch(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(false);
+  it('refreshes the branch lists and the Branch Explorer when a branch is created, deleted or hidden', () => {
+    expect(isAffectedByBranchList(key('branches', {}))).toBe(true);
+    expect(isAffectedByBranchList(key('branchExplorer', { sinceDate: '2026-08-26' }))).toBe(true);
+    expect(isAffectedByBranchList(key('pendingChanges'))).toBe(false);
+    expect(isAffectedByBranchList(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(false);
+  });
+
+  it('refreshes the labels, the graph and the workspace info when a label changes, not the branches or the history', () => {
+    expect(isAffectedByLabels(key('labels', {}))).toBe(true);
+    expect(isAffectedByLabels(key('branchExplorer', {}))).toBe(true);
+    expect(isAffectedByLabels(key('info'))).toBe(true);
+    expect(isAffectedByLabels(key('branches', {}))).toBe(false);
+    expect(isAffectedByLabels(key('changesets', 'list', {}))).toBe(false);
+  });
+
+  it('refreshes only the attributes when an attribute or a value changes', () => {
+    expect(isAffectedByAttributes(key('attributeTypes'))).toBe(true);
+    expect(isAffectedByAttributes(key('attributeValues', 'br:/main'))).toBe(true);
+    expect(isAffectedByAttributes(key('attributeUsedValues', 'status'))).toBe(true);
+    expect(isAffectedByAttributes(key('branches', {}))).toBe(false);
+    expect(isAffectedByAttributes(key('info'))).toBe(false);
   });
 });

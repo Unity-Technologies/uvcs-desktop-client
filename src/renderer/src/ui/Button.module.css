@@ -47,7 +47,19 @@
 }
 
 .primary:hover:not([aria-disabled='true']) {
-  background: var(--accent-hover);
+  background: var(--accent-fill-hover);
+}
+
+.primary:active:not([aria-disabled='true']) {
+  background: color-mix(in srgb, var(--accent) 88%, black);
+}
+
+/* A ring flush with a fill of about its own color would melt into it: filled buttons draw it 2px out. */
+.primary:focus-visible,
+.danger:focus-visible {
+  box-shadow: var(--shadow-sm);
+  outline: var(--focus-outline);
+  outline-offset: 2px;
 }
 
 .secondary {
@@ -56,9 +68,13 @@
   box-shadow: var(--shadow-sm);
 }
 
-.secondary:hover {
+.secondary:hover:not([aria-disabled='true']) {
   background: var(--bg-subtle);
   border-color: var(--border-strong);
+}
+
+.secondary:active:not([aria-disabled='true']) {
+  background: var(--bg-active);
 }
 
 .ghost {
@@ -66,18 +82,28 @@
   color: var(--text-secondary);
 }
 
-.ghost:hover {
+.ghost:hover:not([aria-disabled='true']) {
   background: var(--bg-hover);
   color: var(--text-primary);
 }
 
-.danger {
-  background: var(--status-deleted);
-  color: var(--accent-contrast);
+.ghost:active:not([aria-disabled='true']) {
+  background: var(--bg-active);
 }
 
-.danger:hover {
-  filter: brightness(1.08);
+.danger {
+  background: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 80%, black);
+  color: var(--accent-contrast);
+  box-shadow: var(--shadow-sm);
+}
+
+.danger:hover:not([aria-disabled='true']) {
+  background: var(--danger-hover);
+}
+
+.danger:active:not([aria-disabled='true']) {
+  background: color-mix(in srgb, var(--danger-hover) 88%, black);
 }
 
 .iconOnly {

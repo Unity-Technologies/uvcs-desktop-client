@@ -50,6 +50,12 @@ textarea:focus-visible {
   box-shadow: none;
 }
 
+/* Focus a click moved back to a menu's trigger, until the keyboard is used (`lib/inputModality`). */
+:root [data-pointer-return-focus]:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 ::selection {
   background: var(--bg-selected-strong);
 }
@@ -77,7 +83,7 @@ textarea:focus-visible {
 
 .mono {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: var(--text-sm);
 }
 
 /* For refresh icons while their data is being fetched. */

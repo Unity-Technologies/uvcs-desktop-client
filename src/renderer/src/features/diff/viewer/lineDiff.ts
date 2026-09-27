@@ -1,6 +1,6 @@
 import { parseDiffFromFile, type FileDiffMetadata } from '@pierre/diffs';
 import type { DiffLinesOptionsNonabortable } from 'diff';
-import { crAgainstLf, shownText } from '../../../lib/lineBreaks';
+import { crAgainstLf, shownText, splitLines } from '../../../lib/lineBreaks';
 import { syntaxLanguage } from '../../../lib/syntaxLanguage';
 import { COMPARISON_METHODS, comparedPart, ignoresLineEndings, type ComparisonMethod } from './comparisonMethod';
 
@@ -43,9 +43,19 @@ export function hasLineChanges({ added, removed }: Pick<LineDiff, 'added' | 'rem
   return added > 0 || removed > 0;
 }
 
-/** Whether `current` shows any line changed from `original` under `method`. */
+/**
+ * Whether `current` shows any line changed from `original` under `method`. Under a method that ignores something, the
+ * texts show none exactly when their lines compare equal one by one, which takes no diff: a quick check, even of big files.
+ */
 export function differsUnder(original: string, current: string, method: ComparisonMethod): boolean {
-  return hasLineChanges(lineDiff(original, current, method));
+  const key = looseLineKey(lineDiffOptions(original, current, method));
+  if (!key) return hasLineChanges(lineDiff(original, current, method));
+  const left = splitLines(shownText(original));
+  const right = splitLines(shownText(current));
+  return left.length !== right.length || left.some((line, index) => {
+    const compared = key(line);
+    return compared === null || compared !== key(right[index]!);
+  });
 }
 
 /**

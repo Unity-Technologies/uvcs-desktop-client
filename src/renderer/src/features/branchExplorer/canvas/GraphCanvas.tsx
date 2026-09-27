@@ -8,11 +8,11 @@ import type { GraphLayout } from '../model/layoutGraph';
 import type { DrawnTargets, GraphScene } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
 import { drawGraph } from './drawGraph';
-import { COLUMN_WIDTH, graphSize } from './geometry';
+import { COLUMN_WIDTH } from './geometry';
 import { captionMetrics } from './captionCard';
 import { hitTest, hoverCardFor, nodePoint, type GraphTarget, type HoverCard, type PointerCardTarget } from './graphTargets';
 import { GraphTooltip, HOVER_CARD_ATTRIBUTE, type TooltipAnchor } from './GraphTooltip';
-import { laneHeaderTop, laneShape } from './laneShape';
+import { graphExtent, laneHeaderTop, laneShape } from './laneShape';
 import { useGraphPalette } from './useGraphPalette';
 import { useGraphViewport } from './useGraphViewport';
 import { useCanvasTip } from './useCanvasTip';
@@ -137,7 +137,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   }, [drawNow]);
 
   const view = useGraphViewport(
-    () => graphSize(sceneRef.current.layout.columnCount, sceneRef.current.layout.rowCount),
+    () => graphExtent(sceneRef.current.layout),
     () => sizeRef.current,
     () => {
       // Whatever moves the graph moves it away from the card's anchor.
@@ -220,12 +220,12 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         showOpeningView: (focusId) => {
           const show = (): void => {
             const point = nodePoint(layout, focusId);
-            if (point) view.jumpTo(openingViewport(graphSize(layout.columnCount, layout.rowCount), sizeRef.current, point.x, point.y));
+            if (point) view.jumpTo(openingViewport(graphExtent(layout), sizeRef.current, point.x, point.y));
           };
           if (sizeRef.current.width === 0) pendingViewRef.current = show;
           else show();
         },
-        fit: () => view.jumpTo(fitToScreen(graphSize(layout.columnCount, layout.rowCount), sizeRef.current)),
+        fit: () => view.jumpTo(fitToScreen(graphExtent(layout), sizeRef.current, view.viewportRef.current)),
         zoomBy: (factor) => view.zoomStep(center().x, center().y, factor),
         focus: () => containerRef.current?.focus(),
       };
@@ -296,6 +296,8 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     clippedTip.hide();
     containerRef.current?.focus();
     if (event.button === 2) {
+      // The menu covers the hover card's place: it would linger under the menu.
+      clearHover();
       contextTargetRef.current = targetAt(event.clientX, event.clientY, false);
       onSelect(contextTargetRef.current);
       return;

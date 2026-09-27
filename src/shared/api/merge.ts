@@ -20,8 +20,9 @@ export interface MergeApi {
   /** Updates the workspace, merging locally changed files that also changed on the branch. */
   updateResolvingConflicts(workspacePath: string, resolutions: UpdateResolutions, operationId: string): Promise<UpdateResult>;
   /**
-   * Shelves the locally changed files the branch deleted or moved (they block the update), undoes them and updates.
+   * Shelves the locally changed files the branch deleted or moved (they block the update), undoes them and updates,
+   * merging the files changed on both sides with `resolutions` (null or incomplete: it stops before updating).
    * The shelve waits in Changes to be restored.
    */
-  shelveBlockedAndUpdate(workspacePath: string, operationId: string): Promise<ShelvedForUpdate>;
+  shelveBlockedAndUpdate(workspacePath: string, resolutions: UpdateResolutions | null, operationId: string): Promise<ShelvedForUpdate>;
 }

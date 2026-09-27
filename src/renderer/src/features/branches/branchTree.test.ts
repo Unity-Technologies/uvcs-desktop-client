@@ -19,6 +19,12 @@ describe('buildBranchTree', () => {
     ]);
   });
 
+  it('orders siblings as people read them, numbers by value', () => {
+    const siblings = ['/main/bulk-10', '/main/Bulk-2', '/main/bulk-1'].map((name) => branch(name, '/main'));
+    const rows = buildBranchTree([branch('/main'), ...siblings], new Set());
+    expect(rows.map((row) => row.branch.name)).toEqual(['/main', '/main/bulk-1', '/main/Bulk-2', '/main/bulk-10']);
+  });
+
   it('hides the children of collapsed branches', () => {
     const rows = buildBranchTree(branches, new Set(['/main/task-1']));
     expect(rows.map((row) => row.branch.name)).toEqual(['/main', '/main/task-1', '/main/task-2']);

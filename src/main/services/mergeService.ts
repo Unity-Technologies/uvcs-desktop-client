@@ -27,7 +27,9 @@ export function createMergeService({ cm, operations }: ServiceContext, { switchS
     incomingChanges: (workspacePath) => readIncomingChanges(cm, workspacePath),
     updateResolvingConflicts: (workspacePath, resolutions, operationId) =>
       operations.run(operationId, (context) => updateWithMerge(cm, workspacePath, resolutions, backupsRoot, context)),
-    shelveBlockedAndUpdate: (workspacePath, operationId) =>
-      operations.run(operationId, (context) => shelveBlockedAndUpdate({ cm, records: switchShelves, leftChanges }, workspacePath, context)),
+    shelveBlockedAndUpdate: (workspacePath, resolutions, operationId) =>
+      operations.run(operationId, (context) =>
+        shelveBlockedAndUpdate({ cm, records: switchShelves, leftChanges, backupsRoot }, workspacePath, resolutions, context),
+      ),
   };
 }

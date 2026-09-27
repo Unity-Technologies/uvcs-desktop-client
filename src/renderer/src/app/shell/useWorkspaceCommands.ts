@@ -29,6 +29,7 @@ export function useWorkspaceCommands(): void {
   const { theme, reviewModeWorkspaces, autoRefresh } = useSettings();
   const reviewing = reviewModeWorkspaces.includes(workspacePath);
   const updateSettings = useUpdateSettings();
+  const commandLogOpen = useCommandLogStore((state) => state.open);
 
   const commands = useMemo<Command[]>(
     () => [
@@ -67,7 +68,7 @@ export function useWorkspaceCommands(): void {
       {
         id: 'workspace.reviewMode',
         group: 'Workspace',
-        label: 'Toggle review mode',
+        label: reviewing ? 'Leave review mode' : 'Enter review mode',
         icon: ListChecks,
         keywords: ['review', 'reviewed', 'mark'],
         run: () => void setReviewMode(workspacePath, !reviewing),
@@ -107,7 +108,7 @@ export function useWorkspaceCommands(): void {
       {
         id: 'app.commandLog',
         group: 'App',
-        label: 'Toggle command log',
+        label: commandLogOpen ? 'Hide command log' : 'Show command log',
         icon: TerminalSquare,
         shortcut: hotkey('commandLog'),
         run: () => useCommandLogStore.getState().toggle(),
@@ -123,7 +124,7 @@ export function useWorkspaceCommands(): void {
         run: () => updateSettings({ theme: choice }),
       })),
     ],
-    [workspacePath, closeWorkspace, theme, reviewing, autoRefresh, updateSettings],
+    [workspacePath, closeWorkspace, theme, reviewing, autoRefresh, commandLogOpen, updateSettings],
   );
 
   useCommands(commands);

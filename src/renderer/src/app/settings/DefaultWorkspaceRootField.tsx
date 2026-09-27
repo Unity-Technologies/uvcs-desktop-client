@@ -1,6 +1,7 @@
 import { FolderOpen } from 'lucide-react';
 import { api } from '../../api/client';
 import { Button } from '../../ui/Button';
+import { useDefaultWorkspaceRoot } from '../home/useDefaultWorkspaceRoot';
 import styles from './SettingsDialog.module.css';
 
 interface DefaultWorkspaceRootFieldProps {
@@ -9,14 +10,18 @@ interface DefaultWorkspaceRootFieldProps {
 }
 
 export function DefaultWorkspaceRootField({ value, onChange }: DefaultWorkspaceRootFieldProps) {
+  // The home folder until one is chosen, shown as the path it is.
+  const folder = useDefaultWorkspaceRoot();
   const choose = async (): Promise<void> => {
-    const folder = await api.system.pickDirectory('Folder for new workspaces', value || undefined);
-    if (folder) onChange(folder);
+    const picked = await api.system.pickDirectory('Folder for new workspaces', folder);
+    if (picked) onChange(picked);
   };
 
   return (
     <div className={styles.folderRow}>
-      <span className={styles.folder}>{value || 'Home folder'}</span>
+      <span className={styles.folder} data-tip={folder}>
+        {folder}
+      </span>
       <Button size="small" icon={<FolderOpen size={13} />} onClick={() => void choose()}>
         Choose…
       </Button>

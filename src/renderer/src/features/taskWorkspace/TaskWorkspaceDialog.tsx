@@ -8,7 +8,7 @@ import { LocationField } from '../../app/home/dialogs/LocationField';
 import { describeProgress } from '../../app/operations/describeProgress';
 import { nextProgressBar, SWEEP } from '../../app/operations/progressBar';
 import { invalidateWorkspace, queryClient } from '../../app/queryClient';
-import { isAffectedByNewBranch } from '../../app/refresh/refreshScopes';
+import { isAffectedByBranchList } from '../../app/refresh/refreshScopes';
 import { useOpenWorkspace } from '../../app/workspace/useOpenWorkspace';
 import { useWorkspaceInfoOf } from '../../app/workspace/useWorkspace';
 import { useWorkspaceList } from '../../app/workspace/workspaceQueries';
@@ -25,6 +25,7 @@ import { describeTaskFailure, setUpTaskWorkspace, taskSteps, type TaskStep, type
 import { taskWorkspaceActions } from './taskWorkspaceActions';
 import { defaultTaskFolder, suggestTaskBranchName, TASK_PARENT_BRANCH, taskWorkspaceName } from './taskWorkspaceNaming';
 import { TaskStepList, type TaskStepProgress } from './TaskStepList';
+import { useBranchExists } from './useBranchExists';
 import styles from './TaskWorkspaceDialog.module.css';
 
 interface TaskWorkspaceOptions {
@@ -66,6 +67,8 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
 
   const branchError = mode === 'new' ? validateBranchName(leaf.trim()) : undefined;
   const branch = mode === 'new' ? `${TASK_PARENT_BRANCH}/${leaf.trim()}` : existingBranch;
+  // A new branch whose name is taken is simply worked on, as if picked under "Existing branch".
+  const typedExists = useBranchExists(workspacePath, mode === 'new' && !branchError && !running ? branch : undefined);
   const folder = chosenFolder ?? (workspace && branch ? defaultTaskFolder(workspacePath, workspace.repositoryName, branch) : '');
   const name = useMemo(() => (folder ? taskWorkspaceName(folder, (workspaces ?? []).map((candidate) => candidate.name)) : ''), [folder, workspaces]);
   const { data: folderCheck } = useQuery({
@@ -77,8 +80,8 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
   });
   const folderProblem = folderCheck && folderCheck !== 'available' ? FOLDER_PROBLEMS[folderCheck] : undefined;
   const plan: TaskWorkspacePlan | null =
-    workspace && branch && !branchError && folder && name && folderCheck === 'available'
-      ? { repository: workspace.repository, branch, newBranch: mode === 'new', workspaceName: name, folder }
+    workspace && branch && !branchError && folder && name && folderCheck === 'available' && (mode === 'existing' || running || typedExists !== undefined)
+      ? { repository: workspace.repository, branch, newBranch: mode === 'new' && !typedExists, workspaceName: name, folder }
       : null;
 
   const chooseBranch = async (): Promise<void> => {
@@ -106,7 +109,7 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
     const outcome = await setUpTaskWorkspace(plan, actions, (step, state) => setStates((current) => ({ ...current, [step]: state })));
     operationId.current = null;
     void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
-    if (plan.newBranch) void invalidateWorkspace(workspacePath, isAffectedByNewBranch);
+    if (plan.newBranch) void invalidateWorkspace(workspacePath, isAffectedByBranchList);
     setRunning(false);
 
     if (outcome.kind === 'failed') {
@@ -164,7 +167,11 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
             disabled={running}
             autoFocus
             error={leaf ? branchError : undefined}
-            hint={`${TASK_PARENT_BRANCH}/${leaf.trim() || '…'}, starting at the latest changeset of ${TASK_PARENT_BRANCH}.`}
+            hint={
+              typedExists
+                ? `${branch} already exists: the new workspace works on it.`
+                : `${TASK_PARENT_BRANCH}/${leaf.trim() || '…'}, starting at the latest changeset of ${TASK_PARENT_BRANCH}.`
+            }
             onChange={(event) => setLeaf(event.target.value)}
           />
         ) : (

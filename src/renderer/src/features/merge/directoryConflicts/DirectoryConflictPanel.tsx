@@ -32,18 +32,19 @@ export function DirectoryConflictPanel({ conflict, labels, resolution, onResolve
         </div>
       </header>
 
+      {/* Yours first, as in the file conflicts' choices and blocks. */}
       <div className={styles.options} role="radiogroup" aria-label="How to resolve">
-        <Option
-          selected={resolution?.choice === 'source'}
-          title={`Keep ${source.name.toLowerCase()}`}
-          detail={<SideDetail side={conflict.source} branch={labels.source} />}
-          onSelect={() => onResolve({ choice: 'source' })}
-        />
         <Option
           selected={resolution?.choice === 'destination'}
           title={`Keep ${destination.name.toLowerCase()}`}
           detail={<SideDetail side={conflict.destination} branch={labels.destination} />}
           onSelect={() => onResolve({ choice: 'destination' })}
+        />
+        <Option
+          selected={resolution?.choice === 'source'}
+          title={`Keep ${source.name.toLowerCase()}`}
+          detail={<SideDetail side={conflict.source} branch={labels.source} />}
+          onSelect={() => onResolve({ choice: 'source' })}
         />
         {canKeepBoth && (
           <Option

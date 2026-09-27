@@ -9,6 +9,7 @@ import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleto
 import { NoSelection } from '../../components/NoSelection';
 import { PathLabel } from '../../components/PathLabel';
 import { SincePicker } from '../../components/SincePicker';
+import { matchesAllWords } from '../../lib/matchesAllWords';
 import { sinceDateFor } from '../../lib/sincePresets';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
@@ -17,6 +18,7 @@ import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SearchField } from '../../ui/SearchField';
+import { cellText } from '../../ui/table/cellText';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ToggleChip } from '../../ui/ToggleChip';
 import { ViewHeader } from '../../ui/ViewHeader';
@@ -32,16 +34,16 @@ const COLUMNS: Column<Label>[] = [
   {
     id: 'name',
     header: 'Name',
-    grow: 1.5,
+    grow: 2,
     sortValue: (label) => label.name,
     render: (label) => (
       <span className={styles.name}>
         <Tag size={13} className={styles.icon} />
-        <Highlight text={label.name} />
+        {cellText(<Highlight text={label.name} />)}
       </span>
     ),
   },
-  { id: 'changeset', header: 'Changeset', width: 100, align: 'end', sortValue: (label) => label.changeset, render: (label) => label.changeset },
+  { id: 'changeset', header: 'Changeset', width: 100, sortValue: (label) => label.changeset, render: (label) => <span className="mono">{label.changeset}</span> },
   { id: 'branch', header: 'Branch', grow: 1, secondary: true, sortValue: (label) => label.branch, render: (label) => <PathLabel path={label.branch} /> },
   { id: 'comment', header: 'Comment', grow: 2, secondary: true, hideBelow: 640, render: (label) => <Highlight text={label.comment} /> },
   { id: 'owner', header: 'Created by', width: 180, hideBelow: 760, sortValue: (label) => label.owner, render: (label) => <UserLabel user={label.owner} /> },
@@ -55,17 +57,18 @@ export function LabelsView() {
   const [search, setSearch] = useState('');
   const [selection, setSelection] = useViewSelection('labels');
 
-  const visible = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    return (labels ?? []).filter((label) => `${label.name} ${label.comment} ${label.branch}`.toLowerCase().includes(needle));
-  }, [labels, search]);
+  const visible = useMemo(
+    () => (search.trim() ? (labels ?? []).filter((label) => matchesAllWords(`${label.name}\n${label.comment}\n${label.branch}\n${label.owner}`, search)) : (labels ?? [])),
+    [labels, search],
+  );
   const selected = visible.find((label) => labelKey(label) === selection.anchor);
+  const filtered = Boolean(search.trim()) || since !== 'anyTime' || onlyMine;
 
   return (
     <>
       <ViewHeader
         title="Labels"
-        subtitle={labels && `${labels.length}`}
+        count={labels?.length}
         actions={
           <>
             <IconButton icon={<RefreshCw size={14} className={isFetching ? 'spinning' : undefined} />} label="Refresh" onClick={() => void invalidateWorkspace(workspacePath)} />
@@ -85,6 +88,8 @@ export function LabelsView() {
         <ListWithDetailsSkeleton columns={COLUMNS} />
       ) : error ? (
         <EmptyState title="Couldn't load labels" description={error.message} />
+      ) : visible.length === 0 && filtered ? (
+        <EmptyState icon={<Tag size={22} />} title="No matching labels" description="Try a different filter or date range." />
       ) : visible.length === 0 ? (
         <EmptyState
           icon={<Tag size={22} />}
@@ -117,6 +122,7 @@ export function LabelsView() {
   );
 }
 
+/** By id, so a renamed label stays selected. */
 function labelKey(label: Label): string {
-  return label.name;
+  return String(label.id);
 }

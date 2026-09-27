@@ -7,6 +7,8 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { prompt } from '../../ui/dialog/prompt';
 import { FILE_SHORTCUTS } from './fileMenu';
 import { createItem, deleteItems, renameItem, targetDirectoryFor } from './fileOperations';
+import { hasRevisionsToShow } from './fileMenuTargets';
+import type { PendingChangesIndex } from './itemStatus';
 import { isWorkspaceRoot } from './workspaceRoot';
 import { useFilesViewStore } from './filesViewStore';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -20,15 +22,16 @@ async function browseRepositoryAtChangeset(): Promise<void> {
 }
 
 /** Palette commands and shortcuts of the Files view, acting on the current selection. */
-export function useFileCommands(workspacePath: string, selected: TreeItem[], onGoToFile: () => void): void {
+export function useFileCommands(workspacePath: string, selected: TreeItem[], pendingChanges: PendingChangesIndex, onGoToFile: () => void): void {
   const commands = useMemo<Command[]>(() => {
     const single = selected.length === 1 ? selected[0]! : undefined;
     const isControlledFile = Boolean(single && !single.isPrivate && single.itemType !== 'directory');
     const directory = targetDirectoryFor(single);
     const hasRoot = selected.some(isWorkspaceRoot);
+    const hasRevisions = Boolean(single && hasRevisionsToShow(single, pendingChanges));
 
     return [
-      { id: 'files.goTo', group: 'Files', label: 'Go to file…', icon: Search, shortcut: GO_TO_FILE_SHORTCUT, run: onGoToFile },
+      { id: 'files.goTo', group: 'Files', label: 'Go to file…', icon: Search, shortcut: GO_TO_FILE_SHORTCUT, run: () => onGoToFile() },
       {
         id: 'files.browseRepository',
         group: 'Files',
@@ -76,8 +79,8 @@ export function useFileCommands(workspacePath: string, selected: TreeItem[], onG
         label: 'View history of selected item',
         icon: History,
         shortcut: FILE_SHORTCUTS.history,
-        disabled: !single || single.isPrivate || hasRoot,
-        run: () => single && !hasRoot && navigation.openPage({ kind: 'history', path: single.path }),
+        disabled: !single || !hasRevisions || hasRoot,
+        run: () => single && hasRevisions && !hasRoot && navigation.openPage({ kind: 'history', path: single.path }),
       },
       {
         id: 'files.annotate',
@@ -85,8 +88,8 @@ export function useFileCommands(workspacePath: string, selected: TreeItem[], onG
         label: 'Annotate selected file',
         icon: ScanText,
         shortcut: FILE_SHORTCUTS.annotate,
-        disabled: !single || single.isPrivate || !canAnnotate(single.itemType),
-        run: () => single && navigation.openPage({ kind: 'annotate', path: single.path }),
+        disabled: !single || !hasRevisions || !canAnnotate(single.itemType),
+        run: () => single && hasRevisions && canAnnotate(single.itemType) && navigation.openPage({ kind: 'annotate', path: single.path }),
       },
       {
         id: 'files.showChanges',
@@ -98,7 +101,7 @@ export function useFileCommands(workspacePath: string, selected: TreeItem[], onG
         run: () => useFilesViewStore.getState().setDetailsTab('changes'),
       },
     ];
-  }, [workspacePath, selected, onGoToFile]);
+  }, [workspacePath, selected, pendingChanges, onGoToFile]);
 
   useCommands(commands);
 }

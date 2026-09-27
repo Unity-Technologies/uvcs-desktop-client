@@ -28,7 +28,7 @@ export function IncomingChangesView() {
   const header = (
     <ViewHeader
       title="Incoming"
-      subtitle={incoming?.branch && `${incoming.changesetCount} new on ${incoming.branch}`}
+      subtitle={incoming?.branch && (incoming.changesetCount > 0 ? `${incoming.changesetCount} new on ${incoming.branch}` : incoming.branch)}
       actions={<IconButton icon={<RefreshCw size={14} />} label="Refresh" loading={isFetching} onClick={() => void invalidateWorkspace(workspacePath)} />}
     />
   );
@@ -76,6 +76,7 @@ function IncomingSession({ workspacePath, incoming, header }: IncomingSessionPro
   const [updating, setUpdating] = useState(false);
 
   const conflictPaths = useMemo(() => new Set(incoming.conflicts.map((conflict) => conflict.path)), [incoming.conflicts]);
+  const blockedPaths = useMemo(() => new Set(incoming.blockedPaths), [incoming.blockedPaths]);
   const pendingConflictPaths = new Set(states.filter((state) => !state.resolution).map((state) => state.file.key));
   const openToolByPath = new Map(states.flatMap((state) => (state.openTool ? [[state.file.key, state.openTool.toolName] as const] : [])));
   const resolutions = collectUpdateResolutions(states);
@@ -98,7 +99,7 @@ function IncomingSession({ workspacePath, incoming, header }: IncomingSessionPro
   const update = (): Promise<void> =>
     whileUpdating(async () => {
       if (incoming.conflicts.length === 0) await updateToIncoming(workspacePath, incoming);
-      else if (resolutions) await updateResolvingConflicts(workspacePath, resolutions);
+      else if (resolutions) await updateResolvingConflicts(workspacePath, incoming, resolutions);
     });
 
   const selectedChangeset = selection?.kind === 'changeset' ? incoming.changesets.find((changeset) => changeset.id === selection.id) : undefined;
@@ -114,7 +115,7 @@ function IncomingSession({ workspacePath, incoming, header }: IncomingSessionPro
         canUpdate={incoming.conflicts.length === 0 || Boolean(resolutions)}
         updating={updating}
         onUpdate={() => void update()}
-        onShelveBlockedAndUpdate={() => void whileUpdating(() => shelveBlockedAndUpdate(workspacePath))}
+        onShelveBlockedAndUpdate={() => void whileUpdating(() => shelveBlockedAndUpdate(workspacePath, incoming, resolutions))}
         run={run.progress || runPlans.length > 0 ? <ResolveRunControl states={states} run={run} plans={runPlans} /> : undefined}
       />
       <SplitPane
@@ -127,6 +128,7 @@ function IncomingSession({ workspacePath, incoming, header }: IncomingSessionPro
             files={incoming.files}
             conflictPaths={conflictPaths}
             pendingConflictPaths={pendingConflictPaths}
+            blockedPaths={blockedPaths}
             openToolByPath={openToolByPath}
             selection={selection}
             onSelect={setSelection}

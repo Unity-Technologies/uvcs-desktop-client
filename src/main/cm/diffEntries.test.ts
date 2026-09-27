@@ -17,6 +17,11 @@ describe('parseDiffEntries', () => {
     ]);
   });
 
+  it('sorts numbered files as people read them', () => {
+    const output = ['file_10.txt', 'file_2.txt', 'File_1.txt', 'file_100.txt'].map((name) => record('A', `"/${name}"`, '""', '-1', '5', 'F')).join('');
+    expect(parseDiffEntries(output).map((entry) => entry.path)).toEqual(['File_1.txt', 'file_2.txt', 'file_10.txt', 'file_100.txt']);
+  });
+
   it('shows the same revision on both sides of a pure move', () => {
     const [moved] = parseDiffEntries(record('M', '"/docs/changelog.md"', '"/docs/notes.md"', '-1', '14', 'F'));
     expect(moved).toMatchObject({ status: 'moved', oldPath: 'docs/notes.md', baseRevisionId: 14, revisionId: 14 });

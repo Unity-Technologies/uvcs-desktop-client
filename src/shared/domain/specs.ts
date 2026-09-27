@@ -4,7 +4,8 @@ export const spec = {
   changeset: (id: number): string => `cs:${id}`,
   label: (name: string): string => `lb:${name}`,
   shelve: (id: number): string => `sh:${id}`,
-  revision: (revisionId: number): string => `revid:${revisionId}`,
+  /** `cm cat` takes a bare `revid:`; `cm annotate` finds it only with its repository. */
+  revision: (revisionId: number, repository?: string): string => (repository ? `revid:${revisionId}@${repository}` : `revid:${revisionId}`),
   itemAtChangeset: (itemId: number, changesetId: number): string => `itemid:${itemId}#cs:${changesetId}`,
   serverPathAtChangeset: (serverPath: string, changesetId: number): string =>
     `serverpath:${serverPath}#cs:${changesetId}`,
@@ -15,10 +16,10 @@ export const spec = {
 
 /**
  * Whether a revision spec is pinned to a changeset or a shelve (`serverpath:/a.ts#cs:12`, `itemid:27#sh:3`,
- * `src/a.ts#cs:12`): what it reads never changes.
+ * `src/a.ts#cs:12`) or names a revision (`revid:45@game@local`): what it reads never changes.
  */
 export function isPinnedSpec(revisionSpec: string): boolean {
-  return /#(?:cs|sh):\d+$/.test(revisionSpec);
+  return /#(?:cs|sh):\d+$/.test(revisionSpec) || /^revid:\d+(?:@|$)/.test(revisionSpec);
 }
 
 export function repositorySpec(name: string, server: string): string {

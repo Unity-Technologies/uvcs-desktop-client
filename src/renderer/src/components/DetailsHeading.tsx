@@ -13,7 +13,10 @@ interface DetailsHeadingProps {
   /** The object's name (a branch, a label). Without it the comment's first line is the title and the rest its description. */
   name?: ReactNode;
   comment?: string;
-  /** Saves an edited comment; without it the heading is read-only (cm can't change every object's comment). */
+  /**
+   * Saves an edited comment, resolving to false when it couldn't (the editor then stays open); without it the heading
+   * is read-only (cm can't change every object's comment).
+   */
   onSave?: (comment: string) => Promise<unknown>;
 }
 
@@ -128,8 +131,10 @@ function CommentEditor({ draft, withSummary, original, onChange, onSave, onClose
     const comment = joinComment(draft);
     if (comment !== original.trim()) {
       setSaving(true);
-      await onSave(comment);
+      const saved = await onSave(comment);
       setSaving(false);
+      // A comment that couldn't be saved stays to try again (the failure shows as a toast).
+      if (saved === false) return;
     }
     onClose();
   };

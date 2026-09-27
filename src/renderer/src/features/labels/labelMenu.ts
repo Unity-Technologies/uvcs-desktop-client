@@ -5,6 +5,7 @@ import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { copyToClipboard } from '../../lib/copyToClipboard';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { mergeTo } from '../branches/branchOperations';
+import { MERGE_INTO_WORKSPACE, serverMergeLabel } from '../branches/mergeMenuLabels';
 import {
   browseLabel,
   createBranchFromLabel,
@@ -26,8 +27,8 @@ export function labelMenu(workspacePath: string, labels: Label[]): MenuEntry[] {
     single && { id: 'switch', label: 'Switch to this label', icon: ArrowRightLeft, run: () => void switchToLabel(workspacePath, single) },
     single && { id: 'branch', label: 'New branch from label…', icon: GitBranchPlus, run: () => createBranchFromLabel(workspacePath, single) },
     SEPARATOR,
-    single && { id: 'merge', label: 'Merge into workspace', icon: GitMerge, run: () => mergeFromLabel(single) },
-    single && { id: 'mergeTo', label: 'Merge to…', icon: GitPullRequestArrow, run: () => void mergeTo(spec.label(single.name), single.name) },
+    single && { id: 'merge', label: MERGE_INTO_WORKSPACE, icon: GitMerge, run: () => mergeFromLabel(single) },
+    single && { id: 'mergeTo', label: serverMergeLabel(), icon: GitPullRequestArrow, run: () => void mergeTo(spec.label(single.name), single.name) },
     SEPARATOR,
     single && { id: 'diff', label: 'Show labeled changeset', icon: FileDiff, run: () => showLabelChanges(single) },
     single && { id: 'diffWith', label: 'Compare with another label…', icon: GitCompareArrows, run: () => void diffWithAnotherLabel(single) },

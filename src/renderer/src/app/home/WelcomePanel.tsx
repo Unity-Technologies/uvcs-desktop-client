@@ -5,7 +5,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { SearchField } from '../../ui/SearchField';
 import { useWorkspaceEntries } from './useWorkspaceEntries';
 import { WelcomeActions } from './WelcomeActions';
-import { WorkspaceList, type WorkspaceListHandle } from './WorkspaceList';
+import { WorkspaceList, type WorkspaceListHandle, type WorkspaceListSection } from './WorkspaceList';
 import { WorkspaceListSkeleton } from './WorkspaceListSkeleton';
 import styles from './Home.module.css';
 
@@ -22,6 +22,28 @@ export function WelcomePanel({ onOpen, onOpenFolder, onBrowseRepositories }: Wel
   const { workspaces, recent, all, isLoading, error } = useWorkspaceEntries(filter);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<WorkspaceListHandle>(null);
+
+  const sections: WorkspaceListSection[] = [
+    {
+      id: 'recent',
+      title: 'Recent',
+      entries: recent,
+      empty: (
+        <div className={styles.firstRun}>
+          <Clock size={16} />
+          <span>
+            <strong>Nothing here yet.</strong> The workspaces you open show up here, one click away.
+          </span>
+        </div>
+      ),
+    },
+    {
+      id: 'all',
+      title: 'All workspaces',
+      entries: all,
+      empty: <p className={styles.sectionEmpty}>No workspaces on this computer yet. Create one from a repository to get started.</p>,
+    },
+  ];
 
   return (
     <>
@@ -45,11 +67,7 @@ export function WelcomePanel({ onOpen, onOpenFolder, onBrowseRepositories }: Wel
               placeholder="Find a workspace"
               width="100%"
               autoFocus
-              onKeyDown={(event) => {
-                if (event.key !== 'ArrowDown') return;
-                event.preventDefault();
-                listRef.current?.focusFirst();
-              }}
+              onKeyDown={(event) => listRef.current?.takeSearchKey(event)}
             />
           </div>
 
@@ -61,34 +79,8 @@ export function WelcomePanel({ onOpen, onOpenFolder, onBrowseRepositories }: Wel
               query={filter}
               onOpen={onOpen}
               onLeaveTop={() => searchRef.current?.focus()}
-              sections={[
-                {
-                  id: 'recent',
-                  title: 'Recent',
-                  entries: recent,
-                  empty: filter ? (
-                    <p className={styles.sectionEmpty}>No recent workspace matches.</p>
-                  ) : (
-                    <div className={styles.firstRun}>
-                      <Clock size={16} />
-                      <span>
-                        <strong>Nothing here yet.</strong> The workspaces you open come back here, so picking up where you left off
-                        is one click away.
-                      </span>
-                    </div>
-                  ),
-                },
-                {
-                  id: 'all',
-                  title: 'All workspaces',
-                  entries: all,
-                  empty: (
-                    <p className={styles.sectionEmpty}>
-                      {filter ? 'No workspace matches.' : 'No workspaces on this computer yet. Create one from a repository to get started.'}
-                    </p>
-                  ),
-                },
-              ]}
+              sections={sections}
+              noMatches={<p className={styles.sectionEmpty}>No workspace matches.</p>}
             />
           )}
         </div>

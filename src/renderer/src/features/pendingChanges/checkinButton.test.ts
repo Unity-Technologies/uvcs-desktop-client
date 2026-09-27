@@ -31,6 +31,10 @@ describe('checkinButtonLabel', () => {
     expect(wordings(checkinButtonLabel(base))).toEqual(['Check in 4 changes | to /main | 1.1 MB', 'Check in 4 changes | to /main', 'Check in 4 changes', 'Check in 4']);
   });
 
+  it('writes big counts with thousands separators, in every wording', () => {
+    expect(wordings(checkinButtonLabel({ ...base, includedCount: 3008, uploadBytes: 0 }))).toEqual(['Check in 3,008 changes | to /main', 'Check in 3,008 changes', 'Check in 3,008']);
+  });
+
   it('shortens a child branch to its leaf before dropping it', () => {
     expect(wordings(checkinButtonLabel({ ...base, branchName: '/main/scm1008874/scm1008874d', uploadBytes: 0 }))).toEqual([
       'Check in 4 changes | to /main/scm1008874/scm1008874d',
@@ -82,9 +86,14 @@ describe('checkinButtonLabel', () => {
 
 describe('checkinDisabledReason', () => {
   it('asks to select changes when none are checked', () => {
-    expect(checkinDisabledReason('checkin', 0)).toBe('Select changes to check in');
-    expect(checkinDisabledReason('shelve', 0)).toBe('Select changes to shelve');
-    expect(checkinDisabledReason('checkin', 2)).toBeNull();
+    expect(checkinDisabledReason('checkin', 0, 0)).toBe('Select changes to check in');
+    expect(checkinDisabledReason('shelve', 0, 0)).toBe('Select changes to shelve');
+    expect(checkinDisabledReason('checkin', 2, 2)).toBeNull();
+  });
+
+  it('says why a shelve of only private files is not possible', () => {
+    expect(checkinDisabledReason('shelve', 0, 3)).toBe("Private files and links can't be shelved");
+    expect(checkinDisabledReason('shelve', 1, 3)).toBeNull();
   });
 });
 
