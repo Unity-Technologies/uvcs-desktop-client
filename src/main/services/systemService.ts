@@ -1,8 +1,10 @@
+import { existsSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { normalize } from 'node:path';
 import { app, dialog, net, shell } from 'electron';
 import type { SystemApi } from '@shared/api/system';
 import { checkSetup } from '../cm/setupCheck';
+import { outermostPaths } from '../files/pathContainment';
 import { callerId } from '../ipc/caller';
 import { GravatarCache } from '../system/gravatar';
 import { openTerminal } from '../system/openTerminal';
@@ -38,7 +40,10 @@ export function createSystemService({ cm, operations, windows, settings }: Servi
     openTerminal: (path) => openTerminal(normalize(path)),
     openExternal: (url) => shell.openExternal(url),
     moveToTrash: async (paths) => {
-      for (const path of paths) await shell.trashItem(normalize(path));
+      // A folder takes what's picked inside it along, and what's already gone has nothing left to trash.
+      for (const path of outermostPaths(paths.map((path) => normalize(path)), process.platform)) {
+        if (existsSync(path)) await shell.trashItem(path);
+      }
     },
     pickDirectory: async (title, defaultPath) => {
       const result = await dialog.showOpenDialog({ title, defaultPath, properties: ['openDirectory', 'createDirectory'] });
