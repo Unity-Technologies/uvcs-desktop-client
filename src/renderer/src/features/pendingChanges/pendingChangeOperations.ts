@@ -4,7 +4,7 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByShelving } from '../../app/refresh/refreshScopes';
 import { copyToClipboard } from '../../lib/copyToClipboard';
-import { pluralize } from '../../lib/text';
+import { formatCount, pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 import { existsOnDisk, isControlled } from './changeCategories';
@@ -63,7 +63,7 @@ export function openWithDefaultApp(workspacePath: string, change: PendingChange)
 
 export async function deletePrivateFiles(workspacePath: string, changes: Pick<PendingChange, 'path'>[]): Promise<void> {
   const confirmed = await confirm({
-    title: changes.length === 1 ? `Move ${fileName(changes[0]!.path)} to the trash?` : `Move ${changes.length} files to the trash?`,
+    title: changes.length === 1 ? `Move ${fileName(changes[0]!.path)} to the trash?` : `Move ${formatCount(changes.length)} files to the trash?`,
     message: 'These files are not under version control. You can restore them from the trash.',
     confirmLabel: 'Move to trash',
     danger: true,
@@ -97,7 +97,7 @@ export const FILTER_LIST_FILES: Record<FilterRuleList, string> = {
 };
 
 export function copyPaths(paths: string[]): void {
-  copyToClipboard(paths.join('\n'), paths.length === 1 ? 'Path' : `${paths.length} paths`);
+  copyToClipboard(paths.join('\n'), paths.length === 1 ? 'Path' : `${formatCount(paths.length)} paths`);
 }
 
 export function fileName(path: string): string {

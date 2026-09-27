@@ -31,6 +31,10 @@ describe('checkinButtonLabel', () => {
     expect(wordings(checkinButtonLabel(base))).toEqual(['Check in 4 changes | to /main | 1.1 MB', 'Check in 4 changes | to /main', 'Check in 4 changes', 'Check in 4']);
   });
 
+  it('writes big counts with thousands separators, in every wording', () => {
+    expect(wordings(checkinButtonLabel({ ...base, includedCount: 3008, uploadBytes: 0 }))).toEqual(['Check in 3,008 changes | to /main', 'Check in 3,008 changes', 'Check in 3,008']);
+  });
+
   it('shortens a child branch to its leaf before dropping it', () => {
     expect(wordings(checkinButtonLabel({ ...base, branchName: '/main/scm1008874/scm1008874d', uploadBytes: 0 }))).toEqual([
       'Check in 4 changes | to /main/scm1008874/scm1008874d',

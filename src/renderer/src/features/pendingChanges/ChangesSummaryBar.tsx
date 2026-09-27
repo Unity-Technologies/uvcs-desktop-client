@@ -1,6 +1,7 @@
 import { ChevronDown, Undo2 } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
+import { formatCount, pluralize } from '../../lib/text';
 import { Checkbox, type CheckState } from '../../ui/Checkbox';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
@@ -26,13 +27,13 @@ export function ChangesSummaryBar({ changes, totalCount, isIncluded, onSetInclud
   const checkState: CheckState = includedCount === 0 ? false : includedCount === candidates.length ? true : 'mixed';
   const undoable = changes.filter(isControlled);
   const filtered = changes.length !== totalCount;
-  const undoAllLabel = filtered ? `Undo the ${undoable.length} shown changes` : 'Undo all changes';
+  const undoAllLabel = filtered ? `Undo the ${formatCount(undoable.length)} shown changes` : 'Undo all changes';
 
   return (
     <div className={styles.bar} style={{ '--checkbox-inset': `${checkboxInset}px` } as CSSProperties}>
       <Checkbox checked={checkState} disabled={candidates.length === 0} onChange={(checked) => onSetIncluded(candidates, checked)} />
       <span className={styles.label}>
-        {filtered ? `${changes.length} of ${totalCount}` : `${totalCount} ${totalCount === 1 ? 'file' : 'files'}`}
+        {filtered ? `${formatCount(changes.length)} of ${formatCount(totalCount)}` : pluralize(totalCount, 'file')}
       </span>
       <div className={styles.undo}>
         <IconButton

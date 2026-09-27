@@ -1,4 +1,5 @@
 import { TriangleAlert } from 'lucide-react';
+import { pluralize } from '../../lib/text';
 import { Button } from '../../ui/Button';
 import { confirm } from '../../ui/dialog/confirm';
 import { bulkPrivateMessage, type BulkPrivate } from './bulkPrivate';
@@ -40,7 +41,7 @@ export function BulkPrivateNotice({ bulk, onExclude, onIgnoreFolder }: BulkPriva
 /** A check-in that adds a pile of private files goes ahead only once confirmed, even from the keyboard. */
 export function confirmBulkPrivateCheckin(bulk: BulkPrivate): Promise<boolean> {
   return confirm({
-    title: `Check in ${bulk.fileCount.toLocaleString('en-US')} private ${bulk.fileCount === 1 ? 'file' : 'files'}?`,
+    title: `Check in ${pluralize(bulk.fileCount, 'private file')}?`,
     message: `${bulkPrivateMessage(bulk)}. They are added to version control with this check-in; build output and generated files usually belong in ${FILTER_LIST_FILES.ignore}.`,
     confirmLabel: 'Check in anyway',
   });

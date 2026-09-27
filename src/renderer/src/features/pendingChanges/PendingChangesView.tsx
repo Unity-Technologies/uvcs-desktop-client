@@ -9,6 +9,7 @@ import { selectAfterLeaving, settleBeforeLeaving } from '../../app/navigation/le
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { joinComment } from '../../lib/comment';
 import { EMPTY_SELECTION } from '../../lib/selection';
+import { formatCount } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
@@ -164,7 +165,7 @@ export function PendingChangesView() {
   const header = (
     <ViewHeader
       title="Changes"
-      subtitle={snapshot && `${snapshot.changes.filter(isCheckinCandidate).length} pending`}
+      subtitle={snapshot && `${formatCount(snapshot.changes.filter(isCheckinCandidate).length)} pending`}
       actions={
         <>
           <ReviewModeButton workspacePath={workspacePath} />
@@ -308,7 +309,7 @@ export function PendingChangesView() {
         }
         second={
           selectedCount > 1 ? (
-            <EmptyState icon={<Files size={24} />} title={`${selectedCount} files selected`} description="Select a single file to see its diff." />
+            <EmptyState icon={<Files size={24} />} title={`${formatCount(selectedCount)} files selected`} description="Select a single file to see its diff." />
           ) : focused ? (
             <ChangeDiffPanel workspacePath={workspacePath} change={focused} reviewMark={review.marks.get(focused.path)} />
           ) : (

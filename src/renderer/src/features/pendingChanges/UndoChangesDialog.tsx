@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge } from '../../components/StatusBadge';
-import { fileNameOf, pluralize } from '../../lib/text';
+import { fileNameOf, formatCount, pluralize } from '../../lib/text';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
@@ -29,7 +29,7 @@ function UndoChangesDialog({ changes, finish }: { changes: PendingChange[]; fini
 
   return (
     <Dialog
-      title={changes.length === 1 ? `Undo changes to ${fileNameOf(changes[0]!.path)}?` : `Undo ${changes.length} changes?`}
+      title={changes.length === 1 ? `Undo changes to ${fileNameOf(changes[0]!.path)}?` : `Undo ${formatCount(changes.length)} changes?`}
       width={540}
       onClose={() => finish(undefined)}
       onSubmit={() => finish({ backup })}
