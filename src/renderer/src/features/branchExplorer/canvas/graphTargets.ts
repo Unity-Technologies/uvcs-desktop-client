@@ -5,7 +5,7 @@ import type { DrawnTargets } from './drawContext';
 import type { DrawnBox } from './drawnBoxes';
 import { distanceToCurve, linkCurve, type Point } from './curves';
 import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, COLUMN_WIDTH, columnX, GRAPH_PADDING, NODE_RADIUS, ROW_HEIGHT, rowY } from './geometry';
-import { estimatedLabelWidth, LABEL_HEIGHT, labelTop } from './labelPlacement';
+import { estimatedLabelWidth, LABEL_HEIGHT, labelChips } from './labelPlacement';
 import { laneShape } from './laneShape';
 
 /** Something the pointer can be on. */
@@ -13,7 +13,8 @@ export type GraphTarget =
   | { kind: 'changeset'; id: number }
   /** A "+N" node standing for changesets collapsed by "Only relevant changesets". */
   | { kind: 'collapsed'; node: NodeLayout }
-  | { kind: 'label'; label: GraphLabel }
+  /** A label chip; `more` are the labels of its changeset that didn't fit, counted on it. */
+  | { kind: 'label'; label: GraphLabel; more: readonly GraphLabel[] }
   | { kind: 'branch'; lane: Lane }
   | { kind: 'mergeLink'; link: MergeLink }
   /** The code review chip in a branch's header card. */
@@ -88,17 +89,23 @@ function hitChangeset(layout: GraphLayout, point: Point): GraphTarget | null {
   return distance <= NODE_HIT_RADIUS ? { kind: 'changeset', id: node.changeset.id } : null;
 }
 
-function hitLabel(layout: GraphLayout, point: Point): GraphTarget | null {
-  const node = layout.nodesByColumn[Math.round((point.x - GRAPH_PADDING.left) / COLUMN_WIDTH)];
-  const labels = node ? layout.labelsByChangeset.get(node.changeset.id) : undefined;
-  if (!node || !labels) return null;
+/** How many columns away a long label's chip may still reach. */
+const LABEL_REACH_COLUMNS = 3;
 
-  const label = labels.find((candidate, index) => {
-    const top = labelTop(layout, node, index);
-    const halfWidth = estimatedLabelWidth(candidate.name) / 2;
-    return point.y >= top && point.y <= top + LABEL_HEIGHT && Math.abs(columnX(node.column) - point.x) <= halfWidth;
-  });
-  return label ? { kind: 'label', label } : null;
+/** A chip is centered on its changeset and can be wider than a column: the nearest changesets' chips are looked at. */
+function hitLabel(layout: GraphLayout, point: Point): GraphTarget | null {
+  const column = Math.round((point.x - GRAPH_PADDING.left) / COLUMN_WIDTH);
+  for (let distance = 0; distance <= LABEL_REACH_COLUMNS; distance++) {
+    for (const candidate of distance === 0 ? [column] : [column - distance, column + distance]) {
+      const node = layout.nodesByColumn[candidate];
+      if (!node || !layout.labelsByChangeset.has(node.changeset.id)) continue;
+      const chip = labelChips(layout, node).find(
+        ({ text, top }) => point.y >= top && point.y <= top + LABEL_HEIGHT && Math.abs(columnX(node.column) - point.x) <= estimatedLabelWidth(text) / 2,
+      );
+      if (chip) return { kind: 'label', label: chip.label, more: chip.more };
+    }
+  }
+  return null;
 }
 
 function hitMergeLink(layout: GraphLayout, point: Point): GraphTarget | null {

@@ -30,6 +30,15 @@ export function diffPresentation(left: FileContent, right: FileContent, represen
   return { kind: 'binary' };
 }
 
+/**
+ * Whether a text diff shows lines, so the header's ways of viewing them (comparison method, collapse, wrap,
+ * Split/Unified) have something to act on: not an empty or unchanged file that can't be typed into, which shows a
+ * note instead.
+ */
+export function showsLines(presentation: DiffPresentation, editable: boolean): boolean {
+  return presentation.kind === 'text' && (editable || !(presentation.empty || presentation.identical));
+}
+
 function imagePresentation(left: FileContent, right: FileContent): DiffPresentation {
   return { kind: 'image', comparable: Boolean(left.imageDataUrl && right.imageDataUrl) };
 }

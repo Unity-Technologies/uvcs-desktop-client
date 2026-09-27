@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { collapseGroups, COLLAPSED_ROWS, rankGroups, type SearchGroup, type SearchResult } from './searchResults';
+import { collapseGroups, COLLAPSED_ROWS, moreLabel, rankGroups, type SearchGroup, type SearchResult } from './searchResults';
 
 function result(id: string, quality?: number): SearchResult {
   return { id, icon: () => null, label: id, quality, run: () => {} };
@@ -58,5 +58,16 @@ describe('collapseGroups', () => {
   it('shows expanded sections in full', () => {
     expect(collapseGroups(groups, new Set(['commands']))[0]).toMatchObject({ more: 0, results: groups[0]!.results });
     expect(collapseGroups(groups, 'all').every((group) => group.more === 0)).toBe(true);
+  });
+});
+
+describe('moreLabel', () => {
+  it('counts what a collapsed section holds back in its own words, one or many', () => {
+    expect(moreLabel({ heading: 'Branches', more: 1 })).toBe('1 more branch');
+    expect(moreLabel({ heading: 'Branches', more: 2 })).toBe('2 more branches');
+    expect(moreLabel({ heading: 'Commands', more: 1 })).toBe('1 more command');
+    expect(moreLabel({ heading: 'Pending changes', more: 1 })).toBe('1 more pending change');
+    expect(moreLabel({ heading: 'Shelves', more: 1 })).toBe('1 more shelve');
+    expect(moreLabel({ heading: 'Code reviews', more: 29 })).toBe('29 more code reviews');
   });
 });

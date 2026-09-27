@@ -1,11 +1,14 @@
 import type { RevisionType, TreeItem } from '@shared/domain/explorer';
 import { api } from '../../api/client';
+import { queryKeys } from '../../api/queryKeys';
 import { runAction, runRead } from '../../app/operations/runOperation';
+import { queryClient } from '../../app/queryClient';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { absolutePath, deletePrivateFiles, fileName } from '../pendingChanges/pendingChangeOperations';
 import { useFilesViewStore } from './filesViewStore';
 import { parentOf } from './fileTreeRows';
+import { itemNameProblem } from './itemName';
 
 export function openItem(workspacePath: string, item: Pick<TreeItem, 'path'>): void {
   void runRead("Couldn't open the file", () => api.system.openPath(absolutePath(workspacePath, item.path)));
@@ -51,13 +54,21 @@ export async function deleteItems(workspacePath: string, items: TreeItem[]): Pro
 }
 
 export async function renameItem(workspacePath: string, item: TreeItem): Promise<void> {
-  const newName = await prompt({ title: `Rename ${item.name}`, label: 'New name', initialValue: item.name, confirmLabel: 'Rename' });
-  if (!newName) return;
-
   const parent = parentOf(item.path);
+  const siblings = listedNames(workspacePath, parent).filter((name) => name !== item.name);
+  const newName = await prompt({
+    title: `Rename ${item.name}`,
+    label: 'New name',
+    initialValue: item.name,
+    confirmLabel: 'Rename',
+    validate: (name) => itemNameProblem(name, siblings, { allowFolders: false }),
+  });
+  if (!newName || newName === item.name) return;
+
   const newPath = parent ? `${parent}/${newName}` : newName;
   await runAction(workspacePath, `Couldn't rename ${item.name}`, async () => {
-    await api.explorer.move(workspacePath, item.path, newPath);
+    if (item.isPrivate) await api.explorer.renamePrivate(workspacePath, item.path, newPath);
+    else await api.explorer.move(workspacePath, item.path, newPath);
     useFilesViewStore.getState().requestReveal(newPath);
   });
 }
@@ -65,11 +76,13 @@ export async function renameItem(workspacePath: string, item: TreeItem): Promise
 /** Asks for a name and creates a new, added file or directory inside `directory` (`''` is the root). */
 export async function createItem(workspacePath: string, directory: string, kind: 'file' | 'directory'): Promise<void> {
   const noun = kind === 'file' ? 'file' : 'folder';
+  const siblings = listedNames(workspacePath, directory);
   const name = await prompt({
     title: `New ${noun}`,
     label: 'Name',
     description: `Created in /${directory} and added to version control.`,
     confirmLabel: `Create ${noun}`,
+    validate: (typed) => itemNameProblem(typed, siblings, { allowFolders: true }),
   });
   if (!name) return;
 
@@ -84,6 +97,12 @@ export function changeRevisionType(workspacePath: string, items: TreeItem[], typ
   return runAction(workspacePath, "Couldn't change the revision type", () =>
     api.explorer.changeRevisionType(workspacePath, items.map((item) => item.path), type),
   );
+}
+
+/** The names in a folder, as far as its listing is read. */
+function listedNames(workspacePath: string, directory: string): string[] {
+  const listing = queryClient.getQueryData<TreeItem[]>(queryKeys.inWorkspace(workspacePath, 'explorer', 'directory', directory));
+  return listing?.map((item) => item.name) ?? [];
 }
 
 /** The directory new items go into: the selected directory itself, or the parent of the selected file. */

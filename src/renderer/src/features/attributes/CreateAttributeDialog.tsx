@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { api } from '../../api/client';
 import { runVoidAction } from '../../app/operations/runOperation';
+import { isAffectedByAttributes } from '../../app/refresh/refreshScopes';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { TextArea, TextField } from '../../ui/TextField';
+import { validateAttributeName } from './attributeNames';
 
 export function openCreateAttributeDialog(workspacePath: string): void {
   openDialog((close) => <CreateAttributeDialog workspacePath={workspacePath} onClose={close} />);
@@ -15,12 +17,12 @@ function CreateAttributeDialog({ workspacePath, onClose }: { workspacePath: stri
   const [comment, setComment] = useState('');
   const [creating, setCreating] = useState(false);
   const trimmed = name.trim();
-  const error = /\s/.test(trimmed) ? 'Attribute names cannot contain spaces.' : undefined;
+  const error = validateAttributeName(trimmed);
 
   const create = async (): Promise<void> => {
     if (!trimmed || error) return;
     setCreating(true);
-    const created = await runVoidAction(workspacePath, "Couldn't create the attribute", () => api.attributes.createType(workspacePath, trimmed, comment.trim()));
+    const created = await runVoidAction(workspacePath, "Couldn't create the attribute", () => api.attributes.createType(workspacePath, trimmed, comment.trim()), isAffectedByAttributes);
     setCreating(false);
     if (created) onClose();
   };

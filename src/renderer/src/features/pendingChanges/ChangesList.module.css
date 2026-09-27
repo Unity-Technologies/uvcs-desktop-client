@@ -83,6 +83,7 @@
 }
 
 .row:hover .groupMenu,
+.groupMenu:focus-visible,
 .groupMenu[data-state='open'] {
   opacity: 1;
 }

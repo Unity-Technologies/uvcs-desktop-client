@@ -19,6 +19,12 @@ export function describeServer(server: string): { label: string; detail?: string
   return organization ? { label: organization, detail: 'Cloud' } : { label: server };
 }
 
+/** A server as a choice in a list, named as the sidebar names it: `This computer`, `acme · Cloud`, `host:8087`. */
+export function serverChoiceLabel(server: string): string {
+  const { label, detail } = describeServer(server);
+  return detail ? `${label} · ${detail}` : label;
+}
+
 /** `codice@codice@cloud` → `codice` on `codice@cloud`: repository names never contain `@`, so the server is everything after the first one. */
 export function splitRepositorySpec(spec: string): { name: string; server: string } {
   const at = spec.indexOf('@');

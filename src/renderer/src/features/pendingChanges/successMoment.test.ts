@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isOutlivedByChanges, SUCCESS_MOMENT_MS, successMomentLeft, type SuccessMoment } from './successMoment';
+import { checkedInMessage, isOutlivedByChanges, SUCCESS_MOMENT_MS, successCardTellsCheckin, successMomentLeft, type SuccessMoment } from './successMoment';
 
 const moment: SuccessMoment = { verb: 'Checked in', changesetId: 4, branch: '/main/task001', at: 1_000 };
 
@@ -19,5 +19,18 @@ describe('isOutlivedByChanges', () => {
   it('outlasts the changes read before it, still on screen until the refresh', () => {
     expect(isOutlivedByChanges(moment, 900, 3)).toBe(false);
     expect(isOutlivedByChanges(moment, 2_000, 0)).toBe(false);
+  });
+});
+
+describe('successCardTellsCheckin', () => {
+  it('leaves a check-in of everything pending to the card, and one that leaves changes behind to a toast', () => {
+    expect(successCardTellsCheckin(3, 3)).toBe(true);
+    expect(successCardTellsCheckin(2, 3)).toBe(false);
+  });
+});
+
+describe('checkedInMessage', () => {
+  it('reads as the success card does', () => {
+    expect(checkedInMessage(6, '/main')).toBe('Checked in cs:6 on /main');
   });
 });

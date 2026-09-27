@@ -1,6 +1,6 @@
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { Archive, ArrowDownToLine, Check, ChevronDown, GitCommitHorizontal, GitMerge, History } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type RefObject } from 'react';
 import type { Icon } from '../../lib/actions';
 import { splitComment } from '../../lib/comment';
 import { useShortcut } from '../../lib/useShortcut';
@@ -19,12 +19,16 @@ const DESCRIPTION_MIN_HEIGHT = 32;
 const DESCRIPTION_MAX_HEIGHT = 360;
 
 interface CheckinPanelProps {
+  /** The summary field, for the view to put the caret in. */
+  summaryRef: RefObject<HTMLInputElement | null>;
   summary: string;
   description: string;
   onMessageChange: (message: { summary?: string; description?: string }) => void;
   includedCount: number;
   /** Bytes the included changes upload. */
   uploadBytes: number;
+  /** What a shelve takes of the included changes: private files stay out. */
+  shelvable: { count: number; uploadBytes: number };
   branchName: string;
   /** A merge is pending: checking in completes it. */
   merging: boolean;
@@ -43,11 +47,13 @@ interface CheckinPanelProps {
 const MODES: CheckinMode[] = ['checkin', 'shelve'];
 
 export function CheckinPanel({
+  summaryRef,
   summary,
   description,
   onMessageChange,
   includedCount,
   uploadBytes,
+  shelvable,
   branchName,
   merging,
   behindCount,
@@ -60,10 +66,19 @@ export function CheckinPanel({
 }: CheckinPanelProps) {
   const [mode, setMode] = useState<CheckinMode>('checkin');
   const { descriptionHeight, setDescriptionHeight } = usePendingChangesViewStore();
-  const disabledReason = checkinDisabledReason(mode, includedCount);
+  const count = mode === 'shelve' ? shelvable.count : includedCount;
+  const disabledReason = checkinDisabledReason(mode, count, includedCount);
   const canAct = disabledReason === null && !busy;
   const { icon: ModeIcon } = describeMode(mode);
-  const label = checkinButtonLabel({ mode, includedCount, branchName, uploadBytes, merging, behindCount, allReviewed });
+  const label = checkinButtonLabel({
+    mode,
+    includedCount: count,
+    branchName,
+    uploadBytes: mode === 'shelve' ? shelvable.uploadBytes : uploadBytes,
+    merging,
+    behindCount,
+    allReviewed,
+  });
   const updatesFirst = mode === 'checkin' && includedCount > 0 && behindCount > 0 && !merging;
 
   // A shelve is a detour: once it's done, the panel is back to checking in.
@@ -79,6 +94,7 @@ export function CheckinPanel({
       <ResizeHandle size={descriptionHeight} min={DESCRIPTION_MIN_HEIGHT} max={DESCRIPTION_MAX_HEIGHT} onResize={setDescriptionHeight} />
       <div className={styles.summaryField}>
         <input
+          ref={summaryRef}
           className={styles.summary}
           placeholder={mode === 'shelve' ? 'Shelve summary' : 'Summary'}
           value={summary}
@@ -121,7 +137,7 @@ export function CheckinPanel({
         </Button>
         <DropdownMenu.Root modal={false}>
           <DropdownMenu.Trigger asChild>
-            <Button variant="primary" className={styles.modeButton} icon={<ChevronDown size={14} />} disabled={!canAct} aria-label="Change mode" />
+            <Button variant="primary" className={styles.modeButton} icon={<ChevronDown size={14} />} disabled={busy} aria-label="Change mode" />
           </DropdownMenu.Trigger>
           <DropdownMenu.Portal>
             <DropdownMenu.Content className={`${menuStyles.content} ${styles.modeMenu}`} align="end" side="top" sideOffset={4}>

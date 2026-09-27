@@ -1,23 +1,29 @@
 import { app, BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from 'electron';
 import { sendEventTo } from '../ipc/sendEvent';
+import { isMenuCommandEnabled } from './workspaceMenuCommands';
 import { focusWindow, type WorkspaceWindows } from './WorkspaceWindows';
 
 const DOCUMENTATION_URL = 'https://docs.unity.com/ugs/en-us/manual/devops/manual';
 
 /**
  * A menu item that runs a renderer command in the focused window. The renderer owns the keyboard shortcut,
- * so the accelerator is only displayed here (not registered) to avoid handling keys twice.
+ * so the accelerator is only displayed here (not registered) to avoid handling keys twice. `withoutWindow` runs
+ * when no window has focus (on macOS every window can be closed), for items that still make sense then.
  */
-function commandItem(label: string, commandId: string, accelerator?: string): MenuItemConstructorOptions {
+function commandItem(label: string, commandId: string, accelerator?: string, withoutWindow?: () => void): MenuItemConstructorOptions {
   return {
+    id: commandId,
     label,
     accelerator,
     registerAccelerator: false,
-    click: (_item, window) => window instanceof BrowserWindow && sendEventTo(window.webContents, 'menuCommand', { commandId }),
+    click: (_item, window) => {
+      if (window instanceof BrowserWindow) sendEventTo(window.webContents, 'menuCommand', { commandId });
+      else withoutWindow?.();
+    },
   };
 }
 
-/** The Window menu: a new window, then every open window by the workspace it shows, the focused one checked. */
+/** The Window menu: every open window by the workspace it shows, the focused one checked. */
 function windowMenu(windows: WorkspaceWindows, isMac: boolean): MenuItemConstructorOptions {
   const focused = BrowserWindow.getFocusedWindow();
   return {
@@ -25,8 +31,6 @@ function windowMenu(windows: WorkspaceWindows, isMac: boolean): MenuItemConstruc
     submenu: [
       { role: 'minimize' },
       { role: 'zoom' },
-      { type: 'separator' },
-      { label: 'New Window', click: () => windows.open() },
       { type: 'separator' },
       ...windows.all().map(
         (window): MenuItemConstructorOptions => ({
@@ -69,7 +73,8 @@ export function installAppMenu(windows: WorkspaceWindows): void {
     {
       label: 'File',
       submenu: [
-        commandItem('Open Workspace…', 'workspace.open', 'CmdOrCtrl+Shift+O'),
+        commandItem('New Window', 'app.newWindow', 'CmdOrCtrl+N', () => windows.open()),
+        commandItem('Open Another Workspace…', 'workspace.open', 'CmdOrCtrl+Shift+O'),
         commandItem('Update Workspace', 'workspace.update', 'CmdOrCtrl+Shift+U'),
         { type: 'separator' },
         ...(isMac ? [] : [commandItem('Settings…', 'app.settings', 'CmdOrCtrl+,'), { type: 'separator' as const }]),
@@ -99,5 +104,14 @@ export function installAppMenu(windows: WorkspaceWindows): void {
     },
   ];
 
-  Menu.setApplicationMenu(Menu.buildFromTemplate(template));
+  const menu = Menu.buildFromTemplate(template);
+  // A window on the home screen (or none) has no workspace commands to run.
+  const focused = BrowserWindow.getFocusedWindow();
+  const showsWorkspace = Boolean(focused && windows.workspaceIn(focused));
+  for (const item of menuItems(menu)) if (item.id && !item.role) item.enabled = isMenuCommandEnabled(item.id, showsWorkspace);
+  Menu.setApplicationMenu(menu);
+}
+
+function menuItems(menu: Menu): Electron.MenuItem[] {
+  return menu.items.flatMap((item) => [item, ...(item.submenu ? menuItems(item.submenu) : [])]);
 }

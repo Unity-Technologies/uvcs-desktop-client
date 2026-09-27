@@ -7,6 +7,7 @@ import { HomeSidebar } from './HomeSidebar';
 import type { HomeSection } from './homeSection';
 import { RepositoriesPanel } from './RepositoriesPanel';
 import { useFolderDrop } from './useFolderDrop';
+import { useHomeCommands } from './useHomeCommands';
 import { WelcomePanel } from './WelcomePanel';
 import { WorkspacesPanel } from './WorkspacesPanel';
 import styles from './Home.module.css';
@@ -17,6 +18,7 @@ export function HomeScreen() {
   const firstServer = servers?.[0]?.server;
   const open = useOpenWorkspace();
   const drop = useFolderDrop(open);
+  useHomeCommands(open);
   const openFolder = (): void => void openWorkspaceFolder(open);
 
   return (

@@ -1,7 +1,7 @@
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { useSettings } from '../settings/useSettings';
 import { useMissingWorkspacePaths, useRecentWorkspaceRepositories, useWorkspaceHeads, useWorkspaceList } from '../workspace/workspaceQueries';
-import { recentWorkspaceEntries, unlistedRecentPaths, type WorkspaceEntry } from './recentWorkspaces';
+import { entryMatches, recentWorkspaceEntries, unlistedRecentPaths, type WorkspaceEntry } from './recentWorkspaces';
 
 /**
  * The home screen's workspaces, recent ones first, each with its repository and branch where cheaply known: the
@@ -18,7 +18,7 @@ export function useWorkspaceEntries(filter: string) {
     const head = heads?.[workspace.path];
     return { workspace, missing, repository: head?.repository ?? repositories?.[workspace.path], selector: head?.selector ?? null };
   };
-  const matching = (entry: WorkspaceEntry): boolean => matches(entry, filter);
+  const matching = (entry: WorkspaceEntry): boolean => entryMatches(entry, filter);
 
   return {
     workspaces,
@@ -33,8 +33,4 @@ export function useWorkspaceEntries(filter: string) {
 
 function sortedByName(workspaces: WorkspaceSummary[]): WorkspaceSummary[] {
   return [...workspaces].sort((a, b) => a.name.localeCompare(b.name));
-}
-
-function matches({ workspace, repository, selector }: WorkspaceEntry, filter: string): boolean {
-  return `${workspace.name} ${workspace.path} ${repository ?? ''} ${selector?.name ?? ''}`.toLowerCase().includes(filter.toLowerCase());
 }

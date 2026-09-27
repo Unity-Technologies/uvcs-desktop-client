@@ -4,10 +4,10 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByShelving } from '../../app/refresh/refreshScopes';
 import { copyToClipboard } from '../../lib/copyToClipboard';
-import { pluralize } from '../../lib/text';
+import { formatCount, pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
-import { existsOnDisk, isControlled } from './changeCategories';
+import { existsOnDisk, isControlled, isShelvable } from './changeCategories';
 import { askUndoChanges } from './UndoChangesDialog';
 import { BACKUP_SHELVE_COMMENT } from './undoPlan';
 
@@ -28,10 +28,11 @@ export async function undoChanges(workspacePath: string, changes: PendingChange[
   let backupShelveId: number | undefined;
   if (answer.backup) {
     // Backup before undo: if the shelve fails, nothing is undone.
+    const backedUp = controlled.filter(isShelvable).map((change) => change.path);
     backupShelveId = await runOperation({
       title: `Backing up ${pluralize(controlled.length, 'change')}`,
       workspacePath,
-      run: (operationId) => api.pendingChanges.shelve(workspacePath, paths, BACKUP_SHELVE_COMMENT, operationId),
+      run: (operationId) => api.pendingChanges.shelve(workspacePath, backedUp, BACKUP_SHELVE_COMMENT, operationId),
       affects: isAffectedByShelving,
       onFailure: (error) => {
         toast.error("Couldn't shelve a backup, so nothing was undone", error);
@@ -63,7 +64,7 @@ export function openWithDefaultApp(workspacePath: string, change: PendingChange)
 
 export async function deletePrivateFiles(workspacePath: string, changes: Pick<PendingChange, 'path'>[]): Promise<void> {
   const confirmed = await confirm({
-    title: changes.length === 1 ? `Move ${fileName(changes[0]!.path)} to the trash?` : `Move ${changes.length} files to the trash?`,
+    title: changes.length === 1 ? `Move ${fileName(changes[0]!.path)} to the trash?` : `Move ${formatCount(changes.length)} files to the trash?`,
     message: 'These files are not under version control. You can restore them from the trash.',
     confirmLabel: 'Move to trash',
     danger: true,
@@ -97,7 +98,7 @@ export const FILTER_LIST_FILES: Record<FilterRuleList, string> = {
 };
 
 export function copyPaths(paths: string[]): void {
-  copyToClipboard(paths.join('\n'), paths.length === 1 ? 'Path' : `${paths.length} paths`);
+  copyToClipboard(paths.join('\n'), paths.length === 1 ? 'Path' : `${formatCount(paths.length)} paths`);
 }
 
 export function fileName(path: string): string {

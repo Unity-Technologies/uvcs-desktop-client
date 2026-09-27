@@ -43,23 +43,25 @@ export function showUpdatedMoment(workspacePath: string, { branch, loadedChanges
 }
 
 /**
- * Shelves the locally changed files the branch deleted or moved, which block the update, then updates.
+ * Shelves the locally changed files the branch deleted or moved, which block the update, then updates, writing the
+ * user's merge of the files changed on both sides (`resolutions`; null while some wait: it stops before updating).
  * Changes offers the shelve back afterwards. Resolves to whether it shelved them.
  */
-export async function shelveBlockedAndUpdate(workspacePath: string): Promise<boolean> {
+export async function shelveBlockedAndUpdate(workspacePath: string, incoming: IncomingChanges, resolutions: UpdateResolutions | null): Promise<boolean> {
   const result = await runOperation({
     title: 'Shelving the blocking files and updating',
     workspacePath,
     kind: 'update',
     cancellable: false,
-    run: (operationId) => api.merge.shelveBlockedAndUpdate(workspacePath, operationId),
+    run: (operationId) => api.merge.shelveBlockedAndUpdate(workspacePath, resolutions, operationId),
     successMessage: ({ shelveId, count, updated }) =>
       updated
-        ? `Workspace updated · ${pluralize(count, 'change')} shelved in shelve ${shelveId}`
+        ? `${updatedMessage(incoming)} · ${pluralize(count, 'change')} shelved in shelve ${shelveId}`
         : `${pluralize(count, 'change')} shelved in shelve ${shelveId} · merge the remaining files to update`,
     successAction: ({ updated }) => (updated ? { label: 'Restore in Changes', run: () => navigation.goToView('changes') } : undefined),
     onFailure: explainUpdateConflicts,
   });
+  if (result?.updated) showUpdatedMoment(workspacePath, incoming);
   return result !== undefined;
 }
 
@@ -84,14 +86,21 @@ function viewIncoming({ loadedChangeset, headChangeset, changesets }: IncomingCh
   navigation.openPage({ kind: 'diff', title, target });
 }
 
-/** Updates the workspace, writing the user's merge of every file that changed both locally and on the branch. */
-export function updateResolvingConflicts(workspacePath: string, resolutions: UpdateResolutions): Promise<unknown> {
-  return runOperation({
+/**
+ * Updates the workspace, writing the user's merge of every file that changed both locally and on the branch, then
+ * says what came in, with the local versions saved before at hand. Resolves to whether it updated.
+ */
+export async function updateResolvingConflicts(workspacePath: string, incoming: IncomingChanges, resolutions: UpdateResolutions): Promise<boolean> {
+  const result = await runOperation({
     title: 'Updating workspace',
     workspacePath,
     kind: 'update',
     run: (operationId) => api.merge.updateResolvingConflicts(workspacePath, resolutions, operationId),
-    successMessage: (result) =>
-      result.backupDirectory ? `Workspace updated. Your previous versions were saved in ${result.backupDirectory}` : 'Workspace is up to date',
+    successMessage: () => updatedMessage(incoming),
+    successAction: ({ backupDirectory }) =>
+      backupDirectory ? { label: 'Show backups', run: () => void api.system.revealInFileManager(backupDirectory) } : undefined,
+    onFailure: explainUpdateConflicts,
   });
+  if (result) showUpdatedMoment(workspacePath, incoming);
+  return result !== undefined;
 }

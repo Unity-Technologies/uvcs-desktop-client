@@ -7,8 +7,8 @@ import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
 import { toast } from '../../ui/toast/toastStore';
 import { copyPaths } from '../pendingChanges/pendingChangeOperations';
 
-/** The context menu of items in a repository tree (not in the workspace). */
-export function revisionMenu(workspacePath: string, items: TreeItem[]): MenuEntry[] {
+/** The context menu of items in the repository tree of a changeset (not in the workspace). */
+export function revisionMenu(workspacePath: string, changesetId: number, items: TreeItem[]): MenuEntry[] {
   const single = items.length === 1 ? items[0]! : null;
   const file = single && single.itemType !== 'directory' ? single : null;
 
@@ -16,7 +16,7 @@ export function revisionMenu(workspacePath: string, items: TreeItem[]): MenuEntr
     file && { id: 'open', label: 'Open this revision', icon: AppWindow, run: () => openRevision(workspacePath, file) },
     file && { id: 'saveAs', label: 'Save this revision as…', icon: Download, run: () => void saveRevisionAs(workspacePath, file) },
     SEPARATOR,
-    single && { id: 'history', label: 'View history', icon: History, run: () => navigation.openPage({ kind: 'history', path: single.path }) },
+    single && { id: 'history', label: 'View history', icon: History, run: () => navigation.openPage({ kind: 'history', path: single.path, changesetId }) },
     SEPARATOR,
     { id: 'copy', label: 'Copy repository path', icon: Copy, run: () => copyPaths(items.map((item) => `/${item.path}`)) },
   ]);

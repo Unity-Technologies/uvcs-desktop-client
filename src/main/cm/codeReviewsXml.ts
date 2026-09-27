@@ -4,8 +4,8 @@ import { integer, text } from './parseXml';
 
 /** A review as `cm find review` reports it; branch targets come as object ids (`id:54`) to be resolved. */
 export interface RawCodeReview extends CodeReviewSummary {
-  targetType: 'branch' | 'changeset' | 'other';
-  /** Branch object id or changeset number. */
+  targetType: 'branch' | 'changeset' | 'shelve' | 'other';
+  /** Branch object id, changeset or shelve number. */
   targetId: number;
 }
 
@@ -30,5 +30,5 @@ function toStatus(value: string): CodeReviewStatus {
 
 function toTargetType(value: string): RawCodeReview['targetType'] {
   const type = value.toLowerCase();
-  return type === 'branch' || type === 'changeset' ? type : 'other';
+  return type === 'branch' || type === 'changeset' || type === 'shelve' ? type : 'other';
 }

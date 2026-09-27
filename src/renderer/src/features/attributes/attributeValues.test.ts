@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { attributeTone, attributeValueKind, defaultValuesIn, suggestedValues } from './attributeValues';
+import { attributeTone, attributeValueKind, defaultValuesIn, suggestedValues, valueCounts } from './attributeValues';
 
 describe('attributeValueKind', () => {
   it('shows short enumerable values as pills', () => {
@@ -39,5 +39,14 @@ describe('defaultValuesIn', () => {
 describe('suggestedValues', () => {
   it('puts the defaults first, then the most used short values, once each', () => {
     expect(suggestedValues(['open'], ['READY', 'FAILED', 'READY', 'open', 'line one\nline two', ' READY '])).toEqual(['open', 'READY', 'FAILED']);
+  });
+});
+
+describe('valueCounts', () => {
+  it('counts each short value once, most used first, leaving long texts out', () => {
+    expect(valueCounts(['READY', 'FAILED', ' READY ', 'line one\nline two', '', 'READY'])).toEqual([
+      { value: 'READY', count: 3 },
+      { value: 'FAILED', count: 1 },
+    ]);
   });
 });

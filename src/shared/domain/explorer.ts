@@ -20,6 +20,8 @@ export interface TreeItem {
   itemId: number;
   /** Set for a directory that is an xlink: where it points. */
   xlink?: XlinkTarget;
+  /** Set for a symbolic link in the workspace: the path it points to, as written in the link. */
+  symlinkTarget?: string;
 }
 
 /** Where an xlinked directory points: a changeset (and path) of another repository. */

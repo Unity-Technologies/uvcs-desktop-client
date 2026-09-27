@@ -30,6 +30,14 @@ export function useServerAccount(server: string | undefined): { user: string; ac
   return defaultUser ? { user: defaultUser } : undefined;
 }
 
+/** Who you are on `server`, like `useServerAccount`, for code outside components (from the same cached queries). */
+export async function readServerUser(server: string): Promise<string> {
+  const accounts = await queryClient.fetchQuery({ queryKey: queryKeys.accounts, queryFn: () => api.accounts.list(), staleTime: 60_000 });
+  const account = accountForServer(accounts, server);
+  if (account) return account.user;
+  return queryClient.fetchQuery({ queryKey: queryKeys.user, queryFn: () => api.system.currentUser(), staleTime: Infinity });
+}
+
 export async function removeAccount(account: Account): Promise<void> {
   const { label } = describeServer(account.server);
   const confirmed = await confirm({

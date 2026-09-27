@@ -20,7 +20,7 @@ interface DetailsPanelProps {
   context?: ReactNode;
   /** The title and description (a `DetailsHeading`). */
   heading: ReactNode;
-  /** Who created it and when, first in the meta row under the heading. */
+  /** Who created it and when (an empty date for what has none yet), first in the meta row under the heading. */
   author?: { user: string; date: string };
   /** More of the meta row after the date: its id to copy, its branch... Separated by dots, wrapping when narrow. */
   meta?: ReactNode[];
@@ -117,8 +117,12 @@ function AuthorLine({ user, date }: { user: string; date: string }) {
     <span className={styles.author}>
       <Avatar user={user} size={18} />
       <span className={styles.authorName}>{displayName(user)}</span>
-      <span className={styles.dot}>·</span>
-      <RelativeTime date={date} />
+      {date && (
+        <>
+          <span className={styles.dot}>·</span>
+          <RelativeTime date={date} />
+        </>
+      )}
     </span>
   );
 }
@@ -187,9 +191,17 @@ export function DetailsCopyable({ text, copyText = text, what }: { text: string;
 
 type BadgeTone = 'accent' | 'success' | 'neutral' | 'warning';
 
-export function DetailsBadge({ tone = 'neutral', children }: { tone?: BadgeTone; children: ReactNode }) {
+interface DetailsBadgeProps {
+  tone?: BadgeTone;
+  tip?: string;
+  /** Gives way when the row is full, its text (a `<span>` child) cut with an ellipsis, e.g. a long label name. */
+  shrinks?: boolean;
+  children: ReactNode;
+}
+
+export function DetailsBadge({ tone = 'neutral', tip, shrinks, children }: DetailsBadgeProps) {
   return (
-    <span className={styles.badge} data-tone={tone}>
+    <span className={styles.badge} data-tone={tone} data-tip={tip} data-shrinks={shrinks || undefined}>
       {children}
     </span>
   );

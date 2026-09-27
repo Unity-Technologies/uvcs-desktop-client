@@ -10,38 +10,43 @@ import { TextField } from '../../ui/TextField';
 import { toast } from '../../ui/toast/toastStore';
 import { useBranches } from '../branches/useBranches';
 
-export type ReviewTargetKind = 'branch' | 'changeset';
+export type ReviewTargetKind = 'branch' | 'changeset' | 'shelve';
 
 export interface ReviewTargetDraft {
   kind: ReviewTargetKind;
-  /** Branch name (e.g. `/main/task`) or changeset number. */
+  /** Branch name (e.g. `/main/task`), changeset or shelve number. */
   value: string;
+  /** A title to start from, e.g. the shelve's comment. */
+  title?: string;
 }
+
+const SPEC_PREFIX: Record<ReviewTargetKind, string> = { branch: 'br', changeset: 'cs', shelve: 'sh' };
 
 /**
  * Opens the "new code review" dialog. Other features can prefill the target,
- * e.g. from a branch or changeset context menu.
+ * e.g. from a branch, changeset or shelve context menu.
  */
-export function openCreateCodeReviewDialog(workspacePath: string, initialTarget: ReviewTargetDraft): void {
-  openDialog((close) => <CreateCodeReviewDialog workspacePath={workspacePath} initialTarget={initialTarget} onClose={close} />);
+export function openCreateCodeReviewDialog(workspacePath: string, initialTarget: ReviewTargetDraft, onCreated?: (reviewId: number) => void): void {
+  openDialog((close) => <CreateCodeReviewDialog workspacePath={workspacePath} initialTarget={initialTarget} onClose={close} onCreated={onCreated} />);
 }
 
 interface CreateCodeReviewDialogProps {
   workspacePath: string;
   initialTarget: ReviewTargetDraft;
   onClose: () => void;
+  onCreated?: (reviewId: number) => void;
 }
 
-function CreateCodeReviewDialog({ workspacePath, initialTarget, onClose }: CreateCodeReviewDialogProps) {
+function CreateCodeReviewDialog({ workspacePath, initialTarget, onClose, onCreated }: CreateCodeReviewDialogProps) {
   const branchListId = useId();
   const { data: branches } = useBranches();
   const [targetKind, setTargetKind] = useState<ReviewTargetKind>(initialTarget.kind);
   const [target, setTarget] = useState(initialTarget.value);
-  const [title, setTitle] = useState('');
+  const [title, setTitle] = useState(initialTarget.title ?? '');
   const [assignee, setAssignee] = useState('');
   const [creating, setCreating] = useState(false);
 
-  const targetSpec = targetKind === 'branch' ? `br:${target.trim()}` : `cs:${target.trim()}`;
+  const targetSpec = `${SPEC_PREFIX[targetKind]}:${target.trim()}`;
   const isValid = title.trim() !== '' && (targetKind === 'branch' ? target.trim().startsWith('/') : /^\d+$/.test(target.trim()));
 
   const create = async (): Promise<void> => {
@@ -54,6 +59,7 @@ function CreateCodeReviewDialog({ workspacePath, initialTarget, onClose }: Creat
     if (reviewId === undefined) return;
 
     onClose();
+    onCreated?.(reviewId);
     toast.success(`Created code review ${reviewId}`, undefined, {
       label: 'Open',
       run: () => navigation.openPage({ kind: 'codeReview', reviewId }),
@@ -63,7 +69,7 @@ function CreateCodeReviewDialog({ workspacePath, initialTarget, onClose }: Creat
   return (
     <Dialog
       title="New code review"
-      description="Ask a teammate to review a branch or a single changeset."
+      description="Ask a teammate to review a branch, a changeset or a shelve."
       width={500}
       onClose={onClose}
       onSubmit={() => void create()}
@@ -77,6 +83,7 @@ function CreateCodeReviewDialog({ workspacePath, initialTarget, onClose }: Creat
       }
     >
       <SegmentedControl<ReviewTargetKind>
+        stretch
         value={targetKind}
         onChange={(kind) => {
           setTargetKind(kind);
@@ -85,6 +92,7 @@ function CreateCodeReviewDialog({ workspacePath, initialTarget, onClose }: Creat
         segments={[
           { value: 'branch', label: 'Branch' },
           { value: 'changeset', label: 'Changeset' },
+          { value: 'shelve', label: 'Shelve' },
         ]}
       />
       {targetKind === 'branch' ? (
@@ -95,7 +103,13 @@ function CreateCodeReviewDialog({ workspacePath, initialTarget, onClose }: Creat
           </datalist>
         </>
       ) : (
-        <TextField label="Changeset" placeholder="42" inputMode="numeric" value={target} onChange={(event) => setTarget(event.target.value)} />
+        <TextField
+          label={targetKind === 'changeset' ? 'Changeset' : 'Shelve'}
+          placeholder={targetKind === 'changeset' ? '42' : '7'}
+          inputMode="numeric"
+          value={target}
+          onChange={(event) => setTarget(event.target.value)}
+        />
       )}
       <TextField label="Title" placeholder="What should be reviewed?" value={title} onChange={(event) => setTitle(event.target.value)} autoFocus />
       <TextField

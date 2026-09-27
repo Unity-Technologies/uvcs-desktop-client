@@ -1,25 +1,16 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { FolderTree } from 'lucide-react';
 import { useId, useImperativeHandle, useRef, type KeyboardEvent, type Ref } from 'react';
-import type { MergeChangeKind } from '@shared/domain/merge';
 import { PathLabel } from '../../components/PathLabel';
-import { StatusBadge, type StatusTone } from '../../components/StatusBadge';
+import { StatusBadge } from '../../components/StatusBadge';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { ConflictStatusChip } from './ConflictStatusChip';
 import type { MergeLabels } from './mergeDescription';
 import { needsDecision, type MergeItem, type MergeListRow } from './mergeItems';
-import { describeChange, directoryConflictStatus, fileConflictStatus, fileConflictTool } from './mergeStatus';
+import { changeTone, describeChange, directoryConflictStatus, fileConflictStatus, fileConflictTool } from './mergeStatus';
 import styles from './MergeItemList.module.css';
 
 const ROW_HEIGHT = 30;
-
-const CHANGE_TONES: Record<MergeChangeKind, StatusTone> = {
-  added: 'added',
-  changed: 'changed',
-  deleted: 'deleted',
-  moved: 'moved',
-  permissions: 'permissions',
-};
 
 interface MergeItemListProps {
   rows: MergeListRow[];
@@ -126,7 +117,7 @@ function ItemRow({ item, labels }: { item: MergeItem; labels: MergeLabels }) {
     case 'change':
       return (
         <>
-          <StatusBadge tone={CHANGE_TONES[item.change.kind]} title={describeChange(item.change, labels)} />
+          <StatusBadge tone={changeTone(item.change)} title={describeChange(item.change, labels)} />
           <PathLabel path={item.change.path.replace(/^\//, '')} oldPath={item.change.oldPath?.replace(/^\//, '')} strikethrough={item.change.kind === 'deleted'} />
         </>
       );

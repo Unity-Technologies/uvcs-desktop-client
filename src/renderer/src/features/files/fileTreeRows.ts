@@ -1,4 +1,5 @@
 import type { TreeItem } from '@shared/domain/explorer';
+import type { TreeArrowRow } from '../../lib/treeArrowMove';
 
 export interface FileTreeRow {
   item: TreeItem;
@@ -41,6 +42,21 @@ export function buildFileTreeRows({ childrenByDirectory, expanded, filter = '', 
   rows.push({ item: root.item, depth: 0, isExpanded: root.expanded, isLoading: root.expanded && !childrenByDirectory.has('') });
   if (root.expanded) visit('', 1);
   return rows;
+}
+
+/** The rows as ← and → see them (`treeArrowMove`). */
+export function fileTreeArrowRows(rows: readonly FileTreeRow[]): TreeArrowRow[] {
+  return rows.map((row) => ({ depth: row.depth, isFolder: row.item.itemType === 'directory', isExpanded: row.isExpanded }));
+}
+
+const INDENT = 16;
+/** Levels indented in full; deeper ones step in by a quarter, so names deep in a tree keep room to show. */
+const FULL_INDENT_LEVELS = 8;
+
+/** How far a row at `depth` is indented, in pixels. */
+export function indentOf(depth: number): number {
+  const full = Math.min(depth, FULL_INDENT_LEVELS);
+  return full * INDENT + (depth - full) * (INDENT / 4);
 }
 
 export function sortItems(items: TreeItem[]): TreeItem[] {

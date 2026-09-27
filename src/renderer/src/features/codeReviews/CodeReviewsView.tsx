@@ -1,5 +1,5 @@
 import { CircleDot, MessageSquareCode, Plus, RefreshCw, Users } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CODE_REVIEW_STATUSES, MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewFilter, type CodeReviewStatus } from '@shared/domain/codeReview';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { invalidateWorkspace } from '../../app/queryClient';
@@ -21,15 +21,20 @@ import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { CodeReviewDetails } from './CodeReviewDetails';
 import { codeReviewMenu } from './codeReviewMenu';
-import { describeTarget, openReview } from './codeReviewOperations';
+import { openReview } from './codeReviewOperations';
+import { describeTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { openCreateCodeReviewDialog } from './CreateCodeReviewDialog';
+import { codeReviewsEmptyState } from './codeReviewsEmptyState';
+import { selectCreated } from './selectCreated';
 import { useCodeReviews } from './useCodeReviews';
 import { SincePicker } from '../../components/SincePicker';
 import { sinceDateFor, type SincePreset } from '../../lib/sincePresets';
 import styles from './CodeReviewsView.module.css';
 
 type StatusFilter = CodeReviewStatus | 'any';
+
+const DEFAULT_SINCE: SincePreset = 'last3Months';
 
 const COLUMNS: Column<CodeReview>[] = [
   {
@@ -75,15 +80,16 @@ export function CodeReviewsView() {
   const [scope, setScope] = useState<CodeReviewFilter['scope']>('all');
   const [status, setStatus] = useState<StatusFilter>('any');
   const [search, setSearch] = useState('');
-  const [since, setSince] = useState<SincePreset>('last3Months');
+  const [since, setSince] = useState<SincePreset>(DEFAULT_SINCE);
   const [selection, setSelection] = useViewSelection('codeReviews');
+  const [createdKey, setCreatedKey] = useState<string | null>(null);
   const { data: reviews, isLoading, isFetching, error } = useCodeReviews({
     scope,
     status: status === 'any' ? undefined : status,
     sinceDate: sinceDateFor(since),
   });
 
-  const visible = (reviews ?? []).filter((review) => `${review.title} ${review.id}`.toLowerCase().includes(search.toLowerCase()));
+  const visible = (reviews ?? []).filter((review) => `${review.title} ${review.id}`.toLowerCase().includes(search.trim().toLowerCase()));
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : '';
   const commands = useMemo<Command[]>(
     () => [
@@ -92,18 +98,27 @@ export function CodeReviewsView() {
         group: 'Code reviews',
         label: 'New code review…',
         icon: MessageSquareCode,
-        run: () => openCreateCodeReviewDialog(workspacePath, { kind: 'branch', value: currentBranch }),
+        run: () => openCreateCodeReviewDialog(workspacePath, { kind: 'branch', value: currentBranch }, (reviewId) => setCreatedKey(String(reviewId))),
       },
     ],
     [workspacePath, currentBranch],
   );
+  // The review just created is selected once the refreshed list shows it.
+  const shownKeys = visible.map(reviewKey).join('\n');
+  useEffect(() => {
+    const next = selectCreated(shownKeys.split('\n'), createdKey);
+    if (!next) return;
+    setSelection(next);
+    setCreatedKey(null);
+  }, [shownKeys, createdKey, setSelection]);
   useCommands(commands);
   const newReview = commands[0]!.run;
 
   const header = (
     <ViewHeader
       title="Code reviews"
-      subtitle={reviews && (reviews.length >= MAX_LISTED_CODE_REVIEWS ? `Newest ${reviews.length}` : `${reviews.length} ${reviews.length === 1 ? 'review' : 'reviews'}`)}
+      count={reviews?.length}
+      subtitle={reviews && reviews.length >= MAX_LISTED_CODE_REVIEWS && 'newest'}
       actions={
         <>
           <IconButton
@@ -143,17 +158,28 @@ export function CodeReviewsView() {
   if (isLoading) return <>{header}<ListWithDetailsSkeleton columns={COLUMNS} /></>;
   if (error) return <>{header}<EmptyState title="Couldn't read the code reviews" description={error.message} /></>;
   if (visible.length === 0) {
+    const empty = codeReviewsEmptyState({ searching: search.trim() !== '', filtered: scope !== 'all' || status !== 'any' || since !== DEFAULT_SINCE });
+    const clearFilters = (): void => {
+      setSearch('');
+      setScope('all');
+      setStatus('any');
+      setSince(DEFAULT_SINCE);
+    };
     return (
       <>
         {header}
         <EmptyState
           icon={<MessageSquareCode size={22} />}
-          title="No code reviews"
-          description="Ask a teammate to look at a branch or changeset before it gets merged."
+          title={empty.title}
+          description={empty.description}
           action={
-            <Button variant="primary" icon={<Plus size={14} />} onClick={newReview}>
-              New review
-            </Button>
+            empty.action === 'newReview' ? (
+              <Button variant="primary" icon={<Plus size={14} />} onClick={newReview}>
+                New review
+              </Button>
+            ) : (
+              <Button onClick={clearFilters}>Clear filters</Button>
+            )
           }
         />
       </>
