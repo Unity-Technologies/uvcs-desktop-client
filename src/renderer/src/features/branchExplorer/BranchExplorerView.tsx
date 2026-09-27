@@ -180,8 +180,12 @@ export function BranchExplorerView() {
     setActiveHitIndex(-1);
   };
 
+  const revealCreatedBranch = useCreatedBranchReveal(layout, (name) => {
+    setSelection({ kind: 'branch', name });
+    canvasRef.current?.frameBranch(name);
+  });
   const menuFor = (target: GraphTarget | null) =>
-    graphMenu(target, { workspacePath, layout: layout!, goToChangeset, showRelatedTo: (name) => focusOn(name, focusHops) });
+    graphMenu(target, { workspacePath, layout: layout!, goToChangeset, showRelatedTo: (name) => focusOn(name, focusHops), revealCreatedBranch });
 
   const select = (target: GraphTarget | null): void => {
     if (target?.kind === 'codeReview') openReview(target.review);
@@ -378,6 +382,22 @@ function ownsKey(target: EventTarget, key: string): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return true;
   return ['BUTTON', 'A'].includes(target.tagName) && (key === 'Enter' || key === ' ');
+}
+
+/**
+ * A branch created from the graph shows up once the refreshed history has it: then it is revealed, just once. Returns
+ * what to call with its name when it is created.
+ */
+function useCreatedBranchReveal(layout: ReturnType<typeof layoutGraph> | null, reveal: (name: string) => void): (name: string) => void {
+  const [pending, setPending] = useState<string | null>(null);
+  const latestReveal = useRef(reveal);
+  latestReveal.current = reveal;
+  useEffect(() => {
+    if (pending === null || !layout?.lanesByBranch.has(pending)) return;
+    setPending(null);
+    latestReveal.current(pending);
+  }, [pending, layout]);
+  return setPending;
 }
 
 /**
