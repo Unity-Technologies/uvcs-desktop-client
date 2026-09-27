@@ -11,17 +11,23 @@ interface Match {
 /**
  * Fuzzy "go to anything" matching over many short texts (paths, names). Every query character must appear
  * in order; matches in the last path segment, at word starts and in a row score higher; shorter names, then paths, break ties.
- * Texts are lowercased once up front, so ranking hundreds of thousands of paths stays within a few frames.
+ * Texts are lowercased once up front, so ranking hundreds of thousands of paths stays within a few frames. The queries
+ * typed on the way to the current one are remembered: a query that extends one (typing on) only looks through the texts
+ * that one matched, as they alone can match it, and deleting back to one answers at once.
  */
 export function createFuzzyIndex(texts: readonly string[]): FuzzyIndex {
   const lowered = texts.map((text) => text.toLowerCase());
+  // Where each lowered text's last segment starts, and each text's last segment's length (with its slash), for ties.
+  const nameStarts = Int32Array.from(lowered, (text) => text.lastIndexOf('/') + 1);
+  const nameLengths = Int32Array.from(texts, (text) => text.length - text.lastIndexOf('/'));
+  // Each needle extends the one before it; each holds every text it matched and its best ones.
+  const typed: { needle: string; matched: number[]; limit: number; best: number[] }[] = [];
 
   function isBetter(a: Match, b: Match): boolean {
     if (a.score !== b.score) return a.score > b.score;
-    const [textA, textB] = [texts[a.index]!, texts[b.index]!];
-    const nameLengthA = textA.length - textA.lastIndexOf('/');
-    const nameLengthB = textB.length - textB.lastIndexOf('/');
-    return nameLengthA !== nameLengthB ? nameLengthA < nameLengthB : textA.length < textB.length;
+    const nameLengthA = nameLengths[a.index]!;
+    const nameLengthB = nameLengths[b.index]!;
+    return nameLengthA !== nameLengthB ? nameLengthA < nameLengthB : texts[a.index]!.length < texts[b.index]!.length;
   }
 
   return {
@@ -29,11 +35,21 @@ export function createFuzzyIndex(texts: readonly string[]): FuzzyIndex {
       const needle = toNeedle(query);
       if (!needle) return texts.slice(0, limit).map((_, index) => index);
 
+      while (typed.length > 0 && !needle.startsWith(typed.at(-1)!.needle)) typed.pop();
+      const before = typed.at(-1);
+      if (before?.needle === needle && before.limit === limit) return [...before.best];
+      // Every text matching the needle has the letters of a needle it starts with, in order too.
+      const candidates = before ? before.matched : null;
+      const count = candidates ? candidates.length : lowered.length;
+      const chars = [...needle];
+      const matched: number[] = [];
       // Keeps only the best `limit` matches, sorted, instead of sorting every match.
       const best: Match[] = [];
-      for (let index = 0; index < lowered.length; index++) {
-        const score = scoreText(lowered[index]!, needle);
+      for (let candidate = 0; candidate < count; candidate++) {
+        const index = candidates ? candidates[candidate]! : candidate;
+        const score = scoreText(lowered[index]!, needle, chars, nameStarts[index]!);
         if (score === 0) continue;
+        matched.push(index);
 
         const match = { index, score };
         if (best.length === limit && !isBetter(match, best[limit - 1]!)) continue;
@@ -43,7 +59,10 @@ export function createFuzzyIndex(texts: readonly string[]): FuzzyIndex {
         while (position > 0 && isBetter(match, best[position - 1]!)) position--;
         best.splice(position, 0, match);
       }
-      return best.map((match) => match.index);
+      const indexes = best.map((match) => match.index);
+      if (before?.needle === needle) typed.pop();
+      typed.push({ needle, matched, limit, best: indexes });
+      return [...indexes];
     },
   };
 }
@@ -59,8 +78,9 @@ export function fuzzyMatchPositions(text: string, query: string): number[] {
   const nameStart = haystack.lastIndexOf('/') + 1;
   const fromStart: number[] = [];
   const fromName: number[] = [];
-  const startScore = scoreFrom(haystack, needle, 0, nameStart, fromStart);
-  const nameScore = nameStart > 0 ? scoreFrom(haystack, needle, nameStart, nameStart, fromName) : 0;
+  const chars = [...needle];
+  const startScore = scoreFrom(haystack, needle, chars, 0, nameStart, fromStart);
+  const nameScore = nameStart > 0 ? scoreFrom(haystack, needle, chars, nameStart, nameStart, fromName) : 0;
   if (startScore === 0 && nameScore === 0) return [];
   return nameScore > startScore ? fromName : fromStart;
 }
@@ -92,22 +112,22 @@ function toNeedle(query: string): string {
 }
 
 /** Matching from the start alone would let a letter early in the folders break up a run in the name, so try both. */
-function scoreText(haystack: string, needle: string): number {
-  const nameStart = haystack.lastIndexOf('/') + 1;
-  return Math.max(scoreFrom(haystack, needle, 0, nameStart), nameStart > 0 ? scoreFrom(haystack, needle, nameStart, nameStart) : 0);
+function scoreText(haystack: string, needle: string, chars: readonly string[], nameStart: number): number {
+  return Math.max(scoreFrom(haystack, needle, chars, 0, nameStart), nameStart > 0 ? scoreFrom(haystack, needle, chars, nameStart, nameStart) : 0);
 }
 
 /**
  * Collects the matched indexes into `positions` when given; ranking leaves it out to avoid allocations.
  * Starts where the query appears whole, if it does: picking its first letters earlier would break the run.
+ * `chars` are the needle's characters, split once per ranking.
  */
-function scoreFrom(haystack: string, needle: string, start: number, nameStart: number, positions?: number[]): number {
+function scoreFrom(haystack: string, needle: string, chars: readonly string[], start: number, nameStart: number, positions?: number[]): number {
   let score = 1;
   const run = haystack.indexOf(needle, start);
   let position = (run === -1 ? start : run) - 1;
 
-  for (const char of needle) {
-    const found = haystack.indexOf(char, position + 1);
+  for (let i = 0; i < chars.length; i++) {
+    const found = haystack.indexOf(chars[i]!, position + 1);
     if (found === -1) return 0;
 
     if (found === position + 1) score += 3;
