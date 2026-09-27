@@ -49,9 +49,19 @@ export function isAffectedByCheckinOrUpdate(key: QueryKey): boolean {
   return !UNTOUCHED_BY_CHECKINS.includes(area(key) as string);
 }
 
-/** A branch was created: the lists of branches, not what the workspace has loaded. */
-export function isAffectedByNewBranch(key: QueryKey): boolean {
+/** A branch was created, deleted, hidden or shown again: the lists of branches, not what the workspace has loaded. */
+export function isAffectedByBranchList(key: QueryKey): boolean {
   return area(key) === 'branches' || area(key) === 'branchExplorer';
+}
+
+/** A label was created, renamed, deleted or described: the lists of labels, the graph, and the workspace if it's on one. */
+export function isAffectedByLabels(key: QueryKey): boolean {
+  return area(key) === 'labels' || area(key) === 'branchExplorer' || area(key) === 'info';
+}
+
+/** An attribute or one of its values changed: only what shows attributes, which is nothing but them. */
+export function isAffectedByAttributes(key: QueryKey): boolean {
+  return area(key) === 'attributeTypes' || area(key) === 'attributeValues' || area(key) === 'attributeUsedValues';
 }
 
 /** Changes were shelved, and stay in the workspace: only the lists of shelves change. */

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { AttributeValue } from '@shared/domain/attribute';
 import { api } from '../../api/client';
 import { runAction } from '../../app/operations/runOperation';
+import { isAffectedByAttributes } from '../../app/refresh/refreshScopes';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { Markdown } from '../../components/Markdown';
 import { Button } from '../../ui/Button';
@@ -47,12 +48,12 @@ export function AttributeChips({ objectSpec }: { objectSpec: string }) {
 
   const save = async (attribute: string, value: string): Promise<void> => {
     close();
-    await runAction(workspacePath, `Couldn't set ${attribute}`, () => api.attributes.setValue(workspacePath, objectSpec, attribute, value));
+    await runAction(workspacePath, `Couldn't set ${attribute}`, () => api.attributes.setValue(workspacePath, objectSpec, attribute, value), isAffectedByAttributes);
   };
 
   const remove = (attribute: string): void => {
     if (opened?.name === attribute) close();
-    void runAction(workspacePath, `Couldn't remove ${attribute}`, () => api.attributes.unsetValue(workspacePath, objectSpec, attribute));
+    void runAction(workspacePath, `Couldn't remove ${attribute}`, () => api.attributes.unsetValue(workspacePath, objectSpec, attribute), isAffectedByAttributes);
   };
 
   const add = (attribute: string): void => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_SELECTION, selectOnArrow, selectOnClick } from './selection';
+import { EMPTY_SELECTION, selectOnArrow, selectOnClick, successorKey } from './selection';
 
 const keys = ['a', 'b', 'c', 'd'];
 const plain = { shift: false, toggle: false };
@@ -42,5 +42,28 @@ describe('selectOnArrow', () => {
   it('extends to the end from the anchor with shift', () => {
     const result = selectOnArrow({ selected: new Set(['b']), anchor: 'b' }, keys, Infinity, true, 'b');
     expect([...(result?.state.selected ?? [])]).toEqual(['b', 'c', 'd']);
+  });
+});
+
+describe('successorKey', () => {
+  it('selects the row that took the place of a deleted one', () => {
+    expect(successorKey(['a', 'b', 'c', 'd'], ['a', 'c', 'd'], 'b')).toBe('c');
+  });
+
+  it('skips the other rows that went with it', () => {
+    expect(successorKey(['a', 'b', 'c', 'd'], ['a', 'd'], 'b')).toBe('d');
+  });
+
+  it('falls back to the row before when the last rows went', () => {
+    expect(successorKey(['a', 'b', 'c', 'd'], ['a', 'b'], 'c')).toBe('b');
+  });
+
+  it('selects the first row when the gone one was never shown, e.g. kept from an earlier visit', () => {
+    expect(successorKey([], ['a', 'b'], 'x')).toBe('a');
+    expect(successorKey(['a', 'b'], ['a', 'b'], null)).toBe('a');
+  });
+
+  it('selects nothing when no row is left', () => {
+    expect(successorKey(['a'], [], 'a')).toBeUndefined();
   });
 });

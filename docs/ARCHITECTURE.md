@@ -325,10 +325,11 @@ and many people use the same server. Every `cm` command other than local reads (
   pinned to a changeset or shelve, annotations of pinned revisions) are cached (`IMMUTABLE_QUERY`) and skipped by refreshes.
   An object opened from a list already read starts from it (`useChangeset`) and is asked for only once that list is stale.
 - **After an operation**: `invalidateWorkspace` refetches what is on screen and marks the rest stale, scoped to what the
-  operation can change (`refreshScopes.ts`, `runOperation({ affects })`): a checkin, an update or a merge from a branch
-  leave labels, shelves, attributes, reviews, left changes and changesets already read alone; shelving changes that stay
-  in the workspace refreshes only the shelve lists; a new branch only the branch lists and the Branch Explorer. Reads
-  refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
+  operation can change (`refreshScopes.ts`, `runOperation({ affects })`, `runAction(..., affects)`): a checkin, an update
+  or a merge from a branch leave labels, shelves, attributes, reviews, left changes and changesets already read alone;
+  shelving changes that stay in the workspace refreshes only the shelve lists; a new, deleted or hidden branch only the
+  branch lists and the Branch Explorer; a label edit the labels and the graph; an attribute or value edit only the
+  attributes. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
   the last (create a branch and switch to it). Views keyed by the workspace info (`keyedByWorkspaceInfo`: left changes, the
   incoming check, the branch the workspace is on) wait for it, and when the operation gave them another key they are only
   marked stale: they are read under the new key as they show, never once more under the old one. Event-driven refreshes

@@ -61,3 +61,14 @@ function range(orderedKeys: readonly string[], from: string, to: string): string
   if (start === -1 || end === -1) return [to];
   return orderedKeys.slice(Math.min(start, end), Math.max(start, end) + 1);
 }
+
+/**
+ * The row to select once the selected one is gone (deleted, hidden, filtered out): the first one after it that is still
+ * shown, else the last one before it, so the selection stays where the user was. The first row when it was never shown.
+ */
+export function successorKey(previousKeys: readonly string[], shownKeys: readonly string[], goneKey: string | null): string | undefined {
+  const shown = new Set(shownKeys);
+  const index = goneKey === null ? -1 : previousKeys.indexOf(goneKey);
+  if (index === -1) return shownKeys[0];
+  return previousKeys.slice(index + 1).find((key) => shown.has(key)) ?? previousKeys.slice(0, index).findLast((key) => shown.has(key)) ?? shownKeys[0];
+}
