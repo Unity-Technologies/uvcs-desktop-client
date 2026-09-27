@@ -1,6 +1,6 @@
 import { GalleryHorizontalEnd } from 'lucide-react';
 import type { MouseEvent } from 'react';
-import type { ItemRevision } from '@shared/domain/history';
+import type { BlockLinks } from './AnnotatedCode';
 import { formatRelativeDate } from '../../lib/formatDate';
 import { firstLine } from '../../lib/text';
 import { Avatar } from '../../ui/Avatar';
@@ -26,9 +26,8 @@ interface AnnotationGutterProps {
   /** The pointer is on (a block) or off (null) a block's label, which opens its card. */
   onHoverLabel: (block: number | null) => void;
   onClick: (block: number) => void;
-  /** The revision to annotate "before this change" of a block, if the history has one. */
-  revisionBefore?: (changesetId: number) => ItemRevision | undefined;
-  onAnnotateBefore: (revision: ItemRevision) => void;
+  /** "Annotate before this change" of a block, if the history has a revision before it. */
+  walkBack?: BlockLinks['walkBack'];
 }
 
 /**
@@ -46,8 +45,7 @@ export function AnnotationGutter({
   onHover,
   onHoverLabel,
   onClick,
-  revisionBefore,
-  onAnnotateBefore,
+  walkBack,
 }: AnnotationGutterProps) {
   const showsDetails = columns.author || columns.changeset || columns.date;
   const blockOf = (event: MouseEvent): number | null => {
@@ -71,7 +69,7 @@ export function AnnotationGutter({
       {blocks.slice(shown.first, shown.end).map((block, offset) => {
         const index = shown.first + offset;
         const { changeset } = block;
-        const before = showsDetails ? revisionBefore?.(changeset.changesetId) : undefined;
+        const before = showsDetails ? walkBack?.revisionBefore(changeset.changesetId) : undefined;
         return (
           <div
             key={block.start}
@@ -106,7 +104,7 @@ export function AnnotationGutter({
                     tabIndex={-1}
                     onClick={(event) => {
                       event.stopPropagation();
-                      onAnnotateBefore(before);
+                      walkBack?.annotateBefore(before);
                     }}
                   >
                     <GalleryHorizontalEnd size={13} />

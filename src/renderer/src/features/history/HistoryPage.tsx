@@ -1,5 +1,5 @@
 import { History } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { PageProps } from '../../app/navigation/pages';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { detailsWidthOf, useDetailsWidthStore, type DetailsWidthLimits } from '../../components/detailsWidthStore';
@@ -18,6 +18,7 @@ import type { AnnotationHistory } from '../annotate/AnnotationPane';
 import { openChangesetDiff } from '../changesets/changesetOperations';
 import { HISTORY_ROW_HEIGHT, HistoryList } from './HistoryList';
 import { historyMenu } from './historyMenu';
+import { initialHistoryRow } from './initialHistoryRow';
 import { historyRowKey, historyRows, revisionRowKey } from './historyRows';
 import { matchesHistorySearch } from './historySearch';
 import { PathChangeDetails } from './PathChangeDetails';
@@ -56,12 +57,12 @@ export function HistoryPage({ page }: PageProps<'history'>) {
   const selectedRevisions = selectedRows.flatMap((row) => (row.kind === 'revision' ? [row.revision] : []));
   const focusedRow = rows.find((row) => historyRowKey(row) === selection.anchor);
   const focusedChange = selectedRows.length === 1 && selectedRows[0]!.kind === 'pathChange' ? selectedRows[0]!.change : undefined;
-  // The asked-for revision, else the newest one, rather than a move or a removal on another branch: what opening a history is for.
-  const initialKey = history && ((page.selectChangeset !== undefined && revisionRowKey(rows, page.selectChangeset)) || (history.revisions[0] && String(history.revisions[0].changesetId)));
-  const menu = useCallback(
-    (selected: typeof rows) => historyMenu({ workspacePath, path: page.path, changesetId: page.changesetId }, selected),
-    [workspacePath, page.path, page.changesetId],
-  );
+  const initialKey = history && initialHistoryRow(rows, history, page);
+
+  // Opened to annotate: the pane shows the annotation from the start, and stays so for the next history, as if picked.
+  useLayoutEffect(() => {
+    if (page.view) setView(page.view);
+  }, [page.view, setView]);
 
   useEffect(() => {
     if (selection.anchor === null && initialKey) {
@@ -85,6 +86,7 @@ export function HistoryPage({ page }: PageProps<'history'>) {
   );
   const annotationHistory = useMemo<AnnotationHistory>(
     () => ({
+      revisions: history?.revisions ?? [],
       select: (changesetId) => {
         const key = revisionRowKey(rows, changesetId);
         if (key) selectFromPane(key);
@@ -95,7 +97,24 @@ export function HistoryPage({ page }: PageProps<'history'>) {
         selectFromPane(historyRowKey({ kind: 'revision', revision }));
       },
     }),
-    [rows, selectFromPane, selection.anchor, page.path],
+    [history, rows, selectFromPane, selection.anchor, page.path],
+  );
+  const menu = useCallback(
+    (selected: typeof rows) =>
+      historyMenu(
+        {
+          workspacePath,
+          path: page.path,
+          changesetId: page.changesetId,
+          annotate: (revision) => {
+            setTrail([]);
+            selectFromPane(historyRowKey({ kind: 'revision', revision }));
+            setView('annotate');
+          },
+        },
+        selected,
+      ),
+    [workspacePath, page.path, page.changesetId, selectFromPane, setView],
   );
   const back = (): void => {
     const previous = trail.at(-1);

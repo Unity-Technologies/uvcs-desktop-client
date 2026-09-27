@@ -33,9 +33,11 @@ export interface BlockLinks {
   showInHistory: (changesetId: number) => void;
   /** Where the annotation sits beside the history list, clicking a block (or Enter) selects its revision there. */
   selectsInHistory: boolean;
-  /** The revision to annotate "before this change", if the history has one. */
-  revisionBefore?: (changesetId: number) => ItemRevision | undefined;
-  annotateBefore: (revision: ItemRevision) => void;
+  /** Beside the history list: "Annotate before this change", to the revision before it (if the history has one). */
+  walkBack?: {
+    revisionBefore: (changesetId: number) => ItemRevision | undefined;
+    annotateBefore: (revision: ItemRevision) => void;
+  };
 }
 
 interface AnnotatedCodeProps {
@@ -102,7 +104,7 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
     (): Element | null => scroller?.querySelector(`[${BLOCK_LABEL_ATTRIBUTE}="${cardBlock}"]`) ?? null,
     [scroller, cardBlock],
   );
-  const revisionBefore = links.revisionBefore;
+  const revisionBefore = links.walkBack?.revisionBefore;
   const cardChangeset = blocks[cardBlock]?.changeset;
 
   const showBlock = (index: number): void => {
@@ -176,8 +178,7 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
             setActive(index);
             showBlock(index);
           }}
-          revisionBefore={revisionBefore}
-          onAnnotateBefore={links.annotateBefore}
+          walkBack={links.walkBack}
         />
         <VirtualizerContext.Provider value={virtualizer}>
           <WorkerPoolContext.Provider value={workers}>
@@ -202,7 +203,7 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
           revisionBefore: cardChangeset && revisionBefore?.(cardChangeset.changesetId),
           annotateBefore: (revision) => {
             card.close();
-            links.annotateBefore(revision);
+            links.walkBack?.annotateBefore(revision);
           },
           showInHistory: (changesetId) => {
             card.close();

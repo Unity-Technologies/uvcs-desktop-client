@@ -123,7 +123,7 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   folder: () => fileMenu(ws, [{ ...file, path: 'src', name: 'src', itemType: 'directory' }], new PendingChangesIndex([])),
   pendingChange: () => pendingChangeMenu(ws, [change], [], { isIncluded: () => false, setIncluded: () => {} }),
   history: () =>
-    historyMenu({ workspacePath: ws, path: 'src/a.ts' }, [
+    historyMenu({ workspacePath: ws, path: 'src/a.ts', annotate: () => {} }, [
       { kind: 'revision', revision: { revisionId: 40, changesetId: 5, itemType: 'file', spec: 'revid:40', date: '' } } as never,
     ]),
   diffEntry: () => diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [{ path: '/src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39 } as never], { statusOf: () => 'unreviewed', toggle: () => {} } as never),

@@ -1,5 +1,4 @@
 import type { DiffTarget } from '@shared/domain/diff';
-import type { ItemRevision } from '@shared/domain/history';
 import type { MergeRequest } from '@shared/domain/merge';
 
 /**
@@ -9,11 +8,10 @@ import type { MergeRequest } from '@shared/domain/merge';
 export type Page =
   /**
    * `changesetId` reads `path` as the repository had it then (browsing a changeset), instead of in the workspace, where
-   * the item may have moved or be missing. `selectChangeset` opens on the revision that changeset made.
+   * the item may have moved or be missing. `select` opens on that revision; `view: 'annotate'` shows it annotated (at
+   * the workspace's revision unless `select` says otherwise): what every "Annotate" outside the Files view opens.
    */
-  | { kind: 'history'; path: string; changesetId?: number; selectChangeset?: number }
-  /** `revision`, from the file's history, annotates it instead of the loaded one; `changesetId` as in its history. */
-  | { kind: 'annotate'; path: string; revision?: ItemRevision; changesetId?: number }
+  | { kind: 'history'; path: string; changesetId?: number; select?: HistorySelection; view?: 'annotate' }
   /**
    * `focusPath` preselects a file in the diff. `branchHead`, for a branch, is the head it was seen at: the diff is
    * then the one a details panel may already have read, not a second `cm diff`.
@@ -22,6 +20,9 @@ export type Page =
   | { kind: 'merge'; request: MergeRequest }
   | { kind: 'codeReview'; reviewId: number; focusPath?: string }
   | { kind: 'browseRepository'; changesetId: number };
+
+/** A revision of a history: the one a changeset made, or one by its id (which finds it wherever the file was then). */
+export type HistorySelection = { changesetId: number } | { revisionId: number };
 
 export type PageKind = Page['kind'];
 
