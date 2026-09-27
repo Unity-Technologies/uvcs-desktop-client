@@ -192,6 +192,14 @@ export function PendingChangesView() {
     return done;
   };
 
+  // A shelve takes the files as they are on disk, as a checkin does. Shelved away, the changes take their comment along.
+  const shelve = async (keep: boolean): Promise<boolean> => {
+    if (!(await settleBeforeLeaving())) return false;
+    const done = await runBusy(() => shelveChanges(workspacePath, shelvable, joinComment(checkinDraftOf(workspacePath)), keep));
+    if (done && !keep) clearMessage(workspacePath);
+    return done;
+  };
+
   // With nothing pending, the empty state says so: no count, no ways to lay out a list that isn't there.
   const empty = snapshot?.changes.length === 0;
   const header = (
@@ -346,7 +354,7 @@ export function PendingChangesView() {
               recentComments={settings.recentComments}
               busy={busy}
               onCheckin={checkin}
-              onShelve={() => runBusy(() => shelveChanges(workspacePath, shelvable, joinComment(checkinDraftOf(workspacePath))))}
+              onShelve={shelve}
             />
           </div>
         }

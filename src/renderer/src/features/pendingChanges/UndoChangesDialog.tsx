@@ -61,7 +61,7 @@ function UndoChangesDialog({ changes, finish }: { changes: PendingChange[]; fini
         <div className={styles.backup}>
           <Checkbox checked={backup} onChange={setBackup} label="Shelve a backup first" />
           <span className={styles.hint}>
-            {backup ? 'If you need the changes back, apply the shelve from Shelves.' : 'Without a backup, this cannot be undone.'}
+            {backup ? 'If you need the changes back, apply the shelve from your shelves in Changes.' : 'Without a backup, this cannot be undone.'}
           </span>
         </div>
       )}

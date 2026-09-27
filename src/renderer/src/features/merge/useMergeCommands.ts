@@ -1,15 +1,17 @@
 import { Archive, CherryIcon, GitMerge, GitPullRequestArrow, Undo2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useCommands, type Command } from '../../app/commands/commandStore';
-import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
+import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { prompt } from '../../ui/dialog/prompt';
 import { openMerge } from './mergeOperations';
 import { pickBranch } from '../branches/BranchPickerDialog';
+import { applyShelve } from '../shelves/shelveOperations';
 import { hotkey } from '../../lib/shortcutRegistry';
 
 /** Palette commands to start any kind of merge. */
 export function useMergeCommands(): void {
   const { data: workspace } = useWorkspaceInfo();
+  const workspacePath = useWorkspacePath();
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
 
   const commands = useMemo<Command[]>(
@@ -52,9 +54,10 @@ export function useMergeCommands(): void {
         label: 'Apply shelve…',
         icon: Archive,
         run: async () => {
-          const answer = await prompt({ title: 'Apply shelve', label: 'Shelve number', confirmLabel: 'Preview' });
+          const answer = await prompt({ title: 'Apply shelve', label: 'Shelve number', confirmLabel: 'Apply' });
           const shelve = parsePositiveNumber(answer, 'sh:');
-          if (shelve) openMerge({ kind: 'merge', sourceSpec: `sh:${shelve}` });
+          // Applied at once; only conflicts open the merge view.
+          if (shelve) void applyShelve(workspacePath, shelve, false);
         },
       },
       {
@@ -68,7 +71,7 @@ export function useMergeCommands(): void {
         },
       },
     ],
-    [currentBranch],
+    [currentBranch, workspacePath],
   );
 
   useCommands(commands);

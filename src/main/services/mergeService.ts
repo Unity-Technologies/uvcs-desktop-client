@@ -17,9 +17,10 @@ export function createMergeService({ cm, operations }: ServiceContext, { switchS
     run: (workspacePath, request, resolutions, operationId) =>
       operations.run(operationId, async (context) => {
         const result = await runMerge(cm, workspacePath, request, resolutions, context);
-        // A switch shelve applied from the merge view (its conflicts resolved) has done its job.
+        // A shelve applied from the merge view (its conflicts resolved): what shelving it away took comes back, and a
+        // shelve of left changes, or one to apply and delete, is done.
         const shelve = /^sh:(\d+)$/.exec(request.sourceSpec);
-        if (shelve && !request.destinationBranch) await leftChanges.finishAppliedShelve(workspacePath, Number(shelve[1]));
+        if (shelve && !request.destinationBranch) await leftChanges.finishAppliedShelve(workspacePath, Number(shelve[1]), request.deleteShelve === true);
         return result;
       }),
     mergedInto: (workspacePath, sourceChangeset, destinationBranch) => findMergedInto(cm, workspacePath, sourceChangeset, destinationBranch),

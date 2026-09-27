@@ -92,6 +92,14 @@ export function isAffectedByShelving(key: QueryKey): boolean {
 }
 
 /**
+ * Changes were shelved and undone: the lists of shelves, and the workspace as undoing leaves it (its files, the items
+ * the changes added, what is checked out).
+ */
+export function isAffectedByShelvingAway(key: QueryKey): boolean {
+  return isAffectedByShelving(key) || isAffectedByFileChanges(key) || isAffectedByMovedPaths(key) || isAffectedByWorkspaceState(key);
+}
+
+/**
  * New changesets on the server: repository views (history, branches, incoming...), not the disk, the check that told,
  * nor the lists of objects checkins don't create (every label or shelve is a heavy read on big repositories).
  */

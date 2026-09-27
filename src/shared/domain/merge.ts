@@ -9,6 +9,8 @@ export interface MergeRequest {
   intervalOriginSpec?: string;
   /** Merge into this branch on the server ("merge to") instead of into the workspace. */
   destinationBranch?: string;
+  /** A shelve applied to the workspace and deleted once merged ("Apply and delete"). */
+  deleteShelve?: boolean;
 }
 
 export interface MergeContributor {

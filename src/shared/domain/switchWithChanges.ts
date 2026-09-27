@@ -68,7 +68,7 @@ export interface SwitchShelveRecord {
   source: { spec: string; name: string; objectRef: string };
   target: { spec: string; name: string };
   mode: PendingChangesAction;
-  /** Set when the changes were put aside so the workspace could update (see `ShelvedChangesReason`); absent: a switch. */
+  /** Set when the changes were put aside to update, or shelved away by the user (see `ShelvedChangesReason`); absent: a switch. */
   reason?: ShelvedChangesReason;
   createdAt: string;
   /** Workspace paths in the shelve. */
@@ -79,10 +79,11 @@ export interface SwitchShelveRecord {
 }
 
 /**
- * Why the app shelved changes: to switch away, or to update past incoming changesets that deleted or moved
- * files changed locally (`cm update` can't merge those).
+ * Why the app shelved changes: to switch away, to update past incoming changesets that deleted or moved
+ * files changed locally (`cm update` can't merge those), or because the user shelved them away (Shelve undoes what it
+ * shelves). Only the first two are left changes, offered by "Welcome back"; all of them are put back the same way.
  */
-export type ShelvedChangesReason = 'switch' | 'update';
+export type ShelvedChangesReason = 'switch' | 'update' | 'shelve';
 
 /** Shelved changes waiting for the user on the workspace's current selector. */
 export interface LeftChanges {
@@ -92,7 +93,7 @@ export interface LeftChanges {
   /** Where the workspace switched to when they were shelved; unknown for shelves left by another app. */
   targetName?: string;
   mode: PendingChangesAction;
-  reason: ShelvedChangesReason;
+  reason: Exclude<ShelvedChangesReason, 'shelve'>;
   count: number;
   createdAt: string;
   /** Left by another workspace or app (the official client, `cm switch`). */
