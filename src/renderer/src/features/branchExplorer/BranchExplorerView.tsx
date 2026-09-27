@@ -8,6 +8,7 @@ import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorks
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { hotkey, hotkeys, type ShortcutId } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
+import { pluralize } from '../../lib/text';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
@@ -312,7 +313,7 @@ export function BranchExplorerView() {
   const header = (
     <ViewHeader
       title="Branch Explorer"
-      subtitle={layout && filtered && `${filtered.changesets.length} changesets · ${layout.lanes.length} branches`}
+      subtitle={layout && filtered && `${pluralize(filtered.changesets.length, 'changeset')} · ${pluralize(layout.lanes.length, 'branch', 'branches')}`}
       actions={
         <>
           <GraphSearch
