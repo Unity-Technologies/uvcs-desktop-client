@@ -8,3 +8,6 @@ export interface Label {
   date: string;
   repository: string;
 }
+
+/** A label as lists and the Branch Explorer know it; the graph doesn't read its object id. */
+export type LabelInfo = Omit<Label, 'id'>;

@@ -8,6 +8,8 @@ export interface Action {
   label: string;
   icon?: Icon;
   shortcut?: string;
+  /** Muted text after the label, e.g. what a "Copy" entry copies (`br:/main/task`). */
+  detail?: string;
   danger?: boolean;
   disabled?: boolean;
   /** Why it's disabled, as its tooltip in menus. */
@@ -16,6 +18,8 @@ export interface Action {
 }
 
 export interface Submenu {
+  /** Names the submenu for the menu vocabulary (`components/menuWords`), e.g. `copy`. */
+  id?: string;
   label: string;
   icon?: Icon;
   entries: MenuEntry[];

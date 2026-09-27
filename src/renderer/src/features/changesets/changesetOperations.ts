@@ -1,8 +1,8 @@
-import type { Changeset } from '@shared/domain/changeset';
+import type { Changeset, ChangesetInfo } from '@shared/domain/changeset';
 import type { MergeRequest } from '@shared/domain/merge';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
-import { runAction, runVoidAction } from '../../app/operations/runOperation';
+import { runAction, runRead, runVoidAction } from '../../app/operations/runOperation';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
@@ -15,7 +15,7 @@ export function openChangesetDiff(changeset: Pick<Changeset, 'id'>, focusPath?: 
 }
 
 /** Compares the state after the older changeset with the state after the newer one. */
-export function openRangeDiff(older: Changeset, newer: Changeset): void {
+export function openRangeDiff(older: Pick<Changeset, 'id'>, newer: Pick<Changeset, 'id'>): void {
   navigation.openPage({
     kind: 'diff',
     title: `Changesets ${older.id} → ${newer.id}`,
@@ -27,7 +27,7 @@ export function openMerge(request: MergeRequest): void {
   navigation.openPage({ kind: 'merge', request });
 }
 
-export async function mergeChangesetTo(changeset: Changeset): Promise<void> {
+export async function mergeChangesetTo(changeset: Pick<Changeset, 'id' | 'branch'>): Promise<void> {
   const destinationBranch = await pickBranch({
     title: `Merge changeset ${changeset.id} to…`,
     description: 'The merge happens on the server; your workspace is not touched.',
@@ -36,11 +36,11 @@ export async function mergeChangesetTo(changeset: Changeset): Promise<void> {
   if (destinationBranch) openMerge({ kind: 'merge', sourceSpec: `cs:${changeset.id}`, destinationBranch });
 }
 
-export function switchToChangeset(workspacePath: string, changeset: Changeset): Promise<boolean> {
+export function switchToChangeset(workspacePath: string, changeset: Pick<Changeset, 'id'>): Promise<boolean> {
   return switchWorkspace(workspacePath, `cs:${changeset.id}`, `changeset ${changeset.id}`);
 }
 
-export async function editChangesetComment(workspacePath: string, changeset: Changeset): Promise<void> {
+export async function editChangesetComment(workspacePath: string, changeset: Pick<Changeset, 'id' | 'comment'>): Promise<void> {
   const comment = await askForChangesetComment(changeset.id, changeset.comment);
   if (comment !== undefined) await saveChangesetComment(workspacePath, changeset, comment);
 }
@@ -49,7 +49,7 @@ export function saveChangesetComment(workspacePath: string, changeset: Pick<Chan
   return runAction(workspacePath, "Couldn't update the comment", () => api.changesets.editComment(workspacePath, changeset.id, comment));
 }
 
-export async function moveChangesetToBranch(workspacePath: string, changeset: Changeset): Promise<void> {
+export async function moveChangesetToBranch(workspacePath: string, changeset: Pick<Changeset, 'id' | 'branch'>): Promise<void> {
   const branch = await prompt({
     title: `Move changeset ${changeset.id} to another branch`,
     label: 'Destination branch',
@@ -65,7 +65,7 @@ export async function moveChangesetToBranch(workspacePath: string, changeset: Ch
   if (moved) toast.success(`Moved changeset ${changeset.id} to ${branch}`);
 }
 
-export async function deleteChangeset(workspacePath: string, changeset: Changeset): Promise<void> {
+export async function deleteChangeset(workspacePath: string, changeset: Pick<Changeset, 'id'>): Promise<void> {
   const confirmed = await confirm({
     title: `Delete changeset ${changeset.id}?`,
     message: 'Only the last changeset of a branch can be deleted, and it is gone for good.',
@@ -82,6 +82,12 @@ export async function deleteChangeset(workspacePath: string, changeset: Changese
  * Makes the workspace match an older changeset of the loaded branch: a subtractive merge of everything after it,
  * reviewed in the merge view like any other merge, so conflicts are resolved there.
  */
-export function revertWorkspaceToChangeset(changeset: Changeset, loadedChangeset: number): void {
+export function revertWorkspaceToChangeset(changeset: Pick<Changeset, 'id'>, loadedChangeset: number): void {
   openMerge({ kind: 'subtractive', sourceSpec: `cs:${loadedChangeset}`, intervalOriginSpec: `cs:${changeset.id}` });
+}
+
+/** A changeset's GUID, read when a view that didn't read it (the Branch Explorer) copies it. */
+export function readChangesetGuid(workspacePath: string, changeset: ChangesetInfo): Promise<string | undefined> {
+  if (changeset.guid) return Promise.resolve(changeset.guid);
+  return runRead("Couldn't read the changeset's GUID", async () => (await api.changesets.get(workspacePath, changeset.id)).guid);
 }

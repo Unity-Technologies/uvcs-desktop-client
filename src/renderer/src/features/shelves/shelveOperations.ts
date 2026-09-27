@@ -71,7 +71,7 @@ export function shelveAway(workspacePath: string, paths: string[] | null, commen
   });
 }
 
-export function showShelveChanges(shelve: Shelve, focusPath?: string): void {
+export function showShelveChanges(shelve: Pick<Shelve, 'id'>, focusPath?: string): void {
   navigation.openPage({ kind: 'diff', title: `Shelve ${shelve.id}`, target: { kind: 'shelve', shelveId: shelve.id }, focusPath });
 }
 

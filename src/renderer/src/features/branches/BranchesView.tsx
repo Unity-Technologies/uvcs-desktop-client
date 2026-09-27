@@ -34,6 +34,8 @@ import { buildBranchTree, sortBranchesByName, type BranchTreeRow } from './branc
 import { openCreateBranchDialog } from './CreateBranchDialog';
 import { newBranchFromWorkspace } from './newBranchFromWorkspace';
 import { useBranches } from './useBranches';
+import { branchCopyTexts } from './branchMenu';
+import { useCopyCommand } from '../../app/commands/useCopyCommand';
 
 export function BranchesView() {
   const workspacePath = useWorkspacePath();
@@ -59,6 +61,7 @@ export function BranchesView() {
   );
   const selected = matching.find((branch) => rowKey({ branch }) === selection.anchor);
   useRenameCommand('Branches', 'branch', selection.selected.size === 1 ? selected : undefined, (branch) => void renameBranch(workspacePath, branch));
+  useCopyCommand('Branches', 'Branch', selection.selected.size === 1 && selected ? branchCopyTexts(selected) : undefined);
   // What collapsing reads, so the columns (and their sort) don't change with every selection.
   const latest = useRef({ selected, matching, setSelection });
   latest.current = { selected, matching, setSelection };

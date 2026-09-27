@@ -203,7 +203,16 @@ export function BranchExplorerView() {
     canvasRef.current?.frameBranch(name);
   });
   const menuFor = (target: GraphTarget | null) =>
-    graphMenu(target, { workspacePath, layout: layout!, goToChangeset, showRelatedTo: (name) => focusOn(name, focusHops), revealCreatedBranch });
+    graphMenu(target, {
+      workspacePath,
+      layout: layout!,
+      currentBranch: currentBranch ?? undefined,
+      loadedChangeset: workspace?.loadedChangeset,
+      repository: workspace?.repository,
+      goToChangeset,
+      showRelatedTo: (name) => focusOn(name, focusHops),
+      revealCreatedBranch,
+    });
 
   const select = (target: GraphTarget | null): void => {
     if (target?.kind === 'codeReview') openReview(target.review);

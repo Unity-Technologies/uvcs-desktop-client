@@ -1,4 +1,4 @@
-import type { Label } from '@shared/domain/label';
+import type { LabelInfo as Label } from '@shared/domain/label';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -43,8 +43,9 @@ export function browseLabel(label: Label): void {
   navigation.openPage({ kind: 'browseRepository', changesetId: label.changeset });
 }
 
-export function createBranchFromLabel(workspacePath: string, label: Label): void {
-  openCreateBranchDialog(workspacePath, {
+/** Resolves to the new branch's name, once created. */
+export function createBranchFromLabel(workspacePath: string, label: Label): Promise<string | undefined> {
+  return openCreateBranchDialog(workspacePath, {
     parentBranch: label.branch,
     startingPoint: spec.label(label.name),
     startingPointLabel: `label ${label.name} (changeset ${label.changeset})`,

@@ -32,7 +32,7 @@ export function MenuEntries({ entries, primitives }: { entries: MenuEntry[]; pri
     if (isSubmenu(entry)) {
       const SubmenuIcon = entry.icon;
       return (
-        <Sub key={entry.label}>
+        <Sub key={entry.id ?? entry.label}>
           <SubTrigger className={styles.item}>
             <span className={styles.icon}>{SubmenuIcon && <SubmenuIcon size={14} />}</span>
             <span className={styles.label}>{entry.label}</span>
@@ -58,6 +58,7 @@ export function MenuEntries({ entries, primitives }: { entries: MenuEntry[]; pri
       >
         <span className={styles.icon}>{ActionIcon && <ActionIcon size={14} />}</span>
         <span className={styles.label}>{entry.label}</span>
+        {entry.detail && <span className={styles.detail}>{entry.detail}</span>}
         {entry.shortcut && (
           <span className={styles.trailing}>
             <Kbd keys={entry.shortcut} />

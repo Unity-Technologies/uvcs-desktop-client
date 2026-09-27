@@ -9,6 +9,7 @@ import { Button } from '../../ui/Button';
 import { DetailsCopyable, DetailsPanel } from '../../ui/DetailsPanel';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { showShelveChanges } from './shelveOperations';
+import { copiedWhat } from '../../components/copyMenu';
 
 export function ShelveDetails({ shelve, menu }: { shelve: Shelve; menu: MenuEntry[] }) {
   return (
@@ -18,9 +19,9 @@ export function ShelveDetails({ shelve, menu }: { shelve: Shelve; menu: MenuEntr
       heading={<DetailsHeading comment={shelve.comment} />}
       author={{ user: shelve.owner, date: shelve.date }}
       meta={[
-        <DetailsCopyable key="id" text={spec.shelve(shelve.id)} what="Shelve spec" />,
+        <DetailsCopyable key="id" text={spec.shelve(shelve.id)} what={copiedWhat('Shelve', 'spec')} />,
         <Fragment key="base">
-          on <DetailsCopyable text={spec.changeset(shelve.parentChangeset)} what="Changeset spec" />
+          on <DetailsCopyable text={spec.changeset(shelve.parentChangeset)} what={copiedWhat('Changeset', 'spec')} />
         </Fragment>,
       ]}
       primaryAction={

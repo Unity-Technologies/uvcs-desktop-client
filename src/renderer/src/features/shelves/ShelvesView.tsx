@@ -23,6 +23,8 @@ import { showShelveChanges } from './shelveOperations';
 import { useShelves } from './useShelves';
 import { shelvesEmptyState } from './shelvesEmptyState';
 import { useShelvesViewStore } from './shelvesViewStore';
+import { shelveCopyTexts } from './shelveMenu';
+import { useCopyCommand } from '../../app/commands/useCopyCommand';
 
 /** Read like the changesets list; where a changeset shows its branch, a shelve shows the changeset it was made on. */
 const COLUMNS: Column<Shelve>[] = [
@@ -49,6 +51,7 @@ export function ShelvesView() {
     return (shelves ?? []).filter((shelve) => `${shelve.id} ${shelve.comment} ${shelve.owner}`.toLowerCase().includes(needle));
   }, [shelves, search]);
   const selected = visible.find((shelve) => shelveKey(shelve) === selection.anchor);
+  useCopyCommand('Shelves', 'Shelve', selection.selected.size === 1 && selected ? shelveCopyTexts(selected) : undefined);
 
   return (
     <>

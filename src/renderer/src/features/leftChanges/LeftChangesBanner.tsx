@@ -2,7 +2,7 @@ import { Archive, FileDiff, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { LeftChanges } from '@shared/domain/switchWithChanges';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { tidyMenu } from '../../lib/actions';
+import { SEPARATOR, tidyMenu } from '../../lib/actions';
 import { formatRelativeDate } from '../../lib/formatDate';
 import { pluralize } from '../../lib/text';
 import { SplitButton } from '../../ui/SplitButton';
@@ -32,10 +32,11 @@ export function LeftChangesBanner() {
 
   const menu = tidyMenu([
     { id: 'review', label: 'Review first', icon: FileDiff, run: () => reviewLeftChanges(newest) },
+    SEPARATOR,
     { id: 'discard', label: 'Discard…', icon: Trash2, danger: true, run: () => void run(() => discardLeftChanges(workspacePath, [newest])) },
     older.length > 0 && {
       id: 'discardOlder',
-      label: `Discard older (${older.length})`,
+      label: `Discard older (${older.length})…`,
       icon: Trash2,
       danger: true,
       run: () => void run(() => discardLeftChanges(workspacePath, older)),

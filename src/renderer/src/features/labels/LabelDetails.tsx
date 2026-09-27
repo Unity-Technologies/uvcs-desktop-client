@@ -10,6 +10,7 @@ import { AttributeChips } from '../attributes/AttributeChips';
 import { BranchChip } from '../branches/BranchChip';
 import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { saveLabelComment, showLabelChanges } from './labelOperations';
+import { copiedWhat } from '../../components/copyMenu';
 
 export function LabelDetails({ workspacePath, label, menu }: { workspacePath: string; label: Label; menu: MenuEntry[] }) {
   return (
@@ -19,7 +20,7 @@ export function LabelDetails({ workspacePath, label, menu }: { workspacePath: st
       heading={<DetailsHeading name={label.name} comment={label.comment} onSave={(comment) => saveLabelComment(workspacePath, label, comment)} />}
       author={{ user: label.owner, date: label.date }}
       meta={[
-        <DetailsCopyable key="changeset" text={spec.changeset(label.changeset)} what="Changeset spec" />,
+        <DetailsCopyable key="changeset" text={spec.changeset(label.changeset)} what={copiedWhat('Changeset', 'spec')} />,
         <BranchChip key="branch" name={label.branch} />,
       ]}
       attributes={<AttributeChips key={label.name} objectSpec={spec.label(label.name)} />}

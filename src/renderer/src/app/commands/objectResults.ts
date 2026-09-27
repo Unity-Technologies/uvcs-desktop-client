@@ -1,4 +1,4 @@
-import { AppWindow, Archive, Copy, File, Folder, FolderSearch, FolderTree, GitBranch, GitCommitVertical, History, MessageSquareCode, ScanText, Tag } from 'lucide-react';
+import { Archive, File, Folder, GitBranch, GitCommitVertical, MessageSquareCode, Tag } from 'lucide-react';
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
@@ -17,15 +17,15 @@ import { labelMenu } from '../../features/labels/labelMenu';
 import { showLabelChanges } from '../../features/labels/labelOperations';
 import { describeKinds } from '../../features/pendingChanges/changeCategories';
 import { changeTone } from '../../features/pendingChanges/changeTone';
-import { pendingChangeMenu } from '../../features/pendingChanges/pendingChangeMenu';
-import { absolutePath, copyPaths } from '../../features/pendingChanges/pendingChangeOperations';
+import { itemCopySubmenu, pendingChangeMenu } from '../../features/pendingChanges/pendingChangeMenu';
 import { shelveMenu } from '../../features/shelves/shelveMenu';
 import { showShelveChanges } from '../../features/shelves/shelveOperations';
-import { SEPARATOR, tidyMenu, type MenuEntry } from '../../lib/actions';
+import type { MenuEntry } from '../../lib/actions';
 import { formatRelativeDate } from '../../lib/formatDate';
+import { groupedMenu, withEntries } from '../../lib/menuGroups';
+import { menuAction } from '../../components/menuWords';
 import { fuzzyMatchPositions, fuzzyMatchQuality } from '../../lib/fuzzyIndex';
 import { wordMatchQuality } from '../../lib/matchesAllWords';
-import { REVEAL_LABEL } from '../../lib/platform';
 import { firstLine } from '../../lib/text';
 import { wordMatchRanges } from '../../lib/textMatchRanges';
 import { displayName } from '../../lib/userName';
@@ -61,32 +61,22 @@ export function fileResult(entry: { path: string; isDirectory: boolean }, contex
     detailMatches: matches.filter((position) => position < separator),
     quality: term ? fuzzyMatchQuality(entry.path, term) : undefined,
     status: change && { tone: changeTone(change), title: describeKinds(change) },
-    menu: () => [
-      { id: 'showInFiles', label: 'Show in Files', icon: FolderTree, run: reveal },
-      SEPARATOR,
-      ...(change ? pendingChangeMenu(workspacePath, [change], context.changelists) : workspaceFileMenu(workspacePath, entry)),
-    ],
+    menu: () =>
+      withEntries(change ? pendingChangeMenu(workspacePath, [change], context.changelists) : workspaceFileMenu(workspacePath, entry), [
+        menuAction('showInFiles', reveal),
+      ]),
     run: reveal,
   };
 }
 
 /** For files without pending changes, which the Files view's menu would need their revision details for. */
 function workspaceFileMenu(workspacePath: string, entry: { path: string; isDirectory: boolean }): MenuEntry[] {
-  return tidyMenu([
-    !entry.isDirectory && { id: 'open', label: 'Open', icon: AppWindow, run: () => openItem(workspacePath, entry) },
-    { id: 'reveal', label: REVEAL_LABEL, icon: FolderSearch, run: () => revealItem(workspacePath, entry) },
-    SEPARATOR,
-    { id: 'history', label: 'View history', icon: History, run: () => navigation.openPage({ kind: 'history', path: entry.path }) },
-    !entry.isDirectory && { id: 'annotate', label: 'Annotate', icon: ScanText, run: () => navigation.openPage({ kind: 'annotate', path: entry.path }) },
-    SEPARATOR,
-    {
-      label: 'Copy',
-      icon: Copy,
-      entries: [
-        { id: 'copy.relative', label: 'Copy relative path', run: () => copyPaths([entry.path]) },
-        { id: 'copy.absolute', label: 'Copy full path', run: () => copyPaths([absolutePath(workspacePath, entry.path)]) },
-      ],
-    },
+  return groupedMenu([
+    !entry.isDirectory && menuAction('open', () => openItem(workspacePath, entry)),
+    menuAction('history', () => navigation.openPage({ kind: 'history', path: entry.path })),
+    !entry.isDirectory && menuAction('annotate', () => navigation.openPage({ kind: 'annotate', path: entry.path })),
+    menuAction('reveal', () => revealItem(workspacePath, entry)),
+    itemCopySubmenu(workspacePath, [entry.path]),
   ]);
 }
 

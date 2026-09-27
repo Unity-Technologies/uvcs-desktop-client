@@ -1,18 +1,15 @@
-import { CircleCheck } from 'lucide-react';
-import type { MenuEntry } from '../../lib/actions';
+import type { GroupedEntry } from '../../lib/menuGroups';
+import { hotkey } from '../../lib/shortcutRegistry';
+import { menuAction } from '../../components/menuWords';
 import { shouldMarkReviewed } from './reviewStatus';
 import type { ListReview } from './useReviewMode';
-import { hotkey } from '../../lib/shortcutRegistry';
 
 /** "Mark as reviewed" (turning review mode on if needed) or "Clear review mark" for the selected files; nothing for folders. */
-export function reviewMenuEntry<T>(items: T[], { statusOf, toggle }: ListReview<T>): MenuEntry | null {
+export function reviewMenuEntry<T>(items: T[], { statusOf, toggle }: ListReview<T>): GroupedEntry | null {
   const reviewable = items.filter((item) => statusOf(item) !== null);
   if (reviewable.length === 0) return null;
-  return {
-    id: 'review',
+  return menuAction('review', () => toggle(reviewable), {
     label: shouldMarkReviewed(reviewable, statusOf) ? 'Mark as reviewed' : 'Clear review mark',
-    icon: CircleCheck,
     shortcut: hotkey('review'),
-    run: () => toggle(reviewable),
-  };
+  });
 }
