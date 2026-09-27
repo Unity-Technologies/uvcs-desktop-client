@@ -13,7 +13,9 @@ const bridge: UvcsBridge = {
     return () => ipcRenderer.removeListener(EVENT_CHANNEL, handler);
   },
 
-  platform: process.platform,
+  // `UVCS_RENDERER_PLATFORM=win32` (or `linux`) previews another OS's shortcuts, copy and chrome from a Mac: the
+  // renderer only, the menus and window frame stay the host's.
+  platform: process.env.UVCS_RENDERER_PLATFORM || process.platform,
 
   pathForFile: (file) => webUtils.getPathForFile(file),
 };

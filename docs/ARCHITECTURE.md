@@ -316,6 +316,20 @@ renderer/src/
   (`?`, ⌘/) lists the registry, and a test rejects shortcut literals anywhere else and menu accelerators that differ. Views
   get ⌘1… in sidebar order (`viewShortcut`; past the ninth ⌥⌘1… on macOS, whose ⇧⌘3–5 take screenshots). Window
   shortcuts and menu commands run once per press and wait while a modal dialog is open (`lib/modalDialog`).
+  `mod` is ⌘ on macOS and Ctrl elsewhere, shown as symbols in the Mac's order (⇧⌘K) or spelled out (Ctrl+Shift+K,
+  `formatShortcut`). A shortcut takes other keys off macOS where Windows and Linux conventions differ (`keysOffMac`: Alt+←
+  back, Delete deletes) and never Ctrl+Alt there, which is AltGr on European layouts (the test checks it). Letters match
+  by the character typed (Ctrl+Z on a German keyboard), digits by position. F2 renames the selected file, branch, label or
+  attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A field keeps
+  its own text chords, Ctrl+Y (redo) included off macOS (`belongsToField`).
+- **Per OS**: platform differences go through small pure helpers taking the platform (`revealLabel`, `trashName`,
+  `windowChrome`, `appMenuTemplate`, `formatShortcut`), read once in `lib/platform.ts`. Windows draw their title bar per
+  `windowChrome`: macOS insets its traffic lights over the sidebar's top band; Windows hides its title bar and overlays
+  its caption buttons on the top bar (`titleBarOverlay`, clear, symbols in the theme's text color; the page keeps
+  `--caption-buttons-width` free), with a menu button in the band (and Alt or F10) popping up the menu bar's menus;
+  Linux keeps the desktop's frame and menu bar. Native parts follow the app's theme (`followAppTheme`). The menus
+  (`main/window/appMenuTemplate`) have an app menu on macOS only; elsewhere File ends with Settings and Exit (Windows)
+  or Quit (Linux), Help with About, and `&` marks each item's Alt letter.
 - **Focus**: the list, tree or graph a view or page works on carries `MAIN_FOCUS` (`lib/mainFocus.ts`). `useMainFocus`
   focuses it after navigating and whenever focus falls to the document (a dialog, menu or popover closed), and hands it
   list keys pressed while nothing has focus. Views keep their list's selection while away (`useViewSelection`). Lists
@@ -400,3 +414,5 @@ and many people use the same server. Every `cm` command other than local reads (
   - interactive: `npm run build && UVCS_CDP_PORT=9333 npm run app:debug &`, then
     `npx playwright-cli attach --cdp=http://localhost:9333` and use `snapshot`, `click <ref>`, `screenshot`
     (see `.claude/skills/playwright-cli`). Use a distinct port and `-s=<session>` per parallel agent.
+- `UVCS_RENDERER_PLATFORM=win32` (or `linux`) in the environment previews another OS's shortcuts, copy and layout from a
+  Mac (the page only: the menus and window frame stay the Mac's).
