@@ -141,4 +141,28 @@ describe('CmShellPool', () => {
     expect(pool.isReady('/wk')).toBe(false);
     expect(FakeSession.created).toHaveLength(4);
   });
+
+  it("lets a released workspace's sessions go once their commands are done, and starts new ones when needed", async () => {
+    const running = pool.run('/wk', ['status']);
+    const [busy] = FakeSession.created;
+    pool.release('/wk');
+    expect(busy!.disposed).toBe(false);
+
+    busy!.finish('status');
+    await expect(running).resolves.toMatchObject({ output: 'status' });
+    await settle();
+    expect(busy!.disposed).toBe(true);
+    void pool.run('/wk', ['status']);
+    expect(FakeSession.created).toHaveLength(2);
+  });
+
+  it("keeps a released workspace's sessions when a command comes before they are done", async () => {
+    void pool.run('/wk', ['status']);
+    const [session] = FakeSession.created;
+    pool.release('/wk');
+    void pool.run('/wk', ['status', '--header']);
+    session!.finish('status');
+    await settle();
+    expect(session!.disposed).toBe(false);
+  });
 });

@@ -7,6 +7,7 @@ import type { SettingsStore } from '../settings/SettingsStore';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
 import type { WorkspaceWindows } from '../window/WorkspaceWindows';
 import type { LeftChangesFinder } from '../workspace/leftChanges';
+import type { WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
 import type { SwitchShelveRecords } from '../workspace/switchShelveRecords';
 
 /** Shared dependencies handed to every service. */
@@ -18,6 +19,7 @@ export interface ServiceContext {
   settings: SettingsStore;
   watchers: WorkspaceWatchers;
   windows: WorkspaceWindows;
+  headers: WorkspaceHeaders;
 }
 
 /**

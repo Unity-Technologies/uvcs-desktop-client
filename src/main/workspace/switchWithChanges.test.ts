@@ -49,7 +49,7 @@ function workspaceWith(workspacePath: string, scenario: Scenario = {}) {
     async query(args: string[]) {
       const command = args.join(' ');
       if (command === 'status --header --xml') return header(branch, 1);
-      if (args[0] === 'getworkspacefrompath') return 'a0411612-d36e-4eca-b9b5-97acad5969ea\n';
+      if (args[0] === 'getworkspacefrompath') return 'work\u001fa0411612-d36e-4eca-b9b5-97acad5969ea\u001e\n';
       if (args[0] === 'find' && args[1] === 'branch') return TASK1_BRANCH;
       if (command === 'status --xml --private') return withChanges(change('PR', 'src/new.txt'));
       if (args[0] === 'status' && args[1] === '--short') return '';

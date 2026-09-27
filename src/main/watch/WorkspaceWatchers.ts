@@ -13,6 +13,7 @@ export interface Watcher {
 
 type CreateWatcher = (workspacePath: string, onChanged: (change: WorkspaceChange) => void) => Watcher;
 type ChangeListener = (viewers: number[], workspacePath: string, change: WorkspaceChange) => void;
+type StopListener = (workspacePath: string) => void;
 
 interface Entry {
   watcher: Watcher;
@@ -22,7 +23,7 @@ interface Entry {
 
 /**
  * One watcher per workspace shown in some window (a viewer, by id). A window watches one workspace at a time;
- * the watcher stops when no window shows its workspace anymore.
+ * the watcher stops when no window shows its workspace anymore (`onStopped`).
  */
 export class WorkspaceWatchers {
   private readonly byPath = new Map<string, Entry>();
@@ -30,6 +31,7 @@ export class WorkspaceWatchers {
 
   constructor(
     private readonly onChanged: ChangeListener,
+    private readonly onStopped: StopListener,
     private readonly createWatcher: CreateWatcher = (path, onChanged) => new WorkspaceWatcher(path, onChanged),
   ) {}
 
@@ -55,6 +57,7 @@ export class WorkspaceWatchers {
     if (entry && entry.viewers.size === 0) {
       entry.watcher.stop();
       this.byPath.delete(workspacePath);
+      this.onStopped(workspacePath);
     }
   }
 

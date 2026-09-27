@@ -18,6 +18,7 @@ src/
 4. `CmClient` runs the command:
    - `query()` for short reads: reuses pooled `cm shell` sessions (much faster than spawning `cm`), two per working
      directory; a command takes the first one free, and a directory idle for ten minutes lets its sessions go.
+     A workspace no window shows anymore lets them go once their commands are done (`WorkspaceWatchers` `onStopped`).
      A session takes about a second to answer its first command, so until one in that directory has, the query runs as a
      process of its own.
    - `execute()` for long or cancellable work (update, switch, checkin, merge): a dedicated process that streams progress lines.
@@ -209,6 +210,8 @@ renderer/src/
     from `.plastic` rewrites by any tool (workspace info; everything when the loaded changeset or branch moved). See
     `app/shell/useWorkspaceWatcher.ts` and `app/refresh/`. A diff with unsaved edits holds still and offers to reload instead.
     A hidden window (minimized, covered, on another desktop) keeps the changes and refreshes once, when it shows again.
+    File edits name the folders they touched (up to `MAX_CHANGED_FOLDERS`, else anywhere): the files view re-reads only
+    those listings and the ones above them (`isAffectedByFileChangesIn`), not every open folder.
   - Locks live on the server, where nothing reports changes: pending changes re-read them along with the changes, at most every 30 s.
   - Window focus (wired to real focus in `trackWindowFocus`) refetches stale server views; local views skip it while the watcher sees everything.
   - Incoming: `useIncomingSummary` polls every minute with focus, every five minutes behind other apps, never hidden, and on focus if

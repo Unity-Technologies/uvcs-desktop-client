@@ -12,6 +12,7 @@ import { describeSelector, selectorSpec } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
 import { applyShelveCleanly, deleteShelves, detachReplacedFiles, readShelveEntries } from './switchShelves';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';
+import { cmHeaderReaders, type HeaderReaders } from './WorkspaceHeaders';
 
 /**
  * The shelves left behind when switching away, found again when the workspace comes back:
@@ -22,10 +23,11 @@ export class LeftChangesFinder {
   constructor(
     private readonly cm: CmClient,
     private readonly records: SwitchShelveRecords,
+    private readonly headers: HeaderReaders = cmHeaderReaders(cm),
   ) {}
 
   async find(workspacePath: string): Promise<LeftChanges[]> {
-    const workspace = await readWorkspaceIdentity(this.cm, workspacePath);
+    const workspace = await readWorkspaceIdentity(this.headers, workspacePath);
     const shelves = await this.automaticShelves(workspacePath);
     const own = this.liveRecords(workspace, shelves).flatMap((record) => waitingOn(record, selectorSpec(workspace.selector)) ?? []);
     const foreign = await this.foreignShelves(workspacePath, workspace, shelves);
@@ -38,7 +40,7 @@ export class LeftChangesFinder {
 
   /** Whether this app's records have changes waiting on what the workspace is on now. Reads no server data. */
   async hasOwnWaiting(workspacePath: string): Promise<boolean> {
-    const workspace = await readWorkspaceIdentity(this.cm, workspacePath);
+    const workspace = await readWorkspaceIdentity(this.headers, workspacePath);
     return this.records
       .forWorkspace(workspace.guid)
       .some((record) => record.repository === workspace.repository && waitingOn(record, selectorSpec(workspace.selector)));
@@ -49,7 +51,7 @@ export class LeftChangesFinder {
    * Shelves left by another app are adopted into the records, so finishing them in the merge view cleans up too.
    */
   async restore(workspacePath: string, shelveId: number, context: OperationContext): Promise<RestoreResult> {
-    const workspace = await readWorkspaceIdentity(this.cm, workspacePath);
+    const workspace = await readWorkspaceIdentity(this.headers, workspacePath);
     const record = this.records.find({ shelveId, repository: workspace.repository }) ?? (await this.adopt(workspacePath, workspace, shelveId));
 
     if (record.backup) await putBack(workspacePath, record.backup);
@@ -63,13 +65,13 @@ export class LeftChangesFinder {
 
   /** After a merge from a shelve: if it was a switch shelve, its changes are back, so it is cleaned up. */
   async finishAppliedShelve(workspacePath: string, shelveId: number): Promise<void> {
-    const workspace = await readWorkspaceIdentity(this.cm, workspacePath);
+    const workspace = await readWorkspaceIdentity(this.headers, workspacePath);
     const record = this.records.find({ shelveId, repository: workspace.repository });
     if (record) await this.finish(workspacePath, record);
   }
 
   async discard(workspacePath: string, shelveIds: number[]): Promise<void> {
-    const workspace = await readWorkspaceIdentity(this.cm, workspacePath);
+    const workspace = await readWorkspaceIdentity(this.headers, workspacePath);
     const keys = shelveIds.map((shelveId) => ({ shelveId, repository: workspace.repository }));
     await deleteShelves(this.cm, workspacePath, keys.map(({ shelveId, repository }) => ({ id: shelveId, repository })));
     for (const key of keys) {

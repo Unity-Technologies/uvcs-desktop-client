@@ -19,11 +19,14 @@ interface Directory {
   /** Commands waiting for a session to be free: the first one free takes the next, so a slow command holds up none. */
   waiting: Waiting[];
   idleTimer: NodeJS.Timeout | null;
+  /** No window shows the workspace anymore: its sessions go as soon as their commands are done. */
+  released: boolean;
 }
 
 /**
  * Keeps a few `cm shell` sessions per working directory so independent queries don't wait on each other, and lets
- * them go once the directory is idle: each one is a process of about 100 MB.
+ * them go once the directory is idle, or as soon as no window shows its workspace (`release`): each one is a process
+ * of about 100 MB.
  */
 export class CmShellPool {
   private readonly directories = new Map<string, Directory>();
@@ -65,6 +68,14 @@ export class CmShellPool {
     this.whenIdle(cwd, directory);
   }
 
+  /** Lets a workspace's sessions go once the commands already asked for are done; a later command starts new ones. */
+  release(cwd: string): void {
+    const directory = this.directories.get(cwd);
+    if (!directory) return;
+    directory.released = true;
+    this.whenIdle(cwd, directory);
+  }
+
   disposeAll(): void {
     for (const directory of this.directories.values()) this.disposeDirectory(directory);
     this.directories.clear();
@@ -73,9 +84,10 @@ export class CmShellPool {
   private directory(cwd: string): Directory {
     let directory = this.directories.get(cwd);
     if (!directory) {
-      directory = { sessions: [], waiting: [], idleTimer: null };
+      directory = { sessions: [], waiting: [], idleTimer: null, released: false };
       this.directories.set(cwd, directory);
     }
+    directory.released = false;
     if (directory.idleTimer) clearTimeout(directory.idleTimer);
     directory.idleTimer = null;
     return directory;
@@ -106,11 +118,17 @@ export class CmShellPool {
   }
 
   private whenIdle(cwd: string, directory: Directory): void {
-    if (directory.idleTimer || directory.waiting.length > 0 || directory.sessions.some((session) => session.pendingCount > 0)) return;
-    directory.idleTimer = setTimeout(() => {
+    if (directory.waiting.length > 0 || directory.sessions.some((session) => session.pendingCount > 0)) return;
+    const letGo = () => {
       this.disposeDirectory(directory);
       this.directories.delete(cwd);
-    }, IDLE_DIRECTORY_MS);
+    };
+    if (directory.released) {
+      letGo();
+      return;
+    }
+    if (directory.idleTimer) return;
+    directory.idleTimer = setTimeout(letGo, IDLE_DIRECTORY_MS);
     // Waiting to let the sessions go is no reason to keep the app running.
     directory.idleTimer.unref();
   }
