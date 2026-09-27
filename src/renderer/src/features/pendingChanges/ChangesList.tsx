@@ -1,9 +1,12 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ChevronRight, Folder, MoreHorizontal } from 'lucide-react';
+import { ChevronRight, MoreHorizontal } from 'lucide-react';
 import { useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
-import { PathLabel } from '../../components/PathLabel';
-import { StatusBadge } from '../../components/StatusBadge';
+import { ItemIcon } from '../../components/ItemIcon';
+import { ItemPathRow } from '../../components/ItemPathRow';
+import { ItemRow } from '../../components/ItemRow';
+import { ItemStatusMark } from '../../components/ItemStatusMark';
+import { ItemTag } from '../../components/ItemTag';
 import type { MenuEntry } from '../../lib/actions';
 import { Arrivals } from '../../lib/arrivals';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
@@ -14,15 +17,13 @@ import { treeArrowMove } from '../../lib/treeArrowMove';
 import { Checkbox, type CheckState } from '../../ui/Checkbox';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
-import { describeKinds } from './changeCategories';
-import { changeTone } from './changeTone';
+import { changePresence, changeStatus, changeTone } from './changeTone';
 import { changeTreeArrowRows, menuTargetOf, rowCheckState, rowIndent, treeLevel, type ChangeRow } from './changeRows';
 import { LockChip } from './locks/LockChip';
 import type { PendingLocks } from './locks/pendingLocks';
 import { isReviewKey, toggleReviewedFromKey } from '../review/reviewKey';
 import { groupReviewStatus, type ReviewStatus, type ReviewStatusOf } from '../review/reviewStatus';
 import { ReviewToggle } from '../review/ReviewToggle';
-import { SinceReviewDot } from '../review/SinceReviewDot';
 import type { ListReview } from '../review/useReviewMode';
 import { useChangelistDrop } from './useChangelistDrop';
 import styles from './ChangesList.module.css';
@@ -220,7 +221,6 @@ export function ChangesList({
                 data-focused={row.key === focused}
                 data-arrived={arrived.has(row.key) || undefined}
                 data-drop-target={dropTarget === row.key}
-                data-review={reviewStatusOf(row) ?? undefined}
                 style={{ top: item.start, height: ROW_HEIGHT, '--row-indent': `${rowIndent(row, grouped)}px` } as CSSProperties}
                 onMouseDown={(event) => onRowMouseDown(row, event)}
                 onClick={() => onRowClick(row)}
@@ -306,27 +306,29 @@ function RowContent({ row, checkState, reviewStatus, onToggleIncluded, changelis
           <span className={styles.count}>{row.changes.length}</span>
         </>
       );
-    case 'directory': {
+    case 'directory':
       return (
         <>
           <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
           <RowCheckbox row={row} checkState={checkState} label={row.name} onToggleIncluded={onToggleIncluded} />
-          {row.change && <StatusBadge tone={changeTone(row.change)} title={describeKinds(row.change)} />}
-          <Folder size={14} className={styles.folder} />
-          <span className={styles.directoryName} data-tip={row.name.includes('/') ? row.name : undefined}>
-            {row.name}
-          </span>
-          {reviewStatus && (
-            <span className={styles.trailing}>
-              <ReviewToggle folder status={reviewStatus} onToggle={() => review.toggle(row.changes)} />
-            </span>
-          )}
+          {/* Every folder here holds changes, so only its own change marks it. */}
+          <ItemRow
+            icon={<ItemIcon itemType="directory" name={row.name} />}
+            label={
+              <span className={styles.directoryName} data-tip={row.name.includes('/') ? row.name : undefined}>
+                {row.name}
+              </span>
+            }
+            extras={reviewStatus && <ReviewToggle folder status={reviewStatus} onToggle={() => review.toggle(row.changes)} />}
+            status={<ItemStatusMark status={row.change && changeStatus(row.change)} />}
+            presence={row.change ? changePresence(row.change) : 'controlled'}
+            deleted={row.change && changeTone(row.change) === 'deleted'}
+            faded={reviewStatus === 'reviewed'}
+          />
         </>
       );
-    }
     case 'change': {
       const { change } = row;
-      const deleted = change.kinds.includes('deleted') || change.kinds.includes('locallyDeleted');
       const lock = locks.get(change.path);
       return (
         <>
@@ -335,15 +337,23 @@ function RowContent({ row, checkState, reviewStatus, onToggleIncluded, changelis
           ) : (
             <span className={styles.checkboxPlaceholder} />
           )}
-          <StatusBadge tone={changeTone(change)} title={describeKinds(change)} />
-          {reviewStatus === 'changedSinceReview' && <SinceReviewDot />}
-          <PathLabel path={change.path} nameOnly={row.depth > 0} oldPath={change.oldPath} strikethrough={deleted} />
-          <span className={styles.trailing}>
-            {change.mergeInfo && <span className={styles.tag}>{change.mergeInfo}</span>}
-            {change.kinds.includes('moved') && change.kinds.includes('changed') && <span className={styles.tag}>modified</span>}
-            {lock && <LockChip path={change.path} lock={lock} />}
-            {reviewStatus && <ReviewToggle status={reviewStatus} onToggle={() => review.toggle([change])} />}
-          </span>
+          <ItemPathRow
+            path={change.path}
+            itemType={change.itemType}
+            nameOnly={row.depth > 0}
+            oldPath={change.oldPath}
+            status={changeStatus(change)}
+            presence={changePresence(change)}
+            faded={reviewStatus === 'reviewed'}
+            extras={
+              <>
+                {change.mergeInfo && <ItemTag>{change.mergeInfo}</ItemTag>}
+                {change.kinds.includes('moved') && change.kinds.includes('changed') && <ItemTag>modified</ItemTag>}
+                {lock && <LockChip path={change.path} lock={lock} />}
+                {reviewStatus && <ReviewToggle status={reviewStatus} onToggle={() => review.toggle([change])} />}
+              </>
+            }
+          />
         </>
       );
     }

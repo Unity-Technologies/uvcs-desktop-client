@@ -1,7 +1,4 @@
-import { ItemIcon } from '../../components/ItemIcon';
-import { ItemRow } from '../../components/ItemRow';
-import { ItemStatusMark } from '../../components/ItemStatusMark';
-import { PathLabel } from '../../components/PathLabel';
+import { ItemPathRow } from '../../components/ItemPathRow';
 import type { MenuEntry } from '../../lib/actions';
 import { fuzzyMatchPositions } from '../../lib/fuzzyIndex';
 import type { SelectionState } from '../../lib/selection';
@@ -9,7 +6,8 @@ import { hotkeys } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { itemDecoration } from './itemDecoration';
-import { changeStatus, type PendingChangesIndex } from './itemStatus';
+import { changeStatus } from '../pendingChanges/changeTone';
+import type { PendingChangesIndex } from './itemStatus';
 import type { FoundItem } from './workspaceFind';
 
 const rowKey = (item: FoundItem): string => item.path;
@@ -39,12 +37,13 @@ export function FileFindResults({ items, query, pendingIndex, selection, onSelec
         const change = pendingIndex.changeAt(item.path);
         const { status, presence } = itemDecoration({ isPrivate: false }, change ? changeStatus(change) : null);
         return (
-          <ItemRow
-            icon={<ItemIcon itemType={item.isDirectory ? 'directory' : 'file'} name={item.path} />}
-            label={<PathLabel path={item.path} matches={fuzzyMatchPositions(item.path, query)} fitContent />}
-            status={<ItemStatusMark status={status} changesInside={item.isDirectory && pendingIndex.hasChangesInside(item.path)} />}
+          <ItemPathRow
+            path={item.path}
+            itemType={item.isDirectory ? 'directory' : 'file'}
+            matches={fuzzyMatchPositions(item.path, query)}
+            status={status}
+            changesInside={item.isDirectory && pendingIndex.hasChangesInside(item.path)}
             presence={presence}
-            deleted={status?.tone === 'deleted'}
           />
         );
       },

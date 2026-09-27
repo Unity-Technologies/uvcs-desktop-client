@@ -16,15 +16,17 @@ interface ItemRowProps {
   presence?: ItemPresence;
   /** Struck through: an item deleted by a pending change. */
   deleted?: boolean;
+  /** Stepped back, a reviewed file: its icon, name and status fade while its extras (the review mark) stay clickable. */
+  faded?: boolean;
 }
 
 /**
  * A file or folder in a list: its icon and name, then at the end of the row whatever it carries and its status, the
  * way every list of items reads (Files, Changes, a changeset's files). Private items dim, ignored ones further.
  */
-export function ItemRow({ icon, label, extras, status, presence = 'controlled', deleted = false }: ItemRowProps) {
+export function ItemRow({ icon, label, extras, status, presence = 'controlled', deleted = false, faded = false }: ItemRowProps) {
   return (
-    <span className={styles.row} data-presence={presence}>
+    <span className={styles.row} data-presence={presence} data-faded={faded || undefined}>
       <span className={styles.icon}>{icon}</span>
       <span className={styles.label} data-deleted={deleted || undefined}>
         {label}
@@ -32,7 +34,7 @@ export function ItemRow({ icon, label, extras, status, presence = 'controlled', 
       {(extras || status) && (
         <span className={styles.trailing}>
           {extras}
-          {status}
+          {status && <span className={styles.status}>{status}</span>}
         </span>
       )}
     </span>

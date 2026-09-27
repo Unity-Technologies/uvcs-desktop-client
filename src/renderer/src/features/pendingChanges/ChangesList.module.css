@@ -99,16 +99,9 @@
   font-variant-numeric: tabular-nums;
 }
 
-.folder {
-  flex: none;
-  color: var(--text-tertiary);
-}
-
 .directoryName {
   overflow: hidden;
-  color: var(--text-secondary);
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .checkboxPlaceholder {
@@ -116,40 +109,10 @@
   width: 15px;
 }
 
-.trailing {
-  display: flex;
-  flex: none;
-  align-items: center;
-  gap: var(--space-1);
-  margin-left: auto;
-}
-
-.tag {
-  flex: none;
-  padding: 0 6px;
-  border-radius: var(--radius-full);
-  background: var(--bg-hover);
-  color: var(--text-tertiary);
-  font-size: var(--text-xs);
-  line-height: 16px;
-}
-
-/* Reviewed files and folders step back, so what's left to look at stands out; their checkboxes and chevrons don't.
-   Their chips ("modified", the merge) step back too: only the review check stays bright, as in the diff lists. */
-.row[data-review='reviewed'] > :not(.trailing, .chevron, button),
-.row[data-review='reviewed'] .tag {
-  opacity: 0.6;
-}
-
-/* Entering or leaving review mode, reviewed files ease back and forth; files that just appeared fade in (on the row
-   itself, positioned by the virtualizer, so nothing around it moves). */
+/* Files that just appeared fade in (on the row itself, positioned by the virtualizer, so nothing around it moves). */
 @media (prefers-reduced-motion: no-preference) {
   .row[data-arrived='true'] {
     animation: var(--keyframes-row-enter) var(--duration-slow) var(--ease-out);
-  }
-
-  .row:is([data-type='change'], [data-type='directory']) > :not(.trailing, .chevron, button) {
-    transition: opacity var(--duration-normal);
   }
 }
 
