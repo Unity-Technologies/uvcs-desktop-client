@@ -5,6 +5,8 @@ export interface DetailsWidthLimits {
   initial: number;
   min: number;
   max: number;
+  /** What the other pane keeps at least as the window narrows, when more than `min`. */
+  restMin?: number;
 }
 
 export const DETAILS_WIDTH: DetailsWidthLimits = { initial: 400, min: 300, max: 720 };

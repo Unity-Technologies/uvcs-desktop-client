@@ -10,3 +10,9 @@ describe('sizedPaneStyle', () => {
     expect(sizedPaneStyle(false, 900, 120)).toEqual({ height: 900, maxHeight: 'calc(100% - 120px)' });
   });
 });
+
+describe('sizedPaneStyle with room kept for the other pane', () => {
+  it('gives way first, down to its own minimum', () => {
+    expect(sizedPaneStyle(true, 400, 260, 480)).toEqual({ width: 400, maxWidth: 'max(260px, calc(100% - 480px))' });
+  });
+});
