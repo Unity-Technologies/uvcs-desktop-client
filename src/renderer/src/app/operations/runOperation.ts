@@ -3,6 +3,7 @@ import { useCommandLogStore } from '../shell/commandLogStore';
 import { invalidateWorkspace } from '../queryClient';
 import { toast, useToastStore, type Toast, type ToastAction } from '../../ui/toast/toastStore';
 import { describeCompletion } from './describeProgress';
+import { stopOnce } from './stopOnce';
 import { blockingOperation, operationById, useRunningOperationsStore, type WorkspaceChangingOperation } from './runningOperationsStore';
 
 /** How an operation's card ends when it succeeds. */
@@ -58,10 +59,13 @@ export async function runOperation<T>({
   operations.start({ id: operationId, workspacePath, kind, title });
   const toasts = useToastStore.getState();
   let cancelRequested = false;
-  const cancel = (): void => {
-    cancelRequested = true;
-    void api.system.cancelOperation(operationId);
-  };
+  const cancel = stopOnce(
+    () => {
+      cancelRequested = true;
+      void api.system.cancelOperation(operationId);
+    },
+    () => toasts.update(toastId, { action: { label: 'Stopping…', run: () => {}, disabled: true } }),
+  );
   const toastId = toasts.show({ kind: 'progress', title, operationId, action: cancellable ? { label: 'Cancel', run: cancel } : undefined });
 
   const stopListening = window.uvcs.on('operationProgress', (event) => {
