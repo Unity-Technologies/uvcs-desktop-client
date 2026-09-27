@@ -51,7 +51,7 @@ describe('known tools', () => {
     expect(commandOf('smerge')).toEqual(['mergetool', '/t/a.BASE.ts', '/t/a.YOURS.ts', '/t/a.INCOMING.ts', '-o', '/t/a.ts']);
     expect(commandOf('kdiff3').slice(0, 5)).toEqual(['/t/a.BASE.ts', '/t/a.YOURS.ts', '/t/a.INCOMING.ts', '-o', '/t/a.ts']);
     expect(commandOf('bcompare')).toEqual(['/t/a.YOURS.ts', '/t/a.INCOMING.ts', '/t/a.BASE.ts', '/t/a.ts']);
-    expect(commandOf('meld')).toEqual(['--output=/t/a.ts', '/t/a.YOURS.ts', '/t/a.BASE.ts', '/t/a.INCOMING.ts']);
+    expect(commandOf('meld')).toEqual(['--output=/t/a.ts', '/t/a.YOURS.ts', '/t/a.ts', '/t/a.INCOMING.ts']);
     expect(commandOf('p4merge')).toEqual(['/t/a.BASE.ts', '/t/a.INCOMING.ts', '/t/a.YOURS.ts', '/t/a.ts']);
     expect(commandOf('araxis')).toEqual(['-wait', '-merge', '-3', '-a1', '/t/a.BASE.ts', '/t/a.YOURS.ts', '/t/a.INCOMING.ts', '/t/a.ts']);
     expect(commandOf('winmerge')).toEqual(['-u', '-e', '-wl', '-wr', '-am', '-dl', 'Yours (/main/task)', '-dm', 'Base', '-dr', 'Incoming (/main)', '/t/a.YOURS.ts', '/t/a.BASE.ts', '/t/a.INCOMING.ts', '-o', '/t/a.ts']);

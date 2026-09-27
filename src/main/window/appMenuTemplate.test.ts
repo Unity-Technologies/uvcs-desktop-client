@@ -1,6 +1,6 @@
 import type { MenuItemConstructorOptions } from 'electron';
 import { describe, expect, it } from 'vitest';
-import { appMenuTemplate } from './appMenuTemplate';
+import { appMenuTemplate, shownAccelerator } from './appMenuTemplate';
 
 function templateOn(platform: NodeJS.Platform): MenuItemConstructorOptions[] {
   return appMenuTemplate({
@@ -28,7 +28,7 @@ describe('appMenuTemplate', () => {
   it('ends the File menu with Settings and Exit on Windows, Settings and Quit on Linux', () => {
     const windows = itemsOf('win32', 'File');
     expect(windows.at(-1)).toMatchObject({ role: 'quit', label: 'E&xit' });
-    expect(windows.find((item) => item.id === 'app.settings')).toMatchObject({ label: '&Settings…', accelerator: 'CmdOrCtrl+,' });
+    expect(windows.find((item) => item.id === 'app.settings')).toMatchObject({ label: '&Settings…', accelerator: undefined });
     const linux = itemsOf('linux', 'File');
     expect(linux.at(-1)).toMatchObject({ role: 'quit', label: '&Quit' });
     expect(linux.some((item) => item.id === 'app.settings')).toBe(true);
@@ -73,5 +73,13 @@ describe('appMenuTemplate', () => {
       templateOn(platform).flatMap((menu) => [menu.label ?? '', ...submenuOf(menu).map((item) => item.label ?? '')]);
     expect(labels('darwin').filter((label) => label.includes('&'))).toEqual([]);
     expect(itemsOf('win32', 'View').map((item) => item.label).filter(Boolean)).toEqual(['Command &Palette…', 'Command &Log', '&Refresh']);
+  });
+
+  it('shows no accelerator Chromium would spell out off macOS ("Ctrl+Comma"), and every one on macOS', () => {
+    expect(shownAccelerator('CmdOrCtrl+,', false)).toBeUndefined();
+    expect(shownAccelerator('CmdOrCtrl+.', false)).toBeUndefined();
+    expect(shownAccelerator('CmdOrCtrl+,', true)).toBe('CmdOrCtrl+,');
+    expect(shownAccelerator('CmdOrCtrl+Shift+L', false)).toBe('CmdOrCtrl+Shift+L');
+    expect(submenuOf(templateOn('darwin')[0]!).find((item) => item.id === 'app.settings')).toMatchObject({ accelerator: 'CmdOrCtrl+,' });
   });
 });

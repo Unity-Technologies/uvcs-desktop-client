@@ -3,7 +3,7 @@ import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { MenuEntry } from '../../lib/actions';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
-import { isListMenuKey, openContextMenuOf } from '../../lib/rowMenu';
+import { holdBackMenuKeyRelease, isListMenuKey, openContextMenuOf } from '../../lib/rowMenu';
 import { isModPressed } from '../../lib/shortcuts';
 import { focusedKeyOf, selectOnArrow, selectOnClick, successorKey, type SelectionState } from '../../lib/selection';
 import { ActionContextMenu } from '../menu/ActionContextMenu';
@@ -250,6 +250,7 @@ export function DataTable<Row>({
       aria-multiselectable
       aria-activedescendant={focusedIndex === -1 ? undefined : `${rowIdPrefix}-${focusedIndex}`}
       onKeyDown={onKeyDown}
+      onKeyUp={holdBackMenuKeyRelease}
       {...MAIN_FOCUS}
     >
       <div className={hideHeader ? 'visually-hidden' : styles.header} role="row" aria-rowindex={1}>

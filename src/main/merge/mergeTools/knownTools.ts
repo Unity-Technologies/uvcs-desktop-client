@@ -103,7 +103,8 @@ export const KNOWN_TOOLS: KnownTool[] = [
           ...programFiles(where, 'Unity VCS\\client\\plastic.exe'),
         ];
       }
-      return [posix.join(posix.dirname(where.cmPath), 'plasticgui'), '/opt/plasticscm5/client/plasticgui'];
+      // The Linux package installs it as `linplasticx` next to `cm`, and links `/usr/bin/plasticgui` to it.
+      return [posix.join(posix.dirname(where.cmPath), 'plasticgui'), posix.join(posix.dirname(where.cmPath), 'linplasticx'), '/opt/plasticscm5/client/linplasticx'];
     },
     commands: { darwin: ['plasticgui'], linux: ['plasticgui'], win32: ['plastic.exe'] },
   },
@@ -162,9 +163,11 @@ export const KNOWN_TOOLS: KnownTool[] = [
     commands: { win32: ['WinMergeU.exe'] },
   },
   {
+    // As Git's `mergetools/meld` without `--auto-merge`: the middle pane is the result file itself, so it starts from
+    // the app's merge (and the picks made in the app) instead of the base, and saving writes it.
     id: 'meld',
     name: 'Meld',
-    args: ['--output={result}', '{yours}', '{base}', '{incoming}'],
+    args: ['--output={result}', '{yours}', '{result}', '{incoming}'],
     locations: (where) => {
       if (where.platform === 'darwin') return macApps(where, 'Meld.app/Contents/MacOS/Meld');
       if (where.platform === 'win32') return programFiles(where, 'Meld\\Meld.exe');

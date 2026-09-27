@@ -1,6 +1,7 @@
 import { Check, Copy, TerminalSquare } from 'lucide-react';
 import { useState } from 'react';
 import type { FailedCommand } from '@shared/ipc';
+import { withControlPictures } from '../../lib/controlPictures';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { OutputBlock } from '../../ui/OutputBlock';
@@ -61,7 +62,7 @@ export function ErrorDialog({ title, message, command, onShowInLog, onClose }: E
     >
       <PropertyList
         properties={[
-          { label: 'Command', value: command.commandLine, mono: true, copyText: command.commandLine },
+          { label: 'Command', value: withControlPictures(command.commandLine), mono: true, copyText: command.commandLine },
           { label: 'Exit code', value: String(command.exitCode), mono: true },
         ]}
       />

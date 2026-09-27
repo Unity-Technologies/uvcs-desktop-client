@@ -11,7 +11,7 @@ const OTHER_TEXT_CHORDS = new Set([...MAC_TEXT_CHORDS, 'y']);
 /**
  * Whether a key pressed while typing into a field belongs to the field rather than to a command: plain keys, the
  * editing keys with any modifier (⌘⌫ in the Files filter must not delete the selected files), and the platform's
- * text chords (Ctrl+Y in the Files filter redoes the typing, it doesn't open the history).
+ * text chords (Ctrl+Y in a field redoes the typing off macOS).
  */
 export function belongsToField(event: Pick<KeyboardEvent, 'key' | 'metaKey' | 'ctrlKey' | 'altKey'>, mac = isMac): boolean {
   const usesModifier = event.metaKey || event.ctrlKey || event.altKey;

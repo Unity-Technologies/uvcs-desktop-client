@@ -7,6 +7,7 @@ import { StatusBadge } from '../../components/StatusBadge';
 import type { MenuEntry } from '../../lib/actions';
 import { Arrivals } from '../../lib/arrivals';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
+import { holdBackMenuKeyRelease, isListMenuKey, openContextMenuOf } from '../../lib/rowMenu';
 import { isModPressed } from '../../lib/shortcuts';
 import { selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
 import { treeArrowMove } from '../../lib/treeArrowMove';
@@ -151,6 +152,10 @@ export function ChangesList({
     } else if (event.key === 'Enter' && focusedRow) {
       if (focusedRow.type === 'change') onOpen(focusedRow.change);
       else onToggleCollapsed(focusedRow.key);
+    } else if (focusedIndex !== -1 && isListMenuKey(event)) {
+      // At the focused row, where the browser would open it at the list's middle.
+      event.preventDefault();
+      openContextMenuOf(document.getElementById(`${rowIdPrefix}-${focusedIndex}`));
     }
   };
 
@@ -191,6 +196,7 @@ export function ChangesList({
         aria-multiselectable
         aria-activedescendant={focusedIndex === -1 ? undefined : `${rowIdPrefix}-${focusedIndex}`}
         onKeyDown={onKeyDown}
+        onKeyUp={holdBackMenuKeyRelease}
         // From the keyboard, the menu is for the folder or changelist focused; a right-click on a row says which below.
         onContextMenuCapture={() => (menuRow.current = focusedRow && focusedRow.type !== 'change' ? focusedRow : null)}
         {...MAIN_FOCUS}

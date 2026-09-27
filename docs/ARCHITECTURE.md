@@ -240,7 +240,8 @@ renderer/src/
 - **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)`, so `invalidateWorkspace(path)` refreshes everything after an operation
   (or what it can touch: `invalidateWorkspace(path, affected)`, `runOperation({ affects })`).
 - **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check.
-  - `main/watch/WorkspaceWatcher` watches an open workspace (recursive on macOS/Windows; the root and `.plastic` only on Linux;
+  - `main/watch/WorkspaceWatcher` watches an open workspace (recursive on macOS/Windows; on Linux a watch per folder,
+    `FolderTreeWatch`, as Node's recursive mode there watches every file and loses files saved by replacing them;
     an event Windows sends without a name, when a burst overflowed its buffer, refreshes everything),
     skips `ignore.conf` folders and `.plastic` lock/temp files, coalesces bursts (300 ms quiet, 2 s max wait) and drops what the
     app's own writes cause (`changesWorkspace` commands and tracked operations): the renderer refreshes after those anyway.
