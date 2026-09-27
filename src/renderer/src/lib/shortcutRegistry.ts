@@ -19,6 +19,7 @@ export const SHORTCUT_AREAS = [
   'Diff',
   'Branch Explorer',
   'Files',
+  'History',
   'Annotate',
   'Merge',
   'Command palette',
@@ -119,6 +120,10 @@ export const SHORTCUTS = {
   cutItems: { area: 'Files', label: 'Cut, to move into another folder', keys: ['mod+x'] },
   pasteItems: { area: 'Files', label: 'Move the cut items into the selected folder', keys: ['mod+v'] },
   cancelCut: { area: 'Files', label: 'Cancel the cut', keys: ['escape'] },
+
+  historyToggleView: { area: 'History', label: 'Diff or annotate the revision', keys: ['mod+shift+t'] },
+  historyEnterPane: { area: 'History', label: 'Into the diff or annotation', keys: ['mod+e'] },
+  historyLeavePane: { area: 'History', label: 'Back to the revisions', keys: ['escape'] },
 
   annotateNextBlock: { area: 'Annotate', label: 'Next block of lines', keys: ['alt+down'] },
   annotatePreviousBlock: { area: 'Annotate', label: 'Previous block of lines', keys: ['alt+up'] },
