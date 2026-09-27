@@ -37,6 +37,10 @@ describe.each(Object.entries(themes))('%s theme', (_theme, tokens) => {
     expect(contrastRatio(parseColor(tokens['--focus-color']!).rgb, selected)).toBeGreaterThanOrEqual(3);
   });
 
+  it.each(['--accent', '--danger', '--danger-hover'])('writes button labels at 4.5:1 on a %s fill', (fill) => {
+    expect(ratio(tokens, '--accent-contrast', fill)).toBeGreaterThanOrEqual(4.5);
+  });
+
   it('keeps tertiary text quieter than secondary text', () => {
     expect(ratio(tokens, '--text-tertiary', '--bg-surface')).toBeLessThan(ratio(tokens, '--text-secondary', '--bg-surface'));
   });

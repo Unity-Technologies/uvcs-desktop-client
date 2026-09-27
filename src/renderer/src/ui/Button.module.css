@@ -92,18 +92,18 @@
 }
 
 .danger {
-  background: var(--status-deleted);
-  border-color: color-mix(in srgb, var(--status-deleted) 80%, black);
+  background: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 80%, black);
   color: var(--accent-contrast);
   box-shadow: var(--shadow-sm);
 }
 
 .danger:hover:not([aria-disabled='true']) {
-  filter: brightness(1.08);
+  background: var(--danger-hover);
 }
 
 .danger:active:not([aria-disabled='true']) {
-  filter: brightness(0.94);
+  background: color-mix(in srgb, var(--danger-hover) 88%, black);
 }
 
 .iconOnly {

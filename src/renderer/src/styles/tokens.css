@@ -52,8 +52,6 @@
   --keyframes-row-enter: row-enter;
   --keyframes-pulse: pulse;
 
-  --accent-contrast: #ffffff;
-
   --focus-ring-visible: 0 0 0 2px var(--focus-color);
   /* For lists, rows and panes, whose outer edge a parent would clip. */
   --focus-ring-inset: inset 0 0 0 2px var(--focus-color);
@@ -70,10 +68,15 @@
   --accent-hover: #0860c7;
   --accent-soft: rgba(9, 105, 218, 0.1);
   --accent-text: #0969da;
+  /* Text and icons on an --accent or --danger fill. */
+  --accent-contrast: #ffffff;
   /* Text fields: a soft halo around their accent border. */
   --focus-ring: 0 0 0 3px rgba(9, 105, 218, 0.3);
   /* Everything else the keyboard reaches: a ring that stands out (3:1) from what surrounds it. */
   --focus-color: #0969da;
+  /* Buttons that destroy something: filled, with --accent-contrast text. */
+  --danger: #cf222e;
+  --danger-hover: #a40e26;
 
   --status-added: #1a7f37;
   --status-changed: #9a6700;
@@ -135,8 +138,11 @@
   --accent-hover: #388bfd;
   --accent-soft: rgba(56, 139, 253, 0.15);
   --accent-text: #4493f8;
+  --accent-contrast: #ffffff;
   --focus-ring: 0 0 0 3px rgba(56, 139, 253, 0.4);
   --focus-color: #4493f8;
+  --danger: #da3633;
+  --danger-hover: #b62324;
 
   --status-added: #3fb950;
   --status-changed: #d29922;
