@@ -2,11 +2,15 @@ import { Command as Cmdk } from 'cmdk';
 import { Ellipsis } from 'lucide-react';
 import { PathLabel } from '../../components/PathLabel';
 import { StatusBadge } from '../../components/StatusBadge';
+import { runningFirst } from '../../lib/actions';
 import { Highlight } from '../../ui/Highlight';
 import { Kbd } from '../../ui/Kbd';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import type { SearchResult } from './searchResults';
 import styles from './CommandPalette.module.css';
+
+/** Copying from a row's actions keeps the palette open, as in the branch switcher; every other action closes it first. */
+const KEEP_OPEN = ['copy', 'copySpec', 'copyPath'];
 
 interface PaletteRowProps {
   result: SearchResult;
@@ -15,12 +19,14 @@ interface PaletteRowProps {
   menuOpen: boolean;
   onMenuOpenChange: (open: boolean) => void;
   onRun: () => void;
+  /** Runs before any of its actions that leave the palette (closes it). */
+  onLeave: () => void;
   /** Takes focus back when the actions menu closes, so typing goes on where it was. */
   onMenuClosed: () => void;
 }
 
 /** One result: its icon, the highlighted label with a dimmed detail after it, a status or "current" pill, and its actions (Tab). */
-export function PaletteRow({ result, selected, menuOpen, onMenuOpenChange, onRun, onMenuClosed }: PaletteRowProps) {
+export function PaletteRow({ result, selected, menuOpen, onMenuOpenChange, onRun, onLeave, onMenuClosed }: PaletteRowProps) {
   const Icon = result.icon;
   const showsActions = result.menu && (selected || menuOpen);
   return (
@@ -57,7 +63,7 @@ export function PaletteRow({ result, selected, menuOpen, onMenuOpenChange, onRun
       {result.shortcut && <Kbd keys={result.shortcut} />}
       {showsActions && (
         <ActionDropdownMenu
-          entries={result.menu!()}
+          entries={runningFirst(result.menu!(), onLeave, KEEP_OPEN)}
           open={menuOpen}
           onOpenChange={onMenuOpenChange}
           onCloseAutoFocus={(event) => {

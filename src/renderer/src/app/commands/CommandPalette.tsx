@@ -137,6 +137,7 @@ function OpenPalette({ close }: { close: () => void }) {
                     onMenuOpenChange={(open) => setMenuFor(open ? result.id : null)}
                     onMenuClosed={() => inputRef.current?.focus()}
                     onRun={() => run(result)}
+                    onLeave={close}
                   />
                 ))}
                 {group.more > 0 && (
