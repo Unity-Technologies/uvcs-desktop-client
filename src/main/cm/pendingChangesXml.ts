@@ -1,6 +1,6 @@
 import type { ChangeKind, Changelist, ItemType, PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import { withForwardSlashes } from '../files/workspacePaths';
-import { child, children, integer, parseXml, text } from './parseXml';
+import { child, children, dateText, integer, parseXml, text } from './parseXml';
 
 const CHANGE_KINDS: Record<string, ChangeKind> = {
   AD: 'added',
@@ -62,7 +62,7 @@ function toPendingChange(node: Record<string, unknown>, changelist: string | und
   const similarity = Number.parseFloat(text(node.SimilarityPerUnit));
 
   return withOptionalFields(
-    { path: withForwardSlashes(text(node.Path), platform), kinds, itemType: ITEM_TYPES[text(node.RevisionType)] ?? 'file', size: integer(node.Size, 0), lastModified: text(node.LastModified) },
+    { path: withForwardSlashes(text(node.Path), platform), kinds, itemType: ITEM_TYPES[text(node.RevisionType)] ?? 'file', size: integer(node.Size, 0), lastModified: dateText(node.LastModified) },
     {
       oldPath: withForwardSlashes(text(node.OldPath), platform) || undefined,
       mergeInfo: text(node.MergesInfo).replace(/^\s*\(|\)\s*$/g, '') || undefined,

@@ -20,6 +20,11 @@ describe('parsePendingChanges', () => {
     expect(Object.keys(snapshot.changes[1]!)).toEqual(['path', 'kinds', 'itemType', 'size', 'lastModified']);
   });
 
+  it('leaves out the minimum date cm reports for moved items', () => {
+    const moved = change('MV', 'docs/a.ts', '').replace('<OldPath />', '<OldPath>src/a.ts</OldPath>').replace('2026-09-25T08:26:09+02:00', '0001-01-01T00:00:00');
+    expect(parsePendingChanges(`${header}<Changes>${moved}</Changes></StatusOutput>`).changes[0]!.lastModified).toBe('');
+  });
+
   it('reads the backslashes cm writes on Windows as forward slashes, and keeps them in names elsewhere', () => {
     const moved = change('MV', 'src\\ui\\b.ts').replace('<OldPath />', '<OldPath>src\\a.ts</OldPath>');
     const xml = `${header}<Changes>${moved}</Changes></StatusOutput>`;
