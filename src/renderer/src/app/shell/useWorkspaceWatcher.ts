@@ -17,6 +17,7 @@ import {
   isAffectedByWorkspaceState,
   LOCAL_AREAS,
 } from '../refresh/refreshScopes';
+import { toast } from '../../ui/toast/toastStore';
 import { useSettings } from '../settings/useSettings';
 import { useWorkspacePath } from '../workspace/useWorkspace';
 
@@ -34,7 +35,10 @@ export function useWorkspaceWatcher(): void {
   const [coverage, setCoverage] = useState<WatchCoverage>('partial');
 
   useEffect(() => {
-    void api.workspaces.watch(workspacePath).then(setCoverage);
+    void api.workspaces.watch(workspacePath).then((watched) => {
+      setCoverage(watched);
+      if (watched === 'partial') notePartialWatch(workspacePath);
+    });
     return () => void api.workspaces.unwatch();
   }, [workspacePath]);
 
@@ -76,6 +80,15 @@ export function useWorkspaceWatcher(): void {
     document.addEventListener('visibilitychange', refreshHeld);
     return () => document.removeEventListener('visibilitychange', refreshHeld);
   }, [workspacePath, autoRefresh]);
+}
+
+/** Workspaces already told, this session, that some of their folders aren't watched. */
+const toldPartial = new Set<string>();
+
+function notePartialWatch(workspacePath: string): void {
+  if (toldPartial.has(workspacePath)) return;
+  toldPartial.add(workspacePath);
+  toast.info("Some folders here aren't watched", 'Edits in them show when you come back to this window, or with Refresh.');
 }
 
 function inWorkspace(workspacePath: string, affected: (key: readonly unknown[]) => boolean) {

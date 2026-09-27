@@ -79,8 +79,15 @@ describe('FolderTreeWatch', () => {
     expect([...paths].filter((path) => path.startsWith('Library/'))).toEqual([]);
   });
 
-  it('is incomplete past its folder limit', () => {
-    const { tree } = setUp({ maxFolders: 2 });
+  it('is incomplete past its folder limit, and watches the upper folders first', async () => {
+    const { root, tree, paths, write, seen, settle } = setUp({ maxFolders: 4 });
+    mkdirSync(join(root, '.plastic'));
     expect(tree.start()).toBe(false);
+    await settle();
+    write('src/deep/app.ts', 'd');
+    write('.plastic/plastic.selector', 's');
+    await seen('.plastic/plastic.selector');
+    await settle();
+    expect(paths).not.toContain('src/deep/app.ts');
   });
 });

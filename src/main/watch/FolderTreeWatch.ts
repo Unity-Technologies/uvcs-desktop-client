@@ -33,10 +33,11 @@ export class FolderTreeWatch {
     this.watchers.clear();
   }
 
+  /** Level by level, so a tree past the limit still has its root, `.plastic` and upper folders watched. */
   private watchTree(top: string): void {
     const pending = [top];
-    while (pending.length > 0 && !this.closed) {
-      const folder = pending.pop()!;
+    for (let next = 0; next < pending.length && !this.closed; next++) {
+      const folder = pending[next]!;
       if (this.watchers.has(folder) || (folder && this.skip(folder))) continue;
       if (this.watchers.size >= this.maxFolders || !this.watchFolder(folder)) {
         this.complete = false;
