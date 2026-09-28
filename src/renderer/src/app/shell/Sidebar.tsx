@@ -1,5 +1,5 @@
 import { ChevronsUpDown, Settings } from 'lucide-react';
-import { initialOf } from '../../lib/initialOf';
+import { RepositoryAvatar } from '../../components/RepositoryAvatar';
 import { NavFooter, NavGroup, NavGroups, NavItem, Sidebar as SidebarColumn } from '../../ui/nav/SidebarNav';
 import { useNavigation } from '../navigation/navigationStore';
 import { VIEWS, type ViewDefinition } from '../navigation/viewRegistry';
@@ -27,7 +27,7 @@ export function Sidebar() {
           aria-label="Switch workspace"
           data-tip={rail ? workspace && `${workspace.name} · ${workspace.repository}` : undefined}
         >
-          <span className={styles.workspaceIcon}>{workspace && initialOf(workspace.name)}</span>
+          <RepositoryAvatar repository={workspace?.repository} label={workspace?.name ?? ''} size={28} />
           <span className={styles.workspaceText}>
             <span className={styles.workspaceName}>{workspace?.name ?? '…'}</span>
             <span className={styles.workspaceRepo}>{workspace?.repository}</span>

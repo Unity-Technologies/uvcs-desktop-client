@@ -15,19 +15,6 @@
   border-color: var(--border-strong);
 }
 
-.workspaceIcon {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-md);
-  background: var(--accent);
-  color: var(--accent-contrast);
-  font-weight: var(--weight-semibold);
-}
-
 .workspaceText {
   display: flex;
   flex: 1;

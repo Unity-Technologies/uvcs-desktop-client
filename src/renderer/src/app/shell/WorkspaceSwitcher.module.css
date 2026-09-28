@@ -64,20 +64,6 @@
   box-shadow: none;
 }
 
-.icon {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-active);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-semibold);
-}
-
 .text {
   display: flex;
   flex: 1;
@@ -98,30 +84,44 @@
 }
 
 .item[data-missing='true'] .name,
-.item[data-missing='true'] .icon {
+.item[data-missing='true'] .avatar {
   opacity: 0.55;
 }
 
-.repository,
-.missing {
+/* The name and path keep at least half the row; past that the chips give way, the server's first, down to its icon. */
+.chips {
+  display: flex;
   flex: none;
-  max-width: 45%;
-  padding: 1px 8px;
-  overflow: hidden;
+  align-items: center;
+  gap: var(--space-1);
+  max-width: 50%;
+  min-width: 0;
+}
+
+.branchChip {
+  flex: 0 1 auto;
+}
+
+.serverChip {
+  flex: 0 1000 auto;
+  /* Its icon and padding: what's left of it when the row is short of room. */
+  min-width: 27px;
+}
+
+.pending {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
   border-radius: var(--radius-full);
-  font-size: var(--text-xs);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.repository {
-  background: var(--bg-hover);
+  background: var(--bg-active);
   color: var(--text-secondary);
-}
-
-.missing {
-  background: var(--diff-removed-bg);
-  color: var(--status-deleted);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
 }
 
 .footer {

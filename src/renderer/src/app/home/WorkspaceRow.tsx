@@ -1,15 +1,15 @@
-import { GitBranch, MoreHorizontal } from 'lucide-react';
-import { shortBranchName } from '@shared/domain/specs';
+import { MoreHorizontal } from 'lucide-react';
 import type { WorkspaceSelector, WorkspaceSummary } from '@shared/domain/workspace';
-import { ServerIcon } from '../../components/ServerIcon';
-import { SELECTOR_KIND_LABELS, workingObjectName } from '../../components/workingObject';
-import { describeServer, splitRepositorySpec } from '../../lib/servers';
+import { MissingChip } from '../../components/MissingChip';
+import { RepositoryAvatar } from '../../components/RepositoryAvatar';
+import { SelectorChip } from '../../components/SelectorChip';
+import { ServerChip } from '../../components/ServerChip';
+import { splitRepositorySpec } from '../../lib/servers';
 import { Button } from '../../ui/Button';
 import { Highlight } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { missingWorkspaceMenu, workspaceMenu } from './homeMenus';
-import { RepositoryAvatar } from './RepositoryAvatar';
 import styles from './Home.module.css';
 
 interface WorkspaceRowProps {
@@ -26,15 +26,14 @@ interface WorkspaceRowProps {
 
 export function WorkspaceRow({ workspace, repository, selector, missing = false, onOpen, compact }: WorkspaceRowProps) {
   const menu = () => (missing ? missingWorkspaceMenu(workspace, onOpen) : workspaceMenu(workspace, onOpen));
-  const spec = repository ? splitRepositorySpec(repository) : null;
-  const server = spec && describeServer(spec.server);
-  const showsRepository = spec && spec.name.toLowerCase() !== workspace.name.toLowerCase();
+  const repositoryName = repository && splitRepositorySpec(repository).name;
+  const showsRepository = repositoryName && repositoryName.toLowerCase() !== workspace.name.toLowerCase();
 
   return (
     <ActionContextMenu entries={menu}>
       <div className={styles.row} data-compact={compact} data-missing={missing}>
         <button className={styles.rowMain} data-workspace-row onClick={() => onOpen(workspace.path)}>
-          <RepositoryAvatar name={spec?.name ?? workspace.name} label={workspace.name} size={compact ? 24 : 32} />
+          <RepositoryAvatar repository={repository} label={workspace.name} size={compact ? 24 : 32} className={styles.rowAvatar} />
           <span className={styles.rowText}>
             <span className={styles.rowTitle}>
               <span className={styles.rowName}>
@@ -42,7 +41,7 @@ export function WorkspaceRow({ workspace, repository, selector, missing = false,
               </span>
               {!compact && showsRepository && (
                 <span className={styles.rowRepository}>
-                  <Highlight text={spec.name} />
+                  <Highlight text={repositoryName} />
                 </span>
               )}
             </span>
@@ -50,35 +49,14 @@ export function WorkspaceRow({ workspace, repository, selector, missing = false,
               <Highlight text={workspace.path} />
             </span>
           </span>
-          {missing && (
-            <span className={styles.missingChip} data-tip="Its folder can't be found">
-              Missing
-            </span>
-          )}
-          {!compact && !missing && selector && <SelectorChip selector={selector} />}
-          {!compact && !missing && spec && server && (
-            <span className={styles.chip} data-tip={spec.server}>
-              <ServerIcon server={spec.server} size={11} />
-              <span className={styles.chipText}>{server.label}</span>
-            </span>
-          )}
+          {missing && <MissingChip />}
+          {!compact && !missing && selector && <SelectorChip selector={selector} className={styles.rowChip} />}
+          {!compact && !missing && repository && <ServerChip repository={repository} className={styles.rowChip} />}
         </button>
         <ActionDropdownMenu entries={menu()}>
           <Button variant="ghost" size="small" className={styles.rowMenu} icon={<MoreHorizontal size={15} />} aria-label="Workspace actions" />
         </ActionDropdownMenu>
       </div>
     </ActionContextMenu>
-  );
-}
-
-function SelectorChip({ selector }: { selector: WorkspaceSelector }) {
-  const fullName = workingObjectName(selector);
-  return (
-    <span className={styles.chip} data-tip={SELECTOR_KIND_LABELS[selector.kind]} data-tip-sub={fullName}>
-      <GitBranch size={11} />
-      <span className={styles.chipText}>
-        <Highlight text={selector.kind === 'branch' ? shortBranchName(fullName) : fullName} />
-      </span>
-    </span>
   );
 }

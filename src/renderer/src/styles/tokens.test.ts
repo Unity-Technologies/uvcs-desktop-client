@@ -1,7 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { composite, contrastRatio, parseColor, themeTokens } from './contrast';
+import { STABLE_HUES } from '../lib/stableHue';
+import { composite, contrastRatio, hslColor, parseColor, themeTokens } from './contrast';
 
 const themes = themeTokens(readFileSync(join(__dirname, 'tokens.css'), 'utf8'));
 
@@ -59,6 +60,23 @@ describe.each(Object.entries(themes))('%s theme', (_theme, tokens) => {
     const lightness = (rgb: number[]): number => rgb.reduce((sum, channel) => sum + channel, 0);
     expect(lightness(checked)).toBeGreaterThan(lightness(track));
     expect(ratio(tokens, '--text-primary', '--bg-segment-checked')).toBeGreaterThanOrEqual(4.5);
+  });
+
+  // A graphic like the status letters: the name beside it says the same, so 3:1.
+  it('draws the letter of a mark colored per name at 3:1 on its tint, for every hue, surface and row state', () => {
+    // The dark theme only overrides what differs.
+    const tint = { ...themes.light, ...tokens };
+    const rowStates = [null, '--bg-hover', '--bg-selected', '--accent-soft'];
+    for (const hue of STABLE_HUES) {
+      const letter = hslColor(hue, tint['--tint-text-saturation']!, tint['--tint-text-lightness']!).rgb;
+      const fill = hslColor(hue, tint['--tint-bg-saturation']!, tint['--tint-bg-lightness']!, Number(tint['--tint-bg-alpha']));
+      for (const surface of SURFACES)
+        for (const state of rowStates) {
+          const opaque = parseColor(tokens[surface]!).rgb;
+          const behind = state ? composite(parseColor(tokens[state]!), opaque) : opaque;
+          expect(contrastRatio(letter, composite(fill, behind)), `hue ${hue} on ${surface} ${state ?? ''}`).toBeGreaterThanOrEqual(3);
+        }
+    }
   });
 
   it('keeps tertiary text quieter than secondary text', () => {

@@ -328,27 +328,8 @@
   padding: 6px var(--space-3);
 }
 
-.avatar {
-  display: flex;
-  flex: none;
-  align-items: center;
-  justify-content: center;
-  border-radius: var(--radius-md);
-  background: hsl(var(--hue) 65% 50% / var(--tint-bg-alpha));
-  color: hsl(var(--hue) 60% var(--tint-text-lightness));
-  font-weight: var(--weight-semibold);
-}
-
 .serverMonogram {
-  width: 20px;
-  height: 20px;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-xs);
   letter-spacing: -0.02em;
-}
-
-.row[data-compact='true'] .avatar {
-  font-size: var(--text-xs);
 }
 
 .rowMain:focus-visible {
@@ -395,44 +376,14 @@
   white-space: nowrap;
 }
 
-.chip {
-  display: inline-flex;
+.rowChip {
   flex: none;
-  align-items: center;
-  gap: 4px;
   max-width: 28%;
-  height: 20px;
-  padding: 0 8px;
-  border-radius: var(--radius-full);
-  background: var(--bg-hover);
-  color: var(--text-secondary);
-  font-size: var(--text-xs);
 }
 
-.chip > svg {
-  flex: none;
-  color: var(--text-tertiary);
-}
-
-.chipText {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.row[data-missing='true'] .avatar,
+.row[data-missing='true'] .rowAvatar,
 .row[data-missing='true'] .rowText {
   opacity: 0.55;
-}
-
-.missingChip {
-  flex: none;
-  padding: 1px 8px;
-  border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--status-changed) 14%, transparent);
-  color: var(--status-changed);
-  font-size: var(--text-xs);
-  font-weight: var(--weight-medium);
 }
 
 .rowMenu,

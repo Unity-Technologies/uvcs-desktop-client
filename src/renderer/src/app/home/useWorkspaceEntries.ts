@@ -1,23 +1,15 @@
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { useSettings } from '../settings/useSettings';
-import { useMissingWorkspacePaths, useRecentWorkspaceRepositories, useWorkspaceHeads, useWorkspaceList } from '../workspace/workspaceQueries';
+import { useMissingWorkspacePaths, useWorkspaceList } from '../workspace/workspaceQueries';
 import { entryMatches, recentWorkspaceEntries, unlistedRecentPaths, type WorkspaceEntry } from './recentWorkspaces';
+import { useDescribeWorkspace } from './useDescribeWorkspace';
 
-/**
- * The home screen's workspaces, recent ones first, each with its repository and branch where cheaply known: the
- * `.plastic` folder says, and `cm` is asked only about recent workspaces whose folder couldn't tell.
- */
+/** The home screen's workspaces, recent ones first, each with its repository and branch where cheaply known. */
 export function useWorkspaceEntries(filter: string) {
   const { recentWorkspacePaths } = useSettings();
   const { data: workspaces, isLoading, error } = useWorkspaceList();
-  const { data: heads, isFetched: headsRead } = useWorkspaceHeads(workspaces);
-  const { data: repositories } = useRecentWorkspaceRepositories(headsRead ? workspaces : undefined, heads);
+  const described = useDescribeWorkspace(workspaces);
   const { data: missingPaths = [] } = useMissingWorkspacePaths(workspaces ? unlistedRecentPaths(workspaces, recentWorkspacePaths) : []);
-
-  const described = ({ workspace, missing }: Pick<WorkspaceEntry, 'workspace' | 'missing'>): WorkspaceEntry => {
-    const head = heads?.[workspace.path];
-    return { workspace, missing, repository: head?.repository ?? repositories?.[workspace.path], selector: head?.selector ?? null };
-  };
   const matching = (entry: WorkspaceEntry): boolean => entryMatches(entry, filter);
 
   return {

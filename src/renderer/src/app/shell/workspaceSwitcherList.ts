@@ -1,6 +1,5 @@
 import type { WorkspaceSummary } from '@shared/domain/workspace';
-import { matchesAllWords } from '../../lib/matchesAllWords';
-import { recentWorkspaceEntries, type WorkspaceEntry } from '../home/recentWorkspaces';
+import { entryMatches, recentWorkspaceEntries, type WorkspaceEntry } from '../home/recentWorkspaces';
 
 export interface WorkspaceSwitcherList {
   recent: WorkspaceEntry[];
@@ -9,25 +8,24 @@ export interface WorkspaceSwitcherList {
 
 /**
  * The workspaces to switch to, without the open one: the recent ones in the order they were used (with the ones
- * whose folder is missing), then the rest by name. The filter matches the name, the folder and the repository.
+ * whose folder is missing), then the rest by name, each told as `describe` knows it. The filter matches as the home
+ * screen's search does: the name, the folder, the repository and the branch.
  */
 export function workspaceSwitcherList(
   workspaces: WorkspaceSummary[],
   recentPaths: string[],
   missingPaths: string[],
   currentPath: string,
-  repositories: Record<string, string | null> | undefined,
+  describe: (entry: Pick<WorkspaceEntry, 'workspace' | 'missing'>) => WorkspaceEntry,
   filter: string,
 ): WorkspaceSwitcherList {
-  const matches = ({ workspace }: WorkspaceEntry): boolean =>
-    workspace.path !== currentPath &&
-    (!filter.trim() || matchesAllWords(`${workspace.name} ${workspace.path} ${repositories?.[workspace.path] ?? ''}`, filter));
+  const matches = (entry: WorkspaceEntry): boolean => entry.workspace.path !== currentPath && entryMatches(entry, filter);
 
-  const recent = recentWorkspaceEntries(workspaces, recentPaths, missingPaths).filter(matches);
+  const recent = recentWorkspaceEntries(workspaces, recentPaths, missingPaths).map(describe).filter(matches);
   const others = workspaces
     .filter((workspace) => !recentPaths.includes(workspace.path))
     .sort((a, b) => a.name.localeCompare(b.name))
-    .map((workspace) => ({ workspace, missing: false }))
+    .map((workspace) => describe({ workspace, missing: false }))
     .filter(matches);
   return { recent, others };
 }
