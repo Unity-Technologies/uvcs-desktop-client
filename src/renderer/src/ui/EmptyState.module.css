@@ -33,6 +33,11 @@
   color: var(--text-secondary);
 }
 
+/* As wide as the description at most, so a long label never widens the block. */
 .action {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  max-width: 360px;
   margin-top: var(--space-3);
 }

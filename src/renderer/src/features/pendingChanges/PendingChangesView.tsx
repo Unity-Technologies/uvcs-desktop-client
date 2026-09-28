@@ -258,7 +258,7 @@ export function PendingChangesView() {
           <EmptyState
             icon={<CheckCircle2 size={24} />}
             title="No pending changes"
-            description={`Your workspace matches ${workspace?.selector.name ?? 'the repository'}. Changes you make to files show up here automatically.`}
+            description="Changes you make show up here."
             action={workspace?.selector.kind === 'branch' && <MergeTaskSuggestion workspacePath={workspacePath} branchName={workspace.selector.name} />}
           />
         )}
@@ -324,7 +324,7 @@ export function PendingChangesView() {
             {/* Files never checked in don't make a task unfinished: finishing it is offered as on a clean workspace. */}
             {branchName && onlyNeverCheckedIn && (
               <div className={styles.taskSuggestion}>
-                <MergeTaskSuggestion workspacePath={workspacePath} branchName={branchName} />
+                <MergeTaskSuggestion workspacePath={workspacePath} branchName={branchName} quiet />
               </div>
             )}
             {bulkPrivate && (

@@ -1,22 +1,23 @@
 import { useQuery } from '@tanstack/react-query';
-import { GitPullRequest } from 'lucide-react';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { IMMUTABLE_QUERY, SLOW_CHANGING_QUERY } from '../../app/queryClient';
-import { Button } from '../../ui/Button';
 import { useBranch } from '../branches/useBranches';
+import { distinctBranchNames } from './distinctBranchNames';
 import { finishedTaskFor, useFinishedTasksStore } from './finishedTask';
 import { FinishedTaskCard } from './FinishedTaskCard';
 import { openMergeTaskDialog } from './MergeTaskDialog';
 import { isTaskBranch } from './mergeTaskSummary';
+import { TaskMergeButton } from './TaskMergeButton';
 
 /**
  * For a clean workspace on a task branch with changesets of its own: a quiet way to finish the task, and once it's
  * merged, what to do next. It stays cheap: one `cm find` reads the branch (never the list of every branch), one (limit 1)
  * per branch head tells whether the branch has changesets, and one merge link (limit 1) per head whether that head is
- * already merged into the parent. The merge itself is only previewed once the dialog opens.
+ * already merged into the parent. The merge itself is only previewed once the dialog opens. It names the branches as
+ * briefly as tells them apart ("Merge subtask into child_1"), in full in its tooltip; `quiet` where it sits under a list.
  */
-export function MergeTaskSuggestion({ workspacePath, branchName }: { workspacePath: string; branchName: string }) {
+export function MergeTaskSuggestion({ workspacePath, branchName, quiet }: { workspacePath: string; branchName: string; quiet?: boolean }) {
   const branch = useBranch(branchName).data ?? undefined;
   const task = isTaskBranch(branch) ? branch : undefined;
   const { data: hasChangesets } = useQuery({
@@ -43,9 +44,14 @@ export function MergeTaskSuggestion({ workspacePath, branchName }: { workspacePa
   if (finished) return <FinishedTaskCard workspacePath={workspacePath} task={finished} />;
   if (!task || !hasChangesets || mergedInto !== null) return null;
 
+  const [source, destination] = distinctBranchNames(task.name, task.parent);
   return (
-    <Button variant="ghost" size="small" icon={<GitPullRequest size={13} />} onClick={() => openMergeTaskDialog(workspacePath, task)}>
-      Ready? Merge {task.name} into {task.parent}
-    </Button>
+    <TaskMergeButton
+      source={source}
+      destination={destination}
+      tooltip={`Finish the task: merge ${task.name} into ${task.parent}`}
+      quiet={quiet}
+      onClick={() => openMergeTaskDialog(workspacePath, task)}
+    />
   );
 }
