@@ -1,5 +1,5 @@
 import type { MergeLink } from '@shared/domain/branchExplorer';
-import { arrowLength, drawArrowHead, LINE_INTO_HEAD } from './drawArrowHead';
+import { arrowLength, drawArrowHead, lineUnderHead } from './drawArrowHead';
 import { STRUCTURE_DIMMED_ALPHA, type DrawContext } from './drawContext';
 import { arrivalAt, curveUntil, linkCurve, type Curve } from './curves';
 import { NODE_RADIUS, nodePoint } from './geometry';
@@ -43,9 +43,10 @@ function drawLink(draw: DrawContext, link: MergeLink, curve: Curve): void {
   const lineWidth = emphasized ? 2.5 : 2;
   const length = arrowLength(lineWidth);
   const tipDistance = draw.detail.avatars ? NODE_RADIUS + 4 : DOT_RADIUS + 3;
+  // Tip and base both on the curve: the head follows the curve's arrival and the line meets the middle of its base.
   const tip = arrivalAt(curve, tipDistance);
-  // The line ends inside the head, never under its tip, so the tip stays sharp and nothing pokes out around it.
-  const [, c1, c2, end] = curveUntil(curve, arrivalAt(curve, tipDistance + length * LINE_INTO_HEAD).t);
+  const base = arrivalAt(curve, tipDistance + length);
+  const [, c1, c2, end] = curveUntil(curve, arrivalAt(curve, tipDistance + length - lineUnderHead(draw)).t);
   ctx.lineWidth = lineWidth;
   ctx.lineCap = 'butt';
   ctx.setLineDash(mergeLinkDash(link.type));
@@ -54,7 +55,7 @@ function drawLink(draw: DrawContext, link: MergeLink, curve: Curve): void {
   pen.bezierCurveTo(c1.x, c1.y, c2.x, c2.y, end.x, end.y);
   ctx.stroke();
   ctx.setLineDash(NO_DASH);
-  drawArrowHead(draw, tip, tip.angle, length);
+  drawArrowHead(draw, tip, base);
   ctx.restore();
 }
 

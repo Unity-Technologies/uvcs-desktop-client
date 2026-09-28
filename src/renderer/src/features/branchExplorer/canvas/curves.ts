@@ -31,11 +31,11 @@ export function pointOnCurve([p0, p1, p2, p3]: Curve, t: number): Point {
 const ARRIVAL_STEP = 1 / 32;
 
 /**
- * Where the curve comes within `distance` of its end, the last time along it, and the angle it runs at there. An
- * arrow drawn there sits on the line where it disappears behind the changeset it points at, aligned with it, instead
- * of along the curve's hidden last stretch (flat, while a link can arrive from far below).
+ * Where the curve comes within `distance` of its end, the last time along it. An arrow between two such points sits on
+ * the line where it disappears behind the changeset it points at, aligned with it, instead of along the curve's hidden
+ * last stretch (flat, while a link can arrive from far below).
  */
-export function arrivalAt(curve: Curve, distance: number): Point & { angle: number; t: number } {
+export function arrivalAt(curve: Curve, distance: number): Point & { t: number } {
   let inside = 1;
   let outside = 0;
   for (let t = 1 - ARRIVAL_STEP; t > 0; t -= ARRIVAL_STEP) {
@@ -51,11 +51,7 @@ export function arrivalAt(curve: Curve, distance: number): Point & { angle: numb
     else inside = middle;
   }
   const t = (inside + outside) / 2;
-  const [p0, p1, p2, p3] = curve;
-  const u = 1 - t;
-  const dx = 3 * u * u * (p1.x - p0.x) + 6 * u * t * (p2.x - p1.x) + 3 * t * t * (p3.x - p2.x);
-  const dy = 3 * u * u * (p1.y - p0.y) + 6 * u * t * (p2.y - p1.y) + 3 * t * t * (p3.y - p2.y);
-  return { ...pointOnCurve(curve, t), angle: Math.atan2(dy, dx), t };
+  return { ...pointOnCurve(curve, t), t };
 }
 
 /** The part of the curve from its start to `t` (de Casteljau), to stroke a link only up to its arrowhead. */

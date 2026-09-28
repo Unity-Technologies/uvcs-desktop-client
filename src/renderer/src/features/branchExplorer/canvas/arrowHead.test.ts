@@ -2,22 +2,26 @@ import { describe, expect, it } from 'vitest';
 import { arrowHead } from './arrowHead';
 
 describe('arrowHead', () => {
-  it('points along the angle, its back corners either side and its notch between them', () => {
-    const [tip, left, notch, right] = arrowHead({ x: 100, y: 50 }, 0, 10);
+  it('is a triangle from its tip back to two corners either side of the middle of its base', () => {
+    const [tip, left, right] = arrowHead({ x: 100, y: 50 }, { x: 90, y: 50 });
     expect(tip).toEqual({ x: 100, y: 50 });
     expect(left.x).toBeCloseTo(90, 6);
     expect(right.x).toBeCloseTo(90, 6);
-    expect(left.y - 50).toBeCloseTo(-(right.y - 50), 6);
-    expect(Math.abs(left.y - right.y)).toBeCloseTo(9.2, 6);
-    expect(notch.x).toBeGreaterThan(90);
-    expect(notch.x).toBeLessThan(100);
-    expect(notch.y).toBeCloseTo(50, 6);
+    expect((left.y + right.y) / 2).toBeCloseTo(50, 6);
+  });
+
+  it('is isosceles and a little longer than wide', () => {
+    const [tip, left, right] = arrowHead({ x: 3, y: 4 }, { x: -3, y: -4 });
+    expect(Math.hypot(left.x - tip.x, left.y - tip.y)).toBeCloseTo(Math.hypot(right.x - tip.x, right.y - tip.y), 6);
+    const width = Math.hypot(left.x - right.x, left.y - right.y);
+    expect(width).toBeLessThan(10);
+    expect(width).toBeGreaterThan(7.5);
   });
 
   it('turns with the link it ends', () => {
-    const [tip, , notch] = arrowHead({ x: 0, y: 0 }, -Math.PI / 2, 10);
-    expect(tip).toEqual({ x: 0, y: 0 });
-    expect(notch.x).toBeCloseTo(0, 6);
-    expect(notch.y).toBeGreaterThan(0);
+    const [, left, right] = arrowHead({ x: 0, y: 0 }, { x: 0, y: 10 });
+    expect(left.y).toBeCloseTo(10, 6);
+    expect(right.y).toBeCloseTo(10, 6);
+    expect((left.x + right.x) / 2).toBeCloseTo(0, 6);
   });
 });
