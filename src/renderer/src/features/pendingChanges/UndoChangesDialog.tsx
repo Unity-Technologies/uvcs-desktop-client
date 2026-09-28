@@ -7,7 +7,7 @@ import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { askDialog } from '../../ui/dialog/dialogStore';
 import { changePresence, changeStatus } from './changeTone';
-import { offersBackup, suggestsBackup, UNDO_LIST_MAX, undoConsequences } from './undoPlan';
+import { offersBackup, UNDO_LIST_MAX, undoConsequences } from './undoPlan';
 import styles from './UndoChangesDialog.module.css';
 
 export interface UndoAnswer {
@@ -22,7 +22,7 @@ export function askUndoChanges(changes: PendingChange[]): Promise<UndoAnswer | u
 
 function UndoChangesDialog({ changes, finish }: { changes: PendingChange[]; finish: (answer: UndoAnswer | undefined) => void }) {
   const canBackup = offersBackup(changes);
-  const [backup, setBackup] = useState(() => canBackup && suggestsBackup(changes));
+  const [backup, setBackup] = useState(false);
   const listed = changes.slice(0, UNDO_LIST_MAX);
   const more = changes.length - listed.length;
 
