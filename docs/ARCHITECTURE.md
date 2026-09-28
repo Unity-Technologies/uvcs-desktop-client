@@ -421,13 +421,16 @@ renderer/src/
   immutable results are cached (`IMMUTABLE_QUERY`).
 - **Item rows**: every list of files and folders reads the same (`components/`): Files and Browse repository, Changes
   (after its checkbox), the files of every diff and details panel, the merge page, a task merge, Incoming, Go to file,
-  the Undo dialog. `ItemRow` lays out the icon, the name (cut first, in the middle as every path is: `PathLabel`), extras
+  the Undo dialog, the Locks view (a lock names no item type, and only files are locked). `ItemRow` lays out the icon, the name (cut first, in the middle as every path is: `PathLabel`), extras
   and, last on the row in one column, `ItemStatusMark`: the status letter (`StatusBadge`, the same tones and letters
   everywhere; its tooltip says what it means there), or a dot for a folder with changes inside. `ItemPathRow` is an item
   named by its path, the folders dimmed. Extras go in one order: tags (`ItemTag`: "modified", a merge), where a conflict
   stands (the merge page's icons, `ConflictStatusChip`, in Incoming too), the review mark, then `ItemMark`s by the
   letter, a quiet icon whose words are in its tooltip (`LockMark`: "Locked by ana in art-wk", someone else's in the
-  alert tone; `XlinkMark`: "Xlink to nervathirdparty@17568"). Nothing but ignored items dims: a private item keeps
+  alert tone; `XlinkMark`: "Xlink to nervathirdparty@17568"). A mark that leads somewhere is a button, its tooltip
+  saying where, that keeps the row's click and selection out of it; the row's menu offers the same to the keyboard: a
+  lock mark ("· click to see all locks") and the file's "Show in Locks" open the Locks view on that lock
+  (`showInLocks`, selecting it through `selectInView` before going there). Nothing but ignored items dims: a private item keeps
   its icon, its name a step quieter, and wears its P; ignored (and cloaked) ones grey out, icon and name, with no
   letter in Files; deleted ones are struck through, reviewed ones fade (`faded`) but for their review mark. Files marks
   what is notable only (a pending change, a checkout, a private item: `itemDecoration`); a list of changes letters

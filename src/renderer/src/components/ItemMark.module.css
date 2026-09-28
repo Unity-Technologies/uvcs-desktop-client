@@ -11,3 +11,20 @@
 .mark[data-tone='alert'] {
   color: var(--change-deleted);
 }
+
+button.mark {
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  cursor: pointer;
+}
+
+button.mark:hover {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+button.mark[data-tone='alert']:hover {
+  color: var(--change-deleted);
+}

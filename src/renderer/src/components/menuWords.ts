@@ -130,6 +130,7 @@ export const MENU_WORDS = {
   browse: word('navigate', FolderTree),
   showInBranchExplorer: word('navigate', GitGraph, 'Show in Branch Explorer'),
   locks: word('navigate', Lock, 'Show locks'),
+  showInLocks: word('navigate', Lock, 'Show in Locks'),
   showInFiles: word('navigate', FolderTree, 'Show in Files'),
   // The Branch Explorer's own ways around the graph.
   parent: word('navigate', CornerLeftUp, 'Go to parent changeset'),

@@ -91,6 +91,7 @@ const lock: Lock = {
   holderBranch: '/main',
   repository,
 };
+const pendingLocks = new Map([['src/a.ts', { mine: false, owner: 'ana', workspace: 'art-wk', key: `${repository}:4` }]]);
 
 const layout = layoutGraph({ ...sampleHistory(), branches: [...sampleHistory().branches, graphBranch('/main/task', '/main', 5)] });
 const graphContext = {
@@ -121,7 +122,9 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   codeReview: () => codeReviewMenu(ws, [review]),
   file: () => fileMenu(ws, [file], new PendingChangesIndex([])),
   folder: () => fileMenu(ws, [{ ...file, path: 'src', name: 'src', itemType: 'directory' }], new PendingChangesIndex([])),
+  lockedFile: () => fileMenu(ws, [file], new PendingChangesIndex([change]), pendingLocks),
   pendingChange: () => pendingChangeMenu(ws, [change], [], { isIncluded: () => false, setIncluded: () => {} }),
+  lockedPendingChange: () => pendingChangeMenu(ws, [change], [], { isIncluded: () => false, setIncluded: () => {} }, undefined, pendingLocks),
   history: () =>
     historyMenu({ workspacePath: ws, path: 'src/a.ts', annotate: () => {} }, [
       { kind: 'revision', revision: { revisionId: 40, changesetId: 5, itemType: 'file', spec: 'revid:40', date: '' } } as never,
@@ -334,5 +337,17 @@ describe('the top bar', () => {
 
   it('says it is loading until what the workspace is on is read', () => {
     expect(topEntries(workingObjectMenu(workspace, undefined)).map((entry) => entry.label)).toEqual(['Loading…']);
+  });
+});
+
+describe('locks', () => {
+  const ids = (menu: MenuEntry[]): (string | undefined)[] => topEntries(menu).map((entry) => entry.id);
+
+  it('a locked file or pending change leads to its lock, where any other file leads to the Locks view', () => {
+    expect(ids(MENUS.lockedFile!())).toContain('showInLocks');
+    expect(ids(MENUS.lockedFile!())).not.toContain('locks');
+    expect(ids(MENUS.file!())).toContain('locks');
+    expect(ids(MENUS.lockedPendingChange!())).toContain('showInLocks');
+    expect(ids(MENUS.pendingChange!())).not.toContain('showInLocks');
   });
 });

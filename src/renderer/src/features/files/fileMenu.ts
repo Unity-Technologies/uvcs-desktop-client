@@ -6,6 +6,8 @@ import { openTerminalIn } from '../../app/workspace/workspaceShellActions';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { menuAction, menuSubmenu } from '../../components/menuWords';
+import { showInLocks } from '../locks/showInLocks';
+import type { PendingLocks } from '../pendingChanges/locks/pendingLocks';
 import { filterRulesSubmenu, itemCopySubmenu } from '../pendingChanges/pendingChangeMenu';
 import { absolutePath, undoChanges } from '../pendingChanges/pendingChangeOperations';
 import {
@@ -43,11 +45,12 @@ function showAnnotated(path: string): void {
   view.requestReveal(path);
 }
 
-/** The context menu of the selected items in the Files view. */
-export function fileMenu(workspacePath: string, items: TreeItem[], pendingChanges: PendingChangesIndex): MenuEntry[] {
+/** The context menu of the selected items in the Files view; `locks` left out where they aren't read (Go to file). */
+export function fileMenu(workspacePath: string, items: TreeItem[], pendingChanges: PendingChangesIndex, locks: PendingLocks = new Map()): MenuEntry[] {
   if (items.length === 0) return [];
 
   const single = items.length === 1 ? items[0]! : null;
+  const lock = single ? locks.get(single.path) : undefined;
   const { privateItems, checkoutCandidates, undoable, typedFiles } = fileMenuTargets(items, pendingChanges);
   const directory = targetDirectoryFor(single ?? undefined);
   // The workspace root can't be renamed or deleted from here.
@@ -75,7 +78,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
       hasRevisionsToShow(single, pendingChanges) &&
       canAnnotate(single.itemType) &&
       menuAction('annotate', () => showAnnotated(single.path), { shortcut: FILE_SHORTCUTS.annotate }),
-    menuAction('locks', () => navigation.goToView('locks')),
+    lock ? menuAction('showInLocks', () => showInLocks(workspacePath, lock)) : menuAction('locks', () => navigation.goToView('locks')),
     // The workspace opens as a folder; an item shows selected in the folder that holds it.
     single && isWorkspaceRoot(single) && menuAction('openFolder', () => void api.system.openPath(workspacePath)),
     single && !isWorkspaceRoot(single) && menuAction('reveal', () => revealItem(workspacePath, single)),

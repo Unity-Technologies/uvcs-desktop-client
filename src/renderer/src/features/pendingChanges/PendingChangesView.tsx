@@ -311,7 +311,7 @@ export function PendingChangesView() {
                     grouping === 'changelist' ? (moved, changelist) => void moveToChangelist(workspacePath, changelist, moved) : undefined
                   }
                   contextMenu={(selected) =>
-                    pendingChangeMenu(workspacePath, selected, changelists, { isIncluded, setIncluded: setIncludedChanges }, review)
+                    pendingChangeMenu(workspacePath, selected, changelists, { isIncluded, setIncluded: setIncludedChanges }, review, locks)
                   }
                   changelistMenu={(changelist) => changelistMenu(workspacePath, changelist)}
                   review={review}
