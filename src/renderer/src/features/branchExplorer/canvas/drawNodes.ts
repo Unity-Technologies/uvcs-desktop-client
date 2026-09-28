@@ -1,5 +1,5 @@
 import type { NodeLayout } from '../model/layoutGraph';
-import { arrowLength, drawArrowHead, LINE_INTO_HEAD } from './drawArrowHead';
+import { arrowLength, drawArrowHead, lineUnderHead } from './drawArrowHead';
 import { drawAvatar, drawDot } from './drawAvatar';
 import { drawCollapsedNode } from './drawCollapsedNode';
 import { DIMMED_ALPHA, isChangesetDimmed, STRUCTURE_DIMMED_ALPHA, type DrawContext } from './drawContext';
@@ -69,10 +69,11 @@ function drawParentLink(draw: DrawContext, parent: NodeLayout, node: NodeLayout)
   else ctx.globalAlpha = isChangesetDimmed(scene, node.changeset) ? DIMMED_ALPHA : 0.7;
   ctx.lineWidth = 2;
   ctx.beginPath();
-  pen.moveTo(fromX + (detail.text ? PARENT_ARROW * LINE_INTO_HEAD : 0), y);
+  const baseX = fromX + PARENT_ARROW;
+  pen.moveTo(detail.text ? baseX - lineUnderHead(draw) : fromX, y);
   pen.lineTo(toX, y);
   ctx.stroke();
-  if (detail.text) drawArrowHead(draw, { x: fromX, y }, Math.PI, PARENT_ARROW);
+  if (detail.text) drawArrowHead(draw, { x: fromX, y }, { x: baseX, y });
   ctx.restore();
 }
 

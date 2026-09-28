@@ -1,23 +1,10 @@
 import type { Point } from './curves';
 
-/** How far the back of the head is notched in, as a share of its length: an arrowhead, not a triangle. */
-const NOTCH = 0.28;
-/** Half the head's width, as a share of its length. */
-const HALF_WIDTH = 0.46;
+/** Half the head's width, as a share of its length: a triangle a little longer than wide. */
+const HALF_WIDTH = 0.42;
 
-/**
- * An arrowhead with its tip at `tip`, pointing along `angle`: the tip, its two back corners and the notch between
- * them, in drawing order.
- */
-export function arrowHead(tip: Point, angle: number, length: number): [Point, Point, Point, Point] {
-  const along = { x: Math.cos(angle), y: Math.sin(angle) };
-  const across = { x: -along.y, y: along.x };
-  const back = { x: tip.x - along.x * length, y: tip.y - along.y * length };
-  const half = length * HALF_WIDTH;
-  return [
-    tip,
-    { x: back.x + across.x * half, y: back.y + across.y * half },
-    { x: tip.x - along.x * length * (1 - NOTCH), y: tip.y - along.y * length * (1 - NOTCH) },
-    { x: back.x - across.x * half, y: back.y - across.y * half },
-  ];
+/** A plain triangular arrowhead from `base`, the middle of its back, to `tip`: the tip and its two back corners. */
+export function arrowHead(tip: Point, base: Point): [Point, Point, Point] {
+  const across = { x: (base.y - tip.y) * HALF_WIDTH, y: (tip.x - base.x) * HALF_WIDTH };
+  return [tip, { x: base.x + across.x, y: base.y + across.y }, { x: base.x - across.x, y: base.y - across.y }];
 }
