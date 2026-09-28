@@ -5,15 +5,7 @@ import { categoryOf, hasContentChanges, isShelvable } from './changeCategories';
 /** Rows listed in the undo confirmation before collapsing the rest into "…and N more". */
 export const UNDO_LIST_MAX = 250;
 
-/** Undoing more changes than this suggests shelving a backup first, even without edits to lose. */
-const BACKUP_SUGGESTED_ABOVE = 10;
-
 export const BACKUP_SHELVE_COMMENT = 'Backup before undo';
-
-/** Whether undoing edits text the user wrote: those are the edits worth keeping a backup of. */
-function losesTextEdits(change: PendingChange): boolean {
-  return change.itemType === 'file' && hasContentChanges(change) && categoryOf(change) !== 'added';
-}
 
 /** A checkout without edits: undoing it only releases the file. */
 function isUnchangedCheckout(change: PendingChange): boolean {
@@ -23,11 +15,6 @@ function isUnchangedCheckout(change: PendingChange): boolean {
 /** Whether a backup could keep anything: releasing checkouts without edits leaves nothing to shelve, and links can't be. */
 export function offersBackup(changes: PendingChange[]): boolean {
   return changes.some((change) => isShelvable(change) && !isUnchangedCheckout(change));
-}
-
-/** Whether the "Shelve a backup first" box starts ticked. */
-export function suggestsBackup(changes: PendingChange[]): boolean {
-  return changes.length > BACKUP_SUGGESTED_ABOVE || changes.some(losesTextEdits);
 }
 
 /** One sentence per kind of change about what undoing it does to the workspace. */

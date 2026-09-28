@@ -16,7 +16,7 @@ export function absolutePath(workspacePath: string, relativePath: string): strin
   return `${workspacePath}${separator}${relativePath.split('/').join(separator)}`;
 }
 
-/** Undoes the controlled changes after confirming, shelving them first when the user keeps the backup option. */
+/** Undoes the controlled changes after confirming, shelving them first when the user ticks the backup option. */
 export async function undoChanges(workspacePath: string, changes: PendingChange[]): Promise<void> {
   const controlled = changes.filter(isControlled);
   if (controlled.length === 0) return;

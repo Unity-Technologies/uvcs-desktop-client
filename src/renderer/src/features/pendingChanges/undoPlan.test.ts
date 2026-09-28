@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { offersBackup, suggestsBackup, undoConsequences } from './undoPlan';
+import { offersBackup, undoConsequences } from './undoPlan';
 
 function change(path: string, kinds: PendingChange['kinds'], itemType: PendingChange['itemType'] = 'file'): PendingChange {
   return { path, kinds, itemType, size: 1, lastModified: '' };
@@ -30,20 +30,6 @@ describe('undoConsequences', () => {
       'Local edits to 1 file are lost.',
       '2 moved items go back to their old paths.',
     ]);
-  });
-});
-
-describe('suggestsBackup', () => {
-  it('suggests a backup when text edits would be lost', () => {
-    expect(suggestsBackup([change('a.ts', ['changed'])])).toBe(true);
-  });
-
-  it('does not for binary edits, additions or moves alone', () => {
-    expect(suggestsBackup([change('a.png', ['changed'], 'binaryFile'), change('b.ts', ['added', 'changed']), change('c.ts', ['moved'])])).toBe(false);
-  });
-
-  it('suggests a backup for many changes of any kind', () => {
-    expect(suggestsBackup(Array.from({ length: 11 }, (_, index) => change(`${index}.ts`, ['moved'])))).toBe(true);
   });
 });
 
