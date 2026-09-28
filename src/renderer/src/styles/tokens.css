@@ -161,8 +161,13 @@
   --label-bg: rgba(191, 135, 0, 0.12);
   --label-text: #8a6100;
   --search-highlight: #d4a72c;
-  /* Marks colored per name (repository avatars): hsl(var(--hue) …) with these, so any hue reads on the theme. */
-  --tint-text-lightness: 36%;
+  /* Marks colored per name (repository and workspace avatars, server monograms): the letter in
+     hsl(var(--hue) var(--tint-text-saturation) var(--tint-text-lightness)) on
+     hsl(var(--hue) var(--tint-bg-saturation) var(--tint-bg-lightness) / var(--tint-bg-alpha)), so any hue reads on the theme. */
+  --tint-text-saturation: 60%;
+  --tint-text-lightness: 34%;
+  --tint-bg-saturation: 65%;
+  --tint-bg-lightness: 50%;
   --tint-bg-alpha: 0.14;
 }
 

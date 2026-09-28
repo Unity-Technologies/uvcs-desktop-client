@@ -1,0 +1,15 @@
+.mark {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: hsl(var(--hue) var(--tint-bg-saturation) var(--tint-bg-lightness) / var(--tint-bg-alpha));
+  color: hsl(var(--hue) var(--tint-text-saturation) var(--tint-text-lightness));
+  font-weight: var(--weight-semibold);
+}
+
+.mark[data-small='true'] {
+  border-radius: var(--radius-sm);
+  font-size: var(--text-xs);
+}

@@ -264,6 +264,11 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   a workspace next to the current one, and switches it (a plain `cm switch`: it's empty); a failure removes the new
   workspace and keeps the branch. The switcher shows the branch and pending changes of the other workspaces of the same
   repository with one local `cm status` each, only while it's open (`workspaces.glance`).
+- A workspace reads the same everywhere it shows (the home screen, the switcher, the sidebar's workspace button): the
+  repository's avatar (`components/RepositoryAvatar`, its color from `avatarHue`: the repository's short name, the
+  workspace's own until it's known), then its branch (`SelectorChip`) and server (`ServerChip`, the whole `name@server`
+  in its tooltip), told by `useDescribeWorkspace` (the `.plastic` folder, `cm` only for recent ones it can't tell). In
+  the switcher's narrow rows the server gives way first, down to its icon, then the branch's name.
 
 ## Two developers on one branch
 
@@ -598,7 +603,8 @@ renderer/src/
   well-known GUID, the workspace's recent branches, then the rest newest first. Recent branches are the official client's,
   read from and written to its `plasticgui.conf` (`main/plasticConfig`) on every switch, so both apps list the same ones.
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in components.
-  - Text tokens keep 4.5:1 and focus rings 3:1 (`styles/tokens.test.ts`); focus shows with `--focus-ring-visible`, or
+  - Text tokens keep 4.5:1 and focus rings 3:1 (`styles/tokens.test.ts`), and the letters of marks colored per name
+    (`ui/TintedMark`, the `--tint-*` tokens) 3:1 on their tint for every `stableHue` hue, as status letters do; focus shows with `--focus-ring-visible`, or
     `--focus-ring-inset` on rows and panes (over their content when it would paint over the ring); filled controls
     draw `--focus-outline` 2px out, and state rules with a shadow of their own restore the ring (`focusRings.test.ts`).
   - Motion uses the `--duration-*` and `--ease-*` tokens and the shared keyframes of `styles/global.css` (through

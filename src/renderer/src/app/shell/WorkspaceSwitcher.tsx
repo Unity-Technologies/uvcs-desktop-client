@@ -1,8 +1,9 @@
 import * as Popover from '@radix-ui/react-popover';
 import { Copy, FolderGit2, FolderOpen, FolderPlus, Layers, SquareTerminal } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactElement } from 'react';
+import { MissingChip } from '../../components/MissingChip';
+import { RepositoryAvatar } from '../../components/RepositoryAvatar';
 import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorkspaceDialog';
-import { initialOf } from '../../lib/initialOf';
 import { navigationTarget } from '../../lib/listNavigation';
 import { isRowMenuKey, openContextMenuOf } from '../../lib/rowMenu';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -13,21 +14,23 @@ import { useReturnFocus } from '../../ui/useReturnFocus';
 import { openCreateWorkspaceDialog } from '../home/dialogs/CreateWorkspaceDialog';
 import { missingWorkspaceMenu, workspaceMenu } from '../home/homeMenus';
 import { unlistedRecentPaths, type WorkspaceEntry } from '../home/recentWorkspaces';
+import { useDescribeWorkspace } from '../home/useDescribeWorkspace';
 import { useSettings } from '../settings/useSettings';
 import { useSession } from '../workspace/sessionStore';
 import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
 import { useWorkspaceInfo } from '../workspace/useWorkspace';
-import { useMissingWorkspacePaths, useRecentWorkspaceRepositories, useWorkspaceList } from '../workspace/workspaceQueries';
+import { useMissingWorkspacePaths, useWorkspaceList } from '../workspace/workspaceQueries';
 import { copyWorkspacePath, openTerminalIn } from '../workspace/workspaceShellActions';
 import { currentWorkspaceMenu } from './currentWorkspaceMenu';
-import { WorkspaceGlance } from './WorkspaceGlance';
+import { WorkspaceSwitcherChips } from './WorkspaceSwitcherChips';
 import { highlightedRow, workspaceSwitcherList } from './workspaceSwitcherList';
 import styles from './WorkspaceSwitcher.module.css';
 
 /**
- * Quick switch to any workspace, recent ones first, without going back to the home screen. Workspaces of the same
- * repository show their branch and pending changes. Right-clicking the card offers the open workspace's actions.
+ * Quick switch to any workspace, recent ones first, without going back to the home screen. Rows read as the home
+ * screen's (the repository's avatar, the branch and the server); workspaces of the same repository also show their
+ * pending changes. Right-clicking the card offers the open workspace's actions.
  */
 export function WorkspaceSwitcher({ currentPath, children }: { currentPath: string; children: ReactElement }) {
   const [open, setOpen] = useState(false);
@@ -93,11 +96,11 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
   const listboxId = useId();
   const { recentWorkspacePaths } = useSettings();
   const { data: workspaces = [] } = useWorkspaceList();
-  const { data: repositories } = useRecentWorkspaceRepositories(workspaces);
+  const describe = useDescribeWorkspace(workspaces);
   const currentRepository = useWorkspaceInfo().data?.repository;
   const { data: missingPaths = [] } = useMissingWorkspacePaths(unlistedRecentPaths(workspaces, recentWorkspacePaths));
 
-  const { recent, others } = workspaceSwitcherList(workspaces, recentWorkspacePaths, missingPaths, currentPath, repositories, filter);
+  const { recent, others } = workspaceSwitcherList(workspaces, recentWorkspacePaths, missingPaths, currentPath, describe, filter);
   const flat = [...recent, ...others];
   const highlighted = highlightedRow(flat, highlightedPath);
 
@@ -106,7 +109,6 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
     movedByKeyboard.current = false;
     listRef.current?.querySelector('[data-highlighted="true"]')?.scrollIntoView({ block: 'nearest' });
   }, [highlighted]);
-
 
   const onKeyDown = (event: KeyboardEvent): void => {
     const target = navigationTarget(event.key, highlighted, flat.length);
@@ -124,8 +126,8 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
   };
 
   // A missing workspace opens too: the workspace screen offers to locate, recreate or forget it.
-  const row = ({ workspace, missing }: WorkspaceEntry, index: number) => {
-    const repository = repositories?.[workspace.path];
+  const row = (entry: WorkspaceEntry, index: number) => {
+    const { workspace, missing } = entry;
     return (
       <ActionContextMenu
         key={workspace.guid}
@@ -147,7 +149,7 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
           onMouseEnter={() => setHighlightedPath(workspace.path)}
           onClick={() => onChoose(workspace.path)}
         >
-          <span className={styles.icon}>{initialOf(workspace.name)}</span>
+          <RepositoryAvatar repository={entry.repository} label={workspace.name} size={24} className={styles.avatar} />
           <span className={styles.text}>
             <span className={styles.name}>
               <Highlight text={workspace.name} />
@@ -156,19 +158,7 @@ function WorkspaceList({ currentPath, onChoose }: { currentPath: string; onChoos
               <Highlight text={workspace.path} />
             </span>
           </span>
-          {missing ? (
-            <span className={styles.missing} data-tip="Its folder can't be found">
-              Missing
-            </span>
-          ) : repository && repository === currentRepository ? (
-            <WorkspaceGlance workspacePath={workspace.path} />
-          ) : (
-            repository && (
-              <span className={styles.repository}>
-                <Highlight text={repository} />
-              </span>
-            )
-          )}
+          {missing ? <MissingChip /> : <WorkspaceSwitcherChips entry={entry} sameRepository={!!entry.repository && entry.repository === currentRepository} />}
         </button>
       </ActionContextMenu>
     );

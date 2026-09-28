@@ -18,6 +18,18 @@ export function parseColor(value: string): Rgba {
   throw new Error(`Not a color: ${value}`);
 }
 
+/** `hsl(hue saturation% lightness% / alpha)`, as the marks colored per name are written (percentages as tokens.css holds them). */
+export function hslColor(hue: number, saturation: string, lightness: string, alpha = 1): Rgba {
+  const s = Number.parseFloat(saturation) / 100;
+  const l = Number.parseFloat(lightness) / 100;
+  const a = s * Math.min(l, 1 - l);
+  const channel = (n: number): number => {
+    const k = (n + hue / 30) % 12;
+    return Math.round((l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))) * 255);
+  };
+  return { rgb: [channel(0), channel(8), channel(4)], alpha };
+}
+
 /** A translucent color as it shows over an opaque one. */
 export function composite(top: Rgba, bottom: Rgb): Rgb {
   return top.rgb.map((channel, index) => channel * top.alpha + bottom[index]! * (1 - top.alpha)) as Rgb;

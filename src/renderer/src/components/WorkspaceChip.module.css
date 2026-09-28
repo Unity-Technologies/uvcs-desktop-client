@@ -1,0 +1,32 @@
+/* The chips describing a workspace on the home screen and in the switcher; where they sit, and how they give way, is the row's. */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 8px;
+  overflow: hidden;
+  border-radius: var(--radius-full);
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.chip > svg {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.missing {
+  flex: none;
+  background: color-mix(in srgb, var(--status-changed) 14%, transparent);
+  color: var(--status-changed);
+  font-weight: var(--weight-medium);
+}

@@ -2,6 +2,7 @@ import { ChevronRight, MoreHorizontal } from 'lucide-react';
 import { useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
 import type { WorkspaceSummary } from '@shared/domain/workspace';
+import { RepositoryAvatar } from '../../components/RepositoryAvatar';
 import { ROVING_ITEM } from '../../lib/rovingFocus';
 import { pluralize } from '../../lib/text';
 import { displayName } from '../../lib/userName';
@@ -10,7 +11,6 @@ import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { repositoryMenu } from './homeMenus';
-import { RepositoryAvatar } from './RepositoryAvatar';
 import { WorkspaceRow } from './WorkspaceRow';
 import styles from './Home.module.css';
 
@@ -33,7 +33,7 @@ export function RepositoryRow({ repository, workspaces, onOpen, onCreateWorkspac
         <div className={styles.row}>
           <button className={styles.rowMain} onClick={() => setExpanded(!expanded)} aria-expanded={expanded} {...ROVING_ITEM}>
             <ChevronRight size={14} className={styles.chevron} data-expanded={expanded} />
-            <RepositoryAvatar name={repository.name} size={32} />
+            <RepositoryAvatar repository={repository.spec} label={repository.name} size={32} />
             <span className={styles.rowText}>
               <span className={styles.rowTitle}>
                 {/* In a box of its own: the title's gap would open between the pieces a match splits the name into. */}
@@ -74,7 +74,7 @@ export function RepositoryRow({ repository, workspaces, onOpen, onCreateWorkspac
         <HighlightQuery query="">
           <div className={styles.nested}>
             {workspaces.map((workspace) => (
-              <WorkspaceRow key={workspace.guid} workspace={workspace} onOpen={onOpen} compact />
+              <WorkspaceRow key={workspace.guid} workspace={workspace} repository={repository.spec} onOpen={onOpen} compact />
             ))}
             <button className={styles.nestedAction} onClick={() => onCreateWorkspace(repository)}>
               + New workspace for {repository.name}
