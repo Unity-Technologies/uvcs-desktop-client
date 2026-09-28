@@ -1,0 +1,28 @@
+/* The width the button may take: centered in an empty state, at the start under a list. */
+.room {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  min-width: 0;
+}
+
+.room[data-quiet='true'] {
+  justify-content: flex-start;
+}
+
+.button {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.button > svg {
+  flex: none;
+}
+
+/* Fitted to the room; clipping only guards the moment before it's measured. */
+.label {
+  display: flex;
+  gap: 0.3em;
+  min-width: 0;
+  overflow: hidden;
+}

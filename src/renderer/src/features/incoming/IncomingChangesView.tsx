@@ -51,7 +51,7 @@ export function IncomingChangesView() {
     return (
       <>
         {header}
-        <EmptyState icon={<CheckCircle2 size={22} />} title="You're up to date" description={`Your workspace has everything on ${incoming.branch}.`} />
+        <EmptyState icon={<CheckCircle2 size={22} />} title="You're up to date" />
       </>
     );
   }
