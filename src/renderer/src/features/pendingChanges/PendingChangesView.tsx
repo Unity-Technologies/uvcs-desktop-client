@@ -48,8 +48,8 @@ import { checkinDraftOf, useCheckinDraftStore, useExcludedPaths } from './checki
 import { pendingChangeMenu } from './pendingChangeMenu';
 import { addFilterRule, openWithDefaultApp, undoChanges } from './pendingChangeOperations';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
-import { SuccessCard } from './SuccessCard';
-import { isOutlivedByChanges, successCardTellsCheckin, successMomentLeft, useSuccessMomentStore } from './successMoment';
+import { SuccessEmptyState } from './SuccessEmptyState';
+import { isMomentOver, successCardTellsCheckin, useSuccessMomentStore } from './successMoment';
 import { usePendingChanges } from './usePendingChanges';
 import { useCheckinSelection } from './useCheckinSelection';
 import { useSortedChanges } from './useSortedChanges';
@@ -61,7 +61,7 @@ const changePath = (change: PendingChange): string => change.path;
 
 export function PendingChangesView() {
   const workspacePath = useWorkspacePath();
-  const { data: workspace } = useWorkspaceInfo();
+  const { data: workspace, dataUpdatedAt: workspaceReadAt } = useWorkspaceInfo();
   const { data: snapshot, isLoading, isFetching, isPlaceholderData, dataUpdatedAt, error } = usePendingChanges();
   const { data: incomingSummary } = useIncomingSummary();
   const settings = useSettings();
@@ -131,10 +131,12 @@ export function PendingChangesView() {
   // Checking in completes a pending merge as it is; updating first is for plain check-ins.
   const behind = mergeChanges.length > 0 ? null : behindBranch(incomingSummary, branchName);
 
-  // The next change ends the success moment, even before its time is up.
+  // The next change ends the success moment, and so does the workspace moving to another changeset.
+  const loadedChangeset = workspace?.loadedChangeset;
   useEffect(() => {
-    if (successMoment && isOutlivedByChanges(successMoment, dataUpdatedAt, allChanges.length)) clearSuccessMoment(workspacePath);
-  }, [successMoment, dataUpdatedAt, allChanges.length]);
+    const workspaceRead = loadedChangeset === undefined ? undefined : { readAt: workspaceReadAt, loadedChangeset };
+    if (successMoment && isMomentOver(successMoment, { readAt: dataUpdatedAt, count: allChanges.length }, workspaceRead)) clearSuccessMoment(workspacePath);
+  }, [successMoment, dataUpdatedAt, allChanges.length, workspaceReadAt, loadedChangeset]);
 
   // Keep something selected, so the diff pane is useful from the start and after the selected file goes away.
   useEffect(() => {
@@ -242,24 +244,15 @@ export function PendingChangesView() {
   if (error) return <>{header}<EmptyState title="Couldn't read pending changes" description={error.message} /></>;
 
   if (empty) {
+    const suggestion = workspace?.selector.kind === 'branch' && <MergeTaskSuggestion workspacePath={workspacePath} branchName={workspace.selector.name} />;
     return (
       <>
         {header}
         <LeftChangesBanner />
-        {successMoment && workspace && successMomentLeft(successMoment, Date.now()) > 0 ? (
-          <SuccessCard
-            moment={successMoment}
-            repositoryName={workspace.repositoryName}
-            server={workspace.server}
-            onDone={() => clearSuccessMoment(workspacePath)}
-          />
+        {successMoment && workspace ? (
+          <SuccessEmptyState moment={successMoment} repositoryName={workspace.repositoryName} server={workspace.server} suggestion={suggestion} />
         ) : (
-          <EmptyState
-            icon={<CheckCircle2 size={24} />}
-            title="No pending changes"
-            description="Changes you make show up here."
-            action={workspace?.selector.kind === 'branch' && <MergeTaskSuggestion workspacePath={workspacePath} branchName={workspace.selector.name} />}
-          />
+          <EmptyState icon={<CheckCircle2 size={24} />} title="No pending changes" description="Changes you make show up here." action={suggestion} />
         )}
       </>
     );

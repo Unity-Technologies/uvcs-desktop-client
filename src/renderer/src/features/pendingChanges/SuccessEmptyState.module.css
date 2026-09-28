@@ -1,0 +1,31 @@
+/* Fills the pane as the empty state does, which it holds. */
+.moment {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+/* The changeset in the title, a link in the app's link color. */
+.changeset {
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--accent-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.changeset:hover {
+  text-decoration: underline;
+}
+
+/* Copy link, then what the usual empty state suggests next, each centered on its line. */
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+}
