@@ -1,5 +1,4 @@
-import { Lock as LockIcon, LockOpen, RefreshCw, User } from 'lucide-react';
-import { useState } from 'react';
+import { Lock as LockIcon, LockOpen, RefreshCw } from 'lucide-react';
 import type { Lock } from '@shared/domain/lock';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
@@ -16,20 +15,26 @@ import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { userFilterTexts } from '../../lib/userName';
 import { IconButton } from '../../ui/IconButton';
+import { useWorkspaceUser } from '../../app/account/accounts';
+import { PeopleFilter } from '../../components/people/PeopleFilter';
+import { usePeopleSeen } from '../../components/people/usePeopleSeen';
+import { isOnlyMine, matchesPeople } from '../../lib/peopleFilter';
+import { isFiltering } from '../../lib/viewFilters';
+import { FilterBar } from '../../ui/FilterBar';
+import { FilterField } from '../../ui/FilterField';
+import { NoMatches } from '../../ui/NoMatches';
+import { useLocksViewStore } from './locksViewStore';
 import { RelativeTime } from '../../ui/RelativeTime';
-import { SearchField } from '../../ui/SearchField';
-import { ToggleChip } from '../../ui/ToggleChip';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { LockDetails } from './LockDetails';
 import { lockKey } from './lockKey';
 import { lockMenu } from './lockMenu';
 import { isReleasable, releaseLocks } from './lockOperations';
-import { locksEmptyState } from './locksEmptyState';
 import { useLocks } from './useLocks';
 import styles from './LocksView.module.css';
 
-type Scope = 'all' | 'mine';
+const RULES = "Files matching the server's lock rules are locked when someone checks them out, so nobody else edits them at the same time.";
 
 const COLUMNS: Column<Lock>[] = [
   // Only files are locked, and a lock names no item type: the icon goes by the name.
@@ -53,6 +58,8 @@ const COLUMNS: Column<Lock>[] = [
   { id: 'date', header: 'Locked', width: 120, secondary: true, render: (lock) => <RelativeTime date={lock.date} />, sortValue: (lock) => lock.date },
 ];
 
+const ownerOf = (lock: Lock): string => lock.owner;
+
 /** What the row shows: the item, its owner, the branches it's held on and released on, and the workspace. */
 function lockFilterTexts(lock: Lock): string[] {
   return [lock.path, ...userFilterTexts(lock.owner), lock.holderBranch, lock.destinationBranch, lock.workspace];
@@ -61,12 +68,15 @@ function lockFilterTexts(lock: Lock): string[] {
 /** Exclusive checkouts on the repository: who holds what, and releasing them. */
 export function LocksView() {
   const workspacePath = useWorkspacePath();
-  const [scope, setScope] = useState<Scope>('all');
-  const [filter, setFilter] = useState('');
+  const filters = useLocksViewStore();
+  const { text: filter, people, update } = filters;
+  const me = useWorkspaceUser();
   const [selection, setSelection] = useViewSelection('locks');
-  const { data: locks, isLoading, error, isFetching } = useLocks(scope === 'mine');
+  // `cm lock list` reads only the user's locks, or everyone's: other people are picked among everyone's.
+  const { data: locks, isLoading, error, isFetching } = useLocks(isOnlyMine(people));
+  const offered = usePeopleSeen('locks', locks, ownerOf);
 
-  const visible = (locks ?? []).filter((lock) => matchesWordFilter(lockFilterTexts(lock), filter));
+  const visible = (locks ?? []).filter((lock) => matchesPeople(people, me, lock.owner) && matchesWordFilter(lockFilterTexts(lock), filter));
   const selected = visible.filter((lock) => selection.selected.has(lockKey(lock)));
   const releasable = selected.filter(isReleasable);
   const focused = visible.find((lock) => lockKey(lock) === selection.anchor);
@@ -74,7 +84,8 @@ export function LocksView() {
   const header = (
     <ViewHeader
       title="Locks"
-      count={locks?.length}
+      count={locks && visible.length}
+      total={locks?.length}
       actions={
         <>
           <IconButton
@@ -88,29 +99,19 @@ export function LocksView() {
         </>
       }
     >
-      <SearchField value={filter} onChange={setFilter} placeholder="Filter locks" />
-      <ToggleChip pressed={scope === 'mine'} icon={<User size={13} />} onChange={(mine) => setScope(mine ? 'mine' : 'all')}>
-        Mine
-      </ToggleChip>
+      <FilterBar
+        text={<FilterField value={filter} onChange={(text) => update({ text })} placeholder="Filter locks" />}
+        people={<PeopleFilter value={people} onChange={(value) => update({ people: value })} people={offered} mineTip="Locks you hold" />}
+      />
     </ViewHeader>
   );
 
   if (isLoading) return <>{header}<ListWithDetailsSkeleton widthKey="locks" columns={COLUMNS} /></>;
   if (error) return <>{header}<EmptyState title="Couldn't read the locks" description={error.message} /></>;
-  if (visible.length === 0) {
-    const empty = locksEmptyState({ searching: filter.trim() !== '', onlyMine: scope === 'mine' });
-    return (
-      <>
-        {header}
-        <EmptyState
-          icon={<LockIcon size={22} />}
-          title={empty.title}
-          description={empty.description}
-          action={empty.offerEveryone && <Button onClick={() => setScope('all')}>Show everyone's locks</Button>}
-        />
-      </>
-    );
+  if (visible.length === 0 && isFiltering(filters)) {
+    return <>{header}<NoMatches icon={<LockIcon size={22} />} noun="locks" hint={isOnlyMine(people) && !filter.trim() ? 'You hold no locks.' : undefined} onClear={filters.clear} /></>;
   }
+  if (visible.length === 0) return <>{header}<EmptyState icon={<LockIcon size={22} />} title="Nothing is locked" description={RULES} /></>;
 
   return (
     <>

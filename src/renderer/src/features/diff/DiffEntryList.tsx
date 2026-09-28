@@ -53,7 +53,7 @@ function columns({ on, statusOf, toggle }: ReviewMode<DiffEntry>): Column<DiffEn
 
 /** The files of a diff: filterable, and in review mode marked as they are reviewed. */
 export function DiffEntryList({ entries, selection, onSelectionChange, contextMenu, review }: DiffEntryListProps) {
-  const { visible, query, bar } = useChangeFilter(entries, diffEntryKey, diffEntryTone);
+  const { visible, query, bar } = useChangeFilter(entries, diffEntryKey, diffEntryTone, true);
   const rows = review.narrow(visible);
 
   const onRowKeyDown = (event: KeyboardEvent, _focused: DiffEntry, moveBy: (step: number) => void): void => {

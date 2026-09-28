@@ -3,13 +3,16 @@ import type { CodeReviewFilter } from '@shared/domain/codeReview';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { compactFilter } from '../../lib/compactFilter';
 import { latestReviewByBranch } from './reviewsByBranch';
 
 export function useCodeReviews(filter: CodeReviewFilter) {
   const workspacePath = useWorkspacePath();
+  // Equivalent filters (no owners, not only assigned) share one cache entry and one `cm find`.
+  const query = compactFilter(filter);
   return useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'codeReviews', filter),
-    queryFn: () => api.codeReviews.list(workspacePath, filter),
+    queryKey: queryKeys.inWorkspace(workspacePath, 'codeReviews', query),
+    queryFn: () => api.codeReviews.list(workspacePath, query),
     placeholderData: (previous) => previous,
   });
 }

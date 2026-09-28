@@ -8,7 +8,8 @@ import { NoSelection } from '../../components/NoSelection';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
-import { SearchField } from '../../ui/SearchField';
+import { FilterBar } from '../../ui/FilterBar';
+import { FilterField } from '../../ui/FilterField';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { useExpandedDirectories, useExpandedDirectoriesStore } from '../files/expandedDirectoriesStore';
@@ -46,7 +47,7 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
 
   const header = (
     <ViewHeader title={`Repository at changeset ${page.changesetId}`} subtitle="Read-only">
-      <SearchField value={filter} onChange={setFilter} placeholder="Filter open folders" />
+      <FilterBar text={<FilterField value={filter} onChange={setFilter} placeholder="Filter open folders" />} />
     </ViewHeader>
   );
 

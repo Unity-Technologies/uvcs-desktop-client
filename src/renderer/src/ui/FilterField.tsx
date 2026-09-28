@@ -48,6 +48,7 @@ export function FilterField({ value, onChange, placeholder, width = FILTER_FIELD
       placeholder={placeholder}
       width={width}
       aria-label={placeholder}
+      tip={{ text: placeholder, shortcut: hotkey('listFilter') }}
       onKeyDown={(event) => {
         if ((event.key === 'ArrowDown' || event.key === 'Escape') && focusMain(document)) event.preventDefault();
       }}

@@ -93,7 +93,7 @@ export function PeoplePicker({ value, onChange, people, me }: PeoplePickerProps)
         ) : undefined
       }
       empty={<>No one matches “{search.trim()}”</>}
-      footer={offered.length === 0 && !search.trim() ? 'Others show here once the list shows everyone’s rows.' : undefined}
+      footer={offered.length === 0 && !search.trim() && !isEveryone(value) ? 'Others show here once the list shows everyone’s rows.' : undefined}
     />
   );
 }

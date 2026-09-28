@@ -1,6 +1,6 @@
-import { CircleDot, MessageSquareCode, Plus, RefreshCw, Users } from 'lucide-react';
+import { CircleDot, MessageSquareCode, Plus, RefreshCw, UserCheck } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { CODE_REVIEW_STATUSES, MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewStatus } from '@shared/domain/codeReview';
+import { CODE_REVIEW_STATUSES, MAX_LISTED_CODE_REVIEWS, type CodeReview } from '@shared/domain/codeReview';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -15,7 +15,6 @@ import { EmptyState } from '../../ui/EmptyState';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
-import { SearchField } from '../../ui/SearchField';
 import { ChoiceChip } from '../../ui/ChoiceChip';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
@@ -25,21 +24,28 @@ import { openReview } from './codeReviewOperations';
 import { describeTarget } from './reviewTarget';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { openCreateCodeReviewDialog } from './CreateCodeReviewDialog';
-import { codeReviewsEmptyState } from './codeReviewsEmptyState';
 import { selectCreated } from './selectCreated';
 import { useCodeReviews } from './useCodeReviews';
 import { SincePicker } from '../../components/SincePicker';
-import { sinceDateFor, type SincePreset } from '../../lib/sincePresets';
+import { sinceDateFor } from '../../lib/sincePresets';
+import { useWorkspaceUser } from '../../app/account/accounts';
+import { PeopleFilter } from '../../components/people/PeopleFilter';
+import { usePeopleSeen } from '../../components/people/usePeopleSeen';
+import { matchesPeople, pickedOwners, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
+import { useDebouncedValue } from '../../lib/useDebouncedValue';
+import { isFiltering } from '../../lib/viewFilters';
+import { FilterBar } from '../../ui/FilterBar';
+import { FilterField } from '../../ui/FilterField';
+import { NoMatches } from '../../ui/NoMatches';
+import { ToggleChip } from '../../ui/ToggleChip';
+import { CLEARED_CODE_REVIEW_FILTERS, useCodeReviewsViewStore, type StatusFilter } from './codeReviewsViewStore';
 import styles from './CodeReviewsView.module.css';
 import { codeReviewCopyTexts } from './codeReviewMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { userFilterTexts } from '../../lib/userName';
 
-type StatusFilter = CodeReviewStatus | 'any';
-type ReviewScope = 'all' | 'createdByMe' | 'assignedToMe';
-
-const DEFAULT_SINCE: SincePreset = 'last3Months';
+const ownerOf = (review: CodeReview): string => review.owner;
 
 const COLUMNS: Column<CodeReview>[] = [
   {
@@ -87,20 +93,21 @@ function reviewFilterTexts(review: CodeReview): string[] {
 export function CodeReviewsView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
-  const [scope, setScope] = useState<ReviewScope>('all');
-  const [status, setStatus] = useState<StatusFilter>('any');
-  const [search, setSearch] = useState('');
-  const [since, setSince] = useState<SincePreset>(DEFAULT_SINCE);
+  const filters = useCodeReviewsViewStore();
+  const { text: search, people, since, status, assignedToMe, update } = filters;
+  const me = useWorkspaceUser();
+  const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const [selection, setSelection] = useViewSelection('codeReviews');
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const { data: reviews, isLoading, isFetching, error } = useCodeReviews({
-    owners: scope === 'createdByMe' ? ['me'] : undefined,
-    assignedToMe: scope === 'assignedToMe',
+    owners: pickedOwners(queriedPeople),
+    assignedToMe,
     status: status === 'any' ? undefined : status,
     sinceDate: sinceDateFor(since),
   });
+  const offered = usePeopleSeen('codeReviews', reviews, ownerOf);
 
-  const visible = (reviews ?? []).filter((review) => matchesWordFilter(reviewFilterTexts(review), search));
+  const visible = (reviews ?? []).filter((review) => matchesPeople(people, me, review.owner) && matchesWordFilter(reviewFilterTexts(review), search));
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : '';
   const commands = useMemo<Command[]>(
     () => [
@@ -130,7 +137,8 @@ export function CodeReviewsView() {
   const header = (
     <ViewHeader
       title="Code reviews"
-      count={reviews?.length}
+      count={reviews && visible.length}
+      total={reviews?.length}
       subtitle={reviews && reviews.length >= MAX_LISTED_CODE_REVIEWS && 'newest'}
       actions={
         <>
@@ -145,54 +153,45 @@ export function CodeReviewsView() {
         </>
       }
     >
-      <SearchField value={search} onChange={setSearch} placeholder="Filter reviews" />
-      <SincePicker value={since} onChange={setSince} />
-      <ChoiceChip<ReviewScope>
-        value={scope}
-        onChange={setScope}
-        icon={<Users size={13} />}
-        neutralValue="all"
-        choices={[
-          { value: 'all', label: 'Everyone' },
-          { value: 'createdByMe', label: 'Created by me' },
-          { value: 'assignedToMe', label: 'Assigned to me' },
-        ]}
-      />
-      <ChoiceChip<StatusFilter>
-        value={status}
-        onChange={setStatus}
-        icon={<CircleDot size={13} />}
-        neutralValue="any"
-        choices={[{ value: 'any', label: 'Any status' }, ...CODE_REVIEW_STATUSES.map((value) => ({ value, label: value }))]}
+      <FilterBar
+        text={<FilterField value={search} onChange={(text) => update({ text })} placeholder="Filter code reviews" />}
+        people={<PeopleFilter value={people} onChange={(value) => update({ people: value })} people={offered} mineTip="Reviews you created" />}
+        time={<SincePicker value={since} onChange={(value) => update({ since: value })} />}
+        kinds={
+          <>
+            <ToggleChip pressed={assignedToMe} icon={<UserCheck size={13} />} onChange={(value) => update({ assignedToMe: value })}>
+              Assigned to me
+            </ToggleChip>
+            <ChoiceChip<StatusFilter>
+              value={status}
+              onChange={(value) => update({ status: value })}
+              icon={<CircleDot size={13} />}
+              neutralValue="any"
+              choices={[{ value: 'any', label: 'Any status' }, ...CODE_REVIEW_STATUSES.map((value) => ({ value, label: value }))]}
+            />
+          </>
+        }
       />
     </ViewHeader>
   );
 
   if (isLoading) return <>{header}<ListWithDetailsSkeleton widthKey="codeReviews" columns={COLUMNS} /></>;
   if (error) return <>{header}<EmptyState title="Couldn't read the code reviews" description={error.message} /></>;
+  if (visible.length === 0 && isFiltering(filters, CLEARED_CODE_REVIEW_FILTERS)) {
+    return <>{header}<NoMatches icon={<MessageSquareCode size={22} />} noun="code reviews" hint={since === 'anyTime' ? undefined : 'The filters look within the time range. Try a longer one.'} onClear={filters.clear} /></>;
+  }
   if (visible.length === 0) {
-    const empty = codeReviewsEmptyState({ searching: search.trim() !== '', filtered: scope !== 'all' || status !== 'any' || since !== DEFAULT_SINCE });
-    const clearFilters = (): void => {
-      setSearch('');
-      setScope('all');
-      setStatus('any');
-      setSince(DEFAULT_SINCE);
-    };
     return (
       <>
         {header}
         <EmptyState
           icon={<MessageSquareCode size={22} />}
-          title={empty.title}
-          description={empty.description}
+          title="No code reviews"
+          description={since === 'anyTime' ? 'Ask a teammate to look at a branch or changeset before it gets merged.' : 'None in this time range. Try a longer one, or ask a teammate for a review.'}
           action={
-            empty.action === 'newReview' ? (
-              <Button variant="primary" icon={<Plus size={14} />} onClick={newReview}>
-                New review
-              </Button>
-            ) : (
-              <Button onClick={clearFilters}>Clear filters</Button>
-            )
+            <Button variant="primary" icon={<Plus size={14} />} onClick={newReview}>
+              New review
+            </Button>
           }
         />
       </>

@@ -16,6 +16,11 @@ export function historyRowKey(row: HistoryRow): string {
   return row.kind === 'revision' ? String(row.revision.changesetId) : `${row.change.changesetId}-path`;
 }
 
+/** Who made the revision or the move. */
+export function ownerOf(row: HistoryRow): string {
+  return row.kind === 'revision' ? row.revision.owner : row.change.owner;
+}
+
 export function changesetOf(row: HistoryRow): number {
   return row.kind === 'revision' ? row.revision.changesetId : row.change.changesetId;
 }
