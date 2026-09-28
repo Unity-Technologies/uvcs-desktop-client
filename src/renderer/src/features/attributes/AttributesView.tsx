@@ -8,6 +8,7 @@ import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
 import { NoSelection } from '../../components/NoSelection';
+import { ObjectName } from '../../components/ObjectName';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { userFilterTexts } from '../../lib/userName';
 import { UserLabel } from '../../ui/Avatar';
@@ -24,7 +25,6 @@ import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
 import { NoMatches } from '../../ui/NoMatches';
 import { useAttributesViewStore } from './attributesViewStore';
-import { cellText } from '../../ui/table/cellText';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { editAttributeComment, renameAttributeType } from './attributeOperations';
@@ -32,15 +32,14 @@ import { AttributeTypeDetails } from './AttributeTypeDetails';
 import { attributeTypeMenu } from './attributeTypeMenu';
 import { openCreateAttributeDialog } from './CreateAttributeDialog';
 import { useAttributeTypes } from './useAttributes';
-import styles from './AttributesView.module.css';
 
 const COLUMNS: Column<AttributeType>[] = [
   {
     id: 'name',
     header: 'Name',
-    grow: 1,
+    grow: 2,
     sortValue: (type) => type.name,
-    render: (type) => <strong className={styles.name}>{cellText(<Highlight text={type.name} />)}</strong>,
+    render: (type) => <ObjectName icon={Tags} name={type.name} />,
   },
   { id: 'comment', header: 'Comment', grow: 3, secondary: true, render: (type) => <Highlight text={type.comment} /> },
   { id: 'owner', header: 'Created by', width: 180, hideBelow: 700, sortValue: (type) => type.owner, render: (type) => <UserLabel user={type.owner} /> },
