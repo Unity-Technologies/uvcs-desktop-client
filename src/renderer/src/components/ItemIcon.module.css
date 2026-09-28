@@ -1,35 +1,57 @@
-.icon,
-.folder,
-.page,
-.file {
+.icon {
+  position: relative;
   display: inline-flex;
   flex: none;
   width: 16px;
   height: 16px;
 }
 
-/* The theme's folder and plain page are shapes only, filled with the tokens: they read on every surface. */
-.folder,
-.page {
-  mask: var(--icon-shape) center / 16px no-repeat;
+.icon > svg {
+  position: absolute;
+  inset: 0;
 }
 
 .folder {
-  background: var(--icon-folder);
+  color: var(--icon-folder);
+  fill: var(--icon-folder);
 }
 
+/* Every file is the same filled page, whatever its glyph: all read with one weight. */
 .page {
-  background: var(--icon-file);
-}
-
-.file {
-  background: var(--icon-light) center / 16px no-repeat;
-}
-
-:global([data-theme='dark']) .file {
-  background-image: var(--icon-dark);
-}
-
-.symlink {
   color: var(--icon-file);
+  fill: var(--icon-file-fill);
+}
+
+/* Under a glyph the page is its fill only: the glyph draws the outline as Lucide cut it around the glyph. That outline
+   (known by its rounded and dog-eared corners, and its fold) stays neutral; only the glyph takes its family's tint. */
+.page:not(:only-child) {
+  color: transparent;
+}
+
+.glyph {
+  color: var(--glyph-tint, var(--icon-file));
+}
+
+.glyph > path:is([d*='2.4 2.4'], [d*='a2 2 0 0 1 2-2h'], [d*='a2 2 0 0 1-2 2h'], [d^='M14 2v5']) {
+  stroke: var(--icon-file);
+}
+
+.icon:is([data-family='source'], [data-family='script']) {
+  --glyph-tint: var(--icon-source);
+}
+
+.icon[data-family='project'] {
+  --glyph-tint: var(--icon-project);
+}
+
+.icon[data-family='config'] {
+  --glyph-tint: var(--icon-config);
+}
+
+.icon:is([data-family='image'], [data-family='media']) {
+  --glyph-tint: var(--icon-media);
+}
+
+.icon[data-family='asset'] {
+  --glyph-tint: var(--icon-asset);
 }

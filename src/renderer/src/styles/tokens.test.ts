@@ -34,6 +34,13 @@ describe.each(Object.entries(themes))('%s theme', (_theme, tokens) => {
     for (const surface of SURFACES) expect(ratio(tokens, icon, surface), surface).toBeGreaterThanOrEqual(3);
   });
 
+  it.each(['--icon-file', '--icon-source', '--icon-project', '--icon-config', '--icon-media', '--icon-asset'])(
+    'draws file glyphs in %s at 3:1 on the page they sit on',
+    (glyph) => {
+      expect(ratio(tokens, glyph, '--icon-file-fill')).toBeGreaterThanOrEqual(3);
+    },
+  );
+
   it('draws focus rings at 3:1 on surfaces and on selected rows', () => {
     for (const surface of SURFACES) expect(ratio(tokens, '--focus-color', surface), surface).toBeGreaterThanOrEqual(3);
     const surface = parseColor(tokens['--bg-surface']!).rgb;

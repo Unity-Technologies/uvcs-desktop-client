@@ -113,9 +113,17 @@
   --change-moved: #8250df;
   --change-permissions: #bc4c00;
 
-  /* Item icons the app draws itself: folders, and the plain page of a file with no icon of its type (a Unity .meta). */
+  /* Item icons: solid slate folders and one neutral filled page for every file, whose glyph takes its family's tint
+     (source, project and build files, config and data, images and media, Unity assets; docs, archives and binaries
+     stay neutral, generated files are the plain page). */
   --icon-folder: #6788b4;
   --icon-file: #6e7781;
+  --icon-file-fill: #e3e7eb;
+  --icon-source: #0969da;
+  --icon-project: #bc4c00;
+  --icon-config: #8250df;
+  --icon-media: #bf3989;
+  --icon-asset: #1a7f37;
 
   --bg-app: #f6f8fa;
   --bg-sidebar: #f6f8fa;
@@ -187,6 +195,12 @@
 
   --icon-folder: #7f9fcb;
   --icon-file: #9aa3ad;
+  --icon-file-fill: #343c47;
+  --icon-source: #58a6ff;
+  --icon-project: #f0883e;
+  --icon-config: #bc8cff;
+  --icon-media: #f778ba;
+  --icon-asset: #3fb950;
 
   --bg-app: #0d1117;
   --bg-sidebar: #0d1117;
