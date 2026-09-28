@@ -4,12 +4,14 @@ import { dirname, join } from 'node:path';
 import { dialog, shell } from 'electron';
 import type { ExplorerApi } from '@shared/api/explorer';
 import type { ItemMove, RevisionType } from '@shared/domain/explorer';
+import type { RevisionRef } from '@shared/domain/revision';
 import { parseItemDetails } from '../cm/itemDetailsXml';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { parseTreeItems } from '../cm/treeItemsXml';
 import { listWorkspacePaths } from '../files/listWorkspacePaths';
 import { moveArgs, moveItems } from '../files/moveItems';
 import { renamePrivate } from '../files/renamePrivate';
+import { saveContent } from '../files/saveContent';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
 
@@ -62,24 +64,25 @@ export function createExplorerService({ cm, operations }: ServiceContext): Explo
     await cm.query(['changerevisiontype', ...absolute(workspacePath, paths), `--type=${type}`], inWorkspace(workspacePath));
   }
 
-  async function saveRevisionAs(workspacePath: string, revisionId: number, fileName: string) {
+  async function saveRevisionAs(workspacePath: string, revision: RevisionRef, fileName: string) {
     const { canceled, filePath } = await dialog.showSaveDialog({ defaultPath: fileName });
     if (canceled || !filePath) return false;
-    await downloadRevision(workspacePath, revisionId, filePath);
+    await downloadRevision(workspacePath, revision, filePath);
     return true;
   }
 
-  async function openRevision(workspacePath: string, revisionId: number, fileName: string) {
-    const directory = join(tmpdir(), 'uvcs-revisions', String(revisionId));
+  async function openRevision(workspacePath: string, revision: RevisionRef, fileName: string) {
+    // Ids are per repository: two repositories' revision 45 are two files.
+    const directory = join(tmpdir(), 'uvcs-revisions', revision.repository.replace(/[^\w.-]/g, '_'), String(revision.revisionId));
     await mkdir(directory, { recursive: true });
     const filePath = join(directory, fileName);
-    await downloadRevision(workspacePath, revisionId, filePath);
+    await downloadRevision(workspacePath, revision, filePath);
     const error = await shell.openPath(filePath);
     if (error) throw new Error(error);
   }
 
-  async function downloadRevision(workspacePath: string, revisionId: number, filePath: string) {
-    await cm.query(['cat', `revid:${revisionId}`, `--file=${filePath}`], inWorkspace(workspacePath));
+  function downloadRevision(workspacePath: string, revision: RevisionRef, filePath: string) {
+    return saveContent(cm, workspacePath, { kind: 'revision', revision, fileName: filePath }, filePath);
   }
 
   return {

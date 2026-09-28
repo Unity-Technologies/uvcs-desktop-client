@@ -15,7 +15,7 @@ const changes = (conflicts: number, blocked = 0, headChangeset = 13): IncomingCh
   headChangeset,
   changesets: [],
   files: [],
-  conflicts: Array.from({ length: conflicts }, (_, index) => ({ path: `f${index}`, isBinary: false, baseRevisionId: 1, incomingRevisionId: 2 })),
+  conflicts: Array.from({ length: conflicts }, (_, index) => ({ path: `f${index}`, isBinary: false, baseRevisionId: 1, incomingRevisionId: 2, repository: 'game@local' })),
   blockedPaths: Array.from({ length: blocked }, (_, index) => `b${index}`),
 });
 

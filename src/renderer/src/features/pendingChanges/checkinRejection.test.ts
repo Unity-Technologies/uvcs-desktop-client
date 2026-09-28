@@ -18,6 +18,7 @@ const entry = (status: DiffEntry['status'], path: string, extra: Partial<DiffEnt
   itemType: 'file',
   baseRevisionId: 1,
   revisionId: 2,
+  repository: 'game@local',
   ...extra,
 });
 

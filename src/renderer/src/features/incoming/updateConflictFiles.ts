@@ -10,8 +10,8 @@ export function updateConflictFiles(conflicts: UpdateConflict[]): ConflictedFile
   return conflicts.map((conflict) => ({
     key: conflict.path,
     path: conflict.path,
-    base: { kind: 'revision', revisionId: conflict.baseRevisionId, fileName: conflict.path },
-    source: { kind: 'revision', revisionId: conflict.incomingRevisionId, fileName: conflict.path },
+    base: { kind: 'revision', revision: { revisionId: conflict.baseRevisionId, repository: conflict.repository }, fileName: conflict.path },
+    source: { kind: 'revision', revision: { revisionId: conflict.incomingRevisionId, repository: conflict.repository }, fileName: conflict.path },
     destination: { kind: 'workspaceFile', path: conflict.path },
   }));
 }

@@ -2,8 +2,11 @@ import type { DiffEntry, DiffStatus } from '@shared/domain/diff';
 import type { ItemType } from '@shared/domain/pendingChanges';
 import { parseRecords, recordFormat } from './formatRecords';
 
-/** `--format` for `cm diff --repositorypaths` that `parseDiffEntries` understands. */
-export const DIFF_FORMAT = recordFormat(['status', 'path', 'srccmpath', 'baserevid', 'revid', 'type']);
+/**
+ * `--format` for `cm diff --repositorypaths` that `parseDiffEntries` understands. `{repository}` is the repository of
+ * each item's revisions: under an xlink, the xlinked one.
+ */
+export const DIFF_FORMAT = recordFormat(['status', 'path', 'srccmpath', 'baserevid', 'revid', 'type', 'repository']);
 
 const STATUSES: Record<string, DiffStatus> = { A: 'added', C: 'changed', D: 'deleted', M: 'moved' };
 const ITEM_TYPES: Record<string, ItemType> = { F: 'file', B: 'binaryFile', D: 'directory', X: 'xlink' };
@@ -28,7 +31,7 @@ export function parseDiffEntries(output: string): DiffEntry[] {
   return [...entriesByPath.values()].sort((a, b) => PATH_ORDER.compare(a.path, b.path));
 }
 
-function toDiffEntry([statusCode = '', path = '', sourcePath = '', baseRevision = '', revision = '', typeCode = '']: string[]): DiffEntry | null {
+function toDiffEntry([statusCode = '', path = '', sourcePath = '', baseRevision = '', revision = '', typeCode = '', repository = '']: string[]): DiffEntry | null {
   const status = STATUSES[statusCode];
   if (!status) return null;
 
@@ -40,6 +43,7 @@ function toDiffEntry([statusCode = '', path = '', sourcePath = '', baseRevision 
     oldPath: status === 'moved' && sourcePath ? withoutLeadingSlash(sourcePath) : undefined,
     itemType: ITEM_TYPES[typeCode] ?? 'file',
     ...sidesOf(status, baseRevisionId, revisionId),
+    repository,
   };
 }
 

@@ -118,7 +118,7 @@ async function writeFileResolutions(
     if (resolution.choice === 'text') {
       await retryWhileBusy(() => writeFile(target, resolution.text, 'utf8'));
     } else if (resolution.choice === 'source') {
-      const source = spec.itemAt(conflict.itemId, mergeSourcePoint(request, conflict.sourceChangeset));
+      const source = spec.itemAt(conflict.itemId, mergeSourcePoint(request, conflict.sourceChangeset), conflict.repository);
       await cm.query(['cat', source, `--file=${target}`], { cwd: workspacePath });
     }
   }

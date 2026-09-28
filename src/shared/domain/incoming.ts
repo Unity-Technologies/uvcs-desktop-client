@@ -29,6 +29,8 @@ export interface UpdateConflict {
   baseRevisionId: number;
   /** The revision on the branch head. */
   incomingRevisionId: number;
+  /** The repository both revisions belong to: the workspace's, or under an xlink the xlinked one. */
+  repository: string;
 }
 
 export interface IncomingChanges extends IncomingSummary {

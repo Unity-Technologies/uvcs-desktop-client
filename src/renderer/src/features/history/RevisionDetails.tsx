@@ -20,6 +20,8 @@ interface RevisionDetailsProps {
   /** Walks back from a revision "Annotate before this change" selected. */
   onBack?: () => void;
   history: AnnotationHistory;
+  /** The repository of a file under an xlink, whose changesets no diff of the workspace's has. */
+  otherRepository?: string;
   /** The view picked: the page's, which starts as the one it was opened with. */
   picked: RevisionView;
   onPick: (view: RevisionView) => void;
@@ -30,7 +32,7 @@ interface RevisionDetailsProps {
  * revision is compared with the one it was made from; two selected revisions with each other, and the newer one is
  * annotated. Directories have no content, so their changeset is offered instead.
  */
-export function RevisionDetails({ path, revisions, selected, onBack, history, picked, onPick }: RevisionDetailsProps) {
+export function RevisionDetails({ path, revisions, selected, onBack, history, otherRepository, picked, onPick }: RevisionDetailsProps) {
   const compared = comparedRevisions(revisions, selected);
   // Arrowing through the history doesn't read (`cm cat`, `cm annotate`) every revision it passes.
   const [newer, older] = useSettledValue(compared, compared.map((revision) => revision?.revisionId).join(':'));
@@ -41,11 +43,17 @@ export function RevisionDetails({ path, revisions, selected, onBack, history, pi
     return (
       <EmptyState
         title={`Changeset ${newer.changesetId}`}
-        description="Directories have no content to compare. Open the changeset to see what changed inside."
+        description={
+          otherRepository
+            ? `Directories have no content to compare. The changeset is one of ${otherRepository}.`
+            : 'Directories have no content to compare. Open the changeset to see what changed inside.'
+        }
         action={
-          <Button icon={<FileDiff size={14} />} onClick={() => openChangesetDiff({ id: newer.changesetId })}>
-            Diff changeset
-          </Button>
+          !otherRepository && (
+            <Button icon={<FileDiff size={14} />} onClick={() => openChangesetDiff({ id: newer.changesetId })}>
+              Diff changeset
+            </Button>
+          )
         }
       />
     );
@@ -77,7 +85,7 @@ export function RevisionDetails({ path, revisions, selected, onBack, history, pi
   return view === 'diff' ? (
     <RevisionComparison path={path} newer={newer} older={older} leading={leading} />
   ) : (
-    <AnnotationPane path={path} revision={newer} leading={leading} history={history} />
+    <AnnotationPane path={path} repository={newer.repository} revision={newer} leading={leading} history={history} />
   );
 }
 

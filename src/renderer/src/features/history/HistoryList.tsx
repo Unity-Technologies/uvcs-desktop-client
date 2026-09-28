@@ -26,11 +26,13 @@ interface HistoryListProps {
   workspaceRevisionId?: number;
   /** Scrolls this row into view when it changes: one selected from the annotation. */
   revealKey?: string | null;
+  /** The repository of a file under an xlink, whose changesets carry none of the workspace's labels. */
+  otherRepository?: string;
 }
 
 /** The file's revisions and moves, newest first, as the lists of changesets read: avatar, comment, then its details. */
-export function HistoryList({ rows, selection, onSelectionChange, contextMenu, workspaceRevisionId, revealKey }: HistoryListProps) {
-  const labelsByChangeset = useLabelsByChangeset();
+export function HistoryList({ rows, selection, onSelectionChange, contextMenu, workspaceRevisionId, revealKey, otherRepository }: HistoryListProps) {
+  const labelsByChangeset = useLabelsByChangeset(otherRepository);
   const columns = useMemo(() => [revisionColumn(labelsByChangeset, workspaceRevisionId)], [labelsByChangeset, workspaceRevisionId]);
   return (
     <DataTable

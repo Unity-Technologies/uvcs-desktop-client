@@ -38,7 +38,7 @@ function annotate(menu: MenuEntry[]): Page | undefined {
 }
 
 const change = (kinds: PendingChange['kinds']): PendingChange => ({ path: 'src/a.ts', kinds, itemType: 'file', size: 10, lastModified: '' });
-const diffEntry: DiffEntry = { status: 'changed', path: 'src/a.ts', itemType: 'file', baseRevisionId: 39, revisionId: 40 };
+const diffEntry: DiffEntry = { status: 'changed', path: 'src/a.ts', itemType: 'file', baseRevisionId: 39, revisionId: 40, repository: 'game@local' };
 
 describe('Annotate outside the Files view', () => {
   it("opens a pending change's history annotated at the workspace's revision", () => {
@@ -60,7 +60,7 @@ describe('Annotate outside the Files view', () => {
     expect(annotate(diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [diffEntry], review))).toEqual({
       kind: 'history',
       path: 'src/a.ts',
-      changesetId: 5,
+      revision: { revisionId: 40, repository: 'game@local' },
       select: { revisionId: 40 },
       view: 'annotate',
     });
@@ -68,8 +68,9 @@ describe('Annotate outside the Files view', () => {
 
   it('annotates a history row in place, opening nothing', () => {
     const shown: ItemRevision[] = [];
-    const revision = { revisionId: 40, changesetId: 5, itemType: 'file', spec: 'src/a.ts#cs:5' } as ItemRevision;
-    annotateEntry(historyMenu({ workspacePath: ws, path: 'src/a.ts', annotate: (row) => shown.push(row) }, [{ kind: 'revision', revision }]), 'annotateRevision')!.run();
+    const revision = { revisionId: 40, changesetId: 5, itemType: 'file', repository: 'game@local', idSpec: 'revid:40@game@local' } as ItemRevision;
+    const context = { workspacePath: ws, path: 'src/a.ts', ofWorkspaceFile: true, annotate: (row: ItemRevision) => shown.push(row) };
+    annotateEntry(historyMenu(context, [{ kind: 'revision', revision }]), 'annotateRevision')!.run();
     expect(shown).toEqual([revision]);
     expect(opened).toEqual([]);
   });

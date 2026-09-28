@@ -2,7 +2,7 @@ import type { TreeItem } from '@shared/domain/explorer';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 
 /** The top row of the Files tree, as in the Plastic desktop GUI: the workspace folder itself, named by its full path. */
-export function workspaceRootItem(workspace: Pick<WorkspaceInfo, 'path' | 'selector' | 'loadedChangeset'>): TreeItem {
+export function workspaceRootItem(workspace: Pick<WorkspaceInfo, 'path' | 'selector' | 'loadedChangeset' | 'repository'>): TreeItem {
   return {
     path: '',
     name: workspace.path,
@@ -16,6 +16,7 @@ export function workspaceRootItem(workspace: Pick<WorkspaceInfo, 'path' | 'selec
     owner: '',
     revisionId: 0,
     parentRevisionId: -1,
+    repository: workspace.repository,
     itemId: 0,
   };
 }

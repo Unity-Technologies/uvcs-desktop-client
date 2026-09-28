@@ -28,7 +28,7 @@ function plan(changes: Partial<MergePlan> = {}): MergePlan {
   };
 }
 
-const conflict: FileConflict = { path: '/src/shared.txt', itemId: 27, baseChangeset: 1, sourceChangeset: 5, destinationChangeset: 7 };
+const conflict: FileConflict = { path: '/src/shared.txt', itemId: 27, baseChangeset: 1, sourceChangeset: 5, destinationChangeset: 7, repository: 'game@local' };
 
 describe('mergeTaskOutcome', () => {
   it('is clean without conflicts', () => {

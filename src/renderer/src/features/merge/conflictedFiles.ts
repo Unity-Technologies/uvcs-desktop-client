@@ -15,5 +15,5 @@ export function conflictedFilesOf(plan: MergePlan, request: MergeRequest): Confl
 }
 
 function versionAt(conflict: FileConflict, pointSpec: string): ContentSource {
-  return { kind: 'spec', spec: spec.itemAt(conflict.itemId, pointSpec), fileName: conflict.path };
+  return { kind: 'spec', spec: spec.itemAt(conflict.itemId, pointSpec, conflict.repository), fileName: conflict.path };
 }

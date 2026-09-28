@@ -1,5 +1,6 @@
 import type { ItemHistory, ItemPathChange, ItemRevision } from '@shared/domain/history';
 import type { ItemType } from '@shared/domain/pendingChanges';
+import type { RevisionRef } from '@shared/domain/revision';
 import { repositorySpec, spec } from '@shared/domain/specs';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { escapeQueryValue } from './findQuery';
@@ -10,11 +11,12 @@ import { onLinksThemselves } from './symlinkArgs';
 const ITEM_TYPES: Record<string, ItemType> = { txt: 'file', bin: 'binaryFile', dir: 'directory' };
 
 /**
- * What `cm history` reads: the workspace's file, or with `changesetId` the item at that repository path in that
- * changeset, which the workspace may not have (moved, deleted, not loaded).
+ * What `cm history` reads: the workspace's file, or with `revision` the item that revision is of, which the workspace
+ * may not have (moved, deleted, not loaded). By its id in its repository, as no repository path reaches through an
+ * xlink (`serverpath:/lib/a.cs#cs:12` finds nothing when `lib` is one).
  */
-export function itemHistoryTarget(workspacePath: string, path: string, changesetId?: number): string {
-  return changesetId === undefined ? toAbsolutePath(workspacePath, path) : spec.serverPathAtChangeset(`/${path}`, changesetId);
+export function itemHistoryTarget(workspacePath: string, path: string, revision?: RevisionRef): string {
+  return revision ? `rev:${spec.revision(revision)}` : toAbsolutePath(workspacePath, path);
 }
 
 /** The item's revisions, moves and removals. */
@@ -84,8 +86,8 @@ export function parseItemHistory(records: XmlNode[], revisionsOutput: string, wo
 
 function toRevision(record: XmlNode, ids: { id: number; parent: number } | undefined): ItemRevision {
   const revisionId = ids?.id ?? -1;
-  const pathSpec = text(record.RevisionSpec);
-  const repository = text(record.Repository);
+  const name = text(record.Repository);
+  const repository = name && repositorySpec(name, text(record.Server));
   return {
     revisionId,
     parentRevisionId: ids?.parent ?? -1,
@@ -96,7 +98,7 @@ function toRevision(record: XmlNode, ids: { id: number; parent: number } | undef
     comment: text(record.Comment),
     itemType: ITEM_TYPES[text(record.RevisionType)] ?? 'file',
     size: integer(record.Size, 0),
-    spec: pathSpec,
-    idSpec: revisionId >= 0 && repository ? spec.revision(revisionId, repositorySpec(repository, text(record.Server))) : pathSpec,
+    repository,
+    idSpec: revisionId >= 0 && repository ? spec.revision({ revisionId, repository }) : text(record.RevisionSpec),
   };
 }

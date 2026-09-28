@@ -13,8 +13,11 @@ export interface ItemRevision {
   comment: string;
   itemType: ItemType;
   size: number;
-  /** Spec to load this revision, e.g. `src/app.ts#cs:12`. It names the file's path now: before a move, `cm` finds nothing there. */
-  spec: string;
+  /**
+   * The repository the item lives in, whose changesets and branches these are (`name@server`): the workspace's, or for
+   * a file under an xlink the xlinked one.
+   */
+  repository: string;
   /** This very revision wherever the file was then, e.g. `revid:45@game@local`. */
   idSpec: string;
 }

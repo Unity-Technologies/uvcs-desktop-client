@@ -77,7 +77,7 @@ function EntryDiff({ workspacePath, entry, reviewMarks }: { workspacePath: strin
   return (
     <FileDiffViewer
       workspacePath={workspacePath}
-      original={sinceReview ? { kind: 'revision', revisionId: reviewedRevision, fileName: entry.path } : sources.original}
+      original={sinceReview ? { kind: 'revision', revision: { revisionId: reviewedRevision, repository: entry.repository }, fileName: entry.path } : sources.original}
       modified={sources.modified}
       fileName={entry.path}
       title={<DiffFileTitle tone={diffEntryTone(entry)} status={describeDiffEntry(entry)} path={entry.path} oldPath={entry.oldPath} />}

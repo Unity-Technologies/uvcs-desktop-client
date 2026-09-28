@@ -2,16 +2,22 @@ import { useMemo } from 'react';
 import type { Label } from '@shared/domain/label';
 import { useLabels } from './useLabels';
 
-/** Every label in the repository, grouped by the changeset it is on. */
-export function useLabelsByChangeset(): ReadonlyMap<number, readonly Label[]> {
+const NO_LABELS: ReadonlyMap<number, readonly Label[]> = new Map();
+
+/**
+ * Every label in the repository, grouped by the changeset it is on. None for the changesets of `otherRepository` (a
+ * file's under an xlink): the workspace's labels are on its own changesets, whose numbers another repository reuses.
+ */
+export function useLabelsByChangeset(otherRepository?: string): ReadonlyMap<number, readonly Label[]> {
   const { data: labels } = useLabels();
-  return useMemo(() => {
-    const byChangeset = new Map<number, Label[]>();
+  const byChangeset = useMemo(() => {
+    const grouped = new Map<number, Label[]>();
     for (const label of labels ?? []) {
-      const group = byChangeset.get(label.changeset);
+      const group = grouped.get(label.changeset);
       if (group) group.push(label);
-      else byChangeset.set(label.changeset, [label]);
+      else grouped.set(label.changeset, [label]);
     }
-    return byChangeset;
+    return grouped;
   }, [labels]);
+  return otherRepository ? NO_LABELS : byChangeset;
 }

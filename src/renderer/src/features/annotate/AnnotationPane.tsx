@@ -7,7 +7,7 @@ import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
 import { IMMUTABLE_QUERY } from '../../app/queryClient';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { useOtherRepository, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { pluralize } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
@@ -33,6 +33,8 @@ export interface AnnotationHistory {
 
 interface AnnotationPaneProps {
   path: string;
+  /** The repository the file lives in, whose changesets its lines name: the workspace's, or under an xlink the xlinked one. */
+  repository: string;
   /** Revision to annotate; the one loaded in the workspace when omitted. */
   revision?: ItemRevision;
   /** Shown first in the toolbar, e.g. a view switch. */
@@ -42,13 +44,12 @@ interface AnnotationPaneProps {
    * it. Without one, "Show in history" opens the file's history.
    */
   history?: AnnotationHistory;
-  /** Where the path is read (browsing a changeset), for the history "Show in history" opens. */
-  changesetId?: number;
 }
 
 /** Who last changed each line of a file, with a toolbar to pick the details and walk back through older revisions. */
-export function AnnotationPane({ path, revision, leading, history, changesetId }: AnnotationPaneProps) {
+export function AnnotationPane({ path, repository, revision, leading, history }: AnnotationPaneProps) {
   const workspacePath = useWorkspacePath();
+  const otherRepository = useOtherRepository(repository);
   const { columns, toggleColumn } = useAnnotateOptions();
   // By revision id: the path spec finds nothing in the changesets before the file moved.
   const spec = revision?.idSpec;
@@ -64,12 +65,12 @@ export function AnnotationPane({ path, revision, leading, history, changesetId }
   const code = useMemo(() => annotation?.lines.map((line) => line.content).join('\n') ?? '', [annotation]);
   const links = useMemo<BlockLinks>(
     () => ({
-      openChangeset: (id) => openChangesetDiff({ id }, path),
-      showInHistory: history?.select ?? ((id) => navigation.openPage({ kind: 'history', path, changesetId, select: { changesetId: id } })),
+      openChangeset: otherRepository ? undefined : (id) => openChangesetDiff({ id }, path),
+      showInHistory: history?.select ?? ((id) => navigation.openPage({ kind: 'history', path, select: { changesetId: id } })),
       selectsInHistory: history !== undefined,
       walkBack: history && { revisionBefore: (id) => revisionBefore(history.revisions, id), annotateBefore: history.annotate },
     }),
-    [path, history, changesetId],
+    [path, history, otherRepository],
   );
 
   const revisionLabel = revision && `cs:${revision.changesetId}`;

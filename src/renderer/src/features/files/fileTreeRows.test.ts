@@ -17,6 +17,7 @@ function item(path: string, itemType: TreeItem['itemType'] = 'file'): TreeItem {
     owner: '',
     revisionId: 1,
     parentRevisionId: -1,
+    repository: 'game@local',
     itemId: 1,
   };
 }

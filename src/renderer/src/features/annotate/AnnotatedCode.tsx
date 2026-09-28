@@ -28,7 +28,8 @@ const CODE_PADDING_TOP = 8;
 
 /** What a block leads to. */
 export interface BlockLinks {
-  openChangeset: (changesetId: number) => void;
+  /** None for a file of another repository than the workspace's (under an xlink): no diff of the workspace's has its changesets. */
+  openChangeset?: (changesetId: number) => void;
   /** The changeset's revision in the file's history: selected beside it, or opened there. */
   showInHistory: (changesetId: number) => void;
   /** Where the annotation sits beside the history list, clicking a block (or Enter) selects its revision there. */
@@ -196,10 +197,12 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
         hoverProps={card.hoverProps}
         returnFocusTo={scroller}
         actions={{
-          openChangeset: (changesetId) => {
-            card.close();
-            links.openChangeset(changesetId);
-          },
+          openChangeset:
+            links.openChangeset &&
+            ((changesetId) => {
+              card.close();
+              links.openChangeset!(changesetId);
+            }),
           revisionBefore: cardChangeset && revisionBefore?.(cardChangeset.changesetId),
           annotateBefore: (revision) => {
             card.close();

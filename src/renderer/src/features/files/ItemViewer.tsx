@@ -1,7 +1,6 @@
 import { ScanText } from 'lucide-react';
 import { useRef } from 'react';
 import type { TreeItem } from '@shared/domain/explorer';
-import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { focusMain } from '../../lib/mainFocus';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
@@ -36,7 +35,6 @@ export function ItemViewer({ workspacePath, item, comparison, comment }: ItemVie
   const annotatable = canAnnotateComparison(comparison);
   const annotating = annotatable && detailsTab === 'annotate';
   const viewerRef = useRef<HTMLDivElement>(null);
-  const repository = useWorkspaceInfo().data?.repository;
 
   useShortcut(hotkey('fileViewer'), () => {
     const viewer = viewerRef.current;
@@ -73,7 +71,7 @@ export function ItemViewer({ workspacePath, item, comparison, comment }: ItemVie
     <div ref={viewerRef} className={styles.viewer} tabIndex={-1} onKeyDown={leave}>
       {annotating ? (
         // A file with changes is annotated as it is on disk; any other as its revision, read once.
-        <AnnotationPane key={item.path} path={item.path} revision={comparison.kind === 'changes' ? undefined : itemRevision(item, repository)} leading={annotateToggle} />
+        <AnnotationPane key={item.path} path={item.path} repository={item.repository} revision={comparison.kind === 'changes' ? undefined : itemRevision(item)} leading={annotateToggle} />
       ) : comparison.kind === 'lastChange' ? (
         <RevisionChanges workspacePath={workspacePath} item={item} title={title} />
       ) : comparison.change ? (

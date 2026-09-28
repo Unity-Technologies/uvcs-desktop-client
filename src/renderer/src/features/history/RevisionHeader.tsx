@@ -25,14 +25,16 @@ interface RevisionHeaderProps {
   path: string;
   /** The row's context menu, behind "More actions". */
   menu: MenuEntry[];
+  /** The repository of a file under an xlink, whose changesets the workspace's diffs and Branch Explorer don't have. */
+  otherRepository?: string;
   isWorkspaceRevision: boolean;
 }
 
 /** The selected revision (or move) over its diff: its comment, who and when, its changeset, and where to go from it. */
-export function RevisionHeader({ row, path, menu, isWorkspaceRevision }: RevisionHeaderProps) {
+export function RevisionHeader({ row, path, menu, otherRepository, isWorkspaceRevision }: RevisionHeaderProps) {
   const [expanded, setExpanded] = useState(false);
   const changesetId = changesetOf(row);
-  const labels = useLabelsByChangeset().get(changesetId);
+  const labels = useLabelsByChangeset(otherRepository).get(changesetId);
   const { owner, date } = row.kind === 'revision' ? row.revision : row.change;
   const { summary, description } = row.kind === 'revision' ? splitComment(row.revision.comment) : { summary: row.change.description, description: '' };
   const moreActions = withoutAction(withoutAction(menu, 'changesetDiff'), 'showInBranchExplorer');
@@ -63,8 +65,8 @@ export function RevisionHeader({ row, path, menu, isWorkspaceRevision }: Revisio
           {[
             <span className={styles.author}>{displayName(owner)}</span>,
             <RelativeTime date={date} />,
-            <DetailsCopyable text={spec.changeset(changesetId)} what="Changeset spec" />,
-            row.kind === 'revision' && <BranchChip name={row.revision.branch} />,
+            <DetailsCopyable text={spec.changeset(changesetId, otherRepository)} what="Changeset spec" />,
+            row.kind === 'revision' && <BranchChip name={row.revision.branch} otherRepository={otherRepository} />,
           ]
             .filter(Boolean)
             .map((item, index) => (
@@ -76,15 +78,19 @@ export function RevisionHeader({ row, path, menu, isWorkspaceRevision }: Revisio
         </div>
       </div>
       <div className={styles.actions}>
-        <Button size="small" variant="ghost" icon={<FileDiff size={13} />} data-tip="Every file this changeset changed" onClick={() => openChangesetDiff({ id: changesetId }, path)}>
-          <span data-toolbar-label>Changeset diff</span>
-        </Button>
-        <IconButton
-          size="small"
-          icon={<GitGraph size={14} />}
-          label="Show in Branch Explorer"
-          onClick={() => showInBranchExplorer({ kind: 'changeset', id: changesetId, date })}
-        />
+        {!otherRepository && (
+          <>
+            <Button size="small" variant="ghost" icon={<FileDiff size={13} />} data-tip="Every file this changeset changed" onClick={() => openChangesetDiff({ id: changesetId }, path)}>
+              <span data-toolbar-label>Changeset diff</span>
+            </Button>
+            <IconButton
+              size="small"
+              icon={<GitGraph size={14} />}
+              label="Show in Branch Explorer"
+              onClick={() => showInBranchExplorer({ kind: 'changeset', id: changesetId, date })}
+            />
+          </>
+        )}
         {moreActions.length > 0 && (
           <ActionDropdownMenu entries={moreActions}>
             <IconButton size="small" icon={<MoreHorizontal size={15} />} label="More actions" />

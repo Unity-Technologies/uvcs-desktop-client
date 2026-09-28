@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { ContentSource } from '@shared/domain/content';
 import type { ItemRevision } from '@shared/domain/history';
+import { revisionRef } from '@shared/domain/revision';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
 import styles from './RevisionComparison.module.css';
@@ -38,5 +39,5 @@ export function RevisionComparison({ path, newer, older, leading }: RevisionComp
 }
 
 function revisionSource(revision: ItemRevision, path: string): ContentSource {
-  return { kind: 'revision', revisionId: revision.revisionId, fileName: path };
+  return { kind: 'revision', revision: revisionRef(revision), fileName: path };
 }

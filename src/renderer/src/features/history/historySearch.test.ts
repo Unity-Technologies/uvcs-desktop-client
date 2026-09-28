@@ -14,7 +14,7 @@ const revision: ItemRevision = {
   comment: 'Fix the jump height\nLonger explanation',
   itemType: 'file',
   size: 100,
-  spec: 'Player.cs#cs:42',
+  repository: 'game@local',
   idSpec: 'revid:7@game@local',
 };
 const row: HistoryRow = { kind: 'revision', revision };

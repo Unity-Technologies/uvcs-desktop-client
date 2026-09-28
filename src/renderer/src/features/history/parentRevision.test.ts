@@ -12,7 +12,7 @@ const revision = (changesetId: number, parentRevisionId: number): ItemRevision =
   comment: '',
   itemType: 'file',
   size: 1,
-  spec: `a.cs#cs:${changesetId}`,
+  repository: 'game@local',
   idSpec: `revid:${changesetId * 10}@game@local`,
 });
 

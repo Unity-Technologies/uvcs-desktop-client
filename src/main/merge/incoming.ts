@@ -86,6 +86,7 @@ export function findUpdateConflicts(incoming: DiffEntry[], local: PendingChange[
       isBinary: entry.itemType === 'binaryFile',
       baseRevisionId: entry.baseRevisionId,
       incomingRevisionId: entry.revisionId,
+      repository: entry.repository,
     }));
 }
 

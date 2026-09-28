@@ -1,16 +1,17 @@
 import { canAnnotate } from '@shared/domain/annotate';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
+import { revisionIn } from '@shared/domain/revision';
 import type { Page } from '../../app/navigation/pages';
 import { annotatedHistory } from '../history/annotatedHistory';
 
 /**
- * The history of a file in a diff, read at the changeset the diff ends at when it names one: the file may have moved
- * or be gone from the workspace since. A deleted file has no path there, nor a branch or shelve diff a changeset to
- * name: their history is the workspace's.
+ * The history of a file in a diff, read from the revision the diff shows, in its repository: the file may have moved
+ * or be gone from the workspace since, or live under an xlink. A deleted file has no revision on that side, nor is a
+ * shelve's revision one of the history's: their history is the workspace's.
  */
 export function diffEntryHistory(target: DiffTarget, entry: DiffEntry): Extract<Page, { kind: 'history' }> {
-  const changesetId = entry.status === 'deleted' ? undefined : endChangeset(target);
-  return changesetId === undefined ? { kind: 'history', path: entry.path } : { kind: 'history', path: entry.path, changesetId };
+  const revision = target.kind === 'shelve' ? null : revisionIn(entry.repository, entry.revisionId);
+  return revision ? { kind: 'history', path: entry.path, revision } : { kind: 'history', path: entry.path };
 }
 
 /**
@@ -20,11 +21,4 @@ export function diffEntryHistory(target: DiffTarget, entry: DiffEntry): Extract<
 export function diffEntryAnnotation(target: DiffTarget, entry: DiffEntry): Extract<Page, { kind: 'history' }> | null {
   if (!canAnnotate(entry.itemType) || entry.status === 'deleted' || target.kind === 'shelve') return null;
   return annotatedHistory({ ...diffEntryHistory(target, entry), select: { revisionId: entry.revisionId } });
-}
-
-function endChangeset(target: DiffTarget): number | undefined {
-  if (target.kind === 'changeset') return target.changesetId;
-  if (target.kind !== 'range') return undefined;
-  const changeset = /^cs:(\d+)$/.exec(target.toSpec);
-  return changeset ? Number(changeset[1]) : undefined;
 }

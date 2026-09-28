@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { FileConflict, MergePlan, MergeResolutions } from '@shared/domain/merge';
 import { fileConflictArgs, mergeSourceArgs } from './mergeArgs';
 
-const conflict = (path: string): FileConflict => ({ path, itemId: 1, baseChangeset: 1, sourceChangeset: 2, destinationChangeset: 3 });
+const conflict = (path: string): FileConflict => ({ path, itemId: 1, baseChangeset: 1, sourceChangeset: 2, destinationChangeset: 3, repository: 'game@local' });
 const plan: MergePlan = { status: 'ready', changes: [], fileConflicts: [conflict('/a.txt'), conflict('/b.txt')], directoryConflicts: [], warnings: [] };
 
 function resolutions(files: MergeResolutions['files']): MergeResolutions {

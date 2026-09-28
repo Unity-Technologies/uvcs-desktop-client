@@ -1,7 +1,7 @@
 import { History } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { PageProps } from '../../app/navigation/pages';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { useOtherRepository, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { detailsWidthOf, useDetailsWidthStore, type DetailsWidthLimits } from '../../components/detailsWidthStore';
 import { focusMain, isKeyboardTaken } from '../../lib/mainFocus';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
@@ -41,7 +41,9 @@ const single = (key: string): SelectionState => ({ selected: new Set([key]), anc
  */
 export function HistoryPage({ page }: PageProps<'history'>) {
   const workspacePath = useWorkspacePath();
-  const { data: history, error } = useItemHistory(page.path, page.changesetId);
+  const { data: history, error } = useItemHistory(page.path, page.revision);
+  // A file under an xlink: its changesets, branches and labels are the xlinked repository's.
+  const otherRepository = useOtherRepository(history?.revisions[0]?.repository);
   const [search, setSearch] = useState('');
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
   // Revisions left by "Annotate before this change", for Back; picking a row in the list starts over.
@@ -64,7 +66,7 @@ export function HistoryPage({ page }: PageProps<'history'>) {
   const paneRef = useRef<HTMLDivElement>(null);
 
   const rows = useMemo(() => (history ? historyRows(history) : []), [history]);
-  const labelsByChangeset = useLabelsByChangeset();
+  const labelsByChangeset = useLabelsByChangeset(otherRepository);
   const visible = useMemo(
     () => rows.filter((row) => matchesHistorySearch(row, search, row.kind === 'revision' ? labelsByChangeset.get(row.revision.changesetId) : undefined)),
     [rows, search, labelsByChangeset],
@@ -101,14 +103,14 @@ export function HistoryPage({ page }: PageProps<'history'>) {
       select: (changesetId) => {
         const key = revisionRowKey(rows, changesetId);
         if (key) selectFromPane(key);
-        else openChangesetDiff({ id: changesetId }, page.path);
+        else if (!otherRepository) openChangesetDiff({ id: changesetId }, page.path);
       },
       annotate: (revision) => {
         if (selection.anchor) setTrail((current) => [...current, selection.anchor!]);
         selectFromPane(historyRowKey({ kind: 'revision', revision }));
       },
     }),
-    [history, rows, selectFromPane, selection.anchor, page.path],
+    [history, rows, selectFromPane, selection.anchor, page.path, otherRepository],
   );
   const menu = useCallback(
     (selected: typeof rows) =>
@@ -116,7 +118,8 @@ export function HistoryPage({ page }: PageProps<'history'>) {
         {
           workspacePath,
           path: page.path,
-          changesetId: page.changesetId,
+          ofWorkspaceFile: page.revision === undefined,
+          otherRepository,
           annotate: (revision) => {
             setTrail([]);
             selectFromPane(historyRowKey({ kind: 'revision', revision }));
@@ -125,7 +128,7 @@ export function HistoryPage({ page }: PageProps<'history'>) {
         },
         selected,
       ),
-    [workspacePath, page.path, page.changesetId, selectFromPane, setView],
+    [workspacePath, page.path, page.revision, otherRepository, selectFromPane, setView],
   );
   const back = (): void => {
     const previous = trail.at(-1);
@@ -179,6 +182,7 @@ export function HistoryPage({ page }: PageProps<'history'>) {
                 contextMenu={menu}
                 workspaceRevisionId={history.workspaceRevisionId}
                 revealKey={revealKey}
+                otherRepository={otherRepository}
               />
             </HighlightQuery>
           )
@@ -191,11 +195,12 @@ export function HistoryPage({ page }: PageProps<'history'>) {
                 row={focusedRow}
                 path={page.path}
                 menu={menu([focusedRow])}
+                otherRepository={otherRepository}
                 isWorkspaceRevision={focusedRow.kind === 'revision' && focusedRow.revision.revisionId === history.workspaceRevisionId}
               />
             )}
             {focusedChange ? (
-              <PathChangeDetails change={focusedChange} />
+              <PathChangeDetails change={focusedChange} otherRepository={otherRepository} />
             ) : (
               <RevisionDetails
                 path={page.path}
@@ -203,6 +208,7 @@ export function HistoryPage({ page }: PageProps<'history'>) {
                 selected={selectedRevisions}
                 onBack={trail.length > 0 ? back : undefined}
                 history={annotationHistory}
+                otherRepository={otherRepository}
                 picked={view}
                 onPick={setView}
               />

@@ -17,6 +17,7 @@ const item = (path: string, overrides: Partial<TreeItem> = {}): TreeItem => ({
   owner: 'jane',
   revisionId: 2,
   parentRevisionId: -1,
+  repository: 'game@local',
   itemId: 3,
   ...overrides,
 });
