@@ -4,6 +4,7 @@ import { drawAvatar, drawDot } from './drawAvatar';
 import { drawCollapsedNode } from './drawCollapsedNode';
 import { DIMMED_ALPHA, isChangesetDimmed, STRUCTURE_DIMMED_ALPHA, type DrawContext } from './drawContext';
 import { drawHomeMarker } from './drawHomeMarker';
+import { drawSelectionHalo, drawSelectionRing } from './drawNodeSelection';
 import { drawPendingChangeset } from './drawPendingChangeset';
 import { drawNodeCorona, drawNodeGlow } from './drawSearchHit';
 import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, columnX, NODE_RADIUS, nodePoint, pendingPoint, rowY } from './geometry';
@@ -16,9 +17,6 @@ const DOT_RADIUS = 5;
 const PARENT_ARROW = arrowLength(2);
 /** How far the dashed line of a changeset whose parent is off the graph reaches past the changeset. */
 const OFF_GRAPH_STUB_LENGTH = 22;
-/** The selection: a soft halo behind the changeset and an accent ring just outside its branch ring. */
-const SELECTION_HALO = 8;
-const SELECTION_RING = 4;
 
 /** The changesets on screen, refilled every frame instead of allocated. */
 const visible: NodeLayout[] = [];
@@ -139,12 +137,7 @@ function drawNode(draw: DrawContext, node: NodeLayout): void {
   ctx.shadowColor = 'transparent';
 
   if (isHit) drawNodeGlow(draw, x, y, radius, isCurrentHit);
-  if (selected) {
-    ctx.fillStyle = palette.accentSoft;
-    ctx.beginPath();
-    pen.arc(x, y, radius + SELECTION_HALO, 0, Math.PI * 2);
-    ctx.fill();
-  }
+  if (selected) drawSelectionHalo(draw, x, y, radius);
 
   ctx.globalAlpha = isChangesetDimmed(scene, node.changeset) ? DIMMED_ALPHA : 1;
   const color = branchColor(palette, node.changeset.branch);
@@ -167,14 +160,4 @@ function drawNode(draw: DrawContext, node: NodeLayout): void {
 
   if (isCurrentHit) drawNodeCorona(draw, x, y, detail.avatars ? radius + ringWidth / 2 : radius);
   else if (selected) drawSelectionRing(draw, x, y, radius);
-}
-
-function drawSelectionRing({ ctx, pen, scene, detail }: DrawContext, x: number, y: number, radius: number): void {
-  ctx.save();
-  ctx.strokeStyle = scene.palette.accent;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  pen.arc(x, y, radius + (detail.avatars ? SELECTION_RING + 1 : SELECTION_RING - 1), 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.restore();
 }

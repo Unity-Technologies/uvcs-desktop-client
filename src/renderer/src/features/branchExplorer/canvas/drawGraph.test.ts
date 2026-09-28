@@ -105,6 +105,7 @@ function drawFar(search: GraphScene['search'], searchQuery = ''): ReturnType<typ
     options: { showComments: false, showAvatars: true },
     selectedChangeset: focus.changeset.id,
     selectedBranch: lane.branch.name,
+    selectedPending: false,
     hoveredChangeset: focus.changeset.id,
     hoveredBranch: lane.branch.name,
     hoveredReview: null,

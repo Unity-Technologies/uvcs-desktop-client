@@ -14,7 +14,7 @@ interface GraphNavControlsProps {
 export function GraphNavControls({ onGoHome, onFit, onZoom }: GraphNavControlsProps) {
   return (
     <div className={styles.cluster}>
-      <IconButton icon={<Home size={14} />} label="Go to workspace changeset" shortcut={hotkey('graphHome')} onClick={onGoHome} />
+      <IconButton icon={<Home size={14} />} label="Go to the workspace" shortcut={hotkey('graphHome')} onClick={onGoHome} />
       <IconButton icon={<Maximize size={14} />} label="Fit to window" shortcut={hotkey('graphFit')} onClick={onFit} />
       <span className={styles.separator} />
       <IconButton icon={<Plus size={14} />} label="Zoom in" shortcut={hotkey('graphZoomIn')} onClick={() => onZoom(ZOOM_STEP)} />

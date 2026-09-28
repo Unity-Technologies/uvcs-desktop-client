@@ -109,7 +109,7 @@ export const SHORTCUTS = {
   graphMerge: { area: 'Branch Explorer', label: 'Merge from the selection', keys: ['m'] },
   graphDetails: { area: 'Branch Explorer', label: 'Show or hide the details panel', keys: ['space'] },
   graphContextMenu: { area: 'Branch Explorer', label: 'Actions of the selection', keys: ['shift+f10'] },
-  graphHome: { area: 'Branch Explorer', label: 'Go to workspace changeset', keys: ['h'] },
+  graphHome: { area: 'Branch Explorer', label: 'Go to the workspace', keys: ['h'] },
   graphZoomIn: { area: 'Branch Explorer', label: 'Zoom in', keys: ['plus', '='] },
   graphZoomOut: { area: 'Branch Explorer', label: 'Zoom out', keys: ['-'] },
   graphFit: { area: 'Branch Explorer', label: 'Fit to window', keys: ['0'] },

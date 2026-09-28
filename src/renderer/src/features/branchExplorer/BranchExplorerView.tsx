@@ -40,11 +40,13 @@ import {
   graphEnd,
   mergeDestination,
   mergeSource,
-  neighborChangeset,
+  neighborStop,
   pageChangeset,
   startingChangeset,
   type GraphDirection,
+  type GraphStop,
 } from './model/navigateGraph';
+import { homeTarget } from './model/homeTarget';
 import { firstHitIndex, searchGraph, searchHighlight, type SearchHit } from './model/searchGraph';
 import { useBranchExplorerCommands } from './useBranchExplorerCommands';
 import { useBranchExplorerData } from './useBranchExplorerData';
@@ -54,6 +56,8 @@ import { useSearchHits } from './useSearchHits';
 import styles from './BranchExplorerView.module.css';
 
 const NO_REVIEWS: ReadonlyMap<number, CodeReviewSummary> = new Map();
+
+const openChanges = (): void => navigation.goToView('changes');
 
 const ARROW_DIRECTIONS: Record<string, GraphDirection> = { ArrowLeft: 'left', ArrowRight: 'right', ArrowUp: 'up', ArrowDown: 'down' };
 
@@ -136,6 +140,7 @@ export function BranchExplorerView() {
     () => ({
       selectedChangeset: selection?.kind === 'changeset' ? selection.id : null,
       selectedBranch: selection?.kind === 'branch' ? selection.name : null,
+      selectedPending: selection?.kind === 'pending',
       homeChangeset,
       pendingChangeCount,
       currentBranch,
@@ -163,15 +168,16 @@ export function BranchExplorerView() {
     preferences.set({ onlyRelatedToCurrent: false, hideMergedBranches: false, visibleBranches: null, people: EVERYONE });
   };
 
+  const home = useMemo(() => layout && homeTarget(layout, homeChangeset, pendingBranch), [layout, homeChangeset, pendingBranch]);
   const goHome = useCallback(() => {
-    if (homeChangeset === null) return;
-    setSelection({ kind: 'changeset', id: homeChangeset });
-    canvasRef.current?.centerOnChangeset(homeChangeset);
-  }, [homeChangeset]);
+    if (!home) return;
+    setSelection(home);
+    canvasRef.current?.centerOn(home);
+  }, [home]);
 
   const fit = useCallback(() => canvasRef.current?.fit(), []);
   const zoomBy = useCallback((factor: number) => canvasRef.current?.zoomBy(factor), []);
-  useInitialFocus(layout, homeChangeset, canvasRef, structureOnly);
+  useInitialFocus(layout, home, canvasRef, structureOnly);
   const find = useCallback(() => {
     searchRef.current?.focus();
     searchRef.current?.select();
@@ -234,7 +240,6 @@ export function BranchExplorerView() {
 
   const select = (target: GraphTarget | null): void => {
     if (target?.kind === 'codeReview') openReview(target.review);
-    else if (target?.kind === 'pending') navigation.goToView('changes');
     else if (target?.kind === 'collapsed') setExpanded((current) => new Set([...current, ...target.node.collapsed!.map((changeset) => changeset.id)]));
     else setSelection(selectionFor(target));
   };
@@ -242,6 +247,7 @@ export function BranchExplorerView() {
   const activate = (target: GraphTarget): void => {
     const selected = selectionFor(target);
     if (selected?.kind === 'changeset') graphActions.diffChangeset(selected.id);
+    if (selected?.kind === 'pending') openChanges();
     if (target.kind === 'branch') graphActions.diffBranch(target.lane.branch);
   };
 
@@ -250,19 +256,30 @@ export function BranchExplorerView() {
     if (!event.currentTarget.contains(event.target as Node)) return;
     if (!layout || ownsKey(event.target, event.key)) return;
     const selectedId = selection?.kind === 'changeset' ? selection.id : null;
-    /** The selected branch, or the branch of the selected changeset. */
-    const branchName = selection?.kind === 'branch' ? selection.name : selectedId !== null ? (layout.nodes.get(selectedId)?.changeset.branch ?? null) : null;
+    const selectedStop: GraphStop | null = selection?.kind === 'branch' ? null : selection;
+    /** The selected branch, or the branch of the selected changeset or pending changes. */
+    const branchName =
+      selection?.kind === 'branch'
+        ? selection.name
+        : selection?.kind === 'pending'
+          ? (layout.pending?.branch ?? null)
+          : selectedId !== null
+            ? (layout.nodes.get(selectedId)?.changeset.branch ?? null)
+            : null;
     const lane = branchName !== null ? layout.lanesByBranch.get(branchName) : undefined;
     // Keyboard moves glide the view along, just enough to keep the selection in sight.
-    const moveTo = (id: number | null): void => {
-      if (id === null) return;
-      setSelection({ kind: 'changeset', id });
-      canvasRef.current?.followChangeset(id);
+    const moveTo = (id: number | null): void => stopAt(id === null ? null : { kind: 'changeset', id });
+    const stopAt = (stop: GraphStop | null): void => {
+      if (stop === null) return;
+      setSelection(stop);
+      canvasRef.current?.follow(stop);
     };
     const fromChangeset = (move: (id: number) => number | null) => (): void => moveTo(selectedId !== null ? move(selectedId) : null);
-    const walk = (direction: GraphDirection) => (): void =>
+    const walk = (direction: GraphDirection) => (): void => {
       // Without a selected changeset, the first arrow picks where to start.
-      moveTo(selectedId !== null ? neighborChangeset(layout, selectedId, direction) : startingChangeset(layout, branchName, homeChangeset));
+      if (selectedStop) stopAt(neighborStop(layout, selectedStop, direction));
+      else moveTo(startingChangeset(layout, branchName, homeChangeset));
+    };
     const branchEdge = (edge: 'first' | 'last') => (): void => {
       // With nothing selected, Home keeps its old meaning: the workspace changeset.
       if (branchName !== null) moveTo(branchEnd(layout, branchName, edge));
@@ -287,7 +304,14 @@ export function BranchExplorerView() {
       ['graphMergeSource', fromChangeset((id) => mergeSource(layout, id))],
       ['graphMergeDestination', fromChangeset((id) => mergeDestination(layout, id))],
       ['graphBranchBase', () => moveTo(branchName !== null ? branchBase(layout, branchName) : null)],
-      ['graphOpen', () => (selectedId !== null ? graphActions.diffChangeset(selectedId) : lane && graphActions.diffBranch(lane.branch))],
+      [
+        'graphOpen',
+        () => {
+          if (selectedId !== null) graphActions.diffChangeset(selectedId);
+          else if (selection?.kind === 'pending') openChanges();
+          else if (lane) graphActions.diffBranch(lane.branch);
+        },
+      ],
       ['graphOpenBranch', () => lane && graphActions.diffBranch(lane.branch)],
       [
         'graphMerge',
@@ -407,6 +431,7 @@ export function BranchExplorerView() {
             <DetailsPanel
               selection={selection}
               layout={layout}
+              pendingChangeCount={pendingChangeCount}
               menuFor={menuFor}
               goToChangeset={goToChangeset}
               selectBranch={(name) => setSelection({ kind: 'branch', name })}
@@ -449,11 +474,11 @@ function useCreatedBranchReveal(layout: ReturnType<typeof layoutGraph> | null, r
 
 /**
  * The first time the graph appears, and whenever "Only relevant changesets" reshapes it, bring the
- * workspace changeset (or the latest history) into view.
+ * workspace (where the home badge is: `homeTarget`), or the latest history, into view.
  */
 function useInitialFocus(
   layout: ReturnType<typeof layoutGraph> | null,
-  homeChangeset: number | null,
+  home: GraphSelection | null,
   canvasRef: React.RefObject<GraphCanvasHandle | null>,
   structureOnly: boolean,
 ): void {
@@ -461,7 +486,6 @@ function useInitialFocus(
   useEffect(() => {
     if (focusedFor.current === structureOnly || !layout || layout.columnCount === 0 || !canvasRef.current) return;
     focusedFor.current = structureOnly;
-    const target = homeChangeset !== null && layout.nodes.has(homeChangeset) ? homeChangeset : layout.nodesByColumn.at(-1)!.changeset.id;
-    canvasRef.current.showOpeningView(target);
-  }, [layout, homeChangeset, canvasRef]);
+    canvasRef.current.showOpeningView(home ?? { kind: 'changeset', id: layout.nodesByColumn.at(-1)!.changeset.id });
+  }, [layout, home, canvasRef]);
 }

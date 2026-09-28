@@ -4,6 +4,7 @@ import { subscribeToAvatars } from '../../../lib/avatars/avatarImages';
 import { MAIN_FOCUS } from '../../../lib/mainFocus';
 import { ActionContextMenu } from '../../../ui/menu/ActionContextMenu';
 import { TooltipBubble } from '../../../ui/TooltipBubble';
+import type { GraphSelection } from '../graphSelection';
 import type { GraphLayout } from '../model/layoutGraph';
 import type { DrawnTargets, GraphScene } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
@@ -12,7 +13,8 @@ import { COLUMN_WIDTH, nodePoint } from './geometry';
 import { captionMetrics } from './captionCard';
 import { hitTest, hoverCardFor, type GraphTarget, type HoverCard, type PointerCardTarget } from './graphTargets';
 import { GraphTooltip, HOVER_CARD_ATTRIBUTE, type TooltipAnchor } from './GraphTooltip';
-import { graphExtent, laneHeaderTop, laneShape } from './laneShape';
+import { graphExtent } from './laneShape';
+import { selectionPoint } from './selectionPoint';
 import { useGraphPalette } from './useGraphPalette';
 import { useGraphViewport } from './useGraphViewport';
 import { useCanvasTip } from './useCanvasTip';
@@ -27,6 +29,7 @@ export type GraphHighlights = Pick<
   GraphScene,
   | 'selectedChangeset'
   | 'selectedBranch'
+  | 'selectedPending'
   | 'homeChangeset'
   | 'pendingChangeCount'
   | 'currentBranch'
@@ -40,20 +43,21 @@ export type GraphHighlights = Pick<
 export interface GraphCanvasHandle {
   /** Scrolls just enough to show the changeset. */
   revealChangeset: (id: number) => void;
-  /** Glides just enough to show the changeset: the view following the keyboard. */
-  followChangeset: (id: number) => void;
+  /** Glides just enough to show the changeset or the pending changes: the view following the keyboard. */
+  follow: (selection: GraphSelection) => void;
   /** How many columns a screen holds at the current zoom. */
   columnsOnScreen: () => number;
   /** Opens the context menu of a changeset or branch where it is drawn, as a right click on it would. */
   openContextMenu: (target: GraphTarget) => void;
   /** Scrolls just enough to show the branch's header card. */
   revealBranch: (name: string) => void;
-  centerOnChangeset: (id: number) => void;
+  /** Centers the view on a changeset, the pending changes or a branch's header card. */
+  centerOn: (selection: GraphSelection) => void;
   /** Glides to a changeset or a branch's header card, centered and readable: a reveal from another view. */
   frameChangeset: (id: number) => void;
   frameBranch: (name: string) => void;
-  /** The first view of a graph, focused on a changeset. */
-  showOpeningView: (focusId: number) => void;
+  /** The first view of a graph, focused on a changeset, the pending changes or a branch. */
+  showOpeningView: (focus: GraphSelection) => void;
   fit: () => void;
   /** Glides the zoom by `factor` around the middle of the canvas. */
   zoomBy: (factor: number) => void;
@@ -74,8 +78,6 @@ interface GraphCanvasProps {
 
 const DRAG_THRESHOLD = 4;
 const DOUBLE_CLICK_ZOOM = 1.4;
-/** Where in a header card a reveal aims: far enough in to show the start of the name. */
-const HEADER_REVEAL_INSET = 60;
 
 export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(function GraphCanvas(
   { layout, highlights, onSelect, onActivate, contextMenu, children },
@@ -186,12 +188,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           };
         } else view.glideTo(framed());
       };
-      const headerPoint = (name: string): { x: number; y: number } | null => {
-        const lane = layout.lanesByBranch.get(name);
-        if (!lane) return null;
-        const shape = laneShape(lane);
-        return { x: shape.left + HEADER_REVEAL_INSET, y: laneHeaderTop(lane) };
-      };
+      const headerPoint = (name: string): { x: number; y: number } | null => selectionPoint(layout, { kind: 'branch', name });
       return {
         frameChangeset: (id) => frame(nodePoint(layout, id)),
         frameBranch: (name) => frame(headerPoint(name)),
@@ -203,8 +200,8 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           const point = headerPoint(name);
           if (point) reveal(point.x, point.y);
         },
-        followChangeset: (id) => {
-          const point = nodePoint(layout, id);
+        follow: (selection) => {
+          const point = selectionPoint(layout, selection);
           if (!point) return;
           clearHover();
           const current = view.viewportRef.current;
@@ -224,13 +221,13 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
             new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: bounds.left + point.x * zoom + panX, clientY: bounds.top + point.y * zoom + panY }),
           );
         },
-        centerOnChangeset: (id) => {
-          const point = nodePoint(layout, id);
+        centerOn: (selection) => {
+          const point = selectionPoint(layout, selection);
           if (point) view.jumpTo(centerOn(view.viewportRef.current, point.x, point.y, sizeRef.current));
         },
-        showOpeningView: (focusId) => {
+        showOpeningView: (focus) => {
           const show = (): void => {
-            const point = nodePoint(layout, focusId);
+            const point = selectionPoint(layout, focus);
             if (point) view.jumpTo(openingViewport(graphExtent(layout), sizeRef.current, point.x, point.y));
           };
           if (sizeRef.current.width === 0) pendingViewRef.current = show;
@@ -376,7 +373,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         tabIndex={0}
         role="application"
         aria-roledescription="graph"
-        aria-label="Branch Explorer. Arrow keys walk the changesets, Home and End go to the ends of the branch, Enter diffs the selection, H goes to the workspace changeset. Question mark lists every shortcut."
+        aria-label="Branch Explorer. Arrow keys walk the changesets, Home and End go to the ends of the branch, Enter diffs the selection, H goes to the workspace. Question mark lists every shortcut."
         {...MAIN_FOCUS}
         data-hovering={hovered !== null}
         onPointerDown={onPointerDown}
