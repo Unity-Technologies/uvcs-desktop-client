@@ -27,7 +27,7 @@ export function Sidebar() {
           aria-label="Switch workspace"
           data-tip={rail ? workspace && `${workspace.name} · ${workspace.repository}` : undefined}
         >
-          <RepositoryAvatar repository={workspace?.repository} label={workspace?.name ?? ''} size={28} />
+          <RepositoryAvatar repository={workspace?.repository} label={workspace?.name} size={28} />
           <span className={styles.workspaceText}>
             <span className={styles.workspaceName}>{workspace?.name ?? '…'}</span>
             <span className={styles.workspaceRepo}>{workspace?.repository}</span>

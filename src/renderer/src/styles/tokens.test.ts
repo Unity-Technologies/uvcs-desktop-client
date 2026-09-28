@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { AVATAR_COLORS } from '../components/avatarColor';
 import { STABLE_HUES } from '../lib/stableHue';
 import { composite, contrastRatio, hslColor, parseColor, themeTokens } from './contrast';
 
@@ -13,6 +14,18 @@ const TEXT = ['--text-primary', '--text-secondary', '--text-tertiary', '--accent
 /** Status letters on their own tint and focus rings are graphics: 3:1. */
 const BADGES = ['--change-added', '--change-changed', '--change-deleted', '--change-moved', '--change-permissions', '--status-changed'];
 const BADGE_TINT = 0.16;
+/** Where avatars sit: home rows (plain, hovered, focused), the switcher's rows (plain, highlighted), the sidebar's button. */
+const AVATAR_PLACES: [string, string | null][] = [
+  ['--bg-surface', null],
+  ['--bg-surface', '--bg-hover'],
+  ['--bg-surface', '--bg-selected'],
+  ['--bg-app', null],
+  ['--bg-app', '--bg-hover'],
+  ['--bg-app', '--bg-selected'],
+  ['--bg-surface-raised', null],
+  ['--bg-surface-raised', '--accent-soft'],
+  ['--bg-sidebar', null],
+];
 
 function ratio(tokens: Record<string, string>, foreground: string, background: string): number {
   const behind = parseColor(tokens[background]!).rgb;
@@ -62,8 +75,26 @@ describe.each(Object.entries(themes))('%s theme', (_theme, tokens) => {
     expect(ratio(tokens, '--text-primary', '--bg-segment-checked')).toBeGreaterThanOrEqual(4.5);
   });
 
-  // A graphic like the status letters: the name beside it says the same, so 3:1.
-  it('draws the letter of a mark colored per name at 3:1 on its tint, for every hue, surface and row state', () => {
+  // White at 4.5:1 caps how light a fill can be, so on the dark theme's surfaces 3:1 is out of reach: 2.5:1, and the hue does the rest.
+  it.each(AVATAR_COLORS)('writes the white initial of a %s avatar at 4.5:1, the fill standing 2.5:1 off the rows it sits in', (fill) => {
+    // The dark theme only overrides what differs.
+    const letter = parseColor({ ...themes.light, ...tokens }['--avatar-letter']!).rgb;
+    const color = parseColor(tokens[fill]!).rgb;
+    expect(contrastRatio(letter, color)).toBeGreaterThanOrEqual(4.5);
+    for (const [surface, state] of AVATAR_PLACES) {
+      const opaque = parseColor(tokens[surface]!).rgb;
+      const behind = state ? composite(parseColor(tokens[state]!), opaque) : opaque;
+      expect(contrastRatio(color, behind), `${surface} ${state ?? ''}`).toBeGreaterThanOrEqual(2.5);
+    }
+  });
+
+  it('weighs the avatar fills alike, so no repository shouts louder: white reads within 0.2 of the same ratio on each', () => {
+    const ratios = AVATAR_COLORS.map((fill) => contrastRatio([255, 255, 255], parseColor(tokens[fill]!).rgb));
+    expect(Math.max(...ratios) - Math.min(...ratios)).toBeLessThanOrEqual(0.2);
+  });
+
+  // A server monogram's letter is a graphic like the status letters: the name beside it says the same, so 3:1.
+  it('draws the letter of a server monogram at 3:1 on its tint, for every hue, surface and row state', () => {
     // The dark theme only overrides what differs.
     const tint = { ...themes.light, ...tokens };
     const rowStates = [null, '--bg-hover', '--bg-selected', '--accent-soft'];

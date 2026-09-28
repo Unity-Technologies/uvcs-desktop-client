@@ -161,7 +161,21 @@
   --label-bg: rgba(191, 135, 0, 0.12);
   --label-text: #8a6100;
   --search-highlight: #d4a72c;
-  /* Marks colored per name (repository and workspace avatars, server monograms): the letter in
+  /* Workspace and repository avatars: a white initial on one of these solid fills (`AVATAR_COLORS`, one per
+     `STABLE_HUES` hue, in their order), each tuned on its own so all weigh the same (white at about 4.8:1) and a notch short of full saturation, so they
+     read solid without shouting. */
+  --avatar-letter: #ffffff;
+  --avatar-blue: #1974c9;
+  --avatar-cyan: #157d90;
+  --avatar-teal: #158073;
+  --avatar-green: #1c8253;
+  --avatar-lime: #478024;
+  --avatar-amber: #99690b;
+  --avatar-orange: #b65816;
+  --avatar-red: #c64a2b;
+  --avatar-rose: #c84359;
+  --avatar-pink: #c83b83;
+  /* Server monograms, colored per name as a tint (secondary to the solid workspace avatars): the letter in
      hsl(var(--hue) var(--tint-text-saturation) var(--tint-text-lightness)) on
      hsl(var(--hue) var(--tint-bg-saturation) var(--tint-bg-lightness) / var(--tint-bg-alpha)), so any hue reads on the theme. */
   --tint-text-saturation: 60%;
@@ -240,6 +254,17 @@
   --label-bg: rgba(210, 153, 34, 0.16);
   --label-text: #e3b341;
   --search-highlight: #e3b341;
+  /* A touch lighter and softer, as far as white at 4.5:1 allows (about 4.7:1), so they stand off the dark rows without glowing. */
+  --avatar-blue: #3976b9;
+  --avatar-cyan: #267e8e;
+  --avatar-teal: #298175;
+  --avatar-green: #308259;
+  --avatar-lime: #538034;
+  --avatar-amber: #986c19;
+  --avatar-orange: #b15e27;
+  --avatar-red: #bc5439;
+  --avatar-rose: #c04d61;
+  --avatar-pink: #ba4d87;
   --tint-text-lightness: 72%;
   --tint-bg-alpha: 0.2;
 }

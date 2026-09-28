@@ -329,6 +329,17 @@
 }
 
 .serverMonogram {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-sm);
+  background: hsl(var(--hue) var(--tint-bg-saturation) var(--tint-bg-lightness) / var(--tint-bg-alpha));
+  color: hsl(var(--hue) var(--tint-text-saturation) var(--tint-text-lightness));
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
   letter-spacing: -0.02em;
 }
 

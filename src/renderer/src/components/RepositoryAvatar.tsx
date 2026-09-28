@@ -1,24 +1,32 @@
+import type { CSSProperties } from 'react';
 import { initialOf } from '../lib/initialOf';
-import { TintedMark } from '../ui/TintedMark';
-import { avatarHue } from './avatarHue';
+import { avatarColor } from './avatarColor';
+import styles from './RepositoryAvatar.module.css';
 
 interface RepositoryAvatarProps {
   /** `name@server` or a repository's name; while unknown, the color is the label's. */
   repository: string | null | undefined;
-  /** Whose initial it shows: a workspace's own name, or the repository's. */
-  label: string;
-  size: number;
+  /** Whose initial it shows: a workspace's own name, or the repository's; undefined while loading, a neutral square. */
+  label: string | undefined;
+  size: 24 | 28 | 32;
   className?: string;
 }
 
 /**
- * An initial on the repository's own color, the same on the home screen, in the switcher and on the sidebar's
- * workspace button, so workspaces of the same repository look alike at a glance.
+ * A white initial on the repository's own solid color, the same on the home screen, in the switcher and on the
+ * sidebar's workspace button, so workspaces of the same repository look alike at a glance.
  */
 export function RepositoryAvatar({ repository, label, size, className }: RepositoryAvatarProps) {
+  const fill = label === undefined ? undefined : `var(${avatarColor(repository, label)})`;
   return (
-    <TintedMark hue={avatarHue(repository, label)} size={size} className={className}>
-      {initialOf(label)}
-    </TintedMark>
+    <span
+      className={className ? `${styles.avatar} ${className}` : styles.avatar}
+      data-size={size}
+      data-loading={label === undefined}
+      style={{ '--avatar-fill': fill } as CSSProperties}
+      aria-hidden
+    >
+      {label !== undefined && <span className={styles.letter}>{initialOf(label)}</span>}
+    </span>
   );
 }
