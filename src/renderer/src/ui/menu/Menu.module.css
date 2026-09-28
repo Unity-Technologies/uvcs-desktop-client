@@ -82,6 +82,10 @@
   opacity: 0.6;
   font-family: var(--font-mono);
   font-size: var(--text-sm);
+  /* Centered by its caps, as the label's are: a smaller monospace line box centered as it is sits its text higher.
+     The same room above and below keeps its descenders from being cut, and it centered. */
+  text-box: trim-both cap alphabetic;
+  padding-block: 0.3em;
 }
 
 .trailing {
