@@ -12,6 +12,8 @@ import { TRASH_NAME } from '../../lib/platform';
 import { formatCount } from '../../lib/text';
 import { categoryOf, existsOnDisk, hasRevisions, isCheckinCandidate, isControlled } from './changeCategories';
 import { moveToChangelistSubmenu } from './changelistMenu';
+import { showInLocks } from '../locks/showInLocks';
+import type { PendingLocks } from './locks/pendingLocks';
 import { reviewMenuEntry } from '../review/reviewMenuEntry';
 import type { ListReview } from '../review/useReviewMode';
 import {
@@ -41,10 +43,13 @@ export function pendingChangeMenu(
   inclusion?: CheckinInclusion,
   /** Offers to mark the changes reviewed or clear their marks; left out where there are no marks (the command palette). */
   review?: ListReview<PendingChange>,
+  /** Offers to show a locked change's lock; left out where the locks aren't read (the command palette). */
+  locks?: PendingLocks,
 ): MenuEntry[] {
   if (changes.length === 0) return [];
 
   const single = changes.length === 1 ? changes[0]! : null;
+  const lock = single ? locks?.get(single.path) : undefined;
   const privateChanges = changes.filter((change) => categoryOf(change) === 'private');
   const controlledChanges = changes.filter(isControlled);
   const checkoutCandidates = controlledChanges.filter((change) => !change.kinds.includes('checkedOut') && !change.kinds.includes('added'));
@@ -64,6 +69,7 @@ export function pendingChangeMenu(
       hasRevisions(single) &&
       canAnnotate(single.itemType) &&
       menuAction('annotate', () => navigation.openPage(annotatedHistory({ path: single.path }))),
+    lock && menuAction('showInLocks', () => showInLocks(workspacePath, lock)),
     onDisk && menuAction('reveal', () => void api.system.revealInFileManager(absolutePath(workspacePath, single.path))),
     itemCopySubmenu(workspacePath, changes.map((change) => change.path)),
     moveToChangelistSubmenu(workspacePath, changes, changelists),

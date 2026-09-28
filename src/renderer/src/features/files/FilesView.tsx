@@ -73,7 +73,7 @@ export function FilesView() {
     (query?: string) => void goToFile(workspacePath, query).then((path) => path && useFilesViewStore.getState().requestReveal(path)),
     [workspacePath],
   );
-  useFileCommands(workspacePath, selectedItems, pendingIndex, openGoToFile);
+  useFileCommands(workspacePath, selectedItems, pendingIndex, locks, openGoToFile);
   // Where the legacy client finds files; the tree adds its plain key.
   useShortcut(hotkey('filesGoToFile'), () => openGoToFile());
   useCutPasteCommands(workspacePath, selectedItems);
@@ -122,7 +122,7 @@ export function FilesView() {
             onSelectionChange={(next) => selectAfterLeaving(selection, next, setSelection)}
             onToggleDirectory={(directory) => (directory === '' ? setRootExpanded((shown) => !shown) : toggle(workspacePath, directory))}
             onOpenFile={(item) => openItem(workspacePath, item)}
-            contextMenu={(items) => fileMenu(workspacePath, items, pendingIndex)}
+            contextMenu={(items) => fileMenu(workspacePath, items, pendingIndex, locks)}
             statusOf={(item) => itemStatus(item, pendingIndex)}
             lockOf={(item) => locks.get(item.path)}
             hasChangesInside={(directory) => pendingIndex.hasChangesInside(directory)}
@@ -133,14 +133,14 @@ export function FilesView() {
         }
         details={
           focused && workspace && isWorkspaceRoot(focused) ? (
-            <WorkspaceRootDetails workspace={workspace} menu={fileMenu(workspacePath, [focused], pendingIndex)} />
+            <WorkspaceRootDetails workspace={workspace} menu={fileMenu(workspacePath, [focused], pendingIndex, locks)} />
           ) : focused ? (
             <ItemDetailsPane
               workspacePath={workspacePath}
               item={focused}
               pendingIndex={pendingIndex}
               lock={locks.get(focused.path)}
-              menu={fileMenu(workspacePath, [focused], pendingIndex)}
+              menu={fileMenu(workspacePath, [focused], pendingIndex, locks)}
               onSelectFolder={selectFolder}
               folderContents={childrenByDirectory.get(focused.path)}
             />

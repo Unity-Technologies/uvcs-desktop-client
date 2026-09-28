@@ -19,8 +19,17 @@ const useViewSelectionStore = create<ViewSelectionStore>((set) => ({
  * coming back with ⌘1… or the sidebar finds the rows it left, ready for the arrows.
  */
 export function useViewSelection(view: ViewId): [SelectionState, (selection: SelectionState) => void] {
-  const key = `${useWorkspacePath()}\n${view}`;
+  const key = selectionKey(useWorkspacePath(), view);
   const selection = useViewSelectionStore((state) => state.selections.get(key)) ?? EMPTY_SELECTION;
   const setSelection = useCallback((next: SelectionState) => useViewSelectionStore.getState().set(key, next), [key]);
   return [selection, setSelection];
+}
+
+/** Selects one row of a view from elsewhere, before going to it: the view opens on that row, scrolled to it. */
+export function selectInView(workspacePath: string, view: ViewId, rowKey: string): void {
+  useViewSelectionStore.getState().set(selectionKey(workspacePath, view), { selected: new Set([rowKey]), anchor: rowKey });
+}
+
+function selectionKey(workspacePath: string, view: ViewId): string {
+  return `${workspacePath}\n${view}`;
 }

@@ -5,8 +5,10 @@ import { describeLock, lockedByOthersMessage, locksPendingChanges, pendingLocks 
 
 const change = (path: string): PendingChange => ({ path, kinds: ['checkedOut'], itemType: 'binaryFile', size: 0, lastModified: '' });
 
+const ITEM_IDS: Record<string, number> = { '/art/Mine.psd': 1, '/art/Hero.fbx': 2, '/art/Old.fbx': 3, '/art/Other.fbx': 4 };
+
 function lock(guid: string, path: string, owner: string, status: Lock['status'] = 'Locked'): Lock {
-  return { itemId: 1, guid, path, owner, workspace: `${owner}-wk`, status, date: '', destinationBranch: '/main', holderBranch: '/main', repository: 'rvx@local' };
+  return { itemId: ITEM_IDS[path] ?? 0, guid, path, owner, workspace: `${owner}-wk`, status, date: '', destinationBranch: '/main', holderBranch: '/main', repository: 'rvx@local' };
 }
 
 describe('pendingLocks', () => {
@@ -17,8 +19,8 @@ describe('pendingLocks', () => {
   it('tells my exclusive checkouts from locks held by others, on pending changes only', () => {
     expect(pendingLocks(changes, mine, all)).toEqual(
       new Map([
-        ['art/Mine.psd', { mine: true, owner: 'me', workspace: 'me-wk' }],
-        ['art/Hero.fbx', { mine: false, owner: 'ana', workspace: 'ana-wk' }],
+        ['art/Mine.psd', { mine: true, owner: 'me', workspace: 'me-wk', key: 'rvx@local:1' }],
+        ['art/Hero.fbx', { mine: false, owner: 'ana', workspace: 'ana-wk', key: 'rvx@local:2' }],
       ]),
     );
   });
@@ -42,13 +44,13 @@ describe('locksPendingChanges', () => {
 
 describe('lockedByOthersMessage', () => {
   it('names the owner of a single locked file', () => {
-    expect(lockedByOthersMessage([{ path: 'art/Hero.fbx', lock: { mine: false, owner: 'ana', workspace: 'w' } }])).toBe(
+    expect(lockedByOthersMessage([{ path: 'art/Hero.fbx', lock: { mine: false, owner: 'ana', workspace: 'w', key: 'r:1' } }])).toBe(
       "Hero.fbx is locked by ana — you can't check it in until the lock is released",
     );
   });
 
   it('counts several', () => {
-    const locked = { mine: false, owner: 'ana', workspace: 'w' };
+    const locked = { mine: false, owner: 'ana', workspace: 'w', key: 'r:1' };
     expect(lockedByOthersMessage([{ path: 'a', lock: locked }, { path: 'b', lock: locked }])).toBe(
       "2 changed files are locked by others — you can't check them in until the locks are released",
     );
@@ -57,8 +59,8 @@ describe('lockedByOthersMessage', () => {
 
 describe('describeLock', () => {
   it('says who holds a lock and where', () => {
-    expect(describeLock({ mine: true, owner: 'me', workspace: 'wk' }).label).toBe('Locked by you');
-    expect(describeLock({ mine: false, owner: 'ana', workspace: 'art-wk' })).toEqual({
+    expect(describeLock({ mine: true, owner: 'me', workspace: 'wk', key: 'r:1' }).label).toBe('Locked by you');
+    expect(describeLock({ mine: false, owner: 'ana', workspace: 'art-wk', key: 'r:1' })).toEqual({
       label: 'Locked by ana in art-wk',
       detail: "You can't check it in until the lock is released",
     });

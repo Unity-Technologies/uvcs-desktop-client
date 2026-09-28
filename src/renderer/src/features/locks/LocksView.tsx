@@ -3,6 +3,7 @@ import { useState } from 'react';
 import type { Lock } from '@shared/domain/lock';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
+import { ItemPathRow } from '../../components/ItemPathRow';
 import { NoSelection } from '../../components/NoSelection';
 import { PathLabel } from '../../components/PathLabel';
 import { invalidateWorkspace } from '../../app/queryClient';
@@ -21,6 +22,7 @@ import { ToggleChip } from '../../ui/ToggleChip';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { LockDetails } from './LockDetails';
+import { lockKey } from './lockKey';
 import { lockMenu } from './lockMenu';
 import { isReleasable, releaseLocks } from './lockOperations';
 import { locksEmptyState } from './locksEmptyState';
@@ -30,7 +32,8 @@ import styles from './LocksView.module.css';
 type Scope = 'all' | 'mine';
 
 const COLUMNS: Column<Lock>[] = [
-  { id: 'path', header: 'Item', grow: 3, render: (lock) => <PathLabel path={lock.path.replace(/^\//, '')} />, sortValue: (lock) => lock.path },
+  // Only files are locked, and a lock names no item type: the icon goes by the name.
+  { id: 'path', header: 'Item', grow: 3, render: (lock) => <ItemPathRow path={lock.path.replace(/^\//, '')} itemType="file" />, sortValue: (lock) => lock.path },
   {
     id: 'status',
     header: 'Status',
@@ -133,8 +136,4 @@ export function LocksView() {
       />
     </>
   );
-}
-
-function lockKey(lock: Lock): string {
-  return `${lock.repository}:${lock.itemId}`;
 }

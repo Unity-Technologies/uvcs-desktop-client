@@ -1,4 +1,4 @@
-import { FileDiff, FilePlus, FolderPlus, FolderTree, History, ScanText, Search, TextCursorInput, Trash2 } from 'lucide-react';
+import { FileDiff, FilePlus, FolderPlus, FolderTree, History, Lock, ScanText, Search, TextCursorInput, Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
 import { canAnnotate } from '@shared/domain/annotate';
 import type { TreeItem } from '@shared/domain/explorer';
@@ -11,6 +11,8 @@ import { hasRevisionsToShow } from './fileMenuTargets';
 import type { PendingChangesIndex } from './itemStatus';
 import { isWorkspaceRoot } from './workspaceRoot';
 import { useFilesViewStore } from './filesViewStore';
+import { showInLocks } from '../locks/showInLocks';
+import type { PendingLocks } from '../pendingChanges/locks/pendingLocks';
 import { hotkey } from '../../lib/shortcutRegistry';
 
 export const GO_TO_FILE_SHORTCUT = hotkey('goToFile');
@@ -26,10 +28,12 @@ export function useFileCommands(
   workspacePath: string,
   selected: TreeItem[],
   pendingChanges: PendingChangesIndex,
+  locks: PendingLocks,
   onGoToFile: () => void,
 ): void {
   const commands = useMemo<Command[]>(() => {
     const single = selected.length === 1 ? selected[0]! : undefined;
+    const lock = single && locks.get(single.path);
     const isControlledFile = Boolean(single && !single.isPrivate && single.itemType !== 'directory');
     const directory = targetDirectoryFor(single);
     const hasRoot = selected.some(isWorkspaceRoot);
@@ -110,8 +114,16 @@ export function useFileCommands(
         disabled: !isControlledFile,
         run: () => useFilesViewStore.getState().setDetailsTab('changes'),
       },
+      {
+        id: 'files.showInLocks',
+        group: 'Files',
+        label: 'Show lock of selected file in Locks',
+        icon: Lock,
+        disabled: !lock,
+        run: () => lock && showInLocks(workspacePath, lock),
+      },
     ];
-  }, [workspacePath, selected, pendingChanges, onGoToFile]);
+  }, [workspacePath, selected, pendingChanges, locks, onGoToFile]);
 
   useCommands(commands);
 }

@@ -1,12 +1,15 @@
 import type { Lock } from '@shared/domain/lock';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { fileNameOf, pluralize } from '../../../lib/text';
+import { lockKey } from '../../locks/lockKey';
 
 /** A lock on a pending change: taken by me in this workspace (an exclusive checkout), or held by someone else. */
 export interface PendingLock {
   mine: boolean;
   owner: string;
   workspace: string;
+  /** Its row in the Locks view (`lockKey`). */
+  key: string;
 }
 
 export type PendingLocks = ReadonlyMap<string, PendingLock>;
@@ -23,7 +26,7 @@ export function pendingLocks(changes: PendingChange[], mine: Lock[], all: Lock[]
   for (const lock of [...mine, ...all]) {
     const path = workspacePathOf(lock);
     if (lock.status !== 'Locked' || !pending.has(path) || result.has(path)) continue;
-    result.set(path, { mine: mineIds.has(lock.guid), owner: lock.owner, workspace: lock.workspace });
+    result.set(path, { mine: mineIds.has(lock.guid), owner: lock.owner, workspace: lock.workspace, key: lockKey(lock) });
   }
   return result;
 }
