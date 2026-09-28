@@ -9,7 +9,7 @@ describe('toQueryFilter', () => {
   it('restricts by date by default', () => {
     expect(toQueryFilter(DEFAULT_CHANGESET_FILTER, '/main', today)).toEqual({
       sinceDate: '2026-08-26',
-      owner: undefined,
+      owners: undefined,
       branch: undefined,
       limit: undefined,
     });
@@ -17,7 +17,7 @@ describe('toQueryFilter', () => {
 
   it('applies mine and current branch, and caps "any time"', () => {
     const filter = toQueryFilter({ ...DEFAULT_CHANGESET_FILTER, datePreset: 'all', onlyMine: true, onlyCurrentBranch: true }, '/main/ui', today);
-    expect(filter).toEqual({ sinceDate: undefined, owner: 'me', branch: '/main/ui', limit: 2000 });
+    expect(filter).toEqual({ sinceDate: undefined, owners: ['me'], branch: '/main/ui', limit: 2000 });
   });
 });
 

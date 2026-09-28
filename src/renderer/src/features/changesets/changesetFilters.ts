@@ -39,7 +39,7 @@ export const DEFAULT_CHANGESET_FILTER: ChangesetFilterState = {
 export function toQueryFilter(state: Omit<ChangesetFilterState, 'search'>, currentBranch: string | undefined, today: Date): QueryFilter {
   return {
     sinceDate: state.datePreset === 'all' ? undefined : isoDateDaysBefore(today, DAYS_BACK[state.datePreset]),
-    owner: state.onlyMine ? 'me' : undefined,
+    owners: state.onlyMine ? ['me'] : undefined,
     branch: state.onlyCurrentBranch ? currentBranch : undefined,
     limit: state.datePreset === 'all' ? ANY_TIME_LIMIT : undefined,
   };

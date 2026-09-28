@@ -59,6 +59,7 @@ export const SHORTCUTS = {
   appMenu: { area: 'General', label: 'Open the menu', keys: ['f10'], offMacOnly: true },
   saveComment: { area: 'General', label: 'Save an edited comment', keys: ['mod+enter'] },
 
+  listFilter: { area: 'Lists', label: "Filter the view's list (/ from outside a text field)", keys: ['mod+f', '/'] },
   listMove: { area: 'Lists', label: 'Move the selection', keys: ['up', 'down'] },
   listExtend: { area: 'Lists', label: 'Extend the selection', keys: ['shift+up', 'shift+down'] },
   listEnds: { area: 'Lists', label: 'First or last row', keys: ['home', 'end'] },

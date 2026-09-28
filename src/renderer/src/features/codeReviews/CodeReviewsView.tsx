@@ -1,6 +1,6 @@
 import { CircleDot, MessageSquareCode, Plus, RefreshCw, Users } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { CODE_REVIEW_STATUSES, MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewFilter, type CodeReviewStatus } from '@shared/domain/codeReview';
+import { CODE_REVIEW_STATUSES, MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewStatus } from '@shared/domain/codeReview';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -37,6 +37,7 @@ import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { userFilterTexts } from '../../lib/userName';
 
 type StatusFilter = CodeReviewStatus | 'any';
+type ReviewScope = 'all' | 'createdByMe' | 'assignedToMe';
 
 const DEFAULT_SINCE: SincePreset = 'last3Months';
 
@@ -86,14 +87,15 @@ function reviewFilterTexts(review: CodeReview): string[] {
 export function CodeReviewsView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
-  const [scope, setScope] = useState<CodeReviewFilter['scope']>('all');
+  const [scope, setScope] = useState<ReviewScope>('all');
   const [status, setStatus] = useState<StatusFilter>('any');
   const [search, setSearch] = useState('');
   const [since, setSince] = useState<SincePreset>(DEFAULT_SINCE);
   const [selection, setSelection] = useViewSelection('codeReviews');
   const [createdKey, setCreatedKey] = useState<string | null>(null);
   const { data: reviews, isLoading, isFetching, error } = useCodeReviews({
-    scope,
+    owners: scope === 'createdByMe' ? ['me'] : undefined,
+    assignedToMe: scope === 'assignedToMe',
     status: status === 'any' ? undefined : status,
     sinceDate: sinceDateFor(since),
   });
@@ -145,7 +147,7 @@ export function CodeReviewsView() {
     >
       <SearchField value={search} onChange={setSearch} placeholder="Filter reviews" />
       <SincePicker value={since} onChange={setSince} />
-      <ChoiceChip<CodeReviewFilter['scope']>
+      <ChoiceChip<ReviewScope>
         value={scope}
         onChange={setScope}
         icon={<Users size={13} />}

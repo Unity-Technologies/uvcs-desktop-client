@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCount, pluralize } from './text';
+import { formatCount, pluralize, shownCount } from './text';
 
 describe('formatCount', () => {
   it('groups thousands', () => {
@@ -15,5 +15,13 @@ describe('pluralize', () => {
     expect(pluralize(1, 'file')).toBe('1 file');
     expect(pluralize(3008, 'file')).toBe('3,008 files');
     expect(pluralize(2, 'branch', 'branches')).toBe('2 branches');
+  });
+});
+
+describe('shownCount', () => {
+  it('counts what shows, and of how many once filters hide some', () => {
+    expect(shownCount(340)).toBe('340');
+    expect(shownCount(340, 340)).toBe('340');
+    expect(shownCount(12, 1340)).toBe('12 of 1,340');
   });
 });

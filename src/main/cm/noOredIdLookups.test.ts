@@ -24,8 +24,17 @@ const JOINED_WITH_OR = /\.join\(\s*(['"`])\s*or\s*\1\s*\)/i;
 /** A literal comparing an id and ORing another condition, e.g. `where id = ${a} or id = ${b}`. */
 const ORED_ID_LITERAL = /['"`][^'"`\n]*\bid\s*=\s*[^'"`\n]*\bor\b[^'"`\n]*['"`]/i;
 
+/** Owners are names picked by hand, a few at most (`ownersCondition`): ORing them is one bounded scan, not a lookup per id. */
+const OWNERS_CONDITION = /\bowner = /;
+
 function oredIdLookups(source: string): string[] {
-  return source.split('\n').filter((line) => JOINED_WITH_OR.test(line) || ORED_ID_LITERAL.test(line));
+  const lines = source.split('\n');
+  return lines.filter((line, index) => {
+    if (ORED_ID_LITERAL.test(line)) return true;
+    if (!JOINED_WITH_OR.test(line)) return false;
+    // The conditions joined are built on the line itself or the one before.
+    return !OWNERS_CONDITION.test(`${lines[index - 1] ?? ''}\n${line}`);
+  });
 }
 
 describe('no ORed id lookups', () => {
@@ -34,6 +43,7 @@ describe('no ORed id lookups', () => {
     expect(oredIdLookups("cm.query(['find', 'branch', 'where id = 1 or id = 2'])")).toHaveLength(1);
     expect(oredIdLookups("cm.query(['find', 'review', `id = ${reviewId}`])")).toEqual([]);
     expect(oredIdLookups("const where = `where name = '${name}'`;")).toEqual([]);
+    expect(oredIdLookups("const each = owners.map((owner) => `owner = '${owner}'`);\nreturn `(${each.join(' or ')})`;")).toEqual([]);
   });
 
   it('no source builds one', () => {

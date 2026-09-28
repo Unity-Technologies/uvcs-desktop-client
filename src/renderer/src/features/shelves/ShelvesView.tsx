@@ -45,7 +45,7 @@ const COLUMNS: Column<Shelve>[] = [
 export function ShelvesView() {
   const workspacePath = useWorkspacePath();
   const { onlyMine, setOnlyMine, search, setSearch } = useShelvesViewStore();
-  const { data: shelves, isLoading, isFetching, error } = useShelves({ owner: onlyMine ? 'me' : undefined });
+  const { data: shelves, isLoading, isFetching, error } = useShelves({ owners: onlyMine ? ['me'] : undefined });
   const [selection, setSelection] = useViewSelection('shelves');
 
   const visible = useMemo(() => (shelves ?? []).filter((shelve) => matchesWordFilter(shelveFilterTexts(shelve), search)), [shelves, search]);

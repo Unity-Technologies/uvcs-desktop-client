@@ -112,7 +112,7 @@ function drawFar(search: GraphScene['search'], searchQuery = ''): ReturnType<typ
     homeChangeset: focus.changeset.id,
     pendingChangeCount: 0,
     currentBranch: lane.branch.name,
-    highlightedAuthor: null,
+    highlightedAuthors: null,
     search,
     searchQuery,
     searchPing: 0.3,

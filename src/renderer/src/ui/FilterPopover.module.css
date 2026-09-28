@@ -1,0 +1,15 @@
+.popover {
+  display: flex;
+  flex-direction: column;
+  max-height: min(520px, var(--radix-popover-content-available-height));
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  z-index: 900;
+}
+
+.popover[data-state='open'] {
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+}

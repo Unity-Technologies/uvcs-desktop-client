@@ -30,7 +30,7 @@ export type GraphHighlights = Pick<
   | 'homeChangeset'
   | 'pendingChangeCount'
   | 'currentBranch'
-  | 'highlightedAuthor'
+  | 'highlightedAuthors'
   | 'search'
   | 'searchQuery'
   | 'options'

@@ -57,7 +57,7 @@ const COLUMNS: Column<Label>[] = [
 export function LabelsView() {
   const workspacePath = useWorkspacePath();
   const { since, onlyMine, update } = useLabelsViewStore();
-  const { data: labels, isLoading, isFetching, error } = useLabels({ sinceDate: sinceDateFor(since), owner: onlyMine ? 'me' : undefined });
+  const { data: labels, isLoading, isFetching, error } = useLabels({ sinceDate: sinceDateFor(since), owners: onlyMine ? ['me'] : undefined });
   const [search, setSearch] = useState('');
   const [selection, setSelection] = useViewSelection('labels');
 

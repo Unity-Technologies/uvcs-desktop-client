@@ -44,7 +44,7 @@ export function BranchesView() {
   const { layout, since, onlyMine, showHidden, update } = useBranchesViewStore();
   const { data: branches, isLoading, isFetching, error } = useBranches({
     sinceDate: sinceDateFor(since),
-    owner: onlyMine ? 'me' : undefined,
+    owners: onlyMine ? ['me'] : undefined,
     includeHidden: showHidden,
   });
 

@@ -1,8 +1,8 @@
 import { Search } from 'lucide-react';
-import { forwardRef, type KeyboardEvent } from 'react';
+import { forwardRef, type InputHTMLAttributes, type KeyboardEvent } from 'react';
 import styles from './Field.module.css';
 
-interface SearchFieldProps {
+interface SearchFieldProps extends Pick<InputHTMLAttributes<HTMLInputElement>, 'aria-controls' | 'aria-activedescendant' | 'aria-label'> {
   value: string;
   onChange: (value: string) => void;
   placeholder?: string;
@@ -14,7 +14,7 @@ interface SearchFieldProps {
 }
 
 export const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(function SearchField(
-  { value, onChange, placeholder = 'Filter', autoFocus, width = 220, onKeyDown },
+  { value, onChange, placeholder = 'Filter', autoFocus, width = 220, onKeyDown, ...aria },
   ref,
 ) {
   return (
@@ -27,6 +27,7 @@ export const SearchField = forwardRef<HTMLInputElement, SearchFieldProps>(functi
         placeholder={placeholder}
         autoFocus={autoFocus}
         spellCheck={false}
+        {...aria}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
           if (event.key === 'Escape' && value) {

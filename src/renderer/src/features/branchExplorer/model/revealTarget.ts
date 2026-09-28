@@ -1,4 +1,4 @@
-import { DATE_RANGES, sinceDateFor, type DateRangeId } from './dateRanges';
+import { longerPresets, sinceDateFor, type SincePreset } from '../../../lib/sincePresets';
 import type { GraphLayout } from './layoutGraph';
 
 /**
@@ -28,25 +28,24 @@ export function resolveReveal(target: RevealTarget, layout: GraphLayout): Reveal
 export interface RevealLimits {
   /** A focus, "only related to mine", "hide merged", unchecked branches or an author. */
   filtersActive: boolean;
-  dateRange: DateRangeId;
+  dateRange: SincePreset;
   showHiddenBranches: boolean;
 }
 
 /** One step towards showing a target the graph hides, from the least to the most disruptive. */
-export type RevealRelaxation = { kind: 'clearFilters' } | { kind: 'widenDates'; dateRange: DateRangeId } | { kind: 'showHidden' };
+export type RevealRelaxation = { kind: 'clearFilters' } | { kind: 'widenDates'; dateRange: SincePreset } | { kind: 'showHidden' };
 
 /** The next thing to relax while a target is not in the graph; null once nothing is left to relax. */
 export function nextRelaxation(limits: RevealLimits, targetDate: string | undefined, now = new Date()): RevealRelaxation | null {
   if (limits.filtersActive) return { kind: 'clearFilters' };
-  if (limits.dateRange !== 'all') return { kind: 'widenDates', dateRange: rangeIncluding(targetDate, limits.dateRange, now) };
+  if (limits.dateRange !== 'anyTime') return { kind: 'widenDates', dateRange: rangeIncluding(targetDate, limits.dateRange, now) };
   if (!limits.showHiddenBranches) return { kind: 'showHidden' };
   return null;
 }
 
 /** The shortest range longer than `current` that reaches back to `date`; all history when the date is unknown. */
-function rangeIncluding(date: string | undefined, current: DateRangeId, now: Date): DateRangeId {
-  if (!date) return 'all';
+function rangeIncluding(date: string | undefined, current: SincePreset, now: Date): SincePreset {
+  if (!date) return 'anyTime';
   const day = date.slice(0, 10);
-  const longer = DATE_RANGES.slice(DATE_RANGES.findIndex((range) => range.id === current) + 1);
-  return longer.find((range) => (sinceDateFor(range.id, now) ?? '') <= day)?.id ?? 'all';
+  return longerPresets(current).find((preset) => (sinceDateFor(preset, now) ?? '') <= day) ?? 'anyTime';
 }

@@ -24,7 +24,7 @@ export function useCodeReview(reviewId: number) {
 
 /** The newest reviews of the repository as `cm` lists them, branch targets by id; `text` narrows them by title. */
 export function reviewSummariesKey(workspacePath: string, text?: string): readonly unknown[] {
-  return queryKeys.inWorkspace(workspacePath, 'codeReviews', 'summaries', { scope: 'all', text });
+  return queryKeys.inWorkspace(workspacePath, 'codeReviews', 'summaries', { text });
 }
 
 /**
@@ -36,7 +36,7 @@ export function useReviewsByBranch(enabled = true) {
   const workspacePath = useWorkspacePath();
   return useQuery({
     queryKey: reviewSummariesKey(workspacePath),
-    queryFn: () => api.codeReviews.listSummaries(workspacePath, { scope: 'all' }),
+    queryFn: () => api.codeReviews.listSummaries(workspacePath, {}),
     select: latestReviewByBranch,
     staleTime: 5 * 60_000,
     enabled,

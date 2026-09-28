@@ -6,12 +6,14 @@ import { spec } from '@shared/domain/specs';
 import { navigation } from '../../app/navigation/navigationStore';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { useWorkspaceUser } from '../../app/account/accounts';
 import { ListWithDetails } from '../../components/ListWithDetails';
+import { EVERYONE, isEveryone, pickedNames } from '../../lib/peopleFilter';
 import { hotkey, hotkeys, type ShortcutId } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
 import { pluralize } from '../../lib/text';
-import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
+import { NoMatches } from '../../ui/NoMatches';
 import { IconButton } from '../../ui/IconButton';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { ViewHeader } from '../../ui/ViewHeader';
@@ -60,9 +62,11 @@ export function BranchExplorerView() {
   const { data: workspace } = useWorkspaceInfo();
   const { data, isLoading, isFetching, isPlaceholderData, error } = useBranchExplorerData();
   const preferences = useBranchExplorerPreferences();
-  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, structureOnly, detailsOpen, highlightedAuthor, showComments, showAvatars, revealRequest } =
+  const { hideMergedBranches, onlyRelatedToCurrent, visibleBranches, structureOnly, detailsOpen, people, showComments, showAvatars, revealRequest } =
     preferences;
 
+  const me = useWorkspaceUser();
+  const highlightedAuthors = useMemo(() => pickedNames(people, me), [people, me]);
   const canvasRef = useRef<GraphCanvasHandle>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const [selection, setSelection] = useState<GraphSelection | null>(null);
@@ -135,13 +139,13 @@ export function BranchExplorerView() {
       homeChangeset,
       pendingChangeCount,
       currentBranch,
-      highlightedAuthor,
+      highlightedAuthors,
       search: searchLit && { ...searchLit, active: searchHits[activeHitIndex] ?? null },
       searchQuery: shownSearch.trim(),
       options: { showComments, showAvatars },
       reviews: reviews ?? NO_REVIEWS,
     }),
-    [selection, homeChangeset, pendingChangeCount, currentBranch, highlightedAuthor, shownSearch, searchLit, searchHits, activeHitIndex, showComments, showAvatars, reviews],
+    [selection, homeChangeset, pendingChangeCount, currentBranch, highlightedAuthors, shownSearch, searchLit, searchHits, activeHitIndex, showComments, showAvatars, reviews],
   );
 
   const goToChangeset = useCallback((id: number) => {
@@ -156,7 +160,7 @@ export function BranchExplorerView() {
 
   const clearFilters = (): void => {
     setFocus(null);
-    preferences.set({ onlyRelatedToCurrent: false, hideMergedBranches: false, visibleBranches: null, highlightedAuthor: null });
+    preferences.set({ onlyRelatedToCurrent: false, hideMergedBranches: false, visibleBranches: null, people: EVERYONE });
   };
 
   const goHome = useCallback(() => {
@@ -176,7 +180,7 @@ export function BranchExplorerView() {
   useRevealRequest({
     layout,
     settled: !isFetching && !isPlaceholderData,
-    filtersActive: focus !== null || onlyRelatedToCurrent || hideMergedBranches || visibleBranches !== null || highlightedAuthor !== null,
+    filtersActive: focus !== null || onlyRelatedToCurrent || hideMergedBranches || visibleBranches !== null || !isEveryone(people),
     clearFilters,
     reveal: (hit) => {
       if (hit.kind === 'branch') {
@@ -365,12 +369,7 @@ export function BranchExplorerView() {
     return (
       <>
         {header}
-        <EmptyState
-          icon={<GitGraph size={22} />}
-          title="The filters hide every branch"
-          description="Check some branches in the Branches filter, or show everything again."
-          action={<Button onClick={clearFilters}>Clear filters</Button>}
-        />
+        <NoMatches icon={<GitGraph size={22} />} noun="branches" hint="Check some branches in the Branches filter, or show every branch again." onClear={clearFilters} />
       </>
     );
   }
@@ -422,7 +421,7 @@ export function BranchExplorerView() {
 function authorsOf(data: BranchExplorerData): string[] {
   const authors = new Set<string>();
   for (const changeset of data.changesets) authors.add(changeset.owner);
-  return [...authors].sort();
+  return [...authors];
 }
 
 /** Fields keep every key (the search, an edited comment); buttons and links keep the keys that press them. */

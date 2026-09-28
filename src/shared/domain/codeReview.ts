@@ -30,7 +30,10 @@ export interface CodeReview extends CodeReviewSummary {
 }
 
 export interface CodeReviewFilter {
-  scope: 'all' | 'createdByMe' | 'assignedToMe';
+  /** Only reviews created by one of these users, as `QueryFilter.owners`. */
+  owners?: readonly string[];
+  /** Only reviews the user is asked to review. */
+  assignedToMe?: boolean;
   status?: CodeReviewStatus;
   /** `YYYY-MM-DD`; only reviews created on or after it. */
   sinceDate?: string;
