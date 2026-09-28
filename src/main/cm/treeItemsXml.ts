@@ -30,6 +30,10 @@ function treeItem(item: Record<string, unknown>): TreeItem {
   const listedName = text(item.Name);
   const xlink = parseXlinkName(listedName);
   const symlinkTarget = text(item.SymlinkTarget).replace(/^\s*->\s*/, '');
+  const changeset = integer(item.Changeset);
+  const revisionId = integer(item.RevId);
+  // A revision numbered below zero is a shelve's (`-id`, on branch `id:-1`); a private item has neither.
+  const shelveId = changeset < 0 && revisionId > 0 ? -changeset : undefined;
   return {
     path,
     name: path ? path.slice(path.lastIndexOf('/') + 1) : listedName,
@@ -38,13 +42,14 @@ function treeItem(item: Record<string, unknown>): TreeItem {
     date: dateText(item.Date),
     isPrivate: text(item.Status) === 'Private',
     isCheckedOut: text(item.Checkout) !== '',
-    changeset: integer(item.Changeset),
-    branch: text(item.Branch),
+    changeset: shelveId === undefined ? changeset : null,
+    branch: shelveId === undefined ? text(item.Branch) : '',
     owner: text(item.Owner),
-    revisionId: integer(item.RevId),
+    revisionId,
     parentRevisionId: integer(item.ParentRevId),
     repository: text(item.Repository).replace(/^rep:/, ''),
     itemId: integer(item.ItemId),
+    ...(shelveId !== undefined && { shelveId }),
     ...(xlink && { xlink }),
     ...(symlinkTarget && { symlinkTarget }),
   };

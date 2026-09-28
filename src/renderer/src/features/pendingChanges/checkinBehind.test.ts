@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { IncomingSummary } from '@shared/domain/incoming';
+import type { BranchIncoming } from '@shared/domain/incoming';
 import { behindBranch, behindDescription } from './checkinBehind';
 
-const summary = (changesetCount: number, authors: string[] = [], branch: string | null = '/main/task'): IncomingSummary => ({
+const summary = (changesetCount: number, authors: string[] = [], branch = '/main/task'): BranchIncoming => ({
   branch,
   loadedChangeset: 10,
   headChangeset: 10 + changesetCount,
@@ -19,7 +19,7 @@ describe('behindBranch', () => {
     expect(behindBranch(summary(0), '/main/task')).toBeNull();
     expect(behindBranch(undefined, '/main/task')).toBeNull();
     expect(behindBranch(summary(2), '/main')).toBeNull();
-    expect(behindBranch(summary(2, [], null), undefined)).toBeNull();
+    expect(behindBranch({ branch: null, changesetCount: 0, authors: [] }, undefined)).toBeNull();
   });
 });
 

@@ -56,7 +56,6 @@ describe('topmostPaths', () => {
 describe('shelvedChangelists', () => {
   it('keeps the changelists that hold shelved changes', () => {
     const snapshot = {
-      loadedChangeset: 1,
       changes: [changed, added],
       changelists: [
         { name: 'cl1', description: 'mine' },

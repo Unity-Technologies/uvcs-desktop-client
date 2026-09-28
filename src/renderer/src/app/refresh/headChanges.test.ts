@@ -32,6 +32,13 @@ describe('loadedChangesetChanged', () => {
     expect(loadedChangesetChanged(onMain(3), onMain(4))).toBe(true);
     expect(loadedChangesetChanged(onMain(3), { selector: { kind: 'branch', name: '/main/task' }, loadedChangeset: 3 })).toBe(true);
   });
+
+  it('tells a switch between shelves, which load no changeset', () => {
+    const onShelve = (name: string) => ({ selector: { kind: 'shelve' as const, name }, loadedChangeset: null });
+    expect(loadedChangesetChanged(onShelve('2'), onShelve('2'))).toBe(false);
+    expect(loadedChangesetChanged(onShelve('2'), onShelve('3'))).toBe(true);
+    expect(loadedChangesetChanged(onMain(3), onShelve('3'))).toBe(true);
+  });
 });
 
 describe('branchHeadMovedOnServer', () => {
@@ -43,5 +50,11 @@ describe('branchHeadMovedOnServer', () => {
   it('leaves our own checkins and updates, which refresh everything anyway', () => {
     expect(branchHeadMovedOnServer(summary(3, 3), summary(4, 4))).toBe(false);
     expect(branchHeadMovedOnServer(summary(3, 5), summary(5, 5))).toBe(false);
+  });
+
+  it('sees nothing move off a branch', () => {
+    const nothing = { branch: null, changesetCount: 0, authors: [] } as const satisfies IncomingSummary;
+    expect(branchHeadMovedOnServer(nothing, summary(3, 5))).toBe(false);
+    expect(branchHeadMovedOnServer(summary(3, 5), nothing)).toBe(false);
   });
 });

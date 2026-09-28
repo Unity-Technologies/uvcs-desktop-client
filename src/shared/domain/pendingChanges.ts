@@ -43,7 +43,6 @@ export interface PendingChangesSnapshot {
   changes: PendingChange[];
   /** User changelists (the default one is implicit). */
   changelists: Changelist[];
-  loadedChangeset: number;
   /** The merges the changes come from, each once: checking in records them as merge links. */
   mergeLinks: PendingMergeLink[];
 }

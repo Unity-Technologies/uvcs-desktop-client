@@ -1,7 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { findUpdateBlockers, findUpdateConflicts, incomingChangesetsArgs, summarizeIncoming } from './incoming';
+import type { CmClient } from '../cm/CmClient';
+import { findUpdateBlockers, findUpdateConflicts, incomingChangesetsArgs, readIncomingChanges, readIncomingSummary, summarizeIncoming } from './incoming';
 
 function incoming(path: string, status: DiffEntry['status'], itemType: DiffEntry['itemType'] = 'file'): DiffEntry {
   return { path, status, itemType, baseRevisionId: 10, revisionId: 20, repository: 'game@local' };
@@ -60,5 +61,31 @@ describe('the incoming summary', () => {
     ];
     expect(summarizeIncoming('/main', 41, incoming)).toEqual({ branch: '/main', loadedChangeset: 41, headChangeset: 45, changesetCount: 3, authors: ['ana', 'bob'] });
     expect(summarizeIncoming('/main', 41, [])).toEqual({ branch: '/main', loadedChangeset: 41, headChangeset: 41, changesetCount: 0, authors: [] });
+  });
+});
+
+describe('incoming off a branch', () => {
+  // `cm status --header --xml` of a workspace switched to shelve 3: cm reports it as changeset -3.
+  const ON_SHELVE = `<?xml version="1.0" encoding="utf-8"?>
+<StatusOutput>
+  <WorkspaceStatus><Status><RepSpec><Server>local</Server><Name>sandbox</Name></RepSpec><Changeset>-3</Changeset></Status></WorkspaceStatus>
+  <WkConfigType>Shelve</WkConfigType>
+  <WkConfigName>3@sandbox@local</WkConfigName>
+</StatusOutput>`;
+  const cmAnswering = (output: string) => {
+    const query = vi.fn(async (_args: string[]) => output);
+    return { cm: { query } as unknown as CmClient, query };
+  };
+
+  it('asks the server nothing', async () => {
+    const { cm, query } = cmAnswering('');
+    expect(await readIncomingSummary(cm, '/w', null)).toEqual({ branch: null, changesetCount: 0, authors: [] });
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it('on a shelve reads only the status: no changeset query starts from the shelve', async () => {
+    const { cm, query } = cmAnswering(ON_SHELVE);
+    expect(await readIncomingChanges(cm, '/w')).toEqual({ branch: null, changesetCount: 0, authors: [], changesets: [], files: [], conflicts: [], blockedPaths: [] });
+    expect(query.mock.calls.map(([args]) => args[0])).toEqual(['status']);
   });
 });

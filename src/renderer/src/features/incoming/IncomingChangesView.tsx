@@ -1,6 +1,6 @@
 import { CheckCircle2, GitBranch, RefreshCw } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { IncomingChanges, UpdateResolutions } from '@shared/domain/incoming';
+import type { BranchIncomingChanges, UpdateResolutions } from '@shared/domain/incoming';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { EmptyState } from '../../ui/EmptyState';
@@ -61,7 +61,7 @@ export function IncomingChangesView() {
 
 interface IncomingSessionProps {
   workspacePath: string;
-  incoming: IncomingChanges;
+  incoming: BranchIncomingChanges;
   header: React.ReactNode;
 }
 

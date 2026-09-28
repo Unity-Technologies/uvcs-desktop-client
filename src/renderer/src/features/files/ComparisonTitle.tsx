@@ -4,6 +4,7 @@ import { displayName } from '../../lib/userName';
 import { useOtherRepository } from '../../app/workspace/useWorkspace';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { openChangesetDiff } from '../changesets/changesetOperations';
+import { showShelveChanges } from '../shelves/shelveOperations';
 import type { ItemComparison } from './itemComparison';
 import styles from './ComparisonTitle.module.css';
 
@@ -25,7 +26,7 @@ export function ComparisonTitle({ item, comparison, comment }: ComparisonTitlePr
     return (
       <span className={styles.comparison}>
         <span className={styles.title}>Your changes</span>
-        <span className={styles.detail}>{item.changeset > 0 ? `vs cs:${item.changeset}` : 'vs the loaded revision'}</span>
+        <span className={styles.detail}>{item.changeset !== null && item.changeset > 0 ? `vs cs:${item.changeset}` : 'vs the loaded revision'}</span>
       </span>
     );
   }
@@ -34,13 +35,7 @@ export function ComparisonTitle({ item, comparison, comment }: ComparisonTitlePr
     <span className={styles.comparison}>
       <span className={styles.title}>{item.parentRevisionId > 0 ? 'Last change' : 'Added'}</span>
       <span className={styles.detail}>
-        {otherRepository ? (
-          <span data-tip={`Changeset ${item.changeset} of ${otherRepository}`}>cs:{item.changeset}</span>
-        ) : (
-          <button className={styles.changeset} onClick={() => openChangesetDiff({ id: item.changeset }, item.path)} data-tip="Open the changeset's diff">
-            cs:{item.changeset}
-          </button>
-        )}
+        <MadeIn item={item} otherRepository={otherRepository} />
         {item.branch && ` on ${item.branch}`}
         {item.owner && ` by ${displayName(item.owner)}`}
         {item.date && (
@@ -57,5 +52,25 @@ export function ComparisonTitle({ item, comparison, comment }: ComparisonTitlePr
         </span>
       )}
     </span>
+  );
+}
+
+/** Where the revision was made: its changeset, or on a shelve the shelve (a workspace on one lists its revisions). */
+function MadeIn({ item, otherRepository }: { item: TreeItem; otherRepository: string | undefined }) {
+  const { changeset, shelveId, path } = item;
+  if (changeset === null) {
+    return (
+      shelveId !== undefined && (
+        <button className={styles.changeset} onClick={() => showShelveChanges({ id: shelveId }, path)} data-tip="Open the shelve's diff">
+          sh:{shelveId}
+        </button>
+      )
+    );
+  }
+  if (otherRepository) return <span data-tip={`Changeset ${changeset} of ${otherRepository}`}>cs:{changeset}</span>;
+  return (
+    <button className={styles.changeset} onClick={() => openChangesetDiff({ id: changeset }, path)} data-tip="Open the changeset's diff">
+      cs:{changeset}
+    </button>
   );
 }

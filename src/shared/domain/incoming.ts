@@ -2,22 +2,29 @@ import type { Changeset } from './changeset';
 import type { DiffEntry } from './diff';
 import type { FileConflictResolution } from './merge';
 
-/** Where the workspace stands, as its workspace info tells: what the incoming check compares the branch head with. */
-export interface LoadedBranch {
-  /** Null when the workspace is not loaded from a branch. */
-  branch: string | null;
-  loadedChangeset: number;
-}
+/**
+ * Where the workspace stands on its branch, as its workspace info tells: what the incoming check compares the branch
+ * head with. Null off a branch (a changeset, label or shelve).
+ */
+export type LoadedBranch = { branch: string; loadedChangeset: number } | null;
 
 /** A cheap check of how far behind its branch head the workspace is. */
-export interface IncomingSummary {
-  /** Null when the workspace is not loaded from a branch (e.g. a label), so nothing comes in. */
-  branch: string | null;
+export type IncomingSummary = BranchIncoming | NothingIncoming;
+
+export interface BranchIncoming {
+  branch: string;
   loadedChangeset: number;
   headChangeset: number;
   changesetCount: number;
   /** Who checked in the incoming changesets, newest first, each once. */
   authors: string[];
+}
+
+/** Off a branch (a changeset, label or shelve), nothing comes in, and there is no head to be behind of. */
+export interface NothingIncoming {
+  branch: null;
+  changesetCount: 0;
+  authors: [];
 }
 
 /** A file changed both locally and by an incoming changeset. Updating needs to merge it. */
@@ -33,7 +40,11 @@ export interface UpdateConflict {
   repository: string;
 }
 
-export interface IncomingChanges extends IncomingSummary {
+export type IncomingChanges = BranchIncomingChanges | (NothingIncoming & IncomingDetails);
+
+export type BranchIncomingChanges = BranchIncoming & IncomingDetails;
+
+interface IncomingDetails {
   /** Newest first. */
   changesets: Changeset[];
   /** Every item that changes between the loaded changeset and the head. */

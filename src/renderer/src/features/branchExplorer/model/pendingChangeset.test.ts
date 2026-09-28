@@ -4,7 +4,7 @@ import { pendingChangesetKey, pendingChangesetOf } from './pendingChangeset';
 
 function snapshot(kinds: PendingChange['kinds'][], mergeLinks: PendingChangesSnapshot['mergeLinks'] = []): PendingChangesSnapshot {
   const changes = kinds.map((kind, index) => ({ path: `f${index}`, kinds: kind, itemType: 'file' as const, size: 1, lastModified: '' }));
-  return { changes, changelists: [], loadedChangeset: 12, mergeLinks };
+  return { changes, changelists: [], mergeLinks };
 }
 
 describe('pendingChangesetOf', () => {

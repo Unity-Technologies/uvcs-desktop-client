@@ -3,7 +3,7 @@ import type { PendingChange, PendingChangesSnapshot } from '@shared/domain/pendi
 import { sharePendingChanges } from './sharePendingChanges';
 
 const change = (path: string, lastModified = '1', kinds: PendingChange['kinds'] = ['changed']): PendingChange => ({ path, kinds, itemType: 'file', size: 1, lastModified, oldPath: undefined });
-const snapshot = (changes: PendingChange[], changelists = [{ name: 'UI', description: '' }]): PendingChangesSnapshot => ({ changes, changelists, loadedChangeset: 3, mergeLinks: [] });
+const snapshot = (changes: PendingChange[], changelists = [{ name: 'UI', description: '' }]): PendingChangesSnapshot => ({ changes, changelists, mergeLinks: [] });
 /** What a read hands over: equal values, never the same objects. */
 const reread = (value: PendingChangesSnapshot): PendingChangesSnapshot => structuredClone(value);
 
@@ -32,12 +32,11 @@ describe('sharePendingChanges', () => {
     expect(shared.changes[1]).toBe(previous.changes[0]);
   });
 
-  it('tells other changelists and another loaded changeset', () => {
+  it('tells other changelists', () => {
     const previous = snapshot([change('a')]);
-    expect(sharePendingChanges(previous, reread(snapshot([change('a')], [{ name: 'UI', description: 'now described' }]))).changelists[0]!.description).toBe('now described');
-    const moved = sharePendingChanges(previous, { ...reread(previous), loadedChangeset: 4 });
-    expect(moved.loadedChangeset).toBe(4);
-    expect(moved.changes).toBe(previous.changes);
+    const described = sharePendingChanges(previous, reread(snapshot([change('a')], [{ name: 'UI', description: 'now described' }])));
+    expect(described.changelists[0]!.description).toBe('now described');
+    expect(described.changes).toBe(previous.changes);
   });
 
   it('shares 100,000 changes in well under a second', () => {

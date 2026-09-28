@@ -1,6 +1,6 @@
 import type { Changeset } from '@shared/domain/changeset';
 import type { DiffEntry } from '@shared/domain/diff';
-import type { IncomingChanges, IncomingSummary, LoadedBranch, UpdateConflict } from '@shared/domain/incoming';
+import type { BranchIncoming, IncomingChanges, IncomingSummary, LoadedBranch, NothingIncoming, UpdateConflict } from '@shared/domain/incoming';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
@@ -13,12 +13,15 @@ import { readWorkspaceStatus } from '../cm/workspaceStatus';
 
 const LOCAL_CONTENT_CHANGES = new Set(['changed', 'checkedOut', 'replaced']);
 
+const NOTHING_INCOMING: NothingIncoming = { branch: null, changesetCount: 0, authors: [] };
+
 /**
  * How many changesets the branch has after the loaded one, and by whom. Polled, so it is a single `cm find` returning
  * only changeset numbers and owners; the renderer tells where the workspace stands (its workspace info follows `.plastic`).
  */
-export async function readIncomingSummary(cm: CmClient, workspacePath: string, { branch, loadedChangeset }: LoadedBranch): Promise<IncomingSummary> {
-  if (!branch) return { branch: null, loadedChangeset, headChangeset: loadedChangeset, changesetCount: 0, authors: [] };
+export async function readIncomingSummary(cm: CmClient, workspacePath: string, loaded: LoadedBranch): Promise<IncomingSummary> {
+  if (!loaded) return NOTHING_INCOMING;
+  const { branch, loadedChangeset } = loaded;
   const output = await cm.query(incomingChangesetsArgs(branch, loadedChangeset), { cwd: workspacePath });
   return summarizeIncoming(branch, loadedChangeset, parseRecords(output).map(([id, owner]) => ({ id: Number(id), owner: owner ?? '' })));
 }
@@ -33,7 +36,7 @@ export function incomingChangesetsArgs(branch: string, loadedChangeset: number):
   ];
 }
 
-export function summarizeIncoming(branch: string, loadedChangeset: number, incoming: { id: number; owner: string }[]): IncomingSummary {
+export function summarizeIncoming(branch: string, loadedChangeset: number, incoming: { id: number; owner: string }[]): BranchIncoming {
   const newestFirst = [...incoming].sort((a, b) => b.id - a.id);
   return {
     branch,
@@ -50,7 +53,7 @@ function distinctAuthors(owners: string[]): string[] {
 
 export async function readIncomingChanges(cm: CmClient, workspacePath: string): Promise<IncomingChanges> {
   const { summary, changesets } = await readIncomingChangesets(cm, workspacePath);
-  if (changesets.length === 0) return { ...summary, changesets, files: [], conflicts: [], blockedPaths: [] };
+  if (!summary.branch || changesets.length === 0) return { ...summary, changesets, files: [], conflicts: [], blockedPaths: [] };
 
   const [diffOutput, statusXml] = await Promise.all([
     cm.query(['diff', spec.changeset(summary.loadedChangeset), spec.changeset(summary.headChangeset), '--repositorypaths', `--format=${DIFF_FORMAT}`], {
@@ -91,13 +94,11 @@ export function findUpdateConflicts(incoming: DiffEntry[], local: PendingChange[
 }
 
 async function readIncomingChangesets(cm: CmClient, workspacePath: string): Promise<{ summary: IncomingSummary; changesets: Changeset[] }> {
-  const status = await readWorkspaceStatus(cm, workspacePath);
-  const loadedChangeset = status.loadedChangeset;
-  if (status.selector.kind !== 'branch') {
-    return { summary: { branch: null, loadedChangeset, headChangeset: loadedChangeset, changesetCount: 0, authors: [] }, changesets: [] };
-  }
+  const { selector, loadedChangeset } = await readWorkspaceStatus(cm, workspacePath);
+  // Only a shelve has no loaded changeset, and a shelve is no branch.
+  if (selector.kind !== 'branch' || loadedChangeset === null) return { summary: NOTHING_INCOMING, changesets: [] };
 
-  const branch = status.selector.name;
+  const branch = selector.name;
   const xml = await cm.query(findArgs('changeset', { branch }, 'changesetid desc', [`changesetid > ${loadedChangeset}`]), { cwd: workspacePath });
   const changesets = findRecords(xml, 'CHANGESET').map(toChangeset);
 

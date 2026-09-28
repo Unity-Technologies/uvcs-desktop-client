@@ -35,7 +35,6 @@ const ITEM_TYPES: Record<string, ItemType> = {
  */
 export function parsePendingChanges(xml: string, platform: NodeJS.Platform = process.platform): PendingChangesSnapshot {
   const status = child(parseXml(xml, ['Change', 'Changelist']), 'StatusOutput');
-  const loadedChangeset = integer(child(child(status, 'WorkspaceStatus'), 'Status')?.Changeset);
   const changelistNodes = children(child(status, 'Changelists'), 'Changelist');
   const groups = changelistNodes.length > 0 ? changelistNodes : [{ Name: DEFAULT_CHANGELIST, Changes: child(status, 'Changes') }];
   const changesByPath = new Map<string, PendingChange>();
@@ -55,7 +54,7 @@ export function parsePendingChanges(xml: string, platform: NodeJS.Platform = pro
     }
   }
 
-  return { loadedChangeset, changelists, changes: [...changesByPath.values()], mergeLinks: pendingMergeLinks(mergeInfos) };
+  return { changelists, changes: [...changesByPath.values()], mergeLinks: pendingMergeLinks(mergeInfos) };
 }
 
 function toPendingChange(node: Record<string, unknown>, changelist: string | undefined, platform: NodeJS.Platform): PendingChange {

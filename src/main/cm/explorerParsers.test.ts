@@ -26,6 +26,21 @@ describe('parseTreeItems', () => {
     expect(items[2]).toMatchObject({ itemType: 'binaryFile', isCheckedOut: true, date: '' });
   });
 
+  it("reads a shelve's revisions, which a workspace on a shelve lists as changeset -3 on branch id:-1", () => {
+    // `cm ls --xml` of a workspace switched to shelve 3, trimmed.
+    const xml = `<LsResults><LsItems>
+      <LsItem><Status>Controlled</Status><Name>a.txt</Name><WkPath>a.txt</WkPath><Size>10</Size><Type>txt</Type>
+        <Changeset>-3</Changeset><Repository>rep:uvcs-shelvews-sandbox@local</Repository><Owner>daniel.penalba@unity3d.com</Owner>
+        <Checkout /><BrId>-1</BrId><RevId>24</RevId><ParentRevId>13</ParentRevId><ItemId>15</ItemId><Server>local</Server>
+        <Branch>id:-1</Branch><Date>2026-09-28T13:41:01+02:00</Date></LsItem>
+      <LsItem><Status>Private</Status><Name>priv.txt</Name><WkPath>priv.txt</WkPath><Type>txt</Type><Changeset /><RevId /><ParentRevId /><Branch /></LsItem>
+    </LsItems></LsResults>`;
+    const [shelved, privateFile] = parseTreeItems(xml);
+    expect(shelved).toMatchObject({ changeset: null, shelveId: 3, branch: '', revisionId: 24, parentRevisionId: 13 });
+    expect(privateFile).toMatchObject({ changeset: -1, isPrivate: true });
+    expect(privateFile).not.toHaveProperty('shelveId');
+  });
+
   it('reads symbolic links as links, with where they point', () => {
     const xml = `<LsResults><LsItems>
       <LsItem><Status>Private</Status><Name>linkdir</Name><WkPath>linkdir</WkPath><Size>3</Size><Type>link</Type>

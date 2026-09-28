@@ -22,7 +22,7 @@ export function sharePendingChanges(previous: PendingChangesSnapshot | undefined
     return change;
   });
   const sameChangelists = previous.changelists.length === next.changelists.length && next.changelists.every((changelist, index) => sameFields(previous.changelists[index]!, changelist));
-  if (sameChanges && sameChangelists && previous.loadedChangeset === next.loadedChangeset) return previous;
+  if (sameChanges && sameChangelists) return previous;
   return { ...next, changes: sameChanges ? previous.changes : changes, changelists: sameChangelists ? previous.changelists : next.changelists };
 }
 

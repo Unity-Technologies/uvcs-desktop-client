@@ -8,7 +8,6 @@ export interface WorkspaceIdentity {
   repository: string;
   repositoryName: string;
   selector: WorkspaceSelector;
-  loadedChangeset: number;
 }
 
 /** Which workspace this is and what it is loaded from; `headers` may answer from a read just made (`WorkspaceHeaders`). */
@@ -20,6 +19,5 @@ export async function readWorkspaceIdentity(from: CmClient | HeaderReaders, work
     repository: `${status.repositoryName}@${status.server}`,
     repositoryName: status.repositoryName,
     selector: status.selector,
-    loadedChangeset: status.loadedChangeset,
   };
 }

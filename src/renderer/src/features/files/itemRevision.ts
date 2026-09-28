@@ -5,9 +5,11 @@ import { spec } from '@shared/domain/specs';
 /**
  * The revision a tree lists for an item, as a file's history names it: annotated by its id in its repository
  * (`revid:45@game@local`; under an xlink, the xlinked one), a pinned spec whose annotations are read once. Its comment
- * is the changeset's, which the listing doesn't carry.
+ * is the changeset's, which the listing doesn't carry. Null for a revision of a shelve, which `cm annotate` can't read
+ * (and a history has no changeset for).
  */
-export function itemRevision(item: TreeItem): ItemRevision {
+export function itemRevision(item: TreeItem): ItemRevision | null {
+  if (item.changeset === null) return null;
   return {
     revisionId: item.revisionId,
     parentRevisionId: item.parentRevisionId,

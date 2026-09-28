@@ -1,4 +1,4 @@
-import type { IncomingChanges } from '@shared/domain/incoming';
+import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import { fileNameOf, firstLine, pluralize } from '../../lib/text';
 import { displayName } from '../../lib/userName';
 import { Avatar } from '../../ui/Avatar';
@@ -13,7 +13,7 @@ const SHOWN_CHANGESETS = 4;
 export type CatchUpChoice = 'updateAndCheckin' | 'review';
 
 interface CheckinRejectedRequest {
-  incoming: IncomingChanges;
+  incoming: BranchIncomingChanges;
   /** The paths being checked in that the incoming changesets touch too. */
   overlapping: string[];
   /** Updating needs a decision first: files changed on both sides, or files the branch deleted or moved. */
@@ -68,7 +68,7 @@ function CheckinRejectedDialog({ incoming, overlapping, needsReview, rejected, o
   );
 }
 
-function reviewReason(incoming: IncomingChanges, overlapping: string[]): string {
+function reviewReason(incoming: BranchIncomingChanges, overlapping: string[]): string {
   if (overlapping.length === 0) return 'Some of your other changes collide with what came in. Review it before updating.';
   const names = overlapping.slice(0, 2).map(fileNameOf).join(', ');
   const rest = overlapping.length > 2 ? ` and ${overlapping.length - 2} more` : '';

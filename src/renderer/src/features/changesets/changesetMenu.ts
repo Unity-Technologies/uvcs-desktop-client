@@ -25,8 +25,8 @@ import {
 
 export interface ChangesetMenuContext {
   workspacePath: string;
-  /** The workspace's loaded changeset and branch, to offer "revert to" only where it makes sense. */
-  loadedChangeset?: number;
+  /** The workspace's loaded changeset (none on a shelve) and branch, to offer "revert to" only where it makes sense. */
+  loadedChangeset?: number | null;
   loadedBranch?: string;
   /** The repository, where the changesets don't say it (the Branch Explorer), for the full spec. */
   repository?: string;
@@ -56,7 +56,7 @@ export function changesetMenu(context: ChangesetMenuContext, selected: Changeset
 function singleChangesetMenu(context: ChangesetMenuContext, changeset: ChangesetInfo, place: MenuPlace): MenuEntry[] {
   const { workspacePath, loadedChangeset, loadedBranch } = context;
   const source = spec.changeset(changeset.id);
-  const canRevertTo = loadedChangeset !== undefined && changeset.branch === loadedBranch && changeset.id < loadedChangeset;
+  const canRevertTo = typeof loadedChangeset === 'number' && changeset.branch === loadedBranch && changeset.id < loadedChangeset;
 
   return groupedMenu([
     menuAction('diff', () => openChangesetDiff(changeset), { shortcut: hotkey('listDiff') }),

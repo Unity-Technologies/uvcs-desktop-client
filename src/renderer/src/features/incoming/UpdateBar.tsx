@@ -1,13 +1,13 @@
 import { AlertTriangle, ArrowDownToLine } from 'lucide-react';
 import type { ReactNode } from 'react';
-import type { IncomingChanges } from '@shared/domain/incoming';
+import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import { navigation } from '../../app/navigation/navigationStore';
 import { Button } from '../../ui/Button';
 import { blockedMessage, updateBarMessage } from './collisionMessages';
 import styles from './UpdateBar.module.css';
 
 interface UpdateBarProps {
-  incoming: IncomingChanges;
+  incoming: BranchIncomingChanges;
   pendingConflictCount: number;
   canUpdate: boolean;
   updating: boolean;

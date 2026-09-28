@@ -20,7 +20,11 @@ export interface WorkspaceInfo {
   repositoryName: string;
   server: string;
   selector: WorkspaceSelector;
-  loadedChangeset: number;
+  /**
+   * The changeset the workspace has loaded; null on a shelve, whose tree is no changeset of the repository (`cm`
+   * numbers it as changeset `-id`, never a changeset to query from): the selector names the shelve.
+   */
+  loadedChangeset: number | null;
 }
 
 /** What a workspace works on, as its selector file says: `cm` reads and rewrites it, the app only reads it. */

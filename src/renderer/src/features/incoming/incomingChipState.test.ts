@@ -1,16 +1,16 @@
 import { describe, expect, it } from 'vitest';
-import type { IncomingChanges, IncomingSummary } from '@shared/domain/incoming';
+import type { BranchIncoming, BranchIncomingChanges } from '@shared/domain/incoming';
 import { nextProgressBar, SWEEP } from '../../app/operations/progressBar';
 import { incomingChipState } from './incomingChipState';
 
-const summary = (changesetCount: number, branch: string | null = '/main'): IncomingSummary => ({
-  branch,
+const summary = (changesetCount: number): BranchIncoming => ({
+  branch: '/main',
   loadedChangeset: 10,
   headChangeset: 10 + changesetCount,
   changesetCount,
   authors: [],
 });
-const changes = (conflicts: number, blocked = 0, headChangeset = 13): IncomingChanges => ({
+const changes = (conflicts: number, blocked = 0, headChangeset = 13): BranchIncomingChanges => ({
   ...summary(3),
   headChangeset,
   changesets: [],
@@ -22,7 +22,7 @@ const changes = (conflicts: number, blocked = 0, headChangeset = 13): IncomingCh
 describe('incomingChipState', () => {
   it('shows nothing when up to date or not on a branch', () => {
     expect(incomingChipState(summary(0), undefined, undefined)).toBeNull();
-    expect(incomingChipState(summary(3, null), undefined, undefined)).toBeNull();
+    expect(incomingChipState({ branch: null, changesetCount: 0, authors: [] }, undefined, undefined)).toBeNull();
     expect(incomingChipState(undefined, undefined, undefined)).toBeNull();
   });
 

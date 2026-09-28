@@ -13,7 +13,7 @@ import { readWorkspaceStatus } from '../cm/workspaceStatus';
  */
 export async function withConflictRepositories(cm: CmClient, workspacePath: string, request: MergeRequest, plan: PrintedMergePlan): Promise<MergePlan> {
   if (plan.fileConflicts.length === 0) return withRepositories(plan, '');
-  const tree = destinationTree(request, plan) ?? spec.changeset((await readWorkspaceStatus(cm, workspacePath)).loadedChangeset);
+  const tree = destinationTree(request, plan) ?? (await loadedTree(cm, workspacePath));
   return withRepositories(plan, await cm.query(conflictListingArgs(plan, tree), { cwd: workspacePath }));
 }
 
@@ -25,6 +25,13 @@ export function destinationTree(request: MergeRequest, plan: PrintedMergePlan): 
   const destination = plan.contributors?.destination.changesetId;
   if (destination !== undefined) return spec.changeset(destination);
   return request.destinationBranch ? spec.branch(request.destinationBranch) : null;
+}
+
+/** The workspace's loaded changeset. A workspace on a shelve takes no merges: `cm` finds no branch to check out on. */
+async function loadedTree(cm: CmClient, workspacePath: string): Promise<string> {
+  const { loadedChangeset } = await readWorkspaceStatus(cm, workspacePath);
+  if (loadedChangeset === null) throw new Error("A workspace on a shelve can't take a merge. Switch it to a branch first.");
+  return spec.changeset(loadedChangeset);
 }
 
 /** `cm ls` of the conflicting files in `tree`. */

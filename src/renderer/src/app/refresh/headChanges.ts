@@ -24,5 +24,6 @@ export function workspaceInfoKeyMoved(part: WorkspaceInfoPart, before: LoadedSta
  * Our own checkins and updates move the loaded changeset too, and refresh everything by themselves.
  */
 export function branchHeadMovedOnServer(before: IncomingSummary, after: IncomingSummary): boolean {
+  if (!before.branch || !after.branch) return false;
   return before.branch === after.branch && before.loadedChangeset === after.loadedChangeset && before.headChangeset !== after.headChangeset;
 }
