@@ -25,7 +25,7 @@ interface CheckinOptions {
   comment: string;
   /** The incoming check saw the branch move on: update (or review what came in) before checking in, not after a rejection. */
   updateFirst?: boolean;
-  /** Every pending change goes in: the success card in the empty Changes tells it, so no toast does. */
+  /** Every pending change goes in: the success moment in the empty Changes tells it, so no toast does. */
   quiet?: boolean;
 }
 
@@ -75,7 +75,7 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
   if (result.kind === 'noChanges') return false;
 
   useCheckinAfterUpdateStore.getState().forget(workspacePath);
-  useSuccessMomentStore.getState().show(workspacePath, { verb: 'Checked in', changesetId: result.changesetId, branch: result.branch, detail: firstLine(comment) || undefined });
+  useSuccessMomentStore.getState().show(workspacePath, { verb: 'Checked in', changesetId: result.changesetId, detail: firstLine(comment) || undefined });
   if (comment.trim()) await rememberComment(comment.trim());
   return true;
 }

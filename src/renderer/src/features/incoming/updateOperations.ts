@@ -30,13 +30,12 @@ export async function updateToIncoming(workspacePath: string, incoming: Incoming
   return updated === true;
 }
 
-/** Changes shows what the update brought for a few seconds, as it does after a check-in. */
+/** Changes shows what the update brought until the next change, as it does after a check-in. */
 export function showUpdatedMoment(workspacePath: string, { branch, loadedChangeset, headChangeset, changesetCount, authors }: IncomingSummary): void {
   if (!branch || changesetCount === 0) return;
   useSuccessMomentStore.getState().show(workspacePath, {
     verb: 'Updated to',
     changesetId: headChangeset,
-    branch,
     fromChangeset: loadedChangeset,
     detail: changesetsFrom(changesetCount, authors),
   });

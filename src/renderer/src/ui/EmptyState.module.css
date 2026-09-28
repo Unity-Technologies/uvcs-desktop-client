@@ -23,6 +23,11 @@
   color: var(--text-tertiary);
 }
 
+.icon[data-tone='success'] {
+  background: color-mix(in srgb, var(--status-added) 12%, transparent);
+  color: var(--status-added);
+}
+
 .title {
   font-size: var(--text-lg);
   font-weight: 600;

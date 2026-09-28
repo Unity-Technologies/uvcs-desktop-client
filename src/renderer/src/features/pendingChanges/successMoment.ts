@@ -1,14 +1,10 @@
 import { create } from 'zustand';
 
-/** How long Changes celebrates a check-in or an update before going back to its usual empty state. */
-export const SUCCESS_MOMENT_MS = 10_000;
-
-/** What just landed in the workspace: "Checked in cs:4 on /main/task001", "Updated to cs:14 on /main". */
+/** What just landed in the workspace: "Checked in cs:4", "Updated to cs:14". */
 export interface SuccessMoment {
   verb: 'Checked in' | 'Updated to';
   changesetId: number;
-  branch: string;
-  /** The changeset the workspace was at before an update of several changesets: the card shows the range. */
+  /** The changeset the workspace was at before an update of several changesets: the link opens the range. */
   fromChangeset?: number;
   /** A second line: the check-in's summary, or who the update brought changes from. */
   detail?: string;
@@ -32,25 +28,24 @@ export const useSuccessMomentStore = create<SuccessMomentStore>((set) => ({
     }),
 }));
 
-/** What Changes says once a changeset lands, on its card or in a toast: "Checked in cs:4 on /main/task001". */
+/** What a toast says once a changeset lands and changes stay behind: "Checked in cs:4 on /main/task001". */
 export function checkedInMessage(changesetId: number, branch: string): string {
   return `Checked in cs:${changesetId} on ${branch}`;
 }
 
 /**
- * Whether checking in `checkedIn` of the `pending` changes leaves Changes empty, where the success card tells it: then
+ * Whether checking in `checkedIn` of the `pending` changes leaves Changes empty, where the success moment tells it: then
  * no toast says it too. A check-in that leaves changes behind is told by a toast.
  */
 export function successCardTellsCheckin(checkedIn: number, pending: number): boolean {
   return checkedIn === pending;
 }
 
-/** Milliseconds the moment still shows; zero once it's over. */
-export function successMomentLeft(moment: SuccessMoment, now: number): number {
-  return Math.max(0, moment.at + SUCCESS_MOMENT_MS - now);
-}
-
-/** The next change ends the moment: pending changes read after it happened. */
-export function isOutlivedByChanges(moment: SuccessMoment, changesReadAt: number, changeCount: number): boolean {
-  return changeCount > 0 && changesReadAt > moment.at;
+/**
+ * Whether the moment is over. It lasts until the next change (pending changes read after it happened), or until the
+ * workspace moves to another changeset (read after it happened: a switch, an update elsewhere).
+ */
+export function isMomentOver(moment: SuccessMoment, changes: { readAt: number; count: number }, workspace: { readAt: number; loadedChangeset: number } | undefined): boolean {
+  if (changes.count > 0 && changes.readAt > moment.at) return true;
+  return workspace !== undefined && workspace.readAt > moment.at && workspace.loadedChangeset !== moment.changesetId;
 }
