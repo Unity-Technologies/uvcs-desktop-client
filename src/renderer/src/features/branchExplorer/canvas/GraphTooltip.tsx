@@ -139,7 +139,7 @@ function tooltipContent(target: PointerCardTarget, layout: GraphLayout, pendingC
       return {
         title: `Pending changes · ${pluralize(pendingChangeCount, 'change')}`,
         body: merges.length > 0 ? merges.map((link) => `${MERGE_LINK_NAMES[link.type]} from changeset ${link.sourceChangeset} in progress`).join('\n') : 'Not checked in yet',
-        meta: 'Click to open Changes',
+        meta: 'Double-click to open Changes',
       };
     }
     case 'pendingMergeLink':

@@ -1,6 +1,7 @@
 import type { PendingNode } from '../model/layoutGraph';
 import { arrowLength, drawArrowHead, lineUnderHead } from './drawArrowHead';
 import { STRUCTURE_DIMMED_ALPHA, type DrawContext } from './drawContext';
+import { drawSelectionHalo, drawSelectionRing } from './drawNodeSelection';
 import { arrivalAt, curveUntil, pendingParentCurve, reversed } from './curves';
 import { NODE_RADIUS, nodePoint, pendingPoint } from './geometry';
 import { branchColor } from './graphPalette';
@@ -33,6 +34,7 @@ export function drawPendingChangeset(draw: DrawContext, pending: PendingNode): v
   ctx.beginPath();
   pen.arc(point.x, point.y, radius + 2, 0, Math.PI * 2);
   ctx.fill();
+  if (scene.selectedPending) drawSelectionHalo(draw, point.x, point.y, radius);
   if (scene.hoveredPending) {
     ctx.globalAlpha = alpha * 0.14;
     ctx.fillStyle = color;
@@ -54,6 +56,7 @@ export function drawPendingChangeset(draw: DrawContext, pending: PendingNode): v
     pen.fillText(scene.pendingChangeCount > 99 ? '99+' : String(scene.pendingChangeCount), point.x, point.y + 0.5);
   }
   ctx.restore();
+  if (scene.selectedPending) drawSelectionRing(draw, point.x, point.y, radius);
 }
 
 /**

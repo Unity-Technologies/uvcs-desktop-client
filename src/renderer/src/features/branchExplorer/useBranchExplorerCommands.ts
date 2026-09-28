@@ -17,7 +17,7 @@ export function useBranchExplorerCommands({ goHome, fit, find }: BranchExplorerC
   const commands = useMemo<Command[]>(
     () => [
       { id: 'branchExplorer.find', group: 'Branch Explorer', label: 'Find in graph', icon: Search, shortcut: hotkey('graphFind'), run: find },
-      { id: 'branchExplorer.home', group: 'Branch Explorer', label: 'Go to workspace changeset', icon: Home, run: goHome },
+      { id: 'branchExplorer.home', group: 'Branch Explorer', label: 'Go to the workspace', icon: Home, run: goHome },
       { id: 'branchExplorer.fit', group: 'Branch Explorer', label: 'Fit graph to window', icon: Maximize, run: fit },
       {
         id: 'branchExplorer.related',

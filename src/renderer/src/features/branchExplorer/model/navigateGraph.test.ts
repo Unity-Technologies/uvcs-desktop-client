@@ -7,7 +7,7 @@ import {
   graphEnd,
   mergeDestination,
   mergeSource,
-  neighborChangeset,
+  neighborStop,
   pageChangeset,
   startingChangeset,
 } from './navigateGraph';
@@ -15,19 +15,46 @@ import {
 // /main: 0 1 3 6 on row 0 · /main/a: 2 4 5 on row 1 (from 1, merged into 6) · /main/b: 7 on row 2 (from 6)
 const layout = layoutGraph(sampleHistory());
 
-describe('neighborChangeset', () => {
+const stop = (id: number) => ({ kind: 'changeset' as const, id });
+
+describe('neighborStop', () => {
   it('walks the branch sideways, and past its last changeset to where it was merged', () => {
-    expect(neighborChangeset(layout, 3, 'left')).toBe(1);
-    expect(neighborChangeset(layout, 1, 'right')).toBe(3);
-    expect(neighborChangeset(layout, 5, 'right')).toBe(6);
-    expect(neighborChangeset(layout, 0, 'left')).toBeNull();
+    expect(neighborStop(layout, stop(3), 'left')).toEqual(stop(1));
+    expect(neighborStop(layout, stop(1), 'right')).toEqual(stop(3));
+    expect(neighborStop(layout, stop(5), 'right')).toEqual(stop(6));
+    expect(neighborStop(layout, stop(0), 'left')).toBeNull();
   });
 
   it('moves up and down to the closest changeset of the nearest row', () => {
-    expect(neighborChangeset(layout, 4, 'up')).toBe(3);
-    expect(neighborChangeset(layout, 6, 'down')).toBe(5);
-    expect(neighborChangeset(layout, 5, 'down')).toBe(7);
-    expect(neighborChangeset(layout, 7, 'down')).toBeNull();
+    expect(neighborStop(layout, stop(4), 'up')).toEqual(stop(3));
+    expect(neighborStop(layout, stop(6), 'down')).toEqual(stop(5));
+    expect(neighborStop(layout, stop(5), 'down')).toEqual(stop(7));
+    expect(neighborStop(layout, stop(7), 'down')).toBeNull();
+  });
+});
+
+describe('neighborStop with pending changes', () => {
+  // The pending changes of /main/a (loaded 5) take column 8 on row 1.
+  const withPending = layoutGraph(sampleHistory(), undefined, { branch: '/main/a', parent: 5, mergeLinks: [] });
+  const pending = { kind: 'pending' as const };
+
+  it('reaches them right of the branch newest, and goes back to the loaded changeset', () => {
+    expect(neighborStop(withPending, stop(5), 'right')).toEqual(pending);
+    expect(neighborStop(withPending, stop(4), 'right')).toEqual(stop(5));
+    expect(neighborStop(withPending, pending, 'left')).toEqual(stop(5));
+    expect(neighborStop(withPending, pending, 'right')).toBeNull();
+  });
+
+  it('weighs them like any changeset of their row going up and down', () => {
+    expect(neighborStop(withPending, pending, 'up')).toEqual(stop(6));
+    expect(neighborStop(withPending, pending, 'down')).toEqual(stop(7));
+    expect(neighborStop(withPending, stop(7), 'up')).toEqual(pending);
+  });
+
+  it('goes left from a branch without changesets to where it starts', () => {
+    const data = sampleHistory();
+    const empty = layoutGraph({ ...data, branches: [...data.branches, branch('/main/new', '/main', 6)] }, undefined, { branch: '/main/new', parent: 6, mergeLinks: [] });
+    expect(neighborStop(empty, pending, 'left')).toEqual(stop(6));
   });
 });
 

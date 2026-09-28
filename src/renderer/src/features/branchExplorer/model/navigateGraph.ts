@@ -2,23 +2,37 @@ import type { GraphLayout, NodeLayout } from './layoutGraph';
 
 export type GraphDirection = 'left' | 'right' | 'up' | 'down';
 
-/**
- * The changeset to move to with the arrow keys: left follows the parent, right the next changeset
- * on the same branch (or where it was merged), up and down jump to the closest changeset on the nearest row.
- */
-export function neighborChangeset(layout: GraphLayout, fromId: number, direction: GraphDirection): number | null {
-  const from = layout.nodes.get(fromId);
-  if (!from) return null;
+/** Where the arrow keys stop: a changeset, or the pending changes past the workspace's branch. */
+export type GraphStop = { kind: 'changeset'; id: number } | { kind: 'pending' };
 
+/**
+ * The stop to move to with the arrow keys, the pending changes being the next changeset of their branch: right from
+ * the branch's newest reaches them, left from them goes to the loaded changeset, and up and down weigh them like any
+ * changeset on their row.
+ */
+export function neighborStop(layout: GraphLayout, from: GraphStop, direction: GraphDirection): GraphStop | null {
+  const { pending } = layout;
+  const place = from.kind === 'pending' ? pending : layout.nodes.get(from.id);
+  if (!place) return null;
+  if (direction === 'up' || direction === 'down') return closestOnRow(layout, place, direction === 'up' ? -1 : 1);
+  if (from.kind === 'pending') return direction === 'left' && layout.nodes.has(pending!.parent) ? changesetStop(pending!.parent) : null;
+  const node = place as NodeLayout;
+  if (direction === 'right' && pending && node.changeset.branch === pending.branch && nextOnBranch(layout, node) === null) return { kind: 'pending' };
+  const id = sideways(layout, node, direction);
+  return id === null ? null : changesetStop(id);
+}
+
+function changesetStop(id: number): GraphStop {
+  return { kind: 'changeset', id };
+}
+
+/** The changeset left (its parent) or right (the next on its branch, or where it was merged) of a changeset. */
+function sideways(layout: GraphLayout, from: NodeLayout, direction: 'left' | 'right'): number | null {
   switch (direction) {
     case 'left':
       return layout.nodes.has(from.changeset.parent) ? from.changeset.parent : null;
     case 'right':
-      return nextOnBranch(layout, from) ?? mergeDestination(layout, fromId);
-    case 'up':
-      return closestOnRow(layout, from, -1);
-    case 'down':
-      return closestOnRow(layout, from, 1);
+      return nextOnBranch(layout, from) ?? mergeDestination(layout, from.changeset.id);
   }
 }
 
@@ -30,14 +44,16 @@ function nextOnBranch(layout: GraphLayout, from: NodeLayout): number | null {
   return null;
 }
 
-function closestOnRow(layout: GraphLayout, from: NodeLayout, step: 1 | -1): number | null {
+/** The stop closest to a place on the nearest row up or down that has one. */
+function closestOnRow(layout: GraphLayout, from: { row: number; column: number }, step: 1 | -1): GraphStop | null {
+  const { pending } = layout;
   for (let row = from.row + step; row >= 0 && row < layout.rowCount; row += step) {
-    let closest: NodeLayout | null = null;
+    let closest: { column: number; stop: GraphStop } | null = pending?.row === row ? { column: pending.column, stop: { kind: 'pending' } } : null;
     for (const node of layout.nodesByColumn) {
       if (node.row !== row) continue;
-      if (!closest || Math.abs(node.column - from.column) < Math.abs(closest.column - from.column)) closest = node;
+      if (!closest || Math.abs(node.column - from.column) < Math.abs(closest.column - from.column)) closest = { column: node.column, stop: changesetStop(node.changeset.id) };
     }
-    if (closest) return closest.changeset.id;
+    if (closest) return closest.stop;
   }
   return null;
 }

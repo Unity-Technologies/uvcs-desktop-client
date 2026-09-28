@@ -599,7 +599,10 @@ renderer/src/
   the pending changes already read (`cm status --xml` names a change's merges only in its `MergesInfo`: `Merge from 58,
   Cherrypick from 3 to 7`, read by `mergeLinksOf`), so nothing is asked of the server and the watcher refreshes them;
   the history is laid out again only when the pending changeset appears, goes or changes what it draws, never re-read.
-  Hovering tells what it holds, clicking opens Changes.
+  Hovering tells what it holds; it is selected like a changeset (its details: the changes, what they are on, the
+  merges in progress, Open Changes, also Enter and a double-click), and the arrow keys stop at it as the next changeset
+  of its branch. "Go home" and the first view go where the home badge is (`homeTarget`): the pending changes, else the
+  band of a branch without changesets the workspace is on, else the loaded changeset.
 - **Branch switcher**: groups and orders branches like the official Desktop client (`branchSwitcherGroups`): /main by its
   well-known GUID, the workspace's recent branches, then the rest newest first. Recent branches are the official client's,
   read from and written to its `plasticgui.conf` (`main/plasticConfig`) on every switch, so both apps list the same ones.

@@ -51,7 +51,7 @@ export function GraphFilterBar({ branches, authors, onZoom, onFit, onGoHome, foc
     { id: 'zoomOut', label: 'Zoom out', shortcut: hotkey('graphZoomOut'), run: () => onZoom(1 / ZOOM_STEP) },
     { id: 'fit', label: 'Fit to window', shortcut: hotkey('graphFit'), run: onFit },
     SEPARATOR,
-    { id: 'home', label: 'Go to workspace changeset', shortcut: hotkey('graphHome'), run: onGoHome },
+    { id: 'home', label: 'Go to the workspace', shortcut: hotkey('graphHome'), run: onGoHome },
   ];
 
   return (

@@ -22,6 +22,8 @@ export interface GraphScene {
   options: GraphViewOptions;
   selectedChangeset: number | null;
   selectedBranch: string | null;
+  /** Whether the pending changes are selected. */
+  selectedPending: boolean;
   hoveredChangeset: number | null;
   /** The branch whose header or band is under the pointer. */
   hoveredBranch: string | null;

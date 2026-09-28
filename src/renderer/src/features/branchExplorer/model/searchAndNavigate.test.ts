@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { branch, changeset, merge, sampleHistory } from './graphFixtures';
 import { layoutGraph } from './layoutGraph';
-import { neighborChangeset } from './navigateGraph';
+import { neighborStop } from './navigateGraph';
 import { firstHitIndex, searchGraph, searchHighlight, type SearchHit } from './searchGraph';
 
 const layout = layoutGraph(sampleHistory());
+
+const stop = (id: number) => ({ kind: 'changeset' as const, id });
 
 describe('searchGraph', () => {
   const changeset = (id: number) => ({ kind: 'changeset', id });
@@ -129,19 +131,19 @@ describe('searchHighlight', () => {
   });
 });
 
-describe('neighborChangeset', () => {
+describe('neighborStop', () => {
   it('moves left to the parent, even across branches', () => {
-    expect(neighborChangeset(layout, 2, 'left')).toBe(1);
+    expect(neighborStop(layout, stop(2), 'left')).toEqual(stop(1));
   });
 
   it('moves right along the branch, then to where it was merged', () => {
-    expect(neighborChangeset(layout, 4, 'right')).toBe(5);
-    expect(neighborChangeset(layout, 5, 'right')).toBe(6);
+    expect(neighborStop(layout, stop(4), 'right')).toEqual(stop(5));
+    expect(neighborStop(layout, stop(5), 'right')).toEqual(stop(6));
   });
 
   it('moves down and up to the closest changeset on the nearest row', () => {
-    expect(neighborChangeset(layout, 3, 'down')).toBe(2);
-    expect(neighborChangeset(layout, 4, 'up')).toBe(3);
-    expect(neighborChangeset(layout, 0, 'up')).toBeNull();
+    expect(neighborStop(layout, stop(3), 'down')).toEqual(stop(2));
+    expect(neighborStop(layout, stop(4), 'up')).toEqual(stop(3));
+    expect(neighborStop(layout, stop(0), 'up')).toBeNull();
   });
 });
