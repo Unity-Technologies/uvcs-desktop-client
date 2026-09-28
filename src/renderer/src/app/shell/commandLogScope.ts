@@ -1,5 +1,8 @@
 import type { CommandLogEntry } from '@shared/events';
 
+/** Which commands the log shows: those of the open workspace, or every command the app ran. */
+export type CommandLogScope = 'workspace' | 'all';
+
 /**
  * Whether a command ran for the given workspace: `cm` resolves the workspace from the working directory,
  * so a command belongs to the workspace it ran in. Global commands (profiles, the workspace list,
