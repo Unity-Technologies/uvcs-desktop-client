@@ -31,6 +31,9 @@ import { workingObjectMenu } from './workingObjectMenu';
 import styles from './WorkingObjectButton.module.css';
 import { hotkey } from '../../lib/shortcutRegistry';
 
+/** The widest the name and its comment get: 360px with the pill's icon, padding and chevron. */
+const TEXT_MAX_WIDTH = 294;
+
 /** Shows what the workspace is loaded from and lets the user switch branches; right-click for that object's menu. */
 export function WorkingObjectButton() {
   const { data: workspace } = useWorkspaceInfo();
@@ -66,8 +69,9 @@ export function WorkingObjectButton() {
             }}
             onKeyUp={holdBackMenuKeyRelease}
             className={styles.trigger}
+            textMaxWidth={TEXT_MAX_WIDTH}
             icon={switchBar ? <ProgressRing value={ringValue(switchBar)} size={14} /> : <SelectorIcon size={15} />}
-            label={switching ? `${switching}…` : workspace?.selector.kind === 'branch' ? <PathLabel path={title} fitContent tooltip={false} /> : title}
+            label={switching ? `${switching}…` : workspace?.selector.kind === 'branch' ? <PathLabel path={title} fitContent maxWidth={TEXT_MAX_WIDTH} tooltip={false} /> : title}
             sub={switching || comment === undefined ? undefined : firstLine || <span className={styles.noComment}>No comment</span>}
             data-tip={switching ? undefined : title}
             data-tip-sub={switching ? undefined : comment?.trim() || undefined}
