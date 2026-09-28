@@ -18,14 +18,18 @@ interface AnnotationGutterProps {
   shown: RowRange;
   columns: AnnotateColumns;
   lineHeight: number;
-  /** The changeset whose lines stand out: the one hovered, or the keyboard's. */
-  highlighted: number | null;
-  /** The keyboard's block. */
+  /** The block picked, by a click or the keyboard: its changeset stands out. */
   active: number;
-  onHover: (block: number | null) => void;
-  /** The pointer is on (a block) or off (null) a block's label, which opens its card. */
+  /** The pointer is on (a block) or off (null) a block's avatar or comment, which opens its card. */
   onHoverLabel: (block: number | null) => void;
-  onClick: (block: number) => void;
+  /** A click anywhere else in a block's cell: picks it, or lets go of it if picked. */
+  onPick: (block: number) => void;
+  /** A click on the avatar or comment: picks the block and pins its card. */
+  onPinCard: (block: number) => void;
+  /** A click on the changeset number: the block's revision. */
+  onShowRevision: (block: number) => void;
+  /** What the changeset number leads to, for its tooltip. */
+  revisionTip: string;
   /** "Annotate before this change" of a block, if the history has a revision before it. */
   walkBack?: BlockLinks['walkBack'];
 }
@@ -40,14 +44,23 @@ export function AnnotationGutter({
   shown,
   columns,
   lineHeight,
-  highlighted,
   active,
-  onHover,
   onHoverLabel,
-  onClick,
+  onPick,
+  onPinCard,
+  onShowRevision,
+  revisionTip,
   walkBack,
 }: AnnotationGutterProps) {
   const showsDetails = columns.author || columns.changeset || columns.date;
+  const cardTrigger = (index: number) => ({
+    onMouseEnter: () => onHoverLabel(index),
+    onMouseLeave: () => onHoverLabel(null),
+    onClick: (event: MouseEvent) => {
+      event.stopPropagation();
+      onPinCard(index);
+    },
+  });
   const blockOf = (event: MouseEvent): number | null => {
     const element = (event.target as Element).closest<HTMLElement>('[data-block]');
     return element ? Number(element.dataset.block) : null;
@@ -58,11 +71,9 @@ export function AnnotationGutter({
       className={styles.gutter}
       data-compact={!showsDetails}
       aria-hidden="true"
-      onMouseOver={(event) => onHover(blockOf(event))}
-      onMouseLeave={() => onHover(null)}
       onClick={(event) => {
         const block = blockOf(event);
-        if (block !== null) onClick(block);
+        if (block !== null) onPick(block);
       }}
     >
       <div style={{ height: (blocks[shown.first]?.start ?? 0) * lineHeight }} />
@@ -76,7 +87,6 @@ export function AnnotationGutter({
             className={styles.block}
             data-block={index}
             data-age={block.age}
-            data-highlighted={changeset.changesetId === highlighted}
             data-active={index === active}
             style={{ height: (block.end - block.start) * lineHeight }}
           >
@@ -87,13 +97,31 @@ export function AnnotationGutter({
                 {...{ [BLOCK_LABEL_ATTRIBUTE]: index }}
                 // The card tells all of it: no tooltip for the cut comment.
                 data-tip=""
-                onMouseEnter={() => onHoverLabel(index)}
-                onMouseLeave={() => onHoverLabel(null)}
               >
                 {/* The face says who, the card names them: a name on every block crowds out the comment. */}
-                {columns.author && <Avatar user={changeset.owner} size={16} tip={null} />}
-                <span className={styles.comment}>{firstLine(changeset.comment) || 'No comment'}</span>
-                {columns.changeset && <span className={styles.changeset}>{changeset.changesetId}</span>}
+                {columns.author && (
+                  <span className={styles.avatar} {...cardTrigger(index)}>
+                    <Avatar user={changeset.owner} size={16} tip={null} />
+                  </span>
+                )}
+                {/* Only the text opens the card, not the room after it, so moving down the gutter doesn't pop cards. */}
+                <span className={styles.comment}>
+                  <span {...cardTrigger(index)}>{firstLine(changeset.comment) || 'No comment'}</span>
+                </span>
+                {/* The one way to the revision: the rest of the cell is for reading, not a target that jumps away. */}
+                {columns.changeset && (
+                  <button
+                    className={styles.changeset}
+                    data-tip={revisionTip}
+                    tabIndex={-1}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onShowRevision(index);
+                    }}
+                  >
+                    {changeset.changesetId}
+                  </button>
+                )}
                 {columns.date && <span className={styles.date}>{formatRelativeDate(changeset.date)}</span>}
                 {/* Always takes its slot, so the dates stay aligned down the gutter whether or not there is an earlier revision. */}
                 {before ? (

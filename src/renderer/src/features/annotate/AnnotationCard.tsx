@@ -1,6 +1,6 @@
 import * as Popover from '@radix-ui/react-popover';
 import { FileDiff, GalleryHorizontalEnd, History } from 'lucide-react';
-import { useMemo, useRef, type RefObject } from 'react';
+import { useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import type { AnnotationChangeset } from '@shared/domain/annotate';
 import type { ItemRevision } from '@shared/domain/history';
 import { formatDateTime } from '../../lib/formatDate';
@@ -32,10 +32,12 @@ interface AnnotationCardProps {
   actions: BlockCardActions;
   /** Where the focus goes back to from a card that took it: it has no trigger of its own. */
   returnFocusTo: HTMLElement | null;
+  /** A quiet line under the actions: how to find the changeset's other blocks. */
+  hint?: ReactNode;
 }
 
 /** The changeset behind a block of lines: its whole comment, who and when, and where to go from it. */
-export function AnnotationCard({ changeset, anchor, open, pinned, onOpenChange, hoverProps, actions, returnFocusTo }: AnnotationCardProps) {
+export function AnnotationCard({ changeset, anchor, open, pinned, onOpenChange, hoverProps, actions, returnFocusTo, hint }: AnnotationCardProps) {
   const anchorRef = useMemo<RefObject<{ getBoundingClientRect: () => DOMRect }>>(
     () => ({ current: { getBoundingClientRect: () => anchor()?.getBoundingClientRect() ?? new DOMRect() } }),
     [anchor],
@@ -99,6 +101,7 @@ export function AnnotationCard({ changeset, anchor, open, pinned, onOpenChange, 
                 Show in history
               </Button>
             </div>
+            {hint && <p className={styles.hint}>{hint}</p>}
           </Popover.Content>
         )}
       </Popover.Portal>
