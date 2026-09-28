@@ -26,7 +26,8 @@ src/
      characters, quotes included) is written to a `cm shell` of its own instead (`processCommand`): still one command, never split.
      So is, on Windows, a command that prints text (see Parsing).
    - A pooled command may take two minutes, a workspace write (undo, add, checkout of thousands of files) half an hour.
-5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), shown in the command log panel.
+5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), shown in the command log panel: under the view
+   past a `SplitPane` splitter, as tall as it was left (`COMMAND_LOG_HEIGHT`, remembered across sessions), the view keeping 200px.
 
 ## Parsing `cm` output
 

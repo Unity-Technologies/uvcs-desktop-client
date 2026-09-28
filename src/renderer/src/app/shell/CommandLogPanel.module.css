@@ -1,10 +1,8 @@
 .panel {
   display: flex;
-  flex: none;
+  flex: 1;
   flex-direction: column;
-  /* A short window keeps room for the view above it. */
-  height: min(220px, 25vh);
-  border-top: 1px solid var(--border-default);
+  min-height: 0;
   background: var(--bg-code);
 }
 
