@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fitPath, positionsInTrimmed, trimFolderToFit, trimMiddleToFit, trimToFit } from './trimToFit';
+import { fitPath, fittedPathWidth, positionsInTrimmed, trimFolderToFit, trimMiddleToFit, trimToFit } from './trimToFit';
 
 const measure = (text: string): number => Array.from(text).length;
 
@@ -105,5 +105,23 @@ describe('fitPath', () => {
   it('cuts a top-level name from its middle', () => {
     expect(fit('/', 'main', 3)).toBe('m…n');
     expect(fit('', 'Assets.meta', 7)).toBe('Ass…eta');
+  });
+});
+
+describe('fittedPathWidth', () => {
+  const folder = '/main/child-br-cr-sample/empty-branch2/child_1/';
+
+  it('is the whole path, with a pixel to spare', () => {
+    expect(fittedPathWidth(folder, 'subtask', measure)).toEqual({ width: 55, nameWidth: 8 });
+    expect(fittedPathWidth('/', 'main', measure, 40)).toEqual({ width: 6, nameWidth: 5 });
+  });
+
+  it('is what is left of a path fitted to its maximum, not the maximum', () => {
+    expect(fittedPathWidth(folder, 'subtask', measure, 40)).toEqual({ width: 38, nameWidth: 8 });
+  });
+
+  it('fits the path the same way again at that width', () => {
+    const { width } = fittedPathWidth(folder, 'subtask', measure, 40);
+    expect(fitPath(folder, 'subtask', width - 1, measure)).toEqual(fitPath(folder, 'subtask', 39, measure));
   });
 });

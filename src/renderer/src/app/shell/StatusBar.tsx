@@ -75,6 +75,9 @@ export function StatusBar() {
   );
 }
 
+/** Past this a branch drops parent branches from its middle, as the top bar's does: 280px with its icon. */
+const WORKING_OBJECT_MAX_WIDTH = 255;
+
 /** The branch, label or shelve the workspace is on, led by its icon; a long branch keeps its leaf. Click copies its spec. */
 function WorkingObjectItem({ selector, repository }: { selector: WorkspaceSelector; repository: string }) {
   const SelectorIcon = SELECTOR_ICONS[selector.kind];
@@ -88,7 +91,7 @@ function WorkingObjectItem({ selector, repository }: { selector: WorkspaceSelect
       data-tip-sub={`${repository} · Click to copy ${objectSpec}`}
     >
       <SelectorIcon size={12} className={styles.icon} />
-      <PathLabel path={workingObjectName(selector)} fitContent tooltip={false} />
+      <PathLabel path={workingObjectName(selector)} fitContent maxWidth={WORKING_OBJECT_MAX_WIDTH} tooltip={false} />
     </button>
   );
 }

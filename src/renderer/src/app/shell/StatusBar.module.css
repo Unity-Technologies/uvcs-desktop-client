@@ -75,11 +75,10 @@ button.item:focus-visible,
   content: '';
 }
 
-/* A branch can be very long: past this it drops parent branches from its middle, as the top bar's does. */
+/* A branch can be very long: its label trims it (`WORKING_OBJECT_MAX_WIDTH`) and the item hugs what is left. */
 .workingObject {
   flex: 0 1 auto;
   min-width: 0;
-  max-width: 280px;
   padding-right: 2px;
 }
 
