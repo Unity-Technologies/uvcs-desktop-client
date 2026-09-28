@@ -1,15 +1,15 @@
 import * as Popover from '@radix-ui/react-popover';
-import { Archive, ChevronDown, GitBranch, GitBranchPlus, GitCommitVertical, Tag } from 'lucide-react';
+import { ChevronDown, GitBranch, GitBranchPlus } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
-import type { SelectorKind, WorkspaceInfo, WorkspaceSelector } from '@shared/domain/workspace';
+import type { WorkspaceInfo, WorkspaceSelector } from '@shared/domain/workspace';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { useRunningOperationOfKind } from '../../app/operations/runningOperationsStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { COPY_ENTRY_IDS } from '../../components/copyMenu';
 import { PathLabel } from '../../components/PathLabel';
-import { workingObjectName } from '../../components/workingObject';
-import { runningFirst, type Icon } from '../../lib/actions';
+import { SELECTOR_ICONS, workingObjectName } from '../../components/workingObject';
+import { runningFirst } from '../../lib/actions';
 import { holdBackMenuKeyRelease, isListMenuKey, openContextMenuOf } from '../../lib/rowMenu';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { Button } from '../../ui/Button';
@@ -30,13 +30,6 @@ import { useWorkingObjectComment } from './useWorkingObjectComment';
 import { workingObjectMenu } from './workingObjectMenu';
 import styles from './WorkingObjectButton.module.css';
 import { hotkey } from '../../lib/shortcutRegistry';
-
-const SELECTOR_ICONS: Record<SelectorKind, Icon> = {
-  branch: GitBranch,
-  changeset: GitCommitVertical,
-  label: Tag,
-  shelve: Archive,
-};
 
 /** Shows what the workspace is loaded from and lets the user switch branches; right-click for that object's menu. */
 export function WorkingObjectButton() {

@@ -1,5 +1,8 @@
-import { spec } from '@shared/domain/specs';
+import { selectorSpec, spec } from '@shared/domain/specs';
+import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { ArrowDownToLine, Check, GitCommitVertical, TerminalSquare } from 'lucide-react';
+import { PathLabel } from '../../components/PathLabel';
+import { SELECTOR_ICONS, SELECTOR_KIND_LABELS, workingObjectName } from '../../components/workingObject';
 import { useIncomingSummary } from '../../features/incoming/useIncomingSummary';
 import { copyToClipboard } from '../../lib/copyToClipboard';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -17,10 +20,10 @@ import { workspaceContext, type SyncState } from './workspaceContext';
 import styles from './StatusBar.module.css';
 
 /**
- * A quiet line at the bottom. On the left, the loaded changeset (the branch is the top bar's), then what is running or
- * whether the branch moved on. On the right, the command log: the last `cm` command is only a faint hint, shown on
- * hover and while something runs; a failed one leaves a red dot until the log (which the hint opens) has been looked
- * at, unless the operation that ran it dealt with it.
+ * A quiet line at the bottom. On the left, what is running or whether the branch moved on. On the right, the command
+ * log, then where the workspace is: its branch (or label, or shelve) and the loaded changeset's number. The last `cm` command is only a faint hint,
+ * shown on hover and while something runs; a failed one leaves a red dot until the log (which the hint opens) has been
+ * looked at, unless the operation that ran it dealt with it.
  */
 export function StatusBar() {
   const workspacePath = useWorkspacePath();
@@ -38,17 +41,6 @@ export function StatusBar() {
   return (
     <footer className={styles.statusBar} data-busy={Boolean(running)}>
       <div className={styles.context}>
-        {context && info && (
-          <button
-            className={styles.item}
-            onClick={() => copyToClipboard(spec.changeset(info.loadedChangeset), 'Changeset spec')}
-            data-tip={context.description}
-            data-tip-sub={`${context.repository} · Click to copy ${context.changeset}`}
-          >
-            <GitCommitVertical size={12} className={styles.icon} />
-            <span className={styles.changeset}>{context.changeset}</span>
-          </button>
-        )}
         {running ? <RunningActivity operation={running} /> : context?.sync && <SyncItem sync={context.sync} />}
       </div>
       <button
@@ -65,7 +57,39 @@ export function StatusBar() {
           {failure && <span className={styles.failedDot} />}
         </span>
       </button>
+      {context && info && (
+        <div className={styles.where}>
+          {info.selector.kind !== 'changeset' && <WorkingObjectItem selector={info.selector} repository={context.repository} />}
+          <button
+            className={styles.item}
+            onClick={() => copyToClipboard(spec.changeset(info.loadedChangeset), 'Changeset spec')}
+            data-tip={context.description}
+            data-tip-sub={`${context.repository} · Click to copy ${context.changeset}`}
+          >
+            <GitCommitVertical size={12} className={styles.icon} />
+            <span className={styles.changeset}>{info.loadedChangeset}</span>
+          </button>
+        </div>
+      )}
     </footer>
+  );
+}
+
+/** The branch, label or shelve the workspace is on, led by its icon; a long branch keeps its leaf. Click copies its spec. */
+function WorkingObjectItem({ selector, repository }: { selector: WorkspaceSelector; repository: string }) {
+  const SelectorIcon = SELECTOR_ICONS[selector.kind];
+  const kind = SELECTOR_KIND_LABELS[selector.kind];
+  const objectSpec = selectorSpec(selector);
+  return (
+    <button
+      className={`${styles.item} ${styles.workingObject}`}
+      onClick={() => copyToClipboard(objectSpec, `${kind} spec`)}
+      data-tip={`${kind} ${workingObjectName(selector)}`}
+      data-tip-sub={`${repository} · Click to copy ${objectSpec}`}
+    >
+      <SelectorIcon size={12} className={styles.icon} />
+      <PathLabel path={workingObjectName(selector)} fitContent tooltip={false} />
+    </button>
   );
 }
 

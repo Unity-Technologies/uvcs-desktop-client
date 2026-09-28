@@ -2,7 +2,7 @@
   display: flex;
   flex: none;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-1);
   height: 24px;
   padding: 0 var(--space-2);
   border-top: 1px solid var(--border-subtle);
@@ -56,9 +56,34 @@ button.item:focus-visible,
   opacity: 0.8;
 }
 
+/* Where the workspace is: the branch and its changeset, together; gives way down to the branch's leaf. */
+.where {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  min-width: 0;
+  max-width: 40%;
+}
+
+/* Sets it apart from the command log. */
+.where::before {
+  flex: none;
+  width: 1px;
+  height: 12px;
+  margin-right: var(--space-1);
+  background: var(--border-subtle);
+  content: '';
+}
+
+/* A branch can be very long: past this it drops parent branches from its middle, as the top bar's does. */
+.workingObject {
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 280px;
+  padding-right: 2px;
+}
+
 .changeset {
-  font-family: var(--font-mono);
-  font-size: 10.5px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -136,7 +161,8 @@ button.incoming:hover {
   transition: opacity var(--duration-normal);
 }
 
-.statusBar:hover .hint,
+/* Not while pointing at where the workspace is: that has its own tooltip. */
+.statusBar:hover:not(:has(.where:hover)) .hint,
 .log:focus-visible .hint,
 .statusBar[data-busy='true'] .hint,
 .log[data-failed='true'] .hint {
