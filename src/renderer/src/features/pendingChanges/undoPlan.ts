@@ -1,4 +1,4 @@
-import type { PendingChange } from '@shared/domain/pendingChanges';
+import { isUnchangedCheckout, type PendingChange } from '@shared/domain/pendingChanges';
 import { formatCount } from '../../lib/text';
 import { categoryOf, hasContentChanges, isShelvable } from './changeCategories';
 
@@ -6,11 +6,6 @@ import { categoryOf, hasContentChanges, isShelvable } from './changeCategories';
 export const UNDO_LIST_MAX = 250;
 
 export const BACKUP_SHELVE_COMMENT = 'Backup before undo';
-
-/** A checkout without edits: undoing it only releases the file. */
-function isUnchangedCheckout(change: PendingChange): boolean {
-  return categoryOf(change) === 'changed' && !hasContentChanges(change);
-}
 
 /** Whether a backup could keep anything: releasing checkouts without edits leaves nothing to shelve, and links can't be. */
 export function offersBackup(changes: PendingChange[]): boolean {

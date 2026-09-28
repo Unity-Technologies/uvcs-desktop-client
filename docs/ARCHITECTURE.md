@@ -48,6 +48,10 @@ src/
   in `cm status --xml` get forward slashes.
 - On macOS `cm` reads names decomposed (NFD), as it reports them: local paths go to it so (`inCmPathForm`), or
   `cm checkin` of a composed `é.txt` finds no change. Branch names, queries and server paths are left as written.
+- `cm checkin` first undoes the checkouts whose content is the loaded revision's; with nothing left it prints
+  `NO_CHANGES_APPLIED` instead of `CHANGESET cs:N@…` and exits 0 (`readCheckinOutput`). When every change checked in was
+  a checkout without edits (`isUnchangedCheckout`: `CO`, not `CO+CH`, in `cm status --iscochanged`), Changes says so in
+  an info toast ("Nothing to check in"); with any other change in, no changeset is a failure (`expectedCheckinResult`).
 
 ## Xlinks
 
