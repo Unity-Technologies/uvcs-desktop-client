@@ -33,4 +33,8 @@ describe('history columns', () => {
       expect(fixed).toBeLessThanOrEqual(width);
     }
   });
+
+  it('keep the avatar at any width in a list beside a diff', () => {
+    expect(avatarColumn<HistoryRow>({ alwaysShown: true }).hideBelow).toBeUndefined();
+  });
 });
