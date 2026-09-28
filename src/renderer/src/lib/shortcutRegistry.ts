@@ -24,6 +24,7 @@ export const SHORTCUT_AREAS = [
   'Merge',
   'Command palette',
   'Image diff',
+  'Command log',
 ] as const;
 
 export type ShortcutArea = (typeof SHORTCUT_AREAS)[number];
@@ -148,6 +149,8 @@ export const SHORTCUTS = {
   imageZoomOut: { area: 'Image diff', label: 'Zoom out', keys: ['-'] },
   imageFit: { area: 'Image diff', label: 'Zoom to fit', keys: ['0'] },
   imageActualSize: { area: 'Image diff', label: 'Actual size', keys: ['1'] },
+
+  commandLogFilter: { area: 'Command log', label: 'Filter the commands, from the log', keys: ['mod+f', '/'] },
 } as const satisfies Record<string, ShortcutDefinition>;
 
 export type ShortcutId = keyof typeof SHORTCUTS;

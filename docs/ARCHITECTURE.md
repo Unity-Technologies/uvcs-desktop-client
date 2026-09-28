@@ -28,6 +28,10 @@ src/
    - A pooled command may take two minutes, a workspace write (undo, add, checkout of thousands of files) half an hour.
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), shown in the command log panel: under the view
    past a `SplitPane` splitter, as tall as it was left (`COMMAND_LOG_HEIGHT`, remembered across sessions), the view keeping 200px.
+   Its filter (⌘F or / from the log; "Failed" for failures only) is a list filter like any other (`commandLogFilterTexts`),
+   kept for the session; each command is numbered by its place in the log since it was cleared (`NumberedLog`), so
+   numbers stay put as the scope, the filter and the 500-entry cap drop rows, in a gutter as wide as the largest.
+   Revealing a command the filter or scope hides clears them.
 
 ## Parsing `cm` output
 
