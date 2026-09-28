@@ -75,14 +75,23 @@ export const DEFAULT_PENDING_CHANGES_FILTER: PendingChangesFilter = {
   moveSimilarityPercent: 20,
 };
 
+/**
+ * A checkout without edits (`cm status --iscochanged` reads it `CO`, not `CO+CH`): checking it in or undoing it only
+ * releases the item.
+ */
+export function isUnchangedCheckout(change: PendingChange): boolean {
+  return change.kinds.length > 0 && change.kinds.every((kind) => kind === 'checkedOut');
+}
+
 export interface CheckinRequest {
   paths: string[];
   comment: string;
 }
 
-export interface CheckinResult {
-  changesetId: number;
-  branch: string;
-}
+/**
+ * What `cm checkin` did: the changeset it created, or none (`noChanges`) when nothing was left to record. Before
+ * recording, it undoes the checkouts whose content is the loaded revision's, so checking in only those releases them.
+ */
+export type CheckinResult = { kind: 'created'; changesetId: number; branch: string } | { kind: 'noChanges' };
 
 export type FilterRuleList = 'ignore' | 'cloaked' | 'hidden';

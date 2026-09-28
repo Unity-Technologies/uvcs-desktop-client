@@ -11,6 +11,7 @@ import type {
   PendingChangesSnapshot,
 } from '@shared/domain/pendingChanges';
 import { checkinArgs } from '../cm/checkinArgs';
+import { readCheckinOutput } from '../cm/checkinOutput';
 import { explainLockedItems } from '../cm/lockedItems';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readCheckinProgress } from '../cm/progress/checkinProgress';
@@ -28,7 +29,6 @@ const FILTER_RULE_FILES: Record<FilterRuleList, string> = {
 };
 
 const DEFAULT_CHANGELIST = 'Default';
-const CREATED_CHANGESET_LINE = /^CHANGESET cs:(\d+)@br:([^@]+)@/m;
 const CREATED_SHELVE = /sh:(\d+)/;
 
 export function createPendingChangesService({ cm, operations }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): PendingChangesApi {
@@ -51,9 +51,7 @@ export function createPendingChangesService({ cm, operations }: ServiceContext, 
             onOutputLine: progressOf(readCheckinProgress),
           }),
         );
-        const created = CREATED_CHANGESET_LINE.exec(output);
-        if (!created) throw new Error('The checkin finished but no changeset was reported.');
-        return { changesetId: Number(created[1]), branch: created[2] };
+        return readCheckinOutput(output);
       }),
     );
   }

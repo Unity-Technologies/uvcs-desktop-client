@@ -12,6 +12,7 @@ import { pluralize } from '../../lib/text';
 import { updateToIncoming } from '../incoming/updateOperations';
 import { shelveAway } from '../shelves/shelveOperations';
 import { useCheckinAfterUpdateStore } from './checkinAfterUpdate';
+import { expectedCheckinResult, releasedCheckoutsNote } from './checkinOutcome';
 import { checkinRejection, overlappingPaths, type CheckinRejection } from './checkinRejection';
 import { askCatchUpForCheckin } from './CheckinRejectedDialog';
 import { checkedInMessage, useSuccessMomentStore } from './successMoment';
@@ -50,19 +51,28 @@ export async function checkinChanges(options: CheckinOptions): Promise<boolean> 
   const result = await runOperation({
     title: `Checking in ${pluralize(changes.length, 'change')}`,
     workspacePath,
-    run: (operationId) => api.pendingChanges.checkin(workspacePath, { paths: changes.map((change) => change.path), comment }, operationId),
+    run: async (operationId) =>
+      expectedCheckinResult(await api.pendingChanges.checkin(workspacePath, { paths: changes.map((change) => change.path), comment }, operationId), changes),
     affects: isAffectedByCheckinOrUpdate,
-    successMessage: (created) => (options.quiet ? null : checkedInMessage(created.changesetId, created.branch)),
-    successAction: (created) => ({
-      label: 'View',
-      run: () => navigation.openPage({ kind: 'diff', title: `Changeset ${created.changesetId}`, target: { kind: 'changeset', changesetId: created.changesetId } }),
-    }),
+    success: (done) => {
+      if (done.kind === 'noChanges') return releasedCheckoutsNote(changes.length);
+      if (options.quiet) return null;
+      return {
+        title: checkedInMessage(done.changesetId, done.branch),
+        action: {
+          label: 'View',
+          run: () => navigation.openPage({ kind: 'diff', title: `Changeset ${done.changesetId}`, target: { kind: 'changeset', changesetId: done.changesetId } }),
+        },
+      };
+    },
     onFailure: (error) => {
       rejected.rejection = (error instanceof ApiError && checkinRejection(error.command)) || undefined;
       return rejected.rejection !== undefined;
     },
   });
   if (!result) return rejected.rejection ? catchUpAndCheckin(options, rejected.rejection) : false;
+  // Only checkouts without edits went in: released, and no changeset to celebrate. The comment stays for a real one.
+  if (result.kind === 'noChanges') return false;
 
   useCheckinAfterUpdateStore.getState().forget(workspacePath);
   useSuccessMomentStore.getState().show(workspacePath, { verb: 'Checked in', changesetId: result.changesetId, branch: result.branch, detail: firstLine(comment) || undefined });
