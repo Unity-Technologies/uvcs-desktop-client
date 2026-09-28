@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { otherRepository } from '@shared/domain/repository';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { useSession } from './sessionStore';
@@ -12,6 +13,11 @@ export function useWorkspacePath(): string {
 
 export function useWorkspaceInfo() {
   return useWorkspaceInfoOf(useWorkspacePath());
+}
+
+/** `repository` when it isn't the workspace's (an item under an xlink): see `otherRepository`. */
+export function useOtherRepository(repository: string | undefined): string | undefined {
+  return otherRepository(repository, useWorkspaceInfo().data?.repository);
 }
 
 /** Like `useWorkspaceInfo`, for code that also runs without a workspace (null). */

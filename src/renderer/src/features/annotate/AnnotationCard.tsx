@@ -12,7 +12,7 @@ import styles from './AnnotationCard.module.css';
 
 /** What can be done from a block's card. */
 export interface BlockCardActions {
-  openChangeset: (changesetId: number) => void;
+  openChangeset?: (changesetId: number) => void;
   /** The revision before the change, when the history has one. */
   revisionBefore?: ItemRevision;
   annotateBefore: (revision: ItemRevision) => void;
@@ -80,9 +80,11 @@ export function AnnotationCard({ changeset, anchor, open, pinned, onOpenChange, 
               {changeset.isMerge && <span className={styles.merge}> · by a merge</span>}
             </div>
             <div className={styles.actions}>
-              <Button size="small" icon={<FileDiff size={13} />} onClick={() => actions.openChangeset(changeset.changesetId)}>
-                Open changeset
-              </Button>
+              {actions.openChangeset && (
+                <Button size="small" icon={<FileDiff size={13} />} onClick={() => actions.openChangeset!(changeset.changesetId)}>
+                  Open changeset
+                </Button>
+              )}
               {actions.revisionBefore && (
                 <Button
                   size="small"

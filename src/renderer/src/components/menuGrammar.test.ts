@@ -76,6 +76,7 @@ const file: TreeItem = {
   owner: 'jane@example.com',
   revisionId: 40,
   parentRevisionId: 39,
+  repository,
   itemId: 4,
 };
 const change: PendingChange = { path: 'src/a.ts', kinds: ['checkedOut', 'changed'], itemType: 'file', size: 10, lastModified: '' };
@@ -126,11 +127,11 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   pendingChange: () => pendingChangeMenu(ws, [change], [], { isIncluded: () => false, setIncluded: () => {} }),
   lockedPendingChange: () => pendingChangeMenu(ws, [change], [], { isIncluded: () => false, setIncluded: () => {} }, undefined, pendingLocks),
   history: () =>
-    historyMenu({ workspacePath: ws, path: 'src/a.ts', annotate: () => {} }, [
-      { kind: 'revision', revision: { revisionId: 40, changesetId: 5, itemType: 'file', spec: 'revid:40', date: '' } } as never,
+    historyMenu({ workspacePath: ws, path: 'src/a.ts', ofWorkspaceFile: true, annotate: () => {} }, [
+      { kind: 'revision', revision: { revisionId: 40, changesetId: 5, itemType: 'file', repository, idSpec: 'revid:40@game@local', date: '' } } as never,
     ]),
-  diffEntry: () => diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [{ path: '/src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39 } as never], { statusOf: () => 'unreviewed', toggle: () => {} } as never),
-  revision: () => revisionMenu(ws, 5, [file]),
+  diffEntry: () => diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [{ path: '/src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never], { statusOf: () => 'unreviewed', toggle: () => {} } as never),
+  revision: () => revisionMenu(ws, 5, repository, [file]),
   lock: () => lockMenu(ws, [lock]),
   attributeType: () => attributeTypeMenu(ws, [{ name: 'status', comment: '' } as never]),
   changelist: () => changelistMenu(ws, { name: 'ui', description: '' } as never),

@@ -48,7 +48,7 @@ function versionsToCompare(change: MergeChange, contributors: MergeContributors,
   const source = mergeSourcePoint(request, contributors.source.changesetId);
   const destination = spec.changeset(contributors.destination.changesetId);
   const ancestor = spec.changeset(contributors.base?.changesetId ?? contributors.destination.changesetId);
-  const at = (path: string, pointSpec: string): ContentSource => ({ kind: 'spec', spec: spec.serverPathAt(path, pointSpec), fileName: path });
+  const at = (path: string, pointSpec: string): ContentSource => ({ kind: 'repositoryPath', path, at: pointSpec });
 
   // Undoing a changeset takes the destination back to the ancestor's content.
   if (request.kind === 'subtractive' && (change.kind === 'changed' || change.kind === 'moved')) {

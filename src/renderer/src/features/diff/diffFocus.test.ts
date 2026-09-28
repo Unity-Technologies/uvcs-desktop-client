@@ -9,6 +9,7 @@ const entry = (path: string, status: DiffEntry['status'] = 'changed', oldPath?: 
   itemType: 'file',
   baseRevisionId: 1,
   revisionId: 2,
+  repository: 'game@local',
 });
 
 const entries = [entry('a.ts'), entry('src/new.ts', 'moved', 'src/old.ts'), entry('b.ts', 'deleted')];

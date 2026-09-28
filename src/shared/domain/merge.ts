@@ -44,6 +44,11 @@ export interface FileConflict {
   baseChangeset: number;
   sourceChangeset: number;
   destinationChangeset: number;
+  /**
+   * The repository the item id and the changesets belong to: the merged one, or for a file under a writable xlink the
+   * xlinked one, where the same numbers are another item and other changesets.
+   */
+  repository: string;
 }
 
 export type DirectoryConflictType =

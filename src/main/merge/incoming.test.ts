@@ -4,7 +4,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import { findUpdateBlockers, findUpdateConflicts, incomingChangesetsArgs, summarizeIncoming } from './incoming';
 
 function incoming(path: string, status: DiffEntry['status'], itemType: DiffEntry['itemType'] = 'file'): DiffEntry {
-  return { path, status, itemType, baseRevisionId: 10, revisionId: 20 };
+  return { path, status, itemType, baseRevisionId: 10, revisionId: 20, repository: 'game@local' };
 }
 
 function local(path: string, kinds: PendingChange['kinds']): PendingChange {
@@ -31,8 +31,8 @@ describe('findUpdateConflicts', () => {
       [local('src/a.txt', ['checkedOut', 'changed']), local('img.png', ['changed'])],
     );
     expect(conflicts).toEqual([
-      { path: 'src/a.txt', isBinary: false, baseRevisionId: 10, incomingRevisionId: 20 },
-      { path: 'img.png', isBinary: true, baseRevisionId: 10, incomingRevisionId: 20 },
+      { path: 'src/a.txt', isBinary: false, baseRevisionId: 10, incomingRevisionId: 20, repository: 'game@local' },
+      { path: 'img.png', isBinary: true, baseRevisionId: 10, incomingRevisionId: 20, repository: 'game@local' },
     ]);
   });
 

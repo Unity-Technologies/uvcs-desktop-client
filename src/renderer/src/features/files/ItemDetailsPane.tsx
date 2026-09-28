@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { File, FileSymlink, Folder, History, Lock } from 'lucide-react';
 import type { TreeItem } from '@shared/domain/explorer';
+import { revisionRef } from '@shared/domain/revision';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
+import { useOtherRepository } from '../../app/workspace/useWorkspace';
 import { DetailsHeading } from '../../components/DetailsHeading';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime, formatSize } from '../../lib/formatDate';
@@ -54,8 +56,10 @@ export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu,
   const isFile = item.itemType !== 'directory';
   const controlled = !item.isPrivate;
   const moreDetailsOpen = useDetailsLayoutStore((state) => state.moreDetailsOpen);
+  // Under an xlink, the item's changeset and branch are the xlinked repository's.
+  const otherRepository = useOtherRepository(item.repository);
 
-  const { data: changeset } = useChangeset(!shown.isPrivate && shown.changeset > 0 ? shown.changeset : null);
+  const { data: changeset } = useChangeset(!shown.isPrivate && shown.changeset > 0 ? shown.changeset : null, shown.repository);
   const comment = changeset?.id === shown.changeset ? changeset.comment : undefined;
   const { data: details } = useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'explorer', 'details', item.path),
@@ -99,8 +103,8 @@ export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu,
         isFile
           ? []
           : [
-              controlled && item.changeset > 0 && <DetailsCopyable key="cs" text={spec.changeset(item.changeset)} what="Changeset spec" />,
-              controlled && item.branch && <BranchChip key="branch" name={item.branch} />,
+              controlled && item.changeset > 0 && <DetailsCopyable key="cs" text={spec.changeset(item.changeset, otherRepository)} what="Changeset spec" />,
+              controlled && item.branch && <BranchChip key="branch" name={item.branch} otherRepository={otherRepository} />,
             ].filter(Boolean)
       }
       badges={
@@ -122,7 +126,7 @@ export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu,
             variant="ghost"
             icon={<History size={13} />}
             data-tip-shortcut={inWorkspace ? hotkey('fileHistory') : undefined}
-            onClick={() => navigation.openPage({ kind: 'history', path: item.path, changesetId: inWorkspace ? undefined : item.changeset })}
+            onClick={() => navigation.openPage({ kind: 'history', path: item.path, ...(!inWorkspace && { revision: revisionRef(item) }) })}
           >
             History
           </Button>

@@ -14,6 +14,12 @@ import type {
 /** Separates fields in `cm merge --machinereadable` output. A control character never appears in paths. */
 export const MERGE_FIELD_SEPARATOR = '\u001f';
 
+/** A conflicting file as `cm merge` prints it: its ids and changesets, without the repository they belong to. */
+export type PrintedFileConflict = Omit<FileConflict, 'repository'>;
+
+/** The plan as `cm merge` prints it; `withConflictRepositories` completes its file conflicts. */
+export type PrintedMergePlan = Omit<MergePlan, 'fileConflicts'> & { fileConflicts: PrintedFileConflict[] };
+
 const DIRECTORY_CONFLICT_TYPES: Record<string, DirectoryConflictType> = {
   EVIL: 'evilTwin',
   MV_EVIL: 'movedEvilTwin',
@@ -43,8 +49,8 @@ const STATUSES: Record<string, MergePlanStatus> = {
 };
 
 /** Parses the preview printed by `cm merge <spec> --machinereadable --printcontributors`. */
-export function parseMergePlan(output: string): MergePlan {
-  const plan: MergePlan = { status: 'ready', changes: [], fileConflicts: [], directoryConflicts: [], warnings: [] };
+export function parseMergePlan(output: string): PrintedMergePlan {
+  const plan: PrintedMergePlan = { status: 'ready', changes: [], fileConflicts: [], directoryConflicts: [], warnings: [] };
   const contributors: Partial<MergeContributors> = {};
 
   for (const line of output.split(/\r?\n/)) {
@@ -94,7 +100,7 @@ function addContributor(contributors: Partial<MergeContributors>, [role, changes
   else if (role === 'BASE') contributors.base ??= contributor;
 }
 
-function parseFileConflict([path, base, source, destination, itemId]: string[]): FileConflict {
+function parseFileConflict([path, base, source, destination, itemId]: string[]): PrintedFileConflict {
   return {
     path: path!,
     baseChangeset: Number(base),

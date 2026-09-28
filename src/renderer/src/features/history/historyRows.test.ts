@@ -12,7 +12,7 @@ const revision = (changesetId: number): ItemRevision => ({
   comment: '',
   itemType: 'file',
   size: 1,
-  spec: `a.cs#cs:${changesetId}`,
+  repository: 'game@local',
   idSpec: `revid:${changesetId * 10}@game@local`,
 });
 const change = (changesetId: number): ItemPathChange => ({ changesetId, owner: 'jane@example.com', date: '', description: 'Moved from /b.cs to /a.cs' });

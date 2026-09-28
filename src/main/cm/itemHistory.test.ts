@@ -52,12 +52,33 @@ describe('parseItemHistory', () => {
       [4, 45, 15, 'Mention UI'],
       [1, 15, -1, 'Initial import'],
     ]);
-    expect(revisions[0]).toMatchObject({ branch: '/main', owner: 'jane@example.com', itemType: 'file', size: 42, spec: 'README.md#cs:4' });
+    expect(revisions[0]).toMatchObject({ branch: '/main', owner: 'jane@example.com', itemType: 'file', size: 42, repository: 'game@local' });
   });
 
   it('names each revision by its id too, which finds it before the file moved', () => {
     const [only] = parse(revision(4, 'Mention UI'), found([4, 45, 15])).revisions;
-    expect(only).toMatchObject({ spec: 'README.md#cs:4', idSpec: 'revid:45@game@local' });
+    expect(only).toMatchObject({ idSpec: 'revid:45@game@local' });
+  });
+
+  it("names a file's revisions under an xlink in the xlinked repository, whose changesets they are", () => {
+    // `cm history` of UnityDiffWindowMockExtensions.cs in codice@codice@cloud, under the unity-plugin xlink to unityGUI, trimmed.
+    const records = `
+      <Revision>
+        <RevisionSpec>/work/unity-plugin/UnityDiffWindowMockExtensions.cs#cs:16828</RevisionSpec>
+        <Branch>/main/scm1008582</Branch>
+        <CreationDate>2026-08-31T21:08:46+02:00</CreationDate>
+        <RevisionType>txt</RevisionType>
+        <ChangesetNumber>16828</ChangesetNumber>
+        <Owner>stephen.callan@unity3d.com</Owner>
+        <Comment>Review 425296 comment d245ed6d</Comment>
+        <Repository>unityGUI</Repository>
+        <Server>codice@cloud</Server>
+        <RepositorySpec><Server>codice@cloud</Server><Name>unityGUI</Name></RepositorySpec>
+        <ItemId>425954</ItemId>
+        <Size>627</Size>
+      </Revision>`;
+    const [only] = parse(records, found([16828, 425946, -1])).revisions;
+    expect(only).toMatchObject({ changesetId: 16828, revisionId: 425946, repository: 'unityGUI@codice@cloud', idSpec: 'revid:425946@unityGUI@codice@cloud' });
   });
 
   it('falls back to the path spec for a revision without an id', () => {
@@ -99,9 +120,9 @@ describe('itemRevisionsArgs', () => {
 });
 
 describe('itemHistoryTarget', () => {
-  it("reads the workspace's file, or the repository path in a changeset", () => {
+  it("reads the workspace's file, or the item of a revision in its repository", () => {
     expect(itemHistoryTarget('/work', 'src/a.cs')).toBe(join('/work', 'src', 'a.cs'));
-    expect(itemHistoryTarget('/work', 'src/a.cs', 42)).toBe('serverpath:/src/a.cs#cs:42');
+    expect(itemHistoryTarget('/work', 'src/a.cs', { revisionId: 432251, repository: 'unityGUI@codice@cloud' })).toBe('rev:revid:432251@unityGUI@codice@cloud');
   });
 });
 

@@ -8,6 +8,7 @@ const entry = (path: string, revisionId: number, itemType: DiffEntry['itemType']
   itemType,
   baseRevisionId: 1,
   revisionId,
+  repository: 'game@local',
 });
 
 const marks = new Map([

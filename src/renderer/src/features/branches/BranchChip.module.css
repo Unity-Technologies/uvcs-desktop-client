@@ -13,7 +13,7 @@
   font-size: var(--text-sm);
 }
 
-.chip:hover {
+.chip:not([data-inert]):hover {
   border-color: var(--border-default);
   background: var(--bg-hover);
 }

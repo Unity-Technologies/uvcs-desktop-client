@@ -2,8 +2,10 @@ import { existsSync } from 'node:fs';
 import { copyFile, writeFile } from 'node:fs/promises';
 import { basename, dirname } from 'node:path';
 import type { ContentSource } from '@shared/domain/content';
+import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import { removedItemSpec } from '../cm/removedItemSpec';
+import { parseTreeItems } from '../cm/treeItemsXml';
 import { toAbsolutePath } from './workspacePaths';
 
 /** A version of a file, as it is and whatever it holds, saved to `target`. Review snapshots are read elsewhere. */
@@ -16,7 +18,9 @@ export async function saveContent(cm: CmClient, workspacePath: string, source: E
     case 'workspaceBase':
       return saveLoadedRevision(cm, workspacePath, source.path, target);
     case 'revision':
-      return saveRevision(cm, workspacePath, `revid:${source.revisionId}`, target);
+      return saveRevision(cm, workspacePath, spec.revision(source.revision), target);
+    case 'repositoryPath':
+      return saveRepositoryPath(cm, workspacePath, source.path, source.at, target);
     case 'spec':
       return saveRevision(cm, workspacePath, source.spec, target);
   }
@@ -42,6 +46,22 @@ async function saveLoadedRevision(cm: CmClient, workspacePath: string, path: str
     } catch {
       throw error;
     }
+  }
+}
+
+/**
+ * `serverpath:` reads the path in the repository's own tree, where an xlink is a leaf: nothing under one is found.
+ * Then the changeset's tree, which `cm ls` walks through xlinks (nested ones too), names the file's revision in the
+ * xlinked repository. A shelve has no such tree (`--tree` takes changesets): its paths are read as they are.
+ */
+async function saveRepositoryPath(cm: CmClient, workspacePath: string, path: string, at: string, target: string): Promise<void> {
+  try {
+    await saveRevision(cm, workspacePath, spec.serverPathAt(path, at), target);
+  } catch (error) {
+    const listed = at.startsWith('cs:') ? await cm.query(['ls', path, `--tree=${at}`, '--xml'], { cwd: workspacePath }).catch(() => '') : '';
+    const item = listed && parseTreeItems(listed).find((candidate) => `/${candidate.path}` === path);
+    if (!item || item.revisionId < 0) throw error;
+    await saveRevision(cm, workspacePath, spec.revision(item), target);
   }
 }
 

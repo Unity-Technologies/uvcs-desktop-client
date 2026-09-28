@@ -4,10 +4,10 @@ import { spec } from '@shared/domain/specs';
 
 /**
  * The revision a tree lists for an item, as a file's history names it: annotated by its id in its repository
- * (`revid:45@game@local`; `cm annotate` finds no bare id on a cloud server), a pinned spec whose annotations are read
- * once. Its comment is the changeset's, which the listing doesn't carry.
+ * (`revid:45@game@local`; under an xlink, the xlinked one), a pinned spec whose annotations are read once. Its comment
+ * is the changeset's, which the listing doesn't carry.
  */
-export function itemRevision(item: TreeItem, repository: string | undefined): ItemRevision {
+export function itemRevision(item: TreeItem): ItemRevision {
   return {
     revisionId: item.revisionId,
     parentRevisionId: item.parentRevisionId,
@@ -18,7 +18,7 @@ export function itemRevision(item: TreeItem, repository: string | undefined): It
     comment: '',
     itemType: item.itemType,
     size: item.size,
-    spec: `${item.path}#cs:${item.changeset}`,
-    idSpec: spec.revision(item.revisionId, repository),
+    repository: item.repository,
+    idSpec: spec.revision(item),
   };
 }

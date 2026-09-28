@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import { listedEntries } from './listedEntries';
 
-const file = (path: string, status: DiffEntry['status'] = 'added'): DiffEntry => ({ status, path, itemType: 'file', baseRevisionId: -1, revisionId: 5 });
+const file = (path: string, status: DiffEntry['status'] = 'added'): DiffEntry => ({ status, path, itemType: 'file', baseRevisionId: -1, revisionId: 5, repository: 'game@local' });
 const folder = (path: string, status: DiffEntry['status'] = 'added'): DiffEntry => ({ ...file(path, status), itemType: 'directory' });
 const paths = (entries: DiffEntry[]) => listedEntries(entries).map((entry) => entry.path);
 

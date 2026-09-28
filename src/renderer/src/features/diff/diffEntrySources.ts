@@ -1,19 +1,20 @@
 import type { ContentSource } from '@shared/domain/content';
 import type { DiffEntry } from '@shared/domain/diff';
+import { revisionIn, type RevisionRef } from '@shared/domain/revision';
 import type { StatusTone } from '../../components/StatusBadge';
 
 const EMPTY: ContentSource = { kind: 'empty' };
 
-/** The two revisions to compare for an entry; a missing side (added/deleted item) is empty. */
+/** The two revisions to compare for an entry, in its repository; a missing side (added/deleted item) is empty. */
 export function diffEntrySources(entry: DiffEntry): { original: ContentSource; modified: ContentSource } {
   return {
-    original: revisionSource(entry.baseRevisionId, entry.oldPath ?? entry.path),
-    modified: revisionSource(entry.revisionId, entry.path),
+    original: revisionSource(revisionIn(entry.repository, entry.baseRevisionId), entry.oldPath ?? entry.path),
+    modified: revisionSource(revisionIn(entry.repository, entry.revisionId), entry.path),
   };
 }
 
-function revisionSource(revisionId: number, path: string): ContentSource {
-  return revisionId === -1 ? EMPTY : { kind: 'revision', revisionId, fileName: path };
+function revisionSource(revision: RevisionRef | null, path: string): ContentSource {
+  return revision ? { kind: 'revision', revision, fileName: path } : EMPTY;
 }
 
 /** A moved item whose content also changed. */

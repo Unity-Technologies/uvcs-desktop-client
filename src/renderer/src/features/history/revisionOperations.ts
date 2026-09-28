@@ -1,19 +1,20 @@
+import type { RevisionRef } from '@shared/domain/revision';
 import { api } from '../../api/client';
 import { runVoidAction } from '../../app/operations/runOperation';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 
-export async function openRevision(workspacePath: string, revisionId: number, fileName: string): Promise<void> {
+export async function openRevision(workspacePath: string, revision: RevisionRef, fileName: string): Promise<void> {
   try {
-    await api.history.openRevision(workspacePath, revisionId, fileName);
+    await api.history.openRevision(workspacePath, revision, fileName);
   } catch (error) {
     toast.error("Couldn't open the revision", error);
   }
 }
 
-export async function saveRevisionAs(workspacePath: string, revisionId: number, fileName: string): Promise<void> {
+export async function saveRevisionAs(workspacePath: string, revision: RevisionRef, fileName: string): Promise<void> {
   try {
-    const savedPath = await api.history.saveRevisionAs(workspacePath, revisionId, fileName);
+    const savedPath = await api.history.saveRevisionAs(workspacePath, revision, fileName);
     if (savedPath) toast.success('Revision saved', savedPath);
   } catch (error) {
     toast.error("Couldn't save the revision", error);

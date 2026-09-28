@@ -12,13 +12,13 @@ describe('canEditInPlace', () => {
   });
 
   it('keeps read-only a workspace file shown against another version, as merges and conflicts do', () => {
-    expect(canEditInPlace({ kind: 'revision', revisionId: 7, fileName: 'a.cs' }, onDisk)).toBe(false);
+    expect(canEditInPlace({ kind: 'revision', revision: { revisionId: 7, repository: 'game@local' }, fileName: 'a.cs' }, onDisk)).toBe(false);
     expect(canEditInPlace({ kind: 'spec', spec: 'serverpath:/src/a.cs#cs:3' }, onDisk)).toBe(false);
     expect(canEditInPlace({ kind: 'workspaceBase', path: 'src/b.cs' }, onDisk)).toBe(false);
   });
 
   it('keeps read-only diffs whose modified side is not in the workspace', () => {
     expect(canEditInPlace({ kind: 'workspaceBase', path: 'src/a.cs' }, { kind: 'empty' })).toBe(false);
-    expect(canEditInPlace({ kind: 'revision', revisionId: 1, fileName: 'a.cs' }, { kind: 'revision', revisionId: 2, fileName: 'a.cs' })).toBe(false);
+    expect(canEditInPlace({ kind: 'revision', revision: { revisionId: 1, repository: 'game@local' }, fileName: 'a.cs' }, { kind: 'revision', revision: { revisionId: 2, repository: 'game@local' }, fileName: 'a.cs' })).toBe(false);
   });
 });

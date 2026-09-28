@@ -15,6 +15,7 @@ const ITEM_TYPES: Record<string, ItemType> = {
  * Parses `cm ls --xml`. The listed directory itself comes back as a `.` entry, which is skipped.
  * Paths are made relative with forward slashes: `--tree` listings return server paths (`/src/a.ts`).
  * Names come from the path: an xlink's `<Name>` is its target (`lib -> xlink -> / 12@lib@server`), read into `xlink`.
+ * `<Repository>` (`rep:unityGUI@codice@cloud`) is the one holding the item's revision: under an xlink, the xlinked one.
  * Workspace listings take `--symlink` (`onLinksThemselves`): without it a link to a folder reads as that folder,
  * children and paths included.
  */
@@ -42,6 +43,7 @@ function treeItem(item: Record<string, unknown>): TreeItem {
     owner: text(item.Owner),
     revisionId: integer(item.RevId),
     parentRevisionId: integer(item.ParentRevId),
+    repository: text(item.Repository).replace(/^rep:/, ''),
     itemId: integer(item.ItemId),
     ...(xlink && { xlink }),
     ...(symlinkTarget && { symlinkTarget }),

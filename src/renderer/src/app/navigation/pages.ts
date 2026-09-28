@@ -1,5 +1,6 @@
 import type { DiffTarget } from '@shared/domain/diff';
 import type { MergeRequest } from '@shared/domain/merge';
+import type { RevisionRef } from '@shared/domain/revision';
 
 /**
  * A page is a drill-down opened on top of the current view (history of a file, a diff, a merge...).
@@ -7,11 +8,12 @@ import type { MergeRequest } from '@shared/domain/merge';
  */
 export type Page =
   /**
-   * `changesetId` reads `path` as the repository had it then (browsing a changeset), instead of in the workspace, where
-   * the item may have moved or be missing. `select` opens on that revision; `view: 'annotate'` shows it annotated (at
-   * the workspace's revision unless `select` says otherwise): what every "Annotate" outside the Files view opens.
+   * `revision` reads the history of the item it is a revision of (browsing a changeset, a diff), instead of the
+   * workspace's file at `path`, which may have moved or be missing. `select` opens on that revision; `view: 'annotate'`
+   * shows it annotated (at the workspace's revision unless `select` says otherwise): what every "Annotate" outside the
+   * Files view opens.
    */
-  | { kind: 'history'; path: string; changesetId?: number; select?: HistorySelection; view?: 'annotate' }
+  | { kind: 'history'; path: string; revision?: RevisionRef; select?: HistorySelection; view?: 'annotate' }
   /**
    * `focusPath` preselects a file in the diff. `branchHead`, for a branch, is the head it was seen at: the diff is
    * then the one a details panel may already have read, not a second `cm diff`.

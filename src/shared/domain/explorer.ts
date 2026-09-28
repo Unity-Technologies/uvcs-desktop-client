@@ -17,6 +17,11 @@ export interface TreeItem {
   revisionId: number;
   /** The revision before `revisionId`; -1 when this is the first one. */
   parentRevisionId: number;
+  /**
+   * The repository its revision, changeset and branch belong to (`name@server`): the workspace's, or under an xlink
+   * (and for the xlink itself) the xlinked one. Empty for a private item.
+   */
+  repository: string;
   itemId: number;
   /** Set for a directory that is an xlink: where it points. */
   xlink?: XlinkTarget;

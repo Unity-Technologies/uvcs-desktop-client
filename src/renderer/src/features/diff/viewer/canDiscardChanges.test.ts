@@ -13,12 +13,12 @@ describe('canDiscardChanges', () => {
   it('refuses an added file, and a workspace file against any other version', () => {
     expect(canDiscardChanges({ kind: 'empty' }, onDisk)).toBe(false);
     expect(canDiscardChanges({ kind: 'spec', spec: 'serverpath:/src/a.cs#cs:3' }, onDisk)).toBe(false);
-    expect(canDiscardChanges({ kind: 'revision', revisionId: 7, fileName: 'a.cs' }, onDisk)).toBe(false);
+    expect(canDiscardChanges({ kind: 'revision', revision: { revisionId: 7, repository: 'game@local' }, fileName: 'a.cs' }, onDisk)).toBe(false);
     expect(canDiscardChanges({ kind: 'workspaceBase', path: 'src/b.cs' }, onDisk)).toBe(false);
   });
 
   it('refuses diffs whose modified side is not in the workspace', () => {
     expect(canDiscardChanges({ kind: 'workspaceBase', path: 'src/a.cs' }, { kind: 'empty' })).toBe(false);
-    expect(canDiscardChanges({ kind: 'revision', revisionId: 1, fileName: 'a.cs' }, { kind: 'revision', revisionId: 2, fileName: 'a.cs' })).toBe(false);
+    expect(canDiscardChanges({ kind: 'revision', revision: { revisionId: 1, repository: 'game@local' }, fileName: 'a.cs' }, { kind: 'revision', revision: { revisionId: 2, repository: 'game@local' }, fileName: 'a.cs' })).toBe(false);
   });
 });

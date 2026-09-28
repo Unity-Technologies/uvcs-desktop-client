@@ -1,3 +1,5 @@
+import type { RevisionRef } from './revision';
+
 /** Where to read a file's contents from. */
 export type ContentSource =
   | { kind: 'empty' }
@@ -7,7 +9,12 @@ export type ContentSource =
   /** The text of a workspace file when it was marked as reviewed. */
   | { kind: 'reviewSnapshot'; path: string }
   /** `fileName` is used to recognize images and pick syntax highlighting. */
-  | { kind: 'revision'; revisionId: number; fileName: string }
+  | { kind: 'revision'; revision: RevisionRef; fileName: string }
+  /**
+   * The file at a repository path (`/src/a.ts`) in a changeset or shelve (`cs:12`, `sh:3`), also under an xlink, where
+   * a `serverpath:` spec finds nothing.
+   */
+  | { kind: 'repositoryPath'; path: string; at: string }
   /**
    * Any `cm cat` spec, e.g. `serverpath:/src/a.ts#cs:12`. `fileName` recognizes images when
    * the spec has no path in it (e.g. `itemid:27#cs:12`).

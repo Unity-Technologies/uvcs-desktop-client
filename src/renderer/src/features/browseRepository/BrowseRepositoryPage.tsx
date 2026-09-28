@@ -2,7 +2,7 @@ import { useDeferredValue, useMemo, useState } from 'react';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import type { PageProps } from '../../app/navigation/pages';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { NoSelection } from '../../components/NoSelection';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
@@ -22,6 +22,7 @@ import { openRevision, revisionMenu } from './revisionMenu';
 /** The repository as it was at a changeset: read-only, no workspace needed. */
 export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
   const workspacePath = useWorkspacePath();
+  const repository = useWorkspaceInfo().data?.repository;
   const treeId = `${workspacePath}#cs:${page.changesetId}`;
   const expanded = useExpandedDirectories(treeId);
   const toggle = useExpandedDirectoriesStore((state) => state.toggle);
@@ -67,7 +68,7 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
               onSelectionChange={setSelection}
               onToggleDirectory={(directory) => toggle(treeId, directory)}
               onOpenFile={(item) => openRevision(workspacePath, item)}
-              contextMenu={(items) => revisionMenu(workspacePath, page.changesetId, items)}
+              contextMenu={(items) => revisionMenu(workspacePath, page.changesetId, repository, items)}
               revealPath={revealPath}
             />
           </HighlightQuery>
@@ -77,7 +78,7 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
             <ItemDetailsPane
               workspacePath={workspacePath}
               item={focused}
-              menu={revisionMenu(workspacePath, page.changesetId, [focused])}
+              menu={revisionMenu(workspacePath, page.changesetId, repository, [focused])}
               onSelectFolder={selectFolder}
               folderContents={childrenByDirectory.get(focused.path)}
             />

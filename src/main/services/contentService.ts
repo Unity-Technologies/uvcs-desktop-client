@@ -25,6 +25,7 @@ export function createContentService({ cm, reviews }: ServiceContext): ContentAp
         return reviews.readSnapshot(workspacePath, source.path);
       case 'workspaceBase':
       case 'revision':
+      case 'repositoryPath':
       case 'spec':
         return withTempPath(async (outputFile) => {
           await saveContent(cm, workspacePath, source, outputFile);
@@ -45,8 +46,8 @@ export function createContentService({ cm, reviews }: ServiceContext): ContentAp
 }
 
 /** The name that tells images and syntax apart: the spec's path when the source names no file. */
-function fileNameOf(source: Extract<ContentSource, { kind: 'workspaceBase' | 'revision' | 'spec' }>): string {
-  if (source.kind === 'workspaceBase') return source.path;
+function fileNameOf(source: Extract<ContentSource, { kind: 'workspaceBase' | 'revision' | 'repositoryPath' | 'spec' }>): string {
+  if (source.kind === 'workspaceBase' || source.kind === 'repositoryPath') return source.path;
   if (source.kind === 'revision') return source.fileName;
   return source.fileName ?? source.spec.split('#')[0]!;
 }

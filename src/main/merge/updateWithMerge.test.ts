@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { UpdateConflict } from '@shared/domain/incoming';
 import { unresolvedConflicts } from './updateWithMerge';
 
-const conflict = (path: string): UpdateConflict => ({ path, isBinary: false, baseRevisionId: 1, incomingRevisionId: 2 });
+const conflict = (path: string): UpdateConflict => ({ path, isBinary: false, baseRevisionId: 1, incomingRevisionId: 2, repository: 'game@local' });
 
 describe('unresolvedConflicts', () => {
   it('lists the files that need merging and have no resolution yet', () => {

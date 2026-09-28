@@ -2,6 +2,7 @@ import type { MergePlan, MergeRequest } from '@shared/domain/merge';
 import type { CmClient } from '../cm/CmClient';
 import { CmError, SILENT_FAILURE_MESSAGE } from '../cm/CmError';
 import { parseMergePlan } from '../cm/mergeOutput';
+import { withConflictRepositories } from './conflictRepositories';
 import { MACHINE_READABLE_ARGS, mergeSourceArgs } from './mergeArgs';
 
 const PENDING_CHANGES_PLAN: MergePlan = { status: 'pendingChanges', changes: [], fileConflicts: [], directoryConflicts: [], warnings: [] };
@@ -11,12 +12,13 @@ export async function previewMerge(cm: CmClient, workspacePath: string, request:
   const intoWorkspace = !request.destinationBranch;
   if (intoWorkspace && (await hasPendingChanges(cm, workspacePath))) return PENDING_CHANGES_PLAN;
 
+  let output: string;
   try {
-    const output = await cm.query(['merge', ...mergeSourceArgs(request), ...MACHINE_READABLE_ARGS, '--printcontributors'], { cwd: workspacePath });
-    return parseMergePlan(output);
+    output = await cm.query(['merge', ...mergeSourceArgs(request), ...MACHINE_READABLE_ARGS, '--printcontributors'], { cwd: workspacePath });
   } catch (error) {
     throw await explainFailure(cm, workspacePath, request, error);
   }
+  return withConflictRepositories(cm, workspacePath, request, parseMergePlan(output));
 }
 
 async function hasPendingChanges(cm: CmClient, workspacePath: string): Promise<boolean> {

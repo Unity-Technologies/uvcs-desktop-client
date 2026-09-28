@@ -1,6 +1,7 @@
 import type { TreeItem } from '@shared/domain/explorer';
 import { firstLine } from '../../lib/text';
 import { displayName } from '../../lib/userName';
+import { useOtherRepository } from '../../app/workspace/useWorkspace';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { openChangesetDiff } from '../changesets/changesetOperations';
 import type { ItemComparison } from './itemComparison';
@@ -17,6 +18,8 @@ interface ComparisonTitleProps {
 
 /** What the viewer compares, said first in its toolbar: "Your changes · vs cs:12", "Last change · cs:12 on /main by Ana · 2 days ago". */
 export function ComparisonTitle({ item, comparison, comment }: ComparisonTitleProps) {
+  // Under an xlink, the changeset is the xlinked repository's: no diff of the workspace's has it.
+  const otherRepository = useOtherRepository(item.repository);
   if (comparison.kind === 'new') return <span className={styles.title}>{NEW_FILE_TITLES[comparison.reason]}</span>;
   if (comparison.kind === 'changes') {
     return (
@@ -31,9 +34,13 @@ export function ComparisonTitle({ item, comparison, comment }: ComparisonTitlePr
     <span className={styles.comparison}>
       <span className={styles.title}>{item.parentRevisionId > 0 ? 'Last change' : 'Added'}</span>
       <span className={styles.detail}>
-        <button className={styles.changeset} onClick={() => openChangesetDiff({ id: item.changeset }, item.path)} data-tip="Open the changeset's diff">
-          cs:{item.changeset}
-        </button>
+        {otherRepository ? (
+          <span data-tip={`Changeset ${item.changeset} of ${otherRepository}`}>cs:{item.changeset}</span>
+        ) : (
+          <button className={styles.changeset} onClick={() => openChangesetDiff({ id: item.changeset }, item.path)} data-tip="Open the changeset's diff">
+            cs:{item.changeset}
+          </button>
+        )}
         {item.branch && ` on ${item.branch}`}
         {item.owner && ` by ${displayName(item.owner)}`}
         {item.date && (

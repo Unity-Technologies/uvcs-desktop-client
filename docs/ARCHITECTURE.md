@@ -49,6 +49,29 @@ src/
 - On macOS `cm` reads names decomposed (NFD), as it reports them: local paths go to it so (`inCmPathForm`), or
   `cm checkin` of a composed `é.txt` finds no change. Branch names, queries and server paths are left as written.
 
+## Xlinks
+
+Revision ids, item ids and changeset numbers are per repository, and an item under an xlink (nested ones too, and on
+other servers) lives in the xlinked repository: `cm` looks a bare `revid:432251` up in the workspace's, where it is
+another file or none. So a revision is never a bare id: `RevisionRef` (`shared/domain/revision.ts`) is an id with its
+repository, set where `cm` names it, and every spec built from it names both (`spec.revision`: `revid:N@repo@server`,
+`spec.itemAt`: `itemid:N#cs:M@repo`), as the official client carries each diff item's mount repository.
+
+- Each item records its repository as parsed: `cm diff --format={repository}` (`DiffEntry`, so every committed diff,
+  Incoming and update conflicts), `cm ls` `<Repository>` (`TreeItem`: Files, Browse repository), `cm history`'s
+  records (`ItemRevision`). Content sources (`{ kind: 'revision', revision }`), open/save revision and query keys carry
+  it, so two repositories' revision 45 never share a cached content.
+- No repository path reaches through an xlink (`serverpath:/lib/a.cs#cs:12` finds nothing when `lib` is one), but
+  workspace paths and `cm ls --tree` do. A history opened from a diff or a repository tree reads the item of its
+  revision (`rev:revid:N@repo`, `itemHistoryTarget`); a merge change's version under an xlink is looked up in the
+  changeset's tree once `serverpath:` finds nothing (`repositoryPath`, a second command only for those).
+- `cm merge` prints conflicting files under a writable xlink with the xlinked repository's item id and changesets but
+  not the repository: one `cm ls` of the conflicting files in the destination's tree names each one's
+  (`withConflictRepositories`), only when some file conflicts.
+- An item of another repository than the workspace's (`otherRepository`) keeps its changeset, branch and comment (read
+  `on repository`), but leads to none of the workspace's views: no changeset diff, Branch Explorer, branch chip link or
+  labels, and its changeset spec is copied with its repository.
+
 ## Operation progress
 
 Long operations report a structured `OperationProgress` (`shared/domain/operation.ts`): a stage (`preparing`,
