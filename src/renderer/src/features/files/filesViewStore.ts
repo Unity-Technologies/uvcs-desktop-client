@@ -1,20 +1,18 @@
 import { create } from 'zustand';
-
-/** What the selected file shows: its comparison (`itemComparison`), or its annotations. */
-export type DetailsTab = 'changes' | 'annotate';
+import type { FileView } from '../annotate/fileView';
 
 interface FilesViewStore {
-  /** Kept as the selection moves. */
-  detailsTab: DetailsTab;
+  /** What the selected file shows: its comparison (`itemComparison`), or its annotations. Kept as the selection moves. */
+  fileView: FileView;
   /** A path to select and scroll to, e.g. after creating or renaming an item, with the others to select (moved items). */
   revealRequest: { path: string; selected?: string[] } | null;
-  setDetailsTab: (tab: DetailsTab) => void;
+  setFileView: (view: FileView) => void;
   requestReveal: (path: string, selected?: string[]) => void;
 }
 
 export const useFilesViewStore = create<FilesViewStore>((set) => ({
-  detailsTab: 'changes',
+  fileView: 'diff',
   revealRequest: null,
-  setDetailsTab: (detailsTab) => set({ detailsTab }),
+  setFileView: (fileView) => set({ fileView }),
   requestReveal: (path, selected) => set({ revealRequest: { path, selected } }),
 }));

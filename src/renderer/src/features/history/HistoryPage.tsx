@@ -15,6 +15,7 @@ import { ListSkeleton } from '../../ui/Skeleton';
 import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
 import type { AnnotationHistory } from '../annotate/AnnotationPane';
+import { otherFileView } from '../annotate/fileView';
 import { openChangesetDiff } from '../changesets/changesetOperations';
 import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
 import { HISTORY_ROW_HEIGHT, HistoryList } from './HistoryList';
@@ -25,7 +26,7 @@ import { matchesHistorySearch } from './historySearch';
 import { PathChangeDetails } from './PathChangeDetails';
 import { RevisionDetails } from './RevisionDetails';
 import { RevisionHeader } from './RevisionHeader';
-import { otherRevisionView, shownRevisionView, useRevisionView, type RevisionView } from './revisionView';
+import { shownRevisionView, useRevisionView, type RevisionView } from './revisionView';
 import { useItemHistory } from './useItemHistory';
 import styles from './HistoryPage.module.css';
 
@@ -135,7 +136,7 @@ export function HistoryPage({ page }: PageProps<'history'>) {
   };
 
   const togglable = focusedRow?.kind === 'revision' && shownRevisionView('annotate', focusedRow.revision.itemType) === 'annotate';
-  useShortcut(hotkey('historyToggleView'), () => setView(otherRevisionView(view)), togglable);
+  useShortcut(hotkey('historyToggleView'), () => setView(otherFileView(view)), togglable);
   // Into the diff or the annotation, and Esc back to the list, as in any list beside a file.
   useShortcut(hotkey('historyEnterPane'), () => paneRef.current?.querySelector<HTMLElement>('[role="region"]')?.focus(), Boolean(focusedRow));
   const leavePane = (event: KeyboardEvent): void => {

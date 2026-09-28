@@ -1,13 +1,13 @@
-import { ScanText } from 'lucide-react';
 import { useRef } from 'react';
+import { canAnnotate } from '@shared/domain/annotate';
 import type { TreeItem } from '@shared/domain/explorer';
 import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { focusMain } from '../../lib/mainFocus';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
 import { useShortcut } from '../../lib/useShortcut';
-import { Button } from '../../ui/Button';
 import { AnnotationPane } from '../annotate/AnnotationPane';
+import { FileViewSwitch } from '../annotate/FileViewSwitch';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
 import { ChangeDiffPanel } from '../pendingChanges/ChangeDiffPanel';
 import { ComparisonTitle } from './ComparisonTitle';
@@ -24,17 +24,19 @@ interface ItemViewerProps {
   comparison: ItemComparison;
   /** The last change's comment, once read. */
   comment?: string;
+  /** The key that switches "Diff | Annotate", where one does (the Files view's commands). */
+  viewShortcut?: string;
 }
 
 /**
  * The selected file under its heading, as big as the pane allows: one diff, the most telling for its status
- * (`itemComparison`), saying what it compares; or, with the toggle beside that, the file annotated. The tree keeps the
- * keyboard; F6 moves it into the file to scroll it, and F6 or Esc back.
+ * (`itemComparison`), saying what it compares; or, switched with "Diff | Annotate" before that, the file annotated.
+ * The tree keeps the keyboard; F6 moves it into the file to scroll it, and F6 or Esc back.
  */
-export function ItemViewer({ workspacePath, item, comparison, comment }: ItemViewerProps) {
-  const { detailsTab, setDetailsTab } = useFilesViewStore();
-  const annotatable = canAnnotateComparison(comparison);
-  const annotating = annotatable && detailsTab === 'annotate';
+export function ItemViewer({ workspacePath, item, comparison, comment, viewShortcut }: ItemViewerProps) {
+  const { fileView, setFileView } = useFilesViewStore();
+  const annotatable = canAnnotateComparison(comparison) && canAnnotate(item.itemType);
+  const annotating = annotatable && fileView === 'annotate';
   const viewerRef = useRef<HTMLDivElement>(null);
   const repository = useWorkspaceInfo().data?.repository;
 
@@ -50,22 +52,19 @@ export function ItemViewer({ workspacePath, item, comparison, comment }: ItemVie
     focusMain(document);
   };
 
-  const annotateToggle = annotatable && (
-    <Button
-      size="small"
-      variant={annotating ? 'secondary' : 'ghost'}
-      icon={<ScanText size={13} />}
-      aria-pressed={annotating}
-      data-tip={annotating ? 'Back to the diff' : 'Who last changed each line'}
-      onClick={() => setDetailsTab(annotating ? 'changes' : 'annotate')}
-    >
-      Annotate
-    </Button>
+  // What can't be annotated (no revision yet, deleted from disk, binary) only shows its diff.
+  const viewSwitch = annotatable && (
+    <FileViewSwitch
+      value={annotating ? 'annotate' : 'diff'}
+      onChange={setFileView}
+      tips={{ diff: "The file's diff", annotate: 'Who last changed each line' }}
+      shortcut={viewShortcut}
+    />
   );
   const title = (
     <>
+      {viewSwitch}
       <ComparisonTitle item={item} comparison={comparison} comment={comment} />
-      {annotateToggle}
     </>
   );
 
@@ -73,7 +72,7 @@ export function ItemViewer({ workspacePath, item, comparison, comment }: ItemVie
     <div ref={viewerRef} className={styles.viewer} tabIndex={-1} onKeyDown={leave}>
       {annotating ? (
         // A file with changes is annotated as it is on disk; any other as its revision, read once.
-        <AnnotationPane key={item.path} path={item.path} revision={comparison.kind === 'changes' ? undefined : itemRevision(item, repository)} leading={annotateToggle} />
+        <AnnotationPane key={item.path} path={item.path} revision={comparison.kind === 'changes' ? undefined : itemRevision(item, repository)} leading={viewSwitch} />
       ) : comparison.kind === 'lastChange' ? (
         <RevisionChanges workspacePath={workspacePath} item={item} title={title} />
       ) : comparison.change ? (

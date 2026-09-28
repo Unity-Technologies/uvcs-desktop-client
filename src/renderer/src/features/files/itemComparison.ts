@@ -27,7 +27,7 @@ export function itemComparison(item: ComparedItem, change: PendingChange | undef
 }
 
 /**
- * Whether the annotate toggle applies: `cm annotate` reads revisions, so a file with none yet has no annotations, and
+ * Whether "Diff | Annotate" offers Annotate: `cm annotate` reads revisions, so a file with none yet has no annotations, and
  * one deleted from disk has no text to annotate as it is now.
  */
 export function canAnnotateComparison(comparison: ItemComparison | null): boolean {

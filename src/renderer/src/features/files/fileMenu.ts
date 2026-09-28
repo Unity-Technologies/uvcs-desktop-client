@@ -41,7 +41,7 @@ export const FILE_SHORTCUTS = {
 /** The file annotated beside the tree, in the diff's place (from Go to file's actions too: the tree selects it). */
 function showAnnotated(path: string): void {
   const view = useFilesViewStore.getState();
-  view.setDetailsTab('annotate');
+  view.setFileView('annotate');
   view.requestReveal(path);
 }
 
@@ -68,7 +68,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
     single &&
       !single.isPrivate &&
       single.itemType !== 'directory' &&
-      menuAction('changes', () => useFilesViewStore.getState().setDetailsTab('changes'), { shortcut: FILE_SHORTCUTS.showChanges }),
+      menuAction('changes', () => useFilesViewStore.getState().setFileView('diff'), { shortcut: FILE_SHORTCUTS.showChanges }),
     // The root changes with every changeset: its history is the whole repository's.
     single &&
       hasRevisionsToShow(single, pendingChanges) &&
