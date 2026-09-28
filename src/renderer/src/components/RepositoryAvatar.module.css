@@ -1,0 +1,36 @@
+.avatar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  background: var(--avatar-fill);
+  color: var(--avatar-letter);
+  font-size: var(--text-lg);
+  font-weight: var(--weight-semibold);
+}
+
+.avatar[data-size='28'] {
+  width: 28px;
+  height: 28px;
+  font-size: var(--text-md);
+}
+
+.avatar[data-size='24'] {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-sm);
+  font-size: var(--text-sm);
+}
+
+.avatar[data-loading='true'] {
+  background: var(--bg-active);
+}
+
+/* Trimmed to the capital's height, so the letter (or digit) sits in the optical middle, not the line box's. */
+.letter {
+  line-height: 1;
+  text-box: trim-both cap alphabetic;
+}

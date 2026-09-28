@@ -1,13 +1,16 @@
+import type { CSSProperties } from 'react';
 import { stableHue } from '../../lib/stableHue';
-import { TintedMark } from '../../ui/TintedMark';
 import { serverInitials } from './serverInitials';
 import styles from './Home.module.css';
 
-/** A server in the folded sidebar: its initials on its own stable color, where a cloud icon would look like every other. */
+/**
+ * A server in the folded sidebar: its initials on a tint of its own stable color, where a cloud icon would look like
+ * every other. A tint, not the solid fill of workspace avatars: a server is secondary to the workspaces on it.
+ */
 export function ServerMonogram({ label }: { label: string }) {
   return (
-    <TintedMark hue={stableHue(label)} size={20} className={styles.serverMonogram}>
+    <span className={styles.serverMonogram} style={{ '--hue': stableHue(label) } as CSSProperties} aria-hidden>
       {serverInitials(label)}
-    </TintedMark>
+    </span>
   );
 }
