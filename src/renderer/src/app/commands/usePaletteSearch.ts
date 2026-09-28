@@ -89,7 +89,7 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
   const codeReviews = useQuery({
     // The same newest reviews the branch chips read (`useReviewsByBranch`): one query for both.
     queryKey: reviewSummariesKey(path),
-    queryFn: () => api.codeReviews.listSummaries(path, { scope: 'all' }),
+    queryFn: () => api.codeReviews.listSummaries(path, {}),
     ...cached,
   });
 
@@ -103,7 +103,7 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
   const foundShelves = useQuery({ queryKey: shelvesKey(path, textFilter), queryFn: () => api.shelves.list(path, textFilter), ...server('shelves') });
   const foundCodeReviews = useQuery({
     queryKey: reviewSummariesKey(path, serverTerm),
-    queryFn: () => api.codeReviews.listSummaries(path, { scope: 'all', text: serverTerm }),
+    queryFn: () => api.codeReviews.listSummaries(path, { text: serverTerm }),
     ...server('codeReviews'),
   });
 

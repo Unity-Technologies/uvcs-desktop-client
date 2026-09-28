@@ -5,14 +5,14 @@ const NOW = new Date('2026-09-27T12:00:00');
 
 describe('shelvesListFilter', () => {
   it("reads the user's shelves by owner and date, everyone's by the same date alone", () => {
-    expect(shelvesListFilter('mine', NOW)).toEqual({ owner: 'me', sinceDate: '2026-06-28' });
+    expect(shelvesListFilter('mine', NOW)).toEqual({ owners: ['me'], sinceDate: '2026-06-28' });
     expect(shelvesListFilter('everyone', NOW)).toEqual({ sinceDate: '2026-06-28' });
   });
 });
 
 describe('shelvesSearchFilter', () => {
   it("searches the user's comments at any age, bounded by a limit", () => {
-    expect(shelvesSearchFilter('mine', ' login ', NOW)).toEqual({ owner: 'me', text: 'login', limit: 100 });
+    expect(shelvesSearchFilter('mine', ' login ', NOW)).toEqual({ owners: ['me'], text: 'login', limit: 100 });
   });
 
   it("searches everyone's comments of the last year: cm can't sort shelves, and a limit alone would keep the oldest", () => {

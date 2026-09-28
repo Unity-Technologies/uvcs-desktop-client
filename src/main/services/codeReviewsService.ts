@@ -17,11 +17,11 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
 
   function findListed(workspacePath: string, filter: CodeReviewFilter): Promise<RawCodeReview[]> {
     const conditions = [
-      ...(filter.scope === 'assignedToMe' ? ["assignee = 'me'"] : []),
+      ...(filter.assignedToMe ? ["assignee = 'me'"] : []),
       ...(filter.status ? [`status = '${escapeQueryValue(filter.status)}'`] : []),
     ];
     return findRaw(workspacePath, conditions, {
-      owner: filter.scope === 'createdByMe' ? 'me' : undefined,
+      owners: filter.owners,
       sinceDate: filter.sinceDate,
       text: filter.text,
       limit: MAX_LISTED_CODE_REVIEWS,

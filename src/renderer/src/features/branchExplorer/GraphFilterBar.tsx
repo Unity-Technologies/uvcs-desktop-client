@@ -1,23 +1,22 @@
-import { Check, ChevronDown } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { Check, SlidersHorizontal } from 'lucide-react';
 import { SEPARATOR, type MenuEntry } from '../../lib/actions';
-import { displayName } from '../../lib/userName';
-import { Button } from '../../ui/Button';
+import { hotkey } from '../../lib/shortcutRegistry';
+import { PeopleFilter } from '../../components/people/PeopleFilter';
+import { SincePicker } from '../../components/SincePicker';
+import { FilterBar } from '../../ui/FilterBar';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
+import { MenuChip } from '../../ui/ToggleChip';
 import { BranchFilterPopover } from './BranchFilterPopover';
 import { FocusChip } from './FocusChip';
 import type { GraphFocus } from './model/filterGraph';
 import { useBranchExplorerPreferences } from './branchExplorerStore';
 import { ZOOM_STEP } from './canvas/zoom';
-import { DATE_RANGES } from './model/dateRanges';
-import styles from './BranchExplorerView.module.css';
-import { hotkey } from '../../lib/shortcutRegistry';
 
 interface GraphFilterBarProps {
   /** Every branch in the loaded history, by name. */
   branches: readonly string[];
   /** Everyone who authored a changeset in the loaded history. */
-  authors: string[];
+  authors: readonly string[];
   onZoom: (factor: number) => void;
   onFit: () => void;
   onGoHome: () => void;
@@ -27,29 +26,14 @@ interface GraphFilterBarProps {
   onExitFocus: () => void;
 }
 
-/** Compact dropdowns for what to show: branches, authors, time range and view options, then the focus if any. */
+/**
+ * The Branch Explorer's filter bar, in every view's order: whose changesets stand out (the others fade), how far back
+ * the history goes, which branches, then what the graph draws and the focus if any. Finding is the search's, above.
+ */
 export function GraphFilterBar({ branches, authors, onZoom, onFit, onGoHome, focus, onFocusHopsChange, onExitFocus }: GraphFilterBarProps) {
   const preferences = useBranchExplorerPreferences();
   const { set } = preferences;
   const check = (value: boolean) => (value ? Check : undefined);
-
-  const authorsMenu: MenuEntry[] = [
-    { id: 'everyone', label: 'Everyone', icon: check(preferences.highlightedAuthor === null), run: () => set({ highlightedAuthor: null }) },
-    SEPARATOR,
-    ...authors.map((author) => ({
-      id: `author.${author}`,
-      label: displayName(author),
-      icon: check(preferences.highlightedAuthor === author),
-      run: () => set({ highlightedAuthor: author }),
-    })),
-  ];
-
-  const dateMenu: MenuEntry[] = DATE_RANGES.map((range) => ({
-    id: range.id,
-    label: range.label,
-    icon: check(range.id === preferences.dateRange),
-    run: () => set({ dateRange: range.id }),
-  }));
 
   const viewMenu: MenuEntry[] = [
     {
@@ -71,29 +55,20 @@ export function GraphFilterBar({ branches, authors, onZoom, onFit, onGoHome, foc
   ];
 
   return (
-    <div className={styles.filterBar}>
-      <BranchFilterPopover branches={branches} />
-      <FilterPill entries={authorsMenu} active={preferences.highlightedAuthor !== null}>
-        Authors
-        {preferences.highlightedAuthor && <span className={styles.filterValue}>{displayName(preferences.highlightedAuthor)}</span>}
-      </FilterPill>
-      <FilterPill entries={dateMenu}>{DATE_RANGES.find((range) => range.id === preferences.dateRange)?.label}</FilterPill>
-      <FilterPill entries={viewMenu} active={preferences.structureOnly}>
-        View
-        {preferences.structureOnly && <span className={styles.filterValue}>Relevant only</span>}
-      </FilterPill>
-      {focus && <FocusChip focus={focus} onHopsChange={onFocusHopsChange} onExit={onExitFocus} />}
-    </div>
-  );
-}
-
-function FilterPill({ entries, active = false, children }: { entries: MenuEntry[]; active?: boolean; children: ReactNode }) {
-  return (
-    <ActionDropdownMenu entries={entries} align="start">
-      <Button size="small" className={styles.filterPill} data-active={active}>
-        {children}
-        <ChevronDown size={12} className={styles.filterChevron} />
-      </Button>
-    </ActionDropdownMenu>
+    <FilterBar
+      people={<PeopleFilter value={preferences.people} onChange={(people) => set({ people })} people={authors} mineTip="Make your changesets stand out" />}
+      time={<SincePicker value={preferences.dateRange} onChange={(dateRange) => set({ dateRange })} />}
+      kinds={<BranchFilterPopover branches={branches} />}
+      view={
+        <>
+          {focus && <FocusChip focus={focus} onHopsChange={onFocusHopsChange} onExit={onExitFocus} />}
+          <ActionDropdownMenu entries={viewMenu} align="end">
+            <MenuChip icon={<SlidersHorizontal size={13} />} active={preferences.structureOnly}>
+              {preferences.structureOnly ? 'Relevant only' : 'View'}
+            </MenuChip>
+          </ActionDropdownMenu>
+        </>
+      }
+    />
   );
 }

@@ -3,7 +3,7 @@ import { caseTolerantPattern, findArgs } from './findQuery';
 
 describe('findArgs', () => {
   it('combines filter conditions, order and limit', () => {
-    expect(findArgs('changeset', { owner: 'me', sinceDate: '2026-01-01', limit: 50 }, 'changesetid desc')).toEqual([
+    expect(findArgs('changeset', { owners: ['me'], sinceDate: '2026-01-01', limit: 50 }, 'changesetid desc')).toEqual([
       'find',
       'changeset',
       "where date >= '2026-01-01' and owner = 'me' order by changesetid desc limit 50",
@@ -23,7 +23,14 @@ describe('findArgs', () => {
     expect(caseTolerantPattern('a fix')).toBe('%a%ix%');
   });
 
+  it('asks for objects by any of several owners in one condition', () => {
+    expect(findArgs('branch', { owners: ['me', 'ana@corp.com'], sinceDate: '2026-01-01' }, null)[2]).toBe(
+      "where date >= '2026-01-01' and (owner = 'me' or owner = 'ana@corp.com')",
+    );
+    expect(findArgs('label', { owners: [] }, null)[2]).toBe('');
+  });
+
   it('escapes quotes in values', () => {
-    expect(findArgs('branch', { owner: "o'neil" }, null)[2]).toBe("where owner = 'o''neil'");
+    expect(findArgs('branch', { owners: ["o'neil"] }, null)[2]).toBe("where owner = 'o''neil'");
   });
 });

@@ -10,7 +10,12 @@ import { matchesShortcut } from '../../lib/shortcuts';
 import { useShortcut } from '../../lib/useShortcut';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
-import { SearchField } from '../../ui/SearchField';
+import { FilterBar } from '../../ui/FilterBar';
+import { FilterField } from '../../ui/FilterField';
+import { NoMatches } from '../../ui/NoMatches';
+import { useWorkspaceUser } from '../../app/account/accounts';
+import { PeopleFilter } from '../../components/people/PeopleFilter';
+import { EVERYONE, matchesPeople, type PeoplePick } from '../../lib/peopleFilter';
 import { ListSkeleton } from '../../ui/Skeleton';
 import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
@@ -21,7 +26,7 @@ import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
 import { HISTORY_ROW_HEIGHT, HistoryList } from './HistoryList';
 import { historyMenu } from './historyMenu';
 import { initialHistoryRow } from './initialHistoryRow';
-import { historyRowKey, historyRows, revisionRowKey } from './historyRows';
+import { historyRowKey, historyRows, ownerOf, revisionRowKey } from './historyRows';
 import { matchesHistorySearch } from './historySearch';
 import { PathChangeDetails } from './PathChangeDetails';
 import { RevisionDetails } from './RevisionDetails';
@@ -46,6 +51,9 @@ export function HistoryPage({ page }: PageProps<'history'>) {
   // A file under an xlink: its changesets, branches and labels are the xlinked repository's.
   const otherRepository = useOtherRepository(history?.revisions[0]?.repository);
   const [search, setSearch] = useState('');
+  // A page's filters last as long as it: another file's history starts with everyone's revisions.
+  const [people, setPeople] = useState<PeoplePick>(EVERYONE);
+  const me = useWorkspaceUser();
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
   // Revisions left by "Annotate before this change", for Back; picking a row in the list starts over.
   const [trail, setTrail] = useState<string[]>([]);
@@ -68,10 +76,18 @@ export function HistoryPage({ page }: PageProps<'history'>) {
 
   const rows = useMemo(() => (history ? historyRows(history) : []), [history]);
   const labelsByChangeset = useLabelsByChangeset(otherRepository);
+  const authors = useMemo(() => rows.map(ownerOf), [rows]);
   const visible = useMemo(
-    () => rows.filter((row) => matchesHistorySearch(row, search, row.kind === 'revision' ? labelsByChangeset.get(row.revision.changesetId) : undefined)),
-    [rows, search, labelsByChangeset],
+    () =>
+      rows.filter(
+        (row) => matchesPeople(people, me, ownerOf(row)) && matchesHistorySearch(row, search, row.kind === 'revision' ? labelsByChangeset.get(row.revision.changesetId) : undefined),
+      ),
+    [rows, people, me, search, labelsByChangeset],
   );
+  const clearFilters = useCallback(() => {
+    setSearch('');
+    setPeople(EVERYONE);
+  }, []);
   const selectedRows = useMemo(() => rows.filter((row) => selection.selected.has(historyRowKey(row))), [rows, selection]);
   const selectedRevisions = selectedRows.flatMap((row) => (row.kind === 'revision' ? [row.revision] : []));
   const focusedRow = rows.find((row) => historyRowKey(row) === selection.anchor);
@@ -91,12 +107,12 @@ export function HistoryPage({ page }: PageProps<'history'>) {
    */
   const selectFromPane = useCallback(
     (key: string): void => {
-      if (!visible.some((row) => historyRowKey(row) === key)) setSearch('');
+      if (!visible.some((row) => historyRowKey(row) === key)) clearFilters();
       setSelection(single(key));
       setRevealKey(key);
       focusMain(document);
     },
-    [visible],
+    [visible, clearFilters],
   );
   const annotationHistory = useMemo<AnnotationHistory>(
     () => ({
@@ -150,8 +166,13 @@ export function HistoryPage({ page }: PageProps<'history'>) {
   };
 
   const header = (
-    <ViewHeader title={page.path} count={history?.revisions.length}>
-      {rows.length > 0 && <SearchField value={search} onChange={setSearch} placeholder="Filter by comment, author, changeset, branch" width={320} />}
+    <ViewHeader title={page.path} count={history && visible.length} total={rows.length}>
+      {rows.length > 0 && (
+        <FilterBar
+          text={<FilterField value={search} onChange={setSearch} placeholder="Filter revisions" />}
+          people={<PeopleFilter value={people} onChange={setPeople} people={authors} mineTip="Revisions you checked in" />}
+        />
+      )}
     </ViewHeader>
   );
 
@@ -170,7 +191,7 @@ export function HistoryPage({ page }: PageProps<'history'>) {
         onSizeChange={(size) => setListWidth(LIST_WIDTH_KEY, size)}
         first={
           visible.length === 0 ? (
-            <EmptyState icon={<History size={22} />} title="No matching revisions" description="No comment, author, changeset or branch contains this text." />
+            <NoMatches icon={<History size={22} />} noun="revisions" onClear={clearFilters} />
           ) : (
             <HighlightQuery query={search}>
               <HistoryList

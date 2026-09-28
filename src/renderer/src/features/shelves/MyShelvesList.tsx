@@ -21,6 +21,7 @@ import { shelveMenu } from './shelveMenu';
 import { applyShelve, showShelveChanges } from './shelveOperations';
 import { SEARCH_LIMIT, SHOWN_LIMIT, shelvesEmptyMessage, shelvesFilterPlaceholder, shelvesListNote, type ShelvesScope } from './shelvesScope';
 import { useShelvesViewStore } from './shelvesViewStore';
+import { EVERYONE, MINE } from '../../lib/peopleFilter';
 import { COPY_ENTRY_IDS } from '../../components/copyMenu';
 import { useEveryonesShelves, useShelvesSearch } from './useMyShelves';
 import styles from './MyShelvesList.module.css';
@@ -88,9 +89,7 @@ export function MyShelvesList({ workspacePath, scope, onScopeChange, recent, onD
   };
 
   const openAllShelves = (): void => {
-    const { setOnlyMine, setSearch } = useShelvesViewStore.getState();
-    setOnlyMine(scope === 'mine');
-    setSearch(filter.trim());
+    useShelvesViewStore.getState().update({ people: scope === 'mine' ? MINE : EVERYONE, text: filter.trim() });
     onDone();
     navigation.goToView('shelves');
   };

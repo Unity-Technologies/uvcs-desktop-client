@@ -1,26 +1,14 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { EVERYONE } from '../../lib/peopleFilter';
 import type { SincePreset } from '../../lib/sincePresets';
+import { createViewFilters, type ViewFilters } from '../../lib/viewFilters';
 
 export type BranchesLayout = 'list' | 'tree';
 
-interface BranchesViewStore {
-  layout: BranchesLayout;
+interface BranchesFilters extends ViewFilters {
   since: SincePreset;
-  onlyMine: boolean;
+  /** Adds the hidden branches: it shows more, so "Clear filters" leaves it. */
   showHidden: boolean;
-  update: (changes: Partial<Omit<BranchesViewStore, 'update'>>) => void;
+  layout: BranchesLayout;
 }
 
-export const useBranchesViewStore = create<BranchesViewStore>()(
-  persist(
-    (set) => ({
-      layout: 'list',
-      since: 'anyTime',
-      onlyMine: false,
-      showHidden: false,
-      update: (changes) => set(changes),
-    }),
-    { name: 'branches-view' },
-  ),
-);
+export const useBranchesViewStore = createViewFilters<BranchesFilters>('branches-view', { text: '', people: EVERYONE, since: 'anyTime', showHidden: false, layout: 'list' });

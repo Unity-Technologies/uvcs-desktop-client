@@ -4,7 +4,7 @@ import { layoutGraph } from './layoutGraph';
 import { nextRelaxation, resolveReveal } from './revealTarget';
 
 const now = new Date(2026, 8, 25);
-const open = { filtersActive: false, dateRange: 'month', showHiddenBranches: false } as const;
+const open = { filtersActive: false, dateRange: 'lastMonth', showHiddenBranches: false } as const;
 
 describe('resolveReveal', () => {
   const layout = layoutGraph(sampleHistory());
@@ -28,20 +28,20 @@ describe('nextRelaxation', () => {
   });
 
   it('then widens the dates just enough to reach the target', () => {
-    expect(nextRelaxation(open, '2026-07-10', now)).toEqual({ kind: 'widenDates', dateRange: 'quarter' });
-    expect(nextRelaxation(open, '2025-01-10', now)).toEqual({ kind: 'widenDates', dateRange: 'all' });
+    expect(nextRelaxation(open, '2026-07-10', now)).toEqual({ kind: 'widenDates', dateRange: 'last3Months' });
+    expect(nextRelaxation(open, '2025-01-10', now)).toEqual({ kind: 'widenDates', dateRange: 'anyTime' });
   });
 
   it('always widens past the current range, even when the date looks covered', () => {
-    expect(nextRelaxation(open, '2026-09-20', now)).toEqual({ kind: 'widenDates', dateRange: 'quarter' });
+    expect(nextRelaxation(open, '2026-09-20', now)).toEqual({ kind: 'widenDates', dateRange: 'last3Months' });
   });
 
   it('loads all history when the date is unknown', () => {
-    expect(nextRelaxation(open, undefined, now)).toEqual({ kind: 'widenDates', dateRange: 'all' });
+    expect(nextRelaxation(open, undefined, now)).toEqual({ kind: 'widenDates', dateRange: 'anyTime' });
   });
 
   it('then shows hidden branches, and finally gives up', () => {
-    expect(nextRelaxation({ ...open, dateRange: 'all' }, undefined, now)).toEqual({ kind: 'showHidden' });
-    expect(nextRelaxation({ ...open, dateRange: 'all', showHiddenBranches: true }, undefined, now)).toBeNull();
+    expect(nextRelaxation({ ...open, dateRange: 'anyTime' }, undefined, now)).toEqual({ kind: 'showHidden' });
+    expect(nextRelaxation({ ...open, dateRange: 'anyTime', showHiddenBranches: true }, undefined, now)).toBeNull();
   });
 });

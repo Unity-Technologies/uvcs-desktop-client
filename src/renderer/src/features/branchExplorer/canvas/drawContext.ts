@@ -34,8 +34,8 @@ export interface GraphScene {
   hoveredPending: boolean;
   /** The branch the workspace is on, emphasized. */
   currentBranch: string | null;
-  /** When set, changesets by other authors fade out. */
-  highlightedAuthor: string | null;
+  /** When set, changesets by anyone else fade out (the people filter). */
+  highlightedAuthors: ReadonlySet<string> | null;
   /** While searching, what matched; everything else fades. */
   search: SearchHighlight | null;
   /** What was typed in the search, its words marked in the branch headers while `search` is set. */
@@ -64,8 +64,8 @@ export const GHOST_ALPHA = 0.3;
 /** Bands and links recede with the changesets while a search picks some out. */
 export const STRUCTURE_DIMMED_ALPHA = 0.12;
 
-export function isChangesetDimmed({ highlightedAuthor, search }: GraphScene, changeset: GraphChangeset): boolean {
-  return (highlightedAuthor !== null && changeset.owner !== highlightedAuthor) || (search !== null && !search.changesets.has(changeset.id));
+export function isChangesetDimmed({ highlightedAuthors, search }: GraphScene, changeset: GraphChangeset): boolean {
+  return (highlightedAuthors !== null && !highlightedAuthors.has(changeset.owner)) || (search !== null && !search.changesets.has(changeset.id));
 }
 
 /** The part of the world currently on screen. */

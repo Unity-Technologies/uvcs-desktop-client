@@ -24,7 +24,7 @@ const SHELVE_NUMBER = /^(?:sh:)?\d+$/i;
 /** The one `cm find shelve` the list reads: by owner and date for the user's, by date alone for everyone's. */
 export function shelvesListFilter(scope: ShelvesScope, now = new Date()): QueryFilter {
   const sinceDate = sinceDateFor(SHELVES_SINCE, now);
-  return scope === 'mine' ? { owner: 'me', sinceDate } : { sinceDate };
+  return scope === 'mine' ? { owners: ['me'], sinceDate } : { sinceDate };
 }
 
 /**
@@ -36,7 +36,7 @@ export function shelvesSearchFilter(scope: ShelvesScope, text: string, now = new
   const term = text.trim();
   if (term.length < MIN_SEARCH_LENGTH || SHELVE_NUMBER.test(term)) return null;
   return scope === 'mine'
-    ? { owner: 'me', text: term, limit: SEARCH_LIMIT }
+    ? { owners: ['me'], text: term, limit: SEARCH_LIMIT }
     : { text: term, sinceDate: sinceDateFor(EVERYONE_SEARCH_SINCE, now), limit: SEARCH_LIMIT };
 }
 

@@ -1,4 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react';
+import { FilterField } from '../ui/FilterField';
 import { SearchField } from '../ui/SearchField';
 import { Tooltip } from '../ui/Tooltip';
 import { changeFilterPlaceholder, countTones, matchesChangeFilter, offeredTones } from './changeFilter';
@@ -26,8 +27,11 @@ interface ChangeFilterResult<T> {
   bar: ReactNode;
 }
 
-/** Filters a list of changed files by path and by status (A, M, D, R...). */
-export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, toneOf: (item: T) => StatusTone): ChangeFilterResult<T> {
+/**
+ * Filters a list of changed files by path and by status (A, M, D, R...). `isViewFilter` for the list a view or page
+ * works on (Changes, a diff's files): its field takes ⌘F as every view's filter does; a list inside details doesn't.
+ */
+export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, toneOf: (item: T) => StatusTone, isViewFilter = false): ChangeFilterResult<T> {
   const [query, setQuery] = useState('');
   const [chosenTones, setChosenTones] = useState<ReadonlySet<StatusTone>>(new Set());
 
@@ -56,7 +60,11 @@ export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tone
 
   const bar = (
     <div className={styles.bar}>
-      <SearchField value={query} onChange={setQuery} placeholder={changeFilterPlaceholder(items.length)} width="100%" />
+      {isViewFilter ? (
+        <FilterField value={query} onChange={setQuery} placeholder={changeFilterPlaceholder(items.length)} width="100%" />
+      ) : (
+        <SearchField value={query} onChange={setQuery} placeholder={changeFilterPlaceholder(items.length)} width="100%" />
+      )}
       {tones.map((tone) => {
         const count = counts.get(tone) ?? 0;
         const label = count > 0 ? `${TONE_LABELS[tone]} (${count.toLocaleString('en-US')})` : TONE_LABELS[tone];

@@ -56,7 +56,7 @@ describe('refresh scopes', () => {
     expect(isAffectedByNewChangesets(key('shelves', {}))).toBe(false);
     expect(isAffectedByNewChangesets(key('attributeTypes'))).toBe(false);
     expect(isAffectedByNewChangesets(key('attributeValues', 'br:/main/task'))).toBe(false);
-    expect(isAffectedByNewChangesets(key('codeReviews', { scope: 'all' }))).toBe(false);
+    expect(isAffectedByNewChangesets(key('codeReviews', {}))).toBe(false);
     expect(isAffectedByNewChangesets(key('annotate', 'src/a.ts', undefined))).toBe(false);
     expect(isAffectedByNewChangesets(key('history', 'src/a.ts'))).toBe(true);
   });
@@ -68,18 +68,18 @@ describe('refresh scopes', () => {
     expect(isAffectedByCheckinOrUpdate(key('changesets', {}))).toBe(true);
     expect(isAffectedByCheckinOrUpdate(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(false);
     expect(isAffectedByCheckinOrUpdate(key('labels', {}))).toBe(false);
-    expect(isAffectedByCheckinOrUpdate(key('shelves', { owner: 'me' }))).toBe(false);
+    expect(isAffectedByCheckinOrUpdate(key('shelves', { owners: ['me'] }))).toBe(false);
     expect(isAffectedByCheckinOrUpdate(key('changesets', 'byId', 4))).toBe(false);
   });
 
   it('refreshes only the shelve lists after shelving changes that stay in the workspace', () => {
-    expect(isAffectedByShelving(key('shelves', { owner: 'me' }))).toBe(true);
+    expect(isAffectedByShelving(key('shelves', { owners: ['me'] }))).toBe(true);
     expect(isAffectedByShelving(key('pendingChanges'))).toBe(false);
     expect(isAffectedByShelving(key('info'))).toBe(false);
   });
 
   it('refreshes the shelve lists and the workspace, not the repository, after shelving changes away', () => {
-    expect(isAffectedByShelvingAway(key('shelves', { owner: 'me' }))).toBe(true);
+    expect(isAffectedByShelvingAway(key('shelves', { owners: ['me'] }))).toBe(true);
     expect(isAffectedByShelvingAway(key('pendingChanges'))).toBe(true);
     expect(isAffectedByShelvingAway(key('explorer', 'allPaths'))).toBe(true);
     expect(isAffectedByShelvingAway(key('diffContents', { kind: 'workspaceFile', path: 'a.txt' }))).toBe(true);

@@ -1,5 +1,5 @@
 import { Plus, RefreshCw, Tags } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import type { AttributeType } from '@shared/domain/attribute';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
 import { invalidateWorkspace } from '../../app/queryClient';
@@ -16,7 +16,14 @@ import { EmptyState } from '../../ui/EmptyState';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
-import { SearchField } from '../../ui/SearchField';
+import { useWorkspaceUser } from '../../app/account/accounts';
+import { PeopleFilter } from '../../components/people/PeopleFilter';
+import { matchesPeople } from '../../lib/peopleFilter';
+import { isFiltering } from '../../lib/viewFilters';
+import { FilterBar } from '../../ui/FilterBar';
+import { FilterField } from '../../ui/FilterField';
+import { NoMatches } from '../../ui/NoMatches';
+import { useAttributesViewStore } from './attributesViewStore';
 import { cellText } from '../../ui/table/cellText';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
@@ -43,12 +50,16 @@ const COLUMNS: Column<AttributeType>[] = [
 export function AttributesView() {
   const workspacePath = useWorkspacePath();
   const { data: types, isLoading, isFetching, error } = useAttributeTypes();
-  const [search, setSearch] = useState('');
+  const filters = useAttributesViewStore();
+  const { text: search, people, update } = filters;
+  const me = useWorkspaceUser();
   const [selection, setSelection] = useViewSelection('attributes');
 
+  // Every attribute type is read: people are matched among them.
+  const authors = useMemo(() => (types ?? []).map((type) => type.owner), [types]);
   const visible = useMemo(
-    () => (search.trim() ? (types ?? []).filter((type) => matchesWordFilter([type.name, type.comment, ...userFilterTexts(type.owner)], search)) : (types ?? [])),
-    [types, search],
+    () => (types ?? []).filter((type) => matchesPeople(people, me, type.owner) && matchesWordFilter([type.name, type.comment, ...userFilterTexts(type.owner)], search)),
+    [types, people, me, search],
   );
   const selected = visible.find((type) => typeKey(type) === selection.anchor);
   useRenameCommand('Attributes', 'attribute', selection.selected.size === 1 ? selected : undefined, (type) => void renameAttributeType(workspacePath, type));
@@ -57,7 +68,8 @@ export function AttributesView() {
     <>
       <ViewHeader
         title="Attributes"
-        count={types?.length}
+        count={types && visible.length}
+        total={types?.length}
         actions={
           <>
             <IconButton icon={<RefreshCw size={14} className={isFetching ? 'spinning' : undefined} />} label="Refresh" onClick={() => void invalidateWorkspace(workspacePath)} />
@@ -67,14 +79,17 @@ export function AttributesView() {
           </>
         }
       >
-        <SearchField value={search} onChange={setSearch} placeholder="Filter attributes" />
+        <FilterBar
+          text={<FilterField value={search} onChange={(text) => update({ text })} placeholder="Filter attributes" />}
+          people={<PeopleFilter value={people} onChange={(value) => update({ people: value })} people={authors} mineTip="Attributes you created" />}
+        />
       </ViewHeader>
       {isLoading ? (
         <ListWithDetailsSkeleton widthKey="attributes" columns={COLUMNS} />
       ) : error ? (
         <EmptyState title="Couldn't load attributes" description={error.message} />
-      ) : visible.length === 0 && search.trim() ? (
-        <EmptyState icon={<Tags size={22} />} title="No matching attributes" description="Try a different filter." />
+      ) : visible.length === 0 && isFiltering(filters) ? (
+        <NoMatches icon={<Tags size={22} />} noun="attributes" onClear={filters.clear} />
       ) : visible.length === 0 ? (
         <EmptyState
           icon={<Tags size={22} />}

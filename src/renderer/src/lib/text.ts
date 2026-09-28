@@ -8,6 +8,11 @@ export function fileNameOf(path: string): string {
 }
 
 /** A count as the app shows it: 20,412. */
+/** How many rows a list shows: "340", or "12 of 340" while its filters hide some of what it read. */
+export function shownCount(shown: number, total: number = shown): string {
+  return shown === total ? formatCount(total) : `${formatCount(shown)} of ${formatCount(total)}`;
+}
+
 export function formatCount(count: number): string {
   return count.toLocaleString('en-US');
 }

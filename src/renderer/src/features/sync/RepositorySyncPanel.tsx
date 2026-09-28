@@ -10,7 +10,7 @@ import { prompt } from '../../ui/dialog/prompt';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
-import { SearchField } from '../../ui/SearchField';
+import { FilterField } from '../../ui/FilterField';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { UserLabel } from '../../ui/Avatar';
@@ -90,7 +90,7 @@ export function RepositorySyncPanel({ localRepository }: { localRepository: stri
       </section>
 
       <div className={styles.toolbar}>
-        <SearchField value={filter} onChange={setFilter} placeholder="Filter branches" />
+        <FilterField value={filter} onChange={setFilter} placeholder="Filter branches" />
         <span className={styles.hint}>
           <b>Push</b> sends a branch to the remote. <b>Pull</b> brings the remote's version here.
         </span>

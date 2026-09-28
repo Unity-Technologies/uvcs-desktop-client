@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemPathChange, ItemRevision } from '@shared/domain/history';
-import { historyRowKey, historyRows, revisionRowKey } from './historyRows';
+import { historyRowKey, historyRows, ownerOf, revisionRowKey } from './historyRows';
 
 const revision = (changesetId: number): ItemRevision => ({
   revisionId: changesetId * 10,
@@ -34,5 +34,12 @@ describe('revisionRowKey', () => {
   it('finds none for a changeset that only moved the item, or never touched it', () => {
     expect(revisionRowKey(rows, 7)).toBeNull();
     expect(revisionRowKey(rows, 4)).toBeNull();
+  });
+});
+
+describe('ownerOf', () => {
+  it('names who made a revision or a move', () => {
+    expect(ownerOf({ kind: 'revision', revision: { ...revision(3), owner: 'ana' } })).toBe('ana');
+    expect(ownerOf({ kind: 'pathChange', change: { ...change(4), owner: 'bob' } })).toBe('bob');
   });
 });

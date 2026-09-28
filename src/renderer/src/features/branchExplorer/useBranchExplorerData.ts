@@ -4,7 +4,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useBranchExplorerPreferences } from './branchExplorerStore';
-import { sinceDateFor } from './model/dateRanges';
+import { sinceDateFor } from '../../lib/sincePresets';
 import { shareRepeatedStrings } from './model/shareRepeatedStrings';
 
 export function useBranchExplorerData() {

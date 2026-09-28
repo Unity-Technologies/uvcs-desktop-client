@@ -34,9 +34,18 @@ export function caseTolerantPattern(text: string): string {
 export function whereClause(filter: QueryFilter, extraConditions: string[] = []): string {
   const conditions = [...extraConditions];
   if (filter.sinceDate) conditions.push(`date >= '${filter.sinceDate}'`);
-  if (filter.owner) conditions.push(`owner = '${escapeQueryValue(filter.owner)}'`);
+  if (filter.owners?.length) conditions.push(ownersCondition(filter.owners));
   if (filter.branch) conditions.push(`branch = '${escapeQueryValue(filter.branch)}'`);
   return conditions.length > 0 ? `where ${conditions.join(' and ')}` : '';
+}
+
+/**
+ * Objects by any of a few users: `owner = 'ana'`, or `(owner = 'me' or owner = 'ana')`. Names, never ids, picked by
+ * hand (a handful), so the query stays one bounded scan; `cm` has no `in (...)`.
+ */
+export function ownersCondition(owners: readonly string[]): string {
+  const each = owners.map((owner) => `owner = '${escapeQueryValue(owner)}'`);
+  return each.length === 1 ? each[0]! : `(${each.join(' or ')})`;
 }
 
 export function escapeQueryValue(value: string): string {

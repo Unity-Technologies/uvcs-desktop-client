@@ -1,4 +1,4 @@
-import { EyeOff, GitBranch, GitBranchPlus, List, ListTree, RefreshCw, User } from 'lucide-react';
+import { EyeOff, GitBranch, GitBranchPlus, List, ListTree, RefreshCw } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
@@ -10,7 +10,16 @@ import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
 import { NoSelection } from '../../components/NoSelection';
+import { useWorkspaceUser } from '../../app/account/accounts';
+import { PeopleFilter } from '../../components/people/PeopleFilter';
+import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { SincePicker } from '../../components/SincePicker';
+import { matchesPeople, pickedOwners, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
+import { useDebouncedValue } from '../../lib/useDebouncedValue';
+import { isFiltering } from '../../lib/viewFilters';
+import { FilterBar } from '../../ui/FilterBar';
+import { FilterField } from '../../ui/FilterField';
+import { NoMatches } from '../../ui/NoMatches';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { userFilterTexts } from '../../lib/userName';
 import { sinceDateFor } from '../../lib/sincePresets';
@@ -20,7 +29,6 @@ import { EmptyState } from '../../ui/EmptyState';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
-import { SearchField } from '../../ui/SearchField';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ToggleChip } from '../../ui/ToggleChip';
@@ -41,21 +49,24 @@ import { useCopyCommand } from '../../app/commands/useCopyCommand';
 export function BranchesView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
-  const { layout, since, onlyMine, showHidden, update } = useBranchesViewStore();
+  const filters = useBranchesViewStore();
+  const { text: search, people, layout, since, showHidden, update } = filters;
+  const me = useWorkspaceUser();
+  const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const { data: branches, isLoading, isFetching, error } = useBranches({
     sinceDate: sinceDateFor(since),
-    owner: onlyMine ? 'me' : undefined,
+    owners: pickedOwners(queriedPeople),
     includeHidden: showHidden,
   });
+  const offered = usePeopleSeen('branches', branches, ownerOf);
 
-  const [search, setSearch] = useState('');
   const [selection, setSelection] = useViewSelection('branches');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
 
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
   // The tree lists siblings by name: sorted once per read, so typing a filter only filters.
   const listed = useMemo(() => (layout === 'tree' ? sortBranchesByName(branches ?? []) : (branches ?? [])), [layout, branches]);
-  const matching = useMemo(() => filterBranches(listed, search), [listed, search]);
+  const matching = useMemo(() => filterBranches(listed, search, (owner) => matchesPeople(people, me, owner)), [listed, search, people, me]);
   const rows = useMemo(
     () => (layout === 'tree' ? buildBranchTree(matching, collapsed) : matching.map((branch) => ({ branch, depth: 0, hasChildren: false, collapsed: false }))),
     [layout, matching, collapsed],
@@ -100,7 +111,8 @@ export function BranchesView() {
     <>
       <ViewHeader
         title="Branches"
-        count={branches?.length}
+        count={branches && matching.length}
+        total={branches?.length}
         actions={
           <>
             <IconButton icon={<RefreshCw size={14} className={isFetching ? 'spinning' : undefined} />} label="Refresh" onClick={() => void invalidateWorkspace(workspacePath)} />
@@ -110,29 +122,35 @@ export function BranchesView() {
           </>
         }
       >
-        <SearchField value={search} onChange={setSearch} placeholder="Filter branches" />
-        <SincePicker value={since} onChange={(value) => update({ since: value })} />
-        <ToggleChip pressed={onlyMine} onChange={(value) => update({ onlyMine: value })} icon={<User size={12} />}>
-          Mine
-        </ToggleChip>
-        <ToggleChip pressed={showHidden} onChange={(value) => update({ showHidden: value })} icon={<EyeOff size={12} />}>
-          Hidden
-        </ToggleChip>
-        <SegmentedControl<BranchesLayout>
-          value={layout}
-          onChange={(value) => update({ layout: value })}
-          segments={[
-            { value: 'list', label: <List size={13} />, title: 'List' },
-            { value: 'tree', label: <ListTree size={13} />, title: 'Tree' },
-          ]}
+        <FilterBar
+          text={<FilterField value={search} onChange={(text) => update({ text })} placeholder="Filter branches" />}
+          people={<PeopleFilter value={people} onChange={(value) => update({ people: value })} people={offered} mineTip="Branches you created" />}
+          time={<SincePicker value={since} onChange={(value) => update({ since: value })} />}
+          kinds={
+            <ToggleChip pressed={showHidden} onChange={(value) => update({ showHidden: value })} icon={<EyeOff size={13} />}>
+              Hidden
+            </ToggleChip>
+          }
+          view={
+            <SegmentedControl<BranchesLayout>
+              value={layout}
+              onChange={(value) => update({ layout: value })}
+              segments={[
+                { value: 'list', label: <List size={13} />, title: 'List' },
+                { value: 'tree', label: <ListTree size={13} />, title: 'Tree' },
+              ]}
+            />
+          }
         />
       </ViewHeader>
       {isLoading ? (
         <ListWithDetailsSkeleton widthKey="branches" columns={columns} />
       ) : error ? (
         <EmptyState title="Couldn't load branches" description={error.message} />
+      ) : rows.length === 0 && isFiltering(filters) ? (
+        <NoMatches icon={<GitBranch size={22} />} noun="branches" hint={since === 'anyTime' ? undefined : 'The filters look within the time range. Try a longer one.'} onClear={filters.clear} />
       ) : rows.length === 0 ? (
-        <EmptyState icon={<GitBranch size={22} />} title="No branches found" description="Try a different filter or date range." />
+        <EmptyState icon={<GitBranch size={22} />} title="No branches" description={since === 'anyTime' ? undefined : 'Try a longer time range.'} />
       ) : (
         <ListWithDetails widthKey="branches"
           list={
@@ -167,9 +185,11 @@ function rowKey(row: Pick<BranchTreeRow, 'branch'>): string {
   return String(row.branch.id);
 }
 
-function filterBranches(branches: Branch[], search: string): Branch[] {
-  if (!search.trim()) return branches;
-  return branches.filter((branch) => matchesWordFilter([branch.name, branch.comment, ...userFilterTexts(branch.owner)], search));
+const ownerOf = (branch: Branch): string => branch.owner;
+
+/** The branches by the people picked (`isPicked`) whose name, comment or creator has every word typed. */
+function filterBranches(branches: Branch[], search: string, isPicked: (owner: string) => boolean): Branch[] {
+  return branches.filter((branch) => isPicked(branch.owner) && matchesWordFilter([branch.name, branch.comment, ...userFilterTexts(branch.owner)], search));
 }
 
 function useBranchColumns(
