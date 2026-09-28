@@ -106,9 +106,3 @@
   text-decoration: underline;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .mine,
-  .others {
-    transition: none;
-  }
-}

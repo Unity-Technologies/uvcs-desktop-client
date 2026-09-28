@@ -435,6 +435,38 @@ renderer/src/
   `userFilterTexts`), and `HighlightQuery` marks those words in each cell; a path cut to fit finds them in the whole
   path first (`PathLabel`, `positionsInTrimmed`). Fuzzy finders (the palette, Go to file) pass the positions they
   ranked by (`fuzzyMatchPositions`). Text a row shows but its filter doesn't look at is never marked.
+  - **One filter bar**: every view lays its filters out with `FilterBar`, whose slots fix the order: the text
+    (`FilterField`, "Filter <things>", 240px), people, time (`SincePicker`, the presets of `lib/sincePresets`, any time
+    last), kinds and statuses (`ToggleChip`, `ChoiceChip`, the Branch Explorer's Branches picker), then the view's own
+    options at the end (layout, the graph's View). The text field is where ⌘F (and / from outside a text field) goes
+    while it shows (`listFilter`, in its tooltip and the shortcuts sheet); ↓ goes on to the list and Esc empties it,
+    then goes back to the list. Changes' and a diff's file filters take it too (`useChangeFilter(..., true)`); a list
+    inside details keeps a plain `SearchField`; the command log keeps its own ⌘F.
+  - **People**: `PeopleFilter` is the one people control: Mine, a click away, joined to a picker of anyone the list
+    shows (`PeoplePicker` over `FilterChecklist`, which the Branches picker uses too: a search matching
+    `userFilterTexts`, marked with `HighlightQuery`, Everyone and You first, then the people picked when it opened and
+    the rest by name, avatars, several at once, only the rows in view rendered; ↑↓ move, Enter toggles, Space toggles
+    once the arrows moved, Esc empties the search then closes). It reads the pick: "Ana Diaz +2", avatars stacked
+    (`lib/peopleFilter`: `othersLabel`, `describePick`). The people offered come from the rows: a list read whole
+    offers its owners, one read by people on the server everyone it showed this session (`usePeopleSeen`); no query
+    lists people. Where the view reads a subset from the server (Changesets, Branches, Labels, Shelves, Code reviews)
+    the pick goes into that same query (`pickedOwners`: `me` and names, sorted, one key per pick; `ownersCondition`
+    ORs a few owner names, never ids, at most `MAX_PICKED_PEOPLE`), once picking pauses (`PICKING_PAUSE_MS`), and the
+    rows already read narrow at once meanwhile (`matchesPeople`). Locks read only the user's (`--onlycurrentuser`)
+    or everyone's, other people picked among everyone's; the Branch Explorer fades the others' changesets
+    (`pickedNames`), History and Attributes filter what they read. Code reviews go by who created them; Assigned to me
+    is a chip of its own. `cm find` fails on an owner it doesn't know, so only people from the rows are offered.
+  - **Remembered**: each view keeps its filters in one store (`createViewFilters`): the time range, the kinds, the
+    view options and Mine across sessions, the text and the people picked by name for the session (people differ
+    between repositories); a page's (History) last as long as it. Older stores' `onlyMine` and the Branch Explorer's
+    own date ranges are read into these (`restoredFilters`, `sincePresetOf`).
+  - **Counts and empty lists**: the header counts what shows, "12 of 340" while filters hide some of what was read
+    (`shownCount`). A list its filters empty says "No matching <things>" with Clear filters (`NoMatches`), which
+    empties the text, shows everyone and turns the kinds off (`clear`, `isFiltering`); the time range stays, and the
+    hint says when a longer one could find more. A list with nothing to filter keeps its own first-use empty state.
+    Revealing a row the filters hide clears them (Show in Locks, the Branch Explorer's reveal).
+  - The shelves list in Changes stays a quick list with "Mine | Everyone" (⇧⌘S), not a filter bar: it's a popover
+    over Changes, and its "All shelves" hands its scope and text to the Shelves view.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
 - **List and details**: `ListWithDetails` (each view remembers its own details width, `widthKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. Every
   kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
@@ -600,7 +632,7 @@ and many people use the same server. Every `cm` command other than local reads (
   changes look the selector's object id up only when an automatic shelve by another client could match it, and arriving
   from a switch looks for changes to restore only when this app left some there.
 - **Queries**: list everything only when the view needs everything, and then read it rarely. Otherwise filter on the
-  server: a date (`sinceDate`), a `limit`, one object by name or id (`api.branches.get`). Never OR ids together
+  server: a date (`sinceDate`), a `limit`, the people picked (`owners`), one object by name or id (`api.branches.get`). Never OR ids together
   (`where id = 1 or id = 2 …`, checked by `noOredIdLookups.test.ts`): take names and details from the query that lists
   the objects (`--format` fields, `{id}` in branch lists), or from one bounded query the view needs anyway. Prefer
   `--format` with just the fields needed over `--xml`.
