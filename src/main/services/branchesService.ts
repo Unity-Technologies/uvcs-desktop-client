@@ -27,10 +27,17 @@ export function createBranchesService({ cm }: ServiceContext, { branchNames }: B
   }
 
   async function get(workspacePath: string, name: string): Promise<Branch | null> {
-    // `cm find` matches branches by their last name part only.
-    const where = `where name = '${escapeQueryValue(shortBranchName(name))}'`;
-    const xml = await cm.query(['find', 'branch', where, '--xml', '--nototal'], { cwd: workspacePath });
-    return findRecords(xml, 'BRANCH').map(toBranch).find((branch) => branch.name === name) ?? null;
+    // `cm find` matches branches by their last name part only, and leaves hidden branches out unless they are asked
+    // for (a workspace can be on one): both are asked for, as `or` there finds neither.
+    const named = `name = '${escapeQueryValue(shortBranchName(name))}'`;
+    const findNamed = (condition: string): Promise<string> =>
+      cm.query(['find', 'branch', `where ${named} and ${condition}`, '--xml', '--nototal'], { cwd: workspacePath });
+    const [visible, hidden] = await Promise.all([findNamed("hidden = 'false'"), findNamed("hidden = 'true'")]);
+    const branches = [
+      ...findRecords(visible, 'BRANCH').map(toBranch),
+      ...findRecords(hidden, 'BRANCH').map((record) => ({ ...toBranch(record), isHidden: true })),
+    ];
+    return branches.find((branch) => branch.name === name) ?? null;
   }
 
   function create(workspacePath: string, request: CreateBranchRequest): Promise<void> {
