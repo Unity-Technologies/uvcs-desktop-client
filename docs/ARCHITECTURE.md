@@ -432,17 +432,23 @@ renderer/src/
   pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. The Changes list renders
   its file and folder rows memoized with stable callbacks: holding ↓ over 100,000 changes re-renders none of them
   (0.5-0.6 ms a step).
-  `ItemIcon` draws a file's type in Material Icon Theme (`material-icon-theme`, MIT: the icons of VS Code's most
-  installed icon theme), matched as VS Code does, on the file name first, then its longest extension (`fileIconOf`:
-  1,400 extensions and 2,100 names, from C#, C++ and web projects to Docker, CMake and lockfiles), plus what the theme
-  lacks (Unity's serialized assets, Plastic's `.conf` files); its light variants on the light theme. The build emits its
-  file icons (not its folder ones) as files, loaded as rows show them (`materialIconUrl`, about 640 KB on disk);
-  updating the dependency updates them. Folders, and the plain page of a file it has no icon for (a Unity `.meta`, an
-  unknown type), are the theme's shapes in the `--icon-*` tokens. Its colors are the file types' own, as in an editor;
-  statuses stay letters at the end of the row. Rejected: Lucide glyphs (neutral or tinted by family: a gray tree where
-  types look alike), catppuccin (pastels washed out on white), vscode-icons (32 px art, busy at 16), file-icons (one
-  color). Native icons (`app.getFileIcon`) were rejected too: macOS answers a generic page for a path not on disk
-  (repository trees, deleted files), they're bitmaps that ignore the app's theme, and every OS draws them differently.
+  `ItemIcon` draws every file as the same filled Lucide page (`--icon-file` on `--icon-file-fill`) beside solid
+  folders, so every row reads with one weight; a glyph on the page tells the file's family (`fileFamilyOf`, by name
+  first, then its longest extension: `Form.Designer.cs` before `.cs`), and only the glyph takes the family's tint
+  (`FAMILY_GLYPHS`; its outline of the page stays neutral, found by its corners). The families are what matters in a
+  change: what you write (source `<>`, scripts) in `--icon-source`; what builds it (`.csproj`, `.sln`, `.props`,
+  `package.json`, `Cargo.toml`, `CMakeLists.txt`, `Makefile`, `.gradle`, `Dockerfile`, `.asmdef`: a cog) in
+  `--icon-project`; what's generated for you (lockfiles, Unity's `.meta`, `*.g.cs`, `*.Designer.cs`) as the plain
+  page, like an unknown type; config and data (braces) in `--icon-config`; images and media in `--icon-media`; Unity
+  and other game assets (a box) in `--icon-asset`; docs, archives and binaries with a neutral glyph. Each tint is 3:1
+  on the page in both themes. Rejected, rendered in the real rows with the same tree: Material Icon Theme (glyphs fill
+  their box unevenly: C# edge to edge, the page a thin outline, so rows look airy and unbalanced), Symbols, JetBrains
+  New UI and Seti (the same glyph-only imbalance; JetBrains lacks Unity, Go, Rust and lockfiles, Seti's glyphs are faint), Fluent's file
+  types (balanced pages but one icon for all code, and its assets are licensed for Microsoft-connected use only),
+  file-icon-vectors and Phosphor (uniform pages, but their extension letters are unreadable at 16 px; the first
+  unmaintained), catppuccin, vscode-icons and file-icons. Native icons (`app.getFileIcon`) were rejected too: macOS
+  answers a generic page for a path not on disk (repository trees, deleted files), they're bitmaps that ignore the
+  app's theme, and every OS draws them differently.
 - **Files**: the tree keeps its width (400 px at first; on a narrow window it gives way first, keeping 480 px for the
   diff: `FILE_TREE_WIDTH`) and shows names only, with Modified once it's wider than 420 px: size, changeset, author
   and comment are the selected item's, above its diff. A file shows one diff, the most telling for its status
