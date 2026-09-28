@@ -20,6 +20,16 @@ describe('parsePendingChanges', () => {
     expect(Object.keys(snapshot.changes[1]!)).toEqual(['path', 'kinds', 'itemType', 'size', 'lastModified']);
   });
 
+  it('lists the merges the changes come from, each once', () => {
+    const merged = (path: string, info: string): string => change('CO+CH', path).replace('<MergesInfo />', `<MergesInfo> (${info})</MergesInfo>`);
+    const xml = `${header}<Changes>${merged('a.ts', 'Merge from 242')}${merged('b.ts', 'Merge from 242')}${change('CH', 'c.ts')}</Changes></StatusOutput>`;
+    const snapshot = parsePendingChanges(xml);
+
+    expect(snapshot.changes[0]!.mergeInfo).toBe('Merge from 242');
+    expect(snapshot.mergeLinks).toEqual([{ type: 'merge', sourceChangeset: 242 }]);
+    expect(parsePendingChanges(`${header}<Changes>${change('CH', 'c.ts')}</Changes></StatusOutput>`).mergeLinks).toEqual([]);
+  });
+
   it('leaves out the minimum date cm reports for moved items', () => {
     const moved = change('MV', 'docs/a.ts', '').replace('<OldPath />', '<OldPath>src/a.ts</OldPath>').replace('2026-09-25T08:26:09+02:00', '0001-01-01T00:00:00');
     expect(parsePendingChanges(`${header}<Changes>${moved}</Changes></StatusOutput>`).changes[0]!.lastModified).toBe('');

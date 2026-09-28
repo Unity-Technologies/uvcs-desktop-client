@@ -25,7 +25,16 @@ import styles from './GraphCanvas.module.css';
 /** Scene fields owned by the view; the canvas adds the viewport, size, palette, hover state and animations. */
 export type GraphHighlights = Pick<
   GraphScene,
-  'selectedChangeset' | 'selectedBranch' | 'homeChangeset' | 'currentBranch' | 'highlightedAuthor' | 'search' | 'searchQuery' | 'options' | 'reviews'
+  | 'selectedChangeset'
+  | 'selectedBranch'
+  | 'homeChangeset'
+  | 'pendingChangeCount'
+  | 'currentBranch'
+  | 'highlightedAuthor'
+  | 'search'
+  | 'searchQuery'
+  | 'options'
+  | 'reviews'
 >;
 
 export interface GraphCanvasHandle {
@@ -90,8 +99,9 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const hoveredChangeset = hovered?.kind === 'changeset' ? hovered.id : hovered?.kind === 'collapsed' ? hovered.node.changeset.id : null;
   const hoveredBranch = hovered?.kind === 'branch' ? hovered.lane.branch.name : null;
   const hoveredReview = hovered?.kind === 'codeReview' ? hovered.review.id : null;
-  const sceneRef = useRef({ layout, highlights, palette, hoveredChangeset, hoveredBranch, hoveredReview });
-  sceneRef.current = { layout, highlights, palette, hoveredChangeset, hoveredBranch, hoveredReview };
+  const hoveredPending = hovered?.kind === 'pending';
+  const sceneRef = useRef({ layout, highlights, palette, hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending });
+  sceneRef.current = { layout, highlights, palette, hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending };
   /** Where the last frame drew what the pointer can land on. */
   const drawnRef = useRef<DrawnTargets>({
     reviewChips: new DrawnBoxes(),
@@ -124,6 +134,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         hoveredChangeset: current.hoveredChangeset,
         hoveredBranch: current.hoveredBranch,
         hoveredReview: current.hoveredReview,
+        hoveredPending: current.hoveredPending,
         searchPing: searchPingRef.current,
       },
       window.devicePixelRatio,
@@ -147,7 +158,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   );
   const searchPingRef = useSearchPing(highlights.search?.active ?? null, scheduleDraw);
 
-  useEffect(scheduleDraw, [layout, highlights, palette, hoveredChangeset, hoveredBranch, hoveredReview, scheduleDraw]);
+  useEffect(scheduleDraw, [layout, highlights, palette, hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending, scheduleDraw]);
   // A filter can shrink or grow the graph: keep it on screen.
   useEffect(() => view.keepInBounds(), [layout, view]);
   // Avatars arrive in the background; repaint as each one lands.
@@ -387,6 +398,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
             target={card.target}
             layout={layout}
             palette={palette}
+            pendingChangeCount={highlights.pendingChangeCount}
             x={card.x}
             y={card.y}
             anchor={card.anchor}
@@ -413,6 +425,10 @@ function hoverCardKey(target: PointerCardTarget): string {
       return `link:${target.link.sourceChangeset}:${target.link.destinationChangeset}:${target.link.type}`;
     case 'codeReview':
       return `review:${target.review.id}`;
+    case 'pending':
+      return 'pending';
+    case 'pendingMergeLink':
+      return `pendingLink:${target.link.sourceChangeset}:${target.link.type}`;
   }
 }
 

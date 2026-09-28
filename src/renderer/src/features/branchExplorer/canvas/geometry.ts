@@ -37,6 +37,11 @@ export function nodePoint(layout: GraphLayout, changesetId: number): { x: number
   return node ? { x: columnX(node.column), y: rowY(node.row) } : null;
 }
 
+/** Where the pending changeset is drawn, when there is one. */
+export function pendingPoint(layout: GraphLayout): { x: number; y: number } | null {
+  return layout.pending && { x: columnX(layout.pending.column), y: rowY(layout.pending.row) };
+}
+
 export function headerHeight(hasComment: boolean): number {
   return hasComment ? TWO_LINE_HEADER_HEIGHT : HEADER_HEIGHT;
 }

@@ -5,7 +5,7 @@ import { drawCaptions } from './drawCaptions';
 import { drawDateRuler, drawDaySeparators, measureDayMarks } from './drawDateRuler';
 import { drawLabels } from './drawLabels';
 import { drawLanes } from './drawLanes';
-import { drawMergeLinks } from './drawMergeLinks';
+import { drawMergeLinks, drawPendingMergeLinks } from './drawMergeLinks';
 import { drawNodes } from './drawNodes';
 import { OriginPen, originFor } from './pen';
 import { toWorld } from './viewport';
@@ -49,6 +49,7 @@ export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixe
   world();
   drawLanes(draw);
   drawMergeLinks(draw);
+  drawPendingMergeLinks(draw);
   drawNodes(draw);
   screen();
   drawCaptions(draw);

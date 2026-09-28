@@ -28,6 +28,10 @@ export interface GraphScene {
   /** The code review whose chip is under the pointer. */
   hoveredReview: number | null;
   homeChangeset: number | null;
+  /** How many changes the workspace has pending, counted in the pending changeset (`layout.pending`). */
+  pendingChangeCount: number;
+  /** Whether the pointer is on the pending changeset. */
+  hoveredPending: boolean;
   /** The branch the workspace is on, emphasized. */
   currentBranch: string | null;
   /** When set, changesets by other authors fade out. */

@@ -1,5 +1,7 @@
+import type { PendingMergeLink } from '@shared/domain/pendingChanges';
 import { displayName } from '../../../lib/userName';
 import { formatRelativeDate } from '../../../lib/formatDate';
+import { pluralize } from '../../../lib/text';
 import type { GraphLayout } from '../model/layoutGraph';
 import { MERGE_LINK_NAMES } from '../model/mergeLinkNames';
 import { useLayoutEffect, useRef } from 'react';
@@ -20,6 +22,8 @@ interface GraphTooltipProps {
   target: PointerCardTarget;
   layout: GraphLayout;
   palette: GraphPalette;
+  /** What the pending changeset counts. */
+  pendingChangeCount: number;
   /** The pointer, for tooltips without an anchor. */
   x: number;
   y: number;
@@ -35,7 +39,7 @@ const SUBJECT_LINE_HEIGHT = 1.45;
 /** Marks the cards the pointer can move into to select and copy their text: the canvas leaves them alone. */
 export const HOVER_CARD_ATTRIBUTE = 'data-hover-card';
 
-export function GraphTooltip({ target, layout, palette, x, y, anchor, containerWidth }: GraphTooltipProps) {
+export function GraphTooltip({ target, layout, palette, pendingChangeCount, x, y, anchor, containerWidth }: GraphTooltipProps) {
   const cardRef = useRef<HTMLDivElement>(null);
   const textOriginRef = useRef<HTMLSpanElement>(null);
   // Before it is painted, the card over a caption measures where its text landed and moves it onto the caption's
@@ -78,7 +82,7 @@ export function GraphTooltip({ target, layout, palette, x, y, anchor, containerW
     );
   }
 
-  const content = tooltipContent(target, layout);
+  const content = tooltipContent(target, layout, pendingChangeCount);
   if (!content) return null;
   const flip = x > containerWidth - POINTER_TOOLTIP_ROOM;
   return (
@@ -90,7 +94,7 @@ export function GraphTooltip({ target, layout, palette, x, y, anchor, containerW
   );
 }
 
-function tooltipContent(target: PointerCardTarget, layout: GraphLayout): { title: string; body?: string; meta?: string } | null {
+function tooltipContent(target: PointerCardTarget, layout: GraphLayout, pendingChangeCount: number): { title: string; body?: string; meta?: string } | null {
   switch (target.kind) {
     case 'changeset': {
       const changeset = layout.nodes.get(target.id)?.changeset;
@@ -130,5 +134,26 @@ function tooltipContent(target: PointerCardTarget, layout: GraphLayout): { title
         title: MERGE_LINK_NAMES[target.link.type],
         meta: `From changeset ${target.link.sourceChangeset} to ${target.link.destinationChangeset}`,
       };
+    case 'pending': {
+      const merges = layout.pending?.mergeLinks ?? [];
+      return {
+        title: `Pending changes · ${pluralize(pendingChangeCount, 'change')}`,
+        body: merges.length > 0 ? merges.map((link) => `${MERGE_LINK_NAMES[link.type]} from changeset ${link.sourceChangeset} in progress`).join('\n') : 'Not checked in yet',
+        meta: 'Click to open Changes',
+      };
+    }
+    case 'pendingMergeLink':
+      return {
+        title: `${MERGE_LINK_NAMES[target.link.type]} in progress`,
+        body: pendingMergeSource(target.link, layout),
+        meta: 'Check in to complete it',
+      };
   }
+}
+
+/** Where a merge in progress comes from: a changeset, or an interval after one up to another, and its branch. */
+function pendingMergeSource(link: PendingMergeLink, layout: GraphLayout): string {
+  const branch = layout.nodes.get(link.sourceChangeset)?.changeset.branch;
+  const changesets = link.intervalStart === undefined ? `changeset ${link.sourceChangeset}` : `changesets after ${link.intervalStart} up to ${link.sourceChangeset}`;
+  return `From ${changesets}${branch ? ` on ${branch}` : ''}`;
 }

@@ -3,6 +3,7 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, ty
 import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { spec } from '@shared/domain/specs';
+import { navigation } from '../../app/navigation/navigationStore';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
@@ -45,6 +46,7 @@ import {
 import { firstHitIndex, searchGraph, searchHighlight, type SearchHit } from './model/searchGraph';
 import { useBranchExplorerCommands } from './useBranchExplorerCommands';
 import { useBranchExplorerData } from './useBranchExplorerData';
+import { usePendingChangeset } from './usePendingChangeset';
 import { useRevealRequest } from './useRevealRequest';
 import { useSearchHits } from './useSearchHits';
 import styles from './BranchExplorerView.module.css';
@@ -77,6 +79,12 @@ export function BranchExplorerView() {
 
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : null;
   const homeChangeset = workspace?.loadedChangeset ?? null;
+  // On a label or a changeset, the workspace's changes go on the loaded changeset's branch.
+  const pendingBranch = useMemo(
+    () => currentBranch ?? (homeChangeset !== null ? (data?.changesets.find((changeset) => changeset.id === homeChangeset)?.branch ?? null) : null),
+    [currentBranch, homeChangeset, data],
+  );
+  const { pending, count: pendingChangeCount } = usePendingChangeset(homeChangeset, pendingBranch);
 
   // Remembered with the history, so coming back to the view draws at once.
   const filtered = useMemo(() => {
@@ -89,18 +97,22 @@ export function BranchExplorerView() {
   }, [data, focus, onlyRelatedToCurrent, visibleBranches, hideMergedBranches, currentBranch]);
 
   // Search looks at every changeset, so "Only relevant changesets" can keep what it finds.
-  const fullLayout = useMemo(() => filtered && rememberedPerHistory(filtered, 'layout', [], () => layoutGraph(filtered)), [filtered]);
+  const fullLayout = useMemo(
+    () => filtered && rememberedPerHistory(filtered, 'layout', [pending], () => layoutGraph(filtered, undefined, pending)),
+    [filtered, pending],
+  );
   const searchHits = useSearchHits(fullLayout, shownSearch);
   const selectedChangeset = selection?.kind === 'changeset' ? selection.id : null;
   const structure = useMemo(() => {
     if (!filtered || !structureOnly) return null;
     const keep = new Set(expanded);
     if (homeChangeset !== null) keep.add(homeChangeset);
+    for (const link of pending?.mergeLinks ?? []) keep.add(link.sourceChangeset);
     for (const hit of searchHits) if (hit.kind === 'changeset') keep.add(hit.id);
     if (revealRequest?.kind === 'changeset') keep.add(revealRequest.id);
     if (revealRequest?.kind === 'label') keep.add(revealRequest.changeset);
-    return { keep, layout: layoutGraph(filtered, { keep }) };
-  }, [filtered, structureOnly, expanded, homeChangeset, searchHits, revealRequest]);
+    return { keep, pending, layout: layoutGraph(filtered, { keep }, pending) };
+  }, [filtered, structureOnly, expanded, homeChangeset, pending, searchHits, revealRequest]);
   // The selection is kept out of the "+N" nodes too.
   const layout = useMemo(
     () => (filtered && structure ? layoutKeeping(filtered, structure, selectedChangeset) : fullLayout),
@@ -121,6 +133,7 @@ export function BranchExplorerView() {
       selectedChangeset: selection?.kind === 'changeset' ? selection.id : null,
       selectedBranch: selection?.kind === 'branch' ? selection.name : null,
       homeChangeset,
+      pendingChangeCount,
       currentBranch,
       highlightedAuthor,
       search: searchLit && { ...searchLit, active: searchHits[activeHitIndex] ?? null },
@@ -128,7 +141,7 @@ export function BranchExplorerView() {
       options: { showComments, showAvatars },
       reviews: reviews ?? NO_REVIEWS,
     }),
-    [selection, homeChangeset, currentBranch, highlightedAuthor, shownSearch, searchLit, searchHits, activeHitIndex, showComments, showAvatars, reviews],
+    [selection, homeChangeset, pendingChangeCount, currentBranch, highlightedAuthor, shownSearch, searchLit, searchHits, activeHitIndex, showComments, showAvatars, reviews],
   );
 
   const goToChangeset = useCallback((id: number) => {
@@ -217,6 +230,7 @@ export function BranchExplorerView() {
 
   const select = (target: GraphTarget | null): void => {
     if (target?.kind === 'codeReview') openReview(target.review);
+    else if (target?.kind === 'pending') navigation.goToView('changes');
     else if (target?.kind === 'collapsed') setExpanded((current) => new Set([...current, ...target.node.collapsed!.map((changeset) => changeset.id)]));
     else setSelection(selectionFor(target));
   };

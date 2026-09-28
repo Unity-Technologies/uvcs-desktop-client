@@ -43,14 +43,14 @@ const HEADER_END_MARGIN = 16;
 const extents = new WeakMap<GraphLayout, { width: number; height: number }>();
 
 /**
- * How big the graph is in the world: its changesets with their padding, and wide enough for the header card of a
+ * How big the graph is in the world: its changesets (and the pending one) with their padding, and wide enough for the header card of a
  * branch starting at the end (a new branch, the latest task) to scroll into view whole. Kept per layout: panning asks
  * for it every frame.
  */
 export function graphExtent(layout: GraphLayout): { width: number; height: number } {
   let extent = extents.get(layout);
   if (!extent) {
-    const size = graphSize(layout.columnCount, layout.rowCount);
+    const size = graphSize(layout.columnCount + (layout.pending ? 1 : 0), layout.rowCount);
     let width = size.width;
     for (const lane of layout.lanes) width = Math.max(width, laneShape(lane).left + HEADER_MAX_WIDTH + HEADER_END_MARGIN);
     extents.set(layout, (extent = { width, height: size.height }));

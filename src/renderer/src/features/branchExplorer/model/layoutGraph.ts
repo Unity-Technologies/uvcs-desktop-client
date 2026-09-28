@@ -1,4 +1,5 @@
 import type { BranchExplorerData, GraphBranch, GraphChangeset, GraphLabel, MergeLink } from '@shared/domain/branchExplorer';
+import type { PendingMergeLink } from '@shared/domain/pendingChanges';
 import { collapseLinearRuns, structuralChangesets, type ShownChangeset } from './structureOnly';
 
 export interface NodeLayout extends ShownChangeset {
@@ -12,10 +13,28 @@ export interface Lane {
   row: number;
   startColumn: number;
   endColumn: number;
-  /** Column of the branch's first visible changeset; null when none of its changesets is visible. */
+  /** Column of the branch's first visible changeset (or of the pending changeset on it); null when there is none. */
   firstOwnColumn: number | null;
   /** The changeset the branch starts from, when it is visible (it lives on another lane). */
   baseChangeset: number | null;
+}
+
+/**
+ * The workspace's changes not checked in yet, drawn as the changeset they will become (as the official client draws
+ * its "checkout changeset"): a child of the loaded changeset on the workspace's branch, newer than everything else.
+ */
+export interface PendingChangeset {
+  branch: string;
+  /** The loaded changeset. */
+  parent: number;
+  /** The merges in progress, drawn into it. */
+  mergeLinks: readonly PendingMergeLink[];
+}
+
+/** Where the pending changeset is drawn: the column past every changeset, on its branch's row. */
+export interface PendingNode extends PendingChangeset {
+  column: number;
+  row: number;
 }
 
 export interface GraphLayout {
@@ -28,6 +47,9 @@ export interface GraphLayout {
   lanesByRow: ReadonlyMap<number, readonly Lane[]>;
   mergeLinks: readonly MergeLink[];
   labelsByChangeset: ReadonlyMap<number, readonly GraphLabel[]>;
+  /** The workspace's pending changes, when its loaded changeset and branch are in the graph; its merge links only from changesets in it. */
+  pending: PendingNode | null;
+  /** The changesets' columns; the pending changeset takes the one after them. */
   columnCount: number;
   rowCount: number;
 }
@@ -44,7 +66,7 @@ export interface StructureOnly {
  * Lays out history as lanes: changesets ordered left to right by id (parents always come first),
  * one lane per branch, child branches below their parents, packed into shared rows when they don't overlap.
  */
-export function layoutGraph(data: BranchExplorerData, structureOnly?: StructureOnly): GraphLayout {
+export function layoutGraph(data: BranchExplorerData, structureOnly?: StructureOnly, pending: PendingChangeset | null = null): GraphLayout {
   const sorted = [...data.changesets].sort((a, b) => a.id - b.id);
   const shown = structureOnly
     ? collapseLinearRuns(sorted, new Set([...structuralChangesets(data), ...structureOnly.keep]))
@@ -53,7 +75,14 @@ export function layoutGraph(data: BranchExplorerData, structureOnly?: StructureO
   shown.forEach(({ changeset, collapsed }, column) => {
     for (const member of collapsed ?? [changeset]) columnOf.set(member.id, column);
   });
-  const lanes = placeLanes(buildLanes(data.branches, shown.map(({ changeset }) => changeset), columnOf));
+  const unplaced = buildLanes(data.branches, shown.map(({ changeset }) => changeset), columnOf);
+  const pendingLane = pending && columnOf.has(pending.parent) ? unplaced.find((lane) => lane.branch.name === pending.branch) : undefined;
+  // Its branch's band reaches it, before the rows are packed: the band takes that room in its row.
+  if (pendingLane) {
+    pendingLane.endColumn = shown.length;
+    pendingLane.firstOwnColumn ??= shown.length;
+  }
+  const lanes = placeLanes(unplaced);
   const lanesByBranch = new Map(lanes.map((lane) => [lane.branch.name, lane]));
 
   const nodesByColumn = shown.map(({ changeset, collapsed }, column): NodeLayout => ({
@@ -77,6 +106,15 @@ export function layoutGraph(data: BranchExplorerData, structureOnly?: StructureO
       data.labels.filter((label) => columnOf.has(label.changeset)),
       (label) => label.changeset,
     ),
+    pending:
+      pending && pendingLane
+        ? {
+            ...pending,
+            mergeLinks: pending.mergeLinks.filter((link) => columnOf.has(link.sourceChangeset)),
+            column: shown.length,
+            row: lanesByBranch.get(pending.branch)!.row,
+          }
+        : null,
     columnCount: shown.length,
     rowCount: lanes.reduce((count, lane) => Math.max(count, lane.row + 1), 0),
   };
@@ -87,10 +125,14 @@ export function layoutGraph(data: BranchExplorerData, structureOnly?: StructureO
  * changeset that already shows on its own (or isn't in the history) changes nothing, so the layout without it is the
  * one: arrowing along the graph lays nothing out again.
  */
-export function layoutKeeping(data: BranchExplorerData, base: { keep: ReadonlySet<number>; layout: GraphLayout }, id: number | null): GraphLayout {
+export function layoutKeeping(
+  data: BranchExplorerData,
+  base: { keep: ReadonlySet<number>; pending: PendingChangeset | null; layout: GraphLayout },
+  id: number | null,
+): GraphLayout {
   const node = id === null ? undefined : base.layout.nodes.get(id);
   if (!node || node.collapsed === null) return base.layout;
-  return layoutGraph(data, { keep: new Set([...base.keep, id!]) });
+  return layoutGraph(data, { keep: new Set([...base.keep, id!]) }, base.pending);
 }
 
 type UnplacedLane = Omit<Lane, 'row'>;

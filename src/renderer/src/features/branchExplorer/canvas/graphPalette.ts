@@ -147,6 +147,9 @@ export function mergeLinkDash(type: MergeLinkType): number[] {
   }
 }
 
+/** A merge in progress, not checked in yet: dots (with round caps), whatever kind of merge it is. */
+export const PENDING_LINK_DASH = [0, 5];
+
 const NO_DASH: number[] = [];
 const DASHED = [6, 4];
 const DOTTED = [2, 3];

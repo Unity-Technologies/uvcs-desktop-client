@@ -3,7 +3,7 @@ import type { PendingChange, PendingChangesSnapshot } from '@shared/domain/pendi
 import { sharePendingChanges } from './sharePendingChanges';
 
 const change = (path: string, lastModified = '1', kinds: PendingChange['kinds'] = ['changed']): PendingChange => ({ path, kinds, itemType: 'file', size: 1, lastModified, oldPath: undefined });
-const snapshot = (changes: PendingChange[], changelists = [{ name: 'UI', description: '' }]): PendingChangesSnapshot => ({ changes, changelists, loadedChangeset: 3 });
+const snapshot = (changes: PendingChange[], changelists = [{ name: 'UI', description: '' }]): PendingChangesSnapshot => ({ changes, changelists, loadedChangeset: 3, mergeLinks: [] });
 /** What a read hands over: equal values, never the same objects. */
 const reread = (value: PendingChangesSnapshot): PendingChangesSnapshot => structuredClone(value);
 

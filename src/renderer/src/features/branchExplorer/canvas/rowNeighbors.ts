@@ -3,8 +3,8 @@ import type { GraphLayout } from '../model/layoutGraph';
 const nextColumnsByLayout = new WeakMap<GraphLayout, Int32Array>();
 
 /**
- * For each column, the column of the next changeset on the same row (-1 when it is the last one).
- * Tells how much room a changeset has for its comment. Computed once per layout.
+ * For each column, the column of the next changeset on the same row, the pending changeset included (-1 when it is
+ * the last one). Tells how much room a changeset has for its comment. Computed once per layout.
  */
 export function nextColumnOnRow(layout: GraphLayout, column: number): number {
   let nextColumns = nextColumnsByLayout.get(layout);
@@ -18,6 +18,7 @@ export function nextColumnOnRow(layout: GraphLayout, column: number): number {
 function computeNextColumns(layout: GraphLayout): Int32Array {
   const next = new Int32Array(layout.nodesByColumn.length).fill(-1);
   const lastSeenByRow = new Map<number, number>();
+  if (layout.pending) lastSeenByRow.set(layout.pending.row, layout.pending.column);
   for (let column = layout.nodesByColumn.length - 1; column >= 0; column--) {
     const row = layout.nodesByColumn[column]!.row;
     next[column] = lastSeenByRow.get(row) ?? -1;

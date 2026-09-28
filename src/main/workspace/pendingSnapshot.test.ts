@@ -62,6 +62,7 @@ describe('shelvedChangelists', () => {
         { name: 'cl1', description: 'mine' },
         { name: 'empty', description: '' },
       ],
+      mergeLinks: [],
     };
     expect(shelvedChangelists(snapshot)).toEqual([{ name: 'cl1', description: 'mine', paths: ['new.txt'] }]);
   });

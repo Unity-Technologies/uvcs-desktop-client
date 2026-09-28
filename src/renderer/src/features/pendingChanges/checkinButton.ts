@@ -1,4 +1,3 @@
-import type { PendingChange } from '@shared/domain/pendingChanges';
 import { formatSize } from '../../lib/formatDate';
 import { fileNameOf, formatCount, pluralize } from '../../lib/text';
 
@@ -81,13 +80,4 @@ export function checkinDisabledReason(mode: CheckinMode, count: number, included
   if (count > 0) return null;
   if (mode === 'checkin') return 'Select changes to check in';
   return includedCount > 0 ? "Private files and links can't be shelved" : 'Select changes to shelve';
-}
-
-/** The changeset a pending merge comes from, read from the "Merge from 12" tag of its changes. */
-export function mergeSourceChangeset(changes: PendingChange[]): number | null {
-  for (const change of changes) {
-    const match = /Merge from (?:cs:)?(\d+)/.exec(change.mergeInfo ?? '');
-    if (match) return Number(match[1]);
-  }
-  return null;
 }
