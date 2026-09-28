@@ -460,9 +460,10 @@ renderer/src/
   (`itemComparison`), its toolbar saying what it compares: a pending change against the loaded revision as in Changes
   ("Your changes · vs cs:12": editable, discards), an up-to-date file's last change against its parent revision (the
   listing names it, as History's `parentRevision` finds first: "Last change · cs:12 on /main by Ana · 2 days ago ·
-  comment"), a file with no revision whole against nothing ("New file", "Private file"). "Annotate" beside it (⌘T,
-  the menu's Annotate; elsewhere Annotate opens the history) toggles the file annotated (kept as the selection
-  moves), its revision by id in its repository (`itemRevision`), or
+  comment"), a file with no revision whole against nothing ("New file", "Private file"). "Diff | Annotate" before it,
+  History's switch (`FileViewSwitch`; ⌘T in Files, the menu's Annotate; elsewhere Annotate opens the history; only
+  where there is something to annotate) shows the file annotated instead, with what is annotated in place of the
+  description (kept as the selection moves), its revision by id in its repository (`itemRevision`), or
   as on disk while it has changes. A folder shows what it holds and its last change. The diff and `cm` lookups wait for
   the selection to settle (`useSettledValue`, without remounting); revisions are cached immutable. F6 moves the keys
   into the diff to scroll it, F6 or Esc back to the tree, which keeps `MAIN_FOCUS`. Browse repository shows its tree
@@ -486,7 +487,9 @@ renderer/src/
   Two selected revisions are compared with each other. The header follows the selection at once; the pane waits for
   it to settle (`useSettledValue`), and every revision's contents and annotation are cached as immutable. The list
   keeps the keyboard; ⌘E goes into the pane and Esc back.
-- **Annotate**: `features/annotate` is shared (the history's pane and the Files view's) through `AnnotationPane`
+- **Annotate**: `features/annotate` is shared (the history's pane and the Files view's) through `FileViewSwitch`
+  ("Diff | Annotate", first in the diff's or the annotation's toolbar, taking the focus back when switching
+  replaces it, so ← → keep switching) and `AnnotationPane`
   (`path`, the `revision` to annotate or the workspace's, a `leading` toolbar slot, and `history` where a history list
   is beside it, with the file's revisions for walking back). Lines are read in blocks, runs of lines
   from one changeset (`annotationBlocks`): the gutter labels each once (avatar, comment, changeset, date, "Annotate

@@ -131,7 +131,13 @@ export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu,
       menu={menu}
       primaryActionId="history"
       properties={properties}
-      changes={isFile && shownComparison && <ItemViewer workspacePath={workspacePath} item={shown} comparison={shownComparison} comment={comment} />}
+      changes={
+        isFile &&
+        shownComparison && (
+          // Only the Files view switches "Diff | Annotate" with a key: Browse repository has no such command.
+          <ItemViewer workspacePath={workspacePath} item={shown} comparison={shownComparison} comment={comment} viewShortcut={inWorkspace ? hotkey('annotate') : undefined} />
+        )
+      }
     >
       {!isFile && <FolderDetails item={item} contents={folderContents} changesInside={pendingIndex?.countInside(item.path)} details={details} />}
     </DetailsPanel>

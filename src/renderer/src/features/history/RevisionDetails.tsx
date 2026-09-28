@@ -1,12 +1,12 @@
-import { ArrowLeft, FileDiff, ScanText } from 'lucide-react';
+import { ArrowLeft, FileDiff } from 'lucide-react';
 import { canAnnotate } from '@shared/domain/annotate';
 import type { ItemRevision } from '@shared/domain/history';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useSettledValue } from '../../lib/useSettled';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
-import { SegmentedControl } from '../../ui/SegmentedControl';
 import { AnnotationPane, type AnnotationHistory } from '../annotate/AnnotationPane';
+import { FileViewSwitch } from '../annotate/FileViewSwitch';
 import { openChangesetDiff } from '../changesets/changesetOperations';
 import { parentRevision } from './parentRevision';
 import { RevisionComparison } from './RevisionComparison';
@@ -56,14 +56,11 @@ export function RevisionDetails({ path, revisions, selected, onBack, history, pi
     <>
       {/* Binary revisions have nothing to annotate: only their diff (an image comparison, or their sizes) shows. */}
       {canAnnotate(newer.itemType) && (
-        <SegmentedControl<RevisionView>
+        <FileViewSwitch
           value={view}
           onChange={onPick}
-          label="Show the revision as"
-          segments={[
-            { value: 'diff', label: <><FileDiff size={13} /> Diff</>, title: 'What this revision changed', shortcut: hotkey('historyToggleView') },
-            { value: 'annotate', label: <><ScanText size={13} /> Annotate</>, title: 'Who last changed each line, as of this revision', shortcut: hotkey('historyToggleView') },
-          ]}
+          tips={{ diff: 'What this revision changed', annotate: 'Who last changed each line, as of this revision' }}
+          shortcut={hotkey('historyToggleView')}
         />
       )}
       {onBack && (

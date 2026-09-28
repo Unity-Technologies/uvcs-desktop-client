@@ -1,0 +1,4 @@
+/* Only there to find the switch's segments: the toolbar lays out the control itself. */
+.switch {
+  display: contents;
+}

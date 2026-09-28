@@ -5,6 +5,7 @@ import type { TreeItem } from '@shared/domain/explorer';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { navigation } from '../../app/navigation/navigationStore';
 import { prompt } from '../../ui/dialog/prompt';
+import { otherFileView } from '../annotate/fileView';
 import { FILE_SHORTCUTS } from './fileMenu';
 import { createItem, deleteItems, renameItem, targetDirectoryFor } from './fileOperations';
 import { hasRevisionsToShow } from './fileMenuTargets';
@@ -94,11 +95,11 @@ export function useFileCommands(
         icon: ScanText,
         shortcut: FILE_SHORTCUTS.annotate,
         disabled: !single || !hasRevisions || !canAnnotate(single.itemType),
-        // The pane's Annotate toggle: the file annotated, or back to its diff.
+        // The pane's "Diff | Annotate": the file annotated, or back to its diff.
         run: () => {
           if (!single || !hasRevisions || !canAnnotate(single.itemType)) return;
           const view = useFilesViewStore.getState();
-          view.setDetailsTab(view.detailsTab === 'annotate' ? 'changes' : 'annotate');
+          view.setFileView(otherFileView(view.fileView));
         },
       },
       {
@@ -108,7 +109,7 @@ export function useFileCommands(
         icon: FileDiff,
         shortcut: FILE_SHORTCUTS.showChanges,
         disabled: !isControlledFile,
-        run: () => useFilesViewStore.getState().setDetailsTab('changes'),
+        run: () => useFilesViewStore.getState().setFileView('diff'),
       },
     ];
   }, [workspacePath, selected, pendingChanges, onGoToFile]);
