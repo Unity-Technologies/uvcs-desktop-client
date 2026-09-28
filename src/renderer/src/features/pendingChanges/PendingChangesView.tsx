@@ -99,7 +99,7 @@ export function PendingChangesView() {
   const forgetRejectedCheckin = useCheckinAfterUpdateStore((state) => state.forget);
   const checkinAfterUpdate = checkinAfterUpdateMessage(
     rejectedCheckin,
-    { branch: branchName, loadedChangeset: workspace?.loadedChangeset },
+    { branch: branchName, loadedChangeset: workspace?.loadedChangeset ?? undefined },
     included.length,
   );
   const reviewed = useMemo(() => reviewProgress(included, review.statusOf), [included, review.statusOf]);

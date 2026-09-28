@@ -1,4 +1,4 @@
-import type { IncomingChanges, IncomingSummary, UpdateResolutions } from '@shared/domain/incoming';
+import type { BranchIncomingChanges, IncomingSummary, UpdateResolutions } from '@shared/domain/incoming';
 import { spec } from '@shared/domain/specs';
 import { ApiError, api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -13,7 +13,7 @@ import { updateStoppedByConflicts } from './updateFailure';
  * Updates to the incoming changesets (known not to collide with local changes), then says what came in and offers
  * to see it. Resolves to whether it updated.
  */
-export async function updateToIncoming(workspacePath: string, incoming: IncomingChanges): Promise<boolean> {
+export async function updateToIncoming(workspacePath: string, incoming: BranchIncomingChanges): Promise<boolean> {
   const updated = await runOperation({
     title: 'Updating workspace',
     workspacePath,
@@ -31,8 +31,9 @@ export async function updateToIncoming(workspacePath: string, incoming: Incoming
 }
 
 /** Changes shows what the update brought for a few seconds, as it does after a check-in. */
-export function showUpdatedMoment(workspacePath: string, { branch, loadedChangeset, headChangeset, changesetCount, authors }: IncomingSummary): void {
-  if (!branch || changesetCount === 0) return;
+export function showUpdatedMoment(workspacePath: string, summary: IncomingSummary): void {
+  if (!summary.branch || summary.changesetCount === 0) return;
+  const { branch, loadedChangeset, headChangeset, changesetCount, authors } = summary;
   useSuccessMomentStore.getState().show(workspacePath, {
     verb: 'Updated to',
     changesetId: headChangeset,
@@ -47,7 +48,7 @@ export function showUpdatedMoment(workspacePath: string, { branch, loadedChanges
  * user's merge of the files changed on both sides (`resolutions`; null while some wait: it stops before updating).
  * Changes offers the shelve back afterwards. Resolves to whether it shelved them.
  */
-export async function shelveBlockedAndUpdate(workspacePath: string, incoming: IncomingChanges, resolutions: UpdateResolutions | null): Promise<boolean> {
+export async function shelveBlockedAndUpdate(workspacePath: string, incoming: BranchIncomingChanges, resolutions: UpdateResolutions | null): Promise<boolean> {
   const result = await runOperation({
     title: 'Shelving the blocking files and updating',
     workspacePath,
@@ -77,7 +78,7 @@ export function explainUpdateConflicts(error: unknown): boolean {
   return true;
 }
 
-function viewIncoming({ loadedChangeset, headChangeset, changesets }: IncomingChanges): void {
+function viewIncoming({ loadedChangeset, headChangeset, changesets }: BranchIncomingChanges): void {
   const target =
     changesets.length === 1
       ? ({ kind: 'changeset', changesetId: headChangeset } as const)
@@ -90,7 +91,7 @@ function viewIncoming({ loadedChangeset, headChangeset, changesets }: IncomingCh
  * Updates the workspace, writing the user's merge of every file that changed both locally and on the branch, then
  * says what came in, with the local versions saved before at hand. Resolves to whether it updated.
  */
-export async function updateResolvingConflicts(workspacePath: string, incoming: IncomingChanges, resolutions: UpdateResolutions): Promise<boolean> {
+export async function updateResolvingConflicts(workspacePath: string, incoming: BranchIncomingChanges, resolutions: UpdateResolutions): Promise<boolean> {
   const result = await runOperation({
     title: 'Updating workspace',
     workspacePath,

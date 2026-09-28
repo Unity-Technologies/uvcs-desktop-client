@@ -18,6 +18,8 @@ export function workspaceRootItem(workspace: Pick<WorkspaceInfo, 'path' | 'selec
     parentRevisionId: -1,
     repository: workspace.repository,
     itemId: 0,
+    // On a shelve the root is the shelve's, as `cm ls` lists it.
+    ...(workspace.loadedChangeset === null && { shelveId: Number(workspace.selector.name) }),
   };
 }
 

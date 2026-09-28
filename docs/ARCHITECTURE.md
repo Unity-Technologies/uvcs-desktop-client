@@ -197,6 +197,17 @@ client's) are offered again by the "Welcome back" banner in Changes (`features/l
 automatically on arrival when they apply cleanly. Changes still waiting to be brought (conflicts left for the merge
 view) are offered on the target, and as left ones on the source if the user goes back instead.
 
+## A workspace on a shelve
+
+`cm` keeps shelves as changesets numbered below zero: a workspace switched to shelve 3 reports changeset -3 in
+`cm status`, and `cm ls` lists its revisions as changeset -3 on branch `id:-1`. The app reads that as no changeset
+(`WorkspaceInfo.loadedChangeset: null`, the selector naming the shelve; `TreeItem.changeset: null` with `shelveId`), and
+any other number below zero as unexpected output (`loadedChangesetOf`), so no query ever starts from one. Nothing
+comes in (`NothingIncoming`, no server query), the status bar shows the shelve and no changeset, the Branch Explorer
+no home or pending changeset, Files names the shelve as the last change (no Annotate: `cm annotate` can't read a
+shelve's revisions), and a new branch starts from /main only. `cm` checks nothing out there ("No checkout branch
+found"), so the workspace takes no changes or merges.
+
 ## Shelves in Changes
 
 Changes put aside, whoever put them there, are in one place: "N shelves" in the Changes header (`MyShelvesButton`,

@@ -23,6 +23,14 @@ describe('parseSelectorFile', () => {
     });
   });
 
+  it('reads a shelve', () => {
+    // `.plastic/plastic.selector` of a workspace switched to shelve 2 (cm 11.0.16.10371).
+    expect(parseSelectorFile('repository "uvcs-shelvews-sandbox@local"\n  path "/"\n    shelve "2"\n')).toEqual({
+      repository: 'uvcs-shelvews-sandbox@local',
+      selector: { kind: 'shelve', name: '2' },
+    });
+  });
+
   it('reads labels and changesets', () => {
     expect(parseSelectorFile('repository "a@b"\n path "/"\n  label "BL100"')?.selector).toEqual({ kind: 'label', name: 'BL100' });
     expect(parseSelectorFile('repository "a@b"\n path "/"\n  changeset "42"')?.selector).toEqual({ kind: 'changeset', name: '42' });

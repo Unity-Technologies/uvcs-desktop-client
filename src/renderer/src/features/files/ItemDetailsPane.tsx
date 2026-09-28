@@ -59,7 +59,7 @@ export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu,
   // Under an xlink, the item's changeset and branch are the xlinked repository's.
   const otherRepository = useOtherRepository(item.repository);
 
-  const { data: changeset } = useChangeset(!shown.isPrivate && shown.changeset > 0 ? shown.changeset : null, shown.repository);
+  const { data: changeset } = useChangeset(!shown.isPrivate && shown.changeset !== null && shown.changeset > 0 ? shown.changeset : null, shown.repository);
   const comment = changeset?.id === shown.changeset ? changeset.comment : undefined;
   const { data: details } = useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'explorer', 'details', item.path),
@@ -103,7 +103,7 @@ export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu,
         isFile
           ? []
           : [
-              controlled && item.changeset > 0 && <DetailsCopyable key="cs" text={spec.changeset(item.changeset, otherRepository)} what="Changeset spec" />,
+              controlled && item.changeset !== null && item.changeset > 0 && <DetailsCopyable key="cs" text={spec.changeset(item.changeset, otherRepository)} what="Changeset spec" />,
               controlled && item.branch && <BranchChip key="branch" name={item.branch} otherRepository={otherRepository} />,
             ].filter(Boolean)
       }

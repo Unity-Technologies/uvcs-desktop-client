@@ -12,7 +12,6 @@ describe('parsePendingChanges', () => {
     const xml = `${header}<Changes>${change('CH', 'src/b.ts')}${change('MV', 'src/b.ts', '').replace('<OldPath />', '<OldPath>src/a.ts</OldPath>')}${change('PR', 'new.txt')}</Changes></StatusOutput>`;
     const snapshot = parsePendingChanges(xml);
 
-    expect(snapshot.loadedChangeset).toBe(7);
     expect(snapshot.changelists).toEqual([]);
     expect(snapshot.changes).toHaveLength(2);
     expect(snapshot.changes[0]).toMatchObject({ path: 'src/b.ts', oldPath: 'src/a.ts', kinds: ['changed', 'moved'] });

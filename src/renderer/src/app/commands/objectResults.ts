@@ -38,7 +38,7 @@ export interface ResultContext {
   workspacePath: string;
   term: string;
   currentBranch?: string;
-  loadedChangeset?: number;
+  loadedChangeset?: number | null;
   changelists: Changelist[];
   changeAt: (path: string) => PendingChange | undefined;
 }

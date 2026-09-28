@@ -14,7 +14,7 @@ interface GraphMenuContext {
   layout: GraphLayout;
   /** What the workspace is on, as the lists' menus take it. */
   currentBranch: string | undefined;
-  loadedChangeset: number | undefined;
+  loadedChangeset: number | null | undefined;
   /** The graph's objects don't say their repository; the full specs need it. */
   repository: string | undefined;
   goToChangeset: (id: number) => void;

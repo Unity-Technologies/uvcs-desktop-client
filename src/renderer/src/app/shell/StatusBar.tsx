@@ -1,4 +1,4 @@
-import { selectorSpec, spec } from '@shared/domain/specs';
+import { selectorSpec } from '@shared/domain/specs';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { ArrowDownToLine, Check, GitCommitVertical, TerminalSquare } from 'lucide-react';
 import { PathLabel } from '../../components/PathLabel';
@@ -16,12 +16,12 @@ import { CommandHint } from './CommandHint';
 import { ranInWorkspace } from './commandLogScope';
 import { useCommandLogStore } from './commandLogStore';
 import { isUnseenFailure } from './unseenFailure';
-import { workspaceContext, type SyncState } from './workspaceContext';
+import { workspaceContext, type LoadedChangeset, type SyncState } from './workspaceContext';
 import styles from './StatusBar.module.css';
 
 /**
  * A quiet line at the bottom. On the left, what is running or whether the branch moved on. On the right, the command
- * log, then where the workspace is: its branch (or label, or shelve) and the loaded changeset's number. The last `cm` command is only a faint hint,
+ * log, then where the workspace is: its branch (or label, or shelve) and the loaded changeset's number (none on a shelve, which is no changeset). The last `cm` command is only a faint hint,
  * shown on hover and while something runs; a failed one leaves a red dot until the log (which the hint opens) has been
  * looked at, unless the operation that ran it dealt with it.
  */
@@ -60,15 +60,7 @@ export function StatusBar() {
       {context && info && (
         <div className={styles.where}>
           {info.selector.kind !== 'changeset' && <WorkingObjectItem selector={info.selector} repository={context.repository} />}
-          <button
-            className={styles.item}
-            onClick={() => copyToClipboard(spec.changeset(info.loadedChangeset), 'Changeset spec')}
-            data-tip={context.description}
-            data-tip-sub={`${context.repository} · Click to copy ${context.changeset}`}
-          >
-            <GitCommitVertical size={12} className={styles.icon} />
-            <span className={styles.changeset}>{info.loadedChangeset}</span>
-          </button>
+          {context.changeset && <ChangesetItem changeset={context.changeset} repository={context.repository} />}
         </div>
       )}
     </footer>
@@ -92,6 +84,21 @@ function WorkingObjectItem({ selector, repository }: { selector: WorkspaceSelect
     >
       <SelectorIcon size={12} className={styles.icon} />
       <PathLabel path={workingObjectName(selector)} fitContent maxWidth={WORKING_OBJECT_MAX_WIDTH} tooltip={false} />
+    </button>
+  );
+}
+
+/** The loaded changeset's number. Click copies its spec. */
+function ChangesetItem({ changeset, repository }: { changeset: LoadedChangeset; repository: string }) {
+  return (
+    <button
+      className={styles.item}
+      onClick={() => copyToClipboard(changeset.spec, 'Changeset spec')}
+      data-tip={changeset.description}
+      data-tip-sub={`${repository} · Click to copy ${changeset.spec}`}
+    >
+      <GitCommitVertical size={12} className={styles.icon} />
+      <span className={styles.changeset}>{changeset.id}</span>
     </button>
   );
 }

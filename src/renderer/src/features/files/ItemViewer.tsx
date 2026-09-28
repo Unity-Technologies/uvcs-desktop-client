@@ -34,7 +34,9 @@ interface ItemViewerProps {
  */
 export function ItemViewer({ workspacePath, item, comparison, comment, viewShortcut }: ItemViewerProps) {
   const { fileView, setFileView } = useFilesViewStore();
-  const annotatable = canAnnotateComparison(comparison) && canAnnotate(item.itemType);
+  // A file with changes is annotated as it is on disk; any other as its revision, read once (a shelve's has none to annotate).
+  const revision = comparison.kind === 'changes' ? undefined : itemRevision(item);
+  const annotatable = canAnnotateComparison(comparison) && canAnnotate(item.itemType) && revision !== null;
   const annotating = annotatable && fileView === 'annotate';
   const viewerRef = useRef<HTMLDivElement>(null);
 
@@ -69,8 +71,7 @@ export function ItemViewer({ workspacePath, item, comparison, comment, viewShort
   return (
     <div ref={viewerRef} className={styles.viewer} tabIndex={-1} onKeyDown={leave}>
       {annotating ? (
-        // A file with changes is annotated as it is on disk; any other as its revision, read once.
-        <AnnotationPane key={item.path} path={item.path} repository={item.repository} revision={comparison.kind === 'changes' ? undefined : itemRevision(item)} leading={viewSwitch} />
+        <AnnotationPane key={item.path} path={item.path} repository={item.repository} revision={revision ?? undefined} leading={viewSwitch} />
       ) : comparison.kind === 'lastChange' ? (
         <RevisionChanges workspacePath={workspacePath} item={item} title={title} />
       ) : comparison.change ? (

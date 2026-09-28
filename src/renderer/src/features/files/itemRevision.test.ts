@@ -21,10 +21,14 @@ describe('itemRevision', () => {
   it('names the revision by its id in its repository, a spec whose annotations never change', () => {
     const revision = itemRevision(item);
     expect(revision).toMatchObject({ revisionId: 45, parentRevisionId: 40, changesetId: 12, repository: 'game@local', idSpec: 'revid:45@game@local' });
-    expect(isPinnedSpec(revision.idSpec)).toBe(true);
+    expect(isPinnedSpec(revision!.idSpec)).toBe(true);
   });
 
   it("names a file under an xlink in the xlinked repository, not the workspace's", () => {
-    expect(itemRevision({ ...item, revisionId: 432251, repository: 'unityGUI@codice@cloud' }).idSpec).toBe('revid:432251@unityGUI@codice@cloud');
+    expect(itemRevision({ ...item, revisionId: 432251, repository: 'unityGUI@codice@cloud' })?.idSpec).toBe('revid:432251@unityGUI@codice@cloud');
+  });
+
+  it("has none for a shelve's revision, which cm can't annotate", () => {
+    expect(itemRevision({ ...item, changeset: null, shelveId: 3, branch: '' })).toBeNull();
   });
 });

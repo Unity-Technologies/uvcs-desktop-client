@@ -7,7 +7,7 @@ import { WorkspaceMark } from '../../components/WorkspaceMark';
 import type { Column } from '../../ui/table/DataTable';
 
 /** Columns of the changesets table; `loadedChangeset` is marked as the one the workspace is on. */
-export function changesetColumns(loadedChangeset: number | undefined, labelsByChangeset: ReadonlyMap<number, readonly Label[]>): Column<Changeset>[] {
+export function changesetColumns(loadedChangeset: number | null | undefined, labelsByChangeset: ReadonlyMap<number, readonly Label[]>): Column<Changeset>[] {
   return [
     avatarColumn(),
     numberColumn('Changeset', (changeset) => changeset.id === loadedChangeset && <WorkspaceMark on="changeset" />),

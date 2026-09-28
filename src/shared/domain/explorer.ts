@@ -11,7 +11,13 @@ export interface TreeItem {
   /** Private items are not under version control, so they have no revision information. */
   isPrivate: boolean;
   isCheckedOut: boolean;
-  changeset: number;
+  /**
+   * The changeset its revision was made in; null for a revision of a shelve (`shelveId`), which a workspace on a
+   * shelve lists: `cm` numbers it as changeset `-id`, on no branch.
+   */
+  changeset: number | null;
+  /** Set for a revision of a shelve. */
+  shelveId?: number;
   branch: string;
   owner: string;
   revisionId: number;

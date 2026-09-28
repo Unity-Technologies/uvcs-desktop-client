@@ -30,7 +30,8 @@ export function useIncomingSummary() {
   const pollInterval = useSyncExternalStore(onPresenceChange, currentPollInterval);
   return useQuery({
     queryKey: incomingSummaryKey(workspacePath, loaded),
-    queryFn: ({ queryKey }) => checkIncoming(workspacePath, loaded!, queryKey),
+    // Enabled once the workspace info is known: only then is `loaded` more than undefined.
+    queryFn: ({ queryKey }) => checkIncoming(workspacePath, loaded as LoadedBranch, queryKey),
     enabled: loaded !== undefined,
     staleTime: RECHECK_ON_FOCUS_AFTER_MS,
     refetchOnWindowFocus: true,
@@ -69,8 +70,9 @@ function incomingSummaryKey(workspacePath: string, loaded: LoadedBranch | undefi
   return queryKeys.inWorkspace(workspacePath, 'incoming', 'summary', loaded);
 }
 
-function loadedBranchOf(workspace: WorkspaceInfo): LoadedBranch {
-  return { branch: workspace.selector.kind === 'branch' ? workspace.selector.name : null, loadedChangeset: workspace.loadedChangeset };
+function loadedBranchOf({ selector, loadedChangeset }: WorkspaceInfo): LoadedBranch {
+  // Only a shelve has no loaded changeset, and a shelve is no branch.
+  return selector.kind === 'branch' && loadedChangeset !== null ? { branch: selector.name, loadedChangeset } : null;
 }
 
 async function checkIncoming(workspacePath: string, loaded: LoadedBranch, queryKey: readonly unknown[]): Promise<IncomingSummary> {

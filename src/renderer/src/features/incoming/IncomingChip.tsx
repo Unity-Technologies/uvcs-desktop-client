@@ -50,7 +50,7 @@ export function IncomingChip() {
       const fresh = await api.merge.incomingChanges(workspacePath);
       queryClient.setQueryData(incomingChangesKey(workspacePath), fresh);
       if (fresh.conflicts.length + fresh.blockedPaths.length > 0) navigation.goToView('incoming');
-      else void updateToIncoming(workspacePath, fresh);
+      else if (fresh.branch) void updateToIncoming(workspacePath, fresh);
     } catch (error) {
       toast.error("Couldn't check the incoming changes", error);
     } finally {

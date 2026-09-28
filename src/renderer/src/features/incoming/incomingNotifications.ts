@@ -12,7 +12,7 @@ import { incomingNotificationMessage } from './incomingNotificationMessage';
  * notification says who and what. Best effort: a failure here is not worth interrupting anyone for.
  */
 export async function notifyIncoming(workspacePath: string, before: IncomingSummary, after: IncomingSummary): Promise<void> {
-  if (!after.branch || after.headChangeset <= before.headChangeset || document.hasFocus()) return;
+  if (!after.branch || !before.branch || after.headChangeset <= before.headChangeset || document.hasFocus()) return;
   try {
     const settings = await queryClient.fetchQuery({ queryKey: queryKeys.settings, queryFn: () => api.settings.get(), staleTime: Infinity });
     if (!settings.notifyOnIncoming) return;

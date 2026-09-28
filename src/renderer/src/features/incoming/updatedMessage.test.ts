@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
-import type { IncomingChanges } from '@shared/domain/incoming';
+import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import { updatedMessage } from './updatedMessage';
 
 const changeset = (id: number, owner: string): Changeset => ({ id, guid: `${id}`, branch: '/main', comment: '', owner, date: '', parent: id - 1, repository: 'r@local' });
-const incoming = (changesets: Changeset[]): IncomingChanges => ({
+const incoming = (changesets: Changeset[]): BranchIncomingChanges => ({
   branch: '/main',
   loadedChangeset: 10,
   headChangeset: 10 + changesets.length,

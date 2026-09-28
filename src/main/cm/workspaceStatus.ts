@@ -13,7 +13,8 @@ export interface WorkspaceStatus {
   repositoryName: string;
   server: string;
   selector: WorkspaceSelector;
-  loadedChangeset: number;
+  /** Null on a shelve: its tree is no changeset (`WorkspaceInfo.loadedChangeset`). */
+  loadedChangeset: number | null;
 }
 
 /** What the workspace is loaded from, read with `cm status --header --xml`. */
@@ -32,20 +33,24 @@ export function parseWorkspaceStatus(xml: string): WorkspaceStatus {
   const repositoryName = text(repSpec?.Name);
   const server = text(repSpec?.Server);
   const configName = text(status?.WkConfigName);
-  const loadedChangeset = integer(workspaceStatus?.Changeset);
-  if (!repositoryName || !configName || loadedChangeset < 0) {
-    throw new Error(`Unexpected output from cm status: ${xml.trim().slice(0, 200) || '(empty)'}`);
-  }
-
-  return {
-    repositoryName,
-    server,
-    selector: {
-      kind: SELECTOR_KINDS[text(status?.WkConfigType)] ?? 'branch',
-      name: selectorName(configName, repositoryName, server),
-    },
-    loadedChangeset,
+  const selector: WorkspaceSelector = {
+    kind: SELECTOR_KINDS[text(status?.WkConfigType)] ?? 'branch',
+    name: configName && selectorName(configName, repositoryName, server),
   };
+  const loadedChangeset = repositoryName && configName ? loadedChangesetOf(integer(workspaceStatus?.Changeset, Number.NaN), selector) : undefined;
+  if (loadedChangeset === undefined) throw new Error(`Unexpected output from cm status: ${xml.trim().slice(0, 200) || '(empty)'}`);
+  return { repositoryName, server, selector, loadedChangeset };
+}
+
+/**
+ * The loaded changeset `cm status` reports, null on a shelve, undefined when it makes no sense. `cm` keeps shelves as
+ * changesets numbered below zero: a workspace on shelve 3 reports changeset -3 (the official client reads a shelve as
+ * changeset `-id`). So the shelve's own negated id is no changeset; any other number below zero, or a shelve with a
+ * changeset, is output to reject, never a changeset to query from.
+ */
+export function loadedChangesetOf(changeset: number, selector: WorkspaceSelector): number | null | undefined {
+  if (changeset >= 0) return selector.kind === 'shelve' ? undefined : changeset;
+  return selector.kind === 'shelve' && changeset === -Number(selector.name) ? null : undefined;
 }
 
 /**

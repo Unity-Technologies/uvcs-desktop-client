@@ -3,7 +3,7 @@ import type { IncomingSummary } from '@shared/domain/incoming';
 import type { WorkspaceInfo, WorkspaceSelector } from '@shared/domain/workspace';
 import { workspaceContext } from './workspaceContext';
 
-const info = (selector: WorkspaceSelector, loadedChangeset = 11): WorkspaceInfo => ({
+const info = (selector: WorkspaceSelector, loadedChangeset: number | null = 11): WorkspaceInfo => ({
   name: 'game',
   path: '/work/game',
   repository: 'game@local',
@@ -17,8 +17,7 @@ const summary = (changesetCount: number, branch = '/main'): IncomingSummary => (
 describe('workspaceContext', () => {
   it('tells the loaded changeset and keeps its branch for the tooltip', () => {
     expect(workspaceContext(info({ kind: 'branch', name: '/main/task' }), undefined)).toEqual({
-      changeset: 'cs:11',
-      description: 'cs:11 on /main/task',
+      changeset: { id: 11, spec: 'cs:11', description: 'cs:11 on /main/task' },
       repository: 'game@local',
       sync: null,
     });
@@ -40,9 +39,12 @@ describe('workspaceContext', () => {
     expect(workspaceContext(info({ kind: 'branch', name: '/main/task' }), summary(2)).sync).toBeNull();
   });
 
-  it('names labels and shelves next to the changeset, and a changeset once', () => {
-    expect(workspaceContext(info({ kind: 'label', name: 'v1.0' }), undefined).description).toBe('cs:11 · Label v1.0');
-    expect(workspaceContext(info({ kind: 'shelve', name: '3' }), undefined).description).toBe('cs:11 · Shelve sh:3');
-    expect(workspaceContext(info({ kind: 'changeset', name: '11' }), summary(0))).toMatchObject({ changeset: 'cs:11', description: 'cs:11', sync: null });
+  it('names labels next to the changeset, and a changeset once', () => {
+    expect(workspaceContext(info({ kind: 'label', name: 'v1.0' }), undefined).changeset?.description).toBe('cs:11 · Label v1.0');
+    expect(workspaceContext(info({ kind: 'changeset', name: '11' }), summary(0))).toMatchObject({ changeset: { spec: 'cs:11', description: 'cs:11' }, sync: null });
+  });
+
+  it('shows no changeset on a shelve, whose tree is none', () => {
+    expect(workspaceContext(info({ kind: 'shelve', name: '3' }, null), undefined)).toEqual({ changeset: null, repository: 'game@local', sync: null });
   });
 });

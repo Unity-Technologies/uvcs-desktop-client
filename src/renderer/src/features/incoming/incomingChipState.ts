@@ -28,7 +28,7 @@ export function incomingChipState(
 
   const { branch, changesetCount: count } = summary;
   // Changes read for an older head don't tell about the changesets that came in since.
-  if (!changes || changes.headChangeset !== summary.headChangeset) return { kind: 'incoming', branch, count, checked: false };
+  if (!changes?.branch || changes.headChangeset !== summary.headChangeset) return { kind: 'incoming', branch, count, checked: false };
 
   const mergeCount = changes.conflicts.length;
   const blockedCount = changes.blockedPaths.length;
