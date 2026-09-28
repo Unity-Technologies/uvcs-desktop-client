@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { bringDisabledReason, describeSelector, parseSelectorSpec, selectorSpec } from './switchSelectors';
+import { selectorSpec } from '@shared/domain/specs';
+import { bringDisabledReason, describeSelector, parseSelectorSpec } from './switchSelectors';
 
 describe('parseSelectorSpec', () => {
   it('reads the kind, name and repository of a spec', () => {

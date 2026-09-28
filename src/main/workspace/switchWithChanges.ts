@@ -13,7 +13,8 @@ import { changedPaths, shelvedChangelists, summarizePending, SWITCH_STATUS_ARGS 
 import { putBack } from './privateBackups';
 import { renamedPrivateFiles } from './renamedPrivateFiles';
 import { selectorObjectRef } from './selectorObjectRef';
-import { bringDisabledReason, describeSelector, parseSelectorSpec, selectorSpec } from './switchSelectors';
+import { selectorSpec } from '@shared/domain/specs';
+import { bringDisabledReason, describeSelector, parseSelectorSpec } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
 import { applyShelveCleanly, createSwitchShelve, moveNewItemsAside } from './switchShelves';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';

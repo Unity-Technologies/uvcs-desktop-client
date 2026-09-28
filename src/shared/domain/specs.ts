@@ -1,3 +1,5 @@
+import type { SelectorKind, WorkspaceSelector } from './workspace';
+
 /** Helpers to build `cm` object specs. See `cm help objectspec`. */
 export const spec = {
   branch: (name: string): string => `br:${name}`,
@@ -13,6 +15,13 @@ export const spec = {
   itemAt: (itemId: number, pointSpec: string): string => `itemid:${itemId}#${pointSpec}`,
   serverPathAt: (serverPath: string, pointSpec: string): string => `serverpath:${serverPath}#${pointSpec}`,
 };
+
+const SELECTOR_PREFIXES: Record<SelectorKind, string> = { branch: 'br', changeset: 'cs', label: 'lb', shelve: 'sh' };
+
+/** `{ kind: 'branch', name: '/main/t1' }` → `br:/main/t1`. */
+export function selectorSpec(selector: WorkspaceSelector): string {
+  return `${SELECTOR_PREFIXES[selector.kind]}:${selector.name}`;
+}
 
 /**
  * Whether a revision spec is pinned to a changeset or a shelve (`serverpath:/a.ts#cs:12`, `itemid:27#sh:3`,

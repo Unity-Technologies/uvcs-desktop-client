@@ -4,7 +4,8 @@ import type { CmClient } from '../cm/CmClient';
 import { LOCK_LIST_FORMAT_ARGS, parseLocks } from '../cm/lockRecords';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { shelvableChanges, summarizePending, SWITCH_STATUS_ARGS } from './pendingSnapshot';
-import { bringDisabledReason, describeSelector, selectorSpec } from './switchSelectors';
+import { selectorSpec } from '@shared/domain/specs';
+import { bringDisabledReason, describeSelector } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';
 

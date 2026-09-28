@@ -1,13 +1,7 @@
 import type { BringDisabledReason } from '@shared/domain/switchWithChanges';
 import type { SelectorKind, WorkspaceSelector } from '@shared/domain/workspace';
 
-const SPEC_PREFIXES: Record<SelectorKind, string> = { branch: 'br', changeset: 'cs', label: 'lb', shelve: 'sh' };
 const KINDS_BY_PREFIX: Record<string, SelectorKind> = { br: 'branch', cs: 'changeset', lb: 'label', sh: 'shelve' };
-
-/** `{ kind: 'branch', name: '/main/t1' }` → `br:/main/t1`. */
-export function selectorSpec(selector: WorkspaceSelector): string {
-  return `${SPEC_PREFIXES[selector.kind]}:${selector.name}`;
-}
 
 export interface ParsedSpec {
   selector: WorkspaceSelector;
