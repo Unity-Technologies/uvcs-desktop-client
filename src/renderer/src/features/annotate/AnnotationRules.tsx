@@ -13,7 +13,7 @@ interface AnnotationRulesProps {
 
 /**
  * Drawn over the gutter and the code together, in the same scrolled content, so nothing drifts: a hairline where one
- * block ends and the next starts, across the whole width, and a tint on the lines of the highlighted changeset.
+ * block ends and the next starts, across the whole width, and a faint tint on the lines of the highlighted changeset.
  */
 export function AnnotationRules({ blocks, shown, lineHeight, highlighted }: AnnotationRulesProps) {
   return (

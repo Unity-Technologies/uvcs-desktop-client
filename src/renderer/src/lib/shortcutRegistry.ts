@@ -137,6 +137,7 @@ export const SHORTCUTS = {
   annotatePreviousSameChangeset: { area: 'Annotate', label: 'Previous block from the same changeset', keys: ['alt+shift+up'] },
   annotateShowRevision: { area: 'Annotate', label: "Show the block's revision", keys: ['enter'] },
   annotateBlockDetails: { area: 'Annotate', label: "The block's changeset and actions", keys: ['space'] },
+  annotateLetGo: { area: 'Annotate', label: "Stop highlighting the block's changeset", keys: ['escape'] },
 
   merge: { area: 'Merge', label: 'Merge', keys: ['mod+enter'] },
   resolveAllInTool: { area: 'Merge', label: 'Resolve the conflicts in the merge tool, one by one', keys: ['mod+shift+enter'] },

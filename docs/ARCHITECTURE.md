@@ -575,10 +575,13 @@ renderer/src/
   before this change", beside a history), the label sticking to the top while the rest of its block is in view; an age strip in five
   shades of the accent (`annotationAge`, ranked by date among the file's changesets, `--annotate-age-*`) runs down
   each block, and a hairline across gutter and code marks where the next starts (`AnnotationRules`, drawn in the
-  same scrolled content, so nothing drifts). Hovering a block highlights every line of its changeset; its label opens
-  a card (`AnnotationCard`: the whole comment, Open changeset, Annotate before, Show in history). Beside a history,
-  clicking a block (or Enter) selects its revision there and walking back selects the revision before, with Back;
-  in Files a click pins the card and Show in history opens the file's history on that revision. ⌥↓ ⌥↑ walk the blocks (with ⇧, those of the same changeset), Space opens the card. The gutter, the rules
+  same scrolled content, so nothing drifts). Hovering a block marks its row only; clicking its cell picks it, as ⌥↓ ⌥↑
+  do, and a faint tint fades over every line of its changeset when it has other blocks to find (clicking it again or
+  Esc lets go, before Esc leaves the pane). Its avatar and comment (the text, not the room after it) open a card
+  (`AnnotationCard`: the whole comment, Open changeset, Annotate before, Show in history, and a hint of how to find the
+  changeset's other blocks) and pick the block and pin it when clicked. Only the changeset number leads away (a link): beside a history it
+  (or Enter) selects the block's revision there, in Files it opens the file's history on that revision, as Show in
+  history does; the rest of the cell only picks. Walking back selects the revision before, with Back. ⌥↓ ⌥↑ walk the blocks (with ⇧, those of the same changeset), Space opens the card. The gutter, the rules
   and Pierre's code render only the lines in view; the code highlights as a read-only diff does (`syntaxHighlighting`).
 - **Files: moving items**: ⌘X (Ctrl+X) cuts the selected items (`cutItemsStore`: only the outermost, never the root),
   ghosted with a hint in the header; cutting again replaces them, and they stay cut across views until pasted, Esc

@@ -24,6 +24,7 @@
   position: relative;
   flex: none;
   --age: var(--annotate-age-1);
+  transition: background-color var(--duration-fast) var(--ease-out);
 }
 
 .block[data-age='2'] {
@@ -55,11 +56,12 @@
   background: var(--age);
 }
 
-.block[data-highlighted='true'] {
+.block:hover,
+.block[data-active='true'] {
   background: var(--bg-hover);
 }
 
-/* The keyboard's block: its strip widens, the way a focused row is told apart without moving anything. */
+/* The picked block: its strip widens, the way a selected row is told apart without moving anything. */
 .block[data-active='true']::before {
   width: 5px;
 }
@@ -73,13 +75,20 @@
   gap: 6px;
   min-width: 0;
   padding-left: 11px;
-  background: var(--bg-surface);
+  /* No fill of its own: its block's shows through, which a second translucent hover would darken. */
   white-space: nowrap;
+  transition: color var(--duration-fast) var(--ease-out);
 }
 
-.block[data-highlighted='true'] .label {
-  background: var(--bg-hover);
+/* Only the block under the pointer or picked: the rest of its changeset is told by the rules' tint, not by lighting every label. */
+.block:hover .label,
+.block[data-active='true'] .label {
   color: var(--text-primary);
+}
+
+.avatar {
+  display: flex;
+  flex: none;
 }
 
 .comment {
@@ -91,8 +100,17 @@
 
 .changeset {
   flex: none;
+  padding: 0;
+  border: none;
+  background: none;
   color: var(--accent-text);
   font-family: var(--font-mono);
+  font-size: inherit;
+  cursor: pointer;
+}
+
+.changeset:hover {
+  text-decoration: underline;
 }
 
 .date {

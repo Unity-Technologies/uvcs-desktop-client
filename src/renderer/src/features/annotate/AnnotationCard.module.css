@@ -82,3 +82,13 @@
   padding-top: var(--space-1);
   border-top: 1px solid var(--border-subtle);
 }
+
+.hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}

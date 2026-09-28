@@ -5,9 +5,10 @@ import type { ItemRevision } from '@shared/domain/history';
 import { useResolvedTheme } from '../../app/settings/useResolvedTheme';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
-import { fileNameOf } from '../../lib/text';
+import { fileNameOf, pluralize } from '../../lib/text';
 import { useHoverCard } from '../../lib/useHoverCard';
 import { displayName } from '../../lib/userName';
+import { Kbd } from '../../ui/Kbd';
 import { highlightWorkers } from '../diff/viewer/highlightWorkers';
 import { PIERRE_SURFACE_CSS, pierreThemeName } from '../diff/viewer/pierreOptions';
 import { highlightedLanguage, syntaxHighlighting } from '../diff/viewer/syntaxHighlighting';
@@ -32,7 +33,7 @@ export interface BlockLinks {
   openChangeset?: (changesetId: number) => void;
   /** The changeset's revision in the file's history: selected beside it, or opened there. */
   showInHistory: (changesetId: number) => void;
-  /** Where the annotation sits beside the history list, clicking a block (or Enter) selects its revision there. */
+  /** Where the annotation sits beside the history list, a block's changeset number (or Enter) selects its revision there. */
   selectsInHistory: boolean;
   /** Beside the history list: "Annotate before this change", to the revision before it (if the history has one). */
   walkBack?: {
@@ -72,11 +73,20 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
   );
   const range = useVisibleRows(scroller, lineCount, ANNOTATION_LINE_HEIGHT, CODE_PADDING_TOP);
   const shown = blocksInView(blocks, range);
-  const [hovered, setHovered] = useState<number | null>(null);
   const [active, setActive] = useState(-1);
   const [cardBlock, setCardBlock] = useState(-1);
   const card = useHoverCard();
-  const highlighted = blocks[hovered ?? active]?.changeset.changesetId ?? null;
+  // The picked block's changeset stands out (a click or the keyboard picks it; hovering lights nothing up), when it has
+  // other blocks to find: a changeset of one block has nothing to point out.
+  const otherBlocks = (index: number): number => {
+    const changesetId = blocks[index]?.changeset.changesetId;
+    return changesetId === undefined ? 0 : blocks.filter((block) => block.changeset.changesetId === changesetId).length - 1;
+  };
+  const highlighted = useMemo(() => {
+    const changesetId = blocks[active]?.changeset.changesetId;
+    if (changesetId === undefined) return null;
+    return blocks.some((block, index) => index !== active && block.changeset.changesetId === changesetId) ? changesetId : null;
+  }, [blocks, active]);
 
   const highlighting = syntaxHighlighting(code, '', false);
   const workers = highlighting === 'background' ? highlightWorkers() : undefined;
@@ -136,6 +146,8 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
   const onKeyDown = (event: KeyboardEvent): void => {
     if (event.target !== event.currentTarget) return;
     const handlers: [string, () => void][] = [
+      // Before Esc leaves the pane: only while something is picked.
+      ...(active !== -1 ? ([[hotkey('annotateLetGo'), () => setActive(-1)]] as [string, () => void][]) : []),
       [hotkey('annotateNextBlock'), () => step(1)],
       [hotkey('annotatePreviousBlock'), () => step(-1)],
       [hotkey('annotateNextSameChangeset'), () => step(1, true)],
@@ -150,6 +162,16 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
   };
 
   const activeBlock = blocks[active];
+  const cardHint = () => {
+    const others = otherBlocks(cardBlock);
+    if (others === 0) return undefined;
+    if (cardBlock !== active) return `Click the block to highlight its ${pluralize(others, 'other block')}`;
+    return (
+      <>
+        {pluralize(others, 'other block')} highlighted · <Kbd keys={hotkey('annotateNextSameChangeset')} /> goes to the next
+      </>
+    );
+  };
 
   return (
     <div
@@ -167,18 +189,22 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
           shown={shown}
           columns={columns}
           lineHeight={ANNOTATION_LINE_HEIGHT}
-          highlighted={highlighted}
           active={active}
-          onHover={setHovered}
+          onPick={(index) => setActive(index === active ? -1 : index)}
           onHoverLabel={(index) => {
             if (index === null) return card.hoverProps.onMouseLeave();
             if (!card.pinned) setCardBlock(index);
             card.hoverProps.onMouseEnter();
           }}
-          onClick={(index) => {
+          onPinCard={(index) => {
             setActive(index);
-            showBlock(index);
+            openCard(index);
           }}
+          onShowRevision={(index) => {
+            setActive(index);
+            links.showInHistory(blocks[index]!.changeset.changesetId);
+          }}
+          revisionTip={links.selectsInHistory ? 'Select this revision' : 'Show this revision in history'}
           walkBack={links.walkBack}
         />
         <VirtualizerContext.Provider value={virtualizer}>
@@ -196,6 +222,7 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
         onOpenChange={card.onOpenChange}
         hoverProps={card.hoverProps}
         returnFocusTo={scroller}
+        hint={cardHint()}
         actions={{
           openChangeset:
             links.openChangeset &&

@@ -11,12 +11,16 @@
   right: 0;
   left: 0;
   border-top: 1px solid var(--border-default);
+  /* Fades out slower than it comes in, so the tint settles rather than blinks. */
+  transition: background-color var(--duration-slow) var(--ease-in-out);
 }
 
 .block[data-first='true'] {
   border-top-color: transparent;
 }
 
+/* A whisper over the changeset's lines: enough to find them down the file, never a stripe pattern across it. */
 .block[data-highlighted='true'] {
-  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  background: color-mix(in srgb, var(--accent) 5%, transparent);
+  transition-duration: var(--duration-normal);
 }
