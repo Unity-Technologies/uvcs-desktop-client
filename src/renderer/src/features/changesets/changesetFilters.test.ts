@@ -1,13 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
 import type { Label } from '@shared/domain/label';
-import { changesetsCap, DEFAULT_CHANGESET_FILTER, matchesSearch, noChangesetsHint, toQueryFilter } from './changesetFilters';
+import { MINE } from '../../lib/peopleFilter';
+import { changesetsCap, DEFAULT_CHANGESET_FILTERS, matchesSearch, noChangesetsHint, toQueryFilter } from './changesetFilters';
 
 const today = new Date(2026, 8, 25);
 
 describe('toQueryFilter', () => {
   it('restricts by date by default', () => {
-    expect(toQueryFilter(DEFAULT_CHANGESET_FILTER, '/main', today)).toEqual({
+    expect(toQueryFilter(DEFAULT_CHANGESET_FILTERS, '/main', today)).toEqual({
       sinceDate: '2026-08-26',
       owners: undefined,
       branch: undefined,
@@ -16,8 +17,13 @@ describe('toQueryFilter', () => {
   });
 
   it('applies mine and current branch, and caps "any time"', () => {
-    const filter = toQueryFilter({ ...DEFAULT_CHANGESET_FILTER, datePreset: 'all', onlyMine: true, onlyCurrentBranch: true }, '/main/ui', today);
+    const filter = toQueryFilter({ ...DEFAULT_CHANGESET_FILTERS, since: 'anyTime', people: MINE, onlyCurrentBranch: true }, '/main/ui', today);
     expect(filter).toEqual({ sinceDate: undefined, owners: ['me'], branch: '/main/ui', limit: 2000 });
+  });
+
+  it('asks for the people picked, so "any time" reaches their newest', () => {
+    const filter = toQueryFilter({ ...DEFAULT_CHANGESET_FILTERS, since: 'anyTime', people: { mine: true, others: ['zoe', 'ana'] } }, '/main', today);
+    expect(filter.owners).toEqual(['me', 'ana', 'zoe']);
   });
 });
 
@@ -50,22 +56,22 @@ describe('matchesSearch', () => {
 });
 
 describe('noChangesetsHint', () => {
-  it('suggests a longer time range, which the search looks within', () => {
-    expect(noChangesetsHint(DEFAULT_CHANGESET_FILTER)).toBe('Try a longer time range.');
-    expect(noChangesetsHint({ ...DEFAULT_CHANGESET_FILTER, search: '1234' })).toBe('The search looks within the time range. Try a longer one.');
+  it('suggests a longer time range, which the filters look within', () => {
+    expect(noChangesetsHint('lastMonth', false)).toBe('Try a longer time range.');
+    expect(noChangesetsHint('lastMonth', true)).toBe('The filters look within the time range. Try a longer one.');
   });
 
   it("doesn't suggest a longer range than any time", () => {
-    expect(noChangesetsHint({ ...DEFAULT_CHANGESET_FILTER, datePreset: 'all', onlyMine: true })).toBe('Try fewer filters.');
-    expect(noChangesetsHint({ ...DEFAULT_CHANGESET_FILTER, datePreset: 'all', search: 'old' })).toBe('Any time reads the newest 2,000 changesets.');
+    expect(noChangesetsHint('anyTime', false)).toBe('Nothing was checked in yet.');
+    expect(noChangesetsHint('anyTime', true)).toBe('Any time reads the newest 2,000 changesets.');
   });
 });
 
 describe('changesetsCap', () => {
   it('says when any time stopped at its cap, and nothing while the count tells it all', () => {
-    expect(changesetsCap(12, 2000, 'all')).toBe('12 shown of the newest 2,000');
-    expect(changesetsCap(2000, 2000, 'all')).toBe('The newest 2,000');
-    expect(changesetsCap(12, 40, 'all')).toBeUndefined();
-    expect(changesetsCap(2000, 2000, 'month')).toBeUndefined();
+    expect(changesetsCap(12, 2000, 'anyTime')).toBe('12 shown of the newest 2,000');
+    expect(changesetsCap(2000, 2000, 'anyTime')).toBe('The newest 2,000');
+    expect(changesetsCap(12, 40, 'anyTime')).toBeUndefined();
+    expect(changesetsCap(2000, 2000, 'lastMonth')).toBeUndefined();
   });
 });

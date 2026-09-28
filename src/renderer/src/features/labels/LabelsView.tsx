@@ -1,5 +1,5 @@
-import { Plus, RefreshCw, Tag, User } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Plus, RefreshCw, Tag } from 'lucide-react';
+import { useMemo } from 'react';
 import type { Label } from '@shared/domain/label';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
 import { invalidateWorkspace } from '../../app/queryClient';
@@ -9,7 +9,16 @@ import { ListWithDetails } from '../../components/ListWithDetails';
 import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
 import { NoSelection } from '../../components/NoSelection';
 import { PathLabel } from '../../components/PathLabel';
+import { useWorkspaceUser } from '../../app/account/accounts';
+import { PeopleFilter } from '../../components/people/PeopleFilter';
+import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { SincePicker } from '../../components/SincePicker';
+import { matchesPeople, pickedOwners, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
+import { useDebouncedValue } from '../../lib/useDebouncedValue';
+import { isFiltering } from '../../lib/viewFilters';
+import { FilterBar } from '../../ui/FilterBar';
+import { FilterField } from '../../ui/FilterField';
+import { NoMatches } from '../../ui/NoMatches';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { userFilterTexts } from '../../lib/userName';
 import { sinceDateFor } from '../../lib/sincePresets';
@@ -19,10 +28,8 @@ import { EmptyState } from '../../ui/EmptyState';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
-import { SearchField } from '../../ui/SearchField';
 import { cellText } from '../../ui/table/cellText';
 import { DataTable, type Column } from '../../ui/table/DataTable';
-import { ToggleChip } from '../../ui/ToggleChip';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { openCreateLabelDialog } from './CreateLabelDialog';
 import { LabelDetails } from './LabelDetails';
@@ -56,25 +63,29 @@ const COLUMNS: Column<Label>[] = [
 
 export function LabelsView() {
   const workspacePath = useWorkspacePath();
-  const { since, onlyMine, update } = useLabelsViewStore();
-  const { data: labels, isLoading, isFetching, error } = useLabels({ sinceDate: sinceDateFor(since), owners: onlyMine ? ['me'] : undefined });
-  const [search, setSearch] = useState('');
+  const filters = useLabelsViewStore();
+  const { text: search, people, since, update } = filters;
+  const me = useWorkspaceUser();
+  const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
+  const { data: labels, isLoading, isFetching, error } = useLabels({ sinceDate: sinceDateFor(since), owners: pickedOwners(queriedPeople) });
+  const offered = usePeopleSeen('labels', labels, ownerOf);
   const [selection, setSelection] = useViewSelection('labels');
 
   const visible = useMemo(
-    () => (search.trim() ? (labels ?? []).filter((label) => matchesWordFilter([label.name, label.comment, label.branch, ...userFilterTexts(label.owner)], search)) : (labels ?? [])),
-    [labels, search],
+    () => (labels ?? []).filter((label) => matchesPeople(people, me, label.owner) && matchesWordFilter([label.name, label.comment, label.branch, ...userFilterTexts(label.owner)], search)),
+    [labels, people, me, search],
   );
   const selected = visible.find((label) => labelKey(label) === selection.anchor);
   useRenameCommand('Labels', 'label', selection.selected.size === 1 ? selected : undefined, (label) => void renameLabel(workspacePath, label));
   useCopyCommand('Labels', 'Label', selection.selected.size === 1 && selected ? labelCopyTexts(selected) : undefined);
-  const filtered = Boolean(search.trim()) || since !== 'anyTime' || onlyMine;
+  const filtering = isFiltering(filters);
 
   return (
     <>
       <ViewHeader
         title="Labels"
-        count={labels?.length}
+        count={labels && visible.length}
+        total={labels?.length}
         actions={
           <>
             <IconButton icon={<RefreshCw size={14} className={isFetching ? 'spinning' : undefined} />} label="Refresh" onClick={() => void invalidateWorkspace(workspacePath)} />
@@ -84,18 +95,20 @@ export function LabelsView() {
           </>
         }
       >
-        <SearchField value={search} onChange={setSearch} placeholder="Filter labels" />
-        <SincePicker value={since} onChange={(value) => update({ since: value })} />
-        <ToggleChip pressed={onlyMine} onChange={(value) => update({ onlyMine: value })} icon={<User size={12} />}>
-          Mine
-        </ToggleChip>
+        <FilterBar
+          text={<FilterField value={search} onChange={(text) => update({ text })} placeholder="Filter labels" />}
+          people={<PeopleFilter value={people} onChange={(value) => update({ people: value })} people={offered} mineTip="Labels you created" />}
+          time={<SincePicker value={since} onChange={(value) => update({ since: value })} />}
+        />
       </ViewHeader>
       {isLoading ? (
         <ListWithDetailsSkeleton widthKey="labels" columns={COLUMNS} />
       ) : error ? (
         <EmptyState title="Couldn't load labels" description={error.message} />
-      ) : visible.length === 0 && filtered ? (
-        <EmptyState icon={<Tag size={22} />} title="No matching labels" description="Try a different filter or date range." />
+      ) : visible.length === 0 && filtering ? (
+        <NoMatches icon={<Tag size={22} />} noun="labels" hint={since === 'anyTime' ? undefined : 'The filters look within the time range. Try a longer one.'} onClear={filters.clear} />
+      ) : visible.length === 0 && since !== 'anyTime' ? (
+        <EmptyState icon={<Tag size={22} />} title="No labels" description="Try a longer time range." />
       ) : visible.length === 0 ? (
         <EmptyState
           icon={<Tag size={22} />}
@@ -127,6 +140,8 @@ export function LabelsView() {
     </>
   );
 }
+
+const ownerOf = (label: Label): string => label.owner;
 
 /** By id, so a renamed label stays selected. */
 function labelKey(label: Label): string {

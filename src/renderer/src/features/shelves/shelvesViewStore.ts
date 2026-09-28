@@ -1,17 +1,5 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { MINE } from '../../lib/peopleFilter';
+import { createViewFilters, type ViewFilters } from '../../lib/viewFilters';
 
-interface ShelvesViewStore {
-  onlyMine: boolean;
-  /** The filter's text, for this session only: the list in Changes hands its own over ("All shelves"). */
-  search: string;
-  setOnlyMine: (onlyMine: boolean) => void;
-  setSearch: (search: string) => void;
-}
-
-export const useShelvesViewStore = create<ShelvesViewStore>()(
-  persist(
-    (set) => ({ onlyMine: true, search: '', setOnlyMine: (onlyMine) => set({ onlyMine }), setSearch: (search) => set({ search }) }),
-    { name: 'shelves-view', partialize: ({ onlyMine }) => ({ onlyMine }) },
-  ),
-);
+/** Starts on the user's own shelves, as the list in Changes does; "All shelves" there hands its scope and text over. */
+export const useShelvesViewStore = createViewFilters<ViewFilters>('shelves-view', { text: '', people: MINE });

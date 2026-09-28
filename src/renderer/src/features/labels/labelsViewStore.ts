@@ -1,13 +1,9 @@
-import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { EVERYONE } from '../../lib/peopleFilter';
 import type { SincePreset } from '../../lib/sincePresets';
+import { createViewFilters, type ViewFilters } from '../../lib/viewFilters';
 
-interface LabelsViewStore {
+interface LabelsFilters extends ViewFilters {
   since: SincePreset;
-  onlyMine: boolean;
-  update: (changes: Partial<Omit<LabelsViewStore, 'update'>>) => void;
 }
 
-export const useLabelsViewStore = create<LabelsViewStore>()(
-  persist((set) => ({ since: 'anyTime', onlyMine: false, update: (changes) => set(changes) }), { name: 'labels-view' }),
-);
+export const useLabelsViewStore = createViewFilters<LabelsFilters>('labels-view', { text: '', people: EVERYONE, since: 'anyTime' });

@@ -16,6 +16,12 @@ export const MINE: PeoplePick = { mine: true, others: [] };
 /** People are picked by hand, and each one is a condition of the view's query: a handful, never a list of ids. */
 export const MAX_PICKED_PEOPLE = 20;
 
+/**
+ * How long a view waits after the last pick before reading the people's rows: picking three people is one query, not
+ * three. The rows already read narrow at once meanwhile (`matchesPeople`).
+ */
+export const PICKING_PAUSE_MS = 400;
+
 export function isEveryone(pick: PeoplePick): boolean {
   return !pick.mine && pick.others.length === 0;
 }

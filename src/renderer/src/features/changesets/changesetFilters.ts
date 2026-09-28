@@ -1,47 +1,36 @@
 import type { Changeset } from '@shared/domain/changeset';
 import type { QueryFilter } from '@shared/domain/query';
-import { formatCount } from '../../lib/text';
 import type { Label } from '@shared/domain/label';
+import { EVERYONE, pickedOwners } from '../../lib/peopleFilter';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
+import { sinceDateFor, type SincePreset } from '../../lib/sincePresets';
+import { formatCount } from '../../lib/text';
 import { userFilterTexts } from '../../lib/userName';
-
-export type DatePreset = 'week' | 'twoWeeks' | 'month' | 'quarter' | 'year' | 'all';
-
-export const DATE_PRESET_LABELS: Record<DatePreset, string> = {
-  week: 'Last week',
-  twoWeeks: 'Last 15 days',
-  month: 'Last month',
-  quarter: 'Last 3 months',
-  year: 'Last year',
-  all: 'Any time',
-};
-
-const DAYS_BACK: Record<Exclude<DatePreset, 'all'>, number> = { week: 7, twoWeeks: 15, month: 30, quarter: 90, year: 365 };
+import type { ViewFilters } from '../../lib/viewFilters';
 
 /** Keeps "Any time" usable on huge repositories. */
 const ANY_TIME_LIMIT = 2000;
 
-export interface ChangesetFilterState {
-  search: string;
-  datePreset: DatePreset;
-  onlyMine: boolean;
+export interface ChangesetFilters extends ViewFilters {
+  since: SincePreset;
   onlyCurrentBranch: boolean;
 }
 
-export const DEFAULT_CHANGESET_FILTER: ChangesetFilterState = {
-  search: '',
-  datePreset: 'month',
-  onlyMine: false,
-  onlyCurrentBranch: false,
-};
+export const DEFAULT_CHANGESET_FILTERS: ChangesetFilters = { text: '', people: EVERYONE, since: 'lastMonth', onlyCurrentBranch: false };
 
-/** What to ask `cm find` for. The text search is applied locally, so typing stays instant. */
-export function toQueryFilter(state: Omit<ChangesetFilterState, 'search'>, currentBranch: string | undefined, today: Date): QueryFilter {
+/** What "Clear filters" resets besides the text and the people. */
+export const CLEARED_CHANGESET_FILTERS: Partial<ChangesetFilters> = { onlyCurrentBranch: false };
+
+/**
+ * What to ask `cm find` for: the time range, the people and the branch, so "Any time" (capped) finds the people's
+ * newest ones and not those among everyone's newest. The text is matched locally, so typing stays instant.
+ */
+export function toQueryFilter({ since, people, onlyCurrentBranch }: Omit<ChangesetFilters, 'text'>, currentBranch: string | undefined, today: Date): QueryFilter {
   return {
-    sinceDate: state.datePreset === 'all' ? undefined : isoDateDaysBefore(today, DAYS_BACK[state.datePreset]),
-    owners: state.onlyMine ? ['me'] : undefined,
-    branch: state.onlyCurrentBranch ? currentBranch : undefined,
-    limit: state.datePreset === 'all' ? ANY_TIME_LIMIT : undefined,
+    sinceDate: sinceDateFor(since, today),
+    owners: pickedOwners(people),
+    branch: onlyCurrentBranch ? currentBranch : undefined,
+    limit: since === 'anyTime' ? ANY_TIME_LIMIT : undefined,
   };
 }
 
@@ -53,23 +42,15 @@ export function matchesSearch(changeset: Changeset, search: string, labels: read
   );
 }
 
-/** What to try when nothing shows: the search only looks through what the other filters read. */
-export function noChangesetsHint({ search, datePreset }: ChangesetFilterState): string {
-  const searching = search.trim() !== '';
-  if (datePreset !== 'all') return searching ? 'The search looks within the time range. Try a longer one.' : 'Try a longer time range.';
-  return searching ? `Any time reads the newest ${ANY_TIME_LIMIT.toLocaleString('en-US')} changesets.` : 'Try fewer filters.';
+/** What to try when nothing shows: the filters only look through what the time range read. */
+export function noChangesetsHint(since: SincePreset, filtering: boolean): string {
+  if (since !== 'anyTime') return filtering ? 'The filters look within the time range. Try a longer one.' : 'Try a longer time range.';
+  return filtering ? `Any time reads the newest ${formatCount(ANY_TIME_LIMIT)} changesets.` : 'Nothing was checked in yet.';
 }
 
 /** What the header says instead of a bare count once Any time stopped at its cap; undefined while the count tells it all. */
-export function changesetsCap(shown: number, read: number, datePreset: DatePreset): string | undefined {
-  if (datePreset !== 'all' || read < ANY_TIME_LIMIT) return undefined;
+export function changesetsCap(shown: number, read: number, since: SincePreset): string | undefined {
+  if (since !== 'anyTime' || read < ANY_TIME_LIMIT) return undefined;
   const newest = `newest ${formatCount(ANY_TIME_LIMIT)}`;
   return shown === read ? `The ${newest}` : `${formatCount(shown)} shown of the ${newest}`;
-}
-
-function isoDateDaysBefore(today: Date, days: number): string {
-  const date = new Date(today);
-  date.setDate(date.getDate() - days);
-  const pad = (value: number): string => String(value).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
