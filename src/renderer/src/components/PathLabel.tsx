@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { textMeasurer } from '../lib/measureText';
-import { fitPath, positionsInTrimmed } from '../lib/trimToFit';
+import { fitPath, fittedPathWidth, positionsInTrimmed } from '../lib/trimToFit';
 import { wordMatchPositions } from '../lib/textMatchRanges';
 import { Highlight, useHighlightQuery } from '../ui/Highlight';
 import styles from './PathLabel.module.css';
@@ -22,6 +22,11 @@ interface PathLabelProps {
    * label rather than sizing it.
    */
   fitContent?: boolean;
+  /**
+   * With `fitContent`, the widest it gets: a longer path is fitted to it and the label is only as wide as what is left,
+   * where a container's `max-width` would keep the whole width and leave a gap after the dropped folders.
+   */
+  maxWidth?: number;
   /** False where the element around it has a tooltip naming the path already. */
   tooltip?: boolean;
 }
@@ -32,7 +37,7 @@ interface PathLabelProps {
  * (`src/…/app/main.ts`) so the name always stays whole. The cut is measured rather than left to CSS `text-overflow`,
  * which would cut the name first; a name too long on its own is cut from its middle (`fitPath`).
  */
-export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fitContent, tooltip = true }: PathLabelProps) {
+export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fitContent, maxWidth, tooltip = true }: PathLabelProps) {
   const nameStart = path.lastIndexOf('/') + 1;
   const name = path.slice(nameStart);
   const directory = nameOnly ? '' : path.slice(0, nameStart);
@@ -46,12 +51,12 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fit
     if (!element) return;
     const fit = (): void => {
       const measure = textMeasurer(element);
-      // Widths are rounded; the extra pixel keeps a rounded-up width from clipping the fitted text.
       if (fitContent) {
-        const nameWidth = Math.ceil(measure(name)) + 1;
+        const { width, nameWidth } = fittedPathWidth(directory, name, measure, maxWidth);
         // Next to other labels, the one with the most folder to drop gives way first.
-        setContentSize({ width: Math.ceil(measure(directory)) + nameWidth, minWidth: `min(${nameWidth}px, 100%)`, flexShrink: measure(directory) });
+        setContentSize({ width, minWidth: `min(${nameWidth}px, 100%)`, flexShrink: measure(directory) });
       }
+      // Widths are rounded; the extra pixel keeps a rounded-up width from clipping the fitted text.
       const fitted = fitPath(directory, name, element.clientWidth - 1, measure);
       setShown((current) => (current.folder === fitted.folder && current.name === fitted.name ? current : fitted));
     };
@@ -59,7 +64,7 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fit
     const observer = new ResizeObserver(fit);
     observer.observe(element);
     return () => observer.disconnect();
-  }, [directory, name, fitContent]);
+  }, [directory, name, fitContent, maxWidth]);
 
   const query = useHighlightQuery();
   const positions = matches ?? (nameOnly ? wordMatchPositions(name, query).map((position) => position + nameStart) : wordMatchPositions(path, query));

@@ -88,3 +88,13 @@ export function positionsInTrimmed(text: string, shown: string, positions: reado
   const shift = kept + ELLIPSIS.length - tailStart;
   return positions.flatMap((position) => (position < kept ? [position] : position >= tailStart ? [position + shift] : []));
 }
+
+/**
+ * The whole pixels a label showing a path needs, the name's alone too, with one to spare so a rounded-up width never
+ * clips it: the path whole, or once fitted to `maxWidth` (`fitPath`), so a label fitted there is as wide as what it shows.
+ */
+export function fittedPathWidth(folder: string, name: string, measure: Measure, maxWidth?: number): { width: number; nameWidth: number } {
+  const shown = maxWidth === undefined ? { folder, name } : fitPath(folder, name, maxWidth - 1, measure);
+  const nameWidth = Math.ceil(measure(shown.name)) + 1;
+  return { width: Math.ceil(measure(shown.folder)) + nameWidth, nameWidth };
+}
