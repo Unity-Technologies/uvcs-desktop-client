@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
+import { avatarColumn, commentColumn, dateColumn, numberColumn } from '../../components/historyColumns';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
-import { firstLine } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
-import { RelativeTime } from '../../ui/RelativeTime';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { SplitPane } from '../../ui/SplitPane';
@@ -38,11 +37,8 @@ export function BranchDiff({ branch, branchHead, focusPath }: BranchDiffProps) {
   return <ChangesetByChangeset branch={branch} toolbar={modeToggle} focusPath={focusPath} />;
 }
 
-const CHANGESET_COLUMNS: Column<Changeset>[] = [
-  { id: 'id', header: 'Cs', width: 56, secondary: true, render: (changeset) => changeset.id },
-  { id: 'comment', header: 'Comment', render: (changeset) => firstLine(changeset.comment) || '—' },
-  { id: 'date', header: 'Date', width: 110, secondary: true, render: (changeset) => <RelativeTime date={changeset.date} /> },
-];
+/** The Changesets view's columns that fit beside a diff; the avatar, whose tooltip names the author, always shows. */
+const CHANGESET_COLUMNS: Column<Changeset>[] = [avatarColumn({ alwaysShown: true }), numberColumn('Changeset'), commentColumn(), dateColumn()];
 
 function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; toolbar: React.ReactNode; focusPath?: string }) {
   const filter = useMemo(() => ({ branch }), [branch]);
@@ -60,7 +56,7 @@ function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; 
 
   return (
     <SplitPane
-      initialSize={320}
+      initialSize={380}
       minSize={220}
       maxSize={560}
       first={

@@ -20,13 +20,14 @@ export interface HistoryRow {
 /**
  * Columns give way as the list narrows (a small window with the details open), so the comment keeps room to be read
  * and the list never scrolls sideways: the secondary column below 560 px, the author below 700, the avatar below 480
- * and, last, the date below 360.
+ * and, last, the date below 360. A list beside a diff (a branch's changesets) keeps the avatar at any width, as History
+ * does: there it is the only way to tell who made each row.
  */
 const NARROW_LIST = 480;
 const NARROWEST_LIST = 360;
 
-export function avatarColumn<Row extends HistoryRow>(): Column<Row> {
-  return { id: 'avatar', header: '', width: 34, hideBelow: NARROW_LIST, render: (row) => <Avatar user={row.owner} size={20} /> };
+export function avatarColumn<Row extends HistoryRow>({ alwaysShown = false }: { alwaysShown?: boolean } = {}): Column<Row> {
+  return { id: 'avatar', header: '', width: 34, hideBelow: alwaysShown ? undefined : NARROW_LIST, render: (row) => <Avatar user={row.owner} size={20} /> };
 }
 
 /** The number, in mono; `marker` adds something after it (the changeset loaded in the workspace). */
