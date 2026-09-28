@@ -4,9 +4,11 @@ import { drawAvatar, drawDot } from './drawAvatar';
 import { drawCollapsedNode } from './drawCollapsedNode';
 import { DIMMED_ALPHA, isChangesetDimmed, STRUCTURE_DIMMED_ALPHA, type DrawContext } from './drawContext';
 import { drawHomeMarker } from './drawHomeMarker';
+import { drawPendingChangeset } from './drawPendingChangeset';
 import { drawNodeCorona, drawNodeGlow } from './drawSearchHit';
-import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, columnX, NODE_RADIUS, rowY } from './geometry';
+import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, columnX, NODE_RADIUS, nodePoint, pendingPoint, rowY } from './geometry';
 import { branchColor } from './graphPalette';
+import { boundsOf, crossesView } from './linkVisibility';
 import { hasParentOffGraph, parentLinksInView } from './parentLinks';
 
 const DOT_RADIUS = 5;
@@ -21,7 +23,10 @@ const SELECTION_RING = 4;
 /** The changesets on screen, refilled every frame instead of allocated. */
 const visible: NodeLayout[] = [];
 
-/** Changesets with the links to their parents and the workspace marker. */
+/**
+ * Changesets with the links to their parents, the pending changeset and the workspace marker: on the pending changeset
+ * when there is one (what the workspace has is the loaded changeset and its changes), else on the loaded changeset.
+ */
 export function drawNodes(draw: DrawContext): void {
   const nodes = visibleNodes(draw);
   parentLinksInView(draw.scene.layout, draw.visible, NODE_RADIUS).forEach(({ parent, child }) => drawParentLink(draw, parent, child));
@@ -31,8 +36,15 @@ export function drawNodes(draw: DrawContext): void {
   for (const node of nodes) drawNode(draw, node);
 
   const { homeChangeset, layout } = draw.scene;
+  const pending = pendingPoint(layout);
+  if (pending) {
+    const reach = boundsOf([nodePoint(layout, layout.pending!.parent) ?? pending, pending]);
+    if (crossesView(reach, draw.visible, BAND_HEIGHT * 2)) drawPendingChangeset(draw, layout.pending!);
+    if (crossesView(boundsOf([pending]), draw.visible, BAND_HEIGHT)) drawHomeMarker(draw, pending, radiusFor(draw));
+    return;
+  }
   const home = homeChangeset !== null ? layout.nodes.get(homeChangeset) : undefined;
-  if (home && nodes.includes(home)) drawHomeMarker(draw, home, radiusFor(draw));
+  if (home && nodes.includes(home)) drawHomeMarker(draw, { x: columnX(home.column), y: rowY(home.row) }, radiusFor(draw));
 }
 
 function visibleNodes({ scene, visible: area }: DrawContext): NodeLayout[] {

@@ -1,6 +1,7 @@
 import type { ChangeKind, Changelist, ItemType, PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import { withForwardSlashes } from '../files/workspacePaths';
 import { child, children, dateText, integer, parseXml, text } from './parseXml';
+import { pendingMergeLinks } from './pendingMergeLinks';
 
 const CHANGE_KINDS: Record<string, ChangeKind> = {
   AD: 'added',
@@ -29,7 +30,8 @@ const ITEM_TYPES: Record<string, ItemType> = {
 
 /**
  * Parses `cm status --xml`, with or without `--changelists`. The same item can be listed
- * several times (e.g. moved and changed), so entries are merged by path. Paths come with the OS's separators.
+ * several times (e.g. moved and changed), so entries are merged by path. Paths come with the OS's separators. The
+ * merges in progress come from the changes' merge info: `cm status --xml` lists them nowhere else.
  */
 export function parsePendingChanges(xml: string, platform: NodeJS.Platform = process.platform): PendingChangesSnapshot {
   const status = child(parseXml(xml, ['Change', 'Changelist']), 'StatusOutput');
@@ -38,6 +40,7 @@ export function parsePendingChanges(xml: string, platform: NodeJS.Platform = pro
   const groups = changelistNodes.length > 0 ? changelistNodes : [{ Name: DEFAULT_CHANGELIST, Changes: child(status, 'Changes') }];
   const changesByPath = new Map<string, PendingChange>();
   const changelists: Changelist[] = [];
+  const mergeInfos = new Set<string>();
 
   for (const group of groups) {
     const name = text(group.Name);
@@ -46,12 +49,13 @@ export function parsePendingChanges(xml: string, platform: NodeJS.Platform = pro
 
     for (const node of children(child(group, 'Changes'), 'Change')) {
       const change = toPendingChange(node, changelist, platform);
+      if (change.mergeInfo) mergeInfos.add(change.mergeInfo);
       const existing = changesByPath.get(change.path);
       changesByPath.set(change.path, existing ? mergeChanges(existing, change) : change);
     }
   }
 
-  return { loadedChangeset, changelists, changes: [...changesByPath.values()] };
+  return { loadedChangeset, changelists, changes: [...changesByPath.values()], mergeLinks: pendingMergeLinks(mergeInfos) };
 }
 
 function toPendingChange(node: Record<string, unknown>, changelist: string | undefined, platform: NodeJS.Platform): PendingChange {

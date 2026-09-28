@@ -12,6 +12,25 @@ export function linkCurve(from: Point, to: Point): Curve {
   return [from, { x: from.x + bend, y: from.y }, { x: to.x - bend, y: to.y }, to];
 }
 
+/** How far above its band the line from the loaded changeset to the pending changeset arches over newer changesets. */
+const PENDING_ARCH = 30;
+
+/**
+ * The line from the loaded changeset to the pending changeset past the branch's newest: straight along the band when
+ * the loaded changeset is the newest, else an arch over the band's changesets in between, so it never reads as
+ * coming from the newest.
+ */
+export function pendingParentCurve(parent: Point, pending: Point, overChangesets: boolean): Curve {
+  if (!overChangesets) return [parent, parent, pending, pending];
+  const bend = Math.min(Math.abs(pending.x - parent.x) * 0.25, 48);
+  return [parent, { x: parent.x + bend, y: parent.y - PENDING_ARCH }, { x: pending.x - bend, y: pending.y - PENDING_ARCH }, pending];
+}
+
+/** The same curve, run the other way. */
+export function reversed([p0, p1, p2, p3]: Curve): Curve {
+  return [p3, p2, p1, p0];
+}
+
 /** A branch leaves its base changeset downwards, then turns right into its lane. */
 export function branchStartCurve(base: Point, laneStart: Point): Curve {
   const turn = Math.min(Math.abs(laneStart.y - base.y), 28);

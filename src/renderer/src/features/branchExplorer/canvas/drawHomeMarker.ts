@@ -1,19 +1,18 @@
-import type { NodeLayout } from '../model/layoutGraph';
+import type { Point } from './curves';
 import type { DrawContext } from './drawContext';
-import { columnX, rowY } from './geometry';
 import { strokeHouse } from './houseGlyph';
 
 /**
- * "You are here": a small house pinned to the workspace changeset's shoulder, a badge rather than a ring so it never
+ * "You are here": a small house pinned to the shoulder of the workspace changeset (or of its pending changes), a badge rather than a ring so it never
  * looks like the selection. Like a map pin it is drawn at screen size with a floor and a ceiling: findable zoomed far
  * out, never ballooning zoomed in. Once it would outgrow the changeset it marks, it becomes the changeset: a solid dot.
  */
-export function drawHomeMarker({ ctx, scene, pixelRatio }: DrawContext, node: NodeLayout, nodeRadius: number): void {
+export function drawHomeMarker({ ctx, scene, pixelRatio }: DrawContext, center: Point, nodeRadius: number): void {
   const { viewport, palette } = scene;
   const radius = Math.min(10, Math.max(4, 8 * viewport.zoom));
   const nodeScreenRadius = nodeRadius * viewport.zoom;
-  const x = columnX(node.column) * viewport.zoom + viewport.panX;
-  const y = rowY(node.row) * viewport.zoom + viewport.panY;
+  const x = center.x * viewport.zoom + viewport.panX;
+  const y = center.y * viewport.zoom + viewport.panY;
 
   ctx.save();
   ctx.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);

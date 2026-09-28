@@ -1,6 +1,6 @@
 import type { GraphTarget } from './canvas/graphTargets';
 
-/** What the details panel shows. Labels and merge links select the changeset they point to. */
+/** What the details panel shows. Labels and merge links select the changeset they point to; merges in progress, where they come from. */
 export type GraphSelection = { kind: 'changeset'; id: number } | { kind: 'branch'; name: string };
 
 export function selectionFor(target: GraphTarget | null): GraphSelection | null {
@@ -11,6 +11,8 @@ export function selectionFor(target: GraphTarget | null): GraphSelection | null 
       return { kind: 'changeset', id: target.label.changeset };
     case 'mergeLink':
       return { kind: 'changeset', id: target.link.destinationChangeset };
+    case 'pendingMergeLink':
+      return { kind: 'changeset', id: target.link.sourceChangeset };
     case 'branch':
       return { kind: 'branch', name: target.lane.branch.name };
     default:

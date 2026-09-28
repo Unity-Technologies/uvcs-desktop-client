@@ -514,6 +514,16 @@ renderer/src/
 - **Branch Explorer canvas**: the world is drawn relative to a per-frame origin near the screen (`OriginPen`, `draw.pen`, the
   world transform carrying the origin in doubles) and bands only as far as the screen, so the canvas, which keeps points in
   float32, never sees the millions of px of a whole history (jagged circles and pills zoomed in otherwise); hit tests stay in world doubles.
+- **Branch Explorer: pending changes**: while the workspace has changes under version control (private files alone
+  don't count), they show as the changeset they will become, as the official client draws its checkout changeset
+  (`layoutGraph`'s `pending`): a dashed, empty ring counting them, in the column past every changeset on the
+  workspace's branch (its band reaches it before rows are packed), with the home badge moved to it and a dashed line
+  back to the loaded changeset, arching over the band when the branch went on without the workspace. Each merge in
+  progress (merge, cherry pick, subtractive, intervals) is a dotted link into it in its kind's color. They come from
+  the pending changes already read (`cm status --xml` names a change's merges only in its `MergesInfo`: `Merge from 58,
+  Cherrypick from 3 to 7`, read by `mergeLinksOf`), so nothing is asked of the server and the watcher refreshes them;
+  the history is laid out again only when the pending changeset appears, goes or changes what it draws, never re-read.
+  Hovering tells what it holds, clicking opens Changes.
 - **Branch switcher**: groups and orders branches like the official Desktop client (`branchSwitcherGroups`): /main by its
   well-known GUID, the workspace's recent branches, then the rest newest first. Recent branches are the official client's,
   read from and written to its `plasticgui.conf` (`main/plasticConfig`) on every switch, so both apps list the same ones.

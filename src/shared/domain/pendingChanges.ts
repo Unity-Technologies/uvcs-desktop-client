@@ -1,3 +1,5 @@
+import type { MergeLinkType } from './branchExplorer';
+
 export type ChangeKind =
   | 'added'
   | 'checkedOut'
@@ -42,6 +44,16 @@ export interface PendingChangesSnapshot {
   /** User changelists (the default one is implicit). */
   changelists: Changelist[];
   loadedChangeset: number;
+  /** The merges the changes come from, each once: checking in records them as merge links. */
+  mergeLinks: PendingMergeLink[];
+}
+
+/** A merge (or cherry pick, subtractive, interval) done in the workspace and not checked in yet. */
+export interface PendingMergeLink {
+  type: MergeLinkType;
+  sourceChangeset: number;
+  /** Where an interval starts (it takes the changesets after it, up to the source); undefined for the rest. */
+  intervalStart?: number;
 }
 
 export interface PendingChangesFilter {

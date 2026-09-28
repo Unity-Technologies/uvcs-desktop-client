@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { branch, changeset, sampleHistory } from '../model/graphFixtures';
+import { pendingParentCurve } from './curves';
 import { layoutGraph } from '../model/layoutGraph';
-import { columnX, graphSize, HEADER_HEIGHT, HEADER_MAX_WIDTH, headerTop, rowY, TWO_LINE_HEADER_HEIGHT } from './geometry';
+import { columnX, graphSize, HEADER_HEIGHT, HEADER_MAX_WIDTH, headerTop, GRAPH_PADDING, rowY, TWO_LINE_HEADER_HEIGHT } from './geometry';
 import { labelChips } from './labelPlacement';
 import { graphExtent, laneHeaderHeight, laneHeaderTop, laneShape } from './laneShape';
 import { nextColumnOnRow } from './rowNeighbors';
@@ -118,5 +119,27 @@ describe('graphExtent', () => {
     const lane = withNewBranch.lanesByBranch.get('/main/b/new')!;
     expect(graphExtent(withNewBranch).width).toBeGreaterThanOrEqual(laneShape(lane).left + HEADER_MAX_WIDTH);
     expect(graphExtent(withNewBranch).height).toBe(graphSize(withNewBranch.columnCount, withNewBranch.rowCount).height);
+  });
+});
+
+describe('the pending changeset', () => {
+  const pending = (parent: number) => layoutGraph(sampleHistory(), undefined, { branch: '/main/a', parent, mergeLinks: [] });
+
+  it('stretches its band and the graph to it, and bounds the comment before it', () => {
+    const layout = pending(5);
+    expect(laneShape(layout.lanesByBranch.get('/main/a')!).right).toBeGreaterThan(columnX(8));
+    expect(graphExtent(layout).width).toBeGreaterThanOrEqual(columnX(8) + GRAPH_PADDING.right);
+    expect(nextColumnOnRow(layout, layout.nodes.get(5)!.column)).toBe(8);
+  });
+
+  it('runs its line along the band from the newest changeset, and arches over newer ones from an older one', () => {
+    const from = { x: 0, y: 100 };
+    const to = { x: 300, y: 100 };
+    expect(pendingParentCurve(from, to, false).every((point) => point.y === 100)).toBe(true);
+    const arch = pendingParentCurve(from, to, true);
+    expect(arch[1].y).toBeLessThan(100);
+    expect(arch[2].y).toBeLessThan(100);
+    // From changeset 4, changeset 5 is in between.
+    expect(nextColumnOnRow(pending(4), pending(4).nodes.get(4)!.column)).not.toBe(8);
   });
 });

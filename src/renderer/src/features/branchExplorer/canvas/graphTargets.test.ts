@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { CodeReview } from '@shared/domain/codeReview';
 import { sampleHistory } from '../model/graphFixtures';
 import { layoutGraph } from '../model/layoutGraph';
-import { COLUMN_WIDTH, columnX, headerTop, nodePoint } from './geometry';
+import { COLUMN_WIDTH, columnX, headerTop, nodePoint, pendingPoint } from './geometry';
+import { pointOnCurve, linkCurve } from './curves';
 import type { DrawnTargets } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
 import { hitTest, hoverCardFor } from './graphTargets';
@@ -16,6 +17,16 @@ function drawnTargets(): DrawnTargets {
 }
 
 describe('hitTest', () => {
+  const withPending = layoutGraph(sampleHistory(), undefined, { branch: '/main/a', parent: 5, mergeLinks: [{ type: 'merge', sourceChangeset: 7 }] });
+
+  it('finds the pending changes past the branch, and the merge in progress into them', () => {
+    const pending = pendingPoint(withPending)!;
+    expect(hitTest(withPending, { x: pending.x + 3, y: pending.y - 3 })).toEqual({ kind: 'pending' });
+    const onLink = pointOnCurve(linkCurve(nodePoint(withPending, 7)!, pending), 0.5);
+    expect(hitTest(withPending, onLink)).toEqual({ kind: 'pendingMergeLink', link: { type: 'merge', sourceChangeset: 7 } });
+    expect(hitTest(layout, pending)).toBeNull();
+  });
+
   it('finds a changeset under the pointer', () => {
     expect(hitTest(layout, nodePoint(layout, 4)!)).toEqual({ kind: 'changeset', id: 4 });
   });

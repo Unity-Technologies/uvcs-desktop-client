@@ -37,7 +37,6 @@ import { reviewProgress } from '../review/reviewStatus';
 import { usePendingReview } from './review/usePendingReview';
 import { BulkPrivateNotice, confirmBulkPrivateCheckin } from './BulkPrivateNotice';
 import { behindBranch, behindDescription } from './checkinBehind';
-import { mergeSourceChangeset } from './checkinButton';
 import { checkinAfterUpdateMessage, useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinChanges, confirmCheckinWithoutComment, shelveChanges, undoUnchangedCheckouts } from './checkinOperations';
 import { isCheckinCandidate, matchesBranch } from './changeCategories';
@@ -127,7 +126,7 @@ export function PendingChangesView() {
     }),
     [allChanges],
   );
-  const { data: mergeSource } = useChangeset(mergeSourceChangeset(mergeChanges));
+  const { data: mergeSource } = useChangeset(snapshot?.mergeLinks[0]?.sourceChangeset ?? null);
   const firstChangeKey = rows.find((row) => row.type === 'change')?.key;
   // Checking in completes a pending merge as it is; updating first is for plain check-ins.
   const behind = mergeChanges.length > 0 ? null : behindBranch(incomingSummary, branchName);

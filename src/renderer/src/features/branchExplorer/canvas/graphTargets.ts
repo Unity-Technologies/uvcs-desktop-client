@@ -1,10 +1,11 @@
 import type { GraphLabel, MergeLink } from '@shared/domain/branchExplorer';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
+import type { PendingMergeLink } from '@shared/domain/pendingChanges';
 import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
 import type { DrawnTargets } from './drawContext';
 import type { DrawnBox } from './drawnBoxes';
 import { distanceToCurve, linkCurve, type Point } from './curves';
-import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, COLUMN_WIDTH, columnX, GRAPH_PADDING, NODE_RADIUS, nodePoint, ROW_HEIGHT, rowY } from './geometry';
+import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, COLUMN_WIDTH, columnX, GRAPH_PADDING, NODE_RADIUS, nodePoint, pendingPoint, ROW_HEIGHT, rowY } from './geometry';
 import { estimatedLabelWidth, LABEL_HEIGHT, labelChips } from './labelPlacement';
 import { laneShape } from './laneShape';
 import { mergeLinksAcross } from './spansInView';
@@ -18,6 +19,10 @@ export type GraphTarget =
   | { kind: 'label'; label: GraphLabel; more: readonly GraphLabel[] }
   | { kind: 'branch'; lane: Lane }
   | { kind: 'mergeLink'; link: MergeLink }
+  /** The workspace's pending changes, drawn as the changeset they will become. */
+  | { kind: 'pending' }
+  /** A merge in progress, into the pending changes. */
+  | { kind: 'pendingMergeLink'; link: PendingMergeLink }
   /** The code review chip in a branch's header card. */
   | { kind: 'codeReview'; review: CodeReviewSummary };
 
@@ -67,9 +72,11 @@ export function hitTest(layout: GraphLayout, point: Point, drawn: DrawnTargets |
   const caption = drawn?.captions.at(point);
   return (
     hitChangeset(layout, point) ??
+    hitPending(layout, point) ??
     hitLabel(layout, point) ??
     (caption ? { kind: 'changeset', id: caption.item.changeset.id } : null) ??
     hitMergeLink(layout, point) ??
+    hitPendingMergeLink(layout, point) ??
     hitLane(layout, point)
   );
 }
@@ -83,6 +90,11 @@ function hitChangeset(layout: GraphLayout, point: Point): GraphTarget | null {
   }
   const distance = Math.hypot(columnX(node.column) - point.x, rowY(node.row) - point.y);
   return distance <= NODE_HIT_RADIUS ? { kind: 'changeset', id: node.changeset.id } : null;
+}
+
+function hitPending(layout: GraphLayout, point: Point): GraphTarget | null {
+  const pending = pendingPoint(layout);
+  return pending && Math.hypot(pending.x - point.x, pending.y - point.y) <= NODE_HIT_RADIUS ? { kind: 'pending' } : null;
 }
 
 /** How many columns away a long label's chip may still reach. */
@@ -106,16 +118,25 @@ function hitLabel(layout: GraphLayout, point: Point): GraphTarget | null {
 
 function hitMergeLink(layout: GraphLayout, point: Point): GraphTarget | null {
   for (const link of mergeLinksAcross(layout, point.x - LINE_HIT_DISTANCE, point.x + LINE_HIT_DISTANCE)) {
-    const from = nodePoint(layout, link.sourceChangeset)!;
-    const to = nodePoint(layout, link.destinationChangeset)!;
-    const outsideBounds =
-      point.x < Math.min(from.x, to.x) - LINE_HIT_DISTANCE ||
-      point.x > Math.max(from.x, to.x) + LINE_HIT_DISTANCE ||
-      point.y < Math.min(from.y, to.y) - LINE_HIT_DISTANCE ||
-      point.y > Math.max(from.y, to.y) + LINE_HIT_DISTANCE;
-    if (!outsideBounds && distanceToCurve(linkCurve(from, to), point) <= LINE_HIT_DISTANCE) return { kind: 'mergeLink', link };
+    if (nearLink(nodePoint(layout, link.sourceChangeset)!, nodePoint(layout, link.destinationChangeset)!, point)) return { kind: 'mergeLink', link };
   }
   return null;
+}
+
+/** Whether the point is on the merge link drawn between the two changesets. */
+function nearLink(from: Point, to: Point, point: Point): boolean {
+  const outsideBounds =
+    point.x < Math.min(from.x, to.x) - LINE_HIT_DISTANCE ||
+    point.x > Math.max(from.x, to.x) + LINE_HIT_DISTANCE ||
+    point.y < Math.min(from.y, to.y) - LINE_HIT_DISTANCE ||
+    point.y > Math.max(from.y, to.y) + LINE_HIT_DISTANCE;
+  return !outsideBounds && distanceToCurve(linkCurve(from, to), point) <= LINE_HIT_DISTANCE;
+}
+
+function hitPendingMergeLink(layout: GraphLayout, point: Point): GraphTarget | null {
+  const to = pendingPoint(layout);
+  const link = to && layout.pending!.mergeLinks.find((candidate) => nearLink(nodePoint(layout, candidate.sourceChangeset)!, to, point));
+  return link ? { kind: 'pendingMergeLink', link } : null;
 }
 
 /** A branch is its band (its header card is hit where it was drawn). */

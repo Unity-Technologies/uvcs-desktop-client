@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { PendingChange } from '@shared/domain/pendingChanges';
-import { checkinButtonLabel, checkinDisabledReason, mergeSourceChangeset } from './checkinButton';
-
-function change(path: string, kinds: PendingChange['kinds'], size: number, extra: Partial<PendingChange> = {}): PendingChange {
-  return { path, kinds, itemType: 'file', size, lastModified: '', ...extra };
-}
+import { checkinButtonLabel, checkinDisabledReason } from './checkinButton';
 
 describe('checkinButtonLabel', () => {
   const base = { mode: 'checkin' as const, includedCount: 4, branchName: '/main', uploadBytes: 1_150_000, merging: false, behindCount: 0, allReviewed: false };
@@ -92,15 +87,5 @@ describe('checkinDisabledReason', () => {
   it('says why a shelve of only private files is not possible', () => {
     expect(checkinDisabledReason('shelve', 0, 3)).toBe("Private files and links can't be shelved");
     expect(checkinDisabledReason('shelve', 1, 3)).toBeNull();
-  });
-});
-
-describe('mergeSourceChangeset', () => {
-  it('reads the source changeset of a pending merge', () => {
-    expect(mergeSourceChangeset([change('a.ts', ['changed'], 1), change('b.ts', ['checkedOut'], 1, { mergeInfo: 'Merge from 12' })])).toBe(12);
-  });
-
-  it('is null without a merge', () => {
-    expect(mergeSourceChangeset([change('a.ts', ['changed'], 1)])).toBeNull();
   });
 });
