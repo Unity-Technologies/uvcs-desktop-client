@@ -9,7 +9,7 @@ import { fileNameOf, pluralize } from '../../lib/text';
 import { useHoverCard } from '../../lib/useHoverCard';
 import { displayName } from '../../lib/userName';
 import { Kbd } from '../../ui/Kbd';
-import { highlightWorkers } from '../diff/viewer/highlightWorkers';
+import { useHighlightWorkers } from '../diff/viewer/highlightWorkers';
 import { PIERRE_SURFACE_CSS, pierreThemeName } from '../diff/viewer/pierreOptions';
 import { highlightedLanguage, syntaxHighlighting } from '../diff/viewer/syntaxHighlighting';
 import { AnnotationCard } from './AnnotationCard';
@@ -89,7 +89,7 @@ export function AnnotatedCode({ code, path, blocks, lineCount, columns, links }:
   }, [blocks, active]);
 
   const highlighting = syntaxHighlighting(code, '', false);
-  const workers = highlighting === 'background' ? highlightWorkers() : undefined;
+  const workers = useHighlightWorkers(highlighting === 'background');
   const file = useMemo(() => ({ name: fileNameOf(path), lang: highlightedLanguage(highlighting, path), contents: code }), [path, code, highlighting]);
   const options = useMemo(
     () => ({

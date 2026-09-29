@@ -337,8 +337,9 @@ renderer/src/
   lines in view, so `syntaxHighlighting` picks by size (both versions together), at 1.5 to 4 ms a KB on the main
   thread: an editable diff up to 400 KB highlights there (0.1 s for 2 x 16 KB, 0.57 s for 2 x 156 KB; highlighted once,
   with the editor's token transformer from the first render); a read-only diff only up to 20 KB (about 0.1 s), and up
-  to 4 MB it renders only the lines in view, shows as plain text at once and takes its colors from Pierre's workers
-  (`highlightWorkers`: 0.2 s for 2 x 16 KB, 1.2 s for 2 x 156 KB, 12 s for 2 x 1.6 MB); anything bigger, and an
+  to 4 MB it renders only the lines in view, shows as plain text at once and takes its colors from Pierre's worker
+  (`useHighlightWorkers`: 0.2 s for 2 x 16 KB, 1.2 s for 2 x 156 KB, 12 s for 2 x 1.6 MB; one worker, in the app's
+  theme only, see Memory); anything bigger, and an
   editable diff past 400 KB (Pierre
   highlights editors on the main thread, pool or not), is plain text and renders only the lines in view too (Pierre
   renders a plain text diff whole at every render: `pierrePlainTextRender` keeps it), with a quiet "Large file" in the
@@ -618,6 +619,20 @@ renderer/src/
   - Motion uses the `--duration-*` and `--ease-*` tokens and the shared keyframes of `styles/global.css` (through
     `--keyframes-*`); reduced motion zeroes the durations, so only loops (spinners, skeleton pulses) opt out themselves.
   - Lists that load show skeletons at their real row height (`ui/Skeleton`, `TableSkeleton`, `ListWithDetailsSkeleton`).
+
+## Memory
+
+Measured on codice's `/main/scm1008837` (52 files, up to 240 KB each), stepping through its diff a file a second:
+
+- **GPU process**: Skia's Graphite (Chromium's default renderer on macOS) takes about 450 MB more in the GPU process
+  for as long as anything repaints, a blank window too, and gives it back a second after. Ganesh, the renderer
+  before it, stays under 61 MB, but the app keeps Graphite: it's where Chromium is going, and the memory isn't kept.
+- **Highlighting**: each of Pierre's workers grows its heap by what it highlights (to about 90 MB there), and
+  highlighting in both themes at once takes half as much again. One worker in the app's theme (`useHighlightWorkers`)
+  takes the renderer's peak from about 430 MB to 320: the next big text waits for the one before, and a theme switch
+  highlights again the texts on screen (`setRenderOptions`).
+- The rest is garbage between collections (the page's heap reaches about 95 MB for 25 used; Pierre's structured
+  clones of highlighted lines, Myers diffs, Shiki on the main thread): the renderer goes back to about 130 MB once idle.
 
 ## Server budget
 

@@ -1,7 +1,7 @@
 import { UnresolvedFile, WorkerPoolContext } from '@pierre/diffs/react';
 import { useMemo, useRef } from 'react';
 import { Button } from '../../../ui/Button';
-import { highlightWorkers } from '../../diff/viewer/highlightWorkers';
+import { useHighlightWorkers } from '../../diff/viewer/highlightWorkers';
 import { PaneScrollbars } from '../../diff/viewer/PaneScrollbars';
 import { highlightedLanguage, syntaxHighlighting } from '../../diff/viewer/syntaxHighlighting';
 import type { MergeLabels } from '../mergeDescription';
@@ -33,7 +33,7 @@ export function ConflictHunks({ path, text, labels, onChange }: ConflictHunksPro
   // text: in Pierre's workers past what the main thread highlights at once, plain past what's worth it.
   const highlighting = syntaxHighlighting(text, text, false);
   const tokenizeMaxLength = highlighting === 'off' ? 0 : undefined;
-  const workers = highlighting === 'background' ? highlightWorkers() : undefined;
+  const workers = useHighlightWorkers(highlighting === 'background');
   const options = useMemo(
     () => ({
       ...pierreOptions,

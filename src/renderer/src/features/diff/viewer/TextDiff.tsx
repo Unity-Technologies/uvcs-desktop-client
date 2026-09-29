@@ -10,7 +10,7 @@ import type { ComparisonMethod } from './comparisonMethod';
 import { useDiffPreferences } from './diffPreferencesStore';
 import type { EditorHandle } from './editorHandle';
 import { escapeWhileTyping } from './escapeWhileTyping';
-import { highlightWorkers } from './highlightWorkers';
+import { useHighlightWorkers } from './highlightWorkers';
 import type { LineDiff } from './lineDiff';
 import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
 import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
@@ -138,7 +138,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     onUndo: onUndoDiscard,
   });
   const tokenizeMaxLength = highlighting === 'off' ? 0 : undefined;
-  const workers = highlighting === 'background' ? highlightWorkers() : undefined;
+  const workers = useHighlightWorkers(highlighting === 'background');
   const virtualized = highlighting !== 'inline';
   // An editable diff renders its tokens as the editor does (`useTokenTransformer`, which Pierre turns on once the editor
   // attaches) from the first render: otherwise the file is highlighted twice as it opens, before and after.

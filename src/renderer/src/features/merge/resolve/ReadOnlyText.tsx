@@ -1,6 +1,6 @@
 import { File, VirtualizerContext, WorkerPoolContext } from '@pierre/diffs/react';
 import { useMemo } from 'react';
-import { highlightWorkers } from '../../diff/viewer/highlightWorkers';
+import { useHighlightWorkers } from '../../diff/viewer/highlightWorkers';
 import { PaneScrollbars } from '../../diff/viewer/PaneScrollbars';
 import { highlightedLanguage, syntaxHighlighting } from '../../diff/viewer/syntaxHighlighting';
 import { usePierreOptions } from './usePierreOptions';
@@ -17,7 +17,7 @@ export function ReadOnlyText({ path, text }: { path: string; text: string }) {
   const { virtualizer, surfaceRef, setSurface } = useSurfaceVirtualizer();
   const highlighting = syntaxHighlighting(text, '', false);
   const tokenizeMaxLength = highlighting === 'off' ? 0 : undefined;
-  const workers = highlighting === 'background' ? highlightWorkers() : undefined;
+  const workers = useHighlightWorkers(highlighting === 'background');
   const options = useMemo(() => ({ ...pierreOptions, tokenizeMaxLength }), [pierreOptions, tokenizeMaxLength]);
   const file = useMemo(() => ({ name: path, lang: highlightedLanguage(highlighting, path), contents: shownText(text) }), [path, highlighting, text]);
   return (

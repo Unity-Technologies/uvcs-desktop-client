@@ -1,16 +1,29 @@
 import { getOrCreateWorkerPoolSingleton, type WorkerPoolManager } from '@pierre/diffs/worker';
+import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
+import { pierreThemeName } from './pierreOptions';
 
 /**
- * Pierre's workers, which highlight a big read-only diff off the main thread while it shows as plain text. Created with
- * the first such diff and kept for the session. They highlight in both themes at once, so switching theme doesn't
- * highlight again; one diff is one task, and a second worker keeps the next diff from waiting on a long one.
+ * Pierre's worker, which highlights a big read-only text off the main thread while it shows as plain text, when
+ * `enabled`. Created with the first such text and kept for the session.
  */
-export function highlightWorkers(): WorkerPoolManager {
-  return getOrCreateWorkerPoolSingleton({
+export function useHighlightWorkers(enabled: boolean): WorkerPoolManager | undefined {
+  const theme = pierreThemeName(useResolvedTheme());
+  return enabled ? highlightWorkers(theme) : undefined;
+}
+
+/**
+ * One worker, in the app's theme only: each worker's heap grows by what it highlights (to about 90 MB stepping through
+ * a branch's files), and highlighting in both themes at once takes half as much again. So the next text waits for the
+ * one before it, and a theme switch highlights again the texts on screen (`setRenderOptions`).
+ */
+function highlightWorkers(theme: ReturnType<typeof pierreThemeName>): WorkerPoolManager {
+  const workers = getOrCreateWorkerPoolSingleton({
     poolOptions: {
       workerFactory: () => new Worker(new URL('@pierre/diffs/worker/worker.js', import.meta.url), { type: 'module', name: 'Syntax highlighting' }),
-      poolSize: 2,
+      poolSize: 1,
     },
-    highlighterOptions: { theme: { light: 'pierre-light', dark: 'pierre-dark' }, lineDiffType: 'word' },
+    highlighterOptions: { theme, lineDiffType: 'word' },
   });
+  if (workers.getDiffRenderOptions().theme !== theme) void workers.setRenderOptions({ theme });
+  return workers;
 }
