@@ -381,7 +381,7 @@ renderer/src/
   like typing.
 - **Moving through changes**: every text diff of two versions steps through its changes (`useChangeNavigation`: the
   regions of the one `lineDiff`, so they follow what's typed) with ⌥↓ ⌥↑, F7 ⇧F7 (the editor keeps ⌥↓ ⌥↑ to move lines
-  while typing) and the header's arrows around "3 of 12", from the diff or the list beside it; the first move goes from
+  while typing) and the header's arrows around "3 of 12" (last in the header, so ▼ stays put from file to file), from the diff or the list beside it; the first move goes from
   the top of the view. The change comes a few rows from the top unless it's all in view (`scrollToChange`: a big diff
   not rendered there yet is scrolled to where Pierre lays it out, `pierreLinePosition`; collapsed lines never hide one,
   as changes are always in the hunks shown), lights up for a moment and, where discards are, is picked for ⌥⌘Z. Past

@@ -1,7 +1,7 @@
-/* Stepping "3 of 12" to "4 of 12" must not shift the buttons. */
+/* Stepping "3 of 12" to "4 of 12" must not shift ▲; ▼, last in the header, stays put whatever the label says. */
 .position {
   flex: none;
-  min-width: 7ch;
+  min-width: 5ch;
   padding: 0 var(--space-1);
   color: var(--text-secondary);
   font-size: var(--text-xs);

@@ -168,17 +168,16 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const plainText = isText && syntaxHighlighting(left.text ?? '', right.text ?? '', editable) === 'off';
 
   // Discard and Save come first: the controls are right-aligned, so appearing on the first keystroke they move none
-  // of the others.
+  // of the others. The change arrows come last, at the header's right edge, in the same place for every file (a
+  // version shown alone has no Split | Unified): clicking on through the files, the pointer stays on them.
   const controls = isText ? (
     <>
       {unsavedControls}
       {compareControls}
-      {!viewControls && navigator}
       {viewControls && (
         <>
           {plainText && <PlainTextIndicator />}
           {currentDiff && hasLineChanges(currentDiff) && <LineStats added={currentDiff.added} removed={currentDiff.removed} />}
-          {navigator}
           <PaneToolbarGroup>
             <ComparisonMethodMenu value={comparisonMethod} onChange={setComparisonMethod} />
             <IconButton
@@ -209,11 +208,11 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
         </>
       )}
       {representationControl}
+      {navigator}
     </>
   ) : (
     <>
       {unsavedControls}
-      {navigator}
       {/* Single-sided images (added or deleted) are previews: no modes to offer. */}
       {presentation.kind === 'image' && presentation.comparable && (
         <SegmentedControl<ImageDiffMode>
@@ -223,6 +222,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
         />
       )}
       {representationControl}
+      {navigator}
     </>
   );
 
