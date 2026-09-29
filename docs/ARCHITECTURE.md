@@ -626,7 +626,9 @@ renderer/src/
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in components.
   - Text tokens keep 4.5:1 and focus rings 3:1 (`styles/tokens.test.ts`); avatars' white initials 4.5:1 on every
     `--avatar-*` fill (one per `stableHue` hue, all weighing alike), and server monograms' letters, a tint as secondary
-    marks (`--tint-*`), 3:1 as status letters do. Focus shows with `--focus-ring-visible`, or
+    marks (`--tint-*`), 3:1 as status letters do. Branch headers set their text's lightness per hue to a contrast on
+    their tint (`--branch-name-contrast`, `--branch-comment-contrast`, `hslAtContrast`), so the comment always reads
+    quieter than the name, pale yellows as much as dark blues. Focus shows with `--focus-ring-visible`, or
     `--focus-ring-inset` on rows and panes (over their content when it would paint over the ring); filled controls
     draw `--focus-outline` 2px out, and state rules with a shadow of their own restore the ring (`focusRings.test.ts`).
   - Motion uses the `--duration-*` and `--ease-*` tokens and the shared keyframes of `styles/global.css` (through

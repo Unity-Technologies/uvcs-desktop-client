@@ -1,6 +1,6 @@
 /** WCAG contrast of colors written as in tokens.css: `#rrggbb` or `rgba(r, g, b, a)` (composited over the background). */
 
-type Rgb = [number, number, number];
+export type Rgb = [number, number, number];
 
 export interface Rgba {
   rgb: Rgb;
@@ -46,6 +46,34 @@ function luminance([r, g, b]: Rgb): number {
 export function contrastRatio(foreground: Rgb, background: Rgb): number {
   const [light, dark] = [luminance(foreground), luminance(background)].sort((a, b) => b - a) as [number, number];
   return (light + 0.05) / (dark + 0.05);
+}
+
+/** The hue of an opaque color, in degrees (0 for grays). */
+export function hueOf([r, g, b]: Rgb): number {
+  const max = Math.max(r, g, b);
+  const delta = max - Math.min(r, g, b);
+  if (delta === 0) return 0;
+  const sector = max === r ? (g - b) / delta : max === g ? (b - r) / delta + 2 : (r - g) / delta + 4;
+  return (sector * 60 + 360) % 360;
+}
+
+/**
+ * Text of a hue and saturation that reads at `ratio` on `background` and no more: as light as it can be on a light
+ * background, as dark as it can be on a dark one, so text of every hue weighs alike (black or white when the ratio
+ * can't be reached). Luminance grows with lightness at any hue and saturation, so halving the range finds it.
+ */
+export function hslAtContrast(hue: number, saturation: string, ratio: number, background: Rgb): Rgb {
+  const onLight = contrastRatio([0, 0, 0], background) >= contrastRatio([255, 255, 255], background);
+  const at = (lightness: number): Rgb => hslColor(hue, saturation, `${lightness}%`).rgb;
+  // `reaching` always reads at the ratio (or is black or white); `missing` never does.
+  let reaching = onLight ? 0 : 100;
+  let missing = onLight ? 100 : 0;
+  for (let step = 0; step < 16; step++) {
+    const middle = (reaching + missing) / 2;
+    if (contrastRatio(at(middle), background) >= ratio) reaching = middle;
+    else missing = middle;
+  }
+  return at(reaching);
 }
 
 /** The `--name: value;` declarations of each `[data-theme='…']` block of tokens.css (the light one also holds `:root`). */

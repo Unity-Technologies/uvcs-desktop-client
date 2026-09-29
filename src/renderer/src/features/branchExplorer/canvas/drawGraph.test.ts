@@ -51,7 +51,7 @@ function recordingContext(): { ctx: CanvasRenderingContext2D; placed: Placed[]; 
   return { ctx: ctx as unknown as CanvasRenderingContext2D, placed, transforms };
 }
 
-const INK = '#888';
+const INK = '#888888';
 const FONT = '10px sans-serif';
 const palette: GraphPalette = {
   isDark: false,
@@ -65,8 +65,7 @@ const palette: GraphPalette = {
   gridLine: INK,
   accent: INK,
   accentText: INK,
-  accentTextMuted: INK,
-  branchCommentTone: { saturation: '30%', lightness: '30%' },
+  headerText: { name: { saturation: '70%', contrast: 6.3 }, comment: { saturation: '30%', contrast: 4.7 } },
   accentContrast: INK,
   accentSoft: INK,
   searchHit: INK,

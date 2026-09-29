@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { AVATAR_COLORS } from '../components/avatarColor';
-import { HEADER_HOVER_TINT, HEADER_TINT } from '../features/branchExplorer/canvas/graphPalette';
+import { HEADER_HOVER_TINT, HEADER_TINT, headerTextOn } from '../features/branchExplorer/canvas/graphPalette';
 import { BRANCH_HUES, LINE_TONE } from '../features/branchExplorer/model/branchHue';
 import { STABLE_HUES } from '../lib/stableHue';
 import { composite, contrastRatio, hslColor, parseColor, themeTokens } from './contrast';
@@ -13,7 +13,7 @@ const themes = themeTokens(readFileSync(join(__dirname, 'tokens.css'), 'utf8'));
 /** The opaque backgrounds text sits on. */
 const SURFACES = ['--bg-app', '--bg-sidebar', '--bg-surface', '--bg-surface-raised', '--bg-subtle', '--bg-input', '--bg-code'];
 /** Text down to 11px: WCAG AA asks 4.5:1. */
-const TEXT = ['--text-primary', '--text-secondary', '--text-tertiary', '--accent-text', '--accent-text-muted', '--label-text', '--status-changed'];
+const TEXT = ['--text-primary', '--text-secondary', '--text-tertiary', '--accent-text', '--label-text', '--status-changed'];
 /** Status letters on their own tint and focus rings are graphics: 3:1. */
 const BADGES = ['--change-added', '--change-changed', '--change-deleted', '--change-moved', '--change-permissions', '--status-changed'];
 const BADGE_TINT = 0.16;
@@ -113,19 +113,25 @@ describe.each(Object.entries(themes))('%s theme', (theme, tokens) => {
     }
   });
 
-  it('writes a branch header\'s comment at 4.5:1 on the header\'s tint, hovered or not, for every branch hue and the accent', () => {
+  it('writes a branch header\'s name at 6:1 and its comment quieter, at 4.5:1, on its tint, hovered or not, for every hue and the accent', () => {
     // The dark theme only overrides what differs.
     const tone = { ...themes.light, ...tokens };
     const surface = parseColor(tokens['--bg-surface-raised']!).rgb;
     const line = LINE_TONE[theme as 'light' | 'dark'];
-    for (const alpha of [HEADER_TINT[theme as 'light' | 'dark'], HEADER_TINT[theme as 'light' | 'dark'] + HEADER_HOVER_TINT]) {
-      for (const hue of BRANCH_HUES) {
-        const comment = hslColor(hue, tone['--branch-comment-saturation']!, tone['--branch-comment-lightness']!).rgb;
-        const tint = composite(hslColor(hue, line.saturation, line.lightness, alpha), surface);
-        expect(contrastRatio(comment, tint), `hue ${hue} at ${alpha}`).toBeGreaterThanOrEqual(4.5);
+    const text = {
+      name: { saturation: tone['--branch-name-saturation']!, contrast: Number(tone['--branch-name-contrast']) },
+      comment: { saturation: tone['--branch-comment-saturation']!, contrast: Number(tone['--branch-comment-contrast']) },
+    };
+    const fills = [...BRANCH_HUES.map((hue) => [`hue ${hue}`, hslColor(hue, line.saturation, line.lightness).rgb] as const), ['accent', parseColor(tokens['--accent']!).rgb] as const];
+    for (const [fill, rgb] of fills) {
+      const { name, comment } = headerTextOn(rgb, surface, theme as 'light' | 'dark', text);
+      for (const alpha of [HEADER_TINT[theme as 'light' | 'dark'], HEADER_TINT[theme as 'light' | 'dark'] + HEADER_HOVER_TINT]) {
+        const tint = composite({ rgb, alpha }, surface);
+        const [nameRatio, commentRatio] = [contrastRatio(name, tint), contrastRatio(comment, tint)];
+        expect(nameRatio, `${fill}'s name at ${alpha}`).toBeGreaterThanOrEqual(6);
+        expect(commentRatio, `${fill}'s comment at ${alpha}`).toBeGreaterThanOrEqual(4.5);
+        expect(nameRatio / commentRatio, `${fill}'s name over its comment at ${alpha}`).toBeGreaterThanOrEqual(1.3);
       }
-      const accentTint = composite({ ...parseColor(tokens['--accent']!), alpha }, surface);
-      expect(contrastRatio(parseColor(tokens['--accent-text-muted']!).rgb, accentTint), `accent at ${alpha}`).toBeGreaterThanOrEqual(4.5);
     }
   });
 
