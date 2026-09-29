@@ -7,20 +7,23 @@ export const NODE_RADIUS = 11;
 /** Half the width of a "+N" node, the widest it gets. */
 export const COLLAPSED_NODE_HALF_WIDTH = 20;
 /** Branches are drawn as rounded bands the changesets sit on. */
-export const BAND_HEIGHT = 30;
+export const BAND_HEIGHT = 34;
 /**
- * Every branch has a header card sitting on top of its band: the name (and its chips) on one line, the comment in a
- * second, smaller line below it. A branch without a comment gets a one-line card.
+ * Every branch has a header card sitting on the top edge of its band, overlapping it a little so the two read as one
+ * shape: the name (and its chips) on one line, the comment in a second, smaller line below it. A branch without a
+ * comment gets a one-line card.
  */
 export const HEADER_HEIGHT = 22;
 export const TWO_LINE_HEADER_HEIGHT = 36;
 /** Where the lines of a card are centered, from its top. The name sits where it does on a one-line card. */
 export const HEADER_NAME_MIDDLE = HEADER_HEIGHT / 2;
 export const HEADER_COMMENT_MIDDLE = 25;
-const HEADER_GAP = 5;
+const HEADER_OVERLAP = 1;
+/** How far in from the band's rounded start the card begins: about where the first changeset does. */
+export const HEADER_INSET = 10;
 /** Header cards never grow wider than this many columns, so labels on those columns can move above them. */
 export const HEADER_SPAN_COLUMNS = 4;
-export const HEADER_MAX_WIDTH = HEADER_SPAN_COLUMNS * COLUMN_WIDTH - 8;
+export const HEADER_MAX_WIDTH = HEADER_SPAN_COLUMNS * COLUMN_WIDTH - 8 - HEADER_INSET;
 export const GRAPH_PADDING = { left: 56, top: 118, right: 140, bottom: 80 };
 
 export function columnX(column: number): number {
@@ -48,7 +51,7 @@ export function headerHeight(hasComment: boolean): number {
 
 /** Top of a branch's header card `height` tall, for a band centered at `bandY`. */
 export function headerTop(bandY: number, height = HEADER_HEIGHT): number {
-  return bandY - BAND_HEIGHT / 2 - HEADER_GAP - height;
+  return bandY - BAND_HEIGHT / 2 + HEADER_OVERLAP - height;
 }
 
 export function graphSize(columnCount: number, rowCount: number): { width: number; height: number } {

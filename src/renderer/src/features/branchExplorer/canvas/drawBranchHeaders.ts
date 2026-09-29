@@ -6,7 +6,7 @@ import { drawRectCorona, drawRectGlow } from './drawSearchHit';
 import { headerCardLeft } from './headerCardLeft';
 import { drawReviewChip, reviewChipWidth } from './drawReviewChip';
 import { fitBranchName, fitText, summaryOf, textWidth } from './fitText';
-import { BAND_HEIGHT, HEADER_COMMENT_MIDDLE, HEADER_HEIGHT, HEADER_MAX_WIDTH, HEADER_NAME_MIDDLE, headerTop, ROW_HEIGHT } from './geometry';
+import { BAND_HEIGHT, HEADER_COMMENT_MIDDLE, HEADER_HEIGHT, HEADER_INSET, HEADER_MAX_WIDTH, HEADER_NAME_MIDDLE, headerTop, ROW_HEIGHT } from './geometry';
 import { branchColor, branchInk, type GraphPalette } from './graphPalette';
 import { strokeHouse } from './houseGlyph';
 import { laneHeaderHeight, laneShape } from './laneShape';
@@ -30,8 +30,9 @@ const COMMENT_MARK_HEIGHT = 13;
 const COMMENT_LINE_TOP = (HEADER_NAME_MIDDLE + HEADER_COMMENT_MIDDLE) / 2;
 
 /**
- * A pill above each band, tinted in the branch's color, in two lines like the official client's: the branch name
- * with its code review, then the comment, smaller and muted (a branch without a comment gets a one-line pill). It
+ * A pill on the top edge of each band, overlapping it a little so the two read as one shape, tinted in the branch's
+ * color with a border stronger than the band's, in two lines like the official client's: the branch name with its
+ * code review, then the comment, smaller and in gray (a branch without a comment gets a one-line pill). It
  * grows to the longer line, up to a few columns and never into the next branch on its row. While the start of a band
  * is scrolled away, its pill stays pinned to the left edge (floating, with a shadow), whole for as long as any of
  * the band shows, so the branch stays identifiable. Records where each pill landed for the pointer, and where its comment line lies when it doesn't show
@@ -45,11 +46,12 @@ export function drawBranchHeaders(draw: DrawContext): void {
     const top = headerTop(shape.y, height);
     if (shape.right < visible.left || shape.left > visible.right || top > visible.bottom || top + height < visible.top) continue;
 
-    const roomBeforeNext = roomBeforeNextLane(draw, lane, shape.left);
+    const restLeft = shape.left + HEADER_INSET;
+    const roomBeforeNext = roomBeforeNextLane(draw, lane, restLeft);
     const width = Math.max(MIN_WIDTH, Math.min(HEADER_MAX_WIDTH, roomBeforeNext, contentWidth(draw, lane) + PADDING * 2));
     const pinnedLeft = visible.left + PINNED_INSET / scene.viewport.zoom;
-    const left = headerCardLeft(shape.left, width, pinnedLeft, shape.left + roomBeforeNext);
-    drawCard(draw, lane, left, top, width, height, left > shape.left + 0.5);
+    const left = headerCardLeft(restLeft, width, pinnedLeft, restLeft + roomBeforeNext);
+    drawCard(draw, lane, left, top, width, height, left > restLeft + 0.5);
     draw.drawn.branchHeaders.add(lane, left, top, width, height);
   }
 }
@@ -171,13 +173,14 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
   ctx.fill();
   ctx.shadowColor = 'transparent';
 
-  // Fading a branch without hits fades its ink: tint, border and text.
+  // The band's tint, stronger, and a border stronger than the band's. Fading a branch without hits fades its ink:
+  // tint, border and text.
   const ink = ghost ? GHOST_ALPHA : 1;
   ctx.fillStyle = color;
-  ctx.globalAlpha = ink * ((palette.isDark ? 0.16 : 0.1) + (hovered ? 0.06 : 0));
+  ctx.globalAlpha = ink * ((palette.isDark ? 0.18 : 0.15) + (hovered ? 0.06 : 0));
   ctx.fill();
   ctx.strokeStyle = selected ? palette.accent : color;
-  ctx.globalAlpha = ink * (selected || current ? 1 : hovered ? 0.75 : 0.5);
+  ctx.globalAlpha = ink * (selected || current ? 1 : hovered ? 0.75 : 0.55);
   ctx.lineWidth = selected ? 1.5 : 1;
   ctx.stroke();
   ctx.clip();
@@ -205,7 +208,8 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
   x += textWidth(ctx, fitted) + GAP;
   if (review && x + chipWidth <= right + PADDING / 2) drawReviewChip(draw, review, x, nameMiddle, chipWidth, scene.hoveredReview === review.id);
 
-  // Second line: the comment's summary, smaller and muted, cut at the end.
+  // Second line: the comment's summary, smaller, cut at the end. Neutral, so the name stays the one line in the
+  // branch's color, and dark enough to read on the tint.
   const comment = summaryOf(lane.branch.comment);
   if (comment) {
     const commentMiddle = top + HEADER_COMMENT_MIDDLE;
@@ -216,7 +220,7 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
       draw.drawn.cutBranchComments.add(lane, textLeft, top + COMMENT_LINE_TOP, textWidth(ctx, text), height - COMMENT_LINE_TOP);
     }
     drawSearchMarks(draw, text, textLeft, commentMiddle, COMMENT_MARK_HEIGHT);
-    ctx.fillStyle = palette.textTertiary;
+    ctx.fillStyle = palette.textSecondary;
     pen.fillText(text, textLeft, commentMiddle + 0.5);
     redrawMarkedLetters(draw, text, textLeft, commentMiddle + 0.5);
   }

@@ -6,7 +6,7 @@ import { drawDateRuler, drawDaySeparators, measureDayMarks } from './drawDateRul
 import { drawLabels } from './drawLabels';
 import { drawLanes } from './drawLanes';
 import { drawMergeLinks, drawPendingMergeLinks } from './drawMergeLinks';
-import { drawNodes } from './drawNodes';
+import { drawNodes, drawWorkspaceMarker } from './drawNodes';
 import { OriginPen, originFor } from './pen';
 import { toWorld } from './viewport';
 
@@ -15,7 +15,8 @@ const worldPen = new OriginPen();
 
 /**
  * Draws one frame, back to front: day separators, branch bands, links, changesets, their comments, labels and
- * branch headers, then the date ruler on top. Only what is on screen is drawn, so large histories stay smooth.
+ * branch headers, the workspace marker, then the date ruler on top. Only what is on screen is drawn, so large
+ * histories stay smooth.
  * The world is drawn relative to an origin near the screen (`OriginPen`), so the canvas only ever sees small numbers.
  * Fills `drawn` with where the pointer targets landed.
  */
@@ -62,6 +63,7 @@ export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixe
   } else {
     drawCompactBranchNames(draw);
   }
+  drawWorkspaceMarker(draw);
   drawDateRuler(draw);
 }
 
