@@ -89,6 +89,8 @@
   --accent-fill-hover: #0860c7;
   --accent-soft: rgba(9, 105, 218, 0.1);
   --accent-text: #0969da;
+  /* Secondary text in the accent's hue: a quieter --accent-text, as --text-secondary is to --text-primary. */
+  --accent-text-muted: #364b63;
   /* Text and icons on an --accent or --danger fill. */
   --accent-contrast: #ffffff;
   /* Text fields: a soft halo around their accent border. */
@@ -183,6 +185,10 @@
   --tint-bg-saturation: 65%;
   --tint-bg-lightness: 50%;
   --tint-bg-alpha: 0.14;
+  /* A branch header's comment, under its name in the branch's ink: the same hue, quieter,
+     hsl(hue var(--branch-comment-saturation) var(--branch-comment-lightness)) on the header's tint. */
+  --branch-comment-saturation: 30%;
+  --branch-comment-lightness: 30%;
 }
 
 [data-theme='dark'] {
@@ -193,6 +199,7 @@
   --accent-fill-hover: #1b63d4;
   --accent-soft: rgba(56, 139, 253, 0.15);
   --accent-text: #4493f8;
+  --accent-text-muted: #9caec9;
   --accent-contrast: #ffffff;
   --focus-ring: 0 0 0 3px rgba(56, 139, 253, 0.4);
   --focus-color: #4493f8;
@@ -267,4 +274,5 @@
   --avatar-pink: #ba4d87;
   --tint-text-lightness: 72%;
   --tint-bg-alpha: 0.2;
+  --branch-comment-lightness: 70%;
 }

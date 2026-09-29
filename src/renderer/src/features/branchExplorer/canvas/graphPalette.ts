@@ -30,6 +30,10 @@ export interface GraphPalette {
   gridLine: string;
   accent: string;
   accentText: string;
+  /** Secondary text in the accent's hue: the comment on `/main`'s header. */
+  accentTextMuted: string;
+  /** Saturation and lightness of a branch header's comment, in the branch's hue. */
+  branchCommentTone: { saturation: string; lightness: string };
   accentContrast: string;
   /** The soft halo behind a selection. */
   accentSoft: string;
@@ -68,6 +72,8 @@ export function readGraphPalette(element: Element): GraphPalette {
     gridLine: variable('--border-subtle'),
     accent: variable('--accent'),
     accentText: variable('--accent-text'),
+    accentTextMuted: variable('--accent-text-muted'),
+    branchCommentTone: { saturation: variable('--branch-comment-saturation'), lightness: variable('--branch-comment-lightness') },
     accentContrast: variable('--accent-contrast'),
     accentSoft: variable('--accent-soft'),
     searchHit: variable('--search-highlight'),
@@ -101,12 +107,22 @@ export function readGraphPalette(element: Element): GraphPalette {
   };
 }
 
-/** Branch colors are asked for on every frame: each palette remembers the ones it computed. */
-const branchColors = new WeakMap<GraphPalette, { lines: Map<string, string>; inks: Map<string, string> }>();
+/** How strongly a branch header takes its branch's color over the raised surface, and how much more while hovered. */
+export const HEADER_TINT = { light: 0.15, dark: 0.18 };
+export const HEADER_HOVER_TINT = 0.06;
 
-function colorsOf(palette: GraphPalette): { lines: Map<string, string>; inks: Map<string, string> } {
+interface BranchColors {
+  lines: Map<string, string>;
+  inks: Map<string, string>;
+  comments: Map<string, string>;
+}
+
+/** Branch colors are asked for on every frame: each palette remembers the ones it computed. */
+const branchColors = new WeakMap<GraphPalette, BranchColors>();
+
+function colorsOf(palette: GraphPalette): BranchColors {
   let colors = branchColors.get(palette);
-  if (!colors) branchColors.set(palette, (colors = { lines: new Map(), inks: new Map() }));
+  if (!colors) branchColors.set(palette, (colors = { lines: new Map(), inks: new Map(), comments: new Map() }));
   return colors;
 }
 
@@ -128,6 +144,21 @@ export function branchInk(palette: GraphPalette, branchName: string): string {
   if (color === undefined) {
     const hue = branchHue(branchName);
     inks.set(branchName, (color = hue === null ? palette.accentText : hueToInk(hue, palette.isDark)));
+  }
+  return color;
+}
+
+/**
+ * A branch's comment color on its tinted header, under the name in its ink: the same hue, quieter, as secondary text
+ * is to primary text, so the name leads and the header still reads as one.
+ */
+export function branchCommentInk(palette: GraphPalette, branchName: string): string {
+  const { comments } = colorsOf(palette);
+  let color = comments.get(branchName);
+  if (color === undefined) {
+    const hue = branchHue(branchName);
+    const { saturation, lightness } = palette.branchCommentTone;
+    comments.set(branchName, (color = hue === null ? palette.accentTextMuted : `hsl(${hue} ${saturation} ${lightness})`));
   }
   return color;
 }

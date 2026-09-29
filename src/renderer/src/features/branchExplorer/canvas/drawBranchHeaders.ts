@@ -7,7 +7,7 @@ import { headerCardLeft } from './headerCardLeft';
 import { drawReviewChip, reviewChipWidth } from './drawReviewChip';
 import { fitBranchName, fitText, summaryOf, textWidth } from './fitText';
 import { BAND_HEIGHT, HEADER_COMMENT_MIDDLE, HEADER_HEIGHT, HEADER_INSET, HEADER_MAX_WIDTH, HEADER_NAME_MIDDLE, headerTop, ROW_HEIGHT } from './geometry';
-import { branchColor, branchInk, type GraphPalette } from './graphPalette';
+import { branchColor, branchCommentInk, branchInk, HEADER_HOVER_TINT, HEADER_TINT, type GraphPalette } from './graphPalette';
 import { strokeHouse } from './houseGlyph';
 import { laneHeaderHeight, laneShape } from './laneShape';
 import { lanesAcross } from './spansInView';
@@ -32,11 +32,11 @@ const COMMENT_LINE_TOP = (HEADER_NAME_MIDDLE + HEADER_COMMENT_MIDDLE) / 2;
 /**
  * A pill on the top edge of each band, overlapping it a little so the two read as one shape, tinted in the branch's
  * color with a border stronger than the band's, in two lines like the official client's: the branch name with its
- * code review, then the comment, smaller and in gray (a branch without a comment gets a one-line pill). It
- * grows to the longer line, up to a few columns and never into the next branch on its row. While the start of a band
- * is scrolled away, its pill stays pinned to the left edge (floating, with a shadow), whole for as long as any of
- * the band shows, so the branch stays identifiable. Records where each pill landed for the pointer, and where its comment line lies when it doesn't show
- * the whole comment.
+ * code review, then the comment, smaller and in a quieter ink of the branch's hue (a branch without a comment gets a
+ * one-line pill). It grows to the longer line, up to a few columns and never into the next branch on its row. While
+ * the start of a band is scrolled away, its pill stays pinned to the left edge (floating, with a shadow), whole for as
+ * long as any of the band shows, so the branch stays identifiable. Records where each pill landed for the pointer, and
+ * where its comment line lies when it doesn't show the whole comment.
  */
 export function drawBranchHeaders(draw: DrawContext): void {
   const { scene, visible } = draw;
@@ -177,7 +177,7 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
   // tint, border and text.
   const ink = ghost ? GHOST_ALPHA : 1;
   ctx.fillStyle = color;
-  ctx.globalAlpha = ink * ((palette.isDark ? 0.18 : 0.15) + (hovered ? 0.06 : 0));
+  ctx.globalAlpha = ink * (HEADER_TINT[palette.isDark ? 'dark' : 'light'] + (hovered ? HEADER_HOVER_TINT : 0));
   ctx.fill();
   ctx.strokeStyle = selected ? palette.accent : color;
   ctx.globalAlpha = ink * (selected || current ? 1 : hovered ? 0.75 : 0.55);
@@ -208,8 +208,7 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
   x += textWidth(ctx, fitted) + GAP;
   if (review && x + chipWidth <= right + PADDING / 2) drawReviewChip(draw, review, x, nameMiddle, chipWidth, scene.hoveredReview === review.id);
 
-  // Second line: the comment's summary, smaller, cut at the end. Neutral, so the name stays the one line in the
-  // branch's color, and dark enough to read on the tint.
+  // Second line: the comment's summary, smaller and in a quieter ink of the branch's hue, cut at the end.
   const comment = summaryOf(lane.branch.comment);
   if (comment) {
     const commentMiddle = top + HEADER_COMMENT_MIDDLE;
@@ -220,7 +219,7 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
       draw.drawn.cutBranchComments.add(lane, textLeft, top + COMMENT_LINE_TOP, textWidth(ctx, text), height - COMMENT_LINE_TOP);
     }
     drawSearchMarks(draw, text, textLeft, commentMiddle, COMMENT_MARK_HEIGHT);
-    ctx.fillStyle = palette.textSecondary;
+    ctx.fillStyle = current ? palette.accentTextMuted : branchCommentInk(palette, name);
     pen.fillText(text, textLeft, commentMiddle + 0.5);
     redrawMarkedLetters(draw, text, textLeft, commentMiddle + 0.5);
   }
