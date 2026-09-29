@@ -65,6 +65,8 @@ const palette: GraphPalette = {
   gridLine: INK,
   accent: INK,
   accentText: INK,
+  accentTextMuted: INK,
+  branchCommentTone: { saturation: '30%', lightness: '30%' },
   accentContrast: INK,
   accentSoft: INK,
   searchHit: INK,

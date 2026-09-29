@@ -2,7 +2,7 @@
  * Calm, clearly distinct hues for branches: greens, oranges, teals, roses and ambers first,
  * so the accent-colored `/main` stays the only strong blue and nothing leans purple.
  */
-const BRANCH_HUES = [152, 24, 188, 344, 42, 118, 8, 60, 316, 170];
+export const BRANCH_HUES = [152, 24, 188, 344, 42, 118, 8, 60, 316, 170];
 
 /** A stable hue per branch name, so a branch keeps its color everywhere. `/main` uses the accent color instead (null). */
 export function branchHue(branchName: string): number | null {
@@ -12,9 +12,12 @@ export function branchHue(branchName: string): number | null {
   return BRANCH_HUES[Math.abs(hash) % BRANCH_HUES.length]!;
 }
 
-/** Lightness and saturation tuned for each theme's background. */
+/** Saturation and lightness of branch lines, tuned for each theme's background. */
+export const LINE_TONE = { light: { saturation: '60%', lightness: '42%' }, dark: { saturation: '58%', lightness: '62%' } };
+
 export function hueToColor(hue: number, isDark: boolean): string {
-  return isDark ? `hsl(${hue} 58% 62%)` : `hsl(${hue} 60% 42%)`;
+  const { saturation, lightness } = LINE_TONE[isDark ? 'dark' : 'light'];
+  return `hsl(${hue} ${saturation} ${lightness})`;
 }
 
 /** Text in a branch's hue, readable on the branch's own light tint. */

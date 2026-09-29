@@ -3,6 +3,8 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { AVATAR_COLORS } from '../components/avatarColor';
+import { HEADER_HOVER_TINT, HEADER_TINT } from '../features/branchExplorer/canvas/graphPalette';
+import { BRANCH_HUES, LINE_TONE } from '../features/branchExplorer/model/branchHue';
 import { STABLE_HUES } from '../lib/stableHue';
 import { composite, contrastRatio, hslColor, parseColor, themeTokens } from './contrast';
 
@@ -11,7 +13,7 @@ const themes = themeTokens(readFileSync(join(__dirname, 'tokens.css'), 'utf8'));
 /** The opaque backgrounds text sits on. */
 const SURFACES = ['--bg-app', '--bg-sidebar', '--bg-surface', '--bg-surface-raised', '--bg-subtle', '--bg-input', '--bg-code'];
 /** Text down to 11px: WCAG AA asks 4.5:1. */
-const TEXT = ['--text-primary', '--text-secondary', '--text-tertiary', '--accent-text', '--label-text', '--status-changed'];
+const TEXT = ['--text-primary', '--text-secondary', '--text-tertiary', '--accent-text', '--accent-text-muted', '--label-text', '--status-changed'];
 /** Status letters on their own tint and focus rings are graphics: 3:1. */
 const BADGES = ['--change-added', '--change-changed', '--change-deleted', '--change-moved', '--change-permissions', '--status-changed'];
 const BADGE_TINT = 0.16;
@@ -33,7 +35,7 @@ function ratio(tokens: Record<string, string>, foreground: string, background: s
   return contrastRatio(composite(parseColor(tokens[foreground]!), behind), behind);
 }
 
-describe.each(Object.entries(themes))('%s theme', (_theme, tokens) => {
+describe.each(Object.entries(themes))('%s theme', (theme, tokens) => {
   it.each(TEXT)('%s reads at 4.5:1 on every surface', (text) => {
     for (const surface of SURFACES) expect(ratio(tokens, text, surface), surface).toBeGreaterThanOrEqual(4.5);
   });
@@ -108,6 +110,22 @@ describe.each(Object.entries(themes))('%s theme', (_theme, tokens) => {
           const behind = state ? composite(parseColor(tokens[state]!), opaque) : opaque;
           expect(contrastRatio(letter, composite(fill, behind)), `hue ${hue} on ${surface} ${state ?? ''}`).toBeGreaterThanOrEqual(3);
         }
+    }
+  });
+
+  it('writes a branch header\'s comment at 4.5:1 on the header\'s tint, hovered or not, for every branch hue and the accent', () => {
+    // The dark theme only overrides what differs.
+    const tone = { ...themes.light, ...tokens };
+    const surface = parseColor(tokens['--bg-surface-raised']!).rgb;
+    const line = LINE_TONE[theme as 'light' | 'dark'];
+    for (const alpha of [HEADER_TINT[theme as 'light' | 'dark'], HEADER_TINT[theme as 'light' | 'dark'] + HEADER_HOVER_TINT]) {
+      for (const hue of BRANCH_HUES) {
+        const comment = hslColor(hue, tone['--branch-comment-saturation']!, tone['--branch-comment-lightness']!).rgb;
+        const tint = composite(hslColor(hue, line.saturation, line.lightness, alpha), surface);
+        expect(contrastRatio(comment, tint), `hue ${hue} at ${alpha}`).toBeGreaterThanOrEqual(4.5);
+      }
+      const accentTint = composite({ ...parseColor(tokens['--accent']!), alpha }, surface);
+      expect(contrastRatio(parseColor(tokens['--accent-text-muted']!).rgb, accentTint), `accent at ${alpha}`).toBeGreaterThanOrEqual(4.5);
     }
   });
 
