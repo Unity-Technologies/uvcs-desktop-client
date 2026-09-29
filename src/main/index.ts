@@ -15,7 +15,7 @@ import { SettingsStore } from './settings/SettingsStore';
 import { changesWorkspace, rewritesChangelists } from './watch/changesWorkspace';
 import { WorkspaceWatchers } from './watch/WorkspaceWatchers';
 import { aboutPanelOptions } from './window/aboutPanel';
-import { installAppMenu } from './window/appMenu';
+import { installAppMenu, installDockMenu } from './window/appMenu';
 import { followAppTheme } from './window/followAppTheme';
 import { handleRecentDocumentRequests } from './window/recentDocuments';
 import { workspaceArgument } from './window/workspaceArgument';
@@ -86,6 +86,7 @@ function start(): void {
   followAppTheme(settings);
   app.setAboutPanelOptions(aboutPanelOptions(app.name, app.getVersion()));
   installAppMenu(windows);
+  installDockMenu(windows);
   windows.openFirst();
   // macOS keeps the app running with no window; clicking the Dock icon then opens the home screen.
   app.on('activate', () => windows.all().length === 0 && windows.open());

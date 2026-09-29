@@ -55,6 +55,14 @@ export function installAppMenu(windows: WorkspaceWindows): void {
 }
 
 /**
+ * The Dock icon's menu on macOS gets New Window, even with every window closed; the system puts the recent workspaces
+ * above it (`recentDocuments`) and the open windows below.
+ */
+export function installDockMenu(windows: WorkspaceWindows): void {
+  app.dock?.setMenu(Menu.buildFromTemplate([{ label: 'New Window', click: () => windows.open() }]));
+}
+
+/**
  * Opens the menu bar's menus as a popup under the window's menu button, where the window has no menu bar (Windows).
  * `position` is in page pixels, which the View menu's zoom scales.
  */

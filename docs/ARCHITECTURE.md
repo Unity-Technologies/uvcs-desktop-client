@@ -248,10 +248,12 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
 One window per workspace, so several tasks (often one AI agent each, in its own workspace and branch) run side by side.
 
 - `main/window/WorkspaceWindows` opens the windows; opening a workspace that another window shows brings that window
-  forward instead (`windows.focusWorkspace`, checked by `useOpenWorkspace`). A new window asked to open a workspace
+  forward instead (`windows.focusWorkspace`, checked by `useOpenWorkspace`). The installed app's first window reopens the
+  last workspace used (`openFirst`); a new window opens on the home screen. A new window asked to open a workspace
   takes it at start (`system.takeRequestedWorkspace`), as does a folder the installed app is launched with on Windows
   and Linux (`workspaceArgument`; a second launch hands it to the running app). The Window menu lists them; closing
-  the last one keeps the app on macOS, and the Dock icon opens the home screen; elsewhere it quits.
+  the last one keeps the app on macOS, and the Dock icon opens the home screen (its menu offers New Window under the
+  recent workspaces, `installDockMenu`); elsewhere it quits.
 - Each API call runs with its window as the caller (`main/ipc/caller.ts`, followed across `await`s), so its commands
   (`commandLogged`) and operation progress go back to that window only. `workspaces.watch` is the window saying which
   workspace it shows: `main/watch/WorkspaceWatchers` keeps one watcher per shown workspace and sends its changes to the

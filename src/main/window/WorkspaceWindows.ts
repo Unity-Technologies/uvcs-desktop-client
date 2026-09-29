@@ -1,4 +1,5 @@
-import { BrowserWindow } from 'electron';
+import { existsSync } from 'node:fs';
+import { app, BrowserWindow } from 'electron';
 import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
 import { createMainWindow } from './createMainWindow';
@@ -45,9 +46,13 @@ export class WorkspaceWindows {
     return window;
   }
 
-  /** The first window at launch, opening the workspace that launched the app, if any. */
+  /**
+   * The first window at launch, opening the workspace that launched the app, else the last one used (the home screen
+   * when its folder is gone). Development builds start on the home screen, where automated UI checks pick a workspace.
+   */
   openFirst(): void {
-    const workspacePath = this.launchRequest ?? undefined;
+    const lastUsed = app.isPackaged ? this.options.settings.get().recentWorkspacePaths[0] : undefined;
+    const workspacePath = this.launchRequest ?? (lastUsed && existsSync(lastUsed) ? lastUsed : undefined);
     this.launchRequest = null;
     this.open(workspacePath);
   }
