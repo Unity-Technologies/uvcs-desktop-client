@@ -568,8 +568,8 @@ renderer/src/
 - **Files: finding**: one way to find a file, Go to file (⌘P anywhere; in Files also ⌘F or Ctrl+F, where the legacy
   client finds files, and / from the tree: `filesGoToFile`; the header's search button): a fuzzy search (`fuzzyIndex`)
   over every path on disk (`useWorkspacePaths`, read once, no `cm`), its results as the tree's rows. The one picked is
-  revealed in the tree, its folders expanded, and selected with its diff. A find field of the view's own duplicated it
-  and was removed.
+  revealed in the tree, its folders expanded, and selected with its diff. The view has no find field of its own:
+  Go to file is the one way to find a file.
 - **History**: a file's history (`features/history`) reads like the other lists beside a file: its revisions and moves
   on the left (`HistoryList`, two lines a row: avatar and comment, then cs:N · branch · author · date; moves in
   italics; the workspace's revision with the house, which `cm ls` reads from the workspace alongside `cm history`),
