@@ -1,12 +1,9 @@
-/* Stepping "3 of 12" to "4 of 12" must not shift ▲; ▼, last in the header, stays put whatever the label says. */
+/* As wide as its text: ▼, last in the header, stays put whatever it says; tabular figures keep "3 of 12" to "4 of 12" still. */
 .position {
   flex: none;
-  min-width: 5ch;
-  padding: 0 var(--space-1);
   color: var(--text-secondary);
   font-size: var(--text-xs);
   font-variant-numeric: tabular-nums;
-  text-align: center;
   white-space: nowrap;
   cursor: default;
   user-select: none;
