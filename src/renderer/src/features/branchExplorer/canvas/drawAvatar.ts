@@ -11,8 +11,6 @@ interface AvatarStyle {
   /** Ring around the avatar, in the branch's color. */
   ringColor: string;
   ringWidth: number;
-  /** Separates the avatar from the band behind it. */
-  outlineColor: string;
   showInitials: boolean;
   font: string;
 }
@@ -20,11 +18,6 @@ interface AvatarStyle {
 /** A changeset drawn as its author's avatar (Gravatar, or initials on the author's color), ringed with the branch color. */
 export function drawAvatar({ ctx, pen }: DrawContext, style: AvatarStyle): void {
   const { x, y, radius } = style;
-
-  ctx.beginPath();
-  pen.arc(x, y, radius + style.ringWidth + 1.5, 0, Math.PI * 2);
-  ctx.fillStyle = style.outlineColor;
-  ctx.fill();
 
   ctx.beginPath();
   pen.arc(x, y, radius + style.ringWidth / 2, 0, Math.PI * 2);

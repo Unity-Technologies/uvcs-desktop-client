@@ -1,6 +1,6 @@
 import type { GraphLayout, Lane } from '../model/layoutGraph';
 import { summaryOf } from './fitText';
-import { BAND_HEIGHT, COLUMN_WIDTH, columnX, graphSize, HEADER_MAX_WIDTH, headerHeight, headerTop, NODE_RADIUS, rowY } from './geometry';
+import { BAND_HEIGHT, COLUMN_WIDTH, columnX, graphSize, HEADER_INSET, HEADER_MAX_WIDTH, headerHeight, headerTop, NODE_RADIUS, rowY } from './geometry';
 
 /** Where the band of a branch without changesets starts, after its base changeset on the parent's band. */
 const EMPTY_BRANCH_OFFSET = COLUMN_WIDTH * 0.6;
@@ -52,7 +52,7 @@ export function graphExtent(layout: GraphLayout): { width: number; height: numbe
   if (!extent) {
     const size = graphSize(layout.columnCount + (layout.pending ? 1 : 0), layout.rowCount);
     let width = size.width;
-    for (const lane of layout.lanes) width = Math.max(width, laneShape(lane).left + HEADER_MAX_WIDTH + HEADER_END_MARGIN);
+    for (const lane of layout.lanes) width = Math.max(width, laneShape(lane).left + HEADER_INSET + HEADER_MAX_WIDTH + HEADER_END_MARGIN);
     extents.set(layout, (extent = { width, height: size.height }));
   }
   return extent;

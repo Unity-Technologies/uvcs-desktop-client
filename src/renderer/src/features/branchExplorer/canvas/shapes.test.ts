@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { branch, changeset, sampleHistory } from '../model/graphFixtures';
 import { pendingParentCurve } from './curves';
 import { layoutGraph } from '../model/layoutGraph';
-import { columnX, graphSize, HEADER_HEIGHT, HEADER_MAX_WIDTH, headerTop, GRAPH_PADDING, rowY, TWO_LINE_HEADER_HEIGHT } from './geometry';
+import { BAND_HEIGHT, columnX, graphSize, HEADER_HEIGHT, HEADER_INSET, HEADER_MAX_WIDTH, headerTop, GRAPH_PADDING, NODE_RADIUS, rowY, TWO_LINE_HEADER_HEIGHT } from './geometry';
 import { labelChips } from './labelPlacement';
 import { graphExtent, laneHeaderHeight, laneHeaderTop, laneShape } from './laneShape';
 import { nextColumnOnRow } from './rowNeighbors';
@@ -37,6 +37,13 @@ describe('laneHeaderHeight', () => {
     const lane = layout.lanesByBranch.get('/main/a')!;
     expect(laneHeaderHeight(lane)).toBe(HEADER_HEIGHT);
     expect(laneHeaderHeight({ ...lane, branch: { ...lane.branch, comment: 'Nitro boost\n\nDetails' } })).toBe(TWO_LINE_HEADER_HEIGHT);
+  });
+
+  it('sits the card on the top edge of the band, overlapping it a little, clear of the changesets', () => {
+    const lane = layout.lanesByBranch.get('/main/a')!;
+    const bottom = laneHeaderTop(lane) + laneHeaderHeight(lane);
+    expect(bottom).toBeGreaterThan(rowY(lane.row) - BAND_HEIGHT / 2);
+    expect(bottom).toBeLessThan(rowY(lane.row) - NODE_RADIUS);
   });
 });
 
@@ -81,7 +88,7 @@ describe('labelChips', () => {
     const node = labeled.nodes.get(6)!;
     const chips = labelChips(labeled, node);
     expect(chips.map(({ text }) => text)).toEqual(['a', 'b', 'c']);
-    expect(chips.at(-1)!.top).toBeGreaterThanOrEqual(rowY(node.row - 1) + 15 + ROW_ABOVE_COMMENTS);
+    expect(chips.at(-1)!.top).toBeGreaterThanOrEqual(rowY(node.row - 1) + BAND_HEIGHT / 2 + ROW_ABOVE_COMMENTS);
   });
 
   it('counts the labels that do not fit on the last chip that does', () => {
@@ -102,7 +109,7 @@ describe('labelChips', () => {
     const node = labeled.nodes.get(2)!;
     const chips = labelChips(labeled, node);
     expect(chips.map(({ text }) => text)).toEqual(['v2.1 +2']);
-    expect(chips[0]!.top).toBeGreaterThanOrEqual(rowY(node.row - 1) + 15 + ROW_ABOVE_COMMENTS - 8);
+    expect(chips[0]!.top).toBeGreaterThanOrEqual(rowY(node.row - 1) + BAND_HEIGHT / 2 + ROW_ABOVE_COMMENTS - 8);
   });
 });
 
@@ -117,7 +124,7 @@ describe('graphExtent', () => {
     const history = sampleHistory();
     const withNewBranch = layoutGraph({ ...history, branches: [...history.branches, branch('/main/b/new', '/main/b', 7)] });
     const lane = withNewBranch.lanesByBranch.get('/main/b/new')!;
-    expect(graphExtent(withNewBranch).width).toBeGreaterThanOrEqual(laneShape(lane).left + HEADER_MAX_WIDTH);
+    expect(graphExtent(withNewBranch).width).toBeGreaterThanOrEqual(laneShape(lane).left + HEADER_INSET + HEADER_MAX_WIDTH);
     expect(graphExtent(withNewBranch).height).toBe(graphSize(withNewBranch.columnCount, withNewBranch.rowCount).height);
   });
 });
