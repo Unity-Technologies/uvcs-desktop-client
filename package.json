@@ -3,6 +3,7 @@
   "productName": "Unity Version Control",
   "version": "0.1.0",
   "description": "A modern desktop client for Unity Version Control, powered by the cm CLI.",
+  "author": "Unity Technologies",
   "private": true,
   "main": "out/main/index.js",
   "engines": {
@@ -15,40 +16,48 @@
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
     "app:debug": "node scripts/app-debug.mjs",
-    "postinstall": "install-electron"
+    "postinstall": "install-electron",
+    "dist": "electron-vite build && electron-builder"
   },
   "devDependencies": {
-    "@playwright/cli": "^0.1.21",
-    "@types/node": "^26.6.2",
-    "@types/react": "^19.3.0",
-    "@types/react-dom": "^19.3.0",
-    "@vitejs/plugin-react": "^5.2.0",
-    "electron": "^44.4.5",
-    "electron-vite": "^5.0.0",
-    "playwright-core": "^1.63.0",
-    "typescript": "^7.0.2",
-    "vite": "^7.3.6",
-    "vitest": "^4.1.11"
-  },
-  "dependencies": {
     "@pierre/diffs": "^1.5.1",
+    "@playwright/cli": "^0.1.21",
     "@radix-ui/react-context-menu": "^2.3.7",
     "@radix-ui/react-dialog": "^1.1.23",
     "@radix-ui/react-dropdown-menu": "^2.1.24",
     "@radix-ui/react-popover": "^1.1.23",
     "@tanstack/react-query": "^5.103.2",
     "@tanstack/react-virtual": "^3.14.13",
+    "@types/node": "^26.6.2",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
     "cmdk": "^1.1.1",
     "diff": "^9.0.0",
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
     "lucide-react": "^1.48.0",
+    "playwright-core": "^1.63.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.6",
+    "vitest": "^4.1.11",
     "zustand": "^5.0.15"
   },
   "allowScripts": {
+    "electron-winstaller@5.4.0": true,
     "electron@44.4.5": true,
     "esbuild@0.25.12": true,
     "esbuild@0.28.2": true,
     "fsevents@2.3.3": true
+  },
+  "overrides": {
+    "@electron/asar": "^4.1.1",
+    "global-agent": "^4.1.3",
+    "temp": {
+      "rimraf": "^6.1.3"
+    }
   }
 }

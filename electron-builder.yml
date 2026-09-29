@@ -1,0 +1,17 @@
+appId: com.unity.uvcs-desktop
+directories:
+  output: dist
+  buildResources: build
+# electron-vite bundles everything the app runs into out/ (its libraries are devDependencies),
+# so there are no node_modules to ship or native modules to rebuild.
+files:
+  - out/**
+  - package.json
+npmRebuild: false
+mac:
+  category: public.app-category.developer-tools
+  target: dmg
+win:
+  target: nsis
+linux:
+  target: AppImage

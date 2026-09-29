@@ -37,6 +37,7 @@ npm run dev      # starts the app with hot reload
 | `npm run build && npm start` | Builds the app into `out/` and runs that build |
 | `npm run typecheck`          | Type-checks the main and renderer code         |
 | `npm test`                   | Runs the unit tests                            |
+| `npm run dist`               | Builds the installer for this OS into `dist/`  |
 
 In the app, ⌘K searches everything, ⌘/ lists the keyboard shortcuts, and ⌘⇧L shows every `cm` command it ran (Ctrl on Windows and Linux).
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains how the code is organized.
