@@ -7,6 +7,7 @@ import { codeReviewMenu } from '../codeReviews/codeReviewMenu';
 import { labelMenu } from '../labels/labelMenu';
 import type { GraphTarget } from './canvas/graphTargets';
 import { graphActions } from './graphActions';
+import { labelInfo } from './model/graphLabels';
 import type { GraphLayout, Lane } from './model/layoutGraph';
 
 interface GraphMenuContext {
@@ -35,8 +36,7 @@ export function graphMenu(target: GraphTarget | null, context: GraphMenuContext)
       return graphBranchMenu(target.lane, context, place);
     case 'label': {
       const { label } = target;
-      const branch = context.layout.nodes.get(label.changeset)?.changeset.branch ?? '';
-      return withEntries(labelMenu(context.workspacePath, [{ ...label, branch, repository: context.repository ?? '' }], place), [
+      return withEntries(labelMenu(context.workspacePath, [labelInfo(context.layout, label, context.repository ?? '')], place), [
         menuAction('labeledChangeset', () => context.goToChangeset(label.changeset)),
       ]);
     }

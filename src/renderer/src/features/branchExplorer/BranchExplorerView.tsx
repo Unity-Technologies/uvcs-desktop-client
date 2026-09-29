@@ -34,6 +34,7 @@ import { filterGraph, type GraphFocus } from './model/filterGraph';
 import { layoutGraph, layoutKeeping } from './model/layoutGraph';
 import { rememberedPerHistory } from './model/rememberedPerHistory';
 import { describeSelection } from './model/describeSelection';
+import { selectedLabel } from './model/graphLabels';
 import {
   branchBase,
   branchEnd,
@@ -85,6 +86,7 @@ export function BranchExplorerView() {
   /** -1 until the user steps through the matches. */
   const [activeHitIndex, setActiveHitIndex] = useState(-1);
 
+  const repository = workspace?.repository ?? '';
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : null;
   const homeChangeset = workspace?.loadedChangeset ?? null;
   // On a label or a changeset, the workspace's changes go on the loaded changeset's branch.
@@ -246,7 +248,9 @@ export function BranchExplorerView() {
 
   const activate = (target: GraphTarget): void => {
     const selected = selectionFor(target);
-    if (selected?.kind === 'changeset') graphActions.diffChangeset(selected.id);
+    const label = layout && selectedLabel(layout, selected, repository);
+    if (label) graphActions.diffLabel(label);
+    else if (selected?.kind === 'changeset') graphActions.diffChangeset(selected.id);
     if (selected?.kind === 'pending') openChanges();
     if (target.kind === 'branch') graphActions.diffBranch(target.lane.branch);
   };
@@ -256,6 +260,7 @@ export function BranchExplorerView() {
     if (!event.currentTarget.contains(event.target as Node)) return;
     if (!layout || ownsKey(event.target, event.key)) return;
     const selectedId = selection?.kind === 'changeset' ? selection.id : null;
+    const label = selectedLabel(layout, selection, repository);
     const selectedStop: GraphStop | null = selection?.kind === 'branch' ? null : selection;
     /** The selected branch, or the branch of the selected changeset or pending changes. */
     const branchName =
@@ -307,7 +312,8 @@ export function BranchExplorerView() {
       [
         'graphOpen',
         () => {
-          if (selectedId !== null) graphActions.diffChangeset(selectedId);
+          if (label) graphActions.diffLabel(label);
+          else if (selectedId !== null) graphActions.diffChangeset(selectedId);
           else if (selection?.kind === 'pending') openChanges();
           else if (lane) graphActions.diffBranch(lane.branch);
         },
@@ -324,7 +330,8 @@ export function BranchExplorerView() {
       [
         'graphContextMenu',
         () => {
-          if (selectedId !== null) canvasRef.current?.openContextMenu({ kind: 'changeset', id: layout.nodes.get(selectedId)?.changeset.id ?? selectedId });
+          if (label) canvasRef.current?.openContextMenu({ kind: 'label', label, more: [] });
+          else if (selectedId !== null) canvasRef.current?.openContextMenu({ kind: 'changeset', id: layout.nodes.get(selectedId)?.changeset.id ?? selectedId });
           else if (selection?.kind === 'branch' && lane) canvasRef.current?.openContextMenu({ kind: 'branch', lane });
         },
       ],

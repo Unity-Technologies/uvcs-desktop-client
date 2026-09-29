@@ -1,7 +1,8 @@
 import { FileDiff, Tag } from 'lucide-react';
-import type { Label } from '@shared/domain/label';
+import type { LabelInfo } from '@shared/domain/label';
 import { spec } from '@shared/domain/specs';
 import { DetailsHeading } from '../../components/DetailsHeading';
+import { PLAIN_LINKS, type ObjectLinks } from '../../components/objectLinks';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
 import { Button } from '../../ui/Button';
@@ -12,7 +13,15 @@ import { ChangedFilesSection } from '../changesets/ChangedFilesSection';
 import { saveLabelComment, showLabelChanges } from './labelOperations';
 import { copiedWhat } from '../../components/copyMenu';
 
-export function LabelDetails({ workspacePath, label, menu }: { workspacePath: string; label: Label; menu: MenuEntry[] }) {
+interface LabelDetailsProps {
+  workspacePath: string;
+  label: LabelInfo;
+  /** The label's context menu, offered behind "More actions". */
+  menu: MenuEntry[];
+  links?: ObjectLinks;
+}
+
+export function LabelDetails({ workspacePath, label, menu, links = PLAIN_LINKS }: LabelDetailsProps) {
   return (
     <DetailsPanel
       icon={<Tag />}
@@ -21,7 +30,7 @@ export function LabelDetails({ workspacePath, label, menu }: { workspacePath: st
       author={{ user: label.owner, date: label.date }}
       meta={[
         <DetailsCopyable key="changeset" text={spec.changeset(label.changeset)} what={copiedWhat('Changeset', 'spec')} />,
-        <BranchChip key="branch" name={label.branch} />,
+        <BranchChip key="branch" name={label.branch} onSelect={links.selectBranch} />,
       ]}
       attributes={<AttributeChips key={label.name} objectSpec={spec.label(label.name)} />}
       primaryAction={
@@ -33,8 +42,8 @@ export function LabelDetails({ workspacePath, label, menu }: { workspacePath: st
       primaryActionId="diff"
       properties={[
         { label: 'Created', value: formatDateTime(label.date) },
-        { label: 'Changeset', value: `Changeset ${label.changeset}`, copyText: spec.changeset(label.changeset) },
-        { label: 'Branch', value: label.branch },
+        { label: 'Changeset', value: links.changeset(label.changeset), copyText: spec.changeset(label.changeset) },
+        { label: 'Branch', value: links.branch(label.branch) },
         { label: 'Repository', value: label.repository },
       ]}
       changes={<ChangedFilesSection target={{ kind: 'changeset', changesetId: label.changeset }} onOpen={(path) => showLabelChanges(label, path)} />}
