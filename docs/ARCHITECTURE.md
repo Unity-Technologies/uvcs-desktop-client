@@ -333,7 +333,11 @@ renderer/src/
   edit look the same: the editor is always on, so nothing in the diff moves when typing starts. Each pane of code
   scrolls sideways on its own and its bar would sit at the end of the file, so `PaneScrollbars` keeps one per pane at
   the bottom of the view (diffs, the whole-file editor, merge resolution). The whole-file editor renders only the lines
-  in view (Pierre's `Virtualizer` on the diff's scrolling element). Shiki reads whole files at once, never just the
+  in view (Pierre's `Virtualizer` on the diff's scrolling element). A file's language comes from its path
+  (`lib/syntaxLanguage`, for diffs, annotations and merges alike): its whole name first (Dockerfile, Cargo.lock,
+  .gitignore), then its longest extension (.gradle.kts before .kts), from tables of the grammars Pierre bundles (.NET
+  projects are XML, Unity's assets YAML, its shaders HLSL), then Pierre's own guess; a test checks every one is in
+  Pierre's bundle. Shiki reads whole files at once, never just the
   lines in view, so `syntaxHighlighting` picks by size (both versions together), at 1.5 to 4 ms a KB on the main
   thread: an editable diff up to 400 KB highlights there (0.1 s for 2 x 16 KB, 0.57 s for 2 x 156 KB; highlighted once,
   with the editor's token transformer from the first render); a read-only diff only up to 20 KB (about 0.1 s), and up
