@@ -260,6 +260,13 @@
   transform: rotate(90deg);
 }
 
+/* The changes pane's title as a disclosure: More details' look in the title's own type. */
+.titleDisclosure {
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
 .properties {
   padding: var(--space-1) var(--space-3);
   border: 1px solid var(--border-subtle);

@@ -151,11 +151,13 @@ interface DetailsChangesPaneProps {
   action?: ReactNode;
   /** The list is shown: the pane gets a splitter and fills the space left, at least as tall as it was sized. */
   expanded: boolean;
+  /** Given, the title is a disclosure that shows and hides what the pane lists. */
+  disclosure?: { open: boolean; toggle: () => void };
   children: ReactNode;
 }
 
 /** The pane at the bottom of a details panel listing what the object changed, resizable once the list shows. */
-export function DetailsChangesPane({ title, action, expanded, children }: DetailsChangesPaneProps) {
+export function DetailsChangesPane({ title, action, expanded, disclosure, children }: DetailsChangesPaneProps) {
   const { changesHeight, set } = useDetailsLayoutStore();
   const paneRef = useRef<HTMLElement>(null);
 
@@ -171,7 +173,16 @@ export function DetailsChangesPane({ title, action, expanded, children }: Detail
         />
       )}
       <div className={styles.changesHeader}>
-        <h3 className={styles.sectionTitle}>{title}</h3>
+        <h3 className={styles.sectionTitle}>
+          {disclosure ? (
+            <button className={`${styles.disclosure} ${styles.titleDisclosure}`} aria-expanded={disclosure.open} onClick={disclosure.toggle}>
+              <ChevronRight size={13} className={styles.chevron} />
+              {title}
+            </button>
+          ) : (
+            title
+          )}
+        </h3>
         {action}
       </div>
       {children}
