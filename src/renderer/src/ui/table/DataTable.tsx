@@ -168,7 +168,8 @@ export function DataTable<Row>({
       End: Infinity,
       ...(letterMoves && plain && { j: 1, k: -1 }),
     };
-    const step = steps[event.key];
+    // ⌥↑ ⌥↓ move through the changes of the diff beside the list (`useChangeNavigation`).
+    const step = event.altKey ? undefined : steps[event.key];
     if (step !== undefined) {
       event.preventDefault();
       moveBy(step, event.shiftKey);

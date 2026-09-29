@@ -32,7 +32,8 @@ export function MergeItemList({ rows, labels, selectedKey, runKey, onSelect, ref
   const selectedIndex = rows.findIndex((row) => row.key === selectedKey);
 
   const onKeyDown = (event: KeyboardEvent): void => {
-    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    // ⌥↑ ⌥↓ move through the changes of the diff beside the list (`useChangeNavigation`).
+    if ((event.key !== 'ArrowDown' && event.key !== 'ArrowUp') || event.altKey) return;
     event.preventDefault();
     const current = selectedKey ? itemKeys.indexOf(selectedKey) : -1;
     const next = itemKeys[Math.min(itemKeys.length - 1, Math.max(0, current + (event.key === 'ArrowDown' ? 1 : -1)))];

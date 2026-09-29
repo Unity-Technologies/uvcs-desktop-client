@@ -1,8 +1,7 @@
-import type { KeyboardEvent } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import type { DiffEntry } from '@shared/domain/diff';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { ItemTag } from '../../components/ItemTag';
-import { useChangeFilter } from '../../components/useChangeFilter';
 import type { MenuEntry } from '../../lib/actions';
 import type { SelectionState } from '../../lib/selection';
 import { HighlightQuery } from '../../ui/Highlight';
@@ -14,7 +13,12 @@ import { describeDiffEntry, diffEntryTone, isMovedAndChanged } from './diffEntry
 import styles from './DiffEntryList.module.css';
 
 interface DiffEntryListProps {
-  entries: DiffEntry[];
+  /** The files shown: the filter's and review mode's. */
+  rows: DiffEntry[];
+  /** The filter's text, marked in the rows. */
+  query: string;
+  /** The filter's field and chips. */
+  filterBar: ReactNode;
   selection: SelectionState;
   onSelectionChange: (selection: SelectionState) => void;
   contextMenu: (selected: DiffEntry[]) => MenuEntry[];
@@ -52,10 +56,7 @@ function columns({ on, statusOf, toggle }: ReviewMode<DiffEntry>): Column<DiffEn
 }
 
 /** The files of a diff: filterable, and in review mode marked as they are reviewed. */
-export function DiffEntryList({ entries, selection, onSelectionChange, contextMenu, review }: DiffEntryListProps) {
-  const { visible, query, bar } = useChangeFilter(entries, diffEntryKey, diffEntryTone, true);
-  const rows = review.narrow(visible);
-
+export function DiffEntryList({ rows, query, filterBar, selection, onSelectionChange, contextMenu, review }: DiffEntryListProps) {
   const onRowKeyDown = (event: KeyboardEvent, _focused: DiffEntry, moveBy: (step: number) => void): void => {
     if (!isReviewKey(event)) return;
     event.preventDefault();
@@ -65,7 +66,7 @@ export function DiffEntryList({ entries, selection, onSelectionChange, contextMe
   return (
     <div className={styles.list}>
       {review.bar}
-      {bar}
+      {filterBar}
       <HighlightQuery query={query}>
         <DataTable
           rows={rows}

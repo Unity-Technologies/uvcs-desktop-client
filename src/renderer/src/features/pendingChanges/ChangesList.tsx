@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronRight, MoreHorizontal } from 'lucide-react';
-import { memo, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react';
+import { memo, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { ItemIcon } from '../../components/ItemIcon';
 import { ItemPathRow } from '../../components/ItemPathRow';
@@ -12,7 +12,7 @@ import { Arrivals } from '../../lib/arrivals';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { holdBackMenuKeyRelease, isListMenuKey, openContextMenuOf } from '../../lib/rowMenu';
 import { isModPressed } from '../../lib/shortcuts';
-import { selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
+import { focusedKeyOf, selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
 import { treeArrowMove } from '../../lib/treeArrowMove';
 import { Checkbox, type CheckState } from '../../ui/Checkbox';
 import { Highlight } from '../../ui/Highlight';
@@ -73,9 +73,10 @@ export function ChangesList({
   // The keyboard moves through every row (`rowKeys`), folders and changelists too, so ← and → can close and open them.
   // Every arrow key renders the list: rows are found by key, never searched for.
   const { changeRows, orderedKeys, rowKeys, rowIndexes } = useMemo(() => indexRows(rows), [rows]);
-  // The row keyboard moves go from; Shift extends the selection from the anchor to it.
+  // The row keyboard moves go from; Shift extends the selection from the anchor to it. A selection from outside the
+  // list (the diff going on to the next file) moves it too.
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
-  const focused = focusedKey !== null && rowIndexes.has(focusedKey) ? focusedKey : selection.anchor;
+  const focused = focusedKeyOf(focusedKey, selection, (key) => rowIndexes.has(key));
   const grouped = useMemo(() => rows.some((row) => row.type === 'group'), [rows]);
   // Files that just appeared among the changes (saved, created) fade in once.
   const [arrivals] = useState(() => new Arrivals(ARRIVAL_WINDOW_MS));
@@ -111,6 +112,11 @@ export function ChangesList({
     estimateSize: () => ROW_HEIGHT,
     overscan: 16,
   });
+  // The selected row stays in view, however it was selected (the diff going on to the next file).
+  useEffect(() => {
+    const index = selection.anchor === null ? undefined : rowIndexes.get(selection.anchor);
+    if (index !== undefined) virtualizer.scrollToIndex(index);
+  }, [selection.anchor]);
 
   const selectedChanges = (): PendingChange[] => changeRows.filter((row) => selection.selected.has(row.key)).map((row) => row.change);
   const menuEntries = (): MenuEntry[] => {
@@ -136,7 +142,8 @@ export function ChangesList({
 
   const onKeyDown = (event: KeyboardEvent): void => {
     const plain = !event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
-    const step = moveSteps(event.key) ?? (plain ? LETTER_STEPS[event.key] : undefined);
+    // ⌥↑ ⌥↓ move through the changes of the diff beside the list (`useChangeNavigation`).
+    const step = event.altKey ? undefined : (moveSteps(event.key) ?? (plain ? LETTER_STEPS[event.key] : undefined));
     if (step !== undefined) {
       event.preventDefault();
       moveBy(step, event.shiftKey);

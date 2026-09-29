@@ -1,6 +1,6 @@
 import { parseDiffFromFile } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
-import { blockLines, isChanged, listChangeBlocks, listChangeRegions, nextRegionIndex, regionContaining, sameRegions, type DisplayMeta } from './changeBlocks';
+import { blockLines, isChanged, listChangeBlocks, listChangeRegions, regionContaining, sameRegions, type DisplayMeta } from './changeBlocks';
 
 const diff = (original: string, modified: string): DisplayMeta =>
   parseDiffFromFile({ name: 'a.ts', contents: original }, { name: 'a.ts', contents: modified });
@@ -36,8 +36,8 @@ describe('listChangeRegions', () => {
       { index: 2, oldStart: 14, oldLines: 1, newStart: 15, newLines: 0 },
     ];
     expect(listChangeRegions(blocks)).toEqual([
-      { index: 0, lines: [added(9), removed(9), added(10)] },
-      { index: 1, lines: [removed(14)] },
+      { index: 0, lines: [added(9), removed(9), added(10)], newStart: 9 },
+      { index: 1, lines: [removed(14)], newStart: 15 },
     ]);
   });
 });
@@ -83,26 +83,5 @@ describe('isChanged', () => {
   it('takes no other line as changed, however the diff shows it for a moment', () => {
     // Pierre recolors lines a moment after typing stops, and shows the editor's empty last line as added.
     expect([removed(6), added(5), added(10), removed(9)].some((line) => isChanged(blocks, line))).toBe(false);
-  });
-});
-
-describe('nextRegionIndex', () => {
-  const regions = listChangeRegions(listChangeBlocks(diff(lines('a', 'b', 'c', 'd', 'e'), lines('A', 'b', 'C', 'd', 'E'))));
-
-  it('starts at the first change going down and at the last going up', () => {
-    expect(nextRegionIndex(regions, undefined, 1)).toBe(0);
-    expect(nextRegionIndex(regions, undefined, -1)).toBe(2);
-  });
-
-  it('moves from the change holding the picked line, round the ends of the diff', () => {
-    expect(nextRegionIndex(regions, added(3), 1)).toBe(2);
-    expect(nextRegionIndex(regions, removed(3), -1)).toBe(0);
-    expect(nextRegionIndex(regions, added(5), 1)).toBe(0);
-    expect(nextRegionIndex(regions, added(1), -1)).toBe(2);
-  });
-
-  it('starts over when the picked line is no change any more, and finds nothing in a diff without changes', () => {
-    expect(nextRegionIndex(regions, added(2), 1)).toBe(0);
-    expect(nextRegionIndex([], undefined, 1)).toBe(-1);
   });
 });

@@ -16,7 +16,7 @@ describe('chipRegion', () => {
 
   it('is the change hovered (or held on the way to the chip) while the diff has it', () => {
     expect(chipRegion(regions, null, regions[0])).toBe(regions[0]);
-    expect(chipRegion(regions, null, { index: 0, lines: [removed(2), added(2)] })).toBeUndefined();
+    expect(chipRegion(regions, null, { index: 0, lines: [removed(2), added(2)], newStart: 2 })).toBeUndefined();
     expect(chipRegion(regions, null, undefined)).toBeUndefined();
   });
 });
