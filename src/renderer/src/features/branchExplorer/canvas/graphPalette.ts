@@ -1,6 +1,7 @@
 import type { MergeLinkType } from '@shared/domain/branchExplorer';
 import type { CodeReviewStatus } from '@shared/domain/codeReview';
-import { branchHue, hueToColor, hueToInk } from '../model/branchHue';
+import { composite, hslAtContrast, hslColor, hueOf, parseColor, type Rgb } from '../../../styles/contrast';
+import { branchHue, hueToColor, hueToInk, LINE_TONE } from '../model/branchHue';
 
 /** The fonts the graph draws with, built once per theme so frames never assemble font strings. */
 export interface GraphFonts {
@@ -14,6 +15,18 @@ export interface GraphFonts {
   /** Changeset comments, drawn at a fixed screen size. */
   caption: string;
   ruler: string;
+}
+
+/** Text in a hue at this saturation, as light (or, in the dark theme, as dark) as reads at this contrast. */
+export interface TextTone {
+  saturation: string;
+  contrast: number;
+}
+
+/** A branch header's name, and its comment under it, quieter: less saturated and at less contrast. */
+export interface HeaderText {
+  name: TextTone;
+  comment: TextTone;
 }
 
 /** Colors and fonts for drawing, resolved from the app's CSS variables so the graph follows the theme and accent. */
@@ -30,10 +43,8 @@ export interface GraphPalette {
   gridLine: string;
   accent: string;
   accentText: string;
-  /** Secondary text in the accent's hue: the comment on `/main`'s header. */
-  accentTextMuted: string;
-  /** Saturation and lightness of a branch header's comment, in the branch's hue. */
-  branchCommentTone: { saturation: string; lightness: string };
+  /** How a branch header writes its name and comment in its branch's hue. */
+  headerText: HeaderText;
   accentContrast: string;
   /** The soft halo behind a selection. */
   accentSoft: string;
@@ -72,8 +83,10 @@ export function readGraphPalette(element: Element): GraphPalette {
     gridLine: variable('--border-subtle'),
     accent: variable('--accent'),
     accentText: variable('--accent-text'),
-    accentTextMuted: variable('--accent-text-muted'),
-    branchCommentTone: { saturation: variable('--branch-comment-saturation'), lightness: variable('--branch-comment-lightness') },
+    headerText: {
+      name: { saturation: variable('--branch-name-saturation'), contrast: Number(variable('--branch-name-contrast')) },
+      comment: { saturation: variable('--branch-comment-saturation'), contrast: Number(variable('--branch-comment-contrast')) },
+    },
     accentContrast: variable('--accent-contrast'),
     accentSoft: variable('--accent-soft'),
     searchHit: variable('--search-highlight'),
@@ -111,10 +124,17 @@ export function readGraphPalette(element: Element): GraphPalette {
 export const HEADER_TINT = { light: 0.15, dark: 0.18 };
 export const HEADER_HOVER_TINT = 0.06;
 
+/** A branch header's text colors, as the canvas takes them. */
+export interface HeaderInks {
+  name: string;
+  comment: string;
+}
+
 interface BranchColors {
   lines: Map<string, string>;
   inks: Map<string, string>;
-  comments: Map<string, string>;
+  /** By the hue of the header's fill, null for the accent's. */
+  headers: Map<number | null, HeaderInks>;
 }
 
 /** Branch colors are asked for on every frame: each palette remembers the ones it computed. */
@@ -122,7 +142,7 @@ const branchColors = new WeakMap<GraphPalette, BranchColors>();
 
 function colorsOf(palette: GraphPalette): BranchColors {
   let colors = branchColors.get(palette);
-  if (!colors) branchColors.set(palette, (colors = { lines: new Map(), inks: new Map(), comments: new Map() }));
+  if (!colors) branchColors.set(palette, (colors = { lines: new Map(), inks: new Map(), headers: new Map() }));
   return colors;
 }
 
@@ -137,7 +157,7 @@ export function branchColor(palette: GraphPalette, branchName: string): string {
   return color;
 }
 
-/** A branch's text color on its tinted header: the same hue with more contrast than the line. */
+/** A branch's name over the graph's background, zoomed out: the same hue with more contrast than the line. */
 export function branchInk(palette: GraphPalette, branchName: string): string {
   const { inks } = colorsOf(palette);
   let color = inks.get(branchName);
@@ -149,18 +169,38 @@ export function branchInk(palette: GraphPalette, branchName: string): string {
 }
 
 /**
- * A branch's comment color on its tinted header, under the name in its ink: the same hue, quieter, as secondary text
- * is to primary text, so the name leads and the header still reads as one.
+ * The name and comment colors on a branch's header, tinted in its line color (the accent's on the current branch and
+ * `/main`): its hue, the comment quieter than the name, as secondary text is to primary text.
  */
-export function branchCommentInk(palette: GraphPalette, branchName: string): string {
-  const { comments } = colorsOf(palette);
-  let color = comments.get(branchName);
-  if (color === undefined) {
-    const hue = branchHue(branchName);
-    const { saturation, lightness } = palette.branchCommentTone;
-    comments.set(branchName, (color = hue === null ? palette.accentTextMuted : `hsl(${hue} ${saturation} ${lightness})`));
+export function headerInks(palette: GraphPalette, branchName: string, current: boolean): HeaderInks {
+  const { headers } = colorsOf(palette);
+  const hue = current ? null : branchHue(branchName);
+  let inks = headers.get(hue);
+  if (inks === undefined) {
+    const theme = palette.isDark ? 'dark' : 'light';
+    const line = LINE_TONE[theme];
+    const fill = hue === null ? parseColor(palette.accent).rgb : hslColor(hue, line.saturation, line.lightness).rgb;
+    const text = headerTextOn(fill, parseColor(palette.surfaceRaised).rgb, theme, palette.headerText);
+    headers.set(hue, (inks = { name: rgb(text.name), comment: rgb(text.comment) }));
   }
-  return color;
+  return inks;
+}
+
+/**
+ * A header's text in its fill's hue, at the contrast `text` asks on the hovered tint, the strongest: the plain one only
+ * reads better, and every hue weighs alike, however light or dark its line is (yellows are much lighter than blues).
+ */
+export function headerTextOn(fill: Rgb, surface: Rgb, theme: 'light' | 'dark', text: HeaderText): { name: Rgb; comment: Rgb } {
+  const tint = composite({ rgb: fill, alpha: HEADER_TINT[theme] + HEADER_HOVER_TINT }, surface);
+  const hue = hueOf(fill);
+  return {
+    name: hslAtContrast(hue, text.name.saturation, text.name.contrast, tint),
+    comment: hslAtContrast(hue, text.comment.saturation, text.comment.contrast, tint),
+  };
+}
+
+function rgb([r, g, b]: Rgb): string {
+  return `rgb(${r}, ${g}, ${b})`;
 }
 
 /** Dashes distinguish cherry picks and subtractive merges; intervals are dotted. */

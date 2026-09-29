@@ -7,7 +7,7 @@ import { headerCardLeft } from './headerCardLeft';
 import { drawReviewChip, reviewChipWidth } from './drawReviewChip';
 import { fitBranchName, fitText, summaryOf, textWidth } from './fitText';
 import { BAND_HEIGHT, HEADER_COMMENT_MIDDLE, HEADER_HEIGHT, HEADER_INSET, HEADER_MAX_WIDTH, HEADER_NAME_MIDDLE, headerTop, ROW_HEIGHT } from './geometry';
-import { branchColor, branchCommentInk, branchInk, HEADER_HOVER_TINT, HEADER_TINT, type GraphPalette } from './graphPalette';
+import { branchColor, branchInk, HEADER_HOVER_TINT, HEADER_TINT, headerInks, type GraphPalette } from './graphPalette';
 import { strokeHouse } from './houseGlyph';
 import { laneHeaderHeight, laneShape } from './laneShape';
 import { lanesAcross } from './spansInView';
@@ -157,6 +157,7 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
   const isHit = search?.branches.has(name) ?? false;
   const ghost = search !== null && !search.litBranches.has(name);
   const color = current ? palette.accent : branchColor(palette, name);
+  const inks = headerInks(palette, name, current);
 
   ctx.save();
   if (isHit) drawRectGlow(draw, left, top, width, height, CARD_RADIUS, search?.active?.kind === 'branch' && search.active.name === name);
@@ -202,13 +203,13 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
   ctx.font = palette.fonts.branchName;
   const fitted = fitBranchName(ctx, name, right - x - (chipWidth ? chipWidth + GAP : 0));
   drawSearchMarks(draw, fitted, x, nameMiddle, NAME_MARK_HEIGHT);
-  ctx.fillStyle = current ? palette.accentText : branchInk(palette, name);
+  ctx.fillStyle = inks.name;
   pen.fillText(fitted, x, nameMiddle + 0.5);
   redrawMarkedLetters(draw, fitted, x, nameMiddle + 0.5);
   x += textWidth(ctx, fitted) + GAP;
   if (review && x + chipWidth <= right + PADDING / 2) drawReviewChip(draw, review, x, nameMiddle, chipWidth, scene.hoveredReview === review.id);
 
-  // Second line: the comment's summary, smaller and in a quieter ink of the branch's hue, cut at the end.
+  // Second line: the comment's summary, smaller and quieter, in the same hue, cut at the end.
   const comment = summaryOf(lane.branch.comment);
   if (comment) {
     const commentMiddle = top + HEADER_COMMENT_MIDDLE;
@@ -219,7 +220,7 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
       draw.drawn.cutBranchComments.add(lane, textLeft, top + COMMENT_LINE_TOP, textWidth(ctx, text), height - COMMENT_LINE_TOP);
     }
     drawSearchMarks(draw, text, textLeft, commentMiddle, COMMENT_MARK_HEIGHT);
-    ctx.fillStyle = current ? palette.accentTextMuted : branchCommentInk(palette, name);
+    ctx.fillStyle = inks.comment;
     pen.fillText(text, textLeft, commentMiddle + 0.5);
     redrawMarkedLetters(draw, text, textLeft, commentMiddle + 0.5);
   }

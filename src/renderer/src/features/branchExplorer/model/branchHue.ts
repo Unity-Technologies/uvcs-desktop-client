@@ -20,7 +20,7 @@ export function hueToColor(hue: number, isDark: boolean): string {
   return `hsl(${hue} ${saturation} ${lightness})`;
 }
 
-/** Text in a branch's hue, readable on the branch's own light tint. */
+/** Text in a branch's hue over the graph's background: its name, zoomed out. */
 export function hueToInk(hue: number, isDark: boolean): string {
   return isDark ? `hsl(${hue} 75% 74%)` : `hsl(${hue} 70% 30%)`;
 }
