@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { joinComment, looksLikeMarkdown, splitComment } from './comment';
+import { editedComment, joinComment, looksLikeMarkdown, splitComment, withSummaryText } from './comment';
 
 describe('splitComment', () => {
   it('reads the first line as the summary and the rest as the description', () => {
@@ -33,6 +33,53 @@ describe('joinComment', () => {
   it('gives back what splitComment read', () => {
     const comment = 'Title\n\nFirst paragraph.\n\nSecond one.';
     expect(joinComment(splitComment(comment))).toBe(comment);
+  });
+});
+
+describe('editedComment', () => {
+  const opened = (comment: string) => splitComment(comment);
+
+  it('gives back the original unchanged when nothing was edited', () => {
+    for (const comment of ['Title\nBody on the next line', 'One long line: no title and description written as such.', '  Padded \n\n\nBody  \n', 'Title\r\n\r\nBody']) {
+      expect(editedComment(comment, opened(comment), opened(comment))).toBe(comment);
+    }
+  });
+
+  it('keeps the line end the original had after its title', () => {
+    const comment = 'Title\nBody';
+    expect(editedComment(comment, opened(comment), { summary: 'Title', description: 'Body, edited' })).toBe('Title\nBody, edited');
+    const spaced = 'Title\n\nBody';
+    expect(editedComment(spaced, opened(spaced), { summary: 'New title', description: 'Body' })).toBe('New title\n\nBody');
+  });
+
+  it('separates a new description with a blank line', () => {
+    const comment = 'A single long line';
+    expect(editedComment(comment, opened(comment), { summary: 'A single long line', description: 'Now with a body.' })).toBe('A single long line\n\nNow with a body.');
+  });
+
+  it('leaves out what is empty, and trims what the user left around it', () => {
+    const comment = 'Title\n\nBody';
+    expect(editedComment(comment, opened(comment), { summary: ' Title ', description: '' })).toBe('Title');
+    expect(editedComment(comment, opened(comment), { summary: '', description: '\n  Body\n' })).toBe('  Body');
+    expect(editedComment(comment, opened(comment), { summary: '', description: ' ' })).toBe('');
+  });
+
+  it('reads a comment opened whole as a description the same way', () => {
+    const comment = 'Release notes\nline two\n';
+    const whole = { summary: '', description: comment.trim() };
+    expect(editedComment(comment, whole, whole)).toBe(comment);
+    expect(editedComment(comment, whole, { summary: '', description: 'Other notes' })).toBe('Other notes');
+  });
+});
+
+describe('withSummaryText', () => {
+  it('takes a title without line ends as it is', () => {
+    expect(withSummaryText({ summary: 'Old', description: 'Body' }, 'New title ')).toEqual({ summary: 'New title ', description: 'Body' });
+  });
+
+  it('moves what follows a line end into the description, ahead of it', () => {
+    expect(withSummaryText({ summary: '', description: 'Body' }, 'Title\r\nPasted line\nAnother')).toEqual({ summary: 'Title', description: 'Pasted line\nAnother\nBody' });
+    expect(withSummaryText({ summary: '', description: '' }, 'Title\n')).toEqual({ summary: 'Title', description: '' });
   });
 });
 

@@ -1,7 +1,7 @@
 import { Copy, Pencil } from 'lucide-react';
 import { copyToClipboard } from '../lib/copyToClipboard';
 import { useLayoutEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
-import { joinComment, looksLikeMarkdown, splitComment, type CommentParts } from '../lib/comment';
+import { editedComment, looksLikeMarkdown, splitComment, withSummaryText, type CommentParts } from '../lib/comment';
 import { hotkey } from '../lib/shortcutRegistry';
 import { Button } from '../ui/Button';
 import { IconButton } from '../ui/IconButton';
@@ -31,15 +31,15 @@ export function DetailsHeading({ name, comment = '', onSave }: DetailsHeadingPro
 
   if (draft && onSave) {
     return (
-      <div className={styles.heading}>
+      <div className={styles.heading} data-named={name !== undefined}>
         {name !== undefined && <h2 className={`${styles.title} selectable`}>{name}</h2>}
-        <CommentEditor draft={draft} original={comment} withSummary={name === undefined} onChange={setDraft} onSave={onSave} onClose={() => setDraft(null)} />
+        <CommentEditor draft={draft} original={comment} opened={parts} withSummary={name === undefined} onChange={setDraft} onSave={onSave} onClose={() => setDraft(null)} />
       </div>
     );
   }
 
   return (
-    <div className={styles.heading} data-actions={Boolean(edit || comment.trim())}>
+    <div className={styles.heading} data-named={name !== undefined} data-actions={Boolean(edit || comment.trim())}>
       <Folded
         title={
           name ??
@@ -117,19 +117,25 @@ interface CommentEditorProps {
   /** False where the title is the object's name: the whole comment is the description. */
   withSummary: boolean;
   original: string;
+  /** The parts the editor opened with: while the draft still reads them, saving leaves the comment as it was. */
+  opened: CommentParts;
   onChange: (draft: CommentParts) => void;
   onSave: (comment: string) => Promise<unknown>;
   onClose: () => void;
 }
 
-/** A summary field and a description, like the checkin composer: ⌘↵ saves, Escape cancels, an empty comment is fine. */
-function CommentEditor({ draft, withSummary, original, onChange, onSave, onClose }: CommentEditorProps) {
+/**
+ * A summary field and a description, like the checkin composer: ⌘↵ saves, Escape cancels, an empty comment is fine.
+ * Both grow with their text, so a comment written as one long line reads whole in its summary field.
+ */
+function CommentEditor({ draft, withSummary, original, opened, onChange, onSave, onClose }: CommentEditorProps) {
   const [saving, setSaving] = useState(false);
+  const summaryRef = useRef<HTMLTextAreaElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   const save = async (): Promise<void> => {
-    const comment = joinComment(draft);
-    if (comment !== original.trim()) {
+    const comment = editedComment(original, opened, draft);
+    if (comment !== original) {
       setSaving(true);
       const saved = await onSave(comment);
       setSaving(false);
@@ -146,7 +152,7 @@ function CommentEditor({ draft, withSummary, original, onChange, onSave, onClose
     } else if (event.key === 'Escape') {
       event.stopPropagation();
       onClose();
-    } else if (event.key === 'Enter' && event.target instanceof HTMLInputElement) {
+    } else if (event.key === 'Enter' && event.target === summaryRef.current) {
       event.preventDefault();
       descriptionRef.current?.focus();
     }
@@ -155,15 +161,17 @@ function CommentEditor({ draft, withSummary, original, onChange, onSave, onClose
   return (
     <div className={styles.editor} onKeyDown={onKeyDown}>
       {withSummary && (
-        <input
+        <textarea
+          ref={summaryRef}
           className={styles.summaryField}
           value={draft.summary}
+          rows={1}
           placeholder="Summary"
           aria-label="Summary"
           autoFocus
           disabled={saving}
           spellCheck
-          onChange={(event) => onChange({ ...draft, summary: event.target.value })}
+          onChange={(event) => onChange(withSummaryText(draft, event.target.value))}
         />
       )}
       <textarea
@@ -173,7 +181,6 @@ function CommentEditor({ draft, withSummary, original, onChange, onSave, onClose
         value={draft.description}
         placeholder="Description (optional)"
         aria-label="Description"
-        rows={Math.min(14, Math.max(3, draft.description.split('\n').length + 1))}
         disabled={saving}
         spellCheck
         onChange={(event) => onChange({ ...draft, description: event.target.value })}

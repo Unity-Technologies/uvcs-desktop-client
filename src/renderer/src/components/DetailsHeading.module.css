@@ -36,11 +36,18 @@
   width: 100%;
   margin: 0;
   overflow: hidden;
-  font-size: var(--text-lg);
+  font-size: var(--text-md);
   font-weight: var(--weight-semibold);
-  line-height: 1.35;
+  line-height: 1.45;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
+}
+
+/* A comment's first line is often a whole sentence or two, read at the body's size; a name (a branch, a label) is
+   short and stands a size up. */
+.heading[data-named='true'] .title {
+  font-size: var(--text-lg);
+  line-height: 1.35;
 }
 
 .placeholder {
@@ -121,13 +128,20 @@
   outline: none;
 }
 
+/* Both fields grow with their text: the summary takes no line ends but wraps, so a long one reads whole. */
 .summaryField {
-  font-size: var(--text-lg);
+  max-height: calc(8 * 1.45em + 12px);
   font-weight: var(--weight-semibold);
+  line-height: 1.45;
+  field-sizing: content;
+  resize: none;
 }
 
 .descriptionField {
+  min-height: calc(3 * 1.55em + 12px);
+  max-height: calc(14 * 1.55em + 12px);
   line-height: 1.55;
+  field-sizing: content;
   resize: vertical;
 }
 
