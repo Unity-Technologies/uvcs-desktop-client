@@ -11,5 +11,6 @@ export function describeSelection(layout: GraphLayout, selection: GraphSelection
   const { id, comment, owner, branch } = node.changeset;
   const summary = comment.trim().split('\n', 1)[0] || 'no comment';
   const home = id === homeChangeset ? ', the workspace changeset' : '';
-  return `Changeset ${id}, ${summary}, by ${displayName(owner)}, ${branch}${home}`;
+  const subject = selection.label !== undefined ? `Label ${selection.label} on changeset ${id}` : `Changeset ${id}`;
+  return `${subject}, ${summary}, by ${displayName(owner)}, ${branch}${home}`;
 }

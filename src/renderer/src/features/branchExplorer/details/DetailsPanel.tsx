@@ -1,9 +1,12 @@
+import { useWorkspaceInfo, useWorkspacePath } from '../../../app/workspace/useWorkspace';
 import type { ObjectLinks } from '../../../components/objectLinks';
 import { NoSelection } from '../../../components/NoSelection';
 import type { MenuEntry } from '../../../lib/actions';
 import { DetailsLink } from '../../../ui/DetailsPanel';
 import type { GraphTarget } from '../canvas/graphTargets';
 import type { GraphSelection } from '../graphSelection';
+import { LabelDetails } from '../../labels/LabelDetails';
+import { selectedLabel } from '../model/graphLabels';
 import type { GraphLayout } from '../model/layoutGraph';
 import { BranchDetails } from './BranchDetails';
 import { BranchName } from './BranchName';
@@ -22,6 +25,9 @@ interface DetailsPanelProps {
 }
 
 export function DetailsPanel({ selection, layout, pendingChangeCount, menuFor, goToChangeset, selectBranch }: DetailsPanelProps) {
+  const workspacePath = useWorkspacePath();
+  const repository = useWorkspaceInfo().data?.repository ?? '';
+  const label = selectedLabel(layout, selection, repository);
   const lane = selection?.kind === 'branch' ? layout.lanesByBranch.get(selection.name) : undefined;
   const node = selection?.kind === 'changeset' ? layout.nodes.get(selection.id) : undefined;
   const pending = selection?.kind === 'pending' ? layout.pending : null;
@@ -31,6 +37,9 @@ export function DetailsPanel({ selection, layout, pendingChangeCount, menuFor, g
     selectBranch,
   };
 
+  if (label) {
+    return <LabelDetails key={label.name} workspacePath={workspacePath} label={label} menu={menuFor({ kind: 'label', label, more: [] })} links={links} />;
+  }
   if (node) {
     return <ChangesetDetails key={node.changeset.id} node={node} layout={layout} menu={menuFor({ kind: 'changeset', id: node.changeset.id })} links={links} />;
   }

@@ -211,7 +211,14 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
         columnsOnScreen: () => sizeRef.current.width / (COLUMN_WIDTH * view.viewportRef.current.zoom),
         openContextMenu: (target) => {
           const canvas = canvasRef.current;
-          const point = target.kind === 'changeset' ? nodePoint(layout, target.id) : target.kind === 'branch' ? headerPoint(target.lane.branch.name) : null;
+          const point =
+            target.kind === 'changeset'
+              ? nodePoint(layout, target.id)
+              : target.kind === 'label'
+                ? nodePoint(layout, target.label.changeset)
+                : target.kind === 'branch'
+                  ? headerPoint(target.lane.branch.name)
+                  : null;
           if (!canvas || !point) return;
           const { zoom, panX, panY } = view.viewportRef.current;
           const bounds = canvas.getBoundingClientRect();

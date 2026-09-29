@@ -14,6 +14,10 @@ describe('describeSelection', () => {
     expect(describeSelection(layout, { kind: 'changeset', id: 3 }, 3)).toBe('Changeset 3, no comment, by Jane, /main, the workspace changeset');
   });
 
+  it('reads a label by name, then its changeset', () => {
+    expect(describeSelection(layout, { kind: 'changeset', id: 6, label: 'v1' }, null)).toBe('Label v1 on changeset 6, Merge a, by Jane, /main');
+  });
+
   it('reads a branch by name, and nothing without a selection', () => {
     expect(describeSelection(layout, { kind: 'branch', name: '/main/b' }, null)).toBe('Branch /main/b');
     expect(describeSelection(layout, null, null)).toBe('');
