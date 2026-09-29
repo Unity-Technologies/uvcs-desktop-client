@@ -79,4 +79,15 @@ describe('changePositionLabel', () => {
     expect(changePositionLabel({ count: 1, current: null })).toBe('1 change');
     expect(changePositionLabel({ count: 1200, current: 2 })).toBe('3 of 1,200');
   });
+
+  it('says there are none in a file only stepped past (an image, identical versions)', () => {
+    expect(changePositionLabel({ count: 0, current: null })).toBe('No changes');
+  });
+});
+
+describe('a version shown alone', () => {
+  it('is one change, whole: an added or a deleted file', () => {
+    expect(regionsOf('', lines('a', 'b', 'c'))).toHaveLength(1);
+    expect(regionsOf(lines('a', 'b', 'c'), '')).toHaveLength(1);
+  });
 });

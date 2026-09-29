@@ -37,7 +37,7 @@ import { syntaxHighlighting } from './syntaxHighlighting';
 import type { DiscardRequest } from './useBlockDiscard';
 import type { DiffContents } from './useDiffContents';
 import { renderedEdits } from './renderedEdits';
-import { useChangeNavigation } from './useChangeNavigation';
+import { goesSomewhere, useChangeNavigation } from './useChangeNavigation';
 import { useFileBuffer } from './useFileBuffer';
 import { typedIntoWhole, wholeFileNote } from './wholeFileNote';
 
@@ -121,10 +121,12 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   );
   // Nothing to view differently in an empty or unchanged file that only says so.
   const viewControls = showsLines(presentation, editable);
-  // Nor to move through there, in a file typed into whole, or in a version shown alone (all of it is one change).
+  // Nor to move through there or in a file typed into whole; a version shown alone (added, deleted) is one change.
+  // Beside a list of files, every diff keeps the arrows, to go on to the next file whatever this one is.
   const frame = useRef<HTMLDivElement>(null);
   const changeView = useRef<ChangeView>(null);
-  const navigation = useChangeNavigation(viewControls && followsLayout(sides, wholeFile) ? (currentDiff?.meta ?? null) : null, changeView, frame, fileName);
+  const navigation = useChangeNavigation(viewControls && !wholeFile ? (currentDiff?.meta ?? null) : null, changeView, frame, fileName);
+  const navigator = goesSomewhere(navigation) && <ChangeNavigator navigation={navigation} />;
   const openFile = editablePath === null ? undefined : () => void api.system.openPath(absolutePath(workspacePath, editablePath));
 
   useShortcut(hotkey('saveFile'), () => void buffer.save(), dirty);
@@ -171,11 +173,12 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
     <>
       {unsavedControls}
       {compareControls}
+      {!viewControls && navigator}
       {viewControls && (
         <>
           {plainText && <PlainTextIndicator />}
           {currentDiff && hasLineChanges(currentDiff) && <LineStats added={currentDiff.added} removed={currentDiff.removed} />}
-          {navigation.count > 0 && <ChangeNavigator navigation={navigation} />}
+          {navigator}
           <PaneToolbarGroup>
             <ComparisonMethodMenu value={comparisonMethod} onChange={setComparisonMethod} />
             <IconButton
@@ -210,6 +213,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   ) : (
     <>
       {unsavedControls}
+      {navigator}
       {/* Single-sided images (added or deleted) are previews: no modes to offer. */}
       {presentation.kind === 'image' && presentation.comparable && (
         <SegmentedControl<ImageDiffMode>

@@ -124,6 +124,11 @@ export function useChangeNavigation(
   };
 }
 
+/** Whether the navigation has somewhere to go: changes, or a file beside this one (a file with none still steps on). */
+export function goesSomewhere(navigation: ChangeNavigation): boolean {
+  return navigation.count > 0 || navigation.goesTo(1) !== null || navigation.goesTo(-1) !== null;
+}
+
 /**
  * Whether a key pressed on `target` moves through the diff in `frame`: pressed in it, in the list beside it, or with
  * nothing focused (a header button disabled at the last change lets go of the focus).

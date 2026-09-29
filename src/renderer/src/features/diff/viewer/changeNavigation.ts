@@ -49,7 +49,8 @@ export function currentAfterChange(current: number | null, before: ChangeRegion[
   return current !== null && before.length === after.length ? current : null;
 }
 
-/** "3 of 12" once a change was moved to, "12 changes" before. */
+/** "3 of 12" once a change was moved to, "12 changes" before, "No changes" in a file only stepped past. */
 export function changePositionLabel({ count, current }: Pick<ChangePosition, 'count' | 'current'>): string {
+  if (count === 0) return 'No changes';
   return current === null ? pluralize(count, 'change') : `${formatCount(current + 1)} of ${formatCount(count)}`;
 }

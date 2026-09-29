@@ -386,7 +386,9 @@ renderer/src/
   not rendered there yet is scrolled to where Pierre lays it out, `pierreLinePosition`; collapsed lines never hide one,
   as changes are always in the hunks shown), lights up for a moment and, where discards are, is picked for ⌥⌘Z. Past
   the last or first change, a diff beside a list of files (a diff page, Changes: `FileStepsContext`) goes on to the next
-  file's first change or the previous file's last, asking about unsaved edits first.
+  file's first change or the previous file's last, asking about unsaved edits first. A version shown alone (an added
+  or deleted file) is one change, "1 of 1"; a file with none to step through (an image, a binary, identical versions)
+  keeps the arrows, "No changes", so stepping through the list never stops there.
 - **Comparison method**: every text diff compares lines under the official client's methods (Ignore EOLs, Ignore
   whitespaces, both, Recognize all; one global preference, Recognize all by default). Lines are compared trimmed
   (`features/diff/viewer/comparisonMethod`) through a line comparator, so the diff still shows and discards the
