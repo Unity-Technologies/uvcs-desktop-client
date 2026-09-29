@@ -80,8 +80,9 @@ export const SHORTCUTS = {
   nextFile: { area: 'Changes', label: 'Next file', keys: ['j'] },
   previousFile: { area: 'Changes', label: 'Previous file', keys: ['k'] },
 
-  nextChange: { area: 'Diff', label: 'Next change', keys: ['alt+down'] },
-  previousChange: { area: 'Diff', label: 'Previous change', keys: ['alt+up'] },
+  // F7 as in other diff tools, and while typing, where the editor moves lines with ⌥↓ ⌥↑.
+  nextChange: { area: 'Diff', label: 'Next change', keys: ['alt+down', 'f7'] },
+  previousChange: { area: 'Diff', label: 'Previous change', keys: ['alt+up', 'shift+f7'] },
   discardLines: { area: 'Diff', label: 'Discard the picked lines', keys: ['mod+alt+z'], keysOffMac: ['mod+shift+backspace'] },
   undoDiscard: { area: 'Diff', label: 'Undo the last discard or edit', keys: ['mod+z'] },
   clearPickedLines: { area: 'Diff', label: 'Clear the picked lines', keys: ['escape'] },

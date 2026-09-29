@@ -2,12 +2,14 @@ import { FileSearch } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { useChangeFilter } from '../../components/useChangeFilter';
 import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { SplitPane } from '../../ui/SplitPane';
 import { SinceReviewButton } from '../review/SinceReviewButton';
 import { DiffFileTitle } from './viewer/DiffFileTitle';
 import { FileDiffViewer } from './viewer/FileDiffViewer';
+import { FileStepsContext, useFileSteps } from './viewer/fileSteps';
 import { ONLY_MOVED } from './viewer/movedFrom';
 import { describeDiffEntry, diffEntrySources, diffEntryTone } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
@@ -35,6 +37,11 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
   });
   const focused = entries.find((entry) => diffEntryKey(entry) === selection.anchor);
   const firstKey = entries[0] && diffEntryKey(entries[0]);
+  const filter = useChangeFilter(entries, diffEntryKey, diffEntryTone, true);
+  const rows = useMemo(() => review.narrow(filter.visible), [review.narrow, filter.visible]);
+  // The diff's change navigation goes on to the files before and after, as the list shows them.
+  const rowKeys = useMemo(() => rows.filter((entry) => entry.itemType !== 'directory').map(diffEntryKey), [rows]);
+  const fileSteps = useFileSteps({ keys: rowKeys, current: selection.anchor, select: (key) => setSelection({ selected: new Set([key]), anchor: key }), pathOf: (key) => key });
 
   useEffect(() => {
     if (!focused && firstKey) setSelection({ selected: new Set([firstKey]), anchor: firstKey });
@@ -51,14 +58,22 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
       maxSize={640}
       first={
         <DiffEntryList
-          entries={entries}
+          rows={rows}
+          query={filter.query}
+          filterBar={filter.bar}
           selection={selection}
           onSelectionChange={setSelection}
           contextMenu={(selected) => diffEntryMenu(workspacePath, target, selected, review)}
           review={review}
         />
       }
-      second={focused ? <EntryDiff workspacePath={workspacePath} entry={focused} reviewMarks={review.marks} /> : null}
+      second={
+        focused ? (
+          <FileStepsContext.Provider value={fileSteps}>
+            <EntryDiff workspacePath={workspacePath} entry={focused} reviewMarks={review.marks} />
+          </FileStepsContext.Provider>
+        ) : null
+      }
     />
   );
 }

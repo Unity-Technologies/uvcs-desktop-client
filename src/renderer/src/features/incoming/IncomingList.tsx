@@ -50,6 +50,8 @@ export function IncomingList({ changesets, files, conflictPaths, conflictStates,
   const isBlocking = (file: DiffEntry): boolean => blockedPaths.has(file.oldPath ?? file.path);
 
   const onKeyDown = (event: KeyboardEvent): void => {
+    // ⌥↑ ⌥↓ move through the changes of the diff beside the list (`useChangeNavigation`).
+    if (event.altKey) return;
     const ends: Record<string, number> = { Home: 0, End: entries.length - 1 };
     const target = ends[event.key] ?? navigationTarget(event.key, selectedIndex, entries.length);
     if (target === null || target === undefined || entries.length === 0) return;

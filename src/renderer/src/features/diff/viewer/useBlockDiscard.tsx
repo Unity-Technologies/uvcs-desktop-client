@@ -5,7 +5,7 @@ import { createStore } from 'zustand/vanilla';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import type { ComparisonMethod } from './comparisonMethod';
-import { isChanged, listChangeBlocks, listChangeRegions, nextRegionIndex, sameRegions, type ChangedLine, type ChangeRegion, type DisplayMeta } from './changeBlocks';
+import { isChanged, listChangeBlocks, listChangeRegions, sameRegions, type ChangedLine, type ChangeRegion, type DisplayMeta } from './changeBlocks';
 import { CHANGE_CHIP_ATTRIBUTE, ChangeChip } from './ChangeChip';
 import { describeDiscard } from './discardAction';
 import { discardLines, withOwnLines } from './discardLines';
@@ -38,7 +38,7 @@ interface BlockDiscardOptions {
   onUndo?: () => void;
 }
 
-/** Lines picked in the gutter (with the mouse, or by moving to a change with the keyboard) and the changed lines among them. */
+/** Lines picked in the gutter (with the mouse, or by moving to a change) and the changed lines among them. */
 interface LinePick {
   meta: DisplayMeta;
   range: LineRange;
@@ -74,8 +74,9 @@ const TYPING_IDLE_MS = 400;
 /**
  * Discarding changes from a workspace file's diff. Hovering a changed line offers, in its gutter, to discard just that
  * line, and on the change's top edge, to discard the whole change. Picking lines by their numbers (click, Shift+click,
- * drag, all shown as they're picked) narrows the change's chip to those lines. In the diff, ⌥↓/⌥↑ pick the next or
- * previous change, ⌥⌘Z discards the picked lines, ⌘Z undoes the last discard and Esc (or a click elsewhere) drops the pick.
+ * drag, all shown as they're picked) narrows the change's chip to those lines, and so does moving to a change (the
+ * diff's navigation, `pickChange`). In the diff, ⌥⌘Z discards the picked lines, ⌘Z undoes the last discard and Esc (or
+ * a click elsewhere) drops the pick.
  */
 export function useBlockDiscard({ enabled, diff, texts, typed, comparisonMethod, layout, containerRef, onDiscard, onUndo }: BlockDiscardOptions) {
   // The diff on screen, so every block lines up with what is shown.
@@ -190,19 +191,15 @@ export function useBlockDiscard({ enabled, diff, texts, typed, comparisonMethod,
     restoredTimer.current = setTimeout(() => setMarks({}), RESTORED_MS);
   };
 
-  const moveToChange = (direction: 1 | -1): void => {
-    const region = regions[nextRegionIndex(regions, picked?.lines[0], direction)];
-    if (!region || !meta) return;
-    setPick({ meta, range: regionRange(region), lines: region.lines });
-    scrollToLine(containerRef.current, region.lines[0]!);
+  /** Picks a change moved to, so ⌥⌘Z discards it. */
+  const pickChange = (change: ChangeRegion): void => {
+    if (meta) setPick({ meta, range: regionRange(change), lines: change.lines });
   };
 
   const onKeyDown = (event: KeyboardEvent): void => {
-    // Keys the editor took (⌘Z, ⌥↑/⌥↓ and Esc while typing) are its own.
+    // Keys the editor took (⌘Z and Esc while typing) are its own.
     if (!enabled || event.defaultPrevented) return;
     const handlers: [string, () => void][] = [
-      [hotkey('nextChange'), () => moveToChange(1)],
-      [hotkey('previousChange'), () => moveToChange(-1)],
       [hotkey('discardLines'), () => void discard(picked?.lines ?? [])],
       [hotkey('undoDiscard'), () => onUndo?.()],
       [hotkey('clearPickedLines'), () => setPick(null)],
@@ -261,6 +258,7 @@ export function useBlockDiscard({ enabled, diff, texts, typed, comparisonMethod,
       />
     ),
     onKeyDown,
+    pickChange,
     dropPickFirst,
     onPointerDown,
     onPointerMove,
@@ -311,15 +309,4 @@ function isSameRange(a: LineRange, b: LineRange): boolean {
 
 function prefersReducedMotion(): boolean {
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-}
-
-/** Brings a changed line to the middle of the view, unless it's already in sight. */
-function scrollToLine(container: HTMLElement | null, { side, lineNumber }: ChangedLine): void {
-  const type = side === 'deletions' ? 'change-deletion' : 'change-addition';
-  const row = container?.querySelector('diffs-container')?.shadowRoot?.querySelector(`[data-line-type="${type}"][data-line="${lineNumber}"]`);
-  if (!container || !row) return;
-  const view = container.getBoundingClientRect();
-  const { top, bottom } = row.getBoundingClientRect();
-  if (top >= view.top && bottom <= view.bottom) return;
-  row.scrollIntoView({ block: 'center', behavior: prefersReducedMotion() ? 'auto' : 'smooth' });
 }

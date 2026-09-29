@@ -70,6 +70,8 @@ export interface ChangeRegion {
   index: number;
   /** Its changed lines, in the order the unified view shows them. */
   lines: ChangedLine[];
+  /** First modified line of the change; where its removed lines were when it adds none. */
+  newStart: number;
 }
 
 export function listChangeRegions(blocks: ChangeBlock[]): ChangeRegion[] {
@@ -78,7 +80,7 @@ export function listChangeRegions(blocks: ChangeBlock[]): ChangeRegion[] {
     const previous = blocks[index - 1];
     const adjoins = previous && previous.oldStart + previous.oldLines === block.oldStart && previous.newStart + previous.newLines === block.newStart;
     if (adjoins) regions.at(-1)!.lines.push(...blockLines(block));
-    else regions.push({ index: regions.length, lines: blockLines(block) });
+    else regions.push({ index: regions.length, lines: blockLines(block), newStart: block.newStart });
   });
   return regions;
 }
@@ -97,17 +99,6 @@ export function isChanged(blocks: ChangeBlock[], { side, lineNumber }: ChangedLi
     const [start, count] = side === 'deletions' ? [block.oldStart, block.oldLines] : [block.newStart, block.newLines];
     return lineNumber >= start && lineNumber < start + count;
   });
-}
-
-/**
- * The change ⌥↓ (`direction` 1) or ⌥↑ (-1) moves to from the one holding `from` (the first picked line), round the
- * end of the diff; the first or last change when nothing is picked. Its index in `regions`, -1 when there is none.
- */
-export function nextRegionIndex(regions: ChangeRegion[], from: ChangedLine | undefined, direction: 1 | -1): number {
-  if (regions.length === 0) return -1;
-  const current = from ? regions.findIndex((region) => region.lines.some((line) => line.side === from.side && line.lineNumber === from.lineNumber)) : -1;
-  if (current === -1) return direction === 1 ? 0 : regions.length - 1;
-  return (current + direction + regions.length) % regions.length;
 }
 
 export function regionContaining(regions: ChangeRegion[], line: ChangedLine): ChangeRegion | undefined {

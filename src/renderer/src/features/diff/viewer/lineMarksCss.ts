@@ -42,6 +42,25 @@ export function lineMarksCss({ preview = [], leaving = [], restoredAt = [], pick
   return rules.join('\n');
 }
 
+/** How many of a change's lines light up when it's moved to: enough to see where it starts. */
+const FLASHED_LINES = 200;
+
+/**
+ * CSS lighting up, for a moment, the change the diff's navigation moved to (`round` counts the moves, so moving to the
+ * same change again lights it again). With reduced motion it's lit without fading, as long as the viewer keeps it.
+ */
+export function changeFlashCss(lines: ChangedLine[], round: number): string {
+  if (lines.length === 0) return '';
+  const shown = lines.slice(0, FLASHED_LINES);
+  const rows = [content(shown), gutter(shown)].join(',');
+  const name = `change-flash-${round % 2}`;
+  return [
+    `@media (prefers-reduced-motion:no-preference){${rows}{animation:${name} 1.2s var(--ease-out) forwards}}`,
+    `@media (prefers-reduced-motion:reduce){${rows}{box-shadow:inset 0 0 0 100vmax var(--bg-selected-strong)}}`,
+    `@keyframes ${name}{from{box-shadow:inset 0 0 0 100vmax var(--bg-selected-strong)}to{box-shadow:inset 0 0 0 100vmax transparent}}`,
+  ].join('\n');
+}
+
 const lineType = ({ side }: ChangedLine): string => (side === 'deletions' ? 'change-deletion' : 'change-addition');
 const content = (lines: ChangedLine[]): string => lines.map((line) => `[data-line-type="${lineType(line)}"][data-line="${line.lineNumber}"]`).join(',');
 const gutter = (lines: ChangedLine[]): string => lines.map((line) => `[data-line-type="${lineType(line)}"][data-column-number="${line.lineNumber}"]`).join(',');

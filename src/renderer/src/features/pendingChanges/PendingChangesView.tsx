@@ -22,6 +22,7 @@ import { useChangeset } from '../changesets/useChangeset';
 import { LeftChangesBanner } from '../leftChanges/LeftChangesBanner';
 import { MergeTaskSuggestion } from '../mergeTask/MergeTaskSuggestion';
 import { MyShelvesButton } from '../shelves/MyShelvesButton';
+import { FileStepsContext, useFileSteps } from '../diff/viewer/fileSteps';
 import { ChangeDiffPanel } from './ChangeDiffPanel';
 import { ChangesList } from './ChangesList';
 import { ChangesSummaryBar } from './ChangesSummaryBar';
@@ -128,6 +129,14 @@ export function PendingChangesView() {
   );
   const { data: mergeSource } = useChangeset(snapshot?.mergeLinks[0]?.sourceChangeset ?? null);
   const firstChangeKey = rows.find((row) => row.type === 'change')?.key;
+  // The diff's change navigation goes on to the files before and after, as the list shows them.
+  const fileKeys = useMemo(() => rows.flatMap((row) => (row.type === 'change' ? [row.key] : [])), [rows]);
+  const fileSteps = useFileSteps({
+    keys: fileKeys,
+    current: selection.anchor,
+    select: (key) => selectAfterLeaving(selection, { selected: new Set([key]), anchor: key }, setSelection),
+    pathOf: (key) => changesByKey.get(key)?.path ?? key,
+  });
   // Checking in completes a pending merge as it is; updating first is for plain check-ins.
   const behind = mergeChanges.length > 0 ? null : behindBranch(incomingSummary, branchName);
 
@@ -356,7 +365,9 @@ export function PendingChangesView() {
           selectedCount > 1 ? (
             <EmptyState icon={<Files size={24} />} title={`${formatCount(selectedCount)} files selected`} description="Select a single file to see its diff." />
           ) : focused && diffChange ? (
-            <ChangeDiffPanel workspacePath={workspacePath} change={diffChange} reviewMark={review.marks.get(diffChange.path)} />
+            <FileStepsContext.Provider value={fileSteps}>
+              <ChangeDiffPanel workspacePath={workspacePath} change={diffChange} reviewMark={review.marks.get(diffChange.path)} />
+            </FileStepsContext.Provider>
           ) : focusedFolder && focusedFolder.type !== 'change' ? (
             <EmptyState
               icon={<Folder size={24} />}

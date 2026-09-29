@@ -1,5 +1,5 @@
 import { AppWindow, Code, Columns2, EyeOff, FileText, FoldVertical, ImageIcon, Pilcrow, RefreshCw, Rows2, WrapText } from 'lucide-react';
-import { Suspense, useMemo, type ReactNode, type RefObject } from 'react';
+import { Suspense, useMemo, useRef, type ReactNode, type RefObject } from 'react';
 import { followsLayout, type DiffSides } from './shownDiff';
 import type { FileContent } from '@shared/domain/content';
 import { api } from '../../../api/client';
@@ -17,6 +17,8 @@ import { CenteredSpinner } from '../../../ui/Spinner';
 import { absolutePath, extensionOf } from '../../pendingChanges/pendingChangeOperations';
 import { canDiscardChanges } from './canDiscardChanges';
 import { canEditInPlace } from './canEditInPlace';
+import { ChangeNavigator } from './ChangeNavigator';
+import type { ChangeView } from './changeView';
 import { comparisonMethodLabel, type ComparisonMethod } from './comparisonMethod';
 import { ComparisonMethodMenu } from './ComparisonMethodMenu';
 import { diffPresentation, hasTwoRepresentations, showsLines, type Representation } from './diffPresentation';
@@ -35,6 +37,7 @@ import { syntaxHighlighting } from './syntaxHighlighting';
 import type { DiscardRequest } from './useBlockDiscard';
 import type { DiffContents } from './useDiffContents';
 import { renderedEdits } from './renderedEdits';
+import { useChangeNavigation } from './useChangeNavigation';
 import { useFileBuffer } from './useFileBuffer';
 import { typedIntoWhole, wholeFileNote } from './wholeFileNote';
 
@@ -116,6 +119,12 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
     () => (savedDiff && hasLineChanges(savedDiff) ? methodHidingEveryChange(left.text ?? '', right.text ?? '', comparisonMethod) : null),
     [savedDiff, left.text, right.text, comparisonMethod],
   );
+  // Nothing to view differently in an empty or unchanged file that only says so.
+  const viewControls = showsLines(presentation, editable);
+  // Nor to move through there, in a file typed into whole, or in a version shown alone (all of it is one change).
+  const frame = useRef<HTMLDivElement>(null);
+  const changeView = useRef<ChangeView>(null);
+  const navigation = useChangeNavigation(viewControls && followsLayout(sides, wholeFile) ? (currentDiff?.meta ?? null) : null, changeView, frame, fileName);
   const openFile = editablePath === null ? undefined : () => void api.system.openPath(absolutePath(workspacePath, editablePath));
 
   useShortcut(hotkey('saveFile'), () => void buffer.save(), dirty);
@@ -156,8 +165,6 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   // Said in the header, not over the diff: a note there would stack on "No content changes".
   const plainText = isText && syntaxHighlighting(left.text ?? '', right.text ?? '', editable) === 'off';
 
-  // Nothing to view differently in an empty or unchanged file that only says so.
-  const viewControls = showsLines(presentation, editable);
   // Discard and Save come first: the controls are right-aligned, so appearing on the first keystroke they move none
   // of the others.
   const controls = isText ? (
@@ -168,6 +175,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
         <>
           {plainText && <PlainTextIndicator />}
           {currentDiff && hasLineChanges(currentDiff) && <LineStats added={currentDiff.added} removed={currentDiff.removed} />}
+          {navigation.count > 0 && <ChangeNavigator navigation={navigation} />}
           <PaneToolbarGroup>
             <ComparisonMethodMenu value={comparisonMethod} onChange={setComparisonMethod} />
             <IconButton
@@ -231,6 +239,8 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       onEdit={buffer.onEdit}
       onDiscard={onDiscard}
       onUndoDiscard={onUndoDiscard}
+      changeViewRef={changeView}
+      onViewScroll={navigation.onViewScroll}
     />
   );
 
@@ -307,7 +317,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   }
 
   return (
-    <DiffViewerFrame title={title} controls={controls}>
+    <DiffViewerFrame ref={frame} title={title} controls={controls}>
       {body}
     </DiffViewerFrame>
   );
@@ -328,6 +338,8 @@ interface TextDiffBodyProps {
   onEdit: (text: string) => void;
   onDiscard?: (request: DiscardRequest) => void;
   onUndoDiscard?: () => void;
+  changeViewRef: RefObject<ChangeView | null>;
+  onViewScroll: () => void;
 }
 
 function TextDiffBody({ original, modified, ...rest }: TextDiffBodyProps) {

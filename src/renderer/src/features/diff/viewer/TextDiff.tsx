@@ -1,17 +1,20 @@
 import { Virtualizer } from '@pierre/diffs';
 import { Editor } from '@pierre/diffs/edit';
 import { EditProvider, File, FileDiff, VirtualizerContext, WorkerPoolContext } from '@pierre/diffs/react';
-import { useCallback, useImperativeHandle, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
 import { focusMain } from '../../../lib/mainFocus';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkey } from '../../../lib/shortcutRegistry';
+import type { ChangedLine, ChangeRegion } from './changeBlocks';
+import { lineAtTopOf, scrollToChange, type ChangeView } from './changeView';
 import type { ComparisonMethod } from './comparisonMethod';
 import { useDiffPreferences } from './diffPreferencesStore';
 import type { EditorHandle } from './editorHandle';
 import { escapeWhileTyping } from './escapeWhileTyping';
 import { useHighlightWorkers } from './highlightWorkers';
 import type { LineDiff } from './lineDiff';
+import { changeFlashCss } from './lineMarksCss';
 import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
 import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
 import { PaneScrollbars } from './PaneScrollbars';
@@ -69,7 +72,14 @@ interface TextDiffProps {
   onDiscard?: (request: DiscardRequest) => void;
   /** Undoes the last discard (⌘Z in the diff, outside the text). */
   onUndoDiscard?: () => void;
+  /** Receives the diff's side of moving from change to change (`useChangeNavigation`). */
+  changeViewRef?: RefObject<ChangeView | null>;
+  /** The diff scrolled. */
+  onViewScroll?: () => void;
 }
+
+/** How long a change moved to stays lit. */
+const FLASH_MS = 1200;
 
 /**
  * Each side's code scrolls sideways, so Tab stops there to scroll it with the arrows: show where it stopped (after the
@@ -95,7 +105,7 @@ function editorFactory(onCreate: (editor: Editor) => void): CreateEditor {
 }
 
 /** Syntax-highlighted text diff, side by side or unified, optionally typed into on the modified side. */
-export function TextDiff({ original, modified, current, diff, diffedText, wholeFile = false, fileName, comparisonMethod, sides = BOTH_SIDES, editable = false, editorRef, onEdit, onDiscard, onUndoDiscard }: TextDiffProps) {
+export function TextDiff({ original, modified, current, diff, diffedText, wholeFile = false, fileName, comparisonMethod, sides = BOTH_SIDES, editable = false, editorRef, onEdit, onDiscard, onUndoDiscard, changeViewRef, onViewScroll }: TextDiffProps) {
   const theme = useResolvedTheme();
   const { layout, collapseUnchanged, wrapLines } = useDiffPreferences();
   const container = useRef<HTMLDivElement | null>(null);
@@ -173,6 +183,23 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     [],
   );
 
+  const changeFlash = useChangeFlash();
+  useShadowStyle(container, changeFlash.css);
+  const stopScrolling = useRef<() => void>(undefined);
+  useEffect(() => () => stopScrolling.current?.(), []);
+  useImperativeHandle(changeViewRef, () => ({
+    reveal: (change: ChangeRegion) => {
+      if (!container.current) return;
+      stopScrolling.current?.();
+      stopScrolling.current = scrollToChange(container.current, change, virtualized ? virtualizer : undefined);
+      changeFlash.light(change.lines);
+      discard.pickChange(change);
+      // Typing goes on from the change (F7 while typing): the caret would otherwise bring the view back to it.
+      if (isTyping()) editor.current?.focus({ lineNumber: Math.min(change.newStart, editor.current.getText().split('\n').length), preventScroll: true });
+    },
+    lineAtTop: (blocks) => (container.current ? lineAtTopOf(container.current, blocks) : null),
+  }));
+
   const onKeyDownCapture = (event: KeyboardEvent): void => {
     if (!isTyping() || !matchesShortcut(event.nativeEvent, hotkey('leaveEditor'))) return;
     const action = escapeWhileTyping(editor.current?.getViewState().selections ?? [], discard.dropPickFirst(event));
@@ -208,6 +235,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
         onPointerDownCapture={pointerFocus.onPointerDownCapture}
         onPointerMove={discard.onPointerMove}
         onPointerLeave={discard.onPointerLeave}
+        onScroll={onViewScroll}
         onFocus={pointerFocus.onFocus}
         onBlur={pointerFocus.onBlur}
       >
@@ -242,4 +270,19 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
       </div>
     </div>
   );
+}
+
+/** The change moved to, lit for a moment (`changeFlashCss`). */
+function useChangeFlash(): { css: string; light: (lines: ChangedLine[]) => void } {
+  const [flash, setFlash] = useState<{ lines: ChangedLine[]; round: number } | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  return {
+    css: flash ? changeFlashCss(flash.lines, flash.round) : '',
+    light: (lines) => {
+      setFlash((last) => ({ lines, round: (last?.round ?? 0) + 1 }));
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => setFlash((last) => last && { ...last, lines: [] }), FLASH_MS);
+    },
+  };
 }
