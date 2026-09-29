@@ -495,7 +495,8 @@ renderer/src/
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
   description, or the object's name with the comment below; edited in place where cm can edit it, the title in a field that wraps and grows, and a comment left unedited saved as it was, `editedComment`; a name reads a size above a comment's title); a meta row (author ·
   date · spec to copy · branch chip); attribute chips (`AttributeChips`); properties and relations behind "More details";
-  then the changes pane under a remembered splitter (`DetailsChangesPane`). cm edits changeset, attribute and label
+  then the changes pane under a remembered splitter (`DetailsChangesPane`), its title a disclosure once the list is read
+  that hides it and shows it again from the cache, remembered for every panel as More details is (`changesCollapsed`). cm edits changeset, attribute and label
   comments (a label's by applying it again to its changeset, `labelCommentArgs`); branch and shelve comments stay
   read-only: no `cm` command or client API edits them. Selecting a row must stay cheap: `cm diff`
   runs only on request (`ChangedFilesSection`), other lookups wait for the selection to settle (`useSettled`), and
