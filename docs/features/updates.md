@@ -55,9 +55,9 @@ one shows again. A check the window asked for answers in one toast, "Checking…
   workflow's `MAC_SIGNING_FLAGS`), opens after Privacy & Security ▸ Open Anyway, and updates by its disk image. A build
   with no signature at all is rejected: macOS on Apple silicon calls it "damaged", because electron-builder's edits to
   the bundle break Electron's own signature. Windows builds are unsigned: electron-updater checks an installer's publisher only when the app names one.
-- The feed must be readable without signing in: electron-updater reads a private repository's releases only with a
-  token, which the app never ships. While the repository is private, a check says "No published release is available
-  to update from yet."
+- The feed must be readable without signing in, so the releases' repository is public: electron-updater reads a private
+  repository's releases only with a token, which the app never ships. With no published release (only a draft), a
+  check says "No published release is available to update from yet."
 
 ## CI
 
