@@ -12,6 +12,7 @@ export interface AppMenuContext {
   newWindow: () => void;
   openDocumentation: () => void;
   reportIssue: () => void;
+  requestFeature: () => void;
   /**
    * About with no window to show the app's dialog in (macOS keeps running with every window closed): the OS's panel,
    * which reads the name and version from the app bundle.
@@ -36,7 +37,7 @@ export function shownAccelerator(accelerator: string, isMac: boolean): string | 
  * Alt opens an item with (the menu bar shows it underlined); macOS has no such letters, so they're dropped there.
  */
 export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOptions[] {
-  const { platform, isPackaged, windowItems, newWindow, openDocumentation, reportIssue, showAboutPanel, checkForUpdates } = context;
+  const { platform, isPackaged, windowItems, newWindow, openDocumentation, reportIssue, requestFeature, showAboutPanel, checkForUpdates } = context;
   const isMac = platform === 'darwin';
   const label = (text: string): string => (isMac ? text.replaceAll('&', '') : text);
   const commandItem: AppMenuContext['commandItem'] = (text, commandId, accelerator, withoutWindow) =>
@@ -108,6 +109,7 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
         { label: label('Unity Version Control &Documentation'), click: openDocumentation },
         commandItem('&Keyboard Shortcuts', 'app.shortcuts'),
         { label: label('&Report an Issue'), click: reportIssue },
+        { label: label('Request a &Feature'), click: requestFeature },
         ...(isMac ? [] : [separator, checkForUpdatesItem, aboutItem]),
       ],
     },
