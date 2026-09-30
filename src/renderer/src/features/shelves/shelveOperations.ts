@@ -3,7 +3,7 @@ import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { navigation, useNavigation } from '../../app/navigation/navigationStore';
 import { runOperation, runVoidAction } from '../../app/operations/runOperation';
-import { isAffectedByShelveDeletion, isAffectedByShelvingAway } from '../../app/refresh/refreshScopes';
+import { isAffectedByShelveApplied, isAffectedByShelveDeletion, isAffectedByShelvingAway } from '../../app/refresh/refreshScopes';
 import { pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast, type ToastAction } from '../../ui/toast/toastStore';
@@ -20,6 +20,7 @@ export async function applyShelve(workspacePath: string, shelveId: number, delet
     title: `Applying shelve ${shelveId}`,
     workspacePath,
     run: (operationId) => api.shelves.apply(workspacePath, shelveId, deleteShelve, operationId),
+    affects: isAffectedByShelveApplied,
     cancellable: false,
     success: (outcome) => (outcome.kind === 'applied' ? { title: appliedShelveMessage(shelveId, outcome.count, deleteShelve), action: viewChangesAction() } : null),
   });

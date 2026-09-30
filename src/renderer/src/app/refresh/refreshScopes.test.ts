@@ -9,6 +9,7 @@ import {
   isAffectedByLabels,
   isAffectedByNewChangesets,
   isAffectedByCheckinOrUpdate,
+  isAffectedByShelveApplied,
   isAffectedByShelveDeletion,
   isAffectedByShelving,
   isAffectedByShelvingAway,
@@ -93,6 +94,16 @@ describe('refresh scopes', () => {
     expect(isAffectedByShelveDeletion(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(true);
     expect(isAffectedByShelveDeletion(key('pendingChanges'))).toBe(false);
     expect(isAffectedByShelveDeletion(key('branchExplorer', {}))).toBe(false);
+  });
+
+  it('refreshes the workspace, its locks, the shelve lists and the left changes, not the repository, when a shelve is applied', () => {
+    expect(isAffectedByShelveApplied(key('pendingChanges'))).toBe(true);
+    expect(isAffectedByShelveApplied(key('explorer', 'allPaths'))).toBe(true);
+    expect(isAffectedByShelveApplied(key('locks', {}))).toBe(true);
+    expect(isAffectedByShelveApplied(key('shelves', { owners: ['me'] }))).toBe(true);
+    expect(isAffectedByShelveApplied(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(true);
+    expect(isAffectedByShelveApplied(key('changesets', {}))).toBe(false);
+    expect(isAffectedByShelveApplied(key('branchExplorer', {}))).toBe(false);
   });
 
   it('refreshes the branch lists and the Branch Explorer when a branch is created, deleted or hidden', () => {

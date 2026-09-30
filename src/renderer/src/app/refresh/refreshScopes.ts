@@ -111,7 +111,20 @@ export function isAffectedByShelveDeletion(key: QueryKey): boolean {
  * the changes added, what is checked out).
  */
 export function isAffectedByShelvingAway(key: QueryKey): boolean {
-  return isAffectedByShelving(key) || isAffectedByFileChanges(key) || isAffectedByMovedPaths(key) || isAffectedByWorkspaceState(key);
+  return isAffectedByShelving(key) || isAffectedByWorkspaceEdit(key);
+}
+
+/**
+ * A shelve was applied to the workspace, or restored (applied and deleted): the workspace as the merge leaves it, the
+ * locks its checkouts take, the lists of shelves and the left changes that offered it.
+ */
+export function isAffectedByShelveApplied(key: QueryKey): boolean {
+  return isAffectedByWorkspaceEdit(key) || isAffectedByLocks(key) || isAffectedByShelveDeletion(key);
+}
+
+/** The workspace's files, the items that came or went, and what is checked out, added or moved. */
+function isAffectedByWorkspaceEdit(key: QueryKey): boolean {
+  return isAffectedByFileChanges(key) || isAffectedByMovedPaths(key) || isAffectedByWorkspaceState(key);
 }
 
 /**
