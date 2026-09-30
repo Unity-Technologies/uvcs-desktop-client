@@ -19,7 +19,7 @@ describe('workingObjectFindArgs', () => {
   });
 
   it('finds labels by name and changesets and shelves by number', () => {
-    expect(workingObjectFindArgs({ kind: 'label', name: "v1 'rc'" })[2]).toBe("where name = 'v1 ''rc'''");
+    expect(workingObjectFindArgs({ kind: 'label', name: "v1 'rc'" })[2]).toBe("where name like 'v1 %rc%'");
     expect(workingObjectFindArgs({ kind: 'changeset', name: '42' })[2]).toBe('where changesetid = 42');
     expect(workingObjectFindArgs({ kind: 'shelve', name: '3' })[2]).toBe('where shelveid = 3');
   });
@@ -33,6 +33,12 @@ describe('workingObjectCommentIn', () => {
         name: '/main/fixes/task',
       }),
     ).toBe('Report exceptions via telemetry');
+  });
+
+  it('takes only the label of that very name, not another the wildcard for a quote matched', () => {
+    const labels = `<?xml version="1.0" encoding="utf-8" ?><PLASTICQUERY><MARKER><NAME>v1-rc</NAME><COMMENT>Another</COMMENT></MARKER></PLASTICQUERY>`;
+    expect(workingObjectCommentIn(labels, { kind: 'label', name: "v1'rc" })).toBe('');
+    expect(workingObjectCommentIn(labels, { kind: 'label', name: 'v1-rc' })).toBe('Another');
   });
 
   it('is empty when the object is not found', () => {

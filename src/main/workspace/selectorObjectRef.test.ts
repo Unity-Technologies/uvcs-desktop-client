@@ -19,10 +19,12 @@ describe('selectorObjectRef', () => {
     expect(lines()).toEqual(["find branch where name = 'task1' --xml --nototal"]);
   });
 
-  it("escapes quotes in a branch's name", async () => {
-    const { cm, lines } = fakeCmClient({ 'find branch': NOTHING_FOUND });
-    await selectorObjectRef(cm, '/work', { kind: 'branch', name: "/main/ana's" });
-    expect(lines()).toEqual(["find branch where name = 'ana''s' --xml --nototal"]);
+  it("looks a name holding a quote up with a wildcard in its place, and takes only the object of that very name", async () => {
+    const { cm, lines } = fakeCmClient({ 'find branch': branchesFound({ name: '/main/ana-s', id: 41 }), 'find label': LABEL_V1 });
+
+    expect(await selectorObjectRef(cm, '/work', { kind: 'branch', name: "/main/ana's" })).toBeNull();
+    expect(await selectorObjectRef(cm, '/work', { kind: 'label', name: "v'1" })).toBeNull();
+    expect(lines()).toEqual(["find branch where name like 'ana%s' --xml --nototal", "find label where name like 'v%1' --xml --nototal"]);
   });
 
   it('names a label by its object id', async () => {
