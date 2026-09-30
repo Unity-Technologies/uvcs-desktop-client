@@ -4,7 +4,7 @@ import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import { DIFF_FORMAT, parseDiffEntries } from '../cm/diffEntries';
 import { findRecords, toChangeset } from '../cm/findObjects';
-import { escapeQueryValue, findArgs } from '../cm/findQuery';
+import { equalsCondition, findArgs } from '../cm/findQuery';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readWorkspaceStatus } from '../cm/workspaceStatus';
@@ -27,7 +27,7 @@ export function incomingChangesetsArgs(branch: string, loadedChangeset: number):
   return [
     'find',
     'changeset',
-    `where changesetid > ${loadedChangeset} and branch = '${escapeQueryValue(branch)}'`,
+    `where changesetid > ${loadedChangeset} and ${equalsCondition('branch', branch)}`,
     `--format=${recordFormat(['changesetid', 'owner'])}`,
     '--nototal',
   ];

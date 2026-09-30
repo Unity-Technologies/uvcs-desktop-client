@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MAIN_BRANCH_GUID } from '@shared/domain/branch';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
-import { findXml, formatOutput } from '../cm/testing/cmOutput';
+import { branchesFound, findXml, formatOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { SettingsStore } from '../settings/SettingsStore';
 import { cmHeaderReaders, WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
@@ -130,12 +130,11 @@ describe('one branch by name', () => {
     expect(await service.get(WORKSPACE, '/main/gone')).toBeNull();
   });
 
-  it("escapes quotes in the name so the query can't break", async () => {
-    const { service, lines } = branches({ 'find branch': findXml('BRANCH') });
+  it('looks a name holding a quote up with a wildcard in its place, and returns only the branch of that very name', async () => {
+    const { service, lines } = branches({ 'find branch': branchesFound({ name: '/main/dani-s', id: 41 }) });
 
-    await service.get(WORKSPACE, "/main/dani's");
-
-    expect(lines()[0]).toContain("name = 'dani''s'");
+    expect(await service.get(WORKSPACE, "/main/dani's")).toBeNull();
+    expect(lines()[0]).toContain("name like 'dani%s'");
   });
 });
 

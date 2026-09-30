@@ -51,11 +51,11 @@ describe('changesets', () => {
     const { service, lines } = changesets({ 'find changeset': findXml('CHANGESET', changesetRecord(7, 'lib')) });
 
     await service.get(WORKSPACE, 7);
-    const xlinked = await service.get(WORKSPACE, 7, "lib's@local");
+    const xlinked = await service.get(WORKSPACE, 7, 'lib@local');
 
     expect(lines()).toEqual([
       'find changeset where changesetid = 7 --xml --nototal',
-      "find changeset where changesetid = 7 on repository 'lib''s@local' --xml --nototal",
+      "find changeset where changesetid = 7 on repository 'lib@local' --xml --nototal",
     ]);
     expect(xlinked.repository).toBe('lib@local');
   });

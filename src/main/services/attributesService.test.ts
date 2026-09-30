@@ -50,8 +50,8 @@ describe('attribute values', () => {
   it("reads an object's values with one cm find", async () => {
     const { service, lines } = attributes({ 'find attribute': findXml('ATTRIBUTE', { NAME: 'status', VALUE: 'done' }) });
 
-    expect(await service.valuesOf(WORKSPACE, "br:/main/dani's")).toEqual([{ name: 'status', value: 'done' }]);
-    expect(lines()).toEqual(["find attribute where srcobj = 'br:/main/dani''s' --xml --nototal"]);
+    expect(await service.valuesOf(WORKSPACE, 'br:/main/dani')).toEqual([{ name: 'status', value: 'done' }]);
+    expect(lines()).toEqual(["find attribute where srcobj = 'br:/main/dani' --xml --nototal"]);
   });
 
   it('samples the values a type takes with one bounded query', async () => {

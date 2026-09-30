@@ -1,6 +1,6 @@
 import type { SelectorKind, WorkspaceSelector } from '@shared/domain/workspace';
 import type { CmClient } from './CmClient';
-import { escapeQueryValue } from './findQuery';
+import { equalsCondition } from './findQuery';
 import { findRecords } from './findObjects';
 import { text } from './parseXml';
 
@@ -16,12 +16,12 @@ const QUERIES: Record<SelectorKind, WorkingObjectQuery> = {
   branch: {
     object: 'branch',
     element: 'BRANCH',
-    condition: (name) => `name = '${escapeQueryValue(name.split('/').pop() ?? '')}'`,
+    condition: (name) => equalsCondition('name', name.split('/').pop() ?? ''),
   },
   label: {
     object: 'label',
     element: 'MARKER',
-    condition: (name) => `name = '${escapeQueryValue(name)}'`,
+    condition: (name) => equalsCondition('name', name),
   },
   changeset: {
     object: 'changeset',
@@ -44,7 +44,8 @@ export function workingObjectFindArgs(selector: WorkspaceSelector): string[] {
 /** The comment of that object in the `cm find` output; empty when it has none or wasn't found (e.g. a hidden branch). */
 export function workingObjectCommentIn(xml: string, selector: WorkspaceSelector): string {
   const records = findRecords(xml, QUERIES[selector.kind].element);
-  const record = selector.kind === 'branch' ? records.find((candidate) => text(candidate.NAME) === selector.name) : records[0];
+  const isNamed = selector.kind === 'branch' || selector.kind === 'label';
+  const record = isNamed ? records.find((candidate) => text(candidate.NAME) === selector.name) : records[0];
   return record ? text(record.COMMENT) : '';
 }
 

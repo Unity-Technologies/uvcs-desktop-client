@@ -112,6 +112,9 @@ and many people use the same server. Every `cm` command other than local reads (
 - `cm find branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their
   changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`); merges and labels come either way.
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.
+- `cm find` reads no quote inside a value, neither doubled nor between double quotes: a search puts `%` in each quote's
+  place (`withoutQuotes`), and so does an exact value (`equalsCondition`: `owner like 'o%brien@corp.com'`), whose caller
+  keeps only the exact objects when it needs them. Branch, label, attribute and repository names can't hold a quote.
 - A `cm shell` command ends at the `CommandResult <code>` line that ends its output, with nothing more in the pipe
   (`CmShellSession`, `resultLineAtEnd`): comments can quote such lines, and a misread end shifts every later command by
   one output.
