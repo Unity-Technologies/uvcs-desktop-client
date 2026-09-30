@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { WINDOW_BACKGROUND } from '@shared/windowChrome';
 import { AVATAR_COLORS } from '../lib/avatarColors';
 import { HEADER_HOVER_TINT, HEADER_TINT, headerTextOn } from '../features/branchExplorer/canvas/graphPalette';
 import { BRANCH_HUES, LINE_TONE } from '../features/branchExplorer/model/branchHue';
@@ -39,6 +40,10 @@ function ratio(tokens: Record<string, string>, foreground: string, background: s
 }
 
 describe.each(Object.entries(themes))('%s theme', (theme, tokens) => {
+  it("is the window's own background (`WINDOW_BACKGROUND`), so no frame shows another color", () => {
+    expect(tokens['--bg-app']).toBe(WINDOW_BACKGROUND[theme as keyof typeof WINDOW_BACKGROUND]);
+  });
+
   it.each(TEXT)('%s reads at 4.5:1 on every surface', (text) => {
     for (const surface of SURFACES) expect(ratio(tokens, text, surface), surface).toBeGreaterThanOrEqual(4.5);
   });

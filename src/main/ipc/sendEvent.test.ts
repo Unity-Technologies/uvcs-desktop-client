@@ -1,13 +1,26 @@
+import { EventEmitter } from 'node:events';
 import { describe, expect, it, vi } from 'vitest';
 import { BrowserWindow, type WebContents } from 'electron';
 import { EVENT_CHANNEL } from '@shared/ipc';
 import { runForCaller } from './caller';
-import { sendEventToCaller } from './sendEvent';
+import { sendEventTo, sendEventToCaller } from './sendEvent';
 
 vi.mock('electron', () => ({ BrowserWindow: { getAllWindows: vi.fn(() => []) } }));
 
 function windowContents(id: number, destroyed = false) {
-  return { id, isDestroyed: () => destroyed, send: vi.fn() };
+  return { id, isDestroyed: () => destroyed, isLoading: () => false, send: vi.fn() };
+}
+
+/** A page still loading, until `loaded()`. */
+function loadingContents(id: number) {
+  const page = new EventEmitter();
+  let loading = true;
+  const contents = Object.assign(page, { id, isDestroyed: () => false, isLoading: () => loading, send: vi.fn() });
+  const loaded = (): void => {
+    loading = false;
+    page.emit('did-finish-load');
+  };
+  return { contents, loaded };
 }
 
 function openWindows(...contents: ReturnType<typeof windowContents>[]) {
@@ -35,5 +48,22 @@ describe('sendEventToCaller', () => {
 
     expect(open.send).toHaveBeenCalledWith(EVENT_CHANNEL, 'commandLogged', LOGGED);
     expect(closed.send).not.toHaveBeenCalled();
+  });
+});
+
+describe('sendEventTo', () => {
+  it('sends to a page still loading once it has loaded, in order: before, it has no listeners', () => {
+    const { contents, loaded } = loadingContents(1);
+    const second = { ...LOGGED, id: 2 };
+
+    sendEventTo(contents as unknown as WebContents, 'commandLogged', LOGGED);
+    sendEventTo(contents as unknown as WebContents, 'commandLogged', second);
+    expect(contents.send).not.toHaveBeenCalled();
+
+    loaded();
+    expect(contents.send.mock.calls).toEqual([
+      [EVENT_CHANNEL, 'commandLogged', LOGGED],
+      [EVENT_CHANNEL, 'commandLogged', second],
+    ]);
   });
 });

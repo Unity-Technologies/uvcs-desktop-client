@@ -97,6 +97,7 @@ npm run typecheck    # main + renderer
 npm test             # vitest, every src/**/*.test.ts
 npm run e2e          # build, then the smoke test: every view of the real app against a fake cm (~10 s)
 npm run dist         # the installer for this OS, into dist/
+node scripts/perf/startup.mjs [--cm=real]   # after a build: median start-up times, cold and warm (header: options)
 ```
 
 **Done means**: `npm run typecheck` and `npm test` pass, the new code is tested (see "Tests are the quality gate"),

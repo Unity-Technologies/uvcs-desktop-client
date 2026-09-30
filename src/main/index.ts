@@ -4,11 +4,14 @@ import { CmClient } from './cm/CmClient';
 import { locateCm } from './cm/locateCm';
 import { warnOnRepeatedServerCommands } from './cm/repeatedCommands';
 import { findWorkspaceRoot } from './cm/workspaceRoot';
+import { apiMethods } from './ipc/apiMethods';
+import { EarlyCalls } from './ipc/EarlyCalls';
 import { registerApi } from './ipc/registerApi';
 import { sendEvent, sendEventToCaller } from './ipc/sendEvent';
 import { DiffReviewStore } from './review/DiffReviewStore';
 import { ReviewStore } from './review/ReviewStore';
 import { createServices } from './services/createServices';
+import { openFirstWindow } from './startup/firstWindow';
 import { handleLaunchRequests, isTheRunningApp } from './startup/launchRequests';
 import { trackOperations } from './startup/operationTracking';
 import { ignoreOwnCommandWrites } from './startup/ownWrites';
@@ -35,30 +38,29 @@ const windows = new WorkspaceWindows({
 });
 
 function start(launched: Promise<void>): void {
-  cm.warmUp();
   // A window sees the commands its own calls ran (commands run outside any call go to every window).
   cm.onCommandLogged((entry) => sendEventToCaller('commandLogged', entry));
   if (!app.isPackaged) warnOnRepeatedServerCommands(cm);
   sendSettingsChanges(settings, (changed) => sendEvent('settingsChanged', changed));
   ignoreOwnCommandWrites(cm, watchers, headers);
-  registerApi(
-    createServices({
-      cm,
-      operations: trackOperations(watchers),
-      reviews: new ReviewStore(join(userData, 'review-snapshots')),
-      diffReviews: new DiffReviewStore(join(userData, 'review-snapshots', 'diffs')),
-      settings,
-      watchers,
-      windows,
-      headers,
-      updates,
-    }),
-  );
+  const api = createServices({
+    cm,
+    operations: trackOperations(watchers),
+    reviews: new ReviewStore(join(userData, 'review-snapshots')),
+    diffReviews: new DiffReviewStore(join(userData, 'review-snapshots', 'diffs')),
+    settings,
+    watchers,
+    windows,
+    headers,
+    updates,
+  });
+  const early = new EarlyCalls(apiMethods(api));
+  registerApi(api, early);
   followAppTheme(settings);
   installMenus(windows, updates);
   updates.checkPeriodically();
-  const openFirstWindow = (): void => windows.openFirst();
-  void launched.then(openFirstWindow, openFirstWindow);
+  const openFirst = (): void => openFirstWindow({ cm, windows, early, settings });
+  void launched.then(openFirst, openFirst);
   // macOS keeps the app running with no window; clicking the Dock icon then opens the home screen.
   app.on('activate', () => windows.all().length === 0 && windows.open());
 }

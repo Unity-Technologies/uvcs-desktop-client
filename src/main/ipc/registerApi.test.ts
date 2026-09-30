@@ -4,6 +4,8 @@ import type { UvcsApi } from '@shared/api';
 import { INVOKE_CHANNEL, type InvokeRequest, type InvokeResponse } from '@shared/ipc';
 import { CmError } from '../cm/CmError';
 import { callerId, currentCaller } from './caller';
+import { apiMethods } from './apiMethods';
+import { EarlyCalls } from './EarlyCalls';
 import { registerApi } from './registerApi';
 
 vi.mock('electron', () => ({ ipcMain: { handle: vi.fn() } }));
@@ -17,9 +19,9 @@ function window(id: number, destroyed = false): WebContents {
 }
 
 /** Registers `api` and returns how a window invokes it over the one channel. */
-function served(api: Record<string, Record<string, (...args: never[]) => Promise<unknown>>>) {
+function served(api: Record<string, Record<string, (...args: never[]) => Promise<unknown>>>, early?: EarlyCalls) {
   vi.mocked(ipcMain.handle).mockClear();
-  registerApi(api as unknown as UvcsApi);
+  registerApi(api as unknown as UvcsApi, early);
   const [[channel, handler]] = vi.mocked(ipcMain.handle).mock.calls as unknown as [[string, Handler]];
   expect(channel).toBe(INVOKE_CHANNEL);
   return (method: string, args: unknown[] = [], sender = window(1)) => handler({ sender } as IpcMainInvokeEvent, { method, args });
@@ -60,6 +62,20 @@ describe('registerApi', () => {
 
     expect(await invoke('a.error')).toEqual({ ok: false, error: { message: 'Cannot read properties of undefined' } });
     expect(await invoke('b.thrown')).toEqual({ ok: false, error: { message: 'plain text' } });
+  });
+
+  it('answers a call the main process made ahead of the page from that call, once', async () => {
+    const info = vi.fn(async (workspacePath: string) => ({ workspacePath }));
+    const api = { workspaces: { info } };
+    const early = new EarlyCalls(apiMethods(api as unknown as UvcsApi), () => {});
+    const invoke = served(api, early);
+
+    early.start('workspaces.info', ['/wk']);
+
+    expect(await invoke('workspaces.info', ['/wk'])).toEqual({ ok: true, value: { workspacePath: '/wk' } });
+    expect(info).toHaveBeenCalledTimes(1);
+    expect(await invoke('workspaces.info', ['/wk'])).toEqual({ ok: true, value: { workspacePath: '/wk' } });
+    expect(info).toHaveBeenCalledTimes(2);
   });
 
   it('runs each call on behalf of the window that made it, across awaits', async () => {
