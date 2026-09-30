@@ -11,7 +11,9 @@ import { selectorObjectRef } from './selectorObjectRef';
 import { selectorSpec } from '@shared/domain/specs';
 import { describeSelector } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
-import { applyShelveCleanly, deleteShelves, detachReplacedFiles, readShelveEntries } from './switchShelves';
+import { applyShelveCleanly } from './applyShelveCleanly';
+import { detachReplacedFiles } from './detachReplacedFiles';
+import { deleteShelves, readShelveEntries } from './verifiedShelve';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';
 import { cmHeaderReaders, type HeaderReaders } from './WorkspaceHeaders';
 

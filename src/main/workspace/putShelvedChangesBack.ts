@@ -5,7 +5,7 @@ import type { OperationContext } from '../operations/OperationTracker';
 import type { LeftChangesFinder } from './leftChanges';
 import { changedPaths, SWITCH_STATUS_ARGS } from './pendingSnapshot';
 import { putBack } from './privateBackups';
-import { applyShelveCleanly } from './switchShelves';
+import { applyShelveCleanly } from './applyShelveCleanly';
 
 /**
  * Puts shelved changes back in the workspace they were shelved from, after a step that was taking them out of it

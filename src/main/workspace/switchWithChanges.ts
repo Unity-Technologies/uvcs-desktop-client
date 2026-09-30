@@ -16,7 +16,9 @@ import { selectorObjectRef } from './selectorObjectRef';
 import { selectorSpec } from '@shared/domain/specs';
 import { bringDisabledReason, describeSelector, parseSelectorSpec } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
-import { applyShelveCleanly, createSwitchShelve, moveNewItemsAside } from './switchShelves';
+import { applyShelveCleanly } from './applyShelveCleanly';
+import { moveNewItemsAside } from './moveNewItemsAside';
+import { createSwitchShelve } from './verifiedShelve';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';
 
 const IN_MERGE = "You're in the middle of a merge. Check it in or undo it before switching.";

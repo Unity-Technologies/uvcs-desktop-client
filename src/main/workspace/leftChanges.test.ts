@@ -6,13 +6,15 @@ import { recordingContext } from '../operations/testing/recordingContext';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { LeftChangesFinder } from './leftChanges';
 import { SwitchShelveRecords } from './switchShelveRecords';
-import { applyShelveCleanly, deleteShelves, detachReplacedFiles } from './switchShelves';
+import { applyShelveCleanly } from './applyShelveCleanly';
+import { detachReplacedFiles } from './detachReplacedFiles';
+import { deleteShelves } from './verifiedShelve';
 
-vi.mock('./switchShelves', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./switchShelves')>()),
-  applyShelveCleanly: vi.fn(),
+vi.mock('./applyShelveCleanly', () => ({ applyShelveCleanly: vi.fn() }));
+vi.mock('./detachReplacedFiles', () => ({ detachReplacedFiles: vi.fn(async () => {}) }));
+vi.mock('./verifiedShelve', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./verifiedShelve')>()),
   deleteShelves: vi.fn(async () => {}),
-  detachReplacedFiles: vi.fn(async () => {}),
 }));
 
 const LEFT_ON_TASK1 = 'Automatic shelve created during switch operation (from br:37)';

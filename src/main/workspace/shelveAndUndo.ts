@@ -12,7 +12,8 @@ import { putShelvedChangesBack } from './putShelvedChangesBack';
 import { selectorSpec } from '@shared/domain/specs';
 import { describeSelector } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
-import { createVerifiedShelve, moveNewItemsAside } from './switchShelves';
+import { moveNewItemsAside } from './moveNewItemsAside';
+import { createVerifiedShelve } from './verifiedShelve';
 import { readWorkspaceIdentity } from './workspaceIdentity';
 
 const IN_MERGE = "A merge in progress can't be shelved away. Check it in or undo it first, or shelve and keep the changes.";

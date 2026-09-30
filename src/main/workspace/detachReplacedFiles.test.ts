@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { describe, it } from 'vitest';
 import { change, pendingStatus } from '../cm/testing/cmOutput';
 import { fakeCmClient } from '../cm/testing/fakeCmClient';
-import { detachReplacedFiles } from './switchShelves';
+import { detachReplacedFiles } from './detachReplacedFiles';
 
 const replaced = (path: string, revisionType: 'enTextFile' | 'enSymLink', type = 'RP'): string => pendingStatus(change(type, path, { revisionType }));
 

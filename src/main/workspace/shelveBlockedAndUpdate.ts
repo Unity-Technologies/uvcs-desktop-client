@@ -16,7 +16,7 @@ import { selectorObjectRef } from './selectorObjectRef';
 import { selectorSpec } from '@shared/domain/specs';
 import { describeSelector } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
-import { createSwitchShelve } from './switchShelves';
+import { createSwitchShelve } from './verifiedShelve';
 import { readWorkspaceIdentity } from './workspaceIdentity';
 
 export interface ShelveForUpdateDependencies {
