@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, Bug, Copy, RefreshCw } from 'lucide-react';
+import { BookOpen, Bug, Copy, RefreshCw, Scale } from 'lucide-react';
 import { useEffect } from 'react';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -58,6 +58,15 @@ function AboutDialog({ onClose }: { onClose: () => void }) {
           </Button>
           <Button variant="ghost" size="small" icon={<Bug size={14} />} onClick={() => void api.system.openExternal(info.issuesUrl)}>
             Report an Issue
+          </Button>
+          <Button
+            variant="ghost"
+            size="small"
+            icon={<Scale size={14} />}
+            title="The open-source libraries the app includes, with their licenses"
+            onClick={() => void api.updates.openThirdPartyNotices()}
+          >
+            Licenses
           </Button>
         </div>
       )}

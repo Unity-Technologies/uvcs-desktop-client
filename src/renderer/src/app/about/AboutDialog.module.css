@@ -70,8 +70,11 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Four links don't fit the card's width in one row: they wrap, centered, rather than spill over its edges. */
 .links {
   display: flex;
-  gap: var(--space-4);
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-1) var(--space-4);
   margin-top: var(--space-4);
 }

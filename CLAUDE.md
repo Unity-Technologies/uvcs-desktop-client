@@ -94,7 +94,7 @@ npm run build        # build into out/ (needed by start, app:debug and scripts/s
 npm start            # the built app
 npm run app:debug    # the built app with CDP on UVCS_CDP_PORT (9333 by default)
 npm run typecheck    # main + renderer
-npm test             # vitest, every src/**/*.test.ts
+npm test             # vitest, every src/**/*.test.ts and scripts/build/**/*.test.ts
 npm run e2e          # build, then the smoke test: every view of the real app against a fake cm (~10 s)
 npm run dist         # the installer for this OS, into dist/
 npm run release      # dist, uploaded to the GitHub release (the Release workflow runs it; needs GH_TOKEN)
@@ -202,6 +202,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `styles/noRawColors.test.ts`                              | colors come from `styles/tokens.css`; the few written out say why |
 | `window/workspaceMenuCommands.test.ts`                    | app menu commands match the workspace commands                    |
 | `main/settings/ownConfig.test.ts`                         | only the first-run import reads the official client's config; nothing writes it |
+| `scripts/build/dependencyLicenses.test.ts`                | every package in package-lock.json has a permissive license (`PERMISSIVE_LICENSES`) |
 
 Not enforced yet: no `any` (there are none today). A static test for it is welcome.
 
