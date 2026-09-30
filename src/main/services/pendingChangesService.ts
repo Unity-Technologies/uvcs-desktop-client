@@ -95,12 +95,12 @@ export function createPendingChangesService({ cm, operations }: ServiceContext, 
     await cm.query(['changelist', 'create', name, description, '--persistent'], { cwd: workspacePath });
   }
 
-  async function editChangelist(workspacePath: string, name: string, changes: Changelist): Promise<void> {
-    if (changes.description) {
-      await cm.query(['changelist', 'edit', name, 'description', changes.description], { cwd: workspacePath });
+  async function editChangelist(workspacePath: string, name: string, edit: Partial<Changelist>): Promise<void> {
+    if (edit.description !== undefined) {
+      await cm.query(['changelist', 'edit', name, 'description', edit.description], { cwd: workspacePath });
     }
-    if (changes.name !== name) {
-      await cm.query(['changelist', 'edit', name, 'rename', changes.name], { cwd: workspacePath });
+    if (edit.name !== undefined && edit.name !== name) {
+      await cm.query(['changelist', 'edit', name, 'rename', edit.name], { cwd: workspacePath });
     }
   }
 
