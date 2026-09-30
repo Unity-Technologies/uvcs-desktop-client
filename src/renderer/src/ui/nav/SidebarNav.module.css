@@ -187,10 +187,6 @@
   text-align: center;
 }
 
-.sidebar[data-rail='true'] .item[data-active='true'] {
-  color: var(--accent-text);
-}
-
 .sidebar[data-rail='true'] .label {
   display: -webkit-box;
   flex: none;
