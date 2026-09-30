@@ -2,7 +2,7 @@ import { app } from 'electron';
 import type { AppInfo } from '@shared/domain/appUpdate';
 import { REPOSITORY_URL } from '../update/releaseFeed';
 
-export const DOCUMENTATION_URL = 'https://docs.unity.com/ugs/en-us/manual/devops/manual';
+export const DOCUMENTATION_URL = 'https://docs.unity.com/en-us/unity-version-control';
 
 /** Where a problem is reported: a new issue in the app's repository. */
 export const ISSUES_URL = `${REPOSITORY_URL}/issues/new`;
