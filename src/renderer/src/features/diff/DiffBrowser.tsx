@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useChangeFilter } from '../../components/useChangeFilter';
-import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
+import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { SplitPane } from '../../ui/SplitPane';
 import { diffEntryTone } from './diffEntrySources';
@@ -29,7 +29,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
   const review = useDiffReview(target, entries);
   const [selection, setSelection] = useState<SelectionState>(() => {
     const initial = entryToFocus(entries, initialPath);
-    return initial ? { selected: new Set([diffEntryKey(initial)]), anchor: diffEntryKey(initial) } : EMPTY_SELECTION;
+    return initial ? singleSelection(diffEntryKey(initial)) : EMPTY_SELECTION;
   });
   const focused = entries.find((entry) => diffEntryKey(entry) === selection.anchor);
   const firstKey = entries[0] && diffEntryKey(entries[0]);
@@ -37,10 +37,10 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
   const rows = useMemo(() => review.narrow(filter.visible), [review.narrow, filter.visible]);
   // The diff's change navigation goes on to the files before and after, as the list shows them.
   const rowKeys = useMemo(() => rows.filter((entry) => entry.itemType !== 'directory').map(diffEntryKey), [rows]);
-  const fileSteps = useFileSteps({ keys: rowKeys, current: selection.anchor, select: (key) => setSelection({ selected: new Set([key]), anchor: key }), pathOf: (key) => key });
+  const fileSteps = useFileSteps({ keys: rowKeys, current: selection.anchor, select: (key) => setSelection(singleSelection(key)), pathOf: (key) => key });
 
   useEffect(() => {
-    if (!focused && firstKey) setSelection({ selected: new Set([firstKey]), anchor: firstKey });
+    if (!focused && firstKey) setSelection(singleSelection(firstKey));
   }, [focused, firstKey]);
 
   if (entries.length === 0) {

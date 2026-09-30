@@ -29,6 +29,7 @@ import { itemStatus, PendingChangesIndex } from './itemStatus';
 import { GO_TO_FILE_SHORTCUT, useFileCommands } from './useFileCommands';
 import { useCutPasteCommands } from './useCutPasteCommands';
 import { useTreeListings } from './useTreeListings';
+import { singleSelection } from '../../lib/selection';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
 import { WorkspaceRootDetails } from './WorkspaceRootDetails';
@@ -77,7 +78,7 @@ export function FilesView() {
   const cutPaths = useMemo(() => new Set(cutItems.map((item) => item.path)), [cutItems]);
 
   const selectFolder = (path: string): void => {
-    selectAfterLeaving(selection, { selected: new Set([path]), anchor: path }, setSelection);
+    selectAfterLeaving(selection, singleSelection(path), setSelection);
     setRevealPath(path);
   };
 
