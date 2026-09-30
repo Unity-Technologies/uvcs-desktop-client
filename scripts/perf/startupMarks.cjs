@@ -19,4 +19,7 @@ function check() {
 }
 
 new MutationObserver(check).observe(document, { subtree: true, childList: true, attributes: true });
+// A window created hidden shows its page once it has painted (`ready-to-show`): only then can anyone click in it.
+if (document.visibilityState === 'visible') mark('visible');
+document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && mark('visible'));
 contextBridge.exposeInMainWorld('startupMarks', { read: () => ({ ...marks }) });

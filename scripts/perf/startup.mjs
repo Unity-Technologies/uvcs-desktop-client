@@ -8,13 +8,15 @@
 // - `--cm=fake` (the default) answers from the smoke test's fake `cm` (scripts/e2e/fakeCm) and a temp workspace:
 //   deterministic, no `cm` needed. `--cm=real` runs the installed `cm` on `--workspace`, a sandbox on a local server
 //   (`scripts/sandboxes/demo.sh` makes /tmp/uvcs-demo); the app only reads it, as it starts.
-// - Flows: `home` starts on the home screen, as development builds do, then opens the workspace from its list;
+// - Flows: `home` starts on the home screen, as development builds do, then opens the workspace from its list once
+//   the window shows;
 //   `last` starts as the installed app does, reopening the last workspace used (`openFirst`).
 //   In `last`, a "home screen with workspaces" time means the home screen showed before the workspace did.
 // - `--launch=open` (the default on macOS) starts the app through LaunchServices, as the Dock and Finder do: an app
 //   started from a terminal isn't the active one, and making it so as its window shows (`show()`) holds the main
 //   process for 40-120 ms more, and creating the window for 40 ms more. `--launch=direct` (elsewhere) runs Electron.
-// - `--timeline` prints each run's window steps, API calls and processes on the way (what waits for what).
+// - `--timeline` prints each run's window steps, API calls and processes on the way (what waits for what);
+//   `--settle=<ms>` keeps each run going that much longer, to see what start-up runs after the last step too.
 //
 // Nothing in the app measures itself: `startupProbe.cjs`, loaded into the main process through NODE_OPTIONS, times the
 // main process's steps, its processes and the page's API calls, and adds a preload (`startupMarks.cjs`) that marks when
@@ -116,6 +118,7 @@ async function launch(flow, userData) {
     await page.waitFor(flow === 'home' ? 'homeReady' : 'changesReady');
     let openedFromHome;
     if (flow === 'home') {
+      await page.waitFor('visible');
       const clicked = await page.evaluate(`(() => { const row = document.querySelector('[aria-label="Recent"] [data-workspace-row]'); row.click(); return performance.now(); })()`);
       const shown = await page.waitFor('changesReady');
       openedFromHome = shown - clicked;
@@ -127,6 +130,8 @@ async function launch(flow, userData) {
       firstContentfulPaint: performance.getEntriesByName('first-contentful-paint')[0]?.startTime,
       marks: window.startupMarks.read(),
     }))()`);
+    // `--settle=<ms>` keeps the app running a while longer, for the timeline to show what start-up runs after.
+    await new Promise((resolve) => setTimeout(resolve, Number(options.settle ?? 0)));
     browser.close();
     await withTimeout(app.quit(), 10_000, 'the app to quit');
     const probe = JSON.parse(readFileSync(probeOut, 'utf8'));
