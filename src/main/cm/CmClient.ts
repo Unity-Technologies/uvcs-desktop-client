@@ -32,9 +32,6 @@ export interface CmRunners {
   createShellPool: (cmPath: string) => ShellPool;
 }
 
-/** The exit code logged for a command that never got one of its own. */
-const NO_EXIT_CODE = -1;
-
 const CM_RUNNERS: CmRunners = { runProcess: runCmProcess, createShellPool: (cmPath) => new CmShellPool(cmPath) };
 type CommandStartedListener = (command: { args: readonly string[]; cwd: string; finished: Promise<unknown> }) => void;
 
@@ -127,27 +124,17 @@ export class CmClient {
     const cwd = options.cwd ?? homedir();
     const args = withUtf8Output(inCmPathForm(requested, cwd, this.platform));
     const startedAt = Date.now();
+    const log = (result: CmResult): CommandLogEntry => this.log(args, cwd, startedAt, result, useShell);
     const finished = useShell ? this.shellPool.run(cwd, args) : this.runProcess(args, cwd, options);
     this.startListeners.forEach((listener) => listener({ args, cwd, finished }));
+
     const result = await finished.catch((error: unknown) => {
-      // Ended without an exit code (`cm` not found, a stalled prompt, a closed session): a failure to log like any
-      // other. One its caller cancelled is none.
-      if (!options.signal?.aborted) {
-        this.log(args, cwd, startedAt, { output: error instanceof Error ? error.message : String(error), exitCode: NO_EXIT_CODE }, useShell);
-      }
+      // A command its caller cancelled is no failure to log.
+      if (!options.signal?.aborted) log(endedWithoutExitCode(error));
       throw error;
     });
-
-    const entry = this.log(args, cwd, startedAt, result, useShell);
-
-    if (result.exitCode !== 0) {
-      throw new CmError(outputForLog(extractErrorMessage(result.output)), {
-        commandLine: entry.commandLine,
-        exitCode: entry.exitCode,
-        output: entry.output,
-        logEntryId: entry.id,
-      });
-    }
+    const entry = log(result);
+    if (result.exitCode !== 0) throw failure(result, entry);
     return result.output;
   }
 
@@ -179,4 +166,19 @@ export class CmClient {
     this.logListeners.forEach((listener) => listener(logged));
     return entry;
   }
+}
+
+/** What a command that ended without an exit code of its own (`cm` not found, a stalled prompt, a closed session) logs. */
+function endedWithoutExitCode(error: unknown): CmResult {
+  return { output: error instanceof Error ? error.message : String(error), exitCode: -1 };
+}
+
+/** A command that exited with another code than 0, explained by the error line of its output. */
+function failure(result: CmResult, entry: CommandLogEntry): CmError {
+  return new CmError(outputForLog(extractErrorMessage(result.output)), {
+    commandLine: entry.commandLine,
+    exitCode: entry.exitCode,
+    output: entry.output,
+    logEntryId: entry.id,
+  });
 }
