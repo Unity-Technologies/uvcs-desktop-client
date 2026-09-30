@@ -3,7 +3,10 @@ export function firstLine(text: string): string {
   return text.trimStart().split('\n')[0]?.trim() ?? '';
 }
 
-/** The last name of a `/` path: `main.ts` for `src/app/main.ts`. */
+/**
+ * The last name of a `/` path: `main.ts` for `src/app/main.ts`. For workspace-relative and server paths and branch
+ * names, where a `\` is part of a name (macOS and Linux allow it); a local path takes `lastSegment`.
+ */
 export function fileNameOf(path: string): string {
   return path.split('/').filter(Boolean).at(-1) ?? path;
 }

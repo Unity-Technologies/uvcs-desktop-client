@@ -44,7 +44,8 @@ you touch:
    - A pooled command may take two minutes, a workspace write half an hour (a few paths can still be a whole tree).
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
    (see Renderer: Command log); one that ended without an exit code (stopped on a prompt, `cm` not found) is logged
-   with -1, and one its caller cancelled is not logged: it's no failure.
+   with -1, which the log and the error dialog word as "Stopped" (`commandEnding`), and one its caller cancelled is not
+   logged: it's no failure.
 
 To add a capability: its types in `shared/domain`, the method in `shared/api/<area>.ts` (part of `UvcsApi`), the
 implementation in `main/services/<area>Service.ts` (wired in `createServices`), `cm` argument builders and parsers as
@@ -82,7 +83,7 @@ and many people use the same server. Every `cm` command other than local reads (
   or a merge from a branch leave labels, shelves, attributes, reviews, left changes and changesets already read alone;
   shelving changes that stay in the workspace refreshes only the shelve lists, and shelving them away those and the workspace; a new, deleted or hidden branch only the
   branch lists and the Branch Explorer; a label edit the labels and the graph; an attribute or value edit only the
-  attributes; a code review created, edited or deleted only the reviews (their lists and the branch chips); releasing a lock only the locks. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
+  attributes; a code review created, edited, marked reviewed or deleted only the reviews (their lists and the branch chips); releasing a lock only the locks; deleting a shelve or discarding left changes only the shelve lists and the left changes, and applying or restoring one those, the workspace and its locks; adding, checking out, removing or undoing files only the workspace and its locks; a changeset's comment edited only what shows changesets, and one moved or deleted those, the branch lists and incoming. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
   the last (create a branch and switch to it: `createBranchAndSwitch`). Views keyed by the workspace info (`keyedByWorkspaceInfo`: left changes, the
   incoming check, the branch the workspace is on) wait for it, and when the operation gave them another key they are only
   marked stale: they are read under the new key as they show, never once more under the old one. Event-driven refreshes
@@ -272,6 +273,10 @@ renderer/src/
   styles/       Design tokens and global CSS
 ```
 
+`lib/` and `ui/` never import from the tiers above them (`api/`, `app/`, `features/`, `components/`; `lib/` not from
+`ui/` either): what they need from there is handed to them (`setAvatarPictureSource`) or lives a tier up
+(`rendererTiers.test.ts` checks it).
+
 - **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)`, so `invalidateWorkspace(path)` refreshes everything after an operation
   (or what it can touch: `invalidateWorkspace(path, affected)`, `runOperation({ affects })`).
 - **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check.
@@ -326,7 +331,7 @@ renderer/src/
   `formatShortcut`). A shortcut takes other keys off macOS where Windows and Linux conventions differ (`keysOffMac`: Alt+←
   back, Delete deletes) and never Ctrl+Alt there, which is AltGr on European layouts (the test checks it). Letters match
   by the character typed (Ctrl+Z on a German keyboard), digits by position. F2 renames the selected file, branch, label or
-  attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A field keeps
+  attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A field (`isTextEntry`) keeps
   its own text chords, Ctrl+Y (redo) included off macOS (`belongsToField`).
 - **Per OS**: platform differences go through small pure helpers taking the platform (`revealLabel`, `trashName`,
   `windowChrome`, `appMenuTemplate`, `formatShortcut`), read once in `lib/platform.ts`. Windows draw their title bar per
@@ -389,7 +394,7 @@ renderer/src/
   read-only: no `cm` command or client API edits them. Selecting a row must stay cheap (Server
   budget: Selection); the changed files' `cm diff` runs only on request (`ChangedFilesSection`). The panel's parts are
   primitives of their own in `ui/` (`DetailsSection`, `DetailsEmpty`, `DetailsSkeleton`, `DetailsBadge`,
-  `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), all imported from `ui/DetailsPanel`. Lists are
+  `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), each imported from its own module. Lists are
   a `DataTable` (`ui/table/`: only the rows in view render; the columns' sort, the keys' steps `selectionStep`, and
   `selectFirstRow`'s successor selection each in a module of their own).
 - **Item rows**: every list of files and folders reads the same (`components/`): Files and Browse repository, Changes
@@ -433,7 +438,8 @@ renderer/src/
   remembered across sessions), the view keeping 200px. Its filter (⌘F or / from the log; "Failed" for failures only)
   is a list filter like any other (`commandLogFilterTexts`), kept for the session; each command is numbered by its
   place in the log since it was cleared (`NumberedLog`), so numbers stay put as the scope, the filter and the
-  500-entry cap drop rows. Revealing a command the filter or scope hides clears them.
+  500-entry cap drop rows. A failed command shows how it ended ("Exit code 1", or "Stopped" without one) above its
+  output. Revealing a command the filter or scope hides clears them.
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in styles or components
   (`styles/noRawColors.test.ts`, which lists the few colors written out on purpose); optional classes join with
   `classNames`.

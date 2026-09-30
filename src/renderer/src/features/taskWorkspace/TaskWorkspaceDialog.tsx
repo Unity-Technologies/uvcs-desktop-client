@@ -74,11 +74,6 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
     if (picked) setExistingBranch(picked);
   };
 
-  const chooseFolder = async (): Promise<void> => {
-    const picked = await api.system.pickDirectory('Choose the folder for the new workspace', folder || undefined);
-    if (picked) setChosenFolder(picked);
-  };
-
   const create = async (): Promise<void> => {
     if (!plan || running) return;
     const outcome = await setup.start(plan);
@@ -151,7 +146,7 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
       </div>
 
       <div className={styles.folderField}>
-        <LocationField label="Folder" path={folder} disabled={running} onChange={setChosenFolder} onChoose={() => void chooseFolder()} />
+        <LocationField label="Folder" path={folder} disabled={running} onChange={setChosenFolder} pickerTitle="Choose the folder for the new workspace" />
         {folderProblem ? (
           <span className={styles.error}>{folderProblem}</span>
         ) : (

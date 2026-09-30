@@ -2,7 +2,7 @@ import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { UserLabel } from '../../ui/Avatar';
 import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
-import type { Column } from '../../ui/table/DataTable';
+import type { Column } from '../../ui/table/column';
 import { BranchNameCell } from './BranchNameCell';
 import type { BranchesLayout } from './branchesViewStore';
 import type { BranchTreeRow } from './branchTree';

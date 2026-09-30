@@ -73,7 +73,7 @@ export function ImageDiffViewer({ original, modified, mode }: ImageDiffViewerPro
   // Keyboard zoom on the focused stage (`zoomCommandOf`).
   const onKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      const command = zoomCommandOf(event);
+      const command = zoomCommandOf(event.nativeEvent);
       if (!command) return;
       event.preventDefault();
       panZoom[command]();

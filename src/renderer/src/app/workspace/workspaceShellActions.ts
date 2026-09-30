@@ -1,5 +1,5 @@
 import { api } from '../../api/client';
-import { copyToClipboard } from '../../lib/copyToClipboard';
+import { copyToClipboard } from '../../ui/copyToClipboard';
 import { toast } from '../../ui/toast/toastStore';
 
 /** Opens the user's terminal in the workspace folder, e.g. to start an agent there. */

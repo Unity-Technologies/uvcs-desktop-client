@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { isCheckinCandidate } from '../../features/pendingChanges/changeCategories';
-import { sortByStatus } from '../../features/pendingChanges/changeRows';
+// The palette lists changes as the flat list does.
+import { sortByStatus } from '../../features/pendingChanges/changeOrder';
 import { createFuzzyIndex } from '../../lib/fuzzyIndex';
 import type { ResultContext } from './objectResults';
 import { paletteGroups } from './paletteGroups';

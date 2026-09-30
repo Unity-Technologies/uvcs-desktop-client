@@ -2,6 +2,7 @@ import type { CommandLogEntry } from '@shared/events';
 import { withControlPictures } from '../../lib/controlPictures';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import type { NumberedLog } from './commandLogNumbering';
+import { commandEnding } from './commandEnding';
 import { ranInWorkspace, type CommandLogScope } from './commandLogScope';
 
 export interface CommandLogFilter {
@@ -22,9 +23,13 @@ export function isFiltering(filter: CommandLogFilter): boolean {
   return filter.failedOnly || filter.query.trim() !== '';
 }
 
-/** The texts a row shows, as it shows them: the command line, where it ran when shown, and a failure's output. */
+/**
+ * The texts a row shows, as it shows them: the command line, where it ran when shown, and a failure's ending
+ * (`commandEnding`) and output.
+ */
 export function commandLogFilterTexts(entry: CommandLogEntry, cwd?: string): string[] {
-  return [withControlPictures(entry.commandLine), ...(cwd ? [cwd] : []), withControlPictures(entry.output)];
+  const ending = entry.exitCode === 0 ? [] : [commandEnding(entry.exitCode)];
+  return [withControlPictures(entry.commandLine), ...(cwd ? [cwd] : []), ...ending, withControlPictures(entry.output)];
 }
 
 /** The rows the log shows for the scope and the filter, each with its number in the whole log. */

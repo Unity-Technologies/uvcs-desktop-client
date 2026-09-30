@@ -12,11 +12,13 @@ import { HighlightQuery } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { FilterField } from '../../ui/FilterField';
 import { CenteredSpinner } from '../../ui/Spinner';
-import { DataTable, type Column } from '../../ui/table/DataTable';
 import { UserLabel } from '../../ui/Avatar';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { userFilterTexts } from '../../lib/userName';
+import type { Column } from '../../ui/table/column';
+import { DataTable } from '../../ui/table/DataTable';
 import { useBranches } from '../branches/useBranches';
+import { syncBranchMenu } from './syncBranchMenu';
 import { pullBranch, pushBranch } from './syncOperations';
 import { useSyncTargetStore } from './syncTargetStore';
 import styles from './SyncView.module.css';
@@ -112,14 +114,7 @@ export function RepositorySyncPanel({ localRepository }: { localRepository: stri
             selection={selection}
             onSelectionChange={setSelection}
             initialSort={{ columnId: 'name', descending: false }}
-            contextMenu={(selected) =>
-              selected.length === 1 && remote
-                ? [
-                    { id: 'push', label: `Push to ${remote}`, icon: ArrowUpFromLine, run: () => push(selected[0]!.name) },
-                    { id: 'pull', label: `Pull from ${remote}`, icon: ArrowDownToLine, run: () => pull(selected[0]!.name) },
-                  ]
-                : []
-            }
+            contextMenu={(selected) => syncBranchMenu(selected, remote, { push, pull })}
           />
         </HighlightQuery>
       )}

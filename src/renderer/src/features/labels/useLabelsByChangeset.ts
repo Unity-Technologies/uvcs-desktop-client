@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { Label } from '@shared/domain/label';
+import { groupBy } from '../../lib/groupBy';
 import { useLabels } from './useLabels';
 
 const NO_LABELS: ReadonlyMap<number, readonly Label[]> = new Map();
@@ -10,14 +11,6 @@ const NO_LABELS: ReadonlyMap<number, readonly Label[]> = new Map();
  */
 export function useLabelsByChangeset(otherRepository?: string): ReadonlyMap<number, readonly Label[]> {
   const { data: labels } = useLabels();
-  const byChangeset = useMemo(() => {
-    const grouped = new Map<number, Label[]>();
-    for (const label of labels ?? []) {
-      const group = grouped.get(label.changeset);
-      if (group) group.push(label);
-      else grouped.set(label.changeset, [label]);
-    }
-    return grouped;
-  }, [labels]);
+  const byChangeset = useMemo(() => groupBy(labels ?? [], (label) => label.changeset), [labels]);
   return otherRepository ? NO_LABELS : byChangeset;
 }

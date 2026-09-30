@@ -4,8 +4,8 @@ import { ArrowDownToLine, Check, GitCommitVertical, TerminalSquare } from 'lucid
 import { PathLabel } from '../../components/PathLabel';
 import { SELECTOR_ICONS, SELECTOR_KIND_LABELS, workingObjectName } from '../../components/workingObject';
 import { useIncomingSummary } from '../../features/incoming/useIncomingSummary';
-import { copyToClipboard } from '../../lib/copyToClipboard';
 import { hotkey } from '../../lib/shortcutRegistry';
+import { copyToClipboard } from '../../ui/copyToClipboard';
 import { ProgressRing } from '../../ui/ProgressRing';
 import { navigation } from '../navigation/navigationStore';
 import { describeMeasures, describeProgress } from '../operations/describeProgress';

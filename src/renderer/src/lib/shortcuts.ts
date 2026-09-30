@@ -56,7 +56,10 @@ export function isModPressed(event: Pick<KeyboardEvent | MouseEvent, 'metaKey' |
   return mac ? event.metaKey : event.ctrlKey;
 }
 
-export function matchesShortcut(event: KeyboardEvent, shortcut: string, mac = isMac): boolean {
+/** What a shortcut is matched by: the key typed, where it is, and the modifiers held. */
+export type PressedKey = Pick<KeyboardEvent, 'key' | 'code' | 'metaKey' | 'ctrlKey' | 'altKey' | 'shiftKey'>;
+
+export function matchesShortcut(event: PressedKey, shortcut: string, mac = isMac): boolean {
   const keys = shortcut.split('+');
   const key = keys.at(-1)!;
 
@@ -80,7 +83,7 @@ const SHIFTED_SYMBOLS = new Set(['?', 'plus']);
  * or by their position where it types none (⌥ turns them into symbols on macOS; Cyrillic and other scripts); digits
  * always by position, so Shift (or an AZERTY layout, which needs Shift to type them) doesn't change them.
  */
-function normalizeKey(event: KeyboardEvent): string {
+function normalizeKey(event: PressedKey): string {
   if (event.code.startsWith('Digit')) return event.code.slice(5);
   if (/^[a-z]$/i.test(event.key)) return event.key.toLowerCase();
   if (event.code.startsWith('Key')) return event.code.slice(3).toLowerCase();

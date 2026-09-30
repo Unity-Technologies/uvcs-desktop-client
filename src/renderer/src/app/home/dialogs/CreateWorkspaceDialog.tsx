@@ -48,11 +48,6 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
     if (!initialPath) setName(suggestWorkspaceName(picked.name, takenNames));
   };
 
-  const chooseLocation = async (): Promise<void> => {
-    const directory = await api.system.pickDirectory('Choose the workspace folder', root);
-    if (directory) setChosenPath(directory);
-  };
-
   const create = async (): Promise<void> => {
     if (!canCreate || !repository) return;
     setCreating(true);
@@ -95,7 +90,7 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
         error={nameTaken ? 'There is already a workspace with this name.' : undefined}
         autoFocus={Boolean(initialRepository)}
       />
-      <LocationField path={path} onChange={setChosenPath} onChoose={() => void chooseLocation()} />
+      <LocationField path={path} onChange={setChosenPath} pickerTitle="Choose the workspace folder" pickerFolder={root} />
     </Dialog>
   );
 }

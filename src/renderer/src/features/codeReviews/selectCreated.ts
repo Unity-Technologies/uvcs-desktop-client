@@ -1,4 +1,4 @@
-import type { SelectionState } from '../../lib/selection';
+import { singleSelection, type SelectionState } from '../../lib/selection';
 
 /**
  * The selection that picks a row just created, once the refreshed list shows it; null while it doesn't yet (the list
@@ -6,5 +6,5 @@ import type { SelectionState } from '../../lib/selection';
  */
 export function selectCreated(shownKeys: readonly string[], createdKey: string | null): SelectionState | null {
   if (createdKey === null || !shownKeys.includes(createdKey)) return null;
-  return { selected: new Set([createdKey]), anchor: createdKey };
+  return singleSelection(createdKey);
 }

@@ -4,6 +4,7 @@ import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
+import { serverMergeLabel } from '../../components/mergeMenuLabels';
 import { menuAction, type MenuPlace } from '../../components/menuWords';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
@@ -22,7 +23,6 @@ import {
 } from './branchOperations';
 import { branchHeadOrigin } from './branchHeadOrigin';
 import { openCreateBranchDialog } from './CreateBranchDialog';
-import { serverMergeLabel } from './mergeMenuLabels';
 
 /** What a branch is copied as, first what ⌘C copies: `/main/task`, `br:/main/task`, `br:/main/task@repo@server`. */
 export function branchCopyTexts(branch: Pick<BranchInfo, 'name' | 'comment' | 'repository'>): CopyTexts {

@@ -1,6 +1,6 @@
 import { api } from '../../../api/client';
 import { queryKeys } from '../../../api/queryKeys';
-import { parentDirectory } from '../../../lib/paths';
+import { parentOfLocalPath } from '../../../lib/paths';
 import { toast } from '../../../ui/toast/toastStore';
 import { queryClient } from '../../queryClient';
 import { forgetRecentWorkspace } from '../../settings/useSettings';
@@ -11,7 +11,7 @@ import { useSession } from '../sessionStore';
  * place as soon as it runs inside it (`cm workspace move` can't: it moves a workspace whose folder still exists).
  */
 export async function locateWorkspace(name: string, missingPath: string, open: (path: string) => void): Promise<void> {
-  const directory = await api.system.pickDirectory(`Where is “${name}” now?`, parentDirectory(missingPath));
+  const directory = await api.system.pickDirectory(`Where is “${name}” now?`, parentOfLocalPath(missingPath));
   if (!directory) return;
 
   const root = await api.workspaces.findRoot(directory);

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { useUvcsEvent } from '../api/useUvcsEvent';
-import { MOUSE_BACK, MOUSE_FORWARD, oncePerPress } from './backButtons';
-import { isModalDialogOpen } from './modalDialog';
+import { useUvcsEvent } from '../../api/useUvcsEvent';
+import { MOUSE_BACK, MOUSE_FORWARD, oncePerPress } from '../../lib/backButtons';
+import { isModalDialogOpen } from '../../lib/modalDialog';
 
 /**
  * Runs `goBack` on the mouse's back button (Linux and macOS send it to the page; Windows as an app command too) and on

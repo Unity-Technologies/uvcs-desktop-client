@@ -5,7 +5,7 @@ vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import type { LeftChanges, RestoreResult } from '@shared/domain/switchWithChanges';
 import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
-import { shownToasts, whereTheWindowIs } from '../../testing/operationOutcome';
+import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
 import { discardLeftChanges, restoreLeftChanges } from './leftChangesOperations';
 
 const ws = '/ws';
@@ -34,6 +34,15 @@ describe('restoreLeftChanges', () => {
 
     expect(fakeApi.argsOf('leftChanges.restore')).toEqual([[ws, 12, expect.any(String)]]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Restored 3 changes you left on /main/task', action: 'View' }]);
+  });
+
+  it('refreshes the workspace, its locks, the shelve lists and the left changes, not the repository', async () => {
+    restoreAnswers({ kind: 'restored', count: 3, sourceName: '/main/task' });
+    const refreshed = watchRefreshes(ws);
+
+    await restoreLeftChanges(ws, left(12));
+
+    expect(refreshed()).toEqual(['explorer', 'info', 'leftChanges', 'locks', 'pendingChanges', 'review', 'shelves']);
   });
 
   it('says changes put aside to update were put aside, not left', async () => {
@@ -93,6 +102,15 @@ describe('discardLeftChanges', () => {
 
     expect(confirmTitles()).toEqual(['Discard these shelved changes?']);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Discarded shelve 12' }]);
+  });
+
+  it('refreshes only the left changes and the shelve lists', async () => {
+    fakeApi.answer('leftChanges.discard', () => undefined);
+    const refreshed = watchRefreshes(ws);
+
+    await discardLeftChanges(ws, [left(12)]);
+
+    expect(refreshed()).toEqual(['leftChanges', 'shelves']);
   });
 
   it('discards nothing unless confirmed', async () => {

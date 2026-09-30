@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { create } from 'zustand';
-import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
+import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { useWorkspacePath } from '../workspace/useWorkspace';
 import type { ViewId } from './views';
 
@@ -27,7 +27,7 @@ export function useViewSelection(view: ViewId): [SelectionState, (selection: Sel
 
 /** Selects one row of a view from elsewhere, before going to it: the view opens on that row, scrolled to it. */
 export function selectInView(workspacePath: string, view: ViewId, rowKey: string): void {
-  useViewSelectionStore.getState().set(selectionKey(workspacePath, view), { selected: new Set([rowKey]), anchor: rowKey });
+  useViewSelectionStore.getState().set(selectionKey(workspacePath, view), singleSelection(rowKey));
 }
 
 function selectionKey(workspacePath: string, view: ViewId): string {

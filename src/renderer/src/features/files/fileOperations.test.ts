@@ -7,9 +7,9 @@ vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
 import type { TreeItem } from '@shared/domain/explorer';
 import { queryClient } from '../../app/queryClient';
 import { answerConfirms, answerPrompts, askedDialogs } from '../../testing/fakeDialogs';
-import { shownToasts } from '../../testing/operationOutcome';
+import { shownToasts, watchRefreshes } from '../../testing/operationOutcome';
 import { directoryListingKey } from './directoryListing';
-import { addItems, createItem, deleteItems, renameItem, targetDirectoryFor } from './fileOperations';
+import { addItems, checkoutItems, createItem, deleteItems, renameItem, targetDirectoryFor } from './fileOperations';
 import { useFilesViewStore } from './filesViewStore';
 
 const ws = '/ws';
@@ -18,7 +18,7 @@ const item = (path: string, changes: Partial<TreeItem> = {}): TreeItem =>
 const folder = (path: string, changes: Partial<TreeItem> = {}): TreeItem => item(path, { itemType: 'directory', ...changes });
 
 /** Main does every change it is asked. */
-const WRITES = ['explorer.addRecursive', 'pendingChanges.add', 'system.moveToTrash', 'pendingChanges.remove', 'explorer.move', 'explorer.renamePrivate', 'explorer.create'];
+const WRITES = ['explorer.addRecursive', 'pendingChanges.add', 'pendingChanges.checkout', 'system.moveToTrash', 'pendingChanges.remove', 'explorer.move', 'explorer.renamePrivate', 'explorer.create'];
 
 beforeEach(() => {
   for (const method of WRITES) fakeApi.answer(method, () => undefined);
@@ -32,6 +32,16 @@ describe('adding private items', () => {
       { method: 'explorer.addRecursive', args: [ws, ['assets']] },
       { method: 'pendingChanges.add', args: [ws, ['a.ts', 'assets2/b.ts']] },
     ]);
+  });
+
+  it('refreshes the workspace and its locks, as checking out does, not the repository', async () => {
+    const afterAdd = watchRefreshes(ws);
+    await addItems(ws, [item('a.ts', { isPrivate: true })]);
+    expect(afterAdd()).toEqual(['explorer', 'info', 'locks', 'pendingChanges', 'review']);
+
+    const afterCheckout = watchRefreshes(ws);
+    await checkoutItems(ws, [item('a.ts')]);
+    expect(afterCheckout()).toEqual(['explorer', 'info', 'locks', 'pendingChanges', 'review']);
   });
 });
 

@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import { avatarColumn, commentColumn, dateColumn, numberColumn } from '../../components/historyColumns';
-import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
+import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { SplitPane } from '../../ui/SplitPane';
-import { DataTable, type Column } from '../../ui/table/DataTable';
+import type { Column } from '../../ui/table/column';
+import { DataTable } from '../../ui/table/DataTable';
 import { useChangesets } from '../changesets/useChangesets';
 import { TargetDiff } from './TargetDiff';
 
@@ -48,7 +49,7 @@ function ChangesetByChangeset({ branch, toolbar, focusPath }: { branch: string; 
   const firstId = changesets?.[0]?.id;
 
   useEffect(() => {
-    if (selectedId === null && firstId !== undefined) setSelection({ selected: new Set([String(firstId)]), anchor: String(firstId) });
+    if (selectedId === null && firstId !== undefined) setSelection(singleSelection(String(firstId)));
   }, [selectedId, firstId]);
 
   if (error) return <EmptyState title="Couldn't load the branch changesets" description={error.message} />;

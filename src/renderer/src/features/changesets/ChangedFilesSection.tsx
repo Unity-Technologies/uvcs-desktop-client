@@ -6,8 +6,9 @@ import { ItemPathRow } from '../../components/ItemPathRow';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { moveRovingFocus, ROVING_ITEM } from '../../lib/rovingFocus';
 import { pluralize } from '../../lib/text';
-import { DetailsChangesPane, DetailsEmpty, DetailsSkeleton } from '../../ui/DetailsPanel';
+import { DetailsChangesPane } from '../../ui/DetailsChangesPane';
 import { useDetailsLayoutStore } from '../../ui/detailsLayoutStore';
+import { DetailsEmpty, DetailsSkeleton } from '../../ui/DetailsSection';
 import { HighlightQuery } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { diffEntryKey } from '../diff/DiffEntryList';
@@ -44,8 +45,8 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
   const { visible, query, bar } = useChangeFilter(entries ?? [], diffEntryKey, diffEntryTone);
   const listRef = useRef<HTMLDivElement>(null);
   const workspacePath = useWorkspacePath();
-  // The same menu as in the diff, review marks included.
-  const review = useDiffReview(target, entries ?? NO_ENTRIES);
+  // The same menu as in the diff, review marks included, read once the files are asked for or shown from the cache.
+  const review = useDiffReview(target, entries ?? NO_ENTRIES, requested || entries !== undefined);
   const shown = entries && !collapsed ? entries : undefined;
 
   return (

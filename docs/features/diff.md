@@ -114,7 +114,8 @@ methods that recognize line endings (`crAgainstLf`); a file mixing both can't te
 
 An image's bytes cross IPC as binary (`FileContent.image`, a `Uint8Array` and its type, 40 MB a side at
 most) and are painted from a blob URL that lives while it's shown (`useImageUrl`), never a data URL (35 MB of text for
-a 25 MB PNG, decoded again at every paint).
+a 25 MB PNG, decoded again at every paint). The URL is revoked as the image changes, so what is painted is only ever
+the decode of the image's current URL (`shownDecodeState`): an `<img>` still given the one before fails to load.
 
 ## Images written as text
 

@@ -62,6 +62,15 @@ describe('finishing a task on the server', () => {
     expect(refreshed()).toEqual(['branchExplorer', 'branches', 'changesets', 'history', 'incoming', 'locks']);
   });
 
+  it('refreshes only the reviews besides, when it marks the review reviewed', async () => {
+    fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
+    const refreshed = watchRefreshes(ws);
+
+    await mergeTaskOnServer(ws, request, { ...options, hideBranch: false });
+
+    expect(refreshed()).toEqual(['branchExplorer', 'branches', 'changesets', 'codeReviews', 'history', 'incoming', 'locks']);
+  });
+
   it('stops after the merge when the destination moved meanwhile, for the second merge to finish it', async () => {
     fakeApi.answer('merge.run', () => ({ changesetId: 42, destinationMoved: true }));
     expect(await mergeTaskOnServer(ws, request, options)).toEqual({ changesetId: 42, destinationMoved: true });

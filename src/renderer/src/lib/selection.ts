@@ -6,6 +6,11 @@ export interface SelectionState {
 
 export const EMPTY_SELECTION: SelectionState = { selected: new Set(), anchor: null };
 
+/** Only this row selected, and ranges start from it. */
+export function singleSelection(key: string): SelectionState {
+  return { selected: new Set([key]), anchor: key };
+}
+
 interface ClickModifiers {
   shift: boolean;
   toggle: boolean;
@@ -37,7 +42,7 @@ export function selectOnClick(
     return { selected, anchor: key };
   }
 
-  return { selected: new Set([key]), anchor: key };
+  return singleSelection(key);
 }
 
 /**
@@ -60,7 +65,7 @@ export function selectOnArrow(
   if (extend && state.anchor !== null) {
     return { state: { selected: new Set(range(orderedKeys, state.anchor, next)), anchor: state.anchor }, focused: next };
   }
-  return { state: { selected: new Set([next]), anchor: next }, focused: next };
+  return { state: singleSelection(next), focused: next };
 }
 
 function range(orderedKeys: readonly string[], from: string, to: string): string[] {

@@ -1,3 +1,5 @@
+import { isTextEntry } from './textEntry';
+
 /**
  * The element of a view or page that the keyboard works on first: its main list, tree or graph. Such elements carry
  * `MAIN_FOCUS` (spread it on them); the workspace screen focuses the first visible one after navigating, after a
@@ -27,6 +29,6 @@ export function isKeyboardTaken(): boolean {
   let active = document.activeElement;
   // A text field inside a shadow root (the diff's editor) shows as its host.
   while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
-  if (active instanceof HTMLElement && (active.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(active.tagName))) return true;
+  if (isTextEntry(active)) return true;
   return document.querySelector('[role="dialog"], [role="alertdialog"], [role="menu"], [data-radix-popper-content-wrapper]') !== null;
 }

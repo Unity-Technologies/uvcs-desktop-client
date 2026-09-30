@@ -1,4 +1,4 @@
-import { toast } from '../ui/toast/toastStore';
+import { toast } from './toast/toastStore';
 
 /** Copies text and confirms it, e.g. `copyToClipboard('/main/task', 'Branch name')`. */
 export function copyToClipboard(text: string, what: string): void {

@@ -6,7 +6,7 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation, runRead } from '../../app/operations/runOperation';
 import { queryClient } from '../../app/queryClient';
 import { saveSettings } from '../../app/settings/useSettings';
-import { isAffectedByCheckinOrUpdate, isAffectedByShelving } from '../../app/refresh/refreshScopes';
+import { isAffectedByCheckinOrUpdate, isAffectedByPendingChangeEdit, isAffectedByShelving } from '../../app/refresh/refreshScopes';
 import { firstLine, pluralize } from '../../lib/text';
 import { prompt } from '../../ui/dialog/prompt';
 import { updateToIncoming } from '../incoming/updateOperations';
@@ -124,7 +124,7 @@ export async function shelveChanges(workspacePath: string, changes: PendingChang
 }
 
 export function undoUnchangedCheckouts(workspacePath: string): Promise<void | undefined> {
-  return runAction(workspacePath, "Couldn't undo the unchanged checkouts", () => api.pendingChanges.undoUnchanged(workspacePath));
+  return runAction(workspacePath, "Couldn't undo the unchanged checkouts", () => api.pendingChanges.undoUnchanged(workspacePath), isAffectedByPendingChangeEdit);
 }
 
 /** Puts the comment first among the recent ones the check-in panel offers, once. A store that can't save it says so. */

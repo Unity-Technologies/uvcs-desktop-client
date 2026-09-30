@@ -1,14 +1,14 @@
 import { useEffect } from 'react';
 import { windowShortcutMayRun } from '../../lib/modalDialog';
 import { matchesShortcut } from '../../lib/shortcuts';
+import { isTextEntry } from '../../lib/textEntry';
 import { useCommandPalette } from './commandPaletteStore';
 import { allCommands } from './commandStore';
 import { belongsToField, copiesSelectedText } from './typingKeys';
 
 /** The element typed into, also inside a shadow root (the diff's editor), where `event.target` is its host. */
 function isTyping(event: KeyboardEvent): boolean {
-  const target = event.composedPath()[0];
-  return target instanceof HTMLElement && (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName));
+  return isTextEntry(event.composedPath()[0]);
 }
 
 /**

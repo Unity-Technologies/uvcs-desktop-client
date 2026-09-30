@@ -1,9 +1,11 @@
 import type { RevisionType, TreeItem } from '@shared/domain/explorer';
 import { api } from '../../api/client';
 import { runAction, runRead } from '../../app/operations/runOperation';
+import { isAffectedByPendingChangeEdit } from '../../app/refresh/refreshScopes';
+import { fileNameOf } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
-import { absolutePath, deletePrivateFiles, fileName } from '../pendingChanges/pendingChangeOperations';
+import { absolutePath, deletePrivateFiles } from '../pendingChanges/pendingChangeOperations';
 import { listedItems } from './directoryListing';
 import { useFilesViewStore } from './filesViewStore';
 import { parentOf } from './fileTreeRows';
@@ -25,12 +27,13 @@ export function addItems(workspacePath: string, items: TreeItem[]): Promise<unkn
   return runAction(workspacePath, "Couldn't add the items", async () => {
     if (directories.length > 0) await api.explorer.addRecursive(workspacePath, directories);
     if (files.length > 0) await api.pendingChanges.add(workspacePath, files);
-  });
+  }, isAffectedByPendingChangeEdit);
 }
 
 export function checkoutItems(workspacePath: string, items: TreeItem[]): Promise<unknown> {
   return runAction(workspacePath, "Couldn't check out the items", () =>
     api.pendingChanges.checkout(workspacePath, items.map((item) => item.path)),
+    isAffectedByPendingChangeEdit,
   );
 }
 
@@ -49,7 +52,7 @@ export async function deleteItems(workspacePath: string, items: TreeItem[]): Pro
   });
   if (!confirmed) return;
 
-  await runAction(workspacePath, "Couldn't delete the items", () => api.pendingChanges.remove(workspacePath, controlled.map((item) => item.path)));
+  await runAction(workspacePath, "Couldn't delete the items", () => api.pendingChanges.remove(workspacePath, controlled.map((item) => item.path)), isAffectedByPendingChangeEdit);
 }
 
 export async function renameItem(workspacePath: string, item: TreeItem): Promise<void> {
@@ -86,7 +89,7 @@ export async function createItem(workspacePath: string, directory: string, kind:
   if (!name) return;
 
   const path = directory ? `${directory}/${name}` : name;
-  await runAction(workspacePath, `Couldn't create ${fileName(path)}`, async () => {
+  await runAction(workspacePath, `Couldn't create ${fileNameOf(path)}`, async () => {
     await api.explorer.create(workspacePath, path, kind);
     useFilesViewStore.getState().requestReveal(path);
   });

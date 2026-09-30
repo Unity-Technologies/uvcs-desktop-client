@@ -1,5 +1,6 @@
 import type { MergeTool, MergeToolOutcome } from '@shared/domain/mergeTools';
 import { api } from '../../../api/client';
+import { fileNameOf } from '../../../lib/text';
 import { toast } from '../../../ui/toast/toastStore';
 import type { MergeLabels } from '../mergeDescription';
 import type { FileConflictDecision } from '../resolve/fileConflictDecision';
@@ -33,7 +34,7 @@ export async function resolveInMergeTool(
   quiet = false,
 ): Promise<MergeToolSession> {
   const sessionId = crypto.randomUUID();
-  const fileName = state.file.path.split('/').pop()!;
+  const fileName = fileNameOf(state.file.path);
   onOpen({ sessionId, toolName: tool.name, canBringToFront: tool.canBringToFront });
   let outcome: MergeToolOutcome;
   try {

@@ -13,7 +13,7 @@ export function pushBranch(workspacePath: string, request: ReplicationRequest): 
     workspacePath,
     run: (operationId) => api.sync.push(workspacePath, request, operationId),
     affects: () => false,
-    successMessage: (summary) => replicationMessage('push', request, summary),
+    success: (summary) => ({ title: replicationMessage('push', request, summary) }),
   });
 }
 
@@ -23,7 +23,7 @@ export function pullBranch(workspacePath: string, request: ReplicationRequest): 
     title: `Pulling ${request.branch} from ${request.from}`,
     workspacePath,
     run: (operationId) => api.sync.pull(workspacePath, request, operationId),
-    successMessage: (summary) => replicationMessage('pull', request, summary),
+    success: (summary) => ({ title: replicationMessage('pull', request, summary) }),
   });
 }
 
@@ -32,6 +32,6 @@ export function syncWithGit(workspacePath: string, request: GitSyncRequest): Pro
     title: `Syncing with ${request.url}`,
     workspacePath,
     run: (operationId) => api.sync.syncWithGit(workspacePath, request, operationId),
-    successMessage: () => `${request.repository} is in sync with ${request.url}`,
+    success: () => ({ title: `${request.repository} is in sync with ${request.url}` }),
   });
 }

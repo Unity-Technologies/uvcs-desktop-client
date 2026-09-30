@@ -5,6 +5,7 @@ import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { Label } from '@shared/domain/label';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { Shelve } from '@shared/domain/shelve';
+import { typedChangesetNumber } from '../../lib/changesetNumber';
 import type { FuzzyIndex } from '../../lib/fuzzyIndex';
 import { matchesAllWords } from '../../lib/matchesAllWords';
 import {
@@ -26,16 +27,9 @@ export const MAX_PER_SECTION = 50;
 const MAX_SERVER_EXTRAS = 3;
 /** `like` patterns drop each word's first letter (`caseTolerantPattern`): two letters would match nearly everything. */
 const MIN_SERVER_SEARCH_LENGTH = 3;
-const CHANGESET_NUMBER = /^(?:cs:)?(\d+)$/i;
-
-/** The changeset number typed (`1234` or `cs:1234`), which opens that changeset whether or not it is recent. */
-export function changesetNumberIn(term: string): string | undefined {
-  return CHANGESET_NUMBER.exec(term)?.[1];
-}
-
 /** Whether a (settled) term is worth asking the server about: long enough, and not a changeset number. */
 export function searchesServerFor(serverTerm: string): boolean {
-  return serverTerm.length >= MIN_SERVER_SEARCH_LENGTH && !CHANGESET_NUMBER.test(serverTerm);
+  return serverTerm.length >= MIN_SERVER_SEARCH_LENGTH && typedChangesetNumber(serverTerm) === undefined;
 }
 
 /** Whether the server found something a fully cached list lacks: then that list is out of date. */
@@ -148,13 +142,14 @@ function byRecency(branches: readonly Branch[], currentBranch: string | undefine
 
 function searchGroups({ context, lists, server, changesetSearch }: PaletteGroupsInput): SearchGroup[] {
   const { term } = context;
-  const changesetNumber = changesetNumberIn(term);
+  // A changeset typed (`1234` or `cs:1234`) opens it, whether or not it is recent.
+  const changesetNumber = typedChangesetNumber(term);
   const withServerMatches = <T,>(local: SearchResult[], found: readonly T[] | undefined, textOf: (item: T) => string, toResult: (item: T) => SearchResult) =>
     addServerMatches(local, server.term === term ? found : undefined, term, textOf, toResult);
 
   const recentChangesetResults = firstOnes(
     (lists.changesets ?? []).filter(
-      (changeset) => String(changeset.id) !== changesetNumber && matchesAllWords(`cs:${changeset.id} ${changeset.comment}`, term),
+      (changeset) => changeset.id !== changesetNumber && matchesAllWords(`cs:${changeset.id} ${changeset.comment}`, term),
     ),
   ).map((changeset) => changesetResult(changeset, context));
 
@@ -184,7 +179,7 @@ function searchGroups({ context, lists, server, changesetSearch }: PaletteGroups
       section: 'changesets',
       heading: 'Changesets',
       results: [
-        ...(changesetNumber ? [exactChangeset(Number(changesetNumber), lists.changesets, context)] : []),
+        ...(changesetNumber !== undefined ? [exactChangeset(changesetNumber, lists.changesets, context)] : []),
         ...recentChangesetResults,
         ...searchAllChangesets(term, changesetSearch, recentChangesetResults, context),
       ],
@@ -250,7 +245,7 @@ function exactChangeset(id: number, recent: readonly Changeset[] | undefined, co
 
 /** The row offering to search every changeset's comment, then telling how that search goes, then what it found. */
 function searchAllChangesets(term: string, search: ChangesetSearch, recentResults: SearchResult[], context: ResultContext): SearchResult[] {
-  if (changesetNumberIn(term) || term.length < MIN_SERVER_SEARCH_LENGTH) return [];
+  if (typedChangesetNumber(term) !== undefined || term.length < MIN_SERVER_SEARCH_LENGTH) return [];
   // Explicit empty matches: these rows describe the search, so the query is not highlighted in them.
   const action = { id: 'changeset:searchAll', keepOpen: true, pinned: true, labelMatches: [], detailMatches: [] };
   if (search.term !== term) {

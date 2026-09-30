@@ -10,14 +10,6 @@ import type { Property } from './PropertyList';
 import { RelativeTime } from './RelativeTime';
 import styles from './DetailsPanel.module.css';
 
-// The parts a details panel is made of, where every view imports them from.
-export { DetailsBadge } from './DetailsBadge';
-export { DetailsChangesPane } from './DetailsChangesPane';
-export { DetailsCopyable } from './DetailsCopyable';
-export { DetailsLink } from './DetailsLink';
-export { DetailsPanelSkeleton } from './DetailsPanelSkeleton';
-export { DetailsEmpty, DetailsSection, DetailsSkeleton } from './DetailsSection';
-
 interface DetailsPanelProps {
   icon: ReactNode;
   /** What the object is, e.g. "Branch" or "Changeset". */

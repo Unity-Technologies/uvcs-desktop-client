@@ -1,9 +1,11 @@
 import {
   AppWindow,
   ArchiveRestore,
+  ArrowDownToLine,
   ArrowLeftToLine,
   ArrowRightLeft,
   ArrowRightToLine,
+  ArrowUpFromLine,
   Binary,
   Cherry,
   ClipboardPaste,
@@ -57,7 +59,7 @@ import {
 import type { Action, Icon, MenuEntry, Submenu } from '../lib/actions';
 import type { GroupedEntry, MenuGroup } from '../lib/menuGroups';
 import { OPEN_FOLDER_LABEL, REVEAL_LABEL } from '../lib/platform';
-import { MERGE_INTO_WORKSPACE, serverMergeLabel } from '../features/branches/mergeMenuLabels';
+import { MERGE_INTO_WORKSPACE, serverMergeLabel } from './mergeMenuLabels';
 
 /** A concept of the menus: the group it goes in, its icon, and its words where they are the same for every object. */
 export interface MenuWord {
@@ -101,6 +103,9 @@ export const MENU_WORDS = {
   checkout: word('act', PenLine, 'Check out'),
   status: word('act', CircleDot, 'Set status'),
   assign: word('act', UserPlus, 'Assign reviewer…'),
+  // Sync: the words name the other repository ("Push to game@cloud").
+  push: word('act', ArrowUpFromLine),
+  pull: word('act', ArrowDownToLine),
 
   // Merging it somewhere.
   merge: word('merge', GitMerge, MERGE_INTO_WORKSPACE),

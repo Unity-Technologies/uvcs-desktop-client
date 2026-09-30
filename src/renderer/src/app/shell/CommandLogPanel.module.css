@@ -109,6 +109,10 @@
   white-space: pre-wrap;
 }
 
+.ending {
+  color: var(--text-tertiary);
+}
+
 .empty {
   display: flex;
   flex-direction: column;

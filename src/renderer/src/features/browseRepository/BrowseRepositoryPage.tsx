@@ -4,7 +4,7 @@ import type { PageProps } from '../../app/navigation/pages';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { NoSelection } from '../../components/NoSelection';
-import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
+import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { HighlightQuery } from '../../ui/Highlight';
 import { FilterBar } from '../../ui/FilterBar';
@@ -38,7 +38,7 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
   const [revealPath, setRevealPath] = useState<string | null>(null);
   const selectFolder = (path: string): void => {
-    setSelection({ selected: new Set([path]), anchor: path });
+    setSelection(singleSelection(path));
     setRevealPath(path);
   };
 
