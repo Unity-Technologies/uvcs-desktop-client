@@ -75,7 +75,7 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Four links don't fit the card's width in one row: they wrap, centered, rather than spill over its edges. */
+/* Five links don't fit the card's width in one row: they wrap, centered, rather than spill over its edges. */
 .links {
   display: flex;
   flex-wrap: wrap;
