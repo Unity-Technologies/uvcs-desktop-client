@@ -40,24 +40,27 @@ export async function checkSetup(cm: CmClient): Promise<SetupProblem | null> {
     await cm.execute(CHECK_ARGS, { signal: controller.signal, killSignal: 'SIGKILL', onOutputLine });
     return null;
   } catch (error) {
-    const stopped = controller.signal.aborted;
-    if (!(error instanceof CmError) && !stopped) throw error;
-
-    // A stopped prompt pads its lines with long runs of spaces.
-    const output =
-      error instanceof CmError
-        ? error.command.output
-        : lines
-            .map((line) => line.trim())
-            .filter(Boolean)
-            .join('\n');
-    return {
-      kind: classifySetupCheck(output),
-      server: signInServer(output),
-      commandLine: `cm ${CHECK_ARGS.join(' ')}`,
-      output: output || `No answer after ${CHECK_TIMEOUT_MS / 1000} seconds.`,
-    };
+    if (error instanceof CmError) return setupProblem(error.command.output);
+    if (controller.signal.aborted) return setupProblem(stoppedOutput(lines));
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function setupProblem(output: string): SetupProblem {
+  return {
+    kind: classifySetupCheck(output),
+    server: signInServer(output),
+    commandLine: `cm ${CHECK_ARGS.join(' ')}`,
+    output: output || `No answer after ${CHECK_TIMEOUT_MS / 1000} seconds.`,
+  };
+}
+
+/** What a check stopped at a prompt or by the timeout printed; a stopped prompt pads its lines with long runs of spaces. */
+function stoppedOutput(lines: readonly string[]): string {
+  return lines
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join('\n');
 }

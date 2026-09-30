@@ -77,13 +77,14 @@ describe('CmClient routing', () => {
     expect(shellCommands[0]?.cwd).toBe(homedir());
   });
 
-  it('runs a query as a process of its own while no session of the directory is ready yet', async () => {
-    const { cm, processes, shellCommands } = fakeClient({ warm: false });
+  it('runs a query as a process of its own while no session of the directory is ready yet, and warms them up', async () => {
+    const { cm, processes, shellCommands, pools } = fakeClient({ warm: false });
 
     await cm.query(['whoami'], { cwd: WORKSPACE });
 
     expect(shellCommands).toEqual([]);
     expect(processes).toMatchObject([{ cmPath: CM_PATH, args: ['whoami'], options: { cwd: WORKSPACE } }]);
+    expect(pools[0]?.warmed).toEqual([WORKSPACE]);
   });
 
   it.each([
@@ -266,6 +267,47 @@ describe('CmClient failures', () => {
     expect(error.command.commandLine).toBe(`cm checkout ${paths.join(' ')}`);
     expect(logged[0]?.commandLine.length).toBeLessThan(error.command.commandLine.length);
     expect(logged[0]?.commandLine.startsWith(error.command.commandLine.slice(0, MAX_LOGGED_COMMAND_LINE))).toBe(true);
+  });
+});
+
+describe('CmClient commands that end without an exit code', () => {
+  it('logs a command that could not run, and fails with its error', async () => {
+    const notFound = new Error('spawn cm ENOENT');
+    const { cm, logged } = fakeClient({
+      answer: () => {
+        throw notFound;
+      },
+    });
+
+    await expect(cm.execute(['version'])).rejects.toBe(notFound);
+
+    expect(logged).toMatchObject([{ commandLine: 'cm version', exitCode: -1, viaShell: false, output: 'spawn cm ENOENT' }]);
+  });
+
+  it('leaves out of the log a command its caller cancelled: no failure to point at', async () => {
+    const cancelled = new AbortController();
+    const { cm, logged } = fakeClient({
+      answer: () => {
+        cancelled.abort();
+        throw new Error('The operation was aborted');
+      },
+    });
+
+    await expect(cm.execute(['update'], { signal: cancelled.signal })).rejects.toThrow('aborted');
+
+    expect(logged).toEqual([]);
+  });
+
+  it('logs a pooled command its session stopped', async () => {
+    const { cm, logged } = fakeClient({
+      answer: () => {
+        throw new Error('cm is waiting for input ("Password:").');
+      },
+    });
+
+    await expect(cm.query(['find', 'label', '--xml'])).rejects.toThrow('waiting for input');
+
+    expect(logged).toMatchObject([{ exitCode: -1, viaShell: true, output: 'cm is waiting for input ("Password:").' }]);
   });
 });
 

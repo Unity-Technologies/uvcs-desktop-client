@@ -107,7 +107,9 @@ describe('CmShellPool', () => {
     void pool.run('/wk', ['status']);
     expect(FakeSession.created).toHaveLength(2);
   });
-  it('is not ready in a directory until one of its sessions answered, and starts them when asked', () => {
+  it('is not ready in a directory until one of its sessions answered', () => {
+    expect(pool.isReady('/wk')).toBe(false);
+    pool.warmUp('/wk');
     expect(pool.isReady('/wk')).toBe(false);
     expect(FakeSession.created).toHaveLength(2);
 
@@ -131,13 +133,14 @@ describe('CmShellPool', () => {
 
   it('is not ready again once an idle directory let its sessions go, until the new ones answer', async () => {
     vi.useFakeTimers();
-    pool.isReady('/wk');
+    pool.warmUp('/wk');
     FakeSession.created.forEach((session) => session.answerFirstCommand());
     await vi.advanceTimersByTimeAsync(0);
     expect(pool.isReady('/wk')).toBe(true);
 
     await vi.advanceTimersByTimeAsync(IDLE_DIRECTORY_MS);
     expect(FakeSession.created.every((session) => session.disposed)).toBe(true);
+    pool.warmUp('/wk');
     expect(pool.isReady('/wk')).toBe(false);
     expect(FakeSession.created).toHaveLength(4);
   });

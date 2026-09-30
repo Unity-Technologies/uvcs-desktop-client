@@ -4,7 +4,7 @@ A desktop client for Unity Version Control. The only backend is the `cm` CLI.
 
 ```
 src/
-  shared/     Types shared by both processes: domain model, API contract, events. No runtime deps.
+  shared/     Types shared by both processes: domain model, API contract, events. No runtime deps (a test checks it).
   main/       Electron main process. Talks to `cm`, the file system and the OS.
   preload/    Exposes `window.uvcs` (invoke + events) to the renderer. Nothing else.
   renderer/   React UI.
@@ -43,7 +43,8 @@ you touch:
      So is, on Windows, a command that prints text (see Parsing).
    - A pooled command may take two minutes, a workspace write half an hour (a few paths can still be a whole tree).
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
-   (see Renderer: Command log).
+   (see Renderer: Command log); one that ended without an exit code (stopped on a prompt, `cm` not found) is logged
+   with -1, and one its caller cancelled is not logged: it's no failure.
 
 To add a capability: its types in `shared/domain`, the method in `shared/api/<area>.ts` (part of `UvcsApi`), the
 implementation in `main/services/<area>Service.ts` (wired in `createServices`), `cm` argument builders and parsers as
@@ -112,7 +113,8 @@ and many people use the same server. Every `cm` command other than local reads (
   changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`); merges and labels come either way.
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.
 - A `cm shell` command ends at the `CommandResult <code>` line that ends its output, with nothing more in the pipe
-  (`CmShellSession`): comments can quote such lines, and a misread end shifts every later command by one output.
+  (`CmShellSession`, `resultLineAtEnd`): comments can quote such lines, and a misread end shifts every later command by
+  one output.
 - Text crosses as UTF-8 on every OS: `cm shell --encoding=utf-8` reads commands so (Windows would read them in the
   console's code page), and `find` and `--xml` output is asked for in UTF-8 (`withUtf8Output`). Other output of a
   process comes in the console's code page on Windows (437, 850: other scripts become `?`), while a `cm shell` prints

@@ -1,5 +1,6 @@
-const FIELD_SEPARATOR = '\u001f';
-const RECORD_SEPARATOR = '\u001e';
+/** Control characters, which never appear in names, paths or comments: records split without ambiguity. */
+export const FIELD_SEPARATOR = '\u001f';
+export const RECORD_SEPARATOR = '\u001e';
 
 /** Builds a `--format` value whose output `parseRecords` can split unambiguously. */
 export function recordFormat(placeholders: string[]): string {
