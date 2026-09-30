@@ -1,7 +1,7 @@
 import { parseDiffFromFile } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
 import { listChangeBlocks, listChangeRegions } from './changeBlocks';
-import { adjacentChange, changePositionLabel, changesAbove, currentAfterChange, modifiedLineAt } from './changeNavigation';
+import { adjacentChange, arrivalChange, changePositionLabel, changesAbove, currentAfterChange, modifiedLineAt, plannedMove } from './changeNavigation';
 
 const lines = (...items: string[]) => items.map((item) => `${item}\n`).join('');
 const blocksOf = (original: string, modified: string) => listChangeBlocks(parseDiffFromFile({ name: 'a.ts', contents: original }, { name: 'a.ts', contents: modified }));
@@ -29,6 +29,27 @@ describe('adjacentChange', () => {
 
   it('finds nothing in a diff without changes', () => {
     expect(adjacentChange({ count: 0, current: null, above: 0 }, 1)).toBeNull();
+  });
+});
+
+describe('plannedMove', () => {
+  it('moves to the next or previous change while there is one', () => {
+    expect(plannedMove({ count: 3, current: 1, above: 0 }, 1, true)).toEqual({ to: 'change', index: 2 });
+    expect(plannedMove({ count: 3, current: null, above: 2 }, -1, true)).toEqual({ to: 'change', index: 1 });
+  });
+
+  it('goes on to the file beside the diff past its last or first change, or nowhere without one', () => {
+    expect(plannedMove({ count: 3, current: 2, above: 0 }, 1, true)).toEqual({ to: 'file' });
+    expect(plannedMove({ count: 3, current: 0, above: 0 }, -1, false)).toBeNull();
+    expect(plannedMove({ count: 0, current: null, above: 0 }, 1, true)).toEqual({ to: 'file' });
+  });
+});
+
+describe('arrivalChange', () => {
+  it('opens a diff stepped to at its first change going down and its last going up; one without changes at none', () => {
+    expect(arrivalChange('first', 4)).toBe(0);
+    expect(arrivalChange('last', 4)).toBe(3);
+    expect(arrivalChange('last', 0)).toBeNull();
   });
 });
 
