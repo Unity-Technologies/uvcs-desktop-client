@@ -1,3 +1,5 @@
+import { queryWords } from './matchesAllWords';
+
 /** A `[start, end)` slice of a text to highlight. */
 export type TextRange = readonly [start: number, end: number];
 
@@ -5,7 +7,7 @@ export type TextRange = readonly [start: number, end: number];
 export function wordMatchRanges(text: string, query: string): TextRange[] {
   const haystack = text.toLowerCase();
   const ranges: [number, number][] = [];
-  for (const word of query.toLowerCase().split(/\s+/).filter(Boolean)) {
+  for (const word of queryWords(query)) {
     for (let found = haystack.indexOf(word); found !== -1; found = haystack.indexOf(word, found + word.length)) {
       ranges.push([found, found + word.length]);
     }

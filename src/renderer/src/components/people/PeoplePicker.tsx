@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { EVERYONE, isEveryone, MAX_PICKED_PEOPLE, MINE, offeredPeople, onlyPerson, togglePerson, withMine, type PeoplePick } from '../../lib/peopleFilter';
+import { pluralize } from '../../lib/text';
 import { displayName, userFilterTexts } from '../../lib/userName';
 import { Avatar } from '../../ui/Avatar';
 import { FilterChecklist } from '../../ui/FilterChecklist';
@@ -100,5 +101,5 @@ export function PeoplePicker({ value, onChange, people, me }: PeoplePickerProps)
 
 function pickedCount(pick: PeoplePick): string {
   const count = pick.others.length + (pick.mine ? 1 : 0);
-  return count === 1 ? '1 person picked' : `${count} people picked`;
+  return `${pluralize(count, 'person', 'people')} picked`;
 }

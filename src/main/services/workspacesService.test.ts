@@ -59,20 +59,19 @@ describe('workspace info', () => {
     expect(lines().map((line) => line.split(' ')[0])).toEqual(['status', 'getworkspacefrompath']);
   });
 
-  it('renames the workspace by its current name, and reads its name again afterwards', async () => {
+  it('renames the workspace by its current name, read alone, and reads its name again afterwards', async () => {
     const { service, lines } = workspaces({ status: STATUS_HEADER, ...WORKSPACE_NAMES, 'workspace rename': '' });
 
     await service.rename(WORKSPACE, 'game-2');
     await service.info(WORKSPACE);
 
     expect(lines().map((line) => line.split(' ').slice(0, 2).join(' '))).toEqual([
-      'status --header',
       `getworkspacefrompath ${WORKSPACE}`,
       'workspace rename',
       'status --header',
       `getworkspacefrompath ${WORKSPACE}`,
     ]);
-    expect(lines()[2]).toBe('workspace rename game game-2');
+    expect(lines()[1]).toBe('workspace rename game game-2');
   });
 });
 

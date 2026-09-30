@@ -9,7 +9,7 @@ vi.mock('electron', async () => (await import('./testing/fakeElectron')).fakeEle
 vi.mock('./savedWindowBounds', () => ({
   loadWindowBounds: vi.fn(() => ({ bounds: null, maximized: false })),
   cascadedWindowBounds: () => ({ bounds: null, maximized: false }),
-  saveWindowBounds: () => {},
+  keepWindowBoundsSaved: () => {},
 }));
 
 /** The window `createMainWindow` made. */

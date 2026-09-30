@@ -1,13 +1,15 @@
-import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MAIN_BRANCH_GUID } from '@shared/domain/branch';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
-import { findXml } from '../cm/testing/cmOutput';
-import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { findXml, formatOutput } from '../cm/testing/cmOutput';
+import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { SettingsStore } from '../settings/SettingsStore';
-import { createBranchesService, startingPointOption } from './branchesService';
+import { cmHeaderReaders, WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
+import { createBranchesService } from './branchesService';
+import { readingFileOption } from './testing/readingFileOption';
 import { serviceContext } from './testing/serviceContext';
 
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
@@ -110,8 +112,8 @@ describe('one branch by name', () => {
     const branch = await service.get(WORKSPACE, '/main/fix/task1');
 
     expect(lines()).toEqual([
-      "find branch where name = 'task1' and hidden = 'false' --xml --nototal",
-      "find branch where name = 'task1' and hidden = 'true' --xml --nototal",
+      "find branch where name = 'task1' and hidden = 'false' order by date desc --xml --nototal",
+      "find branch where name = 'task1' and hidden = 'true' order by date desc --xml --nototal",
     ]);
     expect(branch).toMatchObject({ id: 40, name: '/main/fix/task1' });
   });
@@ -139,35 +141,24 @@ describe('one branch by name', () => {
 
 describe('branch writes', () => {
   it('creates a branch at a changeset with its comment in a file deleted afterwards', async () => {
-    const seen = { commentsFile: '', comment: '' };
-    const { service, commands } = branches({
-      'branch create': ({ args }) => {
-        seen.commentsFile = optionValue(args, '-commentsfile=')!;
-        seen.comment = readFileSync(seen.commentsFile, 'utf8');
-        return '';
-      },
-    });
+    const { seen, answer } = readingFileOption('-commentsfile=');
+    const { service, commands } = branches({ 'branch create': answer });
 
     await service.create(WORKSPACE, { name: '/main/task3', startingPoint: 'cs:12', comment: 'Line one\nLine two' });
 
     expect(commands).toMatchObject([
-      { via: 'query', args: ['branch', 'create', '/main/task3', '--changeset=cs:12', `-commentsfile=${seen.commentsFile}`], options: { cwd: WORKSPACE } },
+      { via: 'query', args: ['branch', 'create', '/main/task3', '--changeset=cs:12', `-commentsfile=${seen.file}`], options: { cwd: WORKSPACE } },
     ]);
-    expect(seen.comment).toBe('Line one\nLine two');
-    expect(existsSync(seen.commentsFile)).toBe(false);
+    expect(seen.content).toBe('Line one\nLine two');
+    expect(existsSync(seen.file)).toBe(false);
   });
 
   it('deletes the comment file when the branch cannot be created', async () => {
-    let commentsFile = '';
-    const { service } = branches({
-      'branch create': ({ args }) => {
-        commentsFile = optionValue(args, '-commentsfile=')!;
-        return cmFails('Error: The branch /main/task3 already exists.');
-      },
-    });
+    const { seen, answer } = readingFileOption('-commentsfile=', cmFails('Error: The branch /main/task3 already exists.'));
+    const { service } = branches({ 'branch create': answer });
 
     await expect(service.create(WORKSPACE, { name: '/main/task3', comment: '' })).rejects.toThrow('already exists');
-    expect(existsSync(commentsFile)).toBe(false);
+    expect(existsSync(seen.file)).toBe(false);
   });
 
   it('renames, deletes, hides and unhides with one command for all the branches', async () => {
@@ -192,10 +183,11 @@ describe('recent branches', () => {
   const branchGuid = (n: number): string => `9b8e2f7a-58f3-4c43-9d83-3c2f1f5c000${n}`;
 
   function recentBranches() {
-    const fake = fakeCmClient({ [`getworkspacefrompath ${WORKSPACE} --format={guid}`]: `${WORKSPACE_GUID}\n` });
+    const fake = fakeCmClient({ getworkspacefrompath: formatOutput(['game', WORKSPACE_GUID]) });
     const settings = new SettingsStore(join(mkdtempSync(join(tmpdir(), 'uvcs-settings-')), 'settings.json'));
-    const service = createBranchesService(serviceContext(fake.cm, { settings }), { branchNames: new BranchNamesCache(async () => []) });
-    return { ...fake, settings, service };
+    const headers = new WorkspaceHeaders(cmHeaderReaders(fake.cm));
+    const service = createBranchesService(serviceContext(fake.cm, { settings, headers }), { branchNames: new BranchNamesCache(async () => []) });
+    return { ...fake, settings, headers, service };
   }
 
   it("keeps each switch in the app's settings, by workspace GUID, newest first", async () => {
@@ -208,7 +200,17 @@ describe('recent branches', () => {
     expect(await service.recent(WORKSPACE)).toEqual([branchGuid(2), branchGuid(1)]);
     expect(settings.get().recentBranchesByWorkspace).toEqual({ [WORKSPACE_GUID]: [branchGuid(2), branchGuid(1)] });
     // The workspace's GUID is a local read: no server round trip.
-    expect(new Set(commands.map((command) => command.line))).toEqual(new Set([`getworkspacefrompath ${WORKSPACE} --format={guid}`]));
+    expect(new Set(commands.map((command) => command.line.split(' ')[0]))).toEqual(new Set(['getworkspacefrompath']));
+  });
+
+  it("takes the workspace's GUID from its names already read for the workspace info, asking cm nothing more", async () => {
+    const { service, headers, commands } = recentBranches();
+    await headers.names(WORKSPACE);
+
+    await service.recent(WORKSPACE);
+    await service.rememberRecent(WORKSPACE, branchGuid(1));
+
+    expect(commands).toHaveLength(1);
   });
 
   it('keeps five, never /main', async () => {
@@ -217,17 +219,5 @@ describe('recent branches', () => {
     await service.rememberRecent(WORKSPACE, MAIN_BRANCH_GUID);
 
     expect(await service.recent(WORKSPACE)).toEqual([6, 5, 4, 3, 2].map(branchGuid));
-  });
-});
-
-describe('startingPointOption', () => {
-  it('starts a branch at a changeset, a label, or the head of its parent', () => {
-    expect(startingPointOption('cs:12')).toEqual(['--changeset=cs:12']);
-    expect(startingPointOption('lb:v1.0')).toEqual(['--label=lb:v1.0']);
-    expect(startingPointOption(undefined)).toEqual([]);
-  });
-
-  it('refuses any other starting point', () => {
-    expect(() => startingPointOption('sh:3')).toThrow('A branch can only start at a changeset or a label');
   });
 });

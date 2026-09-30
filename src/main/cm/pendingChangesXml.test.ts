@@ -1,16 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { countCharactersRead } from '@shared/testing/countCharactersRead';
 import { parsePendingChanges } from './pendingChangesXml';
-
-function change(type: string, path: string, extra = ''): string {
-  return `<Change><Type>${type}</Type><Path>${path}</Path><OldPath />${extra}<MergesInfo /><SimilarityPerUnit>0</SimilarityPerUnit><Size>3</Size><RevisionType>enTextFile</RevisionType><LastModified>2026-09-25T08:26:09+02:00</LastModified></Change>`;
-}
+import { change } from './testing/cmOutput';
 
 const header = '<?xml version="1.0" encoding="utf-8"?><StatusOutput><WorkspaceStatus><Status><Changeset>7</Changeset></Status></WorkspaceStatus>';
 
 describe('parsePendingChanges', () => {
   it('reads plain status output and merges entries of the same item', () => {
-    const xml = `${header}<Changes>${change('CH', 'src/b.ts')}${change('MV', 'src/b.ts', '').replace('<OldPath />', '<OldPath>src/a.ts</OldPath>')}${change('PR', 'new.txt')}</Changes></StatusOutput>`;
+    const xml = `${header}<Changes>${change('CH', 'src/b.ts')}${change('MV', 'src/b.ts', { oldPath: 'src/a.ts' })}${change('PR', 'new.txt')}</Changes></StatusOutput>`;
     const snapshot = parsePendingChanges(xml);
 
     expect(snapshot.changelists).toEqual([]);
@@ -21,7 +18,7 @@ describe('parsePendingChanges', () => {
   });
 
   it('lists the merges the changes come from, each once', () => {
-    const merged = (path: string, info: string): string => change('CO+CH', path).replace('<MergesInfo />', `<MergesInfo> (${info})</MergesInfo>`);
+    const merged = (path: string, info: string): string => change('CO+CH', path, { merge: ` (${info})` });
     const xml = `${header}<Changes>${merged('a.ts', 'Merge from 242')}${merged('b.ts', 'Merge from 242')}${change('CH', 'c.ts')}</Changes></StatusOutput>`;
     const snapshot = parsePendingChanges(xml);
 
@@ -31,12 +28,12 @@ describe('parsePendingChanges', () => {
   });
 
   it('leaves out the minimum date cm reports for moved items', () => {
-    const moved = change('MV', 'docs/a.ts', '').replace('<OldPath />', '<OldPath>src/a.ts</OldPath>').replace('2026-09-25T08:26:09+02:00', '0001-01-01T00:00:00');
+    const moved = change('MV', 'docs/a.ts', { oldPath: 'src/a.ts', lastModified: '0001-01-01T00:00:00' });
     expect(parsePendingChanges(`${header}<Changes>${moved}</Changes></StatusOutput>`).changes[0]!.lastModified).toBe('');
   });
 
   it('reads the backslashes cm writes on Windows as forward slashes, and keeps them in names elsewhere', () => {
-    const moved = change('MV', 'src\\ui\\b.ts').replace('<OldPath />', '<OldPath>src\\a.ts</OldPath>');
+    const moved = change('MV', 'src\\ui\\b.ts', { oldPath: 'src\\a.ts' });
     const xml = `${header}<Changes>${moved}</Changes></StatusOutput>`;
 
     expect(parsePendingChanges(xml, 'win32').changes[0]).toMatchObject({ path: 'src/ui/b.ts', oldPath: 'src/a.ts' });
@@ -58,7 +55,7 @@ describe('parsePendingChanges', () => {
   });
 
   it('reads the output of cm on Windows: CRLF line breaks and backslashes in paths', () => {
-    const moved = change('MV', 'Assets\\Scripts\\b.cs').replace('<OldPath />', '<OldPath>Assets\\a.cs</OldPath>');
+    const moved = change('MV', 'Assets\\Scripts\\b.cs', { oldPath: 'Assets\\a.cs' });
     const xml = `${header}\r\n<Changes>\r\n${moved}\r\n${change('PR', 'Assets\\new file.txt')}\r\n</Changes>\r\n</StatusOutput>\r\n`;
     expect(parsePendingChanges(xml, 'win32').changes.map((item) => [item.path, item.oldPath])).toEqual([
       ['Assets/Scripts/b.cs', 'Assets/a.cs'],

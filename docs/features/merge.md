@@ -17,7 +17,7 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   the well-known tools are found anyway, and the user adds any other. Every tool opens every text file.
 - `mergeTools.resolve` saves the three versions to temp files named after the file (`a.BASE.ts`...), writes the result
   file with the file as it stands in the app (the automatic merge with its markers, or the user's picks), runs the
-  tool without a shell (`.cmd` launchers through `cmd.exe`, arguments quoted), and waits. Few tools tell saving from
+  tool without a shell (`.cmd` launchers through `cmd.exe`, arguments quoted: `spawnCommand`), and waits. Few tools tell saving from
   cancelling by their exit code, so the result file decides (`judgeToolResult`): unchanged means nothing was resolved;
   saved text becomes the file's decision (markers left count as conflicts left). Text files only: no tool really
   merges binaries, so a binary keeps one of its versions, picked in the app (`waitsForTool`). "Stop waiting" kills the tool process and takes what was saved so far, as soon as it exits: a launcher's

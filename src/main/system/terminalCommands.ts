@@ -45,12 +45,17 @@ export function terminalCommands(platform: NodeJS.Platform, env: NodeJS.ProcessE
     ];
   }
   const desktops = (env.XDG_CURRENT_DESKTOP ?? '').split(':');
-  const terminals = LINUX_TERMINALS.filter((terminal) => !terminal.desktop || desktops.includes(terminal.desktop)).filter(
-    (terminal, index, all) => all.findIndex((other) => other.command === terminal.command) === index,
-  );
+  const terminals = firstOfEachCommand(LINUX_TERMINALS.filter((terminal) => !terminal.desktop || desktops.includes(terminal.desktop)));
   return [
     // Debian and Ubuntu's choice of terminal (`update-alternatives`).
     { command: 'x-terminal-emulator', args: [], exits: false },
     ...terminals.map(({ command, folderArgs }) => ({ command, args: folderArgs(path), exits: false })),
   ];
+}
+
+/** Each terminal once, where it comes first: the desktop's own keeps its place ahead of the others. */
+function firstOfEachCommand<Terminal extends { command: string }>(terminals: readonly Terminal[]): Terminal[] {
+  const first = new Map<string, Terminal>();
+  for (const terminal of terminals) if (!first.has(terminal.command)) first.set(terminal.command, terminal);
+  return [...first.values()];
 }

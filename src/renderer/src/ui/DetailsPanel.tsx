@@ -1,16 +1,22 @@
-import { ChevronRight, Copy, MoreHorizontal } from 'lucide-react';
-import { useRef, type CSSProperties, type ReactNode } from 'react';
+import { MoreHorizontal } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { withoutAction, type MenuEntry } from '../lib/actions';
-import { copyToClipboard } from '../lib/copyToClipboard';
 import { displayName } from '../lib/userName';
 import { Avatar } from './Avatar';
-import { CHANGES_HEIGHT, useDetailsLayoutStore } from './detailsLayoutStore';
 import { IconButton } from './IconButton';
 import { ActionDropdownMenu } from './menu/ActionDropdownMenu';
-import { PropertyList, type Property } from './PropertyList';
+import { MoreDetails } from './MoreDetails';
+import type { Property } from './PropertyList';
 import { RelativeTime } from './RelativeTime';
-import { ResizeHandle } from './ResizeHandle';
 import styles from './DetailsPanel.module.css';
+
+// The parts a details panel is made of, where every view imports them from.
+export { DetailsBadge } from './DetailsBadge';
+export { DetailsChangesPane } from './DetailsChangesPane';
+export { DetailsCopyable } from './DetailsCopyable';
+export { DetailsLink } from './DetailsLink';
+export { DetailsPanelSkeleton } from './DetailsPanelSkeleton';
+export { DetailsEmpty, DetailsSection, DetailsSkeleton } from './DetailsSection';
 
 interface DetailsPanelProps {
   icon: ReactNode;
@@ -124,159 +130,5 @@ function AuthorLine({ user, date }: { user: string; date: string }) {
         </>
       )}
     </span>
-  );
-}
-
-function MoreDetails({ properties }: { properties: Property[] }) {
-  const { moreDetailsOpen: open, set } = useDetailsLayoutStore();
-  return (
-    <div className={styles.moreDetails}>
-      <button className={styles.disclosure} aria-expanded={open} onClick={() => set({ moreDetailsOpen: !open })}>
-        <ChevronRight size={13} className={styles.chevron} />
-        More details
-      </button>
-      {open && (
-        <div className={styles.properties}>
-          <PropertyList properties={properties} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-interface DetailsChangesPaneProps {
-  /** e.g. "Changes" or "12 files changed". */
-  title: ReactNode;
-  /** A small control at the right of the title. */
-  action?: ReactNode;
-  /** The list is shown: the pane gets a splitter and fills the space left, at least as tall as it was sized. */
-  expanded: boolean;
-  /** Given, the title is a disclosure that shows and hides what the pane lists. */
-  disclosure?: { open: boolean; toggle: () => void };
-  children: ReactNode;
-}
-
-/** The pane at the bottom of a details panel listing what the object changed, resizable once the list shows. */
-export function DetailsChangesPane({ title, action, expanded, disclosure, children }: DetailsChangesPaneProps) {
-  const { changesHeight, set } = useDetailsLayoutStore();
-  const paneRef = useRef<HTMLElement>(null);
-
-  return (
-    <section ref={paneRef} className={styles.changes} data-expanded={expanded} style={{ '--changes-height': `${changesHeight}px` } as CSSProperties}>
-      {expanded && (
-        <ResizeHandle
-          size={changesHeight}
-          min={CHANGES_HEIGHT.min}
-          max={CHANGES_HEIGHT.max}
-          measure={() => paneRef.current?.offsetHeight ?? changesHeight}
-          onResize={(height) => set({ changesHeight: height })}
-        />
-      )}
-      <div className={styles.changesHeader}>
-        <h3 className={styles.sectionTitle}>
-          {disclosure ? (
-            <button className={`${styles.disclosure} ${styles.titleDisclosure}`} aria-expanded={disclosure.open} onClick={disclosure.toggle}>
-              <ChevronRight size={13} className={styles.chevron} />
-              {title}
-            </button>
-          ) : (
-            title
-          )}
-        </h3>
-        {action}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-/** An identifier in the meta row (`cs:42`, a GUID's start) that copies the full value. */
-export function DetailsCopyable({ text, copyText = text, what }: { text: string; copyText?: string; what: string }) {
-  return (
-    <button className={styles.copyable} onClick={() => copyToClipboard(copyText, what)} data-tip={`Copy ${what.toLowerCase()}: ${copyText}`}>
-      <span className="mono">{text}</span>
-      <Copy size={11} className={styles.copyIcon} />
-    </button>
-  );
-}
-
-type BadgeTone = 'accent' | 'success' | 'neutral' | 'warning';
-
-interface DetailsBadgeProps {
-  tone?: BadgeTone;
-  tip?: string;
-  /** Gives way when the row is full, its text (a `<span>` child) cut with an ellipsis, e.g. a long label name. */
-  shrinks?: boolean;
-  children: ReactNode;
-}
-
-export function DetailsBadge({ tone = 'neutral', tip, shrinks, children }: DetailsBadgeProps) {
-  return (
-    <span className={styles.badge} data-tone={tone} data-tip={tip} data-shrinks={shrinks || undefined}>
-      {children}
-    </span>
-  );
-}
-
-interface DetailsSectionProps {
-  title: string;
-  /** A small control at the right of the title, e.g. "Add". */
-  action?: ReactNode;
-  children: ReactNode;
-}
-
-/** A titled card inside the details panel. */
-export function DetailsSection({ title, action, children }: DetailsSectionProps) {
-  return (
-    <section className={styles.section}>
-      <div className={styles.sectionHeader}>
-        <h3 className={styles.sectionTitle}>{title}</h3>
-        {action}
-      </div>
-      <div className={styles.card}>{children}</div>
-    </section>
-  );
-}
-
-/** A friendly message inside a section, e.g. "No attributes yet". */
-export function DetailsEmpty({ children }: { children: ReactNode }) {
-  return <p className={styles.placeholder}>{children}</p>;
-}
-
-/** Placeholder rows while a section loads. */
-export function DetailsSkeleton({ rows = 3 }: { rows?: number }) {
-  return (
-    <div className={styles.skeleton} aria-busy="true" aria-label="Loading">
-      {Array.from({ length: rows }, (_, index) => (
-        <span key={index} className={styles.skeletonRow} />
-      ))}
-    </div>
-  );
-}
-
-/** The whole panel while the list it describes loads: the hero's shape, then the changes pane. */
-export function DetailsPanelSkeleton() {
-  return (
-    <aside className={styles.panel} aria-busy="true" aria-label="Loading">
-      <div className={styles.top}>
-        <header className={styles.hero}>
-          <DetailsSkeleton rows={4} />
-        </header>
-      </div>
-      <section className={styles.changes} data-expanded={false}>
-        <div className={styles.changesHeader}>
-          <span className={styles.skeletonRow} style={{ width: 64 }} />
-        </div>
-      </section>
-    </aside>
-  );
-}
-
-/** A value that takes you somewhere else in the app, e.g. the parent changeset. */
-export function DetailsLink({ onClick, children }: { onClick: () => void; children: ReactNode }) {
-  return (
-    <button className={styles.link} onClick={onClick}>
-      {children}
-    </button>
   );
 }

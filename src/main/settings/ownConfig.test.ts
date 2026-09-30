@@ -26,8 +26,8 @@ const FILE_WRITES = /\b(writeFile|writeFileSync|appendFile|appendFileSync|rename
 
 describe("the official client's config", () => {
   it('is reached only by the first-run import, wired once at start', () => {
-    expect(filesWhere((text) => text.includes('plasticConfigFolder('))).toEqual(['index.ts', 'plasticConfig/configFolder.ts']);
-    expect(filesWhere((text) => /from '\.\.?\/(\.\.\/)?plasticConfig\//.test(text))).toEqual(['index.ts', 'settings/importLegacySettings.ts']);
+    expect(filesWhere((text) => text.includes('plasticConfigFolder('))).toEqual(['plasticConfig/configFolder.ts', 'startup/settings.ts']);
+    expect(filesWhere((text) => /from '\.\.?\/(\.\.\/)?plasticConfig\//.test(text))).toEqual(['settings/importLegacySettings.ts', 'startup/settings.ts']);
   });
 
   it('has its files named only by the import', () => {

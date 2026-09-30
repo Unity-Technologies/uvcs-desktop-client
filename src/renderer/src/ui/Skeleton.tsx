@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { classNames } from '../lib/classNames';
 import styles from './Skeleton.module.css';
 
 /** Enough rows to fill a tall window; the rest is clipped. */
@@ -28,7 +29,7 @@ export function SkeletonRows({ rowHeight, rowClassName, children }: SkeletonRows
   return (
     <div className={styles.rows} aria-busy="true" aria-label="Loading">
       {Array.from({ length: ROWS }, (_, index) => (
-        <div key={index} className={[styles.row, rowClassName].filter(Boolean).join(' ')} style={{ height: rowHeight }}>
+        <div key={index} className={classNames(styles.row, rowClassName)} style={{ height: rowHeight }}>
           {children(index)}
         </div>
       ))}

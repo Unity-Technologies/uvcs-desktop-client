@@ -29,13 +29,16 @@ function installLocations(platform: NodeJS.Platform, env: NodeJS.ProcessEnv): st
  * menu may have a short PATH). It's started without a shell, so on Windows only `cm.exe` runs.
  */
 export function cmCandidates(platform: NodeJS.Platform, env: NodeJS.ProcessEnv): string[] {
-  const executable = platform === 'win32' ? 'cm.exe' : 'cm';
   const join = platform === 'win32' ? win32.join : posix.join;
-  return [...pathFolders(env, platform).map((folder) => join(folder, executable)), ...installLocations(platform, env)];
+  return [...pathFolders(env, platform).map((folder) => join(folder, executableName(platform))), ...installLocations(platform, env)];
+}
+
+function executableName(platform: NodeJS.Platform): string {
+  return platform === 'win32' ? 'cm.exe' : 'cm';
 }
 
 /** Finds the `cm` executable (`UVCS_CM_PATH` overrides the search); its bare name when it's nowhere, so starting it fails with "not found". */
 export function locateCm(platform: NodeJS.Platform = process.platform, env: NodeJS.ProcessEnv = process.env, exists: (path: string) => boolean = existsSync): string {
   if (env.UVCS_CM_PATH) return env.UVCS_CM_PATH;
-  return cmCandidates(platform, env).find(exists) ?? (platform === 'win32' ? 'cm.exe' : 'cm');
+  return cmCandidates(platform, env).find(exists) ?? executableName(platform);
 }

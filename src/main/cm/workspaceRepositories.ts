@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { repositorySpec } from '@shared/domain/specs';
 import type { CmClient } from './CmClient';
 
 /** Only a handful of workspaces (the recent ones) are ever looked up; never the whole list. */
@@ -8,9 +9,9 @@ const CONCURRENT_LOOKUPS = 2;
 const LOOKUP_TIMEOUT_MS = 4000;
 
 /** `STATUS|<changeset>|<repository>|<server>` from `cm status --header --machinereadable`. */
-export function parseStatusHeader(output: string): string | null {
+export function repositoryInStatusHeader(output: string): string | null {
   const match = /^STATUS\|-?\d+\|([^|]+)\|([^|\r\n]+)/m.exec(output);
-  return match ? `${match[1]}@${match[2]}` : null;
+  return match ? repositorySpec(match[1]!, match[2]!) : null;
 }
 
 /**
@@ -26,12 +27,13 @@ export async function resolveWorkspaceRepositories(
   const repositories: Record<string, string | null> = {};
   const pending = [...new Set(workspacePaths)].slice(0, MAX_LOOKUPS);
 
-  const worker = async (): Promise<void> => {
-    for (let path = pending.shift(); path !== undefined && !signal.aborted; path = pending.shift()) {
+  const lookUpNext = async (): Promise<void> => {
+    while (pending.length > 0 && !signal.aborted) {
+      const path = pending.shift()!;
       repositories[path] = await repositoryOf(cm, path, signal);
     }
   };
-  await Promise.all(Array.from({ length: CONCURRENT_LOOKUPS }, worker));
+  await Promise.all(Array.from({ length: CONCURRENT_LOOKUPS }, lookUpNext));
   return repositories;
 }
 
@@ -42,7 +44,7 @@ async function repositoryOf(cm: CmClient, workspacePath: string, signal: AbortSi
       signal: AbortSignal.any([signal, AbortSignal.timeout(LOOKUP_TIMEOUT_MS)]),
       killSignal: 'SIGKILL',
     });
-    return parseStatusHeader(output);
+    return repositoryInStatusHeader(output);
   } catch {
     return null;
   }

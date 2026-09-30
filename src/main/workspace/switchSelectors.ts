@@ -1,4 +1,5 @@
-import type { BringDisabledReason } from '@shared/domain/switchWithChanges';
+import { selectorSpec } from '@shared/domain/specs';
+import type { BringDisabledReason, LeaveDisabledReason } from '@shared/domain/switchWithChanges';
 import type { SelectorKind, WorkspaceSelector } from '@shared/domain/workspace';
 
 const KINDS_BY_PREFIX: Record<string, SelectorKind> = { br: 'branch', cs: 'changeset', lb: 'label', sh: 'shelve' };
@@ -21,6 +22,11 @@ export function describeSelector(selector: WorkspaceSelector): string {
   return selector.kind === 'branch' ? selector.name : `${selector.kind} ${selector.name}`;
 }
 
+/** A selector as a shelve record keeps it: its spec, to recognize it later, and its name, to show it. */
+export function selectorPlace(selector: WorkspaceSelector): { spec: string; name: string } {
+  return { spec: selectorSpec(selector), name: describeSelector(selector) };
+}
+
 /**
  * Changes can only come along to a target they can be merged onto: not a label (a fixed snapshot),
  * not a shelve, and not another repository.
@@ -31,4 +37,9 @@ export function bringDisabledReason(targetSpec: string, workspaceRepositoryName:
   if (selector.kind === 'label') return 'label';
   if (selector.kind === 'shelve') return 'shelve';
   return undefined;
+}
+
+/** Changes can only stay behind where a shelve comment can name the place they were made: not on a shelve. */
+export function leaveDisabledReason(source: WorkspaceSelector): LeaveDisabledReason | undefined {
+  return source.kind === 'shelve' ? 'shelveSource' : undefined;
 }

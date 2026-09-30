@@ -1,10 +1,11 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { findXml } from '../cm/testing/cmOutput';
-import { fakeCmClient, optionValue, type CmAnswer, type FakeCmCommand } from '../cm/testing/fakeCmClient';
+import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createLabelsService } from './labelsService';
+import { readingFileOption } from './testing/readingFileOption';
 import { serviceContext } from './testing/serviceContext';
 
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
@@ -12,17 +13,6 @@ const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 function labels(answers: Record<string, CmAnswer>) {
   const fake = fakeCmClient(answers);
   return { ...fake, service: createLabelsService(serviceContext(fake.cm)) };
-}
-
-/** Answers every command, keeping what its comment file held while it ran. */
-function readingComment() {
-  const seen = { commentsFile: '', comment: '' };
-  const answer = ({ args }: FakeCmCommand): string => {
-    seen.commentsFile = optionValue(args, '-commentsfile=')!;
-    seen.comment = readFileSync(seen.commentsFile, 'utf8');
-    return '';
-  };
-  return { seen, answer };
 }
 
 const V1 = { ID: 80, NAME: 'v1.0', CHANGESET: 12, BRANCH: '/main', COMMENT: 'First', OWNER: 'ana', DATE: '2026-09-25T10:00:00+02:00', REPNAME: 'game', REPSERVER: 'local' };
@@ -38,7 +28,7 @@ describe('labels', () => {
   });
 
   it("labels the workspace's loaded changeset, or the one given, with the comment in a file deleted afterwards", async () => {
-    const { seen, answer } = readingComment();
+    const { seen, answer } = readingFileOption('-commentsfile=');
     const { service, commands } = labels({ 'label create': answer });
 
     await service.create(WORKSPACE, { name: 'v1.1', comment: 'Release\nnotes' });
@@ -48,19 +38,19 @@ describe('labels', () => {
       ['query', ['label', 'create', 'lb:v1.1', WORKSPACE]],
       ['query', ['label', 'create', 'lb:v1.2', 'cs:14']],
     ]);
-    expect(seen.comment).toBe('Next');
-    expect(existsSync(seen.commentsFile)).toBe(false);
+    expect(seen.content).toBe('Next');
+    expect(existsSync(seen.file)).toBe(false);
   });
 
   it('replaces a comment outside any workspace, by specs that name the repository', async () => {
-    const { seen, answer } = readingComment();
+    const { seen, answer } = readingFileOption('-commentsfile=');
     const { service, commands } = labels({ 'label create': answer });
 
     await service.editComment(WORKSPACE, { name: 'v1.0', changeset: 12, repository: 'game@local' }, 'New\ncomment');
 
-    expect(commands).toMatchObject([{ via: 'query', args: ['label', 'create', 'lb:v1.0@game@local', 'cs:12@game@local', `-commentsfile=${seen.commentsFile}`] }]);
+    expect(commands).toMatchObject([{ via: 'query', args: ['label', 'create', 'lb:v1.0@game@local', 'cs:12@game@local', `-commentsfile=${seen.file}`] }]);
     expect(commands[0]?.options.cwd).toBeUndefined();
-    expect(seen.comment).toBe('New\ncomment');
+    expect(seen.content).toBe('New\ncomment');
   });
 
   it('refuses to empty a comment without asking cm', async () => {

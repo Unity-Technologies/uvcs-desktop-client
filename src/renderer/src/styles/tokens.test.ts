@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { AVATAR_COLORS } from '../components/avatarColor';
+import { AVATAR_COLORS } from '../lib/avatarColors';
 import { HEADER_HOVER_TINT, HEADER_TINT, headerTextOn } from '../features/branchExplorer/canvas/graphPalette';
 import { BRANCH_HUES, LINE_TONE } from '../features/branchExplorer/model/branchHue';
 import { STABLE_HUES } from '../lib/stableHue';
@@ -17,7 +17,10 @@ const TEXT = ['--text-primary', '--text-secondary', '--text-tertiary', '--accent
 /** Status letters on their own tint and focus rings are graphics: 3:1. */
 const BADGES = ['--change-added', '--change-changed', '--change-deleted', '--change-moved', '--change-permissions', '--status-changed'];
 const BADGE_TINT = 0.16;
-/** Where avatars sit: home rows (plain, hovered, focused), the switcher's rows (plain, highlighted), the sidebar's button. */
+/**
+ * Where avatars sit: home rows (plain, hovered, focused), the switcher's rows (plain, highlighted), the sidebar's button;
+ * people's in lists (plain, hovered, selected) and details panels.
+ */
 const AVATAR_PLACES: [string, string | null][] = [
   ['--bg-surface', null],
   ['--bg-surface', '--bg-hover'],

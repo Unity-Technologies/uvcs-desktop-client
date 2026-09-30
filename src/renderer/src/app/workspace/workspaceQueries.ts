@@ -23,7 +23,7 @@ export function useRecentWorkspaceRepositories(workspaces: WorkspaceSummary[] | 
   const listed = new Set((workspaces ?? []).map((workspace) => workspace.path));
   const paths = recentWorkspacePaths.filter((path) => listed.has(path) && !(path in alreadyKnown)).slice(0, MAX_RESOLVED_WORKSPACES);
   return useQuery({
-    queryKey: ['workspaceRepositories', paths],
+    queryKey: queryKeys.workspaceRepositories(paths),
     queryFn: ({ signal }) => {
       const lookupId = crypto.randomUUID();
       signal.addEventListener('abort', () => void api.system.cancelOperation(lookupId));
@@ -41,7 +41,7 @@ export function useRecentWorkspaceRepositories(workspaces: WorkspaceSummary[] | 
 export function useWorkspaceHeads(workspaces: WorkspaceSummary[] | undefined) {
   const paths = (workspaces ?? []).map((workspace) => workspace.path);
   return useQuery({
-    queryKey: ['workspaceHeads', paths],
+    queryKey: queryKeys.workspaceHeads(paths),
     queryFn: () => api.workspaces.heads(paths),
     enabled: paths.length > 0,
   });
@@ -50,7 +50,7 @@ export function useWorkspaceHeads(workspaces: WorkspaceSummary[] | undefined) {
 /** Which of these recent paths (ones `cm` doesn't list) lost their folder. */
 export function useMissingWorkspacePaths(paths: string[]) {
   return useQuery({
-    queryKey: ['missingWorkspacePaths', paths],
+    queryKey: queryKeys.missingWorkspacePaths(paths),
     queryFn: () => api.workspaces.findMissing(paths),
     enabled: paths.length > 0,
   });

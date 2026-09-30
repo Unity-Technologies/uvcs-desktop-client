@@ -186,14 +186,15 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | --------------------------------------------------------- | ----------------------------------------------------------------- |
 | `main/cm/noExternalUi.test.ts`                            | `cm` never opens a tool; processes start only where allowed       |
 | `main/cm/noOredIdLookups.test.ts`                         | no `where id = 1 or id = 2 …` queries                             |
+| `shared/noRuntimeDependencies.test.ts`                    | `shared/` imports only its own modules                            |
 | `lib/shortcutRegistry.test.ts`                            | every shortcut is in the registry; menu accelerators match; no Ctrl+Alt off Mac |
 | `lib/menuGroups.test.ts`, `components/menuGrammar.test.ts` | every object menu follows one grammar                            |
 | `styles/tokens.test.ts`, `focusRings.test.ts`             | text 4.5:1 and focus rings 3:1 in both themes                     |
+| `styles/noRawColors.test.ts`                              | colors come from `styles/tokens.css`; the few written out say why |
 | `window/workspaceMenuCommands.test.ts`                    | app menu commands match the workspace commands                    |
 | `main/settings/ownConfig.test.ts`                         | only the first-run import reads the official client's config; nothing writes it |
 
-Not enforced yet: no `any` (there are none today) and no raw colors outside `styles/tokens.css`. A static test for
-either is welcome.
+Not enforced yet: no `any` (there are none today). A static test for it is welcome.
 
 ## Conventions
 
@@ -219,13 +220,24 @@ either is welcome.
 - **Not set up yet**: code signing, notarization, auto-update and versioning (`package.json` stays `0.1.0`). Don't add
   them unasked.
 
-## Git
+## Commits: let the history tell the story
 
-- Parallel agents each work in their own git worktree and branch (`.claude/worktrees/`, ignored); a verified branch is
-  merged into `master`.
+Commit like a careful human. The history should show *how* the work happened.
+
+- One logical change per commit. If the message needs "and", split it.
+- Commit small and often. Keep commits layer-specific (model, service, UI, tests, docs, config).
+- Never mix machine changes (renames, formatting, dependencies, generated code) with human changes.
+- Test first: commit the failing test, then the fix (on working branches only, never on `master`).
+- A refactor commit stands alone, with no other change, and keeps the tests green.
 - A commit message says what the user can now do or see, in the product's words, not which files changed ("The
   Branch Explorer keeps the user's place when it is laid out again …"). Changes to docs or tooling say what they
   change in a short line.
+- A branch is named for its work: `<kind>/<topic>` in kebab case, where kind is `feature`, `fix`, `refactor`,
+  `tests`, `docs`, `perf` or `chore` (`fix/palette-apostrophe`, `refactor/main-services`). An agent whose worktree
+  came with a generated name (`worktree-agent-a571eb…`) renames it first: `git branch -m <kind>/<topic>`.
+- Parallel agents each work in their own git worktree and branch (`.claude/worktrees/`, ignored). A verified branch
+  joins `master` with a merge commit, never squashed or rebased: the real path is the story. Don't squash or rewrite
+  history unless the user asks.
 
 ## Docs
 

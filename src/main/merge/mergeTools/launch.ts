@@ -19,7 +19,7 @@ export interface ToolRun {
  * Rejects when it can't be started at all.
  */
 export function launchMergeTool(executable: string, args: string[], signal: AbortSignal): Promise<ToolRun> {
-  const { command, commandArgs, verbatim } = commandLine(process.platform, executable, args);
+  const { command, commandArgs, verbatim } = spawnCommand(process.platform, executable, args);
   const started = Date.now();
   const ran = (exitCode: number | null, errorOutput: string): ToolRun => ({ exitCode, errorOutput: errorOutput.trim(), seconds: (Date.now() - started) / 1000 });
   return new Promise((resolve, reject) => {
@@ -59,7 +59,7 @@ export function activateApp(bundle: string): Promise<void> {
  * variable. Arguments are the app's temp paths (whose names it makes of letters, digits and `_ .-`) and version names.
  * Backslashes ending an argument are doubled, or the program would read the closing quote as a quote in it.
  */
-export function commandLine(platform: NodeJS.Platform, executable: string, args: string[]): { command: string; commandArgs: string[]; verbatim: boolean } {
+export function spawnCommand(platform: NodeJS.Platform, executable: string, args: string[]): { command: string; commandArgs: string[]; verbatim: boolean } {
   if (platform !== 'win32' || !/\.(cmd|bat)$/i.test(executable)) return { command: executable, commandArgs: args, verbatim: false };
   const quote = (arg: string): string => `"${arg.replace(/["%!]/g, '').replace(/(\\+)$/, '$1$1')}"`;
   return { command: 'cmd.exe', commandArgs: ['/d', '/s', '/c', `"${[executable, ...args].map(quote).join(' ')}"`], verbatim: true };

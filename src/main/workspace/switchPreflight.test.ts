@@ -3,26 +3,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
-import { WORKSPACE_GUID } from '../cm/testing/cmOutput';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { readSwitchPreflight } from './switchPreflight';
 import { SwitchShelveRecords } from './switchShelveRecords';
+import { leftRecord } from './testing/leftRecord';
 import { playAlongWorkspace, type WorkspaceScenario } from './testing/playAlongWorkspace';
 
 const WORKSPACE = '/work';
-
-const leftRecord = (shelveId: number, sourceSpec: string, changes: Partial<SwitchShelveRecord> = {}): SwitchShelveRecord => ({
-  workspaceGuid: WORKSPACE_GUID,
-  shelveId,
-  repository: 'eco@local',
-  source: { spec: sourceSpec, name: sourceSpec.slice(3), objectRef: 'br:37' },
-  target: { spec: 'br:/main', name: '/main' },
-  mode: 'leave',
-  createdAt: '2026-09-25T21:17:30.000Z',
-  paths: ['src/a.txt'],
-  changelists: [],
-  ...changes,
-});
 
 function preflight(scenario: WorkspaceScenario, target = 'br:/main/task2', records: SwitchShelveRecord[] = []) {
   const workspace = playAlongWorkspace(WORKSPACE, scenario);

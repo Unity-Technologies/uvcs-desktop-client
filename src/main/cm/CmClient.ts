@@ -1,7 +1,6 @@
 import { homedir } from 'node:os';
 import type { CommandLogEntry } from '@shared/events';
 import { CmError } from './CmError';
-import { isShellResultLine, processCommand, shellCommandResult } from './commandLineLimit';
 import { clipForLog, MAX_LOGGED_COMMAND_LINE, MAX_LOGGED_OUTPUT } from './clipForLog';
 import { inCmPathForm } from './cmPathForm';
 import type { CmResult } from './CmResult';
@@ -9,8 +8,10 @@ import { CmShellPool } from './CmShellPool';
 import { extractErrorMessage } from './errorMessage';
 import { commandLineForLog, outputForLog } from './hideSecrets';
 import { runsLong } from './longCommands';
+import { processCommand } from './processCommand';
 import { runCmProcess } from './runCmProcess';
 import { canRunInShell } from './shellCommandLine';
+import { isShellResultLine, shellCommandResult } from './shellResultLine';
 import { withUtf8Output } from './utf8Output';
 
 export interface CmRunOptions {
@@ -86,9 +87,7 @@ export class CmClient {
    * anyway (`runsLong`: a workspace write of many files) gets a process of its own, as does one before the pool is warm.
    */
   query(args: string[], options: CmRunOptions = {}): Promise<string> {
-    const useShell =
-      !options.signal && !options.onOutputLine && canRunInShell(args) && !runsLong(args) && this.shellPool.isReady(options.cwd ?? homedir());
-    return this.run(args, options, useShell);
+    return this.run(args, options, this.runsInPooledShell(args, options));
   }
 
   /** Runs a long or cancellable command in its own process, streaming its output. */
@@ -110,24 +109,32 @@ export class CmClient {
     this.shellPool.disposeAll();
   }
 
+  /**
+   * Whether a query goes to a pooled `cm shell`: not when it can be cancelled, streams its output, can't be written on
+   * a shell line (`canRunInShell`) or may run long (`runsLong`). Any other warms the directory's sessions up, and runs
+   * as a process of its own until one of them answers.
+   */
+  private runsInPooledShell(args: string[], { cwd = homedir(), signal, onOutputLine }: CmRunOptions): boolean {
+    if (signal || onOutputLine || !canRunInShell(args) || runsLong(args)) return false;
+    this.shellPool.warmUp(cwd);
+    return this.shellPool.isReady(cwd);
+  }
+
   private async run(requested: string[], options: CmRunOptions, useShell: boolean): Promise<string> {
     const cwd = options.cwd ?? homedir();
     const args = withUtf8Output(inCmPathForm(requested, cwd, this.platform));
     const startedAt = Date.now();
+    const log = (result: CmResult): CommandLogEntry => this.log(args, cwd, startedAt, result, useShell);
     const finished = useShell ? this.shellPool.run(cwd, args) : this.runProcess(args, cwd, options);
     this.startListeners.forEach((listener) => listener({ args, cwd, finished }));
-    const result = await finished;
 
-    const entry = this.log(args, cwd, startedAt, result, useShell);
-
-    if (result.exitCode !== 0) {
-      throw new CmError(outputForLog(extractErrorMessage(result.output)), {
-        commandLine: entry.commandLine,
-        exitCode: entry.exitCode,
-        output: entry.output,
-        logEntryId: entry.id,
-      });
-    }
+    const result = await finished.catch((error: unknown) => {
+      // A command its caller cancelled is no failure to log.
+      if (!options.signal?.aborted) log(endedWithoutExitCode(error));
+      throw error;
+    });
+    const entry = log(result);
+    if (result.exitCode !== 0) throw failure(result, entry);
     return result.output;
   }
 
@@ -159,4 +166,19 @@ export class CmClient {
     this.logListeners.forEach((listener) => listener(logged));
     return entry;
   }
+}
+
+/** What a command that ended without an exit code of its own (`cm` not found, a stalled prompt, a closed session) logs. */
+function endedWithoutExitCode(error: unknown): CmResult {
+  return { output: error instanceof Error ? error.message : String(error), exitCode: -1 };
+}
+
+/** A command that exited with another code than 0, explained by the error line of its output. */
+function failure(result: CmResult, entry: CommandLogEntry): CmError {
+  return new CmError(outputForLog(extractErrorMessage(result.output)), {
+    commandLine: entry.commandLine,
+    exitCode: entry.exitCode,
+    output: entry.output,
+    logEntryId: entry.id,
+  });
 }

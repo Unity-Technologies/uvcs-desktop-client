@@ -23,11 +23,13 @@ export interface HistoryRow {
  * and, last, the date below 360. A list beside a diff (a branch's changesets) keeps the avatar at any width, as History
  * does: there it is the only way to tell who made each row.
  */
-const NARROW_LIST = 480;
-const NARROWEST_LIST = 360;
+const HIDE_SECONDARY_BELOW = 560;
+const HIDE_AUTHOR_BELOW = 700;
+const HIDE_AVATAR_BELOW = 480;
+const HIDE_DATE_BELOW = 360;
 
 export function avatarColumn<Row extends HistoryRow>({ alwaysShown = false }: { alwaysShown?: boolean } = {}): Column<Row> {
-  return { id: 'avatar', header: '', width: 34, hideBelow: alwaysShown ? undefined : NARROW_LIST, render: (row) => <Avatar user={row.owner} size={20} /> };
+  return { id: 'avatar', header: '', width: 34, hideBelow: alwaysShown ? undefined : HIDE_AVATAR_BELOW, render: (row) => <Avatar user={row.owner} size={20} /> };
 }
 
 /** The number, in mono; `marker` adds something after it (the changeset loaded in the workspace). */
@@ -80,7 +82,7 @@ export function secondaryColumn<Row extends HistoryRow>(
     header,
     width: 130,
     secondary: true,
-    hideBelow: 560,
+    hideBelow: HIDE_SECONDARY_BELOW,
     sortValue,
     render: (row) => (
       <span className={styles.clipped} data-tip-overflow data-tip={(tip ?? text)(row)}>
@@ -91,7 +93,7 @@ export function secondaryColumn<Row extends HistoryRow>(
 }
 
 export function authorColumn<Row extends HistoryRow>(): Column<Row> {
-  return { id: 'owner', header: 'Author', width: 150, hideBelow: 700, sortValue: (row) => row.owner, render: (row) => <UserLabel user={row.owner} avatar={false} /> };
+  return { id: 'owner', header: 'Author', width: 150, hideBelow: HIDE_AUTHOR_BELOW, sortValue: (row) => row.owner, render: (row) => <UserLabel user={row.owner} avatar={false} /> };
 }
 
 export function dateColumn<Row extends HistoryRow>(): Column<Row> {
@@ -100,7 +102,7 @@ export function dateColumn<Row extends HistoryRow>(): Column<Row> {
     header: 'Date',
     width: 110,
     secondary: true,
-    hideBelow: NARROWEST_LIST,
+    hideBelow: HIDE_DATE_BELOW,
     sortValue: (row) => row.date,
     render: (row) => <RelativeTime date={row.date} />,
   };

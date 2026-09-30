@@ -4,7 +4,7 @@ A desktop client for Unity Version Control. The only backend is the `cm` CLI.
 
 ```
 src/
-  shared/     Types shared by both processes: domain model, API contract, events. No runtime deps.
+  shared/     Types shared by both processes: domain model, API contract, events. No runtime deps (a test checks it).
   main/       Electron main process. Talks to `cm`, the file system and the OS.
   preload/    Exposes `window.uvcs` (invoke + events) to the renderer. Nothing else.
   renderer/   React UI.
@@ -43,7 +43,8 @@ you touch:
      So is, on Windows, a command that prints text (see Parsing).
    - A pooled command may take two minutes, a workspace write half an hour (a few paths can still be a whole tree).
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
-   (see Renderer: Command log).
+   (see Renderer: Command log); one that ended without an exit code (stopped on a prompt, `cm` not found) is logged
+   with -1, and one its caller cancelled is not logged: it's no failure.
 
 To add a capability: its types in `shared/domain`, the method in `shared/api/<area>.ts` (part of `UvcsApi`), the
 implementation in `main/services/<area>Service.ts` (wired in `createServices`), `cm` argument builders and parsers as
@@ -90,7 +91,8 @@ and many people use the same server. Every `cm` command other than local reads (
   their branch by object id: the branch chips (Branch Explorer, Branches, finishing a task) match it against the ids
   their branch lists already carry, and share one review list with the palette; the Code reviews view and page name it
   from the branch lists already read (`BranchNamesCache.remember`), or else read every branch's id and name once
-  (`readBranchNames`, two light queries, kept ten minutes). The top bar takes the branch comment from the branch query. Pending changes ask which locks are mine only when some lock holds one of them; left
+  (`readBranchNames`, two light queries, kept ten minutes). The top bar takes the branch comment from the branch query. The recent branches and renaming a workspace take its
+  GUID and name from the reads the workspace info shares (`WorkspaceHeaders`). Pending changes ask which locks are mine only when some lock holds one of them; left
   changes look the selector's object id up only when an automatic shelve by another client could match it, and arriving
   from a switch looks for changes to restore only when this app left some there.
 - **Queries**: list everything only when the view needs everything, and then read it rarely. Otherwise filter on the
@@ -111,7 +113,8 @@ and many people use the same server. Every `cm` command other than local reads (
   changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`); merges and labels come either way.
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.
 - A `cm shell` command ends at the `CommandResult <code>` line that ends its output, with nothing more in the pipe
-  (`CmShellSession`): comments can quote such lines, and a misread end shifts every later command by one output.
+  (`CmShellSession`, `resultLineAtEnd`): comments can quote such lines, and a misread end shifts every later command by
+  one output.
 - Text crosses as UTF-8 on every OS: `cm shell --encoding=utf-8` reads commands so (Windows would read them in the
   console's code page), and `find` and `--xml` output is asked for in UTF-8 (`withUtf8Output`). Other output of a
   process comes in the console's code page on Windows (437, 850: other scripts become `?`), while a `cm shell` prints
@@ -198,8 +201,8 @@ stable stage words, files and bytes done and to do, a fraction (or null), the fi
 safe, and the step of a multi-command operation (shelve, undo, switch, bring). Never a raw `cm` line.
 
 - Each command's output is read by a pure `ProgressReader` (`main/cm/progress/`), passed as
-  `onOutputLine: context.progressOf(reader)`; the `OperationTracker` adds the step (`context.beginStep`) and throttles to
-  ten reports a second, stage changes at once.
+  `onOutputLine: context.progressOf(reader)`; the operation's `ProgressReport` (made by the `OperationTracker`) adds the
+  step (`context.beginStep`) and throttles to ten reports a second, stage changes at once.
 - `cm update`/`cm switch` run with `--forcedetailedprogress` (`cm/updateArgs.ts`): `cm` prints its bytes-and-files line
   only to a terminal otherwise, and `--machinereadable` turns it off. It rewrites the line with `\r` every 200 ms, so
   `runCmProcess` splits lines at `\r` too. The words are localized: readers go by the line's shape. Its percentage
@@ -225,9 +228,12 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   forward instead (`windows.focusWorkspace`, checked by `useOpenWorkspace`). The installed app's first window reopens the
   last workspace used (`openFirst`); a new window opens on the home screen. A new window asked to open a workspace
   takes it at start (`system.takeRequestedWorkspace`), as does a folder the installed app is launched with on Windows
-  and Linux (`workspaceArgument`; a second launch hands it to the running app). The Window menu lists them; closing
-  the last one keeps the app on macOS, and the Dock icon opens the home screen (its menu offers New Window under the
-  recent workspaces, `installDockMenu`); elsewhere it quits.
+  and Linux (`workspaceArgument`; a second launch hands it to the running app). The first window waits until `cm` has
+  found the workspace holding that folder (`handleLaunchRequests`), which may take longer than Electron takes to start.
+  The Window menu lists them; closing the last one keeps the app on macOS, and the Dock icon opens the home screen (its
+  menu offers New Window under the recent workspaces, `installDockMenu`); elsewhere it quits.
+- The start-up (`main/index.ts`) is a few named steps; the wiring behind each (settings, watchers, own writes,
+  operations, launch requests) lives in `main/startup/`, around the tested logic of the other folders.
 - Each API call runs with its window as the caller (`main/ipc/caller.ts`, followed across `await`s), so its commands
   (`commandLogged`) and operation progress go back to that window only. `workspaces.watch` is the window saying which
   workspace it shows: `main/watch/WorkspaceWatchers` keeps one watcher per shown workspace and sends its changes to the
@@ -283,6 +289,9 @@ renderer/src/
 - **Mutations**: `runOperation` (progress card, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
   An update or a switch runs alone on its workspace: it waits for any other operation, and the others wait for it (`blockingOperation`).
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
+  A sidebar entry may show a count (`useBadge`) and a dot for something waiting there (`useDot`), whose words go under
+  the entry's tooltip and in its accessible description: Changes' says what changes were left and where
+  (`leftChangesSummary`, in the "Welcome back" banner's words).
   There is no Annotate page: "Annotate" outside the Files view opens the file's history annotated (`annotatedHistory`).
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
 - **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does), what it
@@ -369,7 +378,11 @@ renderer/src/
   that hides it and shows it again from the cache, remembered for every panel as More details is (`changesCollapsed`). cm edits changeset, attribute and label
   comments (a label's by applying it again to its changeset, `labelCommentArgs`); branch and shelve comments stay
   read-only: no `cm` command or client API edits them. Selecting a row must stay cheap (Server
-  budget: Selection); the changed files' `cm diff` runs only on request (`ChangedFilesSection`).
+  budget: Selection); the changed files' `cm diff` runs only on request (`ChangedFilesSection`). The panel's parts are
+  primitives of their own in `ui/` (`DetailsSection`, `DetailsEmpty`, `DetailsSkeleton`, `DetailsBadge`,
+  `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), all imported from `ui/DetailsPanel`. Lists are
+  a `DataTable` (`ui/table/`: only the rows in view render; the columns' sort, the keys' steps `selectionStep`, and
+  `selectFirstRow`'s successor selection each in a module of their own).
 - **Item rows**: every list of files and folders reads the same (`components/`): Files and Browse repository, Changes
   (after its checkbox), the files of every diff and details panel, the merge page, a task merge, Incoming, Go to file,
   the Undo dialog, the Locks view (a lock names no item type, and only files are locked). `ItemRow` lays out the icon, the name (cut first, in the middle as every path is: `PathLabel`), extras
@@ -392,7 +405,8 @@ renderer/src/
   its file and folder rows memoized with stable callbacks: holding ↓ over 100,000 changes re-renders none of them
   (0.5-0.6 ms a step).
 - **File icons**: `ItemIcon` draws every file as the same filled Lucide page (`--icon-file` on `--icon-file-fill`) beside solid
-  folders, so every row reads with one weight; a glyph on the page tells the file's family (`fileFamilyOf`, by name
+  folders (directories and xlinks; `itemIconShape`), so every row reads with one weight; a glyph on the page tells the
+  file's family (`fileFamilyOf`, by name
   first, then its longest extension: `Form.Designer.cs` before `.cs`), and only the glyph takes the family's tint
   (`FAMILY_GLYPHS`; its outline of the page stays neutral, found by its corners). The families are what matters in a
   change: what you write (source `<>`, scripts) in `--icon-source`; what builds it (`.csproj`, `.sln`, `.props`,
@@ -411,9 +425,12 @@ renderer/src/
   is a list filter like any other (`commandLogFilterTexts`), kept for the session; each command is numbered by its
   place in the log since it was cleared (`NumberedLog`), so numbers stay put as the scope, the filter and the
   500-entry cap drop rows. Revealing a command the filter or scope hides clears them.
-- **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in components.
+- **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in styles or components
+  (`styles/noRawColors.test.ts`, which lists the few colors written out on purpose); optional classes join with
+  `classNames`.
   - Text tokens keep 4.5:1 and focus rings 3:1 (`styles/tokens.test.ts`); avatars' white initials 4.5:1 on every
-    `--avatar-*` fill (one per `stableHue` hue, all weighing alike), and server monograms' letters, a tint as secondary
+    `--avatar-*` fill (one per `stableHue` hue, all weighing alike, `avatarColorOf`: people, workspaces and
+    repositories alike), and server monograms' letters, a tint as secondary
     marks (`--tint-*`), 3:1 as status letters do. Branch headers set their text's lightness per hue to a contrast on
     their tint (`--branch-name-contrast`, `--branch-comment-contrast`, `hslAtContrast`), so the comment always reads
     quieter than the name, pale yellows as much as dark blues. Focus shows with `--focus-ring-visible`, or

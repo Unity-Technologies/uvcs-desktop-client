@@ -54,8 +54,8 @@ export function createWorkspacesService({ cm, operations, watchers, settings, he
   }
 
   async function rename(workspacePath: string, newName: string): Promise<void> {
-    const currentName = (await info(workspacePath)).name;
-    await cm.query(['workspace', 'rename', currentName, newName]);
+    const { name } = await headers.names(workspacePath);
+    await cm.query(['workspace', 'rename', name, newName]);
     headers.forget(workspacePath);
   }
 

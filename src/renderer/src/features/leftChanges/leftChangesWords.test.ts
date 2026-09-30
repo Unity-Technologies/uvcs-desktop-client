@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { LeftChanges } from '@shared/domain/switchWithChanges';
-import { leftChangesDetail, leftChangesTitle } from './leftChangesWords';
+import { leftChangesDetail, leftChangesSummary, leftChangesTitle } from './leftChangesWords';
 
 const NOW = Date.parse('2026-09-27T12:00:00Z');
 
@@ -39,5 +39,24 @@ describe('Welcome back', () => {
       'Shelved 2 hours ago (shelve 12): /main/task deleted or moved the file. Restoring merges your changes back.',
     );
     expect(leftChangesDetail(left({ reason: 'update' }), NOW)).toContain('deleted or moved the files.');
+  });
+});
+
+describe('the dot on Changes', () => {
+  it('says nothing when no changes wait', () => {
+    expect(leftChangesSummary([])).toBeUndefined();
+  });
+
+  it('names the branch the changes were left on, and where to restore them', () => {
+    expect(leftChangesSummary([left()])).toBe('Changes left on /main/task · restore them in Changes');
+    expect(leftChangesSummary([left({ mode: 'bring' }), left({ shelveId: 11 })])).toBe('Changes left on /main/task · restore them in Changes');
+  });
+
+  it('counts the branches when changes were left on several', () => {
+    expect(leftChangesSummary([left(), left({ sourceName: '/main/other' })])).toBe('Changes left on 2 branches · restore them in Changes');
+  });
+
+  it('tells changes put aside to update', () => {
+    expect(leftChangesSummary([left({ reason: 'update' })])).toBe('Changes put aside to update · restore them in Changes');
   });
 });
