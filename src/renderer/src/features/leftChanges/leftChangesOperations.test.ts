@@ -36,6 +36,15 @@ describe('restoreLeftChanges', () => {
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Restored 3 changes you left on /main/task', action: 'View' }]);
   });
 
+  it('refreshes the workspace, its locks, the shelve lists and the left changes, not the repository', async () => {
+    restoreAnswers({ kind: 'restored', count: 3, sourceName: '/main/task' });
+    const refreshed = watchRefreshes(ws);
+
+    await restoreLeftChanges(ws, left(12));
+
+    expect(refreshed()).toEqual(['explorer', 'info', 'leftChanges', 'locks', 'pendingChanges', 'review', 'shelves']);
+  });
+
   it('says changes put aside to update were put aside, not left', async () => {
     restoreAnswers({ kind: 'restored', count: 1, sourceName: '/main' });
 

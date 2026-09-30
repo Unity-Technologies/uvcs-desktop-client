@@ -27,6 +27,15 @@ describe('applyShelve', () => {
     expect(whereTheWindowIs().pages).toEqual([]);
   });
 
+  it('refreshes the workspace, its locks, the shelve lists and the left changes, not the repository', async () => {
+    applyAnswers({ kind: 'applied', count: 3 });
+    const refreshed = watchRefreshes(ws);
+
+    await applyShelve(ws, 12, true);
+
+    expect(refreshed()).toEqual(['explorer', 'info', 'leftChanges', 'locks', 'pendingChanges', 'review', 'shelves']);
+  });
+
   it('offers to view the changes, unless Changes is what the window shows', async () => {
     applyAnswers({ kind: 'applied', count: 3 }, { kind: 'applied', count: 1 });
     useNavigation.setState({ view: 'branches' });
