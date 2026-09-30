@@ -1,31 +1,25 @@
-// Pixel inspector: from 8× zoom, hovering reports the exact texel under the
-// cursor — frame coordinates plus the before → after color, swatches included.
-// Pixel forensics without an eyedropper round trip to an external editor.
-// State lives here so the per-pixel pointermove never re-renders the viewer;
-// the listener attaches to the stage element the viewer hands down.
+// The pixel inspector: from 8× zoom, hovering tells the pixel under the pointer, its position in the composed frame
+// and its color before → after, with swatches. The sample is state of its own, so a pointer move re-renders only this.
 
-import { type RefObject, useEffect, useRef, useState } from 'react';
-import { type AnchorMode, anchoredOffset, type ViewTransform } from './imageDiff';
+import { useEffect, useRef, useState, type RefObject } from 'react';
+import { anchoredOffset, type AnchorMode, type Size } from './imageDiff';
+import { colorHex, type Rgba } from './imageInfo';
+import { isOnStageControl } from './pointerDrag';
 import { rasterize } from './rasterize';
 import { VIEWPORT_ATTRIBUTE } from './stage';
 import type { DecodedImage } from './useDecodedImage';
 import type { PanZoom } from './usePanZoom';
+import { framePixelAt } from './viewTransform';
 import styles from './PixelInspector.module.css';
 
-/** The inspector arms past this zoom — texels are ≥ 8 screen pixels, so the
- *  cursor can actually address one. */
+/** The inspector works from this zoom: a pixel is then 8 screen pixels or more, so the pointer can point at one. */
 const MIN_INSPECT_ZOOM = 8;
 
-/** Controls layered over the stage: hovering them inspects nothing. */
-const CONTROL_TARGETS = 'button, input, [data-no-pan]';
-
-type Rgba = [number, number, number, number];
-
 interface Sample {
-  /** Composed-frame coordinates (matches what both revisions are laid out in). */
+  /** In the composed frame, where both revisions are laid out. */
   x: number;
   y: number;
-  /** null = that side doesn't cover this pixel (differently-sized revisions). */
+  /** Null where that revision doesn't cover the pixel (revisions of different sizes). */
   old: Rgba | null;
   new: Rgba | null;
 }
@@ -33,60 +27,38 @@ interface Sample {
 interface PixelInspectorProps {
   oldImage: DecodedImage | null;
   newImage: DecodedImage | null;
-  frame: { width: number; height: number };
+  frame: Size;
   anchor: AnchorMode;
   panZoom: PanZoom;
   /** The stage element to listen on. */
   stageRef: RefObject<HTMLDivElement | null>;
 }
 
-function samplePixel(image: DecodedImage | null, frame: { width: number; height: number }, anchor: AnchorMode, fx: number, fy: number): Rgba | null {
-  if (!image) return null;
-  const offset = anchoredOffset(frame, image, anchor);
-  const x = fx - offset.x;
-  const y = fy - offset.y;
-  if (x < 0 || x >= image.width || y < 0 || y >= image.height) return null;
-  // Cached after the first call — the initial rasterize of a huge image is
-  // the one main-thread hit, and the differences mode usually paid it already.
-  const bitmap = rasterize(image);
-  const i = (y * bitmap.width + x) * 4;
-  return [bitmap.data[i]!, bitmap.data[i + 1]!, bitmap.data[i + 2]!, bitmap.data[i + 3]!];
-}
-
 export function PixelInspector({ oldImage, newImage, frame, anchor, panZoom, stageRef }: PixelInspectorProps) {
   const [sample, setSample] = useState<Sample | null>(null);
-  // The pointermove handler reads the live transform through a ref so the
-  // listener binds once, not on every pan frame.
-  const transformRef = useRef<ViewTransform>(panZoom.transform);
-  transformRef.current = panZoom.transform;
+  // Read by the listener, so it isn't bound again at every pan.
+  const transform = useRef(panZoom.transform);
+  transform.current = panZoom.transform;
 
   useEffect(() => {
     const stage = stageRef.current;
     if (!stage) return;
-    const clear = () => setSample(null);
-    const onMove = (event: PointerEvent) => {
-      const t = transformRef.current;
-      const target = event.target as HTMLElement;
-      const viewport = target.closest(`[${VIEWPORT_ATTRIBUTE}]`);
-      if (t.scale < MIN_INSPECT_ZOOM || !viewport || target.closest(CONTROL_TARGETS)) {
-        clear();
-        return;
-      }
-      const rect = viewport.getBoundingClientRect();
-      const fx = Math.floor((event.clientX - rect.left - t.x) / t.scale);
-      const fy = Math.floor((event.clientY - rect.top - t.y) / t.scale);
-      if (fx < 0 || fx >= frame.width || fy < 0 || fy >= frame.height) {
-        clear();
-        return;
-      }
-      setSample({ x: fx, y: fy, old: samplePixel(oldImage, frame, anchor, fx, fy), new: samplePixel(newImage, frame, anchor, fx, fy) });
+    const clear = (): void => setSample(null);
+    const onMove = (event: PointerEvent): void => {
+      const viewport = event.target instanceof Element ? event.target.closest(`[${VIEWPORT_ATTRIBUTE}]`) : null;
+      const rect = viewport?.getBoundingClientRect();
+      const pixel =
+        rect && transform.current.scale >= MIN_INSPECT_ZOOM && !isOnStageControl(event)
+          ? framePixelAt({ x: event.clientX - rect.left, y: event.clientY - rect.top }, transform.current, frame)
+          : null;
+      setSample(pixel && { ...pixel, old: colorAt(oldImage, frame, anchor, pixel), new: colorAt(newImage, frame, anchor, pixel) });
     };
     stage.addEventListener('pointermove', onMove);
     stage.addEventListener('pointerleave', clear);
     return () => {
       stage.removeEventListener('pointermove', onMove);
       stage.removeEventListener('pointerleave', clear);
-      setSample(null);
+      clear();
     };
   }, [stageRef, frame, anchor, oldImage, newImage]);
 
@@ -110,10 +82,17 @@ export function PixelInspector({ oldImage, newImage, frame, anchor, panZoom, sta
   );
 }
 
-/** #RRGGBB, with /AA appended only when the pixel isn't fully opaque. */
-function hexOf([r, g, b, a]: Rgba): string {
-  const hex = (value: number) => value.toString(16).padStart(2, '0');
-  return `#${hex(r)}${hex(g)}${hex(b)}${a !== 255 ? `/${hex(a)}` : ''}`;
+/** A revision's color at a pixel of the composed frame, or null where it doesn't cover it. */
+function colorAt(image: DecodedImage | null, frame: Size, anchor: AnchorMode, pixel: { x: number; y: number }): Rgba | null {
+  if (!image) return null;
+  const offset = anchoredOffset(frame, image, anchor);
+  const x = pixel.x - offset.x;
+  const y = pixel.y - offset.y;
+  if (x < 0 || x >= image.width || y < 0 || y >= image.height) return null;
+  // Rasterized once per revision (the Differences mode usually has already): the one main-thread cost of a huge image.
+  const { data, width } = rasterize(image);
+  const at = (y * width + x) * 4;
+  return [data[at]!, data[at + 1]!, data[at + 2]!, data[at + 3]!];
 }
 
 const SWATCH_CHECKER = 'repeating-conic-gradient(var(--bg-active) 0% 25%, transparent 0% 50%)';
@@ -125,11 +104,10 @@ function Swatch({ rgba }: { rgba: Rgba | null }) {
     <span className={styles.color}>
       <span
         className={styles.swatch}
-        // The color rides as a gradient layer over the checkerboard — a plain
-        // background-color would paint *under* it.
+        // The color is a gradient layer over the checkerboard: a background color would paint under it.
         style={{ backgroundImage: `linear-gradient(${color}, ${color}), ${SWATCH_CHECKER}` }}
       />
-      {hexOf(rgba)}
+      {colorHex(rgba)}
     </span>
   );
 }

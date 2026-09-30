@@ -2,7 +2,7 @@
 // the same PanZoom, so zooming or panning either one moves both — comparing
 // the same region never needs manual re-alignment.
 
-import type { AnchorMode } from './imageDiff';
+import type { AnchorMode, Size } from './imageDiff';
 import { ImageLayer, SideChip, Viewport, World } from './stage';
 import type { DecodedImage } from './useDecodedImage';
 import type { PanZoom } from './usePanZoom';
@@ -11,7 +11,7 @@ import styles from './SideBySideMode.module.css';
 interface SideBySideModeProps {
   oldImage: DecodedImage;
   newImage: DecodedImage;
-  frame: { width: number; height: number };
+  frame: Size;
   panZoom: PanZoom;
   anchor: AnchorMode;
 }

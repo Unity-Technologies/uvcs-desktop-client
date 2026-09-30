@@ -8,7 +8,7 @@
 
 import { Pause, Play } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { AnchorMode } from './imageDiff';
+import type { AnchorMode, Size } from './imageDiff';
 import { ImageLayer, Pill, PillButton, PillLabel, Viewport, World } from './stage';
 import type { DecodedImage } from './useDecodedImage';
 import type { PanZoom } from './usePanZoom';
@@ -20,7 +20,7 @@ const BLINK_INTERVAL_MS = 500;
 interface OnionSkinModeProps {
   oldImage: DecodedImage;
   newImage: DecodedImage;
-  frame: { width: number; height: number };
+  frame: Size;
   panZoom: PanZoom;
   anchor: AnchorMode;
   /** 0 = all before, 1 = all after. Owned by the viewer so it survives mode trips. */
