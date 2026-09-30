@@ -52,14 +52,21 @@ export function statusHeader(name: string, { changeset = 1, type = 'Branch', rep
 }
 
 interface ChangeOptions {
-  /** `MergesInfo`: set while the change is part of a merge in progress. */
+  /** `MergesInfo`: set while the change is part of a merge in progress, as `cm` writes it (` (Merge from 12)`). */
   merge?: string;
+  /** `OldPath`: where a moved item was. */
+  oldPath?: string;
   revisionType?: 'enTextFile' | 'enBinaryFile' | 'enDirectory' | 'enSymLink';
+  lastModified?: string;
 }
 
 /** A `<Change>` of `cm status --xml`: `type` is its codes as `cm` joins them (`CO+CH`, `AD`, `PR`). */
-export function change(type: string, path: string, { merge = '', revisionType = 'enTextFile' }: ChangeOptions = {}): string {
-  return `<Change><Type>${type}</Type><Path>${path}</Path><OldPath /><MergesInfo>${merge}</MergesInfo><SimilarityPerUnit>0</SimilarityPerUnit><Size>3</Size><RevisionType>${revisionType}</RevisionType><LastModified>2026-09-25T08:26:09+02:00</LastModified></Change>`;
+export function change(
+  type: string,
+  path: string,
+  { merge = '', oldPath = '', revisionType = 'enTextFile', lastModified = '2026-09-25T08:26:09+02:00' }: ChangeOptions = {},
+): string {
+  return `<Change><Type>${type}</Type><Path>${path}</Path><OldPath>${oldPath}</OldPath><MergesInfo>${merge}</MergesInfo><SimilarityPerUnit>0</SimilarityPerUnit><Size>3</Size><RevisionType>${revisionType}</RevisionType><LastModified>${lastModified}</LastModified></Change>`;
 }
 
 /** `cm status --xml` listing `changes` (in the default changelist). */

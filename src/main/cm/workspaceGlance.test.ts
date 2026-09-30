@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { change } from './testing/cmOutput';
 import { parseWorkspaceGlance } from './workspaceGlance';
-
-const change = (type: string, path: string) => `<Change><Type>${type}</Type><Path>${path}</Path><RevisionType>enTextFile</RevisionType></Change>`;
 
 const status = (changes: string) => `<?xml version="1.0" encoding="utf-8"?>
 <StatusOutput>
