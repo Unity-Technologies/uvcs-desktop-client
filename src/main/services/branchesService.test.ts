@@ -4,9 +4,10 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MAIN_BRANCH_GUID } from '@shared/domain/branch';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
-import { findXml } from '../cm/testing/cmOutput';
+import { findXml, formatOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { SettingsStore } from '../settings/SettingsStore';
+import { cmHeaderReaders, WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
 import { createBranchesService } from './branchesService';
 import { readingFileOption } from './testing/readingFileOption';
 import { serviceContext } from './testing/serviceContext';
@@ -182,10 +183,11 @@ describe('recent branches', () => {
   const branchGuid = (n: number): string => `9b8e2f7a-58f3-4c43-9d83-3c2f1f5c000${n}`;
 
   function recentBranches() {
-    const fake = fakeCmClient({ [`getworkspacefrompath ${WORKSPACE} --format={guid}`]: `${WORKSPACE_GUID}\n` });
+    const fake = fakeCmClient({ getworkspacefrompath: formatOutput(['game', WORKSPACE_GUID]) });
     const settings = new SettingsStore(join(mkdtempSync(join(tmpdir(), 'uvcs-settings-')), 'settings.json'));
-    const service = createBranchesService(serviceContext(fake.cm, { settings }), { branchNames: new BranchNamesCache(async () => []) });
-    return { ...fake, settings, service };
+    const headers = new WorkspaceHeaders(cmHeaderReaders(fake.cm));
+    const service = createBranchesService(serviceContext(fake.cm, { settings, headers }), { branchNames: new BranchNamesCache(async () => []) });
+    return { ...fake, settings, headers, service };
   }
 
   it("keeps each switch in the app's settings, by workspace GUID, newest first", async () => {
@@ -198,7 +200,17 @@ describe('recent branches', () => {
     expect(await service.recent(WORKSPACE)).toEqual([branchGuid(2), branchGuid(1)]);
     expect(settings.get().recentBranchesByWorkspace).toEqual({ [WORKSPACE_GUID]: [branchGuid(2), branchGuid(1)] });
     // The workspace's GUID is a local read: no server round trip.
-    expect(new Set(commands.map((command) => command.line))).toEqual(new Set([`getworkspacefrompath ${WORKSPACE} --format={guid}`]));
+    expect(new Set(commands.map((command) => command.line.split(' ')[0]))).toEqual(new Set(['getworkspacefrompath']));
+  });
+
+  it("takes the workspace's GUID from its names already read for the workspace info, asking cm nothing more", async () => {
+    const { service, headers, commands } = recentBranches();
+    await headers.names(WORKSPACE);
+
+    await service.recent(WORKSPACE);
+    await service.rememberRecent(WORKSPACE, branchGuid(1));
+
+    expect(commands).toHaveLength(1);
   });
 
   it('keeps five, never /main', async () => {
