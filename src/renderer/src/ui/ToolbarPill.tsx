@@ -1,4 +1,5 @@
 import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { classNames } from '../lib/classNames';
 import styles from './ToolbarPill.module.css';
 
 interface ToolbarPillProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -21,7 +22,7 @@ export const ToolbarPill = forwardRef<HTMLButtonElement, ToolbarPillProps>(funct
   ref,
 ) {
   return (
-    <button ref={ref} type={type} className={[styles.pill, className].filter(Boolean).join(' ')} {...rest}>
+    <button ref={ref} type={type} className={classNames(styles.pill, className)} {...rest}>
       <span className={styles.icon}>{icon}</span>
       <span className={styles.stack} style={{ maxWidth: textMaxWidth }}>
         <span className={styles.label}>{label}</span>

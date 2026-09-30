@@ -2,6 +2,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { ArrowDown, ArrowUp } from 'lucide-react';
 import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
 import type { MenuEntry } from '../../lib/actions';
+import { classNames } from '../../lib/classNames';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { holdBackMenuKeyRelease, isListMenuKey, openContextMenuOf } from '../../lib/rowMenu';
 import { isModPressed } from '../../lib/shortcuts';
@@ -231,7 +232,7 @@ export function DataTable<Row>({
                 <div
                   key={column.id}
                   role="gridcell"
-                  className={[styles.cell, column.secondary && styles.secondary, column.align === 'end' && styles.end].filter(Boolean).join(' ')}
+                  className={classNames(styles.cell, column.secondary && styles.secondary, column.align === 'end' && styles.end)}
                   style={columnStyle(column)}
                 >
                   {cellText(column.render(row))}
@@ -266,7 +267,7 @@ export function DataTable<Row>({
             key={column.id}
             role="columnheader"
             aria-sort={sort?.columnId === column.id ? (sort.descending ? 'descending' : 'ascending') : undefined}
-            className={[styles.headerCell, column.sortValue && styles.sortable, column.align === 'end' && styles.end].filter(Boolean).join(' ')}
+            className={classNames(styles.headerCell, column.sortValue && styles.sortable, column.align === 'end' && styles.end)}
             style={columnStyle(column)}
             onClick={() => toggleSort(column)}
             tabIndex={-1}

@@ -1,6 +1,7 @@
 import { GitBranch } from 'lucide-react';
 import { shortBranchName } from '@shared/domain/specs';
 import type { WorkspaceSelector } from '@shared/domain/workspace';
+import { classNames } from '../lib/classNames';
 import { Highlight } from '../ui/Highlight';
 import { SELECTOR_KIND_LABELS, workingObjectName } from './workingObject';
 import styles from './WorkspaceChip.module.css';
@@ -9,7 +10,7 @@ import styles from './WorkspaceChip.module.css';
 export function SelectorChip({ selector, className }: { selector: WorkspaceSelector; className?: string }) {
   const fullName = workingObjectName(selector);
   return (
-    <span className={`${styles.chip} ${className ?? ''}`} data-tip={SELECTOR_KIND_LABELS[selector.kind]} data-tip-sub={fullName}>
+    <span className={classNames(styles.chip, className)} data-tip={SELECTOR_KIND_LABELS[selector.kind]} data-tip-sub={fullName}>
       <GitBranch size={11} />
       <span className={styles.text}>
         <Highlight text={selector.kind === 'branch' ? shortBranchName(fullName) : fullName} />

@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { classNames } from '../lib/classNames';
 import { initialOf } from '../lib/initialOf';
 import { avatarColor } from './avatarColor';
 import styles from './RepositoryAvatar.module.css';
@@ -20,7 +21,7 @@ export function RepositoryAvatar({ repository, label, size, className }: Reposit
   const fill = label === undefined ? undefined : `var(${avatarColor(repository, label)})`;
   return (
     <span
-      className={className ? `${styles.avatar} ${className}` : styles.avatar}
+      className={classNames(styles.avatar, className)}
       data-size={size}
       data-loading={label === undefined}
       style={{ '--avatar-fill': fill } as CSSProperties}

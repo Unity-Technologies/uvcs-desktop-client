@@ -1,3 +1,4 @@
+import { classNames } from '../../lib/classNames';
 import { skeletonWidth, SkeletonBar, SkeletonRows } from '../Skeleton';
 import { columnStyle, type Column } from './DataTable';
 import tableStyles from './DataTable.module.css';
@@ -17,7 +18,7 @@ export function TableSkeleton<Row>({ columns, rowHeight = 30 }: TableSkeletonPro
     <div className={tableStyles.table}>
       <div className={tableStyles.header}>
         {shown.map((column) => (
-          <div key={column.id} className={[tableStyles.headerCell, column.align === 'end' && tableStyles.end].filter(Boolean).join(' ')} style={columnStyle(column)}>
+          <div key={column.id} className={classNames(tableStyles.headerCell, column.align === 'end' && tableStyles.end)} style={columnStyle(column)}>
             {column.header}
           </div>
         ))}
@@ -25,7 +26,7 @@ export function TableSkeleton<Row>({ columns, rowHeight = 30 }: TableSkeletonPro
       <SkeletonRows rowHeight={rowHeight} rowClassName={styles.row}>
         {(index) =>
           shown.map((column, columnIndex) => (
-            <div key={column.id} className={[tableStyles.cell, column.align === 'end' && tableStyles.end].filter(Boolean).join(' ')} style={columnStyle(column)}>
+            <div key={column.id} className={classNames(tableStyles.cell, column.align === 'end' && tableStyles.end)} style={columnStyle(column)}>
               <SkeletonBar width={skeletonWidth(index, columnIndex)} />
             </div>
           ))

@@ -1,3 +1,4 @@
+import { classNames } from '../lib/classNames';
 import { describeServer, splitRepositorySpec } from '../lib/servers';
 import { ServerIcon } from './ServerIcon';
 import styles from './WorkspaceChip.module.css';
@@ -7,7 +8,7 @@ export function ServerChip({ repository, className }: { repository: string; clas
   const { server } = splitRepositorySpec(repository);
   if (!server) return null;
   return (
-    <span className={`${styles.chip} ${className ?? ''}`} data-tip={repository}>
+    <span className={classNames(styles.chip, className)} data-tip={repository}>
       <ServerIcon server={server} size={11} />
       <span className={styles.text}>{describeServer(server).label}</span>
     </span>
