@@ -37,6 +37,8 @@ jobs:
       - name: Build on the local SSD
         if: runner.os == 'Windows'
         shell: pwsh
+        # Anywhere but the checkout folder, which the step replaces and can't while it runs in it.
+        working-directory: ${{ runner.temp }}
         run: |
           $raw = Get-Disk | Where-Object PartitionStyle -eq 'RAW' | Select-Object -First 1
           if (-not $raw) {
