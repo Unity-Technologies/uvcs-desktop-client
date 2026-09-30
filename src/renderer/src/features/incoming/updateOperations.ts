@@ -24,8 +24,7 @@ export async function updateToIncoming(workspacePath: string, incoming: BranchIn
       return true;
     },
     affects: isAffectedByCheckinOrUpdate,
-    successMessage: () => updatedMessage(incoming),
-    successAction: () => ({ label: 'View', run: () => viewIncoming(incoming) }),
+    success: () => ({ title: updatedMessage(incoming), action: { label: 'View', run: () => viewIncoming(incoming) } }),
     onFailure: explainUpdateConflicts,
   });
   if (updated === true) showUpdatedMoment(workspacePath, incoming);
@@ -57,11 +56,13 @@ export async function shelveBlockedAndUpdate(workspacePath: string, incoming: Br
     cancellable: false,
     run: (operationId) => api.merge.shelveBlockedAndUpdate(workspacePath, resolutions, operationId),
     // No `affects`: besides updating, it creates a shelve and the left changes that offer it back.
-    successMessage: ({ shelveId, count, updated }) =>
+    success: ({ shelveId, count, updated }) =>
       updated
-        ? `${updatedMessage(incoming)} · ${pluralize(count, 'change')} shelved in shelve ${shelveId}`
-        : `${pluralize(count, 'change')} shelved in shelve ${shelveId} · merge the remaining files to update`,
-    successAction: ({ updated }) => (updated ? { label: 'Restore in Changes', run: () => navigation.goToView('changes') } : undefined),
+        ? {
+            title: `${updatedMessage(incoming)} · ${pluralize(count, 'change')} shelved in shelve ${shelveId}`,
+            action: { label: 'Restore in Changes', run: () => navigation.goToView('changes') },
+          }
+        : { title: `${pluralize(count, 'change')} shelved in shelve ${shelveId} · merge the remaining files to update` },
     onFailure: explainUpdateConflicts,
   });
   if (result?.updated) showUpdatedMoment(workspacePath, incoming);
@@ -100,9 +101,10 @@ export async function updateResolvingConflicts(workspacePath: string, incoming: 
     kind: 'update',
     run: (operationId) => api.merge.updateResolvingConflicts(workspacePath, resolutions, operationId),
     affects: isAffectedByCheckinOrUpdate,
-    successMessage: () => updatedMessage(incoming),
-    successAction: ({ backupDirectory }) =>
-      backupDirectory ? { label: 'Show backups', run: () => void api.system.revealInFileManager(backupDirectory) } : undefined,
+    success: ({ backupDirectory }) => ({
+      title: updatedMessage(incoming),
+      action: backupDirectory ? { label: 'Show backups', run: () => void api.system.revealInFileManager(backupDirectory) } : undefined,
+    }),
     onFailure: explainUpdateConflicts,
   });
   if (result) showUpdatedMoment(workspacePath, incoming);

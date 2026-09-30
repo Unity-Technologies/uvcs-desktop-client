@@ -16,12 +16,10 @@ export async function completeMerge(workspacePath: string, request: MergeRequest
     run: (operationId) => api.merge.run(workspacePath, request, resolutions, operationId),
     // Merging a shelve applies it, and may finish the left changes that offered it.
     affects: request.sourceSpec.startsWith('sh:') ? isAffectedByShelveApplied : isAffectedByCheckinOrUpdate,
-    successMessage: (merged) =>
-      request.destinationBranch
-        ? merged.destinationMoved
-          ? null
-          : `Created changeset ${merged.changesetId} on ${request.destinationBranch}`
-        : 'Merge applied to your workspace',
+    success: (merged) => {
+      if (!request.destinationBranch) return { title: 'Merge applied to your workspace' };
+      return merged.destinationMoved ? null : { title: `Created changeset ${merged.changesetId} on ${request.destinationBranch}` };
+    },
   });
   if (!result) return null;
 

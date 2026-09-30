@@ -1,7 +1,7 @@
 import { ApiError, api } from '../../api/client';
 import { useCommandLogStore } from '../shell/commandLogStore';
 import { invalidateWorkspace } from '../queryClient';
-import { toast, useToastStore, type Toast, type ToastAction } from '../../ui/toast/toastStore';
+import { toast, useToastStore, type Toast } from '../../ui/toast/toastStore';
 import { describeCompletion } from './describeProgress';
 import { stopOnce } from './stopOnce';
 import { blockingOperation, operationById, useRunningOperationsStore, type WorkspaceChangingOperation } from './runningOperationsStore';
@@ -14,10 +14,10 @@ interface OperationOptions<T> {
   title: string;
   workspacePath: string;
   run: (operationId: string) => Promise<T>;
-  /** Success message; return null to stay silent. */
-  successMessage?: (result: T) => string | null;
-  successAction?: (result: T) => ToastAction | undefined;
-  /** The whole ending, for operations whose outcome needs more than a message (a switch and its changes). */
+  /**
+   * How its card ends when it succeeds: the title, an action, and a detail (what was done, counted from the last
+   * progress, when it says none). Null, or no `success` at all, takes the card away in silence.
+   */
   success?: (result: T) => OperationSuccess | null;
   /** Whether it may be stopped at all; its progress also tells when it can't be stopped anymore. */
   cancellable?: boolean;
@@ -44,8 +44,6 @@ export async function runOperation<T>({
   title,
   workspacePath,
   run,
-  successMessage,
-  successAction,
   success,
   cancellable = true,
   kind,
@@ -74,7 +72,7 @@ export async function runOperation<T>({
 
   try {
     const result = await run(operationId);
-    endCard(toastId, operationId, success ? success(result) : endingFromMessage(successMessage?.(result), successAction?.(result)));
+    endCard(toastId, operationId, success?.(result) ?? null);
     return result;
   } catch (error) {
     toasts.dismiss(toastId);
@@ -103,10 +101,6 @@ function endCard(toastId: number, operationId: string, ending: OperationSuccess 
     detail: ending.detail ?? describeCompletion(lastProgress) ?? undefined,
     action: ending.action,
   });
-}
-
-function endingFromMessage(message: string | null | undefined, action: ToastAction | undefined): OperationSuccess | null {
-  return message ? { title: message, action } : null;
 }
 
 /** A failure the operation explained in its own way is no failure to point at in the status bar. */
