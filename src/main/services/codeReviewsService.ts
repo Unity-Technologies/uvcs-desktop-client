@@ -73,7 +73,7 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
       // `cm` succeeds without changing the status of a review nobody is assigned to.
       const [updated] = status ? await findRaw(workspacePath, [`id = ${reviewId}`], {}) : [];
       if (updated && updated.status !== status) {
-        throw new Error("cm didn't change the status: it ignores status changes on reviews nobody is assigned to. Assign the review, then try again.");
+        throw new Error("The status didn't change: a review nobody is assigned to keeps its status. Assign the review, then try again.");
       }
     },
 
