@@ -1,11 +1,10 @@
 import { app, BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from 'electron';
 import { sendEventTo } from '../ipc/sendEvent';
 import { aboutPanelOptions } from './aboutPanel';
+import { DOCUMENTATION_URL } from './appInfo';
 import { appMenuTemplate } from './appMenuTemplate';
 import { isMenuCommandEnabled } from './workspaceMenuCommands';
 import { focusWindow, type WorkspaceWindows } from './WorkspaceWindows';
-
-const DOCUMENTATION_URL = 'https://docs.unity.com/ugs/en-us/manual/devops/manual';
 
 /**
  * A menu item that runs a renderer command in the focused window. The renderer owns the keyboard shortcut,

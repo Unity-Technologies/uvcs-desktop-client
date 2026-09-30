@@ -91,9 +91,9 @@ describe('cm commands never open an external tool', () => {
 });
 
 describe('merge tools open only on the user’s request', () => {
-  it('starts processes only to run cm, open a terminal, or run a merge tool the user picked', () => {
+  it('starts processes only to run cm, open a terminal, run a merge tool the user picked, or ask codesign how the app is signed', () => {
     const spawning = allSources.filter(({ source }) => source.includes("'node:child_process'")).map(({ file }) => relative(file));
-    expect(spawning.sort()).toEqual(['cm/CmShellSession.ts', 'cm/runCmProcess.ts', 'merge/mergeTools/launch.ts', 'system/openTerminal.ts']);
+    expect(spawning.sort()).toEqual(['cm/CmShellSession.ts', 'cm/runCmProcess.ts', 'merge/mergeTools/launch.ts', 'system/openTerminal.ts', 'update/macSignature.ts']);
   });
 
   it('launches merge tools only from the service behind "Resolve in…"', () => {

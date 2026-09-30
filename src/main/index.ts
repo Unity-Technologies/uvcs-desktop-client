@@ -14,6 +14,7 @@ import { trackOperations } from './startup/operationTracking';
 import { ignoreOwnCommandWrites } from './startup/ownWrites';
 import { openSettings, sendSettingsChanges } from './startup/settings';
 import { watchShownWorkspaces } from './startup/workspaceWatching';
+import { startAppUpdates } from './update/startAppUpdates';
 import { installAppMenu, installMenus } from './window/appMenu';
 import { followAppTheme } from './window/followAppTheme';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
@@ -49,6 +50,7 @@ function start(launched: Promise<void>): void {
       watchers,
       windows,
       headers,
+      updates: startAppUpdates(),
     }),
   );
   followAppTheme(settings);
