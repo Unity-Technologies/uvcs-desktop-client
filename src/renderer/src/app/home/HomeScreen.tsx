@@ -1,8 +1,4 @@
-import { FolderDown } from 'lucide-react';
 import { useState } from 'react';
-import { useFolderDrop } from '../folderDrop/useFolderDrop';
-import { droppedItems, readDroppedFolder } from '../folderDrop/droppedFolder';
-import { openDroppedFolder } from '../folderDrop/openDroppedFolder';
 import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
 import { useServers } from '../workspace/workspaceQueries';
@@ -19,13 +15,8 @@ export function HomeScreen() {
   const { data: servers } = useServers();
   const firstServer = servers?.[0]?.server;
   const open = useOpenWorkspace();
-  const drop = useFolderDrop((event) => {
-    if (!event.dataTransfer) return;
-    const dropped = readDroppedFolder(droppedItems(event.dataTransfer, window.uvcs.pathForFile));
-    void openDroppedFolder(dropped, { newWindow: event.shiftKey, currentWorkspace: null, openHere: open });
-  });
   useHomeCommands(open);
-  const pickFolder = (): void => void openWorkspaceFolder(open);
+  const openFolder = (): void => void openWorkspaceFolder(open);
 
   return (
     <div className={styles.home}>
@@ -36,22 +27,16 @@ export function HomeScreen() {
           {section.kind === 'server' ? (
             <RepositoriesPanel server={section.server} onOpen={open} />
           ) : section.kind === 'all' ? (
-            <WorkspacesPanel onOpen={open} onOpenFolder={pickFolder} />
+            <WorkspacesPanel onOpen={open} onOpenFolder={openFolder} />
           ) : (
             <WelcomePanel
               onOpen={open}
-              onOpenFolder={pickFolder}
+              onOpenFolder={openFolder}
               onBrowseRepositories={firstServer ? () => setSection({ kind: 'server', server: firstServer }) : undefined}
             />
           )}
         </div>
       </main>
-      {drop.isOver && (
-        <div className={styles.dropOverlay}>
-          <FolderDown size={28} />
-          <span>Drop a folder to open or create a workspace</span>
-        </div>
-      )}
     </div>
   );
 }

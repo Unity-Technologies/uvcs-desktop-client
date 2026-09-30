@@ -8,6 +8,7 @@ import { CommandShortcuts } from './commands/CommandShortcuts';
 import { useAppCommands } from './commands/useAppCommands';
 import { useMenuCommands } from './commands/useMenuCommands';
 import { errorDetailsAction } from './errors/errorDetailsAction';
+import { FolderDropTarget } from './folderDrop/FolderDropTarget';
 import { HomeScreen } from './home/HomeScreen';
 import { OperationCard } from './operations/OperationCard';
 import { queryClient } from './queryClient';
@@ -60,5 +61,10 @@ function Root() {
       />
     );
   }
-  return workspacePath ? <WorkspaceGate key={workspacePath} /> : <HomeScreen />;
+  return (
+    <>
+      {workspacePath ? <WorkspaceGate key={workspacePath} /> : <HomeScreen />}
+      <FolderDropTarget />
+    </>
+  );
 }
