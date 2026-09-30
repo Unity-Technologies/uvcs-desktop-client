@@ -16,6 +16,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
     "app:debug": "node scripts/app-debug.mjs",
+    "icons": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/icons/makeAppIcons.mjs",
     "e2e": "electron-vite build && node scripts/e2e/smoke.mjs",
     "postinstall": "install-electron",
     "dist": "electron-vite build && electron-builder",
