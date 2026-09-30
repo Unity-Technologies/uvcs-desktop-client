@@ -4,6 +4,7 @@ import type { CmClient } from '../cm/CmClient';
 import { LOCK_LIST_FORMAT_ARGS, parseLocks } from '../cm/lockRecords';
 import { shelvableChanges, summarizePending } from './pendingSnapshot';
 import { readPendingSnapshot } from './readPendingChanges';
+import { switchApproach } from './switchApproach';
 import { selectorSpec } from '@shared/domain/specs';
 import { bringDisabledReason, describeSelector, leaveDisabledReason } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
@@ -13,7 +14,7 @@ import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdenti
 export async function readSwitchPreflight(cm: CmClient, records: SwitchShelveRecords, workspacePath: string, targetSpec: string): Promise<SwitchPreflight> {
   const [workspace, { changes }] = await Promise.all([readWorkspaceIdentity(cm, workspacePath), readPendingSnapshot(cm, workspacePath)]);
   const summary = summarizePending(changes);
-  const needsChoice = summary.pendingCount > 0 && !summary.unchangedCheckoutsOnly && !summary.inMerge;
+  const needsChoice = switchApproach(summary) === 'shelveChanges';
   const sourceSpec = selectorSpec(workspace.selector);
 
   return {

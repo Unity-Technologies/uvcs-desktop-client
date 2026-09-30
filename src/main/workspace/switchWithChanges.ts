@@ -17,6 +17,7 @@ import { runSwitch } from './runSwitch';
 import { selectorObjectRef } from './selectorObjectRef';
 import type { ShelveFlowDependencies } from './shelveFlowDependencies';
 import { newShelveRecord } from './shelveRecord';
+import { switchApproach } from './switchApproach';
 import { bringDisabledReason, describeSelector, leaveDisabledReason, parseSelectorSpec, selectorPlace } from './switchSelectors';
 import { createAutomaticShelve } from './verifiedShelve';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';
@@ -62,29 +63,47 @@ async function switchFrom(
 ): Promise<SwitchResult> {
   const { cm } = deps;
   const summary = summarizePending(snapshot.changes);
-  // Once the workspace starts changing (changes shelved, a restore under way), stopping halfway would leave a mess.
-  const uncancellable: OperationContext = { ...context, signal: new AbortController().signal };
+  switch (switchApproach(summary)) {
+    case 'switchAsIs':
+      await runSwitch(cm, workspacePath, targetSpec, context);
+      return { kind: 'switched', restored: await restoreOnArrival(deps, workspacePath, withoutStop(context)) };
+    case 'refuseMerge':
+      throw new Error(IN_MERGE);
+    case 'undoUnchangedCheckouts':
+      await cm.query(onLinksThemselves('undo', '--unchanged', '-r', workspacePath), { cwd: workspacePath });
+      await runSwitch(cm, workspacePath, targetSpec, context);
+      return { kind: 'undidUnchangedCheckouts', count: summary.pendingCount, restored: await restoreOnArrival(deps, workspacePath, withoutStop(context)) };
+    case 'shelveChanges':
+      return shelveChanges(deps, workspacePath, workspace, snapshot, targetSpec, action, context);
+  }
+}
 
-  if (summary.pendingCount === 0) {
-    await runSwitch(cm, workspacePath, targetSpec, context);
-    return { kind: 'switched', restored: await restoreOnArrival(deps, workspacePath, uncancellable) };
-  }
-  if (summary.inMerge) throw new Error(IN_MERGE);
-  if (summary.unchangedCheckoutsOnly) {
-    await cm.query(onLinksThemselves('undo', '--unchanged', '-r', workspacePath), { cwd: workspacePath });
-    await runSwitch(cm, workspacePath, targetSpec, context);
-    return { kind: 'undidUnchangedCheckouts', count: summary.pendingCount, restored: await restoreOnArrival(deps, workspacePath, uncancellable) };
-  }
+/** Shelves the changes and switches, then leaves them there or brings them along, as the user chose. */
+async function shelveChanges(
+  deps: SwitchDependencies,
+  workspacePath: string,
+  workspace: WorkspaceIdentity,
+  snapshot: PendingChangesSnapshot,
+  targetSpec: string,
+  action: PendingChangesAction | undefined,
+  context: OperationContext,
+): Promise<SwitchResult> {
   if (!action) throw new Error(NEEDS_CHOICE);
   assertAllowed(action, targetSpec, workspace);
 
   if (context.signal.aborted) throw new Error('The switch was cancelled.');
-  const record = await shelveAndSwitch(deps, workspacePath, workspace, snapshot, targetSpec, action, uncancellable);
+  const committed = withoutStop(context);
+  const record = await shelveAndSwitch(deps, workspacePath, workspace, snapshot, targetSpec, action, committed);
   if (action === 'leave') {
-    const restored = await restoreOnArrival(deps, workspacePath, uncancellable);
+    const restored = await restoreOnArrival(deps, workspacePath, committed);
     return { kind: 'left', shelveId: record.shelveId, count: record.paths.length, sourceName: record.source.name, restored };
   }
-  return bringChanges(deps, workspacePath, record, uncancellable);
+  return bringChanges(deps, workspacePath, record, committed);
+}
+
+/** Once the workspace starts changing (changes shelved, a restore under way), stopping halfway would leave a mess. */
+function withoutStop(context: OperationContext): OperationContext {
+  return { ...context, signal: new AbortController().signal };
 }
 
 function assertAllowed(action: PendingChangesAction, targetSpec: string, workspace: WorkspaceIdentity): void {
