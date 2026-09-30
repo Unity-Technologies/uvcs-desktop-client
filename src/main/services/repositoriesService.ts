@@ -28,11 +28,9 @@ export function createRepositoriesService({ cm }: ServiceContext): RepositoriesA
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  async function create(server: string, name: string): Promise<RepositorySummary> {
+  async function create(server: string, name: string): Promise<string> {
     await cm.query(['repository', 'create', server, name]);
-    const created = (await list(server)).find((repository) => repository.name === name);
-    if (!created) throw new Error(`Repository ${name} was not found after creating it.`);
-    return created;
+    return `${name}@${server}`;
   }
 
   async function rename(repositorySpec: string, newName: string): Promise<void> {

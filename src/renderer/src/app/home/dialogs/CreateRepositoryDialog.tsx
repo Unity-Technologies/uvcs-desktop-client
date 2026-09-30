@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import type { RepositorySummary } from '@shared/domain/repository';
 import { api } from '../../../api/client';
 import { serverChoiceLabel } from '../../../lib/servers';
 import { queryKeys } from '../../../api/queryKeys';
@@ -37,7 +36,7 @@ function CreateRepositoryDialog({ server: initialServer, onWorkspaceCreated, onC
   const [chosenPath, setChosenPath] = useState<string>();
   const [creating, setCreating] = useState(false);
   /** Created by a try whose workspace failed: trying again creates only the workspace. */
-  const [created, setCreated] = useState<RepositorySummary>();
+  const [created, setCreated] = useState<string>();
   const { data: repositories } = useRepositories(server);
 
   const workspaceName = suggestWorkspaceName(name.trim(), (workspaces ?? []).map((workspace) => workspace.name));
@@ -52,7 +51,7 @@ function CreateRepositoryDialog({ server: initialServer, onWorkspaceCreated, onC
       created,
       createRepository: () => api.repositories.create(server, name.trim()),
       createWorkspace: withWorkspace
-        ? (repository) => api.workspaces.create({ name: workspaceName, path: workspacePath, repository: repository.spec })
+        ? (repositorySpec) => api.workspaces.create({ name: workspaceName, path: workspacePath, repository: repositorySpec })
         : undefined,
     });
     if (outcome.kind === 'repositoryFailed') {
@@ -62,14 +61,14 @@ function CreateRepositoryDialog({ server: initialServer, onWorkspaceCreated, onC
     }
     void queryClient.invalidateQueries({ queryKey: queryKeys.repositories(server) });
     if (outcome.kind === 'workspaceFailed') {
-      setCreated(outcome.repository);
-      toast.error(`Created ${outcome.repository.name}, but not its workspace`, outcome.error);
+      setCreated(outcome.repositorySpec);
+      toast.error(`Created ${name.trim()}, but not its workspace`, outcome.error);
       setCreating(false);
       return;
     }
     onClose();
     if (!outcome.workspace) {
-      toast.success(`Created ${outcome.repository.spec}`);
+      toast.success(`Created ${outcome.repositorySpec}`);
       return;
     }
     void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
