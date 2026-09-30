@@ -50,7 +50,7 @@ export async function removeWorkspace(workspace: WorkspaceSummary): Promise<void
 }
 
 /** Opens the workspace's folder itself in the file manager, not its parent with it selected. */
-export function openWorkspaceFolder(workspace: WorkspaceSummary): void {
+export function showWorkspaceFolder(workspace: WorkspaceSummary): void {
   void api.system.openPath(workspace.path);
 }
 

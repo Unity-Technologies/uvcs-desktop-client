@@ -1,0 +1,38 @@
+/* Once the list shows, the pane is at least as tall as it was sized and takes whatever room the heading leaves. */
+.changes {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.changes[data-expanded='true'] {
+  flex: 1 1 var(--changes-height);
+  min-height: 120px;
+}
+
+/* Selecting another row remounts the panel: the pane stays put while its content fades in (as the panel's does). */
+.changes > * {
+  animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
+}
+
+.header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 34px;
+  padding: var(--space-1) var(--space-5) 0;
+}
+
+.title {
+  composes: sectionTitle from './DetailsSection.module.css';
+}
+
+/* A message right in the pane (a `DetailsEmpty`) lines up with its title. */
+.changes > p {
+  padding: 0 var(--space-5);
+}

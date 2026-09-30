@@ -1,6 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { classifyChange, isChangelistFile } from './classifyChange';
+import { classifyChange, isChangelistFile, workspaceChangeOf } from './classifyChange';
 import { NO_IGNORE_RULES, parseIgnoreRules } from './ignoreRules';
+
+describe('workspaceChangeOf', () => {
+  it('tells an edit from an addition, deletion or move, naming the folder that holds it', () => {
+    expect(workspaceChangeOf('content', 'change', 'src')).toEqual({ content: true, pathsChanged: false, metadata: false, folders: ['src'] });
+    expect(workspaceChangeOf('content', 'rename', '')).toEqual({ content: true, pathsChanged: true, metadata: false, folders: [''] });
+  });
+
+  it('reports a .plastic rewrite as the workspace state only, whatever the event', () => {
+    expect(workspaceChangeOf('metadata', 'rename', '.plastic')).toEqual({ content: false, pathsChanged: false, metadata: true, folders: [] });
+  });
+
+  it('reports everything, anywhere, when the platform did not name the item', () => {
+    expect(workspaceChangeOf('anything', 'rename', null)).toEqual({ content: true, pathsChanged: true, metadata: true, folders: null });
+  });
+});
 
 describe('classifyChange', () => {
   it('reports workspace files as content', () => {

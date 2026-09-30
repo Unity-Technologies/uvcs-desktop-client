@@ -6,21 +6,21 @@ import { escapeQueryValue, findArgs } from '../cm/findQuery';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 
 export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }: BranchNamesContext): CodeReviewsApi {
-  async function findRaw(workspacePath: string, conditions: string[], filter: QueryFilter): Promise<RawCodeReview[]> {
+  async function findReviews(workspacePath: string, conditions: string[], filter: QueryFilter): Promise<RawCodeReview[]> {
     const xml = await cm.query(findArgs('review', filter, 'date desc', conditions), { cwd: workspacePath });
     return parseCodeReviews(xml);
   }
 
-  async function find(workspacePath: string, conditions: string[], filter: QueryFilter): Promise<CodeReview[]> {
-    return resolveTargets(workspacePath, await findRaw(workspacePath, conditions, filter));
+  function findReviewById(workspacePath: string, reviewId: number): Promise<RawCodeReview[]> {
+    return findReviews(workspacePath, [`id = ${reviewId}`], {});
   }
 
-  function findListed(workspacePath: string, filter: CodeReviewFilter): Promise<RawCodeReview[]> {
+  function findListedReviews(workspacePath: string, filter: CodeReviewFilter): Promise<RawCodeReview[]> {
     const conditions = [
       ...(filter.assignedToMe ? ["assignee = 'me'"] : []),
       ...(filter.status ? [`status = '${escapeQueryValue(filter.status)}'`] : []),
     ];
-    return findRaw(workspacePath, conditions, {
+    return findReviews(workspacePath, conditions, {
       owners: filter.owners,
       sinceDate: filter.sinceDate,
       text: filter.text,
@@ -44,15 +44,15 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
 
   return {
     async list(workspacePath, filter) {
-      return resolveTargets(workspacePath, await findListed(workspacePath, filter));
+      return resolveTargets(workspacePath, await findListedReviews(workspacePath, filter));
     },
 
     async listSummaries(workspacePath, filter) {
-      return (await findListed(workspacePath, filter)).map(summaryOf);
+      return (await findListedReviews(workspacePath, filter)).map(summaryOf);
     },
 
     async get(workspacePath, reviewId) {
-      const [review] = await find(workspacePath, [`id = ${reviewId}`], {});
+      const [review] = await resolveTargets(workspacePath, await findReviewById(workspacePath, reviewId));
       if (!review) throw new Error(`Code review ${reviewId} was not found.`);
       return review;
     },
@@ -71,9 +71,9 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
         { cwd: workspacePath },
       );
       // `cm` succeeds without changing the status of a review nobody is assigned to.
-      const [updated] = status ? await findRaw(workspacePath, [`id = ${reviewId}`], {}) : [];
+      const [updated] = status ? await findReviewById(workspacePath, reviewId) : [];
       if (updated && updated.status !== status) {
-        throw new Error("cm didn't change the status: it ignores status changes on reviews nobody is assigned to. Assign the review, then try again.");
+        throw new Error("The status didn't change: a review nobody is assigned to keeps its status. Assign the review, then try again.");
       }
     },
 

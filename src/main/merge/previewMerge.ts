@@ -3,6 +3,7 @@ import type { CmClient } from '../cm/CmClient';
 import { CmError, SILENT_FAILURE_MESSAGE } from '../cm/CmError';
 import { parseMergePlan } from '../cm/mergeOutput';
 import { withConflictRepositories } from './conflictRepositories';
+import { hasPendingChanges } from './hasPendingChanges';
 import { MACHINE_READABLE_ARGS, mergeSourceArgs } from './mergeArgs';
 
 const PENDING_CHANGES_PLAN: MergePlan = { status: 'pendingChanges', changes: [], fileConflicts: [], directoryConflicts: [], warnings: [] };
@@ -19,11 +20,6 @@ export async function previewMerge(cm: CmClient, workspacePath: string, request:
     throw await explainFailure(cm, workspacePath, request, error);
   }
   return withConflictRepositories(cm, workspacePath, request, parseMergePlan(output));
-}
-
-async function hasPendingChanges(cm: CmClient, workspacePath: string): Promise<boolean> {
-  const output = await cm.query(['status', '--short', '--controlledchanged', '--changed', '--localdeleted'], { cwd: workspacePath });
-  return output.trim().length > 0;
 }
 
 /** The machine-readable preview can fail silently; the plain one explains why. */

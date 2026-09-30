@@ -2,6 +2,7 @@ import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
 import type { Label } from '@shared/domain/label';
 import type { Shelve } from '@shared/domain/shelve';
+import { repositorySpec } from '@shared/domain/specs';
 import { child, children, integer, parseXml, text } from './parseXml';
 
 type XmlRecord = Record<string, unknown>;
@@ -21,7 +22,7 @@ export function toBranch(record: XmlRecord): Branch {
     date: text(record.DATE),
     headChangeset: integer(record.CHANGESET),
     guid: text(record.GUID),
-    repository: `${text(record.REPNAME)}@${text(record.REPSERVER)}`,
+    repository: repositoryOf(record),
   };
 }
 
@@ -34,7 +35,7 @@ export function toChangeset(record: XmlRecord): Changeset {
     owner: text(record.OWNER),
     date: text(record.DATE),
     parent: integer(record.PARENT),
-    repository: `${text(record.REPNAME)}@${text(record.REPSERVER)}`,
+    repository: repositoryOf(record),
   };
 }
 
@@ -47,7 +48,7 @@ export function toLabel(record: XmlRecord): Label {
     comment: text(record.COMMENT),
     owner: text(record.OWNER),
     date: text(record.DATE),
-    repository: `${text(record.REPNAME)}@${text(record.REPSERVER)}`,
+    repository: repositoryOf(record),
   };
 }
 
@@ -59,6 +60,11 @@ export function toShelve(record: XmlRecord): Shelve {
     owner: text(record.OWNER),
     date: text(record.DATE),
     parentChangeset: integer(record.PARENT),
-    repository: `${text(record.REPNAME)}@${text(record.REPSERVER)}`,
+    repository: repositoryOf(record),
   };
+}
+
+/** The repository a found object belongs to (`name@server`). */
+function repositoryOf(record: XmlRecord): string {
+  return repositorySpec(text(record.REPNAME), text(record.REPSERVER));
 }

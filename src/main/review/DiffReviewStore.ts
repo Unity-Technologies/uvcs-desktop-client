@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { DiffReviewMark } from '@shared/domain/review';
+import { PersistedByKey } from './PersistedByKey';
 
 /** Diffs remembered per repository; the least recently used go first. */
 export const MAX_DIFFS_PER_REPOSITORY = 200;
@@ -20,8 +21,11 @@ type RepositoryMarks = Record<string, StoredDiff>;
  * another revision of it, e.g. after new changesets on a branch.
  */
 export class DiffReviewStore {
-  private readonly loaded = new Map<string, Promise<RepositoryMarks>>();
-  private readonly saves = new Map<string, Promise<void>>();
+  private readonly files = new PersistedByKey<RepositoryMarks>((repository) =>
+    readFile(this.filePath(repository), 'utf8')
+      .then((json) => JSON.parse(json) as RepositoryMarks)
+      .catch(() => ({})),
+  );
 
   constructor(
     private readonly root: string,
@@ -29,7 +33,7 @@ export class DiffReviewStore {
   ) {}
 
   async marks(repository: string, diff: string): Promise<DiffReviewMark[]> {
-    const stored = (await this.load(repository))[diff];
+    const stored = (await this.files.load(repository))[diff];
     return Object.entries(stored?.marks ?? {}).map(([path, revisionId]) => ({ path, revisionId }));
   }
 
@@ -43,7 +47,7 @@ export class DiffReviewStore {
   }
 
   private async update(repository: string, diff: string, change: (marks: Record<string, number>) => Record<string, number>): Promise<void> {
-    const repositoryMarks = await this.load(repository);
+    const repositoryMarks = await this.files.load(repository);
     const marks = change(repositoryMarks[diff]?.marks ?? {});
     if (Object.keys(marks).length === 0) delete repositoryMarks[diff];
     else repositoryMarks[diff] = { usedAt: this.now(), marks };
@@ -51,24 +55,12 @@ export class DiffReviewStore {
     await this.save(repository, repositoryMarks);
   }
 
-  private load(repository: string): Promise<RepositoryMarks> {
-    let marks = this.loaded.get(repository);
-    if (!marks) {
-      marks = readFile(this.filePath(repository), 'utf8')
-        .then((json) => JSON.parse(json) as RepositoryMarks)
-        .catch(() => ({}));
-      this.loaded.set(repository, marks);
-    }
-    return marks;
-  }
-
-  /** Writes one save after another, so an older state never lands last. */
   private save(repository: string, marks: RepositoryMarks): Promise<void> {
-    const previous = this.saves.get(repository) ?? Promise.resolve();
     const json = JSON.stringify(marks);
-    const next = previous.then(() => mkdir(this.root, { recursive: true }).then(() => writeFile(this.filePath(repository), json)));
-    this.saves.set(repository, next.catch(() => undefined));
-    return next;
+    return this.files.save(repository, async () => {
+      await mkdir(this.root, { recursive: true });
+      await writeFile(this.filePath(repository), json);
+    });
   }
 
   private filePath(repository: string): string {

@@ -1,5 +1,6 @@
 import { Copy } from 'lucide-react';
 import type { ReactNode } from 'react';
+import { classNames } from '../lib/classNames';
 import { copyToClipboard } from '../lib/copyToClipboard';
 import styles from './PropertyList.module.css';
 
@@ -21,7 +22,7 @@ export function PropertyList({ properties }: { properties: Property[] }) {
       {visible.map((property) => (
         <div key={property.label} className={styles.row}>
           <dt className={styles.label}>{property.label}</dt>
-          <dd className={[styles.value, property.mono && 'mono', 'selectable'].filter(Boolean).join(' ')}>{property.value}</dd>
+          <dd className={classNames(styles.value, property.mono && 'mono', 'selectable')}>{property.value}</dd>
           {property.copyText && (
             <button
               className={styles.copy}

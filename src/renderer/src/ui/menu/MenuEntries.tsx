@@ -1,6 +1,7 @@
 import { ChevronRight } from 'lucide-react';
 import type { ComponentType, ReactNode } from 'react';
 import { isSubmenu, SEPARATOR, type MenuEntry } from '../../lib/actions';
+import { classNames } from '../../lib/classNames';
 import { Kbd } from '../Kbd';
 import styles from './Menu.module.css';
 
@@ -51,7 +52,7 @@ export function MenuEntries({ entries, primitives }: { entries: MenuEntry[]; pri
     return (
       <Item
         key={entry.id}
-        className={[styles.item, entry.danger && styles.danger].filter(Boolean).join(' ')}
+        className={classNames(styles.item, entry.danger && styles.danger)}
         disabled={entry.disabled}
         data-tip={entry.disabled ? entry.disabledReason : undefined}
         onSelect={() => runAfterMenuCloses(entry.run)}

@@ -1,4 +1,5 @@
 import { forwardRef, useId, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react';
+import { classNames } from '../lib/classNames';
 import styles from './Field.module.css';
 
 interface FieldChrome {
@@ -26,7 +27,7 @@ export const TextField = forwardRef<HTMLInputElement, FieldChrome & InputHTMLAtt
     const id = useId();
     return (
       <FieldFrame id={id} label={label} hint={hint} error={error}>
-        <input ref={ref} id={id} className={[styles.input, className].filter(Boolean).join(' ')} spellCheck={false} {...rest} />
+        <input ref={ref} id={id} className={classNames(styles.input, className)} spellCheck={false} {...rest} />
       </FieldFrame>
     );
   },
@@ -37,7 +38,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, FieldChrome & TextareaHT
     const id = useId();
     return (
       <FieldFrame id={id} label={label} hint={hint} error={error}>
-        <textarea ref={ref} id={id} className={[styles.input, styles.textarea, className].filter(Boolean).join(' ')} {...rest} />
+        <textarea ref={ref} id={id} className={classNames(styles.input, styles.textarea, className)} {...rest} />
       </FieldFrame>
     );
   },
@@ -48,7 +49,7 @@ export const SelectField = forwardRef<HTMLSelectElement, FieldChrome & SelectHTM
     const id = useId();
     return (
       <FieldFrame id={id} label={label} hint={hint} error={error}>
-        <select ref={ref} id={id} className={[styles.input, styles.select, className].filter(Boolean).join(' ')} {...rest}>
+        <select ref={ref} id={id} className={classNames(styles.input, styles.select, className)} {...rest}>
           {children}
         </select>
       </FieldFrame>

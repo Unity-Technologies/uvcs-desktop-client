@@ -97,7 +97,14 @@ const state = {
   openedExternally: [] as string[],
 };
 
-const app = Object.assign(new EventEmitter(), { isPackaged: true, quits: 0, quit: () => void app.quits++ });
+const app = Object.assign(new EventEmitter(), {
+  isPackaged: true,
+  /** Whether Electron finished starting (`app.isReady()`). */
+  ready: false,
+  isReady: () => app.ready,
+  quits: 0,
+  quit: () => void app.quits++,
+});
 
 export const fakeElectron = {
   module: {
@@ -119,6 +126,7 @@ export const fakeElectron = {
     state.nextId = 1;
     state.openedExternally = [];
     app.isPackaged = true;
+    app.ready = false;
     app.quits = 0;
     app.removeAllListeners();
   },

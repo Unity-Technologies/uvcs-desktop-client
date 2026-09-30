@@ -74,18 +74,7 @@ export async function runOperation<T>({
 
   try {
     const result = await run(operationId);
-    const ending = success ? success(result) : endingFromMessage(successMessage?.(result), successAction?.(result));
-    if (ending) {
-      const lastProgress = operationById(operationId)?.progress ?? null;
-      toasts.update(toastId, {
-        kind: ending.kind ?? 'success',
-        title: ending.title,
-        detail: ending.detail ?? describeCompletion(lastProgress) ?? undefined,
-        action: ending.action,
-      });
-    } else {
-      toasts.dismiss(toastId);
-    }
+    endCard(toastId, operationId, success ? success(result) : endingFromMessage(successMessage?.(result), successAction?.(result)));
     return result;
   } catch (error) {
     toasts.dismiss(toastId);
@@ -98,6 +87,22 @@ export async function runOperation<T>({
     operations.finish(operationId);
     void invalidateWorkspace(workspacePath, affects);
   }
+}
+
+/**
+ * Turns the progress card into the ending, telling what was done from the last progress unless the ending says; no
+ * ending takes the card away.
+ */
+function endCard(toastId: number, operationId: string, ending: OperationSuccess | null): void {
+  const toasts = useToastStore.getState();
+  if (!ending) return toasts.dismiss(toastId);
+  const lastProgress = operationById(operationId)?.progress ?? null;
+  toasts.update(toastId, {
+    kind: ending.kind ?? 'success',
+    title: ending.title,
+    detail: ending.detail ?? describeCompletion(lastProgress) ?? undefined,
+    action: ending.action,
+  });
 }
 
 function endingFromMessage(message: string | null | undefined, action: ToastAction | undefined): OperationSuccess | null {

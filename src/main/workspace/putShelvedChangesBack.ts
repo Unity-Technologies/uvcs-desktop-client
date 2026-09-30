@@ -1,11 +1,12 @@
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
-import { parsePendingChanges } from '../cm/pendingChangesXml';
 import type { OperationContext } from '../operations/OperationTracker';
 import type { LeftChangesFinder } from './leftChanges';
-import { changedPaths, SWITCH_STATUS_ARGS } from './pendingSnapshot';
+import { applyShelveCleanly } from './applyShelveCleanly';
+import { changedPaths } from './pendingSnapshot';
 import { putBack } from './privateBackups';
-import { applyShelveCleanly } from './switchShelves';
+import { readPendingSnapshot } from './readPendingChanges';
+import type { ShelveFlowDependencies } from './shelveFlowDependencies';
 
 /**
  * Puts shelved changes back in the workspace they were shelved from, after a step that was taking them out of it
@@ -30,7 +31,29 @@ export async function putShelvedChangesBack(
   return true;
 }
 
+/**
+ * `putShelvedChangesBack` once a step failed. It never fails itself: whatever goes wrong putting them back, the changes
+ * are still safe in the shelve, and the caller's error says so.
+ */
+export async function putBackAfterFailure(
+  { cm, leftChanges }: Pick<ShelveFlowDependencies, 'cm' | 'leftChanges'>,
+  workspacePath: string,
+  record: SwitchShelveRecord,
+  context: OperationContext,
+): Promise<boolean> {
+  try {
+    return await putShelvedChangesBack(cm, leftChanges, workspacePath, record, context);
+  } catch {
+    return false;
+  }
+}
+
+/** What went wrong, without its final period, for the sentence that goes on to say where the changes are. */
+export function failureReason(cause: unknown): string {
+  return (cause instanceof Error ? cause.message : String(cause)).replace(/\.$/, '');
+}
+
 async function allStillPending(cm: CmClient, workspacePath: string, paths: string[]): Promise<boolean> {
-  const pending = new Set(changedPaths(parsePendingChanges(await cm.query(SWITCH_STATUS_ARGS, { cwd: workspacePath })).changes));
+  const pending = new Set(changedPaths((await readPendingSnapshot(cm, workspacePath)).changes));
   return paths.length > 0 && paths.every((path) => pending.has(path));
 }

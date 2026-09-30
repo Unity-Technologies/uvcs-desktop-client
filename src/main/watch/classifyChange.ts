@@ -1,3 +1,4 @@
+import type { WorkspaceChange } from '@shared/events';
 import { isIgnored, type IgnoreRules } from './ignoreRules';
 
 /**
@@ -29,4 +30,14 @@ export function classifyChange(relativePath: string | undefined, ignoreRules: Ig
 /** One of the files `cm` keeps the persistent changelists in. */
 export function isChangelistFile(relativePath: string | undefined): boolean {
   return relativePath !== undefined && relativePath.replaceAll('\\', '/').startsWith('.plastic/changelists/');
+}
+
+/**
+ * What an event of `kind` tells the windows. `event` is `fs.watch`'s: `rename` for additions, deletions and moves,
+ * `change` for edits. `folder` holds the item (`changedFolder`); a `.plastic` rewrite changes no folder's listing.
+ */
+export function workspaceChangeOf(kind: Exclude<ChangeKind, null>, event: string, folder: string | null): WorkspaceChange {
+  if (kind === 'anything') return { content: true, pathsChanged: true, metadata: true, folders: null };
+  if (kind === 'metadata') return { content: false, pathsChanged: false, metadata: true, folders: [] };
+  return { content: true, pathsChanged: event === 'rename', metadata: false, folders: folder === null ? null : [folder] };
 }

@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserWindow } from 'electron';
 import { memorySettings } from '../settings/testing/memorySettings';
-import { loadWindowBounds, saveWindowBounds } from './savedWindowBounds';
+import { loadWindowBounds, keepWindowBoundsSaved } from './savedWindowBounds';
 
 vi.mock('electron', () => ({
   screen: { getAllDisplays: () => [{ workArea: { x: 0, y: 0, width: 1920, height: 1080 } }] },
@@ -27,11 +27,11 @@ class MovingWindow extends EventEmitter {
 function watched() {
   const settings = memorySettings();
   const window = new MovingWindow();
-  saveWindowBounds(window as unknown as BrowserWindow, settings);
+  keepWindowBoundsSaved(window as unknown as BrowserWindow, settings);
   return { settings, window };
 }
 
-describe('saveWindowBounds', () => {
+describe('keepWindowBoundsSaved', () => {
   it('saves where the window was left once it stops moving, not on every step', () => {
     const { settings, window } = watched();
     const update = vi.spyOn(settings, 'update');

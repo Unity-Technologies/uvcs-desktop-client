@@ -2,12 +2,13 @@ import type { BranchesApi } from '@shared/api/branches';
 import type { Branch, CreateBranchRequest } from '@shared/domain/branch';
 import type { QueryFilter } from '@shared/domain/query';
 import { shortBranchName } from '@shared/domain/specs';
+import { branchCreateArgs } from '../cm/branchCreateArgs';
 import { escapeQueryValue, findArgs } from '../cm/findQuery';
 import { findRecords, toBranch } from '../cm/findObjects';
 import { withTempFile } from '../files/tempFile';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 
-export function createBranchesService({ cm, settings }: ServiceContext, { branchNames }: BranchNamesContext): BranchesApi {
+export function createBranchesService({ cm, settings, headers }: ServiceContext, { branchNames }: BranchNamesContext): BranchesApi {
   async function find(workspacePath: string, filter: QueryFilter, conditions: string[]): Promise<Branch[]> {
     const xml = await cm.query(findArgs('branch', { ...filter, branch: undefined }, 'date desc', conditions), { cwd: workspacePath });
     const branches = findRecords(xml, 'BRANCH').map(toBranch);
@@ -16,34 +17,32 @@ export function createBranchesService({ cm, settings }: ServiceContext, { branch
     return branches;
   }
 
-  async function list(workspacePath: string, filter: QueryFilter): Promise<Branch[]> {
-    // `cm find branch` leaves hidden branches out unless they are asked for explicitly.
+  /**
+   * `cm find branch` leaves hidden branches out unless they are asked for, and `or` between the two finds neither:
+   * hidden branches take a second query, only when wanted.
+   */
+  async function findVisibleAndHidden(workspacePath: string, filter: QueryFilter, conditions: string[], withHidden: boolean): Promise<Branch[]> {
     const [visible, hidden] = await Promise.all([
-      find(workspacePath, filter, ["hidden = 'false'"]),
-      filter.includeHidden ? find(workspacePath, filter, ["hidden = 'true'"]) : Promise.resolve([]),
+      find(workspacePath, filter, [...conditions, "hidden = 'false'"]),
+      withHidden ? find(workspacePath, filter, [...conditions, "hidden = 'true'"]) : [],
     ]);
-    return [...visible, ...hidden.map((branch) => ({ ...branch, isHidden: true }))].sort((a, b) => b.date.localeCompare(a.date));
+    return [...visible, ...hidden.map((branch) => ({ ...branch, isHidden: true }))];
+  }
+
+  async function list(workspacePath: string, filter: QueryFilter): Promise<Branch[]> {
+    const branches = await findVisibleAndHidden(workspacePath, filter, [], filter.includeHidden === true);
+    return branches.sort((a, b) => b.date.localeCompare(a.date));
   }
 
   async function get(workspacePath: string, name: string): Promise<Branch | null> {
-    // `cm find` matches branches by their last name part only, and leaves hidden branches out unless they are asked
-    // for (a workspace can be on one): both are asked for, as `or` there finds neither.
-    const named = `name = '${escapeQueryValue(shortBranchName(name))}'`;
-    const findNamed = (condition: string): Promise<string> =>
-      cm.query(['find', 'branch', `where ${named} and ${condition}`, '--xml', '--nototal'], { cwd: workspacePath });
-    const [visible, hidden] = await Promise.all([findNamed("hidden = 'false'"), findNamed("hidden = 'true'")]);
-    const branches = [
-      ...findRecords(visible, 'BRANCH').map(toBranch),
-      ...findRecords(hidden, 'BRANCH').map((record) => ({ ...toBranch(record), isHidden: true })),
-    ];
-    return branches.find((branch) => branch.name === name) ?? null;
+    // `cm find` matches branches by their last name part only; a workspace can be on a hidden branch.
+    const named = await findVisibleAndHidden(workspacePath, {}, [`name = '${escapeQueryValue(shortBranchName(name))}'`], true);
+    return named.find((branch) => branch.name === name) ?? null;
   }
 
   function create(workspacePath: string, request: CreateBranchRequest): Promise<void> {
     return withTempFile(request.comment, async (commentsFile) => {
-      await cm.query(['branch', 'create', request.name, ...startingPointOption(request.startingPoint), `-commentsfile=${commentsFile}`], {
-        cwd: workspacePath,
-      });
+      await cm.query(branchCreateArgs(request, commentsFile), { cwd: workspacePath });
     });
   }
 
@@ -59,8 +58,9 @@ export function createBranchesService({ cm, settings }: ServiceContext, { branch
     await cm.query(['branch', hidden ? 'hide' : 'unhide', ...branches.map((branch) => `br:${branch}`)], { cwd: workspacePath });
   }
 
+  /** From the workspace's names, which the workspace info shares: asked for just before, they cost no command. */
   async function workspaceGuid(workspacePath: string): Promise<string> {
-    return (await cm.query(['getworkspacefrompath', workspacePath, '--format={guid}'])).trim();
+    return (await headers.names(workspacePath)).guid;
   }
 
   async function recent(workspacePath: string): Promise<string[]> {
@@ -72,12 +72,4 @@ export function createBranchesService({ cm, settings }: ServiceContext, { branch
   }
 
   return { list, get, create, rename, delete: remove, setHidden, recent, rememberRecent };
-}
-
-/** Without a starting point, `cm` starts the branch at the head of its parent. */
-export function startingPointOption(startingPoint: string | undefined): string[] {
-  if (startingPoint === undefined) return [];
-  if (startingPoint.startsWith('cs:')) return [`--changeset=${startingPoint}`];
-  if (startingPoint.startsWith('lb:')) return [`--label=${startingPoint}`];
-  throw new Error(`A branch can only start at a changeset or a label, not ${startingPoint}.`);
 }

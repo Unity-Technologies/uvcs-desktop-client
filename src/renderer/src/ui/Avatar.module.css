@@ -15,7 +15,12 @@
   object-fit: cover;
 }
 
+.initials circle {
+  fill: var(--avatar-fill);
+}
+
 .initials text {
+  fill: var(--avatar-letter);
   font-family: var(--font-ui);
 }
 

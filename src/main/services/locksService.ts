@@ -17,7 +17,8 @@ export function createLocksService({ cm }: ServiceContext): LocksApi {
         ],
         { cwd: workspacePath },
       );
-      return parseLocks(output, repository.slice(repository.indexOf('@') + 1));
+      const server = repository.slice(repository.indexOf('@') + 1);
+      return parseLocks(output, server);
     },
 
     async unlock(workspacePath, locks, { remove }) {

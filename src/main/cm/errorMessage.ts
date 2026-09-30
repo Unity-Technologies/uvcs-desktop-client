@@ -3,11 +3,19 @@ import { SILENT_FAILURE_MESSAGE } from './CmError';
 /** The message of a `cm` failure that only printed the command's usage help. */
 export const USAGE_MESSAGE = "cm didn't accept the command's arguments.";
 
-/**
- * Progress chatter ("Please wait ...", "Searching for changed items..."), machine-readable stages, stack frames, and the
- * empty result an `--xml` command prints after its error (`<?xml …?>`, `<RevisionHistoriesResult />`).
- */
-const NOISE = [/\.\.\.$/, /^<\w+:.*>$/, /^[A-Z][A-Z_]*$/, /^STAGE\b/, /^at \S+/, /^<[?/]?[A-Za-z][\w.-]*(?:\s[^<>]*)?[?/]?>$/];
+/** Lines that never explain a failure. */
+const NOISE = [
+  // Progress chatter: "Please wait ...", "Searching for changed items...".
+  /\.\.\.$/,
+  // Machine-readable item lines (`<U:/w/a.txt>`), stages (`CI_START`, `STAGE Uploading`).
+  /^<\w+:.*>$/,
+  /^[A-Z][A-Z_]*$/,
+  /^STAGE\b/,
+  // Stack frames.
+  /^at \S+/,
+  // The empty result an `--xml` command prints after its error: `<?xml …?>`, `<RevisionHistoriesResult />`.
+  /^<[?/]?[A-Za-z][\w.-]*(?:\s[^<>]*)?[?/]?>$/,
+];
 const ERROR_PREFIX = /^Error:\s*/;
 /** `--machinereadable` errors: `MERGE_NEEDED <sentence>. <field> <field>…`; keeps the sentence. */
 const MACHINE_READABLE_ERROR = /^[A-Z][A-Z_]+ (.+\.)(?: [^\s.]+)*$/;

@@ -1,6 +1,11 @@
+/** The words of a filter's query, lower case, in the order typed: what a row must hold and `Highlight` marks. */
+export function queryWords(query: string): string[] {
+  return query.toLowerCase().split(/\s+/).filter(Boolean);
+}
+
 /** True when every word of the query appears somewhere in the text, in any order and case. For free text like comments. */
 export function matchesAllWords(text: string, query: string): boolean {
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const words = queryWords(query);
   if (words.length === 0) return false;
 
   const haystack = text.toLowerCase();

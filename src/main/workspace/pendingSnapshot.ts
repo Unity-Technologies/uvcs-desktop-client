@@ -1,8 +1,5 @@
 import { isUnchangedCheckout, type PendingChange, type PendingChangesSnapshot } from '@shared/domain/pendingChanges';
-import type { ShelvedChangelist } from '@shared/domain/switchWithChanges';
-
-/** `cm status` arguments for everything a switch has to take care of, private files included. */
-export const SWITCH_STATUS_ARGS = ['status', '--xml', '--iscochanged', '--changelists', '--controlledchanged', '--changed', '--localdeleted', '--localmoved', '--private'];
+import type { ShelvedChangelist, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 
 const isPrivate = (change: PendingChange): boolean => change.kinds.includes('private');
 
@@ -68,4 +65,9 @@ export function shelvedChangelists(snapshot: PendingChangesSnapshot): ShelvedCha
         .map((change) => change.path),
     }))
     .filter((changelist) => changelist.paths.length > 0);
+}
+
+/** What a shelve of `changes` (the snapshot's, or some of them) holds, as its record keeps it. */
+export function shelvedContents(snapshot: PendingChangesSnapshot, changes = snapshot.changes): Pick<SwitchShelveRecord, 'paths' | 'changelists'> {
+  return { paths: changedPaths(changes), changelists: shelvedChangelists({ ...snapshot, changes }) };
 }

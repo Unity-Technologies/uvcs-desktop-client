@@ -3,10 +3,7 @@ import type { CmResult } from './CmResult';
 import { changesWorkspace } from '../watch/changesWorkspace';
 import { OutputBuffer } from './OutputBuffer';
 import { SHELL_ARGS, toShellCommandLine } from './shellCommandLine';
-
-const RESULT_LINE = /^CommandResult (-?\d+)\r?\n$/;
-/** Longer than any `CommandResult <code>` line. */
-const RESULT_LINE_ROOM = 40;
+import { resultLineAtEnd } from './shellResultLine';
 /** A trailing line without a newline that looks like a question, e.g. "Select your system [0-1]:". */
 const PROMPT_LIKE_TAIL = /^[^<].*(\[[^\]]*\]|[:?])\s*$/;
 /** Longer last lines are output (e.g. `--format` records), not a question. */
@@ -132,7 +129,7 @@ export class CmShellSession {
 
     // Not a regular expression: V8 keeps the last string one ran on, which would hold the whole output in memory.
     // Windows ends lines with CRLF: the last one's CR stays before the result line's LF.
-    const text = this.buffer.textBefore(length - tail.length + result.index).replaceAll('\r\n', '\n');
+    const text = this.buffer.textBefore(length - tail.length + result.outputEnd).replaceAll('\r\n', '\n');
     const output = text.endsWith('\r') ? text.slice(0, -1) : text;
     this.buffer.clear();
     this.answered = true;
@@ -198,18 +195,4 @@ export class CmShellSession {
 /** How long a command may run: reads are quick, while writes to thousands of files take minutes. */
 export function shellCommandTimeoutMs(args: readonly string[]): number {
   return changesWorkspace(args) ? WRITE_TIMEOUT_MS : READ_TIMEOUT_MS;
-}
-
-/**
- * The `CommandResult <code>` line `cm shell` ends each command's output with, when the buffer ends with it: where it
- * starts and the exit code. Only the end is looked at, so huge outputs arriving in hundreds of chunks stay cheap.
- */
-export function resultLineAtEnd(buffer: string): { index: number; exitCode: number } | null {
-  const tailStart = Math.max(0, buffer.length - RESULT_LINE_ROOM);
-  const lineInTail = buffer.slice(tailStart).lastIndexOf('CommandResult ');
-  if (lineInTail < 0) return null;
-  const index = tailStart + lineInTail;
-  if (index > 0 && buffer[index - 1] !== '\n') return null;
-  const match = RESULT_LINE.exec(buffer.slice(index));
-  return match ? { index: index > 0 ? index - 1 : 0, exitCode: Number(match[1]) } : null;
 }

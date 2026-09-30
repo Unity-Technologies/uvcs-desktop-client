@@ -9,7 +9,7 @@ import type { MergeToolOutcome, MergeToolRequest } from '@shared/domain/mergeToo
 import { saveContent } from '../files/saveContent';
 import { withTempDirectory } from '../files/tempFile';
 import { appExecutable } from '../merge/mergeTools/appExecutable';
-import { fillArgs } from '../merge/mergeTools/commandLine';
+import { fillArgs, type MergeToolFiles } from '../merge/mergeTools/commandLine';
 import { detectKnownTools, type ToolFileSystem } from '../merge/mergeTools/detectTools';
 import { KNOWN_TOOLS, type Whereabouts } from '../merge/mergeTools/knownTools';
 import { activateApp, launchMergeTool } from '../merge/mergeTools/launch';
@@ -69,35 +69,32 @@ export function createMergeToolsService({ cm, settings }: ServiceContext): Merge
     open.set(request.sessionId, { stop, bundle: tool.canBringToFront ? appBundleOf(tool.executable) : null });
     try {
       return await withTempDirectory(async (directory) => {
-        const names = toolFileNames(request.path);
-        const file = (name: string): string => join(directory, name);
-        await save(workspacePath, request.base, file(names.base));
-        await save(workspacePath, request.yours, file(names.yours));
-        await save(workspacePath, request.incoming, file(names.incoming));
-        await writeFile(file(names.result), request.startText, 'utf8');
-        const start = await readFile(file(names.result));
-
-        const run = await launchMergeTool(
-          tool.executable,
-          fillArgs(tool.args, {
-            base: file(names.base),
-            yours: file(names.yours),
-            incoming: file(names.incoming),
-            result: file(names.result),
-            baseName: request.names.base,
-            yoursName: request.names.yours,
-            incomingName: request.names.incoming,
-            fileName: names.result,
-          }),
-          stop.signal,
-        );
-        return judgeToolResult({ start, result: await readIfThere(file(names.result)) }, run);
+        const files = await writeToolFiles(workspacePath, request, directory);
+        const start = await readFile(files.result);
+        const run = await launchMergeTool(tool.executable, fillArgs(tool.args, files), stop.signal);
+        return judgeToolResult({ start, result: await readIfThere(files.result) }, run);
       });
     } catch (error) {
       return { kind: 'failed', message: error instanceof Error ? error.message : String(error) };
     } finally {
       open.delete(request.sessionId);
     }
+  }
+
+  /** The three versions and the result, holding the text to start from, as files in `directory` the tool can open. */
+  async function writeToolFiles(workspacePath: string, request: MergeToolRequest, directory: string): Promise<MergeToolFiles> {
+    const names = toolFileNames(request.path);
+    const files = {
+      base: join(directory, names.base),
+      yours: join(directory, names.yours),
+      incoming: join(directory, names.incoming),
+      result: join(directory, names.result),
+    };
+    await save(workspacePath, request.base, files.base);
+    await save(workspacePath, request.yours, files.yours);
+    await save(workspacePath, request.incoming, files.incoming);
+    await writeFile(files.result, request.startText, 'utf8');
+    return { ...files, baseName: request.names.base, yoursName: request.names.yours, incomingName: request.names.incoming, fileName: names.result };
   }
 
   function save(workspacePath: string, source: ContentSource, target: string): Promise<void> {
@@ -124,7 +121,6 @@ export function createMergeToolsService({ cm, settings }: ServiceContext): Merge
     },
   };
 }
-
 
 async function readIfThere(path: string): Promise<Buffer | null> {
   return existsSync(path) ? readFile(path) : null;

@@ -1,14 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { followTip, type TipText } from './followTip';
+import { followTip } from './followTip';
 import { TooltipBubble } from './TooltipBubble';
 import { listenForTooltips } from './tooltipEvents';
 import { TooltipGate } from './tooltipGate';
-
-/** `sub` is `data-tip-sub`, `shortcut` is `data-tip-shortcut`. */
-interface FoundTip extends TipText {
-  /** The element the tip is read from: followed while it shows. */
-  host: Element;
-}
+import { findTip, type FoundTip } from './tooltipTarget';
 
 interface Tip extends FoundTip {
   /** Pointer position at show time: the tip is anchored to the cursor. */
@@ -18,8 +13,6 @@ interface Tip extends FoundTip {
 
 /** How long the pointer rests on something before its tooltip shows; canvas tooltips wait the same. */
 export const TOOLTIP_SHOW_DELAY = 120;
-/** How far up from the hovered node to look for a label cut off with an ellipsis. */
-const CLIPPED_SEARCH_DEPTH = 4;
 
 /**
  * The app's one tooltip. Any element with `data-tip` shows it on hover, quickly and styled, instead of the slow
@@ -82,29 +75,4 @@ export function TooltipLayer() {
   }, [host]);
 
   return tip && <TooltipBubble text={tip.text} sub={tip.sub} shortcut={tip.shortcut} pointerX={tip.pointerX} pointerY={tip.pointerY} />;
-}
-
-function findTip(target: Element | null): FoundTip | null {
-  const host = target?.closest<HTMLElement>('[data-tip]');
-  if (host) {
-    const text = host.getAttribute('data-tip');
-    // A menu or popover trigger that is open already shows what it does.
-    if (!text || host.dataset.state === 'open' || (host.hasAttribute('data-tip-overflow') && !isClipped(host))) return null;
-    return { text, sub: host.getAttribute('data-tip-sub') ?? undefined, shortcut: host.getAttribute('data-tip-shortcut') ?? undefined, host };
-  }
-
-  let element = target instanceof HTMLElement ? target : null;
-  for (let depth = 0; element && depth < CLIPPED_SEARCH_DEPTH; depth++, element = element.parentElement) {
-    if (element.scrollWidth > element.clientWidth + 1 && getComputedStyle(element).textOverflow === 'ellipsis') {
-      const text = element.textContent?.trim();
-      return text ? { text, host: element } : null;
-    }
-  }
-  return null;
-}
-
-/** True when the element's text is clipped, or any descendant's is. */
-function isClipped(element: HTMLElement): boolean {
-  if (element.scrollWidth > element.clientWidth + 1 || element.scrollHeight > element.clientHeight + 1) return true;
-  return [...element.querySelectorAll('*')].some((child) => child.scrollWidth > child.clientWidth + 1);
 }

@@ -1,4 +1,5 @@
 import { lazyComponent } from '../../lib/lazyComponent';
+import { fileNameOf } from '../../lib/text';
 import type { Page } from './pages';
 
 // Pages load when first opened so the app starts fast.
@@ -26,7 +27,7 @@ export function PageContent({ page }: { page: Page }) {
 export function pageTitle(page: Page): string {
   switch (page.kind) {
     case 'history':
-      return `History of ${fileName(page.path)}`;
+      return `History of ${fileNameOf(page.path)}`;
     case 'diff':
       return page.title;
     case 'merge':
@@ -36,8 +37,4 @@ export function pageTitle(page: Page): string {
     case 'browseRepository':
       return `Changeset ${page.changesetId}`;
   }
-}
-
-function fileName(path: string): string {
-  return path.split('/').at(-1) ?? path;
 }

@@ -1,4 +1,5 @@
 import { matchesWordFilter } from '../lib/matchesAllWords';
+import { pluralize } from '../lib/text';
 import type { StatusTone } from './StatusBadge';
 
 export interface ChangeFilter {
@@ -30,7 +31,7 @@ export function countTones(tones: readonly StatusTone[]): Map<StatusTone, number
 
 /** The filter field's placeholder: "Filter 1 file", "Filter 1,204 files". */
 export function changeFilterPlaceholder(count: number): string {
-  return `Filter ${count.toLocaleString('en-US')} ${count === 1 ? 'file' : 'files'}`;
+  return `Filter ${pluralize(count, 'file')}`;
 }
 
 export function matchesChangeFilter(path: string, tone: StatusTone, { query, tones }: ChangeFilter): boolean {

@@ -1,11 +1,11 @@
 import { Check, Copy, TerminalSquare } from 'lucide-react';
-import { useState } from 'react';
 import type { FailedCommand } from '@shared/ipc';
 import { withControlPictures } from '../../lib/controlPictures';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { OutputBlock } from '../../ui/OutputBlock';
 import { PropertyList } from '../../ui/PropertyList';
+import { useCopiedFeedback } from '../useCopiedFeedback';
 import styles from './ErrorDialog.module.css';
 
 interface ErrorDialogProps {
@@ -18,17 +18,9 @@ interface ErrorDialogProps {
   onClose: () => void;
 }
 
-const COPIED_FEEDBACK_MS = 1600;
-
 /** Everything `cm` said about a failure: enough to understand it, search for it or report it. */
 export function ErrorDialog({ title, message, command, onShowInLog, onClose }: ErrorDialogProps) {
-  const [copied, setCopied] = useState(false);
-
-  const copy = (): void => {
-    void navigator.clipboard.writeText(errorReport(title, message, command));
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), COPIED_FEEDBACK_MS);
-  };
+  const { copied, copy } = useCopiedFeedback();
 
   return (
     <Dialog
@@ -51,7 +43,7 @@ export function ErrorDialog({ title, message, command, onShowInLog, onClose }: E
               Show in command log
             </Button>
           )}
-          <Button icon={copied ? <Check size={14} /> : <Copy size={14} />} onClick={copy}>
+          <Button icon={copied ? <Check size={14} /> : <Copy size={14} />} onClick={() => copy(errorReport(title, message, command))}>
             {copied ? 'Copied' : 'Copy'}
           </Button>
           <Button variant="primary" onClick={onClose} autoFocus>
