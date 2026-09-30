@@ -9,6 +9,7 @@
 const childProcess = require('node:child_process');
 const { writeFileSync } = require('node:fs');
 const Module = require('node:module');
+const { resolve } = require('node:path');
 
 const now = () => performance.timeOrigin + performance.now();
 const probe = { processStart: performance.timeOrigin, probeLoaded: now(), processes: [], calls: [] };
@@ -30,8 +31,8 @@ Module.prototype.require = function requireHooked(request) {
 function hookElectron({ app, ipcMain, session }) {
   if (process.env.UVCS_STARTUP_AS_INSTALLED === '1') {
     Object.defineProperty(app, 'isPackaged', { get: () => true });
-    // The installed app isn't started with the app's folder (`electron .`), which it would take as a folder to open.
-    process.argv = process.argv.filter((arg) => arg !== '.');
+    // The installed app isn't started with the app's folder (`electron <folder>`), which it would take as a folder to open.
+    process.argv = process.argv.filter((arg) => resolve(arg) !== resolve(app.getAppPath()));
   }
   probe.appCodeStarted = now();
   // Runs before the app's own `whenReady` callbacks, so before its first window.
