@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { createPeopleSeen } from './peopleSeen';
 
-/** Everyone each list has shown in this session, by workspace and list. */
-const seenByList = new Map<string, Set<string>>();
+const peopleSeen = createPeopleSeen();
 
 /**
  * The people a list read from the server can offer: everyone its rows have shown this session. A list filtered by
@@ -10,12 +10,5 @@ const seenByList = new Map<string, Set<string>>();
  */
 export function usePeopleSeen<Row>(list: string, rows: readonly Row[] | undefined, ownerOf: (row: Row) => string): readonly string[] {
   const workspacePath = useWorkspacePath();
-  return useMemo(() => {
-    const key = `${workspacePath}\n${list}`;
-    const seen = seenByList.get(key) ?? new Set<string>();
-    seenByList.set(key, seen);
-    for (const row of rows ?? []) seen.add(ownerOf(row));
-    return [...seen];
-  }, [workspacePath, list, rows, ownerOf]);
+  return useMemo(() => peopleSeen.remember(workspacePath, list, (rows ?? []).map(ownerOf)), [workspacePath, list, rows, ownerOf]);
 }
-
