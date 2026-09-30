@@ -37,6 +37,8 @@ src/
 
 - Prefer `--xml` (`parseXml`) or `--format` with `recordFormat`/`parseRecords` (control-character separators; no ambiguity with paths or comments).
 - Never parse human-readable output when a machine format exists.
+- `cm find branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their
+  changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`); merges and labels come either way.
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.
 - A `cm shell` command ends at the `CommandResult <code>` line that ends its output, with nothing more in the pipe
   (`CmShellSession`): comments can quote such lines, and a misread end shifts every later command by one output.

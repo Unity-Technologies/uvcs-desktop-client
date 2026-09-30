@@ -1,49 +1,31 @@
 import type { BranchExplorerApi } from '@shared/api/branchExplorer';
 import type { BranchExplorerQuery } from '@shared/domain/branchExplorer';
-import {
-  BRANCH_FORMAT,
-  CHANGESET_FORMAT,
-  DATE_FORMAT,
-  LABEL_FORMAT,
-  MERGE_FORMAT,
-  HIDDEN_BRANCH_FORMAT,
-  parseBranches,
-  parseChangesets,
-  parseLabels,
-  parseMergeLinks,
-  parseHiddenBranches,
-  roundTripDate,
-} from '../cm/branchExplorerRecords';
-import { whereClause } from '../cm/findQuery';
+import { branchExplorerFinds } from '../cm/branchExplorerFinds';
+import { parseBranches, parseChangesets, parseLabels, parseMergeLinks } from '../cm/branchExplorerRecords';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 import { relevantBranches } from './relevantBranches';
 
 export function createBranchExplorerService({ cm }: ServiceContext, { branchNames }: BranchNamesContext): BranchExplorerApi {
   async function load(workspacePath: string, query: BranchExplorerQuery) {
-    const find = (object: string, where: string, format: string): string[] =>
-      ['find', object, where, `--format=${format}`, `--dateformat=${DATE_FORMAT}`, '--nototal'].filter(Boolean);
-    const inRange = whereClause({ sinceDate: query.sinceDate && roundTripDate(query.sinceDate) });
+    const finds = branchExplorerFinds(query);
     const options = { cwd: workspacePath };
 
     // Merges are the slowest query on big repositories, so they get their own process
     // instead of waiting in line behind the pooled `cm shell` sessions.
     const [branchesOutput, hiddenOutput, changesetsOutput, mergesOutput, labelsOutput] = await Promise.all([
-      cm.query(find('branch', '', BRANCH_FORMAT), options),
-      cm.query(find('branch', "where hidden = 'true'", HIDDEN_BRANCH_FORMAT), options),
-      cm.query(find('changeset', inRange, CHANGESET_FORMAT), options),
-      cm.execute(find('merge', inRange, MERGE_FORMAT), options),
-      cm.query(find('label', inRange, LABEL_FORMAT), options),
+      cm.query(finds.branches, options),
+      cm.query(finds.hiddenBranches, options),
+      cm.query(finds.changesets, options),
+      cm.execute(finds.merges, options),
+      cm.query(finds.labels, options),
     ]);
 
-    const hidden = parseHiddenBranches(hiddenOutput);
-    const hiddenNames = new Set(hidden.map((branch) => branch.name));
-    const changesets = parseChangesets(changesetsOutput).filter(
-      (changeset) => query.includeHidden || !hiddenNames.has(changeset.branch),
-    );
-    const allBranches = parseBranches(branchesOutput, hiddenNames);
+    const visible = parseBranches(branchesOutput, false);
+    const hidden = parseBranches(hiddenOutput, true);
     // The code review chips name branches by id (often finished tasks, hidden): these lists answer them.
-    branchNames.remember(workspacePath, [...allBranches, ...hidden], { complete: true });
-    const branches = allBranches.filter((branch) => query.includeHidden || !branch.isHidden);
+    branchNames.remember(workspacePath, [...visible, ...hidden], { complete: true });
+    const branches = query.includeHidden ? [...visible, ...hidden] : visible;
+    const changesets = parseChangesets(changesetsOutput);
 
     return {
       branches: relevantBranches(branches, changesets, query.sinceDate),

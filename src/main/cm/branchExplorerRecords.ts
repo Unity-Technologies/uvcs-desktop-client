@@ -9,7 +9,6 @@ export const BRANCH_FORMAT = recordFormat(['id', 'name', 'parent', 'owner', 'dat
 export const CHANGESET_FORMAT = recordFormat(['changesetid', 'branch', 'parent', 'date', 'owner', 'comment']);
 export const MERGE_FORMAT = recordFormat(['type', 'srcchangeset', 'dstchangeset']);
 export const LABEL_FORMAT = recordFormat(['name', 'changeset', 'owner', 'date', 'comment']);
-export const HIDDEN_BRANCH_FORMAT = recordFormat(['id', 'name']);
 
 /** ISO 8601 round-trip dates, so the renderer can parse them. */
 export const DATE_FORMAT = 'o';
@@ -35,7 +34,8 @@ const MERGE_LINK_TYPES: Record<string, MergeLinkType> = {
   intervalcherrypicksubstractive: 'intervalSubtractive',
 };
 
-export function parseBranches(output: string, hiddenNames: ReadonlySet<string>): GraphBranch[] {
+/** Branches of one `cm find branch`: hidden ones come from a query of their own (`hidden = 'true'`). */
+export function parseBranches(output: string, isHidden: boolean): GraphBranch[] {
   return parseRecords(output).map(([id = '', name = '', parent = '', owner = '', date = '', head = '', comment = '']) => ({
     id: toInteger(id),
     name,
@@ -44,7 +44,7 @@ export function parseBranches(output: string, hiddenNames: ReadonlySet<string>):
     date,
     comment,
     headChangeset: toInteger(head),
-    isHidden: hiddenNames.has(name),
+    isHidden,
   }));
 }
 
@@ -74,11 +74,6 @@ export function parseLabels(output: string): GraphLabel[] {
     date,
     comment,
   }));
-}
-
-/** Hidden branches, by object id and name. */
-export function parseHiddenBranches(output: string): { id: number; name: string }[] {
-  return parseRecords(output).map(([id = '', name = '']) => ({ id: toInteger(id), name }));
 }
 
 function toInteger(value: string): number {
