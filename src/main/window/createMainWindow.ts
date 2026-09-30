@@ -1,9 +1,10 @@
 import { join } from 'node:path';
-import { BrowserWindow, nativeTheme, shell } from 'electron';
+import { app, BrowserWindow, nativeTheme, shell } from 'electron';
 import { startingWorkspaceQuery } from '@shared/startingWorkspace';
 import { WINDOW_BACKGROUND, windowChrome } from '@shared/windowChrome';
 import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
+import { windowIcon } from './appIcon';
 import { cascadedWindowBounds, loadWindowBounds, keepWindowBoundsSaved } from './savedWindowBounds';
 import { titleBarOptions } from './titleBar';
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from './windowBounds';
@@ -31,6 +32,7 @@ export function createMainWindow(settings: SettingsStore, { cascadeFrom, workspa
     minHeight: MIN_WINDOW_HEIGHT,
     show: false,
     title: 'Unity Version Control',
+    icon: windowIcon(process.platform, app.isPackaged),
     ...titleBarOptions(windowChrome(process.platform), nativeTheme.shouldUseDarkColors),
     backgroundColor: WINDOW_BACKGROUND[nativeTheme.shouldUseDarkColors ? 'dark' : 'light'],
     webPreferences: {
