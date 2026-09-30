@@ -8,8 +8,8 @@ A fast, beautiful desktop client for Unity Version Control (Plastic SCM). Electr
 - **A long-term maintenance product.** Every decision must still be right in years: prefer the boring, explicit,
   well-named solution over the clever or quick one, and leave each file easier to change than it was.
 - **Mostly changed and maintained by LLMs.** Write for a reader who arrives cold, with no memory of this conversation:
-  the code, its names, its tests and `docs/` are the only memory. Name symbols in docs so they can be grepped. Prefer a
-  test that enforces a rule (see "Rules the tests enforce") over a comment asking for it.
+  the code, its names, its tests and `docs/` are the only memory. Name symbols in docs so they can be grepped. The
+  tests are the quality gate (see "Tests are the quality gate").
 
 ## Principles (the bar every change is held to)
 
@@ -95,8 +95,8 @@ npm test             # vitest, every src/**/*.test.ts
 npm run dist         # the installer for this OS
 ```
 
-**Done means**: `npm run typecheck` and `npm test` pass, the change is seen working in the app (anything visible), and
-the docs say what's now true (see "Docs"). There is no linter or formatter: match the surrounding code.
+**Done means**: `npm run typecheck` and `npm test` pass, the new code is tested (see "Tests are the quality gate"),
+the change is seen working in the app (anything visible), and the docs say what's now true (see "Docs"). There is no linter or formatter: match the surrounding code.
 
 ## Seeing the app (Playwright)
 
@@ -117,28 +117,47 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
 - `UVCS_RENDERER_PLATFORM=win32` (or `linux`) previews another OS's shortcuts, copy and layout from a Mac (the page
   only: the menus and window frame stay the Mac's).
 
-## Conventions
+## Tests are the quality gate
 
-- **Code style**: TypeScript strict, no new `any`, single quotes, semicolons. `@shared/*` for shared imports.
-  One component, hook or concept per file, named after it.
-- **Comments explain *why*** (a `cm` quirk, a Windows code page, a Pierre workaround), briefly, naming the symbol or
-  command involved. Don't strip existing rationale when moving code.
-- **Tests**: vitest, `*.test.ts` next to the code (`.ts` only: components aren't unit-tested, so keep logic in pure
-  `.ts` modules). Every behaviour change ships with tests; they must never be flaky (no timing races, no shared state,
-  no ordering assumptions). `cm` parsers are tested against output shaped exactly as `cm` prints it; `CmShellSession` against
-  `main/cm/testing/fakeCmShell`.
-- **Cross-platform**: macOS, Windows and Linux are all first-class. Platform differences go through small pure helpers
-  that take the platform (`lib/platform.ts`, `windowChrome`, `formatShortcut`). Watch path separators and drive
-  letters, CRLF, NFD names on macOS, Windows' console code page and 32,767-character command lines (ARCHITECTURE.md
-  "Parsing `cm` output").
-- **Copy**: plain words, short. Labels name things, tooltips define them, no sentence restates what the screen shows.
-  UVCS terms only where the user already uses them (branch, changeset, shelve); never `cm` output or flags.
-- **UI building blocks**: reuse before inventing — `ListWithDetails`/`DetailsPanel`, `ItemRow`, `FilterBar`,
-  `menuWords`/`groupedMenu`, `openDialog`/`confirm`, `runOperation`. Shortcuts only through `lib/shortcutRegistry.ts`.
-  Colors, motion and focus only through `styles/tokens.css`.
-- **Nothing external opens by itself**: `cm` never opens a merge or diff tool, and background work never opens anything.
+No one remembers why the code is the way it is: each change is made by an agent that arrives cold. The only thing
+that stops a new task from breaking an old one is the test suite, so it must be a faithful indicator of the product's
+quality: **if the tests pass, the app works as specified**. Test what matters, not everything.
 
-## Rules the tests enforce
+**Every new or changed piece of code ships with tests**, at the level where it can break:
+
+- **Logic**: parsers, argument builders, layouts, filters, selection, anything that decides. Every branch that encodes
+  a decision, and the edge cases the real world sends (empty, huge, Unicode, CRLF, xlinks, Windows paths).
+- **Contracts between layers**: what a service asks `cm` (which commands, how many, `query()` or `execute()`) and how
+  it reads the answer, against a fake `CmClient` and output shaped exactly as `cm` prints it; what crosses IPC
+  (`UvcsApi`, events); what an operation refreshes (`refreshScopes`, query keys).
+- **Interactions**: flows across modules, including their failure paths: a switch with changes (shelve, undo,
+  switch, bring; a failure puts the changes back), a menu builder serving every place, a shortcut reaching its command.
+- **Specs**: a rule written in `docs/` deserves a test that enforces it; a rule for the whole repository becomes a
+  static test ("Rules the tests enforce" below). A bug fix starts with a test that fails without it.
+
+**Don't test** what the type checker already proves, pass-through code, the libraries' own behaviour (React, TanStack
+Query, Pierre), or implementation details (private helpers, call order nobody relies on). A test should fail only
+when something a user or another layer relies on changes; one that breaks on every refactor is noise.
+
+Components (`.tsx`) aren't unit-tested (vitest runs `*.test.ts` only): keep their logic in pure `.ts` modules or hooks
+built on them, and verify what's on screen with Playwright.
+
+**Never flaky.** A test that sometimes fails teaches everyone to ignore failures. Fix its cause at once; never retry,
+skip or loosen it.
+
+- **No real time**: no sleeps or waits for a duration. Use `vi.useFakeTimers()` and advance them; pass clocks, ids and
+  random sources in instead of reading `Date.now()` or `Math.random()` inside the logic.
+- **Await outcomes**: await the promise or the event that means "done", never poll against a timeout.
+- **Isolated**: each test builds its own state (new instances, its own temp folder under `os.tmpdir()`, which the run
+  already points at a private folder: `vitest.tempDirectory.ts`), no mutable module state, mocks restored after each
+  test. Tests pass alone, in any order, and in parallel.
+- **No network, no server**: never a real `cm` server or account; a fake `CmClient` or `fakeCmShell`, and real `cm`
+  output as fixtures.
+- **Same on every OS**: build paths with `path.join`, don't assume `/` or `\n`, sort before comparing what has no
+  order.
+- **Precise assertions**: compare the result that matters (`toEqual` on the value), not snapshots of large objects.
+
+### Rules the tests enforce
 
 Static tests keep the load-bearing rules; extend them rather than working around them.
 
@@ -150,6 +169,23 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `lib/menuGroups.test.ts`, `components/menuGrammar.test.ts` | every object menu follows one grammar                   |
 | `styles/tokens.test.ts`, `focusRings.test.ts` | text 4.5:1 and focus rings 3:1 in both themes                             |
 | `window/workspaceMenuCommands.test.ts`     | app menu commands match the workspace commands                               |
+
+## Conventions
+
+- **Code style**: TypeScript strict, no new `any`, single quotes, semicolons. `@shared/*` for shared imports.
+  One component, hook or concept per file, named after it.
+- **Comments explain *why*** (a `cm` quirk, a Windows code page, a Pierre workaround), briefly, naming the symbol or
+  command involved. Don't strip existing rationale when moving code.
+- **Cross-platform**: macOS, Windows and Linux are all first-class. Platform differences go through small pure helpers
+  that take the platform (`lib/platform.ts`, `windowChrome`, `formatShortcut`). Watch path separators and drive
+  letters, CRLF, NFD names on macOS, Windows' console code page and 32,767-character command lines (ARCHITECTURE.md
+  "Parsing `cm` output").
+- **Copy**: plain words, short. Labels name things, tooltips define them, no sentence restates what the screen shows.
+  UVCS terms only where the user already uses them (branch, changeset, shelve); never `cm` output or flags.
+- **UI building blocks**: reuse before inventing — `ListWithDetails`/`DetailsPanel`, `ItemRow`, `FilterBar`,
+  `menuWords`/`groupedMenu`, `openDialog`/`confirm`, `runOperation`. Shortcuts only through `lib/shortcutRegistry.ts`.
+  Colors, motion and focus only through `styles/tokens.css`.
+- **Nothing external opens by itself**: `cm` never opens a merge or diff tool, and background work never opens anything.
 
 ## Docs
 
