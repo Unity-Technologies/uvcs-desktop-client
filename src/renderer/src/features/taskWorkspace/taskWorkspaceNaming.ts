@@ -1,5 +1,5 @@
 import { shortBranchName } from '@shared/domain/specs';
-import { joinPath, lastSegment, parentDirectory } from '../../lib/paths';
+import { joinPath, lastSegment, parentOfLocalPath } from '../../lib/paths';
 import { suggestWorkspaceName } from '../../app/home/workspaceNaming';
 
 /** New task branches hang from /main and start at its head. */
@@ -19,7 +19,7 @@ export function suggestTaskBranchName(now: Date): string {
 export function defaultTaskFolder(currentWorkspacePath: string, repositoryName: string, branch: string): string {
   const repository = lastSegment(repositoryName);
   const leaf = shortBranchName(branch);
-  return joinPath(parentDirectory(currentWorkspacePath), leaf ? `${repository}-${leaf}` : repository);
+  return joinPath(parentOfLocalPath(currentWorkspacePath), leaf ? `${repository}-${leaf}` : repository);
 }
 
 /** The workspace is named after its folder, made unique among the workspaces already on this computer. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { joinPath, lastSegment, parentDirectory } from './paths';
+import { joinPath, lastSegment, parentOfLocalPath } from './paths';
 
 describe('paths', () => {
   it('joins with the separator the folder uses', () => {
@@ -12,8 +12,8 @@ describe('paths', () => {
   });
 
   it('returns the folder containing a path', () => {
-    expect(parentDirectory('/Users/me/wkspaces/game/')).toBe('/Users/me/wkspaces');
-    expect(parentDirectory('C:\\work\\game')).toBe('C:\\work');
-    expect(parentDirectory('/game')).toBe('/');
+    expect(parentOfLocalPath('/Users/me/wkspaces/game/')).toBe('/Users/me/wkspaces');
+    expect(parentOfLocalPath('C:\\work\\game')).toBe('C:\\work');
+    expect(parentOfLocalPath('/game')).toBe('/');
   });
 });
