@@ -148,7 +148,7 @@ export const SHORTCUTS = {
   paletteOpen: { area: 'Command palette', label: 'Open', keys: ['enter'] },
   paletteEnds: { area: 'Command palette', label: 'First or last result', keys: ['mod+up', 'mod+down', 'ctrl+home', 'ctrl+end'], keysOffMac: ['ctrl+home', 'ctrl+end'] },
 
-  imageZoomIn: { area: 'Image diff', label: 'Zoom in', keys: ['='] },
+  imageZoomIn: { area: 'Image diff', label: 'Zoom in', keys: ['plus', '='] },
   imageZoomOut: { area: 'Image diff', label: 'Zoom out', keys: ['-'] },
   imageFit: { area: 'Image diff', label: 'Zoom to fit', keys: ['0'] },
   imageActualSize: { area: 'Image diff', label: 'Actual size', keys: ['1'] },
