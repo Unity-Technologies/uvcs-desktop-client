@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { STABLE_HUES, stableHue } from '../lib/stableHue';
-import { AVATAR_COLORS, avatarColor } from './avatarColor';
+import { AVATAR_COLORS } from '../lib/avatarColors';
+import { avatarColor } from './avatarColor';
 
 describe('avatarColor', () => {
   it("takes the repository's short name, so its workspaces and its own row share a color whatever the server", () => {

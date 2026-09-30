@@ -161,7 +161,7 @@
   --label-bg: rgba(191, 135, 0, 0.12);
   --label-text: #8a6100;
   --search-highlight: #d4a72c;
-  /* Workspace and repository avatars: a white initial on one of these solid fills (`AVATAR_COLORS`, one per
+  /* Avatars of people, workspaces and repositories: a white initial on one of these solid fills (`AVATAR_COLORS`, one per
      `STABLE_HUES` hue, in their order), each tuned on its own so all weigh the same (white at about 4.8:1) and a notch short of full saturation, so they
      read solid without shouting. */
   --avatar-letter: #ffffff;
