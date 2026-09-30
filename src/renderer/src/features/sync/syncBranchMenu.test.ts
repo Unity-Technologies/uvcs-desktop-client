@@ -1,3 +1,4 @@
+import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { Action } from '../../lib/actions';
 import { syncBranchMenu } from './syncBranchMenu';

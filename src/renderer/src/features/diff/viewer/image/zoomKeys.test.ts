@@ -1,3 +1,4 @@
+import '../../../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { PressedKey } from '../../../../lib/shortcuts';
 import { zoomCommandOf } from './zoomKeys';
