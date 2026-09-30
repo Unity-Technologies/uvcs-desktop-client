@@ -172,13 +172,18 @@
   display: none;
 }
 
+/* A little air between tiles, more than between a tile's icon and its label, so each reads as one piece. */
+.sidebar[data-rail='true'] .group {
+  gap: 2px;
+}
+
 /* A tile's height follows its label's lines, so every one-line tile is as tall as every other, and every two-line one. */
 .sidebar[data-rail='true'] .item {
   position: relative;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--space-1);
   height: auto;
-  padding: 5px 3px;
+  padding: 6px 3px;
   text-align: center;
 }
 
@@ -200,6 +205,12 @@
   text-wrap: balance;
 }
 
+/* At rest the labels read a step quieter than the icons, so the column stays calm; hovered or selected, the tile's
+   color takes them. */
+.sidebar[data-rail='true'] .item:not(:hover, [data-active='true']) .label {
+  color: var(--text-tertiary);
+}
+
 .sidebar[data-rail='true'] .detail {
   display: none;
 }
@@ -209,7 +220,7 @@
    the icon; the dot stays at the same height with or without it. */
 .sidebar[data-rail='true'] .marks {
   position: absolute;
-  top: 2px;
+  top: 3px;
   left: calc(50% + 6px);
   display: flex;
   flex-direction: row-reverse;
