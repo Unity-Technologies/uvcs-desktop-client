@@ -17,7 +17,7 @@ document.documentElement.dataset.chrome = WINDOW_CHROME;
 guardUnloading();
 trackPointerReturnFocus();
 openWorkspaceFromAddress();
-prefetchStartupQueries();
+void prefetchStartupQueries();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
