@@ -1,7 +1,7 @@
+import { fakeApi } from '../../testing/fakeWindow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OperationProgress } from '@shared/domain/operation';
 
-const uvcs = await vi.hoisted(async () => (await import('../../lib/testing/fakeWindow')).installFakeWindow());
 const refreshed = vi.hoisted(() => vi.fn(async (_workspacePath: string, _affected?: (key: readonly unknown[]) => boolean) => {}));
 vi.mock('../queryClient', () => ({ invalidateWorkspace: refreshed }));
 
@@ -15,7 +15,6 @@ const ws = '/work/game';
 const affectsBranches = (key: readonly unknown[]) => key[2] === 'branches';
 
 beforeEach(() => {
-  uvcs.reset();
   refreshed.mockClear();
   useToastStore.setState({ toasts: [] });
   useRunningOperationsStore.setState({ operations: [] });
@@ -83,8 +82,8 @@ describe('runOperation while it runs', () => {
   it('keeps the progress main reports for this operation only', () => {
     const { id } = startOperation();
 
-    uvcs.emit('operationProgress', { operationId: 'another', progress: progress({ fraction: 0.9 }) });
-    uvcs.emit('operationProgress', { operationId: id(), progress: progress({ fraction: 0.25 }) });
+    fakeApi.emit('operationProgress', { operationId: 'another', progress: progress({ fraction: 0.9 }) });
+    fakeApi.emit('operationProgress', { operationId: id(), progress: progress({ fraction: 0.25 }) });
 
     expect(operations()[0]?.progress).toEqual(progress({ fraction: 0.25 }));
   });
@@ -93,7 +92,7 @@ describe('runOperation while it runs', () => {
 describe('runOperation when it ends', () => {
   it('turns the card into the success message, with what was done counted from the last progress', async () => {
     const { result, command, id } = startOperation({ successMessage: () => 'Workspace updated' });
-    uvcs.emit('operationProgress', { operationId: id(), progress: progress({ total: 3, bytesTotal: 2048 }) });
+    fakeApi.emit('operationProgress', { operationId: id(), progress: progress({ total: 3, bytesTotal: 2048 }) });
 
     command.resolve('cs:12');
 
@@ -122,13 +121,13 @@ describe('runOperation when it ends', () => {
   it('stops listening to progress and no longer lists the operation, whatever the outcome', async () => {
     const succeeding = startOperation();
     const failing = startOperation({ workspacePath: '/work/other' });
-    expect(uvcs.listenerCount('operationProgress')).toBe(2);
+    expect(fakeApi.listenerCount('operationProgress')).toBe(2);
 
     succeeding.command.resolve('ok');
     failing.command.reject(new Error('boom'));
     await Promise.all([succeeding.result, failing.result]);
 
-    expect(uvcs.listenerCount('operationProgress')).toBe(0);
+    expect(fakeApi.listenerCount('operationProgress')).toBe(0);
     expect(operations()).toEqual([]);
   });
 
@@ -187,13 +186,15 @@ describe('runOperation when it fails', () => {
 });
 
 describe('runOperation when cancelled', () => {
+  beforeEach(() => fakeApi.answer('system.cancelOperation', () => undefined));
+
   it('asks main once to stop it, and turns Cancel into a disabled "Stopping…"', () => {
     const { id } = startOperation();
 
     card()?.action?.run();
     card()?.action?.run();
 
-    expect(uvcs.calls).toEqual([{ method: 'system.cancelOperation', args: [id()] }]);
+    expect(fakeApi.calls()).toEqual([{ method: 'system.cancelOperation', args: [id()] }]);
     expect(card()?.action).toMatchObject({ label: 'Stopping…', disabled: true });
   });
 

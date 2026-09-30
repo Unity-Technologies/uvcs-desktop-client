@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { readGrowthWhenDoubled } from '../../testing/countedReads';
+import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
 import { describeUpload, uploadSummary } from './uploadSummary';
 
 function change(path: string, kinds: PendingChange['kinds'], size: number, extra: Partial<PendingChange> = {}): PendingChange {

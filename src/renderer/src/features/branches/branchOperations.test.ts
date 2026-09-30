@@ -2,14 +2,12 @@ import { commandFailure, fakeApi } from '../../testing/fakeWindow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const asked = vi.hoisted(() => ({
-  confirmed: true,
-  typed: undefined as string | undefined,
   picked: undefined as string | undefined,
   picker: undefined as { exclude?: string } | undefined,
   switches: [] as unknown[][],
 }));
-vi.mock('../../ui/dialog/confirm', () => ({ confirm: async () => asked.confirmed }));
-vi.mock('../../ui/dialog/prompt', () => ({ prompt: async () => asked.typed }));
+vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
+vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
 vi.mock('./BranchPickerDialog', () => ({
   pickBranch: async (options: { exclude?: string }) => {
     asked.picker = options;
@@ -26,6 +24,7 @@ vi.mock('../../app/shell/workspaceOperations', () => ({
 import type { Branch } from '@shared/domain/branch';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
+import { answerConfirms, answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
 import { deleteBranches, mergeTo, renameBranch, setBranchesHidden, switchToBranch } from './branchOperations';
 
@@ -33,8 +32,6 @@ const ws = '/ws';
 const branch = (name: string, guid = `guid-${name}`): Branch => ({ id: 1, name, parent: '/main', comment: '', owner: 'ana', date: '', headChangeset: 5, guid, repository: 'game@local' });
 
 beforeEach(() => {
-  asked.confirmed = true;
-  asked.typed = undefined;
   asked.picked = undefined;
   asked.picker = undefined;
   asked.switches.length = 0;
@@ -82,7 +79,7 @@ describe('switching to a branch', () => {
 
 describe('branch operations', () => {
   it('renames only the last part of the name, as typed', async () => {
-    asked.typed = 'login';
+    answerPrompts('login');
     fakeApi.answer('branches.rename', () => undefined);
 
     await renameBranch(ws, branch('/main/task'));
@@ -108,7 +105,7 @@ describe('branch operations', () => {
   });
 
   it('deletes nothing unless confirmed', async () => {
-    asked.confirmed = false;
+    answerConfirms(false);
 
     await deleteBranches(ws, [branch('/main/a')]);
 

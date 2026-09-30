@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { countLineComparisons } from '../../../testing/countLineComparisons';
 import { diff3Merge } from './diff3';
 
 const lines = (text: string): string[] => text.split(' ').map((line) => `${line}\n`);
@@ -42,13 +43,13 @@ describe('diff3Merge', () => {
     ]);
   });
 
-  it('merges a 20,000-line file whose lines repeat by the thousand (a lockfile) in well under a second', () => {
+  it('merges a 20,000-line file whose lines repeat by the thousand (a lockfile) comparing each line a few times', () => {
     const base = Array.from({ length: 20_000 }, (_, index) => (index % 3 === 0 ? '  },\n' : index % 3 === 1 ? '  "dev": true,\n' : `  "name-${index}": "1.0.${index}"\n`));
     const destination = base.map((line, index) => (index % 500 === 2 ? `  "name-${index}": "2.0.0"\n` : line));
     const source = base.map((line, index) => (index % 700 === 5 ? `  "name-${index}": "3.0.0"\n` : line));
-    const started = performance.now();
-    const regions = diff3Merge(destination, base, source);
-    expect(performance.now() - started).toBeLessThan(1000);
+    const { result: regions, comparisons } = countLineComparisons(() => diff3Merge(destination, base, source));
+    // About 2.3 comparisons a line, by the lines changed; a pass over the file per change compares each line dozens of times.
+    expect(comparisons / base.length).toBeLessThan(5);
     expect(regions.flatMap((region) => ('ok' in region ? region.ok : []))).toHaveLength(20_000);
   });
 });

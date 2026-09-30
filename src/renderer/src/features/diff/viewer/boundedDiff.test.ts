@@ -1,6 +1,7 @@
 import { diffArrays } from 'diff';
 import { describe, expect, it } from 'vitest';
-import { boundedDiff, longestIncreasingPairs, type EditRun } from './boundedDiff';
+import { countLineComparisons } from '../../../testing/countLineComparisons';
+import { boundedDiff, longestIncreasingPairs, MYERS_BUDGET, type EditRun } from './boundedDiff';
 
 /** The new ids, rebuilt from the old ones by the script: every script must do that. */
 function applied(oldIds: number[], newIds: number[], runs: EditRun[]): number[] {
@@ -70,9 +71,8 @@ describe('boundedDiff', () => {
     // Lines 0..n; every seventh changed into a line of its own.
     const oldIds = Array.from({ length: 100_000 }, (_, index) => index);
     const newIds = oldIds.map((id) => (id % 7 === 3 ? 1_000_000 + id : id));
-    const started = performance.now();
-    const runs = boundedDiff(oldIds, newIds);
-    expect(performance.now() - started).toBeLessThan(1_000);
+    const { result: runs, comparisons } = countLineComparisons(() => boundedDiff(oldIds, newIds));
+    expect(comparisons).toBeLessThanOrEqual(MYERS_BUDGET);
     expect(edits(runs)).toEqual({ added: 14_286, removed: 14_286 });
     expect(applied(oldIds, newIds, runs)).toEqual(newIds);
   });
@@ -80,21 +80,20 @@ describe('boundedDiff', () => {
   it('removes and adds a rewritten text whole at once', () => {
     const oldIds = Array.from({ length: 50_000 }, (_, index) => index);
     const newIds = Array.from({ length: 50_000 }, (_, index) => 50_000 + index);
-    const started = performance.now();
-    expect(boundedDiff(oldIds, newIds)).toEqual([
+    const { result: runs, comparisons } = countLineComparisons(() => boundedDiff(oldIds, newIds));
+    expect(comparisons).toBeLessThanOrEqual(MYERS_BUDGET);
+    expect(runs).toEqual([
       { count: 50_000, added: false, removed: true },
       { count: 50_000, added: true, removed: false },
     ]);
-    expect(performance.now() - started).toBeLessThan(1_000);
   });
 
   it('matches what it can between repeated lines once the budget is spent', () => {
     // A text of few distinct lines (blank lines, braces), reversed: no line is unique.
     const oldIds = Array.from({ length: 40_000 }, (_, index) => index % 3);
     const newIds = [...oldIds].reverse();
-    const started = performance.now();
-    const runs = boundedDiff(oldIds, newIds);
-    expect(performance.now() - started).toBeLessThan(1_000);
+    const { result: runs, comparisons } = countLineComparisons(() => boundedDiff(oldIds, newIds));
+    expect(comparisons).toBeLessThanOrEqual(MYERS_BUDGET);
     expect(applied(oldIds, newIds, runs)).toEqual(newIds);
   });
 });

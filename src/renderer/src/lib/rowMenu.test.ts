@@ -1,7 +1,7 @@
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
-await vi.hoisted(async () => (await import('./testing/fakeWindow')).installFakeWindow('win32'));
+await vi.hoisted(async () => (await import('../testing/fakeWindow')).setPlatform('win32'));
 
 import { holdBackMenuKeyRelease, isListMenuKey, isRowMenuKey } from './rowMenu';
 

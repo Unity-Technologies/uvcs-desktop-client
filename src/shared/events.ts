@@ -13,7 +13,7 @@ export interface CommandLogEntry {
   output: string;
 }
 
-export interface OperationProgressEvent {
+interface OperationProgressEvent {
   operationId: string;
   progress: OperationProgress;
 }

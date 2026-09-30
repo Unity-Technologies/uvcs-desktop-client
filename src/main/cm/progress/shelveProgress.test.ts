@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readProgress } from './progressReader';
+import { readProgress } from './testing/readProgress';
 import { readShelveProgress } from './shelveProgress';
 
 /** Real output of `cm shelveset create <wk> --all -commentsfile=…` (100 edits, 3 new 50 MB files). */

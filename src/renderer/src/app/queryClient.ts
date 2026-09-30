@@ -43,7 +43,7 @@ export function keyedByWorkspaceInfo(part: WorkspaceInfoPart) {
 }
 
 /** The part of the workspace info a query is keyed by (`keyedByWorkspaceInfo`), if any. */
-export function workspaceInfoKeyOf(query: Query): WorkspaceInfoPart | undefined {
+function workspaceInfoKeyOf(query: Query): WorkspaceInfoPart | undefined {
   return query.meta?.workspaceInfoKeyed as WorkspaceInfoPart | undefined;
 }
 

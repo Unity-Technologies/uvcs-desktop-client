@@ -1,25 +1,20 @@
 import { commandFailure, fakeApi } from '../../testing/fakeWindow';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-const dialogs = vi.hoisted(() => ({ confirmed: true, typed: undefined as string | undefined }));
-vi.mock('../../ui/dialog/confirm', () => ({ confirm: async () => dialogs.confirmed }));
-vi.mock('../../ui/dialog/prompt', () => ({ prompt: async () => dialogs.typed }));
+vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
+vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
 
 import type { LabelInfo } from '@shared/domain/label';
+import { answerConfirms, answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
 import { deleteLabels, diffLabels, renameLabel, saveLabelComment } from './labelOperations';
 
 const ws = '/ws';
 const label = (name: string, changeset = 12): LabelInfo => ({ name, changeset, branch: '/main', comment: '', owner: 'ana', date: '', repository: 'game@local' });
 
-beforeEach(() => {
-  dialogs.confirmed = true;
-  dialogs.typed = undefined;
-});
-
 describe('label operations', () => {
   it('renames to the name typed, refreshing the labels, the graph and the workspace info only', async () => {
-    dialogs.typed = 'v2.0';
+    answerPrompts('v2.0');
     fakeApi.answer('labels.rename', () => undefined);
     const refreshed = watchRefreshes(ws);
 
@@ -47,7 +42,7 @@ describe('label operations', () => {
   });
 
   it('deletes nothing unless confirmed', async () => {
-    dialogs.confirmed = false;
+    answerConfirms(false);
 
     await deleteLabels(ws, [label('v1.0')]);
 

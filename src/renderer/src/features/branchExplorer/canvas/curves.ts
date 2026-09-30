@@ -31,12 +31,6 @@ export function reversed([p0, p1, p2, p3]: Curve): Curve {
   return [p3, p2, p1, p0];
 }
 
-/** A branch leaves its base changeset downwards, then turns right into its lane. */
-export function branchStartCurve(base: Point, laneStart: Point): Curve {
-  const turn = Math.min(Math.abs(laneStart.y - base.y), 28);
-  return [base, { x: base.x, y: base.y + turn }, { x: laneStart.x - turn, y: laneStart.y }, laneStart];
-}
-
 export function pointOnCurve([p0, p1, p2, p3]: Curve, t: number): Point {
   const u = 1 - t;
   const a = u * u * u;

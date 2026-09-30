@@ -27,7 +27,7 @@ export type ConflictStatus =
   | 'openInTool';
 
 /** How a status reads: `pending` waits for the user, `automatic` needs nothing, `decided` follows the user's choice. */
-export type StatusTone = 'muted' | 'pending' | 'automatic' | 'decided';
+type StatusTone = 'muted' | 'pending' | 'automatic' | 'decided';
 
 export interface StatusPresentation {
   label: string;

@@ -1,5 +1,5 @@
 /** A reported fraction and when it came. */
-export interface ProgressSample {
+interface ProgressSample {
   at: number;
   fraction: number;
 }

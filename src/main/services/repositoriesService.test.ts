@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { cmFails, fakeCmClient, formatOutput, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { formatOutput } from '../cm/testing/cmOutput';
+import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createRepositoriesService } from './repositoriesService';
 import { serviceContext } from './testing/serviceContext';
 

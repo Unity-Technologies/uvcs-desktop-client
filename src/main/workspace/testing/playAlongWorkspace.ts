@@ -5,6 +5,7 @@ import {
   branchFound,
   change,
   diffRecord,
+  formatOutput,
   mergeOutput,
   NOTHING_FOUND,
   pendingStatusInChangelists,
@@ -12,8 +13,8 @@ import {
   shelvesFound,
   statusHeader,
   WORKSPACE_NAMES,
-} from '../../testing/cmOutput';
-import { scriptedCm } from '../../testing/scriptedCm';
+} from '../../cm/testing/cmOutput';
+import { cmFails, fakeCmClient, optionValue, type CmFailure, type FakeCmCommand } from '../../cm/testing/fakeCmClient';
 
 /** Object ids of the branches the repository has. */
 const BRANCH_IDS: Record<string, number> = { '/main': 3, '/main/task1': 37, '/main/task2': 38 };
@@ -69,7 +70,7 @@ const isUnchangedCheckout = (codes: string): boolean => codes === 'CO';
 /**
  * A `cm` that plays along with a workspace on disk at `workspacePath`: it keeps the branch, the pending changes, the
  * private files and the shelves, and changes them as `cm` would (undoing an added file leaves it as a private file,
- * merging a shelve brings its changes back). Built on `scriptedCm`, so every command is recorded and any other fails.
+ * merging a shelve brings its changes back). Built on `fakeCmClient`, so every command is recorded and any other fails.
  */
 export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceScenario = {}) {
   const fail = scenario.fail ?? {};
@@ -97,8 +98,8 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
     ]);
   };
 
-  const createShelve = async (args: string[]): Promise<string> => {
-    const comment = readFileSync(args.find((arg) => arg.startsWith('-commentsfile='))!.slice('-commentsfile='.length), 'utf8');
+  const createShelve = async ({ args }: FakeCmCommand): Promise<string> => {
+    const comment = readFileSync(optionValue(args, '-commentsfile=')!, 'utf8');
     const targets = args.slice(2).filter((arg) => !arg.startsWith('-')).map(relative);
     const shelved = Object.entries(pending).filter(([path, codes]) => codes !== 'PR' && (targets.length === 0 || targets.includes(path)) && path !== fail.shelveMisses);
     const id = nextShelveId++;
@@ -107,8 +108,8 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
     return fail.shelveSplits ? shelvesCreated({ id }, { id: 3, repository: 'lib@local' }) : shelvesCreated({ id });
   };
 
-  const undo = (args: string[]): string => {
-    if (fail.undo) throw new Error(fail.undo);
+  const undo = ({ args }: FakeCmCommand): string | CmFailure => {
+    if (fail.undo) return cmFails(fail.undo);
     if (fail.undoLeavesChanges) return '';
     const paths = args.includes('-r') ? Object.keys(pending) : args.slice(1).filter((arg) => !arg.startsWith('-')).map(relative);
     for (const path of paths) {
@@ -122,22 +123,22 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
     return '';
   };
 
-  const switchTo = (args: string[]): string => {
+  const switchTo = ({ args }: FakeCmCommand): string | CmFailure => {
     const target = args[1]!.replace(/^br:/, '');
     const back = target === (scenario.branch ?? '/main/task1');
     if (back ? fail.switchBack : target === fail.switchTo) {
       if (!back) branch = target;
-      throw new Error('Access to the path is denied.');
+      return cmFails('Access to the path is denied.');
     }
     branch = target;
     if (scenario.privateInTheWay) privatePaths.add(`${scenario.privateInTheWay}.private.0`);
     return '';
   };
 
-  const mergeShelve = (args: string[]): string => {
+  const mergeShelve = ({ args }: FakeCmCommand): string | CmFailure => {
     const shelve = shelves.get(Number(args[1]!.slice('sh:'.length)))!;
     if (args.includes('--merge')) {
-      if (fail.shelveMerge) throw new Error(fail.shelveMerge);
+      if (fail.shelveMerge) return cmFails(fail.shelveMerge);
       pending = { ...pending, ...shelve.changes };
       for (const [path, content] of Object.entries(shelve.addedContents)) {
         mkdirSync(dirname(onDisk(path)), { recursive: true });
@@ -152,13 +153,13 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
     return mergeOutput(...Object.keys(shelve.changes).map((path) => ['APPLY', 'ADD', `/${path}`]), ...conflicts);
   };
 
-  const findBranch = (args: string[]): string => {
+  const findBranch = ({ args }: FakeCmCommand): string => {
     const shortName = /name = '([^']*)'/.exec(args[2]!)![1];
     const found = [...knownBranches].find((name) => name.split('/').pop() === shortName);
     return found ? branchFound(found, BRANCH_IDS[found]!) : NOTHING_FOUND;
   };
 
-  const fake = scriptedCm({
+  const fake = fakeCmClient({
     'status --header --xml': () =>
       scenario.onShelve ? statusHeader(String(scenario.onShelve), { type: 'Shelve', changeset: -scenario.onShelve }) : statusHeader(branch),
     getworkspacefrompath: WORKSPACE_NAMES,
@@ -168,13 +169,13 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
     'status --xml': statusXml,
     'status --short': () => Object.entries(pending).filter(([, codes]) => codes !== 'PR').map(([path, codes]) => `${codes} ${path}\n`).join(''),
     'shelveset create': createShelve,
-    'shelveset delete': (args) => {
+    'shelveset delete': ({ args }) => {
       const id = Number(/^sh:(\d+)@/.exec(args[2]!)![1]);
       shelves.delete(id);
       deletedShelves.push(id);
       return '';
     },
-    diff: (args) =>
+    diff: ({ args }) =>
       Object.entries(shelves.get(Number(args[1]!.slice('sh:'.length)))?.changes ?? {})
         .map(([path, codes]) => diffRecord(isAdded(codes) ? 'A' : 'C', path, { base: 11, revision: 50 }))
         .join(''),
@@ -182,15 +183,14 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
     switch: switchTo,
     merge: mergeShelve,
     'lock list': () =>
-      (scenario.locks ?? [])
-        .map(({ repository, path }, index) =>
-          [repository, String(500 + index), 'a1b2c3d4-0000-4000-8000-00000000000' + index, '2026-09-25T10:00:00+02:00', '/main', '-1', branch, '60', 'Locked', 'me', 'wk', path].join('\u001f'),
-        )
-        .map((record) => `${record}\u001e`)
-        .join(''),
-    changelist: (args) => {
+      formatOutput(
+        ...(scenario.locks ?? []).map(({ repository, path }, index) => [
+          repository, 500 + index, `a1b2c3d4-0000-4000-8000-00000000000${index}`, '2026-09-25T10:00:00+02:00', '/main', -1, branch, 60, 'Locked', 'me', 'wk', path,
+        ]),
+      ),
+    changelist: ({ args }) => {
       if (args[1] === 'create') {
-        if (changelists.some((list) => list.name === args[2])) throw new Error(`The changelist ${args[2]} already exists.`);
+        if (changelists.some((list) => list.name === args[2])) return cmFails(`The changelist ${args[2]} already exists.`);
         changelists = [...changelists, { name: args[2]!, description: args[3]!, paths: [] }];
       } else {
         const added = args.slice(3).map(relative);

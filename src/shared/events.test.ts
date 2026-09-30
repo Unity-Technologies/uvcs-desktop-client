@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MAX_CHANGED_FOLDERS, mergeChanges, type WorkspaceChange } from './events';
+import { countedArray } from './testing/countedReads';
 
 const NOTHING: WorkspaceChange = { content: false, pathsChanged: false, metadata: false, folders: [] };
 
@@ -31,11 +32,13 @@ describe('mergeChanges', () => {
     expect(mergeChanges(batch, { ...NOTHING, folders: ['one-more'] }).folders).toBeNull();
   });
 
-  it('stays cheap over a long stream of events in the same folders', () => {
-    let batch: WorkspaceChange = NOTHING;
-    const started = performance.now();
-    for (let i = 0; i < 200_000; i++) batch = mergeChanges(batch, { ...NOTHING, content: true, folders: [`d${i % 50}`] });
-    expect(batch.folders).toHaveLength(50);
-    expect(performance.now() - started).toBeLessThan(1000);
+  it('stays cheap over a long stream of events in the same folders: each reads only the folders batched, copying none', () => {
+    const inFolder = (index: number): WorkspaceChange => ({ ...NOTHING, content: true, folders: [`d${index % 50}`] });
+    const fifty = Array.from({ length: 50 }, (_, index) => inFolder(index)).reduce(mergeChanges, NOTHING);
+    const { array: folders, reads } = countedArray(fifty.folders!);
+    let batch: WorkspaceChange = { ...fifty, folders };
+    for (let index = 0; index < 10_000; index++) batch = mergeChanges(batch, inFolder(index));
+    expect(batch.folders).toBe(folders);
+    expect(reads() / 10_000).toBeLessThanOrEqual(50);
   });
 });

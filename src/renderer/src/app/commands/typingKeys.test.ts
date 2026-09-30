@@ -1,12 +1,6 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
-
-let belongsToField: typeof import('./typingKeys').belongsToField;
-let copiesSelectedText: typeof import('./typingKeys').copiesSelectedText;
-
-beforeAll(async () => {
-  vi.stubGlobal('window', { uvcs: { platform: 'darwin' } });
-  ({ belongsToField, copiesSelectedText } = await import('./typingKeys'));
-});
+import '../../testing/fakeWindow';
+import { describe, expect, it } from 'vitest';
+import { belongsToField, copiesSelectedText } from './typingKeys';
 
 const key = (key: string, modifiers: { metaKey?: boolean; ctrlKey?: boolean; altKey?: boolean } = {}) => ({
   key,

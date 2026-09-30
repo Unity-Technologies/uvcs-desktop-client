@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { WebContents } from 'electron';
-import { cmFails, fakeCmClient, formatOutput, runsUntilCancelled, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { change, formatOutput, statusHeader } from '../cm/testing/cmOutput';
+import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { UPDATE_ARGS } from '../cm/updateArgs';
 import { runForCaller } from '../ipc/caller';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
@@ -17,12 +18,7 @@ vi.mock('electron', () => ({ app: { getPath: () => tmpdir() } }));
 
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 
-const STATUS_HEADER = `<?xml version="1.0" encoding="utf-8"?>
-<StatusOutput>
-  <WorkspaceStatus><Status><RepSpec><Server>local</Server><Name>game</Name></RepSpec><Changeset>12</Changeset></Status></WorkspaceStatus>
-  <WkConfigType>Branch</WkConfigType>
-  <WkConfigName>/main/task1@game@local</WkConfigName>
-</StatusOutput>`;
+const STATUS_HEADER = statusHeader('/main/task1', { changeset: 12, repository: 'game' });
 
 function workspaces(answers: Record<string, CmAnswer>, watchers?: Partial<WorkspaceWatchers>) {
   const fake = fakeCmClient(answers);
@@ -206,10 +202,7 @@ describe('other workspaces', () => {
   });
 
   it("glances at another workspace's branch and pending changes with one local cm status from the home folder", async () => {
-    const withChanges = STATUS_HEADER.replace(
-      '</StatusOutput>',
-      '<Changes><Change><Type>CH</Type><Path>a.cs</Path><OldPath /><MergesInfo /><SimilarityPerUnit>0</SimilarityPerUnit><Size>3</Size><RevisionType>enTextFile</RevisionType><LastModified>2026-09-25T08:26:09+02:00</LastModified></Change></Changes></StatusOutput>',
-    );
+    const withChanges = STATUS_HEADER.replace('</StatusOutput>', `<Changes>${change('CH', 'a.cs')}</Changes></StatusOutput>`);
     const { service, commands } = workspaces({ status: withChanges });
 
     expect(await service.glance(WORKSPACE)).toEqual({ repository: 'game@local', selector: { kind: 'branch', name: '/main/task1' }, pendingCount: 1 });

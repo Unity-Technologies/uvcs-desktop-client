@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
-import { readGrowthWhenDoubled } from '../../testing/countedReads';
+import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
 import { sharePendingChanges } from './sharePendingChanges';
 
 const change = (path: string, lastModified = '1', kinds: PendingChange['kinds'] = ['changed']): PendingChange => ({ path, kinds, itemType: 'file', size: 1, lastModified, oldPath: undefined });

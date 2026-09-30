@@ -1,7 +1,8 @@
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { fakeCmClient, findXml } from '../cm/testing/fakeCmClient';
+import { findXml } from '../cm/testing/cmOutput';
+import { fakeCmClient } from '../cm/testing/fakeCmClient';
 import type { SwitchContext } from './ServiceContext';
 import { createShelvesService } from './shelvesService';
 import { serviceContext } from './testing/serviceContext';

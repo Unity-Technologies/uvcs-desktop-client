@@ -1,10 +1,9 @@
-import { QueryObserver } from '@tanstack/react-query';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import '../../testing/fakeWindow';
+import { afterEach, describe, expect, it } from 'vitest';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import type { WorkspaceChange } from '@shared/events';
 
-await vi.hoisted(async () => (await import('../../lib/testing/fakeWindow')).installFakeWindow());
-
+import { showQuery, type QueryProbe } from '../../testing/queryProbes';
 import { IMMUTABLE_QUERY, keyedByWorkspaceInfo, queryClient } from '../queryClient';
 import { affectedByChange, HeldChanges, localQueryDefaults, refreshForChange } from './workspaceChangeRefresh';
 
@@ -23,25 +22,15 @@ function info(branch: string, loadedChangeset = 10): WorkspaceInfo {
 }
 
 /** A query on screen, already read once; counts its reads. */
-async function shown(queryKey: unknown[], options: { meta?: Record<string, unknown>; read?: () => unknown } = {}) {
-  const reads = { count: 0 };
-  const observer = new QueryObserver(queryClient, {
-    queryKey,
-    queryFn: async () => {
-      reads.count++;
-      return options.read ? options.read() : reads.count;
-    },
-    staleTime: Infinity,
-    meta: options.meta,
-  });
-  unsubscribers.push(observer.subscribe(() => {}));
-  await vi.waitFor(() => expect(reads.count).toBe(1));
-  return reads;
+async function shown(queryKey: unknown[], { meta, read }: { meta?: Record<string, unknown>; read?: () => unknown } = {}): Promise<QueryProbe> {
+  const probe = await showQuery(queryClient, queryKey, { staleTime: Infinity, meta, ...(read && { answer: read }) });
+  unsubscribers.push(probe.hide);
+  return probe;
 }
 
 /** Reads of each query after the refresh, less the first read that showed it. */
-function refetches(queries: Record<string, { count: number }>): Record<string, number> {
-  return Object.fromEntries(Object.entries(queries).map(([name, reads]) => [name, reads.count - 1]));
+function refetches(queries: Record<string, QueryProbe>): Record<string, number> {
+  return Object.fromEntries(Object.entries(queries).map(([name, probe]) => [name, probe.reads() - 1]));
 }
 
 async function workspaceViews(infoRead: () => WorkspaceInfo = () => info('/main')) {

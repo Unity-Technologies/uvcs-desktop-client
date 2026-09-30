@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fillArgs, writesResult, type MergeToolFiles } from './commandLine';
+import { fillArgs, type MergeToolFiles } from './commandLine';
 import { KNOWN_TOOLS } from './knownTools';
 
 const FILES: MergeToolFiles = {
@@ -19,15 +19,11 @@ describe('fillArgs', () => {
   it('replaces placeholders inside arguments and keeps each one whole, spaces and all', () => {
     expect(fillArgs(['-dn={yoursName}', '{result}', '{unknown}'], FILES)).toEqual(['-dn=Yours (/main/task)', '/t/a.ts', '{unknown}']);
   });
-
-  it('knows whether a template saves a result', () => {
-    expect(writesResult(['{base}', '-o', '{result}'])).toBe(true);
-    expect(writesResult(['{base}', '{yours}'])).toBe(false);
-  });
 });
 
 describe('known tools', () => {
-  it('give every tool somewhere to save', () => {
+  it('give every tool somewhere to save: nothing comes back from one without a result file', () => {
+    const writesResult = (args: string[]): boolean => args.some((arg) => arg.includes('{result}'));
     expect(KNOWN_TOOLS.filter((tool) => !writesResult(tool.args)).map((tool) => tool.id)).toEqual([]);
   });
 

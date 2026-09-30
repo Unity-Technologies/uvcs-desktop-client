@@ -83,7 +83,7 @@ export interface SwitchShelveRecord {
  * files changed locally (`cm update` can't merge those), or because the user shelved them away (Shelve undoes what it
  * shelves). Only the first two are left changes, offered by "Welcome back"; all of them are put back the same way.
  */
-export type ShelvedChangesReason = 'switch' | 'update' | 'shelve';
+type ShelvedChangesReason = 'switch' | 'update' | 'shelve';
 
 /** Shelved changes waiting for the user on the workspace's current selector. */
 export interface LeftChanges {

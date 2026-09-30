@@ -10,7 +10,7 @@ import { TextField } from '../../ui/TextField';
 import { toast } from '../../ui/toast/toastStore';
 import { useBranches } from '../branches/useBranches';
 
-export type ReviewTargetKind = 'branch' | 'changeset' | 'shelve';
+type ReviewTargetKind = 'branch' | 'changeset' | 'shelve';
 
 export interface ReviewTargetDraft {
   kind: ReviewTargetKind;

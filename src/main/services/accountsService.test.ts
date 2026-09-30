@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ACCOUNT_FORMAT } from '../cm/accounts';
-import { fakeCmClient, formatOutput } from '../cm/testing/fakeCmClient';
+import { formatOutput } from '../cm/testing/cmOutput';
+import { fakeCmClient } from '../cm/testing/fakeCmClient';
 import { createAccountsService } from './accountsService';
 import { serviceContext } from './testing/serviceContext';
 

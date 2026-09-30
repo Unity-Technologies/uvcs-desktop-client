@@ -3,7 +3,8 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
 import { readBranchNames } from '../cm/branchNames';
-import { fakeCmClient, findXml, formatOutput, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { findXml, formatOutput } from '../cm/testing/cmOutput';
+import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createCodeReviewsService } from './codeReviewsService';
 import { serviceContext } from './testing/serviceContext';
 

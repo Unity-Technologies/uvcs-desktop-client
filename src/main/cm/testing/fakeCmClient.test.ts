@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CmError } from '../CmError';
-import { parseRecords } from '../formatRecords';
-import { findRecords } from '../findObjects';
-import { cmFails, fakeCmClient, findXml, formatOutput } from './fakeCmClient';
+import { cmFails, fakeCmClient } from './fakeCmClient';
 
 describe('fakeCmClient', () => {
   it('fails any command it has no answer for, so a new command never goes unnoticed', async () => {
@@ -24,6 +22,14 @@ describe('fakeCmClient', () => {
     expect(linesVia('execute')).toEqual(['find changeset']);
   });
 
+  it('tells whether a command starting with whole words was asked', async () => {
+    const { cm, ran } = fakeCmClient({ find: '' });
+
+    await cm.query(['find', 'branch', '--xml']);
+
+    expect([ran('find'), ran('find branch'), ran('find bran'), ran('find changeset')]).toEqual([true, true, false, false]);
+  });
+
   it('fails as CmClient does: a CmError with the line that explains it and the command', async () => {
     const { cm } = fakeCmClient({ switch: cmFails('Searching...\nError: The branch does not exist.\n') });
 
@@ -31,13 +37,5 @@ describe('fakeCmClient', () => {
 
     expect(error).toBeInstanceOf(CmError);
     expect(error).toMatchObject({ message: 'The branch does not exist.', command: { commandLine: 'cm switch br:/x', exitCode: 1 } });
-  });
-
-  it("writes output the app's parsers read", () => {
-    expect(parseRecords(formatOutput(['1', 'a b'], ['2', 'ç']))).toEqual([
-      ['1', 'a b'],
-      ['2', 'ç'],
-    ]);
-    expect(findRecords(findXml('BRANCH', { ID: 3, NAME: '/main/a&b' }), 'BRANCH')).toEqual([{ ID: '3', NAME: '/main/a&b' }]);
   });
 });

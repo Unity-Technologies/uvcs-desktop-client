@@ -1,8 +1,3 @@
-/** Identifies a long-running operation so the renderer can follow its progress or cancel it. */
-export interface OperationHandle {
-  operationId: string;
-}
-
 /**
  * What a command is doing, in order: getting ready, working out what changes, moving data (down or up), writing to the
  * workspace, confirming on the server, wrapping up. `working` is anything else the app reports in its own words.

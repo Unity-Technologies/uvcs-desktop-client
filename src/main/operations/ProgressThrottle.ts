@@ -1,5 +1,5 @@
 /** At most ten updates a second: enough for a smooth bar, few enough to keep IPC and React quiet. */
-export const PROGRESS_INTERVAL_MS = 100;
+const PROGRESS_INTERVAL_MS = 100;
 
 /**
  * Passes on the latest value at most once per interval, the last one always, and urgent ones (a new stage) at once.

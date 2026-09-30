@@ -4,7 +4,7 @@
  * two full files (`parseDiffFromFile`), declared structurally so this module stays dependency-free.
  */
 
-export interface DisplayHunk {
+interface DisplayHunk {
   additionStart: number;
   deletionStart: number;
   hunkContent: ({ type: 'context'; lines: number } | { type: 'change'; deletions: number; additions: number })[];

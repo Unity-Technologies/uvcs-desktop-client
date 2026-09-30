@@ -1,7 +1,7 @@
+import '../../testing/fakeWindow';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // The results' menus import feature modules that read the platform as they load.
-await vi.hoisted(async () => (await import('../../lib/testing/fakeWindow')).installFakeWindow());
 
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';

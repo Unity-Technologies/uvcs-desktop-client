@@ -3,8 +3,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { MergeRequest, MergeResolutions } from '@shared/domain/merge';
-import { mergeOutput, statusHeader, treeListing } from '../testing/cmOutput';
-import { recordingContext, scriptedCm, type CmAnswer } from '../testing/scriptedCm';
+import { mergeOutput, statusHeader, treeListing } from '../cm/testing/cmOutput';
+import { fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { recordingContext } from '../operations/testing/recordingContext';
 import { runMerge } from './runMerge';
 
 const FROM_TASK: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/task' };
@@ -27,17 +28,17 @@ const noDecisions: MergeResolutions = { directoryConflicts: [], files: {} };
  */
 function mergingCm(plan: string[][], { remainingAfterSolving = [] as string[][][], finalOutput = '', pending = '' } = {}) {
   let solved = 0;
-  const merge: CmAnswer = (args) => {
+  const merge: CmAnswer = ({ args }) => {
     if (args.includes('--resolveconflict')) return mergeOutput(...CONTRIBUTORS, ...(remainingAfterSolving[solved++] ?? []));
     if (args.includes('--merge')) return finalOutput;
     return mergeOutput(...CONTRIBUTORS, ...plan);
   };
-  return scriptedCm({
+  return fakeCmClient({
     'status --short': pending,
     'merge br:/main/task': merge,
     ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt', 'src/c.txt'),
-    cat: async (args) => {
-      await writeFile(args.find((arg) => arg.startsWith('--file='))!.slice('--file='.length), 'incoming version\n');
+    cat: async ({ args }) => {
+      await writeFile(optionValue(args, '--file=')!, 'incoming version\n');
       return '';
     },
     'status --header --xml': statusHeader('/main', { changeset: 4 }),
@@ -62,7 +63,7 @@ describe('runMerge into the workspace', () => {
     await runMerge(cm, workspacePath, FROM_TASK, { directoryConflicts: [], files: { '/src/a.txt': { choice: 'destination' } } }, recordingContext().context);
 
     const merge = commands.find((command) => command.line === finalMerge([command.line]))!;
-    expect(merge.route).toBe('execute');
+    expect(merge.via).toBe('execute');
     expect(merge.args).toEqual(expect.arrayContaining(['--keepdestination', '--nointeractiveresolution', '--machinereadable']));
   });
 
@@ -83,9 +84,9 @@ describe('runMerge into the workspace', () => {
   });
 
   it('reads the incoming version of a shelve from the shelve, whose revisions no changeset holds', async () => {
-    const { cm, lines } = scriptedCm({
+    const { cm, lines } = fakeCmClient({
       'status --short': '',
-      'merge sh:7': (args) => (args.includes('--merge') ? '' : mergeOutput(...CONTRIBUTORS, fileConflict('src/b.txt', 31))),
+      'merge sh:7': ({ args }) => (args.includes('--merge') ? '' : mergeOutput(...CONTRIBUTORS, fileConflict('src/b.txt', 31))),
       ls: treeListing('eco@local', 'src/b.txt'),
       cat: '',
     });
@@ -151,8 +152,8 @@ describe('runMerge into the workspace', () => {
 
 describe('runMerge into a server branch', () => {
   const serverCm = (finalOutput: string, onMerge: (args: string[]) => Promise<void> = async () => {}) =>
-    scriptedCm({
-      'merge br:/main/task': async (args) => {
+    fakeCmClient({
+      'merge br:/main/task': async ({ args }) => {
         if (!args.includes('--merge')) return mergeOutput(...CONTRIBUTORS, fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31));
         await onMerge(args);
         return finalOutput;
@@ -164,7 +165,7 @@ describe('runMerge into a server branch', () => {
   it('merges on the server with the comment from a file, keeping one side for every file, and names the changeset made', async () => {
     let comment = '';
     const { cm, lines } = serverCm(mergeOutput(['CHANGESET', 'cs:12@/main@eco@local']), async (args) => {
-      comment = await readFile(args.find((arg) => arg.startsWith('--commentsfile='))!.slice('--commentsfile='.length), 'utf8');
+      comment = await readFile(optionValue(args, '--commentsfile=')!, 'utf8');
     });
 
     expect(await runMerge(cm, workspacePath, TO_MAIN, keepSource, recordingContext().context)).toEqual({ changesetId: 12 });

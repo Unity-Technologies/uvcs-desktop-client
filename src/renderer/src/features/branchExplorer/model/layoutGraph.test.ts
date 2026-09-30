@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import type { PendingMergeLink } from '@shared/domain/pendingChanges';
-import { readGrowthWhenDoubled } from '../../../testing/countedReads';
+import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
 import { branch, changeset, largeHistory, sampleHistory } from './graphFixtures';
 import { layoutGraph, layoutKeeping } from './layoutGraph';
 

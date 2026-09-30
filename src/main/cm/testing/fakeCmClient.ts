@@ -3,7 +3,7 @@ import { CmError } from '../CmError';
 import { extractErrorMessage } from '../errorMessage';
 
 /** How a command reached `cm`: a pooled `cm shell` (`query`) or a process of its own (`execute`). */
-export type CmVia = 'query' | 'execute';
+type CmVia = 'query' | 'execute';
 
 export interface FakeCmCommand {
   via: CmVia;
@@ -38,12 +38,14 @@ export interface FakeCm {
   lines(): string[];
   /** The command lines asked through `via`. */
   linesVia(via: CmVia): string[];
+  /** Whether a command starting with `prefix` was asked (`ran('shelveset')`). */
+  ran(prefix: string): boolean;
   /** Working directories whose `cm shell` sessions were warmed up. */
   warmedUp: string[];
 }
 
 /**
- * A fake `CmClient` that answers from synthetic output, records every command with whether it went through `query`
+ * A fake `CmClient` that answers from synthetic output (written with `cmOutput`), records every command with whether it went through `query`
  * or `execute`, and fails the test on any command it has no answer for.
  *
  * `answers` is keyed by the start of the command line (the arguments joined by spaces): `'find branch'` answers every
@@ -57,7 +59,7 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
   async function run(via: CmVia, args: string[], options: CmRunOptions = {}): Promise<string> {
     const command: FakeCmCommand = { via, args, line: args.join(' '), options };
     commands.push(command);
-    const key = keys.find((candidate) => command.line === candidate || command.line.startsWith(`${candidate} `));
+    const key = keys.find((candidate) => startsWithWords(command.line, candidate));
     if (key === undefined) throw new Error(`Unexpected cm command (${via}): cm ${command.line}`);
     const answer = answers[key]!;
     const result = typeof answer === 'function' ? await answer(command) : answer;
@@ -82,8 +84,14 @@ export function fakeCmClient(answers: Record<string, CmAnswer> = {}, { executabl
     commands,
     lines: () => commands.map((command) => command.line),
     linesVia: (via) => commands.filter((command) => command.via === via).map((command) => command.line),
+    ran: (prefix) => commands.some((command) => startsWithWords(command.line, prefix)),
     warmedUp,
   };
+}
+
+/** Whether `line` starts with the whole words of `prefix`: `find branch` starts `find branch --xml`, not `find branchy`. */
+function startsWithWords(line: string, prefix: string): boolean {
+  return line === prefix || line.startsWith(`${prefix} `);
 }
 
 function failure(command: FakeCmCommand, { output, exitCode }: CmFailure, logEntryId: number): CmError {
@@ -103,26 +111,4 @@ export function runsUntilCancelled(output: string): CmAnswer {
 /** The value of an option given as `<prefix><value>` (`-commentsfile=`, `--valuecontents=`), or undefined. */
 export function optionValue(args: readonly string[], prefix: string): string | undefined {
   return args.find((arg) => arg.startsWith(prefix))?.slice(prefix.length);
-}
-
-const FIELD_SEPARATOR = '\u001f';
-const RECORD_SEPARATOR = '\u001e';
-
-/** `--format` output as `cm` prints it for a `recordFormat`: fields and records ended by control characters, a line per record. */
-export function formatOutput(...records: readonly (string | number)[][]): string {
-  return records.map((fields) => `${fields.join(FIELD_SEPARATOR)}${RECORD_SEPARATOR}\n`).join('');
-}
-
-/** `cm find <object> --xml` output: one `<element>` per record, each field an element of its own. */
-export function findXml(element: string, ...records: Record<string, string | number>[]): string {
-  const fields = (record: Record<string, string | number>): string =>
-    Object.entries(record)
-      .map(([name, value]) => `    <${name}>${escapeXml(String(value))}</${name}>`)
-      .join('\n');
-  const body = records.map((record) => `  <${element}>\n${fields(record)}\n  </${element}>`).join('\n');
-  return `<?xml version="1.0" encoding="utf-8" ?>\n<PLASTICQUERY>\n${body}\n</PLASTICQUERY>\n`;
-}
-
-function escapeXml(value: string): string {
-  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
 }

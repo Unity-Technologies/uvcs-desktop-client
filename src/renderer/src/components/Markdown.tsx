@@ -56,7 +56,7 @@ function renderInlines(inlines: MarkdownInline[]): ReactNode[] {
 }
 
 /** A link that opens in the default browser instead of inside the app. */
-export function ExternalLink({ url, children }: { url: string; children: ReactNode }) {
+function ExternalLink({ url, children }: { url: string; children: ReactNode }) {
   return (
     <a
       className={styles.link}

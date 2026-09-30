@@ -1,19 +1,12 @@
 /// <reference types="node" />
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { filesUnder } from '@shared/testing/filesUnder';
 import { contrastRatio, parseColor, themeTokens } from './contrast';
 
 const RENDERER = join(__dirname, '..');
 const themes = themeTokens(readFileSync(join(__dirname, 'tokens.css'), 'utf8'));
-
-function cssModules(directory: string): string[] {
-  return readdirSync(directory).flatMap((name) => {
-    const path = join(directory, name);
-    if (statSync(path).isDirectory()) return cssModules(path);
-    return name.endsWith('.module.css') ? [path] : [];
-  });
-}
 
 interface Rule {
   file: string;
@@ -22,7 +15,7 @@ interface Rule {
 }
 
 /** The innermost `selector { body }` blocks of every CSS module (inside @media too), one per selector of a list. */
-const rules: Rule[] = cssModules(RENDERER).flatMap((path) => {
+const rules: Rule[] = filesUnder(RENDERER, (name) => name.endsWith('.module.css')).flatMap((path) => {
   const css = readFileSync(path, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
   return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].flatMap(([, selectors, body]) =>
     selectors!.split(',').map((selector) => ({ file: relative(RENDERER, path).split(sep).join('/'), selector: selector.trim(), body: body! })),

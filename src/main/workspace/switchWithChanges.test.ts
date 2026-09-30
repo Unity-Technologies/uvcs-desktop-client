@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { PendingChangesAction } from '@shared/domain/switchWithChanges';
-import { memorySettings, recordingContext } from '../testing/scriptedCm';
+import { recordingContext } from '../operations/testing/recordingContext';
+import { memorySettings } from '../settings/testing/memorySettings';
 import { LeftChangesFinder } from './leftChanges';
 import { SwitchShelveRecords } from './switchShelveRecords';
 import { switchWithChanges, type SwitchDependencies } from './switchWithChanges';
@@ -53,7 +54,7 @@ describe('switching a workspace without changes', () => {
     expect(await switchTo(deps, 'br:/main/task2', undefined, context)).toEqual({ kind: 'switched' });
     expect(branch()).toBe('/main/task2');
     const switched = commands.find((command) => command.args[0] === 'switch')!;
-    expect(switched).toMatchObject({ route: 'execute', options: { signal: context.signal } });
+    expect(switched).toMatchObject({ via: 'execute', options: { signal: context.signal } });
     expect(switched.args).toEqual(['switch', 'br:/main/task2', '--forcedetailedprogress', '--noinput']);
   });
 

@@ -134,9 +134,8 @@ quality: **if the tests pass, the app works as specified**. Test what matters, n
   a decision, and the edge cases the real world sends (empty, huge, Unicode, CRLF, xlinks, Windows paths).
 - **Contracts between layers**: what a service asks `cm` (which commands, how many, `query()` or `execute()`) and how
   it reads the answer, with output shaped exactly as `cm` prints it; what crosses IPC (`UvcsApi`, events); what an
-  operation refreshes (`refreshScopes`, query keys). The fake is a small object cast to `CmClient` that records the
-  commands and answers them (`fakeCm` in `main/workspace/switchShelves.test.ts`). Most services have no contract test
-  yet: add one for the service you change.
+  operation refreshes (`refreshScopes`, query keys). `cm` is faked with `fakeCmClient` (see "`cm` output is
+  synthetic"). Most services have no contract test yet: add one for the service you change.
 - **Interactions**: flows across modules, including their failure paths: a switch with changes (shelve, undo,
   switch, bring; a failure puts the changes back), a menu builder serving every place, a shortcut reaching its command.
 - **Specs**: a rule written in `docs/` deserves a test that enforces it; a rule for the whole repository becomes a
@@ -149,23 +148,28 @@ when something a user or another layer relies on changes; one that breaks on eve
 Components (`.tsx`) aren't unit-tested (vitest runs `*.test.ts` only): keep their logic in pure `.ts` modules or hooks
 built on them, and verify what's on screen with Playwright.
 
-**Super fast.** The number of tests doesn't matter; the time they take does (today about 2,400 tests in 5 s).
+**Super fast.** The number of tests doesn't matter; the time they take does (today about 3,300 tests in 6 s).
 The suite runs after every change, so it must take seconds, not minutes. A test never needs UVCS infrastructure: no
 `cm` installation, server, account, network or real workspace.
 
 - **Test each layer with the input it takes, not the layer below.** A view that shows 10 branches gets 10 branches
   built in the test; it never asks a server for them.
 - **`cm` output is synthetic**: to test a parser, write the output as `cm` prints it (`--xml`, `--format` records,
-  `CommandResult` lines) as a string in the test; never run `cm`. Code that runs `cm` gets a fake `CmClient` that
-  answers from such strings, records the commands it was asked and fails on any other (`fakeCm` in
-  `leftChanges.test.ts`). The `cm shell` protocol itself is tested against `main/cm/testing/fakeCmShell`, a script
-  that answers like `cm shell`.
+  `CommandResult` lines) as a string in the test, or with `main/cm/testing/cmOutput` (`formatOutput`, `findXml`,
+  `statusHeader`...); never run `cm`. Code that runs `cm` gets `fakeCmClient` (`main/cm/testing/`): it answers from
+  such strings, records the commands it was asked and how (`query` or `execute`), and fails on any other. A workspace
+  that changes as `cm` would is `playAlongWorkspace`, built on it. The `cm shell` protocol itself is tested against
+  `main/cm/testing/fakeCmShell`, a script that answers like `cm shell`.
+- **The renderer's fakes** are in `renderer/src/testing/`: `fakeWindow` (`window.uvcs`; `fakeApi` answers the calls a
+  test declares and fails it on any other), `fakeDialogs` (confirm and prompt), `operationOutcome` (the toasts, where
+  the window went, the views refreshed), `queryProbes`.
 
 **Never flaky.** A test that sometimes fails teaches everyone to ignore failures. Fix its cause at once; never retry,
 skip or loosen it.
 
 - **No real time**: no sleeps or waits for a duration. Use `vi.useFakeTimers()` and advance them; pass clocks, ids and
-  random sources in instead of reading `Date.now()` or `Math.random()` inside the logic.
+  random sources in instead of reading `Date.now()` or `Math.random()` inside the logic. A performance guard counts
+  work, never time (`shared/testing/`: `countedReads`, `countCharactersRead`, `countCalls`).
 - **Await outcomes**: await the promise or the event that means "done", never poll against a timeout.
 - **Isolated**: each test builds its own state (new instances, its own temp folder under `os.tmpdir()`, which the run
   already points at a private folder: `vitest.tempDirectory.ts`), no mutable module state, mocks restored after each

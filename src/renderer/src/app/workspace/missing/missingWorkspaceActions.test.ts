@@ -1,24 +1,19 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-const uvcs = await vi.hoisted(async () => (await import('../../../lib/testing/fakeWindow')).installFakeWindow());
+import { fakeApi } from '../../../testing/fakeWindow';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { queryKeys } from '../../../api/queryKeys';
-import { useToastStore } from '../../../ui/toast/toastStore';
+import { shownToasts } from '../../../testing/operationOutcome';
 import { queryClient } from '../../queryClient';
 import { useSession } from '../sessionStore';
 import { forgetMissingWorkspace, locateWorkspace } from './missingWorkspaceActions';
 
-const callOf = (method: string) => uvcs.calls.find((call) => call.method === method);
+const callOf = (method: string) => fakeApi.calls().find((call) => call.method === method);
 
-beforeEach(() => {
-  uvcs.reset();
-  useToastStore.setState({ toasts: [] });
-});
 afterEach(() => queryClient.clear());
 
 describe('locateWorkspace', () => {
   it('asks where the workspace went, starting next to where it was', async () => {
-    uvcs.answerWith({ 'system.pickDirectory': null });
+    fakeApi.answer('system.pickDirectory', () => null);
 
     await locateWorkspace('game', '/projects/game', () => {});
 
@@ -26,17 +21,19 @@ describe('locateWorkspace', () => {
   });
 
   it('does nothing more when the user cancels the picker', async () => {
-    uvcs.answerWith({ 'system.pickDirectory': null });
+    fakeApi.answer('system.pickDirectory', () => null);
     const open = vi.fn();
 
     await locateWorkspace('game', '/projects/game', open);
 
-    expect(uvcs.methodsCalled()).toEqual(['system.pickDirectory']);
+    expect(fakeApi.methods()).toEqual(['system.pickDirectory']);
     expect(open).not.toHaveBeenCalled();
   });
 
   it('opens the workspace found at the folder picked, forgetting where it was', async () => {
-    uvcs.answerWith({ 'system.pickDirectory': '/moved/game/Assets', 'workspaces.findRoot': '/moved/game', 'settings.forgetRecentWorkspace': {} });
+    fakeApi.answer('system.pickDirectory', () => '/moved/game/Assets');
+    fakeApi.answer('workspaces.findRoot', () => '/moved/game');
+    fakeApi.answer('settings.forgetRecentWorkspace', () => ({}));
     queryClient.setQueryData(queryKeys.workspaces, []);
     const open = vi.fn();
 
@@ -48,22 +45,22 @@ describe('locateWorkspace', () => {
   });
 
   it('says so, and remembers the old place, when the folder picked is no workspace', async () => {
-    uvcs.answerWith({ 'system.pickDirectory': '/elsewhere', 'workspaces.findRoot': null });
+    fakeApi.answer('system.pickDirectory', () => '/elsewhere');
+    fakeApi.answer('workspaces.findRoot', () => null);
     const open = vi.fn();
 
     await locateWorkspace('game', '/projects/game', open);
 
     expect(open).not.toHaveBeenCalled();
-    expect(uvcs.methodsCalled()).not.toContain('settings.forgetRecentWorkspace');
-    expect(useToastStore.getState().toasts).toEqual([
-      expect.objectContaining({ kind: 'error', title: "That folder isn't a workspace", detail: 'Choose the folder “game” was moved to.' }),
-    ]);
+    expect(fakeApi.methods()).not.toContain('settings.forgetRecentWorkspace');
+    expect(shownToasts()).toEqual([{ kind: 'error', title: "That folder isn't a workspace", detail: 'Choose the folder “game” was moved to.' }]);
   });
 });
 
 describe('forgetMissingWorkspace', () => {
   it('drops it from the recent workspaces and goes back to the home screen', async () => {
     useSession.setState({ workspacePath: '/projects/game' });
+    fakeApi.answer('settings.forgetRecentWorkspace', () => ({}));
 
     await forgetMissingWorkspace('/projects/game');
 

@@ -1,15 +1,9 @@
 /// <reference types="node" />
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import '../../testing/fakeWindow';
+import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-// The menus' modules read the platform as they load.
-vi.hoisted(() => {
-  const uvcs = { platform: 'darwin', invoke: async () => ({ ok: true }), on: () => () => {} };
-  const storage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
-  const window = Object.assign(new EventTarget(), { uvcs, localStorage: storage, matchMedia: () => ({ matches: false, addEventListener: () => {} }) });
-  Object.assign(globalThis, { window, localStorage: storage, document: Object.assign(new EventTarget(), { visibilityState: 'visible' }) });
-});
+import { filesUnder } from '@shared/testing/filesUnder';
 
 import type { DiffEntry } from '@shared/domain/diff';
 import type { ItemRevision } from '@shared/domain/history';
@@ -80,12 +74,7 @@ describe('Annotate outside the Files view', () => {
 describe('the Annotate page', () => {
   it('is gone: nothing opens a page of that kind', () => {
     const renderer = join(__dirname, '..', '..');
-    const sources = (directory: string): string[] =>
-      readdirSync(directory).flatMap((name) => {
-        const path = join(directory, name);
-        return statSync(path).isDirectory() ? sources(path) : /\.tsx?$/.test(name) ? [path] : [];
-      });
-    const offenders = sources(renderer).filter((path) => /kind: 'annotate'|AnnotatePage/.test(readFileSync(path, 'utf8')) && !path.endsWith('annotateEntryPoints.test.ts'));
+    const offenders = filesUnder(renderer, (name) => /\.tsx?$/.test(name)).filter((path) => /kind: 'annotate'|AnnotatePage/.test(readFileSync(path, 'utf8')) && !path.endsWith('annotateEntryPoints.test.ts'));
     expect(offenders.map((path) => relative(renderer, path))).toEqual([]);
   });
 });

@@ -15,8 +15,10 @@ import {
   shelvesCreated,
   statusHeader,
   WORKSPACE_NAMES,
-} from '../testing/cmOutput';
-import { memorySettings, recordingContext, scriptedCm, type CmAnswer } from '../testing/scriptedCm';
+} from '../cm/testing/cmOutput';
+import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { recordingContext } from '../operations/testing/recordingContext';
+import { memorySettings } from '../settings/testing/memorySettings';
 import { shelveBlockedAndUpdate } from './shelveBlockedAndUpdate';
 import { SwitchShelveRecords } from './switchShelveRecords';
 
@@ -38,11 +40,11 @@ function blockedWorkspace(workspacePath: string, { pending: changed = ['src/old.
   let shelveComment = '';
   let pending = changed;
   const pendingChanges = (): string => pendingStatus(...pending.map((path) => change('CH', path)));
-  const shelveMerge: CmAnswer = (args) => {
+  const shelveMerge: CmAnswer = ({ args }) => {
     if (args.includes('--merge')) return '';
     return mergeOutput(['APPLY', 'ADD', '/src/old.txt'], ...(putBackConflicts ? [['DIR_CONFLICT', 'CHG_RM', 'Change/Delete conflict', 'x', 'Modified /src/old.txt', 'Deleted /src/old.txt', '29', 'False', 'CHG', '/src/old.txt', 'RM', '/src/old.txt']] : []));
   };
-  const fake = scriptedCm({
+  const fake = fakeCmClient({
     'status --header --xml': statusHeader('/main/task1'),
     getworkspacefrompath: WORKSPACE_NAMES,
     'find changeset': changesetsFound('/main/task1', { id: 2, owner: 'ana' }),
@@ -52,22 +54,22 @@ function blockedWorkspace(workspacePath: string, { pending: changed = ['src/old.
     'status --xml --iscochanged': pendingChanges,
     'status --xml --checkout': pendingStatus(),
     'status --short': () => pending.map((path) => `CH ${path}\n`).join(''),
-    'shelveset create': async (args) => {
-      shelveComment = await readFile(args.find((arg) => arg.startsWith('-commentsfile='))!.slice('-commentsfile='.length), 'utf8');
+    'shelveset create': async ({ args }) => {
+      shelveComment = await readFile(optionValue(args, '-commentsfile=')!, 'utf8');
       return shelvesCreated({ id: 12 });
     },
     'diff sh:12': diffRecord('C', 'src/old.txt', { base: 11, revision: 50 }),
-    undo: (args) => {
+    undo: ({ args }) => {
       pending = pending.filter((path) => !args.includes(join(workspacePath, path)));
       return '';
     },
     update: () => {
-      if (failUpdate) throw new Error('The server is unreachable.');
+      if (failUpdate) return cmFails('The server is unreachable.');
       return '';
     },
-    'merge sh:12': (args, route) => {
-      if (args.includes('--merge')) pending = [...pending, 'src/old.txt'];
-      return shelveMerge(args, route);
+    'merge sh:12': (command) => {
+      if (command.args.includes('--merge')) pending = [...pending, 'src/old.txt'];
+      return shelveMerge(command);
     },
   });
   const records = new SwitchShelveRecords(memorySettings());
@@ -152,7 +154,7 @@ describe('shelveBlockedAndUpdate', () => {
 
   it('shelves nothing once nothing blocks the update anymore', async () => {
     const { deps } = blockedWorkspace(workspacePath);
-    const upToDate = scriptedCm({ 'status --header --xml': statusHeader('/main/task1'), 'find changeset': NOTHING_FOUND });
+    const upToDate = fakeCmClient({ 'status --header --xml': statusHeader('/main/task1'), 'find changeset': NOTHING_FOUND });
 
     await expect(run({ ...deps, cm: upToDate.cm })).rejects.toThrow('Nothing blocks the update anymore: update from Incoming.');
     expect(upToDate.lines()).toEqual(['status --header --xml', expect.stringMatching(/^find changeset /)]);

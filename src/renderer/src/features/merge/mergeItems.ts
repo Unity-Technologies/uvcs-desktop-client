@@ -26,7 +26,7 @@ export function buildMergeItems(
   ];
 }
 
-export function isConflict(item: MergeItem): boolean {
+function isConflict(item: MergeItem): boolean {
   return item.kind !== 'change';
 }
 

@@ -1,7 +1,8 @@
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { fakeCmClient, findXml, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { findXml } from '../cm/testing/cmOutput';
+import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createChangesetsService } from './changesetsService';
 import { serviceContext } from './testing/serviceContext';
 

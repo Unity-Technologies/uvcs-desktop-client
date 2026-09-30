@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserWindow } from 'electron';
 import { EVENT_CHANNEL } from '@shared/ipc';
-import { memorySettings } from '../testing/scriptedCm';
+import { memorySettings } from '../settings/testing/memorySettings';
 import { createMainWindow } from './createMainWindow';
 import { fakeElectron, type FakeWindow } from './testing/fakeElectron';
 import { WorkspaceWindows } from './WorkspaceWindows';

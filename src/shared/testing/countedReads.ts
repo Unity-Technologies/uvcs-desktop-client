@@ -15,6 +15,18 @@ export function countedReads<T extends object>(items: readonly T[]): { items: T[
   return { items: items.map((item) => new Proxy(item, handler)), reads: () => reads };
 }
 
+/** `countedArray(items)` stands in for the array itself: `reads()` counts the items read from it, as `items[i]`. */
+export function countedArray<T>(items: readonly T[]): { array: T[]; reads: () => number } {
+  let reads = 0;
+  const array = new Proxy([...items], {
+    get(target, property, receiver) {
+      if (typeof property === 'string' && /^\d+$/.test(property)) reads++;
+      return Reflect.get(target, property, receiver);
+    },
+  });
+  return { array, reads: () => reads };
+}
+
 /**
  * How much more work `run` does on `build(2n)` than on `build(n)`: about 2 for linear work, a little more for n·log n
  * (sorting), 4 for quadratic. Only reads made by `run` count, not those made while building the input.

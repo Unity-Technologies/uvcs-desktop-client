@@ -1,7 +1,6 @@
+import '../../testing/fakeWindow';
 import { focusManager } from '@tanstack/react-query';
-import { afterEach, describe, expect, it, vi } from 'vitest';
-
-await vi.hoisted(async () => (await import('../../lib/testing/fakeWindow')).installFakeWindow());
+import { afterEach, describe, expect, it } from 'vitest';
 
 import { trackWindowFocus } from './trackWindowFocus';
 

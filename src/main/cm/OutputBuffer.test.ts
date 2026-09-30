@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { countedText } from '@shared/testing/countedText';
 import { OutputBuffer } from './OutputBuffer';
 
 describe('OutputBuffer', () => {
@@ -24,16 +25,15 @@ describe('OutputBuffer', () => {
     expect([buffer.tail, buffer.length, buffer.textBefore(1)]).toEqual(['d', 1, 'd']);
   });
 
-  it('takes a huge output in chunks in linear time', () => {
+  it('takes a huge output in chunks reading only the end of each, never joining them', () => {
     const buffer = new OutputBuffer(301);
-    const chunk = 'x'.repeat(65_535) + '\n';
-    const start = performance.now();
-    for (let index = 0; index < 1000; index++) {
-      buffer.append(chunk);
+    const chunks = Array.from({ length: 100 }, () => countedText('x'.repeat(65_535) + '\n'));
+    for (const chunk of chunks) {
+      buffer.append(chunk.text);
       void buffer.tail.lastIndexOf('\n');
     }
-    // 64 MB: about 5 ms here; one string appended to and read at its end took 2.3 s.
-    expect(performance.now() - start).toBeLessThan(1000);
-    expect(buffer.textBefore(buffer.length)).toHaveLength(65_536_000);
+    // Joining each chunk to one string to read its end reads all of it: 64 MB that way took 2.3 s.
+    expect(new Set(chunks.map((chunk) => chunk.charactersRead()))).toEqual(new Set([301]));
+    expect(buffer.textBefore(buffer.length)).toHaveLength(6_553_600);
   });
 });

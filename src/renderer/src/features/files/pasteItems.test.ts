@@ -1,20 +1,14 @@
+import { fakeApi } from '../../testing/fakeWindow';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// The trash's name comes from the platform, read as the modules load.
-vi.hoisted(() => Object.assign(globalThis, { window: { uvcs: { platform: 'darwin' } } }));
-
-vi.mock('../../api/client', () => import('./filesTestDoubles').then(({ fakeApi }) => ({ api: fakeApi })));
-vi.mock('../../app/operations/runOperation', () => import('./filesTestDoubles').then(({ fakeRunOperation, fakeRunAction }) => ({ runOperation: fakeRunOperation, runAction: fakeRunAction, runRead: fakeRunAction })));
-vi.mock('../../ui/dialog/confirm', () => import('./filesTestDoubles').then(({ fakeConfirm }) => ({ confirm: fakeConfirm })));
-vi.mock('../../ui/dialog/prompt', () => import('./filesTestDoubles').then(({ fakePrompt }) => ({ prompt: fakePrompt })));
-vi.mock('../../ui/toast/toastStore', () => import('./filesTestDoubles').then(({ fakeToast }) => ({ toast: fakeToast })));
-vi.mock('../../app/queryClient', async () => ({ queryClient: new (await import('@tanstack/react-query')).QueryClient() }));
+vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import type { TreeItem } from '@shared/domain/explorer';
 import { queryClient } from '../../app/queryClient';
+import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
+import { pressToastAction, shownToasts } from '../../testing/operationOutcome';
 import { useCutItemsStore } from './cutItemsStore';
 import { directoryListingKey } from './fileOperations';
-import { doubles, settled } from './filesTestDoubles';
 import { useFilesViewStore } from './filesViewStore';
 import { pasteCutItems, pastePlanFor } from './pasteItems';
 
@@ -30,13 +24,19 @@ function listed(listings: Record<string, TreeItem[]>): void {
 
 const cut = (...items: TreeItem[]) => useCutItemsStore.getState().cut(ws, items);
 const cutPaths = () => useCutItemsStore.getState().items.map((cutItem) => cutItem.path);
+/** The arguments of each move main was asked for. */
+const moves = () => fakeApi.argsOf('explorer.moveItems');
+
+/** Resolves with the arguments of the next move main is asked for. */
+function nextMove(): Promise<unknown[]> {
+  return new Promise((resolve) => fakeApi.answer('explorer.moveItems', (...args: unknown[]) => void resolve(args)));
+}
 
 beforeEach(() => {
-  doubles.reset();
-  queryClient.clear();
   useCutItemsStore.getState().clear();
   useFilesViewStore.setState({ revealRequest: null });
-  doubles.answers['explorer.listDirectory'] = () => [];
+  fakeApi.answer('explorer.listDirectory', () => []);
+  fakeApi.answer('explorer.moveItems', () => undefined);
 });
 
 describe('what Paste would do (menus and commands)', () => {
@@ -63,7 +63,7 @@ describe('pasting the cut items', () => {
   it("moves them in one operation, reading the folder's names first if the tree never did, then selects them and forgets the cut", async () => {
     cut(item('src/a.ts'), item('b.txt', { isPrivate: true }));
     await pasteCutItems(ws, [folder('docs')]);
-    expect(doubles.calls).toEqual([
+    expect(fakeApi.calls()).toEqual([
       { method: 'explorer.listDirectory', args: [ws, 'docs'] },
       {
         method: 'explorer.moveItems',
@@ -73,56 +73,56 @@ describe('pasting the cut items', () => {
             { from: 'src/a.ts', to: 'docs/a.ts', isPrivate: false },
             { from: 'b.txt', to: 'docs/b.txt', isPrivate: true },
           ],
-          'operation-1',
+          expect.any(String),
         ],
       },
     ]);
     expect(useFilesViewStore.getState().revealRequest).toEqual({ path: 'docs/a.ts', selected: ['docs/a.ts', 'docs/b.txt'] });
     expect(cutPaths()).toEqual([]);
-    expect(doubles.toasts).toMatchObject([{ kind: 'success', title: 'Moved 2 items', detail: 'To /docs', action: { label: 'Undo' } }]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Moved 2 items', detail: 'To /docs', action: 'Undo' }]);
   });
 
   it('moves them back with Undo', async () => {
     cut(item('src/a.ts'));
     await pasteCutItems(ws, [folder('docs')]);
-    doubles.toasts[0]!.action!.run();
-    await settled();
-    expect(doubles.writes[1]).toEqual({ method: 'explorer.moveItems', args: [ws, [{ from: 'docs/a.ts', to: 'src/a.ts', isPrivate: false }], 'operation-1'] });
+    const undone = nextMove();
+    pressToastAction(shownToasts()[0]!.title);
+    expect(await undone).toEqual([ws, [{ from: 'docs/a.ts', to: 'src/a.ts', isPrivate: false }], expect.any(String)]);
   });
 
   it('says why it can not paste, moving nothing', async () => {
     cut(folder('src'));
     await pasteCutItems(ws, [folder('src/lib')]);
-    expect(doubles.writes).toEqual([]);
-    expect(doubles.toasts).toEqual([{ kind: 'info', title: 'Can’t paste here', detail: 'Can’t move “src” into a folder inside it' }]);
+    expect(moves()).toEqual([]);
+    expect(shownToasts()).toEqual([{ kind: 'info', title: 'Can’t paste here', detail: 'Can’t move “src” into a folder inside it' }]);
     expect(cutPaths()).toEqual(['src']);
   });
 
   it('asks before leaving items whose names the folder has, and moves nothing when cancelled', async () => {
-    doubles.answers['explorer.listDirectory'] = () => [item('docs/A.ts')];
+    fakeApi.answer('explorer.listDirectory', () => [item('docs/A.ts')]);
     cut(item('src/a.ts'), item('src/b.ts'));
-    doubles.dialogAnswers.push(false);
+    answerConfirms(false);
     await pasteCutItems(ws, [folder('docs')]);
-    expect(doubles.dialogs).toMatchObject([{ kind: 'confirm', title: '“a.ts” is already in /docs' }]);
-    expect(doubles.writes).toEqual([]);
+    expect(askedDialogs()).toEqual([{ kind: 'confirm', title: '“a.ts” is already in /docs' }]);
+    expect(moves()).toEqual([]);
     expect(cutPaths()).toEqual(['src/a.ts', 'src/b.ts']);
   });
 
   it('moves only the others once the user agrees, replacing nothing', async () => {
-    doubles.answers['explorer.listDirectory'] = () => [item('docs/A.ts')];
+    fakeApi.answer('explorer.listDirectory', () => [item('docs/A.ts')]);
     cut(item('src/a.ts'), item('src/b.ts'));
     await pasteCutItems(ws, [folder('docs')]);
-    expect(doubles.writes).toEqual([{ method: 'explorer.moveItems', args: [ws, [{ from: 'src/b.ts', to: 'docs/b.ts', isPrivate: false }], 'operation-1'] }]);
+    expect(moves()).toEqual([[ws, [{ from: 'src/b.ts', to: 'docs/b.ts', isPrivate: false }], expect.any(String)]]);
   });
 
   it('keeps the items cut when the move fails, to try again', async () => {
-    doubles.answers['explorer.moveItems'] = () => {
+    fakeApi.answer('explorer.moveItems', () => {
       throw new Error('The item docs/a.ts already exists');
-    };
+    });
     cut(item('src/a.ts'));
     await pasteCutItems(ws, [folder('docs')]);
     expect(cutPaths()).toEqual(['src/a.ts']);
     expect(useFilesViewStore.getState().revealRequest).toBeNull();
-    expect(doubles.toasts).toMatchObject([{ kind: 'error', title: 'Moving items failed' }]);
+    expect(shownToasts()).toEqual([{ kind: 'error', title: 'Moving items failed', detail: 'The item docs/a.ts already exists' }]);
   });
 });

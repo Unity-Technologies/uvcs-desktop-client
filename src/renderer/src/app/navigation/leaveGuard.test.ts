@@ -1,7 +1,6 @@
+import { fakeApi } from '../../testing/fakeWindow';
 import { describe, expect, it, vi } from 'vitest';
 import type { SelectionState } from '../../lib/selection';
-
-const uvcs = await vi.hoisted(async () => (await import('../../lib/testing/fakeWindow')).installFakeWindow());
 
 import { afterLeaving, guardLeaving, guardUnloading, selectAfterLeaving, settleBeforeLeaving } from './leaveGuard';
 
@@ -104,11 +103,10 @@ describe('guardUnloading', () => {
     return event.defaultPrevented;
   }
 
-  /** The main process asks before closing the window; resolves with what the window answered. */
+  /** The main process asks before closing the window; resolves with whether the window answered it may leave. */
   async function closeWindow(): Promise<unknown> {
-    uvcs.calls.length = 0;
-    const answered = new Promise((resolve) => (uvcs.answer = (request) => (resolve(request), { ok: true, value: undefined })));
-    uvcs.emit('leaveRequested', {});
+    const answered = new Promise((resolve) => fakeApi.answer('windows.continueLeaving', (canLeave: boolean) => void resolve(canLeave)));
+    fakeApi.emit('leaveRequested', {});
     return answered;
   }
 
@@ -124,14 +122,14 @@ describe('guardUnloading', () => {
 
   it('closes the window once the guard lets go, without asking again as it unloads', async () => {
     const lift = guardLeaving(async () => true);
-    await expect(closeWindow()).resolves.toEqual({ method: 'windows.continueLeaving', args: [true] });
+    await expect(closeWindow()).resolves.toBe(true);
     expect(unloadingHeldBack()).toBe(false);
     lift();
   });
 
   it('keeps the window when the user cancels', async () => {
     const lift = guardLeaving(async () => false);
-    await expect(closeWindow()).resolves.toEqual({ method: 'windows.continueLeaving', args: [false] });
+    await expect(closeWindow()).resolves.toBe(false);
     expect(unloadingHeldBack()).toBe(true);
     lift();
   });

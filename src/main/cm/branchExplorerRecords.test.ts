@@ -1,12 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { countCharactersRead } from '@shared/testing/countCharactersRead';
 import { parseBranches, parseChangesets, parseLabels, parseMergeLinks, roundTripDate } from './branchExplorerRecords';
-
-const F = '\u001f';
-const R = '\u001e';
+import { formatOutput } from './testing/cmOutput';
 
 describe('branch explorer records', () => {
   it('parses branches, flagged as hidden when read from the hidden ones', () => {
-    const output = `31266319${F}/main/task${F}/main${F}jane${F}2026-09-01T10:00:00+02:00${F}12${F}Multi\nline${R}\n`;
+    const output = formatOutput([31266319, '/main/task', '/main', 'jane', '2026-09-01T10:00:00+02:00', 12, 'Multi\nline']);
     expect(parseBranches(output, true)).toEqual([
       {
         id: 31266319,
@@ -22,7 +21,7 @@ describe('branch explorer records', () => {
   });
 
   it('parses changesets, keeping -1 for the root parent', () => {
-    const output = `0${F}/main${F}${F}2026-09-01${F}jane${F}${R}\n5${F}/main/task${F}4${F}2026-09-02${F}joe${F}Fix${R}\n`;
+    const output = formatOutput([0, '/main', '', '2026-09-01', 'jane', ''], [5, '/main/task', 4, '2026-09-02', 'joe', 'Fix']);
     expect(parseChangesets(output).map(({ id, parent, branch }) => ({ id, parent, branch }))).toEqual([
       { id: 0, parent: -1, branch: '/main' },
       { id: 5, parent: 4, branch: '/main/task' },
@@ -30,7 +29,7 @@ describe('branch explorer records', () => {
   });
 
   it('maps merge types and skips unknown ones', () => {
-    const output = `merge${F}10${F}11${R}\ncherrypick${F}15${F}16${R}\ncherrypicksubstractive${F}3${F}9${R}\nweird${F}1${F}2${R}\n`;
+    const output = formatOutput(['merge', 10, 11], ['cherrypick', 15, 16], ['cherrypicksubstractive', 3, 9], ['weird', 1, 2]);
     expect(parseMergeLinks(output)).toEqual([
       { type: 'merge', sourceChangeset: 10, destinationChangeset: 11 },
       { type: 'cherryPick', sourceChangeset: 15, destinationChangeset: 16 },
@@ -43,19 +42,17 @@ describe('branch explorer records', () => {
   });
 
   it('parses labels', () => {
-    expect(parseLabels(`v1.0${F}3${F}jane${F}2026-09-01${F}First${R}\n`)).toEqual([
+    expect(parseLabels(formatOutput(['v1.0', 3, 'jane', '2026-09-01', 'First']))).toEqual([
       { name: 'v1.0', changeset: 3, owner: 'jane', date: '2026-09-01', comment: 'First' },
     ]);
   });
 
-  it('reads 280,000 changesets (codice) in linear time', () => {
-    let output = '';
-    for (let id = 0; id < 280_000; id++) output += `${id}${F}/main/task${id % 20_000}${F}${id - 1}${F}2026-09-25T10:11:12.0000000+02:00${F}jane${F}comment ${id}${R}\n`;
-    const start = performance.now();
-    const changesets = parseChangesets(output);
-    // About 0.1 s here.
-    expect(performance.now() - start).toBeLessThan(2000);
-    expect(changesets).toHaveLength(280_000);
+  it('reads the changesets of a big repository in one pass: a few reads of each character, whatever the size', () => {
+    const output = formatOutput(...Array.from({ length: 5_000 }, (_, id) => [id, `/main/task${id % 2_000}`, id - 1, '2026-09-25T10:11:12.0000000+02:00', 'jane', `comment ${id}`]));
+    const { result: changesets, charactersRead } = countCharactersRead(() => parseChangesets(output));
+    // About 3 reads of each character; a pass over the rest of the output per record reads each thousands of times.
+    expect(charactersRead / output.length).toBeLessThan(5);
+    expect(changesets).toHaveLength(5_000);
   });
 });
 

@@ -7,7 +7,7 @@ import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { isCheckinCandidate } from './changeCategories';
 import { sharePendingChanges } from './sharePendingChanges';
 
-export function pendingChangesKey(workspacePath: string) {
+function pendingChangesKey(workspacePath: string) {
   return queryKeys.inWorkspace(workspacePath, 'pendingChanges');
 }
 

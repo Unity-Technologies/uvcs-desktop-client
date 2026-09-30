@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { net, shell } from 'electron';
 import type { AppSettings } from '@shared/domain/settings';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
-import type { SettingsStore } from '../settings/SettingsStore';
+import { memorySettings } from '../settings/testing/memorySettings';
 import { createSystemService } from './systemService';
 import { serviceContext } from './testing/serviceContext';
 
@@ -21,8 +21,7 @@ vi.mock('../window/incomingNotification', () => ({ showIncomingNotification: vi.
 function system(answers: Record<string, CmAnswer>, settings: Partial<AppSettings> = {}) {
   const fake = fakeCmClient(answers);
   const relocate = vi.spyOn(fake.cm, 'relocate');
-  const store = { get: () => settings as AppSettings } as SettingsStore;
-  return { ...fake, relocate, service: createSystemService(serviceContext(fake.cm, { settings: store })) };
+  return { ...fake, relocate, service: createSystemService(serviceContext(fake.cm, { settings: memorySettings(settings) })) };
 }
 
 describe('the cm version', () => {

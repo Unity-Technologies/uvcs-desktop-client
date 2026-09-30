@@ -14,7 +14,7 @@ export const COPY_KINDS = ['name', 'number', 'title', 'path', 'fullPath', 'serve
 export type CopyKind = (typeof COPY_KINDS)[number];
 
 /** A text to copy, or a way to read it when it is copied (a GUID the view didn't read). */
-export type CopyText = string | (() => Promise<string | undefined>);
+type CopyText = string | (() => Promise<string | undefined>);
 
 export type CopyTexts = Partial<Record<CopyKind, CopyText | false | null | undefined>>;
 

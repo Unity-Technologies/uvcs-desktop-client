@@ -7,7 +7,7 @@
 
 const KEY = 'recentbranches';
 const SEPARATOR = ';';
-export const MAX_RECENT_BRANCHES = 5;
+const MAX_RECENT_BRANCHES = 5;
 const GUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 type Line = { kind: 'section'; name: string } | { kind: 'entry'; key: string; value: string } | { kind: 'other' };

@@ -1,12 +1,6 @@
-import { beforeAll, describe, expect, it, vi } from 'vitest';
-
-let matchesShortcut: typeof import('./shortcuts').matchesShortcut;
-let formatShortcut: typeof import('./shortcuts').formatShortcut;
-
-beforeAll(async () => {
-  vi.stubGlobal('window', { uvcs: { platform: 'darwin' } });
-  ({ matchesShortcut, formatShortcut } = await import('./shortcuts'));
-});
+import '../testing/fakeWindow';
+import { describe, expect, it } from 'vitest';
+import { formatShortcut, matchesShortcut } from './shortcuts';
 
 function press(key: string, code: string, modifiers: Partial<KeyboardEvent> = {}): KeyboardEvent {
   return { key, code, metaKey: false, ctrlKey: false, altKey: false, shiftKey: false, ...modifiers } as KeyboardEvent;

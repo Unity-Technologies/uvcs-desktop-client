@@ -1,30 +1,21 @@
 import { commandFailure, fakeApi } from '../../testing/fakeWindow';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-const dialogs = vi.hoisted(() => ({ confirmed: true, asked: [] as string[] }));
-vi.mock('../../ui/dialog/confirm', () => ({
-  confirm: async ({ title }: { title: string }) => {
-    dialogs.asked.push(title);
-    return dialogs.confirmed;
-  },
-}));
+vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import type { ShelveApplyResult } from '@shared/domain/shelve';
 import { useNavigation } from '../../app/navigation/navigationStore';
+import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
 import { pressToastAction, shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
 import { applyShelve, deleteShelve, shelveAway } from './shelveOperations';
 
 const ws = '/ws';
+const confirmTitles = () => askedDialogs().map((dialog) => dialog.title);
 
 /** `shelves.apply` answers each call with the next outcome. */
 function applyAnswers(...outcomes: ShelveApplyResult[]): void {
   fakeApi.answer('shelves.apply', () => outcomes.shift());
 }
-
-beforeEach(() => {
-  dialogs.confirmed = true;
-  dialogs.asked = [];
-});
 
 describe('applyShelve', () => {
   it('merges the shelve at once when nothing conflicts, keeping it unless asked to delete it', async () => {
@@ -66,14 +57,14 @@ describe('applyShelve', () => {
 
     expect(await applyShelve(ws, 12, false)).toBe(true);
 
-    expect(dialogs.asked).toEqual(['Shelve your changes first?']);
+    expect(confirmTitles()).toEqual(['Shelve your changes first?']);
     expect(fakeApi.methods()).toEqual(['shelves.apply', 'pendingChanges.shelveAndUndo', 'shelves.apply']);
     expect(fakeApi.argsOf('pendingChanges.shelveAndUndo')).toEqual([[ws, null, 'Set aside to apply shelve 12', expect.any(String)]]);
   });
 
   it('applies nothing while the user keeps their pending changes', async () => {
     applyAnswers({ kind: 'pendingChanges' });
-    dialogs.confirmed = false;
+    answerConfirms(false);
 
     expect(await applyShelve(ws, 12, false)).toBe(false);
 
@@ -137,13 +128,13 @@ describe('deleteShelve', () => {
 
     expect(await deleteShelve(ws, 12)).toBe(true);
 
-    expect(dialogs.asked).toEqual(['Delete shelve 12?']);
+    expect(confirmTitles()).toEqual(['Delete shelve 12?']);
     expect(fakeApi.argsOf('shelves.delete')).toEqual([[ws, 12]]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Deleted shelve 12' }]);
   });
 
   it('deletes nothing unless confirmed', async () => {
-    dialogs.confirmed = false;
+    answerConfirms(false);
 
     expect(await deleteShelve(ws, 12)).toBe(false);
 

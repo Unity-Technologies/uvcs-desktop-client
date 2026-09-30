@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 
-export function workspacePathsKey(workspacePath: string) {
+function workspacePathsKey(workspacePath: string) {
   return queryKeys.inWorkspace(workspacePath, 'explorer', 'allPaths');
 }
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { countCharactersRead } from '@shared/testing/countCharactersRead';
 import { parsePendingChanges } from './pendingChangesXml';
 
 function change(type: string, path: string, extra = ''): string {
@@ -67,14 +68,13 @@ describe('parsePendingChanges', () => {
     expect(parsePendingChanges(xml, 'linux').changes[1]!.path).toBe('Assets\\new file.txt');
   });
 
-  it('reads 100,000 pending changes in linear time', () => {
-    const changes = Array.from({ length: 100_000 }, (_, index) => change(index % 3 ? 'CH' : 'PR', `src/folder${index % 100}/file_${index}.ts`)).join('\n');
+  it('reads thousands of pending changes in one pass: a few reads of each character, whatever the size', () => {
+    const changes = Array.from({ length: 5_000 }, (_, index) => change(index % 3 ? 'CH' : 'PR', `src/folder${index % 100}/file_${index}.ts`)).join('\n');
     const xml = `${header}<Changelists><Changelist><Name>Default</Name><Changes>${changes}</Changes></Changelist></Changelists></StatusOutput>`;
-    const start = performance.now();
-    const snapshot = parsePendingChanges(xml);
-    // About 0.2 s here; with the XML library it replaced, 0.9 s.
-    expect(performance.now() - start).toBeLessThan(2000);
-    expect(snapshot.changes).toHaveLength(100_000);
+    const { result: snapshot, charactersRead } = countCharactersRead(() => parsePendingChanges(xml));
+    // About 3.7 reads of each character; a pass over the rest of the output per change reads each thousands of times.
+    expect(charactersRead / xml.length).toBeLessThan(6);
+    expect(snapshot.changes).toHaveLength(5_000);
   });
 });
 

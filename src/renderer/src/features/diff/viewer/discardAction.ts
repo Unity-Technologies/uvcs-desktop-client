@@ -1,7 +1,7 @@
 import type { ChangedLine } from './changeBlocks';
 
 /** Removed lines come back, added lines go, or both (a changed block goes back to how it was). */
-export type DiscardKind = 'restore' | 'remove' | 'revert';
+type DiscardKind = 'restore' | 'remove' | 'revert';
 
 export interface DiscardAction {
   kind: DiscardKind;

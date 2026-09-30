@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { countCharactersRead } from '@shared/testing/countCharactersRead';
 import { isSameOrInside, outermostPaths } from './pathContainment';
 
 describe('isSameOrInside', () => {
@@ -49,10 +50,11 @@ describe('outermostPaths', () => {
     expect(outermostPaths(['/wk/Icons', '/wk/icons/a.png'], 'linux')).toEqual(['/wk/Icons', '/wk/icons/a.png']);
   });
 
-  it('reads 100,000 paths in one sorted pass', () => {
-    const paths = Array.from({ length: 100_000 }, (_, index) => `/wk/dir${index % 100}/file${index}.txt`);
-    const start = performance.now();
-    expect(outermostPaths([...paths, '/wk/dir7'], 'linux')).toHaveLength(99_001);
-    expect(performance.now() - start).toBeLessThan(2000);
+  it('reads thousands of paths in one sorted pass: a few reads of each character, whatever the count', () => {
+    const paths = [...Array.from({ length: 5_000 }, (_, index) => `/wk/dir${index % 100}/file${index}.txt`), '/wk/dir7'];
+    const { result: outermost, charactersRead } = countCharactersRead(() => outermostPaths(paths, 'linux'));
+    // About one read of each character; comparing each path with every other reads each thousands of times.
+    expect(charactersRead / paths.join('').length).toBeLessThan(3);
+    expect(outermost).toHaveLength(4_951);
   });
 });

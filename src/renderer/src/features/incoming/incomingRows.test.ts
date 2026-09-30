@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
 import type { DiffEntry } from '@shared/domain/diff';
-import { readGrowthWhenDoubled } from '../../testing/countedReads';
+import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
 import { incomingRows, selectionKey } from './incomingRows';
 
 const changeset = (id: number): Changeset => ({ id, comment: `cs ${id}`, owner: 'dev', date: '2026-01-01T00:00:00Z', branch: '/main' }) as Changeset;

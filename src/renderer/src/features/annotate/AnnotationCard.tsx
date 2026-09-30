@@ -11,7 +11,7 @@ import { RelativeTime } from '../../ui/RelativeTime';
 import styles from './AnnotationCard.module.css';
 
 /** What can be done from a block's card. */
-export interface BlockCardActions {
+interface BlockCardActions {
   openChangeset?: (changesetId: number) => void;
   /** The revision before the change, when the history has one. */
   revisionBefore?: ItemRevision;

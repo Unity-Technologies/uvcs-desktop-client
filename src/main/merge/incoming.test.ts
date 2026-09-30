@@ -1,9 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import type { CmClient } from '../cm/CmClient';
-import { change, changesetsFound, diffRecord, NOTHING_FOUND, pendingStatus, statusHeader } from '../testing/cmOutput';
-import { scriptedCm } from '../testing/scriptedCm';
+import { change, changesetsFound, diffRecord, NOTHING_FOUND, pendingStatus, statusHeader } from '../cm/testing/cmOutput';
+import { fakeCmClient } from '../cm/testing/fakeCmClient';
 import { findUpdateBlockers, findUpdateConflicts, incomingChangesetsArgs, readIncomingChanges, readIncomingSummary, summarizeIncoming } from './incoming';
 
 function incoming(path: string, status: DiffEntry['status'], itemType: DiffEntry['itemType'] = 'file'): DiffEntry {
@@ -67,34 +66,25 @@ describe('the incoming summary', () => {
 });
 
 describe('incoming off a branch', () => {
-  // `cm status --header --xml` of a workspace switched to shelve 3: cm reports it as changeset -3.
-  const ON_SHELVE = `<?xml version="1.0" encoding="utf-8"?>
-<StatusOutput>
-  <WorkspaceStatus><Status><RepSpec><Server>local</Server><Name>sandbox</Name></RepSpec><Changeset>-3</Changeset></Status></WorkspaceStatus>
-  <WkConfigType>Shelve</WkConfigType>
-  <WkConfigName>3@sandbox@local</WkConfigName>
-</StatusOutput>`;
-  const cmAnswering = (output: string) => {
-    const query = vi.fn(async (_args: string[]) => output);
-    return { cm: { query } as unknown as CmClient, query };
-  };
+  // cm reports a workspace switched to shelve 3 as on changeset -3.
+  const ON_SHELVE = statusHeader('3', { type: 'Shelve', changeset: -3, repository: 'sandbox' });
 
   it('asks the server nothing', async () => {
-    const { cm, query } = cmAnswering('');
+    const { cm, lines } = fakeCmClient();
     expect(await readIncomingSummary(cm, '/w', null)).toEqual({ branch: null, changesetCount: 0, authors: [] });
-    expect(query).not.toHaveBeenCalled();
+    expect(lines()).toEqual([]);
   });
 
   it('on a shelve reads only the status: no changeset query starts from the shelve', async () => {
-    const { cm, query } = cmAnswering(ON_SHELVE);
+    const { cm, lines } = fakeCmClient({ status: ON_SHELVE });
     expect(await readIncomingChanges(cm, '/w')).toEqual({ branch: null, changesetCount: 0, authors: [], changesets: [], files: [], conflicts: [], blockedPaths: [] });
-    expect(query.mock.calls.map(([args]) => args[0])).toEqual(['status']);
+    expect(lines().map((line) => line.split(' ')[0])).toEqual(['status']);
   });
 });
 
 describe('readIncomingChanges', () => {
   const branchMovedOn = (changesets: string) =>
-    scriptedCm({
+    fakeCmClient({
       'status --header --xml': statusHeader('/main', { changeset: 41 }),
       'find changeset': changesets,
       'diff cs:41 cs:43': diffRecord('C', 'src/a.txt', { base: 10, revision: 20 }) + diffRecord('D', 'src/old.txt', { revision: 11 }),
