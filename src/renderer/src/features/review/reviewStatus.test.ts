@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupReviewStatus, hasMark, needsReview, reviewProgress, shouldMarkReviewed, type ReviewStatus } from './reviewStatus';
+import { groupReviewStatus, hasMark, needsReview, reviewableOf, reviewProgress, shouldMarkReviewed, shownStatusOf, type ReviewStatus } from './reviewStatus';
 
 const statuses: Record<string, ReviewStatus | null> = { a: 'reviewed', b: 'changedSinceReview', d: 'unreviewed', folder: null };
 const statusOf = (item: string): ReviewStatus | null => statuses[item] ?? null;
@@ -26,5 +26,15 @@ describe('review status', () => {
     expect(groupReviewStatus(['a', 'folder'], statusOf)).toBe('reviewed');
     expect(groupReviewStatus(['a', 'b'], statusOf)).toBe('unreviewed');
     expect(groupReviewStatus(['folder'], statusOf)).toBeNull();
+  });
+
+  it('reviews files, not folders', () => {
+    expect(reviewableOf(['a', 'folder', 'd'], statusOf)).toEqual(['a', 'd']);
+  });
+
+  it('shows the marks only in review mode, keeping them for when it is back', () => {
+    const items = ['a', 'b', 'd', 'folder'];
+    expect(items.map(shownStatusOf(statusOf, true))).toEqual(['reviewed', 'changedSinceReview', 'unreviewed', null]);
+    expect(items.map(shownStatusOf(statusOf, false))).toEqual(['unreviewed', 'unreviewed', 'unreviewed', null]);
   });
 });

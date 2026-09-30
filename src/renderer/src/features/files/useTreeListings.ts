@@ -8,15 +8,14 @@ interface TreeListings {
   error: Error | null;
 }
 
+/** How one folder of a tree is read (`''` is the root): its query key and how to list it. */
+export type ListingQuery = (directory: string) => { queryKey: readonly unknown[]; queryFn: () => Promise<TreeItem[]> };
+
 /**
  * Lists the root and every expanded directory, each one as its own cached query,
  * so expanding a folder only fetches that folder.
  */
-export function useTreeListings(
-  queryKeyFor: (directory: string) => readonly unknown[],
-  listDirectory: (directory: string) => Promise<TreeItem[]>,
-  expanded: ReadonlySet<string>,
-): TreeListings {
+export function useTreeListings(listingQuery: ListingQuery, expanded: ReadonlySet<string>): TreeListings {
   const directories = useMemo(() => ['', ...expanded], [expanded]);
   const listed = useRef<ReadonlyMap<string, TreeItem[]>>(new Map());
   // A stable `combine` runs only when a query's state changes, and gives back the same listings while none of them
@@ -39,8 +38,7 @@ export function useTreeListings(
 
   return useQueries({
     queries: directories.map((directory) => ({
-      queryKey: queryKeyFor(directory),
-      queryFn: () => listDirectory(directory),
+      ...listingQuery(directory),
       placeholderData: (previous: TreeItem[] | undefined) => previous,
     })),
     combine,

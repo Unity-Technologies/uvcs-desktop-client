@@ -3,6 +3,14 @@ export type ReviewStatus = 'unreviewed' | 'reviewed' | 'changedSinceReview';
 /** How a list tells where each item stands; null for items with nothing to review, such as folders. */
 export type ReviewStatusOf<T> = (item: T) => ReviewStatus | null;
 
+/**
+ * Where each item stands as a list shows it: its stored mark in review mode; outside it every file shows unreviewed,
+ * though the stored marks are kept for when it's back.
+ */
+export function shownStatusOf<T>(storedStatusOf: ReviewStatusOf<T>, reviewModeOn: boolean): ReviewStatusOf<T> {
+  return reviewModeOn ? storedStatusOf : (item) => (storedStatusOf(item) === null ? null : 'unreviewed');
+}
+
 /** Still to look at: never reviewed, or changed since. */
 export function needsReview<T>(statusOf: ReviewStatusOf<T>, item: T): boolean {
   const status = statusOf(item);
@@ -20,8 +28,13 @@ export interface ReviewProgress {
   reviewed: number;
 }
 
+/** The items with something to review: files, not folders. */
+export function reviewableOf<T>(items: readonly T[], statusOf: ReviewStatusOf<T>): T[] {
+  return items.filter((item) => statusOf(item) !== null);
+}
+
 export function reviewProgress<T>(items: readonly T[], statusOf: ReviewStatusOf<T>): ReviewProgress {
-  const reviewable = items.filter((item) => statusOf(item) !== null);
+  const reviewable = reviewableOf(items, statusOf);
   return { total: reviewable.length, reviewed: reviewable.filter((item) => statusOf(item) === 'reviewed').length };
 }
 

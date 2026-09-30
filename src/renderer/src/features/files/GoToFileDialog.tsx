@@ -1,13 +1,9 @@
 import { Ellipsis } from 'lucide-react';
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { TreeItem } from '@shared/domain/explorer';
-import { api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
-import { queryClient } from '../../app/queryClient';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { runningFirst } from '../../lib/actions';
 import { createFuzzyIndex, fuzzyMatchPositions } from '../../lib/fuzzyIndex';
-import { parentDirectory } from '../../lib/paths';
 import { isRowMenuKey } from '../../lib/rowMenu';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { Dialog } from '../../ui/dialog/Dialog';
@@ -18,6 +14,7 @@ import { SearchField } from '../../ui/SearchField';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { changeStatus } from '../pendingChanges/changeTone';
 import { usePendingChanges } from '../pendingChanges/usePendingChanges';
+import { readListedItem } from './directoryListing';
 import { fileMenu } from './fileMenu';
 import { itemDecoration } from './itemDecoration';
 import { PendingChangesIndex } from './itemStatus';
@@ -29,12 +26,6 @@ const MAX_RESULTS = 60;
 /** Asks for a file or folder by (fuzzy) name, starting from `initialQuery`. Resolves to its path, or undefined if dismissed. */
 export function goToFile(workspacePath: string, initialQuery = ''): Promise<string | undefined> {
   return askDialog<string>((finish) => <GoToFileDialog workspacePath={workspacePath} initialQuery={initialQuery} finish={finish} />);
-}
-
-/** The listing of the directory holding `path`, shared with the Files view. */
-function directoryQuery(workspacePath: string, path: string) {
-  const directory = parentDirectory(path);
-  return { queryKey: queryKeys.inWorkspace(workspacePath, 'explorer', 'directory', directory), queryFn: () => api.explorer.listDirectory(workspacePath, directory) };
 }
 
 interface GoToFileDialogProps {
@@ -60,8 +51,7 @@ function GoToFileDialog({ workspacePath, initialQuery, finish }: GoToFileDialogP
 
   // The file menu needs the item's version control details: its folder's listing has them (and the Files view may have read it).
   const openActions = async (path: string): Promise<void> => {
-    const listing = await queryClient.ensureQueryData(directoryQuery(workspacePath, path));
-    setActionsFor(listing.find((item) => item.path === path) ?? null);
+    setActionsFor((await readListedItem(workspacePath, path)) ?? null);
   };
   const actions = (item: TreeItem) =>
     runningFirst(fileMenu(workspacePath, [item], pendingIndex), () => finish(undefined));

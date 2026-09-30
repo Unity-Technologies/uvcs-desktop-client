@@ -3,6 +3,7 @@ import type { CSSProperties } from 'react';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { ToggleChip } from '../../ui/ToggleChip';
+import { REVIEW_KEYS } from './reviewModeSetting';
 import type { ReviewProgress } from './reviewStatus';
 import styles from './ReviewStrip.module.css';
 
@@ -26,7 +27,7 @@ export function ReviewBar({ progress, onlyUnreviewed, onOnlyUnreviewedChange, on
   return (
     <div className={styles.strip} data-done={done}>
       {done ? <CircleCheck size={13} className={styles.icon} /> : <ListChecks size={13} className={styles.icon} />}
-      <span className={styles.label} data-tip="Mark files as you review them: R toggles, J and K move">
+      <span className={styles.label} data-tip={`Mark files as you review them: ${REVIEW_KEYS}`}>
         {reviewed} of {total} reviewed
       </span>
       <span className={styles.meter} style={{ '--progress': `${(reviewed / total) * 100}%` } as CSSProperties} />

@@ -6,6 +6,9 @@ import { saveSettings, useSettings } from '../../app/settings/useSettings';
 import { toast } from '../../ui/toast/toastStore';
 import { withReviewMode } from './reviewModeWorkspaces';
 
+/** The keys of a review, said the same wherever review mode is offered or shown. */
+export const REVIEW_KEYS = 'R marks a file, J and K move';
+
 export function useReviewModeOn(workspacePath: string): boolean {
   return useSettings().reviewModeWorkspaces.includes(workspacePath);
 }
@@ -18,5 +21,5 @@ export async function setReviewMode(workspacePath: string, on: boolean): Promise
 
 /** Review mode came on without its button (R, or marking a file from a menu): say so, how it works, and the way back. */
 export function announceReviewMode(workspacePath: string): void {
-  toast.info('Review mode on', 'R marks files, J/K move', { label: 'Turn off', run: () => void setReviewMode(workspacePath, false) });
+  toast.info('Review mode on', REVIEW_KEYS, { label: 'Turn off', run: () => void setReviewMode(workspacePath, false) });
 }

@@ -3,7 +3,7 @@ import { saveSettings, useSettings } from '../../app/settings/useSettings';
 import { ReviewBar } from './ReviewBar';
 import { ReviewModeHint } from './ReviewModeHint';
 import { announceReviewMode, setReviewMode } from './reviewModeSetting';
-import { hasMark, needsReview, reviewProgress, shouldMarkReviewed, type ReviewStatusOf } from './reviewStatus';
+import { hasMark, needsReview, reviewableOf, reviewProgress, shouldMarkReviewed, shownStatusOf, type ReviewStatusOf } from './reviewStatus';
 
 /** What a list needs for review marks: whether they show, where each item stands, and the way to mark it. */
 export interface ListReview<T> {
@@ -39,22 +39,21 @@ export function useReviewMode<T>({ workspacePath, items, statusOf: storedStatusO
   const on = reviewModeWorkspaces.includes(workspacePath);
   const [onlyUnreviewed, setOnlyUnreviewed] = useState(false);
   // Kept while nothing they depend on changes, so lists of thousands of files work them out again only then.
-  const statusOf = useMemo<ReviewStatusOf<T>>(() => (on ? storedStatusOf : (item) => storedStatusOf(item) && 'unreviewed'), [on, storedStatusOf]);
+  const statusOf = useMemo(() => shownStatusOf(storedStatusOf, on), [on, storedStatusOf]);
   const progress = useMemo(() => reviewProgress(items, statusOf), [items, statusOf]);
   const hasMarks = useMemo(() => on && items.some((item) => hasMark(statusOf, item)), [on, items, statusOf]);
   const filtering = on && onlyUnreviewed;
   const narrow = useCallback((shown: T[]) => (filtering ? shown.filter((item) => needsReview(statusOf, item)) : shown), [filtering, statusOf]);
 
   const toggle = (selected: T[]): void => {
-    const reviewable = selected.filter((item) => statusOf(item) !== null);
+    const reviewable = reviewableOf(selected, statusOf);
     if (reviewable.length === 0) return;
-    if (on) {
-      setReviewed(reviewable, shouldMarkReviewed(reviewable, statusOf));
-      return;
+    if (!on) {
+      void setReviewMode(workspacePath, true);
+      announceReviewMode(workspacePath);
     }
-    void setReviewMode(workspacePath, true);
-    announceReviewMode(workspacePath);
-    setReviewed(reviewable, true);
+    // Outside review mode every file shows unreviewed, so they are all marked.
+    setReviewed(reviewable, shouldMarkReviewed(reviewable, statusOf));
   };
 
   const hint = offer && !reviewModeHintDone && progress.total > 0 && (
