@@ -1,7 +1,7 @@
 import { parseDiffFromFile } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
 import { listChangeBlocks, listChangeRegions } from './changeBlocks';
-import { changedLinesInRange, linesRange, regionRange } from './lineSelection';
+import { changedLinesInRange, linesRange, regionRange, sameLineRange } from './lineSelection';
 
 const lines = (...items: string[]) => items.map((item) => `${item}\n`).join('');
 // a, b → B C (changed), c, d removed, e, f added.
@@ -62,5 +62,18 @@ describe('linesRange', () => {
       }
     }
     expect(linesRange([added(2), added(3), added(6)])).toEqual({ start: 2, side: 'additions', end: 6, endSide: 'additions' });
+  });
+});
+
+describe('sameLineRange', () => {
+  it('is the same range whether its end side is spelled out or left as its start side', () => {
+    expect(sameLineRange({ start: 2, side: 'additions', end: 3 }, { start: 2, side: 'additions', end: 3, endSide: 'additions' })).toBe(true);
+  });
+
+  it('differs by any end or side', () => {
+    const range = { start: 2, side: 'additions' as const, end: 3 };
+    expect(sameLineRange(range, { ...range, end: 4 })).toBe(false);
+    expect(sameLineRange(range, { ...range, side: 'deletions' })).toBe(false);
+    expect(sameLineRange(range, { ...range, endSide: 'deletions' })).toBe(false);
   });
 });

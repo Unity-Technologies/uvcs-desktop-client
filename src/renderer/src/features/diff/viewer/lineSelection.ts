@@ -51,3 +51,7 @@ function rowOf(blocks: ChangeBlock[], side: DiffSide, lineNumber: number): numbe
   return lineNumber - 1 + otherLinesAbove;
 }
 
+/** Whether two picked ranges cover the same lines: Pierre reports back the range the diff gave it. */
+export function sameLineRange(a: LineRange, b: LineRange): boolean {
+  return a.start === b.start && a.end === b.end && a.side === b.side && (a.endSide ?? a.side) === (b.endSide ?? b.side);
+}

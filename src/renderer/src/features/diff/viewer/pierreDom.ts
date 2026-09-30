@@ -34,3 +34,25 @@ export function numberCellSelector(line: ChangedLine): string {
   return `[data-line-type="${changedLineType(line)}"][data-column-number="${line.lineNumber}"]`;
 }
 
+/**
+ * Moves Pierre's gutter button slot (`data-gutter-utility-slot`, one for the whole diff) into a hovered line's number
+ * cell. Pierre keeps it on the last picked line while lines are picked; the button of a line hovered outside the pick
+ * goes on that line instead. Returns the slot, to find it again once Pierre took it out of the tree.
+ */
+export function moveGutterUtilityTo(numberCell: HTMLElement, knownSlot: Element | null): Element | null {
+  const slot = (numberCell.getRootNode() as ParentNode).querySelector('[data-gutter-utility-slot]') ?? knownSlot;
+  if (slot && slot.parentElement !== numberCell) numberCell.append(slot);
+  return slot;
+}
+
+/**
+ * Hovers what is under a still pointer anew, as if it had moved: Pierre only follows the pointer, so lines sliding
+ * under it (after a discard) would stay unhovered. It's told the pointer left first, as the line it knew may be gone
+ * or another.
+ */
+export function hoverUnderPointer(container: HTMLElement | null, at: { x: number; y: number } | null): void {
+  const root = pierreShadowRoot(container);
+  if (!root || !at) return;
+  for (const pre of root.querySelectorAll('pre')) pre.dispatchEvent(new window.PointerEvent('pointerleave', { pointerType: 'mouse' }));
+  root.elementFromPoint(at.x, at.y)?.dispatchEvent(new window.PointerEvent('pointermove', { pointerType: 'mouse', clientX: at.x, clientY: at.y, bubbles: true, composed: true }));
+}

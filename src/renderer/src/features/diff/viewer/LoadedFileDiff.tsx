@@ -34,7 +34,7 @@ import { hasLineChanges, lineDiff, type LineDiff } from './lineDiff';
 import { LineStats } from './LineStats';
 import { PlainTextIndicator } from './PlainTextIndicator';
 import { syntaxHighlighting } from './syntaxHighlighting';
-import type { DiscardRequest } from './useBlockDiscard';
+import type { DiscardRequest } from './useLineDiscarding';
 import type { DiffContents } from './useDiffContents';
 import { renderedEdits } from './renderedEdits';
 import { goesSomewhere, useChangeNavigation } from './useChangeNavigation';
