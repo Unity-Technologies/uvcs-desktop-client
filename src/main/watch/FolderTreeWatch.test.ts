@@ -81,6 +81,32 @@ describe('FolderTreeWatch', () => {
     expect(watched()).toEqual(['', 'src', 'src/deep']);
   });
 
+  it('follows a change of what it skips: newly skipped folders stop being watched, the ones no longer skipped are walked', () => {
+    let skipped = ['Library'];
+    const { tree, watched } = setUp({ skip: (folder) => skipped.includes(folder) });
+    tree.start();
+
+    skipped = ['src'];
+    tree.followSkipRule();
+    expect(watched()).toEqual(['', 'Library', 'Library/Cache']);
+
+    skipped = [];
+    tree.followSkipRule();
+    expect(watched()).toEqual(['', 'Library', 'Library/Cache', 'src', 'src/deep']);
+  });
+
+  it('walks nothing that went away while it was skipped', () => {
+    let skipped = ['Library'];
+    const { tree, watched, emit, at } = setUp({ skip: (folder) => skipped.includes(folder) });
+    tree.start();
+
+    rmSync(at('Library'), { recursive: true });
+    emit('', 'rename', 'Library');
+    skipped = [];
+    tree.followSkipRule();
+    expect(watched()).toEqual(['', 'src', 'src/deep']);
+  });
+
   it.skipIf(process.platform === 'win32')("doesn't follow links to folders, as cm doesn't", () => {
     const { tree, watched, emit, at } = setUp();
     tree.start();

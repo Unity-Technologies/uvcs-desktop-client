@@ -213,6 +213,18 @@ describe('WorkspaceWatcher', () => {
     expect(changes).toEqual([fileEdit('src')]);
   });
 
+  it('on Linux, watches the folders ignore.conf leaves as it changes', () => {
+    mkdirSync(join(workspacePath, 'src'));
+    mkdirSync(join(workspacePath, 'Library'));
+    writeFileSync(join(workspacePath, 'ignore.conf'), 'Library\n');
+    const { watches } = watching({ platform: 'linux' });
+    const watched = (): string[] => [...watches.watched().keys()].sort();
+
+    writeFileSync(join(workspacePath, 'ignore.conf'), 'src\n');
+    watches.emit(workspacePath, 'change', 'ignore.conf');
+    expect(watched()).toEqual([workspacePath, join(workspacePath, 'Library')].sort());
+  });
+
   it('tells whether a command ran in the workspace, a Windows folder whatever its letter case', () => {
     const { watcher } = watching({ platform: 'darwin' });
     expect(watcher.covers(join(workspacePath, 'src'))).toBe(true);
