@@ -5,6 +5,9 @@ inputs:
   node-version:
     description: Node version (the one used locally; the smoke test's Windows fake cm needs 25.5 or later).
     required: true
+  working-directory:
+    description: The folder to install in (the checkout, or its copy on a faster disk).
+    default: .
 
 runs:
   using: composite
@@ -30,6 +33,7 @@ runs:
     # The registry now and then drops a connection mid-install: try a couple more times before failing.
     - name: Install dependencies
       shell: bash
+      working-directory: ${{ inputs.working-directory }}
       run: |
         for attempt in 1 2 3; do
           if npm ci; then

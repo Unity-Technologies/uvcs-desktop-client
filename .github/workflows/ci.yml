@@ -29,16 +29,16 @@ jobs:
           - { name: Windows arm64, os: windows-11-arm }
           - { name: Linux x64, os: ubuntu-latest }
     steps:
+      - uses: actions/checkout@v5
       # The Windows arm64 runner builds on C:, a network-attached virtual disk, and leaves a local NVMe SSD raw (no
       # partition): `npm ci` of the cached packages takes about 3 minutes on C: and 30 s on that SSD. This formats it as
-      # a Dev Drive and points the checkout folder (a junction, so every later step keeps its usual paths), npm's cache
-      # and the temp folder at it; before the checkout, which fills that folder. Runners without a raw disk skip it
-      # (Windows x64 builds on a separate D:). Timed: the tests take as long on any disk; 2 CPUs, not the disk, bound them.
+      # a Dev Drive, copies the checkout onto it and points npm's cache and the temp folder at it; the later steps run in
+      # BUILD_DIR. A junction from the checkout folder was rejected: Vite then sees the project under two paths and the
+      # build fails. Runners without a raw disk skip it (Windows x64 builds on a separate D:). Timed: the tests take as
+      # long on any disk; 2 CPUs, not the disk, bound them.
       - name: Build on the local SSD
         if: runner.os == 'Windows'
         shell: pwsh
-        # Anywhere but the checkout folder, which the step replaces and can't while it runs in it.
-        working-directory: ${{ runner.temp }}
         run: |
           $raw = Get-Disk | Where-Object PartitionStyle -eq 'RAW' | Select-Object -First 1
           if (-not $raw) {
@@ -49,19 +49,24 @@ jobs:
           $volume = $raw | Initialize-Disk -PartitionStyle GPT -PassThru | New-Partition -UseMaximumSize -AssignDriveLetter |
             Format-Volume -DevDrive -Confirm:$false -Force
           $drive = "$($volume.DriveLetter):"
-          foreach ($folder in 'workspace', 'npm-cache', 'temp') { New-Item -ItemType Directory "$drive\$folder" | Out-Null }
-          Remove-Item $env:GITHUB_WORKSPACE -Recurse -Force
-          New-Item -ItemType Junction -Path $env:GITHUB_WORKSPACE -Target "$drive\workspace" | Out-Null
+          foreach ($folder in 'npm-cache', 'temp') { New-Item -ItemType Directory "$drive\$folder" | Out-Null }
+          robocopy $env:GITHUB_WORKSPACE "$drive\workspace" /E /NFL /NDL /NJH /NJS /NP
+          if ($LASTEXITCODE -ge 8) { exit $LASTEXITCODE }
+          "BUILD_DIR=$drive\workspace" >> $env:GITHUB_ENV
           "npm_config_cache=$drive\npm-cache" >> $env:GITHUB_ENV
           "TEMP=$drive\temp" >> $env:GITHUB_ENV
           "TMP=$drive\temp" >> $env:GITHUB_ENV
-      - uses: actions/checkout@v5
+          exit 0
       - uses: ./.github/actions/install
         with:
           node-version: ${{ env.NODE_VERSION }}
+          working-directory: ${{ env.BUILD_DIR || github.workspace }}
       - run: npm run typecheck
+        working-directory: ${{ env.BUILD_DIR || github.workspace }}
       - run: npm test
+        working-directory: ${{ env.BUILD_DIR || github.workspace }}
       - run: npm run build
+        working-directory: ${{ env.BUILD_DIR || github.workspace }}
 
   # The smoke test (scripts/e2e/README.md): the built app over a fake cm and a temp workspace, every view.
   # Linux is left out: Electron there needs an xvfb display (`xvfb-run -a npm run e2e`), not worth the upkeep for a smoke test.
