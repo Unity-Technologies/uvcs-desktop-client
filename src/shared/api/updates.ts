@@ -9,4 +9,6 @@ export interface UpdatesApi {
   check(): Promise<void>;
   /** Installs the downloaded update: restarts into it, or opens its installer and quits (`install: 'installer'`). */
   install(): Promise<void>;
+  /** Opens THIRD_PARTY_NOTICES.txt, the licenses of the open-source libraries the app includes, in the OS's viewer. */
+  openThirdPartyNotices(): Promise<void>;
 }
