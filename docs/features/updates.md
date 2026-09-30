@@ -6,7 +6,8 @@ The brand at the start of the top bar (`AppBrand`: the mark and the name, after 
 the app menu (macOS), Help (Windows, Linux) and the palette (`app.about`). It shows the version, where the update
 stands with its one button (Check for Updates, or install once one is ready: `aboutUpdateLine`, `aboutUpdateAction`),
 and what the app runs on: the `cm` found (`cmVersionQuery`, asked once at start: no command of its own), the OS and
-architecture, Electron and Chromium. Its links open the documentation and a new issue. With every window closed on
+architecture, Electron and Chromium. Copy Details copies those as text for an issue (`aboutDetails`); its other links
+open the documentation and a new issue. With every window closed on
 macOS, About shows the OS's panel instead (`showAboutPanel`), which reads the bundle.
 
 ## How the app updates

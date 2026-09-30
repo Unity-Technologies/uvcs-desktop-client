@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, Bug, RefreshCw } from 'lucide-react';
+import { BookOpen, Bug, Copy, RefreshCw } from 'lucide-react';
 import { useEffect } from 'react';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -9,8 +9,10 @@ import { Button } from '../../ui/Button';
 import { CardDialog } from '../../ui/dialog/CardDialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
 import { Spinner } from '../../ui/Spinner';
+import { copyToClipboard } from '../../ui/copyToClipboard';
 import { cmVersionQuery } from '../startup/useCmAvailability';
 import { checkForUpdates, installUpdate, setAboutOpen, useUpdateStore } from '../updates/updateStore';
+import { aboutDetails } from './aboutDetails';
 import { aboutUpdateAction, aboutUpdateLine, describePlatform } from './aboutUpdate';
 import styles from './AboutDialog.module.css';
 
@@ -48,6 +50,9 @@ function AboutDialog({ onClose }: { onClose: () => void }) {
 
       {info && (
         <div className={styles.links}>
+          <Button variant="ghost" size="small" icon={<Copy size={14} />} onClick={() => copyToClipboard(aboutDetails(info, cmVersion), 'Details')}>
+            Copy Details
+          </Button>
           <Button variant="ghost" size="small" icon={<BookOpen size={14} />} onClick={() => void api.system.openExternal(info.documentationUrl)}>
             Documentation
           </Button>
