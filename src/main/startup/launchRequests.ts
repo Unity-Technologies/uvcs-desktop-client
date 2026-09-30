@@ -35,8 +35,7 @@ export async function handleLaunchRequests(
   handleRecentDocumentRequests(windows);
   const folder = namedFolder(launch);
   const root = folder && (await findRoot(folder));
-  // Not ready yet as far as the windows go: the first window takes it.
-  if (root) windows.requestWorkspace(root, false);
+  if (root) windows.requestAtLaunch(root);
 }
 
 function openLaterLaunchRequest(windows: WorkspaceWindows, findRoot: FindWorkspaceRoot, launch: Launch): void {
@@ -46,7 +45,7 @@ function openLaterLaunchRequest(windows: WorkspaceWindows, findRoot: FindWorkspa
     return;
   }
   void findRoot(folder).then((root) => {
-    if (root) windows.requestWorkspace(root, app.isReady());
+    if (root) windows.requestWorkspace(root);
     else if (app.isReady()) windows.focusAny();
   });
 }
