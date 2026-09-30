@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readCheckinProgress } from './checkinProgress';
-import { readProgress } from './progressReader';
+import { readProgress } from './testing/readProgress';
 
 /** Real output of `cm checkin --all --private -c=… --machinereadable` (1.87 GB, 3020 files), spawned with piped stdout. */
 const CHECKIN = [

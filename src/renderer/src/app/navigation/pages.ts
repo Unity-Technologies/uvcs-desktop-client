@@ -24,9 +24,9 @@ export type Page =
   | { kind: 'browseRepository'; changesetId: number };
 
 /** A revision of a history: the one a changeset made, or one by its id (which finds it wherever the file was then). */
-export type HistorySelection = { changesetId: number } | { revisionId: number };
+type HistorySelection = { changesetId: number } | { revisionId: number };
 
-export type PageKind = Page['kind'];
+type PageKind = Page['kind'];
 
 export type PageOf<Kind extends PageKind> = Extract<Page, { kind: Kind }>;
 

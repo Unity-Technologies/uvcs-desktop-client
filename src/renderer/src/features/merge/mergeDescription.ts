@@ -21,7 +21,7 @@ export function describeSpec(objectSpec: string): string {
 }
 
 /** What a side is called in words, next to (or instead of) its branch name. */
-export interface SideRole {
+interface SideRole {
   /** "Yours", "Incoming". */
   name: string;
   /** "your version", "the incoming version". */

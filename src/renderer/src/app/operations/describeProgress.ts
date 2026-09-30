@@ -70,7 +70,7 @@ export function formatAmount(done: number, total: number): string {
   return `${scaled(Math.min(done, total), unit, total)} of ${scaled(total, unit, total)} ${UNITS[unit]}`;
 }
 
-export function formatBytes(bytes: number): string {
+function formatBytes(bytes: number): string {
   const unit = unitOf(bytes);
   return `${scaled(bytes, unit, bytes)} ${UNITS[unit]}`;
 }

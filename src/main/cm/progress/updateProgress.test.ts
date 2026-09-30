@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readProgress } from './progressReader';
+import { readProgress } from './testing/readProgress';
 import { readUpdateProgress } from './updateProgress';
 
 /** Real output of `cm switch /main/task --noinput --forcedetailedprogress`, spawned with piped stdout, split at \r and \n. */

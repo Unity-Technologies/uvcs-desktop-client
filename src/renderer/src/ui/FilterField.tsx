@@ -15,7 +15,7 @@ interface FilterFieldProps {
 }
 
 /** Every filter bar's text field is this wide, so the chips after it line up from view to view. */
-export const FILTER_FIELD_WIDTH = 240;
+const FILTER_FIELD_WIDTH = 240;
 
 /**
  * The text filter of a view's filter bar, first in it. ⌘F (and / from anywhere but a text field) goes to it while it

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readActivityProgress } from './activityProgress';
-import { readProgress } from './progressReader';
+import { readProgress } from './testing/readProgress';
 
 describe('readActivityProgress', () => {
   it('shows stages as plain text', () => {

@@ -63,7 +63,7 @@ export function isCheckinCandidate(change: PendingChange): boolean {
   return !['ignored', 'cloaked', 'hidden'].includes(categoryOf(change));
 }
 
-export const KIND_LABELS: Record<ChangeKind, string> = {
+const KIND_LABELS: Record<ChangeKind, string> = {
   added: 'Added',
   checkedOut: 'Checked out',
   changed: 'Changed',

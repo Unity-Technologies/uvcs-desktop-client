@@ -358,7 +358,7 @@ export const ZOOM_STEP = 1.5;
 
 /** Region navigation never zooms past this: a 2-pixel nick should fill a
  *  comfortable chunk of the pane, not a wall of four texels. */
-export const REGION_MAX_ZOOM = 16;
+const REGION_MAX_ZOOM = 16;
 
 export const clampZoom = (z: number): number => Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, z));
 

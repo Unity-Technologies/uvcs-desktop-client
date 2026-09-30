@@ -7,7 +7,7 @@ import type {
 } from '@shared/domain/switchWithChanges';
 import { pluralize } from '../../lib/text';
 
-export interface SwitchOption {
+interface SwitchOption {
   enabled: boolean;
   /** Why it isn't possible, shown under the option. */
   disabledReason?: string;
@@ -53,7 +53,7 @@ export function planSwitch(preflight: SwitchPreflight, setting: PendingChangesOn
 }
 
 /** The two options for these changes; also used by the new-branch dialog. */
-export function switchChoice(preflight: SwitchPreflight, preferred: PendingChangesAction): SwitchChoice {
+function switchChoice(preflight: SwitchPreflight, preferred: PendingChangesAction): SwitchChoice {
   const leave = option(preflight.leaveDisabledReason && LEAVE_DISABLED[preflight.leaveDisabledReason]);
   const bring = option(preflight.bringDisabledReason && BRING_DISABLED[preflight.bringDisabledReason]);
   const other: PendingChangesAction = preferred === 'leave' ? 'bring' : 'leave';

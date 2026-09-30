@@ -43,7 +43,7 @@ export function whereClause(filter: QueryFilter, extraConditions: string[] = [])
  * Objects by any of a few users: `owner = 'ana'`, or `(owner = 'me' or owner = 'ana')`. Names, never ids, picked by
  * hand (a handful), so the query stays one bounded scan; `cm` has no `in (...)`.
  */
-export function ownersCondition(owners: readonly string[]): string {
+function ownersCondition(owners: readonly string[]): string {
   const each = owners.map((owner) => `owner = '${escapeQueryValue(owner)}'`);
   return each.length === 1 ? each[0]! : `(${each.join(' or ')})`;
 }

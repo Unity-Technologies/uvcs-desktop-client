@@ -4,7 +4,7 @@ import { composite, hslAtContrast, hslColor, hueOf, parseColor, type Rgb } from 
 import { branchHue, hueToColor, hueToInk, LINE_TONE } from '../model/branchHue';
 
 /** The fonts the graph draws with, built once per theme so frames never assemble font strings. */
-export interface GraphFonts {
+interface GraphFonts {
   branchName: string;
   branchComment: string;
   compactBranchName: string;
@@ -18,7 +18,7 @@ export interface GraphFonts {
 }
 
 /** Text in a hue at this saturation, as light (or, in the dark theme, as dark) as reads at this contrast. */
-export interface TextTone {
+interface TextTone {
   saturation: string;
   contrast: number;
 }

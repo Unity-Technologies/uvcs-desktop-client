@@ -23,9 +23,9 @@ import type { SearchGroup, SearchResult } from './searchResults';
 /** Rows a section can show once expanded; each section shows fewer until then (see `collapseGroups`). */
 export const MAX_PER_SECTION = 50;
 /** Server matches that the cached lists missed (new, or beyond their limits), added after the cached ones. */
-export const MAX_SERVER_EXTRAS = 3;
+const MAX_SERVER_EXTRAS = 3;
 /** `like` patterns drop each word's first letter (`caseTolerantPattern`): two letters would match nearly everything. */
-export const MIN_SERVER_SEARCH_LENGTH = 3;
+const MIN_SERVER_SEARCH_LENGTH = 3;
 const CHANGESET_NUMBER = /^(?:cs:)?(\d+)$/i;
 
 /** The changeset number typed (`1234` or `cs:1234`), which opens that changeset whether or not it is recent. */
@@ -45,7 +45,7 @@ export function lacksServerMatch(found: readonly { id: number }[] | undefined, c
   return found.some((item) => !cachedIds.has(item.id));
 }
 
-export interface WorkspacePathEntry {
+interface WorkspacePathEntry {
   path: string;
   isDirectory: boolean;
 }

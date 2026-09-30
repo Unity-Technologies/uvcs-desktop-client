@@ -32,7 +32,7 @@ export function filterGraph(data: BranchExplorerData, filter: GraphFilter): Bran
 }
 
 /** Branches whose most recent loaded changeset is the source of a merge (other than `/main`). */
-export function mergedBranches(data: BranchExplorerData): Set<string> {
+function mergedBranches(data: BranchExplorerData): Set<string> {
   const mergeSources = new Set(
     data.mergeLinks.filter((link) => link.type === 'merge' || link.type === 'interval').map((link) => link.sourceChangeset),
   );

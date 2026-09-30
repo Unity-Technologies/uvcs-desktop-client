@@ -15,7 +15,7 @@ import type {
 export const MERGE_FIELD_SEPARATOR = '\u001f';
 
 /** A conflicting file as `cm merge` prints it: its ids and changesets, without the repository they belong to. */
-export type PrintedFileConflict = Omit<FileConflict, 'repository'>;
+type PrintedFileConflict = Omit<FileConflict, 'repository'>;
 
 /** The plan as `cm merge` prints it; `withConflictRepositories` completes its file conflicts. */
 export type PrintedMergePlan = Omit<MergePlan, 'fileConflicts'> & { fileConflicts: PrintedFileConflict[] };

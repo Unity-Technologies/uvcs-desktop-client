@@ -7,7 +7,7 @@ export const MAIN_FOCUS = { 'data-main-focus': '' } as const;
 
 const SELECTOR = '[data-main-focus]';
 
-export function findMainFocus(root: ParentNode): HTMLElement | null {
+function findMainFocus(root: ParentNode): HTMLElement | null {
   for (const element of root.querySelectorAll<HTMLElement>(SELECTOR)) {
     if (element.checkVisibility()) return element;
   }

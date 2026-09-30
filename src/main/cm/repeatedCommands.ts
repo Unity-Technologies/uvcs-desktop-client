@@ -14,7 +14,7 @@ export function isServerCommand(args: readonly string[]): boolean {
 }
 
 /** The development budget: the same server command more often than this within the window is probably a regression. */
-export const REPEATED_COMMAND_BUDGET = { maxRuns: 2, windowMs: 10_000 };
+const REPEATED_COMMAND_BUDGET = { maxRuns: 2, windowMs: 10_000 };
 
 /**
  * Spots a server command run again and again: duplicated queries, focus refetches, per-row lookups. `record` returns

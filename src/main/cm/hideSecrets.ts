@@ -1,5 +1,5 @@
 /** What a hidden secret shows as in the command log, errors and console warnings. */
-export const HIDDEN_SECRET = '•••';
+const HIDDEN_SECRET = '•••';
 
 /** Options whose value is a secret (`cm sync ... git --pwd=`). Add any new one the app passes. */
 const SECRET_OPTIONS = ['--pwd='];

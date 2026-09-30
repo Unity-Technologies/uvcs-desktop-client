@@ -16,8 +16,3 @@ const PLACEHOLDER = /\{(base|yours|incoming|result|baseName|yoursName|incomingNa
 export function fillArgs(template: string[], files: MergeToolFiles): string[] {
   return template.map((arg) => arg.replace(PLACEHOLDER, (_match, name: keyof MergeToolFiles) => files[name]));
 }
-
-/** Whether the arguments give the tool somewhere to save the result: without it, nothing can come back. */
-export function writesResult(template: string[]): boolean {
-  return template.some((arg) => arg.includes('{result}'));
-}

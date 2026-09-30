@@ -8,7 +8,7 @@ import { toAbsolutePath } from '../files/workspacePaths';
 import { fingerprintFile, looksUnchanged, type Fingerprint } from './fingerprint';
 
 /** Larger texts are not copied: showing what changed since the review is for files one reads. */
-export const MAX_SNAPSHOT_BYTES = 2 * 1024 * 1024;
+const MAX_SNAPSHOT_BYTES = 2 * 1024 * 1024;
 
 interface StoredMark extends Fingerprint {
   /** A copy of the reviewed text sits next to the marks. */

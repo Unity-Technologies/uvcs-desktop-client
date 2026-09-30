@@ -25,7 +25,7 @@ export interface MergeContributors {
   base?: MergeContributor;
 }
 
-export type MergeChangeKind = 'added' | 'deleted' | 'moved' | 'changed' | 'permissions';
+type MergeChangeKind = 'added' | 'deleted' | 'moved' | 'changed' | 'permissions';
 
 /** A change from the source that applies cleanly to the destination. */
 export interface MergeChange {

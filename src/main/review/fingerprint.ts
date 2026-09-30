@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto';
 import { readFile, stat } from 'node:fs/promises';
 
 /** Past this, files are told apart by size and modification time instead of reading them whole. */
-export const MAX_HASHED_BYTES = 50 * 1024 * 1024;
+const MAX_HASHED_BYTES = 50 * 1024 * 1024;
 
 /** What a file looked like: its content hash, and the size and time that let a later check skip re-reading it. */
 export interface Fingerprint {

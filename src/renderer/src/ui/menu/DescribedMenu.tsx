@@ -4,7 +4,7 @@ import type { ReactElement } from 'react';
 import type { Icon } from '../../lib/actions';
 import styles from './DescribedMenu.module.css';
 
-export interface DescribedMenuItem {
+interface DescribedMenuItem {
   id: string;
   label: string;
   /** One line on what the item does, under its label. */

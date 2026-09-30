@@ -3,7 +3,7 @@ import { CmError } from '../CmError';
 import { extractErrorMessage } from '../errorMessage';
 
 /** How a command reached `cm`: a pooled `cm shell` (`query`) or a process of its own (`execute`). */
-export type CmVia = 'query' | 'execute';
+type CmVia = 'query' | 'execute';
 
 export interface FakeCmCommand {
   via: CmVia;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MERGE_FIELD_SEPARATOR } from '../mergeOutput';
 import { readMergeProgress } from './mergeProgress';
-import { readProgress } from './progressReader';
+import { readProgress } from './testing/readProgress';
 
 /** Real `cm merge br:/main/task --merge --nointeractiveresolution --machinereadable --fieldseparator=…` output, written with `|`. */
 const MERGE = [
