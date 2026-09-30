@@ -30,7 +30,6 @@ const FILTER_RULE_FILES: Record<FilterRuleList, string> = {
 };
 
 const DEFAULT_CHANGELIST = 'Default';
-const CREATED_SHELVE = /sh:(\d+)/;
 
 export function createPendingChangesService({ cm, operations }: ServiceContext, { switchShelves, leftChanges }: SwitchContext): PendingChangesApi {
   const shelveAwayDependencies = { cm, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'shelve-backups') };
@@ -82,24 +81,14 @@ export function createPendingChangesService({ cm, operations }: ServiceContext, 
   }
 
   function shelve(workspacePath: string, paths: string[], comment: string, operationId: string): Promise<number> {
-    // `--summaryformat` prints just the shelve, in any language, and nothing else: no stages to follow.
-    return operations.run(operationId, ({ reportProgress }) => withTempFile(comment, async (commentsFile) => {
-      reportProgress('Uploading your changes');
-      const output = await cm.execute(
-        [
-          'shelveset',
-          'create',
-          ...absolutePaths(workspacePath, paths),
-          '--all',
-          `-commentsfile=${commentsFile}`,
-          '--summaryformat',
-        ],
-        { cwd: workspacePath },
-      );
-      const created = CREATED_SHELVE.exec(output);
-      if (!created) throw new Error('The shelve finished but no shelve id was reported.');
-      return Number(created[1]);
-    }));
+    return operations.run(operationId, ({ reportProgress }) =>
+      withTempFile(comment, async (commentsFile) => {
+        // `--summaryformat` prints just the shelve, in any language, and nothing else: no stages to follow.
+        reportProgress('Uploading your changes');
+        const args = ['shelveset', 'create', ...absolutePaths(workspacePath, paths), '--all', `-commentsfile=${commentsFile}`, '--summaryformat'];
+        return createdShelveId(await cm.execute(args, { cwd: workspacePath }));
+      }),
+    );
   }
 
   async function createChangelist(workspacePath: string, { name, description }: Changelist): Promise<void> {
@@ -142,6 +131,13 @@ export function createPendingChangesService({ cm, operations }: ServiceContext, 
     deleteChangelist,
     moveToChangelist,
   };
+}
+
+/** The shelve `cm shelveset create --summaryformat` made: `sh:12@repo@server`. */
+function createdShelveId(output: string): number {
+  const created = /sh:(\d+)/.exec(output);
+  if (!created) throw new Error('The shelve finished but no shelve id was reported.');
+  return Number(created[1]);
 }
 
 function absolutePaths(workspacePath: string, relativePaths: string[]): string[] {
