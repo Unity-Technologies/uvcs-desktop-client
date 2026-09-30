@@ -27,10 +27,14 @@ export function preferMergeTool(toolId: string): Promise<void> {
   return saveSettings({ mergeTool: toolId });
 }
 
-export async function addCustomMergeTool(tool: Omit<CustomMergeTool, 'id'>): Promise<string> {
+/**
+ * Adds the user's tool and makes it the preferred one. Its id once saved; undefined when the store couldn't save it
+ * (`saveSettings` then puts the settings back and says so), so no one picks a tool that doesn't exist.
+ */
+export async function addCustomMergeTool(tool: Omit<CustomMergeTool, 'id'>): Promise<string | undefined> {
   const id = `custom:${Date.now()}`;
   await saveSettings({ customMergeTools: [...currentSettings().customMergeTools, { ...tool, id }], mergeTool: id });
-  return id;
+  return currentSettings().customMergeTools.some((saved) => saved.id === id) ? id : undefined;
 }
 
 export function removeCustomMergeTool(toolId: string): Promise<void> {
