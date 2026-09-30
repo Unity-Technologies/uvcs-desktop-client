@@ -4,17 +4,26 @@ import { cascadeWindowBounds, restoreWindowBounds, type Rect } from './windowBou
 
 const SAVE_DELAY_MS = 500;
 
-/** The saved window bounds, fitted to the displays attached now; null for the default size. */
-export function loadWindowBounds(settings: SettingsStore): { bounds: Rect | null; maximized: boolean } {
+/** Where a window opens; null bounds for the default size. */
+interface OpeningBounds {
+  bounds: Rect | null;
+  maximized: boolean;
+}
+
+/** The saved window bounds, fitted to the displays attached now. */
+export function loadWindowBounds(settings: SettingsStore): OpeningBounds {
   const saved = settings.get().windowBounds;
-  const workAreas = screen.getAllDisplays().map((display) => display.workArea);
-  return { bounds: restoreWindowBounds(saved, workAreas), maximized: saved?.maximized ?? false };
+  return { bounds: restoreWindowBounds(saved, displayWorkAreas()), maximized: saved?.maximized ?? false };
 }
 
 /** Bounds for a new window opened from `window`: offset from it, fitted to the displays. */
-export function cascadedWindowBounds(window: BrowserWindow): { bounds: Rect | null; maximized: boolean } {
-  const workAreas = screen.getAllDisplays().map((display) => display.workArea);
-  return { bounds: cascadeWindowBounds(window.getNormalBounds(), workAreas), maximized: false };
+export function cascadedWindowBounds(window: BrowserWindow): OpeningBounds {
+  return { bounds: cascadeWindowBounds(window.getNormalBounds(), displayWorkAreas()), maximized: false };
+}
+
+/** What each display attached now leaves to windows (without the menu bar, Dock or taskbar). */
+function displayWorkAreas(): Rect[] {
+  return screen.getAllDisplays().map((display) => display.workArea);
 }
 
 /** Saves the window's bounds while it moves or resizes (after a short pause) and when it closes. */
