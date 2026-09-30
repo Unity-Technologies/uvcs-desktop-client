@@ -187,9 +187,8 @@
   text-align: center;
 }
 
-.sidebar[data-rail='true'] .item[data-active='true'],
-.sidebar[data-rail='true'] .item[data-active='true'] .icon {
-  color: var(--accent-text-on-selected);
+.sidebar[data-rail='true'] .item[data-active='true'] {
+  color: var(--accent-text);
 }
 
 .sidebar[data-rail='true'] .label {
