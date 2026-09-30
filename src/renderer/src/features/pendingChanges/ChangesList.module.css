@@ -40,9 +40,15 @@
   background: var(--bg-selected-strong);
 }
 
-/* A changelist header under changes being dragged: dropping moves them into it. */
+/* The changelist dragged changes would go into, lit as one block under its outlined header: dropping on any of its
+   rows moves them into it. */
 .row[data-drop-target='true'] {
   background: var(--accent-soft);
+  border-radius: 0;
+}
+
+.row[data-type='group'][data-drop-target='true'] {
+  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
   box-shadow: inset 0 0 0 1px var(--accent);
 }
 
@@ -63,6 +69,11 @@
 
 .chevron[data-collapsed='true'] {
   transform: none;
+}
+
+.groupIcon {
+  flex: none;
+  color: var(--text-tertiary);
 }
 
 .groupLabel {

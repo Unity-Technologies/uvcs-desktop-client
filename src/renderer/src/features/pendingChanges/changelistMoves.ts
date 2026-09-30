@@ -20,3 +20,17 @@ export function dragFromRow(
   if (selection.selected.has(row.key)) return { changes: selectedChanges().filter(isControlled) };
   return { changes: [row.change], select: singleSelection(row.key) };
 }
+
+/**
+ * The changelist header each row is under, by row key: dropping changes on any row of a changelist, not only on its
+ * header, moves them into it, as in the official client. Empty when the rows aren't grouped by changelist.
+ */
+export function changelistHeadersOf(rows: ChangeRow[]): Map<string, ChangeRow & { type: 'group' }> {
+  const headers = new Map<string, ChangeRow & { type: 'group' }>();
+  let header: (ChangeRow & { type: 'group' }) | undefined;
+  for (const row of rows) {
+    if (row.type === 'group') header = row;
+    if (header) headers.set(row.key, header);
+  }
+  return headers;
+}

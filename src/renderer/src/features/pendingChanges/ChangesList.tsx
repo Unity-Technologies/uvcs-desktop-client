@@ -38,7 +38,7 @@ interface ChangesListProps {
   onToggleCollapsed: (rowKey: string) => void;
   /** Enter or double-click on a change. */
   onOpen: (change: PendingChange) => void;
-  /** Dropping changes on a changelist header; changelist headers are only drop targets when this is set. */
+  /** Dropping changes on a changelist, its header or any row in it; rows only take drops when this is set. */
   onMoveToChangelist?: (changes: PendingChange[], changelist: string | null) => void;
   contextMenu: (selected: PendingChange[]) => MenuEntry[];
   changelistMenu: (changelist: Changelist) => MenuEntry[];
@@ -116,7 +116,7 @@ export function ChangesList({
     if (target === null) return contextMenu(selectedChanges());
     return Array.isArray(target) ? contextMenu(target) : changelistMenu(target);
   };
-  const { dragProps, dropProps, dropTarget } = useChangelistDrop({ selection, onSelectionChange, selectedChanges, onMoveToChangelist });
+  const { dragProps, dropProps, listDropProps, isInDropTarget } = useChangelistDrop({ rows, selection, onSelectionChange, selectedChanges, onMoveToChangelist });
 
   const moveSteps = (key: string): number | undefined => {
     const page = Math.max(1, Math.floor((viewportRef.current?.clientHeight ?? 0) / ROW_HEIGHT) - 1);
@@ -203,6 +203,7 @@ export function ChangesList({
         aria-activedescendant={focusedIndex === -1 ? undefined : `${rowIdPrefix}-${focusedIndex}`}
         onKeyDown={onKeyDown}
         onKeyUp={holdBackMenuKeyRelease}
+        {...listDropProps}
         // From the keyboard, the menu is for the folder or changelist focused; a right-click on a row says which below.
         onContextMenuCapture={() => (menuRow.current = focusedRow && focusedRow.type !== 'change' ? focusedRow : null)}
         {...MAIN_FOCUS}
@@ -225,7 +226,7 @@ export function ChangesList({
                 data-joins-below={selection.selected.has(row.key) && selection.selected.has(rows[item.index + 1]?.key ?? '')}
                 data-focused={row.key === focused}
                 data-arrived={arrived.has(row.key) || undefined}
-                data-drop-target={dropTarget === row.key}
+                data-drop-target={isInDropTarget(row)}
                 style={{ top: item.start, height: ROW_HEIGHT, '--row-indent': `${rowIndent(row, grouped)}px` } as CSSProperties}
                 onMouseDown={(event) => onRowMouseDown(row, event)}
                 onClick={() => onRowClick(row)}

@@ -1,4 +1,4 @@
-import { ChevronRight, MoreHorizontal } from 'lucide-react';
+import { ChevronRight, ListChecks, MoreHorizontal } from 'lucide-react';
 import { memo } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import { ItemIcon } from '../../components/ItemIcon';
@@ -36,12 +36,13 @@ interface GroupRowContentProps {
   changelistMenu: (changelist: Changelist) => MenuEntry[];
 }
 
-/** A changelist's header: its check, name, actions and count. */
+/** A changelist's header: its check, icon, name, actions and count. The icon, as in the official client, sets it apart from the folders under it. */
 export function GroupRowContent({ row, checkState, onToggleIncluded, changelistMenu }: GroupRowContentProps) {
   return (
     <>
       <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
       <RowCheckbox row={row} checkState={checkState} label={row.label} onToggleIncluded={onToggleIncluded} />
+      <ListChecks size={14} className={styles.groupIcon} aria-hidden />
       <span className={styles.groupLabel} data-tip={row.changelist?.description}>
         {row.label}
       </span>
