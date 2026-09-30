@@ -15,7 +15,7 @@ const ws = '/work/game';
 const affectsBranches = (key: readonly unknown[]) => key[2] === 'branches';
 
 beforeEach(() => {
-  uvcs.calls.length = 0;
+  uvcs.reset();
   refreshed.mockClear();
   useToastStore.setState({ toasts: [] });
   useRunningOperationsStore.setState({ operations: [] });

@@ -23,7 +23,7 @@ const loadsFinished = () => new Promise((resolve) => setTimeout(resolve, 0));
 const gravatarCalls = () => uvcs.calls.filter((call) => call.method === 'system.gravatar').map((call) => call.args[0]);
 
 beforeEach(() => {
-  uvcs.calls.length = 0;
+  uvcs.reset();
   uvcs.answer = ({ args }) => ({ ok: true, value: args[0] === 'nobody@example.com' ? null : `data:${String(args[0])}` });
   vi.stubGlobal('Image', FakeImage);
 });

@@ -4,10 +4,7 @@ const uvcs = await vi.hoisted(async () => (await import('../lib/testing/fakeWind
 
 import { api, ApiError } from './client';
 
-beforeEach(() => {
-  uvcs.calls.length = 0;
-  uvcs.answer = () => ({ ok: true, value: undefined });
-});
+beforeEach(() => uvcs.reset());
 
 describe('api', () => {
   it('sends api.<area>.<method>(...args) to main as one invoke named "<area>.<method>"', async () => {

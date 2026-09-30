@@ -8,6 +8,12 @@ export interface FakeUvcs {
   readonly calls: InvokeRequest[];
   /** Answers `invoke` requests; by default every call succeeds with `undefined`. */
   answer: (request: InvokeRequest) => InvokeResponse | Promise<InvokeResponse>;
+  /** Answers by method name (`'branches.list'`): a value succeeds with it, an `Error` fails with its message; others get `undefined`. */
+  answerWith: (answers: Record<string, unknown>) => void;
+  /** The methods called so far, in order. */
+  methodsCalled: () => string[];
+  /** Forgets the calls and goes back to answering every call with `undefined`: call it before each test. */
+  reset: () => void;
   /** Sends an event as the main process would, to every listener registered with `window.uvcs.on`. */
   emit: <Name extends UvcsEventName>(name: Name, payload: UvcsEvents[Name]) => void;
   /** How many listeners are registered for an event (a hook that forgot to unsubscribe leaves one behind). */
@@ -24,6 +30,17 @@ export function installFakeWindow(platform = 'darwin'): FakeUvcs {
   const fake: FakeUvcs = {
     calls: [],
     answer: () => ({ ok: true, value: undefined }),
+    answerWith: (answers) => {
+      fake.answer = ({ method }) => {
+        const answer = answers[method];
+        return answer instanceof Error ? { ok: false, error: { message: answer.message } } : { ok: true, value: answer };
+      };
+    },
+    methodsCalled: () => fake.calls.map((call) => call.method),
+    reset: () => {
+      fake.calls.length = 0;
+      fake.answerWith({});
+    },
     emit: (name, payload) => listeners.get(name)?.forEach((listener) => (listener as (payload: unknown) => void)(payload)),
     listenerCount: (name) => listeners.get(name)?.size ?? 0,
   };
