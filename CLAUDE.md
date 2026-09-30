@@ -219,13 +219,21 @@ either is welcome.
 - **Not set up yet**: code signing, notarization, auto-update and versioning (`package.json` stays `0.1.0`). Don't add
   them unasked.
 
-## Git
+## Commits: let the history tell the story
 
-- Parallel agents each work in their own git worktree and branch (`.claude/worktrees/`, ignored); a verified branch is
-  merged into `master`.
+Commit like a careful human. The history should show *how* the work happened.
+
+- One logical change per commit. If the message needs "and", split it.
+- Commit small and often. Keep commits layer-specific (model, service, UI, tests, docs, config).
+- Never mix machine changes (renames, formatting, dependencies, generated code) with human changes.
+- Test first: commit the failing test, then the fix (on working branches only, never on `master`).
+- A refactor commit stands alone, with no other change, and keeps the tests green.
 - A commit message says what the user can now do or see, in the product's words, not which files changed ("The
   Branch Explorer keeps the user's place when it is laid out again …"). Changes to docs or tooling say what they
   change in a short line.
+- Parallel agents each work in their own git worktree and branch (`.claude/worktrees/`, ignored). A verified branch
+  joins `master` with a merge commit, never squashed or rebased: the real path is the story. Don't squash or rewrite
+  history unless the user asks.
 
 ## Docs
 
