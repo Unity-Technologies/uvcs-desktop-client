@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 import type { Account } from '@shared/domain/account';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -10,8 +10,13 @@ import { useWorkspaceInfo } from '../workspace/useWorkspace';
 import { accountForServer } from './serverAccount';
 
 /** Refreshed when the window regains focus after a minute: signing in with the official client adds or changes one. */
+const accountsQuery = queryOptions({ queryKey: queryKeys.accounts, queryFn: () => api.accounts.list(), staleTime: 60_000 });
+
+/** The user `cm` signs in as where no account is set up (client.conf's default user); it changes only by hand. */
+const defaultUserQuery = queryOptions({ queryKey: queryKeys.user, queryFn: () => api.system.currentUser(), staleTime: Infinity });
+
 export function useAccounts() {
-  return useQuery({ queryKey: queryKeys.accounts, queryFn: () => api.accounts.list(), staleTime: 60_000 });
+  return useQuery(accountsQuery);
 }
 
 /**
@@ -21,12 +26,7 @@ export function useAccounts() {
 export function useServerAccount(server: string | undefined): { user: string; account?: Account } | undefined {
   const { data: accounts } = useAccounts();
   const account = server && accounts ? accountForServer(accounts, server) : undefined;
-  const { data: defaultUser } = useQuery({
-    queryKey: queryKeys.user,
-    queryFn: () => api.system.currentUser(),
-    staleTime: Infinity,
-    enabled: Boolean(server && accounts && !account),
-  });
+  const { data: defaultUser } = useQuery({ ...defaultUserQuery, enabled: Boolean(server && accounts && !account) });
   if (account) return { user: account.user, account };
   return defaultUser ? { user: defaultUser } : undefined;
 }
@@ -38,10 +38,10 @@ export function useWorkspaceUser(): string | undefined {
 
 /** Who you are on `server`, like `useServerAccount`, for code outside components (from the same cached queries). */
 export async function readServerUser(server: string): Promise<string> {
-  const accounts = await queryClient.fetchQuery({ queryKey: queryKeys.accounts, queryFn: () => api.accounts.list(), staleTime: 60_000 });
+  const accounts = await queryClient.fetchQuery(accountsQuery);
   const account = accountForServer(accounts, server);
   if (account) return account.user;
-  return queryClient.fetchQuery({ queryKey: queryKeys.user, queryFn: () => api.system.currentUser(), staleTime: Infinity });
+  return queryClient.fetchQuery(defaultUserQuery);
 }
 
 export async function removeAccount(account: Account): Promise<void> {
