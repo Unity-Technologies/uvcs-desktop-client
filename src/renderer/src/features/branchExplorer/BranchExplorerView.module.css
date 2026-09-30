@@ -52,10 +52,6 @@
   color: var(--text-primary);
 }
 
-.spinning {
-  animation: var(--keyframes-spin) 0.8s linear infinite;
-}
-
 /* What the focus is set to, after its branch: "2 hops". */
 .filterValue {
   color: var(--accent-text);

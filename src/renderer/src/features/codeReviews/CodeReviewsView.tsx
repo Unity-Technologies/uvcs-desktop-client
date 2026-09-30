@@ -1,8 +1,8 @@
-import { CircleDot, MessageSquareCode, Plus, RefreshCw, UserCheck } from 'lucide-react';
+import { CircleDot, MessageSquareCode, Plus, UserCheck } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { CODE_REVIEW_STATUSES, MAX_LISTED_CODE_REVIEWS, type CodeReview } from '@shared/domain/codeReview';
 import { useCommands, type Command } from '../../app/commands/commandStore';
-import { invalidateWorkspace } from '../../app/queryClient';
+import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ObjectListView } from '../../components/ObjectListView';
@@ -11,7 +11,6 @@ import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { Highlight } from '../../ui/Highlight';
-import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { ChoiceChip } from '../../ui/ChoiceChip';
 import type { Column } from '../../ui/table/DataTable';
@@ -129,11 +128,7 @@ export function CodeReviewsView() {
       subtitle={reviews && reviews.length >= MAX_LISTED_CODE_REVIEWS && 'newest'}
       actions={
         <>
-          <IconButton
-            icon={<RefreshCw size={14} className={isFetching ? styles.spinning : undefined} />}
-            label="Refresh"
-            onClick={() => void invalidateWorkspace(workspacePath)}
-          />
+          <ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />
           <Button variant="primary" icon={<Plus size={14} />} onClick={newReview}>
             New review
           </Button>

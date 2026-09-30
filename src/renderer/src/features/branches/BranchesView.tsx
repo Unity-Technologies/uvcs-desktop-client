@@ -1,10 +1,10 @@
-import { EyeOff, GitBranch, GitBranchPlus, List, ListTree, RefreshCw } from 'lucide-react';
+import { EyeOff, GitBranch, GitBranchPlus, List, ListTree } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import { spec } from '@shared/domain/specs';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
-import { invalidateWorkspace } from '../../app/queryClient';
+import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ObjectListView } from '../../components/ObjectListView';
@@ -23,7 +23,6 @@ import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { Highlight } from '../../ui/Highlight';
-import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import type { Column } from '../../ui/table/DataTable';
@@ -107,7 +106,7 @@ export function BranchesView() {
         total={branches?.length}
         actions={
           <>
-            <IconButton icon={<RefreshCw size={14} className={isFetching ? 'spinning' : undefined} />} label="Refresh" onClick={() => void invalidateWorkspace(workspacePath)} />
+            <ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />
             <Button variant="primary" icon={<GitBranchPlus size={14} />} onClick={newBranch} disabled={!workspace}>
               New branch
             </Button>

@@ -1,8 +1,8 @@
-import { Plus, RefreshCw, Tag } from 'lucide-react';
+import { Plus, Tag } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Label } from '@shared/domain/label';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
-import { invalidateWorkspace } from '../../app/queryClient';
+import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { ObjectListView } from '../../components/ObjectListView';
@@ -24,7 +24,6 @@ import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { Highlight } from '../../ui/Highlight';
-import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import type { Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
@@ -79,7 +78,7 @@ export function LabelsView() {
         total={labels?.length}
         actions={
           <>
-            <IconButton icon={<RefreshCw size={14} className={isFetching ? 'spinning' : undefined} />} label="Refresh" onClick={() => void invalidateWorkspace(workspacePath)} />
+            <ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />
             <Button variant="primary" icon={<Plus size={14} />} onClick={() => openCreateLabelDialog(workspacePath)}>
               New label
             </Button>

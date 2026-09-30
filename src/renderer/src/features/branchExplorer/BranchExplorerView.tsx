@@ -1,8 +1,8 @@
-import { GitGraph, RefreshCw } from 'lucide-react';
+import { GitGraph } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
-import { invalidateWorkspace } from '../../app/queryClient';
+import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useWorkspaceUser } from '../../app/account/accounts';
 import { ListWithDetails } from '../../components/ListWithDetails';
@@ -10,7 +10,6 @@ import { EVERYONE, isEveryone, pickedNames } from '../../lib/peopleFilter';
 import { pluralize } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { NoMatches } from '../../ui/NoMatches';
-import { IconButton } from '../../ui/IconButton';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { openReview } from '../codeReviews/codeReviewOperations';
@@ -224,11 +223,7 @@ export function BranchExplorerView() {
             inputRef={searchRef}
             onLeave={() => canvasRef.current?.focus()}
           />
-          <IconButton
-            icon={<RefreshCw size={14} className={isFetching ? styles.spinning : undefined} />}
-            label="Refresh"
-            onClick={() => void invalidateWorkspace(workspacePath)}
-          />
+          <ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />
         </>
       }
     >

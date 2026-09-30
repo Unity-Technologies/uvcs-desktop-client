@@ -1,9 +1,9 @@
-import { Lock as LockIcon, LockOpen, RefreshCw } from 'lucide-react';
+import { Lock as LockIcon, LockOpen } from 'lucide-react';
 import type { Lock } from '@shared/domain/lock';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { ObjectListView } from '../../components/ObjectListView';
 import { PathLabel } from '../../components/PathLabel';
-import { invalidateWorkspace } from '../../app/queryClient';
+import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { UserLabel } from '../../ui/Avatar';
@@ -12,7 +12,6 @@ import { EmptyState } from '../../ui/EmptyState';
 import { Highlight } from '../../ui/Highlight';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { lockFilterTexts, readsOnlyMyLocks } from './lockFilters';
-import { IconButton } from '../../ui/IconButton';
 import { useWorkspaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
@@ -80,11 +79,7 @@ export function LocksView() {
       total={locks?.length}
       actions={
         <>
-          <IconButton
-            icon={<RefreshCw size={14} className={isFetching ? styles.spinning : undefined} />}
-            label="Refresh"
-            onClick={() => void invalidateWorkspace(workspacePath)}
-          />
+          <ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />
           <Button icon={<LockOpen size={14} />} disabled={releasable.length === 0} onClick={() => void releaseLocks(workspacePath, releasable)}>
             Release
           </Button>

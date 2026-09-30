@@ -17,7 +17,3 @@
   background: var(--bg-hover);
   color: var(--text-secondary);
 }
-
-.spinning {
-  animation: var(--keyframes-spin) 0.8s linear infinite;
-}
