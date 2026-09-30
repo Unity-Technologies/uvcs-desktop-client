@@ -1,15 +1,13 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import { writeFile } from 'node:fs/promises';
 import type { UpdateConflict, UpdateResolutions, UpdateResult } from '@shared/domain/incoming';
 import type { CmClient } from '../cm/CmClient';
-import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { UPDATE_ARGS } from '../cm/updateArgs';
 import { waitForNextSecond } from '../files/nextSecond';
 import { retryWhileBusy } from '../files/whileBusy';
-import { toAbsolutePath } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
 import { readIncomingChanges } from './incoming';
+import { checkOutAgain, copyInto, putLocalVersionsBack, saveLocalVersions, type LocalVersions } from './localVersions';
 
 /**
  * Updates a workspace whose local changes collide with incoming ones, without an external merge tool:
@@ -17,7 +15,7 @@ import { readIncomingChanges } from './incoming';
  * 2. Undo those files so the update can proceed, and update.
  * 3. Write each file's resolution (in a later second than `cm` wrote them: `waitForNextSecond`) and check out again
  *    the files that were checked out.
- * If the update fails, the local versions are put back as they were.
+ * If undoing or updating fails, the local versions are put back as they were.
  */
 export async function updateWithMerge(
   cm: CmClient,
@@ -54,35 +52,20 @@ export async function updateMergingConflicts(
   const unresolved = unresolvedConflicts(conflicts, resolutions);
   if (unresolved.length > 0) throw new Error(`Resolve ${unresolved.map((conflict) => conflict.path).join(', ')} before updating.`);
 
-  const backupDirectory = join(backupsRoot, new Date().toISOString().replace(/[:.]/g, '-'));
-  const checkedOutPaths = await readCheckedOutPaths(cm, workspacePath);
-  const absolute = (conflict: UpdateConflict): string => toAbsolutePath(workspacePath, conflict.path);
-  const backup = (conflict: UpdateConflict): string => toAbsolutePath(backupDirectory, conflict.path);
-
   context.reportProgress('Saving your local versions');
-  for (const conflict of conflicts) await copyInto(absolute(conflict), backup(conflict));
-
-  await cm.query(['undo', ...conflicts.map(absolute)], { cwd: workspacePath });
+  const local = await saveLocalVersions(cm, workspacePath, conflicts, backupsRoot);
   try {
+    await cm.query(['undo', ...local.files.map((file) => file.path)], { cwd: workspacePath });
     await update();
   } catch (error) {
-    await waitForNextSecond();
-    for (const conflict of conflicts) await copyInto(backup(conflict), absolute(conflict));
+    await putLocalVersionsBack(cm, workspacePath, local);
     throw new Error(`${error instanceof Error ? error.message : String(error)} Your local changes were put back; nothing was lost.`);
   }
 
   context.reportProgress('Writing resolved files');
-  await waitForNextSecond();
-  for (const conflict of conflicts) {
-    const resolution = resolutions[conflict.path]!;
-    if (resolution.choice === 'text') await retryWhileBusy(() => writeFile(absolute(conflict), resolution.text, 'utf8'));
-    else if (resolution.choice === 'destination') await copyInto(backup(conflict), absolute(conflict));
-  }
-
-  const toCheckOut = conflicts.filter((conflict) => checkedOutPaths.has(conflict.path)).map(absolute);
-  if (toCheckOut.length > 0) await cm.query(['checkout', ...toCheckOut], { cwd: workspacePath });
-
-  return { backupDirectory };
+  await writeResolutions(local, resolutions);
+  await checkOutAgain(cm, workspacePath, local);
+  return { backupDirectory: local.directory };
 }
 
 /** The files that need merging to update and have no resolution yet. */
@@ -90,17 +73,13 @@ export function unresolvedConflicts(conflicts: UpdateConflict[], resolutions: Up
   return conflicts.filter((conflict) => !resolutions?.[conflict.path]);
 }
 
-async function readCheckedOutPaths(cm: CmClient, workspacePath: string): Promise<Set<string>> {
-  const xml = await cm.query(['status', '--xml', '--checkout'], { cwd: workspacePath });
-  return new Set(parsePendingChanges(xml).changes.map((change) => change.path));
-}
-
-/**
- * Copies by rewriting the bytes instead of `copyFile`, which keeps the source's modification time:
- * `cm` detects local changes by timestamp, so a restored file must look freshly modified.
- */
-async function copyInto(source: string, target: string): Promise<void> {
-  await mkdir(dirname(target), { recursive: true });
-  const content = await readFile(source);
-  await retryWhileBusy(() => writeFile(target, content));
+/** Each file as decided: the user's text, their own version, or the incoming one the update wrote. */
+async function writeResolutions(local: LocalVersions, resolutions: UpdateResolutions): Promise<void> {
+  // In a later second than `cm` wrote them: rewritten with as many bytes within that second, they'd look unchanged.
+  await waitForNextSecond();
+  for (const file of local.files) {
+    const resolution = resolutions[file.conflict.path]!;
+    if (resolution.choice === 'text') await retryWhileBusy(() => writeFile(file.path, resolution.text, 'utf8'));
+    else if (resolution.choice === 'destination') await copyInto(file.saved, file.path);
+  }
 }
