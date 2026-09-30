@@ -10,29 +10,24 @@ import { hasPendingChanges } from '../merge/hasPendingChanges';
 import type { OperationContext } from '../operations/OperationTracker';
 import type { SettingsStore } from '../settings/SettingsStore';
 import { applyShelveCleanly } from './applyShelveCleanly';
-import type { LeftChangesFinder } from './leftChanges';
 import { moveNewItemsAside } from './moveNewItemsAside';
 import { shelvedContents, summarizePending } from './pendingSnapshot';
 import { failureReason, putBackAfterFailure } from './putShelvedChangesBack';
 import { readPendingSnapshot, readPrivatePaths } from './readPendingChanges';
 import { renamedPrivateFiles } from './renamedPrivateFiles';
 import { selectorObjectRef } from './selectorObjectRef';
+import type { ShelveFlowDependencies } from './shelveFlowDependencies';
 import { newShelveRecord } from './shelveRecord';
 import { bringDisabledReason, describeSelector, leaveDisabledReason, parseSelectorSpec, selectorPlace } from './switchSelectors';
-import type { SwitchShelveRecords } from './switchShelveRecords';
 import { createAutomaticShelve } from './verifiedShelve';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';
 
 const IN_MERGE = "You're in the middle of a merge. Check it in or undo it before switching.";
 const NEEDS_CHOICE = 'The workspace has pending changes. Choose whether to leave them or bring them along.';
 
-export interface SwitchDependencies {
-  cm: CmClient;
+export interface SwitchDependencies extends ShelveFlowDependencies {
+  /** Whether to restore changes left on the target as the switch arrives (`restoreLeftChangesAutomatically`). */
   settings: SettingsStore;
-  records: SwitchShelveRecords;
-  leftChanges: LeftChangesFinder;
-  /** Where added files are moved aside while their changes are in a switch shelve. */
-  backupsRoot: string;
 }
 
 /**
@@ -174,7 +169,7 @@ async function rollBack(deps: SwitchDependencies, workspacePath: string, record:
   const reason = failureReason(cause);
   // Whatever fails from here, the changes are still safe in the shelve: the error says where.
   const onSource = await returnToSource(deps.cm, workspacePath, record.source.spec, context).catch(() => false);
-  if (onSource && (await putBackAfterFailure(deps.cm, deps.leftChanges, workspacePath, record, context))) {
+  if (onSource && (await putBackAfterFailure(deps, workspacePath, record, context))) {
     return new Error(`${reason}. Your changes were put back.`);
   }
   deps.records.save({ ...record, mode: 'leave' });

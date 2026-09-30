@@ -1,29 +1,19 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { ShelvedAway } from '@shared/domain/shelve';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
-import type { CmClient } from '../cm/CmClient';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
-import type { LeftChangesFinder } from './leftChanges';
 import { moveNewItemsAside } from './moveNewItemsAside';
 import { shelvedContents } from './pendingSnapshot';
 import { failureReason, putBackAfterFailure } from './putShelvedChangesBack';
 import { readPendingSnapshot } from './readPendingChanges';
+import type { ShelveFlowDependencies } from './shelveFlowDependencies';
 import { newShelveRecord, NO_TARGET } from './shelveRecord';
-import type { SwitchShelveRecords } from './switchShelveRecords';
 import { createVerifiedShelve } from './verifiedShelve';
 import { readWorkspaceIdentity } from './workspaceIdentity';
 
 const IN_MERGE = "A merge in progress can't be shelved away. Check it in or undo it first, or shelve and keep the changes.";
-
-export interface ShelveAndUndoDependencies {
-  cm: CmClient;
-  records: SwitchShelveRecords;
-  leftChanges: LeftChangesFinder;
-  /** Where the files the changes added wait while the shelve holds them. */
-  backupsRoot: string;
-}
 
 /**
  * Shelves changes away, as switching leaves them (`switchWithChanges`), so they are only in the shelve:
@@ -33,7 +23,7 @@ export interface ShelveAndUndoDependencies {
  * If undoing fails, the changes are put back.
  */
 export async function shelveAndUndo(
-  deps: ShelveAndUndoDependencies,
+  deps: ShelveFlowDependencies,
   workspacePath: string,
   paths: string[] | null,
   comment: string,
@@ -71,8 +61,8 @@ export function shelvedAwayChanges(changes: PendingChange[], paths: string[] | n
 }
 
 /** Puts the shelved changes back after a failed undo, and says where they are. */
-async function undoFailed(deps: ShelveAndUndoDependencies, workspacePath: string, record: SwitchShelveRecord, cause: unknown, context: OperationContext): Promise<Error> {
+async function undoFailed(deps: ShelveFlowDependencies, workspacePath: string, record: SwitchShelveRecord, cause: unknown, context: OperationContext): Promise<Error> {
   const failure = `Couldn't undo the shelved changes: ${failureReason(cause)}`;
-  if (await putBackAfterFailure(deps.cm, deps.leftChanges, workspacePath, record, context)) return new Error(`${failure}. Your changes were put back.`);
+  if (await putBackAfterFailure(deps, workspacePath, record, context)) return new Error(`${failure}. Your changes were put back.`);
   return new Error(`${failure}. Shelve ${record.shelveId} holds them all.`);
 }

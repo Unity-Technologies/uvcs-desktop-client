@@ -1,6 +1,5 @@
 import type { ShelvedForUpdate, UpdateResolutions } from '@shared/domain/incoming';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
-import type { CmClient } from '../cm/CmClient';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { UPDATE_ARGS } from '../cm/updateArgs';
@@ -8,24 +7,15 @@ import { toAbsolutePath } from '../files/workspacePaths';
 import { readIncomingChanges } from '../merge/incoming';
 import { unresolvedConflicts, updateWithMerge } from '../merge/updateWithMerge';
 import type { OperationContext } from '../operations/OperationTracker';
-import type { LeftChangesFinder } from './leftChanges';
 import { shelvedContents } from './pendingSnapshot';
 import { failureReason, putBackAfterFailure } from './putShelvedChangesBack';
 import { readPendingSnapshot } from './readPendingChanges';
 import { selectorObjectRef } from './selectorObjectRef';
+import type { ShelveFlowDependencies } from './shelveFlowDependencies';
 import { newShelveRecord, NO_TARGET } from './shelveRecord';
 import { describeSelector } from './switchSelectors';
-import type { SwitchShelveRecords } from './switchShelveRecords';
 import { createAutomaticShelve } from './verifiedShelve';
 import { readWorkspaceIdentity } from './workspaceIdentity';
-
-export interface ShelveForUpdateDependencies {
-  cm: CmClient;
-  records: SwitchShelveRecords;
-  leftChanges: LeftChangesFinder;
-  /** Where updating with merged files saves the local versions (`updateWithMerge`). */
-  backupsRoot: string;
-}
 
 /**
  * Updates past incoming changesets that deleted or moved files changed locally, which `cm update` can't merge:
@@ -36,7 +26,7 @@ export interface ShelveForUpdateDependencies {
  * If the update fails, the files are put back.
  */
 export async function shelveBlockedAndUpdate(
-  deps: ShelveForUpdateDependencies,
+  deps: ShelveFlowDependencies,
   workspacePath: string,
   resolutions: UpdateResolutions | null,
   context: OperationContext,
@@ -74,8 +64,8 @@ export async function shelveBlockedAndUpdate(
 }
 
 /** Puts the shelved files back after a failed undo or update, and says where they are. */
-async function updateFailed(deps: ShelveForUpdateDependencies, workspacePath: string, record: SwitchShelveRecord, cause: unknown, context: OperationContext): Promise<Error> {
+async function updateFailed(deps: ShelveFlowDependencies, workspacePath: string, record: SwitchShelveRecord, cause: unknown, context: OperationContext): Promise<Error> {
   const failure = `Couldn't update: ${failureReason(cause)}`;
-  if (await putBackAfterFailure(deps.cm, deps.leftChanges, workspacePath, record, context)) return new Error(`${failure}. Your changes were put back.`);
+  if (await putBackAfterFailure(deps, workspacePath, record, context)) return new Error(`${failure}. Your changes were put back.`);
   return new Error(`${failure}. Your changes are safe in shelve ${record.shelveId}; restore them from Changes.`);
 }

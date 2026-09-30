@@ -6,6 +6,7 @@ import { applyShelveCleanly } from './applyShelveCleanly';
 import { changedPaths } from './pendingSnapshot';
 import { putBack } from './privateBackups';
 import { readPendingSnapshot } from './readPendingChanges';
+import type { ShelveFlowDependencies } from './shelveFlowDependencies';
 
 /**
  * Puts shelved changes back in the workspace they were shelved from, after a step that was taking them out of it
@@ -35,8 +36,7 @@ export async function putShelvedChangesBack(
  * are still safe in the shelve, and the caller's error says so.
  */
 export async function putBackAfterFailure(
-  cm: CmClient,
-  leftChanges: LeftChangesFinder,
+  { cm, leftChanges }: Pick<ShelveFlowDependencies, 'cm' | 'leftChanges'>,
   workspacePath: string,
   record: SwitchShelveRecord,
   context: OperationContext,
