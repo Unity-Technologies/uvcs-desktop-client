@@ -1,5 +1,5 @@
 import { commandFailure, fakeApi } from '../../testing/fakeWindow';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const asked = vi.hoisted(() => ({
   confirmed: true,
@@ -39,38 +39,44 @@ beforeEach(() => {
   asked.picker = undefined;
   asked.switches.length = 0;
 });
+afterEach(() => vi.restoreAllMocks());
+
+/** Resolves with the arguments `branches.rememberRecent` is called with: recording runs on its own, after the switch starts. */
+function recordedRecent(): Promise<unknown[]> {
+  return new Promise((resolve) => fakeApi.answer('branches.rememberRecent', (...args: unknown[]) => void resolve(args)));
+}
 
 describe('switching to a branch', () => {
   it('switches through the one switch flow, and records the branch among the recent ones from a list already read', async () => {
     queryClient.setQueryData(queryKeys.inWorkspace(ws, 'branches', {}), [branch('/main'), branch('/main/task')]);
-    fakeApi.answer('branches.rememberRecent', () => undefined);
+    const recorded = recordedRecent();
 
     expect(await switchToBranch(ws, '/main/task', 'bring')).toBe(true);
 
     expect(asked.switches).toEqual([[ws, 'br:/main/task', '/main/task', 'bring']]);
-    await vi.waitFor(() => expect(fakeApi.calls()).toEqual([{ method: 'branches.rememberRecent', args: [ws, 'guid-/main/task'] }]));
+    expect(await recorded).toEqual([ws, 'guid-/main/task']);
+    expect(fakeApi.methods()).toEqual(['branches.rememberRecent']);
   });
 
   it('reads one branch by name to record it when no list has it', async () => {
     fakeApi.answer('branches.get', () => branch('/main/task', 'guid-read'));
-    fakeApi.answer('branches.rememberRecent', () => undefined);
+    const recorded = recordedRecent();
 
     await switchToBranch(ws, '/main/task');
 
-    await vi.waitFor(() => expect(fakeApi.methods()).toEqual(['branches.get', 'branches.rememberRecent']));
-    expect(fakeApi.argsOf('branches.rememberRecent')).toEqual([[ws, 'guid-read']]);
+    expect(await recorded).toEqual([ws, 'guid-read']);
+    expect(fakeApi.methods()).toEqual(['branches.get', 'branches.rememberRecent']);
   });
 
   it('still switches when the recent branches can’t be recorded', async () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const warned = new Promise<void>((resolve) => vi.spyOn(console, 'warn').mockImplementation(() => resolve()));
     fakeApi.answer('branches.get', () => {
       throw new Error('offline');
     });
 
     expect(await switchToBranch(ws, '/main/task')).toBe(true);
 
-    await vi.waitFor(() => expect(warn).toHaveBeenCalled());
-    warn.mockRestore();
+    await warned;
   });
 });
 
