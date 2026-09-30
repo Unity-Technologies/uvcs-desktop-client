@@ -2,6 +2,7 @@ import type { PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import type { PendingChangesAction, RenamedPrivateFile, RestoredChanges, SwitchResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
+import { hasPendingChanges } from '../merge/hasPendingChanges';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { switchArgs } from '../cm/updateArgs';
 import { readWorkspaceStatus } from '../cm/workspaceStatus';
@@ -170,8 +171,7 @@ async function sourceObjectRef(cm: CmClient, workspacePath: string, workspace: W
 }
 
 async function assertClean(cm: CmClient, workspacePath: string): Promise<void> {
-  const output = await cm.query(['status', '--short', '--controlledchanged', '--changed', '--localdeleted'], { cwd: workspacePath });
-  if (output.trim()) throw new Error('Some changes are still pending after undoing them.');
+  if (await hasPendingChanges(cm, workspacePath)) throw new Error('Some changes are still pending after undoing them.');
 }
 
 /**
