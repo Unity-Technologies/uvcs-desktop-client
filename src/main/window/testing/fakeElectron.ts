@@ -22,6 +22,9 @@ class FakeWebContents extends EventEmitter {
   isDestroyed(): boolean {
     return false;
   }
+  isLoading(): boolean {
+    return false;
+  }
   send(...args: unknown[]): void {
     this.sent.push(args);
   }
