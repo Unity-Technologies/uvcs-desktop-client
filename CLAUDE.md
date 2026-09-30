@@ -190,11 +190,11 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `lib/shortcutRegistry.test.ts`                            | every shortcut is in the registry; menu accelerators match; no Ctrl+Alt off Mac |
 | `lib/menuGroups.test.ts`, `components/menuGrammar.test.ts` | every object menu follows one grammar                            |
 | `styles/tokens.test.ts`, `focusRings.test.ts`             | text 4.5:1 and focus rings 3:1 in both themes                     |
+| `styles/noRawColors.test.ts`                              | colors come from `styles/tokens.css`; the few written out say why |
 | `window/workspaceMenuCommands.test.ts`                    | app menu commands match the workspace commands                    |
 | `main/settings/ownConfig.test.ts`                         | only the first-run import reads the official client's config; nothing writes it |
 
-Not enforced yet: no `any` (there are none today) and no raw colors outside `styles/tokens.css`. A static test for
-either is welcome.
+Not enforced yet: no `any` (there are none today). A static test for it is welcome.
 
 ## Conventions
 
