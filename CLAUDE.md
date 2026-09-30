@@ -8,8 +8,7 @@ A fast, beautiful desktop client for Unity Version Control (Plastic SCM). Electr
 - **A long-term maintenance product.** Every decision must still be right in years: prefer the boring, explicit,
   well-named solution over the clever or quick one, and leave each file easier to change than it was.
 - **Mostly changed and maintained by LLMs.** Write for a reader who arrives cold, with no memory of this conversation:
-  the code, its names, its tests and `docs/` are the only memory. Name symbols in docs so they can be grepped. The
-  tests are the quality gate (see "Tests are the quality gate").
+  the code, its names, its tests and `docs/` are the only memory. Name symbols in docs so they can be grepped.
 
 ## Principles (the bar every change is held to)
 
@@ -19,23 +18,21 @@ A fast, beautiful desktop client for Unity Version Control (Plastic SCM). Electr
 - **Max UX.** Advanced UVCS usage (merges, shelves, switching with changes, xlinks, locks, code reviews) must feel
   effortless. Never drop the user into a terminal, editor, or UVCS jargon they didn't ask for.
 - **Simple UI, powerful engine.** Complexity lives in the main process, never in the user's face. If a feature needs
-  explaining, the design isn't done.
-- **Elegant, fast, reliable, beautiful** — UI *and* code. Two themes, one calm layout.
+  explaining, the design isn't done. Favor fewer, sharper features over more knobs.
+- **Fast, reliable, beautiful** — UI *and* code, verified on screen, not in the diff (see "Seeing the app"). Two
+  themes, one calm layout.
 - **`cm` economy: protect the server.** `cm` is not `git`: almost every command is a network round trip to a server
-  that many people share (repositories of ~280k changesets, ~20k branches). One command that returns N things beats N
-  commands; a result already read beats another command. See "Every `cm` command earns its place" below.
-- **Validate visually.** Beauty and UX are verified on screen, not in the diff (see "Seeing the app").
-
-Favor fewer, sharper features over more knobs. Ask: *does this keep the UI simple while letting an expert reach for
-the full power of UVCS?*
+  many people share (repositories of ~280k changesets, ~20k branches). See "Every `cm` command earns its place".
 
 ## Read before changing code
 
 1. `docs/ARCHITECTURE.md` — always. Layers, how a request flows, the server budget, `cm` parsing rules, xlinks,
-   windows, and the renderer's shared conventions (data, refresh, menus, keyboard, filters, lists, styling).
-2. The feature doc of the area you touch, listed at the top of ARCHITECTURE.md (`docs/features/*.md`: diffs, merge,
-   shelves and switching, files/history/annotate, Branch Explorer).
+   secrets, windows, and the renderer's shared conventions (data, refresh, menus, keyboard, filters, lists, styling).
+2. The feature doc of the area you touch, listed at the top of ARCHITECTURE.md (`docs/features/*.md`).
 3. The code next to what you change, and its tests: they show the idiom to follow.
+
+This file holds the rules and where to find things; ARCHITECTURE.md holds the details and the numbers. When they
+seem to disagree, the code and its tests decide, and the doc gets fixed.
 
 ## Architecture in one screen
 
@@ -46,74 +43,82 @@ src/preload/   Exposes `window.uvcs` (one invoke channel + events). Never change
 src/renderer/  React UI. Talks to main only through `api.<area>.<method>` (`renderer/src/api/client.ts`).
 ```
 
-- **Adding a capability**: types in `shared/domain` → method in `shared/api/<area>.ts` → implementation in
-  `main/services/<area>Service.ts` (wired in `createServices`) → `cm` argument builders and parsers as pure, tested
-  helpers in `main/cm/` → a query (`queryKeys`) or mutation (`runOperation`/`runAction`/`runRead`) in the renderer.
-- **`CmClient`** is the single entry point to `cm`. Never spawn `cm` any other way. Commands are routed by how long
-  they take and whether they can be cancelled, not by whether they read or write (see below).
+- **Adding a capability**: ARCHITECTURE.md "How a request flows" (domain type → `shared/api` → service wired in
+  `createServices` → pure, tested `cm` helpers in `main/cm/` → a query or mutation in the renderer).
+- **`CmClient`** is the single entry point to `cm`. Never spawn `cm` any other way.
 - **Renderer tiers**: `ui/` design-system primitives, `components/` domain-aware pieces shared by features,
   `features/<area>/` one folder per area, `lib/` pure helpers, `app/` the shell (navigation, palette, operations,
   refresh), `styles/` tokens and global CSS. A piece used by one feature lives in that feature's folder.
 
 ## Every `cm` command earns its place
 
-Before adding or changing a `cm` call, answer these (details in ARCHITECTURE.md "Server budget"):
+Before adding or changing a `cm` call, answer these (the why and the numbers: ARCHITECTURE.md "Server budget" and
+"How a request flows"):
 
 1. **Is it needed at all?** Can a result already read answer it (a list's `--format` fields, `BranchNamesCache`, the
-   workspace info that follows `.plastic`, `cm status` already on screen)? Local reads (`status`,
-   `getworkspacefrompath`, `workspace list`, `version`) are cheap; everything else hits the server.
-2. **One call for N things.** Never loop a command over rows, files, branches or ids, and never OR ids together
-   (`noOredIdLookups.test.ts`). One `cm find`/`cm ls` that returns every record, `--format` with just the fields
-   needed, filtered on the server (date, `limit`, owners) — then a second call only for what the first couldn't answer.
-3. **Shell or process?** Decide by duration and cancellability, never by read vs write:
-   - **Quick** (reads, and small writes: a label, a rename, an attribute, an undo of a few files) → `query()`, a
-     pooled `cm shell`. Starting a `cm` process costs 100–150 ms (measured on macOS, more on Windows) *before* the
-     command runs; a warm shell answers a 10 ms command in 10 ms. Spawning a process for it makes it 15× slower.
-   - **Long, streamed or cancellable** (update, switch, checkin, shelve, merge, sync, the slowest `find`s) →
-     `execute()`, a process of its own. Each workspace has only two pooled sessions, so a command that holds one for
-     seconds makes every read of that workspace wait behind it, and a command in a shell can't be cancelled.
-   - `query()` sends a workspace write that may run long (many paths, recursive, a transfer: `runsLong`) to a process
-     by itself, so call sites don't have to guess. Shell arguments can't hold quotes or newlines: multi-line text
-     goes through temp files (`-commentsfile`).
+   workspace info that follows `.plastic`, `cm status` already on screen)? Only local reads are free (the list is
+   `LOCAL_COMMANDS` in `main/cm/repeatedCommands.ts`); everything else hits the server.
+2. **One call for N things.** Never loop a command over rows, files, branches or ids, and never OR ids together. One
+   `cm find`/`cm ls` with `--format` holding just the fields needed, filtered on the server (date, `limit`, owners).
+3. **Shell or process?** By duration and cancellability, never by read vs write. Quick (reads, a label, a rename, an
+   undo of a few files) → `query()`, a pooled `cm shell`: a process costs 100–150 ms before the command runs. Long,
+   streamed or cancellable (update, switch, checkin, shelve, merge, sync, the slowest `find`s) → `execute()`: a
+   workspace has two pooled sessions, and a command holding one for seconds stalls every read behind it. `query()`
+   already sends a write that may run long (`runsLong`) to a process. Shell arguments can't hold quotes or newlines:
+   multi-line text goes through temp files (`-commentsfile`).
 4. **When does it run?** Only on an event, a settled selection (`useSettled`), a focus once stale, or an operation —
-   never on a timer (the incoming check is the one exception). Immutable results are cached (`IMMUTABLE_QUERY`),
-   heavy lists that rarely change use `SLOW_CHANGING_QUERY`, equivalent filters share one query key (`compactFilter`).
+   never on a timer (the incoming check is the one exception). Immutable results use `IMMUTABLE_QUERY`, heavy lists
+   that rarely change `SLOW_CHANGING_QUERY`, equivalent filters share one query key (`compactFilter`).
 5. **What does it refresh?** An operation declares what it `affects` (`refreshScopes.ts`); reads refresh nothing.
-6. **Check it.** Watch the command log (⌘⇧L) while exercising the change: count the commands. Development builds warn
-   `[server budget]` in the console when a server command repeats more than twice in ten seconds.
+6. **Check it.** Watch the command log (⌘⇧L) while exercising the change and count the commands. Development builds
+   warn `[server budget]` in the console when a server command repeats more than twice in ten seconds.
+
+## Safety
+
+- **Secrets never show**: the command log, `CmError`s and console warnings hide passwords (`main/cm/hideSecrets.ts`).
+  A new `cm` option carrying a secret joins `SECRET_OPTIONS`; never log, toast or store a credential yourself.
+- **The renderer is untrusted**: keep `contextIsolation` and `sandbox` on, and give it capabilities only as typed
+  `UvcsApi` methods, never a generic "run this" channel.
+- **Nothing external opens by itself**: `cm` never opens a merge or diff tool, and background work never opens anything.
+- **Never write to real data**: anything that writes (checkin, merge, delete, the sandboxes' scripts) runs only
+  against a sandbox on a local server, never the user's workspaces or a shared server such as `codice@codice@cloud`.
+  The sandbox scripts delete and recreate their repository and workspace.
 
 ## Commands
 
-npm (Node ≥ 22.12). `cm` must be installed and signed in.
+npm (Node ≥ 22.12). `cm` must be installed and signed in; set `UVCS_CM_PATH` to use a `cm` that isn't found.
 
 ```bash
 npm run dev          # the app with hot reload
-npm run build        # build into out/ (needed by app:debug and scripts/screenshot.mjs)
+npm run build        # build into out/ (needed by start, app:debug and scripts/screenshot.mjs)
+npm start            # the built app
 npm run app:debug    # the built app with CDP on UVCS_CDP_PORT (9333 by default)
 npm run typecheck    # main + renderer
 npm test             # vitest, every src/**/*.test.ts
-npm run dist         # the installer for this OS
+npm run dist         # the installer for this OS, into dist/
 ```
 
 **Done means**: `npm run typecheck` and `npm test` pass, the new code is tested (see "Tests are the quality gate"),
-the change is seen working in the app (anything visible), and the docs say what's now true (see "Docs"). There is no linter or formatter: match the surrounding code.
+the change is seen working in the app (anything visible), and the docs say what's now true (see "Docs"). There is no
+linter or formatter: match the surrounding code.
 
 ## Seeing the app (Playwright)
 
 For anything complex or that needs to be seen — UI, layout, diff rendering, themes, multi-step flows — drive the real
-app; don't just trust types and tests. **Always use the `playwright-cli` skill** (`.claude/skills/playwright-cli`,
-installed); don't hand-roll Playwright calls. The flow: compile and run, then attach over CDP and exercise/screenshot:
+app; don't just trust types and tests. **Always use the `playwright-cli` skill** (`.claude/skills/playwright-cli`);
+don't hand-roll Playwright calls. Build, start the app as a background process, attach, and stop it when done:
 
 ```bash
-npm run build && UVCS_CDP_PORT=9333 npm run app:debug &
-npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click <ref>, screenshot
+npm run build && UVCS_CDP_PORT=9333 npm run app:debug    # in the background
+npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click <ref>, screenshot, console
 ```
 
-- Check **both themes** and a narrow window; check that the console shows no errors.
+- Check **both themes** and a narrow window, and that the console shows no errors (`playwright-cli console`).
 - Parallel agents: a distinct `UVCS_CDP_PORT` and `-s=<session>` each.
-- One-shot screenshots: `node scripts/screenshot.mjs /tmp/shot.png open:<workspace> key:Meta+3` (steps in its header).
+- One-shot screenshots: `node scripts/screenshot.mjs /tmp/shot.png open:<workspace> key:Meta+3` (steps in its header;
+  it prints renderer errors as `[renderer]` and `[pageerror]`).
 - Sandboxes on a local server: `scripts/sandboxes/demo.sh` (a small game project), `branch-explorer.sh` (a branch
-  topology). Use these, not a shared server, for anything that writes; `scripts/perf/soak.mjs` catches leaks.
+  topology). `scripts/perf/soak.mjs` catches leaks.
 - `UVCS_RENDERER_PLATFORM=win32` (or `linux`) previews another OS's shortcuts, copy and layout from a Mac (the page
   only: the menus and window frame stay the Mac's).
 
@@ -128,8 +133,10 @@ quality: **if the tests pass, the app works as specified**. Test what matters, n
 - **Logic**: parsers, argument builders, layouts, filters, selection, anything that decides. Every branch that encodes
   a decision, and the edge cases the real world sends (empty, huge, Unicode, CRLF, xlinks, Windows paths).
 - **Contracts between layers**: what a service asks `cm` (which commands, how many, `query()` or `execute()`) and how
-  it reads the answer, against a fake `CmClient` and output shaped exactly as `cm` prints it; what crosses IPC
-  (`UvcsApi`, events); what an operation refreshes (`refreshScopes`, query keys).
+  it reads the answer, with output shaped exactly as `cm` prints it; what crosses IPC (`UvcsApi`, events); what an
+  operation refreshes (`refreshScopes`, query keys). The fake is a small object cast to `CmClient` that records the
+  commands and answers them (`fakeCm` in `main/workspace/switchShelves.test.ts`). Most services have no contract test
+  yet: add one for the service you change.
 - **Interactions**: flows across modules, including their failure paths: a switch with changes (shelve, undo,
   switch, bring; a failure puts the changes back), a menu builder serving every place, a shortcut reaching its command.
 - **Specs**: a rule written in `docs/` deserves a test that enforces it; a rule for the whole repository becomes a
@@ -151,8 +158,8 @@ skip or loosen it.
 - **Isolated**: each test builds its own state (new instances, its own temp folder under `os.tmpdir()`, which the run
   already points at a private folder: `vitest.tempDirectory.ts`), no mutable module state, mocks restored after each
   test. Tests pass alone, in any order, and in parallel.
-- **No network, no server**: never a real `cm` server or account; a fake `CmClient` or `fakeCmShell`, and real `cm`
-  output as fixtures.
+- **No network, no server**: never a real `cm` server or account. Services get a fake `CmClient`; the `cm shell`
+  protocol itself is tested against `main/cm/testing/fakeCmShell`, a script that answers like `cm shell`.
 - **Same on every OS**: build paths with `path.join`, don't assume `/` or `\n`, sort before comparing what has no
   order.
 - **Precise assertions**: compare the result that matters (`toEqual` on the value), not snapshots of large objects.
@@ -161,36 +168,52 @@ skip or loosen it.
 
 Static tests keep the load-bearing rules; extend them rather than working around them.
 
-| Test                                       | Rule                                                                         |
-| ------------------------------------------ | ---------------------------------------------------------------------------- |
-| `main/cm/noExternalUi.test.ts`             | `cm` never opens a tool; processes start only where allowed                  |
-| `main/cm/noOredIdLookups.test.ts`          | no `where id = 1 or id = 2 …` queries                                        |
-| `lib/shortcutRegistry.test.ts`             | every shortcut is in the registry; menu accelerators match; no Ctrl+Alt off Mac |
-| `lib/menuGroups.test.ts`, `components/menuGrammar.test.ts` | every object menu follows one grammar                   |
-| `styles/tokens.test.ts`, `focusRings.test.ts` | text 4.5:1 and focus rings 3:1 in both themes                             |
-| `window/workspaceMenuCommands.test.ts`     | app menu commands match the workspace commands                               |
+| Test                                                      | Rule                                                              |
+| --------------------------------------------------------- | ----------------------------------------------------------------- |
+| `main/cm/noExternalUi.test.ts`                            | `cm` never opens a tool; processes start only where allowed       |
+| `main/cm/noOredIdLookups.test.ts`                         | no `where id = 1 or id = 2 …` queries                             |
+| `lib/shortcutRegistry.test.ts`                            | every shortcut is in the registry; menu accelerators match; no Ctrl+Alt off Mac |
+| `lib/menuGroups.test.ts`, `components/menuGrammar.test.ts` | every object menu follows one grammar                            |
+| `styles/tokens.test.ts`, `focusRings.test.ts`             | text 4.5:1 and focus rings 3:1 in both themes                     |
+| `window/workspaceMenuCommands.test.ts`                    | app menu commands match the workspace commands                    |
+
+Not enforced yet: no `any` (there are none today) and no raw colors outside `styles/tokens.css`. A static test for
+either is welcome.
 
 ## Conventions
 
-- **Code style**: TypeScript strict, no new `any`, single quotes, semicolons. `@shared/*` for shared imports.
+- **Code style**: TypeScript strict, no `any`, single quotes, semicolons. `@shared/*` for shared imports.
   One component, hook or concept per file, named after it.
 - **Comments explain *why*** (a `cm` quirk, a Windows code page, a Pierre workaround), briefly, naming the symbol or
   command involved. Don't strip existing rationale when moving code.
 - **Cross-platform**: macOS, Windows and Linux are all first-class. Platform differences go through small pure helpers
-  that take the platform (`lib/platform.ts`, `windowChrome`, `formatShortcut`). Watch path separators and drive
-  letters, CRLF, NFD names on macOS, Windows' console code page and 32,767-character command lines (ARCHITECTURE.md
-  "Parsing `cm` output").
+  that take the platform (`lib/platform.ts`, `shared/windowChrome.ts`, `formatShortcut` in `lib/shortcuts.ts`). Watch
+  path separators and drive letters, CRLF, NFD names on macOS, Windows' console code page and 32,767-character
+  command lines (ARCHITECTURE.md "Parsing `cm` output").
 - **Copy**: plain words, short. Labels name things, tooltips define them, no sentence restates what the screen shows.
   UVCS terms only where the user already uses them (branch, changeset, shelve); never `cm` output or flags.
 - **UI building blocks**: reuse before inventing — `ListWithDetails`/`DetailsPanel`, `ItemRow`, `FilterBar`,
   `menuWords`/`groupedMenu`, `openDialog`/`confirm`, `runOperation`. Shortcuts only through `lib/shortcutRegistry.ts`.
   Colors, motion and focus only through `styles/tokens.css`.
-- **Nothing external opens by itself**: `cm` never opens a merge or diff tool, and background work never opens anything.
+- **Dependencies**: every package is a `devDependency`, because electron-vite bundles what the app runs into `out/`
+  (`electron-builder.yml` ships no `node_modules`). Prefer none: a new one must do what a small module can't.
+- **Generated, never edited**: `out/`, `dist/`, `*.tsbuildinfo`, `node_modules/`.
+- **Not set up yet**: code signing, notarization, auto-update and versioning (`package.json` stays `0.1.0`). Don't add
+  them unasked.
+
+## Git
+
+- Parallel agents each work in their own git worktree and branch (`.claude/worktrees/`, ignored); a verified branch is
+  merged into `master`.
+- A commit message says what the user can now do or see, in the product's words, not which files changed ("The
+  Branch Explorer keeps the user's place when it is laid out again …"). Changes to docs or tooling say what they
+  change in a short line.
 
 ## Docs
 
 - `docs/` describes how the app works **now**, never its history. A change that alters behaviour, a `cm` quirk or a
   convention updates the relevant doc in the same commit.
 - Rules every change must respect go in `docs/ARCHITECTURE.md`; one area's rules go in its `docs/features/*.md`
-  (create one when a new area has rules the code can't show). Name the symbols (`inCmPathForm`) so they can be found.
+  (create one when a new area has rules the code can't show, and list it at the top of ARCHITECTURE.md). Name the
+  symbols (`inCmPathForm`) so they can be found. Say each rule in one place and point to it from the others.
 - Record why an obvious alternative was rejected when it was tried, so it isn't proposed again.
