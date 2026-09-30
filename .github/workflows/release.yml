@@ -66,9 +66,14 @@ jobs:
           node-version: '26'
 
       # macOS signing is optional. With the CSC_LINK secret the build is signed and notarized, and updates install on a
-      # restart; without it signing is turned off cleanly (an empty CSC_LINK would be read as a certificate's path), and
-      # the app updates by downloading the disk image for the user to drag in (main/update/macSignature.ts). Adding the
-      # secrets switches signing on with no change here.
+      # restart; without it the certificate search is turned off (an empty CSC_LINK would be read as a certificate's
+      # path) and the app is signed ad hoc (`identity: -`), and it updates by downloading the disk image for the user to
+      # drag in (main/update/macSignature.ts). Adding the secrets switches signing on with no change here.
+      # Never ship it with no signature at all: electron-builder renames Electron's app and edits its Info.plist, which
+      # breaks Electron's own signature, and macOS on Apple silicon then calls the downloaded app "damaged" with no way
+      # to open it. Signed ad hoc, it opens after System Settings ▸ Privacy & Security ▸ Open Anyway. The hardened
+      # runtime, which only notarization needs, is off with it: under an ad-hoc signature it refuses Electron's
+      # frameworks (library validation).
       - name: Configure macOS code signing
         if: runner.os == 'macOS'
         env:
@@ -88,12 +93,17 @@ jobs:
             } >> "$GITHUB_ENV"
             echo "macOS code signing: on"
           else
-            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
-            echo "macOS code signing: off (no CSC_LINK secret)"
+            {
+              echo "CSC_IDENTITY_AUTO_DISCOVERY=false"
+              echo "MAC_SIGNING_FLAGS=-c.mac.identity=- -c.mac.hardenedRuntime=false"
+            } >> "$GITHUB_ENV"
+            echo "macOS code signing: ad hoc (no CSC_LINK secret)"
           fi
 
       # With no platform flag electron-builder builds for the runner's OS, so each leg uploads its own installers.
+      # MAC_SIGNING_FLAGS is empty except on an unsigned macOS build; bash on every OS so it expands the same way.
       - name: Build and upload
-        run: npm run release
+        shell: bash
+        run: npm run release -- $MAC_SIGNING_FLAGS
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

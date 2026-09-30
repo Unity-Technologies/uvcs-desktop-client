@@ -51,8 +51,10 @@ one shows again. A check the window asked for answers in one toast, "Checking…
   (`UnityVersionControl-<version>-macOS-arm64.dmg`: GitHub turns spaces into dots, which `latest*.yml` would no longer
   match); macOS ships a zip too, which electron-updater needs.
 - macOS signing and notarization turn on once the `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`,
-  `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID` secrets exist; without them the build is unsigned and updates by its
-  disk image. Windows builds are unsigned: electron-updater checks an installer's publisher only when the app names one.
+  `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID` secrets exist; without them the build is signed ad hoc (the
+  workflow's `MAC_SIGNING_FLAGS`), opens after Privacy & Security ▸ Open Anyway, and updates by its disk image. A build
+  with no signature at all is rejected: macOS on Apple silicon calls it "damaged", because electron-builder's edits to
+  the bundle break Electron's own signature. Windows builds are unsigned: electron-updater checks an installer's publisher only when the app names one.
 - The feed must be readable without signing in: electron-updater reads a private repository's releases only with a
   token, which the app never ships. While the repository is private, a check says "No published release is available
   to update from yet."
