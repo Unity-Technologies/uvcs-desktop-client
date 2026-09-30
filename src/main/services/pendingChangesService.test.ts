@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { OperationProgress } from '@shared/domain/operation';
 import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
 import { CmError } from '../cm/CmError';
+import { change, pendingStatus } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, optionValue, runsUntilCancelled, type CmAnswer, type FakeCmCommand } from '../cm/testing/fakeCmClient';
 import { OperationTracker } from '../operations/OperationTracker';
 import { createPendingChangesService } from './pendingChangesService';
@@ -34,13 +35,7 @@ function readingComment(output: string) {
   return { seen, answer };
 }
 
-const STATUS_XML = `<?xml version="1.0" encoding="utf-8"?>
-<StatusOutput>
-  <WorkspaceStatus><Status><Changeset>7</Changeset></Status></WorkspaceStatus>
-  <Changes>
-    <Change><Type>CH</Type><Path>src/player.cs</Path><OldPath /><MergesInfo /><SimilarityPerUnit>0</SimilarityPerUnit><Size>3</Size><RevisionType>enTextFile</RevisionType><LastModified>2026-09-25T08:26:09+02:00</LastModified></Change>
-  </Changes>
-</StatusOutput>`;
+const STATUS_XML = pendingStatus(change('CH', 'src/player.cs'));
 
 // As the server formats ITEMS_ALREADY_LOCKED: the header, then one line per item.
 const LOCKED_OUTPUT = 'These items are exclusively checked out by: \n/art/Hero.fbx (wk:ana-wk owner:ana)\n';
