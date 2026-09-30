@@ -2,13 +2,10 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
-import { dialog } from 'electron';
-import { fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { describe, expect, it } from 'vitest';
+import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createExplorerService } from './explorerService';
 import { serviceContext } from './testing/serviceContext';
-
-vi.mock('electron', () => ({ dialog: { showSaveDialog: vi.fn() }, shell: {} }));
 
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 
@@ -96,30 +93,5 @@ describe('changing the workspace', () => {
       `add -R --coparent ${join(WORKSPACE, 'Assets')} ${join(WORKSPACE, 'Docs')}`,
       `changerevisiontype ${join(WORKSPACE, 'a.png')} ${join(WORKSPACE, 'b.png')} --type=bin`,
     ]);
-  });
-});
-
-describe('saving a revision', () => {
-  it('downloads the revision where the user chose', async () => {
-    const target = join(await mkdtemp(join(tmpdir(), 'save-')), 'a.cs');
-    vi.mocked(dialog.showSaveDialog).mockResolvedValueOnce({ canceled: false, filePath: target });
-    const { service, commands } = explorer({
-      cat: async ({ args }) => {
-        await writeFile(optionValue(args, '--file=')!, 'old version');
-        return '';
-      },
-    });
-
-    expect(await service.saveRevisionAs(WORKSPACE, { revisionId: 45, repository: 'game@local' }, 'a.cs')).toBe(true);
-    expect(commands.map((command) => command.args)).toEqual([['cat', 'revid:45@game@local', `--file=${target}`]]);
-    expect(await readFile(target, 'utf8')).toBe('old version');
-  });
-
-  it('downloads nothing when the user cancels', async () => {
-    vi.mocked(dialog.showSaveDialog).mockResolvedValueOnce({ canceled: true, filePath: '' });
-    const { service, commands } = explorer({});
-
-    expect(await service.saveRevisionAs(WORKSPACE, { revisionId: 45, repository: 'game@local' }, 'a.cs')).toBe(false);
-    expect(commands).toEqual([]);
   });
 });

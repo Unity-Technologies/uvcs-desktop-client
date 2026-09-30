@@ -9,11 +9,9 @@ import { listWorkspacePaths } from '../files/listWorkspacePaths';
 import { moveArgs, moveItems } from '../files/moveItems';
 import { renamePrivate } from '../files/renamePrivate';
 import { toAbsolutePath } from '../files/workspacePaths';
-import { revisionFiles } from './revisionFiles';
 import type { ServiceContext } from './ServiceContext';
 
 export function createExplorerService({ cm, operations }: ServiceContext): ExplorerApi {
-  const revisions = revisionFiles(cm);
   const inWorkspace = (workspacePath: string) => ({ cwd: workspacePath });
   const absolute = (workspacePath: string, paths: string[]) => paths.map((path) => toAbsolutePath(workspacePath, path));
 
@@ -73,7 +71,5 @@ export function createExplorerService({ cm, operations }: ServiceContext): Explo
     moveItems: moveItemsInto,
     create,
     changeRevisionType,
-    saveRevisionAs: async (workspacePath, revision, fileName) => (await revisions.saveAs(workspacePath, revision, fileName)) !== null,
-    openRevision: revisions.open,
   };
 }

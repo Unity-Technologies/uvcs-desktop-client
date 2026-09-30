@@ -1,4 +1,5 @@
 import { useDeferredValue, useMemo, useState } from 'react';
+import { revisionRef } from '@shared/domain/revision';
 import type { PageProps } from '../../app/navigation/pages';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
@@ -16,8 +17,9 @@ import { FILE_TREE_WIDTH } from '../files/fileTreeWidth';
 import { buildFileTreeRows } from '../files/fileTreeRows';
 import { ItemDetailsPane } from '../files/ItemDetailsPane';
 import { useTreeListings } from '../files/useTreeListings';
+import { openRevision } from '../history/revisionOperations';
 import { repositoryListingQuery } from './repositoryListing';
-import { openRevision, revisionMenu } from './revisionMenu';
+import { revisionMenu } from './revisionMenu';
 
 /** The repository as it was at a changeset: read-only, no workspace needed. */
 export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
@@ -63,7 +65,7 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
               selection={selection}
               onSelectionChange={setSelection}
               onToggleDirectory={(directory) => toggle(treeId, directory)}
-              onOpenFile={(item) => openRevision(workspacePath, item)}
+              onOpenFile={(item) => void openRevision(workspacePath, revisionRef(item), item.name)}
               contextMenu={(items) => revisionMenu(workspacePath, page.changesetId, repository, items)}
               revealPath={revealPath}
             />

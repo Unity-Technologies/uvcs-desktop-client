@@ -2,14 +2,12 @@ import type { TreeItem } from '@shared/domain/explorer';
 import { otherRepository } from '@shared/domain/repository';
 import { revisionRef } from '@shared/domain/revision';
 import { spec } from '@shared/domain/specs';
-import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
-import { runRead } from '../../app/operations/runOperation';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
-import { toast } from '../../ui/toast/toastStore';
 import { copySubmenu } from '../../components/copyMenu';
 import { menuAction } from '../../components/menuWords';
+import { openRevision, saveRevisionAs } from '../history/revisionOperations';
 
 /**
  * The context menu of items in the repository tree of a changeset (not in the workspace). `repository` is the one
@@ -23,17 +21,8 @@ export function revisionMenu(workspacePath: string, changesetId: number, reposit
 
   return groupedMenu([
     single && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path, revision: revisionRef(single) })),
-    file && menuAction('openRevision', () => openRevision(workspacePath, file)),
-    file && menuAction('saveAs', () => void saveRevisionAs(workspacePath, file)),
+    file && menuAction('openRevision', () => void openRevision(workspacePath, revisionRef(file), file.name)),
+    file && menuAction('saveAs', () => void saveRevisionAs(workspacePath, revisionRef(file), file.name)),
     copySubmenu('', { serverPath: items.map((item) => `/${item.path}`).join('\n'), spec: singleSpec }, { count: items.length }),
   ]);
-}
-
-export function openRevision(workspacePath: string, item: TreeItem): void {
-  void runRead(`Couldn't open ${item.name}`, () => api.explorer.openRevision(workspacePath, revisionRef(item), item.name));
-}
-
-async function saveRevisionAs(workspacePath: string, item: TreeItem): Promise<void> {
-  const saved = await runRead(`Couldn't save ${item.name}`, () => api.explorer.saveRevisionAs(workspacePath, revisionRef(item), item.name));
-  if (saved) toast.success(`Saved ${item.name}`);
 }
