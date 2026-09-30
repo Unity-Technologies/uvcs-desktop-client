@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { branch, changeset, sampleHistory } from '../model/graphFixtures';
+import { countCalls } from '@shared/testing/countCalls';
+import { branch, changeset, largeHistory, sampleHistory } from '../model/graphFixtures';
 import { pendingParentCurve } from './curves';
-import { layoutGraph } from '../model/layoutGraph';
+import { layoutGraph, type Lane } from '../model/layoutGraph';
 import { BAND_HEIGHT, columnX, graphSize, HEADER_HEIGHT, HEADER_INSET, HEADER_MAX_WIDTH, headerTop, GRAPH_PADDING, NODE_RADIUS, rowY, TWO_LINE_HEADER_HEIGHT } from './geometry';
 import { labelChips } from './labelPlacement';
 import { graphExtent, laneHeaderHeight, laneHeaderTop, laneShape, roomBeforeNextLane } from './laneShape';
@@ -68,6 +69,14 @@ describe('roomBeforeNextLane', () => {
     expect(room).toBeLessThan(nextLeft - left);
     expect(room).toBeGreaterThan(nextLeft - left - 20);
     expect(roomBeforeNextLane(shared, lane('/main/a'), left + 30)).toBe(room - 30);
+  });
+
+  it('measures each row once, however many of its branches ask', () => {
+    const big = layoutGraph(largeHistory(10_000, 2_000));
+    const { calls } = countCalls(big.lanesByRow as Map<number, readonly Lane[]>, 'get', () => {
+      for (let frame = 0; frame < 3; frame++) for (const each of big.lanes) roomBeforeNextLane(big, each, laneShape(each).left);
+    });
+    expect(calls).toBeLessThanOrEqual(big.rowCount);
   });
 
   it('is endless past the last band on the row', () => {
