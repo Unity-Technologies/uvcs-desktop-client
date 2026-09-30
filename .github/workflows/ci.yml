@@ -29,6 +29,30 @@ jobs:
           - { name: Windows arm64, os: windows-11-arm }
           - { name: Linux x64, os: ubuntu-latest }
     steps:
+      # The Windows arm64 runner builds on C:, a network-attached virtual disk, and leaves a local NVMe SSD raw (no
+      # partition): `npm ci` of the cached packages takes about 3 minutes on C: and 30 s on that SSD. This formats it as
+      # a Dev Drive and points the checkout folder (a junction, so every later step keeps its usual paths), npm's cache
+      # and the temp folder at it; before the checkout, which fills that folder. Runners without a raw disk skip it
+      # (Windows x64 builds on a separate D:). Timed: the tests take as long on any disk; 2 CPUs, not the disk, bound them.
+      - name: Build on the local SSD
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $raw = Get-Disk | Where-Object PartitionStyle -eq 'RAW' | Select-Object -First 1
+          if (-not $raw) {
+            'No unused local disk: building on the default one.'
+            exit 0
+          }
+          "Building on $($raw.FriendlyName)"
+          $volume = $raw | Initialize-Disk -PartitionStyle GPT -PassThru | New-Partition -UseMaximumSize -AssignDriveLetter |
+            Format-Volume -DevDrive -Confirm:$false -Force
+          $drive = "$($volume.DriveLetter):"
+          foreach ($folder in 'workspace', 'npm-cache', 'temp') { New-Item -ItemType Directory "$drive\$folder" | Out-Null }
+          Remove-Item $env:GITHUB_WORKSPACE -Recurse -Force
+          New-Item -ItemType Junction -Path $env:GITHUB_WORKSPACE -Target "$drive\workspace" | Out-Null
+          "npm_config_cache=$drive\npm-cache" >> $env:GITHUB_ENV
+          "TEMP=$drive\temp" >> $env:GITHUB_ENV
+          "TMP=$drive\temp" >> $env:GITHUB_ENV
       - uses: actions/checkout@v5
       - uses: ./.github/actions/install
         with:
