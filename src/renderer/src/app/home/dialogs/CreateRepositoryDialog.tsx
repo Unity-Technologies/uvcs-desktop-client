@@ -76,11 +76,6 @@ function CreateRepositoryDialog({ server: initialServer, onWorkspaceCreated, onC
     onWorkspaceCreated(outcome.workspace.path);
   };
 
-  const chooseLocation = async (): Promise<void> => {
-    const directory = await api.system.pickDirectory('Choose the workspace folder', root);
-    if (directory) setChosenPath(directory);
-  };
-
   return (
     <Dialog
       title="New repository"
@@ -114,7 +109,7 @@ function CreateRepositoryDialog({ server: initialServer, onWorkspaceCreated, onC
       {!created && (
         <Checkbox label="Also create a workspace to start working right away" checked={withWorkspace} onChange={setWithWorkspace} />
       )}
-      {withWorkspace && <LocationField path={workspacePath} onChange={setChosenPath} onChoose={() => void chooseLocation()} />}
+      {withWorkspace && <LocationField path={workspacePath} onChange={setChosenPath} pickerTitle="Choose the workspace folder" pickerFolder={root} />}
     </Dialog>
   );
 }
