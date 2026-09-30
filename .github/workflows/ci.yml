@@ -61,6 +61,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           working-directory: ${{ env.BUILD_DIR || github.workspace }}
+          reuse-node-modules: 'true'
       - run: npm run typecheck
         working-directory: ${{ env.BUILD_DIR || github.workspace }}
       - run: npm test

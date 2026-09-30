@@ -8,21 +8,35 @@ inputs:
   working-directory:
     description: The folder to install in (the checkout, or its copy on a faster disk).
     default: .
+  reuse-node-modules:
+    description: Restore node_modules from the last install of the same lockfile instead of running npm ci ('true' in CI; releases install clean).
+    default: 'false'
 
 runs:
   using: composite
   steps:
-    # Caches npm's download cache (~/.npm), not node_modules, which holds each platform's own Electron.
+    # Caches npm's download cache (~/.npm), for the installs that don't reuse node_modules below.
     - uses: actions/setup-node@v5
       with:
         node-version: ${{ inputs.node-version }}
         cache: npm
 
+    # node_modules as the last `npm ci` of the same lockfile left it, Electron included: restoring one archive is much
+    # faster than npm writing ~30k files again, which took about 50 s on each Windows runner. Keyed by OS, architecture
+    # and Node version, since node_modules holds each platform's own Electron. On a hit the steps below are skipped.
+    - id: node-modules
+      if: inputs.reuse-node-modules == 'true'
+      uses: actions/cache@v4
+      with:
+        path: ${{ inputs.working-directory }}/node_modules
+        key: node-modules-v1-${{ runner.os }}-${{ runner.arch }}-node${{ inputs.node-version }}-${{ hashFiles('package-lock.json') }}
+
     # The Electron archive the postinstall (`install-electron`) downloads, ~100 MB from GitHub releases: a flaky
     # download is the most common CI failure, and a warm cache makes it a local unzip. Keyed by OS and architecture,
     # so the Windows x64 and arm64 legs never share one. These are @electron/get's cache folders; only the runner's own
     # exists. Bump the `v1` salt to drop a cached archive that a cut-short save left truncated.
-    - uses: actions/cache@v4
+    - if: steps.node-modules.outputs.cache-hit != 'true'
+      uses: actions/cache@v4
       with:
         path: |
           ~/.cache/electron
@@ -32,6 +46,7 @@ runs:
 
     # The registry now and then drops a connection mid-install: try a couple more times before failing.
     - name: Install dependencies
+      if: steps.node-modules.outputs.cache-hit != 'true'
       shell: bash
       working-directory: ${{ inputs.working-directory }}
       run: |
