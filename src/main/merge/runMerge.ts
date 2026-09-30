@@ -27,7 +27,8 @@ import { previewMerge } from './previewMerge';
  * 1. Directory conflicts are solved one by one with `--resolveconflict`; `cm` keeps the decisions in state files.
  * 2. The final `cm merge --merge` applies everything. Conflicting files keep one side (see `fileConflictArgs`),
  *    so nothing is decided behind the user's back and no external merge tool opens.
- * 3. For workspace merges, each conflicting file is then written with its resolution.
+ * 3. For workspace merges, each conflicting file is then written with its resolution: the text decided, the source's
+ *    text as the page read it, or else (binaries) the source's revision, with one `cm cat` each.
  * If anything looks different from the plan the user reviewed, it stops before changing the workspace.
  */
 export async function runMerge(
@@ -116,11 +117,17 @@ async function writeFileResolutions(
     const resolution = resolutions[conflict.path]!;
     const target = toAbsolutePath(workspacePath, conflict.path.replace(/^\//, ''));
 
-    if (resolution.choice === 'text') {
-      await retryWhileBusy(() => writeFile(target, resolution.text, 'utf8'));
+    const text = textToWrite(resolution);
+    if (text !== undefined) {
+      await retryWhileBusy(() => writeFile(target, text, 'utf8'));
     } else if (resolution.choice === 'source') {
       const source = spec.itemAt(conflict.itemId, mergeSourcePoint(request, conflict.sourceChangeset), conflict.repository);
       await cm.query(['cat', source, `--file=${target}`], { cwd: workspacePath });
     }
   }
+}
+
+/** The text a file is written with: the one decided, or the source's as read; none to keep the destination, or for `cm cat`. */
+function textToWrite(resolution: FileConflictResolution): string | undefined {
+  return resolution.choice === 'destination' ? undefined : resolution.text;
 }

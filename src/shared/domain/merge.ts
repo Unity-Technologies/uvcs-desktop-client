@@ -112,7 +112,11 @@ export type DirectoryConflictResolution =
   | { choice: 'rename'; newName: string };
 
 export type FileConflictResolution =
-  | { choice: 'source' }
+  /**
+   * Keep the source's version. `text`: that version as the merge page read it, when writing it gives back its very
+   * bytes (a text file in UTF-8): the merge writes it instead of asking `cm` for it again. Without it, `cm cat` does.
+   */
+  | { choice: 'source'; text?: string }
   | { choice: 'destination' }
   /** The merged text written by the user or merged automatically. */
   | { choice: 'text'; text: string };
