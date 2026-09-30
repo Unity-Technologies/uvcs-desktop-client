@@ -133,6 +133,15 @@ describe('deleteShelve', () => {
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Deleted shelve 12' }]);
   });
 
+  it('refreshes only the shelve lists and the left changes, which offer shelves back', async () => {
+    fakeApi.answer('shelves.delete', () => undefined);
+    const refreshed = watchRefreshes(ws);
+
+    await deleteShelve(ws, 12);
+
+    expect(refreshed()).toEqual(['leftChanges', 'shelves']);
+  });
+
   it('deletes nothing unless confirmed', async () => {
     answerConfirms(false);
 

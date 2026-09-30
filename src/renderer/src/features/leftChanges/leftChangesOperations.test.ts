@@ -5,7 +5,7 @@ vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import type { LeftChanges, RestoreResult } from '@shared/domain/switchWithChanges';
 import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
-import { shownToasts, whereTheWindowIs } from '../../testing/operationOutcome';
+import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
 import { discardLeftChanges, restoreLeftChanges } from './leftChangesOperations';
 
 const ws = '/ws';
@@ -93,6 +93,15 @@ describe('discardLeftChanges', () => {
 
     expect(confirmTitles()).toEqual(['Discard these shelved changes?']);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Discarded shelve 12' }]);
+  });
+
+  it('refreshes only the left changes and the shelve lists', async () => {
+    fakeApi.answer('leftChanges.discard', () => undefined);
+    const refreshed = watchRefreshes(ws);
+
+    await discardLeftChanges(ws, [left(12)]);
+
+    expect(refreshed()).toEqual(['leftChanges', 'shelves']);
   });
 
   it('discards nothing unless confirmed', async () => {
