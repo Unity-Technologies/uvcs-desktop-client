@@ -101,15 +101,5 @@ async function readIncomingChangesets(cm: CmClient, workspacePath: string): Prom
   const branch = selector.name;
   const xml = await cm.query(findArgs('changeset', { branch }, 'changesetid desc', [`changesetid > ${loadedChangeset}`]), { cwd: workspacePath });
   const changesets = findRecords(xml, 'CHANGESET').map(toChangeset);
-
-  return {
-    summary: {
-      branch,
-      loadedChangeset,
-      headChangeset: changesets[0]?.id ?? loadedChangeset,
-      changesetCount: changesets.length,
-      authors: distinctAuthors(changesets.map((changeset) => changeset.owner)),
-    },
-    changesets,
-  };
+  return { summary: summarizeIncoming(branch, loadedChangeset, changesets), changesets };
 }
