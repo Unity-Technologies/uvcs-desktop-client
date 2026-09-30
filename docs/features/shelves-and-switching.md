@@ -8,13 +8,19 @@ How pending changes survive switches, updates and shelving, and how two people s
 `cm switch` only ever runs on a clean workspace (`main/workspace/switchWithChanges.ts`), whatever client.conf's
 `PendingChangesOnSwitchAction` says. The renderer's single entry point is `switchWorkspace`
 (`app/shell/workspaceOperations.ts`): preflight, then ask (or follow the setting) whether to leave the changes or
-bring them along. The main process shelves them with the official automatic-shelve comment, checks the shelve holds
-them all, records it in the settings (`switchShelves`), undoes, moves added files aside (until the shelve brings them
-back), switches, and merges the shelve on the target (bring). Failures put the changes back, switching back first if
-the switch moved the workspace halfway. Left shelves (the app's and the official
+bring them along. What the pending changes allow is one rule for the preflight and the switch (`switchApproach`):
+nothing pending switches as is, checkouts without edits are undone without asking, an unfinished merge is refused, and
+anything else is shelved. The main process then shelves them with the official automatic-shelve comment
+(`createAutomaticShelve`), checks the shelve holds them all (`createVerifiedShelve`), records it in the settings
+(`switchShelves`, built by `newShelveRecord`), undoes, moves added files aside (`moveNewItemsAside`, until the shelve
+brings them back), switches, and merges the shelve on the target (bring, `applyShelveCleanly`). Stopping is honoured
+only until the changes are shelved. Failures put the changes back (`rollBackSwitch`), switching back first if the
+switch moved the workspace halfway; when that isn't possible the error says which shelve holds them and where to
+restore them. Every flow that shelves changes out of the workspace (switch, shelve away, update) puts them back the same
+way (`putBackAfterFailure`). Left shelves (the app's and the official
 client's) are offered again by the "Welcome back" banner in Changes (`features/leftChanges`), or restored
-automatically on arrival when they apply cleanly. Changes still waiting to be brought (conflicts left for the merge
-view) are offered on the target, and as left ones on the source if the user goes back instead.
+automatically on arrival when they apply cleanly (`restoreOnArrival`). Changes still waiting to be brought (conflicts
+left for the merge view) are offered on the target, and as left ones on the source if the user goes back instead.
 
 ## A workspace on a shelve
 
@@ -71,6 +77,12 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
 - When the incoming check already knows the branch moved on (and names who checked in), the button reads "Update & check
   in" and takes the same path up front (`updateFirst`): no overlap updates and checks in without asking; overlap asks.
 - An update stopped by colliding local changes (`--dontmerge`) shows a toast leading to Incoming (`explainUpdateConflicts`).
-- Local changes to files the branch deleted or moved block the update. `shelveBlockedAndUpdate` shelves just those files
-  as a switch shelve record (`reason: 'update'`), undoes them and updates; the "Welcome back" banner offers them back.
+- Files changed both locally and on the branch update with the user's merge (`updateWithMerge`): their local versions
+  are saved outside the workspace (`saveLocalVersions`, kept afterwards), undone, updated, then written as decided and
+  checked out again where they were. If undoing or updating fails, the local versions go back as they were, checkouts
+  included (`putLocalVersionsBack`).
+- Local changes to files the branch deleted or moved block the update (`findUpdateBlockers`). `shelveBlockedAndUpdate`
+  shelves just those files as a switch shelve record (`reason: 'update'`), undoes them and updates, merging the files
+  it already read as colliding (`updateMergingConflicts`: what came in is read once); the "Welcome back" banner offers
+  them back.
 

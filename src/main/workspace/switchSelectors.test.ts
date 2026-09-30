@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { selectorSpec } from '@shared/domain/specs';
-import { bringDisabledReason, describeSelector, parseSelectorSpec } from './switchSelectors';
+import { bringDisabledReason, describeSelector, leaveDisabledReason, parseSelectorSpec, selectorPlace } from './switchSelectors';
 
 describe('parseSelectorSpec', () => {
   it('reads the kind, name and repository of a spec', () => {
@@ -21,6 +21,12 @@ describe('describeSelector', () => {
   });
 });
 
+describe('selectorPlace', () => {
+  it('keeps the spec to recognize a selector and the name to show it', () => {
+    expect(selectorPlace({ kind: 'changeset', name: '42' })).toEqual({ spec: 'cs:42', name: 'changeset 42' });
+  });
+});
+
 describe('bringDisabledReason', () => {
   it('allows bringing changes to branches and changesets of the same repository', () => {
     expect(bringDisabledReason('br:/main/t2', 'swx')).toBeUndefined();
@@ -31,5 +37,13 @@ describe('bringDisabledReason', () => {
     expect(bringDisabledReason('lb:v1', 'swx')).toBe('label');
     expect(bringDisabledReason('sh:3', 'swx')).toBe('shelve');
     expect(bringDisabledReason('br:/main@other@local', 'swx')).toBe('otherRepository');
+  });
+});
+
+describe('leaveDisabledReason', () => {
+  it('lets changes stay behind anywhere but on a shelve', () => {
+    expect(leaveDisabledReason({ kind: 'branch', name: '/main' })).toBeUndefined();
+    expect(leaveDisabledReason({ kind: 'label', name: 'v1' })).toBeUndefined();
+    expect(leaveDisabledReason({ kind: 'shelve', name: '4' })).toBe('shelveSource');
   });
 });

@@ -33,13 +33,15 @@ interface Branch {
   incoming: string;
   /** Updating fails with this message. */
   failUpdate?: string;
+  /** Undoing writes the loaded revision of the first file, then fails with this message. */
+  failUndoAfterFirst?: string;
 }
 
 /**
  * A workspace on /main at changeset 1 whose files a, b and c are changed locally (a checked out), while changeset 2
  * on /main changed the files `incoming` names. Undoing a file writes the loaded revision; updating writes changeset 2's.
  */
-function updatingCm(workspacePath: string, { incoming, failUpdate }: Branch) {
+function updatingCm(workspacePath: string, { incoming, failUpdate, failUndoAfterFirst }: Branch) {
   const file = (name: string): string => join(workspacePath, 'src', name);
   return fakeCmClient({
     'status --header --xml': statusHeader('/main'),
@@ -48,7 +50,10 @@ function updatingCm(workspacePath: string, { incoming, failUpdate }: Branch) {
     'status --xml --controlledchanged --changed': pendingStatus(change('CO+CH', 'src/a.txt'), change('CH', 'src/b.txt'), change('CH', 'src/c.txt')),
     'status --xml --checkout': pendingStatus(change('CO+CH', 'src/a.txt')),
     undo: async ({ args }) => {
-      for (const path of args.slice(1)) await writeFile(path, 'loaded\n');
+      for (const path of args.slice(1)) {
+        await writeFile(path, 'loaded\n');
+        if (failUndoAfterFirst) return cmFails(failUndoAfterFirst);
+      }
       return '';
     },
     update: async () => {
@@ -110,6 +115,22 @@ describe('updateWithMerge', () => {
 
     await expect(updateWithMerge(cm, workspacePath, resolved, backupsRoot, recordingContext().context)).rejects.toThrow(
       'The server is unreachable. Your local changes were put back; nothing was lost.',
+    );
+    expect([await read('a.txt'), await read('b.txt'), await read('c.txt')]).toEqual(['mine a.txt\n', 'mine b.txt\n', 'mine c.txt\n']);
+  });
+
+  it('checks out again the files that were checked out when the update fails, as they were', async () => {
+    const { cm, lines } = updatingCm(workspacePath, { incoming: changedOnBranch, failUpdate: 'The server is unreachable.' });
+
+    await expect(updateWithMerge(cm, workspacePath, resolved, backupsRoot, recordingContext().context)).rejects.toThrow('nothing was lost');
+    expect(lines().filter((line) => line.startsWith('checkout'))).toEqual([`checkout ${join(workspacePath, 'src', 'a.txt')}`]);
+  });
+
+  it('puts the local versions back when undoing them fails halfway', async () => {
+    const { cm } = updatingCm(workspacePath, { incoming: changedOnBranch, failUndoAfterFirst: 'The file is in use.' });
+
+    await expect(updateWithMerge(cm, workspacePath, resolved, backupsRoot, recordingContext().context)).rejects.toThrow(
+      'The file is in use. Your local changes were put back; nothing was lost.',
     );
     expect([await read('a.txt'), await read('b.txt'), await read('c.txt')]).toEqual(['mine a.txt\n', 'mine b.txt\n', 'mine c.txt\n']);
   });

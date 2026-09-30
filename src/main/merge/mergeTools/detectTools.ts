@@ -25,7 +25,7 @@ export function detectKnownTools(tools: KnownTool[], where: Whereabouts, fs: Too
 
 function findFirst(candidates: string[], where: Whereabouts, fs: ToolFileSystem): string | undefined {
   for (const candidate of candidates) {
-    const found = candidate.includes('*') ? expandWildcard(candidate, where, fs) : fs.exists(candidate) && candidate;
+    const found = candidate.includes('*') ? expandWildcard(candidate, where, fs) : fs.exists(candidate) ? candidate : undefined;
     if (found) return found;
   }
   return undefined;

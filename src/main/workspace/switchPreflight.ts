@@ -1,33 +1,41 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
+import { selectorSpec } from '@shared/domain/specs';
 import type { SwitchPreflight } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import { LOCK_LIST_FORMAT_ARGS, parseLocks } from '../cm/lockRecords';
-import { parsePendingChanges } from '../cm/pendingChangesXml';
-import { shelvableChanges, summarizePending, SWITCH_STATUS_ARGS } from './pendingSnapshot';
-import { selectorSpec } from '@shared/domain/specs';
-import { bringDisabledReason, describeSelector } from './switchSelectors';
+import { isLeftChanges } from './leftChangesRecords';
+import { shelvableChanges, summarizePending } from './pendingSnapshot';
+import { readPendingSnapshot } from './readPendingChanges';
+import { switchApproach } from './switchApproach';
+import { bringDisabledReason, describeSelector, leaveDisabledReason } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';
 
 /** Reads what the pending changes allow before switching, so the app can offer the right choices. */
 export async function readSwitchPreflight(cm: CmClient, records: SwitchShelveRecords, workspacePath: string, targetSpec: string): Promise<SwitchPreflight> {
-  const [workspace, statusXml] = await Promise.all([readWorkspaceIdentity(cm, workspacePath), cm.query(SWITCH_STATUS_ARGS, { cwd: workspacePath })]);
-  const { changes } = parsePendingChanges(statusXml);
+  const [workspace, { changes }] = await Promise.all([readWorkspaceIdentity(cm, workspacePath), readPendingSnapshot(cm, workspacePath)]);
   const summary = summarizePending(changes);
-  const needsChoice = summary.pendingCount > 0 && !summary.unchangedCheckoutsOnly && !summary.inMerge;
-  const sourceSpec = selectorSpec(workspace.selector);
+  const needsChoice = switchApproach(summary) === 'shelveChanges';
 
   return {
     sourceName: describeSelector(workspace.selector),
     ...summary,
     lockedPaths: needsChoice ? await lockedPendingPaths(cm, workspacePath, workspace, shelvableChanges(changes)) : [],
     bringDisabledReason: bringDisabledReason(targetSpec, workspace.repositoryName),
-    leaveDisabledReason: workspace.selector.kind === 'shelve' ? 'shelveSource' : undefined,
-    leftShelveCount: records
-      .forWorkspace(workspace.guid)
-      // Shelves the user shelved away aren't changes left behind: "Welcome back" never offers them either.
-      .filter((record) => record.mode === 'leave' && record.reason !== 'shelve' && record.repository === workspace.repository && record.source.spec === sourceSpec).length,
+    leaveDisabledReason: leaveDisabledReason(workspace.selector),
+    leftShelveCount: countLeftOnSource(records, workspace),
   };
+}
+
+/**
+ * The shelves already left where the workspace is: not those brought along, nor the ones the user shelved away, which
+ * aren't changes left behind ("Welcome back" never offers them either).
+ */
+function countLeftOnSource(records: SwitchShelveRecords, workspace: WorkspaceIdentity): number {
+  const sourceSpec = selectorSpec(workspace.selector);
+  return records
+    .forWorkspace(workspace.guid)
+    .filter((record) => record.mode === 'leave' && isLeftChanges(record) && record.repository === workspace.repository && record.source.spec === sourceSpec).length;
 }
 
 /** Pending paths locked by this user in this workspace: undoing them for the switch releases their locks. */

@@ -6,9 +6,8 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { PendingChangesAction } from '@shared/domain/switchWithChanges';
 import { recordingContext } from '../operations/testing/recordingContext';
 import { memorySettings } from '../settings/testing/memorySettings';
-import { LeftChangesFinder } from './leftChanges';
-import { SwitchShelveRecords } from './switchShelveRecords';
 import { switchWithChanges, type SwitchDependencies } from './switchWithChanges';
+import { playAlongDependencies } from './testing/playAlongDependencies';
 import { playAlongWorkspace, type WorkspaceScenario } from './testing/playAlongWorkspace';
 
 const EDITED_AND_ADDED = { 'src/a.txt': 'CH', 'src/new.txt': 'AD' };
@@ -25,17 +24,7 @@ beforeEach(async () => {
 /** A workspace on /main/task1, with a `cm` that plays along, and the app's real records and left changes. */
 function workspaceWith(scenario: WorkspaceScenario, { restoreLeftChangesAutomatically = false } = {}) {
   const workspace = playAlongWorkspace(workspacePath, scenario);
-  const settings = memorySettings({ restoreLeftChangesAutomatically });
-  const records = new SwitchShelveRecords(settings);
-  const deps: SwitchDependencies = {
-    cm: workspace.cm,
-    settings,
-    records,
-    leftChanges: new LeftChangesFinder(workspace.cm, records),
-    backupsRoot: join(workspacePath, '..', 'backups'),
-  };
-  const recordOf = (shelveId: number) => records.find({ shelveId, repository: 'eco@local' });
-  return { ...workspace, deps, records, recordOf };
+  return { ...workspace, ...playAlongDependencies(workspace.cm, workspacePath, memorySettings({ restoreLeftChangesAutomatically })) };
 }
 
 function switchTo(deps: SwitchDependencies, target: string, action?: PendingChangesAction, context = recordingContext().context) {

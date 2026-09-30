@@ -59,7 +59,23 @@ export class WorkspaceHeaders {
     else this.reads.delete(workspacePath);
   }
 
+  /** The read of `kind` this workspace shares while fresh, started now if there is none. */
   private shared<Kind extends 'status' | 'names'>(workspacePath: string, kind: Kind): NonNullable<Reads[Kind]> {
+    const reads = this.freshReads(workspacePath);
+    const shared = reads[kind];
+    if (shared) return shared;
+
+    const read = (kind === 'status' ? this.readers.status(workspacePath) : this.readers.names(workspacePath)) as NonNullable<Reads[Kind]>;
+    reads[kind] = read;
+    read.catch(() => {
+      // A failure is not an answer to share.
+      if (reads[kind] === read) delete reads[kind];
+    });
+    return read;
+  }
+
+  /** The workspace's reads still fresh, once every workspace's older ones are dropped. */
+  private freshReads(workspacePath: string): Reads {
     const now = this.now();
     for (const [path, reads] of this.reads) if (now - reads.at >= FRESH_MS) this.reads.delete(path);
     let reads = this.reads.get(workspacePath);
@@ -67,13 +83,6 @@ export class WorkspaceHeaders {
       reads = { at: now };
       this.reads.set(workspacePath, reads);
     }
-    const entry = reads;
-    if (!entry[kind]) {
-      const read = (kind === 'status' ? this.readers.status(workspacePath) : this.readers.names(workspacePath)) as NonNullable<Reads[Kind]>;
-      entry[kind] = read;
-      // A failure is not an answer to share.
-      read.catch(() => this.reads.get(workspacePath) === entry && delete entry[kind]);
-    }
-    return entry[kind]!;
+    return reads;
   }
 }

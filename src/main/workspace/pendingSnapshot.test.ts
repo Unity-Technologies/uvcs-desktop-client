@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { missingFromShelve, newItemPaths, shelvedChangelists, summarizePending, topmostPaths } from './pendingSnapshot';
+import { missingFromShelve, newItemPaths, shelvedChangelists, shelvedContents, summarizePending, topmostPaths } from './pendingSnapshot';
 
 function change(path: string, kinds: PendingChange['kinds'], extra: Partial<PendingChange> = {}): PendingChange {
   return { path, kinds, itemType: 'file', size: 0, lastModified: '', ...extra };
@@ -64,5 +64,13 @@ describe('shelvedChangelists', () => {
       mergeLinks: [],
     };
     expect(shelvedChangelists(snapshot)).toEqual([{ name: 'cl1', description: 'mine', paths: ['new.txt'] }]);
+  });
+});
+
+describe('shelvedContents', () => {
+  it('keeps the changed paths of the changes shelved, and only their changelists', () => {
+    const snapshot = { changes: [changed, added, unchangedCheckout], changelists: [{ name: 'cl1', description: 'mine' }], mergeLinks: [] };
+    expect(shelvedContents(snapshot)).toEqual({ paths: ['src/a.txt', 'new.txt'], changelists: [{ name: 'cl1', description: 'mine', paths: ['new.txt'] }] });
+    expect(shelvedContents(snapshot, [changed])).toEqual({ paths: ['src/a.txt'], changelists: [] });
   });
 });
