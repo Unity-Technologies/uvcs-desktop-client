@@ -8,7 +8,8 @@ import type { TreeItem } from '@shared/domain/explorer';
 import { queryClient } from '../../app/queryClient';
 import { answerConfirms, answerPrompts, askedDialogs } from '../../testing/fakeDialogs';
 import { shownToasts } from '../../testing/operationOutcome';
-import { addItems, createItem, deleteItems, directoryListingKey, renameItem, targetDirectoryFor } from './fileOperations';
+import { directoryListingKey } from './directoryListing';
+import { addItems, createItem, deleteItems, renameItem, targetDirectoryFor } from './fileOperations';
 import { useFilesViewStore } from './filesViewStore';
 
 const ws = '/ws';

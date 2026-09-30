@@ -1,13 +1,12 @@
 import type { ItemMove, TreeItem } from '@shared/domain/explorer';
 import { api } from '../../api/client';
 import { runOperation } from '../../app/operations/runOperation';
-import { queryClient } from '../../app/queryClient';
 import { isAffectedByFileChangesIn, isAffectedByMovedPaths } from '../../app/refresh/refreshScopes';
 import { pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 import { useCutItemsStore } from './cutItemsStore';
-import { directoryListingKey, listedItems } from './fileOperations';
+import { listedItems, readDirectoryListing } from './directoryListing';
 import { useFilesViewStore } from './filesViewStore';
 import { parentOf } from './fileTreeRows';
 import { folderLabel, pasteFolderFor, planPaste, reverseMoves, type PastePlan } from './pastePlan';
@@ -26,7 +25,7 @@ export function pastePlanFor(workspacePath: string, selected: readonly TreeItem[
 export async function pasteCutItems(workspacePath: string, selected: readonly TreeItem[]): Promise<void> {
   const folder = pasteFolderFor(selected);
   // The folder's names decide the clashes: read them if it was never opened.
-  if (folder !== null) await queryClient.ensureQueryData({ queryKey: directoryListingKey(workspacePath, folder), queryFn: () => api.explorer.listDirectory(workspacePath, folder) });
+  if (folder !== null) await readDirectoryListing(workspacePath, folder);
   const plan = pastePlanFor(workspacePath, selected);
   if (plan.kind === 'refused') {
     toast.info('Can’t paste here', plan.reason);
