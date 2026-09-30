@@ -257,8 +257,13 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   new one (`app/folderDrop`, as the official client does). The decision is `workspaces.findRoot`, a local
   `cm getworkspacefrompath`, so a folder inside a workspace opens it too; a folder that is no workspace goes straight to
   the new workspace dialog with its location filled in (a folder picked with Open folder… asks first: `openFolder`).
-  Only a single folder is taken; drops wait while a dialog is open. The overlay can't say which will happen: Chromium
-  hides a drag's files until the drop. The drag is followed on `window` by `nextFolderDragState` (enters minus leaves,
+  Only a single folder is taken; drops wait while a dialog is open. Chromium hides a drag's files from the page until
+  the drop, so the overlay's words come from main (`system.draggedFolder`, asked once per drag): on macOS it reads the
+  drag pasteboard with `osascript` (`readDraggedPath`, about 60 ms) and looks for `.plastic` in the folder or above it
+  (`describeDraggedFolder`, no `cm`), and the overlay says "Open workspace" or "Create workspace"
+  (`dropOverlayWording`). Windows and Linux have no pasteboard a process can read during a drag, so there, and until
+  the answer comes, it says "Open or create a workspace". The words are a guess: the drop decides on the dropped path.
+  The drag is followed on `window` by `nextFolderDragState` (enters minus leaves,
   ended for sure by a `dragleave` towards nothing, a drop or any pointer move), since an element's own
   enter and leave events don't pair up and left the overlay on screen.
   The overlay (`FolderDropOverlay`) fades out on a timer (`LEAVE_MS`), never on an animation event, so it can't linger.
