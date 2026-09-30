@@ -5,7 +5,7 @@ import { onLinksThemselves } from '../cm/symlinkArgs';
 import { UPDATE_ARGS } from '../cm/updateArgs';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { readIncomingChanges } from '../merge/incoming';
-import { unresolvedConflicts, updateWithMerge } from '../merge/updateWithMerge';
+import { unresolvedConflicts, updateMergingConflicts } from '../merge/updateWithMerge';
 import type { OperationContext } from '../operations/OperationTracker';
 import { shelvedContents } from './pendingSnapshot';
 import { failureReason, putBackAfterFailure } from './putShelvedChangesBack';
@@ -55,7 +55,10 @@ export async function shelveBlockedAndUpdate(
     if (unresolvedConflicts(incoming.conflicts, resolutions).length > 0) return { ...result, updated: false, backupDirectory: null };
 
     context.beginStep('Updating', 2, 2);
-    if (incoming.conflicts.length > 0) return { ...result, updated: true, ...(await updateWithMerge(cm, workspacePath, resolutions!, deps.backupsRoot, context)) };
+    if (incoming.conflicts.length > 0) {
+      // The blocking files are undone: what came in, read before shelving, is all the update has to merge.
+      return { ...result, updated: true, ...(await updateMergingConflicts(cm, workspacePath, incoming.conflicts, resolutions ?? {}, deps.backupsRoot, context)) };
+    }
     await cm.execute(UPDATE_ARGS, { cwd: workspacePath, onOutputLine: context.progressOf(readUpdateProgress) });
     return { ...result, updated: true, backupDirectory: null };
   } catch (error) {

@@ -28,6 +28,21 @@ export async function updateWithMerge(
 ): Promise<UpdateResult> {
   const { conflicts, blockedPaths } = await readIncomingChanges(cm, workspacePath);
   if (blockedPaths.length > 0) throw new Error(`Check in, shelve or undo your changes to ${blockedPaths.join(', ')} first: the branch deleted or moved them.`);
+  return updateMergingConflicts(cm, workspacePath, conflicts, resolutions, backupsRoot, context);
+}
+
+/**
+ * `updateWithMerge` once what comes in was read, and nothing blocks the update: `conflicts` are the files changed both
+ * locally and on the branch.
+ */
+export async function updateMergingConflicts(
+  cm: CmClient,
+  workspacePath: string,
+  conflicts: UpdateConflict[],
+  resolutions: UpdateResolutions,
+  backupsRoot: string,
+  context: OperationContext,
+): Promise<UpdateResult> {
   const update = (): Promise<string> =>
     cm.execute(UPDATE_ARGS, { cwd: workspacePath, signal: context.signal, onOutputLine: context.progressOf(readUpdateProgress) });
 
