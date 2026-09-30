@@ -26,12 +26,13 @@ export async function resolveWorkspaceRepositories(
   const repositories: Record<string, string | null> = {};
   const pending = [...new Set(workspacePaths)].slice(0, MAX_LOOKUPS);
 
-  const worker = async (): Promise<void> => {
-    for (let path = pending.shift(); path !== undefined && !signal.aborted; path = pending.shift()) {
+  const lookUpNext = async (): Promise<void> => {
+    while (pending.length > 0 && !signal.aborted) {
+      const path = pending.shift()!;
       repositories[path] = await repositoryOf(cm, path, signal);
     }
   };
-  await Promise.all(Array.from({ length: CONCURRENT_LOOKUPS }, worker));
+  await Promise.all(Array.from({ length: CONCURRENT_LOOKUPS }, lookUpNext));
   return repositories;
 }
 
