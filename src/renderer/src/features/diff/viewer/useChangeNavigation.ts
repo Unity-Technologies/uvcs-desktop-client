@@ -8,6 +8,9 @@ import { arrivalChange, changePositionLabel, changesAbove, currentAfterChange, p
 import type { ChangeView } from './changeView';
 import { FileStepsContext, type Arrival } from './fileSteps';
 
+/** Frames to wait, after a step from the file beside it, for the diff to show: it may still be loading. */
+const ARRIVAL_MAX_FRAMES = 60;
+
 export interface ChangeNavigation {
   count: number;
   /** "3 of 12", or "12 changes" before the first move. */
@@ -93,7 +96,7 @@ export function useChangeNavigation(
         arrival.current = null;
         return latestMoveTo.current(at);
       }
-      if (++frames < 60) frame = requestAnimationFrame(arrive);
+      if (++frames < ARRIVAL_MAX_FRAMES) frame = requestAnimationFrame(arrive);
     };
     arrive();
     return () => cancelAnimationFrame(frame);
