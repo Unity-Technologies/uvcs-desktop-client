@@ -15,7 +15,7 @@ import { readPendingSnapshot, readPrivatePaths } from './readPendingChanges';
 import { renamedPrivateFiles } from './renamedPrivateFiles';
 import { selectorObjectRef } from './selectorObjectRef';
 import { selectorSpec } from '@shared/domain/specs';
-import { bringDisabledReason, describeSelector, parseSelectorSpec } from './switchSelectors';
+import { bringDisabledReason, describeSelector, leaveDisabledReason, parseSelectorSpec } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
 import { applyShelveCleanly } from './applyShelveCleanly';
 import { moveNewItemsAside } from './moveNewItemsAside';
@@ -109,7 +109,7 @@ async function privatesRenamedSince(cm: CmClient, workspacePath: string, snapsho
 }
 
 function assertAllowed(action: PendingChangesAction, targetSpec: string, workspace: WorkspaceIdentity): void {
-  if (action === 'leave' && workspace.selector.kind === 'shelve') throw new Error("Changes can't be left on a shelve. Bring them along, or check them in first.");
+  if (action === 'leave' && leaveDisabledReason(workspace.selector)) throw new Error("Changes can't be left on a shelve. Bring them along, or check them in first.");
   if (action === 'bring' && bringDisabledReason(targetSpec, workspace.repositoryName)) throw new Error("Your changes can't be brought to this target.");
 }
 

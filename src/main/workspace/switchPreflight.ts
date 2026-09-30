@@ -5,7 +5,7 @@ import { LOCK_LIST_FORMAT_ARGS, parseLocks } from '../cm/lockRecords';
 import { shelvableChanges, summarizePending } from './pendingSnapshot';
 import { readPendingSnapshot } from './readPendingChanges';
 import { selectorSpec } from '@shared/domain/specs';
-import { bringDisabledReason, describeSelector } from './switchSelectors';
+import { bringDisabledReason, describeSelector, leaveDisabledReason } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';
 
@@ -21,7 +21,7 @@ export async function readSwitchPreflight(cm: CmClient, records: SwitchShelveRec
     ...summary,
     lockedPaths: needsChoice ? await lockedPendingPaths(cm, workspacePath, workspace, shelvableChanges(changes)) : [],
     bringDisabledReason: bringDisabledReason(targetSpec, workspace.repositoryName),
-    leaveDisabledReason: workspace.selector.kind === 'shelve' ? 'shelveSource' : undefined,
+    leaveDisabledReason: leaveDisabledReason(workspace.selector),
     leftShelveCount: records
       .forWorkspace(workspace.guid)
       // Shelves the user shelved away aren't changes left behind: "Welcome back" never offers them either.
