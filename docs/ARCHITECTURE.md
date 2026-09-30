@@ -361,6 +361,10 @@ renderer/src/
   the accent over the icon's corner (99+ at most, `navBadgeText`), the dot at the tile's own corner. Tooltips only add
   what the entry doesn't show (`navItemTip`): the shortcut and the dot's words, and on a tile the whole count, the
   detail and a shortened label spelled out.
+  The sidebar never scrolls, which the rail couldn't show: its groups show the entries that fit and a More entry after
+  them (`NavGroups`, `shownItemCount`), whose popover lists the rest under their groups' titles; More looks selected
+  while it holds the view on screen. It measures the entries as laid out (a tile's label may take two lines) whenever
+  the sidebar's size or entries change, the ones in More kept laid out out of sight for that.
   There is no Annotate page: "Annotate" outside the Files view opens the file's history annotated (`annotatedHistory`).
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
 - **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does), what it
