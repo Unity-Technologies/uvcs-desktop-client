@@ -68,5 +68,5 @@ the last install of the same lockfile (`reuse-node-modules`, CI only: releases i
 Electron's downloads and retries `npm ci`. On a Windows runner with a raw local SSD (arm64) the job formats it as a Dev
 Drive and builds there (`BUILD_DIR`). How fast the tests run on CI's 2-CPU runners, and why: `vitest.config.ts`.
 
-`.github/workflows/codeql.yml` runs GitHub's CodeQL security analysis on pushes to master, pull requests and weekly.
-Code scanning needs a public repository, so while this one is private the job passes without scanning.
+`.github/workflows/codeql.yml` runs GitHub's CodeQL security analysis on pushes to master, pull requests and weekly;
+findings show in the Security tab and on pull requests.
