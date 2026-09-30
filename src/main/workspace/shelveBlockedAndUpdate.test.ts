@@ -4,8 +4,19 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UpdateResolutions } from '@shared/domain/incoming';
 import type { LeftChangesFinder } from './leftChanges';
-import { branchFound, change, changesetsFound, diffRecord, mergeOutput, NOTHING_FOUND, pendingStatus, shelvesCreated, statusHeader, WORKSPACE_NAMES } from '../cm/testing/cmOutput';
-import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
+import {
+  branchFound,
+  change,
+  changesetsFound,
+  diffRecord,
+  mergeOutput,
+  NOTHING_FOUND,
+  pendingStatus,
+  shelvesCreated,
+  statusHeader,
+  WORKSPACE_NAMES,
+} from '../cm/testing/cmOutput';
+import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { recordingContext } from '../operations/testing/recordingContext';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { shelveBlockedAndUpdate } from './shelveBlockedAndUpdate';
@@ -44,7 +55,7 @@ function blockedWorkspace(workspacePath: string, { pending: changed = ['src/old.
     'status --xml --checkout': pendingStatus(),
     'status --short': () => pending.map((path) => `CH ${path}\n`).join(''),
     'shelveset create': async ({ args }) => {
-      shelveComment = await readFile(args.find((arg) => arg.startsWith('-commentsfile='))!.slice('-commentsfile='.length), 'utf8');
+      shelveComment = await readFile(optionValue(args, '-commentsfile=')!, 'utf8');
       return shelvesCreated({ id: 12 });
     },
     'diff sh:12': diffRecord('C', 'src/old.txt', { base: 11, revision: 50 }),

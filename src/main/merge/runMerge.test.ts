@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import type { MergeRequest, MergeResolutions } from '@shared/domain/merge';
 import { mergeOutput, statusHeader, treeListing } from '../cm/testing/cmOutput';
-import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { recordingContext } from '../operations/testing/recordingContext';
 import { runMerge } from './runMerge';
 
@@ -38,7 +38,7 @@ function mergingCm(plan: string[][], { remainingAfterSolving = [] as string[][][
     'merge br:/main/task': merge,
     ls: treeListing('eco@local', 'src/a.txt', 'src/b.txt', 'src/c.txt'),
     cat: async ({ args }) => {
-      await writeFile(args.find((arg) => arg.startsWith('--file='))!.slice('--file='.length), 'incoming version\n');
+      await writeFile(optionValue(args, '--file=')!, 'incoming version\n');
       return '';
     },
     'status --header --xml': statusHeader('/main', { changeset: 4 }),
@@ -165,7 +165,7 @@ describe('runMerge into a server branch', () => {
   it('merges on the server with the comment from a file, keeping one side for every file, and names the changeset made', async () => {
     let comment = '';
     const { cm, lines } = serverCm(mergeOutput(['CHANGESET', 'cs:12@/main@eco@local']), async (args) => {
-      comment = await readFile(args.find((arg) => arg.startsWith('--commentsfile='))!.slice('--commentsfile='.length), 'utf8');
+      comment = await readFile(optionValue(args, '--commentsfile=')!, 'utf8');
     });
 
     expect(await runMerge(cm, workspacePath, TO_MAIN, keepSource, recordingContext().context)).toEqual({ changesetId: 12 });

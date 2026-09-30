@@ -1,8 +1,20 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { AUTOMATIC_SHELVE_COMMENT } from '@shared/domain/shelve';
-import { branchFound, change, diffRecord, formatOutput, mergeOutput, NOTHING_FOUND, pendingStatusInChangelists, shelvesCreated, shelvesFound, statusHeader, WORKSPACE_NAMES } from '../../cm/testing/cmOutput';
-import { cmFails, fakeCmClient, type CmFailure, type FakeCmCommand } from '../../cm/testing/fakeCmClient';
+import {
+  branchFound,
+  change,
+  diffRecord,
+  formatOutput,
+  mergeOutput,
+  NOTHING_FOUND,
+  pendingStatusInChangelists,
+  shelvesCreated,
+  shelvesFound,
+  statusHeader,
+  WORKSPACE_NAMES,
+} from '../../cm/testing/cmOutput';
+import { cmFails, fakeCmClient, optionValue, type CmFailure, type FakeCmCommand } from '../../cm/testing/fakeCmClient';
 
 /** Object ids of the branches the repository has. */
 const BRANCH_IDS: Record<string, number> = { '/main': 3, '/main/task1': 37, '/main/task2': 38 };
@@ -87,7 +99,7 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
   };
 
   const createShelve = async ({ args }: FakeCmCommand): Promise<string> => {
-    const comment = readFileSync(args.find((arg) => arg.startsWith('-commentsfile='))!.slice('-commentsfile='.length), 'utf8');
+    const comment = readFileSync(optionValue(args, '-commentsfile=')!, 'utf8');
     const targets = args.slice(2).filter((arg) => !arg.startsWith('-')).map(relative);
     const shelved = Object.entries(pending).filter(([path, codes]) => codes !== 'PR' && (targets.length === 0 || targets.includes(path)) && path !== fail.shelveMisses);
     const id = nextShelveId++;
