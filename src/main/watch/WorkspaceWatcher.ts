@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import type { WatchCoverage } from '@shared/api/workspaces';
-import type { WorkspaceChange } from '@shared/events';
+import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 import { isSameOrInside } from '../files/pathContainment';
 import { ChangeBatcher } from './ChangeBatcher';
 import { changedFolder } from './changedFolder';

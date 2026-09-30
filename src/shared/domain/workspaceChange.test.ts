@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_CHANGED_FOLDERS, mergeChanges, type WorkspaceChange } from './events';
-import { countedArray } from './testing/countedReads';
+import { MAX_CHANGED_FOLDERS, mergeChanges, type WorkspaceChange } from './workspaceChange';
+import { countedArray } from '../testing/countedReads';
 
 const NOTHING: WorkspaceChange = { content: false, pathsChanged: false, metadata: false, folders: [] };
 

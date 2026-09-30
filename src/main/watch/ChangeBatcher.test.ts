@@ -1,4 +1,4 @@
-import type { WorkspaceChange } from '@shared/events';
+import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ChangeBatcher } from './ChangeBatcher';
 

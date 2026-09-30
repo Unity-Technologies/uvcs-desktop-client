@@ -1,7 +1,7 @@
 import '../../testing/fakeWindow';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
-import type { WorkspaceChange } from '@shared/events';
+import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 
 import { showQuery, type QueryProbe } from '../../testing/queryProbes';
 import { IMMUTABLE_QUERY, keyedByWorkspaceInfo, queryClient } from '../queryClient';

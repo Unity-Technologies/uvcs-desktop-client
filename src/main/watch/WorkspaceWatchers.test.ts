@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import type { WorkspaceChange } from '@shared/events';
+import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 import { WorkspaceWatchers, type Watcher } from './WorkspaceWatchers';
 
 const CHANGE: WorkspaceChange = { content: true, pathsChanged: false, metadata: false, folders: [''] };

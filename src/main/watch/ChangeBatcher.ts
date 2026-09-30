@@ -1,4 +1,4 @@
-import { mergeChanges, type WorkspaceChange } from '@shared/events';
+import { mergeChanges, type WorkspaceChange } from '@shared/domain/workspaceChange';
 
 /**
  * Folds bursts of file system events into one batch: flushes once events stop for `quietMs`, and at the latest

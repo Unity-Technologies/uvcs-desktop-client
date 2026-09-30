@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { WorkspaceChange } from '@shared/events';
+import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 import { fakeFolderWatches } from './testing/fakeFolderWatches';
 import { WorkspaceWatcher } from './WorkspaceWatcher';
 

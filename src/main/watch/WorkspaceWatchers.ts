@@ -1,5 +1,5 @@
 import type { WatchCoverage } from '@shared/api/workspaces';
-import type { WorkspaceChange } from '@shared/events';
+import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 import { WorkspaceWatcher } from './WorkspaceWatcher';
 
 /** What the registry needs from a watcher; tests pass a fake. */

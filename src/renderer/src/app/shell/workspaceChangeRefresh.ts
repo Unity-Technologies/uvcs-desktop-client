@@ -1,7 +1,7 @@
 import type { Query } from '@tanstack/react-query';
 import type { WatchCoverage } from '@shared/api/workspaces';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
-import { mergeChanges, type WorkspaceChange } from '@shared/events';
+import { mergeChanges, type WorkspaceChange } from '@shared/domain/workspaceChange';
 import { queryKeys, workspaceKey } from '../../api/queryKeys';
 import { isKeyedByMovedInfo, isRefreshable, queryClient } from '../queryClient';
 import { loadedChangesetChanged } from '../refresh/headChanges';
