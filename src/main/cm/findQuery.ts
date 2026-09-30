@@ -17,7 +17,15 @@ const TEXT_FIELDS: Record<string, string> = { branch: 'name', label: 'name', cha
 function textCondition(object: string, text: string): string {
   const field = TEXT_FIELDS[object];
   if (!field) throw new Error(`Cannot search ${object} objects by text.`);
-  return `${field} like '${escapeQueryValue(caseTolerantPattern(text))}'`;
+  return `${field} like '${withoutQuotes(caseTolerantPattern(text))}'`;
+}
+
+/**
+ * `cm find` reads no quote inside a value (neither doubled nor between double quotes), so each one in a `like`
+ * pattern matches any text instead: the pattern is loose already, and results are filtered precisely afterwards.
+ */
+function withoutQuotes(pattern: string): string {
+  return pattern.replace(/['"]/g, '%');
 }
 
 /**
