@@ -8,13 +8,13 @@ import { installerAsset } from './installerAsset';
 import { needsManualInstall } from './macSignature';
 import { releaseFileUrl } from './releaseFeed';
 
-/** The app's updates (`AppUpdates`) over electron-updater and Electron, checking on their own from now on. */
-export function startAppUpdates(): AppUpdates {
+/** The app's updates (`AppUpdates`) over electron-updater and Electron; they check on their own once started (`checkPeriodically`). */
+export function createAppUpdates(): AppUpdates {
   // `AppUpdates` downloads once it knows how the update will install (`needsManualInstall`).
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
 
-  const updates = new AppUpdates({
+  return new AppUpdates({
     feed: autoUpdater,
     packaged: app.isPackaged,
     needsManualInstall: async () => process.platform === 'darwin' && needsManualInstall(process.execPath),
@@ -33,6 +33,4 @@ export function startAppUpdates(): AppUpdates {
     },
     push: (status) => sendEvent('updateStatusChanged', status),
   });
-  updates.checkPeriodically();
-  return updates;
 }

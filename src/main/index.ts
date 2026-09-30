@@ -14,7 +14,7 @@ import { trackOperations } from './startup/operationTracking';
 import { ignoreOwnCommandWrites } from './startup/ownWrites';
 import { openSettings, sendSettingsChanges } from './startup/settings';
 import { watchShownWorkspaces } from './startup/workspaceWatching';
-import { startAppUpdates } from './update/startAppUpdates';
+import { createAppUpdates } from './update/createAppUpdates';
 import { installAppMenu, installMenus } from './window/appMenu';
 import { followAppTheme } from './window/followAppTheme';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
@@ -26,10 +26,11 @@ const settings = openSettings(userData);
 // What a workspace is loaded from, shared by the reads that follow one another as a window opens it.
 const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
 const watchers = watchShownWorkspaces(cm, headers);
+const updates = createAppUpdates();
 const windows = new WorkspaceWindows({
   settings,
   workspaceOf: (viewer) => watchers.workspaceOf(viewer),
-  onWindowsChanged: () => app.isReady() && installAppMenu(windows),
+  onWindowsChanged: () => app.isReady() && installAppMenu(windows, updates),
   onClosed: (viewer) => watchers.release(viewer),
 });
 
@@ -50,11 +51,12 @@ function start(launched: Promise<void>): void {
       watchers,
       windows,
       headers,
-      updates: startAppUpdates(),
+      updates,
     }),
   );
   followAppTheme(settings);
-  installMenus(windows);
+  installMenus(windows, updates);
+  updates.checkPeriodically();
   const openFirstWindow = (): void => windows.openFirst();
   void launched.then(openFirstWindow, openFirstWindow);
   // macOS keeps the app running with no window; clicking the Dock icon then opens the home screen.

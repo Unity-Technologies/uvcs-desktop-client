@@ -1,9 +1,9 @@
 import { app, BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from 'electron';
 import { sendEventTo } from '../ipc/sendEvent';
-import { aboutPanelOptions } from './aboutPanel';
 import { DOCUMENTATION_URL } from './appInfo';
 import { appMenuTemplate } from './appMenuTemplate';
 import { isMenuCommandEnabled } from './workspaceMenuCommands';
+import type { AppUpdates } from '../update/AppUpdates';
 import { focusWindow, type WorkspaceWindows } from './WorkspaceWindows';
 
 /**
@@ -36,7 +36,7 @@ function windowItems(windows: WorkspaceWindows): MenuItemConstructorOptions[] {
 }
 
 /** Installs the menu bar; call it again when windows open, close, get focus or change title. */
-export function installAppMenu(windows: WorkspaceWindows): void {
+export function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates): void {
   const template = appMenuTemplate({
     platform: process.platform,
     isPackaged: app.isPackaged,
@@ -44,6 +44,8 @@ export function installAppMenu(windows: WorkspaceWindows): void {
     windowItems: windowItems(windows),
     newWindow: () => windows.open(),
     openDocumentation: () => void shell.openExternal(DOCUMENTATION_URL),
+    showAboutPanel: () => app.showAboutPanel(),
+    checkForUpdates: () => void updates.check(),
   });
 
   const menu = Menu.buildFromTemplate(template);
@@ -54,10 +56,9 @@ export function installAppMenu(windows: WorkspaceWindows): void {
   Menu.setApplicationMenu(menu);
 }
 
-/** The menu bar, the About panel its Help menu opens off macOS, and the Dock icon's menu on macOS. */
-export function installMenus(windows: WorkspaceWindows): void {
-  app.setAboutPanelOptions(aboutPanelOptions(app.name, app.getVersion()));
-  installAppMenu(windows);
+/** The menu bar, and the Dock icon's menu on macOS. */
+export function installMenus(windows: WorkspaceWindows, updates: AppUpdates): void {
+  installAppMenu(windows, updates);
   installDockMenu(windows);
 }
 

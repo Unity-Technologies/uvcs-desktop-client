@@ -10,6 +10,13 @@ export interface AppMenuContext {
   windowItems: MenuItemConstructorOptions[];
   newWindow: () => void;
   openDocumentation: () => void;
+  /**
+   * About with no window to show the app's dialog in (macOS keeps running with every window closed): the OS's panel,
+   * which reads the name and version from the app bundle.
+   */
+  showAboutPanel: () => void;
+  /** Checks for updates with no window to hear the answer in: an update found shows in the next window. */
+  checkForUpdates: () => void;
 }
 
 /**
@@ -27,12 +34,14 @@ export function shownAccelerator(accelerator: string, isMac: boolean): string | 
  * Alt opens an item with (the menu bar shows it underlined); macOS has no such letters, so they're dropped there.
  */
 export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOptions[] {
-  const { platform, isPackaged, windowItems, newWindow, openDocumentation } = context;
+  const { platform, isPackaged, windowItems, newWindow, openDocumentation, showAboutPanel, checkForUpdates } = context;
   const isMac = platform === 'darwin';
   const label = (text: string): string => (isMac ? text.replaceAll('&', '') : text);
   const commandItem: AppMenuContext['commandItem'] = (text, commandId, accelerator, withoutWindow) =>
     context.commandItem(label(text), commandId, accelerator && shownAccelerator(accelerator, isMac), withoutWindow);
   const separator: MenuItemConstructorOptions = { type: 'separator' };
+  const aboutItem = commandItem('&About Unity Version Control', 'app.about', undefined, showAboutPanel);
+  const checkForUpdatesItem = commandItem('Check for &Updates…', 'app.checkForUpdates', undefined, checkForUpdates);
 
   const template: MenuItemConstructorOptions[] = [
     {
@@ -82,7 +91,7 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
       label: label('&Help'),
       submenu: [
         { label: label('Unity Version Control &Documentation'), click: openDocumentation },
-        ...(isMac ? [] : [separator, { role: 'about' as const, label: '&About Unity Version Control' }]),
+        ...(isMac ? [] : [separator, checkForUpdatesItem, aboutItem]),
       ],
     },
   ];
@@ -92,7 +101,8 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
     {
       role: 'appMenu',
       submenu: [
-        { role: 'about' },
+        aboutItem,
+        checkForUpdatesItem,
         separator,
         commandItem('Settings…', 'app.settings', 'CmdOrCtrl+,'),
         separator,

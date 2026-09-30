@@ -10,6 +10,8 @@ function templateOn(platform: NodeJS.Platform): MenuItemConstructorOptions[] {
     windowItems: [{ label: 'Home', type: 'checkbox' }],
     newWindow: () => {},
     openDocumentation: () => {},
+    showAboutPanel: () => {},
+    checkForUpdates: () => {},
   });
 }
 
@@ -48,11 +50,16 @@ describe('appMenuTemplate', () => {
     expect(itemsOf('darwin', 'File').some((item) => item.id === 'app.settings' || item.role === 'quit')).toBe(false);
   });
 
-  it('puts About in Help off macOS, and in the app menu on macOS', () => {
-    expect(hasRole(itemsOf('win32', 'Help'), 'about')).toBe(true);
-    expect(hasRole(itemsOf('linux', 'Help'), 'about')).toBe(true);
-    expect(hasRole(itemsOf('darwin', 'Help'), 'about')).toBe(false);
-    expect(hasRole(submenuOf(templateOn('darwin')[0]!), 'about')).toBe(true);
+  it("puts the app's About dialog and Check for Updates in Help off macOS, and first in the app menu on macOS", () => {
+    const ids = (items: MenuItemConstructorOptions[]) => items.map((item) => item.id).filter(Boolean);
+    expect(ids(itemsOf('win32', 'Help')).slice(-2)).toEqual(['app.checkForUpdates', 'app.about']);
+    expect(ids(itemsOf('linux', 'Help')).slice(-2)).toEqual(['app.checkForUpdates', 'app.about']);
+    expect(ids(itemsOf('darwin', 'Help'))).toEqual([]);
+    expect(submenuOf(templateOn('darwin')[0]!).slice(0, 2)).toMatchObject([
+      { id: 'app.about', label: 'About Unity Version Control' },
+      { id: 'app.checkForUpdates', label: 'Check for Updates…' },
+    ]);
+    expect(hasRole(submenuOf(templateOn('darwin')[0]!), 'about')).toBe(false);
   });
 
   it('closes the window from File everywhere', () => {
