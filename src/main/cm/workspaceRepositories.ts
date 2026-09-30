@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs';
+import { repositorySpec } from '@shared/domain/specs';
 import type { CmClient } from './CmClient';
 
 /** Only a handful of workspaces (the recent ones) are ever looked up; never the whole list. */
@@ -10,7 +11,7 @@ const LOOKUP_TIMEOUT_MS = 4000;
 /** `STATUS|<changeset>|<repository>|<server>` from `cm status --header --machinereadable`. */
 export function repositoryInStatusHeader(output: string): string | null {
   const match = /^STATUS\|-?\d+\|([^|]+)\|([^|\r\n]+)/m.exec(output);
-  return match ? `${match[1]}@${match[2]}` : null;
+  return match ? repositorySpec(match[1]!, match[2]!) : null;
 }
 
 /**

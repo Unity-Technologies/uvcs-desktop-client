@@ -1,4 +1,5 @@
 import type { Lock, LockStatus } from '@shared/domain/lock';
+import { repositorySpec } from '@shared/domain/specs';
 import { FIELD_SEPARATOR, RECORD_SEPARATOR } from './formatRecords';
 
 /** Arguments that make `cm lock list` print one parseable record per lock. */
@@ -23,7 +24,7 @@ export function parseLocks(output: string, repositoryServer: string): Lock[] {
     .map((line) => line.split(FIELD_SEPARATOR))
     .filter((fields) => fields.length >= 12)
     .map(([repository, itemId, guid, date, destinationBranch, , holderBranch, , status, owner, workspace, path]) => ({
-      repository: `${repository}@${repositoryServer}`,
+      repository: repositorySpec(repository!, repositoryServer),
       itemId: Number(itemId),
       guid: guid!,
       date: date!,
