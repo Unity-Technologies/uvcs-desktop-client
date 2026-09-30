@@ -16,6 +16,8 @@ export interface SavedWindowBounds {
 export interface AppSettings {
   theme: ThemePreference;
   recentWorkspacePaths: string[];
+  /** The GUIDs of the branches each workspace switched to lately, newest first (never /main), by workspace GUID. */
+  recentBranchesByWorkspace: Record<string, string[]>;
   pendingChanges: PendingChangesFilter;
   /** Ask for confirmation before checking in without a comment. */
   warnOnEmptyComment: boolean;
@@ -52,11 +54,17 @@ export interface AppSettings {
   askWhenMergeToolClosesUnsaved: boolean;
   /** Null until the window is first moved or resized. */
   windowBounds: SavedWindowBounds | null;
+  /**
+   * The official Desktop client's settings were imported (`importLegacySettings`), or there were none to import: they
+   * are never read again.
+   */
+  legacySettingsImported: boolean;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
   theme: 'system',
   recentWorkspacePaths: [],
+  recentBranchesByWorkspace: {},
   pendingChanges: DEFAULT_PENDING_CHANGES_FILTER,
   warnOnEmptyComment: true,
   recentComments: [],
@@ -74,4 +82,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   mergeToolArgs: {},
   askWhenMergeToolClosesUnsaved: true,
   windowBounds: null,
+  legacySettingsImported: false,
 };

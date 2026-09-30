@@ -6,15 +6,15 @@ import { queryClient } from '../../app/queryClient';
 import { fetchBranch } from './useBranches';
 
 /**
- * The GUIDs of the branches the workspace switched to lately, newest first. They live in the official Desktop
- * client's settings, so both apps list the same recent branches. A local file: cheap to read again.
+ * The GUIDs of the branches the workspace switched to lately, newest first. They live in the app's settings (the
+ * official Desktop client's are only imported once, `importLegacySettings`): cheap to read again.
  */
 export function useRecentBranchGuids(workspacePath: string, enabled = true): string[] {
   const { data } = useQuery({ queryKey: recentBranchesKey(workspacePath), queryFn: () => api.branches.recent(workspacePath), enabled: enabled && Boolean(workspacePath) });
   return data ?? EMPTY;
 }
 
-/** Records a switch to `name` among the recent branches, like the official client does before switching. */
+/** Records a switch to `name` among the recent branches, before switching. */
 export async function rememberRecentBranch(workspacePath: string, name: string): Promise<void> {
   try {
     const guid = cachedBranch(workspacePath, name)?.guid ?? (await fetchBranch(workspacePath, name))?.guid;

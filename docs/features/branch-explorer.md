@@ -39,5 +39,7 @@ band of a branch without changesets the workspace is on, else the loaded changes
 ## Branch switcher
 
 Groups and orders branches like the official Desktop client (`branchSwitcherGroups`): /main by its
-well-known GUID, the workspace's recent branches, then the rest newest first. Recent branches are the official client's,
-read from and written to its `plasticgui.conf` (`main/plasticConfig`) on every switch, so both apps list the same ones.
+well-known GUID, the workspace's recent branches, then the rest newest first. Recent branches live in the app's settings
+(`recentBranchesByWorkspace`, by workspace GUID): every switch puts its branch first (`SettingsStore.rememberRecentBranch`:
+five at most, never /main, as the official client keeps them). The first run takes the official client's from its
+`plasticgui.conf`, once (`importLegacySettings`, ARCHITECTURE.md "Own config"); the app never writes that file.

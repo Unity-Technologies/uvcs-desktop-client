@@ -5,10 +5,9 @@ import { shortBranchName } from '@shared/domain/specs';
 import { escapeQueryValue, findArgs } from '../cm/findQuery';
 import { findRecords, toBranch } from '../cm/findObjects';
 import { withTempFile } from '../files/tempFile';
-import { loadRecentBranches, saveRecentBranch } from '../plasticConfig/recentBranches';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 
-export function createBranchesService({ cm }: ServiceContext, { branchNames }: BranchNamesContext): BranchesApi {
+export function createBranchesService({ cm, settings }: ServiceContext, { branchNames }: BranchNamesContext): BranchesApi {
   async function find(workspacePath: string, filter: QueryFilter, conditions: string[]): Promise<Branch[]> {
     const xml = await cm.query(findArgs('branch', { ...filter, branch: undefined }, 'date desc', conditions), { cwd: workspacePath });
     const branches = findRecords(xml, 'BRANCH').map(toBranch);
@@ -65,11 +64,11 @@ export function createBranchesService({ cm }: ServiceContext, { branchNames }: B
   }
 
   async function recent(workspacePath: string): Promise<string[]> {
-    return loadRecentBranches(await workspaceGuid(workspacePath));
+    return settings.get().recentBranchesByWorkspace[await workspaceGuid(workspacePath)] ?? [];
   }
 
   async function rememberRecent(workspacePath: string, branchGuid: string): Promise<void> {
-    await saveRecentBranch(await workspaceGuid(workspacePath), branchGuid);
+    settings.rememberRecentBranch(await workspaceGuid(workspacePath), branchGuid);
   }
 
   return { list, get, create, rename, delete: remove, setHidden, recent, rememberRecent };

@@ -39,3 +39,22 @@ describe('SettingsStore recent workspaces', () => {
     expect(changed).toEqual([['theme'], ['recentWorkspacePaths']]);
   });
 });
+
+describe('SettingsStore recent branches', () => {
+  const branchGuid = (n: number): string => `9b8e2f7a-58f3-4c43-9d83-3c2f1f5c000${n}`;
+
+  it('keeps them per workspace, writes them to its own file and tells every window', () => {
+    const { settings, filePath } = store();
+    const changed: string[][] = [];
+    settings.onChanged((_settings, changes) => changed.push(Object.keys(changes)));
+
+    settings.rememberRecentBranch('wk-a', branchGuid(1));
+    settings.rememberRecentBranch('wk-b', branchGuid(2));
+    settings.rememberRecentBranch('wk-a', branchGuid(3));
+
+    const expected = { 'wk-a': [branchGuid(3), branchGuid(1)], 'wk-b': [branchGuid(2)] };
+    expect(settings.get().recentBranchesByWorkspace).toEqual(expected);
+    expect(JSON.parse(readFileSync(filePath, 'utf8')).recentBranchesByWorkspace).toEqual(expected);
+    expect(changed).toEqual([['recentBranchesByWorkspace'], ['recentBranchesByWorkspace'], ['recentBranchesByWorkspace']]);
+  });
+});
