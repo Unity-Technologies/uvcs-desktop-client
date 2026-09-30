@@ -1,4 +1,4 @@
-import { Check, FileDiff, GitCommitVertical, GitMerge, HardDrive, Palette, Users } from 'lucide-react';
+import { FileDiff, GitCommitVertical, GitMerge, HardDrive, Palette, Users } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
 import type { AppSettings } from '@shared/domain/settings';
@@ -14,6 +14,7 @@ import { useSession } from '../workspace/sessionStore';
 import { AccountsPane } from './AccountsPane';
 import { DefaultWorkspaceRootField } from './DefaultWorkspaceRootField';
 import { MergeToolsPane } from './MergeToolsPane';
+import { SettingsChoice } from './SettingsChoice';
 import { THEMES } from './themes';
 import { useSettings, useUpdateSettings } from './useSettings';
 import styles from './SettingsDialog.module.css';
@@ -86,28 +87,16 @@ function AppearancePane({ settings, updateSettings }: PaneProps) {
   return (
     <SettingsGroup title="Theme">
       <div className={styles.choices} role="radiogroup" aria-label="Theme">
-        {THEMES.map((theme) => {
-          const selected = settings.theme === theme.value;
-          const ThemeIcon = theme.icon;
-          return (
-            <button
-              key={theme.value}
-              type="button"
-              role="radio"
-              aria-checked={selected}
-              className={styles.choice}
-              data-selected={selected}
-              onClick={() => updateSettings({ theme: theme.value })}
-            >
-              <ThemeIcon size={18} />
-              <span className={styles.choiceText}>
-                <span className={styles.choiceLabel}>{theme.label}</span>
-                <span className={styles.choiceDescription}>{theme.description}</span>
-              </span>
-              {selected && <Check size={14} />}
-            </button>
-          );
-        })}
+        {THEMES.map(({ value, label, description, icon: ThemeIcon }) => (
+          <SettingsChoice
+            key={value}
+            icon={<ThemeIcon size={18} />}
+            label={label}
+            description={description}
+            selected={settings.theme === value}
+            onSelect={() => updateSettings({ theme: value })}
+          />
+        ))}
       </div>
     </SettingsGroup>
   );
