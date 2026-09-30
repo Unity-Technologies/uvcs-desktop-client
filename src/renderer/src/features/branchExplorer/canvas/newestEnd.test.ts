@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { largeHistory } from '../model/graphFixtures';
+import { largeHistory, sampleHistory } from '../model/graphFixtures';
 import { layoutGraph } from '../model/layoutGraph';
-import { nodePoint } from './geometry';
+import { nodePoint, pendingPoint } from './geometry';
 import { graphExtent } from './laneShape';
 import { awayFromNewest, newestEnd } from './newestEnd';
 
@@ -28,4 +28,24 @@ describe('newestEnd', () => {
     expect(awayFromNewest(layout, { panX: 0, panY: 0, zoom: 1 }, screen)).toBe(true);
     expect(awayFromNewest(layout, { panX: screen.width - newest.x - 1, panY: 0, zoom: 1 }, screen)).toBe(false);
   });
+
+  it('counts the pending changes, past every changeset, as the newest end', () => {
+    const history = sampleHistory();
+    const withPending = layoutGraph(history, undefined, { branch: '/main/a', parent: 5, mergeLinks: [] });
+    const pending = pendingPoint(withPending)!;
+    // The newest changeset (7) in view, the pending changes a column past it off screen.
+    const upToNewest = { panX: screen.width - nodePoint(withPending, 7)!.x - 1, panY: 0, zoom: 1 };
+    expect(pending.x - nodePoint(withPending, 7)!.x).toBeGreaterThan(1);
+    expect(awayFromNewest(layoutGraph(history), upToNewest, screen)).toBe(false);
+    expect(awayFromNewest(withPending, upToNewest, screen)).toBe(true);
+    expect(awayFromNewest(withPending, newestEnd(withPending, upToNewest, screen), screen)).toBe(false);
+  });
+
+  it('stays put with nothing drawn', () => {
+    const empty = layoutGraph({ branches: [], changesets: [], mergeLinks: [], labels: [] });
+    const viewport = { panX: 10, panY: 20, zoom: 1 };
+    expect(newestEnd(empty, viewport, screen)).toBe(viewport);
+    expect(awayFromNewest(empty, viewport, screen)).toBe(false);
+  });
 });
+
