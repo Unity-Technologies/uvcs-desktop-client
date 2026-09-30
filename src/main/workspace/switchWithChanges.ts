@@ -10,7 +10,7 @@ import type { OperationContext } from '../operations/OperationTracker';
 import type { SettingsStore } from '../settings/SettingsStore';
 import type { LeftChangesFinder } from './leftChanges';
 import { changedPaths, shelvedChangelists, summarizePending, SWITCH_STATUS_ARGS } from './pendingSnapshot';
-import { putBack } from './privateBackups';
+import { putShelvedChangesBack } from './putShelvedChangesBack';
 import { renamedPrivateFiles } from './renamedPrivateFiles';
 import { selectorObjectRef } from './selectorObjectRef';
 import { selectorSpec } from '@shared/domain/specs';
@@ -183,13 +183,8 @@ async function rollBack(deps: SwitchDependencies, workspacePath: string, record:
   let onSource = false;
   try {
     onSource = await returnToSource(deps.cm, workspacePath, record.source.spec, context);
-    if (onSource) {
-      if (record.backup) await putBack(workspacePath, record.backup);
-      const outcome = await applyShelveCleanly(deps.cm, workspacePath, record.shelveId, context);
-      if (outcome.kind === 'applied') {
-        await deps.leftChanges.finish(workspacePath, record);
-        return new Error(`${reason}. Your changes were put back.`);
-      }
+    if (onSource && (await putShelvedChangesBack(deps.cm, deps.leftChanges, workspacePath, record, context))) {
+      return new Error(`${reason}. Your changes were put back.`);
     }
   } catch {
     // Reported below: the changes are still safe in the shelve.

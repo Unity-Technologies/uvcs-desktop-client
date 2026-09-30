@@ -1,5 +1,6 @@
-import { lstatSync, readdirSync, watch, type FSWatcher } from 'node:fs';
+import { lstatSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { watchFolder, type FolderWatch, type WatchFolder } from './watchFolder';
 
 /**
  * A recursive watch made of one plain watch per folder, where `fs.watch` has no native recursion (Linux). Node's own
@@ -10,7 +11,7 @@ import { join } from 'node:path';
  */
 export class FolderTreeWatch {
   /** By workspace-relative, `/`-separated folder (`''` for the root). */
-  private readonly watchers = new Map<string, FSWatcher>();
+  private readonly watchers = new Map<string, FolderWatch>();
   private complete = true;
   private closed = false;
 
@@ -19,6 +20,7 @@ export class FolderTreeWatch {
     private readonly skip: (relativeFolder: string) => boolean,
     private readonly onEvent: (event: string, relativePath: string | undefined) => void,
     private readonly maxFolders: number,
+    private readonly watch: WatchFolder = watchFolder,
   ) {}
 
   /** Watches the tree; false if some folder couldn't be watched (none at all, past the limit, out of inotify watches). */
@@ -51,8 +53,8 @@ export class FolderTreeWatch {
 
   private watchFolder(folder: string): boolean {
     try {
-      const watcher = watch(this.absolute(folder), (event, name) => this.onFolderEvent(folder, event, name));
-      watcher.on('error', () => this.unwatch(folder));
+      const watcher = this.watch(this.absolute(folder), false, (event, name) => this.onFolderEvent(folder, event, name));
+      watcher.onError(() => this.unwatch(folder));
       this.watchers.set(folder, watcher);
       return true;
     } catch {

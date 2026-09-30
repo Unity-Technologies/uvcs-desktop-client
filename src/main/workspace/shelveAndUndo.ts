@@ -8,11 +8,11 @@ import { toAbsolutePath } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
 import type { LeftChangesFinder } from './leftChanges';
 import { changedPaths, shelvedChangelists, SWITCH_STATUS_ARGS } from './pendingSnapshot';
-import { putBack } from './privateBackups';
+import { putShelvedChangesBack } from './putShelvedChangesBack';
 import { selectorSpec } from '@shared/domain/specs';
 import { describeSelector } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
-import { applyShelveCleanly, createVerifiedShelve, moveNewItemsAside } from './switchShelves';
+import { createVerifiedShelve, moveNewItemsAside } from './switchShelves';
 import { readWorkspaceIdentity } from './workspaceIdentity';
 
 const IN_MERGE = "A merge in progress can't be shelved away. Check it in or undo it first, or shelve and keep the changes.";
@@ -84,10 +84,7 @@ export function shelvedAwayChanges(changes: PendingChange[], paths: string[] | n
 async function putBackAfterFailure(deps: ShelveAndUndoDependencies, workspacePath: string, record: SwitchShelveRecord, cause: unknown, context: OperationContext): Promise<Error> {
   const reason = (cause instanceof Error ? cause.message : String(cause)).replace(/\.$/, '');
   try {
-    if (record.backup) await putBack(workspacePath, record.backup);
-    const outcome = await applyShelveCleanly(deps.cm, workspacePath, record.shelveId, context);
-    if (outcome.kind === 'applied') {
-      await deps.leftChanges.finish(workspacePath, record);
+    if (await putShelvedChangesBack(deps.cm, deps.leftChanges, workspacePath, record, context)) {
       return new Error(`Couldn't undo the shelved changes: ${reason}. Your changes were put back.`);
     }
   } catch {

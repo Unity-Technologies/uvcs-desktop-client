@@ -1,95 +1,121 @@
-import { mkdirSync, mkdtempSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { FolderTreeWatch } from './FolderTreeWatch';
+import { fakeFolderWatches } from './testing/fakeFolderWatches';
 
-// Real folders and the platform's own plain watches: inotify where this matters (Linux), FSEvents on a Mac.
-const trees: FolderTreeWatch[] = [];
-const roots: string[] = [];
-
-function setUp(options: { skip?: (folder: string) => boolean; maxFolders?: number } = {}) {
+/** A real folder tree (src/deep, Library/Cache) watched through fake watches the test fires. */
+function setUp(options: { skip?: (folder: string) => boolean; maxFolders?: number; unwatchable?: string[] } = {}) {
   const root = mkdtempSync(join(tmpdir(), 'folder-tree-'));
-  roots.push(root);
   mkdirSync(join(root, 'src', 'deep'), { recursive: true });
   mkdirSync(join(root, 'Library', 'Cache'), { recursive: true });
-  writeFileSync(join(root, 'src', 'deep', 'app.ts'), 'a');
-  const paths = new Set<string>();
-  const tree = new FolderTreeWatch(root, options.skip ?? (() => false), (_event, path) => path && paths.add(path), options.maxFolders ?? 100);
-  trees.push(tree);
-  const write = (path: string, text: string) => writeFileSync(join(root, ...path.split('/')), text);
-  const seen = (path: string) => vi.waitFor(() => expect(paths).toContain(path), { timeout: 3000, interval: 20 });
-  // FSEvents drops what happens while its stream starts, and events trail the writes a little.
-  const settle = () => new Promise((resolve) => setTimeout(resolve, 300));
-  return { root, tree, paths, write, seen, settle };
+  const at = (folder: string): string => (folder ? join(root, ...folder.split('/')) : root);
+  const watches = fakeFolderWatches((options.unwatchable ?? []).map((folder) => ({ path: at(folder) })));
+  const events: string[] = [];
+  const tree = new FolderTreeWatch(root, options.skip ?? (() => false), (event, path) => events.push(`${event} ${path}`), options.maxFolders ?? 100, watches.watch);
+  /** The watched folders, workspace-relative and sorted. */
+  const watched = (): string[] =>
+    [...watches.watched().keys()].map((path) => (path === root ? '' : path.slice(root.length + 1).split(/[\\/]/).join('/'))).sort();
+  return { root, tree, events, watched, at, emit: (folder: string, event: 'rename' | 'change', name: string | null) => watches.emit(at(folder), event, name), watches };
 }
 
-afterEach(() => {
-  trees.splice(0).forEach((tree) => tree.close());
-  roots.splice(0).forEach((root) => rmSync(root, { recursive: true, force: true }));
-});
-
 describe('FolderTreeWatch', () => {
-  it('reports edits in nested folders by their workspace-relative path', async () => {
-    const { tree, write, seen, settle } = setUp();
+  it('watches each folder of the tree with a plain watch, and reports items by their workspace-relative path', () => {
+    const { tree, watched, emit, events, watches } = setUp();
+
     expect(tree.start()).toBe(true);
-    await settle();
-    write('src/deep/app.ts', 'b');
-    await seen('src/deep/app.ts');
+    expect(watched()).toEqual(['', 'Library', 'Library/Cache', 'src', 'src/deep']);
+    expect([...watches.watched().values()].every((recursive) => !recursive)).toBe(true);
+
+    emit('src/deep', 'change', 'app.ts');
+    emit('', 'change', 'README.md');
+    expect(events).toEqual(['change src/deep/app.ts', 'change README.md']);
   });
 
-  it('keeps reporting a file saved by replacing it, save after save', async () => {
-    const { root, tree, paths, write, seen, settle } = setUp();
+  it('keeps watching a folder whose file was saved by replacing it', () => {
+    const { tree, watched, emit, events } = setUp();
     tree.start();
-    await settle();
-    for (const text of ['one', 'two', 'three']) {
-      write('src/deep/app.ts.tmp', text);
-      await settle();
-      paths.clear();
-      renameSync(join(root, 'src', 'deep', 'app.ts.tmp'), join(root, 'src', 'deep', 'app.ts'));
-      await seen('src/deep/app.ts');
-    }
+
+    emit('src/deep', 'rename', 'app.ts');
+    emit('src/deep', 'change', 'app.ts');
+    expect(watched()).toContain('src/deep');
+    expect(events).toEqual(['rename src/deep/app.ts', 'change src/deep/app.ts']);
   });
 
-  it('watches folders created after it started, and folders moved in', async () => {
-    const { root, tree, write, seen, settle } = setUp();
+  it('watches folders created after it started, with everything inside them', () => {
+    const { tree, watched, emit, at } = setUp();
     tree.start();
-    await settle();
-    mkdirSync(join(root, 'new', 'deeper'), { recursive: true });
-    await seen('new');
-    await settle();
-    write('new/deeper/file.txt', 'n');
-    await seen('new/deeper/file.txt');
-    // Windows won't move a folder while a watch is open inside it; it watches recursively itself, never with these.
-    if (process.platform === 'win32') return;
 
-    renameSync(join(root, 'new'), join(root, 'src', 'moved'));
-    await seen('src/moved');
-    await settle();
-    write('src/moved/deeper/file.txt', 'm');
-    await seen('src/moved/deeper/file.txt');
+    mkdirSync(at('new/deeper'), { recursive: true });
+    emit('', 'rename', 'new');
+    expect(watched()).toEqual(expect.arrayContaining(['new', 'new/deeper']));
   });
 
-  it('never walks skipped folders', async () => {
-    const { tree, paths, write, seen, settle } = setUp({ skip: (folder) => folder === 'Library' });
+  it('follows a folder moved elsewhere in the tree: the old paths go, the new ones are watched', () => {
+    const { tree, watched, emit, at } = setUp();
     tree.start();
-    await settle();
-    write('Library/Cache/blob', 'x');
-    write('src/deep/app.ts', 'c');
-    await seen('src/deep/app.ts');
-    await settle();
-    expect([...paths].filter((path) => path.startsWith('Library/'))).toEqual([]);
+
+    renameSync(at('src/deep'), at('Library/deep'));
+    emit('src', 'rename', 'deep');
+    emit('Library', 'rename', 'deep');
+    expect(watched()).toEqual(['', 'Library', 'Library/Cache', 'Library/deep', 'src']);
   });
 
-  it('is incomplete past its folder limit, and watches the upper folders first', async () => {
-    const { root, tree, paths, write, seen, settle } = setUp({ maxFolders: 4 });
-    mkdirSync(join(root, '.plastic'));
+  it('stops watching a deleted folder and everything that was under it', () => {
+    const { tree, watched, emit, at } = setUp();
+    tree.start();
+
+    rmSync(at('src'), { recursive: true });
+    emit('', 'rename', 'src');
+    expect(watched()).toEqual(['', 'Library', 'Library/Cache']);
+  });
+
+  it('never walks skipped folders, even when they appear later', () => {
+    const { tree, watched, emit, at } = setUp({ skip: (folder) => folder === 'Library' || folder.endsWith('/obj') });
+    tree.start();
+    expect(watched()).toEqual(['', 'src', 'src/deep']);
+
+    mkdirSync(at('src/obj'));
+    emit('src', 'rename', 'obj');
+    expect(watched()).toEqual(['', 'src', 'src/deep']);
+  });
+
+  it.skipIf(process.platform === 'win32')("doesn't follow links to folders, as cm doesn't", () => {
+    const { tree, watched, emit, at } = setUp();
+    tree.start();
+
+    symlinkSync(at('Library'), at('src/linked'));
+    emit('src', 'rename', 'linked');
+    expect(watched()).not.toContain('src/linked');
+  });
+
+  it('is incomplete past its folder limit, having watched the upper folders first', () => {
+    const { tree, watched, at } = setUp({ maxFolders: 4 });
+    mkdirSync(at('.plastic'));
+
     expect(tree.start()).toBe(false);
-    await settle();
-    write('src/deep/app.ts', 'd');
-    write('.plastic/plastic.selector', 's');
-    await seen('.plastic/plastic.selector');
-    await settle();
-    expect(paths).not.toContain('src/deep/app.ts');
+    expect(watched()).toEqual(['', '.plastic', 'Library', 'src']);
+  });
+
+  it("is incomplete when a folder can't be watched, and has nothing without the root", () => {
+    expect(setUp({ unwatchable: ['src/deep'] }).tree.start()).toBe(false);
+    expect(setUp({ unwatchable: [''] }).tree.start()).toBe(false);
+  });
+
+  it('drops a folder whose watch broke, and those under it', () => {
+    const { tree, watched, watches, at } = setUp();
+    tree.start();
+
+    watches.break(at('src'));
+    expect(watched()).toEqual(['', 'Library', 'Library/Cache']);
+  });
+
+  it('lets every watch go once closed', () => {
+    const { tree, watched } = setUp();
+    tree.start();
+
+    tree.close();
+    expect(watched()).toEqual([]);
   });
 });

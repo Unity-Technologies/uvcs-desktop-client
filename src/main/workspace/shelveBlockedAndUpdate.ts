@@ -11,11 +11,12 @@ import { unresolvedConflicts, updateWithMerge } from '../merge/updateWithMerge';
 import type { OperationContext } from '../operations/OperationTracker';
 import type { LeftChangesFinder } from './leftChanges';
 import { changedPaths, shelvedChangelists, SWITCH_STATUS_ARGS } from './pendingSnapshot';
+import { putShelvedChangesBack } from './putShelvedChangesBack';
 import { selectorObjectRef } from './selectorObjectRef';
 import { selectorSpec } from '@shared/domain/specs';
 import { describeSelector } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
-import { applyShelveCleanly, createSwitchShelve } from './switchShelves';
+import { createSwitchShelve } from './switchShelves';
 import { readWorkspaceIdentity } from './workspaceIdentity';
 
 export interface ShelveForUpdateDependencies {
@@ -86,9 +87,7 @@ export async function shelveBlockedAndUpdate(
 async function putBack(deps: ShelveForUpdateDependencies, workspacePath: string, record: SwitchShelveRecord, cause: unknown, context: OperationContext): Promise<Error> {
   const reason = (cause instanceof Error ? cause.message : String(cause)).replace(/\.$/, '');
   try {
-    const outcome = await applyShelveCleanly(deps.cm, workspacePath, record.shelveId, context);
-    if (outcome.kind === 'applied') {
-      await deps.leftChanges.finish(workspacePath, record);
+    if (await putShelvedChangesBack(deps.cm, deps.leftChanges, workspacePath, record, context)) {
       return new Error(`Couldn't update: ${reason}. Your changes were put back.`);
     }
   } catch {
