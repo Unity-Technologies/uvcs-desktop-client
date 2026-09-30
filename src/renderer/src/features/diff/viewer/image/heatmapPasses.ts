@@ -2,7 +2,7 @@
 // the main thread when there is none (`imageDiffSession`). Both keep the last pair compared, so a new tolerance only
 // renders the heatmap again.
 
-import type { AnchorMode } from './imageDiff';
+import type { AnchorMode } from './composedFrame';
 import { findChangedRegions, type ChangedRegion } from './changedRegions';
 import { comparePixels, renderHeatmap, type PixelComparison, type RgbaBitmap } from './pixelComparison';
 

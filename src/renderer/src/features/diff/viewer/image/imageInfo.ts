@@ -1,5 +1,5 @@
 import { formatSize } from '../../../../lib/formatDate';
-import type { Size } from './imageDiff';
+import type { Size } from './composedFrame';
 
 /** How much of a pair differs at the tolerance, which the Differences mode counts for the info strip. */
 export interface DiffStats {

@@ -1,7 +1,7 @@
 // Where the composed frame shows in a viewport, and how zooming and panning move it: the geometry `usePanZoom` and the
 // pixel inspector run on. Pure; `viewport` is the pane's size on screen, `image` the composed frame's in pixels.
 
-import type { Size } from './imageDiff';
+import type { Size } from './composedFrame';
 
 /** How the composed frame shows: scaled by `scale`, its top-left corner at (x, y) in the viewport. */
 export interface ViewTransform {

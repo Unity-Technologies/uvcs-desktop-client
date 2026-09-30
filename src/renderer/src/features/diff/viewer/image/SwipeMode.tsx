@@ -4,7 +4,7 @@
 // underneath it — exactly how a film wipe behaves.
 
 import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import type { AnchorMode, Size } from './imageDiff';
+import type { AnchorMode, Size } from './composedFrame';
 import { followDrag, isDragButton } from './pointerDrag';
 import { ImageLayer, SideChip, Viewport, World } from './stage';
 import type { DecodedImage } from './useDecodedImage';

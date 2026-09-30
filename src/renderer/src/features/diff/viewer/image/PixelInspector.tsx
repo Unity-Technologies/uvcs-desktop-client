@@ -2,7 +2,7 @@
 // and its color before → after, with swatches. The sample is state of its own, so a pointer move re-renders only this.
 
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import { anchoredOffset, type AnchorMode, type Size } from './imageDiff';
+import { anchoredOffset, type AnchorMode, type Size } from './composedFrame';
 import { colorHex, type Rgba } from './imageInfo';
 import { isOnStageControl } from './pointerDrag';
 import { rasterize } from './rasterize';

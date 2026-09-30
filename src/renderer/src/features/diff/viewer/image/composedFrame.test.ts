@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { anchoredOffset, composedSize } from './imageDiff';
+import { anchoredOffset, composedSize } from './composedFrame';
 
 describe('composedSize', () => {
   it('is the larger of both sizes on each axis', () => {

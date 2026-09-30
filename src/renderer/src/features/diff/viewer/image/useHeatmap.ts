@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
 import { compositionKey } from './compositionKey';
-import type { AnchorMode } from './imageDiff';
+import type { AnchorMode } from './composedFrame';
 import { compareImages, rerenderHeatmap, type ComparedImages } from './imageDiffSession';
 import { rasterize } from './rasterize';
 import type { DecodedImage } from './useDecodedImage';

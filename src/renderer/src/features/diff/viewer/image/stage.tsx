@@ -9,7 +9,7 @@
 
 import type { ReactNode } from 'react';
 import { IconButton } from '../../../../ui/IconButton';
-import { anchoredOffset, type AnchorMode, type Size } from './imageDiff';
+import { anchoredOffset, type AnchorMode, type Size } from './composedFrame';
 import type { DecodedImage } from './useDecodedImage';
 import type { PanZoom } from './usePanZoom';
 import styles from './stage.module.css';

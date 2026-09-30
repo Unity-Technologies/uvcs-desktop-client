@@ -1,4 +1,4 @@
-import type { Size } from './imageDiff';
+import type { Size } from './composedFrame';
 
 /** SVGs without width/height decode as 0×0; give them a sane canvas. */
 const FALLBACK_SIZE = { width: 300, height: 150 };

@@ -4,7 +4,7 @@
 
 import type { ChangedRegion } from './changedRegions';
 import { heatmapPasses, type RenderedHeatmap } from './heatmapPasses';
-import type { AnchorMode } from './imageDiff';
+import type { AnchorMode } from './composedFrame';
 import type { RgbaBitmap } from './pixelComparison';
 
 /** A bitmap as it crosses to the worker (a structured clone keeps it whole). */

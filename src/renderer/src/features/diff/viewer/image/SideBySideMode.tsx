@@ -2,7 +2,7 @@
 // the same PanZoom, so zooming or panning either one moves both — comparing
 // the same region never needs manual re-alignment.
 
-import type { AnchorMode, Size } from './imageDiff';
+import type { AnchorMode, Size } from './composedFrame';
 import { ImageLayer, SideChip, Viewport, World } from './stage';
 import type { DecodedImage } from './useDecodedImage';
 import type { PanZoom } from './usePanZoom';

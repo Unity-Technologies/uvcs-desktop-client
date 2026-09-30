@@ -17,7 +17,7 @@ import { EmptyState } from '../../../../ui/EmptyState';
 import { CenteredSpinner } from '../../../../ui/Spinner';
 import { useDiffPreferences } from '../diffPreferencesStore';
 import { DifferencesMode } from './DifferencesMode';
-import { composedSize } from './imageDiff';
+import { composedSize } from './composedFrame';
 import type { ImageDiffMode } from './imageDiffModes';
 import type { DiffStats } from './imageInfo';
 import { ImageInfoStrip } from './ImageInfoStrip';

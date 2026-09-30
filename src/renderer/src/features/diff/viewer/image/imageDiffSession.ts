@@ -4,7 +4,7 @@
 
 import type { ChangedRegion } from './changedRegions';
 import { heatmapPasses, type RenderedHeatmap } from './heatmapPasses';
-import type { AnchorMode } from './imageDiff';
+import type { AnchorMode } from './composedFrame';
 import type { BitmapPayload, DiffWorkerRequest, DiffWorkerResponse, HeatmapPayload } from './imageDiff.worker';
 import type { RgbaBitmap } from './pixelComparison';
 

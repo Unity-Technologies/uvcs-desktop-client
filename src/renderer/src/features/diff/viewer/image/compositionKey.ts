@@ -1,4 +1,4 @@
-import type { AnchorMode } from './imageDiff';
+import type { AnchorMode } from './composedFrame';
 import type { DecodedImage } from './useDecodedImage';
 
 const imageIds = new WeakMap<HTMLImageElement, number>();

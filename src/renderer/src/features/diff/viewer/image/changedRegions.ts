@@ -1,7 +1,7 @@
 // The changed regions the Differences mode's ‹ › step through: boxes around clusters of changed pixels, and which of
 // them are worth stepping to. Pure, so it runs in the worker (`imageDiff.worker`) and is tested without a canvas.
 
-import type { Size } from './imageDiff';
+import type { Size } from './composedFrame';
 
 /** A box around one cluster of changed pixels, in the composed frame. */
 export interface ChangedRegion {

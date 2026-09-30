@@ -8,7 +8,7 @@
 
 import { Pause, Play } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
-import type { AnchorMode, Size } from './imageDiff';
+import type { AnchorMode, Size } from './composedFrame';
 import { ImageLayer, Pill, PillButton, PillLabel, Viewport, World } from './stage';
 import type { DecodedImage } from './useDecodedImage';
 import type { PanZoom } from './usePanZoom';

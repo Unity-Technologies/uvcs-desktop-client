@@ -8,7 +8,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSpinDelay } from '../../../../lib/useSpinDelay';
 import { Spinner } from '../../../../ui/Spinner';
 import { regionCounter, steppableRegions, steppedRegion } from './changedRegions';
-import type { AnchorMode, Size } from './imageDiff';
+import type { AnchorMode, Size } from './composedFrame';
 import type { DiffStats } from './imageInfo';
 import { countChangedPixels, MAX_TOLERANCE } from './pixelComparison';
 import { Pill, PillButton, PillLabel, PillValue, Viewport, World } from './stage';

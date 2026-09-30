@@ -1,7 +1,7 @@
 // The Differences mode's pixel passes: a perceptual comparison of two revisions, then a heatmap of it at a tolerance.
 // Pure, on plain byte arrays, so they are tested without a canvas and run in the worker (`imageDiff.worker`).
 
-import { anchoredOffset, composedSize, type AnchorMode } from './imageDiff';
+import { anchoredOffset, composedSize, type AnchorMode } from './composedFrame';
 
 /** A decoded RGBA bitmap: tightly packed rows (4 bytes a pixel). On a plain ArrayBuffer, to feed `new ImageData()`. */
 export interface RgbaBitmap {

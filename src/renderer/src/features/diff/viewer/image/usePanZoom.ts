@@ -10,7 +10,7 @@
 // drag) follows at once, as animation under the finger reads as lag. The geometry is in `viewTransform`.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { Size } from './imageDiff';
+import type { Size } from './composedFrame';
 import { followDrag, isDragButton, isOnStageControl } from './pointerDrag';
 import {
   clampPan,
