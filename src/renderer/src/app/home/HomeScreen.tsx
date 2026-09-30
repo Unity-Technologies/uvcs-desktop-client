@@ -1,12 +1,12 @@
 import { FolderDown } from 'lucide-react';
 import { useState } from 'react';
-import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
+import { useFolderDrop } from '../folderDrop/useFolderDrop';
+import { openFolder, openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
 import { useServers } from '../workspace/workspaceQueries';
 import { HomeSidebar } from './HomeSidebar';
 import type { HomeSection } from './homeSection';
 import { RepositoriesPanel } from './RepositoriesPanel';
-import { useFolderDrop } from './useFolderDrop';
 import { useHomeCommands } from './useHomeCommands';
 import { WelcomePanel } from './WelcomePanel';
 import { WorkspacesPanel } from './WorkspacesPanel';
@@ -17,12 +17,15 @@ export function HomeScreen() {
   const { data: servers } = useServers();
   const firstServer = servers?.[0]?.server;
   const open = useOpenWorkspace();
-  const drop = useFolderDrop(open);
+  const drop = useFolderDrop((event) => {
+    const file = event.dataTransfer?.files[0];
+    if (file) void openFolder(window.uvcs.pathForFile(file), open);
+  });
   useHomeCommands(open);
-  const openFolder = (): void => void openWorkspaceFolder(open);
+  const pickFolder = (): void => void openWorkspaceFolder(open);
 
   return (
-    <div className={styles.home} onDragOver={drop.onDragOver} onDragLeave={drop.onDragLeave} onDrop={drop.onDrop}>
+    <div className={styles.home}>
       <HomeSidebar section={section} onSelect={setSection} />
       <main className={styles.main}>
         <div className={styles.dragRegion} />
@@ -30,17 +33,17 @@ export function HomeScreen() {
           {section.kind === 'server' ? (
             <RepositoriesPanel server={section.server} onOpen={open} />
           ) : section.kind === 'all' ? (
-            <WorkspacesPanel onOpen={open} onOpenFolder={openFolder} />
+            <WorkspacesPanel onOpen={open} onOpenFolder={pickFolder} />
           ) : (
             <WelcomePanel
               onOpen={open}
-              onOpenFolder={openFolder}
+              onOpenFolder={pickFolder}
               onBrowseRepositories={firstServer ? () => setSection({ kind: 'server', server: firstServer }) : undefined}
             />
           )}
         </div>
       </main>
-      {drop.isDraggingOver && (
+      {drop.isOver && (
         <div className={styles.dropOverlay}>
           <FolderDown size={28} />
           <span>Drop a folder to open or create a workspace</span>
