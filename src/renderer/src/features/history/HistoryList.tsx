@@ -11,7 +11,7 @@ import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
-import { changesetOf, historyRowKey, ownerOf, type HistoryRow } from './historyRows';
+import { changesetOf, dateOf, historyRowKey, ownerOf, type HistoryRow } from './historyRows';
 import styles from './HistoryList.module.css';
 
 /** Two lines a row: the comment, then where and by whom. */
@@ -57,7 +57,6 @@ function revisionColumn(labelsByChangeset: ReadonlyMap<number, readonly Label[]>
     header: 'Revision',
     render: (row) => {
       const owner = ownerOf(row);
-      const date = row.kind === 'revision' ? row.revision.date : row.change.date;
       const comment = row.kind === 'revision' ? firstLine(row.revision.comment) : '';
       return (
         <span className={styles.row}>
@@ -97,7 +96,7 @@ function revisionColumn(labelsByChangeset: ReadonlyMap<number, readonly Label[]>
                 <Highlight text={displayName(owner)} />
               </span>
               <span className={styles.date}>
-                <RelativeTime date={date} />
+                <RelativeTime date={dateOf(row)} />
               </span>
             </span>
           </span>

@@ -21,6 +21,11 @@ export function ownerOf(row: HistoryRow): string {
   return row.kind === 'revision' ? row.revision.owner : row.change.owner;
 }
 
+/** When the revision or the move was checked in. */
+export function dateOf(row: HistoryRow): string {
+  return row.kind === 'revision' ? row.revision.date : row.change.date;
+}
+
 export function changesetOf(row: HistoryRow): number {
   return row.kind === 'revision' ? row.revision.changesetId : row.change.changesetId;
 }
@@ -28,5 +33,11 @@ export function changesetOf(row: HistoryRow): number {
 /** The row of the revision `changesetId` made, to select it from elsewhere (an annotated line); null when it made none. */
 export function revisionRowKey(rows: readonly HistoryRow[], changesetId: number): string | null {
   const row = rows.find((candidate) => candidate.kind === 'revision' && candidate.revision.changesetId === changesetId);
+  return row ? historyRowKey(row) : null;
+}
+
+/** The row of the revision with id `revisionId` (wherever the file was then); null when the history doesn't list it. */
+export function revisionIdRowKey(rows: readonly HistoryRow[], revisionId: number | undefined): string | null {
+  const row = rows.find((candidate) => candidate.kind === 'revision' && candidate.revision.revisionId === revisionId);
   return row ? historyRowKey(row) : null;
 }

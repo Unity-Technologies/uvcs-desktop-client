@@ -8,7 +8,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { AnnotationPane, type AnnotationHistory } from '../annotate/AnnotationPane';
 import { FileViewSwitch } from '../annotate/FileViewSwitch';
 import { openChangesetDiff } from '../changesets/changesetOperations';
-import { parentRevision } from './parentRevision';
+import { comparedRevisions } from './comparedRevisions';
 import { RevisionComparison } from './RevisionComparison';
 import { shownRevisionView, type RevisionView } from './revisionView';
 
@@ -84,14 +84,4 @@ export function RevisionDetails({ path, revisions, selected, onBack, history, ot
   ) : (
     <AnnotationPane path={path} repository={newer.repository} revision={newer} leading={leading} history={history} />
   );
-}
-
-function comparedRevisions(revisions: ItemRevision[], selected: ItemRevision[]): [ItemRevision | undefined, ItemRevision | undefined] {
-  if (selected.length >= 2) {
-    const [first, second] = [...selected].sort((a, b) => b.changesetId - a.changesetId);
-    return [first, second];
-  }
-  const newer = selected[0];
-  if (!newer) return [undefined, undefined];
-  return [newer, parentRevision(revisions, newer)];
 }
