@@ -28,9 +28,10 @@ function setUp() {
   });
   const lookups: { answer: Promise<string | null>; resolve: (root: string | null) => void }[] = [];
   const findRoot = (): Promise<string | null> => {
-    const lookup = Promise.withResolvers<string | null>();
-    lookups.push({ answer: lookup.promise, resolve: lookup.resolve });
-    return lookup.promise;
+    let resolve: (root: string | null) => void = () => {};
+    const answer = new Promise<string | null>((settle) => (resolve = settle));
+    lookups.push({ answer, resolve });
+    return answer;
   };
   /** `cm` answers the oldest lookup still waiting; settles once the app has acted on the answer. */
   const found = async (root: string | null): Promise<void> => {
