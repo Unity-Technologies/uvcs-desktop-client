@@ -2,7 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { CmShellSession, resultLineAtEnd, shellCommandTimeoutMs } from './CmShellSession';
+import { CmShellSession, shellCommandTimeoutMs } from './CmShellSession';
 
 // Every session runs the fake below, but one test's, whose output comes in step with fake timers.
 vi.mock('node:child_process', async (importOriginal) => {
@@ -80,18 +80,5 @@ describe('shellCommandTimeoutMs', () => {
     expect(shellCommandTimeoutMs(['status', '--xml'])).toBe(120_000);
     expect(shellCommandTimeoutMs(['undo', '-r', '/wk'])).toBeGreaterThanOrEqual(30 * 60_000);
     expect(shellCommandTimeoutMs(['add', '--coparent', '/wk/a'])).toBeGreaterThanOrEqual(30 * 60_000);
-  });
-});
-
-describe('resultLineAtEnd', () => {
-  it('finds the result line ending the output', () => {
-    expect(resultLineAtEnd('hello\nCommandResult 0\n')).toEqual({ index: 5, exitCode: 0 });
-    expect(resultLineAtEnd('CommandResult -1\r\n')).toEqual({ index: 0, exitCode: -1 });
-  });
-
-  it('ignores result lines with output after them, and text that only ends like one', () => {
-    expect(resultLineAtEnd('CommandResult 0\nmore')).toBeNull();
-    expect(resultLineAtEnd('hello\nCommandResult 0')).toBeNull();
-    expect(resultLineAtEnd('see CommandResult 0\n')).toBeNull();
   });
 });

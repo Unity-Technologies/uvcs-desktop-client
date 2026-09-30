@@ -1,7 +1,6 @@
 import { homedir } from 'node:os';
 import type { CommandLogEntry } from '@shared/events';
 import { CmError } from './CmError';
-import { isShellResultLine, processCommand, shellCommandResult } from './commandLineLimit';
 import { clipForLog, MAX_LOGGED_COMMAND_LINE, MAX_LOGGED_OUTPUT } from './clipForLog';
 import { inCmPathForm } from './cmPathForm';
 import type { CmResult } from './CmResult';
@@ -9,8 +8,10 @@ import { CmShellPool } from './CmShellPool';
 import { extractErrorMessage } from './errorMessage';
 import { commandLineForLog, outputForLog } from './hideSecrets';
 import { runsLong } from './longCommands';
+import { processCommand } from './processCommand';
 import { runCmProcess } from './runCmProcess';
 import { canRunInShell } from './shellCommandLine';
+import { isShellResultLine, shellCommandResult } from './shellResultLine';
 import { withUtf8Output } from './utf8Output';
 
 export interface CmRunOptions {
