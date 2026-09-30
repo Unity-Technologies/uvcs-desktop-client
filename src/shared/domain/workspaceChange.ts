@@ -17,7 +17,7 @@ export interface WorkspaceChange {
 export const MAX_CHANGED_FOLDERS = 100;
 
 /** What two changes in a row changed, as one. */
-export function mergeChanges(first: WorkspaceChange, second: WorkspaceChange): WorkspaceChange {
+export function mergeWorkspaceChanges(first: WorkspaceChange, second: WorkspaceChange): WorkspaceChange {
   return {
     content: first.content || second.content,
     pathsChanged: first.pathsChanged || second.pathsChanged,

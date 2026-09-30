@@ -1,7 +1,7 @@
 import type { Query } from '@tanstack/react-query';
 import type { WatchCoverage } from '@shared/api/workspaces';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
-import { mergeChanges, type WorkspaceChange } from '@shared/domain/workspaceChange';
+import { mergeWorkspaceChanges, type WorkspaceChange } from '@shared/domain/workspaceChange';
 import { queryKeys, workspaceKey } from '../../api/queryKeys';
 import { isKeyedByMovedInfo, isRefreshable, queryClient } from '../queryClient';
 import { loadedChangesetChanged } from '../refresh/headChanges';
@@ -80,7 +80,7 @@ export class HeldChanges {
 
   hold(workspacePath: string, change: WorkspaceChange): void {
     const before = this.held?.workspacePath === workspacePath ? this.held.change : null;
-    this.held = { workspacePath, change: before ? mergeChanges(before, change) : change };
+    this.held = { workspacePath, change: before ? mergeWorkspaceChanges(before, change) : change };
   }
 
   /** What was held for `workspacePath`, forgetting it; changes held for another workspace are dropped. */
