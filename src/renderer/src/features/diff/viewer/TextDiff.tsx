@@ -1,35 +1,34 @@
 import { Virtualizer } from '@pierre/diffs';
-import { Editor } from '@pierre/diffs/edit';
 import { EditProvider, File, FileDiff, VirtualizerContext, WorkerPoolContext } from '@pierre/diffs/react';
-import { useCallback, useEffect, useImperativeHandle, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
+import { useCallback, useMemo, useRef, useState, type KeyboardEvent, type RefObject } from 'react';
 import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
+import { shownText } from '../../../lib/lineBreaks';
 import { focusMain } from '../../../lib/mainFocus';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkey } from '../../../lib/shortcutRegistry';
-import type { ChangedLine, ChangeRegion } from './changeBlocks';
-import { lineAtTopOf, scrollToChange, type ChangeView } from './changeView';
+import type { ChangeView } from './changeView';
 import type { ComparisonMethod } from './comparisonMethod';
 import { useDiffPreferences } from './diffPreferencesStore';
 import type { EditorHandle } from './editorHandle';
 import { escapeWhileTyping } from './escapeWhileTyping';
 import { useHighlightWorkers } from './highlightWorkers';
 import type { LineDiff } from './lineDiff';
-import { changeFlashCss } from './lineMarksCss';
 import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
-import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
 import { PaneScrollbars } from './PaneScrollbars';
+import { isTypingIn } from './pierreDom';
 import { installPierreLineComparison } from './pierreLineComparison';
+import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
 import { installPierrePlainTextRender } from './pierrePlainTextRender';
-import { replacementEdit } from './replacementEdit';
 import { caretLineCss, shownDiff, type DiffSides } from './shownDiff';
 import { highlightedLanguage, syntaxHighlighting } from './syntaxHighlighting';
 import { useBlockDiscard } from './useBlockDiscard';
+import { useChangeView } from './useChangeView';
 import type { DiscardRequest } from './useLineDiscarding';
+import { usePierreEditor } from './usePierreEditor';
 import { POINTER_FOCUS_ATTRIBUTE, usePointerFocusMark } from './usePointerFocusMark';
 import { useShadowStyle } from './useShadowStyle';
 import { useSyntaxHighlighter } from './useSyntaxHighlighter';
 import styles from './TextDiff.module.css';
-import { shownText } from '../../../lib/lineBreaks';
 
 const BOTH_SIDES: DiffSides = { original: true, modified: true };
 
@@ -79,9 +78,6 @@ interface TextDiffProps {
   onViewScroll?: () => void;
 }
 
-/** How long a change moved to stays lit. */
-const FLASH_MS = 1200;
-
 /**
  * Each side's code scrolls sideways, so Tab stops there to scroll it with the arrows: show where it stopped (after the
  * keyboard took it there, not a click). The caret's line keeps its diff color (the editor would tint it blue, like
@@ -93,17 +89,6 @@ const SHADOW_CSS = [
   `[data-code]:focus-visible:not([${POINTER_FOCUS_ATTRIBUTE}]) { outline: var(--focus-outline); outline-offset: -2px; }`,
   '[data-editor-active-line]:not([data-selected-line]) { --diffs-editor-active-line-source-mix: 100%; --mix-selection-light: 100%; --mix-selection-dark: 100%; }',
 ].join('\n');
-
-type CreateEditor = React.ComponentProps<typeof EditProvider>['createEditor'];
-
-/** Creates the editors Pierre asks for, handing each one over: the diff acts on its text (discards, undo, focus). */
-function editorFactory(onCreate: (editor: Editor) => void): CreateEditor {
-  return (type, options, key) => {
-    const created = new Editor(type, options, key);
-    onCreate(created as unknown as Editor);
-    return created;
-  };
-}
 
 /** Syntax-highlighted text diff, side by side or unified, optionally typed into on the modified side. */
 export function TextDiff({ original, modified, current, diff, diffedText, wholeFile = false, fileName, comparisonMethod, sides = BOTH_SIDES, editable = false, editorRef, onEdit, onDiscard, onUndoDiscard, changeViewRef, onViewScroll }: TextDiffProps) {
@@ -120,13 +105,13 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     },
     [virtualizer],
   );
-  const editor = useRef<Editor | null>(null);
-  const [createEditor] = useState(() => editorFactory((created) => (editor.current = created)));
+  const { editor, createEditor } = usePierreEditor(editorRef, container);
   const latest = useRef({ current: diffedText, diff });
   latest.current = { current: diffedText, diff };
   // Stable inputs: new objects would make Pierre load the files again. While the text is typed into, Pierre works out
-  // the diff itself (with the same options, `pierreLineComparison`); a diff shown anew (another comparison method, the
-  // whole file or its diff, the file saved or changed on disk) starts from the text as it is now, unsaved edits included.
+  // the diff itself (with the same options, `pierreLineComparison`), so the text typed isn't among these memos' keys;
+  // a diff shown anew (another comparison method, the whole file or its diff, the file saved or changed on disk) starts
+  // from the text as it is now (`latest`), unsaved edits included.
   // A big diff renders only the lines in view; a read-only one shows as plain text at once and highlights in Pierre's
   // workers; past what's worth it, Pierre shows files with more lines than `tokenizeMaxLength` as plain text.
   const highlighting = syntaxHighlighting(original, modified, editable);
@@ -161,45 +146,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);
   useShadowStyle(container, [SHADOW_CSS, showsNoNewlineMarker(original, diffedText) ? '' : HIDE_NO_NEWLINE_CSS, editable ? caretLineCss(shownText(diffedText)) : ''].join('\n'));
   const pointerFocus = usePointerFocusMark();
-
-  const isTyping = (): boolean => {
-    const active = container.current?.querySelector('diffs-container')?.shadowRoot?.activeElement;
-    return active instanceof HTMLElement && active.isContentEditable;
-  };
-
-  useImperativeHandle(
-    editorRef,
-    () => ({
-      setText: (text) => {
-        const edit = editor.current && replacementEdit(editor.current.getText(), shownText(text));
-        if (edit) editor.current!.applyEdits([edit]);
-      },
-      undo: () => editor.current?.undo(),
-      focus: () => {
-        const hadCaret = (editor.current?.getViewState().selections?.length ?? 0) > 0;
-        editor.current?.focus(hadCaret ? undefined : { lineNumber: 'first-visible' });
-      },
-      hasFocus: isTyping,
-    }),
-    [],
-  );
-
-  const changeFlash = useChangeFlash();
-  useShadowStyle(container, changeFlash.css);
-  const stopScrolling = useRef<() => void>(undefined);
-  useEffect(() => () => stopScrolling.current?.(), []);
-  useImperativeHandle(changeViewRef, () => ({
-    reveal: (change: ChangeRegion) => {
-      if (!container.current) return;
-      stopScrolling.current?.();
-      stopScrolling.current = scrollToChange(container.current, change, virtualized ? virtualizer : undefined);
-      changeFlash.light(change.lines);
-      discard.pickChange(change);
-      // Typing goes on from the change (F7 while typing): the caret would otherwise bring the view back to it.
-      if (isTyping()) editor.current?.focus({ lineNumber: Math.min(change.newStart, editor.current.getText().split('\n').length), preventScroll: true });
-    },
-    lineAtTop: (blocks) => (container.current ? lineAtTopOf(container.current, blocks) : null),
-  }));
+  useChangeView({ changeViewRef, containerRef: container, virtualizer: virtualized ? virtualizer : undefined, editor, pickChange: discard.pickChange });
+  const isTyping = (): boolean => isTypingIn(container.current);
 
   const onKeyDownCapture = (event: KeyboardEvent): void => {
     if (!isTyping() || !matchesShortcut(event.nativeEvent, hotkey('leaveEditor'))) return;
@@ -271,19 +219,4 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
       </div>
     </div>
   );
-}
-
-/** The change moved to, lit for a moment (`changeFlashCss`). */
-function useChangeFlash(): { css: string; light: (lines: ChangedLine[]) => void } {
-  const [flash, setFlash] = useState<{ lines: ChangedLine[]; round: number } | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  useEffect(() => () => clearTimeout(timer.current), []);
-  return {
-    css: flash ? changeFlashCss(flash.lines, flash.round) : '',
-    light: (lines) => {
-      setFlash((last) => ({ lines, round: (last?.round ?? 0) + 1 }));
-      clearTimeout(timer.current);
-      timer.current = setTimeout(() => setFlash((last) => last && { ...last, lines: [] }), FLASH_MS);
-    },
-  };
 }
