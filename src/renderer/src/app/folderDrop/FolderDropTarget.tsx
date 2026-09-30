@@ -1,11 +1,10 @@
-import { AppWindow, FolderDown } from 'lucide-react';
 import { useDialogStore } from '../../ui/dialog/dialogStore';
 import { useSession } from '../workspace/sessionStore';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
 import { droppedItems, readDroppedFolder } from './droppedFolder';
 import { openDroppedFolder } from './openDroppedFolder';
 import { useFolderDrop } from './useFolderDrop';
-import styles from './FolderDropOverlay.module.css';
+import { FolderDropOverlay } from './FolderDropOverlay';
 
 /**
  * Dropping a folder anywhere on the window, on the home screen or a workspace, opens its workspace here (with Shift, in
@@ -22,12 +21,5 @@ export function FolderDropTarget() {
     },
   });
 
-  if (!drag.isOver || dialogOpen) return null;
-  return (
-    <div className={styles.overlay}>
-      {drag.newWindow ? <AppWindow className={styles.icon} size={28} /> : <FolderDown className={styles.icon} size={28} />}
-      <span className={styles.title}>{drag.newWindow ? 'Open in a new window' : 'Open or create a workspace'}</span>
-      <span className={styles.hint}>{drag.newWindow ? 'Drop a folder here.' : 'Drop a folder here. Hold Shift to open it in a new window.'}</span>
-    </div>
-  );
+  return <FolderDropOverlay visible={drag.isOver && !dialogOpen} newWindow={drag.newWindow} />;
 }
