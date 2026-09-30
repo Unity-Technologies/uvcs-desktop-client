@@ -364,12 +364,12 @@ renderer/src/
   - **Counts and empty lists**: the header counts what shows, "12 of 340" while filters hide some of what was read
     (`shownCount`). A list its filters empty says "No matching <things>" with Clear filters (`NoMatches`), which
     empties the text, shows everyone and turns the kinds off (`clear`, `isFiltering`); the time range stays, and the
-    hint says when a longer one could find more. A list with nothing to filter keeps its own first-use empty state.
+    hint says when a longer one could find more (`longerRangeHint`). A list with nothing to filter keeps its own first-use empty state.
     Revealing a row the filters hide clears them (Show in Locks, the Branch Explorer's reveal).
   - The shelves list in Changes stays a quick list with "Mine | Everyone" (⇧⌘S), not a filter bar: it's a popover
     over Changes, and its "All shelves" hands its scope and text to the Shelves view.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
-- **List and details**: `ListWithDetails` (each view remembers its own details width, `widthKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. Every
+- **List and details**: `ListWithDetails` (each view remembers its own details width, `widthKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. A view listing objects lays its body out with `ObjectListView` (the skeleton while loading, the error, its empty state, or the table with a row always selected and its details) and refreshes with `ViewRefreshButton`. Every
   kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
   description, or the object's name with the comment below; edited in place where cm can edit it, the title in a field that wraps and grows, and a comment left unedited saved as it was, `editedComment`; a name reads a size above a comment's title); a meta row (author ·
