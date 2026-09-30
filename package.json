@@ -4,6 +4,7 @@
   "version": "0.1.2",
   "description": "A modern desktop client for Unity Version Control, powered by the cm CLI.",
   "author": "Unity Technologies",
+  "license": "Apache-2.0",
   "homepage": "https://github.com/danipen/uvcs-desktop-client#readme",
   "repository": {
     "type": "git",
