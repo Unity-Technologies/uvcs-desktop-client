@@ -97,6 +97,7 @@ npm run typecheck    # main + renderer
 npm test             # vitest, every src/**/*.test.ts
 npm run e2e          # build, then the smoke test: every view of the real app against a fake cm (~10 s)
 npm run dist         # the installer for this OS, into dist/
+npm run release      # dist, uploaded to the GitHub release (the Release workflow runs it; needs GH_TOKEN)
 node scripts/perf/startup.mjs [--cm=real]   # after a build: median start-up times, cold and warm (header: options)
 ```
 
@@ -225,8 +226,10 @@ Not enforced yet: no `any` (there are none today). A static test for it is welco
 - **Dependencies**: every package is a `devDependency`, because electron-vite bundles what the app runs into `out/`
   (`electron-builder.yml` ships no `node_modules`). Prefer none: a new one must do what a small module can't.
 - **Generated, never edited**: `out/`, `dist/`, `*.tsbuildinfo`, `node_modules/`.
-- **Not set up yet**: code signing, notarization, auto-update and versioning (`package.json` stays `0.1.0`). Don't add
-  them unasked.
+- **Releases own the version**: the Release workflow bumps `package.json` and tags it; never bump it by hand. The app
+  updates itself from those releases (`docs/features/updates.md`).
+- **Not set up yet**: code signing and notarization (the Release workflow turns them on once its secrets exist). Don't
+  add them unasked.
 
 ## Commits: let the history tell the story
 
