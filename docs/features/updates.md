@@ -67,6 +67,9 @@ one shows again. A check the window asked for answers in one toast, "Checking…
   `scripts/build/`, one plugin for main, preload, renderer and its workers; the text is `thirdPartyNotices`).
   electron-builder.yml's `extraResources` ships it with the app's `LICENSE` and `NOTICE` as plain files in the
   resources folder, outside `app.asar`.
+- **Licenses**: the app is Apache-2.0 (`LICENSE`, `NOTICE`), and every package in package-lock.json must have a
+  permissive license (`PERMISSIVE_LICENSES`, `scripts/build/dependencyLicenses.test.ts`): a copyleft one fails the tests
+  and needs a legal decision before it joins.
 - macOS signing and notarization turn on once the `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`,
   `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID` secrets exist; without them the build is signed ad hoc (the
   workflow's `MAC_SIGNING_FLAGS`), opens after Privacy & Security ▸ Open Anyway, and updates by its disk image. A build
