@@ -13,7 +13,7 @@ import { applyShelveCleanly } from './applyShelveCleanly';
 import type { LeftChangesFinder } from './leftChanges';
 import { moveNewItemsAside } from './moveNewItemsAside';
 import { shelvedContents, summarizePending } from './pendingSnapshot';
-import { putShelvedChangesBack } from './putShelvedChangesBack';
+import { failureReason, putBackAfterFailure } from './putShelvedChangesBack';
 import { readPendingSnapshot, readPrivatePaths } from './readPendingChanges';
 import { renamedPrivateFiles } from './renamedPrivateFiles';
 import { selectorObjectRef } from './selectorObjectRef';
@@ -171,15 +171,11 @@ async function assertClean(cm: CmClient, workspacePath: string): Promise<void> {
  * for restore on the source.
  */
 async function rollBack(deps: SwitchDependencies, workspacePath: string, record: SwitchShelveRecord, cause: unknown, context: OperationContext): Promise<Error> {
-  const reason = (cause instanceof Error ? cause.message : String(cause)).replace(/\.$/, '');
-  let onSource = false;
-  try {
-    onSource = await returnToSource(deps.cm, workspacePath, record.source.spec, context);
-    if (onSource && (await putShelvedChangesBack(deps.cm, deps.leftChanges, workspacePath, record, context))) {
-      return new Error(`${reason}. Your changes were put back.`);
-    }
-  } catch {
-    // Reported below: the changes are still safe in the shelve.
+  const reason = failureReason(cause);
+  // Whatever fails from here, the changes are still safe in the shelve: the error says where.
+  const onSource = await returnToSource(deps.cm, workspacePath, record.source.spec, context).catch(() => false);
+  if (onSource && (await putBackAfterFailure(deps.cm, deps.leftChanges, workspacePath, record, context))) {
+    return new Error(`${reason}. Your changes were put back.`);
   }
   deps.records.save({ ...record, mode: 'leave' });
   const restoreFrom = onSource ? 'restore them from Changes' : `switch back to ${record.source.name} to restore them`;

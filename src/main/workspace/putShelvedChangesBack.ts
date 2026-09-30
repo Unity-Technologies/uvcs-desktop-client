@@ -2,10 +2,10 @@ import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import type { OperationContext } from '../operations/OperationTracker';
 import type { LeftChangesFinder } from './leftChanges';
+import { applyShelveCleanly } from './applyShelveCleanly';
 import { changedPaths } from './pendingSnapshot';
 import { putBack } from './privateBackups';
 import { readPendingSnapshot } from './readPendingChanges';
-import { applyShelveCleanly } from './applyShelveCleanly';
 
 /**
  * Puts shelved changes back in the workspace they were shelved from, after a step that was taking them out of it
@@ -28,6 +28,29 @@ export async function putShelvedChangesBack(
   }
   await leftChanges.finish(workspacePath, record);
   return true;
+}
+
+/**
+ * `putShelvedChangesBack` once a step failed. It never fails itself: whatever goes wrong putting them back, the changes
+ * are still safe in the shelve, and the caller's error says so.
+ */
+export async function putBackAfterFailure(
+  cm: CmClient,
+  leftChanges: LeftChangesFinder,
+  workspacePath: string,
+  record: SwitchShelveRecord,
+  context: OperationContext,
+): Promise<boolean> {
+  try {
+    return await putShelvedChangesBack(cm, leftChanges, workspacePath, record, context);
+  } catch {
+    return false;
+  }
+}
+
+/** What went wrong, without its final period, for the sentence that goes on to say where the changes are. */
+export function failureReason(cause: unknown): string {
+  return (cause instanceof Error ? cause.message : String(cause)).replace(/\.$/, '');
 }
 
 async function allStillPending(cm: CmClient, workspacePath: string, paths: string[]): Promise<boolean> {

@@ -10,7 +10,7 @@ import { unresolvedConflicts, updateWithMerge } from '../merge/updateWithMerge';
 import type { OperationContext } from '../operations/OperationTracker';
 import type { LeftChangesFinder } from './leftChanges';
 import { shelvedContents } from './pendingSnapshot';
-import { putShelvedChangesBack } from './putShelvedChangesBack';
+import { failureReason, putBackAfterFailure } from './putShelvedChangesBack';
 import { readPendingSnapshot } from './readPendingChanges';
 import { selectorObjectRef } from './selectorObjectRef';
 import { newShelveRecord, NO_TARGET } from './shelveRecord';
@@ -69,18 +69,13 @@ export async function shelveBlockedAndUpdate(
     await cm.execute(UPDATE_ARGS, { cwd: workspacePath, onOutputLine: context.progressOf(readUpdateProgress) });
     return { ...result, updated: true, backupDirectory: null };
   } catch (error) {
-    throw await putBack(deps, workspacePath, record, error, context);
+    throw await updateFailed(deps, workspacePath, record, error, context);
   }
 }
 
-async function putBack(deps: ShelveForUpdateDependencies, workspacePath: string, record: SwitchShelveRecord, cause: unknown, context: OperationContext): Promise<Error> {
-  const reason = (cause instanceof Error ? cause.message : String(cause)).replace(/\.$/, '');
-  try {
-    if (await putShelvedChangesBack(deps.cm, deps.leftChanges, workspacePath, record, context)) {
-      return new Error(`Couldn't update: ${reason}. Your changes were put back.`);
-    }
-  } catch {
-    // Reported below: the changes are still safe in the shelve.
-  }
-  return new Error(`Couldn't update: ${reason}. Your changes are safe in shelve ${record.shelveId}; restore them from Changes.`);
+/** Puts the shelved files back after a failed undo or update, and says where they are. */
+async function updateFailed(deps: ShelveForUpdateDependencies, workspacePath: string, record: SwitchShelveRecord, cause: unknown, context: OperationContext): Promise<Error> {
+  const failure = `Couldn't update: ${failureReason(cause)}`;
+  if (await putBackAfterFailure(deps.cm, deps.leftChanges, workspacePath, record, context)) return new Error(`${failure}. Your changes were put back.`);
+  return new Error(`${failure}. Your changes are safe in shelve ${record.shelveId}; restore them from Changes.`);
 }

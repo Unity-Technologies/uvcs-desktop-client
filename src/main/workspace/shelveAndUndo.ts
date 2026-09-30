@@ -8,7 +8,7 @@ import type { OperationContext } from '../operations/OperationTracker';
 import type { LeftChangesFinder } from './leftChanges';
 import { moveNewItemsAside } from './moveNewItemsAside';
 import { shelvedContents } from './pendingSnapshot';
-import { putShelvedChangesBack } from './putShelvedChangesBack';
+import { failureReason, putBackAfterFailure } from './putShelvedChangesBack';
 import { readPendingSnapshot } from './readPendingChanges';
 import { newShelveRecord, NO_TARGET } from './shelveRecord';
 import type { SwitchShelveRecords } from './switchShelveRecords';
@@ -58,7 +58,7 @@ export async function shelveAndUndo(
     await cm.execute(onLinksThemselves('undo', ...targets), { cwd: workspacePath });
     await moveNewItemsAside(cm, records, workspacePath, changes, record, deps.backupsRoot);
   } catch (error) {
-    throw await putBackAfterFailure(deps, workspacePath, record, error, context);
+    throw await undoFailed(deps, workspacePath, record, error, context);
   }
   return { shelveId: shelve.id, count: record.paths.length };
 }
@@ -70,14 +70,9 @@ export function shelvedAwayChanges(changes: PendingChange[], paths: string[] | n
   return changes.filter((change) => shelved.has(change.path));
 }
 
-async function putBackAfterFailure(deps: ShelveAndUndoDependencies, workspacePath: string, record: SwitchShelveRecord, cause: unknown, context: OperationContext): Promise<Error> {
-  const reason = (cause instanceof Error ? cause.message : String(cause)).replace(/\.$/, '');
-  try {
-    if (await putShelvedChangesBack(deps.cm, deps.leftChanges, workspacePath, record, context)) {
-      return new Error(`Couldn't undo the shelved changes: ${reason}. Your changes were put back.`);
-    }
-  } catch {
-    // Reported below: the changes are still safe in the shelve.
-  }
-  return new Error(`Couldn't undo the shelved changes: ${reason}. Shelve ${record.shelveId} holds them all.`);
+/** Puts the shelved changes back after a failed undo, and says where they are. */
+async function undoFailed(deps: ShelveAndUndoDependencies, workspacePath: string, record: SwitchShelveRecord, cause: unknown, context: OperationContext): Promise<Error> {
+  const failure = `Couldn't undo the shelved changes: ${failureReason(cause)}`;
+  if (await putBackAfterFailure(deps.cm, deps.leftChanges, workspacePath, record, context)) return new Error(`${failure}. Your changes were put back.`);
+  return new Error(`${failure}. Shelve ${record.shelveId} holds them all.`);
 }
