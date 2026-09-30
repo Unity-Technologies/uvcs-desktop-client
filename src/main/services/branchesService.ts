@@ -8,7 +8,7 @@ import { findRecords, toBranch } from '../cm/findObjects';
 import { withTempFile } from '../files/tempFile';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 
-export function createBranchesService({ cm, settings }: ServiceContext, { branchNames }: BranchNamesContext): BranchesApi {
+export function createBranchesService({ cm, settings, headers }: ServiceContext, { branchNames }: BranchNamesContext): BranchesApi {
   async function find(workspacePath: string, filter: QueryFilter, conditions: string[]): Promise<Branch[]> {
     const xml = await cm.query(findArgs('branch', { ...filter, branch: undefined }, 'date desc', conditions), { cwd: workspacePath });
     const branches = findRecords(xml, 'BRANCH').map(toBranch);
@@ -58,8 +58,9 @@ export function createBranchesService({ cm, settings }: ServiceContext, { branch
     await cm.query(['branch', hidden ? 'hide' : 'unhide', ...branches.map((branch) => `br:${branch}`)], { cwd: workspacePath });
   }
 
+  /** From the workspace's names, which the workspace info shares: asked for just before, they cost no command. */
   async function workspaceGuid(workspacePath: string): Promise<string> {
-    return (await cm.query(['getworkspacefrompath', workspacePath, '--format={guid}'])).trim();
+    return (await headers.names(workspacePath)).guid;
   }
 
   async function recent(workspacePath: string): Promise<string[]> {
