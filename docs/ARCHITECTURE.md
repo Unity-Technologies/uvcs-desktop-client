@@ -4,7 +4,7 @@ A desktop client for Unity Version Control. The only backend is the `cm` CLI.
 
 ```
 src/
-  shared/     Types shared by both processes: domain model, API contract, events. No runtime deps.
+  shared/     Types shared by both processes: domain model, API contract, events. No runtime deps (a test checks it).
   main/       Electron main process. Talks to `cm`, the file system and the OS.
   preload/    Exposes `window.uvcs` (invoke + events) to the renderer. Nothing else.
   renderer/   React UI.
