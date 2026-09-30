@@ -21,28 +21,37 @@ export function isTheRunningApp(): boolean {
 }
 
 /**
- * Opens what a launch of the app asks for: the workspace named by this launch or a later one (a second launch focuses
- * the app when it names none), and one picked from the Dock's recent workspaces. Called before the app is ready, as
- * that request may be what launched it.
+ * Opens what a launch of the app asks for: the workspace holding the folder this launch or a later one names (a later
+ * launch naming none brings the app forward), and one picked from the Dock's recent workspaces. Called before the app
+ * is ready, as that request may be what launched it. Settles once this launch's own request is known: the first window
+ * waits for it (`openFirst`), as `cm` may find the workspace after Electron is ready.
  */
-export function handleLaunchRequests(windows: WorkspaceWindows, findRoot: FindWorkspaceRoot, launch: Launch = { argv: process.argv, workingDirectory: process.cwd() }): void {
-  app.on('second-instance', (_event, argv, workingDirectory) => {
-    if (!openNamedWorkspace(windows, findRoot, argv, workingDirectory)) windows.focusAny();
-  });
+export async function handleLaunchRequests(
+  windows: WorkspaceWindows,
+  findRoot: FindWorkspaceRoot,
+  launch: Launch = { argv: process.argv, workingDirectory: process.cwd() },
+): Promise<void> {
+  app.on('second-instance', (_event, argv, workingDirectory) => openLaterLaunchRequest(windows, findRoot, { argv, workingDirectory }));
   handleRecentDocumentRequests(windows);
-  openNamedWorkspace(windows, findRoot, launch.argv, launch.workingDirectory);
+  const folder = namedFolder(launch);
+  const root = folder && (await findRoot(folder));
+  // Not ready yet as far as the windows go: the first window takes it.
+  if (root) windows.requestWorkspace(root, false);
 }
 
-/**
- * Opens the workspace holding the folder a launch of the installed app names (Windows and Linux pass it as an
- * argument; macOS as `open-file`). Whether it named one.
- */
-function openNamedWorkspace(windows: WorkspaceWindows, findRoot: FindWorkspaceRoot, argv: readonly string[], workingDirectory: string): boolean {
-  const folder = app.isPackaged ? workspaceArgument(argv, workingDirectory) : null;
-  if (!folder) return false;
+function openLaterLaunchRequest(windows: WorkspaceWindows, findRoot: FindWorkspaceRoot, launch: Launch): void {
+  const folder = namedFolder(launch);
+  if (!folder) {
+    windows.focusAny();
+    return;
+  }
   void findRoot(folder).then((root) => {
     if (root) windows.requestWorkspace(root, app.isReady());
     else if (app.isReady()) windows.focusAny();
   });
-  return true;
+}
+
+/** The folder a launch of the installed app names: Windows and Linux pass it as an argument, macOS as `open-file`. */
+function namedFolder({ argv, workingDirectory }: Launch): string | null {
+  return app.isPackaged ? workspaceArgument(argv, workingDirectory) : null;
 }

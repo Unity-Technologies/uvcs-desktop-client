@@ -32,7 +32,7 @@ const windows = new WorkspaceWindows({
   onClosed: (viewer) => watchers.release(viewer),
 });
 
-function start(): void {
+function start(launched: Promise<void>): void {
   cm.warmUp();
   // A window sees the commands its own calls ran (commands run outside any call go to every window).
   cm.onCommandLogged((entry) => sendEventToCaller('commandLogged', entry));
@@ -53,14 +53,15 @@ function start(): void {
   );
   followAppTheme(settings);
   installMenus(windows);
-  windows.openFirst();
+  const openFirstWindow = (): void => windows.openFirst();
+  void launched.then(openFirstWindow, openFirstWindow);
   // macOS keeps the app running with no window; clicking the Dock icon then opens the home screen.
   app.on('activate', () => windows.all().length === 0 && windows.open());
 }
 
 if (isTheRunningApp()) {
-  handleLaunchRequests(windows, (folder) => findWorkspaceRoot(cm, folder));
-  app.whenReady().then(start);
+  const launched = handleLaunchRequests(windows, (folder) => findWorkspaceRoot(cm, folder));
+  void app.whenReady().then(() => start(launched));
 } else {
   app.quit();
 }
