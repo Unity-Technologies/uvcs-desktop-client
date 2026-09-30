@@ -37,11 +37,14 @@ export function reviewSummariesKey(workspacePath: string, text?: string): readon
  */
 export function useReviewsByBranch(enabled = true) {
   const workspacePath = useWorkspacePath();
-  return useQuery({
+  return useQuery({ ...reviewSummariesQuery(workspacePath), select: latestReviewByBranch, enabled });
+}
+
+/** How the newest reviews of the repository are read, all of them (`reviewSummariesKey` without a text). */
+export function reviewSummariesQuery(workspacePath: string) {
+  return {
     queryKey: reviewSummariesKey(workspacePath),
     queryFn: () => api.codeReviews.listSummaries(workspacePath, {}),
-    select: latestReviewByBranch,
     staleTime: 5 * 60_000,
-    enabled,
-  });
+  };
 }
