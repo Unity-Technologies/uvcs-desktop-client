@@ -111,8 +111,8 @@ describe('one branch by name', () => {
     const branch = await service.get(WORKSPACE, '/main/fix/task1');
 
     expect(lines()).toEqual([
-      "find branch where name = 'task1' and hidden = 'false' --xml --nototal",
-      "find branch where name = 'task1' and hidden = 'true' --xml --nototal",
+      "find branch where name = 'task1' and hidden = 'false' order by date desc --xml --nototal",
+      "find branch where name = 'task1' and hidden = 'true' order by date desc --xml --nototal",
     ]);
     expect(branch).toMatchObject({ id: 40, name: '/main/fix/task1' });
   });

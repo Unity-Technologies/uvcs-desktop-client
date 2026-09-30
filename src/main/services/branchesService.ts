@@ -17,27 +17,27 @@ export function createBranchesService({ cm, settings }: ServiceContext, { branch
     return branches;
   }
 
-  async function list(workspacePath: string, filter: QueryFilter): Promise<Branch[]> {
-    // `cm find branch` leaves hidden branches out unless they are asked for explicitly.
+  /**
+   * `cm find branch` leaves hidden branches out unless they are asked for, and `or` between the two finds neither:
+   * hidden branches take a second query, only when wanted.
+   */
+  async function findVisibleAndHidden(workspacePath: string, filter: QueryFilter, conditions: string[], withHidden: boolean): Promise<Branch[]> {
     const [visible, hidden] = await Promise.all([
-      find(workspacePath, filter, ["hidden = 'false'"]),
-      filter.includeHidden ? find(workspacePath, filter, ["hidden = 'true'"]) : Promise.resolve([]),
+      find(workspacePath, filter, [...conditions, "hidden = 'false'"]),
+      withHidden ? find(workspacePath, filter, [...conditions, "hidden = 'true'"]) : [],
     ]);
-    return [...visible, ...hidden.map((branch) => ({ ...branch, isHidden: true }))].sort((a, b) => b.date.localeCompare(a.date));
+    return [...visible, ...hidden.map((branch) => ({ ...branch, isHidden: true }))];
+  }
+
+  async function list(workspacePath: string, filter: QueryFilter): Promise<Branch[]> {
+    const branches = await findVisibleAndHidden(workspacePath, filter, [], filter.includeHidden === true);
+    return branches.sort((a, b) => b.date.localeCompare(a.date));
   }
 
   async function get(workspacePath: string, name: string): Promise<Branch | null> {
-    // `cm find` matches branches by their last name part only, and leaves hidden branches out unless they are asked
-    // for (a workspace can be on one): both are asked for, as `or` there finds neither.
-    const named = `name = '${escapeQueryValue(shortBranchName(name))}'`;
-    const findNamed = (condition: string): Promise<string> =>
-      cm.query(['find', 'branch', `where ${named} and ${condition}`, '--xml', '--nototal'], { cwd: workspacePath });
-    const [visible, hidden] = await Promise.all([findNamed("hidden = 'false'"), findNamed("hidden = 'true'")]);
-    const branches = [
-      ...findRecords(visible, 'BRANCH').map(toBranch),
-      ...findRecords(hidden, 'BRANCH').map((record) => ({ ...toBranch(record), isHidden: true })),
-    ];
-    return branches.find((branch) => branch.name === name) ?? null;
+    // `cm find` matches branches by their last name part only; a workspace can be on a hidden branch.
+    const named = await findVisibleAndHidden(workspacePath, {}, [`name = '${escapeQueryValue(shortBranchName(name))}'`], true);
+    return named.find((branch) => branch.name === name) ?? null;
   }
 
   function create(workspacePath: string, request: CreateBranchRequest): Promise<void> {
