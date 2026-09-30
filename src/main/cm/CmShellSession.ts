@@ -11,6 +11,7 @@ const RESULT_LINE_ROOM = 40;
 const PROMPT_LIKE_TAIL = /^[^<].*(\[[^\]]*\]|[:?])\s*$/;
 /** Longer last lines are output (e.g. `--format` records), not a question. */
 const MAX_PROMPT_LENGTH = 300;
+/** How long output may pause on a question-like line before it counts as a prompt. */
 const PROMPT_STALL_MS = 1500;
 const READ_TIMEOUT_MS = 120_000;
 /** A write of few paths can still touch a whole tree (removing or moving a folder); a stalled prompt is caught long before either timeout. */
@@ -48,6 +49,7 @@ export class CmShellSession {
   constructor(
     private readonly cmPath: string,
     private readonly cwd: string,
+    private readonly promptStallMs = PROMPT_STALL_MS,
   ) {}
 
   get pendingCount(): number {
@@ -156,7 +158,7 @@ export class CmShellSession {
           if (this.received !== receivedBefore || !this.running) return;
           this.abortRunning(`cm is waiting for input ("${lastLine.trim()}"). Check your credentials for this server.`);
         }),
-      PROMPT_STALL_MS,
+      this.promptStallMs,
     );
   }
 

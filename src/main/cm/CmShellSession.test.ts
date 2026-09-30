@@ -17,7 +17,8 @@ describe('CmShellSession', () => {
   });
 
   it('fails a command stuck on a prompt without feeding it the next commands', async () => {
-    session = new CmShellSession(process.execPath, fakeCmFolder);
+    // Nothing follows the fake's prompt, so any stall tells it; the real one would only make the test wait.
+    session = new CmShellSession(process.execPath, fakeCmFolder, 50);
     const prompted = session.run(['prompt']);
     const next = session.run(['echo', 'still-works']);
 

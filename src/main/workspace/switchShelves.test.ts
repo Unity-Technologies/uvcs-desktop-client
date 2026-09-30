@@ -1,7 +1,7 @@
 import { mkdir, mkdtemp, readFile, readlink, rm, stat, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, it } from 'vitest';
 import type { CmClient } from '../cm/CmClient';
 import { detachReplacedFiles } from './switchShelves';
 
@@ -23,8 +23,9 @@ function fakeCm(status: string, undo: () => Promise<void>) {
   return { cm, commands };
 }
 
-describe('detachReplacedFiles', () => {
-  it('writes the shelved text back in a later second than the undo wrote the loaded one, so cm sees the change', async () => {
+// Concurrent: each test has its own folder and fake, and each waits out a real second (`waitForNextSecond`).
+describe.concurrent('detachReplacedFiles', () => {
+  it('writes the shelved text back in a later second than the undo wrote the loaded one, so cm sees the change', async ({ expect }) => {
     const workspacePath = await mkdtemp(join(tmpdir(), 'uvcs-detach-'));
     const file = join(workspacePath, 'a.txt');
     await writeFile(file, 'teh\n');
@@ -42,7 +43,7 @@ describe('detachReplacedFiles', () => {
     expect(Math.floor((await stat(file)).mtimeMs / 1000)).toBeGreaterThan(undoneAtSecond);
   });
 
-  it('adds back a file the shelve copied over a deletion, so nothing reads its revision once the shelve is deleted', async () => {
+  it('adds back a file the shelve copied over a deletion, so nothing reads its revision once the shelve is deleted', async ({ expect }) => {
     const workspacePath = await mkdtemp(join(tmpdir(), 'uvcs-detach-'));
     const file = join(workspacePath, 'src', 'f5.txt');
     await mkdir(join(workspacePath, 'src'));
@@ -60,7 +61,7 @@ describe('detachReplacedFiles', () => {
   });
 
   // Windows lets only administrators and Developer Mode create links.
-  it.skipIf(process.platform === 'win32')('keeps a link pointing where the shelve left it, never touching the file it points to', async () => {
+  it.skipIf(process.platform === 'win32')('keeps a link pointing where the shelve left it, never touching the file it points to', async ({ expect }) => {
     const workspacePath = await mkdtemp(join(tmpdir(), 'uvcs-detach-'));
     const link = join(workspacePath, 'link');
     await writeFile(join(workspacePath, 'README.md'), 'readme\n');
