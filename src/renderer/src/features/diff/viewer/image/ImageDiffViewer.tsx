@@ -31,6 +31,7 @@ import { useDecodedImage } from './useDecodedImage';
 import type { CachedHeatmap } from './useHeatmap';
 import { usePanZoom } from './usePanZoom';
 import { ZoomControls } from './ZoomControls';
+import { zoomCommandOf } from './zoomKeys';
 import styles from './ImageDiffViewer.module.css';
 
 interface ImageDiffViewerProps {
@@ -69,15 +70,13 @@ export function ImageDiffViewer({ original, modified, mode }: ImageDiffViewerPro
   const decoding = !frame || (isDiff && (!oldImage || !newImage));
   const spin = useSpinDelay(decoding);
 
-  // Keyboard zoom on the focused stage: +/− step, 0 fits, 1 is 100%.
+  // Keyboard zoom on the focused stage (`zoomCommandOf`).
   const onKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      if (event.key === '+' || event.key === '=') panZoom.zoomIn();
-      else if (event.key === '-') panZoom.zoomOut();
-      else if (event.key === '0') panZoom.zoomToFit();
-      else if (event.key === '1') panZoom.zoomToActualSize();
-      else return;
+      const command = zoomCommandOf(event);
+      if (!command) return;
       event.preventDefault();
+      panZoom[command]();
     },
     [panZoom],
   );
