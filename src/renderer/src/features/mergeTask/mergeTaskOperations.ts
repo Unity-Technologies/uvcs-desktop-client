@@ -2,7 +2,8 @@ import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { MergeRequest, MergeResult } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
-import { runAction, runOperation } from '../../app/operations/runOperation';
+import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
+import { isAffectedByBranchList, isAffectedByNewChangesets } from '../../app/refresh/refreshScopes';
 import { toast } from '../../ui/toast/toastStore';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { switchToBranch } from '../branches/branchOperations';
@@ -29,6 +30,8 @@ export async function mergeTaskOnServer(workspacePath: string, request: MergeReq
     title: `Merging ${options.taskBranch} into ${destination}`,
     workspacePath,
     run: (operationId) => api.merge.run(workspacePath, request, { directoryConflicts: [], files: {}, comment: options.comment }, operationId),
+    // A changeset on the destination, as someone else's checkin would bring: the workspace is not touched.
+    affects: isAffectedByNewChangesets,
   });
   if (!result || result.destinationMoved) return result;
 
@@ -36,9 +39,7 @@ export async function mergeTaskOnServer(workspacePath: string, request: MergeReq
   if (review) {
     await runAction(workspacePath, "Couldn't mark the code review as reviewed", () => api.codeReviews.update(workspacePath, review.id, { status: 'Reviewed' }));
   }
-  if (options.hideBranch) {
-    await runAction(workspacePath, "Couldn't hide the branch", () => api.branches.setHidden(workspacePath, [options.taskBranch], true));
-  }
+  if (options.hideBranch) await hideTaskBranch(workspacePath, options.taskBranch);
   const changesetId = result.changesetId;
   if (changesetId !== undefined) {
     useFinishedTasksStore.getState().remember(workspacePath, { branch: options.taskBranch, destination, changesetId, hidden: options.hideBranch });
@@ -49,6 +50,11 @@ export async function mergeTaskOnServer(workspacePath: string, request: MergeReq
     changesetId === undefined ? undefined : { label: 'Show in Branch Explorer', run: () => showInBranchExplorer({ kind: 'changeset', id: changesetId }) },
   );
   return result;
+}
+
+/** Hides a finished task's branch; true once hidden. Only the lists of branches change. */
+export function hideTaskBranch(workspacePath: string, taskBranch: string): Promise<boolean> {
+  return runVoidAction(workspacePath, "Couldn't hide the branch", () => api.branches.setHidden(workspacePath, [taskBranch], true), isAffectedByBranchList);
 }
 
 /** Brings the destination into the task branch in the workspace, so the conflicts are resolved there first. */
