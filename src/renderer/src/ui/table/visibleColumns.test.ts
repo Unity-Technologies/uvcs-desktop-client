@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Column } from './DataTable';
+import type { Column } from './column';
 import { visibleColumns } from './visibleColumns';
 
 const column = (id: string, hideBelow?: number): Column<unknown> => ({ id, header: id, hideBelow, render: () => null });

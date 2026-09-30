@@ -1,6 +1,6 @@
 import { classNames } from '../../lib/classNames';
 import { skeletonWidth, SkeletonBar, SkeletonRows } from '../Skeleton';
-import { columnStyle, type Column } from './DataTable';
+import { columnStyle, type Column } from './column';
 import tableStyles from './DataTable.module.css';
 import styles from './TableSkeleton.module.css';
 
