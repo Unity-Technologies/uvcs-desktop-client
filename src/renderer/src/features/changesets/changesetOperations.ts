@@ -3,6 +3,7 @@ import type { MergeRequest } from '@shared/domain/merge';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runRead, runVoidAction } from '../../app/operations/runOperation';
+import { isAffectedByChangesetComment, isAffectedByChangesetMove } from '../../app/refresh/refreshScopes';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
@@ -46,7 +47,7 @@ export async function editChangesetComment(workspacePath: string, changeset: Pic
 }
 
 export function saveChangesetComment(workspacePath: string, changeset: Pick<Changeset, 'id'>, comment: string): Promise<void | undefined> {
-  return runAction(workspacePath, "Couldn't update the comment", () => api.changesets.editComment(workspacePath, changeset.id, comment));
+  return runAction(workspacePath, "Couldn't update the comment", () => api.changesets.editComment(workspacePath, changeset.id, comment), isAffectedByChangesetComment);
 }
 
 export async function moveChangesetToBranch(workspacePath: string, changeset: Pick<Changeset, 'id' | 'branch'>): Promise<void> {
@@ -61,6 +62,7 @@ export async function moveChangesetToBranch(workspacePath: string, changeset: Pi
 
   const moved = await runVoidAction(workspacePath, "Couldn't move the changeset", () =>
     api.changesets.moveToBranch(workspacePath, changeset.id, branch),
+    isAffectedByChangesetMove,
   );
   if (moved) toast.success(`Moved changeset ${changeset.id} to ${branch}`);
 }
@@ -74,7 +76,7 @@ export async function deleteChangeset(workspacePath: string, changeset: Pick<Cha
   });
   if (!confirmed) return;
 
-  const deleted = await runVoidAction(workspacePath, "Couldn't delete the changeset", () => api.changesets.remove(workspacePath, changeset.id));
+  const deleted = await runVoidAction(workspacePath, "Couldn't delete the changeset", () => api.changesets.remove(workspacePath, changeset.id), isAffectedByChangesetMove);
   if (deleted) toast.success(`Deleted changeset ${changeset.id}`);
 }
 

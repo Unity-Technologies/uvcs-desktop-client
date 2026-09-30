@@ -96,6 +96,22 @@ export function isAffectedByLocks(key: QueryKey): boolean {
   return area(key) === 'locks';
 }
 
+/** What shows a changeset's comment: the changesets already read too, which only a comment edit changes. */
+const SHOWING_CHANGESET_COMMENTS = ['changesets', 'branchExplorer', 'history', 'annotate', 'workingObjectComment'];
+
+/** A changeset's comment was edited: only what shows it. */
+export function isAffectedByChangesetComment(key: QueryKey): boolean {
+  return SHOWING_CHANGESET_COMMENTS.includes(area(key) as string);
+}
+
+/**
+ * A changeset was moved to another branch or deleted: what shows changesets, the branch lists (their heads, and the
+ * branch a move creates) and what is incoming, not the workspace.
+ */
+export function isAffectedByChangesetMove(key: QueryKey): boolean {
+  return isAffectedByChangesetComment(key) || area(key) === 'branches' || area(key) === 'incoming';
+}
+
 /** Changes were shelved, and stay in the workspace: only the lists of shelves change. */
 export function isAffectedByShelving(key: QueryKey): boolean {
   return area(key) === 'shelves';

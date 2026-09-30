@@ -6,6 +6,8 @@ import {
   isAffectedByMovedPaths,
   isAffectedByAttributes,
   isAffectedByBranchList,
+  isAffectedByChangesetComment,
+  isAffectedByChangesetMove,
   isAffectedByLabels,
   isAffectedByNewChangesets,
   isAffectedByCheckinOrUpdate,
@@ -114,6 +116,22 @@ describe('refresh scopes', () => {
     expect(isAffectedByPendingChangeEdit(key('locks', {}))).toBe(true);
     expect(isAffectedByPendingChangeEdit(key('shelves', { owners: ['me'] }))).toBe(false);
     expect(isAffectedByPendingChangeEdit(key('history', 'a.txt'))).toBe(false);
+  });
+
+  it('refreshes only what shows a changeset comment when one is edited, the changesets already read too', () => {
+    expect(isAffectedByChangesetComment(key('changesets', 'byId', 4))).toBe(true);
+    expect(isAffectedByChangesetComment(key('history', 'a.txt'))).toBe(true);
+    expect(isAffectedByChangesetComment(key('workingObjectComment', 'changeset', '4'))).toBe(true);
+    expect(isAffectedByChangesetComment(key('branches', {}))).toBe(false);
+    expect(isAffectedByChangesetComment(key('pendingChanges'))).toBe(false);
+  });
+
+  it('refreshes what shows changesets, the branch lists and incoming, not the workspace, when a changeset moves or goes', () => {
+    expect(isAffectedByChangesetMove(key('branchExplorer', {}))).toBe(true);
+    expect(isAffectedByChangesetMove(key('branches', {}))).toBe(true);
+    expect(isAffectedByChangesetMove(key('incoming', 'changes'))).toBe(true);
+    expect(isAffectedByChangesetMove(key('pendingChanges'))).toBe(false);
+    expect(isAffectedByChangesetMove(key('labels', {}))).toBe(false);
   });
 
   it('refreshes the branch lists and the Branch Explorer when a branch is created, deleted or hidden', () => {
