@@ -15,11 +15,24 @@ describe('navItemTip', () => {
     });
   });
 
-  describe('in the rail of icons', () => {
-    it('names every entry, with its detail and count', () => {
-      expect(navItemTip({ label: 'Settings' }, true)).toBe('Settings');
-      expect(navItemTip({ label: 'acme', detail: 'Cloud' }, true)).toBe('acme · Cloud');
+  describe('in the rail, where each tile shows its label', () => {
+    it('says nothing for a tile that shows all there is', () => {
+      expect(navItemTip({ label: 'Settings' }, true)).toBeUndefined();
+      expect(navItemTip({ label: 'This computer' }, true)).toBeUndefined();
+    });
+
+    it('names the entry to carry its shortcut or the words of its dot', () => {
+      expect(navItemTip({ label: 'Branch Explorer', shortcut: 'mod+4' }, true)).toBe('Branch Explorer');
+      expect(navItemTip({ label: 'Changes', dot: 'Changes left on /main/task' }, true)).toBe('Changes');
+    });
+
+    it('adds the count and the detail the tile leaves out', () => {
       expect(navItemTip({ label: 'Changes', badge: 1234, shortcut: 'mod+1' }, true)).toBe('Changes · 1234');
+      expect(navItemTip({ label: 'acme', detail: 'Cloud' }, true)).toBe('acme · Cloud');
+    });
+
+    it('treats a count of zero as none', () => {
+      expect(navItemTip({ label: 'Incoming', badge: 0 }, true)).toBeUndefined();
     });
   });
 });

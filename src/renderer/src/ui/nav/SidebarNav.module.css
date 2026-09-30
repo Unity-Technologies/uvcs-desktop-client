@@ -1,8 +1,11 @@
 .sidebar {
+  /* How far its content keeps from its sides. */
+  --sidebar-inset: var(--space-2);
+
   display: flex;
   flex: none;
   flex-direction: column;
-  padding: 0 var(--space-2) var(--space-2);
+  padding: 0 var(--sidebar-inset) var(--space-2);
   overflow: hidden;
   background: var(--bg-sidebar);
   transition: width var(--duration-normal) var(--ease-in-out);
@@ -28,7 +31,7 @@
 
 /* One title bar across the window: the band over the sidebar (with the window buttons) wears the top bar's sheen and edge. */
 .dragRegion[data-joins-top-bar='true'] {
-  margin: 0 calc(-1 * var(--space-2)) var(--space-2);
+  margin: 0 calc(-1 * var(--sidebar-inset)) var(--space-2);
   padding-inline: var(--space-2);
   border-bottom: 1px solid var(--border-default);
   background: linear-gradient(180deg, var(--toolbar-top), var(--toolbar-bottom));
@@ -137,11 +140,17 @@
   padding-top: var(--space-2);
 }
 
-/* The icon rail: icons centered, labels as tooltips, group titles as hairlines, counts as small badges on the icon. */
+/* The rail: each item a tile, its icon over its label in small type, centered and wrapping to two lines ("Branch
+   Explorer"); group titles as hairlines; counts as small badges on the icon. The tiles take nearly the rail's whole
+   width, so its longest one-word labels fit on one line. */
+
+.sidebar[data-rail='true'] {
+  --sidebar-inset: var(--space-1);
+}
 
 .sidebar[data-rail='true'] .groups {
   gap: var(--space-2);
-  /* Too narrow for a scrollbar beside its icons: a short window scrolls the rail without one. */
+  /* Too narrow for a scrollbar beside its tiles: a short window scrolls the rail without one. */
   scrollbar-width: none;
 }
 
@@ -158,14 +167,34 @@
   display: none;
 }
 
+/* A tile's height follows its label's lines, so every one-line tile is as tall as every other, and every two-line one. */
 .sidebar[data-rail='true'] .item {
   position: relative;
-  justify-content: center;
-  height: 34px;
-  padding: 0;
+  flex-direction: column;
+  gap: 3px;
+  height: auto;
+  padding: 5px 3px;
+  text-align: center;
 }
 
-.sidebar[data-rail='true'] .label,
+.sidebar[data-rail='true'] .item[data-active='true'] {
+  color: var(--accent-text);
+}
+
+.sidebar[data-rail='true'] .label {
+  display: -webkit-box;
+  flex: none;
+  width: 100%;
+  font-size: var(--text-xs);
+  line-height: 13px;
+  white-space: normal;
+  /* Two lines at most, balanced, broken between words only: a word too long for the tile (a server's name) ends in an
+     ellipsis, the whole name in its tooltip. */
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  text-wrap: balance;
+}
+
 .sidebar[data-rail='true'] .detail {
   display: none;
 }

@@ -1,14 +1,18 @@
 import { createContext, useContext, type ReactNode } from 'react';
-import { isMac } from '../../lib/platform';
 import { navItemTip } from './navItemTip';
 import styles from './SidebarNav.module.css';
 
-/** Wide enough for the macOS window buttons, which sit over the rail's top. */
-const RAIL_WIDTH = isMac ? 76 : 56;
+/**
+ * Wide enough for the longest one-word labels on one line in every OS's UI font (its tiles leave them 66px:
+ * "Changesets" takes 62px in San Francisco, 59px in Arial-wide fonts such as Segoe UI, 64px in Verdana-wide ones such as
+ * DejaVu Sans), and for the macOS window buttons, which
+ * sit over the rail's top.
+ */
+const RAIL_WIDTH = 80;
 
 const RailContext = createContext(false);
 
-/** Whether the sidebar around shows as its icon rail: items show their icon only, with their label as a tooltip. */
+/** Whether the sidebar around shows as its rail: each item a tile, its icon over its label in small type. */
 export function useInRail(): boolean {
   return useContext(RailContext);
 }
@@ -16,7 +20,7 @@ export function useInRail(): boolean {
 interface SidebarProps {
   children: ReactNode;
   width?: number;
-  /** Folded into a rail of icons. */
+  /** Folded into a narrow rail of tiles. */
   rail?: boolean;
   /** Its title-bar area continues the window's top bar (same sheen and bottom edge) instead of the sidebar's colour. */
   joinsTopBar?: boolean;
@@ -79,7 +83,6 @@ export function NavItem({ icon, label, detail, badge, dot, active = false, dimme
       data-tip={tip}
       data-tip-sub={dot}
       data-tip-shortcut={shortcut}
-      aria-label={rail ? label : undefined}
       aria-description={dot}
       onClick={onClick}
     >
