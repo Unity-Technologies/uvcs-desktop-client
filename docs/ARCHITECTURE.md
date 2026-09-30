@@ -201,8 +201,8 @@ stable stage words, files and bytes done and to do, a fraction (or null), the fi
 safe, and the step of a multi-command operation (shelve, undo, switch, bring). Never a raw `cm` line.
 
 - Each command's output is read by a pure `ProgressReader` (`main/cm/progress/`), passed as
-  `onOutputLine: context.progressOf(reader)`; the `OperationTracker` adds the step (`context.beginStep`) and throttles to
-  ten reports a second, stage changes at once.
+  `onOutputLine: context.progressOf(reader)`; the operation's `ProgressReport` (made by the `OperationTracker`) adds the
+  step (`context.beginStep`) and throttles to ten reports a second, stage changes at once.
 - `cm update`/`cm switch` run with `--forcedetailedprogress` (`cm/updateArgs.ts`): `cm` prints its bytes-and-files line
   only to a terminal otherwise, and `--machinereadable` turns it off. It rewrites the line with `\r` every 200 ms, so
   `runCmProcess` splits lines at `\r` too. The words are localized: readers go by the line's shape. Its percentage
@@ -228,9 +228,12 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   forward instead (`windows.focusWorkspace`, checked by `useOpenWorkspace`). The installed app's first window reopens the
   last workspace used (`openFirst`); a new window opens on the home screen. A new window asked to open a workspace
   takes it at start (`system.takeRequestedWorkspace`), as does a folder the installed app is launched with on Windows
-  and Linux (`workspaceArgument`; a second launch hands it to the running app). The Window menu lists them; closing
-  the last one keeps the app on macOS, and the Dock icon opens the home screen (its menu offers New Window under the
-  recent workspaces, `installDockMenu`); elsewhere it quits.
+  and Linux (`workspaceArgument`; a second launch hands it to the running app). The first window waits until `cm` has
+  found the workspace holding that folder (`handleLaunchRequests`), which may take longer than Electron takes to start.
+  The Window menu lists them; closing the last one keeps the app on macOS, and the Dock icon opens the home screen (its
+  menu offers New Window under the recent workspaces, `installDockMenu`); elsewhere it quits.
+- The start-up (`main/index.ts`) is a few named steps; the wiring behind each (settings, watchers, own writes,
+  operations, launch requests) lives in `main/startup/`, around the tested logic of the other folders.
 - Each API call runs with its window as the caller (`main/ipc/caller.ts`, followed across `await`s), so its commands
   (`commandLogged`) and operation progress go back to that window only. `workspaces.watch` is the window saying which
   workspace it shows: `main/watch/WorkspaceWatchers` keeps one watcher per shown workspace and sends its changes to the

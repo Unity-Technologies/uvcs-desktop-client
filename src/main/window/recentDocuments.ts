@@ -9,6 +9,6 @@ import type { WorkspaceWindows } from './WorkspaceWindows';
 export function handleRecentDocumentRequests(windows: WorkspaceWindows): void {
   app.on('open-file', (event, path) => {
     event.preventDefault();
-    windows.requestWorkspace(path, app.isReady());
+    windows.requestWorkspace(path);
   });
 }

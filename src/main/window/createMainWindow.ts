@@ -3,12 +3,14 @@ import { BrowserWindow, nativeTheme, shell } from 'electron';
 import { windowChrome } from '@shared/windowChrome';
 import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
-import { cascadedWindowBounds, loadWindowBounds, saveWindowBounds } from './savedWindowBounds';
+import { cascadedWindowBounds, loadWindowBounds, keepWindowBoundsSaved } from './savedWindowBounds';
 import { titleBarOptions } from './titleBar';
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from './windowBounds';
 
 const DARK_BACKGROUND = '#16171b';
 const LIGHT_BACKGROUND = '#ffffff';
+/** Until the user leaves a window somewhere (`loadWindowBounds`). */
+const DEFAULT_SIZE = { width: 1400, height: 900 };
 
 /**
  * Opens a window where the last one was (fitted to the current displays), or a little below and to the right of
@@ -17,8 +19,7 @@ const LIGHT_BACKGROUND = '#ffffff';
 export function createMainWindow(settings: SettingsStore, cascadeFrom?: BrowserWindow): BrowserWindow {
   const { bounds, maximized } = cascadeFrom ? cascadedWindowBounds(cascadeFrom) : loadWindowBounds(settings);
   const window = new BrowserWindow({
-    width: 1400,
-    height: 900,
+    ...DEFAULT_SIZE,
     ...bounds,
     minWidth: MIN_WINDOW_WIDTH,
     minHeight: MIN_WINDOW_HEIGHT,
@@ -33,7 +34,7 @@ export function createMainWindow(settings: SettingsStore, cascadeFrom?: BrowserW
     },
   });
 
-  saveWindowBounds(window, settings);
+  keepWindowBoundsSaved(window, settings);
   window.once('ready-to-show', () => {
     // Maximizing also shows the window, so it waits until the page can paint.
     if (maximized) window.maximize();
@@ -48,10 +49,12 @@ export function createMainWindow(settings: SettingsStore, cascadeFrom?: BrowserW
     return { action: 'deny' };
   });
 
-  if (process.env.ELECTRON_RENDERER_URL) {
-    void window.loadURL(process.env.ELECTRON_RENDERER_URL);
-  } else {
-    void window.loadFile(join(__dirname, '../renderer/index.html'));
-  }
+  loadPage(window);
   return window;
+}
+
+/** The development server's page while `npm run dev` serves it (hot reload), else the built one. */
+function loadPage(window: BrowserWindow): void {
+  if (process.env.ELECTRON_RENDERER_URL) void window.loadURL(process.env.ELECTRON_RENDERER_URL);
+  else void window.loadFile(join(__dirname, '../renderer/index.html'));
 }

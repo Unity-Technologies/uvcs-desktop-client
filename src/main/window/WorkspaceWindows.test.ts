@@ -20,6 +20,7 @@ const TOOLS = join('/work', 'tools');
 
 beforeEach(() => {
   fakeElectron.reset();
+  fakeElectron.app.ready = true;
   vi.mocked(createMainWindow).mockClear();
 });
 
@@ -87,7 +88,7 @@ describe('a workspace requested from the OS (recent documents, the command line)
     shows(open(), TOOLS);
     const home = open();
 
-    windows.requestWorkspace(GAME, true);
+    windows.requestWorkspace(GAME);
     expect(fakeElectron.windows()).toHaveLength(2);
     expect(fakeElectron.focused()).toBe(home);
     expect(home.webContents.sent).toEqual([[EVENT_CHANNEL, 'workspaceOpenRequested', {}]]);
@@ -98,7 +99,7 @@ describe('a workspace requested from the OS (recent documents, the command line)
     const { windows, open, shows } = setUp();
     shows(open(), TOOLS);
 
-    windows.requestWorkspace(GAME, true);
+    windows.requestWorkspace(GAME);
     expect(fakeElectron.windows()).toHaveLength(2);
   });
 
@@ -108,16 +109,18 @@ describe('a workspace requested from the OS (recent documents, the command line)
     shows(game, GAME);
     open();
 
-    windows.requestWorkspace(GAME, true);
+    windows.requestWorkspace(GAME);
     expect(fakeElectron.windows()).toHaveLength(2);
     expect(fakeElectron.focused()).toBe(game);
   });
 
   it('opens in the first window when it launched the app, once', () => {
     const { windows } = setUp();
+    fakeElectron.app.ready = false;
 
-    windows.requestWorkspace(GAME, false);
+    windows.requestWorkspace(GAME);
     expect(fakeElectron.windows()).toEqual([]);
+    fakeElectron.app.ready = true;
     windows.openFirst();
     expect(windows.takeRequested(fakeElectron.windows()[0]!.webContents.id)).toBe(GAME);
 

@@ -70,16 +70,17 @@ export class WorkspaceWindows {
   }
 
   /**
-   * A workspace picked from the OS recent documents or named on the command line: its window comes forward, else a window on the home screen
-   * opens it, else a new window does.
+   * A workspace picked from the OS recent documents or named on the command line: its window comes forward, else a
+   * window on the home screen opens it, else a new window does. Before the app is ready, the first window opens it.
    */
-  requestWorkspace(workspacePath: string, appReady: boolean): void {
-    if (!appReady) {
-      this.launchRequest = workspacePath;
+  requestWorkspace(workspacePath: string): void {
+    if (!app.isReady()) {
+      this.requestAtLaunch(workspacePath);
       return;
     }
-    if (this.windowShowing(workspacePath)) {
-      this.showWorkspace(workspacePath);
+    const showing = this.windowShowing(workspacePath);
+    if (showing) {
+      focusWindow(showing);
       return;
     }
     const home = this.all().find((window) => this.shownBy(window.webContents.id) === undefined);
@@ -90,6 +91,11 @@ export class WorkspaceWindows {
     this.requested.set(home.webContents.id, workspacePath);
     sendEventTo(home.webContents, 'workspaceOpenRequested', {});
     focusWindow(home);
+  }
+
+  /** The workspace the first window opens (`openFirst`): the one that launched the app. */
+  requestAtLaunch(workspacePath: string): void {
+    this.launchRequest = workspacePath;
   }
 
   /** The workspace the window was asked to open, once. */
