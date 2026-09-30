@@ -29,7 +29,8 @@ export function createRepositoriesService({ cm }: ServiceContext): RepositoriesA
   }
 
   async function create(server: string, name: string): Promise<string> {
-    await cm.query(['repository', 'create', server, name]);
+    // `cm repository <repserverspec> <rep_name>` is the documented form for a server; `create` takes only a name.
+    await cm.query(['repository', server, name]);
     return `${name}@${server}`;
   }
 
