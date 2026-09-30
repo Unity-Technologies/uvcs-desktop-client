@@ -38,6 +38,7 @@ export function RevisionHeader({ row, path, menu, otherRepository, isWorkspaceRe
   const owner = ownerOf(row);
   const date = dateOf(row);
   const { summary, description } = row.kind === 'revision' ? splitComment(row.revision.comment) : { summary: row.change.description, description: '' };
+  // The header's own buttons already offer these two.
   const moreActions = withoutAction(withoutAction(menu, 'changesetDiff'), 'showInBranchExplorer');
 
   return (
