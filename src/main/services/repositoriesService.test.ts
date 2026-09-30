@@ -39,24 +39,17 @@ describe('repositories', () => {
     expect(commands[0]?.options.signal).toBeInstanceOf(AbortSignal);
   });
 
-  it('creates a repository and returns it as listed', async () => {
-    const { service, lines } = repositories({ 'repository create': '', 'repository list': LISTED });
+  it('creates a repository with one command, listing none, and returns its spec', async () => {
+    const { service, lines } = repositories({ 'repository create': '' });
 
-    expect(await service.create('codice@cloud', 'tools')).toMatchObject({ id: '4', spec: 'tools@codice@cloud' });
-    expect(lines().map((line) => line.split(' ').slice(0, 3).join(' '))).toEqual(['repository create codice@cloud', 'repository list codice@cloud']);
+    expect(await service.create('codice@cloud', 'tools')).toBe('tools@codice@cloud');
+    expect(lines()).toEqual(['repository create codice@cloud tools']);
   });
 
-  it("fails when the new repository isn't listed", async () => {
-    const { service } = repositories({ 'repository create': '', 'repository list': LISTED });
-
-    await expect(service.create('codice@cloud', 'docs')).rejects.toThrow('Repository docs was not found after creating it.');
-  });
-
-  it('does not list anything when the creation fails', async () => {
-    const { service, lines } = repositories({ 'repository create': cmFails('Error: The repository tools already exists.') });
+  it('fails as cm reports it when the creation fails', async () => {
+    const { service } = repositories({ 'repository create': cmFails('Error: The repository tools already exists.') });
 
     await expect(service.create('codice@cloud', 'tools')).rejects.toThrow('already exists');
-    expect(lines()).toHaveLength(1);
   });
 
   it('renames and deletes a repository by its spec', async () => {
