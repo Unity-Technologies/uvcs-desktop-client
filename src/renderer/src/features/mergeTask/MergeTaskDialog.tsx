@@ -1,18 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
-import { CheckCircle2, CircleAlert, Info } from 'lucide-react';
+import { CheckCircle2, Info } from 'lucide-react';
 import { useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
-import type { MergePlan } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
-import { api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
 import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
-import { OptionCards } from '../../ui/OptionCards';
 import { Spinner } from '../../ui/Spinner';
 import { TextArea } from '../../ui/TextField';
 import { pickBranch } from '../branches/BranchPickerDialog';
@@ -20,11 +15,14 @@ import { openChangesetDiff } from '../changesets/changesetOperations';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
 import { destinationMovedExplanation, openMerge } from '../merge/mergeOperations';
+import { resolveButtonLabel, type ConflictPath } from './conflictPaths';
+import { MergeTaskConflicts } from './MergeTaskConflicts';
 import { MergeTaskFileList } from './MergeTaskFileList';
 import { mergeDestinationIntoTask, mergeTaskOnServer, resolveOnDestination } from './mergeTaskOperations';
-import { canMarkReviewed, cleanSummary, countChangesetsToMerge, defaultMergeComment, destinationMoved, mergeTaskOutcome } from './mergeTaskSummary';
-import { mergeTaskRequest, useMergeTaskPreview } from './useMergeTaskPreview';
+import { canMarkReviewed, cleanSummary, defaultMergeComment, destinationMoved, mergeTaskOutcome } from './mergeTaskSummary';
 import { ReviewStatusNote } from './ReviewStatusNote';
+import { useChangesetsToMerge } from './useChangesetsToMerge';
+import { mergeTaskRequest, useMergeTaskPreview } from './useMergeTaskPreview';
 import styles from './MergeTaskDialog.module.css';
 
 export type MergeTaskBranch = Pick<Branch, 'id' | 'name' | 'parent' | 'comment'>;
@@ -33,8 +31,6 @@ export type MergeTaskBranch = Pick<Branch, 'id' | 'name' | 'parent' | 'comment'>
 export function openMergeTaskDialog(workspacePath: string, branch: MergeTaskBranch): void {
   openDialog((close) => <MergeTaskDialog workspacePath={workspacePath} branch={branch} onClose={close} />);
 }
-
-type ConflictPath = 'intoTask' | 'onDestination';
 
 function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: string; branch: MergeTaskBranch; onClose: () => void }) {
   const { data: workspace } = useWorkspaceInfo();
@@ -135,7 +131,7 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
           )}
           {outcome?.kind === 'conflicts' && (
             <Button type="submit" variant="primary">
-              {path === 'intoTask' ? `Merge ${destination} into ${branch.name}` : `Resolve on ${destination}`}
+              {resolveButtonLabel(path, branch.name, destination)}
             </Button>
           )}
         </>
@@ -177,40 +173,17 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
         </>
       )}
       {preview.data && outcome?.kind === 'conflicts' && (
-        <>
-          <p className={styles.summary} data-tone="conflict">
-            <CircleAlert size={15} />
-            {outcome.description}
-          </p>
-          <p className={styles.explanation}>
-            {branch.name} and {destination} changed the same files. The server can’t ask you how to combine them, so resolve
-            them in your workspace, then merge again.
-          </p>
-          <MergeTaskFileList plan={preview.data} conflicts onOpen={openFileDiff} />
-          {fromTaskBranch && (
-            <OptionCards<ConflictPath>
-              label="How to resolve them"
-              heading
-              value={conflictPath}
-              onChange={setConflictPath}
-              cards={[
-                {
-                  value: 'intoTask',
-                  title: `Merge ${destination} into ${branch.name} first`,
-                  description: `Resolve on the task branch${currentBranch === branch.name ? '' : ' (the workspace switches to it)'}, check in, and merge the task again: it will be clean.`,
-                },
-                {
-                  value: 'onDestination',
-                  title: `Resolve on ${destination} in this workspace`,
-                  description: `${currentBranch === destination ? 'Merge' : `Switch to ${destination} and merge`} ${branch.name} there; checking in finishes the task.`,
-                },
-              ]}
-            />
-          )}
-          <button type="button" className={styles.link} onClick={keepOneSideOnServer}>
-            Or merge on the server, keeping one side for every conflicting file…
-          </button>
-        </>
+        <MergeTaskConflicts
+          plan={preview.data}
+          description={outcome.description}
+          taskBranch={branch.name}
+          destination={destination}
+          currentBranch={currentBranch}
+          conflictPath={fromTaskBranch ? conflictPath : null}
+          onConflictPathChange={setConflictPath}
+          onOpenFile={openFileDiff}
+          onKeepOneSideOnServer={keepOneSideOnServer}
+        />
       )}
       {preview.data && outcome?.kind === 'alreadyMerged' && (
         <p className={styles.summary} data-tone="success">
@@ -221,16 +194,4 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
       {preview.data && outcome?.kind === 'invalid' && <p className={styles.error}>This merge can’t run.</p>}
     </Dialog>
   );
-}
-
-/** How many of the branch's changesets the merge brings; undefined while counting, or when merging a single changeset. */
-function useChangesetsToMerge(workspacePath: string, branchName: string, sourceSpec: string, plan: MergePlan | undefined): number | undefined {
-  const fromBranch = sourceSpec === spec.branch(branchName);
-  const { data: changesets } = useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'changesets', { branch: branchName }),
-    queryFn: () => api.changesets.list(workspacePath, { branch: branchName }),
-    enabled: fromBranch,
-    refetchOnWindowFocus: false,
-  });
-  return fromBranch && changesets && plan ? countChangesetsToMerge(changesets, plan, branchName) : undefined;
 }
