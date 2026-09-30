@@ -255,7 +255,7 @@ describe('WorkspaceWatcher', () => {
   });
 
   it('tells whether a command ran in the workspace, a Windows folder whatever its letter case', () => {
-    const { watcher } = watching({ platform: 'darwin' });
+    const { watcher } = watching({ platform: process.platform });
     expect(watcher.covers(join(workspacePath, 'src'))).toBe(true);
     expect(watcher.covers(join(workspacePath, '..', 'other'))).toBe(false);
 
