@@ -25,7 +25,8 @@ export async function readSwitchPreflight(cm: CmClient, records: SwitchShelveRec
     leaveDisabledReason: workspace.selector.kind === 'shelve' ? 'shelveSource' : undefined,
     leftShelveCount: records
       .forWorkspace(workspace.guid)
-      .filter((record) => record.mode === 'leave' && record.repository === workspace.repository && record.source.spec === sourceSpec).length,
+      // Shelves the user shelved away aren't changes left behind: "Welcome back" never offers them either.
+      .filter((record) => record.mode === 'leave' && record.reason !== 'shelve' && record.repository === workspace.repository && record.source.spec === sourceSpec).length,
   };
 }
 

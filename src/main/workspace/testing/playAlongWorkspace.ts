@@ -29,6 +29,8 @@ export interface WorkspaceScenario {
   mergingFrom?: number;
   /** Pending paths in a changelist of the user's. */
   changelists?: { name: string; description: string; paths: string[] }[];
+  /** Paths the user holds locks on in this workspace, as `cm lock list` names them (`/src/a.txt`), per repository. */
+  locks?: { repository: string; path: string }[];
   /** Automatic shelves already on the server, left by another client (`{ id, comment }`). */
   shelvesOnServer?: { id: number; comment: string }[];
   /** Branches `cm find branch` finds; every branch of `BRANCH_IDS` by default. */
@@ -180,6 +182,13 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
     undo,
     switch: switchTo,
     merge: mergeShelve,
+    'lock list': () =>
+      (scenario.locks ?? [])
+        .map(({ repository, path }, index) =>
+          [repository, String(500 + index), 'a1b2c3d4-0000-4000-8000-00000000000' + index, '2026-09-25T10:00:00+02:00', '/main', '-1', branch, '60', 'Locked', 'me', 'wk', path].join('\u001f'),
+        )
+        .map((record) => `${record}\u001e`)
+        .join(''),
     changelist: (args) => {
       if (args[1] === 'create') changelists = [...changelists, { name: args[2]!, description: args[3]!, paths: [] }];
       else changelists = changelists.map((list) => (list.name === args[1] ? { ...list, paths: [...list.paths, ...args.slice(3).map(relative)] } : list));
