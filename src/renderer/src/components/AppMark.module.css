@@ -21,3 +21,18 @@
 .glyph circle {
   fill: var(--accent);
 }
+
+.softTile {
+  fill: var(--accent-soft);
+}
+
+.softGlyph {
+  fill: var(--accent-text);
+  stroke: var(--accent-text);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+
+.softGlyph path {
+  fill: none;
+}

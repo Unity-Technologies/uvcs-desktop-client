@@ -7,7 +7,7 @@ import styles from './AppBrand.module.css';
 export function AppBrand() {
   return (
     <button type="button" className={styles.brand} data-tip={`About ${APP_NAME}`} aria-label={`About ${APP_NAME}`} onClick={openAboutDialog}>
-      <AppMark size={20} />
+      <AppMark size={20} soft />
       <span className={styles.name}>{APP_NAME}</span>
     </button>
   );
