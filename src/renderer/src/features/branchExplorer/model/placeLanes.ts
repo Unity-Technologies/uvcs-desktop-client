@@ -1,4 +1,4 @@
-import { groupBy } from './groupBy';
+import { groupBy } from '../../../lib/groupBy';
 import type { Lane } from './layoutGraph';
 
 /** Free columns kept between two lanes sharing a row, so they never look connected. */

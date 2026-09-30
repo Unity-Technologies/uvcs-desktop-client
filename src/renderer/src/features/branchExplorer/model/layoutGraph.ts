@@ -1,6 +1,6 @@
 import type { BranchExplorerData, GraphBranch, GraphChangeset, GraphLabel, MergeLink } from '@shared/domain/branchExplorer';
 import type { PendingMergeLink } from '@shared/domain/pendingChanges';
-import { groupBy } from './groupBy';
+import { groupBy } from '../../../lib/groupBy';
 import { placeLanes, type UnplacedLane } from './placeLanes';
 import { collapseLinearRuns, structuralChangesets, type ShownChangeset } from './structureOnly';
 
