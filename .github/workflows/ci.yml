@@ -15,7 +15,7 @@ env:
   NODE_VERSION: '26'
 
 jobs:
-  # "Done means" (CLAUDE.md): the typecheck and the tests pass, and the app builds, on every OS and architecture.
+  # "Done means" (CLAUDE.md): the typecheck passes, and the tests pass and the app builds on every OS and architecture.
   build:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -24,8 +24,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: macOS arm64, os: macos-latest }
-          - { name: Windows x64, os: windows-latest }
+          # `smoke`: also run the smoke test (scripts/e2e/README.md), the built app over a fake cm and a temp workspace,
+          # every view. Linux is left out: Electron there needs an xvfb display (`xvfb-run -a npm run e2e`), not worth
+          # the upkeep for a smoke test; Windows arm64 too, as Windows x64 covers the same code. It runs in this job,
+          # not one of its own, so it reuses the job's install instead of paying for a runner, a checkout and an install.
+          - { name: macOS arm64, os: macos-latest, smoke: true }
+          - { name: Windows x64, os: windows-latest, smoke: true }
           - { name: Windows arm64, os: windows-11-arm }
           - { name: Linux x64, os: ubuntu-latest }
     steps:
@@ -61,27 +65,17 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           working-directory: ${{ env.BUILD_DIR || github.workspace }}
-      - run: npm run typecheck
+          reuse-node-modules: 'true'
+      # Once: tsc answers the same on every OS, and Linux's case-sensitive disk makes it the strictest about import paths.
+      - if: runner.os == 'Linux'
+        run: npm run typecheck
         working-directory: ${{ env.BUILD_DIR || github.workspace }}
       - run: npm test
         working-directory: ${{ env.BUILD_DIR || github.workspace }}
-      - run: npm run build
+      - if: ${{ !matrix.smoke }}
+        run: npm run build
         working-directory: ${{ env.BUILD_DIR || github.workspace }}
-
-  # The smoke test (scripts/e2e/README.md): the built app over a fake cm and a temp workspace, every view.
-  # Linux is left out: Electron there needs an xvfb display (`xvfb-run -a npm run e2e`), not worth the upkeep for a smoke test.
-  e2e:
-    name: E2E Smoke ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { name: macOS arm64, os: macos-latest }
-          - { name: Windows x64, os: windows-latest }
-    steps:
-      - uses: actions/checkout@v5
-      - uses: ./.github/actions/install
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-      - run: npm run e2e
+      # The build, then the smoke test.
+      - if: ${{ matrix.smoke }}
+        run: npm run e2e
+        working-directory: ${{ env.BUILD_DIR || github.workspace }}
