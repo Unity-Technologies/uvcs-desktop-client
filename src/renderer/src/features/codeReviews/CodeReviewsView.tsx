@@ -27,11 +27,10 @@ import { openCreateCodeReviewDialog } from './CreateCodeReviewDialog';
 import { selectCreated } from './selectCreated';
 import { useCodeReviews } from './useCodeReviews';
 import { SincePicker } from '../../components/SincePicker';
-import { sinceDateFor } from '../../lib/sincePresets';
 import { useWorkspaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
-import { matchesPeople, pickedOwners, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
+import { matchesPeople, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { isFiltering } from '../../lib/viewFilters';
 import { FilterBar } from '../../ui/FilterBar';
@@ -43,7 +42,7 @@ import styles from './CodeReviewsView.module.css';
 import { codeReviewCopyTexts } from './codeReviewMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
-import { userFilterTexts } from '../../lib/userName';
+import { codeReviewsQuery, reviewFilterTexts } from './codeReviewFilters';
 
 const ownerOf = (review: CodeReview): string => review.owner;
 
@@ -85,11 +84,6 @@ const COLUMNS: Column<CodeReview>[] = [
   { id: 'date', header: 'Created', width: 120, secondary: true, render: (review) => <RelativeTime date={review.date} />, sortValue: (review) => review.date },
 ];
 
-/** What the row shows: its number, title, what it reviews, its author and its reviewer. */
-function reviewFilterTexts(review: CodeReview): string[] {
-  return [String(review.id), review.title, describeTarget(review.target), ...userFilterTexts(review.owner), ...(review.assignee ? userFilterTexts(review.assignee) : [])];
-}
-
 export function CodeReviewsView() {
   const workspacePath = useWorkspacePath();
   const { data: workspace } = useWorkspaceInfo();
@@ -99,12 +93,7 @@ export function CodeReviewsView() {
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const [selection, setSelection] = useViewSelection('codeReviews');
   const [createdKey, setCreatedKey] = useState<string | null>(null);
-  const { data: reviews, isLoading, isFetching, error } = useCodeReviews({
-    owners: pickedOwners(queriedPeople),
-    assignedToMe,
-    status: status === 'any' ? undefined : status,
-    sinceDate: sinceDateFor(since),
-  });
+  const { data: reviews, isLoading, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, assignedToMe }));
   const offered = usePeopleSeen('codeReviews', reviews, ownerOf);
 
   const visible = (reviews ?? []).filter((review) => matchesPeople(people, me, review.owner) && matchesWordFilter(reviewFilterTexts(review), search));

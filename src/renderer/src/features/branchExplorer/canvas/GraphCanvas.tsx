@@ -13,9 +13,9 @@ import { COLUMN_WIDTH, nodePoint } from './geometry';
 import { captionMetrics } from './captionCard';
 import { hitTest, hoverCardFor, type GraphTarget, type HoverCard, type PointerCardTarget } from './graphTargets';
 import { GraphTooltip, HOVER_CARD_ATTRIBUTE, type TooltipAnchor } from './GraphTooltip';
-import { keepPlace } from './keepPlace';
 import { awayFromNewest, newestEnd } from './newestEnd';
 import { NewestEndButton } from './NewestEndButton';
+import { viewportAfterLayout } from './placeAfterLayout';
 import { graphExtent } from './laneShape';
 import { selectionPoint } from './selectionPoint';
 import { useGraphPalette } from './useGraphPalette';
@@ -24,7 +24,7 @@ import { useCanvasTip } from './useCanvasTip';
 import { useHoverCard } from './useHoverCard';
 import { useSearchPing } from './useSearchPing';
 import { centerOn, fitToScreen, frameOn, openingViewport, revealPoint, toWorld, type Size, type Viewport } from './viewport';
-import { isDiscreteWheel, wheelZoomFactor } from './zoom';
+import { wheelGesture } from './wheelGesture';
 import styles from './GraphCanvas.module.css';
 
 /** Scene fields owned by the view; the canvas adds the viewport, size, palette, hover state and animations. */
@@ -178,17 +178,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     // The viewport may stay as it was while the graph's end moved.
     setAwayFromEnd(awayFromNewest(layout, view.viewportRef.current, sizeRef.current));
     if (before === layout || view.gliding() || sizeRef.current.width === 0) return view.keepInBounds();
-    const { selectedChangeset, selectedBranch, selectedPending, homeChangeset } = sceneRef.current.highlights;
-    const preferred: GraphSelection[] = [
-      ...(selectedPending ? [{ kind: 'pending' } as const] : []),
-      ...(selectedChangeset !== null ? [{ kind: 'changeset', id: selectedChangeset } as const] : []),
-      ...(selectedBranch !== null ? [{ kind: 'branch', name: selectedBranch } as const] : []),
-      ...(before.pending ? [{ kind: 'pending' } as const] : []),
-      ...(homeChangeset !== null ? [{ kind: 'changeset', id: homeChangeset } as const] : []),
-    ];
-    // Nothing to hold on to: the newest history, where work goes on.
-    const viewport = view.viewportRef.current;
-    view.jumpTo(keepPlace(before, layout, viewport, sizeRef.current, preferred) ?? newestEnd(layout, viewport, sizeRef.current));
+    view.jumpTo(viewportAfterLayout(before, layout, view.viewportRef.current, sizeRef.current, sceneRef.current.highlights));
   }, [layout, view]);
   // Avatars arrive in the background; repaint as each one lands.
   useEffect(() => subscribeToAvatars(scheduleDraw), [scheduleDraw]);
@@ -289,15 +279,11 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   useCanvasSize(containerRef, canvasRef, sizeRef, onResize);
   useWheel(containerRef, (event, x, y) => {
     view.inertia.cancel();
-    if (event.ctrlKey || event.metaKey) {
-      // A wheel notch glides; a trackpad pinch follows the fingers.
-      if (isDiscreteWheel(event.deltaY, event.deltaMode)) view.zoomStep(x, y, wheelZoomFactor(event.deltaY, event.deltaMode));
-      else view.pinchZoom(x, y, Math.exp(-event.deltaY * 0.01));
-      return;
-    }
+    const gesture = wheelGesture(event);
+    if (gesture.kind === 'zoomStep') return view.zoomStep(x, y, gesture.factor);
+    if (gesture.kind === 'pinch') return view.pinchZoom(x, y, gesture.factor);
     view.stop();
-    const sideways = event.shiftKey && event.deltaX === 0;
-    view.panBy(-(sideways ? event.deltaY : event.deltaX), -(sideways ? 0 : event.deltaY));
+    view.panBy(gesture.dx, gesture.dy);
   });
 
   const localPoint = (clientX: number, clientY: number): { x: number; y: number } => {

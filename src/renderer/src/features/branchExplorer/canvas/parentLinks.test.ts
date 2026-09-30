@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { branch, changeset, largeHistory, sampleHistory } from '../model/graphFixtures';
 import { layoutGraph, type GraphLayout } from '../model/layoutGraph';
 import type { VisibleArea } from './drawContext';
+import { countedReads } from '../../../testing/countedReads';
 import { columnX, rowY } from './geometry';
 import { hasParentOffGraph, parentLinksInView } from './parentLinks';
 
@@ -41,7 +42,7 @@ describe('parentLinksInView', () => {
     expect(linkIds(layout, view(0, 7))).not.toContain('1->2');
   });
 
-  it('finds the lines on screen of a 100,000-changeset history without walking the rest, frame after frame', () => {
+  it('finds the lines on screen of a 100,000-changeset history', () => {
     const layout = layoutGraph(largeHistory(100_000, 20_000));
     const everyLink = layout.nodesByColumn.flatMap((child) => {
       const parent = layout.nodes.get(child.changeset.parent);
@@ -54,9 +55,22 @@ describe('parentLinksInView', () => {
     });
     expect(linkIds(layout, screen)).toEqual(expected);
 
-    const started = performance.now();
-    for (let frame = 0; frame < 2_000; frame++) parentLinksInView(layout, view(frame, frame + 30, 0, 80), 0);
-    expect(performance.now() - started).toBeLessThan(1000);
+  });
+
+  it('reads only the changesets on screen and one past it per row, frame after frame, however long the history', () => {
+    const readsPerFrame = (changesets: number): number => {
+      const full = layoutGraph(largeHistory(changesets, changesets / 5));
+      const { items, reads } = countedReads(full.nodesByColumn);
+      const layout = { ...full, nodesByColumn: items };
+      // The first frame indexes the rows once per layout.
+      parentLinksInView(layout, view(0, 30, 0, 80), 0);
+      const before = reads();
+      for (let frame = 0; frame < 2_000; frame++) parentLinksInView(layout, view(frame, frame + 30, 0, 80), 0);
+      return (reads() - before) / 2_000;
+    };
+    const perFrame = readsPerFrame(25_000);
+    expect(perFrame).toBeLessThan(40 * (31 + 81));
+    expect(readsPerFrame(50_000) / perFrame).toBeLessThan(1.3);
   });
 });
 

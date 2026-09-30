@@ -35,19 +35,10 @@ import { layoutGraph, layoutKeeping } from './model/layoutGraph';
 import { rememberedPerHistory } from './model/rememberedPerHistory';
 import { describeSelection } from './model/describeSelection';
 import { selectedLabel } from './model/graphLabels';
-import {
-  branchBase,
-  branchEnd,
-  graphEnd,
-  mergeDestination,
-  mergeSource,
-  neighborStop,
-  pageChangeset,
-  startingChangeset,
-  type GraphDirection,
-  type GraphStop,
-} from './model/navigateGraph';
+import { movedSelection, selectedBranchOf, type GraphMove } from './model/keyboardMoves';
+import type { GraphDirection } from './model/navigateGraph';
 import { homeTarget } from './model/homeTarget';
+import { pendingBranchOf } from './model/pendingChangeset';
 import { firstHitIndex, searchGraph, searchHighlight, type SearchHit } from './model/searchGraph';
 import { useBranchExplorerCommands } from './useBranchExplorerCommands';
 import { useBranchExplorerData } from './useBranchExplorerData';
@@ -90,10 +81,7 @@ export function BranchExplorerView() {
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : null;
   const homeChangeset = workspace?.loadedChangeset ?? null;
   // On a label or a changeset, the workspace's changes go on the loaded changeset's branch.
-  const pendingBranch = useMemo(
-    () => currentBranch ?? (homeChangeset !== null ? (data?.changesets.find((changeset) => changeset.id === homeChangeset)?.branch ?? null) : null),
-    [currentBranch, homeChangeset, data],
-  );
+  const pendingBranch = useMemo(() => pendingBranchOf(currentBranch, homeChangeset, data?.changesets), [currentBranch, homeChangeset, data]);
   const { pending, count: pendingChangeCount } = usePendingChangeset(homeChangeset, pendingBranch);
 
   // Remembered with the history, so coming back to the view draws at once.
@@ -262,54 +250,34 @@ export function BranchExplorerView() {
     if (!layout || ownsKey(event.target, event.key)) return;
     const selectedId = selection?.kind === 'changeset' ? selection.id : null;
     const label = selectedLabel(layout, selection, repository);
-    const selectedStop: GraphStop | null = selection?.kind === 'branch' ? null : selection;
-    /** The selected branch, or the branch of the selected changeset or pending changes. */
-    const branchName =
-      selection?.kind === 'branch'
-        ? selection.name
-        : selection?.kind === 'pending'
-          ? (layout.pending?.branch ?? null)
-          : selectedId !== null
-            ? (layout.nodes.get(selectedId)?.changeset.branch ?? null)
-            : null;
+    const branchName = selectedBranchOf(layout, selection);
     const lane = branchName !== null ? layout.lanesByBranch.get(branchName) : undefined;
     // Keyboard moves glide the view along, just enough to keep the selection in sight.
-    const moveTo = (id: number | null): void => stopAt(id === null ? null : { kind: 'changeset', id });
-    const stopAt = (stop: GraphStop | null): void => {
+    const move = (graphMove: GraphMove) => (): void => {
+      const stop = movedSelection(layout, selection, homeChangeset, graphMove);
       if (stop === null) return;
       setSelection(stop);
       canvasRef.current?.follow(stop);
     };
-    const fromChangeset = (move: (id: number) => number | null) => (): void => moveTo(selectedId !== null ? move(selectedId) : null);
-    const walk = (direction: GraphDirection) => (): void => {
-      // Without a selected changeset, the first arrow picks where to start.
-      if (selectedStop) stopAt(neighborStop(layout, selectedStop, direction));
-      else moveTo(startingChangeset(layout, branchName, homeChangeset));
-    };
     const branchEdge = (edge: 'first' | 'last') => (): void => {
       // With nothing selected, Home keeps its old meaning: the workspace changeset.
-      if (branchName !== null) moveTo(branchEnd(layout, branchName, edge));
-      else if (edge === 'first') goHome();
+      if (branchName === null && edge === 'first') goHome();
+      else move({ kind: 'branchEdge', edge })();
     };
-    const page = (step: 1 | -1) => (): void => {
-      const from = selectedId ?? startingChangeset(layout, branchName, homeChangeset);
-      if (from === null) return;
-      // A page keeps a column of the last screen in sight.
-      const columns = Math.max(1, (canvasRef.current?.columnsOnScreen() ?? 1) - 1);
-      moveTo(pageChangeset(layout, from, step, columns));
-    };
+    // A page keeps a column of the last screen in sight.
+    const page = (step: 1 | -1) => (): void => move({ kind: 'page', step, columns: Math.max(1, (canvasRef.current?.columnsOnScreen() ?? 1) - 1) })();
 
     const bindings: [ShortcutId, () => void][] = [
-      ['graphWalk', () => walk(ARROW_DIRECTIONS[event.key]!)()],
+      ['graphWalk', () => move({ kind: 'walk', direction: ARROW_DIRECTIONS[event.key]! })()],
       ['graphBranchFirst', branchEdge('first')],
       ['graphBranchLast', branchEdge('last')],
-      ['graphOldest', () => moveTo(graphEnd(layout, 'first'))],
-      ['graphNewest', () => moveTo(graphEnd(layout, 'last'))],
+      ['graphOldest', move({ kind: 'graphEdge', edge: 'first' })],
+      ['graphNewest', move({ kind: 'graphEdge', edge: 'last' })],
       ['graphPageBack', page(-1)],
       ['graphPageForward', page(1)],
-      ['graphMergeSource', fromChangeset((id) => mergeSource(layout, id))],
-      ['graphMergeDestination', fromChangeset((id) => mergeDestination(layout, id))],
-      ['graphBranchBase', () => moveTo(branchName !== null ? branchBase(layout, branchName) : null)],
+      ['graphMergeSource', move({ kind: 'mergeSource' })],
+      ['graphMergeDestination', move({ kind: 'mergeDestination' })],
+      ['graphBranchBase', move({ kind: 'branchBase' })],
       [
         'graphOpen',
         () => {

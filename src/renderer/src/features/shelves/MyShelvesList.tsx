@@ -16,10 +16,10 @@ import { SearchField } from '../../ui/SearchField';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { SkeletonBar, SkeletonRows, skeletonWidth } from '../../ui/Skeleton';
 import { Spinner } from '../../ui/Spinner';
-import { matchesShelveFilter, myShelves, withFoundShelves } from './myShelves';
 import { shelveMenu } from './shelveMenu';
 import { applyShelve, showShelveChanges } from './shelveOperations';
-import { SEARCH_LIMIT, SHOWN_LIMIT, shelvesEmptyMessage, shelvesFilterPlaceholder, shelvesListNote, type ShelvesScope } from './shelvesScope';
+import { shelvesListRows } from './shelvesListRows';
+import { shelvesEmptyMessage, shelvesFilterPlaceholder, type ShelvesScope } from './shelvesScope';
 import { useShelvesViewStore } from './shelvesViewStore';
 import { EVERYONE, MINE } from '../../lib/peopleFilter';
 import { COPY_ENTRY_IDS } from '../../components/copyMenu';
@@ -55,12 +55,10 @@ export function MyShelvesList({ workspacePath, scope, onScopeChange, recent, onD
   const listed = scope === 'mine' ? recent : everyone.data;
   const filtering = filter.trim() !== '';
 
-  const rows = useMemo(() => {
-    const shelves = filtering && found ? withFoundShelves(listed ?? [], found) : (listed ?? []);
-    return myShelves(shelves, switchShelves, { everyone: scope === 'everyone', me }).filter((row) => matchesShelveFilter(row, filter));
-  }, [listed, found, filter, filtering, switchShelves, scope, me]);
-  const shown = rows.slice(0, SHOWN_LIMIT);
-  const note = shelvesListNote({ shown: shown.length, total: rows.length, searchFull: filtering && found?.length === SEARCH_LIMIT, filtering });
+  const { shown, note } = useMemo(
+    () => shelvesListRows({ scope, listed: listed ?? [], found, filter, records: switchShelves, me }),
+    [listed, found, filter, switchShelves, scope, me],
+  );
 
   // A row focused in one scope may not be in the other: focus stays in the list, on its first row.
   const shownScope = useRef(scope);

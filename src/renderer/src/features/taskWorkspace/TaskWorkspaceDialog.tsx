@@ -21,8 +21,9 @@ import { SegmentedControl } from '../../ui/SegmentedControl';
 import { TextField } from '../../ui/TextField';
 import { validateBranchName } from '../branches/branchNames';
 import { pickBranch } from '../branches/BranchPickerDialog';
-import { describeTaskFailure, setUpTaskWorkspace, taskSteps, type TaskStep, type TaskStepState, type TaskWorkspacePlan } from './setUpTaskWorkspace';
+import { describeTaskFailure, setUpTaskWorkspace, taskSteps, type TaskStep, type TaskStepState } from './setUpTaskWorkspace';
 import { taskWorkspaceActions } from './taskWorkspaceActions';
+import { taskWorkspacePlan, type BranchMode } from './taskWorkspacePlan';
 import { defaultTaskFolder, suggestTaskBranchName, TASK_PARENT_BRANCH, taskWorkspaceName } from './taskWorkspaceNaming';
 import { TaskStepList, type TaskStepProgress } from './TaskStepList';
 import { useBranchExists } from './useBranchExists';
@@ -39,8 +40,6 @@ interface TaskWorkspaceOptions {
 export function openTaskWorkspaceDialog(options: TaskWorkspaceOptions): void {
   openDialog((close) => <TaskWorkspaceDialog {...options} onClose={close} />);
 }
-
-type BranchMode = 'new' | 'existing';
 
 const FOLDER_PROBLEMS: Record<Exclude<NewFolderCheck, 'available'>, string> = {
   notEmpty: 'This folder isn’t empty. Choose a new or empty folder.',
@@ -79,10 +78,7 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
     gcTime: 0,
   });
   const folderProblem = folderCheck && folderCheck !== 'available' ? FOLDER_PROBLEMS[folderCheck] : undefined;
-  const plan: TaskWorkspacePlan | null =
-    workspace && branch && !branchError && folder && name && folderCheck === 'available' && (mode === 'existing' || running || typedExists !== undefined)
-      ? { repository: workspace.repository, branch, newBranch: mode === 'new' && !typedExists, workspaceName: name, folder }
-      : null;
+  const plan = taskWorkspacePlan({ repository: workspace?.repository, mode, branch, branchError, folder, workspaceName: name, folderCheck, typedExists, running });
 
   const chooseBranch = async (): Promise<void> => {
     const picked = await pickBranch({ title: 'Work on a branch', description: 'The new workspace switches to it.' });

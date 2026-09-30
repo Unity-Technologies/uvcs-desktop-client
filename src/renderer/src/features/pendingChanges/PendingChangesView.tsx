@@ -137,8 +137,7 @@ export function PendingChangesView() {
     select: (key) => selectAfterLeaving(selection, { selected: new Set([key]), anchor: key }, setSelection),
     pathOf: (key) => changesByKey.get(key)?.path ?? key,
   });
-  // Checking in completes a pending merge as it is; updating first is for plain check-ins.
-  const behind = mergeChanges.length > 0 ? null : behindBranch(incomingSummary, branchName);
+  const behind = behindBranch(incomingSummary, branchName, mergeChanges.length > 0);
 
   // The next change ends the success moment, and so does the workspace moving to another changeset.
   const loadedChangeset = workspace?.loadedChangeset;

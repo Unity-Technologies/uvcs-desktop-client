@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
+import { readGrowthWhenDoubled } from '../../testing/countedReads';
 import { treeArrowMove } from '../../lib/treeArrowMove';
 import { changesUnderRow, changeTreeArrowRows, collapseRows, comparePaths, inPreviousOrder, layoutChangeRows, LEVEL_INDENT, menuTargetOf, rowCheckState, rowIndent, sortForLayout, topLevelCheckboxInset, treeLevel, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
 
@@ -281,22 +282,27 @@ describe('treeLevel', () => {
 });
 
 describe('buildChangeRows at scale', () => {
-  // 100,000 changes, deep and flat: 20 × 10 × 5 folders of 50 files, and one folder of 50,000.
-  const many = Array.from({ length: 100_000 }, (_, index) =>
-    index % 2
-      ? change(`src/m${index % 20}/p${index % 10}/s${index % 5}/f${index}.cs`, index % 3 ? ['changed'] : ['checkedOut', 'changed'])
-      : change(`flat/asset${index}.txt`, index % 4 ? ['private'] : ['added']),
-  );
-  const timed = (layout: ChangesLayout, grouping: ChangesGrouping): number => {
-    const started = performance.now();
-    buildChangeRows({ ...base, changes: many, layout, grouping });
-    return performance.now() - started;
-  };
+  // Deep and flat at once: 20 × 10 × 5 folders of files, and one folder holding half of them.
+  const many = (count: number) =>
+    Array.from({ length: count }, (_, index) =>
+      index % 2
+        ? change(`src/m${index % 20}/p${index % 10}/s${index % 5}/f${index}.cs`, index % 3 ? ['changed'] : ['checkedOut', 'changed'])
+        : change(`flat/asset${index}.txt`, index % 4 ? ['private'] : ['added']),
+    );
+  const layouts: [ChangesLayout, ChangesGrouping][] = [
+    ['list', 'none'],
+    ['tree', 'none'],
+    ['tree', 'changelist'],
+  ];
 
-  it('lays out a list, a tree and changelists of 100,000 changes in well under a second each', () => {
-    expect(timed('list', 'none')).toBeLessThan(1000);
-    expect(timed('tree', 'none')).toBeLessThan(1000);
-    expect(timed('tree', 'changelist')).toBeLessThan(1000);
+  it.each(layouts)('lays out a %s grouped by %s of 100,000 changes, every change once', (layout, grouping) => {
+    const rows = buildChangeRows({ ...base, changes: many(100_000), layout, grouping });
+    expect(rows.filter((row) => row.type === 'change')).toHaveLength(100_000);
+  });
+
+  it.each(layouts)('lays out a %s grouped by %s in n·log n work: twice the changes, about twice the reads', (layout, grouping) => {
+    const growth = readGrowthWhenDoubled(5_000, many, (changes) => buildChangeRows({ ...base, changes, layout, grouping }));
+    expect(growth).toBeLessThan(2.5);
   });
 });
 

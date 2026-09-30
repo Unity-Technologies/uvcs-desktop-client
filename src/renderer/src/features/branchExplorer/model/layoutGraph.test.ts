@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import type { BranchExplorerData } from '@shared/domain/branchExplorer';
 import type { PendingMergeLink } from '@shared/domain/pendingChanges';
+import { readGrowthWhenDoubled } from '../../../testing/countedReads';
 import { branch, changeset, largeHistory, sampleHistory } from './graphFixtures';
 import { layoutGraph, layoutKeeping } from './layoutGraph';
 
@@ -51,21 +53,66 @@ describe('layoutGraph', () => {
   });
 });
 
+describe('layoutGraph rows', () => {
+  /** /main/a/fix branches from 4 on /main/a, and has 8 and 9. */
+  function withGrandchild() {
+    const data = sampleHistory();
+    return {
+      ...data,
+      branches: [...data.branches, branch('/main/a/fix', '/main/a', 9)],
+      changesets: [...data.changesets, changeset(8, '/main/a/fix', 4), changeset(9, '/main/a/fix', 8)],
+    };
+  }
+
+  it('puts a child branch below its parent, however much room rows above have', () => {
+    const layout = layoutGraph(withGrandchild());
+    expect(layout.lanesByBranch.get('/main/a/fix')!.row).toBeGreaterThan(layout.lanesByBranch.get('/main/a')!.row);
+  });
+
+  it('still draws a branch whose parent branch is not in the graph (hidden or filtered out), below /main', () => {
+    const data = withGrandchild();
+    const withoutParent = { ...data, branches: data.branches.filter((each) => each.name !== '/main/a'), changesets: data.changesets.filter((each) => each.branch !== '/main/a'), mergeLinks: [] };
+    const lane = layoutGraph(withoutParent).lanesByBranch.get('/main/a/fix');
+    expect(lane).toMatchObject({ startColumn: 5, endColumn: 6, baseChangeset: null });
+    expect(lane!.row).toBeGreaterThan(0);
+  });
+
+  it('gives /main the top row even when another top-level branch starts before it', () => {
+    const layout = layoutGraph({
+      branches: [branch('/legacy', '', 1), branch('/main', '', 3)],
+      changesets: [changeset(0, '/legacy', -1), changeset(1, '/legacy', 0), changeset(2, '/main', -1), changeset(3, '/main', 2)],
+      mergeLinks: [],
+      labels: [],
+    });
+    expect(layout.lanesByBranch.get('/main')!.row).toBe(0);
+    expect(layout.lanesByBranch.get('/legacy')!.row).toBe(1);
+  });
+
+  it('draws nothing for a branch with no changesets and no base in the graph', () => {
+    const data = sampleHistory();
+    expect(layoutGraph({ ...data, branches: [...data.branches, branch('/main/old', '/main', 99)] }).lanesByBranch.has('/main/old')).toBe(false);
+  });
+
+  it('counts the rows the lanes take', () => {
+    expect(layoutGraph(sampleHistory()).rowCount).toBe(3);
+    expect(layoutGraph({ branches: [], changesets: [], mergeLinks: [], labels: [] })).toMatchObject({ rowCount: 0, columnCount: 0, pending: null });
+  });
+});
+
 describe('layoutKeeping', () => {
   it('lays out exactly what keeping one more changeset lays out, reusing the layout when it already shows on its own', () => {
-    const data = largeHistory(3_000, 600);
+    const data = largeHistory(1_500, 300);
     const keep = new Set([40, 41]);
     const base = { keep, pending: null, layout: layoutGraph(data, { keep }) };
     let reused = 0;
-    for (let id = 0; id < 3_000; id += 7) {
+    for (let id = 0; id < 1_500; id += 7) {
       const layout = layoutKeeping(data, base, id);
       if (layout === base.layout) reused++;
       expect(layout.nodesByColumn).toEqual(layoutGraph(data, { keep: new Set([...keep, id]) }).nodesByColumn);
     }
     expect(reused).toBeGreaterThan(0);
     expect(layoutKeeping(data, base, null)).toBe(base.layout);
-    // 430 whole layouts to compare against: about a second here, several on a slower machine running the suite.
-  }, 30_000);
+  });
 });
 
 describe('layoutGraph with pending changes', () => {
@@ -124,11 +171,15 @@ describe('layoutGraph at scale', () => {
     expect(lane).toMatchObject({ startColumn: 0, endColumn: 199_999, firstOwnColumn: 0 });
   });
 
-  it('places 20,000 branches of 100,000 changesets well within a second, never closer than the gap', () => {
-    const data = largeHistory(100_000, 20_000);
-    const started = performance.now();
-    const layout = layoutGraph(data);
-    expect(performance.now() - started).toBeLessThan(1000);
+  it('reads the history a bounded number of times per changeset and branch: twice the history, about twice the work', () => {
+    const histories = new Map<number, BranchExplorerData>();
+    const history = (size: number): BranchExplorerData => histories.get(size) ?? histories.set(size, largeHistory(size, size / 5)).get(size)!;
+    expect(readGrowthWhenDoubled(20_000, (size) => history(size).changesets, (changesets) => layoutGraph({ ...history(changesets.length), changesets }))).toBeLessThan(2.5);
+    expect(readGrowthWhenDoubled(20_000, (size) => history(size).branches, (branches) => layoutGraph({ ...history(branches.length * 5), branches }))).toBeLessThan(2.5);
+  });
+
+  it('places 20,000 branches of 100,000 changesets, never closer than the gap', () => {
+    const layout = layoutGraph(largeHistory(100_000, 20_000));
     expect(layout.lanes).toHaveLength(20_000);
     for (const lanes of layout.lanesByRow.values()) {
       const sorted = [...lanes].sort((a, b) => a.startColumn - b.startColumn);

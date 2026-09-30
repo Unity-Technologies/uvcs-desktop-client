@@ -24,3 +24,22 @@ export function recordSightings(sightings: ChangeSighting[], paths: string[], no
 export function isBurst(sightings: ChangeSighting[]): boolean {
   return new Set(sightings.map((sighting) => sighting.path)).size >= BURST_FILES;
 }
+
+/** What the reads of one workspace's pending changes have shown so far. */
+export interface BurstWatch {
+  workspacePath: string;
+  changes: PendingChange[];
+  sightings: ChangeSighting[];
+  /** Once seen, a burst stays until the workspace changes. */
+  burst: boolean;
+}
+
+/**
+ * Takes a settled read of the pending changes. The first read of a workspace is where things stand, not a burst: only
+ * what changes after it counts.
+ */
+export function watchRead(watch: BurstWatch | null, workspacePath: string, changes: PendingChange[], now: number): BurstWatch {
+  if (watch?.workspacePath !== workspacePath) return { workspacePath, changes, sightings: [], burst: false };
+  const sightings = recordSightings(watch.sightings, freshlyChangedPaths(watch.changes, changes), now);
+  return { workspacePath, changes, sightings, burst: watch.burst || isBurst(sightings) };
+}

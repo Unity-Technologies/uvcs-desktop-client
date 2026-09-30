@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { arrivalAt, curveUntil, distanceToCurve, linkCurve, pointOnCurve } from './curves';
+import { arrivalAt, curveUntil, distanceToCurve, linkCurve, pendingParentCurve, pointOnCurve } from './curves';
 
 describe('arrivalAt', () => {
   it('finds the point that far back along a straight link', () => {
@@ -40,5 +40,19 @@ describe('distanceToCurve', () => {
       expect(distanceToCurve(curve, onLine)).toBeLessThan(0.5);
       expect(distanceToCurve(curve, { x: onLine.x, y: onLine.y - 10 })).toBeGreaterThan(5);
     }
+  });
+
+  it('measures past its ends to the end itself, and to a point for a link of no length', () => {
+    const straight = linkCurve({ x: 0, y: 0 }, { x: 100, y: 0 });
+    expect(distanceToCurve(straight, { x: -30, y: 40 })).toBeCloseTo(50, 6);
+    expect(distanceToCurve(straight, { x: 130, y: 0 })).toBeCloseTo(30, 6);
+    const dot = { x: 5, y: 5 };
+    expect(distanceToCurve([dot, dot, dot, dot], { x: 8, y: 9 })).toBeCloseTo(5, 6);
+  });
+
+  it('measures to the arch over newer changesets, not the band under it', () => {
+    const arch = pendingParentCurve({ x: 0, y: 100 }, { x: 400, y: 100 }, true);
+    expect(distanceToCurve(arch, { x: 200, y: 100 })).toBeGreaterThan(20);
+    expect(distanceToCurve(pendingParentCurve({ x: 0, y: 100 }, { x: 400, y: 100 }, false), { x: 200, y: 100 })).toBeCloseTo(0, 6);
   });
 });

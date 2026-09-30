@@ -3,13 +3,11 @@ import { useWorkspaceUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
 import { useSettings } from '../../app/settings/useSettings';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { withoutAction } from '../../lib/actions';
 import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { cachedShelve } from './cachedShelve';
-import { myShelves } from './myShelves';
-import { shelveMenu } from './shelveMenu';
+import { shelveDiffMenu } from './shelveDiffMenu';
 import { applyShelve } from './shelveOperations';
 
 /**
@@ -24,15 +22,15 @@ export function ShelveDiffActions({ shelveId }: { shelveId: number }) {
   const shelve = cachedShelve(workspacePath, shelveId);
   if (!shelve) return null;
 
-  const { left, mine } = myShelves([shelve], switchShelves, { everyone: true, me })[0]!;
+  const { left, menu } = shelveDiffMenu(workspacePath, shelve, {
+    records: switchShelves,
+    me,
+    onApplied: () => navigation.goToView('changes'),
+    onDeleted: () => navigation.goBack(),
+  });
   const apply = async (deleteShelve: boolean): Promise<void> => {
     if (await applyShelve(workspacePath, shelveId, deleteShelve)) navigation.goToView('changes');
   };
-  // The page is the shelve's diff and its button applies it: the rest of its menu is behind "More actions".
-  const menu = withoutAction(
-    withoutAction(shelveMenu(workspacePath, [shelve], { left, mine, onApplied: () => navigation.goToView('changes'), onDeleted: () => navigation.goBack() }), 'diff'),
-    'apply',
-  );
 
   return (
     <>

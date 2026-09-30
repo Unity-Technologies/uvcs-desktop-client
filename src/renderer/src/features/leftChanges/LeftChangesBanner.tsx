@@ -1,12 +1,10 @@
 import { Archive, FileDiff, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import type { LeftChanges } from '@shared/domain/switchWithChanges';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { SEPARATOR, tidyMenu } from '../../lib/actions';
-import { formatRelativeDate } from '../../lib/formatDate';
-import { pluralize } from '../../lib/text';
 import { SplitButton } from '../../ui/SplitButton';
 import { discardLeftChanges, restoreLeftChanges, reviewLeftChanges } from './leftChangesOperations';
+import { leftChangesDetail, leftChangesTitle } from './leftChangesWords';
 import { useLeftChanges } from './useLeftChanges';
 import styles from './LeftChangesBanner.module.css';
 
@@ -47,27 +45,12 @@ export function LeftChangesBanner() {
     <div className={styles.banner} role="status">
       <Archive size={16} className={styles.icon} />
       <div className={styles.text}>
-        <strong className={styles.title}>{bannerTitle(newest)}</strong>
-        <span className={styles.detail}>{bannerDetail(newest)}</span>
+        <strong className={styles.title}>{leftChangesTitle(newest)}</strong>
+        <span className={styles.detail}>{leftChangesDetail(newest)}</span>
       </div>
       <SplitButton variant="primary" loading={busy} menu={menu} menuLabel="More options" onClick={() => void run(() => restoreLeftChanges(workspacePath, newest))}>
         Restore
       </SplitButton>
     </div>
   );
-}
-
-function bannerTitle(left: LeftChanges): string {
-  if (left.reason === 'update') return `${pluralize(left.count, 'change')} put aside to update`;
-  return left.mode === 'bring'
-    ? `Your changes from ${left.sourceName} are waiting to be brought here`
-    : `Welcome back — you left ${pluralize(left.count, 'change')} on ${left.sourceName}`;
-}
-
-function bannerDetail(left: LeftChanges): string {
-  const shelved = `Shelved ${formatRelativeDate(left.createdAt)} (shelve ${left.shelveId})`;
-  if (left.foreign) return `${shelved}, left from another workspace or app.`;
-  if (left.reason === 'update') return `${shelved}: ${left.sourceName} deleted or moved ${left.count === 1 ? 'the file' : 'the files'}. Restoring merges your changes back.`;
-  if (left.mode === 'bring') return `${shelved} when you switched here. Some files need your decision.`;
-  return left.targetName ? `${shelved} when you switched to ${left.targetName}.` : `${shelved}.`;
 }

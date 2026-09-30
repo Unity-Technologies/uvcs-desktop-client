@@ -1,8 +1,12 @@
+import '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
 import type { Label } from '@shared/domain/label';
-import { MINE } from '../../lib/peopleFilter';
-import { changesetsCap, DEFAULT_CHANGESET_FILTERS, matchesSearch, noChangesetsHint, toQueryFilter } from './changesetFilters';
+import { compactFilter } from '../../lib/compactFilter';
+import { EVERYONE, MINE } from '../../lib/peopleFilter';
+import { isFiltering } from '../../lib/viewFilters';
+import { changesetsCap, CLEARED_CHANGESET_FILTERS, DEFAULT_CHANGESET_FILTERS, matchesSearch, noChangesetsHint, toQueryFilter } from './changesetFilters';
+import { useChangesetFilters } from './changesetsViewStore';
 
 const today = new Date(2026, 8, 25);
 
@@ -24,6 +28,23 @@ describe('toQueryFilter', () => {
   it('asks for the people picked, so "any time" reaches their newest', () => {
     const filter = toQueryFilter({ ...DEFAULT_CHANGESET_FILTERS, since: 'anyTime', people: { mine: true, others: ['zoe', 'ana'] } }, '/main', today);
     expect(filter.owners).toEqual(['me', 'ana', 'zoe']);
+  });
+
+  it('leaves the branch out while only the current branch is asked for but none is known (a label loaded)', () => {
+    expect(compactFilter(toQueryFilter({ ...DEFAULT_CHANGESET_FILTERS, onlyCurrentBranch: true }, undefined, today))).toEqual({ sinceDate: '2026-08-26' });
+  });
+});
+
+describe("Changesets' Clear filters", () => {
+  it('shows everyone, empties the text and every branch again, keeping the time range', () => {
+    const store = useChangesetFilters;
+    store.getState().update({ text: 'fix', people: MINE, since: 'lastYear', onlyCurrentBranch: true });
+
+    store.getState().clear();
+
+    const { text, people, since, onlyCurrentBranch } = store.getState();
+    expect({ text, people, since, onlyCurrentBranch }).toEqual({ text: '', people: EVERYONE, since: 'lastYear', onlyCurrentBranch: false });
+    expect(isFiltering(store.getState(), CLEARED_CHANGESET_FILTERS)).toBe(false);
   });
 });
 

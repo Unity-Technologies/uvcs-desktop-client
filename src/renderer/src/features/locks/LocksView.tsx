@@ -13,7 +13,7 @@ import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { Highlight, HighlightQuery } from '../../ui/Highlight';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
-import { userFilterTexts } from '../../lib/userName';
+import { lockFilterTexts, readsOnlyMyLocks } from './lockFilters';
 import { IconButton } from '../../ui/IconButton';
 import { useWorkspaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
@@ -60,11 +60,6 @@ const COLUMNS: Column<Lock>[] = [
 
 const ownerOf = (lock: Lock): string => lock.owner;
 
-/** What the row shows: the item, its owner, the branches it's held on and released on, and the workspace. */
-function lockFilterTexts(lock: Lock): string[] {
-  return [lock.path, ...userFilterTexts(lock.owner), lock.holderBranch, lock.destinationBranch, lock.workspace];
-}
-
 /** Exclusive checkouts on the repository: who holds what, and releasing them. */
 export function LocksView() {
   const workspacePath = useWorkspacePath();
@@ -72,8 +67,7 @@ export function LocksView() {
   const { text: filter, people, update } = filters;
   const me = useWorkspaceUser();
   const [selection, setSelection] = useViewSelection('locks');
-  // `cm lock list` reads only the user's locks, or everyone's: other people are picked among everyone's.
-  const { data: locks, isLoading, error, isFetching } = useLocks(isOnlyMine(people));
+  const { data: locks, isLoading, error, isFetching } = useLocks(readsOnlyMyLocks(people));
   const offered = usePeopleSeen('locks', locks, ownerOf);
 
   const visible = (locks ?? []).filter((lock) => matchesPeople(people, me, lock.owner) && matchesWordFilter(lockFilterTexts(lock), filter));

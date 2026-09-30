@@ -2,7 +2,7 @@ import { useRef, useState, type DragEvent, type HTMLAttributes } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { SelectionState } from '../../lib/selection';
 import { isControlled } from './changeCategories';
-import { changesToMove } from './changelistMoves';
+import { changesToMove, dragFromRow } from './changelistMoves';
 import type { ChangeRow } from './changeRows';
 
 /** Data type of a drag carrying selected changes; the changes themselves stay in a ref, since only this list reads them. */
@@ -31,9 +31,9 @@ export function useChangelistDrop({ selection, onSelectionChange, selectedChange
     return {
       draggable: true,
       onDragStart: (event: DragEvent) => {
-        const inSelection = selection.selected.has(row.key);
-        if (!inSelection) onSelectionChange({ selected: new Set([row.key]), anchor: row.key });
-        dragged.current = (inSelection ? selectedChanges() : [row.change]).filter(isControlled);
+        const drag = dragFromRow(row, selection, selectedChanges);
+        if (drag.select) onSelectionChange(drag.select);
+        dragged.current = drag.changes;
         event.dataTransfer.effectAllowed = 'move';
         event.dataTransfer.setData(CHANGES_DRAG_TYPE, String(dragged.current.length));
       },

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
 import type { DiffEntry } from '@shared/domain/diff';
+import { readGrowthWhenDoubled } from '../../testing/countedReads';
 import { incomingRows, selectionKey } from './incomingRows';
 
 const changeset = (id: number): Changeset => ({ id, comment: `cs ${id}`, owner: 'dev', date: '2026-01-01T00:00:00Z', branch: '/main' }) as Changeset;
@@ -43,12 +44,17 @@ describe('incomingRows', () => {
     expect(row).toMatchObject({ type: 'file', entryIndex: 1 });
   });
 
-  it('builds the rows of 100,000 files in linear time', () => {
+  it('builds the rows of 100,000 files, each in its place', () => {
     const files = Array.from({ length: 100_000 }, (_, index) => file(`/src/${index}.ts`));
     const conflicts = new Set(files.filter((_, index) => index % 10 === 0).map((entry) => entry.path));
-    const started = performance.now();
-    const { rows } = incomingRows([changeset(1)], files, conflicts, new Set());
+    const { rows, rowIndexOf } = incomingRows([changeset(1)], files, conflicts, new Set());
     expect(rows).toHaveLength(100_000 + 1 + 3);
-    expect(performance.now() - started).toBeLessThan(1000);
+    expect(rows[rowIndexOf.get('file:/src/99999.ts')!]).toMatchObject({ type: 'file', file: files[99_999] });
+  });
+
+  it('builds the rows in linear work: twice the files, twice the reads', () => {
+    const files = (count: number) => Array.from({ length: count }, (_, index) => file(`/src/${index}.ts`));
+    const growth = readGrowthWhenDoubled(1_000, files, (counted) => incomingRows([changeset(1)], counted, new Set(['/src/0.ts']), new Set()));
+    expect(growth).toBeLessThan(2.05);
   });
 });
