@@ -42,7 +42,7 @@ interface CheckinPanelProps {
   allReviewed: boolean;
   recentComments: string[];
   busy: boolean;
-  onCheckin: () => Promise<boolean>;
+  onCheckin: () => Promise<void>;
   /** `keep`: the changes stay in the workspace; otherwise they are undone once shelved. */
   onShelve: (keep: boolean) => Promise<boolean>;
 }

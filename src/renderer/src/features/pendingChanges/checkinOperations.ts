@@ -8,7 +8,6 @@ import { queryClient } from '../../app/queryClient';
 import { saveSettings } from '../../app/settings/useSettings';
 import { isAffectedByCheckinOrUpdate, isAffectedByShelving } from '../../app/refresh/refreshScopes';
 import { firstLine, pluralize } from '../../lib/text';
-import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { updateToIncoming } from '../incoming/updateOperations';
 import { shelveAway } from '../shelves/shelveOperations';
@@ -28,15 +27,6 @@ interface CheckinOptions {
   updateFirst?: boolean;
   /** Every pending change goes in: the success moment in the empty Changes tells it, so no toast does. */
   quiet?: boolean;
-}
-
-/** Asked before a check-in without a comment, when the setting says to. */
-export function confirmCheckinWithoutComment(): Promise<boolean> {
-  return confirm({
-    title: 'Check in without a comment?',
-    message: 'A short description helps your team understand the change later.',
-    confirmLabel: 'Check in anyway',
-  });
 }
 
 /**
