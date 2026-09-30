@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { hotkey } from '../../lib/shortcutRegistry';
 
-/** Below this window width the sidebar folds into its icon rail, so the lists keep their room. */
+/** Below this window width the sidebar folds into its rail of tiles, so the lists keep their room. */
 const NARROW_WINDOW = '(max-width: 999px)';
 
 export const SIDEBAR_SHORTCUT = hotkey('toggleSidebar');
@@ -44,7 +44,7 @@ function isNarrowWindow(): boolean {
   return narrowQuery.matches;
 }
 
-/** Whether the sidebar shows as its icon rail: always in narrow windows unless opened by hand, else as chosen. */
+/** Whether the sidebar shows as its rail of tiles: always in narrow windows unless opened by hand, else as chosen. */
 export function useSidebarCollapsed(): boolean {
   const narrow = useSyncExternalStore(subscribeToWidth, isNarrowWindow);
   const { collapsed, expandedWhileNarrow } = useSidebarStore();
