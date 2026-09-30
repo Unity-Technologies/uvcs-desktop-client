@@ -1,9 +1,11 @@
 import {
   AppWindow,
   ArchiveRestore,
+  ArrowDownToLine,
   ArrowLeftToLine,
   ArrowRightLeft,
   ArrowRightToLine,
+  ArrowUpFromLine,
   Binary,
   Cherry,
   ClipboardPaste,
@@ -101,6 +103,9 @@ export const MENU_WORDS = {
   checkout: word('act', PenLine, 'Check out'),
   status: word('act', CircleDot, 'Set status'),
   assign: word('act', UserPlus, 'Assign reviewer…'),
+  // Sync: the words name the other repository ("Push to game@cloud").
+  push: word('act', ArrowUpFromLine),
+  pull: word('act', ArrowDownToLine),
 
   // Merging it somewhere.
   merge: word('merge', GitMerge, MERGE_INTO_WORKSPACE),
