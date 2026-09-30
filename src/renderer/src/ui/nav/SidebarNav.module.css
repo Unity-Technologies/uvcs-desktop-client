@@ -123,6 +123,11 @@
   text-align: center;
 }
 
+/* Wide, the dot and the count sit in the row as its own items. */
+.marks {
+  display: contents;
+}
+
 .dot {
   flex: none;
   width: 7px;
@@ -199,25 +204,28 @@
   display: none;
 }
 
-.sidebar[data-rail='true'] .badge {
+/* On the tile, the count and the dot sit side by side just off the icon's top-right corner, clear of its strokes, so
+   they need no ring cut into the tile's background (which differs hovered and selected). The count comes first, by
+   the icon; the dot stays at the same height with or without it. */
+.sidebar[data-rail='true'] .marks {
   position: absolute;
-  top: 1px;
-  left: calc(50% + 3px);
-  min-width: 16px;
+  top: 2px;
+  left: calc(50% + 6px);
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: 3px;
+  height: 15px;
+}
+
+.sidebar[data-rail='true'] .badge {
+  min-width: 15px;
   padding: 0 4px;
   font-size: 10px;
   line-height: 15px;
-  box-shadow: 0 0 0 2px var(--bg-sidebar);
 }
 
 .sidebar[data-rail='true'] .item:not([data-active='true']) .badge {
   background: var(--border-default);
   color: var(--text-primary);
-}
-
-.sidebar[data-rail='true'] .dot {
-  position: absolute;
-  top: 6px;
-  left: calc(50% + 5px);
-  box-shadow: 0 0 0 2px var(--bg-sidebar);
 }

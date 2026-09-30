@@ -1,4 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react';
+import { navBadgeText } from './navBadgeText';
 import { navItemTip } from './navItemTip';
 import styles from './SidebarNav.module.css';
 
@@ -89,8 +90,11 @@ export function NavItem({ icon, label, detail, badge, dot, active = false, dimme
       <span className={styles.icon}>{icon}</span>
       <span className={styles.label}>{label}</span>
       {detail && <span className={styles.detail}>{detail}</span>}
-      {dot && <span className={styles.dot} />}
-      {badge ? <span className={styles.badge}>{badge > 999 ? '999+' : badge}</span> : null}
+      {/* At the row's end wide; on the rail's tile, side by side at its icon's top-right corner. */}
+      <span className={styles.marks}>
+        {dot && <span className={styles.dot} />}
+        {badge ? <span className={styles.badge}>{navBadgeText(badge, rail)}</span> : null}
+      </span>
     </button>
   );
 }
