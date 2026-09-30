@@ -1,6 +1,6 @@
 import { commandFailure, fakeApi } from '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
-import { shownToasts } from '../../testing/operationOutcome';
+import { shownToasts, watchRefreshes } from '../../testing/operationOutcome';
 import { pullBranch, pushBranch, syncWithGit } from './syncOperations';
 
 const ws = '/ws';
@@ -16,6 +16,15 @@ describe('sync operations', () => {
 
     expect(fakeApi.argsOf('sync.push')).toEqual([[ws, push, expect.any(String)]]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Pushed 3 changesets of /main/task to game@cloud' }]);
+  });
+
+  it('refreshes nothing after a push: only the other repository changed', async () => {
+    fakeApi.answer('sync.push', () => brought(3));
+    const refreshed = watchRefreshes(ws);
+
+    await pushBranch(ws, push);
+
+    expect(refreshed()).toEqual([]);
   });
 
   it('pulls the branch as asked, saying when there was nothing new', async () => {
