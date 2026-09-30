@@ -20,6 +20,7 @@ you touch:
 | `features/shelves-and-switching.md`     | Switching with changes, a workspace on a shelve, shelves in Changes, two people on one branch |
 | `features/files-history-annotate.md`    | Files, Browse repository, Go to file, cut and paste, history, annotate         |
 | `features/branch-explorer.md`           | The graph's canvas, keeping the place, the pending changeset, the branch switcher |
+| `features/updates.md`                   | The About dialog, how the app updates (unsigned macOS too), releases and CI    |
 
 ## How a request flows
 
@@ -320,7 +321,8 @@ renderer/src/
 
 - **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)`, so `invalidateWorkspace(path)` refreshes everything after an operation
   (or what it can touch: `invalidateWorkspace(path, affected)`, `runOperation({ affects })`).
-- **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check.
+- **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check (the app's
+  own update check runs hourly too, against GitHub, never the server: features/updates.md).
   - `main/watch/WorkspaceWatcher` watches an open workspace (recursive on macOS/Windows; on Linux a watch per folder,
     `FolderTreeWatch`, as Node's recursive mode there watches every file and loses files saved by replacing them;
     an event Windows sends without a name, when a burst overflowed its buffer, refreshes everything),
@@ -343,6 +345,10 @@ renderer/src/
   - Use `refreshQueries` for event-driven refreshes: it never cancels a fetch in flight, it queues one follow-up.
 - **Mutations**: `runOperation` (progress card, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
   An update or a switch runs alone on its workspace: it waits for any other operation, and the others wait for it (`blockingOperation`).
+- **Top bar**: one bar across the window on every screen (`app/shell/TopBar`), the sidebar under it: the window's
+  buttons, the brand (`AppBrand`, which opens About), then what the screen adds. A workspace adds its branch pill and
+  incoming chip after a separator, the search and the account at the end (`WorkspaceTopBar`); the home screen adds
+  nothing. Sidebars (`ui/nav/SidebarNav`) have no title band of their own.
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
   A sidebar entry may show a count (`useBadge`) and a dot for something waiting there (`useDot`), whose words go under
   the entry's tooltip and in its accessible description: Changes' says what changes were left and where
@@ -351,8 +357,7 @@ renderer/src/
   sidebar is a rail of tiles (`useInRail`), the home screen's too: each entry's icon over its label in `--text-xs`,
   two lines at most, balanced, a word too long cut with an ellipsis (an organization's name), or a short `railLabel`
   ("Expand", "All", "Local"); the selected tile as wide, its icon in the accent. The rail is 80px (`--rail-width`), so
-  the longest one-word labels ("Changesets") fit on one line in every OS's font, and the macOS window buttons over its
-  top; labels wrap at the folded width from the start of the fold, so nothing jumps as it ends. The count is pinned in
+  the longest one-word labels ("Changesets") fit on one line in every OS's font; labels wrap at the folded width from the start of the fold, so nothing jumps as it ends. The count is pinned in
   the accent over the icon's corner (99+ at most, `navBadgeText`), the dot at the tile's own corner. Tooltips only add
   what the entry doesn't show (`navItemTip`): the shortcut and the dot's words, and on a tile the whole count, the
   detail and a shortened label spelled out.
@@ -385,12 +390,15 @@ renderer/src/
   its own text chords, Ctrl+Y (redo) included off macOS (`belongsToField`).
 - **Per OS**: platform differences go through small pure helpers taking the platform (`revealLabel`, `trashName`,
   `windowChrome`, `appMenuTemplate`, `formatShortcut`), read once in `lib/platform.ts`. Windows draw their title bar per
-  `windowChrome`: macOS insets its traffic lights over the sidebar's top band; Windows hides its title bar and overlays
-  its caption buttons on the top bar (`titleBarOverlay`, clear, symbols in the theme's text color; the page keeps
-  `--caption-buttons-width` free), with a menu button in the band (and Alt or F10) popping up the menu bar's menus;
+  `windowChrome`: macOS insets its traffic lights over the top bar's start; Windows hides its title bar and overlays
+  its caption buttons on the top bar's end (`titleBarOverlay`, clear, symbols in the theme's text color; the page keeps
+  `--caption-buttons-width` free), with a menu button at the bar's start (and Alt or F10) popping up the menu bar's menus;
   Linux keeps the desktop's frame and menu bar. Native parts follow the app's theme (`followAppTheme`). The menus
   (`main/window/appMenuTemplate`) have an app menu on macOS only; elsewhere File ends with Settings and Exit (Windows)
-  or Quit (Linux), Help with About, and `&` marks each item's Alt letter.
+  or Quit (Linux), Help with Check for Updates and About, and `&` marks each item's Alt letter. The menus hold what
+  a person looks for there: windows and workspaces (File), the branch work (Branch: switch, new, merges), the palette,
+  the command log and the sidebar (View), the documentation, the shortcuts and reporting an issue (Help); what the
+  screen already offers in place (updating the workspace: the incoming chip) stays out.
 - **Focus**: the list, tree or graph a view or page works on carries `MAIN_FOCUS` (`lib/mainFocus.ts`). `useMainFocus`
   focuses it after navigating and whenever focus falls to the document (a dialog, menu or popover closed), and hands it
   list keys pressed while nothing has focus. Views keep their list's selection while away (`useViewSelection`). Lists
