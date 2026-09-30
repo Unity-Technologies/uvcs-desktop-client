@@ -17,8 +17,10 @@ where there is something to annotate) shows the file annotated instead, with wha
 description (kept as the selection moves), its revision by id in its repository (`itemRevision`), or
 as on disk while it has changes. A folder shows what it holds and its last change. The diff and `cm` lookups wait for
 the selection to settle (`useSettledValue`, without remounting); revisions are cached immutable. F6 moves the keys
-into the diff to scroll it, F6 or Esc back to the tree, which keeps `MAIN_FOCUS`. Browse repository shows its tree
-the same way, every item as its revision (with a filter of its open folders).
+into the diff to scroll it, F6 or Esc back to the tree, which keeps `MAIN_FOCUS`. Every folder listing of the
+workspace is one query (`directoryListingQuery`), shared by the tree, Go to file's actions, Paste and the name checks.
+Browse repository shows its tree the same way, every item as its revision (with a filter of its open folders); a
+changeset's tree never changes, so each of its folders is read once (`repositoryListingQuery`, immutable).
 
 ## Finding a file
 
