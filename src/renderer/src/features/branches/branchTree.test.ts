@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Branch } from '@shared/domain/branch';
+import { readGrowthWhenDoubled } from '../../testing/countedReads';
 import { buildBranchTree, sortBranchesByName } from './branchTree';
 
 function branch(name: string, parent = ''): Branch {
@@ -36,13 +37,17 @@ describe('buildBranchTree', () => {
     expect(rows).toMatchObject([{ depth: 0 }]);
   });
 
-  it('builds the tree of 20,000 siblings in linear time', () => {
+  it('builds the tree of 20,000 siblings', () => {
     const many = sortBranchesByName([branch('/main'), ...Array.from({ length: 20_000 }, (_, index) => branch(`/main/task-${index}`, '/main'))]);
-    const started = performance.now();
     const rows = buildBranchTree(many, new Set());
     expect(rows).toHaveLength(20_001);
     expect(rows[2]!.branch.name).toBe('/main/task-1');
-    // Copying the sibling list for each child grew with the square of the siblings.
-    expect(performance.now() - started).toBeLessThan(200);
+  });
+
+  it('builds the tree in linear work, however many siblings or levels: twice the branches, twice the reads', () => {
+    const siblings = (count: number) => [branch('/main'), ...Array.from({ length: count - 1 }, (_, index) => branch(`/main/task-${index}`, '/main'))];
+    const chain = (count: number) => Array.from({ length: count }, (_, index) => branch(`/b${index}`, index > 0 ? `/b${index - 1}` : ''));
+    expect(readGrowthWhenDoubled(1_000, siblings, (branches) => buildBranchTree(branches, new Set()))).toBeLessThan(2.05);
+    expect(readGrowthWhenDoubled(500, chain, (branches) => buildBranchTree(branches, new Set()))).toBeLessThan(2.05);
   });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
+import { readGrowthWhenDoubled } from '../../testing/countedReads';
 import { describeUpload, uploadSummary } from './uploadSummary';
 
 function change(path: string, kinds: PendingChange['kinds'], size: number, extra: Partial<PendingChange> = {}): PendingChange {
@@ -30,13 +31,12 @@ describe('uploadSummary', () => {
     expect(uploadSummary([change('a.ts', ['moved'], 10), change('b.ts', ['deleted'], 10)])).toEqual({ bytes: 0, newFiles: 0, editedFiles: 0, largest: null });
   });
 
-  it('goes over 100,000 changes in a blink, as checking a box does', () => {
+  it('goes over the changes once, as checking a box does, even for 100,000 of them', () => {
     const kinds: PendingChange['kinds'][] = [['added'], ['checkedOut', 'changed'], ['moved']];
-    const many = Array.from({ length: 100_000 }, (_, index) => change(`Assets/f${index}.png`, kinds[index % 3]!, index));
-    const started = performance.now();
-    const summary = uploadSummary(many);
-    expect(performance.now() - started).toBeLessThan(100);
+    const many = (count: number) => Array.from({ length: count }, (_, index) => change(`Assets/f${index}.png`, kinds[index % 3]!, index));
+    const summary = uploadSummary(many(100_000));
     expect(summary.newFiles + summary.editedFiles).toBe(66_667);
+    expect(readGrowthWhenDoubled(1_000, many, uploadSummary)).toBeLessThan(2.05);
   });
 });
 

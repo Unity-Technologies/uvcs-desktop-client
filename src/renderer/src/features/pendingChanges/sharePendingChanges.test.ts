@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
+import { readGrowthWhenDoubled } from '../../testing/countedReads';
 import { sharePendingChanges } from './sharePendingChanges';
 
 const change = (path: string, lastModified = '1', kinds: PendingChange['kinds'] = ['changed']): PendingChange => ({ path, kinds, itemType: 'file', size: 1, lastModified, oldPath: undefined });
@@ -39,14 +40,18 @@ describe('sharePendingChanges', () => {
     expect(described.changes).toBe(previous.changes);
   });
 
-  it('shares 100,000 changes in well under a second', () => {
+  it('shares 100,000 changes, reading each one a bounded number of times', () => {
     const many = snapshot(Array.from({ length: 100_000 }, (_, index) => change(`src/folder${index % 100}/file${index}.ts`)));
     const next = reread(many);
     next.changes[500] = change(next.changes[500]!.path, '2');
-    const started = performance.now();
     const shared = sharePendingChanges(many, next);
-    expect(performance.now() - started).toBeLessThan(1000);
     expect(shared.changes[499]).toBe(many.changes[499]);
     expect(shared.changes[500]).toBe(next.changes[500]);
+  });
+
+  it('shares in linear work, even when a change is added at the top and every place shifts', () => {
+    const changes = (count: number) => Array.from({ length: count }, (_, index) => change(`src/file${index}.ts`));
+    const growth = readGrowthWhenDoubled(1_000, changes, (previous) => sharePendingChanges(snapshot(previous), reread(snapshot([change('new.ts'), ...changes(previous.length)]))));
+    expect(growth).toBeLessThan(2.1);
   });
 });
