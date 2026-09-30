@@ -33,25 +33,12 @@ export class ReviewStore {
 
   async marks(workspacePath: string): Promise<ReviewMark[]> {
     const marks = await this.files.load(workspacePath);
-    let refreshed = false;
-    const result = await Promise.all(
-      [...marks].map(async ([path, stored]): Promise<ReviewMark> => {
-        const absolutePath = toAbsolutePath(workspacePath, path);
-        let reviewed = await looksUnchanged(absolutePath, stored);
-        if (!reviewed) {
-          // Touched, maybe rewritten with the same contents: only the hash tells.
-          const current = await fingerprintFile(absolutePath);
-          reviewed = current.hash === stored.hash;
-          if (reviewed) {
-            marks.set(path, { ...stored, size: current.size, mtimeMs: current.mtimeMs });
-            refreshed = true;
-          }
-        }
-        return { path, state: reviewed ? 'reviewed' : 'changedSinceReview', hasSnapshot: stored.snapshot };
-      }),
+    const checked = await Promise.all(
+      [...marks].map(async ([path, stored]) => ({ path, stored, ...(await stillReviewed(toAbsolutePath(workspacePath, path), stored)) })),
     );
-    if (refreshed) await this.save(workspacePath, marks);
-    return result;
+    for (const { path, refreshed } of checked) if (refreshed) marks.set(path, refreshed);
+    if (checked.some(({ refreshed }) => refreshed)) await this.save(workspacePath, marks);
+    return checked.map(({ path, stored, reviewed }) => ({ path, state: reviewed ? 'reviewed' : 'changedSinceReview', hasSnapshot: stored.snapshot }));
   }
 
   async mark(workspacePath: string, paths: string[]): Promise<void> {
@@ -113,6 +100,18 @@ export class ReviewStore {
   private snapshotPath(workspacePath: string, path: string): string {
     return join(this.directory(workspacePath), hashOf(path));
   }
+}
+
+/**
+ * Whether a file still holds what was reviewed. One touched but holding the same contents is `refreshed` with its new
+ * size and time, so the next check needn't read it again.
+ */
+async function stillReviewed(absolutePath: string, stored: StoredMark): Promise<{ reviewed: boolean; refreshed?: StoredMark }> {
+  if (await looksUnchanged(absolutePath, stored)) return { reviewed: true };
+  // Touched, maybe rewritten with the same contents: only the hash tells.
+  const current = await fingerprintFile(absolutePath);
+  if (current.hash !== stored.hash) return { reviewed: false };
+  return { reviewed: true, refreshed: { ...stored, size: current.size, mtimeMs: current.mtimeMs } };
 }
 
 function hashOf(text: string): string {
