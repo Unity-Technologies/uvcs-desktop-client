@@ -186,6 +186,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | --------------------------------------------------------- | ----------------------------------------------------------------- |
 | `main/cm/noExternalUi.test.ts`                            | `cm` never opens a tool; processes start only where allowed       |
 | `main/cm/noOredIdLookups.test.ts`                         | no `where id = 1 or id = 2 …` queries                             |
+| `shared/noRuntimeDependencies.test.ts`                    | `shared/` imports only its own modules                            |
 | `lib/shortcutRegistry.test.ts`                            | every shortcut is in the registry; menu accelerators match; no Ctrl+Alt off Mac |
 | `lib/menuGroups.test.ts`, `components/menuGrammar.test.ts` | every object menu follows one grammar                            |
 | `styles/tokens.test.ts`, `focusRings.test.ts`             | text 4.5:1 and focus rings 3:1 in both themes                     |
