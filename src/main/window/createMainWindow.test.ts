@@ -44,6 +44,13 @@ describe('createMainWindow', () => {
     expect(window).toMatchObject({ maximized: true, shown: true });
   });
 
+  it('starts the page on the workspace the window was opened for, and on the home screen without one', () => {
+    createMainWindow(memorySettings(), { workspacePath: '/work/game' });
+    createMainWindow(memorySettings());
+
+    expect(fakeElectron.windows().map((window) => window.loadedQuery)).toEqual([{ workspace: '/work/game' }, {}]);
+  });
+
   it("takes Windows' Back command (a mouse's back button, the Browser Back key) to the page", () => {
     const window = open();
 

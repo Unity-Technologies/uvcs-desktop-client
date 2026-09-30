@@ -62,6 +62,8 @@ describe('one window per workspace', () => {
 
     windows.showWorkspace(GAME);
     const [window] = fakeElectron.windows();
+    // Its page starts on the workspace (`startingWorkspaceQuery`), so its first render is the workspace screen.
+    expect(createMainWindow).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ workspacePath: GAME }));
     expect(windows.workspaceIn(asBrowserWindow(window!))).toBe(GAME);
     // Showing it while its page starts: asking again brings it forward instead of opening a second one.
     windows.showWorkspace(GAME);
@@ -160,11 +162,11 @@ describe('WorkspaceWindows', () => {
     const first = open();
     const second = open();
     open();
-    expect(vi.mocked(createMainWindow).mock.calls.map(([, cascadeFrom]) => cascadeFrom)).toEqual([undefined, first, second]);
+    expect(vi.mocked(createMainWindow).mock.calls.map(([, options]) => options?.cascadeFrom)).toEqual([undefined, first, second]);
 
     first.focus();
     open();
-    expect(vi.mocked(createMainWindow).mock.calls.at(-1)![1]).toBe(first);
+    expect(vi.mocked(createMainWindow).mock.calls.at(-1)![1]?.cascadeFrom).toBe(first);
   });
 
   it('brings the app forward: the focused or last window, or a new one when all were closed', () => {

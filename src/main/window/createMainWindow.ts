@@ -1,5 +1,6 @@
 import { join } from 'node:path';
 import { BrowserWindow, nativeTheme, shell } from 'electron';
+import { startingWorkspaceQuery } from '@shared/startingWorkspace';
 import { windowChrome } from '@shared/windowChrome';
 import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
@@ -12,11 +13,18 @@ const LIGHT_BACKGROUND = '#ffffff';
 /** Until the user leaves a window somewhere (`loadWindowBounds`). */
 const DEFAULT_SIZE = { width: 1400, height: 900 };
 
+interface MainWindowOptions {
+  /** The window it was opened from: it opens a little below and to the right, so it doesn't hide that one. */
+  cascadeFrom?: BrowserWindow;
+  /** The workspace its page starts on (`startingWorkspaceQuery`); the home screen without one. */
+  workspacePath?: string;
+}
+
 /**
- * Opens a window where the last one was (fitted to the current displays), or a little below and to the right of
- * `cascadeFrom` so a new window doesn't hide the one it was opened from. The page title becomes the window title.
+ * Opens a window where the last one was (fitted to the current displays), or cascaded from another one. The page title
+ * becomes the window title.
  */
-export function createMainWindow(settings: SettingsStore, cascadeFrom?: BrowserWindow): BrowserWindow {
+export function createMainWindow(settings: SettingsStore, { cascadeFrom, workspacePath }: MainWindowOptions = {}): BrowserWindow {
   const { bounds, maximized } = cascadeFrom ? cascadedWindowBounds(cascadeFrom) : loadWindowBounds(settings);
   const window = new BrowserWindow({
     ...DEFAULT_SIZE,
@@ -49,12 +57,12 @@ export function createMainWindow(settings: SettingsStore, cascadeFrom?: BrowserW
     return { action: 'deny' };
   });
 
-  loadPage(window);
+  loadPage(window, startingWorkspaceQuery(workspacePath));
   return window;
 }
 
 /** The development server's page while `npm run dev` serves it (hot reload), else the built one. */
-function loadPage(window: BrowserWindow): void {
-  if (process.env.ELECTRON_RENDERER_URL) void window.loadURL(process.env.ELECTRON_RENDERER_URL);
-  else void window.loadFile(join(__dirname, '../renderer/index.html'));
+function loadPage(window: BrowserWindow, query: Record<string, string>): void {
+  if (process.env.ELECTRON_RENDERER_URL) void window.loadURL(`${process.env.ELECTRON_RENDERER_URL}?${new URLSearchParams(query)}`);
+  else void window.loadFile(join(__dirname, '../renderer/index.html'), { query });
 }

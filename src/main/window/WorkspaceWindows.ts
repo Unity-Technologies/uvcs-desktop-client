@@ -28,7 +28,7 @@ export class WorkspaceWindows {
   /** Opens a window on the home screen, or opening `workspacePath`. */
   open(workspacePath?: string): BrowserWindow {
     const cascadeFrom = BrowserWindow.getFocusedWindow() ?? this.all().at(-1);
-    const window = createMainWindow(this.options.settings, cascadeFrom);
+    const window = createMainWindow(this.options.settings, { cascadeFrom, workspacePath });
     const viewer = window.webContents.id;
     askBeforeUnloading(window);
     if (workspacePath) this.requested.set(viewer, workspacePath);
