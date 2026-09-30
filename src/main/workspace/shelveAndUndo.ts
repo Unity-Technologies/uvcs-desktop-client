@@ -6,13 +6,12 @@ import { onLinksThemselves } from '../cm/symlinkArgs';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
 import type { LeftChangesFinder } from './leftChanges';
-import { changedPaths, shelvedChangelists } from './pendingSnapshot';
+import { moveNewItemsAside } from './moveNewItemsAside';
+import { shelvedContents } from './pendingSnapshot';
 import { putShelvedChangesBack } from './putShelvedChangesBack';
 import { readPendingSnapshot } from './readPendingChanges';
-import { selectorSpec } from '@shared/domain/specs';
-import { describeSelector } from './switchSelectors';
+import { newShelveRecord, NO_TARGET } from './shelveRecord';
 import type { SwitchShelveRecords } from './switchShelveRecords';
-import { moveNewItemsAside } from './moveNewItemsAside';
 import { createVerifiedShelve } from './verifiedShelve';
 import { readWorkspaceIdentity } from './workspaceIdentity';
 
@@ -48,18 +47,7 @@ export async function shelveAndUndo(
   const workspace = await readWorkspaceIdentity(cm, workspacePath);
   context.beginStep('Shelving your changes', 1, 2);
   const shelve = await createVerifiedShelve(cm, workspacePath, changes, comment, context, paths ?? undefined);
-  const record: SwitchShelveRecord = {
-    workspaceGuid: workspace.guid,
-    shelveId: shelve.id,
-    repository: workspace.repository,
-    source: { spec: selectorSpec(workspace.selector), name: describeSelector(workspace.selector), objectRef: '' },
-    target: { spec: '', name: '' },
-    mode: 'leave',
-    reason: 'shelve',
-    createdAt: new Date().toISOString(),
-    paths: changedPaths(changes),
-    changelists: shelvedChangelists({ ...snapshot, changes }),
-  };
+  const record = newShelveRecord(workspace, shelve.id, shelvedContents(snapshot, changes), { mode: 'leave', reason: 'shelve', objectRef: '', target: NO_TARGET });
   records.save(record);
 
   // From here on the changes live in the shelve: a failure puts them back.

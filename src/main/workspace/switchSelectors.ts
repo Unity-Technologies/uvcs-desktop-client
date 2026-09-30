@@ -1,3 +1,4 @@
+import { selectorSpec } from '@shared/domain/specs';
 import type { BringDisabledReason, LeaveDisabledReason } from '@shared/domain/switchWithChanges';
 import type { SelectorKind, WorkspaceSelector } from '@shared/domain/workspace';
 
@@ -19,6 +20,11 @@ export function parseSelectorSpec(spec: string): ParsedSpec {
 /** How the user sees a selector: `/main/t1`, `changeset 12`, `label v1`, `shelve 4`. */
 export function describeSelector(selector: WorkspaceSelector): string {
   return selector.kind === 'branch' ? selector.name : `${selector.kind} ${selector.name}`;
+}
+
+/** A selector as a shelve record keeps it: its spec, to recognize it later, and its name, to show it. */
+export function selectorPlace(selector: WorkspaceSelector): { spec: string; name: string } {
+  return { spec: selectorSpec(selector), name: describeSelector(selector) };
 }
 
 /**

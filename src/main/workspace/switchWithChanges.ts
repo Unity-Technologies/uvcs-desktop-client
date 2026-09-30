@@ -1,24 +1,25 @@
 import type { PendingChangesSnapshot } from '@shared/domain/pendingChanges';
+import { selectorSpec } from '@shared/domain/specs';
 import type { PendingChangesAction, RenamedPrivateFile, RestoredChanges, SwitchResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
-import { hasPendingChanges } from '../merge/hasPendingChanges';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { switchArgs } from '../cm/updateArgs';
 import { readWorkspaceStatus } from '../cm/workspaceStatus';
+import { hasPendingChanges } from '../merge/hasPendingChanges';
 import type { OperationContext } from '../operations/OperationTracker';
 import type { SettingsStore } from '../settings/SettingsStore';
+import { applyShelveCleanly } from './applyShelveCleanly';
 import type { LeftChangesFinder } from './leftChanges';
-import { changedPaths, shelvedChangelists, summarizePending } from './pendingSnapshot';
+import { moveNewItemsAside } from './moveNewItemsAside';
+import { shelvedContents, summarizePending } from './pendingSnapshot';
 import { putShelvedChangesBack } from './putShelvedChangesBack';
 import { readPendingSnapshot, readPrivatePaths } from './readPendingChanges';
 import { renamedPrivateFiles } from './renamedPrivateFiles';
 import { selectorObjectRef } from './selectorObjectRef';
-import { selectorSpec } from '@shared/domain/specs';
-import { bringDisabledReason, describeSelector, leaveDisabledReason, parseSelectorSpec } from './switchSelectors';
+import { newShelveRecord } from './shelveRecord';
+import { bringDisabledReason, describeSelector, leaveDisabledReason, parseSelectorSpec, selectorPlace } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
-import { applyShelveCleanly } from './applyShelveCleanly';
-import { moveNewItemsAside } from './moveNewItemsAside';
 import { createAutomaticShelve } from './verifiedShelve';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';
 
@@ -127,18 +128,8 @@ async function shelveAndSwitch(
   context.beginStep('Shelving your changes', 1, steps);
   const objectRef = await sourceObjectRef(cm, workspacePath, workspace);
   const shelve = await createAutomaticShelve(cm, workspacePath, snapshot.changes, objectRef, context);
-  const target = parseSelectorSpec(targetSpec).selector;
-  const record: SwitchShelveRecord = {
-    workspaceGuid: workspace.guid,
-    shelveId: shelve.id,
-    repository: workspace.repository,
-    source: { spec: selectorSpec(workspace.selector), name: describeSelector(workspace.selector), objectRef },
-    target: { spec: selectorSpec(target), name: describeSelector(target) },
-    mode,
-    createdAt: new Date().toISOString(),
-    paths: changedPaths(snapshot.changes),
-    changelists: shelvedChangelists(snapshot),
-  };
+  const target = selectorPlace(parseSelectorSpec(targetSpec).selector);
+  const record = newShelveRecord(workspace, shelve.id, shelvedContents(snapshot), { mode, objectRef, target });
   records.save(record);
 
   // From here on the changes live in the shelve: any failure puts them back.
@@ -157,7 +148,7 @@ async function shelveAndSwitch(
 
   // Record where the switch really landed, as `cm status` names it, to recognize it later.
   const landed = (await readWorkspaceStatus(cm, workspacePath)).selector;
-  const switched = { ...record, target: { spec: selectorSpec(landed), name: describeSelector(landed) } };
+  const switched = { ...record, target: selectorPlace(landed) };
   records.save(switched);
   return switched;
 }

@@ -9,11 +9,11 @@ import { readIncomingChanges } from '../merge/incoming';
 import { unresolvedConflicts, updateWithMerge } from '../merge/updateWithMerge';
 import type { OperationContext } from '../operations/OperationTracker';
 import type { LeftChangesFinder } from './leftChanges';
-import { changedPaths, shelvedChangelists } from './pendingSnapshot';
+import { shelvedContents } from './pendingSnapshot';
 import { putShelvedChangesBack } from './putShelvedChangesBack';
 import { readPendingSnapshot } from './readPendingChanges';
 import { selectorObjectRef } from './selectorObjectRef';
-import { selectorSpec } from '@shared/domain/specs';
+import { newShelveRecord, NO_TARGET } from './shelveRecord';
 import { describeSelector } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
 import { createAutomaticShelve } from './verifiedShelve';
@@ -55,18 +55,7 @@ export async function shelveBlockedAndUpdate(
 
   context.beginStep('Shelving the blocking files', 1, 2);
   const shelve = await createAutomaticShelve(cm, workspacePath, changes, objectRef, context, incoming.blockedPaths);
-  const record: SwitchShelveRecord = {
-    workspaceGuid: workspace.guid,
-    shelveId: shelve.id,
-    repository: workspace.repository,
-    source: { spec: selectorSpec(workspace.selector), name: describeSelector(workspace.selector), objectRef },
-    target: { spec: '', name: '' },
-    mode: 'leave',
-    reason: 'update',
-    createdAt: new Date().toISOString(),
-    paths: changedPaths(changes),
-    changelists: shelvedChangelists({ ...snapshot, changes }),
-  };
+  const record = newShelveRecord(workspace, shelve.id, shelvedContents(snapshot, changes), { mode: 'leave', reason: 'update', objectRef, target: NO_TARGET });
   records.save(record);
   const result = { shelveId: shelve.id, count: record.paths.length };
 

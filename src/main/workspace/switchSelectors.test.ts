@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { selectorSpec } from '@shared/domain/specs';
-import { bringDisabledReason, describeSelector, leaveDisabledReason, parseSelectorSpec } from './switchSelectors';
+import { bringDisabledReason, describeSelector, leaveDisabledReason, parseSelectorSpec, selectorPlace } from './switchSelectors';
 
 describe('parseSelectorSpec', () => {
   it('reads the kind, name and repository of a spec', () => {
@@ -18,6 +18,12 @@ describe('describeSelector', () => {
   it('shows branches by name and the rest by kind', () => {
     expect(describeSelector({ kind: 'branch', name: '/main/t1' })).toBe('/main/t1');
     expect(describeSelector({ kind: 'changeset', name: '42' })).toBe('changeset 42');
+  });
+});
+
+describe('selectorPlace', () => {
+  it('keeps the spec to recognize a selector and the name to show it', () => {
+    expect(selectorPlace({ kind: 'changeset', name: '42' })).toEqual({ spec: 'cs:42', name: 'changeset 42' });
   });
 });
 

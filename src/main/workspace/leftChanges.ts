@@ -1,4 +1,5 @@
 import { rm } from 'node:fs/promises';
+import { selectorSpec } from '@shared/domain/specs';
 import type { LeftChanges, RestoreResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { Shelve, ShelveApplyResult } from '@shared/domain/shelve';
 import { AUTOMATIC_SHELVE_CONDITION, automaticShelveComment } from '../cm/automaticShelve';
@@ -6,13 +7,13 @@ import type { CmClient } from '../cm/CmClient';
 import { findRecords, toShelve } from '../cm/findObjects';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
-import { putBack } from './privateBackups';
-import { selectorObjectRef } from './selectorObjectRef';
-import { selectorSpec } from '@shared/domain/specs';
-import { describeSelector } from './switchSelectors';
-import type { SwitchShelveRecords } from './switchShelveRecords';
 import { applyShelveCleanly } from './applyShelveCleanly';
 import { detachReplacedFiles } from './detachReplacedFiles';
+import { putBack } from './privateBackups';
+import { selectorObjectRef } from './selectorObjectRef';
+import { newShelveRecord, NO_TARGET } from './shelveRecord';
+import { describeSelector } from './switchSelectors';
+import type { SwitchShelveRecords } from './switchShelveRecords';
 import { deleteShelves, readShelveEntries } from './verifiedShelve';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';
 import { cmHeaderReaders, type HeaderReaders } from './WorkspaceHeaders';
@@ -177,21 +178,9 @@ export class LeftChangesFinder {
   }
 
   private async adopt(workspacePath: string, workspace: WorkspaceIdentity, shelveId: number): Promise<SwitchShelveRecord> {
-    const record: SwitchShelveRecord = {
-      workspaceGuid: workspace.guid,
-      shelveId,
-      repository: workspace.repository,
-      source: {
-        spec: selectorSpec(workspace.selector),
-        name: describeSelector(workspace.selector),
-        objectRef: (await selectorObjectRef(this.cm, workspacePath, workspace.selector)) ?? '',
-      },
-      target: { spec: '', name: '' },
-      mode: 'leave',
-      createdAt: new Date().toISOString(),
-      paths: (await readShelveEntries(this.cm, workspacePath, shelveId)).map((entry) => entry.path),
-      changelists: [],
-    };
+    const objectRef = (await selectorObjectRef(this.cm, workspacePath, workspace.selector)) ?? '';
+    const paths = (await readShelveEntries(this.cm, workspacePath, shelveId)).map((entry) => entry.path);
+    const record = newShelveRecord(workspace, shelveId, { paths, changelists: [] }, { mode: 'leave', objectRef, target: NO_TARGET });
     this.records.save(record);
     return record;
   }
