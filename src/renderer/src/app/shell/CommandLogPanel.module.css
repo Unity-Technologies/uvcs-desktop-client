@@ -16,13 +16,27 @@
 }
 
 .title {
+  flex: none;
   font-weight: 600;
   font-size: var(--text-sm);
+  white-space: nowrap;
 }
 
 .count {
+  flex: none;
   color: var(--text-tertiary);
   font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+/* The first to give way when the panel is narrow. */
+.version {
+  overflow: hidden;
+  min-width: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .spacer {
