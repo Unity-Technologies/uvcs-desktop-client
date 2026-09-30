@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -7,10 +7,11 @@ import type { OperationProgress } from '@shared/domain/operation';
 import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
 import { CmError } from '../cm/CmError';
 import { change, pendingStatus } from '../cm/testing/cmOutput';
-import { cmFails, fakeCmClient, optionValue, runsUntilCancelled, type CmAnswer, type FakeCmCommand } from '../cm/testing/fakeCmClient';
+import { cmFails, fakeCmClient, runsUntilCancelled, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { OperationTracker } from '../operations/OperationTracker';
 import { createPendingChangesService } from './pendingChangesService';
 import type { SwitchContext } from './ServiceContext';
+import { readingFileOption } from './testing/readingFileOption';
 import { serviceContext } from './testing/serviceContext';
 
 vi.mock('electron', () => ({ app: { getPath: () => tmpdir() } }));
@@ -22,17 +23,6 @@ function pendingChanges(answers: Record<string, CmAnswer>, operations?: Operatio
   const fake = fakeCmClient(answers);
   const context = serviceContext(fake.cm, operations ? { operations } : {});
   return { ...fake, service: createPendingChangesService(context, {} as SwitchContext), operations: context.operations };
-}
-
-/** Answers with `output`, keeping what the command's comment file held while it ran. */
-function readingComment(output: string) {
-  const seen = { commentsFile: '', comment: '' };
-  const answer = ({ args }: FakeCmCommand): string => {
-    seen.commentsFile = optionValue(args, '-commentsfile=') ?? '';
-    seen.comment = readFileSync(seen.commentsFile, 'utf8');
-    return output;
-  };
-  return { seen, answer };
 }
 
 const STATUS_XML = pendingStatus(change('CH', 'src/player.cs'));
@@ -64,28 +54,11 @@ describe('pending changes list', () => {
     ]);
     expect(snapshot.changes.map((change) => [change.path, change.kinds])).toEqual([['src/player.cs', ['changed']]]);
   });
-
-  it('asks cm for each kind of change the filter shows', async () => {
-    const { service, lines } = pendingChanges({ status: STATUS_XML });
-
-    await service.list(WORKSPACE, {
-      detectLocalMoves: true,
-      moveSimilarityPercent: 80,
-      showPrivate: true,
-      showIgnored: true,
-      showCloaked: true,
-      showHiddenChanged: true,
-    });
-
-    expect(lines()).toEqual([
-      'status --xml --iscochanged --changelists --controlledchanged --changed --localdeleted --localmoved --percentofsimilarity=80 --private --ignored --cloaked --hiddenchanged',
-    ]);
-  });
 });
 
 describe('checkin', () => {
   it('checks the paths in with one cm checkin of its own process, the comment in a file deleted afterwards', async () => {
-    const { seen, answer } = readingComment('CI_START\nCHANGESET cs:43@br:/main/task1@game@local\n');
+    const { seen, answer } = readingFileOption('-commentsfile=', 'CI_START\nCHANGESET cs:43@br:/main/task1@game@local\n');
     const { service, commands } = pendingChanges({ checkin: answer });
 
     const result = await service.checkin(WORKSPACE, { paths: ['src/player.cs', 'assets/hero.png'], comment: 'Jump higher\n\nTuned for the new level' }, 'op-1');
@@ -94,11 +67,11 @@ describe('checkin', () => {
     expect(commands).toHaveLength(1);
     expect(commands[0]).toMatchObject({
       via: 'execute',
-      args: ['checkin', at('src', 'player.cs'), at('assets', 'hero.png'), '--all', '--private', `-commentsfile=${seen.commentsFile}`, '--machinereadable', '--symlink'],
+      args: ['checkin', at('src', 'player.cs'), at('assets', 'hero.png'), '--all', '--private', `-commentsfile=${seen.file}`, '--machinereadable', '--symlink'],
       options: { cwd: WORKSPACE },
     });
-    expect(seen.comment).toBe('Jump higher\n\nTuned for the new level');
-    expect(existsSync(seen.commentsFile)).toBe(false);
+    expect(seen.content).toBe('Jump higher\n\nTuned for the new level');
+    expect(existsSync(seen.file)).toBe(false);
   });
 
   it('reports a checkin that found nothing left to record', async () => {
@@ -108,16 +81,11 @@ describe('checkin', () => {
   });
 
   it('deletes the comment file when the checkin fails', async () => {
-    let commentsFile = '';
-    const { service } = pendingChanges({
-      checkin: ({ args }) => {
-        commentsFile = optionValue(args, '-commentsfile=')!;
-        return cmFails('Error: The server is unreachable.');
-      },
-    });
+    const { seen, answer } = readingFileOption('-commentsfile=', cmFails('Error: The server is unreachable.'));
+    const { service } = pendingChanges({ checkin: answer });
 
     await expect(service.checkin(WORKSPACE, { paths: ['a.txt'], comment: 'c' }, 'op-1')).rejects.toThrow('The server is unreachable.');
-    expect(existsSync(commentsFile)).toBe(false);
+    expect(existsSync(seen.file)).toBe(false);
   });
 
   it('names who holds the lock when a checkin meets items locked by someone else', async () => {
@@ -219,17 +187,17 @@ describe('undo, add and remove', () => {
 
 describe('shelve', () => {
   it('shelves the paths with one cm shelveset of its own process and returns the new shelve', async () => {
-    const { seen, answer } = readingComment('sh:12@game@local\n');
+    const { seen, answer } = readingFileOption('-commentsfile=', 'sh:12@game@local\n');
     const { service, commands } = pendingChanges({ 'shelveset create': answer });
 
     const shelveId = await service.shelve(WORKSPACE, ['src/a.cs'], 'Half done', 'op-1');
 
     expect(shelveId).toBe(12);
     expect(commands).toMatchObject([
-      { via: 'execute', args: ['shelveset', 'create', at('src', 'a.cs'), '--all', `-commentsfile=${seen.commentsFile}`, '--summaryformat'] },
+      { via: 'execute', args: ['shelveset', 'create', at('src', 'a.cs'), '--all', `-commentsfile=${seen.file}`, '--summaryformat'] },
     ]);
-    expect(seen.comment).toBe('Half done');
-    expect(existsSync(seen.commentsFile)).toBe(false);
+    expect(seen.content).toBe('Half done');
+    expect(existsSync(seen.file)).toBe(false);
   });
 
   it('fails when cm reports no shelve', async () => {

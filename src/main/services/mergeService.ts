@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { app } from 'electron';
 import type { MergeApi } from '@shared/api/merge';
+import type { MergeRequest } from '@shared/domain/merge';
 import { readIncomingChanges, readIncomingSummary } from '../merge/incoming';
 import { findMergedInto } from '../merge/mergedInto';
 import { previewMerge } from '../merge/previewMerge';
@@ -19,8 +20,8 @@ export function createMergeService({ cm, operations }: ServiceContext, { switchS
         const result = await runMerge(cm, workspacePath, request, resolutions, context);
         // A shelve applied from the merge view (its conflicts resolved): what shelving it away took comes back, and a
         // shelve of left changes, or one to apply and delete, is done.
-        const shelve = /^sh:(\d+)$/.exec(request.sourceSpec);
-        if (shelve && !request.destinationBranch) await leftChanges.finishAppliedShelve(workspacePath, Number(shelve[1]), request.deleteShelve === true);
+        const appliedShelve = shelveAppliedToWorkspace(request);
+        if (appliedShelve !== null) await leftChanges.finishAppliedShelve(workspacePath, appliedShelve, request.deleteShelve === true);
         return result;
       }),
     mergedInto: (workspacePath, sourceChangeset, destinationBranch) => findMergedInto(cm, workspacePath, sourceChangeset, destinationBranch),
@@ -33,4 +34,10 @@ export function createMergeService({ cm, operations }: ServiceContext, { switchS
         shelveBlockedAndUpdate({ cm, records: switchShelves, leftChanges, backupsRoot }, workspacePath, resolutions, context),
       ),
   };
+}
+
+/** The shelve a merge applies to the workspace (`sh:12`), or null for any other source or a merge into a branch. */
+function shelveAppliedToWorkspace({ sourceSpec, destinationBranch }: MergeRequest): number | null {
+  const shelve = /^sh:(\d+)$/.exec(sourceSpec);
+  return shelve && !destinationBranch ? Number(shelve[1]) : null;
 }

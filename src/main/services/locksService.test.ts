@@ -2,10 +2,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { LOCK_LIST_FORMAT_ARGS } from '../cm/lockRecords';
+import { formatOutput } from '../cm/testing/cmOutput';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createLocksService } from './locksService';
 import { serviceContext } from './testing/serviceContext';
-import { formatOutput } from '../cm/testing/cmOutput';
 
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 
@@ -14,10 +14,9 @@ function locks(answers: Record<string, CmAnswer>) {
   return { ...fake, service: createLocksService(serviceContext(fake.cm)) };
 }
 
-/** A `cm lock list` record in the smart-locks machine-readable layout. */
-
 describe('locks', () => {
   it("lists the repository's locks in any status with one quick command", async () => {
+    // A `cm lock list` record in the smart-locks machine-readable layout.
     const output = formatOutput(['game', '118', 'f1d0', '2026-09-25T10:00:00+02:00', '/main', '', '/main/task1', '', 'Locked', 'ana', 'ana-wk', '/art/Hero.fbx']);
     const { service, commands } = locks({ 'lock list': output });
 

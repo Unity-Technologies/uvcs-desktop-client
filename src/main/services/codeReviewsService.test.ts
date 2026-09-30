@@ -142,7 +142,9 @@ describe('code review writes', () => {
   it('fails when cm left the status as it was', async () => {
     const { service } = codeReviews({ 'codereview -e': '', 'find review': findXml('REVIEW', review(6, 'Changeset', '120', 'Under review')) });
 
-    await expect(service.update(WORKSPACE, 6, { status: 'Reviewed' })).rejects.toThrow('Assign the review, then try again.');
+    await expect(service.update(WORKSPACE, 6, { status: 'Reviewed' })).rejects.toThrow(
+      new Error("The status didn't change: a review nobody is assigned to keeps its status. Assign the review, then try again."),
+    );
   });
 
   it('deletes several reviews with one command', async () => {
