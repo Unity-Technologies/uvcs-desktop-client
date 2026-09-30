@@ -61,6 +61,10 @@ one shows again. A check the window asked for answers in one toast, "Checking…
   (`DEVELOPMENT_DOCK_ICON`, `build/icon-macOS.png`), and a window takes the PNG where the OS reads it from the window
   (`windowIcon`: Linux, and Windows while unpackaged). `appIconFiles.test.ts` fails when the mark changes until
   `npm run icons` runs again.
+- **Third-party notices**: the build minifies every library into `out/`, which drops the license headers MIT, BSD, ISC
+  and Apache ask to keep, so `npm run build` also writes `out/THIRD_PARTY_NOTICES.txt`: the name, version, license
+  and LICENSE/NOTICE files of exactly the packages whose code is in the bundles (`thirdPartyNoticesCollector` in
+  `scripts/build/`, one plugin for main, preload, renderer and its workers; the text is `thirdPartyNotices`).
 - macOS signing and notarization turn on once the `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`,
   `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID` secrets exist; without them the build is signed ad hoc (the
   workflow's `MAC_SIGNING_FLAGS`), opens after Privacy & Security ▸ Open Anyway, and updates by its disk image. A build
