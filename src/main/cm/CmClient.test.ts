@@ -288,7 +288,15 @@ describe('CmClient command log', () => {
     ]);
   });
 
-  it("logs a failed command with its output", async () => {
+  it('logs the command as cm ran it', async () => {
+    const { cm, logged } = fakeClient();
+
+    await cm.query(['find', 'label', '--xml']);
+
+    expect(logged[0]?.commandLine).toBe('cm find label --xml --encoding=utf-8');
+  });
+
+  it('logs a failed command with its output', async () => {
     const { cm, logged } = fakeClient({ answer: () => ({ output: '  Error: no such label\n', exitCode: 1 }) });
 
     await cm.query(['label', 'delete', 'lb:v1']).catch(() => undefined);
