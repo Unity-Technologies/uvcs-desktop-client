@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { QueryFilter } from '@shared/domain/query';
 import { api } from '../../api/client';
 import { useRecentBranchGuids } from '../../features/branches/recentBranches';
-import { reviewSummariesKey } from '../../features/codeReviews/useCodeReviews';
+import { reviewSummariesQuery } from '../../features/codeReviews/useCodeReviews';
 import { useWorkspacePaths } from '../../features/files/useWorkspacePaths';
 import { usePendingChangesOf } from '../../features/pendingChanges/usePendingChanges';
 import { sinceDateFor } from '../../lib/sincePresets';
@@ -43,11 +43,7 @@ export function usePaletteLists(workspacePath: string | null) {
       staleTime: CHANGESETS_STALE_TIME,
     }),
     shelves: useQuery({ queryKey: shelvesKey(path, recentShelvesFilter), queryFn: () => api.shelves.list(path, recentShelvesFilter), ...cached }),
-    codeReviews: useQuery({
-      // The same newest reviews the branch chips read (`useReviewsByBranch`): one query for both.
-      queryKey: reviewSummariesKey(path),
-      queryFn: () => api.codeReviews.listSummaries(path, {}),
-      ...cached,
-    }),
+    // The same newest reviews the branch chips read (`useReviewsByBranch`): one query for both.
+    codeReviews: useQuery({ ...reviewSummariesQuery(path), ...cached }),
   };
 }
