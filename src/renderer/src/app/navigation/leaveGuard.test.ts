@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
-import { afterLeaving, guardLeaving, settleBeforeLeaving } from './leaveGuard';
+import type { SelectionState } from '../../lib/selection';
+
+const uvcs = await vi.hoisted(async () => (await import('../../lib/testing/fakeWindow')).installFakeWindow());
+
+import { afterLeaving, guardLeaving, guardUnloading, selectAfterLeaving, settleBeforeLeaving } from './leaveGuard';
 
 const flush = (): Promise<void> => new Promise((resolve) => setTimeout(resolve));
 
@@ -54,5 +58,90 @@ describe('leaveGuard', () => {
     liftNew();
     afterLeaving(leave);
     expect(leave).toHaveBeenCalledOnce();
+  });
+});
+
+describe('selectAfterLeaving', () => {
+  const selection = (...keys: string[]): SelectionState => ({ selected: new Set(keys), anchor: keys[0] ?? null });
+
+  it('selects another row once the guard lets go of the one shown', async () => {
+    const lift = guardLeaving(async () => true);
+    const select = vi.fn();
+    selectAfterLeaving(selection('a'), selection('b'), select);
+    expect(select).not.toHaveBeenCalled();
+    await settleBeforeLeaving();
+    expect(select).toHaveBeenCalledWith(selection('b'));
+    lift();
+  });
+
+  it('keeps the row when the user stays', async () => {
+    const lift = guardLeaving(async () => false);
+    const select = vi.fn();
+    selectAfterLeaving(selection('a'), selection('a', 'b'), select);
+    await settleBeforeLeaving();
+    expect(select).not.toHaveBeenCalled();
+    lift();
+  });
+
+  it('never asks when the selection stays the same (the row clicked again)', () => {
+    const guard = vi.fn(async () => false);
+    const lift = guardLeaving(guard);
+    const select = vi.fn();
+    selectAfterLeaving(selection('a'), selection('a'), select);
+    expect(select).toHaveBeenCalledOnce();
+    expect(guard).not.toHaveBeenCalled();
+    lift();
+  });
+});
+
+describe('guardUnloading', () => {
+  guardUnloading();
+
+  /** Whether closing, quitting or reloading the page would be held back now. */
+  function unloadingHeldBack(): boolean {
+    const event = new Event('beforeunload', { cancelable: true });
+    window.dispatchEvent(event);
+    return event.defaultPrevented;
+  }
+
+  /** The main process asks before closing the window; resolves with what the window answered. */
+  async function closeWindow(): Promise<unknown> {
+    uvcs.calls.length = 0;
+    const answered = new Promise((resolve) => (uvcs.answer = (request) => (resolve(request), { ok: true, value: undefined })));
+    uvcs.emit('leaveRequested', {});
+    return answered;
+  }
+
+  it('lets the page unload when nothing guards it', () => {
+    expect(unloadingHeldBack()).toBe(false);
+  });
+
+  it('holds the unloading back while something guards it', () => {
+    const lift = guardLeaving(async () => true);
+    expect(unloadingHeldBack()).toBe(true);
+    lift();
+  });
+
+  it('closes the window once the guard lets go, without asking again as it unloads', async () => {
+    const lift = guardLeaving(async () => true);
+    await expect(closeWindow()).resolves.toEqual({ method: 'windows.continueLeaving', args: [true] });
+    expect(unloadingHeldBack()).toBe(false);
+    lift();
+  });
+
+  it('keeps the window when the user cancels', async () => {
+    const lift = guardLeaving(async () => false);
+    await expect(closeWindow()).resolves.toEqual({ method: 'windows.continueLeaving', args: [false] });
+    expect(unloadingHeldBack()).toBe(true);
+    lift();
+  });
+
+  it('asks again after a new guard, even once the window was let go', async () => {
+    const liftFirst = guardLeaving(async () => true);
+    await closeWindow();
+    liftFirst();
+    const lift = guardLeaving(async () => true);
+    expect(unloadingHeldBack()).toBe(true);
+    lift();
   });
 });

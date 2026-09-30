@@ -1,25 +1,15 @@
-import type { Query } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import type { WatchCoverage } from '@shared/api/workspaces';
-import type { WorkspaceInfo } from '@shared/domain/workspace';
-import { mergeChanges, type WorkspaceChange } from '@shared/events';
 import { api } from '../../api/client';
-import { queryKeys, workspaceKey } from '../../api/queryKeys';
+import { queryKeys } from '../../api/queryKeys';
 import { useUvcsEvent } from '../../api/useUvcsEvent';
-import { isKeyedByMovedInfo, isRefreshable, queryClient } from '../queryClient';
-import { loadedChangesetChanged } from '../refresh/headChanges';
+import { queryClient } from '../queryClient';
 import { refreshQueries } from '../refresh/refreshQueries';
-import {
-  isAffectedByFileChanges,
-  isAffectedByFileChangesIn,
-  isAffectedByLoadedChangeset,
-  isAffectedByMovedPaths,
-  isAffectedByWorkspaceState,
-  LOCAL_AREAS,
-} from '../refresh/refreshScopes';
+import { isAffectedByFileChanges, LOCAL_AREAS } from '../refresh/refreshScopes';
 import { toast } from '../../ui/toast/toastStore';
 import { useSettings } from '../settings/useSettings';
 import { useWorkspacePath } from '../workspace/useWorkspace';
+import { HeldChanges, inWorkspace, localQueryDefaults, refreshForChange } from './workspaceChangeRefresh';
 
 /**
  * Keeps the workspace views in step with the disk. The main process watches the workspace and reports coalesced
@@ -50,32 +40,24 @@ export function useWorkspaceWatcher(): void {
   }, [workspacePath, autoRefresh]);
 
   useEffect(() => {
-    const watched = autoRefresh && coverage === 'full';
     for (const area of LOCAL_AREAS) {
-      // `.plastic` rewrites refresh the workspace info even without auto refresh: views mounting don't need to.
-      const staleTime = area === 'info' && coverage === 'full' ? Infinity : undefined;
-      queryClient.setQueryDefaults(queryKeys.inWorkspace(workspacePath, area), { refetchOnWindowFocus: !watched, staleTime });
+      queryClient.setQueryDefaults(queryKeys.inWorkspace(workspacePath, area), localQueryDefaults(area, autoRefresh, coverage));
     }
   }, [workspacePath, autoRefresh, coverage]);
 
   // A hidden window (minimized, covered, on another desktop) refreshes once, when it shows again, for all the changes
-  // meanwhile: agents writing in several workspaces would otherwise keep every window re-reading its changes.
-  const held = useRef<{ workspacePath: string; change: WorkspaceChange } | null>(null);
+  // meanwhile (`HeldChanges`).
+  const held = useRef(new HeldChanges());
   useUvcsEvent('workspaceChanged', ({ workspacePath: changedPath, ...change }) => {
     if (changedPath !== workspacePath) return;
-    if (document.visibilityState === 'visible') {
-      void refreshForChange(workspacePath, change, autoRefresh);
-      return;
-    }
-    const before = held.current?.workspacePath === workspacePath ? held.current.change : null;
-    held.current = { workspacePath, change: before ? mergeChanges(before, change) : change };
+    if (document.visibilityState === 'visible') void refreshForChange(workspacePath, change, autoRefresh);
+    else held.current.hold(workspacePath, change);
   });
   useEffect(() => {
     const refreshHeld = () => {
-      if (document.visibilityState !== 'visible' || !held.current) return;
-      const { workspacePath: heldPath, change } = held.current;
-      held.current = null;
-      if (heldPath === workspacePath) void refreshForChange(workspacePath, change, autoRefresh);
+      if (document.visibilityState !== 'visible') return;
+      const change = held.current.take(workspacePath);
+      if (change) void refreshForChange(workspacePath, change, autoRefresh);
     };
     document.addEventListener('visibilitychange', refreshHeld);
     return () => document.removeEventListener('visibilitychange', refreshHeld);
@@ -89,36 +71,4 @@ function notePartialWatch(workspacePath: string): void {
   if (toldPartial.has(workspacePath)) return;
   toldPartial.add(workspacePath);
   toast.info("Some folders here aren't watched", 'Edits in them show when you come back to this window, or with Refresh.');
-}
-
-function inWorkspace(workspacePath: string, affected: (key: readonly unknown[]) => boolean) {
-  return {
-    queryKey: workspaceKey(workspacePath),
-    predicate: ({ queryKey }: { queryKey: readonly unknown[] }) => affected(queryKey),
-  };
-}
-
-async function refreshForChange(workspacePath: string, change: WorkspaceChange, autoRefresh: boolean): Promise<void> {
-  // `.plastic` rewrites are rare, discrete events, so they refresh even without auto refresh, which guards
-  // against streams of file edits. The paths are cheap: re-read only if something shows them, now or later.
-  const fileChanges = isAffectedByFileChangesIn(change.folders);
-  const affected = (key: readonly unknown[]) =>
-    (change.metadata && isAffectedByWorkspaceState(key)) ||
-    (change.content && autoRefresh && fileChanges(key)) ||
-    (change.pathsChanged && isAffectedByMovedPaths(key));
-
-  const infoKey = queryKeys.inWorkspace(workspacePath, 'info');
-  const before = queryClient.getQueryData<WorkspaceInfo>(infoKey);
-  await refreshQueries(inWorkspace(workspacePath, affected));
-  const after = queryClient.getQueryData<WorkspaceInfo>(infoKey);
-  if (change.metadata && before && after && loadedChangesetChanged(before, after)) {
-    const rest = (query: Query) => isAffectedByLoadedChangeset(query.queryKey) && !affected(query.queryKey);
-    // Views keyed by what moved are read under their new key as they show, not once more under the old one.
-    void queryClient.invalidateQueries({
-      queryKey: workspaceKey(workspacePath),
-      predicate: (query) => rest(query) && isRefreshable(query) && isKeyedByMovedInfo(query, before, after),
-      refetchType: 'none',
-    });
-    void refreshQueries({ queryKey: workspaceKey(workspacePath), predicate: (query) => rest(query) && !isKeyedByMovedInfo(query, before, after) });
-  }
 }

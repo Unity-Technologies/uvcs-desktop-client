@@ -1,12 +1,10 @@
 import { useEffect, type RefObject } from 'react';
 import { focusMain, isKeyboardTaken } from '../../lib/mainFocus';
 import { useNavigation } from '../navigation/navigationStore';
+import { isAimedAtMainList } from './mainFocusKeys';
 
 /** How long a view may take to show its list (loading lazily, then its data) before focus stops waiting for it. */
 const WAIT_MS = 5000;
-
-/** Keys that act on the main list; pressed while nothing has focus, they go to it. */
-const LIST_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'PageUp', 'PageDown', 'Home', 'End', 'Enter', ' ', 'j', 'k']);
 
 /**
  * Keyboard-first focus for the workspace screen: the main list of the view or page on top (see `MAIN_FOCUS`) takes
@@ -55,8 +53,8 @@ export function useMainFocus(contentRef: RefObject<HTMLElement | null>): void {
 
     const onKeyDownCapture = (event: KeyboardEvent): void => {
       const root = contentRef.current;
-      if (!root || document.activeElement !== document.body || event.metaKey || event.ctrlKey || event.altKey) return;
-      if (!LIST_KEYS.has(event.key) || isKeyboardTaken() || !focusMain(root)) return;
+      if (!root || document.activeElement !== document.body || !isAimedAtMainList(event)) return;
+      if (isKeyboardTaken() || !focusMain(root)) return;
       // The key was aimed at the list: it gets it now that it has focus.
       event.preventDefault();
       event.stopPropagation();

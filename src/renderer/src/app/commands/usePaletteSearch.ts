@@ -1,7 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { LoaderCircle, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import type { Branch } from '@shared/domain/branch';
 import type { QueryFilter } from '@shared/domain/query';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -12,23 +10,14 @@ import { isCheckinCandidate } from '../../features/pendingChanges/changeCategori
 import { sortByStatus } from '../../features/pendingChanges/changeRows';
 import { usePendingChangesOf } from '../../features/pendingChanges/usePendingChanges';
 import { createFuzzyIndex } from '../../lib/fuzzyIndex';
-import { matchesAllWords } from '../../lib/matchesAllWords';
 import { sinceDateFor } from '../../lib/sincePresets';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { queryClient, SLOW_CHANGING_QUERY } from '../queryClient';
 import { useWorkspaceInfoOf } from '../workspace/useWorkspace';
-import {
-  branchResult,
-  changesetResult,
-  codeReviewResult,
-  exactChangesetResult,
-  fileResult,
-  labelResult,
-  shelveResult,
-  type ResultContext,
-} from './objectResults';
+import type { ResultContext } from './objectResults';
+import { lacksServerMatch, paletteGroups, searchesServerFor } from './paletteGroups';
 import { isInScope, isSearching, type PaletteScope, type SectionId } from './paletteScope';
-import type { SearchGroup, SearchResult } from './searchResults';
+import type { SearchGroup } from './searchResults';
 
 export interface PaletteSearch {
   groups: SearchGroup[];
@@ -36,18 +25,11 @@ export interface PaletteSearch {
   isLoading: boolean;
 }
 
-/** Rows a section can show once expanded; each section shows fewer until then (see `collapseGroups`). */
-const MAX_PER_SECTION = 50;
-/** Server matches that the cached lists missed (new, or beyond their limits), added after the cached ones. */
-const MAX_SERVER_EXTRAS = 3;
 /** Older changesets are still reachable by number (`1234` or `cs:1234`) or by searching them all on demand. */
 const RECENT_CHANGESETS = 2000;
 /** Room for the loose matches of a case-tolerant server search, which are filtered precisely here. */
 const SERVER_SEARCH_LIMIT = 50;
 const SERVER_SEARCH_DELAY_MS = 300;
-/** `like` patterns drop each word's first letter (`caseTolerantPattern`): two letters would match nearly everything. */
-const MIN_SERVER_SEARCH_LENGTH = 3;
-const CHANGESET_NUMBER = /^(?:cs:)?(\d+)$/i;
 const STALE_TIME = 60_000;
 /** Keeps the lists between palette openings, so reopening it never starts from scratch. */
 const CACHE_TIME = 30 * 60_000;
@@ -65,7 +47,6 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
   const enabled = Boolean(workspacePath);
   const path = workspacePath ?? '';
   const term = query.trim();
-  const changesetNumber = CHANGESET_NUMBER.exec(term)?.[1];
 
   // Cached lists.
   const cached = { enabled, ...SLOW_CHANGING_QUERY, gcTime: CACHE_TIME };
@@ -95,7 +76,7 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
 
   // Server searches, once typing pauses, only for the sections in scope.
   const serverTerm = useDebouncedValue(term, SERVER_SEARCH_DELAY_MS);
-  const searchesServer = enabled && serverTerm.length >= MIN_SERVER_SEARCH_LENGTH && !CHANGESET_NUMBER.test(serverTerm);
+  const searchesServer = enabled && searchesServerFor(serverTerm);
   const server = (section: SectionId) => ({ enabled: searchesServer && isInScope(section, scope), staleTime: STALE_TIME });
   const textFilter: QueryFilter = { text: serverTerm, limit: SERVER_SEARCH_LIMIT };
   const foundBranches = useQuery({ queryKey: branchesKey(path, textFilter), queryFn: () => api.branches.list(path, textFilter), ...server('branches') });
@@ -142,7 +123,6 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
 
   const groups = useMemo(() => {
     if (!enabled) return [];
-
     const changeByPath = new Map(changes.map((change) => [change.path, change]));
     const context: ResultContext = {
       workspacePath: path,
@@ -152,162 +132,34 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
       changelists: pendingChanges.data?.changelists ?? [],
       changeAt: (changePath) => changeByPath.get(changePath),
     };
-
-    const listGroups = (): SearchGroup[] => {
-      // The current branch, the ones switched to lately, then the newest.
-      const rank = (branch: Branch): number => {
-        if (branch.name === context.currentBranch) return 0;
-        const recent = recentBranches.indexOf(branch.guid.toLowerCase());
-        return recent === -1 ? recentBranches.length + 1 : recent + 1;
-      };
-      const sortedBranches = (branches.data ?? []).map((branch, order) => ({ branch, order })).sort((a, b) => rank(a.branch) - rank(b.branch) || a.order - b.order);
-      return [
-        {
-          section: 'branches',
-          heading: 'Branches',
-          results: sortedBranches.slice(0, MAX_PER_SECTION).map(({ branch }) => branchResult(branch, context)),
-        },
-        // Labels pile up by the thousand; without a search they only show when asked for (`@`).
-        {
-          section: 'labels',
-          heading: 'Labels',
-          results: scope === 'refs' ? (labels.data ?? []).slice(0, MAX_PER_SECTION).map((label) => labelResult(label, context)) : [],
-        },
-        {
-          section: 'files',
-          heading: 'Pending changes',
-          results: changes
-            .slice(0, MAX_PER_SECTION)
-            .map((change) => fileResult({ path: change.path, isDirectory: change.itemType === 'directory' }, context)),
-        },
-        {
-          section: 'changesets',
-          heading: 'Changesets',
-          results: (changesets.data ?? []).slice(0, MAX_PER_SECTION).map((changeset) => changesetResult(changeset, context)),
-        },
-        {
-          section: 'shelves',
-          heading: 'Shelves',
-          results: [...(shelves.data ?? [])]
-            .sort((a, b) => b.id - a.id)
-            .slice(0, MAX_PER_SECTION)
-            .map((shelve) => shelveResult(shelve, context)),
-        },
-      ];
-    };
-
-    const searchGroups = (): SearchGroup[] => {
-      const withServerMatches = <T,>(
-        local: SearchResult[],
-        found: T[] | undefined,
-        textOf: (item: T) => string,
-        toResult: (item: T) => SearchResult,
-      ): SearchResult[] => {
-        // Matches for an older term would not fit what is typed now.
-        if (serverTerm !== term || !found) return local;
-        const shown = new Set(local.map((result) => result.id));
-        const extras = found
-          .filter((item) => matchesAllWords(textOf(item), term))
-          .map(toResult)
-          .filter((result) => !shown.has(result.id));
-        return [...local, ...extras.slice(0, MAX_SERVER_EXTRAS)];
-      };
-
-      // A recent changeset shows with its comment; an older one is opened by number alone.
-      const exactChangeset = (id: number): SearchResult => {
-        const recent = changesets.data?.find((changeset) => changeset.id === id);
-        return recent ? { ...changesetResult(recent, context), quality: 1 } : exactChangesetResult(id);
-      };
-
-      const recentChangesetResults = (changesets.data ?? [])
-        .filter((changeset) => String(changeset.id) !== changesetNumber && matchesAllWords(`cs:${changeset.id} ${changeset.comment}`, term))
-        .slice(0, MAX_PER_SECTION)
-        .map((changeset) => changesetResult(changeset, context));
-
-      const searchAllChangesets = (): SearchResult[] => {
-        if (changesetNumber || term.length < MIN_SERVER_SEARCH_LENGTH) return [];
-        // Explicit empty matches: these rows describe the search, so the query is not highlighted in them.
-        const action = { id: 'changeset:searchAll', keepOpen: true, pinned: true, labelMatches: [], detailMatches: [] };
-        if (changesetSearchTerm !== term) {
-          return [{ ...action, icon: Search, label: `Search all changesets for “${term}”`, detail: 'May take a few seconds', run: () => setChangesetSearchTerm(term) }];
-        }
-        if (foundChangesets.isFetching) return [{ ...action, icon: LoaderCircle, busy: true, label: 'Searching all changesets…', run: () => {} }];
-        if (foundChangesets.error) {
-          return [{ ...action, icon: Search, label: `Could not search changesets: ${foundChangesets.error.message}`, disabled: true, run: () => {} }];
-        }
-
-        const shown = new Set(recentChangesetResults.map((result) => result.id));
-        const older = (foundChangesets.data ?? [])
-          .filter((changeset) => matchesAllWords(changeset.comment, term))
-          .map((changeset) => changesetResult(changeset, context))
-          .filter((result) => !shown.has(result.id));
-        return older.length > 0 ? older : [{ ...action, icon: Search, label: `No other changesets mention “${term}”`, disabled: true, run: () => {} }];
-      };
-
-      return [
-        { section: 'files', heading: 'Files', results: fileIndex.rank(term, MAX_PER_SECTION).map((index) => fileResult(files.data![index]!, context)) },
-        {
-          section: 'branches',
-          heading: 'Branches',
-          results: withServerMatches(
-            branchIndex.rank(term, MAX_PER_SECTION).map((index) => branchResult(branches.data![index]!, context)),
-            foundBranches.data,
-            (branch) => branch.name,
-            (branch) => branchResult(branch, context, 'words'),
-          ),
-        },
-        {
-          section: 'labels',
-          heading: 'Labels',
-          results: withServerMatches(
-            labelIndex.rank(term, MAX_PER_SECTION).map((index) => labelResult(labels.data![index]!, context)),
-            foundLabels.data,
-            (label) => label.name,
-            (label) => labelResult(label, context, 'words'),
-          ),
-        },
-        {
-          section: 'changesets',
-          heading: 'Changesets',
-          results: [...(changesetNumber ? [exactChangeset(Number(changesetNumber))] : []), ...recentChangesetResults, ...searchAllChangesets()],
-        },
-        {
-          section: 'shelves',
-          heading: 'Shelves',
-          results: withServerMatches(
-            (shelves.data ?? [])
-              .filter((shelve) => matchesAllWords(`sh:${shelve.id} ${shelve.comment}`, term))
-              .slice(0, MAX_PER_SECTION)
-              .map((shelve) => shelveResult(shelve, context)),
-            foundShelves.data,
-            (shelve) => shelve.comment,
-            (shelve) => shelveResult(shelve, context),
-          ),
-        },
-        {
-          section: 'codeReviews',
-          heading: 'Code reviews',
-          results: withServerMatches(
-            (codeReviews.data ?? [])
-              .filter((review) => matchesAllWords(review.title, term))
-              .slice(0, MAX_PER_SECTION)
-              .map((review) => codeReviewResult(review, context)),
-            foundCodeReviews.data,
-            (review) => review.title,
-            (review) => codeReviewResult(review, context),
-          ),
-        },
-      ];
-    };
-
-    return (term ? searchGroups() : listGroups()).filter((group) => group.results.length > 0 && isInScope(group.section, scope));
+    return paletteGroups({
+      scope,
+      context,
+      lists: {
+        files: files.data && { items: files.data, index: fileIndex },
+        changes,
+        branches: branches.data && { items: branches.data, index: branchIndex },
+        labels: labels.data && { items: labels.data, index: labelIndex },
+        changesets: changesets.data,
+        shelves: shelves.data,
+        codeReviews: codeReviews.data,
+        recentBranchGuids: recentBranches,
+      },
+      server: { term: serverTerm, branches: foundBranches.data, labels: foundLabels.data, shelves: foundShelves.data, codeReviews: foundCodeReviews.data },
+      changesetSearch: {
+        term: changesetSearchTerm,
+        found: foundChangesets.data,
+        isFetching: foundChangesets.isFetching,
+        error: foundChangesets.error,
+        start: setChangesetSearchTerm,
+      },
+    });
   }, [
     enabled,
     path,
     term,
     scope,
     serverTerm,
-    changesetNumber,
     workspace.data,
     recentBranches,
     pendingChanges.data,
@@ -358,9 +210,7 @@ function useRefreshWhenMissing(
   area: 'branches' | 'labels',
 ): void {
   useEffect(() => {
-    if (!found || !cached) return;
-    const cachedIds = new Set(cached.map((item) => item.id));
-    if (!found.some((item) => !cachedIds.has(item.id))) return;
+    if (!lacksServerMatch(found, cached)) return;
     void queryClient.invalidateQueries({ queryKey: queryKeys.inWorkspace(workspacePath, area, {}), exact: true });
   }, [found, cached, workspacePath, area]);
 }

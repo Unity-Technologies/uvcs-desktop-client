@@ -7,17 +7,22 @@ import { trackWindowFocus } from './refresh/trackWindowFocus';
 
 trackWindowFocus();
 
-export const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      // Coming back to the window refreshes what is on screen if it is older than this; local views are kept
-      // fresh by the workspace watcher instead (see useWorkspaceWatcher).
-      staleTime: 30_000,
-      retry: false,
-      refetchOnWindowFocus: true,
+/** The app's one query client (`queryClient`), built by a function so tests can have a fresh one each. */
+export function createQueryClient(): QueryClient {
+  const client = new QueryClient({
+    defaultOptions: {
+      queries: {
+        // Coming back to the window refreshes what is on screen if it is older than this; local views are kept
+        // fresh by the workspace watcher instead (see useWorkspaceWatcher).
+        staleTime: 30_000,
+        retry: false,
+        refetchOnWindowFocus: true,
+      },
     },
-  },
-});
+  });
+  boundUnusedQueries(client.getQueryCache(), MAX_UNUSED_IMMUTABLE, (query) => !isRefreshable(query));
+  return client;
+}
 
 /**
  * Server lists that hardly change by themselves (every branch, every label, attribute types...), and are heavy on big
@@ -53,9 +58,9 @@ export function isRefreshable(query: Query): boolean {
 }
 
 /** Immutable results kept once off screen: the objects opened last (a changeset's files, a revision's text). */
-const MAX_UNUSED_IMMUTABLE = 100;
+export const MAX_UNUSED_IMMUTABLE = 100;
 
-boundUnusedQueries(queryClient.getQueryCache(), MAX_UNUSED_IMMUTABLE, (query) => !isRefreshable(query));
+export const queryClient = createQueryClient();
 
 /**
  * Refreshes every view of a workspace; call it after anything that changes the workspace or its repository.
@@ -63,22 +68,31 @@ boundUnusedQueries(queryClient.getQueryCache(), MAX_UNUSED_IMMUTABLE, (query) =>
  * for it: when a switch, update or checkin gave them another key, they are only marked stale, and read under their
  * new key as they show.
  */
-export async function invalidateWorkspace(workspacePath: string, affected: (queryKey: readonly unknown[]) => boolean = () => true): Promise<void> {
+export function invalidateWorkspace(workspacePath: string, affected?: (queryKey: readonly unknown[]) => boolean): Promise<void> {
+  return invalidateWorkspaceIn(queryClient, workspacePath, affected);
+}
+
+/** `invalidateWorkspace` on a given client. */
+export async function invalidateWorkspaceIn(
+  client: QueryClient,
+  workspacePath: string,
+  affected: (queryKey: readonly unknown[]) => boolean = () => true,
+): Promise<void> {
   const queryKey = workspaceKey(workspacePath);
   const infoKey = queryKeys.inWorkspace(workspacePath, 'info');
   const refreshed = (query: Query) => isRefreshable(query) && affected(query.queryKey);
   const keyed = (query: Query) => refreshed(query) && workspaceInfoKeyOf(query) !== undefined;
   const isInfo = (query: Query) => query.queryKey[2] === 'info';
-  const before = queryClient.getQueryData<WorkspaceInfo>(infoKey);
+  const before = client.getQueryData<WorkspaceInfo>(infoKey);
 
-  const others = queryClient.invalidateQueries({ queryKey, predicate: (query) => refreshed(query) && !keyed(query) && !isInfo(query) });
-  await queryClient.invalidateQueries({ queryKey: infoKey, exact: true, predicate: refreshed });
-  const after = queryClient.getQueryData<WorkspaceInfo>(infoKey);
+  const others = client.invalidateQueries({ queryKey, predicate: (query) => refreshed(query) && !keyed(query) && !isInfo(query) });
+  await client.invalidateQueries({ queryKey: infoKey, exact: true, predicate: refreshed });
+  const after = client.getQueryData<WorkspaceInfo>(infoKey);
   const moved = (query: Query) => isKeyedByMovedInfo(query, before, after);
 
   await Promise.all([
     others,
-    queryClient.invalidateQueries({ queryKey, predicate: (query) => keyed(query) && moved(query), refetchType: 'none' }),
-    queryClient.invalidateQueries({ queryKey, predicate: (query) => keyed(query) && !moved(query) }),
+    client.invalidateQueries({ queryKey, predicate: (query) => keyed(query) && moved(query), refetchType: 'none' }),
+    client.invalidateQueries({ queryKey, predicate: (query) => keyed(query) && !moved(query) }),
   ]);
 }

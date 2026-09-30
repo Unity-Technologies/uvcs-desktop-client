@@ -3,6 +3,7 @@ import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { useUvcsEvent } from '../../api/useUvcsEvent';
+import { toast } from '../../ui/toast/toastStore';
 import { queryClient } from '../queryClient';
 
 export const settingsQuery = queryOptions({ queryKey: queryKeys.settings, queryFn: () => api.settings.get(), staleTime: Infinity });
@@ -18,11 +19,19 @@ export function useUpdateSettings(): (changes: Partial<AppSettings>) => void {
   return updateSettings;
 }
 
-/** Saves settings from anywhere, hooks or not: the change shows right away and the store confirms it. */
+/**
+ * Saves settings from anywhere, hooks or not: the change shows right away and the store confirms it. A change the
+ * store couldn't save goes back to what was shown before, and says so.
+ */
 export async function saveSettings(changes: Partial<AppSettings>): Promise<void> {
   const current = queryClient.getQueryData<AppSettings>(queryKeys.settings) ?? DEFAULT_SETTINGS;
   queryClient.setQueryData(queryKeys.settings, { ...current, ...changes });
-  queryClient.setQueryData(queryKeys.settings, await api.settings.update(changes));
+  try {
+    queryClient.setQueryData(queryKeys.settings, await api.settings.update(changes));
+  } catch (error) {
+    queryClient.setQueryData(queryKeys.settings, current);
+    toast.error("Couldn't save the settings", error);
+  }
 }
 
 /** Keeps this window's settings in step with the changes other windows (and the main process) make. */

@@ -1,12 +1,12 @@
 import { QueryObserver } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { queryClient } from '../queryClient';
+import { IMMUTABLE_QUERY, queryClient } from '../queryClient';
 import { refreshQueries } from './refreshQueries';
 
 vi.mock('./trackWindowFocus', () => ({ trackWindowFocus: () => {} }));
 
 /** A query on screen (observed) whose fetches are counted, and resolve when told to. */
-function shownQuery(key: string) {
+function shownQuery(key: string, meta?: Record<string, unknown>) {
   const fetched = { count: 0, finish: () => {} };
   const observer = new QueryObserver(queryClient, {
     queryKey: ['test', key],
@@ -15,6 +15,7 @@ function shownQuery(key: string) {
       return new Promise<number>((resolve) => (fetched.finish = () => resolve(fetched.count)));
     },
     staleTime: Infinity,
+    meta,
   });
   const unsubscribe = observer.subscribe(() => {});
   return { fetched, unsubscribe };
@@ -42,6 +43,17 @@ describe('refreshQueries', () => {
     expect(queryClient.getQueryData(['test', 'busy'])).toBe(2);
     idle.unsubscribe();
     busy.unsubscribe();
+  });
+
+  it('leaves immutable results alone', async () => {
+    const changesetFiles = shownQuery('changesetFiles', IMMUTABLE_QUERY);
+    changesetFiles.fetched.finish();
+    await vi.waitFor(() => expect(queryClient.isFetching()).toBe(0));
+
+    await refreshQueries({ queryKey: ['test'] });
+
+    expect(changesetFiles.fetched.count).toBe(1);
+    changesetFiles.unsubscribe();
   });
 
   it('refreshes thousands of queries on screen without a pass over the cache for each', async () => {

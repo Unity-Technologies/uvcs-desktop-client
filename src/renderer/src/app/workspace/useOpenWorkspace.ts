@@ -13,7 +13,7 @@ export function useOpenWorkspace(): (path: string) => void {
   return useCallback((path: string) => void openUnlessShownElsewhere(path, openWorkspace), [openWorkspace]);
 }
 
-async function openUnlessShownElsewhere(path: string, openWorkspace: (path: string) => void): Promise<void> {
+export async function openUnlessShownElsewhere(path: string, openWorkspace: (path: string) => void): Promise<void> {
   if (await api.windows.focusWorkspace(path)) return;
   navigation.goToView('changes');
   openWorkspace(path);
