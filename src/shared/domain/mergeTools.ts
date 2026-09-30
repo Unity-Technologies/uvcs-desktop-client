@@ -5,10 +5,10 @@ import type { ContentSource } from './content';
  * machine, or one the user added. It opens only when the user asks, on one file.
  */
 export interface MergeTool {
-  /** `uvcs`, `vscode`, `kdiff3`... for known tools; `clientConf:<n>` from client.conf; `custom:<n>` for the user's. */
+  /** `uvcs`, `vscode`, `kdiff3`... for known tools; `custom:<n>` for the user's. */
   id: string;
   name: string;
-  origin: 'known' | 'clientConf' | 'custom';
+  origin: 'known' | 'custom';
   /** The program run, found on this machine (or picked by the user). */
   executable: string;
   /**
@@ -18,8 +18,6 @@ export interface MergeTool {
   args: string[];
   /** The arguments before the user's override, to offer going back to them. */
   defaultArgs: string[];
-  /** Only for these extensions (lowercase, with the dot), as client.conf says; null for every file. */
-  extensions: string[] | null;
   /** Its window can be brought forward while it's open (an app bundle on macOS). */
   canBringToFront: boolean;
 }
@@ -28,16 +26,6 @@ export interface MergeTool {
 export interface MergeToolList {
   tools: MergeTool[];
   preferredId: string | null;
-}
-
-/**
- * Whether a tool is offered for a file: text files only (a binary keeps one of its versions, picked in the app), and
- * client.conf's by extension.
- */
-export function canMergeIn(tool: MergeTool, path: string, isBinary: boolean): boolean {
-  if (isBinary) return false;
-  const name = path.toLowerCase();
-  return !tool.extensions || tool.extensions.some((extension) => name.endsWith(extension));
 }
 
 /** A merge app added by the user; known tools are found, not stored. */

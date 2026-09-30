@@ -2,7 +2,7 @@ import type { MergeToolList, MergeToolOutcome, MergeToolRequest } from '../domai
 
 /** Merge apps to resolve a conflicting file in, opened only when the user asks. */
 export interface MergeToolsApi {
-  /** The tools installed here (looked for on each call), client.conf's and the user's, and the one to offer first. */
+  /** The tools installed here (looked for on each call) and the user's, and the one to offer first. */
   list(): Promise<MergeToolList>;
   /**
    * Opens one file's versions in the tool and waits until it closes, or the user stops waiting. The workspace is left

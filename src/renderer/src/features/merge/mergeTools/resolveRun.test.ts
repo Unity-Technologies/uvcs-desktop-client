@@ -10,12 +10,11 @@ const tool = (id: string, changes: Partial<MergeTool> = {}): MergeTool => ({
   executable: id,
   args: [],
   defaultArgs: [],
-  extensions: null,
   canBringToFront: false,
   ...changes,
 });
 const fakeMerge = tool('FakeMerge');
-const csMerge = tool('CsMerge', { extensions: ['.cs'] });
+const otherMerge = tool('OtherMerge');
 
 const file = (path: string, changes: Partial<FileConflictState> = {}): FileConflictState => ({
   file: { key: `/${path}`, path, base: { kind: 'empty' }, source: { kind: 'empty' }, destination: { kind: 'empty' } },
@@ -49,19 +48,17 @@ describe('planRun', () => {
 });
 
 describe('runPlans', () => {
-  it('offers the preferred tool first, then the others that open something', () => {
-    const withCs = [...states, file('c.cs')];
-    expect(runPlans(withCs, [csMerge, fakeMerge], 'FakeMerge').map((plan) => plan.tool.id)).toEqual(['FakeMerge', 'CsMerge']);
+  it('offers the preferred tool first, then the others', () => {
+    expect(runPlans(states, [otherMerge, fakeMerge], 'FakeMerge').map((plan) => plan.tool.id)).toEqual(['FakeMerge', 'OtherMerge']);
   });
 
-  it('falls back to the tool that opens the most when the preferred one opens nothing', () => {
-    expect(runPlans([file('a.cs'), file('b.cs')], [csMerge, fakeMerge], 'CsMerge').map((plan) => plan.tool.id)).toEqual(['CsMerge', 'FakeMerge']);
-    expect(runPlans([file('a.ts')], [csMerge, fakeMerge], 'CsMerge').map((plan) => plan.tool.id)).toEqual(['FakeMerge']);
+  it('starts with the first tool when the preferred one is gone', () => {
+    expect(runPlans(states, [otherMerge, fakeMerge], 'gone').map((plan) => plan.tool.id)).toEqual(['OtherMerge', 'FakeMerge']);
   });
 
   it('never runs a tool on binaries, which keep one of their versions', () => {
     const binaries = [file('a.png', { isBinary: true }), file('b.png', { isBinary: true })];
-    expect(runPlans(binaries, [fakeMerge, csMerge], 'FakeMerge')).toEqual([]);
+    expect(runPlans(binaries, [fakeMerge, otherMerge], 'FakeMerge')).toEqual([]);
   });
 });
 
@@ -69,9 +66,8 @@ describe('leftOutNote', () => {
   it('says why files stay out of the run', () => {
     expect(leftOutNote(planRun(states, fakeMerge))).toBe('Binary files keep one version: logo.png is left to you');
     expect(leftOutNote(planRun([file('a.ts')], fakeMerge))).toBeUndefined();
-    expect(leftOutNote(planRun([file('a.cs'), file('b.ts'), file('c.ts'), file('d.ts')], csMerge))).toBe(
-      "CsMerge doesn't open these files: b.ts, c.ts and 1 other are left to you",
-    );
+    const binaries = ['a.png', 'b.png', 'c.png', 'd.png'].map((path) => file(path, { isBinary: true }));
+    expect(leftOutNote(planRun([file('a.ts'), ...binaries], fakeMerge))).toBe('Binary files keep one version: a.png, b.png and 2 others are left to you');
   });
 });
 

@@ -52,7 +52,7 @@ export function useResolveRun({ states, resolveInTool, onOpen, onEnd }: ResolveR
     const end = await resolveOneByOne(plan, run, {
       stillWaits: (key) => {
         const state = latest.current.states.find((candidate) => candidate.file.key === key);
-        return Boolean(state && waitsForTool(state, tool));
+        return Boolean(state && waitsForTool(state));
       },
       show: setProgress,
       open: (key, previousKey) => latest.current.onOpen(key, previousKey),

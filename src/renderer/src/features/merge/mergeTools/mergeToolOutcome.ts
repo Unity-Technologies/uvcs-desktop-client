@@ -1,14 +1,16 @@
-import { canMergeIn, type MergeTool, type MergeToolOutcome } from '@shared/domain/mergeTools';
+import type { MergeToolOutcome } from '@shared/domain/mergeTools';
 import { pluralize } from '../../../lib/text';
 import type { MergeLabels } from '../mergeDescription';
 import type { FileConflictDecision } from '../resolve/fileConflictDecision';
 import type { FileConflictState } from '../resolve/useFileConflicts';
 import { countConflictRegions } from '../resolve/threeWayMerge';
 
-/** Whether a file waits for the user and the tool can open it: "Resolve all in…" goes through these. */
-export function waitsForTool(state: FileConflictState, tool: MergeTool): boolean {
-  if (state.status !== 'ready' || state.resolution || state.openTool) return false;
-  return canMergeIn(tool, state.file.path, state.isBinary);
+/**
+ * Whether a file waits for the user and a merge tool can open it: "Resolve all in…" goes through these. Text files
+ * only: a binary keeps one of its versions, picked in the app.
+ */
+export function waitsForTool(state: FileConflictState): boolean {
+  return state.status === 'ready' && !state.resolution && !state.openTool && !state.isBinary;
 }
 
 /** The decision a merge tool's outcome makes; none when nothing was saved. */

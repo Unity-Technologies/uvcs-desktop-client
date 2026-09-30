@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import type { MergeTool } from '@shared/domain/mergeTools';
 import { WORKSPACE_ROLES, type MergeLabels } from '../mergeDescription';
 import type { FileConflictState } from '../resolve/useFileConflicts';
 import { decisionFromTool, toolOutcomeMessage, toolVersionNames, waitsForTool } from './mergeToolOutcome';
@@ -43,16 +42,6 @@ describe('toolVersionNames', () => {
 });
 
 describe('waitsForTool', () => {
-  const tool: MergeTool = {
-    id: 'vscode',
-    name: 'VS Code',
-    origin: 'known',
-    executable: 'code',
-    args: [],
-    defaultArgs: [],
-    extensions: null,
-    canBringToFront: false,
-  };
   const state = (changes: Partial<FileConflictState>): FileConflictState => ({
     file: { key: '/a.ts', path: 'a.ts', base: { kind: 'empty' }, source: { kind: 'empty' }, destination: { kind: 'empty' } },
     status: 'ready',
@@ -64,11 +53,11 @@ describe('waitsForTool', () => {
     ...changes,
   });
 
-  it('takes the files still waiting for the user that the tool can open', () => {
-    expect(waitsForTool(state({}), tool)).toBe(true);
-    expect(waitsForTool(state({ resolution: { choice: 'source' } }), tool)).toBe(false);
-    expect(waitsForTool(state({ status: 'loading' }), tool)).toBe(false);
-    expect(waitsForTool(state({ openTool: { sessionId: 's', toolName: 'VS Code', canBringToFront: false } }), tool)).toBe(false);
-    expect(waitsForTool(state({ isBinary: true }), tool)).toBe(false);
+  it('takes the text files still waiting for the user', () => {
+    expect(waitsForTool(state({}))).toBe(true);
+    expect(waitsForTool(state({ resolution: { choice: 'source' } }))).toBe(false);
+    expect(waitsForTool(state({ status: 'loading' }))).toBe(false);
+    expect(waitsForTool(state({ openTool: { sessionId: 's', toolName: 'VS Code', canBringToFront: false } }))).toBe(false);
+    expect(waitsForTool(state({ isBinary: true }))).toBe(false);
   });
 });

@@ -1,5 +1,5 @@
 import { AppWindow, Check, FolderOpen, PencilLine, Settings } from 'lucide-react';
-import { canMergeIn, type MergeTool } from '@shared/domain/mergeTools';
+import type { MergeTool } from '@shared/domain/mergeTools';
 import { openSettingsDialogAt } from '../../../app/settings/SettingsDialog';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../../lib/actions';
 import { SplitButton } from '../../../ui/SplitButton';
@@ -26,13 +26,12 @@ interface MergeToolButtonProps {
 }
 
 /**
- * "Resolve in <tool>", for a text file: the preferred merge tool the file can open in, with the others found behind the caret. Picking
- * one there makes it the preferred one from then on. Nothing opens until the user clicks.
+ * "Resolve in <tool>", for a text file: the preferred merge tool, with the others found behind the caret. Picking one
+ * there makes it the preferred one from then on. Nothing opens until the user clicks.
  */
 export function MergeToolButton({ state, actions, onEditInApp, variant = 'primary' }: MergeToolButtonProps) {
   const { tools, preferredId } = useMergeTools();
-  const fits = tools.filter((tool) => canMergeIn(tool, state.file.path, state.isBinary));
-  const primary = fits.find((tool) => tool.id === preferredId) ?? fits[0];
+  const primary = tools.find((tool) => tool.id === preferredId) ?? tools[0];
   const resolve = (tool: MergeTool): void => actions.resolveIn(state.file.key, tool);
   const pick = (tool: MergeTool): void => {
     if (tool.id !== preferredId) void preferMergeTool(tool.id);
@@ -40,12 +39,12 @@ export function MergeToolButton({ state, actions, onEditInApp, variant = 'primar
   };
   const addApp = async (): Promise<void> => {
     const added = await addMergeToolAndPick();
-    if (added && canMergeIn(added, state.file.path, state.isBinary)) resolve(added);
+    if (added) resolve(added);
   };
   const running = actions.run ? `Resolving one by one in ${actions.run.toolName}` : undefined;
 
   const menu: MenuEntry[] = tidyMenu([
-    ...fits.map((tool) => ({ id: tool.id, label: tool.name, icon: tool.id === primary?.id ? Check : undefined, run: () => pick(tool) })),
+    ...tools.map((tool) => ({ id: tool.id, label: tool.name, icon: tool.id === primary?.id ? Check : undefined, run: () => pick(tool) })),
     SEPARATOR,
     { id: 'addApp', label: 'Choose another app…', icon: FolderOpen, run: () => void addApp() },
     { id: 'editInApp', label: 'Edit the text in the app', icon: PencilLine, run: onEditInApp },

@@ -8,7 +8,6 @@ const known = (id: string, executable: string) => ({ tool: KNOWN_TOOLS.find((too
 
 const sources: MergeToolSources = {
   detected: [known('uvcs', '/Applications/PlasticSCM.app/Contents/MacOS/macplasticx'), known('vscode', '/usr/local/bin/code')],
-  clientConf: [{ executable: 'UnityYAMLMerge', found: '/opt/UnityYAMLMerge', args: ['merge', '{base}'], extensions: ['.unity'] }],
   custom: [{ id: 'custom:1', name: 'My tool', executable: '/opt/mytool', args: ['{base}', '{result}'] }],
   argsOverrides: { vscode: ['--wait', '{result}'] },
   preference: 'auto',
@@ -16,24 +15,28 @@ const sources: MergeToolSources = {
 };
 
 describe('mergeToolList', () => {
-  it('lists the UVCS tool first, then client.conf, the other tools found and the user’s', () => {
+  it('lists the UVCS tool first, then the other tools found and the user’s', () => {
     const { tools } = mergeToolList(sources);
-    expect(tools.map((tool) => [tool.id, tool.name])).toEqual([
-      ['uvcs', 'UVCS merge tool'],
-      ['clientConf:0', 'UnityYAMLMerge (client.conf, .unity)'],
-      ['vscode', 'Visual Studio Code'],
-      ['custom:1', 'My tool'],
+    expect(tools.map((tool) => [tool.id, tool.name, tool.origin])).toEqual([
+      ['uvcs', 'UVCS merge tool', 'known'],
+      ['vscode', 'Visual Studio Code', 'known'],
+      ['custom:1', 'My tool', 'custom'],
     ]);
-    expect(tools[0]).toMatchObject({ canBringToFront: true, extensions: null });
-    expect(tools[2]).toMatchObject({ args: ['--wait', '{result}'], defaultArgs: KNOWN_TOOLS[1]!.args, canBringToFront: false });
+    expect(tools[0]).toMatchObject({ canBringToFront: true });
+    expect(tools[1]).toMatchObject({ args: ['--wait', '{result}'], defaultArgs: KNOWN_TOOLS[1]!.args, canBringToFront: false });
   });
 
-  it('prefers the user’s pick while it is there, else the UVCS tool, else the first for every file', () => {
+  it('prefers the user’s pick while it is there, else the UVCS tool, else the first', () => {
     expect(mergeToolList(sources).preferredId).toBe('uvcs');
     expect(mergeToolList({ ...sources, preference: 'custom:1' }).preferredId).toBe('custom:1');
     expect(mergeToolList({ ...sources, preference: 'gone' }).preferredId).toBe('uvcs');
     expect(mergeToolList({ ...sources, detected: [] }).preferredId).toBe('custom:1');
-    expect(mergeToolList({ ...sources, detected: [], custom: [], clientConf: [] }).preferredId).toBeNull();
+    expect(mergeToolList({ ...sources, detected: [], custom: [] }).preferredId).toBeNull();
+  });
+
+  it('falls back to auto from a pick of a tool that was once read from client.conf, which the app no longer offers', () => {
+    expect(mergeToolList({ ...sources, preference: 'clientConf:0', argsOverrides: { 'clientConf:0': ['{base}'] } }).preferredId).toBe('uvcs');
+    expect(mergeToolList({ ...sources, detected: [known('vscode', '/usr/local/bin/code')], preference: 'clientConf:0' }).preferredId).toBe('vscode');
   });
 });
 
