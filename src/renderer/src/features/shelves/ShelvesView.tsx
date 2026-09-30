@@ -1,18 +1,16 @@
-import { Archive, RefreshCw } from 'lucide-react';
+import { Archive } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
 import { useWorkspaceUser } from '../../app/account/accounts';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
-import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { authorColumn, avatarColumn, commentColumn, dateColumn, numberColumn, secondaryColumn } from '../../components/historyColumns';
-import { ListWithDetails } from '../../components/ListWithDetails';
-import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
-import { NoSelection } from '../../components/NoSelection';
+import { ObjectListView } from '../../components/ObjectListView';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
+import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { isOnlyMine, matchesPeople, pickedOwners, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
@@ -21,10 +19,8 @@ import { isFiltering } from '../../lib/viewFilters';
 import { EmptyState } from '../../ui/EmptyState';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
-import { HighlightQuery } from '../../ui/Highlight';
-import { IconButton } from '../../ui/IconButton';
 import { NoMatches } from '../../ui/NoMatches';
-import { DataTable, type Column } from '../../ui/table/DataTable';
+import type { Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { ShelveDetails } from './ShelveDetails';
 import { shelveCopyTexts, shelveMenu } from './shelveMenu';
@@ -69,44 +65,37 @@ export function ShelvesView() {
         title="Shelves"
         count={shelves && visible.length}
         total={shelves?.length}
-        actions={<IconButton icon={<RefreshCw size={14} className={isFetching ? 'spinning' : undefined} />} label="Refresh" onClick={() => void invalidateWorkspace(workspacePath)} />}
+        actions={<ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />}
       >
         <FilterBar
           text={<FilterField value={search} onChange={(text) => update({ text })} placeholder="Filter shelves" />}
           people={<PeopleFilter value={people} onChange={(value) => update({ people: value })} people={offered} mineTip="Shelves you created" />}
         />
       </ViewHeader>
-      {isLoading ? (
-        <ListWithDetailsSkeleton widthKey="shelves" columns={COLUMNS} />
-      ) : error ? (
-        <EmptyState title="Couldn't load shelves" description={error.message} />
-      ) : visible.length === 0 && isFiltering(filters) ? (
-        <NoMatches icon={<Archive size={22} />} noun="shelves" hint={isOnlyMine(people) && !search.trim() ? 'You have no shelves.' : undefined} onClear={filters.clear} />
-      ) : visible.length === 0 ? (
-        <EmptyState icon={<Archive size={22} />} title="No shelves" description="Shelve pending changes from the Changes view to save them without checking in." />
-      ) : (
-        <ListWithDetails
-          widthKey="shelves"
-          list={
-            <HighlightQuery query={search.trim()}>
-              <DataTable
-                rows={visible}
-                columns={COLUMNS}
-                rowKey={shelveKey}
-                selection={selection}
-                onSelectionChange={setSelection}
-                selectFirstRow
-                onActivate={showShelveChanges}
-                contextMenu={(selectedShelves) => shelveMenu(workspacePath, selectedShelves)}
-                initialSort={{ columnId: 'id', descending: true }}
-              />
-            </HighlightQuery>
-          }
-          details={
-            selected ? <ShelveDetails key={selected.id} shelve={selected} menu={shelveMenu(workspacePath, [selected])} /> : <NoSelection noun="shelve" />
-          }
-        />
-      )}
+      <ObjectListView
+        widthKey="shelves"
+        loading={isLoading}
+        error={error}
+        errorTitle="Couldn't load shelves"
+        empty={
+          isFiltering(filters) ? (
+            <NoMatches icon={<Archive size={22} />} noun="shelves" hint={isOnlyMine(people) && !search.trim() ? 'You have no shelves.' : undefined} onClear={filters.clear} />
+          ) : (
+            <EmptyState icon={<Archive size={22} />} title="No shelves" description="Shelve pending changes from the Changes view to save them without checking in." />
+          )
+        }
+        query={search}
+        rows={visible}
+        columns={COLUMNS}
+        rowKey={shelveKey}
+        selection={selection}
+        onSelectionChange={setSelection}
+        onActivate={showShelveChanges}
+        contextMenu={(selectedShelves) => shelveMenu(workspacePath, selectedShelves)}
+        initialSort={{ columnId: 'id', descending: true }}
+        noun="shelve"
+        details={selected && <ShelveDetails key={selected.id} shelve={selected} menu={shelveMenu(workspacePath, [selected])} />}
+      />
     </>
   );
 }
