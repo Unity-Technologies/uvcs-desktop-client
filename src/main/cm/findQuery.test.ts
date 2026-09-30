@@ -14,8 +14,15 @@ describe('findArgs', () => {
 
   it('searches the text in the field that describes each object', () => {
     expect(findArgs('branch', { text: 'task' }, null)[2]).toBe("where name like '%ask%'");
-    expect(findArgs('changeset', { text: "don't" }, null)[2]).toBe("where comment like '%on''t%'");
     expect(findArgs('review', { text: 'fix', limit: 5 }, null)[2]).toBe("where title like '%ix%' limit 5");
+  });
+
+  // `cm find` reads no quote inside a value, neither doubled nor between double quotes ("Query error"), so a search
+  // for "Everyone's shelves" used to fail. A quote matches any text instead; results are filtered precisely afterwards.
+  it('searches text holding quotes with a wildcard in their place', () => {
+    expect(findArgs('changeset', { text: "don't" }, null)[2]).toBe("where comment like '%on%t%'");
+    expect(findArgs('branch', { text: "Everyone's shelves" }, null)[2]).toBe("where name like '%veryone%s%helves%'");
+    expect(findArgs('review', { text: 'say "hi"' }, null)[2]).toBe("where title like '%ay%hi%%'");
   });
 
   it('ignores the case of the first letter of each word', () => {
