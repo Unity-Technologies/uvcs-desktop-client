@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
-import { branchFound, shelvesFound, statusHeader, WORKSPACE_GUID, WORKSPACE_NAMES } from '../cm/testing/cmOutput';
+import { branchFound, shelvesFound, statusHeader, WORKSPACE_NAMES } from '../cm/testing/cmOutput';
 import { fakeCmClient } from '../cm/testing/fakeCmClient';
 import { recordingContext } from '../operations/testing/recordingContext';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { LeftChangesFinder } from './leftChanges';
 import { SwitchShelveRecords } from './switchShelveRecords';
+import { leftRecord } from './testing/leftRecord';
 import { applyShelveCleanly } from './applyShelveCleanly';
 import { detachReplacedFiles } from './detachReplacedFiles';
 import { deleteShelves } from './verifiedShelve';
@@ -34,26 +35,14 @@ function recordsOf(records: SwitchShelveRecord[]): SwitchShelveRecords {
   return new SwitchShelveRecords(memorySettings({ switchShelves: records }));
 }
 
-const ownRecord = (shelveId: number, sourceSpec: string): SwitchShelveRecord => ({
-  workspaceGuid: WORKSPACE_GUID,
-  shelveId,
-  repository: 'eco@local',
-  source: { spec: sourceSpec, name: sourceSpec.slice(3), objectRef: 'br:37' },
-  target: { spec: 'br:/main', name: '/main' },
-  mode: 'leave',
-  createdAt: '2026-09-25T21:17:30.000Z',
-  paths: ['src/file4.txt'],
-  changelists: [],
-});
-
-const shelvedAway = (shelveId: number): SwitchShelveRecord => ({ ...ownRecord(shelveId, 'br:/main/task1'), reason: 'shelve' });
+const shelvedAway = (shelveId: number): SwitchShelveRecord => leftRecord(shelveId, 'br:/main/task1', { reason: 'shelve' });
 
 const { context } = recordingContext();
 
 describe('LeftChangesFinder', () => {
   it("doesn't look the branch up when no automatic shelve could have been left by another client", async () => {
     const { cm, lines } = fakeCm(shelvesFound({ id: 2, comment: LEFT_ON_TASK1 }));
-    const finder = new LeftChangesFinder(cm, recordsOf([ownRecord(2, 'br:/main/task1')]));
+    const finder = new LeftChangesFinder(cm, recordsOf([leftRecord(2, 'br:/main/task1')]));
 
     expect(await finder.find('/work')).toEqual([expect.objectContaining({ shelveId: 2, foreign: false })]);
     expect(lines().some((command) => command.startsWith('find branch'))).toBe(false);
@@ -69,7 +58,7 @@ describe('LeftChangesFinder', () => {
 
   it('offers changes still waiting to be brought elsewhere as left here, once the workspace is back where they were made', async () => {
     const { cm } = fakeCm(shelvesFound({ id: 2, comment: LEFT_ON_TASK1 }));
-    const bringing: SwitchShelveRecord = { ...ownRecord(2, 'br:/main/task1'), mode: 'bring' };
+    const bringing: SwitchShelveRecord = { ...leftRecord(2, 'br:/main/task1'), mode: 'bring' };
 
     expect(await new LeftChangesFinder(cm, recordsOf([bringing])).find('/work')).toEqual([
       expect.objectContaining({ shelveId: 2, mode: 'leave', sourceName: '/main/task1', targetName: '/main' }),
@@ -80,8 +69,8 @@ describe('LeftChangesFinder', () => {
   it("tells whether this app left changes on what the workspace is on, without asking the server", async () => {
     const { cm, lines } = fakeCm(shelvesFound());
 
-    expect(await new LeftChangesFinder(cm, recordsOf([ownRecord(2, 'br:/main/task1')])).hasOwnWaiting('/work')).toBe(true);
-    expect(await new LeftChangesFinder(cm, recordsOf([ownRecord(2, 'br:/main')])).hasOwnWaiting('/work')).toBe(false);
+    expect(await new LeftChangesFinder(cm, recordsOf([leftRecord(2, 'br:/main/task1')])).hasOwnWaiting('/work')).toBe(true);
+    expect(await new LeftChangesFinder(cm, recordsOf([leftRecord(2, 'br:/main')])).hasOwnWaiting('/work')).toBe(false);
     expect(lines().every((command) => command.startsWith('status') || command.startsWith('getworkspacefrompath'))).toBe(true);
   });
 });
@@ -129,7 +118,7 @@ describe('LeftChangesFinder.apply', () => {
   });
 
   it('always deletes changes left by a switch once back, as restoring them does', async () => {
-    await new LeftChangesFinder(fakeCm(shelvesFound()).cm, recordsOf([ownRecord(2, 'br:/main/task1')])).apply('/work', 2, false, context);
+    await new LeftChangesFinder(fakeCm(shelvesFound()).cm, recordsOf([leftRecord(2, 'br:/main/task1')])).apply('/work', 2, false, context);
 
     expect(deleteShelves).toHaveBeenCalledWith(expect.anything(), '/work', [{ id: 2, repository: 'eco@local' }]);
   });
