@@ -7,6 +7,7 @@ import { Button } from '../../../ui/Button';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { askDialog } from '../../../ui/dialog/dialogStore';
 import { TextField } from '../../../ui/TextField';
+import { programName } from './programName';
 import { addCustomMergeTool } from './useMergeTools';
 import styles from './CustomMergeToolDialog.module.css';
 
@@ -28,7 +29,8 @@ function CustomMergeToolDialog({ finish }: { finish: (id: string | undefined) =>
   const [args, setArgs] = useState(formatArgs(DEFAULT_ARGS));
   const parsedArgs = parseArgs(args);
   const argsError = parsedArgs.some((arg) => arg.includes('{result}')) ? undefined : 'Include {result}: the file the tool saves the merge to.';
-  const canSave = executable.trim() !== '' && !argsError;
+  const [saving, setSaving] = useState(false);
+  const canSave = executable.trim() !== '' && !argsError && !saving;
 
   const choose = async (): Promise<void> => {
     const picked = await api.mergeTools.pickProgram();
@@ -38,7 +40,11 @@ function CustomMergeToolDialog({ finish }: { finish: (id: string | undefined) =>
   };
   const save = async (): Promise<void> => {
     if (!canSave) return;
-    finish(await addCustomMergeTool({ name: name.trim() || programName(executable), executable: executable.trim(), args: parsedArgs }));
+    setSaving(true);
+    const id = await addCustomMergeTool({ name: name.trim() || programName(executable), executable: executable.trim(), args: parsedArgs });
+    // Not saved: the toast says so, and the dialog stays with what the user typed, to try again or cancel.
+    if (id) finish(id);
+    else setSaving(false);
   };
 
   return (
@@ -67,10 +73,4 @@ function CustomMergeToolDialog({ finish }: { finish: (id: string | undefined) =>
       <TextField label="Arguments" value={args} error={argsError} hint={PLACEHOLDER_HINT} onChange={(event) => setArgs(event.target.value)} className={styles.args} />
     </Dialog>
   );
-}
-
-function programName(executable: string): string {
-  const parts = executable.split(/[\\/]/);
-  const app = parts.find((part) => part.endsWith('.app'));
-  return (app ?? parts.pop() ?? executable).replace(/\.(app|exe|cmd|bat)$/i, '');
 }

@@ -1,9 +1,6 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
-import { compareTones } from '../../components/changeFilter';
-import type { TreeArrowRow } from '../../lib/treeArrowMove';
-import type { CheckState } from '../../ui/Checkbox';
-import { isCheckinCandidate } from './changeCategories';
-import { changeTone } from './changeTone';
+import { sortForLayout } from './changeOrder';
+import { treeLevel } from './changeRowLevels';
 
 /** A changelist header. */
 interface GroupRow {
@@ -106,39 +103,6 @@ export function collapseRows(rows: ChangeRow[], collapsed: ReadonlySet<string>):
   return shown;
 }
 
-/**
- * One level of depth: a checkbox and the gap after it, which is also the room a chevron takes (icon, its margins and the
- * gap). A folder's chevron sits in its siblings' checkbox column, so its checkbox lines up with their status badges and
- * its children's checkboxes line up under its own.
- */
-export const LEVEL_INDENT = 21;
-
-/**
- * How far a row's content starts from the left edge. Top-level files stay flush whether the list is flat or a tree;
- * everything inside a folder or a changelist is one level right of it.
- */
-export function rowIndent(row: ChangeRow, grouped: boolean): number {
-  if (row.type === 'group') return 0;
-  return (row.depth + (grouped ? 1 : 0)) * LEVEL_INDENT;
-}
-
-/** The row's level in the tree screen readers are told about: changelists first, then folders, then files. */
-export function treeLevel(row: ChangeRow, grouped: boolean): number {
-  if (row.type === 'group') return 1;
-  return row.depth + (grouped ? 2 : 1);
-}
-
-/** The rows as ← and → see them (`treeArrowMove`): changelists and folders open and close. */
-export function changeTreeArrowRows(rows: readonly ChangeRow[]): TreeArrowRow[] {
-  const grouped = rows.some((row) => row.type === 'group');
-  return rows.map((row) => ({ depth: treeLevel(row, grouped), isFolder: row.type !== 'change', isExpanded: row.type !== 'change' && !row.collapsed }));
-}
-
-/** Changelist headers lead the rows: the top-level checkboxes are theirs, after their chevrons. */
-export function topLevelCheckboxInset(rows: ChangeRow[]): number {
-  return rows.some((row) => row.type === 'group') ? LEVEL_INDENT : 0;
-}
-
 /** Kept per change: lists of tens of thousands of rows look keys up in maps and sets, which hash each new string again. */
 const changeKeys = new WeakMap<PendingChange, string>();
 
@@ -156,75 +120,10 @@ export function changesUnderRow(row: ChangeRow): PendingChange[] {
   return row.type === 'change' ? [row.change] : row.changes;
 }
 
-/**
- * Folder by folder, so everything in a folder comes right after it: comparing whole paths puts "a-b.txt" between "a"
- * and "a/c.txt", and "src/b" between "Src/a" and "Src/c".
- */
-export function comparePaths(a: string, b: string): number {
-  // Up to the first character they differ in, the folders are the same: only the names there are compared.
-  let differ = 0;
-  const shorter = Math.min(a.length, b.length);
-  while (differ < shorter && a.charCodeAt(differ) === b.charCodeAt(differ)) differ++;
-  if (differ === a.length && differ === b.length) return 0;
-  const start = a.lastIndexOf('/', differ - 1) + 1;
-  const order = collator.compare(segmentAt(a, start), segmentAt(b, start));
-  // Names the collator takes as equal (other Unicode forms of the same text) leave it to the rest of the paths.
-  return order !== 0 ? order : compareSegments(a.split('/'), b.split('/'));
-}
-
-function segmentAt(path: string, start: number): string {
-  const end = path.indexOf('/', start);
-  return path.slice(start, end === -1 ? undefined : end);
-}
-
-function compareSegments(a: string[], b: string[]): number {
-  for (let index = 0; index < Math.min(a.length, b.length); index++) {
-    const order = collator.compare(a[index]!, b[index]!);
-    if (order !== 0) return order;
-  }
-  return a.length - b.length;
-}
-
-/** `localeCompare`'s order, many times faster over thousands of paths. */
-const collator = new Intl.Collator();
-
 /** What the menu of a right-clicked row is for: a changelist, the changes in a folder or the default changelist, or the selected files (null). */
 export function menuTargetOf(row: ChangeRow | null): Changelist | PendingChange[] | null {
   if (!row || row.type === 'change') return null;
   return row.type === 'group' && row.changelist ? row.changelist : row.changes;
-}
-
-function sortByPath(changes: PendingChange[]): PendingChange[] {
-  return [...changes].sort((a, b) => comparePaths(a.path, b.path));
-}
-
-/**
- * The order the rows show changes in. Sorting what is already in order takes one comparison a change, so a view that
- * hands `layoutChangeRows` changes kept in this order (filtered, but not reordered) lays them out again without sorting.
- */
-export function sortForLayout(changes: PendingChange[], layout: ChangesLayout): PendingChange[] {
-  return layout === 'tree' ? sortByPath(changes) : sortByStatus(changes);
-}
-
-/**
- * `changes` with those also in `previous` (the very objects: a read keeps the changes it found as they were) in the
- * order `previous` had them, then the others. A read that changed a few changes of a sorted list gives a list nearly
- * in order, which sorting goes through in about one comparison a change.
- */
-export function inPreviousOrder(changes: PendingChange[], previous: PendingChange[]): PendingChange[] {
-  const current = new Set(changes);
-  const kept = previous.filter((change) => current.has(change));
-  if (kept.length === changes.length) return kept;
-  const keptSet = new Set(kept);
-  return [...kept, ...changes.filter((change) => !keptSet.has(change))];
-}
-
-/** A flat list reads by kind of change first, in the order of the filter chips; a tree has to follow the folders. */
-export function sortByStatus(changes: PendingChange[]): PendingChange[] {
-  // Each change's status once, not twice a comparison: tens of thousands of changes take a million comparisons.
-  const withTones = changes.map((change) => ({ change, tone: changeTone(change) }));
-  withTones.sort((a, b) => compareTones(a.tone, b.tone) || collator.compare(a.change.path, b.change.path));
-  return withTones.map(({ change }) => change);
 }
 
 function appendChangeRows(rows: ChangeRow[], changes: PendingChange[], groupKey: string, layout: ChangesLayout): void {
@@ -322,21 +221,5 @@ function pathPrefixes(path: string): string[] {
   return prefixes;
 }
 
-/** A file's check, or a folder's or changelist's over what it holds that can go into a check-in; null when none can (ignored files). */
-export function rowCheckState(row: ChangeRow, isChecked: (change: PendingChange) => boolean): CheckState | null {
-  if (row.type === 'change') return isCheckinCandidate(row.change) ? isChecked(row.change) : null;
-  return combinedCheckState(row.changes, isChecked);
-}
-
-function combinedCheckState(changes: PendingChange[], isChecked: (change: PendingChange) => boolean): CheckState | null {
-  let candidates = 0;
-  let checked = 0;
-  for (const change of changes) {
-    if (!isCheckinCandidate(change)) continue;
-    candidates++;
-    if (isChecked(change)) checked++;
-  }
-  if (candidates === 0) return null;
-  if (checked === 0) return false;
-  return checked === candidates ? true : 'mixed';
-}
+// The Command palette sorts changes as the flat list does (`usePaletteSearch`).
+export { sortByStatus } from './changeOrder';

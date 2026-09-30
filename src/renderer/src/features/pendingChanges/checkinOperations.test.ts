@@ -16,7 +16,9 @@ vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import type { CheckinResult, PendingChange } from '@shared/domain/pendingChanges';
-import type { AppSettings } from '@shared/domain/settings';
+import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
+import { queryKeys } from '../../api/queryKeys';
+import { queryClient } from '../../app/queryClient';
 import { answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
 import { useCheckinAfterUpdateStore } from './checkinAfterUpdate';
@@ -54,10 +56,11 @@ function answerCheckins(...answers: (CheckinResult | 'rejected')[]): void {
   });
 }
 
-let settings: Pick<AppSettings, 'recentComments'>;
+/** The settings the window shows, and a store that saves every change to them. */
+let settings: AppSettings;
 function answerSettings(recentComments: string[] = []): void {
-  settings = { recentComments };
-  fakeApi.answer('settings.get', () => settings);
+  settings = { ...DEFAULT_SETTINGS, recentComments };
+  queryClient.setQueryData(queryKeys.settings, settings);
   fakeApi.answer('settings.update', (update: Partial<AppSettings>) => (settings = { ...settings, ...update }));
 }
 
@@ -66,6 +69,7 @@ beforeEach(() => {
   dialogs.asked = [];
   useCheckinAfterUpdateStore.setState({ rejected: {} });
   useSuccessMomentStore.setState({ moments: {} });
+  queryClient.clear();
 });
 
 describe('checkinChanges', () => {
@@ -102,6 +106,18 @@ describe('checkinChanges', () => {
     await checkinChanges({ workspacePath: ws, changes: [change('a.ts')], comment: 'new' });
     expect(settings.recentComments).toHaveLength(15);
     expect(settings.recentComments[0]).toBe('new');
+  });
+
+  it('still reports the changeset when the store cannot remember the comment, and says so', async () => {
+    answerCheckins(created(44));
+    answerSettings();
+    fakeApi.answer('settings.update', () => {
+      throw new Error('The settings file is read-only');
+    });
+
+    expect(await checkinChanges({ workspacePath: ws, changes: [change('a.ts')], comment: 'x', quiet: true })).toBe(true);
+
+    expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't save the settings", detail: 'The settings file is read-only' }]);
   });
 
   it('remembers no empty comment', async () => {
@@ -164,7 +180,7 @@ describe('checkinChanges after the branch moved on (rejected by cm)', () => {
     expect(await checkinChanges({ workspacePath: ws, changes: [change('src/a.ts')], comment: 'Mine' })).toBe(true);
 
     expect(dialogs.asked).toEqual([{ incoming: incoming(), overlapping: [], needsReview: false, rejected: true }]);
-    expect(fakeApi.methods()).toEqual(['pendingChanges.checkin', 'merge.incomingChanges', 'workspaces.update', 'pendingChanges.checkin', 'settings.get', 'settings.update']);
+    expect(fakeApi.methods()).toEqual(['pendingChanges.checkin', 'merge.incomingChanges', 'workspaces.update', 'pendingChanges.checkin', 'settings.update']);
     const [first, second] = fakeApi.argsOf('pendingChanges.checkin');
     expect(second![1]).toEqual(first![1]);
     expect(shownToasts().some((toast) => toast.kind === 'error')).toBe(false);

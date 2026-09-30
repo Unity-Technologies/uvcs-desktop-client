@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import type { Changeset } from '@shared/domain/changeset';
 import { useRunningOperationsStore } from '../../app/operations/runningOperationsStore';
-import { pressToastAction, shownToasts, whereTheWindowIs } from '../../testing/operationOutcome';
+import { pressToastAction, shownToasts, watchRefreshes, whereTheWindowIs, type WorkspaceArea } from '../../testing/operationOutcome';
 import { useSuccessMomentStore } from '../pendingChanges/successMoment';
 import { explainUpdateConflicts, shelveBlockedAndUpdate, updateResolvingConflicts, updateToIncoming } from './updateOperations';
 
@@ -36,6 +36,9 @@ function moment() {
   return words;
 }
 
+/** What an update changes: the workspace and what it has loaded, never the labels, shelves, attributes, reviews or left changes. */
+const REFRESHED_BY_UPDATE: WorkspaceArea[] = ['annotate', 'branchExplorer', 'branches', 'changesets', 'explorer', 'history', 'incoming', 'info', 'locks', 'pendingChanges', 'review'];
+
 beforeEach(() => useSuccessMomentStore.setState({ moments: {} }));
 
 describe('updateToIncoming', () => {
@@ -46,6 +49,15 @@ describe('updateToIncoming', () => {
 
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Updated to cs:12 · 2 changesets from Ana, Bob', action: 'View' }]);
     expect(moment()).toEqual({ verb: 'Updated to', changesetId: 12, fromChangeset: 10, detail: '2 changesets from Ana, Bob' });
+  });
+
+  it('refreshes what an update changes, and nothing it leaves alone', async () => {
+    fakeApi.answer('workspaces.update', () => undefined);
+    const refreshed = watchRefreshes(ws);
+
+    await updateToIncoming(ws, twoIn);
+
+    expect(refreshed()).toEqual(REFRESHED_BY_UPDATE);
   });
 
   it('views one changeset that came in as that changeset, several as the range', async () => {
@@ -139,6 +151,15 @@ describe('updateResolvingConflicts', () => {
     expect(shownToasts()[0]).toMatchObject({ action: 'Show backups' });
     expect(fakeApi.argsOf('system.revealInFileManager')).toEqual([['/tmp/backups']]);
     expect(moment()).toMatchObject({ changesetId: 12 });
+  });
+
+  it('refreshes what an update changes, and nothing it leaves alone', async () => {
+    fakeApi.answer('merge.updateResolvingConflicts', () => ({ backupDirectory: null }));
+    const refreshed = watchRefreshes(ws);
+
+    await updateResolvingConflicts(ws, twoIn, {});
+
+    expect(refreshed()).toEqual(REFRESHED_BY_UPDATE);
   });
 
   it('offers no backups when nothing was saved', async () => {

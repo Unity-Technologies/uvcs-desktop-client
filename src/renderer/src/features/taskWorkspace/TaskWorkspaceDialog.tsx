@@ -1,14 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { GitBranch } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { NewFolderCheck } from '@shared/domain/workspace';
 import { api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
 import { LocationField } from '../../app/home/dialogs/LocationField';
-import { describeProgress } from '../../app/operations/describeProgress';
-import { nextProgressBar, SWEEP } from '../../app/operations/progressBar';
-import { invalidateWorkspace, queryClient } from '../../app/queryClient';
-import { isAffectedByBranchList } from '../../app/refresh/refreshScopes';
 import { useOpenWorkspace } from '../../app/workspace/useOpenWorkspace';
 import { useWorkspaceInfoOf } from '../../app/workspace/useWorkspace';
 import { useWorkspaceList } from '../../app/workspace/workspaceQueries';
@@ -21,12 +16,11 @@ import { SegmentedControl } from '../../ui/SegmentedControl';
 import { TextField } from '../../ui/TextField';
 import { validateBranchName } from '../branches/branchNames';
 import { pickBranch } from '../branches/BranchPickerDialog';
-import { describeTaskFailure, setUpTaskWorkspace, taskSteps, type TaskStep, type TaskStepState } from './setUpTaskWorkspace';
-import { taskWorkspaceActions } from './taskWorkspaceActions';
 import { taskWorkspacePlan, type BranchMode } from './taskWorkspacePlan';
 import { defaultTaskFolder, suggestTaskBranchName, TASK_PARENT_BRANCH, taskWorkspaceName } from './taskWorkspaceNaming';
-import { TaskStepList, type TaskStepProgress } from './TaskStepList';
+import { TaskStepList } from './TaskStepList';
 import { useBranchExists } from './useBranchExists';
+import { useTaskWorkspaceSetup } from './useTaskWorkspaceSetup';
 import styles from './TaskWorkspaceDialog.module.css';
 
 interface TaskWorkspaceOptions {
@@ -56,13 +50,8 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
   const [existingBranch, setExistingBranch] = useState(initialBranch);
   const [chosenFolder, setChosenFolder] = useState<string>();
   const [newWindow, setNewWindow] = useState(true);
-  const [running, setRunning] = useState(false);
-  const [steps, setSteps] = useState<TaskStep[]>([]);
-  const [states, setStates] = useState<Partial<Record<TaskStep, TaskStepState>>>({});
-  const [labels, setLabels] = useState<Record<TaskStep, string>>();
-  const [switchProgress, setSwitchProgress] = useState<TaskStepProgress | null>(null);
-  const [failure, setFailure] = useState<{ message: string; reason: string } | null>(null);
-  const operationId = useRef<string | null>(null);
+  const setup = useTaskWorkspaceSetup(workspacePath);
+  const { running } = setup;
 
   const branchError = mode === 'new' ? validateBranchName(leaf.trim()) : undefined;
   const branch = mode === 'new' ? `${TASK_PARENT_BRANCH}/${leaf.trim()}` : existingBranch;
@@ -92,24 +81,8 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
 
   const create = async (): Promise<void> => {
     if (!plan || running) return;
-    setRunning(true);
-    setFailure(null);
-    setSteps(taskSteps(plan.newBranch));
-    setLabels({ branch: `Create branch ${plan.branch}`, workspace: `Create workspace ${plan.workspaceName}`, switch: `Switch it to ${plan.branch}` });
-    setStates({});
-    setSwitchProgress(null);
-    operationId.current = crypto.randomUUID();
-    const actions = taskWorkspaceActions(workspacePath, operationId.current, (progress) =>
-      setSwitchProgress((previous) => ({ text: describeProgress(progress), bar: nextProgressBar(previous?.bar ?? SWEEP, progress, performance.now()) })),
-    );
-    const outcome = await setUpTaskWorkspace(plan, actions, (step, state) => setStates((current) => ({ ...current, [step]: state })));
-    operationId.current = null;
-    void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
-    if (plan.newBranch) void invalidateWorkspace(workspacePath, isAffectedByBranchList);
-    setRunning(false);
-
+    const outcome = await setup.start(plan);
     if (outcome.kind === 'failed') {
-      setFailure({ message: describeTaskFailure(outcome), reason: outcome.error instanceof Error ? outcome.error.message : String(outcome.error) });
       // Trying again works on the branch that was just created.
       if (outcome.keptBranch) {
         setMode('existing');
@@ -125,7 +98,7 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
   // While it runs, closing stops the switch (the workspace is then removed); the other steps are quick.
   const close = (): void => {
     if (!running) onClose();
-    else if (operationId.current && states.switch === 'running') void api.system.cancelOperation(operationId.current);
+    else setup.stop();
   };
 
   return (
@@ -137,7 +110,7 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
       onSubmit={() => void create()}
       footer={
         <>
-          <Button onClick={close} disabled={running && states.switch !== 'running'}>
+          <Button onClick={close} disabled={running && !setup.canStop}>
             {running ? 'Stop' : 'Cancel'}
           </Button>
           <Button type="submit" variant="primary" disabled={!plan} loading={running}>
@@ -188,11 +161,11 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
 
       <Checkbox label="Open in a new window" checked={newWindow} onChange={setNewWindow} disabled={running} />
 
-      {labels && <TaskStepList steps={steps} states={states} labels={labels} progress={switchProgress} />}
-      {failure && (
+      {setup.progress && <TaskStepList steps={setup.progress.steps} states={setup.progress.states} labels={setup.progress.labels} progress={setup.progress.switchProgress} />}
+      {setup.failure && (
         <div className={styles.failure} role="alert">
-          <p>{failure.message}</p>
-          <p className={styles.reason}>{failure.reason}</p>
+          <p>{setup.failure.message}</p>
+          <p className={styles.reason}>{setup.failure.reason}</p>
         </div>
       )}
     </Dialog>

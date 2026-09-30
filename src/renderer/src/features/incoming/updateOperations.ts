@@ -3,6 +3,7 @@ import { spec } from '@shared/domain/specs';
 import { ApiError, api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runOperation } from '../../app/operations/runOperation';
+import { isAffectedByCheckinOrUpdate } from '../../app/refresh/refreshScopes';
 import { pluralize } from '../../lib/text';
 import { useToastStore } from '../../ui/toast/toastStore';
 import { useSuccessMomentStore } from '../pendingChanges/successMoment';
@@ -22,6 +23,7 @@ export async function updateToIncoming(workspacePath: string, incoming: BranchIn
       await api.workspaces.update(workspacePath, operationId);
       return true;
     },
+    affects: isAffectedByCheckinOrUpdate,
     successMessage: () => updatedMessage(incoming),
     successAction: () => ({ label: 'View', run: () => viewIncoming(incoming) }),
     onFailure: explainUpdateConflicts,
@@ -54,6 +56,7 @@ export async function shelveBlockedAndUpdate(workspacePath: string, incoming: Br
     kind: 'update',
     cancellable: false,
     run: (operationId) => api.merge.shelveBlockedAndUpdate(workspacePath, resolutions, operationId),
+    // No `affects`: besides updating, it creates a shelve and the left changes that offer it back.
     successMessage: ({ shelveId, count, updated }) =>
       updated
         ? `${updatedMessage(incoming)} · ${pluralize(count, 'change')} shelved in shelve ${shelveId}`
@@ -96,6 +99,7 @@ export async function updateResolvingConflicts(workspacePath: string, incoming: 
     workspacePath,
     kind: 'update',
     run: (operationId) => api.merge.updateResolvingConflicts(workspacePath, resolutions, operationId),
+    affects: isAffectedByCheckinOrUpdate,
     successMessage: () => updatedMessage(incoming),
     successAction: ({ backupDirectory }) =>
       backupDirectory ? { label: 'Show backups', run: () => void api.system.revealInFileManager(backupDirectory) } : undefined,

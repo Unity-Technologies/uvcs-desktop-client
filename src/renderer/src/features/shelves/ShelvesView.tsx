@@ -2,36 +2,35 @@ import { Archive, RefreshCw } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Shelve } from '@shared/domain/shelve';
 import { spec } from '@shared/domain/specs';
+import { useWorkspaceUser } from '../../app/account/accounts';
+import { useCopyCommand } from '../../app/commands/useCopyCommand';
+import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { authorColumn, avatarColumn, commentColumn, dateColumn, numberColumn, secondaryColumn } from '../../components/historyColumns';
 import { ListWithDetails } from '../../components/ListWithDetails';
 import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
 import { NoSelection } from '../../components/NoSelection';
+import { PeopleFilter } from '../../components/people/PeopleFilter';
+import { usePeopleSeen } from '../../components/people/usePeopleSeen';
+import { matchesWordFilter } from '../../lib/matchesAllWords';
+import { isOnlyMine, matchesPeople, pickedOwners, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
+import { useDebouncedValue } from '../../lib/useDebouncedValue';
+import { userFilterTexts } from '../../lib/userName';
+import { isFiltering } from '../../lib/viewFilters';
 import { EmptyState } from '../../ui/EmptyState';
+import { FilterBar } from '../../ui/FilterBar';
+import { FilterField } from '../../ui/FilterField';
 import { HighlightQuery } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
+import { NoMatches } from '../../ui/NoMatches';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { ShelveDetails } from './ShelveDetails';
-import { shelveMenu } from './shelveMenu';
+import { shelveCopyTexts, shelveMenu } from './shelveMenu';
 import { showShelveChanges } from './shelveOperations';
-import { useShelves } from './useShelves';
 import { useShelvesViewStore } from './shelvesViewStore';
-import { shelveCopyTexts } from './shelveMenu';
-import { useCopyCommand } from '../../app/commands/useCopyCommand';
-import { useWorkspaceUser } from '../../app/account/accounts';
-import { PeopleFilter } from '../../components/people/PeopleFilter';
-import { usePeopleSeen } from '../../components/people/usePeopleSeen';
-import { isOnlyMine, matchesPeople, pickedOwners, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
-import { useDebouncedValue } from '../../lib/useDebouncedValue';
-import { isFiltering } from '../../lib/viewFilters';
-import { FilterBar } from '../../ui/FilterBar';
-import { FilterField } from '../../ui/FilterField';
-import { NoMatches } from '../../ui/NoMatches';
-import { matchesWordFilter } from '../../lib/matchesAllWords';
-import { userFilterTexts } from '../../lib/userName';
+import { useShelves } from './useShelves';
 
 /** Read like the changesets list; where a changeset shows its branch, a shelve shows the changeset it was made on. */
 const COLUMNS: Column<Shelve>[] = [
@@ -86,7 +85,8 @@ export function ShelvesView() {
       ) : visible.length === 0 ? (
         <EmptyState icon={<Archive size={22} />} title="No shelves" description="Shelve pending changes from the Changes view to save them without checking in." />
       ) : (
-        <ListWithDetails widthKey="shelves"
+        <ListWithDetails
+          widthKey="shelves"
           list={
             <HighlightQuery query={search.trim()}>
               <DataTable

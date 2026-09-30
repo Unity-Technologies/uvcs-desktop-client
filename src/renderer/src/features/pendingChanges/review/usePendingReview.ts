@@ -8,7 +8,7 @@ import { useReviewMarks } from './useReviewMarks';
 
 const NO_MARKS: ReviewMarks = new Map();
 
-interface PendingReview extends ReviewMode<PendingChange> {
+export interface PendingReview extends ReviewMode<PendingChange> {
   /** The marks shown, with what the diff needs to show the changes since the review: none outside review mode. */
   marks: ReviewMarks;
 }

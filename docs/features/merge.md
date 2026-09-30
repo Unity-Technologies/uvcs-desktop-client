@@ -12,7 +12,9 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
   JetBrains IDEs, Sublime Merge, KDiff3, Beyond Compare, Meld, P4Merge, Araxis and FileMerge (`opendiff`, only with
   Xcode) and WinMerge on Windows, each with the three-way command line of its docs (cross-checked with Git's `mergetools/*`). The user can add any program with an arguments template (`{base}` `{yours}`
   `{incoming}` `{result}` and their `…Name`s). Settings keep the preferred tool (`auto`: the UVCS one, else the first
-  found; a pick no longer on offer falls back to it), the user's tools and per-tool arguments. The official client's
+  found; a pick no longer on offer falls back to it), the user's tools and per-tool arguments. Adding a tool
+  (`CustomMergeToolDialog`, `addCustomMergeTool`) makes it the preferred one; when the settings can't be saved, nothing
+  is picked and the dialog stays open with what the user typed. The official client's
   merge tools (client.conf's `<MergeTools>`) aren't read, not even on the first run (ARCHITECTURE.md "Own config"):
   the well-known tools are found anyway, and the user adds any other. Every tool opens every text file.
 - `mergeTools.resolve` saves the three versions to temp files named after the file (`a.BASE.ts`...), writes the result

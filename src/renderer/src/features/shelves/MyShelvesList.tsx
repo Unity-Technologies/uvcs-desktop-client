@@ -1,28 +1,21 @@
-import { MoreHorizontal } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { Shelve } from '@shared/domain/shelve';
 import { useWorkspaceUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
 import { useSettings } from '../../app/settings/useSettings';
-import { runningFirst, withoutAction } from '../../lib/actions';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
-import { Avatar } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
-import { IconButton } from '../../ui/IconButton';
-import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
-import { Highlight, HighlightQuery } from '../../ui/Highlight';
+import { HighlightQuery } from '../../ui/Highlight';
 import { SearchField } from '../../ui/SearchField';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { SkeletonBar, SkeletonRows, skeletonWidth } from '../../ui/Skeleton';
 import { Spinner } from '../../ui/Spinner';
-import { shelveMenu } from './shelveMenu';
-import { applyShelve, showShelveChanges } from './shelveOperations';
+import { EVERYONE, MINE } from '../../lib/peopleFilter';
+import { MyShelveRow } from './MyShelveRow';
 import { shelvesListRows } from './shelvesListRows';
 import { shelvesEmptyMessage, shelvesFilterPlaceholder, type ShelvesScope } from './shelvesScope';
 import { useShelvesViewStore } from './shelvesViewStore';
-import { EVERYONE, MINE } from '../../lib/peopleFilter';
-import { COPY_ENTRY_IDS } from '../../components/copyMenu';
 import { useEveryonesShelves, useShelvesSearch } from './useMyShelves';
 import styles from './MyShelvesList.module.css';
 
@@ -127,47 +120,8 @@ export function MyShelvesList({ workspacePath, scope, onScopeChange, recent, onD
       ) : (
         <HighlightQuery query={filter}>
           <ul ref={listRef} className={styles.list} aria-label={scope === 'mine' ? 'Your shelves' : "Everyone's shelves"}>
-            {shown.map(({ shelve, title, spec, detail, author, mine, left }) => (
-              <li key={shelve.id} className={styles.row}>
-                <button
-                  type="button"
-                  className={styles.open}
-                  data-shelve-row
-                  data-tip={left ? 'Show the changes left here' : 'Show the shelved changes'}
-                  onClick={() => {
-                    onDone();
-                    showShelveChanges(shelve);
-                  }}
-                >
-                  {author !== null && <Avatar user={shelve.owner} size={20} tip={null} />}
-                  <span className={styles.text}>
-                    <span className={styles.title}>
-                      <Highlight text={title} />
-                    </span>
-                    <span className={styles.detail}>
-                      {author !== null && (
-                        <span className={mine ? styles.me : styles.author}>
-                          <Highlight text={author} /> ·{' '}
-                        </span>
-                      )}
-                      <Highlight text={spec} /> · {detail}
-                    </span>
-                  </span>
-                </button>
-                <Button
-                  size="small"
-                  data-tip={left ? 'Apply the changes and delete the shelve' : 'Merge the shelved changes here; the shelve stays'}
-                  onClick={() => {
-                    onDone();
-                    void applyShelve(workspacePath, shelve.id, left);
-                  }}
-                >
-                  {left ? 'Restore' : 'Apply'}
-                </Button>
-                <ActionDropdownMenu entries={runningFirst(withoutAction(shelveMenu(workspacePath, [shelve], { left, mine }), 'apply'), onDone, COPY_ENTRY_IDS)}>
-                  <IconButton size="small" icon={<MoreHorizontal size={14} />} label="More actions" />
-                </ActionDropdownMenu>
-              </li>
+            {shown.map((row) => (
+              <MyShelveRow key={row.shelve.id} workspacePath={workspacePath} row={row} onDone={onDone} />
             ))}
           </ul>
         </HighlightQuery>

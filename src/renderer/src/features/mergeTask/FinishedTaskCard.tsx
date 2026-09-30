@@ -1,11 +1,10 @@
 import { CheckCircle2, EyeOff, GitBranchPlus, GitBranch, X } from 'lucide-react';
-import { api } from '../../api/client';
-import { runVoidAction } from '../../app/operations/runOperation';
 import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
 import { switchToBranch } from '../branches/branchOperations';
 import { openCreateBranchDialog } from '../branches/CreateBranchDialog';
 import { useFinishedTasksStore, type FinishedTask } from './finishedTask';
+import { hideTaskBranch } from './mergeTaskOperations';
 import styles from './FinishedTaskCard.module.css';
 
 /** Closes the loop once a task is merged: where it landed, and the next steps (back to the parent, a new task, tidy up). */
@@ -13,7 +12,7 @@ export function FinishedTaskCard({ workspacePath, task }: { workspacePath: strin
   const { remember, dismiss } = useFinishedTasksStore();
 
   const hide = async (): Promise<void> => {
-    if (await runVoidAction(workspacePath, "Couldn't hide the branch", () => api.branches.setHidden(workspacePath, [task.branch], true))) {
+    if (await hideTaskBranch(workspacePath, task.branch)) {
       remember(workspacePath, { ...task, hidden: true });
     }
   };
