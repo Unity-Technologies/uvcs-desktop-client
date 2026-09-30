@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MergePlan } from '@shared/domain/merge';
-import { completionCounts, describeSpec, mergeLabels, mergeTitle, mergeTitleText } from './mergeDescription';
+import { completionCounts, completionTitle, describeSpec, mergeLabels, mergeTitle, mergeTitleText } from './mergeDescription';
 
 const plan: MergePlan = {
   status: 'ready',
@@ -48,6 +48,15 @@ describe('mergeTitle', () => {
     expect(title({ kind: 'merge', sourceSpec: 'sh:2' }, '/main')).toBe('Apply shelve 2 to /main');
     expect(title({ kind: 'cherryPick', sourceSpec: 'cs:9', intervalOriginSpec: 'cs:5' }, '/main')).toBe('Cherry pick changeset 5…changeset 9 into /main');
     expect(title({ kind: 'subtractive', sourceSpec: 'cs:7' }, '/main')).toBe('Undo changeset 7 on /main');
+  });
+});
+
+describe('completionTitle', () => {
+  it('states what the merge did once it ran, in its own words', () => {
+    expect(completionTitle({ kind: 'merge', sourceSpec: 'br:/main/task' })).toBe('Merge complete');
+    expect(completionTitle({ kind: 'merge', sourceSpec: 'sh:2' })).toBe('Shelve applied');
+    expect(completionTitle({ kind: 'cherryPick', sourceSpec: 'cs:9' })).toBe('Cherry pick complete');
+    expect(completionTitle({ kind: 'subtractive', sourceSpec: 'cs:7' })).toBe('Changes undone');
   });
 });
 

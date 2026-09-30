@@ -34,26 +34,45 @@ interface FileStepsOptions {
   pathOf: (key: string) => string;
 }
 
+/** A step to a file whose diff hasn't opened yet: where it opens. */
+export interface PendingArrival {
+  path: string;
+  at: Arrival;
+}
+
+/**
+ * Steps through `keys` from `current` for the diff beside them: a step selects the file after or before (going on
+ * from the diff's last or first change) and leaves in `pending` where its diff opens, taken once by that diff.
+ */
+export function fileSteps(
+  keys: readonly string[],
+  current: string | null,
+  list: Pick<FileStepsOptions, 'select' | 'pathOf'>,
+  pending: { current: PendingArrival | null },
+): FileSteps {
+  return {
+    canStep: (direction) => adjacentKey(keys, current, direction) !== null,
+    step: (direction) => {
+      const key = adjacentKey(keys, current, direction);
+      if (key === null) return;
+      pending.current = { path: list.pathOf(key), at: direction === 1 ? 'first' : 'last' };
+      list.select(key);
+    },
+    takeArrival: (path) => {
+      const at = pending.current?.path === path ? pending.current.at : null;
+      if (at) pending.current = null;
+      return at;
+    },
+  };
+}
+
 /** Steps through a list's files for the diff beside it. */
 export function useFileSteps({ keys, current, select, pathOf }: FileStepsOptions): FileSteps {
-  const arrival = useRef<{ path: string; at: Arrival } | null>(null);
+  const arrival = useRef<PendingArrival | null>(null);
   const latest = useRef({ select, pathOf });
   latest.current = { select, pathOf };
   return useMemo(
-    () => ({
-      canStep: (direction) => adjacentKey(keys, current, direction) !== null,
-      step: (direction) => {
-        const key = adjacentKey(keys, current, direction);
-        if (key === null) return;
-        arrival.current = { path: latest.current.pathOf(key), at: direction === 1 ? 'first' : 'last' };
-        latest.current.select(key);
-      },
-      takeArrival: (path) => {
-        const at = arrival.current?.path === path ? arrival.current.at : null;
-        if (at) arrival.current = null;
-        return at;
-      },
-    }),
+    () => fileSteps(keys, current, { select: (key) => latest.current.select(key), pathOf: (key) => latest.current.pathOf(key) }, arrival),
     [keys, current],
   );
 }

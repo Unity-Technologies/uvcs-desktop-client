@@ -1,5 +1,6 @@
 import { formatCount, pluralize } from '../../../lib/text';
 import type { ChangeBlock, ChangeRegion, DiffSide } from './changeBlocks';
+import type { Arrival } from './fileSteps';
 
 /**
  * Moving from change to change in a text diff (⌥↓ ⌥↑, F7 ⇧F7, the header's arrows). A change is a region of the diff
@@ -18,6 +19,25 @@ export interface ChangePosition {
 export function adjacentChange({ count, current, above }: ChangePosition, direction: 1 | -1): number | null {
   const target = current === null ? (direction === 1 ? above : above - 1) : current + direction;
   return target >= 0 && target < count ? target : null;
+}
+
+/** Where a move goes: to a change of this diff, on to the file beside it in the list, or nowhere. */
+export type ChangeMove = { to: 'change'; index: number } | { to: 'file' } | null;
+
+/**
+ * Where a move from `position` goes: the next or previous change, else, past the last or first, the file after or
+ * before it in the list beside the diff (`canStepFile`), where it opens at its first or last change.
+ */
+export function plannedMove(position: ChangePosition, direction: 1 | -1, canStepFile: boolean): ChangeMove {
+  const index = adjacentChange(position, direction);
+  if (index !== null) return { to: 'change', index };
+  return canStepFile ? { to: 'file' } : null;
+}
+
+/** The change a diff opened by a step from the file beside it moves to: its first going down, its last going up. */
+export function arrivalChange(arrival: Arrival, count: number): number | null {
+  if (count === 0) return null;
+  return arrival === 'first' ? 0 : count - 1;
 }
 
 /** How many of the changes start above `line` of the modified file. */

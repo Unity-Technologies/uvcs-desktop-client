@@ -4,7 +4,7 @@ import { isModalDialogOpen } from '../../../lib/modalDialog';
 import { matchesShortcut } from '../../../lib/shortcuts';
 import { hotkeys } from '../../../lib/shortcutRegistry';
 import { listChangeBlocks, listChangeRegions } from './changeBlocks';
-import { adjacentChange, changePositionLabel, changesAbove, currentAfterChange } from './changeNavigation';
+import { arrivalChange, changePositionLabel, changesAbove, currentAfterChange, plannedMove, type ChangeMove, type ChangePosition } from './changeNavigation';
 import type { ChangeView } from './changeView';
 import { FileStepsContext, type Arrival } from './fileSteps';
 
@@ -71,10 +71,11 @@ export function useChangeNavigation(
     setCurrent(target);
     view.current?.reveal(regions[target]!);
   };
+  const plan = (from: ChangePosition, direction: 1 | -1): ChangeMove => plannedMove(from, direction, steps?.canStep(direction) ?? false);
   const go = (direction: 1 | -1): void => {
-    const target = adjacentChange(current === null ? { ...position, above: readTop() } : position, direction);
-    if (target !== null) moveTo(target);
-    else steps?.step(direction);
+    const move = plan(current === null ? { ...position, above: readTop() } : position, direction);
+    if (move?.to === 'change') moveTo(move.index);
+    else if (move?.to === 'file') steps!.step(direction);
   };
   const latestGo = useRef(go);
   latestGo.current = go;
@@ -83,8 +84,8 @@ export function useChangeNavigation(
   const arrival = useRef<Arrival | null | undefined>(undefined);
   useEffect(() => {
     if (arrival.current === undefined) arrival.current = steps?.takeArrival(path) ?? null;
-    if (!arrival.current || regions.length === 0) return;
-    const at = arrival.current === 'first' ? 0 : regions.length - 1;
+    const at = arrival.current ? arrivalChange(arrival.current, regions.length) : null;
+    if (at === null) return;
     let frames = 0;
     let frame = 0;
     const arrive = (): void => {
@@ -118,7 +119,7 @@ export function useChangeNavigation(
   return {
     count: regions.length,
     label: changePositionLabel(position),
-    goesTo: (direction) => (adjacentChange(position, direction) !== null ? 'change' : steps?.canStep(direction) ? 'file' : null),
+    goesTo: (direction) => plan(position, direction)?.to ?? null,
     go,
     onViewScroll,
   };
