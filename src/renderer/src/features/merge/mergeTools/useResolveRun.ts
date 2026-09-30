@@ -2,11 +2,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MergeTool, MergeToolOutcome } from '@shared/domain/mergeTools';
 import { api } from '../../../api/client';
 import { useSettings } from '../../../app/settings/useSettings';
-import { fileNameOf } from '../../../lib/text';
 import { toast } from '../../../ui/toast/toastStore';
 import type { FileConflictState } from '../resolve/useFileConflicts';
-import { toolOutcomeMessage, waitsForTool } from './mergeToolOutcome';
-import { planRun, runSummary, type RunPlan, type RunProgress } from './resolveRun';
+import { waitsForTool } from './mergeToolOutcome';
+import { resolveOneByOne, runEndMessage, stopRun, type RunControl, type RunEnd } from './resolveOneByOne';
+import { planRun, type RunPlan, type RunProgress } from './resolveRun';
 
 interface ResolveRunOptions {
   states: FileConflictState[];
@@ -28,13 +28,7 @@ export interface ResolveRun {
   stop: () => void;
 }
 
-interface RunControl {
-  stopped: boolean;
-  /** While paused on a file closed unsaved: settles with whether to go on. */
-  answer?: (goOn: boolean) => void;
-}
-
-type Ended = { plan: RunPlan; stopped: boolean; failure?: { outcome: MergeToolOutcome; path: string } };
+type Ended = { plan: RunPlan; end: RunEnd };
 
 /**
  * Resolves every file waiting for the user in one merge tool, one after the other: the next opens once the user saves
@@ -55,56 +49,28 @@ export function useResolveRun({ states, resolveInTool, onOpen, onEnd }: ResolveR
     if (plan.keys.length === 0) return;
     const run: RunControl = { stopped: false };
     control.current = run;
-    const stillWaits = (key: string): boolean => {
-      const state = latest.current.states.find((candidate) => candidate.file.key === key);
-      return Boolean(state && waitsForTool(state, tool));
-    };
-
-    let previousKey: string | undefined;
-    let failure: Ended['failure'];
-    for (const [position, key] of plan.keys.entries()) {
-      if (run.stopped) break;
-      if (!stillWaits(key)) continue;
-      const current: RunProgress = { toolName: tool.name, total: plan.keys.length, position, currentKey: key, paused: false };
-      setProgress(current);
-      latest.current.onOpen(key, previousKey);
-      previousKey = key;
-
-      const outcome = await latest.current.resolveInTool(key, tool, true);
-      if (run.stopped || !outcome) break;
-      if (outcome.kind === 'failed') {
-        failure = { outcome, path: latest.current.states.find((state) => state.file.key === key)?.file.path ?? key };
-        break;
-      }
-      // Closed by the user without saving (not skipped from here): maybe they meant to stop, so ask before the next.
-      const closedUnsaved = outcome.kind === 'unchanged' && outcome.exitCode !== null;
-      if (closedUnsaved && latest.current.askWhenMergeToolClosesUnsaved && plan.keys.slice(position + 1).some(stillWaits)) {
-        setProgress({ ...current, paused: true });
-        const goOn = await new Promise<boolean>((resolve) => (run.answer = resolve));
-        run.answer = undefined;
-        if (!goOn) break;
-      }
-    }
+    const end = await resolveOneByOne(plan, run, {
+      stillWaits: (key) => {
+        const state = latest.current.states.find((candidate) => candidate.file.key === key);
+        return Boolean(state && waitsForTool(state, tool));
+      },
+      show: setProgress,
+      open: (key, previousKey) => latest.current.onOpen(key, previousKey),
+      resolve: (key) => latest.current.resolveInTool(key, tool, true),
+      asksWhenClosedUnsaved: () => latest.current.askWhenMergeToolClosesUnsaved,
+    });
     if (control.current !== run) return; // Left the page meanwhile.
     control.current = null;
     setProgress(null);
-    setEnded({ plan, stopped: run.stopped, failure });
+    setEnded({ plan, end });
   }, []);
 
   // Told once the last decision shows in the states, so the count is right.
   useEffect(() => {
     if (!ended) return;
     setEnded(undefined);
-    const { plan, stopped, failure } = ended;
-    if (failure) {
-      const message = toolOutcomeMessage(failure.outcome, plan.tool.name, fileNameOf(failure.path));
-      const reason = message.detail && !/[.!?]$/.test(message.detail) ? `${message.detail}.` : message.detail;
-      toast.error(message.title, [reason, 'Stopped resolving one by one.'].filter(Boolean).join(' '));
-    } else {
-      const resolved = plan.keys.filter((key) => states.find((state) => state.file.key === key)?.resolution).length;
-      const summary = runSummary({ resolved, total: plan.keys.length, stopped }, plan);
-      toast[summary.kind](summary.title, summary.detail);
-    }
+    const message = runEndMessage(ended.plan, ended.end, states);
+    toast[message.kind](message.title, message.detail);
     onEnd();
   }, [ended, states, onEnd]);
 
@@ -113,10 +79,7 @@ export function useResolveRun({ states, resolveInTool, onOpen, onEnd }: ResolveR
     () => () => {
       const run = control.current;
       control.current = null;
-      if (run) {
-        run.stopped = true;
-        run.answer?.(false);
-      }
+      if (run) stopRun(run);
     },
     [],
   );
@@ -136,10 +99,9 @@ export function useResolveRun({ states, resolveInTool, onOpen, onEnd }: ResolveR
   const stop = (): void => {
     const run = control.current;
     if (!run) return;
-    run.stopped = true;
     const session = openSession();
     if (session) void api.mergeTools.stopWaiting(session);
-    run.answer?.(false);
+    stopRun(run);
   };
 
   return { progress, start: (tool) => void start(tool), skip, proceed, stop };
