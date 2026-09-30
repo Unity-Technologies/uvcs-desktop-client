@@ -3,12 +3,16 @@ import { api } from '../../api/client';
 import { runOperation } from '../../app/operations/runOperation';
 import { replicationMessage } from './replicationMessage';
 
-/** Sends `branch` from the workspace repository (`request.from`) to `request.to`. */
+/**
+ * Sends `branch` from the workspace repository (`request.from`) to `request.to`. Only that other repository changes:
+ * nothing this workspace shows is refreshed.
+ */
 export function pushBranch(workspacePath: string, request: ReplicationRequest): Promise<ReplicationSummary | undefined> {
   return runOperation({
     title: `Pushing ${request.branch} to ${request.to}`,
     workspacePath,
     run: (operationId) => api.sync.push(workspacePath, request, operationId),
+    affects: () => false,
     successMessage: (summary) => replicationMessage('push', request, summary),
   });
 }
