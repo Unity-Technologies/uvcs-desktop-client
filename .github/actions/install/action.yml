@@ -21,7 +21,7 @@ runs:
     # download cache, the Electron archive and the install.
     - id: node-modules
       if: inputs.reuse-node-modules == 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: ${{ inputs.working-directory }}/node_modules
         key: node-modules-v1-${{ runner.os }}-${{ runner.arch }}-node${{ inputs.node-version }}-${{ hashFiles('package-lock.json') }}
@@ -37,7 +37,7 @@ runs:
     # so the Windows x64 and arm64 legs never share one. These are @electron/get's cache folders; only the runner's own
     # exists. Bump the `v1` salt to drop a cached archive that a cut-short save left truncated.
     - if: steps.node-modules.outputs.cache-hit != 'true'
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       with:
         path: |
           ~/.cache/electron
