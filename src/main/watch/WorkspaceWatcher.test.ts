@@ -234,6 +234,13 @@ describe('WorkspaceWatcher', () => {
     expect(watches.watched().size).toBe(0);
   });
 
+  it('tells nothing more of a watch that was partial from the start: the windows were told it is', () => {
+    const { watches, timesBroken } = watching({ unwatchable: [{ path: workspacePath, recursive: true }] });
+
+    watches.break(workspacePath);
+    expect(timesBroken()).toBe(0);
+  });
+
   it("tells once on Linux that a folder's watch broke, or that a new folder couldn't be watched", () => {
     mkdirSync(join(workspacePath, 'src'));
     const brokeFolder = watching({ platform: 'linux' });

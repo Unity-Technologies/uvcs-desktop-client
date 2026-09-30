@@ -26,6 +26,8 @@ interface OperationProgressEvent {
 export interface UvcsEvents {
   commandLogged: CommandLogEntry;
   workspaceChanged: WorkspaceChange & { workspacePath: string };
+  /** The workspace's watch broke once started: changes made outside the app no longer show by themselves. */
+  workspaceWatchBroken: { workspacePath: string };
   operationProgress: OperationProgressEvent;
   /** The settings changed, in this window or another one. */
   settingsChanged: AppSettings;

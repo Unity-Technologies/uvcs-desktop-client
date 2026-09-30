@@ -11,9 +11,16 @@ export interface Watcher {
   stop(): void;
 }
 
-type CreateWatcher = (workspacePath: string, onChanged: (change: WorkspaceChange) => void) => Watcher;
-type ChangeListener = (viewers: number[], workspacePath: string, change: WorkspaceChange) => void;
-type StopListener = (workspacePath: string) => void;
+type CreateWatcher = (workspacePath: string, onChanged: (change: WorkspaceChange) => void, onBroken: () => void) => Watcher;
+
+/** What the registry tells about the workspaces it watches, and to which windows (viewers). */
+interface WatchersListener {
+  changed(viewers: number[], workspacePath: string, change: WorkspaceChange): void;
+  /** The workspace's watch broke: it sees only part of the changes from now on. */
+  broken(viewers: number[], workspacePath: string): void;
+  /** No window shows the workspace anymore. */
+  stopped(workspacePath: string): void;
+}
 
 interface Entry {
   watcher: Watcher;
@@ -23,16 +30,15 @@ interface Entry {
 
 /**
  * One watcher per workspace shown in some window (a viewer, by id). A window watches one workspace at a time;
- * the watcher stops when no window shows its workspace anymore (`onStopped`).
+ * the watcher stops when no window shows its workspace anymore (`stopped`).
  */
 export class WorkspaceWatchers {
   private readonly byPath = new Map<string, Entry>();
   private readonly watchedBy = new Map<number, string>();
 
   constructor(
-    private readonly onChanged: ChangeListener,
-    private readonly onStopped: StopListener,
-    private readonly createWatcher: CreateWatcher = (path, onChanged) => new WorkspaceWatcher(path, onChanged),
+    private readonly listener: WatchersListener,
+    private readonly createWatcher: CreateWatcher = (path, onChanged, onBroken) => new WorkspaceWatcher(path, onChanged, onBroken),
   ) {}
 
   /** The viewer now shows `workspacePath`: it stops getting changes of the workspace it showed before. */
@@ -57,7 +63,7 @@ export class WorkspaceWatchers {
     if (entry && entry.viewers.size === 0) {
       entry.watcher.stop();
       this.byPath.delete(workspacePath);
-      this.onStopped(workspacePath);
+      this.listener.stopped(workspacePath);
     }
   }
 
@@ -74,8 +80,15 @@ export class WorkspaceWatchers {
 
   private start(workspacePath: string): Entry {
     const viewers = new Set<number>();
-    const watcher = this.createWatcher(workspacePath, (change) => this.onChanged([...viewers], workspacePath, change));
-    const entry = { watcher, coverage: watcher.start(), viewers };
+    const watcher = this.createWatcher(
+      workspacePath,
+      (change) => this.listener.changed([...viewers], workspacePath, change),
+      () => {
+        entry.coverage = 'partial';
+        this.listener.broken([...viewers], workspacePath);
+      },
+    );
+    const entry: Entry = { watcher, coverage: watcher.start(), viewers };
     this.byPath.set(workspacePath, entry);
     return entry;
   }

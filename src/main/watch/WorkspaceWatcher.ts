@@ -24,7 +24,8 @@ const MAX_WATCHED_FOLDERS = 10_000;
 /**
  * Watches a workspace and reports what changed, in coalesced batches: file edits (pending changes) apart
  * from `.plastic` state rewrites (checkin, update, switch... by any tool). Changes caused by the app's own writes
- * are dropped, because the app refreshes its views after them anyway.
+ * are dropped, because the app refreshes its views after them anyway. A watch that breaks once started (the platform
+ * gave up on it, Linux ran out of watches) is told once (`onBroken`), if it saw every change until then.
  */
 export class WorkspaceWatcher {
   /** The native watches where the platform recurses (`RECURSIVE_WATCH_PLATFORMS`). */
@@ -35,11 +36,14 @@ export class WorkspaceWatcher {
   private readonly ownWrites = new OwnWrites();
   private readonly ownChangelistWrites = new OwnWrites();
   private stopped = false;
+  /** Seeing only part of the changes: from the start (the answer of `start()` says so), or since a watch broke. */
+  private partial = false;
   private readonly batcher: ChangeBatcher;
 
   constructor(
     readonly workspacePath: string,
     onChanged: (change: WorkspaceChange) => void,
+    private readonly onBroken: () => void,
     private readonly platform: NodeJS.Platform = process.platform,
     private readonly watch: WatchFolder = watchFolder,
   ) {
@@ -48,7 +52,9 @@ export class WorkspaceWatcher {
 
   start(): WatchCoverage {
     this.loadIgnoreRules();
-    return RECURSIVE_WATCH_PLATFORMS.has(this.platform) ? this.watchRecursively() : this.watchFolderByFolder();
+    const coverage = RECURSIVE_WATCH_PLATFORMS.has(this.platform) ? this.watchRecursively() : this.watchFolderByFolder();
+    this.partial = coverage === 'partial';
+    return coverage;
   }
 
   /** Whether a command run in `cwd` works on this workspace (`C:\Work` and `c:\work` are one folder on Windows). */
@@ -87,6 +93,7 @@ export class WorkspaceWatcher {
       this.workspacePath,
       (folder) => isIgnored(folder, this.ignoreRules),
       (event, relativePath) => this.onEvent(event, relativePath),
+      () => this.tellBroken(),
       MAX_WATCHED_FOLDERS,
       this.watch,
     );
@@ -99,12 +106,22 @@ export class WorkspaceWatcher {
         const relativePath = fileName === null ? undefined : relative(this.workspacePath, join(path, fileName));
         this.onEvent(event, relativePath);
       });
-      watch.onError(() => watch.close());
+      watch.onError(() => {
+        watch.close();
+        this.tellBroken();
+      });
       this.watches.push(watch);
       return true;
     } catch {
       return false;
     }
+  }
+
+  /** A watch broke: told once, when the watcher goes from seeing every change to seeing part of them. */
+  private tellBroken(): void {
+    if (this.partial || this.stopped) return;
+    this.partial = true;
+    this.onBroken();
   }
 
   private onEvent(event: string, relativePath: string | undefined): void {

@@ -8,7 +8,8 @@ import { watchFolder, type FolderWatch, type WatchFolder } from './watchFolder';
  * replacing it (most editors' safe save): a folder's watch reports its items by name, whatever happens to them.
  * New folders are watched as they appear and removed ones dropped; skipped folders (ignored ones) are never walked,
  * and follow the rule as it changes (`followSkipRule`). Past `maxFolders` the rest goes unwatched, and the tree is
- * incomplete.
+ * incomplete. Once started, a watch that breaks or a new folder that can't be watched makes it incomplete too, and it
+ * tells (`onBroken`).
  */
 export class FolderTreeWatch {
   /** By workspace-relative, `/`-separated folder (`''` for the root). */
@@ -16,12 +17,14 @@ export class FolderTreeWatch {
   /** The folders met and skipped, so they are walked if the rule stops skipping them. */
   private readonly skipped = new Set<string>();
   private complete = true;
+  private started = false;
   private closed = false;
 
   constructor(
     private readonly root: string,
     private readonly skip: (relativeFolder: string) => boolean,
     private readonly onEvent: (event: string, relativePath: string | undefined) => void,
+    private readonly onBroken: () => void,
     private readonly maxFolders: number,
     private readonly watch: WatchFolder = watchFolder,
   ) {}
@@ -29,6 +32,7 @@ export class FolderTreeWatch {
   /** Watches the tree; false if some folder couldn't be watched (none at all, past the limit, out of inotify watches). */
   start(): boolean {
     this.watchTree('');
+    this.started = true;
     return this.complete && this.watches.has('');
   }
 
@@ -64,7 +68,7 @@ export class FolderTreeWatch {
         continue;
       }
       if (this.watches.size >= this.maxFolders || !this.watchFolder(folder)) {
-        this.complete = false;
+        this.becomeIncomplete();
         continue;
       }
       for (const subfolder of this.subfolders(folder)) pending.push(subfolder);
@@ -74,7 +78,10 @@ export class FolderTreeWatch {
   private watchFolder(folder: string): boolean {
     try {
       const watch = this.watch(this.absolute(folder), false, (event, name) => this.onFolderEvent(folder, event, name));
-      watch.onError(() => this.unwatch(folder));
+      watch.onError(() => {
+        this.unwatch(folder);
+        this.becomeIncomplete();
+      });
       this.watches.set(folder, watch);
       return true;
     } catch {
@@ -90,6 +97,12 @@ export class FolderTreeWatch {
     if (path === undefined || event !== 'rename') return;
     if (this.isFolder(path)) this.watchTree(path);
     else this.unwatch(path);
+  }
+
+  /** Some folder goes unwatched: said by `start()`'s answer while starting, by `onBroken` afterwards. */
+  private becomeIncomplete(): void {
+    this.complete = false;
+    if (this.started && !this.closed) this.onBroken();
   }
 
   /** Stops watching a folder gone, moved or now skipped, and everything that was under it. */
