@@ -1,0 +1,30 @@
+.copyable {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 20px;
+  padding: 0 4px;
+  margin: 0 -4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.copyable:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.copyIcon {
+  flex: none;
+  color: var(--text-tertiary);
+  opacity: 0.6;
+  transition: opacity var(--duration-fast);
+}
+
+.copyable:hover .copyIcon,
+.copyable:focus-visible .copyIcon {
+  opacity: 1;
+}

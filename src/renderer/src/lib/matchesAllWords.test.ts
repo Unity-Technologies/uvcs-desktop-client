@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { matchesAllWords, matchesWordFilter, wordMatchQuality } from './matchesAllWords';
+import { matchesAllWords, matchesWordFilter, queryWords, wordMatchQuality } from './matchesAllWords';
+
+describe('queryWords', () => {
+  it('splits a query at any run of spaces, lower case, dropping the blanks at its ends', () => {
+    expect(queryWords('  Login\tFIX  bug ')).toEqual(['login', 'fix', 'bug']);
+    expect(queryWords('   ')).toEqual([]);
+  });
+});
 
 describe('matchesAllWords', () => {
   it('needs every word, in any order and case', () => {

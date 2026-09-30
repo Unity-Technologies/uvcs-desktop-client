@@ -10,14 +10,8 @@ export function trimToFit(text: string, maxWidth: number, measure: Measure): str
   if (measure(text) <= maxWidth) return text;
   if (measure(ELLIPSIS) > maxWidth) return '';
   const chars = Array.from(text);
-  let fits = 0;
-  let tooWide = chars.length;
-  while (tooWide - fits > 1) {
-    const middle = (fits + tooWide) >> 1;
-    if (measure(chars.slice(0, middle).join('') + ELLIPSIS) <= maxWidth) fits = middle;
-    else tooWide = middle;
-  }
-  return chars.slice(0, fits).join('') + ELLIPSIS;
+  const shortened = (kept: number): string => chars.slice(0, kept).join('') + ELLIPSIS;
+  return shortened(mostCharactersFitting(chars.length, (kept) => measure(shortened(kept)) <= maxWidth));
 }
 
 /**
@@ -31,14 +25,22 @@ export function trimMiddleToFit(text: string, maxWidth: number, measure: Measure
   const chars = Array.from(text);
   const shortened = (kept: number): string =>
     chars.slice(0, Math.ceil(kept / 2)).join('') + ELLIPSIS + chars.slice(chars.length - Math.floor(kept / 2)).join('');
-  let fits = 0;
-  let tooWide = chars.length;
-  while (tooWide - fits > 1) {
-    const middle = (fits + tooWide) >> 1;
-    if (measure(shortened(middle)) <= maxWidth) fits = middle;
+  return shortened(mostCharactersFitting(chars.length, (kept) => measure(shortened(kept)) <= maxWidth));
+}
+
+/**
+ * The most characters (fewer than `length`, which is too wide) a shortened text can keep and still fit, found by halving:
+ * keeping fewer never makes it wider. None when not even one fits.
+ */
+function mostCharactersFitting(length: number, fits: (kept: number) => boolean): number {
+  let fitting = 0;
+  let tooWide = length;
+  while (tooWide - fitting > 1) {
+    const middle = (fitting + tooWide) >> 1;
+    if (fits(middle)) fitting = middle;
     else tooWide = middle;
   }
-  return shortened(fits);
+  return fitting;
 }
 
 /**
