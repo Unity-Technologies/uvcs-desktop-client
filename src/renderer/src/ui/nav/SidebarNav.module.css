@@ -182,6 +182,11 @@
   text-align: center;
 }
 
+/* The tiles fill the scrolling column, which would cut a ring drawn outside them. */
+.sidebar[data-rail='true'] .item:focus-visible {
+  box-shadow: var(--focus-ring-inset);
+}
+
 .sidebar[data-rail='true'] .label {
   display: -webkit-box;
   flex: none;
