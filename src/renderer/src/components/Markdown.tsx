@@ -6,6 +6,11 @@ import styles from './Markdown.module.css';
 /** Markdown text such as release notes, rendered as elements; links open in the browser. */
 export function Markdown({ text }: { text: string }) {
   const blocks = useMemo(() => parseMarkdown(text), [text]);
+  return <MarkdownBlocks blocks={blocks} />;
+}
+
+/** Text already read into Markdown's tree (`parseMarkdown`, `releaseNotesFromHtml`), rendered as elements. */
+export function MarkdownBlocks({ blocks }: { blocks: MarkdownBlock[] }) {
   return <div className={`${styles.markdown} selectable`}>{blocks.map(renderBlock)}</div>;
 }
 
