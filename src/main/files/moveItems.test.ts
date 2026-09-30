@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { moveArgs, moveItems } from './moveItems';
 
@@ -36,12 +37,15 @@ describe('moveItems', () => {
       items,
       context(),
     );
-    expect(items.cm.mock.calls).toEqual([[['move', '/ws/src/a.ts', '/ws/docs/a.ts']], [['move', '/ws/src/lib', '/ws/docs/lib']]]);
-    expect(items.renamePrivate).toHaveBeenCalledWith('/ws/src/notes.txt', '/ws/docs/notes.txt');
+    expect(items.cm.mock.calls).toEqual([
+      [['move', join(WORKSPACE, 'src', 'a.ts'), join(WORKSPACE, 'docs', 'a.ts')]],
+      [['move', join(WORKSPACE, 'src', 'lib'), join(WORKSPACE, 'docs', 'lib')]],
+    ]);
+    expect(items.renamePrivate).toHaveBeenCalledWith(join(WORKSPACE, 'src', 'notes.txt'), join(WORKSPACE, 'docs', 'notes.txt'));
   });
 
   it('never moves onto an existing item, which cm would move the item into', async () => {
-    const items = mover(['/ws/docs/lib']);
+    const items = mover([join(WORKSPACE, 'docs', 'lib')]);
     const moving = moveItems(WORKSPACE, [{ from: 'src/lib', to: 'docs/lib', isPrivate: false }], items, context());
     await expect(moving).rejects.toThrow('lib already exists.');
     expect(items.cm).not.toHaveBeenCalled();

@@ -18,7 +18,13 @@ function launcherOfAnApp(port: number): string {
 async function appListener(): Promise<{ port: number; appStarted: Promise<Socket>; close: () => void }> {
   const server = createServer();
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const appStarted = new Promise<Socket>((resolve) => server.once('connection', resolve));
+  const appStarted = new Promise<Socket>((resolve) =>
+    server.once('connection', (socket) => {
+      // The app ends with the test, abruptly: on Windows its end resets the connection (ECONNRESET), which is no failure.
+      socket.on('error', () => {});
+      resolve(socket);
+    }),
+  );
   return { port: (server.address() as AddressInfo).port, appStarted, close: () => server.close() };
 }
 
