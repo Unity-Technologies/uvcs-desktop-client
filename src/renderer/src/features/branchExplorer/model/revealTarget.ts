@@ -43,6 +43,27 @@ export function nextRelaxation(limits: RevealLimits, targetDate: string | undefi
   return null;
 }
 
+/** What a reveal does once the graph settled: show what it found, relax one limit and look again, or give up. */
+export type RevealStep = { kind: 'reveal'; hit: RevealHit } | RevealRelaxation | { kind: 'notInGraph' };
+
+export function revealStep(target: RevealTarget, layout: GraphLayout, limits: RevealLimits, now = new Date()): RevealStep {
+  const hit = resolveReveal(target, layout);
+  if (hit) return { kind: 'reveal', hit };
+  return nextRelaxation(limits, target.date, now) ?? { kind: 'notInGraph' };
+}
+
+/** "Changeset 12", "Branch /main/task", "Label v1.0". */
+export function describeRevealTarget(target: RevealTarget): string {
+  switch (target.kind) {
+    case 'changeset':
+      return `Changeset ${target.id}`;
+    case 'branch':
+      return `Branch ${target.name}`;
+    case 'label':
+      return `Label ${target.name}`;
+  }
+}
+
 /** The shortest range longer than `current` that reaches back to `date`; all history when the date is unknown. */
 function rangeIncluding(date: string | undefined, current: SincePreset, now: Date): SincePreset {
   if (!date) return 'anyTime';

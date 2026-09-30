@@ -51,6 +51,52 @@ describe('layoutGraph', () => {
   });
 });
 
+describe('layoutGraph rows', () => {
+  /** /main/a/fix branches from 4 on /main/a, and has 8 and 9. */
+  function withGrandchild() {
+    const data = sampleHistory();
+    return {
+      ...data,
+      branches: [...data.branches, branch('/main/a/fix', '/main/a', 9)],
+      changesets: [...data.changesets, changeset(8, '/main/a/fix', 4), changeset(9, '/main/a/fix', 8)],
+    };
+  }
+
+  it('puts a child branch below its parent, however much room rows above have', () => {
+    const layout = layoutGraph(withGrandchild());
+    expect(layout.lanesByBranch.get('/main/a/fix')!.row).toBeGreaterThan(layout.lanesByBranch.get('/main/a')!.row);
+  });
+
+  it('still draws a branch whose parent branch is not in the graph (hidden or filtered out), below /main', () => {
+    const data = withGrandchild();
+    const withoutParent = { ...data, branches: data.branches.filter((each) => each.name !== '/main/a'), changesets: data.changesets.filter((each) => each.branch !== '/main/a'), mergeLinks: [] };
+    const lane = layoutGraph(withoutParent).lanesByBranch.get('/main/a/fix');
+    expect(lane).toMatchObject({ startColumn: 5, endColumn: 6, baseChangeset: null });
+    expect(lane!.row).toBeGreaterThan(0);
+  });
+
+  it('gives /main the top row even when another top-level branch starts before it', () => {
+    const layout = layoutGraph({
+      branches: [branch('/legacy', '', 1), branch('/main', '', 3)],
+      changesets: [changeset(0, '/legacy', -1), changeset(1, '/legacy', 0), changeset(2, '/main', -1), changeset(3, '/main', 2)],
+      mergeLinks: [],
+      labels: [],
+    });
+    expect(layout.lanesByBranch.get('/main')!.row).toBe(0);
+    expect(layout.lanesByBranch.get('/legacy')!.row).toBe(1);
+  });
+
+  it('draws nothing for a branch with no changesets and no base in the graph', () => {
+    const data = sampleHistory();
+    expect(layoutGraph({ ...data, branches: [...data.branches, branch('/main/old', '/main', 99)] }).lanesByBranch.has('/main/old')).toBe(false);
+  });
+
+  it('counts the rows the lanes take', () => {
+    expect(layoutGraph(sampleHistory()).rowCount).toBe(3);
+    expect(layoutGraph({ branches: [], changesets: [], mergeLinks: [], labels: [] })).toMatchObject({ rowCount: 0, columnCount: 0, pending: null });
+  });
+});
+
 describe('layoutKeeping', () => {
   it('lays out exactly what keeping one more changeset lays out, reusing the layout when it already shows on its own', () => {
     const data = largeHistory(3_000, 600);
