@@ -130,8 +130,11 @@ export class CmClient {
     const finished = useShell ? this.shellPool.run(cwd, args) : this.runProcess(args, cwd, options);
     this.startListeners.forEach((listener) => listener({ args, cwd, finished }));
     const result = await finished.catch((error: unknown) => {
-      // Stopped, or ended without an exit code (`cm` not found, a stalled prompt, a closed session): logged too.
-      this.log(args, cwd, startedAt, { output: error instanceof Error ? error.message : String(error), exitCode: NO_EXIT_CODE }, useShell);
+      // Ended without an exit code (`cm` not found, a stalled prompt, a closed session): a failure to log like any
+      // other. One its caller cancelled is none.
+      if (!options.signal?.aborted) {
+        this.log(args, cwd, startedAt, { output: error instanceof Error ? error.message : String(error), exitCode: NO_EXIT_CODE }, useShell);
+      }
       throw error;
     });
 
