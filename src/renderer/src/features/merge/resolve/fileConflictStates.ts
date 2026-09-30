@@ -59,7 +59,7 @@ function toState({ file, loaded, decision: userDecision, openTool }: StateInputs
     document: loaded.document,
     decision,
     decidedByUser: Boolean(userDecision),
-    resolution: openTool ? null : resolutionOf(decision),
+    resolution: openTool ? null : resolutionOf(decision, loaded.contents.source.text),
     mergedAutomatically: !userDecision && loaded.document?.conflictCount === 0,
     remainingConflicts: remainingConflicts(decision),
     ...(openTool && { openTool }),

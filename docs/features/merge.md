@@ -65,6 +65,10 @@ Incoming view resolves update conflicts with the same panel and run (in its upda
 that merges automatically is never edited; its menu only overrides it by keeping one version. Once merged, the page
 states where the result went.
 
+Complete merge writes each conflicting file's decision into the workspace, after `cm merge` (`runMerge`): the text
+decided, or, keeping the incoming version of a text file, the text the page read (`resolutionOf` carries it when it
+writes back byte for byte, UTF-8); only binaries and text in other encodings are read again, with a `cm cat` each.
+
 Merges hold hundreds of conflicting files and thousands of changes. Every conflicting file's three versions load at
 once (its status needs its automatic merge); each file merges once, when its versions are in (`loadConflict`), and
 keeps its state while nothing about it changes (`buildStates`). The three-way merge (`diff3`) draws node-diff3's diff3
