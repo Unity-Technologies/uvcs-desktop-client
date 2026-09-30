@@ -1,7 +1,8 @@
 import { Maximize, Scan, SquareArrowUpLeft, SquareDot, ZoomIn, ZoomOut } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { IconButton } from '../../../../ui/IconButton';
-import { type AnchorMode, zoomLabel } from './imageDiff';
+import type { AnchorMode } from './composedFrame';
+import { zoomLabel } from './viewTransform';
 import type { PanZoom } from './usePanZoom';
 import styles from './ZoomControls.module.css';
 import { hotkey } from '../../../../lib/shortcutRegistry';

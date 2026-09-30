@@ -1,4 +1,3 @@
-import { canAnnotate } from '@shared/domain/annotate';
 import type { TreeItem } from '@shared/domain/explorer';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -22,7 +21,7 @@ import {
   targetDirectoryFor,
 } from './fileOperations';
 import { cutAction, pasteAction } from './cutPasteActions';
-import { fileMenuTargets, hasRevisionsToShow } from './fileMenuTargets';
+import { fileMenuTargets, itemViews } from './fileMenuTargets';
 import { useFilesViewStore } from './filesViewStore';
 import type { PendingChangesIndex } from './itemStatus';
 import { isWorkspaceRoot } from './workspaceRoot';
@@ -52,6 +51,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
   const single = items.length === 1 ? items[0]! : null;
   const lock = single ? locks.get(single.path) : undefined;
   const { privateItems, checkoutCandidates, undoable, typedFiles } = fileMenuTargets(items, pendingChanges);
+  const views = single && itemViews(single, pendingChanges);
   const directory = targetDirectoryFor(single ?? undefined);
   // The workspace root can't be renamed or deleted from here.
   const hasRoot = items.some(isWorkspaceRoot);
@@ -65,19 +65,9 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
     checkoutCandidates.length > 0 && menuAction('checkout', () => void checkoutItems(workspacePath, checkoutCandidates)),
     single && menuAction('newFile', () => void createItem(workspacePath, directory, 'file'), { shortcut: FILE_SHORTCUTS.newFile }),
     single && menuAction('newFolder', () => void createItem(workspacePath, directory, 'directory'), { shortcut: FILE_SHORTCUTS.newFolder }),
-    single &&
-      !single.isPrivate &&
-      single.itemType !== 'directory' &&
-      menuAction('changes', () => useFilesViewStore.getState().setFileView('diff'), { shortcut: FILE_SHORTCUTS.showChanges }),
-    // The root changes with every changeset: its history is the whole repository's.
-    single &&
-      hasRevisionsToShow(single, pendingChanges) &&
-      !hasRoot &&
-      menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path }), { shortcut: FILE_SHORTCUTS.history }),
-    single &&
-      hasRevisionsToShow(single, pendingChanges) &&
-      canAnnotate(single.itemType) &&
-      menuAction('annotate', () => showAnnotated(single.path), { shortcut: FILE_SHORTCUTS.annotate }),
+    single && views?.changes && menuAction('changes', () => useFilesViewStore.getState().setFileView('diff'), { shortcut: FILE_SHORTCUTS.showChanges }),
+    single && views?.history && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path }), { shortcut: FILE_SHORTCUTS.history }),
+    single && views?.annotate && menuAction('annotate', () => showAnnotated(single.path), { shortcut: FILE_SHORTCUTS.annotate }),
     lock ? menuAction('showInLocks', () => showInLocks(workspacePath, lock)) : menuAction('locks', () => navigation.goToView('locks')),
     // The workspace opens as a folder; an item shows selected in the folder that holds it.
     single && isWorkspaceRoot(single) && menuAction('openFolder', () => void api.system.openPath(workspacePath)),

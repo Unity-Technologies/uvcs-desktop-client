@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { RgbaBitmap } from './imageDiff';
+import type { RgbaBitmap } from './pixelComparison';
 import type { DiffWorkerRequest, DiffWorkerResponse } from './imageDiff.worker';
 
 /**
@@ -55,7 +55,7 @@ afterEach(() => vi.unstubAllGlobals());
 describe('without a worker', () => {
   it('compares on the main thread, finding the changed pixel', async () => {
     const session = await loadSession(undefined);
-    const diff = await session.computeImageDiff('pair', OLD, NEW, 'center', 0);
+    const diff = await session.compareImages('pair', OLD, NEW, 'center', 0);
     expect(diff.coveredPixels).toBe(2);
     expect(diff.regions.map(({ x, y, width, height }) => ({ x, y, width, height }))).toEqual([{ x: 1, y: 0, width: 1, height: 1 }]);
     expect(diff.imageData).toMatchObject({ width: 2, height: 1 });
@@ -63,9 +63,9 @@ describe('without a worker', () => {
 
   it('renders a new tolerance from the pair it holds, and nothing for another pair', async () => {
     const session = await loadSession(undefined);
-    await session.computeImageDiff('pair', OLD, NEW, 'center', 0);
-    expect((await session.rethresholdImageDiff('pair', 255))?.regions).toEqual([]);
-    expect(await session.rethresholdImageDiff('another pair', 0)).toBeNull();
+    await session.compareImages('pair', OLD, NEW, 'center', 0);
+    expect((await session.rerenderHeatmap('pair', 255))?.regions).toEqual([]);
+    expect(await session.rerenderHeatmap('another pair', 0)).toBeNull();
   });
 });
 
@@ -73,8 +73,8 @@ describe('with a worker', () => {
   it("takes the worker's frame and regions", async () => {
     FakeWorker.respond = (request) => ({
       id: request.id,
-      kind: 'computed',
-      frame: new Uint8ClampedArray(8).buffer,
+      kind: 'compared',
+      pixels: new Uint8ClampedArray(8).buffer,
       width: 2,
       height: 1,
       regions: [{ x: 1, y: 0, width: 1, height: 1, pixels: 1 }],
@@ -82,23 +82,23 @@ describe('with a worker', () => {
       histogram: new Uint32Array(256).buffer,
     });
     const session = await loadSession(FakeWorker);
-    const diff = await session.computeImageDiff('pair', OLD, NEW, 'center', 0);
+    const diff = await session.compareImages('pair', OLD, NEW, 'center', 0);
     expect(diff.regions).toEqual([{ x: 1, y: 0, width: 1, height: 1, pixels: 1 }]);
   });
 
   it('computes again when the worker no longer holds the pair', async () => {
     FakeWorker.respond = (request) => ({ id: request.id, kind: 'gone' });
     const session = await loadSession(FakeWorker);
-    expect(await session.rethresholdImageDiff('pair', 10)).toBeNull();
+    expect(await session.rerenderHeatmap('pair', 10)).toBeNull();
   });
 
   it('falls back to the main thread when the worker dies mid-flight, and never starts another', async () => {
     const session = await loadSession(FakeWorker);
-    const fallback = await session.computeImageDiff('pair', OLD, NEW, 'center', 0);
+    const fallback = await session.compareImages('pair', OLD, NEW, 'center', 0);
     expect(fallback.regions.map(({ x, y, width, height }) => ({ x, y, width, height }))).toEqual([{ x: 1, y: 0, width: 1, height: 1 }]);
     expect(fallback.coveredPixels).toBe(2);
-    await session.computeImageDiff('pair', OLD, NEW, 'center', 0);
+    await session.compareImages('pair', OLD, NEW, 'center', 0);
     expect(FakeWorker.started).toBe(1);
-    expect((await session.rethresholdImageDiff('pair', 255))?.regions).toEqual([]);
+    expect((await session.rerenderHeatmap('pair', 255))?.regions).toEqual([]);
   });
 });

@@ -1,7 +1,7 @@
 // The image pane: a single preview for added/deleted images, and a four-mode
 // visual diff (onion skin — with its blink autoplay — / side by side /
 // differences / swipe) for modified ones. The mode control lives in the diff
-// header (FileDiffViewer renders it in the same spot text diffs show
+// header (`LoadedFileDiff` renders it where text diffs show
 // Split/Unified — one place for "how do I view this diff" across the app).
 // One shared pan/zoom drives every mode, so switching modes keeps the
 // framing; zoom controls float over the stage (joined by the anchor toggle
@@ -16,18 +16,22 @@ import { useSpinDelay } from '../../../../lib/useSpinDelay';
 import { EmptyState } from '../../../../ui/EmptyState';
 import { CenteredSpinner } from '../../../../ui/Spinner';
 import { useDiffPreferences } from '../diffPreferencesStore';
-import { type DiffComposition, DifferencesMode, type DiffStats } from './DifferencesMode';
-import { composedSize, MAX_TOLERANCE } from './imageDiff';
+import { DifferencesMode } from './DifferencesMode';
+import { composedSize } from './composedFrame';
 import type { ImageDiffMode } from './imageDiffModes';
+import type { DiffStats } from './imageInfo';
 import { ImageInfoStrip } from './ImageInfoStrip';
 import { OnionSkinMode } from './OnionSkinMode';
 import { PixelInspector } from './PixelInspector';
+import { MAX_TOLERANCE } from './pixelComparison';
 import { SideBySideMode } from './SideBySideMode';
 import { ImageLayer, Viewport, World } from './stage';
 import { SwipeMode } from './SwipeMode';
 import { useDecodedImage } from './useDecodedImage';
+import type { CachedHeatmap } from './useHeatmap';
 import { usePanZoom } from './usePanZoom';
 import { ZoomControls } from './ZoomControls';
+import { zoomCommandOf } from './zoomKeys';
 import styles from './ImageDiffViewer.module.css';
 
 interface ImageDiffViewerProps {
@@ -42,12 +46,12 @@ export function ImageDiffViewer({ original, modified, mode }: ImageDiffViewerPro
   const oldState = useDecodedImage(original.image);
   const newState = useDecodedImage(modified.image);
   const { imageAnchor: anchor, imageTolerance, setImageAnchor, setImageTolerance } = useDiffPreferences();
-  const threshold = Math.min(MAX_TOLERANCE, Math.max(0, Math.round(imageTolerance)));
+  const tolerance = Math.min(MAX_TOLERANCE, Math.max(0, Math.round(imageTolerance)));
   // Onion blend lives here (not in the mode) so a trip through other modes
   // comes back to the same mix.
   const [blend, setBlend] = useState(0.5);
   const [stats, setStats] = useState<DiffStats | null>(null);
-  const diffCache = useRef<DiffComposition | null>(null);
+  const heatmapCache = useRef<CachedHeatmap | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
 
   const oldImage = oldState.status === 'ready' ? oldState.image : null;
@@ -66,15 +70,13 @@ export function ImageDiffViewer({ original, modified, mode }: ImageDiffViewerPro
   const decoding = !frame || (isDiff && (!oldImage || !newImage));
   const spin = useSpinDelay(decoding);
 
-  // Keyboard zoom on the focused stage: +/− step, 0 fits, 1 is 100%.
+  // Keyboard zoom on the focused stage (`zoomCommandOf`).
   const onKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      if (event.key === '+' || event.key === '=') panZoom.zoomIn();
-      else if (event.key === '-') panZoom.zoomOut();
-      else if (event.key === '0') panZoom.zoomToFit();
-      else if (event.key === '1') panZoom.zoomToActualSize();
-      else return;
+      const command = zoomCommandOf(event);
+      if (!command) return;
       event.preventDefault();
+      panZoom[command]();
     },
     [panZoom],
   );
@@ -108,9 +110,9 @@ export function ImageDiffViewer({ original, modified, mode }: ImageDiffViewerPro
                 frame={frame}
                 panZoom={panZoom}
                 anchor={anchor}
-                threshold={threshold}
-                onThresholdChange={setImageTolerance}
-                cache={diffCache}
+                tolerance={tolerance}
+                onToleranceChange={setImageTolerance}
+                cache={heatmapCache}
                 onStats={setStats}
               />
             )}
@@ -125,7 +127,7 @@ export function ImageDiffViewer({ original, modified, mode }: ImageDiffViewerPro
           old={oldImage && { image: oldImage, bytes: original.size }}
           new={newImage && { image: newImage, bytes: modified.size }}
           stats={mode === 'differences' && isDiff ? stats : null}
-          threshold={threshold}
+          tolerance={tolerance}
         />
       </div>
     </div>

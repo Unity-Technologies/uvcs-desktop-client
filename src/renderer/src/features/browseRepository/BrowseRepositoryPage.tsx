@@ -1,6 +1,4 @@
 import { useDeferredValue, useMemo, useState } from 'react';
-import { api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
 import type { PageProps } from '../../app/navigation/pages';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { ListWithDetails } from '../../components/ListWithDetails';
@@ -18,6 +16,7 @@ import { FILE_TREE_WIDTH } from '../files/fileTreeWidth';
 import { buildFileTreeRows } from '../files/fileTreeRows';
 import { ItemDetailsPane } from '../files/ItemDetailsPane';
 import { useTreeListings } from '../files/useTreeListings';
+import { repositoryListingQuery } from './repositoryListing';
 import { openRevision, revisionMenu } from './revisionMenu';
 
 /** The repository as it was at a changeset: read-only, no workspace needed. */
@@ -32,11 +31,7 @@ export function BrowseRepositoryPage({ page }: PageProps<'browseRepository'>) {
   const shownFilter = useDeferredValue(filter);
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
 
-  const { childrenByDirectory, isLoadingRoot, error } = useTreeListings(
-    (directory) => queryKeys.inWorkspace(workspacePath, 'explorer', 'repositoryDirectory', page.changesetId, directory),
-    (directory) => api.explorer.listRepositoryDirectory(workspacePath, page.changesetId, directory),
-    expanded,
-  );
+  const { childrenByDirectory, isLoadingRoot, error } = useTreeListings((directory) => repositoryListingQuery(workspacePath, page.changesetId, directory), expanded);
   const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, filter: shownFilter }), [childrenByDirectory, expanded, shownFilter]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
   const [revealPath, setRevealPath] = useState<string | null>(null);

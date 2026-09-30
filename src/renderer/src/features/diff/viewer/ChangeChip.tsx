@@ -5,8 +5,10 @@ import { hotkey } from '../../../lib/shortcutRegistry';
 import { Kbd } from '../../../ui/Kbd';
 import { regionContaining, type ChangedLine, type ChangeRegion } from './changeBlocks';
 import { chipAnchorLines, chipRegion, chipTop } from './chipPlacement';
+import type { DiffLayout } from './diffPreferencesStore';
 import { describeDiscard, wholeChangeLabel } from './discardAction';
 import type { HoveredLineStore } from './LineDiscardButton';
+import { numberCellSelector, pierreShadowRoot } from './pierreDom';
 import styles from './ChangeChip.module.css';
 
 interface ChangeChipProps {
@@ -16,7 +18,7 @@ interface ChangeChipProps {
   hovered: HoveredLineStore;
   /** Lines picked in the gutter: the chip acts on them instead of the whole change. */
   picked: ChangedLine[] | null;
-  layout: 'split' | 'unified';
+  layout: DiffLayout;
   /** The lines the chip would discard while the pointer is on it, to preview the result. */
   onPreview: (lines: ChangedLine[] | null) => void;
   onDiscard: (lines: ChangedLine[]) => void;
@@ -90,12 +92,12 @@ function useHoveredRegion(hovered: HoveredLineStore, regions: ChangeRegion[]): C
  * above it. The right end of a line is where code is least likely to be, and the line numbers and the start of the
  * line above (or its "N unmodified lines") stay in sight. `left` is the chip's right edge (it's moved back by its width).
  */
-function useChipPosition(containerRef: RefObject<HTMLElement | null>, region: ChangeRegion | undefined, layout: 'split' | 'unified'): { top: number; left: number } | null {
+function useChipPosition(containerRef: RefObject<HTMLElement | null>, region: ChangeRegion | undefined, layout: DiffLayout): { top: number; left: number } | null {
   const [position, setPosition] = useState<{ top: number; left: number } | null>(null);
 
   useLayoutEffect(() => {
     const container = containerRef.current;
-    const root = container?.querySelector('diffs-container')?.shadowRoot;
+    const root = pierreShadowRoot(container);
     if (!container || !root || !region) return setPosition(null);
     const place = (): void => {
       const lines = chipAnchorLines(region, layout);
@@ -119,8 +121,7 @@ function useChipPosition(containerRef: RefObject<HTMLElement | null>, region: Ch
   return position;
 }
 
-function numberCell(root: ShadowRoot, { side, lineNumber }: ChangedLine, layout: 'split' | 'unified'): Element | null {
-  const type = side === 'deletions' ? 'change-deletion' : 'change-addition';
-  const scope = layout === 'split' ? `[data-${side}] ` : '';
-  return root.querySelector(`${scope}[data-column-number="${lineNumber}"][data-line-type="${type}"]`);
+function numberCell(root: ShadowRoot, line: ChangedLine, layout: DiffLayout): Element | null {
+  const scope = layout === 'split' ? `[data-${line.side}] ` : '';
+  return root.querySelector(`${scope}${numberCellSelector(line)}`);
 }

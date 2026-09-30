@@ -1,8 +1,10 @@
+import { canAnnotate } from '@shared/domain/annotate';
 import type { TreeItem } from '@shared/domain/explorer';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { hasRevisions, isControlled } from '../pendingChanges/changeCategories';
 import type { PendingChangesIndex } from './itemStatus';
 import { hasRevisionType } from './itemType';
+import { isWorkspaceRoot } from './workspaceRoot';
 
 /** Which of the selected items each file menu action applies to. */
 export interface FileMenuTargets {
@@ -30,4 +32,23 @@ export function fileMenuTargets(items: TreeItem[], pendingChanges: PendingChange
 export function hasRevisionsToShow(item: TreeItem, pendingChanges: PendingChangesIndex): boolean {
   const change = pendingChanges.changeAt(item.path);
   return change ? hasRevisions(change) : !item.isPrivate;
+}
+
+/** Where one selected item leads, for its menu, the palette's commands and its details. */
+export interface ItemViews {
+  history: boolean;
+  /** The file annotated beside the tree, in its diff's place. */
+  annotate: boolean;
+  /** Back to the file's diff from its annotations: a controlled file has one. */
+  changes: boolean;
+}
+
+export function itemViews(item: TreeItem, pendingChanges: PendingChangesIndex): ItemViews {
+  const hasRevisions = hasRevisionsToShow(item, pendingChanges);
+  return {
+    // The root changes with every changeset: its history is the whole repository's.
+    history: hasRevisions && !isWorkspaceRoot(item),
+    annotate: hasRevisions && canAnnotate(item.itemType),
+    changes: !item.isPrivate && item.itemType !== 'directory',
+  };
 }

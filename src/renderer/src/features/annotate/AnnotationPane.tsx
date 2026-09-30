@@ -1,13 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
 import { Calendar, GitCommitVertical, User } from 'lucide-react';
 import { useMemo, type ReactNode } from 'react';
 import type { ItemRevision } from '@shared/domain/history';
-import { isPinnedSpec } from '@shared/domain/specs';
-import { api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
-import { IMMUTABLE_QUERY } from '../../app/queryClient';
-import { useOtherRepository, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { useOtherRepository } from '../../app/workspace/useWorkspace';
 import { pluralize } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
@@ -15,10 +10,12 @@ import { PaneToolbar, PaneToolbarGroup } from '../../ui/PaneToolbar';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { openChangesetDiff } from '../changesets/changesetOperations';
 import { AgeLegend } from './AgeLegend';
-import { AnnotatedCode, type BlockLinks } from './AnnotatedCode';
-import { useAnnotateOptions } from './annotateOptionsStore';
+import { AnnotatedCode } from './AnnotatedCode';
+import { useAnnotateOptions, type AnnotateColumns } from './annotateOptionsStore';
 import { annotationBlocks, distinctAuthors } from './annotationBlocks';
+import type { BlockLinks } from './blockLinks';
 import { revisionBefore } from './revisionBefore';
+import { useFileAnnotation } from './useFileAnnotation';
 import styles from './AnnotationPane.module.css';
 
 /** The history list an annotation sits beside, which then says which revision is annotated. */
@@ -46,20 +43,20 @@ interface AnnotationPaneProps {
   history?: AnnotationHistory;
 }
 
+/** The gutter's details the toolbar shows or hides. */
+const COLUMN_TOGGLES: { column: keyof AnnotateColumns; icon: ReactNode; label: string }[] = [
+  { column: 'author', icon: <User size={14} />, label: 'Show authors' },
+  { column: 'changeset', icon: <GitCommitVertical size={14} />, label: 'Show changesets' },
+  { column: 'date', icon: <Calendar size={14} />, label: 'Show dates' },
+];
+
 /** Who last changed each line of a file, with a toolbar to pick the details and walk back through older revisions. */
 export function AnnotationPane({ path, repository, revision, leading, history }: AnnotationPaneProps) {
-  const workspacePath = useWorkspacePath();
   const otherRepository = useOtherRepository(repository);
   const { columns, toggleColumn } = useAnnotateOptions();
   // By revision id: the path spec finds nothing in the changesets before the file moved.
   const spec = revision?.idSpec;
-
-  const { data: annotation, error } = useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'annotate', path, spec),
-    queryFn: () => api.annotate.file(workspacePath, path, spec),
-    // A revision pinned to a changeset is annotated once; the workspace's own version follows local edits.
-    ...(spec !== undefined && isPinnedSpec(spec) ? { staleTime: Infinity, meta: IMMUTABLE_QUERY } : {}),
-  });
+  const { data: annotation, error } = useFileAnnotation(path, spec);
 
   const blocks = useMemo(() => (annotation ? annotationBlocks(annotation) : []), [annotation]);
   const code = useMemo(() => annotation?.lines.map((line) => line.content).join('\n') ?? '', [annotation]);
@@ -91,15 +88,9 @@ export function AnnotationPane({ path, repository, revision, leading, history }:
       >
         <AgeLegend />
         <PaneToolbarGroup>
-          <IconButton size="small" icon={<User size={14} />} label="Show authors" variant={columns.author ? 'secondary' : 'ghost'} onClick={() => toggleColumn('author')} />
-          <IconButton
-            size="small"
-            icon={<GitCommitVertical size={14} />}
-            label="Show changesets"
-            variant={columns.changeset ? 'secondary' : 'ghost'}
-            onClick={() => toggleColumn('changeset')}
-          />
-          <IconButton size="small" icon={<Calendar size={14} />} label="Show dates" variant={columns.date ? 'secondary' : 'ghost'} onClick={() => toggleColumn('date')} />
+          {COLUMN_TOGGLES.map(({ column, icon, label }) => (
+            <IconButton key={column} size="small" icon={icon} label={label} variant={columns[column] ? 'secondary' : 'ghost'} onClick={() => toggleColumn(column)} />
+          ))}
         </PaneToolbarGroup>
       </PaneToolbar>
 

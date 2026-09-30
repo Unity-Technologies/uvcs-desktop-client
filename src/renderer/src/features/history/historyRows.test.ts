@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ItemPathChange, ItemRevision } from '@shared/domain/history';
-import { historyRowKey, historyRows, ownerOf, revisionRowKey } from './historyRows';
+import { dateOf, historyRowKey, historyRows, ownerOf, revisionIdRowKey, revisionRowKey } from './historyRows';
 
 const revision = (changesetId: number): ItemRevision => ({
   revisionId: changesetId * 10,
@@ -34,6 +34,26 @@ describe('revisionRowKey', () => {
   it('finds none for a changeset that only moved the item, or never touched it', () => {
     expect(revisionRowKey(rows, 7)).toBeNull();
     expect(revisionRowKey(rows, 4)).toBeNull();
+  });
+});
+
+describe('revisionIdRowKey', () => {
+  const rows = historyRows({ revisions: [revision(9), revision(1)], pathChanges: [change(7)] });
+
+  it('finds the row of a revision by its id', () => {
+    expect(revisionIdRowKey(rows, 10)).toBe('1');
+  });
+
+  it("finds none for a revision the history doesn't list, or no revision", () => {
+    expect(revisionIdRowKey(rows, 70)).toBeNull();
+    expect(revisionIdRowKey(rows, undefined)).toBeNull();
+  });
+});
+
+describe('dateOf', () => {
+  it('dates a revision or a move', () => {
+    expect(dateOf({ kind: 'revision', revision: { ...revision(3), date: '2026-02-03T00:00:00Z' } })).toBe('2026-02-03T00:00:00Z');
+    expect(dateOf({ kind: 'pathChange', change: { ...change(4), date: '2026-02-04T00:00:00Z' } })).toBe('2026-02-04T00:00:00Z');
   });
 });
 

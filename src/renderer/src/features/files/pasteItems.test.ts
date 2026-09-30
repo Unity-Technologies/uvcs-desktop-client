@@ -8,7 +8,7 @@ import { queryClient } from '../../app/queryClient';
 import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
 import { pressToastAction, shownToasts } from '../../testing/operationOutcome';
 import { useCutItemsStore } from './cutItemsStore';
-import { directoryListingKey } from './fileOperations';
+import { directoryListingKey } from './directoryListing';
 import { useFilesViewStore } from './filesViewStore';
 import { pasteCutItems, pastePlanFor } from './pasteItems';
 

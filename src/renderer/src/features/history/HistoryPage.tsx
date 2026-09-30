@@ -1,119 +1,57 @@
 import { History } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useMemo } from 'react';
 import type { PageProps } from '../../app/navigation/pages';
 import { useOtherRepository, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { detailsWidthOf, useDetailsWidthStore, type DetailsWidthLimits } from '../../components/detailsWidthStore';
-import { focusMain, isKeyboardTaken } from '../../lib/mainFocus';
-import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
-import { hotkey } from '../../lib/shortcutRegistry';
-import { matchesShortcut } from '../../lib/shortcuts';
-import { useShortcut } from '../../lib/useShortcut';
+import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { EmptyState } from '../../ui/EmptyState';
-import { HighlightQuery } from '../../ui/Highlight';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
+import { HighlightQuery } from '../../ui/Highlight';
 import { NoMatches } from '../../ui/NoMatches';
-import { useWorkspaceUser } from '../../app/account/accounts';
-import { PeopleFilter } from '../../components/people/PeopleFilter';
-import { EVERYONE, matchesPeople, type PeoplePick } from '../../lib/peopleFilter';
 import { ListSkeleton } from '../../ui/Skeleton';
 import { SplitPane } from '../../ui/SplitPane';
 import { ViewHeader } from '../../ui/ViewHeader';
 import type { AnnotationHistory } from '../annotate/AnnotationPane';
-import { otherFileView } from '../annotate/fileView';
 import { openChangesetDiff } from '../changesets/changesetOperations';
-import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
 import { HISTORY_ROW_HEIGHT, HistoryList } from './HistoryList';
 import { historyMenu } from './historyMenu';
+import { historyRowKey, historyRows, revisionRowKey, type HistoryRow } from './historyRows';
 import { initialHistoryRow } from './initialHistoryRow';
-import { historyRowKey, historyRows, ownerOf, revisionRowKey } from './historyRows';
-import { matchesHistorySearch } from './historySearch';
-import { PathChangeDetails } from './PathChangeDetails';
-import { RevisionDetails } from './RevisionDetails';
-import { RevisionHeader } from './RevisionHeader';
-import { shownRevisionView, useRevisionView, type RevisionView } from './revisionView';
+import { RevisionPane } from './RevisionPane';
+import { usePageRevisionView } from './revisionView';
+import { useHistoryFilters } from './useHistoryFilters';
+import { useHistorySelection } from './useHistorySelection';
 import { useItemHistory } from './useItemHistory';
-import styles from './HistoryPage.module.css';
 
 /** The revisions list on the left: as wide as it was left, the diff taking the rest. */
 const LIST_WIDTH: DetailsWidthLimits = { initial: 340, min: 260, max: 640 };
 const LIST_WIDTH_KEY = 'historyList';
 
-const single = (key: string): SelectionState => ({ selected: new Set([key]), anchor: key });
-
 /**
  * A file's history as the other list views read: its revisions (and moves) on the left, the selected one on the right,
- * under a header of its changeset, as a diff against the revision it was made from or annotated.
+ * under a header of its changeset, as a diff against the revision it was made from or annotated (`RevisionPane`).
  */
 export function HistoryPage({ page }: PageProps<'history'>) {
   const workspacePath = useWorkspacePath();
   const { data: history, error } = useItemHistory(page.path, page.revision);
   // A file under an xlink: its changesets, branches and labels are the xlinked repository's.
   const otherRepository = useOtherRepository(history?.revisions[0]?.repository);
-  const [search, setSearch] = useState('');
-  // A page's filters last as long as it: another file's history starts with everyone's revisions.
-  const [people, setPeople] = useState<PeoplePick>(EVERYONE);
-  const me = useWorkspaceUser();
-  const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
-  // Revisions left by "Annotate before this change", for Back; picking a row in the list starts over.
-  const [trail, setTrail] = useState<string[]>([]);
-  const [revealKey, setRevealKey] = useState<string | null>(null);
   const listWidth = useDetailsWidthStore((state) => detailsWidthOf(state, LIST_WIDTH_KEY, LIST_WIDTH));
   const setListWidth = useDetailsWidthStore((state) => state.setWidth);
-  const rememberedView = useRevisionView((state) => state.view);
-  const remember = useRevisionView((state) => state.setView);
-  // Opened to annotate, the page starts annotated without changing what plain histories open with; a pick is remembered.
-  const [openedWith, setOpenedWith] = useState(page.view);
-  const view = openedWith ?? rememberedView;
-  const setView = useCallback(
-    (picked: RevisionView) => {
-      setOpenedWith(undefined);
-      remember(picked);
-    },
-    [remember],
-  );
-  const paneRef = useRef<HTMLDivElement>(null);
+  const [view, setView] = usePageRevisionView(page.view);
 
   const rows = useMemo(() => (history ? historyRows(history) : []), [history]);
-  const labelsByChangeset = useLabelsByChangeset(otherRepository);
-  const authors = useMemo(() => rows.map(ownerOf), [rows]);
-  const visible = useMemo(
-    () =>
-      rows.filter(
-        (row) => matchesPeople(people, me, ownerOf(row)) && matchesHistorySearch(row, search, row.kind === 'revision' ? labelsByChangeset.get(row.revision.changesetId) : undefined),
-      ),
-    [rows, people, me, search, labelsByChangeset],
-  );
-  const clearFilters = useCallback(() => {
-    setSearch('');
-    setPeople(EVERYONE);
-  }, []);
-  const selectedRows = useMemo(() => rows.filter((row) => selection.selected.has(historyRowKey(row))), [rows, selection]);
-  const selectedRevisions = selectedRows.flatMap((row) => (row.kind === 'revision' ? [row.revision] : []));
-  const focusedRow = rows.find((row) => historyRowKey(row) === selection.anchor);
-  const focusedChange = selectedRows.length === 1 && selectedRows[0]!.kind === 'pathChange' ? selectedRows[0]!.change : undefined;
-  const initialKey = history && initialHistoryRow(rows, history, page);
+  const filters = useHistoryFilters(rows, otherRepository);
+  const selection = useHistorySelection({
+    initialKey: history && initialHistoryRow(rows, history, page),
+    visible: filters.visible,
+    clearFilters: filters.clear,
+  });
+  const selectedRows = useMemo(() => rows.filter((row) => selection.selection.selected.has(historyRowKey(row))), [rows, selection.selection]);
+  const focusedRow = rows.find((row) => historyRowKey(row) === selection.selection.anchor);
 
-  useEffect(() => {
-    if (selection.anchor === null && initialKey) {
-      setSelection(single(initialKey));
-      setRevealKey(initialKey);
-    }
-  }, [selection.anchor, initialKey]);
-
-  /**
-   * Selects a row from the pane (an annotated block, "Annotate before this change"), showing it even if the filter hid
-   * it. The keyboard goes with the selection: the pane shows another revision now.
-   */
-  const selectFromPane = useCallback(
-    (key: string): void => {
-      if (!visible.some((row) => historyRowKey(row) === key)) clearFilters();
-      setSelection(single(key));
-      setRevealKey(key);
-      focusMain(document);
-    },
-    [visible, clearFilters],
-  );
+  const { selectFromPane, selectAnew, walkBackTo } = selection;
   const annotationHistory = useMemo<AnnotationHistory>(
     () => ({
       revisions: history?.revisions ?? [],
@@ -122,15 +60,12 @@ export function HistoryPage({ page }: PageProps<'history'>) {
         if (key) selectFromPane(key);
         else if (!otherRepository) openChangesetDiff({ id: changesetId }, page.path);
       },
-      annotate: (revision) => {
-        if (selection.anchor) setTrail((current) => [...current, selection.anchor!]);
-        selectFromPane(historyRowKey({ kind: 'revision', revision }));
-      },
+      annotate: (revision) => walkBackTo(historyRowKey({ kind: 'revision', revision })),
     }),
-    [history, rows, selectFromPane, selection.anchor, page.path, otherRepository],
+    [history, rows, selectFromPane, walkBackTo, page.path, otherRepository],
   );
   const menu = useCallback(
-    (selected: typeof rows) =>
+    (selected: HistoryRow[]) =>
       historyMenu(
         {
           workspacePath,
@@ -138,39 +73,21 @@ export function HistoryPage({ page }: PageProps<'history'>) {
           ofWorkspaceFile: page.revision === undefined,
           otherRepository,
           annotate: (revision) => {
-            setTrail([]);
-            selectFromPane(historyRowKey({ kind: 'revision', revision }));
+            selectAnew(historyRowKey({ kind: 'revision', revision }));
             setView('annotate');
           },
         },
         selected,
       ),
-    [workspacePath, page.path, page.revision, otherRepository, selectFromPane, setView],
+    [workspacePath, page.path, page.revision, otherRepository, selectAnew, setView],
   );
-  const back = (): void => {
-    const previous = trail.at(-1);
-    if (!previous) return;
-    setTrail(trail.slice(0, -1));
-    selectFromPane(previous);
-  };
-
-  const togglable = focusedRow?.kind === 'revision' && shownRevisionView('annotate', focusedRow.revision.itemType) === 'annotate';
-  useShortcut(hotkey('historyToggleView'), () => setView(otherFileView(view)), togglable);
-  // Into the diff or the annotation, and Esc back to the list, as in any list beside a file.
-  useShortcut(hotkey('historyEnterPane'), () => paneRef.current?.querySelector<HTMLElement>('[role="region"]')?.focus(), Boolean(focusedRow));
-  const leavePane = (event: KeyboardEvent): void => {
-    const inPane = event.target instanceof Node && event.currentTarget.contains(event.target);
-    if (event.defaultPrevented || !inPane || isKeyboardTaken() || !matchesShortcut(event.nativeEvent, hotkey('historyLeavePane'))) return;
-    event.preventDefault();
-    focusMain(document);
-  };
 
   const header = (
-    <ViewHeader title={page.path} count={history && visible.length} total={rows.length}>
+    <ViewHeader title={page.path} count={history && filters.visible.length} total={rows.length}>
       {rows.length > 0 && (
         <FilterBar
-          text={<FilterField value={search} onChange={setSearch} placeholder="Filter revisions" />}
-          people={<PeopleFilter value={people} onChange={setPeople} people={authors} mineTip="Revisions you checked in" />}
+          text={<FilterField value={filters.search} onChange={filters.setSearch} placeholder="Filter revisions" />}
+          people={<PeopleFilter value={filters.people} onChange={filters.setPeople} people={filters.authors} mineTip="Revisions you checked in" />}
         />
       )}
     </ViewHeader>
@@ -190,52 +107,35 @@ export function HistoryPage({ page }: PageProps<'history'>) {
         size={listWidth}
         onSizeChange={(size) => setListWidth(LIST_WIDTH_KEY, size)}
         first={
-          visible.length === 0 ? (
-            <NoMatches icon={<History size={22} />} noun="revisions" onClear={clearFilters} />
+          filters.visible.length === 0 ? (
+            <NoMatches icon={<History size={22} />} noun="revisions" onClear={filters.clear} />
           ) : (
-            <HighlightQuery query={search}>
+            <HighlightQuery query={filters.search}>
               <HistoryList
-                rows={visible}
-                selection={selection}
-                onSelectionChange={(next) => {
-                  setTrail([]);
-                  setSelection(next);
-                }}
+                rows={filters.visible}
+                selection={selection.selection}
+                onSelectionChange={selection.selectInList}
                 contextMenu={menu}
                 workspaceRevisionId={history.workspaceRevisionId}
-                revealKey={revealKey}
+                revealKey={selection.revealKey}
                 otherRepository={otherRepository}
               />
             </HighlightQuery>
           )
         }
         second={
-          <div ref={paneRef} className={styles.pane} onKeyDown={leavePane}>
-            {focusedRow && (
-              <RevisionHeader
-                key={historyRowKey(focusedRow)}
-                row={focusedRow}
-                path={page.path}
-                menu={menu([focusedRow])}
-                otherRepository={otherRepository}
-                isWorkspaceRevision={focusedRow.kind === 'revision' && focusedRow.revision.revisionId === history.workspaceRevisionId}
-              />
-            )}
-            {focusedChange ? (
-              <PathChangeDetails change={focusedChange} otherRepository={otherRepository} />
-            ) : (
-              <RevisionDetails
-                path={page.path}
-                revisions={history.revisions}
-                selected={selectedRevisions}
-                onBack={trail.length > 0 ? back : undefined}
-                history={annotationHistory}
-                otherRepository={otherRepository}
-                picked={view}
-                onPick={setView}
-              />
-            )}
-          </div>
+          <RevisionPane
+            path={page.path}
+            history={history}
+            focusedRow={focusedRow}
+            selectedRows={selectedRows}
+            menu={menu}
+            onBack={selection.back}
+            annotationHistory={annotationHistory}
+            otherRepository={otherRepository}
+            view={view}
+            onPickView={setView}
+          />
         }
       />
     </>

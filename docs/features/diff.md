@@ -57,16 +57,16 @@ its gutter (`features/diff/viewer/useBlockDiscard`): hovering a changed line off
 line, ↶ restores a removed one) and a chip at the right end of the change's top edge (in the pane of its new code, clear
 of the line numbers and of the start of the line above) the whole change. Line numbers pick lines (click,
 Shift+click, drag, shown as they're picked; only changed lines' numbers react) and the chip then acts on them
-("Restore 3 lines", ⌥⌘Z); picked lines show no line button of their own, and Esc or a click elsewhere drops the
-pick. Only lines the diff has as changed offer a button, as Pierre recolors lines a moment after typing stops and a
+("Restore 3 lines", ⌥⌘Z: `useLinePick`); picked lines show no line button of their own, and Esc or a click elsewhere
+drops the pick. Only lines the diff has as changed offer a button, as Pierre recolors lines a moment after typing stops and a
 hovered line may stop being one as the text changes under the pointer. After a discard the line that slides under
 the still pointer is hovered anew, so clicking on removes the lines
-below one by one (a click within 150 ms of the last is the rest of a double click). While typing, the chip stays
+below one by one (a click within 150 ms of the last is the rest of a double click: `useLineDiscarding`). While typing, the chip stays
 hidden until typing pauses. The diff's focus ring is for the keyboard only (`usePointerFocusMark`: clicks mark what
 they focus, since Chromium shows `:focus-visible` once any key, even Shift, is pressed). The new text is computed in
 the renderer (`discardLines`). Without unsaved edits it's shown at once and written, and each file keeps an undo
 stack for the session (⌘Z in the diff); with some, it's one more edit in the editor, unsaved, and ⌘Z takes it back
-like typing.
+like typing (`diffDiscards`).
 
 ## Moving through changes
 
@@ -132,6 +132,19 @@ Committed diffs (changeset, branch, shelve, range, code review) keep marks too, 
 by the diff's name (`cs:42`, `br:/main/task`, `sh:3`) and the revision reviewed, so a branch's file is changed since its review once
 another revision shows; the least recently reviewed diffs are forgotten. `features/review` holds the shared list pieces.
 Marks only show in review mode, a per-workspace setting (`reviewModeWorkspaces`, off by default); leaving it keeps the marks.
+
+## Pierre workarounds
+
+Each place the viewer reaches into Pierre (1.5.1) or `diff` past their public API is one module named for it. Those
+that patch or read internals have a test that fails when an update moves them:
+
+- `pierreDom`: where Pierre renders (the `diffs-container` shadow root, its rows' `data-line-type`, `data-line` and
+  `data-column-number`), the gutter button slot moved to the hovered line, and hovering anew under a still pointer.
+  The tests run without a page, so this one is checked on screen.
+- `pierreLineComparison`: typing re-diffs under the comparison method (see Comparison method).
+- `pierrePlainTextRender`: a diff shown as plain text renders once, not at every render (see Editing in the diff).
+- `pierreLinePosition`: where a line not rendered yet sits, to scroll to a change (see Moving through changes).
+- `boundedLineDiff`: every line diff, `diff`'s and Pierre's, keys lines once and stays linear (see Comparison method).
 
 ## Memory
 

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
+import { pierreShadowRoot } from './pierreDom';
 import { useShadowStyle } from './useShadowStyle';
 import styles from './PaneScrollbars.module.css';
 
@@ -33,7 +34,7 @@ export function PaneScrollbars({ containerRef }: PaneScrollbarsProps) {
 
   useEffect(() => {
     const container = containerRef.current;
-    const root = container?.querySelector('diffs-container')?.shadowRoot;
+    const root = pierreShadowRoot(container);
     if (!container || !root) return;
     let frame = 0;
     const resize = new ResizeObserver(() => schedule());

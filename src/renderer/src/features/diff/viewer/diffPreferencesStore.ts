@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { DEFAULT_COMPARISON_METHOD, type ComparisonMethod } from './comparisonMethod';
 import type { Representation } from './diffPresentation';
-import type { AnchorMode } from './image/imageDiff';
+import type { AnchorMode } from './image/composedFrame';
 import type { ImageDiffMode } from './image/imageDiffModes';
 
 export type DiffLayout = 'split' | 'unified';

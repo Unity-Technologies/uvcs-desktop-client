@@ -4,57 +4,45 @@
 // underneath it — exactly how a film wipe behaves.
 
 import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import type { AnchorMode } from './imageDiff';
+import type { AnchorMode, Size } from './composedFrame';
+import { followDrag, isDragButton } from './pointerDrag';
 import { ImageLayer, SideChip, Viewport, World } from './stage';
 import type { DecodedImage } from './useDecodedImage';
 import type { PanZoom } from './usePanZoom';
 import styles from './SwipeMode.module.css';
 
+/** The divider stays this far in from the edges, so it can always be grabbed again. */
+const MIN_SPLIT = 0.02;
+const MAX_SPLIT = 0.98;
+const CENTERED_SPLIT = 0.5;
+/** Below this size on screen, the image would be covered by the divider's 32px knob: only the line shows. */
+const MIN_SIZE_FOR_KNOB = 96;
+
 interface SwipeModeProps {
   oldImage: DecodedImage;
   newImage: DecodedImage;
-  frame: { width: number; height: number };
+  frame: Size;
   panZoom: PanZoom;
   anchor: AnchorMode;
 }
 
 export function SwipeMode({ oldImage, newImage, frame, panZoom, anchor }: SwipeModeProps) {
   /** Divider position as a fraction of the viewport width. */
-  const [split, setSplit] = useState(0.5);
+  const [split, setSplit] = useState(CENTERED_SPLIT);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // The whole divider is the drag surface (a 14px invisible strip around the
-  // 2px line — splitter-style tolerance), not just the knob.
-  const onDividerDown = useCallback((event: ReactPointerEvent) => {
-    // Left or middle button, matching the stage's pan (middle acts as
-    // primary across the image viewer); never the context-menu button.
-    if (event.button !== 0 && event.button !== 1) return;
+  // The whole divider drags (a 14px strip around the 2px line, as a splitter does), not just the knob.
+  const onDividerDown = useCallback((event: ReactPointerEvent<HTMLElement>) => {
     const container = containerRef.current;
-    if (!container) return;
-    const strip = event.currentTarget as HTMLElement;
-    strip.setPointerCapture(event.pointerId);
-    const move = (moveEvent: PointerEvent) => {
+    if (!isDragButton(event.button) || !container) return;
+    followDrag(event.currentTarget, event.pointerId, (drag) => {
       const rect = container.getBoundingClientRect();
-      setSplit(Math.min(0.98, Math.max(0.02, (moveEvent.clientX - rect.left) / rect.width)));
-    };
-    const up = () => {
-      strip.removeEventListener('pointermove', move);
-      strip.removeEventListener('pointerup', up);
-      strip.removeEventListener('pointercancel', up);
-      strip.removeEventListener('lostpointercapture', up);
-    };
-    strip.addEventListener('pointermove', move);
-    strip.addEventListener('pointerup', up);
-    strip.addEventListener('pointercancel', up);
-    // Same safety net as the stage pan: end the drag whenever the capture is
-    // lost, even if the release lands outside the window.
-    strip.addEventListener('lostpointercapture', up);
+      setSplit(Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, (drag.clientX - rect.left) / rect.width)));
+    });
   }, []);
 
-  // At far-out zoom the 32px knob would cover the whole picture — fade it
-  // away and let the (fully draggable) line carry the interaction.
   const { scale } = panZoom.transform;
-  const handleHidden = Math.min(frame.width * scale, frame.height * scale) < 96;
+  const knobHidden = Math.min(frame.width * scale, frame.height * scale) < MIN_SIZE_FOR_KNOB;
 
   return (
     <div className={styles.swipe} ref={containerRef}>
@@ -71,16 +59,16 @@ export function SwipeMode({ oldImage, newImage, frame, panZoom, anchor }: SwipeM
         </div>
         {/* data-no-pan: the viewport's native pan listener fires before any
             React handler here could stopPropagation — the stage checks the
-            attribute instead (see usePanZoom NO_PAN_TARGETS). Double-click
+            attribute instead (`STAGE_CONTROLS`). Double-click
             snaps the split back to center. */}
         <div
           className={styles.divider}
           style={{ left: `${split * 100}%` }}
           data-no-pan
           onPointerDown={onDividerDown}
-          onDoubleClick={() => setSplit(0.5)}
+          onDoubleClick={() => setSplit(CENTERED_SPLIT)}
         >
-          <div className={styles.handle} data-hidden={handleHidden || undefined}>
+          <div className={styles.handle} data-hidden={knobHidden || undefined}>
             <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
               <path
                 d="M5 3 1.8 7 5 11M9 3l3.2 4L9 11"

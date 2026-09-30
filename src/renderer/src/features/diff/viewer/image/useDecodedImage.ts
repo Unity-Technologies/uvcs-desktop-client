@@ -12,7 +12,7 @@ export interface DecodedImage {
   /** The image's blob URL, ready for <img src> while the image is shown. */
   src: string;
   /** The decoded element — the differences mode draws it onto a canvas. */
-  el: HTMLImageElement;
+  element: HTMLImageElement;
   width: number;
   height: number;
 }
@@ -39,7 +39,7 @@ export function useDecodedImage(image: ImageBytes | undefined): DecodeState {
     img.onload = () => {
       if (stale) return;
       const size = decodedSize({ width: img.naturalWidth, height: img.naturalHeight }, image.mimeType === 'image/svg+xml');
-      setState({ status: 'ready', image: { src: url, el: img, ...size } });
+      setState({ status: 'ready', image: { src: url, element: img, ...size } });
     };
     img.onerror = () => {
       if (!stale) setState({ status: 'error' });

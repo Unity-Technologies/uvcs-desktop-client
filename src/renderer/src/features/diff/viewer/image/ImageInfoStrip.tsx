@@ -1,5 +1,4 @@
-import type { DiffStats } from './DifferencesMode';
-import { changedLabel, sideLabel } from './imageInfo';
+import { changedLabel, sideLabel, type DiffStats } from './imageInfo';
 import type { DecodedImage } from './useDecodedImage';
 import styles from './ImageInfoStrip.module.css';
 
@@ -11,14 +10,14 @@ interface ImageSide {
 interface ImageInfoStripProps {
   old: ImageSide | null;
   new: ImageSide | null;
-  /** Differences-mode stats, when that mode is showing. */
+  /** How much differs, while the Differences mode shows. */
   stats: DiffStats | null;
-  threshold: number;
+  tolerance: number;
 }
 
 /** Narrates the change, bottom left: dimensions and size per side, then how much differs. */
-export function ImageInfoStrip({ old, new: next, stats, threshold }: ImageInfoStripProps) {
-  const changed = stats && changedLabel(stats.changedPixels, stats.coveredPixels, threshold);
+export function ImageInfoStrip({ old, new: next, stats, tolerance }: ImageInfoStripProps) {
+  const changed = stats && changedLabel(stats, tolerance);
   return (
     <div className={styles.strip}>
       {old && (

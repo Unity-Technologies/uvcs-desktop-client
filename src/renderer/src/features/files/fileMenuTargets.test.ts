@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TreeItem } from '@shared/domain/explorer';
 import type { ChangeKind, PendingChange } from '@shared/domain/pendingChanges';
-import { fileMenuTargets, hasRevisionsToShow } from './fileMenuTargets';
+import { fileMenuTargets, hasRevisionsToShow, itemViews } from './fileMenuTargets';
 import { PendingChangesIndex } from './itemStatus';
 
 const item = (path: string, overrides: Partial<TreeItem> = {}): TreeItem => ({
@@ -51,5 +51,24 @@ describe('hasRevisionsToShow', () => {
     expect(hasRevisionsToShow(item('lib.ts'), index)).toBe(true);
     expect(hasRevisionsToShow(item('new.ts', { revisionId: -1 }), index)).toBe(false);
     expect(hasRevisionsToShow(item('notes.txt', { isPrivate: true }), index)).toBe(false);
+  });
+});
+
+describe('itemViews', () => {
+  const none = new PendingChangesIndex([]);
+
+  it("leads a controlled file to its history, its annotations and its diff", () => {
+    expect(itemViews(item('app.ts'), none)).toEqual({ history: true, annotate: true, changes: true });
+  });
+
+  it('leads a folder to its history only, and the workspace root nowhere: its history is the whole repository', () => {
+    expect(itemViews(item('src', { itemType: 'directory' }), none)).toEqual({ history: true, annotate: false, changes: false });
+    expect(itemViews(item('', { itemType: 'directory' }), none)).toEqual({ history: false, annotate: false, changes: false });
+  });
+
+  it('has no history or annotations for a file without revisions yet', () => {
+    const added = new PendingChangesIndex([change('new.ts', 'added')]);
+    expect(itemViews(item('new.ts'), added)).toEqual({ history: false, annotate: false, changes: true });
+    expect(itemViews(item('notes.txt', { isPrivate: true }), none)).toEqual({ history: false, annotate: false, changes: false });
   });
 });

@@ -17,8 +17,10 @@ where there is something to annotate) shows the file annotated instead, with wha
 description (kept as the selection moves), its revision by id in its repository (`itemRevision`), or
 as on disk while it has changes. A folder shows what it holds and its last change. The diff and `cm` lookups wait for
 the selection to settle (`useSettledValue`, without remounting); revisions are cached immutable. F6 moves the keys
-into the diff to scroll it, F6 or Esc back to the tree, which keeps `MAIN_FOCUS`. Browse repository shows its tree
-the same way, every item as its revision (with a filter of its open folders).
+into the diff to scroll it, F6 or Esc back to the tree, which keeps `MAIN_FOCUS`. Every folder listing of the
+workspace is one query (`directoryListingQuery`), shared by the tree, Go to file's actions, Paste and the name checks.
+Browse repository shows its tree the same way, every item as its revision (with a filter of its open folders); a
+changeset's tree never changes, so each of its folders is read once (`repositoryListingQuery`, immutable).
 
 ## Finding a file
 
@@ -35,13 +37,13 @@ on the left (`HistoryList`, two lines a row: avatar and comment, then cs:N · br
 italics; the workspace's revision with the house, which `cm ls` reads from the workspace alongside `cm history`),
 as wide as it was left (`detailsWidthStore`, `historyList`), and the selected one on the right: a header of its
 changeset (`RevisionHeader`: comment, author · date · cs:N to copy · branch chip, Changeset diff, Show in Branch
-Explorer, the row's menu behind "More actions") over one pane that shows it as a Diff against the revision it was
+Explorer, the row's menu behind "More actions") over one pane (`RevisionPane`) that shows it as a Diff against the revision it was
 made from (`parentRevision`) or annotated, switched with "Diff | Annotate" (⇧⌘T), remembered (`revisionView`).
 A history opens on the revision asked for (`select`: by changeset, or by revision id wherever the file was then),
 else the newest (`initialHistoryRow`). Every "Annotate" but the Files view's opens it with `view: 'annotate'`
 (`annotatedHistory`: Changes, the palette, a diff's file at the revision the diff shows, a row's "Annotate this
 revision" in place), on the workspace's revision unless it names one; only a view picked in the page is remembered for the next histories.
-Two selected revisions are compared with each other. The header follows the selection at once; the pane waits for
+Two selected revisions are compared with each other (`comparedRevisions`). The header follows the selection at once; the pane waits for
 it to settle (`useSettledValue`), and every revision's contents and annotation are cached as immutable. The list
 keeps the keyboard; ⌘E goes into the pane and Esc back.
 
@@ -62,8 +64,10 @@ Esc lets go, before Esc leaves the pane). Its avatar and comment (the text, not 
 (`AnnotationCard`: the whole comment, Open changeset, Annotate before, Show in history, and a hint of how to find the
 changeset's other blocks) and pick the block and pin it when clicked. Only the changeset number leads away (a link): beside a history it
 (or Enter) selects the block's revision there, in Files it opens the file's history on that revision, as Show in
-history does; the rest of the cell only picks. Walking back selects the revision before, with Back. ⌥↓ ⌥↑ walk the blocks (with ⇧, those of the same changeset), Space opens the card. The gutter, the rules
-and Pierre's code render only the lines in view; the code highlights as a read-only diff does (`syntaxHighlighting`).
+history does; the rest of the cell only picks. Walking back selects the revision before, with Back (the trail `useHistorySelection` keeps; picking in the list starts it over). ⌥↓ ⌥↑ walk the blocks (with ⇧, those of the same changeset), Space opens the card. The gutter, the rules
+and Pierre's code render only the lines in view, at one pinned line height (`annotationLayout`); the code highlights as a
+read-only diff does (`syntaxHighlighting`). A pinned revision's annotation is cached as immutable, the workspace's
+follows its edits (`isImmutableAnnotation`).
 
 ## Moving items (cut and paste)
 

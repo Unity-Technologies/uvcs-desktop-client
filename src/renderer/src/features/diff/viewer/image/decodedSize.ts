@@ -1,3 +1,5 @@
+import type { Size } from './composedFrame';
+
 /** SVGs without width/height decode as 0×0; give them a sane canvas. */
 const FALLBACK_SIZE = { width: 300, height: 150 };
 /**
@@ -5,11 +7,6 @@ const FALLBACK_SIZE = { width: 300, height: 150 };
  * every mode rasterizes it at that size: past this it is drawn smaller, keeping its proportions. Vectors stay sharp.
  */
 export const MAX_VECTOR_PIXELS = 4096 * 4096;
-
-export interface Size {
-  width: number;
-  height: number;
-}
 
 /** The size an image is laid out and rasterized at: its own, within `MAX_VECTOR_PIXELS` for vectors. */
 export function decodedSize(natural: Size, vector: boolean): Size {

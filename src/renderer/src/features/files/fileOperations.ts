@@ -1,11 +1,10 @@
 import type { RevisionType, TreeItem } from '@shared/domain/explorer';
 import { api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
 import { runAction, runRead } from '../../app/operations/runOperation';
-import { queryClient } from '../../app/queryClient';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { absolutePath, deletePrivateFiles, fileName } from '../pendingChanges/pendingChangeOperations';
+import { listedItems } from './directoryListing';
 import { useFilesViewStore } from './filesViewStore';
 import { parentOf } from './fileTreeRows';
 import { itemNameProblem } from './itemName';
@@ -102,15 +101,6 @@ export function changeRevisionType(workspacePath: string, items: TreeItem[], typ
 /** The names in a folder, as far as its listing is read. */
 function listedNames(workspacePath: string, directory: string): string[] {
   return listedItems(workspacePath, directory)?.map((item) => item.name) ?? [];
-}
-
-/** A folder's listing, if it was read. */
-export function listedItems(workspacePath: string, directory: string): TreeItem[] | undefined {
-  return queryClient.getQueryData<TreeItem[]>(directoryListingKey(workspacePath, directory));
-}
-
-export function directoryListingKey(workspacePath: string, directory: string) {
-  return queryKeys.inWorkspace(workspacePath, 'explorer', 'directory', directory);
 }
 
 /** The directory new items go into: the selected directory itself, or the parent of the selected file. */

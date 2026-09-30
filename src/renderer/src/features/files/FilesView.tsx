@@ -1,8 +1,6 @@
 import { FilePlus, FolderPlus, RefreshCw, Search } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { selectAfterLeaving } from '../../app/navigation/leaveGuard';
@@ -18,6 +16,7 @@ import { usePendingChanges } from '../pendingChanges/usePendingChanges';
 import { useExpandedDirectories, useExpandedDirectoriesStore } from './expandedDirectoriesStore';
 import { fileMenu, FILE_SHORTCUTS } from './fileMenu';
 import { useCutItems } from './cutItemsStore';
+import { directoryListingQuery } from './directoryListing';
 import { CutHint } from './CutHint';
 import { createItem, openItem, targetDirectoryFor } from './fileOperations';
 import { useFilesViewStore } from './filesViewStore';
@@ -48,17 +47,14 @@ export function FilesView() {
   const [selection, setSelection] = useViewSelection('files');
   const [revealPath, setRevealPath] = useState<string | null>(null);
 
-  const { childrenByDirectory, isLoadingRoot, error } = useTreeListings(
-    (directory) => queryKeys.inWorkspace(workspacePath, 'explorer', 'directory', directory),
-    (directory) => api.explorer.listDirectory(workspacePath, directory),
-    expanded,
-  );
+  const { childrenByDirectory, isLoadingRoot, error } = useTreeListings((directory) => directoryListingQuery(workspacePath, directory), expanded);
   const pendingIndex = useMemo(() => new PendingChangesIndex(pendingChanges?.changes ?? []), [pendingChanges]);
   const locks = usePendingLocks(workspacePath, workspace?.repository, pendingChanges?.changes ?? NO_CHANGES, pendingChangesUpdatedAt);
   const root = useMemo(() => workspace && { item: workspaceRootItem(workspace), expanded: rootExpanded }, [workspace, rootExpanded]);
   const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, root }), [childrenByDirectory, expanded, root]);
   const selectedItems = useMemo(() => rows.filter((row) => selection.selected.has(row.item.path)).map((row) => row.item), [rows, selection]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
+  const focusedMenu = focused ? fileMenu(workspacePath, [focused], pendingIndex, locks) : [];
 
   const revealRequest = useFilesViewStore((state) => state.revealRequest);
   useEffect(() => {
@@ -133,14 +129,14 @@ export function FilesView() {
         }
         details={
           focused && workspace && isWorkspaceRoot(focused) ? (
-            <WorkspaceRootDetails workspace={workspace} menu={fileMenu(workspacePath, [focused], pendingIndex, locks)} />
+            <WorkspaceRootDetails workspace={workspace} menu={focusedMenu} />
           ) : focused ? (
             <ItemDetailsPane
               workspacePath={workspacePath}
               item={focused}
               pendingIndex={pendingIndex}
               lock={locks.get(focused.path)}
-              menu={fileMenu(workspacePath, [focused], pendingIndex, locks)}
+              menu={focusedMenu}
               onSelectFolder={selectFolder}
               folderContents={childrenByDirectory.get(focused.path)}
             />

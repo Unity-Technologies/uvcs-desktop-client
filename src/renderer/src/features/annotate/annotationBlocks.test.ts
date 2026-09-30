@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Annotation } from '@shared/domain/annotate';
-import { adjacentBlock, annotationBlocks, blockAt, blocksInView, distinctAuthors } from './annotationBlocks';
+import { adjacentBlock, annotationBlocks, blockAt, blocksInView, distinctAuthors, highlightedChangeset, otherBlocksOfChangeset, walkedBlock } from './annotationBlocks';
 
 const changeset = (changesetId: number, date: string, owner = 'jane@example.com') => ({
   changesetId,
@@ -60,15 +60,48 @@ describe('adjacentBlock', () => {
     expect(adjacentBlock(blocks, 0, -1)).toBeNull();
   });
 
-  it('starts at the first or last block from none', () => {
-    expect(adjacentBlock(blocks, -1, 1)).toBe(0);
-    expect(adjacentBlock(blocks, -1, -1)).toBe(4);
-  });
-
   it('jumps to the other places the same changeset changed', () => {
     expect(adjacentBlock(blocks, 1, 1, true)).toBe(4);
     expect(adjacentBlock(blocks, 4, -1, true)).toBe(1);
     expect(adjacentBlock(blocks, 2, 1, true)).toBeNull();
+  });
+});
+
+describe('walkedBlock', () => {
+  it('walks from the picked block', () => {
+    expect(walkedBlock(blocks, 2, 1, false, 0)).toBe(3);
+    expect(walkedBlock(blocks, 1, 1, true, 0)).toBe(4);
+    expect(walkedBlock(blocks, 0, -1, false, 5)).toBeNull();
+  });
+
+  it('picks the block at the top of the view first, whichever the key', () => {
+    expect(walkedBlock(blocks, -1, 1, false, 5)).toBe(2);
+    expect(walkedBlock(blocks, -1, -1, true, 6)).toBe(3);
+  });
+
+  it('has nowhere to go in an empty file', () => {
+    expect(walkedBlock([], -1, 1, false, 0)).toBeNull();
+  });
+});
+
+describe('otherBlocksOfChangeset', () => {
+  it("counts the other places the block's changeset changed", () => {
+    expect([0, 1, 2, 3, 4].map((index) => otherBlocksOfChangeset(blocks, index))).toEqual([1, 1, 0, 1, 1]);
+  });
+
+  it('has none without a block', () => {
+    expect(otherBlocksOfChangeset(blocks, -1)).toBe(0);
+  });
+});
+
+describe('highlightedChangeset', () => {
+  it("lights up the picked block's changeset when it changed other blocks too", () => {
+    expect(highlightedChangeset(blocks, 1)).toBe(7);
+  });
+
+  it('lights up nothing for a changeset of one block, or with nothing picked', () => {
+    expect(highlightedChangeset(blocks, 2)).toBeNull();
+    expect(highlightedChangeset(blocks, -1)).toBeNull();
   });
 });
 

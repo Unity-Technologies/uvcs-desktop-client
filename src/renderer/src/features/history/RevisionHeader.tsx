@@ -17,7 +17,7 @@ import { BranchChip } from '../branches/BranchChip';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { openChangesetDiff } from '../changesets/changesetOperations';
 import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
-import { changesetOf, type HistoryRow } from './historyRows';
+import { changesetOf, dateOf, ownerOf, type HistoryRow } from './historyRows';
 import styles from './RevisionHeader.module.css';
 
 interface RevisionHeaderProps {
@@ -35,8 +35,10 @@ export function RevisionHeader({ row, path, menu, otherRepository, isWorkspaceRe
   const [expanded, setExpanded] = useState(false);
   const changesetId = changesetOf(row);
   const labels = useLabelsByChangeset(otherRepository).get(changesetId);
-  const { owner, date } = row.kind === 'revision' ? row.revision : row.change;
+  const owner = ownerOf(row);
+  const date = dateOf(row);
   const { summary, description } = row.kind === 'revision' ? splitComment(row.revision.comment) : { summary: row.change.description, description: '' };
+  // The header's own buttons already offer these two.
   const moreActions = withoutAction(withoutAction(menu, 'changesetDiff'), 'showInBranchExplorer');
 
   return (
@@ -62,18 +64,20 @@ export function RevisionHeader({ row, path, menu, otherRepository, isWorkspaceRe
         )}
         <div className={styles.metaRow}>
           <div className={styles.meta}>
-          {[
-            <span className={styles.author}>{displayName(owner)}</span>,
-            <RelativeTime date={date} />,
-            <DetailsCopyable text={spec.changeset(changesetId, otherRepository)} what="Changeset spec" />,
-            row.kind === 'revision' && <BranchChip name={row.revision.branch} otherRepository={otherRepository} />,
-          ]
-            .filter(Boolean)
-            .map((item, index) => (
-              <span key={index} className={styles.metaItem}>
-                {item}
+            <span className={styles.metaItem}>
+              <span className={styles.author}>{displayName(owner)}</span>
+            </span>
+            <span className={styles.metaItem}>
+              <RelativeTime date={date} />
+            </span>
+            <span className={styles.metaItem}>
+              <DetailsCopyable text={spec.changeset(changesetId, otherRepository)} what="Changeset spec" />
+            </span>
+            {row.kind === 'revision' && (
+              <span className={styles.metaItem}>
+                <BranchChip name={row.revision.branch} otherRepository={otherRepository} />
               </span>
-            ))}
+            )}
           </div>
         </div>
       </div>

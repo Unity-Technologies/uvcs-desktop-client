@@ -9,7 +9,7 @@
 
 import type { ReactNode } from 'react';
 import { IconButton } from '../../../../ui/IconButton';
-import { type AnchorMode, anchoredOffset } from './imageDiff';
+import { anchoredOffset, type AnchorMode, type Size } from './composedFrame';
 import type { DecodedImage } from './useDecodedImage';
 import type { PanZoom } from './usePanZoom';
 import styles from './stage.module.css';
@@ -33,7 +33,7 @@ export function Viewport({ panZoom, children }: ViewportProps) {
 
 interface WorldProps {
   panZoom: PanZoom;
-  frame: { width: number; height: number };
+  frame: Size;
   children: ReactNode;
 }
 
@@ -109,7 +109,7 @@ export function World({ panZoom, frame, children }: WorldProps) {
 
 interface ImageLayerProps {
   image: DecodedImage;
-  frame: { width: number; height: number };
+  frame: Size;
   /** Tints the revision border: before reads red, after reads green. */
   side: 'old' | 'new';
   /** How the revision is placed in the composed frame (only matters when the

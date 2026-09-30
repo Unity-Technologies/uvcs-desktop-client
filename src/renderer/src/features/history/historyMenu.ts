@@ -8,7 +8,7 @@ import { groupedMenu } from '../../lib/menuGroups';
 import { fileNameOf } from '../../lib/text';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { openChangesetDiff } from '../changesets/changesetOperations';
-import { changesetOf, type HistoryRow } from './historyRows';
+import { changesetOf, dateOf, type HistoryRow } from './historyRows';
 import { openRevision, revertItemTo, saveRevisionAs } from './revisionOperations';
 
 interface HistoryMenuContext {
@@ -39,7 +39,7 @@ export function historyMenu({ workspacePath, path, ofWorkspaceFile, otherReposit
     isFile && canAnnotate(revision.itemType) && menuAction('annotateRevision', () => annotate(revision)),
     inWorkspaceRepository &&
       menuAction('showInBranchExplorer', () =>
-        showInBranchExplorer({ kind: 'changeset', id: changesetOf(row), date: row.kind === 'revision' ? row.revision.date : row.change.date }),
+        showInBranchExplorer({ kind: 'changeset', id: changesetOf(row), date: dateOf(row) }),
       ),
     isFile && menuAction('openRevision', () => void openRevision(workspacePath, revisionRef(revision), name)),
     isFile && menuAction('saveAs', () => void saveRevisionAs(workspacePath, revisionRef(revision), name)),
