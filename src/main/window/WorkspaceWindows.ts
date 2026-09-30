@@ -49,12 +49,18 @@ export class WorkspaceWindows {
   }
 
   /**
-   * The first window at launch, opening the workspace that launched the app, else the last one used (the home screen
-   * when its folder is gone). Development builds start on the home screen, where automated UI checks pick a workspace.
+   * The workspace the first window at launch opens: the one that launched the app, else the last one used (none, for
+   * the home screen, when its folder is gone). Development builds start on the home screen, where automated UI checks
+   * pick a workspace.
    */
-  openFirst(): void {
+  firstWorkspace(): string | undefined {
     const lastUsed = app.isPackaged ? this.options.settings.get().recentWorkspacePaths[0] : undefined;
-    const workspacePath = this.launchRequest ?? (lastUsed && existsSync(lastUsed) ? lastUsed : undefined);
+    return this.launchRequest ?? (lastUsed && existsSync(lastUsed) ? lastUsed : undefined);
+  }
+
+  /** The first window at launch, on `firstWorkspace()`. */
+  openFirst(): void {
+    const workspacePath = this.firstWorkspace();
     this.launchRequest = null;
     this.open(workspacePath);
   }

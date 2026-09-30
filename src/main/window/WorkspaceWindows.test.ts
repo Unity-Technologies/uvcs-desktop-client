@@ -147,9 +147,20 @@ describe('the first window at launch', () => {
     expect(windows.takeRequested(fakeElectron.windows()[0]!.webContents.id)).toBe(lastUsed);
   });
 
+  it('names the workspace it opens before opening it, so its `cm shell`s can start first', () => {
+    const lastUsed = mkdtempSync(join(tmpdir(), 'uvcs-last-'));
+    const { windows } = setUp([lastUsed]);
+
+    expect(windows.firstWorkspace()).toBe(lastUsed);
+    expect(fakeElectron.windows()).toEqual([]);
+    windows.openFirst();
+    expect(windows.takeRequested(fakeElectron.windows()[0]!.webContents.id)).toBe(lastUsed);
+  });
+
   it('opens on the home screen when the last workspace used is gone', () => {
     const { windows } = setUp([join(tmpdir(), 'uvcs-deleted-workspace')]);
 
+    expect(windows.firstWorkspace()).toBeUndefined();
     windows.openFirst();
     expect(windows.takeRequested(fakeElectron.windows()[0]!.webContents.id)).toBeNull();
   });

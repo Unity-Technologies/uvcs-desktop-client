@@ -33,7 +33,6 @@ const windows = new WorkspaceWindows({
 });
 
 function start(launched: Promise<void>): void {
-  cm.warmUp();
   // A window sees the commands its own calls ran (commands run outside any call go to every window).
   cm.onCommandLogged((entry) => sendEventToCaller('commandLogged', entry));
   if (!app.isPackaged) warnOnRepeatedServerCommands(cm);
@@ -53,7 +52,12 @@ function start(launched: Promise<void>): void {
   );
   followAppTheme(settings);
   installMenus(windows);
-  const openFirstWindow = (): void => windows.openFirst();
+  const openFirstWindow = (): void => {
+    // Its `cm shell`s start before the window does (a shell answers its first command after about a second): its
+    // workspace's, or the home folder's for the home screen.
+    cm.warmUp(windows.firstWorkspace());
+    windows.openFirst();
+  };
   void launched.then(openFirstWindow, openFirstWindow);
   // macOS keeps the app running with no window; clicking the Dock icon then opens the home screen.
   app.on('activate', () => windows.all().length === 0 && windows.open());
