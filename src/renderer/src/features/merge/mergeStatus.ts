@@ -1,5 +1,6 @@
 import type { DirectoryConflictResolution, MergeChange } from '@shared/domain/merge';
 import type { StatusTone as ChangeTone } from '../../components/StatusBadge';
+import { pluralize } from '../../lib/text';
 import type { MergeLabels } from './mergeDescription';
 import type { MergeItem } from './mergeItems';
 import type { FileConflictState } from './resolve/useFileConflicts';
@@ -120,12 +121,12 @@ export function presentStatus(status: ConflictStatus, labels: MergeLabels, tool 
   }
 }
 
-/** A change that applies cleanly, in future words: "Will be added", with why (only one side touched it). */
 /** The badge of a change that applies cleanly: its kind. */
 export function changeTone(change: MergeChange): ChangeTone {
   return change.kind;
 }
 
+/** A change that applies cleanly, in future words: "Will be added", with why (only one side touched it). */
 export function describeChange(change: MergeChange, labels: MergeLabels): string {
   const source = labels.roles.source.name.toLowerCase();
   switch (change.kind) {
@@ -144,7 +145,7 @@ export function describeChange(change: MergeChange, labels: MergeLabels): string
 
 /** "598 changes to apply · 2 conflicts: 1 will merge automatically, 1 needs your decision". */
 export function summarizePlan(changeCount: number, statuses: ConflictStatus[]): string {
-  const changes = `${changeCount} ${changeCount === 1 ? 'change' : 'changes'} to apply`;
+  const changes = `${pluralize(changeCount, 'change')} to apply`;
   if (statuses.length === 0) return `${changes} · no conflicts`;
 
   const count = (wanted: (status: ConflictStatus) => boolean): number => statuses.filter(wanted).length;
@@ -156,14 +157,14 @@ export function summarizePlan(changeCount: number, statuses: ConflictStatus[]): 
     decided > 0 && `${decided} decided`,
     waiting > 0 && `${waiting} ${waiting === 1 ? 'needs' : 'need'} your decision`,
   ].filter(Boolean);
-  return `${changes} · ${statuses.length} ${statuses.length === 1 ? 'conflict' : 'conflicts'}: ${parts.join(', ')}`;
+  return `${changes} · ${pluralize(statuses.length, 'conflict')}: ${parts.join(', ')}`;
 }
 
 /** The header's few words, "2 conflicts to decide" or "Ready to merge"; its tooltip says the rest (`summarizePlan`). */
 export function planProgress(statuses: ConflictStatus[]): string {
   const waiting = statuses.filter(isWaiting).length;
   if (waiting === 0) return 'Ready to merge';
-  return `${waiting} ${waiting === 1 ? 'conflict' : 'conflicts'} to decide`;
+  return `${pluralize(waiting, 'conflict')} to decide`;
 }
 
 /** Whether a conflict still stands in the way of completing the merge. */
