@@ -55,9 +55,9 @@ one shows again. A check the window asked for answers in one toast, "Checking…
   workflow's `MAC_SIGNING_FLAGS`), opens after Privacy & Security ▸ Open Anyway, and updates by its disk image. A build
   with no signature at all is rejected: macOS on Apple silicon calls it "damaged", because electron-builder's edits to
   the bundle break Electron's own signature. Windows builds are unsigned: electron-updater checks an installer's publisher only when the app names one.
-- The feed must be readable without signing in: electron-updater reads a private repository's releases only with a
-  token, which the app never ships. While the repository is private, a check says "No published release is available
-  to update from yet."
+- The feed must be readable without signing in, so the releases' repository is public: electron-updater reads a private
+  repository's releases only with a token, which the app never ships. With no published release (only a draft), a
+  check says "No published release is available to update from yet."
 
 ## CI
 
@@ -68,5 +68,5 @@ the last install of the same lockfile (`reuse-node-modules`, CI only: releases i
 Electron's downloads and retries `npm ci`. On a Windows runner with a raw local SSD (arm64) the job formats it as a Dev
 Drive and builds there (`BUILD_DIR`). How fast the tests run on CI's 2-CPU runners, and why: `vitest.config.ts`.
 
-`.github/workflows/codeql.yml` runs GitHub's CodeQL security analysis on pushes to master, pull requests and weekly.
-Code scanning needs a public repository, so while this one is private the job passes without scanning.
+`.github/workflows/codeql.yml` runs GitHub's CodeQL security analysis on pushes to master, pull requests and weekly;
+findings show in the Security tab and on pull requests.
