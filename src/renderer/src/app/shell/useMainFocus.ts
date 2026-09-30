@@ -19,29 +19,7 @@ export function useMainFocus(contentRef: RefObject<HTMLElement | null>): void {
     const focusSoon = (): void => {
       stopWaiting();
       const root = contentRef.current;
-      if (!root) return;
-      const observer = new MutationObserver(() => attempt());
-      const stop = (): void => {
-        observer.disconnect();
-        clearTimeout(timeout);
-        cancelAnimationFrame(frame);
-        window.removeEventListener('pointerdown', stop, true);
-        window.removeEventListener('focusin', onFocusIn, true);
-      };
-      // Focus the user (or a view's own autofocus) put somewhere stays there.
-      const onFocusIn = (event: FocusEvent): void => {
-        if (!root.contains(event.target as Node) || !(event.target as HTMLElement).hasAttribute('data-main-focus')) stop();
-      };
-      const attempt = (): void => {
-        if (isKeyboardTaken()) return stop();
-        if (focusMain(root)) stop();
-      };
-      const frame = requestAnimationFrame(attempt);
-      const timeout = setTimeout(stop, WAIT_MS);
-      observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
-      window.addEventListener('pointerdown', stop, true);
-      window.addEventListener('focusin', onFocusIn, true);
-      stopWaiting = stop;
+      if (root) stopWaiting = waitToFocusMain(root);
     };
 
     const focusIfLost = (): void => {
@@ -80,4 +58,33 @@ export function useMainFocus(contentRef: RefObject<HTMLElement | null>): void {
       window.removeEventListener('keydown', onKeyDownCapture, true);
     };
   }, [contentRef]);
+}
+
+/**
+ * Focuses the main list under `root` as soon as it shows (views load lazily, then read their data), giving up after
+ * `WAIT_MS`, once the user clicks, or once focus goes anywhere else. Returns what stops waiting.
+ */
+function waitToFocusMain(root: HTMLElement): () => void {
+  const observer = new MutationObserver(() => attempt());
+  const stop = (): void => {
+    observer.disconnect();
+    clearTimeout(timeout);
+    cancelAnimationFrame(frame);
+    window.removeEventListener('pointerdown', stop, true);
+    window.removeEventListener('focusin', onFocusIn, true);
+  };
+  // Focus the user (or a view's own autofocus) put somewhere stays there.
+  const onFocusIn = (event: FocusEvent): void => {
+    if (!root.contains(event.target as Node) || !(event.target as HTMLElement).hasAttribute('data-main-focus')) stop();
+  };
+  const attempt = (): void => {
+    if (isKeyboardTaken()) return stop();
+    if (focusMain(root)) stop();
+  };
+  const frame = requestAnimationFrame(attempt);
+  const timeout = setTimeout(stop, WAIT_MS);
+  observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
+  window.addEventListener('pointerdown', stop, true);
+  window.addEventListener('focusin', onFocusIn, true);
+  return stop;
 }
