@@ -112,7 +112,7 @@ describe('shelveAway', () => {
 
     expect(fakeApi.argsOf('pendingChanges.shelveAndUndo')).toEqual([[ws, ['a.txt', 'b.txt'], 'Spike', expect.any(String)]]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Shelved 2 changes', detail: 'In shelve 40', action: 'Undo' }]);
-    expect(refreshed()).toEqual(['info', 'pendingChanges', 'review', 'shelves']);
+    expect(refreshed()).toEqual(['explorer', 'info', 'pendingChanges', 'review', 'shelves']);
   });
 
   it('puts the changes back on Undo: applies the shelve and deletes it', async () => {

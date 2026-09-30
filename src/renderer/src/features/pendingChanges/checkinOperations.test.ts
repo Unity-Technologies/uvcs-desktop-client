@@ -297,7 +297,7 @@ describe('shelveChanges', () => {
     expect(await shelveChanges(ws, [change('a.ts'), change('b.ts')], ' WIP ', false)).toBe(true);
 
     expect(fakeApi.argsOf('pendingChanges.shelveAndUndo')[0]!.slice(0, 3)).toEqual([ws, ['a.ts', 'b.ts'], 'WIP']);
-    expect(refreshed()).toEqual(['info', 'pendingChanges', 'review', 'shelves']);
+    expect(refreshed()).toEqual(['explorer', 'info', 'pendingChanges', 'review', 'shelves']);
   });
 
   it('keeps the changes in the workspace when asked, refreshing only the shelves', async () => {

@@ -40,9 +40,13 @@ export type WorkspaceArea = (typeof WORKSPACE_AREAS)[number];
  * `invalidateWorkspace`, as an operation's `affects` asked), sorted.
  */
 export function watchRefreshes(workspacePath: string): () => WorkspaceArea[] {
-  for (const area of WORKSPACE_AREAS) queryClient.setQueryData(queryKeys.inWorkspace(workspacePath, area), 'read');
-  return () => WORKSPACE_AREAS.filter((area) => queryClient.getQueryState(queryKeys.inWorkspace(workspacePath, area))?.isInvalidated);
+  const keyOf = (area: WorkspaceArea) => queryKeys.inWorkspace(workspacePath, area, ...(AREA_DETAILS[area] ?? []));
+  for (const area of WORKSPACE_AREAS) queryClient.setQueryData(keyOf(area), 'read');
+  return () => WORKSPACE_AREAS.filter((area) => queryClient.getQueryState(keyOf(area))?.isInvalidated);
 }
+
+/** The rest of the key of an area whose refreshes go by it: the Files view's listing of the workspace root. */
+const AREA_DETAILS: Partial<Record<WorkspaceArea, unknown[]>> = { explorer: ['directory', ''] };
 
 export interface ShownToast {
   kind: ToastKind;
