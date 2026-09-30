@@ -8,7 +8,7 @@ export async function openWorkspaceFolder(open: (path: string) => void): Promise
   if (directory) await openFolder(directory, open);
 }
 
-/** Opens the workspace a folder (picked or dropped on the window) belongs to, or offers to create a workspace there. */
+/** Opens the workspace a picked folder belongs to, or offers to create a workspace there (a drop: `openDroppedFolder`). */
 export async function openFolder(folder: string, open: (path: string) => void): Promise<void> {
   const workspaceRoot = await api.workspaces.findRoot(folder);
   if (workspaceRoot) {

@@ -1,7 +1,9 @@
 import { FolderDown } from 'lucide-react';
 import { useState } from 'react';
 import { useFolderDrop } from '../folderDrop/useFolderDrop';
-import { openFolder, openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
+import { droppedItems, readDroppedFolder } from '../folderDrop/droppedFolder';
+import { openDroppedFolder } from '../folderDrop/openDroppedFolder';
+import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
 import { useServers } from '../workspace/workspaceQueries';
 import { HomeSidebar } from './HomeSidebar';
@@ -18,8 +20,9 @@ export function HomeScreen() {
   const firstServer = servers?.[0]?.server;
   const open = useOpenWorkspace();
   const drop = useFolderDrop((event) => {
-    const file = event.dataTransfer?.files[0];
-    if (file) void openFolder(window.uvcs.pathForFile(file), open);
+    if (!event.dataTransfer) return;
+    const dropped = readDroppedFolder(droppedItems(event.dataTransfer, window.uvcs.pathForFile));
+    void openDroppedFolder(dropped, { newWindow: event.shiftKey, currentWorkspace: null, openHere: open });
   });
   useHomeCommands(open);
   const pickFolder = (): void => void openWorkspaceFolder(open);
