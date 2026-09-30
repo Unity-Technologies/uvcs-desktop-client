@@ -13,7 +13,7 @@ export function describeUpdateError(error: unknown): string {
   if ((typeof code === 'string' && OFFLINE_CODES.has(code)) || /net::|ENOTFOUND|EAI_AGAIN|getaddrinfo/i.test(message)) {
     return "Couldn't reach the update server. Check your connection and try again.";
   }
-  // No published release to update from yet (only a draft), or a feed that can't be read without signing in.
+  // No published release to update from yet: the repository holds only a draft, or no release at all.
   if (statusCode === 404 || /\b404\b/.test(message)) return 'No published release is available to update from yet.';
 
   const firstClause = message
