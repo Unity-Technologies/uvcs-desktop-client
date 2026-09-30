@@ -87,9 +87,7 @@ export class CmClient {
    * anyway (`runsLong`: a workspace write of many files) gets a process of its own, as does one before the pool is warm.
    */
   query(args: string[], options: CmRunOptions = {}): Promise<string> {
-    const useShell =
-      !options.signal && !options.onOutputLine && canRunInShell(args) && !runsLong(args) && this.shellPool.isReady(options.cwd ?? homedir());
-    return this.run(args, options, useShell);
+    return this.run(args, options, this.runsInPooledShell(args, options));
   }
 
   /** Runs a long or cancellable command in its own process, streaming its output. */
@@ -109,6 +107,17 @@ export class CmClient {
 
   dispose(): void {
     this.shellPool.disposeAll();
+  }
+
+  /**
+   * Whether a query goes to a pooled `cm shell`: not when it can be cancelled, streams its output, can't be written on
+   * a shell line (`canRunInShell`) or may run long (`runsLong`). Any other warms the directory's sessions up, and runs
+   * as a process of its own until one of them answers.
+   */
+  private runsInPooledShell(args: string[], { cwd = homedir(), signal, onOutputLine }: CmRunOptions): boolean {
+    if (signal || onOutputLine || !canRunInShell(args) || runsLong(args)) return false;
+    this.shellPool.warmUp(cwd);
+    return this.shellPool.isReady(cwd);
   }
 
   private async run(requested: string[], options: CmRunOptions, useShell: boolean): Promise<string> {

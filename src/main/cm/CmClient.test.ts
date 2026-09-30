@@ -77,13 +77,14 @@ describe('CmClient routing', () => {
     expect(shellCommands[0]?.cwd).toBe(homedir());
   });
 
-  it('runs a query as a process of its own while no session of the directory is ready yet', async () => {
-    const { cm, processes, shellCommands } = fakeClient({ warm: false });
+  it('runs a query as a process of its own while no session of the directory is ready yet, and warms them up', async () => {
+    const { cm, processes, shellCommands, pools } = fakeClient({ warm: false });
 
     await cm.query(['whoami'], { cwd: WORKSPACE });
 
     expect(shellCommands).toEqual([]);
     expect(processes).toMatchObject([{ cmPath: CM_PATH, args: ['whoami'], options: { cwd: WORKSPACE } }]);
+    expect(pools[0]?.warmed).toEqual([WORKSPACE]);
   });
 
   it.each([

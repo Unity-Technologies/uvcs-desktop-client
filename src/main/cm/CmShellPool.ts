@@ -45,12 +45,11 @@ export class CmShellPool {
   }
 
   /**
-   * Whether a session in the directory answers commands at once. Otherwise they start (about a second), and a query
-   * is quicker as a process of its own meanwhile.
+   * Whether a session in the directory answers commands at once. Otherwise they are starting (about a second), or not
+   * started at all (`warmUp`), and a query is quicker as a process of its own meanwhile.
    */
   isReady(cwd: string): boolean {
-    this.warmUp(cwd);
-    return this.directories.get(cwd)!.sessions.some((session) => session.isReady);
+    return this.directories.get(cwd)?.sessions.some((session) => session.isReady) ?? false;
   }
 
   /** Starts the sessions for a directory so the first queries there don't pay the startup cost. */
