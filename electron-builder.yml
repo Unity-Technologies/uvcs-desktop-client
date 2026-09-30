@@ -6,8 +6,19 @@ directories:
 # so there are no node_modules to ship or native modules to rebuild.
 files:
   - out/**
+  - '!out/THIRD_PARTY_NOTICES.txt'
   - package.json
 npmRebuild: false
+
+# The app's license and notices, and those of the libraries bundled into out/ (written by the build:
+# scripts/build/thirdPartyNoticesPlugin.ts), as plain files in the app's resources folder, where the About dialog opens
+# them from (a file inside app.asar can't be opened by another app). Electron's own LICENSE and LICENSES.chromium.html
+# ship with Electron.
+extraResources:
+  - LICENSE
+  - NOTICE
+  - from: out/THIRD_PARTY_NOTICES.txt
+    to: THIRD_PARTY_NOTICES.txt
 
 # The update feed (main/update/releaseFeed.ts names the same repository). `npm run release` uploads the installers and
 # the latest*.yml files electron-updater reads to the release tagged v<version>; it needs GH_TOKEN.

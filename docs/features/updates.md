@@ -65,6 +65,8 @@ one shows again. A check the window asked for answers in one toast, "Checking…
   and Apache ask to keep, so `npm run build` also writes `out/THIRD_PARTY_NOTICES.txt`: the name, version, license
   and LICENSE/NOTICE files of exactly the packages whose code is in the bundles (`thirdPartyNoticesCollector` in
   `scripts/build/`, one plugin for main, preload, renderer and its workers; the text is `thirdPartyNotices`).
+  electron-builder.yml's `extraResources` ships it with the app's `LICENSE` and `NOTICE` as plain files in the
+  resources folder, outside `app.asar`.
 - macOS signing and notarization turn on once the `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`,
   `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID` secrets exist; without them the build is signed ad hoc (the
   workflow's `MAC_SIGNING_FLAGS`), opens after Privacy & Security ▸ Open Anyway, and updates by its disk image. A build
