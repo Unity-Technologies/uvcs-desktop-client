@@ -8,12 +8,11 @@ import { parseTreeItems } from '../cm/treeItemsXml';
 import { listWorkspacePaths } from '../files/listWorkspacePaths';
 import { moveArgs, moveItems } from '../files/moveItems';
 import { renamePrivate } from '../files/renamePrivate';
-import { toAbsolutePath } from '../files/workspacePaths';
+import { toAbsolutePath, toAbsolutePaths } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
 
 export function createExplorerService({ cm, operations }: ServiceContext): ExplorerApi {
   const inWorkspace = (workspacePath: string) => ({ cwd: workspacePath });
-  const absolute = (workspacePath: string, paths: string[]) => paths.map((path) => toAbsolutePath(workspacePath, path));
 
   async function listDirectory(workspacePath: string, directory: string) {
     const xml = await cm.query(onLinksThemselves('ls', toAbsolutePath(workspacePath, directory), '--xml'), inWorkspace(workspacePath));
@@ -31,7 +30,7 @@ export function createExplorerService({ cm, operations }: ServiceContext): Explo
   }
 
   async function addRecursive(workspacePath: string, paths: string[]) {
-    await cm.query(['add', '-R', '--coparent', ...absolute(workspacePath, paths)], inWorkspace(workspacePath));
+    await cm.query(['add', '-R', '--coparent', ...toAbsolutePaths(workspacePath, paths)], inWorkspace(workspacePath));
   }
 
   async function move(workspacePath: string, fromPath: string, toPath: string) {
@@ -57,7 +56,7 @@ export function createExplorerService({ cm, operations }: ServiceContext): Explo
   }
 
   async function changeRevisionType(workspacePath: string, paths: string[], type: RevisionType) {
-    await cm.query(['changerevisiontype', ...absolute(workspacePath, paths), `--type=${type}`], inWorkspace(workspacePath));
+    await cm.query(['changerevisiontype', ...toAbsolutePaths(workspacePath, paths), `--type=${type}`], inWorkspace(workspacePath));
   }
 
   return {
