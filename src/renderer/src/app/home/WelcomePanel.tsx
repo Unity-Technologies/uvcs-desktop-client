@@ -1,6 +1,7 @@
 import { Clock } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { AppMark } from '../../components/AppMark';
+import { APP_NAME, APP_TAGLINE } from '../../lib/appIdentity';
 import { EmptyState } from '../../ui/EmptyState';
 import { SearchField } from '../../ui/SearchField';
 import { useWorkspaceEntries } from './useWorkspaceEntries';
@@ -53,8 +54,8 @@ export function WelcomePanel({ onOpen, onOpenFolder, onBrowseRepositories }: Wel
         <div className={styles.welcomeColumn}>
           <header className={styles.hero}>
             <AppMark size={56} />
-            <h1 className={styles.heroTitle}>Unity Version Control</h1>
-            <p className={styles.heroText}>Branch freely, review every change, and check in with confidence, from one workspace or many.</p>
+            <h1 className={styles.heroTitle}>{APP_NAME}</h1>
+            <p className={styles.heroText}>{APP_TAGLINE}</p>
           </header>
 
           <WelcomeActions onOpen={onOpen} onOpenFolder={onOpenFolder} onBrowseRepositories={onBrowseRepositories} />

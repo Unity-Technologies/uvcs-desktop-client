@@ -15,15 +15,11 @@ export type UpdateStatus =
 
 /** What the About dialog shows of the running app. */
 export interface AppInfo {
-  name: string;
   version: string;
   electron: string;
   chromium: string;
-  node: string;
   platform: string;
   arch: string;
-  /** False in development builds, which never update. */
-  packaged: boolean;
   documentationUrl: string;
   /** Where to report a problem. */
   issuesUrl: string;
