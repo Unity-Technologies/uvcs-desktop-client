@@ -1,11 +1,11 @@
 import type { ObjectLinks } from '../../../components/objectLinks';
 import type { MenuEntry } from '../../../lib/actions';
 import type { Property } from '../../../ui/PropertyList';
-import { ChangesetDetails as ChangesetDetailsPanel } from '../../changesets/ChangesetDetails';
+import { ChangesetDetails } from '../../changesets/ChangesetDetails';
 import type { GraphLayout, NodeLayout } from '../model/layoutGraph';
 import { MERGE_LINK_NAMES } from '../model/mergeLinkNames';
 
-interface ChangesetDetailsProps {
+interface GraphChangesetDetailsProps {
   node: NodeLayout;
   layout: GraphLayout;
   menu: MenuEntry[];
@@ -13,7 +13,7 @@ interface ChangesetDetailsProps {
 }
 
 /** The changeset details every view shows, plus the merges the graph draws to and from it. */
-export function ChangesetDetails({ node, layout, menu, links }: ChangesetDetailsProps) {
+export function GraphChangesetDetails({ node, layout, menu, links }: GraphChangesetDetailsProps) {
   const { changeset } = node;
   const relations: Property[] = [
     ...layout.mergeLinks
@@ -24,5 +24,5 @@ export function ChangesetDetails({ node, layout, menu, links }: ChangesetDetails
       .map((merge) => ({ label: 'Merged into', value: links.changeset(merge.destinationChangeset) })),
   ];
 
-  return <ChangesetDetailsPanel changeset={changeset} menu={menu} links={links} relations={relations} />;
+  return <ChangesetDetails changeset={changeset} menu={menu} links={links} relations={relations} />;
 }

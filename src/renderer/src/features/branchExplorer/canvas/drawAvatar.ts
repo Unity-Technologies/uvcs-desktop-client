@@ -1,7 +1,7 @@
 import { avatarImageFor } from '../../../lib/avatars/avatarImages';
-import { stableHue } from '../../../lib/stableHue';
 import { initials } from '../../../lib/userName';
 import type { DrawContext } from './drawContext';
+import { avatarFill } from './graphPalette';
 
 interface AvatarStyle {
   x: number;
@@ -16,7 +16,7 @@ interface AvatarStyle {
 }
 
 /** A changeset drawn as its author's avatar (Gravatar, or initials on the author's color), ringed with the branch color. */
-export function drawAvatar({ ctx, pen }: DrawContext, style: AvatarStyle): void {
+export function drawAvatar({ ctx, pen, scene }: DrawContext, style: AvatarStyle): void {
   const { x, y, radius } = style;
 
   ctx.beginPath();
@@ -27,7 +27,7 @@ export function drawAvatar({ ctx, pen }: DrawContext, style: AvatarStyle): void 
 
   ctx.beginPath();
   pen.arc(x, y, radius, 0, Math.PI * 2);
-  ctx.fillStyle = `hsl(${stableHue(style.owner)} 52% 50%)`;
+  ctx.fillStyle = avatarFill(scene.palette, style.owner);
   ctx.fill();
 
   const image = avatarImageFor(style.owner);
@@ -40,7 +40,7 @@ export function drawAvatar({ ctx, pen }: DrawContext, style: AvatarStyle): void 
   }
 
   if (!style.showInitials) return;
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = scene.palette.avatarLetter;
   ctx.font = style.font;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';

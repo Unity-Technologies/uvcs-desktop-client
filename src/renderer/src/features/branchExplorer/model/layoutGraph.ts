@@ -1,5 +1,7 @@
 import type { BranchExplorerData, GraphBranch, GraphChangeset, GraphLabel, MergeLink } from '@shared/domain/branchExplorer';
 import type { PendingMergeLink } from '@shared/domain/pendingChanges';
+import { groupBy } from './groupBy';
+import { placeLanes, type UnplacedLane } from './placeLanes';
 import { collapseLinearRuns, structuralChangesets, type ShownChangeset } from './structureOnly';
 
 export interface NodeLayout extends ShownChangeset {
@@ -53,9 +55,6 @@ export interface GraphLayout {
   columnCount: number;
   rowCount: number;
 }
-
-/** Free columns kept between two lanes sharing a row, so they never look connected. */
-const LANE_GAP = 3;
 
 /** "Only relevant changesets": everything but the structural changesets and these collapses into "+N" nodes. */
 export interface StructureOnly {
@@ -135,8 +134,6 @@ export function layoutKeeping(
   return layoutGraph(data, { keep: new Set([...base.keep, id!]) }, base.pending);
 }
 
-type UnplacedLane = Omit<Lane, 'row'>;
-
 function buildLanes(branches: GraphBranch[], changesets: GraphChangeset[], columnOf: Map<number, number>): UnplacedLane[] {
   const columnsByBranch = groupBy(changesets, (changeset) => changeset.branch);
 
@@ -165,69 +162,3 @@ function buildLanes(branches: GraphBranch[], changesets: GraphChangeset[], colum
   });
 }
 
-/** Assigns rows: parents before children, each lane in the first free row below its parent. */
-function placeLanes(unplaced: UnplacedLane[]): Lane[] {
-  const byName = new Map(unplaced.map((lane) => [lane.branch.name, lane]));
-  const childrenOf = groupBy(
-    unplaced.filter((lane) => byName.has(lane.branch.parent)),
-    (lane) => lane.branch.parent,
-  );
-  const roots = unplaced.filter((lane) => !byName.has(lane.branch.parent)).sort(rootOrder);
-
-  const occupiedByRow: RowOccupancy[] = [];
-  const placed: Lane[] = [];
-
-  const place = (lane: UnplacedLane, minimumRow: number): void => {
-    let row = minimumRow;
-    while (!occupy((occupiedByRow[row] ??= { starts: [], ends: [] }), lane.startColumn, lane.endColumn)) row++;
-    placed.push({ ...lane, row });
-
-    const children = [...(childrenOf.get(lane.branch.name) ?? [])].sort((a, b) => a.startColumn - b.startColumn);
-    children.forEach((childLane) => place(childLane, row + 1));
-  };
-
-  roots.forEach((root, index) => place(root, index === 0 ? 0 : 1));
-  return placed;
-}
-
-/** `/main` (or whichever top-level branch comes first) takes the top row. */
-function rootOrder(a: UnplacedLane, b: UnplacedLane): number {
-  const aIsMain = a.branch.name === '/main' ? 0 : 1;
-  const bIsMain = b.branch.name === '/main' ? 0 : 1;
-  return aIsMain - bIsMain || a.startColumn - b.startColumn;
-}
-
-/** The column spans of the lanes in a row, sorted: they never overlap, so their starts and their ends both ascend. */
-interface RowOccupancy {
-  starts: number[];
-  ends: number[];
-}
-
-/**
- * Takes the span in the row if it stays `LANE_GAP` columns clear of every lane there. A binary search: a row holds
- * up to thousands of lanes.
- */
-function occupy(row: RowOccupancy, start: number, end: number): boolean {
-  let low = 0;
-  let high = row.ends.length;
-  while (low < high) {
-    const middle = (low + high) >>> 1;
-    if (row.ends[middle]! + LANE_GAP < start) low = middle + 1;
-    else high = middle;
-  }
-  if (low < row.starts.length && row.starts[low]! - LANE_GAP <= end) return false;
-  row.starts.splice(low, 0, start);
-  row.ends.splice(low, 0, end);
-  return true;
-}
-
-function groupBy<Item, Key>(items: readonly Item[], keyOf: (item: Item) => Key): Map<Key, Item[]> {
-  const groups = new Map<Key, Item[]>();
-  for (const item of items) {
-    const key = keyOf(item);
-    const group = groups.get(key);
-    if (group) group.push(item);
-    else groups.set(key, [item]);
-  }
-  return groups;
-}

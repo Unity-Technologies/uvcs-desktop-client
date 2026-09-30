@@ -27,6 +27,44 @@ export function laneShape(lane: Lane): LaneShape {
   return { left, right: Math.max(columnX(lane.endColumn) + BAND_INSET, left + MINIMUM_WIDTH), y };
 }
 
+/** Keeps what a branch draws past its band (its header card, its zoomed-out name) clear of the next band on its row. */
+const NEXT_LANE_CLEARANCE = 12;
+
+/**
+ * How much room there is from `left` (world x) to the next branch's band on the lane's row, less a clearance;
+ * infinite when no band follows. A binary search: a row holds up to thousands of branches, and every branch on
+ * screen asks each frame.
+ */
+export function roomBeforeNextLane(layout: GraphLayout, lane: Lane, left: number): number {
+  const lefts = bandLeftsOnRow(layout, lane.row);
+  let low = 0;
+  let high = lefts.length;
+  while (low < high) {
+    const middle = (low + high) >>> 1;
+    if (lefts[middle]! <= left) low = middle + 1;
+    else high = middle;
+  }
+  const next = low < lefts.length ? lefts[low]! : Number.POSITIVE_INFINITY;
+  return next - left - NEXT_LANE_CLEARANCE;
+}
+
+const bandLeftsByLayout = new WeakMap<GraphLayout, Map<number, Float64Array>>();
+
+/** Where the bands of a row start, ascending; measured once per row and layout. */
+function bandLeftsOnRow(layout: GraphLayout, row: number): Float64Array {
+  let byRow = bandLeftsByLayout.get(layout);
+  if (!byRow) {
+    byRow = new Map();
+    bandLeftsByLayout.set(layout, byRow);
+  }
+  let lefts = byRow.get(row);
+  if (!lefts) {
+    lefts = Float64Array.from(layout.lanesByRow.get(row) ?? [], (other) => laneShape(other).left).sort();
+    byRow.set(row, lefts);
+  }
+  return lefts;
+}
+
 /** A lane's header card is two lines when the branch has a comment, one otherwise. */
 export function laneHeaderHeight(lane: Lane): number {
   return headerHeight(summaryOf(lane.branch.comment) !== '');

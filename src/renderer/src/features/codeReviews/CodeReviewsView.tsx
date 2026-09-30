@@ -1,30 +1,21 @@
-import { CircleDot, MessageSquareCode, Plus, RefreshCw, UserCheck } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { CircleDot, MessageSquareCode, Plus, UserCheck } from 'lucide-react';
+import { useCallback, useMemo } from 'react';
 import { CODE_REVIEW_STATUSES, MAX_LISTED_CODE_REVIEWS, type CodeReview } from '@shared/domain/codeReview';
 import { useCommands, type Command } from '../../app/commands/commandStore';
-import { invalidateWorkspace } from '../../app/queryClient';
+import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
-import { ListWithDetails } from '../../components/ListWithDetails';
-import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
-import { NoSelection } from '../../components/NoSelection';
-import { PathLabel } from '../../components/PathLabel';
-import { UserLabel } from '../../ui/Avatar';
+import { ObjectListView } from '../../components/ObjectListView';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
-import { Highlight, HighlightQuery } from '../../ui/Highlight';
-import { IconButton } from '../../ui/IconButton';
-import { RelativeTime } from '../../ui/RelativeTime';
 import { ChoiceChip } from '../../ui/ChoiceChip';
-import { DataTable, type Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
+import { CODE_REVIEW_COLUMNS } from './codeReviewColumns';
 import { CodeReviewDetails } from './CodeReviewDetails';
 import { codeReviewMenu } from './codeReviewMenu';
 import { openReview } from './codeReviewOperations';
-import { describeTarget } from './reviewTarget';
-import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { openCreateCodeReviewDialog } from './CreateCodeReviewDialog';
-import { selectCreated } from './selectCreated';
+import { useSelectCreated } from './useSelectCreated';
 import { useCodeReviews } from './useCodeReviews';
 import { SincePicker } from '../../components/SincePicker';
 import { useWorkspaceUser } from '../../app/account/accounts';
@@ -32,57 +23,19 @@ import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { matchesPeople, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
+import { longerRangeHint } from '../../lib/longerRangeHint';
 import { isFiltering } from '../../lib/viewFilters';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
 import { NoMatches } from '../../ui/NoMatches';
 import { ToggleChip } from '../../ui/ToggleChip';
 import { CLEARED_CODE_REVIEW_FILTERS, useCodeReviewsViewStore, type StatusFilter } from './codeReviewsViewStore';
-import styles from './CodeReviewsView.module.css';
 import { codeReviewCopyTexts } from './codeReviewMenu';
 import { useCopyCommand } from '../../app/commands/useCopyCommand';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { codeReviewsQuery, reviewFilterTexts } from './codeReviewFilters';
 
 const ownerOf = (review: CodeReview): string => review.owner;
-
-const COLUMNS: Column<CodeReview>[] = [
-  {
-    id: 'title',
-    header: 'Title',
-    grow: 3,
-    render: (review) => (
-      <span className={styles.title}>
-        <span className={styles.id}>
-          #<Highlight text={String(review.id)} />
-        </span>
-        <span className={styles.titleText}>
-          <Highlight text={review.title} />
-        </span>
-      </span>
-    ),
-    sortValue: (review) => review.title.toLowerCase(),
-  },
-  { id: 'status', header: 'Status', width: 150, render: (review) => <CodeReviewStatusBadge status={review.status} />, sortValue: (review) => review.status },
-  {
-    id: 'target',
-    header: 'Changes',
-    grow: 1,
-    secondary: true,
-    hideBelow: 820,
-    render: (review) => (review.target.kind === 'branch' ? <PathLabel path={review.target.branch} /> : <Highlight text={describeTarget(review.target)} />),
-  },
-  { id: 'owner', header: 'Author', grow: 1, hideBelow: 600, render: (review) => <UserLabel user={review.owner} />, sortValue: (review) => review.owner },
-  {
-    id: 'assignee',
-    header: 'Reviewer',
-    grow: 1,
-    hideBelow: 700,
-    render: (review) => (review.assignee ? <UserLabel user={review.assignee} /> : <span className={styles.unassigned}>Unassigned</span>),
-    sortValue: (review) => review.assignee,
-  },
-  { id: 'date', header: 'Created', width: 120, secondary: true, render: (review) => <RelativeTime date={review.date} />, sortValue: (review) => review.date },
-];
 
 export function CodeReviewsView() {
   const workspacePath = useWorkspacePath();
@@ -92,36 +45,22 @@ export function CodeReviewsView() {
   const me = useWorkspaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
   const [selection, setSelection] = useViewSelection('codeReviews');
-  const [createdKey, setCreatedKey] = useState<string | null>(null);
   const { data: reviews, isLoading, isFetching, error } = useCodeReviews(codeReviewsQuery({ since, people: queriedPeople, status, assignedToMe }));
   const offered = usePeopleSeen('codeReviews', reviews, ownerOf);
 
   const visible = (reviews ?? []).filter((review) => matchesPeople(people, me, review.owner) && matchesWordFilter(reviewFilterTexts(review), search));
+  const selectWhenShown = useSelectCreated(visible.map(reviewKey), setSelection);
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : '';
-  const commands = useMemo<Command[]>(
-    () => [
-      {
-        id: 'codeReviews.new',
-        group: 'Code reviews',
-        label: 'New code review…',
-        icon: MessageSquareCode,
-        run: () => openCreateCodeReviewDialog(workspacePath, { kind: 'branch', value: currentBranch }, (reviewId) => setCreatedKey(String(reviewId))),
-      },
-    ],
-    [workspacePath, currentBranch],
+  // On the workspace's branch, and selected once the refreshed list shows it.
+  const newReview = useCallback(
+    () => openCreateCodeReviewDialog(workspacePath, { kind: 'branch', value: currentBranch }, (reviewId) => selectWhenShown(String(reviewId))),
+    [workspacePath, currentBranch, selectWhenShown],
   );
-  // The review just created is selected once the refreshed list shows it.
-  const shownKeys = visible.map(reviewKey).join('\n');
-  useEffect(() => {
-    const next = selectCreated(shownKeys.split('\n'), createdKey);
-    if (!next) return;
-    setSelection(next);
-    setCreatedKey(null);
-  }, [shownKeys, createdKey, setSelection]);
-  useCommands(commands);
+  useCommands(
+    useMemo<Command[]>(() => [{ id: 'codeReviews.new', group: 'Code reviews', label: 'New code review…', icon: MessageSquareCode, run: newReview }], [newReview]),
+  );
   const selected = visible.find((review) => reviewKey(review) === selection.anchor);
   useCopyCommand('Code reviews', 'Code review', selection.selected.size === 1 && selected ? codeReviewCopyTexts(selected) : undefined);
-  const newReview = commands[0]!.run;
 
   const header = (
     <ViewHeader
@@ -131,11 +70,7 @@ export function CodeReviewsView() {
       subtitle={reviews && reviews.length >= MAX_LISTED_CODE_REVIEWS && 'newest'}
       actions={
         <>
-          <IconButton
-            icon={<RefreshCw size={14} className={isFetching ? styles.spinning : undefined} />}
-            label="Refresh"
-            onClick={() => void invalidateWorkspace(workspacePath)}
-          />
+          <ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />
           <Button variant="primary" icon={<Plus size={14} />} onClick={newReview}>
             New review
           </Button>
@@ -164,52 +99,41 @@ export function CodeReviewsView() {
     </ViewHeader>
   );
 
-  if (isLoading) return <>{header}<ListWithDetailsSkeleton widthKey="codeReviews" columns={COLUMNS} /></>;
-  if (error) return <>{header}<EmptyState title="Couldn't read the code reviews" description={error.message} /></>;
-  if (visible.length === 0 && isFiltering(filters, CLEARED_CODE_REVIEW_FILTERS)) {
-    return <>{header}<NoMatches icon={<MessageSquareCode size={22} />} noun="code reviews" hint={since === 'anyTime' ? undefined : 'The filters look within the time range. Try a longer one.'} onClear={filters.clear} /></>;
-  }
-  if (visible.length === 0) {
-    return (
-      <>
-        {header}
-        <EmptyState
-          icon={<MessageSquareCode size={22} />}
-          title="No code reviews"
-          description={since === 'anyTime' ? 'Ask a teammate to look at a branch or changeset before it gets merged.' : 'None in this time range. Try a longer one, or ask a teammate for a review.'}
-          action={
-            <Button variant="primary" icon={<Plus size={14} />} onClick={newReview}>
-              New review
-            </Button>
-          }
-        />
-      </>
-    );
-  }
-
-
   return (
     <>
       {header}
-      <ListWithDetails widthKey="codeReviews"
-        list={
-          <HighlightQuery query={search}>
-            <DataTable
-              rows={visible}
-              columns={COLUMNS}
-              rowKey={reviewKey}
-              selection={selection}
-              onSelectionChange={setSelection}
-              selectFirstRow
-              onActivate={(review) => openReview(review)}
-              contextMenu={(rows) => codeReviewMenu(workspacePath, rows)}
-              initialSort={{ columnId: 'date', descending: true }}
+      <ObjectListView
+        widthKey="codeReviews"
+        loading={isLoading}
+        error={error}
+        errorTitle="Couldn't read the code reviews"
+        empty={
+          isFiltering(filters, CLEARED_CODE_REVIEW_FILTERS) ? (
+            <NoMatches icon={<MessageSquareCode size={22} />} noun="code reviews" hint={longerRangeHint(since, true)} onClear={filters.clear} />
+          ) : (
+            <EmptyState
+              icon={<MessageSquareCode size={22} />}
+              title="No code reviews"
+              description={since === 'anyTime' ? 'Ask a teammate to look at a branch or changeset before it gets merged.' : 'None in this time range. Try a longer one, or ask a teammate for a review.'}
+              action={
+                <Button variant="primary" icon={<Plus size={14} />} onClick={newReview}>
+                  New review
+                </Button>
+              }
             />
-          </HighlightQuery>
+          )
         }
-        details={
-          selected ? <CodeReviewDetails key={selected.id} review={selected} menu={codeReviewMenu(workspacePath, [selected])} /> : <NoSelection noun="code review" />
-        }
+        query={search}
+        rows={visible}
+        columns={CODE_REVIEW_COLUMNS}
+        rowKey={reviewKey}
+        selection={selection}
+        onSelectionChange={setSelection}
+        onActivate={(review) => openReview(review)}
+        contextMenu={(rows) => codeReviewMenu(workspacePath, rows)}
+        initialSort={{ columnId: 'date', descending: true }}
+        noun="code review"
+        details={selected && <CodeReviewDetails key={selected.id} review={selected} menu={codeReviewMenu(workspacePath, [selected])} />}
       />
     </>
   );

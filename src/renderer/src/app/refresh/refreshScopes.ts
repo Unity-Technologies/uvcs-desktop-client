@@ -86,6 +86,16 @@ export function isAffectedByAttributes(key: QueryKey): boolean {
   return area(key) === 'attributeTypes' || area(key) === 'attributeValues' || area(key) === 'attributeUsedValues';
 }
 
+/** A code review was created, edited or deleted: the lists of reviews and the branch chips, which read the same list. */
+export function isAffectedByCodeReviews(key: QueryKey): boolean {
+  return area(key) === 'codeReviews';
+}
+
+/** Locks were released or removed: the Locks view and the lock marks of pending changes, which read the same locks. */
+export function isAffectedByLocks(key: QueryKey): boolean {
+  return area(key) === 'locks';
+}
+
 /** Changes were shelved, and stay in the workspace: only the lists of shelves change. */
 export function isAffectedByShelving(key: QueryKey): boolean {
   return area(key) === 'shelves';

@@ -1,23 +1,20 @@
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { Lane } from '../model/layoutGraph';
 import { GHOST_ALPHA, type DrawContext } from './drawContext';
-import { compactNameWidth } from './compactNameWidth';
 import { drawRectCorona, drawRectGlow } from './drawSearchHit';
 import { headerCardLeft } from './headerCardLeft';
 import { drawReviewChip, reviewChipWidth } from './drawReviewChip';
 import { fitBranchName, fitText, summaryOf, textWidth } from './fitText';
-import { BAND_HEIGHT, HEADER_COMMENT_MIDDLE, HEADER_HEIGHT, HEADER_INSET, HEADER_MAX_WIDTH, HEADER_NAME_MIDDLE, headerTop, ROW_HEIGHT } from './geometry';
-import { branchColor, branchInk, HEADER_HOVER_TINT, HEADER_TINT, headerInks, type GraphPalette } from './graphPalette';
+import { HEADER_COMMENT_MIDDLE, HEADER_HEIGHT, HEADER_INSET, HEADER_MAX_WIDTH, HEADER_NAME_MIDDLE, headerTop } from './geometry';
+import { branchColor, HEADER_HOVER_TINT, HEADER_TINT, headerInks, type GraphPalette } from './graphPalette';
 import { strokeHouse } from './houseGlyph';
-import { laneHeaderHeight, laneShape } from './laneShape';
+import { laneHeaderHeight, laneShape, roomBeforeNextLane } from './laneShape';
 import { lanesAcross } from './spansInView';
 import { drawSearchMarks, redrawMarkedLetters } from './searchMarks';
 
 const PADDING = 8;
 const GAP = 6;
 const MIN_WIDTH = 56;
-/** Keeps a card clear of the next branch band on the same row. */
-const CLEARANCE = 12;
 const CARD_RADIUS = 6;
 /** The current branch's card leads with a solid accent cap holding the home glyph. */
 const HOME_CAP_WIDTH = HEADER_HEIGHT;
@@ -47,67 +44,13 @@ export function drawBranchHeaders(draw: DrawContext): void {
     if (shape.right < visible.left || shape.left > visible.right || top > visible.bottom || top + height < visible.top) continue;
 
     const restLeft = shape.left + HEADER_INSET;
-    const roomBeforeNext = roomBeforeNextLane(draw, lane, restLeft);
+    const roomBeforeNext = roomBeforeNextLane(scene.layout, lane, restLeft);
     const width = Math.max(MIN_WIDTH, Math.min(HEADER_MAX_WIDTH, roomBeforeNext, contentWidth(draw, lane) + PADDING * 2));
     const pinnedLeft = visible.left + PINNED_INSET / scene.viewport.zoom;
     const left = headerCardLeft(restLeft, width, pinnedLeft, restLeft + roomBeforeNext);
     drawCard(draw, lane, left, top, width, height, left > restLeft + 0.5);
     draw.drawn.branchHeaders.add(lane, left, top, width, height);
   }
-}
-
-/** Rows closer than this on screen are too crowded for names. */
-const MIN_ROW_SPACING_FOR_NAMES = 24;
-const COMPACT_NAME_HEIGHT = 13;
-
-/**
- * Zoomed out, cards would be unreadably small: branch names are drawn at a fixed screen size
- * just above each band instead, as long as the rows are not too crowded. Drawn in screen coordinates.
- */
-export function drawCompactBranchNames(draw: DrawContext): void {
-  const { ctx, scene, visible } = draw;
-  const { viewport, palette, search } = scene;
-  if (ROW_HEIGHT * viewport.zoom < MIN_ROW_SPACING_FOR_NAMES) return;
-
-  ctx.save();
-  ctx.font = palette.fonts.compactBranchName;
-  ctx.textBaseline = 'bottom';
-  ctx.lineJoin = 'round';
-  ctx.lineWidth = 3;
-  ctx.strokeStyle = palette.background;
-  for (const lane of lanesAcross(scene.layout, visible.left, visible.right)) {
-    const shape = laneShape(lane);
-    if (shape.right < visible.left || shape.left > visible.right || shape.y < visible.top || shape.y > visible.bottom) continue;
-
-    const left = Math.max(shape.left * viewport.zoom + viewport.panX, 6);
-    const right = shape.right * viewport.zoom + viewport.panX;
-    const bottom = (shape.y - BAND_HEIGHT / 2) * viewport.zoom + viewport.panY - 3;
-    const room = compactNameWidth(left, right, roomBeforeNextLane(draw, lane, shape.left) * viewport.zoom, scene.size.width);
-    const name = fitBranchName(ctx, lane.branch.name, room);
-    ctx.globalAlpha = search && !search.litBranches.has(lane.branch.name) ? GHOST_ALPHA : 1;
-    drawSearchMarks(draw, name, left, bottom - COMPACT_NAME_HEIGHT / 2 + 1, COMPACT_NAME_HEIGHT + 1);
-    ctx.strokeText(name, left, bottom);
-    ctx.fillStyle = scene.currentBranch === lane.branch.name ? palette.accentText : branchInk(palette, lane.branch.name);
-    ctx.fillText(name, left, bottom);
-    redrawMarkedLetters(draw, name, left, bottom);
-    draw.drawn.branchHeaders.add(
-      lane,
-      (left - viewport.panX) / viewport.zoom,
-      (bottom - COMPACT_NAME_HEIGHT - viewport.panY) / viewport.zoom,
-      textWidth(ctx, name) / viewport.zoom,
-      COMPACT_NAME_HEIGHT / viewport.zoom,
-    );
-  }
-  ctx.restore();
-}
-
-function roomBeforeNextLane({ scene }: DrawContext, lane: Lane, left: number): number {
-  let next = Number.POSITIVE_INFINITY;
-  for (const other of scene.layout.lanesByRow.get(lane.row) ?? []) {
-    const otherLeft = laneShape(other).left;
-    if (otherLeft > left && otherLeft < next) next = otherLeft;
-  }
-  return next - left - CLEARANCE;
 }
 
 /** What a card's texts measure in world px, kept per lane: the fonts are the theme's and don't change with the zoom. */

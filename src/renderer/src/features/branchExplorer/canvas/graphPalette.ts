@@ -1,5 +1,6 @@
 import type { MergeLinkType } from '@shared/domain/branchExplorer';
 import type { CodeReviewStatus } from '@shared/domain/codeReview';
+import { AVATAR_COLORS, avatarColorOf, type AvatarColor } from '../../../lib/avatarColors';
 import { composite, hslAtContrast, hslColor, hueOf, parseColor, type Rgb } from '../../../styles/contrast';
 import { branchHue, hueToColor, hueToInk, LINE_TONE } from '../model/branchHue';
 
@@ -56,6 +57,9 @@ export interface GraphPalette {
   mergeLinks: Record<Exclude<MergeLinkType, 'merge'>, string>;
   /** Code review chips, colored like the status badges elsewhere. */
   reviewStatus: Record<CodeReviewStatus, string>;
+  /** Authors' avatars without a picture, their fills as every avatar's (`avatarFill`), with the initials in `avatarLetter`. */
+  avatars: Record<AvatarColor, string>;
+  avatarLetter: string;
   fontUi: string;
   fonts: GraphFonts;
   /** Screen size of the changeset comments, shared with the tooltip that completes them in place. */
@@ -104,6 +108,8 @@ export function readGraphPalette(element: Element): GraphPalette {
       Reviewed: variable('--status-added'),
       'Rework required': variable('--status-changed'),
     },
+    avatars: Object.fromEntries(AVATAR_COLORS.map((token) => [token, variable(token)])) as Record<AvatarColor, string>,
+    avatarLetter: variable('--avatar-letter'),
     fontUi,
     fonts: {
       branchName: `600 11.5px ${fontUi}`,
@@ -118,6 +124,11 @@ export function readGraphPalette(element: Element): GraphPalette {
     },
     captionFontSize: CAPTION_FONT_SIZE,
   };
+}
+
+/** The fill of an author's avatar, the same as theirs everywhere else (`avatarColorOf`), so their initials read at 4.5:1. */
+export function avatarFill(palette: GraphPalette, owner: string): string {
+  return palette.avatars[avatarColorOf(owner)];
 }
 
 /** How strongly a branch header takes its branch's color over the raised surface, and how much more while hovered. */

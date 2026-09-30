@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { AVATAR_COLORS } from '../../../lib/avatarColors';
 import { largeHistory } from '../model/graphFixtures';
 import { layoutGraph } from '../model/layoutGraph';
 import { searchGraph, searchHighlight } from '../model/searchGraph';
@@ -73,6 +74,8 @@ const palette: GraphPalette = {
   labelText: INK,
   mergeLinks: { interval: INK, cherryPick: INK, intervalCherryPick: INK, subtractive: INK, intervalSubtractive: INK },
   reviewStatus: { 'Under review': INK, Reviewed: INK, 'Rework required': INK },
+  avatars: Object.fromEntries(AVATAR_COLORS.map((token) => [token, INK])) as GraphPalette['avatars'],
+  avatarLetter: INK,
   fontUi: 'sans-serif',
   fonts: {
     branchName: FONT,

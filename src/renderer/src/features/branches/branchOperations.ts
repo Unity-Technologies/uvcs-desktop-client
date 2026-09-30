@@ -1,4 +1,4 @@
-import type { Branch } from '@shared/domain/branch';
+import type { Branch, CreateBranchRequest } from '@shared/domain/branch';
 import { shortBranchName, spec } from '@shared/domain/specs';
 import type { PendingChangesAction } from '@shared/domain/switchWithChanges';
 import { api } from '../../api/client';
@@ -8,7 +8,8 @@ import { isAffectedByBranchList } from '../../app/refresh/refreshScopes';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
-import { toast } from '../../ui/toast/toastStore';
+import { invalidateWorkspace } from '../../app/queryClient';
+import { toast, useToastStore } from '../../ui/toast/toastStore';
 import { validateBranchName } from './branchNames';
 import { pickBranch } from './BranchPickerDialog';
 import { rememberRecentBranch } from './recentBranches';
@@ -17,6 +18,54 @@ import { rememberRecentBranch } from './recentBranches';
 export function switchToBranch(workspacePath: string, branch: string, pendingChanges?: PendingChangesAction): Promise<boolean> {
   void rememberRecentBranch(workspacePath, branch);
   return switchWorkspace(workspacePath, spec.branch(branch), branch, pendingChanges);
+}
+
+/** What the user asked for the workspace once the new branch is created. */
+export interface SwitchToNewBranch {
+  /** Whether to switch the workspace to the new branch. */
+  requested: boolean;
+  /** A merge in progress keeps the workspace where it is, even when a switch was requested. */
+  blockedByMerge: boolean;
+  /** The choice already made for the pending changes, if any. */
+  pendingChanges?: PendingChangesAction;
+  /** What the workspace is on, to say where it stayed. */
+  workspaceOn?: string;
+}
+
+/**
+ * Creates a branch, then switches the workspace to it if asked. Two operations in a row refresh once, after the last
+ * (ARCHITECTURE.md "Server budget"): creating refreshes nothing by itself, as a switch refreshes every view when it's
+ * done; only when the workspace stays do the branch lists refresh. `onCreated` runs once the branch exists, before any
+ * switch. Resolves to whether the branch was created.
+ */
+export async function createBranchAndSwitch(
+  workspacePath: string,
+  request: CreateBranchRequest,
+  switchTo: SwitchToNewBranch,
+  onCreated: () => void = () => undefined,
+): Promise<boolean> {
+  try {
+    await api.branches.create(workspacePath, request);
+  } catch (error) {
+    toast.error("Couldn't create the branch", error);
+    return false;
+  }
+  onCreated();
+
+  const switching = switchTo.requested && !switchTo.blockedByMerge;
+  if (switching && (await switchToBranch(workspacePath, request.name, switchTo.pendingChanges))) return true;
+  void invalidateWorkspace(workspacePath, isAffectedByBranchList);
+  if (switchTo.requested) announceNotSwitched(workspacePath, request.name, switchTo.workspaceOn);
+  else toast.success(`Created ${request.name}`);
+  return true;
+}
+
+function announceNotSwitched(workspacePath: string, branch: string, workspaceOn: string | undefined): void {
+  useToastStore.getState().show({
+    kind: 'info',
+    title: `Created ${branch} — you're still on ${workspaceOn ?? 'the same branch'}`,
+    action: { label: 'Switch', run: () => void switchToBranch(workspacePath, branch) },
+  });
 }
 
 export async function renameBranch(workspacePath: string, branch: Pick<Branch, 'name'>): Promise<void> {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { captionCardCorner, captionCardMaxWidth, cardMaxWidth, keepInside } from './captionCard';
+import { captionCardCorner, captionCardMaxWidth, captionOnScreen, cardMaxWidth, keepInside } from './captionCard';
 
 describe('captionCardCorner', () => {
   it('puts the text of the card on the caption: same first glyph, same baseline', () => {
@@ -7,6 +7,12 @@ describe('captionCardCorner', () => {
     const { left, top } = captionCardCorner({ x: 200, baseline: 104 }, origin);
     expect(left + origin.x).toBe(200);
     expect(top + origin.y).toBe(104);
+  });
+});
+
+describe('captionOnScreen', () => {
+  it('finds the caption’s first glyph and baseline where the zoomed, panned view shows it', () => {
+    expect(captionOnScreen({ x: 100, y: 40 }, { zoom: 2, panX: -50, panY: 10 }, 12)).toEqual({ x: 150, baseline: 102 });
   });
 });
 

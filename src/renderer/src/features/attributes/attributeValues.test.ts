@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { attributeTone, attributeValueKind, defaultValuesIn, suggestedValues, valueCounts } from './attributeValues';
+import { attributeTone, attributeValueKind, chipText, defaultValuesIn, suggestedValues, valueCounts } from './attributeValues';
 
 describe('attributeValueKind', () => {
   it('shows short enumerable values as pills', () => {
@@ -13,6 +13,15 @@ describe('attributeValueKind', () => {
     expect(attributeValueKind('x'.repeat(91))).toBe('long');
     expect(attributeValueKind('Waiting for the art team')).toBe('text');
     expect(attributeValueKind('  ')).toBe('empty');
+  });
+});
+
+describe('chipText', () => {
+  it('says what a chip shows: empty, a long text folded to a line, a link without its scheme, else the value', () => {
+    expect(chipText('  ')).toBe('empty');
+    expect(chipText('## Fixes\n- Crash on start')).toBe('Fixes — Crash on start');
+    expect(chipText('https://ci.example.com/build/42')).toBe('ci.example.com/build/42');
+    expect(chipText(' resolved ')).toBe('resolved');
   });
 });
 

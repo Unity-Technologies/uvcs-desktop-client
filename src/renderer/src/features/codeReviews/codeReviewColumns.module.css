@@ -24,7 +24,3 @@
 .unassigned {
   color: var(--text-tertiary);
 }
-
-.spinning {
-  animation: var(--keyframes-spin) 0.8s linear infinite;
-}

@@ -1,30 +1,20 @@
 import * as Popover from '@radix-ui/react-popover';
-import { ChevronDown, GitBranch, GitBranchPlus } from 'lucide-react';
-import { useMemo, useState } from 'react';
-import type { Branch } from '@shared/domain/branch';
-import type { WorkspaceInfo, WorkspaceSelector } from '@shared/domain/workspace';
-import { useCommands, type Command } from '../../app/commands/commandStore';
+import { ChevronDown } from 'lucide-react';
+import { useState } from 'react';
+import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { useRunningOperationOfKind } from '../../app/operations/runningOperationsStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { COPY_ENTRY_IDS } from '../../components/copyMenu';
 import { PathLabel } from '../../components/PathLabel';
 import { SELECTOR_ICONS, workingObjectName } from '../../components/workingObject';
-import { runningFirst } from '../../lib/actions';
 import { holdBackMenuKeyRelease, isListMenuKey, openContextMenuOf } from '../../lib/rowMenu';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
-import { Button } from '../../ui/Button';
 import { ringValue } from '../../app/operations/progressBar';
 import { ProgressRing } from '../../ui/ProgressRing';
 import { ToolbarPill } from '../../ui/ToolbarPill';
-import { branchMenu } from './branchMenu';
-import { switchToBranch } from './branchOperations';
-import { BranchSearchList } from './BranchSearchList';
-import { branchSwitcherGroups } from './branchSwitcherGroups';
+import { BranchSwitcher } from './BranchSwitcher';
 import { useReturnFocus } from '../../ui/useReturnFocus';
+import { useBranchCommands } from './useBranchCommands';
 import { useBranchSwitcher } from './branchSwitcherStore';
-import { newBranchFromWorkspace } from './newBranchFromWorkspace';
-import { useRecentBranchGuids } from './recentBranches';
-import { useBranches } from './useBranches';
 import { useWorkingObject } from './useWorkingObject';
 import { useWorkingObjectComment } from './useWorkingObjectComment';
 import { workingObjectMenu } from './workingObjectMenu';
@@ -93,69 +83,4 @@ export function WorkingObjectButton() {
 function workingObjectTitle(selector: WorkspaceSelector): string {
   const name = workingObjectName(selector);
   return selector.kind === 'label' ? `Label ${name}` : name;
-}
-
-function BranchSwitcher({ workspace, onDone }: { workspace: WorkspaceInfo; onDone: () => void }) {
-  const { data: branches = [] } = useBranches();
-  const recentGuids = useRecentBranchGuids(workspace.path);
-  const currentBranch = workspace.selector.kind === 'branch' ? workspace.selector.name : undefined;
-  const groups = useMemo(() => branchSwitcherGroups(branches, recentGuids), [branches, recentGuids]);
-
-  const pick = (branch: Branch): void => {
-    onDone();
-    if (branch.name !== currentBranch) void switchToBranch(workspace.path, branch.name);
-  };
-
-  return (
-    <BranchSearchList
-      groups={groups}
-      currentBranch={currentBranch}
-      placeholder="Switch to branch…"
-      onPick={pick}
-      // Actions close the popup first (dialogs and pages open without it on top); copying keeps it open.
-      menu={(branch) => runningFirst(branchMenu(workspace.path, [branch], currentBranch), onDone, COPY_ENTRY_IDS)}
-      action={
-        <Button
-          size="small"
-          variant="secondary"
-          icon={<GitBranchPlus size={13} />}
-          data-tip="New branch from what the workspace is loaded from"
-          data-tip-shortcut={hotkey('newBranch')}
-          onClick={() => {
-            onDone();
-            newBranchFromWorkspace(workspace);
-          }}
-        >
-          New branch
-        </Button>
-      }
-    />
-  );
-}
-
-function useBranchCommands(workspace: WorkspaceInfo | undefined): void {
-  const setOpen = useBranchSwitcher((state) => state.setOpen);
-  const commands = useMemo<Command[]>(
-    () => [
-      {
-        id: 'branch.switch',
-        group: 'Branch',
-        label: 'Switch branch…',
-        icon: GitBranch,
-        shortcut: hotkey('switchBranch'),
-        run: () => setOpen(true),
-      },
-      {
-        id: 'branch.new',
-        group: 'Branch',
-        label: 'New branch…',
-        icon: GitBranchPlus,
-        shortcut: hotkey('newBranch'),
-        disabled: !workspace,
-        run: () => workspace && newBranchFromWorkspace(workspace),
-      },
-    ],
-    [setOpen, workspace],
-  );
-  useCommands(commands);
 }

@@ -5,7 +5,8 @@ import { queryKeys } from '../../api/queryKeys';
 import { readServerUser } from '../../app/account/accounts';
 import { navigation } from '../../app/navigation/navigationStore';
 import { queryClient } from '../../app/queryClient';
-import { runAction } from '../../app/operations/runOperation';
+import { runAction, runVoidAction } from '../../app/operations/runOperation';
+import { isAffectedByCodeReviews } from '../../app/refresh/refreshScopes';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { deleteReviewsQuestion } from './deleteReviewsQuestion';
@@ -25,7 +26,7 @@ export async function setReviewStatus(workspacePath: string, review: CodeReviewS
     });
     if (assignee === undefined) return;
   }
-  await runAction(workspacePath, "Couldn't change the review status", () => api.codeReviews.update(workspacePath, review.id, { status, assignee }));
+  await runAction(workspacePath, "Couldn't change the review status", () => api.codeReviews.update(workspacePath, review.id, { status, assignee }), isAffectedByCodeReviews);
 }
 
 /** Whoever changes the status is likely the one reviewing: you on the workspace's server, if already known or quick to read. */
@@ -43,7 +44,7 @@ export async function reassignReview(workspacePath: string, review: CodeReviewSu
     confirmLabel: 'Assign',
   });
   if (assignee === undefined) return;
-  await runAction(workspacePath, "Couldn't assign the review", () => api.codeReviews.update(workspacePath, review.id, { assignee }));
+  await runAction(workspacePath, "Couldn't assign the review", () => api.codeReviews.update(workspacePath, review.id, { assignee }), isAffectedByCodeReviews);
 }
 
 /** Resolves to true when the reviews were deleted. */
@@ -55,11 +56,12 @@ export async function deleteReviews(workspacePath: string, reviews: CodeReviewSu
   });
   if (!confirmed) return false;
 
-  const deleted = await runAction(workspacePath, "Couldn't delete the review", async () => {
-    await api.codeReviews.remove(workspacePath, reviews.map((review) => review.id));
-    return true;
-  });
-  return deleted === true;
+  return runVoidAction(
+    workspacePath,
+    "Couldn't delete the review",
+    () => api.codeReviews.remove(workspacePath, reviews.map((review) => review.id)),
+    isAffectedByCodeReviews,
+  );
 }
 
 export function openReview(review: Pick<CodeReview, 'id'>, focusPath?: string): void {

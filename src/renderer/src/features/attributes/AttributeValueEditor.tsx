@@ -21,7 +21,11 @@ export function AttributeValueEditor({ initialValue, suggestions, onSave, onCanc
   const typed = draft === initialValue ? '' : draft;
   const offered = suggestions.filter((suggestion) => suggestion !== draft.trim() && matchesWordFilter([suggestion], typed));
 
-  const finish = (value: string): void => (value !== initialValue ? onSave(value) : onCancel());
+  // A value left as it was is no edit.
+  const finish = (value: string): void => {
+    if (value === initialValue) onCancel();
+    else onSave(value);
+  };
 
   return (
     <div className={styles.editing}>
@@ -47,18 +51,18 @@ export function AttributeValueEditor({ initialValue, suggestions, onSave, onCanc
         <HighlightQuery query={typed}>
           <div className={styles.suggestions}>
             {offered.map((suggestion) => (
-            <button
-              key={suggestion}
-              className={styles.pillButton}
-              // Keeps the focus in the editor, so its blur doesn't save the draft first.
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => finish(suggestion)}
-            >
-              <span className={styles.pill} data-tone={attributeTone(suggestion)}>
-                <Highlight text={suggestion} />
-              </span>
-            </button>
-          ))}
+              <button
+                key={suggestion}
+                className={styles.pillButton}
+                // Keeps the focus in the editor, so its blur doesn't save the draft first.
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => finish(suggestion)}
+              >
+                <span className={styles.pill} data-tone={attributeTone(suggestion)}>
+                  <Highlight text={suggestion} />
+                </span>
+              </button>
+            ))}
           </div>
         </HighlightQuery>
       )}

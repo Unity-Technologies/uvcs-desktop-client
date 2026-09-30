@@ -6,7 +6,7 @@ import { COLUMN_WIDTH, columnX, headerTop, nodePoint, pendingPoint } from './geo
 import { pointOnCurve, linkCurve } from './curves';
 import type { DrawnTargets } from './drawContext';
 import { DrawnBoxes } from './drawnBoxes';
-import { hitTest, hoverCardFor } from './graphTargets';
+import { hitTest, hoverCardFor, hoverCardKey, hoverHighlight } from './graphTargets';
 import { labelChips } from './labelPlacement';
 import { laneShape } from './laneShape';
 
@@ -184,5 +184,34 @@ describe('hoverCardFor', () => {
 
   it('has no card on empty space', () => {
     expect(cardAt({ x: -500, y: -500 })).toBeNull();
+  });
+});
+
+describe('hoverHighlight', () => {
+  it('lights a "+N" node as its changeset, a branch, a code review chip and the pending changes', () => {
+    const none = { hoveredChangeset: null, hoveredBranch: null, hoveredReview: null, hoveredPending: false };
+    const node = layout.nodes.get(5)!;
+    expect(hoverHighlight(null)).toEqual(none);
+    expect(hoverHighlight({ kind: 'collapsed', node })).toEqual({ ...none, hoveredChangeset: node.changeset.id });
+    expect(hoverHighlight({ kind: 'branch', lane: layout.lanesByBranch.get('/main/a')! })).toEqual({ ...none, hoveredBranch: '/main/a' });
+    expect(hoverHighlight({ kind: 'codeReview', review: { id: 7 } as CodeReview })).toEqual({ ...none, hoveredReview: 7 });
+    expect(hoverHighlight({ kind: 'pending' })).toEqual({ ...none, hoveredPending: true });
+  });
+});
+
+describe('hoverCardKey', () => {
+  it('names the same thing alike, so the card stays, and anything else apart, so it changes', () => {
+    const cherryPick = { type: 'cherryPick', sourceChangeset: 5, destinationChangeset: 6 } as const;
+    const keys = [
+      hoverCardKey({ kind: 'changeset', id: 5 }),
+      hoverCardKey({ kind: 'collapsed', node: layout.nodes.get(5)! }),
+      hoverCardKey({ kind: 'label', label: sampleHistory().labels[0]!, more: [] }),
+      hoverCardKey({ kind: 'mergeLink', link: merge(5, 6) }),
+      hoverCardKey({ kind: 'mergeLink', link: cherryPick }),
+      hoverCardKey({ kind: 'pending' }),
+      hoverCardKey({ kind: 'pendingMergeLink', link: { type: 'merge', sourceChangeset: 5 } }),
+    ];
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(hoverCardKey({ kind: 'mergeLink', link: merge(5, 6) })).toBe(keys[3]);
   });
 });

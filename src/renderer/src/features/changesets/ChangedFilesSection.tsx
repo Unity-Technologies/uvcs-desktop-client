@@ -21,6 +21,8 @@ const MAX_LISTED_FILES = 300;
 /** Short lists read at a glance; longer ones get the path and status filter. */
 const FILTER_FROM = 8;
 
+const NO_ENTRIES: DiffEntry[] = [];
+
 interface ChangedFilesSectionProps {
   target: DiffTarget;
   /** For a branch, its head: the list is reused until the branch moves. */
@@ -35,8 +37,6 @@ interface ChangedFilesSectionProps {
  * for, and stays cached, so it shows right away when that object is selected again. Its title hides and shows it again
  * (from the cache, no second `cm diff`), and every panel keeps it hidden, as More details keeps its state, until shown.
  */
-const NO_ENTRIES: DiffEntry[] = [];
-
 export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFilesSectionProps) {
   const [requested, setRequested] = useState(false);
   const { changesCollapsed: collapsed, set } = useDetailsLayoutStore();

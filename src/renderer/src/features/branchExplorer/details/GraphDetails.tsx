@@ -8,12 +8,12 @@ import type { GraphSelection } from '../graphSelection';
 import { LabelDetails } from '../../labels/LabelDetails';
 import { selectedLabel } from '../model/graphLabels';
 import type { GraphLayout } from '../model/layoutGraph';
-import { BranchDetails } from './BranchDetails';
+import { GraphBranchDetails } from './GraphBranchDetails';
 import { BranchName } from './BranchName';
-import { ChangesetDetails } from './ChangesetDetails';
+import { GraphChangesetDetails } from './GraphChangesetDetails';
 import { PendingDetails } from './PendingDetails';
 
-interface DetailsPanelProps {
+interface GraphDetailsProps {
   selection: GraphSelection | null;
   layout: GraphLayout;
   /** What the pending changes count, when they are selected. */
@@ -24,7 +24,11 @@ interface DetailsPanelProps {
   selectBranch: (name: string) => void;
 }
 
-export function DetailsPanel({ selection, layout, pendingChangeCount, menuFor, goToChangeset, selectBranch }: DetailsPanelProps) {
+/**
+ * The Branch Explorer's details: the selected label, changeset, pending changes or branch, read as every view reads
+ * them, their links leading around the graph.
+ */
+export function GraphDetails({ selection, layout, pendingChangeCount, menuFor, goToChangeset, selectBranch }: GraphDetailsProps) {
   const workspacePath = useWorkspacePath();
   const repository = useWorkspaceInfo().data?.repository ?? '';
   const label = selectedLabel(layout, selection, repository);
@@ -41,11 +45,11 @@ export function DetailsPanel({ selection, layout, pendingChangeCount, menuFor, g
     return <LabelDetails key={label.name} workspacePath={workspacePath} label={label} menu={menuFor({ kind: 'label', label, more: [] })} links={links} />;
   }
   if (node) {
-    return <ChangesetDetails key={node.changeset.id} node={node} layout={layout} menu={menuFor({ kind: 'changeset', id: node.changeset.id })} links={links} />;
+    return <GraphChangesetDetails key={node.changeset.id} node={node} layout={layout} menu={menuFor({ kind: 'changeset', id: node.changeset.id })} links={links} />;
   }
   if (pending) return <PendingDetails pending={pending} count={pendingChangeCount} links={links} />;
   if (lane) {
-    return <BranchDetails key={lane.branch.name} lane={lane} layout={layout} menu={menuFor({ kind: 'branch', lane })} links={links} />;
+    return <GraphBranchDetails key={lane.branch.name} lane={lane} layout={layout} menu={menuFor({ kind: 'branch', lane })} links={links} />;
   }
   return <NoSelection noun="changeset or branch" />;
 }

@@ -5,6 +5,8 @@ const asked = vi.hoisted(() => ({
   picked: undefined as string | undefined,
   picker: undefined as { exclude?: string } | undefined,
   switches: [] as unknown[][],
+  /** Whether the switch goes through (false: the user cancelled it, or it failed). */
+  switchSucceeds: true,
 }));
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
@@ -17,7 +19,7 @@ vi.mock('./BranchPickerDialog', () => ({
 vi.mock('../../app/shell/workspaceOperations', () => ({
   switchWorkspace: async (...args: unknown[]) => {
     asked.switches.push(args);
-    return true;
+    return asked.switchSucceeds;
   },
 }));
 
@@ -26,7 +28,7 @@ import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
 import { answerConfirms, answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
-import { deleteBranches, mergeTo, renameBranch, setBranchesHidden, switchToBranch } from './branchOperations';
+import { createBranchAndSwitch, deleteBranches, mergeTo, renameBranch, setBranchesHidden, switchToBranch, type SwitchToNewBranch } from './branchOperations';
 
 const ws = '/ws';
 const branch = (name: string, guid = `guid-${name}`): Branch => ({ id: 1, name, parent: '/main', comment: '', owner: 'ana', date: '', headChangeset: 5, guid, repository: 'game@local' });
@@ -35,6 +37,7 @@ beforeEach(() => {
   asked.picked = undefined;
   asked.picker = undefined;
   asked.switches.length = 0;
+  asked.switchSucceeds = true;
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -74,6 +77,78 @@ describe('switching to a branch', () => {
     expect(await switchToBranch(ws, '/main/task')).toBe(true);
 
     await warned;
+  });
+});
+
+describe('creating a branch and switching to it', () => {
+  const request = { name: '/main/task', startingPoint: 'cs:12', comment: 'The task' };
+  const switchTo = (overrides: Partial<SwitchToNewBranch> = {}): SwitchToNewBranch => ({ requested: true, blockedByMerge: false, workspaceOn: '/main', ...overrides });
+
+  beforeEach(() => {
+    fakeApi.answer('branches.create', () => undefined);
+    // A switch records the branch among the recent ones, from the list the refresh read.
+    queryClient.setQueryData(queryKeys.inWorkspace(ws, 'branches', {}), [branch('/main/task')]);
+    fakeApi.answer('branches.rememberRecent', () => undefined);
+  });
+
+  it('refreshes once, after the switch: creating the branch refreshes nothing by itself', async () => {
+    const refreshed = watchRefreshes(ws);
+    const order: string[] = [];
+
+    const created = await createBranchAndSwitch(ws, request, switchTo({ pendingChanges: 'bring' }), () => order.push(`created, ${asked.switches.length} switches`));
+
+    expect(created).toBe(true);
+    expect(fakeApi.argsOf('branches.create')).toEqual([[ws, request]]);
+    expect(order).toEqual(['created, 0 switches']);
+    expect(asked.switches).toEqual([[ws, 'br:/main/task', '/main/task', 'bring']]);
+    expect(refreshed()).toEqual([]);
+    expect(shownToasts()).toEqual([]);
+  });
+
+  it('refreshes only the branch lists and the graph when the workspace stays, and says so', async () => {
+    const refreshed = watchRefreshes(ws);
+
+    await createBranchAndSwitch(ws, request, switchTo({ requested: false }));
+
+    expect(asked.switches).toEqual([]);
+    expect(refreshed()).toEqual(['branchExplorer', 'branches']);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Created /main/task' }]);
+  });
+
+  it('offers the switch again when it was cancelled or failed, having refreshed the branch lists', async () => {
+    asked.switchSucceeds = false;
+    const refreshed = watchRefreshes(ws);
+
+    await createBranchAndSwitch(ws, request, switchTo());
+
+    expect(asked.switches).toHaveLength(1);
+    expect(refreshed()).toEqual(['branchExplorer', 'branches']);
+    expect(shownToasts()).toEqual([{ kind: 'info', title: "Created /main/task — you're still on /main", action: 'Switch' }]);
+  });
+
+  it('never tries to switch in the middle of a merge', async () => {
+    const refreshed = watchRefreshes(ws);
+
+    await createBranchAndSwitch(ws, request, switchTo({ blockedByMerge: true }));
+
+    expect(asked.switches).toEqual([]);
+    expect(refreshed()).toEqual(['branchExplorer', 'branches']);
+    expect(shownToasts()).toEqual([{ kind: 'info', title: "Created /main/task — you're still on /main", action: 'Switch' }]);
+  });
+
+  it('reports a branch that couldn’t be created, switching and refreshing nothing', async () => {
+    fakeApi.answer('branches.create', () => {
+      throw commandFailure('The branch already exists');
+    });
+    const refreshed = watchRefreshes(ws);
+    let createdCalls = 0;
+
+    expect(await createBranchAndSwitch(ws, request, switchTo(), () => createdCalls++)).toBe(false);
+
+    expect(createdCalls).toBe(0);
+    expect(asked.switches).toEqual([]);
+    expect(refreshed()).toEqual([]);
+    expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't create the branch", detail: 'The branch already exists' }]);
   });
 });
 

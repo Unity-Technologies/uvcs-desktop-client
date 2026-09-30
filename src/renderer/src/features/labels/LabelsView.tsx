@@ -1,13 +1,11 @@
-import { Plus, RefreshCw, Tag } from 'lucide-react';
+import { Plus, Tag } from 'lucide-react';
 import { useMemo } from 'react';
 import type { Label } from '@shared/domain/label';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
-import { invalidateWorkspace } from '../../app/queryClient';
+import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
-import { ListWithDetails } from '../../components/ListWithDetails';
-import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
-import { NoSelection } from '../../components/NoSelection';
+import { ObjectListView } from '../../components/ObjectListView';
 import { ObjectName } from '../../components/ObjectName';
 import { PathLabel } from '../../components/PathLabel';
 import { useWorkspaceUser } from '../../app/account/accounts';
@@ -16,6 +14,7 @@ import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { SincePicker } from '../../components/SincePicker';
 import { matchesPeople, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
+import { longerRangeHint } from '../../lib/longerRangeHint';
 import { isFiltering } from '../../lib/viewFilters';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
@@ -25,10 +24,9 @@ import { labelFilterTexts, labelsQuery } from './labelFilters';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
-import { Highlight, HighlightQuery } from '../../ui/Highlight';
-import { IconButton } from '../../ui/IconButton';
+import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
-import { DataTable, type Column } from '../../ui/table/DataTable';
+import type { Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { openCreateLabelDialog } from './CreateLabelDialog';
 import { LabelDetails } from './LabelDetails';
@@ -81,7 +79,7 @@ export function LabelsView() {
         total={labels?.length}
         actions={
           <>
-            <IconButton icon={<RefreshCw size={14} className={isFetching ? 'spinning' : undefined} />} label="Refresh" onClick={() => void invalidateWorkspace(workspacePath)} />
+            <ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />
             <Button variant="primary" icon={<Plus size={14} />} onClick={() => openCreateLabelDialog(workspacePath)}>
               New label
             </Button>
@@ -94,42 +92,36 @@ export function LabelsView() {
           time={<SincePicker value={since} onChange={(value) => update({ since: value })} />}
         />
       </ViewHeader>
-      {isLoading ? (
-        <ListWithDetailsSkeleton widthKey="labels" columns={COLUMNS} />
-      ) : error ? (
-        <EmptyState title="Couldn't load labels" description={error.message} />
-      ) : visible.length === 0 && filtering ? (
-        <NoMatches icon={<Tag size={22} />} noun="labels" hint={since === 'anyTime' ? undefined : 'The filters look within the time range. Try a longer one.'} onClear={filters.clear} />
-      ) : visible.length === 0 && since !== 'anyTime' ? (
-        <EmptyState icon={<Tag size={22} />} title="No labels" description="Try a longer time range." />
-      ) : visible.length === 0 ? (
-        <EmptyState
-          icon={<Tag size={22} />}
-          title="No labels"
-          description="Labels mark important changesets, like releases."
-          action={<Button onClick={() => openCreateLabelDialog(workspacePath)}>Label your workspace changeset</Button>}
-        />
-      ) : (
-        <ListWithDetails widthKey="labels"
-          list={
-            <HighlightQuery query={search}>
-              <DataTable
-                rows={visible}
-                columns={COLUMNS}
-                rowKey={labelKey}
-                selection={selection}
-                onSelectionChange={setSelection}
-                selectFirstRow
-                onActivate={(label) => showLabelChanges(label)}
-                contextMenu={(selectedLabels) => labelMenu(workspacePath, selectedLabels)}
-              />
-            </HighlightQuery>
-          }
-          details={
-            selected ? <LabelDetails key={selected.name} workspacePath={workspacePath} label={selected} menu={labelMenu(workspacePath, [selected])} /> : <NoSelection noun="label" />
-          }
-        />
-      )}
+      <ObjectListView
+        widthKey="labels"
+        loading={isLoading}
+        error={error}
+        errorTitle="Couldn't load labels"
+        empty={
+          filtering ? (
+            <NoMatches icon={<Tag size={22} />} noun="labels" hint={longerRangeHint(since, true)} onClear={filters.clear} />
+          ) : since !== 'anyTime' ? (
+            <EmptyState icon={<Tag size={22} />} title="No labels" description={longerRangeHint(since, false)} />
+          ) : (
+            <EmptyState
+              icon={<Tag size={22} />}
+              title="No labels"
+              description="Labels mark important changesets, like releases."
+              action={<Button onClick={() => openCreateLabelDialog(workspacePath)}>Label your workspace changeset</Button>}
+            />
+          )
+        }
+        query={search}
+        rows={visible}
+        columns={COLUMNS}
+        rowKey={labelKey}
+        selection={selection}
+        onSelectionChange={setSelection}
+        onActivate={(label) => showLabelChanges(label)}
+        contextMenu={(selectedLabels) => labelMenu(workspacePath, selectedLabels)}
+        noun="label"
+        details={selected && <LabelDetails key={selected.name} workspacePath={workspacePath} label={selected} menu={labelMenu(workspacePath, [selected])} />}
+      />
     </>
   );
 }

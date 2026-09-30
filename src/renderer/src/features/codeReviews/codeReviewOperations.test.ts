@@ -9,7 +9,7 @@ import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
 import { answerConfirms, answerPrompts, askedDialogs } from '../../testing/fakeDialogs';
-import { shownToasts } from '../../testing/operationOutcome';
+import { shownToasts, watchRefreshes } from '../../testing/operationOutcome';
 import { deleteReviews, reassignReview, setReviewStatus } from './codeReviewOperations';
 
 const ws = '/ws';
@@ -72,6 +72,24 @@ describe('review operations', () => {
     expect(await deleteReviews(ws, [review('ana', 1), review('ana', 2)])).toBe(true);
 
     expect(fakeApi.argsOf('codeReviews.remove')).toEqual([[ws, [1, 2]]]);
+  });
+
+  it('refreshes only the reviews (their lists and the branch chips), never the history nor the workspace', async () => {
+    fakeApi.answer('codeReviews.update', () => undefined);
+    fakeApi.answer('codeReviews.remove', () => undefined);
+    answerPrompts('carl');
+
+    const afterStatus = watchRefreshes(ws);
+    await setReviewStatus(ws, review('ana'), 'Reviewed');
+    expect(afterStatus()).toEqual(['codeReviews']);
+
+    const afterAssign = watchRefreshes(ws);
+    await reassignReview(ws, review('ana'));
+    expect(afterAssign()).toEqual(['codeReviews']);
+
+    const afterDelete = watchRefreshes(ws);
+    await deleteReviews(ws, [review('ana')]);
+    expect(afterDelete()).toEqual(['codeReviews']);
   });
 
   it('tells a delete failed or was cancelled, so the selection stays', async () => {

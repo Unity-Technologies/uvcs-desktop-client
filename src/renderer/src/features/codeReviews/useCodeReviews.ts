@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import type { CodeReviewFilter } from '@shared/domain/codeReview';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
+import { SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { compactFilter } from '../../lib/compactFilter';
 import { latestReviewByBranch } from './reviewsByBranch';
@@ -32,16 +33,22 @@ export function reviewSummariesKey(workspacePath: string, text?: string): readon
 
 /**
  * The newest review of each branch by branch id, for status chips next to branch names (the lists showing them know
- * their branches' ids, so no name is looked up). The command palette lists the same reviews. Cached for a few minutes;
+ * their branches' ids, so no name is looked up). The command palette lists the same reviews, read rarely;
  * `enabled` lets a view ask only once its own data is in, so the chips never delay it.
  */
 export function useReviewsByBranch(enabled = true) {
   const workspacePath = useWorkspacePath();
-  return useQuery({
+  return useQuery({ ...reviewSummariesQuery(workspacePath), select: latestReviewByBranch, enabled });
+}
+
+/**
+ * How the newest reviews of the repository are read, all of them (`reviewSummariesKey` without a text): rarely, as
+ * the palette reads the same list, and a focus never reads them again.
+ */
+export function reviewSummariesQuery(workspacePath: string) {
+  return {
     queryKey: reviewSummariesKey(workspacePath),
     queryFn: () => api.codeReviews.listSummaries(workspacePath, {}),
-    select: latestReviewByBranch,
-    staleTime: 5 * 60_000,
-    enabled,
-  });
+    ...SLOW_CHANGING_QUERY,
+  };
 }

@@ -1,3 +1,5 @@
+import { markdownPreview } from '../../lib/markdown';
+
 /** How an attribute value reads best: a status pill, a link, a long text folded to one line, or plain text. */
 export type AttributeValueKind = 'empty' | 'pill' | 'url' | 'long' | 'text';
 
@@ -22,6 +24,21 @@ export function attributeValueKind(value: string): AttributeValueKind {
   if (trimmed.includes('\n') || trimmed.length > MAX_SHORT_LENGTH) return 'long';
   if (trimmed.length <= MAX_PILL_LENGTH && trimmed.split(/\s+/).length <= MAX_PILL_WORDS) return 'pill';
   return 'text';
+}
+
+/** What a value's chip says: "empty", a long text's first line, a link without its scheme, else the value. */
+export function chipText(value: string): string {
+  const trimmed = value.trim();
+  switch (attributeValueKind(value)) {
+    case 'empty':
+      return 'empty';
+    case 'long':
+      return markdownPreview(trimmed);
+    case 'url':
+      return trimmed.replace(/^https?:\/\//i, '');
+    default:
+      return trimmed;
+  }
 }
 
 /** Green for values that mean "good", red for "bad", amber for "in between"; anything else stays neutral. */

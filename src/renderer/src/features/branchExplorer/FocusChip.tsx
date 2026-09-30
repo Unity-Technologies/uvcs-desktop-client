@@ -3,7 +3,7 @@ import type { MenuEntry } from '../../lib/actions';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import type { GraphFocus } from './model/filterGraph';
-import styles from './BranchExplorerView.module.css';
+import styles from './FocusChip.module.css';
 
 const FOCUS_HOPS: { hops: number; label: string }[] = [
   { hops: 1, label: 'Direct relatives' },

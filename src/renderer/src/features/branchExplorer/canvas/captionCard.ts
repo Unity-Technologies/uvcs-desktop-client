@@ -1,3 +1,5 @@
+import type { Viewport } from './viewport';
+
 /** Font metrics of the caption face: where its baseline goes and how tall its text box is. */
 export interface CaptionMetrics {
   /** Font-box ascent and descent: what CSS line layout uses as the content area. */
@@ -36,6 +38,11 @@ export function captionCardMaxWidth(captionX: number, containerWidth: number, wi
  */
 export function captionCardCorner(caption: { x: number; baseline: number }, origin: { x: number; y: number }): { left: number; top: number } {
   return { left: caption.x - origin.x, top: caption.baseline - origin.y };
+}
+
+/** Where on screen a caption drawn at `caption` (world px, its top-left) has its first glyph and its baseline. */
+export function captionOnScreen(caption: { x: number; y: number }, viewport: Viewport, ascent: number): { x: number; baseline: number } {
+  return { x: caption.x * viewport.zoom + viewport.panX, baseline: caption.y * viewport.zoom + viewport.panY + ascent };
 }
 
 /** A card's left edge moved just enough to keep it inside the canvas: alignment yields to visibility at the edges. */

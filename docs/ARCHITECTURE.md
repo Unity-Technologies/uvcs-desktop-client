@@ -82,8 +82,8 @@ and many people use the same server. Every `cm` command other than local reads (
   or a merge from a branch leave labels, shelves, attributes, reviews, left changes and changesets already read alone;
   shelving changes that stay in the workspace refreshes only the shelve lists, and shelving them away those and the workspace; a new, deleted or hidden branch only the
   branch lists and the Branch Explorer; a label edit the labels and the graph; an attribute or value edit only the
-  attributes. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
-  the last (create a branch and switch to it). Views keyed by the workspace info (`keyedByWorkspaceInfo`: left changes, the
+  attributes; a code review created, edited or deleted only the reviews (their lists and the branch chips); releasing a lock only the locks. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
+  the last (create a branch and switch to it: `createBranchAndSwitch`). Views keyed by the workspace info (`keyedByWorkspaceInfo`: left changes, the
   incoming check, the branch the workspace is on) wait for it, and when the operation gave them another key they are only
   marked stale: they are read under the new key as they show, never once more under the old one. Event-driven refreshes
   are scoped too: someone else's checkin leaves labels, shelves, attributes, reviews and the workspace's own annotations alone.
@@ -364,12 +364,12 @@ renderer/src/
   - **Counts and empty lists**: the header counts what shows, "12 of 340" while filters hide some of what was read
     (`shownCount`). A list its filters empty says "No matching <things>" with Clear filters (`NoMatches`), which
     empties the text, shows everyone and turns the kinds off (`clear`, `isFiltering`); the time range stays, and the
-    hint says when a longer one could find more. A list with nothing to filter keeps its own first-use empty state.
+    hint says when a longer one could find more (`longerRangeHint`). A list with nothing to filter keeps its own first-use empty state.
     Revealing a row the filters hide clears them (Show in Locks, the Branch Explorer's reveal).
   - The shelves list in Changes stays a quick list with "Mine | Everyone" (⇧⌘S), not a filter bar: it's a popover
     over Changes, and its "All shelves" hands its scope and text to the Shelves view.
 - **Dialogs**: `openDialog`/`askDialog`, `confirm`, `prompt` — callable from anywhere, no local state plumbing.
-- **List and details**: `ListWithDetails` (each view remembers its own details width, `widthKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. Every
+- **List and details**: `ListWithDetails` (each view remembers its own details width, `widthKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. A view listing objects lays its body out with `ObjectListView` (the skeleton while loading, the error, its empty state, or the table with a row always selected and its details) and refreshes with `ViewRefreshButton`. Every
   kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
   description, or the object's name with the comment below; edited in place where cm can edit it, the title in a field that wraps and grows, and a comment left unedited saved as it was, `editedComment`; a name reads a size above a comment's title); a meta row (author ·

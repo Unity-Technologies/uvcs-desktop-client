@@ -1,6 +1,16 @@
 # Branch Explorer and branch switcher
 
-`features/branchExplorer` (layout in `model/`, drawing and hit tests in `canvas/`) and the branch switcher.
+`features/branchExplorer` (layout in `model/`, drawing and hit tests in `canvas/`) and the branch switcher. The view
+(`BranchExplorerView`) wires pieces that each own one concern: the history filtered and laid out (`useGraphLayout`),
+the search (`useGraphSearch`), the keys (`graphKeyboard`), what Enter and a double-click open (`openSelection`), and
+the canvas it drives through `GraphCanvasHandle` (`graphCanvasHandle`).
+
+## Scale
+
+Repositories reach ~280k changesets and ~20k branches. Layout packs branches into rows with a binary search per row
+(`placeLanes`); a frame draws only what reaches the screen (`lanesAcross`, `mergeLinksAcross`), and what it asks of
+every branch on screen is measured once per layout (`graphExtent`, `roomBeforeNextLane`, `nextColumnOnRow`). Guards
+count that work (`countCalls`), never time it.
 
 ## Canvas
 

@@ -1,25 +1,5 @@
+import { wordMatchRanges } from '../../../lib/textMatchRanges';
 import type { DrawContext } from './drawContext';
-
-/** The words of a search, lowercased: each one is marked wherever it shows. */
-export function searchTerms(query: string): string[] {
-  return query.toLowerCase().split(/\s+/).filter(Boolean);
-}
-
-/** Where the terms occur in `text`, ignoring case, as merged [start, end) character pairs, in order. */
-export function matchRanges(text: string, terms: readonly string[]): number[] {
-  const lower = text.toLowerCase();
-  const found: [number, number][] = [];
-  for (const term of terms) {
-    for (let at = lower.indexOf(term); at !== -1; at = lower.indexOf(term, at + term.length)) found.push([at, at + term.length]);
-  }
-  found.sort((a, b) => a[0] - b[0]);
-  const merged: number[] = [];
-  for (const [start, end] of found) {
-    if (merged.length > 0 && start <= merged[merged.length - 1]!) merged[merged.length - 1] = Math.max(merged[merged.length - 1]!, end);
-    else merged.push(start, end);
-  }
-  return merged;
-}
 
 /** A matched part of a drawn text: where it starts from the text's start, how wide it is, and its letters. */
 interface Mark {
@@ -32,20 +12,19 @@ const NONE: readonly Mark[] = [];
 const MAX_CACHED = 2000;
 
 /** Per font, the marks of the current search in each text drawn. */
-const marksByFont = new Map<string, { query: string; terms: string[]; marks: Map<string, readonly Mark[]> }>();
+const marksByFont = new Map<string, { query: string; marks: Map<string, readonly Mark[]> }>();
 
+/** The words of the search where `text` holds them (`wordMatchRanges`, as every list marks them), measured. */
 function marksOf(ctx: CanvasRenderingContext2D, text: string, query: string): readonly Mark[] {
   const font = ctx.font;
   let bucket = marksByFont.get(font);
-  if (!bucket || bucket.query !== query) marksByFont.set(font, (bucket = { query, terms: searchTerms(query), marks: new Map() }));
+  if (!bucket || bucket.query !== query) marksByFont.set(font, (bucket = { query, marks: new Map() }));
   let marks = bucket.marks.get(text);
   if (marks === undefined) {
-    const ranges = matchRanges(text, bucket.terms);
-    const found: Mark[] = [];
-    for (let i = 0; i < ranges.length; i += 2) {
-      const left = ctx.measureText(text.slice(0, ranges[i])).width;
-      found.push({ left, width: ctx.measureText(text.slice(0, ranges[i + 1])).width - left, text: text.slice(ranges[i], ranges[i + 1]) });
-    }
+    const found = wordMatchRanges(text, query).map(([start, end]): Mark => {
+      const left = ctx.measureText(text.slice(0, start)).width;
+      return { left, width: ctx.measureText(text.slice(0, end)).width - left, text: text.slice(start, end) };
+    });
     if (bucket.marks.size > MAX_CACHED) bucket.marks.clear();
     bucket.marks.set(text, (marks = found.length > 0 ? found : NONE));
   }

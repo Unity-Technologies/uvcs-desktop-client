@@ -1,9 +1,6 @@
-/** The words of a search, lowercased. A text matches when it holds every one of them, in any case. */
-export function searchWords(query: string): string[] {
-  return query.toLowerCase().split(/\s+/).filter(Boolean);
-}
+import { queryWords } from '../../../lib/matchesAllWords';
 
-/** Whether a name holds every word. */
+/** Whether a name holds every word of a search (`queryWords`, lowercased), in any case. */
 export function nameMatcher(words: readonly string[]): (name: string) => boolean {
   return (name) => {
     const haystack = name.toLowerCase();
@@ -41,7 +38,7 @@ export function changesetMatcher(words: readonly string[]): (comment: string, ow
  * a word of `query`. Then only what `previous` found needs looking at.
  */
 export function narrows(previous: string, query: string): boolean {
-  const words = searchWords(query);
-  const before = searchWords(previous);
+  const words = queryWords(query);
+  const before = queryWords(previous);
   return before.length > 0 && before.every((old) => words.some((word) => word.includes(old)));
 }

@@ -1,21 +1,18 @@
-import { Plus, RefreshCw, Tags } from 'lucide-react';
+import { Plus, Tags } from 'lucide-react';
 import { useMemo } from 'react';
 import type { AttributeType } from '@shared/domain/attribute';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
-import { invalidateWorkspace } from '../../app/queryClient';
+import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
-import { ListWithDetails } from '../../components/ListWithDetails';
-import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
-import { NoSelection } from '../../components/NoSelection';
+import { ObjectListView } from '../../components/ObjectListView';
 import { ObjectName } from '../../components/ObjectName';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { userFilterTexts } from '../../lib/userName';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
-import { Highlight, HighlightQuery } from '../../ui/Highlight';
-import { IconButton } from '../../ui/IconButton';
+import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { useWorkspaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
@@ -25,7 +22,7 @@ import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
 import { NoMatches } from '../../ui/NoMatches';
 import { useAttributesViewStore } from './attributesViewStore';
-import { DataTable, type Column } from '../../ui/table/DataTable';
+import type { Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { editAttributeComment, renameAttributeType } from './attributeOperations';
 import { AttributeTypeDetails } from './AttributeTypeDetails';
@@ -71,7 +68,7 @@ export function AttributesView() {
         total={types?.length}
         actions={
           <>
-            <IconButton icon={<RefreshCw size={14} className={isFetching ? 'spinning' : undefined} />} label="Refresh" onClick={() => void invalidateWorkspace(workspacePath)} />
+            <ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />
             <Button variant="primary" icon={<Plus size={14} />} onClick={() => openCreateAttributeDialog(workspacePath)}>
               New attribute
             </Button>
@@ -83,44 +80,34 @@ export function AttributesView() {
           people={<PeopleFilter value={people} onChange={(value) => update({ people: value })} people={authors} mineTip="Attributes you created" />}
         />
       </ViewHeader>
-      {isLoading ? (
-        <ListWithDetailsSkeleton widthKey="attributes" columns={COLUMNS} />
-      ) : error ? (
-        <EmptyState title="Couldn't load attributes" description={error.message} />
-      ) : visible.length === 0 && isFiltering(filters) ? (
-        <NoMatches icon={<Tags size={22} />} noun="attributes" onClear={filters.clear} />
-      ) : visible.length === 0 ? (
-        <EmptyState
-          icon={<Tags size={22} />}
-          title="No attributes"
-          description="Create an attribute, then set its value from the details of any branch, changeset or label."
-          action={<Button onClick={() => openCreateAttributeDialog(workspacePath)}>New attribute</Button>}
-        />
-      ) : (
-        <ListWithDetails widthKey="attributes"
-          list={
-            <HighlightQuery query={search.trim()}>
-              <DataTable
-                rows={visible}
-                columns={COLUMNS}
-                rowKey={typeKey}
-                selection={selection}
-                onSelectionChange={setSelection}
-                selectFirstRow
-                onActivate={(type) => void editAttributeComment(workspacePath, type)}
-                contextMenu={(selectedTypes) => attributeTypeMenu(workspacePath, selectedTypes)}
-              />
-            </HighlightQuery>
-          }
-          details={
-            selected ? (
-              <AttributeTypeDetails key={selected.name} workspacePath={workspacePath} type={selected} menu={attributeTypeMenu(workspacePath, [selected])} />
-            ) : (
-              <NoSelection noun="attribute" />
-            )
-          }
-        />
-      )}
+      <ObjectListView
+        widthKey="attributes"
+        loading={isLoading}
+        error={error}
+        errorTitle="Couldn't load attributes"
+        empty={
+          isFiltering(filters) ? (
+            <NoMatches icon={<Tags size={22} />} noun="attributes" onClear={filters.clear} />
+          ) : (
+            <EmptyState
+              icon={<Tags size={22} />}
+              title="No attributes"
+              description="Create an attribute, then set its value from the details of any branch, changeset or label."
+              action={<Button onClick={() => openCreateAttributeDialog(workspacePath)}>New attribute</Button>}
+            />
+          )
+        }
+        query={search.trim()}
+        rows={visible}
+        columns={COLUMNS}
+        rowKey={typeKey}
+        selection={selection}
+        onSelectionChange={setSelection}
+        onActivate={(type) => void editAttributeComment(workspacePath, type)}
+        contextMenu={(selectedTypes) => attributeTypeMenu(workspacePath, selectedTypes)}
+        noun="attribute"
+        details={selected && <AttributeTypeDetails key={selected.name} workspacePath={workspacePath} type={selected} menu={attributeTypeMenu(workspacePath, [selected])} />}
+      />
     </>
   );
 }
