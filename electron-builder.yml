@@ -8,10 +8,31 @@ files:
   - out/**
   - package.json
 npmRebuild: false
+
+# The update feed (main/update/releaseFeed.ts names the same repository). `npm run release` uploads the installers and
+# the latest*.yml files electron-updater reads to the release tagged v<version>; it needs GH_TOKEN.
+publish:
+  provider: github
+  owner: danipen
+  repo: uvcs-desktop-client
+
+# File names without spaces (GitHub turns them into dots, which the latest*.yml would no longer match), naming each
+# OS and architecture: the unsigned macOS update picks its disk image by `-macOS-<arch>.dmg` (installerAsset).
 mac:
   category: public.app-category.developer-tools
-  target: dmg
+  artifactName: UnityVersionControl-${version}-macOS-${arch}.${ext}
+  # One installer per architecture, half the size of a universal one. electron-updater needs the zip on macOS; both
+  # architectures build in one run so latest-mac.yml lists them all.
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+    - target: zip
+      arch: [x64, arm64]
 win:
-  target: nsis
+  artifactName: UnityVersionControl-${version}-Windows-${arch}.${ext}
+  target:
+    - target: nsis
+      arch: [x64, arm64]
 linux:
+  artifactName: UnityVersionControl-${version}-Linux-${arch}.${ext}
   target: AppImage

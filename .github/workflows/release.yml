@@ -1,0 +1,99 @@
+name: Release
+
+# One button releases the app: Actions ▸ Release ▸ Run workflow, pick the bump (patch, minor, major), and one run
+#   1. bumps package.json's version, commits it and tags v<version> on master,
+#   2. opens a draft GitHub release with generated notes,
+#   3. builds the installers on macOS, Windows and Linux and uploads them to the draft, with the latest*.yml files
+#      electron-updater reads (electron-builder.yml's `publish`).
+# Publishing the draft makes the update reach every running app within the hour (main/update/AppUpdates.ts). The
+# workflow owns the version: package.json is never bumped by hand.
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version bump
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+
+# The bump's push and the upload use the built-in GITHUB_TOKEN, which needs to write contents and releases.
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.bump.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: master
+          fetch-depth: 0 # the whole history, so the notes cover everything since the last tag
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '26'
+      - name: Bump the version, commit, tag and push
+        id: bump
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          npm version "${{ inputs.bump }}" -m "Release v%s"
+          TAG="v$(node -p "require('./package.json').version")"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          git push origin master --follow-tags
+      - name: Open a draft release with generated notes
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release create "${{ steps.bump.outputs.tag }}" --draft --generate-notes --title "${{ steps.bump.outputs.tag }}"
+
+  # Each OS builds from the new tag, whose package.json has the new version, and uploads its own installers.
+  build:
+    needs: prepare
+    strategy:
+      # One OS failing leaves the others to finish; its leg can be re-run alone.
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.prepare.outputs.tag }}
+      - uses: ./.github/actions/install
+        with:
+          node-version: '26'
+
+      # macOS signing is optional. With the CSC_LINK secret the build is signed and notarized, and updates install on a
+      # restart; without it signing is turned off cleanly (an empty CSC_LINK would be read as a certificate's path), and
+      # the app updates by downloading the disk image for the user to drag in (main/update/macSignature.ts). Adding the
+      # secrets switches signing on with no change here.
+      - name: Configure macOS code signing
+        if: runner.os == 'macOS'
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          if [ -n "$CSC_LINK" ]; then
+            {
+              echo "CSC_LINK=$CSC_LINK"
+              echo "CSC_KEY_PASSWORD=$CSC_KEY_PASSWORD"
+              echo "APPLE_ID=$APPLE_ID"
+              echo "APPLE_APP_SPECIFIC_PASSWORD=$APPLE_APP_SPECIFIC_PASSWORD"
+              echo "APPLE_TEAM_ID=$APPLE_TEAM_ID"
+            } >> "$GITHUB_ENV"
+            echo "macOS code signing: on"
+          else
+            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
+            echo "macOS code signing: off (no CSC_LINK secret)"
+          fi
+
+      # With no platform flag electron-builder builds for the runner's OS, so each leg uploads its own installers.
+      - name: Build and upload
+        run: npm run release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

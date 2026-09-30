@@ -71,6 +71,15 @@ describe('one window per workspace', () => {
     expect(windows.takeRequested(window!.webContents.id)).toBeNull();
   });
 
+  it("starts a new window's page on its workspace when the folder is there, else the page checks it itself", () => {
+    const { windows } = setUp();
+    const game = mkdtempSync(join(tmpdir(), 'uvcs-game-'));
+
+    windows.showWorkspace(game);
+    windows.showWorkspace(join(tmpdir(), 'uvcs-deleted-workspace'));
+    expect(vi.mocked(createMainWindow).mock.calls.map(([, options]) => options?.workspacePath)).toEqual([game, undefined]);
+  });
+
   it('finds the window showing a workspace, other than the one asking', () => {
     const { windows, open, shows } = setUp();
     const game = open();
@@ -138,9 +147,20 @@ describe('the first window at launch', () => {
     expect(windows.takeRequested(fakeElectron.windows()[0]!.webContents.id)).toBe(lastUsed);
   });
 
+  it('names the workspace it opens before opening it, so its `cm shell`s can start first', () => {
+    const lastUsed = mkdtempSync(join(tmpdir(), 'uvcs-last-'));
+    const { windows } = setUp([lastUsed]);
+
+    expect(windows.firstWorkspace()).toBe(lastUsed);
+    expect(fakeElectron.windows()).toEqual([]);
+    windows.openFirst();
+    expect(windows.takeRequested(fakeElectron.windows()[0]!.webContents.id)).toBe(lastUsed);
+  });
+
   it('opens on the home screen when the last workspace used is gone', () => {
     const { windows } = setUp([join(tmpdir(), 'uvcs-deleted-workspace')]);
 
+    expect(windows.firstWorkspace()).toBeUndefined();
     windows.openFirst();
     expect(windows.takeRequested(fakeElectron.windows()[0]!.webContents.id)).toBeNull();
   });
@@ -160,11 +180,11 @@ describe('WorkspaceWindows', () => {
     const first = open();
     const second = open();
     open();
-    expect(vi.mocked(createMainWindow).mock.calls.map(([, cascadeFrom]) => cascadeFrom)).toEqual([undefined, first, second]);
+    expect(vi.mocked(createMainWindow).mock.calls.map(([, options]) => options?.cascadeFrom)).toEqual([undefined, first, second]);
 
     first.focus();
     open();
-    expect(vi.mocked(createMainWindow).mock.calls.at(-1)![1]).toBe(first);
+    expect(vi.mocked(createMainWindow).mock.calls.at(-1)![1]?.cascadeFrom).toBe(first);
   });
 
   it('brings the app forward: the focused or last window, or a new one when all were closed', () => {

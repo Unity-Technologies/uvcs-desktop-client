@@ -20,6 +20,7 @@ you touch:
 | `features/shelves-and-switching.md`     | Switching with changes, a workspace on a shelve, shelves in Changes, two people on one branch |
 | `features/files-history-annotate.md`    | Files, Browse repository, Go to file, cut and paste, history, annotate         |
 | `features/branch-explorer.md`           | The graph's canvas, keeping the place, the pending changeset, the branch switcher |
+| `features/updates.md`                   | The About dialog, how the app updates (unsigned macOS too), releases and CI    |
 
 ## How a request flows
 
@@ -33,7 +34,8 @@ you touch:
      pooled `cm shell` sessions, two per working directory; a command takes the first one free, and a directory idle
      for ten minutes lets its sessions go; a workspace no window shows anymore lets them go once their commands are
      done (`WorkspaceWatchers` `onStopped`). A session takes about a second to answer its first command, so until one
-     in that directory has, the query runs as a process of its own. A workspace write that may run long (`runsLong`:
+     in that directory has, the query runs as a process of its own (the first window's start before it is created:
+     `openFirstWindow`). A workspace write that may run long (`runsLong`:
      more than `MAX_QUICK_WRITE_PATHS` paths, recursive, or a transfer) runs as a process of its own too, so it never
      holds a session every read of the workspace would wait behind.
    - `execute()` for long or cancellable work (update, switch, checkin, shelve, merge, sync; the Branch Explorer's
@@ -240,7 +242,8 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   The Window menu lists them; closing the last one keeps the app on macOS, and the Dock icon opens the home screen (its
   menu offers New Window under the recent workspaces, `installDockMenu`); elsewhere it quits.
 - The start-up (`main/index.ts`) is a few named steps; the wiring behind each (settings, watchers, own writes,
-  operations, launch requests) lives in `main/startup/`, around the tested logic of the other folders.
+  operations, launch requests, the first window) lives in `main/startup/`, around the tested logic of the other
+  folders. The order and what it waits for: "Start-up" below.
 - Each API call runs with its window as the caller (`main/ipc/caller.ts`, followed across `await`s), so its commands
   (`commandLogged`) and operation progress go back to that window only. `workspaces.watch` is the window saying which
   workspace it shows: `main/watch/WorkspaceWatchers` keeps one watcher per shown workspace and sends its changes to the
@@ -259,6 +262,45 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   loading), then its branch (`SelectorChip`) and server (`ServerChip`, the whole `name@server`
   in its tooltip), told by `useDescribeWorkspace` (the `.plastic` folder, `cm` only for recent ones it can't tell). In
   the switcher's narrow rows the server gives way first, down to its icon, then the branch's name.
+
+## Start-up
+
+What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--timeline` shows what waits for what):
+
+1. The main process opens the settings (the first run imports the official client's, `importLegacySettings`: a few
+   ms) and, at `app.whenReady`, wires the services and opens the first window (`openFirstWindow`). Before creating it,
+   which takes 50-100 ms, it starts the `cm shell`s of the workspace it reopens (or of the home folder, for the home
+   screen) and that screen's first reads (`readFirstScreen`): `cm version` and the workspace's info and pending
+   changes, or the home screen's workspaces and servers. Their commands run while the window and its page load; the
+   page's identical calls take the answers (`EarlyCalls`, in `registerApi`; one nobody takes goes after 5 s). The
+   page's events sent while it still loads reach it once it has (`sendEventTo`), so its command log lists them.
+2. The window is created hidden, its background the page's `--bg-app` (`WINDOW_BACKGROUND`), and names the workspace
+   it opens in its page's address when the folder is there (`startingWorkspaceQuery`).
+3. The page opens that workspace (`openWorkspaceFromAddress`) and asks for its first screen's data
+   (`prefetchStartupQueries`) before its first render, and applies the theme as it renders (`useTheme`): its first
+   frame is the themed workspace screen or home screen, never the home screen on the way nor a frame without colors.
+   The window shows on that frame (`ready-to-show`).
+4. `show()` holds the main process 35-55 ms (100+ when started from a terminal, which isn't the active app): what the
+   page asks after its first paint waits behind it. That is why the page asks before rendering, and the main process
+   earlier still.
+5. Nothing else gates the first screen: `cm version`'s answer (the app shows meanwhile, `CmUnavailableScreen` only on
+   failure), `cm checkconnection` once `cm` runs (`useSetupCheck`), the watcher once the page watches, the highlighter
+   warm-up 1.5 s later (`main.tsx`), avatars when rows show them.
+
+Reopening the last workspace on an M4 Max, started as the Dock does, median of 14 runs: Changes shows its data about
+820-840 ms after the process starts with the real `cm` on a local sandbox (930-990 before this sequence), 330-340 ms
+after the window is created (480-550); with the fake `cm` about 205-220 ms after it (255-265). What remains: Electron's
+own start to `app.whenReady` (300-400 ms, our main module about 30 of it), creating the window, loading the page
+(about 100 ms to its first render), and `cm status` as a process (300-350 ms: the workspace's shells answer only
+after about a second).
+
+Tried and dropped, so they aren't proposed again:
+- Showing the window as it is created (`show: true`): an empty frame shows 150 ms sooner, but `show()` then holds the
+  main process while the page loads, which ran its scripts 150 ms later.
+- Asking the main process which workspace to open (`takeRequestedWorkspace`), or awaiting the settings, before the
+  first render: the wait paints an empty frame, the window shows on it, and `show()` holds the answer: the first
+  render came 90 ms later.
+- Minifying the renderer bundle (1.7 MB to 0.73 MB): the page's scripts ran 0-8 ms sooner, within noise.
 
 ## Renderer
 
@@ -279,7 +321,8 @@ renderer/src/
 
 - **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)`, so `invalidateWorkspace(path)` refreshes everything after an operation
   (or what it can touch: `invalidateWorkspace(path, affected)`, `runOperation({ affects })`).
-- **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check.
+- **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check (the app's
+  own update check runs hourly too, against GitHub, never the server: features/updates.md).
   - `main/watch/WorkspaceWatcher` watches an open workspace (recursive on macOS/Windows; on Linux a watch per folder,
     `FolderTreeWatch`, as Node's recursive mode there watches every file and loses files saved by replacing them;
     an event Windows sends without a name, when a burst overflowed its buffer, refreshes everything),
@@ -302,6 +345,10 @@ renderer/src/
   - Use `refreshQueries` for event-driven refreshes: it never cancels a fetch in flight, it queues one follow-up.
 - **Mutations**: `runOperation` (progress card, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
   An update or a switch runs alone on its workspace: it waits for any other operation, and the others wait for it (`blockingOperation`).
+- **Top bar**: one bar across the window on every screen (`app/shell/TopBar`), the sidebar under it: the window's
+  buttons, the brand (`AppBrand`, which opens About), then what the screen adds. A workspace adds its branch pill and
+  incoming chip after a separator, the search and the account at the end (`WorkspaceTopBar`); the home screen adds
+  nothing. Sidebars (`ui/nav/SidebarNav`) have no title band of their own.
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
   A sidebar entry may show a count (`useBadge`) and a dot for something waiting there (`useDot`), whose words go under
   the entry's tooltip and in its accessible description: Changes' says what changes were left and where
@@ -310,8 +357,7 @@ renderer/src/
   sidebar is a rail of tiles (`useInRail`), the home screen's too: each entry's icon over its label in `--text-xs`,
   two lines at most, balanced, a word too long cut with an ellipsis (an organization's name), or a short `railLabel`
   ("Expand", "All", "Local"); the selected tile as wide, its icon in the accent. The rail is 80px (`--rail-width`), so
-  the longest one-word labels ("Changesets") fit on one line in every OS's font, and the macOS window buttons over its
-  top; labels wrap at the folded width from the start of the fold, so nothing jumps as it ends. The count is pinned in
+  the longest one-word labels ("Changesets") fit on one line in every OS's font; labels wrap at the folded width from the start of the fold, so nothing jumps as it ends. The count is pinned in
   the accent over the icon's corner (99+ at most, `navBadgeText`), the dot at the tile's own corner. Tooltips only add
   what the entry doesn't show (`navItemTip`): the shortcut and the dot's words, and on a tile the whole count, the
   detail and a shortened label spelled out.
@@ -344,12 +390,15 @@ renderer/src/
   its own text chords, Ctrl+Y (redo) included off macOS (`belongsToField`).
 - **Per OS**: platform differences go through small pure helpers taking the platform (`revealLabel`, `trashName`,
   `windowChrome`, `appMenuTemplate`, `formatShortcut`), read once in `lib/platform.ts`. Windows draw their title bar per
-  `windowChrome`: macOS insets its traffic lights over the sidebar's top band; Windows hides its title bar and overlays
-  its caption buttons on the top bar (`titleBarOverlay`, clear, symbols in the theme's text color; the page keeps
-  `--caption-buttons-width` free), with a menu button in the band (and Alt or F10) popping up the menu bar's menus;
+  `windowChrome`: macOS insets its traffic lights over the top bar's start; Windows hides its title bar and overlays
+  its caption buttons on the top bar's end (`titleBarOverlay`, clear, symbols in the theme's text color; the page keeps
+  `--caption-buttons-width` free), with a menu button at the bar's start (and Alt or F10) popping up the menu bar's menus;
   Linux keeps the desktop's frame and menu bar. Native parts follow the app's theme (`followAppTheme`). The menus
   (`main/window/appMenuTemplate`) have an app menu on macOS only; elsewhere File ends with Settings and Exit (Windows)
-  or Quit (Linux), Help with About, and `&` marks each item's Alt letter.
+  or Quit (Linux), Help with Check for Updates and About, and `&` marks each item's Alt letter. The menus hold what
+  a person looks for there: windows and workspaces (File), the branch work (Branch: switch, new, merges), the palette,
+  the command log and the sidebar (View), the documentation, the shortcuts and reporting an issue (Help); what the
+  screen already offers in place (updating the workspace: the incoming chip) stays out.
 - **Focus**: the list, tree or graph a view or page works on carries `MAIN_FOCUS` (`lib/mainFocus.ts`). `useMainFocus`
   focuses it after navigating and whenever focus falls to the document (a dialog, menu or popover closed), and hands it
   list keys pressed while nothing has focus. Views keep their list's selection while away (`useViewSelection`). Lists

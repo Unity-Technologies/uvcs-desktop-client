@@ -22,6 +22,9 @@ class FakeWebContents extends EventEmitter {
   isDestroyed(): boolean {
     return false;
   }
+  isLoading(): boolean {
+    return false;
+  }
   send(...args: unknown[]): void {
     this.sent.push(args);
   }
@@ -86,8 +89,12 @@ export class FakeWindow extends EventEmitter {
     if (state.focused === this) state.focused = null;
     this.emit('closed');
   }
+  /** The page's address query (`loadFile(path, { query })`). */
+  loadedQuery: Record<string, string> | undefined;
   async loadURL(): Promise<void> {}
-  async loadFile(): Promise<void> {}
+  async loadFile(_path: string, options?: { query?: Record<string, string> }): Promise<void> {
+    this.loadedQuery = options?.query;
+  }
 }
 
 const state = {

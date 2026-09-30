@@ -4,6 +4,7 @@ import type { OperationTracker } from '../operations/OperationTracker';
 import type { DiffReviewStore } from '../review/DiffReviewStore';
 import type { ReviewStore } from '../review/ReviewStore';
 import type { SettingsStore } from '../settings/SettingsStore';
+import type { AppUpdates } from '../update/AppUpdates';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
 import type { WorkspaceWindows } from '../window/WorkspaceWindows';
 import type { LeftChangesFinder } from '../workspace/leftChanges';
@@ -20,6 +21,7 @@ export interface ServiceContext {
   watchers: WorkspaceWatchers;
   windows: WorkspaceWindows;
   headers: WorkspaceHeaders;
+  updates: AppUpdates;
 }
 
 /**

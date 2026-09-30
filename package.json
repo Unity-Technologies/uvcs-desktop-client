@@ -18,7 +18,8 @@
     "app:debug": "node scripts/app-debug.mjs",
     "e2e": "electron-vite build && node scripts/e2e/smoke.mjs",
     "postinstall": "install-electron",
-    "dist": "electron-vite build && electron-builder"
+    "dist": "electron-vite build && electron-builder",
+    "release": "electron-vite build && electron-builder --publish always"
   },
   "devDependencies": {
     "@pierre/diffs": "^1.5.1",
@@ -37,6 +38,7 @@
     "diff": "^9.0.0",
     "electron": "^44.4.5",
     "electron-builder": "^26.15.3",
+    "electron-updater": "^6.8.9",
     "electron-vite": "^5.0.0",
     "lucide-react": "^1.48.0",
     "playwright-core": "^1.63.0",

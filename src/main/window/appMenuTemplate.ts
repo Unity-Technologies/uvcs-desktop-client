@@ -10,6 +10,14 @@ export interface AppMenuContext {
   windowItems: MenuItemConstructorOptions[];
   newWindow: () => void;
   openDocumentation: () => void;
+  reportIssue: () => void;
+  /**
+   * About with no window to show the app's dialog in (macOS keeps running with every window closed): the OS's panel,
+   * which reads the name and version from the app bundle.
+   */
+  showAboutPanel: () => void;
+  /** Checks for updates with no window to hear the answer in: an update found shows in the next window. */
+  checkForUpdates: () => void;
 }
 
 /**
@@ -27,21 +35,24 @@ export function shownAccelerator(accelerator: string, isMac: boolean): string | 
  * Alt opens an item with (the menu bar shows it underlined); macOS has no such letters, so they're dropped there.
  */
 export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOptions[] {
-  const { platform, isPackaged, windowItems, newWindow, openDocumentation } = context;
+  const { platform, isPackaged, windowItems, newWindow, openDocumentation, reportIssue, showAboutPanel, checkForUpdates } = context;
   const isMac = platform === 'darwin';
   const label = (text: string): string => (isMac ? text.replaceAll('&', '') : text);
   const commandItem: AppMenuContext['commandItem'] = (text, commandId, accelerator, withoutWindow) =>
     context.commandItem(label(text), commandId, accelerator && shownAccelerator(accelerator, isMac), withoutWindow);
   const separator: MenuItemConstructorOptions = { type: 'separator' };
+  const aboutItem = commandItem('&About Unity Version Control', 'app.about', undefined, showAboutPanel);
+  const checkForUpdatesItem = commandItem('Check for &Updates…', 'app.checkForUpdates', undefined, checkForUpdates);
 
   const template: MenuItemConstructorOptions[] = [
     {
       label: label('&File'),
       submenu: [
         commandItem('New &Window', 'app.newWindow', 'CmdOrCtrl+N', newWindow),
+        commandItem('New Workspace for a &Task…', 'workspace.newForTask'),
         commandItem('&Open Another Workspace…', 'workspace.open', 'CmdOrCtrl+Shift+O'),
         separator,
-        commandItem('&Update Workspace', 'workspace.update', 'CmdOrCtrl+Shift+U'),
+        commandItem('Open in &Terminal', 'workspace.openTerminal'),
         separator,
         ...(isMac ? [] : [commandItem('&Settings…', 'app.settings', 'CmdOrCtrl+,'), separator]),
         { role: 'close', label: label('&Close Window') },
@@ -54,6 +65,7 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
       submenu: [
         commandItem('Command &Palette…', 'app.commandPalette', 'CmdOrCtrl+K'),
         commandItem('Command &Log', 'app.commandLog', 'CmdOrCtrl+Shift+L'),
+        commandItem('Toggle &Sidebar', 'app.sidebar', 'CmdOrCtrl+\\'),
         commandItem('&Refresh', 'workspace.refresh', 'CmdOrCtrl+R'),
         separator,
         { role: 'resetZoom' },
@@ -64,6 +76,16 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
         separator,
         { role: 'togglefullscreen' },
         ...(isPackaged ? [] : [separator, { role: 'reload' as const }, { role: 'toggleDevTools' as const }]),
+      ],
+    },
+    {
+      label: label('&Branch'),
+      submenu: [
+        commandItem('&Switch Branch…', 'branch.switch', 'CmdOrCtrl+Shift+W'),
+        commandItem('&New Branch…', 'branch.new', 'CmdOrCtrl+B'),
+        separator,
+        commandItem('&Merge from Branch…', 'merge.fromBranch', 'CmdOrCtrl+Shift+M'),
+        commandItem('Merge Current Branch &into…', 'merge.toBranch'),
       ],
     },
     {
@@ -82,7 +104,9 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
       label: label('&Help'),
       submenu: [
         { label: label('Unity Version Control &Documentation'), click: openDocumentation },
-        ...(isMac ? [] : [separator, { role: 'about' as const, label: '&About Unity Version Control' }]),
+        commandItem('&Keyboard Shortcuts', 'app.shortcuts'),
+        { label: label('&Report an Issue'), click: reportIssue },
+        ...(isMac ? [] : [separator, checkForUpdatesItem, aboutItem]),
       ],
     },
   ];
@@ -92,7 +116,8 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
     {
       role: 'appMenu',
       submenu: [
-        { role: 'about' },
+        aboutItem,
+        checkForUpdatesItem,
         separator,
         commandItem('Settings…', 'app.settings', 'CmdOrCtrl+,'),
         separator,

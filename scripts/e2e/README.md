@@ -30,5 +30,5 @@ private), the first-run import reads an empty `PLASTIC_HOME` (`plasticConfigFold
 
 ## CI
 
-Not set up yet. On macOS and Windows runners: Node 26, `npm ci`, `npm run e2e`. Linux has no display: run it under
-`xvfb-run -a npm run e2e`.
+`.github/workflows/ci.yml` runs it on macOS and Windows (Node 26, `npm ci`, `npm run e2e`). Linux has no display
+there: run it under `xvfb-run -a npm run e2e`.

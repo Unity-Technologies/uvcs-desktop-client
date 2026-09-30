@@ -9,7 +9,7 @@ import { CommandLogPanel } from './CommandLogPanel';
 import { PageFrame } from './PageFrame';
 import { Sidebar } from './Sidebar';
 import { StatusBar } from './StatusBar';
-import { TopBar } from './TopBar';
+import { WorkspaceTopBar } from './WorkspaceTopBar';
 import { ViewFallback } from './ViewFallback';
 import { COMMAND_LOG_HEIGHT, useCommandLogHost, useCommandLogStore } from './commandLogStore';
 import { useMainFocus } from './useMainFocus';
@@ -39,10 +39,10 @@ export function WorkspaceScreen() {
 
   return (
     <div className={styles.screen}>
+      <WorkspaceTopBar />
       <div className={styles.body}>
         <Sidebar />
         <main className={styles.main}>
-          <TopBar />
           {/* The command log sits under the view, as tall as it was left; the view keeps the rest. */}
           <SplitPane
             direction="vertical"

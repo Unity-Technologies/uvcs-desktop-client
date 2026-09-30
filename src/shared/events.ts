@@ -1,3 +1,4 @@
+import type { UpdateStatus } from './domain/appUpdate';
 import type { OperationProgress } from './domain/operation';
 import type { AppSettings } from './domain/settings';
 import type { KeptAsideFile } from './domain/switchWithChanges';
@@ -42,6 +43,8 @@ export interface UvcsEvents {
   incomingNotificationClicked: { workspacePath: string };
   /** Closing the window, quitting or reloading waits for unsaved edits: settle them, then `windows.continueLeaving`. */
   leaveRequested: Record<string, never>;
+  /** The app's update moved on (`updates.status`); every window gets it. */
+  updateStatusChanged: UpdateStatus;
   /** Windows' Back command: a mouse's back button or a keyboard's Browser Back key. */
   navigateBack: Record<string, never>;
 }
