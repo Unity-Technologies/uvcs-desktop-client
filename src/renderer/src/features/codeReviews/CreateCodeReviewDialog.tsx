@@ -9,18 +9,7 @@ import { SegmentedControl } from '../../ui/SegmentedControl';
 import { TextField } from '../../ui/TextField';
 import { toast } from '../../ui/toast/toastStore';
 import { useBranches } from '../branches/useBranches';
-
-type ReviewTargetKind = 'branch' | 'changeset' | 'shelve';
-
-export interface ReviewTargetDraft {
-  kind: ReviewTargetKind;
-  /** Branch name (e.g. `/main/task`), changeset or shelve number. */
-  value: string;
-  /** A title to start from, e.g. the shelve's comment. */
-  title?: string;
-}
-
-const SPEC_PREFIX: Record<ReviewTargetKind, string> = { branch: 'br', changeset: 'cs', shelve: 'sh' };
+import { draftTargetSpec, type ReviewTargetDraft, type ReviewTargetKind } from './reviewDraft';
 
 /**
  * Opens the "new code review" dialog. Other features can prefill the target,
@@ -46,8 +35,8 @@ function CreateCodeReviewDialog({ workspacePath, initialTarget, onClose, onCreat
   const [assignee, setAssignee] = useState('');
   const [creating, setCreating] = useState(false);
 
-  const targetSpec = `${SPEC_PREFIX[targetKind]}:${target.trim()}`;
-  const isValid = title.trim() !== '' && (targetKind === 'branch' ? target.trim().startsWith('/') : /^\d+$/.test(target.trim()));
+  const targetSpec = draftTargetSpec(targetKind, target);
+  const isValid = title.trim() !== '' && targetSpec !== null;
 
   const create = async (): Promise<void> => {
     if (!isValid) return;
