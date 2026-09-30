@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { OperationProgress } from '@shared/domain/operation';
 import type { PendingChangesFilter } from '@shared/domain/pendingChanges';
 import { CmError } from '../cm/CmError';
-import { cmFails, fakeCmClient, optionValue, type CmAnswer, type FakeCmCommand } from '../cm/testing/fakeCmClient';
+import { cmFails, fakeCmClient, optionValue, runsUntilCancelled, type CmAnswer, type FakeCmCommand } from '../cm/testing/fakeCmClient';
 import { OperationTracker } from '../operations/OperationTracker';
 import { createPendingChangesService } from './pendingChangesService';
 import type { SwitchContext } from './ServiceContext';
@@ -32,11 +32,6 @@ function readingComment(output: string) {
     return output;
   };
   return { seen, answer };
-}
-
-function untilAborted(signal: AbortSignal): Promise<void> {
-  if (signal.aborted) return Promise.resolve();
-  return new Promise((resolve) => signal.addEventListener('abort', () => resolve()));
 }
 
 const STATUS_XML = `<?xml version="1.0" encoding="utf-8"?>
@@ -141,10 +136,7 @@ describe('checkin', () => {
 
   it("stops the checkin's process when the operation is cancelled", async () => {
     const { service, operations } = pendingChanges({
-      checkin: async ({ options }) => {
-        await untilAborted(options.signal!);
-        return cmFails('Operation aborted');
-      },
+      checkin: runsUntilCancelled('Operation aborted'),
     });
 
     const checkin = service.checkin(WORKSPACE, { paths: ['a.txt'], comment: 'c' }, 'op-7');

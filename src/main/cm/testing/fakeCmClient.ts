@@ -90,6 +90,16 @@ function failure(command: FakeCmCommand, { output, exitCode }: CmFailure, logEnt
   return new CmError(extractErrorMessage(output), { commandLine: `cm ${command.line}`, exitCode, output: output.trim(), logEntryId });
 }
 
+/** A command that runs until its `signal` aborts (the operation is cancelled), then fails printing `output`. */
+export function runsUntilCancelled(output: string): CmAnswer {
+  return ({ options: { signal } }) => {
+    if (!signal) throw new Error('The command cannot be cancelled: it has no signal.');
+    const cancelled = cmFails(output);
+    if (signal.aborted) return cancelled;
+    return new Promise((resolve) => signal.addEventListener('abort', () => resolve(cancelled)));
+  };
+}
+
 /** The value of an option given as `<prefix><value>` (`-commentsfile=`, `--valuecontents=`), or undefined. */
 export function optionValue(args: readonly string[], prefix: string): string | undefined {
   return args.find((arg) => arg.startsWith(prefix))?.slice(prefix.length);
