@@ -4,7 +4,9 @@ import { DetailsHeading } from '../../components/DetailsHeading';
 import type { MenuEntry } from '../../lib/actions';
 import { formatDateTime } from '../../lib/formatDate';
 import { Button } from '../../ui/Button';
-import { DetailsBadge, DetailsPanel, DetailsSection } from '../../ui/DetailsPanel';
+import { DetailsBadge } from '../../ui/DetailsBadge';
+import { DetailsPanel } from '../../ui/DetailsPanel';
+import { DetailsSection } from '../../ui/DetailsSection';
 import { PropertyList } from '../../ui/PropertyList';
 import { isReleasable, releaseLocks } from './lockOperations';
 

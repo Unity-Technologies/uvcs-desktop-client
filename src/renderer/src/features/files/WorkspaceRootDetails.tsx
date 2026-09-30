@@ -2,7 +2,8 @@ import { FolderRoot } from 'lucide-react';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { DetailsHeading } from '../../components/DetailsHeading';
 import type { MenuEntry } from '../../lib/actions';
-import { DetailsPanel, DetailsSection } from '../../ui/DetailsPanel';
+import { DetailsPanel } from '../../ui/DetailsPanel';
+import { DetailsSection } from '../../ui/DetailsSection';
 import { PropertyList } from '../../ui/PropertyList';
 
 const SELECTOR_LABELS: Record<WorkspaceInfo['selector']['kind'], string> = {

@@ -380,7 +380,7 @@ renderer/src/
   read-only: no `cm` command or client API edits them. Selecting a row must stay cheap (Server
   budget: Selection); the changed files' `cm diff` runs only on request (`ChangedFilesSection`). The panel's parts are
   primitives of their own in `ui/` (`DetailsSection`, `DetailsEmpty`, `DetailsSkeleton`, `DetailsBadge`,
-  `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), all imported from `ui/DetailsPanel`. Lists are
+  `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), each imported from its own module. Lists are
   a `DataTable` (`ui/table/`: only the rows in view render; the columns' sort, the keys' steps `selectionStep`, and
   `selectFirstRow`'s successor selection each in a module of their own).
 - **Item rows**: every list of files and folders reads the same (`components/`): Files and Browse repository, Changes
