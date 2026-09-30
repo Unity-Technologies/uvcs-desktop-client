@@ -1,4 +1,4 @@
-import { AppWindow, Check, Plus, Sparkles, Trash2 } from 'lucide-react';
+import { AppWindow, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { AUTO_MERGE_TOOL, formatArgs, parseArgs, type MergeTool } from '@shared/domain/mergeTools';
 import { addMergeToolAndPick, PLACEHOLDER_HINT } from '../../features/merge/mergeTools/CustomMergeToolDialog';
@@ -8,6 +8,7 @@ import { Checkbox } from '../../ui/Checkbox';
 import { TextField } from '../../ui/TextField';
 import { saveSettings, useSettings } from './useSettings';
 import { AUTOMATIC_MERGE_TOOL_RULE, automaticMergeToolDescription } from './automaticMergeTool';
+import { SettingsChoice } from './SettingsChoice';
 import styles from './SettingsDialog.module.css';
 
 /** Which merge tool "Resolve in…" opens, and how it's called. */
@@ -25,7 +26,7 @@ export function MergeToolsPane() {
       <section className={styles.section}>
         <h2 className={styles.heading}>Resolve conflicts in</h2>
         <div className={styles.choices} role="radiogroup" aria-label="Merge tool">
-          <ToolChoice
+          <SettingsChoice
             icon={<Sparkles size={18} />}
             label="Automatic"
             description={automaticMergeToolDescription(automatic ? preferred?.name : undefined)}
@@ -34,11 +35,12 @@ export function MergeToolsPane() {
             onSelect={() => void preferMergeTool(AUTO_MERGE_TOOL)}
           />
           {tools.map((tool) => (
-            <ToolChoice
+            <SettingsChoice
               key={tool.id}
               icon={<AppWindow size={18} />}
               label={tool.name}
               description={tool.executable}
+              tip={tool.executable}
               selected={!automatic && tool.id === choice}
               onSelect={() => void preferMergeTool(tool.id)}
             />
@@ -58,31 +60,6 @@ export function MergeToolsPane() {
         />
       </section>
     </>
-  );
-}
-
-interface ToolChoiceProps {
-  icon: React.ReactNode;
-  label: string;
-  description: string;
-  /** The description's tooltip; the description itself by default, e.g. a path cut off. */
-  tip?: string;
-  selected: boolean;
-  onSelect: () => void;
-}
-
-function ToolChoice({ icon, label, description, tip = description, selected, onSelect }: ToolChoiceProps) {
-  return (
-    <button type="button" role="radio" aria-checked={selected} className={styles.choice} data-selected={selected} onClick={onSelect}>
-      {icon}
-      <span className={styles.choiceText}>
-        <span className={styles.choiceLabel}>{label}</span>
-        <span className={`${styles.choiceDescription} ${styles.oneLine}`} data-tip={tip}>
-          {description}
-        </span>
-      </span>
-      {selected && <Check size={14} />}
-    </button>
   );
 }
 

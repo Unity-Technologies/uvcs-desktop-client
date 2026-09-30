@@ -1,13 +1,14 @@
 import { Command as Cmdk } from 'cmdk';
 import { useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { createFuzzyIndex, fuzzyMatchPositions, fuzzyMatchQuality } from '../../lib/fuzzyIndex';
+import { createFuzzyIndex } from '../../lib/fuzzyIndex';
 import { isRowMenuKey } from '../../lib/rowMenu';
 import { useShortcut } from '../../lib/useShortcut';
 import { HighlightQuery } from '../../ui/Highlight';
 import { Spinner } from '../../ui/Spinner';
 import { useSession } from '../workspace/sessionStore';
 import { useCommandPalette } from './commandPaletteStore';
-import { useCommandStore, type Command } from './commandStore';
+import { commandResult, commandSearchText, paletteCommands } from './commandResults';
+import { useCommandStore } from './commandStore';
 import { PaletteFooter } from './PaletteFooter';
 import { PaletteRow } from './PaletteRow';
 import { isPaletteTextKey } from './paletteTextKeys';
@@ -49,11 +50,7 @@ function OpenPalette({ close }: { close: () => void }) {
   const workspacePath = useSession((state) => state.workspacePath);
   useFocusBackOnClose();
 
-  const commands = useMemo(
-    // Opening the palette from inside it would do nothing.
-    () => [...commandsByOwner.values()].flat().filter((command) => !command.disabled && command.id !== 'app.commandPalette'),
-    [commandsByOwner],
-  );
+  const commands = useMemo(() => paletteCommands(commandsByOwner), [commandsByOwner]);
   const commandIndex = useMemo(() => createFuzzyIndex(commands.map(commandSearchText)), [commands]);
   const { groups: objectGroups, isLoading } = usePaletteSearch(workspacePath, text, scope);
   const workspaceGroup = useWorkspaceResults(workspacePath, text);
@@ -178,25 +175,4 @@ function keepTextKeys(event: KeyboardEvent<HTMLInputElement>): void {
 
 function moreValue(section: SectionId): string {
   return `more:${section}`;
-}
-
-/** The command's group reads after it ("Changes · Go to"), so commands with the same name in different groups can be told apart. */
-function commandResult(command: Command, query?: string): SearchResult {
-  const searchText = commandSearchText(command);
-  return {
-    id: `command:${command.id}`,
-    icon: command.icon ?? (() => null),
-    label: command.label,
-    detail: command.group,
-    shortcut: command.shortcut,
-    // Commands match on their label and keywords; only the label is shown.
-    labelMatches: query ? fuzzyMatchPositions(searchText, query).filter((position) => position < command.label.length) : [],
-    detailMatches: [],
-    quality: query ? fuzzyMatchQuality(searchText, query) : undefined,
-    run: command.run,
-  };
-}
-
-function commandSearchText(command: Command): string {
-  return [command.label, ...(command.keywords ?? [])].join(' ');
 }

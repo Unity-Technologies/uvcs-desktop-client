@@ -51,8 +51,11 @@ interface NavItemProps {
   detail?: string;
   /** A count at the right, e.g. pending changes. */
   badge?: number;
-  /** A dot at the right: something waits there. */
-  dot?: boolean;
+  /**
+   * A dot at the right, saying what waits there ("Changes left on /main/task · restore them in Changes"): the words
+   * show under the item's tooltip and are read with it.
+   */
+  dot?: string;
   active?: boolean;
   /** Active, but a page is open on top of it. */
   dimmed?: boolean;
@@ -61,10 +64,10 @@ interface NavItemProps {
   onClick: () => void;
 }
 
-export function NavItem({ icon, label, detail, badge, dot = false, active = false, dimmed = false, shortcut, onClick }: NavItemProps) {
+export function NavItem({ icon, label, detail, badge, dot, active = false, dimmed = false, shortcut, onClick }: NavItemProps) {
   const rail = useInRail();
-  // Wide, the label shows already: the tooltip is there to tell the shortcut.
-  const tip = rail ? [label, detail, badge ? `${badge}` : undefined].filter(Boolean).join(' · ') : shortcut && label;
+  // Wide, the label shows already: the tooltip is there to tell the shortcut and what the dot means.
+  const tip = rail ? [label, detail, badge ? `${badge}` : undefined].filter(Boolean).join(' · ') : (shortcut || dot) && label;
 
   return (
     <button
@@ -74,8 +77,10 @@ export function NavItem({ icon, label, detail, badge, dot = false, active = fals
       data-dimmed={dimmed}
       aria-current={active ? 'page' : undefined}
       data-tip={tip}
+      data-tip-sub={dot}
       data-tip-shortcut={shortcut}
       aria-label={rail ? label : undefined}
+      aria-description={dot}
       onClick={onClick}
     >
       <span className={styles.icon}>{icon}</span>

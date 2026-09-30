@@ -25,7 +25,7 @@ export function AccountsPane() {
   return (
     <>
       <p className={styles.intro}>
-        The accounts <code>cm</code> signs in with, one per server. They are shared with the Unity Version Control app and the command line.
+        The accounts this computer signs in with, one per server. They are shared with the Unity Version Control app and the command line.
       </p>
       {isLoading && <CenteredSpinner />}
       {ordered && (

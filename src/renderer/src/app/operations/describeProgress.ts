@@ -1,4 +1,5 @@
 import type { OperationProgress } from '@shared/domain/operation';
+import { formatCount, pluralize } from '../../lib/text';
 
 export interface ProgressText {
   /** Stable words and counts: "Downloading 124 of 530 files". Never a path. */
@@ -53,9 +54,9 @@ export function describeProgressBriefly(progress: OperationProgress | null): str
 export function describeCompletion(progress: OperationProgress | null): string | null {
   if (!progress) return null;
   const { total, bytesTotal } = progress;
-  if (total && bytesTotal) return `${countOf(total, 'file')} updated · ${formatBytes(bytesTotal)}`;
+  if (total && bytesTotal) return `${pluralize(total, 'file')} updated · ${formatBytes(bytesTotal)}`;
   if (bytesTotal) return `${formatBytes(bytesTotal)} uploaded`;
-  if (total) return `${countOf(total, 'change')} applied`;
+  if (total) return `${pluralize(total, 'change')} applied`;
   return null;
 }
 
@@ -85,14 +86,6 @@ function unitOf(bytes: number): number {
 function scaled(bytes: number, unit: number, total: number): string {
   const decimals = unit > 0 && total / 1024 ** unit < 10 ? 1 : 0;
   return (bytes / 1024 ** unit).toFixed(decimals);
-}
-
-function formatCount(value: number): string {
-  return value.toLocaleString('en-US');
-}
-
-function countOf(count: number, singular: string): string {
-  return `${formatCount(count)} ${count === 1 ? singular : `${singular}s`}`;
 }
 
 /**

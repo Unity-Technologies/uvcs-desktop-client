@@ -3,6 +3,7 @@ import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { keyedByWorkspaceInfo, SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { leftChangesSummary } from './leftChangesWords';
 
 /**
  * Changes left on what the workspace is on now, waiting to be restored. Keyed by the selector, so they are looked up
@@ -21,7 +22,7 @@ export function useLeftChanges() {
   });
 }
 
-/** Whether changes are waiting to be restored, for the dot on Changes. */
-export function useHasLeftChanges(): boolean {
-  return (useLeftChanges().data?.length ?? 0) > 0;
+/** What waits to be restored, for the dot on Changes in the sidebar; undefined when nothing does. */
+export function useLeftChangesSummary(): string | undefined {
+  return leftChangesSummary(useLeftChanges().data ?? []);
 }

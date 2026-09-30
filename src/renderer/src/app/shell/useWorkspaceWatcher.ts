@@ -22,8 +22,15 @@ import { HeldChanges, inWorkspace, localQueryDefaults, refreshForChange } from '
 export function useWorkspaceWatcher(): void {
   const workspacePath = useWorkspacePath();
   const { autoRefresh } = useSettings();
-  const [coverage, setCoverage] = useState<WatchCoverage>('partial');
+  const coverage = useWatchCoverage(workspacePath);
+  useCatchUpWhenAutoRefreshResumes(workspacePath, autoRefresh);
+  useLocalQueryDefaults(workspacePath, autoRefresh, coverage);
+  useRefreshOnWorkspaceChanges(workspacePath, autoRefresh);
+}
 
+/** Asks main to watch the workspace while it shows; how much it watches ('partial' until it answers). */
+function useWatchCoverage(workspacePath: string): WatchCoverage {
+  const [coverage, setCoverage] = useState<WatchCoverage>('partial');
   useEffect(() => {
     void api.workspaces.watch(workspacePath).then((watched) => {
       setCoverage(watched);
@@ -31,22 +38,32 @@ export function useWorkspaceWatcher(): void {
     });
     return () => void api.workspaces.unwatch();
   }, [workspacePath]);
+  return coverage;
+}
 
-  // Edits made while automatic refresh was off went unnoticed: catch up once when it's back on.
+/** Edits made while automatic refresh was off went unnoticed: catch up once when it's back on. */
+function useCatchUpWhenAutoRefreshResumes(workspacePath: string, autoRefresh: boolean): void {
   const autoRefreshed = useRef(autoRefresh);
   useEffect(() => {
     if (autoRefresh && !autoRefreshed.current) void refreshQueries(inWorkspace(workspacePath, isAffectedByFileChanges));
     autoRefreshed.current = autoRefresh;
   }, [workspacePath, autoRefresh]);
+}
 
+/** Local views skip the refresh on window focus while the watcher sees every change (`localQueryDefaults`). */
+function useLocalQueryDefaults(workspacePath: string, autoRefresh: boolean, coverage: WatchCoverage): void {
   useEffect(() => {
     for (const area of LOCAL_AREAS) {
       queryClient.setQueryDefaults(queryKeys.inWorkspace(workspacePath, area), localQueryDefaults(area, autoRefresh, coverage));
     }
   }, [workspacePath, autoRefresh, coverage]);
+}
 
-  // A hidden window (minimized, covered, on another desktop) refreshes once, when it shows again, for all the changes
-  // meanwhile (`HeldChanges`).
+/**
+ * Refreshes what each change the watcher reports makes stale. A hidden window (minimized, covered, on another
+ * desktop) refreshes once, when it shows again, for all the changes meanwhile (`HeldChanges`).
+ */
+function useRefreshOnWorkspaceChanges(workspacePath: string, autoRefresh: boolean): void {
   const held = useRef(new HeldChanges());
   useUvcsEvent('workspaceChanged', ({ workspacePath: changedPath, ...change }) => {
     if (changedPath !== workspacePath) return;

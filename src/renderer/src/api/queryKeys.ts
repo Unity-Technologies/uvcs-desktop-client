@@ -14,5 +14,11 @@ export const queryKeys = {
   profiles: ['profiles'] as const,
   accounts: ['accounts'] as const,
   mergeTools: ['mergeTools'] as const,
+  cmVersion: ['cmVersion'] as const,
+  cmSetup: ['cmSetup'] as const,
+  homeDirectory: ['homeDirectory'] as const,
+  workspaceHeads: (paths: readonly string[]) => ['workspaceHeads', paths] as const,
+  workspaceRepositories: (paths: readonly string[]) => ['workspaceRepositories', paths] as const,
+  missingWorkspacePaths: (paths: readonly string[]) => ['missingWorkspacePaths', paths] as const,
   inWorkspace: (workspacePath: string, ...parts: unknown[]) => [...workspaceKey(workspacePath), ...parts] as const,
 };
