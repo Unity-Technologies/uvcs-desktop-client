@@ -266,6 +266,10 @@ renderer/src/
   styles/       Design tokens and global CSS
 ```
 
+`lib/` and `ui/` never import from the tiers above them (`api/`, `app/`, `features/`, `components/`; `lib/` not from
+`ui/` either): what they need from there is handed to them (`setAvatarPictureSource`) or lives a tier up
+(`rendererTiers.test.ts` checks it).
+
 - **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)`, so `invalidateWorkspace(path)` refreshes everything after an operation
   (or what it can touch: `invalidateWorkspace(path, affected)`, `runOperation({ affects })`).
 - **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check.
