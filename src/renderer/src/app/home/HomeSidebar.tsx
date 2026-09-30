@@ -6,8 +6,6 @@ import { NavFooter, NavGroup, NavGroups, NavItem, Sidebar } from '../../ui/nav/S
 import { CenteredSpinner } from '../../ui/Spinner';
 import { openSettingsDialog } from '../settings/SettingsDialog';
 import { useSidebarCollapsed } from '../shell/sidebarStore';
-import { AppBrand } from '../shell/AppBrand';
-import { AppMenuButton } from '../shell/AppMenuButton';
 import { SidebarToggleItem } from '../shell/SidebarToggleItem';
 import { useServers } from '../workspace/workspaceQueries';
 import { isSameSection, type HomeSection } from './homeSection';
@@ -36,16 +34,7 @@ export function HomeSidebar({ section, onSelect }: HomeSidebarProps) {
   );
 
   return (
-    <Sidebar
-      width={256}
-      rail={rail}
-      titleBarStart={
-        <>
-          <AppMenuButton />
-          {!rail && <AppBrand named />}
-        </>
-      }
-    >
+    <Sidebar width={232} rail={rail}>
 
       <NavGroups>
         <NavGroup label="Workspaces">

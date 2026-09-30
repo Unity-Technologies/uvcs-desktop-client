@@ -48,8 +48,6 @@ export function WelcomePanel({ onOpen, onOpenFolder, onBrowseRepositories }: Wel
 
   return (
     <>
-      {/* No header here: this strip lets the window be moved by its top edge. */}
-      <div className={styles.titleBarDrag} />
       <div className={styles.welcome}>
         <div className={styles.welcomeColumn}>
           <header className={styles.hero}>
