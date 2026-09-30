@@ -6,11 +6,11 @@ vi.mock('../../ui/dialog/confirm', () => ({ confirm: async () => dialogs.confirm
 vi.mock('../../ui/dialog/prompt', () => ({ prompt: async () => dialogs.typed }));
 
 import type { LabelInfo } from '@shared/domain/label';
-import { shownToasts, watchRefreshes } from '../../testing/operationOutcome';
-import { deleteLabels, renameLabel, saveLabelComment } from './labelOperations';
+import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
+import { deleteLabels, diffLabels, renameLabel, saveLabelComment } from './labelOperations';
 
 const ws = '/ws';
-const label = (name: string): LabelInfo => ({ name, changeset: 12, branch: '/main', comment: '', owner: 'ana', date: '', repository: 'game@local' });
+const label = (name: string, changeset = 12): LabelInfo => ({ name, changeset, branch: '/main', comment: '', owner: 'ana', date: '', repository: 'game@local' });
 
 beforeEach(() => {
   dialogs.confirmed = true;
@@ -72,5 +72,11 @@ describe('label operations', () => {
 
     fakeApi.answer('labels.editComment', () => undefined);
     expect(await saveLabelComment(ws, label('v1.0'), 'Release')).toBe(true);
+  });
+
+  it('compares two labels with the older one on the left, whichever was picked first', () => {
+    diffLabels(label('v2.0', 30), label('v1.0', 12));
+
+    expect(whereTheWindowIs().pages).toEqual([{ kind: 'diff', title: 'v1.0 → v2.0', target: { kind: 'range', fromSpec: 'lb:v1.0', toSpec: 'lb:v2.0' } }]);
   });
 });
