@@ -35,13 +35,14 @@ export function toFileContent(bytes: Buffer, fileName: string): FileContent {
   // A 0-byte file is empty whatever its extension; as an image it would not even decode.
   if (bytes.length === 0) return EMPTY_CONTENT;
 
-  const imageMimeType = IMAGE_MIME_TYPES[extname(fileName).toLowerCase()];
+  const extension = extname(fileName).toLowerCase();
+  const imageMimeType = IMAGE_MIME_TYPES[extension];
   if (imageMimeType) {
     if (bytes.length > MAX_IMAGE_BYTES) return { isBinary: true, size: bytes.length, tooLarge: 'image' };
     return { isBinary: true, size: bytes.length, image: imageBytes(bytes, imageMimeType) };
   }
 
-  const textImageMimeType = TEXT_IMAGE_MIME_TYPES[extname(fileName).toLowerCase()];
+  const textImageMimeType = TEXT_IMAGE_MIME_TYPES[extension];
   if (textImageMimeType) return toTextImageContent(bytes, textImageMimeType);
 
   if (looksBinary(bytes)) return { isBinary: true, size: bytes.length };
@@ -62,6 +63,7 @@ function imageBytes(bytes: Buffer, mimeType: string): ImageBytes {
   return { bytes: new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength), mimeType };
 }
 
+/** A NUL byte near the start, as Git tells binary files: text in UTF-8 or a single-byte code page has none. */
 function looksBinary(bytes: Buffer): boolean {
   return bytes.subarray(0, BINARY_SNIFF_BYTES).includes(0);
 }
