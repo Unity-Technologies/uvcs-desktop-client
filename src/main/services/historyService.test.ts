@@ -1,7 +1,8 @@
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import { cmFails, fakeCmClient, formatOutput, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { formatOutput } from '../cm/testing/cmOutput';
+import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createHistoryService } from './historyService';
 import { serviceContext } from './testing/serviceContext';
 

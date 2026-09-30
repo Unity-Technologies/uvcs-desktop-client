@@ -2,25 +2,24 @@ import { mkdir, mkdtemp, readFile, readlink, rm, stat, symlink, writeFile } from
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, it } from 'vitest';
-import type { CmClient } from '../cm/CmClient';
+import { change, pendingStatus } from '../cm/testing/cmOutput';
+import { fakeCmClient } from '../cm/testing/fakeCmClient';
 import { detachReplacedFiles } from './switchShelves';
 
-const replaced = (path: string, revisionType: string, type = 'RP'): string => `<?xml version="1.0" encoding="utf-8"?><StatusOutput><WorkspaceStatus><Status><Changeset>1</Changeset></Status></WorkspaceStatus><Changes>
-<Change><Type>${type}</Type><Path>${path}</Path><OldPath /><MergesInfo /><SimilarityPerUnit>0</SimilarityPerUnit><Size>4</Size><RevisionType>${revisionType}</RevisionType><LastModified>2026-09-25T08:26:09+02:00</LastModified></Change>
-</Changes></StatusOutput>`;
+const replaced = (path: string, revisionType: 'enTextFile' | 'enSymLink', type = 'RP'): string => pendingStatus(change(type, path, { revisionType }));
 
-/** A `cm` whose undo puts back the loaded revision with `undo`, and that records the commands. */
+/** A `cm` whose undo puts back the loaded revision with `undo`; `argsAsked` are the arguments of each command, in order. */
 function fakeCm(status: string, undo: () => Promise<void>) {
-  const commands: string[][] = [];
-  const cm = {
-    async query(args: string[]) {
-      commands.push(args);
-      if (args[0] === 'status') return status;
-      if (args[0] === 'undo') await undo();
+  const fake = fakeCmClient({
+    status,
+    undo: async () => {
+      await undo();
       return '';
     },
-  } as unknown as CmClient;
-  return { cm, commands };
+    checkout: '',
+    add: '',
+  });
+  return { cm: fake.cm, argsAsked: () => fake.commands.map((command) => command.args) };
 }
 
 // Concurrent: each test has its own folder and fake, and each waits out a real second (`waitForNextSecond`).
@@ -30,7 +29,7 @@ describe.concurrent('detachReplacedFiles', () => {
     const file = join(workspacePath, 'a.txt');
     await writeFile(file, 'teh\n');
     let undoneAtSecond = -1;
-    const { cm, commands } = fakeCm(replaced('a.txt', 'enTextFile'), async () => {
+    const { cm, argsAsked } = fakeCm(replaced('a.txt', 'enTextFile'), async () => {
       // Like cm: the loaded revision, as many bytes as the shelved text.
       await writeFile(file, 'the\n');
       undoneAtSecond = Math.floor((await stat(file)).mtimeMs / 1000);
@@ -38,7 +37,7 @@ describe.concurrent('detachReplacedFiles', () => {
 
     await detachReplacedFiles(cm, workspacePath);
 
-    expect(commands.map(([command]) => command)).toEqual(['status', 'undo', 'checkout']);
+    expect(argsAsked().map(([command]) => command)).toEqual(['status', 'undo', 'checkout']);
     expect(await readFile(file, 'utf8')).toBe('teh\n');
     expect(Math.floor((await stat(file)).mtimeMs / 1000)).toBeGreaterThan(undoneAtSecond);
   });
@@ -49,12 +48,12 @@ describe.concurrent('detachReplacedFiles', () => {
     await mkdir(join(workspacePath, 'src'));
     await writeFile(file, 'kept over the deletion\n');
     // Like cm: undoing the copy takes the file off the disk.
-    const { cm, commands } = fakeCm(replaced('src/f5.txt', 'enTextFile', 'CO+CP'), () => rm(file));
+    const { cm, argsAsked } = fakeCm(replaced('src/f5.txt', 'enTextFile', 'CO+CP'), () => rm(file));
 
     await detachReplacedFiles(cm, workspacePath);
 
     expect(await readFile(file, 'utf8')).toBe('kept over the deletion\n');
-    expect(commands.slice(1)).toEqual([
+    expect(argsAsked().slice(1)).toEqual([
       ['undo', file, '--symlink'],
       ['add', file],
     ]);
@@ -67,7 +66,7 @@ describe.concurrent('detachReplacedFiles', () => {
     await writeFile(join(workspacePath, 'README.md'), 'readme\n');
     await writeFile(join(workspacePath, 'NOTES.md'), 'notes\n');
     await symlink('NOTES.md', link);
-    const { cm, commands } = fakeCm(replaced('link', 'enSymLink'), async () => {
+    const { cm, argsAsked } = fakeCm(replaced('link', 'enSymLink'), async () => {
       await rm(link);
       await symlink('README.md', link);
     });
@@ -77,7 +76,7 @@ describe.concurrent('detachReplacedFiles', () => {
     expect(await readlink(link)).toBe('NOTES.md');
     expect(await readFile(join(workspacePath, 'README.md'), 'utf8')).toBe('readme\n');
     expect(await readFile(join(workspacePath, 'NOTES.md'), 'utf8')).toBe('notes\n');
-    expect(commands.slice(1)).toEqual([
+    expect(argsAsked().slice(1)).toEqual([
       ['undo', link, '--symlink'],
       ['checkout', link, '--symlink'],
     ]);

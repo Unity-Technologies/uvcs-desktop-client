@@ -3,7 +3,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
-import { cmFails, fakeCmClient, findXml, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { findXml } from '../cm/testing/cmOutput';
+import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createBranchesService, startingPointOption } from './branchesService';
 import { serviceContext } from './testing/serviceContext';
 

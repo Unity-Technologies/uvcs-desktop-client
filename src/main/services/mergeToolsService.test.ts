@@ -3,11 +3,10 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AppSettings } from '@shared/domain/settings';
 import type { MergeToolRequest } from '@shared/domain/mergeTools';
 import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { launchMergeTool } from '../merge/mergeTools/launch';
-import type { SettingsStore } from '../settings/SettingsStore';
+import { memorySettings } from '../settings/testing/memorySettings';
 import { createMergeToolsService } from './mergeToolsService';
 import { serviceContext } from './testing/serviceContext';
 
@@ -37,7 +36,7 @@ const CAT_VERSIONS: CmAnswer = async ({ args }) => {
 
 function mergeTools(answers: Record<string, CmAnswer>) {
   const fake = fakeCmClient(answers);
-  const settings = { get: () => ({ mergeTool: MY_TOOL.id, customMergeTools: [MY_TOOL], mergeToolArgs: {} }) as unknown as AppSettings } as SettingsStore;
+  const settings = memorySettings({ mergeTool: MY_TOOL.id, customMergeTools: [MY_TOOL], mergeToolArgs: {} });
   return { ...fake, service: createMergeToolsService(serviceContext(fake.cm, { settings })) };
 }
 

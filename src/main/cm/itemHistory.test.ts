@@ -1,6 +1,7 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { itemHistoryTarget, itemRevisionsArgs, parseHistoryRecords, parseItemHistory, parseWorkspaceRevision } from './itemHistory';
+import { formatOutput } from './testing/cmOutput';
 
 const revision = (changeset: number, comment: string, type = 'txt'): string => `
   <Revision>
@@ -40,13 +41,12 @@ const xml = (revisions: string): string => `<?xml version="1.0" encoding="utf-8"
 </RevisionHistory></RevisionHistories></RevisionHistoriesResult>`;
 
 /** `cm find revision --format={changeset}{id}{parent}` output. */
-const found = (...rows: [number, number, number][]): string => rows.map((row) => `${row.join('\u001f')}\u001e\n`).join('');
 
 const parse = (records: string, revisions: string) => parseItemHistory(parseHistoryRecords(xml(records)), revisions);
 
 describe('parseItemHistory', () => {
   it('lists revisions newest first with their revision ids and parents', () => {
-    const { revisions } = parse(revision(1, 'Initial import') + revision(4, 'Mention UI'), found([1, 15, -1], [4, 45, 15]));
+    const { revisions } = parse(revision(1, 'Initial import') + revision(4, 'Mention UI'), formatOutput([1, 15, -1], [4, 45, 15]));
 
     expect(revisions.map((item) => [item.changesetId, item.revisionId, item.parentRevisionId, item.comment])).toEqual([
       [4, 45, 15, 'Mention UI'],
@@ -56,7 +56,7 @@ describe('parseItemHistory', () => {
   });
 
   it('names each revision by its id too, which finds it before the file moved', () => {
-    const [only] = parse(revision(4, 'Mention UI'), found([4, 45, 15])).revisions;
+    const [only] = parse(revision(4, 'Mention UI'), formatOutput([4, 45, 15])).revisions;
     expect(only).toMatchObject({ idSpec: 'revid:45@game@local' });
   });
 
@@ -77,7 +77,7 @@ describe('parseItemHistory', () => {
         <ItemId>425954</ItemId>
         <Size>627</Size>
       </Revision>`;
-    const [only] = parse(records, found([16828, 425946, -1])).revisions;
+    const [only] = parse(records, formatOutput([16828, 425946, -1])).revisions;
     expect(only).toMatchObject({ changesetId: 16828, revisionId: 425946, repository: 'unityGUI@codice@cloud', idSpec: 'revid:425946@unityGUI@codice@cloud' });
   });
 
@@ -87,14 +87,14 @@ describe('parseItemHistory', () => {
   });
 
   it('handles a single revision and binary files', () => {
-    const [only] = parse(revision(3, '123', 'bin'), found([3, 37, -1])).revisions;
+    const [only] = parse(revision(3, '123', 'bin'), formatOutput([3, 37, -1])).revisions;
     expect(only).toMatchObject({ changesetId: 3, revisionId: 37, comment: '123', itemType: 'binaryFile' });
   });
 
   it('lists moves and removals apart, with what cm says they did', () => {
     const history = parse(
       revision(1, 'Initial import') + move(2, 'Moved from /README.txt to /README.md') + revision(5, 'Rename and edit') + move(5, 'Moved from /README.md to /docs/README.md'),
-      found([1, 15, -1], [5, 50, 15]),
+      formatOutput([1, 15, -1], [5, 50, 15]),
     );
 
     expect(history.revisions.map((item) => [item.changesetId, item.revisionId])).toEqual([

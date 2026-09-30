@@ -3,8 +3,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { UpdateConflict, UpdateResolutions } from '@shared/domain/incoming';
-import { change, changesetsFound, diffRecord, pendingStatus, statusHeader } from '../testing/cmOutput';
-import { recordingContext, scriptedCm } from '../testing/scriptedCm';
+import { change, changesetsFound, diffRecord, pendingStatus, statusHeader } from '../cm/testing/cmOutput';
+import { cmFails, fakeCmClient } from '../cm/testing/fakeCmClient';
+import { recordingContext } from '../operations/testing/recordingContext';
 import { unresolvedConflicts, updateWithMerge } from './updateWithMerge';
 
 // Writing in a later second than `cm` is `waitForNextSecond`'s own guarantee (nextSecond.test.ts): here it costs a real second.
@@ -40,18 +41,18 @@ interface Branch {
  */
 function updatingCm(workspacePath: string, { incoming, failUpdate }: Branch) {
   const file = (name: string): string => join(workspacePath, 'src', name);
-  return scriptedCm({
+  return fakeCmClient({
     'status --header --xml': statusHeader('/main'),
     'find changeset': changesetsFound('/main', { id: 2, owner: 'ana' }),
     'diff cs:1 cs:2': incoming,
     'status --xml --controlledchanged --changed': pendingStatus(change('CO+CH', 'src/a.txt'), change('CH', 'src/b.txt'), change('CH', 'src/c.txt')),
     'status --xml --checkout': pendingStatus(change('CO+CH', 'src/a.txt')),
-    undo: async (args) => {
+    undo: async ({ args }) => {
       for (const path of args.slice(1)) await writeFile(path, 'loaded\n');
       return '';
     },
     update: async () => {
-      if (failUpdate) throw new Error(failUpdate);
+      if (failUpdate) return cmFails(failUpdate);
       for (const name of FILES) await writeFile(file(name), `incoming ${name}\n`);
       return '';
     },
@@ -137,7 +138,7 @@ describe('updateWithMerge', () => {
 
     expect(await updateWithMerge(cm, workspacePath, {}, backupsRoot, context)).toEqual({ backupDirectory: null });
     const update = commands.find((command) => command.args[0] === 'update')!;
-    expect(update.route).toBe('execute');
+    expect(update.via).toBe('execute');
     expect(update.options.signal).toBe(context.signal);
   });
 });

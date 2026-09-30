@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { parseBranchNames, readBranchNames } from './branchNames';
-import { fakeCmClient, formatOutput } from './testing/fakeCmClient';
+import { formatOutput } from './testing/cmOutput';
+import { fakeCmClient } from './testing/fakeCmClient';
 
 const F = '\u001f';
 const R = '\u001e';

@@ -5,6 +5,7 @@ import { LOCK_LIST_FORMAT_ARGS } from '../cm/lockRecords';
 import { fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createLocksService } from './locksService';
 import { serviceContext } from './testing/serviceContext';
+import { formatOutput } from '../cm/testing/cmOutput';
 
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 
@@ -14,11 +15,10 @@ function locks(answers: Record<string, CmAnswer>) {
 }
 
 /** A `cm lock list` record in the smart-locks machine-readable layout. */
-const lockRecord = (...fields: string[]): string => `${fields.join('\u001f')}\u001e`;
 
 describe('locks', () => {
   it("lists the repository's locks in any status with one quick command", async () => {
-    const output = lockRecord('game', '118', 'f1d0', '2026-09-25T10:00:00+02:00', '/main', '', '/main/task1', '', 'Locked', 'ana', 'ana-wk', '/art/Hero.fbx');
+    const output = formatOutput(['game', '118', 'f1d0', '2026-09-25T10:00:00+02:00', '/main', '', '/main/task1', '', 'Locked', 'ana', 'ana-wk', '/art/Hero.fbx']);
     const { service, commands } = locks({ 'lock list': output });
 
     const listed = await service.list(WORKSPACE, 'game@codice@cloud', { onlyMine: false });

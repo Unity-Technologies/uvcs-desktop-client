@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserWindowConstructorOptions } from 'electron';
 import { EVENT_CHANNEL } from '@shared/ipc';
-import { memorySettings } from '../testing/scriptedCm';
+import { memorySettings } from '../settings/testing/memorySettings';
 import { createMainWindow } from './createMainWindow';
 import { loadWindowBounds } from './savedWindowBounds';
 

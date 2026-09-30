@@ -3,6 +3,7 @@ import { parseCodeReviews } from './codeReviewsXml';
 import { parseItemDetails } from './itemDetailsXml';
 import { parseLocks } from './lockRecords';
 import { parseTreeItems } from './treeItemsXml';
+import { formatOutput } from './testing/cmOutput';
 
 const LS_XML = `<?xml version="1.0" encoding="utf-8"?>
 <LsResults><LsItems>
@@ -100,7 +101,7 @@ describe('parseItemDetails', () => {
 describe('parseLocks', () => {
   it('parses the smart locks layout', () => {
     const line = ['repo', '41', 'guid-1', '2026-09-25T09:43:06+02:00', '/main', '19', '/main/task', '55', 'Retained', 'jane', 'wk', '/a.psd'];
-    const [lock] = parseLocks(`${line.join('\u001f')}\u001e\n`, 'local');
+    const [lock] = parseLocks(formatOutput(line), 'local');
     expect(lock).toEqual({
       repository: 'repo@local',
       itemId: 41,

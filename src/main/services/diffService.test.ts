@@ -2,7 +2,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { DIFF_FORMAT } from '../cm/diffEntries';
-import { fakeCmClient, formatOutput } from '../cm/testing/fakeCmClient';
+import { formatOutput } from '../cm/testing/cmOutput';
+import { fakeCmClient } from '../cm/testing/fakeCmClient';
 import { createDiffService } from './diffService';
 import { serviceContext } from './testing/serviceContext';
 

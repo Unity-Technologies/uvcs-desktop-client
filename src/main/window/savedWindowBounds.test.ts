@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserWindow } from 'electron';
-import { memorySettings } from '../testing/scriptedCm';
+import { memorySettings } from '../settings/testing/memorySettings';
 import { loadWindowBounds, saveWindowBounds } from './savedWindowBounds';
 
 vi.mock('electron', () => ({

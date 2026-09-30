@@ -2,7 +2,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { cmFails, fakeCmClient, findXml, formatOutput, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { findXml, formatOutput } from '../cm/testing/cmOutput';
+import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createAttributesService } from './attributesService';
 import { serviceContext } from './testing/serviceContext';
 
