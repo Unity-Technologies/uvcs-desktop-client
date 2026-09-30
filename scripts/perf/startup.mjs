@@ -56,6 +56,8 @@ const STEPS = [
   ['page navigation start', (r) => r.page.timeOrigin],
   ['page scripts run (DOMContentLoaded)', (r) => r.page.timeOrigin + r.page.domContentLoaded],
   ['first render (React)', (r) => r.page.timeOrigin + r.page.marks.firstRender],
+  ['theme applied (tokens)', (r) => r.page.timeOrigin + r.page.marks.themeApplied],
+  ['first paint', (r) => r.page.timeOrigin + r.page.firstPaint],
   ['first contentful paint', (r) => r.page.timeOrigin + r.page.firstContentfulPaint],
   ['window shown', (r) => r.probe.windowShown],
   ['page seen (painted and shown)', (r) => Math.max(r.page.timeOrigin + r.page.firstContentfulPaint, r.probe.windowShown)],
@@ -121,6 +123,7 @@ async function launch(flow, userData) {
     const timing = await page.evaluate(`(() => ({
       timeOrigin: performance.timeOrigin,
       domContentLoaded: performance.getEntriesByType('navigation')[0].domContentLoadedEventEnd,
+      firstPaint: performance.getEntriesByName('first-paint')[0]?.startTime,
       firstContentfulPaint: performance.getEntriesByName('first-contentful-paint')[0]?.startTime,
       marks: window.startupMarks.read(),
     }))()`);

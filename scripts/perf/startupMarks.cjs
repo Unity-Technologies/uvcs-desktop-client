@@ -9,6 +9,7 @@ const mark = (name) => {
 };
 
 function check() {
+  if (document.documentElement.dataset.theme) mark('themeApplied');
   if (document.getElementById('root')?.childElementCount) mark('firstRender');
   if (document.querySelector('[aria-label="Recent"] [data-workspace-row]')) mark('homeReady');
   if (document.querySelector('[aria-label="Switch workspace"]')) mark('workspaceShown');
