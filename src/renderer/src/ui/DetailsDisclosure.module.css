@@ -1,0 +1,33 @@
+.disclosure {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px;
+  margin-left: -4px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+}
+
+.disclosure:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.chevron {
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.disclosure[aria-expanded='true'] .chevron {
+  transform: rotate(90deg);
+}
+
+/* The changes pane's title as a disclosure: More details' look in the title's own type. */
+.asTitle {
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}

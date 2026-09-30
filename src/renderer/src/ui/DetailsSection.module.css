@@ -1,0 +1,62 @@
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 22px;
+  padding: 0 2px;
+}
+
+.sectionTitle {
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.card {
+  padding: var(--space-3);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-subtle);
+}
+
+.placeholder {
+  margin: 0;
+  color: var(--text-tertiary);
+}
+
+.skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.skeletonRow {
+  height: 12px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-active);
+  animation: var(--keyframes-pulse) 1.2s ease-in-out infinite alternate;
+}
+
+.skeletonRow:nth-child(3n + 2) {
+  width: 72%;
+}
+
+.skeletonRow:nth-child(3n) {
+  width: 86%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeletonRow {
+    animation: none;
+  }
+}
