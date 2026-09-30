@@ -93,12 +93,34 @@ function distanceFromEnd([p0, p1, p2, p3]: Curve, t: number): number {
   return Math.hypot(a * p0.x + b * p1.x + c * p2.x + d * p3.x - p3.x, a * p0.y + b * p1.y + c * p2.y + d * p3.y - p3.y);
 }
 
-/** Approximate distance from a point to the curve, good enough for hit testing. */
-export function distanceToCurve(curve: Curve, point: Point, samples = 24): number {
+/** How long each straight piece of a curve is at most when measuring distances to it. */
+const SEGMENT_LENGTH = 8;
+
+/**
+ * Distance from a point to the curve, measured to the straight pieces it is cut into, as many as its length needs:
+ * a fixed number of points along a link a hundred columns long leaves most of the line too far from any of them.
+ */
+export function distanceToCurve(curve: Curve, point: Point, segments = segmentsFor(curve)): number {
   let best = Number.POSITIVE_INFINITY;
-  for (let index = 0; index <= samples; index++) {
-    const onCurve = pointOnCurve(curve, index / samples);
-    best = Math.min(best, Math.hypot(onCurve.x - point.x, onCurve.y - point.y));
+  let previous = curve[0];
+  for (let index = 1; index <= segments; index++) {
+    const next = pointOnCurve(curve, index / segments);
+    best = Math.min(best, distanceToSegment(point, previous, next));
+    previous = next;
   }
   return best;
+}
+
+/** Enough pieces for none to be longer than `SEGMENT_LENGTH`: the control polygon is never shorter than the curve. */
+function segmentsFor([p0, p1, p2, p3]: Curve): number {
+  const polygon = Math.hypot(p1.x - p0.x, p1.y - p0.y) + Math.hypot(p2.x - p1.x, p2.y - p1.y) + Math.hypot(p3.x - p2.x, p3.y - p2.y);
+  return Math.max(1, Math.ceil(polygon / SEGMENT_LENGTH));
+}
+
+function distanceToSegment(point: Point, from: Point, to: Point): number {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const lengthSquared = dx * dx + dy * dy;
+  const t = lengthSquared === 0 ? 0 : Math.min(1, Math.max(0, ((point.x - from.x) * dx + (point.y - from.y) * dy) / lengthSquared));
+  return Math.hypot(from.x + t * dx - point.x, from.y + t * dy - point.y);
 }

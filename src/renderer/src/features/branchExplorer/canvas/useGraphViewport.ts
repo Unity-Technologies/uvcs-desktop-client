@@ -20,6 +20,8 @@ export interface GraphViewport {
   zoomStep: (screenX: number, screenY: number, factor: number) => void;
   /** Applies the bounds again after the graph or the canvas changed size. */
   keepInBounds: () => void;
+  /** Whether a glide is taking the view somewhere, as a reveal does. */
+  gliding: () => boolean;
   inertia: PanInertia;
 }
 
@@ -91,6 +93,7 @@ export function useGraphViewport(contentSize: () => Size, screenSize: () => Size
         zoomAnimation.zoomStep(screenX, screenY, factor);
       },
       keepInBounds: () => apply(viewportRef.current),
+      gliding: glide.gliding,
     };
   }, [apply, panBy, zoomTo, zoomAnimation, inertia, glide]);
 }

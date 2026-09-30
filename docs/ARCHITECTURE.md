@@ -613,6 +613,15 @@ renderer/src/
 - **Branch Explorer canvas**: the world is drawn relative to a per-frame origin near the screen (`OriginPen`, `draw.pen`, the
   world transform carrying the origin in doubles) and bands only as far as the screen, so the canvas, which keeps points in
   float32, never sees the millions of px of a whole history (jagged circles and pills zoomed in otherwise); hit tests stay in world doubles.
+  A link is hit within 6 px of the line itself (`distanceToCurve` cuts it into pieces of 8 px at most, however long),
+  in screen px when zoomed out.
+- **Branch Explorer: keeping the place**: only the first graph opens on the home badge (else the newest history).
+  Every later layout (filters, hidden branches, only relevant changesets, new history) keeps one thing where it was
+  on screen (`keepPlace`, as the official client does): the selection or the home badge while on screen, else the
+  changeset nearest the middle, else the nearest ancestor still drawn of one on screen (a "+N" node holds its
+  changesets); with nothing to hold on to, and for "Go to the workspace" when the workspace isn't drawn, the newest
+  end (`newestEnd`). A running glide (a reveal) is left alone. While the newest changesets are off screen to the
+  right, a small solid button on the right edge glides back to them.
 - **Branch Explorer: pending changes**: while the workspace has changes under version control (private files alone
   don't count), they show as the changeset they will become, as the official client draws its checkout changeset
   (`layoutGraph`'s `pending`): a dashed, empty ring counting them, in the column past every changeset on the

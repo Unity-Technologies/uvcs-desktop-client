@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { CodeReview } from '@shared/domain/codeReview';
-import { sampleHistory } from '../model/graphFixtures';
+import { branch, changeset, merge, sampleHistory } from '../model/graphFixtures';
 import { layoutGraph } from '../model/layoutGraph';
 import { COLUMN_WIDTH, columnX, headerTop, nodePoint, pendingPoint } from './geometry';
 import { pointOnCurve, linkCurve } from './curves';
@@ -59,6 +59,25 @@ describe('hitTest', () => {
     const to = nodePoint(layout, 6)!;
     const middle = { x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 };
     expect(hitTest(layout, middle)).toMatchObject({ kind: 'mergeLink' });
+  });
+
+  it('finds a long, flat merge link anywhere along it, and zoomed out within the same screen distance', () => {
+    // /main/a's one changeset (1) merged into /main 40 changesets later.
+    const mainChangesets = Array.from({ length: 40 }, (_, index) => changeset(index + 2, '/main', index === 0 ? 0 : index + 1));
+    const long = layoutGraph({
+      branches: [branch('/main', '', 41), branch('/main/a', '/main', 1)],
+      changesets: [changeset(0, '/main', -1), changeset(1, '/main/a', 0), ...mainChangesets],
+      mergeLinks: [merge(1, 41)],
+      labels: [],
+    });
+    const curve = linkCurve(nodePoint(long, 1)!, nodePoint(long, 41)!);
+    for (const t of [0.3, 0.37, 0.45, 0.62, 0.7]) {
+      const onLine = pointOnCurve(curve, t);
+      expect(hitTest(long, onLine)).toMatchObject({ kind: 'mergeLink' });
+      const offLine = { x: onLine.x, y: onLine.y - 12 };
+      expect(hitTest(long, offLine)).not.toMatchObject({ kind: 'mergeLink' });
+      expect(hitTest(long, offLine, null, { zoom: 0.25 })).toMatchObject({ kind: 'mergeLink' });
+    }
   });
 
   it('finds a branch lane between changesets', () => {

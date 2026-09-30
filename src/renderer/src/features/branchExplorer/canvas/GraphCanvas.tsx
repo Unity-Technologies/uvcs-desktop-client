@@ -13,6 +13,9 @@ import { COLUMN_WIDTH, nodePoint } from './geometry';
 import { captionMetrics } from './captionCard';
 import { hitTest, hoverCardFor, type GraphTarget, type HoverCard, type PointerCardTarget } from './graphTargets';
 import { GraphTooltip, HOVER_CARD_ATTRIBUTE, type TooltipAnchor } from './GraphTooltip';
+import { keepPlace } from './keepPlace';
+import { awayFromNewest, newestEnd } from './newestEnd';
+import { NewestEndButton } from './NewestEndButton';
 import { graphExtent } from './laneShape';
 import { selectionPoint } from './selectionPoint';
 import { useGraphPalette } from './useGraphPalette';
@@ -59,6 +62,8 @@ export interface GraphCanvasHandle {
   /** The first view of a graph, focused on a changeset, the pending changes or a branch. */
   showOpeningView: (focus: GraphSelection) => void;
   fit: () => void;
+  /** Glides to the newest end of the history, at the same zoom. */
+  showNewest: () => void;
   /** Glides the zoom by `factor` around the middle of the canvas. */
   zoomBy: (factor: number) => void;
   /** Gives the keyboard back to the graph. */
@@ -97,6 +102,8 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const card = hoverCard.card;
   /** The whole text of a branch comment cut in its header, while the pointer is on it. */
   const clippedTip = useCanvasTip();
+  /** Whether the view is back in older history, the newest changesets off screen to the right. */
+  const [awayFromEnd, setAwayFromEnd] = useState(false);
 
   const hoveredChangeset = hovered?.kind === 'changeset' ? hovered.id : hovered?.kind === 'collapsed' ? hovered.node.changeset.id : null;
   const hoveredBranch = hovered?.kind === 'branch' ? hovered.lane.branch.name : null;
@@ -156,13 +163,33 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
       // Whatever moves the graph moves it away from the card's anchor.
       clearHover();
       scheduleDraw();
+      setAwayFromEnd(awayFromNewest(sceneRef.current.layout, view.viewportRef.current, sizeRef.current));
     },
   );
   const searchPingRef = useSearchPing(highlights.search?.active ?? null, scheduleDraw);
 
   useEffect(scheduleDraw, [layout, highlights, palette, hoveredChangeset, hoveredBranch, hoveredReview, hoveredPending, scheduleDraw]);
-  // A filter can shrink or grow the graph: keep it on screen.
-  useEffect(() => view.keepInBounds(), [layout, view]);
+  // A filter can reshape, shrink or grow the graph: keep the user's place in it (unless a glide is taking them
+  // somewhere) and keep it on screen.
+  const laidOutRef = useRef(layout);
+  useEffect(() => {
+    const before = laidOutRef.current;
+    laidOutRef.current = layout;
+    // The viewport may stay as it was while the graph's end moved.
+    setAwayFromEnd(awayFromNewest(layout, view.viewportRef.current, sizeRef.current));
+    if (before === layout || view.gliding() || sizeRef.current.width === 0) return view.keepInBounds();
+    const { selectedChangeset, selectedBranch, selectedPending, homeChangeset } = sceneRef.current.highlights;
+    const preferred: GraphSelection[] = [
+      ...(selectedPending ? [{ kind: 'pending' } as const] : []),
+      ...(selectedChangeset !== null ? [{ kind: 'changeset', id: selectedChangeset } as const] : []),
+      ...(selectedBranch !== null ? [{ kind: 'branch', name: selectedBranch } as const] : []),
+      ...(before.pending ? [{ kind: 'pending' } as const] : []),
+      ...(homeChangeset !== null ? [{ kind: 'changeset', id: homeChangeset } as const] : []),
+    ];
+    // Nothing to hold on to: the newest history, where work goes on.
+    const viewport = view.viewportRef.current;
+    view.jumpTo(keepPlace(before, layout, viewport, sizeRef.current, preferred) ?? newestEnd(layout, viewport, sizeRef.current));
+  }, [layout, view]);
   // Avatars arrive in the background; repaint as each one lands.
   useEffect(() => subscribeToAvatars(scheduleDraw), [scheduleDraw]);
 
@@ -241,6 +268,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           else show();
         },
         fit: () => view.jumpTo(fitToScreen(graphExtent(layout), sizeRef.current, view.viewportRef.current)),
+        showNewest: () => view.glideTo(newestEnd(layout, view.viewportRef.current, sizeRef.current)),
         zoomBy: (factor) => view.zoomStep(center().x, center().y, factor),
         focus: () => containerRef.current?.focus(),
       };
@@ -253,6 +281,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
     pendingViewRef.current = null;
     if (pending) pending();
     else view.keepInBounds();
+    setAwayFromEnd(awayFromNewest(sceneRef.current.layout, view.viewportRef.current, sizeRef.current));
     // Resizing cleared the canvas: redraw before this frame is painted, or it flashes blank.
     drawNow();
   }, [view, drawNow]);
@@ -279,7 +308,8 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   /** Code review chips only react to clicks; for anything else they are part of their branch's card. */
   const targetAt = (clientX: number, clientY: number, withChips = true): GraphTarget | null => {
     const point = localPoint(clientX, clientY);
-    return hitTest(layout, toWorld(view.viewportRef.current, point.x, point.y), drawnRef.current, { chips: withChips });
+    const viewport = view.viewportRef.current;
+    return hitTest(layout, toWorld(viewport, point.x, point.y), drawnRef.current, { chips: withChips, zoom: viewport.zoom });
   };
 
   /** A changeset's card opens over its caption, in its font and color; a branch's just below its header, wherever they were drawn. */
@@ -410,6 +440,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
           />
         )}
         {clippedTip.tip && <TooltipBubble {...clippedTip.tip} wide />}
+        <NewestEndButton shown={awayFromEnd} onClick={() => view.glideTo(newestEnd(layout, view.viewportRef.current, sizeRef.current))} />
         {children}
       </div>
     </ActionContextMenu>

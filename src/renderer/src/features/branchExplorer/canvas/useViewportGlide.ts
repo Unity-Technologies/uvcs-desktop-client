@@ -8,6 +8,7 @@ export interface ViewportGlide {
   /** Glides from the current viewport to `target`, e.g. to frame something revealed from elsewhere. */
   glideTo: (target: Viewport) => void;
   stop: () => void;
+  gliding: () => boolean;
 }
 
 /** Eased pan-and-zoom from one viewport to another; anything else that moves the view stops it first. */
@@ -36,6 +37,8 @@ export function useViewportGlide(apply: (viewport: Viewport) => void, current: (
     [stop],
   );
 
+  const gliding = useCallback(() => frameRef.current !== null, []);
+
   useEffect(() => stop, [stop]);
-  return useMemo(() => ({ glideTo, stop }), [glideTo, stop]);
+  return useMemo(() => ({ glideTo, stop, gliding }), [glideTo, stop, gliding]);
 }

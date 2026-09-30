@@ -1,0 +1,25 @@
+/* Solid like the zoom controls' cluster: the graph never shows through it. */
+.edge {
+  position: absolute;
+  top: 50%;
+  right: var(--space-2);
+  display: flex;
+  padding: 2px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--duration-normal) var(--ease-out);
+}
+
+.edge[data-shown='true'] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.button {
+  border-radius: var(--radius-full);
+}

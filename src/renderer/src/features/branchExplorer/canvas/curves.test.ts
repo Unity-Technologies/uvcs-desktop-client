@@ -31,3 +31,14 @@ describe('curveUntil', () => {
     expect(distanceToCurve(curve, pointOnCurve(part, 0.5), 4000)).toBeLessThan(0.05);
   });
 });
+
+describe('distanceToCurve', () => {
+  it('measures to the line itself, however long the curve', () => {
+    const curve = linkCurve({ x: 0, y: 0 }, { x: 6400, y: 118 });
+    for (let t = 0; t <= 1; t += 0.01) {
+      const onLine = pointOnCurve(curve, t);
+      expect(distanceToCurve(curve, onLine)).toBeLessThan(0.5);
+      expect(distanceToCurve(curve, { x: onLine.x, y: onLine.y - 10 })).toBeGreaterThan(5);
+    }
+  });
+});

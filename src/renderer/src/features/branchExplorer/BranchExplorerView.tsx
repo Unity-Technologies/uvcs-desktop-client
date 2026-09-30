@@ -172,14 +172,15 @@ export function BranchExplorerView() {
 
   const home = useMemo(() => layout && homeTarget(layout, homeChangeset, pendingBranch), [layout, homeChangeset, pendingBranch]);
   const goHome = useCallback(() => {
-    if (!home) return;
+    // The workspace isn't in the graph (older than the dates shown, on a branch filtered out): the newest history.
+    if (!home) return canvasRef.current?.showNewest();
     setSelection(home);
     canvasRef.current?.centerOn(home);
   }, [home]);
 
   const fit = useCallback(() => canvasRef.current?.fit(), []);
   const zoomBy = useCallback((factor: number) => canvasRef.current?.zoomBy(factor), []);
-  useInitialFocus(layout, home, canvasRef, structureOnly);
+  useInitialFocus(layout, home, canvasRef);
   const find = useCallback(() => {
     searchRef.current?.focus();
     searchRef.current?.select();
@@ -480,19 +481,16 @@ function useCreatedBranchReveal(layout: ReturnType<typeof layoutGraph> | null, r
 }
 
 /**
- * The first time the graph appears, and whenever "Only relevant changesets" reshapes it, bring the
- * workspace (where the home badge is: `homeTarget`), or the latest history, into view.
+ * The first time the graph appears, bring the workspace (where the home badge is: `homeTarget`), or the latest
+ * history, into view. Later layouts keep the user's place instead (`keepPlace`).
  */
-function useInitialFocus(
-  layout: ReturnType<typeof layoutGraph> | null,
-  home: GraphSelection | null,
-  canvasRef: React.RefObject<GraphCanvasHandle | null>,
-  structureOnly: boolean,
-): void {
-  const focusedFor = useRef<boolean | null>(null);
+function useInitialFocus(layout: ReturnType<typeof layoutGraph> | null, home: GraphSelection | null, canvasRef: React.RefObject<GraphCanvasHandle | null>): void {
+  const focused = useRef(false);
   useEffect(() => {
-    if (focusedFor.current === structureOnly || !layout || layout.columnCount === 0 || !canvasRef.current) return;
-    focusedFor.current = structureOnly;
+    // An empty graph shows no canvas: the next one to show opens anew.
+    if (!canvasRef.current) focused.current = false;
+    if (focused.current || !layout || layout.columnCount === 0 || !canvasRef.current) return;
+    focused.current = true;
     canvasRef.current.showOpeningView(home ?? { kind: 'changeset', id: layout.nodesByColumn.at(-1)!.changeset.id });
   }, [layout, home, canvasRef]);
 }

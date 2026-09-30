@@ -57,6 +57,7 @@ export function hoverCardFor(target: GraphTarget | null, point: Point, drawn: Dr
 }
 
 const NODE_HIT_RADIUS = NODE_RADIUS + 4;
+/** How far from a link the pointer is still on it: in world px zoomed in, where lines widen too, in screen px zoomed out. */
 const LINE_HIT_DISTANCE = 6;
 
 /**
@@ -64,19 +65,20 @@ const LINE_HIT_DISTANCE = 6;
  * (code review chips, branch headers pinned to the edge, comments) is hit where the last frame drew it.
  * Code review chips only react to clicks: for anything else, `chips: false` makes them part of their header.
  */
-export function hitTest(layout: GraphLayout, point: Point, drawn: DrawnTargets | null = null, { chips = true } = {}): GraphTarget | null {
+export function hitTest(layout: GraphLayout, point: Point, drawn: DrawnTargets | null = null, { chips = true, zoom = 1 } = {}): GraphTarget | null {
   const chip = chips ? drawn?.reviewChips.at(point) : null;
   if (chip) return { kind: 'codeReview', review: chip.item };
   const header = drawn?.branchHeaders.at(point);
   if (header) return { kind: 'branch', lane: header.item };
   const caption = drawn?.captions.at(point);
+  const lineHitDistance = LINE_HIT_DISTANCE / Math.min(zoom, 1);
   return (
     hitChangeset(layout, point) ??
     hitPending(layout, point) ??
     hitLabel(layout, point) ??
     (caption ? { kind: 'changeset', id: caption.item.changeset.id } : null) ??
-    hitMergeLink(layout, point) ??
-    hitPendingMergeLink(layout, point) ??
+    hitMergeLink(layout, point, lineHitDistance) ??
+    hitPendingMergeLink(layout, point, lineHitDistance) ??
     hitLane(layout, point)
   );
 }
@@ -116,26 +118,26 @@ function hitLabel(layout: GraphLayout, point: Point): GraphTarget | null {
   return null;
 }
 
-function hitMergeLink(layout: GraphLayout, point: Point): GraphTarget | null {
-  for (const link of mergeLinksAcross(layout, point.x - LINE_HIT_DISTANCE, point.x + LINE_HIT_DISTANCE)) {
-    if (nearLink(nodePoint(layout, link.sourceChangeset)!, nodePoint(layout, link.destinationChangeset)!, point)) return { kind: 'mergeLink', link };
+function hitMergeLink(layout: GraphLayout, point: Point, distance: number): GraphTarget | null {
+  for (const link of mergeLinksAcross(layout, point.x - distance, point.x + distance)) {
+    if (nearLink(nodePoint(layout, link.sourceChangeset)!, nodePoint(layout, link.destinationChangeset)!, point, distance)) return { kind: 'mergeLink', link };
   }
   return null;
 }
 
 /** Whether the point is on the merge link drawn between the two changesets. */
-function nearLink(from: Point, to: Point, point: Point): boolean {
+function nearLink(from: Point, to: Point, point: Point, distance: number): boolean {
   const outsideBounds =
-    point.x < Math.min(from.x, to.x) - LINE_HIT_DISTANCE ||
-    point.x > Math.max(from.x, to.x) + LINE_HIT_DISTANCE ||
-    point.y < Math.min(from.y, to.y) - LINE_HIT_DISTANCE ||
-    point.y > Math.max(from.y, to.y) + LINE_HIT_DISTANCE;
-  return !outsideBounds && distanceToCurve(linkCurve(from, to), point) <= LINE_HIT_DISTANCE;
+    point.x < Math.min(from.x, to.x) - distance ||
+    point.x > Math.max(from.x, to.x) + distance ||
+    point.y < Math.min(from.y, to.y) - distance ||
+    point.y > Math.max(from.y, to.y) + distance;
+  return !outsideBounds && distanceToCurve(linkCurve(from, to), point) <= distance;
 }
 
-function hitPendingMergeLink(layout: GraphLayout, point: Point): GraphTarget | null {
+function hitPendingMergeLink(layout: GraphLayout, point: Point, distance: number): GraphTarget | null {
   const to = pendingPoint(layout);
-  const link = to && layout.pending!.mergeLinks.find((candidate) => nearLink(nodePoint(layout, candidate.sourceChangeset)!, to, point));
+  const link = to && layout.pending!.mergeLinks.find((candidate) => nearLink(nodePoint(layout, candidate.sourceChangeset)!, to, point, distance));
   return link ? { kind: 'pendingMergeLink', link } : null;
 }
 
