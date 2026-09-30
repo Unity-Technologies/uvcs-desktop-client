@@ -58,8 +58,7 @@ export function parseMergePlan(output: string): PrintedMergePlan {
     const [record, ...fields] = line.split(MERGE_FIELD_SEPARATOR);
     switch (record) {
       case 'STATUS':
-        plan.status = STATUSES[fields[0]!] ?? plan.status;
-        if (!STATUSES[fields[0]!] && fields[1]) plan.warnings.push(fields[1]);
+        readStatus(plan, fields);
         break;
       case 'CONTRIBUTOR':
         addContributor(contributors, fields);
@@ -88,6 +87,13 @@ export function parseMergePlan(output: string): PrintedMergePlan {
   plan.fileConflicts.sort(byPath);
   plan.changes.sort(byPath);
   return plan;
+}
+
+/** A status the plan knows (already merged, an invalid interval) sets it; any other is a warning, when it says why. */
+function readStatus(plan: PrintedMergePlan, [code = '', message]: string[]): void {
+  const status = STATUSES[code];
+  if (status) plan.status = status;
+  else if (message) plan.warnings.push(message);
 }
 
 function byPath(a: { path: string }, b: { path: string }): number {
