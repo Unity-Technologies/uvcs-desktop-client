@@ -267,6 +267,11 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   ended for sure by a `dragleave` towards nothing, a drop or any pointer move), since an element's own
   enter and leave events don't pair up and left the overlay on screen.
   The overlay (`FolderDropOverlay`) fades out on a timer (`LEAVE_MS`), never on an animation event, so it can't linger.
+- A new workspace (the New workspace dialog: `createWorkspaceAndUpdate`) opens as soon as `cm workspace create` makes
+  it, then gets the latest files of /main through the workspace's own Update (`updateWorkspace`: `cm update` in a process
+  of its own, its progress card, its refreshes). `cm workspace create` already puts it on /main with nothing loaded, so
+  there is no switch. A failed update leaves the workspace created and open, reported as any failed update. Recreating a
+  missing workspace downloads its files the same way; a new repository's workspace isn't updated: it has nothing yet.
 - "New workspace for a task" (`features/taskWorkspace`) creates a child of /main at its head (or takes an existing branch),
   a workspace next to the current one, and switches it (a plain `cm switch`: it's empty); a failure removes the new
   workspace and keeps the branch. The switcher shows the branch and pending changes of the other workspaces of the same

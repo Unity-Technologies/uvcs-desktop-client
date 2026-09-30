@@ -1,7 +1,5 @@
 import { useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
-import { api } from '../../../api/client';
-import { queryKeys } from '../../../api/queryKeys';
 import { RepositoryPicker } from '../../../components/RepositoryPicker';
 import { lastSegment } from '../../../lib/paths';
 import { Button } from '../../../ui/Button';
@@ -9,10 +7,10 @@ import { Dialog } from '../../../ui/dialog/Dialog';
 import { openDialog } from '../../../ui/dialog/dialogStore';
 import { TextField } from '../../../ui/TextField';
 import { toast } from '../../../ui/toast/toastStore';
-import { queryClient } from '../../queryClient';
 import { useWorkspaceList } from '../../workspace/workspaceQueries';
 import { useDefaultWorkspaceRoot } from '../useDefaultWorkspaceRoot';
 import { defaultWorkspacePath, isWorkspaceNameTaken, suggestWorkspaceName } from '../workspaceNaming';
+import { createWorkspaceAndUpdate } from './createWorkspaceAndUpdate';
 import { LocationField } from './LocationField';
 
 interface CreateWorkspaceOptions {
@@ -52,10 +50,10 @@ function CreateWorkspaceDialog({ repository: initialRepository, path: initialPat
     if (!canCreate || !repository) return;
     setCreating(true);
     try {
-      const created = await api.workspaces.create({ name: name.trim(), path, repository: repository.spec });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.workspaces });
-      onClose();
-      onCreated(created.path);
+      await createWorkspaceAndUpdate({ name: name.trim(), path, repository: repository.spec }, (createdPath) => {
+        onClose();
+        onCreated(createdPath);
+      });
     } catch (error) {
       toast.error("Couldn't create the workspace", error);
       setCreating(false);
