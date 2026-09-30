@@ -8,6 +8,7 @@ import { PropertyList } from '../../ui/PropertyList';
 import { commandEnding } from '../shell/commandEnding';
 import { useCopiedFeedback } from '../useCopiedFeedback';
 import styles from './ErrorDialog.module.css';
+import { errorReport } from './errorReport';
 
 interface ErrorDialogProps {
   /** What failed, in plain words, e.g. "Checkin failed". */
@@ -62,8 +63,4 @@ export function ErrorDialog({ title, message, command, onShowInLog, onClose }: E
       <OutputBlock output={command.output} />
     </Dialog>
   );
-}
-
-function errorReport(title: string, message: string, command: FailedCommand): string {
-  return [title, message, '', `$ ${command.commandLine}`, commandEnding(command.exitCode), '', command.output].join('\n').trimEnd();
 }
