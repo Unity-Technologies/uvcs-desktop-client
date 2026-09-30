@@ -1,22 +1,20 @@
-import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
-import { Archive, ArrowDownToLine, Check, ChevronDown, GitCommitHorizontal, GitMerge, History } from 'lucide-react';
+import { ArrowDownToLine, GitMerge, History } from 'lucide-react';
 import { useState, type RefObject } from 'react';
-import type { Icon } from '../../lib/actions';
 import { splitComment } from '../../lib/comment';
+import { hotkey } from '../../lib/shortcutRegistry';
 import { useShortcut } from '../../lib/useShortcut';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
-import menuStyles from '../../ui/menu/Menu.module.css';
 import { ResizeHandle } from '../../ui/ResizeHandle';
 import { checkinButtonLabel, checkinDisabledReason, type CheckinMode } from './checkinButton';
 import { CheckinButtonWording } from './CheckinButtonWording';
+import { CheckinModeMenu, describeMode } from './CheckinModeMenu';
 import { useCheckinDraftStore, useCheckinMessage } from './checkinDraftStore';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { describeUpload, type UploadSummary } from './uploadSummary';
 import styles from './CheckinPanel.module.css';
-import { hotkey } from '../../lib/shortcutRegistry';
 
 const DESCRIPTION_MIN_HEIGHT = 32;
 const DESCRIPTION_MAX_HEIGHT = 360;
@@ -46,8 +44,6 @@ interface CheckinPanelProps {
   /** `keep`: the changes stay in the workspace; otherwise they are undone once shelved. */
   onShelve: (keep: boolean) => Promise<boolean>;
 }
-
-const MODES: CheckinMode[] = ['checkin', 'shelve'];
 
 export function CheckinPanel({
   summaryRef,
@@ -153,38 +149,9 @@ export function CheckinPanel({
         >
           <CheckinButtonWording forms={label.forms} />
         </Button>
-        <DropdownMenu.Root modal={false}>
-          <DropdownMenu.Trigger asChild>
-            <Button variant="primary" className={styles.modeButton} icon={<ChevronDown size={14} />} disabled={busy} aria-label="Change mode" />
-          </DropdownMenu.Trigger>
-          <DropdownMenu.Portal>
-            <DropdownMenu.Content className={`${menuStyles.content} ${styles.modeMenu}`} align="end" side="top" sideOffset={4}>
-              <DropdownMenu.Label className={styles.modeMenuLabel}>Mode</DropdownMenu.Label>
-              {MODES.map((candidate) => {
-                const { title, subtitle, icon: CandidateIcon } = describeMode(candidate);
-                return (
-                  <DropdownMenu.Item key={candidate} className={styles.modeItem} onSelect={() => setMode(candidate)}>
-                    <CandidateIcon size={15} className={styles.modeIcon} />
-                    <span className={styles.modeText}>
-                      <span className={styles.modeTitle}>{title}</span>
-                      <span className={styles.modeSubtitle}>{subtitle}</span>
-                    </span>
-                    {candidate === mode && <Check size={15} className={styles.modeCheck} />}
-                  </DropdownMenu.Item>
-                );
-              })}
-            </DropdownMenu.Content>
-          </DropdownMenu.Portal>
-        </DropdownMenu.Root>
+        <CheckinModeMenu mode={mode} disabled={busy} onChange={setMode} />
       </div>
       {updatesFirst && behindDescription && <div className={styles.behind}>{behindDescription}</div>}
     </div>
   );
-}
-
-// The button already names the branch, so the subtitles stay one short line.
-function describeMode(mode: CheckinMode): { title: string; subtitle: string; icon: Icon } {
-  return mode === 'checkin'
-    ? { title: 'Check in', subtitle: 'Create a new changeset', icon: GitCommitHorizontal }
-    : { title: 'Shelve', subtitle: 'Put changes aside for later', icon: Archive };
 }
