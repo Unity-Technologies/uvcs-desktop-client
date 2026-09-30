@@ -20,6 +20,9 @@ publish:
 # OS and architecture: the unsigned macOS update picks its disk image by `-macOS-<arch>.dmg` (installerAsset).
 mac:
   category: public.app-category.developer-tools
+  # The app's icons (here, win and linux) are made from its mark by `npm run icons` (scripts/icons/makeAppIcons.mjs);
+  # the disk image and the Windows installer show them too.
+  icon: build/icon.icns
   artifactName: UnityVersionControl-${version}-macOS-${arch}.${ext}
   # One installer per architecture, half the size of a universal one. electron-updater needs the zip on macOS; both
   # architectures build in one run so latest-mac.yml lists them all.
@@ -29,10 +32,12 @@ mac:
     - target: zip
       arch: [x64, arm64]
 win:
+  icon: build/icon.ico
   artifactName: UnityVersionControl-${version}-Windows-${arch}.${ext}
   target:
     - target: nsis
       arch: [x64, arm64]
 linux:
+  icon: build/icons
   artifactName: UnityVersionControl-${version}-Linux-${arch}.${ext}
   target: AppImage
