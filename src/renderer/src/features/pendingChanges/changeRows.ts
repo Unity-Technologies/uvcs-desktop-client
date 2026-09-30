@@ -220,6 +220,3 @@ function pathPrefixes(path: string): string[] {
   prefixes.push(path);
   return prefixes;
 }
-
-// The Command palette sorts changes as the flat list does (`usePaletteSearch`).
-export { sortByStatus } from './changeOrder';
