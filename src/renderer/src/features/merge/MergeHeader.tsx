@@ -1,20 +1,19 @@
 import { AlertTriangle, ArrowDownToLine, Eye } from 'lucide-react';
-import { useLayoutEffect, useMemo, useRef, useState, type ReactNode, type Ref } from 'react';
+import { useMemo, type ReactNode, type Ref } from 'react';
 import type { MergePlan, MergeRequest } from '@shared/domain/merge';
 import { shortBranchName } from '@shared/domain/specs';
 import { updateWorkspace } from '../../app/shell/workspaceOperations';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { PathLabel } from '../../components/PathLabel';
-import { textMeasurer } from '../../lib/measureText';
+import { hotkey } from '../../lib/shortcutRegistry';
+import { pluralize } from '../../lib/text';
 import { useShortcut } from '../../lib/useShortcut';
 import { Button } from '../../ui/Button';
 import { Kbd } from '../../ui/Kbd';
 import { useIncomingSummary } from '../incoming/useIncomingSummary';
-import { fitMergeTitle } from './fitMergeTitle';
 import { MergeContributors } from './MergeContributors';
-import { mergeTitle, mergeTitleText, type MergeLabels, type MergeTitle } from './mergeDescription';
+import { mergeTitle, type MergeLabels } from './mergeDescription';
+import { MergeHeading } from './MergeHeading';
 import styles from './MergeHeader.module.css';
-import { hotkey } from '../../lib/shortcutRegistry';
 
 interface MergeHeaderProps {
   request: MergeRequest;
@@ -114,32 +113,6 @@ export function MergeHeader({
   );
 }
 
-/** "Merge /main/…/task into /main": fitted as a whole, the branches give way from their middle and the words stay. */
-function MergeHeading({ title }: { title: MergeTitle }) {
-  const ref = useRef<HTMLHeadingElement>(null);
-  const [fitted, setFitted] = useState(title);
-
-  useLayoutEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    // A few pixels to spare for the gaps between the parts, which the measure of their text leaves out.
-    const fit = (): void => setFitted(fitMergeTitle(title, element.clientWidth - 8, textMeasurer(element)));
-    fit();
-    const observer = new ResizeObserver(fit);
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [title]);
-
-  return (
-    <h1 ref={ref} className={styles.title} data-tip={mergeTitleText(title)}>
-      <span className={styles.titleWord}>{fitted.verb}</span>
-      <PathLabel path={fitted.source} fitContent tooltip={false} />
-      <span className={styles.titleWord}>{fitted.preposition}</span>
-      <PathLabel path={fitted.destination} fitContent tooltip={false} />
-    </h1>
-  );
-}
-
 /** Merging into an outdated workspace works, but checking in the result will need an update first. */
 function BehindHeadNotice() {
   const workspacePath = useWorkspacePath();
@@ -149,7 +122,7 @@ function BehindHeadNotice() {
   return (
     <div className={styles.notice}>
       <ArrowDownToLine size={13} />
-      Your workspace is {incoming.changesetCount} {incoming.changesetCount === 1 ? 'changeset' : 'changesets'} behind {incoming.branch}. Update first
+      Your workspace is {pluralize(incoming.changesetCount, 'changeset')} behind {incoming.branch}. Update first
       to merge into the latest version.
       <Button size="small" onClick={() => void updateWorkspace(workspacePath)}>
         Update
