@@ -1,4 +1,5 @@
 import { blockLines, type ChangeBlock, type ChangedLine, type ChangeRegion, type DiffSide } from './changeBlocks';
+import type { DiffLayout } from './diffPreferencesStore';
 
 /** Lines picked in the diff's gutter, as `@pierre/diffs` reports them: from one line to another, possibly across sides. */
 export interface LineRange {
@@ -13,7 +14,7 @@ export interface LineRange {
  * lines, then its added ones), so a range may start or end on an unchanged line. Side by side, a range that stays on
  * one side only takes that side's lines.
  */
-export function changedLinesInRange(blocks: ChangeBlock[], range: LineRange, layout: 'split' | 'unified'): ChangedLine[] {
+export function changedLinesInRange(blocks: ChangeBlock[], range: LineRange, layout: DiffLayout): ChangedLine[] {
   const from = rowOf(blocks, range.side ?? 'additions', range.start);
   const to = rowOf(blocks, range.endSide ?? range.side ?? 'additions', range.end);
   const [first, last] = from <= to ? [from, to] : [to, from];
@@ -49,3 +50,4 @@ function rowOf(blocks: ChangeBlock[], side: DiffSide, lineNumber: number): numbe
   }
   return lineNumber - 1 + otherLinesAbove;
 }
+

@@ -1,5 +1,6 @@
 import type { FileDiffOptions, FileOptions } from '@pierre/diffs/react';
 import type { ResolvedTheme } from '../../../app/settings/useResolvedTheme';
+import type { DiffLayout } from './diffPreferencesStore';
 
 /**
  * Pierre derives every diff tint from `--diffs-bg`; seeding it with our surface color makes
@@ -10,7 +11,7 @@ export const PIERRE_SURFACE_CSS = ':host{--diffs-bg:var(--bg-surface);background
 
 interface DiffAppearance {
   theme: ResolvedTheme;
-  layout: 'split' | 'unified';
+  layout: DiffLayout;
   collapseUnchanged: boolean;
   wrapLines: boolean;
 }

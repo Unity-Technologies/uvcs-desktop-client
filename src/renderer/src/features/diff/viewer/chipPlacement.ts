@@ -1,4 +1,5 @@
 import { regionContaining, type ChangedLine, type ChangeRegion } from './changeBlocks';
+import type { DiffLayout } from './diffPreferencesStore';
 
 /**
  * The change the chip is for: the one holding the picked lines, else the one hovered (or held while the pointer makes
@@ -10,7 +11,7 @@ export function chipRegion(regions: ChangeRegion[], picked: ChangedLine[] | null
 }
 
 /** The lines the chip sits by: side by side, the change's new code (its added lines) unless it only removes lines. */
-export function chipAnchorLines({ lines }: ChangeRegion, layout: 'split' | 'unified'): ChangedLine[] {
+export function chipAnchorLines({ lines }: ChangeRegion, layout: DiffLayout): ChangedLine[] {
   const added = lines.filter((line) => line.side === 'additions');
   return layout === 'split' && added.length > 0 ? added : lines;
 }
