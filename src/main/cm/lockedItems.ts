@@ -37,12 +37,15 @@ export function describeLockedItems(items: LockedItem[], action: LockedAction): 
   return [`${items.length} items are locked by others, so they can't be ${action} until the locks are released:`, ...lines].join('\n');
 }
 
-/** Runs `work`, turning a "these items are exclusively checked out" failure into a message that reads. */
+/**
+ * Runs `work`, turning a "these items are exclusively checked out" failure into a message that reads. The items are
+ * read from the command's whole output: a `CmError`'s message is only one line of it (`extractErrorMessage`).
+ */
 export async function explainLockedItems<T>(action: LockedAction, work: () => Promise<T>): Promise<T> {
   try {
     return await work();
   } catch (error) {
-    const items = error instanceof CmError ? parseLockedItems(error.message) : null;
+    const items = error instanceof CmError ? parseLockedItems(error.command.output) : null;
     if (!items || !(error instanceof CmError)) throw error;
     throw error.withMessage(describeLockedItems(items, action));
   }

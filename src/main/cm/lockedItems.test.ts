@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CmError } from './CmError';
+import { extractErrorMessage } from './errorMessage';
 import { describeLockedItems, explainLockedItems, parseLockedItems } from './lockedItems';
 
 const command = (commandLine: string) => ({ commandLine, exitCode: 1, output: '', logEntryId: 1 });
@@ -43,7 +44,9 @@ describe('describeLockedItems', () => {
 
 describe('explainLockedItems', () => {
   it('rewrites lock failures and keeps the command line', async () => {
-    const failing = () => Promise.reject(new CmError(ONE_LOCKED, command('cm checkout /w/art/Hero.fbx')));
+    // As `CmClient` reports it: the message is one line of the output (`extractErrorMessage`), the items are in the output.
+    const failed = { ...command('cm checkout /w/art/Hero.fbx'), output: ONE_LOCKED.trim() };
+    const failing = () => Promise.reject(new CmError(extractErrorMessage(ONE_LOCKED), failed));
     await expect(explainLockedItems('checked out', failing)).rejects.toMatchObject({
       message: expect.stringContaining('locked by ana'),
       command: { commandLine: 'cm checkout /w/art/Hero.fbx' },
