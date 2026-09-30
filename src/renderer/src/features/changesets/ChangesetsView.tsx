@@ -4,12 +4,8 @@ import type { Changeset } from '@shared/domain/changeset';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
-import { ListWithDetails } from '../../components/ListWithDetails';
-import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
-import { NoSelection } from '../../components/NoSelection';
+import { ObjectListView } from '../../components/ObjectListView';
 import { EmptyState } from '../../ui/EmptyState';
-import { HighlightQuery } from '../../ui/Highlight';
-import { DataTable } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
 import { changesetColumns } from './changesetColumns';
@@ -103,37 +99,32 @@ export function ChangesetsView() {
     </ViewHeader>
   );
 
-  if (error) return <>{header}<EmptyState title="Couldn't load changesets" description={error.message} /></>;
-  if (isLoading) return <>{header}<ListWithDetailsSkeleton widthKey="changesets" columns={columns} /></>;
-
   return (
     <>
       {header}
-      {visible.length === 0 && filtering ? (
-        <NoMatches icon={<GitCommitVertical size={22} />} noun="changesets" hint={noChangesetsHint(since, true)} onClear={filters.clear} />
-      ) : visible.length === 0 ? (
-        <EmptyState icon={<GitCommitVertical size={22} />} title="No changesets" description={noChangesetsHint(since, false)} />
-      ) : (
-        <ListWithDetails widthKey="changesets"
-          list={
-            <HighlightQuery query={text}>
-              <DataTable
-                rows={visible}
-                columns={columns}
-                rowKey={changesetKey}
-                selection={selection}
-                onSelectionChange={setSelection}
-                selectFirstRow
-                onActivate={openChangesetDiff}
-                contextMenu={(rows) => changesetMenu(menuContext, rows)}
-              />
-            </HighlightQuery>
-          }
-          details={
-            focused ? <ChangesetDetails key={focused.id} changeset={focused} menu={changesetMenu(menuContext, [focused])} /> : <NoSelection noun="changeset" />
-          }
-        />
-      )}
+      <ObjectListView
+        widthKey="changesets"
+        loading={isLoading}
+        error={error}
+        errorTitle="Couldn't load changesets"
+        empty={
+          filtering ? (
+            <NoMatches icon={<GitCommitVertical size={22} />} noun="changesets" hint={noChangesetsHint(since, true)} onClear={filters.clear} />
+          ) : (
+            <EmptyState icon={<GitCommitVertical size={22} />} title="No changesets" description={noChangesetsHint(since, false)} />
+          )
+        }
+        query={text}
+        rows={visible}
+        columns={columns}
+        rowKey={changesetKey}
+        selection={selection}
+        onSelectionChange={setSelection}
+        onActivate={openChangesetDiff}
+        contextMenu={(rows) => changesetMenu(menuContext, rows)}
+        noun="changeset"
+        details={focused && <ChangesetDetails key={focused.id} changeset={focused} menu={changesetMenu(menuContext, [focused])} />}
+      />
     </>
   );
 }

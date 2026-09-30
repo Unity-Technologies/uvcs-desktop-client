@@ -7,9 +7,7 @@ import { useRenameCommand } from '../../app/commands/useRenameCommand';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
-import { ListWithDetails } from '../../components/ListWithDetails';
-import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
-import { NoSelection } from '../../components/NoSelection';
+import { ObjectListView } from '../../components/ObjectListView';
 import { useWorkspaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
@@ -24,11 +22,11 @@ import { branchesQuery, filterBranches } from './branchFilters';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
-import { Highlight, HighlightQuery } from '../../ui/Highlight';
+import { Highlight } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { SegmentedControl } from '../../ui/SegmentedControl';
-import { DataTable, type Column } from '../../ui/table/DataTable';
+import type { Column } from '../../ui/table/DataTable';
 import { ToggleChip } from '../../ui/ToggleChip';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
@@ -137,39 +135,29 @@ export function BranchesView() {
           }
         />
       </ViewHeader>
-      {isLoading ? (
-        <ListWithDetailsSkeleton widthKey="branches" columns={columns} />
-      ) : error ? (
-        <EmptyState title="Couldn't load branches" description={error.message} />
-      ) : rows.length === 0 && isFiltering(filters) ? (
-        <NoMatches icon={<GitBranch size={22} />} noun="branches" hint={since === 'anyTime' ? undefined : 'The filters look within the time range. Try a longer one.'} onClear={filters.clear} />
-      ) : rows.length === 0 ? (
-        <EmptyState icon={<GitBranch size={22} />} title="No branches" description={since === 'anyTime' ? undefined : 'Try a longer time range.'} />
-      ) : (
-        <ListWithDetails widthKey="branches"
-          list={
-            <HighlightQuery query={search}>
-              <DataTable
-                rows={rows}
-                columns={columns}
-                rowKey={rowKey}
-                selection={selection}
-                onSelectionChange={setSelection}
-                selectFirstRow
-                onActivate={(row) => diffBranch(row.branch)}
-                contextMenu={(selectedRows) => branchMenu(workspacePath, selectedRows.map((row) => row.branch), currentBranch)}
-              />
-            </HighlightQuery>
-          }
-          details={
-            selected ? (
-              <BranchDetails key={selected.name} branch={selected} menu={branchMenu(workspacePath, [selected], currentBranch)} />
-            ) : (
-              <NoSelection noun="branch" />
-            )
-          }
-        />
-      )}
+      <ObjectListView
+        widthKey="branches"
+        loading={isLoading}
+        error={error}
+        errorTitle="Couldn't load branches"
+        empty={
+          isFiltering(filters) ? (
+            <NoMatches icon={<GitBranch size={22} />} noun="branches" hint={since === 'anyTime' ? undefined : 'The filters look within the time range. Try a longer one.'} onClear={filters.clear} />
+          ) : (
+            <EmptyState icon={<GitBranch size={22} />} title="No branches" description={since === 'anyTime' ? undefined : 'Try a longer time range.'} />
+          )
+        }
+        query={search}
+        rows={rows}
+        columns={columns}
+        rowKey={rowKey}
+        selection={selection}
+        onSelectionChange={setSelection}
+        onActivate={(row) => diffBranch(row.branch)}
+        contextMenu={(selectedRows) => branchMenu(workspacePath, selectedRows.map((row) => row.branch), currentBranch)}
+        noun="branch"
+        details={selected && <BranchDetails key={selected.name} branch={selected} menu={branchMenu(workspacePath, [selected], currentBranch)} />}
+      />
     </>
   );
 }

@@ -1,9 +1,7 @@
 import { Lock as LockIcon, LockOpen, RefreshCw } from 'lucide-react';
 import type { Lock } from '@shared/domain/lock';
-import { ListWithDetails } from '../../components/ListWithDetails';
-import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
 import { ItemPathRow } from '../../components/ItemPathRow';
-import { NoSelection } from '../../components/NoSelection';
+import { ObjectListView } from '../../components/ObjectListView';
 import { PathLabel } from '../../components/PathLabel';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -11,7 +9,7 @@ import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
-import { Highlight, HighlightQuery } from '../../ui/Highlight';
+import { Highlight } from '../../ui/Highlight';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { lockFilterTexts, readsOnlyMyLocks } from './lockFilters';
 import { IconButton } from '../../ui/IconButton';
@@ -25,7 +23,7 @@ import { FilterField } from '../../ui/FilterField';
 import { NoMatches } from '../../ui/NoMatches';
 import { useLocksViewStore } from './locksViewStore';
 import { RelativeTime } from '../../ui/RelativeTime';
-import { DataTable, type Column } from '../../ui/table/DataTable';
+import type { Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { LockDetails } from './LockDetails';
 import { lockKey } from './lockKey';
@@ -100,34 +98,31 @@ export function LocksView() {
     </ViewHeader>
   );
 
-  if (isLoading) return <>{header}<ListWithDetailsSkeleton widthKey="locks" columns={COLUMNS} /></>;
-  if (error) return <>{header}<EmptyState title="Couldn't read the locks" description={error.message} /></>;
-  if (visible.length === 0 && isFiltering(filters)) {
-    return <>{header}<NoMatches icon={<LockIcon size={22} />} noun="locks" hint={isOnlyMine(people) && !filter.trim() ? 'You hold no locks.' : undefined} onClear={filters.clear} /></>;
-  }
-  if (visible.length === 0) return <>{header}<EmptyState icon={<LockIcon size={22} />} title="Nothing is locked" description={RULES} /></>;
-
   return (
     <>
       {header}
-      <ListWithDetails widthKey="locks"
-        list={
-          <HighlightQuery query={filter}>
-            <DataTable
-              rows={visible}
-              columns={COLUMNS}
-              rowKey={lockKey}
-              selection={selection}
-              onSelectionChange={setSelection}
-              selectFirstRow
-              contextMenu={(rows) => lockMenu(workspacePath, rows)}
-              initialSort={{ columnId: 'date', descending: true }}
-            />
-          </HighlightQuery>
+      <ObjectListView
+        widthKey="locks"
+        loading={isLoading}
+        error={error}
+        errorTitle="Couldn't read the locks"
+        empty={
+          isFiltering(filters) ? (
+            <NoMatches icon={<LockIcon size={22} />} noun="locks" hint={isOnlyMine(people) && !filter.trim() ? 'You hold no locks.' : undefined} onClear={filters.clear} />
+          ) : (
+            <EmptyState icon={<LockIcon size={22} />} title="Nothing is locked" description={RULES} />
+          )
         }
-        details={
-          focused ? <LockDetails key={lockKey(focused)} workspacePath={workspacePath} lock={focused} menu={lockMenu(workspacePath, [focused])} /> : <NoSelection noun="lock" />
-        }
+        query={filter}
+        rows={visible}
+        columns={COLUMNS}
+        rowKey={lockKey}
+        selection={selection}
+        onSelectionChange={setSelection}
+        contextMenu={(rows) => lockMenu(workspacePath, rows)}
+        initialSort={{ columnId: 'date', descending: true }}
+        noun="lock"
+        details={focused && <LockDetails key={lockKey(focused)} workspacePath={workspacePath} lock={focused} menu={lockMenu(workspacePath, [focused])} />}
       />
     </>
   );

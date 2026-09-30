@@ -5,18 +5,16 @@ import { useCommands, type Command } from '../../app/commands/commandStore';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
-import { ListWithDetails } from '../../components/ListWithDetails';
-import { ListWithDetailsSkeleton } from '../../components/ListWithDetailsSkeleton';
-import { NoSelection } from '../../components/NoSelection';
+import { ObjectListView } from '../../components/ObjectListView';
 import { PathLabel } from '../../components/PathLabel';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
-import { Highlight, HighlightQuery } from '../../ui/Highlight';
+import { Highlight } from '../../ui/Highlight';
 import { IconButton } from '../../ui/IconButton';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { ChoiceChip } from '../../ui/ChoiceChip';
-import { DataTable, type Column } from '../../ui/table/DataTable';
+import type { Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { CodeReviewDetails } from './CodeReviewDetails';
 import { codeReviewMenu } from './codeReviewMenu';
@@ -164,52 +162,41 @@ export function CodeReviewsView() {
     </ViewHeader>
   );
 
-  if (isLoading) return <>{header}<ListWithDetailsSkeleton widthKey="codeReviews" columns={COLUMNS} /></>;
-  if (error) return <>{header}<EmptyState title="Couldn't read the code reviews" description={error.message} /></>;
-  if (visible.length === 0 && isFiltering(filters, CLEARED_CODE_REVIEW_FILTERS)) {
-    return <>{header}<NoMatches icon={<MessageSquareCode size={22} />} noun="code reviews" hint={since === 'anyTime' ? undefined : 'The filters look within the time range. Try a longer one.'} onClear={filters.clear} /></>;
-  }
-  if (visible.length === 0) {
-    return (
-      <>
-        {header}
-        <EmptyState
-          icon={<MessageSquareCode size={22} />}
-          title="No code reviews"
-          description={since === 'anyTime' ? 'Ask a teammate to look at a branch or changeset before it gets merged.' : 'None in this time range. Try a longer one, or ask a teammate for a review.'}
-          action={
-            <Button variant="primary" icon={<Plus size={14} />} onClick={newReview}>
-              New review
-            </Button>
-          }
-        />
-      </>
-    );
-  }
-
-
   return (
     <>
       {header}
-      <ListWithDetails widthKey="codeReviews"
-        list={
-          <HighlightQuery query={search}>
-            <DataTable
-              rows={visible}
-              columns={COLUMNS}
-              rowKey={reviewKey}
-              selection={selection}
-              onSelectionChange={setSelection}
-              selectFirstRow
-              onActivate={(review) => openReview(review)}
-              contextMenu={(rows) => codeReviewMenu(workspacePath, rows)}
-              initialSort={{ columnId: 'date', descending: true }}
+      <ObjectListView
+        widthKey="codeReviews"
+        loading={isLoading}
+        error={error}
+        errorTitle="Couldn't read the code reviews"
+        empty={
+          isFiltering(filters, CLEARED_CODE_REVIEW_FILTERS) ? (
+            <NoMatches icon={<MessageSquareCode size={22} />} noun="code reviews" hint={since === 'anyTime' ? undefined : 'The filters look within the time range. Try a longer one.'} onClear={filters.clear} />
+          ) : (
+            <EmptyState
+              icon={<MessageSquareCode size={22} />}
+              title="No code reviews"
+              description={since === 'anyTime' ? 'Ask a teammate to look at a branch or changeset before it gets merged.' : 'None in this time range. Try a longer one, or ask a teammate for a review.'}
+              action={
+                <Button variant="primary" icon={<Plus size={14} />} onClick={newReview}>
+                  New review
+                </Button>
+              }
             />
-          </HighlightQuery>
+          )
         }
-        details={
-          selected ? <CodeReviewDetails key={selected.id} review={selected} menu={codeReviewMenu(workspacePath, [selected])} /> : <NoSelection noun="code review" />
-        }
+        query={search}
+        rows={visible}
+        columns={COLUMNS}
+        rowKey={reviewKey}
+        selection={selection}
+        onSelectionChange={setSelection}
+        onActivate={(review) => openReview(review)}
+        contextMenu={(rows) => codeReviewMenu(workspacePath, rows)}
+        initialSort={{ columnId: 'date', descending: true }}
+        noun="code review"
+        details={selected && <CodeReviewDetails key={selected.id} review={selected} menu={codeReviewMenu(workspacePath, [selected])} />}
       />
     </>
   );
