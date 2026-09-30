@@ -4,7 +4,7 @@ import { useEffect } from 'react';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { AppMark } from '../../components/AppMark';
-import { APP_NAME, APP_TAGLINE } from '../../lib/appIdentity';
+import { APP_NAME, APP_PITCH } from '../../lib/appIdentity';
 import { Button } from '../../ui/Button';
 import { CardDialog } from '../../ui/dialog/CardDialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
@@ -35,7 +35,7 @@ function AboutDialog({ onClose }: { onClose: () => void }) {
       <AppMark size={72} />
       <h2 className={styles.name}>{APP_NAME}</h2>
       <div className={styles.version}>{info ? `Version ${info.version}` : ' '}</div>
-      <p className={styles.tagline}>{APP_TAGLINE}</p>
+      <p className={styles.pitch}>{APP_PITCH}</p>
 
       <UpdateBox />
 
