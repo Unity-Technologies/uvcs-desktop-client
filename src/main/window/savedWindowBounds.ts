@@ -18,7 +18,7 @@ export function cascadedWindowBounds(window: BrowserWindow): { bounds: Rect | nu
 }
 
 /** Saves the window's bounds while it moves or resizes (after a short pause) and when it closes. */
-export function saveWindowBounds(window: BrowserWindow, settings: SettingsStore): void {
+export function keepWindowBoundsSaved(window: BrowserWindow, settings: SettingsStore): void {
   const save = (): void => {
     if (window.isDestroyed()) return;
     // The normal bounds are the unmaximized ones, so unmaximizing after a restart goes back to where the user left it.

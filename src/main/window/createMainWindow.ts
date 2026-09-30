@@ -3,7 +3,7 @@ import { BrowserWindow, nativeTheme, shell } from 'electron';
 import { windowChrome } from '@shared/windowChrome';
 import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
-import { cascadedWindowBounds, loadWindowBounds, saveWindowBounds } from './savedWindowBounds';
+import { cascadedWindowBounds, loadWindowBounds, keepWindowBoundsSaved } from './savedWindowBounds';
 import { titleBarOptions } from './titleBar';
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from './windowBounds';
 
@@ -33,7 +33,7 @@ export function createMainWindow(settings: SettingsStore, cascadeFrom?: BrowserW
     },
   });
 
-  saveWindowBounds(window, settings);
+  keepWindowBoundsSaved(window, settings);
   window.once('ready-to-show', () => {
     // Maximizing also shows the window, so it waits until the page can paint.
     if (maximized) window.maximize();
