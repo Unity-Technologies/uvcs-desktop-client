@@ -23,6 +23,15 @@ export interface CmRunOptions {
 }
 
 type CommandLogListener = (entry: CommandLogEntry) => void;
+type ShellPool = Pick<CmShellPool, 'run' | 'isReady' | 'warmUp' | 'release' | 'disposeAll'>;
+
+/** What `CmClient` runs commands with: a process of their own, and pooled `cm shell` sessions. Tests pass fakes. */
+export interface CmRunners {
+  runProcess: typeof runCmProcess;
+  createShellPool: (cmPath: string) => ShellPool;
+}
+
+const CM_RUNNERS: CmRunners = { runProcess: runCmProcess, createShellPool: (cmPath) => new CmShellPool(cmPath) };
 type CommandStartedListener = (command: { args: readonly string[]; cwd: string; finished: Promise<unknown> }) => void;
 
 /**
@@ -33,7 +42,7 @@ type CommandStartedListener = (command: { args: readonly string[]; cwd: string; 
  */
 export class CmClient {
   private cmPath: string;
-  private shellPool: CmShellPool;
+  private shellPool: ShellPool;
   private readonly logListeners = new Set<CommandLogListener>();
   private readonly startListeners = new Set<CommandStartedListener>();
   private nextCommandId = 1;
@@ -42,9 +51,10 @@ export class CmClient {
   constructor(
     private readonly locate: () => string,
     private readonly platform: NodeJS.Platform = process.platform,
+    private readonly runners: CmRunners = CM_RUNNERS,
   ) {
     this.cmPath = locate();
-    this.shellPool = new CmShellPool(this.cmPath);
+    this.shellPool = runners.createShellPool(this.cmPath);
   }
 
   /** Where `cm` was found: the official GUI and its merge tool are installed next to it. */
@@ -58,7 +68,7 @@ export class CmClient {
     if (cmPath === this.cmPath) return;
     this.shellPool.disposeAll();
     this.cmPath = cmPath;
-    this.shellPool = new CmShellPool(cmPath);
+    this.shellPool = this.runners.createShellPool(cmPath);
   }
 
   onCommandLogged(listener: CommandLogListener): () => void {
@@ -124,9 +134,10 @@ export class CmClient {
   /** A process of its own; a command line too long to start one with (thousands of paths) goes to a `cm shell` of its own. */
   private async runProcess(args: string[], cwd: string, { signal, killSignal, onOutputLine }: CmRunOptions): Promise<CmResult> {
     const { args: started, input } = processCommand(args, this.platform);
-    if (input === undefined) return runCmProcess(this.cmPath, started, { cwd, signal, killSignal, onOutputLine });
+    const { runProcess } = this.runners;
+    if (input === undefined) return runProcess(this.cmPath, started, { cwd, signal, killSignal, onOutputLine });
     const outputLine = onOutputLine && ((line: string) => !isShellResultLine(line) && onOutputLine(line));
-    const result = await runCmProcess(this.cmPath, started, { cwd, signal, killSignal, onOutputLine: outputLine, input });
+    const result = await runProcess(this.cmPath, started, { cwd, signal, killSignal, onOutputLine: outputLine, input });
     return shellCommandResult(result.output);
   }
 
