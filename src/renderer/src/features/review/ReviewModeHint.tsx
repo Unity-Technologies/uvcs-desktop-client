@@ -1,6 +1,7 @@
 import { ListChecks, X } from 'lucide-react';
 import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
+import { REVIEW_KEYS } from './reviewModeSetting';
 import styles from './ReviewStrip.module.css';
 
 interface ReviewModeHintProps {
@@ -14,7 +15,7 @@ export function ReviewModeHint({ onTurnOn, onDismiss }: ReviewModeHintProps) {
     <div className={styles.strip} data-hint>
       <ListChecks size={13} className={styles.icon} />
       <span className={styles.label}>Reviewing a lot of changes?</span>
-      <Button size="small" variant="ghost" className={`${styles.push} ${styles.action}`} data-tip="Mark files as you review them: R marks, J/K move" onClick={onTurnOn}>
+      <Button size="small" variant="ghost" className={`${styles.push} ${styles.action}`} data-tip={`Mark files as you review them: ${REVIEW_KEYS}`} onClick={onTurnOn}>
         Turn on review mode
       </Button>
       <IconButton size="small" icon={<X size={13} />} label="Don't show again" onClick={onDismiss} />
