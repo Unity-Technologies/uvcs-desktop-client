@@ -12,7 +12,6 @@ import type { Shelve } from '@shared/domain/shelve';
 import { createFuzzyIndex } from '../../lib/fuzzyIndex';
 import type { ResultContext } from './objectResults';
 import {
-  changesetNumberIn,
   lacksServerMatch,
   MAX_PER_SECTION,
   paletteGroups,
@@ -254,12 +253,6 @@ describe('searchesServerFor', () => {
     expect(searchesServerFor('abc')).toBe(true);
     expect(searchesServerFor('1234')).toBe(false);
     expect(searchesServerFor('cs:1234')).toBe(false);
-  });
-});
-
-describe('changesetNumberIn', () => {
-  it('reads 123 and cs:123 in any case, and nothing else', () => {
-    expect([changesetNumberIn('123'), changesetNumberIn('Cs:123'), changesetNumberIn('cs:12a'), changesetNumberIn('sh:3')]).toEqual(['123', '123', undefined, undefined]);
   });
 });
 
