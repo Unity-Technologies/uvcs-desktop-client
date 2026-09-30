@@ -1,7 +1,5 @@
 import type { Changeset } from '@shared/domain/changeset';
-import type { DiffEntry } from '@shared/domain/diff';
-import type { BranchIncoming, IncomingChanges, IncomingSummary, LoadedBranch, NothingIncoming, UpdateConflict } from '@shared/domain/incoming';
-import type { PendingChange } from '@shared/domain/pendingChanges';
+import type { BranchIncoming, IncomingChanges, IncomingSummary, LoadedBranch, NothingIncoming } from '@shared/domain/incoming';
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
 import { DIFF_FORMAT, parseDiffEntries } from '../cm/diffEntries';
@@ -10,8 +8,7 @@ import { escapeQueryValue, findArgs } from '../cm/findQuery';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readWorkspaceStatus } from '../cm/workspaceStatus';
-
-const LOCAL_CONTENT_CHANGES = new Set(['changed', 'checkedOut', 'replaced']);
+import { findUpdateBlockers, findUpdateConflicts } from './updateCollisions';
 
 const NOTHING_INCOMING: NothingIncoming = { branch: null, changesetCount: 0, authors: [] };
 
@@ -65,32 +62,6 @@ export async function readIncomingChanges(cm: CmClient, workspacePath: string): 
   const local = parsePendingChanges(statusXml).changes;
 
   return { ...summary, changesets, files, conflicts: findUpdateConflicts(files, local), blockedPaths: findUpdateBlockers(files, local) };
-}
-
-/** Local changes to items the branch deleted or moved away: updating can't merge them. */
-export function findUpdateBlockers(incoming: DiffEntry[], local: PendingChange[]): string[] {
-  const localPaths = new Set(local.map((change) => change.path));
-  return incoming
-    .filter((entry) => entry.status === 'deleted' || entry.status === 'moved')
-    .map((entry) => entry.oldPath ?? entry.path)
-    .filter((path) => localPaths.has(path));
-}
-
-/** Files whose content changed both locally and on the branch: updating has to merge them. */
-export function findUpdateConflicts(incoming: DiffEntry[], local: PendingChange[]): UpdateConflict[] {
-  const locallyChanged = new Set(
-    local.filter((change) => change.kinds.some((kind) => LOCAL_CONTENT_CHANGES.has(kind))).map((change) => change.path),
-  );
-
-  return incoming
-    .filter((entry) => entry.status === 'changed' && entry.itemType !== 'directory' && locallyChanged.has(entry.path))
-    .map((entry) => ({
-      path: entry.path,
-      isBinary: entry.itemType === 'binaryFile',
-      baseRevisionId: entry.baseRevisionId,
-      incomingRevisionId: entry.revisionId,
-      repository: entry.repository,
-    }));
 }
 
 async function readIncomingChangesets(cm: CmClient, workspacePath: string): Promise<{ summary: IncomingSummary; changesets: Changeset[] }> {
