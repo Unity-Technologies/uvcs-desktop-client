@@ -94,6 +94,13 @@ describe('restoring left changes', () => {
     expect(await finder.find(workspacePath)).toEqual([]);
   });
 
+  it('offers changes still waiting to be brought on the target, where their conflicts wait for the merge view', async () => {
+    const workspace = workspaceWith({ pending: { 'src/a.txt': 'CH' }, fail: { shelveConflicts: 1 } });
+    await switchWithChanges(workspace.deps, workspacePath, 'br:/main/task2', 'bring', recordingContext().context);
+
+    expect(await workspace.finder.find(workspacePath)).toEqual([expect.objectContaining({ shelveId: 7, mode: 'bring', sourceName: '/main/task1', targetName: '/main/task2' })]);
+  });
+
   it('forgets changes whose shelve was deleted elsewhere', async () => {
     const { finder, deps } = await leftAndBack({});
     const deletedElsewhere = { ...deps.records.find({ shelveId: 7, repository: 'eco@local' })!, shelveId: 99 };

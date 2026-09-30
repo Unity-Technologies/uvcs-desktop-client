@@ -305,6 +305,18 @@ describe('arriving where changes were left', () => {
     expect(recordOf(7)).toBeDefined();
   });
 
+  it('leaves the choice to "Welcome back" when changes were left there more than once', async () => {
+    const workspace = workspaceWith({ branch: '/main/task2', pending: { 'src/b.txt': 'CH' } });
+    await switchTo(workspace.deps, 'br:/main/task1', 'leave');
+    await switchTo(workspace.deps, 'br:/main/task2');
+    workspace.pending()['src/c.txt'] = 'CH';
+    await switchTo(workspace.deps, 'br:/main/task1', 'leave');
+    workspace.deps.settings.update({ restoreLeftChangesAutomatically: true });
+
+    expect(await switchTo(workspace.deps, 'br:/main/task2')).toEqual({ kind: 'switched' });
+    expect(workspace.shelves()).toEqual([7, 8]);
+  });
+
   it("asks the server nothing about left changes when this app left none there", async () => {
     const { deps, ran } = workspaceWith({}, { restoreLeftChangesAutomatically: true });
 
