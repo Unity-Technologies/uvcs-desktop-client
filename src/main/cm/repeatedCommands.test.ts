@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
-import { isServerCommand, RepeatedCommandDetector } from './repeatedCommands';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { CmClient } from './CmClient';
+import { isServerCommand, RepeatedCommandDetector, warnOnRepeatedServerCommands } from './repeatedCommands';
 
 describe('isServerCommand', () => {
   it('tells server queries from reads of this machine', () => {
@@ -28,5 +29,47 @@ describe('RepeatedCommandDetector', () => {
   it('counts each command apart', () => {
     const detector = new RepeatedCommandDetector(budget);
     expect(['a', 'b', 'a', 'b'].map((command, index) => detector.record(command, index))).toEqual([false, false, false, false]);
+  });
+});
+
+describe('warnOnRepeatedServerCommands', () => {
+  type StartListener = Parameters<CmClient['onCommandStarted']>[0];
+
+  function watchedCommands() {
+    let started: StartListener = () => undefined;
+    warnOnRepeatedServerCommands({ onCommandStarted: (listener) => ((started = listener), () => undefined) });
+    return (args: string[], cwd = '/wk') => started({ args, cwd, finished: Promise.resolve() });
+  }
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
+  it('warns once when a server command runs a third time within ten seconds, secrets hidden', () => {
+    const run = watchedCommands();
+    const sync = ['sync', 'game@local', 'git', 'https://github.com/acme/game.git', '--pwd=s3cret'];
+
+    for (let i = 0; i < 4; i++) {
+      run(sync);
+      vi.advanceTimersByTime(1000);
+    }
+
+    expect(console.warn).toHaveBeenCalledTimes(1);
+    expect(vi.mocked(console.warn).mock.calls[0]?.[0]).toContain('[server budget] cm sync game@local git https://github.com/acme/game.git --pwd=•••');
+    expect(vi.mocked(console.warn).mock.calls[0]?.[0]).not.toContain('s3cret');
+  });
+
+  it('never warns about local reads, or the same command in different workspaces', () => {
+    const run = watchedCommands();
+
+    for (let i = 0; i < 5; i++) run(['status', '--header', '--xml']);
+    ['/a', '/b', '/c'].forEach((cwd) => run(['find', 'branch'], cwd));
+
+    expect(console.warn).not.toHaveBeenCalled();
   });
 });
