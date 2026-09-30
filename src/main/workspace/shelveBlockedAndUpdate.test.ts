@@ -23,6 +23,8 @@ import { SwitchShelveRecords } from './switchShelveRecords';
 vi.mock('../files/nextSecond', () => ({ waitForNextSecond: async () => {} }));
 
 interface Scenario {
+  /** The user's changes; src/old.txt, which changeset 2 deleted, and src/a.txt by default. */
+  pending?: string[];
   /** What changeset 2 did besides deleting src/old.txt, which the user changed. */
   alsoIncoming?: string;
   failUpdate?: boolean;
@@ -32,9 +34,9 @@ interface Scenario {
 }
 
 /** A workspace on /main/task1 (branch id 37) with src/old.txt and src/a.txt changed, while changeset 2 deleted src/old.txt. */
-function blockedWorkspace(workspacePath: string, { alsoIncoming = '', failUpdate = false, putBackConflicts = false, branchExists = true }: Scenario = {}) {
+function blockedWorkspace(workspacePath: string, { pending: changed = ['src/old.txt', 'src/a.txt'], alsoIncoming = '', failUpdate = false, putBackConflicts = false, branchExists = true }: Scenario = {}) {
   let shelveComment = '';
-  let pending = ['src/old.txt', 'src/a.txt'];
+  let pending = changed;
   const pendingChanges = (): string => pendingStatus(...pending.map((path) => change('CH', path)));
   const shelveMerge: CmAnswer = (args) => {
     if (args.includes('--merge')) return '';
@@ -49,7 +51,7 @@ function blockedWorkspace(workspacePath: string, { alsoIncoming = '', failUpdate
     'status --xml --controlledchanged --changed': pendingChanges,
     'status --xml --iscochanged': pendingChanges,
     'status --xml --checkout': pendingStatus(),
-    'status --short': '',
+    'status --short': () => pending.map((path) => `CH ${path}\n`).join(''),
     'shelveset create': async (args) => {
       shelveComment = await readFile(args.find((arg) => arg.startsWith('-commentsfile='))!.slice('-commentsfile='.length), 'utf8');
       return shelvesCreated({ id: 12 });
@@ -63,7 +65,10 @@ function blockedWorkspace(workspacePath: string, { alsoIncoming = '', failUpdate
       if (failUpdate) throw new Error('The server is unreachable.');
       return '';
     },
-    'merge sh:12': shelveMerge,
+    'merge sh:12': (args, route) => {
+      if (args.includes('--merge')) pending = [...pending, 'src/old.txt'];
+      return shelveMerge(args, route);
+    },
   });
   const records = new SwitchShelveRecords(memorySettings());
   const finish = vi.fn(async () => {});
@@ -116,7 +121,7 @@ describe('shelveBlockedAndUpdate', () => {
   });
 
   it('puts the files back by merging the shelve when the update fails', async () => {
-    const { deps, lines, finish } = blockedWorkspace(workspacePath, { failUpdate: true });
+    const { deps, lines, finish } = blockedWorkspace(workspacePath, { pending: ['src/old.txt'], failUpdate: true });
 
     await expect(run(deps)).rejects.toThrow("Couldn't update: The server is unreachable. Your changes were put back.");
     expect(lines()).toContainEqual(expect.stringMatching(/^merge sh:12 --merge .*--nointeractiveresolution/));
@@ -124,11 +129,18 @@ describe('shelveBlockedAndUpdate', () => {
   });
 
   it("says where the changes are when they can't go back cleanly, and keeps them offered in Changes", async () => {
-    const { deps, records, finish } = blockedWorkspace(workspacePath, { failUpdate: true, putBackConflicts: true });
+    const { deps, records, finish } = blockedWorkspace(workspacePath, { pending: ['src/old.txt'], failUpdate: true, putBackConflicts: true });
 
     await expect(run(deps)).rejects.toThrow("Couldn't update: The server is unreachable. Your changes are safe in shelve 12; restore them from Changes.");
     expect(finish).not.toHaveBeenCalled();
     expect(records.find({ shelveId: 12, repository: 'eco@local' })).toMatchObject({ reason: 'update' });
+  });
+
+  it("doesn't merge the shelve into the user's other pending changes, which cm would refuse: it says where the files are", async () => {
+    const { deps, lines } = blockedWorkspace(workspacePath, { failUpdate: true });
+
+    await expect(run(deps)).rejects.toThrow('Your changes are safe in shelve 12; restore them from Changes.');
+    expect(lines().some((line) => line.startsWith('merge sh:12 --merge'))).toBe(false);
   });
 
   it('shelves nothing when the branch cannot be found to name where the changes were made', async () => {

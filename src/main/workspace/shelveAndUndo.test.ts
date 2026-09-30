@@ -2,127 +2,102 @@ import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import type { AppSettings } from '@shared/domain/settings';
-import type { CmClient } from '../cm/CmClient';
-import type { OperationContext } from '../operations/OperationTracker';
-import type { SettingsStore } from '../settings/SettingsStore';
-import type { LeftChangesFinder } from './leftChanges';
+import { beforeEach, describe, expect, it } from 'vitest';
+import { memorySettings, recordingContext } from '../testing/scriptedCm';
+import { LeftChangesFinder } from './leftChanges';
 import { shelveAndUndo, shelvedAwayChanges } from './shelveAndUndo';
 import { SwitchShelveRecords } from './switchShelveRecords';
-import { applyShelveCleanly, createVerifiedShelve } from './switchShelves';
+import { playAlongWorkspace, type WorkspaceScenario } from './testing/playAlongWorkspace';
 
-vi.mock('./switchShelves', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('./switchShelves')>()),
-  createVerifiedShelve: vi.fn(async () => ({ id: 12, repository: 'eco@local' })),
-  applyShelveCleanly: vi.fn(async () => ({ kind: 'applied', count: 2 })),
-}));
-
-const header = `<?xml version="1.0" encoding="utf-8"?>
-<StatusOutput>
-  <WorkspaceStatus><Status><RepSpec><Server>local</Server><Name>eco</Name></RepSpec><Changeset>1</Changeset></Status></WorkspaceStatus>
-  <WkConfigType>Branch</WkConfigType>
-  <WkConfigName>/main/task1@eco@local</WkConfigName>
-</StatusOutput>`;
-
-const change = (type: string, path: string, merge = ''): string =>
-  `<Change><Type>${type}</Type><Path>${path}</Path><OldPath /><MergesInfo>${merge}</MergesInfo><SimilarityPerUnit>0</SimilarityPerUnit><Size>3</Size><RevisionType>enTextFile</RevisionType><LastModified>2026-09-25T08:26:09+02:00</LastModified></Change>`;
-
-const status = (changes: string[], changelist = ''): string =>
-  `<?xml version="1.0" encoding="utf-8"?><StatusOutput><WorkspaceStatus><Status><Changeset>1</Changeset></Status></WorkspaceStatus>${changelist}<Changes>${changes.join('')}</Changes></StatusOutput>`;
-
-/** A workspace on /main/task1 with a changed file, an added one and another changed file left out of the shelve. */
-function workspaceWith(workspacePath: string, { failUndo = false, merging = false } = {}) {
-  const executed: string[][] = [];
-  const pending = [change('CH', 'src/a.txt', merging ? 'Merge from 3' : ''), change('AD', 'src/new.txt'), change('CH', 'src/other.txt')];
-  const cm = {
-    async query(args: string[]) {
-      const command = args.join(' ');
-      if (command === 'status --header --xml') return header;
-      if (args[0] === 'getworkspacefrompath') return 'work\u001fa0411612-d36e-4eca-b9b5-97acad5969ea\u001e\n';
-      if (command === 'status --xml --private') return status([change('PR', 'src/new.txt')]);
-      if (args[0] === 'status') return status(pending);
-      throw new Error(`Unexpected command: cm ${command}`);
-    },
-    async execute(args: string[]) {
-      executed.push(args);
-      if (failUndo && args[0] === 'undo') throw new Error('The file is in use.');
-      return '';
-    },
-  } as unknown as CmClient;
-
-  let settings = { switchShelves: [] } as unknown as AppSettings;
-  const store = {
-    get: () => settings,
-    update: (changes: Partial<AppSettings>) => (settings = { ...settings, ...changes }),
-  } as unknown as SettingsStore;
-  const records = new SwitchShelveRecords(store);
-  const finish = vi.fn(async () => {});
-  const deps = { cm, records, leftChanges: { finish } as unknown as LeftChangesFinder, backupsRoot: join(workspacePath, '..', 'backups') };
-  return { deps, executed, records, finish };
-}
-
-const context: OperationContext = {
-  signal: new AbortController().signal,
-  reportProgress: () => {},
-  beginStep: () => {},
-  progressOf: () => () => {},
-};
+const PENDING = { 'src/a.txt': 'CH', 'src/new.txt': 'AD', 'src/other.txt': 'CH' };
 
 let workspacePath: string;
 
 beforeEach(async () => {
-  vi.mocked(createVerifiedShelve).mockClear();
   workspacePath = join(await mkdtemp(join(tmpdir(), 'uvcs-shelve-')), 'wk');
   await mkdir(join(workspacePath, 'src'), { recursive: true });
-  await writeFile(join(workspacePath, 'src/new.txt'), 'added');
+  await writeFile(join(workspacePath, 'src', 'new.txt'), 'added\n');
 });
 
-describe('shelveAndUndo', () => {
-  it('undoes only what it shelved, and moves the added files aside so the workspace is as before the changes', async () => {
-    const { deps, executed, records } = workspaceWith(workspacePath);
+/** A workspace on /main/task1 with a changed file, an added one and another changed file. */
+function workspaceWith(scenario: WorkspaceScenario = {}) {
+  const workspace = playAlongWorkspace(workspacePath, { pending: PENDING, ...scenario });
+  const records = new SwitchShelveRecords(memorySettings());
+  const deps = { cm: workspace.cm, records, leftChanges: new LeftChangesFinder(workspace.cm, records), backupsRoot: join(workspacePath, '..', 'backups') };
+  const recordOf = (shelveId: number) => records.find({ shelveId, repository: 'eco@local' });
+  return { ...workspace, deps, recordOf };
+}
 
-    expect(await shelveAndUndo(deps, workspacePath, ['src/a.txt', 'src/new.txt'], 'Half done', context)).toEqual({ shelveId: 12, count: 2 });
-    expect(createVerifiedShelve).toHaveBeenCalledWith(
-      deps.cm,
-      workspacePath,
-      [expect.objectContaining({ path: 'src/a.txt' }), expect.objectContaining({ path: 'src/new.txt' })],
-      'Half done',
-      context,
-      ['src/a.txt', 'src/new.txt'],
-    );
-    expect(executed).toEqual([['undo', join(workspacePath, 'src/a.txt'), join(workspacePath, 'src/new.txt'), '--symlink']]);
-    expect(existsSync(join(workspacePath, 'src/new.txt'))).toBe(false);
-    expect(records.find({ shelveId: 12, repository: 'eco@local' })).toMatchObject({
+const shelve = (deps: ReturnType<typeof workspaceWith>['deps'], paths: string[] | null, comment = 'Half done') =>
+  shelveAndUndo(deps, workspacePath, paths, comment, recordingContext().context);
+
+describe('shelveAndUndo', () => {
+  it('shelves the chosen changes with the user’s comment and undoes only them, moving the added files aside', async () => {
+    const { deps, pending, shelveComment, lines } = workspaceWith();
+
+    expect(await shelve(deps, ['src/a.txt', 'src/new.txt'])).toEqual({ shelveId: 7, count: 2 });
+
+    expect(shelveComment(7)).toBe('Half done');
+    expect(pending()).toEqual({ 'src/other.txt': 'CH' });
+    expect(existsSync(join(workspacePath, 'src', 'new.txt'))).toBe(false);
+    expect(lines()).toContain(`undo ${join(workspacePath, 'src', 'a.txt')} ${join(workspacePath, 'src', 'new.txt')} --symlink`);
+  });
+
+  it('records the shelve as shelved away, never as changes left behind for "Welcome back"', async () => {
+    const { deps, recordOf } = workspaceWith({ changelists: [{ name: 'UI work', description: 'polish', paths: ['src/a.txt', 'src/other.txt'] }] });
+
+    await shelve(deps, ['src/a.txt', 'src/new.txt']);
+
+    expect([...recordOf(7)!.paths].sort()).toEqual(['src/a.txt', 'src/new.txt']);
+    expect(recordOf(7)).toMatchObject({
       reason: 'shelve',
-      paths: ['src/a.txt', 'src/new.txt'],
+      mode: 'leave',
       backup: { paths: ['src/new.txt'] },
+      // Only the shelved paths go back into the changelist when applied.
+      changelists: [{ name: 'UI work', description: 'polish', paths: ['src/a.txt'] }],
     });
+    expect(await deps.leftChanges.find(workspacePath)).toEqual([]);
   });
 
   it('shelves and undoes the whole workspace when no paths are given', async () => {
-    const { deps, executed } = workspaceWith(workspacePath);
+    const { deps, pending, lines } = workspaceWith();
 
-    await shelveAndUndo(deps, workspacePath, null, 'Everything', context);
-    expect(vi.mocked(createVerifiedShelve).mock.calls[0]![5]).toBeUndefined();
-    expect(executed).toEqual([['undo', '-r', workspacePath, '--symlink']]);
+    expect(await shelve(deps, null)).toEqual({ shelveId: 7, count: 3 });
+    expect(pending()).toEqual({});
+    expect(lines()).toContain(`undo -r ${workspacePath} --symlink`);
+  });
+
+  it('comes back whole when the shelve is applied: the added files and the changes', async () => {
+    const { deps, pending } = workspaceWith();
+    await shelve(deps, null);
+
+    expect(await deps.leftChanges.apply(workspacePath, 7, true, recordingContext().context)).toEqual({ kind: 'applied', count: 3 });
+    expect(pending()).toEqual(PENDING);
+    expect(existsSync(join(workspacePath, 'src', 'new.txt'))).toBe(true);
   });
 
   it("refuses a merge in progress before shelving anything: a shelve can't hold it", async () => {
-    const { deps } = workspaceWith(workspacePath, { merging: true });
+    const { deps, ran } = workspaceWith({ mergingFrom: 3 });
 
-    await expect(shelveAndUndo(deps, workspacePath, ['src/a.txt'], 'Merge', context)).rejects.toThrow(/merge in progress/);
-    expect(createVerifiedShelve).not.toHaveBeenCalled();
+    await expect(shelve(deps, ['src/a.txt'])).rejects.toThrow(/merge in progress/);
+    expect(ran('shelveset')).toBe(false);
   });
 
-  it('puts the changes back when undoing them fails', async () => {
-    const { deps, finish } = workspaceWith(workspacePath, { failUndo: true });
+  it('undoes nothing when the shelve misses a change', async () => {
+    const { deps, ran, pending } = workspaceWith({ fail: { shelveMisses: 'src/a.txt' } });
 
-    await expect(shelveAndUndo(deps, workspacePath, ['src/a.txt'], 'Half done', context)).rejects.toThrow(
-      "Couldn't undo the shelved changes: The file is in use. Your changes were put back.",
-    );
-    expect(applyShelveCleanly).toHaveBeenCalled();
-    expect(finish).toHaveBeenCalledWith(workspacePath, expect.objectContaining({ shelveId: 12 }));
+    await expect(shelve(deps, ['src/a.txt'])).rejects.toThrow(/couldn't be shelved/);
+    expect(ran('undo')).toBe(false);
+    expect(pending()).toEqual(PENDING);
+  });
+
+  it('keeps the changes when undoing them fails, and deletes the shelve', async () => {
+    const { deps, pending, deletedShelves, recordOf } = workspaceWith({ fail: { undo: 'The file is in use.' } });
+
+    await expect(shelve(deps, ['src/a.txt'])).rejects.toThrow("Couldn't undo the shelved changes: The file is in use. Your changes were put back.");
+    expect(pending()).toEqual(PENDING);
+    expect(deletedShelves).toEqual([7]);
+    expect(recordOf(7)).toBeUndefined();
   });
 });
 
