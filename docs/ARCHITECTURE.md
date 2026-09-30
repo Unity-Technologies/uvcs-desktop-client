@@ -242,6 +242,14 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   branches) are computed there too, and every window gets the result (`settingsChanged`).
 - What a window checks as it opens (`cm version`, `cm checkconnection`) runs until it succeeds once; later windows take
   that answer (`untilSucceeded`). A problem is checked again by the next window, and by Retry.
+- Dropping a folder on any window, home screen or workspace, opens its workspace in that window, or with Shift in a
+  new one (`app/folderDrop`, as the official client does). The decision is `workspaces.findRoot`, a local
+  `cm getworkspacefrompath`, so a folder inside a workspace opens it too; a folder that is no workspace goes straight to
+  the new workspace dialog with its location filled in (a folder picked with Open folder… asks first: `openFolder`).
+  Only a single folder is taken; drops wait while a dialog is open. The overlay can't say which will happen: Chromium
+  hides a drag's files until the drop. The drag is followed on `window` by `nextFolderDragState` (enters minus leaves,
+  ended for sure by a `dragleave` towards nothing, a drop or any pointer move), since an element's own
+  enter and leave events don't pair up and left the overlay on screen.
 - "New workspace for a task" (`features/taskWorkspace`) creates a child of /main at its head (or takes an existing branch),
   a workspace next to the current one, and switches it (a plain `cm switch`: it's empty); a failure removes the new
   workspace and keeps the branch. The switcher shows the branch and pending changes of the other workspaces of the same
