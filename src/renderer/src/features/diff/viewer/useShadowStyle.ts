@@ -1,4 +1,5 @@
 import { useEffect, useRef, type RefObject } from 'react';
+import { pierreShadowRoot } from './pierreDom';
 
 /**
  * Keeps `css` in a style sheet inside the shadow root of the diff (`@pierre/diffs` renders into one) found in
@@ -9,7 +10,7 @@ export function useShadowStyle(containerRef: RefObject<HTMLElement | null>, css:
 
   // After every render: the diff (and its shadow root) may have only just appeared.
   useEffect(() => {
-    const root = containerRef.current?.querySelector('diffs-container')?.shadowRoot;
+    const root = pierreShadowRoot(containerRef.current);
     if (!root) return;
     style.current ??= document.createElement('style');
     if (style.current.parentNode !== root) root.append(style.current);

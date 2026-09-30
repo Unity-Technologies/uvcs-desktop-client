@@ -1,4 +1,5 @@
 import type { ChangedLine, DiffSide } from './changeBlocks';
+import { lineRowSelector, numberCellSelector } from './pierreDom';
 
 /** Lines of a diff to call out while discarding changes. */
 export interface LineMarks {
@@ -61,6 +62,5 @@ export function changeFlashCss(lines: ChangedLine[], round: number): string {
   ].join('\n');
 }
 
-const lineType = ({ side }: ChangedLine): string => (side === 'deletions' ? 'change-deletion' : 'change-addition');
-const content = (lines: ChangedLine[]): string => lines.map((line) => `[data-line-type="${lineType(line)}"][data-line="${line.lineNumber}"]`).join(',');
-const gutter = (lines: ChangedLine[]): string => lines.map((line) => `[data-line-type="${lineType(line)}"][data-column-number="${line.lineNumber}"]`).join(',');
+const content = (lines: ChangedLine[]): string => lines.map(lineRowSelector).join(',');
+const gutter = (lines: ChangedLine[]): string => lines.map(numberCellSelector).join(',');

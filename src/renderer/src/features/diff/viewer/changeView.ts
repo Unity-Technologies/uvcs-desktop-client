@@ -1,7 +1,9 @@
 import type { Virtualizer } from '@pierre/diffs';
 import type { ChangeBlock, ChangedLine, ChangeRegion } from './changeBlocks';
 import { modifiedLineAt } from './changeNavigation';
+import { lineRowSelector, pierreShadowRoot } from './pierreDom';
 import { pierreLinePosition } from './pierreLinePosition';
+import { prefersReducedMotion } from './reducedMotion';
 
 /** What the diff's navigation asks of the diff on screen (`TextDiff`). */
 export interface ChangeView {
@@ -26,7 +28,7 @@ export function scrollToChange(container: HTMLElement, change: ChangeRegion, vir
   let jumped = false;
   let frame = 0;
   const attempt = (): void => {
-    const root = shadowRootIn(container);
+    const root = pierreShadowRoot(container);
     const first = root && rowOf(root, change.lines[0]!);
     if (root && first) return scrollToRows(container, first, lastRows(root, change), !jumped);
     const fileContainer = container.querySelector('diffs-container');
@@ -46,7 +48,7 @@ export function scrollToChange(container: HTMLElement, change: ChangeRegion, vir
  * side): a removed line stands where it was.
  */
 export function lineAtTopOf(container: HTMLElement, blocks: ChangeBlock[]): number | null {
-  const root = shadowRootIn(container);
+  const root = pierreShadowRoot(container);
   if (!root) return null;
   const view = container.getBoundingClientRect();
   const x = view.left + view.width * 0.75;
@@ -76,19 +78,11 @@ function lastRows(root: ShadowRoot, { lines }: ChangeRegion): Element[] {
   return ends.flatMap((line) => (line ? [rowOf(root, line)].filter((row) => row !== null) : []));
 }
 
-function rowOf(root: ShadowRoot, { side, lineNumber }: ChangedLine): Element | null {
-  return root.querySelector(`[data-line-type="${side === 'deletions' ? 'change-deletion' : 'change-addition'}"][data-line="${lineNumber}"]`);
+function rowOf(root: ShadowRoot, line: ChangedLine): Element | null {
+  return root.querySelector(lineRowSelector(line));
 }
 
 function rowHeight(row: Element | null | undefined): number {
   const height = row ? parseFloat(getComputedStyle(row).lineHeight) : NaN;
   return Number.isFinite(height) ? height : 20;
-}
-
-function shadowRootIn(container: HTMLElement): ShadowRoot | null {
-  return container.querySelector('diffs-container')?.shadowRoot ?? null;
-}
-
-function prefersReducedMotion(): boolean {
-  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }

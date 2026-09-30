@@ -7,6 +7,7 @@ import { regionContaining, type ChangedLine, type ChangeRegion } from './changeB
 import { chipAnchorLines, chipRegion, chipTop } from './chipPlacement';
 import { describeDiscard, wholeChangeLabel } from './discardAction';
 import type { HoveredLineStore } from './LineDiscardButton';
+import { numberCellSelector, pierreShadowRoot } from './pierreDom';
 import styles from './ChangeChip.module.css';
 
 interface ChangeChipProps {
@@ -95,7 +96,7 @@ function useChipPosition(containerRef: RefObject<HTMLElement | null>, region: Ch
 
   useLayoutEffect(() => {
     const container = containerRef.current;
-    const root = container?.querySelector('diffs-container')?.shadowRoot;
+    const root = pierreShadowRoot(container);
     if (!container || !root || !region) return setPosition(null);
     const place = (): void => {
       const lines = chipAnchorLines(region, layout);
@@ -119,8 +120,7 @@ function useChipPosition(containerRef: RefObject<HTMLElement | null>, region: Ch
   return position;
 }
 
-function numberCell(root: ShadowRoot, { side, lineNumber }: ChangedLine, layout: 'split' | 'unified'): Element | null {
-  const type = side === 'deletions' ? 'change-deletion' : 'change-addition';
-  const scope = layout === 'split' ? `[data-${side}] ` : '';
-  return root.querySelector(`${scope}[data-column-number="${lineNumber}"][data-line-type="${type}"]`);
+function numberCell(root: ShadowRoot, line: ChangedLine, layout: 'split' | 'unified'): Element | null {
+  const scope = layout === 'split' ? `[data-${line.side}] ` : '';
+  return root.querySelector(`${scope}${numberCellSelector(line)}`);
 }
