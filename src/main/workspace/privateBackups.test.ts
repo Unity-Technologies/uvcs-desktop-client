@@ -29,7 +29,7 @@ describe('putBack', () => {
     await moveAside(workspace, ['src/new.txt', 'assets/new'], backup);
     expect(existsSync(join(workspace, 'src/new.txt'))).toBe(false);
 
-    expect(await putBack(workspace, { directory: backup, paths: ['src/new.txt', 'assets/new'] })).toBe(true);
+    expect(await putBack(workspace, { directory: backup, paths: ['src/new.txt', 'assets/new'] })).toEqual([]);
     expect(await read(workspace, 'src/new.txt')).toBe('added');
     expect(await read(workspace, 'assets/new/a.txt')).toBe('a');
     expect(existsSync(backup)).toBe(false);
@@ -40,7 +40,7 @@ describe('putBack', () => {
     await moveAside(workspace, ['src/new.txt'], backup);
     await write(workspace, 'src/new.txt', 'added');
 
-    expect(await putBack(workspace, { directory: backup, paths: ['src/new.txt'] })).toBe(true);
+    expect(await putBack(workspace, { directory: backup, paths: ['src/new.txt'] })).toEqual([]);
     expect(existsSync(backup)).toBe(false);
   });
 
@@ -50,21 +50,35 @@ describe('putBack', () => {
     await moveAside(workspace, ['assets/new'], backup);
     await write(workspace, 'assets/new/a.txt', 'a');
 
-    expect(await putBack(workspace, { directory: backup, paths: ['assets/new'] })).toBe(true);
+    expect(await putBack(workspace, { directory: backup, paths: ['assets/new'] })).toEqual([]);
     expect(await read(workspace, 'assets/new/notes.log')).toBe('private');
     expect(existsSync(backup)).toBe(false);
   });
 
-  it('never overwrites a different file that took the place: it stays in the backup', async () => {
+  it('never overwrites a different file that took the place: it stays in the backup, and is named with where it is', async () => {
     await write(workspace, 'src/new.txt', 'added');
     await write(workspace, 'src/other.txt', 'other');
     await moveAside(workspace, ['src/new.txt', 'src/other.txt'], backup);
     await write(workspace, 'src/new.txt', 'a private file made meanwhile');
 
-    expect(await putBack(workspace, { directory: backup, paths: ['src/new.txt', 'src/other.txt'] })).toBe(false);
+    expect(await putBack(workspace, { directory: backup, paths: ['src/new.txt', 'src/other.txt'] })).toEqual([
+      { path: 'src/new.txt', savedAt: join(backup, 'src', 'new.txt') },
+    ]);
     expect(await read(workspace, 'src/new.txt')).toBe('a private file made meanwhile');
     expect(await read(workspace, 'src/other.txt')).toBe('other');
     expect(await read(backup, 'src/new.txt')).toBe('added');
     expect(existsSync(join(backup, 'src/other.txt'))).toBe(false);
+  });
+
+  it('names the files kept inside a folder put back item by item', async () => {
+    await write(workspace, 'assets/new/a.txt', 'mine');
+    await write(workspace, 'assets/new/b.txt', 'b');
+    await moveAside(workspace, ['assets/new'], backup);
+    await write(workspace, 'assets/new/a.txt', 'theirs');
+
+    expect(await putBack(workspace, { directory: backup, paths: ['assets/new'] })).toEqual([
+      { path: 'assets/new/a.txt', savedAt: join(backup, 'assets', 'new', 'a.txt') },
+    ]);
+    expect(await read(workspace, 'assets/new/b.txt')).toBe('b');
   });
 });

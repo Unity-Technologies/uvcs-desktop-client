@@ -1,0 +1,16 @@
+.overlay {
+  composes: overlay from './Dialog.module.css';
+}
+
+.content {
+  composes: content from './Dialog.module.css';
+  align-items: center;
+  padding: var(--space-8) var(--space-6) var(--space-5);
+  text-align: center;
+}
+
+.close {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+}

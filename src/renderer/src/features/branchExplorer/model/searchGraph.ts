@@ -1,4 +1,5 @@
 import type { GraphLayout } from './layoutGraph';
+import { typedChangesetNumber } from '../../../lib/changesetNumber';
 import { queryWords } from '../../../lib/matchesAllWords';
 import { changesetMatcher, nameMatcher, narrows } from './searchWords';
 
@@ -32,7 +33,7 @@ export function searchGraph(layout: GraphLayout, rawQuery: string, previous?: Gr
   const query = rawQuery.trim();
   if (!query) return [];
 
-  const changesetNumber = exactChangesetNumber(query);
+  const changesetNumber = typedChangesetNumber(query);
   const words = queryWords(query);
   const matches = nameMatcher(words);
   const matchesChangeset = changesetMatcher(words);
@@ -66,7 +67,7 @@ export function searchGraph(layout: GraphLayout, rawQuery: string, previous?: Gr
 
 /** Where the first Enter lands: on the changeset a number names, wherever it is among the hits, otherwise on the first. */
 export function firstHitIndex(hits: readonly SearchHit[], rawQuery: string): number {
-  const changesetNumber = exactChangesetNumber(rawQuery.trim());
+  const changesetNumber = typedChangesetNumber(rawQuery);
   return Math.max(0, hits.findIndex((hit) => hit.kind === 'changeset' && hit.id === changesetNumber));
 }
 
@@ -77,11 +78,6 @@ export function firstHitIndex(hits: readonly SearchHit[], rawQuery: string): num
 export function steppedHitIndex(activeIndex: number, direction: 1 | -1, hits: readonly SearchHit[], rawQuery: string): number {
   if (activeIndex === -1) return direction === 1 ? firstHitIndex(hits, rawQuery) : hits.length - 1;
   return (activeIndex + direction + hits.length) % hits.length;
-}
-
-function exactChangesetNumber(query: string): number | undefined {
-  const number = /^(?:cs:)?(\d+)$/i.exec(query)?.[1];
-  return number === undefined ? undefined : Number(number);
 }
 
 export function searchHighlight(layout: GraphLayout, hits: readonly SearchHit[], active: SearchHit | null): SearchHighlight {

@@ -3,7 +3,7 @@ import type { Branch, CreateBranchRequest } from '@shared/domain/branch';
 import type { QueryFilter } from '@shared/domain/query';
 import { shortBranchName } from '@shared/domain/specs';
 import { branchCreateArgs } from '../cm/branchCreateArgs';
-import { escapeQueryValue, findArgs } from '../cm/findQuery';
+import { equalsCondition, findArgs } from '../cm/findQuery';
 import { findRecords, toBranch } from '../cm/findObjects';
 import { withTempFile } from '../files/tempFile';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
@@ -36,7 +36,7 @@ export function createBranchesService({ cm, settings, headers }: ServiceContext,
 
   async function get(workspacePath: string, name: string): Promise<Branch | null> {
     // `cm find` matches branches by their last name part only; a workspace can be on a hidden branch.
-    const named = await findVisibleAndHidden(workspacePath, {}, [`name = '${escapeQueryValue(shortBranchName(name))}'`], true);
+    const named = await findVisibleAndHidden(workspacePath, {}, [equalsCondition('name', shortBranchName(name))], true);
     return named.find((branch) => branch.name === name) ?? null;
   }
 

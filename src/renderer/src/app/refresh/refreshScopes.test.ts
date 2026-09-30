@@ -6,9 +6,14 @@ import {
   isAffectedByMovedPaths,
   isAffectedByAttributes,
   isAffectedByBranchList,
+  isAffectedByChangesetComment,
+  isAffectedByChangesetMove,
   isAffectedByLabels,
   isAffectedByNewChangesets,
   isAffectedByCheckinOrUpdate,
+  isAffectedByPendingChangeEdit,
+  isAffectedByShelveApplied,
+  isAffectedByShelveDeletion,
   isAffectedByShelving,
   isAffectedByShelvingAway,
   isAffectedByWorkspaceState,
@@ -85,6 +90,48 @@ describe('refresh scopes', () => {
     expect(isAffectedByShelvingAway(key('diffContents', { kind: 'workspaceFile', path: 'a.txt' }))).toBe(true);
     expect(isAffectedByShelvingAway(key('changesets', {}))).toBe(false);
     expect(isAffectedByShelvingAway(key('leftChanges', 'br:/main'))).toBe(false);
+  });
+
+  it('refreshes the shelve lists and the left changes, nothing else, when shelves are deleted', () => {
+    expect(isAffectedByShelveDeletion(key('shelves', { owners: ['me'] }))).toBe(true);
+    expect(isAffectedByShelveDeletion(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(true);
+    expect(isAffectedByShelveDeletion(key('pendingChanges'))).toBe(false);
+    expect(isAffectedByShelveDeletion(key('branchExplorer', {}))).toBe(false);
+  });
+
+  it('refreshes the workspace, its locks, the shelve lists and the left changes, not the repository, when a shelve is applied', () => {
+    expect(isAffectedByShelveApplied(key('pendingChanges'))).toBe(true);
+    expect(isAffectedByShelveApplied(key('explorer', 'allPaths'))).toBe(true);
+    expect(isAffectedByShelveApplied(key('locks', {}))).toBe(true);
+    expect(isAffectedByShelveApplied(key('shelves', { owners: ['me'] }))).toBe(true);
+    expect(isAffectedByShelveApplied(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(true);
+    expect(isAffectedByShelveApplied(key('changesets', {}))).toBe(false);
+    expect(isAffectedByShelveApplied(key('branchExplorer', {}))).toBe(false);
+  });
+
+  it('refreshes the workspace and its locks, not the repository, when files are added, checked out or undone', () => {
+    expect(isAffectedByPendingChangeEdit(key('pendingChanges'))).toBe(true);
+    expect(isAffectedByPendingChangeEdit(key('info'))).toBe(true);
+    expect(isAffectedByPendingChangeEdit(key('explorer', 'allPaths'))).toBe(true);
+    expect(isAffectedByPendingChangeEdit(key('locks', {}))).toBe(true);
+    expect(isAffectedByPendingChangeEdit(key('shelves', { owners: ['me'] }))).toBe(false);
+    expect(isAffectedByPendingChangeEdit(key('history', 'a.txt'))).toBe(false);
+  });
+
+  it('refreshes only what shows a changeset comment when one is edited, the changesets already read too', () => {
+    expect(isAffectedByChangesetComment(key('changesets', 'byId', 4))).toBe(true);
+    expect(isAffectedByChangesetComment(key('history', 'a.txt'))).toBe(true);
+    expect(isAffectedByChangesetComment(key('workingObjectComment', 'changeset', '4'))).toBe(true);
+    expect(isAffectedByChangesetComment(key('branches', {}))).toBe(false);
+    expect(isAffectedByChangesetComment(key('pendingChanges'))).toBe(false);
+  });
+
+  it('refreshes what shows changesets, the branch lists and incoming, not the workspace, when a changeset moves or goes', () => {
+    expect(isAffectedByChangesetMove(key('branchExplorer', {}))).toBe(true);
+    expect(isAffectedByChangesetMove(key('branches', {}))).toBe(true);
+    expect(isAffectedByChangesetMove(key('incoming', 'changes'))).toBe(true);
+    expect(isAffectedByChangesetMove(key('pendingChanges'))).toBe(false);
+    expect(isAffectedByChangesetMove(key('labels', {}))).toBe(false);
   });
 
   it('refreshes the branch lists and the Branch Explorer when a branch is created, deleted or hidden', () => {

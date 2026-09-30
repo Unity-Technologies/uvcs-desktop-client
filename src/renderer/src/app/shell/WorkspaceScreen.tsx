@@ -1,5 +1,6 @@
 import { Suspense, useRef } from 'react';
 import { useIncomingNotificationClicks } from '../../features/incoming/incomingNotifications';
+import { useKeptAsideNotice } from '../../features/leftChanges/keptAsideNotice';
 import { useMergeCommands } from '../../features/merge/useMergeCommands';
 import { useNavigation } from '../navigation/navigationStore';
 import { viewDefinition } from '../navigation/viewRegistry';
@@ -8,7 +9,7 @@ import { CommandLogPanel } from './CommandLogPanel';
 import { PageFrame } from './PageFrame';
 import { Sidebar } from './Sidebar';
 import { StatusBar } from './StatusBar';
-import { TopBar } from './TopBar';
+import { WorkspaceTopBar } from './WorkspaceTopBar';
 import { ViewFallback } from './ViewFallback';
 import { COMMAND_LOG_HEIGHT, useCommandLogHost, useCommandLogStore } from './commandLogStore';
 import { useMainFocus } from './useMainFocus';
@@ -28,6 +29,7 @@ export function WorkspaceScreen() {
   useWindowTitle();
   useMergeCommands();
   useIncomingNotificationClicks();
+  useKeptAsideNotice();
   const contentRef = useRef<HTMLDivElement>(null);
   useMainFocus(contentRef);
 
@@ -37,10 +39,10 @@ export function WorkspaceScreen() {
 
   return (
     <div className={styles.screen}>
+      <WorkspaceTopBar />
       <div className={styles.body}>
         <Sidebar />
         <main className={styles.main}>
-          <TopBar />
           {/* The command log sits under the view, as tall as it was left; the view keeps the rest. */}
           <SplitPane
             direction="vertical"

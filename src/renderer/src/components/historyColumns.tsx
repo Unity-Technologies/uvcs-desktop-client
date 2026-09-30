@@ -3,7 +3,7 @@ import { firstLine } from '../lib/text';
 import { Avatar, UserLabel } from '../ui/Avatar';
 import { Highlight } from '../ui/Highlight';
 import { RelativeTime } from '../ui/RelativeTime';
-import type { Column } from '../ui/table/DataTable';
+import type { Column } from '../ui/table/column';
 import styles from './historyColumns.module.css';
 
 /**

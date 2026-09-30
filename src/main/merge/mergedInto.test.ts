@@ -6,7 +6,7 @@ describe('mergedIntoArgs', () => {
     expect(mergedIntoArgs(42, "/main/o'neil")).toEqual([
       'find',
       'merge',
-      "where srcchangeset = 42 and dstbranch = '/main/o''neil' limit 1",
+      "where srcchangeset = 42 and dstbranch like '/main/o%neil' limit 1",
       '--format={dstchangeset}\u001e',
       '--nototal',
     ]);

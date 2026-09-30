@@ -1,0 +1,42 @@
+name: Install
+description: Set up the pinned Node, restore the npm and Electron download caches, and install with a retry for registry blips.
+
+inputs:
+  node-version:
+    description: Node version (the one used locally; the smoke test's Windows fake cm needs 25.5 or later).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # Caches npm's download cache (~/.npm), not node_modules, which holds each platform's own Electron.
+    - uses: actions/setup-node@v5
+      with:
+        node-version: ${{ inputs.node-version }}
+        cache: npm
+
+    # The Electron archive the postinstall (`install-electron`) downloads, ~100 MB from GitHub releases: a flaky
+    # download is the most common CI failure, and a warm cache makes it a local unzip. Keyed by OS and architecture,
+    # so the Windows x64 and arm64 legs never share one. These are @electron/get's cache folders; only the runner's own
+    # exists. Bump the `v1` salt to drop a cached archive that a cut-short save left truncated.
+    - uses: actions/cache@v4
+      with:
+        path: |
+          ~/.cache/electron
+          ~/Library/Caches/electron
+          ~/AppData/Local/electron/Cache
+        key: electron-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('package-lock.json') }}
+
+    # The registry now and then drops a connection mid-install: try a couple more times before failing.
+    - name: Install dependencies
+      shell: bash
+      run: |
+        for attempt in 1 2 3; do
+          if npm ci; then
+            exit 0
+          fi
+          echo "::warning::npm ci failed (attempt ${attempt}/3); retrying in $((attempt * 10))s"
+          sleep $((attempt * 10))
+        done
+        echo "::error::npm ci failed after 3 attempts"
+        exit 1

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { focusMain } from '../../lib/mainFocus';
-import { EMPTY_SELECTION, type SelectionState } from '../../lib/selection';
+import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { historyRowKey, type HistoryRow } from './historyRows';
 
 interface HistorySelectionOptions {
@@ -10,8 +10,6 @@ interface HistorySelectionOptions {
   visible: readonly HistoryRow[];
   clearFilters: () => void;
 }
-
-const onlyRow = (key: string): SelectionState => ({ selected: new Set([key]), anchor: key });
 
 /**
  * The rows selected in the history, and the trail "Annotate before this change" leaves for Back. Picking in the list
@@ -25,7 +23,7 @@ export function useHistorySelection({ initialKey, visible, clearFilters }: Histo
 
   useEffect(() => {
     if (selection.anchor === null && initialKey) {
-      setSelection(onlyRow(initialKey));
+      setSelection(singleSelection(initialKey));
       setRevealKey(initialKey);
     }
   }, [selection.anchor, initialKey]);
@@ -33,7 +31,7 @@ export function useHistorySelection({ initialKey, visible, clearFilters }: Histo
   const selectFromPane = useCallback(
     (key: string): void => {
       if (!visible.some((row) => historyRowKey(row) === key)) clearFilters();
-      setSelection(onlyRow(key));
+      setSelection(singleSelection(key));
       setRevealKey(key);
       focusMain(document);
     },

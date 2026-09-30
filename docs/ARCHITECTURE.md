@@ -20,6 +20,8 @@ you touch:
 | `features/shelves-and-switching.md`     | Switching with changes, a workspace on a shelve, shelves in Changes, two people on one branch |
 | `features/files-history-annotate.md`    | Files, Browse repository, Go to file, cut and paste, history, annotate         |
 | `features/branch-explorer.md`           | The graph's canvas, keeping the place, the pending changeset, the branch switcher |
+| `features/updates.md`                   | The About dialog, how the app updates (unsigned macOS too), releases and CI    |
+| `features/locks.md`                     | Lock rules: where they are edited, and why not in the app                      |
 
 ## How a request flows
 
@@ -33,7 +35,8 @@ you touch:
      pooled `cm shell` sessions, two per working directory; a command takes the first one free, and a directory idle
      for ten minutes lets its sessions go; a workspace no window shows anymore lets them go once their commands are
      done (`WorkspaceWatchers` `onStopped`). A session takes about a second to answer its first command, so until one
-     in that directory has, the query runs as a process of its own. A workspace write that may run long (`runsLong`:
+     in that directory has, the query runs as a process of its own (the first window's start before it is created:
+     `openFirstWindow`). A workspace write that may run long (`runsLong`:
      more than `MAX_QUICK_WRITE_PATHS` paths, recursive, or a transfer) runs as a process of its own too, so it never
      holds a session every read of the workspace would wait behind.
    - `execute()` for long or cancellable work (update, switch, checkin, shelve, merge, sync; the Branch Explorer's
@@ -44,7 +47,8 @@ you touch:
    - A pooled command may take two minutes, a workspace write half an hour (a few paths can still be a whole tree).
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
    (see Renderer: Command log); one that ended without an exit code (stopped on a prompt, `cm` not found) is logged
-   with -1, and one its caller cancelled is not logged: it's no failure.
+   with -1, which the log and the error dialog word as "Stopped" (`commandEnding`), and one its caller cancelled is not
+   logged: it's no failure.
 
 To add a capability: its types in `shared/domain`, the method in `shared/api/<area>.ts` (part of `UvcsApi`), the
 implementation in `main/services/<area>Service.ts` (wired in `createServices`), `cm` argument builders and parsers as
@@ -82,7 +86,7 @@ and many people use the same server. Every `cm` command other than local reads (
   or a merge from a branch leave labels, shelves, attributes, reviews, left changes and changesets already read alone;
   shelving changes that stay in the workspace refreshes only the shelve lists, and shelving them away those and the workspace; a new, deleted or hidden branch only the
   branch lists and the Branch Explorer; a label edit the labels and the graph; an attribute or value edit only the
-  attributes; a code review created, edited or deleted only the reviews (their lists and the branch chips); releasing a lock only the locks. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
+  attributes; a code review created, edited, marked reviewed or deleted only the reviews (their lists and the branch chips); releasing a lock only the locks; deleting a shelve or discarding left changes only the shelve lists and the left changes, and applying or restoring one those, the workspace and its locks; adding, checking out, removing or undoing files only the workspace and its locks; a changeset's comment edited only what shows changesets, and one moved or deleted those, the branch lists and incoming. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
   the last (create a branch and switch to it: `createBranchAndSwitch`). Views keyed by the workspace info (`keyedByWorkspaceInfo`: left changes, the
   incoming check, the branch the workspace is on) wait for it, and when the operation gave them another key they are only
   marked stale: they are read under the new key as they show, never once more under the old one. Event-driven refreshes
@@ -112,6 +116,9 @@ and many people use the same server. Every `cm` command other than local reads (
 - `cm find branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their
   changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`); merges and labels come either way.
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.
+- `cm find` reads no quote inside a value, neither doubled nor between double quotes: a search puts `%` in each quote's
+  place (`withoutQuotes`), and so does an exact value (`equalsCondition`: `owner like 'o%brien@corp.com'`), whose caller
+  keeps only the exact objects when it needs them. Branch, label, attribute and repository names can't hold a quote.
 - A `cm shell` command ends at the `CommandResult <code>` line that ends its output, with nothing more in the pipe
   (`CmShellSession`, `resultLineAtEnd`): comments can quote such lines, and a misread end shifts every later command by
   one output.
@@ -179,7 +186,10 @@ through the one invoke channel, and never open a window of their own: a link tha
 
 ## Own config
 
-The app keeps its settings in its own store (`main/settings/SettingsStore`: `settings.json` in the user data folder).
+The app keeps its settings in its own store (`main/settings/SettingsStore`: `settings.json` in the user data folder),
+replaced whole or not at all (`replaceFileSync`: a temp file renamed over it, tried again for a moment while Windows
+says it's busy); a file that can't be read as settings is kept aside as `settings.json.<when>.bak` and the app starts
+from the defaults.
 It never writes to the official Desktop client's config (its settings folder, `plasticConfigFolder`: `plasticgui.conf`,
 `client.conf`...) and never keeps reading it. Only on the first run, `importLegacySettings` reads the well-known values
 there so the user feels at home (each workspace's recent branches, `readRecentBranchesByWorkspace`); it records
@@ -233,7 +243,8 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   The Window menu lists them; closing the last one keeps the app on macOS, and the Dock icon opens the home screen (its
   menu offers New Window under the recent workspaces, `installDockMenu`); elsewhere it quits.
 - The start-up (`main/index.ts`) is a few named steps; the wiring behind each (settings, watchers, own writes,
-  operations, launch requests) lives in `main/startup/`, around the tested logic of the other folders.
+  operations, launch requests, the first window) lives in `main/startup/`, around the tested logic of the other
+  folders. The order and what it waits for: "Start-up" below.
 - Each API call runs with its window as the caller (`main/ipc/caller.ts`, followed across `await`s), so its commands
   (`commandLogged`) and operation progress go back to that window only. `workspaces.watch` is the window saying which
   workspace it shows: `main/watch/WorkspaceWatchers` keeps one watcher per shown workspace and sends its changes to the
@@ -261,6 +272,45 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   in its tooltip), told by `useDescribeWorkspace` (the `.plastic` folder, `cm` only for recent ones it can't tell). In
   the switcher's narrow rows the server gives way first, down to its icon, then the branch's name.
 
+## Start-up
+
+What a launch does, in order (measure it with `scripts/perf/startup.mjs`; `--timeline` shows what waits for what):
+
+1. The main process opens the settings (the first run imports the official client's, `importLegacySettings`: a few
+   ms) and, at `app.whenReady`, wires the services and opens the first window (`openFirstWindow`). Before creating it,
+   which takes 50-100 ms, it starts the `cm shell`s of the workspace it reopens (or of the home folder, for the home
+   screen) and that screen's first reads (`readFirstScreen`): `cm version` and the workspace's info and pending
+   changes, or the home screen's workspaces and servers. Their commands run while the window and its page load; the
+   page's identical calls take the answers (`EarlyCalls`, in `registerApi`; one nobody takes goes after 5 s). The
+   page's events sent while it still loads reach it once it has (`sendEventTo`), so its command log lists them.
+2. The window is created hidden, its background the page's `--bg-app` (`WINDOW_BACKGROUND`), and names the workspace
+   it opens in its page's address when the folder is there (`startingWorkspaceQuery`).
+3. The page opens that workspace (`openWorkspaceFromAddress`) and asks for its first screen's data
+   (`prefetchStartupQueries`) before its first render, and applies the theme as it renders (`useTheme`): its first
+   frame is the themed workspace screen or home screen, never the home screen on the way nor a frame without colors.
+   The window shows on that frame (`ready-to-show`).
+4. `show()` holds the main process 35-55 ms (100+ when started from a terminal, which isn't the active app): what the
+   page asks after its first paint waits behind it. That is why the page asks before rendering, and the main process
+   earlier still.
+5. Nothing else gates the first screen: `cm version`'s answer (the app shows meanwhile, `CmUnavailableScreen` only on
+   failure), `cm checkconnection` once `cm` runs (`useSetupCheck`), the watcher once the page watches, the highlighter
+   warm-up 1.5 s later (`main.tsx`), avatars when rows show them.
+
+Reopening the last workspace on an M4 Max, started as the Dock does, median of 14 runs: Changes shows its data about
+820-840 ms after the process starts with the real `cm` on a local sandbox (930-990 before this sequence), 330-340 ms
+after the window is created (480-550); with the fake `cm` about 205-220 ms after it (255-265). What remains: Electron's
+own start to `app.whenReady` (300-400 ms, our main module about 30 of it), creating the window, loading the page
+(about 100 ms to its first render), and `cm status` as a process (300-350 ms: the workspace's shells answer only
+after about a second).
+
+Tried and dropped, so they aren't proposed again:
+- Showing the window as it is created (`show: true`): an empty frame shows 150 ms sooner, but `show()` then holds the
+  main process while the page loads, which ran its scripts 150 ms later.
+- Asking the main process which workspace to open (`takeRequestedWorkspace`), or awaiting the settings, before the
+  first render: the wait paints an empty frame, the window shows on it, and `show()` holds the answer: the first
+  render came 90 ms later.
+- Minifying the renderer bundle (1.7 MB to 0.73 MB): the page's scripts ran 0-8 ms sooner, within noise.
+
 ## Renderer
 
 ```
@@ -274,15 +324,23 @@ renderer/src/
   styles/       Design tokens and global CSS
 ```
 
+`lib/` and `ui/` never import from the tiers above them (`api/`, `app/`, `features/`, `components/`; `lib/` not from
+`ui/` either): what they need from there is handed to them (`setAvatarPictureSource`) or lives a tier up
+(`rendererTiers.test.ts` checks it).
+
 - **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)`, so `invalidateWorkspace(path)` refreshes everything after an operation
   (or what it can touch: `invalidateWorkspace(path, affected)`, `runOperation({ affects })`).
-- **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check.
+- **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check (the app's
+  own update check runs hourly too, against GitHub, never the server: features/updates.md).
   - `main/watch/WorkspaceWatcher` watches an open workspace (recursive on macOS/Windows; on Linux a watch per folder,
     `FolderTreeWatch`, as Node's recursive mode there watches every file and loses files saved by replacing them;
     an event Windows sends without a name, when a burst overflowed its buffer, refreshes everything),
-    skips `ignore.conf` folders and `.plastic` lock/temp files, coalesces bursts (300 ms quiet, 2 s max wait) and drops what the
+    skips `ignore.conf` folders (on Linux the folders watched follow its edits, `followSkipRule`) and `.plastic` lock/temp files, coalesces bursts (300 ms quiet, 2 s max wait) and drops what the
     app's own writes cause (`changesWorkspace` commands and tracked operations): the renderer refreshes after those anyway.
     `cm status --changelists` writes the changelist files back on every read, so those rewrites count as its own too (`rewritesChangelists`).
+    A watch that sees only part of the workspace refreshes local views on focus instead (`localQueryDefaults`), from the
+    start ("Some folders here aren't watched") or once a watch breaks later (`workspaceWatchBroken`: one error toast per
+    workspace and session, `noteBrokenWatch`; no polling).
   - `workspaceChanged` tells file edits (pending changes, review marks, files view, open diffs of workspace files; if auto refresh is on, and once when it's turned back on)
     from `.plastic` rewrites by any tool (workspace info; everything when the loaded changeset or branch moved). See
     `app/shell/useWorkspaceWatcher.ts` and `app/refresh/`. A diff with unsaved edits holds still and offers to reload instead.
@@ -296,10 +354,26 @@ renderer/src/
   - Use `refreshQueries` for event-driven refreshes: it never cancels a fetch in flight, it queues one follow-up.
 - **Mutations**: `runOperation` (progress card, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
   An update or a switch runs alone on its workspace: it waits for any other operation, and the others wait for it (`blockingOperation`).
+- **Top bar**: one bar across the window on every screen (`app/shell/TopBar`), the sidebar under it: the window's
+  buttons, the brand (`AppBrand`, which opens About), then what the screen adds. A workspace adds its branch pill and
+  incoming chip after a separator, the search and the account at the end (`WorkspaceTopBar`); the home screen adds
+  nothing. Sidebars (`ui/nav/SidebarNav`) have no title band of their own.
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
   A sidebar entry may show a count (`useBadge`) and a dot for something waiting there (`useDot`), whose words go under
   the entry's tooltip and in its accessible description: Changes' says what changes were left and where
   (`leftChangesSummary`, in the "Welcome back" banner's words).
+  Folded (`toggleSidebar`, and always in a window under 1000px unless opened by hand: `useSidebarCollapsed`), the
+  sidebar is a rail of tiles (`useInRail`), the home screen's too: each entry's icon over its label in `--text-xs`,
+  two lines at most, balanced, a word too long cut with an ellipsis (an organization's name), or a short `railLabel`
+  ("Expand", "All", "Local"); the selected tile as wide, its icon in the accent. The rail is 80px (`--rail-width`), so
+  the longest one-word labels ("Changesets") fit on one line in every OS's font; labels wrap at the folded width from the start of the fold, so nothing jumps as it ends. The count is pinned in
+  the accent over the icon's corner (99+ at most, `navBadgeText`), the dot at the tile's own corner. Tooltips only add
+  what the entry doesn't show (`navItemTip`): the shortcut and the dot's words, and on a tile the whole count, the
+  detail and a shortened label spelled out.
+  The sidebar never scrolls, which the rail couldn't show: its groups show the entries that fit and a More entry after
+  them (`NavGroups`, `shownItemCount`), whose popover lists the rest under their groups' titles; More looks selected
+  while it holds the view on screen. It measures the entries as laid out (a tile's label may take two lines) whenever
+  the sidebar's size or entries change, the ones in More kept laid out out of sight for that.
   There is no Annotate page: "Annotate" outside the Files view opens the file's history annotated (`annotatedHistory`).
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
 - **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does), what it
@@ -325,16 +399,19 @@ renderer/src/
   `formatShortcut`). A shortcut takes other keys off macOS where Windows and Linux conventions differ (`keysOffMac`: Alt+←
   back, Delete deletes) and never Ctrl+Alt there, which is AltGr on European layouts (the test checks it). Letters match
   by the character typed (Ctrl+Z on a German keyboard), digits by position. F2 renames the selected file, branch, label or
-  attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A field keeps
+  attribute (`useRenameCommand`); the context-menu key and Shift+F10 open a list's menu at its focused row. A field (`isTextEntry`) keeps
   its own text chords, Ctrl+Y (redo) included off macOS (`belongsToField`).
 - **Per OS**: platform differences go through small pure helpers taking the platform (`revealLabel`, `trashName`,
   `windowChrome`, `appMenuTemplate`, `formatShortcut`), read once in `lib/platform.ts`. Windows draw their title bar per
-  `windowChrome`: macOS insets its traffic lights over the sidebar's top band; Windows hides its title bar and overlays
-  its caption buttons on the top bar (`titleBarOverlay`, clear, symbols in the theme's text color; the page keeps
-  `--caption-buttons-width` free), with a menu button in the band (and Alt or F10) popping up the menu bar's menus;
+  `windowChrome`: macOS insets its traffic lights over the top bar's start; Windows hides its title bar and overlays
+  its caption buttons on the top bar's end (`titleBarOverlay`, clear, symbols in the theme's text color; the page keeps
+  `--caption-buttons-width` free), with a menu button at the bar's start (and Alt or F10) popping up the menu bar's menus;
   Linux keeps the desktop's frame and menu bar. Native parts follow the app's theme (`followAppTheme`). The menus
   (`main/window/appMenuTemplate`) have an app menu on macOS only; elsewhere File ends with Settings and Exit (Windows)
-  or Quit (Linux), Help with About, and `&` marks each item's Alt letter.
+  or Quit (Linux), Help with Check for Updates and About, and `&` marks each item's Alt letter. The menus hold what
+  a person looks for there: windows and workspaces (File), the branch work (Branch: switch, new, merges), the palette,
+  the command log and the sidebar (View), the documentation, the shortcuts and reporting an issue (Help); what the
+  screen already offers in place (updating the workspace: the incoming chip) stays out.
 - **Focus**: the list, tree or graph a view or page works on carries `MAIN_FOCUS` (`lib/mainFocus.ts`). `useMainFocus`
   focuses it after navigating and whenever focus falls to the document (a dialog, menu or popover closed), and hands it
   list keys pressed while nothing has focus. Views keep their list's selection while away (`useViewSelection`). Lists
@@ -388,7 +465,7 @@ renderer/src/
   read-only: no `cm` command or client API edits them. Selecting a row must stay cheap (Server
   budget: Selection); the changed files' `cm diff` runs only on request (`ChangedFilesSection`). The panel's parts are
   primitives of their own in `ui/` (`DetailsSection`, `DetailsEmpty`, `DetailsSkeleton`, `DetailsBadge`,
-  `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), all imported from `ui/DetailsPanel`. Lists are
+  `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), each imported from its own module. Lists are
   a `DataTable` (`ui/table/`: only the rows in view render; the columns' sort, the keys' steps `selectionStep`, and
   `selectFirstRow`'s successor selection each in a module of their own).
 - **Item rows**: every list of files and folders reads the same (`components/`): Files and Browse repository, Changes
@@ -432,7 +509,9 @@ renderer/src/
   remembered across sessions), the view keeping 200px. Its filter (⌘F or / from the log; "Failed" for failures only)
   is a list filter like any other (`commandLogFilterTexts`), kept for the session; each command is numbered by its
   place in the log since it was cleared (`NumberedLog`), so numbers stay put as the scope, the filter and the
-  500-entry cap drop rows. Revealing a command the filter or scope hides clears them.
+  500-entry cap drop rows. A failed command shows how it ended ("Exit code 1", or "Stopped" without one) above its
+  output. Revealing a command the filter or scope hides clears them. Its header shows the `cm` version the app runs
+  (`cmVersionQuery`, already read at start).
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in styles or components
   (`styles/noRawColors.test.ts`, which lists the few colors written out on purpose); optional classes join with
   `classNames`.

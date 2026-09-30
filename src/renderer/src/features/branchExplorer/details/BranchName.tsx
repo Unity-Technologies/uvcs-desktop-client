@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import { DetailsLink } from '../../../ui/DetailsPanel';
+import { DetailsLink } from '../../../ui/DetailsLink';
 import { branchHue } from '../model/branchHue';
 import styles from './BranchName.module.css';
 

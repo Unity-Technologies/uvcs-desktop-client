@@ -1,5 +1,5 @@
 import type { CmClient } from '../cm/CmClient';
-import { escapeQueryValue } from '../cm/findQuery';
+import { equalsCondition } from '../cm/findQuery';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
 
 /**
@@ -15,7 +15,7 @@ export function mergedIntoArgs(sourceChangeset: number, destinationBranch: strin
   return [
     'find',
     'merge',
-    `where srcchangeset = ${sourceChangeset} and dstbranch = '${escapeQueryValue(destinationBranch)}' limit 1`,
+    `where srcchangeset = ${sourceChangeset} and ${equalsCondition('dstbranch', destinationBranch)} limit 1`,
     `--format=${recordFormat(['dstchangeset'])}`,
     '--nototal',
   ];

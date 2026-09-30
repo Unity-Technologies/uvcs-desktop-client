@@ -1,38 +1,15 @@
 .home {
   position: relative;
   display: flex;
+  flex-direction: column;
   height: 100%;
   background: var(--bg-app);
 }
 
-.dragRegion {
-  flex: none;
-  height: 36px;
-  -webkit-app-region: drag;
-}
-
-/* Sidebar */
-
-.brand {
+.body {
   display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: 0 var(--space-2) var(--space-4);
-}
-
-.brandName {
-  overflow: hidden;
-  font-weight: var(--weight-semibold);
-  white-space: nowrap;
-}
-
-.brand[data-rail='true'] {
-  justify-content: center;
-  padding-inline: 0;
-}
-
-.brand[data-rail='true'] .brandName {
-  display: none;
+  flex: 1;
+  min-height: 0;
 }
 
 /* Main panel */
@@ -47,10 +24,6 @@
   overflow: hidden;
 }
 
-.main > .dragRegion {
-  height: 8px;
-}
-
 /* One section of the home screen; each arrives with the view transition. */
 .panel {
   position: relative;
@@ -59,16 +32,6 @@
   flex-direction: column;
   min-height: 0;
   animation: var(--keyframes-view-enter) var(--duration-fast) var(--ease-out);
-}
-
-.titleBarDrag {
-  position: absolute;
-  top: -8px;
-  left: 0;
-  right: 12px;
-  height: 36px;
-  -webkit-app-region: drag;
-  z-index: 1;
 }
 
 /* Welcome */

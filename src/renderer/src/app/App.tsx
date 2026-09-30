@@ -1,5 +1,5 @@
 import { QueryClientProvider } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { DialogHost } from '../ui/dialog/DialogHost';
 import { ToastHost } from '../ui/toast/ToastHost';
 import { TooltipLayer } from '../ui/TooltipLayer';
@@ -19,6 +19,8 @@ import { useGravatarSetting } from './settings/useGravatarSetting';
 import { CmUnavailableScreen } from './startup/CmUnavailableScreen';
 import { SetupProblemScreen } from './startup/SetupProblemScreen';
 import { useCmAvailability, useSetupCheck } from './startup/useCmAvailability';
+import { UpdateCard } from './updates/UpdateCard';
+import { loadUpdateStatus } from './updates/updateStore';
 import { useSession } from './workspace/sessionStore';
 import { useRequestedWorkspace } from './workspace/useRequestedWorkspace';
 import { WorkspaceGate } from './workspace/WorkspaceGate';
@@ -30,7 +32,9 @@ export function App() {
       <CommandPalette />
       <CommandShortcuts />
       <DialogHost />
-      <ToastHost errorAction={errorDetailsAction} renderOperation={(toast, dismiss) => <OperationCard toast={toast} dismiss={dismiss} />} />
+      <ToastHost errorAction={errorDetailsAction} renderOperation={(toast, dismiss) => <OperationCard toast={toast} dismiss={dismiss} />}>
+        <UpdateCard />
+      </ToastHost>
       <TooltipLayer />
     </QueryClientProvider>
   );
@@ -44,6 +48,7 @@ function Root() {
   useMenuCommands();
   useAppMenuKeys();
   useRequestedWorkspace();
+  useEffect(() => void loadUpdateStatus(), []);
   const workspacePath = useSession((state) => state.workspacePath);
   const cm = useCmAvailability();
   const setup = useSetupCheck(cm.isSuccess);

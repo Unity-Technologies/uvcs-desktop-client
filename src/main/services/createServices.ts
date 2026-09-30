@@ -1,6 +1,8 @@
 import type { UvcsApi } from '@shared/api';
+import type { KeptAsideFile } from '@shared/domain/switchWithChanges';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
 import { readBranchNames } from '../cm/branchNames';
+import { sendEventToCaller } from '../ipc/sendEvent';
 import { LeftChangesFinder } from '../workspace/leftChanges';
 import { SwitchShelveRecords } from '../workspace/switchShelveRecords';
 import { createAccountsService } from './accountsService';
@@ -26,13 +28,15 @@ import { createSettingsService } from './settingsService';
 import { createShelvesService } from './shelvesService';
 import { createSyncService } from './syncService';
 import { createSystemService } from './systemService';
+import { createUpdatesService } from './updatesService';
 import { createWindowsService } from './windowsService';
 import { createWorkspacesService } from './workspacesService';
 import type { BranchNamesContext, ServiceContext, SwitchContext } from './ServiceContext';
 
 export function createServices(context: ServiceContext): UvcsApi {
   const switchShelves = new SwitchShelveRecords(context.settings);
-  const switching: SwitchContext = { switchShelves, leftChanges: new LeftChangesFinder(context.cm, switchShelves, context.headers) };
+  const tellKeptAside = (workspacePath: string, files: KeptAsideFile[]) => sendEventToCaller('filesKeptAside', { workspacePath, files });
+  const switching: SwitchContext = { switchShelves, leftChanges: new LeftChangesFinder(context.cm, switchShelves, context.headers, tellKeptAside) };
   const naming: BranchNamesContext = { branchNames: new BranchNamesCache((workspacePath) => readBranchNames(context.cm, workspacePath)) };
 
   return {
@@ -59,6 +63,7 @@ export function createServices(context: ServiceContext): UvcsApi {
     shelves: createShelvesService(context, switching),
     sync: createSyncService(context),
     system: createSystemService(context),
+    updates: createUpdatesService(context),
     windows: createWindowsService(context),
     workspaces: createWorkspacesService(context, switching),
   };

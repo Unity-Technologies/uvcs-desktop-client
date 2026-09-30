@@ -1,6 +1,7 @@
 import type { CmClient } from '../cm/CmClient';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
 import { readWorkspaceStatus, type WorkspaceStatus } from '../cm/workspaceStatus';
+import { isSameOrInside } from '../files/pathContainment';
 
 /** A read this recent answers again, unless something rewrote the workspace meanwhile (`forget`). */
 const FRESH_MS = 5000;
@@ -35,7 +36,7 @@ interface Reads {
 /**
  * What a workspace is loaded from (`cm status --header`) and its name and guid, shared by the reads that follow one
  * another as a window opens it (the workspace info, then the left changes). Every command that rewrites a workspace,
- * and every `.plastic` rewrite the watchers see, forgets them.
+ * and every `.plastic` rewrite the watchers see, forgets that workspace's.
  */
 export class WorkspaceHeaders {
   private readonly reads = new Map<string, Reads>();
@@ -43,6 +44,7 @@ export class WorkspaceHeaders {
   constructor(
     private readonly readers: HeaderReaders,
     private readonly now: () => number = Date.now,
+    private readonly platform: NodeJS.Platform = process.platform,
   ) {}
 
   status(workspacePath: string): Promise<WorkspaceStatus> {
@@ -53,10 +55,11 @@ export class WorkspaceHeaders {
     return this.shared(workspacePath, 'names');
   }
 
-  /** The workspace changed (every workspace, without a path): the next reads ask `cm` again. */
-  forget(workspacePath?: string): void {
-    if (workspacePath === undefined) this.reads.clear();
-    else this.reads.delete(workspacePath);
+  /** The workspace holding `path` (its root or a folder in it) changed: its next reads ask `cm` again. */
+  forget(path: string): void {
+    for (const workspacePath of this.reads.keys()) {
+      if (isSameOrInside(workspacePath, path, this.platform)) this.reads.delete(workspacePath);
+    }
   }
 
   /** The read of `kind` this workspace shares while fresh, started now if there is none. */

@@ -1,5 +1,5 @@
-import { useQuery } from '@tanstack/react-query';
-import type { PendingChangesSnapshot } from '@shared/domain/pendingChanges';
+import { queryOptions, useQuery } from '@tanstack/react-query';
+import type { PendingChangesFilter, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { useSettings } from '../../app/settings/useSettings';
@@ -11,6 +11,14 @@ function pendingChangesKey(workspacePath: string) {
   return queryKeys.inWorkspace(workspacePath, 'pendingChanges');
 }
 
+/** The workspace's pending changes, as the user's filter settings (`pendingChanges`) ask for them. */
+export function pendingChangesQuery(workspacePath: string, filter: PendingChangesFilter) {
+  return queryOptions({
+    queryKey: [...pendingChangesKey(workspacePath), filter],
+    queryFn: () => api.pendingChanges.list(workspacePath, filter),
+  });
+}
+
 export function usePendingChanges() {
   return usePendingChangesOf(useWorkspacePath());
 }
@@ -19,8 +27,7 @@ export function usePendingChanges() {
 export function usePendingChangesOf(workspacePath: string | null) {
   const { pendingChanges: filter } = useSettings();
   return useQuery({
-    queryKey: [...pendingChangesKey(workspacePath ?? ''), filter],
-    queryFn: () => api.pendingChanges.list(workspacePath!, filter),
+    ...pendingChangesQuery(workspacePath ?? '', filter),
     structuralSharing: (previous, next) => sharePendingChanges(previous as PendingChangesSnapshot | undefined, next as PendingChangesSnapshot),
     placeholderData: (previous) => previous,
     enabled: workspacePath !== null,

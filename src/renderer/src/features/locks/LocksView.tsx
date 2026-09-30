@@ -1,4 +1,4 @@
-import { Lock as LockIcon, LockOpen } from 'lucide-react';
+import { ExternalLink, Lock as LockIcon, LockOpen } from 'lucide-react';
 import type { Lock } from '@shared/domain/lock';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { ObjectListView } from '../../components/ObjectListView';
@@ -11,6 +11,7 @@ import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
 import { Highlight } from '../../ui/Highlight';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
+import type { Column } from '../../ui/table/column';
 import { lockFilterTexts, readsOnlyMyLocks } from './lockFilters';
 import { useWorkspaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
@@ -22,13 +23,14 @@ import { FilterField } from '../../ui/FilterField';
 import { NoMatches } from '../../ui/NoMatches';
 import { useLocksViewStore } from './locksViewStore';
 import { RelativeTime } from '../../ui/RelativeTime';
-import type { Column } from '../../ui/table/DataTable';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { LockDetails } from './LockDetails';
 import { lockKey } from './lockKey';
 import { lockMenu } from './lockMenu';
 import { isReleasable, releaseLocks } from './lockOperations';
 import { useLocks } from './useLocks';
+import { useLockRulesPage } from './useLockRulesPage';
+import { openLockRules, useLockRulesCommand } from './useLockRulesCommand';
 import styles from './LocksView.module.css';
 
 const RULES = "Files matching the server's lock rules are locked when someone checks them out, so nobody else edits them at the same time.";
@@ -66,6 +68,8 @@ export function LocksView() {
   const [selection, setSelection] = useViewSelection('locks');
   const { data: locks, isLoading, error, isFetching } = useLocks(readsOnlyMyLocks(people));
   const offered = usePeopleSeen('locks', locks, ownerOf);
+  const lockRules = useLockRulesPage();
+  useLockRulesCommand(lockRules);
 
   const visible = (locks ?? []).filter((lock) => matchesPeople(people, me, lock.owner) && matchesWordFilter(lockFilterTexts(lock), filter));
   const selected = visible.filter((lock) => selection.selected.has(lockKey(lock)));
@@ -80,6 +84,11 @@ export function LocksView() {
       actions={
         <>
           <ViewRefreshButton workspacePath={workspacePath} fetching={isFetching} />
+          {lockRules && (
+            <Button icon={<ExternalLink size={14} />} data-tip={lockRules.tip} onClick={() => openLockRules(lockRules)}>
+              Lock rules
+            </Button>
+          )}
           <Button icon={<LockOpen size={14} />} disabled={releasable.length === 0} onClick={() => void releaseLocks(workspacePath, releasable)}>
             Release
           </Button>

@@ -96,9 +96,30 @@ export function isAffectedByLocks(key: QueryKey): boolean {
   return area(key) === 'locks';
 }
 
+/** What shows a changeset's comment: the changesets already read too, which only a comment edit changes. */
+const SHOWING_CHANGESET_COMMENTS = ['changesets', 'branchExplorer', 'history', 'annotate', 'workingObjectComment'];
+
+/** A changeset's comment was edited: only what shows it. */
+export function isAffectedByChangesetComment(key: QueryKey): boolean {
+  return SHOWING_CHANGESET_COMMENTS.includes(area(key) as string);
+}
+
+/**
+ * A changeset was moved to another branch or deleted: what shows changesets, the branch lists (their heads, and the
+ * branch a move creates) and what is incoming, not the workspace.
+ */
+export function isAffectedByChangesetMove(key: QueryKey): boolean {
+  return isAffectedByChangesetComment(key) || area(key) === 'branches' || area(key) === 'incoming';
+}
+
 /** Changes were shelved, and stay in the workspace: only the lists of shelves change. */
 export function isAffectedByShelving(key: QueryKey): boolean {
   return area(key) === 'shelves';
+}
+
+/** Shelves were deleted: the lists of shelves and the left changes, which offer shelves back. */
+export function isAffectedByShelveDeletion(key: QueryKey): boolean {
+  return area(key) === 'shelves' || area(key) === 'leftChanges';
 }
 
 /**
@@ -106,7 +127,25 @@ export function isAffectedByShelving(key: QueryKey): boolean {
  * the changes added, what is checked out).
  */
 export function isAffectedByShelvingAway(key: QueryKey): boolean {
-  return isAffectedByShelving(key) || isAffectedByFileChanges(key) || isAffectedByMovedPaths(key) || isAffectedByWorkspaceState(key);
+  return isAffectedByShelving(key) || isAffectedByWorkspaceEdit(key);
+}
+
+/**
+ * A shelve was applied to the workspace, or restored (applied and deleted): the workspace as the merge leaves it, the
+ * locks its checkouts take, the lists of shelves and the left changes that offered it.
+ */
+export function isAffectedByShelveApplied(key: QueryKey): boolean {
+  return isAffectedByPendingChangeEdit(key) || isAffectedByShelveDeletion(key);
+}
+
+/** Files were added, checked out, removed or undone: the workspace, and the locks a checkout takes or an undo lets go. */
+export function isAffectedByPendingChangeEdit(key: QueryKey): boolean {
+  return isAffectedByWorkspaceEdit(key) || isAffectedByLocks(key);
+}
+
+/** The workspace's files, the items that came or went, and what is checked out, added or moved. */
+function isAffectedByWorkspaceEdit(key: QueryKey): boolean {
+  return isAffectedByFileChanges(key) || isAffectedByMovedPaths(key) || isAffectedByWorkspaceState(key);
 }
 
 /**

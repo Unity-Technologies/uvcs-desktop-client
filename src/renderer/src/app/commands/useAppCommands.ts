@@ -1,7 +1,9 @@
-import { AppWindow, Command as CommandIcon, Keyboard, PanelLeft, Settings } from 'lucide-react';
+import { AppWindow, Command as CommandIcon, Info, Keyboard, PanelLeft, RefreshCw, Settings } from 'lucide-react';
 import { useMemo } from 'react';
 import { api } from '../../api/client';
+import { openAboutDialog } from '../about/AboutDialog';
 import { openSettingsDialog } from '../settings/SettingsDialog';
+import { checkForUpdates } from '../updates/updateStore';
 import { SIDEBAR_SHORTCUT, toggleSidebar, useSidebarCollapsed } from '../shell/sidebarStore';
 import { useCommandPalette } from './commandPaletteStore';
 import { useCommands, type Command } from './commandStore';
@@ -48,6 +50,15 @@ export function useAppCommands(): void {
         keywords: ['window'],
         shortcut: hotkey('newWindow'),
         run: () => void api.windows.openHome(),
+      },
+      { id: 'app.about', group: 'App', label: 'About Unity Version Control', icon: Info, keywords: ['version'], run: openAboutDialog },
+      {
+        id: 'app.checkForUpdates',
+        group: 'App',
+        label: 'Check for updates',
+        icon: RefreshCw,
+        keywords: ['upgrade', 'version', 'new'],
+        run: () => void checkForUpdates(),
       },
     ],
     [rail],

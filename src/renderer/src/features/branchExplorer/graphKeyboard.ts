@@ -2,6 +2,7 @@ import type { KeyboardEvent, RefObject } from 'react';
 import { spec } from '@shared/domain/specs';
 import { hotkey, hotkeys, type ShortcutId } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
+import { isTextEntry } from '../../lib/textEntry';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import { ZOOM_STEP } from './canvas/zoom';
 import { graphActions, openSelection } from './graphActions';
@@ -119,7 +120,6 @@ function isPressed(id: ShortcutId, event: KeyboardEvent): boolean {
 
 /** Fields keep every key (the search, an edited comment); buttons and links keep the keys that press them. */
 function ownsKey(target: EventTarget, key: string): boolean {
-  if (!(target instanceof HTMLElement)) return false;
-  if (target.isContentEditable || ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return true;
-  return ['BUTTON', 'A'].includes(target.tagName) && (key === 'Enter' || key === ' ');
+  if (isTextEntry(target)) return true;
+  return target instanceof HTMLElement && ['BUTTON', 'A'].includes(target.tagName) && (key === 'Enter' || key === ' ');
 }

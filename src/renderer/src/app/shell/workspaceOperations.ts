@@ -20,7 +20,7 @@ export async function updateWorkspace(workspacePath: string): Promise<boolean> {
       await api.workspaces.update(workspacePath, operationId);
       return true;
     },
-    successMessage: () => 'Workspace is up to date',
+    success: () => ({ title: 'Workspace is up to date' }),
     onFailure: explainUpdateConflicts,
   });
   return updated === true;

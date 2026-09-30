@@ -1,7 +1,7 @@
 import type { Action } from '../lib/actions';
-import { copyToClipboard } from '../lib/copyToClipboard';
 import { formatCount } from '../lib/text';
 import type { GroupedEntry } from '../lib/menuGroups';
+import { copyToClipboard } from '../ui/copyToClipboard';
 import { menuSubmenu } from './menuWords';
 
 /**

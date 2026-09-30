@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
-import type { SelectionState } from '../../lib/selection';
+import { singleSelection, type SelectionState } from '../../lib/selection';
 
 /**
  * Which branches the tree shows collapsed, and toggling one. Collapsing the branch a selected child hangs from selects
@@ -26,7 +26,7 @@ export function useCollapsedBranches(
     });
     const { matching: branches, selected: shown, select: selectRow, keyOf: key } = latest.current;
     const collapsing = branches.find((branch) => branch.name === name);
-    if (collapsing && shown?.name.startsWith(`${name}/`)) selectRow({ selected: new Set([key(collapsing)]), anchor: key(collapsing) });
+    if (collapsing && shown?.name.startsWith(`${name}/`)) selectRow(singleSelection(key(collapsing)));
   }, []);
 
   return { collapsed, toggle };

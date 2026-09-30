@@ -16,8 +16,8 @@ vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
 
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { answerConfirms } from '../../testing/fakeDialogs';
-import { pressToastAction, shownToasts, whereTheWindowIs } from '../../testing/operationOutcome';
-import { absolutePath, deletePrivateFiles, undoChanges } from './pendingChangeOperations';
+import { pressToastAction, shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
+import { absolutePath, addToSourceControl, checkout, deletePrivateFiles, undoChanges } from './pendingChangeOperations';
 import { BACKUP_SHELVE_COMMENT } from './undoPlan';
 
 const ws = '/ws';
@@ -43,6 +43,16 @@ describe('undoChanges', () => {
     expect(dialogs.askedToUndo).toEqual([[edited, added]]);
     expect(fakeApi.argsOf('pendingChanges.undo')).toEqual([[ws, ['src/a.ts', 'src/new.ts']]]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Undid 2 changes' }]);
+  });
+
+  it('refreshes the workspace and its locks, not the repository', async () => {
+    dialogs.undo = { backup: false };
+    fakeApi.answer('pendingChanges.undo', () => undefined);
+    const refreshed = watchRefreshes(ws);
+
+    await undoChanges(ws, [edited]);
+
+    expect(refreshed()).toEqual(['explorer', 'info', 'locks', 'pendingChanges', 'review']);
   });
 
   it('asks nothing when only private files are picked', async () => {
@@ -117,5 +127,25 @@ describe('absolutePath', () => {
   it("joins with the workspace's own separator", () => {
     expect(absolutePath('/Users/ana/ws', 'src/a.ts')).toBe('/Users/ana/ws/src/a.ts');
     expect(absolutePath('C:\\ws', 'src/deep/a.ts')).toBe('C:\\ws\\src\\deep\\a.ts');
+  });
+
+  it('is the workspace folder itself for the empty path, with no separator after it', () => {
+    expect(absolutePath('/Users/ana/ws', '')).toBe('/Users/ana/ws');
+    expect(absolutePath('C:\\ws', '')).toBe('C:\\ws');
+  });
+});
+
+describe('adding and checking out', () => {
+  it('refreshes the workspace and its locks, not the repository', async () => {
+    fakeApi.answer('pendingChanges.add', () => undefined);
+    fakeApi.answer('pendingChanges.checkout', () => undefined);
+
+    const afterAdd = watchRefreshes(ws);
+    await addToSourceControl(ws, [change('notes.txt', ['private'])]);
+    expect(afterAdd()).toEqual(['explorer', 'info', 'locks', 'pendingChanges', 'review']);
+
+    const afterCheckout = watchRefreshes(ws);
+    await checkout(ws, [change('art/hero.psd', ['changed'])]);
+    expect(afterCheckout()).toEqual(['explorer', 'info', 'locks', 'pendingChanges', 'review']);
   });
 });

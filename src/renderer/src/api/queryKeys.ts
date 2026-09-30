@@ -15,6 +15,7 @@ export const queryKeys = {
   accounts: ['accounts'] as const,
   mergeTools: ['mergeTools'] as const,
   cmVersion: ['cmVersion'] as const,
+  appInfo: ['appInfo'] as const,
   cmSetup: ['cmSetup'] as const,
   homeDirectory: ['homeDirectory'] as const,
   workspaceHeads: (paths: readonly string[]) => ['workspaceHeads', paths] as const,

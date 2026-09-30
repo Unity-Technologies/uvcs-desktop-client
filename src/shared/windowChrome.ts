@@ -16,3 +16,9 @@ export function windowChrome(platform: string): WindowChrome {
 
 /** The height of the top bar (`--topbar-height`), which the traffic lights and caption buttons share. */
 export const TITLE_BAR_HEIGHT = 44;
+
+/**
+ * The window's own background, drawn before its page paints and wherever the page hasn't caught up with a resize yet:
+ * the page's `--bg-app` in each theme (`tokens.test.ts` checks), so no frame shows another color.
+ */
+export const WINDOW_BACKGROUND = { light: '#f6f8fa', dark: '#0d1117' } as const;

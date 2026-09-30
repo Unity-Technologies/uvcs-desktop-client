@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+# A new push to a pull request cancels its CI still running on older commits; master's runs are never cancelled.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
+# The Node used locally, so the typecheck, the tests and the build behave the same on a laptop and here.
+env:
+  NODE_VERSION: '26'
+
+jobs:
+  # "Done means" (CLAUDE.md): the typecheck and the tests pass, and the app builds, on every OS and architecture.
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      # Every platform's failures in one run: a Windows-only break shouldn't hide a macOS-only one.
+      fail-fast: false
+      matrix:
+        include:
+          - { name: macOS arm64, os: macos-latest }
+          - { name: Windows x64, os: windows-latest }
+          - { name: Windows arm64, os: windows-11-arm }
+          - { name: Linux x64, os: ubuntu-latest }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/install
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  # The smoke test (scripts/e2e/README.md): the built app over a fake cm and a temp workspace, every view.
+  # Linux is left out: Electron there needs an xvfb display (`xvfb-run -a npm run e2e`), not worth the upkeep for a smoke test.
+  e2e:
+    name: E2E Smoke ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { name: macOS arm64, os: macos-latest }
+          - { name: Windows x64, os: windows-latest }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/install
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - run: npm run e2e

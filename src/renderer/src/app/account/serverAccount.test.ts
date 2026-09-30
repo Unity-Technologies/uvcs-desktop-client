@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Account } from '@shared/domain/account';
-import { accountForServer, cloudDashboardUrl, organizationName, signInMethod } from './serverAccount';
+import { accountForServer, cloudDashboardUrl, lockRulesUrl, organizationName, signInMethod } from './serverAccount';
 
 const account = (name: string, server = name, user = 'me@acme.com'): Account => ({ name, server, user, workingMode: 'SSOWorkingMode' });
 
@@ -41,6 +41,33 @@ describe('cloudDashboardUrl', () => {
       'https://cloud.unity.com/home/organizations/1375488836673/projects/default/plastic-scm/organizations',
     );
     expect(cloudDashboardUrl('libra4d@cloud', legacy)).toBe('https://cloud.unity.com/home/organizations/default/plastic-scm/organizations');
+  });
+});
+
+describe('lockRulesUrl', () => {
+  const DASHBOARD = 'https://cloud.unity.com/home/organizations';
+
+  it('opens the organization’s lock rules in the dashboard, under its genesis id when known', () => {
+    expect(lockRulesUrl('acme@unity', genesis)).toBe(`${DASHBOARD}/1375488836673/projects/default/plastic-scm/organizations/1375488836673/lock-rules`);
+    expect(lockRulesUrl('1375488836673@cloud')).toBe(`${DASHBOARD}/1375488836673/projects/default/plastic-scm/organizations/1375488836673/lock-rules`);
+  });
+
+  it('names an organization without a genesis id, escaped, and lets the dashboard find it', () => {
+    expect(lockRulesUrl('libra4d@cloud', legacy)).toBe(`${DASHBOARD}/default/plastic-scm/organizations/libra4d/lock-rules`);
+    expect(lockRulesUrl('my org@cloud')).toBe(`${DASHBOARD}/default/plastic-scm/organizations/my%20org/lock-rules`);
+  });
+
+  it('opens an on-premises server’s web admin on its host, whatever its protocol and port', () => {
+    expect(lockRulesUrl('ssl://host:8088', onPremises)).toBe('http://host:7178/configuration/lock-rules');
+    expect(lockRulesUrl('tcp://build.acme.lan:8087')).toBe('http://build.acme.lan:7178/configuration/lock-rules');
+    expect(lockRulesUrl('localhost:8087')).toBe('http://localhost:7178/configuration/lock-rules');
+    expect(lockRulesUrl('host')).toBe('http://host:7178/configuration/lock-rules');
+    expect(lockRulesUrl('[::1]:8087')).toBe('http://[::1]:7178/configuration/lock-rules');
+  });
+
+  it('has no page for the local server, or for no organization in particular', () => {
+    expect(lockRulesUrl('local')).toBeNull();
+    expect(lockRulesUrl('*@cloud', wildcard)).toBeNull();
   });
 });
 

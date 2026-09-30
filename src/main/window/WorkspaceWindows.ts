@@ -28,7 +28,9 @@ export class WorkspaceWindows {
   /** Opens a window on the home screen, or opening `workspacePath`. */
   open(workspacePath?: string): BrowserWindow {
     const cascadeFrom = BrowserWindow.getFocusedWindow() ?? this.all().at(-1);
-    const window = createMainWindow(this.options.settings, cascadeFrom);
+    // Its page starts on the workspace when its folder is there; for a missing one, the page's own check explains it.
+    const startsOn = workspacePath && existsSync(workspacePath) ? workspacePath : undefined;
+    const window = createMainWindow(this.options.settings, { cascadeFrom, workspacePath: startsOn });
     const viewer = window.webContents.id;
     askBeforeUnloading(window);
     if (workspacePath) this.requested.set(viewer, workspacePath);
@@ -47,12 +49,18 @@ export class WorkspaceWindows {
   }
 
   /**
-   * The first window at launch, opening the workspace that launched the app, else the last one used (the home screen
-   * when its folder is gone). Development builds start on the home screen, where automated UI checks pick a workspace.
+   * The workspace the first window at launch opens: the one that launched the app, else the last one used (none, for
+   * the home screen, when its folder is gone). Development builds start on the home screen, where automated UI checks
+   * pick a workspace.
    */
-  openFirst(): void {
+  firstWorkspace(): string | undefined {
     const lastUsed = app.isPackaged ? this.options.settings.get().recentWorkspacePaths[0] : undefined;
-    const workspacePath = this.launchRequest ?? (lastUsed && existsSync(lastUsed) ? lastUsed : undefined);
+    return this.launchRequest ?? (lastUsed && existsSync(lastUsed) ? lastUsed : undefined);
+  }
+
+  /** The first window at launch, on `firstWorkspace()`. */
+  openFirst(): void {
+    const workspacePath = this.firstWorkspace();
     this.launchRequest = null;
     this.open(workspacePath);
   }

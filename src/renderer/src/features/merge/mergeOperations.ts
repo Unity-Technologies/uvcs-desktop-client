@@ -2,7 +2,7 @@ import { followUpMerge, type MergeRequest, type MergeResolutions, type MergeResu
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runOperation } from '../../app/operations/runOperation';
-import { isAffectedByCheckinOrUpdate } from '../../app/refresh/refreshScopes';
+import { isAffectedByCheckinOrUpdate, isAffectedByShelveApplied } from '../../app/refresh/refreshScopes';
 import { toast } from '../../ui/toast/toastStore';
 
 /**
@@ -14,14 +14,12 @@ export async function completeMerge(workspacePath: string, request: MergeRequest
     title: 'Merging',
     workspacePath,
     run: (operationId) => api.merge.run(workspacePath, request, resolutions, operationId),
-    // Merging a shelve that was left behind when switching finishes those left changes.
-    affects: request.sourceSpec.startsWith('sh:') ? undefined : isAffectedByCheckinOrUpdate,
-    successMessage: (merged) =>
-      request.destinationBranch
-        ? merged.destinationMoved
-          ? null
-          : `Created changeset ${merged.changesetId} on ${request.destinationBranch}`
-        : 'Merge applied to your workspace',
+    // Merging a shelve applies it, and may finish the left changes that offered it.
+    affects: request.sourceSpec.startsWith('sh:') ? isAffectedByShelveApplied : isAffectedByCheckinOrUpdate,
+    success: (merged) => {
+      if (!request.destinationBranch) return { title: 'Merge applied to your workspace' };
+      return merged.destinationMoved ? null : { title: `Created changeset ${merged.changesetId} on ${request.destinationBranch}` };
+    },
   });
   if (!result) return null;
 

@@ -16,9 +16,11 @@ interface ToastHostProps {
   errorAction?: (title: string, error: unknown) => ToastAction | undefined;
   /** Draws the card of a toast that follows an operation (`operationId`). */
   renderOperation?: (toast: Toast, dismiss: () => void) => React.ReactNode;
+  /** Cards of the app's own that stack with the toasts, under them, nearest the corner (the app's update). */
+  children?: React.ReactNode;
 }
 
-export function ToastHost({ errorAction, renderOperation }: ToastHostProps) {
+export function ToastHost({ errorAction, renderOperation, children }: ToastHostProps) {
   const { toasts, dismiss } = useToastStore();
   const actionOf = (toast: Toast): ToastAction | undefined =>
     toast.action ?? (toast.kind === 'error' && toast.error !== undefined ? errorAction?.(toast.title, toast.error) : undefined);
@@ -71,6 +73,7 @@ export function ToastHost({ errorAction, renderOperation }: ToastHostProps) {
           </div>
         );
       })}
+      {children}
     </div>
   );
 }

@@ -32,7 +32,7 @@ beforeEach(() => {
 });
 
 describe('changeset operations', () => {
-  it('saves an edited comment and refreshes the changesets already read, which only a comment edit changes', async () => {
+  it('saves an edited comment and refreshes only what shows it, the changesets already read too', async () => {
     asked.comment = 'New comment';
     fakeApi.answer('changesets.editComment', () => undefined);
     const refreshed = watchRefreshes(ws);
@@ -40,7 +40,7 @@ describe('changeset operations', () => {
     await editChangesetComment(ws, changeset);
 
     expect(fakeApi.argsOf('changesets.editComment')).toEqual([[ws, 42, 'New comment']]);
-    expect(refreshed()).toEqual(expect.arrayContaining(['changesets', 'history', 'branchExplorer']));
+    expect(refreshed()).toEqual(['annotate', 'branchExplorer', 'changesets', 'history']);
   });
 
   it('saves nothing when the comment editor is cancelled', async () => {
@@ -66,6 +66,20 @@ describe('changeset operations', () => {
 
     expect(fakeApi.argsOf('changesets.moveToBranch')).toEqual([[ws, 42, '/main/task/rescued']]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Moved changeset 42 to /main/task/rescued' }]);
+  });
+
+  it('refreshes what shows changesets and the branch lists after moving or deleting one, not the workspace', async () => {
+    answerPrompts('/main/task/rescued');
+    fakeApi.answer('changesets.moveToBranch', () => undefined);
+    fakeApi.answer('changesets.remove', () => undefined);
+
+    const afterMove = watchRefreshes(ws);
+    await moveChangesetToBranch(ws, changeset);
+    expect(afterMove()).toEqual(['annotate', 'branchExplorer', 'branches', 'changesets', 'history', 'incoming']);
+
+    const afterDelete = watchRefreshes(ws);
+    await deleteChangeset(ws, changeset);
+    expect(afterDelete()).toEqual(['annotate', 'branchExplorer', 'branches', 'changesets', 'history', 'incoming']);
   });
 
   it('deletes a changeset only once confirmed, and reports a refusal with no success', async () => {

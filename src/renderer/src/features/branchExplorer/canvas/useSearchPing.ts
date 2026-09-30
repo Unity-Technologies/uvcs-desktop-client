@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { prefersReducedMotion } from '../../../lib/reducedMotion';
 import { hitKey, type SearchHit } from '../model/searchGraph';
 import { PING_MS } from './searchPing';
 
@@ -13,7 +14,7 @@ export function useSearchPing(activeHit: SearchHit | null, redraw: () => void): 
 
   useEffect(() => {
     progressRef.current = 1;
-    if (!key || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    if (!key || prefersReducedMotion()) return;
     const start = performance.now();
     let frame = requestAnimationFrame(function tick() {
       progressRef.current = Math.min(1, (performance.now() - start) / PING_MS);

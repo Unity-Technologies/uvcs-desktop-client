@@ -10,6 +10,9 @@ function templateOn(platform: NodeJS.Platform): MenuItemConstructorOptions[] {
     windowItems: [{ label: 'Home', type: 'checkbox' }],
     newWindow: () => {},
     openDocumentation: () => {},
+    reportIssue: () => {},
+    showAboutPanel: () => {},
+    checkForUpdates: () => {},
   });
 }
 
@@ -20,9 +23,9 @@ const hasRole = (items: MenuItemConstructorOptions[], role: string) => items.som
 
 describe('appMenuTemplate', () => {
   it('puts the app menu first on macOS only', () => {
-    expect(topLabels('darwin')).toEqual(['appMenu', 'File', 'Edit', 'View', 'Window', 'Help']);
-    expect(topLabels('win32')).toEqual(['&File', '&Edit', '&View', '&Window', '&Help']);
-    expect(topLabels('linux')).toEqual(['&File', '&Edit', '&View', '&Window', '&Help']);
+    expect(topLabels('darwin')).toEqual(['appMenu', 'File', 'Edit', 'View', 'Branch', 'Window', 'Help']);
+    expect(topLabels('win32')).toEqual(['&File', '&Edit', '&View', '&Branch', '&Window', '&Help']);
+    expect(topLabels('linux')).toEqual(['&File', '&Edit', '&View', '&Branch', '&Window', '&Help']);
   });
 
   it('ends the File menu with Settings and Exit on Windows, Settings and Quit on Linux', () => {
@@ -48,11 +51,37 @@ describe('appMenuTemplate', () => {
     expect(itemsOf('darwin', 'File').some((item) => item.id === 'app.settings' || item.role === 'quit')).toBe(false);
   });
 
-  it('puts About in Help off macOS, and in the app menu on macOS', () => {
-    expect(hasRole(itemsOf('win32', 'Help'), 'about')).toBe(true);
-    expect(hasRole(itemsOf('linux', 'Help'), 'about')).toBe(true);
-    expect(hasRole(itemsOf('darwin', 'Help'), 'about')).toBe(false);
-    expect(hasRole(submenuOf(templateOn('darwin')[0]!), 'about')).toBe(true);
+  it("puts the app's About dialog and Check for Updates in Help off macOS, and first in the app menu on macOS", () => {
+    const ids = (items: MenuItemConstructorOptions[]) => items.map((item) => item.id).filter(Boolean);
+    expect(ids(itemsOf('win32', 'Help')).slice(-2)).toEqual(['app.checkForUpdates', 'app.about']);
+    expect(ids(itemsOf('linux', 'Help')).slice(-2)).toEqual(['app.checkForUpdates', 'app.about']);
+    expect(ids(itemsOf('darwin', 'Help'))).toEqual(['app.shortcuts']);
+    expect(submenuOf(templateOn('darwin')[0]!).slice(0, 2)).toMatchObject([
+      { id: 'app.about', label: 'About Unity Version Control' },
+      { id: 'app.checkForUpdates', label: 'Check for Updates…' },
+    ]);
+    expect(hasRole(submenuOf(templateOn('darwin')[0]!), 'about')).toBe(false);
+  });
+
+  it('creates and opens workspaces from File, and leaves updating one to the incoming chip', () => {
+    const ids = itemsOf('darwin', 'File').map((item) => item.id).filter(Boolean);
+    expect(ids).toEqual(['app.newWindow', 'workspace.newForTask', 'workspace.open', 'workspace.reveal', 'workspace.openTerminal']);
+  });
+
+  it("reveals the workspace from File in each OS's file manager", () => {
+    const reveal = (platform: NodeJS.Platform) => itemsOf(platform, 'File').find((item) => item.id === 'workspace.reveal')?.label;
+    expect(reveal('darwin')).toBe('Reveal in Finder');
+    expect(reveal('win32')).toBe('Show in Explorer');
+    expect(reveal('linux')).toBe('Show in file manager');
+  });
+
+  it("offers the workspace's branch work in a Branch menu, with the keys the renderer binds", () => {
+    expect(itemsOf('darwin', 'Branch').filter((item) => item.id)).toEqual([
+      { id: 'branch.switch', label: 'Switch Branch…', accelerator: 'CmdOrCtrl+Shift+W' },
+      { id: 'branch.new', label: 'New Branch…', accelerator: 'CmdOrCtrl+B' },
+      { id: 'merge.fromBranch', label: 'Merge from Branch…', accelerator: 'CmdOrCtrl+Shift+M' },
+      { id: 'merge.toBranch', label: 'Merge Current Branch into…', accelerator: undefined },
+    ]);
   });
 
   it('closes the window from File everywhere', () => {
@@ -72,7 +101,7 @@ describe('appMenuTemplate', () => {
     const labels = (platform: NodeJS.Platform) =>
       templateOn(platform).flatMap((menu) => [menu.label ?? '', ...submenuOf(menu).map((item) => item.label ?? '')]);
     expect(labels('darwin').filter((label) => label.includes('&'))).toEqual([]);
-    expect(itemsOf('win32', 'View').map((item) => item.label).filter(Boolean)).toEqual(['Command &Palette…', 'Command &Log', '&Refresh']);
+    expect(itemsOf('win32', 'View').map((item) => item.label).filter(Boolean)).toEqual(['Command &Palette…', 'Command &Log', 'Toggle &Sidebar', '&Refresh']);
   });
 
   it('shows no accelerator Chromium would spell out off macOS ("Ctrl+Comma"), and every one on macOS', () => {

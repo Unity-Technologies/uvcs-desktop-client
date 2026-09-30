@@ -2,7 +2,7 @@ import '../testing/fakeWindow';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const copied = vi.hoisted(() => [] as { text: string; what: string }[]);
-vi.mock('../lib/copyToClipboard', () => ({ copyToClipboard: (text: string, what: string) => copied.push({ text, what }) }));
+vi.mock('../ui/copyToClipboard', () => ({ copyToClipboard: (text: string, what: string) => copied.push({ text, what }) }));
 
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
@@ -34,6 +34,7 @@ import { lockMenu } from '../features/locks/lockMenu';
 import { changelistMenu } from '../features/pendingChanges/changelistMenu';
 import { pendingChangeMenu } from '../features/pendingChanges/pendingChangeMenu';
 import { shelveMenu } from '../features/shelves/shelveMenu';
+import { syncBranchMenu } from '../features/sync/syncBranchMenu';
 import { isSubmenu, SEPARATOR, withoutAction, type Action, type MenuEntry, type Submenu } from '../lib/actions';
 import { groupOf, MENU_GROUPS } from '../lib/menuGroups';
 import { COPY_KINDS } from './copyMenu';
@@ -127,6 +128,7 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   diffEntry: () => diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [{ path: '/src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never], { statusOf: () => 'unreviewed', toggle: () => {} } as never),
   revision: () => revisionMenu(ws, 5, repository, [file]),
   lock: () => lockMenu(ws, [lock]),
+  syncBranch: () => syncBranchMenu([branch], 'game@cloud', { push: () => {}, pull: () => {} }),
   attributeType: () => attributeTypeMenu(ws, [{ name: 'status', comment: '' } as never]),
   changelist: () => changelistMenu(ws, { name: 'ui', description: '' } as never),
   workspace: () => workspaceMenu({ name: 'game', path: ws, guid: 'w' }, () => {}),

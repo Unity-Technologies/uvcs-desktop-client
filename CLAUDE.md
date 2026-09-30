@@ -95,12 +95,16 @@ npm start            # the built app
 npm run app:debug    # the built app with CDP on UVCS_CDP_PORT (9333 by default)
 npm run typecheck    # main + renderer
 npm test             # vitest, every src/**/*.test.ts
+npm run e2e          # build, then the smoke test: every view of the real app against a fake cm (~10 s)
 npm run dist         # the installer for this OS, into dist/
+npm run release      # dist, uploaded to the GitHub release (the Release workflow runs it; needs GH_TOKEN)
+node scripts/perf/startup.mjs [--cm=real]   # after a build: median start-up times, cold and warm (header: options)
 ```
 
 **Done means**: `npm run typecheck` and `npm test` pass, the new code is tested (see "Tests are the quality gate"),
 the change is seen working in the app (anything visible), and the docs say what's now true (see "Docs"). There is no
-linter or formatter: match the surrounding code.
+linter or formatter: match the surrounding code. Before merging anything that touches startup, navigation or many
+views, `npm run e2e` passes too.
 
 ## Seeing the app (Playwright)
 
@@ -160,6 +164,10 @@ The suite runs after every change, so it must take seconds, not minutes. A test 
   such strings, records the commands it was asked and how (`query` or `execute`), and fails on any other. A workspace
   that changes as `cm` would is `playAlongWorkspace`, built on it. The `cm shell` protocol itself is tested against
   `main/cm/testing/fakeCmShell`, a script that answers like `cm shell`.
+- **The smoke test** (`npm run e2e`, `scripts/e2e/README.md`) drives the built app over a fake `cm` and a temp
+  workspace: startup, every sidebar view, a diff, the palette, Settings, a theme switch; it fails on renderer errors
+  and on any `cm` command the fake doesn't know. A view that starts running a new command teaches it to the fake
+  (`scripts/e2e/fakeCm/answers.cjs`); a new view is one line in `smoke.mjs`'s `VIEWS`.
 - **The renderer's fakes** are in `renderer/src/testing/`: `fakeWindow` (`window.uvcs`; `fakeApi` answers the calls a
   test declares and fails it on any other), `fakeDialogs` (confirm and prompt), `operationOutcome` (the toasts, where
   the window went, the views refreshed), `queryProbes`.
@@ -187,6 +195,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `main/cm/noExternalUi.test.ts`                            | `cm` never opens a tool; processes start only where allowed       |
 | `main/cm/noOredIdLookups.test.ts`                         | no `where id = 1 or id = 2 …` queries                             |
 | `shared/noRuntimeDependencies.test.ts`                    | `shared/` imports only its own modules                            |
+| `renderer/src/rendererTiers.test.ts`                      | `lib/` and `ui/` never import the tiers above them                |
 | `lib/shortcutRegistry.test.ts`                            | every shortcut is in the registry; menu accelerators match; no Ctrl+Alt off Mac |
 | `lib/menuGroups.test.ts`, `components/menuGrammar.test.ts` | every object menu follows one grammar                            |
 | `styles/tokens.test.ts`, `focusRings.test.ts`             | text 4.5:1 and focus rings 3:1 in both themes                     |
@@ -217,8 +226,10 @@ Not enforced yet: no `any` (there are none today). A static test for it is welco
 - **Dependencies**: every package is a `devDependency`, because electron-vite bundles what the app runs into `out/`
   (`electron-builder.yml` ships no `node_modules`). Prefer none: a new one must do what a small module can't.
 - **Generated, never edited**: `out/`, `dist/`, `*.tsbuildinfo`, `node_modules/`.
-- **Not set up yet**: code signing, notarization, auto-update and versioning (`package.json` stays `0.1.0`). Don't add
-  them unasked.
+- **Releases own the version**: the Release workflow bumps `package.json` and tags it; never bump it by hand. The app
+  updates itself from those releases (`docs/features/updates.md`).
+- **Not set up yet**: code signing and notarization (the Release workflow turns them on once its secrets exist). Don't
+  add them unasked.
 
 ## Commits: let the history tell the story
 

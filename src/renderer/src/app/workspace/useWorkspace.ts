@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 import { otherRepository } from '@shared/domain/repository';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
@@ -20,20 +20,24 @@ export function useOtherRepository(repository: string | undefined): string | und
   return otherRepository(repository, useWorkspaceInfo().data?.repository);
 }
 
-/** Like `useWorkspaceInfo`, for code that also runs without a workspace (null). */
-export function useWorkspaceInfoOf(workspacePath: string | null) {
-  return useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath ?? '', 'info'),
-    queryFn: () => api.workspaces.info(workspacePath!),
-    enabled: workspacePath !== null,
-  });
+export function workspaceInfoQuery(workspacePath: string) {
+  return queryOptions({ queryKey: queryKeys.inWorkspace(workspacePath, 'info'), queryFn: () => api.workspaces.info(workspacePath) });
 }
 
-/** Whether the open workspace's folder is gone (deleted, moved, or on a drive that isn't mounted). */
-export function useWorkspaceFolderMissing() {
-  const workspacePath = useWorkspacePath();
-  return useQuery({
+/** Like `useWorkspaceInfo`, for code that also runs without a workspace (null). */
+export function useWorkspaceInfoOf(workspacePath: string | null) {
+  return useQuery({ ...workspaceInfoQuery(workspacePath ?? ''), enabled: workspacePath !== null });
+}
+
+/** Whether a workspace's folder is gone (deleted, moved, or on a drive that isn't mounted). */
+export function folderMissingQuery(workspacePath: string) {
+  return queryOptions({
     queryKey: queryKeys.inWorkspace(workspacePath, 'folderMissing'),
     queryFn: async () => (await api.workspaces.findMissing([workspacePath])).length > 0,
   });
+}
+
+/** Whether the open workspace's folder is gone. */
+export function useWorkspaceFolderMissing() {
+  return useQuery(folderMissingQuery(useWorkspacePath()));
 }

@@ -32,6 +32,11 @@ describe('commandLogFilterTexts', () => {
     expect(commandLogFilterTexts(logged)).toEqual(['cm find --format={a}␟{b}', 'bad␞']);
     expect(commandLogFilterTexts(logged, '/Users/me')).toEqual(['cm find --format={a}␟{b}', '/Users/me', 'bad␞']);
   });
+
+  it("takes how a failed command ended, as its row says it: a command with no exit code of its own as stopped", () => {
+    expect(commandLogFilterTexts(entry(1, 'cm checkin', { exitCode: 1, output: 'locked' }))).toEqual(['cm checkin', 'Exit code 1', 'locked']);
+    expect(commandLogFilterTexts(entry(2, 'cm version', { exitCode: -1, output: 'spawn cm ENOENT' }))).toEqual(['cm version', 'Stopped', 'spawn cm ENOENT']);
+  });
 });
 
 describe('commandLogRows', () => {

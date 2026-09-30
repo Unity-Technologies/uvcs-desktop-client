@@ -9,6 +9,7 @@ export function SidebarToggleItem() {
     <NavItem
       icon={rail ? <PanelLeftOpen size={15} /> : <PanelLeftClose size={15} />}
       label={rail ? 'Expand sidebar' : 'Collapse sidebar'}
+      railLabel="Expand"
       shortcut={SIDEBAR_SHORTCUT}
       onClick={toggleSidebar}
     />

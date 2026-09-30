@@ -23,26 +23,40 @@ export type DecodeState =
   | { status: 'ready'; image: DecodedImage }
   | { status: 'error' };
 
+/** A decode's outcome, kept with the URL it read. */
+export interface KeptDecode {
+  url: string;
+  state: DecodeState;
+}
+
+const IDLE: DecodeState = { status: 'idle' };
+const LOADING: DecodeState = { status: 'loading' };
+
+/**
+ * What shows for the image: the decode kept for its current URL, or loading while that URL is made and read. Never a
+ * decode of a URL the image had before: `useImageUrl` revokes it as the image changes, and an `<img>` painted with it
+ * then fails to load (`ERR_FILE_NOT_FOUND`), as clicking fast from one image file to the next did.
+ */
+export function shownDecodeState(image: ImageBytes | undefined, url: string | undefined, kept: KeptDecode | undefined): DecodeState {
+  if (!image) return IDLE;
+  return url !== undefined && kept?.url === url ? kept.state : LOADING;
+}
+
 export function useDecodedImage(image: ImageBytes | undefined): DecodeState {
   const url = useImageUrl(image);
-  const [state, setState] = useState<DecodeState>({ status: 'idle' });
+  const [kept, setKept] = useState<KeptDecode>();
 
   useEffect(() => {
-    if (!image) {
-      setState({ status: 'idle' });
-      return;
-    }
-    setState({ status: 'loading' });
-    if (!url) return;
+    if (!image || !url) return;
     let stale = false;
     const img = new Image();
     img.onload = () => {
       if (stale) return;
       const size = decodedSize({ width: img.naturalWidth, height: img.naturalHeight }, image.mimeType === 'image/svg+xml');
-      setState({ status: 'ready', image: { src: url, element: img, ...size } });
+      setKept({ url, state: { status: 'ready', image: { src: url, element: img, ...size } } });
     };
     img.onerror = () => {
-      if (!stale) setState({ status: 'error' });
+      if (!stale) setKept({ url, state: { status: 'error' } });
     };
     img.src = url;
     return () => {
@@ -50,5 +64,5 @@ export function useDecodedImage(image: ImageBytes | undefined): DecodeState {
     };
   }, [image, url]);
 
-  return state;
+  return shownDecodeState(image, url, kept);
 }

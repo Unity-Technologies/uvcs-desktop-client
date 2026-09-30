@@ -1,4 +1,4 @@
-import { ArrowDownToLine, Copy, FolderGit2, FolderOpen, ListChecks, Monitor, Moon, Pause, Play, RefreshCw, SquareTerminal, Sun, TerminalSquare } from 'lucide-react';
+import { ArrowDownToLine, Copy, FolderGit2, FolderOpen, FolderSearch, ListChecks, Monitor, Moon, Pause, Play, RefreshCw, SquareTerminal, Sun, TerminalSquare } from 'lucide-react';
 import type { ThemePreference } from '@shared/domain/settings';
 import { setReviewMode } from '../../features/review/reviewModeSetting';
 import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorkspaceDialog';
@@ -11,7 +11,8 @@ import { invalidateWorkspace } from '../queryClient';
 import { useSettings, useUpdateSettings } from '../settings/useSettings';
 import { useSession } from '../workspace/sessionStore';
 import { useWorkspacePath } from '../workspace/useWorkspace';
-import { copyWorkspacePath, openTerminalIn } from '../workspace/workspaceShellActions';
+import { copyWorkspacePath, openTerminalIn, revealWorkspace } from '../workspace/workspaceShellActions';
+import { REVEAL_LABEL } from '../../lib/platform';
 import { useCommandLogStore } from './commandLogStore';
 import { updateUnlessUpToDate } from './workspaceOperations';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -96,6 +97,14 @@ export function useWorkspaceCommands(): void {
         icon: SquareTerminal,
         keywords: ['shell', 'console', 'agent'],
         run: () => openTerminalIn(workspacePath),
+      },
+      {
+        id: 'workspace.reveal',
+        group: 'Workspace',
+        label: REVEAL_LABEL,
+        icon: FolderSearch,
+        keywords: ['folder', 'directory', 'file manager'],
+        run: () => revealWorkspace(workspacePath),
       },
       {
         id: 'workspace.copyPath',

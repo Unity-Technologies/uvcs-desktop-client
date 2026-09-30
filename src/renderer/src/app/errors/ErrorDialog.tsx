@@ -5,6 +5,7 @@ import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { OutputBlock } from '../../ui/OutputBlock';
 import { PropertyList } from '../../ui/PropertyList';
+import { commandEnding } from '../shell/commandEnding';
 import { useCopiedFeedback } from '../useCopiedFeedback';
 import styles from './ErrorDialog.module.css';
 
@@ -55,7 +56,7 @@ export function ErrorDialog({ title, message, command, onShowInLog, onClose }: E
       <PropertyList
         properties={[
           { label: 'Command', value: withControlPictures(command.commandLine), mono: true, copyText: command.commandLine },
-          { label: 'Exit code', value: String(command.exitCode), mono: true },
+          { label: 'Result', value: commandEnding(command.exitCode) },
         ]}
       />
       <OutputBlock output={command.output} />
@@ -64,5 +65,5 @@ export function ErrorDialog({ title, message, command, onShowInLog, onClose }: E
 }
 
 function errorReport(title: string, message: string, command: FailedCommand): string {
-  return [title, message, '', `$ ${command.commandLine}`, `Exit code ${command.exitCode}`, '', command.output].join('\n').trimEnd();
+  return [title, message, '', `$ ${command.commandLine}`, commandEnding(command.exitCode), '', command.output].join('\n').trimEnd();
 }

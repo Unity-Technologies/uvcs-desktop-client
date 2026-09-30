@@ -1,3 +1,6 @@
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import { branchFound, shelvesFound, statusHeader, WORKSPACE_NAMES } from '../cm/testing/cmOutput';
@@ -129,6 +132,22 @@ describe('LeftChangesFinder.apply', () => {
 
     await new LeftChangesFinder(fakeCm(shelvesFound()).cm, records).apply('/work', 5, false, context);
     expect(records.find({ shelveId: 5, repository: 'eco@local' })).toEqual(elsewhere);
+  });
+
+  it('tells which moved-aside files it kept, and where, when another item took their place meanwhile', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'uvcs-kept-'));
+    const [workspace, backup] = [join(root, 'wk'), join(root, 'backup')];
+    await mkdir(join(workspace, 'src'), { recursive: true });
+    await mkdir(join(backup, 'src'), { recursive: true });
+    await writeFile(join(workspace, 'src', 'new.txt'), 'another file made meanwhile');
+    await writeFile(join(backup, 'src', 'new.txt'), 'mine');
+    const told: unknown[] = [];
+    const record: SwitchShelveRecord = { ...shelvedAway(5), backup: { directory: backup, paths: ['src/new.txt'] } };
+    const finder = new LeftChangesFinder(fakeCm(shelvesFound()).cm, recordsOf([record]), undefined, (workspacePath, files) => told.push({ workspacePath, files }));
+
+    await finder.apply(workspace, 5, false, context);
+
+    expect(told).toEqual([{ workspacePath: workspace, files: [{ path: 'src/new.txt', savedAt: join(backup, 'src', 'new.txt') }] }]);
   });
 
   it('keeps the record while conflicts wait for the merge view, for when it completes', async () => {

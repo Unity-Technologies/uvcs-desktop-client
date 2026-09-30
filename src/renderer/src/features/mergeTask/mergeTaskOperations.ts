@@ -3,7 +3,7 @@ import type { MergeRequest, MergeResult } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
-import { isAffectedByBranchList, isAffectedByNewChangesets } from '../../app/refresh/refreshScopes';
+import { isAffectedByBranchList, isAffectedByCodeReviews, isAffectedByNewChangesets } from '../../app/refresh/refreshScopes';
 import { toast } from '../../ui/toast/toastStore';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { switchToBranch } from '../branches/branchOperations';
@@ -37,7 +37,12 @@ export async function mergeTaskOnServer(workspacePath: string, request: MergeReq
 
   const { review } = options;
   if (review) {
-    await runAction(workspacePath, "Couldn't mark the code review as reviewed", () => api.codeReviews.update(workspacePath, review.id, { status: 'Reviewed' }));
+    await runAction(
+      workspacePath,
+      "Couldn't mark the code review as reviewed",
+      () => api.codeReviews.update(workspacePath, review.id, { status: 'Reviewed' }),
+      isAffectedByCodeReviews,
+    );
   }
   if (options.hideBranch) await hideTaskBranch(workspacePath, options.taskBranch);
   const changesetId = result.changesetId;

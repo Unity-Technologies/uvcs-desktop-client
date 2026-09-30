@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { WorkspaceChange } from '@shared/events';
+import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 import { fakeFolderWatches } from './testing/fakeFolderWatches';
 import { WorkspaceWatcher } from './WorkspaceWatcher';
 
@@ -21,11 +21,12 @@ afterEach(() => {
 function watching({ platform = 'darwin' as NodeJS.Platform, unwatchable = [] as { path: string; recursive?: boolean }[] } = {}) {
   const watches = fakeFolderWatches(unwatchable);
   const changes: WorkspaceChange[] = [];
-  const watcher = new WorkspaceWatcher(workspacePath, (change) => changes.push(change), platform, watches.watch);
+  let broken = 0;
+  const watcher = new WorkspaceWatcher(workspacePath, (change) => changes.push(change), () => broken++, platform, watches.watch);
   const coverage = watcher.start();
   /** An event of the recursive watch on the workspace, for a `/`-separated path (null: the platform didn't say). */
   const event = (kind: 'rename' | 'change', path: string | null): void => watches.emit(workspacePath, kind, path === null ? null : join(...path.split('/')));
-  return { watcher, changes, coverage, watches, event };
+  return { watcher, changes, coverage, watches, event, timesBroken: () => broken };
 }
 
 const fileEdit = (folder: string, pathsChanged = false): WorkspaceChange => ({ content: true, pathsChanged, metadata: false, folders: [folder] });
@@ -213,12 +214,52 @@ describe('WorkspaceWatcher', () => {
     expect(changes).toEqual([fileEdit('src')]);
   });
 
+  it('on Linux, watches the folders ignore.conf leaves as it changes', () => {
+    mkdirSync(join(workspacePath, 'src'));
+    mkdirSync(join(workspacePath, 'Library'));
+    writeFileSync(join(workspacePath, 'ignore.conf'), 'Library\n');
+    const { watches } = watching({ platform: 'linux' });
+    const watched = (): string[] => [...watches.watched().keys()].sort();
+
+    writeFileSync(join(workspacePath, 'ignore.conf'), 'src\n');
+    watches.emit(workspacePath, 'change', 'ignore.conf');
+    expect(watched()).toEqual([workspacePath, join(workspacePath, 'Library')].sort());
+  });
+
+  it('tells once that its watch broke on macOS and Windows', () => {
+    const { watches, timesBroken } = watching();
+
+    watches.break(workspacePath);
+    expect(timesBroken()).toBe(1);
+    expect(watches.watched().size).toBe(0);
+  });
+
+  it('tells nothing more of a watch that was partial from the start: the windows were told it is', () => {
+    const { watches, timesBroken } = watching({ unwatchable: [{ path: workspacePath, recursive: true }] });
+
+    watches.break(workspacePath);
+    expect(timesBroken()).toBe(0);
+  });
+
+  it("tells once on Linux that a folder's watch broke, or that a new folder couldn't be watched", () => {
+    mkdirSync(join(workspacePath, 'src'));
+    const brokeFolder = watching({ platform: 'linux' });
+    brokeFolder.watches.break(join(workspacePath, 'src'));
+    brokeFolder.watches.break(workspacePath);
+    expect(brokeFolder.timesBroken()).toBe(1);
+
+    const outOfWatches = watching({ platform: 'linux', unwatchable: [{ path: join(workspacePath, 'new') }] });
+    mkdirSync(join(workspacePath, 'new'));
+    outOfWatches.watches.emit(workspacePath, 'rename', 'new');
+    expect(outOfWatches.timesBroken()).toBe(1);
+  });
+
   it('tells whether a command ran in the workspace, a Windows folder whatever its letter case', () => {
     const { watcher } = watching({ platform: 'darwin' });
     expect(watcher.covers(join(workspacePath, 'src'))).toBe(true);
     expect(watcher.covers(join(workspacePath, '..', 'other'))).toBe(false);
 
-    const onWindows = new WorkspaceWatcher('C:\\Work\\game', () => {}, 'win32', fakeFolderWatches().watch);
+    const onWindows = new WorkspaceWatcher('C:\\Work\\game', () => {}, () => {}, 'win32', fakeFolderWatches().watch);
     expect(onWindows.covers('c:\\work\\GAME\\src')).toBe(true);
     expect(onWindows.covers('C:\\Work\\game2')).toBe(false);
   });

@@ -1,5 +1,5 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import type { SelectionState } from '../../lib/selection';
+import { singleSelection, type SelectionState } from '../../lib/selection';
 import { isControlled } from './changeCategories';
 import type { ChangeRow } from './changeRows';
 
@@ -18,5 +18,5 @@ export function dragFromRow(
   selectedChanges: () => PendingChange[],
 ): { changes: PendingChange[]; select?: SelectionState } {
   if (selection.selected.has(row.key)) return { changes: selectedChanges().filter(isControlled) };
-  return { changes: [row.change], select: { selected: new Set([row.key]), anchor: row.key } };
+  return { changes: [row.change], select: singleSelection(row.key) };
 }

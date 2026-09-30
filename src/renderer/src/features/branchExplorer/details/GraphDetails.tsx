@@ -2,7 +2,7 @@ import { useWorkspaceInfo, useWorkspacePath } from '../../../app/workspace/useWo
 import type { ObjectLinks } from '../../../components/objectLinks';
 import { NoSelection } from '../../../components/NoSelection';
 import type { MenuEntry } from '../../../lib/actions';
-import { DetailsLink } from '../../../ui/DetailsPanel';
+import { DetailsLink } from '../../../ui/DetailsLink';
 import type { GraphTarget } from '../canvas/graphTargets';
 import type { GraphSelection } from '../graphSelection';
 import { LabelDetails } from '../../labels/LabelDetails';

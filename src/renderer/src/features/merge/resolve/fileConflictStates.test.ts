@@ -48,7 +48,7 @@ describe('buildStates', () => {
     const second = buildStates(decided, labels, first.built);
     expect(second.states[0]).toBe(first.states[0]);
     expect(second.states[1]).not.toBe(first.states[1]);
-    expect(second.states[1]).toMatchObject({ decidedByUser: true, resolution: { choice: 'source' } });
+    expect(second.states[1]).toMatchObject({ decidedByUser: true, resolution: { choice: 'source', text: 'a\nS1\nc\n' } });
   });
 
   it('reads a file as loading until its three versions are there, then as needing a decision', () => {

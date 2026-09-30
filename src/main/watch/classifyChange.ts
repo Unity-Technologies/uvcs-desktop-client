@@ -1,4 +1,4 @@
-import type { WorkspaceChange } from '@shared/events';
+import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 import { isIgnored, type IgnoreRules } from './ignoreRules';
 
 /**

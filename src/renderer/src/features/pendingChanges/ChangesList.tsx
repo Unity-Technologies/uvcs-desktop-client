@@ -6,7 +6,7 @@ import { Arrivals } from '../../lib/arrivals';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { holdBackMenuKeyRelease, isListMenuKey, openContextMenuOf } from '../../lib/rowMenu';
 import { isModPressed } from '../../lib/shortcuts';
-import { focusedKeyOf, selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
+import { focusedKeyOf, selectOnArrow, selectOnClick, singleSelection, type SelectionState } from '../../lib/selection';
 import { treeArrowMove } from '../../lib/treeArrowMove';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { GroupRowContent, ItemRowContent, type RowActions, type ToggleIncluded } from './ChangeRowContent';
@@ -170,7 +170,7 @@ export function ChangesList({
       if (event.button !== 0) return;
       // Selected like a file, so the keyboard goes on from it.
       setFocusedKey(row.key);
-      onSelectionChange({ selected: new Set([row.key]), anchor: row.key });
+      onSelectionChange(singleSelection(row.key));
       onToggleCollapsed(row.key);
       return;
     }
@@ -188,7 +188,7 @@ export function ChangesList({
     if (narrowOnClick.current !== row.key) return;
     narrowOnClick.current = null;
     setFocusedKey(row.key);
-    onSelectionChange({ selected: new Set([row.key]), anchor: row.key });
+    onSelectionChange(singleSelection(row.key));
   };
 
   return (

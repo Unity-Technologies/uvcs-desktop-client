@@ -1,7 +1,7 @@
 import { Copy } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { classNames } from '../lib/classNames';
-import { copyToClipboard } from '../lib/copyToClipboard';
+import { copyToClipboard } from './copyToClipboard';
 import styles from './PropertyList.module.css';
 
 export interface Property {

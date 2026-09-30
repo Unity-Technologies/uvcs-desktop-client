@@ -1,12 +1,11 @@
 import { ChevronsUpDown, Settings } from 'lucide-react';
 import { RepositoryAvatar } from '../../components/RepositoryAvatar';
-import { NavFooter, NavGroup, NavGroups, NavItem, Sidebar as SidebarColumn } from '../../ui/nav/SidebarNav';
+import { NavFooter, NavGroups, NavItem, Sidebar as SidebarColumn, type NavSection } from '../../ui/nav/SidebarNav';
 import { useNavigation } from '../navigation/navigationStore';
 import { VIEWS, type ViewDefinition } from '../navigation/viewRegistry';
 import { openSettingsDialog } from '../settings/SettingsDialog';
 import { useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
 import { useSidebarCollapsed } from './sidebarStore';
-import { AppMenuButton } from './AppMenuButton';
 import { SidebarToggleItem } from './SidebarToggleItem';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import styles from './Sidebar.module.css';
@@ -17,9 +16,18 @@ export function Sidebar() {
   const { data: workspace } = useWorkspaceInfo();
   const workspacePath = useWorkspacePath();
   const rail = useSidebarCollapsed();
+  const activeView = useNavigation((state) => state.view);
+  const sections: NavSection[] = GROUPS.map((group) => ({
+    label: group,
+    items: VIEWS.filter((view) => view.group === group).map((view) => ({
+      key: view.id,
+      element: <SidebarViewItem view={view} />,
+      active: view.id === activeView,
+    })),
+  }));
 
   return (
-    <SidebarColumn rail={rail} joinsTopBar titleBarStart={<AppMenuButton />}>
+    <SidebarColumn rail={rail}>
       <WorkspaceSwitcher currentPath={workspacePath}>
         <button
           className={styles.workspace}
@@ -36,15 +44,7 @@ export function Sidebar() {
         </button>
       </WorkspaceSwitcher>
 
-      <NavGroups>
-        {GROUPS.map((group) => (
-          <NavGroup key={group} label={group}>
-            {VIEWS.filter((view) => view.group === group).map((view) => (
-              <SidebarViewItem key={view.id} view={view} />
-            ))}
-          </NavGroup>
-        ))}
-      </NavGroups>
+      <NavGroups sections={sections} />
 
       <NavFooter>
         <NavItem icon={<Settings size={15} />} label="Settings" onClick={openSettingsDialog} />

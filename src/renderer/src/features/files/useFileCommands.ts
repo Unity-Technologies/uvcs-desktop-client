@@ -3,8 +3,8 @@ import { useMemo } from 'react';
 import type { TreeItem } from '@shared/domain/explorer';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { navigation } from '../../app/navigation/navigationStore';
-import { prompt } from '../../ui/dialog/prompt';
 import { otherFileView } from '../annotate/fileView';
+import { browseRepositoryAtChangeset } from '../browseRepository/browseRepositoryAtChangeset';
 import { FILE_SHORTCUTS } from './fileMenu';
 import { createItem, deleteItems, renameItem, targetDirectoryFor } from './fileOperations';
 import { itemViews, type ItemViews } from './fileMenuTargets';
@@ -18,12 +18,6 @@ import { hotkey } from '../../lib/shortcutRegistry';
 export const GO_TO_FILE_SHORTCUT = hotkey('goToFile');
 
 const NO_VIEWS: ItemViews = { history: false, annotate: false, changes: false };
-
-async function browseRepositoryAtChangeset(): Promise<void> {
-  const answer = await prompt({ title: 'Browse repository', label: 'Changeset number', confirmLabel: 'Browse' });
-  const changesetId = Number.parseInt(answer ?? '', 10);
-  if (Number.isInteger(changesetId) && changesetId >= 0) navigation.openPage({ kind: 'browseRepository', changesetId });
-}
 
 /** Palette commands and shortcuts of the Files view, acting on the current selection. */
 export function useFileCommands(

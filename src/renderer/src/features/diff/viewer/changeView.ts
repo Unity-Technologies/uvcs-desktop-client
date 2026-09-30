@@ -1,9 +1,9 @@
 import type { Virtualizer } from '@pierre/diffs';
+import { prefersReducedMotion } from '../../../lib/reducedMotion';
 import type { ChangeBlock, ChangedLine, ChangeRegion } from './changeBlocks';
 import { modifiedLineAt } from './changeNavigation';
 import { lineRowSelector, pierreShadowRoot } from './pierreDom';
 import { pierreLinePosition } from './pierreLinePosition';
-import { prefersReducedMotion } from './reducedMotion';
 
 /** What the diff's navigation asks of the diff on screen (`TextDiff`). */
 export interface ChangeView {

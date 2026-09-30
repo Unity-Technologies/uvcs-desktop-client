@@ -2,7 +2,7 @@ import type { CodeReviewsApi } from '@shared/api/codeReviews';
 import { MAX_LISTED_CODE_REVIEWS, type CodeReview, type CodeReviewFilter, type CodeReviewSummary, type CodeReviewTarget } from '@shared/domain/codeReview';
 import type { QueryFilter } from '@shared/domain/query';
 import { parseCodeReviews, type RawCodeReview } from '../cm/codeReviewsXml';
-import { escapeQueryValue, findArgs } from '../cm/findQuery';
+import { equalsCondition, findArgs } from '../cm/findQuery';
 import type { BranchNamesContext, ServiceContext } from './ServiceContext';
 
 export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }: BranchNamesContext): CodeReviewsApi {
@@ -18,7 +18,7 @@ export function createCodeReviewsService({ cm }: ServiceContext, { branchNames }
   function findListedReviews(workspacePath: string, filter: CodeReviewFilter): Promise<RawCodeReview[]> {
     const conditions = [
       ...(filter.assignedToMe ? ["assignee = 'me'"] : []),
-      ...(filter.status ? [`status = '${escapeQueryValue(filter.status)}'`] : []),
+      ...(filter.status ? [equalsCondition('status', filter.status)] : []),
     ];
     return findReviews(workspacePath, conditions, {
       owners: filter.owners,

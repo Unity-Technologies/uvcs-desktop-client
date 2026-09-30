@@ -1,5 +1,4 @@
 import type { ItemDetails, ItemMove, RevisionType, TreeItem } from '../domain/explorer';
-import type { RevisionRef } from '../domain/revision';
 
 export interface ExplorerApi {
   /** Children of a workspace directory (`''` is the root), including private items. */
@@ -19,8 +18,4 @@ export interface ExplorerApi {
   /** Creates an empty file or directory and adds it to version control. */
   create(workspacePath: string, path: string, kind: 'file' | 'directory'): Promise<void>;
   changeRevisionType(workspacePath: string, paths: string[], type: RevisionType): Promise<void>;
-  /** Asks where to save a revision and downloads it there. Resolves to false if the user cancels. */
-  saveRevisionAs(workspacePath: string, revision: RevisionRef, fileName: string): Promise<boolean>;
-  /** Downloads a revision to a temporary file and opens it with the default app. */
-  openRevision(workspacePath: string, revision: RevisionRef, fileName: string): Promise<void>;
 }

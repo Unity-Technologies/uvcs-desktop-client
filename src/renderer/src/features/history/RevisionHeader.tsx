@@ -9,7 +9,7 @@ import { looksLikeMarkdown, splitComment } from '../../lib/comment';
 import { displayName } from '../../lib/userName';
 import { Avatar } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
-import { DetailsCopyable } from '../../ui/DetailsPanel';
+import { DetailsCopyable } from '../../ui/DetailsCopyable';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { RelativeTime } from '../../ui/RelativeTime';

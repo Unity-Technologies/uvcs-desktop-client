@@ -91,7 +91,7 @@ describe('runOperation while it runs', () => {
 
 describe('runOperation when it ends', () => {
   it('turns the card into the success message, with what was done counted from the last progress', async () => {
-    const { result, command, id } = startOperation({ successMessage: () => 'Workspace updated' });
+    const { result, command, id } = startOperation({ success: () => ({ title: 'Workspace updated' }) });
     fakeApi.emit('operationProgress', { operationId: id(), progress: progress({ total: 3, bytesTotal: 2048 }) });
 
     command.resolve('cs:12');
@@ -110,7 +110,7 @@ describe('runOperation when it ends', () => {
   });
 
   it('takes the card away when there is nothing to say', async () => {
-    const { result, command } = startOperation({ successMessage: () => null });
+    const { result, command } = startOperation({ success: () => null });
 
     command.resolve('done');
     await result;

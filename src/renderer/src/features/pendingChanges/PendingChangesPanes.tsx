@@ -6,6 +6,7 @@ import { useChangeFilter } from '../../components/useChangeFilter';
 import { selectAfterLeaving } from '../../app/navigation/leaveGuard';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { useSettings } from '../../app/settings/useSettings';
+import { singleSelection } from '../../lib/selection';
 import { useSettledValue } from '../../lib/useSettled';
 import { HighlightQuery } from '../../ui/Highlight';
 import { SplitPane } from '../../ui/SplitPane';
@@ -104,14 +105,14 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
   const fileSteps = useFileSteps({
     keys: fileKeys,
     current: selection.anchor,
-    select: (key) => selectAfterLeaving(selection, { selected: new Set([key]), anchor: key }, setSelection),
+    select: (key) => selectAfterLeaving(selection, singleSelection(key), setSelection),
     pathOf: (key) => changesByKey.get(key)?.path ?? key,
   });
 
   // Keep something selected, so the diff pane is useful from the start and after the selected file goes away.
   const firstChangeKey = fileKeys[0];
   useEffect(() => {
-    if (!focused && !focusedFolder && firstChangeKey) setSelection({ selected: new Set([firstChangeKey]), anchor: firstChangeKey });
+    if (!focused && !focusedFolder && firstChangeKey) setSelection(singleSelection(firstChangeKey));
   }, [focused, focusedFolder, firstChangeKey]);
 
   const setIncludedChanges = (selected: PendingChange[], include: boolean): void =>

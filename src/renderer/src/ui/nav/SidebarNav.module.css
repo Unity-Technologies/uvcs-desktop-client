@@ -1,46 +1,56 @@
 .sidebar {
+  /* How far its content keeps from its sides. */
+  --sidebar-inset: var(--space-2);
+
   display: flex;
   flex: none;
   flex-direction: column;
-  padding: 0 var(--space-2) var(--space-2);
+  padding: var(--space-2) var(--sidebar-inset);
   overflow: hidden;
   background: var(--bg-sidebar);
   transition: width var(--duration-normal) var(--ease-in-out);
 }
 
-.dragRegion {
-  display: flex;
-  flex: none;
-  align-items: center;
-  height: var(--topbar-height);
-  -webkit-app-region: drag;
-}
-
-.dragRegion > * {
-  -webkit-app-region: no-drag;
-}
-
-/* Under the desktop's own title bar (Linux) there are no traffic lights to make room for: the band only continues
-   the top bar where it joins it. */
-:global([data-chrome='native']) .dragRegion:not([data-joins-top-bar='true']) {
-  height: var(--space-2);
-}
-
-/* One title bar across the window: the band over the sidebar (with the window buttons) wears the top bar's sheen and edge. */
-.dragRegion[data-joins-top-bar='true'] {
-  margin: 0 calc(-1 * var(--space-2)) var(--space-2);
-  padding-inline: var(--space-2);
-  border-bottom: 1px solid var(--border-default);
-  background: linear-gradient(180deg, var(--toolbar-top), var(--toolbar-bottom));
-}
-
 .groups {
+  position: relative;
   display: flex;
   flex: 1;
   flex-direction: column;
   gap: var(--space-5);
   min-height: 0;
+  /* What doesn't fit goes into More (`NavGroups`): nothing scrolls. */
+  overflow: hidden;
+}
+
+/* An item, title or group moved into More stays laid out at the column's width, out of sight, to be measured again. */
+.slot[data-hidden='true'],
+.group[data-hidden='true'],
+.groupLabel[data-hidden='true'] {
+  position: absolute;
+  right: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.morePopover {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: 240px;
+  max-height: var(--radix-popover-content-available-height);
+  padding: var(--space-2);
   overflow: auto;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-lg);
+  animation: var(--keyframes-pop-in) var(--duration-fast) var(--ease-out);
+  z-index: 900;
+}
+
+.morePopover .groupLabel {
+  padding-top: var(--space-1);
 }
 
 .group {
@@ -137,12 +147,22 @@
   padding-top: var(--space-2);
 }
 
-/* The icon rail: icons centered, labels as tooltips, group titles as hairlines, counts as small badges on the icon. */
+/* The rail: each item a tile, its icon over its label in small type, centered and wrapping to two lines ("Branch
+   Explorer"); group titles as hairlines; counts as small badges on the icon. */
+
+/* Wide enough for the longest one-word labels on one line in every OS's UI font (the tiles leave them 66px:
+   "Changesets" takes 62px in San Francisco, 59px in Arial-wide fonts such as Segoe UI, 64px in Verdana-wide ones such
+   as DejaVu Sans). */
+.sidebar[data-rail='true'] {
+  --rail-width: 80px;
+  --sidebar-inset: var(--space-1);
+  --tile-padding-inline: 3px;
+
+  width: var(--rail-width);
+}
 
 .sidebar[data-rail='true'] .groups {
   gap: var(--space-2);
-  /* Too narrow for a scrollbar beside its icons: a short window scrolls the rail without one. */
-  scrollbar-width: none;
 }
 
 .sidebar[data-rail='true'] .groupLabel {
@@ -158,37 +178,64 @@
   display: none;
 }
 
-.sidebar[data-rail='true'] .item {
-  position: relative;
-  justify-content: center;
-  height: 34px;
-  padding: 0;
+/* A little air between tiles, more than between a tile's icon and its label, so each reads as one piece. */
+.sidebar[data-rail='true'] .group {
+  gap: 2px;
 }
 
-.sidebar[data-rail='true'] .label,
+/* A tile's height follows its label's lines, so every one-line tile is as tall as every other, and every two-line one. */
+.sidebar[data-rail='true'] .item {
+  position: relative;
+  flex-direction: column;
+  gap: var(--space-1);
+  height: auto;
+  padding: 6px var(--tile-padding-inline);
+  text-align: center;
+}
+
+/* The tiles fill the scrolling column, which would cut a ring drawn outside them. */
+.sidebar[data-rail='true'] .item:focus-visible {
+  box-shadow: var(--focus-ring-inset);
+}
+
+.sidebar[data-rail='true'] .label {
+  display: -webkit-box;
+  flex: none;
+  /* The width the tile will have once folded, so a label wraps once, as the sidebar starts folding, not as it ends. */
+  width: calc(var(--rail-width) - 2 * (var(--sidebar-inset) + var(--tile-padding-inline)));
+  font-size: var(--text-xs);
+  line-height: 13px;
+  white-space: normal;
+  /* Two lines at most, balanced, broken between words only: a word too long for the tile (a server's name) ends in an
+     ellipsis, the whole name in its tooltip. */
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  text-wrap: balance;
+}
+
 .sidebar[data-rail='true'] .detail {
   display: none;
 }
 
+/* On the tile, the count is pinned over the icon's top-right corner, in the accent whether the tile is selected or
+   not, a ring of the sidebar's color cutting it from the icon; the dot sits at the tile's own top-right corner, level
+   with the count, so both show. */
 .sidebar[data-rail='true'] .badge {
   position: absolute;
   top: 1px;
-  left: calc(50% + 3px);
+  left: calc(50% + 2px);
   min-width: 16px;
   padding: 0 4px;
+  background: var(--accent);
+  color: var(--accent-contrast);
   font-size: 10px;
-  line-height: 15px;
+  line-height: 16px;
   box-shadow: 0 0 0 2px var(--bg-sidebar);
-}
-
-.sidebar[data-rail='true'] .item:not([data-active='true']) .badge {
-  background: var(--border-default);
-  color: var(--text-primary);
 }
 
 .sidebar[data-rail='true'] .dot {
   position: absolute;
   top: 6px;
-  left: calc(50% + 5px);
-  box-shadow: 0 0 0 2px var(--bg-sidebar);
+  right: 4px;
 }
+

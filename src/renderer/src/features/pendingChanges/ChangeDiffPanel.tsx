@@ -3,6 +3,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { ReviewMark } from '@shared/domain/review';
 import { api } from '../../api/client';
 import { runVoidAction } from '../../app/operations/runOperation';
+import { isAffectedByPendingChangeEdit } from '../../app/refresh/refreshScopes';
 import { fileNameOf } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { toast } from '../../ui/toast/toastStore';
@@ -59,6 +60,6 @@ export function ChangeDiffPanel({ workspacePath, change, reviewMark, title: ownT
 function offerUndoCheckout(workspacePath: string, path: string): void {
   toast.success(`${fileNameOf(path)} is back to its loaded revision`, undefined, {
     label: 'Undo checkout',
-    run: () => void runVoidAction(workspacePath, "Couldn't undo the checkout", () => api.pendingChanges.undoUnchanged(workspacePath, [path])),
+    run: () => void runVoidAction(workspacePath, "Couldn't undo the checkout", () => api.pendingChanges.undoUnchanged(workspacePath, [path]), isAffectedByPendingChangeEdit),
   });
 }

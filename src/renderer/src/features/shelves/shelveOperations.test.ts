@@ -27,6 +27,15 @@ describe('applyShelve', () => {
     expect(whereTheWindowIs().pages).toEqual([]);
   });
 
+  it('refreshes the workspace, its locks, the shelve lists and the left changes, not the repository', async () => {
+    applyAnswers({ kind: 'applied', count: 3 });
+    const refreshed = watchRefreshes(ws);
+
+    await applyShelve(ws, 12, true);
+
+    expect(refreshed()).toEqual(['explorer', 'info', 'leftChanges', 'locks', 'pendingChanges', 'review', 'shelves']);
+  });
+
   it('offers to view the changes, unless Changes is what the window shows', async () => {
     applyAnswers({ kind: 'applied', count: 3 }, { kind: 'applied', count: 1 });
     useNavigation.setState({ view: 'branches' });
@@ -131,6 +140,15 @@ describe('deleteShelve', () => {
     expect(confirmTitles()).toEqual(['Delete shelve 12?']);
     expect(fakeApi.argsOf('shelves.delete')).toEqual([[ws, 12]]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Deleted shelve 12' }]);
+  });
+
+  it('refreshes only the shelve lists and the left changes, which offer shelves back', async () => {
+    fakeApi.answer('shelves.delete', () => undefined);
+    const refreshed = watchRefreshes(ws);
+
+    await deleteShelve(ws, 12);
+
+    expect(refreshed()).toEqual(['leftChanges', 'shelves']);
   });
 
   it('deletes nothing unless confirmed', async () => {

@@ -4,7 +4,7 @@ import { shortBranchName } from '@shared/domain/specs';
 import { authorColumn, avatarColumn, commentColumn, dateColumn, numberColumn, secondaryColumn } from '../../components/historyColumns';
 import { LabelChips } from '../../components/LabelChips';
 import { WorkspaceMark } from '../../components/WorkspaceMark';
-import type { Column } from '../../ui/table/DataTable';
+import type { Column } from '../../ui/table/column';
 
 /** Columns of the changesets table; `loadedChangeset` is marked as the one the workspace is on. */
 export function changesetColumns(loadedChangeset: number | null | undefined, labelsByChangeset: ReadonlyMap<number, readonly Label[]>): Column<Changeset>[] {

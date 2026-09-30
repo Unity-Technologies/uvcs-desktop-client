@@ -18,7 +18,7 @@ const JOINED_WITH_OR = /\.join\(\s*(['"`])\s*or\s*\1\s*\)/i;
 const ORED_ID_LITERAL = /['"`][^'"`\n]*\bid\s*=\s*[^'"`\n]*\bor\b[^'"`\n]*['"`]/i;
 
 /** Owners are names picked by hand, a few at most (`ownersCondition`): ORing them is one bounded scan, not a lookup per id. */
-const OWNERS_CONDITION = /\bowner = /;
+const OWNERS_CONDITION = /\bowner = |equalsCondition\('owner'/;
 
 function oredIdLookups(source: string): string[] {
   const lines = source.split('\n');
@@ -37,6 +37,7 @@ describe('no ORed id lookups', () => {
     expect(oredIdLookups("cm.query(['find', 'review', `id = ${reviewId}`])")).toEqual([]);
     expect(oredIdLookups("const where = `where name = '${name}'`;")).toEqual([]);
     expect(oredIdLookups("const each = owners.map((owner) => `owner = '${owner}'`);\nreturn `(${each.join(' or ')})`;")).toEqual([]);
+    expect(oredIdLookups("const each = owners.map((owner) => equalsCondition('owner', owner));\nreturn `(${each.join(' or ')})`;")).toEqual([]);
   });
 
   it('no source builds one', () => {

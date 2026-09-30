@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { successorKey, type SelectionState } from '../../lib/selection';
+import { singleSelection, successorKey, type SelectionState } from '../../lib/selection';
 
 interface KeepRowSelectedOptions {
   /** Off, a table may show with nothing selected. */
@@ -26,7 +26,7 @@ export function useKeepRowSelected({ enabled, orderedKeys, isShown, selection, o
     if (!enabled || firstKey === undefined || anchorShown) return;
     const next = successorKey(previousKeys.current, orderedKeys, selection.anchor) ?? firstKey;
     focusRow(next);
-    onSelectionChange({ selected: new Set([next]), anchor: next });
+    onSelectionChange(singleSelection(next));
     // Only when the answer can change: rows arriving, the selected row going away.
   }, [enabled, firstKey, anchorShown, onSelectionChange]);
 
