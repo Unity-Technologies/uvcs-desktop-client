@@ -13,11 +13,28 @@ function setUp(options: { skip?: (folder: string) => boolean; maxFolders?: numbe
   const at = (folder: string): string => (folder ? join(root, ...folder.split('/')) : root);
   const watches = fakeFolderWatches((options.unwatchable ?? []).map((folder) => ({ path: at(folder) })));
   const events: string[] = [];
-  const tree = new FolderTreeWatch(root, options.skip ?? (() => false), (event, path) => events.push(`${event} ${path}`), options.maxFolders ?? 100, watches.watch);
+  let broken = 0;
+  const tree = new FolderTreeWatch(
+    root,
+    options.skip ?? (() => false),
+    (event, path) => events.push(`${event} ${path}`),
+    () => broken++,
+    options.maxFolders ?? 100,
+    watches.watch,
+  );
   /** The watched folders, workspace-relative and sorted. */
   const watched = (): string[] =>
     [...watches.watched().keys()].map((path) => (path === root ? '' : path.slice(root.length + 1).split(/[\\/]/).join('/'))).sort();
-  return { root, tree, events, watched, at, emit: (folder: string, event: 'rename' | 'change', name: string | null) => watches.emit(at(folder), event, name), watches };
+  return {
+    root,
+    tree,
+    events,
+    watched,
+    at,
+    emit: (folder: string, event: 'rename' | 'change', name: string | null) => watches.emit(at(folder), event, name),
+    watches,
+    timesBroken: () => broken,
+  };
 }
 
 describe('FolderTreeWatch', () => {
@@ -129,12 +146,23 @@ describe('FolderTreeWatch', () => {
     expect(setUp({ unwatchable: [''] }).tree.start()).toBe(false);
   });
 
-  it('drops a folder whose watch broke, and those under it', () => {
-    const { tree, watched, watches, at } = setUp();
+  it('drops a folder whose watch broke, and those under it, and tells', () => {
+    const { tree, watched, watches, at, timesBroken } = setUp();
     tree.start();
 
     watches.break(at('src'));
     expect(watched()).toEqual(['', 'Library', 'Library/Cache']);
+    expect(timesBroken()).toBe(1);
+  });
+
+  it("tells when a folder that appears can't be watched, but not about what start() already said", () => {
+    const { tree, emit, at, timesBroken } = setUp({ unwatchable: ['src/deep', 'new'] });
+    expect(tree.start()).toBe(false);
+    expect(timesBroken()).toBe(0);
+
+    mkdirSync(at('new'));
+    emit('', 'rename', 'new');
+    expect(timesBroken()).toBe(1);
   });
 
   it('lets every watch go once closed', () => {
