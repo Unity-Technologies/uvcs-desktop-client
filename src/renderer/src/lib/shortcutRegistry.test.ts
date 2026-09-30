@@ -62,7 +62,8 @@ describe('shortcut registry', () => {
   });
 
   it('writes keys the formatter and matcher understand', () => {
-    for (const key of everyKey()) expect(key).toMatch(/^((mod|ctrl|alt|shift)\+)*([a-z0-9]|f\d+|[-=,/[\]?\\]|plus|space|enter|escape|tab|backspace|delete|up|down|left|right|home|end|pageup|pagedown)$/);
+    // A lone modifier is one held while the pointer acts (Shift while dropping a folder): the formatter shows it, no key binds it.
+    for (const key of everyKey()) expect(key).toMatch(/^(shift|((mod|ctrl|alt|shift)\+)*([a-z0-9]|f\d+|[-=,/[\]?\\]|plus|space|enter|escape|tab|backspace|delete|up|down|left|right|home|end|pageup|pagedown))$/);
   });
 
   it('keeps Ctrl+Alt free off macOS, where it is AltGr and types characters', () => {

@@ -1,4 +1,3 @@
-import { FolderDown } from 'lucide-react';
 import { useState } from 'react';
 import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
@@ -7,7 +6,6 @@ import { TopBar } from '../shell/TopBar';
 import { HomeSidebar } from './HomeSidebar';
 import type { HomeSection } from './homeSection';
 import { RepositoriesPanel } from './RepositoriesPanel';
-import { useFolderDrop } from './useFolderDrop';
 import { useHomeCommands } from './useHomeCommands';
 import { WelcomePanel } from './WelcomePanel';
 import { WorkspacesPanel } from './WorkspacesPanel';
@@ -18,12 +16,11 @@ export function HomeScreen() {
   const { data: servers } = useServers();
   const firstServer = servers?.[0]?.server;
   const open = useOpenWorkspace();
-  const drop = useFolderDrop(open);
   useHomeCommands(open);
   const openFolder = (): void => void openWorkspaceFolder(open);
 
   return (
-    <div className={styles.home} onDragOver={drop.onDragOver} onDragLeave={drop.onDragLeave} onDrop={drop.onDrop}>
+    <div className={styles.home}>
       <TopBar />
       <div className={styles.body}>
         <HomeSidebar section={section} onSelect={setSection} />
@@ -43,12 +40,6 @@ export function HomeScreen() {
           </div>
         </main>
       </div>
-      {drop.isDraggingOver && (
-        <div className={styles.dropOverlay}>
-          <FolderDown size={28} />
-          <span>Drop a folder to open or create a workspace</span>
-        </div>
-      )}
     </div>
   );
 }

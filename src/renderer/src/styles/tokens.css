@@ -62,6 +62,10 @@
   --keyframes-view-enter: view-enter;
   --keyframes-row-enter: row-enter;
   --keyframes-pulse: pulse;
+  --keyframes-fade-out: fade-out;
+  --keyframes-zoom-in: zoom-in;
+  --keyframes-zoom-out: zoom-out;
+  --keyframes-lift-in: lift-in;
 
   --focus-ring-visible: 0 0 0 2px var(--focus-color);
   /* For lists, rows and panes, whose outer edge a parent would clip. */
