@@ -201,12 +201,6 @@
   text-wrap: balance;
 }
 
-/* At rest the labels read a step quieter than the icons, so the column stays calm; hovered or selected, the tile's
-   color takes them. */
-.sidebar[data-rail='true'] .item:not(:hover, [data-active='true']) .label {
-  color: var(--text-tertiary);
-}
-
 .sidebar[data-rail='true'] .detail {
   display: none;
 }
