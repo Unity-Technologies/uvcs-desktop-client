@@ -45,9 +45,9 @@ export async function explainLockedItems<T>(action: LockedAction, work: () => Pr
   try {
     return await work();
   } catch (error) {
-    const items = error instanceof CmError ? parseLockedItems(error.command.output) : null;
-    if (!items || !(error instanceof CmError)) throw error;
-    throw error.withMessage(describeLockedItems(items, action));
+    if (!(error instanceof CmError)) throw error;
+    const items = parseLockedItems(error.command.output);
+    throw items ? error.withMessage(describeLockedItems(items, action)) : error;
   }
 }
 
