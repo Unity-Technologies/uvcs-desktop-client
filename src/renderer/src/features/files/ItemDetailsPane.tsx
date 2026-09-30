@@ -20,13 +20,21 @@ import { BranchChip } from '../branches/BranchChip';
 import { useChangeset } from '../changesets/useChangeset';
 import { describeKinds, isControlled } from '../pendingChanges/changeCategories';
 import type { PendingLock } from '../pendingChanges/locks/pendingLocks';
-import { hasRevisionsToShow } from './fileMenuTargets';
+import { itemViews } from './fileMenuTargets';
 import { FolderDetails } from './FolderDetails';
 import { ItemBreadcrumb } from './ItemBreadcrumb';
 import { itemComparison } from './itemComparison';
 import { onDiskState, type PendingChangesIndex } from './itemStatus';
 import { itemTypeLabel } from './itemType';
 import { ItemViewer } from './ItemViewer';
+import { isWorkspaceRoot } from './workspaceRoot';
+
+/** How the details name what the item is: a folder, a link, or any other file. */
+const DETAILS_KINDS = {
+  directory: { icon: <Folder />, noun: 'Folder' },
+  symlink: { icon: <FileSymlink />, noun: 'Link' },
+  file: { icon: <File />, noun: 'File' },
+};
 
 interface ItemDetailsPaneProps {
   workspacePath: string;
@@ -71,7 +79,9 @@ export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu,
   const status = pendingChange ? describeKinds(pendingChange) : item.isPrivate ? 'Private' : item.isCheckedOut ? 'Checked out' : '';
   const onDisk = pendingChange && onDiskState(item, pendingChange);
   const size = isFile && (onDisk || item.isPrivate || item.revisionId > 0) ? formatSize(onDisk?.size ?? item.size) : '';
-  const hasRevisions = pendingIndex ? hasRevisionsToShow(item, pendingIndex) : true;
+  // In a repository tree every item is a revision, with a history.
+  const showsHistory = pendingIndex ? itemViews(item, pendingIndex).history : !isWorkspaceRoot(item);
+  const kind = DETAILS_KINDS[item.itemType === 'directory' || item.itemType === 'symlink' ? item.itemType : 'file'];
 
   const properties: Property[] = isFile
     ? [
@@ -89,8 +99,8 @@ export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu,
 
   return (
     <DetailsPanel
-      icon={item.itemType === 'directory' ? <Folder /> : item.itemType === 'symlink' ? <FileSymlink /> : <File />}
-      kind={[item.itemType === 'directory' ? 'Folder' : item.itemType === 'symlink' ? 'Link' : 'File', size].filter(Boolean).join(' · ')}
+      icon={kind.icon}
+      kind={[kind.noun, size].filter(Boolean).join(' · ')}
       heading={
         <>
           <ItemBreadcrumb path={item.path} onSelectFolder={onSelectFolder} />
@@ -119,8 +129,7 @@ export function ItemDetailsPane({ workspacePath, item, pendingIndex, lock, menu,
         </>
       }
       primaryAction={
-        hasRevisions &&
-        item.path !== '' && (
+        showsHistory && (
           <Button
             size="small"
             variant="ghost"

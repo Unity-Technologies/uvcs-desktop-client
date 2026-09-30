@@ -1,6 +1,5 @@
 import { FileDiff, FilePlus, FolderPlus, FolderTree, History, Lock, ScanText, Search, TextCursorInput, Trash2 } from 'lucide-react';
 import { useMemo } from 'react';
-import { canAnnotate } from '@shared/domain/annotate';
 import type { TreeItem } from '@shared/domain/explorer';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { navigation } from '../../app/navigation/navigationStore';
@@ -8,7 +7,7 @@ import { prompt } from '../../ui/dialog/prompt';
 import { otherFileView } from '../annotate/fileView';
 import { FILE_SHORTCUTS } from './fileMenu';
 import { createItem, deleteItems, renameItem, targetDirectoryFor } from './fileOperations';
-import { hasRevisionsToShow } from './fileMenuTargets';
+import { itemViews, type ItemViews } from './fileMenuTargets';
 import type { PendingChangesIndex } from './itemStatus';
 import { isWorkspaceRoot } from './workspaceRoot';
 import { useFilesViewStore } from './filesViewStore';
@@ -17,6 +16,8 @@ import type { PendingLocks } from '../pendingChanges/locks/pendingLocks';
 import { hotkey } from '../../lib/shortcutRegistry';
 
 export const GO_TO_FILE_SHORTCUT = hotkey('goToFile');
+
+const NO_VIEWS: ItemViews = { history: false, annotate: false, changes: false };
 
 async function browseRepositoryAtChangeset(): Promise<void> {
   const answer = await prompt({ title: 'Browse repository', label: 'Changeset number', confirmLabel: 'Browse' });
@@ -35,10 +36,9 @@ export function useFileCommands(
   const commands = useMemo<Command[]>(() => {
     const single = selected.length === 1 ? selected[0]! : undefined;
     const lock = single && locks.get(single.path);
-    const isControlledFile = Boolean(single && !single.isPrivate && single.itemType !== 'directory');
+    const views = single ? itemViews(single, pendingChanges) : NO_VIEWS;
     const directory = targetDirectoryFor(single);
     const hasRoot = selected.some(isWorkspaceRoot);
-    const hasRevisions = Boolean(single && hasRevisionsToShow(single, pendingChanges));
 
     return [
       { id: 'files.goTo', group: 'Files', label: 'Go to file…', icon: Search, shortcut: GO_TO_FILE_SHORTCUT, run: () => onGoToFile() },
@@ -89,8 +89,8 @@ export function useFileCommands(
         label: 'View history of selected item',
         icon: History,
         shortcut: FILE_SHORTCUTS.history,
-        disabled: !single || !hasRevisions || hasRoot,
-        run: () => single && hasRevisions && !hasRoot && navigation.openPage({ kind: 'history', path: single.path }),
+        disabled: !views.history,
+        run: () => single && views.history && navigation.openPage({ kind: 'history', path: single.path }),
       },
       {
         id: 'files.annotate',
@@ -98,10 +98,10 @@ export function useFileCommands(
         label: 'Annotate selected file, or back to its diff',
         icon: ScanText,
         shortcut: FILE_SHORTCUTS.annotate,
-        disabled: !single || !hasRevisions || !canAnnotate(single.itemType),
+        disabled: !views.annotate,
         // The pane's "Diff | Annotate": the file annotated, or back to its diff.
         run: () => {
-          if (!single || !hasRevisions || !canAnnotate(single.itemType)) return;
+          if (!views.annotate) return;
           const view = useFilesViewStore.getState();
           view.setFileView(otherFileView(view.fileView));
         },
@@ -112,7 +112,7 @@ export function useFileCommands(
         label: 'Show changes of selected file',
         icon: FileDiff,
         shortcut: FILE_SHORTCUTS.showChanges,
-        disabled: !isControlledFile,
+        disabled: !views.changes,
         run: () => useFilesViewStore.getState().setFileView('diff'),
       },
       {
