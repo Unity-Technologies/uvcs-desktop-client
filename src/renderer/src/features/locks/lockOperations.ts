@@ -1,6 +1,7 @@
 import type { Lock } from '@shared/domain/lock';
 import { api } from '../../api/client';
-import { runAction } from '../../app/operations/runOperation';
+import { runVoidAction } from '../../app/operations/runOperation';
+import { isAffectedByLocks } from '../../app/refresh/refreshScopes';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 import { lockSubject } from './lockSubject';
@@ -12,10 +13,7 @@ export function isReleasable(lock: Lock): boolean {
 
 /** Releases the locks so others can check the items out; the lock stays retained until the change reaches its branch. */
 export async function releaseLocks(workspacePath: string, locks: Lock[]): Promise<void> {
-  const released = await runAction(workspacePath, "Couldn't release the lock", async () => {
-    await api.locks.unlock(workspacePath, locks, { remove: false });
-    return true;
-  });
+  const released = await runVoidAction(workspacePath, "Couldn't release the lock", () => api.locks.unlock(workspacePath, locks, { remove: false }), isAffectedByLocks);
   if (released) toast.success(`Released ${lockSubject(locks)}`);
 }
 
@@ -29,9 +27,6 @@ export async function removeLocks(workspacePath: string, locks: Lock[]): Promise
   });
   if (!confirmed) return;
 
-  const removed = await runAction(workspacePath, "Couldn't remove the lock", async () => {
-    await api.locks.unlock(workspacePath, locks, { remove: true });
-    return true;
-  });
+  const removed = await runVoidAction(workspacePath, "Couldn't remove the lock", () => api.locks.unlock(workspacePath, locks, { remove: true }), isAffectedByLocks);
   if (removed) toast.success(`Removed ${lockSubject(locks)}`);
 }

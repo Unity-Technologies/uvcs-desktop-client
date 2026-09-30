@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction } from '../../app/operations/runOperation';
+import { isAffectedByCodeReviews } from '../../app/refresh/refreshScopes';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
 import { openDialog } from '../../ui/dialog/dialogStore';
@@ -41,8 +42,11 @@ function CreateCodeReviewDialog({ workspacePath, initialTarget, onClose, onCreat
   const create = async (): Promise<void> => {
     if (!isValid) return;
     setCreating(true);
-    const reviewId = await runAction(workspacePath, "Couldn't create the code review", () =>
-      api.codeReviews.create(workspacePath, { targetSpec, title: title.trim(), assignee: assignee.trim() || undefined }),
+    const reviewId = await runAction(
+      workspacePath,
+      "Couldn't create the code review",
+      () => api.codeReviews.create(workspacePath, { targetSpec, title: title.trim(), assignee: assignee.trim() || undefined }),
+      isAffectedByCodeReviews,
     );
     setCreating(false);
     if (reviewId === undefined) return;
