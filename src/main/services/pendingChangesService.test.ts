@@ -54,23 +54,6 @@ describe('pending changes list', () => {
     ]);
     expect(snapshot.changes.map((change) => [change.path, change.kinds])).toEqual([['src/player.cs', ['changed']]]);
   });
-
-  it('asks cm for each kind of change the filter shows', async () => {
-    const { service, lines } = pendingChanges({ status: STATUS_XML });
-
-    await service.list(WORKSPACE, {
-      detectLocalMoves: true,
-      moveSimilarityPercent: 80,
-      showPrivate: true,
-      showIgnored: true,
-      showCloaked: true,
-      showHiddenChanged: true,
-    });
-
-    expect(lines()).toEqual([
-      'status --xml --iscochanged --changelists --controlledchanged --changed --localdeleted --localmoved --percentofsimilarity=80 --private --ignored --cloaked --hiddenchanged',
-    ]);
-  });
 });
 
 describe('checkin', () => {

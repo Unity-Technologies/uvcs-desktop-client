@@ -13,6 +13,7 @@ import type {
 import { checkinArgs } from '../cm/checkinArgs';
 import { readCheckinOutput } from '../cm/checkinOutput';
 import { explainLockedItems } from '../cm/lockedItems';
+import { pendingChangesStatusArgs } from '../cm/pendingChangesStatusArgs';
 import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readCheckinProgress } from '../cm/progress/checkinProgress';
 import { onLinksThemselves } from '../cm/symlinkArgs';
@@ -35,10 +36,7 @@ export function createPendingChangesService({ cm, operations }: ServiceContext, 
   const shelveAwayDependencies = { cm, records: switchShelves, leftChanges, backupsRoot: join(app.getPath('userData'), 'shelve-backups') };
 
   async function list(workspacePath: string, filter: PendingChangesFilter): Promise<PendingChangesSnapshot> {
-    const xml = await cm.query(['status', '--xml', '--iscochanged', '--changelists', ...searchTypes(filter)], {
-      cwd: workspacePath,
-    });
-    return parsePendingChanges(xml);
+    return parsePendingChanges(await cm.query(pendingChangesStatusArgs(filter), { cwd: workspacePath }));
   }
 
   function checkin(workspacePath: string, request: CheckinRequest, operationId: string): Promise<CheckinResult> {
@@ -144,19 +142,6 @@ export function createPendingChangesService({ cm, operations }: ServiceContext, 
     deleteChangelist,
     moveToChangelist,
   };
-}
-
-function searchTypes(filter: PendingChangesFilter): string[] {
-  return [
-    '--controlledchanged',
-    '--changed',
-    '--localdeleted',
-    ...(filter.detectLocalMoves ? ['--localmoved', `--percentofsimilarity=${filter.moveSimilarityPercent}`] : []),
-    ...(filter.showPrivate ? ['--private'] : []),
-    ...(filter.showIgnored ? ['--ignored'] : []),
-    ...(filter.showCloaked ? ['--cloaked'] : []),
-    ...(filter.showHiddenChanged ? ['--hiddenchanged'] : []),
-  ];
 }
 
 function absolutePaths(workspacePath: string, relativePaths: string[]): string[] {
