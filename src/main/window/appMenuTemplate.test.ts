@@ -65,7 +65,14 @@ describe('appMenuTemplate', () => {
 
   it('creates and opens workspaces from File, and leaves updating one to the incoming chip', () => {
     const ids = itemsOf('darwin', 'File').map((item) => item.id).filter(Boolean);
-    expect(ids).toEqual(['app.newWindow', 'workspace.newForTask', 'workspace.open', 'workspace.openTerminal']);
+    expect(ids).toEqual(['app.newWindow', 'workspace.newForTask', 'workspace.open', 'workspace.reveal', 'workspace.openTerminal']);
+  });
+
+  it("reveals the workspace from File in each OS's file manager", () => {
+    const reveal = (platform: NodeJS.Platform) => itemsOf(platform, 'File').find((item) => item.id === 'workspace.reveal')?.label;
+    expect(reveal('darwin')).toBe('Reveal in Finder');
+    expect(reveal('win32')).toBe('Show in Explorer');
+    expect(reveal('linux')).toBe('Show in file manager');
   });
 
   it("offers the workspace's branch work in a Branch menu, with the keys the renderer binds", () => {
