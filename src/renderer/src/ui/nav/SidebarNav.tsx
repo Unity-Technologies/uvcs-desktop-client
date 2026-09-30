@@ -3,14 +3,6 @@ import { navBadgeText } from './navBadgeText';
 import { navItemTip } from './navItemTip';
 import styles from './SidebarNav.module.css';
 
-/**
- * Wide enough for the longest one-word labels on one line in every OS's UI font (its tiles leave them 66px:
- * "Changesets" takes 62px in San Francisco, 59px in Arial-wide fonts such as Segoe UI, 64px in Verdana-wide ones such as
- * DejaVu Sans), and for the macOS window buttons, which
- * sit over the rail's top.
- */
-const RAIL_WIDTH = 80;
-
 const RailContext = createContext(false);
 
 /** Whether the sidebar around shows as its rail: each item a tile, its icon over its label in small type. */
@@ -29,10 +21,10 @@ interface SidebarProps {
   titleBarStart?: ReactNode;
 }
 
-/** The column that holds an app sidebar: a draggable title-bar area, then the content. */
+/** The column that holds an app sidebar: a draggable title-bar area, then the content. The rail's width is its CSS's. */
 export function Sidebar({ children, width = 216, rail = false, joinsTopBar = false, titleBarStart }: SidebarProps) {
   return (
-    <nav className={styles.sidebar} data-rail={rail} style={{ width: rail ? RAIL_WIDTH : width }}>
+    <nav className={styles.sidebar} data-rail={rail} style={{ width: rail ? undefined : width }}>
       <div className={styles.dragRegion} data-joins-top-bar={joinsTopBar}>
         {titleBarStart}
       </div>
