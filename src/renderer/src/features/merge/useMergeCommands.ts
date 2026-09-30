@@ -1,12 +1,13 @@
 import { Archive, CherryIcon, GitMerge, GitPullRequestArrow, Undo2 } from 'lucide-react';
 import { useMemo } from 'react';
+import { spec } from '@shared/domain/specs';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { hotkey } from '../../lib/shortcutRegistry';
 import { prompt } from '../../ui/dialog/prompt';
-import { openMerge } from './mergeOperations';
 import { pickBranch } from '../branches/BranchPickerDialog';
 import { applyShelve } from '../shelves/shelveOperations';
-import { hotkey } from '../../lib/shortcutRegistry';
+import { openMerge } from './mergeOperations';
 
 /** Palette commands to start any kind of merge. */
 export function useMergeCommands(): void {
@@ -24,7 +25,7 @@ export function useMergeCommands(): void {
         shortcut: hotkey('mergeFromBranch'),
         run: async () => {
           const branch = await pickBranch({ title: 'Merge from branch', exclude: currentBranch });
-          if (branch) openMerge({ kind: 'merge', sourceSpec: `br:${branch}` });
+          if (branch) openMerge({ kind: 'merge', sourceSpec: spec.branch(branch) });
         },
       },
       {
@@ -35,7 +36,7 @@ export function useMergeCommands(): void {
         disabled: !currentBranch,
         run: async () => {
           const destination = await pickBranch({ title: `Merge ${currentBranch} into`, exclude: currentBranch });
-          if (destination) openMerge({ kind: 'merge', sourceSpec: `br:${currentBranch}`, destinationBranch: destination });
+          if (currentBranch && destination) openMerge({ kind: 'merge', sourceSpec: spec.branch(currentBranch), destinationBranch: destination });
         },
       },
       {
@@ -45,7 +46,7 @@ export function useMergeCommands(): void {
         icon: CherryIcon,
         run: async () => {
           const changeset = await askChangeset('Cherry pick changeset', 'Cherry pick');
-          if (changeset) openMerge({ kind: 'cherryPick', sourceSpec: `cs:${changeset}` });
+          if (changeset) openMerge({ kind: 'cherryPick', sourceSpec: spec.changeset(changeset) });
         },
       },
       {
@@ -67,7 +68,7 @@ export function useMergeCommands(): void {
         icon: Undo2,
         run: async () => {
           const changeset = await askChangeset('Undo the changes of a changeset', 'Preview');
-          if (changeset) openMerge({ kind: 'subtractive', sourceSpec: `cs:${changeset}` });
+          if (changeset) openMerge({ kind: 'subtractive', sourceSpec: spec.changeset(changeset) });
         },
       },
     ],

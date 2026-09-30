@@ -37,7 +37,7 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
   const currentBranch = workspace?.selector.kind === 'branch' ? workspace.selector.name : undefined;
   const [destination, setDestination] = useState(branch.parent);
   // A merge whose destination moved meanwhile leaves its changeset beside the new head; that changeset is merged next.
-  const [sourceSpec, setSourceSpec] = useState(spec.branch(branch.name));
+  const [nextChangeset, setNextChangeset] = useState<number | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [comment, setComment] = useState(() => defaultMergeComment(branch));
   const [markReviewed, setMarkReviewed] = useState(false);
@@ -45,19 +45,20 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
   const [conflictPath, setConflictPath] = useState<ConflictPath>('intoTask');
   const [busy, setBusy] = useState(false);
 
+  const fromTaskBranch = nextChangeset === null;
+  const sourceSpec = fromTaskBranch ? spec.branch(branch.name) : spec.changeset(nextChangeset);
   const request = mergeTaskRequest(sourceSpec, destination);
   const preview = useMergeTaskPreview(workspacePath, request);
   const review = useReviewsByBranch().data?.get(branch.id);
-  const changesetCount = useChangesetsToMerge(workspacePath, branch.name, sourceSpec, preview.data);
+  const changesetCount = useChangesetsToMerge(workspacePath, branch.name, fromTaskBranch, preview.data);
   const outcome = preview.data && mergeTaskOutcome(preview.data);
-  const fromTaskBranch = sourceSpec === spec.branch(branch.name);
   const path: ConflictPath = fromTaskBranch ? conflictPath : 'onDestination';
 
   const changeDestination = async (): Promise<void> => {
     const picked = await pickBranch({ title: `Merge ${branch.name} to…`, exclude: branch.name });
     if (!picked) return;
     setDestination(picked);
-    setSourceSpec(spec.branch(branch.name));
+    setNextChangeset(null);
     setNotice(null);
   };
 
@@ -82,7 +83,7 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
         onClose();
         return;
       }
-      setSourceSpec(`cs:${result.changesetId}`);
+      setNextChangeset(result.changesetId ?? null);
       setNotice(destinationMovedExplanation(result.changesetId, destination));
     } finally {
       setBusy(false);
@@ -99,7 +100,7 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
   const openFileDiff = (path: string): void => {
     onClose();
     if (fromTaskBranch) navigation.openPage({ kind: 'diff', title: `Branch ${branch.name}`, target: { kind: 'branch', branch: branch.name }, focusPath: path });
-    else openChangesetDiff({ id: Number(sourceSpec.slice('cs:'.length)) }, path);
+    else openChangesetDiff({ id: nextChangeset }, path);
   };
 
   const keepOneSideOnServer = (): void => {
