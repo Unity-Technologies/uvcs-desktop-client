@@ -17,7 +17,7 @@ vi.mock('../branches/branchOperations', () => ({
 vi.mock('../merge/mergeOperations', () => ({ openMerge: (request: unknown) => recorded.openedMerges.push(request) }));
 
 import type { MergeRequest } from '@shared/domain/merge';
-import { shownToasts } from '../../testing/operationOutcome';
+import { shownToasts, watchRefreshes } from '../../testing/operationOutcome';
 import { useFinishedTasksStore } from './finishedTask';
 import { mergeDestinationIntoTask, mergeTaskOnServer, resolveOnDestination } from './mergeTaskOperations';
 
@@ -51,6 +51,15 @@ describe('finishing a task on the server', () => {
     fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
     await mergeTaskOnServer(ws, request, { ...options, review: undefined, hideBranch: false });
     expect(writes().map(([method]) => method)).toEqual(['merge.run']);
+  });
+
+  it('refreshes what a new changeset on the server changes, never the workspace it leaves untouched', async () => {
+    fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
+    const refreshed = watchRefreshes(ws);
+
+    await mergeTaskOnServer(ws, request, { ...options, review: undefined });
+
+    expect(refreshed()).toEqual(['branchExplorer', 'branches', 'changesets', 'history', 'incoming', 'locks']);
   });
 
   it('stops after the merge when the destination moved meanwhile, for the second merge to finish it', async () => {

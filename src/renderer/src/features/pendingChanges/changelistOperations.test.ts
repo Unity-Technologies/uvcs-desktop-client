@@ -94,6 +94,29 @@ describe('changelist operations', () => {
     const refreshed = watchRefreshes(ws);
     await deleteChangelist(ws, list);
     expect(fakeApi.argsOf('pendingChanges.deleteChangelist')).toEqual([[ws, 'UI']]);
-    expect(refreshed()).toContain('pendingChanges');
+    expect(refreshed()).toEqual(['info', 'pendingChanges']);
+  });
+
+  it('refreshes only the pending changes when changelists change: they live in the workspace, not on the server', async () => {
+    fakeApi.answer('pendingChanges.createChangelist', () => undefined);
+    fakeApi.answer('pendingChanges.editChangelist', () => undefined);
+    fakeApi.answer('pendingChanges.moveToChangelist', () => undefined);
+    const refreshed = watchRefreshes(ws);
+
+    answerPrompts('Refactor', 'Screens');
+    await moveToNewChangelist(ws, [change('c.ts', ['added'])]);
+    await renameChangelist(ws, list);
+
+    expect(refreshed()).toEqual(['info', 'pendingChanges']);
+  });
+
+  it('refreshes everything a checkout touches when moving changes checks some out first', async () => {
+    fakeApi.answer('pendingChanges.checkout', () => undefined);
+    fakeApi.answer('pendingChanges.moveToChangelist', () => undefined);
+    const refreshed = watchRefreshes(ws);
+
+    await moveToChangelist(ws, 'UI', [change('a.ts', ['changed'])]);
+
+    expect(refreshed()).toContain('locks');
   });
 });
