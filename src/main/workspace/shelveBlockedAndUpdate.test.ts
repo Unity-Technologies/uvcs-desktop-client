@@ -122,6 +122,17 @@ describe('shelveBlockedAndUpdate', () => {
     expect(await readFile(join(workspacePath, 'src', 'a.txt'), 'utf8')).toBe('combined\n');
   });
 
+  it('asks the server what came in once: the files to merge are the ones it read before shelving', async () => {
+    const { deps, lines } = blockedWorkspace(workspacePath, { alsoIncoming: diffRecord('C', 'src/a.txt', { base: 1, revision: 2 }) });
+
+    await run(deps, { 'src/a.txt': { choice: 'text', text: 'combined\n' } });
+
+    expect(lines().filter((line) => line.startsWith('find changeset') || line.startsWith('diff cs:'))).toEqual([
+      expect.stringMatching(/^find changeset /),
+      expect.stringMatching(/^diff cs:1 cs:2 /),
+    ]);
+  });
+
   it('puts the files back by merging the shelve when the update fails', async () => {
     const { deps, lines, finish } = blockedWorkspace(workspacePath, { pending: ['src/old.txt'], failUpdate: true });
 
