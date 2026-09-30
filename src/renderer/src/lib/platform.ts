@@ -1,6 +1,6 @@
 import { windowChrome } from '@shared/windowChrome';
 import { programPlaceholder } from './programPlaceholder';
-import { openFolderLabel, revealLabel } from './revealLabel';
+import { openFolderLabel, revealLabel } from '@shared/revealLabel';
 import { trashName } from './trashName';
 
 export const isMac = window.uvcs.platform === 'darwin';
