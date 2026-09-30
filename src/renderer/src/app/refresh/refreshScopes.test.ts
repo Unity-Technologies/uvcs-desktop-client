@@ -9,6 +9,7 @@ import {
   isAffectedByLabels,
   isAffectedByNewChangesets,
   isAffectedByCheckinOrUpdate,
+  isAffectedByPendingChangeEdit,
   isAffectedByShelveApplied,
   isAffectedByShelveDeletion,
   isAffectedByShelving,
@@ -104,6 +105,15 @@ describe('refresh scopes', () => {
     expect(isAffectedByShelveApplied(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(true);
     expect(isAffectedByShelveApplied(key('changesets', {}))).toBe(false);
     expect(isAffectedByShelveApplied(key('branchExplorer', {}))).toBe(false);
+  });
+
+  it('refreshes the workspace and its locks, not the repository, when files are added, checked out or undone', () => {
+    expect(isAffectedByPendingChangeEdit(key('pendingChanges'))).toBe(true);
+    expect(isAffectedByPendingChangeEdit(key('info'))).toBe(true);
+    expect(isAffectedByPendingChangeEdit(key('explorer', 'allPaths'))).toBe(true);
+    expect(isAffectedByPendingChangeEdit(key('locks', {}))).toBe(true);
+    expect(isAffectedByPendingChangeEdit(key('shelves', { owners: ['me'] }))).toBe(false);
+    expect(isAffectedByPendingChangeEdit(key('history', 'a.txt'))).toBe(false);
   });
 
   it('refreshes the branch lists and the Branch Explorer when a branch is created, deleted or hidden', () => {

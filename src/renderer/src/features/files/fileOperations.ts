@@ -1,6 +1,7 @@
 import type { RevisionType, TreeItem } from '@shared/domain/explorer';
 import { api } from '../../api/client';
 import { runAction, runRead } from '../../app/operations/runOperation';
+import { isAffectedByPendingChangeEdit } from '../../app/refresh/refreshScopes';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { absolutePath, deletePrivateFiles, fileName } from '../pendingChanges/pendingChangeOperations';
@@ -25,12 +26,13 @@ export function addItems(workspacePath: string, items: TreeItem[]): Promise<unkn
   return runAction(workspacePath, "Couldn't add the items", async () => {
     if (directories.length > 0) await api.explorer.addRecursive(workspacePath, directories);
     if (files.length > 0) await api.pendingChanges.add(workspacePath, files);
-  });
+  }, isAffectedByPendingChangeEdit);
 }
 
 export function checkoutItems(workspacePath: string, items: TreeItem[]): Promise<unknown> {
   return runAction(workspacePath, "Couldn't check out the items", () =>
     api.pendingChanges.checkout(workspacePath, items.map((item) => item.path)),
+    isAffectedByPendingChangeEdit,
   );
 }
 
@@ -49,7 +51,7 @@ export async function deleteItems(workspacePath: string, items: TreeItem[]): Pro
   });
   if (!confirmed) return;
 
-  await runAction(workspacePath, "Couldn't delete the items", () => api.pendingChanges.remove(workspacePath, controlled.map((item) => item.path)));
+  await runAction(workspacePath, "Couldn't delete the items", () => api.pendingChanges.remove(workspacePath, controlled.map((item) => item.path)), isAffectedByPendingChangeEdit);
 }
 
 export async function renameItem(workspacePath: string, item: TreeItem): Promise<void> {

@@ -2,7 +2,7 @@ import type { FilterRuleList, PendingChange } from '@shared/domain/pendingChange
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
-import { isAffectedByShelving } from '../../app/refresh/refreshScopes';
+import { isAffectedByPendingChangeEdit, isAffectedByShelving } from '../../app/refresh/refreshScopes';
 import { TRASH_NAME } from '../../lib/platform';
 import { formatCount, pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
@@ -42,7 +42,7 @@ export async function undoChanges(workspacePath: string, changes: PendingChange[
     if (backupShelveId === undefined) return;
   }
 
-  const undone = await runVoidAction(workspacePath, "Couldn't undo the changes", () => api.pendingChanges.undo(workspacePath, paths));
+  const undone = await runVoidAction(workspacePath, "Couldn't undo the changes", () => api.pendingChanges.undo(workspacePath, paths), isAffectedByPendingChangeEdit);
   if (!undone) return;
 
   const title = `Undid ${pluralize(controlled.length, 'change')}`;
@@ -77,12 +77,13 @@ export async function deletePrivateFiles(workspacePath: string, changes: Pick<Pe
 }
 
 export function addToSourceControl(workspacePath: string, changes: PendingChange[]): Promise<void | undefined> {
-  return runAction(workspacePath, "Couldn't add the files", () => api.pendingChanges.add(workspacePath, changes.map((change) => change.path)));
+  return runAction(workspacePath, "Couldn't add the files", () => api.pendingChanges.add(workspacePath, changes.map((change) => change.path)), isAffectedByPendingChangeEdit);
 }
 
 export function checkout(workspacePath: string, changes: PendingChange[]): Promise<void | undefined> {
   return runAction(workspacePath, "Couldn't check out the files", () =>
     api.pendingChanges.checkout(workspacePath, changes.map((change) => change.path)),
+    isAffectedByPendingChangeEdit,
   );
 }
 

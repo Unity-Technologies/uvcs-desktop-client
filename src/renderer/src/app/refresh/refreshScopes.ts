@@ -119,7 +119,12 @@ export function isAffectedByShelvingAway(key: QueryKey): boolean {
  * locks its checkouts take, the lists of shelves and the left changes that offered it.
  */
 export function isAffectedByShelveApplied(key: QueryKey): boolean {
-  return isAffectedByWorkspaceEdit(key) || isAffectedByLocks(key) || isAffectedByShelveDeletion(key);
+  return isAffectedByPendingChangeEdit(key) || isAffectedByShelveDeletion(key);
+}
+
+/** Files were added, checked out, removed or undone: the workspace, and the locks a checkout takes or an undo lets go. */
+export function isAffectedByPendingChangeEdit(key: QueryKey): boolean {
+  return isAffectedByWorkspaceEdit(key) || isAffectedByLocks(key);
 }
 
 /** The workspace's files, the items that came or went, and what is checked out, added or moved. */
