@@ -149,6 +149,18 @@ when something a user or another layer relies on changes; one that breaks on eve
 Components (`.tsx`) aren't unit-tested (vitest runs `*.test.ts` only): keep their logic in pure `.ts` modules or hooks
 built on them, and verify what's on screen with Playwright.
 
+**Super fast.** The number of tests doesn't matter; the time they take does (today about 2,400 tests in 5 s).
+The suite runs after every change, so it must take seconds, not minutes. A test never needs UVCS infrastructure: no
+`cm` installation, server, account, network or real workspace.
+
+- **Test each layer with the input it takes, not the layer below.** A view that shows 10 branches gets 10 branches
+  built in the test; it never asks a server for them.
+- **`cm` output is synthetic**: to test a parser, write the output as `cm` prints it (`--xml`, `--format` records,
+  `CommandResult` lines) as a string in the test; never run `cm`. Code that runs `cm` gets a fake `CmClient` that
+  answers from such strings, records the commands it was asked and fails on any other (`fakeCm` in
+  `leftChanges.test.ts`). The `cm shell` protocol itself is tested against `main/cm/testing/fakeCmShell`, a script
+  that answers like `cm shell`.
+
 **Never flaky.** A test that sometimes fails teaches everyone to ignore failures. Fix its cause at once; never retry,
 skip or loosen it.
 
@@ -158,8 +170,6 @@ skip or loosen it.
 - **Isolated**: each test builds its own state (new instances, its own temp folder under `os.tmpdir()`, which the run
   already points at a private folder: `vitest.tempDirectory.ts`), no mutable module state, mocks restored after each
   test. Tests pass alone, in any order, and in parallel.
-- **No network, no server**: never a real `cm` server or account. Services get a fake `CmClient`; the `cm shell`
-  protocol itself is tested against `main/cm/testing/fakeCmShell`, a script that answers like `cm shell`.
 - **Same on every OS**: build paths with `path.join`, don't assume `/` or `\n`, sort before comparing what has no
   order.
 - **Precise assertions**: compare the result that matters (`toEqual` on the value), not snapshots of large objects.
