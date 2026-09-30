@@ -1,5 +1,5 @@
 import type { Account } from '@shared/domain/account';
-import { cloudOrganization } from '../../lib/servers';
+import { cloudOrganization, isCloudServer } from '../../lib/servers';
 
 const sameName = (a: string, b: string): boolean => a.toLowerCase() === b.toLowerCase();
 
@@ -37,15 +37,45 @@ export function organizationName(server: string, account?: Account): string | nu
 
 const DASHBOARD_ORGANIZATIONS = 'https://cloud.unity.com/home/organizations';
 
+const genesisIdOf = (server: string, account?: Account): string | undefined => organizationsOf(server, account).find(isGenesisId);
+
+/** Where the dashboard lists Unity Version Control organizations: under the genesis organization when known. */
+const dashboardOrganizations = (genesisId: string | undefined): string =>
+  genesisId
+    ? `${DASHBOARD_ORGANIZATIONS}/${genesisId}/projects/default/plastic-scm/organizations`
+    : `${DASHBOARD_ORGANIZATIONS}/default/plastic-scm/organizations`;
+
 /**
  * The Unity Cloud dashboard, built like the official client does (UnityUrl.UnityDashboard): straight into the
  * organization when its genesis id is known, otherwise the dashboard picks it.
  */
 export function cloudDashboardUrl(server: string, account?: Account): string {
-  const genesisId = organizationsOf(server, account).find(isGenesisId);
-  return genesisId
-    ? `${DASHBOARD_ORGANIZATIONS}/${genesisId}/projects/default/plastic-scm/organizations`
-    : `${DASHBOARD_ORGANIZATIONS}/default/plastic-scm/organizations`;
+  return dashboardOrganizations(genesisIdOf(server, account));
+}
+
+/** The port every on-premises server's web admin listens on, as the official client assumes. */
+const WEB_ADMIN_PORT = 7178;
+
+/** `ssl://host:8088` → `host`, `[::1]:8087` → `[::1]`: the host alone, for the server's web admin. */
+function serverHost(server: string): string {
+  const address = server.replace(/^[a-z]+:\/\//i, '');
+  if (address.startsWith('[')) return address.slice(0, address.indexOf(']') + 1);
+  return address.split(':')[0];
+}
+
+/**
+ * The page where the server's lock rules are edited (which files lock on checkout, and the branches they don't lock
+ * on), as the official client opens it (OpenConfigureLockRulesPage): the organization's page in the Unity Cloud
+ * dashboard, or an on-premises server's web admin. No `cm` command reads or writes lock rules, so the app offers the
+ * page rather than a dialog of its own. Null where there are none to edit: the local server, which only this
+ * computer uses.
+ */
+export function lockRulesUrl(server: string, account?: Account): string | null {
+  if (server === 'local') return null;
+  if (!isCloudServer(server)) return `http://${serverHost(server)}:${WEB_ADMIN_PORT}/configuration/lock-rules`;
+  const genesisId = genesisIdOf(server, account);
+  const organization = genesisId ?? cloudOrganization(server);
+  return organization ? `${dashboardOrganizations(genesisId)}/${encodeURIComponent(organization)}/lock-rules` : null;
 }
 
 const SIGN_IN_METHODS: Record<string, string> = {
