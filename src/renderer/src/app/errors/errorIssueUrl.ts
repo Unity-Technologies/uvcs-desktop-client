@@ -1,7 +1,7 @@
-import type { AppInfo } from '@shared/domain/appUpdate';
 import type { FailedCommand } from '@shared/ipc';
 import { bugReportUrl } from '@shared/issueForms';
 import { aboutDetails } from '../about/aboutDetails';
+import type { ReportingAppInfo } from '../about/aboutIssueUrls';
 import { errorReport } from './errorReport';
 
 export interface ReportedError {
@@ -10,8 +10,6 @@ export interface ReportedError {
   message: string;
   command: FailedCommand;
 }
-
-type ReportingAppInfo = Parameters<typeof aboutDetails>[0] & Pick<AppInfo, 'issuesUrl'>;
 
 /**
  * The bug report form on the error the dialog shows: titled with what failed, with the app's details (what About ▸
