@@ -109,7 +109,10 @@ export class WorkspaceWatcher {
 
   private onEvent(event: string, relativePath: string | undefined): void {
     if (this.stopped) return;
-    if (relativePath === 'ignore.conf') this.loadIgnoreRules();
+    if (relativePath === 'ignore.conf') {
+      this.loadIgnoreRules();
+      this.folderTree?.followSkipRule();
+    }
     const kind = classifyChange(relativePath, this.ignoreRules);
     if (!kind || this.causedByOwnWrite(relativePath)) return;
     this.batcher.add(workspaceChangeOf(kind, event, changedFolder(relativePath, this.platform)));

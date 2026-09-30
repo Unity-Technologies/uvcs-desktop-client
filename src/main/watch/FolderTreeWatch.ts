@@ -6,12 +6,15 @@ import { watchFolder, type FolderWatch, type WatchFolder } from './watchFolder';
  * A recursive watch made of one plain watch per folder, where `fs.watch` has no native recursion (Linux). Node's own
  * recursive mode there adds an inotify watch per file, not per folder, and loses a file for good once it's saved by
  * replacing it (most editors' safe save): a folder's watch reports its items by name, whatever happens to them.
- * New folders are watched as they appear and removed ones dropped; skipped folders (ignored ones) are never walked.
- * Past `maxFolders` the rest goes unwatched, and the tree is incomplete.
+ * New folders are watched as they appear and removed ones dropped; skipped folders (ignored ones) are never walked,
+ * and follow the rule as it changes (`followSkipRule`). Past `maxFolders` the rest goes unwatched, and the tree is
+ * incomplete.
  */
 export class FolderTreeWatch {
   /** By workspace-relative, `/`-separated folder (`''` for the root). */
   private readonly watches = new Map<string, FolderWatch>();
+  /** The folders met and skipped, so they are walked if the rule stops skipping them. */
+  private readonly skipped = new Set<string>();
   private complete = true;
   private closed = false;
 
@@ -33,6 +36,21 @@ export class FolderTreeWatch {
     this.closed = true;
     this.watches.forEach((watch) => watch.close());
     this.watches.clear();
+    this.skipped.clear();
+  }
+
+  /** What `skip` says changed (ignore.conf was edited): stops watching the folders it skips now, walks the ones it no longer does. */
+  followSkipRule(): void {
+    for (const folder of [...this.watches.keys()]) {
+      if (!folder || !this.watches.has(folder) || !this.skip(folder)) continue;
+      this.unwatch(folder);
+      this.skipped.add(folder);
+    }
+    for (const folder of [...this.skipped]) {
+      if (this.skip(folder)) continue;
+      this.skipped.delete(folder);
+      if (this.isFolder(folder)) this.watchTree(folder);
+    }
   }
 
   /** Level by level, so a tree past the limit still has its root, `.plastic` and upper folders watched. */
@@ -40,7 +58,11 @@ export class FolderTreeWatch {
     const pending = [top];
     for (let next = 0; next < pending.length && !this.closed; next++) {
       const folder = pending[next]!;
-      if (this.watches.has(folder) || (folder && this.skip(folder))) continue;
+      if (this.watches.has(folder)) continue;
+      if (folder && this.skip(folder)) {
+        this.skipped.add(folder);
+        continue;
+      }
       if (this.watches.size >= this.maxFolders || !this.watchFolder(folder)) {
         this.complete = false;
         continue;
@@ -70,8 +92,11 @@ export class FolderTreeWatch {
     else this.unwatch(path);
   }
 
-  /** Stops watching a folder gone (or moved) and everything that was under it. */
+  /** Stops watching a folder gone, moved or now skipped, and everything that was under it. */
   private unwatch(folder: string): void {
+    for (const skipped of this.skipped) {
+      if (isSameOrUnder(skipped, folder)) this.skipped.delete(skipped);
+    }
     // Folders are watched from the top down, so nothing under an unwatched path is watched: a file deleted or saved
     // by replacing it (every save, for most editors) looks at no other watch.
     if (!this.watches.has(folder)) return;
