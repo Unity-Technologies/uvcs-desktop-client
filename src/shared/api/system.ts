@@ -1,5 +1,12 @@
 import type { SetupProblem } from '../domain/setup';
 
+/** A folder being dragged over a window, read while the drag runs (`system.draggedFolder`). */
+export interface DraggedFolder {
+  path: string;
+  /** The folder is a workspace or inside one: it holds, or a folder above it holds, a `.plastic` folder. */
+  isWorkspace: boolean;
+}
+
 export interface SystemApi {
   /** Looks for `cm` again (it may have been installed meanwhile) and returns its version. */
   cmVersion(): Promise<string>;
@@ -13,6 +20,12 @@ export interface SystemApi {
   openExternal(url: string): Promise<void>;
   /** Moves files to the OS trash, so deleting private files can be undone. */
   moveToTrash(paths: string[]): Promise<void>;
+  /**
+   * The folder dragged over the window right now, so the drop overlay can say whether it opens or creates a workspace.
+   * Only macOS tells (its drag pasteboard); null on Windows and Linux, for a file, and when the drag can't be read. A
+   * guess for the overlay's words only: a drop decides on the dropped path. No `cm` call.
+   */
+  draggedFolder(): Promise<DraggedFolder | null>;
   pickDirectory(title: string, defaultPath?: string): Promise<string | null>;
   homeDirectory(): Promise<string>;
   cancelOperation(operationId: string): Promise<void>;

@@ -6,6 +6,7 @@ import { net, shell } from 'electron';
 import type { AppSettings } from '@shared/domain/settings';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { memorySettings } from '../settings/testing/memorySettings';
+import { readDraggedPath } from '../system/dragPasteboard';
 import { createSystemService } from './systemService';
 import { serviceContext } from './testing/serviceContext';
 
@@ -15,6 +16,8 @@ vi.mock('electron', () => ({
   net: { fetch: vi.fn() },
   shell: { trashItem: vi.fn(async () => undefined), openPath: vi.fn(async () => '') },
 }));
+// It would start osascript and read this Mac's drag pasteboard.
+vi.mock('../system/dragPasteboard', () => ({ readDraggedPath: vi.fn(async () => null) }));
 // It needs the app's windows, which only a running app has.
 vi.mock('../window/incomingNotification', () => ({ showIncomingNotification: vi.fn() }));
 
@@ -83,5 +86,24 @@ describe('gravatars', () => {
 
     expect(await service.gravatar('ana@unity.com', 32)).toBeNull();
     expect(net.fetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('the dragged folder', () => {
+  it('tells the overlay a workspace folder being dragged from its .plastic folder, without asking cm', async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'dragged-'));
+    await mkdir(join(workspace, '.plastic'));
+    vi.mocked(readDraggedPath).mockResolvedValueOnce(workspace);
+    const { service, commands } = system({});
+
+    expect(await service.draggedFolder()).toEqual({ path: workspace, isWorkspace: true });
+    expect(readDraggedPath).toHaveBeenCalledWith(process.platform);
+    expect(commands).toEqual([]);
+  });
+
+  it('is null when the drag can not be read', async () => {
+    vi.mocked(readDraggedPath).mockResolvedValueOnce(null);
+
+    expect(await system({}).service.draggedFolder()).toBeNull();
   });
 });

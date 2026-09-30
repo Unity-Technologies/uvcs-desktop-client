@@ -6,6 +6,8 @@ import type { SystemApi } from '@shared/api/system';
 import { checkSetup } from '../cm/setupCheck';
 import { outermostPaths } from '../files/pathContainment';
 import { callerId } from '../ipc/caller';
+import { readDraggedPath } from '../system/dragPasteboard';
+import { describeDraggedFolder } from '../system/draggedFolder';
 import { GravatarCache } from '../system/gravatar';
 import { openTerminal } from '../system/openTerminal';
 import { untilSucceeded } from '../system/untilSucceeded';
@@ -45,6 +47,7 @@ export function createSystemService({ cm, operations, windows, settings }: Servi
         if (existsSync(path)) await shell.trashItem(path);
       }
     },
+    draggedFolder: async () => describeDraggedFolder(await readDraggedPath(process.platform)),
     pickDirectory: async (title, defaultPath) => {
       const result = await dialog.showOpenDialog({ title, defaultPath, properties: ['openDirectory', 'createDirectory'] });
       return result.canceled ? null : (result.filePaths[0] ?? null);
