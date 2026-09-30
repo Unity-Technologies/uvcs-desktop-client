@@ -1,18 +1,17 @@
 import { House, Layers, Settings } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { AppMark } from '../../components/AppMark';
 import { ServerIcon } from '../../components/ServerIcon';
 import { describeServer } from '../../lib/servers';
 import { NavFooter, NavGroup, NavGroups, NavItem, Sidebar } from '../../ui/nav/SidebarNav';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { openSettingsDialog } from '../settings/SettingsDialog';
 import { useSidebarCollapsed } from '../shell/sidebarStore';
+import { AppBrand } from '../shell/AppBrand';
 import { AppMenuButton } from '../shell/AppMenuButton';
 import { SidebarToggleItem } from '../shell/SidebarToggleItem';
 import { useServers } from '../workspace/workspaceQueries';
 import { isSameSection, type HomeSection } from './homeSection';
 import { ServerMonogram } from './ServerMonogram';
-import styles from './Home.module.css';
 
 interface HomeSidebarProps {
   section: HomeSection;
@@ -37,11 +36,16 @@ export function HomeSidebar({ section, onSelect }: HomeSidebarProps) {
   );
 
   return (
-    <Sidebar width={232} rail={rail} titleBarStart={<AppMenuButton />}>
-      <div className={styles.brand} data-rail={rail}>
-        <AppMark size={28} />
-        <span className={styles.brandName}>Unity Version Control</span>
-      </div>
+    <Sidebar
+      width={256}
+      rail={rail}
+      titleBarStart={
+        <>
+          <AppMenuButton />
+          {!rail && <AppBrand named />}
+        </>
+      }
+    >
 
       <NavGroups>
         <NavGroup label="Workspaces">

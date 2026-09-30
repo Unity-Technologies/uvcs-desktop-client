@@ -6,6 +6,7 @@ import { VIEWS, type ViewDefinition } from '../navigation/viewRegistry';
 import { openSettingsDialog } from '../settings/SettingsDialog';
 import { useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
 import { useSidebarCollapsed } from './sidebarStore';
+import { AppBrand } from './AppBrand';
 import { AppMenuButton } from './AppMenuButton';
 import { SidebarToggleItem } from './SidebarToggleItem';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
@@ -19,7 +20,16 @@ export function Sidebar() {
   const rail = useSidebarCollapsed();
 
   return (
-    <SidebarColumn rail={rail} joinsTopBar titleBarStart={<AppMenuButton />}>
+    <SidebarColumn
+      rail={rail}
+      joinsTopBar
+      titleBarStart={
+        <>
+          <AppMenuButton />
+          {!rail && <AppBrand named={false} />}
+        </>
+      }
+    >
       <WorkspaceSwitcher currentPath={workspacePath}>
         <button
           className={styles.workspace}

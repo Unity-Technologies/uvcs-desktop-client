@@ -23,9 +23,9 @@
   -webkit-app-region: no-drag;
 }
 
-/* Under the desktop's own title bar (Linux) there are no traffic lights to make room for: the band only continues
-   the top bar where it joins it. */
-:global([data-chrome='native']) .dragRegion:not([data-joins-top-bar='true']) {
+/* Under the desktop's own title bar (Linux) there are no traffic lights to make room for: an empty band only
+   continues the top bar where it joins it. */
+:global([data-chrome='native']) .dragRegion:not([data-joins-top-bar='true']):empty {
   height: var(--space-2);
 }
 
@@ -232,4 +232,14 @@
   position: absolute;
   top: 6px;
   right: 4px;
+}
+
+/* macOS insets its traffic lights at the band's start (`titleBarOptions`: 16px in, three 12px buttons 8px apart): what
+   the band shows starts 6px after them, 74px from the window's edge. The band that joins the top bar starts at it. */
+:global([data-chrome='inset']) .dragRegion {
+  padding-left: calc(74px - var(--sidebar-inset));
+}
+
+:global([data-chrome='inset']) .dragRegion[data-joins-top-bar='true'] {
+  padding-left: 74px;
 }
