@@ -37,6 +37,9 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
   records it as a switch shelve record with `reason: 'shelve'`, undoes the changes and moves the files they added aside;
   a failure puts them back. The toast offers Undo (apply and delete). "Keep the changes here", under the comment, is the
   other way (a plain `cm shelveset create`), asked for each time: the panel goes back to checking in after a shelve.
+  The panel's shelve (`shelveFromPanel`) takes the files as they are on disk, as its check-in does
+  (`checkinFromPanel`); shelved away, the changes take the draft comment along, kept here they leave it for their
+  check-in.
 - **The list** is one `cm find shelve` by owner and date (`useMyShelves`, `SLOW_CHANGING_QUERY`), refreshed by shelve
   operations; the count comes from it. Typing filters it, and after three letters one bounded server search by comment
   (`useShelvesSearch`, `shelvesScope`) finds older ones. A row opens the shelve's diff, which shows its comment and Apply as the page's
