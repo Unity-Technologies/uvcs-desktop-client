@@ -4,7 +4,7 @@ import { guardLeaving } from '../../../app/navigation/leaveGuard';
 import { fileNameOf } from '../../../lib/text';
 import { toast } from '../../../ui/toast/toastStore';
 import type { EditorHandle } from './editorHandle';
-import { changedOnDisk, followsDisk, unsavedAfterEdit, unsavedAfterSave } from './fileBuffer';
+import { bufferAfterDiscard, bufferAfterEdit, bufferAfterRead, bufferAfterSave, changedOnDisk, openedBuffer, savedAsBase, type FileBufferState } from './fileBuffer';
 import { refreshFileViews, showFileText } from './fileText';
 import { askAboutUnsavedEdits } from './UnsavedEditsDialog';
 import type { DiffContents } from './useDiffContents';
@@ -41,26 +41,24 @@ interface FileBufferOptions {
  * save or discard them; should the diff go away without asking, they are saved, so no work is ever lost.
  */
 export function useFileBuffer({ workspacePath, contents, path, onMatchesBase }: FileBufferOptions): FileBuffer {
-  const [shown, setShown] = useState(contents);
-  // The file's text on disk as far as the edits go: what was read, then what was saved.
-  const [saved, setSaved] = useState(contents.right.text ?? '');
-  const [unsaved, setUnsaved] = useState<string | null>(null);
+  const [buffer, setBuffer] = useState(() => openedBuffer(contents));
   const editor = useRef<EditorHandle | null>(null);
-  const onDisk = contents.right.text ?? '';
 
   // The disk moved on: follow it, unless that would drop unsaved edits (it reached them when they were just saved).
-  if (contents !== shown && followsDisk(onDisk, unsaved)) {
-    setShown(contents);
-    setSaved(onDisk);
-    setUnsaved(null);
-  }
-  const diskMovedOn = changedOnDisk(onDisk, { saved, unsaved });
+  const read = bufferAfterRead(buffer, contents);
+  if (read !== buffer) setBuffer(read);
+  const { shown, unsaved } = buffer;
+  const diskMovedOn = changedOnDisk(contents.right.text ?? '', buffer);
 
-  const latest = useRef({ contents, shown, saved, unsaved });
-  latest.current = { contents, shown, saved, unsaved };
+  const latest = useRef({ contents, buffer });
+  latest.current = { contents, buffer };
+  const update = (next: FileBufferState): void => {
+    latest.current.buffer = next;
+    setBuffer(next);
+  };
 
   const save = async (): Promise<boolean> => {
-    const text = latest.current.unsaved;
+    const text = latest.current.buffer.unsaved;
     if (path === null || text === null) return true;
     try {
       await api.content.writeWorkspaceFile(workspacePath, path, text);
@@ -69,22 +67,18 @@ export function useFileBuffer({ workspacePath, contents, path, onMatchesBase }: 
       return false;
     }
     // Typing may have gone on while it was written: that stays unsaved.
-    latest.current.saved = text;
-    setSaved(text);
-    setUnsaved((current) => unsavedAfterSave(current, text));
-    latest.current.unsaved = unsavedAfterSave(latest.current.unsaved, text);
+    update(bufferAfterSave(latest.current.buffer, text));
     showFileText(workspacePath, path, text);
     void refreshFileViews(workspacePath);
-    if (contents.original.kind === 'workspaceBase' && text === contents.left.text) onMatchesBase?.();
+    if (savedAsBase(contents, text)) onMatchesBase?.();
     return true;
   };
 
   const discard = (): void => {
-    const { contents, shown, saved } = latest.current;
-    latest.current.unsaved = null;
-    setUnsaved(null);
     // A newer file on disk replaces the edits as the diff follows it; otherwise the editor goes back to the saved text.
-    if (contents === shown) editor.current?.setText(saved);
+    const { buffer, editorText } = bufferAfterDiscard(latest.current.buffer, latest.current.contents);
+    update(buffer);
+    if (editorText !== null) editor.current?.setText(editorText);
   };
 
   const actions = useRef({ save, discard });
@@ -103,7 +97,7 @@ export function useFileBuffer({ workspacePath, contents, path, onMatchesBase }: 
 
   useEffect(
     () => () => {
-      const text = latest.current.unsaved;
+      const text = latest.current.buffer.unsaved;
       if (path === null || text === null) return;
       api.content
         .writeWorkspaceFile(workspacePath, path, text)
@@ -120,11 +114,7 @@ export function useFileBuffer({ workspacePath, contents, path, onMatchesBase }: 
     unsaved,
     changedOnDisk: diskMovedOn,
     editor,
-    onEdit: (shown) => {
-      const next = unsavedAfterEdit(shown, latest.current.saved);
-      latest.current.unsaved = next;
-      setUnsaved(next);
-    },
+    onEdit: (text) => update(bufferAfterEdit(latest.current.buffer, text)),
     save,
     discard,
   };
