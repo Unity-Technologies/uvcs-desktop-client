@@ -31,11 +31,9 @@ describe('WorkspaceHeaders', () => {
     await headers.status('/wk');
     headers.forget('/wk');
     await headers.status('/wk');
-    headers.forget();
-    await headers.status('/wk');
     advance(5000);
     await headers.status('/wk');
-    expect(readers.status).toHaveBeenCalledTimes(4);
+    expect(readers.status).toHaveBeenCalledTimes(3);
   });
 
   it('keeps workspaces apart and never shares a failure', async () => {

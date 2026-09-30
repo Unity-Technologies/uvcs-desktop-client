@@ -7,7 +7,7 @@ type StartedListener = Parameters<Parameters<typeof ignoreOwnCommandWrites>[0]['
 function setUp() {
   let listener: StartedListener = () => {};
   const ignored: string[] = [];
-  const forgotten: (string | undefined)[] = [];
+  const forgotten: string[] = [];
   ignoreOwnCommandWrites(
     { onCommandStarted: (started) => ((listener = started), () => {}) },
     { ignoreOwnWrite: (_write, cwd, only) => void ignored.push([cwd, only].filter(Boolean).join(' ')) },

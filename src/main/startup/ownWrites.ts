@@ -5,7 +5,7 @@ import type { WorkspaceHeaders } from '../workspace/WorkspaceHeaders';
 
 /**
  * The renderer refreshes its views after its own writes, so the watcher of the workspace a command runs in drops the
- * events it causes; and what was read of the workspaces (`WorkspaceHeaders`) is read again once it starts and ends.
+ * events it causes; and what was read of that workspace (`WorkspaceHeaders`) is read again once it starts and ends.
  */
 export function ignoreOwnCommandWrites(
   cm: Pick<CmClient, 'onCommandStarted'>,
@@ -16,8 +16,8 @@ export function ignoreOwnCommandWrites(
     if (rewritesChangelists(args)) watchers.ignoreOwnWrite(finished, cwd, 'changelists');
     if (!changesWorkspace(args)) return;
     watchers.ignoreOwnWrite(finished, cwd);
-    headers.forget();
-    const forget = (): void => headers.forget();
+    headers.forget(cwd);
+    const forget = (): void => headers.forget(cwd);
     void finished.then(forget, forget);
   });
 }
