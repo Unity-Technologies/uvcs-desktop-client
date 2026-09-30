@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { CmClient } from '../cm/CmClient';
+import { change, changesetsFound, diffRecord, NOTHING_FOUND, pendingStatus, statusHeader } from '../testing/cmOutput';
+import { scriptedCm } from '../testing/scriptedCm';
 import { findUpdateBlockers, findUpdateConflicts, incomingChangesetsArgs, readIncomingChanges, readIncomingSummary, summarizeIncoming } from './incoming';
 
 function incoming(path: string, status: DiffEntry['status'], itemType: DiffEntry['itemType'] = 'file'): DiffEntry {
@@ -87,5 +89,33 @@ describe('incoming off a branch', () => {
     const { cm, query } = cmAnswering(ON_SHELVE);
     expect(await readIncomingChanges(cm, '/w')).toEqual({ branch: null, changesetCount: 0, authors: [], changesets: [], files: [], conflicts: [], blockedPaths: [] });
     expect(query.mock.calls.map(([args]) => args[0])).toEqual(['status']);
+  });
+});
+
+describe('readIncomingChanges', () => {
+  const branchMovedOn = (changesets: string) =>
+    scriptedCm({
+      'status --header --xml': statusHeader('/main', { changeset: 41 }),
+      'find changeset': changesets,
+      'diff cs:41 cs:43': diffRecord('C', 'src/a.txt', { base: 10, revision: 20 }) + diffRecord('D', 'src/old.txt', { revision: 11 }),
+      'status --xml --controlledchanged --changed': pendingStatus(change('CH', 'src/a.txt'), change('CH', 'src/old.txt')),
+    });
+
+  it('reads what came in with one find, one diff from the loaded changeset to the head, and the local changes', async () => {
+    const { cm, lines } = branchMovedOn(changesetsFound('/main', { id: 43, owner: 'ana' }, { id: 42, owner: 'bob' }));
+
+    const changes = await readIncomingChanges(cm, '/work');
+
+    expect(changes).toMatchObject({ branch: '/main', loadedChangeset: 41, headChangeset: 43, changesetCount: 2, authors: ['ana', 'bob'] });
+    expect(changes.conflicts.map((conflict) => conflict.path)).toEqual(['src/a.txt']);
+    expect(changes.blockedPaths).toEqual(['src/old.txt']);
+    expect(lines().filter((line) => line.startsWith('find'))).toEqual(["find changeset where changesetid > 41 and branch = '/main' order by changesetid desc --xml --nototal"]);
+  });
+
+  it('asks nothing more once nothing came in', async () => {
+    const { cm, lines } = branchMovedOn(NOTHING_FOUND);
+
+    expect(await readIncomingChanges(cm, '/work')).toMatchObject({ changesetCount: 0, files: [], conflicts: [], blockedPaths: [] });
+    expect(lines().some((line) => line.startsWith('diff'))).toBe(false);
   });
 });
