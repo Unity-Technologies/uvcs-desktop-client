@@ -49,11 +49,6 @@ export async function removeWorkspace(workspace: WorkspaceSummary): Promise<void
   if (removed) await forgetRecentWorkspace(workspace.path);
 }
 
-/** Opens the workspace's folder itself in the file manager, not its parent with it selected. */
-export function showWorkspaceFolder(workspace: WorkspaceSummary): void {
-  void api.system.openPath(workspace.path);
-}
-
 export async function renameRepository(repository: RepositorySummary): Promise<void> {
   const names = (queryClient.getQueryData<RepositorySummary[]>(queryKeys.repositories(repository.server)) ?? []).map((listed) => listed.name);
   const newName = await prompt({

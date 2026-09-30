@@ -6,6 +6,7 @@
 export const WORKSPACE_MENU_COMMANDS: readonly string[] = [
   'workspace.newForTask',
   'workspace.open',
+  'workspace.reveal',
   'workspace.openTerminal',
   'workspace.refresh',
   'app.commandLog',

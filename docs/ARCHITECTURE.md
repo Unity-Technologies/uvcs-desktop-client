@@ -502,7 +502,8 @@ renderer/src/
   is a list filter like any other (`commandLogFilterTexts`), kept for the session; each command is numbered by its
   place in the log since it was cleared (`NumberedLog`), so numbers stay put as the scope, the filter and the
   500-entry cap drop rows. A failed command shows how it ended ("Exit code 1", or "Stopped" without one) above its
-  output. Revealing a command the filter or scope hides clears them.
+  output. Revealing a command the filter or scope hides clears them. Its header shows the `cm` version the app runs
+  (`cmVersionQuery`, already read at start).
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in styles or components
   (`styles/noRawColors.test.ts`, which lists the few colors written out on purpose); optional classes join with
   `classNames`.

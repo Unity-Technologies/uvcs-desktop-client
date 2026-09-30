@@ -11,7 +11,9 @@ import { existsOnDisk, isControlled, isShelvable } from './changeCategories';
 import { askUndoChanges } from './UndoChangesDialog';
 import { BACKUP_SHELVE_COMMENT } from './undoPlan';
 
+/** The item's path on disk; the empty path is the workspace folder itself (the Files tree's root row). */
 export function absolutePath(workspacePath: string, relativePath: string): string {
+  if (relativePath === '') return workspacePath;
   const separator = workspacePath.includes('\\') ? '\\' : '/';
   return `${workspacePath}${separator}${relativePath.split('/').join(separator)}`;
 }

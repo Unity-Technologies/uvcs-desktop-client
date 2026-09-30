@@ -9,8 +9,8 @@
   color: var(--text-secondary);
 }
 
-.tagline {
-  max-width: 320px;
+.pitch {
+  max-width: 340px;
   margin: var(--space-3) 0 var(--space-5);
   color: var(--text-secondary);
   line-height: 1.5;

@@ -1,4 +1,5 @@
 import type { MenuItemConstructorOptions } from 'electron';
+import { revealLabel } from '@shared/revealLabel';
 
 export interface AppMenuContext {
   platform: NodeJS.Platform;
@@ -52,6 +53,7 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
         commandItem('New Workspace for a &Task…', 'workspace.newForTask'),
         commandItem('&Open Another Workspace…', 'workspace.open', 'CmdOrCtrl+Shift+O'),
         separator,
+        commandItem(revealLabel(platform), 'workspace.reveal'),
         commandItem('Open in &Terminal', 'workspace.openTerminal'),
         separator,
         ...(isMac ? [] : [commandItem('&Settings…', 'app.settings', 'CmdOrCtrl+,'), separator]),

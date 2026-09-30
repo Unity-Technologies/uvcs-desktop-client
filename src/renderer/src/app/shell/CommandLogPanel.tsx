@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { CircleX, Trash2, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, type CSSProperties, type KeyboardEvent } from 'react';
 import { hotkey, hotkeys } from '../../lib/shortcutRegistry';
@@ -9,6 +10,7 @@ import { IconButton } from '../../ui/IconButton';
 import { SearchField } from '../../ui/SearchField';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { ToggleChip } from '../../ui/ToggleChip';
+import { cmVersionQuery } from '../startup/useCmAvailability';
 import { useWorkspacePath } from '../workspace/useWorkspace';
 import { CommandLogEntryRow } from './CommandLogEntryRow';
 import { commandLogRows, isFiltering, NO_FILTER } from './commandLogFilter';
@@ -30,6 +32,8 @@ export function CommandLogPanel() {
   const filter = useCommandLogStore((state) => state.filter);
   const { setScope, setFilter, clear, toggle } = useCommandLogStore.getState();
   const workspacePath = useWorkspacePath();
+  // Asked once at start (`prefetchStartupQueries`): showing it runs no command.
+  const { data: cmVersion } = useQuery(cmVersionQuery);
   const listRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLInputElement>(null);
   const log = useMemo(() => ({ entries, firstNumber }), [entries, firstNumber]);
@@ -65,6 +69,11 @@ export function CommandLogPanel() {
       <header className={styles.header}>
         <span className={styles.title}>Command log</span>
         <span className={styles.count}>{pluralize(rows.length, 'command')}</span>
+        {cmVersion && (
+          <span className={`${styles.version} selectable`} data-tip="The version of cm the app runs">
+            · cm {cmVersion}
+          </span>
+        )}
         <div className={styles.spacer} />
         <SearchField ref={filterRef} value={filter.query} onChange={(query) => setFilter({ query })} placeholder="Filter commands" width={200} />
         <ToggleChip pressed={filter.failedOnly} icon={<CircleX size={13} />} onChange={(failedOnly) => setFilter({ failedOnly })}>
