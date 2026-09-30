@@ -1,6 +1,7 @@
 import { COLUMN_WIDTH, GRAPH_PADDING } from './geometry';
 import { detailLevel, type DrawContext, type DrawnTargets, type GraphScene, type VisibleArea } from './drawContext';
-import { drawBranchHeaders, drawCompactBranchNames } from './drawBranchHeaders';
+import { drawBranchHeaders } from './drawBranchHeaders';
+import { drawCompactBranchNames } from './drawCompactBranchNames';
 import { drawCaptions } from './drawCaptions';
 import { drawDateRuler, drawDaySeparators, measureDayMarks } from './drawDateRuler';
 import { drawLabels } from './drawLabels';

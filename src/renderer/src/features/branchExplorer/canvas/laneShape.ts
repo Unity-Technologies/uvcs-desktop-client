@@ -27,6 +27,22 @@ export function laneShape(lane: Lane): LaneShape {
   return { left, right: Math.max(columnX(lane.endColumn) + BAND_INSET, left + MINIMUM_WIDTH), y };
 }
 
+/** Keeps what a branch draws past its band (its header card, its zoomed-out name) clear of the next band on its row. */
+const NEXT_LANE_CLEARANCE = 12;
+
+/**
+ * How much room there is from `left` (world x) to the next branch's band on the lane's row, less a clearance;
+ * infinite when no band follows.
+ */
+export function roomBeforeNextLane(layout: GraphLayout, lane: Lane, left: number): number {
+  let next = Number.POSITIVE_INFINITY;
+  for (const other of layout.lanesByRow.get(lane.row) ?? []) {
+    const otherLeft = laneShape(other).left;
+    if (otherLeft > left && otherLeft < next) next = otherLeft;
+  }
+  return next - left - NEXT_LANE_CLEARANCE;
+}
+
 /** A lane's header card is two lines when the branch has a comment, one otherwise. */
 export function laneHeaderHeight(lane: Lane): number {
   return headerHeight(summaryOf(lane.branch.comment) !== '');
