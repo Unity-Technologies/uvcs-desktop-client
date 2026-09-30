@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
-import { pendingChangesetKey, pendingChangesetOf } from './pendingChangeset';
+import { changeset } from './graphFixtures';
+import { pendingBranchOf, pendingChangesetKey, pendingChangesetOf } from './pendingChangeset';
 
 function snapshot(kinds: PendingChange['kinds'][], mergeLinks: PendingChangesSnapshot['mergeLinks'] = []): PendingChangesSnapshot {
   const changes = kinds.map((kind, index) => ({ path: `f${index}`, kinds: kind, itemType: 'file' as const, size: 1, lastModified: '' }));
@@ -32,5 +33,23 @@ describe('pendingChangesetKey', () => {
     expect(pendingChangesetKey(read())).toBe(pendingChangesetKey(read()));
     expect(pendingChangesetKey(read())).not.toBe(pendingChangesetKey(pendingChangesetOf(snapshot([['changed']]), 12, '/main')));
     expect(pendingChangesetKey(null)).toBe('');
+  });
+});
+
+describe('pendingBranchOf', () => {
+  const history = [changeset(11, '/main', 10), changeset(12, '/main/task', 11)];
+
+  it('is the branch the workspace is on', () => {
+    expect(pendingBranchOf('/main/task', 11, history)).toBe('/main/task');
+  });
+
+  it("is the loaded changeset's branch on a label or a changeset", () => {
+    expect(pendingBranchOf(null, 12, history)).toBe('/main/task');
+  });
+
+  it('is none while the history has not the loaded changeset, or nothing is loaded', () => {
+    expect(pendingBranchOf(null, 99, history)).toBeNull();
+    expect(pendingBranchOf(null, 12, undefined)).toBeNull();
+    expect(pendingBranchOf(null, null, history)).toBeNull();
   });
 });
