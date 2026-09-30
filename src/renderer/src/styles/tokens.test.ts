@@ -68,6 +68,11 @@ describe.each(Object.entries(themes))('%s theme', (theme, tokens) => {
     expect(contrastRatio(parseColor(tokens['--focus-color']!).rgb, selected)).toBeGreaterThanOrEqual(3);
   });
 
+  it.each(['--bg-selected-strong', '--bg-selected'])('writes the collapsed sidebar’s selected label at 4.5:1 on a %s tile', (fill) => {
+    const tile = composite(parseColor(tokens[fill]!), parseColor(tokens['--bg-sidebar']!).rgb);
+    expect(contrastRatio(parseColor(tokens['--accent-text-on-selected']!).rgb, tile)).toBeGreaterThanOrEqual(4.5);
+  });
+
   it.each(['--accent', '--accent-fill-hover', '--danger', '--danger-hover'])('writes button labels at 4.5:1 on a %s fill', (fill) => {
     expect(ratio(tokens, '--accent-contrast', fill)).toBeGreaterThanOrEqual(4.5);
   });

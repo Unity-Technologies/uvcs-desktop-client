@@ -89,6 +89,8 @@
   --accent-fill-hover: #0860c7;
   --accent-soft: rgba(9, 105, 218, 0.1);
   --accent-text: #0969da;
+  /* Text in the accent on a --bg-selected-strong fill (the collapsed sidebar's selected tile): a step darker, for 4.5:1. */
+  --accent-text-on-selected: #0860c7;
   /* Text and icons on an --accent or --danger fill. */
   --accent-contrast: #ffffff;
   /* Text fields: a soft halo around their accent border. */
@@ -200,6 +202,7 @@
   --accent-fill-hover: #1b63d4;
   --accent-soft: rgba(56, 139, 253, 0.15);
   --accent-text: #4493f8;
+  --accent-text-on-selected: #4493f8;
   --accent-contrast: #ffffff;
   --focus-ring: 0 0 0 3px rgba(56, 139, 253, 0.4);
   --focus-color: #4493f8;
