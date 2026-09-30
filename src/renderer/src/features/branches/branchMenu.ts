@@ -20,6 +20,7 @@ import {
   setBranchesHidden,
   switchToBranch,
 } from './branchOperations';
+import { branchHeadOrigin } from './branchHeadOrigin';
 import { openCreateBranchDialog } from './CreateBranchDialog';
 import { serverMergeLabel } from './mergeMenuLabels';
 
@@ -56,13 +57,7 @@ export function branchMenu(workspacePath: string, branches: BranchInfo[], curren
     single && menuAction('mergeTo', () => void mergeTo(spec.branch(single.name), single.name)),
     single && menuAction('cherryPick', () => cherryPickFromBranch(single.name), { label: 'Cherry pick branch changes', ...onCurrent }),
     single &&
-      menuAction('newBranch', () =>
-        void openCreateBranchDialog(workspacePath, {
-          parentBranch: single.name,
-          startingPoint: spec.changeset(single.headChangeset),
-          startingPointLabel: `the head of ${single.name} (changeset ${single.headChangeset})`,
-        }).then((name) => name && place.onBranchCreated?.(name)),
-      ),
+      menuAction('newBranch', () => void openCreateBranchDialog(workspacePath, branchHeadOrigin(single)).then((name) => name && place.onBranchCreated?.(name))),
     single && menuAction('newCodeReview', () => openCreateCodeReviewDialog(workspacePath, { kind: 'branch', value: single.name })),
     single && !place.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'branch', name: single.name, date: single.date })),
     single && copySubmenu('Branch', branchCopyTexts(single), { shortcut: hotkey('listCopy') }),

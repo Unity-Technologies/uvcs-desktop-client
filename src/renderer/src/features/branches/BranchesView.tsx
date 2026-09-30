@@ -2,7 +2,6 @@ import { EyeOff, GitBranch, GitBranchPlus, List, ListTree } from 'lucide-react';
 import { useCallback, useMemo, useRef, useState } from 'react';
 import type { Branch } from '@shared/domain/branch';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
-import { spec } from '@shared/domain/specs';
 import { useRenameCommand } from '../../app/commands/useRenameCommand';
 import { ViewRefreshButton } from '../../components/ViewRefreshButton';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -31,6 +30,7 @@ import { ToggleChip } from '../../ui/ToggleChip';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
 import { BranchDetails } from './BranchDetails';
+import { branchHeadOrigin } from './branchHeadOrigin';
 import { BranchNameCell } from './BranchNameCell';
 import { branchMenu } from './branchMenu';
 import { diffBranch, renameBranch } from './branchOperations';
@@ -85,15 +85,8 @@ export function BranchesView() {
 
   // From the selected branch's head, or else from what the workspace has loaded (nothing listed, a label loaded).
   const newBranch = (): void => {
-    if (!selected) {
-      if (workspace) void newBranchFromWorkspace(workspace);
-      return;
-    }
-    openCreateBranchDialog(workspacePath, {
-      parentBranch: selected.name,
-      startingPoint: spec.changeset(selected.headChangeset),
-      startingPointLabel: `the head of ${selected.name} (changeset ${selected.headChangeset})`,
-    });
+    if (selected) void openCreateBranchDialog(workspacePath, branchHeadOrigin(selected));
+    else if (workspace) void newBranchFromWorkspace(workspace);
   };
 
   const { data: reviews } = useReviewsByBranch(branches !== undefined);
