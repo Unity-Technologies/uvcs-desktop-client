@@ -2,6 +2,7 @@ import type { BranchesApi } from '@shared/api/branches';
 import type { Branch, CreateBranchRequest } from '@shared/domain/branch';
 import type { QueryFilter } from '@shared/domain/query';
 import { shortBranchName } from '@shared/domain/specs';
+import { branchCreateArgs } from '../cm/branchCreateArgs';
 import { escapeQueryValue, findArgs } from '../cm/findQuery';
 import { findRecords, toBranch } from '../cm/findObjects';
 import { withTempFile } from '../files/tempFile';
@@ -41,9 +42,7 @@ export function createBranchesService({ cm, settings }: ServiceContext, { branch
 
   function create(workspacePath: string, request: CreateBranchRequest): Promise<void> {
     return withTempFile(request.comment, async (commentsFile) => {
-      await cm.query(['branch', 'create', request.name, ...startingPointOption(request.startingPoint), `-commentsfile=${commentsFile}`], {
-        cwd: workspacePath,
-      });
+      await cm.query(branchCreateArgs(request, commentsFile), { cwd: workspacePath });
     });
   }
 
@@ -72,12 +71,4 @@ export function createBranchesService({ cm, settings }: ServiceContext, { branch
   }
 
   return { list, get, create, rename, delete: remove, setHidden, recent, rememberRecent };
-}
-
-/** Without a starting point, `cm` starts the branch at the head of its parent. */
-export function startingPointOption(startingPoint: string | undefined): string[] {
-  if (startingPoint === undefined) return [];
-  if (startingPoint.startsWith('cs:')) return [`--changeset=${startingPoint}`];
-  if (startingPoint.startsWith('lb:')) return [`--label=${startingPoint}`];
-  throw new Error(`A branch can only start at a changeset or a label, not ${startingPoint}.`);
 }

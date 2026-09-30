@@ -7,7 +7,7 @@ import { BranchNamesCache } from '../cm/BranchNamesCache';
 import { findXml } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { SettingsStore } from '../settings/SettingsStore';
-import { createBranchesService, startingPointOption } from './branchesService';
+import { createBranchesService } from './branchesService';
 import { readingFileOption } from './testing/readingFileOption';
 import { serviceContext } from './testing/serviceContext';
 
@@ -207,17 +207,5 @@ describe('recent branches', () => {
     await service.rememberRecent(WORKSPACE, MAIN_BRANCH_GUID);
 
     expect(await service.recent(WORKSPACE)).toEqual([6, 5, 4, 3, 2].map(branchGuid));
-  });
-});
-
-describe('startingPointOption', () => {
-  it('starts a branch at a changeset, a label, or the head of its parent', () => {
-    expect(startingPointOption('cs:12')).toEqual(['--changeset=cs:12']);
-    expect(startingPointOption('lb:v1.0')).toEqual(['--label=lb:v1.0']);
-    expect(startingPointOption(undefined)).toEqual([]);
-  });
-
-  it('refuses any other starting point', () => {
-    expect(() => startingPointOption('sh:3')).toThrow('A branch can only start at a changeset or a label');
   });
 });
