@@ -1,6 +1,6 @@
 import { app, BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from 'electron';
 import { sendEventTo } from '../ipc/sendEvent';
-import { DOCUMENTATION_URL } from './appInfo';
+import { DOCUMENTATION_URL, ISSUES_URL } from './appInfo';
 import { appMenuTemplate } from './appMenuTemplate';
 import { isMenuCommandEnabled } from './workspaceMenuCommands';
 import type { AppUpdates } from '../update/AppUpdates';
@@ -44,6 +44,7 @@ export function installAppMenu(windows: WorkspaceWindows, updates: AppUpdates): 
     windowItems: windowItems(windows),
     newWindow: () => windows.open(),
     openDocumentation: () => void shell.openExternal(DOCUMENTATION_URL),
+    reportIssue: () => void shell.openExternal(ISSUES_URL),
     showAboutPanel: () => app.showAboutPanel(),
     checkForUpdates: () => void updates.check(),
   });

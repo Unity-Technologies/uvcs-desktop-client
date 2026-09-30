@@ -37,7 +37,9 @@ describe('shortcut registry', () => {
   it('shows the native menu accelerators of the keys the renderer binds', () => {
     const items = [...readFileSync(APP_MENU, 'utf8').matchAll(/commandItem\('[^']+', '([^']+)', '([^']+)'[,)]/g)];
     expect(items.length).toBeGreaterThan(0);
-    for (const [, commandId, accelerator] of items) {
+    for (const [, commandId, written] of items) {
+      // As the source writes it: a backslash key is escaped there.
+      const accelerator = written!.replaceAll('\\\\', '\\');
       const shortcut = Object.values(SHORTCUTS).find((candidate) => 'commandId' in candidate && candidate.commandId === commandId);
       expect(shortcut, commandId).toBeDefined();
       for (const mac of [true, false]) expect(toAccelerator(shortcutKeys(shortcut!, mac)[0]!), commandId).toBe(accelerator);
