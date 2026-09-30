@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatArgs, parseArgs } from './mergeTools';
+import { formatArgs, parseArgs } from './argumentLine';
 
 describe('parseArgs', () => {
   it('splits on spaces and keeps quoted parts in one argument', () => {
