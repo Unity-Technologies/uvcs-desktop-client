@@ -1,7 +1,7 @@
 /**
  * Inertia for dragging the graph with the mouse. Trackpad scrolling already coasts (the OS bakes
  * inertia into its wheel events), but a drag would stop dead on release. The release velocity is
- * estimated from the last pointer samples and then decays exponentially. The frame loop lives in usePanInertia.
+ * estimated from the last pointer samples and then decays exponentially. The frame loop lives in panInertia.ts.
  */
 
 /** A pointer position during a drag: screen px and ms. */

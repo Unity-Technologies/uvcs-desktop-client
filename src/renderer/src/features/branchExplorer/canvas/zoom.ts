@@ -4,7 +4,7 @@ import { MAX_ZOOM, MIN_ZOOM } from './viewport';
  * Smooth zooming with the mouse wheel. A trackpad pinch streams many tiny deltas and is applied 1:1;
  * a wheel notch is one big step, so it becomes an eased glide instead. Each step multiplies an accumulated
  * target (spinning during a glide compounds it and stretches the glide a little, which reads as momentum);
- * reversing direction starts over from the current zoom. The frame loop lives in useZoomAnimation.
+ * reversing direction starts over from the current zoom. The frame loop lives in zoomAnimation.ts.
  */
 
 /** Zoom change per click of a zoom button or press of +/-. */
