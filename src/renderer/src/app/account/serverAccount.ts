@@ -37,15 +37,20 @@ export function organizationName(server: string, account?: Account): string | nu
 
 const DASHBOARD_ORGANIZATIONS = 'https://cloud.unity.com/home/organizations';
 
+const genesisIdOf = (server: string, account?: Account): string | undefined => organizationsOf(server, account).find(isGenesisId);
+
+/** Where the dashboard lists Unity Version Control organizations: under the genesis organization when known. */
+const dashboardOrganizations = (genesisId: string | undefined): string =>
+  genesisId
+    ? `${DASHBOARD_ORGANIZATIONS}/${genesisId}/projects/default/plastic-scm/organizations`
+    : `${DASHBOARD_ORGANIZATIONS}/default/plastic-scm/organizations`;
+
 /**
  * The Unity Cloud dashboard, built like the official client does (UnityUrl.UnityDashboard): straight into the
  * organization when its genesis id is known, otherwise the dashboard picks it.
  */
 export function cloudDashboardUrl(server: string, account?: Account): string {
-  const genesisId = organizationsOf(server, account).find(isGenesisId);
-  return genesisId
-    ? `${DASHBOARD_ORGANIZATIONS}/${genesisId}/projects/default/plastic-scm/organizations`
-    : `${DASHBOARD_ORGANIZATIONS}/default/plastic-scm/organizations`;
+  return dashboardOrganizations(genesisIdOf(server, account));
 }
 
 const SIGN_IN_METHODS: Record<string, string> = {
