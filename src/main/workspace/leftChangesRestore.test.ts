@@ -7,9 +7,8 @@ import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import { WORKSPACE_GUID } from '../cm/testing/cmOutput';
 import { recordingContext } from '../operations/testing/recordingContext';
 import { memorySettings } from '../settings/testing/memorySettings';
-import { LeftChangesFinder } from './leftChanges';
 import { switchWithChanges } from './switchWithChanges';
-import { SwitchShelveRecords } from './switchShelveRecords';
+import { playAlongDependencies } from './testing/playAlongDependencies';
 import { playAlongWorkspace, type WorkspaceScenario } from './testing/playAlongWorkspace';
 
 // Restoring and discarding left changes, end to end: left by a real switch, against a `cm` that plays along.
@@ -27,11 +26,8 @@ beforeEach(async () => {
 
 function workspaceWith(scenario: WorkspaceScenario, records: SwitchShelveRecord[] = []) {
   const workspace = playAlongWorkspace(workspacePath, scenario);
-  const settings = memorySettings({ switchShelves: records });
-  const store = new SwitchShelveRecords(settings);
-  const finder = new LeftChangesFinder(workspace.cm, store);
-  const deps = { cm: workspace.cm, settings, records: store, leftChanges: finder, backupsRoot: join(workspacePath, '..', 'backups') };
-  return { ...workspace, finder, deps, recordOf: (shelveId: number) => store.find({ shelveId, repository: 'eco@local' }) };
+  const { deps, leftChanges, recordOf } = playAlongDependencies(workspace.cm, workspacePath, memorySettings({ switchShelves: records }));
+  return { ...workspace, finder: leftChanges, deps, recordOf };
 }
 
 /** Leaves the changes on /main/task1 by switching to /main/task2, then comes back. */

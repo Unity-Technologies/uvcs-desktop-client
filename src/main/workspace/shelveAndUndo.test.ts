@@ -4,10 +4,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { recordingContext } from '../operations/testing/recordingContext';
-import { memorySettings } from '../settings/testing/memorySettings';
-import { LeftChangesFinder } from './leftChanges';
 import { shelveAndUndo, shelvedAwayChanges } from './shelveAndUndo';
-import { SwitchShelveRecords } from './switchShelveRecords';
+import { playAlongDependencies } from './testing/playAlongDependencies';
 import { playAlongWorkspace, type WorkspaceScenario } from './testing/playAlongWorkspace';
 
 const PENDING = { 'src/a.txt': 'CH', 'src/new.txt': 'AD', 'src/other.txt': 'CH' };
@@ -23,10 +21,7 @@ beforeEach(async () => {
 /** A workspace on /main/task1 with a changed file, an added one and another changed file. */
 function workspaceWith(scenario: WorkspaceScenario = {}) {
   const workspace = playAlongWorkspace(workspacePath, { pending: PENDING, ...scenario });
-  const records = new SwitchShelveRecords(memorySettings());
-  const deps = { cm: workspace.cm, records, leftChanges: new LeftChangesFinder(workspace.cm, records), backupsRoot: join(workspacePath, '..', 'backups') };
-  const recordOf = (shelveId: number) => records.find({ shelveId, repository: 'eco@local' });
-  return { ...workspace, deps, recordOf };
+  return { ...workspace, ...playAlongDependencies(workspace.cm, workspacePath) };
 }
 
 const shelve = (deps: ReturnType<typeof workspaceWith>['deps'], paths: string[] | null, comment = 'Half done') =>
