@@ -182,7 +182,10 @@ through the one invoke channel, and never open a window of their own: a link tha
 
 ## Own config
 
-The app keeps its settings in its own store (`main/settings/SettingsStore`: `settings.json` in the user data folder).
+The app keeps its settings in its own store (`main/settings/SettingsStore`: `settings.json` in the user data folder),
+replaced whole or not at all (`replaceFileSync`: a temp file renamed over it, tried again for a moment while Windows
+says it's busy); a file that can't be read as settings is kept aside as `settings.json.<when>.bak` and the app starts
+from the defaults.
 It never writes to the official Desktop client's config (its settings folder, `plasticConfigFolder`: `plasticgui.conf`,
 `client.conf`...) and never keeps reading it. Only on the first run, `importLegacySettings` reads the well-known values
 there so the user feels at home (each workspace's recent branches, `readRecentBranchesByWorkspace`); it records
