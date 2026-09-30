@@ -369,7 +369,11 @@ renderer/src/
   that hides it and shows it again from the cache, remembered for every panel as More details is (`changesCollapsed`). cm edits changeset, attribute and label
   comments (a label's by applying it again to its changeset, `labelCommentArgs`); branch and shelve comments stay
   read-only: no `cm` command or client API edits them. Selecting a row must stay cheap (Server
-  budget: Selection); the changed files' `cm diff` runs only on request (`ChangedFilesSection`).
+  budget: Selection); the changed files' `cm diff` runs only on request (`ChangedFilesSection`). The panel's parts are
+  primitives of their own in `ui/` (`DetailsSection`, `DetailsEmpty`, `DetailsSkeleton`, `DetailsBadge`,
+  `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), all imported from `ui/DetailsPanel`. Lists are
+  a `DataTable` (`ui/table/`: only the rows in view render; the columns' sort, the keys' steps `selectionStep`, and
+  `selectFirstRow`'s successor selection each in a module of their own).
 - **Item rows**: every list of files and folders reads the same (`components/`): Files and Browse repository, Changes
   (after its checkbox), the files of every diff and details panel, the merge page, a task merge, Incoming, Go to file,
   the Undo dialog, the Locks view (a lock names no item type, and only files are locked). `ItemRow` lays out the icon, the name (cut first, in the middle as every path is: `PathLabel`), extras
@@ -392,7 +396,8 @@ renderer/src/
   its file and folder rows memoized with stable callbacks: holding ↓ over 100,000 changes re-renders none of them
   (0.5-0.6 ms a step).
 - **File icons**: `ItemIcon` draws every file as the same filled Lucide page (`--icon-file` on `--icon-file-fill`) beside solid
-  folders, so every row reads with one weight; a glyph on the page tells the file's family (`fileFamilyOf`, by name
+  folders (directories and xlinks; `itemIconShape`), so every row reads with one weight; a glyph on the page tells the
+  file's family (`fileFamilyOf`, by name
   first, then its longest extension: `Form.Designer.cs` before `.cs`), and only the glyph takes the family's tint
   (`FAMILY_GLYPHS`; its outline of the page stays neutral, found by its corners). The families are what matters in a
   change: what you write (source `<>`, scripts) in `--icon-source`; what builds it (`.csproj`, `.sln`, `.props`,
@@ -411,9 +416,12 @@ renderer/src/
   is a list filter like any other (`commandLogFilterTexts`), kept for the session; each command is numbered by its
   place in the log since it was cleared (`NumberedLog`), so numbers stay put as the scope, the filter and the
   500-entry cap drop rows. Revealing a command the filter or scope hides clears them.
-- **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in components.
+- **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in styles or components
+  (`styles/noRawColors.test.ts`, which lists the few colors written out on purpose); optional classes join with
+  `classNames`.
   - Text tokens keep 4.5:1 and focus rings 3:1 (`styles/tokens.test.ts`); avatars' white initials 4.5:1 on every
-    `--avatar-*` fill (one per `stableHue` hue, all weighing alike), and server monograms' letters, a tint as secondary
+    `--avatar-*` fill (one per `stableHue` hue, all weighing alike, `avatarColorOf`: people, workspaces and
+    repositories alike), and server monograms' letters, a tint as secondary
     marks (`--tint-*`), 3:1 as status letters do. Branch headers set their text's lightness per hue to a contrast on
     their tint (`--branch-name-contrast`, `--branch-comment-contrast`, `hslAtContrast`), so the comment always reads
     quieter than the name, pale yellows as much as dark blues. Focus shows with `--focus-ring-visible`, or
