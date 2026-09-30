@@ -5,7 +5,7 @@ import { isAffectedByFileChangesIn, isAffectedByMovedPaths } from '../../app/ref
 import { pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
-import { useCutItemsStore } from './cutItemsStore';
+import { cutItemsIn, useCutItemsStore } from './cutItemsStore';
 import { listedItems, readDirectoryListing } from './directoryListing';
 import { useFilesViewStore } from './filesViewStore';
 import { parentOf } from './fileTreeRows';
@@ -15,7 +15,7 @@ import { folderLabel, pasteFolderFor, planPaste, reverseMoves, type PastePlan } 
 export function pastePlanFor(workspacePath: string, selected: readonly TreeItem[]): PastePlan {
   const folder = pasteFolderFor(selected);
   const names = folder === null ? [] : (listedItems(workspacePath, folder) ?? []).map((item) => item.name);
-  return planPaste(cutItemsOf(workspacePath), folder === null ? null : { path: folder, isPrivate: isPrivateFolder(workspacePath, folder) }, names);
+  return planPaste(cutItemsIn(useCutItemsStore.getState(), workspacePath), folder === null ? null : { path: folder, isPrivate: isPrivateFolder(workspacePath, folder) }, names);
 }
 
 /**
@@ -64,11 +64,6 @@ function confirmSkipping(clashes: string[], target: string, moving: number): Pro
     message: one ? 'Nothing is replaced: that item stays where it is.' : `Nothing is replaced: ${clashes.join(', ')} stay where they are.`,
     confirmLabel: `Move ${pluralize(moving, 'item')}`,
   });
-}
-
-function cutItemsOf(workspacePath: string) {
-  const { workspacePath: cutIn, items } = useCutItemsStore.getState();
-  return cutIn === workspacePath ? items : [];
 }
 
 /** Whether the folder is private, as its parent's listing tells; the root is controlled. */

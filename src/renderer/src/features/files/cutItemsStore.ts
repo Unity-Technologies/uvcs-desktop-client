@@ -26,9 +26,13 @@ export const useCutItemsStore = create<CutItemsStore>((set) => ({
   clear: () => set({ workspacePath: null, items: NONE }),
 }));
 
-/** The items cut in this workspace. */
+/** The items cut in this workspace: none while they were cut in another. */
+export function cutItemsIn(state: Pick<CutItemsStore, 'workspacePath' | 'items'>, workspacePath: string): readonly CutItem[] {
+  return state.workspacePath === workspacePath ? state.items : NONE;
+}
+
 export function useCutItems(workspacePath: string): readonly CutItem[] {
-  return useCutItemsStore((state) => (state.workspacePath === workspacePath ? state.items : NONE));
+  return useCutItemsStore((state) => cutItemsIn(state, workspacePath));
 }
 
 function outermost(items: readonly CutItem[]): CutItem[] {
