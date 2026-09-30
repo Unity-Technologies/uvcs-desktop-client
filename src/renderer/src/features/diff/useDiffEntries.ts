@@ -4,6 +4,7 @@ import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { IMMUTABLE_QUERY } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { isImmutableDiff } from './immutableDiff';
 
 interface DiffEntriesOptions {
   /** False reads only what is already cached: `cm diff` is too heavy to run on every selection. */
@@ -14,8 +15,7 @@ interface DiffEntriesOptions {
 
 export function useDiffEntries(target: DiffTarget | null, { enabled = true, branchHead }: DiffEntriesOptions = {}) {
   const workspacePath = useWorkspacePath();
-  // History does not change once written, nor does a shelve or a branch at a given head; other diffs refresh with the workspace.
-  const immutable = target?.kind === 'changeset' || target?.kind === 'range' || target?.kind === 'shelve' || branchHead !== undefined;
+  const immutable = isImmutableDiff(target, branchHead);
   return useQuery({
     queryKey: branchHead === undefined ? queryKeys.inWorkspace(workspacePath, 'diff', target) : queryKeys.inWorkspace(workspacePath, 'diff', target, branchHead),
     queryFn: () => api.diff.entries(workspacePath, target!),
