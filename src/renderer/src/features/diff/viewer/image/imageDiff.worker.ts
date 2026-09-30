@@ -1,21 +1,13 @@
-// The image-diff pixel passes (perceptual compare, heatmap render, region
-// clustering) run here, off the UI thread — a 4K pair takes tens of
-// milliseconds that must never block a paint. The worker holds the last
-// computed DiffData keyed by the request `key`, so moving the tolerance
-// slider is a render-only round trip: no pixels are re-compared. All logic
-// lives in imageDiff.ts (pure, unit-tested); this file is only the wiring.
+// The Differences mode's pixel passes (`heatmapPasses`), off the UI thread: a 4K pair takes tens of milliseconds that
+// must never hold a paint. The worker keeps the last pair compared, so moving the tolerance slider only renders the
+// heatmap again. This file is only the messaging.
 
-import {
-  type AnchorMode,
-  type ChangedRegion,
-  computeDiff,
-  type DiffData,
-  findChangedRegions,
-  type RgbaBitmap,
-  renderDiffFrame,
-} from './imageDiff';
+import type { ChangedRegion } from './changedRegions';
+import { heatmapPasses, type RenderedHeatmap } from './heatmapPasses';
+import type { AnchorMode } from './imageDiff';
+import type { RgbaBitmap } from './pixelComparison';
 
-/** A bitmap flattened for postMessage (structured clone keeps it intact). */
+/** A bitmap as it crosses to the worker (a structured clone keeps it whole). */
 export interface BitmapPayload {
   data: ArrayBuffer;
   width: number;
@@ -23,91 +15,49 @@ export interface BitmapPayload {
 }
 
 export type DiffWorkerRequest =
-  | {
-      id: number;
-      kind: 'compute';
-      key: string;
-      old: BitmapPayload;
-      new: BitmapPayload;
-      anchor: AnchorMode;
-      threshold: number;
-    }
-  | { id: number; kind: 'rethreshold'; key: string; threshold: number };
+  | { id: number; kind: 'compare'; key: string; old: BitmapPayload; new: BitmapPayload; anchor: AnchorMode; tolerance: number }
+  | { id: number; kind: 'rerender'; key: string; tolerance: number };
+
+/** A heatmap as it crosses back: its pixels' buffer is transferred, not copied. */
+export interface HeatmapPayload {
+  pixels: ArrayBuffer;
+  width: number;
+  height: number;
+  regions: ChangedRegion[];
+}
 
 export type DiffWorkerResponse =
-  | {
-      id: number;
-      kind: 'computed';
-      frame: ArrayBuffer;
-      width: number;
-      height: number;
-      regions: ChangedRegion[];
-      coveredPixels: number;
-      histogram: ArrayBuffer;
-    }
-  | {
-      id: number;
-      kind: 'rendered';
-      frame: ArrayBuffer;
-      width: number;
-      height: number;
-      regions: ChangedRegion[];
-    }
-  /** The worker no longer holds that key — the caller must recompute. */
+  | ({ id: number; kind: 'compared'; coveredPixels: number; histogram: ArrayBuffer } & HeatmapPayload)
+  | ({ id: number; kind: 'rendered' } & HeatmapPayload)
+  /** The worker no longer keeps that pair: compare it again. */
   | { id: number; kind: 'gone' };
 
-// The renderer tsconfig targets the DOM, not lib.webworker; type the worker
-// global with just the two members this file touches.
+// The renderer's tsconfig types the DOM, not lib.webworker: the worker's global with just what this file uses.
 const scope = self as unknown as {
-  onmessage: ((e: MessageEvent<DiffWorkerRequest>) => void) | null;
+  onmessage: ((event: MessageEvent<DiffWorkerRequest>) => void) | null;
   postMessage(message: DiffWorkerResponse, transfer?: Transferable[]): void;
 };
 
-/** The last computed pair: rethreshold requests re-render from this. */
-let held: { key: string; data: DiffData } | null = null;
+const passes = heatmapPasses();
 
-const toBitmap = (p: BitmapPayload): RgbaBitmap => ({
-  data: new Uint8ClampedArray(p.data),
-  width: p.width,
-  height: p.height,
-});
+scope.onmessage = ({ data: request }) => {
+  if (request.kind === 'compare') {
+    const { coveredPixels, histogram, ...heatmap } = passes.compare(request.key, toBitmap(request.old), toBitmap(request.new), request.anchor, request.tolerance);
+    // The histogram goes to the renderer, which counts changed pixels with it; the comparison stays for `rerender`.
+    const payload = toPayload(heatmap);
+    scope.postMessage({ id: request.id, kind: 'compared', coveredPixels, histogram: histogram.buffer, ...payload }, [payload.pixels, histogram.buffer]);
+    return;
+  }
+  const heatmap = passes.rerender(request.key, request.tolerance);
+  if (!heatmap) return scope.postMessage({ id: request.id, kind: 'gone' });
+  const payload = toPayload(heatmap);
+  scope.postMessage({ id: request.id, kind: 'rendered', ...payload }, [payload.pixels]);
+};
 
-function frameAndRegions(
-  data: DiffData,
-  threshold: number,
-): { frame: ArrayBuffer; width: number; height: number; regions: ChangedRegion[] } {
-  return {
-    frame: renderDiffFrame(data, threshold).buffer,
-    width: data.width,
-    height: data.height,
-    regions: findChangedRegions(data.delta, data.width, data.height, threshold),
-  };
+function toBitmap(payload: BitmapPayload): RgbaBitmap {
+  return { data: new Uint8ClampedArray(payload.data), width: payload.width, height: payload.height };
 }
 
-scope.onmessage = (e) => {
-  const req = e.data;
-  if (req.kind === 'compute') {
-    const data = computeDiff(toBitmap(req.old), toBitmap(req.new), req.anchor);
-    held = { key: req.key, data };
-    const payload = frameAndRegions(data, req.threshold);
-    // The histogram transfers out (the renderer thresholds with it); delta and
-    // underlay stay here for rethreshold renders.
-    scope.postMessage(
-      {
-        id: req.id,
-        kind: 'computed',
-        coveredPixels: data.coveredPixels,
-        histogram: data.histogram.buffer,
-        ...payload,
-      },
-      [payload.frame, data.histogram.buffer],
-    );
-    return;
-  }
-  if (!held || held.key !== req.key) {
-    scope.postMessage({ id: req.id, kind: 'gone' });
-    return;
-  }
-  const payload = frameAndRegions(held.data, req.threshold);
-  scope.postMessage({ id: req.id, kind: 'rendered', ...payload }, [payload.frame]);
-};
+function toPayload({ pixels, width, height, regions }: RenderedHeatmap): HeatmapPayload {
+  return { pixels: pixels.buffer, width, height, regions };
+}

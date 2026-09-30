@@ -4,7 +4,7 @@
 // main-thread hit that should happen at most once per revision. The WeakMap
 // releases the bytes as soon as the decoded image itself is dropped.
 
-import type { RgbaBitmap } from './imageDiff';
+import type { RgbaBitmap } from './pixelComparison';
 import type { DecodedImage } from './useDecodedImage';
 
 const cache = new WeakMap<HTMLImageElement, RgbaBitmap>();
