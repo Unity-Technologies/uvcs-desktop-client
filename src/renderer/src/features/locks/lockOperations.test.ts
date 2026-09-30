@@ -5,7 +5,7 @@ vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import type { Lock, LockStatus } from '@shared/domain/lock';
 import { answerConfirms } from '../../testing/fakeDialogs';
-import { shownToasts } from '../../testing/operationOutcome';
+import { shownToasts, watchRefreshes } from '../../testing/operationOutcome';
 import { isReleasable, releaseLocks, removeLocks } from './lockOperations';
 
 const ws = '/ws';
@@ -35,6 +35,18 @@ describe('lock operations', () => {
 
     expect(fakeApi.argsOf('locks.unlock')).toEqual([[ws, [lock('/art/hero.psd')], { remove: false }]]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Released the lock on hero.psd' }]);
+  });
+
+  it('refreshes only the locks, never the history nor the workspace', async () => {
+    fakeApi.answer('locks.unlock', () => undefined);
+
+    const afterRelease = watchRefreshes(ws);
+    await releaseLocks(ws, [lock('/a.psd')]);
+    expect(afterRelease()).toEqual(['locks']);
+
+    const afterRemove = watchRefreshes(ws);
+    await removeLocks(ws, [lock('/a.psd')]);
+    expect(afterRemove()).toEqual(['locks']);
   });
 
   it('removes locks entirely only once confirmed', async () => {
