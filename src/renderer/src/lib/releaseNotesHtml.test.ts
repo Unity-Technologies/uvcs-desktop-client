@@ -19,12 +19,14 @@ describe('release notes as GitHub renders them', () => {
         kind: 'list',
         ordered: false,
         items: [
-          [
-            text('Shelves open from the palette by '),
-            { kind: 'link', url: 'https://github.com/ana', children: [text('@ana')] },
-            text(' in '),
-            { kind: 'link', url: 'https://github.com/danipen/uvcs-desktop-client/pull/12', children: [text('#12')] },
-          ],
+          {
+            children: [
+              text('Shelves open from the palette by '),
+              { kind: 'link', url: 'https://github.com/ana', children: [text('@ana')] },
+              text(' in '),
+              { kind: 'link', url: 'https://github.com/danipen/uvcs-desktop-client/pull/12', children: [text('#12')] },
+            ],
+          },
         ],
       },
       {
@@ -68,14 +70,31 @@ describe('release notes as GitHub renders them', () => {
 
   it('reads loose list items, with paragraphs inside, as one line each', () => {
     expect(releaseNotesFromHtml('<ol>\n<li>\n<p>First</p>\n</li>\n<li><p>Second</p></li>\n</ol>')).toEqual([
-      { kind: 'list', ordered: true, items: [[text('First')], [text('Second')]] },
+      { kind: 'list', ordered: true, items: [{ children: [text('First')] }, { children: [text('Second')] }] },
     ]);
   });
 
-  it('joins a nested list to the list it is in, after its item', () => {
-    expect(releaseNotesFromHtml('<ul><li>Branches<ul><li>Rename</li><li>Delete</li></ul></li><li>Labels</li></ul>')).toEqual([
-      { kind: 'list', ordered: false, items: [[text('Branches')], [text('Rename')], [text('Delete')], [text('Labels')]] },
+  it('keeps a nested list under its item', () => {
+    expect(releaseNotesFromHtml('<ul><li>Branches<ol><li>Rename</li><li>Delete</li></ol></li><li>Labels</li></ul>')).toEqual([
+      {
+        kind: 'list',
+        ordered: false,
+        items: [
+          { children: [text('Branches')], sublist: { kind: 'list', ordered: true, items: [{ children: [text('Rename')] }, { children: [text('Delete')] }] } },
+          { children: [text('Labels')] },
+        ],
+      },
     ]);
+  });
+
+  it('keeps an item that holds only a nested list, and joins two nested lists into one', () => {
+    const [list] = releaseNotesFromHtml('<ul><li><ul><li>A</li></ul><ul><li>B</li></ul></li></ul>');
+
+    expect(list).toEqual({
+      kind: 'list',
+      ordered: false,
+      items: [{ children: [], sublist: { kind: 'list', ordered: false, items: [{ children: [text('A')] }, { children: [text('B')] }] } }],
+    });
   });
 
   it('reads text outside any block as a paragraph', () => {

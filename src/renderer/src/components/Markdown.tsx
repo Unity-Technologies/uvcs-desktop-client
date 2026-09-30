@@ -1,6 +1,6 @@
 import { useMemo, type ReactNode } from 'react';
 import { api } from '../api/client';
-import { parseMarkdown, type MarkdownBlock, type MarkdownInline } from '../lib/markdown';
+import { parseMarkdown, type MarkdownBlock, type MarkdownInline, type MarkdownList } from '../lib/markdown';
 import styles from './Markdown.module.css';
 
 /** Markdown text such as release notes, rendered as elements; links open in the browser. */
@@ -26,17 +26,23 @@ function renderBlock(block: MarkdownBlock, index: number): ReactNode {
       return <blockquote key={index}>{renderInlines(block.children)}</blockquote>;
     case 'code':
       return <pre key={index}>{block.text}</pre>;
-    case 'list': {
-      const List = block.ordered ? 'ol' : 'ul';
-      return (
-        <List key={index}>
-          {block.items.map((item, itemIndex) => (
-            <li key={itemIndex}>{renderInlines(item)}</li>
-          ))}
-        </List>
-      );
-    }
+    case 'list':
+      return renderList(block, index);
   }
+}
+
+function renderList(list: MarkdownList, key: number): ReactNode {
+  const List = list.ordered ? 'ol' : 'ul';
+  return (
+    <List key={key}>
+      {list.items.map((item, index) => (
+        <li key={index}>
+          {renderInlines(item.children)}
+          {item.sublist && renderList(item.sublist, 0)}
+        </li>
+      ))}
+    </List>
+  );
 }
 
 function renderInlines(inlines: MarkdownInline[]): ReactNode[] {

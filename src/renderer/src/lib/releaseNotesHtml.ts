@@ -1,10 +1,10 @@
-import type { MarkdownBlock, MarkdownInline } from './markdown';
+import type { MarkdownBlock, MarkdownInline, MarkdownList, MarkdownListItem } from './markdown';
 
 /**
  * Reads release notes as GitHub renders them (HTML, from the releases feed) into the tree `MarkdownBlocks` renders, so
  * no HTML from the feed ever reaches the page. It keeps what release notes use (headings, paragraphs, lists, quotes,
- * code, emphasis and web links) and reads anything else as its text: images, scripts and styles are left out, nested
- * lists join their parent's, and each row of a table is a paragraph.
+ * code, emphasis and web links) and reads anything else as its text: images, scripts and styles are left out, and each
+ * row of a table is a paragraph.
  */
 export function releaseNotesFromHtml(html: string): MarkdownBlock[] {
   return blocksOf(parseHtml(html));
@@ -108,8 +108,8 @@ function blocksOfElement(element: HtmlElement): MarkdownBlock[] {
   if (tag === 'blockquote') return withInlines(children, (inlines) => ({ kind: 'quote', children: inlines }));
   if (tag === 'pre') return [{ kind: 'code', text: textOf(children).replace(/\n$/, '') }];
   if (tag === 'ul' || tag === 'ol') {
-    const items = listItemsOf(children);
-    return items.length > 0 ? [{ kind: 'list', ordered: tag === 'ol', items }] : [];
+    const list = listOf(element);
+    return list ? [list] : [];
   }
   if (tag === 'hr') return [];
   return blocksOf(children);
@@ -120,17 +120,19 @@ function withInlines(nodes: HtmlNode[], block: (inlines: MarkdownInline[]) => Ma
   return inlines.length > 0 ? [block(inlines)] : [];
 }
 
-/** Each item of a list, the items of the lists nested in it following it. */
-function listItemsOf(nodes: HtmlNode[]): MarkdownInline[][] {
-  const items: MarkdownInline[][] = [];
-  for (const node of nodes) {
-    if (typeof node === 'string' || node.tag !== 'li') continue;
-    const nested = node.children.filter((child): child is HtmlElement => typeof child !== 'string' && (child.tag === 'ul' || child.tag === 'ol'));
-    const item = inlinesOf(node.children.filter((child) => !nested.includes(child as HtmlElement)));
-    if (item.length > 0) items.push(item);
-    for (const list of nested) items.push(...listItemsOf(list.children));
-  }
-  return items;
+function listOf(element: HtmlElement): MarkdownList | null {
+  const items = element.children.flatMap((node) => (typeof node !== 'string' && node.tag === 'li' ? listItemOf(node) : []));
+  return items.length > 0 ? { kind: 'list', ordered: element.tag === 'ol', items } : null;
+}
+
+/** A list item's line, and the lists nested in it as one list under it (an item holds one in what GitHub renders). */
+function listItemOf(item: HtmlElement): MarkdownListItem[] {
+  const isList = (node: HtmlNode): node is HtmlElement => typeof node !== 'string' && (node.tag === 'ul' || node.tag === 'ol');
+  const nested = item.children.filter(isList).map(listOf).filter((list) => list !== null);
+  const children = inlinesOf(item.children.filter((node) => !isList(node)));
+  if (children.length === 0 && nested.length === 0) return [];
+  const sublist = nested.length > 0 ? { ...nested[0]!, items: nested.flatMap((list) => list.items) } : undefined;
+  return [sublist ? { children, sublist } : { children }];
 }
 
 /** The nodes as one line of inline marks, the white space collapsed as a browser would. */

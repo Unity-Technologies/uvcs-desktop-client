@@ -7,7 +7,7 @@ describe('parseMarkdown', () => {
     expect(blocks.map((block) => block.kind)).toEqual(['heading', 'paragraph', 'list', 'list', 'quote', 'code']);
     expect(blocks[0]).toEqual({ kind: 'heading', level: 2, children: [{ kind: 'text', text: 'Fixes' }] });
     expect(blocks[1]).toEqual({ kind: 'paragraph', children: [{ kind: 'text', text: 'The game no longer crashes.' }] });
-    expect(blocks[2]).toMatchObject({ kind: 'list', ordered: false, items: [[{ text: 'Faster load' }], [{ text: 'Smaller build' }]] });
+    expect(blocks[2]).toMatchObject({ kind: 'list', ordered: false, items: [{ children: [{ text: 'Faster load' }] }, { children: [{ text: 'Smaller build' }] }] });
     expect(blocks[3]).toMatchObject({ kind: 'list', ordered: true });
     expect(blocks[5]).toEqual({ kind: 'code', text: 'npm test' });
   });
