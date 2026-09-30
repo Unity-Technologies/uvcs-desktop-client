@@ -1,0 +1,114 @@
+import { commandFailure, fakeApi } from '../../testing/fakeWindow';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+const dialogs = vi.hoisted(() => ({ confirmed: true, asked: [] as string[] }));
+vi.mock('../../ui/dialog/confirm', () => ({
+  confirm: async ({ title }: { title: string }) => {
+    dialogs.asked.push(title);
+    return dialogs.confirmed;
+  },
+}));
+
+import type { LeftChanges, RestoreResult } from '@shared/domain/switchWithChanges';
+import { shownToasts, whereTheWindowIs } from '../../testing/operationOutcome';
+import { discardLeftChanges, restoreLeftChanges } from './leftChangesOperations';
+
+const ws = '/ws';
+
+const left = (shelveId: number, reason: LeftChanges['reason'] = 'switch'): LeftChanges => ({
+  shelveId,
+  sourceName: '/main/task',
+  targetName: '/main',
+  mode: 'leave',
+  reason,
+  count: 3,
+  createdAt: '2026-09-27T10:00:00Z',
+  foreign: false,
+});
+
+function restoreAnswers(result: RestoreResult): void {
+  fakeApi.answer('leftChanges.restore', () => result);
+}
+
+beforeEach(() => {
+  dialogs.confirmed = true;
+  dialogs.asked = [];
+});
+
+describe('restoreLeftChanges', () => {
+  it('restores the shelve and says where the changes were left, with a way to see them', async () => {
+    restoreAnswers({ kind: 'restored', count: 3, sourceName: '/main/task' });
+
+    await restoreLeftChanges(ws, left(12));
+
+    expect(fakeApi.argsOf('leftChanges.restore')).toEqual([[ws, 12, expect.any(String)]]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Restored 3 changes you left on /main/task', action: 'View' }]);
+  });
+
+  it('says changes put aside to update were put aside, not left', async () => {
+    restoreAnswers({ kind: 'restored', count: 1, sourceName: '/main' });
+
+    await restoreLeftChanges(ws, left(12, 'update'));
+
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Restored 1 change you put aside', action: 'View' }]);
+  });
+
+  it('restores nothing over pending changes, and says what to do first', async () => {
+    restoreAnswers({ kind: 'pendingChanges' });
+
+    await restoreLeftChanges(ws, left(12));
+
+    expect(shownToasts()).toEqual([
+      { kind: 'info', title: 'Your changes weren’t restored', detail: 'Check in, shelve or undo your current changes first, then restore.' },
+    ]);
+  });
+
+  it('opens the merge view on conflicts', async () => {
+    restoreAnswers({ kind: 'conflicts', shelveId: 12 });
+
+    await restoreLeftChanges(ws, left(12));
+
+    expect(whereTheWindowIs().pages).toEqual([{ kind: 'merge', request: { kind: 'merge', sourceSpec: 'sh:12' } }]);
+    expect(shownToasts()).toEqual([]);
+  });
+
+  it('reports a failed restore and goes nowhere', async () => {
+    fakeApi.answer('leftChanges.restore', () => {
+      throw commandFailure('The shelve does not exist');
+    });
+
+    await restoreLeftChanges(ws, left(12));
+
+    expect(shownToasts()).toEqual([{ kind: 'error', title: 'Restoring your changes from /main/task failed', detail: 'The shelve does not exist' }]);
+    expect(whereTheWindowIs().pages).toEqual([]);
+  });
+});
+
+describe('discardLeftChanges', () => {
+  it('deletes every shelve picked at once, once confirmed', async () => {
+    fakeApi.answer('leftChanges.discard', () => undefined);
+
+    await discardLeftChanges(ws, [left(11), left(9)]);
+
+    expect(dialogs.asked).toEqual(['Discard 2 older shelves?']);
+    expect(fakeApi.argsOf('leftChanges.discard')).toEqual([[ws, [11, 9]]]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Discarded 2 shelves' }]);
+  });
+
+  it('names the one shelve discarded', async () => {
+    fakeApi.answer('leftChanges.discard', () => undefined);
+
+    await discardLeftChanges(ws, [left(12)]);
+
+    expect(dialogs.asked).toEqual(['Discard these shelved changes?']);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Discarded shelve 12' }]);
+  });
+
+  it('discards nothing unless confirmed', async () => {
+    dialogs.confirmed = false;
+
+    await discardLeftChanges(ws, [left(12)]);
+
+    expect(fakeApi.methods()).toEqual([]);
+  });
+});
