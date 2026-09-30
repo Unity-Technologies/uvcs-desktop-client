@@ -1,12 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { ChevronRight, MoreHorizontal } from 'lucide-react';
-import { memo, useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type MouseEvent } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
-import { ItemIcon } from '../../components/ItemIcon';
-import { ItemPathRow } from '../../components/ItemPathRow';
-import { ItemRow } from '../../components/ItemRow';
-import { ItemStatusMark } from '../../components/ItemStatusMark';
-import { ItemTag } from '../../components/ItemTag';
 import type { MenuEntry } from '../../lib/actions';
 import { Arrivals } from '../../lib/arrivals';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
@@ -14,20 +8,15 @@ import { holdBackMenuKeyRelease, isListMenuKey, openContextMenuOf } from '../../
 import { isModPressed } from '../../lib/shortcuts';
 import { focusedKeyOf, selectOnArrow, selectOnClick, type SelectionState } from '../../lib/selection';
 import { treeArrowMove } from '../../lib/treeArrowMove';
-import { Checkbox, type CheckState } from '../../ui/Checkbox';
-import { Highlight } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
-import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
-import { changePresence, changeStatus, changeTone } from './changeTone';
+import { GroupRowContent, ItemRowContent, type RowActions, type ToggleIncluded } from './ChangeRowContent';
 import { indexChangeRows, perRow } from './changeRowIndex';
-import { rowCheckState } from './changeRowChecks';
+import { rowCheckState, spaceToggle } from './changeRowChecks';
 import { changeTreeArrowRows, rowIndent, treeLevel } from './changeRowLevels';
 import { menuTargetOf, type ChangeRow } from './changeRows';
-import { LockMark } from './locks/LockMark';
-import type { PendingLock, PendingLocks } from './locks/pendingLocks';
+import type { PendingLocks } from './locks/pendingLocks';
 import { isReviewKey, toggleReviewedFromKey } from '../review/reviewKey';
 import { groupReviewStatus, type ReviewStatus, type ReviewStatusOf } from '../review/reviewStatus';
-import { ReviewToggle } from '../review/ReviewToggle';
 import type { ListReview } from '../review/useReviewMode';
 import { useChangelistDrop } from './useChangelistDrop';
 import styles from './ChangesList.module.css';
@@ -45,7 +34,7 @@ interface ChangesListProps {
   /** Whether a change goes into the check-in. */
   isIncluded: (change: PendingChange) => boolean;
   /** Checks or unchecks what the rows stand for, all at once. */
-  onToggleIncluded: (rows: ChangeRow[], included: boolean) => void;
+  onToggleIncluded: ToggleIncluded;
   onToggleCollapsed: (rowKey: string) => void;
   /** Enter or double-click on a change. */
   onOpen: (change: PendingChange) => void;
@@ -161,14 +150,8 @@ export function ChangesList({
       toggleReviewedFromKey(review, selectedChanges(), () => moveBy(1, false));
     } else if (event.key === ' ') {
       event.preventDefault();
-      const selectedRows = changeRows.filter((row) => selection.selected.has(row.key));
-      const focusedState = focusedRow && checkStateOf(focusedRow);
-      if (selectedRows.length === 0 && focusedRow && focusedRow.type !== 'change' && focusedState !== null) {
-        onToggleIncluded([focusedRow], focusedState !== true);
-        return;
-      }
-      const include = selectedRows.some((row) => checkStateOf(row) !== true);
-      onToggleIncluded(selectedRows, include);
+      const toggle = spaceToggle(changeRows.filter((row) => selection.selected.has(row.key)), focusedRow, checkStateOf);
+      onToggleIncluded(toggle.rows, toggle.include);
     } else if (event.key === 'a' && isModPressed(event)) {
       event.preventDefault();
       onSelectionChange({ selected: new Set(orderedKeys), anchor: orderedKeys[0] ?? null });
@@ -275,102 +258,4 @@ export function ChangesList({
 function rowReviewStatus(row: ChangeRow, statusOf: ReviewStatusOf<PendingChange>): ReviewStatus | null {
   if (row.type === 'change') return statusOf(row.change);
   return row.type === 'directory' ? groupReviewStatus(row.changes, statusOf) : null;
-}
-
-/** What a row of a file or folder does, stable across renders. */
-interface RowActions {
-  toggleIncluded: ChangesListProps['onToggleIncluded'];
-  toggleReviewed: (changes: PendingChange[]) => void;
-}
-
-type GroupRow = ChangeRow & { type: 'group' };
-
-/** A changelist's header: its check, name, actions and count. */
-function GroupRowContent({ row, checkState, onToggleIncluded, changelistMenu }: { row: GroupRow; checkState: CheckState | null } & Pick<ChangesListProps, 'onToggleIncluded' | 'changelistMenu'>) {
-  return (
-    <>
-      <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
-      <RowCheckbox row={row} checkState={checkState} label={row.label} onToggleIncluded={onToggleIncluded} />
-      <span className={styles.groupLabel} data-tip={row.changelist?.description}>
-        {row.label}
-      </span>
-      {row.changelist && (
-        <ActionDropdownMenu entries={changelistMenu(row.changelist)}>
-          <button className={styles.groupMenu} onMouseDown={(event) => event.stopPropagation()} aria-label="Changelist actions">
-            <MoreHorizontal size={14} />
-          </button>
-        </ActionDropdownMenu>
-      )}
-      <span className={styles.count}>{row.changes.length}</span>
-    </>
-  );
-}
-
-interface ItemRowContentProps {
-  row: Exclude<ChangeRow, GroupRow>;
-  /** Null when nothing it stands for can be checked in. */
-  checkState: CheckState | null;
-  /** Null outside review mode. */
-  reviewStatus: ReviewStatus | null;
-  lock?: PendingLock;
-  actions: RowActions;
-}
-
-/** A file or folder as every list shows one (`ItemRow`), after its check (and a folder's chevron). */
-const ItemRowContent = memo(function ItemRowContent({ row, checkState, reviewStatus, lock, actions }: ItemRowContentProps) {
-  if (row.type === 'directory') {
-    return (
-      <>
-        <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
-        <RowCheckbox row={row} checkState={checkState} label={row.name} onToggleIncluded={actions.toggleIncluded} />
-        {/* Every folder here holds changes, so only its own change marks it. */}
-        <ItemRow
-          icon={<ItemIcon itemType="directory" name={row.name} />}
-          label={
-            <span className={styles.directoryName} data-tip={row.name.includes('/') ? row.name : undefined}>
-              <Highlight text={row.name} />
-            </span>
-          }
-          extras={reviewStatus && <ReviewToggle folder status={reviewStatus} onToggle={() => actions.toggleReviewed(row.changes)} />}
-          status={<ItemStatusMark status={row.change && changeStatus(row.change)} />}
-          presence={row.change ? changePresence(row.change) : 'controlled'}
-          deleted={row.change && changeTone(row.change) === 'deleted'}
-          faded={reviewStatus === 'reviewed'}
-        />
-      </>
-    );
-  }
-  const { change } = row;
-  return (
-    <>
-      {checkState !== null ? (
-        <Checkbox checked={checkState} onChange={(checked) => actions.toggleIncluded([row], checked)} ariaLabel="Include in the check in" focusable={false} />
-      ) : (
-        <span className={styles.checkboxPlaceholder} />
-      )}
-      <ItemPathRow
-        path={change.path}
-        itemType={change.itemType}
-        nameOnly={row.depth > 0}
-        oldPath={change.oldPath}
-        status={changeStatus(change)}
-        presence={changePresence(change)}
-        faded={reviewStatus === 'reviewed'}
-        extras={
-          <>
-            {change.mergeInfo && <ItemTag>{change.mergeInfo}</ItemTag>}
-            {change.kinds.includes('moved') && change.kinds.includes('changed') && <ItemTag>modified</ItemTag>}
-            {reviewStatus && <ReviewToggle status={reviewStatus} onToggle={() => actions.toggleReviewed([change])} />}
-            {lock && <LockMark lock={lock} />}
-          </>
-        }
-      />
-    </>
-  );
-});
-
-/** A changelist's or folder's checkbox, or its room when nothing in it can be checked in. */
-function RowCheckbox({ row, checkState, label, onToggleIncluded }: { row: ChangeRow; checkState: CheckState | null; label: string } & Pick<ChangesListProps, 'onToggleIncluded'>) {
-  if (checkState === null) return <span className={styles.checkboxPlaceholder} />;
-  return <Checkbox checked={checkState} onChange={(checked) => onToggleIncluded([row], checked)} ariaLabel={`Include ${label}`} focusable={false} />;
 }

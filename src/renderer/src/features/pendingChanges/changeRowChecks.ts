@@ -21,3 +21,21 @@ function combinedCheckState(changes: PendingChange[], isChecked: (change: Pendin
   if (checked === 0) return false;
   return checked === candidates ? true : 'mixed';
 }
+
+/** What Space checks or unchecks, and which way. */
+export interface SpaceToggle {
+  rows: ChangeRow[];
+  include: boolean;
+}
+
+/**
+ * Space on the list: the selected files, checked unless every one already is. With no file selected, the folder or
+ * changelist the keyboard is on, over what it holds, unless nothing in it can be checked in.
+ */
+export function spaceToggle(selectedRows: ChangeRow[], focusedRow: ChangeRow | undefined, checkStateOf: (row: ChangeRow) => CheckState | null): SpaceToggle {
+  if (selectedRows.length === 0 && focusedRow && focusedRow.type !== 'change') {
+    const focusedState = checkStateOf(focusedRow);
+    if (focusedState !== null) return { rows: [focusedRow], include: focusedState !== true };
+  }
+  return { rows: selectedRows, include: selectedRows.some((row) => checkStateOf(row) !== true) };
+}
