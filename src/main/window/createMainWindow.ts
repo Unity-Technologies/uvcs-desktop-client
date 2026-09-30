@@ -1,15 +1,13 @@
 import { join } from 'node:path';
 import { BrowserWindow, nativeTheme, shell } from 'electron';
 import { startingWorkspaceQuery } from '@shared/startingWorkspace';
-import { windowChrome } from '@shared/windowChrome';
+import { WINDOW_BACKGROUND, windowChrome } from '@shared/windowChrome';
 import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
 import { cascadedWindowBounds, loadWindowBounds, keepWindowBoundsSaved } from './savedWindowBounds';
 import { titleBarOptions } from './titleBar';
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from './windowBounds';
 
-const DARK_BACKGROUND = '#16171b';
-const LIGHT_BACKGROUND = '#ffffff';
 /** Until the user leaves a window somewhere (`loadWindowBounds`). */
 const DEFAULT_SIZE = { width: 1400, height: 900 };
 
@@ -34,7 +32,7 @@ export function createMainWindow(settings: SettingsStore, { cascadeFrom, workspa
     show: false,
     title: 'Unity Version Control',
     ...titleBarOptions(windowChrome(process.platform), nativeTheme.shouldUseDarkColors),
-    backgroundColor: nativeTheme.shouldUseDarkColors ? DARK_BACKGROUND : LIGHT_BACKGROUND,
+    backgroundColor: WINDOW_BACKGROUND[nativeTheme.shouldUseDarkColors ? 'dark' : 'light'],
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
