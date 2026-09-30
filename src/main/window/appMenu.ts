@@ -1,5 +1,6 @@
 import { app, BrowserWindow, Menu, shell, type MenuItemConstructorOptions } from 'electron';
 import { sendEventTo } from '../ipc/sendEvent';
+import { aboutPanelOptions } from './aboutPanel';
 import { appMenuTemplate } from './appMenuTemplate';
 import { isMenuCommandEnabled } from './workspaceMenuCommands';
 import { focusWindow, type WorkspaceWindows } from './WorkspaceWindows';
@@ -54,11 +55,18 @@ export function installAppMenu(windows: WorkspaceWindows): void {
   Menu.setApplicationMenu(menu);
 }
 
+/** The menu bar, the About panel its Help menu opens off macOS, and the Dock icon's menu on macOS. */
+export function installMenus(windows: WorkspaceWindows): void {
+  app.setAboutPanelOptions(aboutPanelOptions(app.name, app.getVersion()));
+  installAppMenu(windows);
+  installDockMenu(windows);
+}
+
 /**
  * The Dock icon's menu on macOS gets New Window, even with every window closed; the system puts the recent workspaces
  * above it (`recentDocuments`) and the open windows below.
  */
-export function installDockMenu(windows: WorkspaceWindows): void {
+function installDockMenu(windows: WorkspaceWindows): void {
   app.dock?.setMenu(Menu.buildFromTemplate([{ label: 'New Window', click: () => windows.open() }]));
 }
 

@@ -1,47 +1,30 @@
-import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { app, webContents } from 'electron';
+import { app } from 'electron';
 import { CmClient } from './cm/CmClient';
 import { locateCm } from './cm/locateCm';
 import { warnOnRepeatedServerCommands } from './cm/repeatedCommands';
 import { findWorkspaceRoot } from './cm/workspaceRoot';
-import { currentCaller } from './ipc/caller';
 import { registerApi } from './ipc/registerApi';
-import { sendEvent, sendEventTo, sendEventToCaller } from './ipc/sendEvent';
-import { OperationTracker } from './operations/OperationTracker';
+import { sendEvent, sendEventToCaller } from './ipc/sendEvent';
 import { DiffReviewStore } from './review/DiffReviewStore';
 import { ReviewStore } from './review/ReviewStore';
 import { createServices } from './services/createServices';
-import { plasticConfigFolder } from './plasticConfig/configFolder';
-import { importLegacySettings } from './settings/importLegacySettings';
-import { SettingsStore } from './settings/SettingsStore';
-import { changesWorkspace, rewritesChangelists } from './watch/changesWorkspace';
-import { WorkspaceWatchers } from './watch/WorkspaceWatchers';
-import { aboutPanelOptions } from './window/aboutPanel';
-import { installAppMenu, installDockMenu } from './window/appMenu';
+import { handleLaunchRequests, isTheRunningApp } from './startup/launchRequests';
+import { trackOperations } from './startup/operationTracking';
+import { ignoreOwnCommandWrites } from './startup/ownWrites';
+import { openSettings, sendSettingsChanges } from './startup/settings';
+import { watchShownWorkspaces } from './startup/workspaceWatching';
+import { installAppMenu, installMenus } from './window/appMenu';
 import { followAppTheme } from './window/followAppTheme';
-import { handleRecentDocumentRequests } from './window/recentDocuments';
-import { workspaceArgument } from './window/workspaceArgument';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
 
+const userData = app.getPath('userData');
 const cm = new CmClient(locateCm);
-const settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'));
-importLegacySettings(settings, plasticConfigFolder(process.platform, process.env, homedir()));
-// Rewriting a workspace, by the app or any tool, forgets what was read of it.
+const settings = openSettings(userData);
+// What a workspace is loaded from, shared by the reads that follow one another as a window opens it.
 const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
-
-// Each window shows one workspace; windows on the same workspace share its watcher and its `cm shell` sessions.
-const watchers = new WorkspaceWatchers(
-  (viewers, workspacePath, change) => {
-    if (change.metadata) headers.forget(workspacePath);
-    for (const viewer of viewers) {
-      const target = webContents.fromId(viewer);
-      if (target) sendEventTo(target, 'workspaceChanged', { workspacePath, ...change });
-    }
-  },
-  (workspacePath) => cm.release(workspacePath),
-);
+const watchers = watchShownWorkspaces(cm, headers);
 const windows = new WorkspaceWindows({
   settings,
   workspaceOf: (viewer) => watchers.workspaceOf(viewer),
@@ -54,74 +37,32 @@ function start(): void {
   // A window sees the commands its own calls ran (commands run outside any call go to every window).
   cm.onCommandLogged((entry) => sendEventToCaller('commandLogged', entry));
   if (!app.isPackaged) warnOnRepeatedServerCommands(cm);
-  // Window bounds are saved as windows move; no window shows them.
-  settings.onChanged((changed, changes) => Object.keys(changes).some((key) => key !== 'windowBounds') && sendEvent('settingsChanged', changed));
-
-  // The renderer refreshes its views after its own operations and writes; the watchers skip what they cause.
-  cm.onCommandStarted(({ args, cwd, finished }) => {
-    if (rewritesChangelists(args)) watchers.ignoreOwnWrite(finished, cwd, 'changelists');
-    if (!changesWorkspace(args)) return;
-    watchers.ignoreOwnWrite(finished, cwd);
-    headers.forget();
-    const forget = () => headers.forget();
-    void finished.then(forget, forget);
-  });
-  const operations = new OperationTracker(
-    (operationId, progress) => sendEventToCaller('operationProgress', { operationId, progress }),
-    (finished) => {
-      const caller = currentCaller();
-      watchers.ignoreOwnWrite(finished, caller && watchers.workspaceOf(caller.id));
-    },
-  );
-
+  sendSettingsChanges(settings, (changed) => sendEvent('settingsChanged', changed));
+  ignoreOwnCommandWrites(cm, watchers, headers);
   registerApi(
     createServices({
       cm,
-      operations,
-      reviews: new ReviewStore(join(app.getPath('userData'), 'review-snapshots')),
-      diffReviews: new DiffReviewStore(join(app.getPath('userData'), 'review-snapshots', 'diffs')),
+      operations: trackOperations(watchers),
+      reviews: new ReviewStore(join(userData, 'review-snapshots')),
+      diffReviews: new DiffReviewStore(join(userData, 'review-snapshots', 'diffs')),
       settings,
       watchers,
       windows,
       headers,
     }),
   );
-
   followAppTheme(settings);
-  app.setAboutPanelOptions(aboutPanelOptions(app.name, app.getVersion()));
-  installAppMenu(windows);
-  installDockMenu(windows);
+  installMenus(windows);
   windows.openFirst();
   // macOS keeps the app running with no window; clicking the Dock icon then opens the home screen.
   app.on('activate', () => windows.all().length === 0 && windows.open());
 }
 
-/**
- * Opens the workspace holding the folder a launch of the installed app names (Windows and Linux pass it as an
- * argument; macOS as `open-file`). Whether it named one.
- */
-function openNamedWorkspace(argv: readonly string[], workingDirectory: string): boolean {
-  const folder = app.isPackaged ? workspaceArgument(argv, workingDirectory) : null;
-  if (!folder) return false;
-  void findWorkspaceRoot(cm, folder).then((root) => {
-    if (root) windows.requestWorkspace(root, app.isReady());
-    else if (app.isReady()) windows.focusAny();
-  });
-  return true;
-}
-
-// One running app per user: a second launch focuses the existing window, or opens the workspace it names.
-// Development builds skip this so several instances (e.g. automated UI checks) can run side by side.
-if (app.isPackaged && !app.requestSingleInstanceLock()) {
-  app.quit();
-} else {
-  app.on('second-instance', (_event, argv, workingDirectory) => {
-    if (!openNamedWorkspace(argv, workingDirectory)) windows.focusAny();
-  });
-  // Registered before the app is ready: opening a recent workspace from the Dock can be what launches it.
-  handleRecentDocumentRequests(windows);
-  openNamedWorkspace(process.argv, process.cwd());
+if (isTheRunningApp()) {
+  handleLaunchRequests(windows, (folder) => findWorkspaceRoot(cm, folder));
   app.whenReady().then(start);
+} else {
+  app.quit();
 }
 
 app.on('window-all-closed', () => {
