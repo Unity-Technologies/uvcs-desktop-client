@@ -1,3 +1,4 @@
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { app, webContents } from 'electron';
 import { CmClient } from './cm/CmClient';
@@ -11,6 +12,8 @@ import { OperationTracker } from './operations/OperationTracker';
 import { DiffReviewStore } from './review/DiffReviewStore';
 import { ReviewStore } from './review/ReviewStore';
 import { createServices } from './services/createServices';
+import { plasticConfigFolder } from './plasticConfig/configFolder';
+import { importLegacySettings } from './settings/importLegacySettings';
 import { SettingsStore } from './settings/SettingsStore';
 import { changesWorkspace, rewritesChangelists } from './watch/changesWorkspace';
 import { WorkspaceWatchers } from './watch/WorkspaceWatchers';
@@ -24,6 +27,7 @@ import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders'
 
 const cm = new CmClient(locateCm);
 const settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'));
+importLegacySettings(settings, plasticConfigFolder(process.platform, process.env, homedir()));
 // Rewriting a workspace, by the app or any tool, forgets what was read of it.
 const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
 

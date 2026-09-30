@@ -10,8 +10,8 @@ export interface BranchesApi {
   rename(workspacePath: string, branch: string, newName: string): Promise<void>;
   delete(workspacePath: string, branches: string[]): Promise<void>;
   setHidden(workspacePath: string, branches: string[], hidden: boolean): Promise<void>;
-  /** The GUIDs of the branches this workspace switched to lately, newest first, as the official client keeps them. */
+  /** The GUIDs of the branches this workspace switched to lately, newest first, from the app's settings. */
   recent(workspacePath: string): Promise<string[]>;
-  /** Puts a branch first among the workspace's recent branches, as the official client does when it switches. */
+  /** Puts a branch first among the workspace's recent branches (never /main), on every switch. */
   rememberRecent(workspacePath: string, branchGuid: string): Promise<void>;
 }

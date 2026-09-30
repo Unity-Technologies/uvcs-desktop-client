@@ -190,6 +190,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `lib/menuGroups.test.ts`, `components/menuGrammar.test.ts` | every object menu follows one grammar                            |
 | `styles/tokens.test.ts`, `focusRings.test.ts`             | text 4.5:1 and focus rings 3:1 in both themes                     |
 | `window/workspaceMenuCommands.test.ts`                    | app menu commands match the workspace commands                    |
+| `main/settings/ownConfig.test.ts`                         | only the first-run import reads the official client's config; nothing writes it |
 
 Not enforced yet: no `any` (there are none today) and no raw colors outside `styles/tokens.css`. A static test for
 either is welcome.
@@ -209,6 +210,9 @@ either is welcome.
 - **UI building blocks**: reuse before inventing — `ListWithDetails`/`DetailsPanel`, `ItemRow`, `FilterBar`,
   `menuWords`/`groupedMenu`, `openDialog`/`confirm`, `runOperation`. Shortcuts only through `lib/shortcutRegistry.ts`.
   Colors, motion and focus only through `styles/tokens.css`.
+- **Own config**: the app keeps its settings in its own store; it never writes to or keeps reading the official
+  Desktop client's config, only imports well-known values once, on the first run (`importLegacySettings`;
+  ARCHITECTURE.md "Own config").
 - **Dependencies**: every package is a `devDependency`, because electron-vite bundles what the app runs into `out/`
   (`electron-builder.yml` ships no `node_modules`). Prefer none: a new one must do what a small module can't.
 - **Generated, never edited**: `out/`, `dist/`, `*.tsbuildinfo`, `node_modules/`.

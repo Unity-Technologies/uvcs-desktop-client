@@ -1,14 +1,15 @@
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
+import { withRecentBranch } from './recentBranches';
 import { withoutRecentWorkspace, withRecentWorkspace } from './recentWorkspaces';
 
 type ChangeListener = (settings: AppSettings, changes: Partial<AppSettings>) => void;
 
 /**
  * App preferences persisted as JSON in the user data folder. Every window writes through this one store, one
- * change at a time; changes that depend on the stored value (the recent workspaces) are computed here, not by
- * a window from a copy that another window may have changed meanwhile.
+ * change at a time; changes that depend on the stored value (the recent workspaces and branches) are computed here,
+ * not by a window from a copy that another window may have changed meanwhile.
  */
 export class SettingsStore {
   private settings: AppSettings;
@@ -39,6 +40,12 @@ export class SettingsStore {
 
   forgetRecentWorkspace(workspacePath: string): AppSettings {
     return this.update({ recentWorkspacePaths: withoutRecentWorkspace(this.settings.recentWorkspacePaths, workspacePath) });
+  }
+
+  /** Puts a branch first among the workspace's recent branches. */
+  rememberRecentBranch(workspaceGuid: string, branchGuid: string): AppSettings {
+    const recent = this.settings.recentBranchesByWorkspace;
+    return this.update({ recentBranchesByWorkspace: { ...recent, [workspaceGuid]: withRecentBranch(recent[workspaceGuid] ?? [], branchGuid) } });
   }
 
   onChanged(listener: ChangeListener): void {

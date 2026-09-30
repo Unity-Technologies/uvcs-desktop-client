@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { detectKnownTools, locateProgram, type ToolFileSystem } from './detectTools';
+import { detectKnownTools, type ToolFileSystem } from './detectTools';
 import { KNOWN_TOOLS, type Whereabouts } from './knownTools';
 
 function fakeFileSystem(paths: string[]): ToolFileSystem {
@@ -86,15 +86,5 @@ describe('detectKnownTools', () => {
   it("finds the UVCS merge tool as the Linux package installs it, next to cm, when cm isn't the /usr/bin link", () => {
     const linux: Whereabouts = { platform: 'linux', env: { PATH: '/home/me/bin' }, home: '/home/me', cmPath: '/opt/plasticscm5/client/cm' };
     expect(found(linux, ['/usr/bin/plasticgui', '/opt/plasticscm5/client/linplasticx'])).toEqual([['uvcs', '/opt/plasticscm5/client/linplasticx']]);
-  });
-});
-
-describe('locateProgram', () => {
-  it('takes paths as they are and looks bare names up on the PATH', () => {
-    const fs = fakeFileSystem(['/usr/local/bin/kdiff3', '/opt/tool']);
-    expect(locateProgram('/opt/tool', mac, fs)).toBe('/opt/tool');
-    expect(locateProgram('/opt/missing', mac, fs)).toBeUndefined();
-    expect(locateProgram('kdiff3', mac, fs)).toBe('/usr/local/bin/kdiff3');
-    expect(locateProgram('tool', windows, fakeFileSystem(['C:\\Windows\\tool.exe']))).toBe('C:\\Windows\\tool.exe');
   });
 });

@@ -10,13 +10,11 @@ import { saveContent } from '../files/saveContent';
 import { withTempDirectory } from '../files/tempFile';
 import { appExecutable } from '../merge/mergeTools/appExecutable';
 import { fillArgs } from '../merge/mergeTools/commandLine';
-import { detectKnownTools, locateProgram, type ToolFileSystem } from '../merge/mergeTools/detectTools';
+import { detectKnownTools, type ToolFileSystem } from '../merge/mergeTools/detectTools';
 import { KNOWN_TOOLS, type Whereabouts } from '../merge/mergeTools/knownTools';
 import { activateApp, launchMergeTool } from '../merge/mergeTools/launch';
 import { appBundleOf, mergeToolList } from '../merge/mergeTools/mergeToolList';
 import { judgeToolResult, toolFileNames } from '../merge/mergeTools/toolResult';
-import { plasticConfigFile } from '../plasticConfig/configFolder';
-import { readClientConfMergeTools } from '../plasticConfig/clientConfMergeTools';
 import type { ServiceContext } from './ServiceContext';
 
 const fileSystem: ToolFileSystem & { read(path: string): string | null } = {
@@ -54,13 +52,8 @@ export function createMergeToolsService({ cm, settings }: ServiceContext): Merge
   function list() {
     const where: Whereabouts = { platform: process.platform, env: process.env, home: homedir(), cmPath: cm.executable };
     const { mergeTool, customMergeTools, mergeToolArgs } = settings.get();
-    const clientConf = readClientConfMergeTools(fileSystem.read(plasticConfigFile('client.conf')) ?? '').flatMap((tool) => {
-      const found = locateProgram(tool.executable, where, fileSystem);
-      return found ? [{ ...tool, found }] : [];
-    });
     return mergeToolList({
       detected: detectKnownTools(KNOWN_TOOLS, where, fileSystem),
-      clientConf,
       custom: customMergeTools,
       argsOverrides: mergeToolArgs,
       preference: mergeTool,

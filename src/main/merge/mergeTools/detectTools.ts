@@ -23,13 +23,6 @@ export function detectKnownTools(tools: KnownTool[], where: Whereabouts, fs: Too
   });
 }
 
-/** A program named in client.conf: a path as it is, a bare name on the PATH. */
-export function locateProgram(program: string, where: Whereabouts, fs: ToolFileSystem): string | undefined {
-  if (/[\\/]/.test(program)) return fs.exists(program) ? program : undefined;
-  const names = where.platform === 'win32' && !/\.\w+$/.test(program) ? [`${program}.exe`, `${program}.cmd`] : [program];
-  return findOnPath(names, where, fs);
-}
-
 function findFirst(candidates: string[], where: Whereabouts, fs: ToolFileSystem): string | undefined {
   for (const candidate of candidates) {
     const found = candidate.includes('*') ? expandWildcard(candidate, where, fs) : fs.exists(candidate) && candidate;

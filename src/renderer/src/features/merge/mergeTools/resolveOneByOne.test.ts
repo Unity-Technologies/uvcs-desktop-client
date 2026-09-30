@@ -5,7 +5,7 @@ import { waitsForTool } from './mergeToolOutcome';
 import { resolveOneByOne, runEndMessage, stopRun, type RunControl, type RunEnd } from './resolveOneByOne';
 import { planRun, type RunPlan } from './resolveRun';
 
-const fakeMerge: MergeTool = { id: 'FakeMerge', name: 'FakeMerge', origin: 'known', executable: 'fakemerge', args: [], defaultArgs: [], extensions: null, canBringToFront: false };
+const fakeMerge: MergeTool = { id: 'FakeMerge', name: 'FakeMerge', origin: 'known', executable: 'fakemerge', args: [], defaultArgs: [], canBringToFront: false };
 
 const saved: MergeToolOutcome = { kind: 'resolved', text: 'merged\n' };
 const closedUnsaved: MergeToolOutcome = { kind: 'unchanged', exitCode: 0, errorOutput: '' };
@@ -57,7 +57,7 @@ class FakePage {
   async runOneByOne(): Promise<{ end: RunEnd; message: ReturnType<typeof runEndMessage> }> {
     const plan = this.plan;
     const end = await resolveOneByOne(plan, this.run, {
-      stillWaits: (key) => this.states.some((state) => state.file.key === key && waitsForTool(state, fakeMerge)),
+      stillWaits: (key) => this.states.some((state) => state.file.key === key && waitsForTool(state)),
       show: (progress) => {
         this.positions.push(`${progress.position + 1} of ${progress.total}`);
         if (!progress.paused) return;

@@ -8,7 +8,7 @@ export interface RunPlan {
   tool: MergeTool;
   /** The files it opens, in the list's order. */
   keys: string[];
-  /** Files waiting for the user that the tool can't open (binaries, or not among its file types): left to them. */
+  /** Binary files waiting for the user, which no tool opens: left to them. */
   left: FileConflictState[];
 }
 
@@ -17,18 +17,18 @@ export function planRun(states: FileConflictState[], tool: MergeTool): RunPlan {
   const waiting = states.filter((state) => state.status === 'ready' && !state.resolution && !state.openTool);
   return {
     tool,
-    keys: waiting.filter((state) => waitsForTool(state, tool)).map((state) => state.file.key),
-    left: waiting.filter((state) => !waitsForTool(state, tool)),
+    keys: waiting.filter(waitsForTool).map((state) => state.file.key),
+    left: waiting.filter((state) => !waitsForTool(state)),
   };
 }
 
 /**
- * The runs on offer, the one to start first: the preferred tool unless it can't open any file waiting, then the one
- * that opens the most. Only tools that open at least one file.
+ * The runs on offer, the preferred tool's first (else the first tool's), while any file waits for a tool; none
+ * otherwise.
  */
 export function runPlans(states: FileConflictState[], tools: MergeTool[], preferredId: string | null): RunPlan[] {
   const plans = tools.map((tool) => planRun(states, tool)).filter((plan) => plan.keys.length > 0);
-  const first = plans.find((plan) => plan.tool.id === preferredId) ?? [...plans].sort((a, b) => b.keys.length - a.keys.length)[0];
+  const first = plans.find((plan) => plan.tool.id === preferredId) ?? plans[0];
   return first ? [first, ...plans.filter((plan) => plan !== first)] : [];
 }
 
@@ -36,9 +36,7 @@ export function runPlans(states: FileConflictState[], tools: MergeTool[], prefer
 export function leftOutNote(plan: RunPlan): string | undefined {
   if (plan.left.length === 0) return undefined;
   const names = listNames(plan.left.map((state) => fileNameOf(state.file.path)));
-  const leftToYou = `${names} ${plan.left.length === 1 ? 'is' : 'are'} left to you`;
-  if (plan.left.every((state) => state.isBinary)) return `Binary files keep one version: ${leftToYou}`;
-  return `${plan.tool.name} doesn't open ${plan.left.length === 1 ? 'this file' : 'these files'}: ${leftToYou}`;
+  return `Binary files keep one version: ${names} ${plan.left.length === 1 ? 'is' : 'are'} left to you`;
 }
 
 /** A run under way: the file open (or the one closed unsaved, while it asks whether to go on). */

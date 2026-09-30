@@ -1,10 +1,12 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { MAIN_BRANCH_GUID } from '@shared/domain/branch';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
 import { findXml } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { SettingsStore } from '../settings/SettingsStore';
 import { createBranchesService, startingPointOption } from './branchesService';
 import { serviceContext } from './testing/serviceContext';
 
@@ -182,6 +184,39 @@ describe('branch writes', () => {
       'branch hide br:/main/task1 br:/main/task2',
       'branch unhide br:/main/task1',
     ]);
+  });
+});
+
+describe('recent branches', () => {
+  const WORKSPACE_GUID = 'a0411612-d36e-4eca-b9b5-97acad5969ea';
+  const branchGuid = (n: number): string => `9b8e2f7a-58f3-4c43-9d83-3c2f1f5c000${n}`;
+
+  function recentBranches() {
+    const fake = fakeCmClient({ [`getworkspacefrompath ${WORKSPACE} --format={guid}`]: `${WORKSPACE_GUID}\n` });
+    const settings = new SettingsStore(join(mkdtempSync(join(tmpdir(), 'uvcs-settings-')), 'settings.json'));
+    const service = createBranchesService(serviceContext(fake.cm, { settings }), { branchNames: new BranchNamesCache(async () => []) });
+    return { ...fake, settings, service };
+  }
+
+  it("keeps each switch in the app's settings, by workspace GUID, newest first", async () => {
+    const { service, settings, commands } = recentBranches();
+    expect(await service.recent(WORKSPACE)).toEqual([]);
+
+    await service.rememberRecent(WORKSPACE, branchGuid(1));
+    await service.rememberRecent(WORKSPACE, branchGuid(2).toUpperCase());
+
+    expect(await service.recent(WORKSPACE)).toEqual([branchGuid(2), branchGuid(1)]);
+    expect(settings.get().recentBranchesByWorkspace).toEqual({ [WORKSPACE_GUID]: [branchGuid(2), branchGuid(1)] });
+    // The workspace's GUID is a local read: no server round trip.
+    expect(new Set(commands.map((command) => command.line))).toEqual(new Set([`getworkspacefrompath ${WORKSPACE} --format={guid}`]));
+  });
+
+  it('keeps five, never /main', async () => {
+    const { service } = recentBranches();
+    for (const n of [1, 2, 3, 4, 5, 6]) await service.rememberRecent(WORKSPACE, branchGuid(n));
+    await service.rememberRecent(WORKSPACE, MAIN_BRANCH_GUID);
+
+    expect(await service.recent(WORKSPACE)).toEqual([6, 5, 4, 3, 2].map(branchGuid));
   });
 });
 

@@ -174,6 +174,22 @@ The renderer is untrusted: windows run with `contextIsolation` and `sandbox` (`c
 through the one invoke channel, and never open a window of their own: a link that would opens outside the app
 (`setWindowOpenHandler`, `shell.openExternal`).
 
+## Own config
+
+The app keeps its settings in its own store (`main/settings/SettingsStore`: `settings.json` in the user data folder).
+It never writes to the official Desktop client's config (its settings folder, `plasticConfigFolder`: `plasticgui.conf`,
+`client.conf`...) and never keeps reading it. Only on the first run, `importLegacySettings` reads the well-known values
+there so the user feels at home (each workspace's recent branches, `readRecentBranchesByWorkspace`); it records
+`legacySettingsImported` even when it found nothing or couldn't read a file, and never runs again: from then on the
+app's settings are the only source. `main/settings/ownConfig.test.ts` checks statically that only the import reaches
+that folder and that nothing there writes a file.
+
+Not covered, as they aren't the official client's settings: what `cm` itself reads from its `client.conf` (the default
+user `cm whoami` shows; `PendingChangesOnSwitchAction`, neutralized by `switchWithChanges`), the workspace's rule files
+(`ignore.conf`, `cloaked.conf`, `hidden_changes.conf`) and `.plastic` metadata, and server objects the official client
+created (its automatic shelves, offered as left changes). Its merge tools (client.conf's `<MergeTools>`) aren't
+offered: the app finds the well-known tools itself, and the user adds any other (docs/features/merge.md).
+
 ## Operation progress
 
 Long operations report a structured `OperationProgress` (`shared/domain/operation.ts`): a stage (`preparing`,
@@ -216,8 +232,8 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   (`commandLogged`) and operation progress go back to that window only. `workspaces.watch` is the window saying which
   workspace it shows: `main/watch/WorkspaceWatchers` keeps one watcher per shown workspace and sends its changes to the
   windows showing it; own writes are ignored in the workspace they touch.
-- Settings are written in main, one change at a time; values computed from the stored ones (the recent workspaces) are
-  computed there too, and every window gets the result (`settingsChanged`).
+- Settings are written in main, one change at a time; values computed from the stored ones (the recent workspaces and
+  branches) are computed there too, and every window gets the result (`settingsChanged`).
 - What a window checks as it opens (`cm version`, `cm checkconnection`) runs until it succeeds once; later windows take
   that answer (`untilSucceeded`). A problem is checked again by the next window, and by Retry.
 - "New workspace for a task" (`features/taskWorkspace`) creates a child of /main at its head (or takes an existing branch),
