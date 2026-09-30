@@ -32,6 +32,9 @@ export interface CmRunners {
   createShellPool: (cmPath: string) => ShellPool;
 }
 
+/** The exit code logged for a command that never got one of its own. */
+const NO_EXIT_CODE = -1;
+
 const CM_RUNNERS: CmRunners = { runProcess: runCmProcess, createShellPool: (cmPath) => new CmShellPool(cmPath) };
 type CommandStartedListener = (command: { args: readonly string[]; cwd: string; finished: Promise<unknown> }) => void;
 
@@ -126,7 +129,11 @@ export class CmClient {
     const startedAt = Date.now();
     const finished = useShell ? this.shellPool.run(cwd, args) : this.runProcess(args, cwd, options);
     this.startListeners.forEach((listener) => listener({ args, cwd, finished }));
-    const result = await finished;
+    const result = await finished.catch((error: unknown) => {
+      // Stopped, or ended without an exit code (`cm` not found, a stalled prompt, a closed session): logged too.
+      this.log(args, cwd, startedAt, { output: error instanceof Error ? error.message : String(error), exitCode: NO_EXIT_CODE }, useShell);
+      throw error;
+    });
 
     const entry = this.log(args, cwd, startedAt, result, useShell);
 

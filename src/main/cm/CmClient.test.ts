@@ -270,6 +270,33 @@ describe('CmClient failures', () => {
   });
 });
 
+describe('CmClient commands that end without an exit code', () => {
+  it('logs a command that could not run, and fails with its error', async () => {
+    const notFound = new Error('spawn cm ENOENT');
+    const { cm, logged } = fakeClient({
+      answer: () => {
+        throw notFound;
+      },
+    });
+
+    await expect(cm.execute(['version'])).rejects.toBe(notFound);
+
+    expect(logged).toMatchObject([{ commandLine: 'cm version', exitCode: -1, viaShell: false, output: 'spawn cm ENOENT' }]);
+  });
+
+  it('logs a pooled command its session stopped', async () => {
+    const { cm, logged } = fakeClient({
+      answer: () => {
+        throw new Error('cm is waiting for input ("Password:").');
+      },
+    });
+
+    await expect(cm.query(['find', 'label', '--xml'])).rejects.toThrow('waiting for input');
+
+    expect(logged).toMatchObject([{ exitCode: -1, viaShell: true, output: 'cm is waiting for input ("Password:").' }]);
+  });
+});
+
 describe('CmClient command log', () => {
   beforeEach(() => {
     vi.useFakeTimers();
