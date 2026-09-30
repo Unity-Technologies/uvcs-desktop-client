@@ -1,25 +1,32 @@
-import { useRef, useState, type DragEvent, type HTMLAttributes } from 'react';
+import { useMemo, useRef, useState, type DragEvent, type HTMLAttributes } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { SelectionState } from '../../lib/selection';
 import { isControlled } from './changeCategories';
-import { changesToMove, dragFromRow } from './changelistMoves';
+import { changelistHeadersOf, changesToMove, dragFromRow } from './changelistMoves';
 import type { ChangeRow } from './changeRows';
 
 /** Data type of a drag carrying selected changes; the changes themselves stay in a ref, since only this list reads them. */
 const CHANGES_DRAG_TYPE = 'application/x-uvcs-pending-changes';
 
 interface ChangelistDropOptions {
+  rows: ChangeRow[];
   selection: SelectionState;
   onSelectionChange: (selection: SelectionState) => void;
   selectedChanges: () => PendingChange[];
-  /** Changelist headers only take drops when this is set. */
+  /** Rows only take drops when this is set. */
   onMoveToChangelist?: (changes: PendingChange[], changelist: string | null) => void;
 }
 
-/** Dragging the selected changes onto a changelist header moves them into that changelist. */
-export function useChangelistDrop({ selection, onSelectionChange, selectedChanges, onMoveToChangelist }: ChangelistDropOptions) {
+/**
+ * Dragging the selected changes onto a changelist, its header or any row in it, moves them into that changelist, as in
+ * the official client.
+ */
+export function useChangelistDrop({ rows, selection, onSelectionChange, selectedChanges, onMoveToChangelist }: ChangelistDropOptions) {
   const dragged = useRef<PendingChange[] | null>(null);
+  // The key of the header of the changelist the changes would go into.
   const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const takesDrops = onMoveToChangelist !== undefined;
+  const headers = useMemo(() => changelistHeadersOf(takesDrops ? rows : []), [rows, takesDrops]);
 
   const endDrag = (): void => {
     dragged.current = null;
@@ -42,17 +49,20 @@ export function useChangelistDrop({ selection, onSelectionChange, selectedChange
   };
 
   const dropProps = (row: ChangeRow): HTMLAttributes<HTMLElement> => {
-    if (!onMoveToChangelist || row.type !== 'group') return {};
-    const target = row.changelist?.name ?? null;
+    const header = headers.get(row.key);
+    if (!onMoveToChangelist || !header) return {};
+    const target = header.changelist?.name ?? null;
     return {
       onDragOver: (event: DragEvent) => {
-        if (!dragged.current || changesToMove(dragged.current, target).length === 0) return;
+        if (!dragged.current) return;
+        // Over the changelist the changes are already in, nothing moves: no drop, and no changelist lit.
+        if (changesToMove(dragged.current, target).length === 0) {
+          setDropTarget(null);
+          return;
+        }
         event.preventDefault();
         event.dataTransfer.dropEffect = 'move';
-        setDropTarget(row.key);
-      },
-      onDragLeave: (event: DragEvent) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropTarget(null);
+        setDropTarget(header.key);
       },
       onDrop: (event: DragEvent) => {
         event.preventDefault();
@@ -62,5 +72,15 @@ export function useChangelistDrop({ selection, onSelectionChange, selectedChange
     };
   };
 
-  return { dragProps, dropProps, dropTarget };
+  // Only leaving the list puts the changelist out: going from one of its rows to the next doesn't make it flicker.
+  const listDropProps: HTMLAttributes<HTMLElement> = {
+    onDragLeave: (event: DragEvent) => {
+      if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDropTarget(null);
+    },
+  };
+
+  /** Whether the row is in the changelist the dragged changes would go into, its header included. */
+  const isInDropTarget = (row: ChangeRow): boolean => dropTarget !== null && headers.get(row.key)?.key === dropTarget;
+
+  return { dragProps, dropProps, listDropProps, isInDropTarget };
 }
