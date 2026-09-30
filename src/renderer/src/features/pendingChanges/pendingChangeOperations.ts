@@ -4,7 +4,7 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByPendingChangeEdit, isAffectedByShelving } from '../../app/refresh/refreshScopes';
 import { TRASH_NAME } from '../../lib/platform';
-import { formatCount, pluralize } from '../../lib/text';
+import { fileNameOf, formatCount, pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 import { existsOnDisk, isControlled, isShelvable } from './changeCategories';
@@ -64,7 +64,7 @@ export function openWithDefaultApp(workspacePath: string, change: PendingChange)
 
 export async function deletePrivateFiles(workspacePath: string, changes: Pick<PendingChange, 'path'>[]): Promise<void> {
   const confirmed = await confirm({
-    title: changes.length === 1 ? `Move ${fileName(changes[0]!.path)} to the ${TRASH_NAME}?` : `Move ${formatCount(changes.length)} files to the ${TRASH_NAME}?`,
+    title: changes.length === 1 ? `Move ${fileNameOf(changes[0]!.path)} to the ${TRASH_NAME}?` : `Move ${formatCount(changes.length)} files to the ${TRASH_NAME}?`,
     message: `These files are not under version control. You can restore them from the ${TRASH_NAME}.`,
     confirmLabel: `Move to ${TRASH_NAME}`,
     danger: true,
@@ -98,12 +98,8 @@ export const FILTER_LIST_FILES: Record<FilterRuleList, string> = {
   hidden: 'hidden_changes.conf',
 };
 
-export function fileName(path: string): string {
-  return path.split('/').at(-1) ?? path;
-}
-
 export function extensionOf(path: string): string | null {
-  const name = fileName(path);
+  const name = fileNameOf(path);
   const dot = name.lastIndexOf('.');
   return dot > 0 ? name.slice(dot) : null;
 }

@@ -4,6 +4,10 @@ export function joinPath(directory: string, name: string): string {
   return directory.endsWith(separator) ? `${directory}${name}` : `${directory}${separator}${name}`;
 }
 
+/**
+ * The last name of a local path, with either separator: `game` for `C:\work\game\`. Workspace-relative and server
+ * paths take `fileNameOf`: only `/` separates their names.
+ */
 export function lastSegment(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).at(-1) ?? path;
 }

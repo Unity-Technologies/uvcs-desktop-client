@@ -2,7 +2,7 @@ import { ChevronDown, FileCheck2, PencilLine, RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { PathLabel } from '../../../components/PathLabel';
 import { SEPARATOR } from '../../../lib/actions';
-import { pluralize } from '../../../lib/text';
+import { fileNameOf, pluralize } from '../../../lib/text';
 import { Button } from '../../../ui/Button';
 import { ActionDropdownMenu } from '../../../ui/menu/ActionDropdownMenu';
 import { SegmentedControl } from '../../../ui/SegmentedControl';
@@ -13,7 +13,7 @@ import { MergeToolOpenBanner } from '../mergeTools/MergeToolOpenBanner';
 import { fileConflictStatus, fileConflictTool } from '../mergeStatus';
 import { chosenConflictChoice, decisionFor, hasConflicts, type ConflictChoice } from './conflictChoices';
 import { ConflictBody } from './ConflictBody';
-import { effectiveView, fileNameOf, hasBase, type PanelView } from './conflictPanelView';
+import { effectiveView, hasBase, type PanelView } from './conflictPanelView';
 import type { FileConflictDecision } from './fileConflictDecision';
 import { KeepChoices } from './KeepChoices';
 import type { FileConflictState } from './useFileConflicts';
@@ -105,7 +105,7 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
         <div className={styles.editBanner} role="status">
           <PencilLine size={13} />
           <span className={styles.bannerText}>
-            Editing <strong>{fileNameOf(state)}</strong>: remove every conflict marker.
+            Editing <strong>{fileNameOf(state.file.path)}</strong>: remove every conflict marker.
           </span>
           <Button size="small" variant="ghost" onClick={discardEdits}>
             Discard edits
@@ -116,7 +116,7 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
         </div>
       )}
       {state.openTool && (
-        <MergeToolOpenBanner fileName={fileNameOf(state)} open={state.openTool} run={toolActions.run?.currentKey === state.file.key ? toolActions.run : null} />
+        <MergeToolOpenBanner fileName={fileNameOf(state.file.path)} open={state.openTool} run={toolActions.run?.currentKey === state.file.key ? toolActions.run : null} />
       )}
 
       {canMergeLines && !editing && (

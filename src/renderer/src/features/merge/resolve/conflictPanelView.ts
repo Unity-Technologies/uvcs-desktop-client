@@ -33,7 +33,3 @@ export function textToEdit(state: FileConflictState): string {
   if (decision?.kind === 'wholeFile') return contents?.[decision.side].text ?? '';
   return decision?.text ?? document?.text ?? '';
 }
-
-export function fileNameOf(state: FileConflictState): string {
-  return state.file.path.split('/').pop()!;
-}

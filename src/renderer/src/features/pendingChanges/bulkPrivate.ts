@@ -1,5 +1,5 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { formatCount } from '../../lib/text';
+import { fileNameOf, formatCount } from '../../lib/text';
 import { categoryOf } from './changeCategories';
 
 /** More private files than this in one check-in is rarely on purpose: build output, caches, generated code. */
@@ -24,7 +24,7 @@ export function bulkPrivateFiles(included: PendingChange[]): BulkPrivate | null 
   const privateChanges = included.filter((change) => categoryOf(change) === 'private');
   const privateFolders = new Set(privateChanges.filter((change) => change.itemType === 'directory').map((change) => change.path));
   const files = privateChanges.filter((change) => change.itemType !== 'directory');
-  const generatedFolderIncluded = [...privateFolders].some((path) => GENERATED_FOLDERS.has(nameOf(path).toLowerCase()));
+  const generatedFolderIncluded = [...privateFolders].some((path) => GENERATED_FOLDERS.has(fileNameOf(path).toLowerCase()));
   if (files.length <= BULK_PRIVATE_FILES && !generatedFolderIncluded) return null;
 
   const filesPerFolder = new Map<string, number>();
@@ -53,8 +53,4 @@ function outermostPrivateFolder(path: string, privateFolders: ReadonlySet<string
 
 function parentOf(path: string): string {
   return path.slice(0, Math.max(0, path.lastIndexOf('/')));
-}
-
-function nameOf(path: string): string {
-  return path.slice(path.lastIndexOf('/') + 1);
 }

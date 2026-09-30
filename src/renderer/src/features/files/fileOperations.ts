@@ -2,9 +2,10 @@ import type { RevisionType, TreeItem } from '@shared/domain/explorer';
 import { api } from '../../api/client';
 import { runAction, runRead } from '../../app/operations/runOperation';
 import { isAffectedByPendingChangeEdit } from '../../app/refresh/refreshScopes';
+import { fileNameOf } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
-import { absolutePath, deletePrivateFiles, fileName } from '../pendingChanges/pendingChangeOperations';
+import { absolutePath, deletePrivateFiles } from '../pendingChanges/pendingChangeOperations';
 import { listedItems } from './directoryListing';
 import { useFilesViewStore } from './filesViewStore';
 import { parentOf } from './fileTreeRows';
@@ -88,7 +89,7 @@ export async function createItem(workspacePath: string, directory: string, kind:
   if (!name) return;
 
   const path = directory ? `${directory}/${name}` : name;
-  await runAction(workspacePath, `Couldn't create ${fileName(path)}`, async () => {
+  await runAction(workspacePath, `Couldn't create ${fileNameOf(path)}`, async () => {
     await api.explorer.create(workspacePath, path, kind);
     useFilesViewStore.getState().requestReveal(path);
   });
