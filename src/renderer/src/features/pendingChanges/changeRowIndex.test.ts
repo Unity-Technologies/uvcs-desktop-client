@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { selectOnArrow, type SelectionState } from '../../lib/selection';
 import { indexChangeRows, perRow } from './changeRowIndex';
-import { layoutChangeRows, rowCheckState, type ChangeRow } from './changeRows';
+import { rowCheckState } from './changeRowChecks';
+import { layoutChangeRows, type ChangeRow } from './changeRows';
 
 const change = (path: string, kinds: PendingChange['kinds'] = ['changed'], changelist?: string): PendingChange => ({ path, kinds, itemType: 'file', size: 1, lastModified: '', changelist });
 

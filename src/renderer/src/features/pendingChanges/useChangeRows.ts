@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
-import { changeKey, collapseRows, layoutChangeRows, topLevelCheckboxInset, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { topLevelCheckboxInset } from './changeRowLevels';
+import { changeKey, collapseRows, layoutChangeRows, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
 
 interface ChangeRowsInput {
   /** The changes shown, sorted and filtered. */

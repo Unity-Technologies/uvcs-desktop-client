@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { inPreviousOrder, sortForLayout, type ChangesLayout } from './changeRows';
+import { inPreviousOrder, sortForLayout } from './changeOrder';
+import type { ChangesLayout } from './changeRows';
 
 /**
  * The changes in the order the layout shows them. A read after files changed keeps most changes as they were, so they
