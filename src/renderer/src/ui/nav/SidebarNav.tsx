@@ -96,11 +96,8 @@ export function NavItem(props: NavItemProps) {
       <span className={styles.icon}>{icon}</span>
       <span className={styles.label}>{shownLabel}</span>
       {detail && <span className={styles.detail}>{detail}</span>}
-      {/* At the row's end wide; on the rail's tile, side by side at its icon's top-right corner. */}
-      <span className={styles.marks}>
-        {dot && <span className={styles.dot} />}
-        {badge ? <span className={styles.badge}>{navBadgeText(badge, rail)}</span> : null}
-      </span>
+      {dot && <span className={styles.dot} />}
+      {badge ? <span className={styles.badge}>{navBadgeText(badge, rail)}</span> : null}
     </button>
   );
 }
