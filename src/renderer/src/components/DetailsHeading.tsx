@@ -1,7 +1,7 @@
 import { Copy, Pencil } from 'lucide-react';
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { looksLikeMarkdown, splitComment, type CommentParts } from '../lib/comment';
-import { copyToClipboard } from '../lib/copyToClipboard';
+import { copyToClipboard } from '../ui/copyToClipboard';
 import { IconButton } from '../ui/IconButton';
 import { CommentEditor } from './CommentEditor';
 import { Markdown } from './Markdown';

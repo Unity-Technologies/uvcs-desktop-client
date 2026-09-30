@@ -2,7 +2,7 @@ import '../testing/fakeWindow';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const copied = vi.hoisted(() => [] as { text: string; what: string }[]);
-vi.mock('../lib/copyToClipboard', () => ({ copyToClipboard: (text: string, what: string) => copied.push({ text, what }) }));
+vi.mock('../ui/copyToClipboard', () => ({ copyToClipboard: (text: string, what: string) => copied.push({ text, what }) }));
 
 import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';

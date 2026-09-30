@@ -1,5 +1,5 @@
 import { Copy } from 'lucide-react';
-import { copyToClipboard } from '../lib/copyToClipboard';
+import { copyToClipboard } from './copyToClipboard';
 import styles from './DetailsCopyable.module.css';
 
 /** An identifier in the meta row (`cs:42`, a GUID's start) that copies the full value. */
