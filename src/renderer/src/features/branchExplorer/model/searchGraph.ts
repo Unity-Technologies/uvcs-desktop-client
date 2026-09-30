@@ -1,5 +1,6 @@
 import type { GraphLayout } from './layoutGraph';
-import { changesetMatcher, nameMatcher, narrows, searchWords } from './searchWords';
+import { queryWords } from '../../../lib/matchesAllWords';
+import { changesetMatcher, nameMatcher, narrows } from './searchWords';
 
 /** Something a search found. A branch or label name finds the branch or label itself, not the changesets it holds. */
 export type SearchHit = { kind: 'changeset'; id: number } | { kind: 'branch'; name: string } | { kind: 'label'; name: string; changeset: number };
@@ -32,7 +33,7 @@ export function searchGraph(layout: GraphLayout, rawQuery: string, previous?: Gr
   if (!query) return [];
 
   const changesetNumber = exactChangesetNumber(query);
-  const words = searchWords(query);
+  const words = queryWords(query);
   const matches = nameMatcher(words);
   const matchesChangeset = changesetMatcher(words);
 

@@ -2,10 +2,11 @@ import { describe, expect, it } from 'vitest';
 import { largeHistory } from './graphFixtures';
 import { layoutGraph } from './layoutGraph';
 import { searchGraph, type GraphSearchResult } from './searchGraph';
+import { queryWords } from '../../../lib/matchesAllWords';
 import { changesetMatcher, narrows } from './searchWords';
 
 describe('changesetMatcher', () => {
-  const matches = (query: string, comment: string, owner = 'jane@example.com') => changesetMatcher(query.toLowerCase().split(' '))(comment, owner);
+  const matches = (query: string, comment: string, owner = 'jane@example.com') => changesetMatcher(queryWords(query))(comment, owner);
 
   it('finds each word in the comment or the owner, in any case', () => {
     expect(matches('fix jane', 'Fix the crash')).toBe(true);
