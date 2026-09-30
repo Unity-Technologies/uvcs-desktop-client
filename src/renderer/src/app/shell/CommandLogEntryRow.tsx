@@ -3,6 +3,7 @@ import { Copy } from 'lucide-react';
 import { memo } from 'react';
 import { withControlPictures } from '../../lib/controlPictures';
 import { Highlight } from '../../ui/Highlight';
+import { commandEnding } from './commandEnding';
 import styles from './CommandLogPanel.module.css';
 
 interface CommandLogEntryRowProps {
@@ -15,12 +16,13 @@ interface CommandLogEntryRowProps {
 }
 
 /**
- * One command, its number, its duration and, when it failed, its output, the filter's words marked in each (the texts
- * of `commandLogFilterTexts`). Memoized: a new command renders only its own row.
+ * One command, its number, its duration and, when it failed, how it ended (`commandEnding`) and its output, the filter's
+ * words marked in each (the texts of `commandLogFilterTexts`). Memoized: a new command renders only its own row.
  */
 export const CommandLogEntryRow = memo(function CommandLogEntryRow({ entry, number, revealed, cwd }: CommandLogEntryRowProps) {
+  const failed = entry.exitCode !== 0;
   return (
-    <div className={styles.entry} data-entry-id={entry.id} data-failed={entry.exitCode !== 0} data-revealed={revealed}>
+    <div className={styles.entry} data-entry-id={entry.id} data-failed={failed} data-revealed={revealed}>
       <span className={styles.number} aria-hidden>
         {number}
       </span>
@@ -36,8 +38,12 @@ export const CommandLogEntryRow = memo(function CommandLogEntryRow({ entry, numb
       <button className={styles.copy} onClick={() => void navigator.clipboard.writeText(entry.commandLine)} data-tip="Copy command" aria-label="Copy command">
         <Copy size={11} />
       </button>
-      {entry.output && (
+      {failed && (
         <pre className={styles.output}>
+          <span className={styles.ending}>
+            <Highlight text={commandEnding(entry.exitCode)} />
+          </span>
+          {entry.output && '\n'}
           <Highlight text={withControlPictures(entry.output)} />
         </pre>
       )}

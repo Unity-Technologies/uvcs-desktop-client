@@ -44,7 +44,8 @@ you touch:
    - A pooled command may take two minutes, a workspace write half an hour (a few paths can still be a whole tree).
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
    (see Renderer: Command log); one that ended without an exit code (stopped on a prompt, `cm` not found) is logged
-   with -1, and one its caller cancelled is not logged: it's no failure.
+   with -1, which the log and the error dialog word as "Stopped" (`commandEnding`), and one its caller cancelled is not
+   logged: it's no failure.
 
 To add a capability: its types in `shared/domain`, the method in `shared/api/<area>.ts` (part of `UvcsApi`), the
 implementation in `main/services/<area>Service.ts` (wired in `createServices`), `cm` argument builders and parsers as
@@ -428,7 +429,8 @@ renderer/src/
   remembered across sessions), the view keeping 200px. Its filter (⌘F or / from the log; "Failed" for failures only)
   is a list filter like any other (`commandLogFilterTexts`), kept for the session; each command is numbered by its
   place in the log since it was cleared (`NumberedLog`), so numbers stay put as the scope, the filter and the
-  500-entry cap drop rows. Revealing a command the filter or scope hides clears them.
+  500-entry cap drop rows. A failed command shows how it ended ("Exit code 1", or "Stopped" without one) above its
+  output. Revealing a command the filter or scope hides clears them.
 - **Styling**: CSS modules using the tokens in `styles/tokens.css`. No raw colors in styles or components
   (`styles/noRawColors.test.ts`, which lists the few colors written out on purpose); optional classes join with
   `classNames`.
