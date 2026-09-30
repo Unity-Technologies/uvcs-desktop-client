@@ -48,7 +48,7 @@ export async function removeAccount(account: Account): Promise<void> {
   const { label } = describeServer(account.server);
   const confirmed = await confirm({
     title: `Remove the account on ${label}?`,
-    message: `cm forgets how to sign in to ${account.server} as ${account.user}. Sign in again with the Unity Version Control app to use it.`,
+    message: `This computer forgets how to sign in to ${account.server} as ${account.user}. Sign in again with the Unity Version Control app to use it.`,
     confirmLabel: 'Remove account',
     danger: true,
   });

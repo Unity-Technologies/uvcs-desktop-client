@@ -21,14 +21,14 @@ const COPY: Record<SetupProblemKind, ProblemCopy> = {
     icon: <Settings2 size={26} />,
     title: () => "Unity Version Control isn't set up yet",
     explanation:
-      'cm needs a user profile before it can work with a server. Sign in once with the Unity Version Control app, or configure cm in a terminal, then retry.',
+      'Unity Version Control needs to know who you are before it can work with a server. Sign in once with the Unity Version Control app, or set it up in a terminal, then retry.',
     canContinue: false,
   },
   notSignedIn: {
     icon: <KeyRound size={26} />,
     title: (server) => `You're not signed in to ${server}`,
     explanation:
-      'This app uses the same sign-in as the Unity Version Control app. Sign in there once (or run cm configure in a terminal), then retry.',
+      'This app uses the same sign-in as the Unity Version Control app. Sign in there once (or set it up in a terminal), then retry.',
     canContinue: true,
   },
   serverUnreachable: {
@@ -79,7 +79,7 @@ export function SetupProblemScreen({ problem, checking, onRetry, onContinue }: S
       }
       footer={
         <>
-          {problem.kind !== 'serverUnreachable' && <CopyableCommand note="Configure cm in a terminal:" command="cm configure" />}
+          {problem.kind !== 'serverUnreachable' && <CopyableCommand note="Or set it up in a terminal:" command="cm configure" />}
           <OutputBlock output={`$ ${problem.commandLine}\n${problem.output}`} />
         </>
       }
