@@ -1,5 +1,7 @@
 import { useMemo } from 'react';
+import type { ItemRevision } from '@shared/domain/history';
 import type { Label } from '@shared/domain/label';
+import { shortBranchName } from '@shared/domain/specs';
 import { LabelChips } from '../../components/LabelChips';
 import { WorkspaceMark } from '../../components/WorkspaceMark';
 import type { MenuEntry } from '../../lib/actions';
@@ -11,7 +13,7 @@ import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { DataTable, type Column } from '../../ui/table/DataTable';
 import { useLabelsByChangeset } from '../labels/useLabelsByChangeset';
-import { changesetOf, historyRowKey, ownerOf, type HistoryRow } from './historyRows';
+import { changesetOf, dateOf, historyRowKey, ownerOf, type HistoryRow } from './historyRows';
 import styles from './HistoryList.module.css';
 
 /** Two lines a row: the comment, then where and by whom. */
@@ -55,54 +57,64 @@ function revisionColumn(labelsByChangeset: ReadonlyMap<number, readonly Label[]>
   return {
     id: 'revision',
     header: 'Revision',
-    render: (row) => {
-      const owner = ownerOf(row);
-      const date = row.kind === 'revision' ? row.revision.date : row.change.date;
-      const comment = row.kind === 'revision' ? firstLine(row.revision.comment) : '';
-      return (
-        <span className={styles.row}>
-          <Avatar user={owner} size={24} />
-          <span className={styles.text}>
-            <span className={styles.title}>
-              {row.kind === 'revision' ? (
-                <>
-                  <LabelChips labels={labelsByChangeset.get(row.revision.changesetId)} />
-                  {comment ? (
-                    <span className={styles.clipped}>
-                      <Highlight text={comment} />
-                    </span>
-                  ) : (
-                    <span className={styles.noComment}>No comment</span>
-                  )}
-                  {row.revision.revisionId === workspaceRevisionId && <WorkspaceMark on="revision" />}
-                </>
-              ) : (
-                // A move or removal: what cm says happened, told apart from the changesets' own comments.
-                <span className={styles.pathChange} data-tip-overflow data-tip={row.change.description}>
-                  <Highlight text={row.change.description} />
-                </span>
-              )}
-            </span>
-            <span className={styles.meta}>
-              <span className="mono">
-                cs:<Highlight text={String(changesetOf(row))} />
+    render: (row) => (
+      <span className={styles.row}>
+        <Avatar user={ownerOf(row)} size={24} />
+        <span className={styles.text}>
+          <span className={styles.title}>
+            {row.kind === 'revision' ? (
+              <RevisionTitle revision={row.revision} labels={labelsByChangeset.get(row.revision.changesetId)} isWorkspaceRevision={row.revision.revisionId === workspaceRevisionId} />
+            ) : (
+              // A move or removal: what cm says happened, told apart from the changesets' own comments.
+              <span className={styles.pathChange} data-tip-overflow data-tip={row.change.description}>
+                <Highlight text={row.change.description} />
               </span>
-              {/* The branch by its own name (task branches nest deep), whole in its tooltip. The author gives way first: the avatar already says who. */}
-              {row.kind === 'revision' && (
-                <span className={styles.branch} data-tip={row.revision.branch}>
-                  <Highlight text={row.revision.branch.split('/').at(-1) || row.revision.branch} />
-                </span>
-              )}
-              <span className={styles.clipped}>
-                <Highlight text={displayName(owner)} />
-              </span>
-              <span className={styles.date}>
-                <RelativeTime date={date} />
-              </span>
-            </span>
+            )}
           </span>
+          <RowMeta row={row} />
         </span>
-      );
-    },
+      </span>
+    ),
   };
+}
+
+/** A revision's first line: its labels, the comment's first line, and the house when the workspace has it. */
+function RevisionTitle({ revision, labels, isWorkspaceRevision }: { revision: ItemRevision; labels: readonly Label[] | undefined; isWorkspaceRevision: boolean }) {
+  const comment = firstLine(revision.comment);
+  return (
+    <>
+      <LabelChips labels={labels} />
+      {comment ? (
+        <span className={styles.clipped}>
+          <Highlight text={comment} />
+        </span>
+      ) : (
+        <span className={styles.noComment}>No comment</span>
+      )}
+      {isWorkspaceRevision && <WorkspaceMark on="revision" />}
+    </>
+  );
+}
+
+/** A row's second line: cs:N · branch · author · date. */
+function RowMeta({ row }: { row: HistoryRow }) {
+  return (
+    <span className={styles.meta}>
+      <span className="mono">
+        cs:<Highlight text={String(changesetOf(row))} />
+      </span>
+      {/* The branch by its own name (task branches nest deep), whole in its tooltip. The author gives way first: the avatar already says who. */}
+      {row.kind === 'revision' && (
+        <span className={styles.branch} data-tip={row.revision.branch}>
+          <Highlight text={shortBranchName(row.revision.branch)} />
+        </span>
+      )}
+      <span className={styles.clipped}>
+        <Highlight text={displayName(ownerOf(row))} />
+      </span>
+      <span className={styles.date}>
+        <RelativeTime date={dateOf(row)} />
+      </span>
+    </span>
+  );
 }

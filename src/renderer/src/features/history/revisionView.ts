@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react';
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { canAnnotate } from '@shared/domain/annotate';
@@ -27,3 +28,21 @@ export const useRevisionView = create<RevisionViewStore>()(
     { name: 'history-revision-view' },
   ),
 );
+
+/**
+ * A history page's view: the one it was opened with (`annotatedHistory` opens it annotated) until one is picked, so
+ * opening to annotate doesn't change what plain histories open with; a view picked is remembered for every history.
+ */
+export function usePageRevisionView(openedWith: RevisionView | undefined): [RevisionView, (picked: RevisionView) => void] {
+  const remembered = useRevisionView((state) => state.view);
+  const remember = useRevisionView((state) => state.setView);
+  const [opened, setOpened] = useState(openedWith);
+  const pick = useCallback(
+    (picked: RevisionView) => {
+      setOpened(undefined);
+      remember(picked);
+    },
+    [remember],
+  );
+  return [opened ?? remembered, pick];
+}
