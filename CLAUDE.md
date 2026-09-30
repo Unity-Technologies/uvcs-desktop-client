@@ -231,6 +231,9 @@ Commit like a careful human. The history should show *how* the work happened.
 - A commit message says what the user can now do or see, in the product's words, not which files changed ("The
   Branch Explorer keeps the user's place when it is laid out again …"). Changes to docs or tooling say what they
   change in a short line.
+- A branch is named for its work: `<kind>/<topic>` in kebab case, where kind is `feature`, `fix`, `refactor`,
+  `tests`, `docs`, `perf` or `chore` (`fix/palette-apostrophe`, `refactor/main-services`). An agent whose worktree
+  came with a generated name (`worktree-agent-a571eb…`) renames it first: `git branch -m <kind>/<topic>`.
 - Parallel agents each work in their own git worktree and branch (`.claude/worktrees/`, ignored). A verified branch
   joins `master` with a merge commit, never squashed or rebased: the real path is the story. Don't squash or rewrite
   history unless the user asks.
