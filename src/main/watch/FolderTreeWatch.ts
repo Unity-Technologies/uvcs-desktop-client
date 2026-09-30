@@ -11,7 +11,7 @@ import { watchFolder, type FolderWatch, type WatchFolder } from './watchFolder';
  */
 export class FolderTreeWatch {
   /** By workspace-relative, `/`-separated folder (`''` for the root). */
-  private readonly watchers = new Map<string, FolderWatch>();
+  private readonly watches = new Map<string, FolderWatch>();
   private complete = true;
   private closed = false;
 
@@ -26,13 +26,13 @@ export class FolderTreeWatch {
   /** Watches the tree; false if some folder couldn't be watched (none at all, past the limit, out of inotify watches). */
   start(): boolean {
     this.watchTree('');
-    return this.complete && this.watchers.has('');
+    return this.complete && this.watches.has('');
   }
 
   close(): void {
     this.closed = true;
-    this.watchers.forEach((watcher) => watcher.close());
-    this.watchers.clear();
+    this.watches.forEach((watch) => watch.close());
+    this.watches.clear();
   }
 
   /** Level by level, so a tree past the limit still has its root, `.plastic` and upper folders watched. */
@@ -40,22 +40,20 @@ export class FolderTreeWatch {
     const pending = [top];
     for (let next = 0; next < pending.length && !this.closed; next++) {
       const folder = pending[next]!;
-      if (this.watchers.has(folder) || (folder && this.skip(folder))) continue;
-      if (this.watchers.size >= this.maxFolders || !this.watchFolder(folder)) {
+      if (this.watches.has(folder) || (folder && this.skip(folder))) continue;
+      if (this.watches.size >= this.maxFolders || !this.watchFolder(folder)) {
         this.complete = false;
         continue;
       }
-      for (const entry of this.list(folder)) {
-        if (entry.isDirectory()) pending.push(childOf(folder, entry.name));
-      }
+      for (const subfolder of this.subfolders(folder)) pending.push(subfolder);
     }
   }
 
   private watchFolder(folder: string): boolean {
     try {
-      const watcher = this.watch(this.absolute(folder), false, (event, name) => this.onFolderEvent(folder, event, name));
-      watcher.onError(() => this.unwatch(folder));
-      this.watchers.set(folder, watcher);
+      const watch = this.watch(this.absolute(folder), false, (event, name) => this.onFolderEvent(folder, event, name));
+      watch.onError(() => this.unwatch(folder));
+      this.watches.set(folder, watch);
       return true;
     } catch {
       return false;
@@ -74,17 +72,22 @@ export class FolderTreeWatch {
 
   /** Stops watching a folder gone (or moved) and everything that was under it. */
   private unwatch(folder: string): void {
-    for (const [watched, watcher] of this.watchers) {
-      if (watched === folder || watched.startsWith(`${folder}/`) || folder === '') {
-        watcher.close();
-        this.watchers.delete(watched);
+    // Folders are watched from the top down, so nothing under an unwatched path is watched: a file deleted or saved
+    // by replacing it (every save, for most editors) looks at no other watch.
+    if (!this.watches.has(folder)) return;
+    for (const [watched, watch] of this.watches) {
+      if (isSameOrUnder(watched, folder)) {
+        watch.close();
+        this.watches.delete(watched);
       }
     }
   }
 
-  private list(folder: string) {
+  /** The folders directly inside `folder` (links to folders aren't: `Dirent.isDirectory` doesn't follow them). */
+  private subfolders(folder: string): string[] {
     try {
-      return readdirSync(this.absolute(folder), { withFileTypes: true });
+      const entries = readdirSync(this.absolute(folder), { withFileTypes: true });
+      return entries.filter((entry) => entry.isDirectory()).map((entry) => childOf(folder, entry.name));
     } catch {
       return [];
     }
@@ -106,4 +109,9 @@ export class FolderTreeWatch {
 
 function childOf(folder: string, name: string): string {
   return folder ? `${folder}/${name}` : name;
+}
+
+/** Whether `path` is `folder` or inside it; everything is inside the root (`''`). */
+function isSameOrUnder(path: string, folder: string): boolean {
+  return folder === '' || path === folder || path.startsWith(`${folder}/`);
 }
