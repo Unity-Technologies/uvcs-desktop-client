@@ -6,6 +6,12 @@ import type { WorkspaceWindows } from '../window/WorkspaceWindows';
 /** The root of the workspace holding a folder; null outside any workspace (`findWorkspaceRoot`). */
 type FindWorkspaceRoot = (folder: string) => Promise<string | null>;
 
+/** How this process was launched: its command line and the folder it was run in. */
+interface Launch {
+  argv: readonly string[];
+  workingDirectory: string;
+}
+
 /**
  * One running app per user: a later launch hands its request to this one and quits. Development builds skip this so
  * several instances (e.g. automated UI checks) can run side by side. Whether this process is the app that runs.
@@ -19,12 +25,12 @@ export function isTheRunningApp(): boolean {
  * the app when it names none), and one picked from the Dock's recent workspaces. Called before the app is ready, as
  * that request may be what launched it.
  */
-export function handleLaunchRequests(windows: WorkspaceWindows, findRoot: FindWorkspaceRoot): void {
+export function handleLaunchRequests(windows: WorkspaceWindows, findRoot: FindWorkspaceRoot, launch: Launch = { argv: process.argv, workingDirectory: process.cwd() }): void {
   app.on('second-instance', (_event, argv, workingDirectory) => {
     if (!openNamedWorkspace(windows, findRoot, argv, workingDirectory)) windows.focusAny();
   });
   handleRecentDocumentRequests(windows);
-  openNamedWorkspace(windows, findRoot, process.argv, process.cwd());
+  openNamedWorkspace(windows, findRoot, launch.argv, launch.workingDirectory);
 }
 
 /**
