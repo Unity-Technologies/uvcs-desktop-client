@@ -14,6 +14,7 @@ import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { SincePicker } from '../../components/SincePicker';
 import { matchesPeople, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
+import { longerRangeHint } from '../../lib/longerRangeHint';
 import { isFiltering } from '../../lib/viewFilters';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
@@ -141,9 +142,9 @@ export function BranchesView() {
         errorTitle="Couldn't load branches"
         empty={
           isFiltering(filters) ? (
-            <NoMatches icon={<GitBranch size={22} />} noun="branches" hint={since === 'anyTime' ? undefined : 'The filters look within the time range. Try a longer one.'} onClear={filters.clear} />
+            <NoMatches icon={<GitBranch size={22} />} noun="branches" hint={longerRangeHint(since, true)} onClear={filters.clear} />
           ) : (
-            <EmptyState icon={<GitBranch size={22} />} title="No branches" description={since === 'anyTime' ? undefined : 'Try a longer time range.'} />
+            <EmptyState icon={<GitBranch size={22} />} title="No branches" description={longerRangeHint(since, false)} />
           )
         }
         query={search}

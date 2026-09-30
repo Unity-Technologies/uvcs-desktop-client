@@ -14,6 +14,7 @@ import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { SincePicker } from '../../components/SincePicker';
 import { matchesPeople, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
+import { longerRangeHint } from '../../lib/longerRangeHint';
 import { isFiltering } from '../../lib/viewFilters';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
@@ -98,9 +99,9 @@ export function LabelsView() {
         errorTitle="Couldn't load labels"
         empty={
           filtering ? (
-            <NoMatches icon={<Tag size={22} />} noun="labels" hint={since === 'anyTime' ? undefined : 'The filters look within the time range. Try a longer one.'} onClear={filters.clear} />
+            <NoMatches icon={<Tag size={22} />} noun="labels" hint={longerRangeHint(since, true)} onClear={filters.clear} />
           ) : since !== 'anyTime' ? (
-            <EmptyState icon={<Tag size={22} />} title="No labels" description="Try a longer time range." />
+            <EmptyState icon={<Tag size={22} />} title="No labels" description={longerRangeHint(since, false)} />
           ) : (
             <EmptyState
               icon={<Tag size={22} />}

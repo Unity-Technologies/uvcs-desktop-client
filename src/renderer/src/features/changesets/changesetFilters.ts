@@ -2,6 +2,7 @@ import type { Changeset } from '@shared/domain/changeset';
 import type { QueryFilter } from '@shared/domain/query';
 import type { Label } from '@shared/domain/label';
 import { EVERYONE, pickedOwners } from '../../lib/peopleFilter';
+import { longerRangeHint } from '../../lib/longerRangeHint';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { sinceDateFor, type SincePreset } from '../../lib/sincePresets';
 import { formatCount } from '../../lib/text';
@@ -44,7 +45,8 @@ export function matchesSearch(changeset: Changeset, search: string, labels: read
 
 /** What to try when nothing shows: the filters only look through what the time range read. */
 export function noChangesetsHint(since: SincePreset, filtering: boolean): string {
-  if (since !== 'anyTime') return filtering ? 'The filters look within the time range. Try a longer one.' : 'Try a longer time range.';
+  const longerRange = longerRangeHint(since, filtering);
+  if (longerRange) return longerRange;
   return filtering ? `Any time reads the newest ${formatCount(ANY_TIME_LIMIT)} changesets.` : 'Nothing was checked in yet.';
 }
 

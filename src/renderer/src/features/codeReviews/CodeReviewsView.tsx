@@ -29,6 +29,7 @@ import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { matchesPeople, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
+import { longerRangeHint } from '../../lib/longerRangeHint';
 import { isFiltering } from '../../lib/viewFilters';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
@@ -167,7 +168,7 @@ export function CodeReviewsView() {
         errorTitle="Couldn't read the code reviews"
         empty={
           isFiltering(filters, CLEARED_CODE_REVIEW_FILTERS) ? (
-            <NoMatches icon={<MessageSquareCode size={22} />} noun="code reviews" hint={since === 'anyTime' ? undefined : 'The filters look within the time range. Try a longer one.'} onClear={filters.clear} />
+            <NoMatches icon={<MessageSquareCode size={22} />} noun="code reviews" hint={longerRangeHint(since, true)} onClear={filters.clear} />
           ) : (
             <EmptyState
               icon={<MessageSquareCode size={22} />}
