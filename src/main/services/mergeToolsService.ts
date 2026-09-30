@@ -14,7 +14,8 @@ import { detectKnownTools, type ToolFileSystem } from '../merge/mergeTools/detec
 import { KNOWN_TOOLS, type Whereabouts } from '../merge/mergeTools/knownTools';
 import { activateApp, launchMergeTool } from '../merge/mergeTools/launch';
 import { appBundleOf, mergeToolList } from '../merge/mergeTools/mergeToolList';
-import { judgeToolResult, toolFileNames } from '../merge/mergeTools/toolResult';
+import { toolFileNames } from '../merge/mergeTools/toolFileNames';
+import { judgeToolResult } from '../merge/mergeTools/toolResult';
 import type { ServiceContext } from './ServiceContext';
 
 const fileSystem: ToolFileSystem & { read(path: string): string | null } = {
