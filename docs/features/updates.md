@@ -59,6 +59,12 @@ one shows again. A check the window asked for answers in one toast, "Checking…
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every push to master and every pull request: the typecheck, the tests and the build
-on macOS arm64, Windows x64 and arm64 and Linux x64, and the smoke test (`npm run e2e`) on macOS and Windows. The
-shared install step (`.github/actions/install`) pins Node, caches npm's and Electron's downloads and retries `npm ci`.
+`.github/workflows/ci.yml` runs on every push to master and every pull request: the tests and the build on macOS
+arm64, Windows x64 and arm64 and Linux x64, the typecheck once on Linux, and the smoke test (`npm run e2e`) inside the
+macOS and Windows x64 jobs. The shared install step (`.github/actions/install`) pins Node, restores `node_modules` from
+the last install of the same lockfile (`reuse-node-modules`, CI only: releases install clean), or else caches npm's and
+Electron's downloads and retries `npm ci`. On a Windows runner with a raw local SSD (arm64) the job formats it as a Dev
+Drive and builds there (`BUILD_DIR`). How fast the tests run on CI's 2-CPU runners, and why: `vitest.config.ts`.
+
+`.github/workflows/codeql.yml` runs GitHub's CodeQL security analysis on pushes to master, pull requests and weekly.
+Code scanning needs a public repository, so while this one is private the job passes without scanning.
