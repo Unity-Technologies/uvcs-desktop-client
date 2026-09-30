@@ -4,10 +4,3 @@ export function revealLabel(platform: string): string {
   if (platform === 'win32') return 'Show in Explorer';
   return 'Show in file manager';
 }
-
-/** What the OS calls opening a folder in its file manager, as opposed to revealing it in the folder above. */
-export function openFolderLabel(platform: string): string {
-  if (platform === 'darwin') return 'Open in Finder';
-  if (platform === 'win32') return 'Open in Explorer';
-  return 'Open in file manager';
-}

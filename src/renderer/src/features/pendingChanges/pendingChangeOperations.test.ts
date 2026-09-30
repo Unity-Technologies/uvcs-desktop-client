@@ -128,6 +128,11 @@ describe('absolutePath', () => {
     expect(absolutePath('/Users/ana/ws', 'src/a.ts')).toBe('/Users/ana/ws/src/a.ts');
     expect(absolutePath('C:\\ws', 'src/deep/a.ts')).toBe('C:\\ws\\src\\deep\\a.ts');
   });
+
+  it('is the workspace folder itself for the empty path, with no separator after it', () => {
+    expect(absolutePath('/Users/ana/ws', '')).toBe('/Users/ana/ws');
+    expect(absolutePath('C:\\ws', '')).toBe('C:\\ws');
+  });
 });
 
 describe('adding and checking out', () => {

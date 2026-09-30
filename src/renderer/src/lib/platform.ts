@@ -1,6 +1,6 @@
 import { windowChrome } from '@shared/windowChrome';
 import { programPlaceholder } from './programPlaceholder';
-import { openFolderLabel, revealLabel } from '@shared/revealLabel';
+import { revealLabel } from '@shared/revealLabel';
 import { trashName } from './trashName';
 
 export const isMac = window.uvcs.platform === 'darwin';
@@ -9,8 +9,6 @@ export const isMac = window.uvcs.platform === 'darwin';
 export const WINDOW_CHROME = windowChrome(window.uvcs.platform);
 
 export const REVEAL_LABEL = revealLabel(window.uvcs.platform);
-
-export const OPEN_FOLDER_LABEL = openFolderLabel(window.uvcs.platform);
 
 export const TRASH_NAME = trashName(window.uvcs.platform);
 
