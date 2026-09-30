@@ -14,15 +14,14 @@ import { useWorkspaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { SincePicker } from '../../components/SincePicker';
-import { matchesPeople, pickedOwners, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
+import { matchesPeople, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { isFiltering } from '../../lib/viewFilters';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
 import { NoMatches } from '../../ui/NoMatches';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
-import { userFilterTexts } from '../../lib/userName';
-import { sinceDateFor } from '../../lib/sincePresets';
+import { labelFilterTexts, labelsQuery } from './labelFilters';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
@@ -61,12 +60,12 @@ export function LabelsView() {
   const { text: search, people, since, update } = filters;
   const me = useWorkspaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
-  const { data: labels, isLoading, isFetching, error } = useLabels({ sinceDate: sinceDateFor(since), owners: pickedOwners(queriedPeople) });
+  const { data: labels, isLoading, isFetching, error } = useLabels(labelsQuery({ since, people: queriedPeople }));
   const offered = usePeopleSeen('labels', labels, ownerOf);
   const [selection, setSelection] = useViewSelection('labels');
 
   const visible = useMemo(
-    () => (labels ?? []).filter((label) => matchesPeople(people, me, label.owner) && matchesWordFilter([label.name, label.comment, label.branch, ...userFilterTexts(label.owner)], search)),
+    () => (labels ?? []).filter((label) => matchesPeople(people, me, label.owner) && matchesWordFilter(labelFilterTexts(label), search)),
     [labels, people, me, search],
   );
   const selected = visible.find((label) => labelKey(label) === selection.anchor);

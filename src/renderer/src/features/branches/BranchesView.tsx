@@ -14,15 +14,13 @@ import { useWorkspaceUser } from '../../app/account/accounts';
 import { PeopleFilter } from '../../components/people/PeopleFilter';
 import { usePeopleSeen } from '../../components/people/usePeopleSeen';
 import { SincePicker } from '../../components/SincePicker';
-import { matchesPeople, pickedOwners, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
+import { matchesPeople, PICKING_PAUSE_MS } from '../../lib/peopleFilter';
 import { useDebouncedValue } from '../../lib/useDebouncedValue';
 import { isFiltering } from '../../lib/viewFilters';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
 import { NoMatches } from '../../ui/NoMatches';
-import { matchesWordFilter } from '../../lib/matchesAllWords';
-import { userFilterTexts } from '../../lib/userName';
-import { sinceDateFor } from '../../lib/sincePresets';
+import { branchesQuery, filterBranches } from './branchFilters';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
@@ -53,11 +51,7 @@ export function BranchesView() {
   const { text: search, people, layout, since, showHidden, update } = filters;
   const me = useWorkspaceUser();
   const queriedPeople = useDebouncedValue(people, PICKING_PAUSE_MS);
-  const { data: branches, isLoading, isFetching, error } = useBranches({
-    sinceDate: sinceDateFor(since),
-    owners: pickedOwners(queriedPeople),
-    includeHidden: showHidden,
-  });
+  const { data: branches, isLoading, isFetching, error } = useBranches(branchesQuery({ since, people: queriedPeople, showHidden }));
   const offered = usePeopleSeen('branches', branches, ownerOf);
 
   const [selection, setSelection] = useViewSelection('branches');
@@ -187,10 +181,6 @@ function rowKey(row: Pick<BranchTreeRow, 'branch'>): string {
 
 const ownerOf = (branch: Branch): string => branch.owner;
 
-/** The branches by the people picked (`isPicked`) whose name, comment or creator has every word typed. */
-function filterBranches(branches: Branch[], search: string, isPicked: (owner: string) => boolean): Branch[] {
-  return branches.filter((branch) => isPicked(branch.owner) && matchesWordFilter([branch.name, branch.comment, ...userFilterTexts(branch.owner)], search));
-}
 
 function useBranchColumns(
   layout: BranchesLayout,
