@@ -1,5 +1,6 @@
 import type { OperationProgress } from './domain/operation';
 import type { AppSettings } from './domain/settings';
+import type { KeptAsideFile } from './domain/switchWithChanges';
 import type { WorkspaceChange } from './domain/workspaceChange';
 
 export interface CommandLogEntry {
@@ -26,6 +27,8 @@ interface OperationProgressEvent {
 export interface UvcsEvents {
   commandLogged: CommandLogEntry;
   workspaceChanged: WorkspaceChange & { workspacePath: string };
+  /** Shelved changes came back, but some files moved aside couldn't: another item is at their path now. */
+  filesKeptAside: { workspacePath: string; files: KeptAsideFile[] };
   /** The workspace's watch broke once started: changes made outside the app no longer show by themselves. */
   workspaceWatchBroken: { workspacePath: string };
   operationProgress: OperationProgressEvent;

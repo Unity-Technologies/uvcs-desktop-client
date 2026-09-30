@@ -1,7 +1,7 @@
 import { rm } from 'node:fs/promises';
 import type { Shelve, ShelveApplyResult } from '@shared/domain/shelve';
 import { selectorSpec } from '@shared/domain/specs';
-import type { LeftChanges, RestoreResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
+import type { KeptAsideFile, LeftChanges, RestoreResult, SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import type { OperationContext } from '../operations/OperationTracker';
 import { applyShelveCleanly, type ApplyOutcome } from './applyShelveCleanly';
@@ -21,13 +21,15 @@ import { cmHeaderReaders, type HeaderReaders } from './WorkspaceHeaders';
  * The shelves left behind when switching away, found again when the workspace comes back:
  * this app's own records first, then the automatic shelves the official client or `cm switch` left
  * (they share the comment format, so the official lookup finds them). It also puts any recorded shelve's changes back
- * (restore, apply) and forgets them (discard, finish).
+ * (restore, apply) and forgets them (discard, finish). Files moved aside that can't go back stay in the app's data
+ * folder, and it tells (`tellKeptAside`).
  */
 export class LeftChangesFinder {
   constructor(
     private readonly cm: CmClient,
     private readonly records: SwitchShelveRecords,
     private readonly headers: HeaderReaders = cmHeaderReaders(cm),
+    private readonly tellKeptAside: (workspacePath: string, files: KeptAsideFile[]) => void = () => {},
   ) {}
 
   async find(workspacePath: string): Promise<LeftChanges[]> {
@@ -101,9 +103,15 @@ export class LeftChangesFinder {
     this.records.remove(keys);
   }
 
-  /** The changes are in the workspace again: back into their changelists, and the record (and the shelve, unless kept) go away. */
+  /**
+   * The changes are in the workspace again: back into their changelists, and the record (and the shelve, unless kept)
+   * go away. A file moved aside that another item took the place of meanwhile stays in the backup, and is told.
+   */
   async finish(workspacePath: string, record: SwitchShelveRecord, deleteShelve = true): Promise<void> {
-    if (record.backup) await putBack(workspacePath, record.backup);
+    if (record.backup) {
+      const kept = await putBack(workspacePath, record.backup);
+      if (kept.length > 0) this.tellKeptAside(workspacePath, kept);
+    }
     // Kept or not: a file still on the shelve's revision diffs against it, showing no change at all.
     await detachReplacedFiles(this.cm, workspacePath);
     await restoreChangelists(this.cm, workspacePath, record.changelists);
