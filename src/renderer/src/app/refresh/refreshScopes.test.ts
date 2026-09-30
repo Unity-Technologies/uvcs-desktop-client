@@ -9,6 +9,7 @@ import {
   isAffectedByLabels,
   isAffectedByNewChangesets,
   isAffectedByCheckinOrUpdate,
+  isAffectedByShelveDeletion,
   isAffectedByShelving,
   isAffectedByShelvingAway,
   isAffectedByWorkspaceState,
@@ -85,6 +86,13 @@ describe('refresh scopes', () => {
     expect(isAffectedByShelvingAway(key('diffContents', { kind: 'workspaceFile', path: 'a.txt' }))).toBe(true);
     expect(isAffectedByShelvingAway(key('changesets', {}))).toBe(false);
     expect(isAffectedByShelvingAway(key('leftChanges', 'br:/main'))).toBe(false);
+  });
+
+  it('refreshes the shelve lists and the left changes, nothing else, when shelves are deleted', () => {
+    expect(isAffectedByShelveDeletion(key('shelves', { owners: ['me'] }))).toBe(true);
+    expect(isAffectedByShelveDeletion(key('leftChanges', { kind: 'branch', name: '/main' }))).toBe(true);
+    expect(isAffectedByShelveDeletion(key('pendingChanges'))).toBe(false);
+    expect(isAffectedByShelveDeletion(key('branchExplorer', {}))).toBe(false);
   });
 
   it('refreshes the branch lists and the Branch Explorer when a branch is created, deleted or hidden', () => {

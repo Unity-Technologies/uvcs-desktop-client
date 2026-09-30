@@ -3,6 +3,7 @@ import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runOperation, runVoidAction } from '../../app/operations/runOperation';
+import { isAffectedByShelveDeletion } from '../../app/refresh/refreshScopes';
 import { pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
@@ -52,6 +53,6 @@ export async function discardLeftChanges(workspacePath: string, shelves: LeftCha
   if (!confirmed) return;
 
   const ids = shelves.map((shelve) => shelve.shelveId);
-  const discarded = await runVoidAction(workspacePath, "Couldn't discard the shelved changes", () => api.leftChanges.discard(workspacePath, ids));
+  const discarded = await runVoidAction(workspacePath, "Couldn't discard the shelved changes", () => api.leftChanges.discard(workspacePath, ids), isAffectedByShelveDeletion);
   if (discarded) toast.success(shelves.length === 1 ? `Discarded shelve ${ids[0]}` : `Discarded ${pluralize(ids.length, 'shelve')}`);
 }

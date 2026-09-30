@@ -101,6 +101,11 @@ export function isAffectedByShelving(key: QueryKey): boolean {
   return area(key) === 'shelves';
 }
 
+/** Shelves were deleted: the lists of shelves and the left changes, which offer shelves back. */
+export function isAffectedByShelveDeletion(key: QueryKey): boolean {
+  return area(key) === 'shelves' || area(key) === 'leftChanges';
+}
+
 /**
  * Changes were shelved and undone: the lists of shelves, and the workspace as undoing leaves it (its files, the items
  * the changes added, what is checked out).
