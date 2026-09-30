@@ -1,4 +1,4 @@
-import { readFileSync, watch, type FSWatcher } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import type { WatchCoverage } from '@shared/api/workspaces';
 import type { WorkspaceChange } from '@shared/events';
@@ -8,6 +8,7 @@ import { changedFolder } from './changedFolder';
 import { classifyChange, isChangelistFile } from './classifyChange';
 import { FolderTreeWatch } from './FolderTreeWatch';
 import { isIgnored, NO_IGNORE_RULES, parseIgnoreRules, type IgnoreRules } from './ignoreRules';
+import { watchFolder, type FolderWatch, type WatchFolder } from './watchFolder';
 
 const QUIET_MS = 300;
 const MAX_WAIT_MS = 2000;
@@ -27,7 +28,7 @@ const MAX_WATCHED_FOLDERS = 10_000;
  * are dropped, because the app refreshes its views after them anyway.
  */
 export class WorkspaceWatcher {
-  private watchers: FSWatcher[] = [];
+  private watchers: FolderWatch[] = [];
   private folderTree: FolderTreeWatch | null = null;
   private ignoreRules: IgnoreRules = NO_IGNORE_RULES;
   private readonly ownWrites = new OwnWrites();
@@ -39,6 +40,7 @@ export class WorkspaceWatcher {
     readonly workspacePath: string,
     onChanged: (change: WorkspaceChange) => void,
     private readonly platform: NodeJS.Platform = process.platform,
+    private readonly watch: WatchFolder = watchFolder,
   ) {
     this.batcher = new ChangeBatcher((change) => !this.stopped && onChanged(change), QUIET_MS, MAX_WAIT_MS);
   }
@@ -51,6 +53,7 @@ export class WorkspaceWatcher {
         (folder) => isIgnored(folder, this.ignoreRules),
         (event, relativePath) => this.onEvent(event, relativePath),
         MAX_WATCHED_FOLDERS,
+        this.watch,
       );
       return this.folderTree.start() ? 'full' : 'partial';
     }
@@ -86,11 +89,11 @@ export class WorkspaceWatcher {
 
   private tryWatch(path: string, recursive: boolean): boolean {
     try {
-      const watcher = watch(path, { recursive }, (event, fileName) => {
+      const watcher = this.watch(path, recursive, (event, fileName) => {
         const relativePath = fileName === null ? undefined : relative(this.workspacePath, join(path, fileName));
         this.onEvent(event, relativePath);
       });
-      watcher.on('error', () => watcher.close());
+      watcher.onError(() => watcher.close());
       this.watchers.push(watcher);
       return true;
     } catch {
