@@ -52,7 +52,10 @@ export function NavGroup({ label, children }: { label?: string; children: ReactN
 
 interface NavItemProps {
   icon: ReactNode;
+  /** Its name, shown and read as it; the tooltip and screen readers keep it whole when the rail shortens it. */
   label: string;
+  /** Shown instead of the label on the rail's tile, where room is short ("Expand" for "Expand sidebar"). */
+  railLabel?: string;
   /** Quiet text at the right, e.g. "Cloud". */
   detail?: string;
   /** A count at the right, e.g. pending changes. */
@@ -65,14 +68,16 @@ interface NavItemProps {
   active?: boolean;
   /** Active, but a page is open on top of it. */
   dimmed?: boolean;
-  /** Shown with its label as a tooltip (in the rail, the label shows there too). */
+  /** Shown with its label as a tooltip. */
   shortcut?: string;
   onClick: () => void;
 }
 
-export function NavItem({ icon, label, detail, badge, dot, active = false, dimmed = false, shortcut, onClick }: NavItemProps) {
+export function NavItem(props: NavItemProps) {
+  const { icon, label, railLabel, detail, badge, dot, active = false, dimmed = false, shortcut, onClick } = props;
   const rail = useInRail();
-  const tip = navItemTip({ label, detail, badge, dot, shortcut }, rail);
+  const tip = navItemTip({ label, railLabel, detail, badge, dot, shortcut }, rail);
+  const shownLabel = rail && railLabel ? railLabel : label;
 
   return (
     <button
@@ -84,11 +89,12 @@ export function NavItem({ icon, label, detail, badge, dot, active = false, dimme
       data-tip={tip}
       data-tip-sub={dot}
       data-tip-shortcut={shortcut}
+      aria-label={shownLabel === label ? undefined : label}
       aria-description={dot}
       onClick={onClick}
     >
       <span className={styles.icon}>{icon}</span>
-      <span className={styles.label}>{label}</span>
+      <span className={styles.label}>{shownLabel}</span>
       {detail && <span className={styles.detail}>{detail}</span>}
       {/* At the row's end wide; on the rail's tile, side by side at its icon's top-right corner. */}
       <span className={styles.marks}>

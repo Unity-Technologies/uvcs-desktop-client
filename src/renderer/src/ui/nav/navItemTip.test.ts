@@ -13,6 +13,10 @@ describe('navItemTip', () => {
       expect(navItemTip({ label: 'Branches', shortcut: 'mod+5' }, false)).toBe('Branches');
       expect(navItemTip({ label: 'Changes', dot: 'Changes left on /main/task' }, false)).toBe('Changes');
     });
+
+    it('keeps the whole label, which shows whole', () => {
+      expect(navItemTip({ label: 'Collapse sidebar', railLabel: 'Collapse', shortcut: 'mod+backslash' }, false)).toBe('Collapse sidebar');
+    });
   });
 
   describe('in the rail, where each tile shows its label', () => {
@@ -29,6 +33,10 @@ describe('navItemTip', () => {
     it('adds the count and the detail the tile leaves out', () => {
       expect(navItemTip({ label: 'Changes', badge: 1234, shortcut: 'mod+1' }, true)).toBe('Changes · 1234');
       expect(navItemTip({ label: 'acme', detail: 'Cloud' }, true)).toBe('acme · Cloud');
+    });
+
+    it('spells out a label the tile shortens', () => {
+      expect(navItemTip({ label: 'Expand sidebar', railLabel: 'Expand' }, true)).toBe('Expand sidebar');
     });
 
     it('treats a count of zero as none', () => {
