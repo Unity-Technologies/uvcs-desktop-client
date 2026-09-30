@@ -6,12 +6,12 @@ import { copySubmenu } from '../../components/copyMenu';
 import { menuAction } from '../../components/menuWords';
 import { forgetRecentWorkspace } from '../settings/useSettings';
 import { openTerminalIn } from '../workspace/workspaceShellActions';
-import { deleteRepository, removeWorkspace, renameRepository, renameWorkspace, openWorkspaceFolder } from './homeOperations';
+import { deleteRepository, removeWorkspace, renameRepository, renameWorkspace, showWorkspaceFolder } from './homeOperations';
 
 export function workspaceMenu(workspace: WorkspaceSummary, open: (path: string) => void): MenuEntry[] {
   return groupedMenu([
     menuAction('openWorkspace', () => open(workspace.path)),
-    menuAction('openFolder', () => openWorkspaceFolder(workspace)),
+    menuAction('openFolder', () => showWorkspaceFolder(workspace)),
     menuAction('terminal', () => openTerminalIn(workspace.path)),
     copySubmenu('Workspace', { name: workspace.name, path: workspace.path }),
     menuAction('rename', () => void renameWorkspace(workspace)),
