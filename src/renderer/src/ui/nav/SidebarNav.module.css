@@ -192,3 +192,9 @@
   left: calc(50% + 5px);
   box-shadow: 0 0 0 2px var(--bg-sidebar);
 }
+
+/* With a count on the icon too, the dot moves to the icon's lower corner: both stay in sight. */
+.sidebar[data-rail='true'] .dot:has(+ .badge) {
+  top: auto;
+  bottom: 5px;
+}
