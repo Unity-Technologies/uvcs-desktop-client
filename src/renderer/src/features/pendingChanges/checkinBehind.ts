@@ -10,9 +10,12 @@ export interface BehindBranch {
   authors: string[];
 }
 
-/** How far the workspace is behind the branch it checks in to, as the incoming check last saw; null when it isn't. */
-export function behindBranch(summary: IncomingSummary | undefined, branch: string | undefined): BehindBranch | null {
-  if (!summary || !branch || summary.branch !== branch || summary.changesetCount === 0) return null;
+/**
+ * How far the workspace is behind the branch it checks in to, as the incoming check last saw, when checking in updates
+ * first; null when it isn't behind, or `merging`: checking in completes a pending merge as it is.
+ */
+export function behindBranch(summary: IncomingSummary | undefined, branch: string | undefined, merging: boolean): BehindBranch | null {
+  if (merging || !summary || !branch || summary.branch !== branch || summary.changesetCount === 0) return null;
   return { count: summary.changesetCount, authors: summary.authors };
 }
 

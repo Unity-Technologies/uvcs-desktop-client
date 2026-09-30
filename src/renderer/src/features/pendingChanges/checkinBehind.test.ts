@@ -12,14 +12,18 @@ const summary = (changesetCount: number, authors: string[] = [], branch = '/main
 
 describe('behindBranch', () => {
   it('counts what the branch checked in to has that the workspace lacks', () => {
-    expect(behindBranch(summary(2, ['ana']), '/main/task')).toEqual({ count: 2, authors: ['ana'] });
+    expect(behindBranch(summary(2, ['ana']), '/main/task', false)).toEqual({ count: 2, authors: ['ana'] });
   });
 
   it('is null when up to date, unknown, or about another branch', () => {
-    expect(behindBranch(summary(0), '/main/task')).toBeNull();
-    expect(behindBranch(undefined, '/main/task')).toBeNull();
-    expect(behindBranch(summary(2), '/main')).toBeNull();
-    expect(behindBranch({ branch: null, changesetCount: 0, authors: [] }, undefined)).toBeNull();
+    expect(behindBranch(summary(0), '/main/task', false)).toBeNull();
+    expect(behindBranch(undefined, '/main/task', false)).toBeNull();
+    expect(behindBranch(summary(2), '/main', false)).toBeNull();
+    expect(behindBranch({ branch: null, changesetCount: 0, authors: [] }, undefined, false)).toBeNull();
+  });
+
+  it('is null while a merge is pending: checking in completes it as it is, without updating first', () => {
+    expect(behindBranch(summary(2, ['ana']), '/main/task', true)).toBeNull();
   });
 });
 
