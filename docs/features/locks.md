@@ -21,7 +21,7 @@ settings) and only its administrators edit them.
   - an on-premises server: its web admin, `http://<host>:7178/configuration/lock-rules` (the port every web admin
     listens on, as the official client assumes; the protocol and port of the server's address dropped);
   - the local server (`local`): none, and the button doesn't show.
-- The page's tooltip says where it opens (`lockRulesPage`), as the app never leaves for the browser without saying so.
+- The button's tooltip says where the page opens (`lockRulesPage`): the dashboard or the web admin.
 
 Rejected: a lock rules dialog of the app's own. The rules are reachable only through the server's web API (the web
 admin's `LockRulesControllerV2`, the cloud's `LockRulesController`), which takes its own sign-in rather than `cm`'s:
