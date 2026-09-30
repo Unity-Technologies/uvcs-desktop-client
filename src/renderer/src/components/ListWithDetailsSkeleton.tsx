@@ -1,5 +1,5 @@
 import { DetailsPanelSkeleton } from '../ui/DetailsPanel';
-import type { Column } from '../ui/table/DataTable';
+import type { Column } from '../ui/table/column';
 import { TableSkeleton } from '../ui/table/TableSkeleton';
 import { ListWithDetails } from './ListWithDetails';
 

@@ -3,7 +3,7 @@ import { PathLabel } from '../../components/PathLabel';
 import { UserLabel } from '../../ui/Avatar';
 import { Highlight } from '../../ui/Highlight';
 import { RelativeTime } from '../../ui/RelativeTime';
-import type { Column } from '../../ui/table/DataTable';
+import type { Column } from '../../ui/table/column';
 import { CodeReviewStatusBadge } from './CodeReviewStatusBadge';
 import { describeTarget } from './reviewTarget';
 import styles from './codeReviewColumns.module.css';

@@ -6,7 +6,8 @@ import { EmptyState } from '../../ui/EmptyState';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { SplitPane } from '../../ui/SplitPane';
-import { DataTable, type Column } from '../../ui/table/DataTable';
+import type { Column } from '../../ui/table/column';
+import { DataTable } from '../../ui/table/DataTable';
 import { useChangesets } from '../changesets/useChangesets';
 import { TargetDiff } from './TargetDiff';
 

@@ -20,7 +20,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { FilterBar } from '../../ui/FilterBar';
 import { FilterField } from '../../ui/FilterField';
 import { NoMatches } from '../../ui/NoMatches';
-import type { Column } from '../../ui/table/DataTable';
+import type { Column } from '../../ui/table/column';
 import { ViewHeader } from '../../ui/ViewHeader';
 import { ShelveDetails } from './ShelveDetails';
 import { shelveCopyTexts, shelveMenu } from './shelveMenu';

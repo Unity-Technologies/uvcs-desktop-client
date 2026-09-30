@@ -16,8 +16,6 @@ import { useTableWidth } from './useTableWidth';
 import { visibleColumns } from './visibleColumns';
 import styles from './DataTable.module.css';
 
-export type { Column } from './column';
-
 interface DataTableProps<Row> {
   rows: readonly Row[];
   columns: Column<Row>[];
