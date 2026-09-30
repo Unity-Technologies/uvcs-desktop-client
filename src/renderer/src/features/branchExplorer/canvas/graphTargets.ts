@@ -2,7 +2,7 @@ import type { GraphLabel, MergeLink } from '@shared/domain/branchExplorer';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { PendingMergeLink } from '@shared/domain/pendingChanges';
 import type { GraphLayout, Lane, NodeLayout } from '../model/layoutGraph';
-import type { DrawnTargets } from './drawContext';
+import type { DrawnTargets, GraphScene } from './drawContext';
 import type { DrawnBox } from './drawnBoxes';
 import { distanceToCurve, linkCurve, type Point } from './curves';
 import { BAND_HEIGHT, COLLAPSED_NODE_HALF_WIDTH, COLUMN_WIDTH, columnX, GRAPH_PADDING, NODE_RADIUS, nodePoint, pendingPoint, ROW_HEIGHT, rowY } from './geometry';
@@ -54,6 +54,39 @@ export function hoverCardFor(target: GraphTarget | null, point: Point, drawn: Dr
     return drawn?.cutBranchComments.at(point)?.item === target.lane ? { kind: 'clippedText', key: branch.name, text: branch.comment.trim() } : null;
   }
   return { kind: 'pointer', target };
+}
+
+/** What the frame lights up under the pointer. */
+export type HoverHighlight = Pick<GraphScene, 'hoveredChangeset' | 'hoveredBranch' | 'hoveredReview' | 'hoveredPending'>;
+
+/** The pointer on a "+N" node lights it as its changeset; on a code review chip, the chip. */
+export function hoverHighlight(hovered: GraphTarget | null): HoverHighlight {
+  return {
+    hoveredChangeset: hovered?.kind === 'changeset' ? hovered.id : hovered?.kind === 'collapsed' ? hovered.node.changeset.id : null,
+    hoveredBranch: hovered?.kind === 'branch' ? hovered.lane.branch.name : null,
+    hoveredReview: hovered?.kind === 'codeReview' ? hovered.review.id : null,
+    hoveredPending: hovered?.kind === 'pending',
+  };
+}
+
+/** Names what a hover card is about: the pointer moving within the same card keeps it. */
+export function hoverCardKey(target: PointerCardTarget): string {
+  switch (target.kind) {
+    case 'changeset':
+      return `changeset:${target.id}`;
+    case 'collapsed':
+      return `collapsed:${target.node.changeset.id}`;
+    case 'label':
+      return `label:${target.label.name}`;
+    case 'mergeLink':
+      return `link:${target.link.sourceChangeset}:${target.link.destinationChangeset}:${target.link.type}`;
+    case 'codeReview':
+      return `review:${target.review.id}`;
+    case 'pending':
+      return 'pending';
+    case 'pendingMergeLink':
+      return `pendingLink:${target.link.sourceChangeset}:${target.link.type}`;
+  }
 }
 
 const NODE_HIT_RADIUS = NODE_RADIUS + 4;
