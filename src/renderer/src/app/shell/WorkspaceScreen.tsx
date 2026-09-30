@@ -1,5 +1,6 @@
 import { Suspense, useRef } from 'react';
 import { useIncomingNotificationClicks } from '../../features/incoming/incomingNotifications';
+import { useKeptAsideNotice } from '../../features/leftChanges/keptAsideNotice';
 import { useMergeCommands } from '../../features/merge/useMergeCommands';
 import { useNavigation } from '../navigation/navigationStore';
 import { viewDefinition } from '../navigation/viewRegistry';
@@ -28,6 +29,7 @@ export function WorkspaceScreen() {
   useWindowTitle();
   useMergeCommands();
   useIncomingNotificationClicks();
+  useKeptAsideNotice();
   const contentRef = useRef<HTMLDivElement>(null);
   useMainFocus(contentRef);
 
