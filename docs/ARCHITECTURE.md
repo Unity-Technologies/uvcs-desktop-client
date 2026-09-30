@@ -90,7 +90,8 @@ and many people use the same server. Every `cm` command other than local reads (
   their branch by object id: the branch chips (Branch Explorer, Branches, finishing a task) match it against the ids
   their branch lists already carry, and share one review list with the palette; the Code reviews view and page name it
   from the branch lists already read (`BranchNamesCache.remember`), or else read every branch's id and name once
-  (`readBranchNames`, two light queries, kept ten minutes). The top bar takes the branch comment from the branch query. Pending changes ask which locks are mine only when some lock holds one of them; left
+  (`readBranchNames`, two light queries, kept ten minutes). The top bar takes the branch comment from the branch query. The recent branches and renaming a workspace take its
+  GUID and name from the reads the workspace info shares (`WorkspaceHeaders`). Pending changes ask which locks are mine only when some lock holds one of them; left
   changes look the selector's object id up only when an automatic shelve by another client could match it, and arriving
   from a switch looks for changes to restore only when this app left some there.
 - **Queries**: list everything only when the view needs everything, and then read it rarely. Otherwise filter on the
