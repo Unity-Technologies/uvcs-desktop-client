@@ -1,14 +1,15 @@
 import type { PendingChange } from '@shared/domain/pendingChanges';
+import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import { ApiError, api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation, runRead } from '../../app/operations/runOperation';
 import { queryClient } from '../../app/queryClient';
+import { saveSettings } from '../../app/settings/useSettings';
 import { isAffectedByCheckinOrUpdate, isAffectedByShelving } from '../../app/refresh/refreshScopes';
-import { firstLine } from '../../lib/text';
+import { firstLine, pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
-import { pluralize } from '../../lib/text';
 import { updateToIncoming } from '../incoming/updateOperations';
 import { shelveAway } from '../shelves/shelveOperations';
 import { useCheckinAfterUpdateStore } from './checkinAfterUpdate';
@@ -136,10 +137,8 @@ export function undoUnchangedCheckouts(workspacePath: string): Promise<void | un
   return runAction(workspacePath, "Couldn't undo the unchanged checkouts", () => api.pendingChanges.undoUnchanged(workspacePath));
 }
 
-async function rememberComment(comment: string): Promise<void> {
-  const { recentComments } = await api.settings.get();
-  const updated = await api.settings.update({
-    recentComments: [comment, ...recentComments.filter((recent) => recent !== comment)].slice(0, MAX_RECENT_COMMENTS),
-  });
-  queryClient.setQueryData(queryKeys.settings, updated);
+/** Puts the comment first among the recent ones the check-in panel offers, once. A store that can't save it says so. */
+function rememberComment(comment: string): Promise<void> {
+  const { recentComments } = queryClient.getQueryData<AppSettings>(queryKeys.settings) ?? DEFAULT_SETTINGS;
+  return saveSettings({ recentComments: [comment, ...recentComments.filter((recent) => recent !== comment)].slice(0, MAX_RECENT_COMMENTS) });
 }
