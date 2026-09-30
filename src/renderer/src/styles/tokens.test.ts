@@ -2,6 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { APP_ICON_COLORS } from '@shared/appMark';
 import { WINDOW_BACKGROUND } from '@shared/windowChrome';
 import { AVATAR_COLORS } from '../lib/avatarColors';
 import { HEADER_HOVER_TINT, HEADER_TINT, headerTextOn } from '../features/branchExplorer/canvas/graphPalette';
@@ -145,6 +146,13 @@ describe.each(Object.entries(themes))('%s theme', (theme, tokens) => {
 
   it('keeps tertiary text quieter than secondary text', () => {
     expect(ratio(tokens, '--text-tertiary', '--bg-surface')).toBeLessThan(ratio(tokens, '--text-secondary', '--bg-surface'));
+  });
+});
+
+describe('the app icon', () => {
+  it('draws the mark in the light theme\'s colors, as the About dialog does there (`APP_ICON_COLORS`)', () => {
+    const { light } = themes;
+    expect(APP_ICON_COLORS).toEqual({ from: light['--accent-hover'], to: light['--accent'], glyph: light['--accent-contrast'] });
   });
 });
 

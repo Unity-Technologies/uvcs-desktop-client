@@ -20,7 +20,7 @@ you touch:
 | `features/shelves-and-switching.md`     | Switching with changes, a workspace on a shelve, shelves in Changes, two people on one branch |
 | `features/files-history-annotate.md`    | Files, Browse repository, Go to file, cut and paste, history, annotate         |
 | `features/branch-explorer.md`           | The graph's canvas, keeping the place, the pending changeset, the branch switcher |
-| `features/updates.md`                   | The About dialog, how the app updates (unsigned macOS too), releases and CI    |
+| `features/updates.md`                   | The About dialog, how the app updates (unsigned macOS too), releases, the app icon and CI |
 | `features/locks.md`                     | Lock rules: where they are edited, and why not in the app                      |
 
 ## How a request flows

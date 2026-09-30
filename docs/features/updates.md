@@ -50,6 +50,17 @@ one shows again. A check the window asked for answers in one toast, "Checking…
 - The installers (electron-builder.yml) are one per OS and architecture, named without spaces
   (`UnityVersionControl-<version>-macOS-arm64.dmg`: GitHub turns spaces into dots, which `latest*.yml` would no longer
   match); macOS ships a zip too, which electron-updater needs.
+- The **app icon** is the mark the About dialog draws (`APP_MARK`, `shared/appMark.ts`, which `AppMark` renders in the
+  theme's colors), in the light theme's colors (`APP_ICON_COLORS`, checked against `tokens.css`). `npm run icons`
+  (`scripts/icons/makeAppIcons.mjs`) makes the committed files in `build/` from `appIconSvg`, drawing each size from
+  the vectors with the installed Electron's Chromium (`rasterize.cjs`) and writing the .icns and .ico itself, so it
+  needs no other tool: `icon.icns` (macOS, 16 to 1024 pixels, the tile on Apple's icon grid: 824 of 1024 pixels, so
+  the Dock shows it the size of other apps), `icon.ico` (Windows, 16 to 256, edge to edge), `icons/256x256.png` and
+  `512x512.png` (Linux), and `icon-macOS.svg`/`icon.svg`, the sources. electron-builder.yml names them per OS; the disk
+  image and the Windows installer show them too. Running unpackaged, the app sets the Dock's icon itself
+  (`DEVELOPMENT_DOCK_ICON`, `build/icon-macOS.png`), and a window takes the PNG where the OS reads it from the window
+  (`windowIcon`: Linux, and Windows while unpackaged). `appIconFiles.test.ts` fails when the mark changes until
+  `npm run icons` runs again.
 - macOS signing and notarization turn on once the `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`,
   `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID` secrets exist; without them the build is signed ad hoc (the
   workflow's `MAC_SIGNING_FLAGS`), opens after Privacy & Security ▸ Open Anyway, and updates by its disk image. A build
