@@ -1,17 +1,10 @@
 /// <reference types="node" />
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { filesUnder } from '@shared/testing/filesUnder';
 
 const RENDERER = join(__dirname, '..');
-
-function cssFiles(directory: string): string[] {
-  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(directory, entry.name);
-    if (entry.isDirectory()) return cssFiles(path);
-    return entry.name.endsWith('.css') ? [path] : [];
-  });
-}
 
 /** A `:has(…)` followed by `*` (after a space or a combinator): the rule's subject is every element under it. */
 const HAS_THEN_EVERYTHING = /:has\((?:[^()]|\([^()]*\))*\)\s*[>~+]?\s*\*/;
@@ -28,7 +21,7 @@ describe('`:has()` rules', () => {
   // Chromium re-checks such a rule on every DOM change inside the element, and restyles all of its subject when it may
   // have changed: with `*` under the document, a row added to a list restyled the whole page (7 ms per command logged).
   it('never restyle every element under them', () => {
-    const offending = cssFiles(RENDERER).flatMap((path) =>
+    const offending = filesUnder(RENDERER, (name) => name.endsWith('.css')).flatMap((path) =>
       selectorsRestylingEverything(readFileSync(path, 'utf8')).map((selector) => `${path.slice(RENDERER.length + 1)}: ${selector}`),
     );
     expect(offending).toEqual([]);

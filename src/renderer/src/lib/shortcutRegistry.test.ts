@@ -1,20 +1,13 @@
 /// <reference types="node" />
 import '../testing/fakeWindow';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { filesUnder, isAppSource } from '@shared/testing/filesUnder';
 import { SHORTCUT_AREAS, SHORTCUTS, shortcutKeys, viewShortcut } from './shortcutRegistry';
 
 const RENDERER = join(__dirname, '..');
 const APP_MENU = join(RENDERER, '..', '..', 'main', 'window', 'appMenuTemplate.ts');
-
-function sourceFiles(directory: string): string[] {
-  return readdirSync(directory).flatMap((name) => {
-    const path = join(directory, name);
-    if (statSync(path).isDirectory()) return sourceFiles(path);
-    return /\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name) ? [path] : [];
-  });
-}
 
 /** Shortcuts written as literals: a modifier chord anywhere, or any key given to a shortcut prop, field or hook. */
 const LITERAL_SHORTCUT = [
@@ -29,7 +22,7 @@ const keysOn = (mac: boolean) => Object.values(SHORTCUTS).flatMap((shortcut) => 
 
 describe('shortcut registry', () => {
   it('holds every shortcut of the renderer: bindings, tooltips and key caps read their keys from it', () => {
-    const offenders = sourceFiles(RENDERER)
+    const offenders = filesUnder(RENDERER, isAppSource)
       .filter((path) => !path.endsWith('shortcutRegistry.ts'))
       .flatMap((path) =>
         readFileSync(path, 'utf8')

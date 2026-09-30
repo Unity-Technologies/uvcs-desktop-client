@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join, sep } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { filesUnder, isAppSource } from '@shared/testing/filesUnder';
 
 /**
  * No external tool opens by itself: `cm` never gets to open its merge or diff tool, and a merge tool opens only when
@@ -14,14 +15,6 @@ interface CmArgs {
   file: string;
   command: string;
   text: string;
-}
-
-function sourceFiles(directory: string): string[] {
-  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(directory, entry.name);
-    if (entry.isDirectory()) return sourceFiles(path);
-    return entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts') ? [path] : [];
-  });
 }
 
 /** Array literals whose first element is a string, e.g. `['merge', spec, '--merge']`, with their whole text. */
@@ -54,7 +47,7 @@ function closingBracket(source: string, open: number): number {
   return source.length - 1;
 }
 
-const allSources = sourceFiles(MAIN_DIRECTORY).map((file) => ({ file, source: readFileSync(file, 'utf8') }));
+const allSources = filesUnder(MAIN_DIRECTORY, isAppSource).map((file) => ({ file, source: readFileSync(file, 'utf8') }));
 const relative = (file: string): string => file.slice(MAIN_DIRECTORY.length + 1).split(sep).join('/');
 const allArgLists = allSources.flatMap(({ file, source }) => findArgLists(source, file));
 const describeList = (list: CmArgs): string => `${list.file}: ${list.text}`;

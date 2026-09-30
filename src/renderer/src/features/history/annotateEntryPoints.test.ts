@@ -1,8 +1,9 @@
 /// <reference types="node" />
 import '../../testing/fakeWindow';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { filesUnder } from '@shared/testing/filesUnder';
 
 import type { DiffEntry } from '@shared/domain/diff';
 import type { ItemRevision } from '@shared/domain/history';
@@ -73,12 +74,7 @@ describe('Annotate outside the Files view', () => {
 describe('the Annotate page', () => {
   it('is gone: nothing opens a page of that kind', () => {
     const renderer = join(__dirname, '..', '..');
-    const sources = (directory: string): string[] =>
-      readdirSync(directory).flatMap((name) => {
-        const path = join(directory, name);
-        return statSync(path).isDirectory() ? sources(path) : /\.tsx?$/.test(name) ? [path] : [];
-      });
-    const offenders = sources(renderer).filter((path) => /kind: 'annotate'|AnnotatePage/.test(readFileSync(path, 'utf8')) && !path.endsWith('annotateEntryPoints.test.ts'));
+    const offenders = filesUnder(renderer, (name) => /\.tsx?$/.test(name)).filter((path) => /kind: 'annotate'|AnnotatePage/.test(readFileSync(path, 'utf8')) && !path.endsWith('annotateEntryPoints.test.ts'));
     expect(offenders.map((path) => relative(renderer, path))).toEqual([]);
   });
 });

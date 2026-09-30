@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { filesUnder, isAppSource } from '@shared/testing/filesUnder';
 
 /**
  * `cm find` has no `in (...)`, and ids ORed together (`where id = 1 or id = 2 or …`) take a server query per few
@@ -10,14 +11,6 @@ import { describe, expect, it } from 'vitest';
  */
 
 const SOURCE_DIRECTORY = join(__dirname, '..', '..');
-
-function sourceFiles(directory: string): string[] {
-  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(directory, entry.name);
-    if (entry.isDirectory()) return sourceFiles(path);
-    return /\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) ? [path] : [];
-  });
-}
 
 /** `.join(' or ')` and friends: conditions glued together from a list. */
 const JOINED_WITH_OR = /\.join\(\s*(['"`])\s*or\s*\1\s*\)/i;
@@ -47,7 +40,7 @@ describe('no ORed id lookups', () => {
   });
 
   it('no source builds one', () => {
-    const offenders = sourceFiles(SOURCE_DIRECTORY).flatMap((file) =>
+    const offenders = filesUnder(SOURCE_DIRECTORY, isAppSource).flatMap((file) =>
       oredIdLookups(readFileSync(file, 'utf8')).map((line) => `${relative(SOURCE_DIRECTORY, file)}: ${line.trim()}`),
     );
     expect(offenders).toEqual([]);
