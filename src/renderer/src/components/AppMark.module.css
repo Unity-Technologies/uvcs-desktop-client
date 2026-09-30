@@ -14,7 +14,6 @@
 .glyph {
   fill: none;
   stroke: var(--accent-contrast);
-  stroke-width: 4;
   stroke-linecap: round;
 }
 

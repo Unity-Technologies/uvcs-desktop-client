@@ -69,7 +69,7 @@ describe('parseItemHistory', () => {
         <CreationDate>2026-08-31T21:08:46+02:00</CreationDate>
         <RevisionType>txt</RevisionType>
         <ChangesetNumber>16828</ChangesetNumber>
-        <Owner>stephen.callan@unity3d.com</Owner>
+        <Owner>jane@example.com</Owner>
         <Comment>Review 425296 comment d245ed6d</Comment>
         <Repository>unityGUI</Repository>
         <Server>codice@cloud</Server>

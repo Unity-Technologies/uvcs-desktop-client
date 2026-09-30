@@ -71,14 +71,25 @@ markup from the network.
 - The installers (electron-builder.yml) are one per OS and architecture, named without spaces
   (`UnityVersionControl-<version>-macOS-arm64.dmg`: GitHub turns spaces into dots, which `latest*.yml` would no longer
   match); macOS ships a zip too, which electron-updater needs.
+- The **app icon** is the mark the About dialog draws (`APP_MARK`, `shared/appMark.ts`, which `AppMark` renders in the
+  theme's colors), in the light theme's colors (`APP_ICON_COLORS`, checked against `tokens.css`). `npm run icons`
+  (`scripts/icons/makeAppIcons.mjs`) makes the committed files in `build/` from `appIconSvg`, drawing each size from
+  the vectors with the installed Electron's Chromium (`rasterize.cjs`) and writing the .icns and .ico itself, so it
+  needs no other tool: `icon.icns` (macOS, 16 to 1024 pixels, the tile on Apple's icon grid: 824 of 1024 pixels, so
+  the Dock shows it the size of other apps), `icon.ico` (Windows, 16 to 256, edge to edge), `icons/256x256.png` and
+  `512x512.png` (Linux), and `icon-macOS.svg`/`icon.svg`, the sources. electron-builder.yml names them per OS; the disk
+  image and the Windows installer show them too. Running unpackaged, the app sets the Dock's icon itself
+  (`DEVELOPMENT_DOCK_ICON`, `build/icon-macOS.png`), and a window takes the PNG where the OS reads it from the window
+  (`windowIcon`: Linux, and Windows while unpackaged). `appIconFiles.test.ts` fails when the mark changes until
+  `npm run icons` runs again.
 - macOS signing and notarization turn on once the `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`,
   `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID` secrets exist; without them the build is signed ad hoc (the
   workflow's `MAC_SIGNING_FLAGS`), opens after Privacy & Security ▸ Open Anyway, and updates by its disk image. A build
   with no signature at all is rejected: macOS on Apple silicon calls it "damaged", because electron-builder's edits to
   the bundle break Electron's own signature. Windows builds are unsigned: electron-updater checks an installer's publisher only when the app names one.
-- The feed must be readable without signing in: electron-updater reads a private repository's releases only with a
-  token, which the app never ships. While the repository is private, a check says "No published release is available
-  to update from yet."
+- The feed must be readable without signing in, so the releases' repository is public: electron-updater reads a private
+  repository's releases only with a token, which the app never ships. With no published release (only a draft), a
+  check says "No published release is available to update from yet."
 
 ## CI
 
@@ -89,5 +100,5 @@ the last install of the same lockfile (`reuse-node-modules`, CI only: releases i
 Electron's downloads and retries `npm ci`. On a Windows runner with a raw local SSD (arm64) the job formats it as a Dev
 Drive and builds there (`BUILD_DIR`). How fast the tests run on CI's 2-CPU runners, and why: `vitest.config.ts`.
 
-`.github/workflows/codeql.yml` runs GitHub's CodeQL security analysis on pushes to master, pull requests and weekly.
-Code scanning needs a public repository, so while this one is private the job passes without scanning.
+`.github/workflows/codeql.yml` runs GitHub's CodeQL security analysis on pushes to master, pull requests and weekly;
+findings show in the Security tab and on pull requests.

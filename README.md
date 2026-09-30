@@ -3,13 +3,22 @@
 A fast, modern desktop client for Unity Version Control (Plastic SCM), built with Electron, React and TypeScript.
 It has no backend of its own: every operation is a `cm` command, so it works with any server your `cm` can reach.
 
-## Requirements
+It needs **Unity Version Control** installed, and signed in at least once (open the official client or run `cm` once).
+The app finds `cm` in the standard install locations and on your `PATH`; set `UVCS_CM_PATH` to use another one.
 
-- **Node.js 22.12 or newer.**
-- **Unity Version Control** installed, and signed in at least once (open the official client or run `cm` once).
-  The app finds `cm` in the standard install locations and on your `PATH`; set `UVCS_CM_PATH` to use another one.
+## Download
 
-## Run it
+Get the installer for your OS and architecture from [Releases](https://github.com/danipen/uvcs-desktop-client/releases/latest):
+a `.dmg` for macOS, an `.exe` for Windows, an `.AppImage` for Linux. The app updates itself from new releases.
+
+The builds aren't code-signed yet:
+
+- **macOS** stops the first launch: open System Settings ▸ Privacy & Security and click Open Anyway.
+- **Windows** SmartScreen may warn about an unknown publisher: click More info ▸ Run anyway.
+
+## Build from source
+
+Building needs **Node.js 22.12 or newer**.
 
 ```sh
 git clone https://github.com/danipen/uvcs-desktop-client.git
@@ -41,3 +50,9 @@ npm run dev      # starts the app with hot reload
 
 In the app, ⌘K searches everything, ⌘/ lists the keyboard shortcuts, and ⌘⇧L shows every `cm` command it ran (Ctrl on Windows and Linux).
 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains how the code is organized.
+
+## Feedback
+
+Report a problem or ask for a feature in [Issues](https://github.com/danipen/uvcs-desktop-client/issues) (Help ▸
+Report an Issue opens one; About ▸ Copy Details gives the versions to paste in). Report a security vulnerability
+privately instead: see [SECURITY.md](SECURITY.md). [CONTRIBUTING.md](CONTRIBUTING.md) says how to send a change.

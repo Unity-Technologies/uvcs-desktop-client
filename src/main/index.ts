@@ -18,6 +18,7 @@ import { ignoreOwnCommandWrites } from './startup/ownWrites';
 import { openSettings, sendSettingsChanges } from './startup/settings';
 import { watchShownWorkspaces } from './startup/workspaceWatching';
 import { createAppUpdates } from './update/createAppUpdates';
+import { DEVELOPMENT_DOCK_ICON } from './window/appIcon';
 import { installAppMenu, installMenus } from './window/appMenu';
 import { followAppTheme } from './window/followAppTheme';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
@@ -41,6 +42,7 @@ function start(launched: Promise<void>): void {
   // A window sees the commands its own calls ran (commands run outside any call go to every window).
   cm.onCommandLogged((entry) => sendEventToCaller('commandLogged', entry));
   if (!app.isPackaged) warnOnRepeatedServerCommands(cm);
+  if (!app.isPackaged) app.dock?.setIcon(DEVELOPMENT_DOCK_ICON);
   sendSettingsChanges(settings, (changed) => sendEvent('settingsChanged', changed));
   ignoreOwnCommandWrites(cm, watchers, headers);
   const api = createServices({

@@ -5,6 +5,10 @@ on:
     branches: [master]
   pull_request:
 
+# CI only reads the code: its token can't push, comment or touch releases, whoever opened the pull request.
+permissions:
+  contents: read
+
 # A new push to a pull request cancels its CI still running on older commits; master's runs are never cancelled.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}

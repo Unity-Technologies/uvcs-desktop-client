@@ -4,6 +4,14 @@
   "version": "0.1.2",
   "description": "A modern desktop client for Unity Version Control, powered by the cm CLI.",
   "author": "Unity Technologies",
+  "homepage": "https://github.com/danipen/uvcs-desktop-client#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/danipen/uvcs-desktop-client.git"
+  },
+  "bugs": {
+    "url": "https://github.com/danipen/uvcs-desktop-client/issues"
+  },
   "private": true,
   "main": "out/main/index.js",
   "engines": {
@@ -16,6 +24,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.node.json && tsc --noEmit -p tsconfig.web.json",
     "test": "vitest run",
     "app:debug": "node scripts/app-debug.mjs",
+    "icons": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/icons/makeAppIcons.mjs",
     "e2e": "electron-vite build && node scripts/e2e/smoke.mjs",
     "postinstall": "install-electron",
     "dist": "electron-vite build && electron-builder",
