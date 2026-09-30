@@ -1,10 +1,9 @@
+import { FIELD_SEPARATOR, RECORD_SEPARATOR } from '../formatRecords';
+
 /**
  * `cm` output as `cm` prints it, for tests to parse and for `fakeCmClient` to answer with. Only the fields the parsers
  * read; the repository is `eco@local` unless said otherwise.
  */
-
-const FIELD_SEPARATOR = '\u001f';
-const RECORD_SEPARATOR = '\u001e';
 
 /** `--format` output as `cm` prints it for a `recordFormat`: fields and records ended by control characters, a line per record. */
 export function formatOutput(...records: readonly (string | number)[][]): string {

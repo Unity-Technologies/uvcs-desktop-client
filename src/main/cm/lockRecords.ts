@@ -1,14 +1,12 @@
 import type { Lock, LockStatus } from '@shared/domain/lock';
-
-const FIELD_SEPARATOR = '\u001f';
-const LINE_SEPARATOR = '\u001e';
+import { FIELD_SEPARATOR, RECORD_SEPARATOR } from './formatRecords';
 
 /** Arguments that make `cm lock list` print one parseable record per lock. */
 export const LOCK_LIST_FORMAT_ARGS = [
   '--machinereadable',
   '--smartlocks',
   `--fieldseparator=${FIELD_SEPARATOR}`,
-  `--endlineseparator=${LINE_SEPARATOR}`,
+  `--endlineseparator=${RECORD_SEPARATOR}`,
   '--dateformat=yyyy-MM-ddTHH:mm:sszzz',
 ];
 
@@ -19,7 +17,7 @@ export const LOCK_LIST_FORMAT_ARGS = [
  */
 export function parseLocks(output: string, repositoryServer: string): Lock[] {
   return output
-    .split(LINE_SEPARATOR)
+    .split(RECORD_SEPARATOR)
     .map((line) => line.trim())
     .filter(Boolean)
     .map((line) => line.split(FIELD_SEPARATOR))

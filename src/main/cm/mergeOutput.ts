@@ -10,9 +10,10 @@ import type {
   MergePlan,
   MergePlanStatus,
 } from '@shared/domain/merge';
+import { FIELD_SEPARATOR } from './formatRecords';
 
-/** Separates fields in `cm merge --machinereadable` output. A control character never appears in paths. */
-export const MERGE_FIELD_SEPARATOR = '\u001f';
+/** Separates fields in `cm merge --machinereadable` output. */
+export const MERGE_FIELD_SEPARATOR = FIELD_SEPARATOR;
 
 /** A conflicting file as `cm merge` prints it: its ids and changesets, without the repository they belong to. */
 type PrintedFileConflict = Omit<FileConflict, 'repository'>;
@@ -157,9 +158,12 @@ export function directoryConflictIdentity(conflict: DirectoryConflict): string {
   return [conflict.type, conflict.itemId, conflict.source.path, conflict.destination.path].join('|');
 }
 
+const CREATED_CHANGESET_RECORD = new RegExp(`^CHANGESET${MERGE_FIELD_SEPARATOR}cs:(\\d+)@`, 'm');
+const MERGE_NEEDED_RECORD = new RegExp(`^MERGE_NEEDED${MERGE_FIELD_SEPARATOR}`, 'm');
+
 /** Parses `CHANGESET cs:12@/main/task@repo@server` from a merge into a server branch. */
 export function parseCreatedChangeset(output: string): number | undefined {
-  const created = /^CHANGESET\u001fcs:(\d+)@/m.exec(output);
+  const created = CREATED_CHANGESET_RECORD.exec(output);
   return created ? Number(created[1]) : undefined;
 }
 
@@ -168,5 +172,5 @@ export function parseCreatedChangeset(output: string): number | undefined {
  * the merge's changeset is left beside the new head, and has to be merged into the branch to finish.
  */
 export function parseDestinationMoved(output: string): boolean {
-  return /^MERGE_NEEDED\u001f/m.test(output);
+  return MERGE_NEEDED_RECORD.test(output);
 }
