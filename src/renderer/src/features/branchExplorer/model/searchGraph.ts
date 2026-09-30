@@ -69,6 +69,15 @@ export function firstHitIndex(hits: readonly SearchHit[], rawQuery: string): num
   return Math.max(0, hits.findIndex((hit) => hit.kind === 'changeset' && hit.id === changesetNumber));
 }
 
+/**
+ * Where Enter (`1`) or Shift+Enter (`-1`) goes among the hits, round from one end to the other. `activeIndex` is -1
+ * until the user steps: then going forward lands per `firstHitIndex`, going back on the last hit.
+ */
+export function steppedHitIndex(activeIndex: number, direction: 1 | -1, hits: readonly SearchHit[], rawQuery: string): number {
+  if (activeIndex === -1) return direction === 1 ? firstHitIndex(hits, rawQuery) : hits.length - 1;
+  return (activeIndex + direction + hits.length) % hits.length;
+}
+
 function exactChangesetNumber(query: string): number | undefined {
   const number = /^(?:cs:)?(\d+)$/i.exec(query)?.[1];
   return number === undefined ? undefined : Number(number);

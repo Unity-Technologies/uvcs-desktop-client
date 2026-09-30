@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { branch, changeset, merge, sampleHistory } from './graphFixtures';
 import { layoutGraph } from './layoutGraph';
 import { neighborStop } from './navigateGraph';
-import { firstHitIndex, searchGraph, searchHighlight, type SearchHit } from './searchGraph';
+import { firstHitIndex, searchGraph, searchHighlight, steppedHitIndex, type SearchHit } from './searchGraph';
 
 const layout = layoutGraph(sampleHistory());
 
@@ -111,6 +111,15 @@ describe('searchGraph with numbers in names', () => {
     const hits = searchGraph(numbered, 'cs:12');
     expect(hits[firstHitIndex(hits, 'cs:12')]).toEqual({ kind: 'changeset', id: 12 });
     expect(firstHitIndex(searchGraph(numbered, '100874'), '100874')).toBe(0);
+  });
+
+  it('steps through the hits round from one end to the other, the first step back landing on the last', () => {
+    const hits = searchGraph(layout, 'main');
+    expect(steppedHitIndex(-1, 1, hits, 'main')).toBe(0);
+    expect(steppedHitIndex(-1, -1, hits, 'main')).toBe(hits.length - 1);
+    expect(steppedHitIndex(0, 1, hits, 'main')).toBe(1);
+    expect(steppedHitIndex(hits.length - 1, 1, hits, 'main')).toBe(0);
+    expect(steppedHitIndex(0, -1, hits, 'main')).toBe(hits.length - 1);
   });
 });
 
