@@ -1,10 +1,11 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { findXml, formatOutput } from '../cm/testing/cmOutput';
-import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { createAttributesService } from './attributesService';
+import { readingFileOption } from './testing/readingFileOption';
 import { serviceContext } from './testing/serviceContext';
 
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
@@ -61,33 +62,22 @@ describe('attribute values', () => {
   });
 
   it('sets a value through a file, as values may span several lines, and deletes the file afterwards', async () => {
-    const seen = { valueFile: '', value: '' };
-    const { service, commands } = attributes({
-      'attribute set': ({ args }) => {
-        seen.valueFile = optionValue(args, '--valuecontents=')!;
-        seen.value = readFileSync(seen.valueFile, 'utf8');
-        return '';
-      },
-    });
+    const { seen, answer } = readingFileOption('--valuecontents=');
+    const { service, commands } = attributes({ 'attribute set': answer });
 
     await service.setValue(WORKSPACE, 'br:/main/task1', 'notes', '# Notes\n- one');
 
-    expect(commands).toMatchObject([{ via: 'query', args: ['attribute', 'set', 'att:notes', 'br:/main/task1', `--valuecontents=${seen.valueFile}`] }]);
-    expect(seen.value).toBe('# Notes\n- one');
-    expect(existsSync(seen.valueFile)).toBe(false);
+    expect(commands).toMatchObject([{ via: 'query', args: ['attribute', 'set', 'att:notes', 'br:/main/task1', `--valuecontents=${seen.file}`] }]);
+    expect(seen.content).toBe('# Notes\n- one');
+    expect(existsSync(seen.file)).toBe(false);
   });
 
   it('deletes the value file when setting the value fails', async () => {
-    let valueFile = '';
-    const { service } = attributes({
-      'attribute set': ({ args }) => {
-        valueFile = optionValue(args, '--valuecontents=')!;
-        return cmFails('Error: The attribute notes does not exist.');
-      },
-    });
+    const { seen, answer } = readingFileOption('--valuecontents=', cmFails('Error: The attribute notes does not exist.'));
+    const { service } = attributes({ 'attribute set': answer });
 
     await expect(service.setValue(WORKSPACE, 'br:/main/task1', 'notes', 'x')).rejects.toThrow('The attribute notes does not exist.');
-    expect(existsSync(valueFile)).toBe(false);
+    expect(existsSync(seen.file)).toBe(false);
   });
 
   it('unsets a value', async () => {

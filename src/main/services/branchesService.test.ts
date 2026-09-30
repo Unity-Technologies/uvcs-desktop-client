@@ -1,13 +1,14 @@
-import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { MAIN_BRANCH_GUID } from '@shared/domain/branch';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
 import { findXml } from '../cm/testing/cmOutput';
-import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
+import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { SettingsStore } from '../settings/SettingsStore';
 import { createBranchesService, startingPointOption } from './branchesService';
+import { readingFileOption } from './testing/readingFileOption';
 import { serviceContext } from './testing/serviceContext';
 
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
@@ -139,35 +140,24 @@ describe('one branch by name', () => {
 
 describe('branch writes', () => {
   it('creates a branch at a changeset with its comment in a file deleted afterwards', async () => {
-    const seen = { commentsFile: '', comment: '' };
-    const { service, commands } = branches({
-      'branch create': ({ args }) => {
-        seen.commentsFile = optionValue(args, '-commentsfile=')!;
-        seen.comment = readFileSync(seen.commentsFile, 'utf8');
-        return '';
-      },
-    });
+    const { seen, answer } = readingFileOption('-commentsfile=');
+    const { service, commands } = branches({ 'branch create': answer });
 
     await service.create(WORKSPACE, { name: '/main/task3', startingPoint: 'cs:12', comment: 'Line one\nLine two' });
 
     expect(commands).toMatchObject([
-      { via: 'query', args: ['branch', 'create', '/main/task3', '--changeset=cs:12', `-commentsfile=${seen.commentsFile}`], options: { cwd: WORKSPACE } },
+      { via: 'query', args: ['branch', 'create', '/main/task3', '--changeset=cs:12', `-commentsfile=${seen.file}`], options: { cwd: WORKSPACE } },
     ]);
-    expect(seen.comment).toBe('Line one\nLine two');
-    expect(existsSync(seen.commentsFile)).toBe(false);
+    expect(seen.content).toBe('Line one\nLine two');
+    expect(existsSync(seen.file)).toBe(false);
   });
 
   it('deletes the comment file when the branch cannot be created', async () => {
-    let commentsFile = '';
-    const { service } = branches({
-      'branch create': ({ args }) => {
-        commentsFile = optionValue(args, '-commentsfile=')!;
-        return cmFails('Error: The branch /main/task3 already exists.');
-      },
-    });
+    const { seen, answer } = readingFileOption('-commentsfile=', cmFails('Error: The branch /main/task3 already exists.'));
+    const { service } = branches({ 'branch create': answer });
 
     await expect(service.create(WORKSPACE, { name: '/main/task3', comment: '' })).rejects.toThrow('already exists');
-    expect(existsSync(commentsFile)).toBe(false);
+    expect(existsSync(seen.file)).toBe(false);
   });
 
   it('renames, deletes, hides and unhides with one command for all the branches', async () => {
