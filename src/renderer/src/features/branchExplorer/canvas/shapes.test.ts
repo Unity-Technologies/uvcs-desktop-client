@@ -4,7 +4,7 @@ import { pendingParentCurve } from './curves';
 import { layoutGraph } from '../model/layoutGraph';
 import { BAND_HEIGHT, columnX, graphSize, HEADER_HEIGHT, HEADER_INSET, HEADER_MAX_WIDTH, headerTop, GRAPH_PADDING, NODE_RADIUS, rowY, TWO_LINE_HEADER_HEIGHT } from './geometry';
 import { labelChips } from './labelPlacement';
-import { graphExtent, laneHeaderHeight, laneHeaderTop, laneShape } from './laneShape';
+import { graphExtent, laneHeaderHeight, laneHeaderTop, laneShape, roomBeforeNextLane } from './laneShape';
 import { nextColumnOnRow } from './rowNeighbors';
 
 const layout = layoutGraph(sampleHistory());
@@ -29,6 +29,50 @@ describe('laneShape', () => {
     const shape = laneShape(empty.lanesByBranch.get('/main/empty')!);
     expect(shape.left).toBeGreaterThan(columnX(empty.nodes.get(1)!.column));
     expect(shape.right).toBeGreaterThan(shape.left);
+  });
+});
+
+describe('roomBeforeNextLane', () => {
+  /**
+   * /main:    0 ─ 1 ─ 5 ─ … ─ 10
+   * /main/a:      └ 2 ─ 3       └ 11 ─ 12  /main/b, far enough past /main/a to share its row
+   * /main/c:      └ 4           (too close to /main/a: a row of its own)
+   */
+  const shared = layoutGraph({
+    branches: [branch('/main', '', 10), branch('/main/a', '/main', 3), branch('/main/c', '/main', 4), branch('/main/b', '/main', 12)],
+    changesets: [
+      changeset(0, '/main', -1),
+      changeset(1, '/main', 0),
+      changeset(2, '/main/a', 1),
+      changeset(3, '/main/a', 2),
+      changeset(4, '/main/c', 1),
+      changeset(5, '/main', 1),
+      changeset(6, '/main', 5),
+      changeset(7, '/main', 6),
+      changeset(8, '/main', 7),
+      changeset(9, '/main', 8),
+      changeset(10, '/main', 9),
+      changeset(11, '/main/b', 10),
+      changeset(12, '/main/b', 11),
+    ],
+    mergeLinks: [],
+    labels: [],
+  });
+  const lane = (name: string) => shared.lanesByBranch.get(name)!;
+
+  it('reaches the next band on the row, less a clearance, from anywhere before it', () => {
+    expect(lane('/main/a').row).toBe(lane('/main/b').row);
+    const nextLeft = laneShape(lane('/main/b')).left;
+    const left = laneShape(lane('/main/a')).left;
+    const room = roomBeforeNextLane(shared, lane('/main/a'), left);
+    expect(room).toBeLessThan(nextLeft - left);
+    expect(room).toBeGreaterThan(nextLeft - left - 20);
+    expect(roomBeforeNextLane(shared, lane('/main/a'), left + 30)).toBe(room - 30);
+  });
+
+  it('is endless past the last band on the row', () => {
+    expect(roomBeforeNextLane(shared, lane('/main/b'), laneShape(lane('/main/b')).left)).toBe(Number.POSITIVE_INFINITY);
+    expect(roomBeforeNextLane(shared, lane('/main'), laneShape(lane('/main')).left)).toBe(Number.POSITIVE_INFINITY);
   });
 });
 
