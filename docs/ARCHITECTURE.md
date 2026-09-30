@@ -43,8 +43,8 @@ you touch:
      So is, on Windows, a command that prints text (see Parsing).
    - A pooled command may take two minutes, a workspace write half an hour (a few paths can still be a whole tree).
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
-   (see Renderer: Command log); one that ended without an exit code (cancelled, stopped on a prompt, `cm` not found)
-   is logged with -1.
+   (see Renderer: Command log); one that ended without an exit code (stopped on a prompt, `cm` not found) is logged
+   with -1, and one its caller cancelled is not logged: it's no failure.
 
 To add a capability: its types in `shared/domain`, the method in `shared/api/<area>.ts` (part of `UvcsApi`), the
 implementation in `main/services/<area>Service.ts` (wired in `createServices`), `cm` argument builders and parsers as
