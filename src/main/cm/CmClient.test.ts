@@ -284,6 +284,20 @@ describe('CmClient commands that end without an exit code', () => {
     expect(logged).toMatchObject([{ commandLine: 'cm version', exitCode: -1, viaShell: false, output: 'spawn cm ENOENT' }]);
   });
 
+  it('leaves out of the log a command its caller cancelled: no failure to point at', async () => {
+    const cancelled = new AbortController();
+    const { cm, logged } = fakeClient({
+      answer: () => {
+        cancelled.abort();
+        throw new Error('The operation was aborted');
+      },
+    });
+
+    await expect(cm.execute(['update'], { signal: cancelled.signal })).rejects.toThrow('aborted');
+
+    expect(logged).toEqual([]);
+  });
+
   it('logs a pooled command its session stopped', async () => {
     const { cm, logged } = fakeClient({
       answer: () => {
