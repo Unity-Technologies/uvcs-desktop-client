@@ -19,6 +19,7 @@ import { Highlight } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import { changePresence, changeStatus, changeTone } from './changeTone';
+import { indexChangeRows, perRow } from './changeRowIndex';
 import { changeTreeArrowRows, menuTargetOf, rowCheckState, rowIndent, treeLevel, type ChangeRow } from './changeRows';
 import { LockMark } from './locks/LockMark';
 import type { PendingLock, PendingLocks } from './locks/pendingLocks';
@@ -72,7 +73,7 @@ export function ChangesList({
   const viewportRef = useRef<HTMLDivElement>(null);
   // The keyboard moves through every row (`rowKeys`), folders and changelists too, so ← and → can close and open them.
   // Every arrow key renders the list: rows are found by key, never searched for.
-  const { changeRows, orderedKeys, rowKeys, rowIndexes } = useMemo(() => indexRows(rows), [rows]);
+  const { changeRows, orderedKeys, rowKeys, rowIndexes } = useMemo(() => indexChangeRows(rows), [rows]);
   // The row keyboard moves go from; Shift extends the selection from the anchor to it. A selection from outside the
   // list (the diff going on to the next file) moves it too.
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
@@ -268,35 +269,10 @@ export function ChangesList({
   );
 }
 
-/** The rows of files and their keys, every row's key, and where each key is: in one pass over tens of thousands of rows. */
-function indexRows(rows: ChangeRow[]) {
-  const changeRows: (ChangeRow & { type: 'change' })[] = [];
-  const orderedKeys: string[] = [];
-  const rowKeys: string[] = [];
-  const rowIndexes = new Map<string, number>();
-  rows.forEach((row, index) => {
-    rowKeys.push(row.key);
-    rowIndexes.set(row.key, index);
-    if (row.type !== 'change') return;
-    changeRows.push(row);
-    orderedKeys.push(row.key);
-  });
-  return { changeRows, orderedKeys, rowKeys, rowIndexes };
-}
-
 /** A file's mark, or a folder's once every file in it is reviewed; changelist headers have none. */
 function rowReviewStatus(row: ChangeRow, statusOf: ReviewStatusOf<PendingChange>): ReviewStatus | null {
   if (row.type === 'change') return statusOf(row.change);
   return row.type === 'directory' ? groupReviewStatus(row.changes, statusOf) : null;
-}
-
-/** `of`, remembered for each row it's asked about. */
-function perRow<T>(of: (row: ChangeRow) => T): (row: ChangeRow) => T {
-  const known = new Map<ChangeRow, T>();
-  return (row) => {
-    if (!known.has(row)) known.set(row, of(row));
-    return known.get(row)!;
-  };
 }
 
 /** What a row of a file or folder does, stable across renders. */
