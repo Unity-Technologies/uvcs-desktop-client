@@ -23,6 +23,13 @@ describe('file conflict decisions', () => {
 
   it('keeps a whole version of the file', () => {
     expect(resolutionOf({ kind: 'wholeFile', side: 'source' })).toEqual({ choice: 'source' });
+    expect(resolutionOf({ kind: 'wholeFile', side: 'destination' }, 'incoming\n')).toEqual({ choice: 'destination' });
+  });
+
+  it("carries the incoming text when it writes back byte for byte, so the merge needn't read it again", () => {
+    expect(resolutionOf({ kind: 'wholeFile', side: 'source' }, '\uFEFFcafé\r\n')).toEqual({ choice: 'source', text: '\uFEFFcafé\r\n' });
+    // Not UTF-8 (a Latin-1 é read as U+FFFD): only cm writes its bytes as they are.
+    expect(resolutionOf({ kind: 'wholeFile', side: 'source' }, 'caf\uFFFD\n')).toEqual({ choice: 'source' });
   });
 
   it('binary files start without a decision', () => {

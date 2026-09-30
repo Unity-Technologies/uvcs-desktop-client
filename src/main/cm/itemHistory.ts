@@ -3,7 +3,6 @@ import type { ItemType } from '@shared/domain/pendingChanges';
 import type { RevisionRef } from '@shared/domain/revision';
 import { repositorySpec, spec } from '@shared/domain/specs';
 import { toAbsolutePath } from '../files/workspacePaths';
-import { escapeQueryValue } from './findQuery';
 import { parseRecords, recordFormat } from './formatRecords';
 import { child, children, integer, parseXml, text, type XmlNode } from './parseXml';
 import { onLinksThemselves } from './symlinkArgs';
@@ -41,7 +40,7 @@ export function itemRevisionsArgs(records: XmlNode[]): string[] | null {
   return [
     'find',
     'revision',
-    `where itemid = ${integer(revision.ItemId)} on repository '${escapeQueryValue(repository)}'`,
+    `where itemid = ${integer(revision.ItemId)} on repository '${repository}'`,
     `--format=${recordFormat(['changeset', 'id', 'parent'])}`,
     '--nototal',
   ];

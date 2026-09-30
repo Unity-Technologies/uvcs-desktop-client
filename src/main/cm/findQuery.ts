@@ -43,7 +43,7 @@ export function whereClause(filter: QueryFilter, extraConditions: string[] = [])
   const conditions = [...extraConditions];
   if (filter.sinceDate) conditions.push(`date >= '${filter.sinceDate}'`);
   if (filter.owners?.length) conditions.push(ownersCondition(filter.owners));
-  if (filter.branch) conditions.push(`branch = '${escapeQueryValue(filter.branch)}'`);
+  if (filter.branch) conditions.push(equalsCondition('branch', filter.branch));
   return conditions.length > 0 ? `where ${conditions.join(' and ')}` : '';
 }
 
@@ -52,10 +52,16 @@ export function whereClause(filter: QueryFilter, extraConditions: string[] = [])
  * hand (a handful), so the query stays one bounded scan; `cm` has no `in (...)`.
  */
 function ownersCondition(owners: readonly string[]): string {
-  const each = owners.map((owner) => `owner = '${escapeQueryValue(owner)}'`);
+  const each = owners.map((owner) => equalsCondition('owner', owner));
   return each.length === 1 ? each[0]! : `(${each.join(' or ')})`;
 }
 
-export function escapeQueryValue(value: string): string {
-  return value.replace(/'/g, "''");
+/**
+ * `field` is `value`. A value holding a quote, which `cm find` can't read, is matched with a wildcard in each quote's
+ * place instead (`withoutQuotes`): more objects than asked for, so a caller that needs the exact ones filters the
+ * results. Branch, label, attribute and repository names can't hold a quote (`cm` refuses to create one); people's
+ * names and emails can (`o'brien@corp.com`).
+ */
+export function equalsCondition(field: string, value: string): string {
+  return /['"]/.test(value) ? `${field} like '${withoutQuotes(value)}'` : `${field} = '${value}'`;
 }

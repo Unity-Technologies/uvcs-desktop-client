@@ -6,7 +6,7 @@ import { incomingChangesetsArgs, readIncomingChanges, readIncomingSummary, summa
 describe('the incoming summary', () => {
   it('asks only for the numbers and owners of the changesets after the loaded one on the branch', () => {
     const [find, object, where, format, ...rest] = incomingChangesetsArgs("/main/o'brien", 41);
-    expect([find, object, where, rest]).toEqual(['find', 'changeset', "where changesetid > 41 and branch = '/main/o''brien'", ['--nototal']]);
+    expect([find, object, where, rest]).toEqual(['find', 'changeset', "where changesetid > 41 and branch like '/main/o%brien'", ['--nototal']]);
     expect(format).toMatch(/^--format=\{changesetid\}.\{owner\}/);
   });
 

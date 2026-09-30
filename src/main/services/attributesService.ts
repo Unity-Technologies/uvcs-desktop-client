@@ -1,7 +1,7 @@
 import type { AttributesApi } from '@shared/api/attributes';
 import type { AttributeType, AttributeValue } from '@shared/domain/attribute';
 import { toAttributeType, toAttributeValue } from '../cm/attributeRecords';
-import { escapeQueryValue } from '../cm/findQuery';
+import { equalsCondition } from '../cm/findQuery';
 import { findRecords } from '../cm/findObjects';
 import { parseRecords, recordFormat } from '../cm/formatRecords';
 import { withTempFile } from '../files/tempFile';
@@ -34,13 +34,13 @@ export function createAttributesService({ cm }: ServiceContext): AttributesApi {
   }
 
   async function valuesOf(workspacePath: string, objectSpec: string): Promise<AttributeValue[]> {
-    const query = `where srcobj = '${escapeQueryValue(objectSpec)}'`;
+    const query = `where ${equalsCondition('srcobj', objectSpec)}`;
     const xml = await cm.query(['find', 'attribute', query, '--xml', '--nototal'], { cwd: workspacePath });
     return findRecords(xml, 'ATTRIBUTE').map(toAttributeValue);
   }
 
   async function usedValues(workspacePath: string, attribute: string): Promise<string[]> {
-    const query = `where type = '${escapeQueryValue(attribute)}' limit ${USED_VALUES_SAMPLE}`;
+    const query = `where ${equalsCondition('type', attribute)} limit ${USED_VALUES_SAMPLE}`;
     const output = await cm.query(['find', 'attribute', query, `--format=${recordFormat(['value'])}`, '--nototal'], { cwd: workspacePath });
     return parseRecords(output).map(([value]) => value ?? '');
   }

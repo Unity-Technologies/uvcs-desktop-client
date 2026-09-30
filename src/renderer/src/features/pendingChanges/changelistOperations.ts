@@ -45,7 +45,7 @@ export async function renameChangelist(workspacePath: string, changelist: Change
   await runAction(
     workspacePath,
     "Couldn't rename the changelist",
-    () => api.pendingChanges.editChangelist(workspacePath, changelist.name, { ...changelist, name }),
+    () => api.pendingChanges.editChangelist(workspacePath, changelist.name, { name }),
     isAffectedByWorkspaceState,
   );
 }
@@ -61,7 +61,7 @@ export async function editChangelistDescription(workspacePath: string, changelis
   await runAction(
     workspacePath,
     "Couldn't update the changelist",
-    () => api.pendingChanges.editChangelist(workspacePath, changelist.name, { ...changelist, description }),
+    () => api.pendingChanges.editChangelist(workspacePath, changelist.name, { description }),
     isAffectedByWorkspaceState,
   );
 }

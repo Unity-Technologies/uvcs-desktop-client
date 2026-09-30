@@ -159,11 +159,6 @@ function parseSide([operationCode, firstPath, ...rest]: string[], description: s
   return [{ operation, path: firstPath!, description }, rest];
 }
 
-/** Identifies a directory conflict across successive `cm merge` runs, which renumber the remaining ones. */
-export function directoryConflictIdentity(conflict: DirectoryConflict): string {
-  return [conflict.type, conflict.itemId, conflict.source.path, conflict.destination.path].join('|');
-}
-
 const CREATED_CHANGESET_RECORD = new RegExp(`^CHANGESET${MERGE_FIELD_SEPARATOR}cs:(\\d+)@`, 'm');
 const MERGE_NEEDED_RECORD = new RegExp(`^MERGE_NEEDED${MERGE_FIELD_SEPARATOR}`, 'm');
 

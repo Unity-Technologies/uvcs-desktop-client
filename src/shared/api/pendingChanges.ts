@@ -27,7 +27,8 @@ export interface PendingChangesApi {
    */
   shelveAndUndo(workspacePath: string, paths: string[] | null, comment: string, operationId: string): Promise<ShelvedAway>;
   createChangelist(workspacePath: string, changelist: Changelist): Promise<void>;
-  editChangelist(workspacePath: string, name: string, changes: Changelist): Promise<void>;
+  /** Renames or describes the changelist `name`: only the fields `edit` holds, one command each. */
+  editChangelist(workspacePath: string, name: string, edit: Partial<Changelist>): Promise<void>;
   deleteChangelist(workspacePath: string, name: string): Promise<void>;
   /** Moves changes into a changelist, or back to the default one when `name` is null. */
   moveToChangelist(workspacePath: string, name: string | null, paths: string[]): Promise<void>;

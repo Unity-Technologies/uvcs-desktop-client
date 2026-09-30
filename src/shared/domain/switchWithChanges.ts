@@ -104,3 +104,13 @@ export type RestoreResult =
   | { kind: 'restored'; count: number; sourceName: string }
   | { kind: 'conflicts'; shelveId: number }
   | { kind: 'pendingChanges' };
+
+/**
+ * A file moved aside while its changes were shelved that couldn't go back: another item is at its path now. It stays
+ * in the app's data folder, at `savedAt`.
+ */
+export interface KeptAsideFile {
+  /** Where it was in the workspace (workspace-relative, `/`-separated). */
+  path: string;
+  savedAt: string;
+}

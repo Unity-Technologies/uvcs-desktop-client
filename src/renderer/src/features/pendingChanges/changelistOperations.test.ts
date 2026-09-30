@@ -72,7 +72,7 @@ describe('changelist operations', () => {
     expect(fakeApi.methods()).toEqual(['pendingChanges.createChangelist']);
   });
 
-  it('renames and describes a changelist keeping the rest of it', async () => {
+  it('renames and describes a changelist, sending only what changed', async () => {
     fakeApi.answer('pendingChanges.editChangelist', () => undefined);
     answerPrompts('Screens');
     await renameChangelist(ws, list);
@@ -80,8 +80,8 @@ describe('changelist operations', () => {
     await editChangelistDescription(ws, list);
 
     expect(fakeApi.argsOf('pendingChanges.editChangelist')).toEqual([
-      [ws, 'UI', { name: 'Screens', description: 'Screens' }],
-      [ws, 'UI', { name: 'UI', description: 'All the screens' }],
+      [ws, 'UI', { name: 'Screens' }],
+      [ws, 'UI', { description: 'All the screens' }],
     ]);
   });
 

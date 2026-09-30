@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { caseTolerantPattern, findArgs } from './findQuery';
+import { caseTolerantPattern, equalsCondition, findArgs } from './findQuery';
 
 describe('findArgs', () => {
   it('combines filter conditions, order and limit', () => {
@@ -37,7 +37,11 @@ describe('findArgs', () => {
     expect(findArgs('label', { owners: [] }, null)[2]).toBe('');
   });
 
-  it('escapes quotes in values', () => {
-    expect(findArgs('branch', { owners: ["o'neil"] }, null)[2]).toBe("where owner = 'o''neil'");
+  // `cm find` rejects a quote inside an exact value too, doubled or not: such a value is matched with a wildcard in
+  // each quote's place (more objects than asked for), and whoever needs the exact ones filters the results.
+  it('matches a value holding quotes with a wildcard in their place', () => {
+    expect(findArgs('branch', { owners: ["o'neil@corp.com", 'ana'] }, null)[2]).toBe("where (owner like 'o%neil@corp.com' or owner = 'ana')");
+    expect(equalsCondition('name', 'say "hi"')).toBe("name like 'say %hi%'");
+    expect(equalsCondition('name', 'task')).toBe("name = 'task'");
   });
 });

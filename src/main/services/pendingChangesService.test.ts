@@ -216,12 +216,12 @@ describe('changelists', () => {
     expect(lines()).toEqual(['changelist create UI Polish --persistent']);
   });
 
-  it('edits only what changed: the description, the name, or both', async () => {
+  it('sends only what the edit changes: renaming a described changelist leaves its description alone', async () => {
     const { service, lines } = pendingChanges({ changelist: '' });
 
-    await service.editChangelist(WORKSPACE, 'UI', { name: 'UI', description: 'More polish' });
-    await service.editChangelist(WORKSPACE, 'UI', { name: 'Menus', description: '' });
-    await service.editChangelist(WORKSPACE, 'UI', { name: 'UI', description: '' });
+    await service.editChangelist(WORKSPACE, 'UI', { description: 'More polish' });
+    await service.editChangelist(WORKSPACE, 'UI', { name: 'Menus' });
+    await service.editChangelist(WORKSPACE, 'UI', { name: 'UI' });
 
     expect(lines()).toEqual(['changelist edit UI description More polish', 'changelist edit UI rename Menus']);
   });

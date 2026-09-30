@@ -1,6 +1,7 @@
 import { AppWindow, Plus, Sparkles, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { AUTO_MERGE_TOOL, formatArgs, parseArgs, type MergeTool } from '@shared/domain/mergeTools';
+import { AUTO_MERGE_TOOL, type MergeTool } from '@shared/domain/mergeTools';
+import { formatArgs, parseArgs } from '../../lib/argumentLine';
 import { addMergeToolAndPick, PLACEHOLDER_HINT } from '../../features/merge/mergeTools/CustomMergeToolDialog';
 import { preferMergeTool, removeCustomMergeTool, setMergeToolArgs, useMergeTools } from '../../features/merge/mergeTools/useMergeTools';
 import { Button } from '../../ui/Button';

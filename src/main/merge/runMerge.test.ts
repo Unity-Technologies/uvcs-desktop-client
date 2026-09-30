@@ -83,6 +83,19 @@ describe('runMerge into the workspace', () => {
     expect(lines()).toContain(`cat itemid:31#cs:3@eco@local --file=${join(workspacePath, 'src', 'b.txt')}`);
   });
 
+  it("writes the incoming text the page already read instead of asking cm for it; the others' still come from cm cat", async () => {
+    const { cm, lines } = mergingCm([fileConflict('src/a.txt', 30), fileConflict('src/b.txt', 31)]);
+    const resolutions: MergeResolutions = {
+      directoryConflicts: [],
+      files: { '/src/a.txt': { choice: 'source', text: 'incoming as read\n' }, '/src/b.txt': { choice: 'source' } },
+    };
+
+    await runMerge(cm, workspacePath, FROM_TASK, resolutions, recordingContext().context);
+
+    expect(await readFile(join(workspacePath, 'src', 'a.txt'), 'utf8')).toBe('incoming as read\n');
+    expect(lines().filter((line) => line.startsWith('cat'))).toEqual([`cat itemid:31#cs:3@eco@local --file=${join(workspacePath, 'src', 'b.txt')}`]);
+  });
+
   it('reads the incoming version of a shelve from the shelve, whose revisions no changeset holds', async () => {
     const { cm, lines } = fakeCmClient({
       'status --short': '',

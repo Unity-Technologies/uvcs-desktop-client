@@ -13,7 +13,9 @@ nothing pending switches as is, checkouts without edits are undone without askin
 anything else is shelved. The main process then shelves them with the official automatic-shelve comment
 (`createAutomaticShelve`), checks the shelve holds them all (`createVerifiedShelve`), records it in the settings
 (`switchShelves`, built by `newShelveRecord`), undoes, moves added files aside (`moveNewItemsAside`, until the shelve
-brings them back), switches, and merges the shelve on the target (bring, `applyShelveCleanly`). Stopping is honoured
+brings them back: `putBack`, which never overwrites another item that took a file's place meanwhile; that file stays
+in the app's data folder and the window says so, naming it, with a way to reveal it: `filesKeptAside`,
+`noteKeptAside`), switches, and merges the shelve on the target (bring, `applyShelveCleanly`). Stopping is honoured
 only until the changes are shelved. Failures put the changes back (`rollBackSwitch`), switching back first if the
 switch moved the workspace halfway; when that isn't possible the error says which shelve holds them and where to
 restore them. Every flow that shelves changes out of the workspace (switch, shelve away, update) puts them back the same

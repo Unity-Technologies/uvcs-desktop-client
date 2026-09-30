@@ -2,7 +2,7 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { ShelvedAway } from '@shared/domain/shelve';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import { onLinksThemselves } from '../cm/symlinkArgs';
-import { toAbsolutePath } from '../files/workspacePaths';
+import { toAbsolutePaths } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
 import { moveNewItemsAside } from './moveNewItemsAside';
 import { shelvedContents } from './pendingSnapshot';
@@ -43,7 +43,7 @@ export async function shelveAndUndo(
   // From here on the changes live in the shelve: a failure puts them back.
   try {
     context.beginStep('Undoing them here', 2, 2);
-    const targets = paths ? paths.map((path) => toAbsolutePath(workspacePath, path)) : ['-r', workspacePath];
+    const targets = paths ? toAbsolutePaths(workspacePath, paths) : ['-r', workspacePath];
     // Links too: without `--symlink` a checked-out link stays pending (and its target would be undone instead).
     await cm.execute(onLinksThemselves('undo', ...targets), { cwd: workspacePath });
     await moveNewItemsAside(cm, records, workspacePath, changes, record, deps.backupsRoot);

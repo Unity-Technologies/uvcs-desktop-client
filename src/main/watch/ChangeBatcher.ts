@@ -1,4 +1,4 @@
-import { mergeChanges, type WorkspaceChange } from '@shared/events';
+import { mergeWorkspaceChanges, type WorkspaceChange } from '@shared/domain/workspaceChange';
 
 /**
  * Folds bursts of file system events into one batch: flushes once events stop for `quietMs`, and at the latest
@@ -18,7 +18,7 @@ export class ChangeBatcher {
 
   add(change: WorkspaceChange): void {
     if (!this.batch) this.maxWaitTimer = setTimeout(() => this.flush(), this.maxWaitMs);
-    this.batch = this.batch ? mergeChanges(this.batch, change) : change;
+    this.batch = this.batch ? mergeWorkspaceChanges(this.batch, change) : change;
     if (this.quietTimer) clearTimeout(this.quietTimer);
     this.quietTimer = setTimeout(() => this.flush(), this.quietMs);
   }

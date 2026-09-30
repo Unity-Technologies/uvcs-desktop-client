@@ -112,6 +112,9 @@ and many people use the same server. Every `cm` command other than local reads (
 - `cm find branch` leaves hidden branches out unless asked for (`hidden = 'true'`), and `cm find changeset` their
   changesets unless `ignorehidden = 'true'` (`branchExplorerFinds`); merges and labels come either way.
 - Multi-line text (comments) goes through temp files (`-commentsfile`); `cm shell` cannot take quotes or newlines in arguments.
+- `cm find` reads no quote inside a value, neither doubled nor between double quotes: a search puts `%` in each quote's
+  place (`withoutQuotes`), and so does an exact value (`equalsCondition`: `owner like 'o%brien@corp.com'`), whose caller
+  keeps only the exact objects when it needs them. Branch, label, attribute and repository names can't hold a quote.
 - A `cm shell` command ends at the `CommandResult <code>` line that ends its output, with nothing more in the pipe
   (`CmShellSession`, `resultLineAtEnd`): comments can quote such lines, and a misread end shifts every later command by
   one output.
@@ -179,7 +182,10 @@ through the one invoke channel, and never open a window of their own: a link tha
 
 ## Own config
 
-The app keeps its settings in its own store (`main/settings/SettingsStore`: `settings.json` in the user data folder).
+The app keeps its settings in its own store (`main/settings/SettingsStore`: `settings.json` in the user data folder),
+replaced whole or not at all (`replaceFileSync`: a temp file renamed over it, tried again for a moment while Windows
+says it's busy); a file that can't be read as settings is kept aside as `settings.json.<when>.bak` and the app starts
+from the defaults.
 It never writes to the official Desktop client's config (its settings folder, `plasticConfigFolder`: `plasticgui.conf`,
 `client.conf`...) and never keeps reading it. Only on the first run, `importLegacySettings` reads the well-known values
 there so the user feels at home (each workspace's recent branches, `readRecentBranchesByWorkspace`); it records
@@ -272,9 +278,12 @@ renderer/src/
   - `main/watch/WorkspaceWatcher` watches an open workspace (recursive on macOS/Windows; on Linux a watch per folder,
     `FolderTreeWatch`, as Node's recursive mode there watches every file and loses files saved by replacing them;
     an event Windows sends without a name, when a burst overflowed its buffer, refreshes everything),
-    skips `ignore.conf` folders and `.plastic` lock/temp files, coalesces bursts (300 ms quiet, 2 s max wait) and drops what the
+    skips `ignore.conf` folders (on Linux the folders watched follow its edits, `followSkipRule`) and `.plastic` lock/temp files, coalesces bursts (300 ms quiet, 2 s max wait) and drops what the
     app's own writes cause (`changesWorkspace` commands and tracked operations): the renderer refreshes after those anyway.
     `cm status --changelists` writes the changelist files back on every read, so those rewrites count as its own too (`rewritesChangelists`).
+    A watch that sees only part of the workspace refreshes local views on focus instead (`localQueryDefaults`), from the
+    start ("Some folders here aren't watched") or once a watch breaks later (`workspaceWatchBroken`: one error toast per
+    workspace and session, `noteBrokenWatch`; no polling).
   - `workspaceChanged` tells file edits (pending changes, review marks, files view, open diffs of workspace files; if auto refresh is on, and once when it's turned back on)
     from `.plastic` rewrites by any tool (workspace info; everything when the loaded changeset or branch moved). See
     `app/shell/useWorkspaceWatcher.ts` and `app/refresh/`. A diff with unsaved edits holds still and offers to reload instead.

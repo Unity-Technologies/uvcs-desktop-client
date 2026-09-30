@@ -1,7 +1,8 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { DEFAULT_SETTINGS } from '@shared/domain/settings';
 import { SettingsStore } from './SettingsStore';
 
 function store(): { settings: SettingsStore; filePath: string } {
@@ -56,5 +57,26 @@ describe('SettingsStore recent branches', () => {
     expect(settings.get().recentBranchesByWorkspace).toEqual(expected);
     expect(JSON.parse(readFileSync(filePath, 'utf8')).recentBranchesByWorkspace).toEqual(expected);
     expect(changed).toEqual([['recentBranchesByWorkspace'], ['recentBranchesByWorkspace'], ['recentBranchesByWorkspace']]);
+  });
+});
+
+describe('SettingsStore reading its file', () => {
+  it("keeps a file it can't read as settings aside, named for when, and starts from the defaults", () => {
+    const folder = mkdtempSync(join(tmpdir(), 'uvcs-settings-'));
+    const filePath = join(folder, 'settings.json');
+    writeFileSync(filePath, '{"theme": "dark", "recentWork');
+
+    const settings = new SettingsStore(filePath, () => new Date('2026-09-30T12:34:56.789Z'));
+
+    expect(settings.get()).toEqual(DEFAULT_SETTINGS);
+    expect(readdirSync(folder)).toEqual(['settings.json.2026-09-30T12-34-56-789Z.bak']);
+    expect(readFileSync(join(folder, 'settings.json.2026-09-30T12-34-56-789Z.bak'), 'utf8')).toBe('{"theme": "dark", "recentWork');
+  });
+
+  it('starts from the defaults without a file, keeping nothing aside', () => {
+    const folder = mkdtempSync(join(tmpdir(), 'uvcs-settings-'));
+
+    expect(new SettingsStore(join(folder, 'settings.json')).get()).toEqual(DEFAULT_SETTINGS);
+    expect(readdirSync(folder)).toEqual([]);
   });
 });

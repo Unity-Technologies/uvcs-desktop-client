@@ -6,7 +6,7 @@ import type { CmClient } from '../cm/CmClient';
 import { DIFF_FORMAT, parseDiffEntries } from '../cm/diffEntries';
 import { readShelveProgress } from '../cm/progress/shelveProgress';
 import { withTempFile } from '../files/tempFile';
-import { toAbsolutePath } from '../files/workspacePaths';
+import { toAbsolutePaths } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
 import { missingFromShelve } from './pendingSnapshot';
 
@@ -39,7 +39,7 @@ export async function createVerifiedShelve(
   context: OperationContext,
   onlyPaths?: string[],
 ): Promise<CreatedShelve> {
-  const targets = onlyPaths?.map((path) => toAbsolutePath(workspacePath, path)) ?? [];
+  const targets = onlyPaths ? toAbsolutePaths(workspacePath, onlyPaths) : [];
   const output = await withTempFile(comment, (commentsFile) =>
     cm.execute(['shelveset', 'create', ...targets, '--all', `-commentsfile=${commentsFile}`], {
       cwd: workspacePath,

@@ -1,6 +1,8 @@
 import type { UvcsApi } from '@shared/api';
+import type { KeptAsideFile } from '@shared/domain/switchWithChanges';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
 import { readBranchNames } from '../cm/branchNames';
+import { sendEventToCaller } from '../ipc/sendEvent';
 import { LeftChangesFinder } from '../workspace/leftChanges';
 import { SwitchShelveRecords } from '../workspace/switchShelveRecords';
 import { createAccountsService } from './accountsService';
@@ -32,7 +34,8 @@ import type { BranchNamesContext, ServiceContext, SwitchContext } from './Servic
 
 export function createServices(context: ServiceContext): UvcsApi {
   const switchShelves = new SwitchShelveRecords(context.settings);
-  const switching: SwitchContext = { switchShelves, leftChanges: new LeftChangesFinder(context.cm, switchShelves, context.headers) };
+  const tellKeptAside = (workspacePath: string, files: KeptAsideFile[]) => sendEventToCaller('filesKeptAside', { workspacePath, files });
+  const switching: SwitchContext = { switchShelves, leftChanges: new LeftChangesFinder(context.cm, switchShelves, context.headers, tellKeptAside) };
   const naming: BranchNamesContext = { branchNames: new BranchNamesCache((workspacePath) => readBranchNames(context.cm, workspacePath)) };
 
   return {
