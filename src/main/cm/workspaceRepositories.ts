@@ -8,7 +8,7 @@ const CONCURRENT_LOOKUPS = 2;
 const LOOKUP_TIMEOUT_MS = 4000;
 
 /** `STATUS|<changeset>|<repository>|<server>` from `cm status --header --machinereadable`. */
-export function parseStatusHeader(output: string): string | null {
+export function repositoryInStatusHeader(output: string): string | null {
   const match = /^STATUS\|-?\d+\|([^|]+)\|([^|\r\n]+)/m.exec(output);
   return match ? `${match[1]}@${match[2]}` : null;
 }
@@ -42,7 +42,7 @@ async function repositoryOf(cm: CmClient, workspacePath: string, signal: AbortSi
       signal: AbortSignal.any([signal, AbortSignal.timeout(LOOKUP_TIMEOUT_MS)]),
       killSignal: 'SIGKILL',
     });
-    return parseStatusHeader(output);
+    return repositoryInStatusHeader(output);
   } catch {
     return null;
   }
