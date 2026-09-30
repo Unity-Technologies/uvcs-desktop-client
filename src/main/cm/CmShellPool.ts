@@ -61,10 +61,10 @@ export class CmShellPool {
       void session.start().then(() => {
         if (this.directories.get(cwd) !== directory) return;
         this.dispatch(cwd, directory);
-        this.whenIdle(cwd, directory);
+        this.letGoWhenIdle(cwd, directory);
       });
     }
-    this.whenIdle(cwd, directory);
+    this.letGoWhenIdle(cwd, directory);
   }
 
   /** Lets a workspace's sessions go once the commands already asked for are done; a later command starts new ones. */
@@ -72,7 +72,7 @@ export class CmShellPool {
     const directory = this.directories.get(cwd);
     if (!directory) return;
     directory.released = true;
-    this.whenIdle(cwd, directory);
+    this.letGoWhenIdle(cwd, directory);
   }
 
   disposeAll(): void {
@@ -103,7 +103,7 @@ export class CmShellPool {
         .finally(() => {
           if (this.directories.get(cwd) !== directory) return;
           this.dispatch(cwd, directory);
-          this.whenIdle(cwd, directory);
+          this.letGoWhenIdle(cwd, directory);
         });
     }
   }
@@ -116,7 +116,7 @@ export class CmShellPool {
     return created;
   }
 
-  private whenIdle(cwd: string, directory: Directory): void {
+  private letGoWhenIdle(cwd: string, directory: Directory): void {
     if (directory.waiting.length > 0 || directory.sessions.some((session) => session.pendingCount > 0)) return;
     const letGo = () => {
       this.disposeDirectory(directory);
