@@ -7,8 +7,27 @@ the app menu (macOS), Help (Windows, Linux) and the palette (`app.about`). It sh
 stands with its one button (Check for Updates, or install once one is ready: `aboutUpdateLine`, `aboutUpdateAction`),
 and what the app runs on: the `cm` found (`cmVersionQuery`, asked once at start: no command of its own), the OS and
 architecture, Electron and Chromium. Copy Details copies those as text for an issue (`aboutDetails`); its other links
-open the documentation, a new issue and the third-party notices (`openThirdPartyNotices`, at `thirdPartyNoticesPath`). With every window closed on
+open the documentation, a bug report with those details filled in (`aboutBugReportUrl`), a feature request
+(`featureRequestUrl`) and the third-party notices (`openThirdPartyNotices`, at `thirdPartyNoticesPath`). With every window closed on
 macOS, About shows the OS's panel instead (`showAboutPanel`), which reads the bundle.
+
+## Reporting an issue
+
+Issues open on GitHub's issue forms (`.github/ISSUE_TEMPLATE/`): a bug report (what happened, what was expected, the
+steps, the app details, and optional logs or error details) and a feature request (the problem, the idea, other
+options). Blank issues are off, and `config.yml` sends security reports to the private advisory form (SECURITY.md).
+The app opens a form through its address, prefilling fields by their `id` (`issueFormUrl`, `shared/issueForms.ts`:
+`BUG_REPORT_FORM` and `FEATURE_REQUEST_FORM` name the forms and the ids the app fills, which `issueForms.test.ts`
+checks against the YAML). Help ▸ Report an Issue and Request a Feature open the empty forms (`BUG_REPORT_URL`,
+`FEATURE_REQUEST_URL`); About fills in the app details.
+
+The error dialog (`ErrorDialog`, from an error toast's Details) has Report an Issue next to Show in command log: the
+bug report titled with what failed, with the app details and the error as its Copy button gives it (`errorIssueUrl`,
+`errorReport`). Nothing is sent: the user reads, edits and sends the form in the browser, so paths in the command stay
+theirs to remove. The error's secrets were hidden in main before it reached the window (`hideSecrets`, ARCHITECTURE.md
+"Secrets"). The address stays under `MAX_ISSUE_URL_LENGTH` (6,000 characters; GitHub rejects much over 8 KB): the title
+keeps its first line, at most `MAX_ISSUE_TITLE_LENGTH` characters, and a field that doesn't fit is cut at a whole
+character and ends with `CUT_SHORT_MARK`.
 
 ## How the app updates
 
