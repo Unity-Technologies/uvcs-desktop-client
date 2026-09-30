@@ -62,8 +62,6 @@ describe('one window per workspace', () => {
 
     windows.showWorkspace(GAME);
     const [window] = fakeElectron.windows();
-    // Its page starts on the workspace (`startingWorkspaceQuery`), so its first render is the workspace screen.
-    expect(createMainWindow).toHaveBeenLastCalledWith(expect.anything(), expect.objectContaining({ workspacePath: GAME }));
     expect(windows.workspaceIn(asBrowserWindow(window!))).toBe(GAME);
     // Showing it while its page starts: asking again brings it forward instead of opening a second one.
     windows.showWorkspace(GAME);
@@ -71,6 +69,15 @@ describe('one window per workspace', () => {
 
     expect(windows.takeRequested(window!.webContents.id)).toBe(GAME);
     expect(windows.takeRequested(window!.webContents.id)).toBeNull();
+  });
+
+  it("starts a new window's page on its workspace when the folder is there, else the page checks it itself", () => {
+    const { windows } = setUp();
+    const game = mkdtempSync(join(tmpdir(), 'uvcs-game-'));
+
+    windows.showWorkspace(game);
+    windows.showWorkspace(join(tmpdir(), 'uvcs-deleted-workspace'));
+    expect(vi.mocked(createMainWindow).mock.calls.map(([, options]) => options?.workspacePath)).toEqual([game, undefined]);
   });
 
   it('finds the window showing a workspace, other than the one asking', () => {

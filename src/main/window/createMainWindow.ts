@@ -16,7 +16,7 @@ const DEFAULT_SIZE = { width: 1400, height: 900 };
 interface MainWindowOptions {
   /** The window it was opened from: it opens a little below and to the right, so it doesn't hide that one. */
   cascadeFrom?: BrowserWindow;
-  /** The workspace its page starts on (`startingWorkspaceQuery`); the home screen without one. */
+  /** The workspace its page starts on (`startingWorkspaceQuery`), its folder known to be there; the home screen without one. */
   workspacePath?: string;
 }
 

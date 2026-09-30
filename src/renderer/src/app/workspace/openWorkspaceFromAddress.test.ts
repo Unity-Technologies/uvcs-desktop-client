@@ -1,10 +1,15 @@
 import '../../testing/fakeWindow';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { startingWorkspaceQuery } from '@shared/startingWorkspace';
+import { queryClient } from '../queryClient';
 import { openWorkspaceFromAddress } from './openWorkspaceFromAddress';
 import { useSession } from './sessionStore';
+import { folderMissingQuery } from './useWorkspace';
 
-afterEach(() => useSession.setState({ workspacePath: null }));
+afterEach(() => {
+  useSession.setState({ workspacePath: null });
+  queryClient.clear();
+});
 
 /** A page loaded from `index.html` with the query the main process gave it. */
 function pageWith(query: Record<string, string>) {
@@ -20,6 +25,8 @@ describe('openWorkspaceFromAddress', () => {
 
     expect(useSession.getState().workspacePath).toBe('/work/game');
     expect(page.history.replaceState).toHaveBeenCalledWith(null, '', '/app/out/renderer/index.html');
+    // Named only when its folder is there: the workspace screen shows at once, without asking again.
+    expect(queryClient.getQueryData(folderMissingQuery('/work/game').queryKey)).toBe(false);
   });
 
   it('stays on the home screen in a window opened for none', () => {
