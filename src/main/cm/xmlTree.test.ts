@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { countCharactersRead } from '@shared/testing/countCharactersRead';
 import { readXmlTree } from './xmlTree';
 
 const read = (xml: string, arrays: string[] = []) => readXmlTree(xml, new Set(arrays));
@@ -41,13 +42,12 @@ describe('readXmlTree', () => {
     expect(read('<R><A>1</A><B>2')).toEqual({ R: { A: '1', B: '2' } });
   });
 
-  it('reads huge outputs in linear time', () => {
+  it('reads huge outputs in one pass: a few reads of each character, whatever the size', () => {
     const change = '<Change><Type>CH</Type><Path>src/a &amp; b.ts</Path><OldPath /><Size>3</Size></Change>\n';
-    const xml = `<StatusOutput><Changes>${change.repeat(200_000)}</Changes></StatusOutput>`;
-    const start = performance.now();
-    const tree = read(xml, ['Change']);
-    // About 0.15 s here; the XML library it replaced took 1.3 s.
-    expect(performance.now() - start).toBeLessThan(2000);
-    expect(((tree.StatusOutput as Record<string, Record<string, unknown[]>>).Changes!.Change)).toHaveLength(200_000);
+    const xml = `<StatusOutput><Changes>${change.repeat(5_000)}</Changes></StatusOutput>`;
+    const { result: tree, charactersRead } = countCharactersRead(() => read(xml, ['Change']));
+    // About 2.6 reads of each character; a pass over the rest of the output per element reads each thousands of times.
+    expect(charactersRead / xml.length).toBeLessThan(4);
+    expect(((tree.StatusOutput as Record<string, Record<string, unknown[]>>).Changes!.Change)).toHaveLength(5_000);
   });
 });

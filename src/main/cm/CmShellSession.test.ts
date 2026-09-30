@@ -1,12 +1,31 @@
+import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import { EventEmitter } from 'node:events';
 import { fileURLToPath } from 'node:url';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CmShellSession, resultLineAtEnd, shellCommandTimeoutMs } from './CmShellSession';
+
+// Every session runs the fake below, but one test's, whose output comes in step with fake timers.
+vi.mock('node:child_process', async (importOriginal) => {
+  const childProcess = await importOriginal<typeof import('node:child_process')>();
+  return { ...childProcess, spawn: vi.fn(childProcess.spawn) };
+});
 
 // `node shell` in the fake's folder, as the session runs `<cm> shell`.
 const fakeCmFolder = fileURLToPath(new URL('./testing/fakeCmShell', import.meta.url));
 let session: CmShellSession;
 
-afterEach(() => session?.dispose());
+afterEach(() => {
+  session?.dispose();
+  vi.useRealTimers();
+});
+
+/** A `cm shell` process whose output the test prints, as it pleases. */
+function printedShellProcess() {
+  const stdout = Object.assign(new EventEmitter(), { setEncoding: () => stdout });
+  const stderr = Object.assign(new EventEmitter(), { setEncoding: () => stderr });
+  const process = Object.assign(new EventEmitter(), { stdout, stderr, stdin: { write: () => true, end: () => {} }, kill: () => true });
+  return { process: process as unknown as ChildProcessWithoutNullStreams, print: (text: string) => void stdout.emit('data', text) };
+}
 
 describe('CmShellSession', () => {
   it('runs commands in order and reports their exit codes', async () => {
@@ -39,19 +58,18 @@ describe('CmShellSession', () => {
   });
 
   it('does not take output paused on a colon for a prompt while the main process is busy', async () => {
-    session = new CmShellSession(process.execPath, fakeCmFolder);
-    await session.run(['echo', 'started']);
-    const paused = session.run(['pause']);
-    await new Promise((resolve) => setTimeout(resolve, 100));
+    vi.useFakeTimers();
+    const shell = printedShellProcess();
+    vi.mocked(spawn).mockReturnValueOnce(shell.process);
+    session = new CmShellSession('cm', '/wk');
+    const paused = session.run(['status']);
+    shell.print('2026-09-25T10:');
+
     // Busy past the prompt stall (e.g. parsing a huge output): the rest of the line arrives meanwhile, and on the next
-    // turn of the event loop the timer fires before it is read.
-    await new Promise<void>((resolve) =>
-      setImmediate(() => {
-        const busyUntil = Date.now() + 1800;
-        while (Date.now() < busyUntil);
-        resolve();
-      }),
-    );
+    // turn of the event loop the stall's timer fires before it is read.
+    vi.advanceTimersToNextTimer();
+    shell.print('11:12\nCommandResult 0\n');
+    await vi.runOnlyPendingTimersAsync();
 
     await expect(paused).resolves.toEqual({ output: '2026-09-25T10:11:12', exitCode: 0 });
   });

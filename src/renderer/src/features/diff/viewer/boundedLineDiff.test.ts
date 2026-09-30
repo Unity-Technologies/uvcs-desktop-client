@@ -1,16 +1,12 @@
 import { diffArrays, diffLines } from 'diff';
 import { describe, expect, it } from 'vitest';
+import { countLineComparisons } from '../../../testing/countLineComparisons';
+import { MYERS_BUDGET } from './boundedDiff';
 import { COMPARISON_METHODS } from './comparisonMethod';
 import { lineDiff, lineDiffOptions } from './lineDiff';
 
 const code = (lines: number, changed: (index: number) => boolean, seed = 0): string =>
   Array.from({ length: lines }, (_, index) => (changed(index) ? `  let changed${index} = other(${seed});\n` : `  const value${index} = compute(${index % 97}, options.flag${index % 13});\n`)).join('');
-
-const timed = <T>(run: () => T): { result: T; ms: number } => {
-  const started = performance.now();
-  const result = run();
-  return { result, ms: performance.now() - started };
-};
 
 describe('installBoundedLineDiff', () => {
   it("leaves diff's line diff as it was for texts Myers diffs cheaply", () => {
@@ -25,8 +21,8 @@ describe('installBoundedLineDiff', () => {
     const original = code(20_000, () => false);
     const modified = code(20_000, () => true, 1);
     for (const { value: method } of COMPARISON_METHODS) {
-      const { result, ms } = timed(() => lineDiff(original, modified, method));
-      expect(ms).toBeLessThan(2_000);
+      const { result, comparisons } = countLineComparisons(() => lineDiff(original, modified, method));
+      expect(comparisons).toBeLessThanOrEqual(MYERS_BUDGET);
       expect(result).toMatchObject({ added: 20_000, removed: 20_000 });
     }
   });
@@ -34,8 +30,8 @@ describe('installBoundedLineDiff', () => {
   it('diffs 100,000 lines with every seventh one changed as that many changes', () => {
     const original = code(100_000, () => false);
     const modified = code(100_000, (index) => index % 7 === 3);
-    const { result, ms } = timed(() => lineDiff(original, modified, 'ignoreWhitespace'));
-    expect(ms).toBeLessThan(3_000);
+    const { result, comparisons } = countLineComparisons(() => lineDiff(original, modified, 'ignoreWhitespace'));
+    expect(comparisons).toBeLessThanOrEqual(MYERS_BUDGET);
     expect(result).toMatchObject({ added: 14_286, removed: 14_286 });
   });
 

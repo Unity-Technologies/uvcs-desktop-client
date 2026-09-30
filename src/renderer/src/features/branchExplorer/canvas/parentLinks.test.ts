@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { branch, changeset, largeHistory, sampleHistory } from '../model/graphFixtures';
 import { layoutGraph, type GraphLayout } from '../model/layoutGraph';
 import type { VisibleArea } from './drawContext';
-import { countedReads } from '../../../testing/countedReads';
+import { countedReads } from '@shared/testing/countedReads';
 import { columnX, rowY } from './geometry';
 import { hasParentOffGraph, parentLinksInView } from './parentLinks';
 

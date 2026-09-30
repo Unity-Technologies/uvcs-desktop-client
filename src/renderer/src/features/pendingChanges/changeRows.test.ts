@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import { readGrowthWhenDoubled } from '../../testing/countedReads';
+import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
 import { treeArrowMove } from '../../lib/treeArrowMove';
 import { changesUnderRow, changeTreeArrowRows, collapseRows, comparePaths, inPreviousOrder, layoutChangeRows, LEVEL_INDENT, menuTargetOf, rowCheckState, rowIndent, sortForLayout, topLevelCheckboxInset, treeLevel, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
 

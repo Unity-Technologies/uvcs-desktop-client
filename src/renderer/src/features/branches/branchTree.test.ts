@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Branch } from '@shared/domain/branch';
-import { readGrowthWhenDoubled } from '../../testing/countedReads';
+import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
 import { buildBranchTree, sortBranchesByName } from './branchTree';
 
 function branch(name: string, parent = ''): Branch {

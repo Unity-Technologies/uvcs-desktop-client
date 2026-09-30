@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { countCharactersRead } from '@shared/testing/countCharactersRead';
 import { parseDiffEntries } from './diffEntries';
 import { formatOutput } from './testing/cmOutput';
 
@@ -71,13 +72,11 @@ describe('parseDiffEntries', () => {
     ]);
   });
 
-  it('reads a 100,000-file diff in linear time', () => {
-    let output = '';
-    for (let index = 0; index < 100_000; index++) output += formatOutput(['C', `"/src/folder${index % 100}/file_${(index * 7919) % 100_000}.ts"`, '""', '12', '13', 'F', GAME]);
-    const start = performance.now();
-    const entries = parseDiffEntries(output);
-    // About 1 s here, most of it sorting by path.
-    expect(performance.now() - start).toBeLessThan(2000);
-    expect(entries).toHaveLength(100_000);
+  it('reads a big diff in one pass: a few reads of each character, whatever the size', () => {
+    const output = formatOutput(...Array.from({ length: 5_000 }, (_, index) => ['C', `"/src/folder${index % 100}/file_${(index * 7919) % 5_000}.ts"`, '""', '12', '13', 'F', GAME]));
+    const { result: entries, charactersRead } = countCharactersRead(() => parseDiffEntries(output));
+    // About 4.2 reads of each character; a pass over the rest of the output per record reads each thousands of times.
+    expect(charactersRead / output.length).toBeLessThan(6);
+    expect(entries).toHaveLength(5_000);
   });
 });

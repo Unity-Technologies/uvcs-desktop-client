@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { countCharactersRead } from '@shared/testing/countCharactersRead';
 import { createFuzzyIndex, fuzzyMatchPositions, fuzzyMatchQuality } from './fuzzyIndex';
 
 const paths = ['src/core/mod1.ts', 'src/ui/widgets/Button.tsx', 'docs/readme.md', 'README.md', 'src/readme-helper.ts'];
@@ -53,14 +54,17 @@ describe('createFuzzyIndex', () => {
     const texts = Array.from({ length: 200_000 }, (_, index) => `assets/level${index % 50}/props/prop${index}.prefab`);
     const index = createFuzzyIndex(texts);
     for (const query of ['p', 'pr', 'pro', 'prop', 'prop1', 'prop19', 'prop199', 'prop1999']) index.rank(query, 10);
-    // Each letter typed looks through the few paths left, each deleted answers from memory: all 200,000 every time
-    // would take tens of seconds. About 0.45 s on a recent Mac, 1.4 s on a Windows VM running the whole suite.
-    const start = performance.now();
-    for (let digit = 0; digit < 1000; digit++) {
-      expect(index.rank(`prop1999${digit % 10}`, 10).length).toBeGreaterThan(0);
-      expect(index.rank('prop1999', 10)).toHaveLength(10);
-    }
-    expect(performance.now() - start).toBeLessThan(3000);
+    const stillMatching = texts.filter((text) => text.includes('prop1999')).join('').length;
+
+    // Each letter typed looks through the paths the query before it matched, each deleted answers from memory: all
+    // 200,000 paths every time read each thousands of times more.
+    const typedOn = countCharactersRead(() => index.rank('prop19990', 10));
+    const deletedBack = countCharactersRead(() => index.rank('prop1999', 10));
+    expect(typedOn.result.length).toBeGreaterThan(0);
+    // About 24 reads of each character of the paths still matching: scoring one reads it a few times over.
+    expect(typedOn.charactersRead / stillMatching).toBeLessThan(50);
+    expect(deletedBack.result).toHaveLength(10);
+    expect(deletedBack.charactersRead).toBeLessThan(100);
   });
 });
 
