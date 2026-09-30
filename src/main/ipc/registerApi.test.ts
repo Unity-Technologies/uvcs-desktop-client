@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { ipcMain, type IpcMainInvokeEvent, type WebContents } from 'electron';
 import type { UvcsApi } from '@shared/api';
 import { INVOKE_CHANNEL, type InvokeRequest, type InvokeResponse } from '@shared/ipc';
@@ -26,8 +26,6 @@ function served(api: Record<string, Record<string, (...args: never[]) => Promise
 }
 
 describe('registerApi', () => {
-  beforeEach(() => vi.mocked(ipcMain.handle).mockClear());
-
   it('dispatches each area.method to its service with the arguments, and answers its value', async () => {
     const list = vi.fn(async (workspacePath: string, filter: object) => [workspacePath, filter]);
     const invoke = served({ branches: { list }, labels: { list: async () => [] } });

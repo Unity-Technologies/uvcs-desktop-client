@@ -57,7 +57,9 @@ describe('the current user', () => {
 });
 
 describe('moving to the trash', () => {
-  beforeEach(() => vi.mocked(shell.trashItem).mockClear());
+  beforeEach(() => {
+    vi.mocked(shell.trashItem).mockClear();
+  });
 
   it('trashes a folder with what was picked inside it, and skips what is already gone', async () => {
     const root = await mkdtemp(join(tmpdir(), 'trash-'));
@@ -73,7 +75,9 @@ describe('moving to the trash', () => {
 });
 
 describe('gravatars', () => {
-  beforeEach(() => vi.mocked(net.fetch).mockReset());
+  beforeEach(() => {
+    vi.mocked(net.fetch).mockReset();
+  });
 
   it('asks the network for nothing when the user turned gravatars off', async () => {
     const { service } = system({}, { showGravatar: false });
