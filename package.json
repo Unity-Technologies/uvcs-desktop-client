@@ -18,7 +18,8 @@
     "app:debug": "node scripts/app-debug.mjs",
     "e2e": "electron-vite build && node scripts/e2e/smoke.mjs",
     "postinstall": "install-electron",
-    "dist": "electron-vite build && electron-builder"
+    "dist": "electron-vite build && electron-builder",
+    "release": "electron-vite build && electron-builder --publish always"
   },
   "devDependencies": {
     "@pierre/diffs": "^1.5.1",
