@@ -18,7 +18,7 @@ import { useBranchExplorerPreferences } from './branchExplorerStore';
 import { GraphCanvas, type GraphHighlights } from './canvas/GraphCanvas';
 import type { GraphCanvasHandle } from './canvas/graphCanvasHandle';
 import type { GraphTarget } from './canvas/graphTargets';
-import { DetailsPanel } from './details/DetailsPanel';
+import { GraphDetails } from './details/GraphDetails';
 import { openSelection } from './graphActions';
 import { handleGraphKey } from './graphKeyboard';
 import { graphMenu } from './graphMenu';
@@ -281,7 +281,7 @@ export function BranchExplorerView() {
             </GraphCanvas>
           }
           details={
-            <DetailsPanel
+            <GraphDetails
               selection={selection}
               layout={layout}
               pendingChangeCount={pendingChangeCount}
