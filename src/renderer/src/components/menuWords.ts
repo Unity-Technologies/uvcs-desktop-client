@@ -57,7 +57,7 @@ import {
 import type { Action, Icon, MenuEntry, Submenu } from '../lib/actions';
 import type { GroupedEntry, MenuGroup } from '../lib/menuGroups';
 import { OPEN_FOLDER_LABEL, REVEAL_LABEL } from '../lib/platform';
-import { MERGE_INTO_WORKSPACE, serverMergeLabel } from '../features/branches/mergeMenuLabels';
+import { MERGE_INTO_WORKSPACE, serverMergeLabel } from './mergeMenuLabels';
 
 /** A concept of the menus: the group it goes in, its icon, and its words where they are the same for every object. */
 export interface MenuWord {
