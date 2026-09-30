@@ -1,7 +1,7 @@
 import { AsyncResource } from 'node:async_hooks';
-import type { CommandProgress, OperationProgress, ProgressStep } from '@shared/domain/operation';
+import type { OperationProgress } from '@shared/domain/operation';
 import type { ProgressReader } from '../cm/progress/progressReader';
-import { ProgressThrottle } from './ProgressThrottle';
+import { ProgressReport } from './ProgressReport';
 
 export interface OperationContext {
   signal: AbortSignal;
@@ -35,52 +35,22 @@ export class OperationTracker {
     return this.track(operationId, work, false);
   }
 
+  cancel(operationId: string): void {
+    this.running.get(operationId)?.abort();
+  }
+
   private async track<T>(operationId: string, work: (context: OperationContext) => Promise<T>, writes: boolean): Promise<T> {
     const controller = new AbortController();
     this.running.set(operationId, controller);
     // Progress comes from process output events: bound to the caller's context, it reaches the window that started it.
-    const throttle = new ProgressThrottle<OperationProgress>(AsyncResource.bind((progress) => this.onProgress(operationId, progress)));
-    let step: ProgressStep | undefined;
-    let last: OperationProgress | null = null;
-    const report = (command: CommandProgress): void => {
-      const progress: OperationProgress = step ? { ...command, step } : command;
-      throttle.push(progress, !last || last.stageLabel !== progress.stageLabel || last.step !== progress.step);
-      last = progress;
-    };
-
+    const progress = new ProgressReport(AsyncResource.bind((report) => this.onProgress(operationId, report)));
     try {
-      const finished = work({
-        signal: controller.signal,
-        reportProgress: (activity, count) => report(working(activity, count)),
-        beginStep: (label, index, count) => {
-          step = { label, index, count };
-          report(working(label));
-        },
-        progressOf: (reader) => {
-          let command: CommandProgress | null = null;
-          return (line) => {
-            const next = reader(command, line);
-            if (next === command || !next) return;
-            command = next;
-            report(next);
-          };
-        },
-      });
+      const finished = work(progress.context(controller.signal));
       if (writes) this.onStarted(finished);
       return await finished;
     } finally {
-      // The last numbers ("530 of 530 files") are what the completion message sums up.
-      throttle.flush();
+      progress.flush();
       this.running.delete(operationId);
     }
   }
-
-  cancel(operationId: string): void {
-    this.running.get(operationId)?.abort();
-  }
-}
-
-function working(stageLabel: string, count?: { current: number; total: number }): CommandProgress {
-  if (!count || count.total === 0) return { stage: 'working', stageLabel, fraction: null };
-  return { stage: 'working', stageLabel, ...count, fraction: count.current / count.total };
 }
