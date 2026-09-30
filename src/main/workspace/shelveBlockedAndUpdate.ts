@@ -16,7 +16,7 @@ import { selectorObjectRef } from './selectorObjectRef';
 import { selectorSpec } from '@shared/domain/specs';
 import { describeSelector } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
-import { createSwitchShelve } from './verifiedShelve';
+import { createAutomaticShelve } from './verifiedShelve';
 import { readWorkspaceIdentity } from './workspaceIdentity';
 
 export interface ShelveForUpdateDependencies {
@@ -54,7 +54,7 @@ export async function shelveBlockedAndUpdate(
   const changes = snapshot.changes.filter((change) => blocked.has(change.path));
 
   context.beginStep('Shelving the blocking files', 1, 2);
-  const shelve = await createSwitchShelve(cm, workspacePath, changes, objectRef, context, incoming.blockedPaths);
+  const shelve = await createAutomaticShelve(cm, workspacePath, changes, objectRef, context, incoming.blockedPaths);
   const record: SwitchShelveRecord = {
     workspaceGuid: workspace.guid,
     shelveId: shelve.id,

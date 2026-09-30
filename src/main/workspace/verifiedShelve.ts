@@ -13,10 +13,10 @@ import { missingFromShelve } from './pendingSnapshot';
 const XLINK_CHANGES = "Changes inside Xlinks can't be shelved yet. Check them in first.";
 
 /**
- * Shelves the pending changes with the official automatic-shelve comment (every change, or just the given paths),
- * and checks that the shelve really holds them all before anything is undone. Otherwise the shelves are deleted and it fails.
+ * `createVerifiedShelve` with the official automatic-shelve comment, naming where the changes were made (`objectRef`):
+ * "Welcome back" and the official client find such shelves as changes left there.
  */
-export function createSwitchShelve(
+export function createAutomaticShelve(
   cm: CmClient,
   workspacePath: string,
   changes: PendingChange[],

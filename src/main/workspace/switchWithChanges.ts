@@ -18,7 +18,7 @@ import { bringDisabledReason, describeSelector, parseSelectorSpec } from './swit
 import type { SwitchShelveRecords } from './switchShelveRecords';
 import { applyShelveCleanly } from './applyShelveCleanly';
 import { moveNewItemsAside } from './moveNewItemsAside';
-import { createSwitchShelve } from './verifiedShelve';
+import { createAutomaticShelve } from './verifiedShelve';
 import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdentity';
 
 const IN_MERGE = "You're in the middle of a merge. Check it in or undo it before switching.";
@@ -126,7 +126,7 @@ async function shelveAndSwitch(
   const steps = mode === 'bring' ? 4 : 3;
   context.beginStep('Shelving your changes', 1, steps);
   const objectRef = await sourceObjectRef(cm, workspacePath, workspace);
-  const shelve = await createSwitchShelve(cm, workspacePath, snapshot.changes, objectRef, context);
+  const shelve = await createAutomaticShelve(cm, workspacePath, snapshot.changes, objectRef, context);
   const target = parseSelectorSpec(targetSpec).selector;
   const record: SwitchShelveRecord = {
     workspaceGuid: workspace.guid,
