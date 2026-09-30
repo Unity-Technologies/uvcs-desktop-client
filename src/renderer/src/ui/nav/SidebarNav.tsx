@@ -1,5 +1,6 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import { isMac } from '../../lib/platform';
+import { navItemTip } from './navItemTip';
 import styles from './SidebarNav.module.css';
 
 /** Wide enough for the macOS window buttons, which sit over the rail's top. */
@@ -66,8 +67,7 @@ interface NavItemProps {
 
 export function NavItem({ icon, label, detail, badge, dot, active = false, dimmed = false, shortcut, onClick }: NavItemProps) {
   const rail = useInRail();
-  // Wide, the label shows already: the tooltip is there to tell the shortcut and what the dot means.
-  const tip = rail ? [label, detail, badge ? `${badge}` : undefined].filter(Boolean).join(' · ') : (shortcut || dot) && label;
+  const tip = navItemTip({ label, detail, badge, dot, shortcut }, rail);
 
   return (
     <button
