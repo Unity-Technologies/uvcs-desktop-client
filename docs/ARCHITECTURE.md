@@ -306,6 +306,15 @@ renderer/src/
   A sidebar entry may show a count (`useBadge`) and a dot for something waiting there (`useDot`), whose words go under
   the entry's tooltip and in its accessible description: Changes' says what changes were left and where
   (`leftChangesSummary`, in the "Welcome back" banner's words).
+  Folded (`toggleSidebar`, and always in a window under 1000px unless opened by hand: `useSidebarCollapsed`), the
+  sidebar is a rail of tiles (`useInRail`), the home screen's too: each entry's icon over its label in `--text-xs`,
+  two lines at most, balanced, a word too long cut with an ellipsis (an organization's name), or a short `railLabel`
+  ("Expand", "All", "Local"); the selected tile as wide, its icon in the accent. The rail is 80px (`--rail-width`), so
+  the longest one-word labels ("Changesets") fit on one line in every OS's font, and the macOS window buttons over its
+  top; labels wrap at the folded width from the start of the fold, so nothing jumps as it ends. The count is pinned in
+  the accent over the icon's corner (99+ at most, `navBadgeText`), the dot at the tile's own corner. Tooltips only add
+  what the entry doesn't show (`navItemTip`): the shortcut and the dot's words, and on a tile the whole count, the
+  detail and a shortened label spelled out.
   There is no Annotate page: "Annotate" outside the Files view opens the file's history annotated (`annotatedHistory`).
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
 - **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does), what it
