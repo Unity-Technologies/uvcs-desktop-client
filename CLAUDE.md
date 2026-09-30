@@ -95,12 +95,14 @@ npm start            # the built app
 npm run app:debug    # the built app with CDP on UVCS_CDP_PORT (9333 by default)
 npm run typecheck    # main + renderer
 npm test             # vitest, every src/**/*.test.ts
+npm run e2e          # build, then the smoke test: every view of the real app against a fake cm (~10 s)
 npm run dist         # the installer for this OS, into dist/
 ```
 
 **Done means**: `npm run typecheck` and `npm test` pass, the new code is tested (see "Tests are the quality gate"),
 the change is seen working in the app (anything visible), and the docs say what's now true (see "Docs"). There is no
-linter or formatter: match the surrounding code.
+linter or formatter: match the surrounding code. Before merging anything that touches startup, navigation or many
+views, `npm run e2e` passes too.
 
 ## Seeing the app (Playwright)
 
@@ -160,6 +162,10 @@ The suite runs after every change, so it must take seconds, not minutes. A test 
   such strings, records the commands it was asked and how (`query` or `execute`), and fails on any other. A workspace
   that changes as `cm` would is `playAlongWorkspace`, built on it. The `cm shell` protocol itself is tested against
   `main/cm/testing/fakeCmShell`, a script that answers like `cm shell`.
+- **The smoke test** (`npm run e2e`, `scripts/e2e/README.md`) drives the built app over a fake `cm` and a temp
+  workspace: startup, every sidebar view, a diff, the palette, Settings, a theme switch; it fails on renderer errors
+  and on any `cm` command the fake doesn't know. A view that starts running a new command teaches it to the fake
+  (`scripts/e2e/fakeCm/answers.cjs`); a new view is one line in `smoke.mjs`'s `VIEWS`.
 - **The renderer's fakes** are in `renderer/src/testing/`: `fakeWindow` (`window.uvcs`; `fakeApi` answers the calls a
   test declares and fails it on any other), `fakeDialogs` (confirm and prompt), `operationOutcome` (the toasts, where
   the window went, the views refreshed), `queryProbes`.
