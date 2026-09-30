@@ -1,18 +1,58 @@
 .release {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 
 /* The releases after the newest are set apart, so an update that skips a few reads as one list. */
 .release + .release {
-  padding-top: var(--space-4);
+  padding-top: var(--space-5);
   border-top: 1px solid var(--border-subtle);
 }
 
+/* The version leads its notes: the notes' own headings stay a step below it. */
 .heading {
   margin: 0;
+  color: var(--text-primary);
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+.notes h4,
+.notes h5,
+.notes h6 {
+  margin-top: var(--space-2);
   color: var(--text-secondary);
   font-size: var(--text-sm);
   font-weight: var(--weight-semibold);
+}
+
+/* A release's changes are its list: a little air between them reads better than a dense block. */
+.notes ul,
+.notes ol {
+  gap: var(--space-1);
+}
+
+.notes li::marker {
+  color: var(--text-tertiary);
+}
+
+.changelog {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  gap: 2px;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+.changelog:hover {
+  color: var(--accent-text);
+  text-decoration: underline;
+}
+
+.notes li > ul,
+.notes li > ol {
+  margin-top: 2px;
 }
