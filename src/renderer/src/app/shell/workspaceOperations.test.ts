@@ -1,8 +1,7 @@
+import { fakeApi } from '../../testing/fakeWindow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { IncomingSummary } from '@shared/domain/incoming';
 import type { PendingChangesOnSwitch, SwitchPreflight } from '@shared/domain/switchWithChanges';
-
-const uvcs = await vi.hoisted(async () => (await import('../../lib/testing/fakeWindow')).installFakeWindow());
 
 vi.mock('../../features/branches/SwitchWithChangesDialog', () => ({ askSwitchWithChanges: vi.fn() }));
 vi.mock('../../features/incoming/useIncomingSummary', () => ({ recheckIncoming: vi.fn() }));
@@ -11,6 +10,7 @@ vi.mock('../../features/incoming/updateOperations', () => ({ explainUpdateConfli
 import { askSwitchWithChanges } from '../../features/branches/SwitchWithChangesDialog';
 import { explainUpdateConflicts, showUpdatedMoment } from '../../features/incoming/updateOperations';
 import { recheckIncoming } from '../../features/incoming/useIncomingSummary';
+import { shownToasts } from '../../testing/operationOutcome';
 import { useToastStore } from '../../ui/toast/toastStore';
 import { useRunningOperationsStore } from '../operations/runningOperationsStore';
 import { queryClient } from '../queryClient';
@@ -31,30 +31,35 @@ const withChanges: SwitchPreflight = { ...noChanges, pendingCount: 3 };
 
 /** Main answers the switch's questions: its preflight, the setting, and the switch itself (an `Error` fails it). */
 function switchServer(preflight: SwitchPreflight | Error, setting: PendingChangesOnSwitch = 'ask', switchTo: unknown = { kind: 'switched' }): void {
-  uvcs.answerWith({ 'workspaces.switchPreflight': preflight, 'settings.get': { pendingChangesOnSwitch: setting }, 'workspaces.switchTo': switchTo });
+  answerOrFail('workspaces.switchPreflight', preflight);
+  fakeApi.answer('settings.get', () => ({ pendingChangesOnSwitch: setting }));
+  answerOrFail('workspaces.switchTo', switchTo);
+}
+
+/** Answers `method` with `value`, or fails it when `value` is an `Error`. */
+function answerOrFail(method: string, value: unknown): void {
+  fakeApi.answer(method, () => {
+    if (value instanceof Error) throw value;
+    return value;
+  });
 }
 
 /** The pending-changes action each switch was run with. */
 function switchesRun(): unknown[] {
-  return uvcs.calls.filter((call) => call.method === 'workspaces.switchTo').map((call) => call.args[3]);
+  return fakeApi.argsOf('workspaces.switchTo').map((args) => args[3]);
 }
 
-/** What the progress card offers while the switch runs. */
-function progressCardWhileSwitching(): { action?: string } {
+/** What the progress card offers while the switch runs, which ends as `switched`. */
+function progressCardWhileSwitching(switched: unknown): { action?: string } {
   const card: { action?: string } = {};
-  const answer = uvcs.answer;
-  uvcs.answer = (request) => {
-    if (request.method === 'workspaces.switchTo') card.action = useToastStore.getState().toasts.find((toast) => toast.kind === 'progress')?.action?.label;
-    return answer(request);
-  };
+  fakeApi.answer('workspaces.switchTo', () => {
+    card.action = useToastStore.getState().toasts.find((toast) => toast.kind === 'progress')?.action?.label;
+    return switched;
+  });
   return card;
 }
 
-const toasts = () => useToastStore.getState().toasts.map(({ kind, title, detail }) => ({ kind, title, detail }));
-
 beforeEach(() => {
-  uvcs.reset();
-  useToastStore.setState({ toasts: [] });
   useRunningOperationsStore.setState({ operations: [] });
 });
 afterEach(() => {
@@ -70,7 +75,7 @@ describe('switchWorkspace', () => {
 
     expect(switchesRun()).toEqual([undefined]);
     expect(askSwitchWithChanges).not.toHaveBeenCalled();
-    expect(toasts()).toContainEqual({ kind: 'success', title: 'Switched to /main/task', detail: undefined });
+    expect(shownToasts()).toContainEqual({ kind: 'success', title: 'Switched to /main/task' });
   });
 
   it('follows the setting without asking when it decided and the choice is possible', async () => {
@@ -116,7 +121,7 @@ describe('switchWorkspace', () => {
 
     await switchWorkspace(ws, 'br:/main/task', '/main/task', 'bring');
 
-    expect(uvcs.methodsCalled()).not.toContain('workspaces.switchPreflight');
+    expect(fakeApi.methods()).not.toContain('workspaces.switchPreflight');
     expect(switchesRun()).toEqual(['bring']);
   });
 
@@ -126,7 +131,7 @@ describe('switchWorkspace', () => {
     await expect(switchWorkspace(ws, 'br:/main/task', '/main/task')).resolves.toBe(false);
 
     expect(switchesRun()).toEqual([]);
-    expect(toasts()).toEqual([{ kind: 'error', title: "Couldn't switch to /main/task", detail: 'The server is down' }]);
+    expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't switch to /main/task", detail: 'The server is down' }]);
   });
 
   it('reports a switch that failed', async () => {
@@ -134,12 +139,12 @@ describe('switchWorkspace', () => {
 
     await expect(switchWorkspace(ws, 'br:/main/task', '/main/task')).resolves.toBe(false);
 
-    expect(toasts()).toEqual([{ kind: 'error', title: 'Switching to /main/task failed', detail: 'Merge needed' }]);
+    expect(shownToasts()).toEqual([{ kind: 'error', title: 'Switching to /main/task failed', detail: 'Merge needed' }]);
   });
 
   it('can be stopped while no changes are shelved for it', async () => {
     switchServer(noChanges);
-    const card = progressCardWhileSwitching();
+    const card = progressCardWhileSwitching({ kind: 'switched' });
 
     await switchWorkspace(ws, 'br:/main/task', '/main/task');
 
@@ -147,8 +152,8 @@ describe('switchWorkspace', () => {
   });
 
   it('cannot be stopped once changes are shelved for it: they would be left in limbo', async () => {
-    switchServer(withChanges, 'ask', { kind: 'brought' });
-    const card = progressCardWhileSwitching();
+    switchServer(withChanges);
+    const card = progressCardWhileSwitching({ kind: 'brought' });
 
     await switchWorkspace(ws, 'br:/main/task', '/main/task', 'bring');
 
@@ -160,8 +165,8 @@ describe('switchWorkspace', () => {
 
     await expect(switchWorkspace(ws, 'br:/main/task', '/main/task')).resolves.toBe(false);
 
-    expect(uvcs.calls).toEqual([]);
-    expect(toasts()).toEqual([expect.objectContaining({ kind: 'info', title: 'Updating workspace is still running' })]);
+    expect(fakeApi.calls()).toEqual([]);
+    expect(shownToasts()).toEqual([expect.objectContaining({ kind: 'info', title: 'Updating workspace is still running' })]);
   });
 });
 
@@ -173,36 +178,40 @@ describe('updateUnlessUpToDate', () => {
 
     await updateUnlessUpToDate(ws);
 
-    expect(uvcs.methodsCalled()).not.toContain('workspaces.update');
-    expect(toasts()).toEqual([{ kind: 'info', title: 'Already up to date', detail: 'Your workspace has everything on /main.' }]);
+    expect(fakeApi.methods()).not.toContain('workspaces.update');
+    expect(shownToasts()).toEqual([{ kind: 'info', title: 'Already up to date', detail: 'Your workspace has everything on /main.' }]);
   });
 
   it('updates and shows what came when there is something new', async () => {
     vi.mocked(recheckIncoming).mockResolvedValue(summary(2));
+    fakeApi.answer('workspaces.update', () => undefined);
 
     await updateUnlessUpToDate(ws);
 
-    expect(uvcs.methodsCalled()).toContain('workspaces.update');
+    expect(fakeApi.methods()).toContain('workspaces.update');
     expect(showUpdatedMoment).toHaveBeenCalledWith(ws, summary(2));
   });
 
   it('still updates when the server could not be asked first', async () => {
     vi.mocked(recheckIncoming).mockRejectedValue(new Error('offline'));
+    fakeApi.answer('workspaces.update', () => undefined);
 
     await updateUnlessUpToDate(ws);
 
-    expect(uvcs.methodsCalled()).toContain('workspaces.update');
+    expect(fakeApi.methods()).toContain('workspaces.update');
     expect(showUpdatedMoment).not.toHaveBeenCalled();
   });
 
   it('shows nothing updated when the update failed on conflicts it explained', async () => {
     vi.mocked(recheckIncoming).mockResolvedValue(summary(2));
     vi.mocked(explainUpdateConflicts).mockReturnValueOnce(true);
-    uvcs.answerWith({ 'workspaces.update': new Error('conflicts') });
+    fakeApi.answer('workspaces.update', () => {
+      throw new Error('conflicts');
+    });
 
     await updateUnlessUpToDate(ws);
 
     expect(showUpdatedMoment).not.toHaveBeenCalled();
-    expect(toasts()).toEqual([]);
+    expect(shownToasts()).toEqual([]);
   });
 });

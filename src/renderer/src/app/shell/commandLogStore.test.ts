@@ -1,7 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fakeApi } from '../../testing/fakeWindow';
+import { beforeEach, describe, expect, it } from 'vitest';
 import type { CommandLogEntry } from '@shared/events';
-
-const uvcs = await vi.hoisted(async () => (await import('../../lib/testing/fakeWindow')).installFakeWindow());
 
 import { useCommandLogStore } from './commandLogStore';
 
@@ -25,8 +24,8 @@ beforeEach(() => {
 
 describe('command log', () => {
   it('logs every command main reports, in order', () => {
-    uvcs.emit('commandLogged', entry(1));
-    uvcs.emit('commandLogged', entry(2));
+    fakeApi.emit('commandLogged', entry(1));
+    fakeApi.emit('commandLogged', entry(2));
 
     expect(log().entries.map((logged) => logged.id)).toEqual([1, 2]);
   });

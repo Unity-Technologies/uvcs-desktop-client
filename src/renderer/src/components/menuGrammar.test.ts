@@ -1,12 +1,6 @@
+import '../testing/fakeWindow';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// The menus' modules read the platform as they load; what the entries run needs the app around them.
-vi.hoisted(() => {
-  const uvcs = { platform: 'darwin', invoke: async () => ({ ok: true }), on: () => () => {} };
-  const storage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
-  const window = Object.assign(new EventTarget(), { uvcs, localStorage: storage, matchMedia: () => ({ matches: false, addEventListener: () => {} }) });
-  Object.assign(globalThis, { window, localStorage: storage, document: Object.assign(new EventTarget(), { visibilityState: 'visible' }) });
-});
 const copied = vi.hoisted(() => [] as { text: string; what: string }[]);
 vi.mock('../lib/copyToClipboard', () => ({ copyToClipboard: (text: string, what: string) => copied.push({ text, what }) }));
 

@@ -1,8 +1,7 @@
+import '../testing/fakeWindow';
 import { focusManager, type QueryClient } from '@tanstack/react-query';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
-
-await vi.hoisted(async () => (await import('../lib/testing/fakeWindow')).installFakeWindow());
 
 import { queryKeys } from '../api/queryKeys';
 import {
@@ -13,7 +12,7 @@ import {
   MAX_UNUSED_IMMUTABLE,
   SLOW_CHANGING_QUERY,
 } from './queryClient';
-import { readQuery, showQuery } from './testing/queryProbes';
+import { readQuery, showQuery } from '../testing/queryProbes';
 
 const ws = '/work/game';
 const key = (...parts: unknown[]) => queryKeys.inWorkspace(ws, ...parts);

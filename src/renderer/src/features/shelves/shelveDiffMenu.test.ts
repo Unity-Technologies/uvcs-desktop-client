@@ -1,7 +1,7 @@
 import { fakeApi } from '../../testing/fakeWindow';
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../ui/dialog/confirm', () => ({ confirm: async () => true }));
+vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import type { Shelve } from '@shared/domain/shelve';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';

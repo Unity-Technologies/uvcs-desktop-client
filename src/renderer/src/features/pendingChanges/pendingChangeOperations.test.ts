@@ -4,8 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const dialogs = vi.hoisted(() => ({
   undo: undefined as { backup: boolean } | undefined,
   askedToUndo: [] as unknown[],
-  confirmed: true,
-  typed: undefined as string | undefined,
 }));
 vi.mock('./UndoChangesDialog', () => ({
   askUndoChanges: async (changes: unknown) => {
@@ -13,10 +11,11 @@ vi.mock('./UndoChangesDialog', () => ({
     return dialogs.undo;
   },
 }));
-vi.mock('../../ui/dialog/confirm', () => ({ confirm: async () => dialogs.confirmed }));
-vi.mock('../../ui/dialog/prompt', () => ({ prompt: async () => dialogs.typed }));
+vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
+vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
 
 import type { PendingChange } from '@shared/domain/pendingChanges';
+import { answerConfirms } from '../../testing/fakeDialogs';
 import { pressToastAction, shownToasts, whereTheWindowIs } from '../../testing/operationOutcome';
 import { absolutePath, deletePrivateFiles, undoChanges } from './pendingChangeOperations';
 import { BACKUP_SHELVE_COMMENT } from './undoPlan';
@@ -27,8 +26,6 @@ const change = (path: string, kinds: PendingChange['kinds'], itemType: PendingCh
 beforeEach(() => {
   dialogs.undo = undefined;
   dialogs.askedToUndo = [];
-  dialogs.confirmed = true;
-  dialogs.typed = undefined;
 });
 
 describe('undoChanges', () => {
@@ -108,7 +105,7 @@ describe('deletePrivateFiles', () => {
   });
 
   it('deletes nothing unless confirmed', async () => {
-    dialogs.confirmed = false;
+    answerConfirms(false);
 
     await deletePrivateFiles(ws, [{ path: 'tmp.txt' }]);
 

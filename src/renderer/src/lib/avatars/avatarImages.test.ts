@@ -1,6 +1,5 @@
+import { fakeApi } from '../../testing/fakeWindow';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-
-const uvcs = await vi.hoisted(async () => (await import('../testing/fakeWindow')).installFakeWindow());
 
 /** Stands for the browser's `Image`: loads any data URL but `data:broken`. */
 class FakeImage {
@@ -20,11 +19,10 @@ const freshAvatarImages = async () => {
 /** Resolves once every avatar load started so far has finished. */
 const loadsFinished = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-const gravatarCalls = () => uvcs.calls.filter((call) => call.method === 'system.gravatar').map((call) => call.args[0]);
+const gravatarCalls = () => fakeApi.argsOf('system.gravatar').map(([email]) => email);
 
 beforeEach(() => {
-  uvcs.reset();
-  uvcs.answer = ({ args }) => ({ ok: true, value: args[0] === 'nobody@example.com' ? null : `data:${String(args[0])}` });
+  fakeApi.answer('system.gravatar', (email: string) => (email === 'nobody@example.com' ? null : `data:${email}`));
   vi.stubGlobal('Image', FakeImage);
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -52,7 +50,10 @@ describe('avatarImageFor', () => {
 
   it('keeps showing initials for someone without a picture, or whose picture does not load, without asking again', async () => {
     const { avatarImageFor } = await freshAvatarImages();
-    uvcs.answer = ({ args }) => (args[0] === 'broken@example.com' ? { ok: true, value: 'data:broken' } : { ok: false, error: { message: 'offline' } });
+    fakeApi.answer('system.gravatar', (email: string) => {
+      if (email === 'broken@example.com') return 'data:broken';
+      throw new Error('offline');
+    });
 
     avatarImageFor('broken@example.com');
     avatarImageFor('offline@example.com');
@@ -91,11 +92,13 @@ describe('the Gravatar setting', () => {
 
   it('turned back on, asks again for the pictures that came back empty', async () => {
     const { avatarImageFor, setAvatarImagesEnabled } = await freshAvatarImages();
-    uvcs.answer = () => ({ ok: false, error: { message: 'offline' } });
+    fakeApi.answer('system.gravatar', () => {
+      throw new Error('offline');
+    });
     avatarImageFor('ana@example.com');
     await loadsFinished();
     setAvatarImagesEnabled(false);
-    uvcs.answer = () => ({ ok: true, value: 'data:ana' });
+    fakeApi.answer('system.gravatar', () => 'data:ana');
 
     setAvatarImagesEnabled(true);
     avatarImageFor('ana@example.com');

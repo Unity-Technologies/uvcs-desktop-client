@@ -1,6 +1,5 @@
-import { describe, expect, it, vi } from 'vitest';
-
-await vi.hoisted(async () => (await import('../../lib/testing/fakeWindow')).installFakeWindow('darwin'));
+import '../../testing/fakeWindow';
+import { describe, expect, it } from 'vitest';
 
 import { VIEWS } from './viewRegistry';
 

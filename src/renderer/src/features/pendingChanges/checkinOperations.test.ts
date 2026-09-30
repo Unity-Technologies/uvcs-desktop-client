@@ -4,7 +4,6 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const dialogs = vi.hoisted(() => ({
   catchUp: undefined as 'updateAndCheckin' | 'review' | undefined,
   asked: [] as unknown[],
-  typed: undefined as string | undefined,
 }));
 vi.mock('./CheckinRejectedDialog', () => ({
   askCatchUpForCheckin: async (request: unknown) => {
@@ -12,12 +11,13 @@ vi.mock('./CheckinRejectedDialog', () => ({
     return dialogs.catchUp;
   },
 }));
-vi.mock('../../ui/dialog/prompt', () => ({ prompt: async () => dialogs.typed }));
-vi.mock('../../ui/dialog/confirm', () => ({ confirm: async () => true }));
+vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
+vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import type { CheckinResult, PendingChange } from '@shared/domain/pendingChanges';
 import type { AppSettings } from '@shared/domain/settings';
+import { answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
 import { useCheckinAfterUpdateStore } from './checkinAfterUpdate';
 import { checkinChanges, shelveChanges } from './checkinOperations';
@@ -64,7 +64,6 @@ function answerSettings(recentComments: string[] = []): void {
 beforeEach(() => {
   dialogs.catchUp = undefined;
   dialogs.asked = [];
-  dialogs.typed = undefined;
   useCheckinAfterUpdateStore.setState({ rejected: {} });
   useSuccessMomentStore.setState({ moments: {} });
 });
@@ -314,7 +313,7 @@ describe('shelveChanges', () => {
     expect(await shelveChanges(ws, [change('a.ts')], '', true)).toBe(false);
     expect(fakeApi.methods()).toEqual([]);
 
-    dialogs.typed = 'Typed';
+    answerPrompts('Typed');
     fakeApi.answer('pendingChanges.shelve', () => 9);
     await shelveChanges(ws, [change('a.ts')], '', true);
     expect(fakeApi.argsOf('pendingChanges.shelve')[0]![2]).toBe('Typed');

@@ -1,27 +1,28 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-const uvcs = await vi.hoisted(async () => (await import('../lib/testing/fakeWindow')).installFakeWindow());
+import { FakeCommandFailure, fakeApi } from '../testing/fakeWindow';
+import { describe, expect, it } from 'vitest';
 
 import { api, ApiError } from './client';
 
-beforeEach(() => uvcs.reset());
-
 describe('api', () => {
   it('sends api.<area>.<method>(...args) to main as one invoke named "<area>.<method>"', async () => {
+    fakeApi.answer('branches.list', () => []);
+
     await api.branches.list('/ws', { limit: 5 });
 
-    expect(uvcs.calls).toEqual([{ method: 'branches.list', args: ['/ws', { limit: 5 }] }]);
+    expect(fakeApi.calls()).toEqual([{ method: 'branches.list', args: ['/ws', { limit: 5 }] }]);
   });
 
   it('resolves with the value main answered', async () => {
-    uvcs.answer = () => ({ ok: true, value: [{ id: 7 }] });
+    fakeApi.answer('labels.list', () => [{ id: 7 }]);
 
     await expect(api.labels.list('/ws', {})).resolves.toEqual([{ id: 7 }]);
   });
 
   it('turns a remote error into an ApiError that keeps the failed command for the command log', async () => {
-    const command = { commandLine: 'cm switch br:/main', exitCode: 1, output: 'boom', logEntryId: 42 };
-    uvcs.answer = () => ({ ok: false, error: { message: 'The branch does not exist', command } });
+    const command = { commandLine: 'cm switch br:/main', exitCode: 1, output: 'The branch does not exist', logEntryId: 42 };
+    fakeApi.answer('workspaces.list', () => {
+      throw new FakeCommandFailure(command);
+    });
 
     const failure = await api.workspaces.list().catch((error: unknown) => error);
 
@@ -33,6 +34,6 @@ describe('api', () => {
     const area = await Promise.resolve(api.branches);
 
     expect(typeof area.list).toBe('function');
-    expect(uvcs.calls).toEqual([]);
+    expect(fakeApi.calls()).toEqual([]);
   });
 });

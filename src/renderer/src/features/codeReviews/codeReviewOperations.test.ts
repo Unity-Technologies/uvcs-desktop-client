@@ -1,23 +1,14 @@
 import { fakeApi } from '../../testing/fakeWindow';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-const asked = vi.hoisted(() => ({
-  confirmed: true,
-  typed: undefined as string | undefined,
-  prompts: [] as { initialValue?: string }[],
-}));
-vi.mock('../../ui/dialog/confirm', () => ({ confirm: async () => asked.confirmed }));
-vi.mock('../../ui/dialog/prompt', () => ({
-  prompt: async (options: { initialValue?: string }) => {
-    asked.prompts.push(options);
-    return asked.typed;
-  },
-}));
+vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
+vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
 
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { queryKeys } from '../../api/queryKeys';
 import { queryClient } from '../../app/queryClient';
+import { answerConfirms, answerPrompts, askedDialogs } from '../../testing/fakeDialogs';
 import { shownToasts } from '../../testing/operationOutcome';
 import { deleteReviews, reassignReview, setReviewStatus } from './codeReviewOperations';
 
@@ -34,19 +25,13 @@ const workspaceOn = (server: string) =>
     loadedChangeset: 5,
   });
 
-beforeEach(() => {
-  asked.confirmed = true;
-  asked.typed = undefined;
-  asked.prompts.length = 0;
-});
-
 describe('changing a review status', () => {
   it('sets the status alone on a review someone is assigned to, asking nothing', async () => {
     fakeApi.answer('codeReviews.update', () => undefined);
 
     await setReviewStatus(ws, review('ana'), 'Reviewed');
 
-    expect(asked.prompts).toEqual([]);
+    expect(askedDialogs()).toEqual([]);
     expect(fakeApi.argsOf('codeReviews.update')).toEqual([[ws, 31, { status: 'Reviewed', assignee: undefined }]]);
   });
 
@@ -55,11 +40,11 @@ describe('changing a review status', () => {
     fakeApi.answer('accounts.list', () => []);
     fakeApi.answer('system.currentUser', () => 'ana');
     fakeApi.answer('codeReviews.update', () => undefined);
-    asked.typed = 'ana';
+    answerPrompts('ana');
 
     await setReviewStatus(ws, review(' '), 'Rework required');
 
-    expect(asked.prompts.map((prompt) => prompt.initialValue)).toEqual(['ana']);
+    expect(askedDialogs().map((dialog) => dialog.initialValue)).toEqual(['ana']);
     expect(fakeApi.argsOf('codeReviews.update')).toEqual([[ws, 31, { status: 'Rework required', assignee: 'ana' }]]);
   });
 
@@ -73,11 +58,11 @@ describe('changing a review status', () => {
 describe('review operations', () => {
   it('reassigns to the reviewer typed, starting from the current one', async () => {
     fakeApi.answer('codeReviews.update', () => undefined);
-    asked.typed = 'carl';
+    answerPrompts('carl');
 
     await reassignReview(ws, review('ana'));
 
-    expect(asked.prompts.map((prompt) => prompt.initialValue)).toEqual(['ana']);
+    expect(askedDialogs().map((dialog) => dialog.initialValue)).toEqual(['ana']);
     expect(fakeApi.argsOf('codeReviews.update')).toEqual([[ws, 31, { assignee: 'carl' }]]);
   });
 
@@ -96,7 +81,7 @@ describe('review operations', () => {
     expect(await deleteReviews(ws, [review('ana')])).toBe(false);
     expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't delete the review", detail: 'Access denied' }]);
 
-    asked.confirmed = false;
+    answerConfirms(false);
     expect(await deleteReviews(ws, [review('ana')])).toBe(false);
     expect(fakeApi.argsOf('codeReviews.remove')).toHaveLength(1);
   });

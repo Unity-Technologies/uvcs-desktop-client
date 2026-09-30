@@ -1,19 +1,15 @@
 import { commandFailure, fakeApi } from '../../testing/fakeWindow';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-const dialogs = vi.hoisted(() => ({ confirmed: true, asked: [] as string[] }));
-vi.mock('../../ui/dialog/confirm', () => ({
-  confirm: async ({ title }: { title: string }) => {
-    dialogs.asked.push(title);
-    return dialogs.confirmed;
-  },
-}));
+vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import type { LeftChanges, RestoreResult } from '@shared/domain/switchWithChanges';
+import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
 import { shownToasts, whereTheWindowIs } from '../../testing/operationOutcome';
 import { discardLeftChanges, restoreLeftChanges } from './leftChangesOperations';
 
 const ws = '/ws';
+const confirmTitles = () => askedDialogs().map((dialog) => dialog.title);
 
 const left = (shelveId: number, reason: LeftChanges['reason'] = 'switch'): LeftChanges => ({
   shelveId,
@@ -29,11 +25,6 @@ const left = (shelveId: number, reason: LeftChanges['reason'] = 'switch'): LeftC
 function restoreAnswers(result: RestoreResult): void {
   fakeApi.answer('leftChanges.restore', () => result);
 }
-
-beforeEach(() => {
-  dialogs.confirmed = true;
-  dialogs.asked = [];
-});
 
 describe('restoreLeftChanges', () => {
   it('restores the shelve and says where the changes were left, with a way to see them', async () => {
@@ -90,7 +81,7 @@ describe('discardLeftChanges', () => {
 
     await discardLeftChanges(ws, [left(11), left(9)]);
 
-    expect(dialogs.asked).toEqual(['Discard 2 older shelves?']);
+    expect(confirmTitles()).toEqual(['Discard 2 older shelves?']);
     expect(fakeApi.argsOf('leftChanges.discard')).toEqual([[ws, [11, 9]]]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Discarded 2 shelves' }]);
   });
@@ -100,12 +91,12 @@ describe('discardLeftChanges', () => {
 
     await discardLeftChanges(ws, [left(12)]);
 
-    expect(dialogs.asked).toEqual(['Discard these shelved changes?']);
+    expect(confirmTitles()).toEqual(['Discard these shelved changes?']);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Discarded shelve 12' }]);
   });
 
   it('discards nothing unless confirmed', async () => {
-    dialogs.confirmed = false;
+    answerConfirms(false);
 
     await discardLeftChanges(ws, [left(12)]);
 

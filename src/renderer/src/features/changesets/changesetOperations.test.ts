@@ -2,14 +2,12 @@ import { fakeApi } from '../../testing/fakeWindow';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const asked = vi.hoisted(() => ({
-  confirmed: true,
-  typed: undefined as string | undefined,
   comment: undefined as string | undefined,
   picked: undefined as string | undefined,
   picker: undefined as { exclude?: string } | undefined,
 }));
-vi.mock('../../ui/dialog/confirm', () => ({ confirm: async () => asked.confirmed }));
-vi.mock('../../ui/dialog/prompt', () => ({ prompt: async () => asked.typed }));
+vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
+vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
 vi.mock('./EditCommentDialog', () => ({ askForChangesetComment: async () => asked.comment }));
 vi.mock('../branches/BranchPickerDialog', () => ({
   pickBranch: async (options: { exclude?: string }) => {
@@ -19,6 +17,7 @@ vi.mock('../branches/BranchPickerDialog', () => ({
 }));
 
 import type { ChangesetInfo } from '@shared/domain/changeset';
+import { answerConfirms, answerPrompts } from '../../testing/fakeDialogs';
 import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
 import { deleteChangeset, editChangesetComment, mergeChangesetTo, moveChangesetToBranch, readChangesetGuid, revertWorkspaceToChangeset } from './changesetOperations';
 
@@ -27,8 +26,6 @@ const changeset = { id: 42, branch: '/main/task', comment: 'Old comment' };
 const listed = (guid?: string): ChangesetInfo => ({ id: 42, branch: '/main/task', comment: '', owner: 'ana', date: '', parent: 41, guid });
 
 beforeEach(() => {
-  asked.confirmed = true;
-  asked.typed = undefined;
   asked.comment = undefined;
   asked.picked = undefined;
   asked.picker = undefined;
@@ -62,7 +59,7 @@ describe('changeset operations', () => {
   });
 
   it('moves a changeset to the branch typed, and says so', async () => {
-    asked.typed = '/main/task/rescued';
+    answerPrompts('/main/task/rescued');
     fakeApi.answer('changesets.moveToBranch', () => undefined);
 
     await moveChangesetToBranch(ws, changeset);
@@ -72,11 +69,10 @@ describe('changeset operations', () => {
   });
 
   it('deletes a changeset only once confirmed, and reports a refusal with no success', async () => {
-    asked.confirmed = false;
+    answerConfirms(false);
     await deleteChangeset(ws, changeset);
     expect(fakeApi.methods()).toEqual([]);
 
-    asked.confirmed = true;
     fakeApi.answer('changesets.remove', () => {
       throw new Error('Only the last changeset of a branch can be deleted');
     });

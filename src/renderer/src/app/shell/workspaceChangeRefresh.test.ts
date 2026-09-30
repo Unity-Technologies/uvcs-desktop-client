@@ -1,9 +1,8 @@
+import '../../testing/fakeWindow';
 import { QueryObserver } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import type { WorkspaceChange } from '@shared/events';
-
-await vi.hoisted(async () => (await import('../../lib/testing/fakeWindow')).installFakeWindow());
 
 import { IMMUTABLE_QUERY, keyedByWorkspaceInfo, queryClient } from '../queryClient';
 import { affectedByChange, HeldChanges, localQueryDefaults, refreshForChange } from './workspaceChangeRefresh';

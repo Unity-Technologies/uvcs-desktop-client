@@ -1,10 +1,10 @@
 import { fakeApi } from '../../testing/fakeWindow';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-const asked = vi.hoisted(() => ({ confirmed: true }));
-vi.mock('../../ui/dialog/confirm', () => ({ confirm: async () => asked.confirmed }));
+vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 
 import type { Lock, LockStatus } from '@shared/domain/lock';
+import { answerConfirms } from '../../testing/fakeDialogs';
 import { shownToasts } from '../../testing/operationOutcome';
 import { isReleasable, releaseLocks, removeLocks } from './lockOperations';
 
@@ -20,10 +20,6 @@ const lock = (path: string, status: LockStatus = 'Locked'): Lock => ({
   destinationBranch: '/main',
   holderBranch: '/main/art',
   repository: 'game@local',
-});
-
-beforeEach(() => {
-  asked.confirmed = true;
 });
 
 describe('lock operations', () => {
@@ -44,11 +40,10 @@ describe('lock operations', () => {
   it('removes locks entirely only once confirmed', async () => {
     fakeApi.answer('locks.unlock', () => undefined);
 
-    asked.confirmed = false;
+    answerConfirms(false);
     await removeLocks(ws, [lock('/a.psd'), lock('/b.psd')]);
     expect(fakeApi.methods()).toEqual([]);
 
-    asked.confirmed = true;
     await removeLocks(ws, [lock('/a.psd'), lock('/b.psd')]);
     expect(fakeApi.argsOf('locks.unlock')).toEqual([[ws, [lock('/a.psd'), lock('/b.psd')], { remove: true }]]);
     expect(shownToasts()).toEqual([{ kind: 'success', title: 'Removed 2 locks' }]);

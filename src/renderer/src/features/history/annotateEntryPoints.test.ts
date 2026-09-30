@@ -1,15 +1,8 @@
 /// <reference types="node" />
+import '../../testing/fakeWindow';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-
-// The menus' modules read the platform as they load.
-vi.hoisted(() => {
-  const uvcs = { platform: 'darwin', invoke: async () => ({ ok: true }), on: () => () => {} };
-  const storage = { getItem: () => null, setItem: () => {}, removeItem: () => {} };
-  const window = Object.assign(new EventTarget(), { uvcs, localStorage: storage, matchMedia: () => ({ matches: false, addEventListener: () => {} }) });
-  Object.assign(globalThis, { window, localStorage: storage, document: Object.assign(new EventTarget(), { visibilityState: 'visible' }) });
-});
 
 import type { DiffEntry } from '@shared/domain/diff';
 import type { ItemRevision } from '@shared/domain/history';

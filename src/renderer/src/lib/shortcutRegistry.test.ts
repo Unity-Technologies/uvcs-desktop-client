@@ -1,18 +1,9 @@
 /// <reference types="node" />
+import '../testing/fakeWindow';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
-import { beforeAll, describe, expect, it, vi } from 'vitest';
-import type * as Registry from './shortcutRegistry';
-
-let SHORTCUT_AREAS: typeof Registry.SHORTCUT_AREAS;
-let SHORTCUTS: typeof Registry.SHORTCUTS;
-let shortcutKeys: typeof Registry.shortcutKeys;
-let viewShortcut: typeof Registry.viewShortcut;
-
-beforeAll(async () => {
-  vi.stubGlobal('window', { uvcs: { platform: 'darwin' } });
-  ({ SHORTCUT_AREAS, SHORTCUTS, shortcutKeys, viewShortcut } = await import('./shortcutRegistry'));
-});
+import { describe, expect, it } from 'vitest';
+import { SHORTCUT_AREAS, SHORTCUTS, shortcutKeys, viewShortcut } from './shortcutRegistry';
 
 const RENDERER = join(__dirname, '..');
 const APP_MENU = join(RENDERER, '..', '..', 'main', 'window', 'appMenuTemplate.ts');

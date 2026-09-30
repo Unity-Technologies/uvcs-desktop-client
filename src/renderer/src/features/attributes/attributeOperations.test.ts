@@ -1,11 +1,11 @@
 import { fakeApi } from '../../testing/fakeWindow';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-const asked = vi.hoisted(() => ({ confirmed: true, typed: undefined as string | undefined }));
-vi.mock('../../ui/dialog/confirm', () => ({ confirm: async () => asked.confirmed }));
-vi.mock('../../ui/dialog/prompt', () => ({ prompt: async () => asked.typed }));
+vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
+vi.mock('../../ui/dialog/prompt', () => import('../../testing/fakeDialogs'));
 
 import type { AttributeType } from '@shared/domain/attribute';
+import { answerConfirms, answerPrompts } from '../../testing/fakeDialogs';
 import { watchRefreshes } from '../../testing/operationOutcome';
 import { deleteAttributeTypes, editAttributeComment, renameAttributeType, saveAttributeComment } from './attributeOperations';
 
@@ -13,14 +13,9 @@ const ws = '/ws';
 const ATTRIBUTE_AREAS = ['attributeTypes', 'attributeUsedValues', 'attributeValues'];
 const type = (name: string): AttributeType => ({ id: 1, name, comment: 'default: open', owner: 'ana', date: '', repository: 'game@local' });
 
-beforeEach(() => {
-  asked.confirmed = true;
-  asked.typed = undefined;
-});
-
 describe('attribute operations', () => {
   it('renames to the name typed, refreshing only what shows attributes', async () => {
-    asked.typed = 'state';
+    answerPrompts('state');
     fakeApi.answer('attributes.renameType', () => undefined);
     const refreshed = watchRefreshes(ws);
 
@@ -34,7 +29,7 @@ describe('attribute operations', () => {
     fakeApi.answer('attributes.editTypeComment', () => undefined);
 
     await editAttributeComment(ws, type('status'));
-    asked.typed = '';
+    answerPrompts('');
     await editAttributeComment(ws, type('status'));
 
     expect(fakeApi.argsOf('attributes.editTypeComment')).toEqual([[ws, 'status', '']]);
@@ -51,11 +46,10 @@ describe('attribute operations', () => {
     fakeApi.answer('attributes.deleteType', () => undefined);
     const refreshed = watchRefreshes(ws);
 
-    asked.confirmed = false;
+    answerConfirms(false);
     await deleteAttributeTypes(ws, [type('status')]);
     expect(fakeApi.methods()).toEqual([]);
 
-    asked.confirmed = true;
     await deleteAttributeTypes(ws, [type('status'), type('owner')]);
     expect(fakeApi.argsOf('attributes.deleteType')).toEqual([[ws, ['status', 'owner']]]);
     expect(refreshed()).toEqual(ATTRIBUTE_AREAS);

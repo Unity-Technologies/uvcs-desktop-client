@@ -1,7 +1,7 @@
+import '../../testing/fakeWindow';
 import { describe, expect, it, vi } from 'vitest';
 
 // The workspace menu's modules read the platform as they load.
-await vi.hoisted(async () => (await import('../../lib/testing/fakeWindow')).installFakeWindow());
 
 import type { WorkspaceSummary } from '@shared/domain/workspace';
 import { workspaceResults } from './useWorkspaceResults';
