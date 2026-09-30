@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
+import { prefersReducedMotion } from '../../../lib/reducedMotion';
 import type { ChangedLine, DisplayMeta } from './changeBlocks';
 import type { ComparisonMethod } from './comparisonMethod';
 import { describeDiscard } from './discardAction';
@@ -6,7 +7,6 @@ import { discardLines, withOwnLines } from './discardLines';
 import type { HoveredLineStore } from './LineDiscardButton';
 import type { LineMarks } from './lineMarksCss';
 import { hoverUnderPointer } from './pierreDom';
-import { prefersReducedMotion } from './reducedMotion';
 
 /** A discard ready to write: the file's new text and what was done, for the toast. */
 export interface DiscardRequest {
