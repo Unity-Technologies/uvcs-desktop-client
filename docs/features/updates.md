@@ -50,12 +50,15 @@ out releases with none) and the renderer asks for them once per version (`update
 `releaseNotesQuery`).
 
 While an update downloads or waits to install, "What's New" on the update card and in the About dialog opens a dialog
-(`ReleaseNotesDialog`) with each release's notes, newest first, named by version when the update skips a few
-(`releaseNotesSections`), and the install button once the update is ready. With no notes, there is no button.
+(`ReleaseNotesDialog`) with each release's notes, newest first, headed by version when the update skips a few
+(`releaseNotesSections`), and the install button once the update is ready. With no notes, there is no button. GitHub's
+generated notes open with a "What's Changed" heading, which the title already says, so it is left out; their closing
+"**Full Changelog**" link becomes a quiet "Full changelog" line under the release (`changelogUrl`). While About or What's
+New is open the update card steps aside (`updateCardOf`): it would repeat them, over the dialog's own buttons.
 
 GitHub sends the notes as HTML. `releaseNotesFromHtml` reads it into the tree `MarkdownBlocks` renders, so no HTML
 from the feed ever reaches the page: headings, paragraphs, lists (nested ones join their parent), quotes, code,
-emphasis and `http(s)` links, which open in the browser; images, scripts, styles and any other address are left out.
+emphasis and `http(s)` links, which open in the browser; a nested list stays under its item (`MarkdownListItem.sublist`); images, scripts, styles and any other address are left out.
 Showing the HTML as it comes (`dangerouslySetInnerHTML`) was rejected: the renderer is untrusted and must never run
 markup from the network.
 
