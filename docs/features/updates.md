@@ -41,11 +41,32 @@ shows a download with its percent, then the ready update until "Later" puts that
 one shows again. A check the window asked for answers in one toast, "Checking…" turning into the answer
 (`checkFeedback`), unless the About dialog is open, which shows the same; the app's own checks say nothing.
 
-## Releases
+## What's New
+
+Each release's notes are its description on GitHub. electron-updater reads them from the releases feed with the check
+that finds an update (`fullChangelog`, set in `createAppUpdates`: every release between the running version and the
+update, not just the latest), so they cost no request of their own. `AppUpdates` keeps them (`releaseNotesOf` leaves
+out releases with none) and the renderer asks for them once per version (`updates.releaseNotes`,
+`releaseNotesQuery`).
+
+While an update downloads or waits to install, "What's New" on the update card and in the About dialog opens a dialog
+(`ReleaseNotesDialog`) with each release's notes, newest first, headed by version when the update skips a few
+(`releaseNotesSections`), and the install button once the update is ready. With no notes, there is no button. GitHub's
+generated notes open with a "What's Changed" heading, which the title already says, so it is left out; their closing
+"**Full Changelog**" link becomes a quiet "Full changelog" line under the release (`changelogUrl`). While About or What's
+New is open the update card steps aside (`updateCardOf`): it would repeat them, over the dialog's own buttons.
+
+GitHub sends the notes as HTML. `releaseNotesFromHtml` reads it into the tree `MarkdownBlocks` renders, so no HTML
+from the feed ever reaches the page: headings, paragraphs, lists (nested ones join their parent), quotes, code,
+emphasis and `http(s)` links, which open in the browser; a nested list stays under its item (`MarkdownListItem.sublist`); images, scripts, styles and any other address are left out.
+Showing the HTML as it comes (`dangerouslySetInnerHTML`) was rejected: the renderer is untrusted and must never run
+markup from the network.
+
 
 - The **Release** workflow (`.github/workflows/release.yml`, run by hand with a bump: patch, minor or major) owns the
   version: it bumps `package.json`, tags `v<version>` on master, opens a draft release with generated notes, and builds
-  every OS's installers onto it (`npm run release`). Publishing the draft makes the update reach every running app
+  every OS's installers onto it (`npm run release`). The draft's description is what What's New shows: edit it before
+  publishing. Publishing the draft makes the update reach every running app
   within the hour. Never bump the version by hand.
 - The installers (electron-builder.yml) are one per OS and architecture, named without spaces
   (`UnityVersionControl-<version>-macOS-arm64.dmg`: GitHub turns spaces into dots, which `latest*.yml` would no longer

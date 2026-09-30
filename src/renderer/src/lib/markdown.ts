@@ -10,10 +10,22 @@ export type MarkdownInline =
   | { kind: 'emphasis'; children: MarkdownInline[] }
   | { kind: 'link'; url: string; children: MarkdownInline[] };
 
+export interface MarkdownList {
+  kind: 'list';
+  ordered: boolean;
+  items: MarkdownListItem[];
+}
+
+/** One line of a list, and the list nested under it, if any (release notes as GitHub renders them have them). */
+export interface MarkdownListItem {
+  children: MarkdownInline[];
+  sublist?: MarkdownList;
+}
+
 export type MarkdownBlock =
   | { kind: 'heading'; level: 1 | 2 | 3; children: MarkdownInline[] }
   | { kind: 'paragraph'; children: MarkdownInline[] }
-  | { kind: 'list'; ordered: boolean; items: MarkdownInline[][] }
+  | MarkdownList
   | { kind: 'quote'; children: MarkdownInline[] }
   | { kind: 'code'; text: string };
 
@@ -51,7 +63,7 @@ export function parseMarkdown(source: string): MarkdownBlock[] {
       index++;
     } else if (BULLET.test(line) || NUMBERED.test(line)) {
       const ordered = !BULLET.test(line);
-      blocks.push({ kind: 'list', ordered, items: collect(ordered ? NUMBERED : BULLET).map(parseInline) });
+      blocks.push({ kind: 'list', ordered, items: collect(ordered ? NUMBERED : BULLET).map((item) => ({ children: parseInline(item) })) });
     } else if (QUOTE.test(line)) {
       blocks.push({ kind: 'quote', children: parseInline(collect(QUOTE).join(' ')) });
     } else {
@@ -90,10 +102,11 @@ export function parseInline(text: string): MarkdownInline[] {
 /** The text without Markdown marks, e.g. for a one-line preview. */
 export function markdownPreview(source: string): string {
   return parseMarkdown(source)
-    .map((block) => (block.kind === 'code' ? block.text : block.kind === 'list' ? block.items.map(plainText).join(' · ') : plainText(block.children)))
+    .map((block) => (block.kind === 'code' ? block.text : block.kind === 'list' ? block.items.map((item) => plainText(item.children)).join(' · ') : plainText(block.children)))
     .join(' — ');
 }
 
-function plainText(inlines: MarkdownInline[]): string {
+/** The text of a line without its marks. */
+export function plainText(inlines: MarkdownInline[]): string {
   return inlines.map((inline) => (inline.kind === 'text' || inline.kind === 'code' ? inline.text : plainText(inline.children))).join('');
 }

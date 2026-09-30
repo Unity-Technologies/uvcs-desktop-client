@@ -11,6 +11,8 @@ interface UpdateState {
   dismissedVersion: string | null;
   /** The About dialog shows the update itself, so a check asked from it needs no toast. */
   aboutOpen: boolean;
+  /** What's New shows the update and its install button, so the update card steps aside meanwhile. */
+  releaseNotesOpen: boolean;
   /** A check this window asked for, until it answers, and the toast that follows it. */
   askedCheck: { toastId: number | null } | null;
   /** A status arrived from main: the one read at start (`loadUpdateStatus`) is older then. */
@@ -21,6 +23,7 @@ export const useUpdateStore = create<UpdateState>(() => ({
   status: { state: 'idle' },
   dismissedVersion: null,
   aboutOpen: false,
+  releaseNotesOpen: false,
   askedCheck: null,
   heardFromMain: false,
 }));
@@ -60,6 +63,10 @@ export function putOffUpdate(): void {
 
 export function setAboutOpen(aboutOpen: boolean): void {
   useUpdateStore.setState({ aboutOpen });
+}
+
+export function setReleaseNotesOpen(releaseNotesOpen: boolean): void {
+  useUpdateStore.setState({ releaseNotesOpen });
 }
 
 function receiveUpdateStatus(status: UpdateStatus): void {

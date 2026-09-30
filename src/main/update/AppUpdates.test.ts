@@ -216,3 +216,30 @@ describe('installing', () => {
     expect(feed.quitAndInstall).not.toHaveBeenCalled();
   });
 });
+
+describe('the notes of the update found', () => {
+  it('are none before an update is found', async () => {
+    const { updates: app } = updates(fakeFeed([notFound]));
+
+    await app.check();
+
+    expect(app.releaseNotes()).toEqual([]);
+  });
+
+  it('come with the check that found the update, for every release since the running one', async () => {
+    const releaseNotes = [
+      { version: '1.2.0', note: '<p>Shelves</p>' },
+      { version: '1.1.1', note: '<p>A fix</p>' },
+    ];
+    const feed = fakeFeed([{ isUpdateAvailable: true, updateInfo: { version: '1.2.0', files, releaseNotes } }]);
+    const { updates: app } = updates(feed);
+
+    await app.check();
+
+    expect(feed.checkForUpdates).toHaveBeenCalledTimes(1);
+    expect(app.releaseNotes()).toEqual([
+      { version: '1.2.0', html: '<p>Shelves</p>' },
+      { version: '1.1.1', html: '<p>A fix</p>' },
+    ]);
+  });
+});

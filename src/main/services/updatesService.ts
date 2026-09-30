@@ -9,6 +9,7 @@ export function createUpdatesService({ updates }: ServiceContext): UpdatesApi {
     appInfo: async () => appInfo(),
     status: async () => updates.status(),
     check: () => updates.check(),
+    releaseNotes: async () => updates.releaseNotes(),
     install: () => updates.install(),
     openThirdPartyNotices: async () => {
       const error = await shell.openPath(thirdPartyNoticesPath({ isPackaged: app.isPackaged, resourcesPath: process.resourcesPath, appPath: app.getAppPath() }));

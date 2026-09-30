@@ -13,6 +13,8 @@ export function createAppUpdates(): AppUpdates {
   // `AppUpdates` downloads once it knows how the update will install (`needsManualInstall`).
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
+  // The notes of every release since the running one, not just the latest: an update may skip a few.
+  autoUpdater.fullChangelog = true;
 
   return new AppUpdates({
     feed: autoUpdater,

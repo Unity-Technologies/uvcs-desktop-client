@@ -4,7 +4,9 @@ import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
 import { SWEEP, type ProgressBarState } from '../operations/progressBar';
 import { ProgressTrack } from '../operations/ProgressTrack';
+import { openReleaseNotesDialog } from './ReleaseNotesDialog';
 import { installLabel, updateCardOf } from './updateCardStatus';
+import { useUpdateReleaseNotes } from './updateReleaseNotes';
 import { installUpdate, putOffUpdate, useUpdateStore } from './updateStore';
 import styles from './UpdateCard.module.css';
 
@@ -13,7 +15,8 @@ const GLIDE_MS = 300;
 
 /** The corner card of an update downloading, then ready to install until put off (`updateCardOf`). */
 export function UpdateCard() {
-  const card = useUpdateStore((state) => updateCardOf(state.status, state.dismissedVersion));
+  const card = useUpdateStore((state) => updateCardOf(state.status, state.dismissedVersion, state.aboutOpen || state.releaseNotesOpen));
+  const hasNotes = useUpdateReleaseNotes().length > 0;
   if (!card) return null;
 
   if (card.state === 'downloading') {
@@ -43,6 +46,11 @@ export function UpdateCard() {
       {/* A Mac build without a Developer ID signature can't replace itself: the user drags the new one in. */}
       {byInstaller && <p className={styles.hint}>Open the installer and drag {APP_NAME} to your Applications folder to finish.</p>}
       <div className={styles.actions}>
+        {hasNotes && (
+          <Button variant="ghost" size="small" className={styles.whatsNew} onClick={() => openReleaseNotesDialog(card.version)}>
+            What's New
+          </Button>
+        )}
         <Button variant="ghost" size="small" onClick={putOffUpdate}>
           Later
         </Button>

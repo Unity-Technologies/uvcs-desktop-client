@@ -45,3 +45,8 @@
   justify-content: flex-end;
   gap: var(--space-2);
 }
+
+/* Reading about the update is set apart from deciding when to install it. */
+.whatsNew {
+  margin-right: auto;
+}

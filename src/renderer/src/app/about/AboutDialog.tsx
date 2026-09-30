@@ -11,6 +11,8 @@ import { openDialog } from '../../ui/dialog/dialogStore';
 import { Spinner } from '../../ui/Spinner';
 import { copyToClipboard } from '../../ui/copyToClipboard';
 import { cmVersionQuery } from '../startup/useCmAvailability';
+import { openReleaseNotesDialog } from '../updates/ReleaseNotesDialog';
+import { foundUpdateVersion, useUpdateReleaseNotes } from '../updates/updateReleaseNotes';
 import { checkForUpdates, installUpdate, setAboutOpen, useUpdateStore } from '../updates/updateStore';
 import { aboutDetails } from './aboutDetails';
 import { aboutUpdateAction, aboutUpdateLine, describePlatform } from './aboutUpdate';
@@ -78,6 +80,8 @@ function UpdateBox() {
   const status = useUpdateStore((state) => state.status);
   const line = aboutUpdateLine(status);
   const action = aboutUpdateAction(status);
+  const version = foundUpdateVersion(status);
+  const hasNotes = useUpdateReleaseNotes().length > 0;
 
   return (
     <div className={styles.update}>
@@ -85,15 +89,22 @@ function UpdateBox() {
         {line.busy && <Spinner size={12} />}
         {line.text}
       </span>
-      {action.kind === 'install' ? (
-        <Button variant="primary" size="small" onClick={() => void installUpdate()}>
-          {action.label}
-        </Button>
-      ) : (
-        <Button size="small" icon={<RefreshCw size={14} />} disabled={!action.enabled} onClick={() => void checkForUpdates()}>
-          Check for Updates
-        </Button>
-      )}
+      <div className={styles.updateActions}>
+        {version && hasNotes && (
+          <Button variant="ghost" size="small" onClick={() => openReleaseNotesDialog(version)}>
+            What's New
+          </Button>
+        )}
+        {action.kind === 'install' ? (
+          <Button variant="primary" size="small" onClick={() => void installUpdate()}>
+            {action.label}
+          </Button>
+        ) : (
+          <Button size="small" icon={<RefreshCw size={14} />} disabled={!action.enabled} onClick={() => void checkForUpdates()}>
+            Check for Updates
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

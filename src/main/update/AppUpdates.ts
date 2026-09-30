@@ -1,5 +1,6 @@
-import type { UpdateStatus } from '@shared/domain/appUpdate';
+import type { ReleaseNotes, UpdateStatus } from '@shared/domain/appUpdate';
 import type { ReleaseFile } from './installerAsset';
+import { releaseNotesOf, type FeedReleaseNotes } from './releaseNotes';
 import { describeUpdateError } from './updateError';
 
 /** Waits this long after launch before the first check, so it never competes with the first window's reads. */
@@ -9,10 +10,17 @@ export const CHECK_INTERVAL_MS = 60 * 60 * 1000;
 
 /** What `AppUpdates` uses of electron-updater's `autoUpdater`. */
 export interface UpdateFeed {
-  checkForUpdates(): Promise<{ isUpdateAvailable: boolean; updateInfo: { version: string; files: ReleaseFile[] } } | null>;
+  checkForUpdates(): Promise<{ isUpdateAvailable: boolean; updateInfo: FoundUpdate } | null>;
   downloadUpdate(): Promise<unknown>;
   quitAndInstall(isSilent: boolean, isForceRunAfter: boolean): void;
   on(event: 'download-progress', listener: (progress: { percent: number }) => void): unknown;
+}
+
+/** What `AppUpdates` reads of the update a check found. */
+export interface FoundUpdate {
+  version: string;
+  files: ReleaseFile[];
+  releaseNotes?: FeedReleaseNotes;
 }
 
 export interface AppUpdatesDependencies {
@@ -40,11 +48,14 @@ export interface AppUpdatesDependencies {
  * A macOS build without a Developer ID signature can't install through Squirrel.Mac (`needsManualInstall`): it finds
  * updates the same way, downloads the release's disk image itself and offers to open it. It's asked only once an update
  * is found, as it runs `codesign`.
+ *
+ * The notes of the update found (`releaseNotes`) come with the check itself: reading them asks nothing more.
  */
 export class AppUpdates {
   private current: UpdateStatus;
   private manualInstall: Promise<boolean> | null = null;
   private installerPath: string | null = null;
+  private notes: ReleaseNotes[] = [];
 
   constructor(private readonly dependencies: AppUpdatesDependencies) {
     this.current = dependencies.packaged ? { state: 'idle' } : { state: 'unavailable' };
@@ -57,6 +68,11 @@ export class AppUpdates {
 
   status(): UpdateStatus {
     return this.current;
+  }
+
+  /** The notes of every release between the running version and the update found, newest first; none before one is found. */
+  releaseNotes(): ReleaseNotes[] {
+    return this.notes;
   }
 
   /** The checks on their own: the first shortly after launch, then every hour. A development build makes none. */
@@ -98,7 +114,8 @@ export class AppUpdates {
     else this.dependencies.feed.quitAndInstall(true, true);
   }
 
-  private async download({ version, files }: { version: string; files: ReleaseFile[] }): Promise<void> {
+  private async download({ version, files, releaseNotes }: FoundUpdate): Promise<void> {
+    this.notes = releaseNotesOf(releaseNotes, version);
     this.setStatus({ state: 'downloading', version, percent: 0 });
     this.manualInstall ??= this.dependencies.needsManualInstall();
     if (!(await this.manualInstall)) {
