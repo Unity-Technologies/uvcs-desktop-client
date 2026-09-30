@@ -12,3 +12,21 @@ export const TYPING_PAUSE_MS = 300;
 export function diffsEveryKeystroke(original: string, current: string): boolean {
   return original.length + current.length <= MAX_DIFFED_PER_KEYSTROKE_CHARS;
 }
+
+interface TypedTexts {
+  original: string;
+  /** The modified text as read. */
+  saved: string | undefined;
+  /** The modified text as it is now, with unsaved edits. */
+  current: string;
+  /** `current` as it was when typing last paused (`TYPING_PAUSE_MS`). */
+  paused: string;
+}
+
+/**
+ * The modified text the diff shown is of: the text as it is now, or while a big text is typed into, the text as it was
+ * when typing last paused (`diffsEveryKeystroke`). Nothing typed, it's the text as read.
+ */
+export function diffedText({ original, saved, current, paused }: TypedTexts): string {
+  return current === saved || diffsEveryKeystroke(original, current) ? current : paused;
+}
