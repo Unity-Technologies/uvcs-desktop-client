@@ -278,6 +278,9 @@ renderer/src/
     skips `ignore.conf` folders (on Linux the folders watched follow its edits, `followSkipRule`) and `.plastic` lock/temp files, coalesces bursts (300 ms quiet, 2 s max wait) and drops what the
     app's own writes cause (`changesWorkspace` commands and tracked operations): the renderer refreshes after those anyway.
     `cm status --changelists` writes the changelist files back on every read, so those rewrites count as its own too (`rewritesChangelists`).
+    A watch that sees only part of the workspace refreshes local views on focus instead (`localQueryDefaults`), from the
+    start ("Some folders here aren't watched") or once a watch breaks later (`workspaceWatchBroken`: one error toast per
+    workspace and session, `noteBrokenWatch`; no polling).
   - `workspaceChanged` tells file edits (pending changes, review marks, files view, open diffs of workspace files; if auto refresh is on, and once when it's turned back on)
     from `.plastic` rewrites by any tool (workspace info; everything when the loaded changeset or branch moved). See
     `app/shell/useWorkspaceWatcher.ts` and `app/refresh/`. A diff with unsaved edits holds still and offers to reload instead.

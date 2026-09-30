@@ -8,7 +8,7 @@ import { refreshQueries } from '../refresh/refreshQueries';
 import { isAffectedByFileChanges, LOCAL_AREAS } from '../refresh/refreshScopes';
 import { useSettings } from '../settings/useSettings';
 import { useWorkspacePath } from '../workspace/useWorkspace';
-import { notePartialWatch } from './watchNotes';
+import { noteBrokenWatch, notePartialWatch } from './watchNotes';
 import { HeldChanges, inWorkspace, localQueryDefaults, refreshForChange } from './workspaceChangeRefresh';
 
 /**
@@ -28,7 +28,10 @@ export function useWorkspaceWatcher(): void {
   useRefreshOnWorkspaceChanges(workspacePath, autoRefresh);
 }
 
-/** Asks main to watch the workspace while it shows; how much it watches ('partial' until it answers). */
+/**
+ * Asks main to watch the workspace while it shows; how much it watches ('partial' until it answers, and once its
+ * watch broke: local views refresh on focus again).
+ */
 function useWatchCoverage(workspacePath: string): WatchCoverage {
   const [coverage, setCoverage] = useState<WatchCoverage>('partial');
   useEffect(() => {
@@ -38,6 +41,11 @@ function useWatchCoverage(workspacePath: string): WatchCoverage {
     });
     return () => void api.workspaces.unwatch();
   }, [workspacePath]);
+  useUvcsEvent('workspaceWatchBroken', ({ workspacePath: brokenPath }) => {
+    if (brokenPath !== workspacePath) return;
+    setCoverage('partial');
+    noteBrokenWatch(workspacePath);
+  });
   return coverage;
 }
 
