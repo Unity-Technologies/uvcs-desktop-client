@@ -39,15 +39,15 @@ describe('repositories', () => {
     expect(commands[0]?.options.signal).toBeInstanceOf(AbortSignal);
   });
 
-  it('creates a repository with one command, listing none, and returns its spec', async () => {
-    const { service, lines } = repositories({ 'repository create': '' });
+  it('creates a repository with one command in its documented form for a server, listing none, and returns its spec', async () => {
+    const { service, lines } = repositories({ repository: '' });
 
     expect(await service.create('codice@cloud', 'tools')).toBe('tools@codice@cloud');
-    expect(lines()).toEqual(['repository create codice@cloud tools']);
+    expect(lines()).toEqual(['repository codice@cloud tools']);
   });
 
   it('fails as cm reports it when the creation fails', async () => {
-    const { service } = repositories({ 'repository create': cmFails('Error: The repository tools already exists.') });
+    const { service } = repositories({ repository: cmFails('Error: The repository tools already exists.') });
 
     await expect(service.create('codice@cloud', 'tools')).rejects.toThrow('already exists');
   });
