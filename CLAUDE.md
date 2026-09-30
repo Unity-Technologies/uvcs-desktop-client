@@ -49,8 +49,8 @@ src/renderer/  React UI. Talks to main only through `api.<area>.<method>` (`rend
 - **Adding a capability**: types in `shared/domain` → method in `shared/api/<area>.ts` → implementation in
   `main/services/<area>Service.ts` (wired in `createServices`) → `cm` argument builders and parsers as pure, tested
   helpers in `main/cm/` → a query (`queryKeys`) or mutation (`runOperation`/`runAction`/`runRead`) in the renderer.
-- **`CmClient`** is the single entry point to `cm`: `query()` for reads (pooled `cm shell` sessions, much faster than a
-  process), `execute()` for long, streamed or cancellable operations. Never spawn `cm` any other way.
+- **`CmClient`** is the single entry point to `cm`. Never spawn `cm` any other way. Commands are routed by how long
+  they take and whether they can be cancelled, not by whether they read or write (see below).
 - **Renderer tiers**: `ui/` design-system primitives, `components/` domain-aware pieces shared by features,
   `features/<area>/` one folder per area, `lib/` pure helpers, `app/` the shell (navigation, palette, operations,
   refresh), `styles/` tokens and global CSS. A piece used by one feature lives in that feature's folder.
@@ -65,8 +65,16 @@ Before adding or changing a `cm` call, answer these (details in ARCHITECTURE.md 
 2. **One call for N things.** Never loop a command over rows, files, branches or ids, and never OR ids together
    (`noOredIdLookups.test.ts`). One `cm find`/`cm ls` that returns every record, `--format` with just the fields
    needed, filtered on the server (date, `limit`, owners) — then a second call only for what the first couldn't answer.
-3. **Through `query()`** so it rides a warm `cm shell` (arguments without quotes or newlines: multi-line text goes
-   through temp files, `-commentsfile`).
+3. **Shell or process?** Decide by duration and cancellability, never by read vs write:
+   - **Quick** (reads, and small writes: a label, a rename, an attribute, an undo of a few files) → `query()`, a
+     pooled `cm shell`. Starting a `cm` process costs 100–150 ms (measured on macOS, more on Windows) *before* the
+     command runs; a warm shell answers a 10 ms command in 10 ms. Spawning a process for it makes it 15× slower.
+   - **Long, streamed or cancellable** (update, switch, checkin, shelve, merge, sync, the slowest `find`s) →
+     `execute()`, a process of its own. Each workspace has only two pooled sessions, so a command that holds one for
+     seconds makes every read of that workspace wait behind it, and a command in a shell can't be cancelled.
+   - `query()` sends a workspace write that may run long (many paths, recursive, a transfer: `runsLong`) to a process
+     by itself, so call sites don't have to guess. Shell arguments can't hold quotes or newlines: multi-line text
+     goes through temp files (`-commentsfile`).
 4. **When does it run?** Only on an event, a settled selection (`useSettled`), a focus once stale, or an operation —
    never on a timer (the incoming check is the one exception). Immutable results are cached (`IMMUTABLE_QUERY`),
    heavy lists that rarely change use `SLOW_CHANGING_QUERY`, equivalent filters share one query key (`compactFilter`).

@@ -13,7 +13,7 @@ const PROMPT_LIKE_TAIL = /^[^<].*(\[[^\]]*\]|[:?])\s*$/;
 const MAX_PROMPT_LENGTH = 300;
 const PROMPT_STALL_MS = 1500;
 const READ_TIMEOUT_MS = 120_000;
-/** Undoing, adding or checking out 20,000 files takes minutes; a stalled prompt is caught long before either timeout. */
+/** A write of few paths can still touch a whole tree (removing or moving a folder); a stalled prompt is caught long before either timeout. */
 const WRITE_TIMEOUT_MS = 30 * 60_000;
 /** Local and instant: its answer tells the process is up. */
 const STARTUP_PROBE = ['version'];

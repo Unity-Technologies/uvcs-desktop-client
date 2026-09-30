@@ -7,6 +7,7 @@ import { inCmPathForm } from './cmPathForm';
 import type { CmResult } from './CmResult';
 import { CmShellPool } from './CmShellPool';
 import { extractErrorMessage } from './errorMessage';
+import { runsLong } from './longCommands';
 import { runCmProcess } from './runCmProcess';
 import { canRunInShell } from './shellCommandLine';
 import { withUtf8Output } from './utf8Output';
@@ -25,8 +26,9 @@ type CommandStartedListener = (command: { args: readonly string[]; cwd: string; 
 
 /**
  * The single entry point to the `cm` CLI.
- * Short queries reuse pooled `cm shell` sessions; operations that stream progress
- * or can be cancelled run as dedicated processes.
+ * Quick commands reuse pooled `cm shell` sessions: a warm one answers in a few ms, where starting a `cm` process costs
+ * 100-150 ms before the command even runs. Commands that may run long, stream progress or can be cancelled run as
+ * dedicated processes, so they never hold a pooled session that reads are waiting for.
  */
 export class CmClient {
   private cmPath: string;
@@ -68,9 +70,13 @@ export class CmClient {
     return () => this.startListeners.delete(listener);
   }
 
-  /** Runs a quick, non-interactive command. Prefer this for reads. */
+  /**
+   * Runs a quick, non-interactive command (reads, small writes) in a pooled `cm shell`. A command that may run long
+   * anyway (`runsLong`: a workspace write of many files) gets a process of its own, as does one before the pool is warm.
+   */
   query(args: string[], options: CmRunOptions = {}): Promise<string> {
-    const useShell = !options.signal && !options.onOutputLine && canRunInShell(args) && this.shellPool.isReady(options.cwd ?? homedir());
+    const useShell =
+      !options.signal && !options.onOutputLine && canRunInShell(args) && !runsLong(args) && this.shellPool.isReady(options.cwd ?? homedir());
     return this.run(args, options, useShell);
   }
 

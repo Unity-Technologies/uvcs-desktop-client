@@ -26,17 +26,22 @@ you touch:
 1. A component calls `api.<area>.<method>(...)` (`renderer/src/api/client.ts`), a typed proxy of `UvcsApi` (`shared/api`).
 2. The preload forwards it over one IPC channel; `main/ipc/registerApi.ts` dispatches to the service.
 3. Services (`main/services/<area>Service.ts`) build `cm` arguments and parse the output with helpers in `main/cm/`.
-4. `CmClient` runs the command:
-   - `query()` for short reads: reuses pooled `cm shell` sessions (much faster than spawning `cm`), two per working
-     directory; a command takes the first one free, and a directory idle for ten minutes lets its sessions go.
-     A workspace no window shows anymore lets them go once their commands are done (`WorkspaceWatchers` `onStopped`).
-     A session takes about a second to answer its first command, so until one in that directory has, the query runs as a
-     process of its own.
-   - `execute()` for long or cancellable work (update, switch, checkin, merge): a dedicated process that streams progress lines.
+4. `CmClient` runs the command, routed by duration and cancellability, never by read vs write. Starting a `cm`
+   process costs 100–150 ms before the command runs (macOS; more on Windows), while a warm `cm shell` answers a quick
+   command in a few ms:
+   - `query()` for quick commands, reads and small writes alike (a label, a rename, an undo of a few files): reuses
+     pooled `cm shell` sessions, two per working directory; a command takes the first one free, and a directory idle
+     for ten minutes lets its sessions go; a workspace no window shows anymore lets them go once their commands are
+     done (`WorkspaceWatchers` `onStopped`). A session takes about a second to answer its first command, so until one
+     in that directory has, the query runs as a process of its own. A workspace write that may run long (`runsLong`:
+     more than `MAX_QUICK_WRITE_PATHS` paths, recursive, or a transfer) runs as a process of its own too, so it never
+     holds a session every read of the workspace would wait behind.
+   - `execute()` for long or cancellable work (update, switch, checkin, shelve, merge, sync; the Branch Explorer's
+     merges `find`, the slowest query on big repositories): a dedicated process that streams progress lines.
    - A command line too long to start a process with (a checkin or shelve of thousands of paths: Windows takes 32,767
      characters, quotes included) is written to a `cm shell` of its own instead (`processCommand`): still one command, never split.
      So is, on Windows, a command that prints text (see Parsing).
-   - A pooled command may take two minutes, a workspace write (undo, add, checkout of thousands of files) half an hour.
+   - A pooled command may take two minutes, a workspace write half an hour (a few paths can still be a whole tree).
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
    (see Renderer: Command log).
 
