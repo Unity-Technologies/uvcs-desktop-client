@@ -14,8 +14,10 @@ import { parseSize } from './sizes';
 const STAGE = /^STAGE ?(.*)$/;
 const UPLOADED = /([\d.,]+) (\S+)\/([\d.,]+) (\S+)$/;
 
+const PREPARING: CommandProgress = { stage: 'preparing', stageLabel: 'Preparing', fraction: null, cancellable: true };
+
 export const readCheckinProgress: ProgressReader = (previous, line) => {
-  if (line === 'CI_START') return { stage: 'preparing', stageLabel: 'Preparing', fraction: null, cancellable: true };
+  if (line === 'CI_START') return PREPARING;
   const stage = STAGE.exec(line);
   if (!stage) return previous;
 
@@ -29,8 +31,7 @@ export const readCheckinProgress: ProgressReader = (previous, line) => {
     // Nothing is committed until the server confirms: stopping while uploading leaves the changes as they were.
     return { stage: 'uploading', stageLabel: 'Uploading', bytesDone, bytesTotal, fraction: bytesTotal ? Math.min(1, bytesDone / bytesTotal) : 1, cancellable: true };
   }
-  if (previous?.bytesTotal !== undefined) return confirming(previous);
-  return { stage: 'preparing', stageLabel: 'Preparing', fraction: null, cancellable: true };
+  return previous?.bytesTotal !== undefined ? confirming(previous) : PREPARING;
 };
 
 /** The upload is done (all of it); the server is creating the changeset, which stopping now could leave half recorded. */
