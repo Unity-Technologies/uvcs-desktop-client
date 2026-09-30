@@ -10,7 +10,8 @@ import type { SwitchShelveRecords } from './switchShelveRecords';
 /**
  * Added files stay on disk as private files after the undo: they would show up as new files, and on a switch's target
  * (renamed `.private.0` where the target has the same path). They are moved into the app's data folder until the
- * shelve brings them back (`putBack`), and the record says where.
+ * shelve brings them back (`putBack`). `record` says where (`backup`, set on it and saved) before anything moves, so a
+ * failure halfway still finds them to put back.
  */
 export async function moveNewItemsAside(
   cm: CmClient,
