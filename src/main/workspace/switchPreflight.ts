@@ -2,8 +2,8 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { SwitchPreflight } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
 import { LOCK_LIST_FORMAT_ARGS, parseLocks } from '../cm/lockRecords';
-import { parsePendingChanges } from '../cm/pendingChangesXml';
-import { shelvableChanges, summarizePending, SWITCH_STATUS_ARGS } from './pendingSnapshot';
+import { shelvableChanges, summarizePending } from './pendingSnapshot';
+import { readPendingSnapshot } from './readPendingChanges';
 import { selectorSpec } from '@shared/domain/specs';
 import { bringDisabledReason, describeSelector } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
@@ -11,8 +11,7 @@ import { readWorkspaceIdentity, type WorkspaceIdentity } from './workspaceIdenti
 
 /** Reads what the pending changes allow before switching, so the app can offer the right choices. */
 export async function readSwitchPreflight(cm: CmClient, records: SwitchShelveRecords, workspacePath: string, targetSpec: string): Promise<SwitchPreflight> {
-  const [workspace, statusXml] = await Promise.all([readWorkspaceIdentity(cm, workspacePath), cm.query(SWITCH_STATUS_ARGS, { cwd: workspacePath })]);
-  const { changes } = parsePendingChanges(statusXml);
+  const [workspace, { changes }] = await Promise.all([readWorkspaceIdentity(cm, workspacePath), readPendingSnapshot(cm, workspacePath)]);
   const summary = summarizePending(changes);
   const needsChoice = summary.pendingCount > 0 && !summary.unchangedCheckoutsOnly && !summary.inMerge;
   const sourceSpec = selectorSpec(workspace.selector);

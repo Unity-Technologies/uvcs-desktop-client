@@ -1,7 +1,6 @@
 import type { ShelvedForUpdate, UpdateResolutions } from '@shared/domain/incoming';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
-import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { readUpdateProgress } from '../cm/progress/updateProgress';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { UPDATE_ARGS } from '../cm/updateArgs';
@@ -10,8 +9,9 @@ import { readIncomingChanges } from '../merge/incoming';
 import { unresolvedConflicts, updateWithMerge } from '../merge/updateWithMerge';
 import type { OperationContext } from '../operations/OperationTracker';
 import type { LeftChangesFinder } from './leftChanges';
-import { changedPaths, shelvedChangelists, SWITCH_STATUS_ARGS } from './pendingSnapshot';
+import { changedPaths, shelvedChangelists } from './pendingSnapshot';
 import { putShelvedChangesBack } from './putShelvedChangesBack';
+import { readPendingSnapshot } from './readPendingChanges';
 import { selectorObjectRef } from './selectorObjectRef';
 import { selectorSpec } from '@shared/domain/specs';
 import { describeSelector } from './switchSelectors';
@@ -49,7 +49,7 @@ export async function shelveBlockedAndUpdate(
   const objectRef = await selectorObjectRef(cm, workspacePath, workspace.selector);
   if (!objectRef) throw new Error(`Couldn't find ${describeSelector(workspace.selector)} in the repository, so nothing was shelved.`);
 
-  const snapshot = parsePendingChanges(await cm.query(SWITCH_STATUS_ARGS, { cwd: workspacePath }));
+  const snapshot = await readPendingSnapshot(cm, workspacePath);
   const blocked = new Set(incoming.blockedPaths);
   const changes = snapshot.changes.filter((change) => blocked.has(change.path));
 

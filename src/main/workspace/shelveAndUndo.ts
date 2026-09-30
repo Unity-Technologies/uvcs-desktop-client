@@ -2,13 +2,13 @@ import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { ShelvedAway } from '@shared/domain/shelve';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
-import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
 import type { LeftChangesFinder } from './leftChanges';
-import { changedPaths, shelvedChangelists, SWITCH_STATUS_ARGS } from './pendingSnapshot';
+import { changedPaths, shelvedChangelists } from './pendingSnapshot';
 import { putShelvedChangesBack } from './putShelvedChangesBack';
+import { readPendingSnapshot } from './readPendingChanges';
 import { selectorSpec } from '@shared/domain/specs';
 import { describeSelector } from './switchSelectors';
 import type { SwitchShelveRecords } from './switchShelveRecords';
@@ -41,7 +41,7 @@ export async function shelveAndUndo(
   context: OperationContext,
 ): Promise<ShelvedAway> {
   const { cm, records } = deps;
-  const snapshot = parsePendingChanges(await cm.query(SWITCH_STATUS_ARGS, { cwd: workspacePath }));
+  const snapshot = await readPendingSnapshot(cm, workspacePath);
   const changes = shelvedAwayChanges(snapshot.changes, paths);
   if (changes.some((change) => change.mergeInfo)) throw new Error(IN_MERGE);
 

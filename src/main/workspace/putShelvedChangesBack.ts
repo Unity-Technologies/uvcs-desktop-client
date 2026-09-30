@@ -1,10 +1,10 @@
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
-import { parsePendingChanges } from '../cm/pendingChangesXml';
 import type { OperationContext } from '../operations/OperationTracker';
 import type { LeftChangesFinder } from './leftChanges';
-import { changedPaths, SWITCH_STATUS_ARGS } from './pendingSnapshot';
+import { changedPaths } from './pendingSnapshot';
 import { putBack } from './privateBackups';
+import { readPendingSnapshot } from './readPendingChanges';
 import { applyShelveCleanly } from './applyShelveCleanly';
 
 /**
@@ -31,6 +31,6 @@ export async function putShelvedChangesBack(
 }
 
 async function allStillPending(cm: CmClient, workspacePath: string, paths: string[]): Promise<boolean> {
-  const pending = new Set(changedPaths(parsePendingChanges(await cm.query(SWITCH_STATUS_ARGS, { cwd: workspacePath })).changes));
+  const pending = new Set(changedPaths((await readPendingSnapshot(cm, workspacePath)).changes));
   return paths.length > 0 && paths.every((path) => pending.has(path));
 }

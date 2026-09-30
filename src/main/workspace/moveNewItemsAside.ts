@@ -2,9 +2,9 @@ import { join } from 'node:path';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
 import type { CmClient } from '../cm/CmClient';
-import { parsePendingChanges } from '../cm/pendingChangesXml';
 import { newItemPaths } from './pendingSnapshot';
 import { moveAside } from './privateBackups';
+import { readPrivatePaths } from './readPendingChanges';
 import type { SwitchShelveRecords } from './switchShelveRecords';
 
 /**
@@ -20,7 +20,7 @@ export async function moveNewItemsAside(
   record: SwitchShelveRecord,
   backupsRoot: string,
 ): Promise<void> {
-  const privatePaths = new Set(parsePendingChanges(await cm.query(['status', '--xml', '--private'], { cwd: workspacePath })).changes.map((change) => change.path));
+  const privatePaths = new Set(await readPrivatePaths(cm, workspacePath));
   const paths = newItemPaths(changes).filter((path) => privatePaths.has(path));
   if (paths.length === 0) return;
 
