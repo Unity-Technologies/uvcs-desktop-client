@@ -1,0 +1,129 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+// The trash's name comes from the platform, read as the modules load.
+vi.hoisted(() => Object.assign(globalThis, { window: { uvcs: { platform: 'darwin' } } }));
+
+vi.mock('../../api/client', () => import('./filesTestDoubles').then(({ fakeApi }) => ({ api: fakeApi })));
+vi.mock('../../app/operations/runOperation', () => import('./filesTestDoubles').then(({ fakeRunOperation, fakeRunAction }) => ({ runOperation: fakeRunOperation, runAction: fakeRunAction, runRead: fakeRunAction })));
+vi.mock('../../ui/dialog/confirm', () => import('./filesTestDoubles').then(({ fakeConfirm }) => ({ confirm: fakeConfirm })));
+vi.mock('../../ui/dialog/prompt', () => import('./filesTestDoubles').then(({ fakePrompt }) => ({ prompt: fakePrompt })));
+vi.mock('../../ui/toast/toastStore', () => import('./filesTestDoubles').then(({ fakeToast }) => ({ toast: fakeToast })));
+vi.mock('../../app/queryClient', async () => ({ queryClient: new (await import('@tanstack/react-query')).QueryClient() }));
+
+import type { TreeItem } from '@shared/domain/explorer';
+import { queryClient } from '../../app/queryClient';
+import { addItems, createItem, deleteItems, directoryListingKey, renameItem, targetDirectoryFor } from './fileOperations';
+import { doubles } from './filesTestDoubles';
+import { useFilesViewStore } from './filesViewStore';
+
+const ws = '/ws';
+const item = (path: string, changes: Partial<TreeItem> = {}): TreeItem =>
+  ({ path, name: path.slice(path.lastIndexOf('/') + 1), itemType: 'file', isPrivate: false, ...changes }) as TreeItem;
+const folder = (path: string, changes: Partial<TreeItem> = {}): TreeItem => item(path, { itemType: 'directory', ...changes });
+
+beforeEach(() => {
+  doubles.reset();
+  queryClient.clear();
+  useFilesViewStore.setState({ revealRequest: null });
+});
+
+describe('adding private items', () => {
+  it('adds folders with everything inside them, and files on their own', async () => {
+    await addItems(ws, [folder('assets', { isPrivate: true }), item('a.ts', { isPrivate: true }), item('assets2/b.ts', { isPrivate: true })]);
+    expect(doubles.writes).toEqual([
+      { method: 'explorer.addRecursive', args: [ws, ['assets']] },
+      { method: 'pendingChanges.add', args: [ws, ['a.ts', 'assets2/b.ts']] },
+    ]);
+  });
+});
+
+describe('deleting items', () => {
+  it('moves private items to the trash and removes controlled ones from version control, each after asking', async () => {
+    await deleteItems(ws, [item('notes.txt', { isPrivate: true }), item('src/a.ts'), folder('old')]);
+    expect(doubles.dialogs.map((dialog) => dialog.title)).toEqual(['Move notes.txt to the trash?', 'Delete 2 items?']);
+    expect(doubles.writes).toEqual([
+      { method: 'system.moveToTrash', args: [['/ws/notes.txt']] },
+      { method: 'pendingChanges.remove', args: [ws, ['src/a.ts', 'old']] },
+    ]);
+  });
+
+  it('deletes nothing the user said no to', async () => {
+    doubles.dialogAnswers.push(false);
+    await deleteItems(ws, [item('src/a.ts')]);
+    expect(doubles.dialogs.map((dialog) => dialog.title)).toEqual(['Delete a.ts?']);
+    expect(doubles.writes).toEqual([]);
+  });
+
+  it('asks once when every item is private', async () => {
+    await deleteItems(ws, [item('a.log', { isPrivate: true }), item('b.log', { isPrivate: true })]);
+    expect(doubles.dialogs.map((dialog) => dialog.title)).toEqual(['Move 2 files to the trash?']);
+  });
+});
+
+describe('renaming an item', () => {
+  it('moves a controlled item in version control, and selects it under its new name', async () => {
+    doubles.dialogAnswers.push('b.ts');
+    await renameItem(ws, item('src/a.ts'));
+    expect(doubles.writes).toEqual([{ method: 'explorer.move', args: [ws, 'src/a.ts', 'src/b.ts'] }]);
+    expect(useFilesViewStore.getState().revealRequest).toEqual({ path: 'src/b.ts', selected: undefined });
+  });
+
+  it('renames a private item on disk only, at the root too', async () => {
+    doubles.dialogAnswers.push('new.txt');
+    await renameItem(ws, item('old.txt', { isPrivate: true }));
+    expect(doubles.writes).toEqual([{ method: 'explorer.renamePrivate', args: [ws, 'old.txt', 'new.txt'] }]);
+  });
+
+  it('does nothing when cancelled or given the same name', async () => {
+    doubles.dialogAnswers.push(null, 'a.ts');
+    await renameItem(ws, item('src/a.ts'));
+    await renameItem(ws, item('src/a.ts'));
+    expect(doubles.writes).toEqual([]);
+  });
+
+  it("refuses a name another item of the folder has, in any case, but takes the item's own in another case", async () => {
+    queryClient.setQueryData(directoryListingKey(ws, 'src'), [item('src/a.ts'), item('src/Other.ts')]);
+    await renameItem(ws, item('src/a.ts'));
+    const validate = doubles.dialogs[0]!.validate!;
+    expect(validate('other.ts')).toBe('“Other.ts” already exists here');
+    expect(validate('A.ts')).toBeUndefined();
+    expect(validate('sub/a.ts')).toBe('A name can’t contain “/”');
+  });
+
+  it('says so when the rename fails, selecting nothing', async () => {
+    doubles.answers['explorer.move'] = () => {
+      throw new Error('The item is locked');
+    };
+    doubles.dialogAnswers.push('b.ts');
+    await renameItem(ws, item('a.ts'));
+    expect(doubles.toasts).toEqual([{ kind: 'error', title: "Couldn't rename a.ts", detail: 'The item is locked' }]);
+    expect(useFilesViewStore.getState().revealRequest).toBeNull();
+  });
+});
+
+describe('creating an item', () => {
+  it('creates it in the folder, or at the root, and selects it', async () => {
+    doubles.dialogAnswers.push('intro.md', 'Makefile');
+    await createItem(ws, 'docs', 'file');
+    await createItem(ws, '', 'file');
+    expect(doubles.writes).toEqual([
+      { method: 'explorer.create', args: [ws, 'docs/intro.md', 'file'] },
+      { method: 'explorer.create', args: [ws, 'Makefile', 'file'] },
+    ]);
+    expect(useFilesViewStore.getState().revealRequest?.path).toBe('Makefile');
+  });
+
+  it('takes a name with folders, created along with it, but none the folder has', async () => {
+    queryClient.setQueryData(directoryListingKey(ws, ''), [folder('docs')]);
+    await createItem(ws, '', 'directory');
+    const validate = doubles.dialogs[0]!.validate!;
+    expect(validate('docs/guides')).toBeUndefined();
+    expect(validate('DOCS')).toBe('“docs” already exists here');
+  });
+
+  it('goes into the selected folder, or the folder of the selected file', () => {
+    expect(targetDirectoryFor(folder('src/lib'))).toBe('src/lib');
+    expect(targetDirectoryFor(item('src/lib/a.ts'))).toBe('src/lib');
+    expect(targetDirectoryFor(undefined)).toBe('');
+  });
+});
