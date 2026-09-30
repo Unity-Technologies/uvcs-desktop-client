@@ -7,6 +7,7 @@ import { inCmPathForm } from './cmPathForm';
 import type { CmResult } from './CmResult';
 import { CmShellPool } from './CmShellPool';
 import { extractErrorMessage } from './errorMessage';
+import { commandLineForLog, outputForLog } from './hideSecrets';
 import { runsLong } from './longCommands';
 import { runCmProcess } from './runCmProcess';
 import { canRunInShell } from './shellCommandLine';
@@ -110,7 +111,7 @@ export class CmClient {
     const entry = this.log(args, cwd, startedAt, result, useShell);
 
     if (result.exitCode !== 0) {
-      throw new CmError(extractErrorMessage(result.output), {
+      throw new CmError(outputForLog(extractErrorMessage(result.output)), {
         commandLine: entry.commandLine,
         exitCode: entry.exitCode,
         output: entry.output,
@@ -129,10 +130,10 @@ export class CmClient {
     return shellCommandResult(result.output);
   }
 
-  /** Logs the command, clipped (`clipForLog`); returns it whole, for the error that reports it. */
+  /** Logs the command with its secrets hidden (`hideSecrets`) and clipped (`clipForLog`); returns it unclipped, for the error that reports it. */
   private log(args: string[], cwd: string, startedAt: number, result: CmResult, viaShell: boolean): CommandLogEntry {
-    const commandLine = `cm ${args.join(' ')}`;
-    const output = result.exitCode === 0 ? '' : result.output.trim();
+    const commandLine = commandLineForLog(args);
+    const output = result.exitCode === 0 ? '' : outputForLog(result.output.trim());
     const entry: CommandLogEntry = {
       id: this.nextCommandId++,
       commandLine,

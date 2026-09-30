@@ -162,6 +162,18 @@ and the app keeps the decision.
   only to run `cm`, open a terminal, or from `main/merge/mergeTools/launch.ts`, imported only by `mergeToolsService`.
 - `cm` processes run with stdin closed, so a console prompt fails instead of hanging.
 
+## Secrets
+
+Every command is logged, sent to the window's command log and quoted in its `CmError`, so a secret passed to `cm` is
+hidden before any of them sees it: `commandLineForLog` and `outputForLog` (`main/cm/hideSecrets.ts`) show the values of
+`SECRET_OPTIONS` (`--pwd=`, which a Git sync takes) and a URL's password (`https://user:token@host`) as `•••`. A new
+option that carries a secret joins `SECRET_OPTIONS`. `cm sync` takes the password only on its command line, so it
+still shows in the process list while the sync runs; never pass a secret where `cm` offers a file instead.
+
+The renderer is untrusted: windows run with `contextIsolation` and `sandbox` (`createMainWindow`), reach main only
+through the one invoke channel, and never open a window of their own: a link that would opens outside the app
+(`setWindowOpenHandler`, `shell.openExternal`).
+
 ## Operation progress
 
 Long operations report a structured `OperationProgress` (`shared/domain/operation.ts`): a stage (`preparing`,

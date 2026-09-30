@@ -1,4 +1,5 @@
 import type { CmClient } from './CmClient';
+import { commandLineForLog } from './hideSecrets';
 
 /**
  * Commands that only read this machine: client configuration, workspace metadata, the disk. `status` scans the disk
@@ -43,6 +44,6 @@ export function warnOnRepeatedServerCommands(cm: Pick<CmClient, 'onCommandStarte
   cm.onCommandStarted(({ args, cwd }) => {
     if (!isServerCommand(args) || !detector.record(`${cwd}\n${args.join(' ')}`, Date.now())) return;
     const { maxRuns, windowMs } = REPEATED_COMMAND_BUDGET;
-    console.warn(`[server budget] cm ${args.join(' ')} ran more than ${maxRuns} times in ${windowMs / 1000} s (${cwd}). See "Server budget" in docs/ARCHITECTURE.md.`);
+    console.warn(`[server budget] ${commandLineForLog(args)} ran more than ${maxRuns} times in ${windowMs / 1000} s (${cwd}). See "Server budget" in docs/ARCHITECTURE.md.`);
   });
 }
