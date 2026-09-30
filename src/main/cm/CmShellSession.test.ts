@@ -57,6 +57,28 @@ describe('CmShellSession', () => {
     expect(next).toEqual({ output: 'in-step', exitCode: 0 });
   });
 
+  it('fails the running command when cm shell ends, and runs the next ones on a new process', async () => {
+    session = new CmShellSession(process.execPath, fakeCmFolder);
+    const ended = session.run(['exit']);
+    const next = session.run(['echo', 'restarted']);
+
+    await expect(ended).rejects.toThrow('cm shell exited unexpectedly');
+    await expect(next).resolves.toEqual({ output: 'restarted', exitCode: 0 });
+  });
+
+  it('stops a read that takes longer than two minutes', async () => {
+    vi.useFakeTimers();
+    const shell = printedShellProcess();
+    vi.mocked(spawn).mockReturnValueOnce(shell.process);
+    session = new CmShellSession('cm', '/wk');
+    const stuck = session.run(['find', 'changeset']);
+    shell.print('Searching...\n');
+
+    vi.advanceTimersByTime(shellCommandTimeoutMs(['find', 'changeset']));
+
+    await expect(stuck).rejects.toThrow('took too long');
+  });
+
   it('does not take output paused on a colon for a prompt while the main process is busy', async () => {
     vi.useFakeTimers();
     const shell = printedShellProcess();
