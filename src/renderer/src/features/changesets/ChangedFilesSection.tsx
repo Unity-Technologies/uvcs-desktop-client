@@ -44,8 +44,8 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
   const { visible, query, bar } = useChangeFilter(entries ?? [], diffEntryKey, diffEntryTone);
   const listRef = useRef<HTMLDivElement>(null);
   const workspacePath = useWorkspacePath();
-  // The same menu as in the diff, review marks included.
-  const review = useDiffReview(target, entries ?? NO_ENTRIES);
+  // The same menu as in the diff, review marks included, read once the files are asked for or shown from the cache.
+  const review = useDiffReview(target, entries ?? NO_ENTRIES, requested || entries !== undefined);
   const shown = entries && !collapsed ? entries : undefined;
 
   return (

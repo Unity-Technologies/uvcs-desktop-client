@@ -14,15 +14,18 @@ interface DiffReview extends ReviewMode<DiffEntry> {
   marks: DiffReviewMarks;
 }
 
-/** Review mode on the files of a committed diff: marks kept per repository, by the diff's name and the revision reviewed. */
-export function useDiffReview(target: DiffTarget, entries: DiffEntry[]): DiffReview {
+/**
+ * Review mode on the files of a committed diff: marks kept per repository, by the diff's name and the revision reviewed.
+ * `enabled` false reads no marks yet (a details panel whose changed files aren't asked for).
+ */
+export function useDiffReview(target: DiffTarget, entries: DiffEntry[], enabled = true): DiffReview {
   const workspacePath = useWorkspacePath();
   const repository = useWorkspaceInfo().data?.repository ?? '';
   const reviewTarget: DiffReviewTarget = { workspacePath, repository, name: diffReviewName(target) };
   const { data } = useQuery({
     queryKey: diffReviewMarksKey(reviewTarget),
     queryFn: () => api.review.diffMarks(repository, reviewTarget.name),
-    enabled: repository !== '',
+    enabled: enabled && repository !== '',
     staleTime: Infinity,
   });
   const marks = useMemo<DiffReviewMarks>(() => new Map((data ?? []).map((mark) => [mark.path, mark.revisionId])), [data]);
