@@ -54,6 +54,7 @@ export function FilesView() {
   const rows = useMemo(() => buildFileTreeRows({ childrenByDirectory, expanded, root }), [childrenByDirectory, expanded, root]);
   const selectedItems = useMemo(() => rows.filter((row) => selection.selected.has(row.item.path)).map((row) => row.item), [rows, selection]);
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
+  const focusedMenu = focused ? fileMenu(workspacePath, [focused], pendingIndex, locks) : [];
 
   const revealRequest = useFilesViewStore((state) => state.revealRequest);
   useEffect(() => {
@@ -128,14 +129,14 @@ export function FilesView() {
         }
         details={
           focused && workspace && isWorkspaceRoot(focused) ? (
-            <WorkspaceRootDetails workspace={workspace} menu={fileMenu(workspacePath, [focused], pendingIndex, locks)} />
+            <WorkspaceRootDetails workspace={workspace} menu={focusedMenu} />
           ) : focused ? (
             <ItemDetailsPane
               workspacePath={workspacePath}
               item={focused}
               pendingIndex={pendingIndex}
               lock={locks.get(focused.path)}
-              menu={fileMenu(workspacePath, [focused], pendingIndex, locks)}
+              menu={focusedMenu}
               onSelectFolder={selectFolder}
               folderContents={childrenByDirectory.get(focused.path)}
             />
