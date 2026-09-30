@@ -44,9 +44,20 @@ export function pendingStatusInChangelists(changelists: { name: string; descript
   return `<?xml version="1.0" encoding="utf-8"?><StatusOutput><WorkspaceStatus><Status><Changeset>1</Changeset></Status></WorkspaceStatus><Changelists>${lists}</Changelists></StatusOutput>`;
 }
 
+/** `cm find branch … --xml` finding branches by name and object id. */
+export function branchesFound(...branches: { name: string; id: number }[]): string {
+  const records = branches
+    .map(
+      ({ name, id }) =>
+        `<BRANCH><ID>${id}</ID><COMMENT></COMMENT><DATE>2026-09-25T23:16:33+02:00</DATE><OWNER>me</OWNER><NAME>${name}</NAME><PARENT>/main</PARENT><REPOSITORY>eco</REPOSITORY><REPNAME>eco</REPNAME><REPSERVER>local</REPSERVER><TYPE>T</TYPE><CHANGESET>1</CHANGESET><GUID>9b8e2f7a-58f3-4c43-9d83-3c2f1f5c${String(id).padStart(4, '0')}</GUID></BRANCH>`,
+    )
+    .join('');
+  return `<?xml version="1.0" encoding="utf-8" ?><PLASTICQUERY>${records}</PLASTICQUERY>`;
+}
+
 /** `cm find branch … --xml` finding `name` with object id `id`. */
 export function branchFound(name: string, id: number): string {
-  return `<?xml version="1.0" encoding="utf-8" ?><PLASTICQUERY><BRANCH><ID>${id}</ID><COMMENT></COMMENT><DATE>2026-09-25T23:16:33+02:00</DATE><OWNER>me</OWNER><NAME>${name}</NAME><PARENT>/main</PARENT><REPOSITORY>eco</REPOSITORY><REPNAME>eco</REPNAME><REPSERVER>local</REPSERVER><TYPE>T</TYPE><CHANGESET>1</CHANGESET><GUID>9b8e2f7a-58f3-4c43-9d83-3c2f1f5c1a10</GUID></BRANCH></PLASTICQUERY>`;
+  return branchesFound({ name, id });
 }
 
 /** `cm find changeset … --xml` on `branch`, newest first as asked (`order by changesetid desc`). */

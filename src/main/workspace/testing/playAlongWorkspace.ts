@@ -31,8 +31,8 @@ export interface WorkspaceScenario {
   changelists?: { name: string; description: string; paths: string[] }[];
   /** Paths the user holds locks on in this workspace, as `cm lock list` names them (`/src/a.txt`), per repository. */
   locks?: { repository: string; path: string }[];
-  /** Automatic shelves already on the server, left by another client (`{ id, comment }`). */
-  shelvesOnServer?: { id: number; comment: string }[];
+  /** Shelves already on the server (left by another client, or by this app earlier), with the changes they hold. */
+  shelvesOnServer?: { id: number; comment: string; changes: Record<string, string> }[];
   /** Branches `cm find branch` finds; every branch of `BRANCH_IDS` by default. */
   knownBranches?: string[];
   fail?: {
@@ -78,7 +78,7 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
   let pending: Record<string, string> = { ...scenario.pending };
   let changelists = scenario.changelists ?? [];
   const privatePaths = new Set<string>(Object.keys(pending).filter((path) => pending[path] === 'PR'));
-  const shelves = new Map<number, Shelve>();
+  const shelves = new Map<number, Shelve>((scenario.shelvesOnServer ?? []).map(({ id, comment, changes }) => [id, { comment, changes, addedContents: {} }]));
   const deletedShelves: number[] = [];
   let nextShelveId = 7;
 
@@ -117,6 +117,8 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
       if (isAdded(codes)) privatePaths.add(path);
       delete pending[path];
     }
+    // The changelists stay; what they held isn't pending anymore, and comes back in the default one.
+    changelists = changelists.map((list) => ({ ...list, paths: list.paths.filter((path) => path in pending) }));
     return '';
   };
 
@@ -162,10 +164,7 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
     getworkspacefrompath: WORKSPACE_NAMES,
     'find branch': findBranch,
     'find shelve': () =>
-      shelvesFound(
-        ...(scenario.shelvesOnServer ?? []),
-        ...[...shelves].filter(([, shelve]) => shelve.comment.startsWith(AUTOMATIC_SHELVE_COMMENT)).map(([id, shelve]) => ({ id, comment: shelve.comment })),
-      ),
+      shelvesFound(...[...shelves].filter(([, shelve]) => shelve.comment.startsWith(AUTOMATIC_SHELVE_COMMENT)).map(([id, shelve]) => ({ id, comment: shelve.comment }))),
     'status --xml': statusXml,
     'status --short': () => Object.entries(pending).filter(([, codes]) => codes !== 'PR').map(([path, codes]) => `${codes} ${path}\n`).join(''),
     'shelveset create': createShelve,
@@ -190,8 +189,13 @@ export function playAlongWorkspace(workspacePath: string, scenario: WorkspaceSce
         .map((record) => `${record}\u001e`)
         .join(''),
     changelist: (args) => {
-      if (args[1] === 'create') changelists = [...changelists, { name: args[2]!, description: args[3]!, paths: [] }];
-      else changelists = changelists.map((list) => (list.name === args[1] ? { ...list, paths: [...list.paths, ...args.slice(3).map(relative)] } : list));
+      if (args[1] === 'create') {
+        if (changelists.some((list) => list.name === args[2])) throw new Error(`The changelist ${args[2]} already exists.`);
+        changelists = [...changelists, { name: args[2]!, description: args[3]!, paths: [] }];
+      } else {
+        const added = args.slice(3).map(relative);
+        changelists = changelists.map((list) => (list.name === args[1] ? { ...list, paths: [...new Set([...list.paths, ...added])] } : list));
+      }
       return '';
     },
   });

@@ -1,5 +1,8 @@
+import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { parseSelectorFile } from './selectorFile';
+import { parseSelectorFile, readWorkspaceHeads } from './selectorFile';
 
 describe('parseSelectorFile', () => {
   it('reads the repository and smart branch', () => {
@@ -46,5 +49,24 @@ describe('parseSelectorFile', () => {
   it('rejects a repository without its server', () => {
     expect(parseSelectorFile('repository "game"\n path "/"\n br "/main"')).toBeNull();
     expect(parseSelectorFile('')).toBeNull();
+  });
+});
+
+describe('readWorkspaceHeads', () => {
+  it("reads each workspace's selector file, leaving out those it can't read or understand", async () => {
+    const root = await mkdtemp(join(tmpdir(), 'uvcs-heads-'));
+    const workspace = async (name: string, selector?: string): Promise<string> => {
+      const path = join(root, name);
+      await mkdir(join(path, '.plastic'), { recursive: true });
+      if (selector !== undefined) await writeFile(join(path, '.plastic', 'plastic.selector'), selector);
+      return path;
+    };
+    const game = await workspace('game', 'repository "game@local"\n  path "/"\n    br "/main/task"\n');
+    const unreadable = await workspace('no-selector');
+    const garbled = await workspace('garbled', 'not a selector');
+
+    expect(await readWorkspaceHeads([game, unreadable, garbled, join(root, 'gone')])).toEqual({
+      [game]: { repository: 'game@local', selector: { kind: 'branch', name: '/main/task' } },
+    });
   });
 });
