@@ -11,7 +11,8 @@ import {
 } from '@shared/domain/merge';
 import { spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
-import { directoryConflictIdentity, parseCreatedChangeset, parseDestinationMoved, parseMergePlan } from '../cm/mergeOutput';
+import { parseCreatedChangeset, parseDestinationMoved, parseMergePlan } from '../cm/mergeOutput';
+import { directoryConflictIdentity } from './directoryConflictIdentity';
 import { readMergeProgress } from '../cm/progress/mergeProgress';
 import { withTempDirectory } from '../files/tempFile';
 import { retryWhileBusy } from '../files/whileBusy';
