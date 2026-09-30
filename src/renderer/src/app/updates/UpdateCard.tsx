@@ -15,7 +15,7 @@ const GLIDE_MS = 300;
 
 /** The corner card of an update downloading, then ready to install until put off (`updateCardOf`). */
 export function UpdateCard() {
-  const card = useUpdateStore((state) => updateCardOf(state.status, state.dismissedVersion));
+  const card = useUpdateStore((state) => updateCardOf(state.status, state.dismissedVersion, state.aboutOpen || state.releaseNotesOpen));
   const hasNotes = useUpdateReleaseNotes().length > 0;
   if (!card) return null;
 
