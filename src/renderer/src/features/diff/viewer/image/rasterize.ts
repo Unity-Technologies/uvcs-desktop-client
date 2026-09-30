@@ -10,7 +10,7 @@ import type { DecodedImage } from './useDecodedImage';
 const cache = new WeakMap<HTMLImageElement, RgbaBitmap>();
 
 export function rasterize(image: DecodedImage): RgbaBitmap {
-  const hit = cache.get(image.el);
+  const hit = cache.get(image.element);
   if (hit) return hit;
   const canvas = document.createElement('canvas');
   canvas.width = image.width;
@@ -23,9 +23,9 @@ export function rasterize(image: DecodedImage): RgbaBitmap {
       height: image.height,
     };
   }
-  ctx.drawImage(image.el, 0, 0, image.width, image.height);
+  ctx.drawImage(image.element, 0, 0, image.width, image.height);
   const data = ctx.getImageData(0, 0, image.width, image.height);
   const bitmap = { data: data.data, width: data.width, height: data.height };
-  cache.set(image.el, bitmap);
+  cache.set(image.element, bitmap);
   return bitmap;
 }

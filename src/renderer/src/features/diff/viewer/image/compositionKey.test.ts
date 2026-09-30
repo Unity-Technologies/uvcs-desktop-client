@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { compositionKey } from './compositionKey';
 import type { DecodedImage } from './useDecodedImage';
 
-const decoded = (src: string): DecodedImage => ({ src, el: {} as HTMLImageElement, width: 4_000, height: 4_000 });
+const decoded = (src: string): DecodedImage => ({ src, element: {} as HTMLImageElement, width: 4_000, height: 4_000 });
 
 describe('compositionKey', () => {
   it('names a pair by its decoded images and anchor, however big their data URLs', () => {
