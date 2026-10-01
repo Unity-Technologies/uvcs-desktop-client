@@ -122,7 +122,8 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
 - One-shot screenshots: `node scripts/screenshot.mjs /tmp/shot.png open:<workspace> key:Meta+3` (steps in its header;
   it prints renderer errors as `[renderer]` and `[pageerror]`).
 - Sandboxes on a local server: `scripts/sandboxes/demo.sh` (a small game project), `branch-explorer.sh` (a branch
-  topology), `long-branch-names.sh` (very long, nested and non-ASCII branch names; a task that conflicts).
+  topology), `long-branch-names.sh` (very long, nested and non-ASCII branch names; a task that conflicts), `moves.sh`
+  (every kind of move, some changed too, checked in and pending).
   `scripts/perf/soak.mjs` catches leaks.
 - `UVCS_RENDERER_PLATFORM=win32` (or `linux`) previews another OS's shortcuts, copy and layout from a Mac (the page
   only: the menus and window frame stay the Mac's).
