@@ -2,6 +2,7 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import type { CmResult } from './CmResult';
 import { changesWorkspace } from '../watch/changesWorkspace';
 import { OutputBuffer } from './OutputBuffer';
+import { CmOutputTooLargeError, MAX_OUTPUT_LENGTH } from './outputLimit';
 import { SHELL_ARGS, toShellCommandLine } from './shellCommandLine';
 import { resultLineAtEnd } from './shellResultLine';
 /** A trailing line without a newline that looks like a question, e.g. "Select your system [0-1]:". */
@@ -19,9 +20,13 @@ const STARTUP_PROBE = ['version'];
 export interface CmShellSessionLimits {
   /** How long output may pause on a question-like line before it counts as a prompt. */
   promptStallMs?: number;
+  /** The most characters a command may print (`MAX_OUTPUT_LENGTH`). */
+  maxOutputLength?: number;
 }
 
 interface PendingCommand {
+  /** The command's name (`find`), for the errors that name it. */
+  command: string;
   commandLine: string;
   timeoutMs: number;
   resolve: (result: CmResult) => void;
@@ -48,13 +53,15 @@ export class CmShellSession {
   /** Whether the current process answered a command yet; until then it's starting, which takes about a second. */
   private answered = false;
   private readonly promptStallMs: number;
+  private readonly maxOutputLength: number;
 
   constructor(
     private readonly cmPath: string,
     private readonly cwd: string,
-    { promptStallMs = PROMPT_STALL_MS }: CmShellSessionLimits = {},
+    { promptStallMs = PROMPT_STALL_MS, maxOutputLength = MAX_OUTPUT_LENGTH }: CmShellSessionLimits = {},
   ) {
     this.promptStallMs = promptStallMs;
+    this.maxOutputLength = maxOutputLength;
   }
 
   get pendingCount(): number {
@@ -78,7 +85,7 @@ export class CmShellSession {
 
   run(args: string[]): Promise<CmResult> {
     return new Promise((resolve, reject) => {
-      this.queue.push({ commandLine: toShellCommandLine(args), timeoutMs: shellCommandTimeoutMs(args), resolve, reject });
+      this.queue.push({ command: args[0] ?? '', commandLine: toShellCommandLine(args), timeoutMs: shellCommandTimeoutMs(args), resolve, reject });
       this.runNext();
     });
   }
@@ -96,7 +103,7 @@ export class CmShellSession {
     if (this.running || this.queue.length === 0) return;
 
     this.running = this.queue.shift()!;
-    this.timeoutTimer = setTimeout(() => this.abortRunning('The cm command took too long and was stopped.'), this.running.timeoutMs);
+    this.timeoutTimer = setTimeout(() => this.abortRunning(new Error('The cm command took too long and was stopped.')), this.running.timeoutMs);
     this.ensureProcess().stdin.write(`${this.running.commandLine}\n`);
   }
 
@@ -117,6 +124,11 @@ export class CmShellSession {
   }
 
   private onOutput(text: string): void {
+    // Past the limit the output could never be read as one string: the command is stopped before it gets there.
+    if (this.buffer.length + text.length > this.maxOutputLength) {
+      this.abortRunning(new CmOutputTooLargeError(this.running?.command ?? 'shell', this.maxOutputLength));
+      return;
+    }
     this.buffer.append(text);
     this.received += text.length;
     this.watchForPrompt();
@@ -161,19 +173,19 @@ export class CmShellSession {
       () =>
         setImmediate(() => {
           if (this.received !== receivedBefore || !this.running) return;
-          this.abortRunning(`cm is waiting for input ("${lastLine.trim()}"). Check your credentials for this server.`);
+          this.abortRunning(new Error(`cm is waiting for input ("${lastLine.trim()}"). Check your credentials for this server.`));
         }),
       this.promptStallMs,
     );
   }
 
   /** Kills the process (cm ignores SIGTERM while prompting), fails the running command and continues with the queue. */
-  private abortRunning(reason: string): void {
+  private abortRunning(reason: Error): void {
     const child = this.process;
     this.process = null;
     this.buffer.clear();
     child?.kill('SIGKILL');
-    if (this.running) this.finishRunning().reject(new Error(reason));
+    if (this.running) this.finishRunning().reject(reason);
     this.runNext();
   }
 
