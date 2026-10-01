@@ -59,6 +59,11 @@
   padding: var(--space-3) var(--space-5) var(--space-5);
 }
 
+/* A primary label too long for the footer is cut, never Cancel and the other short ones beside it. */
+.footer > :not([type='submit']) {
+  flex-shrink: 0;
+}
+
 /* A question with no body (a confirmation): its buttons keep the body's distance from the text. */
 .header + .footer {
   padding-top: var(--space-5);
