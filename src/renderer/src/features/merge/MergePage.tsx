@@ -36,7 +36,7 @@ export function MergePage({ page }: PageProps<'merge'>) {
   }
 
   if (plan.status !== 'ready') return <MergeNotPossible plan={plan} />;
-  return <MergeSession key={JSON.stringify(page.request)} workspacePath={workspacePath} request={page.request} plan={plan} onCompleted={setCompletion} />;
+  return <MergeSession key={JSON.stringify(page.request)} workspacePath={workspacePath} request={page.request} plan={plan} task={page.task} onCompleted={setCompletion} />;
 }
 
 function MergeNotPossible({ plan }: { plan: MergePlan }) {

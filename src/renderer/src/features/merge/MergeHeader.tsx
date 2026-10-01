@@ -34,6 +34,8 @@ interface MergeHeaderProps {
    * way, which takes the status's place.
    */
   run?: { control: ReactNode; running: boolean };
+  /** What else the merge does once it's in, under the comment (finishing a task: `TaskMergeOptions`). */
+  options?: ReactNode;
   mergeButtonRef?: Ref<HTMLButtonElement>;
 }
 
@@ -50,6 +52,7 @@ export function MergeHeader({
   merging,
   onMerge,
   run,
+  options,
   mergeButtonRef,
 }: MergeHeaderProps) {
   useShortcut(hotkey('merge'), onMerge, canMerge);
@@ -101,6 +104,7 @@ export function MergeHeader({
           {mergeButton}
         </div>
       )}
+      {intoServerBranch && options}
 
       {!intoServerBranch && <BehindHeadNotice />}
       {plan.warnings.map((warning) => (

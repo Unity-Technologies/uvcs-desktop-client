@@ -1,8 +1,10 @@
 import { fakeApi } from '../../testing/fakeWindow';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { MergeRequest } from '@shared/domain/merge';
 import { navigation } from '../../app/navigation/navigationStore';
+import { useFinishedTasksStore } from '../mergeTask/finishedTask';
+import type { TaskMerge } from '../mergeTask/taskMerge';
 import { pressToastAction, shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
 import { completeMerge } from './mergeOperations';
 
@@ -70,6 +72,77 @@ describe('completing a merge', () => {
     expect(await completeMerge(ws, intoServerBranch, resolutions)).toBeNull();
     expect(whereTheWindowIs().pages).toEqual([{ kind: 'merge', request: { kind: 'merge', sourceSpec: 'cs:42', destinationBranch: '/main' } }]);
     expect(shownToasts().map(({ kind, title }) => ({ kind, title }))).toEqual([{ kind: 'info', title: '/main moved while merging' }]);
+  });
+
+  describe('finishing a task', () => {
+    const task: TaskMerge = { branch: { id: 7, name: '/main/task001', parent: '/main', comment: '' }, choices: { markReviewed: true, hideBranch: true } };
+    const review = { id: 12, title: 'Task 001', status: 'Under review' as const, owner: 'ana', assignee: 'bob', date: '2026-09-01' };
+    const finishTask: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/task001', destinationBranch: '/main' };
+    const writes = () => fakeApi.calls().map(({ method, args }) => [method, ...args.slice(1, 3)]);
+
+    beforeEach(() => {
+      fakeApi.answer('codeReviews.update', () => undefined);
+      fakeApi.answer('branches.setHidden', () => undefined);
+      useFinishedTasksStore.setState({ merged: {} });
+    });
+
+    it('marks its review reviewed, hides its branch and remembers where it landed, for Changes to say what is next', async () => {
+      fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
+      navigation.openPage({ kind: 'merge', request: finishTask, task });
+
+      await completeMerge(ws, finishTask, resolutions, { task, review });
+
+      expect(writes()).toEqual([
+        ['merge.run', finishTask, resolutions],
+        ['codeReviews.update', 12, { status: 'Reviewed' }],
+        ['branches.setHidden', ['/main/task001'], true],
+      ]);
+      expect(useFinishedTasksStore.getState().merged[ws]).toEqual({ branch: '/main/task001', destination: '/main', changesetId: 42, hidden: true });
+      expect(whereTheWindowIs()).toEqual({ view: 'changes', pages: [] });
+      expect(shownToasts()).toEqual([{ kind: 'success', title: 'Merged /main/task001 into /main (cs:42)', action: 'Show in Branch Explorer' }]);
+    });
+
+    it('refreshes only the reviews and the branch lists besides what the new changeset changes', async () => {
+      fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
+      const refreshed = watchRefreshes(ws);
+
+      await completeMerge(ws, finishTask, resolutions, { task, review });
+
+      expect(refreshed()).toEqual(['branchExplorer', 'branches', 'changesets', 'codeReviews', 'history', 'incoming', 'locks']);
+    });
+
+    it('still finishes when marking the review fails, telling so', async () => {
+      fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
+      fakeApi.answer('codeReviews.update', () => {
+        throw new Error('No permission');
+      });
+
+      await completeMerge(ws, finishTask, resolutions, { task, review });
+
+      expect(shownToasts().filter(({ kind }) => kind === 'error').map(({ title }) => title)).toEqual(["Couldn't mark the code review as reviewed"]);
+      expect(writes().map(([method]) => method)).toEqual(['merge.run', 'codeReviews.update', 'branches.setHidden']);
+    });
+
+    it('leaves the task as it is until the merge that finishes it, when the destination moved, which carries the choices', async () => {
+      fakeApi.answer('merge.run', () => ({ changesetId: 42, destinationMoved: true }));
+      navigation.openPage({ kind: 'merge', request: finishTask, task });
+
+      await completeMerge(ws, finishTask, resolutions, { task, review });
+
+      expect(writes().map(([method]) => method)).toEqual(['merge.run']);
+      expect(useFinishedTasksStore.getState().merged[ws]).toBeUndefined();
+      expect(whereTheWindowIs().pages).toEqual([{ kind: 'merge', request: { kind: 'merge', sourceSpec: 'cs:42', destinationBranch: '/main' }, task }]);
+    });
+
+    it('names the task in the toast of the merge that finishes it', async () => {
+      fakeApi.answer('merge.run', () => ({ changesetId: 43 }));
+      const followUp: MergeRequest = { kind: 'merge', sourceSpec: 'cs:42', destinationBranch: '/main' };
+
+      await completeMerge(ws, followUp, resolutions, { task, review });
+
+      expect(shownToasts()).toEqual([{ kind: 'success', title: 'Merged /main/task001 into /main (cs:43)', action: 'Show in Branch Explorer' }]);
+      expect(useFinishedTasksStore.getState().merged[ws]).toEqual({ branch: '/main/task001', destination: '/main', changesetId: 43, hidden: true });
+    });
   });
 
   it('stays on the page when the merge fails', async () => {

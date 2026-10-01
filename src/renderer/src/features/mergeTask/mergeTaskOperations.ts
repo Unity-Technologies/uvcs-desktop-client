@@ -1,4 +1,3 @@
-import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { MergeRequest, MergeResult } from '@shared/domain/merge';
 import { api } from '../../api/client';
 import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
@@ -6,15 +5,7 @@ import { isAffectedByBranchList, isAffectedByCodeReviews, isAffectedByNewChanges
 import { toast } from '../../ui/toast/toastStore';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { useFinishedTasksStore } from './finishedTask';
-
-/** What else finishing a task does once it's merged. */
-export interface TaskEnding {
-  /** The task branch, e.g. `/main/t1`. */
-  taskBranch: string;
-  /** Marked as reviewed once merged. */
-  review?: CodeReviewSummary;
-  hideBranch: boolean;
-}
+import type { TaskEnding } from './taskMerge';
 
 interface FinishTaskOptions extends TaskEnding {
   comment: string;

@@ -5,28 +5,40 @@ import { runOperation, type OperationSuccess } from '../../app/operations/runOpe
 import { isAffectedByCheckinOrUpdate, isAffectedByNewChangesets, isAffectedByShelveApplied } from '../../app/refresh/refreshScopes';
 import { toast } from '../../ui/toast/toastStore';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
+import { finishMergedTask } from '../mergeTask/mergeTaskOperations';
+import { taskEnding, type FinishingTask, type TaskMerge } from '../mergeTask/taskMerge';
 import { describeSpec } from './mergeDescription';
 
 /**
  * Runs the merge. Resolves with its result for the page to tell what happened, or null when there's nothing more to
  * show there: it failed, or it merged into a branch on the server, which goes back to where the merge was opened from
  * with a toast naming the new changeset (or opens the merge that finishes it, when its destination moved meanwhile).
+ * A task merged so is finished as picked on the page (`finishMergedTask`).
  */
-export async function completeMerge(workspacePath: string, request: MergeRequest, resolutions: MergeResolutions): Promise<MergeResult | null> {
+export async function completeMerge(
+  workspacePath: string,
+  request: MergeRequest,
+  resolutions: MergeResolutions,
+  finishing?: FinishingTask,
+): Promise<MergeResult | null> {
+  const sourceName = finishing?.task.branch.name ?? describeSpec(request.sourceSpec);
   const result = await runOperation({
     title: 'Merging',
     workspacePath,
     run: (operationId) => api.merge.run(workspacePath, request, resolutions, operationId),
     affects: mergeRefreshScope(request),
-    success: (merged) => mergeSuccess(request, merged),
+    success: (merged) => mergeSuccess(request, sourceName, merged),
   });
   if (!result) return null;
-  if (!request.destinationBranch) return result;
+  const destination = request.destinationBranch;
+  if (!destination) return result;
 
   navigation.goBack();
   if (result.destinationMoved) {
-    toast.info(`${request.destinationBranch} moved while merging`, destinationMovedExplanation(result.changesetId, request.destinationBranch));
-    openMerge(followUpMerge(result, request.destinationBranch));
+    toast.info(`${destination} moved while merging`, destinationMovedExplanation(result.changesetId, destination));
+    openMerge(followUpMerge(result, destination), finishing?.task);
+  } else if (finishing) {
+    await finishMergedTask(workspacePath, taskEnding(finishing), { destination, changesetId: result.changesetId });
   }
   return null;
 }
@@ -43,11 +55,11 @@ function mergeRefreshScope(request: MergeRequest): (queryKey: readonly unknown[]
  * How a merge's progress card ends: the workspace has the result to check in, or the server a new changeset, a click
  * away in the Branch Explorer. It goes away in silence while a server merge still needs the one that finishes it.
  */
-function mergeSuccess(request: MergeRequest, result: MergeResult): OperationSuccess | null {
+function mergeSuccess(request: MergeRequest, sourceName: string, result: MergeResult): OperationSuccess | null {
   const destination = request.destinationBranch;
   if (!destination) return { title: 'Merge applied to your workspace' };
   if (result.destinationMoved) return null;
-  const merged = `Merged ${describeSpec(request.sourceSpec)} into ${destination}`;
+  const merged = `Merged ${sourceName} into ${destination}`;
   const { changesetId } = result;
   if (changesetId === undefined) return { title: merged };
   return {
@@ -56,8 +68,9 @@ function mergeSuccess(request: MergeRequest, result: MergeResult): OperationSucc
   };
 }
 
-export function openMerge(request: MergeRequest): void {
-  navigation.openPage({ kind: 'merge', request });
+/** Opens the merge page; `task` when it finishes a task branch on the server. */
+export function openMerge(request: MergeRequest, task?: TaskMerge): void {
+  navigation.openPage({ kind: 'merge', request, ...(task && { task }) });
 }
 
 /** Why a server-side merge needs a second one when someone checked in on its destination at the same time. */
