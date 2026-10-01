@@ -61,13 +61,19 @@ for that conflict, its lines, the source's label and its lines. While a tool has
 front, Stop waiting), its conflicts show without choices and the merge can't complete; a toast tells how it ended.
 Editing the text in the app opens a banner with Done and Discard edits; the choice shows picked and "Changes" shows what
 it produces. Binary conflicts offer only the two versions to keep, as cards, and no merge tool. The
-Incoming view resolves update conflicts with the same panel and run (in its update bar); server-branch merges keep one side for every file. A file
+Incoming view resolves update conflicts with the same panel and run (in its update bar); a merge into a server branch
+resolves its files the same way as a workspace merge. A file
 that merges automatically is never edited; its menu only overrides it by keeping one version. Once merged, the page
 states where the result went.
 
 Complete merge writes each conflicting file's decision into the workspace, after `cm merge` (`runMerge`): the text
 decided, or, keeping the incoming version of a text file, the text the page read (`resolutionOf` carries it when it
 writes back byte for byte, UTF-8); only binaries and text in other encodings are read again, with a `cm cat` each.
+A merge into a server branch has no workspace to write in: `cm merge --to` reads every file's decision from a JSON file
+(`--fileresolutionsfile`, written by `fileResolutionsFile`): `{ "resolutions": [{ "path", "keep": "source" |
+"destination" } | { "path", "resultFile" }] }`, by the path `cm merge` printed in the plan. A side kept, even an
+incoming text the page read, is named, so `cm` uploads nothing for it; a decided text goes in a result file whose bytes
+`cm` checks in as they are. `cm` leaves both files alone; `runMerge`'s temp folder holds them until it ends.
 
 Merges hold hundreds of conflicting files and thousands of changes. Every conflicting file's three versions load at
 once (its status needs its automatic merge); each file merges once, when its versions are in (`loadConflict`), and
