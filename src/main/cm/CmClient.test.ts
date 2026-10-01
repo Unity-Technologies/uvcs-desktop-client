@@ -6,6 +6,7 @@ import { CmClient, type CmRunners } from './CmClient';
 import { CmError } from './CmError';
 import { MAX_LOGGED_COMMAND_LINE } from './clipForLog';
 import type { CmResult } from './CmResult';
+import { CmOutputTooLargeError } from './outputLimit';
 import { MAX_QUICK_WRITE_PATHS } from './longCommands';
 import type { CmProcessOptions } from './runCmProcess';
 import { SHELL_ARGS } from './shellCommandLine';
@@ -308,6 +309,21 @@ describe('CmClient commands that end without an exit code', () => {
     await expect(cm.query(['find', 'label', '--xml'])).rejects.toThrow('waiting for input');
 
     expect(logged).toMatchObject([{ exitCode: -1, viaShell: true, output: 'cm is waiting for input ("Password:").' }]);
+  });
+
+  it('fails a command whose output was too large to read with a CmError naming it, to report from its details', async () => {
+    const { cm, logged } = fakeClient({
+      answer: () => {
+        throw new CmOutputTooLargeError(256 * 1024 * 1024);
+      },
+    });
+
+    const error = await failureOf(cm.query(['find', 'changeset', "where branch = '/main'", '--xml'], { cwd: WORKSPACE }));
+
+    expect(error).toMatchObject({
+      message: 'The command printed more than 256 MB, too much to read, and was stopped.',
+      command: { commandLine: "cm find changeset where branch = '/main' --xml", exitCode: -1, logEntryId: logged[0]?.id },
+    });
   });
 });
 
