@@ -2,7 +2,7 @@ import { followUpMerge, type MergeRequest, type MergeResolutions, type MergeResu
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runOperation } from '../../app/operations/runOperation';
-import { isAffectedByCheckinOrUpdate, isAffectedByShelveApplied } from '../../app/refresh/refreshScopes';
+import { isAffectedByCheckinOrUpdate, isAffectedByNewChangesets, isAffectedByShelveApplied } from '../../app/refresh/refreshScopes';
 import { toast } from '../../ui/toast/toastStore';
 
 /**
@@ -14,8 +14,7 @@ export async function completeMerge(workspacePath: string, request: MergeRequest
     title: 'Merging',
     workspacePath,
     run: (operationId) => api.merge.run(workspacePath, request, resolutions, operationId),
-    // Merging a shelve applies it, and may finish the left changes that offered it.
-    affects: request.sourceSpec.startsWith('sh:') ? isAffectedByShelveApplied : isAffectedByCheckinOrUpdate,
+    affects: mergeRefreshScope(request),
     success: (merged) => {
       if (!request.destinationBranch) return { title: 'Merge applied to your workspace' };
       return merged.destinationMoved ? null : { title: `Created changeset ${merged.changesetId} on ${request.destinationBranch}` };
@@ -30,6 +29,14 @@ export async function completeMerge(workspacePath: string, request: MergeRequest
     return null;
   }
   return result;
+}
+
+/** What a merge can change: the workspace and what a checkin changes, or only what a new changeset on the server does. */
+function mergeRefreshScope(request: MergeRequest): (queryKey: readonly unknown[]) => boolean {
+  // A merge into a branch on the server leaves the workspace untouched, as someone else's checkin would.
+  if (request.destinationBranch) return isAffectedByNewChangesets;
+  // Merging a shelve applies it, and may finish the left changes that offered it.
+  return request.sourceSpec.startsWith('sh:') ? isAffectedByShelveApplied : isAffectedByCheckinOrUpdate;
 }
 
 export function openMerge(request: MergeRequest): void {

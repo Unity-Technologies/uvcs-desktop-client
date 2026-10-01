@@ -25,4 +25,13 @@ describe('completeMerge', () => {
 
     expect(refreshed()).toEqual(['explorer', 'info', 'leftChanges', 'locks', 'pendingChanges', 'review', 'shelves']);
   });
+
+  it('refreshes what a new changeset on the server changes after a merge into a server branch, never the workspace', async () => {
+    fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
+    const refreshed = watchRefreshes(ws);
+
+    await completeMerge(ws, { kind: 'merge', sourceSpec: 'br:/main/task', destinationBranch: '/main' }, resolutions);
+
+    expect(refreshed()).toEqual(['branchExplorer', 'branches', 'changesets', 'history', 'incoming', 'locks']);
+  });
 });
