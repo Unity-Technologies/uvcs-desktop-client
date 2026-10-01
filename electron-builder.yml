@@ -24,7 +24,7 @@ extraResources:
 # the latest*.yml files electron-updater reads to the release tagged v<version>; it needs GH_TOKEN.
 publish:
   provider: github
-  owner: danipen
+  owner: Unity-Technologies
   repo: uvcs-desktop-client
 
 # File names without spaces (GitHub turns them into dots, which the latest*.yml would no longer match), naming each

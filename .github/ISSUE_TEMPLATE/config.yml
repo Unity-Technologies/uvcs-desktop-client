@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Report a security vulnerability
-    url: https://github.com/danipen/uvcs-desktop-client/security/advisories/new
+    url: https://github.com/Unity-Technologies/uvcs-desktop-client/security/advisories/new
     about: Report it privately, never in a public issue. SECURITY.md says what to include.

@@ -3,7 +3,7 @@
 ## Reporting a vulnerability
 
 Please don't open a public issue for a security problem. Report it privately through GitHub:
-[Security ▸ Report a vulnerability](https://github.com/danipen/uvcs-desktop-client/security/advisories/new).
+[Security ▸ Report a vulnerability](https://github.com/Unity-Technologies/uvcs-desktop-client/security/advisories/new).
 
 Say what an attacker could do, the version (About ▸ Copy Details) and the steps to reproduce it. You'll get an answer
 on the report, and the fix ships as a new release, which every installed app updates to by itself.

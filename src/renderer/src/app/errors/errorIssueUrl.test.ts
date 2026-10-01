@@ -8,7 +8,7 @@ const INFO = {
   arch: 'x64',
   electron: '38.1.0',
   chromium: '140.0.7339.80',
-  issuesUrl: 'https://github.com/danipen/uvcs-desktop-client/issues/new',
+  issuesUrl: 'https://github.com/Unity-Technologies/uvcs-desktop-client/issues/new',
 };
 
 /** A failed sync as main hands it to the window: `commandLineForLog` and `outputForLog` already hid the password. */
