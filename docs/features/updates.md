@@ -119,7 +119,19 @@ markup from the network.
   `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID` secrets exist; without them the build is signed ad hoc (the
   workflow's `MAC_SIGNING_FLAGS`), opens after Privacy & Security ▸ Open Anyway, and updates by its disk image. A build
   with no signature at all is rejected: macOS on Apple silicon calls it "damaged", because electron-builder's edits to
-  the bundle break Electron's own signature. Windows builds are unsigned: electron-updater checks an installer's publisher only when the app names one.
+  the bundle break Electron's own signature.
+- Windows signing turns on once the `AZURE_KEY_VAULT_URI`, `AZURE_KEY_VAULT_CERTIFICATE`, `AZURE_TENANT_ID`,
+  `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET` secrets exist: the workflow downloads AzureSignTool (pinned by version and
+  SHA-256) and builds with `electron-builder.windows-signed.yml`, whose sign hook (`signWindowsFile`,
+  `scripts/build/signWindows.ts`) signs every .exe (the app, `elevate.exe`, the installers and their uninstallers) with
+  Unity's EV certificate in Azure Key Vault, SHA-256 and timestamped. Without them the build is unsigned and SmartScreen
+  warns of an unknown publisher. The signed build writes its `publisherName` into the app's `app-update.yml`, and from
+  then on electron-updater installs only an update whose valid signature names that publisher (`verifySignature`), so
+  the hook checks each file the same way (`signatureProblem`) and a wrong name fails the release instead. Once a signed
+  release is out, every later one must be signed by the same name: an unsigned one, or a renewed certificate with
+  another common name, never reaches those apps. An unsigned build names no publisher and checks nothing.
+- The signing secrets are the `release` environment's, which only the Release workflow's build job uses (its
+  protection rules, such as required reviewers, apply before it starts).
 - The feed must be readable without signing in, so the releases' repository is public: electron-updater reads a private
   repository's releases only with a token, which the app never ships. With no published release (only a draft), a
   check says "No published release is available to update from yet."
