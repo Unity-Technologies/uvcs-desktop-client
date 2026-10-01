@@ -44,7 +44,7 @@ describe('finishing a task on the server', () => {
       ['branches.setHidden', ['/main/task001'], true],
     ]);
     expect(useFinishedTasksStore.getState().merged[ws]).toEqual({ branch: '/main/task001', destination: '/main', changesetId: 42, hidden: true });
-    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Merged /main/task001 into /main (cs:42)', action: 'Show in Branch Explorer' }]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Merged task001 into main (cs:42)', action: 'Show in Branch Explorer' }]);
   });
 
   it('leaves the review and the branch alone when not asked to', async () => {
@@ -85,7 +85,7 @@ describe('finishing a task on the server', () => {
     });
     expect(await mergeTaskOnServer(ws, request, options)).toBeUndefined();
     expect(writes().map(([method]) => method)).toEqual(['merge.run']);
-    expect(failures()).toEqual(['Merging /main/task001 into /main failed']);
+    expect(failures()).toEqual(['Merging task001 into main failed']);
   });
 
   it('still finishes when marking the review fails, telling so', async () => {
