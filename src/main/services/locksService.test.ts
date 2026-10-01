@@ -20,12 +20,12 @@ describe('locks', () => {
     const output = formatOutput(['game', '118', 'f1d0', '2026-09-25T10:00:00+02:00', '/main', '', '/main/task1', '', 'Locked', 'ana', 'ana-wk', '/art/Hero.fbx']);
     const { service, commands } = locks({ 'lock list': output });
 
-    const listed = await service.list(WORKSPACE, 'game@codice@cloud', { onlyMine: false });
+    const listed = await service.list(WORKSPACE, 'game@acme@cloud', { onlyMine: false });
 
-    expect(commands).toMatchObject([{ via: 'query', args: ['lock', 'list', '--anystatus', '--repository=game@codice@cloud', ...LOCK_LIST_FORMAT_ARGS], options: { cwd: WORKSPACE } }]);
+    expect(commands).toMatchObject([{ via: 'query', args: ['lock', 'list', '--anystatus', '--repository=game@acme@cloud', ...LOCK_LIST_FORMAT_ARGS], options: { cwd: WORKSPACE } }]);
     expect(listed).toEqual([
       {
-        repository: 'game@codice@cloud',
+        repository: 'game@acme@cloud',
         itemId: 118,
         guid: 'f1d0',
         date: '2026-09-25T10:00:00+02:00',

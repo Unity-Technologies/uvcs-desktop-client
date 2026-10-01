@@ -42,7 +42,7 @@ export interface XlinkTarget {
   /** The directory of the target repository it shows, e.g. `/` or `/testprograms`. */
   path: string;
   changeset: number;
-  /** The target repository's name, e.g. `nervathirdparty`. */
+  /** The target repository's name, e.g. `thirdparty`. */
   repository: string;
   server: string;
 }

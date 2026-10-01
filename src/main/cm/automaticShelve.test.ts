@@ -16,11 +16,11 @@ describe('parseCreatedShelves', () => {
       'Modified /private/tmp/swx/w1',
       'Added /private/tmp/swx/w1/new.txt',
       "Created shelve sh:2@swx@local (mount:'/')",
-      "Created shelve sh:7@lib@codice@cloud (mount:'/lib')",
+      "Created shelve sh:7@lib@acme@cloud (mount:'/lib')",
     ].join('\n');
     expect(parseCreatedShelves(output)).toEqual([
       { id: 2, repository: 'swx@local' },
-      { id: 7, repository: 'lib@codice@cloud' },
+      { id: 7, repository: 'lib@acme@cloud' },
     ]);
   });
 

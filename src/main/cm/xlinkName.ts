@@ -2,7 +2,7 @@ import type { XlinkTarget } from '@shared/domain/explorer';
 
 /**
  * `cm ls` lists an xlink as a directory named after its target:
- * `02nervathirdparty -> wxlink -> / 17568@nervathirdparty@ [relative] codice@cloud`
+ * `02thirdparty -> wxlink -> / 17568@thirdparty@ [relative] acme@cloud`
  * (writable `wxlink` or read-only `xlink`, then the path in the target, the changeset and the repository; a relative
  * xlink leaves the server out of the spec and names it after `[relative]`).
  */

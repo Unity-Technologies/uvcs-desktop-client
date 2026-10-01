@@ -25,7 +25,7 @@ export function serverChoiceLabel(server: string): string {
   return detail ? `${label} · ${detail}` : label;
 }
 
-/** `codice@codice@cloud` → `codice` on `codice@cloud`: repository names never contain `@`, so the server is everything after the first one. */
+/** `acme@acme@cloud` → `acme` on `acme@cloud`: repository names never contain `@`, so the server is everything after the first one. */
 export function splitRepositorySpec(spec: string): { name: string; server: string } {
   const at = spec.indexOf('@');
   return at === -1 ? { name: spec, server: '' } : { name: spec.slice(0, at), server: spec.slice(at + 1) };

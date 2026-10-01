@@ -4,16 +4,16 @@ import { parseWorkspaceGlance } from './workspaceGlance';
 
 const status = (changes: string) => `<?xml version="1.0" encoding="utf-8"?>
 <StatusOutput>
-  <WorkspaceStatus><Status><RepSpec><Server>codice@cloud</Server><Name>codice</Name></RepSpec><Changeset>42</Changeset></Status></WorkspaceStatus>
+  <WorkspaceStatus><Status><RepSpec><Server>acme@cloud</Server><Name>acme</Name></RepSpec><Changeset>42</Changeset></Status></WorkspaceStatus>
   <WkConfigType>Branch</WkConfigType>
-  <WkConfigName>/main/task-12@codice@codice@cloud</WkConfigName>
+  <WkConfigName>/main/task-12@acme@acme@cloud</WkConfigName>
   <Changes>${changes}</Changes>
 </StatusOutput>`;
 
 describe('parseWorkspaceGlance', () => {
   it('reads the repository, the branch and how many files are pending', () => {
     expect(parseWorkspaceGlance(status(change('CH', 'a.txt') + change('PR', 'new.txt')))).toEqual({
-      repository: 'codice@codice@cloud',
+      repository: 'acme@acme@cloud',
       selector: { kind: 'branch', name: '/main/task-12' },
       pendingCount: 2,
     });

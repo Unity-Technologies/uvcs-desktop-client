@@ -14,7 +14,7 @@ export function suggestTaskBranchName(now: Date): string {
 
 /**
  * Where the task's workspace goes: next to the current one, named after the repository and the branch,
- * e.g. `/wk/codice` on `codice` and `/main/task-12` → `/wk/codice-task-12`.
+ * e.g. `/wk/acme` on `acme` and `/main/task-12` → `/wk/acme-task-12`.
  */
 export function defaultTaskFolder(currentWorkspacePath: string, repositoryName: string, branch: string): string {
   const repository = lastSegment(repositoryName);

@@ -22,7 +22,8 @@ A fast, beautiful desktop client for Unity Version Control (Plastic SCM). Electr
 - **Fast, reliable, beautiful** — UI *and* code, verified on screen, not in the diff (see "Seeing the app"). Two
   themes, one calm layout.
 - **`cm` economy: protect the server.** `cm` is not `git`: almost every command is a network round trip to a server
-  many people share (repositories of ~280k changesets, ~20k branches). See "Every `cm` command earns its place".
+  many people share (a large production repository holds ~280k changesets, ~20k branches). See "Every `cm` command
+  earns its place".
 
 ## Read before changing code
 
@@ -81,7 +82,7 @@ Before adding or changing a `cm` call, answer these (the why and the numbers: AR
   `UvcsApi` methods, never a generic "run this" channel.
 - **Nothing external opens by itself**: `cm` never opens a merge or diff tool, and background work never opens anything.
 - **Never write to real data**: anything that writes (checkin, merge, delete, the sandboxes' scripts) runs only
-  against a sandbox on a local server, never the user's workspaces or a shared server such as `codice@codice@cloud`.
+  against a sandbox on a local server, never the user's workspaces or a shared server.
   The sandbox scripts delete and recreate their repository and workspace.
 
 ## Commands

@@ -20,12 +20,12 @@ describe('createFuzzyIndex', () => {
   });
 
   it('prefers a run in the file name over letters scattered through the folders', () => {
-    const texts = ['01plastic/src/plugins/unity/icons/iconpendingchangesview.png', '01plastic/src/gui/views/PendingChangesView.cs'];
+    const texts = ['01project/src/plugins/unity/icons/iconpendingchangesview.png', '01project/src/gui/views/PendingChangesView.cs'];
     expect(createFuzzyIndex(texts).rank('pendingchangesview', 1)).toEqual([1]);
   });
 
   it('prefers the query found whole, even where its first letter shows up earlier', () => {
-    const texts = ['/main/1x00874', '/main/scm1100874'];
+    const texts = ['/main/1x00874', '/main/task1100874'];
     expect(createFuzzyIndex(texts).rank('100874', 2)).toEqual([1, 0]);
   });
 
@@ -74,8 +74,8 @@ describe('fuzzyMatchPositions', () => {
   });
 
   it('marks the query where it appears whole, digits inside a name too', () => {
-    expect(fuzzyMatchPositions('/main/scm1100874', '100874')).toEqual([10, 11, 12, 13, 14, 15]);
-    expect(fuzzyMatchPositions('/main/SCM1008742', 'scm1008')).toEqual([6, 7, 8, 9, 10, 11, 12]);
+    expect(fuzzyMatchPositions('/main/task1100874', '100874')).toEqual([11, 12, 13, 14, 15, 16]);
+    expect(fuzzyMatchPositions('/main/TASK1008742', 'task1008')).toEqual([6, 7, 8, 9, 10, 11, 12, 13]);
   });
 
   it('returns nothing when the text does not match', () => {
@@ -85,10 +85,10 @@ describe('fuzzyMatchPositions', () => {
 
 describe('fuzzyMatchQuality', () => {
   it('ranks the whole name, its start and a run of it above scattered letters', () => {
-    expect(fuzzyMatchQuality('/main/scm1002144', 'scm1002144')).toBe(1);
+    expect(fuzzyMatchQuality('/main/task1002144', 'task1002144')).toBe(1);
     expect(fuzzyMatchQuality('src/PendingChangesView.cs', 'pendingchanges')).toBe(0.9);
     expect(fuzzyMatchQuality('src/MyPendingView.cs', 'pending')).toBe(0.8);
-    expect(fuzzyMatchQuality('lib/org.eclipse.core.commands_3.6.100.v20140', 'scm1002144')).toBeLessThan(0.3);
+    expect(fuzzyMatchQuality('lib/org.eclipse.core.commands_3.6.100.v20140', 'task1002144')).toBeLessThan(0.3);
   });
 
   it('is zero when nothing matches', () => {

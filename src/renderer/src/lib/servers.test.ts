@@ -24,7 +24,7 @@ describe('servers', () => {
   });
 
   it('splits a repository spec at its first @', () => {
-    expect(splitRepositorySpec('codice@codice@cloud')).toEqual({ name: 'codice', server: 'codice@cloud' });
+    expect(splitRepositorySpec('acme@acme@cloud')).toEqual({ name: 'acme', server: 'acme@cloud' });
     expect(splitRepositorySpec('Cloud Repositories/Sample@local')).toEqual({ name: 'Cloud Repositories/Sample', server: 'local' });
   });
 });

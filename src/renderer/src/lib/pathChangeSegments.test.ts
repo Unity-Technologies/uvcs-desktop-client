@@ -8,11 +8,11 @@ describe('pathChangeSegments', () => {
   it('says the shared folder once and marks the folders a move to a deeper folder added', () => {
     expect(
       pathChangeSegments(
-        '/01plastic/nunit/nunitclient/merge/MatchMergeToFileConflictResolutionsTests.cs',
-        '/01plastic/nunit/nunitclient/merge/mergeto/fileconflictsresolution/MatchMergeToFileConflictResolutionsTests.cs',
+        '/01project/nunit/nunitclient/merge/MatchMergeToFileConflictResolutionsTests.cs',
+        '/01project/nunit/nunitclient/merge/mergeto/fileconflictsresolution/MatchMergeToFileConflictResolutionsTests.cs',
       ),
     ).toEqual({
-      folder: '/01plastic/nunit/nunitclient/merge/',
+      folder: '/01project/nunit/nunitclient/merge/',
       old: [same('MatchMergeToFileConflictResolutionsTests.cs')],
       new: [changed('mergeto/fileconflictsresolution/'), same('MatchMergeToFileConflictResolutionsTests.cs')],
     });

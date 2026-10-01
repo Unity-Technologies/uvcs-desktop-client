@@ -12,8 +12,8 @@ describe('avatarColor', () => {
   });
 
   it("takes the workspace's own name while its repository isn't known", () => {
-    expect(avatarColor(undefined, 'codice')).toBe(avatarColor('codice@codice@cloud', 'anything'));
-    expect(avatarColor(null, 'codice')).toBe(avatarColor('codice', 'x'));
+    expect(avatarColor(undefined, 'acme')).toBe(avatarColor('acme@acme@cloud', 'anything'));
+    expect(avatarColor(null, 'acme')).toBe(avatarColor('acme', 'x'));
   });
 
   it('keeps the color family names always had: one fill per hue, in the hues order', () => {

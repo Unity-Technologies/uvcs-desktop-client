@@ -9,11 +9,11 @@ describe('suggestTaskBranchName', () => {
 
 describe('defaultTaskFolder', () => {
   it('puts the workspace next to the current one, named after the repository and the branch', () => {
-    expect(defaultTaskFolder('/Users/me/wk/codice', 'codice', '/main/task-12')).toBe('/Users/me/wk/codice-task-12');
+    expect(defaultTaskFolder('/Users/me/wk/acme', 'acme', '/main/task-12')).toBe('/Users/me/wk/acme-task-12');
   });
 
   it('uses the last part of a nested repository name', () => {
-    expect(defaultTaskFolder('/wk/unitymerge', 'codice/unitymerge', '/main/fix')).toBe('/wk/unitymerge-fix');
+    expect(defaultTaskFolder('/wk/mergetool', 'acme/mergetool', '/main/fix')).toBe('/wk/mergetool-fix');
   });
 
   it('keeps Windows separators', () => {
@@ -23,7 +23,7 @@ describe('defaultTaskFolder', () => {
 
 describe('taskWorkspaceName', () => {
   it('names the workspace after its folder, unique among the existing ones', () => {
-    expect(taskWorkspaceName('/wk/codice-task-12', ['codice'])).toBe('codice-task-12');
-    expect(taskWorkspaceName('/wk/codice-task-12', ['codice-task-12'])).toBe('codice-task-12-2');
+    expect(taskWorkspaceName('/wk/acme-task-12', ['acme'])).toBe('acme-task-12');
+    expect(taskWorkspaceName('/wk/acme-task-12', ['acme-task-12'])).toBe('acme-task-12-2');
   });
 });

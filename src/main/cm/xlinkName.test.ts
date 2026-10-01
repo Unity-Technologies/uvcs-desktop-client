@@ -3,22 +3,22 @@ import { parseXlinkName } from './xlinkName';
 
 describe('parseXlinkName', () => {
   it('reads a writable relative xlink', () => {
-    expect(parseXlinkName('02nervathirdparty -> wxlink -> / 17568@nervathirdparty@ [relative] codice@cloud')).toEqual({
+    expect(parseXlinkName('02thirdparty -> wxlink -> / 17568@thirdparty@ [relative] acme@cloud')).toEqual({
       writable: true,
       path: '/',
       changeset: 17568,
-      repository: 'nervathirdparty',
-      server: 'codice@cloud',
+      repository: 'thirdparty',
+      server: 'acme@cloud',
     });
   });
 
   it('reads a read-only xlink to a subdirectory of a nested repository', () => {
-    expect(parseXlinkName('docs -> xlink -> /testprograms 5218@documentation/taskdocumentation@ [relative] codice@cloud')).toEqual({
+    expect(parseXlinkName('docs -> xlink -> /testprograms 5218@documentation/manual@ [relative] acme@cloud')).toEqual({
       writable: false,
       path: '/testprograms',
       changeset: 5218,
-      repository: 'documentation/taskdocumentation',
-      server: 'codice@cloud',
+      repository: 'documentation/manual',
+      server: 'acme@cloud',
     });
   });
 
@@ -27,7 +27,7 @@ describe('parseXlinkName', () => {
   });
 
   it('is undefined for plain names, even with an arrow in them', () => {
-    expect(parseXlinkName('01plastic')).toBeUndefined();
+    expect(parseXlinkName('01project')).toBeUndefined();
     expect(parseXlinkName('a -> b.txt')).toBeUndefined();
   });
 });

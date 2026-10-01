@@ -41,7 +41,7 @@ describe('branchSearchRows', () => {
   });
 
   it('finds a number inside a branch name', () => {
-    const numbered = [{ title: 'Other branches', branches: [branch('/main/scm1008742'), branch('/main/scm1008874')] }];
-    expect(branchSearchRows(numbered, '100874').branches.map((match) => match.name)).toEqual(['/main/scm1008742']);
+    const numbered = [{ title: 'Other branches', branches: [branch('/main/task1008742'), branch('/main/task1008874')] }];
+    expect(branchSearchRows(numbered, '100874').branches.map((match) => match.name)).toEqual(['/main/task1008742']);
   });
 });
