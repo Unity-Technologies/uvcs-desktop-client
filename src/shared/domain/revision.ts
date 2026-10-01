@@ -1,10 +1,10 @@
 /**
  * A revision by its id in the repository that holds it. Revision ids are per repository, and an item under an xlink
- * lives in the xlinked repository (`unityGUI@codice@cloud`), not the workspace's: an id means nothing without it.
+ * lives in the xlinked repository (`editorGUI@acme@cloud`), not the workspace's: an id means nothing without it.
  */
 export interface RevisionRef {
   revisionId: number;
-  /** `name@server`, as `cm` names it for the item, e.g. `unityGUI@codice@cloud`. */
+  /** `name@server`, as `cm` names it for the item, e.g. `editorGUI@acme@cloud`. */
   repository: string;
 }
 

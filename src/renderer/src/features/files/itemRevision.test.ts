@@ -25,7 +25,7 @@ describe('itemRevision', () => {
   });
 
   it("names a file under an xlink in the xlinked repository, not the workspace's", () => {
-    expect(itemRevision({ ...item, revisionId: 432251, repository: 'unityGUI@codice@cloud' })?.idSpec).toBe('revid:432251@unityGUI@codice@cloud');
+    expect(itemRevision({ ...item, revisionId: 432251, repository: 'editorGUI@acme@cloud' })?.idSpec).toBe('revid:432251@editorGUI@acme@cloud');
   });
 
   it("has none for a shelve's revision, which cm can't annotate", () => {

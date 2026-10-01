@@ -8,7 +8,7 @@ const guid = (n: number) => `00000000-0000-0000-0000-00000000000${n}`;
 describe('readRecentBranchesByWorkspace', () => {
   it("reads every workspace's section, newest first", () => {
     const conf = [
-      'CurrentWorkspace=/Users/me/wkspaces/codice',
+      'CurrentWorkspace=/Users/me/wkspaces/acme',
       '',
       `[${OTHER_WK}]`,
       `recentbranches=${guid(9)};`,

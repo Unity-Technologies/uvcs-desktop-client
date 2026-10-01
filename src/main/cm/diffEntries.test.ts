@@ -20,37 +20,37 @@ describe('parseDiffEntries', () => {
   });
 
   it("reads the repository of items under an xlink: their revisions are the xlinked repository's", () => {
-    // `cm diff br:/main/scm1008583@codice@codice@cloud --repositorypaths --format=…`, where unity-plugin is an xlink to unityGUI.
+    // `cm diff br:/main/task1008583@acme@acme@cloud --repositorypaths --format=…`, where editor-plugin is an xlink to editorGUI.
     const output =
-      formatOutput(['C', '"/.claude/skills/csharp-code-style/SKILL.md"', '""', '31303681', '31327337', 'F', '"codice@codice@cloud"']) +
-      formatOutput(['C', '"/01plastic/src/client/plugins/unity-plugin"', '""', '-1', '-1', 'X', '"codice@codice@cloud"']) +
+      formatOutput(['C', '"/.github/code-style.md"', '""', '31303681', '31327337', 'F', '"acme@acme@cloud"']) +
+      formatOutput(['C', '"/01project/src/client/plugins/editor-plugin"', '""', '-1', '-1', 'X', '"acme@acme@cloud"']) +
       formatOutput([
         'C',
-        '"/01plastic/src/client/plugins/unity-plugin/Packages/com.unity.collab-proxy.tests/Infrastructure/UnityDiffWindowMockExtensions.cs"',
+        '"/01project/src/client/plugins/editor-plugin/Packages/com.acme.editor.tests/Infrastructure/DiffWindowMockExtensions.cs"',
         '""',
         '425946',
         '432251',
         'F',
-        '"unityGUI@codice@cloud"',
+        '"editorGUI@acme@cloud"',
       ]) +
-      formatOutput(['A', '"/01plastic/src/client/plugins/unity-plugin/UI_AUTOMATION_PLAN.learnings/VCS-1008583.md"', '""', '-1', '432300', 'F', '"unityGUI@codice@cloud"']);
+      formatOutput(['A', '"/01project/src/client/plugins/editor-plugin/TestPlans/TASK-1234.md"', '""', '-1', '432300', 'F', '"editorGUI@acme@cloud"']);
 
     expect(parseDiffEntries(output).map(({ path, itemType, baseRevisionId, revisionId, repository }) => ({ path, itemType, baseRevisionId, revisionId, repository }))).toEqual([
-      { path: '.claude/skills/csharp-code-style/SKILL.md', itemType: 'file', baseRevisionId: 31303681, revisionId: 31327337, repository: 'codice@codice@cloud' },
-      { path: '01plastic/src/client/plugins/unity-plugin', itemType: 'xlink', baseRevisionId: -1, revisionId: -1, repository: 'codice@codice@cloud' },
+      { path: '.github/code-style.md', itemType: 'file', baseRevisionId: 31303681, revisionId: 31327337, repository: 'acme@acme@cloud' },
+      { path: '01project/src/client/plugins/editor-plugin', itemType: 'xlink', baseRevisionId: -1, revisionId: -1, repository: 'acme@acme@cloud' },
       {
-        path: '01plastic/src/client/plugins/unity-plugin/Packages/com.unity.collab-proxy.tests/Infrastructure/UnityDiffWindowMockExtensions.cs',
+        path: '01project/src/client/plugins/editor-plugin/Packages/com.acme.editor.tests/Infrastructure/DiffWindowMockExtensions.cs',
         itemType: 'file',
         baseRevisionId: 425946,
         revisionId: 432251,
-        repository: 'unityGUI@codice@cloud',
+        repository: 'editorGUI@acme@cloud',
       },
       {
-        path: '01plastic/src/client/plugins/unity-plugin/UI_AUTOMATION_PLAN.learnings/VCS-1008583.md',
+        path: '01project/src/client/plugins/editor-plugin/TestPlans/TASK-1234.md',
         itemType: 'file',
         baseRevisionId: -1,
         revisionId: 432300,
-        repository: 'unityGUI@codice@cloud',
+        repository: 'editorGUI@acme@cloud',
       },
     ]);
   });

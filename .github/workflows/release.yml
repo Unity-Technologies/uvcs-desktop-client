@@ -1,7 +1,7 @@
 name: Release
 
 # One button releases the app: Actions ▸ Release ▸ Run workflow, pick the bump (patch, minor, major), and one run
-#   1. bumps package.json's version, commits it and tags v<version> on master,
+#   1. bumps package.json's version, commits it and tags v<version> on main,
 #   2. opens a draft GitHub release with generated notes,
 #   3. builds the installers on macOS, Windows and Linux and uploads them to the draft, with the latest*.yml files
 #      electron-updater reads (electron-builder.yml's `publish`).
@@ -27,11 +27,11 @@ jobs:
     outputs:
       tag: ${{ steps.bump.outputs.tag }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
-          ref: master
+          ref: main
           fetch-depth: 0 # the whole history, so the notes cover everything since the last tag
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: '26'
       - name: Bump the version, commit, tag and push
@@ -42,7 +42,7 @@ jobs:
           npm version "${{ inputs.bump }}" -m "Release v%s"
           TAG="v$(node -p "require('./package.json').version")"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
-          git push origin master --follow-tags
+          git push origin main --follow-tags
       - name: Open a draft release with generated notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -58,7 +58,7 @@ jobs:
         os: [macos-latest, windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           ref: ${{ needs.prepare.outputs.tag }}
       - uses: ./.github/actions/install

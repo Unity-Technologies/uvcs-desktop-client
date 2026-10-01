@@ -5,9 +5,9 @@ name: CodeQL
 # Findings show in the repository's Security tab and on pull requests. Code scanning is free on a public repository.
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
-    branches: [master]
+    branches: [main]
   schedule:
     # Weekly, so queries CodeQL publishes later also check code that hasn't changed. Monday 06:00 UTC.
     - cron: '0 6 * * 1'
@@ -21,15 +21,15 @@ jobs:
       actions: read
       contents: read
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
 
       # The default query suite, the security baseline: security-and-quality adds noise for little signal.
       # build-mode none: JavaScript and TypeScript are analyzed from the sources, with no build.
-      - uses: github/codeql-action/init@v4
+      - uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           languages: javascript-typescript
           build-mode: none
 
-      - uses: github/codeql-action/analyze@v4
+      - uses: github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
         with:
           category: /language:javascript-typescript

@@ -54,8 +54,8 @@ export function loadedChangesetOf(changeset: number, selector: WorkspaceSelector
 }
 
 /**
- * `/main/task@codice@codice@cloud` → `/main/task`. The repository spec is removed as a whole
- * suffix, because repository and organization names can repeat (`codice@codice@cloud`).
+ * `/main/task@acme@acme@cloud` → `/main/task`. The repository spec is removed as a whole
+ * suffix, because repository and organization names can repeat (`acme@acme@cloud`).
  */
 export function selectorName(configName: string, repositoryName: string, server: string): string {
   for (const suffix of [`@${repositoryName}@${server}`, `@${repositoryName}`]) {

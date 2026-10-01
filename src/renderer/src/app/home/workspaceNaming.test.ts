@@ -3,7 +3,7 @@ import { defaultWorkspacePath, isRepositoryNameTaken, isWorkspaceNameTaken, sugg
 
 describe('suggestWorkspaceName', () => {
   it('uses the last segment of sub-repository names', () => {
-    expect(suggestWorkspaceName('codice/unitymerge', [])).toBe('unitymerge');
+    expect(suggestWorkspaceName('acme/mergetool', [])).toBe('mergetool');
   });
 
   it('adds a numeric suffix when the name is taken', () => {

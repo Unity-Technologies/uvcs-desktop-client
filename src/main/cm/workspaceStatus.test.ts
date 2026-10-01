@@ -3,7 +3,7 @@ import { loadedChangesetOf, parseWorkspaceStatus, selectorName } from './workspa
 
 describe('selectorName', () => {
   it('removes the repository spec even when the name repeats in the server', () => {
-    expect(selectorName('/main/scm1008833@codice@codice@cloud', 'codice', 'codice@cloud')).toBe('/main/scm1008833');
+    expect(selectorName('/main/task1008833@acme@acme@cloud', 'acme', 'acme@cloud')).toBe('/main/task1008833');
   });
 
   it('removes a local repository spec', () => {
@@ -18,16 +18,16 @@ describe('selectorName', () => {
 describe('parseWorkspaceStatus', () => {
   const header = `<?xml version="1.0" encoding="utf-8"?>
 <StatusOutput>
-  <WorkspaceStatus><Status><RepSpec><Server>codice@cloud</Server><Name>codice</Name></RepSpec><Changeset>278638</Changeset></Status></WorkspaceStatus>
+  <WorkspaceStatus><Status><RepSpec><Server>acme@cloud</Server><Name>acme</Name></RepSpec><Changeset>278638</Changeset></Status></WorkspaceStatus>
   <WkConfigType>Branch</WkConfigType>
-  <WkConfigName>/main/SCM1008897@codice@codice@cloud</WkConfigName>
+  <WkConfigName>/main/TASK1008897@acme@acme@cloud</WkConfigName>
 </StatusOutput>`;
 
   it('reads the repository, the selector and the loaded changeset', () => {
     expect(parseWorkspaceStatus(header)).toEqual({
-      repositoryName: 'codice',
-      server: 'codice@cloud',
-      selector: { kind: 'branch', name: '/main/SCM1008897' },
+      repositoryName: 'acme',
+      server: 'acme@cloud',
+      selector: { kind: 'branch', name: '/main/TASK1008897' },
       loadedChangeset: 278638,
     });
   });

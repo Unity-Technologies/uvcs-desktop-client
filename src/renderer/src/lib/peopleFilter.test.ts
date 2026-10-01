@@ -14,7 +14,7 @@ import {
   togglePerson,
 } from './peopleFilter';
 
-const ME = 'daniel.penalba@unity3d.com';
+const ME = 'jane.doe@example.com';
 const ANA = 'ana.diaz@unity3d.com';
 const BOB = 'bob@unity3d.com';
 

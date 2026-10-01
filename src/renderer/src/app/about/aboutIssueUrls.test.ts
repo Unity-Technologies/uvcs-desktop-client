@@ -7,7 +7,7 @@ const INFO = {
   arch: 'arm64',
   electron: '38.1.0',
   chromium: '140.0.7339.80',
-  issuesUrl: 'https://github.com/danipen/uvcs-desktop-client/issues/new',
+  issuesUrl: 'https://github.com/Unity-Technologies/uvcs-desktop-client/issues/new',
 };
 
 const paramsOf = (url: string) => Object.fromEntries(new URL(url).searchParams);
@@ -23,6 +23,6 @@ describe('aboutBugReportUrl', () => {
 
 describe('featureRequestUrl', () => {
   it('opens the feature request form', () => {
-    expect(featureRequestUrl(INFO)).toBe('https://github.com/danipen/uvcs-desktop-client/issues/new?template=feature_request.yml');
+    expect(featureRequestUrl(INFO)).toBe('https://github.com/Unity-Technologies/uvcs-desktop-client/issues/new?template=feature_request.yml');
   });
 });

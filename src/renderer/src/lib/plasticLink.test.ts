@@ -3,7 +3,7 @@ import { changesetLink } from './plasticLink';
 
 describe('changesetLink', () => {
   it('links a cloud changeset, the organization joined to cloud with a dot', () => {
-    expect(changesetLink('codice', 'codice@cloud', 273075)).toBe('plastic://codice.cloud/repos/codice/changesets/273075/diff');
+    expect(changesetLink('acme', 'acme@cloud', 273075)).toBe('plastic://acme.cloud/repos/acme/changesets/273075/diff');
   });
 
   it('keeps on-premises and local servers as they are', () => {
@@ -16,6 +16,6 @@ describe('changesetLink', () => {
   });
 
   it('links a range', () => {
-    expect(changesetLink('codice', 'codice@cloud', 45, 41)).toBe('plastic://codice.cloud/repos/codice/changesets/41..45/diff');
+    expect(changesetLink('acme', 'acme@cloud', 45, 41)).toBe('plastic://acme.cloud/repos/acme/changesets/41..45/diff');
   });
 });

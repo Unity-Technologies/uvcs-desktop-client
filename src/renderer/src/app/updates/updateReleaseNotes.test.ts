@@ -39,7 +39,7 @@ describe("the What's New dialog", () => {
 
 describe("GitHub's generated notes in the What's New dialog", () => {
   const generated = (body: string) =>
-    `<h2>What's Changed</h2>\n${body}\n<p><strong>Full Changelog</strong>: <a href="https://github.com/danipen/uvcs-desktop-client/compare/v0.1.3...v0.2.0"><tt>v0.1.3...v0.2.0</tt></a></p>`;
+    `<h2>What's Changed</h2>\n${body}\n<p><strong>Full Changelog</strong>: <a href="https://github.com/Unity-Technologies/uvcs-desktop-client/compare/v0.1.3...v0.2.0"><tt>v0.1.3...v0.2.0</tt></a></p>`;
 
   it('leaves out the opening "What\'s Changed" heading, which the title already says', () => {
     const [section] = releaseNotesSections([{ version: '0.2.0', html: generated('<ul><li>Shelves</li></ul>') }]);
@@ -50,7 +50,7 @@ describe("GitHub's generated notes in the What's New dialog", () => {
   it('sets the closing "Full Changelog" link apart', () => {
     const [section] = releaseNotesSections([{ version: '0.2.0', html: generated('<p>Shelves</p>') }]);
 
-    expect(section!.changelogUrl).toBe('https://github.com/danipen/uvcs-desktop-client/compare/v0.1.3...v0.2.0');
+    expect(section!.changelogUrl).toBe('https://github.com/Unity-Technologies/uvcs-desktop-client/compare/v0.1.3...v0.2.0');
     expect(section!.blocks).toEqual([{ kind: 'paragraph', children: [{ kind: 'text', text: 'Shelves' }] }]);
   });
 

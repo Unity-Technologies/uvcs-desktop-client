@@ -56,7 +56,7 @@ Changes put aside, whoever put them there, are in one place: "N shelves" in the 
 - **Everyone's** shelves are the other side of "Mine | Everyone" at the top (a radio group: Tab reaches it, ← → switch;
   ⇧⌘S again in the list; "Everyone's shelves…" in the palette). Every opening starts on Mine, which the button counts,
   and reads nothing more until Everyone is picked: then one `cm find shelve` by the same date alone
-  (`useEveryonesShelves`; on codice@cloud 128 shelves in three months, 0.1 s, 60 KB), cached and refreshed like Mine's.
+  (`useEveryonesShelves`; on a large server 128 shelves in three months, 0.1 s, 60 KB), cached and refreshed like Mine's.
   `cm` can't sort shelves and `limit` keeps the oldest, so dates bound these queries, not limits: the list renders the
   newest 200 ("Newest 200 of N · filter to find others"), and the server search of everyone's goes back a year
   (limit 100 as a ceiling, "More may match" when reached). Rows name the author with their avatar ("You" for the

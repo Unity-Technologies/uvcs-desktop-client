@@ -8,7 +8,7 @@ The app finds `cm` in the standard install locations and on your `PATH`; set `UV
 
 ## Download
 
-Get the installer for your OS and architecture from [Releases](https://github.com/danipen/uvcs-desktop-client/releases/latest):
+Get the installer for your OS and architecture from [Releases](https://github.com/Unity-Technologies/uvcs-desktop-client/releases/latest):
 a `.dmg` for macOS, an `.exe` for Windows, an `.AppImage` for Linux. The app updates itself from new releases.
 
 The builds aren't code-signed yet:
@@ -21,7 +21,7 @@ The builds aren't code-signed yet:
 Building needs **Node.js 22.12 or newer**.
 
 ```sh
-git clone https://github.com/danipen/uvcs-desktop-client.git
+git clone https://github.com/Unity-Technologies/uvcs-desktop-client.git
 cd uvcs-desktop-client
 npm install      # also downloads the Electron binary
 npm run dev      # starts the app with hot reload
@@ -53,14 +53,32 @@ In the app, ⌘K searches everything, ⌘/ lists the keyboard shortcuts, and ⌘
 
 ## Feedback
 
-Report a problem or ask for a feature in [Issues](https://github.com/danipen/uvcs-desktop-client/issues) (Help ▸
+Report a problem or ask for a feature in [Issues](https://github.com/Unity-Technologies/uvcs-desktop-client/issues) (Help ▸
 Report an Issue and Request a Feature open the forms; About ▸ Copy Details gives the versions to paste in, and an
 error's Details ▸ Report an Issue fills them in with the error). Report a security vulnerability
 privately instead: see [SECURITY.md](SECURITY.md). [CONTRIBUTING.md](CONTRIBUTING.md) says how to send a change.
 
+## Privacy
+
+The app collects no telemetry, analytics or crash reports. Besides the `cm` commands to your own servers, it
+connects to two places:
+
+- **gravatar.com**, for people's profile pictures, as the official clients do: it sends a hash of each email address
+  shown. Settings ▸ Appearance turns the pictures off, and initials show instead.
+- **github.com**, to check this repository's releases for updates and download them. Nothing about you is sent.
+
+Settings and review marks stay on your computer.
+
+## Maintenance
+
+The Unity Version Control team at Unity Technologies maintains this repository: it reads new issues and pull
+requests, fixes security reports first, and ships fixes as new releases. Contributions are welcome under the
+[Unity Contribution Agreement](CONTRIBUTING.md). The repository is reviewed against Unity's standards for public
+repositories once a year, and again whenever it takes in new third-party code or changes the data it handles.
+
 ## License
 
-[Apache License 2.0](LICENSE), copyright Unity Technologies (see [NOTICE](NOTICE)). The installed app lists the
+[Apache License 2.0](LICENSE.md), copyright Unity Technologies (see [NOTICE](NOTICE)). The installed app lists the
 open-source libraries it includes, with their licenses, in `THIRD_PARTY_NOTICES.txt`.
 
 "Unity" and "Unity Version Control" are trademarks of Unity Technologies. The license grants no rights to them.

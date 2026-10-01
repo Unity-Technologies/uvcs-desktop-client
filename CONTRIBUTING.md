@@ -3,6 +3,14 @@
 Issues and pull requests are welcome. For anything larger than a fix, open an issue first so we can agree on the
 design before you build it.
 
+## All contributions are subject to the [Unity Contribution Agreement (UCA)](https://unity.com/legal/licenses/unity-contribution-agreement)
+
+By making a pull request, you are confirming agreement to the terms and conditions of the UCA, including that your
+Contributions are your original creation and that you have complete right and authority to make your Contributions.
+
+When you open your first pull request, a bot (CLA Assistant) asks you to accept the UCA, as an individual or on
+behalf of your company. A pull request is merged only once it's accepted.
+
 ## Before you open a pull request
 
 1. Read [CLAUDE.md](CLAUDE.md) (the rules every change follows) and [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)

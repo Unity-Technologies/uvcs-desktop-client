@@ -45,25 +45,25 @@ describe('saveContent of the loaded revision', () => {
   });
 });
 
-const XLINKED = '/plugins/unity-plugin/Tests/UnityDiffWindowMockExtensions.cs';
+const XLINKED = '/plugins/editor-plugin/Tests/DiffWindowMockExtensions.cs';
 
-/** `cm ls <XLINKED> --tree=cs:278738 --xml`: the file is the unityGUI repository's, under the unity-plugin xlink. */
-const XLINKED_LISTING = `<LsResults><LsItems><LsItem><Status>Controlled</Status><Name>UnityDiffWindowMockExtensions.cs</Name>
-  <WkPath>${XLINKED}</WkPath><Type>txt</Type><Repository>rep:unityGUI@codice@cloud</Repository><RevId>432251</RevId></LsItem></LsItems></LsResults>`;
+/** `cm ls <XLINKED> --tree=cs:278738 --xml`: the file is the editorGUI repository's, under the editor-plugin xlink. */
+const XLINKED_LISTING = `<LsResults><LsItems><LsItem><Status>Controlled</Status><Name>DiffWindowMockExtensions.cs</Name>
+  <WkPath>${XLINKED}</WkPath><Type>txt</Type><Repository>rep:editorGUI@acme@cloud</Repository><RevId>432251</RevId></LsItem></LsItems></LsResults>`;
 
-/** A `cm` whose repository tree has an xlink at `/plugins/unity-plugin`: `serverpath:` finds nothing under it. */
+/** A `cm` whose repository tree has an xlink at `/plugins/editor-plugin`: `serverpath:` finds nothing under it. */
 function xlinkingCm() {
   return fakeCmClient({
     ls: XLINKED_LISTING,
-    cat: ({ args }) => (args[1]!.startsWith('serverpath:/plugins/unity-plugin/') ? cmFails('The specified revision was not found') : ''),
+    cat: ({ args }) => (args[1]!.startsWith('serverpath:/plugins/editor-plugin/') ? cmFails('The specified revision was not found') : ''),
   });
 }
 
 describe('saveContent of a revision', () => {
   it('reads it by its id in its repository, never a bare id the workspace would look up in its own', async () => {
     const { cm, lines } = xlinkingCm();
-    await saveContent(cm, tmpdir(), { kind: 'revision', revision: { revisionId: 432251, repository: 'unityGUI@codice@cloud' }, fileName: 'a.cs' }, 'out');
-    expect(lines()).toEqual(['cat revid:432251@unityGUI@codice@cloud --file=out']);
+    await saveContent(cm, tmpdir(), { kind: 'revision', revision: { revisionId: 432251, repository: 'editorGUI@acme@cloud' }, fileName: 'a.cs' }, 'out');
+    expect(lines()).toEqual(['cat revid:432251@editorGUI@acme@cloud --file=out']);
   });
 });
 
@@ -77,7 +77,7 @@ describe('saveContent of a repository path', () => {
   it("reads a path under an xlink as the revision the changeset's tree has there, in the xlinked repository", async () => {
     const { cm, lines } = xlinkingCm();
     await saveContent(cm, tmpdir(), { kind: 'repositoryPath', path: XLINKED, at: 'cs:278738' }, 'out');
-    expect(lines()).toEqual([`cat serverpath:${XLINKED}#cs:278738 --file=out`, `ls ${XLINKED} --tree=cs:278738 --xml`, 'cat revid:432251@unityGUI@codice@cloud --file=out']);
+    expect(lines()).toEqual([`cat serverpath:${XLINKED}#cs:278738 --file=out`, `ls ${XLINKED} --tree=cs:278738 --xml`, 'cat revid:432251@editorGUI@acme@cloud --file=out']);
   });
 
   it("fails as cm does for a shelve's path, whose tree can't be listed", async () => {

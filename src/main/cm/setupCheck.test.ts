@@ -5,7 +5,7 @@ import { cmFails, fakeCmClient, type FakeCmCommand } from './testing/fakeCmClien
 // Outputs of `cm checkconnection` (cm 11.0.16) with a fresh home folder, an unreachable server and a cloud server without a sign-in.
 const NOT_CONFIGURED =
   "Error: Unity VCS client is not correctly configured for the current user: Client config file /Users/me/.plastic4/client.conf not found. Please execute 'cm configure' to perform a text mode configuration or 'macplastic --configure' for graphical mode.";
-const SIGN_IN_PROMPT = 'Getting organization providers...\nSelect the system you want to use to sign in to: codice@cloud\n0 - Okta Unity\n1 - Unity ID';
+const SIGN_IN_PROMPT = 'Getting organization providers...\nSelect the system you want to use to sign in to: acme@cloud\n0 - Okta\n1 - Unity ID';
 
 describe('classifySetupCheck', () => {
   it('spots a client that was never configured', () => {
@@ -26,7 +26,7 @@ describe('classifySetupCheck', () => {
 
 describe('signInServer', () => {
   it('reads the server named by the sign-in prompt', () => {
-    expect(signInServer(SIGN_IN_PROMPT)).toBe('codice@cloud');
+    expect(signInServer(SIGN_IN_PROMPT)).toBe('acme@cloud');
     expect(signInServer('Error: Connection refused')).toBeUndefined();
   });
 });
@@ -61,14 +61,14 @@ describe('checkSetup', () => {
 
   it('stops cm as soon as it asks for a sign-in, and names the server', async () => {
     const { cm } = fakeCmClient({
-      checkconnection: promptsAndWaits('Getting organization providers...', 'Select the system you want to use to sign in to: codice@cloud      '),
+      checkconnection: promptsAndWaits('Getting organization providers...', 'Select the system you want to use to sign in to: acme@cloud      '),
     });
 
     expect(await checkSetup(cm)).toEqual({
       kind: 'notSignedIn',
-      server: 'codice@cloud',
+      server: 'acme@cloud',
       commandLine: 'cm checkconnection',
-      output: 'Getting organization providers...\nSelect the system you want to use to sign in to: codice@cloud',
+      output: 'Getting organization providers...\nSelect the system you want to use to sign in to: acme@cloud',
     });
   });
 

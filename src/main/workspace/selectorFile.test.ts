@@ -6,8 +6,8 @@ import { parseSelectorFile, readWorkspaceHeads } from './selectorFile';
 
 describe('parseSelectorFile', () => {
   it('reads the repository and smart branch', () => {
-    expect(parseSelectorFile('rep "codice@codice@cloud"\n  path "/"\n    smartbranch "/main/scm1/scm1d"')).toEqual({
-      repository: 'codice@codice@cloud',
+    expect(parseSelectorFile('rep "acme@acme@cloud"\n  path "/"\n    smartbranch "/main/scm1/scm1d"')).toEqual({
+      repository: 'acme@acme@cloud',
       selector: { kind: 'branch', name: '/main/scm1/scm1d' },
     });
   });

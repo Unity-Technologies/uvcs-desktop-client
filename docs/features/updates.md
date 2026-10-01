@@ -83,7 +83,7 @@ markup from the network.
 
 
 - The **Release** workflow (`.github/workflows/release.yml`, run by hand with a bump: patch, minor or major) owns the
-  version: it bumps `package.json`, tags `v<version>` on master, opens a draft release with generated notes, and builds
+  version: it bumps `package.json`, tags `v<version>` on main, opens a draft release with generated notes, and builds
   every OS's installers onto it (`npm run release`). The draft's description is what What's New shows: edit it before
   publishing. Publishing the draft makes the update reach every running app
   within the hour. Never bump the version by hand.
@@ -105,9 +105,9 @@ markup from the network.
   and Apache ask to keep, so `npm run build` also writes `out/THIRD_PARTY_NOTICES.txt`: the name, version, license
   and LICENSE/NOTICE files of exactly the packages whose code is in the bundles (`thirdPartyNoticesCollector` in
   `scripts/build/`, one plugin for main, preload, renderer and its workers; the text is `thirdPartyNotices`).
-  electron-builder.yml's `extraResources` ships it with the app's `LICENSE` and `NOTICE` as plain files in the
+  electron-builder.yml's `extraResources` ships it with the app's `LICENSE.md` and `NOTICE` as plain files in the
   resources folder, outside `app.asar`.
-- **Licenses**: the app is Apache-2.0 (`LICENSE`, `NOTICE`), and every package in package-lock.json must have a
+- **Licenses**: the app is Apache-2.0 (`LICENSE.md`, `NOTICE`), and every package in package-lock.json must have a
   permissive license (`PERMISSIVE_LICENSES`, `scripts/build/dependencyLicenses.test.ts`): a copyleft one fails the tests
   and needs a legal decision before it joins.
 - macOS signing and notarization turn on once the `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`,
@@ -121,12 +121,16 @@ markup from the network.
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every push to master and every pull request: the tests and the build on macOS
+`.github/workflows/ci.yml` runs on every push to main and every pull request: the tests and the build on macOS
 arm64, Windows x64 and arm64 and Linux x64, the typecheck once on Linux, and the smoke test (`npm run e2e`) inside the
 macOS and Windows x64 jobs. The shared install step (`.github/actions/install`) pins Node, restores `node_modules` from
 the last install of the same lockfile (`reuse-node-modules`, CI only: releases install clean), or else caches npm's and
 Electron's downloads and retries `npm ci`. On a Windows runner with a raw local SSD (arm64) the job formats it as a Dev
 Drive and builds there (`BUILD_DIR`). How fast the tests run on CI's 2-CPU runners, and why: `vitest.config.ts`.
 
-`.github/workflows/codeql.yml` runs GitHub's CodeQL security analysis on pushes to master, pull requests and weekly;
+`.github/workflows/codeql.yml` runs GitHub's CodeQL security analysis on pushes to main, pull requests and weekly;
 findings show in the Security tab and on pull requests.
+
+Every action a workflow uses is pinned to a full commit SHA, its tag in a comment (Unity's SSDLC: a tag can be
+moved to other code), which `scripts/build/pinnedActions.test.ts` checks; Dependabot (`.github/dependabot.yml`) proposes
+the new commits monthly.

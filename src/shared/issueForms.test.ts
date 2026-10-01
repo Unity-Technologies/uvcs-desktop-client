@@ -11,7 +11,7 @@ import {
   MAX_ISSUE_URL_LENGTH,
 } from './issueForms';
 
-const ISSUES_URL = 'https://github.com/danipen/uvcs-desktop-client/issues/new';
+const ISSUES_URL = 'https://github.com/Unity-Technologies/uvcs-desktop-client/issues/new';
 const TEMPLATES = join(__dirname, '..', '..', '.github', 'ISSUE_TEMPLATE');
 
 /** The ids of a form's fields: the query parameters GitHub prefills them from. */

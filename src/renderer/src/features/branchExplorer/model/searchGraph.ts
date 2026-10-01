@@ -25,7 +25,7 @@ export interface GraphSearchResult {
 /**
  * Everything matching a search, left to right (the order Enter steps through). Branch and label names, and
  * changesets' comments and owners, match when they hold every word of the query anywhere, in any case
- * (`100874` finds /main/scm1008742). A number (`42` or `cs:42`) also finds that changeset.
+ * (`100874` finds /main/task1008742). A number (`42` or `cs:42`) also finds that changeset.
  * Given the previous search of the same layout, a query that narrows it (typing on) only looks at the changesets
  * that one found.
  */

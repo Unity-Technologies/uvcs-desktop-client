@@ -2,17 +2,17 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
 
 # CI only reads the code: its token can't push, comment or touch releases, whoever opened the pull request.
 permissions:
   contents: read
 
-# A new push to a pull request cancels its CI still running on older commits; master's runs are never cancelled.
+# A new push to a pull request cancels its CI still running on older commits; main's runs are never cancelled.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 # The Node used locally, so the typecheck, the tests and the build behave the same on a laptop and here.
 env:
@@ -37,7 +37,7 @@ jobs:
           - { name: Windows arm64, os: windows-11-arm }
           - { name: Linux x64, os: ubuntu-latest }
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
       # The Windows arm64 runner builds on C:, a network-attached virtual disk, and leaves a local NVMe SSD raw (no
       # partition): `npm ci` of the cached packages takes about 3 minutes on C: and 30 s on that SSD. This formats it as
       # a Dev Drive, copies the checkout onto it and points npm's cache and the temp folder at it; the later steps run in

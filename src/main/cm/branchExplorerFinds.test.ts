@@ -9,7 +9,7 @@ describe('branchExplorerFinds', () => {
   });
 
   it("asks for the changesets of hidden branches only when they show: `cm find changeset` leaves them out otherwise", () => {
-    // /main/SCM1008897 on codice was hidden, and its cs:278638, merged into /main's cs:278758, never loaded.
+    // /main/TASK1008897 on a large repository was hidden, and its cs:278638, merged into /main's cs:278758, never loaded.
     const shown = branchExplorerFinds({ sinceDate: '2026-07-01', includeHidden: true }).changesets[2]!;
     expect(shown).toMatch(/^where ignorehidden = 'true' and date >= '2026-07-01T00:00:00/);
     expect(branchExplorerFinds({ sinceDate: '2026-07-01', includeHidden: false }).changesets[2]).toMatch(/^where date >= /);

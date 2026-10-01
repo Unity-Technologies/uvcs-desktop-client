@@ -1,6 +1,6 @@
 import { joinPath } from '../../lib/paths';
 
-/** A workspace name for a repository: `codice/unitymerge` → `unitymerge`, made unique among `takenNames`. */
+/** A workspace name for a repository: `acme/mergetool` → `mergetool`, made unique among `takenNames`. */
 export function suggestWorkspaceName(repositoryName: string, takenNames: readonly string[]): string {
   const base = (repositoryName.split('/').at(-1) ?? repositoryName).trim() || 'workspace';
   const taken = new Set(takenNames.map((name) => name.toLowerCase()));

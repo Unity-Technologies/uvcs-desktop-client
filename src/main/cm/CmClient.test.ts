@@ -211,7 +211,7 @@ describe('CmClient arguments', () => {
   });
 
   it('passes local paths decomposed on macOS, as cm reads them, and branch names as written', async () => {
-    const macWorkspace = '/Users/dani/wkspaces/game';
+    const macWorkspace = '/Users/jane/wkspaces/game';
     const composed = `${macWorkspace}/café.txt`;
     const { cm, shellCommands } = fakeClient({ platform: 'darwin' });
 

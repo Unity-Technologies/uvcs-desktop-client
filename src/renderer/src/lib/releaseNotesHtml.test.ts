@@ -8,9 +8,9 @@ describe('release notes as GitHub renders them', () => {
     const html = [
       '<h2>What\'s Changed</h2>',
       '<ul>',
-      '<li>Shelves open from the palette by <a class="user-mention notranslate" data-hovercard-type="user" href="https://github.com/ana">@ana</a> in <a class="issue-link js-issue-link" href="https://github.com/danipen/uvcs-desktop-client/pull/12">#12</a></li>',
+      '<li>Shelves open from the palette by <a class="user-mention notranslate" data-hovercard-type="user" href="https://github.com/ana">@ana</a> in <a class="issue-link js-issue-link" href="https://github.com/Unity-Technologies/uvcs-desktop-client/pull/12">#12</a></li>',
       '</ul>',
-      '<p><strong>Full Changelog</strong>: <a class="commit-link" href="https://github.com/danipen/uvcs-desktop-client/compare/v1.2.0...v1.3.0"><tt>v1.2.0...v1.3.0</tt></a></p>',
+      '<p><strong>Full Changelog</strong>: <a class="commit-link" href="https://github.com/Unity-Technologies/uvcs-desktop-client/compare/v1.2.0...v1.3.0"><tt>v1.2.0...v1.3.0</tt></a></p>',
     ].join('\n');
 
     expect(releaseNotesFromHtml(html)).toEqual([
@@ -24,7 +24,7 @@ describe('release notes as GitHub renders them', () => {
               text('Shelves open from the palette by '),
               { kind: 'link', url: 'https://github.com/ana', children: [text('@ana')] },
               text(' in '),
-              { kind: 'link', url: 'https://github.com/danipen/uvcs-desktop-client/pull/12', children: [text('#12')] },
+              { kind: 'link', url: 'https://github.com/Unity-Technologies/uvcs-desktop-client/pull/12', children: [text('#12')] },
             ],
           },
         ],
@@ -34,7 +34,7 @@ describe('release notes as GitHub renders them', () => {
         children: [
           { kind: 'strong', children: [text('Full Changelog')] },
           text(': '),
-          { kind: 'link', url: 'https://github.com/danipen/uvcs-desktop-client/compare/v1.2.0...v1.3.0', children: [text('v1.2.0...v1.3.0')] },
+          { kind: 'link', url: 'https://github.com/Unity-Technologies/uvcs-desktop-client/compare/v1.2.0...v1.3.0', children: [text('v1.2.0...v1.3.0')] },
         ],
       },
     ]);

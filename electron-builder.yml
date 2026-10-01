@@ -15,7 +15,7 @@ npmRebuild: false
 # them from (a file inside app.asar can't be opened by another app). Electron's own LICENSE and LICENSES.chromium.html
 # ship with Electron.
 extraResources:
-  - LICENSE
+  - LICENSE.md
   - NOTICE
   - from: out/THIRD_PARTY_NOTICES.txt
     to: THIRD_PARTY_NOTICES.txt
@@ -24,7 +24,7 @@ extraResources:
 # the latest*.yml files electron-updater reads to the release tagged v<version>; it needs GH_TOKEN.
 publish:
   provider: github
-  owner: danipen
+  owner: Unity-Technologies
   repo: uvcs-desktop-client
 
 # File names without spaces (GitHub turns them into dots, which the latest*.yml would no longer match), naming each

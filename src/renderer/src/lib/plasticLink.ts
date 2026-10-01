@@ -1,7 +1,7 @@
 /**
  * A `plastic://` link that opens the changeset's diff (or the diff of a range, from the changeset after `fromChangeset`)
- * in the Plastic desktop client: `plastic://codice.cloud/repos/codice/changesets/273075/diff`. The server's `@` becomes
- * `.` (`codice@cloud` → `codice.cloud`), and the repository name is URL-encoded with spaces as `+`.
+ * in the Plastic desktop client: `plastic://acme.cloud/repos/acme/changesets/273075/diff`. The server's `@` becomes
+ * `.` (`acme@cloud` → `acme.cloud`), and the repository name is URL-encoded with spaces as `+`.
  */
 export function changesetLink(repositoryName: string, server: string, changesetId: number, fromChangeset?: number): string {
   const changesets = fromChangeset === undefined ? `${changesetId}` : `${fromChangeset}..${changesetId}`;

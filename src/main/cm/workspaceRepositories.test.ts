@@ -7,7 +7,7 @@ import { MAX_LOOKUPS, repositoryInStatusHeader, resolveWorkspaceRepositories } f
 
 describe('repositoryInStatusHeader', () => {
   it('reads the repository spec', () => {
-    expect(repositoryInStatusHeader('STATUS|25076|plasticscm.com|codice@cloud\n')).toBe('plasticscm.com@codice@cloud');
+    expect(repositoryInStatusHeader('STATUS|25076|website|acme@cloud\n')).toBe('website@acme@cloud');
   });
 
   it('accepts workspaces without a loaded changeset', () => {

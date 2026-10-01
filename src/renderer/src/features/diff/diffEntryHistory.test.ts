@@ -21,11 +21,11 @@ describe('diffEntryHistory', () => {
   });
 
   it('reads a file under an xlink in the xlinked repository', () => {
-    const xlinked = entry('changed', 'plugins/unity-plugin/Tests/Mock.cs', 'unityGUI@codice@cloud');
-    expect(diffEntryHistory({ kind: 'branch', branch: '/main/scm1008583' }, xlinked)).toEqual({
+    const xlinked = entry('changed', 'plugins/editor-plugin/Tests/Mock.cs', 'editorGUI@acme@cloud');
+    expect(diffEntryHistory({ kind: 'branch', branch: '/main/task1008583' }, xlinked)).toEqual({
       kind: 'history',
-      path: 'plugins/unity-plugin/Tests/Mock.cs',
-      revision: { revisionId: 2, repository: 'unityGUI@codice@cloud' },
+      path: 'plugins/editor-plugin/Tests/Mock.cs',
+      revision: { revisionId: 2, repository: 'editorGUI@acme@cloud' },
     });
   });
 
