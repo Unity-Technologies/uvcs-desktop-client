@@ -218,6 +218,15 @@ describe('merging to another branch', () => {
     expect(whereTheWindowIs().pages).toEqual([{ kind: 'merge', request: { kind: 'merge', sourceSpec: 'br:/main/task', destinationBranch: '/main' } }]);
   });
 
+  it('carries a task branch to the merge page, which then also offers to finish it', async () => {
+    asked.picked = '/main/other';
+    const task = { branch: { id: 7, name: '/main/task', parent: '/main', comment: '' }, choices: { markReviewed: false, hideBranch: false } };
+
+    await mergeTo('br:/main/task', '/main/task', task);
+
+    expect(whereTheWindowIs().pages).toEqual([{ kind: 'merge', request: { kind: 'merge', sourceSpec: 'br:/main/task', destinationBranch: '/main/other' }, task }]);
+  });
+
   it('offers every branch when merging a changeset or label', async () => {
     await mergeTo('lb:v1', 'v1');
 

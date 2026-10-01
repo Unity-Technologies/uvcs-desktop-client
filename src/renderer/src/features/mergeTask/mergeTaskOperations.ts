@@ -1,11 +1,13 @@
 import type { MergeRequest, MergeResult } from '@shared/domain/merge';
+import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
+import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByBranchList, isAffectedByCodeReviews, isAffectedByNewChangesets } from '../../app/refresh/refreshScopes';
 import { toast } from '../../ui/toast/toastStore';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { useFinishedTasksStore } from './finishedTask';
-import type { TaskEnding } from './taskMerge';
+import { taskMergeOf, type TaskBranch, type TaskEnding } from './taskMerge';
 
 interface FinishTaskOptions extends TaskEnding {
   comment: string;
@@ -35,6 +37,12 @@ export async function mergeTaskOnServer(workspacePath: string, request: MergeReq
     changesetId === undefined ? undefined : { label: 'Show in Branch Explorer', run: () => showInBranchExplorer({ kind: 'changeset', id: changesetId }) },
   );
   return result;
+}
+
+/** Finishes a task: the merge page for merging it into its parent on the server. */
+export function openTaskMerge(branch: TaskBranch): void {
+  const request: MergeRequest = { kind: 'merge', sourceSpec: spec.branch(branch.name), destinationBranch: branch.parent };
+  navigation.openPage({ kind: 'merge', request, task: taskMergeOf(branch) });
 }
 
 /**

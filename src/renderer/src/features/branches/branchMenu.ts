@@ -8,8 +8,9 @@ import { serverMergeLabel } from '../../components/mergeMenuLabels';
 import { menuAction, type MenuPlace } from '../../components/menuWords';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
-import { openMergeTaskDialog } from '../mergeTask/MergeTaskDialog';
+import { openTaskMerge } from '../mergeTask/mergeTaskOperations';
 import { isTaskBranch } from '../mergeTask/mergeTaskSummary';
+import { taskMergeOf } from '../mergeTask/taskMerge';
 import { openTaskWorkspaceDialog } from '../taskWorkspace/TaskWorkspaceDialog';
 import {
   cherryPickFromBranch,
@@ -53,8 +54,8 @@ export function branchMenu(workspacePath: string, branches: BranchInfo[], curren
     single && menuAction('switch', () => void switchToBranch(workspacePath, single.name), { label: 'Switch to this branch', ...onCurrent }),
     single && menuAction('taskWorkspace', () => openTaskWorkspaceDialog({ workspacePath, branch: single.name }), onCurrent),
     single && menuAction('merge', () => mergeFromBranch(single.name), onCurrent),
-    single && isTaskBranch(single) && menuAction('mergeTask', () => openMergeTaskDialog(workspacePath, single), { label: serverMergeLabel(single.parent) }),
-    single && menuAction('mergeTo', () => void mergeTo(spec.branch(single.name), single.name)),
+    single && isTaskBranch(single) && menuAction('mergeTask', () => openTaskMerge(single), { label: serverMergeLabel(single.parent) }),
+    single && menuAction('mergeTo', () => void mergeTo(spec.branch(single.name), single.name, isTaskBranch(single) ? taskMergeOf(single) : undefined)),
     single && menuAction('cherryPick', () => cherryPickFromBranch(single.name), { label: 'Cherry pick branch changes', ...onCurrent }),
     single &&
       menuAction('newBranch', () => void openCreateBranchDialog(workspacePath, branchHeadOrigin(single)).then((name) => name && place.onBranchCreated?.(name))),

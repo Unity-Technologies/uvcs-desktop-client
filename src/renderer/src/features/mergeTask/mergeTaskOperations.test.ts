@@ -4,9 +4,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 vi.mock('../branchExplorer/branchExplorerStore', () => ({ showInBranchExplorer: () => {} }));
 
 import type { MergeRequest } from '@shared/domain/merge';
-import { shownToasts, watchRefreshes } from '../../testing/operationOutcome';
+import { shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
 import { useFinishedTasksStore } from './finishedTask';
-import { mergeTaskOnServer } from './mergeTaskOperations';
+import { mergeTaskOnServer, openTaskMerge } from './mergeTaskOperations';
 
 const ws = '/ws';
 const request: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/task001', destinationBranch: '/main' };
@@ -82,5 +82,19 @@ describe('finishing a task on the server', () => {
     await mergeTaskOnServer(ws, request, options);
     expect(failures()).toEqual(["Couldn't mark the code review as reviewed"]);
     expect(writes().map(([method]) => method)).toEqual(['merge.run', 'codeReviews.update', 'branches.setHidden']);
+  });
+});
+
+describe('finishing a task', () => {
+  it('opens the merge page for merging it into its parent on the server, nothing picked yet', () => {
+    openTaskMerge({ id: 7, name: '/main/task001', parent: '/main', comment: 'Task 001' });
+
+    expect(whereTheWindowIs().pages).toEqual([
+      {
+        kind: 'merge',
+        request: { kind: 'merge', sourceSpec: 'br:/main/task001', destinationBranch: '/main' },
+        task: { branch: { id: 7, name: '/main/task001', parent: '/main', comment: 'Task 001' }, choices: { markReviewed: false, hideBranch: false } },
+      },
+    ]);
   });
 });
