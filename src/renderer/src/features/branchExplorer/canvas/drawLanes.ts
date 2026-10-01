@@ -10,6 +10,11 @@ const ELBOW_RADIUS = 16;
 /** The selection wraps the band like it wraps a changeset: a soft halo and an accent ring. */
 const SELECTION_HALO = 6;
 const SELECTION_RING = 3;
+/**
+ * A band's border is a hairline, the same weight on every branch: the current branch is told by its header card and
+ * the home badge, so a heavier border there only made its band louder than the changesets on it.
+ */
+const BAND_BORDER_WIDTH = 1;
 /** What of a band past the screen edges is still drawn: more than its rounded end with the selection around it. */
 const VIEW_MARGIN = BAND_HEIGHT + SELECTION_HALO;
 
@@ -55,8 +60,8 @@ function drawBand(draw: DrawContext, lane: Lane, shape: LaneShape, color: string
   if (recedes) ctx.globalAlpha *= 0.5;
   ctx.fill();
   ctx.strokeStyle = color;
-  ctx.globalAlpha = (isCurrent ? 0.6 : isHovered ? 0.5 : 0.3) * (recedes ? 0.4 : 1);
-  ctx.lineWidth = isCurrent ? 1.5 : 1;
+  ctx.globalAlpha = (isHovered ? 0.5 : 0.3) * (recedes ? 0.4 : 1);
+  ctx.lineWidth = BAND_BORDER_WIDTH;
   ctx.stroke();
   if (isSelected) {
     ctx.globalAlpha = 1;

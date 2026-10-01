@@ -126,6 +126,7 @@ function drawFar(search: GraphScene['search'], searchQuery = ''): ReturnType<typ
   const drawn: DrawnTargets = {
     reviewChips: new DrawnBoxes(),
     branchHeaders: new DrawnBoxes(),
+    cutBranchNames: new DrawnBoxes(),
     cutBranchComments: new DrawnBoxes(),
     captions: new DrawnBoxes(),
   };

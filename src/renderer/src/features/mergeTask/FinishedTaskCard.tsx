@@ -1,5 +1,5 @@
 import { CheckCircle2, EyeOff, GitBranchPlus, GitBranch, X } from 'lucide-react';
-import { shortBranchName } from '@shared/domain/specs';
+import { branchLabel } from '../../lib/branchLabels';
 import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
 import { switchToBranch } from '../branches/branchOperations';
@@ -12,7 +12,7 @@ import styles from './FinishedTaskCard.module.css';
 export function FinishedTaskCard({ workspacePath, task }: { workspacePath: string; task: FinishedTask }) {
   const { remember, dismiss } = useFinishedTasksStore();
   // The destination's last name keeps the card as narrow as Changes is; the tooltips say it whole.
-  const destination = shortBranchName(task.destination);
+  const destination = branchLabel(task.destination);
 
   const hide = async (): Promise<void> => {
     if (await hideTaskBranch(workspacePath, task.branch)) {

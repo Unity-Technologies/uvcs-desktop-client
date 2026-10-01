@@ -3,6 +3,7 @@ import { CODE_REVIEW_STATUSES, type CodeReview, type CodeReviewStatus } from '@s
 import { navigation } from '../../app/navigation/navigationStore';
 import type { PageProps } from '../../app/navigation/pages';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { PathLabel } from '../../components/PathLabel';
 import { UserLabel } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
 import { EmptyState } from '../../ui/EmptyState';
@@ -58,7 +59,8 @@ function ReviewHeader({ review }: { review: CodeReview }) {
       <div className={styles.meta}>
         <UserLabel user={review.owner} />
         <span>wants a review of</span>
-        <span className={styles.target}>{describeTarget(review.target)}</span>
+        {/* A branch fitted to the row as every branch shown on its own is (`PathLabel`), whole in its tooltip. */}
+        <span className={styles.target}>{review.target.kind === 'branch' ? <PathLabel path={review.target.branch} fitContent /> : describeTarget(review.target)}</span>
         <span className={styles.dot}>·</span>
         <RelativeTime date={review.date} />
         <span className={styles.dot}>·</span>

@@ -26,6 +26,11 @@ describe('checkinButtonLabel', () => {
     expect(label.tip).toBe('Check in to /main/scm1008874/scm1008874d');
   });
 
+  it('cuts a very long branch name in its middle, so the button can still name it', () => {
+    const label = checkinButtonLabel({ ...base, branchName: '/main/ThisBranchNameHasOneLongSegmentWithNoSlashToBreakAtAsSomeTeamsNameBranchesAfterTheirWholeTicketTitle' });
+    expect(wordings(label)[0]).toBe('Check in 4 changes (1.1 MB) to ThisBranchNameHasOne…eirWholeTicketTitle');
+  });
+
   it('leaves the size out when nothing is uploaded', () => {
     expect(wordings(checkinButtonLabel({ ...base, includedCount: 1, uploadBytes: 0 }))).toEqual(['Check in 1 change to main', 'Check in 1 change', 'Check in 1']);
   });

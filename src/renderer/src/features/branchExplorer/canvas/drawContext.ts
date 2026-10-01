@@ -53,6 +53,8 @@ export interface DrawnTargets {
   reviewChips: DrawnBoxes<CodeReviewSummary>;
   /** Branch header cards where they are drawn, pinned to the left edge or not. */
   branchHeaders: DrawnBoxes<Lane>;
+  /** The name lines of branch headers that don't show the whole name (`fitBranchName` cut it), as wide as the text drawn. */
+  cutBranchNames: DrawnBoxes<Lane>;
   /** The comment lines of branch headers that don't show the whole comment (cut to fit, or more lines below), as wide as the text drawn. */
   cutBranchComments: DrawnBoxes<Lane>;
   /** Changeset comments, as wide as the text drawn. */

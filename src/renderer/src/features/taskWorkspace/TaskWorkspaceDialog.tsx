@@ -7,6 +7,7 @@ import { LocationField } from '../../app/home/dialogs/LocationField';
 import { useOpenWorkspace } from '../../app/workspace/useOpenWorkspace';
 import { useWorkspaceInfoOf } from '../../app/workspace/useWorkspace';
 import { useWorkspaceList } from '../../app/workspace/workspaceQueries';
+import { PathLabel } from '../../components/PathLabel';
 import { lastSegment } from '../../lib/paths';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
@@ -140,7 +141,7 @@ function TaskWorkspaceDialog({ workspacePath, branch: initialBranch, onClose }: 
           />
         ) : (
           <Button className={styles.branchButton} icon={<GitBranch size={14} />} disabled={running} onClick={() => void chooseBranch()}>
-            {existingBranch ?? 'Choose a branch…'}
+            {existingBranch ? <PathLabel path={existingBranch} /> : 'Choose a branch…'}
           </Button>
         )}
       </div>

@@ -12,11 +12,11 @@ describe('switchToast', () => {
     expect(words(switchToast({ kind: 'left', count: 1, sourceName: '/main', shelveId: 2 }, '/main/task'))).toEqual({
       kind: 'success',
       title: 'Switched to /main/task',
-      detail: 'Your change stayed on /main, in shelve 2.',
+      detail: 'Your change stayed on main, in shelve 2.',
       action: undefined,
     });
     expect(switchToast({ kind: 'left', count: 3, sourceName: '/main', shelveId: 2, restored: { count: 1 } }, '/main/task').detail).toBe(
-      'Your 3 changes stayed on /main, in shelve 2. Restored the 1 change you left here.',
+      'Your 3 changes stayed on main, in shelve 2. Restored the 1 change you left here.',
     );
   });
 

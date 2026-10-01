@@ -1,6 +1,7 @@
 import type { GitSyncRequest, ReplicationRequest, ReplicationSummary } from '@shared/domain/replication';
 import { api } from '../../api/client';
 import { runOperation } from '../../app/operations/runOperation';
+import { branchLabel } from '../../lib/branchLabels';
 import { replicationMessage } from './replicationMessage';
 
 /**
@@ -9,7 +10,7 @@ import { replicationMessage } from './replicationMessage';
  */
 export function pushBranch(workspacePath: string, request: ReplicationRequest): Promise<ReplicationSummary | undefined> {
   return runOperation({
-    title: `Pushing ${request.branch} to ${request.to}`,
+    title: `Pushing ${branchLabel(request.branch)} to ${request.to}`,
     workspacePath,
     run: (operationId) => api.sync.push(workspacePath, request, operationId),
     affects: () => false,
@@ -20,7 +21,7 @@ export function pushBranch(workspacePath: string, request: ReplicationRequest): 
 /** Brings `branch` of `request.from` into the workspace repository (`request.to`). */
 export function pullBranch(workspacePath: string, request: ReplicationRequest): Promise<ReplicationSummary | undefined> {
   return runOperation({
-    title: `Pulling ${request.branch} from ${request.from}`,
+    title: `Pulling ${branchLabel(request.branch)} from ${request.from}`,
     workspacePath,
     run: (operationId) => api.sync.pull(workspacePath, request, operationId),
     success: (summary) => ({ title: replicationMessage('pull', request, summary) }),

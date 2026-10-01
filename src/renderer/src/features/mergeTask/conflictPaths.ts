@@ -1,5 +1,5 @@
 import { describeSpec } from '../merge/mergeDescription';
-import { distinctBranchNames } from '../../lib/distinctBranchNames';
+import { branchLabels } from '../../lib/branchLabels';
 
 /**
  * How to resolve a task's conflicts in the workspace instead of on the server: merge the destination into the task
@@ -32,7 +32,7 @@ interface WorkspaceResolutionInput {
  * merge brings the whole task branch, not the changeset that finishes a merge whose destination moved.
  */
 export function workspaceResolutions({ sourceSpec, taskBranch, destination, currentBranch }: WorkspaceResolutionInput): WorkspaceResolution[] {
-  const [task, parent] = distinctBranchNames(taskBranch, destination);
+  const [task, parent] = branchLabels(taskBranch, destination);
   const intoTask: WorkspaceResolution = {
     path: 'intoTask',
     label: `Merge ${parent} into ${task} first`,

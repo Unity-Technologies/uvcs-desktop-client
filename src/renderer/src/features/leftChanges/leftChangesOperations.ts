@@ -4,6 +4,7 @@ import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runOperation, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByShelveApplied, isAffectedByShelveDeletion } from '../../app/refresh/refreshScopes';
+import { branchLabel } from '../../lib/branchLabels';
 import { pluralize } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
@@ -11,7 +12,7 @@ import { toast } from '../../ui/toast/toastStore';
 /** Puts left changes back: applied right away when they merge cleanly, otherwise through the merge view. */
 export async function restoreLeftChanges(workspacePath: string, left: LeftChanges): Promise<void> {
   const result = await runOperation({
-    title: `Restoring your changes from ${left.sourceName}`,
+    title: `Restoring your changes from ${branchLabel(left.sourceName)}`,
     workspacePath,
     run: (operationId) => api.leftChanges.restore(workspacePath, left.shelveId, operationId),
     affects: isAffectedByShelveApplied,
@@ -37,11 +38,11 @@ export async function restoreLeftChanges(workspacePath: string, left: LeftChange
 }
 
 function restoredMessage(left: LeftChanges, count: number, sourceName: string): string {
-  return left.reason === 'update' ? `Restored ${pluralize(count, 'change')} you put aside` : `Restored ${pluralize(count, 'change')} you left on ${sourceName}`;
+  return left.reason === 'update' ? `Restored ${pluralize(count, 'change')} you put aside` : `Restored ${pluralize(count, 'change')} you left on ${branchLabel(sourceName)}`;
 }
 
 export function reviewLeftChanges(left: LeftChanges): void {
-  navigation.openPage({ kind: 'diff', title: `Changes left on ${left.sourceName} (shelve ${left.shelveId})`, target: { kind: 'shelve', shelveId: left.shelveId } });
+  navigation.openPage({ kind: 'diff', title: `Changes left on ${branchLabel(left.sourceName)} (shelve ${left.shelveId})`, target: { kind: 'shelve', shelveId: left.shelveId } });
 }
 
 export async function discardLeftChanges(workspacePath: string, shelves: LeftChanges[]): Promise<void> {

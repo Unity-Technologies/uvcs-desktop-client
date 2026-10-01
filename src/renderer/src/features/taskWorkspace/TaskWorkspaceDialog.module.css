@@ -21,11 +21,9 @@
   font-size: var(--text-xs);
 }
 
+/* The branch fitted to the button (`PathLabel`), its own name kept. */
 .branchButton {
   justify-content: flex-start;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .steps {

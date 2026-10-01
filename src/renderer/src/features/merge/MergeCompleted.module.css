@@ -32,6 +32,7 @@
   margin: 0;
   color: var(--text-secondary);
   font-weight: var(--weight-medium);
+  overflow-wrap: anywhere;
 }
 
 .next {

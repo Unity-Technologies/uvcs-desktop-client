@@ -1,4 +1,5 @@
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
+import { branchLabel } from '../../lib/branchLabels';
 import { fileNameOf, firstLine, pluralize } from '../../lib/text';
 import { displayName } from '../../lib/userName';
 import { Avatar } from '../../ui/Avatar';
@@ -34,7 +35,7 @@ function CheckinRejectedDialog({ incoming, overlapping, needsReview, rejected, o
 
   return (
     <Dialog
-      title={`Someone checked in on ${incoming.branch}`}
+      title={`Someone checked in on ${branchLabel(incoming.branch)}`}
       width={480}
       onClose={() => onFinish(undefined)}
       onSubmit={() => onFinish(primary)}

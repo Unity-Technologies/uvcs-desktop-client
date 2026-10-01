@@ -2,8 +2,8 @@ import { useQuery } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { IMMUTABLE_QUERY, SLOW_CHANGING_QUERY } from '../../app/queryClient';
+import { branchLabels } from '../../lib/branchLabels';
 import { useBranch } from '../branches/useBranches';
-import { distinctBranchNames } from '../../lib/distinctBranchNames';
 import { finishedTaskFor, useFinishedTasksStore } from './finishedTask';
 import { FinishedTaskCard } from './FinishedTaskCard';
 import { openTaskMerge } from './mergeTaskOperations';
@@ -44,7 +44,7 @@ export function MergeTaskSuggestion({ workspacePath, branchName, quiet }: { work
   if (finished) return <FinishedTaskCard workspacePath={workspacePath} task={finished} />;
   if (!task || !hasChangesets || mergedInto !== null) return null;
 
-  const [source, destination] = distinctBranchNames(task.name, task.parent);
+  const [source, destination] = branchLabels(task.name, task.parent);
   return (
     <TaskMergeButton
       source={source}

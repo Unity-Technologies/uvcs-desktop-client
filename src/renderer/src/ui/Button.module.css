@@ -9,12 +9,29 @@
   border-radius: var(--radius-md);
   font-size: var(--text-md);
   font-weight: var(--weight-medium);
+  max-width: 100%;
   white-space: nowrap;
   cursor: default;
   transition:
     background var(--duration-fast),
     border-color var(--duration-fast),
     opacity var(--duration-fast);
+}
+
+/*
+ * A button never grows past its container: a label too long for it (a branch's name, ARCHITECTURE.md "Long names") is
+ * cut with an ellipsis. In a row it keeps its size; a place whose button may give way to the others sets its
+ * `min-width: 0` (a dialog's primary button). Icons keep their size.
+ */
+.button > svg,
+.spinner {
+  flex: none;
+}
+
+.label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .button:disabled {

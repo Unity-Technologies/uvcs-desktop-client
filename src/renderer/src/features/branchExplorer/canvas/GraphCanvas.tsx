@@ -96,6 +96,7 @@ export const GraphCanvas = forwardRef<GraphCanvasHandle, GraphCanvasProps>(funct
   const drawnRef = useRef<DrawnTargets>({
     reviewChips: new DrawnBoxes(),
     branchHeaders: new DrawnBoxes(),
+    cutBranchNames: new DrawnBoxes(),
     cutBranchComments: new DrawnBoxes(),
     captions: new DrawnBoxes(),
   });

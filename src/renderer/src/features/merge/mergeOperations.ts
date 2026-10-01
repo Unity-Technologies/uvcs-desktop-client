@@ -1,10 +1,9 @@
 import { followUpMerge, type MergeRequest, type MergeResolutions, type MergeResult } from '@shared/domain/merge';
-import { shortBranchName } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runOperation, type OperationSuccess } from '../../app/operations/runOperation';
 import { isAffectedByCheckinOrUpdate, isAffectedByServerMerge, isAffectedByShelveApplied } from '../../app/refresh/refreshScopes';
-import { distinctBranchNames } from '../../lib/distinctBranchNames';
+import { branchLabel, branchLabels } from '../../lib/branchLabels';
 import { toast } from '../../ui/toast/toastStore';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { finishMergedTask } from '../mergeTask/mergeTaskOperations';
@@ -36,7 +35,7 @@ export async function completeMerge(
 
   navigation.goBack();
   if (result.destinationMoved) {
-    toast.info(`${destination} moved while merging`, destinationMovedExplanation(result.changesetId, destination));
+    toast.info(`${branchLabel(destination)} moved while merging`, destinationMovedExplanation(result.changesetId, destination));
     openMerge(followUpMerge(result, destination), finishing?.task);
   } else if (finishing) {
     await finishMergedTask(workspacePath, taskEnding(finishing), { destination, changesetId: result.changesetId });
@@ -71,11 +70,11 @@ function mergeSuccess(request: MergeRequest, taskBranch: string | undefined, res
 
 /**
  * What a server merge's toast names: the source branch (the task's, for the changeset that finishes it) and the
- * destination as briefly as tells them apart, so long names keep it short; another source as `describeSpec` does.
+ * destination as briefly as tells them apart (`branchLabels`), so long names keep it short; another source as `describeSpec` does.
  */
 function mergedNames(sourceSpec: string, taskBranch: string | undefined, destination: string): [string, string] {
   const sourceBranch = taskBranch ?? (sourceSpec.startsWith('br:') ? describeSpec(sourceSpec) : undefined);
-  return sourceBranch ? distinctBranchNames(sourceBranch, destination) : [describeSpec(sourceSpec), shortBranchName(destination)];
+  return sourceBranch ? branchLabels(sourceBranch, destination) : [describeSpec(sourceSpec), branchLabel(destination)];
 }
 
 /** Opens the merge page; `task` when it finishes a task branch on the server. */
@@ -85,5 +84,6 @@ export function openMerge(request: MergeRequest, task?: TaskMerge): void {
 
 /** Why a server-side merge needs a second one when someone checked in on its destination at the same time. */
 export function destinationMovedExplanation(changesetId: number | undefined, destinationBranch: string): string {
-  return `Someone checked in on ${destinationBranch} at the same time, so the merge (changeset ${changesetId}) sits beside the new head. Merge it into ${destinationBranch} to finish.`;
+  const destination = branchLabel(destinationBranch);
+  return `Someone checked in on ${destination} at the same time, so the merge (changeset ${changesetId}) sits beside the new head. Merge it into ${destination} to finish.`;
 }

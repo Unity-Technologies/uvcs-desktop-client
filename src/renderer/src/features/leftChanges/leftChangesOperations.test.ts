@@ -33,7 +33,7 @@ describe('restoreLeftChanges', () => {
     await restoreLeftChanges(ws, left(12));
 
     expect(fakeApi.argsOf('leftChanges.restore')).toEqual([[ws, 12, expect.any(String)]]);
-    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Restored 3 changes you left on /main/task', action: 'View' }]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Restored 3 changes you left on task', action: 'View' }]);
   });
 
   it('refreshes the workspace, its locks, the shelve lists and the left changes, not the repository', async () => {
@@ -79,7 +79,7 @@ describe('restoreLeftChanges', () => {
 
     await restoreLeftChanges(ws, left(12));
 
-    expect(shownToasts()).toEqual([{ kind: 'error', title: 'Restoring your changes from /main/task failed', detail: 'The shelve does not exist' }]);
+    expect(shownToasts()).toEqual([{ kind: 'error', title: 'Restoring your changes from task failed', detail: 'The shelve does not exist' }]);
     expect(whereTheWindowIs().pages).toEqual([]);
   });
 });

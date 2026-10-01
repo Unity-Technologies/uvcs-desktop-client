@@ -1,6 +1,7 @@
 import { CheckCircle2, GitBranch, RefreshCw } from 'lucide-react';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { branchLabel } from '../../lib/branchLabels';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
 import { CenteredSpinner } from '../../ui/Spinner';
@@ -15,7 +16,13 @@ export function IncomingChangesView() {
   const header = (
     <ViewHeader
       title="Incoming"
-      subtitle={incoming?.branch && (incoming.changesetCount > 0 ? `${incoming.changesetCount} new on ${incoming.branch}` : incoming.branch)}
+      subtitle={
+        incoming?.branch && (
+          <span data-tip={incoming.branch}>
+            {incoming.changesetCount > 0 ? `${incoming.changesetCount} new on ${branchLabel(incoming.branch)}` : branchLabel(incoming.branch)}
+          </span>
+        )
+      }
       actions={<IconButton icon={<RefreshCw size={14} />} label="Refresh" loading={isFetching} onClick={() => void invalidateWorkspace(workspacePath)} />}
     />
   );

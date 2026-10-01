@@ -85,7 +85,22 @@ describe('completing a merge', () => {
 
     expect(await completeMerge(ws, intoServerBranch, resolutions)).toBeNull();
     expect(whereTheWindowIs().pages).toEqual([{ kind: 'merge', request: { kind: 'merge', sourceSpec: 'cs:42', destinationBranch: '/main' } }]);
-    expect(shownToasts().map(({ kind, title }) => ({ kind, title }))).toEqual([{ kind: 'info', title: '/main moved while merging' }]);
+    expect(shownToasts().map(({ kind, title }) => ({ kind, title }))).toEqual([{ kind: 'info', title: 'main moved while merging' }]);
+  });
+
+  it('names a long destination that moved by its own name', async () => {
+    const destinationBranch = '/main/child-br-cr-sample/empty-branch2/child_1/subtask';
+    fakeApi.answer('merge.run', () => ({ changesetId: 43, destinationMoved: true }));
+
+    await completeMerge(ws, { kind: 'merge', sourceSpec: 'br:/main/child-br-cr-sample/empty-branch2/child_1/subtask/merge-test', destinationBranch }, resolutions);
+
+    expect(shownToasts()).toEqual([
+      {
+        kind: 'info',
+        title: 'subtask moved while merging',
+        detail: 'Someone checked in on subtask at the same time, so the merge (changeset 43) sits beside the new head. Merge it into subtask to finish.',
+      },
+    ]);
   });
 
   describe('finishing a task', () => {

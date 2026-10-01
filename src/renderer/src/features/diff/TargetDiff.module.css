@@ -25,6 +25,16 @@
   font-weight: 600;
 }
 
+/* The branch fitted to the row (`PathLabel`) rather than wrapped over several lines. */
+.branchTitle {
+  display: flex;
+  gap: 0.3em;
+  min-width: 0;
+  font-size: var(--text-lg);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .title code {
   font-family: var(--font-mono);
   font-size: var(--text-md);

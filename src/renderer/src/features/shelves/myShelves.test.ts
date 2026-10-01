@@ -42,8 +42,8 @@ describe('myShelves', () => {
 
   it('names the changes a switch or an update left by where they were, and counts what this app recorded', () => {
     const [switched, updated] = myShelves([shelve(12, automatic), shelve(11, automatic)], [record(12), record(11, 'update')], MINE, NOW);
-    expect(switched).toMatchObject({ title: 'Left on /main/task', spec: 'sh:12', detail: '2 hours ago · 3 changes', left: true });
-    expect(updated).toMatchObject({ title: 'Put aside to update /main/task', left: true });
+    expect(switched).toMatchObject({ title: 'Left on task', spec: 'sh:12', detail: '2 hours ago · 3 changes', left: true });
+    expect(updated).toMatchObject({ title: 'Put aside to update task', left: true });
   });
 
   it("recognizes another app's automatic shelves as left changes", () => {
@@ -96,7 +96,7 @@ describe('matchesShelveFilter', () => {
 
   it('finds changes a switch left by where they were left', () => {
     const [left] = myShelves([shelve(12, automatic)], [record(12)], MINE, NOW);
-    expect(matchesShelveFilter(left!, 'main/task')).toBe(true);
+    expect(matchesShelveFilter(left!, 'left task')).toBe(true);
   });
 
   it("finds everyone's shelves by author, by name or by user", () => {

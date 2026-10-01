@@ -1,3 +1,4 @@
+import { branchLabel } from '../../lib/branchLabels';
 import { pluralize } from '../../lib/text';
 
 /** "2 files you changed were", "A file you changed was". */
@@ -7,7 +8,7 @@ function filesYouChanged(count: number): string {
 
 /** The update bar while local changes to files the branch deleted or moved block the update. */
 export function blockedMessage(blockedCount: number, branch: string, pendingMergeCount: number): string {
-  const blocked = `${filesYouChanged(blockedCount)} deleted or moved on ${branch}.`;
+  const blocked = `${filesYouChanged(blockedCount)} deleted or moved on ${branchLabel(branch)}.`;
   return pendingMergeCount > 0 ? `${blocked} ${pluralize(pendingMergeCount, 'other needs', 'others need')} merging.` : blocked;
 }
 
@@ -16,8 +17,8 @@ export function updateBarMessage(changesetCount: number, branch: string, mergeCo
   if (mergeCount === 0) return `Update to get ${pluralize(changesetCount, 'new changeset')}. Your local changes stay as they are.`;
   if (pendingMergeCount === mergeCount) {
     return mergeCount === 1
-      ? `A file you changed also changed on ${branch}. Merge it to update.`
-      : `${mergeCount} files you changed also changed on ${branch}. Merge them to update.`;
+      ? `A file you changed also changed on ${branchLabel(branch)}. Merge it to update.`
+      : `${mergeCount} files you changed also changed on ${branchLabel(branch)}. Merge them to update.`;
   }
   if (pendingMergeCount > 0) return `${pendingMergeCount} of ${mergeCount} files changed on both sides still ${pendingMergeCount === 1 ? 'needs' : 'need'} merging.`;
   return mergeCount === 1 ? 'The file is merged. Update to apply it.' : `All ${mergeCount} files are merged. Update to apply them.`;

@@ -36,9 +36,10 @@ task (below). One preview, one way to resolve, one button.
 The page is a preview until "Complete merge" (into the workspace) or "Merge into <branch>" (into a server branch, the
 branch's last name). Its header is one row: a "Preview" pill (its
 tooltip: nothing is written until then), the title fitted as a whole (`fitMergeTitle`: the words stay, the branches give
-way from their middle), the changesets it combines ("cs:3 → cs:5"; a click lists them with the base), where it stands
-("2 conflicts to decide", the full summary in its tooltip) and the merge button, the primary action only once nothing
-waits. Merging into a server branch, a second row holds the changeset comment (`Merge from <source>`) and the button.
+way from their middle; it keeps that room in a narrow window, ARCHITECTURE.md "Long names"), the changesets it combines
+("cs:3 → cs:5"; a click lists them with the base), where it stands ("2 conflicts to decide", the full summary in its
+tooltip) and the merge button, the primary action only once nothing waits. Merging into a server branch, a second row
+holds the changeset comment (`Merge from <source>`) and the button.
 Every status reads as what the merge will do, never as done (`mergeStatus`): "Will merge automatically", "Needs your
 decision", then the user's choice ("Keeping yours", "Keeping incoming", "Combined", "Edited by you"; "Open in VS Code…",
 "Resolved in VS Code" for merge tools): an icon in the list and a chip in the file's toolbar, with a short tooltip. Sides
@@ -48,7 +49,9 @@ next to their branch. Copy stays short: labels name things, tooltips define them
 While two files or more wait for a decision the preferred tool can open, the header's primary action is "Resolve N
 conflicts in <tool>" (`ResolveRunControl`, ⇧⌘↩; the caret picks another tool, with how many files each opens, and
 whether a file closed unsaved asks before the next): the files open one after the other, each once the one before is
-saved and closed (`useResolveRun`, `resolveRun`). Files the tool can't open (binaries, types it isn't for) are left
+saved and closed (`useResolveRun`, `resolveRun`). Both carets pick the tool like Checkin's picks how to check in
+(`toolChoiceEntries`): the button's tool is checked, and picking another (or adding one) only makes it the button's
+tool, the preferred one from then on; nothing opens until the button is clicked. Files the tool can't open (binaries, types it isn't for) are left
 out and named in its tooltip. While it runs, a strip takes the status's place: a step per file, "Resolving 2 of 5 ·
 app.ts in <tool>", Skip this file (closes it there) and Stop (Esc, confirmed while the tool has a file). The list marks
 the file open and the selection follows it unless the user looks elsewhere, which never stops the run; files decided in
@@ -59,8 +62,7 @@ or to Complete merge. With one file left, its own toolbar is the way.
 
 A conflicting file is read-only. Its toolbar holds the file, its status and the ways out: "Resolve in <tool>"
 (`MergeToolButton`, a split button, primary while the file waits and the header offers nothing; disabled during a run:
-the other tools found, "Choose another app…", "Edit the text in the app" and the settings behind the caret; picking a
-tool there makes it the preferred one), then "Keep Yours | Incoming | Both" for the whole file (`KeepChoices`, `conflictChoices`)
+the other tools found, "Choose another app…", "Edit the text in the app" and the settings behind the caret), then "Keep Yours | Incoming | Both" for the whole file (`KeepChoices`, `conflictChoices`)
 and Start over. Below, short one-line views: "Conflicts" with the count left, then "Changes" (the destination now → after
 the merge), "Yours", "Incoming" and "Base". Conflicts read as labeled blocks instead of conflict markers
 (`conflictHunkCss` over Pierre's view): a header naming the destination's side with Keep yours / Keep incoming / Keep both

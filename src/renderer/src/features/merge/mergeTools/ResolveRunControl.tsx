@@ -1,4 +1,4 @@
-import { Check, ListChecks, Pause, Settings, SkipForward } from 'lucide-react';
+import { Check, GalleryVerticalEnd, Pause, Settings, SkipForward } from 'lucide-react';
 import { openSettingsDialogAt } from '../../../app/settings/SettingsDialog';
 import { saveSettings, useSettings } from '../../../app/settings/useSettings';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../../lib/actions';
@@ -13,6 +13,7 @@ import { SplitButton } from '../../../ui/SplitButton';
 import type { FileConflictState } from '../resolve/useFileConflicts';
 import { leftOutNote, runLabel, runPlans, runPositionText, type RunPlan, type RunProgress } from './resolveRun';
 import type { ResolveRun } from './useResolveRun';
+import { toolChoiceEntries } from './toolChoices';
 import { preferMergeTool, useMergeTools } from './useMergeTools';
 import styles from './ResolveRunControl.module.css';
 
@@ -49,17 +50,13 @@ export function ResolveRunControl({ states, run, plans }: ResolveRunControlProps
 function RunButton({ plans, run }: { plans: RunPlan[]; run: ResolveRun }) {
   const { askWhenMergeToolClosesUnsaved } = useSettings();
   const offered = plans[0]!;
-  const start = (plan: RunPlan): void => {
-    if (plan !== offered) void preferMergeTool(plan.tool.id);
-    run.start(plan.tool);
-  };
+  // The caret only picks the run's tool (the preferred one); the run starts from the button.
   const menu: MenuEntry[] = tidyMenu([
-    ...plans.map((plan) => ({
-      id: plan.tool.id,
-      label: `${plan.tool.name} · ${pluralize(plan.keys.length, 'conflict')}`,
-      icon: plan === offered ? Check : undefined,
-      run: () => start(plan),
-    })),
+    ...toolChoiceEntries(
+      plans.map((plan) => ({ tool: plan.tool, label: `${plan.tool.name} · ${pluralize(plan.keys.length, 'conflict')}` })),
+      offered.tool.id,
+      (toolId) => void preferMergeTool(toolId),
+    ),
     SEPARATOR,
     {
       id: 'askWhenUnsaved',
@@ -74,13 +71,13 @@ function RunButton({ plans, run }: { plans: RunPlan[]; run: ResolveRun }) {
     <SplitButton
       variant="primary"
       size="medium"
-      icon={<ListChecks size={14} />}
+      icon={<GalleryVerticalEnd size={14} />}
       menu={menu}
       menuLabel="Resolve in another tool"
       tip={`Opens each file in ${offered.tool.name} in turn: save and close it there to get the next`}
       tipSub={leftOutNote(offered)}
       shortcut={hotkey('resolveAllInTool')}
-      onClick={() => start(offered)}
+      onClick={() => run.start(offered.tool)}
     >
       {runLabel(offered)}
     </SplitButton>

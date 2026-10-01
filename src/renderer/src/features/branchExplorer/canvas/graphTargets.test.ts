@@ -13,7 +13,7 @@ import { laneShape } from './laneShape';
 const layout = layoutGraph(sampleHistory());
 
 function drawnTargets(): DrawnTargets {
-  return { reviewChips: new DrawnBoxes(), branchHeaders: new DrawnBoxes(), cutBranchComments: new DrawnBoxes(), captions: new DrawnBoxes() };
+  return { reviewChips: new DrawnBoxes(), branchHeaders: new DrawnBoxes(), cutBranchNames: new DrawnBoxes(), cutBranchComments: new DrawnBoxes(), captions: new DrawnBoxes() };
 }
 
 describe('hitTest', () => {
@@ -161,6 +161,19 @@ describe('hoverCardFor', () => {
     cut.branchHeaders.add(lane, shape.left, top, 120, 36);
     cut.cutBranchComments.add(lane, shape.left + 8, top + 18, 100, 18);
     expect(cardAt(onComment, cut)).toEqual({ kind: 'clippedText', key: '/main/a', text: lane.branch.comment.trim() });
+  });
+
+  it('shows the whole name in a plain tooltip on a header name line that was cut to fit', () => {
+    const lane = layout.lanesByBranch.get('/main/a')!;
+    const shape = laneShape(lane);
+    const top = headerTop(shape.y, 36);
+    const onName = { x: shape.left + 20, y: top + 8 };
+    const drawn = drawnTargets();
+    drawn.branchHeaders.add(lane, shape.left, top, 120, 36);
+    expect(cardAt(onName, drawn)).toBeNull();
+
+    drawn.cutBranchNames.add(lane, shape.left + 8, top, 100, 18);
+    expect(cardAt(onName, drawn)).toEqual({ kind: 'clippedText', key: 'name:/main/a', text: '/main/a' });
   });
 
   it('shows no tooltip on the name line or the band of a header whose comment is cut', () => {
