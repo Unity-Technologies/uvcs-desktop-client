@@ -15,7 +15,7 @@ npmRebuild: false
 # them from (a file inside app.asar can't be opened by another app). Electron's own LICENSE and LICENSES.chromium.html
 # ship with Electron.
 extraResources:
-  - LICENSE
+  - LICENSE.md
   - NOTICE
   - from: out/THIRD_PARTY_NOTICES.txt
     to: THIRD_PARTY_NOTICES.txt

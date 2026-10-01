@@ -60,7 +60,7 @@ privately instead: see [SECURITY.md](SECURITY.md). [CONTRIBUTING.md](CONTRIBUTIN
 
 ## License
 
-[Apache License 2.0](LICENSE), copyright Unity Technologies (see [NOTICE](NOTICE)). The installed app lists the
+[Apache License 2.0](LICENSE.md), copyright Unity Technologies (see [NOTICE](NOTICE)). The installed app lists the
 open-source libraries it includes, with their licenses, in `THIRD_PARTY_NOTICES.txt`.
 
 "Unity" and "Unity Version Control" are trademarks of Unity Technologies. The license grants no rights to them.

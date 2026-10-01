@@ -105,9 +105,9 @@ markup from the network.
   and Apache ask to keep, so `npm run build` also writes `out/THIRD_PARTY_NOTICES.txt`: the name, version, license
   and LICENSE/NOTICE files of exactly the packages whose code is in the bundles (`thirdPartyNoticesCollector` in
   `scripts/build/`, one plugin for main, preload, renderer and its workers; the text is `thirdPartyNotices`).
-  electron-builder.yml's `extraResources` ships it with the app's `LICENSE` and `NOTICE` as plain files in the
+  electron-builder.yml's `extraResources` ships it with the app's `LICENSE.md` and `NOTICE` as plain files in the
   resources folder, outside `app.asar`.
-- **Licenses**: the app is Apache-2.0 (`LICENSE`, `NOTICE`), and every package in package-lock.json must have a
+- **Licenses**: the app is Apache-2.0 (`LICENSE.md`, `NOTICE`), and every package in package-lock.json must have a
   permissive license (`PERMISSIVE_LICENSES`, `scripts/build/dependencyLicenses.test.ts`): a copyleft one fails the tests
   and needs a legal decision before it joins.
 - macOS signing and notarization turn on once the `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`,
