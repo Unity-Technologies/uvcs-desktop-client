@@ -1,3 +1,5 @@
+// First: errors nothing else catches are the app's to report from here on, never Electron's native dialog.
+import './errors/installUnexpectedErrorHandlers';
 import { join } from 'node:path';
 import { app } from 'electron';
 import { CmClient } from './cm/CmClient';
