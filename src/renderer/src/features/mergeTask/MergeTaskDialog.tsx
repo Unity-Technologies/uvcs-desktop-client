@@ -18,7 +18,8 @@ import { destinationMovedExplanation, openMerge } from '../merge/mergeOperations
 import { resolveButtonLabel, type ConflictPath } from './conflictPaths';
 import { MergeTaskConflicts } from './MergeTaskConflicts';
 import { MergeTaskFileList } from './MergeTaskFileList';
-import { mergeDestinationIntoTask, mergeTaskOnServer, resolveOnDestination } from './mergeTaskOperations';
+import { mergeTaskOnServer } from './mergeTaskOperations';
+import { mergeDestinationIntoTask, resolveOnDestination } from './resolveTaskInWorkspace';
 import { canMarkReviewed, cleanSummary, defaultMergeComment, destinationMoved, mergeTaskOutcome } from './mergeTaskSummary';
 import { ReviewStatusNote } from './ReviewStatusNote';
 import { useChangesetsToMerge } from './useChangesetsToMerge';

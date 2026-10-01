@@ -1,13 +1,10 @@
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { MergeRequest, MergeResult } from '@shared/domain/merge';
-import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByBranchList, isAffectedByCodeReviews, isAffectedByNewChangesets } from '../../app/refresh/refreshScopes';
 import { toast } from '../../ui/toast/toastStore';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
-import { switchToBranch } from '../branches/branchOperations';
-import { openMerge } from '../merge/mergeOperations';
 import { useFinishedTasksStore } from './finishedTask';
 
 /** What else finishing a task does once it's merged. */
@@ -76,16 +73,4 @@ export async function finishMergedTask(
 /** Hides a finished task's branch; true once hidden. Only the lists of branches change. */
 export function hideTaskBranch(workspacePath: string, taskBranch: string): Promise<boolean> {
   return runVoidAction(workspacePath, "Couldn't hide the branch", () => api.branches.setHidden(workspacePath, [taskBranch], true), isAffectedByBranchList);
-}
-
-/** Brings the destination into the task branch in the workspace, so the conflicts are resolved there first. */
-export async function mergeDestinationIntoTask(workspacePath: string, currentBranch: string | undefined, taskBranch: string, destination: string): Promise<void> {
-  if (currentBranch !== taskBranch && !(await switchToBranch(workspacePath, taskBranch))) return;
-  openMerge({ kind: 'merge', sourceSpec: spec.branch(destination) });
-}
-
-/** Merges the task into the destination in the workspace, where the conflicts can be resolved; checking in finishes it. */
-export async function resolveOnDestination(workspacePath: string, currentBranch: string | undefined, sourceSpec: string, destination: string): Promise<void> {
-  if (currentBranch !== destination && !(await switchToBranch(workspacePath, destination))) return;
-  openMerge({ kind: 'merge', sourceSpec });
 }
