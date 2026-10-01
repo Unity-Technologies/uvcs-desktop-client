@@ -102,6 +102,15 @@ describe('completing a merge', () => {
       expect(shownToasts()).toEqual([{ kind: 'success', title: 'Merged /main/task001 into /main (cs:42)', action: 'Show in Branch Explorer' }]);
     });
 
+    it('leaves the review and the branch alone when not picked, still remembering the task', async () => {
+      fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
+
+      await completeMerge(ws, finishTask, resolutions, { task: { ...task, choices: { markReviewed: false, hideBranch: false } }, review });
+
+      expect(writes().map(([method]) => method)).toEqual(['merge.run']);
+      expect(useFinishedTasksStore.getState().merged[ws]).toEqual({ branch: '/main/task001', destination: '/main', changesetId: 42, hidden: false });
+    });
+
     it('refreshes only the reviews and the branch lists besides what the new changeset changes', async () => {
       fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
       const refreshed = watchRefreshes(ws);
