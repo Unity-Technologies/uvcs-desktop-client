@@ -1,6 +1,8 @@
+/* Gives way in a row too narrow for it, its label cut as any button's is; the caret keeps its size. */
 .split {
   display: flex;
-  flex: none;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .main {
@@ -9,6 +11,7 @@
 }
 
 .caret {
+  flex: none;
   margin-left: 1px;
   border-top-left-radius: 0;
   border-bottom-left-radius: 0;
