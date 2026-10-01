@@ -166,7 +166,7 @@ and the app keeps the decision.
 
 - `cm merge --merge` always carries `--nointeractiveresolution` and an explicit decision for every conflicting file
   (`fileConflictArgs`): workspace merges keep the destination and the app writes the resolutions; merges into a
-  server branch hand `cm` each file's decision in a resolutions file (`--resolutionsfile`, docs/features/merge.md).
+  server branch hand `cm` each file's decision in a resolutions file (`--fileconflictsresolutionsfile`, docs/features/merge.md).
 - Shelves are applied as merges from `sh:N` (never `cm shelveset apply`); `cm update` keeps `--dontmerge`;
   `cm diff` always has `--format`. `main/cm/noExternalUi.test.ts` checks these statically, and that processes start
   only to run `cm`, open a terminal, or from `main/merge/mergeTools/launch.ts`, imported only by `mergeToolsService`.

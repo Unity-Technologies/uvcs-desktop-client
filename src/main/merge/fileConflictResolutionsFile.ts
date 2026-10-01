@@ -1,8 +1,8 @@
 import { join } from 'node:path';
 import type { FileConflictResolution, MergePlan } from '@shared/domain/merge';
 
-/** One file conflict's decision, as `cm merge --to --resolutionsfile` reads it. */
-type FileResolutionEntry = { path: string; keep: 'source' | 'destination' } | { path: string; resultFile: string };
+/** One file conflict's decision, as `cm merge --to --fileconflictsresolutionsfile` reads it. */
+type FileConflictResolutionEntry = { path: string; keep: 'source' | 'destination' } | { path: string; resultFile: string };
 
 /** A merged text to write before `cm` runs; `cm` takes its bytes as the file's content and leaves the file alone. */
 export interface ResultFile {
@@ -10,7 +10,7 @@ export interface ResultFile {
   text: string;
 }
 
-export interface FileResolutionsFile {
+export interface FileConflictResolutionsFile {
   /** The JSON `cm` reads: `{ "resolutions": [{ "path", "keep" | "resultFile" }] }`. */
   json: string;
   resultFiles: ResultFile[];
@@ -21,9 +21,9 @@ export interface FileResolutionsFile {
  * to keep (`keep`), or the merged text in a file of `directory` (`resultFile`). Paths are the plan's, as `cm merge`
  * printed them. A source kept whose text the page read is still kept by `cm`, which uploads nothing for it.
  */
-export function fileResolutionsFile(plan: MergePlan, resolutions: Record<string, FileConflictResolution>, directory: string): FileResolutionsFile {
+export function fileConflictResolutionsFile(plan: MergePlan, resolutions: Record<string, FileConflictResolution>, directory: string): FileConflictResolutionsFile {
   const resultFiles: ResultFile[] = [];
-  const entries = plan.fileConflicts.map(({ path }): FileResolutionEntry => {
+  const entries = plan.fileConflicts.map(({ path }): FileConflictResolutionEntry => {
     const resolution = resolutions[path]!;
     if (resolution.choice !== 'text') return { path, keep: resolution.choice };
 
