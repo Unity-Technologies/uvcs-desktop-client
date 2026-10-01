@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
+import { AppErrorBoundary } from './app/errors/AppErrorBoundary';
 import { reportUnexpectedErrors } from './app/errors/reportUnexpectedErrors';
 import { guardUnloading } from './app/navigation/leaveGuard';
 import { prefetchStartupQueries } from './app/startup/prefetchStartupQueries';
@@ -25,6 +26,9 @@ void prefetchStartupQueries();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    {/* The last resort, for an error outside the app's own boundary (a dialog's, a toast's). */}
+    <AppErrorBoundary>
+      <App />
+    </AppErrorBoundary>
   </StrictMode>,
 );
