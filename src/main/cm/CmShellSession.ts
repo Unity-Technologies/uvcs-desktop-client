@@ -8,13 +8,18 @@ import { resultLineAtEnd } from './shellResultLine';
 const PROMPT_LIKE_TAIL = /^[^<].*(\[[^\]]*\]|[:?])\s*$/;
 /** Longer last lines are output (e.g. `--format` records), not a question. */
 const MAX_PROMPT_LENGTH = 300;
-/** How long output may pause on a question-like line before it counts as a prompt. */
 const PROMPT_STALL_MS = 1500;
 const READ_TIMEOUT_MS = 120_000;
 /** A write of few paths can still touch a whole tree (removing or moving a folder); a stalled prompt is caught long before either timeout. */
 const WRITE_TIMEOUT_MS = 30 * 60_000;
 /** Local and instant: its answer tells the process is up. */
 const STARTUP_PROBE = ['version'];
+
+/** What a session puts up with before it stops a command; tests shorten them. */
+export interface CmShellSessionLimits {
+  /** How long output may pause on a question-like line before it counts as a prompt. */
+  promptStallMs?: number;
+}
 
 interface PendingCommand {
   commandLine: string;
@@ -42,12 +47,15 @@ export class CmShellSession {
   private timeoutTimer: NodeJS.Timeout | null = null;
   /** Whether the current process answered a command yet; until then it's starting, which takes about a second. */
   private answered = false;
+  private readonly promptStallMs: number;
 
   constructor(
     private readonly cmPath: string,
     private readonly cwd: string,
-    private readonly promptStallMs = PROMPT_STALL_MS,
-  ) {}
+    { promptStallMs = PROMPT_STALL_MS }: CmShellSessionLimits = {},
+  ) {
+    this.promptStallMs = promptStallMs;
+  }
 
   get pendingCount(): number {
     return this.queue.length + (this.running ? 1 : 0);
