@@ -25,9 +25,19 @@ export function categoryOf(change: PendingChange): ChangeCategory {
   return CATEGORY_PRECEDENCE[first] ?? 'changed';
 }
 
+/** Whether the kind says the content changed (as opposed to the item being moved, added...). */
+export function isContentKind(kind: ChangeKind): boolean {
+  return kind === 'changed' || kind === 'replaced';
+}
+
 /** Whether the file content differs from the loaded revision (as opposed to only being moved, added...). */
 export function hasContentChanges(change: PendingChange): boolean {
-  return change.kinds.includes('changed') || change.kinds.includes('replaced');
+  return change.kinds.some(isContentKind);
+}
+
+/** A moved file whose content changed too: its row shows C and M, and both filter chips find it. */
+export function isMovedAndChanged(change: PendingChange): boolean {
+  return categoryOf(change) === 'moved' && hasContentChanges(change);
 }
 
 /** Whether the item is in the workspace on disk, so it can be opened or revealed. */
@@ -80,5 +90,10 @@ const KIND_LABELS: Record<ChangeKind, string> = {
 };
 
 export function describeKinds(change: PendingChange): string {
-  return change.kinds.map((kind) => KIND_LABELS[kind]).join(', ');
+  return describeKindList(change.kinds);
+}
+
+/** The kinds in words, in their order: "Checked out, Changed". */
+export function describeKindList(kinds: readonly ChangeKind[]): string {
+  return kinds.map((kind) => KIND_LABELS[kind]).join(', ');
 }

@@ -13,7 +13,7 @@ import { ONLY_MOVED } from '../diff/viewer/movedFrom';
 import { SinceReviewButton } from '../review/SinceReviewButton';
 import { describeKinds } from './changeCategories';
 import { changeDiffSources } from './changeDiffSources';
-import { changeTone } from './changeTone';
+import { changeStatus } from './changeTone';
 
 interface ChangeDiffPanelProps {
   workspacePath: string;
@@ -30,7 +30,7 @@ export function ChangeDiffPanel({ workspacePath, change, reviewMark, title: ownT
   const canCompareWithReview = reviewMark?.state === 'changedSinceReview' && reviewMark.hasSnapshot;
   const sinceReview = canCompareWithReview && sinceReviewPath === change.path;
 
-  const title = ownTitle ?? <DiffFileTitle tone={changeTone(change)} status={describeKinds(change)} path={change.path} oldPath={change.oldPath} />;
+  const title = ownTitle ?? <DiffFileTitle status={changeStatus(change)} path={change.path} oldPath={change.oldPath} />;
 
   if (change.itemType === 'directory') {
     return <EmptyState title={change.path} description={`Directory · ${describeKinds(change)}`} />;

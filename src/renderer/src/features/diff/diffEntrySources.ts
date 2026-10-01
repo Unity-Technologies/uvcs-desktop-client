@@ -1,6 +1,8 @@
 import type { ContentSource } from '@shared/domain/content';
 import type { DiffEntry } from '@shared/domain/diff';
 import { revisionIn, type RevisionRef } from '@shared/domain/revision';
+import { statusTones } from '../../components/changeFilter';
+import type { StatusMark } from '../../components/ItemStatusMark';
 import type { StatusTone } from '../../components/StatusBadge';
 
 const EMPTY: ContentSource = { kind: 'empty' };
@@ -38,6 +40,17 @@ const LABELS: Record<DiffEntry['status'], string> = {
 
 export function diffEntryTone(entry: DiffEntry): StatusTone {
   return TONES[entry.status];
+}
+
+/** The statuses the filter chips find an entry by: a moved file that changed by C and M. */
+export function diffEntryTones(entry: DiffEntry): readonly StatusTone[] {
+  return statusTones(diffEntryTone(entry), isMovedAndChanged(entry));
+}
+
+/** An entry's status letter, a moved file that changed with a C before its M; the M's tooltip shows the move itself. */
+export function diffEntryStatus(entry: DiffEntry): StatusMark {
+  if (isMovedAndChanged(entry)) return { tone: 'moved', label: LABELS.moved, changedLabel: LABELS.changed };
+  return { tone: diffEntryTone(entry), label: LABELS[entry.status] };
 }
 
 export function describeDiffEntry(entry: DiffEntry): string {

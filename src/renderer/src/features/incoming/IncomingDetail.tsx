@@ -1,5 +1,5 @@
 import type { DiffEntry } from '@shared/domain/diff';
-import { describeDiffEntry, diffEntrySources, diffEntryTone } from '../diff/diffEntrySources';
+import { diffEntrySources, diffEntryStatus } from '../diff/diffEntrySources';
 import { DiffFileTitle } from '../diff/viewer/DiffFileTitle';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
 
@@ -13,7 +13,7 @@ export function IncomingFileDiff({ workspacePath, file }: { workspacePath: strin
       original={original}
       modified={modified}
       fileName={file.path}
-      title={<DiffFileTitle tone={diffEntryTone(file)} status={describeDiffEntry(file)} path={file.path} oldPath={file.oldPath} />}
+      title={<DiffFileTitle status={diffEntryStatus(file)} path={file.path} oldPath={file.oldPath} />}
     />
   );
 }

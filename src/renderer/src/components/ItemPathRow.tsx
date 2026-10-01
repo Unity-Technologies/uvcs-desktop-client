@@ -10,7 +10,7 @@ interface ItemPathRowProps {
   /** Its path, shown with the folders dimmed (`PathLabel`), or its name alone with `nameOnly` (in a tree). */
   path: string;
   itemType: ItemType;
-  /** Where a moved item was, for its tooltip. */
+  /** Where a moved item was: the name's and the M's tooltips show the move. */
   oldPath?: string;
   nameOnly?: boolean;
   /** Fuzzy-matched positions in `path` to highlight. */
@@ -18,7 +18,7 @@ interface ItemPathRowProps {
   /** Its status letter at the end of the row; a deleted item's name is struck through. */
   status?: ItemStatusMarkProps['status'];
   changesInside?: boolean;
-  /** Just left of the status, in this order: tags ("modified", a merge), where a conflict stands, the review mark, then marks (`ItemMark`: an xlink, a lock) by the letter. */
+  /** Just left of the status, in this order: tags (a merge), where a conflict stands, the review mark, then marks (`ItemMark`: an xlink, a lock) by the letter. */
   extras?: ReactNode;
   presence?: ItemPresence;
   faded?: boolean;
@@ -33,7 +33,7 @@ export function ItemPathRow({ path, itemType, oldPath, nameOnly, matches, status
       icon={<ItemIcon itemType={itemType} name={fileNameOf(path)} />}
       label={<PathLabel path={path} nameOnly={nameOnly} oldPath={oldPath} matches={matches} tooltip={tooltip} fitContent />}
       extras={extras}
-      status={<ItemStatusMark status={status} changesInside={changesInside} />}
+      status={<ItemStatusMark status={status} changesInside={changesInside} move={oldPath ? { from: oldPath, to: path } : undefined} />}
       presence={presence}
       deleted={status?.tone === 'deleted'}
       faded={faded}

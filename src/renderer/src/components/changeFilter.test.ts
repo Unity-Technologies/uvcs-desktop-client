@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { changeFilterPlaceholder, countTones, matchesChangeFilter, offeredTones } from './changeFilter';
+import { changeFilterPlaceholder, countTones, matchesChangeFilter, offeredTones, statusTones } from './changeFilter';
 
 describe('offeredTones', () => {
   it('always offers the common statuses and adds the others only when present', () => {
@@ -10,29 +10,54 @@ describe('offeredTones', () => {
 
 describe('matchesChangeFilter', () => {
   it('matches everything when nothing is set', () => {
-    expect(matchesChangeFilter('src/a.ts', 'added', { query: '', tones: new Set() })).toBe(true);
+    expect(matchesChangeFilter('src/a.ts', ['added'], { query: '', tones: new Set() })).toBe(true);
   });
 
   it('matches the path ignoring case and surrounding spaces', () => {
-    expect(matchesChangeFilter('src/App.ts', 'added', { query: ' app ', tones: new Set() })).toBe(true);
-    expect(matchesChangeFilter('src/App.ts', 'added', { query: 'lib', tones: new Set() })).toBe(false);
+    expect(matchesChangeFilter('src/App.ts', ['added'], { query: ' app ', tones: new Set() })).toBe(true);
+    expect(matchesChangeFilter('src/App.ts', ['added'], { query: 'lib', tones: new Set() })).toBe(false);
   });
 
   it('takes each word on its own, as the rows highlight them', () => {
-    expect(matchesChangeFilter('src/ui/LoginButton.tsx', 'added', { query: 'button src', tones: new Set() })).toBe(true);
-    expect(matchesChangeFilter('src/ui/LoginButton.tsx', 'added', { query: 'button lib', tones: new Set() })).toBe(false);
+    expect(matchesChangeFilter('src/ui/LoginButton.tsx', ['added'], { query: 'button src', tones: new Set() })).toBe(true);
+    expect(matchesChangeFilter('src/ui/LoginButton.tsx', ['added'], { query: 'button lib', tones: new Set() })).toBe(false);
   });
 
   it('keeps only the chosen statuses', () => {
     const filter = { query: '', tones: new Set(['added', 'deleted'] as const) };
-    expect(matchesChangeFilter('a', 'deleted', filter)).toBe(true);
-    expect(matchesChangeFilter('a', 'changed', filter)).toBe(false);
+    expect(matchesChangeFilter('a', ['deleted'], filter)).toBe(true);
+    expect(matchesChangeFilter('a', ['changed'], filter)).toBe(false);
+  });
+
+  it('finds a moved file that changed by its C and by its M', () => {
+    const movedAndChanged = statusTones('moved', true);
+    expect(matchesChangeFilter('a', movedAndChanged, { query: '', tones: new Set(['changed'] as const) })).toBe(true);
+    expect(matchesChangeFilter('a', movedAndChanged, { query: '', tones: new Set(['moved'] as const) })).toBe(true);
+    expect(matchesChangeFilter('a', movedAndChanged, { query: '', tones: new Set(['added'] as const) })).toBe(false);
+    expect(matchesChangeFilter('a', statusTones('moved', false), { query: '', tones: new Set(['changed'] as const) })).toBe(false);
+  });
+});
+
+describe('statusTones', () => {
+  it('is the status alone, or C before it for a change whose content changed too', () => {
+    expect(statusTones('moved', false)).toEqual(['moved']);
+    expect(statusTones('moved', true)).toEqual(['changed', 'moved']);
+    expect(statusTones('changed', true)).toEqual(['changed']);
+  });
+
+  it('gives the same array every time, so filtering a long list allocates nothing per change', () => {
+    expect(statusTones('moved', true)).toBe(statusTones('moved', true));
+    expect(statusTones('added', false)).toBe(statusTones('added', false));
   });
 });
 
 describe('countTones', () => {
   it('counts the changes of each status', () => {
-    expect(countTones(['changed', 'private', 'changed', 'added'])).toEqual(new Map([['changed', 2], ['private', 1], ['added', 1]]));
+    expect(countTones([['changed'], ['private'], ['changed'], ['added']])).toEqual(new Map([['changed', 2], ['private', 1], ['added', 1]]));
+  });
+
+  it('counts a moved file that changed under both its statuses', () => {
+    expect(countTones([['changed', 'moved'], ['moved'], ['changed']])).toEqual(new Map([['changed', 2], ['moved', 2]]));
   });
 });
 

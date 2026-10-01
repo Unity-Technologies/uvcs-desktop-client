@@ -1,12 +1,10 @@
 import type { TreeItem } from '@shared/domain/explorer';
 import type { PendingChange } from '@shared/domain/pendingChanges';
-import type { StatusTone } from '../../components/StatusBadge';
+import type { StatusMark } from '../../components/ItemStatusMark';
 import { existsOnDisk } from '../pendingChanges/changeCategories';
 import { changeStatus } from '../pendingChanges/changeTone';
 
-export interface ItemStatus {
-  tone: StatusTone;
-  label: string;
+export interface ItemStatus extends StatusMark {
   /** The file as it is on disk, for a file with a pending change: `cm ls` reports its loaded revision (0 bytes once added). */
   onDisk?: { size: number; date: string };
 }
