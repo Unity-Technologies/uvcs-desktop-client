@@ -149,7 +149,7 @@ that patch or read internals have a test that fails when an update moves them:
 
 ## Memory
 
-Why one highlighting worker. Measured on codice's `/main/scm1008837` (52 files, up to 240 KB each), stepping through its diff a file a second:
+Why one highlighting worker. Measured on a task branch of a large production repository (52 files, up to 240 KB each), stepping through its diff a file a second:
 
 - **GPU process**: Skia's Graphite (Chromium's default renderer on macOS) takes about 450 MB more in the GPU process
   for as long as anything repaints, a blank window too, and gives it back a second after. Ganesh, the renderer
