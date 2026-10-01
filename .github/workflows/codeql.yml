@@ -5,9 +5,9 @@ name: CodeQL
 # Findings show in the repository's Security tab and on pull requests. Code scanning is free on a public repository.
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
-    branches: [master]
+    branches: [main]
   schedule:
     # Weekly, so queries CodeQL publishes later also check code that hasn't changed. Monday 06:00 UTC.
     - cron: '0 6 * * 1'

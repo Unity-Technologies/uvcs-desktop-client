@@ -2,17 +2,17 @@ name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
 
 # CI only reads the code: its token can't push, comment or touch releases, whoever opened the pull request.
 permissions:
   contents: read
 
-# A new push to a pull request cancels its CI still running on older commits; master's runs are never cancelled.
+# A new push to a pull request cancels its CI still running on older commits; main's runs are never cancelled.
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 # The Node used locally, so the typecheck, the tests and the build behave the same on a laptop and here.
 env:

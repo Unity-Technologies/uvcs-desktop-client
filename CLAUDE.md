@@ -242,7 +242,7 @@ Commit like a careful human. The history should show *how* the work happened.
 - One logical change per commit. If the message needs "and", split it.
 - Commit small and often. Keep commits layer-specific (model, service, UI, tests, docs, config).
 - Never mix machine changes (renames, formatting, dependencies, generated code) with human changes.
-- Test first: commit the failing test, then the fix (on working branches only, never on `master`).
+- Test first: commit the failing test, then the fix (on working branches only, never on `main`).
 - A refactor commit stands alone, with no other change, and keeps the tests green.
 - A commit message says what the user can now do or see, in the product's words, not which files changed ("The
   Branch Explorer keeps the user's place when it is laid out again …"). Changes to docs or tooling say what they
@@ -251,7 +251,7 @@ Commit like a careful human. The history should show *how* the work happened.
   `tests`, `docs`, `perf` or `chore` (`fix/palette-apostrophe`, `refactor/main-services`). An agent whose worktree
   came with a generated name (`worktree-agent-a571eb…`) renames it first: `git branch -m <kind>/<topic>`.
 - Parallel agents each work in their own git worktree and branch (`.claude/worktrees/`, ignored). A verified branch
-  joins `master` with a merge commit, never squashed or rebased: the real path is the story. Don't squash or rewrite
+  joins `main` with a merge commit, never squashed or rebased: the real path is the story. Don't squash or rewrite
   history unless the user asks.
 
 ## Docs
