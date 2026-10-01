@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Builds a repository whose branches have very long names, to check every place that shows one: deeply nested
 # branches, a 120+ character name, a long single segment with no slash to break at, a non-ASCII name, a label and a
-# shelve on long branches, and a task branch that conflicts with its parent (the merge task dialog's conflict options).
+# shelve on long branches, code reviews of two of them, and a task branch that conflicts with its parent (the merge
+# task dialog's conflict options).
 # The workspace ends on the deepest branch.
 # Usage: scripts/sandboxes/long-branch-names.sh   → repo long-names@local, workspace /tmp/uvcs-long-names
 set -euo pipefail
@@ -77,6 +78,9 @@ branch "$(dirname "$UNICODE")" "Características"
 branch "$UNICODE" "Non-ASCII names"
 w README.md '# Nombres largos — 長い名前'
 commit "Nombres y 名前"
+
+cm codereview "br:$LONGEST" "Review the shader variant hotfix" >/dev/null
+cm codereview "br:$SINGLE" "Review the long segment" >/dev/null
 
 cm switch $TASK/merge-test --noinput >/dev/null
 echo "Sandbox ready at $WK, on $TASK/merge-test"
