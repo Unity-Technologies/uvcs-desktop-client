@@ -21,9 +21,13 @@
   max-width: min(420px, calc(100vw - 16px));
 }
 
-/* Two whole paths, one over the other: as wide as most paths, so they wrap between folders only when really long. */
+/*
+ * A move's lines (`PathMoveLines`), one line each: as wide as most paths, and as wide as its lines wherever it is
+ * placed, never squeezed by the screen's edge, so the lines are fitted to its width alone.
+ */
 .tooltip[data-move] {
-  max-width: min(640px, calc(100vw - 16px));
+  width: max-content;
+  max-width: min(760px, calc(100vw - 16px));
 }
 
 .main {

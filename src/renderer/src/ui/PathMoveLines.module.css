@@ -1,10 +1,9 @@
-/* "from" and "to" in a quiet column, so both paths start at the same place and read down. */
+/* "in", "from" and "to" in a quiet column, so the paths start at the same place and read down. */
 .lines {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 2px var(--space-2);
+  gap: 3px var(--space-2);
   align-items: baseline;
-  white-space: normal;
 }
 
 .word {
@@ -12,23 +11,28 @@
   font-size: var(--text-xs);
 }
 
-/* What stayed steps back, so what the move changed is what the eye finds. */
+/* One line each: one too wide is cut to fit by `fitPathParts`, never wrapped. */
 .path {
-  color: var(--text-secondary);
-  overflow-wrap: anywhere;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
+/* The folder both paths share is context, quieter than where the item was and is. */
+.path[data-shared] {
+  color: var(--text-secondary);
+}
+
+/* A tint drawn around the text rather than padding it, so the parts measure as `fitPathParts` measures them. */
 .changed {
-  border-radius: 3px;
-  padding: 0 2px;
-  color: var(--text-primary);
-  box-decoration-break: clone;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px var(--mark-tint);
+  background: var(--mark-tint);
 }
 
 .changed[data-change='removed'] {
-  background: var(--diff-removed-strong);
+  --mark-tint: var(--diff-removed-strong);
 }
 
 .changed[data-change='added'] {
-  background: var(--diff-added-strong);
+  --mark-tint: var(--diff-added-strong);
 }
