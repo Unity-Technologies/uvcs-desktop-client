@@ -62,10 +62,21 @@ describe('completing a merge', () => {
 
     expect(await completeMerge(ws, intoServerBranch, resolutions)).toBeNull();
     expect(whereTheWindowIs()).toEqual({ view: 'changes', pages: [] });
-    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Merged /main/task into /main (cs:42)', action: 'Show in Branch Explorer' }]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Merged task into main (cs:42)', action: 'Show in Branch Explorer' }]);
 
-    pressToastAction('Merged /main/task into /main (cs:42)');
+    pressToastAction('Merged task into main (cs:42)');
     expect(whereTheWindowIs().view).toBe('branchExplorer');
+  });
+
+  it('names long branches in its toast as briefly as tells them apart, and other sources as they read', async () => {
+    const long = '/main/child-br-cr-sample/empty-branch2/child_1';
+    fakeApi.answer('merge.run', () => ({ changesetId: 15 }));
+
+    await completeMerge(ws, { kind: 'merge', sourceSpec: `br:${long}/subtask`, destinationBranch: long }, resolutions);
+    await completeMerge(ws, { kind: 'merge', sourceSpec: 'br:/main/a/fix', destinationBranch: '/main/b/fix' }, resolutions);
+    await completeMerge(ws, { kind: 'merge', sourceSpec: 'cs:12', destinationBranch: long }, resolutions);
+
+    expect(shownToasts().map(({ title }) => title)).toEqual(['Merged subtask into child_1 (cs:15)', 'Merged a/fix into b/fix (cs:15)', 'Merged changeset 12 into child_1 (cs:15)']);
   });
 
   it('opens the merge that finishes it when the destination moved meanwhile, instead of the success', async () => {
@@ -102,7 +113,7 @@ describe('completing a merge', () => {
       ]);
       expect(useFinishedTasksStore.getState().merged[ws]).toEqual({ branch: '/main/task001', destination: '/main', changesetId: 42, hidden: true });
       expect(whereTheWindowIs()).toEqual({ view: 'changes', pages: [] });
-      expect(shownToasts()).toEqual([{ kind: 'success', title: 'Merged /main/task001 into /main (cs:42)', action: 'Show in Branch Explorer' }]);
+      expect(shownToasts()).toEqual([{ kind: 'success', title: 'Merged task001 into main (cs:42)', action: 'Show in Branch Explorer' }]);
     });
 
     it('leaves the review and the branch alone when not picked, still remembering the task', async () => {
@@ -152,7 +163,7 @@ describe('completing a merge', () => {
 
       await completeMerge(ws, followUp, resolutions, { task, review });
 
-      expect(shownToasts()).toEqual([{ kind: 'success', title: 'Merged /main/task001 into /main (cs:43)', action: 'Show in Branch Explorer' }]);
+      expect(shownToasts()).toEqual([{ kind: 'success', title: 'Merged task001 into main (cs:43)', action: 'Show in Branch Explorer' }]);
       expect(useFinishedTasksStore.getState().merged[ws]).toEqual({ branch: '/main/task001', destination: '/main', changesetId: 43, hidden: true });
     });
   });

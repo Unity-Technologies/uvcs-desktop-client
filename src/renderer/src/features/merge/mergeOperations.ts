@@ -1,8 +1,10 @@
 import { followUpMerge, type MergeRequest, type MergeResolutions, type MergeResult } from '@shared/domain/merge';
+import { shortBranchName } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runOperation, type OperationSuccess } from '../../app/operations/runOperation';
 import { isAffectedByCheckinOrUpdate, isAffectedByServerMerge, isAffectedByShelveApplied } from '../../app/refresh/refreshScopes';
+import { distinctBranchNames } from '../../lib/distinctBranchNames';
 import { toast } from '../../ui/toast/toastStore';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { finishMergedTask } from '../mergeTask/mergeTaskOperations';
@@ -21,13 +23,12 @@ export async function completeMerge(
   resolutions: MergeResolutions,
   finishing?: FinishingTask,
 ): Promise<MergeResult | null> {
-  const sourceName = finishing?.task.branch.name ?? describeSpec(request.sourceSpec);
   const result = await runOperation({
     title: 'Merging',
     workspacePath,
     run: (operationId) => api.merge.run(workspacePath, request, resolutions, operationId),
     affects: mergeRefreshScope(request),
-    success: (merged) => mergeSuccess(request, sourceName, merged),
+    success: (merged) => mergeSuccess(request, finishing?.task.branch.name, merged),
   });
   if (!result) return null;
   const destination = request.destinationBranch;
@@ -54,17 +55,27 @@ function mergeRefreshScope(request: MergeRequest): (queryKey: readonly unknown[]
  * How a merge's progress card ends: the workspace has the result to check in, or the server a new changeset, a click
  * away in the Branch Explorer. It goes away in silence while a server merge still needs the one that finishes it.
  */
-function mergeSuccess(request: MergeRequest, sourceName: string, result: MergeResult): OperationSuccess | null {
+function mergeSuccess(request: MergeRequest, taskBranch: string | undefined, result: MergeResult): OperationSuccess | null {
   const destination = request.destinationBranch;
   if (!destination) return { title: 'Merge applied to your workspace' };
   if (result.destinationMoved) return null;
-  const merged = `Merged ${sourceName} into ${destination}`;
+  const [source, into] = mergedNames(request.sourceSpec, taskBranch, destination);
+  const merged = `Merged ${source} into ${into}`;
   const { changesetId } = result;
   if (changesetId === undefined) return { title: merged };
   return {
     title: `${merged} (cs:${changesetId})`,
     action: { label: 'Show in Branch Explorer', run: () => showInBranchExplorer({ kind: 'changeset', id: changesetId }) },
   };
+}
+
+/**
+ * What a server merge's toast names: the source branch (the task's, for the changeset that finishes it) and the
+ * destination as briefly as tells them apart, so long names keep it short; another source as `describeSpec` does.
+ */
+function mergedNames(sourceSpec: string, taskBranch: string | undefined, destination: string): [string, string] {
+  const sourceBranch = taskBranch ?? (sourceSpec.startsWith('br:') ? describeSpec(sourceSpec) : undefined);
+  return sourceBranch ? distinctBranchNames(sourceBranch, destination) : [describeSpec(sourceSpec), shortBranchName(destination)];
 }
 
 /** Opens the merge page; `task` when it finishes a task branch on the server. */
