@@ -27,7 +27,7 @@ describe('openSelection: Enter and a double-click', () => {
   it('opens a branch’s diff at its head', () => {
     openSelection(layout, { kind: 'branch', name: '/main/b' }, 'game@local');
 
-    expect(whereTheWindowIs().pages).toMatchObject([{ kind: 'diff', title: 'Branch /main/b', target: { kind: 'branch', branch: '/main/b' }, branchHead: 7 }]);
+    expect(whereTheWindowIs().pages).toMatchObject([{ kind: 'diff', title: 'Branch b', target: { kind: 'branch', branch: '/main/b' }, branchHead: 7 }]);
   });
 
   it('goes to Changes for the pending changes', () => {

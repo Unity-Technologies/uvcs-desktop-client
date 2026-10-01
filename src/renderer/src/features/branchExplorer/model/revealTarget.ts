@@ -1,3 +1,4 @@
+import { branchLabel } from '../../../lib/branchLabels';
 import { longerPresets, sinceDateFor, type SincePreset } from '../../../lib/sincePresets';
 import type { GraphLayout } from './layoutGraph';
 
@@ -58,7 +59,7 @@ export function describeRevealTarget(target: RevealTarget): string {
     case 'changeset':
       return `Changeset ${target.id}`;
     case 'branch':
-      return `Branch ${target.name}`;
+      return `Branch ${branchLabel(target.name)}`;
     case 'label':
       return `Label ${target.name}`;
   }

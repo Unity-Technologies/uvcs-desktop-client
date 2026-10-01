@@ -88,7 +88,7 @@ describe('revealStep: a reveal from another view', () => {
 
   it('names what it looked for', () => {
     expect(describeRevealTarget({ kind: 'changeset', id: 12 })).toBe('Changeset 12');
-    expect(describeRevealTarget({ kind: 'branch', name: '/main/task' })).toBe('Branch /main/task');
+    expect(describeRevealTarget({ kind: 'branch', name: '/main/task' })).toBe('Branch task');
     expect(describeRevealTarget({ kind: 'label', name: 'v1.0', changeset: 3 })).toBe('Label v1.0');
   });
 });
