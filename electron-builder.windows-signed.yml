@@ -1,0 +1,13 @@
+# The Windows build signed with Unity's EV certificate in Azure Key Vault. The Release workflow builds with this file
+# (`--config`) once the Azure secrets exist; without them it builds with electron-builder.yml alone, unsigned.
+extends: ./electron-builder.yml
+win:
+  signtoolOptions:
+    # Signs each file through AzureSignTool and checks it names the publisher below (scripts/build/signWindows.ts).
+    sign: ./scripts/build/signWindows.ts
+    # Once, with SHA-256: the dual SHA-1 signature is only for Windows 7, which Electron no longer runs on.
+    signingHashAlgorithms: [sha256]
+    # The certificate's common name, exactly. electron-builder writes it into the app's app-update.yml, and from then
+    # on electron-updater installs only an update signed by it: a release built unsigned, or signed by another name,
+    # would never reach the apps that read it. A renewed certificate must keep this name for the same reason.
+    publisherName: Unity Technologies SF
