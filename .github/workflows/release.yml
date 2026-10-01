@@ -59,6 +59,9 @@ jobs:
   # Each OS builds from the new tag, whose package.json has the new version, and uploads its own installers.
   build:
     needs: prepare
+    # The signing secrets live in this environment, so only a Release run reaches them; its protection rules (required
+    # reviewers) apply before any leg starts.
+    environment: release
     strategy:
       # One OS failing leaves the others to finish; its leg can be re-run alone.
       fail-fast: false
@@ -108,10 +111,46 @@ jobs:
             echo "macOS code signing: ad hoc (no CSC_LINK secret)"
           fi
 
+      # Windows signing is optional too. With the AZURE_* secrets every .exe (the app, its installers and uninstallers)
+      # is signed with Unity's EV certificate in Azure Key Vault, through AzureSignTool (scripts/build/signWindows.ts),
+      # and the app then installs only updates signed by the same publisher (electron-builder.windows-signed.yml);
+      # without them the build is unsigned. AzureSignTool is the release's single-file build, checked against the
+      # SHA-256 GitHub lists for it: a new version changes both lines.
+      - name: Configure Windows code signing
+        if: runner.os == 'Windows'
+        shell: bash
+        env:
+          AZURE_KEY_VAULT_URI: ${{ secrets.AZURE_KEY_VAULT_URI }}
+          AZURE_KEY_VAULT_CERTIFICATE: ${{ secrets.AZURE_KEY_VAULT_CERTIFICATE }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: |
+          if [ -n "$AZURE_CLIENT_SECRET" ]; then
+            TOOLS="$RUNNER_TEMP/signing"
+            mkdir -p "$TOOLS"
+            curl --fail --silent --show-error --location --retry 3 --output "$TOOLS/AzureSignTool.exe" \
+              https://github.com/vcsjones/AzureSignTool/releases/download/v7.0.1/AzureSignTool-x64.exe
+            echo "dc85a3f24bcd5978c63fcfd167a9b41313af9116722b99b831400f05f387fcba  $TOOLS/AzureSignTool.exe" | sha256sum --check -
+            echo "$TOOLS" >> "$GITHUB_PATH"
+            {
+              echo "AZURE_KEY_VAULT_URI=$AZURE_KEY_VAULT_URI"
+              echo "AZURE_KEY_VAULT_CERTIFICATE=$AZURE_KEY_VAULT_CERTIFICATE"
+              echo "AZURE_TENANT_ID=$AZURE_TENANT_ID"
+              echo "AZURE_CLIENT_ID=$AZURE_CLIENT_ID"
+              echo "AZURE_CLIENT_SECRET=$AZURE_CLIENT_SECRET"
+              echo "WINDOWS_SIGNING_FLAGS=--config electron-builder.windows-signed.yml"
+            } >> "$GITHUB_ENV"
+            echo "Windows code signing: on"
+          else
+            echo "Windows code signing: off (no AZURE_CLIENT_SECRET secret)"
+          fi
+
       # With no platform flag electron-builder builds for the runner's OS, so each leg uploads its own installers.
-      # MAC_SIGNING_FLAGS is empty except on an unsigned macOS build; bash on every OS so it expands the same way.
+      # MAC_SIGNING_FLAGS is empty except on an unsigned macOS build, WINDOWS_SIGNING_FLAGS except on a signed Windows
+      # one; bash on every OS so they expand the same way.
       - name: Build and upload
         shell: bash
-        run: npm run release -- $MAC_SIGNING_FLAGS
+        run: npm run release -- $MAC_SIGNING_FLAGS $WINDOWS_SIGNING_FLAGS
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
