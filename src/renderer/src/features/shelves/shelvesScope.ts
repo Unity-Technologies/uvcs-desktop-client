@@ -9,7 +9,7 @@ export type ShelvesScope = 'mine' | 'everyone';
 export const SHELVES_SINCE: SincePreset = 'last3Months';
 /**
  * How far back a search of everyone's shelves goes. `cm` can't sort shelves, and `limit` keeps the oldest matches, so
- * a date bounds it instead: on codice@cloud (3,700 shelves) a year holds 78 matches of the loosest search.
+ * a date bounds it instead: on a large server (3,700 shelves) a year holds 78 matches of the loosest search.
  */
 const EVERYONE_SEARCH_SINCE: SincePreset = 'lastYear';
 /** A ceiling on what a search brings, room for the loose matches of `caseTolerantPattern` (filtered precisely after). */

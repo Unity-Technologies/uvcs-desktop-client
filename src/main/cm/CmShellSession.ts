@@ -137,7 +137,7 @@ export class CmShellSession {
     this.watchForPrompt();
     if (!this.running || !resultLineAtEnd(this.buffer.tail)) return;
 
-    // A comment can hold a `CommandResult 0` line too (codice's do): the real one is the last output, with nothing
+    // A comment can hold a `CommandResult 0` line too (some teams' do): the real one is the last output, with nothing
     // more in the pipe. `setImmediate` lets output already waiting be read first.
     const receivedBefore = this.received;
     setImmediate(() =>
