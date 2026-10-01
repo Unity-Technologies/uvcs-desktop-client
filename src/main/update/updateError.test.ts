@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { describeUpdateError } from './updateError';
+import { describeUpdateError, UpdateFailure, updateErrorForLog } from './updateError';
+
+/** How electron-updater reports a failed `releases/latest` lookup: wrapped twice, then the response and the whole feed. */
+const latestLookupFailure = new Error(
+  'Cannot parse releases feed: Error: Unable to find latest version on GitHub (https://github.com/o/r/releases/latest), ' +
+    'please ensure a production release exists: HttpError: 406 \n"method: GET url: https://github.com/o/r/releases/latest"\n' +
+    'Headers: {"set-cookie": "_gh_sess=secret"}\n    at GitHubProvider.getLatestTagName,\nXML:\n<feed><entry>v0.1.5</entry></feed>',
+);
 
 describe('describeUpdateError', () => {
   it('says the server is out of reach when offline, by code or by message', () => {
@@ -16,17 +23,35 @@ describe('describeUpdateError', () => {
     expect(describeUpdateError(new Error(response))).not.toContain('secret');
   });
 
-  it('keeps only the first clause of any other failure, without its error type', () => {
-    expect(describeUpdateError(new Error('Error: sha512 checksum mismatch\r\nexpected abc'))).toBe('sha512 checksum mismatch');
-    expect(describeUpdateError(new Error('Something broke Headers: {"set-cookie": "x"}'))).toBe('Something broke');
+  it("shows the app's own failures as they are worded", () => {
+    expect(describeUpdateError(new UpdateFailure('The download was damaged. Try again.'))).toBe('The download was damaged. Try again.');
   });
 
-  it('cuts a long message short', () => {
-    expect(describeUpdateError(new Error('x'.repeat(300)))).toBe(`${'x'.repeat(140)}…`);
+  it("says GitHub didn't answer as expected for any other failure, never electron-updater's words", () => {
+    const unexpected = "GitHub didn't answer as expected. Try again in a moment.";
+    expect(describeUpdateError(latestLookupFailure)).toBe(unexpected);
+    expect(describeUpdateError(new Error('sha512 checksum mismatch'))).toBe(unexpected);
+    expect(describeUpdateError('offline for a bit')).toBe(unexpected);
+    expect(describeUpdateError(undefined)).toBe(unexpected);
+  });
+});
+
+describe('updateErrorForLog', () => {
+  it('keeps the whole cause chain, without the response headers or the feed', () => {
+    expect(updateErrorForLog(latestLookupFailure)).toBe(
+      'Cannot parse releases feed: Error: Unable to find latest version on GitHub (https://github.com/o/r/releases/latest), ' +
+        'please ensure a production release exists: HttpError: 406 \n"method: GET url: https://github.com/o/r/releases/latest"',
+    );
   });
 
-  it('describes what is not an error', () => {
-    expect(describeUpdateError('offline for a bit')).toBe('offline for a bit');
-    expect(describeUpdateError(undefined)).toBe('Unknown error');
+  it('logs the stack of an error with nothing to hide', () => {
+    const error = new Error('boom');
+    error.stack = 'Error: boom\n    at check (AppUpdates.ts:101)';
+
+    expect(updateErrorForLog(error)).toBe('Error: boom\n    at check (AppUpdates.ts:101)');
+  });
+
+  it('logs what is not an error as text', () => {
+    expect(updateErrorForLog('offline for a bit')).toBe('offline for a bit');
   });
 });
