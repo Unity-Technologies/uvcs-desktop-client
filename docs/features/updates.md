@@ -129,7 +129,8 @@ Electron's downloads and retries `npm ci`. On a Windows runner with a raw local 
 Drive and builds there (`BUILD_DIR`). How fast the tests run on CI's 2-CPU runners, and why: `vitest.config.ts`.
 
 `.github/workflows/codeql.yml` runs GitHub's CodeQL security analysis on pushes to main, pull requests and weekly;
-findings show in the Security tab and on pull requests.
+findings show in the Security tab and on pull requests. It skips while the repository is private: code scanning needs
+GitHub Advanced Security there, and is free on a public repository.
 
 Every action a workflow uses is pinned to a full commit SHA, its tag in a comment (Unity's SSDLC: a tag can be
 moved to other code), which `scripts/build/pinnedActions.test.ts` checks; Dependabot (`.github/dependabot.yml`) proposes
