@@ -81,7 +81,7 @@ describe('CmShellSession', () => {
     const next = session.run(['echo', 'recovered']);
 
     await expect(withinLimit).resolves.toMatchObject({ exitCode: 0 });
-    await expect(tooLarge).rejects.toThrow('cm print printed more than');
+    await expect(tooLarge).rejects.toThrow('printed more than 1000 characters');
     await expect(next).resolves.toEqual({ output: 'recovered', exitCode: 0 });
   });
 

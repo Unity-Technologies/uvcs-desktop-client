@@ -8,11 +8,13 @@ export const MAX_OUTPUT_LENGTH = 256 * 1024 * 1024;
 
 const MEGABYTE = 1024 * 1024;
 
-/** A command printed more than its output may have (`MAX_OUTPUT_LENGTH`), so it was stopped. `CmClient` reports it as a `CmError`. */
+/**
+ * A command printed more than its output may have (`MAX_OUTPUT_LENGTH`), so it was stopped. `CmClient` reports it as a
+ * `CmError`, which names the command.
+ */
 export class CmOutputTooLargeError extends Error {
-  /** `command`: the `cm` command's name (`find`), never its arguments, which may hold a secret. */
-  constructor(command: string, maxLength: number) {
-    super(`cm ${command} printed more than ${describeLength(maxLength)}, too much to read, and was stopped.`);
+  constructor(maxLength: number) {
+    super(`The command printed more than ${describeLength(maxLength)}, too much to read, and was stopped.`);
     this.name = 'CmOutputTooLargeError';
   }
 }

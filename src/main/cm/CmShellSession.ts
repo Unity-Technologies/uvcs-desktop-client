@@ -25,8 +25,6 @@ export interface CmShellSessionLimits {
 }
 
 interface PendingCommand {
-  /** The command's name (`find`), for the errors that name it. */
-  command: string;
   commandLine: string;
   timeoutMs: number;
   resolve: (result: CmResult) => void;
@@ -85,7 +83,7 @@ export class CmShellSession {
 
   run(args: string[]): Promise<CmResult> {
     return new Promise((resolve, reject) => {
-      this.queue.push({ command: args[0] ?? '', commandLine: toShellCommandLine(args), timeoutMs: shellCommandTimeoutMs(args), resolve, reject });
+      this.queue.push({ commandLine: toShellCommandLine(args), timeoutMs: shellCommandTimeoutMs(args), resolve, reject });
       this.runNext();
     });
   }
@@ -131,7 +129,7 @@ export class CmShellSession {
   private onOutput(text: string): void {
     // Past the limit the output could never be read as one string: the command is stopped before it gets there.
     if (this.buffer.length + text.length > this.maxOutputLength) {
-      this.abortRunning(new CmOutputTooLargeError(this.running?.command ?? 'shell', this.maxOutputLength));
+      this.abortRunning(new CmOutputTooLargeError(this.maxOutputLength));
       return;
     }
     this.buffer.append(text);
