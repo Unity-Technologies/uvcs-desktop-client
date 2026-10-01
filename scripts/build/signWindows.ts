@@ -1,6 +1,6 @@
 /**
  * Windows code signing: electron-builder's sign hook (`win.signtoolOptions.sign` in electron-builder.windows-signed.yml,
- * which the Release workflow adds once the Azure secrets exist). electron-builder calls it for every file it signs (the
+ * which releases build with: docs/features/updates.md). electron-builder calls it for every file it signs (the
  * app's .exe, the installer, its uninstaller); it signs each with Unity's EV certificate in Azure Key Vault through
  * AzureSignTool (the workflow downloads it), then checks the signature names the publisher the updater will ask for
  * (`win.signtoolOptions.publisherName`), so a wrong name fails the release instead of every update after it.
@@ -15,7 +15,7 @@ import type { CustomWindowsSignTaskConfiguration } from 'app-builder-lib';
 
 const run = promisify(execFile);
 
-/** The Release workflow's secrets that reach the certificate, by the environment variable each arrives in. */
+/** What reaches the certificate, by the environment variable each arrives in (set by the signing repo's Sign workflow). */
 export const AZURE_SIGNING_VARIABLES = [
   'AZURE_KEY_VAULT_URI',
   'AZURE_KEY_VAULT_CERTIFICATE',
@@ -39,7 +39,7 @@ const VALID_SIGNATURE = 0;
 export function azureSigningCredentials(env: NodeJS.ProcessEnv): AzureSigningCredentials {
   const missing = AZURE_SIGNING_VARIABLES.filter((name) => !env[name]);
   if (missing.length > 0) {
-    throw new Error(`Windows signing needs ${missing.join(', ')} (the Release workflow's secrets).`);
+    throw new Error(`Windows signing needs ${missing.join(', ')} (docs/features/updates.md).`);
   }
   return Object.fromEntries(AZURE_SIGNING_VARIABLES.map((name) => [name, env[name]!])) as AzureSigningCredentials;
 }
