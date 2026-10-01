@@ -231,8 +231,9 @@ Not enforced yet: no `any` (there are none today). A static test for it is welco
 - **Dependencies**: every package is a `devDependency`, because electron-vite bundles what the app runs into `out/`
   (`electron-builder.yml` ships no `node_modules`). Prefer none: a new one must do what a small module can't.
 - **Generated, never edited**: `out/`, `dist/`, `*.tsbuildinfo`, `node_modules/`.
-- **Releases own the version**: the Release workflow bumps `package.json` and tags it; never bump it by hand. The app
-  updates itself from those releases (`docs/features/updates.md`).
+- **Releases own the version**: the Release workflow bumps the last release tag's version and pushes only the new
+  tag (main's `package.json` isn't kept in step); never bump it by hand. The app updates itself from those releases
+  (`docs/features/updates.md`).
 - **Not set up yet**: code signing and notarization (the Release workflow turns them on once its secrets exist). Don't
   add them unasked.
 
