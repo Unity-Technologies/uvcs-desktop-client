@@ -4,6 +4,7 @@ import { EmptyState } from '../../ui/EmptyState';
 import { SplitPane } from '../../ui/SplitPane';
 import { defaultMergeComment } from '../mergeTask/mergeTaskSummary';
 import type { TaskMerge } from '../mergeTask/taskMerge';
+import { ResolveInWorkspaceMenu } from '../mergeTask/ResolveInWorkspaceMenu';
 import { TaskMergeOptions } from '../mergeTask/TaskMergeOptions';
 import { useFinishingTask } from '../mergeTask/useFinishingTask';
 import { conflictedFilesOf } from './conflictedFiles';
@@ -45,6 +46,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const latestItems = useRef<MergeItem[]>([]);
 
   const intoServerBranch = Boolean(request.destinationBranch);
+  const conflicting = plan.fileConflicts.length + plan.directoryConflicts.length > 0;
   // Thousands of items: built again only when a decision changes, not for every file selected or key typed.
   const items = useMemo(() => buildMergeItems(plan, fileStates, directoryResolutions), [plan, fileStates, directoryResolutions]);
   const rows = useMemo(() => toListRows(items), [items]);
@@ -105,6 +107,11 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
         onMerge={() => void merge()}
         run={run.progress || runPlans.length > 0 ? { control: <ResolveRunControl states={fileStates} run={run} plans={runPlans} />, running: Boolean(run.progress) } : undefined}
         options={finishing && <TaskMergeOptions review={finishing.review} choices={taskChoices} onChange={setTaskChoices} />}
+        alternative={
+          task &&
+          conflicting &&
+          request.destinationBranch && <ResolveInWorkspaceMenu workspacePath={workspacePath} sourceSpec={request.sourceSpec} destination={request.destinationBranch} task={task} />
+        }
         mergeButtonRef={mergeButtonRef}
       />
       <SplitPane
