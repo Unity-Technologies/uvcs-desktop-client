@@ -1,5 +1,5 @@
 import { describeSpec } from '../merge/mergeDescription';
-import { distinctBranchNames } from './distinctBranchNames';
+import { distinctBranchNames } from '../../lib/distinctBranchNames';
 
 /**
  * How to resolve a task's conflicts in the workspace instead of on the server: merge the destination into the task

@@ -3,7 +3,7 @@ import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { IMMUTABLE_QUERY, SLOW_CHANGING_QUERY } from '../../app/queryClient';
 import { useBranch } from '../branches/useBranches';
-import { distinctBranchNames } from './distinctBranchNames';
+import { distinctBranchNames } from '../../lib/distinctBranchNames';
 import { finishedTaskFor, useFinishedTasksStore } from './finishedTask';
 import { FinishedTaskCard } from './FinishedTaskCard';
 import { openTaskMerge } from './mergeTaskOperations';
