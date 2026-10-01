@@ -2,6 +2,7 @@ import type { Branch } from '@shared/domain/branch';
 import type { Changeset } from '@shared/domain/changeset';
 import type { CodeReviewSummary } from '@shared/domain/codeReview';
 import type { MergePlan } from '@shared/domain/merge';
+import { branchLabel } from '../../lib/branchLabels';
 import { firstLine, pluralize } from '../../lib/text';
 
 export type MergeTaskOutcome =
@@ -30,10 +31,10 @@ export function describeConflicts(files: number, directories: number): string {
   return `${parts.join(' and ')} ${verb}.`;
 }
 
-/** "No conflicts — 5 changesets, 12 files will merge into /main." (the changesets while they are being counted). */
+/** "No conflicts — 5 changesets, 12 files will merge into main." (the changesets while they are being counted). */
 export function cleanSummary(changesetCount: number | undefined, fileCount: number, destination: string): string {
   const what = [changesetCount !== undefined && pluralize(changesetCount, 'changeset'), pluralize(fileCount, 'file')].filter(Boolean).join(', ');
-  return `No conflicts — ${what} will merge into ${destination}.`;
+  return `No conflicts — ${what} will merge into ${branchLabel(destination)}.`;
 }
 
 /**

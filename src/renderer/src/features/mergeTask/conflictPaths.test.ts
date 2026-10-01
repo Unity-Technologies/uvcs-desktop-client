@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { conflictPathCards, resolveButtonLabel } from './conflictPaths';
+import { conflictPathCards, resolveButtonLabel, resolveButtonTip } from './conflictPaths';
 
 const TASK = '/main/child-br-cr-sample/empty-branch2/child_1/subtask/merge-test';
 const PARENT = '/main/child-br-cr-sample/empty-branch2/child_1/subtask';
@@ -34,5 +34,10 @@ describe('resolveButtonLabel', () => {
   it('names deep branches by their own names, so the button fits the dialog', () => {
     expect(resolveButtonLabel('intoTask', TASK, PARENT)).toBe('Merge subtask into merge-test');
     expect(resolveButtonLabel('onDestination', TASK, PARENT)).toBe('Resolve on subtask');
+  });
+
+  it('names the branches in full in its tooltip', () => {
+    expect(resolveButtonTip('intoTask', TASK, PARENT)).toBe(`Merge ${PARENT} into ${TASK}`);
+    expect(resolveButtonTip('onDestination', TASK, PARENT)).toBe(`Resolve on ${PARENT}`);
   });
 });
