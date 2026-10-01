@@ -6,6 +6,7 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByBranchList } from '../../app/refresh/refreshScopes';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
+import { branchLabel } from '../../lib/branchLabels';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { invalidateWorkspace } from '../../app/queryClient';
@@ -14,10 +15,13 @@ import { validateBranchName } from './branchNames';
 import { pickBranch } from './BranchPickerDialog';
 import { rememberRecentBranch } from './recentBranches';
 
-/** Resolves to whether the workspace switched. `pendingChanges` is the choice already made for the pending changes, if any. */
+/**
+ * Resolves to whether the workspace switched. `pendingChanges` is the choice already made for the pending changes, if
+ * any. The switch's words (its progress, its question, its toast) name the branch by its own name (`branchLabel`).
+ */
 export function switchToBranch(workspacePath: string, branch: string, pendingChanges?: PendingChangesAction): Promise<boolean> {
   void rememberRecentBranch(workspacePath, branch);
-  return switchWorkspace(workspacePath, spec.branch(branch), branch, pendingChanges);
+  return switchWorkspace(workspacePath, spec.branch(branch), branchLabel(branch), pendingChanges);
 }
 
 /** What the user asked for the workspace once the new branch is created. */
@@ -56,14 +60,14 @@ export async function createBranchAndSwitch(
   if (switching && (await switchToBranch(workspacePath, request.name, switchTo.pendingChanges))) return true;
   void invalidateWorkspace(workspacePath, isAffectedByBranchList);
   if (switchTo.requested) announceNotSwitched(workspacePath, request.name, switchTo.workspaceOn);
-  else toast.success(`Created ${request.name}`);
+  else toast.success(`Created ${branchLabel(request.name)}`);
   return true;
 }
 
 function announceNotSwitched(workspacePath: string, branch: string, workspaceOn: string | undefined): void {
   useToastStore.getState().show({
     kind: 'info',
-    title: `Created ${branch} — you're still on ${workspaceOn ?? 'the same branch'}`,
+    title: `Created ${branchLabel(branch)} — you're still on ${workspaceOn ? branchLabel(workspaceOn) : 'the same branch'}`,
     action: { label: 'Switch', run: () => void switchToBranch(workspacePath, branch) },
   });
 }
@@ -94,7 +98,7 @@ export async function deleteBranches(workspacePath: string, branches: Pick<Branc
     api.branches.delete(workspacePath, branches.map((branch) => branch.name)),
     isAffectedByBranchList,
   );
-  if (deleted) toast.success(branches.length === 1 ? `Deleted ${branches[0]!.name}` : `Deleted ${branches.length} branches`);
+  if (deleted) toast.success(branches.length === 1 ? `Deleted ${branchLabel(branches[0]!.name)}` : `Deleted ${branches.length} branches`);
 }
 
 export function setBranchesHidden(workspacePath: string, branches: Pick<Branch, 'name'>[], hidden: boolean): Promise<void | undefined> {
@@ -117,7 +121,7 @@ export function cherryPickFromBranch(branch: string): void {
 /** Merges `sourceSpec` into a branch the user picks, on the server, without touching the workspace. */
 export async function mergeTo(sourceSpec: string, sourceName: string): Promise<void> {
   const destination = await pickBranch({
-    title: `Merge ${sourceName} to…`,
+    title: `Merge ${branchLabel(sourceName)} to…`,
     description: 'The merge happens on the server; your workspace is not touched.',
     // A branch can't be merged into itself.
     exclude: sourceSpec === spec.branch(sourceName) ? sourceName : undefined,
@@ -128,5 +132,5 @@ export async function mergeTo(sourceSpec: string, sourceName: string): Promise<v
 
 /** Diffs the branch at the head it's known at, so the diff its details panel already read is reused. */
 export function diffBranch({ name, headChangeset }: Pick<Branch, 'name' | 'headChangeset'>, focusPath?: string): void {
-  navigation.openPage({ kind: 'diff', title: `Branch ${name}`, target: { kind: 'branch', branch: name }, focusPath, branchHead: headChangeset });
+  navigation.openPage({ kind: 'diff', title: `Branch ${branchLabel(name)}`, target: { kind: 'branch', branch: name }, focusPath, branchHead: headChangeset });
 }

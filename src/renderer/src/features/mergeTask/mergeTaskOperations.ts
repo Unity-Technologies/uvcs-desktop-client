@@ -4,6 +4,7 @@ import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
 import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByBranchList, isAffectedByCodeReviews, isAffectedByNewChangesets } from '../../app/refresh/refreshScopes';
+import { branchLabels } from '../../lib/branchLabels';
 import { toast } from '../../ui/toast/toastStore';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { switchToBranch } from '../branches/branchOperations';
@@ -26,8 +27,9 @@ interface FinishTaskOptions {
  */
 export async function mergeTaskOnServer(workspacePath: string, request: MergeRequest, options: FinishTaskOptions): Promise<MergeResult | undefined> {
   const destination = request.destinationBranch!;
+  const [taskName, destinationName] = branchLabels(options.taskBranch, destination);
   const result = await runOperation({
-    title: `Merging ${options.taskBranch} into ${destination}`,
+    title: `Merging ${taskName} into ${destinationName}`,
     workspacePath,
     run: (operationId) => api.merge.run(workspacePath, request, { directoryConflicts: [], files: {}, comment: options.comment }, operationId),
     // A changeset on the destination, as someone else's checkin would bring: the workspace is not touched.
@@ -50,7 +52,7 @@ export async function mergeTaskOnServer(workspacePath: string, request: MergeReq
     useFinishedTasksStore.getState().remember(workspacePath, { branch: options.taskBranch, destination, changesetId, hidden: options.hideBranch });
   }
   toast.success(
-    `Merged ${options.taskBranch} into ${destination}${changesetId === undefined ? '' : ` (cs:${changesetId})`}`,
+    `Merged ${taskName} into ${destinationName}${changesetId === undefined ? '' : ` (cs:${changesetId})`}`,
     undefined,
     changesetId === undefined ? undefined : { label: 'Show in Branch Explorer', run: () => showInBranchExplorer({ kind: 'changeset', id: changesetId }) },
   );

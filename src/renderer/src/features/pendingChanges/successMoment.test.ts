@@ -35,6 +35,6 @@ describe('successCardTellsCheckin', () => {
 
 describe('checkedInMessage', () => {
   it('names the changeset and the branch', () => {
-    expect(checkedInMessage(6, '/main')).toBe('Checked in cs:6 on /main');
+    expect(checkedInMessage(6, '/main')).toBe('Checked in cs:6 on main');
   });
 });

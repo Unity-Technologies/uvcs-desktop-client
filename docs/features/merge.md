@@ -30,7 +30,7 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
 
 The merge page (`features/merge`) is a preview until "Complete merge". Its header is one row: a "Preview" pill (its
 tooltip: nothing is written until then), the title fitted as a whole (`fitMergeTitle`: the words stay, the branches give
-way from their middle), the changesets it combines ("cs:3 → cs:5"; a click lists them with the base), where it stands
+way from their middle; it keeps that room in a narrow window, ARCHITECTURE.md "Long names"), the changesets it combines ("cs:3 → cs:5"; a click lists them with the base), where it stands
 ("2 conflicts to decide", the full summary in its tooltip) and Complete merge, the primary action only once nothing waits.
 Every status reads as what the merge will do, never as done (`mergeStatus`): "Will merge automatically", "Needs your
 decision", then the user's choice ("Keeping yours", "Keeping incoming", "Combined", "Edited by you"; "Open in VS Code…",

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { branchLabel } from '../../lib/branchLabels';
 
 /** What just landed in the workspace: "Checked in cs:4", "Updated to cs:14". */
 export interface SuccessMoment {
@@ -28,9 +29,9 @@ export const useSuccessMomentStore = create<SuccessMomentStore>((set) => ({
     }),
 }));
 
-/** What a toast says once a changeset lands and changes stay behind: "Checked in cs:4 on /main/task001". */
+/** What a toast says once a changeset lands and changes stay behind: "Checked in cs:4 on task001" (the branch by its own name). */
 export function checkedInMessage(changesetId: number, branch: string): string {
-  return `Checked in cs:${changesetId} on ${branch}`;
+  return `Checked in cs:${changesetId} on ${branchLabel(branch)}`;
 }
 
 /**

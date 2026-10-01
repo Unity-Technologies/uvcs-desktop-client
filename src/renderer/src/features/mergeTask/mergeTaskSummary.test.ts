@@ -55,8 +55,12 @@ describe('describeConflicts', () => {
 
 describe('cleanSummary', () => {
   it('counts changesets and files', () => {
-    expect(cleanSummary(5, 12, '/main')).toBe('No conflicts — 5 changesets, 12 files will merge into /main.');
-    expect(cleanSummary(undefined, 1, '/main')).toBe('No conflicts — 1 file will merge into /main.');
+    expect(cleanSummary(5, 12, '/main')).toBe('No conflicts — 5 changesets, 12 files will merge into main.');
+    expect(cleanSummary(undefined, 1, '/main')).toBe('No conflicts — 1 file will merge into main.');
+  });
+
+  it('names a deep destination by its own name', () => {
+    expect(cleanSummary(2, 3, '/main/child-br-cr-sample/empty-branch2/child_1/subtask')).toBe('No conflicts — 2 changesets, 3 files will merge into subtask.');
   });
 });
 

@@ -1,4 +1,4 @@
-import { forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { Children, forwardRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { classNames } from '../lib/classNames';
 import styles from './Button.module.css';
 
@@ -21,7 +21,13 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
   return (
     <button ref={ref} type={type} className={classes} disabled={disabled || loading} {...rest}>
       {loading ? <span className={styles.spinner} /> : icon}
-      {children}
+      {isText(children) ? <span className={styles.label}>{children}</span> : children}
     </button>
   );
 });
+
+/** Whether the button's content is only words ("Merge to ", destination), which its label can cut with an ellipsis. */
+function isText(children: ReactNode): boolean {
+  const parts = Children.toArray(children);
+  return parts.length > 0 && parts.every((part) => typeof part === 'string' || typeof part === 'number');
+}

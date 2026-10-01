@@ -99,7 +99,7 @@ describe('notifyIncoming', () => {
 
     await notifyIncoming(ws, behind(12, 2), behind(14, 4));
 
-    expect(await sent).toEqual([ws, "Ana Diaz checked in 'Faster login' on /main (and 1 more)"]);
+    expect(await sent).toEqual([ws, "Ana Diaz checked in 'Faster login' on main (and 1 more)"]);
     expect(fakeApi.argsOf('changesets.get')).toEqual([[ws, 14]]);
   });
 

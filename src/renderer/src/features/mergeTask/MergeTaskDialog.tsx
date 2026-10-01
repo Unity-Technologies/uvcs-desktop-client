@@ -4,6 +4,7 @@ import type { Branch } from '@shared/domain/branch';
 import { spec } from '@shared/domain/specs';
 import { navigation } from '../../app/navigation/navigationStore';
 import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
+import { branchLabels } from '../../lib/branchLabels';
 import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { Dialog } from '../../ui/dialog/Dialog';
@@ -15,7 +16,7 @@ import { openChangesetDiff } from '../changesets/changesetOperations';
 import { openReview } from '../codeReviews/codeReviewOperations';
 import { useReviewsByBranch } from '../codeReviews/useCodeReviews';
 import { destinationMovedExplanation, openMerge } from '../merge/mergeOperations';
-import { resolveButtonLabel, type ConflictPath } from './conflictPaths';
+import { resolveButtonLabel, resolveButtonTip, type ConflictPath } from './conflictPaths';
 import { MergeTaskConflicts } from './MergeTaskConflicts';
 import { MergeTaskFileList } from './MergeTaskFileList';
 import { mergeDestinationIntoTask, mergeTaskOnServer, resolveOnDestination } from './mergeTaskOperations';
@@ -53,9 +54,11 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
   const changesetCount = useChangesetsToMerge(workspacePath, branch.name, fromTaskBranch, preview.data);
   const outcome = preview.data && mergeTaskOutcome(preview.data);
   const path: ConflictPath = fromTaskBranch ? conflictPath : 'onDestination';
+  // The words name both branches by their own names; the buttons' tooltips name them in full.
+  const [taskName, destinationName] = branchLabels(branch.name, destination);
 
   const changeDestination = async (): Promise<void> => {
-    const picked = await pickBranch({ title: `Merge ${branch.name} to…`, exclude: branch.name });
+    const picked = await pickBranch({ title: `Merge ${taskName} to…`, exclude: branch.name });
     if (!picked) return;
     setDestination(picked);
     setNextChangeset(null);
@@ -69,7 +72,7 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
     try {
       const fresh = (await preview.refetch()).data;
       if (!fresh || destinationMoved(reviewed, fresh)) {
-        setNotice(`${destination} got new changesets since the preview. Here is what the merge would do now.`);
+        setNotice(`${destinationName} got new changesets since the preview. Here is what the merge would do now.`);
         return;
       }
       const result = await mergeTaskOnServer(workspacePath, request, {
@@ -99,7 +102,7 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
   // The diff of what the task brings: the whole branch, or the changeset merged next.
   const openFileDiff = (path: string): void => {
     onClose();
-    if (fromTaskBranch) navigation.openPage({ kind: 'diff', title: `Branch ${branch.name}`, target: { kind: 'branch', branch: branch.name }, focusPath: path });
+    if (fromTaskBranch) navigation.openPage({ kind: 'diff', title: `Branch ${taskName}`, target: { kind: 'branch', branch: branch.name }, focusPath: path });
     else openChangesetDiff({ id: nextChangeset }, path);
   };
 
@@ -110,7 +113,7 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
 
   return (
     <Dialog
-      title={`Merge ${branch.name} to ${destination}`}
+      title={`Merge ${taskName} to ${destinationName}`}
       description={
         <span className={styles.destination}>
           The merge happens on the server; your workspace is not touched.
@@ -126,12 +129,12 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
         <>
           <Button onClick={onClose}>{outcome?.kind === 'alreadyMerged' ? 'Close' : 'Cancel'}</Button>
           {outcome?.kind === 'clean' && (
-            <Button type="submit" variant="primary" loading={busy} disabled={preview.isFetching}>
-              Merge to {destination}
+            <Button type="submit" variant="primary" loading={busy} disabled={preview.isFetching} data-tip={`Merge ${branch.name} into ${destination}`}>
+              Merge to {destinationName}
             </Button>
           )}
           {outcome?.kind === 'conflicts' && (
-            <Button type="submit" variant="primary">
+            <Button type="submit" variant="primary" data-tip={resolveButtonTip(path, branch.name, destination)}>
               {resolveButtonLabel(path, branch.name, destination)}
             </Button>
           )}
@@ -189,7 +192,7 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
       {preview.data && outcome?.kind === 'alreadyMerged' && (
         <p className={styles.summary} data-tone="success">
           <CheckCircle2 size={15} />
-          Nothing to merge: {destination} already has every change of {branch.name}.
+          Nothing to merge: {destinationName} already has every change of {taskName}.
         </p>
       )}
       {preview.data && outcome?.kind === 'invalid' && <p className={styles.error}>This merge can’t run.</p>}

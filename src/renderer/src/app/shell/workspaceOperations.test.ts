@@ -179,7 +179,7 @@ describe('updateUnlessUpToDate', () => {
     await updateUnlessUpToDate(ws);
 
     expect(fakeApi.methods()).not.toContain('workspaces.update');
-    expect(shownToasts()).toEqual([{ kind: 'info', title: 'Already up to date', detail: 'Your workspace has everything on /main.' }]);
+    expect(shownToasts()).toEqual([{ kind: 'info', title: 'Already up to date', detail: 'Your workspace has everything on main.' }]);
   });
 
   it('updates and shows what came when there is something new', async () => {

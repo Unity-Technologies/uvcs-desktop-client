@@ -1,6 +1,7 @@
 import { CheckCircle2 } from 'lucide-react';
 import type { MergeRequest, MergeResult } from '@shared/domain/merge';
 import { navigation } from '../../app/navigation/navigationStore';
+import { branchLabel } from '../../lib/branchLabels';
 import { Button } from '../../ui/Button';
 import { completionCounts, completionTitle, mergeTitle, mergeTitleText, type MergeLabels } from './mergeDescription';
 import styles from './MergeCompleted.module.css';
@@ -28,7 +29,7 @@ export function MergeCompleted({ request, completion }: { request: MergeRequest;
       <p className={styles.what}>{mergeTitleText(mergeTitle(request, labels.destination))}</p>
       <p className={styles.next}>
         {intoServerBranch
-          ? `Created changeset ${result.changesetId} on ${labels.destination}.`
+          ? `Created changeset ${result.changesetId} on ${branchLabel(labels.destination)}.`
           : 'The result is in your pending changes, ready to check in.'}
       </p>
       {counts && <p className={styles.counts}>{counts}</p>}

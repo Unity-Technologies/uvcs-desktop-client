@@ -46,6 +46,16 @@ describe('a new branch from the workspace', () => {
     expect(offered()).toEqual(['/main @ cs:120', '/main/task @ cs:90']);
   });
 
+  it('names the branches on its cards by their own names, the new branch’s parent in full', async () => {
+    fakeApi.answer('changesets.list', () => [{ id: 120 }]);
+
+    await newBranchFromWorkspace(workspaceOn({ kind: 'branch', name: '/main/child-br-cr-sample/empty-branch2/child_1/subtask/merge-test' }, 90));
+
+    const origins = opened[0]!.slice(1) as { parentBranch: string; card: { title: string } }[];
+    expect(origins.map((origin) => origin.card.title)).toEqual(['main (latest, changeset 120)', 'merge-test (changeset 90, what you have loaded)']);
+    expect(origins[1]!.parentBranch).toBe('/main/child-br-cr-sample/empty-branch2/child_1/subtask/merge-test');
+  });
+
   it('keeps a label loaded as the label, a child of /main', async () => {
     fakeApi.answer('changesets.list', () => [{ id: 120 }]);
 

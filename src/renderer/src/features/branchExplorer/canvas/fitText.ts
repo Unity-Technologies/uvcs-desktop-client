@@ -1,4 +1,4 @@
-import { trimFolderToFit, trimToFit } from '../../../lib/trimToFit';
+import { fitPath, trimToFit } from '../../../lib/trimToFit';
 
 const MAX_CACHED = 5000;
 const cache = new Map<string, string>();
@@ -12,16 +12,14 @@ export function fitText(ctx: CanvasRenderingContext2D, text: string, maxWidth: n
 }
 
 /**
- * Shortens a branch name the way `PathLabel` does: parent branches go from the middle (`/main/…/child/task`) so the
- * leaf stays whole; only a leaf too wide on its own is cut.
+ * Shortens a branch name the way `PathLabel` does (`fitPath`): parent branches go from the middle (`/main/…/child/task`)
+ * so the leaf stays whole; only a leaf too wide on its own is cut, in its middle (`…/rendering-pi…set-bundles`).
  */
 export function fitBranchName(ctx: CanvasRenderingContext2D, name: string, maxWidth: number): string {
   return cached(`branch|${ctx.font}|${Math.round(maxWidth)}|${name}`, () => {
     const leafStart = name.lastIndexOf('/') + 1;
-    const leaf = name.slice(leafStart);
-    const leafWidth = ctx.measureText(leaf).width;
-    if (leafWidth > maxWidth) return fitText(ctx, leaf, maxWidth);
-    return trimFolderToFit(name.slice(0, leafStart), maxWidth - leafWidth, (text) => ctx.measureText(text).width) + leaf;
+    const fitted = fitPath(name.slice(0, leafStart), name.slice(leafStart), maxWidth, (text) => ctx.measureText(text).width);
+    return fitted.folder + fitted.name;
   });
 }
 

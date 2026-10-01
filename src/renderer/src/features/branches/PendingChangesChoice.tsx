@@ -1,4 +1,5 @@
 import type { PendingChangesAction } from '@shared/domain/switchWithChanges';
+import { branchLabel, branchLabels } from '../../lib/branchLabels';
 import { OptionCards, type OptionCard } from '../../ui/OptionCards';
 import { pendingChangesPronoun } from './pendingChangesWords';
 import type { SwitchChoice } from './switchOptions';
@@ -19,21 +20,23 @@ interface PendingChangesChoiceProps {
 
 /**
  * What happens to pending changes on a switch, in the same words wherever it comes up (switching, creating
- * a branch and switching to it): leave them behind in a shelve, or bring them along.
+ * a branch and switching to it): leave them behind in a shelve, or bring them along. Both branches go by their own
+ * names (`branchLabels`), the one the changes are on in full in its tooltip.
  */
 export function PendingChangesChoice({ source, destination, choice, count, value, onChange, heading = false }: PendingChangesChoiceProps) {
-  const where = destination ?? 'the new branch';
+  const [sourceName, destinationName] = destination === null ? [branchLabel(source), null] : branchLabels(source, destination);
+  const where = destinationName ?? 'the new branch';
   const them = pendingChangesPronoun(count);
   const cards: OptionCard<PendingChangesAction>[] = [
     {
       value: 'leave',
-      title: <>Leave {them} on <code>{source}</code></>,
+      title: <>Leave {them} on <code data-tip={source}>{sourceName}</code></>,
       description: choice.leave.disabledReason ?? `Saved in a shelve. You’ll be offered to restore ${them} when you come back.`,
       disabled: !choice.leave.enabled,
     },
     {
       value: 'bring',
-      title: <>Bring {them} to {destination === null ? where : <code>{destination}</code>}</>,
+      title: <>Bring {them} to {destinationName === null ? where : <code data-tip={destination}>{destinationName}</code>}</>,
       description: choice.bring.disabledReason ?? `Shelved, then applied on ${where}. If a file conflicts, you decide how to merge it.`,
       disabled: !choice.bring.enabled,
     },

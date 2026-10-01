@@ -1,5 +1,6 @@
 import { CircleAlert } from 'lucide-react';
 import type { MergePlan } from '@shared/domain/merge';
+import { branchLabels } from '../../lib/branchLabels';
 import { OptionCards } from '../../ui/OptionCards';
 import { conflictPathCards, type ConflictPath } from './conflictPaths';
 import { MergeTaskFileList } from './MergeTaskFileList';
@@ -31,6 +32,7 @@ export function MergeTaskConflicts({
   onOpenFile,
   onKeepOneSideOnServer,
 }: MergeTaskConflictsProps) {
+  const [taskName, destinationName] = branchLabels(taskBranch, destination);
   return (
     <>
       <p className={styles.summary} data-tone="conflict">
@@ -38,7 +40,7 @@ export function MergeTaskConflicts({
         {description}
       </p>
       <p className={styles.explanation}>
-        {taskBranch} and {destination} changed the same files. The server can’t ask you how to combine them, so resolve
+        {taskName} and {destinationName} changed the same files. The server can’t ask you how to combine them, so resolve
         them in your workspace, then merge again.
       </p>
       <MergeTaskFileList plan={plan} conflicts onOpen={onOpenFile} />

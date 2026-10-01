@@ -53,7 +53,7 @@ describe('switching to a branch', () => {
 
     expect(await switchToBranch(ws, '/main/task', 'bring')).toBe(true);
 
-    expect(asked.switches).toEqual([[ws, 'br:/main/task', '/main/task', 'bring']]);
+    expect(asked.switches).toEqual([[ws, 'br:/main/task', 'task', 'bring']]);
     expect(await recorded).toEqual([ws, 'guid-/main/task']);
     expect(fakeApi.methods()).toEqual(['branches.rememberRecent']);
   });
@@ -100,7 +100,7 @@ describe('creating a branch and switching to it', () => {
     expect(created).toBe(true);
     expect(fakeApi.argsOf('branches.create')).toEqual([[ws, request]]);
     expect(order).toEqual(['created, 0 switches']);
-    expect(asked.switches).toEqual([[ws, 'br:/main/task', '/main/task', 'bring']]);
+    expect(asked.switches).toEqual([[ws, 'br:/main/task', 'task', 'bring']]);
     expect(refreshed()).toEqual([]);
     expect(shownToasts()).toEqual([]);
   });
@@ -112,7 +112,7 @@ describe('creating a branch and switching to it', () => {
 
     expect(asked.switches).toEqual([]);
     expect(refreshed()).toEqual(['branchExplorer', 'branches']);
-    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Created /main/task' }]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Created task' }]);
   });
 
   it('offers the switch again when it was cancelled or failed, having refreshed the branch lists', async () => {
@@ -123,7 +123,7 @@ describe('creating a branch and switching to it', () => {
 
     expect(asked.switches).toHaveLength(1);
     expect(refreshed()).toEqual(['branchExplorer', 'branches']);
-    expect(shownToasts()).toEqual([{ kind: 'info', title: "Created /main/task — you're still on /main", action: 'Switch' }]);
+    expect(shownToasts()).toEqual([{ kind: 'info', title: "Created task — you're still on main", action: 'Switch' }]);
   });
 
   it('never tries to switch in the middle of a merge', async () => {
@@ -133,7 +133,7 @@ describe('creating a branch and switching to it', () => {
 
     expect(asked.switches).toEqual([]);
     expect(refreshed()).toEqual(['branchExplorer', 'branches']);
-    expect(shownToasts()).toEqual([{ kind: 'info', title: "Created /main/task — you're still on /main", action: 'Switch' }]);
+    expect(shownToasts()).toEqual([{ kind: 'info', title: "Created task — you're still on main", action: 'Switch' }]);
   });
 
   it('reports a branch that couldn’t be created, switching and refreshing nothing', async () => {

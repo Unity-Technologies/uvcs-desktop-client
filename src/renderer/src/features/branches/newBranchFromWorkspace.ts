@@ -1,6 +1,7 @@
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { spec } from '@shared/domain/specs';
 import { api } from '../../api/client';
+import { branchLabel } from '../../lib/branchLabels';
 import { toast } from '../../ui/toast/toastStore';
 import { openCreateBranchDialog, type NewBranchOrigin } from './CreateBranchDialog';
 
@@ -24,7 +25,7 @@ export async function newBranchFromWorkspace(workspace: WorkspaceInfo): Promise<
         parentBranch: MAIN_BRANCH,
         startingPoint: spec.changeset(mainHead.id),
         startingPointLabel: `the latest ${MAIN_BRANCH} (changeset ${mainHead.id})`,
-        card: { title: `${MAIN_BRANCH} (latest, changeset ${mainHead.id})`, description: 'Start something new, independent of your current work.' },
+        card: { title: `${branchLabel(MAIN_BRANCH)} (latest, changeset ${mainHead.id})`, description: 'Start something new, independent of your current work.' },
       }
     : null;
   const [first, ...rest] = [main, loaded].filter((origin) => origin !== null);
@@ -46,11 +47,10 @@ function loadedOrigin(workspace: WorkspaceInfo): NewBranchOrigin | null {
       card: { ...card, title: `Label ${selector.name} (changeset ${loadedChangeset}, what you have loaded)` },
     };
   }
-  const name = selector.kind === 'branch' ? selector.name : `changeset ${loadedChangeset}`;
   return {
     parentBranch: selector.kind === 'branch' ? selector.name : MAIN_BRANCH,
     startingPoint: spec.changeset(loadedChangeset),
     startingPointLabel: `your workspace's changeset ${loadedChangeset}`,
-    card: { ...card, title: selector.kind === 'branch' ? `${name} (changeset ${loadedChangeset}, what you have loaded)` : `Changeset ${loadedChangeset} (what you have loaded)` },
+    card: { ...card, title: selector.kind === 'branch' ? `${branchLabel(selector.name)} (changeset ${loadedChangeset}, what you have loaded)` : `Changeset ${loadedChangeset} (what you have loaded)` },
   };
 }

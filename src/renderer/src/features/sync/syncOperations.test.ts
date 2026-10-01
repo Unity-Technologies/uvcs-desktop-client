@@ -15,7 +15,7 @@ describe('sync operations', () => {
     expect(await pushBranch(ws, push)).toEqual(brought(3));
 
     expect(fakeApi.argsOf('sync.push')).toEqual([[ws, push, expect.any(String)]]);
-    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Pushed 3 changesets of /main/task to game@cloud' }]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Pushed 3 changesets of task to game@cloud' }]);
   });
 
   it('refreshes nothing after a push: only the other repository changed', async () => {
@@ -33,7 +33,7 @@ describe('sync operations', () => {
     await pullBranch(ws, pull);
 
     expect(fakeApi.argsOf('sync.pull')).toEqual([[ws, pull, expect.any(String)]]);
-    expect(shownToasts()).toEqual([{ kind: 'success', title: '/main/task is already up to date with game@cloud' }]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'task is already up to date with game@cloud' }]);
   });
 
   it('names the branch and the other side when a push or a pull fails', async () => {
@@ -47,8 +47,8 @@ describe('sync operations', () => {
     expect(await pullBranch(ws, pull)).toBeUndefined();
 
     expect(shownToasts()).toEqual([
-      { kind: 'error', title: 'Pushing /main/task to game@cloud failed', detail: 'Access denied' },
-      { kind: 'error', title: 'Pulling /main/task from game@cloud failed', detail: 'Access denied' },
+      { kind: 'error', title: 'Pushing task to game@cloud failed', detail: 'Access denied' },
+      { kind: 'error', title: 'Pulling task from game@cloud failed', detail: 'Access denied' },
     ]);
   });
 

@@ -1,4 +1,5 @@
 import { CheckCircle2, EyeOff, GitBranchPlus, GitBranch, X } from 'lucide-react';
+import { branchLabel } from '../../lib/branchLabels';
 import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
 import { switchToBranch } from '../branches/branchOperations';
@@ -24,18 +25,19 @@ export function FinishedTaskCard({ workspacePath, task }: { workspacePath: strin
       startingPointLabel: `changeset ${task.changesetId} (the merge)`,
     });
 
+  const destination = branchLabel(task.destination);
   return (
     <div className={styles.card} role="status">
       <div className={styles.message}>
         <CheckCircle2 size={15} className={styles.check} />
-        <span>
-          Merged into {task.destination} as cs:{task.changesetId}
+        <span data-tip={task.destination}>
+          Merged into {destination} as cs:{task.changesetId}
         </span>
         <IconButton icon={<X size={13} />} label="Dismiss" onClick={() => dismiss(task)} />
       </div>
       <div className={styles.actions}>
-        <Button size="small" variant="primary" icon={<GitBranch size={13} />} onClick={() => void switchToBranch(workspacePath, task.destination)}>
-          Switch to {task.destination}
+        <Button size="small" variant="primary" icon={<GitBranch size={13} />} data-tip={task.destination} onClick={() => void switchToBranch(workspacePath, task.destination)}>
+          Switch to {destination}
         </Button>
         <Button size="small" icon={<GitBranchPlus size={13} />} onClick={startNext}>
           Start next task…

@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { spec } from '@shared/domain/specs';
 import { useCommands, type Command } from '../../app/commands/commandStore';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { branchLabel } from '../../lib/branchLabels';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { prompt } from '../../ui/dialog/prompt';
 import { pickBranch } from '../branches/BranchPickerDialog';
@@ -35,8 +36,9 @@ export function useMergeCommands(): void {
         icon: GitPullRequestArrow,
         disabled: !currentBranch,
         run: async () => {
-          const destination = await pickBranch({ title: `Merge ${currentBranch} into`, exclude: currentBranch });
-          if (currentBranch && destination) openMerge({ kind: 'merge', sourceSpec: spec.branch(currentBranch), destinationBranch: destination });
+          if (!currentBranch) return;
+          const destination = await pickBranch({ title: `Merge ${branchLabel(currentBranch)} into`, exclude: currentBranch });
+          if (destination) openMerge({ kind: 'merge', sourceSpec: spec.branch(currentBranch), destinationBranch: destination });
         },
       },
       {

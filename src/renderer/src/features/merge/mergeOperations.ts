@@ -3,6 +3,7 @@ import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runOperation } from '../../app/operations/runOperation';
 import { isAffectedByCheckinOrUpdate, isAffectedByShelveApplied } from '../../app/refresh/refreshScopes';
+import { branchLabel } from '../../lib/branchLabels';
 import { toast } from '../../ui/toast/toastStore';
 
 /**
@@ -18,14 +19,14 @@ export async function completeMerge(workspacePath: string, request: MergeRequest
     affects: request.sourceSpec.startsWith('sh:') ? isAffectedByShelveApplied : isAffectedByCheckinOrUpdate,
     success: (merged) => {
       if (!request.destinationBranch) return { title: 'Merge applied to your workspace' };
-      return merged.destinationMoved ? null : { title: `Created changeset ${merged.changesetId} on ${request.destinationBranch}` };
+      return merged.destinationMoved ? null : { title: `Created changeset ${merged.changesetId} on ${branchLabel(request.destinationBranch)}` };
     },
   });
   if (!result) return null;
 
   if (request.destinationBranch && result.destinationMoved) {
     navigation.goBack();
-    toast.info(`${request.destinationBranch} moved while merging`, destinationMovedExplanation(result.changesetId, request.destinationBranch));
+    toast.info(`${branchLabel(request.destinationBranch)} moved while merging`, destinationMovedExplanation(result.changesetId, request.destinationBranch));
     openMerge(followUpMerge(result, request.destinationBranch));
     return null;
   }
@@ -38,5 +39,6 @@ export function openMerge(request: MergeRequest): void {
 
 /** Why a server-side merge needs a second one when someone checked in on its destination at the same time. */
 export function destinationMovedExplanation(changesetId: number | undefined, destinationBranch: string): string {
-  return `Someone checked in on ${destinationBranch} at the same time, so the merge (changeset ${changesetId}) sits beside the new head. Merge it into ${destinationBranch} to finish.`;
+  const destination = branchLabel(destinationBranch);
+  return `Someone checked in on ${destination} at the same time, so the merge (changeset ${changesetId}) sits beside the new head. Merge it into ${destination} to finish.`;
 }

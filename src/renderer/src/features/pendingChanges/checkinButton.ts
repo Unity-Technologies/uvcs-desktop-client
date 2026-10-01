@@ -1,5 +1,6 @@
+import { branchLabel } from '../../lib/branchLabels';
 import { formatSize } from '../../lib/formatDate';
-import { fileNameOf, formatCount, pluralize } from '../../lib/text';
+import { formatCount, pluralize } from '../../lib/text';
 
 export type CheckinMode = 'checkin' | 'shelve';
 
@@ -33,9 +34,9 @@ interface CheckinButtonLabel {
 }
 
 /**
- * What the check-in button says, e.g. "Check in 4 changes (1.1 MB) to task": the branch by its leaf, whole in the
- * tooltip. As it narrows, the branch goes first, then the words ("Check in 4"), and the size last: the top bar names
- * the branch, while nothing else tells what the check-in uploads. Behind the branch head it updates first
+ * What the check-in button says, e.g. "Check in 4 changes (1.1 MB) to task": the branch by its own name
+ * (`branchLabel`), whole in the tooltip. As it narrows, the branch goes first, then the words ("Check in 4"), and the
+ * size last: the top bar names the branch, while nothing else tells what the check-in uploads. Behind the branch head it updates first
  * ("Update & check in 4 changes"); once every change is reviewed, "Check in reviewed changes".
  */
 export function checkinButtonLabel({ mode, includedCount, branchName, uploadBytes, merging, behindCount, allReviewed, keepShelved }: CheckinButtonState): CheckinButtonLabel {
@@ -57,7 +58,7 @@ export function checkinButtonLabel({ mode, includedCount, branchName, uploadByte
 }
 
 function shorterForms(action: string, shortAction: string | null, branchName: string, size: string | null): CheckinButtonText[] {
-  const target = branchName ? `to ${fileNameOf(branchName)}` : null;
+  const target = branchName ? `to ${branchLabel(branchName)}` : null;
   const short = shortAction ?? action;
   const forms = [
     { action, size, target },

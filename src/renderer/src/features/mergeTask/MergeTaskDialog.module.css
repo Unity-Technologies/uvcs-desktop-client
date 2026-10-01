@@ -83,8 +83,10 @@
   color: var(--status-conflict);
 }
 
+/* Its own height in a short window: the dialog's body scrolls instead of squashing the list. */
 .files {
   display: flex;
+  flex: none;
   flex-direction: column;
   max-height: 180px;
   padding: var(--space-1);
