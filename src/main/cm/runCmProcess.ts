@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import type { CmResult } from './CmResult';
+import { CmOutputTooLargeError, MAX_OUTPUT_LENGTH } from './outputLimit';
 
 export interface CmProcessOptions {
   cwd?: string;
@@ -9,6 +10,8 @@ export interface CmProcessOptions {
   onOutputLine?: (line: string) => void;
   /** Written to the command's stdin, which is then closed: what it reads, and nothing to answer a prompt with. */
   input?: string;
+  /** The most characters the command may print (`MAX_OUTPUT_LENGTH`): past it, it is killed and fails. */
+  maxOutputLength?: number;
 }
 
 /**
@@ -26,10 +29,22 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
     });
     // A command that exits without reading its input closes the pipe first.
     child.stdin.on('error', () => undefined).end(options.input);
+    const { maxOutputLength = MAX_OUTPUT_LENGTH } = options;
     const chunks: string[] = [];
+    let length = 0;
+    let tooLarge = false;
     let pendingLine = '';
 
     const collect = (text: string): void => {
+      if (tooLarge) return;
+      length += text.length;
+      if (length > maxOutputLength) {
+        tooLarge = true;
+        chunks.length = 0;
+        child.kill('SIGKILL');
+        reject(new CmOutputTooLargeError(maxOutputLength));
+        return;
+      }
       chunks.push(text);
       if (!options.onOutputLine) return;
 
@@ -44,6 +59,7 @@ export function runCmProcess(cmPath: string, args: string[], options: CmProcessO
     child.stderr.setEncoding('utf8').on('data', collect);
     child.on('error', reject);
     child.on('close', (code) => {
+      if (tooLarge) return;
       if (pendingLine) options.onOutputLine?.(pendingLine);
       // Windows ends lines with CRLF; parsers get LF, as from a `cm shell`.
       resolve({ output: chunks.join('').replaceAll('\r\n', '\n'), exitCode: code ?? -1 });
