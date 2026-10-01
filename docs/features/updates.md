@@ -130,6 +130,9 @@ markup from the network.
   the hook checks each file the same way (`signatureProblem`) and a wrong name fails the release instead. Once a signed
   release is out, every later one must be signed by the same name: an unsigned one, or a renewed certificate with
   another common name, never reaches those apps. An unsigned build names no publisher and checks nothing.
+  The vault accepts only Unity's networks: from a GitHub-hosted runner it answers 403 ("Client address is not
+  authorized"), so the Windows leg can sign only on Unity's self-hosted runners (PRE; #devs-code-signing). Its client
+  secret rotates every 7 days, so it can't live in a GitHub secret for long either.
 - The signing secrets are the `release` environment's, which only the Release workflow's build job uses (its
   protection rules, such as required reviewers, apply before it starts).
 - The feed must be readable without signing in, so the releases' repository is public: electron-updater reads a private
