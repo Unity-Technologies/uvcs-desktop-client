@@ -3,13 +3,14 @@ import { textMeasurer } from '../lib/measureText';
 import { fitPath, fittedPathWidth, positionsInTrimmed } from '../lib/trimToFit';
 import { wordMatchPositions } from '../lib/textMatchRanges';
 import { Highlight, useHighlightQuery } from '../ui/Highlight';
+import { moveTipAttributes } from '../ui/tipAttributes';
 import styles from './PathLabel.module.css';
 
 interface PathLabelProps {
   path: string;
   /** Show only the file name (e.g. inside a folder tree). */
   nameOnly?: boolean;
-  /** Previous path of a moved item. */
+  /** Previous path of a moved item: its tooltip shows the move, both paths whole. */
   oldPath?: string;
   strikethrough?: boolean;
   /**
@@ -70,6 +71,7 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fit
   const positions = matches ?? (nameOnly ? wordMatchPositions(name, query).map((position) => position + nameStart) : wordMatchPositions(path, query));
   const trimmed = shown.folder !== directory || shown.name !== name;
   const nameMatches = positions.filter((position) => position >= nameStart).map((position) => position - nameStart);
+  const move = tooltip && oldPath ? { from: oldPath, to: path } : undefined;
 
   return (
     <span
@@ -77,7 +79,8 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fit
       className={styles.path}
       data-fit-content={fitContent}
       style={fitContent ? contentSize : undefined}
-      data-tip={!tooltip ? undefined : oldPath ? `${oldPath} → ${path}` : trimmed ? path : undefined}
+      data-tip={!tooltip ? undefined : move ? '' : trimmed ? path : undefined}
+      {...moveTipAttributes(move)}
     >
       {shown.folder && (
         <span className={styles.directory}>
