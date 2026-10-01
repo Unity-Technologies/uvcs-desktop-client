@@ -24,6 +24,12 @@
   text-overflow: ellipsis;
 }
 
+/* The room a name fitted by `PathLabel` takes, so it gives way inside the chip's padding rather than over it. */
+.name {
+  display: flex;
+  min-width: 0;
+}
+
 .missing {
   flex: none;
   background: color-mix(in srgb, var(--status-changed) 14%, transparent);
