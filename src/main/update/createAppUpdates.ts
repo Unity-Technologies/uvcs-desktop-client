@@ -34,5 +34,6 @@ export function createAppUpdates(): AppUpdates {
       app.quit();
     },
     push: (status) => sendEvent('updateStatusChanged', status),
+    logFailure: (text) => console.warn(text),
   });
 }

@@ -1,7 +1,7 @@
 import type { ReleaseNotes, UpdateStatus } from '@shared/domain/appUpdate';
 import type { ReleaseFile } from './installerAsset';
 import { releaseNotesOf, type FeedReleaseNotes } from './releaseNotes';
-import { describeUpdateError } from './updateError';
+import { describeUpdateError, UpdateFailure, updateErrorForLog } from './updateError';
 
 /** Waits this long after launch before the first check, so it never competes with the first window's reads. */
 export const FIRST_CHECK_DELAY_MS = 4000;
@@ -37,6 +37,8 @@ export interface AppUpdatesDependencies {
   openInstaller: (path: string) => Promise<void>;
   /** Tells every window where the update stands. */
   push: (status: UpdateStatus) => void;
+  /** Keeps the cause of a failed check or download, which the window shows only in a sentence (`describeUpdateError`). */
+  logFailure: (text: string) => void;
 }
 
 /**
@@ -102,6 +104,7 @@ export class AppUpdates {
       if (!result?.isUpdateAvailable) this.setStatus({ state: 'upToDate' });
       else await this.download(result.updateInfo);
     } catch (error) {
+      this.dependencies.logFailure(`[updates] The update failed: ${updateErrorForLog(error)}`);
       this.setStatus({ state: 'failed', error: describeUpdateError(error) });
     }
   }
@@ -124,7 +127,7 @@ export class AppUpdates {
       return;
     }
     const installer = this.dependencies.installerOf(files);
-    if (!installer) throw new Error(`Version ${version} has no installer for this Mac.`);
+    if (!installer) throw new UpdateFailure(`Version ${version} has no installer for this Mac.`);
     this.installerPath = await this.dependencies.downloadInstaller(installer, version, (percent) =>
       this.setStatus({ state: 'downloading', version, percent }),
     );

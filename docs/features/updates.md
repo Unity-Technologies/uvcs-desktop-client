@@ -52,8 +52,12 @@ tells every window each step (`updateStatusChanged`, an `UpdateStatus`); a windo
   offers "Open Installer": it opens the image and quits, and the user drags the app to Applications. The image is picked
   by architecture (`installerAsset`: `latest-mac.yml` lists both, x64 first), and an x64 build under Rosetta moves to
   arm64. Signing the build (the release workflow's secrets) switches it to restart-to-install with no code change.
-- **Failures** read as one sentence (`describeUpdateError`): electron-updater reports an HTTP failure as the whole
-  response, `Set-Cookie` tokens included, which never reaches the screen.
+- **Failures** read as one sentence (`describeUpdateError`): offline, no published release, the app's own failures as
+  worded (`UpdateFailure`: no installer for this Mac, a damaged download), and for anything else "GitHub didn't answer as
+  expected", which the next check usually passes (a release just published, a rate limit, an outage). electron-updater's
+  own messages never reach the screen: wrapped two or three times, they hold the whole response, `Set-Cookie` tokens
+  included, and the releases feed. The cause goes to the console instead (`[updates]`, `updateErrorForLog`: the cause
+  chain, cut before the headers and the feed), and only the cause is matched, so no word in a release's notes counts.
 
 The renderer (`app/updates/`): `updateStore` keeps the status. The corner card (`UpdateCard`, stacked with the toasts)
 shows a download with its percent, then the ready update until "Later" puts that version off (`updateCardOf`); a newer

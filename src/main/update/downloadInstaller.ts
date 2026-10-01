@@ -4,6 +4,7 @@ import { rename, rm } from 'node:fs/promises';
 import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import type { ReadableStream as WebReadableStream } from 'node:stream/web';
+import { UpdateFailure } from './updateError';
 
 export interface InstallerDownload {
   url: string;
@@ -47,7 +48,7 @@ export async function downloadInstaller(
 
   try {
     await pipeline(Readable.fromWeb(response.body as WebReadableStream<Uint8Array>), measure, createWriteStream(partial));
-    if (hash.digest('base64') !== download.sha512) throw new Error('The download was damaged. Try again.');
+    if (hash.digest('base64') !== download.sha512) throw new UpdateFailure('The download was damaged. Try again.');
     await rename(partial, download.destination);
   } catch (error) {
     await rm(partial, { force: true });
