@@ -4,6 +4,7 @@ import { askSwitchWithChanges } from '../../features/branches/SwitchWithChangesD
 import { planSwitch } from '../../features/branches/switchOptions';
 import { explainUpdateConflicts, showUpdatedMoment } from '../../features/incoming/updateOperations';
 import { recheckIncoming } from '../../features/incoming/useIncomingSummary';
+import { branchLabel } from '../../lib/branchLabels';
 import { toast } from '../../ui/toast/toastStore';
 import { refuseWhileBusy, runOperation, runRead } from '../operations/runOperation';
 import { isAffectedByCheckinOrUpdate } from '../refresh/refreshScopes';
@@ -29,7 +30,7 @@ export async function updateWorkspace(workspacePath: string): Promise<boolean> {
 /** Updates the workspace, after asking the server whether there is anything new; says so when there isn't. */
 export async function updateUnlessUpToDate(workspacePath: string): Promise<void> {
   const summary = await recheckIncoming(workspacePath).catch(() => undefined);
-  if (summary?.branch && summary.changesetCount === 0) toast.info('Already up to date', `Your workspace has everything on ${summary.branch}.`);
+  if (summary?.branch && summary.changesetCount === 0) toast.info('Already up to date', `Your workspace has everything on ${branchLabel(summary.branch)}.`);
   else if ((await updateWorkspace(workspacePath)) && summary) showUpdatedMoment(workspacePath, summary);
 }
 

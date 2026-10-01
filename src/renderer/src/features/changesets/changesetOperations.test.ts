@@ -65,7 +65,7 @@ describe('changeset operations', () => {
     await moveChangesetToBranch(ws, changeset);
 
     expect(fakeApi.argsOf('changesets.moveToBranch')).toEqual([[ws, 42, '/main/task/rescued']]);
-    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Moved changeset 42 to /main/task/rescued' }]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Moved changeset 42 to rescued' }]);
   });
 
   it('refreshes what shows changesets and the branch lists after moving or deleting one, not the workspace', async () => {

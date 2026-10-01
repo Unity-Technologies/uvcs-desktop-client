@@ -5,6 +5,7 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runRead, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByChangesetComment, isAffectedByChangesetMove } from '../../app/refresh/refreshScopes';
 import { switchWorkspace } from '../../app/shell/workspaceOperations';
+import { branchLabel } from '../../lib/branchLabels';
 import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { toast } from '../../ui/toast/toastStore';
@@ -64,7 +65,7 @@ export async function moveChangesetToBranch(workspacePath: string, changeset: Pi
     api.changesets.moveToBranch(workspacePath, changeset.id, branch),
     isAffectedByChangesetMove,
   );
-  if (moved) toast.success(`Moved changeset ${changeset.id} to ${branch}`);
+  if (moved) toast.success(`Moved changeset ${changeset.id} to ${branchLabel(branch)}`);
 }
 
 export async function deleteChangeset(workspacePath: string, changeset: Pick<Changeset, 'id'>): Promise<void> {

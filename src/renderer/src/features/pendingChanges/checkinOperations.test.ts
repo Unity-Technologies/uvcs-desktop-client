@@ -80,7 +80,7 @@ describe('checkinChanges', () => {
     expect(await checkinChanges({ workspacePath: ws, changes: [change('src/a.ts'), change('src/b.ts')], comment: 'Add login\n\nDetails' })).toBe(true);
 
     expect(fakeApi.argsOf('pendingChanges.checkin')[0]!.slice(0, 2)).toEqual([ws, { paths: ['src/a.ts', 'src/b.ts'], comment: 'Add login\n\nDetails' }]);
-    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Checked in cs:44 on /main', action: 'View' }]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Checked in cs:44 on main', action: 'View' }]);
     expect(useSuccessMomentStore.getState().moments[ws]).toMatchObject({ verb: 'Checked in', changesetId: 44, detail: 'Add login' });
     expect(settings.recentComments).toEqual(['Add login\n\nDetails']);
   });
