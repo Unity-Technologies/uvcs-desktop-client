@@ -10,7 +10,7 @@ describe('merge menu labels', () => {
 
   it('keeps “on the server” within a menu’s width however long the destination’s name is', () => {
     const label = serverMergeLabel('/main/rendering/shader-variant-stripping-regression-after-upgrading-to-unity-6');
-    expect(label).toBe('Merge to shader-variant…ng-to-unity-6 on the server…');
+    expect(label).toBe('Merge to shader-var…o-unity-6 on the server…');
   });
 
   it('never reads the same for a workspace merge and a server merge to the branch the workspace is on', () => {

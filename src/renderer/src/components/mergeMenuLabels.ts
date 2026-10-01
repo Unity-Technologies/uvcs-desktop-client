@@ -7,7 +7,7 @@ import { branchLabel } from '../lib/branchLabels';
 export const MERGE_INTO_WORKSPACE = 'Merge into this workspace';
 
 /** The most characters of the destination's name in a menu item, so "on the server…" still fits a menu's width. */
-const MENU_BRANCH_CHARS = 28;
+const MENU_BRANCH_CHARS = 20;
 
 /** A merge on the server into `destination` (named by its own name, `branchLabel`), or into a branch picked next. */
 export function serverMergeLabel(destination?: string): string {
