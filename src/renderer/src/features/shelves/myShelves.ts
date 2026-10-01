@@ -1,5 +1,6 @@
 import { AUTOMATIC_SHELVE_COMMENT, type Shelve } from '@shared/domain/shelve';
 import type { SwitchShelveRecord } from '@shared/domain/switchWithChanges';
+import { branchLabel } from '../../lib/branchLabels';
 import { formatRelativeDate } from '../../lib/formatDate';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { firstLine, pluralize } from '../../lib/text';
@@ -58,7 +59,8 @@ function sameUser(owner: string, me: string): boolean {
 }
 
 function leftTitle(record: SwitchShelveRecord): string {
-  return record.reason === 'update' ? `Put aside to update ${record.source.name}` : `Left on ${record.source.name}`;
+  const source = branchLabel(record.source.name);
+  return record.reason === 'update' ? `Put aside to update ${source}` : `Left on ${source}`;
 }
 
 /** Whether the shelve shows for the words typed: each in its number, its comment, what it's called here or its author, in any case. */
