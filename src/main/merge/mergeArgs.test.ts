@@ -23,7 +23,7 @@ describe('fileConflictArgs', () => {
   });
 
   it("hands cm each file's decision in server merges, so none is left to its merge tool", () => {
-    expect(fileConflictArgs(toMain, plan, '/tmp/r.json')).toEqual(['--fileresolutionsfile=/tmp/r.json']);
+    expect(fileConflictArgs(toMain, plan, '/tmp/r.json')).toEqual(['--resolutionsfile=/tmp/r.json']);
   });
 
   it('adds nothing without file conflicts', () => {

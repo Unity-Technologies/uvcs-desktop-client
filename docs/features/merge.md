@@ -70,7 +70,7 @@ Complete merge writes each conflicting file's decision into the workspace, after
 decided, or, keeping the incoming version of a text file, the text the page read (`resolutionOf` carries it when it
 writes back byte for byte, UTF-8); only binaries and text in other encodings are read again, with a `cm cat` each.
 A merge into a server branch has no workspace to write in: `cm merge --to` reads every file's decision from a JSON file
-(`--fileresolutionsfile`, written by `fileResolutionsFile`): `{ "resolutions": [{ "path", "keep": "source" |
+(`--resolutionsfile`, written by `fileResolutionsFile`): `{ "resolutions": [{ "path", "keep": "source" |
 "destination" } | { "path", "resultFile" }] }`, by the path `cm merge` printed in the plan. A side kept, even an
 incoming text the page read, is named, so `cm` uploads nothing for it; a decided text goes in a result file whose bytes
 `cm` checks in as they are. `cm` leaves both files alone; `runMerge`'s temp folder holds them until it ends.

@@ -22,5 +22,5 @@ export function mergeSourceArgs(request: MergeRequest): string[] {
  */
 export function fileConflictArgs(request: MergeRequest, plan: MergePlan, resolutionsFile: string): string[] {
   if (plan.fileConflicts.length === 0) return [];
-  return request.destinationBranch ? [`--fileresolutionsfile=${resolutionsFile}`] : ['--keepdestination'];
+  return request.destinationBranch ? [`--resolutionsfile=${resolutionsFile}`] : ['--keepdestination'];
 }
