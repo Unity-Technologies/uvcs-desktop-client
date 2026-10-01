@@ -66,6 +66,18 @@ describe('CmShellSession', () => {
     await expect(next).resolves.toEqual({ output: 'restarted', exitCode: 0 });
   });
 
+  it('fails a command whose output passes the limit, and runs the next ones on a new process', async () => {
+    // A cm shell answer is read as one string, and V8 refuses strings past 512 MB: past the limit it is no answer.
+    session = new CmShellSession(process.execPath, fakeCmFolder, { maxOutputLength: 1000 });
+    const withinLimit = session.run(['print', '900']);
+    const tooLarge = session.run(['print', '5000']);
+    const next = session.run(['echo', 'recovered']);
+
+    await expect(withinLimit).resolves.toMatchObject({ exitCode: 0 });
+    await expect(tooLarge).rejects.toThrow('cm print printed more than');
+    await expect(next).resolves.toEqual({ output: 'recovered', exitCode: 0 });
+  });
+
   it('stops a read that takes longer than two minutes', async () => {
     vi.useFakeTimers();
     const shell = printedShellProcess();
