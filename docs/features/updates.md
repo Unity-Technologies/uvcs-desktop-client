@@ -130,3 +130,7 @@ Drive and builds there (`BUILD_DIR`). How fast the tests run on CI's 2-CPU runne
 
 `.github/workflows/codeql.yml` runs GitHub's CodeQL security analysis on pushes to main, pull requests and weekly;
 findings show in the Security tab and on pull requests.
+
+Every action a workflow uses is pinned to a full commit SHA, its tag in a comment (Unity's SSDLC: a tag can be
+moved to other code), which `scripts/build/pinnedActions.test.ts` checks; Dependabot (`.github/dependabot.yml`) proposes
+the new commits monthly.

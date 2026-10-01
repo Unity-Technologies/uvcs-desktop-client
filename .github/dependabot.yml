@@ -1,0 +1,11 @@
+# The workflows pin each action to a commit (scripts/build/pinnedActions.test.ts): Dependabot proposes the new commit,
+# with its tag in the comment, when an action releases.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directories: ['/', '/.github/actions/*']
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']

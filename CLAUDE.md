@@ -206,6 +206,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `window/workspaceMenuCommands.test.ts`                    | app menu commands match the workspace commands                    |
 | `main/settings/ownConfig.test.ts`                         | only the first-run import reads the official client's config; nothing writes it |
 | `scripts/build/dependencyLicenses.test.ts`                | every package in package-lock.json has a permissive license (`PERMISSIVE_LICENSES`) |
+| `scripts/build/pinnedActions.test.ts`                     | every GitHub action is pinned to a commit SHA                     |
 
 Not enforced yet: no `any` (there are none today). A static test for it is welcome.
 
