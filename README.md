@@ -58,6 +58,13 @@ Report an Issue and Request a Feature open the forms; About ▸ Copy Details giv
 error's Details ▸ Report an Issue fills them in with the error). Report a security vulnerability
 privately instead: see [SECURITY.md](SECURITY.md). [CONTRIBUTING.md](CONTRIBUTING.md) says how to send a change.
 
+## Maintenance
+
+The Unity Version Control team at Unity Technologies maintains this repository: it reads new issues and pull
+requests, fixes security reports first, and ships fixes as new releases. Contributions are welcome under the
+[Unity Contribution Agreement](CONTRIBUTING.md). The repository is reviewed against Unity's standards for public
+repositories once a year, and again whenever it takes in new third-party code or changes the data it handles.
+
 ## License
 
 [Apache License 2.0](LICENSE.md), copyright Unity Technologies (see [NOTICE](NOTICE)). The installed app lists the
