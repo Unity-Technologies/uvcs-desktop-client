@@ -3,6 +3,7 @@ import type { DiffTarget } from '@shared/domain/diff';
 import { EmptyState } from '../../ui/EmptyState';
 import { CenteredSpinner } from '../../ui/Spinner';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { PathLabel } from '../../components/PathLabel';
 import { ChangesetSummary } from '../changesets/ChangesetSummary';
 import { useChangeset } from '../changesets/useChangeset';
 import { ReviewModeButton } from '../review/ReviewModeButton';
@@ -56,7 +57,12 @@ function TargetDescription({ target }: { target: DiffTarget }) {
         </div>
       );
     case 'branch':
-      return <div className={styles.title}>All changes on {target.branch}</div>;
+      return (
+        <div className={styles.branchTitle}>
+          <span>All changes on</span>
+          <PathLabel path={target.branch} fitContent />
+        </div>
+      );
     case 'shelve':
       return <ShelveDescription shelveId={target.shelveId} />;
   }
