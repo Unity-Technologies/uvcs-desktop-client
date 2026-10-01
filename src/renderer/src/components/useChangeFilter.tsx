@@ -29,21 +29,22 @@ interface ChangeFilterResult<T> {
 }
 
 /**
- * Filters a list of changed files by path and by status (A, M, D, R...). `isViewFilter` for the list a view or page
+ * Filters a list of changed files by path and by status (A, M, D, R...), each file found by any of its statuses
+ * (`statusTones`: a moved file that changed by C and M). `isViewFilter` for the list a view or page
  * works on (Changes, a diff's files): its field takes ⌘F as every view's filter does; a list inside details doesn't.
  */
-export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, toneOf: (item: T) => StatusTone, isViewFilter = false): ChangeFilterResult<T> {
+export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tonesOf: (item: T) => readonly StatusTone[], isViewFilter = false): ChangeFilterResult<T> {
   const [query, setQuery] = useState('');
   const [chosenTones, setChosenTones] = useState<ReadonlySet<StatusTone>>(new Set());
 
-  const counts = useMemo(() => countTones(items.map(toneOf)), [items, toneOf]);
+  const counts = useMemo(() => countTones(items.map(tonesOf)), [items, tonesOf]);
   const tones = useMemo(() => offeredTones(new Set(counts.keys())), [counts]);
   // A chip can go away while chosen (the last private file is added); never keep filtering by a hidden chip.
   const activeTones = useMemo(() => new Set([...chosenTones].filter((tone) => tones.includes(tone))), [chosenTones, tones]);
   const visible = useMemo(
     // Nothing to filter by keeps the very list: what is worked out from it isn't worked out again.
-    () => (query.trim() === '' && activeTones.size === 0 ? items : items.filter((item) => matchesChangeFilter(pathOf(item), toneOf(item), { query, tones: activeTones }))),
-    [items, pathOf, toneOf, query, activeTones],
+    () => (query.trim() === '' && activeTones.size === 0 ? items : items.filter((item) => matchesChangeFilter(pathOf(item), tonesOf(item), { query, tones: activeTones }))),
+    [items, pathOf, tonesOf, query, activeTones],
   );
 
   const clear = (): void => {

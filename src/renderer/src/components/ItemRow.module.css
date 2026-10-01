@@ -50,8 +50,10 @@
   padding-left: 6px;
 }
 
+/* A moved file that changed shows its C before its M; the M stays in the column every other letter is in. */
 .status {
   display: flex;
+  gap: 3px;
 }
 
 /* A reviewed file steps back, so what's left to look at stands out; its review mark doesn't. */

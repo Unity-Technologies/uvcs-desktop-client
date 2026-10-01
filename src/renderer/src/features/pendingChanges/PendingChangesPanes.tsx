@@ -32,7 +32,7 @@ import { matchesBranch } from './changeCategories';
 import { changesUnderRow, type ChangeRow } from './changeRows';
 import { changelistMenu } from './changelistMenu';
 import { moveToChangelist } from './changelistOperations';
-import { changeTone } from './changeTone';
+import { changeTones } from './changeTone';
 import { checkinDraftOf, useCheckinDraftStore, useExcludedPaths } from './checkinDraftStore';
 import { pendingChangeMenu } from './pendingChangeMenu';
 import { addFilterRule, openWithDefaultApp, undoChanges } from './pendingChangeOperations';
@@ -72,7 +72,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
   const locks = usePendingLocks(workspacePath, workspace?.repository, allChanges, readAt);
   // Sorted once for the layout; filtering keeps the order, so typing in the filter or opening a folder never sorts again.
   const sorted = useSortedChanges(allChanges, layout);
-  const { visible: filtered, query, clear: clearTextFilter, bar: filterBar } = useChangeFilter(sorted, changePath, changeTone, true);
+  const { visible: filtered, query, clear: clearTextFilter, bar: filterBar } = useChangeFilter(sorted, changePath, changeTones, true);
   const changes = useMemo(() => review.narrow(filtered), [review.narrow, filtered]);
   const clearFilter = (): void => {
     clearTextFilter();

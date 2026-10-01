@@ -9,7 +9,7 @@ import { firstLine } from '../../lib/text';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { Avatar } from '../../ui/Avatar';
 import { RelativeTime } from '../../ui/RelativeTime';
-import { describeDiffEntry, diffEntryTone } from '../diff/diffEntrySources';
+import { diffEntryStatus } from '../diff/diffEntrySources';
 import { ConflictStatusChip } from '../merge/ConflictStatusChip';
 import type { ConflictStatus } from '../merge/mergeStatus';
 import { UPDATE_LABELS } from './updateConflictFiles';
@@ -87,7 +87,7 @@ export function IncomingList({ changesets, files, conflictPaths, conflictStates,
         path={file.path}
         itemType={file.itemType}
         oldPath={file.oldPath}
-        status={{ tone: diffEntryTone(file), label: describeDiffEntry(file) }}
+        status={diffEntryStatus(file)}
         extras={conflictMark(file)}
       />
     </button>

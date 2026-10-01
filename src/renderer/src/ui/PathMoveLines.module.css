@@ -1,0 +1,38 @@
+/* "in", "from" and "to" in a quiet column, so the paths start at the same place and read down. */
+.lines {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px var(--space-2);
+  align-items: baseline;
+}
+
+.word {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+/* One line each: one too wide is cut to fit by `fitPathParts`, never wrapped. */
+.path {
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* The folder both paths share is context, quieter than where the item was and is. */
+.path[data-shared] {
+  color: var(--text-secondary);
+}
+
+/* A tint drawn around the text rather than padding it, so the parts measure as `fitPathParts` measures them. */
+.changed {
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px var(--mark-tint);
+  background: var(--mark-tint);
+}
+
+.changed[data-change='removed'] {
+  --mark-tint: var(--diff-removed-strong);
+}
+
+.changed[data-change='added'] {
+  --mark-tint: var(--diff-added-strong);
+}

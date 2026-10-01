@@ -2,7 +2,7 @@ import { useState } from 'react';
 import type { DiffEntry } from '@shared/domain/diff';
 import { EmptyState } from '../../ui/EmptyState';
 import { SinceReviewButton } from '../review/SinceReviewButton';
-import { describeDiffEntry, diffEntrySources, diffEntryTone } from './diffEntrySources';
+import { describeDiffEntry, diffEntrySources, diffEntryStatus } from './diffEntrySources';
 import { reviewedRevisionToCompare, type DiffReviewMarks } from './review/diffReview';
 import { DiffFileTitle } from './viewer/DiffFileTitle';
 import { FileDiffViewer } from './viewer/FileDiffViewer';
@@ -33,7 +33,7 @@ export function EntryDiff({ workspacePath, entry, reviewMarks }: EntryDiffProps)
       original={sinceReview ? { kind: 'revision', revision: { revisionId: reviewedRevision, repository: entry.repository }, fileName: entry.path } : sources.original}
       modified={sources.modified}
       fileName={entry.path}
-      title={<DiffFileTitle tone={diffEntryTone(entry)} status={describeDiffEntry(entry)} path={entry.path} oldPath={entry.oldPath} />}
+      title={<DiffFileTitle status={diffEntryStatus(entry)} path={entry.path} oldPath={entry.oldPath} />}
       identicalDescription={sinceReview ? 'The file is back to how it was when you reviewed it.' : entry.oldPath ? ONLY_MOVED : undefined}
       compareControls={
         reviewedRevision !== null && <SinceReviewButton pressed={sinceReview} onChange={(pressed) => setSinceReviewPath(pressed ? entry.path : null)} />

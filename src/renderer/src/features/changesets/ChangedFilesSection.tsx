@@ -13,7 +13,7 @@ import { HighlightQuery } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { diffEntryKey } from '../diff/DiffEntryList';
 import { diffEntryMenu } from '../diff/diffEntryMenu';
-import { describeDiffEntry, diffEntryTone } from '../diff/diffEntrySources';
+import { diffEntryStatus, diffEntryTones } from '../diff/diffEntrySources';
 import { useDiffReview } from '../diff/review/useDiffReview';
 import { useDiffEntries } from '../diff/useDiffEntries';
 import styles from './ChangedFilesSection.module.css';
@@ -42,7 +42,7 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
   const [requested, setRequested] = useState(false);
   const { changesCollapsed: collapsed, set } = useDetailsLayoutStore();
   const { data: entries, error } = useDiffEntries(target, { enabled: requested, branchHead });
-  const { visible, query, bar } = useChangeFilter(entries ?? [], diffEntryKey, diffEntryTone);
+  const { visible, query, bar } = useChangeFilter(entries ?? [], diffEntryKey, diffEntryTones);
   const listRef = useRef<HTMLDivElement>(null);
   const workspacePath = useWorkspacePath();
   // The same menu as in the diff, review marks included, read once the files are asked for or shown from the cache.
@@ -81,7 +81,7 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
             {visible.slice(0, MAX_LISTED_FILES).map((entry) => (
               <ActionContextMenu key={entry.path} entries={() => diffEntryMenu(workspacePath, target, [entry], review)}>
                 <button className={styles.file} onClick={() => onOpen(entry.path)} {...ROVING_ITEM}>
-                  <ItemPathRow path={entry.path} itemType={entry.itemType} oldPath={entry.oldPath} status={{ tone: diffEntryTone(entry), label: describeDiffEntry(entry) }} />
+                  <ItemPathRow path={entry.path} itemType={entry.itemType} oldPath={entry.oldPath} status={diffEntryStatus(entry)} />
                 </button>
               </ActionContextMenu>
             ))}

@@ -68,11 +68,25 @@ export function TooltipLayer() {
     if (!host) return;
     const follow = (): void => setTip((shown) => shown && followTip(shown, host.isConnected ? findTip(host) : null));
     const observer = new MutationObserver(follow);
-    observer.observe(host, { attributes: true, attributeFilter: ['data-tip', 'data-tip-sub', 'data-tip-shortcut', 'data-state'] });
+    observer.observe(host, { attributes: true, attributeFilter: ['data-tip', 'data-tip-sub', 'data-tip-shortcut', 'data-tip-move-from', 'data-tip-move-to', 'data-state'] });
     // The element may leave with any of its ancestors.
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, [host]);
 
-  return tip && <TooltipBubble text={tip.text} sub={tip.sub} shortcut={tip.shortcut} pointerX={tip.pointerX} pointerY={tip.pointerY} />;
+  // A tip shown anew (a new pointer position) lays out from scratch, unplaced: a bubble left where the last tip was
+  // would measure as narrow as the room right of it, and a move's lines would be cut to that (`PathMoveLines`).
+  return (
+    tip && (
+      <TooltipBubble
+        key={`${tip.pointerX},${tip.pointerY}`}
+        text={tip.text}
+        sub={tip.sub}
+        shortcut={tip.shortcut}
+        move={tip.move}
+        pointerX={tip.pointerX}
+        pointerY={tip.pointerY}
+      />
+    )
+  );
 }

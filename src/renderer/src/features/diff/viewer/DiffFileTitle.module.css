@@ -8,3 +8,10 @@
   color: var(--text-tertiary);
   white-space: nowrap;
 }
+
+/* A moved file that changed shows its C and its M together. */
+.status {
+  display: flex;
+  flex: none;
+  gap: 3px;
+}

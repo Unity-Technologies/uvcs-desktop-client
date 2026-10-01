@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
-import { describeDiffEntry, diffEntrySources } from './diffEntrySources';
+import { describeDiffEntry, diffEntrySources, diffEntryStatus, diffEntryTones } from './diffEntrySources';
 
 describe('diffEntrySources', () => {
   it('reads both sides of a file under an xlink in the xlinked repository, where its ids are', () => {
@@ -36,5 +36,28 @@ describe('describeDiffEntry', () => {
 
   it('tells a moved item whose content changed too, which the diff then shows', () => {
     expect(describeDiffEntry({ ...base, status: 'moved', oldPath: 'src/a.ts' })).toBe('Moved and changed');
+  });
+});
+
+describe('diffEntryStatus', () => {
+  const base = { path: 'src/app/b.ts', itemType: 'file', repository: 'game@local', baseRevisionId: 4, revisionId: 5 } as const;
+
+  it('letters the item by what happened to it, a move told by the M itself', () => {
+    expect(diffEntryStatus({ ...base, status: 'changed' })).toEqual({ tone: 'changed', label: 'Changed' });
+    expect(diffEntryStatus({ ...base, status: 'moved', oldPath: 'src/lib/b.ts', revisionId: 4 })).toEqual({ tone: 'moved', label: 'Moved' });
+  });
+
+  it('gives a moved file that changed a C before its M', () => {
+    expect(diffEntryStatus({ ...base, status: 'moved', oldPath: 'src/lib/b.ts' })).toEqual({ tone: 'moved', label: 'Moved', changedLabel: 'Changed' });
+  });
+});
+
+describe('diffEntryTones', () => {
+  const base = { path: 'src/app/b.ts', itemType: 'file', repository: 'game@local', baseRevisionId: 4, revisionId: 5 } as const;
+
+  it('finds a moved file that changed by the C and M chips, a file only moved by M', () => {
+    expect(diffEntryTones({ ...base, status: 'moved', oldPath: 'src/lib/b.ts' })).toEqual(['changed', 'moved']);
+    expect(diffEntryTones({ ...base, status: 'moved', oldPath: 'src/lib/b.ts', revisionId: 4 })).toEqual(['moved']);
+    expect(diffEntryTones({ ...base, status: 'added' })).toEqual(['added']);
   });
 });

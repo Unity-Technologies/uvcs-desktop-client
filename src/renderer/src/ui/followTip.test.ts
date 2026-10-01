@@ -28,6 +28,13 @@ describe('followTip', () => {
     });
   });
 
+  it('shows the move the element names now, and keeps the one it still names', () => {
+    const moved = { text: '', move: { from: 'src/lib/A.cs', to: 'src/app/A.cs' }, pointerX: 10, pointerY: 20 };
+    expect(followTip(moved, { text: '', move: { from: 'src/lib/A.cs', to: 'src/app/A.cs' } })).toBe(moved);
+    expect(followTip(moved, { text: '', move: { from: 'src/lib/B.cs', to: 'src/app/B.cs' } })?.move).toEqual({ from: 'src/lib/B.cs', to: 'src/app/B.cs' });
+    expect(followTip(moved, { text: 'src/app/A.cs' })?.move).toBeUndefined();
+  });
+
   it('goes away with its element, or once the element has no tip', () => {
     expect(followTip(shown, null)).toBeNull();
   });

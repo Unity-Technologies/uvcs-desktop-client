@@ -32,8 +32,7 @@ export function MergeChangePreview({ workspacePath, request, change, contributor
       title={
         <span className={styles.title}>
           <DiffFileTitle
-            tone={changeTone(change)}
-            status={describeChange(change, labels)}
+            status={{ tone: changeTone(change), label: describeChange(change, labels) }}
             path={change.path.replace(/^\//, '')}
             oldPath={change.oldPath?.replace(/^\//, '')}
           />

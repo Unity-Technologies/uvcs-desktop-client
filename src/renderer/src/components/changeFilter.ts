@@ -22,10 +22,21 @@ export function offeredTones(present: ReadonlySet<StatusTone>): StatusTone[] {
   return TONE_ORDER.filter((tone) => ALWAYS_OFFERED.has(tone) || present.has(tone));
 }
 
-/** How many changes have each status, for the chips' tooltips and to dim the empty ones. */
-export function countTones(tones: readonly StatusTone[]): Map<StatusTone, number> {
+const ALONE = new Map<StatusTone, readonly StatusTone[]>(TONE_ORDER.map((tone) => [tone, [tone]]));
+const CHANGED_TOO = new Map<StatusTone, readonly StatusTone[]>(TONE_ORDER.map((tone) => [tone, tone === 'changed' ? ['changed'] : ['changed', tone]]));
+
+/**
+ * The statuses a change is found by, its chips: its own, and C too for a moved file that changed, as its row shows
+ * both letters (`ItemStatusMark`). The same arrays every time: a list of 100,000 changes asks for each at every filter.
+ */
+export function statusTones(tone: StatusTone, changedToo: boolean): readonly StatusTone[] {
+  return (changedToo ? CHANGED_TOO : ALONE).get(tone)!;
+}
+
+/** How many changes have each status, for the chips' tooltips and to dim the empty ones: a change of two counts in both. */
+export function countTones(tonesOfEach: readonly (readonly StatusTone[])[]): Map<StatusTone, number> {
   const counts = new Map<StatusTone, number>();
-  for (const tone of tones) counts.set(tone, (counts.get(tone) ?? 0) + 1);
+  for (const tones of tonesOfEach) for (const tone of tones) counts.set(tone, (counts.get(tone) ?? 0) + 1);
   return counts;
 }
 
@@ -34,6 +45,7 @@ export function changeFilterPlaceholder(count: number): string {
   return `Filter ${pluralize(count, 'file')}`;
 }
 
-export function matchesChangeFilter(path: string, tone: StatusTone, { query, tones }: ChangeFilter): boolean {
-  return (tones.size === 0 || tones.has(tone)) && matchesWordFilter([path], query);
+/** Whether a change shows: its path holds every word typed, and one of its statuses is chosen, if any is. */
+export function matchesChangeFilter(path: string, statuses: readonly StatusTone[], { query, tones }: ChangeFilter): boolean {
+  return (tones.size === 0 || statuses.some((status) => tones.has(status))) && matchesWordFilter([path], query);
 }

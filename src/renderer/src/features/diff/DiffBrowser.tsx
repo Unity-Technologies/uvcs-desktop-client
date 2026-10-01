@@ -6,7 +6,7 @@ import { useChangeFilter } from '../../components/useChangeFilter';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { SplitPane } from '../../ui/SplitPane';
-import { diffEntryTone } from './diffEntrySources';
+import { diffEntryTones } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
 import { diffEntryMenu } from './diffEntryMenu';
 import { entryToFocus } from './diffFocus';
@@ -33,7 +33,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
   });
   const focused = entries.find((entry) => diffEntryKey(entry) === selection.anchor);
   const firstKey = entries[0] && diffEntryKey(entries[0]);
-  const filter = useChangeFilter(entries, diffEntryKey, diffEntryTone, true);
+  const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, true);
   const rows = useMemo(() => review.narrow(filter.visible), [review.narrow, filter.visible]);
   // The diff's change navigation goes on to the files before and after, as the list shows them.
   const rowKeys = useMemo(() => rows.filter((entry) => entry.itemType !== 'directory').map(diffEntryKey), [rows]);

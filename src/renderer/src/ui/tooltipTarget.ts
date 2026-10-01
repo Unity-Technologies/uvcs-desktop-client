@@ -1,6 +1,7 @@
 import type { TipText } from './followTip';
+import { readTipAttributes } from './tipAttributes';
 
-/** A tooltip found on the page: `sub` is `data-tip-sub`, `shortcut` is `data-tip-shortcut`. */
+/** A tooltip found on the page, read from its attributes (`readTipAttributes`). */
 export interface FoundTip extends TipText {
   /** The element the tip is read from: followed while it shows. */
   host: Element;
@@ -17,10 +18,10 @@ const CLIPPED_SEARCH_DEPTH = 4;
 export function findTip(target: Element | null): FoundTip | null {
   const host = target?.closest<HTMLElement>('[data-tip]');
   if (host) {
-    const text = host.getAttribute('data-tip');
+    const tip = readTipAttributes((name) => host.getAttribute(name));
     // A menu or popover trigger that is open already shows what it does.
-    if (!text || host.dataset.state === 'open' || (host.hasAttribute('data-tip-overflow') && !isClipped(host))) return null;
-    return { text, sub: host.getAttribute('data-tip-sub') ?? undefined, shortcut: host.getAttribute('data-tip-shortcut') ?? undefined, host };
+    if (!tip || host.dataset.state === 'open' || (host.hasAttribute('data-tip-overflow') && !isClipped(host))) return null;
+    return { ...tip, host };
   }
 
   let element = target instanceof HTMLElement ? target : null;

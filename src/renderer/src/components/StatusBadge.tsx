@@ -1,3 +1,5 @@
+import type { PathMove } from '../ui/followTip';
+import { moveTipAttributes } from '../ui/tipAttributes';
 import styles from './StatusBadge.module.css';
 
 export type StatusTone = 'added' | 'changed' | 'deleted' | 'moved' | 'permissions' | 'private' | 'conflict' | 'muted';
@@ -13,10 +15,10 @@ export const STATUS_LETTERS: Record<StatusTone, string> = {
   muted: '·',
 };
 
-/** A small colored letter describing what happened to a file, as in the Plastic desktop GUI. */
-export function StatusBadge({ tone, title, letter }: { tone: StatusTone; title: string; letter?: string }) {
+/** A small colored letter describing what happened to a file, as in the Plastic desktop GUI; a moved one's tooltip can show the move. */
+export function StatusBadge({ tone, title, letter, move }: { tone: StatusTone; title: string; letter?: string; move?: PathMove }) {
   return (
-    <span className={styles.badge} data-tone={tone} data-tip={title}>
+    <span className={styles.badge} data-tone={tone} data-tip={title} {...moveTipAttributes(move)}>
       <StatusLetter letter={letter ?? STATUS_LETTERS[tone]} />
     </span>
   );

@@ -111,7 +111,6 @@ export const ItemRowContent = memo(function ItemRowContent({ row, checkState, re
         extras={
           <>
             {change.mergeInfo && <ItemTag>{change.mergeInfo}</ItemTag>}
-            {change.kinds.includes('moved') && change.kinds.includes('changed') && <ItemTag>modified</ItemTag>}
             {reviewStatus && <ReviewToggle status={reviewStatus} onToggle={() => actions.toggleReviewed([change])} />}
             {lock && <LockMark lock={lock} />}
           </>

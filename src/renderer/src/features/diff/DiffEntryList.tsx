@@ -1,7 +1,6 @@
 import type { KeyboardEvent, ReactNode } from 'react';
 import type { DiffEntry } from '@shared/domain/diff';
 import { ItemPathRow } from '../../components/ItemPathRow';
-import { ItemTag } from '../../components/ItemTag';
 import type { MenuEntry } from '../../lib/actions';
 import type { SelectionState } from '../../lib/selection';
 import { HighlightQuery } from '../../ui/Highlight';
@@ -10,7 +9,7 @@ import { DataTable } from '../../ui/table/DataTable';
 import { isReviewKey, toggleReviewedFromKey } from '../review/reviewKey';
 import { ReviewToggle } from '../review/ReviewToggle';
 import type { ReviewMode } from '../review/useReviewMode';
-import { describeDiffEntry, diffEntryTone, isMovedAndChanged } from './diffEntrySources';
+import { diffEntryStatus } from './diffEntrySources';
 import styles from './DiffEntryList.module.css';
 
 interface DiffEntryListProps {
@@ -41,14 +40,9 @@ function columns({ on, statusOf, toggle }: ReviewMode<DiffEntry>): Column<DiffEn
             path={entry.path}
             itemType={entry.itemType}
             oldPath={entry.oldPath}
-            status={{ tone: diffEntryTone(entry), label: describeDiffEntry(entry) }}
+            status={diffEntryStatus(entry)}
             faded={status === 'reviewed'}
-            extras={
-              <>
-                {isMovedAndChanged(entry) && <ItemTag>modified</ItemTag>}
-                {status && <ReviewToggle status={status} onToggle={() => toggle([entry])} />}
-              </>
-            }
+            extras={status && <ReviewToggle status={status} onToggle={() => toggle([entry])} />}
           />
         );
       },
