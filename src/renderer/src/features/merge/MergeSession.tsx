@@ -2,6 +2,11 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import type { DirectoryConflictResolution, MergePlan, MergeRequest } from '@shared/domain/merge';
 import { EmptyState } from '../../ui/EmptyState';
 import { SplitPane } from '../../ui/SplitPane';
+import { defaultMergeComment } from '../mergeTask/mergeTaskSummary';
+import type { TaskMerge } from '../mergeTask/taskMerge';
+import { ResolveInWorkspaceMenu } from '../mergeTask/ResolveInWorkspaceMenu';
+import { TaskMergeOptions } from '../mergeTask/TaskMergeOptions';
+import { useFinishingTask } from '../mergeTask/useFinishingTask';
 import { conflictedFilesOf } from './conflictedFiles';
 import { MergeDetail } from './MergeDetail';
 import type { MergeCompletion } from './MergeCompleted';
@@ -21,16 +26,19 @@ interface MergeSessionProps {
   workspacePath: string;
   request: MergeRequest;
   plan: MergePlan;
+  /** A task branch merged into a branch on the server, which the merge also finishes. */
+  task?: TaskMerge;
   onCompleted: (completion: MergeCompletion) => void;
 }
 
 /** The decisions for one merge plan, from the first conflict to "Complete merge". */
-export function MergeSession({ workspacePath, request, plan, onCompleted }: MergeSessionProps) {
+export function MergeSession({ workspacePath, request, plan, task, onCompleted }: MergeSessionProps) {
   const labels = useMemo(() => mergeLabels(request, plan), [request, plan]);
   const conflictedFiles = useMemo(() => conflictedFilesOf(plan, request), [plan, request]);
   const { states: fileStates, decide, reset, resolveInTool } = useFileConflicts(workspacePath, conflictedFiles, labels);
   const [directoryResolutions, setDirectoryResolutions] = useState<(DirectoryConflictResolution | undefined)[]>([]);
-  const [comment, setComment] = useState(`Merge from ${labels.source}`);
+  const [comment, setComment] = useState(() => (task ? defaultMergeComment(task.branch) : `Merge from ${labels.source}`));
+  const { choices: taskChoices, setChoices: setTaskChoices, finishing } = useFinishingTask(task);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [merging, setMerging] = useState(false);
   const mergeButtonRef = useRef<HTMLButtonElement>(null);
@@ -38,6 +46,7 @@ export function MergeSession({ workspacePath, request, plan, onCompleted }: Merg
   const latestItems = useRef<MergeItem[]>([]);
 
   const intoServerBranch = Boolean(request.destinationBranch);
+  const conflicting = plan.fileConflicts.length + plan.directoryConflicts.length > 0;
   // Thousands of items: built again only when a decision changes, not for every file selected or key typed.
   const items = useMemo(() => buildMergeItems(plan, fileStates, directoryResolutions), [plan, fileStates, directoryResolutions]);
   const rows = useMemo(() => toListRows(items), [items]);
@@ -77,9 +86,9 @@ export function MergeSession({ workspacePath, request, plan, onCompleted }: Merg
   const merge = async (): Promise<void> => {
     if (!resolutions) return;
     setMerging(true);
-    const result = await completeMerge(workspacePath, request, resolutions);
+    const result = await completeMerge(workspacePath, request, resolutions, finishing);
     setMerging(false);
-    if (result) onCompleted({ result, labels, changeCount: plan.changes.length, conflictCount: conflictStatuses.length });
+    if (result) onCompleted({ labels, changeCount: plan.changes.length, conflictCount: conflictStatuses.length });
   };
 
   return (
@@ -97,6 +106,12 @@ export function MergeSession({ workspacePath, request, plan, onCompleted }: Merg
         merging={merging}
         onMerge={() => void merge()}
         run={run.progress || runPlans.length > 0 ? { control: <ResolveRunControl states={fileStates} run={run} plans={runPlans} />, running: Boolean(run.progress) } : undefined}
+        options={finishing && <TaskMergeOptions review={finishing.review} choices={taskChoices} onChange={setTaskChoices} />}
+        alternative={
+          task &&
+          conflicting &&
+          request.destinationBranch && <ResolveInWorkspaceMenu workspacePath={workspacePath} sourceSpec={request.sourceSpec} destination={request.destinationBranch} task={task} />
+        }
         mergeButtonRef={mergeButtonRef}
       />
       <SplitPane

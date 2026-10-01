@@ -1,6 +1,7 @@
 import type { DiffTarget } from '@shared/domain/diff';
 import type { MergeRequest } from '@shared/domain/merge';
 import type { RevisionRef } from '@shared/domain/revision';
+import type { TaskMerge } from '../../features/mergeTask/taskMerge';
 
 /**
  * A page is a drill-down opened on top of the current view (history of a file, a diff, a merge...).
@@ -19,7 +20,8 @@ export type Page =
    * then the one a details panel may already have read, not a second `cm diff`.
    */
   | { kind: 'diff'; title: string; target: DiffTarget; focusPath?: string; branchHead?: number }
-  | { kind: 'merge'; request: MergeRequest }
+  /** `task`: a task branch merged into a branch on the server, which the page also offers to finish (`TaskMerge`). */
+  | { kind: 'merge'; request: MergeRequest; task?: TaskMerge }
   | { kind: 'codeReview'; reviewId: number; focusPath?: string }
   | { kind: 'browseRepository'; changesetId: number };
 

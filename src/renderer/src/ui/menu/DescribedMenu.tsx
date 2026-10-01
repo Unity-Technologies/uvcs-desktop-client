@@ -7,7 +7,7 @@ import styles from './DescribedMenu.module.css';
 interface DescribedMenuItem {
   id: string;
   label: string;
-  /** One line on what the item does, under its label. */
+  /** A sentence on what the item does, under its label; it wraps when long. */
   description: string;
   icon?: Icon;
   /** Shown on hover, e.g. the exact `cm` command the item runs. */

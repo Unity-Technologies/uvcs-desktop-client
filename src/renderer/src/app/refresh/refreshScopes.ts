@@ -157,5 +157,17 @@ export function isAffectedByNewChangesets(key: QueryKey): boolean {
   // The workspace's own version of a file (no revision spec) changes with the workspace, not with others' checkins.
   if (area(key) === 'annotate' && key[4] == null) return false;
   if (UNTOUCHED_BY_CHECKINS.includes(area(key) as string)) return false;
-  return !(area(key) === 'incoming' && detail(key) === 'summary');
+  return !isIncomingCheck(key);
+}
+
+/**
+ * A merge into a branch on the server: what its new changeset changes, and the incoming check too, which hasn't seen
+ * it yet when it lands on the branch the workspace is on. The workspace itself is not touched.
+ */
+export function isAffectedByServerMerge(key: QueryKey): boolean {
+  return isAffectedByNewChangesets(key) || isIncomingCheck(key);
+}
+
+function isIncomingCheck(key: QueryKey): boolean {
+  return area(key) === 'incoming' && detail(key) === 'summary';
 }

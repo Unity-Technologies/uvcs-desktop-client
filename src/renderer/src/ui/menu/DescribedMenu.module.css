@@ -63,12 +63,11 @@
   font-weight: var(--weight-medium);
 }
 
+/* Wraps rather than cuts what an item does: it may name branches. */
 .description {
-  overflow: hidden;
   color: var(--text-tertiary);
   font-size: var(--text-xs);
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-wrap: pretty;
 }
 
 .check {
