@@ -15,6 +15,9 @@ on:
 jobs:
   analyze:
     name: CodeQL
+    # A private repository can't use code scanning without GitHub Advanced Security, so the job would fail on every
+    # pull request; it skips until the repository is public, then runs by itself.
+    if: ${{ !github.event.repository.private }}
     runs-on: ubuntu-latest
     permissions:
       security-events: write
