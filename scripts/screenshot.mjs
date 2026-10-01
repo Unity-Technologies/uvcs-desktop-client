@@ -1,5 +1,6 @@
 // Launches the built app (run `npm run build` first), performs a few steps and saves a screenshot.
-// Usage: node scripts/screenshot.mjs <output.png> [step ...]
+// Usage: node scripts/screenshot.mjs [--scale=<factor>] <output.png> [step ...]
+//   --scale=2 renders at twice the pixels, sharp on high-density screens (the README's screenshots)
 // Steps:
 //   open:<workspacePath>   click a workspace on the home screen
 //   click:<text>           click the first element showing <text>
@@ -12,16 +13,38 @@
 //   wait:<ms>              wait
 //   theme:dark|light       force a theme
 //   size:<width>x<height>  resize the window (1400x880 by default)
+import { writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { _electron as electron } from 'playwright-core';
 
-const [output = join(tmpdir(), 'uvcs.png'), ...steps] = process.argv.slice(2);
+const scaleOption = process.argv.slice(2).find((argument) => argument.startsWith('--scale='));
+const [output = join(tmpdir(), 'uvcs.png'), ...steps] = process.argv.slice(2).filter((argument) => argument !== scaleOption);
+// A Chromium switch: the window keeps its size in points and draws each one with more pixels.
+const scaleArgs = scaleOption ? [`--force-device-scale-factor=${scaleOption.slice('--scale='.length)}`] : [];
 
-const app = await electron.launch({ args: ['.'], cwd: fileURLToPath(new URL('..', import.meta.url)) });
+const app = await electron.launch({ args: ['.', ...scaleArgs], cwd: fileURLToPath(new URL('..', import.meta.url)) });
 const window = await app.firstWindow();
-await window.setViewportSize({ width: 1400, height: 880 });
+
+// Sizes and captures the real window rather than Playwright's emulated viewport, which would draw at one pixel
+// per point whatever --scale says.
+async function resizeWindow(width, height) {
+  await app.evaluate(({ BrowserWindow }, size) => BrowserWindow.getAllWindows()[0].setContentSize(size.width, size.height), {
+    width,
+    height,
+  });
+}
+
+async function saveScreenshot(path) {
+  const png = await app.evaluate(async ({ BrowserWindow }) => {
+    const image = await BrowserWindow.getAllWindows()[0].webContents.capturePage();
+    return image.toPNG().toString('base64');
+  });
+  await writeFile(path, Buffer.from(png, 'base64'));
+}
+
+await resizeWindow(1400, 880);
 window.on('console', (message) => message.type() === 'error' && console.error('[renderer]', message.text()));
 window.on('pageerror', (error) => console.error('[pageerror]', error.message));
 
@@ -71,7 +94,7 @@ for (const step of steps) {
       break;
     case 'size': {
       const [width, height] = value.split('x').map(Number);
-      await window.setViewportSize({ width, height });
+      await resizeWindow(width, height);
       break;
     }
     default:
@@ -81,6 +104,6 @@ for (const step of steps) {
 }
 
 await window.waitForTimeout(800);
-await window.screenshot({ path: output });
+await saveScreenshot(output);
 await app.close();
 console.log(`Saved ${output}`);
