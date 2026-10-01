@@ -10,13 +10,17 @@ import { switchToBranch } from '../branches/branchOperations';
 import { openMerge } from '../merge/mergeOperations';
 import { useFinishedTasksStore } from './finishedTask';
 
-interface FinishTaskOptions {
+/** What else finishing a task does once it's merged. */
+export interface TaskEnding {
   /** The task branch, e.g. `/main/t1`. */
   taskBranch: string;
-  comment: string;
   /** Marked as reviewed once merged. */
   review?: CodeReviewSummary;
   hideBranch: boolean;
+}
+
+interface FinishTaskOptions extends TaskEnding {
+  comment: string;
 }
 
 /**
@@ -35,7 +39,25 @@ export async function mergeTaskOnServer(workspacePath: string, request: MergeReq
   });
   if (!result || result.destinationMoved) return result;
 
-  const { review } = options;
+  const changesetId = result.changesetId;
+  await finishMergedTask(workspacePath, options, { destination, changesetId });
+  toast.success(
+    `Merged ${options.taskBranch} into ${destination}${changesetId === undefined ? '' : ` (cs:${changesetId})`}`,
+    undefined,
+    changesetId === undefined ? undefined : { label: 'Show in Branch Explorer', run: () => showInBranchExplorer({ kind: 'changeset', id: changesetId }) },
+  );
+  return result;
+}
+
+/**
+ * What finishing a task does once it's merged into its destination: marks its review as reviewed and hides its branch
+ * when asked to, and remembers where it landed, for Changes to show what to do next (`FinishedTaskCard`).
+ */
+export async function finishMergedTask(
+  workspacePath: string,
+  { taskBranch, review, hideBranch }: TaskEnding,
+  merged: { destination: string; changesetId: number | undefined },
+): Promise<void> {
   if (review) {
     await runAction(
       workspacePath,
@@ -44,17 +66,11 @@ export async function mergeTaskOnServer(workspacePath: string, request: MergeReq
       isAffectedByCodeReviews,
     );
   }
-  if (options.hideBranch) await hideTaskBranch(workspacePath, options.taskBranch);
-  const changesetId = result.changesetId;
+  if (hideBranch) await hideTaskBranch(workspacePath, taskBranch);
+  const { destination, changesetId } = merged;
   if (changesetId !== undefined) {
-    useFinishedTasksStore.getState().remember(workspacePath, { branch: options.taskBranch, destination, changesetId, hidden: options.hideBranch });
+    useFinishedTasksStore.getState().remember(workspacePath, { branch: taskBranch, destination, changesetId, hidden: hideBranch });
   }
-  toast.success(
-    `Merged ${options.taskBranch} into ${destination}${changesetId === undefined ? '' : ` (cs:${changesetId})`}`,
-    undefined,
-    changesetId === undefined ? undefined : { label: 'Show in Branch Explorer', run: () => showInBranchExplorer({ kind: 'changeset', id: changesetId }) },
-  );
-  return result;
 }
 
 /** Hides a finished task's branch; true once hidden. Only the lists of branches change. */
