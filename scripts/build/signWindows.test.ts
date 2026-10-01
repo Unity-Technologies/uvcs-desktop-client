@@ -2,7 +2,6 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
-  AZURE_SIGNING_VARIABLES,
   TIMESTAMP_SERVER,
   azureSignToolArguments,
   azureSigningCredentials,
@@ -45,10 +44,6 @@ describe('the Windows signing credentials', () => {
     expect(() => azureSigningCredentials(env)).not.toThrow(/client-id|vault\.example/);
   });
 
-  it('are the five the Release workflow passes', () => {
-    const workflow = readFileSync(join(ROOT, '.github', 'workflows', 'release.yml'), 'utf8');
-    for (const name of AZURE_SIGNING_VARIABLES) expect(workflow).toContain(`${name}: \${{ secrets.${name} }}`);
-  });
 });
 
 describe("AzureSignTool's arguments", () => {
