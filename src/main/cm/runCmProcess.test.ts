@@ -27,4 +27,10 @@ describe('runCmProcess', () => {
     const script = "let text = ''; process.stdin.on('data', (d) => (text += d)).on('end', () => process.stdout.write(text.toUpperCase()));";
     await expect(runCmProcess(process.execPath, ['-e', script], { input: 'a b\n' })).resolves.toEqual({ output: 'A B\n', exitCode: 0 });
   });
+
+  it('stops a command whose output passes the limit, which it fails', async () => {
+    // Joined into one string at the end, past V8's limit it would throw where nothing catches it.
+    const script = "process.stdout.write('x'.repeat(5000)); setInterval(() => process.stdout.write('x'), 10);";
+    await expect(runCmProcess(process.execPath, ['-e', script], { maxOutputLength: 1000 })).rejects.toThrow('printed more than 1000 characters');
+  });
 });
