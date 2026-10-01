@@ -1,8 +1,8 @@
 import type { MenuItemConstructorOptions } from 'electron';
 import { describe, expect, it } from 'vitest';
-import { appMenuTemplate, shownAccelerator } from './appMenuTemplate';
+import { appMenuTemplate, shownAccelerator, type AppMenuContext } from './appMenuTemplate';
 
-function templateOn(platform: NodeJS.Platform): MenuItemConstructorOptions[] {
+function templateOn(platform: NodeJS.Platform, links: Partial<AppMenuContext> = {}): MenuItemConstructorOptions[] {
   return appMenuTemplate({
     platform,
     isPackaged: true,
@@ -11,8 +11,10 @@ function templateOn(platform: NodeJS.Platform): MenuItemConstructorOptions[] {
     newWindow: () => {},
     openDocumentation: () => {},
     reportIssue: () => {},
+    requestFeature: () => {},
     showAboutPanel: () => {},
     checkForUpdates: () => {},
+    ...links,
   });
 }
 
@@ -61,6 +63,18 @@ describe('appMenuTemplate', () => {
       { id: 'app.checkForUpdates', label: 'Check for Updates…' },
     ]);
     expect(hasRole(submenuOf(templateOn('darwin')[0]!), 'about')).toBe(false);
+  });
+
+  it('reports an issue and requests a feature from Help, each on its own form', () => {
+    const opened: string[] = [];
+    const help = submenuOf(
+      templateOn('win32', { reportIssue: () => opened.push('bug report'), requestFeature: () => opened.push('feature request') }).find((menu) => menu.label === '&Help')!,
+    );
+    const click = (label: string) => (help.find((item) => item.label === label)!.click as () => void)();
+
+    click('&Report an Issue');
+    click('Request a &Feature');
+    expect(opened).toEqual(['bug report', 'feature request']);
   });
 
   it('creates and opens workspaces from File, and leaves updating one to the incoming chip', () => {

@@ -54,7 +54,8 @@ In the app, ⌘K searches everything, ⌘/ lists the keyboard shortcuts, and ⌘
 ## Feedback
 
 Report a problem or ask for a feature in [Issues](https://github.com/danipen/uvcs-desktop-client/issues) (Help ▸
-Report an Issue opens one; About ▸ Copy Details gives the versions to paste in). Report a security vulnerability
+Report an Issue and Request a Feature open the forms; About ▸ Copy Details gives the versions to paste in, and an
+error's Details ▸ Report an Issue fills them in with the error). Report a security vulnerability
 privately instead: see [SECURITY.md](SECURITY.md). [CONTRIBUTING.md](CONTRIBUTING.md) says how to send a change.
 
 ## License

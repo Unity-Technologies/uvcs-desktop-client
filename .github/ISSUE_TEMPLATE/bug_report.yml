@@ -1,0 +1,47 @@
+name: Bug report
+description: Something in the app doesn't work as it should.
+labels: [bug]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you did and what the app did. A screenshot helps when it shows the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: What the app should have done instead.
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The shortest way to see it again, one step per line.
+      placeholder: |
+        1. Open a workspace with pending changes
+        2. Switch to another branch
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: app-details
+    attributes:
+      label: App details
+      description: Paste what About ▸ Copy Details gives. It lists the app version, the `cm` version and the OS.
+      placeholder: |
+        Unity Version Control: 1.4.0
+        cm: 11.0.16.9412
+        Platform: macOS · arm64
+      render: text
+    validations:
+      required: true
+  - type: textarea
+    id: error-details
+    attributes:
+      label: Logs or error details
+      description: >-
+        Optional. The error's Details ▸ Copy gives the command and what `cm` answered; the command log
+        (⌘⇧L, or Ctrl+Shift+L) shows every command the app ran. Remove any path or name you'd rather not share.
+      render: text

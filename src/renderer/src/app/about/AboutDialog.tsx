@@ -1,8 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, Bug, Copy, RefreshCw, Scale } from 'lucide-react';
+import { BookOpen, Bug, Copy, Lightbulb, RefreshCw, Scale } from 'lucide-react';
 import { useEffect } from 'react';
 import { api } from '../../api/client';
-import { queryKeys } from '../../api/queryKeys';
 import { AppMark } from '../../components/AppMark';
 import { APP_NAME, APP_PITCH } from '../../lib/appIdentity';
 import { Button } from '../../ui/Button';
@@ -15,7 +14,9 @@ import { openReleaseNotesDialog } from '../updates/ReleaseNotesDialog';
 import { foundUpdateVersion, useUpdateReleaseNotes } from '../updates/updateReleaseNotes';
 import { checkForUpdates, installUpdate, setAboutOpen, useUpdateStore } from '../updates/updateStore';
 import { aboutDetails } from './aboutDetails';
+import { aboutBugReportUrl, featureRequestUrl } from './aboutIssueUrls';
 import { aboutUpdateAction, aboutUpdateLine, describePlatform } from './aboutUpdate';
+import { appInfoQuery } from './appInfoQuery';
 import styles from './AboutDialog.module.css';
 
 export function openAboutDialog(): void {
@@ -24,7 +25,7 @@ export function openAboutDialog(): void {
 
 /** The app's name and version, its update, and what it runs on: the `cm` found (already asked at start) and Electron. */
 function AboutDialog({ onClose }: { onClose: () => void }) {
-  const { data: info } = useQuery({ queryKey: queryKeys.appInfo, queryFn: () => api.updates.appInfo(), staleTime: Infinity });
+  const { data: info } = useQuery(appInfoQuery);
   const { data: cmVersion } = useQuery(cmVersionQuery);
 
   useEffect(() => {
@@ -58,8 +59,23 @@ function AboutDialog({ onClose }: { onClose: () => void }) {
           <Button variant="ghost" size="small" icon={<BookOpen size={14} />} onClick={() => void api.system.openExternal(info.documentationUrl)}>
             Documentation
           </Button>
-          <Button variant="ghost" size="small" icon={<Bug size={14} />} onClick={() => void api.system.openExternal(info.issuesUrl)}>
+          <Button
+            variant="ghost"
+            size="small"
+            icon={<Bug size={14} />}
+            title="A bug report on GitHub, with these details filled in"
+            onClick={() => void api.system.openExternal(aboutBugReportUrl(info, cmVersion))}
+          >
             Report an Issue
+          </Button>
+          <Button
+            variant="ghost"
+            size="small"
+            icon={<Lightbulb size={14} />}
+            title="A feature request on GitHub"
+            onClick={() => void api.system.openExternal(featureRequestUrl(info))}
+          >
+            Request a Feature
           </Button>
           <Button
             variant="ghost"
