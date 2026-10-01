@@ -234,8 +234,9 @@ Not enforced yet: no `any` (there are none today). A static test for it is welco
 - **Releases own the version**: the Release workflow bumps the last release tag's version and pushes only the new
   tag (main's `package.json` isn't kept in step); never bump it by hand. The app updates itself from those releases
   (`docs/features/updates.md`).
-- **Code signing** (macOS, with notarization, and Windows) is wired into the Release workflow and turns on once its
-  secrets exist (`docs/features/updates.md`).
+- **Code signing**: the Release workflow has macOS and Windows built and signed in the private
+  `uvcs-desktop-client-release-signing` repository (Unity's signing runners serve only private repositories), which
+  uploads them to this repository's release. This repository holds no signing secret (`docs/features/updates.md`).
 
 ## Commits: let the history tell the story
 

@@ -1,5 +1,5 @@
-# The Windows build signed with Unity's EV certificate in Azure Key Vault. The Release workflow builds with this file
-# (`--config`) once the Azure secrets exist; without them it builds with electron-builder.yml alone, unsigned.
+# The Windows build signed with Unity's EV certificate in Azure Key Vault. Releases build with this file (`--config`,
+# docs/features/updates.md); electron-builder.yml alone builds unsigned.
 extends: ./electron-builder.yml
 win:
   signtoolOptions:

@@ -4,7 +4,11 @@ name: Release
 #   1. bumps the last release's version, commits it on top of main and pushes only the tag v<version>,
 #   2. opens a draft GitHub release with generated notes,
 #   3. builds the installers on macOS, Windows and Linux and uploads them to the draft, with the latest*.yml files
-#      electron-updater reads (electron-builder.yml's `publish`).
+#      electron-updater reads (electron-builder.yml's `publish`). Linux builds here; macOS and Windows build and sign
+#      in the private Unity-Technologies/uvcs-desktop-client-release-signing, whose Sign workflow this run starts and
+#      waits for: Unity's signing certificates are in Azure Key Vault, which accepts only Unity's networks, and
+#      Unity's runners that reach it may serve only private repositories. It builds this repository's tag, with this
+#      repository's config and sign hook, and uploads to this draft.
 # Publishing the draft makes the update reach every running app within the hour (main/update/AppUpdates.ts). The
 # release tags own the version: main is protected (every change through a pull request, admins and this workflow too),
 # so the bump commit lives only on its tag, and main's package.json keeps whatever version it had. Never bump it by
@@ -56,18 +60,11 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh release create "${{ steps.bump.outputs.tag }}" --draft --generate-notes --title "${{ steps.bump.outputs.tag }}"
 
-  # Each OS builds from the new tag, whose package.json has the new version, and uploads its own installers.
-  build:
+  # Linux builds from the new tag, whose package.json has the new version, and uploads its installer (unsigned: an
+  # AppImage carries no signature the OS checks).
+  build-linux:
     needs: prepare
-    # The signing secrets live in this environment, so only a Release run reaches them; its protection rules (required
-    # reviewers) apply before any leg starts.
-    environment: release
-    strategy:
-      # One OS failing leaves the others to finish; its leg can be re-run alone.
-      fail-fast: false
-      matrix:
-        os: [macos-latest, windows-latest, ubuntu-latest]
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -75,82 +72,36 @@ jobs:
       - uses: ./.github/actions/install
         with:
           node-version: '26'
-
-      # macOS signing is optional. With the CSC_LINK secret the build is signed and notarized, and updates install on a
-      # restart; without it the certificate search is turned off (an empty CSC_LINK would be read as a certificate's
-      # path) and the app is signed ad hoc (`identity: -`), and it updates by downloading the disk image for the user to
-      # drag in (main/update/macSignature.ts). Adding the secrets switches signing on with no change here.
-      # Never ship it with no signature at all: electron-builder renames Electron's app and edits its Info.plist, which
-      # breaks Electron's own signature, and macOS on Apple silicon then calls the downloaded app "damaged" with no way
-      # to open it. Signed ad hoc, it opens after System Settings ▸ Privacy & Security ▸ Open Anyway. The hardened
-      # runtime, which only notarization needs, is off with it: under an ad-hoc signature it refuses Electron's
-      # frameworks (library validation).
-      - name: Configure macOS code signing
-        if: runner.os == 'macOS'
-        env:
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: |
-          if [ -n "$CSC_LINK" ]; then
-            {
-              echo "CSC_LINK=$CSC_LINK"
-              echo "CSC_KEY_PASSWORD=$CSC_KEY_PASSWORD"
-              echo "APPLE_ID=$APPLE_ID"
-              echo "APPLE_APP_SPECIFIC_PASSWORD=$APPLE_APP_SPECIFIC_PASSWORD"
-              echo "APPLE_TEAM_ID=$APPLE_TEAM_ID"
-            } >> "$GITHUB_ENV"
-            echo "macOS code signing: on"
-          else
-            {
-              echo "CSC_IDENTITY_AUTO_DISCOVERY=false"
-              echo "MAC_SIGNING_FLAGS=-c.mac.identity=- -c.mac.hardenedRuntime=false"
-            } >> "$GITHUB_ENV"
-            echo "macOS code signing: ad hoc (no CSC_LINK secret)"
-          fi
-
-      # Windows signing is optional too. With the AZURE_* secrets every .exe (the app, its installers and uninstallers)
-      # is signed with Unity's EV certificate in Azure Key Vault, through AzureSignTool (scripts/build/signWindows.ts),
-      # and the app then installs only updates signed by the same publisher (electron-builder.windows-signed.yml);
-      # without them the build is unsigned. AzureSignTool is the release's single-file build, checked against the
-      # SHA-256 GitHub lists for it: a new version changes both lines.
-      - name: Configure Windows code signing
-        if: runner.os == 'Windows'
-        shell: bash
-        env:
-          AZURE_KEY_VAULT_URI: ${{ secrets.AZURE_KEY_VAULT_URI }}
-          AZURE_KEY_VAULT_CERTIFICATE: ${{ secrets.AZURE_KEY_VAULT_CERTIFICATE }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
-          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
-        run: |
-          if [ -n "$AZURE_CLIENT_SECRET" ]; then
-            TOOLS="$RUNNER_TEMP/signing"
-            mkdir -p "$TOOLS"
-            curl --fail --silent --show-error --location --retry 3 --output "$TOOLS/AzureSignTool.exe" \
-              https://github.com/vcsjones/AzureSignTool/releases/download/v7.0.1/AzureSignTool-x64.exe
-            echo "dc85a3f24bcd5978c63fcfd167a9b41313af9116722b99b831400f05f387fcba  $TOOLS/AzureSignTool.exe" | sha256sum --check -
-            echo "$TOOLS" >> "$GITHUB_PATH"
-            {
-              echo "AZURE_KEY_VAULT_URI=$AZURE_KEY_VAULT_URI"
-              echo "AZURE_KEY_VAULT_CERTIFICATE=$AZURE_KEY_VAULT_CERTIFICATE"
-              echo "AZURE_TENANT_ID=$AZURE_TENANT_ID"
-              echo "AZURE_CLIENT_ID=$AZURE_CLIENT_ID"
-              echo "AZURE_CLIENT_SECRET=$AZURE_CLIENT_SECRET"
-              echo "WINDOWS_SIGNING_FLAGS=--config electron-builder.windows-signed.yml"
-            } >> "$GITHUB_ENV"
-            echo "Windows code signing: on"
-          else
-            echo "Windows code signing: off (no AZURE_CLIENT_SECRET secret)"
-          fi
-
-      # With no platform flag electron-builder builds for the runner's OS, so each leg uploads its own installers.
-      # MAC_SIGNING_FLAGS is empty except on an unsigned macOS build, WINDOWS_SIGNING_FLAGS except on a signed Windows
-      # one; bash on every OS so they expand the same way.
       - name: Build and upload
-        shell: bash
-        run: npm run release -- $MAC_SIGNING_FLAGS $WINDOWS_SIGNING_FLAGS
+        run: npm run release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # macOS and Windows: the signing repo's Sign workflow builds, signs and uploads them to the same draft; this job
+  # starts it and fails when it does. SIGNING_REPO_TOKEN may only start and read that repository's workflows (Actions:
+  # read and write); the release environment keeps it to runs from main.
+  sign:
+    needs: prepare
+    runs-on: ubuntu-latest
+    environment: release
+    env:
+      SIGNING_REPO: Unity-Technologies/uvcs-desktop-client-release-signing
+      GH_TOKEN: ${{ secrets.SIGNING_REPO_TOKEN }}
+    steps:
+      # The run is found by its title, which ends with this run's id: two releases never pick each other's.
+      - name: Build and sign macOS and Windows in the signing repository
+        run: |
+          REQUEST="${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          gh workflow run sign-release.yml --repo "$SIGNING_REPO" -f tag="${{ needs.prepare.outputs.tag }}" -f request="$REQUEST"
+          for attempt in $(seq 1 24); do
+            RUN_ID="$(gh run list --repo "$SIGNING_REPO" --workflow sign-release.yml --limit 20 --json databaseId,displayTitle \
+              --jq ".[] | select(.displayTitle | endswith(\"($REQUEST)\")) | .databaseId" | head -n 1)"
+            [ -n "$RUN_ID" ] && break
+            sleep 5
+          done
+          if [ -z "$RUN_ID" ]; then
+            echo "::error::The signing repository's Sign workflow didn't start."
+            exit 1
+          fi
+          echo "Signing: https://github.com/$SIGNING_REPO/actions/runs/$RUN_ID" | tee -a "$GITHUB_STEP_SUMMARY"
+          gh run watch "$RUN_ID" --repo "$SIGNING_REPO" --exit-status --interval 30 > /dev/null
