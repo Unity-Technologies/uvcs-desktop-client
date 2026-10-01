@@ -2,12 +2,10 @@ import type { DirectoryConflictResolution, MergePlan, MergeRequest } from '@shar
 import { DirectoryConflictPanel } from './directoryConflicts/DirectoryConflictPanel';
 import { MergeChangePreview } from './MergeChangePreview';
 import type { MergeItem } from './mergeItems';
-import type { ServerFilePolicy } from './mergeResolutions';
 import type { ConflictToolActions } from './mergeTools/MergeToolButton';
 import { FileConflictPanel } from './resolve/FileConflictPanel';
 import type { FileConflictDecision } from './resolve/fileConflictDecision';
 import type { MergeLabels } from './mergeDescription';
-import { ServerFilePolicyPanel } from './ServerFilePolicyPanel';
 
 interface MergeDetailProps {
   workspacePath: string;
@@ -15,7 +13,6 @@ interface MergeDetailProps {
   plan: MergePlan;
   labels: MergeLabels;
   request: MergeRequest;
-  serverPolicy: { needed: boolean; fileCount: number; policy: ServerFilePolicy | undefined; onChoose: (policy: ServerFilePolicy) => void };
   toolActions: ConflictToolActions;
   onDecideFile: (key: string, decision: FileConflictDecision) => void;
   onStartOverFile: (key: string) => void;
@@ -29,7 +26,6 @@ export function MergeDetail({
   plan,
   labels,
   request,
-  serverPolicy,
   toolActions,
   onDecideFile,
   onStartOverFile,
@@ -47,17 +43,6 @@ export function MergeDetail({
         />
       );
     case 'fileConflict':
-      if (request.destinationBranch && serverPolicy.needed) {
-        return (
-          <ServerFilePolicyPanel
-            path={item.state.file.path}
-            fileCount={serverPolicy.fileCount}
-            labels={labels}
-            policy={serverPolicy.policy}
-            onChoose={serverPolicy.onChoose}
-          />
-        );
-      }
       return (
         <FileConflictPanel
           key={item.key}

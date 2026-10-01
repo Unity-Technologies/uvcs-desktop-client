@@ -15,7 +15,7 @@ import { useMergePlan } from './useMergePlan';
 export function MergePage({ page }: PageProps<'merge'>) {
   const workspacePath = useWorkspacePath();
   const { data: plan, isLoading, error, refetch, isFetching } = useMergePlan(workspacePath, page.request);
-  // The workspace refresh after merging re-reads the plan, which then finds pending changes: the page says what happened instead.
+  // Once merged into the workspace, the plan no longer holds (the workspace has pending changes): the page says what happened instead.
   const [completion, setCompletion] = useState<MergeCompletion>();
 
   if (completion) return <MergeCompleted request={page.request} completion={completion} />;
@@ -36,7 +36,7 @@ export function MergePage({ page }: PageProps<'merge'>) {
   }
 
   if (plan.status !== 'ready') return <MergeNotPossible plan={plan} />;
-  return <MergeSession key={JSON.stringify(page.request)} workspacePath={workspacePath} request={page.request} plan={plan} onCompleted={setCompletion} />;
+  return <MergeSession key={JSON.stringify(page.request)} workspacePath={workspacePath} request={page.request} plan={plan} task={page.task} onCompleted={setCompletion} />;
 }
 
 function MergeNotPossible({ plan }: { plan: MergePlan }) {

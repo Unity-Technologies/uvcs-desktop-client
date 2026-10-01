@@ -34,6 +34,10 @@ interface MergeHeaderProps {
    * way, which takes the status's place.
    */
   run?: { control: ReactNode; running: boolean };
+  /** What else the merge does once it's in, under the comment (finishing a task: `TaskMergeOptions`). */
+  options?: ReactNode;
+  /** Another way to the same end, before the merge button (a task's conflicts: `ResolveInWorkspaceMenu`). */
+  alternative?: ReactNode;
   mergeButtonRef?: Ref<HTMLButtonElement>;
 }
 
@@ -50,6 +54,8 @@ export function MergeHeader({
   merging,
   onMerge,
   run,
+  options,
+  alternative,
   mergeButtonRef,
 }: MergeHeaderProps) {
   useShortcut(hotkey('merge'), onMerge, canMerge);
@@ -98,9 +104,11 @@ export function MergeHeader({
             aria-label="Changeset comment"
           />
           <div className={styles.spacer} />
+          {alternative}
           {mergeButton}
         </div>
       )}
+      {intoServerBranch && options}
 
       {!intoServerBranch && <BehindHeadNotice />}
       {plan.warnings.map((warning) => (

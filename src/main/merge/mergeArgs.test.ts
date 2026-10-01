@@ -1,13 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import type { FileConflict, MergePlan, MergeResolutions } from '@shared/domain/merge';
+import type { FileConflict, MergePlan } from '@shared/domain/merge';
 import { fileConflictArgs, mergeSourceArgs } from './mergeArgs';
 
 const conflict = (path: string): FileConflict => ({ path, itemId: 1, baseChangeset: 1, sourceChangeset: 2, destinationChangeset: 3, repository: 'game@local' });
 const plan: MergePlan = { status: 'ready', changes: [], fileConflicts: [conflict('/a.txt'), conflict('/b.txt')], directoryConflicts: [], warnings: [] };
-
-function resolutions(files: MergeResolutions['files']): MergeResolutions {
-  return { directoryConflicts: [], files };
-}
 
 describe('mergeSourceArgs', () => {
   it('merges a shelve like any other source', () => {
@@ -20,27 +16,18 @@ describe('mergeSourceArgs', () => {
 });
 
 describe('fileConflictArgs', () => {
+  const toMain = { kind: 'merge' as const, sourceSpec: 'br:/main/t', destinationBranch: '/main' };
+
   it('keeps the destination in workspace merges; the app writes the resolutions afterwards', () => {
-    const text = resolutions({ '/a.txt': { choice: 'text', text: 'x' }, '/b.txt': { choice: 'source' } });
-    expect(fileConflictArgs({ kind: 'merge', sourceSpec: 'sh:3' }, plan, text)).toEqual(['--keepdestination']);
+    expect(fileConflictArgs({ kind: 'merge', sourceSpec: 'sh:3' }, plan, '/tmp/r.json')).toEqual(['--keepdestination']);
   });
 
-  it('keeps one side for every file in server merges', () => {
-    const request = { kind: 'merge' as const, sourceSpec: 'br:/main/t', destinationBranch: '/main' };
-    expect(fileConflictArgs(request, plan, resolutions({ '/a.txt': { choice: 'source' }, '/b.txt': { choice: 'source' } }))).toEqual(['--keepsource']);
-    expect(fileConflictArgs(request, plan, resolutions({ '/a.txt': { choice: 'destination' }, '/b.txt': { choice: 'destination' } }))).toEqual([
-      '--keepdestination',
-    ]);
-  });
-
-  it('never leaves a server merge conflict to cm, which would open its merge tool', () => {
-    const request = { kind: 'merge' as const, sourceSpec: 'br:/main/t', destinationBranch: '/main' };
-    const merged = resolutions({ '/a.txt': { choice: 'text', text: 'x' }, '/b.txt': { choice: 'text', text: 'y' } });
-    expect(() => fileConflictArgs(request, plan, merged)).toThrow();
-    expect(() => fileConflictArgs(request, plan, resolutions({ '/a.txt': { choice: 'source' }, '/b.txt': { choice: 'destination' } }))).toThrow();
+  it("hands cm each file's decision in server merges, so none is left to its merge tool", () => {
+    expect(fileConflictArgs(toMain, plan, '/tmp/r.json')).toEqual(['--fileconflictsresolutionsfile=/tmp/r.json']);
   });
 
   it('adds nothing without file conflicts', () => {
-    expect(fileConflictArgs({ kind: 'merge', sourceSpec: 'sh:3' }, { ...plan, fileConflicts: [] }, resolutions({}))).toEqual([]);
+    expect(fileConflictArgs({ kind: 'merge', sourceSpec: 'sh:3' }, { ...plan, fileConflicts: [] }, '/tmp/r.json')).toEqual([]);
+    expect(fileConflictArgs(toMain, { ...plan, fileConflicts: [] }, '/tmp/r.json')).toEqual([]);
   });
 });

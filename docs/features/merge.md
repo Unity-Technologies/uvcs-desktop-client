@@ -1,6 +1,7 @@
 # Merge
 
-The merge page, its conflict resolution and external merge tools (`features/merge`, `main/merge/mergeTools`).
+The merge page, its conflict resolution, external merge tools and finishing a task (`features/merge`,
+`features/mergeTask`, `main/merge/mergeTools`).
 The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external tool opens by itself").
 
 ## Merge tools
@@ -28,10 +29,17 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
 
 ## Merge page
 
-The merge page (`features/merge`) is a preview until "Complete merge". Its header is one row: a "Preview" pill (its
+Every merge opens the merge page (`features/merge`), into the workspace or into a branch on the server, wherever it is
+asked for: merging, cherry picking or undoing changesets, applying a shelve, "Merge to … on the server…", finishing a
+task (below). One preview, one way to resolve, one button.
+
+The page is a preview until "Complete merge" (into the workspace) or "Merge into <branch>" (into a server branch, the
+branch's last name). Its header is one row: a "Preview" pill (its
 tooltip: nothing is written until then), the title fitted as a whole (`fitMergeTitle`: the words stay, the branches give
-way from their middle; it keeps that room in a narrow window, ARCHITECTURE.md "Long names"), the changesets it combines ("cs:3 → cs:5"; a click lists them with the base), where it stands
-("2 conflicts to decide", the full summary in its tooltip) and Complete merge, the primary action only once nothing waits.
+way from their middle; it keeps that room in a narrow window, ARCHITECTURE.md "Long names"), the changesets it combines
+("cs:3 → cs:5"; a click lists them with the base), where it stands ("2 conflicts to decide", the full summary in its
+tooltip) and the merge button, the primary action only once nothing waits. Merging into a server branch, a second row
+holds the changeset comment (`Merge from <source>`) and the button.
 Every status reads as what the merge will do, never as done (`mergeStatus`): "Will merge automatically", "Needs your
 decision", then the user's choice ("Keeping yours", "Keeping incoming", "Combined", "Edited by you"; "Open in VS Code…",
 "Resolved in VS Code" for merge tools): an icon in the list and a chip in the file's toolbar, with a short tooltip. Sides
@@ -62,13 +70,26 @@ for that conflict, its lines, the source's label and its lines. While a tool has
 front, Stop waiting), its conflicts show without choices and the merge can't complete; a toast tells how it ended.
 Editing the text in the app opens a banner with Done and Discard edits; the choice shows picked and "Changes" shows what
 it produces. Binary conflicts offer only the two versions to keep, as cards, and no merge tool. The
-Incoming view resolves update conflicts with the same panel and run (in its update bar); server-branch merges keep one side for every file. A file
-that merges automatically is never edited; its menu only overrides it by keeping one version. Once merged, the page
-states where the result went.
+Incoming view resolves update conflicts with the same panel and run (in its update bar); a merge into a server branch
+resolves its files the same way as a workspace merge. A file
+that merges automatically is never edited; its menu only overrides it by keeping one version.
+
+Once merged into the workspace, the page says so ("Merge complete", `MergeCompleted`) and leads to Changes ("Review and
+check in"). Merged into a server branch there is nothing left to do there: the page goes back to where it was opened
+from, and the progress card ends as the one toast, "Merged subtask into child_1 (cs:812)" (branches named as briefly as
+tells them apart, `distinctBranchNames`), with "Show in Branch Explorer" (`completeMerge`). When someone checked in on
+the destination while it merged, `cm` leaves the merge's changeset beside the new head: the page that merges it into the
+branch opens instead (`followUpMerge`), with a toast saying why. The page reads its plan once (`MERGE_PLAN_QUERY`):
+no refresh, not even the one after the merge, previews it again.
 
 Complete merge writes each conflicting file's decision into the workspace, after `cm merge` (`runMerge`): the text
 decided, or, keeping the incoming version of a text file, the text the page read (`resolutionOf` carries it when it
 writes back byte for byte, UTF-8); only binaries and text in other encodings are read again, with a `cm cat` each.
+A merge into a server branch has no workspace to write in: `cm merge --to` reads every file's decision from a JSON file
+(`--fileconflictsresolutionsfile`, written by `fileConflictResolutionsFile`): `{ "resolutions": [{ "path", "keep": "source" |
+"destination" } | { "path", "resultFile" }] }`, by the path `cm merge` printed in the plan. A side kept, even an
+incoming text the page read, is named, so `cm` uploads nothing for it; a decided text goes in a result file whose bytes
+`cm` checks in as they are. `cm` leaves both files alone; `runMerge`'s temp folder holds them until it ends.
 
 Merges hold hundreds of conflicting files and thousands of changes. Every conflicting file's three versions load at
 once (its status needs its automatic merge); each file merges once, when its versions are in (`loadConflict`), and
@@ -77,3 +98,25 @@ regions over Myers diffs of each side, whose time goes by the lines changed (loc
 The list and Incoming render only the rows in view; the file behind the selection follows it deferred, so arrowing
 never waits for a file to highlight. Conflicts, Base and the hand editor follow the diffs' size rule
 (`syntaxHighlighting`), and Base (when big) and the hand editor render only the lines in view.
+
+## Finishing a task
+
+A task branch (`isTaskBranch`: one with a parent) is finished by merging it into its parent on the server: Branch ▸
+"Merge to <parent> on the server…", or, on a clean workspace on the task branch, the suggestion in Changes ("Merge
+subtask into child_1", `MergeTaskSuggestion`, which stays cheap: one `cm find` of the branch, one changeset and one merge
+link with `limit 1`). Both open the merge page with the task (`openTaskMerge`, the page's `task`: `TaskMerge`), and so
+does "Merge to another branch on the server…" on a task branch. The page then:
+
+- starts the comment from the branch's ("Merge /main/t1: Add the login screen", `defaultMergeComment`);
+- offers, under the comment, "Mark the code review as reviewed (“<title>”)" when the branch has a review not reviewed
+  yet (its status beside it, a click opens it; the review comes from the list the branch chips share,
+  `useReviewsByBranch`), and "Hide the branch afterwards" (`TaskMergeOptions`);
+- once merged, does what was picked and remembers where the task landed (`finishMergedTask`), so Changes shows the
+  finished task: where it went, "Switch to <parent>", "Start next task…", "Hide branch" (`FinishedTaskCard`). The merge
+  that finishes it after its destination moved carries the choices made.
+
+Its conflicts are resolved on the page, on the server, as any merge's. The header offers the workspace way too, "Resolve
+in the workspace instead" (`ResolveInWorkspaceMenu`, `workspaceResolutions`): "Merge <parent> into <task> first"
+(switches to the task when needed; resolve, check in, and merge the task again, clean) or "Merge on <parent> in this
+workspace" (switches to the parent when needed; checking in finishes the task). Labels name the branches as briefly as
+tells them apart, the tooltips in full. The changeset a moved destination left is only merged on the parent.

@@ -11,6 +11,7 @@ import { confirm } from '../../ui/dialog/confirm';
 import { prompt } from '../../ui/dialog/prompt';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { toast, useToastStore } from '../../ui/toast/toastStore';
+import type { TaskMerge } from '../mergeTask/taskMerge';
 import { validateBranchName } from './branchNames';
 import { pickBranch } from './BranchPickerDialog';
 import { rememberRecentBranch } from './recentBranches';
@@ -118,8 +119,11 @@ export function cherryPickFromBranch(branch: string): void {
   navigation.openPage({ kind: 'merge', request: { kind: 'cherryPick', sourceSpec: spec.branch(branch) } });
 }
 
-/** Merges `sourceSpec` into a branch the user picks, on the server, without touching the workspace. */
-export async function mergeTo(sourceSpec: string, sourceName: string): Promise<void> {
+/**
+ * Merges `sourceSpec` into a branch the user picks, on the server, without touching the workspace; `task` when the
+ * source is a task branch, which the merge page then also offers to finish.
+ */
+export async function mergeTo(sourceSpec: string, sourceName: string, task?: TaskMerge): Promise<void> {
   const destination = await pickBranch({
     title: `Merge ${branchLabel(sourceName)} to…`,
     description: 'The merge happens on the server; your workspace is not touched.',
@@ -127,7 +131,7 @@ export async function mergeTo(sourceSpec: string, sourceName: string): Promise<v
     exclude: sourceSpec === spec.branch(sourceName) ? sourceName : undefined,
   });
   if (!destination) return;
-  navigation.openPage({ kind: 'merge', request: { kind: 'merge', sourceSpec, destinationBranch: destination } });
+  navigation.openPage({ kind: 'merge', request: { kind: 'merge', sourceSpec, destinationBranch: destination }, ...(task && { task }) });
 }
 
 /** Diffs the branch at the head it's known at, so the diff its details panel already read is reused. */

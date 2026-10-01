@@ -18,6 +18,7 @@ import { withTempDirectory } from '../files/tempFile';
 import { retryWhileBusy } from '../files/whileBusy';
 import { toAbsolutePath } from '../files/workspacePaths';
 import type { OperationContext } from '../operations/OperationTracker';
+import { fileConflictResolutionsFile } from './fileConflictResolutionsFile';
 import { fileConflictArgs, MACHINE_READABLE_ARGS, mergeSourceArgs } from './mergeArgs';
 import { assertResolutionsComplete, describeUnmergeablePlan } from './mergeRules';
 import { previewMerge } from './previewMerge';
@@ -25,8 +26,9 @@ import { previewMerge } from './previewMerge';
 /**
  * Runs a merge with the user's decisions:
  * 1. Directory conflicts are solved one by one with `--resolveconflict`; `cm` keeps the decisions in state files.
- * 2. The final `cm merge --merge` applies everything. Conflicting files keep one side (see `fileConflictArgs`),
- *    so nothing is decided behind the user's back and no external merge tool opens.
+ * 2. The final `cm merge --merge` applies everything. Every conflicting file has a decision (see `fileConflictArgs`),
+ *    so nothing is decided behind the user's back and no external merge tool opens. A merge into a server branch
+ *    takes each file's decision from a resolutions file (`fileConflictResolutionsFile`).
  * 3. For workspace merges, each conflicting file is then written with its resolution: the text decided, the source's
  *    text as the page read it, or else (binaries) the source's revision, with one `cm cat` each.
  * If anything looks different from the plan the user reviewed, it stops before changing the workspace.
@@ -45,13 +47,17 @@ export async function runMerge(
 
   return withTempDirectory(async (directory) => {
     const commentsFile = join(directory, 'comment.txt');
-    if (request.destinationBranch) await writeFile(commentsFile, resolutions.comment ?? '', 'utf8');
+    const fileConflictResolutionsPath = join(directory, 'file-conflict-resolutions.json');
+    if (request.destinationBranch) {
+      await writeFile(commentsFile, resolutions.comment ?? '', 'utf8');
+      await writeServerFileConflictResolutions(plan, resolutions.files, directory, fileConflictResolutionsPath);
+    }
 
     const mergeArgs = [
       'merge',
       ...mergeSourceArgs(request),
       '--merge',
-      ...fileConflictArgs(request, plan, resolutions),
+      ...fileConflictArgs(request, plan, fileConflictResolutionsPath),
       '--nointeractiveresolution',
       ...MACHINE_READABLE_ARGS,
       `--mergeresultfile=${join(directory, 'result')}`,
@@ -73,9 +79,20 @@ export async function runMerge(
     }
 
     context.reportProgress('Writing resolved files');
-    await writeFileResolutions(cm, workspacePath, request, plan, resolutions.files);
+    await writeFileConflictResolutions(cm, workspacePath, request, plan, resolutions.files);
     return {};
   });
+}
+
+async function writeServerFileConflictResolutions(
+  plan: MergePlan,
+  resolutions: Record<string, FileConflictResolution>,
+  directory: string,
+  fileConflictResolutionsPath: string,
+): Promise<void> {
+  const { json, resultFiles } = fileConflictResolutionsFile(plan, resolutions, directory);
+  for (const { file, text } of resultFiles) await writeFile(file, text, 'utf8');
+  await writeFile(fileConflictResolutionsPath, json, 'utf8');
 }
 
 /** `cm` numbers the remaining conflicts on each run, so the next one to solve is always number 1. */
@@ -106,7 +123,7 @@ function resolveConflictArgs(resolution: DirectoryConflictResolution): string[] 
   }
 }
 
-async function writeFileResolutions(
+async function writeFileConflictResolutions(
   cm: CmClient,
   workspacePath: string,
   request: MergeRequest,

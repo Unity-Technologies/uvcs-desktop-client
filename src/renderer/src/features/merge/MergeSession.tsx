@@ -2,6 +2,11 @@ import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } f
 import type { DirectoryConflictResolution, MergePlan, MergeRequest } from '@shared/domain/merge';
 import { EmptyState } from '../../ui/EmptyState';
 import { SplitPane } from '../../ui/SplitPane';
+import { defaultMergeComment } from '../mergeTask/mergeTaskSummary';
+import type { TaskMerge } from '../mergeTask/taskMerge';
+import { ResolveInWorkspaceMenu } from '../mergeTask/ResolveInWorkspaceMenu';
+import { TaskMergeOptions } from '../mergeTask/TaskMergeOptions';
+import { useFinishingTask } from '../mergeTask/useFinishingTask';
 import { conflictedFilesOf } from './conflictedFiles';
 import { MergeDetail } from './MergeDetail';
 import type { MergeCompletion } from './MergeCompleted';
@@ -12,26 +17,28 @@ import { buildMergeItems, needsDecision, toListRows, type MergeItem } from './me
 import { ResolveRunControl, useRunOffer } from './mergeTools/ResolveRunControl';
 import { useResolveRun } from './mergeTools/useResolveRun';
 import { completeMerge } from './mergeOperations';
-import { collectResolutions, needsServerFilePolicy, type ServerFilePolicy } from './mergeResolutions';
+import { collectResolutions } from './mergeResolutions';
 import { conflictStatusOf, planProgress, summarizePlan } from './mergeStatus';
-import { useFileConflicts, type FileConflictState } from './resolve/useFileConflicts';
+import { useFileConflicts } from './resolve/useFileConflicts';
 import styles from './MergeSession.module.css';
 
 interface MergeSessionProps {
   workspacePath: string;
   request: MergeRequest;
   plan: MergePlan;
+  /** A task branch merged into a branch on the server, which the merge also finishes. */
+  task?: TaskMerge;
   onCompleted: (completion: MergeCompletion) => void;
 }
 
 /** The decisions for one merge plan, from the first conflict to "Complete merge". */
-export function MergeSession({ workspacePath, request, plan, onCompleted }: MergeSessionProps) {
+export function MergeSession({ workspacePath, request, plan, task, onCompleted }: MergeSessionProps) {
   const labels = useMemo(() => mergeLabels(request, plan), [request, plan]);
   const conflictedFiles = useMemo(() => conflictedFilesOf(plan, request), [plan, request]);
   const { states: fileStates, decide, reset, resolveInTool } = useFileConflicts(workspacePath, conflictedFiles, labels);
   const [directoryResolutions, setDirectoryResolutions] = useState<(DirectoryConflictResolution | undefined)[]>([]);
-  const [serverFilePolicy, setServerFilePolicy] = useState<ServerFilePolicy>();
-  const [comment, setComment] = useState(`Merge from ${labels.source}`);
+  const [comment, setComment] = useState(() => (task ? defaultMergeComment(task.branch) : `Merge from ${labels.source}`));
+  const { choices: taskChoices, setChoices: setTaskChoices, finishing } = useFinishingTask(task);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [merging, setMerging] = useState(false);
   const mergeButtonRef = useRef<HTMLButtonElement>(null);
@@ -39,22 +46,12 @@ export function MergeSession({ workspacePath, request, plan, onCompleted }: Merg
   const latestItems = useRef<MergeItem[]>([]);
 
   const intoServerBranch = Boolean(request.destinationBranch);
-  const serverPolicyNeeded = intoServerBranch && needsServerFilePolicy(fileStates);
+  const conflicting = plan.fileConflicts.length + plan.directoryConflicts.length > 0;
   // Thousands of items: built again only when a decision changes, not for every file selected or key typed.
-  const items = useMemo(
-    () => buildMergeItems(plan, serverPolicyNeeded ? withServerPolicy(fileStates, serverFilePolicy) : fileStates, directoryResolutions),
-    [plan, serverPolicyNeeded, fileStates, serverFilePolicy, directoryResolutions],
-  );
+  const items = useMemo(() => buildMergeItems(plan, fileStates, directoryResolutions), [plan, fileStates, directoryResolutions]);
   const rows = useMemo(() => toListRows(items), [items]);
   const conflictStatuses = useMemo(() => items.map(conflictStatusOf).filter((status) => status !== null), [items]);
-  const resolutions = collectResolutions({
-    plan,
-    fileStates,
-    directoryResolutions,
-    serverFilePolicy: serverPolicyNeeded ? serverFilePolicy : undefined,
-    intoServerBranch,
-    comment,
-  });
+  const resolutions = collectResolutions({ plan, fileStates, directoryResolutions, comment });
   const selected = items.find((item) => item.key === selectedKey);
   // The list follows the keys at once; the file behind it (a few hundred ms to highlight a file of a few thousand
   // lines) follows once they stop coming, instead of every file an arrow key passes through holding the list back.
@@ -76,7 +73,7 @@ export function MergeSession({ workspacePath, request, plan, onCompleted }: Merg
     }
   }, []);
   const run = useResolveRun({ states: fileStates, resolveInTool, onOpen: followRun, onEnd: afterRun });
-  const runPlans = useRunOffer(intoServerBranch ? [] : fileStates, run);
+  const runPlans = useRunOffer(fileStates, run);
 
   // Start on the first thing that needs the user.
   useEffect(() => {
@@ -89,9 +86,9 @@ export function MergeSession({ workspacePath, request, plan, onCompleted }: Merg
   const merge = async (): Promise<void> => {
     if (!resolutions) return;
     setMerging(true);
-    const result = await completeMerge(workspacePath, request, resolutions);
+    const result = await completeMerge(workspacePath, request, resolutions, finishing);
     setMerging(false);
-    if (result) onCompleted({ result, labels, changeCount: plan.changes.length, conflictCount: conflictStatuses.length });
+    if (result) onCompleted({ labels, changeCount: plan.changes.length, conflictCount: conflictStatuses.length });
   };
 
   return (
@@ -109,6 +106,12 @@ export function MergeSession({ workspacePath, request, plan, onCompleted }: Merg
         merging={merging}
         onMerge={() => void merge()}
         run={run.progress || runPlans.length > 0 ? { control: <ResolveRunControl states={fileStates} run={run} plans={runPlans} />, running: Boolean(run.progress) } : undefined}
+        options={finishing && <TaskMergeOptions review={finishing.review} choices={taskChoices} onChange={setTaskChoices} />}
+        alternative={
+          task &&
+          conflicting &&
+          request.destinationBranch && <ResolveInWorkspaceMenu workspacePath={workspacePath} sourceSpec={request.sourceSpec} destination={request.destinationBranch} task={task} />
+        }
         mergeButtonRef={mergeButtonRef}
       />
       <SplitPane
@@ -131,12 +134,6 @@ export function MergeSession({ workspacePath, request, plan, onCompleted }: Merg
               plan={plan}
               labels={labels}
               request={request}
-              serverPolicy={{
-                needed: serverPolicyNeeded,
-                fileCount: fileStates.length,
-                policy: serverFilePolicy,
-                onChoose: setServerFilePolicy,
-              }}
               toolActions={{ resolveIn: (key, tool) => void resolveInTool(key, tool), run: run.progress, runOffered: runPlans.length > 0 }}
               onDecideFile={decide}
               onStartOverFile={reset}
@@ -151,7 +148,3 @@ export function MergeSession({ workspacePath, request, plan, onCompleted }: Merg
   );
 }
 
-/** A server merge's files all wait for the side to keep; once it is chosen, none of them waits anymore. */
-function withServerPolicy(fileStates: FileConflictState[], policy: ServerFilePolicy | undefined): FileConflictState[] {
-  return fileStates.map((state) => ({ ...state, resolution: policy ? { choice: policy } : null, mergedAutomatically: false }));
-}

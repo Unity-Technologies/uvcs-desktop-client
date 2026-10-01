@@ -1,4 +1,4 @@
-import type { MergePlan, MergeRequest, MergeResolutions } from '@shared/domain/merge';
+import type { MergePlan, MergeRequest } from '@shared/domain/merge';
 import { MERGE_FIELD_SEPARATOR } from '../cm/mergeOutput';
 
 export const MACHINE_READABLE_ARGS = ['--machinereadable', `--fieldseparator=${MERGE_FIELD_SEPARATOR}`];
@@ -15,17 +15,12 @@ export function mergeSourceArgs(request: MergeRequest): string[] {
 }
 
 /**
- * How `cm merge --merge` treats conflicting files. Every conflict gets an explicit decision, because a
- * file left to `cm` would be merged by its external merge tool, and this app never opens one.
- * Workspace merges keep the destination and the app writes the resolutions afterwards. A merge into a
- * server branch cannot take per-file content, so it keeps the same side for every conflicting file.
+ * How `cm merge --merge` treats conflicting files. Every conflict gets an explicit decision, because a file left to
+ * `cm` would be merged by its external merge tool, and this app never opens one. Workspace merges keep the
+ * destination and the app writes the resolutions afterwards. A merge into a server branch hands `cm` each file's
+ * decision in `fileConflictResolutionsPath` (`fileConflictResolutionsFile`).
  */
-export function fileConflictArgs(request: MergeRequest, plan: MergePlan, resolutions: MergeResolutions): string[] {
+export function fileConflictArgs(request: MergeRequest, plan: MergePlan, fileConflictResolutionsPath: string): string[] {
   if (plan.fileConflicts.length === 0) return [];
-  if (!request.destinationBranch) return ['--keepdestination'];
-
-  const choices = new Set(plan.fileConflicts.map((conflict) => resolutions.files[conflict.path]?.choice));
-  if (choices.size === 1 && choices.has('source')) return ['--keepsource'];
-  if (choices.size === 1 && choices.has('destination')) return ['--keepdestination'];
-  throw new Error('A merge into a server branch must keep the same side for every conflicting file.');
+  return request.destinationBranch ? [`--fileconflictsresolutionsfile=${fileConflictResolutionsPath}`] : ['--keepdestination'];
 }

@@ -11,6 +11,7 @@ import {
   isAffectedByLabels,
   isAffectedByNewChangesets,
   isAffectedByCheckinOrUpdate,
+  isAffectedByServerMerge,
   isAffectedByPendingChangeEdit,
   isAffectedByShelveApplied,
   isAffectedByShelveDeletion,
@@ -52,6 +53,14 @@ describe('refresh scopes', () => {
     expect(isAffectedByNewChangesets(key('incoming', 'summary'))).toBe(false);
     expect(isAffectedByNewChangesets(key('pendingChanges'))).toBe(false);
     expect(isAffectedByNewChangesets(key('content', { kind: 'revision' }))).toBe(false);
+  });
+
+  it('refreshes after a merge into a server branch what new changesets change and the incoming check, never the workspace', () => {
+    expect(isAffectedByServerMerge(key('incoming', 'summary'))).toBe(true);
+    expect(isAffectedByServerMerge(key('branchExplorer', {}))).toBe(true);
+    expect(isAffectedByServerMerge(key('pendingChanges'))).toBe(false);
+    expect(isAffectedByServerMerge(key('info'))).toBe(false);
+    expect(isAffectedByServerMerge(key('labels', {}))).toBe(false);
   });
 
   it('leaves the lists of objects checkins do not create alone on new changesets', () => {
