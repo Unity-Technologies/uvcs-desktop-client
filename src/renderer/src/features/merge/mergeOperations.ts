@@ -2,7 +2,7 @@ import { followUpMerge, type MergeRequest, type MergeResolutions, type MergeResu
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runOperation, type OperationSuccess } from '../../app/operations/runOperation';
-import { isAffectedByCheckinOrUpdate, isAffectedByNewChangesets, isAffectedByShelveApplied } from '../../app/refresh/refreshScopes';
+import { isAffectedByCheckinOrUpdate, isAffectedByServerMerge, isAffectedByShelveApplied } from '../../app/refresh/refreshScopes';
 import { toast } from '../../ui/toast/toastStore';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { finishMergedTask } from '../mergeTask/mergeTaskOperations';
@@ -45,8 +45,7 @@ export async function completeMerge(
 
 /** What a merge can change: the workspace and what a checkin changes, or only what a new changeset on the server does. */
 function mergeRefreshScope(request: MergeRequest): (queryKey: readonly unknown[]) => boolean {
-  // A merge into a branch on the server leaves the workspace untouched, as someone else's checkin would.
-  if (request.destinationBranch) return isAffectedByNewChangesets;
+  if (request.destinationBranch) return isAffectedByServerMerge;
   // Merging a shelve applies it, and may finish the left changes that offered it.
   return request.sourceSpec.startsWith('sh:') ? isAffectedByShelveApplied : isAffectedByCheckinOrUpdate;
 }
