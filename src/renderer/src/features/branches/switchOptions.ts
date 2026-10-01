@@ -5,6 +5,7 @@ import type {
   PendingChangesOnSwitch,
   SwitchPreflight,
 } from '@shared/domain/switchWithChanges';
+import { branchLabel } from '../../lib/branchLabels';
 import { pluralize } from '../../lib/text';
 
 interface SwitchOption {
@@ -72,7 +73,7 @@ function switchNotes(preflight: SwitchPreflight): string[] {
     notes.push(`Your locks on ${pluralize(preflight.lockedPaths.length, 'file')} are released while the changes are shelved.`);
   }
   if (preflight.leftShelveCount > 0) {
-    notes.push(`You already left changes on ${preflight.sourceName}. They stay; leaving these makes another shelve next to them.`);
+    notes.push(`You already left changes on ${branchLabel(preflight.sourceName)}. They stay; leaving these makes another shelve next to them.`);
   }
   return notes;
 }

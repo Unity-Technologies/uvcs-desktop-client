@@ -52,7 +52,7 @@ describe('planSwitch', () => {
     expect(plan.kind === 'ask' && plan.choice.notes).toEqual([
       '1 private file isn’t shelved: it stays in the folder.',
       'Your locks on 2 files are released while the changes are shelved.',
-      'You already left changes on /main/t1. They stay; leaving these makes another shelve next to them.',
+      'You already left changes on t1. They stay; leaving these makes another shelve next to them.',
     ]);
   });
 });

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { PendingChangesAction, SwitchPreflight } from '@shared/domain/switchWithChanges';
 import { navigation } from '../../app/navigation/navigationStore';
+import { branchLabels } from '../../lib/branchLabels';
 import { pluralize } from '../../lib/text';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
@@ -32,6 +33,7 @@ function SwitchWithChangesDialog({
 }: SwitchWithChangesRequest & { onFinish: (action: PendingChangesAction | undefined) => void }) {
   const [action, setAction] = useState(choice.defaultAction);
   const cancel = (): void => onFinish(undefined);
+  const [sourceName] = branchLabels(preflight.sourceName, targetName);
 
   return (
     <Dialog
@@ -65,7 +67,7 @@ function SwitchWithChangesDialog({
       }
     >
       <p className={styles.question}>
-        You have {pluralize(preflight.pendingCount, 'pending change')} on <code>{preflight.sourceName}</code>. What should happen to {pendingChangesPronoun(preflight.pendingCount)}?
+        You have {pluralize(preflight.pendingCount, 'pending change')} on <code data-tip={preflight.sourceName}>{sourceName}</code>. What should happen to {pendingChangesPronoun(preflight.pendingCount)}?
       </p>
       <PendingChangesChoice source={preflight.sourceName} destination={targetName} choice={choice} count={preflight.pendingCount} value={action} onChange={setAction} />
       {inMerge && <p className={styles.blocker}>You’re in the middle of a merge. Check it in or undo it before switching.</p>}
