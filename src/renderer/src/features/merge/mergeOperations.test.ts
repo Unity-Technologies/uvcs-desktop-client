@@ -3,6 +3,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 
 import type { MergeRequest } from '@shared/domain/merge';
 import { navigation } from '../../app/navigation/navigationStore';
+import { queryClient } from '../../app/queryClient';
+import { showQuery } from '../../testing/queryProbes';
+import { MERGE_PLAN_QUERY, mergePlanKey } from './useMergePlan';
 import { useFinishedTasksStore } from '../mergeTask/finishedTask';
 import type { TaskMerge } from '../mergeTask/taskMerge';
 import { pressToastAction, shownToasts, watchRefreshes, whereTheWindowIs } from '../../testing/operationOutcome';
@@ -152,6 +155,17 @@ describe('completing a merge', () => {
       expect(shownToasts()).toEqual([{ kind: 'success', title: 'Merged /main/task001 into /main (cs:43)', action: 'Show in Branch Explorer' }]);
       expect(useFinishedTasksStore.getState().merged[ws]).toEqual({ branch: '/main/task001', destination: '/main', changesetId: 43, hidden: true });
     });
+  });
+
+  it('never previews the merge again once it ran, while the page still shows the plan', async () => {
+    fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
+    const intoServer = await showQuery(queryClient, mergePlanKey(ws, intoServerBranch), MERGE_PLAN_QUERY);
+    const intoTheWorkspace = await showQuery(queryClient, mergePlanKey(ws, intoWorkspace), MERGE_PLAN_QUERY);
+
+    await completeMerge(ws, intoServerBranch, resolutions);
+    await completeMerge(ws, intoWorkspace, resolutions);
+
+    expect([intoServer.reads(), intoTheWorkspace.reads()]).toEqual([1, 1]);
   });
 
   it('stays on the page when the merge fails', async () => {
