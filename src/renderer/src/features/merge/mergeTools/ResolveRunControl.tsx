@@ -1,4 +1,4 @@
-import { Check, ListChecks, Pause, Settings, SkipForward } from 'lucide-react';
+import { Check, GalleryVerticalEnd, Pause, Settings, SkipForward } from 'lucide-react';
 import { openSettingsDialogAt } from '../../../app/settings/SettingsDialog';
 import { saveSettings, useSettings } from '../../../app/settings/useSettings';
 import { SEPARATOR, tidyMenu, type MenuEntry } from '../../../lib/actions';
@@ -71,7 +71,7 @@ function RunButton({ plans, run }: { plans: RunPlan[]; run: ResolveRun }) {
     <SplitButton
       variant="primary"
       size="medium"
-      icon={<ListChecks size={14} />}
+      icon={<GalleryVerticalEnd size={14} />}
       menu={menu}
       menuLabel="Resolve in another tool"
       tip={`Opens each file in ${offered.tool.name} in turn: save and close it there to get the next`}
