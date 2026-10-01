@@ -144,6 +144,12 @@ describe.each(Object.entries(themes))('%s theme', (theme, tokens) => {
     }
   });
 
+  it.each(['--diff-removed-strong', '--diff-added-strong'])('writes what a move changed (`PathMoveLines`) at 4.5:1 on %s in a tooltip', (mark) => {
+    const tooltip = parseColor(tokens['--bg-surface-raised']!).rgb;
+    const behind = composite(parseColor(tokens[mark]!), tooltip);
+    expect(contrastRatio(composite(parseColor(tokens['--text-primary']!), behind), behind)).toBeGreaterThanOrEqual(4.5);
+  });
+
   it('keeps tertiary text quieter than secondary text', () => {
     expect(ratio(tokens, '--text-tertiary', '--bg-surface')).toBeLessThan(ratio(tokens, '--text-secondary', '--bg-surface'));
   });

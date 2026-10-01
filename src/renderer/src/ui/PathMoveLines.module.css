@@ -1,0 +1,34 @@
+/* "from" and "to" in a quiet column, so both paths start at the same place and read down. */
+.lines {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px var(--space-2);
+  align-items: baseline;
+  white-space: normal;
+}
+
+.word {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+/* What stayed steps back, so what the move changed is what the eye finds. */
+.path {
+  color: var(--text-secondary);
+  overflow-wrap: anywhere;
+}
+
+.changed {
+  border-radius: 3px;
+  padding: 0 2px;
+  color: var(--text-primary);
+  box-decoration-break: clone;
+}
+
+.changed[data-change='removed'] {
+  background: var(--diff-removed-strong);
+}
+
+.changed[data-change='added'] {
+  background: var(--diff-added-strong);
+}

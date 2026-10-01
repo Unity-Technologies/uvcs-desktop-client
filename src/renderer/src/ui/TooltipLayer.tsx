@@ -68,11 +68,11 @@ export function TooltipLayer() {
     if (!host) return;
     const follow = (): void => setTip((shown) => shown && followTip(shown, host.isConnected ? findTip(host) : null));
     const observer = new MutationObserver(follow);
-    observer.observe(host, { attributes: true, attributeFilter: ['data-tip', 'data-tip-sub', 'data-tip-shortcut', 'data-state'] });
+    observer.observe(host, { attributes: true, attributeFilter: ['data-tip', 'data-tip-sub', 'data-tip-shortcut', 'data-tip-move-from', 'data-tip-move-to', 'data-state'] });
     // The element may leave with any of its ancestors.
     observer.observe(document.body, { childList: true, subtree: true });
     return () => observer.disconnect();
   }, [host]);
 
-  return tip && <TooltipBubble text={tip.text} sub={tip.sub} shortcut={tip.shortcut} pointerX={tip.pointerX} pointerY={tip.pointerY} />;
+  return tip && <TooltipBubble text={tip.text} sub={tip.sub} shortcut={tip.shortcut} move={tip.move} pointerX={tip.pointerX} pointerY={tip.pointerY} />;
 }
