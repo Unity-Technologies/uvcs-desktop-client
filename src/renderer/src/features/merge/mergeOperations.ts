@@ -1,13 +1,16 @@
 import { followUpMerge, type MergeRequest, type MergeResolutions, type MergeResult } from '@shared/domain/merge';
 import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
-import { runOperation } from '../../app/operations/runOperation';
+import { runOperation, type OperationSuccess } from '../../app/operations/runOperation';
 import { isAffectedByCheckinOrUpdate, isAffectedByNewChangesets, isAffectedByShelveApplied } from '../../app/refresh/refreshScopes';
 import { toast } from '../../ui/toast/toastStore';
+import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
+import { describeSpec } from './mergeDescription';
 
 /**
  * Runs the merge. Resolves with its result for the page to tell what happened, or null when there's nothing more to
- * show there: it failed, or a server merge's destination moved and the merge that finishes it opens instead.
+ * show there: it failed, or it merged into a branch on the server, which goes back to where the merge was opened from
+ * with a toast naming the new changeset (or opens the merge that finishes it, when its destination moved meanwhile).
  */
 export async function completeMerge(workspacePath: string, request: MergeRequest, resolutions: MergeResolutions): Promise<MergeResult | null> {
   const result = await runOperation({
@@ -15,20 +18,17 @@ export async function completeMerge(workspacePath: string, request: MergeRequest
     workspacePath,
     run: (operationId) => api.merge.run(workspacePath, request, resolutions, operationId),
     affects: mergeRefreshScope(request),
-    success: (merged) => {
-      if (!request.destinationBranch) return { title: 'Merge applied to your workspace' };
-      return merged.destinationMoved ? null : { title: `Created changeset ${merged.changesetId} on ${request.destinationBranch}` };
-    },
+    success: (merged) => mergeSuccess(request, merged),
   });
   if (!result) return null;
+  if (!request.destinationBranch) return result;
 
-  if (request.destinationBranch && result.destinationMoved) {
-    navigation.goBack();
+  navigation.goBack();
+  if (result.destinationMoved) {
     toast.info(`${request.destinationBranch} moved while merging`, destinationMovedExplanation(result.changesetId, request.destinationBranch));
     openMerge(followUpMerge(result, request.destinationBranch));
-    return null;
   }
-  return result;
+  return null;
 }
 
 /** What a merge can change: the workspace and what a checkin changes, or only what a new changeset on the server does. */
@@ -37,6 +37,23 @@ function mergeRefreshScope(request: MergeRequest): (queryKey: readonly unknown[]
   if (request.destinationBranch) return isAffectedByNewChangesets;
   // Merging a shelve applies it, and may finish the left changes that offered it.
   return request.sourceSpec.startsWith('sh:') ? isAffectedByShelveApplied : isAffectedByCheckinOrUpdate;
+}
+
+/**
+ * How a merge's progress card ends: the workspace has the result to check in, or the server a new changeset, a click
+ * away in the Branch Explorer. It goes away in silence while a server merge still needs the one that finishes it.
+ */
+function mergeSuccess(request: MergeRequest, result: MergeResult): OperationSuccess | null {
+  const destination = request.destinationBranch;
+  if (!destination) return { title: 'Merge applied to your workspace' };
+  if (result.destinationMoved) return null;
+  const merged = `Merged ${describeSpec(request.sourceSpec)} into ${destination}`;
+  const { changesetId } = result;
+  if (changesetId === undefined) return { title: merged };
+  return {
+    title: `${merged} (cs:${changesetId})`,
+    action: { label: 'Show in Branch Explorer', run: () => showInBranchExplorer({ kind: 'changeset', id: changesetId }) },
+  };
 }
 
 export function openMerge(request: MergeRequest): void {

@@ -79,7 +79,7 @@ export function MergeSession({ workspacePath, request, plan, onCompleted }: Merg
     setMerging(true);
     const result = await completeMerge(workspacePath, request, resolutions);
     setMerging(false);
-    if (result) onCompleted({ result, labels, changeCount: plan.changes.length, conflictCount: conflictStatuses.length });
+    if (result) onCompleted({ labels, changeCount: plan.changes.length, conflictCount: conflictStatuses.length });
   };
 
   return (
