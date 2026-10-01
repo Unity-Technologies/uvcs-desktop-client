@@ -4,6 +4,7 @@ import { startingWorkspaceQuery } from '@shared/startingWorkspace';
 import { WINDOW_BACKGROUND, windowChrome } from '@shared/windowChrome';
 import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
+import { isWebAddress } from '../system/webAddress';
 import { windowIcon } from './appIcon';
 import { cascadedWindowBounds, loadWindowBounds, keepWindowBoundsSaved } from './savedWindowBounds';
 import { titleBarOptions } from './titleBar';
@@ -53,7 +54,7 @@ export function createMainWindow(settings: SettingsStore, { cascadeFrom, workspa
     if (command === 'browser-backward') sendEventTo(window.webContents, 'navigateBack', {});
   });
   window.webContents.setWindowOpenHandler(({ url }) => {
-    void shell.openExternal(url);
+    if (isWebAddress(url)) void shell.openExternal(url);
     return { action: 'deny' };
   });
 

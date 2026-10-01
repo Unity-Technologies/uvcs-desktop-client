@@ -187,7 +187,8 @@ still shows in the process list while the sync runs; never pass a secret where `
 
 The renderer is untrusted: windows run with `contextIsolation` and `sandbox` (`createMainWindow`), reach main only
 through the one invoke channel, and never open a window of their own: a link that would opens outside the app
-(`setWindowOpenHandler`, `shell.openExternal`).
+(`setWindowOpenHandler`, `shell.openExternal`). Only web pages open that way (`isWebAddress`): the OS would hand
+any other scheme (`file:`, `smb:`, `ms-msdt:`) to a program.
 
 ## Errors
 
