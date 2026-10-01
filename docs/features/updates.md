@@ -83,9 +83,10 @@ markup from the network.
 
 
 - The **Release** workflow (`.github/workflows/release.yml`, run by hand with a bump: patch, minor or major) owns the
-  version: it bumps `package.json`, tags `v<version>` on main, opens a draft release with generated notes, and builds
-  every OS's installers onto it (`npm run release`). The draft's description is what What's New shows: edit it before
-  publishing. Publishing the draft makes the update reach every running app
+  version: it bumps the last release tag's version, commits it on top of main and pushes only the tag `v<version>`
+  (main is protected, so the bump never lands there and main's `package.json` keeps an older version), opens a draft
+  release with generated notes, and builds every OS's installers onto it (`npm run release`). The draft's description
+  is what What's New shows: edit it before publishing. Publishing the draft makes the update reach every running app
   within the hour. Never bump the version by hand.
 - The installers (electron-builder.yml) are one per OS and architecture, named without spaces
   (`UnityVersionControl-<version>-macOS-arm64.dmg`: GitHub turns spaces into dots, which `latest*.yml` would no longer
