@@ -175,16 +175,19 @@ describe('runMerge into a server branch', () => {
     });
   const keepSource: MergeResolutions = { directoryConflicts: [], files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'source' } }, comment: 'Merge task\ninto main' };
 
-  it('merges on the server with the comment from a file, keeping one side for every file, and names the changeset made', async () => {
+  it('merges on the server with the comment from a file and each file\'s decision, and names the changeset made', async () => {
     let comment = '';
+    let fileResolutions: unknown;
     const { cm, lines } = serverCm(mergeOutput(['CHANGESET', 'cs:12@/main@eco@local']), async (args) => {
       comment = await readFile(optionValue(args, '--commentsfile=')!, 'utf8');
+      fileResolutions = JSON.parse(await readFile(optionValue(args, '--fileresolutionsfile=')!, 'utf8'));
     });
 
     expect(await runMerge(cm, workspacePath, TO_MAIN, keepSource, recordingContext().context)).toEqual({ changesetId: 12 });
     expect(comment).toBe('Merge task\ninto main');
+    expect(fileResolutions).toEqual({ resolutions: [{ path: '/src/a.txt', keep: 'source' }, { path: '/src/b.txt', keep: 'source' }] });
     const merge = finalMerge(lines())!;
-    expect(merge).toContain('--to=br:/main --merge --keepsource --nointeractiveresolution');
+    expect(merge).toMatch(/--to=br:\/main --merge --fileresolutionsfile=\S+ --nointeractiveresolution/);
     // Nothing to check in the workspace: it isn't touched, and the preview asked nothing about its pending changes.
     expect(lines().some((line) => line.startsWith('status') || line.startsWith('cat'))).toBe(false);
   });
@@ -195,11 +198,23 @@ describe('runMerge into a server branch', () => {
     expect(await runMerge(cm, workspacePath, TO_MAIN, keepSource, recordingContext().context)).toEqual({ changesetId: 12, destinationMoved: true });
   });
 
-  it('refuses mixed decisions, which a server merge cannot apply per file', async () => {
-    const { cm, lines } = serverCm('');
-    const mixed: MergeResolutions = { directoryConflicts: [], files: { '/src/a.txt': { choice: 'source' }, '/src/b.txt': { choice: 'destination' } } };
+  it('applies a different decision to each file: a merged text goes to cm in a file, the other side by name', async () => {
+    let resultText = '';
+    let fileResolutions: { resolutions: { path: string; keep?: string; resultFile?: string }[] } = { resolutions: [] };
+    const { cm } = serverCm(mergeOutput(['CHANGESET', 'cs:12@/main@eco@local']), async (args) => {
+      fileResolutions = JSON.parse(await readFile(optionValue(args, '--fileresolutionsfile=')!, 'utf8'));
+      resultText = await readFile(fileResolutions.resolutions[0]!.resultFile!, 'utf8');
+    });
+    const mixed: MergeResolutions = {
+      directoryConflicts: [],
+      files: { '/src/a.txt': { choice: 'text', text: 'mine and theirs\n' }, '/src/b.txt': { choice: 'destination' } },
+    };
 
-    await expect(runMerge(cm, workspacePath, TO_MAIN, mixed, recordingContext().context)).rejects.toThrow(/same side/);
-    expect(finalMerge(lines())).toBeUndefined();
+    expect(await runMerge(cm, workspacePath, TO_MAIN, mixed, recordingContext().context)).toEqual({ changesetId: 12 });
+    expect(fileResolutions.resolutions.map(({ path, keep }) => ({ path, keep }))).toEqual([
+      { path: '/src/a.txt', keep: undefined },
+      { path: '/src/b.txt', keep: 'destination' },
+    ]);
+    expect(resultText).toBe('mine and theirs\n');
   });
 });
