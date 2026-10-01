@@ -9,12 +9,32 @@
   border-radius: var(--radius-md);
   font-size: var(--text-md);
   font-weight: var(--weight-medium);
+  max-width: 100%;
   white-space: nowrap;
   cursor: default;
   transition:
     background var(--duration-fast),
     border-color var(--duration-fast),
     opacity var(--duration-fast);
+}
+
+/*
+ * A button never grows past its container: a label too long for it (a branch's name, ARCHITECTURE.md "Long names") is
+ * cut with an ellipsis, and among buttons in a row it gives way instead of pushing the others out. Icons keep their size.
+ */
+.button:has(> .label) {
+  min-width: 0;
+}
+
+.button > svg,
+.spinner {
+  flex: none;
+}
+
+.label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .button:disabled {
