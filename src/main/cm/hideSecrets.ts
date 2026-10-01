@@ -20,6 +20,18 @@ export function outputForLog(output: string): string {
   return output.replace(URL_PASSWORD, `$1:${HIDDEN_SECRET}@`);
 }
 
+/**
+ * Any text that may quote a command line or echo a URL, such as an error nothing caught (its message and stack): a
+ * secret option's value is hidden up to the next space, as a command line prints it.
+ */
+export function textForLog(text: string): string {
+  return SECRET_OPTIONS.reduce((hidden, option) => hidden.replace(new RegExp(`${escapeRegExp(option)}\\S*`, 'g'), `${option}${HIDDEN_SECRET}`), outputForLog(text));
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function hideSecretArgument(arg: string): string {
   const option = SECRET_OPTIONS.find((prefix) => arg.startsWith(prefix));
   if (option) return `${option}${HIDDEN_SECRET}`;
