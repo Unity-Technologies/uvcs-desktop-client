@@ -51,7 +51,7 @@ tells every window each step (`updateStatusChanged`, an `UpdateStatus`); a windo
   the system's proxy, into Downloads, checked against the release's sha512, kept across restarts when whole), then
   offers "Open Installer": it opens the image and quits, and the user drags the app to Applications. The image is picked
   by architecture (`installerAsset`: `latest-mac.yml` lists both, x64 first), and an x64 build under Rosetta moves to
-  arm64. Signing the build (the release workflow's secrets) switches it to restart-to-install with no code change.
+  arm64. Releases are signed (see the releases below), so this path serves only a build made without a Developer ID.
 - **Failures** read as one sentence (`describeUpdateError`): offline, no published release, the app's own failures as
   worded (`UpdateFailure`: no installer for this Mac, a damaged download), and for anything else "GitHub didn't answer as
   expected", which the next check usually passes (a release just published, a rate limit, an outage). electron-updater's
@@ -89,7 +89,13 @@ markup from the network.
 - The **Release** workflow (`.github/workflows/release.yml`, run by hand with a bump: patch, minor or major) owns the
   version: it bumps the last release tag's version, commits it on top of main and pushes only the tag `v<version>`
   (main is protected, so the bump never lands there and main's `package.json` keeps an older version), opens a draft
-  release with generated notes, and builds every OS's installers onto it (`npm run release`). The draft's description
+  release with generated notes, and builds every OS's installers onto it (`npm run release`). Linux builds in it;
+  macOS and Windows build and sign in a private repository, [uvcs-desktop-client-release-signing](https://github.com/Unity-Technologies/uvcs-desktop-client-release-signing), whose Sign workflow
+  (`sign-release.yml`) the Release run starts for the tag and waits for (its `sign` job, through `SIGNING_REPO_TOKEN`,
+  which may only start and read that repository's workflows). Unity's signing certificates are in Azure Key Vault,
+  which accepts only Unity's networks, and Unity's runners that reach it may serve only private repositories (SSDLC),
+  which this one isn't. The Sign workflow builds this repository's tag with this repository's config and sign hook, and
+  uploads to the same draft; its README lists its secrets. This repository holds no signing secret. The draft's description
   is what What's New shows: edit it before publishing. Publishing the draft makes the update reach every running app
   within the hour. Never bump the version by hand.
 - The installers (electron-builder.yml) are one per OS and architecture, named without spaces
@@ -115,23 +121,25 @@ markup from the network.
 - **Licenses**: the app is Apache-2.0 (`LICENSE.md`, `NOTICE`), and every package in package-lock.json must have a
   permissive license (`PERMISSIVE_LICENSES`, `scripts/build/dependencyLicenses.test.ts`): a copyleft one fails the tests
   and needs a legal decision before it joins.
-- macOS signing and notarization turn on once the `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`,
-  `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID` secrets exist; without them the build is signed ad hoc (the
-  workflow's `MAC_SIGNING_FLAGS`), opens after Privacy & Security ▸ Open Anyway, and updates by its disk image. A build
-  with no signature at all is rejected: macOS on Apple silicon calls it "damaged", because electron-builder's edits to
-  the bundle break Electron's own signature.
-- Windows signing turns on once the `AZURE_KEY_VAULT_URI`, `AZURE_KEY_VAULT_CERTIFICATE`, `AZURE_TENANT_ID`,
-  `AZURE_CLIENT_ID` and `AZURE_CLIENT_SECRET` secrets exist: the workflow downloads AzureSignTool (pinned by version and
-  SHA-256) and builds with `electron-builder.windows-signed.yml`, whose sign hook (`signWindowsFile`,
+- **macOS** releases are signed with Unity's Developer ID (`Unity Technologies SF (9QW8UQUTAA)`, the certificate Unity
+  Hub uses, imported from Key Vault on Unity's macOS runners) and notarized, so updates install on a restart. macOS
+  installs an update only from the same team, so that identity must never change. A local build (`npm run dist`) is
+  signed with whatever Developer ID the keychain holds; `-c.mac.identity=- -c.mac.hardenedRuntime=false` signs it ad
+  hoc instead, so it opens after Privacy & Security ▸ Open Anyway and updates by its disk image. A build with no
+  signature at all is rejected: macOS on Apple silicon calls it "damaged", because electron-builder's edits to the
+  bundle break Electron's own signature. The hardened runtime, which only notarization needs, must be off under an
+  ad-hoc signature: it refuses Electron's frameworks (library validation).
+- **Windows** releases build with `electron-builder.windows-signed.yml`, whose sign hook (`signWindowsFile`,
   `scripts/build/signWindows.ts`) signs every .exe (the app, `elevate.exe`, the installers and their uninstallers) with
-  Unity's EV certificate in Azure Key Vault, SHA-256 and timestamped. Without them the build is unsigned and SmartScreen
+  Unity's EV certificate in Key Vault through AzureSignTool, SHA-256 and timestamped; the hook reads the credentials
+  from `AZURE_SIGNING_VARIABLES`. A build with electron-builder.yml alone (`npm run dist`) is unsigned, and SmartScreen
   warns of an unknown publisher. The signed build writes its `publisherName` into the app's `app-update.yml`, and from
   then on electron-updater installs only an update whose valid signature names that publisher (`verifySignature`), so
-  the hook checks each file the same way (`signatureProblem`) and a wrong name fails the release instead. Once a signed
-  release is out, every later one must be signed by the same name: an unsigned one, or a renewed certificate with
-  another common name, never reaches those apps. An unsigned build names no publisher and checks nothing.
-- The signing secrets are the `release` environment's, which only the Release workflow's build job uses (its
-  protection rules, such as required reviewers, apply before it starts).
+  the hook checks each file the same way (`signatureProblem`) and a wrong name fails the release instead. Every
+  release after a signed one must be signed by the same name: an unsigned one, or a renewed certificate with another
+  common name, never reaches those apps. An unsigned build names no publisher and checks nothing.
+- Signing on GitHub's own runners was tried and rejected: Key Vault answers 403 ("Client address is not authorized"),
+  and its client secret rotates every 7 days, so it can't live in a GitHub secret either.
 - The feed must be readable without signing in, so the releases' repository is public: electron-updater reads a private
   repository's releases only with a token, which the app never ships. With no published release (only a draft), a
   check says "No published release is available to update from yet."
