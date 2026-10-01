@@ -17,6 +17,9 @@ const DOT_RADIUS = 5;
 const PARENT_ARROW = arrowLength(2);
 /** How far the dashed line of a changeset whose parent is off the graph reaches past the changeset. */
 const OFF_GRAPH_STUB_LENGTH = 22;
+/** The branch-colored ring around a changeset's avatar: 2 px, a little more while hovered, as the links are. */
+const RING_WIDTH = 2;
+const HOVERED_RING_WIDTH = 2.5;
 
 /** The changesets on screen, refilled every frame instead of allocated. */
 const visible: NodeLayout[] = [];
@@ -121,7 +124,7 @@ function drawNode(draw: DrawContext, node: NodeLayout): void {
   if (node.collapsed) return drawCollapsedNode(draw, node, hovered);
   const selected = scene.selectedChangeset === id;
   const radius = radiusFor(draw);
-  const ringWidth = hovered ? 3 : 2.25;
+  const ringWidth = hovered ? HOVERED_RING_WIDTH : RING_WIDTH;
   const isHit = search?.changesets.has(id) ?? false;
   const isCurrentHit = isHit && search?.active?.kind === 'changeset' && search.active.id === id;
 
