@@ -9,7 +9,7 @@ describe('serverInitials', () => {
   });
 
   it('takes the first two letters of a one-word name', () => {
-    expect(serverInitials('codice')).toBe('CO');
+    expect(serverInitials('acme')).toBe('AC');
     expect(serverInitials('x')).toBe('X');
   });
 

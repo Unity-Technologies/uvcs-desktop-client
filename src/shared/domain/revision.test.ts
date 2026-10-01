@@ -3,8 +3,8 @@ import { revisionIn, revisionRef } from './revision';
 
 describe('revisionIn', () => {
   it("is a revision of the item's repository, and none for a side the item isn't on", () => {
-    expect(revisionIn('unityGUI@codice@cloud', 432251)).toEqual({ revisionId: 432251, repository: 'unityGUI@codice@cloud' });
-    expect(revisionIn('unityGUI@codice@cloud', -1)).toBeNull();
+    expect(revisionIn('editorGUI@acme@cloud', 432251)).toEqual({ revisionId: 432251, repository: 'editorGUI@acme@cloud' });
+    expect(revisionIn('editorGUI@acme@cloud', -1)).toBeNull();
   });
 });
 

@@ -6,15 +6,15 @@ describe('diffEntrySources', () => {
   it('reads both sides of a file under an xlink in the xlinked repository, where its ids are', () => {
     const entry: DiffEntry = {
       status: 'changed',
-      path: 'plugins/unity-plugin/Tests/UnityDiffWindowMockExtensions.cs',
+      path: 'plugins/editor-plugin/Tests/DiffWindowMockExtensions.cs',
       itemType: 'file',
       baseRevisionId: 425946,
       revisionId: 432251,
-      repository: 'unityGUI@codice@cloud',
+      repository: 'editorGUI@acme@cloud',
     };
     expect(diffEntrySources(entry)).toEqual({
-      original: { kind: 'revision', revision: { revisionId: 425946, repository: 'unityGUI@codice@cloud' }, fileName: entry.path },
-      modified: { kind: 'revision', revision: { revisionId: 432251, repository: 'unityGUI@codice@cloud' }, fileName: entry.path },
+      original: { kind: 'revision', revision: { revisionId: 425946, repository: 'editorGUI@acme@cloud' }, fileName: entry.path },
+      modified: { kind: 'revision', revision: { revisionId: 432251, repository: 'editorGUI@acme@cloud' }, fileName: entry.path },
     });
   });
 

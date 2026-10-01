@@ -21,9 +21,9 @@ describe('checkinButtonLabel', () => {
   });
 
   it('names a branch by its leaf, and the whole branch in the tooltip', () => {
-    const label = checkinButtonLabel({ ...base, branchName: '/main/scm1008874/scm1008874d' });
-    expect(wordings(label)[0]).toBe('Check in 4 changes (1.1 MB) to scm1008874d');
-    expect(label.tip).toBe('Check in to /main/scm1008874/scm1008874d');
+    const label = checkinButtonLabel({ ...base, branchName: '/main/task1008874/task1008874d' });
+    expect(wordings(label)[0]).toBe('Check in 4 changes (1.1 MB) to task1008874d');
+    expect(label.tip).toBe('Check in to /main/task1008874/task1008874d');
   });
 
   it('cuts a very long branch name in its middle, so the button can still name it', () => {

@@ -15,7 +15,7 @@ describe('isWebAddress', () => {
     expect(isWebAddress('smb://attacker/share/payload.exe')).toBe(false);
     expect(isWebAddress('ms-msdt:/id PCWDiagnostic')).toBe(false);
     expect(isWebAddress('javascript:alert(1)')).toBe(false);
-    expect(isWebAddress('plastic://codice.cloud/repos/game/changesets/12/diff')).toBe(false);
+    expect(isWebAddress('plastic://acme.cloud/repos/game/changesets/12/diff')).toBe(false);
   });
 
   it('refuses text that is not an address', () => {

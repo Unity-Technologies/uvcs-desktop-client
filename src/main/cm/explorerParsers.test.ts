@@ -31,7 +31,7 @@ describe('parseTreeItems', () => {
     // `cm ls --xml` of a workspace switched to shelve 3, trimmed.
     const xml = `<LsResults><LsItems>
       <LsItem><Status>Controlled</Status><Name>a.txt</Name><WkPath>a.txt</WkPath><Size>10</Size><Type>txt</Type>
-        <Changeset>-3</Changeset><Repository>rep:uvcs-shelvews-sandbox@local</Repository><Owner>daniel.penalba@unity3d.com</Owner>
+        <Changeset>-3</Changeset><Repository>rep:uvcs-shelvews-sandbox@local</Repository><Owner>jane.doe@example.com</Owner>
         <Checkout /><BrId>-1</BrId><RevId>24</RevId><ParentRevId>13</ParentRevId><ItemId>15</ItemId><Server>local</Server>
         <Branch>id:-1</Branch><Date>2026-09-28T13:41:01+02:00</Date></LsItem>
       <LsItem><Status>Private</Status><Name>priv.txt</Name><WkPath>priv.txt</WkPath><Type>txt</Type><Changeset /><RevId /><ParentRevId /><Branch /></LsItem>
@@ -54,38 +54,38 @@ describe('parseTreeItems', () => {
   });
 
   it('reads the repository of each item: the xlinked one under an xlink, and for the xlink itself', () => {
-    // `cm ls 01plastic/src/client/plugins --xml` in codice@codice@cloud, trimmed.
+    // `cm ls 01project/src/client/plugins --xml` in acme@acme@cloud, trimmed.
     const xml = `<LsResults><LsItems>
-      <LsItem><Status>Controlled</Status><Name>bamboo-81-plasticscm-plugin</Name>
-        <WkPath>01plastic/src/client/plugins/bamboo-81-plasticscm-plugin</WkPath><Type>dir</Type>
-        <Repository>rep:codice@codice@cloud</Repository><RevId>31045109</RevId><Server>codice@cloud</Server></LsItem>
-      <LsItem><Status>Controlled</Status><Name>bamboo-plasticscm-plugin -&gt; wxlink -&gt; / 6696@plugins/bambooplugin@ [relative] codice@cloud</Name>
-        <WkPath>01plastic/src/client/plugins/bamboo-plasticscm-plugin</WkPath><Type>dir</Type>
-        <Repository>rep:plugins/bambooplugin@codice@cloud</Repository><RevId>278093</RevId><Server>codice@cloud</Server></LsItem>
+      <LsItem><Status>Controlled</Status><Name>ci-81-plugin</Name>
+        <WkPath>01project/src/client/plugins/ci-81-plugin</WkPath><Type>dir</Type>
+        <Repository>rep:acme@acme@cloud</Repository><RevId>31045109</RevId><Server>acme@cloud</Server></LsItem>
+      <LsItem><Status>Controlled</Status><Name>ci-plugin -&gt; wxlink -&gt; / 6696@plugins/ciplugin@ [relative] acme@cloud</Name>
+        <WkPath>01project/src/client/plugins/ci-plugin</WkPath><Type>dir</Type>
+        <Repository>rep:plugins/ciplugin@acme@cloud</Repository><RevId>278093</RevId><Server>acme@cloud</Server></LsItem>
       <LsItem><Status>Controlled</Status><Name>CreatePath.cs</Name>
-        <WkPath>01plastic/src/client/plugins/unity-plugin/Packages/com.unity.collab-proxy.tests/Infrastructure/CreatePath.cs</WkPath><Type>txt</Type>
-        <Changeset>8285</Changeset><Repository>rep:unityGUI@codice@cloud</Repository><RevId>175536</RevId><ParentRevId>-1</ParentRevId>
-        <Server>codice@cloud</Server><Branch>/main/scm1004207</Branch></LsItem>
-      <LsItem><Status>Private</Status><Name>.DS_Store</Name><WkPath>01plastic/src/client/plugins/.DS_Store</WkPath><Type>bin</Type>
+        <WkPath>01project/src/client/plugins/editor-plugin/Packages/com.acme.editor.tests/Infrastructure/CreatePath.cs</WkPath><Type>txt</Type>
+        <Changeset>8285</Changeset><Repository>rep:editorGUI@acme@cloud</Repository><RevId>175536</RevId><ParentRevId>-1</ParentRevId>
+        <Server>acme@cloud</Server><Branch>/main/task1004207</Branch></LsItem>
+      <LsItem><Status>Private</Status><Name>.DS_Store</Name><WkPath>01project/src/client/plugins/.DS_Store</WkPath><Type>bin</Type>
         <Changeset /><Repository /><RevId /></LsItem>
     </LsItems></LsResults>`;
     expect(parseTreeItems(xml).map(({ name, revisionId, repository }) => ({ name, revisionId, repository }))).toEqual([
-      { name: 'bamboo-81-plasticscm-plugin', revisionId: 31045109, repository: 'codice@codice@cloud' },
-      { name: 'bamboo-plasticscm-plugin', revisionId: 278093, repository: 'plugins/bambooplugin@codice@cloud' },
-      { name: 'CreatePath.cs', revisionId: 175536, repository: 'unityGUI@codice@cloud' },
+      { name: 'ci-81-plugin', revisionId: 31045109, repository: 'acme@acme@cloud' },
+      { name: 'ci-plugin', revisionId: 278093, repository: 'plugins/ciplugin@acme@cloud' },
+      { name: 'CreatePath.cs', revisionId: 175536, repository: 'editorGUI@acme@cloud' },
       { name: '.DS_Store', revisionId: -1, repository: '' },
     ]);
   });
 
   it('names an xlink after its path and reads where it points', () => {
     const xml = `<LsResults><LsItems>
-      <LsItem><Status>Controlled</Status><Name>third -&gt; wxlink -&gt; / 17568@nervathirdparty@ [relative] codice@cloud</Name>
+      <LsItem><Status>Controlled</Status><Name>third -&gt; wxlink -&gt; / 17568@thirdparty@ [relative] acme@cloud</Name>
         <WkPath>libs/third</WkPath><Type>dir</Type></LsItem>
     </LsItems></LsResults>`;
     expect(parseTreeItems(xml)[0]).toMatchObject({
       name: 'third',
       itemType: 'directory',
-      xlink: { writable: true, repository: 'nervathirdparty', changeset: 17568, path: '/' },
+      xlink: { writable: true, repository: 'thirdparty', changeset: 17568, path: '/' },
     });
   });
 });

@@ -38,17 +38,17 @@ describe('searchGraph', () => {
 describe('searchGraph with numbers in names', () => {
   /**
    * /main:              0 ─── 3 (release-100874) ─ 12 (merges 1)
-   * /main/scm1008742:   └ 1
-   * /main/scm1008874:   └ 2
+   * /main/task1008742:   └ 1
+   * /main/task1008874:   └ 2
    */
   const numbered = layoutGraph({
-    branches: [branch('/main', '', 12), branch('/main/scm1008742', '/main', 1), branch('/main/scm1008874', '/main', 2)],
+    branches: [branch('/main', '', 12), branch('/main/task1008742', '/main', 1), branch('/main/task1008874', '/main', 2)],
     changesets: [
       changeset(0, '/main', -1),
-      changeset(1, '/main/scm1008742', 0, 'Fix the Crash in the pending changes'),
-      changeset(2, '/main/scm1008874', 0, 'Retry after cs:12 failed'),
+      changeset(1, '/main/task1008742', 0, 'Fix the Crash in the pending changes'),
+      changeset(2, '/main/task1008874', 0, 'Retry after cs:12 failed'),
       changeset(3, '/main', 0, 'Prepare the release'),
-      changeset(12, '/main', 3, 'Merge scm1008742'),
+      changeset(12, '/main', 3, 'Merge task1008742'),
     ],
     mergeLinks: [merge(1, 12)],
     labels: [{ name: 'release-100874', changeset: 3, owner: 'jane@example.com', date: '2026-09-04T00:00:00Z', comment: '' }],
@@ -56,14 +56,14 @@ describe('searchGraph with numbers in names', () => {
   const kinds = (query: string) => searchGraph(numbered, query).map((hit) => (hit.kind === 'changeset' ? `cs:${hit.id}` : hit.name));
 
   it('finds a number inside a branch name, a label and a comment', () => {
-    expect(kinds('100874')).toEqual(expect.arrayContaining(['/main/scm1008742', 'release-100874', 'cs:12']));
-    expect(kinds('100874')).not.toContain('/main/scm1008874');
-    expect(kinds('08874')).toEqual(['/main/scm1008874']);
+    expect(kinds('100874')).toEqual(expect.arrayContaining(['/main/task1008742', 'release-100874', 'cs:12']));
+    expect(kinds('100874')).not.toContain('/main/task1008874');
+    expect(kinds('08874')).toEqual(['/main/task1008874']);
   });
 
   it('matches any part of the full name, in any case', () => {
-    expect(kinds('MAIN/SCM1008')).toEqual(expect.arrayContaining(['/main/scm1008742', '/main/scm1008874']));
-    expect(kinds('scm1008742')).toEqual(expect.arrayContaining(['/main/scm1008742', 'cs:12']));
+    expect(kinds('MAIN/TASK1008')).toEqual(expect.arrayContaining(['/main/task1008742', '/main/task1008874']));
+    expect(kinds('task1008742')).toEqual(expect.arrayContaining(['/main/task1008742', 'cs:12']));
   });
 
   it('finds the changeset a number names, and the text holding the number too', () => {
@@ -80,8 +80,8 @@ describe('searchGraph with numbers in names', () => {
   });
 
   it('needs every word in the same name', () => {
-    expect(kinds('scm 742')).toEqual(expect.arrayContaining(['/main/scm1008742']));
-    expect(kinds('scm 742')).not.toContain('/main/scm1008874');
+    expect(kinds('task 742')).toEqual(expect.arrayContaining(['/main/task1008742']));
+    expect(kinds('task 742')).not.toContain('/main/task1008874');
   });
 
   it('keeps the hits left to right', () => {
