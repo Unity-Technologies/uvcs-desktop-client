@@ -58,6 +58,17 @@ Report an Issue and Request a Feature open the forms; About ▸ Copy Details giv
 error's Details ▸ Report an Issue fills them in with the error). Report a security vulnerability
 privately instead: see [SECURITY.md](SECURITY.md). [CONTRIBUTING.md](CONTRIBUTING.md) says how to send a change.
 
+## Privacy
+
+The app collects no telemetry, analytics or crash reports. Besides the `cm` commands to your own servers, it
+connects to two places:
+
+- **gravatar.com**, for people's profile pictures, as the official clients do: it sends a hash of each email address
+  shown. Settings ▸ Appearance turns the pictures off, and initials show instead.
+- **github.com**, to check this repository's releases for updates and download them. Nothing about you is sent.
+
+Settings and review marks stay on your computer.
+
 ## Maintenance
 
 The Unity Version Control team at Unity Technologies maintains this repository: it reads new issues and pull
