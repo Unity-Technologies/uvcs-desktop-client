@@ -58,8 +58,8 @@ export function TooltipBubble({ text, sub, shortcut, move, pointerX, pointerY, w
       ref={tipRef}
       className={styles.tooltip}
       data-side={placement?.side}
-      // Two whole paths, one over the other, need the room of a paragraph.
-      data-wide={wide || move !== undefined || undefined}
+      data-wide={wide || undefined}
+      data-move={move !== undefined || undefined}
       role="tooltip"
       style={placement ? { top: placement.top, left: placement.left } : { top: -9999, left: -9999 }}
     >

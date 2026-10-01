@@ -21,6 +21,11 @@
   max-width: min(420px, calc(100vw - 16px));
 }
 
+/* Two whole paths, one over the other: as wide as most paths, so they wrap between folders only when really long. */
+.tooltip[data-move] {
+  max-width: min(640px, calc(100vw - 16px));
+}
+
 .main {
   display: flex;
   align-items: center;
