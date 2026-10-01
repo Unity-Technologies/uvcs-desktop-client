@@ -60,8 +60,8 @@
 }
 
 /* A primary label too long for the footer is cut, never Cancel and the other short ones beside it. */
-.footer > :not([type='submit']) {
-  flex-shrink: 0;
+.footer > [type='submit'] {
+  min-width: 0;
 }
 
 /* A question with no body (a confirmation): its buttons keep the body's distance from the text. */
