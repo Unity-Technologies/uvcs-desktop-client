@@ -322,7 +322,7 @@ describe('CmClient commands that end without an exit code', () => {
 
     expect(error).toMatchObject({
       message: 'The command printed more than 256 MB, too much to read, and was stopped.',
-      command: { commandLine: "cm find changeset where branch = '/main' --xml", exitCode: -1, logEntryId: logged[0]?.id },
+      command: { commandLine: "cm find changeset where branch = '/main' --xml --encoding=utf-8", exitCode: -1, logEntryId: logged[0]?.id },
     });
   });
 });
