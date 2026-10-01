@@ -45,6 +45,10 @@ you touch:
      characters, quotes included) is written to a `cm shell` of its own instead (`processCommand`): still one command, never split.
      So is, on Windows, a command that prints text (see Parsing).
    - A pooled command may take two minutes, a workspace write half an hour (a few paths can still be a whole tree).
+   - A command may print at most `MAX_OUTPUT_LENGTH` (256 MB) characters, shell or process: its output is read as one
+     string, and V8 refuses strings past about 512 MB. Past it the command is killed (a session starts a new process)
+     and fails with a `CmError` (`CmOutputTooLargeError`), never a crash. A list that can get there needs a
+     server-side filter or a `limit` (Server budget: Queries).
 5. Every command is logged and pushed to the window whose call ran it (`commandLogged`), for the command log panel
    (see Renderer: Command log); one that ended without an exit code (stopped on a prompt, `cm` not found) is logged
    with -1, which the log and the error dialog word as "Stopped" (`commandEnding`), and one its caller cancelled is not
@@ -184,6 +188,32 @@ still shows in the process list while the sync runs; never pass a secret where `
 The renderer is untrusted: windows run with `contextIsolation` and `sandbox` (`createMainWindow`), reach main only
 through the one invoke channel, and never open a window of their own: a link that would opens outside the app
 (`setWindowOpenHandler`, `shell.openExternal`).
+
+## Errors
+
+Every error is the app's to tell, in its own UI; Electron's native "A JavaScript error occurred in the main process"
+dialog never shows.
+
+- **Expected failures** reach the window as the API call's rejection (`registerApi`: a `CmError` keeps its command),
+  and the renderer tells them as error toasts (`runOperation`, `runAction`) whose Details open `ErrorDialog`, with
+  "Report an Issue".
+- **Main, nothing caught**: `main/index.ts` imports `errors/installUnexpectedErrorHandlers` first, so before any other
+  module runs `handleUnexpectedErrors` listens to `uncaughtException` and `unhandledRejection` (a listener of the app's
+  own is what keeps Electron's dialog away, and Node from ending the process on a rejection). Each one is logged with
+  its stack, secrets hidden (`textForLog`), and sent to every window (`unexpectedError`) once per message. The app keeps
+  running. Node warns that state may be inconsistent after an uncaught exception, but here the state that matters lives
+  in `cm`, the disk and the settings file (written whole, `replaceFileSync`), and quitting would lose what the windows
+  hold (unsaved edits, running operations) for no gain. Code that runs from callbacks, where no promise catches a throw,
+  ends cleanly itself: `CmShellSession.guarded` wraps its stream listeners and timers, and a throw there (or a broken
+  stdin pipe) fails the running command and starts a new process, as a stalled prompt does.
+- **The window, nothing caught**: `reportUnexpectedErrors` (called first in `main.tsx`) turns the main process's
+  `unexpectedError` and the page's own `error` and `unhandledrejection` events into one error toast per message,
+  "Something went wrong", with "Report an Issue" (`unexpectedErrorIssueUrl`: the app's details and the stack, reviewed
+  in the browser before sending). The stack never shows on screen. A render error shows `AppErrorBoundary`'s
+  `WindowErrorScreen` (Reload, Report an Issue) instead of a blank window: one boundary around the screen, inside the
+  dialogs and toasts so they keep working, and one around the whole app as the last resort.
+- `unexpectedErrors.test.ts` checks that the handlers are main's first import, installed in one place, and that every
+  timer of `CmShellSession` goes through `guarded`.
 
 ## Own config
 
