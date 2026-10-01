@@ -30,12 +30,15 @@
   line-height: 20px;
 }
 
-/* Takes the room left in the row and is fitted to it (fitMergeTitle): what it doesn't use stays after it. */
+/*
+ * Takes the room left in the row and is fitted to it (fitMergeTitle): what it doesn't use stays after it. In a narrow
+ * window it keeps enough to name both branches, the buttons after it giving way instead.
+ */
 .title {
   display: flex;
   flex: 1 1 0;
   gap: 0.3em;
-  min-width: 0;
+  min-width: min(20em, 45%);
   margin: 0;
   overflow: hidden;
   font-size: var(--text-lg);
