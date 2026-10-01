@@ -145,6 +145,7 @@ function drawCard(draw: DrawContext, lane: Lane, left: number, top: number, widt
   ctx.textBaseline = 'middle';
   ctx.font = palette.fonts.branchName;
   const fitted = fitBranchName(ctx, name, right - x - (chipWidth ? chipWidth + GAP : 0));
+  if (fitted !== name) draw.drawn.cutBranchNames.add(lane, x, top, textWidth(ctx, fitted), COMMENT_LINE_TOP);
   drawSearchMarks(draw, fitted, x, nameMiddle, NAME_MARK_HEIGHT);
   ctx.fillStyle = inks.name;
   pen.fillText(fitted, x, nameMiddle + 0.5);

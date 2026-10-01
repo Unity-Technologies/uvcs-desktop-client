@@ -25,6 +25,7 @@ export function drawGraph(ctx: CanvasRenderingContext2D, scene: GraphScene, pixe
   const { viewport, size, palette } = scene;
   drawn.reviewChips.reset();
   drawn.branchHeaders.reset();
+  drawn.cutBranchNames.reset();
   drawn.cutBranchComments.reset();
   drawn.captions.reset();
   const visible = visibleArea(scene);
