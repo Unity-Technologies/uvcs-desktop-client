@@ -1,7 +1,7 @@
 import { join } from 'node:path';
 import type { FileConflictResolution, MergePlan } from '@shared/domain/merge';
 
-/** One file conflict's decision, as `cm merge --to --resolutionsfile` reads it. */
+/** One file conflict's decision, as `cm merge --to --fileconflictsresolutionsfile` reads it. */
 type FileResolutionEntry = { path: string; keep: 'source' | 'destination' } | { path: string; resultFile: string };
 
 /** A merged text to write before `cm` runs; `cm` takes its bytes as the file's content and leaves the file alone. */

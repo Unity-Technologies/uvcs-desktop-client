@@ -180,14 +180,14 @@ describe('runMerge into a server branch', () => {
     let fileResolutions: unknown;
     const { cm, lines } = serverCm(mergeOutput(['CHANGESET', 'cs:12@/main@eco@local']), async (args) => {
       comment = await readFile(optionValue(args, '--commentsfile=')!, 'utf8');
-      fileResolutions = JSON.parse(await readFile(optionValue(args, '--resolutionsfile=')!, 'utf8'));
+      fileResolutions = JSON.parse(await readFile(optionValue(args, '--fileconflictsresolutionsfile=')!, 'utf8'));
     });
 
     expect(await runMerge(cm, workspacePath, TO_MAIN, keepSource, recordingContext().context)).toEqual({ changesetId: 12 });
     expect(comment).toBe('Merge task\ninto main');
     expect(fileResolutions).toEqual({ resolutions: [{ path: '/src/a.txt', keep: 'source' }, { path: '/src/b.txt', keep: 'source' }] });
     const merge = finalMerge(lines())!;
-    expect(merge).toMatch(/--to=br:\/main --merge --resolutionsfile=\S+ --nointeractiveresolution/);
+    expect(merge).toMatch(/--to=br:\/main --merge --fileconflictsresolutionsfile=\S+ --nointeractiveresolution/);
     // Nothing to check in the workspace: it isn't touched, and the preview asked nothing about its pending changes.
     expect(lines().some((line) => line.startsWith('status') || line.startsWith('cat'))).toBe(false);
   });
@@ -202,7 +202,7 @@ describe('runMerge into a server branch', () => {
     let resultText = '';
     let fileResolutions: { resolutions: { path: string; keep?: string; resultFile?: string }[] } = { resolutions: [] };
     const { cm } = serverCm(mergeOutput(['CHANGESET', 'cs:12@/main@eco@local']), async (args) => {
-      fileResolutions = JSON.parse(await readFile(optionValue(args, '--resolutionsfile=')!, 'utf8'));
+      fileResolutions = JSON.parse(await readFile(optionValue(args, '--fileconflictsresolutionsfile=')!, 'utf8'));
       resultText = await readFile(fileResolutions.resolutions[0]!.resultFile!, 'utf8');
     });
     const mixed: MergeResolutions = {
