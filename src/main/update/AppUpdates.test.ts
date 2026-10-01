@@ -43,6 +43,7 @@ function updates(feed: ReturnType<typeof fakeFeed>, parts: Partial<AppUpdatesDep
     installerOf: (releaseFiles) => releaseFiles.find((file) => file.url.endsWith('.dmg')) ?? null,
     openInstaller: vi.fn(async () => undefined),
     push: (status) => pushed.push(status),
+    logFailure: vi.fn(),
     ...parts,
   };
   return { updates: new AppUpdates(dependencies), pushed, dependencies };
@@ -86,6 +87,16 @@ describe('checking for updates', () => {
     await app.check();
 
     expect(app.status()).toEqual({ state: 'failed', error: "Couldn't reach the update server. Check your connection and try again." });
+  });
+
+  it('logs the cause of a failure, which the window never shows', async () => {
+    const refused = new Error('HttpError: 429 \nHeaders: {"set-cookie": "_gh_sess=secret"}');
+    const { updates: app, dependencies } = updates(fakeFeed([refused]));
+
+    await app.check();
+
+    expect(app.status()).toEqual({ state: 'failed', error: "GitHub didn't answer as expected. Try again in a moment." });
+    expect(dependencies.logFailure).toHaveBeenCalledWith('[updates] The update failed: HttpError: 429 ');
   });
 
   it('checks again after a failure', async () => {
