@@ -74,5 +74,19 @@ export function TooltipLayer() {
     return () => observer.disconnect();
   }, [host]);
 
-  return tip && <TooltipBubble text={tip.text} sub={tip.sub} shortcut={tip.shortcut} move={tip.move} pointerX={tip.pointerX} pointerY={tip.pointerY} />;
+  // A tip shown anew (a new pointer position) lays out from scratch, unplaced: a bubble left where the last tip was
+  // would measure as narrow as the room right of it, and a move's lines would be cut to that (`PathMoveLines`).
+  return (
+    tip && (
+      <TooltipBubble
+        key={`${tip.pointerX},${tip.pointerY}`}
+        text={tip.text}
+        sub={tip.sub}
+        shortcut={tip.shortcut}
+        move={tip.move}
+        pointerX={tip.pointerX}
+        pointerY={tip.pointerY}
+      />
+    )
+  );
 }
