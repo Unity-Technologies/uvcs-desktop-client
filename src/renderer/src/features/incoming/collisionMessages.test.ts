@@ -3,13 +3,13 @@ import { blockedMessage, collisionNote, updateBarMessage } from './collisionMess
 
 describe('blockedMessage', () => {
   it('counts the blocking files instead of listing them, which the list shows', () => {
-    expect(blockedMessage(6, '/main', 0)).toBe('6 files you changed were deleted or moved on /main.');
-    expect(blockedMessage(1, '/main', 0)).toBe('A file you changed was deleted or moved on /main.');
+    expect(blockedMessage(6, '/main', 0)).toBe('6 files you changed were deleted or moved on main.');
+    expect(blockedMessage(1, '/main', 0)).toBe('A file you changed was deleted or moved on main.');
   });
 
   it('tells about the files that still need merging too', () => {
-    expect(blockedMessage(2, '/main', 1)).toBe('2 files you changed were deleted or moved on /main. 1 other needs merging.');
-    expect(blockedMessage(1, '/main', 3)).toBe('A file you changed was deleted or moved on /main. 3 others need merging.');
+    expect(blockedMessage(2, '/main', 1)).toBe('2 files you changed were deleted or moved on main. 1 other needs merging.');
+    expect(blockedMessage(1, '/main', 3)).toBe('A file you changed was deleted or moved on main. 3 others need merging.');
   });
 });
 
@@ -20,8 +20,8 @@ describe('updateBarMessage', () => {
   });
 
   it('agrees in number with the files to merge', () => {
-    expect(updateBarMessage(3, '/main', 1, 1)).toBe('A file you changed also changed on /main. Merge it to update.');
-    expect(updateBarMessage(3, '/main', 2, 2)).toBe('2 files you changed also changed on /main. Merge them to update.');
+    expect(updateBarMessage(3, '/main', 1, 1)).toBe('A file you changed also changed on main. Merge it to update.');
+    expect(updateBarMessage(3, '/main', 2, 2)).toBe('2 files you changed also changed on main. Merge them to update.');
   });
 
   it('counts down the files left to merge', () => {
