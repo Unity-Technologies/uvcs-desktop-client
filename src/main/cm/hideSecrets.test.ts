@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { commandLineForLog, outputForLog } from './hideSecrets';
+import { commandLineForLog, outputForLog, textForLog } from './hideSecrets';
 
 describe('commandLineForLog', () => {
   it('shows a command without secrets as it ran', () => {
@@ -33,5 +33,12 @@ describe('outputForLog', () => {
     expect(outputForLog('Error: could not reach https://ana:ghp_123@github.com/game.git\r\nretry')).toBe(
       'Error: could not reach https://ana:•••@github.com/game.git\r\nretry',
     );
+  });
+});
+
+describe('textForLog', () => {
+  it('hides the secrets of a command line an error quotes, and a token in a URL', () => {
+    const text = 'Error: cm sync r git https://ana:ghp_123@example.com/game --user=ana --pwd=s3cret failed\n    at run (index.js:1:2)';
+    expect(textForLog(text)).toBe('Error: cm sync r git https://ana:•••@example.com/game --user=ana --pwd=••• failed\n    at run (index.js:1:2)');
   });
 });

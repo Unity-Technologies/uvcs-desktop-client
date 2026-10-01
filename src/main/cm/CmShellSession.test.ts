@@ -3,6 +3,7 @@ import { EventEmitter } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { CmShellSession, shellCommandTimeoutMs } from './CmShellSession';
+import { OutputBuffer } from './OutputBuffer';
 
 // Every session runs the fake below, but one test's, whose output comes in step with fake timers.
 vi.mock('node:child_process', async (importOriginal) => {
@@ -17,14 +18,20 @@ let session: CmShellSession;
 afterEach(() => {
   session?.dispose();
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 /** A `cm shell` process whose output the test prints, as it pleases. */
 function printedShellProcess() {
   const stdout = Object.assign(new EventEmitter(), { setEncoding: () => stdout });
   const stderr = Object.assign(new EventEmitter(), { setEncoding: () => stderr });
-  const process = Object.assign(new EventEmitter(), { stdout, stderr, stdin: { write: () => true, end: () => {} }, kill: () => true });
-  return { process: process as unknown as ChildProcessWithoutNullStreams, print: (text: string) => void stdout.emit('data', text) };
+  const stdin = Object.assign(new EventEmitter(), { write: () => true, end: () => {} });
+  const process = Object.assign(new EventEmitter(), { stdout, stderr, stdin, kill: () => true });
+  return {
+    process: process as unknown as ChildProcessWithoutNullStreams,
+    print: (text: string) => void stdout.emit('data', text),
+    breakInput: (error: Error) => void stdin.emit('error', error),
+  };
 }
 
 describe('CmShellSession', () => {
@@ -37,7 +44,7 @@ describe('CmShellSession', () => {
 
   it('fails a command stuck on a prompt without feeding it the next commands', async () => {
     // Nothing follows the fake's prompt, so any stall tells it; the real one would only make the test wait.
-    session = new CmShellSession(process.execPath, fakeCmFolder, 50);
+    session = new CmShellSession(process.execPath, fakeCmFolder, { promptStallMs: 50 });
     const prompted = session.run(['prompt']);
     const next = session.run(['echo', 'still-works']);
 
@@ -64,6 +71,43 @@ describe('CmShellSession', () => {
 
     await expect(ended).rejects.toThrow('cm shell exited unexpectedly');
     await expect(next).resolves.toEqual({ output: 'restarted', exitCode: 0 });
+  });
+
+  it('fails a command whose output passes the limit, and runs the next ones on a new process', async () => {
+    // A cm shell answer is read as one string, and V8 refuses strings past 512 MB: past the limit it is no answer.
+    session = new CmShellSession(process.execPath, fakeCmFolder, { maxOutputLength: 1000 });
+    const withinLimit = session.run(['print', '900']);
+    const tooLarge = session.run(['print', '5000']);
+    const next = session.run(['echo', 'recovered']);
+
+    await expect(withinLimit).resolves.toMatchObject({ exitCode: 0 });
+    await expect(tooLarge).rejects.toThrow('printed more than 1000 characters');
+    await expect(next).resolves.toEqual({ output: 'recovered', exitCode: 0 });
+  });
+
+  it('fails the running command when reading its output throws, instead of crashing the app, and runs the next on a new process', async () => {
+    // The end of a command is read on a later turn of the event loop (`setImmediate`), where no promise would catch a
+    // throw: Electron would show it in its own "A JavaScript error occurred in the main process" dialog.
+    vi.spyOn(OutputBuffer.prototype, 'textBefore').mockImplementationOnce(() => {
+      throw new RangeError('Invalid string length');
+    });
+    session = new CmShellSession(process.execPath, fakeCmFolder);
+    const failed = session.run(['echo', 'huge']);
+    const next = session.run(['echo', 'recovered']);
+
+    await expect(failed).rejects.toThrow('Invalid string length');
+    await expect(next).resolves.toEqual({ output: 'recovered', exitCode: 0 });
+  });
+
+  it('fails the running command when its input pipe breaks, instead of crashing the app', async () => {
+    const shell = printedShellProcess();
+    vi.mocked(spawn).mockReturnValueOnce(shell.process);
+    session = new CmShellSession('cm', '/wk');
+    const broken = session.run(['status']);
+
+    shell.breakInput(new Error('write EPIPE'));
+
+    await expect(broken).rejects.toThrow('write EPIPE');
   });
 
   it('stops a read that takes longer than two minutes', async () => {

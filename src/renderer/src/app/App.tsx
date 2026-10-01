@@ -7,6 +7,7 @@ import { CommandPalette } from './commands/CommandPalette';
 import { CommandShortcuts } from './commands/CommandShortcuts';
 import { useAppCommands } from './commands/useAppCommands';
 import { useMenuCommands } from './commands/useMenuCommands';
+import { AppErrorBoundary } from './errors/AppErrorBoundary';
 import { errorDetailsAction } from './errors/errorDetailsAction';
 import { FolderDropTarget } from './folderDrop/FolderDropTarget';
 import { HomeScreen } from './home/HomeScreen';
@@ -28,7 +29,10 @@ import { WorkspaceGate } from './workspace/WorkspaceGate';
 export function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <Root />
+      {/* Inside, so the dialogs and toasts outside it keep working once it shows its error screen. */}
+      <AppErrorBoundary>
+        <Root />
+      </AppErrorBoundary>
       <CommandPalette />
       <CommandShortcuts />
       <DialogHost />

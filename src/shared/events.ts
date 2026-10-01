@@ -16,6 +16,14 @@ export interface CommandLogEntry {
   output: string;
 }
 
+/** An error the main process didn't expect, which nothing caught (`handleUnexpectedErrors`); its secrets hidden. */
+export interface UnexpectedError {
+  /** The error's own words, e.g. "Invalid string length". */
+  message: string;
+  /** The error with its stack, for a bug report; never shown on screen. */
+  details: string;
+}
+
 interface OperationProgressEvent {
   operationId: string;
   progress: OperationProgress;
@@ -47,6 +55,8 @@ export interface UvcsEvents {
   updateStatusChanged: UpdateStatus;
   /** Windows' Back command: a mouse's back button or a keyboard's Browser Back key. */
   navigateBack: Record<string, never>;
+  /** The main process caught an error nothing else did, and kept running; every window gets it. */
+  unexpectedError: UnexpectedError;
 }
 
 export type UvcsEventName = keyof UvcsEvents;

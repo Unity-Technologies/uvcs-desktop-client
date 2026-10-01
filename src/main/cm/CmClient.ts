@@ -8,6 +8,7 @@ import { CmShellPool } from './CmShellPool';
 import { extractErrorMessage } from './errorMessage';
 import { commandLineForLog, outputForLog } from './hideSecrets';
 import { runsLong } from './longCommands';
+import { CmOutputTooLargeError } from './outputLimit';
 import { processCommand } from './processCommand';
 import { runCmProcess } from './runCmProcess';
 import { canRunInShell } from './shellCommandLine';
@@ -130,8 +131,9 @@ export class CmClient {
 
     const result = await finished.catch((error: unknown) => {
       // A command its caller cancelled is no failure to log.
-      if (!options.signal?.aborted) log(endedWithoutExitCode(error));
-      throw error;
+      if (options.signal?.aborted) throw error;
+      const entry = log(endedWithoutExitCode(error));
+      throw error instanceof CmOutputTooLargeError ? stoppedFailure(error, entry) : error;
     });
     const entry = log(result);
     if (result.exitCode !== 0) throw failure(result, entry);
@@ -171,6 +173,11 @@ export class CmClient {
 /** What a command that ended without an exit code of its own (`cm` not found, a stalled prompt, a closed session) logs. */
 function endedWithoutExitCode(error: unknown): CmResult {
   return { output: error instanceof Error ? error.message : String(error), exitCode: -1 };
+}
+
+/** A command the app stopped for a reason of its own (`CmOutputTooLargeError`), reported with its details as any failure. */
+function stoppedFailure(error: Error, entry: CommandLogEntry): CmError {
+  return new CmError(error.message, { commandLine: entry.commandLine, exitCode: entry.exitCode, output: entry.output, logEntryId: entry.id });
 }
 
 /** A command that exited with another code than 0, explained by the error line of its output. */

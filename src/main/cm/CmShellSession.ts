@@ -2,19 +2,27 @@ import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import type { CmResult } from './CmResult';
 import { changesWorkspace } from '../watch/changesWorkspace';
 import { OutputBuffer } from './OutputBuffer';
+import { CmOutputTooLargeError, MAX_OUTPUT_LENGTH } from './outputLimit';
 import { SHELL_ARGS, toShellCommandLine } from './shellCommandLine';
 import { resultLineAtEnd } from './shellResultLine';
 /** A trailing line without a newline that looks like a question, e.g. "Select your system [0-1]:". */
 const PROMPT_LIKE_TAIL = /^[^<].*(\[[^\]]*\]|[:?])\s*$/;
 /** Longer last lines are output (e.g. `--format` records), not a question. */
 const MAX_PROMPT_LENGTH = 300;
-/** How long output may pause on a question-like line before it counts as a prompt. */
 const PROMPT_STALL_MS = 1500;
 const READ_TIMEOUT_MS = 120_000;
 /** A write of few paths can still touch a whole tree (removing or moving a folder); a stalled prompt is caught long before either timeout. */
 const WRITE_TIMEOUT_MS = 30 * 60_000;
 /** Local and instant: its answer tells the process is up. */
 const STARTUP_PROBE = ['version'];
+
+/** What a session puts up with before it stops a command; tests shorten them. */
+export interface CmShellSessionLimits {
+  /** How long output may pause on a question-like line before it counts as a prompt. */
+  promptStallMs?: number;
+  /** The most characters a command may print (`MAX_OUTPUT_LENGTH`). */
+  maxOutputLength?: number;
+}
 
 interface PendingCommand {
   commandLine: string;
@@ -42,12 +50,17 @@ export class CmShellSession {
   private timeoutTimer: NodeJS.Timeout | null = null;
   /** Whether the current process answered a command yet; until then it's starting, which takes about a second. */
   private answered = false;
+  private readonly promptStallMs: number;
+  private readonly maxOutputLength: number;
 
   constructor(
     private readonly cmPath: string,
     private readonly cwd: string,
-    private readonly promptStallMs = PROMPT_STALL_MS,
-  ) {}
+    { promptStallMs = PROMPT_STALL_MS, maxOutputLength = MAX_OUTPUT_LENGTH }: CmShellSessionLimits = {},
+  ) {
+    this.promptStallMs = promptStallMs;
+    this.maxOutputLength = maxOutputLength;
+  }
 
   get pendingCount(): number {
     return this.queue.length + (this.running ? 1 : 0);
@@ -88,7 +101,10 @@ export class CmShellSession {
     if (this.running || this.queue.length === 0) return;
 
     this.running = this.queue.shift()!;
-    this.timeoutTimer = setTimeout(() => this.abortRunning('The cm command took too long and was stopped.'), this.running.timeoutMs);
+    this.timeoutTimer = setTimeout(
+      () => this.guarded(() => this.abortRunning(new Error('The cm command took too long and was stopped.'))),
+      this.running.timeoutMs,
+    );
     this.ensureProcess().stdin.write(`${this.running.commandLine}\n`);
   }
 
@@ -98,10 +114,12 @@ export class CmShellSession {
     const child = spawn(this.cmPath, SHELL_ARGS, { cwd: this.cwd, windowsHide: true });
     this.answered = false;
     // What a killed process still had in its pipes must not end up in the output of the next command.
-    const onData = (text: string) => child === this.process && this.onOutput(text);
+    const onData = (text: string) => child === this.process && this.guarded(() => this.onOutput(text));
     // Decoded by the streams, so a character split between two chunks stays whole.
     child.stdout.setEncoding('utf8').on('data', onData);
     child.stderr.setEncoding('utf8').on('data', onData);
+    // A process that died while a command was written to it breaks the pipe (EPIPE): an error nobody listened to would throw.
+    child.stdin.on('error', (error) => child === this.process && this.abortRunning(error));
     child.on('error', (error) => this.onProcessEnded(child, error));
     child.on('close', () => this.onProcessEnded(child, new Error('cm shell exited unexpectedly')));
     this.process = child;
@@ -109,6 +127,11 @@ export class CmShellSession {
   }
 
   private onOutput(text: string): void {
+    // Past the limit the output could never be read as one string: the command is stopped before it gets there.
+    if (this.buffer.length + text.length > this.maxOutputLength) {
+      this.abortRunning(new CmOutputTooLargeError(this.maxOutputLength));
+      return;
+    }
     this.buffer.append(text);
     this.received += text.length;
     this.watchForPrompt();
@@ -117,9 +140,11 @@ export class CmShellSession {
     // A comment can hold a `CommandResult 0` line too (codice's do): the real one is the last output, with nothing
     // more in the pipe. `setImmediate` lets output already waiting be read first.
     const receivedBefore = this.received;
-    setImmediate(() => {
-      if (this.received === receivedBefore) this.finishIfDone();
-    });
+    setImmediate(() =>
+      this.guarded(() => {
+        if (this.received === receivedBefore) this.finishIfDone();
+      }),
+    );
   }
 
   private finishIfDone(): void {
@@ -151,21 +176,36 @@ export class CmShellSession {
     const receivedBefore = this.received;
     this.promptTimer = setTimeout(
       () =>
-        setImmediate(() => {
-          if (this.received !== receivedBefore || !this.running) return;
-          this.abortRunning(`cm is waiting for input ("${lastLine.trim()}"). Check your credentials for this server.`);
-        }),
+        setImmediate(() =>
+          this.guarded(() => {
+            if (this.received !== receivedBefore || !this.running) return;
+            this.abortRunning(new Error(`cm is waiting for input ("${lastLine.trim()}"). Check your credentials for this server.`));
+          }),
+        ),
       this.promptStallMs,
     );
   }
 
+  /**
+   * Runs what a stream event or a timer calls back: no promise is there to catch a throw (reading a huge output once
+   * threw `RangeError: Invalid string length` from `finishIfDone`), which would reach Electron's "A JavaScript error
+   * occurred in the main process" dialog. It fails the running command instead, and the queue goes on on a new process.
+   */
+  private guarded(callback: () => void): void {
+    try {
+      callback();
+    } catch (error) {
+      this.abortRunning(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+
   /** Kills the process (cm ignores SIGTERM while prompting), fails the running command and continues with the queue. */
-  private abortRunning(reason: string): void {
+  private abortRunning(reason: Error): void {
     const child = this.process;
     this.process = null;
     this.buffer.clear();
     child?.kill('SIGKILL');
-    if (this.running) this.finishRunning().reject(new Error(reason));
+    if (this.running) this.finishRunning().reject(reason);
     this.runNext();
   }
 
