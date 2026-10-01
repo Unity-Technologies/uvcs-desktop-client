@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { distinctBranchNames } from './distinctBranchNames';
+import { distinctBranchNames } from './branchLabels';
 
 describe('distinctBranchNames', () => {
   it('names each branch by its last segment', () => {
