@@ -1,6 +1,6 @@
 /**
  * Two letters telling servers apart where only an icon fits (the folded sidebar): the first letters of the first two
- * words of its name (`snakes-org` → `SO`, `UC_Global_Hack` → `UG`), else its first two letters (`acme` → `AC`). A
+ * words of its name (`pixel-forge` → `PF`, `Acme_Global_Jam` → `AG`), else its first two letters (`acme` → `AC`). A
  * server address goes by its host (`ssl://plasticscm.acme.fi:8088` → `PL`).
  */
 export function serverInitials(label: string): string {

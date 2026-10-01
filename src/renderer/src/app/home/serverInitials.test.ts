@@ -3,8 +3,8 @@ import { serverInitials } from './serverInitials';
 
 describe('serverInitials', () => {
   it('takes the first letters of the first two words', () => {
-    expect(serverInitials('snakes-org')).toBe('SO');
-    expect(serverInitials('UC_Global_Hack_a_thon')).toBe('UG');
+    expect(serverInitials('pixel-forge')).toBe('PF');
+    expect(serverInitials('Acme_Global_Game_Jam')).toBe('AG');
     expect(serverInitials('danipen_unity')).toBe('DU');
   });
 
