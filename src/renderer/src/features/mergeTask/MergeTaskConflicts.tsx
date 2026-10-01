@@ -16,10 +16,10 @@ interface MergeTaskConflictsProps {
   conflictPath: ConflictPath | null;
   onConflictPathChange: (path: ConflictPath) => void;
   onOpenFile: (path: string) => void;
-  onKeepOneSideOnServer: () => void;
+  onResolveOnServer: () => void;
 }
 
-/** A task that conflicts with its destination: what conflicts, and how to resolve it in the workspace. */
+/** A task that conflicts with its destination: what conflicts, and how to resolve it in the workspace or on the server. */
 export function MergeTaskConflicts({
   plan,
   description,
@@ -29,7 +29,7 @@ export function MergeTaskConflicts({
   conflictPath,
   onConflictPathChange,
   onOpenFile,
-  onKeepOneSideOnServer,
+  onResolveOnServer,
 }: MergeTaskConflictsProps) {
   return (
     <>
@@ -38,8 +38,8 @@ export function MergeTaskConflicts({
         {description}
       </p>
       <p className={styles.explanation}>
-        {taskBranch} and {destination} changed the same files. The server can’t ask you how to combine them, so resolve
-        them in your workspace, then merge again.
+        {taskBranch} and {destination} changed the same files. Resolve them in your workspace and merge again, or on
+        the server.
       </p>
       <MergeTaskFileList plan={plan} conflicts onOpen={onOpenFile} />
       {conflictPath && (
@@ -51,8 +51,8 @@ export function MergeTaskConflicts({
           cards={conflictPathCards(taskBranch, destination, currentBranch)}
         />
       )}
-      <button type="button" className={styles.link} onClick={onKeepOneSideOnServer}>
-        Or merge on the server, keeping one side for every conflicting file…
+      <button type="button" className={styles.link} onClick={onResolveOnServer}>
+        Resolve them on the server, without touching your workspace…
       </button>
     </>
   );

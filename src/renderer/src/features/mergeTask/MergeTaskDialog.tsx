@@ -103,7 +103,7 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
     else openChangesetDiff({ id: nextChangeset }, path);
   };
 
-  const keepOneSideOnServer = (): void => {
+  const resolveOnServer = (): void => {
     onClose();
     openMerge(request);
   };
@@ -183,7 +183,7 @@ function MergeTaskDialog({ workspacePath, branch, onClose }: { workspacePath: st
           conflictPath={fromTaskBranch ? conflictPath : null}
           onConflictPathChange={setConflictPath}
           onOpenFile={openFileDiff}
-          onKeepOneSideOnServer={keepOneSideOnServer}
+          onResolveOnServer={resolveOnServer}
         />
       )}
       {preview.data && outcome?.kind === 'alreadyMerged' && (
