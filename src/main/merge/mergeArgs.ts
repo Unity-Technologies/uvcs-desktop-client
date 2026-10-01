@@ -18,9 +18,9 @@ export function mergeSourceArgs(request: MergeRequest): string[] {
  * How `cm merge --merge` treats conflicting files. Every conflict gets an explicit decision, because a file left to
  * `cm` would be merged by its external merge tool, and this app never opens one. Workspace merges keep the
  * destination and the app writes the resolutions afterwards. A merge into a server branch hands `cm` each file's
- * decision in `resolutionsFile` (`fileResolutionsFile`).
+ * decision in `fileConflictResolutionsPath` (`fileConflictResolutionsFile`).
  */
-export function fileConflictArgs(request: MergeRequest, plan: MergePlan, resolutionsFile: string): string[] {
+export function fileConflictArgs(request: MergeRequest, plan: MergePlan, fileConflictResolutionsPath: string): string[] {
   if (plan.fileConflicts.length === 0) return [];
-  return request.destinationBranch ? [`--fileconflictsresolutionsfile=${resolutionsFile}`] : ['--keepdestination'];
+  return request.destinationBranch ? [`--fileconflictsresolutionsfile=${fileConflictResolutionsPath}`] : ['--keepdestination'];
 }
