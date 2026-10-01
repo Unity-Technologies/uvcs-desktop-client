@@ -479,6 +479,24 @@ renderer/src/
   `DetailsCopyable`, `DetailsLink`, `DetailsDisclosure`, `MoreDetails`), each imported from its own module. Lists are
   a `DataTable` (`ui/table/`: only the rows in view render; the columns' sort, the keys' steps `selectionStep`, and
   `selectFirstRow`'s successor selection each in a module of their own).
+- **Long names**: branch names run past 120 characters (`/main/child-br-cr-sample/empty-branch2/child_1/subtask/merge-test`),
+  so nothing that shows one may overflow, wrap a row or push another control out. Each place names a branch one of two
+  ways, by what it does with it:
+  - **In words** (a button, a menu item, a title, a sentence, a toast, a progress card, a breadcrumb): by its own name,
+    `branchLabel` (`lib/branchLabels`: the last segment, cut in its middle past `MAX_BRANCH_LABEL_CHARS`; a menu item
+    keeps fewer, `serverMergeLabel`), two side by side told apart by `branchLabels` ("Merge merge-test into subtask").
+    The full name goes in the tooltip where the control has one.
+  - **On its own** (a row, a cell, a chip, a header, a field's button): the whole path fitted to the room by
+    `PathLabel` (parents dropped from the middle, `/main/…/child_1/subtask`, the name cut in its middle last), the
+    full name in its tooltip; the Branch Explorer's canvas the same way (`fitBranchName`, a tooltip on a cut name), the
+    merge page's title both branches together (`fitMergeTitle`). A table cell may show just the own name, its tooltip
+    the path (Changesets' Branch column).
+  - The full path stays in words only where the user must know exactly which branch: the confirmation to delete it,
+    the rename dialog's description, the new branch's "A child of …" and "Full name: …". There it wraps anywhere
+    (dialog titles and text break long names, `overflow-wrap`) rather than overflow.
+  - Underneath, nothing can grow past its container: a button's text label ends in an ellipsis at its container's width
+    (`ui/Button`), a dialog's primary button gives way before Cancel does, and a split button before the row it sits in.
+  `scripts/sandboxes/long-branch-names.sh` builds a repository with such names to check a change against.
 - **Item rows**: every list of files and folders reads the same (`components/`): Files and Browse repository, Changes
   (after its checkbox), the files of every diff and details panel, the merge page, a task merge, Incoming, Go to file,
   the Undo dialog, the Locks view (a lock names no item type, and only files are locked). `ItemRow` lays out the icon, the name (cut first, in the middle as every path is: `PathLabel`), extras
