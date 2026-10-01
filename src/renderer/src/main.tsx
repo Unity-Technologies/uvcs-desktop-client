@@ -1,12 +1,16 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app/App';
+import { reportUnexpectedErrors } from './app/errors/reportUnexpectedErrors';
 import { guardUnloading } from './app/navigation/leaveGuard';
 import { prefetchStartupQueries } from './app/startup/prefetchStartupQueries';
 import { openWorkspaceFromAddress } from './app/workspace/openWorkspaceFromAddress';
 import { trackPointerReturnFocus } from './lib/inputModality';
 import { WINDOW_CHROME } from './lib/platform';
 import './styles/global.css';
+
+// First, so an error of the steps below is told too.
+reportUnexpectedErrors();
 
 // Warm up the syntax highlighter in the background so the first diff renders without a delay.
 setTimeout(() => {
