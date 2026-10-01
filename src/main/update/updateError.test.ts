@@ -31,6 +31,8 @@ describe('describeUpdateError', () => {
     const unexpected = "GitHub didn't answer as expected. Try again in a moment.";
     expect(describeUpdateError(latestLookupFailure)).toBe(unexpected);
     expect(describeUpdateError(new Error('sha512 checksum mismatch'))).toBe(unexpected);
+    const notesMention404 = new Error(latestLookupFailure.message.replace('<entry>', '<entry>Fixes the 404 page'));
+    expect(describeUpdateError(notesMention404)).toBe(unexpected);
     expect(describeUpdateError('offline for a bit')).toBe(unexpected);
     expect(describeUpdateError(undefined)).toBe(unexpected);
   });
@@ -44,11 +46,8 @@ describe('updateErrorForLog', () => {
     );
   });
 
-  it('logs the stack of an error with nothing to hide', () => {
-    const error = new Error('boom');
-    error.stack = 'Error: boom\n    at check (AppUpdates.ts:101)';
-
-    expect(updateErrorForLog(error)).toBe('Error: boom\n    at check (AppUpdates.ts:101)');
+  it('logs the whole message of an error with nothing to hide', () => {
+    expect(updateErrorForLog(new Error('sha512 checksum mismatch\nexpected abc'))).toBe('sha512 checksum mismatch\nexpected abc');
   });
 
   it('logs what is not an error as text', () => {
