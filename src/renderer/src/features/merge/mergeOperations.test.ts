@@ -1,28 +1,36 @@
 import { fakeApi } from '../../testing/fakeWindow';
 import { describe, expect, it } from 'vitest';
-
-import { watchRefreshes } from '../../testing/operationOutcome';
+import type { MergeRequest, MergeResolutions } from '@shared/domain/merge';
+import { shownToasts, whereTheWindowIs } from '../../testing/operationOutcome';
 import { completeMerge } from './mergeOperations';
 
 const ws = '/ws';
-const resolutions = { directoryConflicts: [], files: {} };
+const destinationBranch = '/main/child-br-cr-sample/empty-branch2/child_1/subtask';
+const request: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/child-br-cr-sample/empty-branch2/child_1/subtask/merge-test', destinationBranch };
+const resolutions: MergeResolutions = { directoryConflicts: [], files: {} };
 
 describe('completeMerge', () => {
-  it('refreshes what a checkin would after merging a branch into the workspace', async () => {
-    fakeApi.answer('merge.run', () => ({}));
-    const refreshed = watchRefreshes(ws);
+  it('says where a server merge created its changeset, naming the branch by its own name', async () => {
+    fakeApi.answer('merge.run', () => ({ changesetId: 42 }));
 
-    await completeMerge(ws, { kind: 'merge', sourceSpec: 'br:/main/task' }, resolutions);
+    expect(await completeMerge(ws, request, resolutions)).toEqual({ changesetId: 42 });
 
-    expect(refreshed()).toEqual(['annotate', 'branchExplorer', 'branches', 'changesets', 'explorer', 'history', 'incoming', 'info', 'locks', 'pendingChanges', 'review']);
+    expect(fakeApi.argsOf('merge.run')).toEqual([[ws, request, resolutions, expect.any(String)]]);
+    expect(shownToasts()).toEqual([{ kind: 'success', title: 'Created changeset 42 on subtask' }]);
   });
 
-  it('refreshes the workspace, its locks, the shelve lists and the left changes after applying a shelve', async () => {
-    fakeApi.answer('merge.run', () => ({}));
-    const refreshed = watchRefreshes(ws);
+  it('explains a destination that moved meanwhile, and opens the merge that finishes it', async () => {
+    fakeApi.answer('merge.run', () => ({ changesetId: 43, destinationMoved: true }));
 
-    await completeMerge(ws, { kind: 'merge', sourceSpec: 'sh:12' }, resolutions);
+    expect(await completeMerge(ws, request, resolutions)).toBeNull();
 
-    expect(refreshed()).toEqual(['explorer', 'info', 'leftChanges', 'locks', 'pendingChanges', 'review', 'shelves']);
+    expect(shownToasts()).toEqual([
+      {
+        kind: 'info',
+        title: 'subtask moved while merging',
+        detail: 'Someone checked in on subtask at the same time, so the merge (changeset 43) sits beside the new head. Merge it into subtask to finish.',
+      },
+    ]);
+    expect(whereTheWindowIs().pages.at(-1)).toEqual({ kind: 'merge', request: { kind: 'merge', sourceSpec: 'cs:43', destinationBranch } });
   });
 });
