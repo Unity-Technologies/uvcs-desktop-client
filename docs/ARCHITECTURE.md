@@ -16,7 +16,7 @@ you touch:
 | Doc                                     | Covers                                                                         |
 | --------------------------------------- | ------------------------------------------------------------------------------ |
 | `features/diff.md`                      | Editing, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
-| `features/merge.md`                     | The merge page, conflict resolution, external merge tools                      |
+| `features/merge.md`                     | The merge page, conflict resolution, external merge tools, finishing a task    |
 | `features/shelves-and-switching.md`     | Switching with changes, a workspace on a shelve, shelves in Changes, two people on one branch |
 | `features/files-history-annotate.md`    | Files, Browse repository, Go to file, cut and paste, history, annotate         |
 | `features/branch-explorer.md`           | The graph's canvas, keeping the place, the pending changeset, the branch switcher |
@@ -84,6 +84,7 @@ and many people use the same server. Every `cm` command other than local reads (
 - **After an operation**: `invalidateWorkspace` refetches what is on screen and marks the rest stale, scoped to what the
   operation can change (`refreshScopes.ts`, `runOperation({ affects })`, `runAction(..., affects)`): a checkin, an update
   or a merge from a branch leave labels, shelves, attributes, reviews, left changes and changesets already read alone;
+  a merge into a server branch the workspace too, refreshing the incoming check instead (`isAffectedByServerMerge`);
   shelving changes that stay in the workspace refreshes only the shelve lists, and shelving them away those and the workspace; a new, deleted or hidden branch only the
   branch lists and the Branch Explorer; a label edit the labels and the graph; an attribute or value edit only the
   attributes; a code review created, edited, marked reviewed or deleted only the reviews (their lists and the branch chips); releasing a lock only the locks; deleting a shelve or discarding left changes only the shelve lists and the left changes, and applying or restoring one those, the workspace and its locks; adding, checking out, removing or undoing files only the workspace and its locks; a changeset's comment edited only what shows changesets, and one moved or deleted those, the branch lists and incoming. Reads refresh nothing (`runRead`: the switch preflight, previews, opening a file); two operations in a row refresh once, after
@@ -480,7 +481,7 @@ renderer/src/
   a `DataTable` (`ui/table/`: only the rows in view render; the columns' sort, the keys' steps `selectionStep`, and
   `selectFirstRow`'s successor selection each in a module of their own).
 - **Item rows**: every list of files and folders reads the same (`components/`): Files and Browse repository, Changes
-  (after its checkbox), the files of every diff and details panel, the merge page, a task merge, Incoming, Go to file,
+  (after its checkbox), the files of every diff and details panel, the merge page, Incoming, Go to file,
   the Undo dialog, the Locks view (a lock names no item type, and only files are locked). `ItemRow` lays out the icon, the name (cut first, in the middle as every path is: `PathLabel`), extras
   and, last on the row in one column, `ItemStatusMark`: the status letter (`StatusBadge`, the same tones and letters
   everywhere; its tooltip says what it means there), or a dot for a folder with changes inside. `ItemPathRow` is an item
