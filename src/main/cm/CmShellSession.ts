@@ -103,7 +103,10 @@ export class CmShellSession {
     if (this.running || this.queue.length === 0) return;
 
     this.running = this.queue.shift()!;
-    this.timeoutTimer = setTimeout(() => this.abortRunning(new Error('The cm command took too long and was stopped.')), this.running.timeoutMs);
+    this.timeoutTimer = setTimeout(
+      () => this.guarded(() => this.abortRunning(new Error('The cm command took too long and was stopped.'))),
+      this.running.timeoutMs,
+    );
     this.ensureProcess().stdin.write(`${this.running.commandLine}\n`);
   }
 
@@ -113,10 +116,12 @@ export class CmShellSession {
     const child = spawn(this.cmPath, SHELL_ARGS, { cwd: this.cwd, windowsHide: true });
     this.answered = false;
     // What a killed process still had in its pipes must not end up in the output of the next command.
-    const onData = (text: string) => child === this.process && this.onOutput(text);
+    const onData = (text: string) => child === this.process && this.guarded(() => this.onOutput(text));
     // Decoded by the streams, so a character split between two chunks stays whole.
     child.stdout.setEncoding('utf8').on('data', onData);
     child.stderr.setEncoding('utf8').on('data', onData);
+    // A process that died while a command was written to it breaks the pipe (EPIPE): an error nobody listened to would throw.
+    child.stdin.on('error', (error) => child === this.process && this.abortRunning(error));
     child.on('error', (error) => this.onProcessEnded(child, error));
     child.on('close', () => this.onProcessEnded(child, new Error('cm shell exited unexpectedly')));
     this.process = child;
@@ -137,9 +142,11 @@ export class CmShellSession {
     // A comment can hold a `CommandResult 0` line too (codice's do): the real one is the last output, with nothing
     // more in the pipe. `setImmediate` lets output already waiting be read first.
     const receivedBefore = this.received;
-    setImmediate(() => {
-      if (this.received === receivedBefore) this.finishIfDone();
-    });
+    setImmediate(() =>
+      this.guarded(() => {
+        if (this.received === receivedBefore) this.finishIfDone();
+      }),
+    );
   }
 
   private finishIfDone(): void {
@@ -171,12 +178,27 @@ export class CmShellSession {
     const receivedBefore = this.received;
     this.promptTimer = setTimeout(
       () =>
-        setImmediate(() => {
-          if (this.received !== receivedBefore || !this.running) return;
-          this.abortRunning(new Error(`cm is waiting for input ("${lastLine.trim()}"). Check your credentials for this server.`));
-        }),
+        setImmediate(() =>
+          this.guarded(() => {
+            if (this.received !== receivedBefore || !this.running) return;
+            this.abortRunning(new Error(`cm is waiting for input ("${lastLine.trim()}"). Check your credentials for this server.`));
+          }),
+        ),
       this.promptStallMs,
     );
+  }
+
+  /**
+   * Runs what a stream event or a timer calls back: no promise is there to catch a throw (reading a huge output once
+   * threw `RangeError: Invalid string length` from `finishIfDone`), which would reach Electron's "A JavaScript error
+   * occurred in the main process" dialog. It fails the running command instead, and the queue goes on on a new process.
+   */
+  private guarded(callback: () => void): void {
+    try {
+      callback();
+    } catch (error) {
+      this.abortRunning(error instanceof Error ? error : new Error(String(error)));
+    }
   }
 
   /** Kills the process (cm ignores SIGTERM while prompting), fails the running command and continues with the queue. */
