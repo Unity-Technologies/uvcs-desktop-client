@@ -1,0 +1,54 @@
+.folded {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.title {
+  display: -webkit-box;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+}
+
+.description {
+  width: 100%;
+  max-height: calc(var(--folded-description-lines) * 1.55em);
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+/* The cut line fades out instead of ending mid-glyph. */
+.description[data-cut='true'] {
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 1.55em), transparent);
+}
+
+.folded[data-expanded='true'] .description {
+  max-height: var(--folded-expanded-max-height);
+  overflow: auto;
+  mask-image: none;
+}
+
+.plain {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.toggle {
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent-text);
+  font-size: var(--text-sm);
+}
+
+.toggle:hover {
+  text-decoration: underline;
+}
