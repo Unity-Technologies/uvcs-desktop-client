@@ -23,6 +23,7 @@ import { watchShownWorkspaces } from './startup/workspaceWatching';
 import { createAppUpdates } from './update/createAppUpdates';
 import { DEVELOPMENT_DOCK_ICON } from './window/appIcon';
 import { installAppMenu, installMenus } from './window/appMenu';
+import { askToQuitWhenDone } from './window/askToQuitWhenDone';
 import { followAppTheme } from './window/followAppTheme';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
@@ -48,9 +49,10 @@ function start(launched: Promise<void>): void {
   if (!app.isPackaged) app.dock?.setIcon(DEVELOPMENT_DOCK_ICON);
   sendSettingsChanges(settings, (changed) => sendEvent('settingsChanged', changed));
   ignoreOwnCommandWrites(cm, watchers, headers);
+  const operations = trackOperations(watchers);
   const api = createServices({
     cm,
-    operations: trackOperations(watchers),
+    operations,
     reviews: new ReviewStore(join(userData, 'review-snapshots')),
     diffReviews: new DiffReviewStore(join(userData, 'review-snapshots', 'diffs')),
     settings,
@@ -62,7 +64,15 @@ function start(launched: Promise<void>): void {
   const early = new EarlyCalls(apiMethods(api));
   registerApi(api, early);
   followAppTheme(settings);
-  handleQuitting(new Quitting());
+  handleQuitting(
+    new Quitting({
+      writesRunning: () => operations.writesRunning(),
+      writesFinished: () => operations.writesFinished(),
+      askToQuitWhenDone,
+      hasWindows: () => windows.all().length > 0,
+      quit: () => app.quit(),
+    }),
+  );
   installMenus(windows, updates);
   updates.checkPeriodically();
   const openFirst = (): void => openFirstWindow({ cm, windows, early, settings });

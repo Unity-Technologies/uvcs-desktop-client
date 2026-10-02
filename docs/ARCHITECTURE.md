@@ -286,6 +286,11 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   (`commandLogged`) and operation progress go back to that window only. `workspaces.watch` is the window saying which
   workspace it shows: `main/watch/WorkspaceWatchers` keeps one watcher per shown workspace and sends its changes to the
   windows showing it; own writes are ignored in the workspace they touch.
+- Quitting goes through one `before-quit` listener (`main/startup/quitting.ts`, `Quitting`). An operation changing a
+  workspace (`OperationTracker.writesRunning`: update, switch, checkin, merge…) holds the quit back, as quitting would
+  kill its `cm` partway: the OS's message box asks to quit once it finishes or to stay (`askToQuitWhenDone`), and with
+  no window left (Windows and Linux quit as the last one closes) the app quits once it finishes. A slow read never holds
+  it. Then the pages hear it (`quitStarted`), so one with unsaved edits asks Save / Don't save / Cancel first.
 - Settings are written in main, one change at a time; values computed from the stored ones (the recent workspaces and
   branches) are computed there too, and every window gets the result (`settingsChanged`).
 - What a window checks as it opens (`cm version`, `cm checkconnection`) runs until it succeeds once; later windows take
