@@ -1,5 +1,6 @@
 import type { AccountsApi } from './accounts';
 import type { AnnotateApi } from './annotate';
+import type { AppsApi } from './apps';
 import type { AttributesApi } from './attributes';
 import type { BranchExplorerApi } from './branchExplorer';
 import type { BranchesApi } from './branches';
@@ -32,6 +33,7 @@ import type { WorkspacesApi } from './workspaces';
 export interface UvcsApi {
   accounts: AccountsApi;
   annotate: AnnotateApi;
+  apps: AppsApi;
   attributes: AttributesApi;
   branchExplorer: BranchExplorerApi;
   branches: BranchesApi;

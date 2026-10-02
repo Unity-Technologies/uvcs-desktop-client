@@ -34,7 +34,7 @@ const historyXml = (revisions: string): string => `<?xml version="1.0" encoding=
 
 function history(answers: Record<string, CmAnswer>) {
   const fake = fakeCmClient(answers);
-  return { ...fake, service: createHistoryService(serviceContext(fake.cm)) };
+  return { ...fake, service: createHistoryService(serviceContext(fake.cm), { apps: {} as never }) };
 }
 
 const TWO_REVISIONS: Record<string, CmAnswer> = {

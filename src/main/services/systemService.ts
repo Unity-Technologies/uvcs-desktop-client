@@ -9,7 +9,6 @@ import { callerId } from '../ipc/caller';
 import { readDraggedPath } from '../system/dragPasteboard';
 import { describeDraggedFolder } from '../system/draggedFolder';
 import { GravatarCache } from '../system/gravatar';
-import { openTerminal } from '../system/openTerminal';
 import { untilSucceeded } from '../system/untilSucceeded';
 import { isWebAddress } from '../system/webAddress';
 import { showIncomingNotification } from '../window/incomingNotification';
@@ -40,7 +39,6 @@ export function createSystemService({ cm, operations, windows, settings }: Servi
     },
     // In the OS's own separators: Explorer finds no item to select in `C:\wk/src/a.cs`.
     revealInFileManager: async (path) => shell.showItemInFolder(normalize(path)),
-    openTerminal: (path) => openTerminal(normalize(path)),
     openExternal: async (url) => {
       if (!isWebAddress(url)) throw new Error(`Only web pages open in the browser: ${url}`);
       await shell.openExternal(url);

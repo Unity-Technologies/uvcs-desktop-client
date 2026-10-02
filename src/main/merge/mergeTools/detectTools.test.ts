@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AppFileSystem } from '../../system/apps/appFileSystem';
+import { installedOnMac, installedOnWindows } from '../../system/apps/testing/appFixtures';
 import type { Whereabouts } from '../../system/apps/whereabouts';
 import { detectKnownTools } from './detectTools';
 import { KNOWN_TOOLS } from './knownTools';
@@ -84,6 +85,17 @@ describe('detectKnownTools', () => {
       ['bcompare', '/usr/bin/bcompare'],
       ['meld', '/usr/bin/meld'],
     ]);
+  });
+
+  it('finds tools inside their app wherever the OS says the app is: a bundle Spotlight knows, a folder an uninstall entry names', () => {
+    const onMac = installedOnMac({ 'com.microsoft.VSCode': '/Users/me/Tools/Visual Studio Code.app' });
+    const macFs = fakeFileSystem(['/Users/me/Tools/Visual Studio Code.app/Contents/Resources/app/bin/code']);
+    expect(detectKnownTools(KNOWN_TOOLS, mac, macFs, onMac).map(({ tool, executable }) => [tool.id, executable])).toEqual([
+      ['vscode', '/Users/me/Tools/Visual Studio Code.app/Contents/Resources/app/bin/code'],
+    ]);
+    const onWindows = installedOnWindows([{ displayName: 'JetBrains Rider 2026.2', publisher: 'JetBrains s.r.o.', installLocation: 'D:\\IDEs\\Rider' }]);
+    const windowsFs = fakeFileSystem(['D:\\IDEs\\Rider\\bin\\rider64.exe']);
+    expect(detectKnownTools(KNOWN_TOOLS, windows, windowsFs, onWindows).map(({ tool, executable }) => [tool.id, executable])).toEqual([['rider', 'D:\\IDEs\\Rider\\bin\\rider64.exe']]);
   });
 
   it("finds the UVCS merge tool as the Linux package installs it, next to cm, when cm isn't the /usr/bin link", () => {

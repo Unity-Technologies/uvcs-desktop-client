@@ -1,3 +1,4 @@
+import { AUTO_APP, type CustomEditor } from './externalApps';
 import { AUTO_MERGE_TOOL, type CustomMergeTool } from './mergeTools';
 import { DEFAULT_PENDING_CHANGES_FILTER, type PendingChangesFilter } from './pendingChanges';
 import type { PendingChangesOnSwitch, SwitchShelveRecord } from './switchWithChanges';
@@ -52,6 +53,12 @@ export interface AppSettings {
    * off, the next file opens at once.
    */
   askWhenMergeToolClosesUnsaved: boolean;
+  /** The app "Open in…" opens files and folders in: `auto` (the first editor found) or an app id. */
+  editor: string;
+  /** The terminal "Open in…" opens folders in: `auto` (the platform's usual one) or a terminal id. */
+  terminal: string;
+  /** Apps the user added to open files in ("Other app…"). */
+  customEditors: CustomEditor[];
   /** Null until the window is first moved or resized. */
   windowBounds: SavedWindowBounds | null;
   /**
@@ -81,6 +88,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   customMergeTools: [],
   mergeToolArgs: {},
   askWhenMergeToolClosesUnsaved: true,
+  editor: AUTO_APP,
+  terminal: AUTO_APP,
+  customEditors: [],
   windowBounds: null,
   legacySettingsImported: false,
 };

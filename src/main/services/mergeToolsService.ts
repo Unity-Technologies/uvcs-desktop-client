@@ -18,21 +18,21 @@ import { judgeToolResult } from '../merge/mergeTools/toolResult';
 import { appExecutable } from '../system/apps/appExecutable';
 import { diskFileSystem } from '../system/apps/appFileSystem';
 import type { Whereabouts } from '../system/apps/whereabouts';
-import type { ServiceContext } from './ServiceContext';
+import type { AppsContext, ServiceContext } from './ServiceContext';
 
 interface OpenTool {
   stop: AbortController;
   bundle: string | null;
 }
 
-export function createMergeToolsService({ cm, settings }: ServiceContext): MergeToolsApi {
+export function createMergeToolsService({ cm, settings }: ServiceContext, { installedApps }: Pick<AppsContext, 'installedApps'>): MergeToolsApi {
   const open = new Map<string, OpenTool>();
 
-  function list() {
+  async function list() {
     const where: Whereabouts = { platform: process.platform, env: process.env, home: homedir(), cmPath: cm.executable };
     const { mergeTool, customMergeTools, mergeToolArgs } = settings.get();
     return mergeToolList({
-      detected: detectKnownTools(KNOWN_TOOLS, where, diskFileSystem),
+      detected: detectKnownTools(KNOWN_TOOLS, where, diskFileSystem, await installedApps.get()),
       custom: customMergeTools,
       argsOverrides: mergeToolArgs,
       preference: mergeTool,
@@ -41,7 +41,7 @@ export function createMergeToolsService({ cm, settings }: ServiceContext): Merge
   }
 
   async function resolve(workspacePath: string, request: MergeToolRequest): Promise<MergeToolOutcome> {
-    const tool = list().tools.find((candidate) => candidate.id === request.toolId);
+    const tool = (await list()).tools.find((candidate) => candidate.id === request.toolId);
     if (!tool) return { kind: 'failed', message: "That merge tool isn't installed anymore." };
 
     const stop = new AbortController();
@@ -82,7 +82,7 @@ export function createMergeToolsService({ cm, settings }: ServiceContext): Merge
   }
 
   return {
-    list: async () => list(),
+    list,
     resolve,
     stopWaiting: async (sessionId) => open.get(sessionId)?.stop.abort(),
     bringToFront: async (sessionId) => {

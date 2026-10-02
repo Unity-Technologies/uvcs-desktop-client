@@ -1,4 +1,6 @@
 import { posix, win32 } from 'node:path';
+import { APP_IDENTITIES } from '../../system/apps/appIdentities';
+import type { AppIdentity } from '../../system/apps/appIdentity';
 import { localPrograms, macApps, programFiles, type Whereabouts } from '../../system/apps/whereabouts';
 
 /**
@@ -10,6 +12,12 @@ export interface KnownTool {
   name: string;
   /** `{result}` is where the tool saves. */
   args: string[];
+  /**
+   * How the OS knows the app it's part of (`APP_IDENTITIES`), and its program inside the app's macOS bundle or Windows
+   * install folder: found wherever the app was installed, before its usual `locations`.
+   */
+  identity?: AppIdentity;
+  inInstall?: Partial<Record<'darwin' | 'win32', string[]>>;
   /** Where it may be installed, in order; a `*` stands for any name in one folder (a version number). */
   locations: (where: Whereabouts) => string[];
   /** Program names to look for on the PATH. */
@@ -32,11 +40,13 @@ const VSCODE_ARGS = ['--wait', '--merge', '{incoming}', '{yours}', '{base}', '{r
 const JETBRAINS_ARGS = ['merge', '{yours}', '{incoming}', '{base}', '{result}'];
 
 /** `windowsBin`: where its `.cmd` launcher is in its Windows install folder (`bin`, or Cursor's `resources\app\bin`). */
-function vscodeLike(id: string, name: string, app: string, command: string, windowsFolder: string, windowsBin = 'bin'): KnownTool {
+function vscodeLike(id: string, name: string, identity: AppIdentity, app: string, command: string, windowsFolder: string, windowsBin = 'bin'): KnownTool {
   return {
     id,
     name,
     args: VSCODE_ARGS,
+    identity,
+    inInstall: { darwin: [`Contents/Resources/app/bin/${command}`], win32: [`${windowsBin}\\${command}.cmd`] },
     locations: (where) => {
       if (where.platform === 'darwin') return macApps(where, `${app}.app/Contents/Resources/app/bin/${command}`);
       if (where.platform === 'win32') {
@@ -50,11 +60,13 @@ function vscodeLike(id: string, name: string, app: string, command: string, wind
   };
 }
 
-function jetbrains(id: string, name: string, apps: string[], command: string, windowsFolder: string): KnownTool {
+function jetbrains(id: string, name: string, identity: AppIdentity, apps: string[], command: string, windowsFolder: string): KnownTool {
   return {
     id,
     name,
     args: JETBRAINS_ARGS,
+    identity,
+    inInstall: { darwin: [`Contents/MacOS/${command}`], win32: [`bin\\${command}64.exe`] },
     locations: (where) => {
       if (where.platform === 'darwin') return apps.flatMap((app) => macApps(where, `${app}.app/Contents/MacOS/${command}`));
       if (where.platform === 'win32') {
@@ -91,19 +103,21 @@ export const KNOWN_TOOLS: KnownTool[] = [
     },
     commands: { darwin: ['plasticgui'], linux: ['plasticgui'], win32: ['plastic.exe'] },
   },
-  vscodeLike('vscode', 'Visual Studio Code', 'Visual Studio Code', 'code', 'Microsoft VS Code'),
-  vscodeLike('vscodeInsiders', 'VS Code Insiders', 'Visual Studio Code - Insiders', 'code-insiders', 'Microsoft VS Code Insiders'),
-  vscodeLike('cursor', 'Cursor', 'Cursor', 'cursor', 'cursor', 'resources\\app\\bin'),
-  vscodeLike('windsurf', 'Windsurf', 'Windsurf', 'windsurf', 'Windsurf'),
-  jetbrains('rider', 'JetBrains Rider', ['Rider'], 'rider', 'JetBrains Rider'),
-  jetbrains('intellij', 'IntelliJ IDEA', ['IntelliJ IDEA', 'IntelliJ IDEA Ultimate', 'IntelliJ IDEA CE'], 'idea', 'IntelliJ IDEA'),
-  jetbrains('webstorm', 'WebStorm', ['WebStorm'], 'webstorm', 'WebStorm'),
-  jetbrains('pycharm', 'PyCharm', ['PyCharm', 'PyCharm Professional Edition', 'PyCharm CE'], 'pycharm', 'PyCharm'),
-  jetbrains('clion', 'CLion', ['CLion'], 'clion', 'CLion'),
-  jetbrains('goland', 'GoLand', ['GoLand'], 'goland', 'GoLand'),
+  vscodeLike('vscode', 'Visual Studio Code', APP_IDENTITIES.vscode, 'Visual Studio Code', 'code', 'Microsoft VS Code'),
+  vscodeLike('vscodeInsiders', 'VS Code Insiders', APP_IDENTITIES.vscodeInsiders, 'Visual Studio Code - Insiders', 'code-insiders', 'Microsoft VS Code Insiders'),
+  vscodeLike('cursor', 'Cursor', APP_IDENTITIES.cursor, 'Cursor', 'cursor', 'cursor', 'resources\\app\\bin'),
+  vscodeLike('windsurf', 'Windsurf', APP_IDENTITIES.windsurf, 'Windsurf', 'windsurf', 'Windsurf'),
+  jetbrains('rider', 'JetBrains Rider', APP_IDENTITIES.rider, ['Rider'], 'rider', 'JetBrains Rider'),
+  jetbrains('intellij', 'IntelliJ IDEA', APP_IDENTITIES.intellij, ['IntelliJ IDEA', 'IntelliJ IDEA Ultimate', 'IntelliJ IDEA CE'], 'idea', 'IntelliJ IDEA'),
+  jetbrains('webstorm', 'WebStorm', APP_IDENTITIES.webstorm, ['WebStorm'], 'webstorm', 'WebStorm'),
+  jetbrains('pycharm', 'PyCharm', APP_IDENTITIES.pycharm, ['PyCharm', 'PyCharm Professional Edition', 'PyCharm CE'], 'pycharm', 'PyCharm'),
+  jetbrains('clion', 'CLion', APP_IDENTITIES.clion, ['CLion'], 'clion', 'CLion'),
+  jetbrains('goland', 'GoLand', APP_IDENTITIES.goland, ['GoLand'], 'goland', 'GoLand'),
   {
     id: 'smerge',
     name: 'Sublime Merge',
+    identity: APP_IDENTITIES.sublimeMerge,
+    inInstall: { darwin: ['Contents/SharedSupport/bin/smerge'], win32: ['smerge.exe'] },
     args: ['mergetool', '{base}', '{yours}', '{incoming}', '-o', '{result}'],
     locations: (where) => {
       if (where.platform === 'darwin') return macApps(where, 'Sublime Merge.app/Contents/SharedSupport/bin/smerge');
@@ -127,6 +141,8 @@ export const KNOWN_TOOLS: KnownTool[] = [
   {
     id: 'bcompare',
     name: 'Beyond Compare',
+    identity: APP_IDENTITIES.beyondCompare,
+    inInstall: { darwin: ['Contents/MacOS/bcomp'], win32: ['BComp.exe'] },
     args: ['{yours}', '{incoming}', '{base}', '{result}'],
     locations: (where) => {
       if (where.platform === 'darwin') return macApps(where, 'Beyond Compare.app/Contents/MacOS/bcomp');

@@ -11,10 +11,10 @@ import {
 } from '../cm/itemHistory';
 import { toAbsolutePath } from '../files/workspacePaths';
 import { revisionFiles } from './revisionFiles';
-import type { ServiceContext } from './ServiceContext';
+import type { AppsContext, ServiceContext } from './ServiceContext';
 
-export function createHistoryService({ cm }: ServiceContext): HistoryApi {
-  const revisions = revisionFiles(cm);
+export function createHistoryService({ cm }: ServiceContext, { apps }: Pick<AppsContext, 'apps'>): HistoryApi {
+  const revisions = revisionFiles(cm, (path, editorId) => apps.openInEditor(path, editorId));
 
   /**
    * Which revision of the file the workspace has, read from the workspace itself; none when history starts from a
