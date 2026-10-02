@@ -1,4 +1,5 @@
 import { AUTO_MERGE_TOOL, type CustomMergeTool, type MergeTool, type MergeToolList } from '@shared/domain/mergeTools';
+import { appBundleOf } from '../../system/apps/appBundle';
 import type { DetectedTool } from './detectTools';
 import { UVCS_TOOL_ID } from './knownTools';
 
@@ -31,10 +32,4 @@ export function mergeToolList(sources: MergeToolSources): MergeToolList {
 function preferredTool(tools: MergeTool[], preference: string): string | null {
   if (preference !== AUTO_MERGE_TOOL && tools.some((tool) => tool.id === preference)) return preference;
   return (tools.find((tool) => tool.id === UVCS_TOOL_ID) ?? tools[0])?.id ?? null;
-}
-
-/** `/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code` → `/Applications/Visual Studio Code.app`. */
-export function appBundleOf(executable: string): string | null {
-  const match = /^(.*?\.app)\//.exec(executable);
-  return match ? match[1]! : null;
 }

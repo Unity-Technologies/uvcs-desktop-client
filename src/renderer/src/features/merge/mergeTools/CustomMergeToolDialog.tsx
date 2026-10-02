@@ -8,7 +8,7 @@ import { Button } from '../../../ui/Button';
 import { Dialog } from '../../../ui/dialog/Dialog';
 import { askDialog } from '../../../ui/dialog/dialogStore';
 import { TextField } from '../../../ui/TextField';
-import { programName } from './programName';
+import { programName } from '../../../lib/programName';
 import { addCustomMergeTool } from './useMergeTools';
 import styles from './CustomMergeToolDialog.module.css';
 

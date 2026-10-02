@@ -11,6 +11,7 @@ import {
   ClipboardPaste,
   CircleCheck,
   CircleDot,
+  CodeXml,
   Copy,
   CornerLeftUp,
   Download,
@@ -47,6 +48,7 @@ import {
   ScanText,
   Scissors,
   Square,
+  SquareArrowOutUpRight,
   SquareCheckBig,
   SquareTerminal,
   Tag,
@@ -78,17 +80,26 @@ const word = (group: MenuGroup, icon: Icon, label?: string, danger?: true): Menu
  * their group, so `groupedMenu` puts them in the grammar's order.
  */
 export const MENU_WORDS = {
-  // What Enter or a double-click does.
+  // What Enter or a double-click does in the app.
   diff: word('primary', FileDiff, 'Open diff'),
   diffRange: word('primary', FileDiff),
   diffPair: word('primary', GitCompareArrows, 'Compare selected labels'),
   diffMerge: word('primary', FileDiff, 'Open diff of the merge'),
   changesetDiff: word('primary', FileDiff),
-  open: word('primary', AppWindow, 'Open'),
   openReview: word('primary', ExternalLink, 'Open review'),
   release: word('primary', LockOpen, 'Release lock'),
-  openWorkspace: word('primary', FolderOpen, 'Open'),
+  openWorkspace: word('primary', FolderOpen, 'Open workspace'),
   locate: word('primary', FolderSearch, 'Locate or recreate…'),
+
+  // Opening it in other apps, and the file manager (`openOnDiskEntries`, `openRevisionEntries`): a file's Enter too.
+  // The words name the app ("Open in Visual Studio Code").
+  open: word('open', AppWindow),
+  openInEditor: word('open', CodeXml),
+  terminal: word('open', SquareTerminal),
+  openRevision: word('open', AppWindow),
+  openWith: word('open', SquareArrowOutUpRight, 'Open with'),
+  openRevisionWith: word('open', SquareArrowOutUpRight, 'Open this revision with'),
+  reveal: word('open', FolderSearch, REVEAL_LABEL),
 
   // What it does to the workspace or to the object.
   switch: word('act', ArrowRightLeft),
@@ -147,10 +158,7 @@ export const MENU_WORDS = {
   destination: word('navigate', ArrowRightToLine, 'Go to destination changeset'),
 
   // The OS.
-  openRevision: word('external', AppWindow, 'Open this revision'),
   saveAs: word('external', Download, 'Save this revision as…'),
-  reveal: word('external', FolderSearch, REVEAL_LABEL),
-  terminal: word('external', SquareTerminal, 'Open terminal here'),
 
   // The clipboard: Cut, Copy, Paste, as everywhere.
   cut: word('clipboard', Scissors, 'Cut'),

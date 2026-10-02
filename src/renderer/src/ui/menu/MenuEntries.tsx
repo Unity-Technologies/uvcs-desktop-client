@@ -1,4 +1,4 @@
-import { ChevronRight } from 'lucide-react';
+import { Check, ChevronRight } from 'lucide-react';
 import type { ComponentType, ReactNode } from 'react';
 import { isSubmenu, SEPARATOR, type MenuEntry } from '../../lib/actions';
 import { classNames } from '../../lib/classNames';
@@ -63,6 +63,11 @@ export function MenuEntries({ entries, primitives }: { entries: MenuEntry[]; pri
         {entry.shortcut && (
           <span className={styles.trailing}>
             <Kbd keys={entry.shortcut} />
+          </span>
+        )}
+        {entry.checked && (
+          <span className={styles.check} aria-label="Selected">
+            <Check size={14} />
           </span>
         )}
       </Item>

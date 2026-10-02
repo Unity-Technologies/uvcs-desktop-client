@@ -1,4 +1,4 @@
-import { AppWindow, Check, CircleAlert, Ellipsis, PencilLine, Sparkles, type LucideIcon } from 'lucide-react';
+import { AppWindow, Check, CheckCheck, CircleAlert, Ellipsis, PencilLine, type LucideIcon } from 'lucide-react';
 import type { MergeLabels } from './mergeDescription';
 import { presentStatus, type ConflictStatus } from './mergeStatus';
 import styles from './ConflictStatusChip.module.css';
@@ -6,7 +6,7 @@ import styles from './ConflictStatusChip.module.css';
 const ICONS: Record<ConflictStatus, LucideIcon> = {
   reading: Ellipsis,
   unreadable: CircleAlert,
-  automatic: Sparkles,
+  automatic: CheckCheck,
   needsDecision: CircleAlert,
   keepingDestination: Check,
   keepingSource: Check,

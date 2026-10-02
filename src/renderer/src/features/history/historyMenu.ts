@@ -3,6 +3,7 @@ import type { ItemRevision } from '@shared/domain/history';
 import { revisionRef } from '@shared/domain/revision';
 import type { MenuEntry } from '../../lib/actions';
 import { copySubmenu } from '../../components/copyMenu';
+import { openRevisionEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction } from '../../components/menuWords';
 import { groupedMenu } from '../../lib/menuGroups';
 import { fileNameOf } from '../../lib/text';
@@ -41,7 +42,7 @@ export function historyMenu({ workspacePath, path, ofWorkspaceFile, otherReposit
       menuAction('showInBranchExplorer', () =>
         showInBranchExplorer({ kind: 'changeset', id: changesetOf(row), date: dateOf(row) }),
       ),
-    isFile && menuAction('openRevision', () => void openRevision(workspacePath, revisionRef(revision), name)),
+    ...(isFile ? openRevisionEntries((editorId) => openRevision(workspacePath, revisionRef(revision), name, editorId)) : []),
     isFile && menuAction('saveAs', () => void saveRevisionAs(workspacePath, revisionRef(revision), name)),
     revision && copySubmenu('Revision', { path, spec: revision.idSpec }),
   ]);

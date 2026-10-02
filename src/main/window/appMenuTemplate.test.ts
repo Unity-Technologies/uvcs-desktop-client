@@ -79,7 +79,7 @@ describe('appMenuTemplate', () => {
 
   it('creates and opens workspaces from File, and leaves updating one to the incoming chip', () => {
     const ids = itemsOf('darwin', 'File').map((item) => item.id).filter(Boolean);
-    expect(ids).toEqual(['app.newWindow', 'workspace.newForTask', 'workspace.open', 'workspace.reveal', 'workspace.openTerminal']);
+    expect(ids).toEqual(['app.newWindow', 'workspace.newForTask', 'workspace.open', 'workspace.openInEditor', 'workspace.openTerminal', 'workspace.reveal']);
   });
 
   it("reveals the workspace from File in each OS's file manager", () => {

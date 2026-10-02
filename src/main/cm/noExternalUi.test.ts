@@ -91,9 +91,22 @@ describe('cm commands never open an external tool', () => {
 });
 
 describe('merge tools open only on the user’s request', () => {
-  it('starts processes only to run cm, open a terminal, run a merge tool the user picked, ask codesign how the app is signed, or read the folder dragged over a window (osascript)', () => {
+  it('starts processes only to run cm, open an app the user picked (an editor, a terminal, a merge tool), ask the OS which apps are installed, ask codesign how the app is signed, or read the folder dragged over a window (osascript)', () => {
     const spawning = allSources.filter(({ source }) => source.includes("'node:child_process'")).map(({ file }) => relative(file));
-    expect(spawning.sort()).toEqual(['cm/CmShellSession.ts', 'cm/runCmProcess.ts', 'merge/mergeTools/launch.ts', 'system/dragPasteboard.ts', 'system/openTerminal.ts', 'update/macSignature.ts']);
+    expect(spawning.sort()).toEqual([
+      'cm/CmShellSession.ts',
+      'cm/runCmProcess.ts',
+      'merge/mergeTools/launch.ts',
+      'system/apps/launchApp.ts',
+      'system/apps/readInstalledApps.ts',
+      'system/dragPasteboard.ts',
+      'update/macSignature.ts',
+    ]);
+  });
+
+  it('opens editors and terminals only from the catalog behind "Open in…", wired once', () => {
+    const launching = allSources.filter(({ source }) => /from '[./]*(system\/)?apps\/launchApp'/.test(source)).map(({ file }) => relative(file));
+    expect(launching).toEqual(['services/createServices.ts']);
   });
 
   it('launches merge tools only from the service behind "Resolve in…"', () => {

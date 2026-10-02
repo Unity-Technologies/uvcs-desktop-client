@@ -2,17 +2,19 @@ import { SEPARATOR, type Action, type MenuEntry, type Submenu } from './actions'
 
 /**
  * The groups of every object's menu, in the order they show (docs/ARCHITECTURE.md, Menus):
- * - `primary`: what Enter or a double-click does (the details panel's button).
+ * - `primary`: what Enter or a double-click does in the app (the details panel's button): open the workspace, a diff.
+ * - `open`: opening it in other apps: a file's "Open in <editor>" (its Enter too), the terminal, "Open with ▸", and
+ *   revealing it in the file manager, together and apart from what opens in the app.
  * - `act`: what it does to the workspace or the object: switch to it, apply it, include it, check it out, review it.
  * - `merge`: merging it somewhere: into the workspace, to its parent, to another branch, cherry picks.
  * - `create`: new things from it: a branch, a label, a code review, a file.
  * - `navigate`: other views of it: its history, annotations, repository tree, place in the Branch Explorer.
- * - `external`: the OS: open it in another app, reveal it, open a terminal on it, save a copy.
+ * - `external`: the OS: save a copy of a revision.
  * - `clipboard`: its one "Copy" submenu (names, specs and paths), and Cut and Paste where items move.
  * - `edit`: what it is called, says or is filed under: rename, comments, changelists, ignore rules, hiding.
  * - `danger`: what undoes or deletes it, last.
  */
-export const MENU_GROUPS = ['primary', 'act', 'merge', 'create', 'navigate', 'external', 'clipboard', 'edit', 'danger'] as const;
+export const MENU_GROUPS = ['primary', 'open', 'act', 'merge', 'create', 'navigate', 'external', 'clipboard', 'edit', 'danger'] as const;
 
 export type MenuGroup = (typeof MENU_GROUPS)[number];
 

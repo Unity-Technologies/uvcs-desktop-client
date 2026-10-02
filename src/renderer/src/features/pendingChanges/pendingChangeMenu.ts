@@ -1,12 +1,12 @@
 import { EyeClosed, EyeOff, FileClock } from 'lucide-react';
 import { canAnnotate } from '@shared/domain/annotate';
 import type { Changelist, FilterRuleList, PendingChange } from '@shared/domain/pendingChanges';
-import { api } from '../../api/client';
 import { navigation } from '../../app/navigation/navigationStore';
 import { annotatedHistory } from '../history/annotatedHistory';
 import { tidyMenu, type MenuEntry } from '../../lib/actions';
 import { groupedMenu, type GroupedEntry } from '../../lib/menuGroups';
 import { copySubmenu } from '../../components/copyMenu';
+import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction, menuSubmenu } from '../../components/menuWords';
 import { TRASH_NAME } from '../../lib/platform';
 import { formatCount } from '../../lib/text';
@@ -24,7 +24,6 @@ import {
   deletePrivateFiles,
   extensionOf,
   FILTER_LIST_FILES,
-  openWithDefaultApp,
   undoChanges,
 } from './pendingChangeOperations';
 
@@ -56,7 +55,6 @@ export function pendingChangeMenu(
   const onDisk = single && existsOnDisk(single);
 
   return groupedMenu([
-    onDisk && menuAction('open', () => openWithDefaultApp(workspacePath, single)),
     ...(inclusion ? inclusionEntries(changes, inclusion) : []),
     review && reviewMenuEntry(changes, review),
     privateChanges.length > 0 &&
@@ -70,7 +68,7 @@ export function pendingChangeMenu(
       canAnnotate(single.itemType) &&
       menuAction('annotate', () => navigation.openPage(annotatedHistory({ path: single.path }))),
     lock && menuAction('showInLocks', () => showInLocks(workspacePath, lock)),
-    onDisk && menuAction('reveal', () => void api.system.revealInFileManager(absolutePath(workspacePath, single.path))),
+    ...(onDisk ? openOnDiskEntries({ path: absolutePath(workspacePath, single.path), isFolder: single.itemType === 'directory' }) : []),
     itemCopySubmenu(workspacePath, changes.map((change) => change.path)),
     moveToChangelistSubmenu(workspacePath, changes, changelists),
     single && filterRulesSubmenu(workspacePath, single.path),

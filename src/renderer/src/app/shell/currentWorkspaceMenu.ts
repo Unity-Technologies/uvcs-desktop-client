@@ -3,16 +3,15 @@ import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorksp
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { copySubmenu } from '../../components/copyMenu';
+import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction } from '../../components/menuWords';
-import { openTerminalIn, revealWorkspace } from '../workspace/workspaceShellActions';
 
-/** The workspace card's menu: starting work next to the open workspace, and its folder. */
+/** The workspace card's menu: starting work next to the open workspace, and opening its folder in other apps. */
 export function currentWorkspaceMenu(workspacePath: string, workspaceName?: string): MenuEntry[] {
   return groupedMenu([
     menuAction('newTaskWorkspace', () => openTaskWorkspaceDialog({ workspacePath })),
     menuAction('newWindow', () => void api.windows.openHome()),
-    menuAction('reveal', () => revealWorkspace(workspacePath)),
-    menuAction('terminal', () => openTerminalIn(workspacePath)),
+    ...openOnDiskEntries({ path: workspacePath, isFolder: true }),
     copySubmenu('Workspace', { name: workspaceName, path: workspacePath }),
   ]);
 }

@@ -1,11 +1,11 @@
 import { posix } from 'node:path';
-import type { ToolFileSystem } from './detectTools';
+import type { AppFileSystem } from './appFileSystem';
 
 /**
  * The program to run for what the user picked: itself, or for a macOS app bundle its `CFBundleExecutable` (from an
  * XML Info.plist), else the one program in `Contents/MacOS` named like the bundle, else the first one there.
  */
-export function appExecutable(picked: string, fs: ToolFileSystem & { read(path: string): string | null }): string {
+export function appExecutable(picked: string, fs: AppFileSystem): string {
   if (!/\.app\/?$/.test(picked)) return picked;
   const bundle = picked.replace(/\/$/, '');
   const programs = posix.join(bundle, 'Contents', 'MacOS');
