@@ -22,8 +22,8 @@ describe("Pierre's pierre-diffs skill", () => {
     const installed = installedPierreVersion();
     expect(
       skillPierreVersion(),
-      `@pierre/diffs is ${installed}: reinstall the skill for it (npx skills add pierrecomputer/pierre --skill diffs, or copy ` +
-        `skills/diffs from the diffs-v${installed} tag of pierrecomputer/pierre into .claude/skills/pierre-diffs, with `name: pierre-diffs` in its SKILL.md), then set ` +
+      `@pierre/diffs is ${installed}: reinstall the skill for it (copy ` +
+        `skills/diffs from the diffs-v${installed} tag of pierrecomputer/pierre into .claude/skills/pierre-diffs, with name: pierre-diffs in its SKILL.md), then set ` +
         `"version", "source" and "commit" in .claude/skills/pierre-diffs/pierre-version.json and re-apply its "localChanges"`,
     ).toBe(installed);
   });
