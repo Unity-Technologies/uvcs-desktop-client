@@ -1,0 +1,17 @@
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--bg-active);
+  color: var(--text-secondary);
+}
+
+.icon[data-role='owner'] {
+  color: var(--status-changed);
+}
+
+.icon[data-role='everyone'] {
+  color: var(--accent-text);
+}
