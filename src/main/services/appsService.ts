@@ -1,42 +1,17 @@
 import { normalize } from 'node:path';
-import { dialog, nativeImage } from 'electron';
+import { dialog } from 'electron';
 import type { AppsApi } from '@shared/api/apps';
-import type { ExternalApp, ExternalApps } from '@shared/domain/externalApps';
+import type { ExternalApps } from '@shared/domain/externalApps';
 import type { AppsContext } from './ServiceContext';
 
-/** Drawn at 14-18 px; twice that for high-density screens. */
-const ICON_SIZE = { width: 36, height: 36 };
-
-export function createAppsService({ apps }: AppsContext, platform: NodeJS.Platform = process.platform): AppsApi {
-  const icons = new Map<string, Promise<string | undefined>>();
-
-  /**
-   * Each app's own icon, read once per location: the OS's thumbnail of an app bundle or a program is its icon
-   * (`app.getFileIcon` draws the icon of its file type instead: every macOS app the same). Linux makes no thumbnails, and
-   * a desktop entry has no icon of its own but a file's, so its apps show none.
-   */
-  function iconOf(location: string): Promise<string | undefined> {
-    if (platform === 'linux') return Promise.resolve(undefined);
-    let icon = icons.get(location);
-    if (!icon) {
-      icon = nativeImage.createThumbnailFromPath(location, ICON_SIZE).then(
-        (image) => (image.isEmpty() ? undefined : image.toDataURL()),
-        () => undefined,
-      );
-      icons.set(location, icon);
-    }
-    return icon;
-  }
-
-  const withIcon = async (external: ExternalApp): Promise<ExternalApp> => {
-    const icon = await iconOf(external.location);
-    return icon ? { ...external, icon } : external;
-  };
-
+export function createAppsService({ apps, icons }: Pick<AppsContext, 'apps' | 'icons'>, platform: NodeJS.Platform = process.platform): AppsApi {
   return {
     list: async (): Promise<ExternalApps> => {
       const list = await apps.list();
-      const [editors, terminals] = await Promise.all([Promise.all(list.editors.map(withIcon)), Promise.all(list.terminals.map(withIcon))]);
+      const [editors, terminals] = await Promise.all([
+        Promise.all(list.editors.map((app) => icons.withIcon(app, app.location))),
+        Promise.all(list.terminals.map((app) => icons.withIcon(app, app.location))),
+      ]);
       return { ...list, editors, terminals };
     },
     // In the OS's own separators, as every app expects them.

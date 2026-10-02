@@ -4,6 +4,7 @@ import type { OperationTracker } from '../operations/OperationTracker';
 import type { DiffReviewStore } from '../review/DiffReviewStore';
 import type { ReviewStore } from '../review/ReviewStore';
 import type { SettingsStore } from '../settings/SettingsStore';
+import type { AppIcons } from '../system/apps/AppIcons';
 import type { ExternalAppsCatalog } from '../system/apps/ExternalAppsCatalog';
 import type { InstalledAppsCache } from '../system/apps/installedApps';
 import type { AppUpdates } from '../update/AppUpdates';
@@ -41,10 +42,11 @@ export interface SwitchContext {
 }
 
 /**
- * The OS's records of installed apps, read once for the merge tools and the apps files open in, and those apps, shared
- * by the services that open files in them.
+ * The OS's records of installed apps, read once for the merge tools and the apps files open in, those apps, and their
+ * icons, shared by the services that offer apps.
  */
 export interface AppsContext {
   installedApps: InstalledAppsCache;
   apps: ExternalAppsCatalog;
+  icons: AppIcons;
 }

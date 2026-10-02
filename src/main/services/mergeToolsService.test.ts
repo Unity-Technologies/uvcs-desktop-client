@@ -7,6 +7,7 @@ import type { MergeToolRequest } from '@shared/domain/mergeTools';
 import { cmFails, fakeCmClient, optionValue, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { launchMergeTool } from '../merge/mergeTools/launch';
 import { memorySettings } from '../settings/testing/memorySettings';
+import { AppIcons } from '../system/apps/AppIcons';
 import { NO_INSTALLED_APPS } from '../system/apps/installedApps';
 import { createMergeToolsService } from './mergeToolsService';
 import { serviceContext } from './testing/serviceContext';
@@ -38,7 +39,7 @@ const CAT_VERSIONS: CmAnswer = async ({ args }) => {
 function mergeTools(answers: Record<string, CmAnswer>) {
   const fake = fakeCmClient(answers);
   const settings = memorySettings({ mergeTool: MY_TOOL.id, customMergeTools: [MY_TOOL], mergeToolArgs: {} });
-  return { ...fake, service: createMergeToolsService(serviceContext(fake.cm, { settings }), { installedApps: { get: async () => NO_INSTALLED_APPS } as never }) };
+  return { ...fake, service: createMergeToolsService(serviceContext(fake.cm, { settings }), { installedApps: { get: async () => NO_INSTALLED_APPS } as never, icons: new AppIcons('linux', async () => undefined) }) };
 }
 
 /** The tool as launched: its arguments and what each file held when it opened. */

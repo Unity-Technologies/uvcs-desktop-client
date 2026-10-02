@@ -26,7 +26,7 @@ interface OpenTool {
   bundle: string | null;
 }
 
-export function createMergeToolsService({ cm, settings }: ServiceContext, { installedApps }: Pick<AppsContext, 'installedApps'>): MergeToolsApi {
+export function createMergeToolsService({ cm, settings }: ServiceContext, { installedApps, icons }: Pick<AppsContext, 'installedApps' | 'icons'>): MergeToolsApi {
   const open = new Map<string, OpenTool>();
 
   async function list() {
@@ -83,7 +83,10 @@ export function createMergeToolsService({ cm, settings }: ServiceContext, { inst
   }
 
   return {
-    list,
+    list: async () => {
+      const found = await list();
+      return { ...found, tools: await Promise.all(found.tools.map((tool) => icons.withIcon(tool, tool.executable))) };
+    },
     resolve,
     stopWaiting: async (sessionId) => open.get(sessionId)?.stop.abort(),
     bringToFront: async (sessionId) => {

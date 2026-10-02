@@ -3,9 +3,11 @@ import type { KeptAsideFile } from '@shared/domain/switchWithChanges';
 import { BranchNamesCache } from '../cm/BranchNamesCache';
 import { readBranchNames } from '../cm/branchNames';
 import { homedir } from 'node:os';
+import { nativeImage } from 'electron';
 import { sendEventToCaller } from '../ipc/sendEvent';
 import { allBundleIds } from '../system/apps/appIdentities';
 import { diskFileSystem } from '../system/apps/appFileSystem';
+import { AppIcons } from '../system/apps/AppIcons';
 import { ExternalAppsCatalog } from '../system/apps/ExternalAppsCatalog';
 import { InstalledAppsCache } from '../system/apps/installedApps';
 import { launchApp } from '../system/apps/launchApp';
@@ -82,5 +84,13 @@ export function createServices(context: ServiceContext): UvcsApi {
 function appsContext({ cm, settings }: ServiceContext): AppsContext {
   const installedApps = new InstalledAppsCache(() => readInstalledApps(process.platform, process.env, homedir(), allBundleIds()));
   const where = () => ({ platform: process.platform, env: process.env, home: homedir(), cmPath: cm.executable });
-  return { installedApps, apps: new ExternalAppsCatalog({ installedApps, settings, where, fs: diskFileSystem, launch: launchApp }) };
+  return { installedApps, apps: new ExternalAppsCatalog({ installedApps, settings, where, fs: diskFileSystem, launch: launchApp }), icons: new AppIcons(process.platform, readThumbnail) };
+}
+
+/** Drawn at 14-18 px; twice that for high-density screens. */
+const ICON_SIZE = { width: 36, height: 36 };
+
+async function readThumbnail(path: string): Promise<string | undefined> {
+  const image = await nativeImage.createThumbnailFromPath(path, ICON_SIZE);
+  return image.isEmpty() ? undefined : image.toDataURL();
 }
