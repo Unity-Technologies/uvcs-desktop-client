@@ -71,29 +71,32 @@ export const PermissionGrid = forwardRef<HTMLDivElement, PermissionGridProps>(fu
       onKeyDown={onKeyDown}
       onFocus={() => !active && rows[0] && onActivate(rows[0])}
     >
-      {groups.map((group) => (
-        <div key={group.id} role="rowgroup" aria-label={group.label} className={styles.group}>
-          <div className={styles.groupTitle} aria-hidden>
-            {group.label}
+      {/* One set of columns for every row (subgrid): the result column as wide as the widest result shown, aligned. */}
+      <div className={styles.columns} data-overrides={hasAbove}>
+        {groups.map((group) => (
+          <div key={group.id} role="rowgroup" aria-label={group.label} className={styles.group}>
+            <div className={styles.groupTitle} aria-hidden>
+              {group.label}
+            </div>
+            {group.permissions.map((permission) => (
+              <PermissionRow
+                key={permission}
+                id={rowId(permission)}
+                permission={permission}
+                resolution={resolutions.get(permission)!}
+                active={permission === active}
+                savedChoice={savedChoices.get(permission)}
+                hasAbove={hasAbove}
+                menuOpen={menuFor === permission}
+                onMenuOpenChange={onMenuOpenChange}
+                onActivate={onActivate}
+                onSet={onSet}
+                onOverride={onOverride}
+              />
+            ))}
           </div>
-          {group.permissions.map((permission) => (
-            <PermissionRow
-              key={permission}
-              id={rowId(permission)}
-              permission={permission}
-              resolution={resolutions.get(permission)!}
-              active={permission === active}
-              savedChoice={savedChoices.get(permission)}
-              hasAbove={hasAbove}
-              menuOpen={menuFor === permission}
-              onMenuOpenChange={onMenuOpenChange}
-              onActivate={onActivate}
-              onSet={onSet}
-              onOverride={onOverride}
-            />
-          ))}
-        </div>
-      ))}
+        ))}
+      </div>
     </div>
   );
 });

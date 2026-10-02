@@ -87,8 +87,8 @@ export const PermissionRow = memo(function PermissionRow(props: PermissionRowPro
           <span className={styles.effectiveLabel}>{effectiveLabel(resolution)}</span>
           {resolution.source && <span className={styles.source}>{sourceLabel(resolution.source)}</span>}
         </span>
-        <span role="gridcell" className={styles.more}>
-          {hasAbove && (
+        {hasAbove && (
+          <span role="gridcell" className={styles.more}>
             <ActionDropdownMenu
               entries={overrideMenuEntries(resolution, (kind, on) => onOverride(permission, kind, on))}
               open={menuOpen}
@@ -96,8 +96,8 @@ export const PermissionRow = memo(function PermissionRow(props: PermissionRowPro
             >
               <IconButton size="small" tabIndex={-1} icon={<MoreHorizontal size={14} />} label="Overrides" shortcut={hotkey('permissionMenu')} />
             </ActionDropdownMenu>
-          )}
-        </span>
+          </span>
+        )}
       </div>
     </div>
   );

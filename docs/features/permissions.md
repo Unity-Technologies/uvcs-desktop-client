@@ -78,7 +78,10 @@ Specs: `permissionSpec` (`repserver:local`, `rep:game@local`, `br:/main@game@loc
   branches is new (`ownListNotice`).
 - **Inherit, allow or deny**, one choice per permission instead of the official client's two checkboxes and two
   override toggles: the row shows the choice, the **result** ("Allowed", "Denied", "Not allowed") and **where it comes
-  from** ("here", "the server", "repository game"; `sourceLabel`). A row never changes height, so a click lands where
+  from** ("here", "the server", "repository game"; `sourceLabel`). Every row shares one set of columns (a CSS subgrid
+  in `PermissionGrid`): the result column is as wide as the widest result the member shows, up to a limit, so it
+  stays aligned without the empty space a fixed width left, and the ⋯ column exists only when there are lists above.
+  A row never changes height, so a click lands where
   it was aimed (rows that opened their details inline moved the rows below between a press and its release, and a
   click on Inherit, Allow or Deny landed on another row; a details panel under the grid was tried and dropped as
   heavier than the help it gave). The row hovered or active shows two marks: an **ⓘ** whose tooltip is the help
