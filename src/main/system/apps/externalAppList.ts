@@ -1,4 +1,4 @@
-import { AUTO_APP, type CustomEditor, type ExternalApp, type ExternalApps } from '@shared/domain/externalApps';
+import { AUTO_APP, SYSTEM_APP, type CustomEditor, type ExternalApp, type ExternalApps } from '@shared/domain/externalApps';
 import type { AppFileSystem } from './appFileSystem';
 import { findEditor, KNOWN_EDITORS, type KnownEditor } from './editors';
 import type { InstalledApps } from './installedApps';
@@ -11,7 +11,7 @@ export interface ExternalAppSources {
   installed: InstalledApps;
   fs: AppFileSystem;
   custom: CustomEditor[];
-  /** `auto` or an editor id. */
+  /** `auto`, `system` or an editor id. */
   editorPreference: string;
   /** `auto` or a terminal id. */
   terminalPreference: string;
@@ -52,7 +52,7 @@ export function externalAppList(sources: ExternalAppSources): ExternalAppList {
     apps: {
       editors,
       terminals,
-      editorId: chosen(sources.editorPreference, editors.map((editor) => editor.id)) ?? known[0]?.id ?? custom[0]?.id ?? null,
+      editorId: sources.editorPreference === SYSTEM_APP ? null : (chosen(sources.editorPreference, editors.map((editor) => editor.id)) ?? known[0]?.id ?? custom[0]?.id ?? null),
       terminalId: chosen(sources.terminalPreference, terminalIds) ?? automaticTerminal(terminalIds, where.platform, where.env),
     },
     launchers,

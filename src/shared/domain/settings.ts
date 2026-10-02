@@ -53,7 +53,7 @@ export interface AppSettings {
    * off, the next file opens at once.
    */
   askWhenMergeToolClosesUnsaved: boolean;
-  /** The app "Open in…" opens files and folders in: `auto` (the first editor found) or an app id. */
+  /** The app files and folders open in: `auto` (the first editor found), `system` (each file's default app) or an app id. */
   editor: string;
   /** The terminal "Open in…" opens folders in: `auto` (the platform's usual one) or a terminal id. */
   terminal: string;

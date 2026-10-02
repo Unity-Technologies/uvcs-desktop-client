@@ -19,7 +19,7 @@ export interface ExternalApp {
 export interface ExternalApps {
   editors: ExternalApp[];
   terminals: ExternalApp[];
-  /** Null when no editor is found. */
+  /** Null when no editor is found, or the user opens each file with its default app (`SYSTEM_APP`). */
   editorId: string | null;
   /** Null when no terminal is found. */
   terminalId: string | null;
@@ -35,3 +35,6 @@ export interface CustomEditor {
 
 /** `auto`: the first editor found (in `KNOWN_EDITORS`' order); for terminals, the platform's usual one (`automaticTerminal`). */
 export const AUTO_APP = 'auto';
+
+/** The editor choice that opens each file with its default app, as the OS would: no editor (`editorId` null). */
+export const SYSTEM_APP = 'system';

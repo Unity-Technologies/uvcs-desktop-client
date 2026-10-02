@@ -40,6 +40,11 @@ describe('externalAppList', () => {
     expect(externalAppList(sources({ editorPreference: 'zed', terminalPreference: 'ghostty' })).apps).toMatchObject({ editorId: 'vscode', terminalId: 'terminal' });
   });
 
+  it('uses no editor when the user opens each file with its default app', () => {
+    expect(externalAppList(sources({ editorPreference: 'system' })).apps).toMatchObject({ editorId: null, terminalId: 'terminal' });
+    expect(externalAppList(sources({ editorPreference: 'system' })).apps.editors.map(({ id }) => id)).toEqual(['vscode', 'rider']);
+  });
+
   it('has no editor to use when none is found but the user added one, then that one', () => {
     expect(externalAppList(sources({ installed: NO_INSTALLED_APPS })).apps.editorId).toBeNull();
     expect(externalAppList(sources({ installed: NO_INSTALLED_APPS, custom: [{ id: 'custom:1', name: 'Mine', executable: '/opt/edit' }] })).apps.editorId).toBe('custom:1');
