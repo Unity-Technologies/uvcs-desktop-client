@@ -137,3 +137,50 @@ describe('OperationTracker', () => {
     expect(writes).toHaveLength(1);
   });
 });
+
+describe('operations that change a workspace', () => {
+  it('are running from their start until they settle, failed ones too', async () => {
+    const { operations } = tracker();
+    expect(operations.writesRunning()).toBe(false);
+
+    const update = started((work) => operations.run('update', work));
+    const checkin = started((work) => operations.run('checkin', work));
+    expect(operations.writesRunning()).toBe(true);
+
+    update.finish('done');
+    await update.result;
+    expect(operations.writesRunning()).toBe(true);
+    checkin.fail(new Error('the server went away'));
+    await checkin.result.catch(() => {});
+    expect(operations.writesRunning()).toBe(false);
+  });
+
+  it('never count a slow read, which quitting can stop at no cost', () => {
+    const { operations } = tracker();
+    started((work) => operations.read('find', work));
+
+    expect(operations.writesRunning()).toBe(false);
+  });
+
+  it('are waited for until none runs, including one started while waiting', async () => {
+    const { operations } = tracker();
+    const update = started((work) => operations.run('update', work));
+    let settled = false;
+    const finished = operations.writesFinished().then(() => void (settled = true));
+
+    const merge = started((work) => operations.run('merge', work));
+    update.finish('done');
+    await update.result;
+    await Promise.resolve();
+    expect(settled).toBe(false);
+
+    merge.fail(new Error('conflicts'));
+    await merge.result.catch(() => {});
+    await finished;
+    expect(settled).toBe(true);
+  });
+
+  it('are waited for at once when none runs', async () => {
+    await expect(tracker().operations.writesFinished()).resolves.toBeUndefined();
+  });
+});
