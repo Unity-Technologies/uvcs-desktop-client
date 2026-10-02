@@ -19,6 +19,7 @@ import { isTypingIn } from './pierreDom';
 import { installPierreLineComparison } from './pierreLineComparison';
 import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
 import { installPierrePlainTextRender } from './pierrePlainTextRender';
+import { installPierrePlainTextWordDiffs } from './pierrePlainTextWordDiffs';
 import { caretLineCss, shownDiff, type DiffSides } from './shownDiff';
 import { highlightedLanguage, syntaxHighlighting } from './syntaxHighlighting';
 import { useBlockDiscard } from './useBlockDiscard';
@@ -28,6 +29,7 @@ import { usePierreEditor } from './usePierreEditor';
 import { POINTER_FOCUS_ATTRIBUTE, usePointerFocusMark } from './usePointerFocusMark';
 import { useShadowStyle } from './useShadowStyle';
 import { useSyntaxHighlighter } from './useSyntaxHighlighter';
+import { useWordMarksRefresh } from './useWordMarksRefresh';
 import styles from './TextDiff.module.css';
 
 const BOTH_SIDES: DiffSides = { original: true, modified: true };
@@ -36,6 +38,8 @@ const BOTH_SIDES: DiffSides = { original: true, modified: true };
 installPierreLineComparison();
 // A diff shown as plain text renders once, not again for every few rows scrolled into view.
 installPierrePlainTextRender();
+// A diff shown as plain text marks the words that changed, however long the file.
+installPierrePlainTextWordDiffs();
 
 /**
  * The texts are the files' own, their lines broken by LF, CRLF or lone CRs. Pierre is given them as shown, lone CRs as
@@ -105,7 +109,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     },
     [virtualizer],
   );
-  const { editor, createEditor } = usePierreEditor(editorRef, container);
+  const { editor, fileDiff: shownFileDiff, createEditor } = usePierreEditor(editorRef, container);
   const latest = useRef({ current: diffedText, diff });
   latest.current = { current: diffedText, diff };
   // Stable inputs: new objects would make Pierre load the files again. While the text is typed into, Pierre works out
@@ -122,6 +126,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     [fileName, lang, original, modified, comparisonMethod, wholeFile, sides.original, sides.modified, editable],
   );
   const parseDiffOptions = diff.options;
+  // Pierre marks no words in the lines typed into, nor drops the original's old marks, until the file is saved.
+  useWordMarksRefresh({ fileDiff: shownFileDiff, containerRef: container, current, shown: fileDiff });
   const discard = useBlockDiscard({
     enabled: Boolean(onDiscard),
     diff: diff.meta,
