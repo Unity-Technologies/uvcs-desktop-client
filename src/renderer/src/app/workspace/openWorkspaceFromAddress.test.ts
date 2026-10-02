@@ -13,10 +13,11 @@ afterEach(() => {
   queryClient.clear();
 });
 
-/** A page loaded from `index.html` with the query the main process gave it. */
+/** A page loaded from `index.html` with the query the main process gave it; replacing its address drops the query, as a browser does. */
 function pageWith(query: Record<string, string>) {
-  const search = Object.keys(query).length > 0 ? `?${new URLSearchParams(query)}` : '';
-  return { location: { search, pathname: '/app/out/renderer/index.html' }, history: { replaceState: vi.fn() } };
+  const location = { search: Object.keys(query).length > 0 ? `?${new URLSearchParams(query)}` : '', pathname: '/app/out/renderer/index.html' };
+  const replaceState = vi.fn((_state: unknown, _unused: string, url: string) => void Object.assign(location, { search: '', pathname: url }));
+  return { location, history: { replaceState } };
 }
 
 describe('openWorkspaceFromAddress', () => {

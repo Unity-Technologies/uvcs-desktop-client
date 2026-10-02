@@ -56,8 +56,9 @@ describe('a window reopened on a view after an update', () => {
     fakeApi.answer('windows.focusWorkspace', () => false);
     fakeApi.answer('settings.rememberRecentWorkspace', () => undefined);
     fakeApi.answer('system.addRecentDocument', () => undefined);
-    const search = `?${new URLSearchParams(startingWorkspaceQuery('/ws', 'branchExplorer'))}`;
-    openWorkspaceFromAddress({ location: { search, pathname: '/index.html' }, history: { replaceState: () => {} } });
+    const location = { search: `?${new URLSearchParams(startingWorkspaceQuery('/ws', 'branchExplorer'))}`, pathname: '/index.html' };
+    // Replacing the address drops its query, as a browser does.
+    openWorkspaceFromAddress({ location, history: { replaceState: () => void (location.search = '') } });
 
     await openUnlessShownElsewhere('/ws', useSession.getState().openWorkspace);
 
