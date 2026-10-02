@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { highlightedLanguage, MAX_BACKGROUND_HIGHLIGHTED_CHARS, MAX_HIGHLIGHTED_CHARS, MAX_READ_ONLY_HIGHLIGHTED_CHARS, syntaxHighlighting } from './syntaxHighlighting';
+import { highlightedLanguage, MAX_BACKGROUND_HIGHLIGHTED_CHARS, MAX_HIGHLIGHTED_CHARS, MAX_READ_ONLY_HIGHLIGHTED_CHARS, plainTextThresholdLabel, syntaxHighlighting } from './syntaxHighlighting';
 
 describe('syntaxHighlighting', () => {
   it('highlights a small editable diff before showing it, and a bigger one in the background, counting both versions', () => {
@@ -21,6 +21,13 @@ describe('syntaxHighlighting', () => {
 
   it('shows huge files as plain text', () => {
     expect(syntaxHighlighting('', 'x'.repeat(MAX_BACKGROUND_HIGHLIGHTED_CHARS + 1), false)).toBe('off');
+  });
+});
+
+describe('plainTextThresholdLabel', () => {
+  it('names the size past which a diff is plain text, by whether it is editable', () => {
+    expect(plainTextThresholdLabel(true)).toBe('400 KB');
+    expect(plainTextThresholdLabel(false)).toBe('4 MB');
   });
 });
 

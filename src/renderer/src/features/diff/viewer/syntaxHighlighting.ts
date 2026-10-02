@@ -37,7 +37,17 @@ export const MAX_BACKGROUND_HIGHLIGHTED_CHARS = 4_000_000;
 export function syntaxHighlighting(original: string, modified: string, editable: boolean): SyntaxHighlighting {
   const size = original.length + modified.length;
   if (size <= MAX_READ_ONLY_HIGHLIGHTED_CHARS) return 'inline';
-  return size <= (editable ? MAX_HIGHLIGHTED_CHARS : MAX_BACKGROUND_HIGHLIGHTED_CHARS) ? 'background' : 'off';
+  return size <= maxHighlightedChars(editable) ? 'background' : 'off';
+}
+
+function maxHighlightedChars(editable: boolean): number {
+  return editable ? MAX_HIGHLIGHTED_CHARS : MAX_BACKGROUND_HIGHLIGHTED_CHARS;
+}
+
+/** The size past which a diff shows as plain text, for the "Large file" tooltip: "400 KB" (editable) or "4 MB" (read-only), as KB or MB of characters. */
+export function plainTextThresholdLabel(editable: boolean): string {
+  const kilobytes = maxHighlightedChars(editable) / 1000;
+  return kilobytes >= 1000 ? `${kilobytes / 1000} MB` : `${kilobytes} KB`;
 }
 
 /**
