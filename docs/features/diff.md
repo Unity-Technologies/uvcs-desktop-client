@@ -37,11 +37,12 @@ only for pairs of changed lines, whatever the file's length, so the bound is tho
 once typing pauses, not at every keystroke (`diffsEveryKeystroke`): the +N −M and the lines discards act on follow
 then, as Pierre's recoloring does; nothing is discarded until they do.
 While typing, Pierre rebuilds only the rows typed into, from the editor's tokens, without word marks, and keeps the
-original's rows with the marks they had; so once typing pauses (`TYPING_PAUSE_MS`), the rows Pierre keeps are
-marked anew on both sides (`useWordMarksRefresh`, `pierreWordMarks`): each pair of changed lines gets the marks Pierre would give it (`lineWordMarks`), every other row loses its own, only the
-rows whose marks differ are rebuilt from their colored tokens (`markedRow`), and the diff is drawn again from them.
-Nothing is highlighted again, so a file of any size gets its marks, up to `MAX_WORD_DIFFED_LINE_PAIRS` changed pairs
-(past it they come with the save). Drawing again costs what Pierre's own redraw after Enter costs, for the rows
+original's rows with the marks they had; so once typing pauses (`TYPING_PAUSE_MS`; never while an input method
+composes text, which a redraw would end), the rows Pierre keeps are marked anew on both sides
+(`useWordMarksRefresh`, `pierreWordMarks`): each pair of changed lines gets the marks Pierre would give it
+(`lineWordMarks`), every other row loses its own, only the rows whose marks differ are rebuilt from their colored
+tokens (`markedRow`), and the diff is drawn again from them. Nothing is highlighted again, so a file of any size
+gets its marks, up to `MAX_WORD_DIFFED_LINE_PAIRS` changed pairs (past it they come with the save). Drawing again costs what Pierre's own redraw after Enter costs, for the rows
 rendered: under a frame with unchanged lines collapsed or a diff shown only where it's in view, about 0.45 s for a
 190 KB file with all its lines shown (Pierre's own redraw after Enter took 1.4 s there). The redraw hands the editor
 its rows back, so the caret, selection and undo stay. Re-highlighting the whole diff instead (what saving does) was

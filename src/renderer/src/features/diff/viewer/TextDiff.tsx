@@ -127,7 +127,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   );
   const parseDiffOptions = diff.options;
   // Pierre marks no words in the lines typed into, nor drops the original's old marks, until the file is saved.
-  useWordMarksRefresh({ fileDiff: shownFileDiff, current, shown: fileDiff });
+  useWordMarksRefresh({ fileDiff: shownFileDiff, containerRef: container, current, shown: fileDiff });
   const discard = useBlockDiscard({
     enabled: Boolean(onDiscard),
     diff: diff.meta,
