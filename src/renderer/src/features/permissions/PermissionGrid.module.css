@@ -38,8 +38,17 @@
   background: var(--bg-selected);
 }
 
-/* An edit not saved yet: a bar at the row's start, as the changes it makes are listed below. */
-.row[data-changed='true']::before {
+/* An edit not saved yet: a bar at the row's start, as the changes it makes are listed below. The mark is wider than
+   its bar so its tooltip is easy to reach. */
+.changedMark {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 10px;
+}
+
+.changedMark::before {
   content: '';
   position: absolute;
   top: 6px;

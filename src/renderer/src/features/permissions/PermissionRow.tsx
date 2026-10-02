@@ -39,9 +39,9 @@ export const PermissionRow = memo(function PermissionRow({ id, permission, resol
       aria-label={`${info.label}: ${STATE_LABELS[resolution.own].toLowerCase()}, ${effectiveSentence(resolution).toLowerCase()}`}
       className={styles.row}
       data-active={active}
-      data-changed={changed}
       onMouseDown={() => onActivate(permission)}
     >
+      {changed && <span className={styles.changedMark} data-tip="Not saved yet" />}
       <div className={styles.line}>
         <span role="gridcell" className={styles.name} data-tip={info.description}>
           <span className={styles.label}>
