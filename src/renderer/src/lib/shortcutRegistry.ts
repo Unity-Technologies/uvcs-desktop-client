@@ -99,7 +99,7 @@ export const SHORTCUTS = {
   graphLeaveFind: { area: 'Branch Explorer', label: 'Back to the graph from an empty search', keys: ['escape'] },
   graphWalk: { area: 'Branch Explorer', label: 'Walk the changesets', keys: ['left', 'right', 'up', 'down'] },
   graphBranchFirst: { area: 'Branch Explorer', label: 'First changeset of the branch', keys: ['home'] },
-  graphBranchLast: { area: 'Branch Explorer', label: 'Last changeset of the branch', keys: ['end'] },
+  graphBranchLast: { area: 'Branch Explorer', label: 'Last changeset of the branch, or its pending changes', keys: ['end'] },
   graphOldest: { area: 'Branch Explorer', label: 'Oldest changeset', keys: ['mod+left', 'shift+home'] },
   graphNewest: { area: 'Branch Explorer', label: 'Newest changeset', keys: ['mod+right', 'shift+end'] },
   graphPageBack: { area: 'Branch Explorer', label: 'A screen back in time', keys: ['pageup'] },

@@ -43,7 +43,7 @@ Cherrypick from 3 to 7`, read by `mergeLinksOf`), so nothing is asked of the ser
 the history is laid out again only when the pending changeset appears, goes or changes what it draws, never re-read.
 Hovering tells what it holds; it is selected like a changeset (its details: the changes, what they are on, the
 merges in progress, Open Changes, also Enter and a double-click), and the arrow keys stop at it as the next changeset
-of its branch. "Go home" and the first view go where the home badge is (`homeTarget`): the pending changes, else the
+of its branch, End as its last (`movedSelection`). "Go home" and the first view go where the home badge is (`homeTarget`): the pending changes, else the
 band of a branch without changesets the workspace is on, else the loaded changeset.
 
 ## Branch switcher
