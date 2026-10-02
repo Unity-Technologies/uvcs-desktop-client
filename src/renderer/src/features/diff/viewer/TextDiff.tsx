@@ -101,7 +101,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const theme = useResolvedTheme();
   const { layout, collapseUnchanged, wrapLines } = useDiffPreferences();
   const container = useRef<HTMLDivElement | null>(null);
-  // The whole file (and a big read-only diff) renders only the lines in view: files can be huge.
+  // Every diff (and the whole file) renders only the lines in view: files can be huge, and what's drawn again (a typing
+  // pause's word marks, a line added, a theme switch) costs only those lines.
   const [virtualizer] = useState(() => new Virtualizer());
   const setContainer = useCallback(
     (element: HTMLDivElement | null) => {
@@ -157,7 +158,6 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   });
   const tokenizeMaxLength = highlighting === 'off' ? 0 : undefined;
   const workers = useHighlightWorkers(highlighting === 'background');
-  const virtualized = highlighting !== 'inline';
   // An editable diff renders its tokens as the editor does (`useTokenTransformer`, which Pierre turns on once the editor
   // attaches) from the first render: otherwise the file is highlighted twice as it opens, before and after.
   const options = useMemo(
@@ -168,7 +168,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);
   useShadowStyle(container, [SHADOW_CSS, showsNoNewlineMarker(original, diffedText) ? '' : HIDE_NO_NEWLINE_CSS, editable ? caretLineCss(shownText(diffedText)) : ''].join('\n'));
   const pointerFocus = usePointerFocusMark();
-  useChangeView({ changeViewRef, containerRef: container, virtualizer: virtualized ? virtualizer : undefined, editor, pickChange: discard.pickChange });
+  useChangeView({ changeViewRef, containerRef: container, virtualizer, editor, pickChange: discard.pickChange });
   const isTyping = (): boolean => isTypingIn(container.current);
 
   const onKeyDownCapture = (event: KeyboardEvent): void => {
@@ -223,12 +223,12 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
               <File file={newFile} options={fileOptions} edit onEditChange={(event) => onEdit?.(event.file.contents)} disableWorkerPool style={{ minHeight: '100%' }} />
             </VirtualizerContext.Provider>
           ) : (
-            <VirtualizerContext.Provider value={virtualized ? virtualizer : undefined}>
+            <VirtualizerContext.Provider value={virtualizer}>
               <WorkerPoolContext.Provider value={workers}>
                 <FileDiff
                   // Pierre computes the diff once per pair of files, whatever the options say later, and takes the
                   // workers and virtualizer when it's created; typing doesn't start it anew.
-                  key={`${comparisonMethod}:${editable ? 'editable' : 'read-only'}:${highlighting}:${virtualized}`}
+                  key={`${comparisonMethod}:${editable ? 'editable' : 'read-only'}:${highlighting}`}
                   fileDiff={fileDiff}
                   options={options}
                   selectedLines={discard.selectedLines}

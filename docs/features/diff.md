@@ -18,8 +18,10 @@ caret in the text and Esc leaves it for the file list; keys the editor handles n
 edit look the same: the editor is on as soon as the diff has its colors, so nothing in the diff moves when typing
 starts. Each pane of code
 scrolls sideways on its own and its bar would sit at the end of the file, so `PaneScrollbars` keeps one per pane at
-the bottom of the view (diffs, the whole-file editor, merge resolution). The whole-file editor renders only the lines
-in view (Pierre's `Virtualizer` on the diff's scrolling element). A file's language comes from its path
+the bottom of the view (diffs, the whole-file editor, merge resolution). Every text diff, and the whole-file editor, renders only the
+lines in view (Pierre's `Virtualizer` on the diff's scrolling element): what's drawn again (a line added, a typing
+pause's word marks, a theme switch) costs those lines, not the file's. With every line of a 190 KB file shown, the
+typing pause's redraw took 0.45 s before; it's now under a frame. A file's language comes from its path
 (`lib/syntaxLanguage`, for diffs, annotations and merges alike): its whole name first (Dockerfile, Cargo.lock,
 .gitignore), then its longest extension (.gradle.kts before .kts), from tables of the grammars Pierre bundles (.NET
 projects are XML, Unity's assets YAML, its shaders HLSL), then Pierre's own guess; a test checks every one is in
@@ -49,11 +51,10 @@ composes text, which a redraw would end), the rows Pierre keeps are marked anew 
 (`useWordMarksRefresh`, `pierreWordMarks`): each pair of changed lines gets the marks Pierre would give it
 (`lineWordMarks`), every other row loses its own, only the rows whose marks differ are rebuilt from their colored
 tokens (`markedRow`), and the diff is drawn again from them. Nothing is highlighted again, so a file of any size
-gets its marks, up to `MAX_WORD_DIFFED_LINE_PAIRS` changed pairs (past it they come with the save). Drawing again costs what Pierre's own redraw after Enter costs, for the rows
-rendered: under a frame with unchanged lines collapsed or a diff shown only where it's in view, about 0.45 s for a
-190 KB file with all its lines shown (Pierre's own redraw after Enter took 1.4 s there). The redraw hands the editor
-its rows back, so the caret, selection and undo stay. Re-highlighting the whole diff instead (what saving does) was
-tried and rejected: 2 ms a KB at every pause, 0.7 s for 2 x 156 KB. Pierre has no row-level way to do it:
+gets its marks, up to `MAX_WORD_DIFFED_LINE_PAIRS` changed pairs (past it they come with the save). Drawing again
+costs what Pierre's own redraw after Enter costs, for the rows in view: under a frame. A highlighted diff whose rows
+already have the right marks isn't drawn again. The redraw hands the editor its rows back, so the caret, selection
+and undo stay. Re-highlighting the whole diff instead was tried and rejected: 2 ms a KB at every pause, 0.7 s for 2 x 156 KB. Pierre has no row-level way to do it:
 `updateRenderCache` rebuilds only the addition rows it's handed, without marks, and the refreshes after a keystroke
 (`refreshSplitDiffView`) only recolor rows.
 Every diff of two versions follows Split/Unified, one from or to an empty version (an empty base, a file emptied)
