@@ -16,6 +16,7 @@ import { createServices } from './services/createServices';
 import { openFirstWindow } from './startup/firstWindow';
 import { handleLaunchRequests, isTheRunningApp } from './startup/launchRequests';
 import { trackOperations } from './startup/operationTracking';
+import { handleQuitting, Quitting } from './startup/quitting';
 import { ignoreOwnCommandWrites } from './startup/ownWrites';
 import { openSettings, sendSettingsChanges } from './startup/settings';
 import { watchShownWorkspaces } from './startup/workspaceWatching';
@@ -61,6 +62,7 @@ function start(launched: Promise<void>): void {
   const early = new EarlyCalls(apiMethods(api));
   registerApi(api, early);
   followAppTheme(settings);
+  handleQuitting(new Quitting());
   installMenus(windows, updates);
   updates.checkPeriodically();
   const openFirst = (): void => openFirstWindow({ cm, windows, early, settings });
