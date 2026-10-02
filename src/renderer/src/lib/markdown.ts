@@ -34,6 +34,8 @@ const BULLET = /^\s*[-*+]\s+(.*)$/;
 const NUMBERED = /^\s*\d+[.)]\s+(.*)$/;
 const QUOTE = /^\s*>\s?(.*)$/;
 const FENCE = /^\s*(```|~~~)/;
+/** Code indented by four spaces or a tab, as Markdown reads it. */
+const INDENTED = /^( {4}|\t)/;
 
 export function parseMarkdown(source: string): MarkdownBlock[] {
   const lines = source.replace(/\r\n?/g, '\n').split('\n');
@@ -66,6 +68,13 @@ export function parseMarkdown(source: string): MarkdownBlock[] {
       blocks.push({ kind: 'list', ordered, items: collect(ordered ? NUMBERED : BULLET).map((item) => ({ children: parseInline(item) })) });
     } else if (QUOTE.test(line)) {
       blocks.push({ kind: 'quote', children: parseInline(collect(QUOTE).join(' ')) });
+    } else if (INDENTED.test(line)) {
+      // Commands pasted into a comment, read line by line as written. Checked after lists and quotes, which may be
+      // indented, and reached only where a block starts: an indented line under a paragraph continues it.
+      const code: string[] = [];
+      while (index < lines.length && (INDENTED.test(lines[index]!) || !lines[index]!.trim())) code.push(lines[index++]!.replace(INDENTED, ''));
+      while (!code.at(-1)!.trim()) code.pop();
+      blocks.push({ kind: 'code', text: code.join('\n') });
     } else {
       const paragraph: string[] = [];
       while (index < lines.length && lines[index]!.trim() && !startsBlock(lines[index]!)) paragraph.push(lines[index++]!.trim());
