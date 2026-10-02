@@ -1,3 +1,4 @@
+import { FileDiff } from '@pierre/diffs';
 import { Editor } from '@pierre/diffs/edit';
 import type { EditProvider } from '@pierre/diffs/react';
 import { useImperativeHandle, useRef, useState, type ComponentProps, type RefObject } from 'react';
@@ -11,6 +12,8 @@ type CreateEditor = ComponentProps<typeof EditProvider>['createEditor'];
 export interface PierreEditor {
   /** The editor holding the diff's modified text, once Pierre created it. */
   editor: RefObject<Editor | null>;
+  /** The diff the editor attached to (not the whole-file editor's file). */
+  fileDiff: RefObject<FileDiff<unknown, unknown> | null>;
   /** For `EditProvider`: creates the editors Pierre asks for, keeping the latest. */
   createEditor: CreateEditor;
 }
@@ -21,9 +24,14 @@ export interface PierreEditor {
  */
 export function usePierreEditor(editorRef: RefObject<EditorHandle | null> | undefined, containerRef: RefObject<HTMLElement | null>): PierreEditor {
   const editor = useRef<Editor | null>(null);
+  const fileDiff = useRef<FileDiff<unknown, unknown> | null>(null);
   const [createEditor] = useState(() => {
     const create: CreateEditor = (type, options, key) => {
-      const created = new Editor(type, options, key);
+      const onAttach: typeof options.onAttach = (attached, surface) => {
+        options.onAttach?.(attached, surface);
+        fileDiff.current = surface instanceof FileDiff ? surface : null;
+      };
+      const created = new Editor(type, { ...options, onAttach }, key);
       editor.current = created as unknown as Editor;
       return created;
     };
@@ -47,5 +55,5 @@ export function usePierreEditor(editorRef: RefObject<EditorHandle | null> | unde
     [containerRef],
   );
 
-  return { editor, createEditor };
+  return { editor, fileDiff, createEditor };
 }
