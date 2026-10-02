@@ -8,7 +8,7 @@ import {
   type PermissionChanges,
   type PermissionName,
 } from '@shared/domain/permissions';
-import { readOwnBits, type OwnState } from './aclResolution';
+import { ownStateOf, readOwnBits, type OwnState } from './aclResolution';
 
 /**
  * The edits made in the permissions dialog, not yet saved: what each touched member's own entry should say, the
@@ -101,10 +101,18 @@ export function sameBits(a: AclBits, b: AclBits): boolean {
   return same(a.allowed, b.allowed) && same(a.denied, b.denied) && same(a.overrideAllowed, b.overrideAllowed) && same(a.overrideDenied, b.overrideDenied);
 }
 
-/** The permissions of `names` an entry says something else about from `before` to `after`, overrides included. */
-export function changedPermissions(before: AclBits, after: AclBits, names: readonly PermissionName[]): Set<PermissionName> {
-  const says = (bits: AclBits, name: PermissionName) => (['allowed', 'denied', 'overrideAllowed', 'overrideDenied'] as const).map((set) => bits[set].includes(name)).join();
-  return new Set(names.filter((name) => says(before, name) !== says(after, name)));
+/**
+ * The saved choice (inherit, allow, deny) of each permission of `names` whose choice goes from `saved` to `edited`, for
+ * the grid to show beside the new one. A change of overrides alone keeps the choice, so it isn't here: the details'
+ * checkboxes and the footer's list show it.
+ */
+export function savedChoices(saved: AclBits, edited: AclBits, names: readonly PermissionName[]): Map<PermissionName, OwnState> {
+  const choices = new Map<PermissionName, OwnState>();
+  for (const name of names) {
+    const before = ownStateOf(saved, name);
+    if (before !== ownStateOf(edited, name)) choices.set(name, before);
+  }
+  return choices;
 }
 
 /** One entry the draft changes: what it says now and what it will say. */

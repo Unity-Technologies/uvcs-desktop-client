@@ -1,4 +1,4 @@
-import { forwardRef, useCallback, useId, type KeyboardEvent } from 'react';
+import { forwardRef, useCallback, useId, useState, type KeyboardEvent } from 'react';
 import type { PermissionName } from '@shared/domain/permissions';
 import type { OwnState, PermissionResolution } from './aclResolution';
 import type { PermissionGroup } from './permissionCatalog';
@@ -11,7 +11,9 @@ interface PermissionGridProps {
   /** The member's permissions under their groups, as the filter leaves them. */
   groups: PermissionGroup[];
   resolutions: ReadonlyMap<PermissionName, PermissionResolution>;
-  changed: ReadonlySet<PermissionName>;
+  /** The saved choice of each permission the draft picks another for (`savedChoices`). */
+  savedChoices: ReadonlyMap<PermissionName, OwnState>;
+  /** There are lists above to inherit from (not on the server), so the overrides apply. */
   hasAbove: boolean;
   active: PermissionName | undefined;
   onActivate: (permission: PermissionName) => void;
@@ -21,22 +23,34 @@ interface PermissionGridProps {
 
 /**
  * The permissions of the member picked, one Tab stop for all: ↑ ↓ move, ← → and A, D, I set (`gridKeyAction`), the
- * active row showing its details. Rows are buttons only for the mouse.
+ * Shift+F10 opening the active row's overrides menu. Rows are buttons only for the mouse.
  */
 export const PermissionGrid = forwardRef<HTMLDivElement, PermissionGridProps>(function PermissionGrid(
-  { groups, resolutions, changed, hasAbove, active, onActivate, onSet, onOverride },
+  { groups, resolutions, savedChoices, hasAbove, active, onActivate, onSet, onOverride },
   ref,
 ) {
   const gridId = useId();
   const rows = groups.flatMap((group) => group.permissions);
   const rowId = useCallback((permission: PermissionName) => `${gridId}-${permission}`, [gridId]);
   const activeIndex = active ? rows.indexOf(active) : -1;
+  const [menuFor, setMenuFor] = useState<PermissionName>();
+  const onMenuOpenChange = useCallback(
+    (permission: PermissionName, open: boolean) => {
+      setMenuFor(open ? permission : undefined);
+      // In a dialog a closing menu leaves focus alone (`focusAfterMenu`): the grid takes it back, its keys working on.
+      if (!open) requestAnimationFrame(() => document.getElementById(rowId(permission))?.closest<HTMLElement>('[role="grid"]')?.focus());
+    },
+    [rowId],
+  );
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    // The details' own controls (a checkbox, a button) keep their keys but for the grid's.
     const action = gridKeyAction(event, Math.max(0, activeIndex), rows.length, active && resolutions.get(active)?.own);
     if (!action) return;
     event.preventDefault();
+    if (action.kind === 'menu') {
+      if (active && hasAbove) setMenuFor(active);
+      return;
+    }
     if (action.kind === 'set') {
       if (active) onSet(active, action.state);
       return;
@@ -69,8 +83,10 @@ export const PermissionGrid = forwardRef<HTMLDivElement, PermissionGridProps>(fu
               permission={permission}
               resolution={resolutions.get(permission)!}
               active={permission === active}
-              changed={changed.has(permission)}
+              savedChoice={savedChoices.get(permission)}
               hasAbove={hasAbove}
+              menuOpen={menuFor === permission}
+              onMenuOpenChange={onMenuOpenChange}
               onActivate={onActivate}
               onSet={onSet}
               onOverride={onOverride}

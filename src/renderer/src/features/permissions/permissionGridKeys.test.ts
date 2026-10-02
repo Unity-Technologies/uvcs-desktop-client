@@ -35,4 +35,9 @@ describe('the permission grid keys', () => {
     expect(gridKeyAction(press('x'), 0, 5, 'inherit')).toBeNull();
     expect(gridKeyAction(press('ArrowDown'), 0, 0, undefined)).toBeNull();
   });
+
+  it('opens the overrides menu of the active permission with Shift+F10', () => {
+    expect(gridKeyAction(press('F10', { shiftKey: true }), 0, 5, 'allow')).toEqual({ kind: 'menu' });
+    expect(gridKeyAction(press('F10'), 0, 5, 'allow')).toBeNull();
+  });
 });

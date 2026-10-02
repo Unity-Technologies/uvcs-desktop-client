@@ -4,7 +4,6 @@ import { changeLines } from './changeWords';
 import { cannotRemoveReason, memberRows, memberStatus, roleOfMember } from './members';
 import {
   addMember,
-  changedPermissions,
   changeCount,
   changeRequest,
   draftBits,
@@ -12,6 +11,7 @@ import {
   EMPTY_DRAFT,
   needsConfirmation,
   removeMember,
+  savedChoices,
   setOverride,
   setOwner,
   setOwnState,
@@ -79,10 +79,17 @@ describe('editing permissions', () => {
     expect(memberRows(read, draft, groups).find((row) => row.label === 'Developers')).toMatchObject({ setHere: false, changed: true });
   });
 
-  it('tells which permissions an edit changes, overrides included', () => {
-    const after = bits({ denied: ['ci'], overrideAllowed: ['read'] });
+  it('keeps the saved choice of each permission an edit changes, to show beside the new one', () => {
+    const saved = bits({ allowed: ['read'], denied: ['ci'] });
+    const edited = bits({ denied: ['read', 'rm', 'ci'], overrideAllowed: ['ci'] });
 
-    expect(changedPermissions(bits({ denied: ['ci'] }), after, ['read', 'ci', 'rm'])).toEqual(new Set(['read']));
+    // `ci` changes only its overrides: its choice, Deny, is the saved one.
+    expect(savedChoices(saved, edited, ['read', 'ci', 'rm', 'add'])).toEqual(
+      new Map([
+        ['read', 'allow'],
+        ['rm', 'inherit'],
+      ]),
+    );
   });
 
   it('undoes every edit of a member', () => {
@@ -166,6 +173,14 @@ describe('members', () => {
       ['Leads', 'New: set what it may do'],
       ['ana', 'Set here'],
     ]);
+  });
+
+  it('says first that an entry is edited, keeping where it stands', () => {
+    const draft = setOwnState(read, removeMember(EMPTY_DRAFT, developers), ana, ['ci'], 'allow');
+    const status = (label: string) => memberStatus(memberRows(read, draft, groups).find((row) => row.label === label)!);
+
+    expect(status('ana')).toBe('Edited · set here');
+    expect(status('Developers')).toBe('Edited · from repository game');
   });
 
   it('removes only an entry set here, and keeps one on the server', () => {

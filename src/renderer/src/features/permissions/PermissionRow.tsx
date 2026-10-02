@@ -1,15 +1,16 @@
-import { Ban, CircleCheck, CircleMinus } from 'lucide-react';
+import { Ban, CircleCheck, CircleMinus, Info, MoreHorizontal } from 'lucide-react';
 import { memo } from 'react';
 import type { PermissionName } from '@shared/domain/permissions';
 import { hotkey } from '../../lib/shortcutRegistry';
-import { Button } from '../../ui/Button';
-import { Checkbox } from '../../ui/Checkbox';
 import { Highlight } from '../../ui/Highlight';
+import { IconButton } from '../../ui/IconButton';
+import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import type { OwnState, PermissionResolution } from './aclResolution';
 import { OWN_STATES } from './permissionGridKeys';
 import { PERMISSION_INFO } from './permissionCatalog';
+import { overrideMenuEntries } from './permissionOverrideMenu';
 import type { OverrideKind } from './permissionsDraft';
-import { aboveSentence, effectiveLabel, effectiveSentence, losesToDenyAbove, STATE_LABELS, STATE_TIPS } from './permissionWords';
+import { effectiveLabel, effectiveSentence, permissionHelp, STATE_LABELS, STATE_TIPS } from './permissionWords';
 import { sourceLabel } from './permissionTargets';
 import styles from './PermissionGrid.module.css';
 
@@ -20,16 +21,24 @@ interface PermissionRowProps {
   permission: PermissionName;
   resolution: PermissionResolution;
   active: boolean;
-  changed: boolean;
-  /** There are lists above to inherit from (not on the server). */
+  /** The choice saved on the server, when the draft picks another (`savedChoices`). */
+  savedChoice: OwnState | undefined;
+  /** There are lists above to inherit from (not on the server), so the overrides apply. */
   hasAbove: boolean;
+  menuOpen: boolean;
+  onMenuOpenChange: (permission: PermissionName, open: boolean) => void;
   onActivate: (permission: PermissionName) => void;
   onSet: (permission: PermissionName, state: OwnState) => void;
   onOverride: (permission: PermissionName, kind: OverrideKind, on: boolean) => void;
 }
 
-/** One permission of the member picked: its name, what the entry says (inherit, allow, deny) and the result; the active one with its details. */
-export const PermissionRow = memo(function PermissionRow({ id, permission, resolution, active, changed, hasAbove, onActivate, onSet, onOverride }: PermissionRowProps) {
+/**
+ * One permission of the member picked: its name, what the entry says (inherit, allow, deny) and the result. Its help
+ * is the tooltip of an info mark and its overrides a menu, both shown on the hovered or active row: a row never changes
+ * height, so a click lands where it was aimed. An edited choice keeps the saved one outlined beside it.
+ */
+export const PermissionRow = memo(function PermissionRow(props: PermissionRowProps) {
+  const { id, permission, resolution, active, savedChoice, hasAbove, menuOpen, onMenuOpenChange, onActivate, onSet, onOverride } = props;
   const info = PERMISSION_INFO[permission];
   return (
     <div
@@ -37,18 +46,22 @@ export const PermissionRow = memo(function PermissionRow({ id, permission, resol
       role="row"
       aria-selected={active}
       aria-label={`${info.label}: ${STATE_LABELS[resolution.own].toLowerCase()}, ${effectiveSentence(resolution).toLowerCase()}`}
+      aria-description={info.description}
       className={styles.row}
       data-active={active}
+      data-menu-open={menuOpen}
       onMouseDown={() => onActivate(permission)}
     >
-      {changed && <span className={styles.changedDot} data-tip="Changed, not saved yet" />}
       <div className={styles.line}>
-        <span role="gridcell" className={styles.name} data-tip={info.description}>
+        <span role="gridcell" className={styles.name}>
           <span className={styles.label}>
             <Highlight text={info.label} />
           </span>
           <span className={styles.cmName}>
             <Highlight text={permission} />
+          </span>
+          <span className={styles.help} data-tip={permissionHelp(permission, resolution, hasAbove)} aria-hidden>
+            <Info size={13} />
           </span>
         </span>
         <span role="gridcell" className={styles.states} aria-label="Inherit, allow or deny">
@@ -59,8 +72,9 @@ export const PermissionRow = memo(function PermissionRow({ id, permission, resol
               tabIndex={-1}
               className={styles.state}
               data-state={state}
+              data-saved={state === savedChoice}
               aria-pressed={resolution.own === state}
-              data-tip={STATE_TIPS[state]}
+              data-tip={state === savedChoice ? 'What is saved now: pick it to undo the edit' : STATE_TIPS[state]}
               data-tip-shortcut={hotkey(STATE_KEYS[state])}
               onClick={() => onSet(permission, state)}
             >
@@ -73,35 +87,18 @@ export const PermissionRow = memo(function PermissionRow({ id, permission, resol
           <span className={styles.effectiveLabel}>{effectiveLabel(resolution)}</span>
           {resolution.source && <span className={styles.source}>{sourceLabel(resolution.source)}</span>}
         </span>
-      </div>
-      {active && (
-        <div className={styles.details}>
-          <p className={styles.description}>{info.description}</p>
-          {hasAbove && <p className={styles.above}>{aboveSentence(resolution)}</p>}
-          {losesToDenyAbove(resolution) && (
-            <p className={styles.warning}>
-              A deny above wins over this allow.
-              <Button size="small" variant="ghost" onClick={() => onOverride(permission, 'overrideDenied', true)}>
-                Allow anyway
-              </Button>
-            </p>
-          )}
+        <span role="gridcell" className={styles.more}>
           {hasAbove && (
-            <div className={styles.overrides}>
-              <Checkbox
-                label="Ignore allows from above"
-                checked={resolution.ignoresAllowsAbove}
-                onChange={(on) => onOverride(permission, 'overrideAllowed', on)}
-              />
-              <Checkbox
-                label="Ignore denies from above"
-                checked={resolution.ignoresDeniesAbove}
-                onChange={(on) => onOverride(permission, 'overrideDenied', on)}
-              />
-            </div>
+            <ActionDropdownMenu
+              entries={overrideMenuEntries(resolution, (kind, on) => onOverride(permission, kind, on))}
+              open={menuOpen}
+              onOpenChange={(open) => onMenuOpenChange(permission, open)}
+            >
+              <IconButton size="small" tabIndex={-1} icon={<MoreHorizontal size={14} />} label="Overrides" shortcut={hotkey('permissionMenu')} />
+            </ActionDropdownMenu>
           )}
-        </div>
-      )}
+        </span>
+      </div>
     </div>
   );
 });

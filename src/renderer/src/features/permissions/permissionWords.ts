@@ -1,5 +1,6 @@
-import type { ObjectPermissions, PermissionTarget } from '@shared/domain/permissions';
+import type { ObjectPermissions, PermissionName, PermissionTarget } from '@shared/domain/permissions';
 import type { OwnState, PermissionResolution } from './aclResolution';
+import { PERMISSION_INFO } from './permissionCatalog';
 import { KIND_WORDS, sourceLabel } from './permissionTargets';
 
 export const STATE_LABELS: Record<OwnState, string> = { inherit: 'Inherit', allow: 'Allow', deny: 'Deny' };
@@ -43,7 +44,18 @@ export function ownListNotice(target: PermissionTarget, permissions: Pick<Object
   return `This ${KIND_WORDS[target.kind].toLowerCase()} uses the permissions of ${parent}. Your first change gives it permissions of its own; those of ${parent} stay as they are.`;
 }
 
-/** An allow here that a deny above beats, which "Allow anyway" (ignoring denies from above) would let through. */
+/**
+ * The help of a permission, the tooltip of its row's info mark: what it means, then (when there are lists above) what
+ * they say, and a deny above that beats an allow here with the override that lets it through.
+ */
+export function permissionHelp(permission: PermissionName, resolution: PermissionResolution, hasAbove: boolean): string {
+  const lines = [PERMISSION_INFO[permission].description];
+  if (hasAbove) lines.push(aboveSentence(resolution));
+  if (losesToDenyAbove(resolution)) lines.push('A deny above wins over this allow: "Ignore denies from above" lets it through.');
+  return lines.join('\n');
+}
+
+/** An allow here that a deny above beats, which "Ignore denies from above" would let through. */
 export function losesToDenyAbove(resolution: PermissionResolution): boolean {
   return resolution.own === 'allow' && resolution.effective === 'denied' && resolution.source !== 'here';
 }

@@ -77,9 +77,17 @@ function collectMembers(level: AclLevel, found: Map<string, string[]>): void {
   for (const parent of level.inherited) collectMembers(parent, found);
 }
 
-/** Where a member's entry stands, under its name: set here, inherited from the closest list naming it, or just added. */
+/**
+ * Where a member's entry stands, under its name: set here, inherited from the closest list naming it, or just added;
+ * "Edited" first while the draft changes it.
+ */
 export function memberStatus(row: MemberRow): string {
   if (row.added && !row.setHere) return 'New: set what it may do';
+  const standing = entryStanding(row);
+  return row.changed && !row.added ? `Edited · ${standing[0]!.toLowerCase()}${standing.slice(1)}` : standing;
+}
+
+function entryStanding(row: MemberRow): string {
   const above = row.inheritedFrom[0];
   if (row.setHere) return above ? `Set here, and on ${sourceLabel(above)}` : 'Set here';
   return above ? `From ${sourceLabel(above)}` : 'Nothing set';

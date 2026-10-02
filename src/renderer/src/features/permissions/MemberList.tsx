@@ -89,7 +89,6 @@ export const MemberList = forwardRef<HTMLDivElement, MemberListProps>(function M
                 </span>
                 <span className={styles.memberStatus}>{memberStatus(row)}</span>
               </span>
-              {row.changed && <span className={styles.changedDot} data-tip="Changed, not saved yet" />}
             </div>
           ))}
           {shown.length === 0 && <p className={styles.emptyNote}>No matching users or groups</p>}

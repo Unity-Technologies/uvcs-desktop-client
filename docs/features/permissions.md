@@ -78,19 +78,27 @@ Specs: `permissionSpec` (`repserver:local`, `rep:game@local`, `br:/main@game@loc
   branches is new (`ownListNotice`).
 - **Inherit, allow or deny**, one choice per permission instead of the official client's two checkboxes and two
   override toggles: the row shows the choice, the **result** ("Allowed", "Denied", "Not allowed") and **where it comes
-  from** ("here", "the server", "repository game"; `sourceLabel`). The row picked opens its details: the definition,
-  what the lists above say (`aboveSentence`), and the two overrides in plain words, "Ignore allows from above" and
-  "Ignore denies from above", so every combination the server stores stays reachable. An allow a deny above beats
-  says so, with **Allow anyway** (ignoring denies from above). Back to Inherit clears the overrides too.
+  from** ("here", "the server", "repository game"; `sourceLabel`). A row never changes height, so a click lands where
+  it was aimed (rows that opened their details inline moved the rows below between a press and its release, and a
+  click on Inherit, Allow or Deny landed on another row; a details panel under the grid was tried and dropped as
+  heavier than the help it gave). The row hovered or active shows two marks: an **ⓘ** whose tooltip is the help
+  (`permissionHelp`: the definition, what the lists above say, a deny above that beats an allow here), and a **⋯** menu
+  with the two overrides in plain words, "Ignore allows from above" and "Ignore denies from above", "Stop ignoring…"
+  once on (`overrideMenuEntries`), so every combination the server stores stays reachable. Back to Inherit clears the
+  overrides too.
 - Permissions read in plain words, grouped by what people do (`permissionCatalog.ts`), each with `cm`'s name beside
   it (`ci`, `mkchildbranch`): it's the name the security guide, the server's log and `cm acl` use, which
   administrators know them by. A filter finds them by either.
-- **Edits are staged** in a draft (`permissionsDraft.ts`) and saved at once: the footer counts them and lists them in
-  words with an undo each (`changeLines`); Save says how many. Saving asks first when it removes an entry, denies
+- **Edits are staged** in a draft (`permissionsDraft.ts`) and saved at once. An edited permission keeps its saved
+  choice outlined (dashed) beside the new one, so "was → now" reads at a glance and picking it back undoes the edit
+  (`savedChoices`; a change of overrides alone keeps the choice and shows only in the footer); an edited member's
+  status starts with "Edited" (`memberStatus`). No other mark: dots and bars were tried and read as noise. The footer
+  counts the edits and lists them in words with an undo each (`changeLines`); Save says how many. Saving asks first when it removes an entry, denies
   "Change permissions" or gives the object away (`needsConfirmation`); closing with unsaved edits asks to discard
   them.
 - **Keyboard first**: the members list and the grid are one Tab stop each; ↑ ↓ move, ← → step through the choices,
-  A, D and I pick one, the remove shortcut removes the member's entry, ⌘↵ saves (`lib/shortcutRegistry.ts`, area
+  A, D and I pick one, Shift+F10 opens the active permission's overrides menu, the remove shortcut removes the
+  member's entry, ⌘↵ saves (`lib/shortcutRegistry.ts`, area
   Permissions; bound in the dialog, as a modal dialog keeps window shortcuts off).
 - Adding a member (`pickMember`) searches the server's users and groups, All users and Owner first; its entry starts
   empty, following what's above, and the bulk buttons (Allow all, Deny all, Inherit all, on the permissions shown)

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { PermissionResolution } from './aclResolution';
-import { aboveSentence, effectiveLabel, effectiveSentence, losesToDenyAbove, ownListNotice } from './permissionWords';
+import { aboveSentence, effectiveLabel, effectiveSentence, losesToDenyAbove, ownListNotice, permissionHelp } from './permissionWords';
 
 const resolution = (parts: Partial<PermissionResolution>): PermissionResolution => ({
   own: 'inherit',
@@ -43,5 +43,17 @@ describe('permission words', () => {
     expect(losesToDenyAbove(resolution({ own: 'allow', effective: 'denied', source: 'rep:game@repserver:local' }))).toBe(true);
     expect(losesToDenyAbove(resolution({ own: 'allow', effective: 'allowed', source: 'here' }))).toBe(false);
     expect(losesToDenyAbove(resolution({ own: 'deny', effective: 'denied', source: 'here' }))).toBe(false);
+  });
+
+  it('explains a permission in its help: what it means, then what the lists above say, then a deny that wins', () => {
+    const repository = 'rep:game@repserver:local';
+
+    expect(permissionHelp('rm', resolution({}), false)).toBe('Delete files and folders in a check-in.');
+    expect(permissionHelp('rm', resolution({ above: { allowedBy: repository } }), true)).toBe(
+      'Delete files and folders in a check-in.\nAbove: allowed by repository game',
+    );
+    expect(permissionHelp('rm', resolution({ own: 'allow', effective: 'denied', source: repository, above: { deniedBy: repository } }), true)).toBe(
+      'Delete files and folders in a check-in.\nAbove: denied by repository game\nA deny above wins over this allow: "Ignore denies from above" lets it through.',
+    );
   });
 });

@@ -16,9 +16,9 @@ import { groupPermissions, PERMISSION_INFO } from './permissionCatalog';
 import { PermissionGrid } from './PermissionGrid';
 import {
   addMember,
-  changedPermissions,
   draftBits,
   removeMember,
+  savedChoices,
   setOverride,
   setOwner,
   setOwnState,
@@ -116,7 +116,7 @@ function MemberPermissions({ target, permissions, row, draft, onDraft }: MemberP
   const name = row.member.name;
   const own = draftBits(permissions, draft, name);
   const resolutions = useMemo(() => resolvePermissions(permissions, name, own, applicable), [permissions, name, own, applicable]);
-  const changed = useMemo(() => changedPermissions(readOwnBits(permissions, name), own, applicable), [permissions, name, own, applicable]);
+  const saved = useMemo(() => savedChoices(readOwnBits(permissions, name), own, applicable), [permissions, name, own, applicable]);
   const groups = groupPermissions(applicable.filter((permission) => matchesWordFilter([PERMISSION_INFO[permission].label, permission], filter)));
   const shown = groups.flatMap((group) => group.permissions);
 
@@ -127,6 +127,8 @@ function MemberPermissions({ target, permissions, row, draft, onDraft }: MemberP
   );
   const setAll = (state: OwnState): void => onDraft(setOwnState(permissions, draft, row.member, shown, state));
   const allWord = filter.trim() ? 'shown' : 'all';
+  const shownActive = active && shown.includes(active) ? active : undefined;
+  const hasAbove = levelsAbove(permissions).length > 0;
 
   return (
     <section className={styles.permissionsPane} aria-label={`What ${row.label} may do`}>
@@ -157,9 +159,9 @@ function MemberPermissions({ target, permissions, row, draft, onDraft }: MemberP
           <PermissionGrid
             groups={groups}
             resolutions={resolutions}
-            changed={changed}
-            hasAbove={levelsAbove(permissions).length > 0}
-            active={active && shown.includes(active) ? active : undefined}
+            savedChoices={saved}
+            hasAbove={hasAbove}
+            active={shownActive}
             onActivate={setActive}
             onSet={set}
             onOverride={override}

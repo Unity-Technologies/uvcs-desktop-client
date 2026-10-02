@@ -150,6 +150,7 @@ export const SHORTCUTS = {
   permissionDeny: { area: 'Permissions', label: 'Deny the permission', keys: ['d'] },
   permissionInherit: { area: 'Permissions', label: 'Inherit the permission from above', keys: ['i'] },
   permissionStep: { area: 'Permissions', label: 'Inherit, allow or deny the permission', keys: ['left', 'right'] },
+  permissionMenu: { area: 'Permissions', label: 'Ignore what the lists above say', keys: ['shift+f10'] },
   removeMember: { area: 'Permissions', label: 'Remove the selected user or group', keys: ['mod+backspace'], keysOffMac: ['delete'] },
   savePermissions: { area: 'Permissions', label: 'Save the changes', keys: ['mod+enter'] },
 

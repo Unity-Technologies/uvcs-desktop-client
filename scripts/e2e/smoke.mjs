@@ -98,9 +98,15 @@ try {
     await window.getByRole('menuitem', { name: 'Permissions…' }).click();
     const dialog = window.getByRole('dialog', { name: 'Permissions' });
     await dialog.getByRole('option', { name: /^Developers/ }).click();
-    await dialog.getByRole('row', { name: /^Check in/ }).click();
+    const checkIn = dialog.getByRole('row', { name: /^Check in/ });
+    await checkIn.click();
     await window.keyboard.press('d');
     await dialog.getByRole('button', { name: '1 change' }).waitFor();
+    await checkIn.locator('[data-saved="true"]').waitFor();
+    await window.keyboard.press('Shift+F10');
+    await window.getByRole('menuitem', { name: 'Ignore allows from above' }).waitFor();
+    await window.keyboard.press('Escape');
+    await window.getByRole('menu').waitFor({ state: 'detached' });
     await dialog.getByRole('button', { name: 'Cancel' }).click();
     await window.getByRole('dialog', { name: 'Discard 1 change?' }).getByRole('button', { name: 'Discard' }).click();
     await dialog.waitFor({ state: 'detached' });
