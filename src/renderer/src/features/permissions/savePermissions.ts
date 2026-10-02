@@ -5,7 +5,7 @@ import { invalidateWorkspace, queryClient } from '../../app/queryClient';
 import { isAffectedByPermissions } from '../../app/refresh/refreshScopes';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
-import { changeCount, changeRequest, needsConfirmation, type DraftChanges } from './permissionsDraft';
+import { changeCount, changeRequest, changesLanded, needsConfirmation, type DraftChanges } from './permissionsDraft';
 
 export interface SaveRequest {
   target: PermissionTarget;
@@ -17,6 +17,16 @@ export interface SaveRequest {
   /** The workspace the dialog was opened from, whose lists may show the owner. */
   workspacePath?: string;
 }
+
+async function landedAnyway(target: PermissionTarget, changes: DraftChanges): Promise<boolean> {
+  try {
+    return changesLanded(changes, await api.permissions.read(target));
+  } catch {
+    return false;
+  }
+}
+
+const errorText = (error: unknown): string => (error instanceof Error ? error.message : String(error));
 
 const changesWord = (count: number) => (count === 1 ? '1 change' : `${count} changes`);
 
@@ -44,6 +54,12 @@ export async function savePermissions({ target, permissions, changes, branches, 
     toast.success(count === 1 ? 'Permission change saved' : `${count} permission changes saved`);
     return true;
   } catch (error) {
+    // `cm acl --branches` fails printing the branches when the repository's server isn't its default one, after it
+    // did the work (docs/features/permissions.md): what the server says now decides.
+    if (await landedAnyway(target, changes)) {
+      toast.info(count === 1 ? 'Permission change saved' : `${count} permission changes saved`, `cm reported an error, but the server has them: ${errorText(error)}`);
+      return true;
+    }
     toast.error("Couldn't save every change", error);
     return false;
   } finally {

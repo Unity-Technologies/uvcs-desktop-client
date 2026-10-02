@@ -77,6 +77,7 @@ describe('saving permissions', () => {
     fakeApi.answer('permissions.apply', () => {
       throw commandFailure('You are not allowed to change permissions');
     });
+    fakeApi.answer('permissions.read', () => read);
     const reread = seedPermissionsQuery('local', 'br:/main/task@game@local');
 
     const saved = await savePermissions({ target: branch, permissions: read, changes: draftChanges(read, setOwnState(read, EMPTY_DRAFT, developers, ['ci'], 'deny')) });
@@ -84,6 +85,21 @@ describe('saving permissions', () => {
     expect(saved).toBe(false);
     expect(shownToasts()).toEqual([{ kind: 'error', title: "Couldn't save every change", detail: 'You are not allowed to change permissions' }]);
     expect(reread()).toBe(true);
+  });
+});
+
+describe('a save cm reports failed', () => {
+  it('says saved when the server has every change anyway, as after cm acl --branches fails printing the branches', async () => {
+    fakeApi.answer('permissions.apply', () => {
+      throw commandFailure('There has been an unexpected error "Could not find a part of the path branches.dat".');
+    });
+    const changes = draftChanges(read, setOwnState(read, EMPTY_DRAFT, developers, ['ci'], 'deny'));
+    fakeApi.answer('permissions.read', () => ({ ...read, acl: { ...read.acl, entries: [...read.acl.entries, { member: 'Developers', bits: { ...NO_BITS, denied: ['ci'] } }] } }));
+
+    expect(await savePermissions({ target: branch, permissions: read, changes })).toBe(true);
+    expect(shownToasts()).toEqual([
+      { kind: 'info', title: 'Permission change saved', detail: expect.stringContaining('cm reported an error, but the server has them') },
+    ]);
   });
 });
 

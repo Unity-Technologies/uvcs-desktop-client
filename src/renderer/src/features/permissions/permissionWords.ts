@@ -37,7 +37,7 @@ export function aboveSentence(resolution: PermissionResolution): string {
  */
 export function ownListNotice(target: PermissionTarget, permissions: Pick<ObjectPermissions, 'acl' | 'ownAcl'>): string | undefined {
   if (permissions.ownAcl) return undefined;
-  if (target.kind === 'path' && target.tag) return 'A new group of branches: setting a permission creates it, on the branches named below.';
+  if (target.kind === 'path' && target.tag) return 'A new group of branches: setting a permission creates it, on the branches you name.';
   if (target.kind === 'path') return 'Not secured: on its branches this path follows the repository. Setting a permission secures it.';
   return `Shares the permissions of ${sourceLabel(permissions.acl.creator)}: setting one here gives it its own.`;
 }

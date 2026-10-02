@@ -1,5 +1,5 @@
 import { ChevronDown, ChevronRight, RotateCcw } from 'lucide-react';
-import { useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { PermissionTarget } from '@shared/domain/permissions';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { matchesShortcut } from '../../lib/shortcuts';
@@ -82,12 +82,21 @@ function PermissionsDialog({ target: opened, workspacePath, onClose }: Permissio
     if (await removePathPermissions(target)) setDraft(EMPTY_DRAFT);
   };
 
-  // A modal dialog keeps the window's shortcuts from running (`windowShortcutMayRun`): saving is bound here.
-  const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
-    if (!matchesShortcut(event, hotkey('savePermissions'))) return;
-    event.preventDefault();
-    void save();
-  };
+  // A modal dialog keeps the window's shortcuts from running (`windowShortcutMayRun`): saving is bound to this
+  // dialog's keys, wherever its focus is (the footer too), and not to a dialog opened over it.
+  const latestSave = useRef(save);
+  latestSave.current = save;
+  const bodyRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const onKeyDown = (event: globalThis.KeyboardEvent): void => {
+      const dialog = bodyRef.current?.closest('[role="dialog"]');
+      if (!dialog?.contains(event.target as Node) || !matchesShortcut(event, hotkey('savePermissions'))) return;
+      event.preventDefault();
+      void latestSave.current();
+    };
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
+  }, []);
 
   const loadError = permissionsQuery.error ?? groupsQuery.error;
   const secured = target.kind === 'path' && permissions?.ownAcl === true;
@@ -124,8 +133,8 @@ function PermissionsDialog({ target: opened, workspacePath, onClose }: Permissio
         </div>
       }
     >
-      <div className={styles.body} onKeyDown={onKeyDown}>
-        {target.kind === 'path' && <PathScope key={`${target.name}#${target.tag ?? ''}`} target={target} onShow={show} />}
+      <div ref={bodyRef} className={styles.body}>
+        {target.kind === 'path' && <PathScope target={target} onShow={show} />}
         {isNewGroup && (
           <TextField
             label={`Branches of ${target.tag}`}

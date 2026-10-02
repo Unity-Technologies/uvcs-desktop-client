@@ -132,6 +132,12 @@ export function draftChanges(permissions: ObjectPermissions, draft: PermissionsD
   return { entries, ...(owner && { owner }) };
 }
 
+/** Whether the permissions read now say everything the changes asked for: what a failed save may still have done. */
+export function changesLanded(changes: DraftChanges, now: ObjectPermissions): boolean {
+  const entries = changes.entries.every(({ member, after }) => sameBits(readOwnBits(now, member.name), after));
+  return entries && (!changes.owner || now.owner?.name === changes.owner.after.name);
+}
+
 export function changeCount(changes: DraftChanges): number {
   return changes.entries.length + (changes.owner ? 1 : 0);
 }
