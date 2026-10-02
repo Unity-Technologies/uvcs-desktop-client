@@ -105,7 +105,7 @@ function PermissionsDialog({ target: opened, workspacePath, onClose }: Permissio
     <Dialog
       title="Permissions"
       description={describeTarget(target)}
-      width={980}
+      width={1000}
       onClose={() => void leaving(onClose)}
       footer={
         <div className={styles.footer}>

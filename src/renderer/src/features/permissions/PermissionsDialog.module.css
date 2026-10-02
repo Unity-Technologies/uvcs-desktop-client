@@ -6,7 +6,7 @@
 }
 
 .loading {
-  height: min(520px, 54vh);
+  height: min(500px, 52vh);
 }
 
 .footer {
@@ -95,7 +95,7 @@
 .panes {
   display: grid;
   grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
-  height: min(520px, 54vh);
+  height: min(500px, 52vh);
   min-height: 300px;
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
