@@ -11,7 +11,10 @@ added file: `canEditInPlace`) is typed into directly on its modified side, like 
 Without unsaved edits the diff follows the disk; with some it holds still and says the file changed on disk. Saving
 reads back the text the editor holds, so the diff stays as it is (`heldModifiedText`): showing it anew would end the
 editor's session, dropping the caret and undo and highlighting the file again on the main thread (1.6 s for
-2 x 190 KB of TypeScript). A file with
+2 x 190 KB of TypeScript). Leaving a diff typed into (another file selected) doesn't highlight it on the way out:
+Pierre refreshes a diff's colors as its edit session ends, on the main thread for our diffs, which have no
+`cacheKey` (1.6 s for 2 x 190 KB); `pierreSessionEndRefresh` runs that a task later, and only for a diff still
+shown. A file with
 no lines to show (no content changes, empty, only ignored differences) is typed into whole, under a note (kept while
 it's typed into). ⌘E puts the
 caret in the text and Esc leaves it for the file list; keys the editor handles never reach the app's shortcuts. Read and
@@ -168,6 +171,7 @@ that patch or read internals have a test that fails when an update moves them:
   The tests run without a page, so this one is checked on screen.
 - `pierreLineComparison`: typing re-diffs under the comparison method (see Comparison method).
 - `pierrePlainTextRender`: a diff shown as plain text renders once, not at every render (see Editing in the diff).
+- `pierreSessionEndRefresh`: a diff typed into isn't highlighted again as it goes away (see Editing in the diff).
 - `pierreWordMarks`: a diff typed into marks the changed words once typing pauses, in the rows Pierre keeps (see
   Editing in the diff).
 - `pierrePlainTextWordDiffs`: a diff shown as plain text marks changed words past 1,000 lines (see Editing in the diff).
