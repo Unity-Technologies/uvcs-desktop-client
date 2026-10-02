@@ -30,7 +30,10 @@ editable diff past 400 KB (Pierre
 highlights editors on the main thread, pool or not), is plain text and renders only the lines in view too (Pierre
 renders a plain text diff whole at every render: `pierrePlainTextRender` keeps it), with a quiet "Large file" in the
 header (its tooltip says why); such a diff is the "text" language (`highlightedLanguage`),
-or the editor would color the lines typed into it. Past 1 MB (both versions), the text typed into is diffed again
+or the editor would color the lines typed into it. Plain text marks the words that changed like any diff
+(`pierrePlainTextWordDiffs`): Pierre marks none in a plain text diff of more than 1,000 lines, but words are diffed
+only for pairs of changed lines, whatever the file's length, so the bound is those pairs instead
+(`MAX_WORD_DIFFED_LINE_PAIRS`, 1,000: as many as Pierre already diffs for any diff of 1,000 lines). Past 1 MB (both versions), the text typed into is diffed again
 once typing pauses, not at every keystroke (`diffsEveryKeystroke`): the +N −M and the lines discards act on follow
 then, as Pierre's recoloring does; nothing is discarded until they do.
 Every diff of two versions follows Split/Unified, one from or to an empty version (an empty base, a file emptied)
@@ -144,6 +147,7 @@ that patch or read internals have a test that fails when an update moves them:
   The tests run without a page, so this one is checked on screen.
 - `pierreLineComparison`: typing re-diffs under the comparison method (see Comparison method).
 - `pierrePlainTextRender`: a diff shown as plain text renders once, not at every render (see Editing in the diff).
+- `pierrePlainTextWordDiffs`: a diff shown as plain text marks changed words past 1,000 lines (see Editing in the diff).
 - `pierreLinePosition`: where a line not rendered yet sits, to scroll to a change (see Moving through changes).
 - `boundedLineDiff`: every line diff, `diff`'s and Pierre's, keys lines once and stays linear (see Comparison method).
 

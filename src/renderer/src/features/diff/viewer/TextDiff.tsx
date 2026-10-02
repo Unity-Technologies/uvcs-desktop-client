@@ -19,6 +19,7 @@ import { isTypingIn } from './pierreDom';
 import { installPierreLineComparison } from './pierreLineComparison';
 import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
 import { installPierrePlainTextRender } from './pierrePlainTextRender';
+import { installPierrePlainTextWordDiffs } from './pierrePlainTextWordDiffs';
 import { caretLineCss, shownDiff, type DiffSides } from './shownDiff';
 import { highlightedLanguage, syntaxHighlighting } from './syntaxHighlighting';
 import { useBlockDiscard } from './useBlockDiscard';
@@ -36,6 +37,8 @@ const BOTH_SIDES: DiffSides = { original: true, modified: true };
 installPierreLineComparison();
 // A diff shown as plain text renders once, not again for every few rows scrolled into view.
 installPierrePlainTextRender();
+// A diff shown as plain text marks the words that changed, however long the file.
+installPierrePlainTextWordDiffs();
 
 /**
  * The texts are the files' own, their lines broken by LF, CRLF or lone CRs. Pierre is given them as shown, lone CRs as
