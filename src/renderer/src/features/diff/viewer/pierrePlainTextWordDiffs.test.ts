@@ -3,9 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { lineDiff } from './lineDiff';
 import { installPierrePlainTextRender } from './pierrePlainTextRender';
 import { installPierrePlainTextWordDiffs, MAX_WORD_DIFFED_LINE_PAIRS, wordDiffedLinePairs } from './pierrePlainTextWordDiffs';
-
-/** A row Pierre renders, or a node in it. */
-type ElementContent = NonNullable<ReturnType<DiffHunksRenderer['renderCodeAST']>>[number];
+import { renderedWordMarks, wordMarksIn, type RenderedNode } from './renderedWordMarks';
 
 const text = (lines: number, changed: (index: number) => boolean) =>
   Array.from({ length: lines }, (_, index) => (changed(index) ? `alpha gamma ${index}\n` : `alpha beta ${index}\n`)).join('');
@@ -14,31 +12,13 @@ const text = (lines: number, changed: (index: number) => boolean) =>
 const diffOf = (lines: number, changed: (index: number) => boolean, fileName = 'file.ts') =>
   lineDiff(text(lines, () => false), text(lines, changed), 'recognizeAll', fileName).meta;
 
-/** The text of each word-level mark (Pierre's `data-diff-span`) in rendered rows, in order. */
-function wordMarks(nodes: ElementContent[] | undefined): string[] {
-  const marks: string[] = [];
-  const visit = (node: ElementContent): void => {
-    if (node.type !== 'element') return;
-    if (node.properties?.['data-diff-span'] !== undefined) marks.push(textOf(node));
-    else node.children.forEach(visit);
-  };
-  nodes?.forEach(visit);
-  return marks;
-}
-
-function textOf(node: ElementContent): string {
-  if (node.type === 'text') return node.value;
-  return node.type === 'element' ? node.children.map(textOf).join('') : '';
-}
-
 /** What the viewer's renderer shows of `diff` as plain text (`tokenizeMaxLength` 0, as `syntaxHighlighting` 'off'). */
 async function plainTextMarks(diff: FileDiffMetadata, options: { tokenizeMaxLength?: number } = { tokenizeMaxLength: 0 }) {
   installPierrePlainTextRender();
   installPierrePlainTextWordDiffs();
   const renderer = new DiffHunksRenderer({ theme: 'github-light', lineDiffType: 'word', expandUnchanged: true, ...options });
   await renderer.asyncRender(diff);
-  const result = renderer.renderDiff(diff)!;
-  return { deletions: wordMarks(renderer.renderCodeAST('deletions', result)), additions: wordMarks(renderer.renderCodeAST('additions', result)) };
+  return renderedWordMarks(renderer, renderer.renderDiff(diff)!);
 }
 
 describe('installPierrePlainTextWordDiffs', () => {
@@ -88,6 +68,6 @@ describe("Pierre's plain text render in the workers", () => {
     const highlighter = await getSharedHighlighter({ themes: ['github-light'], langs: ['text'], preferredHighlighter: 'shiki-js' });
     const options = { theme: 'github-light', useTokenTransformer: false, tokenizeMaxLineLength: 1_000, lineDiffType: 'word', maxLineDiffLength: 1_000 } as const;
     const { code } = renderDiffWithHighlighter(diff, highlighter, options, { forcePlainText: true, startingLine: 4_990, totalLines: 20, expandedHunks: true });
-    expect(wordMarks(code.additionLines.filter(Boolean) as ElementContent[])).toEqual(['gamma']);
+    expect(wordMarksIn(code.additionLines.filter(Boolean) as RenderedNode[])).toEqual(['gamma']);
   });
 });
