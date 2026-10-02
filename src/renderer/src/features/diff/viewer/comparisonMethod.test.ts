@@ -26,6 +26,13 @@ describe('comparedPart', () => {
   it('trims both when ignoring EOLs and whitespaces, keeping whitespace inside the line', () => {
     expect(comparedPart('\t a  b \r\n', 'ignoreEolAndWhitespace')).toBe('a  b');
   });
+
+  it('keeps every line break a line ends with when ignoring whitespaces', () => {
+    expect(comparedPart(' a \r\n\n', 'ignoreWhitespace')).toBe('a\r\n\n');
+    expect(comparedPart(' a \r', 'ignoreWhitespace')).toBe('a\r');
+    expect(comparedPart('\r\n', 'ignoreWhitespace')).toBe('\r\n');
+    expect(comparedPart(' é 中 \n', 'ignoreWhitespace')).toBe('é 中\n');
+  });
 });
 
 describe('the diff under each comparison method', () => {
