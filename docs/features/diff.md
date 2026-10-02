@@ -12,7 +12,8 @@ Without unsaved edits the diff follows the disk; with some it holds still and sa
 no lines to show (no content changes, empty, only ignored differences) is typed into whole, under a note (kept while
 it's typed into). ⌘E puts the
 caret in the text and Esc leaves it for the file list; keys the editor handles never reach the app's shortcuts. Read and
-edit look the same: the editor is always on, so nothing in the diff moves when typing starts. Each pane of code
+edit look the same: the editor is on as soon as the diff has its colors, so nothing in the diff moves when typing
+starts. Each pane of code
 scrolls sideways on its own and its bar would sit at the end of the file, so `PaneScrollbars` keeps one per pane at
 the bottom of the view (diffs, the whole-file editor, merge resolution). The whole-file editor renders only the lines
 in view (Pierre's `Virtualizer` on the diff's scrolling element). A file's language comes from its path
@@ -20,16 +21,19 @@ in view (Pierre's `Virtualizer` on the diff's scrolling element). A file's langu
 .gitignore), then its longest extension (.gradle.kts before .kts), from tables of the grammars Pierre bundles (.NET
 projects are XML, Unity's assets YAML, its shaders HLSL), then Pierre's own guess; a test checks every one is in
 Pierre's bundle. Shiki reads whole files at once, never just the
-lines in view, so `syntaxHighlighting` picks by size (both versions together), at 1.5 to 4 ms a KB on the main
-thread: an editable diff up to 400 KB highlights there (0.1 s for 2 x 16 KB, 0.57 s for 2 x 156 KB; highlighted once,
-with the editor's token transformer from the first render); a read-only diff only up to 20 KB (about 0.1 s), and up
-to 4 MB it renders only the lines in view, shows as plain text at once and takes its colors from Pierre's worker
-(`useHighlightWorkers`: 0.2 s for 2 x 16 KB, 1.2 s for 2 x 156 KB, 12 s for 2 x 1.6 MB; one worker, in the app's
-theme only, see Memory); anything bigger, and an
-editable diff past 400 KB (Pierre
-highlights editors on the main thread, pool or not), is plain text and renders only the lines in view too (Pierre
-renders a plain text diff whole at every render: `pierrePlainTextRender` keeps it), with a quiet "Large file" in the
-header (its tooltip says why); such a diff is the "text" language (`highlightedLanguage`),
+lines in view, so `syntaxHighlighting` picks by size (both versions together), at 1.5 to 4.5 ms a KB on the main
+thread: a diff up to 20 KB highlights there before it shows (about 0.1 s); up to 4 MB (400 KB if it's typed into) it
+renders only the lines in view, shows as plain text at once and takes its colors from Pierre's worker
+(`useHighlightWorkers`: 0.2 s for 2 x 16 KB, 1.2 s for 2 x 156 KB, 1.7 s for 2 x 190 KB of TypeScript, 12 s for
+2 x 1.6 MB; one worker, in the app's theme only, see Memory), in the editor's markup (`useTokenTransformer`). A diff
+typed into gets its editor once the worker's colors are in (`attachesEditor`, `isReadyToEdit`): Pierre's edit session
+reuses them, where an editor attached earlier makes Pierre highlight the whole diff on the main thread (1.6 to 1.8 s
+for 2 x 190 KB of TypeScript, the app frozen). A click in the text (or ⌘E) before then waits for them, keeping what's
+typed meanwhile and typing it at the click once the editor is attached (`focusAt`, `typeWhileAttaching`); only a
+worker that failed (`MAX_WAIT_FOR_COLORS_MS`) attaches it anyway. That main-thread fallback is why a diff typed into
+goes to the worker only up to 400 KB (`MAX_HIGHLIGHTED_CHARS`). Anything bigger is plain text and renders only the
+lines in view too (Pierre renders a plain text diff whole at every render: `pierrePlainTextRender` keeps it), with a
+quiet "Large file" in the header (its tooltip says why); such a diff is the "text" language (`highlightedLanguage`),
 or the editor would color the lines typed into it. Plain text marks the words that changed like any diff
 (`pierrePlainTextWordDiffs`): Pierre marks none in a plain text diff of more than 1,000 lines, but words are diffed
 only for pairs of changed lines, whatever the file's length, so the bound is those pairs instead

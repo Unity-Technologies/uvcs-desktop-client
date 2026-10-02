@@ -10,12 +10,14 @@ import type { ChangeView } from './changeView';
 import type { ComparisonMethod } from './comparisonMethod';
 import { useDiffPreferences } from './diffPreferencesStore';
 import type { EditorHandle } from './editorHandle';
+import { attachesEditor } from './editorAttachment';
 import { escapeWhileTyping } from './escapeWhileTyping';
 import { useHighlightWorkers } from './highlightWorkers';
 import type { LineDiff } from './lineDiff';
 import { HIDE_NO_NEWLINE_CSS, showsNoNewlineMarker } from './noNewlineMarker';
 import { PaneScrollbars } from './PaneScrollbars';
-import { isTypingIn } from './pierreDom';
+import { isTypingIn, modifiedTextPositionAt } from './pierreDom';
+import { isReadyToEdit } from './pierreEditorReady';
 import { installPierreLineComparison } from './pierreLineComparison';
 import { pierreDiffOptions, pierreFileOptions, pierreThemeName } from './pierreOptions';
 import { installPierrePlainTextRender } from './pierrePlainTextRender';
@@ -109,7 +111,6 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     },
     [virtualizer],
   );
-  const { editor, fileDiff: shownFileDiff, createEditor } = usePierreEditor(editorRef, container);
   const latest = useRef({ current: diffedText, diff });
   latest.current = { current: diffedText, diff };
   // Stable inputs: new objects would make Pierre load the files again. While the text is typed into, Pierre works out
@@ -125,6 +126,17 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     () => ({ ...shownDiff(latest.current.diff.meta, sides, original, latest.current.current, editable), lang }),
     [fileName, lang, original, modified, comparisonMethod, wholeFile, sides.original, sides.modified, editable],
   );
+  // A diff highlighted in the workers gets the editor once it's highlighted in the editor's markup, or at once when
+  // the user wants the caret in it before then (a click in the text, ⌘E).
+  const [readyToEdit, setReadyToEdit] = useState<unknown>(null);
+  const edit = attachesEditor({ editable, highlighting, readyFor: readyToEdit, shown: fileDiff });
+  const attachNow = useCallback(() => setReadyToEdit(fileDiff), [fileDiff]);
+  const { editor, fileDiff: shownFileDiff, createEditor, focusAt, typeWhileAttaching } = usePierreEditor(editorRef, container, { attached: edit, attach: attachNow });
+  const shownRef = useRef(fileDiff);
+  shownRef.current = fileDiff;
+  const onPostRender = useCallback((_element: unknown, instance: object) => {
+    if (isReadyToEdit(instance, shownRef.current)) setReadyToEdit((ready: unknown) => (ready === shownRef.current ? ready : shownRef.current));
+  }, []);
   const parseDiffOptions = diff.options;
   // Pierre marks no words in the lines typed into, nor drops the original's old marks, until the file is saved.
   useWordMarksRefresh({ fileDiff: shownFileDiff, containerRef: container, current, shown: fileDiff });
@@ -145,8 +157,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   // An editable diff renders its tokens as the editor does (`useTokenTransformer`, which Pierre turns on once the editor
   // attaches) from the first render: otherwise the file is highlighted twice as it opens, before and after.
   const options = useMemo(
-    () => ({ ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }), parseDiffOptions, tokenizeMaxLength, useTokenTransformer: editable, ...discard.options }),
-    [theme, layout, collapseUnchanged, wrapLines, parseDiffOptions, tokenizeMaxLength, editable, discard.options],
+    () => ({ ...pierreDiffOptions({ theme, layout, collapseUnchanged, wrapLines }), parseDiffOptions, tokenizeMaxLength, useTokenTransformer: editable, onPostRender, ...discard.options }),
+    [theme, layout, collapseUnchanged, wrapLines, parseDiffOptions, tokenizeMaxLength, editable, onPostRender, discard.options],
   );
   const fileOptions = useMemo(() => ({ ...pierreFileOptions({ theme, wrapLines }), tokenizeMaxLength }), [theme, wrapLines, tokenizeMaxLength]);
   const canHighlight = useSyntaxHighlighter(pierreThemeName(theme), fileName);
@@ -156,6 +168,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   const isTyping = (): boolean => isTypingIn(container.current);
 
   const onKeyDownCapture = (event: KeyboardEvent): void => {
+    const typesText = event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey;
+    if (typesText && typeWhileAttaching(event.key)) return event.preventDefault();
     if (!isTyping() || !matchesShortcut(event.nativeEvent, hotkey('leaveEditor'))) return;
     const action = escapeWhileTyping(editor.current?.getViewState().selections ?? [], discard.dropPickFirst(event));
     if (action === 'editor') return;
@@ -187,7 +201,12 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
         onKeyDownCapture={onKeyDownCapture}
         onKeyDown={onKeyDown}
         onPointerDown={discard.onPointerDown}
-        onPointerDownCapture={pointerFocus.onPointerDownCapture}
+        onPointerDownCapture={(event) => {
+          pointerFocus.onPointerDownCapture(event);
+          if (!editable || edit || wholeFile) return;
+          const place = modifiedTextPositionAt(container.current, { x: event.clientX, y: event.clientY });
+          if (place) focusAt(place);
+        }}
         onPointerMove={discard.onPointerMove}
         onPointerLeave={discard.onPointerLeave}
         onScroll={onViewScroll}
@@ -204,13 +223,13 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
               <WorkerPoolContext.Provider value={workers}>
                 <FileDiff
                   // Pierre computes the diff once per pair of files, whatever the options say later, and takes the
-                  // workers (never for an editable diff) and virtualizer when it's created; typing doesn't start it anew.
-                  key={`${comparisonMethod}:${editable ? 'editable' : highlighting}:${virtualized}`}
+                  // workers and virtualizer when it's created; typing doesn't start it anew.
+                  key={`${comparisonMethod}:${editable ? 'editable' : 'read-only'}:${highlighting}:${virtualized}`}
                   fileDiff={fileDiff}
                   options={options}
                   selectedLines={discard.selectedLines}
                   renderGutterUtility={discard.renderGutterUtility}
-                  edit={editable}
+                  edit={edit}
                   onEditChange={(event) => onEdit?.(event.editor.getText())}
                   onEditComplete={() => 'reject'}
                   disableWorkerPool={!workers}
