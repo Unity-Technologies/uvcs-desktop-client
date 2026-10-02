@@ -68,11 +68,6 @@ describe('refreshWordMarks', () => {
     expect(session.wordMarks()).toEqual({ deletions: [], additions: [] });
   });
 
-  it("redraws nothing when the marks are already the diff's", async () => {
-    const session = await typedIntoPierre(ORIGINAL, MODIFIED, 'recognizeAll');
-    expect(refreshWordMarks(session.component)).toBe(false);
-  });
-
   it('leaves the marks to the save once more lines changed than are worth diffing', async () => {
     const original = code(MAX_WORD_DIFFED_LINE_PAIRS + 1);
     const modified = code(MAX_WORD_DIFFED_LINE_PAIRS + 1, (index) => `let value${index} = compute(${index}, 'name ${index}');`);

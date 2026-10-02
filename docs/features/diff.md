@@ -37,10 +37,17 @@ only for pairs of changed lines, whatever the file's length, so the bound is tho
 once typing pauses, not at every keystroke (`diffsEveryKeystroke`): the +N −M and the lines discards act on follow
 then, as Pierre's recoloring does; nothing is discarded until they do.
 While typing, Pierre rebuilds only the rows typed into, from the editor's tokens, without word marks, and keeps the
-original's rows with the marks they had; so once typing pauses (`TYPING_PAUSE_MS`), a diff of up to 40 KB (both
-versions, `MAX_WORD_MARKS_REFRESHED_CHARS`: about 0.1 s) is rendered whole again, both sides marked anew
-(`useWordMarksRefresh`, `pierreWordMarks`); the render hands the editor its rows back, so the caret, selection and
-undo stay. A bigger one marks them once saved: highlighting it again would hold every pause for up to 0.7 s.
+original's rows with the marks they had; so once typing pauses (`TYPING_PAUSE_MS`), the rows Pierre keeps are
+marked anew on both sides (`useWordMarksRefresh`, `pierreWordMarks`): each pair of changed lines gets the marks Pierre would give it (`lineWordMarks`), every other row loses its own, only the
+rows whose marks differ are rebuilt from their colored tokens (`markedRow`), and the diff is drawn again from them.
+Nothing is highlighted again, so a file of any size gets its marks, up to `MAX_WORD_DIFFED_LINE_PAIRS` changed pairs
+(past it they come with the save). Drawing again costs what Pierre's own redraw after Enter costs, for the rows
+rendered: under a frame with unchanged lines collapsed or a diff shown only where it's in view, about 0.45 s for a
+190 KB file with all its lines shown (Pierre's own redraw after Enter took 1.4 s there). The redraw hands the editor
+its rows back, so the caret, selection and undo stay. Re-highlighting the whole diff instead (what saving does) was
+tried and rejected: 2 ms a KB at every pause, 0.7 s for 2 x 156 KB. Pierre has no row-level way to do it:
+`updateRenderCache` rebuilds only the addition rows it's handed, without marks, and the refreshes after a keystroke
+(`refreshSplitDiffView`) only recolor rows.
 Every diff of two versions follows Split/Unified, one from or to an empty version (an empty base, a file emptied)
 too: `shownDiff` keeps both sides where Pierre would show a new or deleted file in one column, and the empty side is
 hatched like any added lines. An item with one version only (added, private, deleted; a revision that created the
@@ -152,7 +159,8 @@ that patch or read internals have a test that fails when an update moves them:
   The tests run without a page, so this one is checked on screen.
 - `pierreLineComparison`: typing re-diffs under the comparison method (see Comparison method).
 - `pierrePlainTextRender`: a diff shown as plain text renders once, not at every render (see Editing in the diff).
-- `pierreWordMarks`: a diff typed into marks the changed words once typing pauses (see Editing in the diff).
+- `pierreWordMarks`: a diff typed into marks the changed words once typing pauses, in the rows Pierre keeps (see
+  Editing in the diff).
 - `pierrePlainTextWordDiffs`: a diff shown as plain text marks changed words past 1,000 lines (see Editing in the diff).
 - `pierreLinePosition`: where a line not rendered yet sits, to scroll to a change (see Moving through changes).
 - `boundedLineDiff`: every line diff, `diff`'s and Pierre's, keys lines once and stays linear (see Comparison method).
