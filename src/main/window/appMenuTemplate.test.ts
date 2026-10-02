@@ -20,7 +20,7 @@ function templateOn(platform: NodeJS.Platform, links: Partial<AppMenuContext> = 
 
 const submenuOf = (menu: MenuItemConstructorOptions): MenuItemConstructorOptions[] => (menu.submenu ?? []) as MenuItemConstructorOptions[];
 const topLabels = (platform: NodeJS.Platform) => templateOn(platform).map((menu) => menu.label ?? menu.role);
-const itemsOf = (platform: NodeJS.Platform, menu: string) => submenuOf(templateOn(platform).find((candidate) => candidate.label?.replace('&', '') === menu)!);
+const itemsOf = (platform: NodeJS.Platform, menu: string) => submenuOf(templateOn(platform).find((candidate) => candidate.label?.replaceAll('&', '') === menu)!);
 const hasRole = (items: MenuItemConstructorOptions[], role: string) => items.some((item) => item.role === role);
 
 describe('appMenuTemplate', () => {
