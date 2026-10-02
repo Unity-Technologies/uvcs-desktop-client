@@ -269,7 +269,8 @@ Commit like a careful human. The history should show *how* the work happened.
   came with a generated name (`worktree-agent-a571eb…`) renames it first: `git branch -m <kind>/<topic>`.
 - Parallel agents each work in their own git worktree and branch (`.claude/worktrees/`, ignored). A verified branch
   joins `main` with a merge commit, never squashed or rebased: the real path is the story. Don't squash or rewrite
-  history unless the user asks.
+  history unless the user asks. It joins through the merge queue (`gh pr merge --auto --merge`), which tests it on top
+  of the latest `main`: never update a branch just to merge it (docs/features/updates.md "CI").
 
 ## Docs
 
