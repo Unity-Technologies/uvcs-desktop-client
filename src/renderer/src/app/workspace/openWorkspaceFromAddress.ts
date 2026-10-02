@@ -19,9 +19,9 @@ type Page = { location: Pick<Location, 'search' | 'pathname'>; history: Pick<His
 export function openWorkspaceFromAddress(page: Page = window): void {
   const workspacePath = startingWorkspaceIn(page.location.search);
   if (!workspacePath) return;
+  const view = startingViewIn(page.location.search);
   page.history.replaceState(null, '', page.location.pathname);
   queryClient.setQueryData(folderMissingQuery(workspacePath).queryKey, false);
   useSession.getState().openWorkspace(workspacePath);
-  const view = startingViewIn(page.location.search);
   if (view && isViewId(view)) useNavigation.setState({ view });
 }
