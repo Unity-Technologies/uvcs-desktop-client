@@ -33,6 +33,16 @@ describe('comparedPart', () => {
     expect(comparedPart('\r\n', 'ignoreWhitespace')).toBe('\r\n');
     expect(comparedPart(' é 中 \n', 'ignoreWhitespace')).toBe('é 中\n');
   });
+
+  // A file's text is anyone's: trimming a line must not go back over it. Each of these lines took a regular expression
+  // that backtracks so long (exponentially for the CRLFs, quadratically for the long runs) that the diff froze.
+  it('trims lines built to make a regular expression backtrack', () => {
+    const run = 1_000_000;
+    expect(comparedPart('\r\n'.repeat(64) + 'x', 'ignoreWhitespace')).toBe('\r\n'.repeat(64) + 'x');
+    expect(comparedPart('a' + ' '.repeat(run) + 'b', 'ignoreWhitespace')).toBe('a' + ' '.repeat(run) + 'b');
+    expect(comparedPart('a' + '\t'.repeat(run) + 'b\n', 'ignoreEolAndWhitespace')).toBe('a' + '\t'.repeat(run) + 'b');
+    expect(comparedPart('a' + '\r'.repeat(run) + 'b', 'ignoreEol')).toBe('a' + '\r'.repeat(run) + 'b');
+  });
 });
 
 describe('the diff under each comparison method', () => {
