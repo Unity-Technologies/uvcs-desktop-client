@@ -41,7 +41,7 @@ export const PermissionRow = memo(function PermissionRow({ id, permission, resol
       data-active={active}
       onMouseDown={() => onActivate(permission)}
     >
-      {changed && <span className={styles.changedMark} data-tip="Not saved yet" />}
+      {changed && <span className={styles.changedDot} data-tip="Changed, not saved yet" />}
       <div className={styles.line}>
         <span role="gridcell" className={styles.name} data-tip={info.description}>
           <span className={styles.label}>

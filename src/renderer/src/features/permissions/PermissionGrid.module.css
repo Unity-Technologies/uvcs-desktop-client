@@ -38,23 +38,14 @@
   background: var(--bg-selected);
 }
 
-/* An edit not saved yet: a bar at the row's start, as the changes it makes are listed below. The mark is wider than
-   its bar so its tooltip is easy to reach. */
-.changedMark {
+/* An edit not saved yet: the same dot the member list shows, in the row's start gutter, centred on its first line
+   (`.line`'s 34px), as the changes it makes are listed below. */
+.changedDot {
   position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: 10px;
-}
-
-.changedMark::before {
-  content: '';
-  position: absolute;
-  top: 6px;
-  bottom: 6px;
-  left: 0;
-  width: 3px;
+  top: 13px;
+  left: 3px;
+  width: 7px;
+  height: 7px;
   border-radius: var(--radius-full);
   background: var(--accent);
 }
