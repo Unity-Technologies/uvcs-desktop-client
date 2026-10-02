@@ -70,6 +70,7 @@ function start(launched: Promise<void>): void {
       writesFinished: () => operations.writesFinished(),
       askToQuitWhenDone,
       hasWindows: () => windows.all().length > 0,
+      saveSession: () => windows.saveSession(),
       quit: () => app.quit(),
     }),
   );

@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserWindow } from 'electron';
+import type { SavedWindow } from '@shared/domain/settings';
 import { EVENT_CHANNEL } from '@shared/ipc';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { createMainWindow } from './createMainWindow';
@@ -25,12 +26,13 @@ beforeEach(() => {
 });
 
 /** The windows, with each page saying which workspace it shows (`shows`). */
-function setUp(recentWorkspacePaths: string[] = []) {
+function setUp(recentWorkspacePaths: string[] = [], openWindows: SavedWindow[] = []) {
   const shown = new Map<number, string>();
   const onWindowsChanged = vi.fn();
   const onClosed = vi.fn();
+  const settings = memorySettings({ recentWorkspacePaths, openWindows });
   const windows = new WorkspaceWindows({
-    settings: memorySettings({ recentWorkspacePaths }),
+    settings,
     workspaceOf: (viewer) => shown.get(viewer),
     onWindowsChanged,
     onClosed,
@@ -38,7 +40,7 @@ function setUp(recentWorkspacePaths: string[] = []) {
   const open = (workspacePath?: string): FakeWindow => windows.open(workspacePath) as unknown as FakeWindow;
   /** The page of `window` now shows `workspacePath` (after taking its request, or picked on the home screen). */
   const shows = (window: FakeWindow, workspacePath: string): void => void shown.set(window.webContents.id, workspacePath);
-  return { windows, open, shows, onWindowsChanged, onClosed };
+  return { windows, settings, open, shows, onWindowsChanged, onClosed };
 }
 
 const asBrowserWindow = (window: FakeWindow): BrowserWindow => window as unknown as BrowserWindow;
@@ -219,5 +221,96 @@ describe('WorkspaceWindows', () => {
     b.close();
 
     expect(windows.all()).toEqual([a, c].map(asBrowserWindow));
+  });
+});
+
+describe('the windows open as the app quit', () => {
+  const LEFT = { x: 0, y: 0, width: 1200, height: 800, maximized: false };
+  const RIGHT = { x: 1300, y: 40, width: 1000, height: 700, maximized: true };
+
+  /** What each window was opened with: its workspace, where it opens and whether it takes the focus. */
+  const openedWith = () =>
+    vi.mocked(createMainWindow).mock.calls.map(([, options]) => ({
+      workspacePath: options?.workspacePath,
+      reopen: options?.reopen,
+      inBackground: options?.inBackground,
+    }));
+
+  it('are saved as they quit: workspace, bounds, maximized and full screen, the last focused one last', () => {
+    const { windows, settings, open, shows } = setUp();
+    const game = open();
+    shows(game, GAME);
+    game.normalBounds = { x: 0, y: 0, width: 1200, height: 800 };
+    game.setFullScreen(true);
+    const home = open();
+    home.normalBounds = { x: 1300, y: 40, width: 1000, height: 700 };
+    home.maximize();
+    const tools = open();
+    shows(tools, TOOLS);
+    game.focus();
+    // The app may quit from the Dock, no window focused: the last one that was keeps its place.
+    game.minimize();
+
+    windows.saveSession();
+    expect(settings.get().openWindows).toEqual([
+      { workspacePath: undefined, bounds: RIGHT, fullScreen: false },
+      { workspacePath: TOOLS, bounds: { x: 0, y: 0, width: 800, height: 600, maximized: false }, fullScreen: false },
+      { workspacePath: GAME, bounds: LEFT, fullScreen: true },
+    ]);
+  });
+
+  it('are saved as none when every window was closed before quitting (macOS)', () => {
+    const { windows, settings, open } = setUp();
+    open().close();
+
+    windows.saveSession();
+    expect(settings.get().openWindows).toEqual([]);
+  });
+
+  it('open again at launch where they were, the focused one last and in front', () => {
+    const game = mkdtempSync(join(tmpdir(), 'uvcs-game-'));
+    const { windows } = setUp([TOOLS], [
+      { bounds: RIGHT, fullScreen: false },
+      { workspacePath: game, bounds: LEFT, fullScreen: true },
+    ]);
+
+    expect(windows.firstWorkspace()).toBe(game);
+    windows.openFirst();
+    expect(openedWith()).toEqual([
+      { workspacePath: undefined, reopen: { bounds: RIGHT, fullScreen: false }, inBackground: true },
+      { workspacePath: game, reopen: { bounds: LEFT, fullScreen: true }, inBackground: false },
+    ]);
+  });
+
+  it('leave out a workspace whose folder is gone, and open the last one used when none is left', () => {
+    const lastUsed = mkdtempSync(join(tmpdir(), 'uvcs-last-'));
+    const { windows } = setUp([lastUsed], [{ workspacePath: join(tmpdir(), 'uvcs-deleted-workspace'), bounds: LEFT, fullScreen: false }]);
+
+    expect(windows.firstWorkspace()).toBe(lastUsed);
+    windows.openFirst();
+    expect(openedWith()).toEqual([{ workspacePath: lastUsed, reopen: undefined, inBackground: undefined }]);
+  });
+
+  it('open behind the workspace that launched the app, which comes forward in its own window', () => {
+    const game = mkdtempSync(join(tmpdir(), 'uvcs-game-'));
+    const { windows } = setUp([], [{ workspacePath: game, bounds: LEFT, fullScreen: false }]);
+    windows.requestAtLaunch(TOOLS);
+
+    expect(windows.firstWorkspace()).toBe(TOOLS);
+    windows.openFirst();
+    expect(openedWith()).toEqual([
+      { workspacePath: game, reopen: { bounds: LEFT, fullScreen: false }, inBackground: true },
+      { workspacePath: undefined, reopen: undefined, inBackground: undefined },
+    ]);
+    expect(windows.takeRequested(fakeElectron.windows()[1]!.webContents.id)).toBe(TOOLS);
+  });
+
+  it('are never opened again by development builds, which start on the home screen', () => {
+    fakeElectron.app.isPackaged = false;
+    const game = mkdtempSync(join(tmpdir(), 'uvcs-game-'));
+    const { windows } = setUp([], [{ workspacePath: game, bounds: LEFT, fullScreen: false }]);
+
+    windows.openFirst();
+    expect(openedWith()).toEqual([{ workspacePath: undefined, reopen: undefined, inBackground: undefined }]);
   });
 });

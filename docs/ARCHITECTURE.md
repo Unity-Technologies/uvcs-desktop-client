@@ -272,8 +272,13 @@ safe, and the step of a multi-command operation (shelve, undo, switch, bring). N
 One window per workspace, so several tasks (often one AI agent each, in its own workspace and branch) run side by side.
 
 - `main/window/WorkspaceWindows` opens the windows; opening a workspace that another window shows brings that window
-  forward instead (`windows.focusWorkspace`, checked by `useOpenWorkspace`). The installed app's first window reopens the
-  last workspace used (`openFirst`); a new window opens on the home screen. A new window asked to open a workspace
+  forward instead (`windows.focusWorkspace`, checked by `useOpenWorkspace`). The windows open as the installed app quits
+  (`saveSession`, from `Quitting`: each one's workspace or home screen, bounds, maximized and full screen, the last
+  focused one last; `openWindows`) open again at its next launch where they were (`openFirst`, `windowsToReopen`: one
+  per workspace, none for a folder that's gone), the focused one in front and the others shown behind it
+  (`showInactive`). With none saved (every window was closed before quitting), the first window reopens the last
+  workspace used. Development builds start on one home screen, where automated UI checks pick a workspace. A new
+  window opens on the home screen. A new window asked to open a workspace
   takes it at start (`system.takeRequestedWorkspace`), as does a folder the installed app is launched with on Windows
   and Linux (`workspaceArgument`; a second launch hands it to the running app). The first window waits until `cm` has
   found the workspace holding that folder (`handleLaunchRequests`), which may take longer than Electron takes to start.

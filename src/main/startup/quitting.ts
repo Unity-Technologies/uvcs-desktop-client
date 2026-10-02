@@ -10,6 +10,8 @@ export interface QuittingDependencies {
   askToQuitWhenDone: () => Promise<boolean>;
   /** Whether any window is open: Windows and Linux quit as the last one closes. */
   hasWindows: () => boolean;
+  /** Saves the windows open now, to open again at the next launch (`WorkspaceWindows.saveSession`). */
+  saveSession: () => void;
   quit: () => void;
 }
 
@@ -19,6 +21,7 @@ export interface QuittingDependencies {
  * - An operation changing a workspace (update, switch, checkin, merge…) holds it back: quitting would kill its `cm`
  *   partway. The user is asked to quit once it finishes, or to stay; with no window left to ask from (the last one was
  *   closed), the app quits once it finishes.
+ * - The windows open are saved (`saveSession`), before they close, to open again at the next launch.
  * - The pages hear it (`quitStarted`), so one holding unsaved edits quits the app once it settles them.
  */
 export class Quitting {
@@ -34,6 +37,7 @@ export class Quitting {
       if (!this.holding) void this.quitWhenWritesFinish();
       return;
     }
+    this.dependencies.saveSession();
     quitStarted();
   }
 

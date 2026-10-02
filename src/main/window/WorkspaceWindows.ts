@@ -1,9 +1,12 @@
 import { existsSync } from 'node:fs';
 import { app, BrowserWindow } from 'electron';
+import type { SavedWindow } from '@shared/domain/settings';
 import { sendEventTo } from '../ipc/sendEvent';
 import type { SettingsStore } from '../settings/SettingsStore';
 import { createMainWindow } from './createMainWindow';
 import { askBeforeUnloading } from './leaveRequests';
+import { savedBoundsOf } from './savedWindowBounds';
+import { inSessionOrder, windowsToReopen } from './windowSession';
 
 interface WorkspaceWindowsOptions {
   settings: SettingsStore;
@@ -14,33 +17,46 @@ interface WorkspaceWindowsOptions {
   onClosed: (viewer: number) => void;
 }
 
+/** Where a window opens again at launch, as it was when the app quit (`createMainWindow`'s `reopen`). */
+interface Reopening {
+  reopen: Pick<SavedWindow, 'bounds' | 'fullScreen'>;
+  inBackground: boolean;
+}
+
 /**
  * One window per workspace: opening a workspace that another window shows focuses that window. A new window may
- * be asked to open a workspace as soon as its page starts (`takeRequested`).
+ * be asked to open a workspace as soon as its page starts (`takeRequested`). The windows open as the app quits open
+ * again at the next launch (`saveSession`, `openFirst`).
  */
 export class WorkspaceWindows {
   private readonly requested = new Map<number, string>();
   /** A workspace picked from the Dock or named on the command line before any window existed (it launched the app). */
   private launchRequest: string | null = null;
+  /** The window that had the focus last: it keeps it when the session opens again, as the app may quit from the Dock. */
+  private lastFocused: BrowserWindow | null = null;
 
   constructor(private readonly options: WorkspaceWindowsOptions) {}
 
-  /** Opens a window on the home screen, or opening `workspacePath`. */
-  open(workspacePath?: string): BrowserWindow {
-    const cascadeFrom = BrowserWindow.getFocusedWindow() ?? this.all().at(-1);
+  /** Opens a window on the home screen, or opening `workspacePath`; one reopened at launch opens where it was. */
+  open(workspacePath?: string, reopening?: Reopening): BrowserWindow {
+    const cascadeFrom = reopening ? undefined : (BrowserWindow.getFocusedWindow() ?? this.all().at(-1));
     // Its page starts on the workspace when its folder is there; for a missing one, the page's own check explains it.
     const startsOn = workspacePath && existsSync(workspacePath) ? workspacePath : undefined;
-    const window = createMainWindow(this.options.settings, { cascadeFrom, workspacePath: startsOn });
+    const window = createMainWindow(this.options.settings, { cascadeFrom, workspacePath: startsOn, ...reopening });
     const viewer = window.webContents.id;
     askBeforeUnloading(window);
     if (workspacePath) this.requested.set(viewer, workspacePath);
 
     const changed = (): void => this.options.onWindowsChanged();
-    window.on('focus', changed);
+    window.on('focus', () => {
+      this.lastFocused = window;
+      changed();
+    });
     // The event comes before the window takes the new title.
     window.on('page-title-updated', () => setImmediate(changed));
     window.on('closed', () => {
       this.requested.delete(viewer);
+      if (this.lastFocused === window) this.lastFocused = null;
       this.options.onClosed(viewer);
       changed();
     });
@@ -49,20 +65,38 @@ export class WorkspaceWindows {
   }
 
   /**
-   * The workspace the first window at launch opens: the one that launched the app, else the last one used (none, for
-   * the home screen, when its folder is gone). Development builds start on the home screen, where automated UI checks
-   * pick a workspace.
+   * The workspace the window focused at launch opens (`openFirst`): the one that launched the app, else the one the
+   * focused window showed when the app quit, else the last one used (none, for the home screen, when its folder is gone).
    */
   firstWorkspace(): string | undefined {
-    const lastUsed = app.isPackaged ? this.options.settings.get().recentWorkspacePaths[0] : undefined;
-    return this.launchRequest ?? (lastUsed && existsSync(lastUsed) ? lastUsed : undefined);
+    if (this.launchRequest) return this.launchRequest;
+    const reopened = this.windowsToReopen();
+    return reopened.length > 0 ? reopened.at(-1)!.workspacePath : this.lastUsedWorkspace();
   }
 
-  /** The first window at launch, on `firstWorkspace()`. */
+  /**
+   * The windows at launch: those open when the app quit, where they were and on what they showed, the focused one in
+   * front; else one on the last workspace used. A workspace that launched the app then comes forward, in its window
+   * if one reopened on it.
+   */
   openFirst(): void {
-    const workspacePath = this.firstWorkspace();
+    const launchRequest = this.launchRequest;
     this.launchRequest = null;
-    this.open(workspacePath);
+    const reopened = this.windowsToReopen();
+    reopened.forEach(({ workspacePath, bounds, fullScreen }, index) => {
+      const behindAnother = index < reopened.length - 1 || launchRequest !== null;
+      this.open(workspacePath, { reopen: { bounds, fullScreen }, inBackground: behindAnother });
+    });
+    if (launchRequest) this.showWorkspace(launchRequest);
+    else if (reopened.length === 0) this.open(this.lastUsedWorkspace());
+  }
+
+  /** Saves the windows open now, to open again at the next launch (`openWindows`); none when every window was closed. */
+  saveSession(): void {
+    const openWindows = inSessionOrder(this.all(), this.lastFocused).map(
+      (window): SavedWindow => ({ workspacePath: this.workspaceIn(window), bounds: savedBoundsOf(window), fullScreen: window.isFullScreen() }),
+    );
+    this.options.settings.update({ openWindows });
   }
 
   /** Focuses the window showing the workspace, or opens one for it. */
@@ -130,6 +164,19 @@ export class WorkspaceWindows {
     return BrowserWindow.getAllWindows()
       .filter((window) => !window.isDestroyed())
       .sort((a, b) => a.id - b.id);
+  }
+
+  /**
+   * The saved windows to open again (`windowsToReopen`). Development builds open none, as they open no last workspace:
+   * they start on the home screen, where automated UI checks pick a workspace.
+   */
+  private windowsToReopen(): SavedWindow[] {
+    return app.isPackaged ? windowsToReopen(this.options.settings.get().openWindows, existsSync) : [];
+  }
+
+  private lastUsedWorkspace(): string | undefined {
+    const lastUsed = app.isPackaged ? this.options.settings.get().recentWorkspacePaths[0] : undefined;
+    return lastUsed && existsSync(lastUsed) ? lastUsed : undefined;
   }
 
   private shownBy(viewer: number): string | undefined {

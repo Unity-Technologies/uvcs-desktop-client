@@ -12,6 +12,7 @@ function setUp({ writing = false, windows = true, answer = true } = {}) {
     writesFinished: vi.fn(() => writesFinished),
     askToQuitWhenDone: vi.fn(async () => answer),
     hasWindows: () => windows,
+    saveSession: vi.fn(),
     quit: vi.fn(),
   } satisfies QuittingDependencies;
   const quitting = new Quitting(dependencies);
@@ -28,11 +29,12 @@ function setUp({ writing = false, windows = true, answer = true } = {}) {
 const settle = (): Promise<void> => new Promise((resolve) => setImmediate(resolve));
 
 describe('quitting', () => {
-  it('goes on at once when no operation changes a workspace', () => {
+  it('goes on at once when no operation changes a workspace, saving the windows before they close', () => {
     const { dependencies, quit } = setUp();
 
     expect(quit()).toBe(true);
     expect(dependencies.askToQuitWhenDone).not.toHaveBeenCalled();
+    expect(dependencies.saveSession).toHaveBeenCalledOnce();
   });
 
   it('waits for a running operation once the user agrees, then quits', async () => {
@@ -42,6 +44,8 @@ describe('quitting', () => {
     await settle();
     expect(dependencies.askToQuitWhenDone).toHaveBeenCalledOnce();
     expect(dependencies.quit).not.toHaveBeenCalled();
+    // Saved by the quit that goes on, with the windows as they are then.
+    expect(dependencies.saveSession).not.toHaveBeenCalled();
 
     finishWrites();
     await settle();

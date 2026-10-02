@@ -14,6 +14,14 @@ export interface SavedWindowBounds {
   maximized: boolean;
 }
 
+/** A window open when the app last quit, opened again where it was at the next launch (`WorkspaceWindows.saveSession`). */
+export interface SavedWindow {
+  /** The workspace it showed; none on the home screen. */
+  workspacePath?: string;
+  bounds: SavedWindowBounds;
+  fullScreen: boolean;
+}
+
 export interface AppSettings {
   theme: ThemePreference;
   recentWorkspacePaths: string[];
@@ -61,6 +69,8 @@ export interface AppSettings {
   customEditors: CustomEditor[];
   /** Null until the window is first moved or resized. */
   windowBounds: SavedWindowBounds | null;
+  /** The windows open when the app last quit, the focused one last; none when it quit with no window open. */
+  openWindows: SavedWindow[];
   /**
    * The official Desktop client's settings were imported (`importLegacySettings`), or there were none to import: they
    * are never read again.
@@ -92,5 +102,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   terminal: AUTO_APP,
   customEditors: [],
   windowBounds: null,
+  openWindows: [],
   legacySettingsImported: false,
 };
