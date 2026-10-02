@@ -22,7 +22,8 @@ interface FoldedCommentProps {
 /**
  * A comment's title and description folded to a few lines each, with one "Show more" once either doesn't fit and
  * "Show less" to fold it again. Read the same in a details panel (`DetailsHeading`) and over a diff
- * (`ChangesetSummary`, `ShelveSummary`).
+ * (`ChangesetSummary`, `ShelveSummary`). What is cut is measured for the comment it first shows: a place that shows
+ * another object's comment instead keys it by that object, as the details panels and `TargetDiff` do.
  */
 export function FoldedComment({ title, titleClassName, description, titleLines, descriptionLines, expandedMaxHeight, children }: FoldedCommentProps) {
   const [expanded, setExpanded] = useState(false);
