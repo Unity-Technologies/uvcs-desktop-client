@@ -2,7 +2,6 @@ import { useCallback, useMemo, useState } from 'react';
 import { APPLICABLE_PERMISSIONS, type ObjectPermissions, type PermissionName, type PermissionTarget } from '@shared/domain/permissions';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
 import { hotkey } from '../../lib/shortcutRegistry';
-import { Button } from '../../ui/Button';
 import { HighlightQuery } from '../../ui/Highlight';
 import { KeyHints } from '../../ui/KeyHints';
 import { SearchField } from '../../ui/SearchField';
@@ -102,11 +101,13 @@ interface MemberPermissionsProps {
   onDraft: (draft: PermissionsDraft) => void;
 }
 
-const KEY_HINTS = [
+// In the order of the choices (`OWN_STATES`), then the overrides menu where there are lists above.
+const CHOICE_HINTS = [
+  { keys: hotkey('permissionInherit'), label: 'inherit' },
   { keys: hotkey('permissionAllow'), label: 'allow' },
   { keys: hotkey('permissionDeny'), label: 'deny' },
-  { keys: hotkey('permissionInherit'), label: 'inherit' },
 ];
+const OVERRIDES_HINT = { keys: hotkey('permissionMenu'), label: 'overrides' };
 
 /** What one member may do here: every permission that applies to the object, under its group. */
 function MemberPermissions({ target, permissions, row, draft, onDraft }: MemberPermissionsProps) {
@@ -138,22 +139,10 @@ function MemberPermissions({ target, permissions, row, draft, onDraft }: MemberP
           <span className={styles.memberHeading}>{row.label}</span>
           <span className={styles.memberStatus}>{memberStatus(row)}</span>
         </span>
-        <span className={styles.bulk}>
-          <Button size="small" variant="ghost" onClick={() => setAll('allow')} disabled={shown.length === 0}>
-            Allow {allWord}
-          </Button>
-          <Button size="small" variant="ghost" onClick={() => setAll('deny')} disabled={shown.length === 0}>
-            Deny {allWord}
-          </Button>
-          <Button size="small" variant="ghost" onClick={() => setAll('inherit')} disabled={shown.length === 0}>
-            Inherit {allWord}
-          </Button>
+        <span className={styles.gridTools}>
+          <SearchField value={filter} onChange={setFilter} placeholder="Filter permissions" width={200} />
         </span>
       </header>
-      <div className={styles.gridTools}>
-        <SearchField value={filter} onChange={setFilter} placeholder="Filter permissions" width={220} />
-        <KeyHints hints={KEY_HINTS} />
-      </div>
       <HighlightQuery query={filter}>
         {shown.length > 0 ? (
           <PermissionGrid
@@ -165,11 +154,14 @@ function MemberPermissions({ target, permissions, row, draft, onDraft }: MemberP
             onActivate={setActive}
             onSet={set}
             onOverride={override}
+            onSetAll={setAll}
+            setAllScope={allWord}
           />
         ) : (
           <p className={styles.emptyNote}>No matching permissions</p>
         )}
       </HighlightQuery>
+      {shown.length > 0 && <KeyHints hints={hasAbove ? [...CHOICE_HINTS, OVERRIDES_HINT] : CHOICE_HINTS} />}
     </section>
   );
 }

@@ -64,6 +64,11 @@ export const PermissionRow = memo(function PermissionRow(props: PermissionRowPro
             <Info size={13} />
           </span>
         </span>
+        <span role="gridcell" className={styles.effective} data-effective={resolution.effective} data-tip={effectiveSentence(resolution)}>
+          <EffectiveIcon effective={resolution.effective} />
+          <span className={styles.effectiveLabel}>{effectiveLabel(resolution)}</span>
+          {resolution.source && <span className={styles.source}>{sourceLabel(resolution.source)}</span>}
+        </span>
         <span role="gridcell" className={styles.states} aria-label="Inherit, allow or deny">
           {OWN_STATES.map((state) => (
             <button
@@ -81,11 +86,6 @@ export const PermissionRow = memo(function PermissionRow(props: PermissionRowPro
               {STATE_LABELS[state]}
             </button>
           ))}
-        </span>
-        <span role="gridcell" className={styles.effective} data-effective={resolution.effective} data-tip={effectiveSentence(resolution)}>
-          <EffectiveIcon effective={resolution.effective} />
-          <span className={styles.effectiveLabel}>{effectiveLabel(resolution)}</span>
-          {resolution.source && <span className={styles.source}>{sourceLabel(resolution.source)}</span>}
         </span>
         {hasAbove && (
           <span role="gridcell" className={styles.more}>

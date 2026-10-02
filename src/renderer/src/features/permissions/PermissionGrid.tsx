@@ -2,6 +2,7 @@ import { forwardRef, useCallback, useId, useState, type KeyboardEvent } from 're
 import type { PermissionName } from '@shared/domain/permissions';
 import type { OwnState, PermissionResolution } from './aclResolution';
 import type { PermissionGroup } from './permissionCatalog';
+import { PermissionGridHeader } from './PermissionGridHeader';
 import { gridKeyAction } from './permissionGridKeys';
 import type { OverrideKind } from './permissionsDraft';
 import { PermissionRow } from './PermissionRow';
@@ -19,6 +20,9 @@ interface PermissionGridProps {
   onActivate: (permission: PermissionName) => void;
   onSet: (permission: PermissionName, state: OwnState) => void;
   onOverride: (permission: PermissionName, kind: OverrideKind, on: boolean) => void;
+  /** Sets every permission shown; "all" or "shown" says which (a filter hides some). */
+  onSetAll: (state: OwnState) => void;
+  setAllScope: 'all' | 'shown';
 }
 
 /**
@@ -26,7 +30,7 @@ interface PermissionGridProps {
  * Shift+F10 opening the active row's overrides menu. Rows are buttons only for the mouse.
  */
 export const PermissionGrid = forwardRef<HTMLDivElement, PermissionGridProps>(function PermissionGrid(
-  { groups, resolutions, savedChoices, hasAbove, active, onActivate, onSet, onOverride },
+  { groups, resolutions, savedChoices, hasAbove, active, onActivate, onSet, onOverride, onSetAll, setAllScope },
   ref,
 ) {
   const gridId = useId();
@@ -44,6 +48,8 @@ export const PermissionGrid = forwardRef<HTMLDivElement, PermissionGridProps>(fu
   );
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>): void => {
+    // The header's buttons keep their own keys (Enter, Space) and aren't a row the keys move through.
+    if ((event.target as HTMLElement).closest('[data-grid-header]')) return;
     const action = gridKeyAction(event, Math.max(0, activeIndex), rows.length, active && resolutions.get(active)?.own);
     if (!action) return;
     event.preventDefault();
@@ -73,6 +79,7 @@ export const PermissionGrid = forwardRef<HTMLDivElement, PermissionGridProps>(fu
     >
       {/* One set of columns for every row (subgrid): the result column as wide as the widest result shown, aligned. */}
       <div className={styles.columns} data-overrides={hasAbove}>
+        <PermissionGridHeader scope={setAllScope} hasOverrides={hasAbove} onSetAll={onSetAll} />
         {groups.map((group) => (
           <div key={group.id} role="rowgroup" aria-label={group.label} className={styles.group}>
             <div className={styles.groupTitle} aria-hidden>
