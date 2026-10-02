@@ -11,6 +11,8 @@ export interface ExternalApp {
   location: string;
   /** It opens a folder as a project. Terminals always do; a plain text editor doesn't. */
   opensFolders: boolean;
+  /** The app's own icon as a data URL, when the OS gives one (macOS and Windows). */
+  icon?: string;
 }
 
 /** The apps found, with the ones "Open in…" uses: the user's choice while it's there, else the automatic one. */
