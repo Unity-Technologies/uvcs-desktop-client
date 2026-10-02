@@ -1,10 +1,7 @@
 name: Install
-description: Set up the pinned Node, restore the npm and Electron download caches, and install with a retry for registry blips.
+description: Set up the Node .nvmrc pins, restore the npm and Electron download caches, and install with a retry for registry blips.
 
 inputs:
-  node-version:
-    description: Node version (the one used locally; the smoke test's Windows fake cm needs 25.5 or later).
-    required: true
   working-directory:
     description: The folder to install in (the checkout, or its copy on a faster disk).
     default: .
@@ -24,12 +21,13 @@ runs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ${{ inputs.working-directory }}/node_modules
-        key: node-modules-v1-${{ runner.os }}-${{ runner.arch }}-node${{ inputs.node-version }}-${{ hashFiles('package-lock.json') }}
+        key: node-modules-v1-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('.nvmrc', 'package-lock.json') }}
 
-    # Caches npm's download cache (~/.npm), for the installs that don't reuse node_modules.
+    # The Node used locally (.nvmrc; the smoke test's Windows fake cm needs 25.5 or later). Caches npm's download cache
+    # (~/.npm), for the installs that don't reuse node_modules.
     - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
       with:
-        node-version: ${{ inputs.node-version }}
+        node-version-file: .nvmrc
         cache: ${{ steps.node-modules.outputs.cache-hit != 'true' && 'npm' || '' }}
 
     # The Electron archive the postinstall (`install-electron`) downloads, ~100 MB from GitHub releases: a flaky
