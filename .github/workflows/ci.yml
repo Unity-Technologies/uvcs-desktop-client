@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The merge queue tests each pull request on top of main before merging it (docs/features/updates.md "CI").
+  merge_group:
 
 # CI only reads the code: its token can't push, comment or touch releases, whoever opened the pull request.
 permissions:
