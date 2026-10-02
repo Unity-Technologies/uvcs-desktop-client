@@ -1,0 +1,6 @@
+{
+  "package": "@pierre/diffs",
+  "version": "1.5.1",
+  "source": "https://github.com/pierrecomputer/pierre/tree/diffs-v1.5.1/skills/diffs",
+  "commit": "8f360ae1b39fcbbdaccacbcd8dbbf94fb10a3c38"
+}
