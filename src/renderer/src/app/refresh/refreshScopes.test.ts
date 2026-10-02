@@ -13,6 +13,7 @@ import {
   isAffectedByCheckinOrUpdate,
   isAffectedByServerMerge,
   isAffectedByPendingChangeEdit,
+  isAffectedByPermissions,
   isAffectedByShelveApplied,
   isAffectedByShelveDeletion,
   isAffectedByShelving,
@@ -164,6 +165,17 @@ describe('refresh scopes', () => {
     expect(isAffectedByAttributes(key('attributeUsedValues', 'status'))).toBe(true);
     expect(isAffectedByAttributes(key('branches', {}))).toBe(false);
     expect(isAffectedByAttributes(key('info'))).toBe(false);
+  });
+
+  it('refreshes nothing in the workspace when permissions are saved, but the lists showing an owner that changed', () => {
+    expect(isAffectedByPermissions('branch', false)(key('branches', 'all'))).toBe(false);
+    expect(isAffectedByPermissions('branch', true)(key('branches', 'all'))).toBe(true);
+    expect(isAffectedByPermissions('branch', true)(key('branchExplorer', {}))).toBe(true);
+    expect(isAffectedByPermissions('branch', true)(key('labels'))).toBe(false);
+    expect(isAffectedByPermissions('label', true)(key('labels'))).toBe(true);
+    expect(isAffectedByPermissions('attribute', true)(key('attributeTypes'))).toBe(true);
+    expect(isAffectedByPermissions('repository', true)(key('branches', 'all'))).toBe(false);
+    expect(isAffectedByPermissions('path', true)(key('pendingChanges'))).toBe(false);
   });
 
   it('re-reads only the listings and details a change in some folders touches', () => {

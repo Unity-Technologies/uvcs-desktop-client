@@ -86,6 +86,22 @@ export function isAffectedByAttributes(key: QueryKey): boolean {
   return area(key) === 'attributeTypes' || area(key) === 'attributeValues' || area(key) === 'attributeUsedValues';
 }
 
+/** The workspace views that show the owner of each kind of object (none shows a server's, a repository's or a path's). */
+const SHOWING_OWNERS: Record<string, readonly string[]> = {
+  branch: ['branches', 'branchExplorer'],
+  label: ['labels', 'branchExplorer'],
+  attribute: ['attributeTypes'],
+};
+
+/**
+ * Permissions were saved: in the workspace, only the lists that show the owner of that kind of object, when it got
+ * another one. Who may do what shows nowhere but in the permissions themselves, which saving refreshes apart.
+ */
+export function isAffectedByPermissions(kind: string, ownerChanged: boolean): (key: QueryKey) => boolean {
+  const areas = ownerChanged ? (SHOWING_OWNERS[kind] ?? []) : [];
+  return (key) => areas.includes(area(key) as string);
+}
+
 /** A code review was created, edited or deleted: the lists of reviews and the branch chips, which read the same list. */
 export function isAffectedByCodeReviews(key: QueryKey): boolean {
   return area(key) === 'codeReviews';
