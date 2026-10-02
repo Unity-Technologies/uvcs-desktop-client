@@ -22,6 +22,7 @@ export const SHORTCUT_AREAS = [
   'History',
   'Annotate',
   'Merge',
+  'Permissions',
   'Command palette',
   'Image diff',
   'Command log',
@@ -144,6 +145,13 @@ export const SHORTCUTS = {
   merge: { area: 'Merge', label: 'Merge', keys: ['mod+enter'] },
   resolveAllInTool: { area: 'Merge', label: 'Resolve the conflicts in the merge tool, one by one', keys: ['mod+shift+enter'] },
   stopResolvingInTool: { area: 'Merge', label: 'Stop resolving one by one', keys: ['escape'] },
+
+  permissionAllow: { area: 'Permissions', label: 'Allow the permission', keys: ['a'] },
+  permissionDeny: { area: 'Permissions', label: 'Deny the permission', keys: ['d'] },
+  permissionInherit: { area: 'Permissions', label: 'Inherit the permission from above', keys: ['i'] },
+  permissionStep: { area: 'Permissions', label: 'Inherit, allow or deny the permission', keys: ['left', 'right'] },
+  removeMember: { area: 'Permissions', label: 'Remove the selected user or group', keys: ['mod+backspace'], keysOffMac: ['delete'] },
+  savePermissions: { area: 'Permissions', label: 'Save the changes', keys: ['mod+enter'] },
 
   paletteMove: { area: 'Command palette', label: 'Move', keys: ['up', 'down'] },
   paletteOpen: { area: 'Command palette', label: 'Open', keys: ['enter'] },
