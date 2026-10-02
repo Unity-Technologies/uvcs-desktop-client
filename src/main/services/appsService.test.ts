@@ -1,3 +1,4 @@
+import { join, sep } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { ExternalApps } from '@shared/domain/externalApps';
 import { AppIcons } from '../system/apps/AppIcons';
@@ -30,7 +31,7 @@ describe('the apps service', () => {
     const { apps, catalog } = service();
     await apps.openInEditor('/wk//game/./a.cs', 'vscode');
     await apps.openInTerminal('/wk/game/', undefined);
-    expect(catalog.openInEditor).toHaveBeenCalledWith('/wk/game/a.cs', 'vscode');
-    expect(catalog.openInTerminal).toHaveBeenCalledWith('/wk/game/', undefined);
+    expect(catalog.openInEditor).toHaveBeenCalledWith(join(sep, 'wk', 'game', 'a.cs'), 'vscode');
+    expect(catalog.openInTerminal).toHaveBeenCalledWith(join(sep, 'wk', 'game') + sep, undefined);
   });
 });
