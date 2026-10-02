@@ -35,6 +35,8 @@ A fast, beautiful desktop client for Unity Version Control (Plastic SCM). Electr
    secrets, windows, and the renderer's shared conventions (data, refresh, menus, keyboard, filters, lists, styling).
 2. The feature doc of the area you touch, listed at the top of ARCHITECTURE.md (`docs/features/*.md`).
 3. The code next to what you change, and its tests: they show the idiom to follow.
+4. For Pierre's API (`@pierre/diffs`), the `diffs` skill (`.claude/skills/diffs`). We pin @pierre/diffs 1.5.1, so check
+   what it says against `node_modules`; updating @pierre/diffs means reinstalling the skill (`pierreSkillVersion.test.ts`).
 
 This file holds the rules and where to find things; ARCHITECTURE.md holds the details and the numbers. When they
 seem to disagree, the code and its tests decide, and the doc gets fixed.
@@ -215,6 +217,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `main/settings/ownConfig.test.ts`                         | only the first-run import reads the official client's config; nothing writes it |
 | `scripts/build/dependencyLicenses.test.ts`                | every package in package-lock.json has a permissive license (`PERMISSIVE_LICENSES`) |
 | `scripts/build/pinnedActions.test.ts`                     | every GitHub action is pinned to a commit SHA                     |
+| `scripts/build/pierreSkillVersion.test.ts`                | the `diffs` skill describes the @pierre/diffs version installed   |
 
 Not enforced yet: no `any` (there are none today). A static test for it is welcome.
 
