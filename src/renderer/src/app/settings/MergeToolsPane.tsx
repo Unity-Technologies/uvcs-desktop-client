@@ -8,6 +8,7 @@ import { Button } from '../../ui/Button';
 import { Checkbox } from '../../ui/Checkbox';
 import { TextField } from '../../ui/TextField';
 import { saveSettings, useSettings } from './useSettings';
+import { appIcon } from '../../components/externalApps/appIcon';
 import { AUTOMATIC_CHOICE_ICON } from './automaticApp';
 import { AUTOMATIC_MERGE_TOOL_RULE, automaticMergeToolDescription } from './automaticMergeTool';
 import { SettingsChoice } from './SettingsChoice';
@@ -39,7 +40,7 @@ export function MergeToolsPane() {
           {tools.map((tool) => (
             <SettingsChoice
               key={tool.id}
-              icon={<AppWindow size={18} />}
+              icon={<ToolIcon tool={tool} />}
               label={tool.name}
               description={tool.executable}
               tip={tool.executable}
@@ -104,4 +105,10 @@ function ToolArguments({ tool }: { tool: MergeTool }) {
       </div>
     </section>
   );
+}
+
+/** The tool's app icon, as the Apps pane and the merge tool menu show it; a generic window where the OS gave none. */
+function ToolIcon({ tool }: { tool: MergeTool }) {
+  const Icon = appIcon(tool) ?? AppWindow;
+  return <Icon size={18} />;
 }
