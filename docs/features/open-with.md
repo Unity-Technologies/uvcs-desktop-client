@@ -53,8 +53,8 @@ One way to find apps serves the editors, the terminals and the merge tools (docs
 
 ## Menus
 
-Opening comes first in every menu, one group: what Enter does, every other way to open it, and Reveal
-(ARCHITECTURE.md "Menus"). `openOnDiskEntries` gives every item on disk the same entries (`fileMenu`,
+Opening in other apps is one group of every menu (`open`), first after what opens in the app (Home's "Open
+workspace", a history row's "Open diff of changeset"), a separator between them (ARCHITECTURE.md "Menus"). `openOnDiskEntries` gives every item on disk the same entries (`fileMenu`,
 `pendingChangeMenu`, the palette's files, `workspaceMenu`, `currentWorkspaceMenu`):
 
 - **A file**: "Open in <editor>", what Enter and a double-click do too (`openFile`); plain "Open", its default app,

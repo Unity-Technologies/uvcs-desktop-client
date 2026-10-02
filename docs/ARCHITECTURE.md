@@ -423,9 +423,9 @@ renderer/src/
   the sidebar's size or entries change, the ones in More kept laid out out of sight for that.
   There is no Annotate page: "Annotate" outside the Files view opens the file's history annotated (`annotatedHistory`).
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
-- **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does) with every
-  other way to open it (in the editor, the terminal, "Open with ▸", Reveal: `openOnDiskEntries`,
-  docs/features/open-with.md), what it does (switch, apply, check out), merges, what it creates, where it leads (history,
+- **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does in the app:
+  open the workspace, a diff), every way to open it in other apps (the editor, the terminal, "Open with ▸", Reveal:
+  `openOnDiskEntries`, docs/features/open-with.md; a file's Enter is its "Open in <editor>"), what it does (switch, apply, check out), merges, what it creates, where it leads (history,
   annotate, browse, Show in Branch Explorer), the OS (save a revision), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
   hiding), and what undoes or deletes it last, in the danger tone; a separator between groups. Entries come from one
   vocabulary (`components/menuWords`: one id, icon, wording and group per concept) and `groupedMenu` orders them.
