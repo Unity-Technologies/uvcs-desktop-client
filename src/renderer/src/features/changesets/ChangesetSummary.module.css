@@ -17,14 +17,6 @@
   font-style: italic;
 }
 
-.body {
-  max-height: 160px;
-  overflow: auto;
-  color: var(--text-secondary);
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
 .meta {
   display: flex;
   flex-wrap: wrap;

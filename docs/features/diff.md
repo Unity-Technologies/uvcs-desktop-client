@@ -2,6 +2,16 @@
 
 Everything a text or image diff does (`features/diff`, `features/review`), whichever view shows it.
 
+## The diff's header
+
+Over a changeset's or a shelve's files (`TargetDiff`: from Changesets, Shelves, the Branch Explorer, a branch diff's
+"By changeset"), the header says who, when and why (`ChangesetSummary`, `ShelveSummary`). A long comment is folded as a
+details panel folds it (`FoldedComment`, through `SummaryComment`), but tighter: two lines of title and three of
+description, then "Show more"; expanded, the description grows to at most 40% of the window and scrolls past that, so
+the files and the diff stay in sight. A short comment shows whole, with no link. The header's description is keyed by
+the target, so another changeset folds its own comment afresh. Indented lines in a comment (commands pasted in) read as
+code, one per line (`parseMarkdown`).
+
 ## Editing in the diff
 
 A workspace file shown against its own past (loaded revision, reviewed copy, or nothing for an
