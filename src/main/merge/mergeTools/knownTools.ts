@@ -1,4 +1,5 @@
 import { posix, win32 } from 'node:path';
+import { localPrograms, macApps, programFiles, type Whereabouts } from '../../system/apps/whereabouts';
 
 /**
  * The merge tools the app looks for, each with its three-way command line as its documentation (and Git's own
@@ -17,15 +18,6 @@ export interface KnownTool {
   requires?: (where: Whereabouts) => string[];
 }
 
-/** What locating a tool depends on. */
-export interface Whereabouts {
-  platform: NodeJS.Platform;
-  env: NodeJS.ProcessEnv;
-  home: string;
-  /** Where `cm` was found: the UVCS merge tool lives next to it on Windows. */
-  cmPath: string;
-}
-
 /**
  * The UVCS merge tool is the Desktop GUI run with `xmerge` (`DiffMergeToolConfig.cs`). It
  * saves to `-r` and exits 0 only when it saved. Source is the incoming side, destination yours. No `-a`: it would
@@ -38,15 +30,6 @@ const VSCODE_ARGS = ['--wait', '--merge', '{incoming}', '{yours}', '{base}', '{r
 
 /** `idea merge <path1> <path2> <base> <output>`, the same for every JetBrains IDE; path1 shows on the left. */
 const JETBRAINS_ARGS = ['merge', '{yours}', '{incoming}', '{base}', '{result}'];
-
-const macApps = (where: Whereabouts, bundlePath: string): string[] =>
-  ['/Applications', posix.join(where.home, 'Applications')].map((folder) => posix.join(folder, bundlePath));
-
-const programFiles = (where: Whereabouts, path: string): string[] =>
-  [where.env.ProgramFiles ?? 'C:\\Program Files', where.env['ProgramFiles(x86)'] ?? 'C:\\Program Files (x86)'].map((folder) => win32.join(folder, path));
-
-const localPrograms = (where: Whereabouts, path: string): string[] =>
-  where.env.LOCALAPPDATA ? [win32.join(where.env.LOCALAPPDATA, 'Programs', path)] : [];
 
 /** `windowsBin`: where its `.cmd` launcher is in its Windows install folder (`bin`, or Cursor's `resources\app\bin`). */
 function vscodeLike(id: string, name: string, app: string, command: string, windowsFolder: string, windowsBin = 'bin'): KnownTool {

@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -8,39 +8,17 @@ import type { ContentSource } from '@shared/domain/content';
 import type { MergeToolOutcome, MergeToolRequest } from '@shared/domain/mergeTools';
 import { saveContent } from '../files/saveContent';
 import { withTempDirectory } from '../files/tempFile';
-import { appExecutable } from '../merge/mergeTools/appExecutable';
 import { fillArgs, type MergeToolFiles } from '../merge/mergeTools/commandLine';
-import { detectKnownTools, type ToolFileSystem } from '../merge/mergeTools/detectTools';
-import { KNOWN_TOOLS, type Whereabouts } from '../merge/mergeTools/knownTools';
+import { detectKnownTools } from '../merge/mergeTools/detectTools';
+import { KNOWN_TOOLS } from '../merge/mergeTools/knownTools';
 import { activateApp, launchMergeTool } from '../merge/mergeTools/launch';
 import { appBundleOf, mergeToolList } from '../merge/mergeTools/mergeToolList';
 import { toolFileNames } from '../merge/mergeTools/toolFileNames';
 import { judgeToolResult } from '../merge/mergeTools/toolResult';
+import { appExecutable } from '../system/apps/appExecutable';
+import { diskFileSystem } from '../system/apps/appFileSystem';
+import type { Whereabouts } from '../system/apps/whereabouts';
 import type { ServiceContext } from './ServiceContext';
-
-const fileSystem: ToolFileSystem & { read(path: string): string | null } = {
-  exists: (path) => {
-    try {
-      return statSync(path).isFile() || path.endsWith('.app');
-    } catch {
-      return false;
-    }
-  },
-  list: (folder) => {
-    try {
-      return readdirSync(folder);
-    } catch {
-      return [];
-    }
-  },
-  read: (path) => {
-    try {
-      return readFileSync(path, 'utf8');
-    } catch {
-      return null;
-    }
-  },
-};
 
 interface OpenTool {
   stop: AbortController;
@@ -54,7 +32,7 @@ export function createMergeToolsService({ cm, settings }: ServiceContext): Merge
     const where: Whereabouts = { platform: process.platform, env: process.env, home: homedir(), cmPath: cm.executable };
     const { mergeTool, customMergeTools, mergeToolArgs } = settings.get();
     return mergeToolList({
-      detected: detectKnownTools(KNOWN_TOOLS, where, fileSystem),
+      detected: detectKnownTools(KNOWN_TOOLS, where, diskFileSystem),
       custom: customMergeTools,
       argsOverrides: mergeToolArgs,
       preference: mergeTool,
@@ -118,7 +96,7 @@ export function createMergeToolsService({ cm, settings }: ServiceContext): Merge
         properties: ['openFile'],
       });
       const picked = result.canceled ? undefined : result.filePaths[0];
-      return picked ? appExecutable(picked, fileSystem) : null;
+      return picked ? appExecutable(picked, diskFileSystem) : null;
     },
   };
 }

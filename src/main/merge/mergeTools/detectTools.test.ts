@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { detectKnownTools, type ToolFileSystem } from './detectTools';
-import { KNOWN_TOOLS, type Whereabouts } from './knownTools';
+import type { AppFileSystem } from '../../system/apps/appFileSystem';
+import type { Whereabouts } from '../../system/apps/whereabouts';
+import { detectKnownTools } from './detectTools';
+import { KNOWN_TOOLS } from './knownTools';
 
-function fakeFileSystem(paths: string[]): ToolFileSystem {
+function fakeFileSystem(paths: string[]): AppFileSystem {
   return {
+    read: () => null,
     exists: (path) => paths.includes(path),
     list: (folder) => [...new Set(paths.filter((path) => path.startsWith(folder + (folder.includes('\\') ? '\\' : '/'))).map((path) => path.slice(folder.length + 1).split(/[\\/]/)[0]!))],
   };
