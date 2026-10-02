@@ -17,6 +17,7 @@ you touch:
 | --------------------------------------- | ------------------------------------------------------------------------------ |
 | `features/diff.md`                      | Editing, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
 | `features/merge.md`                     | The merge page, conflict resolution, external merge tools, finishing a task    |
+| `features/open-with.md`                 | Finding apps per OS, the editors and terminals, opening items in them          |
 | `features/shelves-and-switching.md`     | Switching with changes, a workspace on a shelve, shelves in Changes, two people on one branch |
 | `features/files-history-annotate.md`    | Files, Browse repository, Go to file, cut and paste, history, annotate         |
 | `features/branch-explorer.md`           | The graph's canvas, keeping the place, the pending changeset, the branch switcher |
@@ -167,14 +168,17 @@ repository, set where `cm` names it, and every spec built from it names both (`s
 
 `cm` never opens its merge or diff tool, and background work never opens anything. A merge tool opens only when the
 user asks for it on one conflicting file ("Resolve in…") or on each in turn ("Resolve N conflicts in…"), one at a time,
-and the app keeps the decision.
+and the app keeps the decision. An editor or a terminal opens only on the user's "Open in…" or "Open with"
+(docs/features/open-with.md).
 
 - `cm merge --merge` always carries `--nointeractiveresolution` and an explicit decision for every conflicting file
   (`fileConflictArgs`): workspace merges keep the destination and the app writes the resolutions; merges into a
   server branch hand `cm` each file's decision in a resolutions file (`--fileconflictsresolutionsfile`, docs/features/merge.md).
 - Shelves are applied as merges from `sh:N` (never `cm shelveset apply`); `cm update` keeps `--dontmerge`;
   `cm diff` always has `--format`. `main/cm/noExternalUi.test.ts` checks these statically, and that processes start
-  only to run `cm`, open a terminal, or from `main/merge/mergeTools/launch.ts`, imported only by `mergeToolsService`.
+  only to run `cm`, to ask the OS which apps are installed (`readInstalledApps`), to open an editor or a terminal
+  (`system/apps/launchApp.ts`, wired only in `createServices`), or from `main/merge/mergeTools/launch.ts`, imported
+  only by `mergeToolsService`.
 - `cm` processes run with stdin closed, so a console prompt fails instead of hanging.
 
 ## Secrets
@@ -421,7 +425,7 @@ renderer/src/
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
 - **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does), what it
   does (switch, apply, check out), merges, what it creates, where it leads (history, annotate, browse, Show in Branch
-  Explorer), the OS (open, reveal, terminal), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
+  Explorer), the OS (other apps, then the file manager: `openOnDiskEntries`, docs/features/open-with.md), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
   hiding), and what undoes or deletes it last, in the danger tone; a separator between groups. Entries come from one
   vocabulary (`components/menuWords`: one id, icon, wording and group per concept) and `groupedMenu` orders them.
   One builder per kind (`branchMenu`, `changesetMenu`, `labelMenu`, `shelveMenu`, `codeReviewMenu`, `fileMenu`,
