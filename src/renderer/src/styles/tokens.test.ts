@@ -17,7 +17,7 @@ const SURFACES = ['--bg-app', '--bg-sidebar', '--bg-surface', '--bg-surface-rais
 /** Text down to 11px: WCAG AA asks 4.5:1. */
 const TEXT = ['--text-primary', '--text-secondary', '--text-tertiary', '--accent-text', '--label-text', '--status-changed'];
 /** Status letters on their own tint and focus rings are graphics: 3:1. */
-const BADGES = ['--change-added', '--change-changed', '--change-deleted', '--change-moved', '--change-permissions', '--status-changed'];
+const BADGES = ['--change-added', '--change-changed', '--change-deleted', '--change-moved', '--change-permissions', '--status-changed', '--permission-allowed', '--permission-denied'];
 const BADGE_TINT = 0.16;
 /**
  * Where avatars sit: home rows (plain, hovered, focused), the switcher's rows (plain, highlighted), the sidebar's button;
