@@ -203,6 +203,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `lib/menuGroups.test.ts`, `components/menuGrammar.test.ts` | every object menu follows one grammar                            |
 | `styles/tokens.test.ts`, `focusRings.test.ts`             | text 4.5:1 and focus rings 3:1 in both themes                     |
 | `styles/noRawColors.test.ts`                              | colors come from `styles/tokens.css`; the few written out say why |
+| `renderer/src/noAiLookalikeIcons.test.ts`                 | no sparkles or wands: "Automatic" never reads as an AI feature    |
 | `window/workspaceMenuCommands.test.ts`                    | app menu commands match the workspace commands                    |
 | `main/settings/ownConfig.test.ts`                         | only the first-run import reads the official client's config; nothing writes it |
 | `scripts/build/dependencyLicenses.test.ts`                | every package in package-lock.json has a permissive license (`PERMISSIVE_LICENSES`) |

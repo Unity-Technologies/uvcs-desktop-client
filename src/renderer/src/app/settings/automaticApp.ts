@@ -1,4 +1,11 @@
+import { ScanSearch } from 'lucide-react';
 import { AUTO_APP, type ExternalApp } from '@shared/domain/externalApps';
+
+/**
+ * The icon of every "Automatic" choice (the editor, the terminal, the merge tool): picked from the apps found. Not
+ * sparkles, which most apps now show for AI.
+ */
+export const AUTOMATIC_CHOICE_ICON = ScanSearch;
 
 /** What "Automatic" picks, in its tooltip: the rule, which the line under it shouldn't repeat. */
 export const AUTOMATIC_EDITOR_RULE = 'The first editor found';
