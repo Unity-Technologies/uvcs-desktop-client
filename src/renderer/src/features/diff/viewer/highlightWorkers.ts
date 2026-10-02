@@ -3,8 +3,8 @@ import { useResolvedTheme } from '../../../app/settings/useResolvedTheme';
 import { pierreThemeName } from './pierreOptions';
 
 /**
- * Pierre's worker, which highlights a big read-only text off the main thread while it shows as plain text, when
- * `enabled`. Created with the first such text and kept for the session.
+ * Pierre's worker, which highlights a big text off the main thread while it shows as plain text, when `enabled`.
+ * Created with the first such text and kept for the session.
  */
 export function useHighlightWorkers(enabled: boolean): WorkerPoolManager | undefined {
   const theme = pierreThemeName(useResolvedTheme());
@@ -22,7 +22,9 @@ function highlightWorkers(theme: ReturnType<typeof pierreThemeName>): WorkerPool
       workerFactory: () => new Worker(new URL('@pierre/diffs/worker/worker.js', import.meta.url), { type: 'module', name: 'Syntax highlighting' }),
       poolSize: 1,
     },
-    highlighterOptions: { theme, lineDiffType: 'word' },
+    // The editor's markup (`useTokenTransformer`): the editor attaches to a diff the workers highlighted without Pierre
+    // highlighting it again on the main thread (`isReadyToEdit`), and a read-only diff shows the same.
+    highlighterOptions: { theme, lineDiffType: 'word', useTokenTransformer: true },
   });
   if (workers.getDiffRenderOptions().theme !== theme) void workers.setRenderOptions({ theme });
   return workers;

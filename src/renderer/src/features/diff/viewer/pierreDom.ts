@@ -56,3 +56,30 @@ export function hoverUnderPointer(container: HTMLElement | null, at: { x: number
   for (const pre of root.querySelectorAll('pre')) pre.dispatchEvent(new window.PointerEvent('pointerleave', { pointerType: 'mouse' }));
   root.elementFromPoint(at.x, at.y)?.dispatchEvent(new window.PointerEvent('pointermove', { pointerType: 'mouse', clientX: at.x, clientY: at.y, bubbles: true, composed: true }));
 }
+
+/**
+ * Where in the modified text a point is: the one-based line of the row under it (in the modified column, or a unified
+ * row the modified text has) and the character the caret would go before; null over anything else. Pierre puts each
+ * line's text in its row's text nodes, in order, whatever spans wrap them.
+ */
+export function modifiedTextPositionAt(container: Element | null, at: { x: number; y: number }): { lineNumber: number; character: number } | null {
+  const root = pierreShadowRoot(container);
+  const row = root?.elementFromPoint(at.x, at.y)?.closest('[data-line]');
+  if (!root || !row || row.getAttribute('data-line-type') === 'change-deletion' || row.closest('[data-deletions]')) return null;
+  const lineNumber = Number(row.getAttribute('data-line'));
+  if (!Number.isInteger(lineNumber) || lineNumber < 1) return null;
+  return { lineNumber, character: characterAt(root, row, at) };
+}
+
+/** How many characters of `row`'s text come before the caret position at a point (0 when the browser can't say). */
+function characterAt(root: ShadowRoot, row: Element, at: { x: number; y: number }): number {
+  const position = document.caretPositionFromPoint?.(at.x, at.y, { shadowRoots: [root] });
+  if (!position || !row.contains(position.offsetNode)) return 0;
+  let character = 0;
+  const walker = document.createTreeWalker(row, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    if (node === position.offsetNode) return character + position.offset;
+    character += node.textContent?.length ?? 0;
+  }
+  return 0;
+}

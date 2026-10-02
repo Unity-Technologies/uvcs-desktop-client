@@ -8,9 +8,11 @@ import { syntaxLanguage } from '../../../lib/syntaxLanguage';
 export type SyntaxHighlighting = 'inline' | 'background' | 'off';
 
 /**
- * How much text (both versions together) an editable diff highlights on the main thread, where Pierre highlights
- * editors whatever the workers could do. Shiki reads whole files at once and the app waits, about 1.5 to 4 ms a KB
- * (dense generated code to real TSX): 0.1 s for 2 x 16 KB, 0.57 s for 2 x 156 KB. Past this, plain text.
+ * How much text (both versions together) an editable diff highlights. Past `MAX_READ_ONLY_HIGHLIGHTED_CHARS` it goes
+ * to Pierre's workers like a read-only diff, and the editor attaches once the colors are in (`isReadyToEdit`); but a
+ * click or ⌘E before then attaches it at once, and Pierre then highlights the whole diff on the main thread. Shiki reads
+ * whole files at once, 1.5 to 4.5 ms a KB (dense generated code to real TypeScript): 0.57 s for 2 x 156 KB of TSX,
+ * 1.6 to 1.8 s for 2 x 190 KB of TypeScript, the most that early click may cost. Past this, plain text.
  */
 export const MAX_HIGHLIGHTED_CHARS = 400_000;
 
@@ -29,13 +31,13 @@ export const MAX_READ_ONLY_HIGHLIGHTED_CHARS = 20_000;
 export const MAX_BACKGROUND_HIGHLIGHTED_CHARS = 4_000_000;
 
 /**
- * How a diff of these texts is highlighted. Pierre highlights an editable diff (and the whole-file editor) on the main
- * thread whatever the workers could do, so only read-only diffs go to the background.
+ * How a diff of these texts is highlighted. An editable diff goes to the background only up to what the main thread
+ * may have to highlight if the editor attaches early (`MAX_HIGHLIGHTED_CHARS`).
  */
 export function syntaxHighlighting(original: string, modified: string, editable: boolean): SyntaxHighlighting {
   const size = original.length + modified.length;
-  if (size <= (editable ? MAX_HIGHLIGHTED_CHARS : MAX_READ_ONLY_HIGHLIGHTED_CHARS)) return 'inline';
-  return !editable && size <= MAX_BACKGROUND_HIGHLIGHTED_CHARS ? 'background' : 'off';
+  if (size <= MAX_READ_ONLY_HIGHLIGHTED_CHARS) return 'inline';
+  return size <= (editable ? MAX_HIGHLIGHTED_CHARS : MAX_BACKGROUND_HIGHLIGHTED_CHARS) ? 'background' : 'off';
 }
 
 /**

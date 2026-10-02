@@ -4,10 +4,10 @@ import { coveredMarks, lineWordMarks, markedRow, rowWordMarks, type MarkRange, t
 
 /**
  * Makes Pierre (1.5.1) mark the words that changed in a diff typed into, as it does once it's saved; whether the diff
- * was drawn again (not when it has too many changes to mark). While the editor holds the diff (its edit session),
- * Pierre rebuilds only the rows typed into, from the editor's tokens and with no word marks, and keeps the original's
- * rows, marks and all, as they were: a line typed into showed as changed but none of its words, and the original's
- * line kept marking the words it marked before.
+ * was drawn again (not when its marks were right, or it has too many changes to mark). While the editor holds the
+ * diff (its edit session), Pierre rebuilds only the rows typed into, from the editor's tokens and with no word marks,
+ * and keeps the original's rows, marks and all, as they were: a line typed into showed as changed but none of its
+ * words, and the original's line kept marking the words it marked before.
  *
  * This marks the rows the diff's renderer keeps (`renderCache.result.code`) in place: each pair of changed lines
  * (`changedLinePairs`) gets the marks Pierre would give it (`lineWordMarks`) on both sides, and every other row loses
@@ -32,9 +32,12 @@ export function refreshWordMarks(fileDiff: Pick<FileDiff, 'rerender'>): boolean 
   // The rows may be shared with the diff as it was before typing (Pierre's cache of it): replaced, never changed.
   if (deletionLines || additionLines) {
     cache.result = { ...cache.result, code: { ...code, deletionLines: deletionLines ?? code.deletionLines, additionLines: additionLines ?? code.additionLines } };
+  } else if (cache.highlighted) {
+    // The rows kept are what's on screen: the editor drew the lines typed into from the same tokens, without marks.
+    return false;
   }
-  // Drawn again even when the rows kept are right: the editor draws the line typed into itself, from its tokens, and
-  // the rows kept may already have its marks (a diff shown as plain text renders them anew at every render).
+  // A diff shown as plain text renders its rows anew, marks and all, at every render, so the rows kept may already
+  // have the marks of a line the editor drew without them.
   fileDiff.rerender();
   return true;
 }
@@ -72,7 +75,7 @@ const sameMarks = (left: MarkRange[], right: MarkRange[]): boolean =>
 /** The members of the component and its renderer this reaches: protected and private. */
 interface RenderedFileDiff {
   hunksRenderer: {
-    renderCache: { diff: FileDiffMetadata; result?: { code: { deletionLines: (RenderedRow | undefined)[]; additionLines: (RenderedRow | undefined)[] } } } | undefined;
+    renderCache: { diff: FileDiffMetadata; highlighted: boolean; result?: { code: { deletionLines: (RenderedRow | undefined)[]; additionLines: (RenderedRow | undefined)[] } } } | undefined;
     getOptionsWithDefaults(): DiffHunksRendererOptionsWithDefaults;
   };
 }
