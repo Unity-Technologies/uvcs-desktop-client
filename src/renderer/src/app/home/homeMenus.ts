@@ -5,6 +5,7 @@ import { groupedMenu } from '../../lib/menuGroups';
 import { copySubmenu } from '../../components/copyMenu';
 import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction } from '../../components/menuWords';
+import { openRepositoryPathPermissions, openRepositoryPermissions, openServerPermissions } from '../../features/permissions/openPermissions';
 import { forgetRecentWorkspace } from '../settings/useSettings';
 import { deleteRepository, removeWorkspace, renameRepository, renameWorkspace } from './homeOperations';
 
@@ -27,6 +28,9 @@ export function repositoryMenu(repository: RepositorySummary, createWorkspace: (
     menuAction('newWorkspace', () => createWorkspace(repository)),
     copySubmenu('Repository', { name: repository.name, spec: repository.spec }),
     menuAction('rename', () => void renameRepository(repository)),
+    menuAction('permissions', () => openRepositoryPermissions(repository.spec, { owner: repository.owner })),
+    menuAction('pathPermissions', () => openRepositoryPathPermissions(repository.spec)),
+    menuAction('serverPermissions', () => openServerPermissions(repository.server)),
     menuAction('delete', () => void deleteRepository(repository), { label: 'Delete repository…' }),
   ]);
 }

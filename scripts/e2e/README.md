@@ -2,7 +2,7 @@
 
 A light pass over the real built app, to catch what unit tests can't: wiring, startup, a view that fails to render.
 `npm run e2e` builds, then `smoke.mjs` launches `out/` with Playwright's Electron driver and a throwaway
-`--user-data-dir`, opens a workspace, visits every sidebar view, a diff, the command palette and Settings, and switches
+`--user-data-dir`, opens a workspace, visits every sidebar view, a diff, a branch's permissions (an edit, then discarded), the command palette and Settings, and switches
 to the dark theme. It fails on any `pageerror` or `console.error`, a view whose heading doesn't show or that stays
 `Loading`, and any `cm` command the fake couldn't answer. It asserts only that things appear, never pixels or copy.
 About 10 seconds. Screenshots of each step go to `<os temp>/uvcs-e2e-shots` (a failed step's is `NN-FAILED-<step>.png`).
@@ -20,7 +20,7 @@ private), the first-run import reads an empty `PLASTIC_HOME` (`plasticConfigFold
   so a new field is one more property on the objects. `find` keeps only the objects its query's comparisons match
   (`where.cjs`); other conditions keep every object.
 - `repository.cjs` is the synthetic repository: 3 branches, 8 changesets (one incoming), 2 labels, a shelve, a code
-  review, an attribute, a lock, the workspace's files and the revisions `cm cat` and `cm diff` answer. `status.cjs`
+  review, an attribute, a lock, the repository's and server's permissions (`showacl`), the workspace's files and the revisions `cm cat` and `cm diff` answer. `status.cjs`
   answers `cm status --xml`, `tree.cjs` `cm ls --xml`.
 - A command, `find` object or `--format` field it doesn't know fails with exit code 1, naming it, and the smoke test
   fails listing it. **When a view starts running a new `cm` command, teach the fake**: add it to `COMMANDS`, with its

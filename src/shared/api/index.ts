@@ -16,6 +16,7 @@ import type { LocksApi } from './locks';
 import type { MergeApi } from './merge';
 import type { MergeToolsApi } from './mergeTools';
 import type { PendingChangesApi } from './pendingChanges';
+import type { PermissionsApi } from './permissions';
 import type { RepositoriesApi } from './repositories';
 import type { ReviewApi } from './review';
 import type { SettingsApi } from './settings';
@@ -49,6 +50,7 @@ export interface UvcsApi {
   merge: MergeApi;
   mergeTools: MergeToolsApi;
   pendingChanges: PendingChangesApi;
+  permissions: PermissionsApi;
   repositories: RepositoriesApi;
   review: ReviewApi;
   settings: SettingsApi;

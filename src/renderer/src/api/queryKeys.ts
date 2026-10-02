@@ -11,6 +11,10 @@ export const queryKeys = {
   settings: ['settings'] as const,
   user: ['user'] as const,
   repositories: (server: string) => ['repositories', server] as const,
+  /** Every object's permissions on a server: saving some refreshes them all, as objects inherit from each other. */
+  permissionsOn: (server: string) => ['permissions', server, 'acl'] as const,
+  permissions: (server: string, spec: string) => ['permissions', server, 'acl', spec] as const,
+  permissionMembers: (server: string, kind: string, filter: string) => ['permissions', server, 'members', kind, filter] as const,
   profiles: ['profiles'] as const,
   accounts: ['accounts'] as const,
   mergeTools: ['mergeTools'] as const,
