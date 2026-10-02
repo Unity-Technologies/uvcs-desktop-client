@@ -24,7 +24,7 @@ describe("Pierre's diffs skill", () => {
       skillPierreVersion(),
       `@pierre/diffs is ${installed}: reinstall the skill for it (npx skills add pierrecomputer/pierre --skill diffs, or copy ` +
         `skills/diffs from the diffs-v${installed} tag of pierrecomputer/pierre into .claude/skills/diffs), then set ` +
-        `"version", "source" and "commit" in .claude/skills/diffs/pierre-version.json`,
+        `"version", "source" and "commit" in .claude/skills/diffs/pierre-version.json and re-apply its "localChanges"`,
     ).toBe(installed);
   });
 });

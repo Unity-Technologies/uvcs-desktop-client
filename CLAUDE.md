@@ -36,7 +36,8 @@ A fast, beautiful desktop client for Unity Version Control (Plastic SCM). Electr
 2. The feature doc of the area you touch, listed at the top of ARCHITECTURE.md (`docs/features/*.md`).
 3. The code next to what you change, and its tests: they show the idiom to follow.
 4. For Pierre's API (`@pierre/diffs`), the `diffs` skill (`.claude/skills/diffs`). We pin @pierre/diffs 1.5.1, so check
-   what it says against `node_modules`; updating @pierre/diffs means reinstalling the skill (`pierreSkillVersion.test.ts`).
+   what it says against `node_modules`; updating @pierre/diffs means reinstalling the skill (`pierreSkillVersion.test.ts`)
+   and re-applying the `localChanges` its `pierre-version.json` lists.
 
 This file holds the rules and where to find things; ARCHITECTURE.md holds the details and the numbers. When they
 seem to disagree, the code and its tests decide, and the doc gets fixed.

@@ -2,5 +2,9 @@
   "package": "@pierre/diffs",
   "version": "1.5.1",
   "source": "https://github.com/pierrecomputer/pierre/tree/diffs-v1.5.1/skills/diffs",
-  "commit": "8f360ae1b39fcbbdaccacbcd8dbbf94fb10a3c38"
+  "commit": "8f360ae1b39fcbbdaccacbcd8dbbf94fb10a3c38",
+  "localChanges": [
+    "LICENSE.md: Pierre's LICENSE.md (Apache-2.0) from the same tag, which the skill folder doesn't include",
+    "SKILL.md: the link to ../highlights/SKILL.md points to that file on GitHub at the same tag, as the highlights skill isn't installed"
+  ]
 }
