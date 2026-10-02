@@ -31,7 +31,9 @@ describe('permission words', () => {
     const branch = { kind: 'branch', server: 'local', repository: 'game@local', name: '/main/task' } as const;
     const path = { kind: 'path', server: 'local', repository: 'game@local', name: '/src' } as const;
 
-    expect(ownListNotice(branch, shared)).toBe('Shares the permissions of repository game: setting one here gives it its own.');
+    expect(ownListNotice(branch, shared)).toBe(
+      'This branch uses the permissions of repository game. Your first change gives it permissions of its own; those of repository game stay as they are.',
+    );
     expect(ownListNotice(path, shared)).toMatch(/^Not secured/);
     expect(ownListNotice({ ...path, tag: 'release' }, shared)).toMatch(/^A new group of branches/);
     expect(ownListNotice(branch, { ...shared, ownAcl: true })).toBeUndefined();

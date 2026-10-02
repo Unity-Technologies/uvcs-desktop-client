@@ -1,7 +1,7 @@
 import { serverOfRepository, type PermissionTarget, type PermissionTargetKind } from '@shared/domain/permissions';
 import type { Source } from './aclResolution';
 
-const KIND_WORDS: Record<PermissionTargetKind, string> = {
+export const KIND_WORDS: Record<PermissionTargetKind, string> = {
   server: 'Server',
   repository: 'Repository',
   branch: 'Branch',

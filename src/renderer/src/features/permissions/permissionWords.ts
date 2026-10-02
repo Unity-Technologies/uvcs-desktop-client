@@ -1,6 +1,6 @@
 import type { ObjectPermissions, PermissionTarget } from '@shared/domain/permissions';
 import type { OwnState, PermissionResolution } from './aclResolution';
-import { sourceLabel } from './permissionTargets';
+import { KIND_WORDS, sourceLabel } from './permissionTargets';
 
 export const STATE_LABELS: Record<OwnState, string> = { inherit: 'Inherit', allow: 'Allow', deny: 'Deny' };
 
@@ -39,7 +39,8 @@ export function ownListNotice(target: PermissionTarget, permissions: Pick<Object
   if (permissions.ownAcl) return undefined;
   if (target.kind === 'path' && target.tag) return 'A new group of branches: setting a permission creates it, on the branches you name.';
   if (target.kind === 'path') return 'Not secured: on its branches this path follows the repository. Setting a permission secures it.';
-  return `Shares the permissions of ${sourceLabel(permissions.acl.creator)}: setting one here gives it its own.`;
+  const parent = sourceLabel(permissions.acl.creator);
+  return `This ${KIND_WORDS[target.kind].toLowerCase()} uses the permissions of ${parent}. Your first change gives it permissions of its own; those of ${parent} stay as they are.`;
 }
 
 /** An allow here that a deny above beats, which "Allow anyway" (ignoring denies from above) would let through. */
