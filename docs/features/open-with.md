@@ -26,9 +26,10 @@ One way to find apps serves the editors, the terminals and the merge tools (docs
   restart (GitHub Desktop needs one). A failed read counts as no records and is tried again. The renderer reads the
   list at the root of every window (`useExternalApps`), stale after a minute; menus only read it as last read
   (`currentExternalApps`), so building a menu starts nothing.
-- **Icons**: the list carries each app's own icon (`appsService`, `nativeImage.createThumbnailFromPath`, once per
-  location). `app.getFileIcon` was tried and rejected: on macOS it draws the icon of the file type, the same for every
-  app. Linux shows none: a desktop entry's thumbnail is a file's.
+- **Icons** (`AppIcons`): the apps list and the merge tools carry each app's own icon, read once per location with
+  `nativeImage.createThumbnailFromPath`; a program inside a macOS bundle shows the bundle's. `app.getFileIcon` was
+  tried and rejected: on macOS it draws the icon of the file type, the same for every app. A Windows `.cmd` launcher
+  and a Linux desktop entry have only a file's picture, so they show none.
 
 ## The catalogs
 
@@ -38,7 +39,7 @@ One way to find apps serves the editors, the terminals and the merge tools (docs
   path (`open -a`, as Finder would); Windows runs the program in the install folder (`Code.exe`, never `code.cmd` when the
   `.exe` is there: `.cmd` launchers go through `cmd.exe`, `spawnCommand`, which drops `%` and `!` from arguments);
   Linux runs the desktop entry's command line with its file codes filled (`execArgsFor`). The user adds any program or
-  macOS app ("Other app…", Settings' "Add another app…": `customEditors`); picking one already added reuses it.
+  macOS app ("Choose another app…", in the menus and Settings: `customEditors`); picking one already added reuses it.
 - **Terminals** (`KNOWN_TERMINALS`, one finder per OS): each is told the folder its own way and started in it. macOS:
   Terminal, iTerm, Ghostty, Warp, Hyper, PowerShell by `open -a`; WezTerm, kitty and Alacritty by their own program in
   the bundle. Windows: Windows Terminal (`wt.exe -d .`), PowerShell 7, Windows PowerShell and Command Prompt through cmd's
@@ -46,21 +47,27 @@ One way to find apps serves the editors, the terminals and the merge tools (docs
   system's choice (`x-terminal-emulator`) first. "Automatic" (`automaticTerminal`) is the terminal the app was started
   from on macOS, else Terminal; Windows Terminal, else Windows PowerShell; the system's choice, else the desktop's own.
 - **Choices** (`editor`, `terminal` settings, `auto` by default): "Automatic" uses the first editor found, in the
-  catalog's order; a choice no longer installed falls back to it (`externalAppList`). Settings' Apps pane shows them.
+  catalog's order; a choice no longer installed falls back to it (`externalAppList`). The editor can also be each
+  file's default app (`SYSTEM_APP`): no editor, files open as the OS opens them. Settings' Apps pane picks them with
+  one drop-down each (`AppPicker`, `appPickerEntries`): a list of every app found would bury the terminal under it.
 
 ## Menus
 
-`openOnDiskEntries` gives every item on disk the same OS entries, after the menu's own (`fileMenu`, `pendingChangeMenu`,
-the palette's files, `workspaceMenu`, `currentWorkspaceMenu`):
+Opening comes first in every menu, one group: what Enter does, every other way to open it, and Reveal
+(ARCHITECTURE.md "Menus"). `openOnDiskEntries` gives every item on disk the same entries (`fileMenu`,
+`pendingChangeMenu`, the palette's files, `workspaceMenu`, `currentWorkspaceMenu`):
 
-- **A file**: the menu's "Open" (its default app, as a double-click), then "Open with ▸" every editor, the user's
-  first and marked "(default)" as macOS' own Open With menu marks it, and "Other app…"; then "Reveal in Finder". No
-  "Open in <editor>" at the top: next to "Open" it would read as a second way to do the same, and the default app of a
-  code file is usually the editor anyway.
+- **A file**: "Open in <editor>", what Enter and a double-click do too (`openFile`); plain "Open", its default app,
+  when the user has no editor. Then "Open with ▸": every editor, the user's marked "(default)" as macOS' own Open
+  With menu marks it, the file's "Default app" when an editor opens it otherwise, "Choose another app…" and "Manage
+  apps…" (Settings' Apps, as the merge tools' menu leads to theirs); then "Reveal in Finder". Every "Open" says where
+  it opens: a plain "Open" beside "Open with ▸" read as a second way to do the same.
 - **A folder or the workspace**: "Open in <editor>" (when the user's editor opens folders) and "Open in <terminal>",
   a folder's two ways to open (its default app would only show it in Finder); then "Open with ▸" every app that opens
   folders and every terminal, and "Reveal". Home's own "Open" reads "Open workspace", apart from them.
-- **A revision** (history, Browse repository, a diff's files): "Open this revision" (the default app) and "Open this
-  revision with ▸" every editor; the revision is saved to a temp file first (`revisionFiles.open`), as before.
+- **A revision** (history, Browse repository, a diff's files, `openRevisionEntries`): "Open this revision in <editor>"
+  (plain, its default app, without an editor; a double-click in Browse repository does the same), then "Open this
+  revision with ▸" as a file's. The revision is saved to a temp file first (`revisionFiles.open`), as before.
+- **Words**: "Open in <app>" for a named app, "Open with ▸" for choosing one, as Finder, Explorer and VS Code say them.
 - The palette ("Open workspace in <editor>", "Open workspace in <terminal>"), File's "Open in Editor" and "Open in
   Terminal", and the workspace switcher's popover open the workspace the same way.

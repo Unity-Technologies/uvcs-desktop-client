@@ -423,9 +423,10 @@ renderer/src/
   the sidebar's size or entries change, the ones in More kept laid out out of sight for that.
   There is no Annotate page: "Annotate" outside the Files view opens the file's history annotated (`annotatedHistory`).
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
-- **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does), what it
-  does (switch, apply, check out), merges, what it creates, where it leads (history, annotate, browse, Show in Branch
-  Explorer), the OS (other apps, then the file manager: `openOnDiskEntries`, docs/features/open-with.md), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
+- **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does) with every
+  other way to open it (in the editor, the terminal, "Open with ▸", Reveal: `openOnDiskEntries`,
+  docs/features/open-with.md), what it does (switch, apply, check out), merges, what it creates, where it leads (history,
+  annotate, browse, Show in Branch Explorer), the OS (save a revision), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
   hiding), and what undoes or deletes it last, in the danger tone; a separator between groups. Entries come from one
   vocabulary (`components/menuWords`: one id, icon, wording and group per concept) and `groupedMenu` orders them.
   One builder per kind (`branchMenu`, `changesetMenu`, `labelMenu`, `shelveMenu`, `codeReviewMenu`, `fileMenu`,
@@ -435,7 +436,8 @@ renderer/src/
   Branch Explorer". "Copy ▸" (`copySubmenu`) lists what the object has in one order (name or number, title, paths,
   spec, full spec with `@repository`, comment, GUID), each with what it copies, and the toast names it ("Branch spec
   copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected. Items that open a dialog
-  end with "…"; submenus hold real sets of choices. `menuGrammar.test.ts` checks every builder and every place.
+  end with "…"; submenus hold real sets of choices, the choice made checked after its label (`checked`), so the icon
+  in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every place.
 - **Back buttons**: a page goes back with the mouse's back button and, on Windows, the Browser Back key (the `app-command`
   the main process forwards as `navigateBack`), once per press however it arrives (`useBackButtons`).
 - **Keyboard**: every shortcut is declared in `lib/shortcutRegistry.ts` and bound through `hotkey(id)`; the shortcuts sheet
