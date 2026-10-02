@@ -29,8 +29,15 @@ describe('aboutUpdateLine', () => {
 
 describe('aboutUpdateAction', () => {
   it('installs a downloaded update, by restarting or by opening its installer', () => {
-    expect(aboutUpdateAction({ state: 'ready', version: '1.2.0', install: 'restart' })).toEqual({ kind: 'install', label: 'Restart & Install' });
-    expect(aboutUpdateAction({ state: 'ready', version: '1.2.0', install: 'installer' })).toEqual({ kind: 'install', label: 'Open Installer' });
+    expect(aboutUpdateAction({ state: 'ready', version: '1.2.0', install: 'restart' })).toEqual({ kind: 'install', label: 'Restart & Install', enabled: true });
+    expect(aboutUpdateAction({ state: 'ready', version: '1.2.0', install: 'installer' })).toEqual({ kind: 'install', label: 'Open Installer', enabled: true });
+  });
+
+  it('waits, with a spinner and its button off, while an operation finishes before installing', () => {
+    const waiting = { state: 'waitingToInstall', version: '1.2.0', install: 'restart' } as const;
+
+    expect(aboutUpdateLine(waiting)).toEqual({ text: 'Version 1.2.0 installs once the operation finishes.', tone: 'accent', busy: true });
+    expect(aboutUpdateAction(waiting)).toEqual({ kind: 'install', label: 'Restart & Install', enabled: false });
   });
 
   it('checks, except while a check or download is under way or in a development build', () => {

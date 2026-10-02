@@ -272,8 +272,16 @@ safe, and the step of a multi-command operation (shelve, undo, switch, bring). N
 One window per workspace, so several tasks (often one AI agent each, in its own workspace and branch) run side by side.
 
 - `main/window/WorkspaceWindows` opens the windows; opening a workspace that another window shows brings that window
-  forward instead (`windows.focusWorkspace`, checked by `useOpenWorkspace`). The installed app's first window reopens the
-  last workspace used (`openFirst`); a new window opens on the home screen. A new window asked to open a workspace
+  forward instead (`windows.focusWorkspace`, checked by `useOpenWorkspace`). The windows open as the installed app quits
+  (`saveSession`, from `Quitting`: each one's workspace or home screen, bounds, maximized and full screen, the last
+  focused one last; `openWindows`) open again at its next launch where they were (`openFirst`, `windowsToReopen`: one
+  per workspace, none for a folder that's gone), the focused one in front and the others shown behind it
+  (`showInactive`). After a restart to install an update, which nobody chose, each also opens on the view it showed
+  (`Quitting.restartToInstall` saves `withViews`; the page reports each view it goes to, `windows.viewShown`, and reads
+  it back from its address, `startingViewIn`); a launch of the user's own starts on Changes. Where the app quits as
+  its last window closes (Windows, Linux), that window is saved as it closes (`Quitting.lastWindowClosing`). With none
+  saved (on macOS, every window was closed before quitting), the first window reopens the last workspace used. Development builds start on one home screen, where automated UI checks pick a workspace. A new
+  window opens on the home screen. A new window asked to open a workspace
   takes it at start (`system.takeRequestedWorkspace`), as does a folder the installed app is launched with on Windows
   and Linux (`workspaceArgument`; a second launch hands it to the running app). The first window waits until `cm` has
   found the workspace holding that folder (`handleLaunchRequests`), which may take longer than Electron takes to start.
@@ -286,6 +294,11 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   (`commandLogged`) and operation progress go back to that window only. `workspaces.watch` is the window saying which
   workspace it shows: `main/watch/WorkspaceWatchers` keeps one watcher per shown workspace and sends its changes to the
   windows showing it; own writes are ignored in the workspace they touch.
+- Quitting goes through one `before-quit` listener (`main/startup/quitting.ts`, `Quitting`). An operation changing a
+  workspace (`OperationTracker.writesRunning`: update, switch, checkin, merge…) holds the quit back, as quitting would
+  kill its `cm` partway: the OS's message box asks to quit once it finishes or to stay (`askToQuitWhenDone`), and with
+  no window left (Windows and Linux quit as the last one closes) the app quits once it finishes. A slow read never holds
+  it. Then the pages hear it (`quitStarted`), so one with unsaved edits asks Save / Don't save / Cancel first.
 - Settings are written in main, one change at a time; values computed from the stored ones (the recent workspaces and
   branches) are computed there too, and every window gets the result (`settingsChanged`).
 - What a window checks as it opens (`cm version`, `cm checkconnection`) runs until it succeeds once; later windows take

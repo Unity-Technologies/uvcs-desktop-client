@@ -6,9 +6,10 @@ import { focusWindow } from './WorkspaceWindows';
 const closing = new Set<number>();
 let quitting = false;
 
-app.on('before-quit', () => {
+/** The app began quitting (`Quitting`, on `before-quit`): a page that settles its unsaved edits then quits it. */
+export function quitStarted(): void {
   quitting = true;
-});
+}
 
 /**
  * A page with unsaved edits holds its unloading back (`beforeunload`), whatever unloads it: closing its window,

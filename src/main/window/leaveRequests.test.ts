@@ -10,12 +10,12 @@ async function setUp() {
   vi.resetModules();
   const { fakeElectron } = (await import('electron')) as unknown as { fakeElectron: FakeElectron };
   fakeElectron.reset();
-  const { askBeforeUnloading, continueLeaving } = await import('./leaveRequests');
+  const { askBeforeUnloading, continueLeaving, quitStarted } = await import('./leaveRequests');
   const window = fakeElectron.newWindow();
   askBeforeUnloading(window as unknown as BrowserWindow);
   /** The page held its unloading back: it has unsaved edits. */
   const heldBack = (): void => void window.webContents.emit('will-prevent-unload');
-  return { fakeElectron, window, heldBack, continueLeaving: (canLeave: boolean) => continueLeaving(window.webContents.id, canLeave) };
+  return { fakeElectron, window, heldBack, quitStarted, continueLeaving: (canLeave: boolean) => continueLeaving(window.webContents.id, canLeave) };
 }
 
 const closed = (window: FakeWindow): boolean => window.isDestroyed();
@@ -41,8 +41,8 @@ describe('leaving a page with unsaved edits', () => {
   });
 
   it('quits once settled, when quitting was held back', async () => {
-    const { fakeElectron, window, heldBack, continueLeaving } = await setUp();
-    fakeElectron.app.emit('before-quit');
+    const { fakeElectron, window, heldBack, quitStarted, continueLeaving } = await setUp();
+    quitStarted();
     window.emit('close');
     heldBack();
 
@@ -60,8 +60,8 @@ describe('leaving a page with unsaved edits', () => {
   });
 
   it('stays, and stops quitting, when the user cancels', async () => {
-    const { fakeElectron, window, heldBack, continueLeaving } = await setUp();
-    fakeElectron.app.emit('before-quit');
+    const { fakeElectron, window, heldBack, quitStarted, continueLeaving } = await setUp();
+    quitStarted();
     window.emit('close');
     heldBack();
 

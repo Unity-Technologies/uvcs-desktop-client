@@ -1,5 +1,6 @@
 import { fakeApi } from '../../testing/fakeWindow';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { startingWorkspaceQuery } from '@shared/startingWorkspace';
 
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 vi.mock('../home/dialogs/CreateWorkspaceDialog', () => ({ openCreateWorkspaceDialog: vi.fn() }));
@@ -9,6 +10,8 @@ import { openCreateWorkspaceDialog } from '../home/dialogs/CreateWorkspaceDialog
 import { useNavigation } from '../navigation/navigationStore';
 import { queryClient } from '../queryClient';
 import { openFolder } from './openWorkspaceFolder';
+import { openWorkspaceFromAddress } from './openWorkspaceFromAddress';
+import { useSession } from './sessionStore';
 import { openUnlessShownElsewhere } from './useOpenWorkspace';
 
 afterEach(() => {
@@ -40,6 +43,27 @@ describe('openUnlessShownElsewhere', () => {
     expect(useNavigation.getState().view).toBe('changes');
     expect(fakeApi.calls()).toContainEqual({ method: 'settings.rememberRecentWorkspace', args: ['/ws'] });
     expect(fakeApi.calls()).toContainEqual({ method: 'system.addRecentDocument', args: ['/ws'] });
+  });
+});
+
+describe('a window reopened on a view after an update', () => {
+  afterEach(() => {
+    useSession.setState({ workspacePath: null });
+    useNavigation.setState({ view: 'changes', pages: [] });
+  });
+
+  it("keeps the view once the main process's request for its workspace comes, which only remembers it as recent", async () => {
+    fakeApi.answer('windows.focusWorkspace', () => false);
+    fakeApi.answer('settings.rememberRecentWorkspace', () => undefined);
+    fakeApi.answer('system.addRecentDocument', () => undefined);
+    const location = { search: `?${new URLSearchParams(startingWorkspaceQuery('/ws', 'branchExplorer'))}`, pathname: '/index.html' };
+    // Replacing the address drops its query, as a browser does.
+    openWorkspaceFromAddress({ location, history: { replaceState: () => void (location.search = '') } });
+
+    await openUnlessShownElsewhere('/ws', useSession.getState().openWorkspace);
+
+    expect(useNavigation.getState().view).toBe('branchExplorer');
+    expect(fakeApi.calls()).toContainEqual({ method: 'settings.rememberRecentWorkspace', args: ['/ws'] });
   });
 });
 

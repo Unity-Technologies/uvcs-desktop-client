@@ -43,7 +43,10 @@ tells every window each step (`updateStatusChanged`, an `UpdateStatus`); a windo
 - **Download**: an update found downloads by itself, then waits (`ready`). A check while one is under way or ready
   checks nothing and tells where it stands.
 - **Install**: "Restart & Install" quits into it (Windows runs the installer silently, per user, and starts the app
-  again); quitting the app installs it too (`autoInstallOnAppQuit`).
+  again); quitting the app installs it too (`autoInstallOnAppQuit`). Asked while an operation changes a workspace
+  (`writesRunning`: an update, a checkin…), it waits for it to finish (`waitingToInstall`: the card and About say so,
+  with nothing to press) rather than kill its `cm` partway; quitting asks the same. The app comes back with every
+  window where it was, each on the view it showed (`beforeRestart`; ARCHITECTURE.md "Windows").
 - **Unsigned macOS builds**: Squirrel.Mac, which electron-updater installs through on macOS, rejects any build without a
   Developer ID signature ("code failed to satisfy specified code requirement(s)"). Once an update is found,
   `needsManualInstall` asks `codesign` about the running bundle (its one process: `noExternalUi.test.ts` allows it); such

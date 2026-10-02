@@ -19,6 +19,8 @@ type StartListener = (finished: Promise<unknown>) => void;
 /** Tracks long-running operations so they can report progress and be cancelled from the UI. */
 export class OperationTracker {
   private readonly running = new Map<string, AbortController>();
+  /** The operations running that change a workspace (`run`), which quitting or restarting would stop partway. */
+  private readonly writes = new Set<Promise<unknown>>();
 
   constructor(
     private readonly onProgress: ProgressListener,
@@ -35,6 +37,16 @@ export class OperationTracker {
     return this.track(operationId, work, false);
   }
 
+  /** Whether an operation that changes a workspace is running. */
+  writesRunning(): boolean {
+    return this.writes.size > 0;
+  }
+
+  /** Settles once no operation that changes a workspace runs, including any started while waiting; at once when none does. */
+  async writesFinished(): Promise<void> {
+    while (this.writes.size > 0) await Promise.allSettled([...this.writes]);
+  }
+
   cancel(operationId: string): void {
     this.running.get(operationId)?.abort();
   }
@@ -44,13 +56,18 @@ export class OperationTracker {
     this.running.set(operationId, controller);
     // Progress comes from process output events: bound to the caller's context, it reaches the window that started it.
     const progress = new ProgressReport(AsyncResource.bind((report) => this.onProgress(operationId, report)));
+    let finished: Promise<T> | undefined;
     try {
-      const finished = work(progress.context(controller.signal));
-      if (writes) this.onStarted(finished);
+      finished = work(progress.context(controller.signal));
+      if (writes) {
+        this.writes.add(finished);
+        this.onStarted(finished);
+      }
       return await finished;
     } finally {
       progress.flush();
       this.running.delete(operationId);
+      if (finished) this.writes.delete(finished);
     }
   }
 }

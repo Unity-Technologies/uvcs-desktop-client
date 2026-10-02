@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { startingWorkspaceIn, startingWorkspaceQuery } from './startingWorkspace';
+import { startingViewIn, startingWorkspaceIn, startingWorkspaceQuery } from './startingWorkspace';
 
 /** The query as Electron's `loadFile(path, { query })` writes it into the page's address. */
 const search = (query: Record<string, string>): string => `?${new URLSearchParams(query)}`;
@@ -13,6 +13,12 @@ describe('startingWorkspace', () => {
 
   it('names none for a window on the home screen', () => {
     expect(startingWorkspaceQuery(undefined)).toEqual({});
+    expect(startingWorkspaceQuery(undefined, 'branches')).toEqual({});
     expect(startingWorkspaceIn('')).toBeNull();
+  });
+
+  it('names the view a reopened window showed, and none otherwise', () => {
+    expect(startingViewIn(search(startingWorkspaceQuery('/Users/ana/wk', 'branchExplorer')))).toBe('branchExplorer');
+    expect(startingViewIn(search(startingWorkspaceQuery('/Users/ana/wk')))).toBeNull();
   });
 });
