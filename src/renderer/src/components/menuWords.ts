@@ -80,17 +80,24 @@ const word = (group: MenuGroup, icon: Icon, label?: string, danger?: true): Menu
  * their group, so `groupedMenu` puts them in the grammar's order.
  */
 export const MENU_WORDS = {
-  // What Enter or a double-click does.
+  // What Enter or a double-click does, then every other way to open it (`openOnDiskEntries`, `openRevisionEntries`).
+  // The words name the app ("Open in Visual Studio Code").
   diff: word('primary', FileDiff, 'Open diff'),
   diffRange: word('primary', FileDiff),
   diffPair: word('primary', GitCompareArrows, 'Compare selected labels'),
   diffMerge: word('primary', FileDiff, 'Open diff of the merge'),
   changesetDiff: word('primary', FileDiff),
-  open: word('primary', AppWindow, 'Open'),
+  open: word('primary', AppWindow),
   openReview: word('primary', ExternalLink, 'Open review'),
   release: word('primary', LockOpen, 'Release lock'),
   openWorkspace: word('primary', FolderOpen, 'Open workspace'),
   locate: word('primary', FolderSearch, 'Locate or recreate…'),
+  openInEditor: word('primary', CodeXml),
+  terminal: word('primary', SquareTerminal),
+  openRevision: word('primary', AppWindow),
+  openWith: word('primary', SquareArrowOutUpRight, 'Open with'),
+  openRevisionWith: word('primary', SquareArrowOutUpRight, 'Open this revision with'),
+  reveal: word('primary', FolderSearch, REVEAL_LABEL),
 
   // What it does to the workspace or to the object.
   switch: word('act', ArrowRightLeft),
@@ -148,14 +155,8 @@ export const MENU_WORDS = {
   source: word('navigate', ArrowLeftToLine, 'Go to source changeset'),
   destination: word('navigate', ArrowRightToLine, 'Go to destination changeset'),
 
-  // The OS: other apps, then the file manager (`openOnDiskEntries`). The words name the app ("Open in Visual Studio Code").
-  openRevision: word('external', AppWindow, 'Open this revision'),
-  openRevisionWith: word('external', SquareArrowOutUpRight, 'Open this revision with'),
+  // The OS.
   saveAs: word('external', Download, 'Save this revision as…'),
-  openInEditor: word('external', CodeXml),
-  terminal: word('external', SquareTerminal),
-  openWith: word('external', SquareArrowOutUpRight, 'Open with'),
-  reveal: word('external', FolderSearch, REVEAL_LABEL),
 
   // The clipboard: Cut, Copy, Paste, as everywhere.
   cut: word('clipboard', Scissors, 'Cut'),

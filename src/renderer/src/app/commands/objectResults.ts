@@ -11,7 +11,6 @@ import { changesetMenu } from '../../features/changesets/changesetMenu';
 import { openChangesetDiff } from '../../features/changesets/changesetOperations';
 import { codeReviewMenu } from '../../features/codeReviews/codeReviewMenu';
 import { openReview } from '../../features/codeReviews/codeReviewOperations';
-import { openItem } from '../../features/files/fileOperations';
 import { useFilesViewStore } from '../../features/files/filesViewStore';
 import { labelMenu } from '../../features/labels/labelMenu';
 import { showLabelChanges } from '../../features/labels/labelOperations';
@@ -75,7 +74,6 @@ export function fileResult(entry: { path: string; isDirectory: boolean }, contex
 /** For files without pending changes, which the Files view's menu would need their revision details for. */
 function workspaceFileMenu(workspacePath: string, entry: { path: string; isDirectory: boolean }): MenuEntry[] {
   return groupedMenu([
-    !entry.isDirectory && menuAction('open', () => openItem(workspacePath, entry)),
     menuAction('history', () => navigation.openPage({ kind: 'history', path: entry.path })),
     !entry.isDirectory && menuAction('annotate', () => navigation.openPage(annotatedHistory({ path: entry.path }))),
     ...openOnDiskEntries({ path: absolutePath(workspacePath, entry.path), isFolder: entry.isDirectory }),

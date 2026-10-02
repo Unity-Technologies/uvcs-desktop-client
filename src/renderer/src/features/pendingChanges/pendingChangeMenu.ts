@@ -24,7 +24,6 @@ import {
   deletePrivateFiles,
   extensionOf,
   FILTER_LIST_FILES,
-  openWithDefaultApp,
   undoChanges,
 } from './pendingChangeOperations';
 
@@ -56,7 +55,6 @@ export function pendingChangeMenu(
   const onDisk = single && existsOnDisk(single);
 
   return groupedMenu([
-    onDisk && menuAction('open', () => openWithDefaultApp(workspacePath, single)),
     ...(inclusion ? inclusionEntries(changes, inclusion) : []),
     review && reviewMenuEntry(changes, review),
     privateChanges.length > 0 &&

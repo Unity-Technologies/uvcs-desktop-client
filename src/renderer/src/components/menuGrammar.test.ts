@@ -350,27 +350,33 @@ describe('the top bar', () => {
   });
 });
 
-describe('opening in other apps', () => {
+describe('opening', () => {
   const REVEAL = 'Reveal in Finder';
-  const external = (menu: MenuEntry[]): string[] => topEntries(menu).filter((entry) => groupOf(entry) === 'external').map((entry) => entry.label);
+  /** The menu's first group: what Enter does and every other way to open it. */
+  const opening = (menu: MenuEntry[]): string[] => {
+    const entries = topEntries(menu);
+    expect(groupOf(entries[0]!)).toBe('primary');
+    return entries.filter((entry) => groupOf(entry) === 'primary').map((entry) => entry.label);
+  };
 
-  it('offers a file on disk in the same words wherever it shows: the Files view, Changes and the palette', () => {
-    const words = ['Open with', REVEAL];
-    expect(external(MENUS.file!())).toEqual(words);
-    expect(external(MENUS.pendingChange!())).toEqual(words);
+  it("opens a file on disk first, in the user's editor, in the same words wherever it shows: the Files view, Changes and the palette", () => {
+    const words = ['Open in Visual Studio Code', 'Open with', REVEAL];
+    expect(opening(MENUS.file!())).toEqual(words);
+    expect(opening(MENUS.pendingChange!())).toEqual(words);
   });
 
-  it('offers a folder, and the workspace itself, in the editor and the terminal too', () => {
+  it('opens a folder, and the workspace itself, in the editor and the terminal first', () => {
     const words = ['Open in Visual Studio Code', 'Open in Terminal', 'Open with', REVEAL];
-    expect(external(MENUS.folder!())).toEqual(words);
-    expect(external(MENUS.workspace!())).toEqual(words);
-    expect(external(MENUS.currentWorkspace!())).toEqual(words);
+    expect(opening(MENUS.folder!())).toEqual(words);
+    expect(opening(MENUS.currentWorkspace!())).toEqual(words);
+    expect(opening(MENUS.workspace!())).toEqual(['Open workspace', ...words]);
   });
 
-  it('offers a revision with the default app or any other', () => {
-    expect(external(MENUS.history!())).toEqual(['Open this revision', 'Open this revision with', 'Save this revision as…']);
-    expect(external(MENUS.diffEntry!())).toEqual(['Open this revision', 'Open this revision with', 'Save this revision as…']);
-    expect(external(MENUS.revision!())).toEqual(['Open this revision', 'Open this revision with', 'Save this revision as…']);
+  it("opens a revision first, in the user's editor or any other app", () => {
+    const words = ['Open this revision in Visual Studio Code', 'Open this revision with'];
+    expect(opening(MENUS.revision!())).toEqual(words);
+    expect(opening(MENUS.history!())).toEqual(expect.arrayContaining(words));
+    expect(opening(MENUS.diffEntry!())).toEqual(words);
   });
 });
 

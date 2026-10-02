@@ -1,9 +1,11 @@
+import { FolderOpen, Settings } from 'lucide-react';
 import type { ExternalApp, ExternalApps } from '@shared/domain/externalApps';
 import { api } from '../../api/client';
+import { openSettingsDialogAt } from '../../app/settings/SettingsDialog';
 import { SEPARATOR, tidyMenu, type Action, type MenuEntry, type Submenu } from '../../lib/actions';
 import type { GroupedEntry } from '../../lib/menuGroups';
 import { menuAction, menuSubmenu } from '../menuWords';
-import { openInEditor, openInTerminal, openWithOtherApp } from './externalAppOperations';
+import { openFile, openInEditor, openInTerminal, openWithDefaultApp, openWithOtherApp } from './externalAppOperations';
 import { appIcon } from './appIcon';
 import { currentExternalApps, defaultEditor, defaultTerminal } from './externalApps';
 
@@ -20,40 +22,59 @@ export function appLabel(app: ExternalApp, defaultId: string | null): string {
 }
 
 /**
- * The OS entries of anything on disk, in this order everywhere. A folder: "Open in <editor>" (when the user's editor
- * opens folders) and "Open in <terminal>", its two ways to open, then "Open with ▸" every app and "Reveal in Finder". A
- * file has Finder's: its menu's "Open" (the default app, as a double-click), then "Open with ▸" (the user's editor first,
- * marked) and "Reveal". Each entry earns its place: a file's "Open in <editor>" would read as a second "Open".
+ * The opening entries of anything on disk, first in its menu and in this order everywhere. A file: "Open in <editor>"
+ * (plain "Open", its default app, when the user has no editor), what Enter and a double-click do too; then "Open with ▸"
+ * and "Reveal in Finder". A folder: "Open in <editor>" (when the user's editor opens folders) and "Open in <terminal>",
+ * its two ways to open (its default app would only show it in Finder); then "Open with ▸" and "Reveal".
  */
 export function openOnDiskEntries(target: DiskTarget, apps: ExternalApps = currentExternalApps()): (GroupedEntry & (Action | Submenu))[] {
   const editor = defaultEditor(apps);
   const terminal = defaultTerminal(apps);
-  return [
-    ...(target.isFolder && editor?.opensFolders ? [menuAction('openInEditor', () => void openInEditor(target.path, editor.id), { label: `Open in ${editor.name}` })] : []),
-    ...(target.isFolder ? [menuAction('terminal', () => void openInTerminal(target.path), { label: terminal ? `Open in ${terminal.name}` : 'Open in terminal' })] : []),
-    menuSubmenu('openWith', openWithEntries(target, apps)),
-    menuAction('reveal', () => void api.system.revealInFileManager(target.path)),
-  ];
+  const opening = target.isFolder
+    ? [
+        ...(editor?.opensFolders ? [menuAction('openInEditor', () => void openInEditor(target.path, editor.id), { label: `Open in ${editor.name}` })] : []),
+        menuAction('terminal', () => void openInTerminal(target.path), { label: terminal ? `Open in ${terminal.name}` : 'Open in terminal' }),
+      ]
+    : [menuAction('open', () => void openFile(target.path, apps), { label: editor ? `Open in ${editor.name}` : 'Open' })];
+  return [...opening, menuSubmenu('openWith', openWithEntries(target, apps)), menuAction('reveal', () => void api.system.revealInFileManager(target.path))];
 }
 
-/** Every editor that opens the item (and for a folder, every terminal), the defaults marked, then "Other app…". */
+/**
+ * Every editor that opens the item (and for a folder, every terminal), the defaults marked; for a file opened in an
+ * editor, its default app too; then another app, and the apps' settings.
+ */
 export function openWithEntries(target: DiskTarget, apps: ExternalApps): MenuEntry[] {
   const editors = apps.editors.filter((editor) => editor.opensFolders || !target.isFolder);
   return tidyMenu([
     ...editors.map((editor) => appEntry(editor, apps.editorId, () => void openInEditor(target.path, editor.id))),
     SEPARATOR,
     ...(target.isFolder ? apps.terminals.map((terminal) => appEntry(terminal, apps.terminalId, () => void openInTerminal(target.path, terminal.id))) : []),
+    ...(!target.isFolder && apps.editorId ? [defaultAppEntry(() => void openWithDefaultApp(target.path))] : []),
     SEPARATOR,
-    otherAppEntry((editorId) => openInEditor(target.path, editorId)),
+    ...otherAppEntries((editorId) => openInEditor(target.path, editorId)),
   ]);
 }
 
-/** "Open this revision with ▸": every editor, then "Other app…"; `open` saves the revision and opens it in one. */
-export function openRevisionWithSubmenu(open: (editorId: string) => Promise<unknown>, apps: ExternalApps = currentExternalApps()): GroupedEntry & Submenu {
-  return menuSubmenu(
-    'openRevisionWith',
-    tidyMenu([...apps.editors.map((editor) => appEntry(editor, apps.editorId, () => void open(editor.id))), SEPARATOR, otherAppEntry(open)]),
-  );
+/**
+ * A revision's opening entries: "Open this revision in <editor>" (plain, with its default app, when the user has no
+ * editor), then "Open this revision with ▸". `open` saves the revision and opens it in an editor, or with its default
+ * app for `null`.
+ */
+export function openRevisionEntries(open: (editorId: string | null) => Promise<unknown>, apps: ExternalApps = currentExternalApps()): (GroupedEntry & (Action | Submenu))[] {
+  const editor = defaultEditor(apps);
+  return [
+    menuAction('openRevision', () => void open(editor?.id ?? null), { label: editor ? `Open this revision in ${editor.name}` : 'Open this revision' }),
+    menuSubmenu(
+      'openRevisionWith',
+      tidyMenu([
+        ...apps.editors.map((app) => appEntry(app, apps.editorId, () => void open(app.id))),
+        SEPARATOR,
+        ...(editor ? [defaultAppEntry(() => void open(null))] : []),
+        SEPARATOR,
+        ...otherAppEntries(open),
+      ]),
+    ),
+  ];
 }
 
 function appEntry(app: ExternalApp, defaultId: string | null, run: () => void): Action {
@@ -61,6 +82,15 @@ function appEntry(app: ExternalApp, defaultId: string | null, run: () => void): 
   return { id: `openWith.${app.id}`, label: appLabel(app, defaultId), ...(icon && { icon }), run };
 }
 
-function otherAppEntry(open: (editorId: string) => Promise<unknown>): Action {
-  return { id: 'openWith.other', label: 'Other app…', run: () => void openWithOtherApp(open) };
+/** The file's own default app, as the OS would open it, when the user's editor opens files otherwise. */
+function defaultAppEntry(run: () => void): Action {
+  return { id: 'openWith.system', label: 'Default app', run };
+}
+
+/** "Choose another app…" adds one and opens the item in it, as the merge tools' menu words it; "Manage apps…" leads to the apps' settings. */
+function otherAppEntries(open: (editorId: string) => Promise<unknown>): Action[] {
+  return [
+    { id: 'openWith.other', label: 'Choose another app…', icon: FolderOpen, run: () => void openWithOtherApp(open) },
+    { id: 'openWith.manage', label: 'Manage apps…', icon: Settings, run: () => openSettingsDialogAt('apps') },
+  ];
 }

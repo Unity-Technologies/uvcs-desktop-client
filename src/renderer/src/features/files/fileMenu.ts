@@ -14,7 +14,6 @@ import {
   checkoutItems,
   createItem,
   deleteItems,
-  openItem,
   renameItem,
   targetDirectoryFor,
 } from './fileOperations';
@@ -55,7 +54,6 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
   const hasRoot = items.some(isWorkspaceRoot);
 
   return groupedMenu([
-    single && single.itemType !== 'directory' && menuAction('open', () => openItem(workspacePath, single)),
     privateItems.length > 0 &&
       menuAction('add', () => void addItems(workspacePath, privateItems), {
         label: privateItems.some((item) => item.itemType === 'directory') ? 'Add to version control (recursively)' : 'Add to version control',

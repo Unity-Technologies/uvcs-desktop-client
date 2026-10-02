@@ -6,6 +6,21 @@ import { runRead } from '../../app/operations/runOperation';
 import { queryClient } from '../../app/queryClient';
 import { saveSettings } from '../../app/settings/useSettings';
 import { programName } from '../../lib/programName';
+import { currentExternalApps } from './externalApps';
+import type { ExternalApps } from '@shared/domain/externalApps';
+
+/**
+ * Opens a file on disk as its menu's first entry says, and as Enter and a double-click do: in the user's editor, or with
+ * its default app when the user has none (or chose each file's default app).
+ */
+export function openFile(path: string, apps: ExternalApps = currentExternalApps()): Promise<void | undefined> {
+  return apps.editorId ? openInEditor(path, apps.editorId) : openWithDefaultApp(path);
+}
+
+/** Opens a file with the OS's default app for its type. */
+export function openWithDefaultApp(path: string): Promise<void | undefined> {
+  return runRead("Couldn't open the file", () => api.system.openPath(path));
+}
 
 /** Opens a file or folder on disk in the editor `editorId`, or in the user's editor. */
 export function openInEditor(path: string, editorId?: string): Promise<void | undefined> {
