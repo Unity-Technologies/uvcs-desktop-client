@@ -94,7 +94,7 @@ Before adding or changing a `cm` call, answer these (the why and the numbers: AR
 
 ## Commands
 
-npm (Node ≥ 22.12). `cm` must be installed and signed in; set `UVCS_CM_PATH` to use a `cm` that isn't found.
+npm (Node ≥ 22.12; `.nvmrc` pins the one CI builds with, and `.npmrc`'s `engine-strict` stops an install on an older one). `cm` must be installed and signed in; set `UVCS_CM_PATH` to use a `cm` that isn't found.
 
 ```bash
 npm run dev          # the app with hot reload
