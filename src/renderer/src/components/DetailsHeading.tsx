@@ -1,10 +1,10 @@
 import { Copy, Pencil } from 'lucide-react';
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
-import { looksLikeMarkdown, splitComment, type CommentParts } from '../lib/comment';
+import { useState, type ReactNode } from 'react';
+import { splitComment, type CommentParts } from '../lib/comment';
 import { copyToClipboard } from '../ui/copyToClipboard';
 import { IconButton } from '../ui/IconButton';
 import { CommentEditor } from './CommentEditor';
-import { Markdown } from './Markdown';
+import { FoldedComment } from './FoldedComment';
 import styles from './DetailsHeading.module.css';
 
 interface DetailsHeadingProps {
@@ -38,7 +38,10 @@ export function DetailsHeading({ name, comment = '', onSave }: DetailsHeadingPro
 
   return (
     <div className={styles.heading} data-named={name !== undefined} data-actions={Boolean(edit || comment.trim())}>
-      <Folded
+      <FoldedComment
+        titleClassName={styles.title}
+        titleLines={TITLE_LINES}
+        descriptionLines={DESCRIPTION_LINES}
         title={
           name ??
           (parts.summary ||
@@ -51,8 +54,13 @@ export function DetailsHeading({ name, comment = '', onSave }: DetailsHeadingPro
             )))
         }
         description={parts.description}
-        onAddDescription={name !== undefined && !parts.description ? edit : undefined}
-      />
+      >
+        {name !== undefined && !parts.description && edit && (
+          <button className={styles.add} onClick={edit}>
+            Add a description…
+          </button>
+        )}
+      </FoldedComment>
       <div className={styles.actions}>
         {comment.trim() && (
           <IconButton size="small" icon={<Copy size={12} strokeWidth={1.75} />} label="Copy comment" onClick={() => copyToClipboard(comment.trim(), 'Comment')} />
@@ -63,49 +71,6 @@ export function DetailsHeading({ name, comment = '', onSave }: DetailsHeadingPro
   );
 }
 
+/** How much of the heading shows while folded (`FoldedComment`): the panel scrolls, so it shows more than a diff's header. */
 const TITLE_LINES = 3;
-
-/** The title (up to three lines) and description (a few lines), with one "Show more" once either doesn't fit. */
-function Folded({ title, description, onAddDescription }: { title: ReactNode; description: string; onAddDescription?: () => void }) {
-  const [expanded, setExpanded] = useState(false);
-  // What was cut while folded; stays known once expanded, so "Show less" stays too.
-  const [cut, setCut] = useState({ title: false, description: false });
-  const titleRef = useRef<HTMLHeadingElement>(null);
-  const descriptionRef = useRef<HTMLDivElement>(null);
-
-  useLayoutEffect(() => {
-    const isCut = (element: HTMLElement | null): boolean => Boolean(element && element.scrollHeight - element.clientHeight > 2);
-    const measure = (): void =>
-      setCut((current) => {
-        const next = { title: current.title || isCut(titleRef.current), description: current.description || isCut(descriptionRef.current) };
-        return next.title === current.title && next.description === current.description ? current : next;
-      });
-    measure();
-    const observer = new ResizeObserver(measure);
-    for (const element of [titleRef.current, descriptionRef.current]) if (element) observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
-
-  return (
-    <div className={styles.folded} data-expanded={expanded}>
-      <h2 ref={titleRef} className={`${styles.title} selectable`} style={{ WebkitLineClamp: expanded ? 'none' : TITLE_LINES }}>
-        {title}
-      </h2>
-      {description && (
-        <div ref={descriptionRef} className={`${styles.description} selectable`} data-cut={cut.description}>
-          {looksLikeMarkdown(description) ? <Markdown text={description} /> : <p className={styles.plain}>{description}</p>}
-        </div>
-      )}
-      {onAddDescription && (
-        <button className={styles.add} onClick={onAddDescription}>
-          Add a description…
-        </button>
-      )}
-      {(cut.title || cut.description) && (
-        <button className={styles.toggle} onClick={() => setExpanded((value) => !value)}>
-          {expanded ? 'Show less' : 'Show more'}
-        </button>
-      )}
-    </div>
-  );
-}
+const DESCRIPTION_LINES = 6;
