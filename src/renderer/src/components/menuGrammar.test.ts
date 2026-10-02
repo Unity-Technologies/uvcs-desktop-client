@@ -352,11 +352,11 @@ describe('the top bar', () => {
 
 describe('opening', () => {
   const REVEAL = 'Reveal in Finder';
-  /** The menu's first group: what Enter does and every other way to open it. */
+  /** The menu's opening group: every way to open it in other apps, first after what opens in the app. */
   const opening = (menu: MenuEntry[]): string[] => {
-    const entries = topEntries(menu);
-    expect(groupOf(entries[0]!)).toBe('primary');
-    return entries.filter((entry) => groupOf(entry) === 'primary').map((entry) => entry.label);
+    const entries = topEntries(menu).filter((entry) => groupOf(entry) !== 'primary');
+    expect(groupOf(entries[0]!)).toBe('open');
+    return entries.filter((entry) => groupOf(entry) === 'open').map((entry) => entry.label);
   };
 
   it("opens a file on disk first, in the user's editor, in the same words wherever it shows: the Files view, Changes and the palette", () => {
@@ -369,13 +369,15 @@ describe('opening', () => {
     const words = ['Open in Visual Studio Code', 'Open in Terminal', 'Open with', REVEAL];
     expect(opening(MENUS.folder!())).toEqual(words);
     expect(opening(MENUS.currentWorkspace!())).toEqual(words);
-    expect(opening(MENUS.workspace!())).toEqual(['Open workspace', ...words]);
+    expect(opening(MENUS.workspace!())).toEqual(words);
+    expect(reading(MENUS.workspace!()).slice(0, 1)).toEqual([expect.stringContaining('openWorkspace | Open workspace')]);
+    expect(MENUS.workspace!()[1]).toBe(SEPARATOR);
   });
 
   it("opens a revision first, in the user's editor or any other app", () => {
     const words = ['Open this revision in Visual Studio Code', 'Open this revision with'];
     expect(opening(MENUS.revision!())).toEqual(words);
-    expect(opening(MENUS.history!())).toEqual(expect.arrayContaining(words));
+    expect(opening(MENUS.history!())).toEqual(words);
     expect(opening(MENUS.diffEntry!())).toEqual(words);
   });
 });
