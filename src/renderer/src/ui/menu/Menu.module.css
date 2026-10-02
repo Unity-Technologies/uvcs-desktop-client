@@ -99,6 +99,12 @@
   opacity: 0.6;
 }
 
+/* The choice made, after its label: the icon in front stays the item's own. */
+.check {
+  display: flex;
+  margin-left: var(--space-4);
+}
+
 .separator {
   height: 1px;
   margin: var(--space-1) var(--space-2);

@@ -14,6 +14,8 @@ export interface Action {
   disabled?: boolean;
   /** Why it's disabled, as its tooltip in menus. */
   disabledReason?: string;
+  /** The choice made, of a set of choices (the merge tool a button uses): a check after its label. */
+  checked?: boolean;
   run: () => void;
 }
 
