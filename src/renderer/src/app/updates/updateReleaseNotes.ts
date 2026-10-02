@@ -9,7 +9,7 @@ import { useUpdateStore } from './updateStore';
 
 /** The version of the update found, downloading or ready to install; none otherwise. */
 export function foundUpdateVersion(status: UpdateStatus): string | null {
-  return status.state === 'downloading' || status.state === 'ready' ? status.version : null;
+  return status.state === 'downloading' || status.state === 'ready' || status.state === 'waitingToInstall' ? status.version : null;
 }
 
 /** The notes of the update found, read once per version: main has them from the check that found it (`AppUpdates`). */

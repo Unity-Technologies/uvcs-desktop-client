@@ -2,6 +2,7 @@ import { Download, X } from 'lucide-react';
 import { APP_NAME } from '../../lib/appIdentity';
 import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
+import { Spinner } from '../../ui/Spinner';
 import { SWEEP, type ProgressBarState } from '../operations/progressBar';
 import { ProgressTrack } from '../operations/ProgressTrack';
 import { openReleaseNotesDialog } from './ReleaseNotesDialog';
@@ -29,6 +30,20 @@ export function UpdateCard() {
           <span className={styles.percent}>{card.percent}%</span>
         </div>
         <ProgressTrack bar={bar} />
+      </div>
+    );
+  }
+
+  // Asked to install while an operation changes a workspace: nothing to choose until it finishes and the app restarts.
+  if (card.state === 'waitingToInstall') {
+    return (
+      <div className={styles.card} role="status">
+        <div className={styles.row}>
+          <Spinner size={13} />
+          <span className={styles.title}>
+            {APP_NAME} {card.version} installs once the operation finishes.
+          </span>
+        </div>
       </div>
     );
   }

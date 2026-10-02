@@ -42,6 +42,8 @@ function updates(feed: ReturnType<typeof fakeFeed>, parts: Partial<AppUpdatesDep
     }),
     installerOf: (releaseFiles) => releaseFiles.find((file) => file.url.endsWith('.dmg')) ?? null,
     openInstaller: vi.fn(async () => undefined),
+    writesRunning: () => false,
+    writesFinished: async () => undefined,
     push: (status) => pushed.push(status),
     logFailure: vi.fn(),
     ...parts,
@@ -215,6 +217,45 @@ describe('installing', () => {
     await app.install();
 
     expect(feed.quitAndInstall).toHaveBeenCalledWith(true, true);
+  });
+
+  it('waits for an operation changing a workspace to finish before restarting, and says so', async () => {
+    const feed = fakeFeed([found]);
+    let finishWrites!: () => void;
+    const writesFinished = new Promise<void>((resolve) => (finishWrites = resolve));
+    const { updates: app, pushed } = updates(feed, { writesRunning: () => true, writesFinished: () => writesFinished });
+    await app.check();
+    pushed.length = 0;
+
+    const installing = app.install();
+    expect(pushed).toEqual([{ state: 'waitingToInstall', version: '1.2.0', install: 'restart' }]);
+    // Asked again, or checked, meanwhile: still waiting, nothing restarts.
+    await app.install();
+    await app.check();
+    expect(feed.quitAndInstall).not.toHaveBeenCalled();
+    expect(app.status()).toEqual({ state: 'waitingToInstall', version: '1.2.0', install: 'restart' });
+
+    finishWrites();
+    await installing;
+    expect(feed.quitAndInstall).toHaveBeenCalledOnce();
+  });
+
+  it('waits for an operation to finish before opening the disk image too, as that quits the app', async () => {
+    let finishWrites!: () => void;
+    const writesFinished = new Promise<void>((resolve) => (finishWrites = resolve));
+    const { updates: app, dependencies } = updates(fakeFeed([found]), {
+      needsManualInstall: async () => true,
+      writesRunning: () => true,
+      writesFinished: () => writesFinished,
+    });
+    await app.check();
+
+    const installing = app.install();
+    await Promise.resolve();
+    expect(dependencies.openInstaller).not.toHaveBeenCalled();
+    finishWrites();
+    await installing;
+    expect(dependencies.openInstaller).toHaveBeenCalledOnce();
   });
 
   it('does nothing while no update is ready', async () => {

@@ -2,14 +2,17 @@ import { basename, join } from 'node:path';
 import { app, net, shell } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { sendEvent } from '../ipc/sendEvent';
-import { AppUpdates } from './AppUpdates';
+import { AppUpdates, type AppUpdatesDependencies } from './AppUpdates';
 import { downloadInstaller } from './downloadInstaller';
 import { installerAsset } from './installerAsset';
 import { needsManualInstall } from './macSignature';
 import { releaseFileUrl } from './releaseFeed';
 
+/** The operations changing a workspace, which installing waits for (`OperationTracker`). */
+type RunningWrites = Pick<AppUpdatesDependencies, 'writesRunning' | 'writesFinished'>;
+
 /** The app's updates (`AppUpdates`) over electron-updater and Electron; they check on their own once started (`checkPeriodically`). */
-export function createAppUpdates(): AppUpdates {
+export function createAppUpdates(operations: RunningWrites): AppUpdates {
   // `AppUpdates` downloads once it knows how the update will install (`needsManualInstall`).
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
@@ -33,6 +36,8 @@ export function createAppUpdates(): AppUpdates {
       if (error) throw new Error(error);
       app.quit();
     },
+    writesRunning: () => operations.writesRunning(),
+    writesFinished: () => operations.writesFinished(),
     push: (status) => sendEvent('updateStatusChanged', status),
     logFailure: (text) => console.warn(text),
   });

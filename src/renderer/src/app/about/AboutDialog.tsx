@@ -112,7 +112,7 @@ function UpdateBox() {
           </Button>
         )}
         {action.kind === 'install' ? (
-          <Button variant="primary" size="small" onClick={() => void installUpdate()}>
+          <Button variant="primary" size="small" disabled={!action.enabled} onClick={() => void installUpdate()}>
             {action.label}
           </Button>
         ) : (

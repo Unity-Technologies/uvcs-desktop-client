@@ -35,6 +35,10 @@ export interface AppUpdatesDependencies {
   installerOf: (files: readonly ReleaseFile[]) => ReleaseFile | null;
   /** Opens a downloaded disk image, where the user drags the app in, and quits so it can be replaced. */
   openInstaller: (path: string) => Promise<void>;
+  /** Whether an operation changing a workspace runs (`OperationTracker.writesRunning`), which restarting would stop partway. */
+  writesRunning: () => boolean;
+  /** Settles once none runs (`OperationTracker.writesFinished`). */
+  writesFinished: () => Promise<void>;
   /** Tells every window where the update stands. */
   push: (status: UpdateStatus) => void;
   /** Keeps the cause of a failed check or download, which the window shows only in a sentence (`describeUpdateError`). */
@@ -94,7 +98,7 @@ export class AppUpdates {
    */
   async check(): Promise<void> {
     const { state } = this.current;
-    if (state === 'unavailable' || state === 'checking' || state === 'downloading' || state === 'ready') {
+    if (state === 'unavailable' || state === 'checking' || state === 'downloading' || state === 'ready' || state === 'waitingToInstall') {
       this.dependencies.push(this.current);
       return;
     }
@@ -109,9 +113,17 @@ export class AppUpdates {
     }
   }
 
-  /** Installs the downloaded update; nothing while none is ready. */
+  /**
+   * Installs the downloaded update; nothing while none is ready. Both ways quit the app, so an operation changing a
+   * workspace (an update, a checkin…) finishes first (`waitingToInstall`) rather than having its `cm` killed partway.
+   */
   async install(): Promise<void> {
-    if (this.current.state !== 'ready') return;
+    const ready = this.current;
+    if (ready.state !== 'ready') return;
+    if (this.dependencies.writesRunning()) {
+      this.setStatus({ ...ready, state: 'waitingToInstall' });
+      await this.dependencies.writesFinished();
+    }
     if (this.installerPath) await this.dependencies.openInstaller(this.installerPath);
     // Silent: the Windows installer runs with no wizard (a per-user install asks for no elevation), then the app starts again.
     else this.dependencies.feed.quitAndInstall(true, true);

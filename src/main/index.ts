@@ -34,7 +34,8 @@ const settings = openSettings(userData);
 // What a workspace is loaded from, shared by the reads that follow one another as a window opens it.
 const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
 const watchers = watchShownWorkspaces(cm, headers);
-const updates = createAppUpdates();
+const operations = trackOperations(watchers);
+const updates = createAppUpdates(operations);
 const windows = new WorkspaceWindows({
   settings,
   workspaceOf: (viewer) => watchers.workspaceOf(viewer),
@@ -49,7 +50,6 @@ function start(launched: Promise<void>): void {
   if (!app.isPackaged) app.dock?.setIcon(DEVELOPMENT_DOCK_ICON);
   sendSettingsChanges(settings, (changed) => sendEvent('settingsChanged', changed));
   ignoreOwnCommandWrites(cm, watchers, headers);
-  const operations = trackOperations(watchers);
   const api = createServices({
     cm,
     operations,
