@@ -23,24 +23,10 @@
   opacity: 1;
 }
 
-.folded {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: var(--space-1);
-  min-width: 0;
-}
-
 .title {
-  display: -webkit-box;
-  width: 100%;
-  margin: 0;
-  overflow: hidden;
   font-size: var(--text-md);
   font-weight: var(--weight-semibold);
   line-height: 1.45;
-  overflow-wrap: anywhere;
-  -webkit-box-orient: vertical;
 }
 
 /* A comment's first line is often a whole sentence or two, read at the body's size; a name (a branch, a label) is
@@ -66,41 +52,4 @@
 
 .add:hover {
   color: var(--accent-text);
-}
-
-.description {
-  width: 100%;
-  max-height: calc(6 * 1.55em);
-  margin-top: 2px;
-  overflow: hidden;
-  color: var(--text-secondary);
-  line-height: 1.55;
-}
-
-/* The cut line fades out instead of ending mid-glyph. */
-.description[data-cut='true'] {
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 1.55em), transparent);
-}
-
-.folded[data-expanded='true'] .description {
-  max-height: none;
-  mask-image: none;
-}
-
-.plain {
-  margin: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-}
-
-.toggle {
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--accent-text);
-  font-size: var(--text-sm);
-}
-
-.toggle:hover {
-  text-decoration: underline;
 }
