@@ -22,6 +22,7 @@ you touch:
 | `features/branch-explorer.md`           | The graph's canvas, keeping the place, the pending changeset, the branch switcher |
 | `features/updates.md`                   | The About dialog, reporting an issue, how the app updates (unsigned macOS too), What's New, releases, the app icon and CI |
 | `features/locks.md`                     | Lock rules: where they are edited, and why not in the app                      |
+| `features/permissions.md`               | Permissions: the ACL model, `cm showacl`/`cm acl` quirks, the dialog, where it's reachable |
 
 ## How a request flows
 
@@ -422,7 +423,7 @@ renderer/src/
 - **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does), what it
   does (switch, apply, check out), merges, what it creates, where it leads (history, annotate, browse, Show in Branch
   Explorer), the OS (open, reveal, terminal), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
-  hiding), and what undoes or deletes it last, in the danger tone; a separator between groups. Entries come from one
+  hiding, permissions), and what undoes or deletes it last, in the danger tone; a separator between groups. Entries come from one
   vocabulary (`components/menuWords`: one id, icon, wording and group per concept) and `groupedMenu` orders them.
   One builder per kind (`branchMenu`, `changesetMenu`, `labelMenu`, `shelveMenu`, `codeReviewMenu`, `fileMenu`,
   `pendingChangeMenu`) serves every place the object shows: its view, details' "More actions", the Branch Explorer,
