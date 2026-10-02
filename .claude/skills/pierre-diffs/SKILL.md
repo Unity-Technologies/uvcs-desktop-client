@@ -1,5 +1,5 @@
 ---
-name: diffs
+name: pierre-diffs
 description:
   Use when an app uses @pierre/diffs to render or edit code files, diffs,
   patches, merge conflicts, or CodeView review surfaces, including React,
