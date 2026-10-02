@@ -1,4 +1,4 @@
-import { FileDiff, GitCommitVertical, GitMerge, HardDrive, Palette, Users } from 'lucide-react';
+import { AppWindow, FileDiff, GitCommitVertical, GitMerge, HardDrive, Palette, Users } from 'lucide-react';
 import { useState, type ReactNode } from 'react';
 import { Button } from '../../ui/Button';
 import { Dialog } from '../../ui/dialog/Dialog';
@@ -6,18 +6,20 @@ import { openDialog } from '../../ui/dialog/dialogStore';
 import { NavItem } from '../../ui/nav/SidebarNav';
 import { AccountsPane } from './AccountsPane';
 import { AppearancePane } from './AppearancePane';
+import { AppsPane } from './AppsPane';
 import { CheckinPane } from './CheckinPane';
 import { MergeToolsPane } from './MergeToolsPane';
 import { PendingChangesPane } from './PendingChangesPane';
 import { WorkspacesPane } from './WorkspacesPane';
 import styles from './SettingsDialog.module.css';
 
-export type SettingsSection = 'appearance' | 'pendingChanges' | 'checkin' | 'merge' | 'workspaces' | 'accounts';
+export type SettingsSection = 'appearance' | 'pendingChanges' | 'checkin' | 'apps' | 'merge' | 'workspaces' | 'accounts';
 
 const SECTIONS: { id: SettingsSection; label: string; icon: ReactNode }[] = [
   { id: 'appearance', label: 'Appearance', icon: <Palette size={15} /> },
   { id: 'pendingChanges', label: 'Pending changes', icon: <FileDiff size={15} /> },
   { id: 'checkin', label: 'Check in', icon: <GitCommitVertical size={15} /> },
+  { id: 'apps', label: 'Apps', icon: <AppWindow size={15} /> },
   { id: 'merge', label: 'Merge', icon: <GitMerge size={15} /> },
   { id: 'workspaces', label: 'Workspaces', icon: <HardDrive size={15} /> },
   { id: 'accounts', label: 'Accounts', icon: <Users size={15} /> },
@@ -46,6 +48,7 @@ function SettingsDialog({ initialSection, onClose }: { initialSection: SettingsS
           {section === 'appearance' && <AppearancePane />}
           {section === 'pendingChanges' && <PendingChangesPane />}
           {section === 'checkin' && <CheckinPane />}
+          {section === 'apps' && <AppsPane />}
           {section === 'merge' && <MergeToolsPane />}
           {section === 'workspaces' && <WorkspacesPane />}
           {section === 'accounts' && <AccountsPane />}
