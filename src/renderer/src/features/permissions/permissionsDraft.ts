@@ -101,6 +101,12 @@ export function sameBits(a: AclBits, b: AclBits): boolean {
   return same(a.allowed, b.allowed) && same(a.denied, b.denied) && same(a.overrideAllowed, b.overrideAllowed) && same(a.overrideDenied, b.overrideDenied);
 }
 
+/** The permissions of `names` an entry says something else about from `before` to `after`, overrides included. */
+export function changedPermissions(before: AclBits, after: AclBits, names: readonly PermissionName[]): Set<PermissionName> {
+  const says = (bits: AclBits, name: PermissionName) => (['allowed', 'denied', 'overrideAllowed', 'overrideDenied'] as const).map((set) => bits[set].includes(name)).join();
+  return new Set(names.filter((name) => says(before, name) !== says(after, name)));
+}
+
 /** One entry the draft changes: what it says now and what it will say. */
 export interface DraftEntryChange {
   member: MemberRef;

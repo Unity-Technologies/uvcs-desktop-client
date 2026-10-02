@@ -1,0 +1,228 @@
+.grid {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-1) var(--space-1) var(--space-3);
+  overflow-y: auto;
+  outline: none;
+  container-type: inline-size;
+}
+
+.grid:focus-visible {
+  box-shadow: var(--focus-ring-inset);
+}
+
+.group + .group {
+  margin-top: var(--space-2);
+}
+
+.groupTitle {
+  padding: var(--space-2) var(--space-2) var(--space-1);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.row {
+  position: relative;
+  border-radius: var(--radius-md);
+  cursor: default;
+}
+
+.row:hover {
+  background: var(--bg-hover);
+}
+
+.row[data-active='true'] {
+  background: var(--bg-selected);
+}
+
+/* An edit not saved yet: a bar at the row's start, as the changes it makes are listed below. */
+.row[data-changed='true']::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  left: 0;
+  width: 3px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+
+.line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto 150px;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 34px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+}
+
+.name {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* cm's own name for it, as the security guide and `cm acl` write it. */
+.cmName {
+  flex: none;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.states {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--radius-md);
+  background: var(--bg-active);
+}
+
+.state {
+  height: 22px;
+  min-width: 52px;
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  transition:
+    color var(--duration-fast),
+    background var(--duration-fast);
+}
+
+.state:hover {
+  color: var(--text-primary);
+}
+
+.state[aria-pressed='true'] {
+  background: var(--bg-segment-checked);
+  color: var(--text-primary);
+  box-shadow:
+    0 0 0 1px var(--border-default),
+    var(--shadow-sm);
+}
+
+.state[aria-pressed='true'][data-state='allow'] {
+  background: color-mix(in srgb, var(--permission-allowed) 16%, var(--bg-segment-checked));
+  color: var(--permission-allowed);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--permission-allowed) 45%, transparent);
+}
+
+.state[aria-pressed='true'][data-state='deny'] {
+  background: color-mix(in srgb, var(--permission-denied) 16%, var(--bg-segment-checked));
+  color: var(--permission-denied);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--permission-denied) 45%, transparent);
+}
+
+/* The checked state's own shadow is more specific than the global ring. */
+.state[aria-pressed='true']:focus-visible,
+.state[aria-pressed='true'][data-state='allow']:focus-visible,
+.state[aria-pressed='true'][data-state='deny']:focus-visible {
+  box-shadow: var(--focus-ring-visible);
+}
+
+.effective {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.effectiveIcon {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.effective[data-effective='allowed'] .effectiveIcon {
+  color: var(--permission-allowed);
+}
+
+.effective[data-effective='denied'] .effectiveIcon {
+  color: var(--permission-denied);
+}
+
+.effectiveLabel {
+  flex: none;
+}
+
+.source {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: 0 var(--space-3) var(--space-3);
+  animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
+}
+
+.description,
+.above,
+.warning {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+.above {
+  color: var(--text-tertiary);
+}
+
+.warning {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-primary);
+}
+
+.overrides {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+}
+
+/* Narrow: the result moves under the name, and where it comes from into its tooltip. */
+@container (max-width: 520px) {
+  .line {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'name states' 'effective effective';
+    row-gap: 0;
+    padding-block: var(--space-1);
+  }
+
+  .name {
+    grid-area: name;
+  }
+
+  .states {
+    grid-area: states;
+  }
+
+  .effective {
+    grid-area: effective;
+    font-size: var(--text-xs);
+  }
+
+  .source {
+    display: none;
+  }
+}

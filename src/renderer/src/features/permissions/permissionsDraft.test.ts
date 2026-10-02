@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { NO_BITS, type AclBits, type AclLevel, type ObjectPermissions } from '@shared/domain/permissions';
 import { changeLines } from './changeWords';
-import { cannotRemoveReason, memberRows } from './members';
+import { cannotRemoveReason, memberRows, memberStatus } from './members';
 import {
   addMember,
+  changedPermissions,
   changeCount,
   changeRequest,
   draftBits,
@@ -78,6 +79,12 @@ describe('editing permissions', () => {
     expect(memberRows(read, draft, groups).find((row) => row.label === 'Developers')).toMatchObject({ setHere: false, changed: true });
   });
 
+  it('tells which permissions an edit changes, overrides included', () => {
+    const after = bits({ denied: ['ci'], overrideAllowed: ['read'] });
+
+    expect(changedPermissions(bits({ denied: ['ci'] }), after, ['read', 'ci', 'rm'])).toEqual(new Set(['read']));
+  });
+
   it('undoes every edit of a member', () => {
     const draft = undoMember(setOwnState(read, EMPTY_DRAFT, ana, ['ci'], 'allow'), 'ana');
 
@@ -125,9 +132,9 @@ describe('what saving changes', () => {
     draft = setOwner(draft, { name: 'Leads', kind: 'group' });
 
     expect(changeLines(draftChanges(read, draft))).toEqual([
-      { member: 'Developers', text: 'Allow Read, Check in · Inherit Delete files · Ignore denies above for Read' },
-      { member: 'ana', text: 'Removed' },
-      { member: 'Owner', text: 'ana → Leads' },
+      { name: 'Developers', member: 'Developers', text: 'Allow Read, Check in · Inherit Delete files · Ignore denies above for Read' },
+      { name: 'ana', member: 'ana', text: 'Removed' },
+      { name: null, member: 'Owner', text: 'ana → Leads' },
     ]);
   });
 });
@@ -142,6 +149,17 @@ describe('members', () => {
       ['ana', 'user', true, []],
     ]);
     expect(rows[0]!.member).toEqual({ name: 'ALL USERS', kind: 'group' });
+  });
+
+  it('says where each entry stands', () => {
+    const rows = memberRows(read, addMember(EMPTY_DRAFT, { name: 'Leads', kind: 'group' }), groups);
+
+    expect(rows.map((row) => [row.label, memberStatus(row)])).toEqual([
+      ['All users', 'From repository game'],
+      ['Developers', 'Set here, and on repository game'],
+      ['Leads', 'New: set what it may do'],
+      ['ana', 'Set here'],
+    ]);
   });
 
   it('removes only an entry set here, and keeps one on the server', () => {

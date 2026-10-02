@@ -6,6 +6,8 @@ import type { DraftChanges, DraftEntryChange } from './permissionsDraft';
 
 /** One line of the changes to review before saving: whose entry, and what it does. */
 export interface ChangeLine {
+  /** The member whose entry changes, as `cm` names it; null for the owner. */
+  name: string | null;
   member: string;
   text: string;
 }
@@ -36,7 +38,10 @@ function overrideParts(before: AclBits, after: AclBits, kind: 'overrideAllowed' 
 
 /** Every change of the draft, a line each: the entries in their order, then the owner. */
 export function changeLines(changes: DraftChanges): ChangeLine[] {
-  const lines = changes.entries.map((change) => ({ member: memberLabel(change.member.name), text: entryChangeText(change) }));
-  if (changes.owner) lines.push({ member: 'Owner', text: `${changes.owner.before ? `${memberLabel(changes.owner.before.name)} → ` : ''}${memberLabel(changes.owner.after.name)}` });
+  const lines: ChangeLine[] = changes.entries.map((change) => ({ name: change.member.name, member: memberLabel(change.member.name), text: entryChangeText(change) }));
+  if (changes.owner) {
+    const { before, after } = changes.owner;
+    lines.push({ name: null, member: 'Owner', text: `${before ? `${memberLabel(before.name)} → ` : ''}${memberLabel(after.name)}` });
+  }
   return lines;
 }

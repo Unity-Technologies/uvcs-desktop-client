@@ -1,0 +1,283 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+}
+
+.loading {
+  height: min(520px, 54vh);
+}
+
+.footer {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.footerStart {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+/* Which path, and on which branches. */
+.pathScope {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.pathField {
+  width: 260px;
+}
+
+.tagField {
+  width: 160px;
+}
+
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-height: 0;
+}
+
+.owner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.ownerLabel {
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.ownerName {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ownerName[data-changed='true'] {
+  color: var(--accent-text);
+  font-weight: var(--weight-medium);
+}
+
+.ownerWas {
+  color: var(--text-tertiary);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.notice {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+}
+
+/* The members beside what the one picked may do; one above the other in a narrow window. */
+.panes {
+  display: grid;
+  grid-template-columns: minmax(200px, 260px) minmax(0, 1fr);
+  height: min(520px, 54vh);
+  min-height: 300px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+  overflow: hidden;
+}
+
+@media (max-width: 760px) {
+  .panes {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 180px minmax(0, 1fr);
+    height: min(640px, 64vh);
+  }
+
+  .members {
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+}
+
+.members {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-height: 0;
+  padding: var(--space-2);
+  border-right: 1px solid var(--border-subtle);
+}
+
+.paneHeader {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 28px;
+  padding-left: var(--space-1);
+}
+
+.paneTitle {
+  flex: 1;
+  margin: 0;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.memberList {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  border-radius: var(--radius-md);
+  outline: none;
+}
+
+.memberList:focus-visible {
+  box-shadow: var(--focus-ring-inset);
+}
+
+.member {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-2);
+  border-radius: var(--radius-md);
+  cursor: default;
+}
+
+.member:hover {
+  background: var(--bg-hover);
+}
+
+.member[data-selected='true'] {
+  background: var(--bg-selected);
+}
+
+.memberText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.memberName,
+.memberHeading,
+.memberStatus {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.memberHeading {
+  font-size: var(--text-md);
+  font-weight: var(--weight-semibold);
+}
+
+.memberStatus {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+}
+
+.changedDot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: var(--radius-full);
+  background: var(--accent);
+}
+
+.permissionsPane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.memberHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3) var(--space-2);
+}
+
+.bulk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.gridTools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 0 var(--space-3) var(--space-2);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.emptyNote {
+  margin: 0;
+  padding: var(--space-5);
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+/* The changes not saved yet, each with its own undo. */
+.review {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 160px;
+  padding: var(--space-2);
+  overflow-y: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  background: var(--bg-subtle);
+  animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
+}
+
+.reviewLine {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 28px;
+  padding-left: var(--space-1);
+  font-size: var(--text-sm);
+}
+
+.reviewMember {
+  flex: none;
+  max-width: 220px;
+  overflow: hidden;
+  font-weight: var(--weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.reviewText {
+  flex: 1;
+  min-width: 0;
+  color: var(--text-secondary);
+}

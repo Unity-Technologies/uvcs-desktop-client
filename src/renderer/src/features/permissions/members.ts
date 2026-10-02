@@ -2,6 +2,7 @@ import { EVERYONE, isBitsEmpty, OWNER, type AclLevel, type MemberRef, type Objec
 import { naturalCompare } from '../../lib/naturalCompare';
 import { levelsAbove, readOwnBits } from './aclResolution';
 import { draftBits, sameBits, type PermissionsDraft } from './permissionsDraft';
+import { sourceLabel } from './permissionTargets';
 
 /** What a member is: `ALL USERS`, `OWNER`, a group or a user. */
 export type MemberRole = 'everyone' | 'owner' | 'group' | 'user';
@@ -69,6 +70,14 @@ export function memberRows(permissions: ObjectPermissions, draft: PermissionsDra
 function collectMembers(level: AclLevel, found: Map<string, string[]>): void {
   for (const entry of level.entries) found.set(entry.member, [...(found.get(entry.member) ?? []), level.creator]);
   for (const parent of level.inherited) collectMembers(parent, found);
+}
+
+/** Where a member's entry stands, under its name: set here, inherited from the closest list naming it, or just added. */
+export function memberStatus(row: MemberRow): string {
+  if (row.added && !row.setHere) return 'New: set what it may do';
+  const above = row.inheritedFrom[0];
+  if (row.setHere) return above ? `Set here, and on ${sourceLabel(above)}` : 'Set here';
+  return above ? `From ${sourceLabel(above)}` : 'Nothing set';
 }
 
 /**
