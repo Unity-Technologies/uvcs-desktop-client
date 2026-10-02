@@ -1,5 +1,5 @@
 // `npm run e2e`: a light pass over the built app (run `npm run build` first), against the fake `cm` and a workspace
-// in a temp folder (scripts/e2e/README.md). Opens the workspace, visits every view, a diff, the command palette and
+// in a temp folder (scripts/e2e/README.md). Opens the workspace, visits every view, a diff, a branch's permissions, the command palette and
 // Settings, switches the theme; fails on any renderer error, any `cm` command the fake doesn't know, or a view that
 // doesn't show. It asserts only that things appear, never pixels or copy. Screenshots go to <tmp>/uvcs-e2e-shots.
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -91,6 +91,19 @@ try {
     await main.getByText('src/player.cs', { exact: true }).first().click();
     // A line only the edited side of the fixture's file has.
     await main.getByText('void Jump() { }').first().waitFor();
+  });
+  await step('Permissions', async () => {
+    await window.getByRole('navigation').getByRole('button', { name: /^Branches( \d+)?$/ }).click();
+    await main.getByRole('button', { name: 'More actions' }).click();
+    await window.getByRole('menuitem', { name: 'Permissions…' }).click();
+    const dialog = window.getByRole('dialog', { name: 'Permissions' });
+    await dialog.getByRole('option', { name: /^Developers/ }).click();
+    await dialog.getByRole('row', { name: /^Check in/ }).click();
+    await window.keyboard.press('d');
+    await dialog.getByRole('button', { name: '1 change' }).waitFor();
+    await dialog.getByRole('button', { name: 'Cancel' }).click();
+    await window.getByRole('dialog', { name: 'Discard 1 change?' }).getByRole('button', { name: 'Discard' }).click();
+    await dialog.waitFor({ state: 'detached' });
   });
   await step('Command palette', async () => {
     await window.keyboard.press('ControlOrMeta+K');
