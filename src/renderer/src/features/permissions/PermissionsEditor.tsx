@@ -1,9 +1,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import { APPLICABLE_PERMISSIONS, type ObjectPermissions, type PermissionName, type PermissionTarget } from '@shared/domain/permissions';
 import { matchesWordFilter } from '../../lib/matchesAllWords';
-import { hotkey } from '../../lib/shortcutRegistry';
 import { HighlightQuery } from '../../ui/Highlight';
-import { KeyHints } from '../../ui/KeyHints';
 import { SearchField } from '../../ui/SearchField';
 import { levelsAbove, readOwnBits, resolvePermissions, type OwnState } from './aclResolution';
 import { MemberIcon } from './MemberIcon';
@@ -101,13 +99,6 @@ interface MemberPermissionsProps {
   onDraft: (draft: PermissionsDraft) => void;
 }
 
-// In the order of the choices (`OWN_STATES`), then the overrides menu where there are lists above.
-const CHOICE_HINTS = [
-  { keys: hotkey('permissionInherit'), label: 'inherit' },
-  { keys: hotkey('permissionAllow'), label: 'allow' },
-  { keys: hotkey('permissionDeny'), label: 'deny' },
-];
-const OVERRIDES_HINT = { keys: hotkey('permissionMenu'), label: 'overrides' };
 
 /** What one member may do here: every permission that applies to the object, under its group. */
 function MemberPermissions({ target, permissions, row, draft, onDraft }: MemberPermissionsProps) {
@@ -161,7 +152,6 @@ function MemberPermissions({ target, permissions, row, draft, onDraft }: MemberP
           <p className={styles.emptyNote}>No matching permissions</p>
         )}
       </HighlightQuery>
-      {shown.length > 0 && <KeyHints hints={hasAbove ? [...CHOICE_HINTS, OVERRIDES_HINT] : CHOICE_HINTS} />}
     </section>
   );
 }

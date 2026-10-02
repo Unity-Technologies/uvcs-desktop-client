@@ -81,7 +81,7 @@ Specs: `permissionSpec` (`repserver:local`, `rep:game@local`, `br:/main@game@loc
   from** ("here", "the server", "repository game"; `sourceLabel`). Every row reads left to right as what it is, what it
   comes to, and the choice that changes it: name, result, Inherit/Allow/Deny, ⋯. A header that stays in view titles
   the columns and holds the bulk buttons, each over the choice it sets and in the same order (`PermissionGridHeader`,
-  `OWN_STATES`; the key hints under the grid follow it too). Every row shares one set of columns (a CSS subgrid
+  `OWN_STATES`). Every row shares one set of columns (a CSS subgrid
   in `PermissionGrid`): the result column is as wide as the widest result the member shows, up to a limit, so it
   stays aligned without the empty space a fixed width left, and the ⋯ column exists only when there are lists above.
   A row never changes height, so a click lands where
@@ -103,7 +103,8 @@ Specs: `permissionSpec` (`repserver:local`, `rep:game@local`, `br:/main@game@loc
   "Change permissions" or gives the object away (`needsConfirmation`); closing with unsaved edits asks to discard
   them.
 - **Keyboard first**: the members list and the grid are one Tab stop each; ↑ ↓ move, ← → step through the choices,
-  A, D and I pick one, Shift+F10 opens the active permission's overrides menu, the remove shortcut removes the
+  A, D and I pick one (each choice's tooltip shows its key: a hint line under the grid didn't say what the keys
+  applied to, and keys inside the choices crowded them), Shift+F10 opens the active permission's overrides menu, the remove shortcut removes the
   member's entry, ⌘↵ saves (`lib/shortcutRegistry.ts`, area
   Permissions; bound in the dialog, as a modal dialog keeps window shortcuts off).
 - Adding a member (`pickMember`) searches the server's users and groups, All users and Owner first; its entry starts
