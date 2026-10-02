@@ -22,6 +22,7 @@ import {
   Filter,
   FolderGit2,
   FolderInput,
+  FolderLock,
   FolderOpen,
   FolderPlus,
   FolderSearch,
@@ -46,6 +47,8 @@ import {
   RotateCcw,
   ScanText,
   Scissors,
+  ServerCog,
+  ShieldCheck,
   Square,
   SquareCheckBig,
   SquareTerminal,
@@ -168,6 +171,10 @@ export const MENU_WORDS = {
   hide: word('edit', EyeOff),
   unhide: word('edit', Eye),
   forget: word('edit', X, 'Remove from list'),
+  // Who may do what with it (docs/features/permissions.md).
+  permissions: word('edit', ShieldCheck, 'Permissions…'),
+  pathPermissions: word('edit', FolderLock, 'Path permissions…'),
+  serverPermissions: word('edit', ServerCog, 'Server permissions…'),
 
   // What undoes or deletes it.
   undo: word('danger', Undo2, undefined, true),

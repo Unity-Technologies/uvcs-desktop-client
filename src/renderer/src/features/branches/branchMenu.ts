@@ -9,6 +9,7 @@ import { menuAction, type MenuPlace } from '../../components/menuWords';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { openCreateCodeReviewDialog } from '../codeReviews/CreateCodeReviewDialog';
 import { openTaskMerge } from '../mergeTask/mergeTaskOperations';
+import { openObjectPermissions } from '../permissions/openPermissions';
 import { isTaskBranch } from '../mergeTask/mergeTaskSummary';
 import { taskMergeOf } from '../mergeTask/taskMerge';
 import { openTaskWorkspaceDialog } from '../taskWorkspace/TaskWorkspaceDialog';
@@ -63,6 +64,7 @@ export function branchMenu(workspacePath: string, branches: BranchInfo[], curren
     single && !place.inBranchExplorer && menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'branch', name: single.name, date: single.date })),
     single && copySubmenu('Branch', branchCopyTexts(single), { shortcut: hotkey('listCopy') }),
     single && menuAction('rename', () => void renameBranch(workspacePath, single), { shortcut: hotkey('rename') }),
+    single && menuAction('permissions', () => openObjectPermissions(workspacePath, 'branch', single)),
     visible.length > 0 &&
       menuAction('hide', () => void setBranchesHidden(workspacePath, visible, true), { label: visible.length === 1 ? 'Hide' : `Hide ${visible.length} branches` }),
     hidden.length > 0 &&
