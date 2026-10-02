@@ -2,7 +2,8 @@ import { DiffHunksRenderer, getSharedHighlighter, renderDiffWithHighlighter, typ
 import { describe, expect, it } from 'vitest';
 import { lineDiff } from './lineDiff';
 import { installPierrePlainTextRender } from './pierrePlainTextRender';
-import { installPierrePlainTextWordDiffs, MAX_WORD_DIFFED_LINE_PAIRS, wordDiffedLinePairs } from './pierrePlainTextWordDiffs';
+import { MAX_WORD_DIFFED_LINE_PAIRS } from './changedLinePairs';
+import { installPierrePlainTextWordDiffs } from './pierrePlainTextWordDiffs';
 import { renderedWordMarks, wordMarksIn, type RenderedNode } from './renderedWordMarks';
 
 const text = (lines: number, changed: (index: number) => boolean) =>
@@ -45,18 +46,6 @@ describe('installPierrePlainTextWordDiffs', () => {
     const before = structuredClone(diff);
     await plainTextMarks(diff);
     expect(diff).toEqual(before);
-  });
-});
-
-describe('wordDiffedLinePairs', () => {
-  it('counts the lines a change replaces, not the lines it only adds or removes', () => {
-    const original = 'a\nb\nc\nd\ne\nf\n';
-    const changed = 'a\nB\nC\nd\nx\ny\nz\ne\n';
-    expect(wordDiffedLinePairs(lineDiff(original, changed, 'recognizeAll').meta)).toBe(2);
-  });
-
-  it('counts nothing for a diff that only adds lines', () => {
-    expect(wordDiffedLinePairs(lineDiff('a\n', 'a\nb\nc\n', 'recognizeAll').meta)).toBe(0);
   });
 });
 

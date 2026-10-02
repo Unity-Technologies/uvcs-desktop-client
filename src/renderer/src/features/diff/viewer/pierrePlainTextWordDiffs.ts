@@ -1,13 +1,5 @@
 import { DiffHunksRenderer, type FileDiffMetadata } from '@pierre/diffs';
-
-/**
- * How many pairs of changed lines a diff shown as plain text marks the changed words of. Each pair is one word diff
- * of two lines (Pierre's `computeLineDiffDecorations`, lines past 1,000 characters skipped): measured at 0.004 ms for
- * a line with one word changed, 0.07 ms for an 80-character line rewritten, 7 ms for a 1,000-character one. That's
- * at most 70 ms for a thousand ordinary lines rewritten, and as much as Pierre already does for any diff of 1,000
- * lines; past it, a diff shows its changed lines without marking their words, as Pierre does.
- */
-export const MAX_WORD_DIFFED_LINE_PAIRS = 1_000;
+import { MAX_WORD_DIFFED_LINE_PAIRS, wordDiffedLinePairs } from './changedLinePairs';
 
 /**
  * Makes Pierre (1.5.1) mark the changed words of a diff shown as plain text, whatever its length. Its renderer on the
@@ -33,17 +25,6 @@ export function installPierrePlainTextWordDiffs(): void {
 }
 
 let installed = false;
-
-/** How many pairs of lines the diff's changes replace: the line diffs a render with word marks computes. */
-export function wordDiffedLinePairs(diff: FileDiffMetadata): number {
-  let pairs = 0;
-  for (const hunk of diff.hunks) {
-    for (const part of hunk.hunkContent) {
-      if (part.type === 'change') pairs += Math.min(part.additions, part.deletions);
-    }
-  }
-  return pairs;
-}
 
 function withLineCountsHidden<T>(diff: FileDiffMetadata, render: () => T): T {
   const { unifiedLineCount, splitLineCount } = diff;
