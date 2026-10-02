@@ -1,5 +1,24 @@
-import { ArrowDownToLine, Copy, FolderGit2, FolderOpen, FolderSearch, ListChecks, Monitor, Moon, Pause, Play, RefreshCw, SquareTerminal, Sun, TerminalSquare } from 'lucide-react';
+import {
+  ArrowDownToLine,
+  Copy,
+  FolderGit2,
+  FolderLock,
+  FolderOpen,
+  FolderSearch,
+  ListChecks,
+  Monitor,
+  Moon,
+  Pause,
+  Play,
+  RefreshCw,
+  ServerCog,
+  ShieldCheck,
+  SquareTerminal,
+  Sun,
+  TerminalSquare,
+} from 'lucide-react';
 import type { ThemePreference } from '@shared/domain/settings';
+import { openWorkspaceRepositoryPermissions } from '../../features/permissions/openPermissions';
 import { setReviewMode } from '../../features/review/reviewModeSetting';
 import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorkspaceDialog';
 import type { Icon } from '../../lib/actions';
@@ -89,6 +108,30 @@ export function useWorkspaceCommands(): void {
         icon: FolderGit2,
         keywords: ['agent', 'branch', 'parallel', 'worktree'],
         run: () => openTaskWorkspaceDialog({ workspacePath }),
+      },
+      {
+        id: 'workspace.repositoryPermissions',
+        group: 'Workspace',
+        label: 'Repository permissions…',
+        icon: ShieldCheck,
+        keywords: ['security', 'acl', 'access', 'users', 'groups'],
+        run: () => openWorkspaceRepositoryPermissions(workspacePath, 'repository'),
+      },
+      {
+        id: 'workspace.pathPermissions',
+        group: 'Workspace',
+        label: 'Path permissions…',
+        icon: FolderLock,
+        keywords: ['security', 'secured path', 'acl', 'access'],
+        run: () => openWorkspaceRepositoryPermissions(workspacePath, 'paths'),
+      },
+      {
+        id: 'workspace.serverPermissions',
+        group: 'Workspace',
+        label: 'Server permissions…',
+        icon: ServerCog,
+        keywords: ['security', 'acl', 'access', 'repository server'],
+        run: () => openWorkspaceRepositoryPermissions(workspacePath, 'server'),
       },
       {
         id: 'workspace.openTerminal',
