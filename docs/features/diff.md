@@ -51,7 +51,7 @@ typed meanwhile and typing it at the click once the editor is attached (`focusAt
 worker that failed (`MAX_WAIT_FOR_COLORS_MS`) attaches it anyway. That main-thread fallback is why a diff typed into
 goes to the worker only up to 400 KB (`MAX_HIGHLIGHTED_CHARS`). Anything bigger is plain text and renders only the
 lines in view too (Pierre renders a plain text diff whole at every render: `pierrePlainTextRender` keeps it), with a
-quiet "Large file" in the header (its tooltip says why); such a diff is the "text" language (`highlightedLanguage`),
+quiet "Large file" in the header (its tooltip says why and past what size: `plainTextThresholdLabel`, 400 KB editable, 4 MB read-only); such a diff is the "text" language (`highlightedLanguage`),
 or the editor would color the lines typed into it. Plain text marks the words that changed like any diff
 (`pierrePlainTextWordDiffs`): Pierre marks none in a plain text diff of more than 1,000 lines, but words are diffed
 only for pairs of changed lines, whatever the file's length, so the bound is those pairs instead

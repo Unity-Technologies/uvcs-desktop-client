@@ -13,17 +13,19 @@ interface TextViewControlsProps {
   diff: LineDiff | null;
   /** The text shows without syntax highlighting (`syntaxHighlighting` is off). */
   plainText: boolean;
+  /** The size past which a text is plain text (`plainTextThresholdLabel`), for the note's tooltip. */
+  plainTextThreshold: string;
   /** Split | Unified changes how the diff shows (`followsLayout`). */
   followsLayout: boolean;
 }
 
 /** The header's ways of viewing a text's lines: its size note and +N −M, the comparison method, collapse, wrap, Split | Unified. */
-export function TextViewControls({ diff, plainText, followsLayout }: TextViewControlsProps) {
+export function TextViewControls({ diff, plainText, plainTextThreshold, followsLayout }: TextViewControlsProps) {
   const { layout, collapseUnchanged, wrapLines, comparisonMethod, setLayout, setCollapseUnchanged, setWrapLines, setComparisonMethod } = useDiffPreferences();
   return (
     <>
       {/* Said in the header, not over the diff: a note there would stack on "No content changes". */}
-      {plainText && <PlainTextIndicator />}
+      {plainText && <PlainTextIndicator threshold={plainTextThreshold} />}
       {diff && hasLineChanges(diff) && <LineStats added={diff.added} removed={diff.removed} />}
       <PaneToolbarGroup>
         <ComparisonMethodMenu value={comparisonMethod} onChange={setComparisonMethod} />

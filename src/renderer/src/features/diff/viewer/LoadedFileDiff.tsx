@@ -23,7 +23,7 @@ import { NothingToDiff } from './NothingToDiff';
 import { renderedEdits } from './renderedEdits';
 import { RepresentationSwitch } from './RepresentationSwitch';
 import { followsLayout } from './shownDiff';
-import { syntaxHighlighting } from './syntaxHighlighting';
+import { plainTextThresholdLabel, syntaxHighlighting } from './syntaxHighlighting';
 import { TextViewControls } from './TextViewControls';
 import { UnsavedEditsControls } from './UnsavedEditsControls';
 import { goesSomewhere, useChangeNavigation } from './useChangeNavigation';
@@ -107,6 +107,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
         <TextViewControls
           diff={diffs.current}
           plainText={syntaxHighlighting(left.text ?? '', right.text ?? '', editable) === 'off'}
+          plainTextThreshold={plainTextThresholdLabel(editable)}
           followsLayout={followsLayout(sides, wholeFile)}
         />
       )}
