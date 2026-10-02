@@ -41,6 +41,13 @@ describe('keyboard moves through the Branch Explorer', () => {
     expect(movedSelection(layout, null, 4, { kind: 'branchEdge', edge: 'last' })).toBeNull();
   });
 
+  it('ends a branch with pending changes on them, past its newest changeset', () => {
+    expect(movedSelection(withPending, changeset(2), 5, { kind: 'branchEdge', edge: 'last' })).toEqual(pending);
+    expect(movedSelection(withPending, branch('/main/a'), 5, { kind: 'branchEdge', edge: 'last' })).toEqual(pending);
+    expect(movedSelection(withPending, pending, 5, { kind: 'branchEdge', edge: 'last' })).toEqual(pending);
+    expect(movedSelection(withPending, changeset(0), 5, { kind: 'branchEdge', edge: 'last' })).toEqual(changeset(6));
+  });
+
   it('goes to the oldest and newest changeset of the graph from anywhere', () => {
     expect(movedSelection(layout, branch('/main/a'), null, { kind: 'graphEdge', edge: 'first' })).toEqual(changeset(0));
     expect(movedSelection(layout, null, null, { kind: 'graphEdge', edge: 'last' })).toEqual(changeset(7));
