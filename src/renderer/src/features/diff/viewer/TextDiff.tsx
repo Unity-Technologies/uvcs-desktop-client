@@ -29,6 +29,7 @@ import { usePierreEditor } from './usePierreEditor';
 import { POINTER_FOCUS_ATTRIBUTE, usePointerFocusMark } from './usePointerFocusMark';
 import { useShadowStyle } from './useShadowStyle';
 import { useSyntaxHighlighter } from './useSyntaxHighlighter';
+import { useWordMarksRefresh } from './useWordMarksRefresh';
 import styles from './TextDiff.module.css';
 
 const BOTH_SIDES: DiffSides = { original: true, modified: true };
@@ -108,7 +109,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     },
     [virtualizer],
   );
-  const { editor, createEditor } = usePierreEditor(editorRef, container);
+  const { editor, fileDiff: shownFileDiff, createEditor } = usePierreEditor(editorRef, container);
   const latest = useRef({ current: diffedText, diff });
   latest.current = { current: diffedText, diff };
   // Stable inputs: new objects would make Pierre load the files again. While the text is typed into, Pierre works out
@@ -125,6 +126,8 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     [fileName, lang, original, modified, comparisonMethod, wholeFile, sides.original, sides.modified, editable],
   );
   const parseDiffOptions = diff.options;
+  // Pierre marks no words in the lines typed into, nor drops the original's old marks, until the file is saved.
+  useWordMarksRefresh({ fileDiff: shownFileDiff, original, current, shown: fileDiff });
   const discard = useBlockDiscard({
     enabled: Boolean(onDiscard),
     diff: diff.meta,

@@ -2,7 +2,7 @@ import { DiffHunksRenderer } from '@pierre/diffs';
 import { describe, expect, it } from 'vitest';
 import { lineDiff } from './lineDiff';
 import { typedIntoPierre } from './pierreSessionFixture';
-import { refreshWordMarks } from './pierreWordMarks';
+import { MAX_WORD_MARKS_REFRESHED_CHARS, refreshesWordMarksWhileTyping, refreshWordMarks } from './pierreWordMarks';
 import { renderedWordMarks } from './renderedWordMarks';
 
 const ORIGINAL = 'namespace Codice;\nusing Codice.CM.Common;\nclass Main {}\n';
@@ -30,5 +30,13 @@ describe('refreshWordMarks', () => {
     expect(session.rowsInStep()).toBe(true);
     // Highlighted with the editor's token markup (`useTokenTransformer`), which it maps the caret through.
     expect((session.component as unknown as { hunksRenderer: DiffHunksRenderer }).hunksRenderer.editorRenderReady()).toBe(true);
+  });
+});
+
+describe('refreshesWordMarksWhileTyping', () => {
+  it('refreshes the marks of texts that render whole quickly, both versions together', () => {
+    const half = 'x'.repeat(MAX_WORD_MARKS_REFRESHED_CHARS / 2);
+    expect(refreshesWordMarksWhileTyping(half, half)).toBe(true);
+    expect(refreshesWordMarksWhileTyping(half, `${half}x`)).toBe(false);
   });
 });
