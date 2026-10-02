@@ -8,7 +8,10 @@ A workspace file shown against its own past (loaded revision, reviewed copy, or 
 added file: `canEditInPlace`) is typed into directly on its modified side, like the official client; every other diff
 (history, merges, conflicts) is read-only, with no caret. Pierre's editor holds the text and its undo (⌘Z while typing);
 `useFileBuffer` keeps what the disk doesn't have yet: Discard and Save (⌘S) show in the header as soon as there is some.
-Without unsaved edits the diff follows the disk; with some it holds still and says the file changed on disk. A file with
+Without unsaved edits the diff follows the disk; with some it holds still and says the file changed on disk. Saving
+reads back the text the editor holds, so the diff stays as it is (`heldModifiedText`): showing it anew would end the
+editor's session, dropping the caret and undo and highlighting the file again on the main thread (1.6 s for
+2 x 190 KB of TypeScript). A file with
 no lines to show (no content changes, empty, only ignored differences) is typed into whole, under a note (kept while
 it's typed into). ⌘E puts the
 caret in the text and Esc leaves it for the file list; keys the editor handles never reach the app's shortcuts. Read and

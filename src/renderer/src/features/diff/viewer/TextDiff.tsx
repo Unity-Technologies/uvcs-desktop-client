@@ -10,7 +10,7 @@ import type { ChangeView } from './changeView';
 import type { ComparisonMethod } from './comparisonMethod';
 import { useDiffPreferences } from './diffPreferencesStore';
 import type { EditorHandle } from './editorHandle';
-import { attachesEditor } from './editorAttachment';
+import { attachesEditor, heldModifiedText, type HeldText } from './editorAttachment';
 import { escapeWhileTyping } from './escapeWhileTyping';
 import { useHighlightWorkers } from './highlightWorkers';
 import type { LineDiff } from './lineDiff';
@@ -115,16 +115,20 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
   latest.current = { current: diffedText, diff };
   // Stable inputs: new objects would make Pierre load the files again. While the text is typed into, Pierre works out
   // the diff itself (with the same options, `pierreLineComparison`), so the text typed isn't among these memos' keys;
-  // a diff shown anew (another comparison method, the whole file or its diff, the file saved or changed on disk) starts
-  // from the text as it is now (`latest`), unsaved edits included.
+  // a diff shown anew (another comparison method, the whole file or its diff, the file changed on disk) starts from the
+  // text as it is now (`latest`), unsaved edits included. Saving reads back what the editor holds: the diff shown
+  // stays, and with it the editor's caret and undo (`heldModifiedText`).
   // A big diff renders only the lines in view; a read-only one shows as plain text at once and highlights in Pierre's
   // workers; past what's worth it, Pierre shows files with more lines than `tokenizeMaxLength` as plain text.
+  const held = useRef<HeldText | undefined>(undefined);
+  const shownFrom = heldModifiedText(held.current, modified);
+  held.current = { modified, held: shownFrom, current };
   const highlighting = syntaxHighlighting(original, modified, editable);
   const lang = highlightedLanguage(highlighting, fileName);
-  const newFile = useMemo(() => ({ name: fileName, lang, contents: shownText(latest.current.current) }), [fileName, lang, modified, comparisonMethod, wholeFile]);
+  const newFile = useMemo(() => ({ name: fileName, lang, contents: shownText(latest.current.current) }), [fileName, lang, shownFrom, comparisonMethod, wholeFile]);
   const fileDiff = useMemo(
     () => ({ ...shownDiff(latest.current.diff.meta, sides, original, latest.current.current, editable), lang }),
-    [fileName, lang, original, modified, comparisonMethod, wholeFile, sides.original, sides.modified, editable],
+    [fileName, lang, original, shownFrom, comparisonMethod, wholeFile, sides.original, sides.modified, editable],
   );
   // A diff highlighted in the workers gets the editor once it's highlighted in the editor's markup, or at once when
   // the user wants the caret in it before then (a click in the text, ⌘E).
