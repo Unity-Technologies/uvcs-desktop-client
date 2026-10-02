@@ -20,6 +20,8 @@ export interface MergeTool {
   defaultArgs: string[];
   /** Its window can be brought forward while it's open (an app bundle on macOS). */
   canBringToFront: boolean;
+  /** Its app's own icon as a data URL, when the OS gives one (macOS and Windows). */
+  icon?: string;
 }
 
 /** The tools found, with the one "Resolve in…" uses: the user's choice, or else the UVCS tool, or else the first. */

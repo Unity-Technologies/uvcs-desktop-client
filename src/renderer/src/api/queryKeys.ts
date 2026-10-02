@@ -18,6 +18,7 @@ export const queryKeys = {
   profiles: ['profiles'] as const,
   accounts: ['accounts'] as const,
   mergeTools: ['mergeTools'] as const,
+  externalApps: ['externalApps'] as const,
   cmVersion: ['cmVersion'] as const,
   appInfo: ['appInfo'] as const,
   releaseNotes: (version: string) => ['releaseNotes', version] as const,

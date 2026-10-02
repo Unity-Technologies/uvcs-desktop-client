@@ -1,12 +1,17 @@
 import type { RevisionRef } from '@shared/domain/revision';
 import { api } from '../../api/client';
+import { currentExternalApps } from '../../components/externalApps/externalApps';
 import { runVoidAction } from '../../app/operations/runOperation';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 
-export async function openRevision(workspacePath: string, revision: RevisionRef, fileName: string): Promise<void> {
+/**
+ * Saves the revision to a temp file and opens it: in the editor `editorId`, with its default app for `null`, and as its
+ * menu's first entry does when omitted (the user's editor, else the default app: a double-click in Browse repository).
+ */
+export async function openRevision(workspacePath: string, revision: RevisionRef, fileName: string, editorId: string | null = currentExternalApps().editorId): Promise<void> {
   try {
-    await api.history.openRevision(workspacePath, revision, fileName);
+    await api.history.openRevision(workspacePath, revision, fileName, editorId ?? undefined);
   } catch (error) {
     toast.error("Couldn't open the revision", error);
   }

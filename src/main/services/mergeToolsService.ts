@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
@@ -8,53 +8,32 @@ import type { ContentSource } from '@shared/domain/content';
 import type { MergeToolOutcome, MergeToolRequest } from '@shared/domain/mergeTools';
 import { saveContent } from '../files/saveContent';
 import { withTempDirectory } from '../files/tempFile';
-import { appExecutable } from '../merge/mergeTools/appExecutable';
 import { fillArgs, type MergeToolFiles } from '../merge/mergeTools/commandLine';
-import { detectKnownTools, type ToolFileSystem } from '../merge/mergeTools/detectTools';
-import { KNOWN_TOOLS, type Whereabouts } from '../merge/mergeTools/knownTools';
+import { detectKnownTools } from '../merge/mergeTools/detectTools';
+import { KNOWN_TOOLS } from '../merge/mergeTools/knownTools';
 import { activateApp, launchMergeTool } from '../merge/mergeTools/launch';
-import { appBundleOf, mergeToolList } from '../merge/mergeTools/mergeToolList';
+import { mergeToolList } from '../merge/mergeTools/mergeToolList';
 import { toolFileNames } from '../merge/mergeTools/toolFileNames';
 import { judgeToolResult } from '../merge/mergeTools/toolResult';
-import type { ServiceContext } from './ServiceContext';
-
-const fileSystem: ToolFileSystem & { read(path: string): string | null } = {
-  exists: (path) => {
-    try {
-      return statSync(path).isFile() || path.endsWith('.app');
-    } catch {
-      return false;
-    }
-  },
-  list: (folder) => {
-    try {
-      return readdirSync(folder);
-    } catch {
-      return [];
-    }
-  },
-  read: (path) => {
-    try {
-      return readFileSync(path, 'utf8');
-    } catch {
-      return null;
-    }
-  },
-};
+import { appBundleOf } from '../system/apps/appBundle';
+import { appExecutable } from '../system/apps/appExecutable';
+import { diskFileSystem } from '../system/apps/appFileSystem';
+import type { Whereabouts } from '../system/apps/whereabouts';
+import type { AppsContext, ServiceContext } from './ServiceContext';
 
 interface OpenTool {
   stop: AbortController;
   bundle: string | null;
 }
 
-export function createMergeToolsService({ cm, settings }: ServiceContext): MergeToolsApi {
+export function createMergeToolsService({ cm, settings }: ServiceContext, { installedApps, icons }: Pick<AppsContext, 'installedApps' | 'icons'>): MergeToolsApi {
   const open = new Map<string, OpenTool>();
 
-  function list() {
+  async function list() {
     const where: Whereabouts = { platform: process.platform, env: process.env, home: homedir(), cmPath: cm.executable };
     const { mergeTool, customMergeTools, mergeToolArgs } = settings.get();
     return mergeToolList({
-      detected: detectKnownTools(KNOWN_TOOLS, where, fileSystem),
+      detected: detectKnownTools(KNOWN_TOOLS, where, diskFileSystem, await installedApps.get()),
       custom: customMergeTools,
       argsOverrides: mergeToolArgs,
       preference: mergeTool,
@@ -63,7 +42,7 @@ export function createMergeToolsService({ cm, settings }: ServiceContext): Merge
   }
 
   async function resolve(workspacePath: string, request: MergeToolRequest): Promise<MergeToolOutcome> {
-    const tool = list().tools.find((candidate) => candidate.id === request.toolId);
+    const tool = (await list()).tools.find((candidate) => candidate.id === request.toolId);
     if (!tool) return { kind: 'failed', message: "That merge tool isn't installed anymore." };
 
     const stop = new AbortController();
@@ -104,7 +83,10 @@ export function createMergeToolsService({ cm, settings }: ServiceContext): Merge
   }
 
   return {
-    list: async () => list(),
+    list: async () => {
+      const found = await list();
+      return { ...found, tools: await Promise.all(found.tools.map((tool) => icons.withIcon(tool, tool.executable))) };
+    },
     resolve,
     stopWaiting: async (sessionId) => open.get(sessionId)?.stop.abort(),
     bringToFront: async (sessionId) => {
@@ -118,7 +100,7 @@ export function createMergeToolsService({ cm, settings }: ServiceContext): Merge
         properties: ['openFile'],
       });
       const picked = result.canceled ? undefined : result.filePaths[0];
-      return picked ? appExecutable(picked, fileSystem) : null;
+      return picked ? appExecutable(picked, diskFileSystem) : null;
     },
   };
 }

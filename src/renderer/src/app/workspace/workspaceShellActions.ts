@@ -4,7 +4,7 @@ import { toast } from '../../ui/toast/toastStore';
 
 /** Opens the user's terminal in the workspace folder, e.g. to start an agent there. */
 export function openTerminalIn(workspacePath: string): void {
-  api.system.openTerminal(workspacePath).catch((error: unknown) => toast.error("Couldn't open a terminal", error));
+  api.apps.openInTerminal(workspacePath).catch((error: unknown) => toast.error("Couldn't open a terminal", error));
 }
 
 /** Shows the workspace folder selected in the file manager, as every other item is revealed. */

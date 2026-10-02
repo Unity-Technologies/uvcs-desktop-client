@@ -1,5 +1,6 @@
 import {
   ArrowDownToLine,
+  CodeXml,
   Copy,
   FolderGit2,
   FolderLock,
@@ -18,6 +19,8 @@ import {
   TerminalSquare,
 } from 'lucide-react';
 import type { ThemePreference } from '@shared/domain/settings';
+import { defaultEditor, defaultTerminal, useExternalApps } from '../../components/externalApps/externalApps';
+import { openInEditor } from '../../components/externalApps/externalAppOperations';
 import { openWorkspaceRepositoryPermissions } from '../../features/permissions/openPermissions';
 import { setReviewMode } from '../../features/review/reviewModeSetting';
 import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorkspaceDialog';
@@ -50,6 +53,9 @@ export function useWorkspaceCommands(): void {
   const reviewing = reviewModeWorkspaces.includes(workspacePath);
   const updateSettings = useUpdateSettings();
   const commandLogOpen = useCommandLogStore((state) => state.open);
+  const apps = useExternalApps();
+  const editor = defaultEditor(apps);
+  const terminal = defaultTerminal(apps);
 
   const commands = useMemo<Command[]>(
     () => [
@@ -109,6 +115,18 @@ export function useWorkspaceCommands(): void {
         keywords: ['agent', 'branch', 'parallel', 'worktree'],
         run: () => openTaskWorkspaceDialog({ workspacePath }),
       },
+      ...(editor?.opensFolders
+        ? [
+            {
+              id: 'workspace.openInEditor',
+              group: 'Workspace',
+              label: `Open workspace in ${editor.name}`,
+              icon: CodeXml,
+              keywords: ['editor', 'ide', 'code'],
+              run: () => void openInEditor(workspacePath),
+            },
+          ]
+        : []),
       {
         id: 'workspace.repositoryPermissions',
         group: 'Workspace',
@@ -136,9 +154,9 @@ export function useWorkspaceCommands(): void {
       {
         id: 'workspace.openTerminal',
         group: 'Workspace',
-        label: 'Open terminal here',
+        label: terminal ? `Open workspace in ${terminal.name}` : 'Open terminal here',
         icon: SquareTerminal,
-        keywords: ['shell', 'console', 'agent'],
+        keywords: ['terminal', 'shell', 'console', 'agent'],
         run: () => openTerminalIn(workspacePath),
       },
       {
@@ -176,7 +194,7 @@ export function useWorkspaceCommands(): void {
         run: () => updateSettings({ theme: choice }),
       })),
     ],
-    [workspacePath, closeWorkspace, theme, reviewing, autoRefresh, commandLogOpen, updateSettings],
+    [workspacePath, closeWorkspace, theme, reviewing, autoRefresh, commandLogOpen, updateSettings, editor, terminal],
   );
 
   useCommands(commands);

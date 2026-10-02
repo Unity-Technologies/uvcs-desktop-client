@@ -1,5 +1,6 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { useExternalApps } from '../components/externalApps/externalApps';
 import { DialogHost } from '../ui/dialog/DialogHost';
 import { ToastHost } from '../ui/toast/ToastHost';
 import { TooltipLayer } from '../ui/TooltipLayer';
@@ -48,6 +49,7 @@ function Root() {
   useTheme();
   useGravatarSetting();
   useSettingsFromOtherWindows();
+  useExternalApps();
   useAppCommands();
   useMenuCommands();
   useAppMenuKeys();

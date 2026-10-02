@@ -39,8 +39,21 @@ import { isSubmenu, SEPARATOR, withoutAction, type Action, type MenuEntry, type 
 import { groupOf, MENU_GROUPS } from '../lib/menuGroups';
 import { COPY_KINDS } from './copyMenu';
 import { MENU_WORDS, type MenuWord } from './menuWords';
+import { externalAppsKey } from './externalApps/externalApps';
+import { queryClient } from '../app/queryClient';
+import { DEFAULT_SETTINGS } from '@shared/domain/settings';
+import type { ExternalApps } from '@shared/domain/externalApps';
 
 const ws = '/ws';
+
+/** Apps found, so the menus offer opening items in them ("Open in Visual Studio Code"). */
+const FOUND_APPS: ExternalApps = {
+  editors: [{ id: 'vscode', name: 'Visual Studio Code', origin: 'known', location: '/Applications/Visual Studio Code.app', opensFolders: true }],
+  terminals: [{ id: 'terminal', name: 'Terminal', origin: 'known', location: '/System/Applications/Utilities/Terminal.app', opensFolders: true }],
+  editorId: 'vscode',
+  terminalId: 'terminal',
+};
+queryClient.setQueryData(externalAppsKey(DEFAULT_SETTINGS), FOUND_APPS);
 const repository = 'game@local';
 const branch: Branch = {
   id: 7,
@@ -334,6 +347,38 @@ describe('the top bar', () => {
 
   it('says it is loading until what the workspace is on is read', () => {
     expect(topEntries(workingObjectMenu(workspace, undefined)).map((entry) => entry.label)).toEqual(['Loading…']);
+  });
+});
+
+describe('opening', () => {
+  const REVEAL = 'Reveal in Finder';
+  /** The menu's opening group: every way to open it in other apps, first after what opens in the app. */
+  const opening = (menu: MenuEntry[]): string[] => {
+    const entries = topEntries(menu).filter((entry) => groupOf(entry) !== 'primary');
+    expect(groupOf(entries[0]!)).toBe('open');
+    return entries.filter((entry) => groupOf(entry) === 'open').map((entry) => entry.label);
+  };
+
+  it("opens a file on disk first, in the user's editor, in the same words wherever it shows: the Files view, Changes and the palette", () => {
+    const words = ['Open in Visual Studio Code', 'Open with', REVEAL];
+    expect(opening(MENUS.file!())).toEqual(words);
+    expect(opening(MENUS.pendingChange!())).toEqual(words);
+  });
+
+  it('opens a folder, and the workspace itself, in the editor and the terminal first', () => {
+    const words = ['Open in Visual Studio Code', 'Open in Terminal', 'Open with', REVEAL];
+    expect(opening(MENUS.folder!())).toEqual(words);
+    expect(opening(MENUS.currentWorkspace!())).toEqual(words);
+    expect(opening(MENUS.workspace!())).toEqual(words);
+    expect(reading(MENUS.workspace!()).slice(0, 1)).toEqual([expect.stringContaining('openWorkspace | Open workspace')]);
+    expect(MENUS.workspace!()[1]).toBe(SEPARATOR);
+  });
+
+  it("opens a revision first, in the user's editor or any other app", () => {
+    const words = ['Open this revision in Visual Studio Code', 'Open this revision with'];
+    expect(opening(MENUS.revision!())).toEqual(words);
+    expect(opening(MENUS.history!())).toEqual(words);
+    expect(opening(MENUS.diffEntry!())).toEqual(words);
   });
 });
 
