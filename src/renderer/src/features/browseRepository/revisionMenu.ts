@@ -6,6 +6,7 @@ import { navigation } from '../../app/navigation/navigationStore';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { copySubmenu } from '../../components/copyMenu';
+import { openRevisionWithSubmenu } from '../../components/externalApps/openWithMenu';
 import { menuAction } from '../../components/menuWords';
 import { openRevision, saveRevisionAs } from '../history/revisionOperations';
 
@@ -22,6 +23,7 @@ export function revisionMenu(workspacePath: string, changesetId: number, reposit
   return groupedMenu([
     single && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path, revision: revisionRef(single) })),
     file && menuAction('openRevision', () => void openRevision(workspacePath, revisionRef(file), file.name)),
+    file && openRevisionWithSubmenu((editorId) => openRevision(workspacePath, revisionRef(file), file.name, editorId)),
     file && menuAction('saveAs', () => void saveRevisionAs(workspacePath, revisionRef(file), file.name)),
     copySubmenu('', { serverPath: items.map((item) => `/${item.path}`).join('\n'), spec: singleSpec }, { count: items.length }),
   ]);

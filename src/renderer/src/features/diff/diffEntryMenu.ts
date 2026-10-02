@@ -3,6 +3,7 @@ import { revisionIn } from '@shared/domain/revision';
 import { navigation } from '../../app/navigation/navigationStore';
 import type { MenuEntry } from '../../lib/actions';
 import { copySubmenu } from '../../components/copyMenu';
+import { openRevisionWithSubmenu } from '../../components/externalApps/openWithMenu';
 import { menuAction } from '../../components/menuWords';
 import { groupedMenu } from '../../lib/menuGroups';
 import { fileNameOf } from '../../lib/text';
@@ -23,6 +24,7 @@ export function diffEntryMenu(workspacePath: string, target: DiffTarget, entries
     single && menuAction('history', () => navigation.openPage(diffEntryHistory(target, single))),
     annotated && menuAction('annotate', () => navigation.openPage(annotated)),
     isFile && menuAction('openRevision', () => void openRevision(workspacePath, revision, fileNameOf(single.path))),
+    isFile && openRevisionWithSubmenu((editorId) => openRevision(workspacePath, revision, fileNameOf(single.path), editorId)),
     isFile && menuAction('saveAs', () => void saveRevisionAs(workspacePath, revision, fileNameOf(single.path))),
     copySubmenu('', { path: entries.map((entry) => entry.path).join('\n') }, { count: entries.length }),
   ]);

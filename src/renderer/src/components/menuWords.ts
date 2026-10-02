@@ -11,6 +11,7 @@ import {
   ClipboardPaste,
   CircleCheck,
   CircleDot,
+  CodeXml,
   Copy,
   CornerLeftUp,
   Download,
@@ -47,6 +48,7 @@ import {
   ScanText,
   Scissors,
   Square,
+  SquareArrowOutUpRight,
   SquareCheckBig,
   SquareTerminal,
   Tag,
@@ -87,7 +89,7 @@ export const MENU_WORDS = {
   open: word('primary', AppWindow, 'Open'),
   openReview: word('primary', ExternalLink, 'Open review'),
   release: word('primary', LockOpen, 'Release lock'),
-  openWorkspace: word('primary', FolderOpen, 'Open'),
+  openWorkspace: word('primary', FolderOpen, 'Open workspace'),
   locate: word('primary', FolderSearch, 'Locate or recreate…'),
 
   // What it does to the workspace or to the object.
@@ -146,11 +148,14 @@ export const MENU_WORDS = {
   source: word('navigate', ArrowLeftToLine, 'Go to source changeset'),
   destination: word('navigate', ArrowRightToLine, 'Go to destination changeset'),
 
-  // The OS.
+  // The OS: other apps, then the file manager (`openOnDiskEntries`). The words name the app ("Open in Visual Studio Code").
   openRevision: word('external', AppWindow, 'Open this revision'),
+  openRevisionWith: word('external', SquareArrowOutUpRight, 'Open this revision with'),
   saveAs: word('external', Download, 'Save this revision as…'),
+  openInEditor: word('external', CodeXml),
+  terminal: word('external', SquareTerminal),
+  openWith: word('external', SquareArrowOutUpRight, 'Open with'),
   reveal: word('external', FolderSearch, REVEAL_LABEL),
-  terminal: word('external', SquareTerminal, 'Open terminal here'),
 
   // The clipboard: Cut, Copy, Paste, as everywhere.
   cut: word('clipboard', Scissors, 'Cut'),

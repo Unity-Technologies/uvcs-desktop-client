@@ -4,9 +4,10 @@ import { runVoidAction } from '../../app/operations/runOperation';
 import { confirm } from '../../ui/dialog/confirm';
 import { toast } from '../../ui/toast/toastStore';
 
-export async function openRevision(workspacePath: string, revision: RevisionRef, fileName: string): Promise<void> {
+/** Saves the revision to a temp file and opens it in the editor `editorId`, or with the default app for its type. */
+export async function openRevision(workspacePath: string, revision: RevisionRef, fileName: string, editorId?: string): Promise<void> {
   try {
-    await api.history.openRevision(workspacePath, revision, fileName);
+    await api.history.openRevision(workspacePath, revision, fileName, editorId);
   } catch (error) {
     toast.error("Couldn't open the revision", error);
   }

@@ -39,8 +39,21 @@ import { isSubmenu, SEPARATOR, withoutAction, type Action, type MenuEntry, type 
 import { groupOf, MENU_GROUPS } from '../lib/menuGroups';
 import { COPY_KINDS } from './copyMenu';
 import { MENU_WORDS, type MenuWord } from './menuWords';
+import { externalAppsKey } from './externalApps/externalApps';
+import { queryClient } from '../app/queryClient';
+import { DEFAULT_SETTINGS } from '@shared/domain/settings';
+import type { ExternalApps } from '@shared/domain/externalApps';
 
 const ws = '/ws';
+
+/** Apps found, so the menus offer opening items in them ("Open in Visual Studio Code"). */
+const FOUND_APPS: ExternalApps = {
+  editors: [{ id: 'vscode', name: 'Visual Studio Code', origin: 'known', location: '/Applications/Visual Studio Code.app', opensFolders: true }],
+  terminals: [{ id: 'terminal', name: 'Terminal', origin: 'known', location: '/System/Applications/Utilities/Terminal.app', opensFolders: true }],
+  editorId: 'vscode',
+  terminalId: 'terminal',
+};
+queryClient.setQueryData(externalAppsKey(DEFAULT_SETTINGS), FOUND_APPS);
 const repository = 'game@local';
 const branch: Branch = {
   id: 7,
@@ -334,6 +347,30 @@ describe('the top bar', () => {
 
   it('says it is loading until what the workspace is on is read', () => {
     expect(topEntries(workingObjectMenu(workspace, undefined)).map((entry) => entry.label)).toEqual(['Loading…']);
+  });
+});
+
+describe('opening in other apps', () => {
+  const REVEAL = 'Reveal in Finder';
+  const external = (menu: MenuEntry[]): string[] => topEntries(menu).filter((entry) => groupOf(entry) === 'external').map((entry) => entry.label);
+
+  it('offers a file on disk in the same words wherever it shows: the Files view, Changes and the palette', () => {
+    const words = ['Open with', REVEAL];
+    expect(external(MENUS.file!())).toEqual(words);
+    expect(external(MENUS.pendingChange!())).toEqual(words);
+  });
+
+  it('offers a folder, and the workspace itself, in the editor and the terminal too', () => {
+    const words = ['Open in Visual Studio Code', 'Open in Terminal', 'Open with', REVEAL];
+    expect(external(MENUS.folder!())).toEqual(words);
+    expect(external(MENUS.workspace!())).toEqual(words);
+    expect(external(MENUS.currentWorkspace!())).toEqual(words);
+  });
+
+  it('offers a revision with the default app or any other', () => {
+    expect(external(MENUS.history!())).toEqual(['Open this revision', 'Open this revision with', 'Save this revision as…']);
+    expect(external(MENUS.diffEntry!())).toEqual(['Open this revision', 'Open this revision with', 'Save this revision as…']);
+    expect(external(MENUS.revision!())).toEqual(['Open this revision', 'Open this revision with', 'Save this revision as…']);
   });
 });
 

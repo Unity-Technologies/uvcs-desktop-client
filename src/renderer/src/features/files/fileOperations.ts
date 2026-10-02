@@ -15,10 +15,6 @@ export function openItem(workspacePath: string, item: Pick<TreeItem, 'path'>): v
   void runRead("Couldn't open the file", () => api.system.openPath(absolutePath(workspacePath, item.path)));
 }
 
-export function revealItem(workspacePath: string, item: Pick<TreeItem, 'path'>): void {
-  void api.system.revealInFileManager(absolutePath(workspacePath, item.path));
-}
-
 /** Adds private items; directories are added with everything inside them. */
 export function addItems(workspacePath: string, items: TreeItem[]): Promise<unknown> {
   const directories = items.filter((item) => item.itemType === 'directory').map((item) => item.path);

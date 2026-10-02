@@ -58,6 +58,11 @@
   opacity: 0.8;
 }
 
+/* A picture in color, such as an app's own icon ("Open with"), is drawn as it is: only glyphs are dimmed. */
+.icon:has(img) {
+  opacity: 1;
+}
+
 .label {
   flex: 1;
   overflow: hidden;

@@ -1,8 +1,8 @@
 import type { TreeItem } from '@shared/domain/explorer';
 import { navigation } from '../../app/navigation/navigationStore';
-import { openTerminalIn } from '../../app/workspace/workspaceShellActions';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
+import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction, menuSubmenu } from '../../components/menuWords';
 import { showInLocks } from '../locks/showInLocks';
 import type { PendingLocks } from '../pendingChanges/locks/pendingLocks';
@@ -16,7 +16,6 @@ import {
   deleteItems,
   openItem,
   renameItem,
-  revealItem,
   targetDirectoryFor,
 } from './fileOperations';
 import { cutAction, pasteAction } from './cutPasteActions';
@@ -68,8 +67,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
     single && views?.history && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path }), { shortcut: FILE_SHORTCUTS.history }),
     single && views?.annotate && menuAction('annotate', () => showAnnotated(single.path), { shortcut: FILE_SHORTCUTS.annotate }),
     lock ? menuAction('showInLocks', () => showInLocks(workspacePath, lock)) : menuAction('locks', () => navigation.goToView('locks')),
-    single && menuAction('reveal', () => revealItem(workspacePath, single)),
-    single?.itemType === 'directory' && menuAction('terminal', () => openTerminalIn(absolutePath(workspacePath, single.path))),
+    ...(single ? openOnDiskEntries({ path: absolutePath(workspacePath, single.path), isFolder: single.itemType === 'directory' }) : []),
     // Cut and Paste move items into another folder.
     !hasRoot && cutAction(workspacePath, items),
     itemCopySubmenu(workspacePath, items.map((item) => item.path)),
