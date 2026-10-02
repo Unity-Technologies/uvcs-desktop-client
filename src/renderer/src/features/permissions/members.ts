@@ -13,6 +13,11 @@ export function memberRole(name: string, groups: ReadonlySet<string>): MemberRol
   return groups.has(name) ? 'group' : 'user';
 }
 
+/** What a member whose kind is already known is. */
+export function roleOfMember(member: MemberRef): MemberRole {
+  return memberRole(member.name, new Set(member.kind === 'group' ? [member.name] : []));
+}
+
 /** A member as `cm acl` takes it, its kind told by the server's groups. */
 export function memberRef(name: string, groups: ReadonlySet<string>): MemberRef {
   const role = memberRole(name, groups);

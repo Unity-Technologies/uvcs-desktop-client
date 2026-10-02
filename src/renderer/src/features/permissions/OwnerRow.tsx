@@ -3,7 +3,7 @@ import type { MemberRef } from '@shared/domain/permissions';
 import { Button } from '../../ui/Button';
 import { IconButton } from '../../ui/IconButton';
 import { MemberIcon } from './MemberIcon';
-import { memberLabel, type MemberRole } from './members';
+import { memberLabel, roleOfMember } from './members';
 import styles from './PermissionsDialog.module.css';
 
 interface OwnerRowProps {
@@ -14,7 +14,6 @@ interface OwnerRowProps {
   onUndo: () => void;
 }
 
-const roleOf = (member: MemberRef): MemberRole => (member.kind === 'group' ? 'group' : 'user');
 
 /** Who owns the object, which the `OWNER` entry stands for, and Change… to give it to another user or group. */
 export function OwnerRow({ owner, newOwner, onChange, onUndo }: OwnerRowProps) {
@@ -24,7 +23,7 @@ export function OwnerRow({ owner, newOwner, onChange, onUndo }: OwnerRowProps) {
       <span className={styles.ownerLabel}>Owner</span>
       {shown ? (
         <span className={styles.ownerName} data-changed={Boolean(newOwner)}>
-          <MemberIcon name={shown.name} role={roleOf(shown)} />
+          <MemberIcon name={shown.name} role={roleOfMember(shown)} />
           {memberLabel(shown.name)}
         </span>
       ) : (

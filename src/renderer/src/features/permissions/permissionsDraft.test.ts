@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { NO_BITS, type AclBits, type AclLevel, type ObjectPermissions } from '@shared/domain/permissions';
 import { changeLines } from './changeWords';
-import { cannotRemoveReason, memberRows, memberStatus } from './members';
+import { cannotRemoveReason, memberRows, memberStatus, roleOfMember } from './members';
 import {
   addMember,
   changedPermissions,
@@ -149,6 +149,12 @@ describe('members', () => {
       ['ana', 'user', true, []],
     ]);
     expect(rows[0]!.member).toEqual({ name: 'ALL USERS', kind: 'group' });
+  });
+
+  it('tells an owner that is everyone from a group and a user', () => {
+    expect(roleOfMember({ name: 'ALL USERS', kind: 'group' })).toBe('everyone');
+    expect(roleOfMember({ name: 'Leads', kind: 'group' })).toBe('group');
+    expect(roleOfMember({ name: 'ana', kind: 'user' })).toBe('user');
   });
 
   it('says where each entry stands', () => {
