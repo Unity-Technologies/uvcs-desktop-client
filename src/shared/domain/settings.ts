@@ -20,6 +20,8 @@ export interface SavedWindow {
   workspacePath?: string;
   bounds: SavedWindowBounds;
   fullScreen: boolean;
+  /** The view it showed (a renderer `ViewId`): saved only by a restart to install an update, which nobody chose. */
+  view?: string;
 }
 
 export interface AppSettings {

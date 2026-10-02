@@ -251,7 +251,7 @@ describe('the windows open as the app quit', () => {
     // The app may quit from the Dock, no window focused: the last one that was keeps its place.
     game.minimize();
 
-    windows.saveSession();
+    windows.saveSession({ withViews: false });
     expect(settings.get().openWindows).toEqual([
       { workspacePath: undefined, bounds: RIGHT, fullScreen: false },
       { workspacePath: TOOLS, bounds: { x: 0, y: 0, width: 800, height: 600, maximized: false }, fullScreen: false },
@@ -259,11 +259,41 @@ describe('the windows open as the app quit', () => {
     ]);
   });
 
+  it('are saved on the views their pages show only for a restart to install an update', () => {
+    const { windows, settings, open, shows } = setUp();
+    const game = open();
+    shows(game, GAME);
+    windows.viewShown(game.webContents.id, 'branchExplorer');
+    // A page back on the home screen keeps no view.
+    const home = open();
+    windows.viewShown(home.webContents.id, 'locks');
+
+    windows.saveSession({ withViews: true });
+    expect(settings.get().openWindows.map(({ workspacePath, view }) => ({ workspacePath, view }))).toEqual([
+      { workspacePath: GAME, view: 'branchExplorer' },
+      { workspacePath: undefined, view: undefined },
+    ]);
+    windows.saveSession({ withViews: false });
+    expect(settings.get().openWindows.map(({ view }) => view)).toEqual([undefined, undefined]);
+  });
+
+  it('keep the view a window reopened on until its page shows another', () => {
+    const game = mkdtempSync(join(tmpdir(), 'uvcs-game-'));
+    const { windows, settings, shows } = setUp([], [{ workspacePath: game, bounds: LEFT, fullScreen: false, view: 'shelves' }]);
+    windows.openFirst();
+    const [reopened] = fakeElectron.windows();
+    shows(reopened!, game);
+
+    expect(vi.mocked(createMainWindow).mock.calls[0]?.[1]?.reopen?.view).toBe('shelves');
+    windows.saveSession({ withViews: true });
+    expect(settings.get().openWindows[0]?.view).toBe('shelves');
+  });
+
   it('are saved as none when every window was closed before quitting (macOS)', () => {
     const { windows, settings, open } = setUp();
     open().close();
 
-    windows.saveSession();
+    windows.saveSession({ withViews: false });
     expect(settings.get().openWindows).toEqual([]);
   });
 
@@ -278,7 +308,7 @@ describe('the windows open as the app quit', () => {
     windows.openFirst();
     expect(openedWith()).toEqual([
       { workspacePath: undefined, reopen: { bounds: RIGHT, fullScreen: false }, inBackground: true },
-      { workspacePath: game, reopen: { bounds: LEFT, fullScreen: true }, inBackground: false },
+      { workspacePath: game, reopen: { workspacePath: game, bounds: LEFT, fullScreen: true }, inBackground: false },
     ]);
   });
 
@@ -299,7 +329,7 @@ describe('the windows open as the app quit', () => {
     expect(windows.firstWorkspace()).toBe(TOOLS);
     windows.openFirst();
     expect(openedWith()).toEqual([
-      { workspacePath: game, reopen: { bounds: LEFT, fullScreen: false }, inBackground: true },
+      { workspacePath: game, reopen: { workspacePath: game, bounds: LEFT, fullScreen: false }, inBackground: true },
       { workspacePath: undefined, reopen: undefined, inBackground: undefined },
     ]);
     expect(windows.takeRequested(fakeElectron.windows()[1]!.webContents.id)).toBe(TOOLS);

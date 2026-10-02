@@ -20,7 +20,7 @@ interface MainWindowOptions {
   /** The workspace its page starts on (`startingWorkspaceQuery`), its folder known to be there; the home screen without one. */
   workspacePath?: string;
   /** A window open when the app last quit: it opens where it was, full screen if it was. */
-  reopen?: Pick<SavedWindow, 'bounds' | 'fullScreen'>;
+  reopen?: SavedWindow;
   /** Shows without taking the focus: a window reopened at launch behind the one that had it. */
   inBackground?: boolean;
 }
@@ -68,7 +68,7 @@ export function createMainWindow(
     return { action: 'deny' };
   });
 
-  loadPage(window, startingWorkspaceQuery(workspacePath));
+  loadPage(window, startingWorkspaceQuery(workspacePath, reopen?.view));
   return window;
 }
 

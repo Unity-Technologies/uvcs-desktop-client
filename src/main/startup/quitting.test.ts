@@ -34,7 +34,7 @@ describe('quitting', () => {
 
     expect(quit()).toBe(true);
     expect(dependencies.askToQuitWhenDone).not.toHaveBeenCalled();
-    expect(dependencies.saveSession).toHaveBeenCalledOnce();
+    expect(dependencies.saveSession).toHaveBeenCalledExactlyOnceWith({ withViews: false });
   });
 
   it('waits for a running operation once the user agrees, then quits', async () => {
@@ -88,5 +88,28 @@ describe('quitting', () => {
     finishWrites();
     await settle();
     expect(dependencies.quit).toHaveBeenCalledOnce();
+  });
+});
+
+describe('restarting to install an update', () => {
+  it('saves the windows with their views before quitting', () => {
+    const { dependencies } = setUp();
+
+    new Quitting(dependencies).restartToInstall();
+    expect(dependencies.saveSession).toHaveBeenCalledExactlyOnceWith({ withViews: true });
+  });
+
+  it("keeps the windows saved when they closed before the quit began (Squirrel.Mac), else saves them as they are", () => {
+    const closedFirst = setUp({ windows: false });
+    const quitting = new Quitting(closedFirst.dependencies);
+    quitting.restartToInstall();
+    quitting.beforeQuit({ preventDefault: () => {} });
+    expect(closedFirst.dependencies.saveSession).toHaveBeenCalledOnce();
+
+    const stillOpen = setUp();
+    const restarting = new Quitting(stillOpen.dependencies);
+    restarting.restartToInstall();
+    restarting.beforeQuit({ preventDefault: () => {} });
+    expect(stillOpen.dependencies.saveSession.mock.calls).toEqual([[{ withViews: true }], [{ withViews: true }]]);
   });
 });

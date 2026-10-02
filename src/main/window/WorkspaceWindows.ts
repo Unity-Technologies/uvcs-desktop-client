@@ -19,7 +19,7 @@ interface WorkspaceWindowsOptions {
 
 /** Where a window opens again at launch, as it was when the app quit (`createMainWindow`'s `reopen`). */
 interface Reopening {
-  reopen: Pick<SavedWindow, 'bounds' | 'fullScreen'>;
+  reopen: SavedWindow;
   inBackground: boolean;
 }
 
@@ -34,6 +34,8 @@ export class WorkspaceWindows {
   private launchRequest: string | null = null;
   /** The window that had the focus last: it keeps it when the session opens again, as the app may quit from the Dock. */
   private lastFocused: BrowserWindow | null = null;
+  /** The view each window's page shows (`viewShown`, by web contents id), kept for a restart to install an update. */
+  private readonly views = new Map<number, string>();
 
   constructor(private readonly options: WorkspaceWindowsOptions) {}
 
@@ -46,6 +48,7 @@ export class WorkspaceWindows {
     const viewer = window.webContents.id;
     askBeforeUnloading(window);
     if (workspacePath) this.requested.set(viewer, workspacePath);
+    if (reopening?.reopen.view) this.views.set(viewer, reopening.reopen.view);
 
     const changed = (): void => this.options.onWindowsChanged();
     window.on('focus', () => {
@@ -56,6 +59,7 @@ export class WorkspaceWindows {
     window.on('page-title-updated', () => setImmediate(changed));
     window.on('closed', () => {
       this.requested.delete(viewer);
+      this.views.delete(viewer);
       if (this.lastFocused === window) this.lastFocused = null;
       this.options.onClosed(viewer);
       changed();
@@ -83,20 +87,33 @@ export class WorkspaceWindows {
     const launchRequest = this.launchRequest;
     this.launchRequest = null;
     const reopened = this.windowsToReopen();
-    reopened.forEach(({ workspacePath, bounds, fullScreen }, index) => {
+    reopened.forEach((reopen, index) => {
       const behindAnother = index < reopened.length - 1 || launchRequest !== null;
-      this.open(workspacePath, { reopen: { bounds, fullScreen }, inBackground: behindAnother });
+      this.open(reopen.workspacePath, { reopen, inBackground: behindAnother });
     });
     if (launchRequest) this.showWorkspace(launchRequest);
     else if (reopened.length === 0) this.open(this.lastUsedWorkspace());
   }
 
-  /** Saves the windows open now, to open again at the next launch (`openWindows`); none when every window was closed. */
-  saveSession(): void {
-    const openWindows = inSessionOrder(this.all(), this.lastFocused).map(
-      (window): SavedWindow => ({ workspacePath: this.workspaceIn(window), bounds: savedBoundsOf(window), fullScreen: window.isFullScreen() }),
-    );
+  /**
+   * Saves the windows open now, to open again at the next launch (`openWindows`); none when every window was closed.
+   * `withViews` keeps the view each one shows, for a restart to install an update: a restart the user didn't choose
+   * puts them back where they were, while a launch of their own starts on Changes.
+   */
+  saveSession({ withViews }: { withViews: boolean }): void {
+    const openWindows = inSessionOrder(this.all(), this.lastFocused).map((window): SavedWindow => {
+      const workspacePath = this.workspaceIn(window);
+      const saved = { workspacePath, bounds: savedBoundsOf(window), fullScreen: window.isFullScreen() };
+      // The home screen has no view.
+      const view = withViews && workspacePath ? this.views.get(window.webContents.id) : undefined;
+      return view ? { ...saved, view } : saved;
+    });
     this.options.settings.update({ openWindows });
+  }
+
+  /** The window's page shows `view` now (`windows.viewShown`). */
+  viewShown(viewer: number, view: string): void {
+    this.views.set(viewer, view);
   }
 
   /** Focuses the window showing the workspace, or opens one for it. */

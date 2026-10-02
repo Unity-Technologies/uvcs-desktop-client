@@ -39,6 +39,8 @@ export interface AppUpdatesDependencies {
   writesRunning: () => boolean;
   /** Settles once none runs (`OperationTracker.writesFinished`). */
   writesFinished: () => Promise<void>;
+  /** Called just before quitting to install (`Quitting.restartToInstall`): the windows reopen where they were. */
+  beforeRestart: () => void;
   /** Tells every window where the update stands. */
   push: (status: UpdateStatus) => void;
   /** Keeps the cause of a failed check or download, which the window shows only in a sentence (`describeUpdateError`). */
@@ -124,6 +126,7 @@ export class AppUpdates {
       this.setStatus({ ...ready, state: 'waitingToInstall' });
       await this.dependencies.writesFinished();
     }
+    this.dependencies.beforeRestart();
     if (this.installerPath) await this.dependencies.openInstaller(this.installerPath);
     // Silent: the Windows installer runs with no wizard (a per-user install asks for no elevation), then the app starts again.
     else this.dependencies.feed.quitAndInstall(true, true);

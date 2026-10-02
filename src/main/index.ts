@@ -35,12 +35,24 @@ const settings = openSettings(userData);
 const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
 const watchers = watchShownWorkspaces(cm, headers);
 const operations = trackOperations(watchers);
-const updates = createAppUpdates(operations);
+const updates = createAppUpdates({
+  writesRunning: () => operations.writesRunning(),
+  writesFinished: () => operations.writesFinished(),
+  beforeRestart: () => quitting.restartToInstall(),
+});
 const windows = new WorkspaceWindows({
   settings,
   workspaceOf: (viewer) => watchers.workspaceOf(viewer),
   onWindowsChanged: () => app.isReady() && installAppMenu(windows, updates),
   onClosed: (viewer) => watchers.release(viewer),
+});
+const quitting = new Quitting({
+  writesRunning: () => operations.writesRunning(),
+  writesFinished: () => operations.writesFinished(),
+  askToQuitWhenDone,
+  hasWindows: () => windows.all().length > 0,
+  saveSession: (options) => windows.saveSession(options),
+  quit: () => app.quit(),
 });
 
 function start(launched: Promise<void>): void {
@@ -64,16 +76,7 @@ function start(launched: Promise<void>): void {
   const early = new EarlyCalls(apiMethods(api));
   registerApi(api, early);
   followAppTheme(settings);
-  handleQuitting(
-    new Quitting({
-      writesRunning: () => operations.writesRunning(),
-      writesFinished: () => operations.writesFinished(),
-      askToQuitWhenDone,
-      hasWindows: () => windows.all().length > 0,
-      saveSession: () => windows.saveSession(),
-      quit: () => app.quit(),
-    }),
-  );
+  handleQuitting(quitting);
   installMenus(windows, updates);
   updates.checkPeriodically();
   const openFirst = (): void => openFirstWindow({ cm, windows, early, settings });

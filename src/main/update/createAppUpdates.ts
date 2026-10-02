@@ -8,11 +8,11 @@ import { installerAsset } from './installerAsset';
 import { needsManualInstall } from './macSignature';
 import { releaseFileUrl } from './releaseFeed';
 
-/** The operations changing a workspace, which installing waits for (`OperationTracker`). */
-type RunningWrites = Pick<AppUpdatesDependencies, 'writesRunning' | 'writesFinished'>;
+/** The operations changing a workspace, which installing waits for (`OperationTracker`), and what quitting to install does first. */
+type AroundInstalling = Pick<AppUpdatesDependencies, 'writesRunning' | 'writesFinished' | 'beforeRestart'>;
 
 /** The app's updates (`AppUpdates`) over electron-updater and Electron; they check on their own once started (`checkPeriodically`). */
-export function createAppUpdates(operations: RunningWrites): AppUpdates {
+export function createAppUpdates(aroundInstalling: AroundInstalling): AppUpdates {
   // `AppUpdates` downloads once it knows how the update will install (`needsManualInstall`).
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
@@ -36,8 +36,7 @@ export function createAppUpdates(operations: RunningWrites): AppUpdates {
       if (error) throw new Error(error);
       app.quit();
     },
-    writesRunning: () => operations.writesRunning(),
-    writesFinished: () => operations.writesFinished(),
+    ...aroundInstalling,
     push: (status) => sendEvent('updateStatusChanged', status),
     logFailure: (text) => console.warn(text),
   });

@@ -44,6 +44,7 @@ function updates(feed: ReturnType<typeof fakeFeed>, parts: Partial<AppUpdatesDep
     openInstaller: vi.fn(async () => undefined),
     writesRunning: () => false,
     writesFinished: async () => undefined,
+    beforeRestart: vi.fn(),
     push: (status) => pushed.push(status),
     logFailure: vi.fn(),
     ...parts,
@@ -223,7 +224,7 @@ describe('installing', () => {
     const feed = fakeFeed([found]);
     let finishWrites!: () => void;
     const writesFinished = new Promise<void>((resolve) => (finishWrites = resolve));
-    const { updates: app, pushed } = updates(feed, { writesRunning: () => true, writesFinished: () => writesFinished });
+    const { updates: app, pushed, dependencies } = updates(feed, { writesRunning: () => true, writesFinished: () => writesFinished });
     await app.check();
     pushed.length = 0;
 
@@ -235,9 +236,12 @@ describe('installing', () => {
     expect(feed.quitAndInstall).not.toHaveBeenCalled();
     expect(app.status()).toEqual({ state: 'waitingToInstall', version: '1.2.0', install: 'restart' });
 
+    expect(dependencies.beforeRestart).not.toHaveBeenCalled();
+
     finishWrites();
     await installing;
     expect(feed.quitAndInstall).toHaveBeenCalledOnce();
+    expect(dependencies.beforeRestart).toHaveBeenCalledOnce();
   });
 
   it('waits for an operation to finish before opening the disk image too, as that quits the app', async () => {
@@ -256,6 +260,8 @@ describe('installing', () => {
     finishWrites();
     await installing;
     expect(dependencies.openInstaller).toHaveBeenCalledOnce();
+    // The user reopens the app from the disk image: its windows open where they were too.
+    expect(dependencies.beforeRestart).toHaveBeenCalledOnce();
   });
 
   it('does nothing while no update is ready', async () => {
