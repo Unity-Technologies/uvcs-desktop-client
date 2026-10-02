@@ -30,9 +30,11 @@ function setUp(recentWorkspacePaths: string[] = [], openWindows: SavedWindow[] =
   const shown = new Map<number, string>();
   const onWindowsChanged = vi.fn();
   const onClosed = vi.fn();
+  const onLastWindowClosing = vi.fn();
   const settings = memorySettings({ recentWorkspacePaths, openWindows });
   const windows = new WorkspaceWindows({
     settings,
+    onLastWindowClosing,
     workspaceOf: (viewer) => shown.get(viewer),
     onWindowsChanged,
     onClosed,
@@ -40,7 +42,7 @@ function setUp(recentWorkspacePaths: string[] = [], openWindows: SavedWindow[] =
   const open = (workspacePath?: string): FakeWindow => windows.open(workspacePath) as unknown as FakeWindow;
   /** The page of `window` now shows `workspacePath` (after taking its request, or picked on the home screen). */
   const shows = (window: FakeWindow, workspacePath: string): void => void shown.set(window.webContents.id, workspacePath);
-  return { windows, settings, open, shows, onWindowsChanged, onClosed };
+  return { windows, settings, open, shows, onWindowsChanged, onClosed, onLastWindowClosing };
 }
 
 const asBrowserWindow = (window: FakeWindow): BrowserWindow => window as unknown as BrowserWindow;
@@ -287,6 +289,18 @@ describe('the windows open as the app quit', () => {
     expect(vi.mocked(createMainWindow).mock.calls[0]?.[1]?.reopen?.view).toBe('shelves');
     windows.saveSession({ withViews: true });
     expect(settings.get().openWindows[0]?.view).toBe('shelves');
+  });
+
+  it('hear when the last window is closing, while it is still open', () => {
+    const { windows, open, onLastWindowClosing } = setUp();
+    const first = open();
+    const last = open();
+
+    first.close();
+    expect(onLastWindowClosing).not.toHaveBeenCalled();
+    last.on('close', () => expect(windows.all()).toHaveLength(1));
+    last.close();
+    expect(onLastWindowClosing).toHaveBeenCalledOnce();
   });
 
   it('are saved as none when every window was closed before quitting (macOS)', () => {

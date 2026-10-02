@@ -4,7 +4,7 @@ import { Quitting, type QuittingDependencies } from './quitting';
 vi.mock('electron', async () => (await import('../window/testing/fakeElectron')).fakeElectron.module);
 
 /** A quit with an operation running or not; the user answers `answer` when asked. */
-function setUp({ writing = false, windows = true, answer = true } = {}) {
+function setUp({ writing = false, windows = true, answer = true, quitsWithLastWindow = false } = {}) {
   let finishWrites!: () => void;
   const writesFinished = new Promise<void>((resolve) => (finishWrites = resolve));
   const dependencies = {
@@ -12,6 +12,7 @@ function setUp({ writing = false, windows = true, answer = true } = {}) {
     writesFinished: vi.fn(() => writesFinished),
     askToQuitWhenDone: vi.fn(async () => answer),
     hasWindows: () => windows,
+    quitsWithLastWindow,
     saveSession: vi.fn(),
     quit: vi.fn(),
   } satisfies QuittingDependencies;
@@ -111,5 +112,39 @@ describe('restarting to install an update', () => {
     restarting.restartToInstall();
     restarting.beforeQuit({ preventDefault: () => {} });
     expect(stillOpen.dependencies.saveSession.mock.calls).toEqual([[{ withViews: true }], [{ withViews: true }]]);
+  });
+});
+
+describe('the windows saved for the next launch', () => {
+  it('are the last window, saved as it closes, where the app quits with it (Windows, Linux)', () => {
+    const { dependencies } = setUp({ quitsWithLastWindow: true });
+    const quitting = new Quitting(dependencies);
+
+    quitting.lastWindowClosing();
+    expect(dependencies.saveSession).toHaveBeenCalledExactlyOnceWith({ withViews: false });
+    // The quit that follows finds no window: the one just saved stays.
+    dependencies.hasWindows = () => false;
+    quitting.beforeQuit({ preventDefault: () => {} });
+    expect(dependencies.saveSession).toHaveBeenCalledOnce();
+  });
+
+  it('are none on macOS when every window was closed before quitting, and the last one closing saves nothing', () => {
+    const { dependencies } = setUp({ windows: false });
+    const quitting = new Quitting(dependencies);
+
+    quitting.lastWindowClosing();
+    expect(dependencies.saveSession).not.toHaveBeenCalled();
+    quitting.beforeQuit({ preventDefault: () => {} });
+    expect(dependencies.saveSession).toHaveBeenCalledExactlyOnceWith({ withViews: false });
+  });
+
+  it('stay as the quit saved them while its windows close, a restart’s views included', () => {
+    const { dependencies } = setUp({ quitsWithLastWindow: true });
+    const quitting = new Quitting(dependencies);
+    quitting.restartToInstall();
+    quitting.beforeQuit({ preventDefault: () => {} });
+
+    quitting.lastWindowClosing();
+    expect(dependencies.saveSession.mock.calls).toEqual([[{ withViews: true }], [{ withViews: true }]]);
   });
 });

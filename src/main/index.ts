@@ -45,12 +45,14 @@ const windows = new WorkspaceWindows({
   workspaceOf: (viewer) => watchers.workspaceOf(viewer),
   onWindowsChanged: () => app.isReady() && installAppMenu(windows, updates),
   onClosed: (viewer) => watchers.release(viewer),
+  onLastWindowClosing: () => quitting.lastWindowClosing(),
 });
 const quitting = new Quitting({
   writesRunning: () => operations.writesRunning(),
   writesFinished: () => operations.writesFinished(),
   askToQuitWhenDone,
   hasWindows: () => windows.all().length > 0,
+  quitsWithLastWindow: process.platform !== 'darwin',
   saveSession: (options) => windows.saveSession(options),
   quit: () => app.quit(),
 });

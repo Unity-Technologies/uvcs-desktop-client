@@ -10,6 +10,8 @@ export interface QuittingDependencies {
   askToQuitWhenDone: () => Promise<boolean>;
   /** Whether any window is open: Windows and Linux quit as the last one closes. */
   hasWindows: () => boolean;
+  /** Whether the app quits as its last window closes (Windows, Linux), rather than staying with none (macOS). */
+  quitsWithLastWindow: boolean;
   /** Saves the windows open now, to open again at the next launch (`WorkspaceWindows.saveSession`), with their views or not. */
   saveSession: (options: { withViews: boolean }) => void;
   quit: () => void;
@@ -22,7 +24,8 @@ export interface QuittingDependencies {
  *   partway. The user is asked to quit once it finishes, or to stay; with no window left to ask from (the last one was
  *   closed), the app quits once it finishes.
  * - The windows open are saved (`saveSession`), before they close, to open again at the next launch; on the views they
- *   show when restarting to install an update (`restartToInstall`).
+ *   show when restarting to install an update (`restartToInstall`). Where the app quits as its last window closes, that
+ *   window is saved as it closes (`lastWindowClosing`); on macOS, quitting with none open saves none.
  * - The pages hear it (`quitStarted`), so one holding unsaved edits quits the app once it settles them.
  */
 export class Quitting {
@@ -30,6 +33,8 @@ export class Quitting {
   private holding = false;
   /** Quitting to install an update (`restartToInstall`), which then starts the app again. */
   private restarting = false;
+  /** The quit went on (`before-quit`, not held back): the windows closing now were saved already. */
+  private quitting = false;
 
   constructor(private readonly dependencies: QuittingDependencies) {}
 
@@ -40,9 +45,17 @@ export class Quitting {
       if (!this.holding) void this.quitWhenWritesFinish();
       return;
     }
-    // Squirrel.Mac closes the windows before `before-quit` when it restarts to install: the session saved then stays.
-    if (!this.restarting || this.dependencies.hasWindows()) this.dependencies.saveSession({ withViews: this.restarting });
+    if (this.dependencies.hasWindows()) this.dependencies.saveSession({ withViews: this.restarting });
+    // With none left, the session stays as the last window closing saved it (Windows, Linux) or as `restartToInstall`
+    // did (Squirrel.Mac closes the windows before `before-quit`); on macOS, quitting with every window closed saves none.
+    else if (!this.restarting && !this.dependencies.quitsWithLastWindow) this.dependencies.saveSession({ withViews: false });
+    this.quitting = true;
     quitStarted();
+  }
+
+  /** The last window is closing: where the app quits with it, it's saved now, while it's still open. */
+  lastWindowClosing(): void {
+    if (this.dependencies.quitsWithLastWindow && !this.quitting) this.dependencies.saveSession({ withViews: false });
   }
 
   /**

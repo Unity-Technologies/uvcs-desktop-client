@@ -15,6 +15,8 @@ interface WorkspaceWindowsOptions {
   /** A window opened, closed, got focus or changed title: the Window menu lists them. */
   onWindowsChanged: () => void;
   onClosed: (viewer: number) => void;
+  /** The last open window is closing, still open (`Quitting.lastWindowClosing`). */
+  onLastWindowClosing: () => void;
 }
 
 /** Where a window opens again at launch, as it was when the app quit (`createMainWindow`'s `reopen`). */
@@ -57,6 +59,9 @@ export class WorkspaceWindows {
     });
     // The event comes before the window takes the new title.
     window.on('page-title-updated', () => setImmediate(changed));
+    window.on('close', () => {
+      if (this.all().length === 1) this.options.onLastWindowClosing();
+    });
     window.on('closed', () => {
       this.requested.delete(viewer);
       this.views.delete(viewer);

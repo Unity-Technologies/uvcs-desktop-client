@@ -278,8 +278,9 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   per workspace, none for a folder that's gone), the focused one in front and the others shown behind it
   (`showInactive`). After a restart to install an update, which nobody chose, each also opens on the view it showed
   (`Quitting.restartToInstall` saves `withViews`; the page reports each view it goes to, `windows.viewShown`, and reads
-  it back from its address, `startingViewIn`); a launch of the user's own starts on Changes. With none saved (every
-  window was closed before quitting), the first window reopens the last workspace used. Development builds start on one home screen, where automated UI checks pick a workspace. A new
+  it back from its address, `startingViewIn`); a launch of the user's own starts on Changes. Where the app quits as
+  its last window closes (Windows, Linux), that window is saved as it closes (`Quitting.lastWindowClosing`). With none
+  saved (on macOS, every window was closed before quitting), the first window reopens the last workspace used. Development builds start on one home screen, where automated UI checks pick a workspace. A new
   window opens on the home screen. A new window asked to open a workspace
   takes it at start (`system.takeRequestedWorkspace`), as does a folder the installed app is launched with on Windows
   and Linux (`workspaceArgument`; a second launch hands it to the running app). The first window waits until `cm` has
