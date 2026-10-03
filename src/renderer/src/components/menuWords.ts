@@ -63,7 +63,7 @@ import {
 } from 'lucide-react';
 import type { Action, Icon, MenuEntry, Submenu } from '../lib/actions';
 import type { GroupedEntry, MenuGroup } from '../lib/menuGroups';
-import { REVEAL_LABEL } from '../lib/platform';
+import { OPEN_IN_FILE_MANAGER_LABEL, REVEAL_LABEL } from '../lib/platform';
 import { MERGE_INTO_WORKSPACE, serverMergeLabel } from './mergeMenuLabels';
 
 /** A concept of the menus: the group it goes in, its icon, and its words where they are the same for every object. */
@@ -103,6 +103,7 @@ export const MENU_WORDS = {
   openWith: word('open', SquareArrowOutUpRight, 'Open with'),
   openRevisionWith: word('open', SquareArrowOutUpRight, 'Open this revision with'),
   reveal: word('open', FolderSearch, REVEAL_LABEL),
+  openInFileManager: word('open', FolderSearch, OPEN_IN_FILE_MANAGER_LABEL),
 
   // What it does to the workspace or to the object.
   switch: word('act', ArrowRightLeft),

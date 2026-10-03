@@ -8,7 +8,7 @@ export const WORKSPACE_MENU_COMMANDS: readonly string[] = [
   'workspace.open',
   'workspace.openInEditor',
   'workspace.openTerminal',
-  'workspace.reveal',
+  'workspace.openInFileManager',
   'workspace.refresh',
   'app.commandLog',
   'branch.switch',

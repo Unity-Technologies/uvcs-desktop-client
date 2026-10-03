@@ -20,6 +20,7 @@ const APPS: ExternalApps = {
 const DEFAULT_APPS: ExternalApps = { ...APPS, editorId: null };
 const FILE = { path: '/wk/game/src/player.cs', isFolder: false };
 const FOLDER = { path: '/wk/game/src', isFolder: true };
+const WORKSPACE = { path: '/wk/game', isFolder: true, isWorkspace: true };
 
 /** What a menu reads as: each entry's label, a submenu's entries indented. */
 function reading(entries: MenuEntry[], indent = ''): string[] {
@@ -91,6 +92,17 @@ describe('openOnDiskEntries', () => {
 
   it('still opens a terminal, and offers another app, before any app was found', () => {
     expect(reading(openOnDiskEntries(FOLDER, NO_EXTERNAL_APPS))).toEqual(['Open in terminal', 'Open with', '  Choose another app…', '  Manage apps…', 'Reveal in Finder']);
+  });
+
+  it("opens the workspace itself in the file manager, whose parent folder isn't the workspace's", async () => {
+    fakeApi.answer('system.openPath', () => undefined);
+    const entries = openOnDiskEntries(WORKSPACE, APPS);
+
+    expect(reading(entries).at(-1)).toBe('Open in Finder');
+    run(entries, 'Open in Finder');
+    await settle();
+
+    expect(fakeApi.calls()).toEqual([{ method: 'system.openPath', args: [WORKSPACE.path] }]);
   });
 
   it('opens the item in the app picked, the default one when the entry names no other', async () => {

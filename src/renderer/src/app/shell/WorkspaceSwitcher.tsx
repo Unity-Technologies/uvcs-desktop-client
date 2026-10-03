@@ -4,7 +4,7 @@ import { useState, type ReactElement, type ReactNode } from 'react';
 import { defaultEditor, defaultTerminal, useExternalApps } from '../../components/externalApps/externalApps';
 import { openInEditor } from '../../components/externalApps/externalAppOperations';
 import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorkspaceDialog';
-import { REVEAL_LABEL } from '../../lib/platform';
+import { OPEN_IN_FILE_MANAGER_LABEL } from '../../lib/platform';
 import type { Icon } from '../../lib/actions';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { useReturnFocus } from '../../ui/useReturnFocus';
@@ -13,7 +13,7 @@ import { useSession } from '../workspace/sessionStore';
 import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
 import { useWorkspaceInfo } from '../workspace/useWorkspace';
-import { copyWorkspacePath, openTerminalIn, revealWorkspace } from '../workspace/workspaceShellActions';
+import { copyWorkspacePath, openTerminalIn, openWorkspaceInFileManager } from '../workspace/workspaceShellActions';
 import { currentWorkspaceMenu } from './currentWorkspaceMenu';
 import { WorkspaceSwitcherRows } from './WorkspaceSwitcherRows';
 import styles from './WorkspaceSwitcher.module.css';
@@ -70,8 +70,8 @@ export function WorkspaceSwitcher({ currentPath, children }: { currentPath: stri
             <SwitcherAction icon={SquareTerminal} onClick={closeThen(() => openTerminalIn(currentPath))}>
               {terminal ? `Open in ${terminal.name}` : 'Open terminal here'}
             </SwitcherAction>
-            <SwitcherAction icon={FolderSearch} onClick={closeThen(() => revealWorkspace(currentPath))}>
-              {REVEAL_LABEL}
+            <SwitcherAction icon={FolderSearch} onClick={closeThen(() => openWorkspaceInFileManager(currentPath))}>
+              {OPEN_IN_FILE_MANAGER_LABEL}
             </SwitcherAction>
             <SwitcherAction icon={Copy} onClick={closeThen(() => copyWorkspacePath(currentPath))}>
               Copy workspace path

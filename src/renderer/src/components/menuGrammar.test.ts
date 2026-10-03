@@ -365,11 +365,11 @@ describe('opening', () => {
     expect(opening(MENUS.pendingChange!())).toEqual(words);
   });
 
-  it('opens a folder, and the workspace itself, in the editor and the terminal first', () => {
-    const words = ['Open in Visual Studio Code', 'Open in Terminal', 'Open with', REVEAL];
-    expect(opening(MENUS.folder!())).toEqual(words);
-    expect(opening(MENUS.currentWorkspace!())).toEqual(words);
-    expect(opening(MENUS.workspace!())).toEqual(words);
+  it("opens a folder, and the workspace itself, in the editor and the terminal first; the workspace's contents in Finder", () => {
+    const words = ['Open in Visual Studio Code', 'Open in Terminal', 'Open with'];
+    expect(opening(MENUS.folder!())).toEqual([...words, REVEAL]);
+    expect(opening(MENUS.currentWorkspace!())).toEqual([...words, 'Open in Finder']);
+    expect(opening(MENUS.workspace!())).toEqual([...words, 'Open in Finder']);
     expect(reading(MENUS.workspace!()).slice(0, 1)).toEqual([expect.stringContaining('openWorkspace | Open workspace')]);
     expect(MENUS.workspace!()[1]).toBe(SEPARATOR);
   });

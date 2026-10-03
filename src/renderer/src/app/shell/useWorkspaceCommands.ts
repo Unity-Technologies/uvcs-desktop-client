@@ -33,8 +33,8 @@ import { invalidateWorkspace } from '../queryClient';
 import { useSettings, useUpdateSettings } from '../settings/useSettings';
 import { useSession } from '../workspace/sessionStore';
 import { useWorkspacePath } from '../workspace/useWorkspace';
-import { copyWorkspacePath, openTerminalIn, revealWorkspace } from '../workspace/workspaceShellActions';
-import { REVEAL_LABEL } from '../../lib/platform';
+import { copyWorkspacePath, openTerminalIn, openWorkspaceInFileManager } from '../workspace/workspaceShellActions';
+import { OPEN_IN_FILE_MANAGER_LABEL } from '../../lib/platform';
 import { useCommandLogStore } from './commandLogStore';
 import { updateUnlessUpToDate } from './workspaceOperations';
 import { hotkey } from '../../lib/shortcutRegistry';
@@ -160,12 +160,12 @@ export function useWorkspaceCommands(): void {
         run: () => openTerminalIn(workspacePath),
       },
       {
-        id: 'workspace.reveal',
+        id: 'workspace.openInFileManager',
         group: 'Workspace',
-        label: REVEAL_LABEL,
+        label: OPEN_IN_FILE_MANAGER_LABEL,
         icon: FolderSearch,
-        keywords: ['folder', 'directory', 'file manager'],
-        run: () => revealWorkspace(workspacePath),
+        keywords: ['folder', 'directory', 'file manager', 'reveal', 'show'],
+        run: () => openWorkspaceInFileManager(workspacePath),
       },
       {
         id: 'workspace.copyPath',
