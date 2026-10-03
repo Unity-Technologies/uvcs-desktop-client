@@ -22,7 +22,7 @@ export function HomeScreen() {
 
   return (
     <div className={styles.home}>
-      <TopBar />
+      <TopBar atHome onHome={goHome} />
       <div className={styles.body}>
         <HomeSidebar section={section} onSelect={setSection} />
         <main className={styles.main}>
