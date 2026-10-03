@@ -12,7 +12,7 @@ import { deleteRepository, removeWorkspace, renameRepository, renameWorkspace } 
 export function workspaceMenu(workspace: WorkspaceSummary, open: (path: string) => void): MenuEntry[] {
   return groupedMenu([
     menuAction('openWorkspace', () => open(workspace.path)),
-    ...openOnDiskEntries({ path: workspace.path, isFolder: true }),
+    ...openOnDiskEntries({ path: workspace.path, isFolder: true, isWorkspace: true }),
     copySubmenu('Workspace', { name: workspace.name, path: workspace.path }),
     menuAction('rename', () => void renameWorkspace(workspace)),
     menuAction('remove', () => void removeWorkspace(workspace), { label: 'Remove workspace…' }),
