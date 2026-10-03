@@ -85,7 +85,7 @@ function SwitcherAction({ icon: ActionIcon, onClick, children }: { icon: Icon; o
   return (
     <button className={styles.footerItem} onClick={onClick}>
       <ActionIcon size={14} />
-      {children}
+      <span className={styles.footerLabel}>{children}</span>
     </button>
   );
 }
