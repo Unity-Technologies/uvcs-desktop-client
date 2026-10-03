@@ -8,7 +8,7 @@ import { openSettingsDialog } from '../settings/SettingsDialog';
 import { useSidebarCollapsed } from '../shell/sidebarStore';
 import { SidebarToggleItem } from '../shell/SidebarToggleItem';
 import { useServers } from '../workspace/workspaceQueries';
-import { isSameSection, type HomeSection } from './homeSection';
+import { isSameSection, WELCOME, type HomeSection } from './homeSection';
 import { ServerMonogram } from './ServerMonogram';
 
 interface HomeSidebarProps {
@@ -46,7 +46,7 @@ export function HomeSidebar({ section, onSelect }: HomeSidebarProps) {
         sections={[
           {
             label: 'Workspaces',
-            items: [item({ kind: 'welcome' }, <House size={15} />, 'Home'), item({ kind: 'all' }, <Layers size={15} />, 'All workspaces', { railLabel: 'All' })],
+            items: [item(WELCOME, <House size={15} />, 'Home'), item({ kind: 'all' }, <Layers size={15} />, 'All workspaces', { railLabel: 'All' })],
           },
           { label: 'Repositories', items: isLoading ? [{ key: 'loading', element: <CenteredSpinner /> }] : repositories },
         ]}

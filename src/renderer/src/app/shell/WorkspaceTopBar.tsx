@@ -3,14 +3,16 @@ import { WorkingObjectButton } from '../../features/branches/WorkingObjectButton
 import { IncomingChip } from '../../features/incoming/IncomingChip';
 import { Kbd } from '../../ui/Kbd';
 import { AccountButton } from '../account/AccountButton';
+import { useSession } from '../workspace/sessionStore';
 import { useCommandPalette } from '../commands/commandPaletteStore';
 import { TopBar } from './TopBar';
 import styles from './WorkspaceTopBar.module.css';
 import { hotkey } from '../../lib/shortcutRegistry';
 
-/** A workspace's top bar: its branch (and what's incoming) after the brand, the search and the account at the end. */
+/** A workspace's top bar: its branch (and what's incoming) after the home button, the search and the account at the end. */
 export function WorkspaceTopBar() {
   const setCommandPaletteOpen = useCommandPalette((state) => state.setOpen);
+  const closeWorkspace = useSession((state) => state.closeWorkspace);
 
   const end = (
     <>
@@ -30,7 +32,7 @@ export function WorkspaceTopBar() {
   );
 
   return (
-    <TopBar end={end}>
+    <TopBar onHome={closeWorkspace} end={end}>
       <div className={styles.branchControls}>
         <WorkingObjectButton />
         <IncomingChip />

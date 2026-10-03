@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
 import { useServers } from '../workspace/workspaceQueries';
 import { TopBar } from '../shell/TopBar';
+import { BackToWorkspaceButton } from './BackToWorkspaceButton';
 import { HomeSidebar } from './HomeSidebar';
-import type { HomeSection } from './homeSection';
+import { WELCOME, type HomeSection } from './homeSection';
 import { RepositoriesPanel } from './RepositoriesPanel';
 import { useHomeCommands } from './useHomeCommands';
 import { WelcomePanel } from './WelcomePanel';
@@ -12,16 +13,19 @@ import { WorkspacesPanel } from './WorkspacesPanel';
 import styles from './Home.module.css';
 
 export function HomeScreen() {
-  const [section, setSection] = useState<HomeSection>({ kind: 'welcome' });
+  const [section, setSection] = useState<HomeSection>(WELCOME);
   const { data: servers } = useServers();
   const firstServer = servers?.[0]?.server;
   const open = useOpenWorkspace();
-  useHomeCommands(open);
+  const goHome = useCallback(() => setSection(WELCOME), []);
+  useHomeCommands(open, goHome);
   const openFolder = (): void => void openWorkspaceFolder(open);
 
   return (
     <div className={styles.home}>
-      <TopBar />
+      <TopBar atHome onHome={goHome}>
+        <BackToWorkspaceButton />
+      </TopBar>
       <div className={styles.body}>
         <HomeSidebar section={section} onSelect={setSection} />
         <main className={styles.main}>
