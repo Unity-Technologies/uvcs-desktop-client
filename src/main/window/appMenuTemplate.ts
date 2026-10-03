@@ -1,5 +1,5 @@
 import type { MenuItemConstructorOptions } from 'electron';
-import { revealLabel } from '@shared/revealLabel';
+import { openInFileManagerLabel } from '@shared/revealLabel';
 
 export interface AppMenuContext {
   platform: NodeJS.Platform;
@@ -58,7 +58,7 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
         separator,
         commandItem('Open in &Editor', 'workspace.openInEditor'),
         commandItem('Open in &Terminal', 'workspace.openTerminal'),
-        commandItem(revealLabel(platform), 'workspace.reveal'),
+        commandItem(openInFileManagerLabel(platform), 'workspace.openInFileManager'),
         separator,
         ...(isMac ? [] : [commandItem('&Settings…', 'app.settings', 'CmdOrCtrl+,'), separator]),
         { role: 'close', label: label('&Close Window') },

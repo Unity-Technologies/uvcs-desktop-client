@@ -64,7 +64,9 @@ workspace", a history row's "Open diff of changeset"), a separator between them 
   it opens: a plain "Open" beside "Open with ▸" read as a second way to do the same.
 - **A folder or the workspace**: "Open in <editor>" (when the user's editor opens folders) and "Open in <terminal>",
   a folder's two ways to open (its default app would only show it in Finder); then "Open with ▸" every app that opens
-  folders and every terminal, and "Reveal". Home's own "Open" reads "Open workspace", apart from them.
+  folders and every terminal; then a folder's "Reveal", shown selected in its parent folder, and the workspace's "Open
+  in Finder" ("Open in Explorer", "Open in file manager": `openInFileManagerLabel`, `isWorkspace`), its contents: its
+  parent folder isn't the workspace's. Home's own "Open" reads "Open workspace", apart from them.
 - **A revision** (history, Browse repository, a diff's files, `openRevisionEntries`): "Open this revision in <editor>"
   (plain, its default app, without an editor; a double-click in Browse repository does the same), then "Open this
   revision with ▸" as a file's. The revision is saved to a temp file first (`revisionFiles.open`), as before.

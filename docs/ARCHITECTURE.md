@@ -306,7 +306,7 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
 - Dropping a folder on any window, home screen or workspace, opens its workspace in that window, or with Shift in a
   new one (`app/folderDrop`, as the official client does). The decision is `workspaces.findRoot`, a local
   `cm getworkspacefrompath`, so a folder inside a workspace opens it too; a folder that is no workspace goes straight to
-  the new workspace dialog with its location filled in (a folder picked with Open folder… asks first: `openFolder`).
+  the new workspace dialog with its location filled in (a folder picked with Open workspace folder… asks first: `openFolder`).
   Only a single folder is taken; drops wait while a dialog is open. Chromium hides a drag's files from the page until
   the drop, so the overlay's words come from main (`system.draggedFolder`, asked once per drag): on macOS it reads the
   drag pasteboard with `osascript` (`readDraggedPath`, about 60 ms) and looks for `.plastic` in the folder or above it
