@@ -21,3 +21,12 @@ export async function openUnlessShownElsewhere(path: string, openWorkspace: (pat
   openWorkspace(path);
   void rememberRecentWorkspace(path);
 }
+
+/**
+ * Back to the workspace this window left for the home screen, on the view and pages it showed (the navigation stays
+ * while on the home screen); the window that opened it meanwhile comes forward instead.
+ */
+export async function returnToWorkspace(path: string, openWorkspace: (path: string) => void): Promise<void> {
+  if (await api.windows.focusWorkspace(path)) return;
+  openWorkspace(path);
+}

@@ -416,9 +416,19 @@ renderer/src/
 - **Mutations**: `runOperation` (progress card, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
   An update or a switch runs alone on its workspace: it waits for any other operation, and the others wait for it (`blockingOperation`).
 - **Top bar**: one bar across the window on every screen (`app/shell/TopBar`), the sidebar under it: the window's
-  buttons, the brand (`AppBrand`, which opens About), then what the screen adds. A workspace adds its branch pill and
-  incoming chip after a separator, the search and the account at the end (`WorkspaceTopBar`); the home screen adds
-  nothing. Sidebars (`ui/nav/SidebarNav`) have no title band of their own.
+  buttons, the home button (`HomeButton`), then what the screen adds. A workspace adds its branch pill and
+  incoming chip, the search and the account at the end (`WorkspaceTopBar`); the home screen adds nothing. Sidebars
+  (`ui/nav/SidebarNav`) have no title band of their own.
+  - Home is one click (or ⇧⌘H, `app.home`, File ▸ Home) from anywhere: in a workspace it leaves for the home
+    screen, on the home screen it goes back to its welcome (`WELCOME`), where the house is lit. It sits in the top
+    bar, not the sidebar, so it stays put whether the sidebar is folded or not and costs no sidebar entry. It is a
+    borderless icon button, the bar's 8px gap on each side and nothing between it and the branch pill: a separator
+    there, or a bordered square like the pill's, both looked off balance. It replaced the app's mark and name, which
+    opened About: the welcome shows those, and the status bar's version opens About.
+  - The way back: on the home screen, after the house, "‹ <workspace>" returns to the workspace the window left
+    (`leftWorkspacePath`, `BackToWorkspaceButton`) on the view and pages it showed (`returnToWorkspace`: the
+    navigation stays while on the home screen), as do Back (⌘[, Alt+←) and the mouse's back button. It shows only
+    while `cm` lists that workspace (`workspaceToReturnTo`, from the list the home screen reads anyway).
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
   A sidebar entry may show a count (`useBadge`) and a dot for something waiting there (`useDot`), whose words go under
   the entry's tooltip and in its accessible description: Changes' says what changes were left and where

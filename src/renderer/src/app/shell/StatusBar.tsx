@@ -15,13 +15,14 @@ import { useWorkspaceInfo, useWorkspacePath } from '../workspace/useWorkspace';
 import { CommandHint } from './CommandHint';
 import { ranInWorkspace } from './commandLogScope';
 import { useCommandLogStore } from './commandLogStore';
+import { StatusBarVersion } from './StatusBarVersion';
 import { isUnseenFailure } from './unseenFailure';
 import { workspaceContext, type LoadedChangeset, type SyncState } from './workspaceContext';
 import styles from './StatusBar.module.css';
 
 /**
  * A quiet line at the bottom. On the left, what is running or whether the branch moved on. On the right, the command
- * log, then where the workspace is: its branch (or label, or shelve) and the loaded changeset's number (none on a shelve, which is no changeset). The last `cm` command is only a faint hint,
+ * log, then where the workspace is: its branch (or label, or shelve) and the loaded changeset's number (none on a shelve, which is no changeset), and last the app's version (`StatusBarVersion`). The last `cm` command is only a faint hint,
  * shown on hover and while something runs; a failed one leaves a red dot until the log (which the hint opens) has been
  * looked at, unless the operation that ran it dealt with it.
  */
@@ -63,6 +64,7 @@ export function StatusBar() {
           {context.changeset && <ChangesetItem changeset={context.changeset} repository={context.repository} />}
         </div>
       )}
+      <StatusBarVersion />
     </footer>
   );
 }
