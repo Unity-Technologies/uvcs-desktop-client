@@ -2,8 +2,9 @@
 
 ## The About dialog
 
-The brand at the start of the top bar (`AppBrand`: the mark and the name, after the window's buttons) opens it, as do
-the app menu (macOS), Help (Windows, Linux) and the palette (`app.about`). It shows the version, where the update
+The version at the end of a workspace's status bar (`StatusBarVersion`) opens it, as do the app menu (macOS), Help
+(Windows, Linux) and the palette (`app.about`). Once an update is downloaded the version reads "Update ready", in the
+accent, until the app restarts into it (`versionItem`): the corner card can be put off, this quiet reminder stays. It shows the version, where the update
 stands with its one button (Check for Updates, or install once one is ready: `aboutUpdateLine`, `aboutUpdateAction`),
 and what the app runs on: the `cm` found (`cmVersionQuery`, asked once at start: no command of its own), the OS and
 architecture, Electron and Chromium. Copy Details copies those as text for an issue (`aboutDetails`); its other links
