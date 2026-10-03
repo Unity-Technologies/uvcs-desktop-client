@@ -79,14 +79,14 @@ describe('appMenuTemplate', () => {
 
   it('creates and opens workspaces from File, and leaves updating one to the incoming chip', () => {
     const ids = itemsOf('darwin', 'File').map((item) => item.id).filter(Boolean);
-    expect(ids).toEqual(['app.newWindow', 'workspace.newForTask', 'workspace.open', 'workspace.openInEditor', 'workspace.openTerminal', 'workspace.reveal']);
+    expect(ids).toEqual(['app.newWindow', 'workspace.newForTask', 'workspace.open', 'workspace.openInEditor', 'workspace.openTerminal', 'workspace.openInFileManager']);
   });
 
-  it("reveals the workspace from File in each OS's file manager", () => {
-    const reveal = (platform: NodeJS.Platform) => itemsOf(platform, 'File').find((item) => item.id === 'workspace.reveal')?.label;
-    expect(reveal('darwin')).toBe('Reveal in Finder');
-    expect(reveal('win32')).toBe('Show in Explorer');
-    expect(reveal('linux')).toBe('Show in file manager');
+  it("opens the workspace from File in each OS's file manager", () => {
+    const openIn = (platform: NodeJS.Platform) => itemsOf(platform, 'File').find((item) => item.id === 'workspace.openInFileManager')?.label;
+    expect(openIn('darwin')).toBe('Open in Finder');
+    expect(openIn('win32')).toBe('Open in Explorer');
+    expect(openIn('linux')).toBe('Open in file manager');
   });
 
   it("offers the workspace's branch work in a Branch menu, with the keys the renderer binds", () => {

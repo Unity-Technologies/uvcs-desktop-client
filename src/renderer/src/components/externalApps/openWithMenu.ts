@@ -6,6 +6,7 @@ import { SEPARATOR, tidyMenu, type Action, type MenuEntry, type Submenu } from '
 import type { GroupedEntry } from '../../lib/menuGroups';
 import { menuAction, menuSubmenu } from '../menuWords';
 import { openFile, openInEditor, openInTerminal, openWithDefaultApp, openWithOtherApp } from './externalAppOperations';
+import { openWorkspaceInFileManager } from '../../app/workspace/workspaceShellActions';
 import { appIcon } from './appIcon';
 import { currentExternalApps, defaultEditor, defaultTerminal } from './externalApps';
 
@@ -14,6 +15,8 @@ export interface DiskTarget {
   /** Its full path. */
   path: string;
   isFolder: boolean;
+  /** The workspace's own folder: the file manager opens it, since its parent folder isn't the workspace's. */
+  isWorkspace?: boolean;
 }
 
 /** The app "Open in…" uses, in the "Open with" submenus: "Visual Studio Code (default)", as macOS' own Open With menu says. */
@@ -25,7 +28,8 @@ export function appLabel(app: ExternalApp, defaultId: string | null): string {
  * The opening entries of anything on disk, first in its menu and in this order everywhere. A file: "Open in <editor>"
  * (plain "Open", its default app, when the user has no editor), what Enter and a double-click do too; then "Open with ▸"
  * and "Reveal in Finder". A folder: "Open in <editor>" (when the user's editor opens folders) and "Open in <terminal>",
- * its two ways to open (its default app would only show it in Finder); then "Open with ▸" and "Reveal".
+ * its two ways to open (its default app would only show it in Finder); then "Open with ▸" and "Reveal", or for the
+ * workspace's own folder "Open in Finder" (`isWorkspace`), which shows what it holds rather than its parent's.
  */
 export function openOnDiskEntries(target: DiskTarget, apps: ExternalApps = currentExternalApps()): (GroupedEntry & (Action | Submenu))[] {
   const editor = defaultEditor(apps);
@@ -36,7 +40,10 @@ export function openOnDiskEntries(target: DiskTarget, apps: ExternalApps = curre
         menuAction('terminal', () => void openInTerminal(target.path), { label: terminal ? `Open in ${terminal.name}` : 'Open in terminal' }),
       ]
     : [menuAction('open', () => void openFile(target.path, apps), { label: editor ? `Open in ${editor.name}` : 'Open' })];
-  return [...opening, menuSubmenu('openWith', openWithEntries(target, apps)), menuAction('reveal', () => void api.system.revealInFileManager(target.path))];
+  const fileManager = target.isWorkspace
+    ? menuAction('openInFileManager', () => openWorkspaceInFileManager(target.path))
+    : menuAction('reveal', () => void api.system.revealInFileManager(target.path));
+  return [...opening, menuSubmenu('openWith', openWithEntries(target, apps)), fileManager];
 }
 
 /**

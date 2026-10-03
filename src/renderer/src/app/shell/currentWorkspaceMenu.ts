@@ -11,7 +11,7 @@ export function currentWorkspaceMenu(workspacePath: string, workspaceName?: stri
   return groupedMenu([
     menuAction('newTaskWorkspace', () => openTaskWorkspaceDialog({ workspacePath })),
     menuAction('newWindow', () => void api.windows.openHome()),
-    ...openOnDiskEntries({ path: workspacePath, isFolder: true }),
+    ...openOnDiskEntries({ path: workspacePath, isFolder: true, isWorkspace: true }),
     copySubmenu('Workspace', { name: workspaceName, path: workspacePath }),
   ]);
 }
