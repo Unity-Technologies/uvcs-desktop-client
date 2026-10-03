@@ -47,6 +47,7 @@ export const SHORTCUTS = {
   shortcuts: { area: 'General', label: 'Keyboard shortcuts', keys: ['?', 'mod+/'] },
   settings: { area: 'General', label: 'Settings', keys: ['mod+,'], commandId: 'app.settings' },
   back: { area: 'General', label: 'Back', keys: ['mod+['], keysOffMac: ['alt+left'] },
+  home: { area: 'General', label: 'Home', keys: ['mod+shift+h'], commandId: 'app.home' },
   refresh: { area: 'General', label: 'Refresh', keys: ['mod+r'], commandId: 'workspace.refresh' },
   updateWorkspace: { area: 'General', label: 'Update workspace', keys: ['mod+shift+u'] },
   switchBranch: { area: 'General', label: 'Switch branch', keys: ['mod+shift+w'], commandId: 'branch.switch' },

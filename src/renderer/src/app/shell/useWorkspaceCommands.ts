@@ -6,6 +6,7 @@ import {
   FolderLock,
   FolderOpen,
   FolderSearch,
+  House,
   ListChecks,
   Monitor,
   Moon,
@@ -99,6 +100,7 @@ export function useWorkspaceCommands(): void {
         keywords: ['review', 'reviewed', 'mark'],
         run: () => void setReviewMode(workspacePath, !reviewing),
       },
+      { id: 'app.home', group: 'Go to', label: 'Home', icon: House, shortcut: hotkey('home'), run: closeWorkspace },
       {
         id: 'workspace.open',
         group: 'Workspace',

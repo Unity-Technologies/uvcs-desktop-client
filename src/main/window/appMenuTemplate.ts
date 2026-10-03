@@ -51,6 +51,8 @@ export function appMenuTemplate(context: AppMenuContext): MenuItemConstructorOpt
       label: label('&File'),
       submenu: [
         commandItem('New &Window', 'app.newWindow', 'CmdOrCtrl+N', newWindow),
+        // With every window closed (macOS), Home opens a window on it.
+        commandItem('&Home', 'app.home', 'CmdOrCtrl+Shift+H', newWindow),
         commandItem('New Workspace for a &Task…', 'workspace.newForTask'),
         commandItem('&Open Another Workspace…', 'workspace.open', 'CmdOrCtrl+Shift+O'),
         separator,
