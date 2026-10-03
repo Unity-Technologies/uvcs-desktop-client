@@ -425,6 +425,10 @@ renderer/src/
     borderless icon button, the bar's 8px gap on each side and nothing between it and the branch pill: a separator
     there, or a bordered square like the pill's, both looked off balance. It replaced the app's mark and name, which
     opened About: the welcome shows those, and the status bar's version opens About.
+  - The way back: on the home screen, after the house, "‹ <workspace>" returns to the workspace the window left
+    (`leftWorkspacePath`, `BackToWorkspaceButton`) on the view and pages it showed (`returnToWorkspace`: the
+    navigation stays while on the home screen), as do Back (⌘[, Alt+←) and the mouse's back button. It shows only
+    while `cm` lists that workspace (`workspaceToReturnTo`, from the list the home screen reads anyway).
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
   A sidebar entry may show a count (`useBadge`) and a dot for something waiting there (`useDot`), whose words go under
   the entry's tooltip and in its accessible description: Changes' says what changes were left and where

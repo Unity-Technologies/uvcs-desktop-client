@@ -3,6 +3,7 @@ import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
 import { useServers } from '../workspace/workspaceQueries';
 import { TopBar } from '../shell/TopBar';
+import { BackToWorkspaceButton } from './BackToWorkspaceButton';
 import { HomeSidebar } from './HomeSidebar';
 import { WELCOME, type HomeSection } from './homeSection';
 import { RepositoriesPanel } from './RepositoriesPanel';
@@ -22,7 +23,9 @@ export function HomeScreen() {
 
   return (
     <div className={styles.home}>
-      <TopBar atHome onHome={goHome} />
+      <TopBar atHome onHome={goHome}>
+        <BackToWorkspaceButton />
+      </TopBar>
       <div className={styles.body}>
         <HomeSidebar section={section} onSelect={setSection} />
         <main className={styles.main}>
