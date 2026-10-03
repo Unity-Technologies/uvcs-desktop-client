@@ -32,7 +32,9 @@ import { navigation } from '../navigation/navigationStore';
 import { VIEWS } from '../navigation/viewRegistry';
 import { invalidateWorkspace } from '../queryClient';
 import { useSettings, useUpdateSettings } from '../settings/useSettings';
+import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useSession } from '../workspace/sessionStore';
+import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
 import { useWorkspacePath } from '../workspace/useWorkspace';
 import { copyWorkspacePath, openTerminalIn, revealWorkspace } from '../workspace/workspaceShellActions';
 import { REVEAL_LABEL } from '../../lib/platform';
@@ -50,6 +52,7 @@ const THEMES: { theme: ThemePreference; label: string; icon: Icon }[] = [
 export function useWorkspaceCommands(): void {
   const workspacePath = useWorkspacePath();
   const closeWorkspace = useSession((state) => state.closeWorkspace);
+  const openWorkspace = useOpenWorkspace();
   const { theme, reviewModeWorkspaces, autoRefresh } = useSettings();
   const reviewing = reviewModeWorkspaces.includes(workspacePath);
   const updateSettings = useUpdateSettings();
@@ -107,7 +110,7 @@ export function useWorkspaceCommands(): void {
         label: 'Open another workspace…',
         icon: FolderOpen,
         shortcut: hotkey('openWorkspace'),
-        run: closeWorkspace,
+        run: () => void openWorkspaceFolder(openWorkspace),
       },
       {
         id: 'workspace.newForTask',
@@ -196,7 +199,7 @@ export function useWorkspaceCommands(): void {
         run: () => updateSettings({ theme: choice }),
       })),
     ],
-    [workspacePath, closeWorkspace, theme, reviewing, autoRefresh, commandLogOpen, updateSettings, editor, terminal],
+    [workspacePath, closeWorkspace, openWorkspace, theme, reviewing, autoRefresh, commandLogOpen, updateSettings, editor, terminal],
   );
 
   useCommands(commands);
