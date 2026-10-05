@@ -100,8 +100,10 @@ markup from the network.
   which accepts only Unity's networks, and Unity's runners that reach it may serve only private repositories (SSDLC),
   which this one isn't. The Sign workflow builds this repository's tag with this repository's config and sign hook, and
   uploads to the same draft; its README lists its secrets. This repository holds no signing secret. The draft's description
-  is what What's New shows: edit it before publishing. Publishing the draft makes the update reach every running app
-  within the hour. Never bump the version by hand.
+  is what What's New shows: edit it before publishing. Its notes start from the last release tag (`--notes-start-tag`):
+  left to choose, GitHub starts from the newest tag in the new tag's history, and no release tag is there (its bump
+  commit never reaches main), so the notes would repeat every earlier release's changes. Publishing the draft makes the
+  update reach every running app within the hour. Never bump the version by hand.
 - The installers (electron-builder.yml) are one per OS and architecture, named without spaces
   (`UnityVersionControl-<version>-macOS-arm64.dmg`: GitHub turns spaces into dots, which `latest*.yml` would no longer
   match); macOS ships a zip too, which electron-updater needs. The macOS targets name no architecture, so a run builds
