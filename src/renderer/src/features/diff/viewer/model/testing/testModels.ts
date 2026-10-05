@@ -1,7 +1,7 @@
 // `ParsedModel`s built in tests: a hierarchy by names, each mesh a box of its own size and slots, so a test reads as
 // the model an artist exported ("a crate with a lid") and states only what it is about.
 
-import { Euler, Quaternion } from 'three';
+import { AnimationClip, Euler, Quaternion } from 'three';
 import { fbxAxisConversion, Y_UP_AXES } from '../fbxAxes';
 import type { ModelClip, ModelMesh, ModelNode, ModelNodeKind, ParsedModel } from '../parsedModel';
 
@@ -66,7 +66,7 @@ export function testModel(spec: TestModel): ParsedModel {
     format: 'fbx',
     nodes,
     meshes,
-    clips: (spec.clips ?? []).map((clip): ModelClip => ({ ...clip, tracks: null })),
+    clips: (spec.clips ?? []).map((clip): ModelClip => ({ ...clip, tracks: AnimationClip.toJSON(new AnimationClip(clip.name, clip.duration, [])) })),
     textures: spec.textures ?? [],
     unitScale: spec.unitScale ?? 1,
     upAxis: spec.upAxis ?? 'y',

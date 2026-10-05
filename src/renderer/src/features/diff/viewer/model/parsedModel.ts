@@ -2,6 +2,7 @@
 // arrays that cross from the model worker without a copy. Everything the viewer draws (`buildModelScene`) and tells
 // (`modelSummary`, `modelChanges`) reads this, never a loader's own objects.
 
+import type { AnimationClipJSON } from 'three';
 import type { ModelFormat } from '@shared/domain/content';
 
 export type Vector3Tuple = [number, number, number];
@@ -76,7 +77,7 @@ export interface ModelClip {
   name: string;
   /** In seconds. */
   duration: number;
-  tracks: unknown;
+  tracks: AnimationClipJSON;
 }
 
 export interface ParsedModel {

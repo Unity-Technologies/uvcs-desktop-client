@@ -4,7 +4,22 @@
 // three's right-handed camera shows the file's own, so the model looks as in Unity's Scene view (`modelSummary`
 // keeps Unity's mirrored numbers for what the panel tells).
 
-import { BufferAttribute, BufferGeometry, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, Quaternion, Vector3 } from 'three';
+import {
+  Bone,
+  BufferAttribute,
+  BufferGeometry,
+  Group,
+  Matrix4,
+  Mesh,
+  MeshBasicMaterial,
+  MeshStandardMaterial,
+  Object3D,
+  PropertyBinding,
+  Quaternion,
+  Skeleton,
+  SkinnedMesh,
+  Vector3,
+} from 'three';
 import type { ModelMesh, ParsedModel } from './parsedModel';
 import type { ModelSummary } from './modelSummary';
 import { viewerSpaceOf } from './modelSpaces';
@@ -38,8 +53,9 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
   const objects = new Map<string, Object3D>();
   const nodes: Object3D[] = [];
   model.nodes.forEach((node, i) => {
-    const object = new Group();
-    object.name = node.name;
+    const object = node.kind === 'bone' ? new Bone() : new Group();
+    // As animation tracks address it (FBXLoader and GLTFLoader name their tracks so): `Hand L.001` is `Hand_L001`.
+    object.name = PropertyBinding.sanitizeNodeName(node.name);
     object.position.fromArray(node.position);
     object.quaternion.fromArray(node.rotation);
     object.scale.fromArray(node.scale);
@@ -53,6 +69,9 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
     return sceneMesh;
   });
   root.updateMatrixWorld(true);
+  model.meshes.forEach((mesh, i) => {
+    if (mesh.skin) bindSkin(meshes[i]!, mesh.skin, nodes, root.matrix);
+  });
   return {
     root,
     objects,
@@ -75,6 +94,13 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
  */
 function meshOf(mesh: ModelMesh, key: string): SceneMesh {
   const geometry = new BufferGeometry();
+  const skinned = mesh.skin !== null && mesh.attributes.skinIndex !== null && mesh.attributes.skinWeight !== null;
+  if (skinned) {
+    geometry.setAttribute('skinIndex', new BufferAttribute(mesh.attributes.skinIndex!, 4));
+    geometry.setAttribute('skinWeight', new BufferAttribute(mesh.attributes.skinWeight!, 4));
+  }
+  // A skinned mesh and its twins deform alike: each a SkinnedMesh on the one skeleton (`bindSkin`).
+  const MeshKind = skinned ? SkinnedMesh : Mesh;
   geometry.setAttribute('position', new BufferAttribute(mesh.attributes.position, 3));
   if (mesh.attributes.normal) geometry.setAttribute('normal', new BufferAttribute(mesh.attributes.normal, 3));
   if (mesh.attributes.uv) geometry.setAttribute('uv', new BufferAttribute(mesh.attributes.uv, 2));
@@ -83,14 +109,28 @@ function meshOf(mesh: ModelMesh, key: string): SceneMesh {
   for (const group of mesh.groups) geometry.addGroup(group.start, group.count, group.slot);
   geometry.computeBoundingSphere();
   const materials = mesh.slots.map((slot) => new MeshStandardMaterial({ name: slot, roughness: 0.72, metalness: 0, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }));
-  const solid = new Mesh(geometry, materials);
-  const wire = new Mesh(geometry, new MeshBasicMaterial({ wireframe: true, transparent: true, depthWrite: false }));
-  const heat = new Mesh(geometry, new MeshStandardMaterial({ vertexColors: true, roughness: 0.72, metalness: 0, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }));
-  const ghost = new Mesh(geometry, new MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false }));
+  const solid = new MeshKind(geometry, materials);
+  const wire = new MeshKind(geometry, new MeshBasicMaterial({ wireframe: true, transparent: true, depthWrite: false }));
+  const heat = new MeshKind(geometry, new MeshStandardMaterial({ vertexColors: true, roughness: 0.72, metalness: 0, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }));
+  const ghost = new MeshKind(geometry, new MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false }));
   heat.visible = false;
   ghost.visible = false;
   for (const object of [solid, wire, heat, ghost]) object.userData.key = key;
   return { key, solid, wire, heat, ghost, slots: mesh.slots };
+}
+
+/**
+ * Binds a skinned mesh and its twins to its bones. The file's inverse bind matrices are in the loader's space; the
+ * scene's root puts the model in the viewer's (`viewerSpace`), so each is carried there (`inverse × viewerSpace⁻¹`),
+ * or the root's units and axes would skin the mesh twice.
+ */
+function bindSkin(mesh: SceneMesh, skin: NonNullable<ModelMesh['skin']>, nodes: Object3D[], viewerSpace: Matrix4): void {
+  const toViewer = viewerSpace.clone().invert();
+  const inverses = skin.bones.map((_, i) => new Matrix4().fromArray(skin.boneInverses, i * 16).multiply(toViewer));
+  // A bone the file names is a node of the hierarchy; a joint the loader made an empty still moves the mesh.
+  const bones = skin.bones.map((node) => nodes[node] ?? new Bone()) as Bone[];
+  const skeleton = new Skeleton(bones, inverses);
+  for (const object of [mesh.solid, mesh.wire, mesh.heat, mesh.ghost]) (object as unknown as SkinnedMesh).bind(skeleton, object.matrixWorld);
 }
 
 /** A box in the viewer's space from one in Unity's (`modelSummary`'s bounds): X mirrored back. */
