@@ -157,10 +157,12 @@ markup from the network.
   (Defender, which a job can't turn off), and installing and building took them about 9 minutes against 2. A build
   with electron-builder.yml alone (`npm run dist`) is unsigned, and SmartScreen warns of an unknown publisher. The
   signed build writes its `publisherName` into the app's `app-update.yml`, and from then on electron-updater installs
-  only an update whose valid signature names that publisher (`verifySignature`). So the release checks every .exe the
-  same way on real Windows before it is published (`verifyWindowsSignatures.ts`: the installers, what the x64 one
-  installs, and the app the arm64 one carries; `signatureProblem` reads the signer as `parseDn` does), and a wrong
-  name or a broken signature fails the release instead of every update after it. Every
+  only an update whose valid signature names that publisher (`verifySignature`). So before uploading, the release
+  installs every installer on real Windows, x64 and arm64 (each architecture's own, then the combined one the updater
+  downloads), checks each put the app's .exe where it belongs (the arm64 one once didn't: "Windows installer"), and
+  checks every .exe the way the updater will (`verifyWindowsSignatures.ts`; `signatureProblem` reads the signer as
+  `parseDn` does). A wrong name, a broken signature or a missing exe fails the release instead of reaching users.
+  Every
   release after a signed one must be signed by the same name: an unsigned one, or a renewed certificate with another
   common name, never reaches those apps. An unsigned build names no publisher and checks nothing.
 - Signing on GitHub's own runners was tried and rejected: Key Vault answers 403 ("Client address is not authorized"),
