@@ -1,5 +1,5 @@
 // A 3D model as the diff knows it: plain data, the same whatever format it was read from (FBX, OBJ, glTF), in typed
-// arrays that cross from the parsing worker without a copy. Everything the viewer draws (`buildModelScene`) and tells
+// arrays that cross from the model worker without a copy. Everything the viewer draws (`buildModelScene`) and tells
 // (`modelSummary`, `modelChanges`) reads this, never a loader's own objects.
 
 import type { ModelFormat } from '@shared/domain/content';

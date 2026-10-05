@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { ModelBytes } from '@shared/domain/content';
-import { readModel } from './modelParseSession';
+import { readModel } from './modelWorkerSession';
 import type { ModelFileRead } from './readModelFile';
 
 export type ModelReadState = { status: 'idle' } | { status: 'loading' } | ({ status: 'ready' } & Extract<ModelFileRead, { kind: 'read' }>) | ({ status: 'failed' } & Extract<ModelFileRead, { kind: 'failed' }>);
 
-/** One version of a model, read in the parsing worker; idle when there's no version on that side (added, deleted). */
+/** One version of a model, read in the model worker; idle when there's no version on that side (added, deleted). */
 export function useReadModel(model: ModelBytes | undefined): ModelReadState {
   const [kept, setKept] = useState<{ model: ModelBytes; read: ModelFileRead } | null>(null);
 

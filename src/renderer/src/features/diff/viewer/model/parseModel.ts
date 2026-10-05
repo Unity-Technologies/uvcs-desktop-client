@@ -1,5 +1,5 @@
 // A model file's bytes as a `ParsedModel`, through three's loaders for its format. Nothing but the bytes is read
-// (`noTextureLoading`), and nothing needs a DOM, so it runs in the parsing worker (`modelParse.worker`) and in tests.
+// (`noTextureLoading`), and nothing needs a DOM, so it runs in the model worker (`model.worker`) and in tests.
 
 import { Matrix4, Quaternion, type AnimationClip, type Object3D } from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';

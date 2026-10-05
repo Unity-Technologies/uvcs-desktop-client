@@ -14,7 +14,7 @@ OBJ, `.gltf` and ASCII FBX are text too, while small enough to diff (`MAX_TEXT_B
 parsed and shown (`renderedEdits`). No `cm` command is added: a model is read by the same `cm cat` (or disk read) as any
 file.
 
-The renderer parses in a worker (`modelParse.worker`, through `modelParseSession`: one worker for the app's life, the
+The renderer parses in a worker (`model.worker`, through `modelWorkerSession`: one worker for the app's life, the
 main thread when it can't start), once per version's bytes (a `WeakMap` on them), and gets back plain data:
 `ParsedModel`, its arrays transferred. The bytes are copied to the worker, never transferred: the content cache keeps
 them. A 2M-triangle FBX takes about 1.7 s to parse and 0.3 s to sum up, never on the UI thread.

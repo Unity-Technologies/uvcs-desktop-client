@@ -6,7 +6,7 @@ import type { ParsedModel } from './parsedModel';
 /** A model file read: parsed and summed up, or why it can't be shown. */
 export type ModelFileRead = { kind: 'read'; model: ParsedModel; summary: ModelSummary } | { kind: 'failed'; failure: ModelReadFailure };
 
-/** All a model diff needs of one version, worked out once: in the parsing worker, or on the main thread without it. */
+/** All a model diff needs of one version, worked out once: in the model worker, or on the main thread without it. */
 export async function readModelFile(model: ModelBytes): Promise<ModelFileRead> {
   const result = await parseModel(model);
   if (result.kind === 'failed') return result;

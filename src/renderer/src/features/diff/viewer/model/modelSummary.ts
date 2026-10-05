@@ -1,7 +1,7 @@
 // What Unity would show of one version of a model: its GameObjects by path, each mesh's triangles and vertices as the
 // Inspector counts them, material slots, blendshapes, bones, takes, and where everything sits in Unity's space
 // (metres, Y up, X mirrored as Unity's importer turns right-handed files left-handed). Computed once per version in
-// the parsing worker; `modelChanges` compares two of them, the info strip and the "What changed" panel read them.
+// the model worker; `modelChanges` compares two of them, the info strip and the "What changed" panel read them.
 
 import { Box3, Matrix4, Quaternion, Vector3 } from 'three';
 import type { ModelMesh, ModelNodeKind, ParsedModel } from './parsedModel';

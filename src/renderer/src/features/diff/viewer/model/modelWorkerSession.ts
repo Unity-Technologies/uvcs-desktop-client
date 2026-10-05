@@ -1,10 +1,10 @@
-// The model diff's client of the parsing worker. One worker for the app's life: the next model doesn't pay for its
+// The model diff's client of the model worker. One worker for the app's life: the next model doesn't pay for its
 // start. When the worker can't start or dies mid-flight, the model is read on the main thread: slower, never wrong.
 // Each version is read once while its bytes are kept (the diff's content cache holds them), so going back to a model,
 // or from one mode to another, shows it at once.
 
 import type { ModelBytes } from '@shared/domain/content';
-import type { ModelWorkerRequest, ModelWorkerResponse } from './modelParse.worker';
+import type { ModelWorkerRequest, ModelWorkerResponse } from './model.worker';
 import { readModelFile, type ModelFileRead } from './readModelFile';
 
 // Undefined until first asked for; null once it couldn't start or died: the main thread reads from then on.
@@ -35,7 +35,7 @@ async function readInWorker(model: ModelBytes): Promise<ModelFileRead> {
 function startedWorker(): Worker | null {
   if (worker !== undefined) return worker;
   try {
-    worker = new Worker(new URL('./modelParse.worker.ts', import.meta.url), { type: 'module', name: 'Model parsing' });
+    worker = new Worker(new URL('./model.worker.ts', import.meta.url), { type: 'module', name: 'Models' });
     worker.onmessage = ({ data: response }: MessageEvent<ModelWorkerResponse>) => {
       awaited.get(response.id)?.resolve(response);
       awaited.delete(response.id);
