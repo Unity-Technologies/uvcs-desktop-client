@@ -71,7 +71,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const optionsAfter = useModelReadOptions(workspacePath, 'modified', sources.modified, modelAfter, settings?.modified);
   const before = useReadModel(modelBefore, optionsBefore);
   const after = useReadModel(modelAfter, optionsAfter);
-  const { modelDrawMode, setModelDrawMode, modelColorBySlot, setModelColorBySlot, modelToleranceShare, setModelToleranceShare, modelShowBones, setModelShowBones } =
+  const { modelDrawMode, setModelDrawMode, modelColorBySlot, setModelColorBySlot, modelToleranceShare, setModelToleranceShare, modelShowBones, setModelShowBones, modelChangesOpen, setModelChangesOpen } =
     useDiffPreferences();
   const paneRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -79,9 +79,8 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const palette = useModelPalette(paneRef);
   const renderer = useModelRenderer(canvasRef);
   const paneWidth = useSize(paneRef).width;
-  // The panel starts open where the pane has room for it beside the model, folded where it would cover much of it.
-  const [panelOpen, setPanelOpen] = useState<boolean | null>(null);
-  const changesOpen = panelOpen ?? paneWidth >= ROOMY_PANE;
+  // Open, the panel docks beside the model where the pane has room for it, and floats over it where it hasn't.
+  const changesOpen = modelChangesOpen;
   const docked = changesOpen && paneWidth >= ROOMY_PANE;
   // The onion blend and the swipe split live here, not in the renderer, so a trip through other modes comes back to them.
   const [blend, setBlend] = useState(0.5);
@@ -187,7 +186,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const shownMode = comparable ? mode : null;
 
   const changesPanel = rows && (
-    <ModelChangesPanel rows={rows} picked={picked?.id ?? null} onPick={onPickRow} open={changesOpen} onOpenChange={setPanelOpen} docked={docked} pillRows={shownMode === 'onion' ? 1 : differences ? (regions.length > 0 ? 2 : 1) : 0} />
+    <ModelChangesPanel rows={rows} picked={picked?.id ?? null} onPick={onPickRow} open={changesOpen} onOpenChange={setModelChangesOpen} docked={docked} pillRows={shownMode === 'onion' ? 1 : differences ? (regions.length > 0 ? 2 : 1) : 0} />
   );
 
   if (failed) {

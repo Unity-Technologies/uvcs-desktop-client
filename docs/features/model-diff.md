@@ -134,8 +134,9 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   axis colors; each version's pivot axes, turned as the node every mesh hangs under. A picked node with no geometry
   (a bone, an empty) shows as a dot on top of everything, framed with a third of the model around it. Colors come from
   `tokens.css` (`readModelPalette`, read again as the theme changes).
-- **"What changed"** (`ModelChangesPanel`): open, beside a pane at least `ROOMY_PANE` wide it is a column of its own;
-  narrower, or folded, it floats at the stage's top right (under the onion's pill). A row picked frames and lights up
+- **"What changed"** (`ModelChangesPanel`): folded by default to its title, its count and its risks, so the model has
+  the stage, and remembered as the user leaves it (`modelChangesOpen`). Open, beside a pane at least `ROOMY_PANE` wide
+  it is a column of its own; narrower, or folded, it floats at the stage's top right (under the onion's pill). A row picked frames and lights up
   its nodes on both sides; the rest fade. **The info strip** (`modelStats`): Tris, Verts, materials, bones,
   blendshapes, animations and size, "before → after" where they changed, both sizes in one unit.
 

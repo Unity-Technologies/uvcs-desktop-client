@@ -1,7 +1,8 @@
 // "What changed": the model diff's list of changes as Unity will take them (`modelChanges`, `changeRows`). Risks
 // first, with why they matter; a row picked frames and lights up what it is about on both sides, picked again lets
-// go. Open beside a wide stage it is a column of its own, so it never covers the model; on a narrow one, or folded to
-// its title, it floats at the stage's top right.
+// go. It starts folded to its title, with its count and risks, so the model has the stage, and stays as the user
+// leaves it (`modelChangesOpen`). Open beside a wide stage it is a column of its own, so it never covers the model; on
+// a narrow one, or folded, it floats at the stage's top right.
 
 import { ChevronDown, ChevronRight, CircleCheck, TriangleAlert } from 'lucide-react';
 import type { ChangeRow } from './modelChangeWords';

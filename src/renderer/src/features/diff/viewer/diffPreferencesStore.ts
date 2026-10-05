@@ -30,6 +30,8 @@ interface DiffPreferences {
   modelColorBySlot: boolean;
   /** Each version's skeleton drawn over it. */
   modelShowBones: boolean;
+  /** The "What changed" panel open; folded by default, so the model has the stage, its count and risks still shown. */
+  modelChangesOpen: boolean;
   /** How far a vertex may move and still count as unchanged, as a share of the model's size: one setting fits a bolt and a building. */
   modelToleranceShare: number;
   setLayout: (layout: DiffLayout) => void;
@@ -45,6 +47,7 @@ interface DiffPreferences {
   setModelColorBySlot: (colorBySlot: boolean) => void;
   setModelToleranceShare: (share: number) => void;
   setModelShowBones: (show: boolean) => void;
+  setModelChangesOpen: (open: boolean) => void;
 }
 
 export const useDiffPreferences = create<DiffPreferences>()(
@@ -63,6 +66,7 @@ export const useDiffPreferences = create<DiffPreferences>()(
       modelColorBySlot: false,
       modelToleranceShare: 0.001,
       modelShowBones: false,
+      modelChangesOpen: false,
       setLayout: (layout) => set({ layout }),
       setCollapseUnchanged: (collapseUnchanged) => set({ collapseUnchanged }),
       setWrapLines: (wrapLines) => set({ wrapLines }),
@@ -77,6 +81,7 @@ export const useDiffPreferences = create<DiffPreferences>()(
       setModelColorBySlot: (modelColorBySlot) => set({ modelColorBySlot }),
       setModelToleranceShare: (modelToleranceShare) => set({ modelToleranceShare }),
       setModelShowBones: (modelShowBones) => set({ modelShowBones }),
+      setModelChangesOpen: (modelChangesOpen) => set({ modelChangesOpen }),
     }),
     { name: 'diff-preferences' },
   ),
