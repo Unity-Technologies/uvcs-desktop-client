@@ -1,5 +1,5 @@
 import { extname } from 'node:path';
-import type { FileContent, ImageBytes } from '@shared/domain/content';
+import type { FileContent, ImageBytes, ModelBytes, ModelFormat } from '@shared/domain/content';
 
 /** Past this, a text diff is too slow to compute and too long to read. */
 export const MAX_TEXT_BYTES = 10 * 1024 * 1024;
@@ -9,6 +9,11 @@ export const MAX_TEXT_BYTES = 10 * 1024 * 1024;
  * never stall the bridge.
  */
 export const MAX_IMAGE_BYTES = 40 * 1024 * 1024;
+/**
+ * Hard cap per model side. A character with its animations runs 50-150 MB as FBX; past this, parsing and drawing both
+ * versions would hold too much of the renderer's memory.
+ */
+export const MAX_MODEL_BYTES = 100 * 1024 * 1024;
 const BINARY_SNIFF_BYTES = 8000;
 
 const IMAGE_MIME_TYPES: Record<string, string> = {
@@ -28,6 +33,14 @@ const TEXT_IMAGE_MIME_TYPES: Record<string, string> = {
   '.svg': 'image/svg+xml',
 };
 
+/** OBJ and `.gltf` are always text, an FBX may be (ASCII FBX): those read as text too while they're small enough. */
+const MODEL_FORMATS: Record<string, ModelFormat> = {
+  '.fbx': 'fbx',
+  '.obj': 'obj',
+  '.gltf': 'gltf',
+  '.glb': 'glb',
+};
+
 export const EMPTY_CONTENT: FileContent = { text: '', isBinary: false, size: 0 };
 
 /** Classifies raw bytes as text, image or opaque binary. `fileName` is used to recognize images. */
@@ -45,6 +58,9 @@ export function toFileContent(bytes: Buffer, fileName: string): FileContent {
   const textImageMimeType = TEXT_IMAGE_MIME_TYPES[extension];
   if (textImageMimeType) return toTextImageContent(bytes, textImageMimeType);
 
+  const modelFormat = MODEL_FORMATS[extension];
+  if (modelFormat) return toModelContent(bytes, modelFormat);
+
   if (looksBinary(bytes)) return { isBinary: true, size: bytes.length };
   if (bytes.length > MAX_TEXT_BYTES) return { isBinary: true, size: bytes.length, tooLarge: 'text' };
   return { isBinary: false, size: bytes.length, text: bytes.toString('utf8') };
@@ -58,9 +74,21 @@ function toTextImageContent(bytes: Buffer, mimeType: string): FileContent {
   return { isBinary: false, size: bytes.length, text: bytes.toString('utf8'), image };
 }
 
-/** The bytes as a plain `Uint8Array`: IPC copies them as binary (a `Buffer` would arrive as one too, pool slice and all). */
+/** A model, and its text while it is text small enough to diff (OBJ, `.gltf`, ASCII FBX). */
+function toModelContent(bytes: Buffer, format: ModelFormat): FileContent {
+  if (bytes.length > MAX_MODEL_BYTES) return { isBinary: true, size: bytes.length, tooLarge: 'model' };
+  const model: ModelBytes = { bytes: plainBytes(bytes), format };
+  if (looksBinary(bytes) || bytes.length > MAX_TEXT_BYTES) return { isBinary: true, size: bytes.length, model };
+  return { isBinary: false, size: bytes.length, text: bytes.toString('utf8'), model };
+}
+
 function imageBytes(bytes: Buffer, mimeType: string): ImageBytes {
-  return { bytes: new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength), mimeType };
+  return { bytes: plainBytes(bytes), mimeType };
+}
+
+/** The bytes as a plain `Uint8Array`: IPC copies them as binary (a `Buffer` would arrive as one too, pool slice and all). */
+function plainBytes(bytes: Buffer): Uint8Array {
+  return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 }
 
 /** A NUL byte near the start, as Git tells binary files: text in UTF-8 or a single-byte code page has none. */
