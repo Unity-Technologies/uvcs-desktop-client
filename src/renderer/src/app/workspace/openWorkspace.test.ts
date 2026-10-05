@@ -1,5 +1,6 @@
 import { fakeApi } from '../../testing/fakeWindow';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { startingWorkspaceQuery } from '@shared/startingWorkspace';
 
 vi.mock('../../ui/dialog/confirm', () => import('../../testing/fakeDialogs'));
 vi.mock('../home/dialogs/CreateWorkspaceDialog', () => ({ openCreateWorkspaceDialog: vi.fn() }));
@@ -7,9 +8,12 @@ vi.mock('../home/dialogs/CreateWorkspaceDialog', () => ({ openCreateWorkspaceDia
 import { answerConfirms, askedDialogs } from '../../testing/fakeDialogs';
 import { openCreateWorkspaceDialog } from '../home/dialogs/CreateWorkspaceDialog';
 import { useNavigation } from '../navigation/navigationStore';
+import type { Page } from '../navigation/pages';
 import { queryClient } from '../queryClient';
 import { openFolder } from './openWorkspaceFolder';
-import { openUnlessShownElsewhere } from './useOpenWorkspace';
+import { openWorkspaceFromAddress } from './openWorkspaceFromAddress';
+import { useSession } from './sessionStore';
+import { openUnlessShownElsewhere, returnToWorkspace } from './useOpenWorkspace';
 
 afterEach(() => {
   vi.clearAllMocks();
@@ -40,6 +44,53 @@ describe('openUnlessShownElsewhere', () => {
     expect(useNavigation.getState().view).toBe('changes');
     expect(fakeApi.calls()).toContainEqual({ method: 'settings.rememberRecentWorkspace', args: ['/ws'] });
     expect(fakeApi.calls()).toContainEqual({ method: 'system.addRecentDocument', args: ['/ws'] });
+  });
+});
+
+describe('returnToWorkspace', () => {
+  afterEach(() => useNavigation.setState({ view: 'changes', pages: [] }));
+
+  it('opens the workspace the window left on the view and pages it showed', async () => {
+    fakeApi.answer('windows.focusWorkspace', () => false);
+    const pages: Page[] = [{ kind: 'codeReview', reviewId: 7 }];
+    useNavigation.setState({ view: 'branchExplorer', pages });
+    const open = vi.fn();
+
+    await returnToWorkspace('/ws', open);
+
+    expect(open).toHaveBeenCalledWith('/ws');
+    expect(useNavigation.getState()).toMatchObject({ view: 'branchExplorer', pages });
+    expect(fakeApi.methods()).toEqual(['windows.focusWorkspace']);
+  });
+
+  it('brings forward the window that opened it meanwhile instead of opening it twice', async () => {
+    fakeApi.answer('windows.focusWorkspace', () => true);
+    const open = vi.fn();
+
+    await returnToWorkspace('/ws', open);
+
+    expect(open).not.toHaveBeenCalled();
+  });
+});
+
+describe('a window reopened on a view after an update', () => {
+  afterEach(() => {
+    useSession.setState({ workspacePath: null });
+    useNavigation.setState({ view: 'changes', pages: [] });
+  });
+
+  it("keeps the view once the main process's request for its workspace comes, which only remembers it as recent", async () => {
+    fakeApi.answer('windows.focusWorkspace', () => false);
+    fakeApi.answer('settings.rememberRecentWorkspace', () => undefined);
+    fakeApi.answer('system.addRecentDocument', () => undefined);
+    const location = { search: `?${new URLSearchParams(startingWorkspaceQuery('/ws', 'branchExplorer'))}`, pathname: '/index.html' };
+    // Replacing the address drops its query, as a browser does.
+    openWorkspaceFromAddress({ location, history: { replaceState: () => void (location.search = '') } });
+
+    await openUnlessShownElsewhere('/ws', useSession.getState().openWorkspace);
+
+    expect(useNavigation.getState().view).toBe('branchExplorer');
+    expect(fakeApi.calls()).toContainEqual({ method: 'settings.rememberRecentWorkspace', args: ['/ws'] });
   });
 });
 

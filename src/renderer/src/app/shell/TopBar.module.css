@@ -15,17 +15,9 @@
 }
 
 /* macOS insets its traffic lights at the bar's start (`titleBarOptions`: 16px in, the three buttons 60px wide): the
-   brand starts after them. */
+   home button starts 8px after them, the bar's gap, which it also leaves before the branch pill. */
 :global([data-chrome='inset']) .topBar {
   padding-left: 84px;
-}
-
-.separator {
-  flex: none;
-  width: 1px;
-  height: 20px;
-  margin: 0 var(--space-1);
-  background: var(--border-default);
 }
 
 .topBar > .spacer {

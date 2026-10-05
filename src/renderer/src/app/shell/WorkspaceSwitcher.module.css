@@ -1,7 +1,9 @@
 .popover {
   display: flex;
   flex-direction: column;
-  width: 400px;
+  /* Wide enough for an editor and a terminal side by side in the actions below ("Open in Visual Studio Code",
+     "Open in Windows Terminal"). */
+  width: 420px;
   max-height: min(480px, calc(100vh - 80px));
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
@@ -136,6 +138,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
   height: 30px;
   padding: 0 var(--space-2);
   border: none;
@@ -145,15 +148,30 @@
   text-align: left;
 }
 
+.footerItem > svg {
+  flex: none;
+}
+
+/* One line always: a label too long for its column ("Open in Visual Studio Code - Insiders") is cut, and the tooltip
+   layer shows it whole. */
+.footerLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .footerItem:hover {
   background: var(--bg-hover);
   color: var(--text-primary);
 }
 
+/* Two columns, the first as wide as its longest label (an editor's name, "Visual Studio Code") up to 60%: even halves
+   wrapped it while "Open in iTerm" beside it left room. */
 .here {
   display: grid;
   flex: none;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: fit-content(60%) minmax(0, 1fr);
   padding: var(--space-1);
   border-top: 1px solid var(--border-subtle);
 }

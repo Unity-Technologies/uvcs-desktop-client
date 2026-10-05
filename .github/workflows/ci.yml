@@ -4,6 +4,8 @@ on:
   push:
     branches: [main]
   pull_request:
+  # The merge queue tests each pull request on top of main before merging it (docs/features/updates.md "CI").
+  merge_group:
 
 # CI only reads the code: its token can't push, comment or touch releases, whoever opened the pull request.
 permissions:
@@ -13,10 +15,6 @@ permissions:
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
-
-# The Node used locally, so the typecheck, the tests and the build behave the same on a laptop and here.
-env:
-  NODE_VERSION: '26'
 
 jobs:
   # "Done means" (CLAUDE.md): the typecheck passes, and the tests pass and the app builds on every OS and architecture.
@@ -67,7 +65,6 @@ jobs:
           exit 0
       - uses: ./.github/actions/install
         with:
-          node-version: ${{ env.NODE_VERSION }}
           working-directory: ${{ env.BUILD_DIR || github.workspace }}
           reuse-node-modules: 'true'
       # Once: tsc answers the same on every OS, and Linux's case-sensitive disk makes it the strictest about import paths.

@@ -1,5 +1,6 @@
 import type { AccountsApi } from './accounts';
 import type { AnnotateApi } from './annotate';
+import type { AppsApi } from './apps';
 import type { AttributesApi } from './attributes';
 import type { BranchExplorerApi } from './branchExplorer';
 import type { BranchesApi } from './branches';
@@ -15,6 +16,7 @@ import type { LocksApi } from './locks';
 import type { MergeApi } from './merge';
 import type { MergeToolsApi } from './mergeTools';
 import type { PendingChangesApi } from './pendingChanges';
+import type { PermissionsApi } from './permissions';
 import type { RepositoriesApi } from './repositories';
 import type { ReviewApi } from './review';
 import type { SettingsApi } from './settings';
@@ -32,6 +34,7 @@ import type { WorkspacesApi } from './workspaces';
 export interface UvcsApi {
   accounts: AccountsApi;
   annotate: AnnotateApi;
+  apps: AppsApi;
   attributes: AttributesApi;
   branchExplorer: BranchExplorerApi;
   branches: BranchesApi;
@@ -47,6 +50,7 @@ export interface UvcsApi {
   merge: MergeApi;
   mergeTools: MergeToolsApi;
   pendingChanges: PendingChangesApi;
+  permissions: PermissionsApi;
   repositories: RepositoriesApi;
   review: ReviewApi;
   settings: SettingsApi;

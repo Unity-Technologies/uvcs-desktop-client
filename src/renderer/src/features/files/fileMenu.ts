@@ -1,10 +1,11 @@
 import type { TreeItem } from '@shared/domain/explorer';
 import { navigation } from '../../app/navigation/navigationStore';
-import { openTerminalIn } from '../../app/workspace/workspaceShellActions';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
+import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction, menuSubmenu } from '../../components/menuWords';
 import { showInLocks } from '../locks/showInLocks';
+import { itemPathPermissionsUnavailable, openItemPathPermissions } from '../permissions/openPermissions';
 import type { PendingLocks } from '../pendingChanges/locks/pendingLocks';
 import { filterRulesSubmenu, itemCopySubmenu } from '../pendingChanges/pendingChangeMenu';
 import { absolutePath, undoChanges } from '../pendingChanges/pendingChangeOperations';
@@ -14,9 +15,7 @@ import {
   checkoutItems,
   createItem,
   deleteItems,
-  openItem,
   renameItem,
-  revealItem,
   targetDirectoryFor,
 } from './fileOperations';
 import { cutAction, pasteAction } from './cutPasteActions';
@@ -43,6 +42,12 @@ function showAnnotated(path: string): void {
   view.requestReveal(path);
 }
 
+/** Who may check in under the item's path, on every branch (a secured path). */
+function pathPermissionsAction(workspacePath: string, item: TreeItem) {
+  const unavailable = itemPathPermissionsUnavailable(workspacePath, item.repository);
+  return menuAction('pathPermissions', () => openItemPathPermissions(workspacePath, item.path), { disabled: Boolean(unavailable), disabledReason: unavailable });
+}
+
 /** The context menu of the selected items in the Files view; `locks` left out where they aren't read (Go to file). */
 export function fileMenu(workspacePath: string, items: TreeItem[], pendingChanges: PendingChangesIndex, locks: PendingLocks = new Map()): MenuEntry[] {
   if (items.length === 0) return [];
@@ -56,7 +61,6 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
   const hasRoot = items.some(isWorkspaceRoot);
 
   return groupedMenu([
-    single && single.itemType !== 'directory' && menuAction('open', () => openItem(workspacePath, single)),
     privateItems.length > 0 &&
       menuAction('add', () => void addItems(workspacePath, privateItems), {
         label: privateItems.some((item) => item.itemType === 'directory') ? 'Add to version control (recursively)' : 'Add to version control',
@@ -68,8 +72,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
     single && views?.history && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path }), { shortcut: FILE_SHORTCUTS.history }),
     single && views?.annotate && menuAction('annotate', () => showAnnotated(single.path), { shortcut: FILE_SHORTCUTS.annotate }),
     lock ? menuAction('showInLocks', () => showInLocks(workspacePath, lock)) : menuAction('locks', () => navigation.goToView('locks')),
-    single && menuAction('reveal', () => revealItem(workspacePath, single)),
-    single?.itemType === 'directory' && menuAction('terminal', () => openTerminalIn(absolutePath(workspacePath, single.path))),
+    ...(single ? openOnDiskEntries({ path: absolutePath(workspacePath, single.path), isFolder: single.itemType === 'directory' }) : []),
     // Cut and Paste move items into another folder.
     !hasRoot && cutAction(workspacePath, items),
     itemCopySubmenu(workspacePath, items.map((item) => item.path)),
@@ -81,6 +84,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
         { id: 'type.txt', label: 'Text', run: () => void changeRevisionType(workspacePath, typedFiles, 'txt') },
       ]),
     single && !hasRoot && filterRulesSubmenu(workspacePath, single.path),
+    single && !single.isPrivate && pathPermissionsAction(workspacePath, single),
     undoable.length > 0 &&
       menuAction('undo', () => void undoChanges(workspacePath, undoable), {
         label: undoable.length === 1 ? 'Undo changes…' : `Undo ${undoable.length} changes…`,

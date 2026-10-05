@@ -14,6 +14,12 @@ describe('updateCardOf', () => {
     expect(updateCardOf({ ...ready, version: '1.3.0' }, '1.2.0', false)).toEqual({ ...ready, version: '1.3.0' });
   });
 
+  it('keeps showing an update waiting for an operation to install, even a version put off', () => {
+    const waiting = { state: 'waitingToInstall', version: '1.2.0', install: 'restart' } as const;
+
+    expect(updateCardOf(waiting, '1.2.0', false)).toEqual(waiting);
+  });
+
   it('leaves checks and their answers to the About dialog and the toasts', () => {
     expect(updateCardOf({ state: 'checking' }, null, false)).toBeNull();
     expect(updateCardOf({ state: 'upToDate' }, null, false)).toBeNull();

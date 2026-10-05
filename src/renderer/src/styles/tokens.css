@@ -117,6 +117,10 @@
   --change-moved: #8250df;
   --change-permissions: #bc4c00;
 
+  /* A permission allowed or denied (the permissions dialog): its mark, and the tint of the choice that set it. */
+  --permission-allowed: #1a7f37;
+  --permission-denied: #cf222e;
+
   /* Item icons: solid slate folders and one neutral filled page for every file, whose glyph takes its family's tint
      (source, project and build files, config and data, images and media, Unity assets; docs, archives and binaries
      stay neutral, generated files are the plain page). */
@@ -222,6 +226,9 @@
   --change-deleted: #f85149;
   --change-moved: #bc8cff;
   --change-permissions: #f0883e;
+
+  --permission-allowed: #3fb950;
+  --permission-denied: #f85149;
 
   --icon-folder: #7f9fcb;
   --icon-file: #9aa3ad;

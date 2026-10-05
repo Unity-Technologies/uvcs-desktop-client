@@ -84,11 +84,20 @@ Settings and review marks stay on your computer.
 
 ## Build from source
 
-You need **Node.js 22.12 or newer**, and `cm` installed and signed in.
+You need:
+
+- **Node.js 22.12 or newer**. CI builds with the version in [`.nvmrc`](.nvmrc) (26), so that one is safest. Check with
+  `node -v`. An older Node stops `npm install` with `EBADENGINE … Required: {"node":">=22.12"}`: install a newer one
+  and run `npm install` again.
+  - With a version manager (recommended), run `nvm install` ([nvm](https://github.com/nvm-sh/nvm), macOS and Linux)
+    or `fnm use --install-if-missing` ([fnm](https://github.com/Schniz/fnm), any OS) in the clone: both read `.nvmrc`.
+  - Without one, use the installer from [nodejs.org](https://nodejs.org).
+- **`cm`** installed and signed in (see [Get started](#get-started)).
 
 ```sh
 git clone https://github.com/Unity-Technologies/uvcs-desktop-client.git
 cd uvcs-desktop-client
+nvm install      # or fnm use --install-if-missing: the Node in .nvmrc
 npm install      # also downloads Electron
 npm run dev      # the app, with hot reload
 ```

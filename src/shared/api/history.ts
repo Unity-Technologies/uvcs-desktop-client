@@ -11,6 +11,9 @@ export interface HistoryApi {
   revertTo(workspacePath: string, path: string, changesetId: number): Promise<void>;
   /** Asks where to save a revision and writes it there. Resolves to the saved path, or null if cancelled. */
   saveRevisionAs(workspacePath: string, revision: RevisionRef, suggestedFileName: string): Promise<string | null>;
-  /** Opens a past revision with the default app for its file type. */
-  openRevision(workspacePath: string, revision: RevisionRef, fileName: string): Promise<void>;
+  /**
+   * Saves a past revision to a temp file and opens it: in the editor `editorId` (`apps`), or with the default app for its
+   * file type when it's omitted.
+   */
+  openRevision(workspacePath: string, revision: RevisionRef, fileName: string, editorId?: string): Promise<void>;
 }

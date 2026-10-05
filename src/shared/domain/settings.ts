@@ -1,3 +1,4 @@
+import { AUTO_APP, type CustomEditor } from './externalApps';
 import { AUTO_MERGE_TOOL, type CustomMergeTool } from './mergeTools';
 import { DEFAULT_PENDING_CHANGES_FILTER, type PendingChangesFilter } from './pendingChanges';
 import type { PendingChangesOnSwitch, SwitchShelveRecord } from './switchWithChanges';
@@ -11,6 +12,16 @@ export interface SavedWindowBounds {
   width: number;
   height: number;
   maximized: boolean;
+}
+
+/** A window open when the app last quit, opened again where it was at the next launch (`WorkspaceWindows.saveSession`). */
+export interface SavedWindow {
+  /** The workspace it showed; none on the home screen. */
+  workspacePath?: string;
+  bounds: SavedWindowBounds;
+  fullScreen: boolean;
+  /** The view it showed (a renderer `ViewId`): saved only by a restart to install an update, which nobody chose. */
+  view?: string;
 }
 
 export interface AppSettings {
@@ -52,8 +63,16 @@ export interface AppSettings {
    * off, the next file opens at once.
    */
   askWhenMergeToolClosesUnsaved: boolean;
+  /** The app files and folders open in: `auto` (the first editor found), `system` (each file's default app) or an app id. */
+  editor: string;
+  /** The terminal "Open in…" opens folders in: `auto` (the platform's usual one) or a terminal id. */
+  terminal: string;
+  /** Apps the user added to open files in ("Other app…"). */
+  customEditors: CustomEditor[];
   /** Null until the window is first moved or resized. */
   windowBounds: SavedWindowBounds | null;
+  /** The windows open when the app last quit, the focused one last; none when it quit with no window open. */
+  openWindows: SavedWindow[];
   /**
    * The official Desktop client's settings were imported (`importLegacySettings`), or there were none to import: they
    * are never read again.
@@ -81,6 +100,10 @@ export const DEFAULT_SETTINGS: AppSettings = {
   customMergeTools: [],
   mergeToolArgs: {},
   askWhenMergeToolClosesUnsaved: true,
+  editor: AUTO_APP,
+  terminal: AUTO_APP,
+  customEditors: [],
   windowBounds: null,
+  openWindows: [],
   legacySettingsImported: false,
 };

@@ -2,8 +2,9 @@
 
 ## The About dialog
 
-The brand at the start of the top bar (`AppBrand`: the mark and the name, after the window's buttons) opens it, as do
-the app menu (macOS), Help (Windows, Linux) and the palette (`app.about`). It shows the version, where the update
+The version at the end of a workspace's status bar (`StatusBarVersion`) opens it, as do the app menu (macOS), Help
+(Windows, Linux) and the palette (`app.about`). Once an update is downloaded the version reads "Update ready", in the
+accent, until the app restarts into it (`versionItem`): the corner card can be put off, this quiet reminder stays. It shows the version, where the update
 stands with its one button (Check for Updates, or install once one is ready: `aboutUpdateLine`, `aboutUpdateAction`),
 and what the app runs on: the `cm` found (`cmVersionQuery`, asked once at start: no command of its own), the OS and
 architecture, Electron and Chromium. Copy Details copies those as text for an issue (`aboutDetails`); its other links
@@ -43,7 +44,10 @@ tells every window each step (`updateStatusChanged`, an `UpdateStatus`); a windo
 - **Download**: an update found downloads by itself, then waits (`ready`). A check while one is under way or ready
   checks nothing and tells where it stands.
 - **Install**: "Restart & Install" quits into it (Windows runs the installer silently, per user, and starts the app
-  again); quitting the app installs it too (`autoInstallOnAppQuit`).
+  again); quitting the app installs it too (`autoInstallOnAppQuit`). Asked while an operation changes a workspace
+  (`writesRunning`: an update, a checkin…), it waits for it to finish (`waitingToInstall`: the card and About say so,
+  with nothing to press) rather than kill its `cm` partway; quitting asks the same. The app comes back with every
+  window where it was, each on the view it showed (`beforeRestart`; ARCHITECTURE.md "Windows").
 - **Unsigned macOS builds**: Squirrel.Mac, which electron-updater installs through on macOS, rejects any build without a
   Developer ID signature ("code failed to satisfy specified code requirement(s)"). Once an update is found,
   `needsManualInstall` asks `codesign` about the running bundle (its one process: `noExternalUi.test.ts` allows it); such
@@ -146,7 +150,15 @@ markup from the network.
 
 ## CI
 
-`.github/workflows/ci.yml` runs on every push to main and every pull request: the tests and the build on macOS
+A pull request joins main through GitHub's merge queue (`gh pr merge --auto --merge`, or "Merge when ready"): once
+its own CI passes, the queue builds a merge commit of main, the pull requests queued ahead of it and this one, runs the
+required checks (the four `ci.yml` jobs) on it, and merges it only if they pass; if they fail, the pull request leaves
+the queue and main is untouched. So no one updates a branch by hand, and main always passes. Each pull request runs CI
+twice, on its own and in the queue: at about 4 minutes a run, splitting a lighter pull-request CI from a full queue
+CI was rejected as not worth it. `scripts/build/mergeQueueTrigger.test.ts` keeps the `merge_group` trigger, without
+which nothing merges.
+
+`.github/workflows/ci.yml` runs on every push to main, every pull request and every merge-queue entry: the tests and the build on macOS
 arm64, Windows x64 and arm64 and Linux x64, the typecheck once on Linux, and the smoke test (`npm run e2e`) inside the
 macOS and Windows x64 jobs. The shared install step (`.github/actions/install`) pins Node, restores `node_modules` from
 the last install of the same lockfile (`reuse-node-modules`, CI only: releases install clean), or else caches npm's and

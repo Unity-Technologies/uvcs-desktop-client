@@ -2,6 +2,7 @@ import type { AttributeType } from '@shared/domain/attribute';
 import type { MenuEntry } from '../../lib/actions';
 import { groupedMenu } from '../../lib/menuGroups';
 import { menuAction } from '../../components/menuWords';
+import { openObjectPermissions } from '../permissions/openPermissions';
 import { deleteAttributeTypes, editAttributeComment, renameAttributeType } from './attributeOperations';
 import { hotkey } from '../../lib/shortcutRegistry';
 
@@ -10,6 +11,7 @@ export function attributeTypeMenu(workspacePath: string, types: AttributeType[])
   return groupedMenu([
     single && menuAction('editComment', () => void editAttributeComment(workspacePath, single)),
     single && menuAction('rename', () => void renameAttributeType(workspacePath, single), { shortcut: hotkey('rename') }),
+    single && menuAction('permissions', () => openObjectPermissions(workspacePath, 'attribute', single)),
     types.length > 0 && menuAction('delete', () => void deleteAttributeTypes(workspacePath, types)),
   ]);
 }

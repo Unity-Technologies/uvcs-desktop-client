@@ -1,6 +1,6 @@
 import { createServer, type AddressInfo, type Socket } from 'node:net';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { launchMergeTool, spawnCommand } from './launch';
+import { launchMergeTool } from './launch';
 
 /** A tool made of a Node script, so the launch is tested the same on every OS. */
 const tool = (script: string): [string, string[]] => [process.execPath, ['-e', script]];
@@ -56,17 +56,6 @@ describe('launchMergeTool', () => {
     await expect(launchMergeTool(...tool("console.error('oops'); process.exit(3)"), new AbortController().signal)).resolves.toMatchObject({
       exitCode: 3,
       errorOutput: 'oops',
-    });
-  });
-});
-
-describe('spawnCommand', () => {
-  it('runs programs directly, and Windows .cmd launchers through cmd.exe with every argument quoted', () => {
-    expect(spawnCommand('darwin', '/bin/tool', ['a b'])).toEqual({ command: '/bin/tool', commandArgs: ['a b'], verbatim: false });
-    expect(spawnCommand('win32', 'C:\\VS Code\\bin\\code.cmd', ['--wait', 'C:\\Users\\R&D\\a^b "x".ts', 'Yours (%PATH%!)', 'C:\\t\\'])).toEqual({
-      command: 'cmd.exe',
-      commandArgs: ['/d', '/s', '/c', '""C:\\VS Code\\bin\\code.cmd" "--wait" "C:\\Users\\R&D\\a^b x.ts" "Yours (PATH)" "C:\\t\\\\""'],
-      verbatim: true,
     });
   });
 });

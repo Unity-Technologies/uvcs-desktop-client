@@ -9,6 +9,7 @@ import { revisionFiles } from './revisionFiles';
 vi.mock('electron', () => ({ dialog: { showSaveDialog: vi.fn() }, shell: { openPath: vi.fn() } }));
 
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
+const openInEditor = vi.fn(async (_path: string, _editorId: string) => {});
 const REVISION = { revisionId: 45, repository: 'game@local' };
 
 /** `cm cat` writing the old version to the file it is given. */
@@ -20,6 +21,7 @@ const CAT: CmAnswer = async ({ args }) => {
 describe('revision files', () => {
   beforeEach(() => {
     vi.mocked(shell.openPath).mockReset().mockResolvedValue('');
+    openInEditor.mockReset();
   });
 
   it('saves the revision where the user chose, with one cm cat', async () => {
@@ -27,7 +29,7 @@ describe('revision files', () => {
     vi.mocked(dialog.showSaveDialog).mockResolvedValueOnce({ canceled: false, filePath: target });
     const fake = fakeCmClient({ cat: CAT });
 
-    expect(await revisionFiles(fake.cm).saveAs(WORKSPACE, REVISION, 'a.cs')).toBe(target);
+    expect(await revisionFiles(fake.cm, openInEditor).saveAs(WORKSPACE, REVISION, 'a.cs')).toBe(target);
     expect(fake.lines()).toEqual([`cat revid:45@game@local --file=${target}`]);
     expect(await readFile(target, 'utf8')).toBe('old version');
   });
@@ -36,13 +38,13 @@ describe('revision files', () => {
     vi.mocked(dialog.showSaveDialog).mockResolvedValueOnce({ canceled: true, filePath: '' });
     const fake = fakeCmClient();
 
-    expect(await revisionFiles(fake.cm).saveAs(WORKSPACE, REVISION, 'a.cs')).toBeNull();
+    expect(await revisionFiles(fake.cm, openInEditor).saveAs(WORKSPACE, REVISION, 'a.cs')).toBeNull();
     expect(fake.commands).toEqual([]);
   });
 
   it('opens the revision under its own name, in a folder of its own each time', async () => {
     const fake = fakeCmClient({ cat: CAT });
-    const files = revisionFiles(fake.cm);
+    const files = revisionFiles(fake.cm, openInEditor);
 
     await files.open(WORKSPACE, REVISION, 'a.cs');
     await files.open(WORKSPACE, REVISION, 'a.cs');
@@ -53,10 +55,21 @@ describe('revision files', () => {
     expect(await readFile(first!, 'utf8')).toBe('old version');
   });
 
+  it('opens the revision in the editor the user picked, instead of the default app', async () => {
+    const fake = fakeCmClient({ cat: CAT });
+
+    await revisionFiles(fake.cm, openInEditor).open(WORKSPACE, REVISION, 'a.cs', 'vscode');
+
+    const [[path, editorId]] = openInEditor.mock.calls as [[string, string]];
+    expect([basename(path), editorId]).toEqual(['a.cs', 'vscode']);
+    expect(await readFile(path, 'utf8')).toBe('old version');
+    expect(shell.openPath).not.toHaveBeenCalled();
+  });
+
   it("fails with the OS's reason when no app opens it", async () => {
     vi.mocked(shell.openPath).mockResolvedValueOnce('No application knows how to open this file.');
     const fake = fakeCmClient({ cat: CAT });
 
-    await expect(revisionFiles(fake.cm).open(WORKSPACE, REVISION, 'a.cs')).rejects.toThrow('No application knows how to open this file.');
+    await expect(revisionFiles(fake.cm, openInEditor).open(WORKSPACE, REVISION, 'a.cs')).rejects.toThrow('No application knows how to open this file.');
   });
 });

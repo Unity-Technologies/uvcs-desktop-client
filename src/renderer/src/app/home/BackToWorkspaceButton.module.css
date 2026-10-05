@@ -1,0 +1,38 @@
+/* A quiet text button, as the house beside it: a page's breadcrumb back link, at the top bar's control height. */
+.back {
+  display: flex;
+  flex: 0 1 auto;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  max-width: 280px;
+  height: var(--control-height);
+  padding: 0 10px 0 4px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: none;
+  color: var(--text-secondary);
+  font-weight: var(--weight-medium);
+  transition: background var(--duration-fast), color var(--duration-fast);
+}
+
+.back:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.back:focus-visible {
+  box-shadow: var(--focus-ring-visible);
+  outline: none;
+}
+
+.chevron {
+  flex: none;
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

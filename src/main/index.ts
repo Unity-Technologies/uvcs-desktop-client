@@ -17,11 +17,13 @@ import { openFirstWindow } from './startup/firstWindow';
 import { handleLaunchRequests, isTheRunningApp } from './startup/launchRequests';
 import { trackOperations } from './startup/operationTracking';
 import { ignoreOwnCommandWrites } from './startup/ownWrites';
+import { handleQuitting, Quitting } from './startup/quitting';
 import { openSettings, sendSettingsChanges } from './startup/settings';
 import { watchShownWorkspaces } from './startup/workspaceWatching';
 import { createAppUpdates } from './update/createAppUpdates';
 import { DEVELOPMENT_DOCK_ICON } from './window/appIcon';
 import { installAppMenu, installMenus } from './window/appMenu';
+import { askToQuitWhenDone } from './window/askToQuitWhenDone';
 import { followAppTheme } from './window/followAppTheme';
 import { WorkspaceWindows } from './window/WorkspaceWindows';
 import { cmHeaderReaders, WorkspaceHeaders } from './workspace/WorkspaceHeaders';
@@ -32,12 +34,27 @@ const settings = openSettings(userData);
 // What a workspace is loaded from, shared by the reads that follow one another as a window opens it.
 const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
 const watchers = watchShownWorkspaces(cm, headers);
-const updates = createAppUpdates();
+const operations = trackOperations(watchers);
+const updates = createAppUpdates({
+  writesRunning: () => operations.writesRunning(),
+  writesFinished: () => operations.writesFinished(),
+  beforeRestart: () => quitting.restartToInstall(),
+});
 const windows = new WorkspaceWindows({
   settings,
   workspaceOf: (viewer) => watchers.workspaceOf(viewer),
   onWindowsChanged: () => app.isReady() && installAppMenu(windows, updates),
   onClosed: (viewer) => watchers.release(viewer),
+  onLastWindowClosing: () => quitting.lastWindowClosing(),
+});
+const quitting = new Quitting({
+  writesRunning: () => operations.writesRunning(),
+  writesFinished: () => operations.writesFinished(),
+  askToQuitWhenDone,
+  hasWindows: () => windows.all().length > 0,
+  quitsWithLastWindow: process.platform !== 'darwin',
+  saveSession: (options) => windows.saveSession(options),
+  quit: () => app.quit(),
 });
 
 function start(launched: Promise<void>): void {
@@ -49,7 +66,7 @@ function start(launched: Promise<void>): void {
   ignoreOwnCommandWrites(cm, watchers, headers);
   const api = createServices({
     cm,
-    operations: trackOperations(watchers),
+    operations,
     reviews: new ReviewStore(join(userData, 'review-snapshots')),
     diffReviews: new DiffReviewStore(join(userData, 'review-snapshots', 'diffs')),
     settings,
@@ -61,6 +78,7 @@ function start(launched: Promise<void>): void {
   const early = new EarlyCalls(apiMethods(api));
   registerApi(api, early);
   followAppTheme(settings);
+  handleQuitting(quitting);
   installMenus(windows, updates);
   updates.checkPeriodically();
   const openFirst = (): void => openFirstWindow({ cm, windows, early, settings });

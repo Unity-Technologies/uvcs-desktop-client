@@ -38,7 +38,40 @@ const COMMANDS = {
   ls: lsOutput,
   'lock list': lockList,
   'repository list': (args) => formatted(args, REPOSITORIES),
+  showacl: showAcl,
+  showowner: ([spec]) => `${spec} ${OWNER} User\n`,
+  listusers: ([, kind]) => (kind === '--onlygroups' ? 'Developers\nArtists\n' : `${OWNER}\nana@example.com\n`),
+  acl: () => 'Command finished successfully\n',
+  setowner: () => '',
 };
+
+/**
+ * `cm showacl <spec> --extended`, indented as cm 11 prints it: every object shares the repository's list, which
+ * inherits the server's (`extendedAclOutput` in main/cm/testing/cmOutput.ts builds the same in the unit tests).
+ */
+function showAcl([spec, option]) {
+  if (option !== '--extended') throw new Error('The fake cm shows access control lists only --extended');
+  if (spec.startsWith('path:')) throw new Error(`Incorrect object specification ${spec}`);
+  return [
+    '  ACL: 1',
+    `    Creator rep:${repository.REPOSITORY}@repserver:${SERVER}`,
+    '    Entries',
+    '     Developers:',
+    '       Allowed:',
+    '        view read ci add change move rm mkchildbranch mergefrom',
+    '     Artists:',
+    '       Denied:',
+    '        rm',
+    '    Inherited',
+    '      ACL: 0',
+    `        Creator repserver:${SERVER}`,
+    '        Entries',
+    '         ALL USERS:',
+    '           Allowed:',
+    '            all',
+    '',
+  ].join('\n');
+}
 
 /** `cm find <object> <query> --xml|--format=…`: the objects the query's comparisons keep (`where.cjs`). */
 function find([object, ...args]) {

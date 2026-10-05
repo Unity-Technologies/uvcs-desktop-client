@@ -1,8 +1,9 @@
-import { DiffHunksRenderer, FileDiff, type FileDiffMetadata } from '@pierre/diffs';
+import { FileDiff, type DiffHunksRenderer, type FileDiffMetadata } from '@pierre/diffs';
 import { shownText } from '../../../lib/lineBreaks';
 import type { ComparisonMethod } from './comparisonMethod';
 import { lineDiff, lineDiffOptions } from './lineDiff';
 import { installPierreLineComparison } from './pierreLineComparison';
+import { renderedWordMarks, type WordMarks } from './renderedWordMarks';
 import { shownDiff, type DiffSides } from './shownDiff';
 
 /** A change block of a diff: where it starts in the original (0-based) and how many lines it removes and adds. */
@@ -46,8 +47,9 @@ const BOTH_SIDES: DiffSides = { original: true, modified: true };
 export async function typedIntoPierre(original: string, modified: string, method: ComparisonMethod, current = modified, sides = BOTH_SIDES) {
   installPierreLineComparison();
   const parseDiffOptions = lineDiffOptions(original, current, method);
-  const component = new FileDiff({ parseDiffOptions, theme: 'github-light' }) as unknown as { getHunksRendererOptions(options: unknown): object; options: unknown };
-  const renderer = new DiffHunksRenderer(component.getHunksRendererOptions(component.options));
+  const component = new FileDiff({ parseDiffOptions, theme: 'github-light', lineDiffType: 'word' });
+  // Its own renderer, made as Pierre makes it (`getHunksRendererOptions`, which `installPierreLineComparison` patches).
+  const renderer = (component as unknown as { hunksRenderer: DiffHunksRenderer }).hunksRenderer;
   const diff = shownDiff(lineDiff(original, modified, method, 'file.ts').meta, sides, original, modified, true);
   renderer.beginEditSession(diff);
   await renderer.asyncRender(diff);
@@ -65,6 +67,8 @@ export async function typedIntoPierre(original: string, modified: string, method
   };
   return {
     diff,
+    /** The component the renderer is part of, as the editor attaches to it; it has no page to render into. */
+    component,
     /** Types over line `index` (0-based) so it reads `text`, as the editor reports a keystroke within a line. Whether
      * the renderer asks for the diff to be rendered whole. */
     type(index: number, text: string): boolean {
@@ -93,6 +97,10 @@ export async function typedIntoPierre(original: string, modified: string, method
      */
     rowsInStep(): boolean {
       return JSON.stringify(onScreen) === JSON.stringify(rowsNow());
+    },
+    /** The words the rows mark as changed, rendered now (from what the renderer keeps, or anew once it keeps nothing). */
+    wordMarks(): WordMarks {
+      return renderedWordMarks(renderer, renderer.renderDiff(diff)!);
     },
   };
 }

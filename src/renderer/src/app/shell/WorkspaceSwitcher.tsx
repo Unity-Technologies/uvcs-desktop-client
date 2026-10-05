@@ -1,16 +1,18 @@
 import * as Popover from '@radix-ui/react-popover';
-import { Copy, FolderGit2, FolderOpen, FolderPlus, Layers, SquareTerminal } from 'lucide-react';
+import { CodeXml, Copy, FolderGit2, FolderPlus, FolderSearch, Layers, SquareTerminal } from 'lucide-react';
 import { useState, type ReactElement, type ReactNode } from 'react';
+import { defaultEditor, defaultTerminal, useExternalApps } from '../../components/externalApps/externalApps';
+import { openInEditor } from '../../components/externalApps/externalAppOperations';
 import { openTaskWorkspaceDialog } from '../../features/taskWorkspace/TaskWorkspaceDialog';
+import { OPEN_IN_FILE_MANAGER_LABEL } from '../../lib/platform';
 import type { Icon } from '../../lib/actions';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { useReturnFocus } from '../../ui/useReturnFocus';
 import { openCreateWorkspaceDialog } from '../home/dialogs/CreateWorkspaceDialog';
 import { useSession } from '../workspace/sessionStore';
-import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { useOpenWorkspace } from '../workspace/useOpenWorkspace';
 import { useWorkspaceInfo } from '../workspace/useWorkspace';
-import { copyWorkspacePath, openTerminalIn } from '../workspace/workspaceShellActions';
+import { copyWorkspacePath, openTerminalIn, openWorkspaceInFileManager } from '../workspace/workspaceShellActions';
 import { currentWorkspaceMenu } from './currentWorkspaceMenu';
 import { WorkspaceSwitcherRows } from './WorkspaceSwitcherRows';
 import styles from './WorkspaceSwitcher.module.css';
@@ -18,7 +20,9 @@ import styles from './WorkspaceSwitcher.module.css';
 /**
  * Quick switch to any workspace, recent ones first, without going back to the home screen. Rows read as the home
  * screen's (the repository's avatar, the branch and the server); workspaces of the same repository also show their
- * pending changes. Right-clicking the card offers the open workspace's actions.
+ * pending changes. Right-clicking the card offers the open workspace's actions. A folder `cm` doesn't list as a
+ * workspace is opened from File ▸ Open Another Workspace… (⇧⌘O), the home screen or by dropping it on the window:
+ * here, beside the workspaces listed, "Open folder…" read as showing the folder in the file manager.
  */
 export function WorkspaceSwitcher({ currentPath, children }: { currentPath: string; children: ReactElement }) {
   const [open, setOpen] = useState(false);
@@ -26,6 +30,9 @@ export function WorkspaceSwitcher({ currentPath, children }: { currentPath: stri
   const openWorkspace = useOpenWorkspace();
   const returnFocus = useReturnFocus(open);
   const workspaceName = useWorkspaceInfo().data?.name;
+  const apps = useExternalApps();
+  const editor = defaultEditor(apps);
+  const terminal = defaultTerminal(apps);
 
   // Popover actions often open a dialog or a folder picker: close first so focus goes where it should.
   const closeThen = (action: () => void) => () => {
@@ -42,9 +49,6 @@ export function WorkspaceSwitcher({ currentPath, children }: { currentPath: stri
         <Popover.Content className={styles.popover} side="bottom" align="start" sideOffset={4} {...returnFocus}>
           <WorkspaceSwitcherRows currentPath={currentPath} onChoose={(path) => closeThen(() => openWorkspace(path))()} />
           <div className={styles.footer}>
-            <SwitcherAction icon={FolderOpen} onClick={closeThen(() => void openWorkspaceFolder(openWorkspace))}>
-              Open folder…
-            </SwitcherAction>
             <SwitcherAction icon={FolderPlus} onClick={closeThen(() => openCreateWorkspaceDialog({ onCreated: openWorkspace }))}>
               New workspace…
             </SwitcherAction>
@@ -56,8 +60,16 @@ export function WorkspaceSwitcher({ currentPath, children }: { currentPath: stri
             </SwitcherAction>
           </div>
           <div className={styles.here}>
+            {editor?.opensFolders && (
+              <SwitcherAction icon={CodeXml} onClick={closeThen(() => void openInEditor(currentPath))}>
+                Open in {editor.name}
+              </SwitcherAction>
+            )}
             <SwitcherAction icon={SquareTerminal} onClick={closeThen(() => openTerminalIn(currentPath))}>
-              Open terminal here
+              {terminal ? `Open in ${terminal.name}` : 'Open terminal here'}
+            </SwitcherAction>
+            <SwitcherAction icon={FolderSearch} onClick={closeThen(() => openWorkspaceInFileManager(currentPath))}>
+              {OPEN_IN_FILE_MANAGER_LABEL}
             </SwitcherAction>
             <SwitcherAction icon={Copy} onClick={closeThen(() => copyWorkspacePath(currentPath))}>
               Copy workspace path
@@ -73,7 +85,7 @@ function SwitcherAction({ icon: ActionIcon, onClick, children }: { icon: Icon; o
   return (
     <button className={styles.footerItem} onClick={onClick}>
       <ActionIcon size={14} />
-      {children}
+      <span className={styles.footerLabel}>{children}</span>
     </button>
   );
 }

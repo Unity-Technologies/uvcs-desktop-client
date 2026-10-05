@@ -13,10 +13,9 @@ export interface SystemApi {
   /** Checks that `cm` is configured, signed in and reaches its default server; null when all is well. */
   checkSetup(): Promise<SetupProblem | null>;
   currentUser(): Promise<string>;
+  /** Opens a file with the OS's default app for its type (a folder in the file manager); `apps` opens it in a chosen one. */
   openPath(path: string): Promise<void>;
   revealInFileManager(path: string): Promise<void>;
-  /** Opens the user's terminal in a folder: $TERM_PROGRAM's app or Terminal on macOS, Windows Terminal or cmd, x-terminal-emulator or the desktop's own terminal on Linux. */
-  openTerminal(path: string): Promise<void>;
   openExternal(url: string): Promise<void>;
   /** Moves files to the OS trash, so deleting private files can be undone. */
   moveToTrash(paths: string[]): Promise<void>;

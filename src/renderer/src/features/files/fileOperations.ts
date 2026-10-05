@@ -1,6 +1,7 @@
 import type { RevisionType, TreeItem } from '@shared/domain/explorer';
 import { api } from '../../api/client';
-import { runAction, runRead } from '../../app/operations/runOperation';
+import { openFile } from '../../components/externalApps/externalAppOperations';
+import { runAction } from '../../app/operations/runOperation';
 import { isAffectedByPendingChangeEdit } from '../../app/refresh/refreshScopes';
 import { fileNameOf } from '../../lib/text';
 import { confirm } from '../../ui/dialog/confirm';
@@ -11,12 +12,9 @@ import { useFilesViewStore } from './filesViewStore';
 import { parentOf } from './fileTreeRows';
 import { itemNameProblem } from './itemName';
 
+/** Opens a file as its menu's first entry does: in the user's editor, or with its default app (`openFile`). */
 export function openItem(workspacePath: string, item: Pick<TreeItem, 'path'>): void {
-  void runRead("Couldn't open the file", () => api.system.openPath(absolutePath(workspacePath, item.path)));
-}
-
-export function revealItem(workspacePath: string, item: Pick<TreeItem, 'path'>): void {
-  void api.system.revealInFileManager(absolutePath(workspacePath, item.path));
+  void openFile(absolutePath(workspacePath, item.path));
 }
 
 /** Adds private items; directories are added with everything inside them. */

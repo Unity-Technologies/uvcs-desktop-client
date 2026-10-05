@@ -16,6 +16,7 @@ export function createWindowsService({ windows }: ServiceContext): WindowsApi {
     },
     openHome: async () => void windows.open(),
     continueLeaving: async (canLeave) => continueLeaving(callerId(), canLeave),
+    viewShown: async (view) => windows.viewShown(callerId(), view),
     showAppMenu: async (position) => {
       const caller = webContents.fromId(callerId());
       const window = caller && BrowserWindow.fromWebContents(caller);

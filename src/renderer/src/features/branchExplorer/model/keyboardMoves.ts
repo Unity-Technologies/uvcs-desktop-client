@@ -17,7 +17,7 @@ import {
 export type GraphMove =
   /** An arrow key. */
   | { kind: 'walk'; direction: GraphDirection }
-  /** Home and End: the ends of the selection's branch. */
+  /** Home and End: the ends of the selection's branch, its pending changes being the last. */
   | { kind: 'branchEdge'; edge: 'first' | 'last' }
   /** The oldest or newest changeset of the whole graph. */
   | { kind: 'graphEdge'; edge: 'first' | 'last' }
@@ -55,7 +55,10 @@ export function movedSelection(layout: GraphLayout, selection: GraphSelection | 
     case 'walk':
       return selection && selection.kind !== 'branch' ? neighborStop(layout, selection, move.direction) : changesetStop(starting());
     case 'branchEdge':
-      return branch === null ? null : changesetStop(branchEnd(layout, branch, move.edge));
+      if (branch === null) return null;
+      // The pending changes are the branch's next changeset, so they are its last stop.
+      if (move.edge === 'last' && layout.pending?.branch === branch) return { kind: 'pending' };
+      return changesetStop(branchEnd(layout, branch, move.edge));
     case 'graphEdge':
       return changesetStop(graphEnd(layout, move.edge));
     case 'page': {

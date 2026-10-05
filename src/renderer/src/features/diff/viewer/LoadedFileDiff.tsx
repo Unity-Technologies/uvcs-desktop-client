@@ -1,6 +1,6 @@
 import { RefreshCw } from 'lucide-react';
 import { Suspense, useMemo, useRef, type ReactNode } from 'react';
-import { api } from '../../../api/client';
+import { openFile } from '../../../components/externalApps/externalAppOperations';
 import { lazyComponent } from '../../../lib/lazyComponent';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { useShortcut } from '../../../lib/useShortcut';
@@ -23,7 +23,7 @@ import { NothingToDiff } from './NothingToDiff';
 import { renderedEdits } from './renderedEdits';
 import { RepresentationSwitch } from './RepresentationSwitch';
 import { followsLayout } from './shownDiff';
-import { syntaxHighlighting } from './syntaxHighlighting';
+import { plainTextThresholdLabel, syntaxHighlighting } from './syntaxHighlighting';
 import { TextViewControls } from './TextViewControls';
 import { UnsavedEditsControls } from './UnsavedEditsControls';
 import { goesSomewhere, useChangeNavigation } from './useChangeNavigation';
@@ -87,7 +87,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const changeView = useRef<ChangeView>(null);
   const navigation = useChangeNavigation(viewControls && !wholeFile ? (diffs.current?.meta ?? null) : null, changeView, frame, fileName);
   const navigator = goesSomewhere(navigation) && <ChangeNavigator navigation={navigation} />;
-  const openFile = editablePath === null ? undefined : () => void api.system.openPath(absolutePath(workspacePath, editablePath));
+  const openEditable = editablePath === null ? undefined : () => void openFile(absolutePath(workspacePath, editablePath));
   const discards = diffDiscards(workspacePath, buffer, onMatchesBase);
   const identical = identicalDescription ?? IDENTICAL_DESCRIPTION;
   const recognizeAll = (): void => setComparisonMethod('recognizeAll');
@@ -107,6 +107,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
         <TextViewControls
           diff={diffs.current}
           plainText={syntaxHighlighting(left.text ?? '', right.text ?? '', editable) === 'off'}
+          plainTextThreshold={plainTextThresholdLabel(editable)}
           followsLayout={followsLayout(sides, wholeFile)}
         />
       )}
@@ -199,7 +200,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
           identicalDescription={identical}
           comparisonMethod={comparisonMethod}
           onRecognizeAll={recognizeAll}
-          openFile={openFile}
+          openFile={openEditable}
         />
       );
   }

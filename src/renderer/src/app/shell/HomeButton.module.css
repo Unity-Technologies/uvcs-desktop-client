@@ -1,0 +1,10 @@
+/* On the home screen: lit like the sidebar's selected entry, and stays lit under the pointer. */
+.home[aria-current='page'] {
+  background: var(--bg-selected);
+  color: var(--accent-text);
+}
+
+.home[aria-current='page']:hover:not([aria-disabled='true']) {
+  background: var(--bg-selected-strong);
+  color: var(--accent-text);
+}

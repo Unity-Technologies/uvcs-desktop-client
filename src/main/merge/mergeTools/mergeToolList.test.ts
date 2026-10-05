@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { KNOWN_TOOLS } from './knownTools';
-import { appBundleOf, mergeToolList, type MergeToolSources } from './mergeToolList';
+import { mergeToolList, type MergeToolSources } from './mergeToolList';
 
 const known = (id: string, executable: string) => ({ tool: KNOWN_TOOLS.find((tool) => tool.id === id)!, executable });
 
@@ -35,12 +35,5 @@ describe('mergeToolList', () => {
   it('falls back to auto from a pick of a tool that was once read from client.conf, which the app no longer offers', () => {
     expect(mergeToolList({ ...sources, preference: 'clientConf:0', argsOverrides: { 'clientConf:0': ['{base}'] } }).preferredId).toBe('uvcs');
     expect(mergeToolList({ ...sources, detected: [known('vscode', '/usr/local/bin/code')], preference: 'clientConf:0' }).preferredId).toBe('vscode');
-  });
-});
-
-describe('appBundleOf', () => {
-  it('finds the app a program is in', () => {
-    expect(appBundleOf('/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code')).toBe('/Applications/Visual Studio Code.app');
-    expect(appBundleOf('/usr/bin/opendiff')).toBeNull();
   });
 });

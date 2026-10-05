@@ -1,0 +1,309 @@
+.grid {
+  /* One choice's width, shared by each row's choices and the header's "… all" over them. */
+  --permission-choice-width: 66px;
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-1) var(--space-1) var(--space-3);
+  overflow-y: auto;
+  outline: none;
+  container-type: inline-size;
+}
+
+.grid:focus-visible {
+  box-shadow: var(--focus-ring-inset);
+}
+
+/* The columns every row shares, read left to right as what it is, what it comes to, and the choice that changes it:
+   name, result (as wide as the widest shown, up to a limit; a longer source ends in an ellipsis), choice, and the
+   overrides menu when there are lists above. The header, groups, rows and their lines are subgrids. */
+.columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) fit-content(220px) auto 24px;
+  column-gap: var(--space-3);
+}
+
+.columns[data-overrides='false'] {
+  grid-template-columns: minmax(0, 1fr) fit-content(220px) auto;
+}
+
+.headerRow,
+.group,
+.row,
+.line {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+}
+
+.groupTitle {
+  grid-column: 1 / -1;
+}
+
+/* Stays in view while the rows scroll, over the same columns; its padding matches `.line`'s. */
+.headerRow {
+  position: sticky;
+  z-index: 1;
+  top: calc(-1 * var(--space-1));
+  align-items: center;
+  min-height: 34px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+/* Plain case, unlike the group titles under it, so the two don't read as one kind of heading. */
+.columnTitle {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+
+/* Laid out as the choices below (`.states`), each button as wide as the choice it sets. */
+.bulkStates {
+  display: inline-flex;
+  padding: 0 2px;
+}
+
+.bulkState {
+  width: var(--permission-choice-width);
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+}
+
+.bulkState:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.group + .group {
+  margin-top: var(--space-2);
+}
+
+.groupTitle {
+  padding: var(--space-2) var(--space-2) var(--space-1);
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.row {
+  position: relative;
+  border-radius: var(--radius-md);
+  cursor: default;
+}
+
+.row:hover {
+  background: var(--bg-hover);
+}
+
+.row[data-active='true'] {
+  background: var(--bg-selected);
+}
+
+.line {
+  align-items: center;
+  min-height: 34px;
+  padding: 0 var(--space-2) 0 var(--space-3);
+}
+
+.name {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* The help mark and the overrides menu show on the row hovered, active or with its menu open: the rest stay calm. */
+.help,
+.more {
+  display: inline-flex;
+  opacity: 0;
+  transition: opacity var(--duration-fast);
+}
+
+.row:hover :is(.help, .more),
+.row[data-active='true'] :is(.help, .more),
+.row[data-menu-open='true'] .more {
+  opacity: 1;
+}
+
+.help {
+  flex: none;
+  align-self: center;
+  color: var(--text-tertiary);
+  cursor: help;
+}
+
+.help:hover {
+  color: var(--text-primary);
+}
+
+/* cm's own name for it, as the security guide and `cm acl` write it. */
+.cmName {
+  flex: none;
+  color: var(--text-tertiary);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+.states {
+  display: inline-flex;
+  padding: 2px;
+  border-radius: var(--radius-md);
+  background: var(--bg-active);
+}
+
+.state {
+  width: var(--permission-choice-width);
+  height: 22px;
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  transition:
+    color var(--duration-fast),
+    background var(--duration-fast);
+}
+
+.state:hover {
+  color: var(--text-primary);
+}
+
+.state[aria-pressed='true'] {
+  background: var(--bg-segment-checked);
+  color: var(--text-primary);
+  box-shadow:
+    0 0 0 1px var(--border-default),
+    var(--shadow-sm);
+}
+
+.state[aria-pressed='true'][data-state='allow'] {
+  background: color-mix(in srgb, var(--permission-allowed) 16%, var(--bg-segment-checked));
+  color: var(--permission-allowed);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--permission-allowed) 45%, transparent);
+}
+
+.state[aria-pressed='true'][data-state='deny'] {
+  background: color-mix(in srgb, var(--permission-denied) 16%, var(--bg-segment-checked));
+  color: var(--permission-denied);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--permission-denied) 45%, transparent);
+}
+
+/* The choice saved on the server while the draft picks another: outlined, so "was → now" reads at a glance. */
+.state[data-saved='true'] {
+  outline: 1px dashed var(--text-tertiary);
+  outline-offset: -2px;
+}
+
+/* The checked state's own shadow is more specific than the global ring. */
+.state[aria-pressed='true']:focus-visible,
+.state[aria-pressed='true'][data-state='allow']:focus-visible,
+.state[aria-pressed='true'][data-state='deny']:focus-visible {
+  box-shadow: var(--focus-ring-visible);
+}
+
+.effective {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.effectiveIcon {
+  flex: none;
+  color: var(--text-tertiary);
+}
+
+.effective[data-effective='allowed'] .effectiveIcon {
+  color: var(--permission-allowed);
+}
+
+.effective[data-effective='denied'] .effectiveIcon {
+  color: var(--permission-denied);
+}
+
+.effectiveLabel {
+  flex: none;
+}
+
+.source {
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+}
+
+/* Narrow: the result moves under the name, and where it comes from into its tooltip. */
+@container (max-width: 520px) {
+  .columns,
+  .group,
+  .row {
+    display: block;
+  }
+
+  /* The titles go; the "… all" buttons stay over the choices, which end before the overrides column. */
+  .headerRow {
+    display: flex;
+    justify-content: flex-end;
+    padding-right: calc(var(--space-2) + 24px + var(--space-3));
+  }
+
+  .columns[data-overrides='false'] .headerRow {
+    padding-right: var(--space-2);
+  }
+
+  .columnTitle {
+    display: none;
+  }
+
+  .line {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto 24px;
+    column-gap: var(--space-3);
+    grid-template-areas: 'name states more' 'effective effective more';
+    row-gap: 0;
+    padding-block: var(--space-1);
+  }
+
+  .name {
+    grid-area: name;
+  }
+
+  .states {
+    grid-area: states;
+  }
+
+  .more {
+    grid-area: more;
+  }
+
+  .effective {
+    grid-area: effective;
+    font-size: var(--text-xs);
+  }
+
+  .source {
+    display: none;
+  }
+}

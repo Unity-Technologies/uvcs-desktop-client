@@ -17,11 +17,13 @@ you touch:
 | --------------------------------------- | ------------------------------------------------------------------------------ |
 | `features/diff.md`                      | Editing, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
 | `features/merge.md`                     | The merge page, conflict resolution, external merge tools, finishing a task    |
+| `features/open-with.md`                 | Finding apps per OS, the editors and terminals, opening items in them          |
 | `features/shelves-and-switching.md`     | Switching with changes, a workspace on a shelve, shelves in Changes, two people on one branch |
 | `features/files-history-annotate.md`    | Files, Browse repository, Go to file, cut and paste, history, annotate         |
 | `features/branch-explorer.md`           | The graph's canvas, keeping the place, the pending changeset, the branch switcher |
 | `features/updates.md`                   | The About dialog, reporting an issue, how the app updates (unsigned macOS too), What's New, releases, the app icon and CI |
 | `features/locks.md`                     | Lock rules: where they are edited, and why not in the app                      |
+| `features/permissions.md`               | Permissions: the ACL model, `cm showacl`/`cm acl` quirks, the dialog, where it's reachable |
 
 ## How a request flows
 
@@ -167,14 +169,17 @@ repository, set where `cm` names it, and every spec built from it names both (`s
 
 `cm` never opens its merge or diff tool, and background work never opens anything. A merge tool opens only when the
 user asks for it on one conflicting file ("Resolve in…") or on each in turn ("Resolve N conflicts in…"), one at a time,
-and the app keeps the decision.
+and the app keeps the decision. An editor or a terminal opens only on the user's "Open in…" or "Open with"
+(docs/features/open-with.md).
 
 - `cm merge --merge` always carries `--nointeractiveresolution` and an explicit decision for every conflicting file
   (`fileConflictArgs`): workspace merges keep the destination and the app writes the resolutions; merges into a
   server branch hand `cm` each file's decision in a resolutions file (`--fileconflictsresolutionsfile`, docs/features/merge.md).
 - Shelves are applied as merges from `sh:N` (never `cm shelveset apply`); `cm update` keeps `--dontmerge`;
   `cm diff` always has `--format`. `main/cm/noExternalUi.test.ts` checks these statically, and that processes start
-  only to run `cm`, open a terminal, or from `main/merge/mergeTools/launch.ts`, imported only by `mergeToolsService`.
+  only to run `cm`, to ask the OS which apps are installed (`readInstalledApps`), to open an editor or a terminal
+  (`system/apps/launchApp.ts`, wired only in `createServices`), or from `main/merge/mergeTools/launch.ts`, imported
+  only by `mergeToolsService`.
 - `cm` processes run with stdin closed, so a console prompt fails instead of hanging.
 
 ## Secrets
@@ -267,8 +272,16 @@ safe, and the step of a multi-command operation (shelve, undo, switch, bring). N
 One window per workspace, so several tasks (often one AI agent each, in its own workspace and branch) run side by side.
 
 - `main/window/WorkspaceWindows` opens the windows; opening a workspace that another window shows brings that window
-  forward instead (`windows.focusWorkspace`, checked by `useOpenWorkspace`). The installed app's first window reopens the
-  last workspace used (`openFirst`); a new window opens on the home screen. A new window asked to open a workspace
+  forward instead (`windows.focusWorkspace`, checked by `useOpenWorkspace`). The windows open as the installed app quits
+  (`saveSession`, from `Quitting`: each one's workspace or home screen, bounds, maximized and full screen, the last
+  focused one last; `openWindows`) open again at its next launch where they were (`openFirst`, `windowsToReopen`: one
+  per workspace, none for a folder that's gone), the focused one in front and the others shown behind it
+  (`showInactive`). After a restart to install an update, which nobody chose, each also opens on the view it showed
+  (`Quitting.restartToInstall` saves `withViews`; the page reports each view it goes to, `windows.viewShown`, and reads
+  it back from its address, `startingViewIn`); a launch of the user's own starts on Changes. Where the app quits as
+  its last window closes (Windows, Linux), that window is saved as it closes (`Quitting.lastWindowClosing`). With none
+  saved (on macOS, every window was closed before quitting), the first window reopens the last workspace used. Development builds start on one home screen, where automated UI checks pick a workspace. A new
+  window opens on the home screen. A new window asked to open a workspace
   takes it at start (`system.takeRequestedWorkspace`), as does a folder the installed app is launched with on Windows
   and Linux (`workspaceArgument`; a second launch hands it to the running app). The first window waits until `cm` has
   found the workspace holding that folder (`handleLaunchRequests`), which may take longer than Electron takes to start.
@@ -281,6 +294,11 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
   (`commandLogged`) and operation progress go back to that window only. `workspaces.watch` is the window saying which
   workspace it shows: `main/watch/WorkspaceWatchers` keeps one watcher per shown workspace and sends its changes to the
   windows showing it; own writes are ignored in the workspace they touch.
+- Quitting goes through one `before-quit` listener (`main/startup/quitting.ts`, `Quitting`). An operation changing a
+  workspace (`OperationTracker.writesRunning`: update, switch, checkin, merge…) holds the quit back, as quitting would
+  kill its `cm` partway: the OS's message box asks to quit once it finishes or to stay (`askToQuitWhenDone`), and with
+  no window left (Windows and Linux quit as the last one closes) the app quits once it finishes. A slow read never holds
+  it. Then the pages hear it (`quitStarted`), so one with unsaved edits asks Save / Don't save / Cancel first.
 - Settings are written in main, one change at a time; values computed from the stored ones (the recent workspaces and
   branches) are computed there too, and every window gets the result (`settingsChanged`).
 - What a window checks as it opens (`cm version`, `cm checkconnection`) runs until it succeeds once; later windows take
@@ -288,7 +306,7 @@ One window per workspace, so several tasks (often one AI agent each, in its own 
 - Dropping a folder on any window, home screen or workspace, opens its workspace in that window, or with Shift in a
   new one (`app/folderDrop`, as the official client does). The decision is `workspaces.findRoot`, a local
   `cm getworkspacefrompath`, so a folder inside a workspace opens it too; a folder that is no workspace goes straight to
-  the new workspace dialog with its location filled in (a folder picked with Open folder… asks first: `openFolder`).
+  the new workspace dialog with its location filled in (a folder picked with Open workspace folder… asks first: `openFolder`).
   Only a single folder is taken; drops wait while a dialog is open. Chromium hides a drag's files from the page until
   the drop, so the overlay's words come from main (`system.draggedFolder`, asked once per drag): on macOS it reads the
   drag pasteboard with `osascript` (`readDraggedPath`, about 60 ms) and looks for `.plastic` in the folder or above it
@@ -398,9 +416,19 @@ renderer/src/
 - **Mutations**: `runOperation` (progress card, cancel, refresh) for long operations; `runAction` for quick ones. Both report errors as toasts.
   An update or a switch runs alone on its workspace: it waits for any other operation, and the others wait for it (`blockingOperation`).
 - **Top bar**: one bar across the window on every screen (`app/shell/TopBar`), the sidebar under it: the window's
-  buttons, the brand (`AppBrand`, which opens About), then what the screen adds. A workspace adds its branch pill and
-  incoming chip after a separator, the search and the account at the end (`WorkspaceTopBar`); the home screen adds
-  nothing. Sidebars (`ui/nav/SidebarNav`) have no title band of their own.
+  buttons, the home button (`HomeButton`), then what the screen adds. A workspace adds its branch pill and
+  incoming chip, the search and the account at the end (`WorkspaceTopBar`); the home screen adds nothing. Sidebars
+  (`ui/nav/SidebarNav`) have no title band of their own.
+  - Home is one click (or ⇧⌘H, `app.home`, File ▸ Home) from anywhere: in a workspace it leaves for the home
+    screen, on the home screen it goes back to its welcome (`WELCOME`), where the house is lit. It sits in the top
+    bar, not the sidebar, so it stays put whether the sidebar is folded or not and costs no sidebar entry. It is a
+    borderless icon button, the bar's 8px gap on each side and nothing between it and the branch pill: a separator
+    there, or a bordered square like the pill's, both looked off balance. It replaced the app's mark and name, which
+    opened About: the welcome shows those, and the status bar's version opens About.
+  - The way back: on the home screen, after the house, "‹ <workspace>" returns to the workspace the window left
+    (`leftWorkspacePath`, `BackToWorkspaceButton`) on the view and pages it showed (`returnToWorkspace`: the
+    navigation stays while on the home screen), as do Back (⌘[, Alt+←) and the mouse's back button. It shows only
+    while `cm` lists that workspace (`workspaceToReturnTo`, from the list the home screen reads anyway).
 - **Navigation**: a view per sidebar entry (`app/navigation/viewRegistry.ts`) and a stack of drill-down pages (`app/navigation/pages.ts`) such as history, diff or merge.
   A sidebar entry may show a count (`useBadge`) and a dot for something waiting there (`useDot`), whose words go under
   the entry's tooltip and in its accessible description: Changes' says what changes were left and where
@@ -419,10 +447,11 @@ renderer/src/
   the sidebar's size or entries change, the ones in More kept laid out out of sight for that.
   There is no Annotate page: "Annotate" outside the Files view opens the file's history annotated (`annotatedHistory`).
 - **Actions**: menus and the command palette share the `Action`/`MenuEntry` model (`lib/actions.ts`). Register palette commands (and their shortcuts) with `useCommands`.
-- **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does), what it
-  does (switch, apply, check out), merges, what it creates, where it leads (history, annotate, browse, Show in Branch
-  Explorer), the OS (open, reveal, terminal), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
-  hiding), and what undoes or deletes it last, in the danger tone; a separator between groups. Entries come from one
+- **Menus**: one grammar for every object's menu (`lib/menuGroups`): the default action (what Enter does in the app:
+  open the workspace, a diff), every way to open it in other apps (the editor, the terminal, "Open with ▸", Reveal:
+  `openOnDiskEntries`, docs/features/open-with.md; a file's Enter is its "Open in <editor>"), what it does (switch, apply, check out), merges, what it creates, where it leads (history,
+  annotate, browse, Show in Branch Explorer), the OS (save a revision), the clipboard (Cut, one "Copy ▸", Paste), edits (rename, comments,
+  hiding, permissions), and what undoes or deletes it last, in the danger tone; a separator between groups. Entries come from one
   vocabulary (`components/menuWords`: one id, icon, wording and group per concept) and `groupedMenu` orders them.
   One builder per kind (`branchMenu`, `changesetMenu`, `labelMenu`, `shelveMenu`, `codeReviewMenu`, `fileMenu`,
   `pendingChangeMenu`) serves every place the object shows: its view, details' "More actions", the Branch Explorer,
@@ -431,7 +460,8 @@ renderer/src/
   Branch Explorer". "Copy ▸" (`copySubmenu`) lists what the object has in one order (name or number, title, paths,
   spec, full spec with `@repository`, comment, GUID), each with what it copies, and the toast names it ("Branch spec
   copied"); ⌘C in a list copies its first entry (`useCopyCommand`) unless text is selected. Items that open a dialog
-  end with "…"; submenus hold real sets of choices. `menuGrammar.test.ts` checks every builder and every place.
+  end with "…"; submenus hold real sets of choices, the choice made checked after its label (`checked`), so the icon
+  in front stays the item's own (an app's). `menuGrammar.test.ts` checks every builder and every place.
 - **Back buttons**: a page goes back with the mouse's back button and, on Windows, the Browser Back key (the `app-command`
   the main process forwards as `navigateBack`), once per press however it arrives (`useBackButtons`).
 - **Keyboard**: every shortcut is declared in `lib/shortcutRegistry.ts` and bound through `hotkey(id)`; the shortcuts sheet
@@ -500,7 +530,8 @@ renderer/src/
 - **List and details**: `ListWithDetails` (each view remembers its own details width, `widthKey`; a file tree keeps its own width instead, `sized="list"`) around a `DetailsPanel`. A view listing objects lays its body out with `ObjectListView` (the skeleton while loading, the error, its empty state, or the table with a row always selected and its details) and refreshes with `ViewRefreshButton`. Every
   kind reads the same way: the kind and status badges with the default action (what Enter does on the row) and the row's
   context menu behind "More actions"; a `DetailsHeading` (the comment's first line as the title and the rest as its
-  description, or the object's name with the comment below; edited in place where cm can edit it, the title in a field that wraps and grows, and a comment left unedited saved as it was, `editedComment`; a name reads a size above a comment's title); a meta row (author ·
+  description, or the object's name with the comment below; folded to a few lines with "Show more" and "Show less" by
+  `FoldedComment`, which a diff's header shares, see `features/diff.md` "The diff's header"; edited in place where cm can edit it, the title in a field that wraps and grows, and a comment left unedited saved as it was, `editedComment`; a name reads a size above a comment's title); a meta row (author ·
   date · spec to copy · branch chip); attribute chips (`AttributeChips`); properties and relations behind "More details";
   then the changes pane under a remembered splitter (`DetailsChangesPane`), its title a disclosure once the list is read
   that hides it and shows it again from the cache, remembered for every panel as More details is (`changesCollapsed`). cm edits changeset, attribute and label

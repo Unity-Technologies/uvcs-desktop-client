@@ -8,6 +8,8 @@ export interface WindowsApi {
   openHome(): Promise<void>;
   /** Answers `leaveRequested`: the window closes, the app quits or the page reloads as asked; nothing when false. */
   continueLeaving(canLeave: boolean): Promise<void>;
+  /** The view the window shows now (a `ViewId`): restarting to install an update opens the window on it again. */
+  viewShown(view: string): Promise<void>;
   /** Opens the menu bar's menus at a point of the window (in page pixels), where the window has no menu bar (Windows). */
   showAppMenu(position: { x: number; y: number }): Promise<void>;
 }

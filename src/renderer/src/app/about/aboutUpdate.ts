@@ -25,6 +25,8 @@ export function aboutUpdateLine(status: UpdateStatus): AboutUpdateLine {
       return status.install === 'restart'
         ? { text: `Version ${status.version} is ready to install.`, tone: 'accent', busy: false }
         : { text: `Version ${status.version} is downloaded. Open its installer to finish.`, tone: 'accent', busy: false };
+    case 'waitingToInstall':
+      return { text: `Version ${status.version} installs once the operation finishes.`, tone: 'accent', busy: true };
     case 'failed':
       return { text: `Couldn't check for updates: ${status.error}`, tone: 'error', busy: false };
     case 'unavailable':
@@ -32,11 +34,16 @@ export function aboutUpdateLine(status: UpdateStatus): AboutUpdateLine {
   }
 }
 
-export type AboutUpdateAction = { kind: 'check'; enabled: boolean } | { kind: 'install'; label: string };
+export type AboutUpdateAction = { kind: 'check'; enabled: boolean } | { kind: 'install'; label: string; enabled: boolean };
 
-/** The About dialog's button: installing a downloaded update, or checking, which waits while one is under way. */
+/**
+ * The About dialog's button: installing a downloaded update, which waits once asked while an operation finishes, or
+ * checking, which waits while one is under way.
+ */
 export function aboutUpdateAction(status: UpdateStatus): AboutUpdateAction {
-  if (status.state === 'ready') return { kind: 'install', label: installLabel(status.install) };
+  if (status.state === 'ready' || status.state === 'waitingToInstall') {
+    return { kind: 'install', label: installLabel(status.install), enabled: status.state === 'ready' };
+  }
   const enabled = status.state !== 'checking' && status.state !== 'downloading' && status.state !== 'unavailable';
   return { kind: 'check', enabled };
 }

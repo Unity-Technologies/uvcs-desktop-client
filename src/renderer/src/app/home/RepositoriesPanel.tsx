@@ -1,6 +1,7 @@
-import { Database, Plus, RefreshCw } from 'lucide-react';
+import { Database, Plus, RefreshCw, ServerCog } from 'lucide-react';
 import { useRef, useState } from 'react';
 import type { RepositorySummary } from '@shared/domain/repository';
+import { openServerPermissions } from '../../features/permissions/openPermissions';
 import { matchesAllWords } from '../../lib/matchesAllWords';
 import { focusFirstItem, moveRovingFocus } from '../../lib/rovingFocus';
 import { describeServer } from '../../lib/servers';
@@ -49,6 +50,7 @@ export function RepositoriesPanel({ server, onOpen }: RepositoriesPanelProps) {
         count={repositories?.length}
         actions={
           <>
+            <IconButton icon={<ServerCog size={14} />} label="Server permissions…" onClick={() => openServerPermissions(server)} />
             <IconButton icon={<RefreshCw size={14} />} label="Refresh" loading={isFetching} onClick={() => void refetch()} />
             <Button variant="primary" icon={<Plus size={14} />} onClick={() => openCreateRepositoryDialog({ server, onWorkspaceCreated: onOpen })}>
               New repository

@@ -48,7 +48,12 @@ export class FakeWindow extends EventEmitter {
   readonly id: number;
   readonly webContents: FakeWebContents;
   maximized = false;
+  fullScreen = false;
   shown = false;
+  /** Shown without taking the focus (`showInactive`). */
+  shownInactive = false;
+  /** Where the window is when not maximized or full screen (`getNormalBounds`): where it was made to open. */
+  normalBounds: { x: number; y: number; width: number; height: number };
   private destroyed = false;
   private minimized = false;
 
@@ -56,6 +61,8 @@ export class FakeWindow extends EventEmitter {
     super();
     this.id = state.nextId++;
     this.webContents = new FakeWebContents(this.id + 100);
+    const { x = 0, y = 0, width = 800, height = 600 } = options;
+    this.normalBounds = { x, y, width, height };
     state.windows.push(this);
   }
 
@@ -75,8 +82,23 @@ export class FakeWindow extends EventEmitter {
   maximize(): void {
     this.maximized = true;
   }
+  isMaximized(): boolean {
+    return this.maximized;
+  }
+  setFullScreen(fullScreen: boolean): void {
+    this.fullScreen = fullScreen;
+  }
+  isFullScreen(): boolean {
+    return this.fullScreen;
+  }
+  getNormalBounds(): { x: number; y: number; width: number; height: number } {
+    return { ...this.normalBounds };
+  }
   show(): void {
     this.shown = true;
+  }
+  showInactive(): void {
+    this.shownInactive = true;
   }
   focus(): void {
     state.focused = this;

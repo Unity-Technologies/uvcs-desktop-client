@@ -35,7 +35,7 @@ import { moveToChangelist } from './changelistOperations';
 import { changeTones } from './changeTone';
 import { checkinDraftOf, useCheckinDraftStore, useExcludedPaths } from './checkinDraftStore';
 import { pendingChangeMenu } from './pendingChangeMenu';
-import { addFilterRule, openWithDefaultApp, undoChanges } from './pendingChangeOperations';
+import { addFilterRule, openChange, undoChanges } from './pendingChangeOperations';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { useChangeRows } from './useChangeRows';
 import { useCheckinPanelSubmit } from './useCheckinPanelSubmit';
@@ -155,7 +155,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
                   isIncluded={isIncluded}
                   onToggleIncluded={toggleIncluded}
                   onToggleCollapsed={toggleCollapsed}
-                  onOpen={(change) => openWithDefaultApp(workspacePath, change)}
+                  onOpen={(change) => openChange(workspacePath, change)}
                   onMoveToChangelist={
                     grouping === 'changelist' ? (moved, changelist) => void moveToChangelist(workspacePath, changelist, moved) : undefined
                   }

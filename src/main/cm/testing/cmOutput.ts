@@ -174,3 +174,27 @@ export function treeListing(repository: string, ...paths: string[]): string {
     .join('');
   return `<?xml version="1.0" encoding="utf-8"?><LsResults><LsItems>${items}</LsItems></LsResults>`;
 }
+
+type AclOutputCategory = 'Allowed' | 'Denied' | 'Override Allowed' | 'Override Denied';
+
+/** One list of `cm showacl --extended`: its creator's spec, its entries by member (each category's names as cm prints them), its parents. */
+export interface AclOutputLevel {
+  creator: string;
+  entries?: Record<string, Partial<Record<AclOutputCategory, string>>>;
+  inherited?: AclOutputLevel[];
+}
+
+/** `cm showacl <spec> --extended` output, indented as cm 11 prints it (`ExtendedAclDisplayInfo`). */
+export function extendedAclOutput(level: AclOutputLevel, indent = 2): string {
+  const pad = (extra: number) => ' '.repeat(indent + extra);
+  const lines = [`${pad(0)}ACL: ${indent}`, `${pad(2)}Creator ${level.creator}`];
+  const entries = Object.entries(level.entries ?? {});
+  if (entries.length > 0) lines.push(`${pad(2)}Entries`);
+  for (const [member, categories] of entries) {
+    lines.push(`${pad(3)}${member}:`);
+    for (const [category, names] of Object.entries(categories)) lines.push(`${pad(5)}${category}:`, `${pad(6)}${names}`);
+  }
+  const inherited = level.inherited ?? [];
+  if (inherited.length > 0) lines.push(`${pad(2)}Inherited`, ...inherited.map((parent) => extendedAclOutput(parent, indent + 4).trimEnd()));
+  return `${lines.join('\n')}\n`;
+}

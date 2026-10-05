@@ -9,7 +9,9 @@ The rule that no tool ever opens by itself is in ARCHITECTURE.md ("No external t
 `cm` has no way to run its merge tool for one chosen conflict (`--resolveconflict` is for directory conflicts only;
 `--merge` runs it for every file), so the app runs the tool itself, per file (`main/merge/mergeTools`):
 
-- Found per OS (`knownTools`, `detectTools`): the UVCS merge tool (the Desktop GUI run as `xmerge`: `macplasticx` in PlasticSCM.app, `plastic.exe` next to `cm.exe`, `plasticgui`), VS Code and its forks,
+- Found per OS (`knownTools`, `detectTools`), the editors' way (docs/features/open-with.md "Finding apps"): inside
+  their app wherever the OS records it (`identity`, `inInstall`: a bundle Spotlight knows, a folder an uninstall entry
+  names), else at their usual locations, else on the PATH. Each shows its app's icon (`AppIcons`). The tools: the UVCS merge tool (the Desktop GUI run as `xmerge`: `macplasticx` in PlasticSCM.app, `plastic.exe` next to `cm.exe`, `plasticgui`), VS Code and its forks,
   JetBrains IDEs, Sublime Merge, KDiff3, Beyond Compare, Meld, P4Merge, Araxis and FileMerge (`opendiff`, only with
   Xcode) and WinMerge on Windows, each with the three-way command line of its docs (cross-checked with Git's `mergetools/*`). The user can add any program with an arguments template (`{base}` `{yours}`
   `{incoming}` `{result}` and their `…Name`s). Settings keep the preferred tool (`auto`: the UVCS one, else the first

@@ -7,6 +7,7 @@ import { copySubmenu, type CopyTexts } from '../../components/copyMenu';
 import { menuAction, type MenuPlace } from '../../components/menuWords';
 import { showInBranchExplorer } from '../branchExplorer/branchExplorerStore';
 import { mergeTo } from '../branches/branchOperations';
+import { openObjectPermissions } from '../permissions/openPermissions';
 import {
   browseLabel,
   createBranchFromLabel,
@@ -49,6 +50,7 @@ export function labelMenu(workspacePath: string, labels: LabelInfo[], place: Men
       menuAction('showInBranchExplorer', () => showInBranchExplorer({ kind: 'label', name: single.name, changeset: single.changeset, date: single.date })),
     single && copySubmenu('Label', labelCopyTexts(single), { shortcut: hotkey('listCopy') }),
     single && menuAction('rename', () => void renameLabel(workspacePath, single), { shortcut: hotkey('rename') }),
+    single && menuAction('permissions', () => openObjectPermissions(workspacePath, 'label', single)),
     menuAction('delete', () => void deleteLabels(workspacePath, labels), single ? {} : { label: `Delete ${labels.length} labels…` }),
   ]);
 }

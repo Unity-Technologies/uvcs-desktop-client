@@ -11,18 +11,19 @@ import { changesetMenu } from '../../features/changesets/changesetMenu';
 import { openChangesetDiff } from '../../features/changesets/changesetOperations';
 import { codeReviewMenu } from '../../features/codeReviews/codeReviewMenu';
 import { openReview } from '../../features/codeReviews/codeReviewOperations';
-import { openItem, revealItem } from '../../features/files/fileOperations';
 import { useFilesViewStore } from '../../features/files/filesViewStore';
 import { labelMenu } from '../../features/labels/labelMenu';
 import { showLabelChanges } from '../../features/labels/labelOperations';
 import { describeKinds } from '../../features/pendingChanges/changeCategories';
 import { changeTone } from '../../features/pendingChanges/changeTone';
 import { itemCopySubmenu, pendingChangeMenu } from '../../features/pendingChanges/pendingChangeMenu';
+import { absolutePath } from '../../features/pendingChanges/pendingChangeOperations';
 import { shelveMenu } from '../../features/shelves/shelveMenu';
 import { showShelveChanges } from '../../features/shelves/shelveOperations';
 import type { MenuEntry } from '../../lib/actions';
 import { formatRelativeDate } from '../../lib/formatDate';
 import { groupedMenu, withEntries } from '../../lib/menuGroups';
+import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction } from '../../components/menuWords';
 import { fuzzyMatchPositions, fuzzyMatchQuality } from '../../lib/fuzzyIndex';
 import { wordMatchQuality } from '../../lib/matchesAllWords';
@@ -73,10 +74,9 @@ export function fileResult(entry: { path: string; isDirectory: boolean }, contex
 /** For files without pending changes, which the Files view's menu would need their revision details for. */
 function workspaceFileMenu(workspacePath: string, entry: { path: string; isDirectory: boolean }): MenuEntry[] {
   return groupedMenu([
-    !entry.isDirectory && menuAction('open', () => openItem(workspacePath, entry)),
     menuAction('history', () => navigation.openPage({ kind: 'history', path: entry.path })),
     !entry.isDirectory && menuAction('annotate', () => navigation.openPage(annotatedHistory({ path: entry.path }))),
-    menuAction('reveal', () => revealItem(workspacePath, entry)),
+    ...openOnDiskEntries({ path: absolutePath(workspacePath, entry.path), isFolder: entry.isDirectory }),
     itemCopySubmenu(workspacePath, [entry.path]),
   ]);
 }

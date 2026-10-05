@@ -114,6 +114,21 @@
   color: var(--accent-text);
 }
 
+/* An app setting's drop-down button (`AppPicker`), drawn as one choice card. */
+.picker {
+  composes: choice;
+}
+
+.picker[data-state='open'] {
+  border-color: var(--accent);
+}
+
+.pickerIcon {
+  display: flex;
+  flex: none;
+  width: 18px;
+}
+
 .choiceText {
   display: flex;
   flex: 1;

@@ -4,6 +4,7 @@ import { App } from './app/App';
 import { AppErrorBoundary } from './app/errors/AppErrorBoundary';
 import { reportUnexpectedErrors } from './app/errors/reportUnexpectedErrors';
 import { guardUnloading } from './app/navigation/leaveGuard';
+import { reportShownView } from './app/navigation/reportShownView';
 import { prefetchStartupQueries } from './app/startup/prefetchStartupQueries';
 import { openWorkspaceFromAddress } from './app/workspace/openWorkspaceFromAddress';
 import { trackPointerReturnFocus } from './lib/inputModality';
@@ -22,6 +23,7 @@ document.documentElement.dataset.chrome = WINDOW_CHROME;
 guardUnloading();
 trackPointerReturnFocus();
 openWorkspaceFromAddress();
+reportShownView();
 void prefetchStartupQueries();
 
 createRoot(document.getElementById('root')!).render(

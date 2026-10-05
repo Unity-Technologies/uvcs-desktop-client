@@ -24,6 +24,7 @@ function setUp() {
     settings: memorySettings({ recentWorkspacePaths: [lastUsed] }),
     workspaceOf: () => undefined,
     onWindowsChanged: () => {},
+    onLastWindowClosing: () => {},
     onClosed: () => {},
   });
   const lookups: { answer: Promise<string | null>; resolve: (root: string | null) => void }[] = [];

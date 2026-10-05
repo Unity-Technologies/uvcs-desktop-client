@@ -30,7 +30,8 @@ export function TargetDiff({ target, toolbar, focusPath, branchHead }: TargetDif
     <div className={styles.diff}>
       <header className={styles.header}>
         <div className={styles.description}>
-          <TargetDescription target={target} />
+          {/* Keyed so another changeset (Branch diff's "By changeset") folds its own comment afresh (`FoldedComment`). */}
+          <TargetDescription key={JSON.stringify(target)} target={target} />
         </div>
         {toolbar}
         <ReviewModeButton workspacePath={workspacePath} />

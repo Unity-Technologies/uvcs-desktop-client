@@ -11,6 +11,7 @@ import {
   ClipboardPaste,
   CircleCheck,
   CircleDot,
+  CodeXml,
   Copy,
   CornerLeftUp,
   Download,
@@ -22,6 +23,7 @@ import {
   Filter,
   FolderGit2,
   FolderInput,
+  FolderLock,
   FolderOpen,
   FolderPlus,
   FolderSearch,
@@ -46,7 +48,10 @@ import {
   RotateCcw,
   ScanText,
   Scissors,
+  ServerCog,
+  ShieldCheck,
   Square,
+  SquareArrowOutUpRight,
   SquareCheckBig,
   SquareTerminal,
   Tag,
@@ -58,7 +63,7 @@ import {
 } from 'lucide-react';
 import type { Action, Icon, MenuEntry, Submenu } from '../lib/actions';
 import type { GroupedEntry, MenuGroup } from '../lib/menuGroups';
-import { REVEAL_LABEL } from '../lib/platform';
+import { OPEN_IN_FILE_MANAGER_LABEL, REVEAL_LABEL } from '../lib/platform';
 import { MERGE_INTO_WORKSPACE, serverMergeLabel } from './mergeMenuLabels';
 
 /** A concept of the menus: the group it goes in, its icon, and its words where they are the same for every object. */
@@ -78,17 +83,27 @@ const word = (group: MenuGroup, icon: Icon, label?: string, danger?: true): Menu
  * their group, so `groupedMenu` puts them in the grammar's order.
  */
 export const MENU_WORDS = {
-  // What Enter or a double-click does.
+  // What Enter or a double-click does in the app.
   diff: word('primary', FileDiff, 'Open diff'),
   diffRange: word('primary', FileDiff),
   diffPair: word('primary', GitCompareArrows, 'Compare selected labels'),
   diffMerge: word('primary', FileDiff, 'Open diff of the merge'),
   changesetDiff: word('primary', FileDiff),
-  open: word('primary', AppWindow, 'Open'),
   openReview: word('primary', ExternalLink, 'Open review'),
   release: word('primary', LockOpen, 'Release lock'),
-  openWorkspace: word('primary', FolderOpen, 'Open'),
+  openWorkspace: word('primary', FolderOpen, 'Open workspace'),
   locate: word('primary', FolderSearch, 'Locate or recreate…'),
+
+  // Opening it in other apps, and the file manager (`openOnDiskEntries`, `openRevisionEntries`): a file's Enter too.
+  // The words name the app ("Open in Visual Studio Code").
+  open: word('open', AppWindow),
+  openInEditor: word('open', CodeXml),
+  terminal: word('open', SquareTerminal),
+  openRevision: word('open', AppWindow),
+  openWith: word('open', SquareArrowOutUpRight, 'Open with'),
+  openRevisionWith: word('open', SquareArrowOutUpRight, 'Open this revision with'),
+  reveal: word('open', FolderSearch, REVEAL_LABEL),
+  openInFileManager: word('open', FolderSearch, OPEN_IN_FILE_MANAGER_LABEL),
 
   // What it does to the workspace or to the object.
   switch: word('act', ArrowRightLeft),
@@ -147,10 +162,7 @@ export const MENU_WORDS = {
   destination: word('navigate', ArrowRightToLine, 'Go to destination changeset'),
 
   // The OS.
-  openRevision: word('external', AppWindow, 'Open this revision'),
   saveAs: word('external', Download, 'Save this revision as…'),
-  reveal: word('external', FolderSearch, REVEAL_LABEL),
-  terminal: word('external', SquareTerminal, 'Open terminal here'),
 
   // The clipboard: Cut, Copy, Paste, as everywhere.
   cut: word('clipboard', Scissors, 'Cut'),
@@ -168,6 +180,10 @@ export const MENU_WORDS = {
   hide: word('edit', EyeOff),
   unhide: word('edit', Eye),
   forget: word('edit', X, 'Remove from list'),
+  // Who may do what with it (docs/features/permissions.md).
+  permissions: word('edit', ShieldCheck, 'Permissions…'),
+  pathPermissions: word('edit', FolderLock, 'Path permissions…'),
+  serverPermissions: word('edit', ServerCog, 'Server permissions…'),
 
   // What undoes or deletes it.
   undo: word('danger', Undo2, undefined, true),

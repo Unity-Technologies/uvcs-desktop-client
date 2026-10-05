@@ -1,5 +1,6 @@
 import type { FilterRuleList, PendingChange } from '@shared/domain/pendingChanges';
 import { api } from '../../api/client';
+import { openFile } from '../../components/externalApps/externalAppOperations';
 import { navigation } from '../../app/navigation/navigationStore';
 import { runAction, runOperation, runVoidAction } from '../../app/operations/runOperation';
 import { isAffectedByPendingChangeEdit, isAffectedByShelving } from '../../app/refresh/refreshScopes';
@@ -60,8 +61,9 @@ export async function undoChanges(workspacePath: string, changes: PendingChange[
 }
 
 /** Opens the file with the app the OS associates with it; deleted items have nothing on disk to open. */
-export function openWithDefaultApp(workspacePath: string, change: PendingChange): void {
-  if (existsOnDisk(change)) void api.system.openPath(absolutePath(workspacePath, change.path));
+/** Opens a change's file as its menu's first entry does (`openFile`); a deleted file has nothing to open. */
+export function openChange(workspacePath: string, change: PendingChange): void {
+  if (existsOnDisk(change)) void openFile(absolutePath(workspacePath, change.path));
 }
 
 export async function deletePrivateFiles(workspacePath: string, changes: Pick<PendingChange, 'path'>[]): Promise<void> {

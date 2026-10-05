@@ -1,4 +1,4 @@
-import { FolderOpen, FolderPlus, RefreshCw } from 'lucide-react';
+import { FolderOpen, FolderPlus, House, RefreshCw } from 'lucide-react';
 import { useMemo } from 'react';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { useCommands, type Command } from '../commands/commandStore';
@@ -7,12 +7,13 @@ import { openWorkspaceFolder } from '../workspace/openWorkspaceFolder';
 import { openCreateWorkspaceDialog } from './dialogs/CreateWorkspaceDialog';
 
 /**
- * The home screen's commands. They take the ids of the workspace's own, so File › Open Workspace… (⇧⌘O) and
- * View › Refresh (⌘R) work here too: opening a folder, and reading the lists again.
+ * The home screen's commands. They take the ids of the workspace's own, so Home (⇧⌘H), File › Open Workspace… (⇧⌘O)
+ * and View › Refresh (⌘R) work here too: back to the welcome, opening a folder, and reading the lists again.
  */
-export function useHomeCommands(open: (path: string) => void): void {
+export function useHomeCommands(open: (path: string) => void, goHome: () => void): void {
   const commands = useMemo<Command[]>(
     () => [
+      { id: 'app.home', group: 'Go to', label: 'Home', icon: House, shortcut: hotkey('home'), run: goHome },
       {
         id: 'workspace.open',
         group: 'Workspace',
@@ -38,7 +39,7 @@ export function useHomeCommands(open: (path: string) => void): void {
         run: () => void queryClient.invalidateQueries({ predicate: ({ queryKey }) => HOME_QUERIES.has(String(queryKey[0])) }),
       },
     ],
-    [open],
+    [open, goHome],
   );
   useCommands(commands);
 }

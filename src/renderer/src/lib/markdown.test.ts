@@ -16,6 +16,19 @@ describe('parseMarkdown', () => {
     expect(parseMarkdown('Changes:\n- One').map((block) => block.kind)).toEqual(['paragraph', 'list']);
   });
 
+  it('reads lines indented after a blank line as code, each line kept', () => {
+    const comment = 'Commands:\n\n    cm codereview comment 1234 "Looks good"\n\n\tcm codereview reviewer add 1234 alice\n\nThe end.';
+    expect(parseMarkdown(comment)).toEqual([
+      { kind: 'paragraph', children: [{ kind: 'text', text: 'Commands:' }] },
+      { kind: 'code', text: 'cm codereview comment 1234 "Looks good"\n\ncm codereview reviewer add 1234 alice' },
+      { kind: 'paragraph', children: [{ kind: 'text', text: 'The end.' }] },
+    ]);
+  });
+
+  it('keeps an indented line right under a paragraph in the paragraph', () => {
+    expect(parseMarkdown('Wraps here\n    and goes on')).toEqual([{ kind: 'paragraph', children: [{ kind: 'text', text: 'Wraps here and goes on' }] }]);
+  });
+
   it('caps heading levels at three', () => {
     expect(parseMarkdown('##### Deep')[0]).toMatchObject({ kind: 'heading', level: 3 });
   });

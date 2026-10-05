@@ -65,8 +65,9 @@ button.item:focus-visible,
   max-width: 40%;
 }
 
-/* Sets it apart from the command log. */
-.where::before {
+/* Sets it apart from the command log; the version, from where the workspace is. */
+.where::before,
+.appVersion::before {
   flex: none;
   width: 1px;
   height: 12px;
@@ -80,6 +81,22 @@ button.item:focus-visible,
   flex: 0 1 auto;
   min-width: 0;
   padding-right: 2px;
+}
+
+/* The app's own version, last: in the accent once an update is ready. */
+.appVersion {
+  display: flex;
+  flex: none;
+  align-items: center;
+}
+
+.version {
+  font-variant-numeric: tabular-nums;
+}
+
+.version[data-update-ready='true'],
+button.version[data-update-ready='true']:hover {
+  color: var(--accent-text);
 }
 
 .changeset {

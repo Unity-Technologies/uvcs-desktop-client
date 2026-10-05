@@ -25,6 +25,7 @@ export function checkFeedback(status: UpdateStatus): CheckFeedback | null {
     case 'idle':
     case 'downloading':
     case 'ready':
+    case 'waitingToInstall':
       return null;
   }
 }
