@@ -125,7 +125,9 @@ export class ModelRenderer {
   setModels(before: ModelScene | null, after: ModelScene | null, bounds: BoundsLike): void {
     for (const side of ['before', 'after'] as const) {
       const model = side === 'before' ? before : after;
-      if (this.sides[side]?.model === model) continue;
+      const current = this.sides[side];
+      if (current?.model === model) continue;
+      if (current) disposeSide(current);
       this.sides[side] = model && this.sceneOf(model);
     }
     this.bounds = bounds;
@@ -166,7 +168,7 @@ export class ModelRenderer {
       const colors = heat?.[side];
       this.sides[side]?.model.meshes.forEach((mesh, i) => {
         const values = colors?.[i];
-        if (values) mesh.solid.geometry.setAttribute('color', new Float32BufferAttribute(values, side === 'before' ? 4 : 3));
+        if (values) writeAttribute(mesh.solid.geometry, 'color', values, side === 'before' ? 4 : 3);
       });
     }
     this.applyLook();
@@ -184,8 +186,7 @@ export class ModelRenderer {
     for (const side of ['before', 'after'] as const) {
       const scene = this.sides[side];
       if (!scene) continue;
-      scene.markers.geometry.setAttribute('position', new Float32BufferAttribute(markers[side].flat(), 3));
-      scene.markers.geometry.computeBoundingSphere();
+      writeAttribute(scene.markers.geometry, 'position', new Float32Array(markers[side].flat()), 3);
     }
     this.requestRender();
   }
@@ -254,14 +255,7 @@ export class ModelRenderer {
 
   dispose(): void {
     cancelAnimationFrame(this.frame);
-    for (const side of Object.values(this.sides)) {
-      side?.model.root.removeFromParent();
-      for (const overlay of side ? [side.markers, side.skeleton, side.joints] : []) {
-        overlay.geometry.dispose();
-        overlay.material.dispose();
-      }
-      side?.pivot.dispose();
-    }
+    for (const side of Object.values(this.sides)) if (side) disposeSide(side);
     this.targets?.forEach((target) => target.dispose());
     this.blender.dispose();
     this.environment.dispose();
@@ -335,10 +329,10 @@ export class ModelRenderer {
       lines.set(point.setFromMatrixPosition(bone.matrixWorld).toArray(), i * 6);
       lines.set(point.setFromMatrixPosition(parent.matrixWorld).toArray(), i * 6 + 3);
     });
-    side.skeleton.geometry.setAttribute('position', new Float32BufferAttribute(lines, 3));
+    writeAttribute(side.skeleton.geometry, 'position', lines, 3);
     const joints = new Float32Array(side.model.bones.length * 3);
     side.model.bones.forEach((bone, i) => joints.set(point.setFromMatrixPosition(bone.matrixWorld).toArray(), i * 3));
-    side.joints.geometry.setAttribute('position', new Float32BufferAttribute(joints, 3));
+    writeAttribute(side.joints.geometry, 'position', joints, 3);
   }
 
   private placeCamera(aspect: number): void {
@@ -529,6 +523,32 @@ class Blender {
     this.material.dispose();
     this.quad.geometry.dispose();
   }
+}
+
+/**
+ * Sets a geometry's attribute to `values`: written into the one it has when that is the same size (a playing take's
+ * skeleton each frame, a tolerance's colors each tick), so the GPU buffer is updated rather than made again and the old
+ * one left for the collector; a new one otherwise.
+ */
+function writeAttribute(geometry: BufferGeometry, name: string, values: Float32Array, itemSize: number): void {
+  const existing = geometry.getAttribute(name) as Float32BufferAttribute | undefined;
+  if (existing && existing.itemSize === itemSize && existing.array.length === values.length) {
+    existing.array.set(values);
+    existing.needsUpdate = true;
+  } else {
+    geometry.setAttribute(name, new Float32BufferAttribute(values, itemSize));
+  }
+  if (name === 'position') geometry.computeBoundingSphere();
+}
+
+/** A side's own objects let go: its overlays' geometries and materials (the model's are its scene's to dispose). */
+function disposeSide(side: SideScene): void {
+  side.model.root.removeFromParent();
+  for (const overlay of [side.markers, side.skeleton, side.joints]) {
+    overlay.geometry.dispose();
+    overlay.material.dispose();
+  }
+  side.pivot.dispose();
 }
 
 function disposeGroup(group: Group): void {

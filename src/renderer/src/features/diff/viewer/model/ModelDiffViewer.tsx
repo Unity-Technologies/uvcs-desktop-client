@@ -5,7 +5,7 @@
 // the model; the info strip narrates the figures a budget checks.
 
 import { Box as BoxIcon } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Color } from 'three';
 import type { ContentSource, FileContent } from '@shared/domain/content';
 import { useSpinDelay } from '../../../../lib/useSpinDelay';
@@ -166,7 +166,8 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   // stepped through.
   const differences = comparable && mode === 'differences';
   const { comparison, comparing, failed: comparisonFailed } = useSurfaceComparison(old?.model ?? null, next?.model ?? null, differences);
-  const tolerance = comparison ? modelToleranceShare * comparison.size : 0;
+  // The slider moves at once; the colors and regions of millions of vertices follow when React has the time.
+  const tolerance = useDeferredValue(comparison ? modelToleranceShare * comparison.size : 0);
   useEffect(() => {
     if (!renderer || !palette) return;
     if (!comparison) return renderer.setHeat(null);
