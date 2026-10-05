@@ -4,6 +4,8 @@
 // `S` string (a type byte, a uint32 length, the bytes), then its type, its kind and its flags as three more strings,
 // then its value (`I` int32, `D` double, `S` string). Global settings are never compressed (only arrays are).
 
+import { escapeRegExp } from '@shared/escapeRegExp';
+
 /** The values of FBX properties the diff reads. */
 export type FbxPropertyName =
   | 'UpAxis'
@@ -33,7 +35,7 @@ export function isBinaryFbx(bytes: Uint8Array): boolean {
 
 function readAsciiProperty(bytes: Uint8Array, name: FbxPropertyName): string | number | undefined {
   const text = new TextDecoder().decode(bytes);
-  const quotedName = `"${name.replace(/[|]/g, '\\|')}"`;
+  const quotedName = `"${escapeRegExp(name)}"`;
   const line = new RegExp(`P:\\s*${quotedName},\\s*"[^"]*",\\s*"[^"]*",\\s*"[^"]*",\\s*([^\\r\\n]*)`).exec(text);
   if (!line) return undefined;
   const value = line[1]!.trim();
