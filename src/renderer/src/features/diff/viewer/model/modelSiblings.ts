@@ -37,7 +37,8 @@ export function diffSibling(entries: DiffEntry[], target: DiffTarget): SiblingFi
     if (source.kind !== 'revision') return workspaceSibling(side, source, path, fileName);
     const sibling = siblingPath(path, fileName);
     if (sibling === null) return null;
-    const entry = entries.find((candidate) => candidate.path === sibling);
+    // The side before of a moved entry is at its old path: a model moved with its `.meta` finds it there.
+    const entry = entries.find((candidate) => (side === 'original' ? (candidate.oldPath ?? candidate.path) : candidate.path) === sibling);
     if (entry) {
       const revision = revisionIn(entry.repository, side === 'original' ? entry.baseRevisionId : entry.revisionId);
       return revision ? { kind: 'revision', revision, fileName: sibling } : null;

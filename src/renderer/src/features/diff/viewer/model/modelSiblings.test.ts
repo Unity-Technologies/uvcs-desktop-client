@@ -41,6 +41,13 @@ describe('diffSibling', () => {
     expect(diffSibling(entries, { kind: 'shelve', shelveId: 3 })('modified', gltf, 'Assets/Barrel.gltf', 'Barrel.bin')).toMatchObject({ at: 'sh:3' });
   });
 
+  it("finds a moved model's siblings, moved with it, by their old path on the side before", () => {
+    const moved = (path: string, oldPath: string, base: number, revision: number): DiffEntry => ({ ...entry(path, base, revision), status: 'moved', oldPath });
+    const find = diffSibling([moved('Assets/New/Hero.fbx', 'Assets/Old/Hero.fbx', 10, 11), moved('Assets/New/Hero.fbx.meta', 'Assets/Old/Hero.fbx.meta', 20, 21)], { kind: 'changeset', changesetId: 7 });
+    const before = { kind: 'revision' as const, revision: { revisionId: 10, repository: 'game@local' }, fileName: 'Assets/Old/Hero.fbx' };
+    expect(find('original', before, 'Assets/Old/Hero.fbx', 'Hero.fbx.meta')).toEqual({ kind: 'revision', revision: { revisionId: 20, repository: 'game@local' }, fileName: 'Assets/Old/Hero.fbx.meta' });
+  });
+
   it('finds no side of a sibling added or deleted with the model', () => {
     const find = diffSibling([entry('Assets/Barrel.bin', -1, 21)], { kind: 'changeset', changesetId: 7 });
     expect(find('original', gltf, 'Assets/Barrel.gltf', 'Barrel.bin')).toBeNull();
