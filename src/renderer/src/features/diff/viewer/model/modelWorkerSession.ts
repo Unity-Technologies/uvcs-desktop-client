@@ -1,17 +1,20 @@
 // The model diff's client of the model worker. One worker for the app's life: the next model doesn't pay for its
-// start. When the worker can't start or dies mid-flight, the model is read on the main thread: slower, never wrong.
-// Each version is read once while its bytes are kept (the diff's content cache holds them), so going back to a model,
-// or from one mode to another, shows it at once.
+// start. When the worker can't start or dies mid-flight, the work is done on the main thread: slower, never wrong.
+// Each version is read once while its bytes are kept (the diff's content cache holds them), and each pair compared
+// once while both are kept, so going back to a model, or from one mode to another, shows it at once.
 
 import type { ModelBytes } from '@shared/domain/content';
 import type { ModelWorkerRequest, ModelWorkerResponse } from './model.worker';
+import type { ParsedModel } from './parsedModel';
 import { readModelFile, type ModelFileRead } from './readModelFile';
+import { compareSurfaces, placedMeshesOf, type PlaceableModel, type SurfaceComparison } from './surfaceComparison';
 
 // Undefined until first asked for; null once it couldn't start or died: the main thread reads from then on.
 let worker: Worker | null | undefined;
 let lastRequestId = 0;
 const awaited = new Map<number, { resolve: (response: ModelWorkerResponse) => void; reject: () => void }>();
 const reads = new WeakMap<Uint8Array, Promise<ModelFileRead>>();
+const comparisons = new WeakMap<ParsedModel, WeakMap<ParsedModel, Promise<SurfaceComparison>>>();
 
 /** The model read, from the one read of the same bytes if there was one. */
 export function readModel(model: ModelBytes): Promise<ModelFileRead> {
@@ -23,13 +26,34 @@ export function readModel(model: ModelBytes): Promise<ModelFileRead> {
   return read;
 }
 
+/** The surfaces of a pair compared, from the one comparison of the same pair if there was one. */
+export function compareModels(before: ParsedModel, after: ParsedModel): Promise<SurfaceComparison> {
+  let ofBefore = comparisons.get(before);
+  if (!ofBefore) comparisons.set(before, (ofBefore = new WeakMap()));
+  let comparison = ofBefore.get(after);
+  if (!comparison) {
+    comparison = compareInWorker(before, after);
+    ofBefore.set(after, comparison);
+  }
+  return comparison;
+}
+
 async function readInWorker(model: ModelBytes): Promise<ModelFileRead> {
-  const parsingWorker = startedWorker();
+  const modelWorker = startedWorker();
   // The bytes are copied to the worker, never transferred: the content cache keeps them for the next time.
-  const response = parsingWorker && (await ask(parsingWorker, { id: ++lastRequestId, model }));
-  if (!response) return readModelFile(model);
-  const { id: _id, ...read } = response;
-  return read;
+  const response = modelWorker && (await ask(modelWorker, { id: ++lastRequestId, read: model }));
+  return response && 'read' in response ? response.read : readModelFile(model);
+}
+
+async function compareInWorker(before: ParsedModel, after: ParsedModel): Promise<SurfaceComparison> {
+  const modelWorker = startedWorker();
+  // Only what placing the meshes takes is copied to the worker; the viewer keeps drawing from the models.
+  const response = modelWorker && (await ask(modelWorker, { id: ++lastRequestId, compare: { before: placeable(before), after: placeable(after) } }));
+  return response && 'comparison' in response ? response.comparison : compareSurfaces(placedMeshesOf(before), placedMeshesOf(after));
+}
+
+function placeable({ nodes, unitScale, axisConversion, meshes }: ParsedModel): PlaceableModel {
+  return { nodes, unitScale, axisConversion, meshes: meshes.map(({ node, attributes, index }) => ({ node, attributes: { position: attributes.position }, index })) };
 }
 
 function startedWorker(): Worker | null {
@@ -54,9 +78,9 @@ function startedWorker(): Worker | null {
 }
 
 /** The worker's answer, or null when it died first. */
-function ask(parsingWorker: Worker, request: ModelWorkerRequest): Promise<ModelWorkerResponse | null> {
+function ask(modelWorker: Worker, request: ModelWorkerRequest): Promise<ModelWorkerResponse | null> {
   return new Promise<ModelWorkerResponse>((resolve, reject) => {
     awaited.set(request.id, { resolve, reject });
-    parsingWorker.postMessage(request);
+    modelWorker.postMessage(request);
   }).catch(() => null);
 }
