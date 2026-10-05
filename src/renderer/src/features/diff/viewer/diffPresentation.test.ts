@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
-import { diffPresentation, hasTwoRepresentations, showsLines } from './diffPresentation';
+import { diffPresentation, hasTwoRepresentations, renderedRepresentation, showsLines } from './diffPresentation';
 
 const missing: FileContent = { text: '', isBinary: false, size: 0 };
 const text = (value: string): FileContent => ({ text: value, isBinary: false, size: value.length });
 const svg = (value: string): FileContent => ({ ...text(value), image: { bytes: new TextEncoder().encode(value), mimeType: 'image/svg+xml' } });
 const image = (size: number): FileContent => ({ isBinary: true, size, image: { bytes: new Uint8Array(size), mimeType: 'image/png' } });
+const fbx = (size: number): FileContent => ({ isBinary: true, size, model: { bytes: new Uint8Array(size), format: 'fbx' } });
+const obj = (value: string): FileContent => ({ ...text(value), model: { bytes: new TextEncoder().encode(value), format: 'obj' } });
 
 describe('diffPresentation', () => {
   it('shows an added 0-byte file as empty, not as identical', () => {
@@ -48,6 +50,38 @@ describe('diffPresentation', () => {
     expect(hasTwoRepresentations(image(10), svg('<svg/>'))).toBe(false);
     expect(diffPresentation(text('a'), text('b'), 'image')).toEqual({ kind: 'text', empty: false, identical: false });
     expect(diffPresentation(image(10), svg('<svg/>'), 'text')).toEqual({ kind: 'image', comparable: true });
+  });
+});
+
+describe('diffPresentation of 3D models', () => {
+  it('compares two models, or previews the one side of an added or deleted model', () => {
+    expect(diffPresentation(fbx(10), fbx(12))).toEqual({ kind: 'model', comparable: true });
+    expect(diffPresentation(missing, fbx(12))).toEqual({ kind: 'model', comparable: false });
+    expect(diffPresentation(fbx(12), missing)).toEqual({ kind: 'model', comparable: false });
+  });
+
+  it('reports a model too large to preview', () => {
+    expect(diffPresentation({ isBinary: true, size: 200e6, tooLarge: 'model' }, fbx(10))).toEqual({ kind: 'tooLarge', content: 'model' });
+  });
+
+  it('shows a model written as text (OBJ, ASCII FBX) as text or as the model, as asked', () => {
+    expect(hasTwoRepresentations(obj('v 0 0 0'), obj('v 1 0 0'))).toBe(true);
+    expect(diffPresentation(obj('v 0 0 0'), obj('v 1 0 0'), 'model')).toEqual({ kind: 'model', comparable: true });
+    expect(diffPresentation(obj('v 0 0 0'), obj('v 1 0 0'), 'text')).toEqual({ kind: 'text', empty: false, identical: false });
+    expect(diffPresentation(missing, obj('v 0 0 0'), 'model')).toEqual({ kind: 'model', comparable: false });
+  });
+
+  it('compares a text model with a binary one as models, with no choice to offer', () => {
+    expect(hasTwoRepresentations(obj('; FBX 7.4.0'), fbx(10))).toBe(false);
+    expect(diffPresentation(obj('; FBX 7.4.0'), fbx(10), 'text')).toEqual({ kind: 'model', comparable: true });
+  });
+});
+
+describe('renderedRepresentation', () => {
+  it('names what a file written as text renders as', () => {
+    expect(renderedRepresentation(svg('<svg/>'), missing)).toBe('image');
+    expect(renderedRepresentation(missing, obj('v 0 0 0'))).toBe('model');
+    expect(renderedRepresentation(text('a'), text('b'))).toBeNull();
   });
 });
 
