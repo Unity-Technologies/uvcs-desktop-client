@@ -15,7 +15,7 @@ export function unitySpaceOf(model: Pick<ParsedModel, 'unitScale' | 'axisConvers
 }
 
 /** Each node's matrix from its own space to `space` (Unity's by default), in node order. */
-export function worldMatricesOf(model: ParsedModel, space: Matrix4 = unitySpaceOf(model)): Matrix4[] {
+export function worldMatricesOf(model: Pick<ParsedModel, 'nodes' | 'unitScale' | 'axisConversion'>, space: Matrix4 = unitySpaceOf(model)): Matrix4[] {
   const matrices: Matrix4[] = [];
   for (const node of model.nodes) {
     const local = new Matrix4().compose(new Vector3(...node.position), new Quaternion(...node.rotation), new Vector3(...node.scale));
