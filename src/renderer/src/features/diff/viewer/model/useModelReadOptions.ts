@@ -36,13 +36,14 @@ function useImportSettings(workspacePath: string, side: DiffSide, source: Conten
   const read = useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'importSettings', meta),
     // A `.meta` that isn't there (outside a Unity project) is an answer, kept as any other: Unity's defaults.
-    queryFn: () =>
-      api.content
-        .read(workspacePath, meta!)
-        .then((content) => readImportSettings(content.text ?? ''))
-        .catch(() => DEFAULT_IMPORT_SETTINGS),
+    queryFn: async () => {
+      const bytes = await api.content.readBytes(workspacePath, meta!);
+      return bytes ? readImportSettings(new TextDecoder().decode(bytes)) : DEFAULT_IMPORT_SETTINGS;
+    },
     enabled: meta !== null,
     ...(meta && contentCaching([meta])),
   });
-  return meta === null ? DEFAULT_IMPORT_SETTINGS : (read.data ?? null);
+  // A read that failed (the server) shows the defaults meanwhile, and is read again, never kept as the answer.
+  if (meta === null || read.isError) return DEFAULT_IMPORT_SETTINGS;
+  return read.data ?? null;
 }

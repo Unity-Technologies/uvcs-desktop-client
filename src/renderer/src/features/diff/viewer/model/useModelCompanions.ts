@@ -9,9 +9,12 @@ import { SiblingFinderContext, sourcePathOf, type DiffSide } from './modelSiblin
 
 const NONE: Readonly<Record<string, Uint8Array>> = {};
 
-/** The reads as one, made again only when one of them changes: a function of its own, as TanStack reruns a new one each render. */
-function combineReads(results: { isPending: boolean; data?: Uint8Array | null }[]): { loading: boolean; bytes: (Uint8Array | null)[] } {
-  return { loading: results.some((result) => result.isPending), bytes: results.map((result) => result.data ?? null) };
+/**
+ * The reads as one, made again only when one of them changes: a function of its own, as TanStack reruns a new one each
+ * render. A read that failed counts as done, without bytes: the model then says it needs the file.
+ */
+function combineReads(results: { isPending: boolean; isError: boolean; data?: Uint8Array | null }[]): { loading: boolean; bytes: (Uint8Array | null)[] } {
+  return { loading: results.some((result) => result.isPending && !result.isError), bytes: results.map((result) => result.data ?? null) };
 }
 
 /**
@@ -29,8 +32,8 @@ export function useModelCompanions(workspacePath: string, side: DiffSide, source
   const reads = useQueries({
     queries: found.map(({ source: sibling }) => ({
       queryKey: queryKeys.inWorkspace(workspacePath, 'contentBytes', sibling),
-      // A file that isn't there is an answer, kept as any other: read again on each view, it would cost a `cm cat` each time.
-      queryFn: () => api.content.readBytes(workspacePath, sibling).catch(() => null),
+      // A file that isn't there is an answer (null), kept as any other; a failure is read again.
+      queryFn: () => api.content.readBytes(workspacePath, sibling),
       ...contentCaching([sibling]),
     })),
     combine: combineReads,

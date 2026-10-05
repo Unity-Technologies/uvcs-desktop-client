@@ -121,6 +121,25 @@ describe('reading the bytes of a model companion', () => {
     expect(commands).toMatchObject([{ via: 'query', args: ['cat', 'serverpath:/Assets/Barrel.bin#cs:12', `--file=${written[0]}`] }]);
   });
 
+  it("reads a companion that isn't there as nothing, from the disk or from cm, so it is an answer", async () => {
+    const workspace = await newWorkspace();
+    const { service } = content({ cat: () => cmFails('Error: The specified item /Assets/Hero.fbx.meta does not exist.'), ls: '<?xml version="1.0" encoding="utf-8"?><LsResults><LsItems></LsItems></LsResults>' });
+    expect(await service.readBytes(workspace, { kind: 'workspaceFile', path: 'Assets/Hero.fbx.meta' })).toBeNull();
+    expect(await service.readBytes(workspace, { kind: 'repositoryPath', path: '/Assets/Hero.fbx.meta', at: 'cs:4' })).toBeNull();
+  });
+
+  it('fails on any other error, which is no answer about the file', async () => {
+    const { service } = content({ cat: () => cmFails('Error: The server is unreachable.') });
+    await expect(service.readBytes(await newWorkspace(), { kind: 'revision', revision: { revisionId: 4, repository: 'game@local' }, fileName: 'a.bin' })).rejects.toThrow('unreachable');
+  });
+
+  it('refuses a workspace file outside the workspace', async () => {
+    const { service } = content({});
+    await expect(service.readBytes(await newWorkspace(), { kind: 'workspaceFile', path: '../../etc/passwd' })).rejects.toThrow('outside the workspace');
+    await expect(service.read(await newWorkspace(), { kind: 'workspaceFile', path: '../../etc/passwd' })).rejects.toThrow('outside the workspace');
+    await expect(service.writeWorkspaceFile(await newWorkspace(), '../outside.txt', 'x')).rejects.toThrow('outside the workspace');
+  });
+
   it('reads nothing of an empty side', async () => {
     const { service } = content({});
     expect(await service.readBytes(await newWorkspace(), { kind: 'empty' })).toBeNull();
