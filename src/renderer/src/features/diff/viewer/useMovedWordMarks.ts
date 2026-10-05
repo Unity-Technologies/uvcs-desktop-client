@@ -1,17 +1,17 @@
 import { useEffect, useId, type RefObject } from 'react';
 import type { DiffSide } from './changeBlocks';
 import type { MovedWordMarks } from './movedWordMarks';
-import { lineRowSelector, pierreShadowRoot, rowTextRange } from './pierreDom';
+import { lineRowSelector, rowTextRange } from './pierreDom';
 import { useShadowStyle } from './useShadowStyle';
 
 /**
- * Marks the words changed inside moved code (`movedWordMarks`) in the diff's rows, with the browser's highlights
+ * Marks the words changed inside moved code (`movedWordMarks`) in the rows of the diff (`root`, `useDiffShadowRoot`), with the browser's highlights
  * (`CSS.highlights`) in Pierre's own colors for marked words. They're drawn over the rows on screen, whatever Pierre
  * renders: its rows come and go as the diff scrolls (it renders the lines in view), is typed into or highlighted, and
  * the marks are drawn again each time (a `MutationObserver`). Marking Pierre's own rows instead (`refreshWordMarks`)
  * was rejected: every render of Pierre's (its worker's colors, a keystroke) would draw its own marks back over them.
  */
-export function useMovedWordMarks(containerRef: RefObject<HTMLElement | null>, marks: MovedWordMarks): void {
+export function useMovedWordMarks(containerRef: RefObject<HTMLElement | null>, root: ShadowRoot | null, marks: MovedWordMarks): void {
   const names = highlightNames(useId());
   useShadowStyle(
     containerRef,
@@ -19,7 +19,6 @@ export function useMovedWordMarks(containerRef: RefObject<HTMLElement | null>, m
   );
 
   useEffect(() => {
-    const root = pierreShadowRoot(containerRef.current);
     const clear = (): void => {
       CSS.highlights.delete(names.deletions);
       CSS.highlights.delete(names.additions);
@@ -42,7 +41,7 @@ export function useMovedWordMarks(containerRef: RefObject<HTMLElement | null>, m
       mutations.disconnect();
       clear();
     };
-  }, [containerRef, marks, names.deletions, names.additions]);
+  }, [root, marks, names.deletions, names.additions]);
 }
 
 /** The ranges of the marked characters in the rows of one side that are rendered. */

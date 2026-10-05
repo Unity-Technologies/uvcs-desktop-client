@@ -8,8 +8,8 @@ import { detectMovedBlocks, moveContaining, type MovedBlock } from './movedBlock
 import { MovedCode } from './MovedCode';
 import { linesOf, movedCodeCss } from './movedCodeCss';
 import { movedWordMarks } from './movedWordMarks';
-import { pierreShadowRoot } from './pierreDom';
 import { useChangeFlash } from './useChangeFlash';
+import { useDiffShadowRoot } from './useDiffShadowRoot';
 import { useMovedWordMarks } from './useMovedWordMarks';
 import { useShadowStyle } from './useShadowStyle';
 
@@ -42,9 +42,10 @@ export function useMovedCode({ diff, comparisonMethod, layout, containerRef, vir
   const [hovered, setHovered] = useState<MovedBlock | undefined>(undefined);
   const shownHovered = hovered && moves.includes(hovered) ? hovered : undefined;
   const flash = useChangeFlash();
+  const root = useDiffShadowRoot(containerRef);
   useShadowStyle(containerRef, `${movedCodeCss(moves, shownHovered)}\n${flash.css}`);
-  useHoveredRows(containerRef, moves, setHovered);
-  useMovedWordMarks(containerRef, useMemo(() => movedWordMarks(diff, moves), [diff, moves]));
+  useHoveredRows(root, moves, setHovered);
+  useMovedWordMarks(containerRef, root, useMemo(() => movedWordMarks(diff, moves), [diff, moves]));
   const stopScrolling = useRef<() => void>(undefined);
   useEffect(() => () => stopScrolling.current?.(), []);
 
@@ -57,36 +58,32 @@ export function useMovedCode({ diff, comparisonMethod, layout, containerRef, vir
     flash.light(lines);
   };
 
-  return <MovedCode containerRef={containerRef} virtualizer={virtualizer} moves={moves} layout={layout} hovered={shownHovered} onHover={setHovered} onGoTo={goTo} />;
+  return <MovedCode containerRef={containerRef} root={root} virtualizer={virtualizer} moves={moves} layout={layout} hovered={shownHovered} onHover={setHovered} onGoTo={goTo} />;
 }
 
 const NO_MOVES: MovedBlock[] = [];
 
 /** Follows the pointer over the diff's rows: the move it's on, if any, is hovered. */
-function useHoveredRows(containerRef: RefObject<HTMLElement | null>, moves: MovedBlock[], setHovered: (move: MovedBlock | undefined) => void): void {
+function useHoveredRows(root: ShadowRoot | null, moves: MovedBlock[], setHovered: (move: MovedBlock | undefined) => void): void {
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container || moves.length === 0) return;
+    if (!root || moves.length === 0) return;
     // The labels set what's hovered too: setting the same move again changes nothing (React drops it).
-    const onMove = (event: PointerEvent): void => {
-      const line = changedLineUnder(event, container);
-      // Off the rows (on a label), the label says what's hovered.
-      if (line !== 'outside') setHovered(line ? moveContaining(moves, line) : undefined);
+    const onMove = (event: Event): void => {
+      const line = changedLineUnder(event);
+      setHovered(line ? moveContaining(moves, line) : undefined);
     };
     const onLeave = (): void => setHovered(undefined);
-    container.addEventListener('pointermove', onMove);
-    container.addEventListener('pointerleave', onLeave);
+    root.addEventListener('pointermove', onMove);
+    root.host.addEventListener('pointerleave', onLeave);
     return () => {
-      container.removeEventListener('pointermove', onMove);
-      container.removeEventListener('pointerleave', onLeave);
+      root.removeEventListener('pointermove', onMove);
+      root.host.removeEventListener('pointerleave', onLeave);
     };
-  }, [containerRef, moves, setHovered]);
+  }, [root, moves, setHovered]);
 }
 
-/** The changed line whose row the pointer is on; null over any other row, 'outside' off the diff's rows. */
-function changedLineUnder(event: PointerEvent, container: HTMLElement): ChangedLine | null | 'outside' {
-  const root = pierreShadowRoot(container);
-  if (!root || !event.composedPath().includes(root)) return 'outside';
+/** The changed line whose row (its code or its number) a pointer event inside the diff is on; null on any other. */
+function changedLineUnder(event: Event): ChangedLine | null {
   const row = event.composedPath().find((target): target is HTMLElement => target instanceof HTMLElement && (target.hasAttribute('data-line') || target.hasAttribute('data-column-number')));
   const type = row?.getAttribute('data-line-type');
   if (!row || (type !== 'change-deletion' && type !== 'change-addition')) return null;

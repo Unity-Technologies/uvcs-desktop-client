@@ -5,13 +5,15 @@ import type { ChangedLine, DiffSide } from './changeBlocks';
 import type { DiffLayout } from './diffPreferencesStore';
 import type { MovedBlock } from './movedBlocks';
 import { labelSpot, ribbonBox, ribbonPath, sameLayout, type Box, type LabelSpot, type Span } from './movedCodeLayout';
-import { lineRowSelector, paneRect, pierreShadowRoot } from './pierreDom';
+import { lineRowSelector, paneRect } from './pierreDom';
 import { pierreLinePosition } from './pierreLinePosition';
 import styles from './MovedCode.module.css';
 
 interface MovedCodeProps {
   /** The scrolling element around the diff, which holds its shadow root and this overlay. */
   containerRef: RefObject<HTMLElement | null>;
+  /** The diff's shadow root, once it's there (`useDiffShadowRoot`). */
+  root: ShadowRoot | null;
   /** The diff's virtualizer: where the places of a move not rendered yet will be. */
   virtualizer: Virtualizer;
   moves: MovedBlock[];
@@ -57,8 +59,8 @@ const OTHER_SIDE: Record<DiffSide, DiffSide> = { deletions: 'additions', additio
  * the view there. Pointing at a label or the moved code lights the move up in both places (`onHover`) and, side by
  * side, draws a ribbon joining them over the panes' seam, gone once the pointer leaves.
  */
-export function MovedCode({ containerRef, virtualizer, moves, layout, hovered, onHover, onGoTo }: MovedCodeProps) {
-  const shown = useMovesOnScreen(containerRef, virtualizer, moves, layout);
+export function MovedCode({ containerRef, root, virtualizer, moves, layout, hovered, onHover, onGoTo }: MovedCodeProps) {
+  const shown = useMovesOnScreen(containerRef, root, virtualizer, moves, layout);
   if (shown.moves.length === 0) return null;
   return (
     <div className={styles.layer}>
@@ -111,12 +113,11 @@ function Ribbon({ lane, move }: { lane: NonNullable<Layout['lane']>; move: MoveO
  * Measures where the moves are in the container's scrolled content, again whenever its size or the rows rendered
  * change (a big diff renders the lines in view only; typing, wrapping and expanding move them).
  */
-function useMovesOnScreen(containerRef: RefObject<HTMLElement | null>, virtualizer: Virtualizer, moves: MovedBlock[], layout: DiffLayout): Layout {
+function useMovesOnScreen(containerRef: RefObject<HTMLElement | null>, root: ShadowRoot | null, virtualizer: Virtualizer, moves: MovedBlock[], layout: DiffLayout): Layout {
   const [shown, setShown] = useState<Layout>(NOTHING);
 
   useEffect(() => {
     const container = containerRef.current;
-    const root = pierreShadowRoot(container);
     if (!container || !root || moves.length === 0) return setShown(NOTHING);
     let frame = 0;
     const measure = (): void => {
@@ -138,7 +139,7 @@ function useMovesOnScreen(containerRef: RefObject<HTMLElement | null>, virtualiz
       resize.disconnect();
       mutations.disconnect();
     };
-  }, [containerRef, virtualizer, moves, layout]);
+  }, [containerRef, root, virtualizer, moves, layout]);
 
   return shown;
 }
