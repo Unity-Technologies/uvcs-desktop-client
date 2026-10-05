@@ -81,6 +81,11 @@ const FILES = {
     onDisk: 'class Player {\n  float speed = 5f;\n  void Move() { }\n  void Jump() { }\n}\n',
   },
   'src/camera.cs': { loaded: 'class Camera {\n  float distance = 10f;\n}\n' },
+  // A 3D model, written as text (OBJ) so the fixture stays readable: its diff is the model diff's.
+  'Assets/crate.obj': {
+    loaded: 'o Crate\nusemtl Wood\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nf 1 2 3 4\n',
+    onDisk: 'o Crate\nusemtl Wood_mat\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nf 1 2 3 4\n',
+  },
   'notes.txt': { onDisk: 'Ideas for the next level.\n' },
 };
 

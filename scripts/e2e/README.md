@@ -2,7 +2,7 @@
 
 A light pass over the real built app, to catch what unit tests can't: wiring, startup, a view that fails to render.
 `npm run e2e` builds, then `smoke.mjs` launches `out/` with Playwright's Electron driver and a throwaway
-`--user-data-dir`, opens a workspace, visits every sidebar view, a diff, a branch's permissions (an edit, then discarded), the command palette and Settings, and switches
+`--user-data-dir`, opens a workspace, visits every sidebar view, a diff, a model diff (a 3D model's, in its worker), a branch's permissions (an edit, then discarded), the command palette and Settings, and switches
 to the dark theme. It fails on any `pageerror` or `console.error`, a view whose heading doesn't show or that stays
 `Loading`, and any `cm` command the fake couldn't answer. It asserts only that things appear, never pixels or copy.
 About 10 seconds. Screenshots of each step go to `<os temp>/uvcs-e2e-shots` (a failed step's is `NN-FAILED-<step>.png`).
