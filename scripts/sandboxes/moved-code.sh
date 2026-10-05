@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Builds a repository whose last changeset and pending changes move code inside files: a function moved as it was,
 # one moved and edited a little, one moved far down a long file (its two places screens apart), one re-indented into
-# a class, next to plain edits, a block rewritten (removed and added, not moved) and lines only removed.
+# a class, a block of imports moved with a name changed in one of them, next to plain edits, a block rewritten
+# (removed and added, not moved) and lines only removed.
 # Usage: scripts/sandboxes/moved-code.sh   → repo moved-code-demo@local, workspace /tmp/uvcs-moved-code-demo
 set -euo pipefail
 REPO=moved-code-demo@local
@@ -58,6 +59,36 @@ EOF
 }
 filler() { for i in $(seq "$2" "$3"); do printf 'export const %s%d = { id: %d, label: "%s %d" };\n' "$1" "$i" "$i" "$1" "$i"; done; }
 
+# The imports of a viewer, before and after three of them move below the others, one renamed on the way.
+imports_before() { cat <<'EOF'
+import { EditProvider, File, FileDiff } from '@pierre/diffs/react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { hotkey } from '../../lib/shortcutRegistry';
+import type { ChangeView } from './changeView';
+import type { ComparisonMethod } from './comparisonMethod';
+import { useDiffPreferences } from './diffPreferencesStore';
+import type { EditorHandle } from './editorHandle';
+import { escapeWhileTyping } from './escapeWhileTyping';
+import type { LineDiff } from './lineDiff';
+import { PaneScrollbars } from './PaneScrollbars';
+import { isTypingIn } from './pierreDom';
+EOF
+}
+imports_after() { cat <<'EOF'
+import { EditProvider, File, FileDiff } from '@pierre/diffs/react';
+import { useCallback, useMemo, useRef, useState } from 'react';
+import { useDiffPreferences } from './diffPreferencesStore';
+import type { EditorHandle } from './editorHandle';
+import { escapeWhileTyping } from './escapeWhileTyping';
+import type { LineDiff } from './lineDiff';
+import { PaneScrollbars } from './PaneScrollbars';
+import { isTypingIn } from './pierreDom';
+import { hotkey } from '../../lib/shortcutRegistry';
+import type { ChangeView } from './changeView';
+import type { ComparisonMethod2 } from './comparisonMethod';
+EOF
+}
+
 header() { cat <<'EOF'
 import type { CartItem } from './types';
 import { DISCOUNTS } from './discounts';
@@ -66,6 +97,7 @@ EOF
 }
 
 { header; fn_total; echo; fn_format; echo; fn_discount; echo; filler preset 1 120; echo; fn_validate; echo; filler legacy 1 4; } > src/cart.ts
+{ imports_before; echo; echo 'export const viewer = true;'; } > src/viewer.ts
 cm add -R src >/dev/null
 cm ci --all -c "A cart with prices and discounts" >/dev/null
 
@@ -73,6 +105,7 @@ cm ci --all -c "A cart with prices and discounts" >/dev/null
 # its locale; validate moves from the bottom to the top, screens away; a plain edit and lines removed.
 sleep 1
 { header; fn_validate; echo; fn_discount | sed 's/?? 0/?? 0.05/'; echo; filler preset 1 60; filler preset 62 120; echo; fn_format_edited; echo; fn_total; } > src/cart.ts
+{ imports_after; echo; echo 'export const viewer = true;'; } > src/viewer.ts
 cm ci --all -c "Group the cart helpers by what they do" >/dev/null
 
 # Pending: what Changes shows. validate moves to the end as it was; total goes into a class, re-indented and changed
