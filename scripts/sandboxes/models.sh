@@ -3,8 +3,8 @@
 # Unity sees changed, the wrong units, a turned root, a moved pivot, a renamed and reshaped hierarchy, renamed
 # material slots, a sculpt, more polygons, new UVs, a model added and one deleted; a branch with several models
 # changed; an animated GLB character whose takes change; a glTF with its geometry in a .bin beside it; import
-# settings changed in a .meta alone (the scale); and a model edited and not checked in. The models are written by
-# models/writeModels.ts, one step each.
+# settings changed in a .meta alone (the scale, a clip cut past its take's end); and a model edited and not checked
+# in. The models are written by models/writeModels.ts, one step each.
 # Usage: scripts/sandboxes/models.sh   (from the repository root) → repo models@local, workspace /tmp/uvcs-models
 set -euo pipefail
 REPO=models@local
@@ -52,6 +52,8 @@ step scout-snappier "Made the wave snappier and added a jump"
 step barrel-gltf "Exported the barrel as glTF for the web build, its geometry in Barrel.bin"
 step barrel-gltf-taller "Made the glTF barrel taller"
 step crate-import-scale "Scaled the crate up in its import settings instead of exporting it again"
+step robot-animated "Animated the robot in one take, split into an Idle and a Wave clip"
+step robot-wave-clip "Let the robot's Wave clip run on to frame 120"
 
 # Pending: what Changes shows.
 models pending

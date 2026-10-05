@@ -7,9 +7,9 @@
 
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { asciiFbx, box, sphere, type FbxNodeSpec } from '../../../src/renderer/src/features/diff/viewer/model/testing/asciiFbx';
+import { asciiFbx, box, sphere, type FbxNodeSpec, type FbxTake } from '../../../src/renderer/src/features/diff/viewer/model/testing/asciiFbx';
 import { barrelGltf, scoutGlb, type ScoutVersion } from './gltfModels';
-import { defaultImporterMeta, gltfastImporterMeta, guidOf, modelImporterMeta, type ModelImporterSettings } from './unityMeta';
+import { defaultImporterMeta, gltfastImporterMeta, guidOf, modelImporterMeta, type ClipSplit, type ModelImporterSettings } from './unityMeta';
 
 /** What the artists have done so far: each step changes some of it. */
 interface Project {
@@ -17,7 +17,8 @@ interface Project {
   /** `globalScale`: the Scale Factor of the crate's import settings. */
   crate: { unitScaleFactor: number; lidPivotAtHinge: boolean; woodSlot: string; labelSlot: boolean; globalScale: number };
   rock: { rotationX: number; sculpted: boolean; rings: number; segments: number };
-  robot: { leftHand: string; helmetOnHead: boolean; backpack: boolean; antenna: boolean; fingers: boolean };
+  /** `waveLastFrame`: where the Wave clip cut from its take ends, once the robot is animated. */
+  robot: { leftHand: string; helmetOnHead: boolean; backpack: boolean; antenna: boolean; fingers: boolean; animated: boolean; waveLastFrame: number };
   barrel: { segments: number; uvAtlas: boolean };
   placeholderCube: boolean;
   lantern: { scale: number } | null;
@@ -26,11 +27,16 @@ interface Project {
   barrelGltf: { height: number } | null;
 }
 
+/** Maya's one take, at 30 fps: the robot breathes for 60 frames (2 s), then waves for 36 (1.2 s). */
+const ROBOT_FPS = 30;
+const ROBOT_IDLE_FRAMES = 60;
+const ROBOT_TAKE_FRAMES = 96;
+
 const INITIAL: Project = {
   blenderVersion: '4.2.1',
   crate: { unitScaleFactor: 100, lidPivotAtHinge: false, woodSlot: 'Wood', labelSlot: false, globalScale: 1 },
   rock: { rotationX: 0, sculpted: false, rings: 8, segments: 12 },
-  robot: { leftHand: 'Hand_L', helmetOnHead: false, backpack: true, antenna: false, fingers: false },
+  robot: { leftHand: 'Hand_L', helmetOnHead: false, backpack: true, antenna: false, fingers: false, animated: false, waveLastFrame: ROBOT_TAKE_FRAMES },
   barrel: { segments: 12, uvAtlas: false },
   placeholderCube: true,
   lantern: null,
@@ -69,7 +75,10 @@ const STEPS: Record<string, Step> = {
   'barrel-gltf-taller': { after: 'barrel-gltf', change: (p) => (p.barrelGltf = { height: 1.2 }) },
   // The crate came in 100× smaller since it was exported in centimetres: the import settings' scale makes up for it.
   'crate-import-scale': { after: 'barrel-gltf-taller', change: (p) => (p.crate.globalScale = 100) },
-  pending: { after: 'crate-import-scale', change: (p) => (p.crate.unitScaleFactor = 100) },
+  'robot-animated': { after: 'crate-import-scale', change: (p) => (p.robot.animated = true) },
+  // The clip now ends past the take's last frame: Unity holds the last pose for the frames the take hasn't.
+  'robot-wave-clip': { after: 'robot-animated', change: (p) => (p.robot.waveLastFrame = 120) },
+  pending: { after: 'robot-wave-clip', change: (p) => (p.crate.unitScaleFactor = 100) },
 };
 
 function projectAfter(stepName: string): Project {
@@ -193,7 +202,29 @@ function robot(p: Project): string {
   });
   if (backpack) nodes.push({ name: 'Backpack', kind: 'mesh', parent: 'Robot', mesh: { ...box([30, 40, 15], [0, 130, -20]), materials: ['Metal'], uvs: true } });
   if (antenna) nodes.push({ name: 'Antenna', kind: 'mesh', parent: 'Head', mesh: { ...box([2, 25, 2], [8, 35, 0]), materials: ['Metal', 'Lights'], polygonMaterials: [0, 0, 1, 0, 0, 0], uvs: true } });
-  return asciiFbx({ application: { name: 'Autodesk Maya', version: '2025.2' }, unitScaleFactor: 1, nodes });
+  return asciiFbx({ application: { name: 'Autodesk Maya', version: '2025.2' }, unitScaleFactor: 1, nodes, ...(p.robot.animated && { takes: [robotTake()] }) });
+}
+
+function robotTake(): FbxTake {
+  const at = (frame: number): number => frame / ROBOT_FPS;
+  const idle = [0, 30, ROBOT_IDLE_FRAMES].map(at);
+  const wave = [ROBOT_IDLE_FRAMES, 69, 78, 87, ROBOT_TAKE_FRAMES].map(at);
+  return {
+    name: 'Take 001',
+    length: at(ROBOT_TAKE_FRAMES),
+    curves: [
+      { node: 'Spine', property: 'rotation', times: idle, values: [[0, 0, 0], [4, 0, 0], [0, 0, 0]] },
+      { node: 'UpperArm_L', property: 'rotation', times: wave, values: [[0, 0, 0], [0, 0, 75], [0, 0, 60], [0, 0, 75], [0, 0, 0]] },
+    ],
+  };
+}
+
+/** The robot's take split into an idle that loops and a wave that plays once, as the animator set them up in Unity. */
+function robotClips(waveLastFrame: number): ClipSplit[] {
+  return [
+    { name: 'Idle', takeName: 'Take 001', firstFrame: 0, lastFrame: ROBOT_IDLE_FRAMES, loopTime: true },
+    { name: 'Wave', takeName: 'Take 001', firstFrame: ROBOT_IDLE_FRAMES, lastFrame: waveLastFrame, loopTime: false },
+  ];
 }
 
 /** A barrel as Blender writes an OBJ: banded iron hoops and wooden staves on its body, and a lid, each an object. */
@@ -274,11 +305,12 @@ function lantern(scale: number): string {
   return JSON.stringify(gltf, null, 2) + '\n';
 }
 
-/** Unity imports FBX and OBJ itself, glTF and GLB with glTFast; the crate's scale is the artists'. */
+/** Unity imports FBX and OBJ itself, glTF and GLB with glTFast; the crate's scale and the robot's clips are the artists'. */
 function modelMeta(path: string, p: Project): string {
   if (/\.(gltf|glb)$/.test(path)) return gltfastImporterMeta(path);
   const settings: ModelImporterSettings = { globalScale: 1 };
   if (path === `${MODELS}/Props/Crate.fbx`) settings.globalScale = p.crate.globalScale;
+  if (path === `${MODELS}/Characters/Robot.fbx` && p.robot.animated) settings.clips = robotClips(p.robot.waveLastFrame);
   return modelImporterMeta(path, settings);
 }
 
