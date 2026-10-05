@@ -104,7 +104,7 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
 }
 
 /**
- * The mesh as drawn: in its bind pose (skinned meshes are posed by their animations, Phase 2's), its slots as groups,
+ * The mesh as drawn: in its bind pose (a take poses a skinned one: `ModelAnimationBar`), its slots as groups,
  * its normals computed when the file has none, as Unity's importer does.
  */
 function meshOf(mesh: ModelMesh, key: string): SceneMesh {

@@ -190,7 +190,7 @@ function placedPositions(positions: Float32Array, world: Matrix4): Int32Array {
 function nodeKeys(model: ParsedModel): string[] {
   const keys: string[] = [];
   const seen = new Map<string, number>();
-  model.nodes.forEach((node, i) => {
+  model.nodes.forEach((node) => {
     if (node.parent < 0) return keys.push('');
     const parentKey = keys[node.parent]!;
     const plain = parentKey === '' ? node.name : `${parentKey}/${node.name}`;

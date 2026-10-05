@@ -1,51 +1,46 @@
 // The model pane: a 3D preview of an added or deleted model, and for a changed one the image diff's ways of looking
-// in 3D (side by side, onion skin with its blink, swipe), with what changed as Unity will take it. The mode control
-// lives in the diff header (`ModelModeSwitch`, where images show theirs). One camera draws every mode, so switching
-// keeps the framing; the "What changed" panel frames and lights up what a change is about, and so does a click on
-// the model; the info strip narrates the figures a budget checks.
+// in 3D (onion skin with its blink, side by side, differences, swipe), with what changed as Unity will take it. The
+// mode control lives in the diff header (`ModelModeSwitch`, where images show theirs). One camera draws every mode
+// (`useModelCamera`), so switching keeps the framing; the "What changed" panel frames and lights up what a change is
+// about, and so does a click on the model; the info strip narrates the figures a budget checks.
 
 import { Box as BoxIcon } from 'lucide-react';
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { Color } from 'three';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { ContentSource, FileContent } from '@shared/domain/content';
 import { useSpinDelay } from '../../../../lib/useSpinDelay';
 import { EmptyState } from '../../../../ui/EmptyState';
-import { CenteredSpinner } from '../../../../ui/Spinner';
+import { CenteredSpinner, Spinner } from '../../../../ui/Spinner';
 import { useDiffPreferences } from '../diffPreferencesStore';
 import { BlendPill } from '../image/BlendPill';
-import { steppedRegion } from '../image/changedRegions';
-import { Spinner } from '../../../../ui/Spinner';
 import { SideChip } from '../image/stage';
 import { CENTERED_SPLIT, SwipeDivider } from '../image/SwipeDivider';
+import { importSettingsChanges } from './importSettingsChanges';
+import { ModelAnimationBar } from './ModelAnimationBar';
 import { changeRows, type ChangeRow } from './modelChangeWords';
 import { isRisk, modelChanges, type NodeRef } from './modelChanges';
-import { importSettingsChanges } from './importSettingsChanges';
 import { ModelChangesPanel } from './ModelChangesPanel';
-import type { ModelDiffMode } from './modelDiffModes';
-import { framedBounds, nodesBounds } from './modelFraming';
-import { ModelInfoStrip } from './ModelInfoStrip';
-import { modelCommandOf } from './modelKeys';
-import type { ModelImportSettings } from './modelImportSettings';
-import { modelReadFailureWords } from './modelReadFailureWords';
-import { buildModelScene, pivotOf, type ModelScene } from './modelScene';
-import { ModelAnimationBar } from './ModelAnimationBar';
 import { clipChoices } from './modelClips';
 import { ModelDifferencesControls } from './ModelDifferencesControls';
-import { fullHeatAt, ghostColors, heatColors, type Rgb } from './heatColors';
+import type { ModelDiffMode } from './modelDiffModes';
+import { framedBounds, nodesBounds } from './modelFraming';
+import type { ModelImportSettings } from './modelImportSettings';
+import { ModelInfoStrip } from './ModelInfoStrip';
+import { modelCommandOf } from './modelKeys';
+import { aroundPoints, clickedNode, markersOf } from './modelPicking';
+import { modelReadFailureWords } from './modelReadFailureWords';
 import { modelStats, movedStat } from './modelStats';
-import { placedMeshesOf } from './surfaceComparison';
-import { changedRegions, type ChangedRegion } from './surfaceRegions';
-import { useSurfaceComparison } from './useSurfaceComparison';
-import type { ModelSummary } from './modelSummary';
 import { ModelViewControls } from './ModelViewControls';
 import { matchNodes } from './nodeMatching';
-import { framedView, type BoundsLike, type OrbitView, type Vector } from './orbitCamera';
-import { useModelReadOptions } from './useModelReadOptions';
-import { useStableModel } from './useStableModel';
+import { useModelCamera } from './useModelCamera';
+import { useModelDifferences } from './useModelDifferences';
 import { useModelPalette } from './useModelPalette';
+import { useModelReadOptions } from './useModelReadOptions';
 import { useModelRenderer } from './useModelRenderer';
+import { useModelScene } from './useModelScene';
 import { useOrbitGestures } from './useOrbitGestures';
 import { useReadModel, type ModelReadState } from './useReadModel';
+import { useSize } from './useSize';
+import { useStableModel } from './useStableModel';
 import styles from './ModelDiffViewer.module.css';
 
 /** From this pane width the "What changed" panel opens as a column beside the stage. */
@@ -96,8 +91,8 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const old = readyOf(before);
   const next = readyOf(after);
   const comparable = Boolean(original.model && modified.model);
-  const sceneBefore = useScene(old);
-  const sceneAfter = useScene(next);
+  const sceneBefore = useModelScene(old);
+  const sceneAfter = useModelScene(next);
   const rows = useMemo(() => {
     if (!old || !next || !optionsBefore || !optionsAfter) return null;
     const changes = [...modelChanges(old.summary, next.summary), ...importSettingsChanges({ summary: old.summary, settings: optionsBefore.settings }, { summary: next.summary, settings: optionsAfter.settings })];
@@ -108,32 +103,8 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const allRead = (!original.model || old !== null) && (!modified.model || next !== null);
   const bounds = useMemo(() => (allRead ? framedBounds(old?.summary ?? null, next?.summary ?? null) : null), [allRead, old, next]);
 
-  // The camera: a ref, not state, so a drag redraws the canvas without rendering the panel again. Until the hand
-  // moves it, the app keeps the model framed: as the stage is resized, and as the panel docks beside it.
-  const view = useRef<OrbitView | null>(null);
-  const framedByApp = useRef(true);
-  const setView = useCallback(
-    (next: OrbitView) => {
-      view.current = next;
-      renderer?.setView(next);
-    },
-    [renderer],
-  );
-  const onGesture = useCallback(
-    (next: OrbitView) => {
-      framedByApp.current = false;
-      setView(next);
-    },
-    [setView],
-  );
-  const frame = useCallback(
-    (target: BoundsLike | null) => {
-      if (!renderer || !target) return;
-      const current = view.current;
-      setView(current ? framedView(target, renderer.paneAspect(), current.yaw, current.pitch) : framedView(target, renderer.paneAspect()));
-    },
-    [renderer, setView],
-  );
+  const camera = useModelCamera(renderer, bounds, stageRef);
+  const { frame } = camera;
   const pickedBounds = useCallback(
     (nodes: NodeRef[]) => nodesBounds(nodes, old?.summary ?? null, next?.summary ?? null) ?? aroundPoints(markersOf(nodes, sceneBefore, sceneAfter), bounds),
     [old, next, sceneBefore, sceneAfter, bounds],
@@ -143,9 +114,8 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   useEffect(() => {
     if (!renderer || !bounds) return;
     renderer.setModels(sceneBefore, sceneAfter, bounds);
-    // A new pair is framed whole from the first view; the same pair read again (an edit typed) keeps the camera.
-    if (!view.current) frame(bounds);
-  }, [renderer, sceneBefore, sceneAfter, bounds, frame]);
+    camera.frameFirst();
+  }, [renderer, sceneBefore, sceneAfter, bounds, camera.frameFirst]);
   useEffect(() => {
     if (renderer && palette) renderer.setPalette(palette);
   }, [renderer, palette]);
@@ -162,41 +132,16 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     renderer?.setMarkers(markersOf(picked?.nodes ?? [], sceneBefore, sceneAfter));
   }, [renderer, picked, modelDrawMode, modelColorBySlot, sceneBefore, sceneAfter]);
 
-  // The Differences mode: the pair's surfaces compared in the worker, colored at the tolerance, its changed regions
-  // stepped through.
   const differences = comparable && mode === 'differences';
-  const { comparison, comparing, failed: comparisonFailed } = useSurfaceComparison(old?.model ?? null, next?.model ?? null, differences);
-  // The slider moves at once; the colors and regions of millions of vertices follow when React has the time.
-  const tolerance = useDeferredValue(comparison ? modelToleranceShare * comparison.size : 0);
-  useEffect(() => {
-    if (!renderer || !palette) return;
-    if (!comparison) return renderer.setHeat(null);
-    const linear = (css: string): Rgb => new Color(css).toArray() as Rgb;
-    const fullAt = fullHeatAt(tolerance, comparison.size);
-    renderer.setHeat({
-      after: comparison.after.map((distances) => heatColors(distances, tolerance, fullAt, linear(palette.clay), linear(palette.highlight))),
-      before: comparison.before.map((distances) => ghostColors(distances, tolerance, fullAt, linear(palette.removed))),
-    });
-  }, [renderer, palette, comparison, tolerance]);
-  const placed = useMemo(() => (comparison && old && next ? { before: placedMeshesOf(old.model), after: placedMeshesOf(next.model) } : null), [comparison, old, next]);
-  const regions = useMemo(() => {
-    if (!placed || !comparison) return [];
-    const measured = (side: 'before' | 'after') => placed[side].meshes.map((mesh, i) => ({ positions: mesh.positions, index: mesh.index, distances: comparison[side][i]! }));
-    return changedRegions([...measured('after'), ...measured('before')], tolerance, comparison.size);
-  }, [placed, comparison, tolerance]);
-  // The region stepped to, among the regions it was stepped in: the slider finding others starts over.
-  const [stepped, setStepped] = useState<{ regions: ChangedRegion[]; index: number } | null>(null);
-  const currentRegion = differences && stepped?.regions === regions ? stepped.index : null;
-  useEffect(() => {
-    const region = currentRegion === null ? null : regions[currentRegion];
-    renderer?.setRegion(region ? paddedRegion(region, comparison?.size ?? 0) : null);
-  }, [renderer, regions, currentRegion, comparison]);
-  const stepRegion = (direction: 1 | -1): void => {
-    if (regions.length === 0) return;
-    const index = steppedRegion(currentRegion, direction, regions.length);
-    setStepped({ regions, index });
-    frame(paddedRegion(regions[index]!, comparison?.size ?? 0));
-  };
+  const { comparison, comparing, failed: comparisonFailed, tolerance, regions, currentRegion, stepRegion } = useModelDifferences({
+    renderer,
+    palette,
+    before: old?.model ?? null,
+    after: next?.model ?? null,
+    wanted: differences,
+    toleranceShare: modelToleranceShare,
+    frame,
+  });
   const shownStats = useMemo(() => (differences && comparison ? [...stats, movedStat(comparison, tolerance)] : stats), [differences, comparison, stats, tolerance]);
 
   const choices = useMemo(() => clipChoices(old?.model.clips ?? [], next?.model.clips ?? []), [old, next]);
@@ -215,11 +160,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     },
     [renderer, old, next, matching],
   );
-  useOrbitGestures({ element: stageRef, renderer, view: () => view.current ?? framedView({ min: [-1, -1, -1], max: [1, 1, 1] }, 1), onView: onGesture, onClick });
-  const stageSize = useSize(stageRef);
-  useEffect(() => {
-    if (framedByApp.current && view.current) frame(bounds);
-  }, [stageSize, frame, bounds]);
+  useOrbitGestures({ element: stageRef, renderer, view: camera.currentView, onView: camera.onGesture, onClick });
 
   const onPickRow = useCallback(
     (id: string | null, row: ChangeRow, item?: number) => {
@@ -319,65 +260,4 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
 
 function readyOf(state: ModelReadState): Extract<ModelReadState, { status: 'ready' }> | null {
   return state.status === 'ready' ? state : null;
-}
-
-/** The version's three.js scene, built once per version read and let go with it. */
-function useScene(read: Extract<ModelReadState, { status: 'ready' }> | null): ModelScene | null {
-  const scene = useMemo(() => read && buildModelScene(read.model, read.summary), [read]);
-  useEffect(() => () => scene?.dispose(), [scene]);
-  return scene;
-}
-
-/** A part clicked on one side, with the node it is on the other side, so both light up. */
-function clickedNode(side: 'before' | 'after', key: string, before: ModelSummary | null, after: ModelSummary | null, matching: ReturnType<typeof matchNodes> | null): NodeRef {
-  const own = side === 'before' ? before : after;
-  const index = own?.nodes.findIndex((node) => node.key === key) ?? -1;
-  const node = own?.nodes[index];
-  const other = matching && index >= 0 ? (side === 'before' ? matching.afterOf[index] : matching.beforeOf[index]) : -1;
-  const otherKey = other !== undefined && other >= 0 ? (side === 'before' ? after : before)?.nodes[other]?.key : undefined;
-  return {
-    name: node?.name ?? key,
-    path: node?.path ?? key,
-    kind: node?.kind ?? 'mesh',
-    ...(side === 'before' ? { before: key, ...(otherKey !== undefined && { after: otherKey }) } : { after: key, ...(otherKey !== undefined && { before: otherKey }) }),
-  };
-}
-
-/** A changed region with room around it, a twentieth of the model: a dent framed alone would fill the view. */
-function paddedRegion(region: ChangedRegion, modelSize: number): BoundsLike {
-  const pad = modelSize * 0.05;
-  return { min: region.min.map((value) => value - pad) as Vector, max: region.max.map((value) => value + pad) as Vector };
-}
-
-/** Where the picked nodes that draw nothing (bones, empties) are on each side: their pivots, marked as dots. */
-function markersOf(nodes: NodeRef[], before: ModelScene | null, after: ModelScene | null): Record<'before' | 'after', Vector[]> {
-  const pivots = (scene: ModelScene | null, keys: (string | undefined)[]): Vector[] =>
-    keys.flatMap((key) => {
-      const pivot = key === undefined || !scene || scene.meshes.some((mesh) => mesh.key === key) ? null : pivotOf(scene, key);
-      return pivot ? [pivot.toArray() as Vector] : [];
-    });
-  return { before: pivots(before, nodes.map((node) => node.before)), after: pivots(after, nodes.map((node) => node.after)) };
-}
-
-/** A box around points with a third of the model around them, so a bone framed shows the part of the model it moves. */
-function aroundPoints(markers: Record<'before' | 'after', Vector[]>, model: BoundsLike | null): BoundsLike | null {
-  const points = [...markers.before, ...markers.after];
-  if (points.length === 0 || !model) return null;
-  const pad = Math.max(...model.max.map((value, axis) => value - model.min[axis]!)) * 0.3;
-  const min = [0, 1, 2].map((axis) => Math.min(...points.map((point) => point[axis]!)) - pad) as Vector;
-  const max = [0, 1, 2].map((axis) => Math.max(...points.map((point) => point[axis]!)) + pad) as Vector;
-  return { min, max };
-}
-
-/** The element's size, followed as it is resized; 0 × 0 until measured. */
-function useSize(ref: React.RefObject<HTMLElement | null>): { width: number; height: number } {
-  const [size, setSize] = useState({ width: 0, height: 0 });
-  useEffect(() => {
-    const element = ref.current;
-    if (!element) return;
-    const observer = new ResizeObserver(([entry]) => setSize({ width: entry?.contentRect.width ?? 0, height: entry?.contentRect.height ?? 0 }));
-    observer.observe(element);
-    return () => observer.disconnect();
-  }, [ref]);
-  return size;
 }
