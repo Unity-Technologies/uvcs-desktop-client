@@ -52,6 +52,20 @@ describe('parseModel, FBX', () => {
     expect(centimetres.exportedFrom).toBeNull();
   });
 
+  it('reads each take as a clip of its name, as long as its last key', async () => {
+    const waving = asciiFbx({
+      nodes: [
+        { name: 'Hips', kind: 'bone' },
+        { name: 'UpperArm_L', kind: 'bone', parent: 'Hips', translation: [20, 30, 0] },
+      ],
+      takes: [{ name: 'Take 001', length: 3.2, curves: [{ node: 'UpperArm_L', property: 'rotation', times: [0, 1.6, 3.2], values: [[0, 0, 0], [0, 0, 80], [0, 0, 0]] }] }],
+    });
+    const model = await parsed(bytesOf(waving, 'fbx'));
+    expect(model.clips.map((clip) => clip.name)).toEqual(['Take 001']);
+    expect(model.clips[0]!.duration).toBeCloseTo(3.2);
+    expect(model.clips[0]!.tracks.tracks.map((track) => track.name)).toEqual(['UpperArm_L.quaternion']);
+  });
+
   it('converts a Z-up file onto Y by its axes, apart from the root rotation FBXLoader set', async () => {
     const model = await parsed(bytesOf(asciiFbx({ upAxis: 2, nodes: [{ name: 'Rock', kind: 'mesh', mesh: { ...box([1, 1, 1]), materials: ['Rock'] } }] }), 'fbx'));
     expect(model.upAxis).toBe('z');

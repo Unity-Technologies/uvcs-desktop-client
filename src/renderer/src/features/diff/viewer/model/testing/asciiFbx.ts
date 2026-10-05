@@ -1,6 +1,7 @@
 // Writes ASCII FBX 7.4, as the DCC tools export it, for tests and the models sandbox (`scripts/sandboxes/models.sh`):
 // a hierarchy of meshes, empties and bones with their transforms, each mesh's material slots per polygon and its UVs,
-// and the global settings (up axis, units, the exporting app). Only what the diff reads; never shipped in the app.
+// animation takes, and the global settings (up axis, units, the exporting app). Only what the diff reads; never
+// shipped in the app.
 
 export interface FbxScene {
   /** 1: Y-up (Maya), 2: Z-up (Blender's own axes, 3ds Max). */
@@ -9,6 +10,25 @@ export interface FbxScene {
   unitScaleFactor?: number;
   application?: { name: string; version: string };
   nodes: FbxNodeSpec[];
+  /** Animation takes ("AnimStack"s), which Unity imports as clips: Maya names its one take "Take 001". */
+  takes?: FbxTake[];
+}
+
+export interface FbxTake {
+  name: string;
+  /** Where the take stops, in seconds: Unity's clip splits count their frames within it. */
+  length: number;
+  curves: FbxCurve[];
+}
+
+/** One node's transform property keyed over time, a value per axis at each key. */
+export interface FbxCurve {
+  node: string;
+  property: 'translation' | 'rotation' | 'scale';
+  /** In seconds. */
+  times: number[];
+  /** Per key; rotations in degrees, as FBX stores them. */
+  values: [number, number, number][];
 }
 
 export interface FbxNodeSpec {
@@ -62,6 +82,12 @@ export function asciiFbx(scene: FbxScene): string {
     }
   }
 
+  (scene.takes ?? []).forEach((take, i) => {
+    const written = takeObjects(take, 500000 + i * 10000, ids);
+    objects.push(...written.objects);
+    connections.push(...written.connections);
+  });
+
   return [
     '; FBX 7.4.0 project file',
     'FBXHeaderExtension:  {',
@@ -97,6 +123,54 @@ function sceneInfo(application: { name: string; version: string }): string[] {
     '\t}',
     '}',
   ];
+}
+
+/** FBX counts time in ticks: 46,186,158,000 a second. */
+const FBX_TICKS_PER_SECOND = 46186158000;
+const CURVE_NODE_ATTRIBUTES = { translation: 'T', rotation: 'R', scale: 'S' } as const;
+const CURVE_NODE_PROPERTIES = { translation: 'Lcl Translation', rotation: 'Lcl Rotation', scale: 'Lcl Scaling' } as const;
+
+/** A take as FBX nests it: the stack, its one layer, a curve node per animated property, a curve per axis. */
+function takeObjects(take: FbxTake, firstId: number, nodeIds: Map<string, number>): { objects: string[]; connections: string[] } {
+  const ticks = (seconds: number): number => Math.round(seconds * FBX_TICKS_PER_SECOND);
+  const stackId = firstId;
+  const layerId = firstId + 1;
+  const objects = [
+    `\tAnimationStack: ${stackId}, "AnimStack::${take.name}", "" {`,
+    '\t\tProperties70:  {',
+    `\t\t\tP: "LocalStop", "KTime", "Time", "",${ticks(take.length)}`,
+    '\t\t}',
+    '\t}',
+    `\tAnimationLayer: ${layerId}, "AnimLayer::BaseLayer", "" {`,
+    '\t}',
+  ];
+  const connections = [`\tC: "OO",${layerId},${stackId}`];
+  take.curves.forEach((curve, i) => {
+    const model = nodeIds.get(curve.node);
+    if (model === undefined) throw new Error(`No node named ${curve.node}`);
+    const curveNodeId = firstId + 10 + i * 4;
+    const first = curve.values[0] ?? [0, 0, 0];
+    objects.push(
+      `\tAnimationCurveNode: ${curveNodeId}, "AnimCurveNode::${CURVE_NODE_ATTRIBUTES[curve.property]}", "" {`,
+      '\t\tProperties70:  {',
+      ...['X', 'Y', 'Z'].map((axis, a) => `\t\t\tP: "d|${axis}", "Number", "", "A",${first[a]}`),
+      '\t\t}',
+      '\t}',
+    );
+    connections.push(`\tC: "OO",${curveNodeId},${layerId}`, `\tC: "OP",${curveNodeId},${model}, "${CURVE_NODE_PROPERTIES[curve.property]}"`);
+    ['X', 'Y', 'Z'].forEach((axis, a) => {
+      const curveId = curveNodeId + 1 + a;
+      objects.push(
+        `\tAnimationCurve: ${curveId}, "AnimCurve::", "" {`,
+        '\t\tKeyVer: 4009',
+        array('KeyTime', curve.times.map(ticks)),
+        array('KeyValueFloat', curve.values.map((value) => value[a]!)),
+        '\t}',
+      );
+      connections.push(`\tC: "OP",${curveId},${curveNodeId}, "d|${axis}"`);
+    });
+  });
+  return { objects, connections };
 }
 
 const FBX_TYPES = { mesh: 'Mesh', group: 'Null', bone: 'LimbNode' } as const;
