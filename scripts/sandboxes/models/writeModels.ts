@@ -9,12 +9,13 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { dirname, join } from 'node:path';
 import { asciiFbx, box, sphere, type FbxNodeSpec } from '../../../src/renderer/src/features/diff/viewer/model/testing/asciiFbx';
 import { barrelGltf, scoutGlb, type ScoutVersion } from './gltfModels';
-import { defaultImporterMeta, gltfastImporterMeta, guidOf, modelImporterMeta } from './unityMeta';
+import { defaultImporterMeta, gltfastImporterMeta, guidOf, modelImporterMeta, type ModelImporterSettings } from './unityMeta';
 
 /** What the artists have done so far: each step changes some of it. */
 interface Project {
   blenderVersion: string;
-  crate: { unitScaleFactor: number; lidPivotAtHinge: boolean; woodSlot: string; labelSlot: boolean };
+  /** `globalScale`: the Scale Factor of the crate's import settings. */
+  crate: { unitScaleFactor: number; lidPivotAtHinge: boolean; woodSlot: string; labelSlot: boolean; globalScale: number };
   rock: { rotationX: number; sculpted: boolean; rings: number; segments: number };
   robot: { leftHand: string; helmetOnHead: boolean; backpack: boolean; antenna: boolean; fingers: boolean };
   barrel: { segments: number; uvAtlas: boolean };
@@ -27,7 +28,7 @@ interface Project {
 
 const INITIAL: Project = {
   blenderVersion: '4.2.1',
-  crate: { unitScaleFactor: 100, lidPivotAtHinge: false, woodSlot: 'Wood', labelSlot: false },
+  crate: { unitScaleFactor: 100, lidPivotAtHinge: false, woodSlot: 'Wood', labelSlot: false, globalScale: 1 },
   rock: { rotationX: 0, sculpted: false, rings: 8, segments: 12 },
   robot: { leftHand: 'Hand_L', helmetOnHead: false, backpack: true, antenna: false, fingers: false },
   barrel: { segments: 12, uvAtlas: false },
@@ -66,7 +67,9 @@ const STEPS: Record<string, Step> = {
   'scout-snappier': { after: 'scout', change: (p) => (p.scout = { wave: 'snappier', jump: true }) },
   'barrel-gltf': { after: 'scout-snappier', change: (p) => (p.barrelGltf = { height: 0.9 }) },
   'barrel-gltf-taller': { after: 'barrel-gltf', change: (p) => (p.barrelGltf = { height: 1.2 }) },
-  pending: { after: 'barrel-gltf-taller', change: (p) => (p.crate.unitScaleFactor = 100) },
+  // The crate came in 100× smaller since it was exported in centimetres: the import settings' scale makes up for it.
+  'crate-import-scale': { after: 'barrel-gltf-taller', change: (p) => (p.crate.globalScale = 100) },
+  pending: { after: 'crate-import-scale', change: (p) => (p.crate.unitScaleFactor = 100) },
 };
 
 function projectAfter(stepName: string): Project {
@@ -96,7 +99,7 @@ async function filesOf(p: Project): Promise<Record<string, FileContent>> {
     [`${MODELS}/Characters/Scout.glb`]: p.scout ? await scoutGlb(p.scout) : null,
   };
   const files: Record<string, FileContent> = { ...models };
-  for (const [path, content] of Object.entries(models)) files[`${path}.meta`] = content === null ? null : modelMeta(path);
+  for (const [path, content] of Object.entries(models)) files[`${path}.meta`] = content === null ? null : modelMeta(path, p);
   // Unity imports the glTF, not its buffer: the `.bin` is an asset of no type to it.
   files[`${MODELS}/Props/Barrel.bin`] = barrelExport?.bin ?? null;
   files[`${MODELS}/Props/Barrel.bin.meta`] = barrelExport ? defaultImporterMeta(`${MODELS}/Props/Barrel.bin`) : null;
@@ -271,9 +274,12 @@ function lantern(scale: number): string {
   return JSON.stringify(gltf, null, 2) + '\n';
 }
 
-/** Unity imports FBX and OBJ itself, glTF and GLB with glTFast. */
-function modelMeta(path: string): string {
-  return /\.(gltf|glb)$/.test(path) ? gltfastImporterMeta(path) : modelImporterMeta(path, { globalScale: 1 });
+/** Unity imports FBX and OBJ itself, glTF and GLB with glTFast; the crate's scale is the artists'. */
+function modelMeta(path: string, p: Project): string {
+  if (/\.(gltf|glb)$/.test(path)) return gltfastImporterMeta(path);
+  const settings: ModelImporterSettings = { globalScale: 1 };
+  if (path === `${MODELS}/Props/Crate.fbx`) settings.globalScale = p.crate.globalScale;
+  return modelImporterMeta(path, settings);
 }
 
 function robotPrefab(): string {
