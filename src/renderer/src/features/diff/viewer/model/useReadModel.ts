@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ModelBytes } from '@shared/domain/content';
 import { readModel } from './modelWorkerSession';
 import type { ModelFileRead } from './readModelFile';
@@ -20,8 +20,13 @@ export function useReadModel(model: ModelBytes | undefined): ModelReadState {
     };
   }, [model]);
 
-  if (!model) return { status: 'idle' };
+  // One object while nothing changes: the viewer builds a scene, a comparison and the panel's rows from it.
+  const shown = kept?.model === model ? kept : null;
+  const ready = useMemo<ModelReadState | null>(() => (shown ? (shown.read.kind === 'read' ? { status: 'ready', ...shown.read } : { status: 'failed', ...shown.read }) : null), [shown]);
+  if (!model) return IDLE;
   // Only the read of these bytes: another file's would show for a frame as the selection moves.
-  if (kept?.model !== model) return { status: 'loading' };
-  return kept.read.kind === 'read' ? { status: 'ready', ...kept.read } : { status: 'failed', ...kept.read };
+  return ready ?? LOADING;
 }
+
+const IDLE: ModelReadState = { status: 'idle' };
+const LOADING: ModelReadState = { status: 'loading' };
