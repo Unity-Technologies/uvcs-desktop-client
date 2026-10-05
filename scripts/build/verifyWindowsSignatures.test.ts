@@ -7,6 +7,7 @@ import {
   distinguishedName,
   executablesIn,
   parseSignatures,
+  powershellEnvironment,
   publisherNamesOf,
   signatureProblem,
   type FileSignature,
@@ -110,5 +111,12 @@ describe('the files checked', () => {
     expect(executablesIn([app, installer])).toEqual(
       [join(app, 'Unity Version Control.exe'), join(app, 'resources', 'elevate.EXE'), installer].sort(),
     );
+  });
+});
+
+describe("Windows PowerShell's environment", () => {
+  it("drops PowerShell 7's module path, in any case, and passes the files", () => {
+    const env = { PATH: 'C:\\Windows', PSModulePath: 'C:\\pwsh\\Modules', psmodulepath: 'C:\\other' };
+    expect(powershellEnvironment(env, ['C:\\a.exe'])).toEqual({ PATH: 'C:\\Windows', SIGNED_FILES: '["C:\\\\a.exe"]' });
   });
 });

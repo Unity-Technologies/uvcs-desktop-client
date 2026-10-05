@@ -140,9 +140,19 @@ const signaturesCommand = [
   '  ConvertTo-Json -Compress',
 ].join('\n');
 
+/**
+ * Windows PowerShell's environment: the files to check, and no PSModulePath. Started from PowerShell 7 (a pwsh step),
+ * it inherits PowerShell 7's module path and can't load Get-AuthenticodeSignature; electron-updater clears it for the
+ * same reason (`set "PSModulePath="`, windowsExecutableCodeSignatureVerifier).
+ */
+export function powershellEnvironment(env: NodeJS.ProcessEnv, files: string[]): NodeJS.ProcessEnv {
+  const withoutModulePath = Object.fromEntries(Object.entries(env).filter(([name]) => name.toUpperCase() !== 'PSMODULEPATH'));
+  return { ...withoutModulePath, SIGNED_FILES: JSON.stringify(files) };
+}
+
 function signaturesOf(files: string[]): FileSignature[] {
   const json = execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', signaturesCommand], {
-    env: { ...process.env, SIGNED_FILES: JSON.stringify(files) },
+    env: powershellEnvironment(process.env, files),
     encoding: 'utf8',
     maxBuffer: 16 * 1024 * 1024,
   });
