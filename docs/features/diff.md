@@ -155,7 +155,7 @@ What shows (`useMovedCode`, `MovedCode`):
   one is beside half of it at least (`labelSpot`: the space that says the code is gone tells where it went), else at
   the right end of the place's bottom edge: the top edge is the change's chip's. In a pane narrower than 320 px it
   shows the arrow and the number only, the words in its tooltip.
-- The label's other button, "Compare both places", opens the two places side by side (`openMovedCodeDialog`, of
+- The label's other button, "Compare moved code", opens the two places side by side (`openMovedCodeDialog`, of
   `movedCopies`): a read-only diff of what moved with what it became, in the diff's look, layout and comparison
   method, so only what changed on the way shows as changed. Its lines are numbered from the start of the moved code
   (Pierre numbers a diff from 1); the title says where both places are. Putting the two places side by side in the

@@ -90,7 +90,7 @@ export function MovedCode({ containerRef, root, virtualizer, moves, layout, hove
                 <Arrow size={12} strokeWidth={2.25} />
                 <span>{spot.short ? line : text}</span>
               </button>
-              <button type="button" className={styles.compare} aria-label="Compare both places" data-tip="Compare both places" onClick={() => onCompare(move)}>
+              <button type="button" className={styles.compare} aria-label="Compare moved code" data-tip="Compare moved code" onClick={() => onCompare(move)}>
                 <GitCompareArrows size={12} strokeWidth={2.25} />
               </button>
             </div>
