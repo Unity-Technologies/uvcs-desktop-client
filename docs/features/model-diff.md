@@ -119,5 +119,10 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
 
 `scripts/sandboxes/models.sh` builds `models@local` (workspace `/tmp/uvcs-models`): a changeset per case above (a
 re-export, wrong units, a turn, a pivot, hierarchy edits, material slots, a sculpt, a polycount, UVs, added and deleted
-models), a branch of model changes and a pending one. Its FBX files are ASCII, written by `testing/asciiFbx`, which
-tests use too.
+models), a branch of model changes and a pending one. Then, on /main: a skinned GLB character (`Scout.glb`) whose
+takes change (a shorter `Wave`, a new `Jump`), a `.gltf` whose geometry is in the `.bin` beside it (`Barrel.gltf`),
+import settings changed in a `.meta` alone (the crate's `globalScale`, the robot's `Wave` clip cut past the end of its
+take), and `/main/conflict-lamp`, which conflicts with /main on `Lamp.glb` when merged. Its FBX files are ASCII,
+written by `testing/asciiFbx`, which tests use too; its glTF ones are three.js scenes written by GLTFExporter
+(`models/gltfModels.ts`, with a `FileReader` stand-in for Node); its `.meta` files are Unity 6.3's (`models/unityMeta.ts`:
+ModelImporter for FBX and OBJ, glTFast's ScriptedImporter for glTF and GLB).
