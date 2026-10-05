@@ -33,7 +33,7 @@ export async function parseModel({ bytes, format }: ModelBytes, companions: Read
   const manager = noTextureLoading((name) => textures.add(name), companionUrls);
   try {
     const loaded = await load(bytes, format, manager);
-    const facts: ModelFileFacts = { format, textures: [...textures].sort(), unitScale: 1, upAxis: 'y', axisConversion: new Matrix4().elements, exportedFrom: null };
+    const facts: ModelFileFacts = { format, textures: [...textures].sort(), unitScale: 1, upAxis: 'y', axisConversion: new Matrix4().elements, exportedFrom: null, frameRate: null };
     if (format === 'fbx') Object.assign(facts, fbxFacts(bytes, loaded.root));
     return { kind: 'parsed', model: fromThreeObject(loaded.root, loaded.animations, facts) };
   } catch {
@@ -78,8 +78,27 @@ function fbxFacts(bytes: Uint8Array, root: Object3D): Partial<ModelFileFacts> {
     axisConversion: fbxAxisConversion(axes),
     unitScale: (typeof unitScaleFactor === 'number' && unitScaleFactor > 0 ? unitScaleFactor : 1) / FBX_UNITS_PER_METRE,
     exportedFrom: exporterOf(bytes),
+    frameRate: fbxFrameRate(bytes),
   };
 }
+
+/**
+ * The FBX's frame rate, from its `TimeMode` (FbxTime::EMode) or its `CustomFrameRate`: what Unity's clip splits count
+ * frames in. A file that doesn't say is 30 fps, as the FBX SDK's default.
+ */
+function fbxFrameRate(bytes: Uint8Array): number {
+  const mode = readFbxProperty(bytes, 'TimeMode');
+  if (mode === CUSTOM_TIME_MODE) {
+    const custom = readFbxProperty(bytes, 'CustomFrameRate');
+    if (typeof custom === 'number' && custom > 0) return custom;
+  }
+  return (typeof mode === 'number' && FRAME_RATES[mode]) || DEFAULT_FRAME_RATE;
+}
+
+const DEFAULT_FRAME_RATE = 30;
+const CUSTOM_TIME_MODE = 14;
+/** FbxTime::EMode, by value: eFrames120, 100, 60, 50, 48, 30, 30 drop, NTSC drop, NTSC full, PAL, 24 (cinema), 1000, film full, custom, 96, 72, 59.94, 119.88. */
+const FRAME_RATES: Record<number, number> = { 1: 120, 2: 100, 3: 60, 4: 50, 5: 48, 6: 30, 7: 30, 8: 29.97, 9: 29.97, 10: 25, 11: 24, 12: 1000, 13: 23.976, 15: 96, 16: 72, 17: 59.94, 18: 119.88 };
 
 function fbxAxes(bytes: Uint8Array): FbxAxisSystem {
   const read = (name: FbxPropertyName, fallback: number): number => {

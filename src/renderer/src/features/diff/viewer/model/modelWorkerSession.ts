@@ -58,8 +58,8 @@ async function compareInWorker(before: ParsedModel, after: ParsedModel): Promise
   return response && 'comparison' in response ? response.comparison : compareSurfaces(placedMeshesOf(before), placedMeshesOf(after));
 }
 
-function placeable({ nodes, unitScale, axisConversion, meshes }: ParsedModel): PlaceableModel {
-  return { nodes, unitScale, axisConversion, meshes: meshes.map(({ node, attributes, index }) => ({ node, attributes: { position: attributes.position }, index })) };
+function placeable({ nodes, unitScale, importScale, axisConversion, meshes }: ParsedModel): PlaceableModel {
+  return { nodes, unitScale, importScale, axisConversion, meshes: meshes.map(({ node, attributes, index }) => ({ node, attributes: { position: attributes.position }, index })) };
 }
 
 function startedWorker(): Worker | null {

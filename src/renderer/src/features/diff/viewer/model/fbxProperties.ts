@@ -13,6 +13,8 @@ export type FbxPropertyName =
   | 'CoordAxis'
   | 'CoordAxisSign'
   | 'UnitScaleFactor'
+  | 'TimeMode'
+  | 'CustomFrameRate'
   | 'Original|ApplicationName'
   | 'Original|ApplicationVersion';
 

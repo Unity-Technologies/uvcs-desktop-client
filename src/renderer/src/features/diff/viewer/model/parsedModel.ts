@@ -90,6 +90,10 @@ export interface ParsedModel {
   textures: string[];
   /** Metres per file unit, as Unity imports it ("Convert Units"): an FBX in centimetres is 0.01. */
   unitScale: number;
+  /** What the model's import settings multiply that by (`importScaleOf`: its Scale Factor); 1 when none are read. */
+  importScale: number;
+  /** The takes' frames per second, which Unity's clip splits count in; null when the file doesn't say (glTF). */
+  frameRate: number | null;
   /** The file's up axis. Unity stands a file on Y whatever its axes: `axisConversion`, above the root, does it. */
   upAxis: 'x' | 'y' | 'z';
   /** From the file's axes onto Unity's (`fbxAxisConversion`), as a column-major 4×4; the identity for a Y-up file. */

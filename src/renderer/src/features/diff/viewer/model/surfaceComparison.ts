@@ -8,7 +8,7 @@ import type { ParsedModel } from './parsedModel';
 import { surfaceDistances } from './surfaceDistance';
 
 /** What placing a version's meshes takes of it: its nodes, units and axes, and each mesh's positions and indices. */
-export type PlaceableModel = Pick<ParsedModel, 'nodes' | 'unitScale' | 'axisConversion'> & {
+export type PlaceableModel = Pick<ParsedModel, 'nodes' | 'unitScale' | 'importScale' | 'axisConversion'> & {
   meshes: { node: number; attributes: { position: Float32Array }; index: Uint32Array | null }[];
 };
 

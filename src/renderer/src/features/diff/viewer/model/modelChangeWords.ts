@@ -114,7 +114,12 @@ function wordsOf(change: ModelChange): { title: string; detail?: string } {
     case 'resized': {
       const bigger = change.factor >= 1;
       const factor = factorOf(bigger ? change.factor : 1 / change.factor);
-      const cause = change.units ? `The file's units changed from ${formatUnits(change.units.before)} to ${formatUnits(change.units.after)}. ` : '';
+      const cause =
+        change.cause?.kind === 'units'
+          ? `The file's units changed from ${formatUnits(change.cause.before)} to ${formatUnits(change.cause.after)}. `
+          : change.cause?.kind === 'importSettings'
+            ? 'Its import settings scale it differently. '
+            : '';
       return {
         title: `${factor}× ${bigger ? 'larger' : 'smaller'} in Unity`,
         detail: `${cause}It was ${formatLength(change.heightBefore)} tall, now ${formatLength(change.heightAfter)}, in every scene that uses it.`,

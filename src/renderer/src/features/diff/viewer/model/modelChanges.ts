@@ -20,8 +20,8 @@ export interface NodeRef {
 }
 
 export type ModelChange =
-  /** Every mesh grew or shrank by `factor`; `units` when the file's units changed with it. */
-  | { kind: 'resized'; factor: number; heightBefore: number; heightAfter: number; units: { before: number; after: number } | null }
+  /** Every mesh grew or shrank by `factor`; `cause` when the file's units or its import settings changed with it. */
+  | { kind: 'resized'; factor: number; heightBefore: number; heightAfter: number; cause: ResizeCause | null }
   /** The file's units changed and the model kept its size in Unity. */
   | { kind: 'unitsChanged'; before: number; after: number }
   /** Every mesh turned by the same rotation; `axis` when it is about one of Unity's. */
@@ -59,6 +59,9 @@ export type ModelChange =
   | { kind: 'exporter'; before: string | null; after: string | null };
 
 export type ModelChangeKind = ModelChange['kind'];
+
+/** Why a model's size changed in Unity: the file's units (metres per unit), or its import settings' scale. */
+export type ResizeCause = { kind: 'units'; before: number; after: number } | { kind: 'importSettings'; before: number; after: number };
 
 /** A change that loses work or breaks a scene in Unity, which the panel tells first, in the attention tone. */
 export function isRisk(change: ModelChange): boolean {
@@ -163,7 +166,7 @@ function wholeModelChanges(before: ModelSummary, after: ModelSummary, pairs: Mes
       factor: scale,
       heightBefore: heightOf(before),
       heightAfter: heightOf(after),
-      units: before.unitScale === after.unitScale ? null : { before: before.unitScale, after: after.unitScale },
+      cause: resizeCause(before, after),
     });
   }
   const degrees = rotation ? (rotation.angleTo(new Quaternion()) * 180) / Math.PI : 0;
@@ -223,6 +226,12 @@ function uniformRatio(before: Bounds, after: Bounds): number {
   });
   if (ratios.length === 0) return 1;
   return ratios.every((ratio) => closeRatio(ratio, ratios[0]!)) ? ratios[0]! : Number.NaN;
+}
+
+function resizeCause(before: ModelSummary, after: ModelSummary): ResizeCause | null {
+  if (before.unitScale !== after.unitScale) return { kind: 'units', before: before.unitScale, after: after.unitScale };
+  if (before.importScale !== after.importScale) return { kind: 'importSettings', before: before.importScale, after: after.importScale };
+  return null;
 }
 
 function heightOf(summary: ModelSummary): number {

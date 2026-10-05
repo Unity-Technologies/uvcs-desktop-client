@@ -36,6 +36,8 @@ export interface TestModel {
   root?: string;
   nodes: TestNode[];
   unitScale?: number;
+  importScale?: number;
+  frameRate?: number | null;
   upAxis?: 'y' | 'z';
   clips?: { name: string; duration: number }[];
   textures?: string[];
@@ -69,6 +71,8 @@ export function testModel(spec: TestModel): ParsedModel {
     clips: (spec.clips ?? []).map((clip): ModelClip => ({ ...clip, tracks: AnimationClip.toJSON(new AnimationClip(clip.name, clip.duration, [])) })),
     textures: spec.textures ?? [],
     unitScale: spec.unitScale ?? 1,
+    importScale: spec.importScale ?? 1,
+    frameRate: spec.frameRate ?? null,
     upAxis: spec.upAxis ?? 'y',
     axisConversion: fbxAxisConversion(spec.upAxis === 'z' ? MAX_AXES : Y_UP_AXES),
     exportedFrom: spec.exportedFrom ?? null,

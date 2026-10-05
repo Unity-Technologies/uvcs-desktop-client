@@ -35,7 +35,7 @@ describe('modelChanges: the whole model', () => {
   it('tells a model 100× larger once, with its units as the cause', () => {
     const list = changes({ nodes: crate, unitScale: 0.01 }, { nodes: crate, unitScale: 1 });
     expect(list).toHaveLength(1);
-    expect(list[0]).toMatchObject({ kind: 'resized', units: { before: 0.01, after: 1 } });
+    expect(list[0]).toMatchObject({ kind: 'resized', cause: { kind: 'units', before: 0.01, after: 1 } });
     const resized = list[0] as Extract<ModelChange, { kind: 'resized' }>;
     expect(resized.factor).toBeCloseTo(100);
     expect(resized.heightBefore).toBeCloseTo(0.009);
@@ -47,7 +47,12 @@ describe('modelChanges: the whole model', () => {
     const scaled = crate.map((node) => (node.name === 'Crate' ? { ...node, scale: [2, 2, 2] as [number, number, number] } : node));
     const list = changes({ nodes: crate }, { nodes: scaled });
     expect(kinds(list)).toEqual(['resized']);
-    expect((list[0] as Extract<ModelChange, { kind: 'resized' }>).units).toBeNull();
+    expect((list[0] as Extract<ModelChange, { kind: 'resized' }>).cause).toBeNull();
+  });
+
+  it("tells a model resized by its import settings' Scale Factor, its file as it was", () => {
+    const list = changes({ nodes: crate, importScale: 1 }, { nodes: crate, importScale: 100 });
+    expect(list).toMatchObject([{ kind: 'resized', cause: { kind: 'importSettings', before: 1, after: 100 } }]);
   });
 
   it('tells a scale applied to the vertices (Apply Scale) as a resize too', () => {

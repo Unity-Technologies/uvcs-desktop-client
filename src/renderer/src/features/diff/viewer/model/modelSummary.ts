@@ -71,6 +71,8 @@ export interface ModelSummary {
   clips: { name: string; duration: number }[];
   textures: string[];
   unitScale: number;
+  /** What the import settings scale the model by (`ParsedModel.importScale`). */
+  importScale: number;
   upAxis: ParsedModel['upAxis'];
   exportedFrom: string | null;
   totals: { triangles: number; vertices: number; meshes: number; materials: number; bones: number; blendShapes: number };
@@ -114,6 +116,7 @@ export function modelSummary(model: ParsedModel): ModelSummary {
     clips: model.clips.map(({ name, duration }) => ({ name, duration })),
     textures: model.textures,
     unitScale: model.unitScale,
+    importScale: model.importScale,
     upAxis: model.upAxis,
     exportedFrom: model.exportedFrom,
     totals: {

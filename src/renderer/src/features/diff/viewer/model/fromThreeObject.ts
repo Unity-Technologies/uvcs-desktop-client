@@ -6,7 +6,7 @@ import { AnimationClip, type BufferAttribute, type BufferGeometry, type Interlea
 import type { BlendShape, MeshAttributes, MeshGroup, ModelClip, ModelMesh, ModelNode, ModelNodeKind, ParsedModel } from './parsedModel';
 
 /** What the loader told besides the objects (`parseModel` reads it from the file). */
-export type ModelFileFacts = Pick<ParsedModel, 'format' | 'textures' | 'unitScale' | 'upAxis' | 'axisConversion' | 'exportedFrom'>;
+export type ModelFileFacts = Pick<ParsedModel, 'format' | 'textures' | 'unitScale' | 'upAxis' | 'axisConversion' | 'exportedFrom' | 'frameRate'>;
 
 type AnyAttribute = BufferAttribute | InterleavedBufferAttribute;
 
@@ -20,7 +20,7 @@ export function fromThreeObject(root: Object3D, animations: AnimationClip[], fac
   // Bones are nodes of the hierarchy, found anywhere in it: their indices are known once every node is.
   for (const { mesh, parsed } of skinned) parsed.skin = skinOf(mesh, indexOf);
 
-  return { ...facts, nodes, meshes, clips: animations.map(clipOf) };
+  return { ...facts, importScale: 1, nodes, meshes, clips: animations.map(clipOf) };
 
   function visit(object: Object3D, parent: number): void {
     // FBXLoader adds the file's ambient color as a light of the scene: a setting of the file, not a node of the model.

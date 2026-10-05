@@ -9,7 +9,7 @@ const titles = (changes: ModelChange[]): string[] => changeRows(changes).map((ro
 
 describe('changeRows', () => {
   it('tells a model resized by its units, and why, in the attention tone', () => {
-    const [row] = changeRows([{ kind: 'resized', factor: 0.01, heightBefore: 0.9, heightAfter: 0.009, units: { before: 1, after: 0.01 } }]);
+    const [row] = changeRows([{ kind: 'resized', factor: 0.01, heightBefore: 0.9, heightAfter: 0.009, cause: { kind: 'units', before: 1, after: 0.01 } }]);
     expect(row).toMatchObject({
       tone: 'risk',
       title: '100× smaller in Unity',
