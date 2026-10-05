@@ -1,16 +1,17 @@
 // A model file's bytes as a `ParsedModel`, through three's loaders for its format. Nothing but the bytes is read
 // (`noTextureLoading`), and nothing needs a DOM, so it runs in the parsing worker (`modelParse.worker`) and in tests.
 
-import { Quaternion, type AnimationClip, type Object3D } from 'three';
+import { Matrix4, Quaternion, type AnimationClip, type Object3D } from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import type { ModelBytes } from '@shared/domain/content';
-import { readFbxProperty } from './fbxProperties';
+import { fbxAxisConversion, Y_UP_AXES, type FbxAxisSystem } from './fbxAxes';
+import { readFbxProperty, type FbxPropertyName } from './fbxProperties';
 import { fromThreeObject, type ModelFileFacts } from './fromThreeObject';
 import { gltfNeed, type GltfNeed } from './gltfJson';
 import { noTextureLoading } from './noTextureLoading';
-import type { ParsedModel, QuaternionTuple } from './parsedModel';
+import type { ParsedModel } from './parsedModel';
 
 /** Why a model can't be shown: what its bytes don't hold (a glTF's other file, a decoder), or bytes that don't read. */
 export type ModelReadFailure = GltfNeed | { kind: 'unreadable' };
@@ -19,7 +20,7 @@ export type ModelReadResult = { kind: 'parsed'; model: ParsedModel } | { kind: '
 
 /** FBX keeps lengths in centimetres: Unity's "Convert Units" turns them into metres. */
 const FBX_UNITS_PER_METRE = 100;
-const IDENTITY: QuaternionTuple = [0, 0, 0, 1];
+const AXES = ['x', 'y', 'z'] as const;
 
 export async function parseModel({ bytes, format }: ModelBytes): Promise<ModelReadResult> {
   if (format === 'gltf' || format === 'glb') {
@@ -30,7 +31,7 @@ export async function parseModel({ bytes, format }: ModelBytes): Promise<ModelRe
   const manager = noTextureLoading((name) => textures.add(name));
   try {
     const loaded = await load(bytes, format, manager);
-    const facts: ModelFileFacts = { format, textures: [...textures].sort(), unitScale: 1, upAxis: 'y', axisCorrection: IDENTITY, exportedFrom: null };
+    const facts: ModelFileFacts = { format, textures: [...textures].sort(), unitScale: 1, upAxis: 'y', axisConversion: new Matrix4().elements, exportedFrom: null };
     if (format === 'fbx') Object.assign(facts, fbxFacts(bytes, loaded.root));
     return { kind: 'parsed', model: fromThreeObject(loaded.root, loaded.animations, facts) };
   } catch {
@@ -60,22 +61,34 @@ async function load(bytes: Uint8Array, format: ModelBytes['format'], manager: Re
 }
 
 /**
- * The FBX's units and up axis, which FBXLoader applies only in part: it turns a Z-up file onto Y by setting the
- * root's rotation (over the root's own, which it loses), and it leaves the units alone. Unity converts both.
+ * The FBX's units and axes, which FBXLoader applies only in part: it leaves the units alone, and turns a Z-up file by
+ * -90° on X whatever its front axis, setting the root's rotation over the root's own (lost). That turn is taken back
+ * and the file's whole axis system converted instead (`fbxAxisConversion`), as Unity converts it.
  */
 function fbxFacts(bytes: Uint8Array, root: Object3D): Partial<ModelFileFacts> {
-  const upAxis = readFbxProperty(bytes, 'UpAxis') === 2 ? 'z' : 'y';
-  let axisCorrection = IDENTITY;
-  if (upAxis === 'z') {
-    axisCorrection = root.quaternion.toArray() as QuaternionTuple;
-    root.quaternion.copy(new Quaternion());
-  }
+  const axes = fbxAxes(bytes);
+  if (axes.upAxis === 2) root.quaternion.copy(new Quaternion());
   const unitScaleFactor = readFbxProperty(bytes, 'UnitScaleFactor');
   return {
-    upAxis,
-    axisCorrection,
+    upAxis: AXES[axes.upAxis] ?? 'y',
+    axisConversion: fbxAxisConversion(axes),
     unitScale: (typeof unitScaleFactor === 'number' && unitScaleFactor > 0 ? unitScaleFactor : 1) / FBX_UNITS_PER_METRE,
     exportedFrom: exporterOf(bytes),
+  };
+}
+
+function fbxAxes(bytes: Uint8Array): FbxAxisSystem {
+  const read = (name: FbxPropertyName, fallback: number): number => {
+    const value = readFbxProperty(bytes, name);
+    return typeof value === 'number' ? value : fallback;
+  };
+  return {
+    upAxis: read('UpAxis', Y_UP_AXES.upAxis),
+    upAxisSign: read('UpAxisSign', Y_UP_AXES.upAxisSign),
+    frontAxis: read('FrontAxis', Y_UP_AXES.frontAxis),
+    frontAxisSign: read('FrontAxisSign', Y_UP_AXES.frontAxisSign),
+    coordAxis: read('CoordAxis', Y_UP_AXES.coordAxis),
+    coordAxisSign: read('CoordAxisSign', Y_UP_AXES.coordAxisSign),
   };
 }
 

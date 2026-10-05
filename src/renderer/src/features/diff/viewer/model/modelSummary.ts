@@ -5,7 +5,7 @@
 
 import { Box3, Matrix4, Quaternion, Vector3 } from 'three';
 import type { ModelMesh, ModelNodeKind, ParsedModel } from './parsedModel';
-import { countUniqueVertices, fingerprintOf } from './uniqueVertices';
+import { countUniqueVertices, fingerprintOf, NORMAL_WELD_STEP } from './uniqueVertices';
 
 export interface Bounds {
   min: [number, number, number];
@@ -33,11 +33,10 @@ export interface SummaryNode {
 export interface MeshSummary {
   node: number;
   triangles: number;
-  /** As Unity counts them: corners welded where every attribute matches. */
+  /** About as Unity counts them: corners welded where every attribute matches (`countUniqueVertices`). */
   vertices: number;
+  /** The material slots its triangles use, in slot order: Unity's submeshes. A slot no triangle uses, Unity drops. */
   slots: string[];
-  /** The slot each triangle range draws with, in order: which material goes where. */
-  slotsUsed: number[];
   blendShapes: string[];
   /** Bones the mesh is skinned to, by node key; empty for a mesh that isn't skinned. */
   bones: string[];
@@ -58,17 +57,17 @@ export interface ModelSummary {
   clips: { name: string; duration: number }[];
   textures: string[];
   unitScale: number;
-  upAxis: 'y' | 'z';
+  upAxis: ParsedModel['upAxis'];
   exportedFrom: string | null;
   totals: { triangles: number; vertices: number; meshes: number; materials: number; bones: number; blendShapes: number };
   /** The whole model in Unity's space; null when it draws nothing. */
   bounds: Bounds | null;
 }
 
-/** From the file's space to Unity's: its units in metres, its up axis turned onto Y, X mirrored. */
-export function unitySpaceOf(model: Pick<ParsedModel, 'unitScale' | 'axisCorrection'>): Matrix4 {
+/** From the file's space to Unity's: its units in metres, its axes onto Unity's, X mirrored. */
+export function unitySpaceOf(model: Pick<ParsedModel, 'unitScale' | 'axisConversion'>): Matrix4 {
   const mirror = new Matrix4().makeScale(-1, 1, 1);
-  const correction = new Matrix4().makeRotationFromQuaternion(new Quaternion(...model.axisCorrection));
+  const correction = new Matrix4().fromArray(model.axisConversion);
   const units = new Matrix4().makeScale(model.unitScale, model.unitScale, model.unitScale);
   return mirror.multiply(correction).multiply(units);
 }
@@ -135,18 +134,17 @@ function meshSummary(mesh: ModelMesh, keys: string[]): MeshSummary {
   const { attributes } = mesh;
   const vertexCount = attributes.position.length / 3;
   const drawn = [
-    { array: attributes.position, size: 3 },
-    { array: attributes.normal, size: 3 },
-    { array: attributes.uv, size: 2 },
-    { array: attributes.uv1, size: 2 },
-    { array: attributes.color, size: attributes.colorSize },
-  ].filter((attribute): attribute is { array: Float32Array; size: number } => attribute.array !== null);
+    { array: attributes.position, size: 3, step: 0 },
+    { array: attributes.normal, size: 3, step: NORMAL_WELD_STEP },
+    { array: attributes.uv, size: 2, step: 0 },
+    { array: attributes.uv1, size: 2, step: 0 },
+    { array: attributes.color, size: attributes.colorSize, step: 0 },
+  ].filter((attribute): attribute is { array: Float32Array; size: number; step: number } => attribute.array !== null);
   return {
     node: mesh.node,
     triangles: Math.floor((mesh.index?.length ?? vertexCount) / 3),
-    vertices: countUniqueVertices({ arrays: drawn.map((a) => a.array), sizes: drawn.map((a) => a.size), count: vertexCount }),
-    slots: mesh.slots,
-    slotsUsed: mesh.groups.map((group) => group.slot),
+    vertices: countUniqueVertices({ arrays: drawn.map((a) => a.array), sizes: drawn.map((a) => a.size), steps: drawn.map((a) => a.step), count: vertexCount }),
+    slots: mesh.slots.filter((_, slot) => mesh.groups.some((group) => group.slot === slot && group.count > 0)),
     blendShapes: mesh.blendShapes.map((shape) => shape.name),
     bones: mesh.skin ? mesh.skin.bones.map((bone) => keys[bone] ?? '') : [],
     hasNormals: attributes.normal !== null,

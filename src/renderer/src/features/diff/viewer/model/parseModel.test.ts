@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ModelBytes, ModelFormat } from '@shared/domain/content';
 import { parseModel } from './parseModel';
 import type { ParsedModel } from './parsedModel';
+import { fbxAxisConversion, Y_UP_AXES } from './fbxAxes';
 import { asciiFbx, box } from './testing/asciiFbx';
 
 const bytesOf = (text: string, format: ModelFormat): ModelBytes => ({ bytes: new TextEncoder().encode(text), format });
@@ -51,11 +52,12 @@ describe('parseModel, FBX', () => {
     expect(centimetres.exportedFrom).toBeNull();
   });
 
-  it('keeps a Z-up file turned onto Y apart from the root rotation', async () => {
+  it('converts a Z-up file onto Y by its axes, apart from the root rotation FBXLoader set', async () => {
     const model = await parsed(bytesOf(asciiFbx({ upAxis: 2, nodes: [{ name: 'Rock', kind: 'mesh', mesh: { ...box([1, 1, 1]), materials: ['Rock'] } }] }), 'fbx'));
     expect(model.upAxis).toBe('z');
-    expect(model.axisCorrection.map((value) => Number(value.toFixed(4)))).toEqual([-0.7071, 0, 0, 0.7071]);
-    expect(model.nodes[0]!.rotation).toEqual([0, 0, 0, 1]);
+    // The file names no front or coord axis: they read as Y-up's, so its Z (up) becomes Y and its Y (front, unnamed) Z.
+    expect(model.axisConversion).toEqual(fbxAxisConversion({ ...Y_UP_AXES, upAxis: 2 }));
+    expect(model.nodes.every((node) => node.rotation.every((value, i) => value === [0, 0, 0, 1][i]))).toBe(true);
   });
 });
 

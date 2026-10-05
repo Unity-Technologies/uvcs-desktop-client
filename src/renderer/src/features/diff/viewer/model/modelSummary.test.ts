@@ -69,6 +69,15 @@ describe('modelSummary', () => {
     expect(summary.clips).toEqual([{ name: 'Idle', duration: 2 }]);
   });
 
+  it('keeps only the material slots some triangle uses, as Unity makes submeshes only of those', () => {
+    const model = testModel({ nodes: [{ name: 'Car', mesh: { slots: ['Paint', 'Glass'] } }] });
+    model.meshes[0]!.slots.push('Unused');
+    model.meshes[0]!.groups.push({ start: 36, count: 0, slot: 2 });
+    const summary = modelSummary(model);
+    expect(summary.meshes[0]!.slots).toEqual(['Paint', 'Glass']);
+    expect(summary.totals.materials).toBe(2);
+  });
+
   it('fingerprints each attribute, equal for equal data and different for any change', () => {
     const before = modelSummary(testModel({ nodes: [{ name: 'Rock', mesh: { uv: true } }] })).meshes[0]!;
     const same = modelSummary(testModel({ nodes: [{ name: 'Rock', mesh: { uv: true } }] })).meshes[0]!;

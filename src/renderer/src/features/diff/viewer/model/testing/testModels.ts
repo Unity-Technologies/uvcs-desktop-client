@@ -1,7 +1,8 @@
 // `ParsedModel`s built in tests: a hierarchy by names, each mesh a box of its own size and slots, so a test reads as
 // the model an artist exported ("a crate with a lid") and states only what it is about.
 
-import { Euler, Quaternion, Vector3 } from 'three';
+import { Euler, Quaternion } from 'three';
+import { fbxAxisConversion, Y_UP_AXES } from '../fbxAxes';
 import type { ModelClip, ModelMesh, ModelNode, ModelNodeKind, ParsedModel } from '../parsedModel';
 
 export interface TestNode {
@@ -41,13 +42,16 @@ export interface TestModel {
   exportedFrom?: string | null;
 }
 
+/** 3ds Max's: Z up, -Y front. */
+const MAX_AXES = { upAxis: 2, upAxisSign: 1, frontAxis: 1, frontAxisSign: -1, coordAxis: 0, coordAxisSign: 1 };
+
 export function testModel(spec: TestModel): ParsedModel {
   const nodes: ModelNode[] = [{ name: spec.root ?? '', parent: -1, kind: 'group', position: [0, 0, 0], rotation: [0, 0, 0, 1], scale: [1, 1, 1] }];
   const index = new Map<string, number>();
   for (const node of spec.nodes) {
     index.set(node.name, nodes.length);
-    const rotation = node.rotation ?? [0, 0, 0];
-    const quaternion = new Quaternion().setFromEuler(new Euler(...rotation.map((degrees) => (degrees * Math.PI) / 180), 'XYZ'));
+    const [x, y, z] = (node.rotation ?? [0, 0, 0]).map((degrees) => (degrees * Math.PI) / 180) as [number, number, number];
+    const quaternion = new Quaternion().setFromEuler(new Euler(x, y, z, 'XYZ'));
     nodes.push({
       name: node.name,
       parent: node.parent === undefined ? 0 : index.get(node.parent)!,
@@ -66,7 +70,7 @@ export function testModel(spec: TestModel): ParsedModel {
     textures: spec.textures ?? [],
     unitScale: spec.unitScale ?? 1,
     upAxis: spec.upAxis ?? 'y',
-    axisCorrection: spec.upAxis === 'z' ? (new Quaternion().setFromAxisAngle(new Vector3(1, 0, 0), -Math.PI / 2).toArray() as ModelNode['rotation']) : [0, 0, 0, 1],
+    axisConversion: fbxAxisConversion(spec.upAxis === 'z' ? MAX_AXES : Y_UP_AXES),
     exportedFrom: spec.exportedFrom ?? null,
   };
 }

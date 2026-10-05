@@ -15,6 +15,13 @@ describe('countUniqueVertices', () => {
     expect(countUniqueVertices({ arrays: [positions, uvs], sizes: [3, 2], count: 3 })).toBe(2);
   });
 
+  it('welds values that differ by less than their step', () => {
+    const positions = new Float32Array([0, 0, 0, 0, 0, 0]);
+    const normals = new Float32Array([0, 1, 0, 0.00001, 0.99999, 0]);
+    expect(countUniqueVertices({ arrays: [positions, normals], sizes: [3, 3], count: 2 })).toBe(2);
+    expect(countUniqueVertices({ arrays: [positions, normals], sizes: [3, 3], steps: [0, 1e-4], count: 2 })).toBe(1);
+  });
+
   it('takes -0 and 0 as one value', () => {
     expect(countUniqueVertices({ arrays: [new Float32Array([0, -0, 0, -0, 0, 0])], sizes: [3], count: 2 })).toBe(1);
   });

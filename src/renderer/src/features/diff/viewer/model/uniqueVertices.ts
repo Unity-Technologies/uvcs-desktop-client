@@ -1,21 +1,27 @@
 // How many vertices Unity's mesh has once imported. A file stores a vertex per polygon corner (FBX) or per index
 // (glTF); Unity welds the corners that share every attribute and keeps apart those that differ in any (a UV seam, a
 // hard edge), so its count is the number of distinct attribute tuples, which is what the Inspector shows and what a
-// vertex budget counts. Tuples are told apart by a 64-bit hash of their bits in an open-addressed table of typed
+// vertex budget counts. Unity welds normals that differ by float noise (exporters write split normals with it), so
+// normals are compared to `NORMAL_WELD_STEP`; its count still differs by a few percent, as it also splits vertices
+// for the tangents it computes. Tuples are told apart by a 64-bit hash of their bits in an open-addressed table of typed
 // arrays: a few million corners take a few megabytes and tens of milliseconds, where a `Set` of strings took seconds.
 
-/** The attributes of each vertex: `arrays[k]` holds `sizes[k]` floats per vertex. */
+/** The attributes of each vertex: `arrays[k]` holds `sizes[k]` floats per vertex, compared to `steps[k]` (0: exactly). */
 export interface VertexAttributes {
   arrays: Float32Array[];
   sizes: number[];
+  steps?: number[];
   count: number;
 }
 
+/** How close two normals' components weld: closest to Unity's counts on real exports (Blender, Maya). */
+export const NORMAL_WELD_STEP = 1e-4;
+
 const EMPTY_SLOT = 0;
 
-export function countUniqueVertices({ arrays, sizes, count }: VertexAttributes): number {
+export function countUniqueVertices({ arrays, sizes, steps = [], count }: VertexAttributes): number {
   if (count === 0) return 0;
-  const bits = arrays.map((array) => new Uint32Array(array.buffer, array.byteOffset, array.length));
+  const bits = arrays.map((array, k) => (steps[k] ? snapped(array, steps[k]) : new Uint32Array(array.buffer, array.byteOffset, array.length)));
   // A power of two at least twice the count keeps probes short.
   const capacity = 2 ** Math.ceil(Math.log2(count * 2));
   const mask = capacity - 1;
@@ -47,6 +53,13 @@ export function countUniqueVertices({ arrays, sizes, count }: VertexAttributes):
     }
   }
   return unique;
+}
+
+/** The values as whole steps, which compare as bits like any value. */
+function snapped(array: Float32Array, step: number): Uint32Array {
+  const steps = new Int32Array(array.length);
+  for (let i = 0; i < array.length; i++) steps[i] = Math.round(array[i]! / step);
+  return new Uint32Array(steps.buffer);
 }
 
 /** A fingerprint of a float array's exact bits: equal arrays have equal fingerprints, and any change changes it. */

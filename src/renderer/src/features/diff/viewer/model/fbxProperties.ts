@@ -5,7 +5,16 @@
 // then its value (`I` int32, `D` double, `S` string). Global settings are never compressed (only arrays are).
 
 /** The values of FBX properties the diff reads. */
-export type FbxPropertyName = 'UpAxis' | 'UnitScaleFactor' | 'Original|ApplicationName' | 'Original|ApplicationVersion';
+export type FbxPropertyName =
+  | 'UpAxis'
+  | 'UpAxisSign'
+  | 'FrontAxis'
+  | 'FrontAxisSign'
+  | 'CoordAxis'
+  | 'CoordAxisSign'
+  | 'UnitScaleFactor'
+  | 'Original|ApplicationName'
+  | 'Original|ApplicationVersion';
 
 const BINARY_MAGIC = 'Kaydara FBX Binary';
 /** The three strings between a property's name and its value: its type, its kind and its flags. */

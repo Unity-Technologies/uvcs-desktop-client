@@ -89,9 +89,10 @@ export interface ParsedModel {
   textures: string[];
   /** Metres per file unit, as Unity imports it ("Convert Units"): an FBX in centimetres is 0.01. */
   unitScale: number;
-  /** The file's up axis. A Z-up file is turned onto Y, as Unity turns it, by `axisCorrection` above the root. */
-  upAxis: 'y' | 'z';
-  axisCorrection: QuaternionTuple;
+  /** The file's up axis. Unity stands a file on Y whatever its axes: `axisConversion`, above the root, does it. */
+  upAxis: 'x' | 'y' | 'z';
+  /** From the file's axes onto Unity's (`fbxAxisConversion`), as a column-major 4×4; the identity for a Y-up file. */
+  axisConversion: number[];
   /** The app that exported the file, when it says (`Blender 4.2.1`). */
   exportedFrom: string | null;
 }

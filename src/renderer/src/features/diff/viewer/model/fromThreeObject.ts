@@ -6,7 +6,7 @@ import { AnimationClip, type BufferAttribute, type BufferGeometry, type Interlea
 import type { BlendShape, MeshAttributes, MeshGroup, ModelClip, ModelMesh, ModelNode, ModelNodeKind, ParsedModel } from './parsedModel';
 
 /** What the loader told besides the objects (`parseModel` reads it from the file). */
-export type ModelFileFacts = Pick<ParsedModel, 'format' | 'textures' | 'unitScale' | 'upAxis' | 'axisCorrection' | 'exportedFrom'>;
+export type ModelFileFacts = Pick<ParsedModel, 'format' | 'textures' | 'unitScale' | 'upAxis' | 'axisConversion' | 'exportedFrom'>;
 
 type AnyAttribute = BufferAttribute | InterleavedBufferAttribute;
 
