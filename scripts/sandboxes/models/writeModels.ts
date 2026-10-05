@@ -1,13 +1,13 @@
 // Writes the models sandbox's Unity project (`scripts/sandboxes/models.sh`) as it stands after one step of its
-// history: every model (FBX, OBJ, glTF), its `.meta` and a prefab. Each step changes one thing an artist would, on top
+// history: every model (FBX, OBJ, glTF), its `.meta` (`unityMeta.ts`) and a prefab. Each step changes one thing an artist would, on top
 // of the step before it, so each changeset shows one model diff case. Only the files whose bytes change are written,
 // and the models a step leaves out are deleted, so `cm ci --all --private` checks in exactly that step.
 // Usage (models.sh bundles it with esbuild first): node writeModels.mjs <step> <workspace>
 
-import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { asciiFbx, box, sphere, type FbxNodeSpec } from '../../../src/renderer/src/features/diff/viewer/model/testing/asciiFbx';
+import { gltfastImporterMeta, guidOf, modelImporterMeta } from './unityMeta';
 
 /** What the artists have done so far: each step changes some of it. */
 interface Project {
@@ -81,7 +81,7 @@ function filesOf(p: Project): Record<string, string | null> {
   const files: Record<string, string | null> = { ...models };
   for (const [path, content] of Object.entries(models)) files[`${path}.meta`] = content === null ? null : modelMeta(path);
   files['Assets/Prefabs/Robot.prefab'] = robotPrefab();
-  files['ProjectSettings/ProjectVersion.txt'] = 'm_EditorVersion: 6000.0.38f1\n';
+  files['ProjectSettings/ProjectVersion.txt'] = 'm_EditorVersion: 6000.3.10f1\n';
   return files;
 }
 
@@ -251,13 +251,9 @@ function lantern(scale: number): string {
   return JSON.stringify(gltf, null, 2) + '\n';
 }
 
-/** Unity's GUID for an asset, made from its path so every run writes the same one. */
-function guidOf(path: string): string {
-  return createHash('md5').update(path).digest('hex');
-}
-
+/** Unity imports FBX and OBJ itself, glTF and GLB with glTFast. */
 function modelMeta(path: string): string {
-  return ['fileFormatVersion: 2', `guid: ${guidOf(path)}`, 'ModelImporter:', '  serializedVersion: 22200', '  materials:', '    materialImportMode: 2', '  meshes:', '    globalScale: 1', '    useFileUnits: 1', ''].join('\n');
+  return /\.(gltf|glb)$/.test(path) ? gltfastImporterMeta(path) : modelImporterMeta(path, { globalScale: 1 });
 }
 
 function robotPrefab(): string {
