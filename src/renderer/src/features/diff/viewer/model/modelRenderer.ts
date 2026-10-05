@@ -236,6 +236,13 @@ export class ModelRenderer {
     return { side: pane.side, key: (hit?.object.userData.key as string | undefined) ?? null, point: hit ? (hit.point.toArray() as Vector) : null };
   }
 
+  /** Draws now, for a still (a thumbnail read back at once); views draw on the next frame (`requestRender`). */
+  renderNow(): void {
+    cancelAnimationFrame(this.frame);
+    this.frame = 0;
+    this.render();
+  }
+
   /** Draws on the next frame, once however often it is asked before then. */
   readonly requestRender = (): void => {
     if (this.frame) return;
