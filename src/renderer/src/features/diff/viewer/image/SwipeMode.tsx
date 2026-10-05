@@ -3,18 +3,14 @@
 // viewport space, so the split line stays put while the image pans and zooms
 // underneath it — exactly how a film wipe behaves.
 
-import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { useRef, useState } from 'react';
 import type { AnchorMode, Size } from './composedFrame';
-import { followDrag, isDragButton } from './pointerDrag';
 import { ImageLayer, SideChip, Viewport, World } from './stage';
+import { CENTERED_SPLIT, SwipeDivider } from './SwipeDivider';
 import type { DecodedImage } from './useDecodedImage';
 import type { PanZoom } from './usePanZoom';
 import styles from './SwipeMode.module.css';
 
-/** The divider stays this far in from the edges, so it can always be grabbed again. */
-const MIN_SPLIT = 0.02;
-const MAX_SPLIT = 0.98;
-const CENTERED_SPLIT = 0.5;
 /** Below this size on screen, the image would be covered by the divider's 32px knob: only the line shows. */
 const MIN_SIZE_FOR_KNOB = 96;
 
@@ -30,16 +26,6 @@ export function SwipeMode({ oldImage, newImage, frame, panZoom, anchor }: SwipeM
   /** Divider position as a fraction of the viewport width. */
   const [split, setSplit] = useState(CENTERED_SPLIT);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // The whole divider drags (a 14px strip around the 2px line, as a splitter does), not just the knob.
-  const onDividerDown = useCallback((event: ReactPointerEvent<HTMLElement>) => {
-    const container = containerRef.current;
-    if (!isDragButton(event.button) || !container) return;
-    followDrag(event.currentTarget, event.pointerId, (drag) => {
-      const rect = container.getBoundingClientRect();
-      setSplit(Math.min(MAX_SPLIT, Math.max(MIN_SPLIT, (drag.clientX - rect.left) / rect.width)));
-    });
-  }, []);
 
   const { scale } = panZoom.transform;
   const knobHidden = Math.min(frame.width * scale, frame.height * scale) < MIN_SIZE_FOR_KNOB;
@@ -57,30 +43,7 @@ export function SwipeMode({ oldImage, newImage, frame, panZoom, anchor }: SwipeM
             <ImageLayer image={newImage} frame={frame} side="new" anchor={anchor} />
           </World>
         </div>
-        {/* data-no-pan: the viewport's native pan listener fires before any
-            React handler here could stopPropagation — the stage checks the
-            attribute instead (`STAGE_CONTROLS`). Double-click
-            snaps the split back to center. */}
-        <div
-          className={styles.divider}
-          style={{ left: `${split * 100}%` }}
-          data-no-pan
-          onPointerDown={onDividerDown}
-          onDoubleClick={() => setSplit(CENTERED_SPLIT)}
-        >
-          <div className={styles.handle} data-hidden={knobHidden || undefined}>
-            <svg width="14" height="14" viewBox="0 0 14 14" aria-hidden="true">
-              <path
-                d="M5 3 1.8 7 5 11M9 3l3.2 4L9 11"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-        </div>
+        <SwipeDivider split={split} onSplitChange={setSplit} container={containerRef} knobHidden={knobHidden} />
         <SideChip side="old" />
         <SideChip side="new" corner="right" />
       </Viewport>
