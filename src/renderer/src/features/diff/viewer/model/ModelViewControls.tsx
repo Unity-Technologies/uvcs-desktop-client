@@ -1,4 +1,4 @@
-import { Box, Focus, Grid3x3, Palette, Shapes } from 'lucide-react';
+import { Bone, Box, Focus, Grid3x3, Palette, Shapes } from 'lucide-react';
 import { hotkey } from '../../../../lib/shortcutRegistry';
 import { StageButton, StageControls, StageSeparator } from '../image/StageControls';
 import type { DrawMode } from './modelRenderer';
@@ -8,11 +8,13 @@ interface ModelViewControlsProps {
   onDrawMode: (drawMode: DrawMode) => void;
   colorBySlot: boolean;
   onColorBySlot: (colorBySlot: boolean) => void;
+  /** Offered when a version has bones. */
+  bones: { shown: boolean; onShow: (shown: boolean) => void } | null;
   onFrame: () => void;
 }
 
-/** The view's buttons, bottom right: framing, then Unity's Scene view draw modes, then the materials' colors. */
-export function ModelViewControls({ drawMode, onDrawMode, colorBySlot, onColorBySlot, onFrame }: ModelViewControlsProps) {
+/** The view's buttons, bottom right: framing, then Unity's Scene view draw modes, then the materials' colors and the bones. */
+export function ModelViewControls({ drawMode, onDrawMode, colorBySlot, onColorBySlot, bones, onFrame }: ModelViewControlsProps) {
   return (
     <StageControls>
       <StageButton icon={<Focus size={15} />} label="Frame the part picked, or the whole model" shortcut={hotkey('modelFrame')} onClick={onFrame} />
@@ -22,6 +24,7 @@ export function ModelViewControls({ drawMode, onDrawMode, colorBySlot, onColorBy
       <StageButton icon={<Shapes size={15} />} label="Shaded wireframe" active={drawMode === 'shadedWireframe'} onClick={() => onDrawMode('shadedWireframe')} />
       <StageSeparator />
       <StageButton icon={<Palette size={15} />} label="Color each material slot" active={colorBySlot} onClick={() => onColorBySlot(!colorBySlot)} />
+      {bones && <StageButton icon={<Bone size={15} />} label="Show the bones" active={bones.shown} onClick={() => bones.onShow(!bones.shown)} />}
     </StageControls>
   );
 }

@@ -73,6 +73,9 @@ interface SideScene {
   markers: Points<BufferGeometry, ShaderMaterial>;
   /** The model's pivot: its axes at the origin, turned as the model is (`modelOrientation`), on top of everything. */
   pivot: AxesHelper;
+  /** The skeleton: a line from each bone to its parent and a dot at each joint, on top of the model. */
+  skeleton: LineSegments<BufferGeometry, LineBasicMaterial>;
+  joints: Points<BufferGeometry, ShaderMaterial>;
 }
 
 /** How much a node that isn't lit up fades towards the backdrop while others are. */
@@ -93,6 +96,7 @@ export class ModelRenderer {
   private look: ModelLook = { drawMode: 'shaded', colorBySlot: false, highlighted: { before: new Set(), after: new Set() } };
   private palette: ModelPalette | null = null;
   private heat: ModelHeat | null = null;
+  private showBones = false;
   private width = 1;
   private height = 1;
   private pixelRatio = 1;
@@ -139,6 +143,12 @@ export class ModelRenderer {
     const modeChanged = layout.mode !== this.layoutState.mode;
     this.layoutState = layout;
     if (modeChanged) this.applyLook();
+    this.requestRender();
+  }
+
+  /** Draws each version's skeleton over it, or not. */
+  setShowBones(show: boolean): void {
+    this.showBones = show;
     this.requestRender();
   }
 
@@ -239,8 +249,10 @@ export class ModelRenderer {
     cancelAnimationFrame(this.frame);
     for (const side of Object.values(this.sides)) {
       side?.model.root.removeFromParent();
-      side?.markers.geometry.dispose();
-      side?.markers.material.dispose();
+      for (const overlay of side ? [side.markers, side.skeleton, side.joints] : []) {
+        overlay.geometry.dispose();
+        overlay.material.dispose();
+      }
       side?.pivot.dispose();
     }
     this.targets?.forEach((target) => target.dispose());
@@ -300,7 +312,26 @@ export class ModelRenderer {
     if (withGrid) side.scene.add(this.grid, this.region);
     else this.grid.removeFromParent();
     side.pivot.visible = withGrid;
+    this.placeSkeleton(side, withGrid && this.showBones);
     this.renderer.render(side.scene, this.camera);
+  }
+
+  /** The skeleton where the bones are now: a take may have moved them since the last frame. */
+  private placeSkeleton(side: SideScene, shown: boolean): void {
+    side.skeleton.visible = shown && side.model.links.length > 0;
+    side.joints.visible = shown && side.model.bones.length > 0;
+    if (!shown) return;
+    side.scene.updateMatrixWorld();
+    const point = new Vector3();
+    const lines = new Float32Array(side.model.links.length * 6);
+    side.model.links.forEach(([bone, parent], i) => {
+      lines.set(point.setFromMatrixPosition(bone.matrixWorld).toArray(), i * 6);
+      lines.set(point.setFromMatrixPosition(parent.matrixWorld).toArray(), i * 6 + 3);
+    });
+    side.skeleton.geometry.setAttribute('position', new Float32BufferAttribute(lines, 3));
+    const joints = new Float32Array(side.model.bones.length * 3);
+    side.model.bones.forEach((bone, i) => joints.set(point.setFromMatrixPosition(bone.matrixWorld).toArray(), i * 3));
+    side.joints.geometry.setAttribute('position', new Float32BufferAttribute(joints, 3));
   }
 
   private placeCamera(aspect: number): void {
@@ -329,15 +360,22 @@ export class ModelRenderer {
     scene.environment = this.environment;
     scene.environmentIntensity = 0.55;
     const key = new DirectionalLight(0xffffff, 1.8);
-    const markers = new Points(new BufferGeometry(), markerMaterial());
+    const markers = new Points(new BufferGeometry(), markerMaterial(14));
     markers.renderOrder = 20;
     markers.frustumCulled = false;
+    const skeleton = new LineSegments(new BufferGeometry(), new LineBasicMaterial({ depthTest: false, transparent: true, opacity: 0.85 }));
+    const joints = new Points(new BufferGeometry(), markerMaterial(7));
+    for (const overlay of [skeleton, joints]) {
+      overlay.renderOrder = 12;
+      overlay.frustumCulled = false;
+      overlay.visible = false;
+    }
     const pivot = new AxesHelper(1);
     pivot.quaternion.copy(modelOrientation(model));
     (pivot.material as LineBasicMaterial).depthTest = false;
     pivot.renderOrder = 10;
-    scene.add(key, key.target, new HemisphereLight(0xffffff, 0x000000, 0.25), model.root, markers, pivot);
-    return { scene, model, key, markers, pivot };
+    scene.add(key, key.target, new HemisphereLight(0xffffff, 0x000000, 0.25), model.root, markers, pivot, skeleton, joints);
+    return { scene, model, key, markers, pivot, skeleton, joints };
   }
 
   private applyLook(): void {
@@ -345,9 +383,15 @@ export class ModelRenderer {
     if (!palette) return;
     const backdrop = new Color(palette.backdrop);
     const differences = this.layoutState.mode === 'differences' && this.heat !== null && this.sides.before !== null && this.sides.after !== null;
+    (this.region.material as LineBasicMaterial).color.set(palette.highlight);
     for (const side of ['before', 'after'] as const) {
       const scene = this.sides[side];
       if (!scene) continue;
+      scene.skeleton.material.color.set(palette.bone);
+      scene.joints.material.uniforms.fill!.value = new Color(palette.bone);
+      scene.joints.material.uniforms.ring!.value = new Color(palette.backdrop);
+      scene.markers.material.uniforms.fill!.value = new Color(palette.highlight);
+      scene.markers.material.uniforms.ring!.value = new Color(palette.backdrop);
       for (const mesh of scene.model.meshes) {
         mesh.heat.visible = differences && side === 'after';
         mesh.ghost.visible = differences && side === 'before';
@@ -379,9 +423,6 @@ export class ModelRenderer {
         mesh.wire.material.color.set(lit ? palette.highlight : palette.wire);
         mesh.wire.material.opacity = drawMode === 'wireframe' ? 0.9 : lit ? 0.6 : faded ? 0.1 : 0.28;
       }
-      (this.region.material as LineBasicMaterial).color.set(palette.highlight);
-      scene.markers.material.uniforms.fill!.value = new Color(palette.highlight);
-      scene.markers.material.uniforms.ring!.value = new Color(palette.backdrop);
     }
   }
 
@@ -424,10 +465,10 @@ export class ModelRenderer {
   }
 }
 
-/** Round dots of a fixed size on screen, the highlight ringed in the backdrop's color, never hidden by the model. */
-function markerMaterial(): ShaderMaterial {
+/** Round dots of `size` CSS pixels on screen, ringed in the backdrop's color, never hidden by the model. */
+function markerMaterial(size: number): ShaderMaterial {
   return new ShaderMaterial({
-    uniforms: { fill: { value: new Color() }, ring: { value: new Color() }, size: { value: 14 * window.devicePixelRatio } },
+    uniforms: { fill: { value: new Color() }, ring: { value: new Color() }, size: { value: size * window.devicePixelRatio } },
     vertexShader: 'uniform float size; void main() { gl_PointSize = size; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
     fragmentShader: `
       uniform vec3 fill;

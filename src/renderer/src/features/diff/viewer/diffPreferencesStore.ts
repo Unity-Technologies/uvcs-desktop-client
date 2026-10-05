@@ -28,6 +28,8 @@ interface DiffPreferences {
   modelDrawMode: DrawMode;
   /** Each material slot in its color, instead of clay. */
   modelColorBySlot: boolean;
+  /** Each version's skeleton drawn over it. */
+  modelShowBones: boolean;
   /** How far a vertex may move and still count as unchanged, as a share of the model's size: one setting fits a bolt and a building. */
   modelToleranceShare: number;
   setLayout: (layout: DiffLayout) => void;
@@ -42,6 +44,7 @@ interface DiffPreferences {
   setModelDrawMode: (drawMode: DrawMode) => void;
   setModelColorBySlot: (colorBySlot: boolean) => void;
   setModelToleranceShare: (share: number) => void;
+  setModelShowBones: (show: boolean) => void;
 }
 
 export const useDiffPreferences = create<DiffPreferences>()(
@@ -59,6 +62,7 @@ export const useDiffPreferences = create<DiffPreferences>()(
       modelDrawMode: 'shaded',
       modelColorBySlot: false,
       modelToleranceShare: 0.001,
+      modelShowBones: false,
       setLayout: (layout) => set({ layout }),
       setCollapseUnchanged: (collapseUnchanged) => set({ collapseUnchanged }),
       setWrapLines: (wrapLines) => set({ wrapLines }),
@@ -72,6 +76,7 @@ export const useDiffPreferences = create<DiffPreferences>()(
       setModelDrawMode: (modelDrawMode) => set({ modelDrawMode }),
       setModelColorBySlot: (modelColorBySlot) => set({ modelColorBySlot }),
       setModelToleranceShare: (modelToleranceShare) => set({ modelToleranceShare }),
+      setModelShowBones: (modelShowBones) => set({ modelShowBones }),
     }),
     { name: 'diff-preferences' },
   ),

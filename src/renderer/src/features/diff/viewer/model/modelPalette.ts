@@ -11,6 +11,8 @@ export interface ModelPalette {
   highlight: string;
   /** What is gone in the Differences mode: the version before's ghost. */
   removed: string;
+  /** The skeleton's lines and joints. */
+  bone: string;
   axisX: string;
   axisY: string;
   axisZ: string;
@@ -30,6 +32,7 @@ export function readModelPalette(element: Element): ModelPalette {
     gridMajor: variable('--border-strong'),
     highlight: variable('--accent'),
     removed: variable('--status-deleted'),
+    bone: variable('--status-moved'),
     axisX: variable('--model-axis-x'),
     axisY: variable('--model-axis-y'),
     axisZ: variable('--model-axis-z'),
