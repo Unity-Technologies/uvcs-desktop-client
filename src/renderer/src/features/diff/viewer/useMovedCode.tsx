@@ -7,8 +7,10 @@ import type { DiffLayout } from './diffPreferencesStore';
 import { detectMovedBlocks, moveContaining, type MovedBlock } from './movedBlocks';
 import { MovedCode } from './MovedCode';
 import { linesOf, movedCodeCss } from './movedCodeCss';
+import { movedWordMarks } from './movedWordMarks';
 import { pierreShadowRoot } from './pierreDom';
 import { useChangeFlash } from './useChangeFlash';
+import { useMovedWordMarks } from './useMovedWordMarks';
 import { useShadowStyle } from './useShadowStyle';
 
 interface MovedCodeOptions {
@@ -30,8 +32,8 @@ interface MovedCodeOptions {
 }
 
 /**
- * The code a text diff shows moved (`detectMovedBlocks`): in the moved color, its two places labeled and, side by
- * side, joined by a ribbon while it's hovered (`MovedCode`). A label takes the view to the other place and lights it for a moment.
+ * The code a text diff shows moved (`detectMovedBlocks`): in the moved color, the words edited on the way marked
+ * (`useMovedWordMarks`), its two places labeled and, side by side, joined by a ribbon while it's hovered (`MovedCode`). A label takes the view to the other place and lights it for a moment.
  * Returns the overlay, to go in the scrolling element.
  */
 export function useMovedCode({ diff, comparisonMethod, layout, containerRef, virtualizer, diffedText, typed }: MovedCodeOptions): ReactNode {
@@ -42,6 +44,7 @@ export function useMovedCode({ diff, comparisonMethod, layout, containerRef, vir
   const flash = useChangeFlash();
   useShadowStyle(containerRef, `${movedCodeCss(moves, shownHovered)}\n${flash.css}`);
   useHoveredRows(containerRef, moves, setHovered);
+  useMovedWordMarks(containerRef, useMemo(() => movedWordMarks(diff, moves), [diff, moves]));
   const stopScrolling = useRef<() => void>(undefined);
   useEffect(() => () => stopScrolling.current?.(), []);
 

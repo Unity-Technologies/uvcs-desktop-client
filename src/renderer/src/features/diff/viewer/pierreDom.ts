@@ -93,3 +93,27 @@ function characterAt(root: ShadowRoot, row: Element, at: { x: number; y: number 
   }
   return 0;
 }
+
+/**
+ * The range of `row`'s text from character `start` to `end` (not included), across whatever spans Pierre wraps its
+ * tokens in; null when the row's text is shorter.
+ */
+export function rowTextRange(row: Element, start: number, end: number): Range | null {
+  const range = document.createRange();
+  let offset = 0;
+  let started = false;
+  const walker = document.createTreeWalker(row, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const length = node.textContent?.length ?? 0;
+    if (!started && start < offset + length) {
+      range.setStart(node, start - offset);
+      started = true;
+    }
+    if (started && end <= offset + length) {
+      range.setEnd(node, end - offset);
+      return range;
+    }
+    offset += length;
+  }
+  return null;
+}
