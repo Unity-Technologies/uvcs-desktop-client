@@ -7,7 +7,7 @@
 import { Box as BoxIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import { Color } from 'three';
-import type { FileContent } from '@shared/domain/content';
+import type { ContentSource, FileContent } from '@shared/domain/content';
 import { useSpinDelay } from '../../../../lib/useSpinDelay';
 import { EmptyState } from '../../../../ui/EmptyState';
 import { CenteredSpinner } from '../../../../ui/Spinner';
@@ -38,6 +38,7 @@ import type { ModelSummary } from './modelSummary';
 import { ModelViewControls } from './ModelViewControls';
 import { matchNodes } from './nodeMatching';
 import { framedView, type BoundsLike, type OrbitView, type Vector } from './orbitCamera';
+import { useModelCompanions } from './useModelCompanions';
 import { useModelPalette } from './useModelPalette';
 import { useModelRenderer } from './useModelRenderer';
 import { useOrbitGestures } from './useOrbitGestures';
@@ -48,6 +49,11 @@ import styles from './ModelDiffViewer.module.css';
 const ROOMY_PANE = 820;
 
 interface ModelDiffViewerProps {
+  workspacePath: string;
+  /** Where each version was read from: the files a model needs beside it (a glTF's `.bin`) are read beside it. */
+  sources: { original: ContentSource; modified: ContentSource };
+  /** The model's path, which its companions' are relative to. */
+  path: string;
   original: FileContent;
   modified: FileContent;
   /** Active diff mode; owned by the header's segmented control. */
@@ -60,9 +66,9 @@ interface Picked {
   nodes: NodeRef[];
 }
 
-export function ModelDiffViewer({ original, modified, mode }: ModelDiffViewerProps) {
-  const before = useReadModel(original.model);
-  const after = useReadModel(modified.model);
+export function ModelDiffViewer({ workspacePath, sources, path, original, modified, mode }: ModelDiffViewerProps) {
+  const before = useReadModel(original.model, useModelCompanions(workspacePath, 'original', sources.original, path, original.model));
+  const after = useReadModel(modified.model, useModelCompanions(workspacePath, 'modified', sources.modified, path, modified.model));
   const { modelDrawMode, setModelDrawMode, modelColorBySlot, setModelColorBySlot, modelToleranceShare, setModelToleranceShare, modelShowBones, setModelShowBones } =
     useDiffPreferences();
   const paneRef = useRef<HTMLDivElement>(null);

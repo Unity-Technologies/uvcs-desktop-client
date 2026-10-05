@@ -201,7 +201,14 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
     case 'model':
       body = (
         <Suspense fallback={<CenteredSpinner />}>
-          <ModelDiffViewer original={left} modified={shownRendering} mode={modelMode} />
+          <ModelDiffViewer
+            workspacePath={workspacePath}
+            sources={{ original: contents.original, modified: contents.modified }}
+            path={fileName}
+            original={left}
+            modified={shownRendering}
+            mode={modelMode}
+          />
         </Suspense>
       );
       break;
