@@ -147,8 +147,12 @@ jobs:
       # With no platform flag electron-builder builds for the runner's OS, so each leg uploads its own installers.
       # MAC_SIGNING_FLAGS is empty except on an unsigned macOS build, WINDOWS_SIGNING_FLAGS except on a signed Windows
       # one; bash on every OS so they expand the same way.
+      # ELECTRON_BUILDER_7Z_FILTER: electron-builder's 7-Zip packs ARM64 executables with the ARM64 filter, which the
+      # Windows installer's extractor (nsis7z 19.00) can't decode, so the arm64 installer would leave out the app's .exe
+      # and DLLs. BCJ, which it reads, costs both Windows installers about 8% in size; only the NSIS 7z archives use it.
       - name: Build and upload
         shell: bash
         run: npm run release -- $MAC_SIGNING_FLAGS $WINDOWS_SIGNING_FLAGS
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ELECTRON_BUILDER_7Z_FILTER: BCJ
