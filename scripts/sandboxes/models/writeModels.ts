@@ -8,8 +8,8 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { asciiFbx, box, sphere, type FbxNodeSpec } from '../../../src/renderer/src/features/diff/viewer/model/testing/asciiFbx';
-import { scoutGlb, type ScoutVersion } from './gltfModels';
-import { gltfastImporterMeta, guidOf, modelImporterMeta } from './unityMeta';
+import { barrelGltf, scoutGlb, type ScoutVersion } from './gltfModels';
+import { defaultImporterMeta, gltfastImporterMeta, guidOf, modelImporterMeta } from './unityMeta';
 
 /** What the artists have done so far: each step changes some of it. */
 interface Project {
@@ -21,6 +21,8 @@ interface Project {
   placeholderCube: boolean;
   lantern: { scale: number } | null;
   scout: ScoutVersion | null;
+  /** The barrel exported again as a glTF, its geometry in a `.bin`: its height, in metres. */
+  barrelGltf: { height: number } | null;
 }
 
 const INITIAL: Project = {
@@ -32,6 +34,7 @@ const INITIAL: Project = {
   placeholderCube: true,
   lantern: null,
   scout: null,
+  barrelGltf: null,
 };
 
 interface Step {
@@ -61,7 +64,9 @@ const STEPS: Record<string, Step> = {
   'art-lantern': { after: 'art-fingers', change: (p) => (p.lantern = { scale: 1.5 }) },
   scout: { after: 'lantern-replaces-cube', change: (p) => (p.scout = { wave: 'first', jump: false }) },
   'scout-snappier': { after: 'scout', change: (p) => (p.scout = { wave: 'snappier', jump: true }) },
-  pending: { after: 'scout-snappier', change: (p) => (p.crate.unitScaleFactor = 100) },
+  'barrel-gltf': { after: 'scout-snappier', change: (p) => (p.barrelGltf = { height: 0.9 }) },
+  'barrel-gltf-taller': { after: 'barrel-gltf', change: (p) => (p.barrelGltf = { height: 1.2 }) },
+  pending: { after: 'barrel-gltf-taller', change: (p) => (p.crate.unitScaleFactor = 100) },
 };
 
 function projectAfter(stepName: string): Project {
@@ -79,10 +84,12 @@ type FileContent = string | Uint8Array | null;
 
 /** Every file the project can hold, by path. */
 async function filesOf(p: Project): Promise<Record<string, FileContent>> {
+  const barrelExport = p.barrelGltf ? await barrelGltf(p.barrelGltf.height) : null;
   const models: Record<string, FileContent> = {
     [`${MODELS}/Props/Crate.fbx`]: crate(p),
     [`${MODELS}/Props/Rock.fbx`]: rock(p),
     [`${MODELS}/Props/Barrel.obj`]: barrel(p),
+    [`${MODELS}/Props/Barrel.gltf`]: barrelExport?.gltf ?? null,
     [`${MODELS}/Props/Placeholder_Cube.fbx`]: p.placeholderCube ? placeholderCube() : null,
     [`${MODELS}/Props/Lantern.gltf`]: p.lantern ? lantern(p.lantern.scale) : null,
     [`${MODELS}/Characters/Robot.fbx`]: robot(p),
@@ -90,6 +97,9 @@ async function filesOf(p: Project): Promise<Record<string, FileContent>> {
   };
   const files: Record<string, FileContent> = { ...models };
   for (const [path, content] of Object.entries(models)) files[`${path}.meta`] = content === null ? null : modelMeta(path);
+  // Unity imports the glTF, not its buffer: the `.bin` is an asset of no type to it.
+  files[`${MODELS}/Props/Barrel.bin`] = barrelExport?.bin ?? null;
+  files[`${MODELS}/Props/Barrel.bin.meta`] = barrelExport ? defaultImporterMeta(`${MODELS}/Props/Barrel.bin`) : null;
   files['Assets/Prefabs/Robot.prefab'] = robotPrefab();
   files['ProjectSettings/ProjectVersion.txt'] = 'm_EditorVersion: 6000.3.10f1\n';
   return files;

@@ -1,13 +1,16 @@
 // The models sandbox's glTF models (`writeModels.ts`), built as three.js scenes and written by three's GLTFExporter,
-// as Unity users get them from Blender or a web tool: the scout, a skinned character with takes, as GLB.
+// as Unity users get them from Blender or a web tool: the scout, a skinned character with takes, as GLB, and a barrel
+// as a `.gltf` with its geometry in a `.bin` beside it.
 
 import {
   AnimationClip,
   Bone,
   BoxGeometry,
   BufferAttribute,
+  CylinderGeometry,
   Euler,
   Group,
+  Mesh,
   MeshStandardMaterial,
   Quaternion,
   QuaternionKeyframeTrack,
@@ -24,7 +27,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 
 /**
  * GLTFExporter reads its buffers out of a `Blob` with the browser's `FileReader`, which Node hasn't: this stand-in
- * reads them with `Blob.arrayBuffer()`, for the reads the exporter makes of a GLB's bytes.
+ * reads them with `Blob.arrayBuffer()`, for the two reads the exporter makes (a GLB's bytes, a `.gltf`'s data URI).
  */
 class BlobReader {
   result: ArrayBuffer | string | null = null;
@@ -32,6 +35,10 @@ class BlobReader {
 
   readAsArrayBuffer(blob: Blob): void {
     void blob.arrayBuffer().then((bytes) => this.done(bytes));
+  }
+
+  readAsDataURL(blob: Blob): void {
+    void blob.arrayBuffer().then((bytes) => this.done(`data:${blob.type || 'application/octet-stream'};base64,${Buffer.from(bytes).toString('base64')}`));
   }
 
   private done(result: ArrayBuffer | string): void {
@@ -142,6 +149,23 @@ function scoutJump(): AnimationClip {
 function turns(bone: ScoutBone, times: number[], degrees: [number, number, number][]): KeyframeTrack {
   const values = degrees.flatMap(([x, y, z]) => new Quaternion().setFromEuler(new Euler(...([x, y, z].map((angle) => (angle * Math.PI) / 180) as [number, number, number]))).toArray());
   return new QuaternionKeyframeTrack(`${bone}.quaternion`, times, values);
+}
+
+/** A barrel as a `.gltf` and the `.bin` its JSON names, as Blender's "glTF Separate" writes them. */
+export async function barrelGltf(height: number): Promise<{ gltf: string; bin: Uint8Array }> {
+  const barrel = mesh('Barrel', new CylinderGeometry(0.3, 0.3, height, 24).translate(0, height / 2, 0), new MeshStandardMaterial({ name: 'Barrel_Wood', color: 0x8a5a2b }));
+  const json = (await new GLTFExporter().parseAsync(inScene(barrel), { binary: false })) as { buffers: { uri: string }[] };
+  const [buffer] = json.buffers;
+  if (!buffer) throw new Error('The barrel exported no buffer');
+  const bin = Buffer.from(buffer.uri.slice(buffer.uri.indexOf(',') + 1), 'base64');
+  buffer.uri = 'Barrel.bin';
+  return { gltf: JSON.stringify(json, null, 2) + '\n', bin: new Uint8Array(bin) };
+}
+
+function mesh(name: string, geometry: BufferGeometry, material: MeshStandardMaterial): Mesh {
+  const made = new Mesh(geometry, material);
+  made.name = name;
+  return made;
 }
 
 async function glb(root: Object3D, animations: AnimationClip[]): Promise<Uint8Array> {

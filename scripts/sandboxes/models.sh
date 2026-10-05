@@ -2,7 +2,8 @@
 # Builds a small Unity project whose history holds one changeset per 3D model diff case: a re-export where nothing
 # Unity sees changed, the wrong units, a turned root, a moved pivot, a renamed and reshaped hierarchy, renamed
 # material slots, a sculpt, more polygons, new UVs, a model added and one deleted; a branch with several models
-# changed; an animated GLB character whose takes change; and a model edited and not checked in. The models are written by models/writeModels.ts, one step each.
+# changed; an animated GLB character whose takes change; a glTF with its geometry in a .bin beside it; and a model
+# edited and not checked in. The models are written by models/writeModels.ts, one step each.
 # Usage: scripts/sandboxes/models.sh   (from the repository root) → repo models@local, workspace /tmp/uvcs-models
 set -euo pipefail
 REPO=models@local
@@ -47,6 +48,8 @@ cm switch /main --noinput >/dev/null
 
 step scout "Imported the scout from Blender as GLB: rigged, with an idle and a wave"
 step scout-snappier "Made the wave snappier and added a jump"
+step barrel-gltf "Exported the barrel as glTF for the web build, its geometry in Barrel.bin"
+step barrel-gltf-taller "Made the glTF barrel taller"
 
 # Pending: what Changes shows.
 models pending

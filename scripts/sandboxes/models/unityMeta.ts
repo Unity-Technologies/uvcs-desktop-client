@@ -1,5 +1,6 @@
 // The `.meta` files Unity 6.3 writes beside the models sandbox's models (`writeModels.ts`): ModelImporter's for FBX
-// and OBJ, glTFast's ScriptedImporter for glTF and GLB (Unity has no glTF importer of its own). The settings are
+// and OBJ, glTFast's ScriptedImporter for glTF and GLB (Unity has no glTF importer of its own), DefaultImporter's for
+// a glTF's `.bin`. The settings are
 // Unity's defaults, laid out as a Unity batch import wrote them, apart from what a step changes: the scale and the clips
 // cut from the takes.
 
@@ -219,6 +220,11 @@ export function gltfastImporterMeta(path: string): string {
     '  reportItems: []',
     '',
   ].join('\n');
+}
+
+/** The `.meta` of a file Unity imports as nothing in particular, like a glTF's `.bin`. */
+export function defaultImporterMeta(path: string): string {
+  return ['fileFormatVersion: 2', `guid: ${guidOf(path)}`, 'DefaultImporter:', '  externalObjects: {}', '  userData: ', '  assetBundleName: ', '  assetBundleVariant: ', ''].join('\n');
 }
 
 /** A YAML list under its key, or the key and `[]` when it has no items, as Unity writes them. */
