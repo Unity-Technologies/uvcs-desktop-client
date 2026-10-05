@@ -26,6 +26,15 @@ describe('layoutOf', () => {
     ]);
   });
 
+  it('draws the version after full size for the differences, the version before over it in the same view', () => {
+    const { panes, blended } = layoutOf('differences', 400, 300);
+    expect(panes.map((pane) => [pane.side, pane.viewport.width, pane.overlay ?? false])).toEqual([
+      ['after', 400, false],
+      ['before', 400, true],
+    ]);
+    expect(blended).toBe(false);
+  });
+
   it('blends both full-size versions for the onion skin', () => {
     expect(layoutOf('onion', 400, 300).blended).toBe(true);
   });

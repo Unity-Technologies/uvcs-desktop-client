@@ -9,6 +9,8 @@ export interface ModelPalette {
   grid: string;
   gridMajor: string;
   highlight: string;
+  /** What is gone in the Differences mode: the version before's ghost. */
+  removed: string;
   axisX: string;
   axisY: string;
   axisZ: string;
@@ -27,6 +29,7 @@ export function readModelPalette(element: Element): ModelPalette {
     grid: variable('--border-default'),
     gridMajor: variable('--border-strong'),
     highlight: variable('--accent'),
+    removed: variable('--status-deleted'),
     axisX: variable('--model-axis-x'),
     axisY: variable('--model-axis-y'),
     axisZ: variable('--model-axis-z'),

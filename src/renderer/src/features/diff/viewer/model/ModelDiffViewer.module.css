@@ -64,3 +64,20 @@
   left: 50%;
   pointer-events: none;
 }
+
+.computing {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 5px var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-md);
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  transform: translateX(-50%);
+}

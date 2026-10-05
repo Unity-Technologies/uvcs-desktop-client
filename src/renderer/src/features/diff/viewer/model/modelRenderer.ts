@@ -5,6 +5,8 @@
 
 import {
   AxesHelper,
+  Box3,
+  Box3Helper,
   BufferGeometry,
   Color,
   DirectionalLight,
@@ -48,6 +50,12 @@ export interface ModelLook {
   highlighted: { before: Set<string>; after: Set<string> };
 }
 
+/** The Differences mode's colors, per mesh of each version (`heatColors`, `ghostColors`); null until compared. */
+export interface ModelHeat {
+  before: Float32Array[];
+  after: Float32Array[];
+}
+
 export interface ModelLayoutState {
   /** How two versions are compared; a version shown alone (added, deleted) takes the whole canvas whatever it is. */
   mode: Exclude<ModelLayoutMode, 'single'>;
@@ -78,10 +86,13 @@ export class ModelRenderer {
   /** Both versions' bounds together, in the viewer's space: the grid and the clip planes cover them. */
   private bounds: BoundsLike = { min: [-1, -1, -1], max: [1, 1, 1] };
   private readonly grid = new Group();
+  /** The changed region stepped to, boxed in the accent. */
+  private readonly region = new Box3Helper(new Box3());
   private view: OrbitView = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 5 };
   private layoutState: ModelLayoutState = { mode: 'sideBySide', blend: 0.5, split: 0.5 };
   private look: ModelLook = { drawMode: 'shaded', colorBySlot: false, highlighted: { before: new Set(), after: new Set() } };
   private palette: ModelPalette | null = null;
+  private heat: ModelHeat | null = null;
   private width = 1;
   private height = 1;
   private pixelRatio = 1;
@@ -95,6 +106,11 @@ export class ModelRenderer {
     // Clay lit by a studio clips to white without it; the onion skin's blend applies the same (`Blender`).
     this.renderer.toneMapping = NeutralToneMapping;
     this.renderer.setScissorTest(true);
+    // Each frame clears once, itself: the Differences mode draws the version before over the one after, in its depth.
+    this.renderer.autoClear = false;
+    this.region.visible = false;
+    (this.region.material as LineBasicMaterial).depthTest = false;
+    this.region.renderOrder = 15;
     // A soft studio for the clay to read its shape in, from every side: three's procedural room, no file to load.
     const generator = new PMREMGenerator(this.renderer);
     this.environment = generator.fromScene(new RoomEnvironment(), 0.04).texture;
@@ -120,7 +136,30 @@ export class ModelRenderer {
   }
 
   setLayout(layout: ModelLayoutState): void {
+    const modeChanged = layout.mode !== this.layoutState.mode;
     this.layoutState = layout;
+    if (modeChanged) this.applyLook();
+    this.requestRender();
+  }
+
+  /** Boxes a region of the viewer's space (the changed region stepped to); null takes the box away. */
+  setRegion(region: BoundsLike | null): void {
+    this.region.visible = region !== null;
+    if (region) this.region.box.set(new Vector3(...region.min), new Vector3(...region.max));
+    this.requestRender();
+  }
+
+  /** The Differences mode's colors, set on each mesh's geometry; null shows the clay there until they come. */
+  setHeat(heat: ModelHeat | null): void {
+    this.heat = heat;
+    for (const side of ['before', 'after'] as const) {
+      const colors = heat?.[side];
+      this.sides[side]?.model.meshes.forEach((mesh, i) => {
+        const values = colors?.[i];
+        if (values) mesh.solid.geometry.setAttribute('color', new Float32BufferAttribute(values, side === 'before' ? 4 : 3));
+      });
+    }
+    this.applyLook();
     this.requestRender();
   }
 
@@ -228,7 +267,7 @@ export class ModelRenderer {
       const toCss = (value: number) => value / this.pixelRatio;
       this.renderer.setViewport(toCss(pane.viewport.x), toCss(pane.viewport.y), toCss(pane.viewport.width), toCss(pane.viewport.height));
       this.renderer.setScissor(toCss(pane.scissor.x), toCss(pane.scissor.y), toCss(pane.scissor.width), toCss(pane.scissor.height));
-      this.drawSide(side, pane.viewport.width / pane.viewport.height);
+      this.drawSide(side, pane.viewport.width / pane.viewport.height, !pane.overlay);
     }
   }
 
@@ -250,7 +289,7 @@ export class ModelRenderer {
     this.blender.draw(this.renderer, targets[0]!.texture, targets[1]!.texture, this.layoutState.blend, new Color(this.palette!.backdrop));
   }
 
-  private drawSide(side: SideScene, aspect: number): void {
+  private drawSide(side: SideScene, aspect: number, withGrid = true): void {
     this.placeCamera(aspect);
     // The key light rides over the camera's right shoulder, so the side facing the viewer is always lit.
     const position = new Vector3(...cameraPositionOf(this.view));
@@ -258,7 +297,9 @@ export class ModelRenderer {
     const offset = position.clone().sub(target);
     side.key.position.copy(target).add(offset.applyAxisAngle(new Vector3(0, 1, 0), -0.6).add(new Vector3(0, offset.length() * 0.5, 0)));
     side.key.target.position.copy(target);
-    side.scene.add(this.grid);
+    if (withGrid) side.scene.add(this.grid, this.region);
+    else this.grid.removeFromParent();
+    side.pivot.visible = withGrid;
     this.renderer.render(side.scene, this.camera);
   }
 
@@ -303,9 +344,24 @@ export class ModelRenderer {
     const palette = this.palette;
     if (!palette) return;
     const backdrop = new Color(palette.backdrop);
+    const differences = this.layoutState.mode === 'differences' && this.heat !== null && this.sides.before !== null && this.sides.after !== null;
     for (const side of ['before', 'after'] as const) {
       const scene = this.sides[side];
       if (!scene) continue;
+      for (const mesh of scene.model.meshes) {
+        mesh.heat.visible = differences && side === 'after';
+        mesh.ghost.visible = differences && side === 'before';
+      }
+      if (differences) {
+        // The after's heat in its draw mode's wires; the before only as the ghost of what is gone.
+        for (const mesh of scene.model.meshes) {
+          mesh.solid.visible = false;
+          mesh.wire.visible = side === 'after' && this.look.drawMode !== 'shaded';
+          mesh.wire.material.color.set(palette.wire);
+          mesh.wire.material.opacity = 0.2;
+        }
+        continue;
+      }
       const highlighted = this.look.highlighted[side];
       const anyHighlighted = this.look.highlighted.before.size + this.look.highlighted.after.size > 0;
       for (const mesh of scene.model.meshes) {
@@ -323,6 +379,7 @@ export class ModelRenderer {
         mesh.wire.material.color.set(lit ? palette.highlight : palette.wire);
         mesh.wire.material.opacity = drawMode === 'wireframe' ? 0.9 : lit ? 0.6 : faded ? 0.1 : 0.28;
       }
+      (this.region.material as LineBasicMaterial).color.set(palette.highlight);
       scene.markers.material.uniforms.fill!.value = new Color(palette.highlight);
       scene.markers.material.uniforms.ring!.value = new Color(palette.backdrop);
     }

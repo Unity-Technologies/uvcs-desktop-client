@@ -28,6 +28,8 @@ interface DiffPreferences {
   modelDrawMode: DrawMode;
   /** Each material slot in its color, instead of clay. */
   modelColorBySlot: boolean;
+  /** How far a vertex may move and still count as unchanged, as a share of the model's size: one setting fits a bolt and a building. */
+  modelToleranceShare: number;
   setLayout: (layout: DiffLayout) => void;
   setCollapseUnchanged: (collapse: boolean) => void;
   setWrapLines: (wrap: boolean) => void;
@@ -39,6 +41,7 @@ interface DiffPreferences {
   setModelMode: (mode: ModelDiffMode) => void;
   setModelDrawMode: (drawMode: DrawMode) => void;
   setModelColorBySlot: (colorBySlot: boolean) => void;
+  setModelToleranceShare: (share: number) => void;
 }
 
 export const useDiffPreferences = create<DiffPreferences>()(
@@ -55,6 +58,7 @@ export const useDiffPreferences = create<DiffPreferences>()(
       modelMode: 'sideBySide',
       modelDrawMode: 'shaded',
       modelColorBySlot: false,
+      modelToleranceShare: 0.001,
       setLayout: (layout) => set({ layout }),
       setCollapseUnchanged: (collapseUnchanged) => set({ collapseUnchanged }),
       setWrapLines: (wrapLines) => set({ wrapLines }),
@@ -67,6 +71,7 @@ export const useDiffPreferences = create<DiffPreferences>()(
       setModelMode: (modelMode) => set({ modelMode }),
       setModelDrawMode: (modelDrawMode) => set({ modelDrawMode }),
       setModelColorBySlot: (modelColorBySlot) => set({ modelColorBySlot }),
+      setModelToleranceShare: (modelToleranceShare) => set({ modelToleranceShare }),
     }),
     { name: 'diff-preferences' },
   ),

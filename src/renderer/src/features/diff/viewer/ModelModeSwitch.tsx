@@ -2,7 +2,7 @@ import { SegmentedControl } from '../../../ui/SegmentedControl';
 import { useDiffPreferences } from './diffPreferencesStore';
 import { MODEL_DIFF_MODES, type ModelDiffMode } from './model/modelDiffModes';
 
-/** How two models are compared (side by side, onion skin, swipe), remembered for every model diff. */
+/** How two models are compared (onion skin, side by side, differences, swipe), remembered for every model diff. */
 export function ModelModeSwitch() {
   const { modelMode, setModelMode } = useDiffPreferences();
   return (

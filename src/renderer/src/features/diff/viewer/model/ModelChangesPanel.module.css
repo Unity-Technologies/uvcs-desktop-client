@@ -14,10 +14,15 @@
   overflow: hidden;
 }
 
-/* Under the onion skin's blend pill (10px from the top, 32px tall), not over it. */
-.panel[data-below-pill] {
+/* Under the pills of the stage's top (10px from it, a row each 42px), not over them. */
+.panel[data-pill-rows='1'] {
   top: 52px;
   max-height: calc(100% - 52px - var(--space-3) - 44px);
+}
+
+.panel[data-pill-rows='2'] {
+  top: 94px;
+  max-height: calc(100% - 94px - var(--space-3) - 44px);
 }
 
 /* Beside the stage: the pane's full height, a border instead of a card's shadow. */

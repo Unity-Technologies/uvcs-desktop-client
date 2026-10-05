@@ -23,6 +23,10 @@ export interface SceneMesh {
   key: string;
   solid: Mesh<BufferGeometry, MeshStandardMaterial[]>;
   wire: Mesh<BufferGeometry, MeshBasicMaterial>;
+  /** The Differences mode's twins, on the same geometry: the version after colored by how far it moved, the version
+   *  before as a ghost of what is gone (`heatColors`, set as the geometry's `color`). Hidden in other modes. */
+  heat: Mesh<BufferGeometry, MeshStandardMaterial>;
+  ghost: Mesh<BufferGeometry, MeshBasicMaterial>;
   /** Each material slot's name, in the order of `solid.material`. */
   slots: string[];
 }
@@ -45,7 +49,7 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
   });
   const meshes = model.meshes.map((mesh) => {
     const sceneMesh = meshOf(mesh, summary.nodes[mesh.node]!.key);
-    nodes[mesh.node]!.add(sceneMesh.solid, sceneMesh.wire);
+    nodes[mesh.node]!.add(sceneMesh.solid, sceneMesh.wire, sceneMesh.heat, sceneMesh.ghost);
     return sceneMesh;
   });
   root.updateMatrixWorld(true);
@@ -54,10 +58,12 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
     objects,
     meshes,
     dispose() {
-      for (const { solid, wire } of meshes) {
+      for (const { solid, wire, heat, ghost } of meshes) {
         solid.geometry.dispose();
         for (const material of solid.material) material.dispose();
         wire.material.dispose();
+        heat.material.dispose();
+        ghost.material.dispose();
       }
     },
   };
@@ -79,9 +85,12 @@ function meshOf(mesh: ModelMesh, key: string): SceneMesh {
   const materials = mesh.slots.map((slot) => new MeshStandardMaterial({ name: slot, roughness: 0.72, metalness: 0, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }));
   const solid = new Mesh(geometry, materials);
   const wire = new Mesh(geometry, new MeshBasicMaterial({ wireframe: true, transparent: true, depthWrite: false }));
-  solid.userData.key = key;
-  wire.userData.key = key;
-  return { key, solid, wire, slots: mesh.slots };
+  const heat = new Mesh(geometry, new MeshStandardMaterial({ vertexColors: true, roughness: 0.72, metalness: 0, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }));
+  const ghost = new Mesh(geometry, new MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false }));
+  heat.visible = false;
+  ghost.visible = false;
+  for (const object of [solid, wire, heat, ghost]) object.userData.key = key;
+  return { key, solid, wire, heat, ghost, slots: mesh.slots };
 }
 
 /** A box in the viewer's space from one in Unity's (`modelSummary`'s bounds): X mirrored back. */

@@ -16,16 +16,16 @@ interface ModelChangesPanelProps {
   onOpenChange: (open: boolean) => void;
   /** A column beside the stage, rather than floating over it. */
   docked: boolean;
-  /** Floating, it sits below the pill a mode shows at the stage's top (the onion skin's blend). */
-  belowPill: boolean;
+  /** Floating, it sits below the pills a mode shows at the stage's top (the onion's blend, the differences' tolerance). */
+  pillRows: 0 | 1 | 2;
 }
 
-export function ModelChangesPanel({ rows, picked, onPick, open, onOpenChange, docked, belowPill }: ModelChangesPanelProps) {
+export function ModelChangesPanel({ rows, picked, onPick, open, onOpenChange, docked, pillRows }: ModelChangesPanelProps) {
   const risks = rows.filter((row) => row.tone === 'risk').length;
   const toggle = (id: string, row: ChangeRow, item?: number): void => onPick(picked === id ? null : id, row, item);
 
   return (
-    <section className={styles.panel} data-docked={docked || undefined} data-below-pill={belowPill || undefined} data-no-pan aria-label="What changed">
+    <section className={styles.panel} data-docked={docked || undefined} data-pill-rows={docked ? undefined : pillRows || undefined} data-no-pan aria-label="What changed">
       <button type="button" className={styles.header} aria-expanded={open} onClick={() => onOpenChange(!open)}>
         {open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
         <span className={styles.title}>What changed</span>

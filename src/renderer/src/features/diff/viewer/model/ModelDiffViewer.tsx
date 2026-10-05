@@ -6,12 +6,15 @@
 
 import { Box as BoxIcon } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { Color } from 'three';
 import type { FileContent } from '@shared/domain/content';
 import { useSpinDelay } from '../../../../lib/useSpinDelay';
 import { EmptyState } from '../../../../ui/EmptyState';
 import { CenteredSpinner } from '../../../../ui/Spinner';
 import { useDiffPreferences } from '../diffPreferencesStore';
 import { BlendPill } from '../image/BlendPill';
+import { steppedRegion } from '../image/changedRegions';
+import { Spinner } from '../../../../ui/Spinner';
 import { SideChip } from '../image/stage';
 import { CENTERED_SPLIT, SwipeDivider } from '../image/SwipeDivider';
 import { changeRows, type ChangeRow } from './modelChangeWords';
@@ -23,7 +26,12 @@ import { ModelInfoStrip } from './ModelInfoStrip';
 import { modelCommandOf } from './modelKeys';
 import { modelReadFailureWords } from './modelReadFailureWords';
 import { buildModelScene, pivotOf, type ModelScene } from './modelScene';
-import { modelStats } from './modelStats';
+import { ModelDifferencesControls } from './ModelDifferencesControls';
+import { fullHeatAt, ghostColors, heatColors, type Rgb } from './heatColors';
+import { modelStats, movedStat } from './modelStats';
+import { placedMeshesOf } from './surfaceComparison';
+import { changedRegions, type ChangedRegion } from './surfaceRegions';
+import { useSurfaceComparison } from './useSurfaceComparison';
 import type { ModelSummary } from './modelSummary';
 import { ModelViewControls } from './ModelViewControls';
 import { matchNodes } from './nodeMatching';
@@ -53,7 +61,7 @@ interface Picked {
 export function ModelDiffViewer({ original, modified, mode }: ModelDiffViewerProps) {
   const before = useReadModel(original.model);
   const after = useReadModel(modified.model);
-  const { modelDrawMode, setModelDrawMode, modelColorBySlot, setModelColorBySlot } = useDiffPreferences();
+  const { modelDrawMode, setModelDrawMode, modelColorBySlot, setModelColorBySlot, modelToleranceShare, setModelToleranceShare } = useDiffPreferences();
   const paneRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -134,6 +142,42 @@ export function ModelDiffViewer({ original, modified, mode }: ModelDiffViewerPro
     renderer?.setMarkers(markersOf(picked?.nodes ?? [], sceneBefore, sceneAfter));
   }, [renderer, picked, modelDrawMode, modelColorBySlot, sceneBefore, sceneAfter]);
 
+  // The Differences mode: the pair's surfaces compared in the worker, colored at the tolerance, its changed regions
+  // stepped through.
+  const differences = comparable && mode === 'differences';
+  const { comparison, comparing } = useSurfaceComparison(old?.model ?? null, next?.model ?? null, differences);
+  const tolerance = comparison ? modelToleranceShare * comparison.size : 0;
+  useEffect(() => {
+    if (!renderer || !palette) return;
+    if (!comparison) return renderer.setHeat(null);
+    const linear = (css: string): Rgb => new Color(css).toArray() as Rgb;
+    const fullAt = fullHeatAt(tolerance, comparison.size);
+    renderer.setHeat({
+      after: comparison.after.map((distances) => heatColors(distances, tolerance, fullAt, linear(palette.clay), linear(palette.highlight))),
+      before: comparison.before.map((distances) => ghostColors(distances, tolerance, fullAt, linear(palette.removed))),
+    });
+  }, [renderer, palette, comparison, tolerance]);
+  const placed = useMemo(() => (comparison && old && next ? { before: placedMeshesOf(old.model), after: placedMeshesOf(next.model) } : null), [comparison, old, next]);
+  const regions = useMemo(() => {
+    if (!placed || !comparison) return [];
+    const measured = (side: 'before' | 'after') => placed[side].meshes.map((mesh, i) => ({ positions: mesh.positions, index: mesh.index, distances: comparison[side][i]! }));
+    return changedRegions([...measured('after'), ...measured('before')], tolerance, comparison.size);
+  }, [placed, comparison, tolerance]);
+  // The region stepped to, among the regions it was stepped in: the slider finding others starts over.
+  const [stepped, setStepped] = useState<{ regions: ChangedRegion[]; index: number } | null>(null);
+  const currentRegion = differences && stepped?.regions === regions ? stepped.index : null;
+  useEffect(() => {
+    const region = currentRegion === null ? null : regions[currentRegion];
+    renderer?.setRegion(region ? paddedRegion(region, comparison?.size ?? 0) : null);
+  }, [renderer, regions, currentRegion, comparison]);
+  const stepRegion = (direction: 1 | -1): void => {
+    if (regions.length === 0) return;
+    const index = steppedRegion(currentRegion, direction, regions.length);
+    setStepped({ regions, index });
+    frame(paddedRegion(regions[index]!, comparison?.size ?? 0));
+  };
+  const shownStats = useMemo(() => (differences && comparison ? [...stats, movedStat(comparison, tolerance)] : stats), [differences, comparison, stats, tolerance]);
+
   const matching = useMemo(() => old && next && matchNodes(old.summary, next.summary), [old, next]);
   const onClick = useCallback(
     (x: number, y: number) => {
@@ -174,7 +218,7 @@ export function ModelDiffViewer({ original, modified, mode }: ModelDiffViewerPro
   const shownMode = comparable ? mode : null;
 
   const changesPanel = rows && (
-    <ModelChangesPanel rows={rows} picked={picked?.id ?? null} onPick={onPickRow} open={changesOpen} onOpenChange={setPanelOpen} docked={docked} belowPill={shownMode === 'onion'} />
+    <ModelChangesPanel rows={rows} picked={picked?.id ?? null} onPick={onPickRow} open={changesOpen} onOpenChange={setPanelOpen} docked={docked} pillRows={shownMode === 'onion' ? 1 : differences ? (regions.length > 0 ? 2 : 1) : 0} />
   );
 
   if (failed) {
@@ -208,9 +252,24 @@ export function ModelDiffViewer({ original, modified, mode }: ModelDiffViewerPro
               </>
             )}
             {shownMode === 'onion' && <BlendPill blend={blend} onBlendChange={setBlend} things="models" />}
+            {differences && comparison && (
+              <ModelDifferencesControls
+                toleranceShare={modelToleranceShare}
+                onToleranceShare={setModelToleranceShare}
+                modelSize={comparison.size}
+                regionCount={regions.length}
+                currentRegion={currentRegion}
+                onStep={stepRegion}
+              />
+            )}
+            {differences && comparing && (
+              <div className={styles.computing}>
+                <Spinner size={14} /> Comparing surfaces…
+              </div>
+            )}
             {rows && paneWidth > 0 && !docked && changesPanel}
             <ModelViewControls drawMode={modelDrawMode} onDrawMode={setModelDrawMode} colorBySlot={modelColorBySlot} onColorBySlot={setModelColorBySlot} onFrame={frameShown} />
-            <ModelInfoStrip stats={stats} />
+            <ModelInfoStrip stats={shownStats} />
           </>
         )}
       </div>
@@ -243,6 +302,12 @@ function clickedNode(side: 'before' | 'after', key: string, before: ModelSummary
     kind: node?.kind ?? 'mesh',
     ...(side === 'before' ? { before: key, ...(otherKey !== undefined && { after: otherKey }) } : { after: key, ...(otherKey !== undefined && { before: otherKey }) }),
   };
+}
+
+/** A changed region with room around it, a twentieth of the model: a dent framed alone would fill the view. */
+function paddedRegion(region: ChangedRegion, modelSize: number): BoundsLike {
+  const pad = modelSize * 0.05;
+  return { min: region.min.map((value) => value - pad) as Vector, max: region.max.map((value) => value + pad) as Vector };
 }
 
 /** Where the picked nodes that draw nothing (bones, empties) are on each side: their pivots, marked as dots. */

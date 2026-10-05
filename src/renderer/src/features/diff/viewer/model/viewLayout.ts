@@ -1,8 +1,9 @@
 // Where each version is drawn on the one canvas, per mode. Split gives each version a half with its own aspect;
 // swipe draws both through one full-size view, each cut to its side of the divider; onion draws both full size, to be
-// blended; a version shown alone takes it all. Rectangles are in canvas pixels from the bottom left, as WebGL counts.
+// blended; differences draws the version after full size and the version before's ghost over it, in its depth; a
+// version shown alone takes it all. Rectangles are in canvas pixels from the bottom left, as WebGL counts.
 
-export type ModelLayoutMode = 'single' | 'sideBySide' | 'onion' | 'swipe';
+export type ModelLayoutMode = 'single' | 'sideBySide' | 'onion' | 'swipe' | 'differences';
 export type Side = 'before' | 'after';
 
 export interface Rect {
@@ -18,6 +19,8 @@ export interface Pane {
   viewport: Rect;
   /** What of it is drawn. */
   scissor: Rect;
+  /** Drawn over the pane before it, in its depth, without the grid again. */
+  overlay?: true;
 }
 
 export interface Layout {
@@ -51,6 +54,8 @@ export function layoutOf(mode: ModelLayoutMode, width: number, height: number, s
     }
     case 'onion':
       return { panes: [{ side: 'before', viewport: full, scissor: full }, { side: 'after', viewport: full, scissor: full }], blended: true };
+    case 'differences':
+      return { panes: [{ side: 'after', viewport: full, scissor: full }, { side: 'before', viewport: full, scissor: full, overlay: true }], blended: false };
   }
 }
 
