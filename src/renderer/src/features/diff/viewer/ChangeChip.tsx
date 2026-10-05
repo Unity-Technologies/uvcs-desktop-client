@@ -8,7 +8,7 @@ import { chipAnchorLines, chipRegion, chipTop } from './chipPlacement';
 import type { DiffLayout } from './diffPreferencesStore';
 import { describeDiscard, wholeChangeLabel } from './discardAction';
 import type { HoveredLineStore } from './LineDiscardButton';
-import { numberCellSelector, pierreShadowRoot } from './pierreDom';
+import { numberCellSelector, paneRect, pierreShadowRoot } from './pierreDom';
 import styles from './ChangeChip.module.css';
 
 interface ChangeChipProps {
@@ -109,7 +109,7 @@ function useChipPosition(containerRef: RefObject<HTMLElement | null>, region: Ch
       const view = container.getBoundingClientRect();
       setPosition({
         top: chipTop(first.getBoundingClientRect().top - view.top + container.scrollTop, last.getBoundingClientRect().bottom - view.top + container.scrollTop, CHIP_HEIGHT),
-        left: pane.getBoundingClientRect().right - view.left + container.scrollLeft - CHIP_INSET,
+        left: paneRect(pane).right - view.left + container.scrollLeft - CHIP_INSET,
       });
     };
     place();

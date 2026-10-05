@@ -13,6 +13,16 @@ export function pierreShadowRoot(container: Element | null | undefined): ShadowR
   return container?.querySelector('diffs-container')?.shadowRoot ?? null;
 }
 
+/**
+ * The box of a pane of the diff (`data-code`: one side, side by side, or the unified column). Wrapping lines, Pierre lays
+ * both panes out as one grid and a pane has no box of its own (`display: contents`): its code column, the last of its
+ * own, ends where it does.
+ */
+export function paneRect(pane: Element): DOMRect {
+  const rect = pane.getBoundingClientRect();
+  return rect.width > 0 ? rect : (pane.querySelector(':scope > [data-content]')?.getBoundingClientRect() ?? rect);
+}
+
 /** Whether the text of the diff inside `container` is being typed into: the caret is in Pierre's editor. */
 export function isTypingIn(container: Element | null | undefined): boolean {
   const focused = pierreShadowRoot(container)?.activeElement;
