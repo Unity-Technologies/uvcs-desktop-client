@@ -3,8 +3,9 @@
 // (metres, Y up, X mirrored as Unity's importer turns right-handed files left-handed). Computed once per version in
 // the model worker; `modelChanges` compares two of them, the info strip and the "What changed" panel read them.
 
-import { Box3, Matrix4, Quaternion, Vector3 } from 'three';
+import { Box3, Matrix4, Vector3 } from 'three';
 import type { ModelMesh, ModelNodeKind, ParsedModel } from './parsedModel';
+import { worldMatricesOf } from './modelSpaces';
 import { countUniqueVertices, fingerprintOf, NORMAL_WELD_STEP } from './uniqueVertices';
 
 export interface Bounds {
@@ -78,25 +79,6 @@ export interface ModelSummary {
 }
 
 const PLACED_STEP_METRES = 1e-5;
-
-/** From the file's space to Unity's: its units in metres, its axes onto Unity's, X mirrored. */
-export function unitySpaceOf(model: Pick<ParsedModel, 'unitScale' | 'axisConversion'>): Matrix4 {
-  const mirror = new Matrix4().makeScale(-1, 1, 1);
-  const correction = new Matrix4().fromArray(model.axisConversion);
-  const units = new Matrix4().makeScale(model.unitScale, model.unitScale, model.unitScale);
-  return mirror.multiply(correction).multiply(units);
-}
-
-/** Each node's matrix from its own space to Unity's, in node order. */
-export function worldMatricesOf(model: ParsedModel): Matrix4[] {
-  const unitySpace = unitySpaceOf(model);
-  const matrices: Matrix4[] = [];
-  for (const node of model.nodes) {
-    const local = new Matrix4().compose(new Vector3(...node.position), new Quaternion(...node.rotation), new Vector3(...node.scale));
-    matrices.push((node.parent < 0 ? unitySpace : matrices[node.parent]!).clone().multiply(local));
-  }
-  return matrices;
-}
 
 export function modelSummary(model: ParsedModel): ModelSummary {
   const keys = nodeKeys(model);

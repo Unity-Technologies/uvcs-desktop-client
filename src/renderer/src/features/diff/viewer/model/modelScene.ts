@@ -4,9 +4,10 @@
 // three's right-handed camera shows the file's own, so the model looks as in Unity's Scene view (`modelSummary`
 // keeps Unity's mirrored numbers for what the panel tells).
 
-import { BufferAttribute, BufferGeometry, Group, Matrix4, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, Quaternion, Vector3 } from 'three';
+import { BufferAttribute, BufferGeometry, Group, Mesh, MeshBasicMaterial, MeshStandardMaterial, Object3D, Quaternion, Vector3 } from 'three';
 import type { ModelMesh, ParsedModel } from './parsedModel';
 import type { ModelSummary } from './modelSummary';
+import { viewerSpaceOf } from './modelSpaces';
 
 export interface ModelScene {
   /** The model in the viewer's space: its units in metres and its axes onto Unity's. */
@@ -24,12 +25,6 @@ export interface SceneMesh {
   wire: Mesh<BufferGeometry, MeshBasicMaterial>;
   /** Each material slot's name, in the order of `solid.material`. */
   slots: string[];
-}
-
-/** From the file's space to the viewer's: its units in metres and its axes onto Unity's (no mirror: see above). */
-export function viewerSpaceOf(model: Pick<ParsedModel, 'unitScale' | 'axisConversion'>): Matrix4 {
-  const units = new Matrix4().makeScale(model.unitScale, model.unitScale, model.unitScale);
-  return new Matrix4().fromArray(model.axisConversion).multiply(units);
 }
 
 export function buildModelScene(model: ParsedModel, summary: ModelSummary): ModelScene {
