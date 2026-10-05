@@ -3,22 +3,17 @@ import type { MovedBlock } from './movedBlocks';
 import { lineRowSelector, numberCellSelector } from './pierreDom';
 
 /**
- * CSS for the code a diff shows moved, to go inside the diff's shadow root. The lines that moved as they were take
- * the moved color where they'd take red or green: Pierre derives a changed row's tint, its number and its bar from
- * `--diffs-deletion-base` or `--diffs-addition-base`, so setting it on the row recolors all three. The lines edited on
- * the way keep red and green, so what changed stands out in the moved code. Pierre's word marks are dropped from
- * every moved line: they compare it with a line beside it that it has nothing to do with, not with its other place.
- * The move under the pointer stands out in both places.
+ * CSS for the code a diff shows moved, to go inside the diff's shadow root. Moved code keeps the diff's own red and
+ * green, edited lines too, as the official client keeps its own colors: the moved color only marks moves (the labels,
+ * the ribbon, the move under the pointer), so the diff's lines speak one language. Pierre's word marks are dropped from
+ * every moved line: they compare it with a line beside it that it has nothing to do with, not with its other place;
+ * the words it changed are marked against the line it became instead (`useMovedWordMarks`). The move under the
+ * pointer stands out in both places.
  */
 export function movedCodeCss(moves: MovedBlock[], hovered: MovedBlock | undefined): string {
   if (moves.length === 0) return '';
-  const rules: string[] = [];
-  const removed = moves.flatMap((move) => movedAsItWas(move, 'deletions'));
-  const added = moves.flatMap((move) => movedAsItWas(move, 'additions'));
-  if (removed.length > 0) rules.push(`${rows(removed)}{--diffs-deletion-base:var(--change-moved)}`);
-  if (added.length > 0) rules.push(`${rows(added)}{--diffs-addition-base:var(--change-moved)}`);
   const everyLine = moves.flatMap((move) => [...linesOf(move, 'deletions'), ...linesOf(move, 'additions')]);
-  rules.push(`${content(everyLine)} [data-diff-span]{background:none}`);
+  const rules = [`${content(everyLine)} [data-diff-span]{background:none}`];
   if (hovered) {
     const both = [...linesOf(hovered, 'deletions'), ...linesOf(hovered, 'additions')];
     rules.push(`${rows(both)}{background-image:linear-gradient(var(--diff-moved-emphasis),var(--diff-moved-emphasis))}`);
@@ -30,11 +25,6 @@ export function movedCodeCss(moves: MovedBlock[], hovered: MovedBlock | undefine
 export function linesOf(move: MovedBlock, side: DiffSide): ChangedLine[] {
   const { start, count } = move[side];
   return Array.from({ length: count }, (_, offset) => ({ side, lineNumber: start + offset }));
-}
-
-function movedAsItWas(move: MovedBlock, side: DiffSide): ChangedLine[] {
-  const edited = new Set(move.changed.filter((line) => line.side === side).map((line) => line.lineNumber));
-  return linesOf(move, side).filter((line) => !edited.has(line.lineNumber));
 }
 
 const content = (lines: ChangedLine[]): string => `:is(${lines.map(lineRowSelector).join(',')})`;
