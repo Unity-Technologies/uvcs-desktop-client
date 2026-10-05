@@ -154,7 +154,10 @@ markup from the network.
   Unity's EV certificate in Key Vault through jsign, SHA-256 and timestamped; the hook reads the vault, the
   certificate, an access token and the jsign jar from `AZURE_SIGNING_VARIABLES`. jsign runs on any OS, so releases
   build the Windows installers on Unity's macOS runners: Unity's Windows runners scan every file they write
-  (Defender, which a job can't turn off), and installing and building took them about 9 minutes against 2. A build
+  (Defender, which a job can't turn off), and installing and building took them about 9 minutes against 2. The
+  installers are the same as Windows would build: the same Electron binaries, NSIS, 7-Zip and filter, resedit for the
+  .exe's resources, and a standard Authenticode signature. That holds because the app has no native Node modules
+  (`npmRebuild: false`, everything bundled by electron-vite): one would have to be compiled for Windows on Windows. A build
   with electron-builder.yml alone (`npm run dist`) is unsigned, and SmartScreen warns of an unknown publisher. The
   signed build writes its `publisherName` into the app's `app-update.yml`, and from then on electron-updater installs
   only an update whose valid signature names that publisher (`verifySignature`). So before uploading, the release
