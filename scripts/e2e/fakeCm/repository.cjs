@@ -81,7 +81,9 @@ const FILES = {
     onDisk: 'class Player {\n  float speed = 5f;\n  void Move() { }\n  void Jump() { }\n}\n',
   },
   'src/camera.cs': { loaded: 'class Camera {\n  float distance = 10f;\n}\n' },
-  // A 3D model, written as text (OBJ) so the fixture stays readable: its diff is the model diff's.
+  // A 3D model, written as text (OBJ) so the fixture stays readable: its diff is the model diff's, which reads the
+  // import settings in its .meta beside it, as every model of a Unity project has.
+  'Assets/crate.obj.meta': { loaded: 'fileFormatVersion: 2\nguid: 4f1d0c6a2b3e4d5f8a9b0c1d2e3f4a5b\nModelImporter:\n  meshes:\n    globalScale: 1\n    useFileScale: 1\n  animationType: 2\n' },
   'Assets/crate.obj': {
     loaded: 'o Crate\nusemtl Wood\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nf 1 2 3 4\n',
     onDisk: 'o Crate\nusemtl Wood_mat\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nf 1 2 3 4\n',
