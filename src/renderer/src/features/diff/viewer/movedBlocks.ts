@@ -206,3 +206,11 @@ function changedInMove(meta: DisplayMeta, method: ComparisonMethod, deletions: L
   }
   return changed;
 }
+
+/** The move a changed line is part of, in either of its places. */
+export function moveContaining(moves: MovedBlock[], { side, lineNumber }: ChangedLine): MovedBlock | undefined {
+  return moves.find((move) => {
+    const { start, count } = move[side];
+    return lineNumber >= start && lineNumber < start + count;
+  });
+}

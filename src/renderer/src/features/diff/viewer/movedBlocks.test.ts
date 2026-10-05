@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { countCalls } from '@shared/testing/countCalls';
 import type { ComparisonMethod } from './comparisonMethod';
 import { lineDiff } from './lineDiff';
-import { detectMovedBlocks, MAX_BLOCKS, MAX_CHANGED_LINES, MAX_COMPARISONS, MoveSearch } from './movedBlocks';
+import { detectMovedBlocks, MAX_BLOCKS, MAX_CHANGED_LINES, MAX_COMPARISONS, moveContaining, MoveSearch, type MovedBlock } from './movedBlocks';
 
 const text = (lines: string[], lineBreak = '\n'): string => lines.map((line) => `${line}${lineBreak}`).join('');
 const movesIn = (original: string[], modified: string[], method: ComparisonMethod = 'recognizeAll') =>
@@ -122,5 +122,19 @@ describe('detectMovedBlocks', () => {
     const { result, calls } = countCalls(MoveSearch.prototype, 'compare', () => detectMovedBlocks(meta, 'recognizeAll'));
     expect(result.length).toBeGreaterThan(20);
     expect(calls).toBeLessThanOrEqual(MAX_COMPARISONS);
+  });
+});
+
+describe('moveContaining', () => {
+  const move: MovedBlock = { deletions: { start: 3, count: 2 }, additions: { start: 20, count: 2 }, changed: [] };
+
+  it('finds the move a line is in, in either of its places', () => {
+    expect(moveContaining([move], { side: 'deletions', lineNumber: 4 })).toBe(move);
+    expect(moveContaining([move], { side: 'additions', lineNumber: 20 })).toBe(move);
+  });
+
+  it("finds none for a line outside its places, or with the other side's number", () => {
+    expect(moveContaining([move], { side: 'deletions', lineNumber: 5 })).toBeUndefined();
+    expect(moveContaining([move], { side: 'deletions', lineNumber: 20 })).toBeUndefined();
   });
 });
