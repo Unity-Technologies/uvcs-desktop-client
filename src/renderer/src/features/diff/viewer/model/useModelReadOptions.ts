@@ -14,9 +14,18 @@ import { useModelCompanions } from './useModelCompanions';
  * and its import settings, from the `.meta` beside it (one read, cached as any content is). A model without a `.meta`
  * (outside a Unity project) or whose `.meta` can't be read has Unity's defaults. Null while any is being read.
  */
-export function useModelReadOptions(workspacePath: string, side: DiffSide, source: ContentSource, path: string, model: ModelBytes | undefined): ModelReadOptions | null {
+export function useModelReadOptions(
+  workspacePath: string,
+  side: DiffSide,
+  source: ContentSource,
+  path: string,
+  model: ModelBytes | undefined,
+  /** Settings already known (the `.meta` being diffed), which are not read again. */
+  knownSettings?: ModelImportSettings,
+): ModelReadOptions | null {
   const companions = useModelCompanions(workspacePath, side, source, path, model);
-  const settings = useImportSettings(workspacePath, side, source, path, model !== undefined);
+  const readSettings = useImportSettings(workspacePath, side, source, path, model !== undefined && knownSettings === undefined);
+  const settings = knownSettings ?? readSettings;
   return useMemo(() => (companions && settings ? { companions, settings } : null), [companions, settings]);
 }
 

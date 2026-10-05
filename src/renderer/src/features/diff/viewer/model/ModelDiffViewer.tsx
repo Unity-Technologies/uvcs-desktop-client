@@ -25,6 +25,7 @@ import type { ModelDiffMode } from './modelDiffModes';
 import { framedBounds, nodesBounds } from './modelFraming';
 import { ModelInfoStrip } from './ModelInfoStrip';
 import { modelCommandOf } from './modelKeys';
+import type { ModelImportSettings } from './modelImportSettings';
 import { modelReadFailureWords } from './modelReadFailureWords';
 import { buildModelScene, pivotOf, type ModelScene } from './modelScene';
 import { ModelAnimationBar } from './ModelAnimationBar';
@@ -59,6 +60,8 @@ interface ModelDiffViewerProps {
   modified: FileContent;
   /** Active diff mode; owned by the header's segmented control. */
   mode: ModelDiffMode;
+  /** Each version's import settings, when they're what is diffed (a `.meta`): otherwise read from the `.meta` beside it. */
+  settings?: { original: ModelImportSettings; modified: ModelImportSettings };
 }
 
 /** What is lit up: a row of the panel (or one of its items), or a part clicked on the model. */
@@ -67,9 +70,9 @@ interface Picked {
   nodes: NodeRef[];
 }
 
-export function ModelDiffViewer({ workspacePath, sources, path, original, modified, mode }: ModelDiffViewerProps) {
-  const optionsBefore = useModelReadOptions(workspacePath, 'original', sources.original, path, original.model);
-  const optionsAfter = useModelReadOptions(workspacePath, 'modified', sources.modified, path, modified.model);
+export function ModelDiffViewer({ workspacePath, sources, path, original, modified, mode, settings }: ModelDiffViewerProps) {
+  const optionsBefore = useModelReadOptions(workspacePath, 'original', sources.original, path, original.model, settings?.original);
+  const optionsAfter = useModelReadOptions(workspacePath, 'modified', sources.modified, path, modified.model, settings?.modified);
   const before = useReadModel(original.model, optionsBefore);
   const after = useReadModel(modified.model, optionsAfter);
   const { modelDrawMode, setModelDrawMode, modelColorBySlot, setModelColorBySlot, modelToleranceShare, setModelToleranceShare, modelShowBones, setModelShowBones } =
