@@ -65,7 +65,7 @@ function snapped(array: Float32Array, step: number): Uint32Array {
 /** A fingerprint of a float array's exact bits: equal arrays have equal fingerprints, and any change changes it. */
 export function fingerprintOf(array: ArrayLike<number> | null): string {
   if (!array) return '';
-  const bits = array instanceof Float32Array ? new Uint32Array(array.buffer, array.byteOffset, array.length) : Uint32Array.from(array);
+  const bits = array instanceof Float32Array || array instanceof Int32Array ? new Uint32Array(array.buffer, array.byteOffset, array.length) : Uint32Array.from(array);
   let h1 = 0x811c9dc5;
   let h2 = 0x01000193;
   for (let i = 0; i < bits.length; i++) {

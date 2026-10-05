@@ -24,6 +24,8 @@ export interface SummaryNode {
   position: [number, number, number];
   rotation: [number, number, number, number];
   scale: [number, number, number];
+  /** From the node's space to Unity's (column-major 4×4): where it sits, turned and scaled, in the scene. */
+  world: number[];
   /** What the node and everything under it draws, in Unity's space; null for nothing. */
   bounds: Bounds | null;
   /** Its mesh's index in `meshes`, if it has one. */
@@ -48,7 +50,18 @@ export interface MeshSummary {
   /** The geometry in the node's own space and the file's units, to tell a moved pivot from a moved node. */
   localBounds: Bounds;
   /** Fingerprints of each attribute's exact values: equal when the data Unity imports is the same. */
-  fingerprints: { positions: string; normals: string; uv: string; uv1: string; colors: string; index: string; skin: string; blendShapes: string };
+  fingerprints: {
+    positions: string;
+    /** The positions where they end up in Unity's space, to 10 µm: equal when the mesh looks the same in place. */
+    placedPositions: string;
+    normals: string;
+    uv: string;
+    uv1: string;
+    colors: string;
+    index: string;
+    skin: string;
+    blendShapes: string;
+  };
 }
 
 export interface ModelSummary {
@@ -63,6 +76,8 @@ export interface ModelSummary {
   /** The whole model in Unity's space; null when it draws nothing. */
   bounds: Bounds | null;
 }
+
+const PLACED_STEP_METRES = 1e-5;
 
 /** From the file's space to Unity's: its units in metres, its axes onto Unity's, X mirrored. */
 export function unitySpaceOf(model: Pick<ParsedModel, 'unitScale' | 'axisConversion'>): Matrix4 {
@@ -87,7 +102,7 @@ export function modelSummary(model: ParsedModel): ModelSummary {
   const keys = nodeKeys(model);
   const world = worldMatricesOf(model);
   const meshOfNode = new Map(model.meshes.map((mesh, i) => [mesh.node, i]));
-  const meshes = model.meshes.map((mesh) => meshSummary(mesh, keys));
+  const meshes = model.meshes.map((mesh) => meshSummary(mesh, keys, world[mesh.node]!));
   const ownBounds = model.nodes.map((_, i) => {
     const mesh = meshOfNode.get(i);
     return mesh === undefined ? null : transformedBounds(model.meshes[mesh]!.attributes.position, world[i]!);
@@ -107,6 +122,7 @@ export function modelSummary(model: ParsedModel): ModelSummary {
     position: node.position,
     rotation: node.rotation,
     scale: node.scale,
+    world: world[i]!.elements.slice(),
     bounds: subtreeBounds[i]!,
     mesh: meshOfNode.get(i) ?? null,
   }));
@@ -130,7 +146,7 @@ export function modelSummary(model: ParsedModel): ModelSummary {
   };
 }
 
-function meshSummary(mesh: ModelMesh, keys: string[]): MeshSummary {
+function meshSummary(mesh: ModelMesh, keys: string[], world: Matrix4): MeshSummary {
   const { attributes } = mesh;
   const vertexCount = attributes.position.length / 3;
   const drawn = [
@@ -154,6 +170,7 @@ function meshSummary(mesh: ModelMesh, keys: string[]): MeshSummary {
     localBounds: transformedBounds(attributes.position, new Matrix4())!,
     fingerprints: {
       positions: fingerprintOf(attributes.position),
+      placedPositions: fingerprintOf(placedPositions(attributes.position, world)),
       normals: fingerprintOf(attributes.normal),
       uv: fingerprintOf(attributes.uv),
       uv1: fingerprintOf(attributes.uv1),
@@ -163,6 +180,19 @@ function meshSummary(mesh: ModelMesh, keys: string[]): MeshSummary {
       blendShapes: mesh.blendShapes.map((shape) => fingerprintOf(shape.deltas)).join('|'),
     },
   };
+}
+
+/** Where the mesh's vertices end up in Unity's space, in steps of 10 µm, so float noise from the matrices weighs nothing. */
+function placedPositions(positions: Float32Array, world: Matrix4): Int32Array {
+  const placed = new Int32Array(positions.length);
+  const point = new Vector3();
+  for (let i = 0; i < positions.length; i += 3) {
+    point.set(positions[i]!, positions[i + 1]!, positions[i + 2]!).applyMatrix4(world);
+    placed[i] = Math.round(point.x / PLACED_STEP_METRES);
+    placed[i + 1] = Math.round(point.y / PLACED_STEP_METRES);
+    placed[i + 2] = Math.round(point.z / PLACED_STEP_METRES);
+  }
+  return placed;
 }
 
 /** Each node's path, made unique with ` #2`, ` #3`… for siblings sharing a name (Unity allows them; paths can't tell them apart). */
