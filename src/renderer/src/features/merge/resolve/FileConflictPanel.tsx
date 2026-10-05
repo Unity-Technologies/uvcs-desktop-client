@@ -13,7 +13,7 @@ import { MergeToolOpenBanner } from '../mergeTools/MergeToolOpenBanner';
 import { fileConflictStatus, fileConflictTool } from '../mergeStatus';
 import { chosenConflictChoice, decisionFor, hasConflicts, type ConflictChoice } from './conflictChoices';
 import { ConflictBody } from './ConflictBody';
-import { effectiveView, hasBase, type PanelView } from './conflictPanelView';
+import { effectiveView, hasBase, rendersVersions, type PanelView } from './conflictPanelView';
 import type { FileConflictDecision } from './fileConflictDecision';
 import { KeepChoices } from './KeepChoices';
 import type { FileConflictState } from './useFileConflicts';
@@ -119,7 +119,7 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
         <MergeToolOpenBanner fileName={fileNameOf(state.file.path)} open={state.openTool} run={toolActions.run?.currentKey === state.file.key ? toolActions.run : null} />
       )}
 
-      {canMergeLines && !editing && (
+      {(canMergeLines || rendersVersions(state)) && !editing && (
         <div className={styles.viewBar}>
           <SegmentedControl<PanelView> value={view} onChange={setChosenView} segments={viewSegments(state, labels)} />
         </div>
@@ -139,6 +139,13 @@ export function FileConflictPanel({ workspacePath, state, labels, toolActions, o
 
 function viewSegments(state: FileConflictState, labels: MergeLabels) {
   const { source, destination } = labels.roles;
+  const sides = [
+    { value: 'destination' as const, label: destination.name, title: `Base → ${labels.destination}` },
+    { value: 'source' as const, label: source.name, title: `Base → ${labels.source}` },
+    ...(hasBase(state) ? [{ value: 'base' as const, label: 'Base', title: 'Common ancestor' }] : []),
+  ];
+  // A binary's versions can't be merged: the first view is the one to keep, then what each side changed.
+  if (state.isBinary) return [{ value: 'choice' as const, label: 'Choose', title: 'The version to keep' }, ...sides];
   return [
     state.remainingConflicts > 0
       ? {
@@ -151,8 +158,6 @@ function viewSegments(state: FileConflictState, labels: MergeLabels) {
           title: `${pluralize(state.remainingConflicts, 'conflict')} left`,
         }
       : { value: 'changes' as const, label: 'Changes', title: `${destination.name} now → after the merge` },
-    { value: 'destination' as const, label: destination.name, title: `Base → ${labels.destination}` },
-    { value: 'source' as const, label: source.name, title: `Base → ${labels.source}` },
-    ...(hasBase(state) ? [{ value: 'base' as const, label: 'Base', title: 'Common ancestor' }] : []),
+    ...sides,
   ];
 }

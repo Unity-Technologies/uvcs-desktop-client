@@ -30,7 +30,7 @@ export function ConflictBody({ workspacePath, state, labels, view, editing, onDe
   if (state.status === 'loading') return <CenteredSpinner />;
   if (state.status === 'error' || !contents) return <EmptyState title="Couldn't read this file" description={state.error?.message} />;
 
-  if (state.isBinary) {
+  if (state.isBinary && view === 'choice') {
     return (
       <WholeFileChoice
         contents={contents}
@@ -88,7 +88,11 @@ export function ConflictBody({ workspacePath, state, labels, view, editing, onDe
         />
       );
     case 'base':
+      // A binary's base shows as what it is (a model, an image); a text's as its text.
+      if (state.isBinary) return <FileDiffViewer workspacePath={workspacePath} original={{ kind: 'empty' }} modified={file.base} fileName={file.path} title={<span className={styles.diffTitle}>Base</span>} />;
       return <ReadOnlyText path={file.path} text={contents.base.text ?? ''} />;
+    case 'choice':
+      return null;
   }
 }
 

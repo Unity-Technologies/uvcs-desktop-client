@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { FileContent } from '@shared/domain/content';
-import { effectiveView, mergedText, textToEdit } from './conflictPanelView';
+import { effectiveView, mergedText, rendersVersions, textToEdit } from './conflictPanelView';
 import type { FileConflictState } from './useFileConflicts';
 
 const text = (value: string): FileContent => ({ text: value, isBinary: false, size: value.length });
@@ -34,6 +34,35 @@ describe('effectiveView', () => {
     expect(effectiveView('base', stateOf())).toBe('conflicts');
     const withBase = stateOf({ file: { ...stateOf().file, base: { kind: 'spec', spec: 'serverpath:/src/a.ts#cs:4' } } });
     expect(effectiveView('base', withBase)).toBe('base');
+  });
+});
+
+describe('a binary file', () => {
+  const model = (size: number): FileContent => ({ isBinary: true, size, model: { bytes: new Uint8Array(size), format: 'fbx' } });
+  const image = (size: number): FileContent => ({ isBinary: true, size, image: { bytes: new Uint8Array(size), mimeType: 'image/png' } });
+  const opaque = (size: number): FileContent => ({ isBinary: true, size });
+  const binary = (contents: FileConflictState['contents']): FileConflictState =>
+    stateOf({ isBinary: true, contents, document: undefined, decision: undefined, remainingConflicts: 1 });
+
+  it('opens on the versions to choose from', () => {
+    expect(effectiveView(undefined, binary({ base: model(1), source: model(2), destination: model(3) }))).toBe('choice');
+    expect(effectiveView('conflicts', binary({ base: model(1), source: model(2), destination: model(3) }))).toBe('choice');
+  });
+
+  it('shows each side against the base where its versions render: models and images', () => {
+    expect(rendersVersions(binary({ base: model(1), source: model(2), destination: model(3) }))).toBe(true);
+    expect(rendersVersions(binary({ base: image(1), source: image(2), destination: image(3) }))).toBe(true);
+    expect(effectiveView('source', binary({ base: model(1), source: model(2), destination: model(3) }))).toBe('source');
+  });
+
+  it('offers only the choice for a binary that renders as nothing', () => {
+    const state = binary({ base: opaque(1), source: opaque(2), destination: opaque(3) });
+    expect(rendersVersions(state)).toBe(false);
+    expect(effectiveView('source', state)).toBe('choice');
+  });
+
+  it('takes a side added on both, with no base, as still rendering', () => {
+    expect(rendersVersions(binary({ base: { isBinary: false, size: 0, text: '' }, source: model(2), destination: model(3) }))).toBe(true);
   });
 });
 
