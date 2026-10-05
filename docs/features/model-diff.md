@@ -89,7 +89,9 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
 
 One `ModelRenderer` per viewer draws on one WebGL canvas, only when something changes (`requestRender`: a gesture, a
 mode, a look), never on a loop; disposing it frees the GPU's memory at once (`forceContextLoss`), as stepping through
-files makes many viewers. Each version is a scene of its own (`buildModelScene`: its hierarchy, a material per slot, a
+files makes many viewers. What changes every frame or tick (a playing take's skeleton, the tolerance's colors) is
+written into the buffers it has (`writeAttribute`), and a side replaced frees its own (`disposeSide`). The model worker
+answers every request, a failure too ("Couldn't compare these surfaces"): no view waits for good. Each version is a scene of its own (`buildModelScene`: its hierarchy, a material per slot, a
 wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out per mode (`layoutOf`):
 
 - **Diffs** (Differences): the version after colored by how far each vertex is from the version before's surface,
@@ -142,12 +144,23 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
 A version is read with what it needs beside it (`useModelReadOptions`), found by a `SiblingFinder`
 (`SiblingFinderContext`): a workspace file's sibling is the file beside it, on disk or as loaded (`workspaceSibling`);
 a committed diff's (`diffSibling`, provided by `DiffBrowser`) is the entry of the same diff (a glTF's shape lives in
-its `.bin`, so a changed shape changed the `.bin` too, with its own revisions), or, when the diff left it alone, the
-file where the diff points to (`cs:N`, the branch's head, `sh:N`: the same on both sides). Elsewhere (history, merges)
-none is found. A sibling's name never reaches above the model's folder.
+its `.bin`, so a changed shape changed the `.bin` too, with its own revisions; a moved model's `.meta` moved with it, at
+its old path on the side before), or, when the diff left it alone, the file where the diff points to (`cs:N`, the
+branch's head, `sh:N`: the same on both sides). Elsewhere (history, merges) none is found. A sibling is found beside
+the path each side was read from (`sourcePathOf`), never the diff's file name, which names the next file while the one
+before still shows. Its name never reaches above the model's folder, and main refuses a workspace file outside the
+workspace anyway (`workspaceFileOf`): the renderer is not trusted.
 
-- **A glTF's companions** (`gltfCompanions`, from its JSON) are read as bytes (`api.content.readBytes`: an opaque
-  binary has none in `FileContent`), cached as any content (`contentCaching`), and handed to the loader as `blob:` URLs
+- **Absent is an answer**: `api.content.readBytes` reads a file that isn't there as null (the disk's `ENOENT`, `cm`'s
+  "does not exist"), cached as any content, so a model without a `.meta` costs its `cm cat` once; any other failure
+  (the server) rejects, shows Unity's defaults meanwhile and is read again, never kept as "no `.meta`". It checks a
+  file's size before reading it.
+- **Read once**: a pending file is read anew on every focus, as new arrays; while its bytes are the same (`sameBytes`),
+  the viewer keeps the model it has (`useStableModel`), its read, scene and comparison. Typing into a model written as
+  text (or its `.meta`) renders it once typing pauses (`useTypingPause`), not at every keystroke.
+
+- **A glTF's companions** (`gltfCompanions`, from its JSON, decoded as glTF writes URIs) are read as bytes
+  (`api.content.readBytes`: an opaque binary has none in `FileContent`), and handed to the loader as `blob:` URLs
   (`noTextureLoading`'s companions); one it can't find still says it needs it (`gltfNeed`). Reads are keyed by the
   model's bytes and the options they were read with (`readModel`).
 - **Import settings**: the `.meta` beside the model (`readImportSettings`, over `parseUnityYaml`, the YAML subset Unity
@@ -160,7 +173,8 @@ none is found. A sibling's name never reaches above the model's folder.
   past its take's end or from a take it doesn't have; and a Scale Factor changed. One `cm cat` a side, cached.
 - **A model's `.meta` diffed alone** (`modelOfMeta`) shows as the model under each version's settings (`ModelMetaDiff`,
   "Code | Model", the model by default, remembered as `representations.meta`): raising the Scale Factor instead of
-  exporting again reads "100× larger in Unity".
+  exporting again reads "100× larger in Unity". Only where the model can be found beside it (`modelBesideMeta`);
+  elsewhere the `.meta` is its text.
 
 ## In a merge
 
