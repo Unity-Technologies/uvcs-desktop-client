@@ -150,6 +150,13 @@ describe('parseModel, glTF', () => {
     expect(gltfCompanions(new Uint8Array([1, 2]), 'fbx')).toEqual([]);
   });
 
+  it("lists no companion for a glTF whose buffers aren't what glTF writes, rather than failing", () => {
+    const json = (buffers: unknown) => new TextEncoder().encode(JSON.stringify({ asset: { version: '2.0' }, buffers }));
+    expect(gltfCompanions(json([{ uri: '100%.bin' }]), 'gltf')).toEqual(['100%.bin']);
+    expect(gltfCompanions(json([{ uri: 7 }]), 'gltf')).toEqual([]);
+    expect(gltfCompanions(json({}), 'gltf')).toEqual([]);
+  });
+
   it('names the compression a glTF needs a decoder for', async () => {
     const draco = triangleGltf('inline', { extensionsUsed: ['KHR_draco_mesh_compression'], extensionsRequired: ['KHR_draco_mesh_compression'] });
     expect(await parseModel(bytesOf(draco, 'gltf'))).toEqual({ kind: 'failed', failure: { kind: 'compressed', compression: 'Draco' } });

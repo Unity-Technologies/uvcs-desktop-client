@@ -10,7 +10,7 @@ import { Loader, LoadingManager, Texture } from 'three';
 export function noTextureLoading(onTexture: (fileName: string) => void, companions: ReadonlyMap<string, string> = new Map()): LoadingManager {
   const manager = new LoadingManager();
   // A file the model needs beside it, given as a blob URL of its bytes (a glTF's `.bin`), by the name the model uses.
-  manager.setURLModifier((url) => companions.get(decodeURIComponent(url)) ?? (isOwnBytes(url) ? url : 'data:,'));
+  manager.setURLModifier((url) => companions.get(decodedName(url)) ?? (isOwnBytes(url) ? url : 'data:,'));
   manager.addHandler(/./, new TextureNames(onTexture));
   return manager;
 }
@@ -24,10 +24,19 @@ class TextureNames extends Loader<Texture> {
   override load(url: string, onLoad?: (texture: Texture) => void): Texture {
     // A texture embedded in the file comes as a blob URL the loader made: nothing names it, and nothing will read it.
     if (url.startsWith('blob:')) URL.revokeObjectURL(url);
-    else if (!isOwnBytes(url)) this.onTexture(fileNameOf(url));
+    else if (!isOwnBytes(url)) this.onTexture(decodedName(fileNameOf(url)));
     const texture = new Texture();
     onLoad?.(texture);
     return texture;
+  }
+}
+
+/** A name as the file gives it, `%20` as a space (glTF writes URIs encoded); one that isn't validly encoded as written. */
+function decodedName(name: string): string {
+  try {
+    return decodeURIComponent(name);
+  } catch {
+    return name;
   }
 }
 

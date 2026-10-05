@@ -15,7 +15,7 @@ let lastRequestId = 0;
 const awaited = new Map<number, { resolve: (response: ModelWorkerResponse) => void; reject: () => void }>();
 /** By the model's bytes: each read with the options it was given (its `.bin` and its `.meta`, as they were). */
 const reads = new WeakMap<Uint8Array, { options: ModelReadOptions; read: Promise<ModelFileRead> }[]>();
-const comparisons = new WeakMap<ParsedModel, WeakMap<ParsedModel, Promise<SurfaceComparison>>>();
+const comparisons = new WeakMap<ParsedModel, WeakMap<ParsedModel, Promise<SurfaceComparison | null>>>();
 
 /** The model read with its companions and import settings, from the one read of the same bytes and options if there was one. */
 export function readModel(model: ModelBytes, options: ModelReadOptions = PLAIN_READ): Promise<ModelFileRead> {
@@ -34,7 +34,7 @@ function sameOptions(a: ModelReadOptions, b: ModelReadOptions): boolean {
 }
 
 /** The surfaces of a pair compared, from the one comparison of the same pair if there was one. */
-export function compareModels(before: ParsedModel, after: ParsedModel): Promise<SurfaceComparison> {
+export function compareModels(before: ParsedModel, after: ParsedModel): Promise<SurfaceComparison | null> {
   let ofBefore = comparisons.get(before);
   if (!ofBefore) comparisons.set(before, (ofBefore = new WeakMap()));
   let comparison = ofBefore.get(after);
@@ -49,14 +49,22 @@ async function readInWorker(model: ModelBytes, options: ModelReadOptions): Promi
   const modelWorker = startedWorker();
   // The bytes are copied to the worker, never transferred: the content cache keeps them for the next time.
   const response = modelWorker && (await ask(modelWorker, { id: ++lastRequestId, read: model, options }));
-  return response && 'read' in response ? response.read : readModelFile(model, options);
+  if (response && 'read' in response) return response.read;
+  return readModelFile(model, options).catch((): ModelFileRead => ({ kind: 'failed', failure: { kind: 'unreadable' } }));
 }
 
-async function compareInWorker(before: ParsedModel, after: ParsedModel): Promise<SurfaceComparison> {
+/** The comparison, or null when the surfaces couldn't be compared: the Differences mode then says so. */
+async function compareInWorker(before: ParsedModel, after: ParsedModel): Promise<SurfaceComparison | null> {
   const modelWorker = startedWorker();
   // Only what placing the meshes takes is copied to the worker; the viewer keeps drawing from the models.
   const response = modelWorker && (await ask(modelWorker, { id: ++lastRequestId, compare: { before: placeable(before), after: placeable(after) } }));
-  return response && 'comparison' in response ? response.comparison : compareSurfaces(placedMeshesOf(before), placedMeshesOf(after));
+  if (response && 'comparison' in response) return response.comparison;
+  if (response && 'comparisonFailed' in response) return null;
+  try {
+    return compareSurfaces(placedMeshesOf(before), placedMeshesOf(after));
+  } catch {
+    return null;
+  }
 }
 
 function placeable({ nodes, unitScale, importScale, axisConversion, meshes }: ParsedModel): PlaceableModel {

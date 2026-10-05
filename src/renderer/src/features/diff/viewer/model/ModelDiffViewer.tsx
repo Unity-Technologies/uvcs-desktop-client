@@ -162,7 +162,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   // The Differences mode: the pair's surfaces compared in the worker, colored at the tolerance, its changed regions
   // stepped through.
   const differences = comparable && mode === 'differences';
-  const { comparison, comparing } = useSurfaceComparison(old?.model ?? null, next?.model ?? null, differences);
+  const { comparison, comparing, failed: comparisonFailed } = useSurfaceComparison(old?.model ?? null, next?.model ?? null, differences);
   const tolerance = comparison ? modelToleranceShare * comparison.size : 0;
   useEffect(() => {
     if (!renderer || !palette) return;
@@ -291,6 +291,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
                 <Spinner size={14} /> Comparing surfaces…
               </div>
             )}
+            {differences && comparisonFailed && <div className={styles.computing}>Couldn't compare these surfaces</div>}
             {rows && paneWidth > 0 && !docked && changesPanel}
             <ModelViewControls
               drawMode={modelDrawMode}

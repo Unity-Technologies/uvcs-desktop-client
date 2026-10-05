@@ -7,7 +7,7 @@ import type { ModelFormat } from '@shared/domain/content';
 export type GltfNeed = { kind: 'externalData'; file: string } | { kind: 'compressed'; compression: 'Draco' | 'meshopt' };
 
 interface GltfJson {
-  buffers?: { uri?: string }[];
+  buffers?: unknown;
   extensionsRequired?: string[];
 }
 
@@ -43,8 +43,23 @@ export function gltfCompanions(bytes: Uint8Array, format: ModelFormat): string[]
   return json ? externalBuffers(json) : [];
 }
 
+/** The buffers' files, as named: a buffer list or a `uri` that isn't what glTF writes names none (the loader then reports it). */
 function externalBuffers(json: GltfJson): string[] {
-  return [...new Set((json.buffers ?? []).flatMap((buffer) => (buffer.uri !== undefined && !buffer.uri.startsWith('data:') ? [decodeURIComponent(buffer.uri)] : [])))];
+  const buffers: unknown[] = Array.isArray(json.buffers) ? json.buffers : [];
+  const uris = buffers.flatMap((buffer) => {
+    const uri = (buffer as { uri?: unknown } | null)?.uri;
+    return typeof uri === 'string' && !uri.startsWith('data:') ? [decodedUri(uri)] : [];
+  });
+  return [...new Set(uris)];
+}
+
+/** A URI's file name, `%20` as a space; one that isn't validly encoded (`100%.bin`) as written. */
+function decodedUri(uri: string): string {
+  try {
+    return decodeURIComponent(uri);
+  } catch {
+    return uri;
+  }
 }
 
 function readJson(bytes: Uint8Array, format: 'gltf' | 'glb'): GltfJson | null {
