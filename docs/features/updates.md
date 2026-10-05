@@ -104,7 +104,13 @@ markup from the network.
   within the hour. Never bump the version by hand.
 - The installers (electron-builder.yml) are one per OS and architecture, named without spaces
   (`UnityVersionControl-<version>-macOS-arm64.dmg`: GitHub turns spaces into dots, which `latest*.yml` would no longer
-  match); macOS ships a zip too, which electron-updater needs.
+  match); macOS ships a zip too, which electron-updater needs. The macOS targets name no architecture, so a run builds
+  the ones its command line names (`--x64`, `--arm64`; a local `npm run dist` builds only the Mac's own): releases
+  build each in its own run, at once, so Apple notarizes both apps at the same time (about 3 minutes each, the
+  slowest step of a release), and join the two runs' `latest-mac.yml` into one (`mergeMacUpdateInfo`,
+  `scripts/build/mergeMacUpdateInfo.ts`: the x64 zip stays the default download; electron-updater and
+  `installerAsset` pick their architecture's files by name, in any order). Listing the architectures in the targets,
+  as one run building both did, was rejected: the command line can't narrow them.
 - The **app icon** is the mark the About dialog draws (`APP_MARK`, `shared/appMark.ts`, which `AppMark` renders in the
   theme's colors), in the light theme's colors (`APP_ICON_COLORS`, checked against `tokens.css`). `npm run icons`
   (`scripts/icons/makeAppIcons.mjs`) makes the committed files in `build/` from `appIconSvg`, drawing each size from
@@ -135,11 +141,16 @@ markup from the network.
   ad-hoc signature: it refuses Electron's frameworks (library validation).
 - **Windows** releases build with `electron-builder.windows-signed.yml`, whose sign hook (`signWindowsFile`,
   `scripts/build/signWindows.ts`) signs every .exe (the app, `elevate.exe`, the installers and their uninstallers) with
-  Unity's EV certificate in Key Vault through AzureSignTool, SHA-256 and timestamped; the hook reads the credentials
-  from `AZURE_SIGNING_VARIABLES`. A build with electron-builder.yml alone (`npm run dist`) is unsigned, and SmartScreen
-  warns of an unknown publisher. The signed build writes its `publisherName` into the app's `app-update.yml`, and from
-  then on electron-updater installs only an update whose valid signature names that publisher (`verifySignature`), so
-  the hook checks each file the same way (`signatureProblem`) and a wrong name fails the release instead. Every
+  Unity's EV certificate in Key Vault through jsign, SHA-256 and timestamped; the hook reads the vault, the
+  certificate, an access token and the jsign jar from `AZURE_SIGNING_VARIABLES`. jsign runs on any OS, so releases
+  build the Windows installers on Unity's macOS runners: Unity's Windows runners scan every file they write
+  (Defender, which a job can't turn off), and installing and building took them about 9 minutes against 2. A build
+  with electron-builder.yml alone (`npm run dist`) is unsigned, and SmartScreen warns of an unknown publisher. The
+  signed build writes its `publisherName` into the app's `app-update.yml`, and from then on electron-updater installs
+  only an update whose valid signature names that publisher (`verifySignature`). So the release checks every .exe the
+  same way on real Windows before it is published (`verifyWindowsSignatures.ts`: the installers, what the x64 one
+  installs, and the app the arm64 one carries; `signatureProblem` reads the signer as `parseDn` does), and a wrong
+  name or a broken signature fails the release instead of every update after it. Every
   release after a signed one must be signed by the same name: an unsigned one, or a renewed certificate with another
   common name, never reaches those apps. An unsigned build names no publisher and checks nothing.
 - Signing on GitHub's own runners was tried and rejected: Key Vault answers 403 ("Client address is not authorized"),
