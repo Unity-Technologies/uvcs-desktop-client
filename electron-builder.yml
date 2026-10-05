@@ -38,13 +38,11 @@ mac:
   # the disk image and the Windows installer show them too.
   icon: build/icon.icns
   artifactName: UnityVersionControl-${version}-macOS-${arch}.${ext}
-  # One installer per architecture, half the size of a universal one. electron-updater needs the zip on macOS; both
-  # architectures build in one run so latest-mac.yml lists them all.
-  target:
-    - target: dmg
-      arch: [x64, arm64]
-    - target: zip
-      arch: [x64, arm64]
+  # One installer per architecture, half the size of a universal one; electron-updater needs the zip on macOS. The
+  # targets name no architecture, so each run builds the ones its command line names (the Mac's own when it names
+  # none): releases build x64 and arm64 in two runs at once, so Apple notarizes both apps at the same time, and join
+  # their latest-mac.yml (scripts/build/mergeMacUpdateInfo.ts).
+  target: [dmg, zip]
 win:
   icon: build/icon.ico
   artifactName: UnityVersionControl-${version}-Windows-${arch}.${ext}
