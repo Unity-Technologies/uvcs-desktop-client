@@ -71,7 +71,9 @@ the merge), "Yours", "Incoming" and "Base". Conflicts read as labeled blocks ins
 for that conflict, its lines, the source's label and its lines. While a tool has the file, a banner says so (Bring to
 front, Stop waiting), its conflicts show without choices and the merge can't complete; a toast tells how it ended.
 Editing the text in the app opens a banner with Done and Discard edits; the choice shows picked and "Changes" shows what
-it produces. Binary conflicts offer only the two versions to keep, as cards, and no merge tool. The
+it produces. Binary conflicts offer the two versions to keep, as cards, and no merge tool; one whose versions render (3D models,
+images: `rendersVersions`) also shows each side against the base and the base itself ("Choose | Yours | Incoming |
+Base"), and a model's cards tell what each side changed since the base (docs/features/model-diff.md "In a merge"). The
 Incoming view resolves update conflicts with the same panel and run (in its update bar); a merge into a server branch
 resolves its files the same way as a workspace merge. A file
 that merges automatically is never edited; its menu only overrides it by keeping one version.

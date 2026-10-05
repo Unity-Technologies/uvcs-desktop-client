@@ -137,6 +137,38 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   its nodes on both sides; the rest fade. **The info strip** (`modelStats`): Tris, Verts, materials, bones,
   blendshapes, animations and size, "before → after" where they changed, both sizes in one unit.
 
+## Beside the model: its `.bin` and its `.meta`
+
+A version is read with what it needs beside it (`useModelReadOptions`), found by a `SiblingFinder`
+(`SiblingFinderContext`): a workspace file's sibling is the file beside it, on disk or as loaded (`workspaceSibling`);
+a committed diff's (`diffSibling`, provided by `DiffBrowser`) is the entry of the same diff (a glTF's shape lives in
+its `.bin`, so a changed shape changed the `.bin` too, with its own revisions), or, when the diff left it alone, the
+file where the diff points to (`cs:N`, the branch's head, `sh:N`: the same on both sides). Elsewhere (history, merges)
+none is found. A sibling's name never reaches above the model's folder.
+
+- **A glTF's companions** (`gltfCompanions`, from its JSON) are read as bytes (`api.content.readBytes`: an opaque
+  binary has none in `FileContent`), cached as any content (`contentCaching`), and handed to the loader as `blob:` URLs
+  (`noTextureLoading`'s companions); one it can't find still says it needs it (`gltfNeed`). Reads are keyed by the
+  model's bytes and the options they were read with (`readModel`).
+- **Import settings**: the `.meta` beside the model (`readImportSettings`, over `parseUnityYaml`, the YAML subset Unity
+  writes; Unity's defaults without one, or for glTFast's importer): the Scale Factor and Convert Units, scaling the
+  model as Unity does (`importScaleOf`, applied in the worker once the file's own units are known:
+  `ParsedModel.importScale`, apart from `unitScale`, so a resize names its cause), the Humanoid avatar's bone map,
+  the clips cut from the takes by frames (counted at the FBX's frame rate, `TimeMode`; 30 fps without one), and the
+  materials remapped onto slots. `importSettingsChanges` tells what the settings do with the model that no longer
+  fits it, only when this change broke it: a remap onto a slot it doesn't have, an avatar bone it doesn't have, a clip
+  past its take's end or from a take it doesn't have; and a Scale Factor changed. One `cm cat` a side, cached.
+- **A model's `.meta` diffed alone** (`modelOfMeta`) shows as the model under each version's settings (`ModelMetaDiff`,
+  "Code | Model", the model by default, remembered as `representations.meta`): raising the Scale Factor instead of
+  exporting again reads "100× larger in Unity".
+
+## In a merge
+
+A binary conflict whose versions render (models or images: `rendersVersions`) opens on its versions to keep
+(`choice`) and shows each side against the base, and the base, through the diff viewer (docs/features/merge.md). A
+model's cards hold a still of it (`modelThumbnail`: drawn once through a renderer of its own, read back at once, let
+go) and what its side changed since the base (`ModelSinceBase`, the panel's rows, risks first).
+
 ## Sandbox
 
 `scripts/sandboxes/models.sh` builds `models@local` (workspace `/tmp/uvcs-models`): a changeset per case above (a
