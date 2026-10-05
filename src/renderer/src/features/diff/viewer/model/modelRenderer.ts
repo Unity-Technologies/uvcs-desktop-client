@@ -286,8 +286,8 @@ export class ModelRenderer {
   private sceneOf(model: ModelScene): SideScene {
     const scene = new Scene();
     scene.environment = this.environment;
-    scene.environmentIntensity = 0.85;
-    const key = new DirectionalLight(0xffffff, 1.4);
+    scene.environmentIntensity = 0.55;
+    const key = new DirectionalLight(0xffffff, 1.8);
     const markers = new Points(new BufferGeometry(), markerMaterial());
     markers.renderOrder = 20;
     markers.frustumCulled = false;

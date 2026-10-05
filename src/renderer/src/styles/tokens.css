@@ -200,7 +200,7 @@
   --branch-comment-contrast: 4.7;
   /* The model diff's 3D view (`modelPalette`): models in a neutral clay, lit to read their shape, and the pivot's and
      the grid's axes in the colors Unity's gizmos give X, Y and Z. */
-  --model-clay: #a9b1bb;
+  --model-clay: #9ea7b2;
   --model-axis-x: #d5343c;
   --model-axis-y: #4a9a2e;
   --model-axis-z: #2f6bd8;
