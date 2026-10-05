@@ -22,10 +22,14 @@ describe('movedCodeCss', () => {
     expect(movedCodeCss([], undefined)).toBe('');
   });
 
-  it("leaves moved code in the diff's own red and green, its edited lines too: the moved color only marks moves", () => {
+  it("leaves moved code in the diff's own red and green, edited lines too, and marks its line numbers in the moved color", () => {
     const css = movedCodeCss([MOVE], undefined);
-    expect(css).not.toContain('--diffs-deletion-base');
-    expect(css).not.toContain('--diffs-addition-base');
+    const removed = rule(css, '--diffs-deletion-base:var(--change-moved)');
+    const added = rule(css, '--diffs-addition-base:var(--change-moved)');
+    for (const line of [3, 4, 5]) expect(removed).toContain(`[data-line-type="change-deletion"][data-column-number="${line}"]`);
+    for (const line of [20, 21, 22]) expect(added).toContain(`[data-line-type="change-addition"][data-column-number="${line}"]`);
+    expect(removed).not.toContain('[data-line=');
+    expect(added).not.toContain('[data-line=');
   });
 
   it("drops Pierre's word marks from every moved line, edited ones too: they compare it with an unrelated line", () => {
