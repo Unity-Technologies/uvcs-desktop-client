@@ -37,7 +37,7 @@ describe('detectMovedBlocks', () => {
   });
 
   it('pairs each line it replaces with the added line most like it, never with a line only added on the way', () => {
-    const edited = [...FUNCTION.slice(0, 2), '  // add every price', '  for (const item of items) sum += item.cost;', ...FUNCTION.slice(3)];
+    const edited = [...FUNCTION.slice(0, 2), '  debugger;', '  for (const item of items) sum += item.cost;', ...FUNCTION.slice(3)];
     const [move] = movesIn([...FUNCTION, ...BEFORE, ...AFTER], [...BEFORE, ...AFTER, ...edited]);
     expect(move?.changed).toEqual([
       { side: 'deletions', lineNumber: 3 },

@@ -10,6 +10,7 @@ const MOVE: MovedBlock = {
     { side: 'deletions', lineNumber: 4 },
     { side: 'additions', lineNumber: 21 },
   ],
+  replaced: [{ deletion: 4, addition: 21 }],
 };
 
 const rule = (css: string, declaration: string): string => css.split('\n').find((line) => line.endsWith(`{${declaration}}`)) ?? '';

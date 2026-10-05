@@ -16,8 +16,18 @@ export interface MovedBlock {
   additions: LineRange;
   /** Its lines that differ between the two places; the rest moved as they were. */
   changed: ChangedLine[];
+  /** Of those, each line edited on the way with what it became, whose words differ (`movedWordMarks`); by line number. */
+  replaced: ReplacedLine[];
 }
 
+/** A line of moved code, numbered in the original, and the line it became, numbered in the modified file. */
+export interface ReplacedLine {
+  deletion: number;
+  addition: number;
+}
+
+/** How alike an edited line and what it became must be, by their words, to be paired: half of them the same. */
+const REPLACED_SIMILARITY = 0.5;
 /** How alike two blocks must be to be one block moved: 80% of their words the same, as the official client's default. */
 export const MOVED_SIMILARITY = 0.8;
 /** A single line is too common to tell a move from a coincidence. */
@@ -46,7 +56,7 @@ export function detectMovedBlocks(meta: DisplayMeta, method: ComparisonMethod): 
   if (blocks.length > MAX_BLOCKS || changedLines > MAX_CHANGED_LINES) return [];
   const search = new MoveSearch(meta, method, blocks);
   const candidates = search.sides.flatMap((sides) => search.movesFrom(sides));
-  return closestFirst(candidates).map(({ deletions, additions }) => ({ deletions, additions, changed: changedInMove(meta, method, deletions, additions) }));
+  return closestFirst(candidates).map(({ deletions, additions }) => ({ deletions, additions, ...editsInMove(meta, method, deletions, additions) }));
 }
 
 /** A side of a change, its lines as word ids. */
@@ -187,24 +197,71 @@ function overlaps(a: LineRange, b: LineRange): boolean {
   return a.start < b.start + b.count && b.start < a.start + a.count;
 }
 
-/** The lines of a move that differ between its two places, by a line diff of its two copies under `method`. */
-function changedInMove(meta: DisplayMeta, method: ComparisonMethod, deletions: LineRange, additions: LineRange): ChangedLine[] {
+/**
+ * The lines of a move that differ between its two places, by a line diff of its two copies under `method`, and the
+ * ones edited on the way paired with what they became. Within a run of changed lines, each removed line pairs with the
+ * first added line after the last pair that's most like it (`REPLACED_SIMILARITY`, by words): a line only added (or
+ * only removed) on the way pairs with none, rather than with whatever line stands across from it, as the official
+ * client and Pierre pair them.
+ */
+function editsInMove(meta: DisplayMeta, method: ComparisonMethod, deletions: LineRange, additions: LineRange): Pick<MovedBlock, 'changed' | 'replaced'> {
   const key = (line: string): string => comparedPart(line, method);
   const before = meta.deletionLines.slice(deletions.start - 1, deletions.start - 1 + deletions.count).map(key);
   const after = meta.additionLines.slice(additions.start - 1, additions.start - 1 + additions.count).map(key);
   const changed: ChangedLine[] = [];
+  const replaced: ReplacedLine[] = [];
+  let run: { removed: number[]; added: number[] } = { removed: [], added: [] };
+  const endRun = (): void => {
+    replaced.push(...pairedLines(run.removed, run.added, (line) => before[line - deletions.start]!, (line) => after[line - additions.start]!));
+    run = { removed: [], added: [] };
+  };
   let oldLine = deletions.start;
   let newLine = additions.start;
   for (const change of diffArrays(before, after)) {
     const count = change.count ?? 0;
+    if (!change.added && !change.removed) endRun();
     for (let offset = 0; offset < count; offset++) {
-      if (change.removed) changed.push({ side: 'deletions', lineNumber: oldLine + offset });
-      if (change.added) changed.push({ side: 'additions', lineNumber: newLine + offset });
+      if (change.removed) {
+        changed.push({ side: 'deletions', lineNumber: oldLine + offset });
+        run.removed.push(oldLine + offset);
+      }
+      if (change.added) {
+        changed.push({ side: 'additions', lineNumber: newLine + offset });
+        run.added.push(newLine + offset);
+      }
     }
     if (!change.added) oldLine += count;
     if (!change.removed) newLine += count;
   }
-  return changed;
+  endRun();
+  return { changed, replaced };
+}
+
+/** Each removed line with the first added line after the last pair most like it, when one is alike enough. */
+function pairedLines(removed: number[], added: number[], removedText: (line: number) => string, addedText: (line: number) => string): ReplacedLine[] {
+  const pairs: ReplacedLine[] = [];
+  let next = 0;
+  for (const deletion of removed) {
+    let best = -1;
+    let bestSimilarity = REPLACED_SIMILARITY;
+    for (let index = next; index < added.length; index++) {
+      const similarity = wordSimilarity(removedText(deletion), addedText(added[index]!));
+      if (similarity > bestSimilarity || (best === -1 && similarity === bestSimilarity)) [best, bestSimilarity] = [index, similarity];
+    }
+    if (best === -1) continue;
+    pairs.push({ deletion, addition: added[best]! });
+    next = best + 1;
+  }
+  return pairs;
+}
+
+/** How much of two lines' words they share, from 0 to 1. */
+function wordSimilarity(left: string, right: string): number {
+  const leftWords = left.match(WORD) ?? [];
+  const rightWords = right.match(WORD) ?? [];
+  if (leftWords.length + rightWords.length === 0) return 1;
+  const shared = diffArrays(leftWords, rightWords).reduce((total, change) => total + (change.added || change.removed ? 0 : (change.count ?? 0)), 0);
+  return (2 * shared) / (leftWords.length + rightWords.length);
 }
 
 /** The move a changed line is part of, in either of its places. */
