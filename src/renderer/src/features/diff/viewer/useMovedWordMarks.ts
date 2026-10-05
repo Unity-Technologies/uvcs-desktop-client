@@ -5,30 +5,24 @@ import { lineRowSelector, rowTextRange } from './pierreDom';
 import { useShadowStyle } from './useShadowStyle';
 
 /**
- * Marks the words changed inside moved code (`movedWordMarks`) in the rows of the diff (`root`, `useDiffShadowRoot`), with the browser's highlights
- * (`CSS.highlights`) in Pierre's own colors for marked words. They're drawn over the rows on screen, whatever Pierre
- * renders: its rows come and go as the diff scrolls (it renders the lines in view), is typed into or highlighted, and
- * the marks are drawn again each time (a `MutationObserver`). Marking Pierre's own rows instead (`refreshWordMarks`)
- * was rejected: every render of Pierre's (its worker's colors, a keystroke) would draw its own marks back over them.
+ * Marks the words changed inside moved code (`movedWordMarks`) in the rows of the diff (`root`, `useDiffShadowRoot`),
+ * with the browser's highlights (`CSS.highlights`) in the moved color, stronger than the line's (`--diff-moved-word`).
+ * They're drawn over the rows on screen, whatever Pierre renders: its rows come and go as the diff scrolls (it renders
+ * the lines in view), is typed into or highlighted, and the marks are drawn again each time (a `MutationObserver`).
+ * Marking Pierre's own rows instead (`refreshWordMarks`) was rejected: every render of Pierre's (its worker's colors,
+ * a keystroke) would draw its own marks back over them.
  */
 export function useMovedWordMarks(containerRef: RefObject<HTMLElement | null>, root: ShadowRoot | null, marks: MovedWordMarks): void {
-  const names = highlightNames(useId());
-  useShadowStyle(
-    containerRef,
-    `::highlight(${names.deletions}){background-color:var(--diffs-bg-deletion-emphasis)}\n::highlight(${names.additions}){background-color:var(--diffs-bg-addition-emphasis)}`,
-  );
+  const name = highlightName(useId());
+  useShadowStyle(containerRef, `::highlight(${name}){background-color:var(--diff-moved-word)}`);
 
   useEffect(() => {
-    const clear = (): void => {
-      CSS.highlights.delete(names.deletions);
-      CSS.highlights.delete(names.additions);
-    };
+    const clear = (): void => void CSS.highlights.delete(name);
     if (!root || marks.deletions.size + marks.additions.size === 0) return clear;
     let frame = 0;
     const draw = (): void => {
       frame = 0;
-      CSS.highlights.set(names.deletions, new Highlight(...markedRanges(root, 'deletions', marks.deletions)));
-      CSS.highlights.set(names.additions, new Highlight(...markedRanges(root, 'additions', marks.additions)));
+      CSS.highlights.set(name, new Highlight(...markedRanges(root, 'deletions', marks.deletions), ...markedRanges(root, 'additions', marks.additions)));
     };
     const schedule = (): void => {
       frame ||= requestAnimationFrame(draw);
@@ -41,7 +35,7 @@ export function useMovedWordMarks(containerRef: RefObject<HTMLElement | null>, r
       mutations.disconnect();
       clear();
     };
-  }, [root, marks, names.deletions, names.additions]);
+  }, [root, marks, name]);
 }
 
 /** The ranges of the marked characters in the rows of one side that are rendered. */
@@ -59,7 +53,6 @@ function markedRanges(root: ShadowRoot, side: DiffSide, marks: MovedWordMarks[Di
 }
 
 /** Highlights are named for the whole page: each diff's own, from its React id, as a CSS identifier. */
-function highlightNames(id: string): Record<DiffSide, string> {
-  const own = id.replace(/[^a-zA-Z0-9_-]/g, '');
-  return { deletions: `moved-words-${own}-deletions`, additions: `moved-words-${own}-additions` };
+function highlightName(id: string): string {
+  return `moved-words-${id.replace(/[^a-zA-Z0-9_-]/g, '')}`;
 }

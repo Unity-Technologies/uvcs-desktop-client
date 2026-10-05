@@ -134,19 +134,20 @@ client's three (on, similarity, minimum lines) sit in a menu few find, and these
 
 What shows (`useMovedCode`, `MovedCode`):
 
-- Moved code keeps the diff's red and green, its edited lines too, as the official client keeps its own colors: the
-  moved color (`--change-moved`, the color of moved files in lists) only marks moves, so the code speaks one
-  language. Its line numbers take the moved color (`movedCodeCss` sets Pierre's `--diffs-deletion-base` or
-  `--diffs-addition-base` on their cells, which recolors their tint, the number and the bar), so what moved shows at a
-  glance down the code's edge. A whole move in the moved color, its edited lines red and green or a stronger moved
-  color, was tried and rejected: three colors of changes read harder than two and a mark; and with the moved color
-  on its labels only, what moved didn't show at a glance. The words a moved line changed are marked against
-  the line it became, as the official client marks them: within a line diff of the two places (`MovedBlock.changed`),
+- Every line of a move takes `--change-moved`, the color of moved files in lists, where it'd take red or green
+  (`movedCodeCss` sets Pierre's `--diffs-deletion-base`/`--diffs-addition-base` on its rows and number cells, which
+  recolors their tint, the number and the bar), so what moved shows at a glance and reads as one block. The lines
+  changed on the way (edited, or only added or removed inside it: `MovedBlock.changed`) are tinted a little stronger
+  (`--diff-moved-edited`) and their changed words stronger still (`--diff-moved-word`). Tried and rejected: the lines
+  changed on the way in red and green (a move broken into pieces that read as changes of their own); every moved line
+  in red and green with the moved color on the labels only, as the official client keeps its own colors, or on the
+  line numbers too (in neither did what moved show at a glance).
+- The words a moved line changed are marked against the line it became, as the official client marks them: within a line diff of the two places (`MovedBlock.changed`),
   each removed line pairs with the following added line most like it (`MovedBlock.replaced`, half of their words the
   same at least; a line only added on the way pairs with none), and the pair is word-diffed as Pierre diffs one
   (`movedWordMarks`, `lineWordMarks`, `WORD_MARKS`). Pierre's own marks on moved lines compare them with whatever line
-  stands beside them, so they're dropped (`movedCodeCss`) and these drawn with the browser's highlights in Pierre's
-  colors (`useMovedWordMarks`, `CSS.highlights`, drawn again as rows render). Marking Pierre's rows instead
+  stands beside them, so they're dropped (`movedCodeCss`) and these drawn with the browser's highlights
+  (`useMovedWordMarks`, `CSS.highlights`, drawn again as rows render). Marking Pierre's rows instead
   (`refreshWordMarks`) was rejected: each of its renders (its worker's colors, a keystroke) draws its own marks back.
 - Each place has a label, "Moved to line 143" or "Moved from line 4" with an arrow toward the other place, that scrolls
   there and lights it up (`scrollToChange`, `useChangeFlash`). It goes in the hatched gap across from the place when
@@ -226,10 +227,9 @@ that patch or read internals have a test that fails when an update moves them:
   `data-column-number`), the gutter button slot moved to the hovered line, and hovering anew under a still pointer.
   The tests run without a page, so this one is checked on screen. Wrapping lines, a pane (`data-code`) has no box of
   its own (`display: contents`), and its code column stands for it (`paneRect`).
-- `movedCodeCss`, `MovedCode`, `useMovedWordMarks`: moved code's line numbers recolored through Pierre's
-  `--diffs-deletion-base` and `--diffs-addition-base`, its labels in the gaps across from it (`data-content-buffer`),
-  and its words marked in Pierre's `--diffs-bg-deletion-emphasis`/`--diffs-bg-addition-emphasis` over a row's text
-  nodes, which hold its line in order (`rowTextRange`). Checked on screen too.
+- `movedCodeCss`, `MovedCode`, `useMovedWordMarks`: moved code recolored through Pierre's `--diffs-deletion-base` and
+  `--diffs-addition-base`, its labels in the gaps across from it (`data-content-buffer`), and its words marked over a
+  row's text nodes, which hold its line in order (`rowTextRange`). Checked on screen too.
 - `pierreLineComparison`: typing re-diffs under the comparison method (see Comparison method).
 - `pierrePlainTextRender`: a diff shown as plain text renders once, not at every render (see Editing in the diff).
 - `pierreSessionEndRefresh`: a diff typed into isn't highlighted again as it goes away (see Editing in the diff).

@@ -82,12 +82,14 @@
   --annotate-age-4: color-mix(in srgb, var(--accent) 74%, transparent);
   --annotate-age-5: var(--accent);
 
-  /* What marks code a diff shows moved, which keeps its red and green (`movedCodeCss`), besides its line numbers in
-     --change-moved: its labels' outline, and the move under the pointer, lit in both places and joined by a ribbon
-     side by side. */
+  /* Code a diff shows moved (`movedCodeCss`): its rows take the moved color the way removed and added rows take red
+     and green, the lines changed on the way a little stronger and their changed words stronger still; the move under
+     the pointer stands out in both places, joined by a ribbon side by side. */
   --diff-moved-ribbon: color-mix(in srgb, var(--change-moved) 18%, transparent);
   --diff-moved-outline: color-mix(in srgb, var(--change-moved) 34%, transparent);
   --diff-moved-emphasis: color-mix(in srgb, var(--change-moved) 9%, transparent);
+  --diff-moved-edited: color-mix(in srgb, var(--change-moved) 10%, transparent);
+  --diff-moved-word: color-mix(in srgb, var(--change-moved) 28%, transparent);
 }
 
 :root,

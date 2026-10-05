@@ -3,30 +3,39 @@ import type { MovedBlock } from './movedBlocks';
 import { lineRowSelector, numberCellSelector } from './pierreDom';
 
 /**
- * CSS for the code a diff shows moved, to go inside the diff's shadow root. Moved code keeps the diff's own red and
- * green, edited lines too, as the official client keeps its own colors: the moved color only marks moves, so the
- * diff's code speaks one language. Its line numbers take the moved color (Pierre derives a number cell's tint, its
- * number and its bar from `--diffs-deletion-base` or `--diffs-addition-base`), so what moved shows at a glance down the
- * edge of the code; so do its labels, its ribbon and the move under the pointer. Pierre's word marks are dropped from
- * every moved line: they compare it with a line beside it that it has nothing to do with, not with its other place;
- * the words it changed are marked against the line it became instead (`useMovedWordMarks`). The move under the
- * pointer stands out in both places.
+ * CSS for the code a diff shows moved, to go inside the diff's shadow root. Every line of a move takes the moved color
+ * where it'd take red or green, so what moved shows at a glance: Pierre derives a changed row's tint, its number and
+ * its bar from `--diffs-deletion-base` or `--diffs-addition-base`, so setting it on the row and its number cell
+ * recolors all of them. A move reads as one block in one color: the lines changed on the way (edited, or only added or
+ * removed inside it) are tinted a little stronger, and their changed words marked stronger still
+ * (`useMovedWordMarks`). Pierre's word marks are dropped from every moved line: they compare it with a line beside it
+ * that it has nothing to do with, not with its other place. The move under the pointer stands out in both places.
  */
 export function movedCodeCss(moves: MovedBlock[], hovered: MovedBlock | undefined): string {
   if (moves.length === 0) return '';
   const removed = moves.flatMap((move) => linesOf(move, 'deletions'));
   const added = moves.flatMap((move) => linesOf(move, 'additions'));
   const rules = [
-    `${numbers(removed)}{--diffs-deletion-base:var(--change-moved)}`,
-    `${numbers(added)}{--diffs-addition-base:var(--change-moved)}`,
+    `${rows(removed)}{--diffs-deletion-base:var(--change-moved)}`,
+    `${rows(added)}{--diffs-addition-base:var(--change-moved)}`,
     `${content([...removed, ...added])} [data-diff-span]{background:none}`,
   ];
+  const edited = moves.flatMap((move) => move.changed);
+  if (edited.length > 0) rules.push(`${rows(edited)}{background-image:${EDITED}}`);
   if (hovered) {
-    const both = [...linesOf(hovered, 'deletions'), ...linesOf(hovered, 'additions')];
-    rules.push(`${rows(both)}{background-image:linear-gradient(var(--diff-moved-emphasis),var(--diff-moved-emphasis))}`);
+    const editedHere = new Set(hovered.changed.map(lineKey));
+    const asItWas = [...linesOf(hovered, 'deletions'), ...linesOf(hovered, 'additions')].filter((line) => !editedHere.has(lineKey(line)));
+    if (asItWas.length > 0) rules.push(`${rows(asItWas)}{background-image:${EMPHASIS}}`);
+    if (hovered.changed.length > 0) rules.push(`${rows(hovered.changed)}{background-image:${EMPHASIS},${EDITED}}`);
   }
   return rules.join('\n');
 }
+
+/** Tints over a row's own: a line changed on the way, and the move under the pointer. */
+const EDITED = 'linear-gradient(var(--diff-moved-edited),var(--diff-moved-edited))';
+const EMPHASIS = 'linear-gradient(var(--diff-moved-emphasis),var(--diff-moved-emphasis))';
+
+const lineKey = ({ side, lineNumber }: ChangedLine): string => `${side}:${lineNumber}`;
 
 /** Every line of a move's place on one side. */
 export function linesOf(move: MovedBlock, side: DiffSide): ChangedLine[] {
@@ -34,6 +43,5 @@ export function linesOf(move: MovedBlock, side: DiffSide): ChangedLine[] {
   return Array.from({ length: count }, (_, offset) => ({ side, lineNumber: start + offset }));
 }
 
-const numbers = (lines: ChangedLine[]): string => `:is(${lines.map(numberCellSelector).join(',')})`;
 const content = (lines: ChangedLine[]): string => `:is(${lines.map(lineRowSelector).join(',')})`;
 const rows = (lines: ChangedLine[]): string => `:is(${[...lines.map(lineRowSelector), ...lines.map(numberCellSelector)].join(',')})`;
