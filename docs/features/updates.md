@@ -105,6 +105,16 @@ markup from the network.
 - The installers (electron-builder.yml) are one per OS and architecture, named without spaces
   (`UnityVersionControl-<version>-macOS-arm64.dmg`: GitHub turns spaces into dots, which `latest*.yml` would no longer
   match); macOS ships a zip too, which electron-updater needs.
+- **Windows installer**: the NSIS installers (one per architecture, and `UnityVersionControl-<version>-Windows.exe`
+  holding both, which `latest.yml` points updates at) unpack the app from a 7z archive with electron-builder's
+  `nsis7z` plugin, 7-Zip 19.00. electron-builder's own 7-Zip is newer and packs ARM64 executables with the ARM64
+  filter (7-Zip 23), which that plugin can't decode: the installer then writes every file but the app's .exe and DLLs,
+  and its shortcut asks where `Unity Version Control.exe` went. electron-builder.yml's `beforePack` hook
+  (`scripts/build/windowsInstallerFilter.ts`) forces the BCJ filter instead (`ELECTRON_BUILDER_7Z_FILTER`) on every
+  Windows build, at about 8% more size. It lives in the config, not a workflow, because the release builds in the
+  signing repository and a local `npm run dist` needs it too. Building arm64 alone with it was rejected: the combined
+  installer the updater downloads holds the arm64 archive too. Drop it once electron-builder's nsis-resources ship an
+  `nsis7z` that reads the ARM64 filter.
 - The **app icon** is the mark the About dialog draws (`APP_MARK`, `shared/appMark.ts`, which `AppMark` renders in the
   theme's colors), in the light theme's colors (`APP_ICON_COLORS`, checked against `tokens.css`). `npm run icons`
   (`scripts/icons/makeAppIcons.mjs`) makes the committed files in `build/` from `appIconSvg`, drawing each size from

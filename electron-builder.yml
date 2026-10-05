@@ -9,6 +9,9 @@ files:
   - '!out/THIRD_PARTY_NOTICES.txt'
   - package.json
 npmRebuild: false
+# Packs the Windows installer's archive with a filter its extractor can read: the arm64 installer otherwise leaves out
+# the app's .exe and DLLs.
+beforePack: ./scripts/build/windowsInstallerFilter.ts
 
 # The app's license and notices, and those of the libraries bundled into out/ (written by the build:
 # scripts/build/thirdPartyNoticesPlugin.ts), as plain files in the app's resources folder, where the About dialog opens
