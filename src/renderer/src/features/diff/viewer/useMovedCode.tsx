@@ -6,6 +6,7 @@ import type { ComparisonMethod } from './comparisonMethod';
 import type { DiffLayout } from './diffPreferencesStore';
 import { detectMovedBlocks, moveContaining, type MovedBlock } from './movedBlocks';
 import { MovedCode } from './MovedCode';
+import { openMovedCodeDialog } from './MovedCodeDialog';
 import { linesOf, movedCodeCss } from './movedCodeCss';
 import { movedWordMarks } from './movedWordMarks';
 import { useChangeFlash } from './useChangeFlash';
@@ -16,8 +17,10 @@ import { useShadowStyle } from './useShadowStyle';
 interface MovedCodeOptions {
   /** The diff shown (`lineDiff`), of the original and the modified text as it is now. */
   diff: DisplayMeta;
-  /** How the diff compares lines: moves are found the same way. */
+  /** How the diff compares lines: moves are found, and compared, the same way. */
   comparisonMethod: ComparisonMethod;
+  /** The file's name, for the language its moved code is compared in. */
+  fileName: string;
   layout: DiffLayout;
   /** The scrolling element around the diff, which holds its shadow root. */
   containerRef: RefObject<HTMLElement | null>;
@@ -33,10 +36,11 @@ interface MovedCodeOptions {
 
 /**
  * The code a text diff shows moved (`detectMovedBlocks`): in the moved color, the words edited on the way marked
- * (`useMovedWordMarks`), its two places labeled and, side by side, joined by a ribbon while it's hovered (`MovedCode`). A label takes the view to the other place and lights it for a moment.
+ * (`useMovedWordMarks`), its two places labeled and, side by side, joined by a ribbon while it's hovered (`MovedCode`).
+ * A label takes the view to the other place and lights it for a moment, or compares both (`openMovedCodeDialog`).
  * Returns the overlay, to go in the scrolling element.
  */
-export function useMovedCode({ diff, comparisonMethod, layout, containerRef, virtualizer, diffedText, typed }: MovedCodeOptions): ReactNode {
+export function useMovedCode({ diff, comparisonMethod, fileName, layout, containerRef, virtualizer, diffedText, typed }: MovedCodeOptions): ReactNode {
   const found = useMemo(() => detectMovedBlocks(diff, comparisonMethod), [diff, comparisonMethod]);
   const moves = diffedText === typed ? found : NO_MOVES;
   const [hovered, setHovered] = useState<MovedBlock | undefined>(undefined);
@@ -58,7 +62,7 @@ export function useMovedCode({ diff, comparisonMethod, layout, containerRef, vir
     flash.light(lines);
   };
 
-  return <MovedCode containerRef={containerRef} root={root} virtualizer={virtualizer} moves={moves} layout={layout} hovered={shownHovered} onHover={setHovered} onGoTo={goTo} />;
+  return <MovedCode containerRef={containerRef} root={root} virtualizer={virtualizer} moves={moves} layout={layout} hovered={shownHovered} onHover={setHovered} onGoTo={goTo} onCompare={(move) => openMovedCodeDialog({ move, meta: diff, fileName, comparisonMethod })} />;
 }
 
 const NO_MOVES: MovedBlock[] = [];

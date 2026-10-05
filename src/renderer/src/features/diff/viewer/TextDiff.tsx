@@ -160,7 +160,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     onDiscard,
     onUndo: onUndoDiscard,
   });
-  const movedCode = useMovedCode({ diff: diff.meta, comparisonMethod, layout, containerRef: container, virtualizer, diffedText, typed: current });
+  const movedCode = useMovedCode({ diff: diff.meta, comparisonMethod, fileName, layout, containerRef: container, virtualizer, diffedText, typed: current });
   const tokenizeMaxLength = highlighting === 'off' ? 0 : undefined;
   const workers = useHighlightWorkers(highlighting === 'background');
   // An editable diff renders its tokens as the editor does (`useTokenTransformer`, which Pierre turns on once the editor

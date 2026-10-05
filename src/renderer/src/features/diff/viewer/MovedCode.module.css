@@ -22,16 +22,17 @@
   stroke-width: 1px;
 }
 
-/* Always in sight while its code is, so it stays quiet: a pill in the moved color's outline, louder once hovered. */
+/*
+ * Always in sight while its code is, so it stays quiet: a pill in the moved color's outline, louder once hovered.
+ * It holds two buttons: going to the other place, and comparing both.
+ */
 .label {
   position: absolute;
   z-index: 1;
   display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  max-width: 260px;
+  align-items: stretch;
+  max-width: 290px;
   height: 20px;
-  padding: 0 8px 0 6px;
   border: 1px solid var(--diff-moved-outline);
   border-radius: var(--radius-full);
   background: var(--bg-surface-raised);
@@ -41,7 +42,6 @@
   font-size: var(--text-xs);
   font-weight: var(--weight-medium);
   white-space: nowrap;
-  cursor: pointer;
   pointer-events: auto;
   transition:
     border-color var(--duration-fast) var(--ease-out),
@@ -57,29 +57,60 @@
   translate: -100% -50%;
 }
 
-.label svg {
+.label[data-hovered] {
+  border-color: var(--change-moved);
+  color: var(--text-primary);
+}
+
+.goTo,
+.compare {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.goTo {
+  padding: 0 8px 0 6px;
+  border-radius: var(--radius-full) 0 0 var(--radius-full);
+}
+
+.compare {
+  padding: 0 7px 0 6px;
+  border-left: 1px solid var(--diff-moved-outline);
+  border-radius: 0 var(--radius-full) var(--radius-full) 0;
+}
+
+.goTo svg,
+.compare svg {
   flex: none;
   color: var(--change-moved);
 }
 
-.label span {
+.goTo span {
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 /* Tints go over the solid surface: over code, nothing behind may show through. */
-.label:hover,
-.label[data-hovered] {
-  border-color: var(--change-moved);
-  background: linear-gradient(var(--diff-moved-emphasis), var(--diff-moved-emphasis)) var(--bg-surface-raised);
+.goTo:hover,
+.compare:hover {
+  background: var(--diff-moved-emphasis);
   color: var(--text-primary);
 }
 
-.label:active {
-  background: linear-gradient(var(--diff-moved-ribbon), var(--diff-moved-ribbon)) var(--bg-surface-raised);
+.goTo:active,
+.compare:active {
+  background: var(--diff-moved-ribbon);
 }
 
-.label:focus-visible {
+.goTo:focus-visible,
+.compare:focus-visible {
   outline: var(--focus-outline);
   outline-offset: 2px;
 }

@@ -1,5 +1,5 @@
 import type { Virtualizer } from '@pierre/diffs';
-import { ArrowDown, ArrowUp } from 'lucide-react';
+import { ArrowDown, ArrowUp, GitCompareArrows } from 'lucide-react';
 import { useEffect, useState, type RefObject } from 'react';
 import type { ChangedLine, DiffSide } from './changeBlocks';
 import type { DiffLayout } from './diffPreferencesStore';
@@ -23,6 +23,8 @@ interface MovedCodeProps {
   onHover: (move: MovedBlock | undefined) => void;
   /** Takes the view to a move's place on `side`. */
   onGoTo: (move: MovedBlock, side: DiffSide) => void;
+  /** Compares a move's two places, to see what changed on the way. */
+  onCompare: (move: MovedBlock) => void;
 }
 
 /** Where a move's places are on screen, and its labels. */
@@ -56,10 +58,10 @@ const OTHER_SIDE: Record<DiffSide, DiffSide> = { deletions: 'additions', additio
 
 /**
  * The places of each move, joined. Each place has a label naming the line the code went to or came from, which takes
- * the view there. Pointing at a label or the moved code lights the move up in both places (`onHover`) and, side by
+ * the view there, and a button comparing both places, to see what changed on the way. Pointing at a label or the moved code lights the move up in both places (`onHover`) and, side by
  * side, draws a ribbon joining them over the panes' seam, gone once the pointer leaves.
  */
-export function MovedCode({ containerRef, root, virtualizer, moves, layout, hovered, onHover, onGoTo }: MovedCodeProps) {
+export function MovedCode({ containerRef, root, virtualizer, moves, layout, hovered, onHover, onGoTo, onCompare }: MovedCodeProps) {
   const shown = useMovesOnScreen(containerRef, root, virtualizer, moves, layout);
   if (shown.moves.length === 0) return null;
   return (
@@ -75,22 +77,23 @@ export function MovedCode({ containerRef, root, virtualizer, moves, layout, hove
           const line = move[other].start;
           const text = side === 'deletions' ? `Moved to line ${line}` : `Moved from line ${line}`;
           return (
-            <button
+            <div
               key={`${side}:${move[side].start}`}
-              type="button"
               className={styles.label}
-              aria-label={text}
-              data-tip={spot.short ? text : undefined}
               data-anchor={spot.anchor}
               data-hovered={move === hovered ? '' : undefined}
               style={{ top: spot.top, left: spot.x }}
               onPointerEnter={() => onHover(move)}
               onPointerLeave={() => onHover(undefined)}
-              onClick={() => onGoTo(move, other)}
             >
-              <Arrow size={12} strokeWidth={2.25} />
-              <span>{spot.short ? line : text}</span>
-            </button>
+              <button type="button" className={styles.goTo} aria-label={text} data-tip={spot.short ? text : undefined} onClick={() => onGoTo(move, other)}>
+                <Arrow size={12} strokeWidth={2.25} />
+                <span>{spot.short ? line : text}</span>
+              </button>
+              <button type="button" className={styles.compare} aria-label="Compare both places" data-tip="Compare both places" onClick={() => onCompare(move)}>
+                <GitCompareArrows size={12} strokeWidth={2.25} />
+              </button>
+            </div>
           );
         }),
       )}
