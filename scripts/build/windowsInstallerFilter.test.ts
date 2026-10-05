@@ -1,21 +1,26 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { useReadableInstallerFilter } from './windowsInstallerFilter';
 
-const RELEASE_WORKFLOW = join(__dirname, '..', '..', '.github', 'workflows', 'release.yml');
+const BUILDER_CONFIG = join(__dirname, '..', '..', 'electron-builder.yml');
 
-/** The `env:` block of the workflow step with this name, one `NAME: value` per line. */
-function stepEnvironment(workflow: string, stepName: string): Record<string, string> {
-  const step = workflow.split(/^\s+- name: /m).find((block) => block.split(/\r?\n/, 1)[0] === stepName);
-  const env = step?.match(/^(\s+)env:\r?\n((?:\1 {2}.*\r?\n?)*)/m)?.[2] ?? '';
-  return Object.fromEntries([...env.matchAll(/^\s+(\w+): (.*?)\s*$/gm)].map((match) => [match[1], match[2]]));
-}
+describe('Windows installer filter', () => {
+  // The arm64 installer otherwise leaves out the app's .exe and DLLs (windowsInstallerFilter.ts).
+  it('packs a Windows build with a filter the installer can read', () => {
+    const env: NodeJS.ProcessEnv = {};
+    useReadableInstallerFilter('win32', env);
+    expect(env.ELECTRON_BUILDER_7Z_FILTER).toBe('BCJ');
+  });
 
-describe('Release workflow', () => {
-  // electron-builder's 7-Zip packs ARM64 executables with the ARM64 filter, which the installer's own extractor
-  // (nsis7z 19.00, in electron-builder's nsis-resources) can't decode: the arm64 installer would install everything but
-  // the app's .exe and DLLs (docs/features/updates.md "Windows installer").
-  it('packs the Windows installers with a filter their extractor can read', () => {
-    expect(stepEnvironment(readFileSync(RELEASE_WORKFLOW, 'utf8'), 'Build and upload').ELECTRON_BUILDER_7Z_FILTER).toBe('BCJ');
+  it('leaves the macOS and Linux builds as they are', () => {
+    const env: NodeJS.ProcessEnv = {};
+    useReadableInstallerFilter('darwin', env);
+    useReadableInstallerFilter('linux', env);
+    expect(env).toEqual({});
+  });
+
+  it('runs before every build packs', () => {
+    expect(readFileSync(BUILDER_CONFIG, 'utf8')).toMatch(/^beforePack: \.\/scripts\/build\/windowsInstallerFilter\.ts\s*$/m);
   });
 });
