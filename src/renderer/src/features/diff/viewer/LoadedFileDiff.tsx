@@ -4,6 +4,7 @@ import { openFile } from '../../../components/externalApps/externalAppOperations
 import { lazyComponent } from '../../../lib/lazyComponent';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { useShortcut } from '../../../lib/useShortcut';
+import { useTypingPause } from './useTypingPause';
 import { Button } from '../../../ui/Button';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { absolutePath, extensionOf } from '../../pendingChanges/pendingChangeOperations';
@@ -73,8 +74,9 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const { left, right } = buffer.shown;
   const current = buffer.unsaved ?? right.text ?? '';
   const dirty = buffer.unsaved !== null;
-  // One image or model per state of the text: a new one is encoded, and painted from a new blob URL or parsed anew.
-  const shownRendering = useMemo(() => (dirty ? renderedEdits(right, current) : right), [dirty, right, current]);
+  // One image or model per pause in typing: a new one is encoded, and painted from a new blob URL or parsed anew.
+  const pausedText = useTypingPause(current);
+  const shownRendering = useMemo(() => (dirty ? renderedEdits(right, pausedText) : right), [dirty, right, pausedText]);
 
   // Files that are text and render at once (SVG, OBJ) show rendered unless the user picked the text for their type.
   const twoRepresentations = hasTwoRepresentations(left, right);
@@ -171,7 +173,7 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
           <ModelMetaDiff
             workspacePath={workspacePath}
             sources={{ original: contents.original, modified: contents.modified }}
-            texts={{ original: sides.original ? (left.text ?? '') : null, modified: sides.modified ? current : null }}
+            texts={{ original: sides.original ? (left.text ?? '') : null, modified: sides.modified ? (dirty ? pausedText : (right.text ?? '')) : null }}
             mode={modelMode}
           />
         </Suspense>
