@@ -12,13 +12,14 @@ import { ChangeNavigator } from './ChangeNavigator';
 import type { ChangeView } from './changeView';
 import { diffBodyOf } from './diffBody';
 import { diffDiscards } from './diffDiscards';
-import { diffPresentation, hasTwoRepresentations, showsLines } from './diffPresentation';
+import { diffPresentation, hasTwoRepresentations, renderedRepresentation, showsLines } from './diffPresentation';
 import { useDiffPreferences } from './diffPreferencesStore';
 import { DiffNotice } from './DiffNotice';
 import { DiffViewerFrame } from './DiffViewerFrame';
 import { ImageModeSwitch } from './ImageModeSwitch';
 import { hasLineChanges } from './lineDiff';
 import { MethodHidingNotice } from './MethodHidingNotice';
+import { ModelModeSwitch } from './ModelModeSwitch';
 import { NothingToDiff } from './NothingToDiff';
 import { renderedEdits } from './renderedEdits';
 import { RepresentationSwitch } from './RepresentationSwitch';
@@ -37,6 +38,8 @@ import { WholeFileNotice } from './WholeFileNotice';
 const TextDiff = lazyComponent(() => import('./TextDiff').then((module) => module.TextDiff));
 // So is the image viewer, and most sessions never open an image.
 const ImageDiffViewer = lazyComponent(() => import('./image/ImageDiffViewer').then((module) => module.ImageDiffViewer));
+// And the model viewer, with three.js, the largest of the three.
+const ModelDiffViewer = lazyComponent(() => import('./model/ModelDiffViewer').then((module) => module.ModelDiffViewer));
 
 const IDENTICAL_DESCRIPTION = 'The contents of both versions are identical.';
 
@@ -57,7 +60,7 @@ interface LoadedFileDiffProps {
  * past is typed into directly, like in any editor: Discard and Save show up as soon as it has unsaved edits.
  */
 export function LoadedFileDiff({ workspacePath, contents, fileName, title, identicalDescription, compareControls, onMatchesBase }: LoadedFileDiffProps) {
-  const { comparisonMethod, imageMode, representations, setComparisonMethod, setRepresentation } = useDiffPreferences();
+  const { comparisonMethod, imageMode, modelMode, representations, setComparisonMethod, setRepresentation } = useDiffPreferences();
   const editablePath = canEditInPlace(contents.original, contents.modified) ? contents.modified.path : null;
   const sides = useMemo(
     () => ({ original: contents.original.kind !== 'empty', modified: contents.modified.kind !== 'empty' }),
@@ -67,13 +70,14 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const { left, right } = buffer.shown;
   const current = buffer.unsaved ?? right.text ?? '';
   const dirty = buffer.unsaved !== null;
-  // One image per state of the text: a new one is encoded, and painted from a new blob URL.
-  const shownImage = useMemo(() => (dirty ? renderedEdits(right, current) : right), [dirty, right, current]);
+  // One image or model per state of the text: a new one is encoded, and painted from a new blob URL or parsed anew.
+  const shownRendering = useMemo(() => (dirty ? renderedEdits(right, current) : right), [dirty, right, current]);
 
-  // Files that are text and an image at once (SVG) show rendered unless the user picked the text for their type.
+  // Files that are text and render at once (SVG, OBJ) show rendered unless the user picked the text for their type.
   const twoRepresentations = hasTwoRepresentations(left, right);
+  const rendered = renderedRepresentation(left, right) ?? 'image';
   const extension = extensionOf(fileName)?.toLowerCase() ?? '';
-  const representation = representations[extension] ?? 'image';
+  const representation = representations[extension] ?? rendered;
   const presentation = diffPresentation(left, right, representation);
   const isText = presentation.kind === 'text';
   const editable = isText && editablePath !== null;
@@ -95,7 +99,9 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   useShortcut(hotkey('saveFile'), () => void buffer.save(), dirty);
   useShortcut(hotkey('editFile'), () => buffer.editor.current?.focus(), editable);
 
-  const representationSwitch = twoRepresentations && <RepresentationSwitch value={representation} onChange={(value) => setRepresentation(extension, value)} />;
+  const representationSwitch = twoRepresentations && (
+    <RepresentationSwitch value={representation === 'text' ? 'text' : rendered} rendered={rendered} onChange={(value) => setRepresentation(extension, value)} />
+  );
   // Discard and Save come first: the controls are right-aligned, so appearing on the first keystroke they move none
   // of the others. The change arrows come last, at the header's right edge, in the same place for every file (a
   // version shown alone has no Split | Unified): clicking on through the files, the pointer stays on them.
@@ -111,8 +117,9 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
           followsLayout={followsLayout(sides, wholeFile)}
         />
       )}
-      {/* Single-sided images (added or deleted) are previews: no modes to offer. */}
+      {/* Single-sided images and models (added or deleted) are previews: no modes to offer. */}
       {presentation.kind === 'image' && presentation.comparable && <ImageModeSwitch />}
+      {presentation.kind === 'model' && presentation.comparable && <ModelModeSwitch />}
       {representationSwitch}
       {navigator}
     </>
@@ -187,7 +194,14 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
     case 'image':
       body = (
         <Suspense fallback={<CenteredSpinner />}>
-          <ImageDiffViewer original={left} modified={shownImage} mode={imageMode} />
+          <ImageDiffViewer original={left} modified={shownRendering} mode={imageMode} />
+        </Suspense>
+      );
+      break;
+    case 'model':
+      body = (
+        <Suspense fallback={<CenteredSpinner />}>
+          <ModelDiffViewer original={left} modified={shownRendering} mode={modelMode} />
         </Suspense>
       );
       break;

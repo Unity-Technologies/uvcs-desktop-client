@@ -9,9 +9,9 @@ import { hasLineChanges, type LineDiff } from './lineDiff';
  * - `onlyIgnoredChanges`: different texts the comparison method shows as equal (only their line endings changed),
  *   with the way to see them.
  * - `textDiff`: the read-only diff.
- * - `tooLarge`, `image`, `binary`: what a text diff can't show.
+ * - `tooLarge`, `image`, `model`, `binary`: what a text diff can't show.
  */
-export type DiffBody = 'editable' | 'emptyFile' | 'noContentChanges' | 'onlyIgnoredChanges' | 'textDiff' | 'tooLarge' | 'image' | 'binary';
+export type DiffBody = 'editable' | 'emptyFile' | 'noContentChanges' | 'onlyIgnoredChanges' | 'textDiff' | 'tooLarge' | 'image' | 'model' | 'binary';
 
 /** `savedDiff`: the diff of the texts as read, under the comparison method (`lineDiff`); null for what isn't text. */
 export function diffBodyOf(presentation: DiffPresentation, editable: boolean, savedDiff: LineDiff | null): DiffBody {
