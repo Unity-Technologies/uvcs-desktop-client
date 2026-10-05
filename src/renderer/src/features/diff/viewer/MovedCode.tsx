@@ -4,7 +4,7 @@ import { useEffect, useState, type RefObject } from 'react';
 import type { ChangedLine, DiffSide } from './changeBlocks';
 import type { DiffLayout } from './diffPreferencesStore';
 import type { MovedBlock } from './movedBlocks';
-import { labelSpot, ribbonBox, ribbonPath, type Box, type LabelSpot, type Span } from './movedCodeLayout';
+import { labelSpot, ribbonBox, ribbonPath, sameLayout, type Box, type LabelSpot, type Span } from './movedCodeLayout';
 import { lineRowSelector, paneRect, pierreShadowRoot } from './pierreDom';
 import { pierreLinePosition } from './pierreLinePosition';
 import styles from './MovedCode.module.css';
@@ -123,7 +123,7 @@ function useMovesOnScreen(containerRef: RefObject<HTMLElement | null>, virtualiz
       frame = 0;
       const next = measureMoves(container, root, virtualizer, moves, layout);
       // Rows come and go as the diff scrolls; the moves stay where they were most of the time.
-      setShown((current) => (JSON.stringify(current) === JSON.stringify(next) ? current : next));
+      setShown((current) => (sameLayout(current, next) ? current : next));
     };
     const schedule = (): void => {
       frame ||= requestAnimationFrame(measure);

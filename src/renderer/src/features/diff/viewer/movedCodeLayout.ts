@@ -56,3 +56,16 @@ export function ribbonPath(from: Span, to: Span, width: number): string {
 }
 
 const round = (value: number): number => Math.round(value * 10) / 10;
+
+/**
+ * Whether moves measured anew show as they already do, so what's on screen is kept. The moves must be the same ones,
+ * not equal copies: they're found anew whenever the diff is (saving, typing), and the move under the pointer, the
+ * ribbon's, is one of the new ones, found among those shown by identity.
+ */
+export function sameLayout<Layout extends { moves: { move: object }[] }>(shown: Layout, measured: Layout): boolean {
+  return (
+    shown.moves.length === measured.moves.length &&
+    shown.moves.every((onScreen, index) => onScreen.move === measured.moves[index]!.move) &&
+    JSON.stringify(shown) === JSON.stringify(measured)
+  );
+}
