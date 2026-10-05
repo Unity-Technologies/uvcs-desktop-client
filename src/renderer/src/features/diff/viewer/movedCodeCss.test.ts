@@ -16,7 +16,8 @@ const MOVE: MovedBlock = {
 const EDITED = 'linear-gradient(var(--diff-moved-edited),var(--diff-moved-edited))';
 const EMPHASIS = 'linear-gradient(var(--diff-moved-emphasis),var(--diff-moved-emphasis))';
 
-const rule = (css: string, declaration: string): string => css.split('\n').find((line) => line.endsWith(`{${declaration}}`)) ?? '';
+/** The rule whose declarations start with `declaration`. */
+const rule = (css: string, declaration: string): string => css.split('\n').find((line) => line.includes(`{${declaration}`)) ?? '';
 
 describe('movedCodeCss', () => {
   it('styles nothing in a diff with no moves', () => {
@@ -35,6 +36,12 @@ describe('movedCodeCss', () => {
       expect(added).toContain(`[data-line-type="change-addition"][data-line="${line}"]`);
       expect(added).toContain(`[data-line-type="change-addition"][data-column-number="${line}"]`);
     }
+  });
+
+  it('tints the moved lines lighter than the moved color, their numbers and bars keeping it', () => {
+    const css = movedCodeCss([MOVE], undefined);
+    expect(rule(css, '--diffs-deletion-base:var(--change-moved)')).toContain('{--diffs-deletion-base:var(--change-moved);--diffs-bg-deletion-override:var(--diff-moved-tint);--diffs-bg-deletion-number-override:var(--diff-moved-tint)}');
+    expect(rule(css, '--diffs-addition-base:var(--change-moved)')).toContain('{--diffs-addition-base:var(--change-moved);--diffs-bg-addition-override:var(--diff-moved-tint);--diffs-bg-addition-number-override:var(--diff-moved-tint)}');
   });
 
   it('tints the lines changed on the way a little stronger, so they stand out in the move without breaking it up', () => {

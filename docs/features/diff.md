@@ -136,7 +136,8 @@ What shows (`useMovedCode`, `MovedCode`):
 
 - Every line of a move takes `--change-moved`, the color of moved files in lists, where it'd take red or green
   (`movedCodeCss` sets Pierre's `--diffs-deletion-base`/`--diffs-addition-base` on its rows and number cells, which
-  recolors their tint, the number and the bar), so what moved shows at a glance and reads as one block. The lines
+  recolors the number and the bar, and their background to a lighter `--diff-moved-tint` through Pierre's
+  `--diffs-bg-*-override`s), so what moved shows at a glance and reads as one block, quieter than the changes around it. The lines
   changed on the way (edited, or only added or removed inside it: `MovedBlock.changed`) are tinted a little stronger
   (`--diff-moved-edited`) and their changed words stronger still (`--diff-moved-word`). Tried and rejected: the lines
   changed on the way in red and green (a move broken into pieces that read as changes of their own); every moved line
