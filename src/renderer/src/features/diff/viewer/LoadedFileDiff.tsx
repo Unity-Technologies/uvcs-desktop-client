@@ -19,6 +19,7 @@ import { DiffViewerFrame } from './DiffViewerFrame';
 import { ImageModeSwitch } from './ImageModeSwitch';
 import { hasLineChanges } from './lineDiff';
 import { MethodHidingNotice } from './MethodHidingNotice';
+import { modelOfMeta } from './model/modelMeta';
 import { ModelModeSwitch } from './ModelModeSwitch';
 import { NothingToDiff } from './NothingToDiff';
 import { renderedEdits } from './renderedEdits';
@@ -38,8 +39,9 @@ import { WholeFileNotice } from './WholeFileNotice';
 const TextDiff = lazyComponent(() => import('./TextDiff').then((module) => module.TextDiff));
 // So is the image viewer, and most sessions never open an image.
 const ImageDiffViewer = lazyComponent(() => import('./image/ImageDiffViewer').then((module) => module.ImageDiffViewer));
-// And the model viewer, with three.js, the largest of the three.
+// And the model viewer, with three.js, the largest of the three; a model's .meta shows through it too.
 const ModelDiffViewer = lazyComponent(() => import('./model/ModelDiffViewer').then((module) => module.ModelDiffViewer));
+const ModelMetaDiff = lazyComponent(() => import('./model/ModelMetaDiff').then((module) => module.ModelMetaDiff));
 
 const IDENTICAL_DESCRIPTION = 'The contents of both versions are identical.';
 
@@ -80,11 +82,14 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const representation = representations[extension] ?? rendered;
   const presentation = diffPresentation(left, right, representation);
   const isText = presentation.kind === 'text';
+  // A model's .meta shows as the model under its import settings, unless the user picked its text (`representations.meta`).
+  const metaModel = isText ? modelOfMeta(fileName) : null;
+  const metaAsModel = metaModel !== null && (representations.meta ?? 'model') === 'model';
   const editable = isText && editablePath !== null;
   const diffs = useLineDiffs({ isText, original: left.text ?? '', saved: right.text, current, comparisonMethod, fileName });
   const wholeFile = typedIntoWhole(editable, diffs.saved);
-  // Nothing to view differently in an empty or unchanged file that only says so.
-  const viewControls = showsLines(presentation, editable);
+  // Nothing to view differently in an empty or unchanged file that only says so, nor in a .meta shown as its model.
+  const viewControls = !metaAsModel && showsLines(presentation, editable);
   // Nor to move through there or in a file typed into whole; a version shown alone (added, deleted) is one change.
   // Beside a list of files, every diff keeps the arrows, to go on to the next file whatever this one is.
   const frame = useRef<HTMLDivElement>(null);
@@ -120,7 +125,9 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
       {/* Single-sided images and models (added or deleted) are previews: no modes to offer. */}
       {presentation.kind === 'image' && presentation.comparable && <ImageModeSwitch />}
       {presentation.kind === 'model' && presentation.comparable && <ModelModeSwitch />}
+      {metaAsModel && <ModelModeSwitch />}
       {representationSwitch}
+      {metaModel !== null && <RepresentationSwitch value={metaAsModel ? 'model' : 'text'} rendered="model" onChange={(value) => setRepresentation('meta', value)} />}
       {navigator}
     </>
   );
@@ -153,8 +160,22 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   );
 
   let body: ReactNode;
-  const bodyKind = diffBodyOf(presentation, editable, diffs.saved);
+  const bodyKind = metaAsModel ? 'metaModel' : diffBodyOf(presentation, editable, diffs.saved);
   switch (bodyKind) {
+    case 'metaModel':
+      body = (
+        <Suspense fallback={<CenteredSpinner />}>
+          <ModelMetaDiff
+            workspacePath={workspacePath}
+            sources={{ original: contents.original, modified: contents.modified }}
+            metaPath={fileName}
+            modelPath={metaModel!}
+            texts={{ original: sides.original ? (left.text ?? '') : null, modified: sides.modified ? current : null }}
+            mode={modelMode}
+          />
+        </Suspense>
+      );
+      break;
     case 'editable': {
       // Typed into even with no lines to show: then the whole file, under a line that says why.
       const note =
