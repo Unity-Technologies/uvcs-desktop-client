@@ -1,33 +1,49 @@
 // Writes the models sandbox's Unity project (`scripts/sandboxes/models.sh`) as it stands after one step of its
-// history: every model (FBX, OBJ, glTF), its `.meta` and a prefab. Each step changes one thing an artist would, on top
+// history: every model (FBX, OBJ, glTF, GLB; the glTF ones in `gltfModels.ts`), its `.meta` (`unityMeta.ts`) and a
+// prefab. Each step changes one thing an artist would, on top
 // of the step before it, so each changeset shows one model diff case. Only the files whose bytes change are written,
 // and the models a step leaves out are deleted, so `cm ci --all --private` checks in exactly that step.
 // Usage (models.sh bundles it with esbuild first): node writeModels.mjs <step> <workspace>
 
-import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { asciiFbx, box, sphere, type FbxNodeSpec } from '../../../src/renderer/src/features/diff/viewer/model/testing/asciiFbx';
+import { asciiFbx, box, sphere, type FbxNodeSpec, type FbxTake } from '../../../src/renderer/src/features/diff/viewer/model/testing/asciiFbx';
+import { barrelGltf, lampGlb, scoutGlb, type LampVersion, type ScoutVersion } from './gltfModels';
+import { defaultImporterMeta, gltfastImporterMeta, guidOf, modelImporterMeta, type ClipSplit, type ModelImporterSettings } from './unityMeta';
 
 /** What the artists have done so far: each step changes some of it. */
 interface Project {
   blenderVersion: string;
-  crate: { unitScaleFactor: number; lidPivotAtHinge: boolean; woodSlot: string; labelSlot: boolean };
+  /** `globalScale`: the Scale Factor of the crate's import settings. */
+  crate: { unitScaleFactor: number; lidPivotAtHinge: boolean; woodSlot: string; labelSlot: boolean; globalScale: number };
   rock: { rotationX: number; sculpted: boolean; rings: number; segments: number };
-  robot: { leftHand: string; helmetOnHead: boolean; backpack: boolean; antenna: boolean; fingers: boolean };
+  /** `waveLastFrame`: where the Wave clip cut from its take ends, once the robot is animated. */
+  robot: { leftHand: string; helmetOnHead: boolean; backpack: boolean; antenna: boolean; fingers: boolean; animated: boolean; waveLastFrame: number };
   barrel: { segments: number; uvAtlas: boolean };
   placeholderCube: boolean;
   lantern: { scale: number } | null;
+  scout: ScoutVersion | null;
+  /** The barrel exported again as a glTF, its geometry in a `.bin`: its height, in metres. */
+  barrelGltf: { height: number } | null;
+  lamp: LampVersion | null;
 }
+
+/** Maya's one take, at 30 fps: the robot breathes for 60 frames (2 s), then waves for 36 (1.2 s). */
+const ROBOT_FPS = 30;
+const ROBOT_IDLE_FRAMES = 60;
+const ROBOT_TAKE_FRAMES = 96;
 
 const INITIAL: Project = {
   blenderVersion: '4.2.1',
-  crate: { unitScaleFactor: 100, lidPivotAtHinge: false, woodSlot: 'Wood', labelSlot: false },
+  crate: { unitScaleFactor: 100, lidPivotAtHinge: false, woodSlot: 'Wood', labelSlot: false, globalScale: 1 },
   rock: { rotationX: 0, sculpted: false, rings: 8, segments: 12 },
-  robot: { leftHand: 'Hand_L', helmetOnHead: false, backpack: true, antenna: false, fingers: false },
+  robot: { leftHand: 'Hand_L', helmetOnHead: false, backpack: true, antenna: false, fingers: false, animated: false, waveLastFrame: ROBOT_TAKE_FRAMES },
   barrel: { segments: 12, uvAtlas: false },
   placeholderCube: true,
   lantern: null,
+  scout: null,
+  barrelGltf: null,
+  lamp: null,
 };
 
 interface Step {
@@ -36,7 +52,10 @@ interface Step {
   change: (project: Project) => void;
 }
 
-/** The history, in models.sh's order. `art-*` are on the branch /main/art-pass; `pending` is left uncommitted. */
+/**
+ * The history, in models.sh's order. `art-*` are on the branch /main/art-pass; `lamp-taller` on /main/conflict-lamp,
+ * which `lamp-wider` changes the same file on /main after, so merging it conflicts; `pending` is left uncommitted.
+ */
 const STEPS: Record<string, Step> = {
   initial: { change: () => {} },
   reexport: { after: 'initial', change: (p) => (p.blenderVersion = '4.2.3') },
@@ -55,7 +74,19 @@ const STEPS: Record<string, Step> = {
   'art-barrel': { after: 'lantern-replaces-cube', change: (p) => (p.barrel.segments = 32) },
   'art-fingers': { after: 'art-barrel', change: (p) => (p.robot.fingers = true) },
   'art-lantern': { after: 'art-fingers', change: (p) => (p.lantern = { scale: 1.5 }) },
-  pending: { after: 'lantern-replaces-cube', change: (p) => (p.crate.unitScaleFactor = 100) },
+  scout: { after: 'lantern-replaces-cube', change: (p) => (p.scout = { wave: 'first', jump: false }) },
+  'scout-snappier': { after: 'scout', change: (p) => (p.scout = { wave: 'snappier', jump: true }) },
+  'barrel-gltf': { after: 'scout-snappier', change: (p) => (p.barrelGltf = { height: 0.9 }) },
+  'barrel-gltf-taller': { after: 'barrel-gltf', change: (p) => (p.barrelGltf = { height: 1.2 }) },
+  // The crate came in 100× smaller since it was exported in centimetres: the import settings' scale makes up for it.
+  'crate-import-scale': { after: 'barrel-gltf-taller', change: (p) => (p.crate.globalScale = 100) },
+  'robot-animated': { after: 'crate-import-scale', change: (p) => (p.robot.animated = true) },
+  // The clip now ends past the take's last frame: Unity holds the last pose for the frames the take hasn't.
+  'robot-wave-clip': { after: 'robot-animated', change: (p) => (p.robot.waveLastFrame = 120) },
+  lamp: { after: 'robot-wave-clip', change: (p) => (p.lamp = { poleHeight: 1.6, shadeRadius: 0.25 }) },
+  'lamp-taller': { after: 'lamp', change: (p) => (p.lamp = { poleHeight: 1.9, shadeRadius: 0.25 }) },
+  'lamp-wider': { after: 'lamp', change: (p) => (p.lamp = { poleHeight: 1.6, shadeRadius: 0.35 }) },
+  pending: { after: 'lamp-wider', change: (p) => (p.crate.unitScaleFactor = 100) },
 };
 
 function projectAfter(stepName: string): Project {
@@ -68,20 +99,30 @@ function projectAfter(stepName: string): Project {
 
 const MODELS = 'Assets/Models';
 
-/** Every file the project can hold, by path; null for one the project doesn't hold at this step. */
-function filesOf(p: Project): Record<string, string | null> {
-  const models: Record<string, string | null> = {
+/** A file's text or bytes; null for one the project doesn't hold at this step. */
+type FileContent = string | Uint8Array | null;
+
+/** Every file the project can hold, by path. */
+async function filesOf(p: Project): Promise<Record<string, FileContent>> {
+  const barrelExport = p.barrelGltf ? await barrelGltf(p.barrelGltf.height) : null;
+  const models: Record<string, FileContent> = {
     [`${MODELS}/Props/Crate.fbx`]: crate(p),
     [`${MODELS}/Props/Rock.fbx`]: rock(p),
     [`${MODELS}/Props/Barrel.obj`]: barrel(p),
+    [`${MODELS}/Props/Barrel.gltf`]: barrelExport?.gltf ?? null,
     [`${MODELS}/Props/Placeholder_Cube.fbx`]: p.placeholderCube ? placeholderCube() : null,
     [`${MODELS}/Props/Lantern.gltf`]: p.lantern ? lantern(p.lantern.scale) : null,
+    [`${MODELS}/Props/Lamp.glb`]: p.lamp ? await lampGlb(p.lamp) : null,
     [`${MODELS}/Characters/Robot.fbx`]: robot(p),
+    [`${MODELS}/Characters/Scout.glb`]: p.scout ? await scoutGlb(p.scout) : null,
   };
-  const files: Record<string, string | null> = { ...models };
-  for (const [path, content] of Object.entries(models)) files[`${path}.meta`] = content === null ? null : modelMeta(path);
+  const files: Record<string, FileContent> = { ...models };
+  for (const [path, content] of Object.entries(models)) files[`${path}.meta`] = content === null ? null : modelMeta(path, p);
+  // Unity imports the glTF, not its buffer: the `.bin` is an asset of no type to it.
+  files[`${MODELS}/Props/Barrel.bin`] = barrelExport?.bin ?? null;
+  files[`${MODELS}/Props/Barrel.bin.meta`] = barrelExport ? defaultImporterMeta(`${MODELS}/Props/Barrel.bin`) : null;
   files['Assets/Prefabs/Robot.prefab'] = robotPrefab();
-  files['ProjectSettings/ProjectVersion.txt'] = 'm_EditorVersion: 6000.0.38f1\n';
+  files['ProjectSettings/ProjectVersion.txt'] = 'm_EditorVersion: 6000.3.10f1\n';
   return files;
 }
 
@@ -170,7 +211,29 @@ function robot(p: Project): string {
   });
   if (backpack) nodes.push({ name: 'Backpack', kind: 'mesh', parent: 'Robot', mesh: { ...box([30, 40, 15], [0, 130, -20]), materials: ['Metal'], uvs: true } });
   if (antenna) nodes.push({ name: 'Antenna', kind: 'mesh', parent: 'Head', mesh: { ...box([2, 25, 2], [8, 35, 0]), materials: ['Metal', 'Lights'], polygonMaterials: [0, 0, 1, 0, 0, 0], uvs: true } });
-  return asciiFbx({ application: { name: 'Autodesk Maya', version: '2025.2' }, unitScaleFactor: 1, nodes });
+  return asciiFbx({ application: { name: 'Autodesk Maya', version: '2025.2' }, unitScaleFactor: 1, nodes, ...(p.robot.animated && { takes: [robotTake()] }) });
+}
+
+function robotTake(): FbxTake {
+  const at = (frame: number): number => frame / ROBOT_FPS;
+  const idle = [0, 30, ROBOT_IDLE_FRAMES].map(at);
+  const wave = [ROBOT_IDLE_FRAMES, 69, 78, 87, ROBOT_TAKE_FRAMES].map(at);
+  return {
+    name: 'Take 001',
+    length: at(ROBOT_TAKE_FRAMES),
+    curves: [
+      { node: 'Spine', property: 'rotation', times: idle, values: [[0, 0, 0], [4, 0, 0], [0, 0, 0]] },
+      { node: 'UpperArm_L', property: 'rotation', times: wave, values: [[0, 0, 0], [0, 0, 75], [0, 0, 60], [0, 0, 75], [0, 0, 0]] },
+    ],
+  };
+}
+
+/** The robot's take split into an idle that loops and a wave that plays once, as the animator set them up in Unity. */
+function robotClips(waveLastFrame: number): ClipSplit[] {
+  return [
+    { name: 'Idle', takeName: 'Take 001', firstFrame: 0, lastFrame: ROBOT_IDLE_FRAMES, loopTime: true },
+    { name: 'Wave', takeName: 'Take 001', firstFrame: ROBOT_IDLE_FRAMES, lastFrame: waveLastFrame, loopTime: false },
+  ];
 }
 
 /** A barrel as Blender writes an OBJ: banded iron hoops and wooden staves on its body, and a lid, each an object. */
@@ -251,13 +314,13 @@ function lantern(scale: number): string {
   return JSON.stringify(gltf, null, 2) + '\n';
 }
 
-/** Unity's GUID for an asset, made from its path so every run writes the same one. */
-function guidOf(path: string): string {
-  return createHash('md5').update(path).digest('hex');
-}
-
-function modelMeta(path: string): string {
-  return ['fileFormatVersion: 2', `guid: ${guidOf(path)}`, 'ModelImporter:', '  serializedVersion: 22200', '  materials:', '    materialImportMode: 2', '  meshes:', '    globalScale: 1', '    useFileUnits: 1', ''].join('\n');
+/** Unity imports FBX and OBJ itself, glTF and GLB with glTFast; the crate's scale and the robot's clips are the artists'. */
+function modelMeta(path: string, p: Project): string {
+  if (/\.(gltf|glb)$/.test(path)) return gltfastImporterMeta(path);
+  const settings: ModelImporterSettings = { globalScale: 1 };
+  if (path === `${MODELS}/Props/Crate.fbx`) settings.globalScale = p.crate.globalScale;
+  if (path === `${MODELS}/Characters/Robot.fbx` && p.robot.animated) settings.clips = robotClips(p.robot.waveLastFrame);
+  return modelImporterMeta(path, settings);
 }
 
 function robotPrefab(): string {
@@ -281,12 +344,12 @@ function robotPrefab(): string {
   ].join('\n');
 }
 
-function write(workspace: string, files: Record<string, string | null>): void {
+function write(workspace: string, files: Record<string, FileContent>): void {
   for (const [path, content] of Object.entries(files)) {
     const file = join(workspace, ...path.split('/'));
     if (content === null) {
       rmSync(file, { force: true });
-    } else if (!existsSync(file) || readFileSync(file, 'utf8') !== content) {
+    } else if (!existsSync(file) || !readFileSync(file).equals(Buffer.from(content))) {
       mkdirSync(dirname(file), { recursive: true });
       writeFileSync(file, content);
     }
@@ -295,4 +358,4 @@ function write(workspace: string, files: Record<string, string | null>): void {
 
 const [stepName, workspace] = process.argv.slice(2);
 if (!stepName || !workspace) throw new Error('Usage: node writeModels.mjs <step> <workspace>');
-write(workspace, filesOf(projectAfter(stepName)));
+write(workspace, await filesOf(projectAfter(stepName)));
