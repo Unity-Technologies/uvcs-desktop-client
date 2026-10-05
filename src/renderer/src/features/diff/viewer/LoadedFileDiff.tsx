@@ -168,8 +168,6 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
           <ModelMetaDiff
             workspacePath={workspacePath}
             sources={{ original: contents.original, modified: contents.modified }}
-            metaPath={fileName}
-            modelPath={metaModel!}
             texts={{ original: sides.original ? (left.text ?? '') : null, modified: sides.modified ? current : null }}
             mode={modelMode}
           />
@@ -225,7 +223,6 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
           <ModelDiffViewer
             workspacePath={workspacePath}
             sources={{ original: contents.original, modified: contents.modified }}
-            path={fileName}
             original={left}
             modified={shownRendering}
             mode={modelMode}

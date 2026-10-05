@@ -5,7 +5,7 @@ import { api } from '../../../../api/client';
 import { queryKeys } from '../../../../api/queryKeys';
 import { contentCaching } from '../useDiffContents';
 import { gltfCompanions } from './gltfJson';
-import { SiblingFinderContext, type DiffSide } from './modelSiblings';
+import { SiblingFinderContext, sourcePathOf, type DiffSide } from './modelSiblings';
 
 const NONE: Readonly<Record<string, Uint8Array>> = {};
 
@@ -19,16 +19,18 @@ function combineReads(results: { isPending: boolean; data?: Uint8Array | null }[
  * (`SiblingFinderContext`), cached as any content is; null while they are being read. A file that can't be found or
  * read is left out: the model then says it needs it. A self-contained model needs none, and reads at once.
  */
-export function useModelCompanions(workspacePath: string, side: DiffSide, source: ContentSource, path: string, model: ModelBytes | undefined): Readonly<Record<string, Uint8Array>> | null {
+export function useModelCompanions(workspacePath: string, side: DiffSide, source: ContentSource, model: ModelBytes | undefined): Readonly<Record<string, Uint8Array>> | null {
   const findSibling = useContext(SiblingFinderContext);
+  const path = sourcePathOf(source);
   const needed = useMemo(() => (model ? gltfCompanions(model.bytes, model.format) : []), [model]);
-  const siblings = needed.map((name) => ({ name, source: findSibling(side, source, path, name) }));
+  const siblings = needed.map((name) => ({ name, source: path === null ? null : findSibling(side, source, path, name) }));
   const found = siblings.filter((sibling): sibling is { name: string; source: ContentSource } => sibling.source !== null);
   // One result for all the reads, a new one only when one of them changes.
   const reads = useQueries({
     queries: found.map(({ source: sibling }) => ({
       queryKey: queryKeys.inWorkspace(workspacePath, 'contentBytes', sibling),
-      queryFn: () => api.content.readBytes(workspacePath, sibling),
+      // A file that isn't there is an answer, kept as any other: read again on each view, it would cost a `cm cat` each time.
+      queryFn: () => api.content.readBytes(workspacePath, sibling).catch(() => null),
       ...contentCaching([sibling]),
     })),
     combine: combineReads,

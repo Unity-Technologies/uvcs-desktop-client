@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DiffEntry } from '@shared/domain/diff';
-import { diffSibling, workspaceSibling } from './modelSiblings';
+import { diffSibling, sourcePathOf, workspaceSibling } from './modelSiblings';
 
 const entry = (path: string, baseRevisionId: number, revisionId: number): DiffEntry => ({ status: 'changed', path, itemType: 'file', baseRevisionId, revisionId, repository: 'game@local' });
 
@@ -44,5 +44,15 @@ describe('diffSibling', () => {
   it('finds no side of a sibling added or deleted with the model', () => {
     const find = diffSibling([entry('Assets/Barrel.bin', -1, 21)], { kind: 'changeset', changesetId: 7 });
     expect(find('original', gltf, 'Assets/Barrel.gltf', 'Barrel.bin')).toBeNull();
+  });
+});
+
+describe('sourcePathOf', () => {
+  it("is the path a side was read from, which its siblings are found beside, whatever the diff's file name says meanwhile", () => {
+    expect(sourcePathOf({ kind: 'workspaceFile', path: 'Assets/Crate.fbx' })).toBe('Assets/Crate.fbx');
+    expect(sourcePathOf({ kind: 'revision', revision: { revisionId: 4, repository: 'game@local' }, fileName: 'Assets/Crate.fbx' })).toBe('Assets/Crate.fbx');
+    expect(sourcePathOf({ kind: 'repositoryPath', path: '/Assets/Crate.fbx', at: 'cs:3' })).toBe('/Assets/Crate.fbx');
+    expect(sourcePathOf({ kind: 'spec', spec: 'serverpath:/Assets/Crate.fbx#cs:3' })).toBe('/Assets/Crate.fbx');
+    expect(sourcePathOf({ kind: 'empty' })).toBeNull();
   });
 });

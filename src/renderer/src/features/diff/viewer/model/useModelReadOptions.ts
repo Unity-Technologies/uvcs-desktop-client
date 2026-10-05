@@ -5,7 +5,7 @@ import { api } from '../../../../api/client';
 import { queryKeys } from '../../../../api/queryKeys';
 import { contentCaching } from '../useDiffContents';
 import { DEFAULT_IMPORT_SETTINGS, readImportSettings, type ModelImportSettings } from './modelImportSettings';
-import { SiblingFinderContext, type DiffSide } from './modelSiblings';
+import { SiblingFinderContext, sourcePathOf, type DiffSide } from './modelSiblings';
 import type { ModelReadOptions } from './readModelFile';
 import { useModelCompanions } from './useModelCompanions';
 
@@ -18,30 +18,31 @@ export function useModelReadOptions(
   workspacePath: string,
   side: DiffSide,
   source: ContentSource,
-  path: string,
   model: ModelBytes | undefined,
   /** Settings already known (the `.meta` being diffed), which are not read again. */
   knownSettings?: ModelImportSettings,
 ): ModelReadOptions | null {
-  const companions = useModelCompanions(workspacePath, side, source, path, model);
-  const readSettings = useImportSettings(workspacePath, side, source, path, model !== undefined && knownSettings === undefined);
+  const companions = useModelCompanions(workspacePath, side, source, model);
+  const readSettings = useImportSettings(workspacePath, side, source, model !== undefined && knownSettings === undefined);
   const settings = knownSettings ?? readSettings;
   return useMemo(() => (companions && settings ? { companions, settings } : null), [companions, settings]);
 }
 
-function useImportSettings(workspacePath: string, side: DiffSide, source: ContentSource, path: string, wanted: boolean): ModelImportSettings | null {
+function useImportSettings(workspacePath: string, side: DiffSide, source: ContentSource, wanted: boolean): ModelImportSettings | null {
   const findSibling = useContext(SiblingFinderContext);
-  const fileName = path.split(/[\\/]/).pop() ?? path;
-  const meta = wanted ? findSibling(side, source, path, `${fileName}.meta`) : null;
+  const path = sourcePathOf(source);
+  const fileName = path?.split(/[\\/]/).pop();
+  const meta = wanted && path !== null && fileName ? findSibling(side, source, path, `${fileName}.meta`) : null;
   const read = useQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'content', meta),
-    queryFn: () => api.content.read(workspacePath, meta!),
+    queryKey: queryKeys.inWorkspace(workspacePath, 'importSettings', meta),
+    // A `.meta` that isn't there (outside a Unity project) is an answer, kept as any other: Unity's defaults.
+    queryFn: () =>
+      api.content
+        .read(workspacePath, meta!)
+        .then((content) => readImportSettings(content.text ?? ''))
+        .catch(() => DEFAULT_IMPORT_SETTINGS),
     enabled: meta !== null,
-    retry: false,
     ...(meta && contentCaching([meta])),
   });
-  return useMemo(() => {
-    if (meta === null || read.isError) return DEFAULT_IMPORT_SETTINGS;
-    return read.data ? readImportSettings(read.data.text ?? '') : null;
-  }, [meta, read.isError, read.data]);
+  return meta === null ? DEFAULT_IMPORT_SETTINGS : (read.data ?? null);
 }

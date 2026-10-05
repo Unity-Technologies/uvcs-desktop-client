@@ -52,10 +52,8 @@ const ROOMY_PANE = 820;
 
 interface ModelDiffViewerProps {
   workspacePath: string;
-  /** Where each version was read from: the files a model needs beside it (a glTF's `.bin`) are read beside it. */
+  /** Where each version was read from: the files a model needs beside it (a glTF's `.bin`, its `.meta`) are read beside it. */
   sources: { original: ContentSource; modified: ContentSource };
-  /** The model's path, which its companions' are relative to. */
-  path: string;
   original: FileContent;
   modified: FileContent;
   /** Active diff mode; owned by the header's segmented control. */
@@ -70,9 +68,9 @@ interface Picked {
   nodes: NodeRef[];
 }
 
-export function ModelDiffViewer({ workspacePath, sources, path, original, modified, mode, settings }: ModelDiffViewerProps) {
-  const optionsBefore = useModelReadOptions(workspacePath, 'original', sources.original, path, original.model, settings?.original);
-  const optionsAfter = useModelReadOptions(workspacePath, 'modified', sources.modified, path, modified.model, settings?.modified);
+export function ModelDiffViewer({ workspacePath, sources, original, modified, mode, settings }: ModelDiffViewerProps) {
+  const optionsBefore = useModelReadOptions(workspacePath, 'original', sources.original, original.model, settings?.original);
+  const optionsAfter = useModelReadOptions(workspacePath, 'modified', sources.modified, modified.model, settings?.modified);
   const before = useReadModel(original.model, optionsBefore);
   const after = useReadModel(modified.model, optionsAfter);
   const { modelDrawMode, setModelDrawMode, modelColorBySlot, setModelColorBySlot, modelToleranceShare, setModelToleranceShare, modelShowBones, setModelShowBones } =

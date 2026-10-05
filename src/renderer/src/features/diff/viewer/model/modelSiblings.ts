@@ -59,5 +59,25 @@ function pointOf(target: DiffTarget): string {
   }
 }
 
+/**
+ * The path a side was read from, which its siblings are found beside: its own, never the diff's file name, which
+ * names the next file while the previous one's contents still show. Null for a side read from no path.
+ */
+export function sourcePathOf(source: ContentSource): string | null {
+  switch (source.kind) {
+    case 'workspaceFile':
+    case 'workspaceBase':
+    case 'reviewSnapshot':
+    case 'repositoryPath':
+      return source.path;
+    case 'revision':
+      return source.fileName;
+    case 'spec':
+      return source.fileName ?? (/^serverpath:([^#]+)/.exec(source.spec)?.[1] ?? null);
+    case 'empty':
+      return null;
+  }
+}
+
 /** How the model viewer finds siblings where it shows: workspace files anywhere, a committed diff's where it provides. */
 export const SiblingFinderContext = createContext<SiblingFinder>(workspaceSibling);

@@ -13,15 +13,13 @@ import { contentCaching } from '../useDiffContents';
 import { ModelDiffViewer } from './ModelDiffViewer';
 import type { ModelDiffMode } from './modelDiffModes';
 import { readImportSettings } from './modelImportSettings';
-import { SiblingFinderContext } from './modelSiblings';
+import { modelOfMeta } from './modelMeta';
+import { SiblingFinderContext, sourcePathOf } from './modelSiblings';
 
 interface ModelMetaDiffProps {
   workspacePath: string;
   /** Where each version of the `.meta` was read from: the model is read beside it. */
   sources: { original: ContentSource; modified: ContentSource };
-  /** The `.meta`'s path, and its model's. */
-  metaPath: string;
-  modelPath: string;
   /** Each version of the `.meta`'s text (with unsaved edits, for the one typed into). */
   texts: { original: string | null; modified: string | null };
   mode: ModelDiffMode;
@@ -29,14 +27,16 @@ interface ModelMetaDiffProps {
 
 const EMPTY: FileContent = { text: '', isBinary: false, size: 0 };
 
-export function ModelMetaDiff({ workspacePath, sources, metaPath, modelPath, texts, mode }: ModelMetaDiffProps) {
+export function ModelMetaDiff({ workspacePath, sources, texts, mode }: ModelMetaDiffProps) {
   const findSibling = useContext(SiblingFinderContext);
-  const modelName = modelPath.split(/[\\/]/).pop() ?? modelPath;
-  // A side without the `.meta` (added, deleted) has no model to show beside it either.
-  const modelSources = {
-    original: texts.original === null ? null : findSibling('original', sources.original, metaPath, modelName),
-    modified: texts.modified === null ? null : findSibling('modified', sources.modified, metaPath, modelName),
+  // Each side's model is beside that side's `.meta`; a side without one (added, deleted) has no model to show.
+  const modelBeside = (side: 'original' | 'modified'): ContentSource | null => {
+    const metaPath = sourcePathOf(sources[side]);
+    const model = metaPath === null || texts[side] === null ? null : modelOfMeta(metaPath);
+    return model === null || metaPath === null ? null : findSibling(side, sources[side], metaPath, model.split(/[\\/]/).pop()!);
   };
+  const modelSources = { original: modelBeside('original'), modified: modelBeside('modified') };
+  const modelName = sourcePathOf(sources.modified) ?? sourcePathOf(sources.original) ?? '';
   const reads = useQueries({
     queries: (['original', 'modified'] as const).map((side) => {
       const source = modelSources[side];
@@ -54,14 +54,13 @@ export function ModelMetaDiff({ workspacePath, sources, metaPath, modelPath, tex
   );
   const [original, modified] = reads.map((read) => read.data);
   if (reads.some((read) => read.isError)) {
-    return <EmptyState title={`Couldn't read ${modelName}`} description="The model this .meta belongs to isn't where the .meta is." />;
+    return <EmptyState title={`Couldn't read ${modelOfMeta(modelName)?.split(/[\\/]/).pop() ?? 'the model'}`} description="The model this .meta belongs to isn't where the .meta is." />;
   }
   if (!original || !modified) return <CenteredSpinner />;
   return (
     <ModelDiffViewer
       workspacePath={workspacePath}
       sources={{ original: modelSources.original ?? { kind: 'empty' }, modified: modelSources.modified ?? { kind: 'empty' } }}
-      path={modelPath}
       original={original}
       modified={modified}
       mode={mode}
