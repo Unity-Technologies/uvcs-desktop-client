@@ -28,6 +28,7 @@ import { highlightedLanguage, syntaxHighlighting } from './syntaxHighlighting';
 import { useBlockDiscard } from './useBlockDiscard';
 import { useChangeView } from './useChangeView';
 import type { DiscardRequest } from './useLineDiscarding';
+import { useMovedCode } from './useMovedCode';
 import { usePierreEditor } from './usePierreEditor';
 import { POINTER_FOCUS_ATTRIBUTE, usePointerFocusMark } from './usePointerFocusMark';
 import { useShadowStyle } from './useShadowStyle';
@@ -159,6 +160,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
     onDiscard,
     onUndo: onUndoDiscard,
   });
+  const movedCode = useMovedCode({ diff: diff.meta, comparisonMethod, layout, containerRef: container, virtualizer, diffedText, typed: current });
   const tokenizeMaxLength = highlighting === 'off' ? 0 : undefined;
   const workers = useHighlightWorkers(highlighting === 'background');
   // An editable diff renders its tokens as the editor does (`useTokenTransformer`, which Pierre turns on once the editor
@@ -248,6 +250,7 @@ export function TextDiff({ original, modified, current, diff, diffedText, wholeF
         </EditProvider>
         <PaneScrollbars containerRef={container} />
         {discard.overlay}
+        {movedCode}
       </div>
     </div>
   );

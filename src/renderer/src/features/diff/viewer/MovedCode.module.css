@@ -1,0 +1,94 @@
+/* The overlay sits at the top left of the diff's scrolled content, taking no room: its pieces are placed in it. */
+.layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.ribbon {
+  position: absolute;
+  overflow: visible;
+}
+
+.ribbon path {
+  fill: var(--diff-moved-ribbon);
+  pointer-events: visiblePainted;
+  transition: fill var(--duration-fast) var(--ease-out);
+}
+
+.ribbon[data-hovered] path {
+  fill: var(--diff-moved-ribbon-hover);
+}
+
+/* Always in sight while its code is, so it stays quiet: a pill in the moved color's outline, louder once hovered. */
+.label {
+  position: absolute;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 260px;
+  height: 20px;
+  padding: 0 8px 0 6px;
+  border: 1px solid var(--diff-moved-ribbon-hover);
+  border-radius: var(--radius-full);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-sm);
+  color: var(--text-secondary);
+  font-family: var(--font-ui);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    border-color var(--duration-fast) var(--ease-out),
+    color var(--duration-fast) var(--ease-out);
+  animation: var(--keyframes-fade-in) var(--duration-normal) var(--ease-out);
+}
+
+.label[data-anchor='center'] {
+  translate: -50% -50%;
+}
+
+.label[data-anchor='end'] {
+  translate: -100% -50%;
+}
+
+.label svg {
+  flex: none;
+  color: var(--change-moved);
+}
+
+.label span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Tints go over the solid surface: over code, nothing behind may show through. */
+.label:hover,
+.label[data-hovered] {
+  border-color: var(--change-moved);
+  background: linear-gradient(var(--diff-moved-emphasis), var(--diff-moved-emphasis)) var(--bg-surface-raised);
+  color: var(--text-primary);
+}
+
+.label:active {
+  background: linear-gradient(var(--diff-moved-ribbon), var(--diff-moved-ribbon)) var(--bg-surface-raised);
+}
+
+.label:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ribbon path,
+  .label {
+    transition: none;
+    animation: none;
+  }
+}
