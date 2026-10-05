@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { labelSpot, ribbonBox, ribbonPath } from './movedCodeLayout';
+import { labelSpot, ribbonBox, ribbonPath, sameLayout } from './movedCodeLayout';
 
 const ROW = 20;
 
@@ -42,5 +42,23 @@ describe('ribbonPath', () => {
 
   it('is a straight band between places side by side', () => {
     expect(ribbonPath({ top: 40, bottom: 80 }, { top: 40, bottom: 80 }, 28)).toBe('M0 0C14 0 14 0 28 0L28 40C14 40 14 40 0 40Z');
+  });
+});
+
+describe('sameLayout', () => {
+  const at = (move: object, top: number) => ({ moves: [{ move, deletions: { top, bottom: top + 40 } }] });
+
+  it('keeps what shows when nothing moved on screen', () => {
+    const move = {};
+    expect(sameLayout(at(move, 100), at(move, 100))).toBe(true);
+  });
+
+  it('takes a layout measured anew when a move is placed elsewhere', () => {
+    const move = {};
+    expect(sameLayout(at(move, 100), at(move, 120))).toBe(false);
+  });
+
+  it('takes it when the moves were found anew, equal or not: the move under the pointer is the new one', () => {
+    expect(sameLayout(at({ start: 1 }, 100), at({ start: 1 }, 100))).toBe(false);
   });
 });
