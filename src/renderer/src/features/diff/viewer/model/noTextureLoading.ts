@@ -3,13 +3,14 @@ import { Loader, LoadingManager, Texture } from 'three';
 /**
  * A loading manager under which a model's loader reads nothing but the model's own bytes: every texture its materials
  * name goes to one handler that records the name and hands back an empty texture, and any other URL a loader would
- * fetch (a glTF's external buffer) is turned into an empty one; only the file's own bytes load (`data:` URIs inline in
- * it, `blob:` URLs the loader makes of what it embeds). So a model never reaches the disk or the network, and
+ * fetch is turned into an empty one; only the file's own bytes load (`data:` URIs inline in it, `blob:` URLs the
+ * loader makes of what it embeds), and the companions it is given (a glTF's `.bin`, read by the viewer). So a model never reaches the disk or the network, and
  * three's loaders run without a DOM: their own `TextureLoader` would create an `<img>`, which a worker hasn't.
  */
-export function noTextureLoading(onTexture: (fileName: string) => void): LoadingManager {
+export function noTextureLoading(onTexture: (fileName: string) => void, companions: ReadonlyMap<string, string> = new Map()): LoadingManager {
   const manager = new LoadingManager();
-  manager.setURLModifier((url) => (isOwnBytes(url) ? url : 'data:,'));
+  // A file the model needs beside it, given as a blob URL of its bytes (a glTF's `.bin`), by the name the model uses.
+  manager.setURLModifier((url) => companions.get(decodeURIComponent(url)) ?? (isOwnBytes(url) ? url : 'data:,'));
   manager.addHandler(/./, new TextureNames(onTexture));
   return manager;
 }

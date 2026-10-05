@@ -13,17 +13,23 @@ import { compareSurfaces, placedMeshesOf, type PlaceableModel, type SurfaceCompa
 let worker: Worker | null | undefined;
 let lastRequestId = 0;
 const awaited = new Map<number, { resolve: (response: ModelWorkerResponse) => void; reject: () => void }>();
-const reads = new WeakMap<Uint8Array, Promise<ModelFileRead>>();
+/** By the model's bytes: each read with the companions it was given (the same bytes' versions of its `.bin`). */
+const reads = new WeakMap<Uint8Array, { companions: Readonly<Record<string, Uint8Array>>; read: Promise<ModelFileRead> }[]>();
 const comparisons = new WeakMap<ParsedModel, WeakMap<ParsedModel, Promise<SurfaceComparison>>>();
 
-/** The model read, from the one read of the same bytes if there was one. */
-export function readModel(model: ModelBytes): Promise<ModelFileRead> {
-  let read = reads.get(model.bytes);
-  if (!read) {
-    read = readInWorker(model);
-    reads.set(model.bytes, read);
-  }
+/** The model read, with the files it needs beside it (`gltfCompanions`), from the one read of the same bytes if there was one. */
+export function readModel(model: ModelBytes, companions: Readonly<Record<string, Uint8Array>> = {}): Promise<ModelFileRead> {
+  const kept = reads.get(model.bytes) ?? [];
+  const same = kept.find((entry) => sameCompanions(entry.companions, companions));
+  if (same) return same.read;
+  const read = readInWorker(model, companions);
+  reads.set(model.bytes, [...kept, { companions, read }]);
   return read;
+}
+
+function sameCompanions(a: Readonly<Record<string, Uint8Array>>, b: Readonly<Record<string, Uint8Array>>): boolean {
+  const names = Object.keys(a);
+  return names.length === Object.keys(b).length && names.every((name) => a[name] === b[name]);
 }
 
 /** The surfaces of a pair compared, from the one comparison of the same pair if there was one. */
@@ -38,11 +44,11 @@ export function compareModels(before: ParsedModel, after: ParsedModel): Promise<
   return comparison;
 }
 
-async function readInWorker(model: ModelBytes): Promise<ModelFileRead> {
+async function readInWorker(model: ModelBytes, companions: Readonly<Record<string, Uint8Array>>): Promise<ModelFileRead> {
   const modelWorker = startedWorker();
   // The bytes are copied to the worker, never transferred: the content cache keeps them for the next time.
-  const response = modelWorker && (await ask(modelWorker, { id: ++lastRequestId, read: model }));
-  return response && 'read' in response ? response.read : readModelFile(model);
+  const response = modelWorker && (await ask(modelWorker, { id: ++lastRequestId, read: model, companions: { ...companions } }));
+  return response && 'read' in response ? response.read : readModelFile(model, companions);
 }
 
 async function compareInWorker(before: ParsedModel, after: ParsedModel): Promise<SurfaceComparison> {

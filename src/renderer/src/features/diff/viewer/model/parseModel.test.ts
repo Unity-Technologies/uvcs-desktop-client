@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ModelBytes, ModelFormat } from '@shared/domain/content';
+import { gltfCompanions } from './gltfJson';
 import { parseModel } from './parseModel';
 import type { ParsedModel } from './parsedModel';
 import { fbxAxisConversion, Y_UP_AXES } from './fbxAxes';
@@ -7,8 +8,8 @@ import { asciiFbx, box } from './testing/asciiFbx';
 
 const bytesOf = (text: string, format: ModelFormat): ModelBytes => ({ bytes: new TextEncoder().encode(text), format });
 
-async function parsed(model: ModelBytes): Promise<ParsedModel> {
-  const result = await parseModel(model);
+async function parsed(model: ModelBytes, companions?: Record<string, Uint8Array>): Promise<ParsedModel> {
+  const result = await parseModel(model, companions);
   if (result.kind !== 'parsed') throw new Error(`Not parsed: ${JSON.stringify(result.failure)}`);
   return result.model;
 }
@@ -119,8 +120,20 @@ describe('parseModel, glTF', () => {
     expect(model.textures).toEqual(['leaf.png']);
   });
 
+  it('reads a glTF whose geometry is in a file beside it, given its bytes', async () => {
+    const positions = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]);
+    const model = await parsed(bytesOf(triangleGltf('Leaf%20data.bin'), 'gltf'), { 'Leaf data.bin': new Uint8Array(positions.buffer) });
+    expect([...model.meshes[0]!.attributes.position]).toEqual([...positions]);
+  });
+
   it('names the file a glTF keeps its geometry in', async () => {
     expect(await parseModel(bytesOf(triangleGltf('scene%20data.bin'), 'gltf'))).toEqual({ kind: 'failed', failure: { kind: 'externalData', file: 'scene data.bin' } });
+  });
+
+  it('lists the files a glTF needs beside it, and none for a self-contained one', () => {
+    expect(gltfCompanions(new TextEncoder().encode(triangleGltf('scene.bin')), 'gltf')).toEqual(['scene.bin']);
+    expect(gltfCompanions(new TextEncoder().encode(triangleGltf('inline')), 'gltf')).toEqual([]);
+    expect(gltfCompanions(new Uint8Array([1, 2]), 'fbx')).toEqual([]);
   });
 
   it('names the compression a glTF needs a decoder for', async () => {

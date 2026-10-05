@@ -21,16 +21,30 @@ const COMPRESSIONS: Record<string, 'Draco' | 'meshopt'> = {
   KHR_meshopt_compression: 'meshopt',
 };
 
-/** What the glTF needs that its bytes don't hold, or null when they're enough. A JSON that doesn't read is the loader's to report. */
-export function gltfNeed(bytes: Uint8Array, format: Extract<ModelFormat, 'gltf' | 'glb'>): GltfNeed | null {
+/**
+ * What the glTF needs that its bytes and the `companions` given (its other files, by the name it uses) don't hold, or
+ * null when they're enough. A JSON that doesn't read is the loader's to report.
+ */
+export function gltfNeed(bytes: Uint8Array, format: Extract<ModelFormat, 'gltf' | 'glb'>, companions: ReadonlySet<string> = new Set()): GltfNeed | null {
   const json = readJson(bytes, format);
   if (!json) return null;
   for (const extension of json.extensionsRequired ?? []) {
     const compression = COMPRESSIONS[extension];
     if (compression) return { kind: 'compressed', compression };
   }
-  const external = (json.buffers ?? []).find((buffer) => buffer.uri !== undefined && !buffer.uri.startsWith('data:'));
-  return external?.uri ? { kind: 'externalData', file: decodeURIComponent(external.uri) } : null;
+  const missing = externalBuffers(json).find((file) => !companions.has(file));
+  return missing === undefined ? null : { kind: 'externalData', file: missing };
+}
+
+/** The files a glTF keeps its geometry in, beside it, by the names it gives them; none for a self-contained one. */
+export function gltfCompanions(bytes: Uint8Array, format: ModelFormat): string[] {
+  if (format !== 'gltf' && format !== 'glb') return [];
+  const json = readJson(bytes, format);
+  return json ? externalBuffers(json) : [];
+}
+
+function externalBuffers(json: GltfJson): string[] {
+  return [...new Set((json.buffers ?? []).flatMap((buffer) => (buffer.uri !== undefined && !buffer.uri.startsWith('data:') ? [decodeURIComponent(buffer.uri)] : [])))];
 }
 
 function readJson(bytes: Uint8Array, format: 'gltf' | 'glb'): GltfJson | null {

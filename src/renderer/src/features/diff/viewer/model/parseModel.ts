@@ -22,13 +22,15 @@ export type ModelReadResult = { kind: 'parsed'; model: ParsedModel } | { kind: '
 const FBX_UNITS_PER_METRE = 100;
 const AXES = ['x', 'y', 'z'] as const;
 
-export async function parseModel({ bytes, format }: ModelBytes): Promise<ModelReadResult> {
+/** `companions`: the files the model needs beside it (`gltfCompanions`), by the name it gives them. */
+export async function parseModel({ bytes, format }: ModelBytes, companions: Readonly<Record<string, Uint8Array>> = {}): Promise<ModelReadResult> {
   if (format === 'gltf' || format === 'glb') {
-    const need = gltfNeed(bytes, format);
+    const need = gltfNeed(bytes, format, new Set(Object.keys(companions)));
     if (need) return { kind: 'failed', failure: need };
   }
   const textures = new Set<string>();
-  const manager = noTextureLoading((name) => textures.add(name));
+  const companionUrls = new Map(Object.entries(companions).map(([name, data]) => [name, URL.createObjectURL(new Blob([data as Uint8Array<ArrayBuffer>]))]));
+  const manager = noTextureLoading((name) => textures.add(name), companionUrls);
   try {
     const loaded = await load(bytes, format, manager);
     const facts: ModelFileFacts = { format, textures: [...textures].sort(), unitScale: 1, upAxis: 'y', axisConversion: new Matrix4().elements, exportedFrom: null };
@@ -36,6 +38,8 @@ export async function parseModel({ bytes, format }: ModelBytes): Promise<ModelRe
     return { kind: 'parsed', model: fromThreeObject(loaded.root, loaded.animations, facts) };
   } catch {
     return { kind: 'failed', failure: { kind: 'unreadable' } };
+  } finally {
+    for (const url of companionUrls.values()) URL.revokeObjectURL(url);
   }
 }
 

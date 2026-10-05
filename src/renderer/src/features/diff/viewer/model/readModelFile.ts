@@ -7,8 +7,8 @@ import type { ParsedModel } from './parsedModel';
 export type ModelFileRead = { kind: 'read'; model: ParsedModel; summary: ModelSummary } | { kind: 'failed'; failure: ModelReadFailure };
 
 /** All a model diff needs of one version, worked out once: in the model worker, or on the main thread without it. */
-export async function readModelFile(model: ModelBytes): Promise<ModelFileRead> {
-  const result = await parseModel(model);
+export async function readModelFile(model: ModelBytes, companions: Readonly<Record<string, Uint8Array>> = {}): Promise<ModelFileRead> {
+  const result = await parseModel(model, companions);
   if (result.kind === 'failed') return result;
   return { kind: 'read', model: result.model, summary: modelSummary(result.model) };
 }
