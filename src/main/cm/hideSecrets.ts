@@ -1,3 +1,5 @@
+import { escapeRegExp } from '@shared/escapeRegExp';
+
 /** What a hidden secret shows as in the command log, errors and console warnings. */
 const HIDDEN_SECRET = '•••';
 
@@ -26,10 +28,6 @@ export function outputForLog(output: string): string {
  */
 export function textForLog(text: string): string {
   return SECRET_OPTIONS.reduce((hidden, option) => hidden.replace(new RegExp(`${escapeRegExp(option)}\\S*`, 'g'), `${option}${HIDDEN_SECRET}`), outputForLog(text));
-}
-
-function escapeRegExp(text: string): string {
-  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function hideSecretArgument(arg: string): string {
