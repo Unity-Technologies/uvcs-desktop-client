@@ -16,7 +16,7 @@ const AFTER = filler('after', 6);
 describe('detectMovedBlocks', () => {
   it('finds a block moved as it was, with no line changed', () => {
     expect(movesIn([...FUNCTION, ...BEFORE, ...AFTER], [...BEFORE, ...AFTER, ...FUNCTION])).toEqual([
-      { deletions: { start: 1, count: 5 }, additions: { start: 13, count: 5 }, changed: [] },
+      { deletions: { start: 1, count: 5 }, additions: { start: 13, count: 5 }, changed: [], replaced: [] },
     ]);
   });
 
@@ -31,8 +31,20 @@ describe('detectMovedBlocks', () => {
           { side: 'deletions', lineNumber: 3 },
           { side: 'additions', lineNumber: 15 },
         ],
+        replaced: [{ deletion: 3, addition: 15 }],
       },
     ]);
+  });
+
+  it('pairs each line it replaces with the added line most like it, never with a line only added on the way', () => {
+    const edited = [...FUNCTION.slice(0, 2), '  // add every price', '  for (const item of items) sum += item.cost;', ...FUNCTION.slice(3)];
+    const [move] = movesIn([...FUNCTION, ...BEFORE, ...AFTER], [...BEFORE, ...AFTER, ...edited]);
+    expect(move?.changed).toEqual([
+      { side: 'deletions', lineNumber: 3 },
+      { side: 'additions', lineNumber: 15 },
+      { side: 'additions', lineNumber: 16 },
+    ]);
+    expect(move?.replaced).toEqual([{ deletion: 3, addition: 16 }]);
   });
 
   it('takes a block changed by more than a fifth of its words as removed and added, not moved', () => {
@@ -56,7 +68,7 @@ describe('detectMovedBlocks', () => {
 
   it('finds a block moved into new code, as the lines of it that match', () => {
     const modified = [...BEFORE, ...AFTER, 'const extra = 1;', ...FUNCTION, 'export default total;'];
-    expect(movesIn([...FUNCTION, ...BEFORE, ...AFTER], modified)).toEqual([{ deletions: { start: 1, count: 5 }, additions: { start: 14, count: 5 }, changed: [] }]);
+    expect(movesIn([...FUNCTION, ...BEFORE, ...AFTER], modified)).toEqual([{ deletions: { start: 1, count: 5 }, additions: { start: 14, count: 5 }, changed: [], replaced: [] }]);
   });
 
   it('pairs each place once, however many blocks moved', () => {
@@ -73,15 +85,16 @@ describe('detectMovedBlocks', () => {
     const original = [...FUNCTION, ...BEFORE, ...AFTER];
     const modified = [...BEFORE, ...AFTER, 'class Totals {', ...indented, '}'];
     const everyLine = [1, 2, 3, 4, 5].map((lineNumber) => ({ side: 'deletions', lineNumber })).concat([14, 15, 16, 17, 18].map((lineNumber) => ({ side: 'additions', lineNumber })));
-    expect(movesIn(original, modified, 'recognizeAll')).toEqual([{ deletions: { start: 1, count: 5 }, additions: { start: 14, count: 5 }, changed: everyLine }]);
-    expect(movesIn(original, modified, 'ignoreWhitespace')).toEqual([{ deletions: { start: 1, count: 5 }, additions: { start: 14, count: 5 }, changed: [] }]);
+    const everyPair = [1, 2, 3, 4, 5].map((line) => ({ deletion: line, addition: line + 13 }));
+    expect(movesIn(original, modified, 'recognizeAll')).toEqual([{ deletions: { start: 1, count: 5 }, additions: { start: 14, count: 5 }, changed: everyLine, replaced: everyPair }]);
+    expect(movesIn(original, modified, 'ignoreWhitespace')).toEqual([{ deletions: { start: 1, count: 5 }, additions: { start: 14, count: 5 }, changed: [], replaced: [] }]);
   });
 
   it('reads files with CRLF line breaks', () => {
     const original = text([...FUNCTION, ...BEFORE, ...AFTER], '\r\n');
     const modified = text([...BEFORE, ...AFTER, ...FUNCTION], '\r\n');
     expect(detectMovedBlocks(lineDiff(original, modified, 'recognizeAll').meta, 'recognizeAll')).toEqual([
-      { deletions: { start: 1, count: 5 }, additions: { start: 13, count: 5 }, changed: [] },
+      { deletions: { start: 1, count: 5 }, additions: { start: 13, count: 5 }, changed: [], replaced: [] },
     ]);
   });
 
@@ -97,6 +110,7 @@ describe('detectMovedBlocks', () => {
           { side: 'deletions', lineNumber: 2 },
           { side: 'additions', lineNumber: 14 },
         ],
+        replaced: [{ deletion: 2, addition: 14 }],
       },
     ]);
   });
@@ -126,7 +140,7 @@ describe('detectMovedBlocks', () => {
 });
 
 describe('moveContaining', () => {
-  const move: MovedBlock = { deletions: { start: 3, count: 2 }, additions: { start: 20, count: 2 }, changed: [] };
+  const move: MovedBlock = { deletions: { start: 3, count: 2 }, additions: { start: 20, count: 2 }, changed: [], replaced: [] };
 
   it('finds the move a line is in, in either of its places', () => {
     expect(moveContaining([move], { side: 'deletions', lineNumber: 4 })).toBe(move);
