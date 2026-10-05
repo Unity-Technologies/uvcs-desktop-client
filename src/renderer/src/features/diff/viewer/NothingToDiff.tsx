@@ -38,7 +38,7 @@ export function NothingToDiff({ reason, left, right, identicalDescription, compa
     case 'tooLarge':
       return (
         <EmptyState
-          title={(left.tooLarge ?? right.tooLarge) === 'image' ? 'This image is too large to preview' : 'This file is too large to show a diff'}
+          title={TOO_LARGE_TITLES[left.tooLarge ?? right.tooLarge ?? 'text']}
           description={sizeChange(left, right)}
           action={openFile && <Button icon={<AppWindow size={13} />} onClick={openFile}>Open file</Button>}
         />
@@ -47,6 +47,12 @@ export function NothingToDiff({ reason, left, right, identicalDescription, compa
       return <EmptyState title="Binary file" description={`${sizeChange(left, right)}. Binary contents can't be compared as text.`} />;
   }
 }
+
+const TOO_LARGE_TITLES: Record<NonNullable<FileContent['tooLarge']>, string> = {
+  text: 'This file is too large to show a diff',
+  image: 'This image is too large to preview',
+  model: 'This model is too large to preview',
+};
 
 function sizeChange(left: FileContent, right: FileContent): string {
   return `${formatSize(left.size)} → ${formatSize(right.size)}`;

@@ -210,6 +210,12 @@
   --branch-name-contrast: 6.3;
   --branch-comment-saturation: 30%;
   --branch-comment-contrast: 4.7;
+  /* The model diff's 3D view (`modelPalette`): models in a neutral clay, lit to read their shape, and the pivot's and
+     the grid's axes in the colors Unity's gizmos give X, Y and Z. */
+  --model-clay: #9ea7b2;
+  --model-axis-x: #d5343c;
+  --model-axis-y: #4a9a2e;
+  --model-axis-z: #2f6bd8;
 }
 
 [data-theme='dark'] {
@@ -298,4 +304,8 @@
   --tint-text-lightness: 72%;
   --tint-bg-alpha: 0.2;
   --branch-name-saturation: 75%;
+  --model-clay: #8f98a3;
+  --model-axis-x: #f0555c;
+  --model-axis-y: #7cc35a;
+  --model-axis-z: #5b8ff0;
 }

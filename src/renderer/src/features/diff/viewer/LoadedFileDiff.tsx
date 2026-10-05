@@ -1,9 +1,10 @@
 import { RefreshCw } from 'lucide-react';
-import { Suspense, useMemo, useRef, type ReactNode } from 'react';
+import { Suspense, useContext, useMemo, useRef, type ReactNode } from 'react';
 import { openFile } from '../../../components/externalApps/externalAppOperations';
 import { lazyComponent } from '../../../lib/lazyComponent';
 import { hotkey } from '../../../lib/shortcutRegistry';
 import { useShortcut } from '../../../lib/useShortcut';
+import { useTypingPause } from './useTypingPause';
 import { Button } from '../../../ui/Button';
 import { CenteredSpinner } from '../../../ui/Spinner';
 import { absolutePath, extensionOf } from '../../pendingChanges/pendingChangeOperations';
@@ -12,13 +13,16 @@ import { ChangeNavigator } from './ChangeNavigator';
 import type { ChangeView } from './changeView';
 import { diffBodyOf } from './diffBody';
 import { diffDiscards } from './diffDiscards';
-import { diffPresentation, hasTwoRepresentations, showsLines } from './diffPresentation';
+import { diffPresentation, hasTwoRepresentations, renderedRepresentation, showsLines } from './diffPresentation';
 import { useDiffPreferences } from './diffPreferencesStore';
 import { DiffNotice } from './DiffNotice';
 import { DiffViewerFrame } from './DiffViewerFrame';
 import { ImageModeSwitch } from './ImageModeSwitch';
 import { hasLineChanges } from './lineDiff';
 import { MethodHidingNotice } from './MethodHidingNotice';
+import { modelBesideMeta, modelOfMeta } from './model/modelMeta';
+import { SiblingFinderContext } from './model/modelSiblings';
+import { ModelModeSwitch } from './ModelModeSwitch';
 import { NothingToDiff } from './NothingToDiff';
 import { renderedEdits } from './renderedEdits';
 import { RepresentationSwitch } from './RepresentationSwitch';
@@ -37,6 +41,9 @@ import { WholeFileNotice } from './WholeFileNotice';
 const TextDiff = lazyComponent(() => import('./TextDiff').then((module) => module.TextDiff));
 // So is the image viewer, and most sessions never open an image.
 const ImageDiffViewer = lazyComponent(() => import('./image/ImageDiffViewer').then((module) => module.ImageDiffViewer));
+// And the model viewer, with three.js, the largest of the three; a model's .meta shows through it too.
+const ModelDiffViewer = lazyComponent(() => import('./model/ModelDiffViewer').then((module) => module.ModelDiffViewer));
+const ModelMetaDiff = lazyComponent(() => import('./model/ModelMetaDiff').then((module) => module.ModelMetaDiff));
 
 const IDENTICAL_DESCRIPTION = 'The contents of both versions are identical.';
 
@@ -57,7 +64,7 @@ interface LoadedFileDiffProps {
  * past is typed into directly, like in any editor: Discard and Save show up as soon as it has unsaved edits.
  */
 export function LoadedFileDiff({ workspacePath, contents, fileName, title, identicalDescription, compareControls, onMatchesBase }: LoadedFileDiffProps) {
-  const { comparisonMethod, imageMode, representations, setComparisonMethod, setRepresentation } = useDiffPreferences();
+  const { comparisonMethod, imageMode, modelMode, representations, setComparisonMethod, setRepresentation } = useDiffPreferences();
   const editablePath = canEditInPlace(contents.original, contents.modified) ? contents.modified.path : null;
   const sides = useMemo(
     () => ({ original: contents.original.kind !== 'empty', modified: contents.modified.kind !== 'empty' }),
@@ -67,20 +74,27 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const { left, right } = buffer.shown;
   const current = buffer.unsaved ?? right.text ?? '';
   const dirty = buffer.unsaved !== null;
-  // One image per state of the text: a new one is encoded, and painted from a new blob URL.
-  const shownImage = useMemo(() => (dirty ? renderedEdits(right, current) : right), [dirty, right, current]);
+  // One image or model per pause in typing: a new one is encoded, and painted from a new blob URL or parsed anew.
+  const pausedText = useTypingPause(current);
+  const shownRendering = useMemo(() => (dirty ? renderedEdits(right, pausedText) : right), [dirty, right, pausedText]);
 
-  // Files that are text and an image at once (SVG) show rendered unless the user picked the text for their type.
+  // Files that are text and render at once (SVG, OBJ) show rendered unless the user picked the text for their type.
   const twoRepresentations = hasTwoRepresentations(left, right);
+  const rendered = renderedRepresentation(left, right) ?? 'image';
   const extension = extensionOf(fileName)?.toLowerCase() ?? '';
-  const representation = representations[extension] ?? 'image';
+  const representation = representations[extension] ?? rendered;
   const presentation = diffPresentation(left, right, representation);
   const isText = presentation.kind === 'text';
+  // A model's .meta shows as the model under its import settings where the model can be found beside it, unless the
+  // user picked its text (`representations.meta`).
+  const findSibling = useContext(SiblingFinderContext);
+  const metaModel = isText && modelOfMeta(fileName) !== null ? modelBesideMeta(findSibling, { original: contents.original, modified: contents.modified }) : null;
+  const metaAsModel = metaModel !== null && (representations.meta ?? 'model') === 'model';
   const editable = isText && editablePath !== null;
   const diffs = useLineDiffs({ isText, original: left.text ?? '', saved: right.text, current, comparisonMethod, fileName });
   const wholeFile = typedIntoWhole(editable, diffs.saved);
-  // Nothing to view differently in an empty or unchanged file that only says so.
-  const viewControls = showsLines(presentation, editable);
+  // Nothing to view differently in an empty or unchanged file that only says so, nor in a .meta shown as its model.
+  const viewControls = !metaAsModel && showsLines(presentation, editable);
   // Nor to move through there or in a file typed into whole; a version shown alone (added, deleted) is one change.
   // Beside a list of files, every diff keeps the arrows, to go on to the next file whatever this one is.
   const frame = useRef<HTMLDivElement>(null);
@@ -95,7 +109,9 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   useShortcut(hotkey('saveFile'), () => void buffer.save(), dirty);
   useShortcut(hotkey('editFile'), () => buffer.editor.current?.focus(), editable);
 
-  const representationSwitch = twoRepresentations && <RepresentationSwitch value={representation} onChange={(value) => setRepresentation(extension, value)} />;
+  const representationSwitch = twoRepresentations && (
+    <RepresentationSwitch value={representation === 'text' ? 'text' : rendered} rendered={rendered} onChange={(value) => setRepresentation(extension, value)} />
+  );
   // Discard and Save come first: the controls are right-aligned, so appearing on the first keystroke they move none
   // of the others. The change arrows come last, at the header's right edge, in the same place for every file (a
   // version shown alone has no Split | Unified): clicking on through the files, the pointer stays on them.
@@ -111,9 +127,12 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
           followsLayout={followsLayout(sides, wholeFile)}
         />
       )}
-      {/* Single-sided images (added or deleted) are previews: no modes to offer. */}
+      {/* Single-sided images and models (added or deleted) are previews: no modes to offer. */}
       {presentation.kind === 'image' && presentation.comparable && <ImageModeSwitch />}
+      {presentation.kind === 'model' && presentation.comparable && <ModelModeSwitch />}
+      {metaAsModel && <ModelModeSwitch />}
       {representationSwitch}
+      {metaModel !== null && <RepresentationSwitch value={metaAsModel ? 'model' : 'text'} rendered="model" onChange={(value) => setRepresentation('meta', value)} />}
       {navigator}
     </>
   );
@@ -146,8 +165,20 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   );
 
   let body: ReactNode;
-  const bodyKind = diffBodyOf(presentation, editable, diffs.saved);
+  const bodyKind = metaAsModel ? 'metaModel' : diffBodyOf(presentation, editable, diffs.saved);
   switch (bodyKind) {
+    case 'metaModel':
+      body = (
+        <Suspense fallback={<CenteredSpinner />}>
+          <ModelMetaDiff
+            workspacePath={workspacePath}
+            sources={{ original: contents.original, modified: contents.modified }}
+            texts={{ original: sides.original ? (left.text ?? '') : null, modified: sides.modified ? (dirty ? pausedText : (right.text ?? '')) : null }}
+            mode={modelMode}
+          />
+        </Suspense>
+      );
+      break;
     case 'editable': {
       // Typed into even with no lines to show: then the whole file, under a line that says why.
       const note =
@@ -187,7 +218,20 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
     case 'image':
       body = (
         <Suspense fallback={<CenteredSpinner />}>
-          <ImageDiffViewer original={left} modified={shownImage} mode={imageMode} />
+          <ImageDiffViewer original={left} modified={shownRendering} mode={imageMode} />
+        </Suspense>
+      );
+      break;
+    case 'model':
+      body = (
+        <Suspense fallback={<CenteredSpinner />}>
+          <ModelDiffViewer
+            workspacePath={workspacePath}
+            sources={{ original: contents.original, modified: contents.modified }}
+            original={left}
+            modified={shownRendering}
+            mode={modelMode}
+          />
         </Suspense>
       );
       break;

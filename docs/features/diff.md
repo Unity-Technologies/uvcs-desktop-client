@@ -1,6 +1,7 @@
 # Diffs
 
-Everything a text or image diff does (`features/diff`, `features/review`), whichever view shows it.
+Everything a text or image diff does (`features/diff`, `features/review`), whichever view shows it. 3D models have
+their own doc: `model-diff.md`.
 
 ## The diff's header
 

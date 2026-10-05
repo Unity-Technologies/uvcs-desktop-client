@@ -1,0 +1,19 @@
+.slider {
+  width: 130px;
+}
+
+/* Wide enough for "12.5 cm": the centered pill keeps its width as the slider sweeps. */
+.readout {
+  width: 7ch;
+  text-align: right;
+}
+
+.regionNav {
+  gap: 5px;
+  padding: var(--space-1) 10px;
+}
+
+.regionCount {
+  min-width: 64px;
+  text-align: center;
+}

@@ -132,8 +132,9 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
 - Sandboxes on a local server: `scripts/sandboxes/demo.sh` (a small game project), `branch-explorer.sh` (a branch
   topology), `long-branch-names.sh` (very long, nested and non-ASCII branch names; a task that conflicts), `moves.sh`
   (every kind of move, some changed too, checked in and pending), `moved-code.sh` (code moved inside a file, as it
-  was and edited, checked in and pending), `permissions.sh` (permissions at every level, a
-  secured path and a group of branches; never the server's own).
+  was and edited, checked in and pending), `permissions.sh` (permissions at every level, a secured path and a group of
+  branches; never the server's own), `models.sh` (a Unity project with one changeset per 3D model diff case: units,
+  rotation, pivot, hierarchy, material slots, sculpt, polycount, UVs; a branch and a pending model too).
   `scripts/perf/soak.mjs` catches leaks.
 - `UVCS_RENDERER_PLATFORM=win32` (or `linux`) previews another OS's shortcuts, copy and layout from a Mac (the page
   only: the menus and window frame stay the Mac's).

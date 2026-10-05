@@ -1,48 +1,84 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, stat, writeFile } from 'node:fs/promises';
+import { CmError } from '../cm/CmError';
 import type { ContentApi } from '@shared/api/content';
 import type { ContentSource, FileContent } from '@shared/domain/content';
-import { EMPTY_CONTENT, toFileContent } from '../files/fileContent';
+import { EMPTY_CONTENT, MAX_MODEL_BYTES, toFileContent } from '../files/fileContent';
 import { explainLockedFile } from '../files/lockedFile';
 import { saveContent } from '../files/saveContent';
 import { withTempPath } from '../files/tempFile';
 import { retryWhileBusy } from '../files/whileBusy';
-import { toAbsolutePath } from '../files/workspacePaths';
+import { workspaceFileOf } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
 
 export function createContentService({ cm, reviews }: ServiceContext): ContentApi {
   async function read(workspacePath: string, source: ContentSource): Promise<FileContent> {
-    switch (source.kind) {
-      case 'empty':
-        return EMPTY_CONTENT;
-      case 'workspaceFile': {
-        const absolutePath = toAbsolutePath(workspacePath, source.path);
-        const bytes = await readFile(absolutePath).catch((error: unknown) => {
-          throw explainLockedFile(error, absolutePath);
-        });
-        return toFileContent(bytes, absolutePath);
-      }
-      case 'reviewSnapshot':
-        return reviews.readSnapshot(workspacePath, source.path);
-      case 'workspaceBase':
-      case 'revision':
-      case 'repositoryPath':
-      case 'spec':
-        return withTempPath(async (outputFile) => {
-          await saveContent(cm, workspacePath, source, outputFile);
-          return toFileContent(await readFile(outputFile), fileNameOf(source));
-        });
+    if (source.kind === 'empty') return EMPTY_CONTENT;
+    if (source.kind === 'reviewSnapshot') return reviews.readSnapshot(workspacePath, source.path);
+    const { bytes, name } = await bytesOf(workspacePath, source);
+    return toFileContent(bytes, name);
+  }
+
+  /**
+   * Null when the file isn't there (a model without a `.meta`): that is an answer, which the renderer keeps. Any other
+   * failure (the server, a locked file) fails, to be read again; a file past `MAX_MODEL_BYTES` fails unread.
+   */
+  async function readBytes(workspacePath: string, source: ContentSource): Promise<Uint8Array | null> {
+    if (source.kind === 'empty' || source.kind === 'reviewSnapshot') return null;
+    if (source.kind === 'workspaceFile') {
+      const size = await stat(workspaceFileOf(workspacePath, source.path)).then(
+        (stats) => stats.size,
+        (error: NodeJS.ErrnoException) => (error.code === 'ENOENT' ? null : Promise.reject(error)),
+      );
+      if (size === null) return null;
+      if (size > MAX_MODEL_BYTES) throw new Error(`${source.path} is too large to read`);
     }
+    try {
+      const { bytes } = await bytesOf(workspacePath, source);
+      if (bytes.length > MAX_MODEL_BYTES) throw new Error(`${fileNameOfAny(source)} is too large to read`);
+      // A plain Uint8Array: IPC copies it as binary (a Buffer would arrive as one too, pool slice and all).
+      return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    } catch (error) {
+      if (isMissingItem(error)) return null;
+      throw error;
+    }
+  }
+
+  /** A file's bytes from the disk or `cm cat`, and the name that tells what they are. */
+  async function bytesOf(workspacePath: string, source: Exclude<ContentSource, { kind: 'empty' | 'reviewSnapshot' }>): Promise<{ bytes: Buffer; name: string }> {
+    if (source.kind === 'workspaceFile') {
+      const absolutePath = workspaceFileOf(workspacePath, source.path);
+      const bytes = await readFile(absolutePath).catch((error: unknown) => {
+        throw explainLockedFile(error, absolutePath);
+      });
+      return { bytes, name: absolutePath };
+    }
+    // The loaded revision of a workspace path: kept inside the workspace as a file on disk is.
+    if (source.kind === 'workspaceBase') workspaceFileOf(workspacePath, source.path);
+    return withTempPath(async (outputFile) => {
+      await saveContent(cm, workspacePath, source, outputFile);
+      return { bytes: await readFile(outputFile), name: fileNameOf(source) };
+    });
   }
 
   /** The text as the editor has it, line breaks included (the file's own). Written in place, keeping the file's identity. */
   async function writeWorkspaceFile(workspacePath: string, path: string, text: string): Promise<void> {
-    const absolutePath = toAbsolutePath(workspacePath, path);
+    const absolutePath = workspaceFileOf(workspacePath, path);
     await retryWhileBusy(() => writeFile(absolutePath, text, 'utf8')).catch((error: unknown) => {
       throw explainLockedFile(error, absolutePath);
     });
   }
 
-  return { read, writeWorkspaceFile };
+  return { read, readBytes, writeWorkspaceFile };
+}
+
+/** `cm` telling an item isn't there (`The specified item /a.cs does not exist.`), or the disk telling a file isn't. */
+function isMissingItem(error: unknown): boolean {
+  if (error instanceof CmError) return /does not exist/i.test(error.message);
+  return (error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT';
+}
+
+function fileNameOfAny(source: Exclude<ContentSource, { kind: 'empty' | 'reviewSnapshot' }>): string {
+  return source.kind === 'workspaceFile' ? source.path : fileNameOf(source);
 }
 
 /** The name that tells images and syntax apart: the spec's path when the source names no file. */

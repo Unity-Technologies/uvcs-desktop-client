@@ -1,5 +1,5 @@
 // `npm run e2e`: a light pass over the built app (run `npm run build` first), against the fake `cm` and a workspace
-// in a temp folder (scripts/e2e/README.md). Opens the workspace, visits every view, a diff, a branch's permissions, the command palette and
+// in a temp folder (scripts/e2e/README.md). Opens the workspace, visits every view, a diff, a model diff, a branch's permissions, the command palette and
 // Settings, switches the theme; fails on any renderer error, any `cm` command the fake doesn't know, or a view that
 // doesn't show. It asserts only that things appear, never pixels or copy. Screenshots go to <tmp>/uvcs-e2e-shots.
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
@@ -91,6 +91,12 @@ try {
     await main.getByText('src/player.cs', { exact: true }).first().click();
     // A line only the edited side of the fixture's file has.
     await main.getByText('void Jump() { }').first().waitFor();
+  });
+  await step('Model diff', async () => {
+    await main.getByText('Assets/crate.obj', { exact: true }).first().click();
+    // The 3D view, and what changed in it: the fixture renamed the crate's material slot.
+    await main.getByLabel('3D view of the model').waitFor();
+    await main.getByRole('region', { name: 'What changed' }).waitFor();
   });
   await step('Permissions', async () => {
     await window.getByRole('navigation').getByRole('button', { name: /^Branches( \d+)?$/ }).click();

@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 export type ImageDiffMode = 'onion' | 'sideBySide' | 'differences' | 'swipe';
 
-interface ImageModeDefinition {
+export interface ImageModeDefinition {
   value: ImageDiffMode;
   label: string;
   /** Tooltip, when the label is an abbreviation; otherwise the label (also once the header shows only the icon). */

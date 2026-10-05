@@ -53,7 +53,7 @@ function readContent(workspacePath: string, source: ContentSource): Promise<File
  * changes: read once, kept an hour after its last use, skipped by refreshes. Others (the loaded revision) stay until
  * an operation refreshes the workspace.
  */
-function contentCaching(sources: ContentSource[]) {
+export function contentCaching(sources: ContentSource[]) {
   if (sources.some(isLive)) return { staleTime: 0 };
   if (sources.every(isImmutableContent)) return { staleTime: Infinity, gcTime: REVISION_CACHE_MS, meta: IMMUTABLE_QUERY };
   return { staleTime: Infinity };

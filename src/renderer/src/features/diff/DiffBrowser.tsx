@@ -14,6 +14,7 @@ import { EntryDiff } from './EntryDiff';
 import { listedEntries } from './listedEntries';
 import { useDiffReview } from './review/useDiffReview';
 import { FileStepsContext, useFileSteps } from './viewer/fileSteps';
+import { diffSibling, SiblingFinderContext } from './viewer/model/modelSiblings';
 
 interface DiffBrowserProps {
   target: DiffTarget;
@@ -37,6 +38,8 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
   const rows = useMemo(() => review.narrow(filter.visible), [review.narrow, filter.visible]);
   // The diff's change navigation goes on to the files before and after, as the list shows them.
   const rowKeys = useMemo(() => rows.filter((entry) => entry.itemType !== 'directory').map(diffEntryKey), [rows]);
+  // A model's companions (a glTF's `.bin`) are entries of the same diff, or the files where it points to.
+  const findSibling = useMemo(() => diffSibling(diffEntries, target), [diffEntries, target]);
   const fileSteps = useFileSteps({ keys: rowKeys, current: selection.anchor, select: (key) => setSelection(singleSelection(key)), pathOf: (key) => key });
 
   useEffect(() => {
@@ -66,7 +69,9 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
       second={
         focused ? (
           <FileStepsContext.Provider value={fileSteps}>
-            <EntryDiff workspacePath={workspacePath} entry={focused} reviewMarks={review.marks} />
+            <SiblingFinderContext.Provider value={findSibling}>
+              <EntryDiff workspacePath={workspacePath} entry={focused} reviewMarks={review.marks} />
+            </SiblingFinderContext.Provider>
           </FileStepsContext.Provider>
         ) : null
       }

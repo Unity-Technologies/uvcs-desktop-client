@@ -1,0 +1,39 @@
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  pointer-events: none;
+}
+
+.stat {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px var(--space-2);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface-raised);
+  box-shadow: var(--shadow-md);
+  color: var(--text-primary);
+  white-space: nowrap;
+  pointer-events: auto;
+}
+
+.label {
+  color: var(--text-tertiary);
+  font-family: var(--font-ui);
+}
+
+.stat[data-changed] {
+  box-shadow: var(--shadow-md), inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent);
+}
+
+.stat [data-side='old'] {
+  color: var(--text-secondary);
+}
+
+.arrow {
+  color: var(--text-tertiary);
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { EMPTY_CONTENT, MAX_IMAGE_BYTES, MAX_TEXT_BYTES, toFileContent } from './fileContent';
+import { EMPTY_CONTENT, MAX_IMAGE_BYTES, MAX_MODEL_BYTES, MAX_TEXT_BYTES, toFileContent } from './fileContent';
 
 describe('toFileContent', () => {
   it('reads text as UTF-8', () => {
@@ -49,5 +49,37 @@ describe('toFileContent', () => {
     expect(large.image?.bytes.length).toBe(MAX_TEXT_BYTES + 1);
     const size = MAX_IMAGE_BYTES + 1;
     expect(toFileContent(Buffer.alloc(size, 'a'), 'huge.svg')).toEqual({ isBinary: true, size, tooLarge: 'image' });
+  });
+
+  it('keeps the bytes of a binary FBX as a model only', () => {
+    const fbx = Buffer.concat([Buffer.from('Kaydara FBX Binary  '), Buffer.from([0, 0x1a, 0])]);
+    const content = toFileContent(fbx, 'Assets/Characters/Hero.FBX');
+    expect(content).toEqual({ isBinary: true, size: fbx.length, model: { bytes: new Uint8Array(fbx), format: 'fbx' } });
+    expect(Buffer.isBuffer(content.model!.bytes)).toBe(false);
+  });
+
+  it('reads the text formats of models both as text and as a model', () => {
+    const obj = 'v 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n';
+    expect(toFileContent(Buffer.from(obj), 'Props/crate.obj')).toEqual({
+      isBinary: false,
+      size: obj.length,
+      text: obj,
+      model: { bytes: new Uint8Array(Buffer.from(obj)), format: 'obj' },
+    });
+    expect(toFileContent(Buffer.from('; FBX 7.4.0 project file'), 'rock.fbx').text).toBe('; FBX 7.4.0 project file');
+    expect(toFileContent(Buffer.from('{"asset":{"version":"2.0"}}'), 'tree.gltf').model?.format).toBe('gltf');
+  });
+
+  it('keeps a GLB as a model only', () => {
+    const glb = Buffer.from([0x67, 0x6c, 0x54, 0x46, 2, 0, 0, 0]);
+    expect(toFileContent(glb, 'tree.glb')).toEqual({ isBinary: true, size: glb.length, model: { bytes: new Uint8Array(glb), format: 'glb' } });
+  });
+
+  it('keeps only the model of a text model too large to diff, and nothing of one over the model cap', () => {
+    const large = toFileContent(Buffer.alloc(MAX_TEXT_BYTES + 1, 'v'), 'city.obj');
+    expect(large.text).toBeUndefined();
+    expect(large).toMatchObject({ isBinary: true, size: MAX_TEXT_BYTES + 1, model: { format: 'obj' } });
+    const size = MAX_MODEL_BYTES + 1;
+    expect(toFileContent(Buffer.alloc(size, 'v'), 'huge.fbx')).toEqual({ isBinary: true, size, tooLarge: 'model' });
   });
 });

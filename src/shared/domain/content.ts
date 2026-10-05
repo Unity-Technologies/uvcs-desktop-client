@@ -27,13 +27,24 @@ export interface ImageBytes {
   mimeType: string;
 }
 
+/** The 3D model formats the diff shows: what Unity projects keep models in, read by their extension. */
+export type ModelFormat = 'fbx' | 'obj' | 'gltf' | 'glb';
+
+/** A 3D model's file bytes and format, as read: they cross IPC as binary, and the renderer parses them in a worker. */
+export interface ModelBytes {
+  bytes: Uint8Array;
+  format: ModelFormat;
+}
+
 export interface FileContent {
   /** UTF-8 text, when the content is text. */
   text?: string;
   /** The image, when the content is one (an SVG has its `text` too). */
   image?: ImageBytes;
+  /** The 3D model, when the content is one (OBJ, `.gltf` and ASCII FBX have their `text` too). */
+  model?: ModelBytes;
   isBinary: boolean;
-  /** Too big to show: text over the diff cap, or an image over the preview cap. */
-  tooLarge?: 'text' | 'image';
+  /** Too big to show: text over the diff cap, or an image or a model over its preview cap. */
+  tooLarge?: 'text' | 'image' | 'model';
   size: number;
 }

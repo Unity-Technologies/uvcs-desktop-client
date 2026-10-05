@@ -1,0 +1,101 @@
+// The model diff's client of the model worker. One worker for the app's life: the next model doesn't pay for its
+// start. When the worker can't start or dies mid-flight, the work is done on the main thread: slower, never wrong.
+// Each version is read once while its bytes are kept (the diff's content cache holds them), and each pair compared
+// once while both are kept, so going back to a model, or from one mode to another, shows it at once.
+
+import type { ModelBytes } from '@shared/domain/content';
+import type { ModelWorkerRequest, ModelWorkerResponse } from './model.worker';
+import type { ParsedModel } from './parsedModel';
+import { PLAIN_READ, readModelFile, type ModelFileRead, type ModelReadOptions } from './readModelFile';
+import { compareSurfaces, placedMeshesOf, type PlaceableModel, type SurfaceComparison } from './surfaceComparison';
+
+// Undefined until first asked for; null once it couldn't start or died: the main thread reads from then on.
+let worker: Worker | null | undefined;
+let lastRequestId = 0;
+const awaited = new Map<number, { resolve: (response: ModelWorkerResponse) => void; reject: () => void }>();
+/** By the model's bytes: each read with the options it was given (its `.bin` and its `.meta`, as they were). */
+const reads = new WeakMap<Uint8Array, { options: ModelReadOptions; read: Promise<ModelFileRead> }[]>();
+const comparisons = new WeakMap<ParsedModel, WeakMap<ParsedModel, Promise<SurfaceComparison | null>>>();
+
+/** The model read with its companions and import settings, from the one read of the same bytes and options if there was one. */
+export function readModel(model: ModelBytes, options: ModelReadOptions = PLAIN_READ): Promise<ModelFileRead> {
+  const kept = reads.get(model.bytes) ?? [];
+  const same = kept.find((entry) => sameOptions(entry.options, options));
+  if (same) return same.read;
+  const read = readInWorker(model, options);
+  reads.set(model.bytes, [...kept, { options, read }]);
+  return read;
+}
+
+function sameOptions(a: ModelReadOptions, b: ModelReadOptions): boolean {
+  const names = Object.keys(a.companions);
+  const sameCompanions = names.length === Object.keys(b.companions).length && names.every((name) => a.companions[name] === b.companions[name]);
+  return sameCompanions && JSON.stringify(a.settings) === JSON.stringify(b.settings);
+}
+
+/** The surfaces of a pair compared, from the one comparison of the same pair if there was one. */
+export function compareModels(before: ParsedModel, after: ParsedModel): Promise<SurfaceComparison | null> {
+  let ofBefore = comparisons.get(before);
+  if (!ofBefore) comparisons.set(before, (ofBefore = new WeakMap()));
+  let comparison = ofBefore.get(after);
+  if (!comparison) {
+    comparison = compareInWorker(before, after);
+    ofBefore.set(after, comparison);
+  }
+  return comparison;
+}
+
+async function readInWorker(model: ModelBytes, options: ModelReadOptions): Promise<ModelFileRead> {
+  const modelWorker = startedWorker();
+  // The bytes are copied to the worker, never transferred: the content cache keeps them for the next time.
+  const response = modelWorker && (await ask(modelWorker, { id: ++lastRequestId, read: model, options }));
+  if (response && 'read' in response) return response.read;
+  return readModelFile(model, options).catch((): ModelFileRead => ({ kind: 'failed', failure: { kind: 'unreadable' } }));
+}
+
+/** The comparison, or null when the surfaces couldn't be compared: the Differences mode then says so. */
+async function compareInWorker(before: ParsedModel, after: ParsedModel): Promise<SurfaceComparison | null> {
+  const modelWorker = startedWorker();
+  // Only what placing the meshes takes is copied to the worker; the viewer keeps drawing from the models.
+  const response = modelWorker && (await ask(modelWorker, { id: ++lastRequestId, compare: { before: placeable(before), after: placeable(after) } }));
+  if (response && 'comparison' in response) return response.comparison;
+  if (response && 'comparisonFailed' in response) return null;
+  try {
+    return compareSurfaces(placedMeshesOf(before), placedMeshesOf(after));
+  } catch {
+    return null;
+  }
+}
+
+function placeable({ nodes, unitScale, importScale, axisConversion, meshes }: ParsedModel): PlaceableModel {
+  return { nodes, unitScale, importScale, axisConversion, meshes: meshes.map(({ node, attributes, index }) => ({ node, attributes: { position: attributes.position }, index })) };
+}
+
+function startedWorker(): Worker | null {
+  if (worker !== undefined) return worker;
+  try {
+    worker = new Worker(new URL('./model.worker.ts', import.meta.url), { type: 'module', name: 'Models' });
+    worker.onmessage = ({ data: response }: MessageEvent<ModelWorkerResponse>) => {
+      awaited.get(response.id)?.resolve(response);
+      awaited.delete(response.id);
+    };
+    // The worker failed to load or crashed: what it was asked fails over to the main thread, and so does all that follows.
+    worker.onerror = () => {
+      worker?.terminate();
+      worker = null;
+      for (const request of awaited.values()) request.reject();
+      awaited.clear();
+    };
+  } catch {
+    worker = null;
+  }
+  return worker;
+}
+
+/** The worker's answer, or null when it died first. */
+function ask(modelWorker: Worker, request: ModelWorkerRequest): Promise<ModelWorkerResponse | null> {
+  return new Promise<ModelWorkerResponse>((resolve, reject) => {
+    awaited.set(request.id, { resolve, reject });
+    modelWorker.postMessage(request);
+  }).catch(() => null);
+}

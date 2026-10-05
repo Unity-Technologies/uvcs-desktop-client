@@ -6,6 +6,7 @@ import { useImageUrl } from '../../diff/viewer/image/useImageUrl';
 import { formatSize } from '../../../lib/formatDate';
 import type { ConflictContents } from './loadedConflict';
 import type { MergeLabels } from '../mergeDescription';
+import { ModelSinceBase, ModelVersionThumbnail } from './ModelVersionPreview';
 import styles from './WholeFileChoice.module.css';
 
 type Side = 'source' | 'destination';
@@ -26,6 +27,7 @@ export function WholeFileChoice({ contents, labels, chosen, onChoose }: WholeFil
           title={`Keep ${labels.roles.destination.name.toLowerCase()}`}
           subtitle={labels.destination}
           content={contents.destination}
+          base={contents.base}
           selected={chosen === 'destination'}
           onSelect={() => onChoose('destination')}
         />
@@ -33,6 +35,7 @@ export function WholeFileChoice({ contents, labels, chosen, onChoose }: WholeFil
           title={`Keep ${labels.roles.source.name.toLowerCase()}`}
           subtitle={labels.source}
           content={contents.source}
+          base={contents.base}
           selected={chosen === 'source'}
           onSelect={() => onChoose('source')}
         />
@@ -45,11 +48,13 @@ interface VersionCardProps {
   title: string;
   subtitle: string;
   content: FileContent;
+  /** The common ancestor: a model's card tells what its side changed since. */
+  base: FileContent;
   selected: boolean;
   onSelect: () => void;
 }
 
-function VersionCard({ title, subtitle, content, selected, onSelect }: VersionCardProps) {
+function VersionCard({ title, subtitle, content, base, selected, onSelect }: VersionCardProps) {
   // An image the browser can't decode (a damaged file, a format it doesn't read) shows as what it is, not a broken image.
   const [undecodableImage, setUndecodableImage] = useState<ImageBytes>();
   const undecodable = undecodableImage !== undefined && undecodableImage === content.image;
@@ -57,7 +62,9 @@ function VersionCard({ title, subtitle, content, selected, onSelect }: VersionCa
   return (
     <button className={styles.card} data-selected={selected} onClick={onSelect}>
       <div className={styles.preview}>
-        {content.image && !undecodable ? (
+        {content.model ? (
+          <ModelVersionThumbnail content={content} title={title} />
+        ) : content.image && !undecodable ? (
           imageUrl && <img src={imageUrl} alt={title} className={styles.image} onError={() => setUndecodableImage(content.image)} />
         ) : (
           <span className={styles.noPreview} data-tip={content.image ? "Couldn't display this image" : undefined}>
@@ -72,6 +79,7 @@ function VersionCard({ title, subtitle, content, selected, onSelect }: VersionCa
           <span className={styles.sizeNote}>{formatSize(content.size)}</span>
         </span>
       </div>
+      {content.model && <ModelSinceBase base={base} content={content} />}
       {selected && (
         <span className={styles.check}>
           <Check size={13} strokeWidth={3} />
