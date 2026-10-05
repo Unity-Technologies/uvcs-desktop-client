@@ -98,3 +98,31 @@ describe('writing a workspace file', () => {
     expect(await readFile(join(workspace, 'a.cs'), 'utf8')).toBe('new\r\nlines\r\n');
   });
 });
+
+describe('reading the bytes of a model companion', () => {
+  it("reads a glTF's .bin beside it in the workspace, from the disk", async () => {
+    const workspace = await newWorkspace();
+    await mkdir(join(workspace, 'Assets'), { recursive: true });
+    await writeFile(join(workspace, 'Assets', 'Barrel.bin'), Buffer.from([1, 2, 3]));
+    const { service, commands } = content({});
+
+    expect([...(await service.readBytes(workspace, { kind: 'workspaceFile', path: 'Assets/Barrel.bin' }))!]).toEqual([1, 2, 3]);
+    expect(commands).toEqual([]);
+  });
+
+  it('reads a revision of one with one quick cm cat, as any content', async () => {
+    const workspace = await newWorkspace();
+    const { written, answer } = catWriting('BIN');
+    const { service, commands } = content({ cat: answer });
+
+    const bytes = await service.readBytes(workspace, { kind: 'repositoryPath', path: '/Assets/Barrel.bin', at: 'cs:12' });
+
+    expect(new TextDecoder().decode(bytes!)).toBe('BIN');
+    expect(commands).toMatchObject([{ via: 'query', args: ['cat', 'serverpath:/Assets/Barrel.bin#cs:12', `--file=${written[0]}`] }]);
+  });
+
+  it('reads nothing of an empty side', async () => {
+    const { service } = content({});
+    expect(await service.readBytes(await newWorkspace(), { kind: 'empty' })).toBeNull();
+  });
+});
