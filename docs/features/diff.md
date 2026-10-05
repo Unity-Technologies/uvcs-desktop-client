@@ -144,10 +144,11 @@ What shows (`useMovedCode`, `MovedCode`):
   one is beside half of it at least (`labelSpot`: the space that says the code is gone tells where it went), else at
   the right end of the place's bottom edge: the top edge is the change's chip's. In a pane narrower than 320 px it
   shows the arrow and the number only, the words in its tooltip.
-- Side by side, the panes make room between them (`ribbonRoomCss`, 28 px, kept while typing so the code doesn't shift)
-  for a ribbon joining the two places (`ribbonPath`), level with the rows at both ends. A place not rendered yet is
-  where Pierre lays it out (`pierreLinePosition`).
-- Pointing at moved code, its label or its ribbon lights the move up in both places.
+- Pointing at moved code or its label lights the move up in both places and, side by side, draws a ribbon joining them
+  (`ribbonPath`, level with the rows at both ends) over the last 24 px of the removed side's pane, where code is least
+  likely to be, up to the seam; it goes once the pointer leaves, and the pointer and selections go through it. A place
+  not rendered yet is where Pierre lays it out (`pierreLinePosition`). A ribbon always shown took room between the
+  panes, which opened and closed as code was moved and saved; one always shown over the seam would cover long lines.
 - A big text diffed only once typing pauses (`diffsEveryKeystroke`) hides its moves until then: its lines move under
   them meanwhile. Other texts are diffed at every keystroke, and their moves follow.
 
@@ -217,8 +218,7 @@ that patch or read internals have a test that fails when an update moves them:
   The tests run without a page, so this one is checked on screen. Wrapping lines, a pane (`data-code`) has no box of
   its own (`display: contents`), and its code column stands for it (`paneRect`).
 - `movedCodeCss`, `MovedCode`: moved code recolored through Pierre's `--diffs-deletion-base` and
-  `--diffs-addition-base`, the room for its ribbons as a margin before the added side's numbers (`[data-gutter]`), and
-  its labels in the gaps across from it (`data-content-buffer`). Checked on screen too.
+  `--diffs-addition-base`, and its labels in the gaps across from it (`data-content-buffer`). Checked on screen too.
 - `pierreLineComparison`: typing re-diffs under the comparison method (see Comparison method).
 - `pierrePlainTextRender`: a diff shown as plain text renders once, not at every render (see Editing in the diff).
 - `pierreSessionEndRefresh`: a diff typed into isn't highlighted again as it goes away (see Editing in the diff).

@@ -8,19 +8,18 @@
   pointer-events: none;
 }
 
+/* Over code while the move is hovered: see-through, and never in the way of the pointer or a selection. */
 .ribbon {
   position: absolute;
   overflow: visible;
+  pointer-events: none;
+  animation: var(--keyframes-fade-in) var(--duration-fast) var(--ease-out);
 }
 
 .ribbon path {
   fill: var(--diff-moved-ribbon);
-  pointer-events: visiblePainted;
-  transition: fill var(--duration-fast) var(--ease-out);
-}
-
-.ribbon[data-hovered] path {
-  fill: var(--diff-moved-ribbon-hover);
+  stroke: var(--diff-moved-outline);
+  stroke-width: 1px;
 }
 
 /* Always in sight while its code is, so it stays quiet: a pill in the moved color's outline, louder once hovered. */
@@ -33,7 +32,7 @@
   max-width: 260px;
   height: 20px;
   padding: 0 8px 0 6px;
-  border: 1px solid var(--diff-moved-ribbon-hover);
+  border: 1px solid var(--diff-moved-outline);
   border-radius: var(--radius-full);
   background: var(--bg-surface-raised);
   box-shadow: var(--shadow-sm);
@@ -86,7 +85,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .ribbon path,
+  .ribbon,
   .label {
     transition: none;
     animation: none;

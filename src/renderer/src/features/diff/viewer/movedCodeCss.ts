@@ -1,10 +1,6 @@
 import type { ChangedLine, DiffSide } from './changeBlocks';
-import type { DiffLayout } from './diffPreferencesStore';
 import type { MovedBlock } from './movedBlocks';
 import { lineRowSelector, numberCellSelector } from './pierreDom';
-
-/** The room between the two panes, side by side, where the ribbons joining a move's two places go (`MovedCode`). */
-export const RIBBON_GAP = 28;
 
 /**
  * CSS for the code a diff shows moved, to go inside the diff's shadow root. The lines that moved as they were take
@@ -28,14 +24,6 @@ export function movedCodeCss(moves: MovedBlock[], hovered: MovedBlock | undefine
     rules.push(`${rows(both)}{background-image:linear-gradient(var(--diff-moved-emphasis),var(--diff-moved-emphasis))}`);
   }
   return rules.join('\n');
-}
-
-/**
- * CSS making room between the two panes for the ribbons, side by side. It stays while the moves hide (typing), or the
- * modified side's code would shift sideways as typing starts and stops.
- */
-export function ribbonRoomCss(layout: DiffLayout): string {
-  return layout === 'split' ? `[data-additions] [data-gutter]{margin-inline-start:${RIBBON_GAP}px}` : '';
 }
 
 /** Every line of a move's place on one side. */

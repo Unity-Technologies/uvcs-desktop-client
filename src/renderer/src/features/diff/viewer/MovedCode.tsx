@@ -38,40 +38,31 @@ interface PlacedLabel extends LabelSpot {
 
 interface Layout {
   moves: MoveOnScreen[];
-  /** Side by side, the room between the panes the ribbons go in. */
-  gap: { left: number; width: number } | null;
+  /** Side by side, the strip at the right end of the removed side's pane the hovered move's ribbon goes over. */
+  lane: { left: number; width: number } | null;
 }
 
-const NOTHING: Layout = { moves: [], gap: null };
+const NOTHING: Layout = { moves: [], lane: null };
+/**
+ * How far into the removed side's pane the ribbon reaches: its lines' right ends, where code is least likely to be.
+ * The panes keep no room between them for it: that room would open and close as code is moved and saved.
+ */
+const RIBBON_WIDTH = 24;
 /** Narrower than this, a pane's code would hide behind a label in words. */
 const SHORT_LABEL_PANE_WIDTH = 320;
 const OTHER_SIDE: Record<DiffSide, DiffSide> = { deletions: 'additions', additions: 'deletions' };
 
 /**
  * The places of each move, joined. Each place has a label naming the line the code went to or came from, which takes
- * the view there; side by side, a ribbon in the room between the panes joins the two places. Pointing at a label, a
- * ribbon or the moved code lights the move up in both places (`onHover`).
+ * the view there. Pointing at a label or the moved code lights the move up in both places (`onHover`) and, side by
+ * side, draws a ribbon joining them over the panes' seam, gone once the pointer leaves.
  */
 export function MovedCode({ containerRef, virtualizer, moves, layout, hovered, onHover, onGoTo }: MovedCodeProps) {
   const shown = useMovesOnScreen(containerRef, virtualizer, moves, layout);
   if (shown.moves.length === 0) return null;
   return (
     <div className={styles.layer}>
-      {shown.gap &&
-        shown.moves.map(({ move, deletions, additions }) => {
-          const box = ribbonBox(deletions, additions);
-          return (
-            <svg
-              key={`ribbon:${move.deletions.start}`}
-              className={styles.ribbon}
-              data-hovered={move === hovered ? '' : undefined}
-              style={{ left: shown.gap!.left, top: box.top, width: shown.gap!.width, height: box.bottom - box.top }}
-              aria-hidden
-            >
-              <path d={ribbonPath(deletions, additions, shown.gap!.width)} onPointerEnter={() => onHover(move)} onPointerLeave={() => onHover(undefined)} />
-            </svg>
-          );
-        })}
+      {shown.lane && <Ribbon lane={shown.lane} move={shown.moves.find((onScreen) => onScreen.move === hovered)} />}
       {shown.moves.flatMap((onScreen) =>
         (['deletions', 'additions'] as const).map((side) => {
           const spot = onScreen.labels[side];
@@ -102,6 +93,17 @@ export function MovedCode({ containerRef, virtualizer, moves, layout, hovered, o
         }),
       )}
     </div>
+  );
+}
+
+/** The hovered move's ribbon, from its removed place's rows to its added place's, over the end of the removed side's pane. */
+function Ribbon({ lane, move }: { lane: NonNullable<Layout['lane']>; move: MoveOnScreen | undefined }) {
+  if (!move) return null;
+  const box = ribbonBox(move.deletions, move.additions);
+  return (
+    <svg className={styles.ribbon} style={{ left: lane.left, top: box.top, width: lane.width, height: box.bottom - box.top }} aria-hidden>
+      <path d={ribbonPath(move.deletions, move.additions, lane.width)} />
+    </svg>
   );
 }
 
@@ -187,15 +189,13 @@ function measureMoves(container: HTMLElement, root: ShadowRoot, virtualizer: Vir
     if (!deletions || !additions) return [];
     return [{ move, deletions: deletions.span, additions: additions.span, labels: { deletions: deletions.label, additions: additions.label } }];
   });
-  return { moves: onScreen, gap: layout === 'split' ? ribbonGap(root, toContent) : null };
+  return { moves: onScreen, lane: layout === 'split' ? ribbonLane(root, toContent) : null };
 }
 
-/** The room between the panes: from the right edge of the removed side's pane to the added side's line numbers. */
-function ribbonGap(root: ShadowRoot, toContent: (rect: DOMRect) => Box): Layout['gap'] {
+/** The strip the ribbon goes over: the right end of the removed side's pane, up to the seam with the added side. */
+function ribbonLane(root: ShadowRoot, toContent: (rect: DOMRect) => Box): Layout['lane'] {
   const removedPane = root.querySelector('[data-deletions]');
-  const addedNumbers = root.querySelector('[data-additions] [data-gutter]');
-  if (!removedPane || !addedNumbers) return null;
-  const left = toContent(paneRect(removedPane)).right;
-  const width = toContent(addedNumbers.getBoundingClientRect()).left - left;
-  return width > 0 ? { left, width } : null;
+  if (!removedPane) return null;
+  const seam = toContent(paneRect(removedPane)).right;
+  return { left: seam - RIBBON_WIDTH, width: RIBBON_WIDTH };
 }

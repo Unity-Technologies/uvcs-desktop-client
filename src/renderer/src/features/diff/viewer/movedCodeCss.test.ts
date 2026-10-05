@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MovedBlock } from './movedBlocks';
-import { linesOf, movedCodeCss, RIBBON_GAP, ribbonRoomCss } from './movedCodeCss';
+import { linesOf, movedCodeCss } from './movedCodeCss';
 
 /** Lines 3–5 of the original moved to 20–22, line 4 edited on the way (21 in the modified file). */
 const MOVE: MovedBlock = {
@@ -44,13 +44,6 @@ describe('movedCodeCss', () => {
     for (const line of [3, 4, 5]) expect(lit).toContain(`[data-line-type="change-deletion"][data-line="${line}"]`);
     for (const line of [20, 21, 22]) expect(lit).toContain(`[data-line-type="change-addition"][data-line="${line}"]`);
     expect(movedCodeCss([MOVE], undefined)).not.toContain('--diff-moved-emphasis');
-  });
-});
-
-describe('ribbonRoomCss', () => {
-  it('makes room between the panes for the ribbons, side by side only', () => {
-    expect(ribbonRoomCss('split')).toBe(`[data-additions] [data-gutter]{margin-inline-start:${RIBBON_GAP}px}`);
-    expect(ribbonRoomCss('unified')).toBe('');
   });
 });
 

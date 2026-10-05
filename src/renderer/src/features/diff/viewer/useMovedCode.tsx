@@ -6,7 +6,7 @@ import type { ComparisonMethod } from './comparisonMethod';
 import type { DiffLayout } from './diffPreferencesStore';
 import { detectMovedBlocks, moveContaining, type MovedBlock } from './movedBlocks';
 import { MovedCode } from './MovedCode';
-import { linesOf, movedCodeCss, ribbonRoomCss } from './movedCodeCss';
+import { linesOf, movedCodeCss } from './movedCodeCss';
 import { pierreShadowRoot } from './pierreDom';
 import { useChangeFlash } from './useChangeFlash';
 import { useShadowStyle } from './useShadowStyle';
@@ -31,7 +31,7 @@ interface MovedCodeOptions {
 
 /**
  * The code a text diff shows moved (`detectMovedBlocks`): in the moved color, its two places labeled and, side by
- * side, joined by a ribbon (`MovedCode`). A label takes the view to the other place and lights it for a moment.
+ * side, joined by a ribbon while it's hovered (`MovedCode`). A label takes the view to the other place and lights it for a moment.
  * Returns the overlay, to go in the scrolling element.
  */
 export function useMovedCode({ diff, comparisonMethod, layout, containerRef, virtualizer, diffedText, typed }: MovedCodeOptions): ReactNode {
@@ -40,7 +40,7 @@ export function useMovedCode({ diff, comparisonMethod, layout, containerRef, vir
   const [hovered, setHovered] = useState<MovedBlock | undefined>(undefined);
   const shownHovered = hovered && moves.includes(hovered) ? hovered : undefined;
   const flash = useChangeFlash();
-  useShadowStyle(containerRef, [found.length > 0 ? ribbonRoomCss(layout) : '', movedCodeCss(moves, shownHovered), flash.css].join('\n'));
+  useShadowStyle(containerRef, `${movedCodeCss(moves, shownHovered)}\n${flash.css}`);
   useHoveredRows(containerRef, moves, setHovered);
   const stopScrolling = useRef<() => void>(undefined);
   useEffect(() => () => stopScrolling.current?.(), []);
@@ -64,18 +64,13 @@ function useHoveredRows(containerRef: RefObject<HTMLElement | null>, moves: Move
   useEffect(() => {
     const container = containerRef.current;
     if (!container || moves.length === 0) return;
-    let current: MovedBlock | undefined;
-    const hover = (move: MovedBlock | undefined): void => {
-      if (move === current) return;
-      current = move;
-      setHovered(move);
-    };
+    // The labels set what's hovered too: setting the same move again changes nothing (React drops it).
     const onMove = (event: PointerEvent): void => {
       const line = changedLineUnder(event, container);
-      // Off the rows (on a label or a ribbon), they say what's hovered.
-      if (line !== 'outside') hover(line ? moveContaining(moves, line) : undefined);
+      // Off the rows (on a label), the label says what's hovered.
+      if (line !== 'outside') setHovered(line ? moveContaining(moves, line) : undefined);
     };
-    const onLeave = (): void => hover(undefined);
+    const onLeave = (): void => setHovered(undefined);
     container.addEventListener('pointermove', onMove);
     container.addEventListener('pointerleave', onLeave);
     return () => {
