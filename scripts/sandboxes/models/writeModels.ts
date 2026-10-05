@@ -1,5 +1,6 @@
 // Writes the models sandbox's Unity project (`scripts/sandboxes/models.sh`) as it stands after one step of its
-// history: every model (FBX, OBJ, glTF), its `.meta` (`unityMeta.ts`) and a prefab. Each step changes one thing an artist would, on top
+// history: every model (FBX, OBJ, glTF, GLB; the glTF ones in `gltfModels.ts`), its `.meta` (`unityMeta.ts`) and a
+// prefab. Each step changes one thing an artist would, on top
 // of the step before it, so each changeset shows one model diff case. Only the files whose bytes change are written,
 // and the models a step leaves out are deleted, so `cm ci --all --private` checks in exactly that step.
 // Usage (models.sh bundles it with esbuild first): node writeModels.mjs <step> <workspace>
@@ -7,6 +8,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { asciiFbx, box, sphere, type FbxNodeSpec } from '../../../src/renderer/src/features/diff/viewer/model/testing/asciiFbx';
+import { scoutGlb, type ScoutVersion } from './gltfModels';
 import { gltfastImporterMeta, guidOf, modelImporterMeta } from './unityMeta';
 
 /** What the artists have done so far: each step changes some of it. */
@@ -18,6 +20,7 @@ interface Project {
   barrel: { segments: number; uvAtlas: boolean };
   placeholderCube: boolean;
   lantern: { scale: number } | null;
+  scout: ScoutVersion | null;
 }
 
 const INITIAL: Project = {
@@ -28,6 +31,7 @@ const INITIAL: Project = {
   barrel: { segments: 12, uvAtlas: false },
   placeholderCube: true,
   lantern: null,
+  scout: null,
 };
 
 interface Step {
@@ -55,7 +59,9 @@ const STEPS: Record<string, Step> = {
   'art-barrel': { after: 'lantern-replaces-cube', change: (p) => (p.barrel.segments = 32) },
   'art-fingers': { after: 'art-barrel', change: (p) => (p.robot.fingers = true) },
   'art-lantern': { after: 'art-fingers', change: (p) => (p.lantern = { scale: 1.5 }) },
-  pending: { after: 'lantern-replaces-cube', change: (p) => (p.crate.unitScaleFactor = 100) },
+  scout: { after: 'lantern-replaces-cube', change: (p) => (p.scout = { wave: 'first', jump: false }) },
+  'scout-snappier': { after: 'scout', change: (p) => (p.scout = { wave: 'snappier', jump: true }) },
+  pending: { after: 'scout-snappier', change: (p) => (p.crate.unitScaleFactor = 100) },
 };
 
 function projectAfter(stepName: string): Project {
@@ -68,17 +74,21 @@ function projectAfter(stepName: string): Project {
 
 const MODELS = 'Assets/Models';
 
-/** Every file the project can hold, by path; null for one the project doesn't hold at this step. */
-function filesOf(p: Project): Record<string, string | null> {
-  const models: Record<string, string | null> = {
+/** A file's text or bytes; null for one the project doesn't hold at this step. */
+type FileContent = string | Uint8Array | null;
+
+/** Every file the project can hold, by path. */
+async function filesOf(p: Project): Promise<Record<string, FileContent>> {
+  const models: Record<string, FileContent> = {
     [`${MODELS}/Props/Crate.fbx`]: crate(p),
     [`${MODELS}/Props/Rock.fbx`]: rock(p),
     [`${MODELS}/Props/Barrel.obj`]: barrel(p),
     [`${MODELS}/Props/Placeholder_Cube.fbx`]: p.placeholderCube ? placeholderCube() : null,
     [`${MODELS}/Props/Lantern.gltf`]: p.lantern ? lantern(p.lantern.scale) : null,
     [`${MODELS}/Characters/Robot.fbx`]: robot(p),
+    [`${MODELS}/Characters/Scout.glb`]: p.scout ? await scoutGlb(p.scout) : null,
   };
-  const files: Record<string, string | null> = { ...models };
+  const files: Record<string, FileContent> = { ...models };
   for (const [path, content] of Object.entries(models)) files[`${path}.meta`] = content === null ? null : modelMeta(path);
   files['Assets/Prefabs/Robot.prefab'] = robotPrefab();
   files['ProjectSettings/ProjectVersion.txt'] = 'm_EditorVersion: 6000.3.10f1\n';
@@ -277,12 +287,12 @@ function robotPrefab(): string {
   ].join('\n');
 }
 
-function write(workspace: string, files: Record<string, string | null>): void {
+function write(workspace: string, files: Record<string, FileContent>): void {
   for (const [path, content] of Object.entries(files)) {
     const file = join(workspace, ...path.split('/'));
     if (content === null) {
       rmSync(file, { force: true });
-    } else if (!existsSync(file) || readFileSync(file, 'utf8') !== content) {
+    } else if (!existsSync(file) || !readFileSync(file).equals(Buffer.from(content))) {
       mkdirSync(dirname(file), { recursive: true });
       writeFileSync(file, content);
     }
@@ -291,4 +301,4 @@ function write(workspace: string, files: Record<string, string | null>): void {
 
 const [stepName, workspace] = process.argv.slice(2);
 if (!stepName || !workspace) throw new Error('Usage: node writeModels.mjs <step> <workspace>');
-write(workspace, filesOf(projectAfter(stepName)));
+write(workspace, await filesOf(projectAfter(stepName)));
