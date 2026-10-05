@@ -13,6 +13,16 @@ export function pierreShadowRoot(container: Element | null | undefined): ShadowR
   return container?.querySelector('diffs-container')?.shadowRoot ?? null;
 }
 
+/**
+ * The box of a pane of the diff (`data-code`: one side, side by side, or the unified column). Wrapping lines, Pierre lays
+ * both panes out as one grid and a pane has no box of its own (`display: contents`): its code column, the last of its
+ * own, ends where it does.
+ */
+export function paneRect(pane: Element): DOMRect {
+  const rect = pane.getBoundingClientRect();
+  return rect.width > 0 ? rect : (pane.querySelector(':scope > [data-content]')?.getBoundingClientRect() ?? rect);
+}
+
 /** Whether the text of the diff inside `container` is being typed into: the caret is in Pierre's editor. */
 export function isTypingIn(container: Element | null | undefined): boolean {
   const focused = pierreShadowRoot(container)?.activeElement;
@@ -82,4 +92,28 @@ function characterAt(root: ShadowRoot, row: Element, at: { x: number; y: number 
     character += node.textContent?.length ?? 0;
   }
   return 0;
+}
+
+/**
+ * The range of `row`'s text from character `start` to `end` (not included), across whatever spans Pierre wraps its
+ * tokens in; null when the row's text is shorter.
+ */
+export function rowTextRange(row: Element, start: number, end: number): Range | null {
+  const range = document.createRange();
+  let offset = 0;
+  let started = false;
+  const walker = document.createTreeWalker(row, NodeFilter.SHOW_TEXT);
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const length = node.textContent?.length ?? 0;
+    if (!started && start < offset + length) {
+      range.setStart(node, start - offset);
+      started = true;
+    }
+    if (started && end <= offset + length) {
+      range.setEnd(node, end - offset);
+      return range;
+    }
+    offset += length;
+  }
+  return null;
 }
