@@ -92,6 +92,19 @@ mode, a look), never on a loop; disposing it frees the GPU's memory at once (`fo
 files makes many viewers. Each version is a scene of its own (`buildModelScene`: its hierarchy, a material per slot, a
 wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out per mode (`layoutOf`):
 
+- **Diffs** (Differences): the version after colored by how far each vertex is from the version before's surface,
+  and the version before drawn as a ghost (`--status-deleted`) only where it is gone, over it in its depth. The
+  measure (`compareSurfaces`, in the model worker, once per pair) takes each version's surface whole, so a mesh
+  renamed or split still compares by shape, and measures each triangle exactly (`surfaceDistances`: closest point on
+  a triangle, a bounding volume hierarchy; a uniform grid was tried and dropped, as a dense part beside an empty one
+  put thousands of triangles in a cell). A vertex exactly at a vertex of the other version is 0 without a search,
+  and each point is measured once (files repeat a corner per polygon): a 2M-triangle car takes 1.4 s unchanged, 5 s
+  with every vertex moved. What nothing is near saturates at a tenth of the model ("12 cm+" in the strip). The
+  tolerance is a share of the model's size (`modelToleranceShare`, one setting for a bolt and a building), read out
+  in mm, cm or m; `heatColors` keeps the clay within it and turns to the accent beyond. ‹ › step through the changed
+  regions (`changedRegions`: changed vertices joined through their own triangles and shared corners, patches of
+  either version within 3% of the model merged; binning vertices into fixed cells was tried and dropped, as a coarse
+  mesh read as 30 regions), each framed and boxed. The strip adds "Moved 12% · up to 4.2 cm" (`movedStat`).
 - **Split**: a half each, before on the left. **Swipe**: both through one full view, each cut at the divider
   (`SwipeDivider`, the image swipe's). **Onion**: each version drawn apart, cleared transparent, and blended
   (`Blender`): it tone maps what was drawn and lays it over the backdrop, so the onion looks as the other modes do and
@@ -105,6 +118,15 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   part under it and its match on the other side. F frames what is picked, or the whole model; 0 the whole model
   (`modelKeys`, in the shortcut registry). Draw modes are Unity's (Shaded, Wireframe, Shaded wireframe), and material
   slots can show in their colors (`slotColor`: the avatar fills by name, so a renamed slot changes color).
+- **Bones** (offered when a version has some, remembered): each version's skeleton over it, a line from each bone
+  to its parent bone (`boneLinks`) and a dot per joint, where the bones are now.
+- **Takes** (`ModelAnimationBar`, when a version has any): a take picked from both versions' (matched by name,
+  `clipChoices`) plays on one timeline, each version its own take of that name at its own length, looping
+  (`timeInTake`), so a shorter take ends sooner beside the longer one; a take only one version has says so. It starts
+  at the rest pose, and going back to it or leaving puts every node back (`resetPose`). Bones are `Bone`s and skinned
+  meshes `SkinnedMesh`es (their twins too, so they deform alike), named as the takes' tracks address them
+  (`PropertyBinding.sanitizeNodeName`); the file's inverse bind matrices are carried into the viewer's space
+  (`bindSkin`), or the root's units and axes would skin the mesh twice.
 - **The scene**: clay lit by a soft studio (three's `RoomEnvironment`) and a key light over the camera's shoulder;
   a ground grid a power of ten apart that suits the model (1 m for a person), X and Z through the origin in Unity's
   axis colors; each version's pivot axes, turned as the node every mesh hangs under. A picked node with no geometry
