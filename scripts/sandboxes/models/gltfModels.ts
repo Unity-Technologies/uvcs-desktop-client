@@ -1,12 +1,13 @@
 // The models sandbox's glTF models (`writeModels.ts`), built as three.js scenes and written by three's GLTFExporter,
-// as Unity users get them from Blender or a web tool: the scout, a skinned character with takes, as GLB, and a barrel
-// as a `.gltf` with its geometry in a `.bin` beside it.
+// as Unity users get them from Blender or a web tool: the scout, a skinned character with takes, as GLB; the lamp, a
+// prop, as GLB; and a barrel as a `.gltf` with its geometry in a `.bin` beside it.
 
 import {
   AnimationClip,
   Bone,
   BoxGeometry,
   BufferAttribute,
+  ConeGeometry,
   CylinderGeometry,
   Euler,
   Group,
@@ -149,6 +150,23 @@ function scoutJump(): AnimationClip {
 function turns(bone: ScoutBone, times: number[], degrees: [number, number, number][]): KeyframeTrack {
   const values = degrees.flatMap(([x, y, z]) => new Quaternion().setFromEuler(new Euler(...([x, y, z].map((angle) => (angle * Math.PI) / 180) as [number, number, number]))).toArray());
   return new QuaternionKeyframeTrack(`${bone}.quaternion`, times, values);
+}
+
+export interface LampVersion {
+  poleHeight: number;
+  shadeRadius: number;
+}
+
+/** A standing lamp: a base, a pole and a shade, one mesh each. */
+export async function lampGlb({ poleHeight, shadeRadius }: LampVersion): Promise<Uint8Array> {
+  const root = new Group();
+  root.name = 'Lamp';
+  const metal = new MeshStandardMaterial({ name: 'Lamp_Metal', color: 0x777777, metalness: 1 });
+  const base = mesh('Lamp_Base', new CylinderGeometry(0.18, 0.2, 0.04, 24).translate(0, 0.02, 0), metal);
+  const pole = mesh('Lamp_Pole', new CylinderGeometry(0.02, 0.02, poleHeight, 12).translate(0, 0.04 + poleHeight / 2, 0), metal);
+  const shade = mesh('Lamp_Shade', new ConeGeometry(shadeRadius, 0.3, 24, 1, true).translate(0, 0.04 + poleHeight, 0), new MeshStandardMaterial({ name: 'Lamp_Fabric', color: 0xe8d9b0 }));
+  root.add(base, pole, shade);
+  return glb(root, []);
 }
 
 /** A barrel as a `.gltf` and the `.bin` its JSON names, as Blender's "glTF Separate" writes them. */

@@ -8,7 +8,7 @@
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { asciiFbx, box, sphere, type FbxNodeSpec, type FbxTake } from '../../../src/renderer/src/features/diff/viewer/model/testing/asciiFbx';
-import { barrelGltf, scoutGlb, type ScoutVersion } from './gltfModels';
+import { barrelGltf, lampGlb, scoutGlb, type LampVersion, type ScoutVersion } from './gltfModels';
 import { defaultImporterMeta, gltfastImporterMeta, guidOf, modelImporterMeta, type ClipSplit, type ModelImporterSettings } from './unityMeta';
 
 /** What the artists have done so far: each step changes some of it. */
@@ -25,6 +25,7 @@ interface Project {
   scout: ScoutVersion | null;
   /** The barrel exported again as a glTF, its geometry in a `.bin`: its height, in metres. */
   barrelGltf: { height: number } | null;
+  lamp: LampVersion | null;
 }
 
 /** Maya's one take, at 30 fps: the robot breathes for 60 frames (2 s), then waves for 36 (1.2 s). */
@@ -42,6 +43,7 @@ const INITIAL: Project = {
   lantern: null,
   scout: null,
   barrelGltf: null,
+  lamp: null,
 };
 
 interface Step {
@@ -50,7 +52,10 @@ interface Step {
   change: (project: Project) => void;
 }
 
-/** The history, in models.sh's order. `art-*` are on the branch /main/art-pass; `pending` is left uncommitted. */
+/**
+ * The history, in models.sh's order. `art-*` are on the branch /main/art-pass; `lamp-taller` on /main/conflict-lamp,
+ * which `lamp-wider` changes the same file on /main after, so merging it conflicts; `pending` is left uncommitted.
+ */
 const STEPS: Record<string, Step> = {
   initial: { change: () => {} },
   reexport: { after: 'initial', change: (p) => (p.blenderVersion = '4.2.3') },
@@ -78,7 +83,10 @@ const STEPS: Record<string, Step> = {
   'robot-animated': { after: 'crate-import-scale', change: (p) => (p.robot.animated = true) },
   // The clip now ends past the take's last frame: Unity holds the last pose for the frames the take hasn't.
   'robot-wave-clip': { after: 'robot-animated', change: (p) => (p.robot.waveLastFrame = 120) },
-  pending: { after: 'robot-wave-clip', change: (p) => (p.crate.unitScaleFactor = 100) },
+  lamp: { after: 'robot-wave-clip', change: (p) => (p.lamp = { poleHeight: 1.6, shadeRadius: 0.25 }) },
+  'lamp-taller': { after: 'lamp', change: (p) => (p.lamp = { poleHeight: 1.9, shadeRadius: 0.25 }) },
+  'lamp-wider': { after: 'lamp', change: (p) => (p.lamp = { poleHeight: 1.6, shadeRadius: 0.35 }) },
+  pending: { after: 'lamp-wider', change: (p) => (p.crate.unitScaleFactor = 100) },
 };
 
 function projectAfter(stepName: string): Project {
@@ -104,6 +112,7 @@ async function filesOf(p: Project): Promise<Record<string, FileContent>> {
     [`${MODELS}/Props/Barrel.gltf`]: barrelExport?.gltf ?? null,
     [`${MODELS}/Props/Placeholder_Cube.fbx`]: p.placeholderCube ? placeholderCube() : null,
     [`${MODELS}/Props/Lantern.gltf`]: p.lantern ? lantern(p.lantern.scale) : null,
+    [`${MODELS}/Props/Lamp.glb`]: p.lamp ? await lampGlb(p.lamp) : null,
     [`${MODELS}/Characters/Robot.fbx`]: robot(p),
     [`${MODELS}/Characters/Scout.glb`]: p.scout ? await scoutGlb(p.scout) : null,
   };
