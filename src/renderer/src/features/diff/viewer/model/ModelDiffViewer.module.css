@@ -81,3 +81,18 @@
   font-size: var(--text-sm);
   transform: translateX(-50%);
 }
+
+/* The stage's bottom left: the take bar over the info strip, stacked so they never overlap however the strip wraps;
+   clear of the view controls' column on the right. */
+.dock {
+  position: absolute;
+  right: 64px;
+  bottom: var(--space-3);
+  left: var(--space-3);
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  pointer-events: none;
+}

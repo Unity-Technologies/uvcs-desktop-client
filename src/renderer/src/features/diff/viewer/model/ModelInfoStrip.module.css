@@ -1,9 +1,4 @@
 .strip {
-  position: absolute;
-  bottom: var(--space-3);
-  left: var(--space-3);
-  right: 64px;
-  z-index: 3;
   display: flex;
   flex-wrap: wrap;
   align-items: center;

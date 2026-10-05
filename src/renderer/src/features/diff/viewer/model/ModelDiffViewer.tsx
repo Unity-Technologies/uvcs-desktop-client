@@ -299,8 +299,10 @@ export function ModelDiffViewer({ workspacePath, sources, path, original, modifi
               bones={hasBones ? { shown: modelShowBones, onShow: setModelShowBones } : null}
               onFrame={frameShown}
             />
-            {renderer && choices.length > 0 && <ModelAnimationBar renderer={renderer} scenes={scenes} choices={choices} comparable={comparable} />}
-            <ModelInfoStrip stats={shownStats} />
+            <div className={styles.dock}>
+              {renderer && choices.length > 0 && <ModelAnimationBar renderer={renderer} scenes={scenes} choices={choices} comparable={comparable} />}
+              <ModelInfoStrip stats={shownStats} />
+            </div>
           </>
         )}
       </div>
