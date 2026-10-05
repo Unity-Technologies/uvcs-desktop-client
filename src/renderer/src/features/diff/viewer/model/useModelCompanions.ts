@@ -1,10 +1,11 @@
 import { useQueries } from '@tanstack/react-query';
-import { useContext, useMemo } from 'react';
+import { useContext, useMemo, useRef } from 'react';
 import type { ContentSource, ModelBytes } from '@shared/domain/content';
 import { api } from '../../../../api/client';
 import { queryKeys } from '../../../../api/queryKeys';
 import { contentCaching } from '../useDiffContents';
 import { gltfCompanions } from './gltfJson';
+import { sameBytes } from './sameBytes';
 import { SiblingFinderContext, sourcePathOf, type DiffSide } from './modelSiblings';
 
 const NONE: Readonly<Record<string, Uint8Array>> = {};
@@ -39,10 +40,20 @@ export function useModelCompanions(workspacePath: string, side: DiffSide, source
     combine: combineReads,
   });
   const names = found.map(({ name }) => name).join('\n');
-  return useMemo(() => {
+  const read = useMemo(() => {
     if (needed.length === 0) return NONE;
     if (reads.loading) return null;
     const listed = names.split('\n');
     return Object.fromEntries(reads.bytes.flatMap((bytes, i) => (bytes ? [[listed[i]!, bytes]] : [])));
   }, [needed, names, reads]);
+  // The companions as first read while their bytes stay the same: a pending `.bin` read again comes as a new array.
+  const kept = useRef(read);
+  if (read && kept.current && read !== kept.current && sameCompanions(read, kept.current)) return kept.current;
+  kept.current = read;
+  return read;
+}
+
+function sameCompanions(a: Readonly<Record<string, Uint8Array>>, b: Readonly<Record<string, Uint8Array>>): boolean {
+  const names = Object.keys(a);
+  return names.length === Object.keys(b).length && names.every((name) => b[name] !== undefined && sameBytes(a[name]!, b[name]!));
 }

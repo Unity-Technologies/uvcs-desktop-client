@@ -41,6 +41,7 @@ import { ModelViewControls } from './ModelViewControls';
 import { matchNodes } from './nodeMatching';
 import { framedView, type BoundsLike, type OrbitView, type Vector } from './orbitCamera';
 import { useModelReadOptions } from './useModelReadOptions';
+import { useStableModel } from './useStableModel';
 import { useModelPalette } from './useModelPalette';
 import { useModelRenderer } from './useModelRenderer';
 import { useOrbitGestures } from './useOrbitGestures';
@@ -69,10 +70,12 @@ interface Picked {
 }
 
 export function ModelDiffViewer({ workspacePath, sources, original, modified, mode, settings }: ModelDiffViewerProps) {
-  const optionsBefore = useModelReadOptions(workspacePath, 'original', sources.original, original.model, settings?.original);
-  const optionsAfter = useModelReadOptions(workspacePath, 'modified', sources.modified, modified.model, settings?.modified);
-  const before = useReadModel(original.model, optionsBefore);
-  const after = useReadModel(modified.model, optionsAfter);
+  const modelBefore = useStableModel(original.model);
+  const modelAfter = useStableModel(modified.model);
+  const optionsBefore = useModelReadOptions(workspacePath, 'original', sources.original, modelBefore, settings?.original);
+  const optionsAfter = useModelReadOptions(workspacePath, 'modified', sources.modified, modelAfter, settings?.modified);
+  const before = useReadModel(modelBefore, optionsBefore);
+  const after = useReadModel(modelAfter, optionsAfter);
   const { modelDrawMode, setModelDrawMode, modelColorBySlot, setModelColorBySlot, modelToleranceShare, setModelToleranceShare, modelShowBones, setModelShowBones } =
     useDiffPreferences();
   const paneRef = useRef<HTMLDivElement>(null);
