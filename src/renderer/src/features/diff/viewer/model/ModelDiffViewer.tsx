@@ -26,6 +26,8 @@ import { ModelInfoStrip } from './ModelInfoStrip';
 import { modelCommandOf } from './modelKeys';
 import { modelReadFailureWords } from './modelReadFailureWords';
 import { buildModelScene, pivotOf, type ModelScene } from './modelScene';
+import { ModelAnimationBar } from './ModelAnimationBar';
+import { clipChoices } from './modelClips';
 import { ModelDifferencesControls } from './ModelDifferencesControls';
 import { fullHeatAt, ghostColors, heatColors, type Rgb } from './heatColors';
 import { modelStats, movedStat } from './modelStats';
@@ -61,7 +63,8 @@ interface Picked {
 export function ModelDiffViewer({ original, modified, mode }: ModelDiffViewerProps) {
   const before = useReadModel(original.model);
   const after = useReadModel(modified.model);
-  const { modelDrawMode, setModelDrawMode, modelColorBySlot, setModelColorBySlot, modelToleranceShare, setModelToleranceShare } = useDiffPreferences();
+  const { modelDrawMode, setModelDrawMode, modelColorBySlot, setModelColorBySlot, modelToleranceShare, setModelToleranceShare, modelShowBones, setModelShowBones } =
+    useDiffPreferences();
   const paneRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -178,6 +181,13 @@ export function ModelDiffViewer({ original, modified, mode }: ModelDiffViewerPro
   };
   const shownStats = useMemo(() => (differences && comparison ? [...stats, movedStat(comparison, tolerance)] : stats), [differences, comparison, stats, tolerance]);
 
+  const choices = useMemo(() => clipChoices(old?.model.clips ?? [], next?.model.clips ?? []), [old, next]);
+  const hasBones = (old?.summary.totals.bones ?? 0) + (next?.summary.totals.bones ?? 0) > 0;
+  useEffect(() => {
+    renderer?.setShowBones(hasBones && modelShowBones);
+  }, [renderer, hasBones, modelShowBones]);
+  const scenes = useMemo(() => ({ before: sceneBefore, after: sceneAfter }), [sceneBefore, sceneAfter]);
+
   const matching = useMemo(() => old && next && matchNodes(old.summary, next.summary), [old, next]);
   const onClick = useCallback(
     (x: number, y: number) => {
@@ -268,7 +278,15 @@ export function ModelDiffViewer({ original, modified, mode }: ModelDiffViewerPro
               </div>
             )}
             {rows && paneWidth > 0 && !docked && changesPanel}
-            <ModelViewControls drawMode={modelDrawMode} onDrawMode={setModelDrawMode} colorBySlot={modelColorBySlot} onColorBySlot={setModelColorBySlot} onFrame={frameShown} />
+            <ModelViewControls
+              drawMode={modelDrawMode}
+              onDrawMode={setModelDrawMode}
+              colorBySlot={modelColorBySlot}
+              onColorBySlot={setModelColorBySlot}
+              bones={hasBones ? { shown: modelShowBones, onShow: setModelShowBones } : null}
+              onFrame={frameShown}
+            />
+            {renderer && choices.length > 0 && <ModelAnimationBar renderer={renderer} scenes={scenes} choices={choices} comparable={comparable} />}
             <ModelInfoStrip stats={shownStats} />
           </>
         )}
