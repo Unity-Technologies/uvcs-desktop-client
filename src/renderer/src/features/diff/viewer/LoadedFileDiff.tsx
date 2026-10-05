@@ -1,5 +1,5 @@
 import { RefreshCw } from 'lucide-react';
-import { Suspense, useMemo, useRef, type ReactNode } from 'react';
+import { Suspense, useContext, useMemo, useRef, type ReactNode } from 'react';
 import { openFile } from '../../../components/externalApps/externalAppOperations';
 import { lazyComponent } from '../../../lib/lazyComponent';
 import { hotkey } from '../../../lib/shortcutRegistry';
@@ -19,7 +19,8 @@ import { DiffViewerFrame } from './DiffViewerFrame';
 import { ImageModeSwitch } from './ImageModeSwitch';
 import { hasLineChanges } from './lineDiff';
 import { MethodHidingNotice } from './MethodHidingNotice';
-import { modelOfMeta } from './model/modelMeta';
+import { modelBesideMeta, modelOfMeta } from './model/modelMeta';
+import { SiblingFinderContext } from './model/modelSiblings';
 import { ModelModeSwitch } from './ModelModeSwitch';
 import { NothingToDiff } from './NothingToDiff';
 import { renderedEdits } from './renderedEdits';
@@ -82,8 +83,10 @@ export function LoadedFileDiff({ workspacePath, contents, fileName, title, ident
   const representation = representations[extension] ?? rendered;
   const presentation = diffPresentation(left, right, representation);
   const isText = presentation.kind === 'text';
-  // A model's .meta shows as the model under its import settings, unless the user picked its text (`representations.meta`).
-  const metaModel = isText ? modelOfMeta(fileName) : null;
+  // A model's .meta shows as the model under its import settings where the model can be found beside it, unless the
+  // user picked its text (`representations.meta`).
+  const findSibling = useContext(SiblingFinderContext);
+  const metaModel = isText && modelOfMeta(fileName) !== null ? modelBesideMeta(findSibling, { original: contents.original, modified: contents.modified }) : null;
   const metaAsModel = metaModel !== null && (representations.meta ?? 'model') === 'model';
   const editable = isText && editablePath !== null;
   const diffs = useLineDiffs({ isText, original: left.text ?? '', saved: right.text, current, comparisonMethod, fileName });

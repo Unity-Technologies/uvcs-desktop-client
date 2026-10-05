@@ -13,7 +13,7 @@ import { contentCaching } from '../useDiffContents';
 import { ModelDiffViewer } from './ModelDiffViewer';
 import type { ModelDiffMode } from './modelDiffModes';
 import { readImportSettings } from './modelImportSettings';
-import { modelOfMeta } from './modelMeta';
+import { modelBesideMeta, modelOfMeta } from './modelMeta';
 import { SiblingFinderContext, sourcePathOf } from './modelSiblings';
 
 interface ModelMetaDiffProps {
@@ -30,12 +30,7 @@ const EMPTY: FileContent = { text: '', isBinary: false, size: 0 };
 export function ModelMetaDiff({ workspacePath, sources, texts, mode }: ModelMetaDiffProps) {
   const findSibling = useContext(SiblingFinderContext);
   // Each side's model is beside that side's `.meta`; a side without one (added, deleted) has no model to show.
-  const modelBeside = (side: 'original' | 'modified'): ContentSource | null => {
-    const metaPath = sourcePathOf(sources[side]);
-    const model = metaPath === null || texts[side] === null ? null : modelOfMeta(metaPath);
-    return model === null || metaPath === null ? null : findSibling(side, sources[side], metaPath, model.split(/[\\/]/).pop()!);
-  };
-  const modelSources = { original: modelBeside('original'), modified: modelBeside('modified') };
+  const modelSources = modelBesideMeta(findSibling, sources) ?? { original: null, modified: null };
   const modelName = sourcePathOf(sources.modified) ?? sourcePathOf(sources.original) ?? '';
   const reads = useQueries({
     queries: (['original', 'modified'] as const).map((side) => {
