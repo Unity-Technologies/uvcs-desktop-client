@@ -81,6 +81,12 @@
   --annotate-age-3: color-mix(in srgb, var(--accent) 52%, transparent);
   --annotate-age-4: color-mix(in srgb, var(--accent) 74%, transparent);
   --annotate-age-5: var(--accent);
+
+  /* Code a diff shows moved (`movedCodeCss`): its rows take the moved color the way removed and added rows take red
+     and green, a ribbon joins its two places side by side, and the move under the pointer stands out, both places. */
+  --diff-moved-ribbon: color-mix(in srgb, var(--change-moved) 18%, transparent);
+  --diff-moved-ribbon-hover: color-mix(in srgb, var(--change-moved) 34%, transparent);
+  --diff-moved-emphasis: color-mix(in srgb, var(--change-moved) 9%, transparent);
 }
 
 :root,
