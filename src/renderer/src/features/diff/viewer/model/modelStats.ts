@@ -3,6 +3,7 @@
 
 import { formatCount } from '../../../../lib/text';
 import type { ModelSummary } from './modelSummary';
+import { changeShares, type SurfaceComparison } from './surfaceComparison';
 import { formatLength } from './modelUnits';
 
 export interface ModelStat {
@@ -31,6 +32,20 @@ export function modelStats(before: ModelSummary | null, after: ModelSummary | nu
     stat('Animations', optional((summary) => summary.clips.length)),
     stat('Size', (summary) => sizeOf(summary, largestSide(before, after)), 'Width × height × depth in Unity'),
   ].filter((value): value is ModelStat => value !== null);
+}
+
+/**
+ * The Differences mode's figure: how much of the version after moved past the tolerance, and the farthest any part
+ * moved, "12% · up to 4.2 cm"; "None" when nothing did.
+ */
+export function movedStat(comparison: SurfaceComparison, tolerance: number): ModelStat {
+  const { moved, gone, farthest } = changeShares(comparison, tolerance);
+  const tip = 'The share of the vertices that moved more than the tolerance, and the farthest any did';
+  if (moved === 0 && gone === 0) return { label: 'Moved', before: null, after: 'None', tip };
+  const share = moved > 0 && moved < 0.01 ? '<1%' : `${Math.round(moved * 100)}%`;
+  // As far as the measure goes: a part that came or went, which is farther than any number.
+  const beyond = farthest >= comparison.maxDistance * 0.999 ? '+' : '';
+  return { label: 'Moved', before: null, after: `${share} · up to ${formatLength(farthest)}${beyond}`, tip };
 }
 
 /** "1.71 × 1.72 × 3.93 m": the three in the unit that reads `largest`, so both versions read in one unit. */

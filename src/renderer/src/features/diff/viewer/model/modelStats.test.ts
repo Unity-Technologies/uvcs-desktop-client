@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { modelStats } from './modelStats';
+import { modelStats, movedStat } from './modelStats';
 import { modelSummary } from './modelSummary';
 import { testModel } from './testing/testModels';
 
@@ -27,5 +27,22 @@ describe('modelStats', () => {
     expect(modelStats(pebble, crate).find((stat) => stat.label === 'Size')).toMatchObject({ before: '0.04 × 0.02 × 0.03 m', after: '1 × 0.5 × 0.25 m' });
     const speck = modelSummary(testModel({ nodes: [{ name: 'Speck', mesh: { size: [0.009, 0.0045, 0.0123] } }] }));
     expect(modelStats(speck, crate).find((stat) => stat.label === 'Size')?.before).toBe('0.009 × 0.0045 × 0.0123 m');
+  });
+});
+
+describe('movedStat', () => {
+  const comparison = (after: number[], before: number[] = [0]) => ({ before: [new Float32Array(before)], after: [new Float32Array(after)], size: 10, maxDistance: 1 });
+
+  it('tells the share that moved past the tolerance, and the farthest', () => {
+    expect(movedStat(comparison([0, 0, 0, 0.042]), 0.001).after).toBe('25% · up to 4.2 cm');
+  });
+
+  it('tells a part that came or went as farther than the measure goes', () => {
+    expect(movedStat(comparison([0, 1]), 0.001).after).toBe('50% · up to 1 m+');
+  });
+
+  it('tells a tiny share as under 1%, and nothing moved as None', () => {
+    expect(movedStat(comparison([...Array(999).fill(0), 0.5]), 0.001).after).toBe('<1% · up to 50 cm');
+    expect(movedStat(comparison([0, 0.0005]), 0.001).after).toBe('None');
   });
 });
