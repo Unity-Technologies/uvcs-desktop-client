@@ -1,0 +1,8 @@
+/* The two places of a move, compared: framed like code, scrolling on their own past the dialog's height. */
+.diff {
+  min-height: 80px;
+  overflow: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+}

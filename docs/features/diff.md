@@ -119,6 +119,60 @@ file's first change or the previous file's last, asking about unsaved edits firs
 or deleted file) is one change, "1 of 1"; a file with none to step through (an image, a binary, identical versions)
 keeps the arrows, "No changes", so stepping through the list never stops there.
 
+## Moved code
+
+Every text diff tells code that moved from code removed and added, in the renderer, from the one `lineDiff` (no `cm`
+command, and it follows what's typed). `detectMovedBlocks` (`features/diff/viewer/movedBlocks`) takes each change's
+removed and added sides and looks for the other side of another change, or a run of its lines, holding at least 80%
+of its words (`MOVED_SIMILARITY`): words are runs of letters and digits of any script, compared under the comparison
+method, and counted by a bounded edit distance (`diffArrays` with `maxEditLength`), so code moved and edited a little
+is still a move. The official client's rules, which it was taken from: a change whose own two sides are that alike is
+an edit in place, never a move; a move is 2 lines at least (`MIN_MOVED_LINES`); a diff of more than 50 changes or 500
+changed lines (`MAX_BLOCKS`, `MAX_CHANGED_LINES`) is a rewrite, not looked into. Unlike it, lines with no letter or
+digit (braces, blanks) are never a move, each line is in one move at most (the closest match wins), and a diff spends
+20,000 comparisons at most (`MAX_COMPARISONS`, a few milliseconds at worst). There are no settings: the official
+client's three (on, similarity, minimum lines) sit in a menu few find, and these defaults are its own.
+
+What shows (`useMovedCode`, `MovedCode`):
+
+- Every line of a move takes `--change-moved`, the color of moved files in lists, where it'd take red or green
+  (`movedCodeCss` sets Pierre's `--diffs-deletion-base`/`--diffs-addition-base` on its rows and number cells, which
+  recolors the number and the bar, and their background to a lighter `--diff-moved-tint` through Pierre's
+  `--diffs-bg-*-override`s), so what moved shows at a glance and reads as one block, quieter than the changes around it. The lines
+  changed on the way (edited, or only added or removed inside it: `MovedBlock.changed`) are tinted a little stronger
+  (`--diff-moved-edited`) and their changed words stronger still (`--diff-moved-word`). Tried and rejected: the lines
+  changed on the way in red and green (a move broken into pieces that read as changes of their own); every moved line
+  in red and green with the moved color on the labels only, as the official client keeps its own colors, or on the
+  line numbers too (in neither did what moved show at a glance).
+- The words a moved line changed are marked against the line it became, as the official client marks them: within a line diff of the two places (`MovedBlock.changed`),
+  each removed line pairs with the following added line most like it (`MovedBlock.replaced`, half of their words the
+  same at least; a line only added on the way pairs with none), and the pair is word-diffed as Pierre diffs one
+  (`movedWordMarks`, `lineWordMarks`, `WORD_MARKS`). Pierre's own marks on moved lines compare them with whatever line
+  stands beside them, so they're dropped (`movedCodeCss`) and these drawn with the browser's highlights
+  (`useMovedWordMarks`, `CSS.highlights`, drawn again as rows render). Marking Pierre's rows instead
+  (`refreshWordMarks`) was rejected: each of its renders (its worker's colors, a keystroke) draws its own marks back.
+- Each place has a label, "Moved to line 143" or "Moved from line 4" with an arrow toward the other place, that scrolls
+  there and lights it up (`scrollToChange`, `useChangeFlash`). It goes in the hatched gap across from the place when
+  one is beside half of it at least (`labelSpot`: the space that says the code is gone tells where it went), else at
+  the right end of the place's bottom edge: the top edge is the change's chip's. In a pane narrower than 320 px it
+  shows the arrow and the number only, the words in its tooltip.
+- The label's other button, "Compare moved code", opens the two places side by side (`openMovedCodeDialog`, of
+  `movedCopies`): a read-only diff of what moved with what it became, in the diff's look, layout and comparison
+  method, so only what changed on the way shows as changed. Its lines are numbered from the start of the moved code
+  (Pierre numbers a diff from 1); the title says where both places are. Putting the two places side by side in the
+  diff itself, each side scrolling on its own, was rejected: everything in the diff (its gaps, navigation, discards,
+  the editor, the labels) relies on both sides' rows lining up.
+- Pointing at moved code or its label lights the move up in both places and, side by side, draws a ribbon joining them
+  (`ribbonPath`, level with the rows at both ends) over the last 24 px of the removed side's pane, where code is least
+  likely to be, up to the seam; it goes once the pointer leaves, and the pointer and selections go through it. A place
+  not rendered yet is where Pierre lays it out (`pierreLinePosition`). A ribbon always shown took room between the
+  panes, which opened and closed as code was moved and saved; one always shown over the seam would cover long lines.
+- A big text diffed only once typing pauses (`diffsEveryKeystroke`) hides its moves until then: its lines move under
+  them meanwhile. Other texts are diffed at every keystroke, and their moves follow.
+
+A move isn't a stop of its own when moving through changes: its two places are changes like any other.
+`scripts/sandboxes/moved-code.sh` builds a changeset and pending changes that move code.
+
 ## Comparison method
 
 Every text diff compares lines under the official client's methods (Ignore EOLs, Ignore
@@ -179,7 +233,11 @@ that patch or read internals have a test that fails when an update moves them:
 
 - `pierreDom`: where Pierre renders (the `diffs-container` shadow root, its rows' `data-line-type`, `data-line` and
   `data-column-number`), the gutter button slot moved to the hovered line, and hovering anew under a still pointer.
-  The tests run without a page, so this one is checked on screen.
+  The tests run without a page, so this one is checked on screen. Wrapping lines, a pane (`data-code`) has no box of
+  its own (`display: contents`), and its code column stands for it (`paneRect`).
+- `movedCodeCss`, `MovedCode`, `useMovedWordMarks`: moved code recolored through Pierre's `--diffs-deletion-base` and
+  `--diffs-addition-base`, its labels in the gaps across from it (`data-content-buffer`), and its words marked over a
+  row's text nodes, which hold its line in order (`rowTextRange`). Checked on screen too.
 - `pierreLineComparison`: typing re-diffs under the comparison method (see Comparison method).
 - `pierrePlainTextRender`: a diff shown as plain text renders once, not at every render (see Editing in the diff).
 - `pierreSessionEndRefresh`: a diff typed into isn't highlighted again as it goes away (see Editing in the diff).

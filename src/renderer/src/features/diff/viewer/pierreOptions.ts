@@ -9,6 +9,12 @@ import type { DiffLayout } from './diffPreferencesStore';
  */
 export const PIERRE_SURFACE_CSS = ':host{--diffs-bg:var(--bg-surface);background-color:var(--bg-surface);--diffs-font-family:var(--font-mono)}';
 
+/**
+ * How a diff marks the words two lines change: word by word, nothing on lines past 1,000 characters (Pierre's own
+ * default, written out so moved code is marked the same way: `movedWordMarks`).
+ */
+export const WORD_MARKS = { lineDiffType: 'word', maxLineDiffLength: 1_000 } as const;
+
 interface DiffAppearance {
   theme: ResolvedTheme;
   layout: DiffLayout;
@@ -28,7 +34,7 @@ export function pierreDiffOptions<LAnnotation = undefined>({ theme, layout, coll
     overflow: wrapLines ? 'wrap' : 'scroll',
     diffIndicators: 'bars',
     hunkSeparators: 'line-info-basic',
-    lineDiffType: 'word',
+    ...WORD_MARKS,
     expandUnchanged: !collapseUnchanged,
     disableFileHeader: true,
     stickyHeader: false,
