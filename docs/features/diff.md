@@ -142,7 +142,7 @@ What shows (`useMovedCode`, `MovedCode`):
 - Each place has a label, "Moved to line 143" or "Moved from line 4" with an arrow toward the other place, that scrolls
   there and lights it up (`scrollToChange`, `useChangeFlash`). It goes in the hatched gap across from the place when
   one is beside half of it at least (`labelSpot`: the space that says the code is gone tells where it went), else at
-  the right end of the place's bottom edge: the top edge is the change's chip's. In a pane narrower than 420 px it
+  the right end of the place's bottom edge: the top edge is the change's chip's. In a pane narrower than 320 px it
   shows the arrow and the number only, the words in its tooltip.
 - Side by side, the panes make room between them (`ribbonRoomCss`, 28 px, kept while typing so the code doesn't shift)
   for a ribbon joining the two places (`ribbonPath`), level with the rows at both ends. A place not rendered yet is

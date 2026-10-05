@@ -44,7 +44,7 @@ interface Layout {
 
 const NOTHING: Layout = { moves: [], gap: null };
 /** Narrower than this, a pane's code would hide behind a label in words. */
-const SHORT_LABEL_PANE_WIDTH = 420;
+const SHORT_LABEL_PANE_WIDTH = 320;
 const OTHER_SIDE: Record<DiffSide, DiffSide> = { deletions: 'additions', additions: 'deletions' };
 
 /**
@@ -152,8 +152,16 @@ function measureMoves(container: HTMLElement, root: ShadowRoot, virtualizer: Vir
   const fileContainer = container.querySelector('diffs-container');
   const rowHeight = root.querySelector('[data-line]')?.getBoundingClientRect().height || 20;
   const linePosition = (line: ChangedLine): number | undefined => (fileContainer ? pierreLinePosition(virtualizer, fileContainer, line) : undefined);
-  const gapsAcross = (side: DiffSide): Box[] =>
-    layout === 'split' ? [...root.querySelectorAll(`[data-${OTHER_SIDE[side]}] [data-content-buffer]`)].map((gap) => toContent(gap.getBoundingClientRect())) : [];
+  /** The gaps in the other pane, cut to the part in sight: a pane whose lines scroll sideways has gaps as wide as its longest line. */
+  const gapsAcross = (side: DiffSide): Box[] => {
+    const otherPane = layout === 'split' ? root.querySelector(`[data-${OTHER_SIDE[side]}]`) : null;
+    if (!otherPane) return [];
+    const { left, right } = toContent(paneRect(otherPane));
+    return [...otherPane.querySelectorAll('[data-content-buffer]')].map((gap) => {
+      const box = toContent(gap.getBoundingClientRect());
+      return { ...box, left: Math.max(box.left, left), right: Math.min(box.right, right) };
+    });
+  };
 
   /** Where a place is, from its rows when they're rendered, else from where Pierre lays them out; its label once they're rendered. */
   const place = (move: MovedBlock, side: DiffSide): { span: Span; label: PlacedLabel | null } | null => {
