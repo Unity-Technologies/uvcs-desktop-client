@@ -66,6 +66,33 @@ describe('changeRows', () => {
   });
 });
 
+describe('changeRows, for the import settings', () => {
+  it('tells a Scale Factor changed, and Convert Units turned off alone', () => {
+    expect(titles([{ kind: 'scaleFactor', before: { scaleFactor: 1, convertUnits: true }, after: { scaleFactor: 100, convertUnits: true } }])).toEqual(['Scale Factor in the import settings: 1 → 100']);
+    expect(titles([{ kind: 'scaleFactor', before: { scaleFactor: 1, convertUnits: true }, after: { scaleFactor: 1, convertUnits: false } }])).toEqual(['Convert Units turned off in the import settings']);
+  });
+
+  it("tells what the settings ask of the model that it doesn't have, as risks", () => {
+    const rows = changeRows([
+      { kind: 'remapLost', slot: 'Wood' },
+      { kind: 'clipPastTake', clip: 'Wave', take: 'Wave', lastFrame: 36, takeFrames: 24 },
+      { kind: 'clipTakeLost', clip: 'Jump', take: 'Jump' },
+    ]);
+    expect(rows.map((row) => [row.tone, row.title])).toEqual([
+      ['risk', "The material remapped to Wood isn't used"],
+      ['risk', "Clip Wave ends at frame 36, past its take's 24 frames"],
+      ['risk', 'Clip Jump is cut from the take Jump, which is gone'],
+    ]);
+  });
+
+  it("folds a Humanoid avatar's lost bones into one row", () => {
+    const lost = ['LeftHand', 'LeftLowerArm', 'LeftUpperArm'].map((humanName): ModelChange => ({ kind: 'avatarBoneLost', humanName, boneName: `${humanName}_bone` }));
+    const [row] = changeRows(lost);
+    expect(row).toMatchObject({ tone: 'risk', title: 'The Humanoid avatar lost 3 of its bones' });
+    expect(row!.items!.map((item) => item.label)).toEqual(['LeftHand → LeftHand_bone', 'LeftLowerArm → LeftLowerArm_bone', 'LeftUpperArm → LeftUpperArm_bone']);
+  });
+});
+
 describe('formatLength', () => {
   it('picks the unit that keeps a length readable', () => {
     expect([180, 1.8, 0.45, 0.05, 0.005, 0.0004].map(formatLength)).toEqual(['180 m', '1.8 m', '45 cm', '5 cm', '5 mm', '0.4 mm']);

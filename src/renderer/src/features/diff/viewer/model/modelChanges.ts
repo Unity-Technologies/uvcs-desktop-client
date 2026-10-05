@@ -56,9 +56,21 @@ export type ModelChange =
   | { kind: 'clipLength'; name: string; before: number; after: number }
   | { kind: 'textures'; added: string[]; removed: string[] }
   | { kind: 'upAxis'; before: string; after: string }
+  /** What the model's import settings (`importSettingsChanges`) do with it now, and no longer fits it. */
+  | { kind: 'scaleFactor'; before: ScaleSettings; after: ScaleSettings }
+  | { kind: 'remapLost'; slot: string }
+  | { kind: 'avatarBoneLost'; humanName: string; boneName: string }
+  | { kind: 'clipPastTake'; clip: string; take: string; lastFrame: number; takeFrames: number }
+  | { kind: 'clipTakeLost'; clip: string; take: string }
   | { kind: 'exporter'; before: string | null; after: string | null };
 
 export type ModelChangeKind = ModelChange['kind'];
+
+/** The import settings that scale a model in Unity. */
+export interface ScaleSettings {
+  scaleFactor: number;
+  convertUnits: boolean;
+}
 
 /** Why a model's size changed in Unity: the file's units (metres per unit), or its import settings' scale. */
 export type ResizeCause = { kind: 'units'; before: number; after: number } | { kind: 'importSettings'; before: number; after: number };
@@ -78,6 +90,10 @@ export function isRisk(change: ModelChange): boolean {
     case 'blendShapeRemoved':
     case 'clipRenamed':
     case 'clipRemoved':
+    case 'remapLost':
+    case 'avatarBoneLost':
+    case 'clipPastTake':
+    case 'clipTakeLost':
       return true;
     case 'lightmapUvs':
       return !change.now;

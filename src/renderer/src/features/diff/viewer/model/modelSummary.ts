@@ -73,6 +73,8 @@ export interface ModelSummary {
   unitScale: number;
   /** What the import settings scale the model by (`ParsedModel.importScale`). */
   importScale: number;
+  /** The takes' frames per second (`ParsedModel.frameRate`). */
+  frameRate: number | null;
   upAxis: ParsedModel['upAxis'];
   exportedFrom: string | null;
   totals: { triangles: number; vertices: number; meshes: number; materials: number; bones: number; blendShapes: number };
@@ -117,6 +119,7 @@ export function modelSummary(model: ParsedModel): ModelSummary {
     textures: model.textures,
     unitScale: model.unitScale,
     importScale: model.importScale,
+    frameRate: model.frameRate,
     upAxis: model.upAxis,
     exportedFrom: model.exportedFrom,
     totals: {

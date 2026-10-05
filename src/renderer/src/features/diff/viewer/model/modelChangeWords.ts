@@ -59,6 +59,8 @@ function foldKey(change: ModelChange): string | null {
     case 'lightmapUvs':
     case 'vertexColors':
       return `${change.kind}:${change.now}`;
+    case 'avatarBoneLost':
+      return change.kind;
     default:
       return null;
   }
@@ -80,6 +82,7 @@ function foldedRow(key: string, run: ModelChange[]): ChangeRow {
     uvs: `UVs changed on ${count} meshes`,
     skinning: `Skinning changed on ${count} meshes`,
     meshSlots: `${count} meshes use other material slots`,
+    avatarBoneLost: `The Humanoid avatar lost ${count} of its bones`,
     lightmapUvs: first.kind === 'lightmapUvs' && first.now ? `${count} meshes have lightmap UVs now` : `${count} meshes lost their lightmap UVs`,
     vertexColors: first.kind === 'vertexColors' && first.now ? `${count} meshes have vertex colors now` : `${count} meshes lost their vertex colors`,
   };
@@ -104,6 +107,8 @@ function itemLabel(change: ModelChange): string {
       return `${change.node.name}: ${formatCount(change.before)} → ${formatCount(change.after)}`;
     case 'meshSlots':
       return `${change.node.name}: ${change.before.join(', ')} → ${change.after.join(', ')}`;
+    case 'avatarBoneLost':
+      return `${change.humanName} → ${change.boneName}`;
     default:
       return 'node' in change ? change.node.name : change.kind;
   }
@@ -202,7 +207,29 @@ function wordsOf(change: ModelChange): { title: string; detail?: string } {
       return { title: `Exported ${change.after}-up, was ${change.before}-up`, detail: 'Unity stands it on Y either way.' };
     case 'exporter':
       return { title: exporterTitle(change.before, change.after) };
+    case 'scaleFactor':
+      return { title: scaleSettingsTitle(change.before, change.after), detail: 'Every scene that uses it shows it at the new size.' };
+    case 'remapLost':
+      return { title: `The material remapped to ${change.slot} isn't used`, detail: `The model has no ${change.slot} slot anymore: remap a material to its new slot in the import settings.` };
+    case 'avatarBoneLost':
+      return {
+        title: `The Humanoid avatar maps ${change.humanName} to ${change.boneName}, which is gone`,
+        detail: 'Animations on the avatar lose that bone until it is mapped again in the import settings.',
+      };
+    case 'clipPastTake':
+      return {
+        title: `Clip ${change.clip} ends at frame ${change.lastFrame}, past its take's ${change.takeFrames} frames`,
+        detail: 'Unity holds the last frame for the rest: shorten the clip in the import settings.',
+      };
+    case 'clipTakeLost':
+      return { title: `Clip ${change.clip} is cut from the take ${change.take}, which is gone`, detail: 'Unity imports no clip from it until it is cut from a take the model has.' };
   }
+}
+
+function scaleSettingsTitle(before: { scaleFactor: number; convertUnits: boolean }, after: { scaleFactor: number; convertUnits: boolean }): string {
+  if (before.convertUnits !== after.convertUnits && before.scaleFactor === after.scaleFactor) return `Convert Units turned ${after.convertUnits ? 'on' : 'off'} in the import settings`;
+  const units = before.convertUnits !== after.convertUnits ? `, Convert Units ${after.convertUnits ? 'on' : 'off'}` : '';
+  return `Scale Factor in the import settings: ${before.scaleFactor} → ${after.scaleFactor}${units}`;
 }
 
 function focusOf(change: ModelChange): NodeRef[] {
