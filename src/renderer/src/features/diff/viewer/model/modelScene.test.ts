@@ -1,6 +1,6 @@
 import { AnimationClip, AnimationMixer, Bone, SkinnedMesh, VectorKeyframeTrack, Vector3 } from 'three';
 import { describe, expect, it } from 'vitest';
-import { buildModelScene } from './modelScene';
+import { boneLinks, buildModelScene } from './modelScene';
 import { modelSummary } from './modelSummary';
 import type { ParsedModel } from './parsedModel';
 import { testModel } from './testing/testModels';
@@ -43,5 +43,24 @@ describe('buildModelScene', () => {
     (body as unknown as SkinnedMesh).skeleton.update();
     const moved = (body as unknown as SkinnedMesh).applyBoneTransform(0, rest.clone());
     expect(moved.x - rest.x).toBeCloseTo(3);
+  });
+});
+
+describe('boneLinks', () => {
+  it('links each bone to its parent bone, not to the empties above the skeleton', () => {
+    const model = testModel({ nodes: [{ name: 'Armature' }, { name: 'Hips', parent: 'Armature', kind: 'bone' }, { name: 'Spine', parent: 'Hips', kind: 'bone' }, { name: 'Head', parent: 'Spine', kind: 'bone' }] });
+    expect(boneLinks(model).map(([bone, parent]) => [model.nodes[bone]!.name, model.nodes[parent]!.name])).toEqual([
+      ['Spine', 'Hips'],
+      ['Head', 'Spine'],
+    ]);
+  });
+});
+
+describe('resetPose', () => {
+  it('puts every node back where the file has it', () => {
+    const scene = sceneOf(testModel({ nodes: [{ name: 'Lid', position: [0, 1, 0], mesh: {} }] }));
+    scene.objects.get('Lid')!.position.set(5, 5, 5);
+    scene.resetPose();
+    expect(scene.objects.get('Lid')!.position.toArray()).toEqual([0, 1, 0]);
   });
 });

@@ -30,6 +30,11 @@ export interface ModelScene {
   /** Each node's object, by its summary key. */
   objects: Map<string, Object3D>;
   meshes: SceneMesh[];
+  /** The skeleton to draw: each bone, and each bone with its parent bone (`boneLinks`). */
+  bones: Object3D[];
+  links: [Object3D, Object3D][];
+  /** Puts every node back where the file has it, after a take moved them. */
+  resetPose(): void;
   dispose(): void;
 }
 
@@ -72,10 +77,20 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
   model.meshes.forEach((mesh, i) => {
     if (mesh.skin) bindSkin(meshes[i]!, mesh.skin, nodes, root.matrix);
   });
+  const rest = nodes.map((node) => ({ position: node.position.clone(), quaternion: node.quaternion.clone(), scale: node.scale.clone() }));
   return {
     root,
     objects,
     meshes,
+    bones: nodes.filter((_, i) => model.nodes[i]!.kind === 'bone'),
+    links: boneLinks(model).map(([bone, parent]) => [nodes[bone]!, nodes[parent]!]),
+    resetPose() {
+      nodes.forEach((node, i) => {
+        node.position.copy(rest[i]!.position);
+        node.quaternion.copy(rest[i]!.quaternion);
+        node.scale.copy(rest[i]!.scale);
+      });
+    },
     dispose() {
       for (const { solid, wire, heat, ghost } of meshes) {
         solid.geometry.dispose();
@@ -119,6 +134,11 @@ function meshOf(mesh: ModelMesh, key: string): SceneMesh {
   return { key, solid, wire, heat, ghost, slots: mesh.slots };
 }
 
+/** Each bone with its parent, where the parent is a bone too: the skeleton's lines. */
+export function boneLinks(model: Pick<ParsedModel, 'nodes'>): [number, number][] {
+  return model.nodes.flatMap((node, i) => (node.kind === 'bone' && node.parent >= 0 && model.nodes[node.parent]!.kind === 'bone' ? [[i, node.parent] as [number, number]] : []));
+}
+
 /**
  * Binds a skinned mesh and its twins to its bones. The file's inverse bind matrices are in the loader's space; the
  * scene's root puts the model in the viewer's (`viewerSpace`), so each is carried there (`inverse × viewerSpace⁻¹`),
@@ -130,7 +150,11 @@ function bindSkin(mesh: SceneMesh, skin: NonNullable<ModelMesh['skin']>, nodes: 
   // A bone the file names is a node of the hierarchy; a joint the loader made an empty still moves the mesh.
   const bones = skin.bones.map((node) => nodes[node] ?? new Bone()) as Bone[];
   const skeleton = new Skeleton(bones, inverses);
-  for (const object of [mesh.solid, mesh.wire, mesh.heat, mesh.ghost]) (object as unknown as SkinnedMesh).bind(skeleton, object.matrixWorld);
+  for (const object of [mesh.solid, mesh.wire, mesh.heat, mesh.ghost]) {
+    (object as unknown as SkinnedMesh).bind(skeleton, object.matrixWorld);
+    // Its bounds are the bind pose's: a take that moves it out of them mustn't cull it.
+    object.frustumCulled = false;
+  }
 }
 
 /** A box in the viewer's space from one in Unity's (`modelSummary`'s bounds): X mirrored back. */
