@@ -4,11 +4,11 @@
 
 import type { ModelBytes } from '@shared/domain/content';
 import { transferablesOf } from './parsedModel';
-import { readModelFile, type ModelFileRead } from './readModelFile';
+import { readModelFile, type ModelFileRead, type ModelReadOptions } from './readModelFile';
 import { compareSurfaces, placedMeshesOf, type PlaceableModel, type SurfaceComparison } from './surfaceComparison';
 
 export type ModelWorkerRequest =
-  | { id: number; read: ModelBytes; companions: Record<string, Uint8Array> }
+  | { id: number; read: ModelBytes; options: ModelReadOptions }
   | { id: number; compare: { before: PlaceableModel; after: PlaceableModel } };
 
 export type ModelWorkerResponse = { id: number; read: ModelFileRead } | { id: number; comparison: SurfaceComparison };
@@ -21,7 +21,7 @@ const scope = self as unknown as {
 
 scope.onmessage = async ({ data: request }) => {
   if ('read' in request) {
-    const read = await readModelFile(request.read, request.companions);
+    const read = await readModelFile(request.read, request.options);
     scope.postMessage({ id: request.id, read }, read.kind === 'read' ? transferablesOf(read.model) : []);
     return;
   }

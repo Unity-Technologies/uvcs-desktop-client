@@ -18,7 +18,8 @@ import { Spinner } from '../../../../ui/Spinner';
 import { SideChip } from '../image/stage';
 import { CENTERED_SPLIT, SwipeDivider } from '../image/SwipeDivider';
 import { changeRows, type ChangeRow } from './modelChangeWords';
-import { modelChanges, type NodeRef } from './modelChanges';
+import { isRisk, modelChanges, type NodeRef } from './modelChanges';
+import { importSettingsChanges } from './importSettingsChanges';
 import { ModelChangesPanel } from './ModelChangesPanel';
 import type { ModelDiffMode } from './modelDiffModes';
 import { framedBounds, nodesBounds } from './modelFraming';
@@ -38,7 +39,7 @@ import type { ModelSummary } from './modelSummary';
 import { ModelViewControls } from './ModelViewControls';
 import { matchNodes } from './nodeMatching';
 import { framedView, type BoundsLike, type OrbitView, type Vector } from './orbitCamera';
-import { useModelCompanions } from './useModelCompanions';
+import { useModelReadOptions } from './useModelReadOptions';
 import { useModelPalette } from './useModelPalette';
 import { useModelRenderer } from './useModelRenderer';
 import { useOrbitGestures } from './useOrbitGestures';
@@ -67,8 +68,10 @@ interface Picked {
 }
 
 export function ModelDiffViewer({ workspacePath, sources, path, original, modified, mode }: ModelDiffViewerProps) {
-  const before = useReadModel(original.model, useModelCompanions(workspacePath, 'original', sources.original, path, original.model));
-  const after = useReadModel(modified.model, useModelCompanions(workspacePath, 'modified', sources.modified, path, modified.model));
+  const optionsBefore = useModelReadOptions(workspacePath, 'original', sources.original, path, original.model);
+  const optionsAfter = useModelReadOptions(workspacePath, 'modified', sources.modified, path, modified.model);
+  const before = useReadModel(original.model, optionsBefore);
+  const after = useReadModel(modified.model, optionsAfter);
   const { modelDrawMode, setModelDrawMode, modelColorBySlot, setModelColorBySlot, modelToleranceShare, setModelToleranceShare, modelShowBones, setModelShowBones } =
     useDiffPreferences();
   const paneRef = useRef<HTMLDivElement>(null);
@@ -91,7 +94,11 @@ export function ModelDiffViewer({ workspacePath, sources, path, original, modifi
   const comparable = Boolean(original.model && modified.model);
   const sceneBefore = useScene(old);
   const sceneAfter = useScene(next);
-  const rows = useMemo(() => (old && next ? changeRows(modelChanges(old.summary, next.summary)) : null), [old, next]);
+  const rows = useMemo(() => {
+    if (!old || !next || !optionsBefore || !optionsAfter) return null;
+    const changes = [...modelChanges(old.summary, next.summary), ...importSettingsChanges({ summary: old.summary, settings: optionsBefore.settings }, { summary: next.summary, settings: optionsAfter.settings })];
+    return changeRows([...changes.filter(isRisk), ...changes.filter((change) => !isRisk(change))]);
+  }, [old, next, optionsBefore, optionsAfter]);
   const stats = useMemo(() => modelStats(old?.summary ?? null, next?.summary ?? null), [old, next]);
   // Every version there is, read: framing one alone would frame a pair whose other half may be 100 times its size.
   const allRead = (!original.model || old !== null) && (!modified.model || next !== null);
