@@ -54,11 +54,17 @@ jobs:
           npm version "${{ inputs.bump }}" --force -m "Release v%s"
           TAG="v$(node -p "require('./package.json').version")"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "last_tag=$LAST_TAG" >> "$GITHUB_OUTPUT"
           git push origin "$TAG"
       - name: Open a draft release with generated notes
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "${{ steps.bump.outputs.tag }}" --draft --generate-notes --title "${{ steps.bump.outputs.tag }}"
+          LAST_TAG: ${{ steps.bump.outputs.last_tag }}
+        # From the last release tag, not GitHub's pick: release tags aren't on main (the bump commit is only on its tag),
+        # so GitHub would start from the last tag that is, and list every release's changes again.
+        run: |
+          gh release create "${{ steps.bump.outputs.tag }}" --draft --generate-notes --title "${{ steps.bump.outputs.tag }}" \
+            ${LAST_TAG:+--notes-start-tag "$LAST_TAG"}
 
   # Linux builds from the new tag, whose package.json has the new version, and uploads its installer (unsigned: an
   # AppImage carries no signature the OS checks).
