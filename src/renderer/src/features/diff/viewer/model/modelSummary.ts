@@ -14,7 +14,7 @@ export interface Bounds {
 }
 
 export interface SummaryNode {
-  /** Unique among the model's nodes: the path, and ` #2`, ` #3`… for later siblings of the same name. */
+  /** Unique among the model's nodes: the path, with ` #2`, ` #3`… after later siblings of the same name (`nodeKeys`). */
   key: string;
   /** Names from the root's child down (`Armature/Hips/Spine`), as Unity's `transform.Find` and animations take them; '' for the root. */
   path: string;
@@ -183,15 +183,20 @@ function placedPositions(positions: Float32Array, world: Matrix4): Int32Array {
   return placed;
 }
 
-/** Each node's path, made unique with ` #2`, ` #3`… for siblings sharing a name (Unity allows them; paths can't tell them apart). */
+/**
+ * Each node's key: its parent's key and its name, with ` #2`, ` #3`… for later siblings of the same name (Unity
+ * allows them; paths can't tell them apart), so the children of each keep under it (`Wheel #2/Bolt`).
+ */
 function nodeKeys(model: ParsedModel): string[] {
   const keys: string[] = [];
   const seen = new Map<string, number>();
-  model.nodes.forEach((_, i) => {
-    const path = pathOf(model, i);
-    const occurrence = (seen.get(path) ?? 0) + 1;
-    seen.set(path, occurrence);
-    keys.push(occurrence === 1 ? path : `${path} #${occurrence}`);
+  model.nodes.forEach((node, i) => {
+    if (node.parent < 0) return keys.push('');
+    const parentKey = keys[node.parent]!;
+    const plain = parentKey === '' ? node.name : `${parentKey}/${node.name}`;
+    const occurrence = (seen.get(plain) ?? 0) + 1;
+    seen.set(plain, occurrence);
+    keys.push(occurrence === 1 ? plain : `${plain} #${occurrence}`);
   });
   return keys;
 }

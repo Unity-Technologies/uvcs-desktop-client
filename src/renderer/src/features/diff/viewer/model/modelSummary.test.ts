@@ -26,6 +26,15 @@ describe('modelSummary', () => {
     expect(summary.nodes.map((node) => node.path)).toEqual(['', 'Wheel', 'Wheel', 'Wheel']);
   });
 
+  it("keys a node under its parent's key, so the children of siblings of one name stay apart", () => {
+    const summary = modelSummary(testModel({ nodes: [{ name: 'Wheel' }, { name: 'Bolt', parent: 'Wheel', mesh: {} }] }));
+    const second = testModel({ nodes: [{ name: 'Wheel' }, { name: 'Wheel' }] });
+    second.nodes.push({ ...second.nodes[2]!, name: 'Bolt', parent: 2 });
+    expect(modelSummary(second).nodes.map((node) => node.key)).toEqual(['', 'Wheel', 'Wheel #2', 'Wheel #2/Bolt']);
+    expect(modelSummary(second).nodes.map((node) => node.path)).toEqual(['', 'Wheel', 'Wheel', 'Wheel/Bolt']);
+    expect(summary.nodes.map((node) => node.key)).toEqual(['', 'Wheel', 'Wheel/Bolt']);
+  });
+
   it('counts vertices as Unity does: corners that differ in any attribute stay apart', () => {
     // A box with flat normals: each of its 8 corners belongs to 3 faces, each with its own normal.
     expect(modelSummary(testModel({ nodes: [{ name: 'Crate', mesh: {} }] })).meshes[0]).toMatchObject({ triangles: 12, vertices: 24 });
