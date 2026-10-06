@@ -13,6 +13,19 @@ the files and the diff stay in sight. A short comment shows whole, with no link.
 the target, so another changeset folds its own comment afresh. Indented lines in a comment (commands pasted in) read as
 code, one per line (`parseMarkdown`).
 
+## A branch's diff
+
+A branch's diff shows what the branch brings to its parent, as a pull request does: `cm diff br:<branch>
+--integration` diffs from the branch's common ancestor with its parent, so the changes it merged from its parent (or
+a rebase) don't show (`branchEntries` in `main/services/diffService`). A branch already merged into its parent has
+nothing pending, and neither has `/main`: `cm` answers empty, cheaply (it diffs the head against itself), and only then
+is the whole branch asked for, so a finished branch still shows what it changed. Every other branch costs one command.
+
+Why no toggle, like the official client's "Show pending to integrate": the whole diff, with what came from the parent,
+is noise for anyone reading a branch, and the web code review and GitHub show only the clean one, with no option. Why
+not decide first whether the branch received merges (as the official client does to show its button): that is the
+same common-ancestor calculation `--integration` already makes inside its one command.
+
 ## Editing in the diff
 
 A workspace file shown against its own past (loaded revision, reviewed copy, or nothing for an
