@@ -77,7 +77,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const stageRef = useRef<HTMLDivElement>(null);
   const canvasHostRef = useRef<HTMLDivElement>(null);
   const palette = useModelPalette(paneRef);
-  const renderer = useModelRenderer(canvasHostRef);
+  const { renderer, unavailable } = useModelRenderer(canvasHostRef);
   const paneWidth = useSize(paneRef).width;
   // Open, the panel docks beside the model where the pane has room for it, and floats over it where it hasn't.
   const changesOpen = modelChangesOpen;
@@ -192,6 +192,9 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   if (failed) {
     const words = modelReadFailureWords(failed.failure);
     return <EmptyState icon={<BoxIcon size={22} />} title={words.title} description={words.description} />;
+  }
+  if (unavailable) {
+    return <EmptyState icon={<BoxIcon size={22} />} title="Couldn't start the 3D view" description="This computer's graphics didn't let the app draw the model. Its file still shows in Code." />;
   }
 
   return (
