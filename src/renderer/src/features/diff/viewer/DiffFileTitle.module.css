@@ -1,3 +1,15 @@
+/* The paths alone, apart from the status: a fitted `PathLabel` keeps its name whole down to `100%` of its container,
+   so each label's container holds only that label, or the room the others take would push it under the header's
+   controls. */
+.paths {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  overflow: hidden;
+}
+
 /* Quieter than the path: where the file was is context, not what the diff shows. */
 .from {
   display: flex;
@@ -7,6 +19,12 @@
   min-width: 0;
   color: var(--text-tertiary);
   white-space: nowrap;
+}
+
+.fromPath {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 /* A moved file that changed shows its C and its M together. */
