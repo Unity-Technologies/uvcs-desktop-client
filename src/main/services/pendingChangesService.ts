@@ -17,7 +17,7 @@ import { readCheckinProgress } from '../cm/progress/checkinProgress';
 import { onLinksThemselves } from '../cm/symlinkArgs';
 import { withTempFile } from '../files/tempFile';
 import { toAbsolutePaths } from '../files/workspacePaths';
-import { addFilterRule } from '../workspace/filterRuleFile';
+import { addFilterRules } from '../workspace/filterRuleFile';
 import { shelveAndUndo } from '../workspace/shelveAndUndo';
 import type { ServiceContext, SwitchContext } from './ServiceContext';
 
@@ -108,7 +108,7 @@ export function createPendingChangesService({ cm, operations }: ServiceContext, 
     add,
     remove,
     checkout,
-    addFilterRule,
+    addFilterRules,
     shelve,
     shelveAndUndo: (workspacePath, paths, comment, operationId) =>
       operations.run(operationId, (context) => shelveAndUndo(shelveAwayDependencies, workspacePath, paths, comment, context)),

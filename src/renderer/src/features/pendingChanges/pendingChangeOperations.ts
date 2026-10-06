@@ -91,9 +91,14 @@ export function checkout(workspacePath: string, changes: PendingChange[]): Promi
   );
 }
 
-export async function addFilterRule(workspacePath: string, list: FilterRuleList, pattern: string): Promise<void> {
-  const added = await runVoidAction(workspacePath, "Couldn't update the rules", () => api.pendingChanges.addFilterRule(workspacePath, list, pattern));
-  if (added) toast.success(`Added “${pattern}” to ${FILTER_LIST_FILES[list]}`);
+export async function addFilterRules(workspacePath: string, list: FilterRuleList, patterns: string[]): Promise<void> {
+  const added = await runVoidAction(workspacePath, "Couldn't update the rules", () => api.pendingChanges.addFilterRules(workspacePath, list, patterns));
+  if (added) toast.success(`Added ${addedRulesWording(patterns)} to ${FILTER_LIST_FILES[list]}`);
+}
+
+/** “/Assets”, or “3 rules”. */
+function addedRulesWording(patterns: string[]): string {
+  return patterns.length === 1 ? `“${patterns[0]}”` : `${formatCount(patterns.length)} rules`;
 }
 
 export const FILTER_LIST_FILES: Record<FilterRuleList, string> = {

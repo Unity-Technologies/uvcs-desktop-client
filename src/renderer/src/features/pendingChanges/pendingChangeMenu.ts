@@ -9,16 +9,17 @@ import { copySubmenu } from '../../components/copyMenu';
 import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction, menuSubmenu } from '../../components/menuWords';
 import { TRASH_NAME } from '../../lib/platform';
-import { extensionOf, formatCount } from '../../lib/text';
+import { formatCount } from '../../lib/text';
 import { categoryOf, existsOnDisk, hasRevisions, isCheckinCandidate, isControlled } from './changeCategories';
 import { moveToChangelistSubmenu } from './changelistMenu';
+import { itemRulePatterns, sharedExtension } from './filterRulePatterns';
 import { showInLocks } from '../locks/showInLocks';
 import type { PendingLocks } from './locks/pendingLocks';
 import { reviewMenuEntry } from '../review/reviewMenuEntry';
 import type { ListReview } from '../review/useReviewMode';
 import {
   absolutePath,
-  addFilterRule,
+  addFilterRules,
   addToSourceControl,
   checkout,
   deletePrivateFiles,
@@ -70,7 +71,7 @@ export function pendingChangeMenu(
     ...(onDisk ? openOnDiskEntries({ path: absolutePath(workspacePath, single.path), isFolder: single.itemType === 'directory' }) : []),
     itemCopySubmenu(workspacePath, changes.map((change) => change.path)),
     moveToChangelistSubmenu(workspacePath, changes, changelists),
-    single && filterRulesSubmenu(workspacePath, single.path),
+    filterRulesSubmenu(workspacePath, changes.map((change) => change.path)),
     controlledChanges.length > 0 &&
       menuAction('undo', () => void undoChanges(workspacePath, controlledChanges), {
         label: controlledChanges.length === 1 ? 'Undo changes…' : `Undo ${formatCount(controlledChanges.length)} changes…`,
@@ -95,13 +96,15 @@ export function itemCopySubmenu(workspacePath: string, paths: string[]): Grouped
   return copySubmenu('', { path: paths.join('\n'), fullPath: paths.map((path) => absolutePath(workspacePath, path)).join('\n') }, { count: paths.length });
 }
 
-/** Adds an item, or all files with its extension, to the ignore, cloaked or hidden-changes rules. */
-export function filterRulesSubmenu(workspacePath: string, path: string): GroupedEntry {
-  const extension = extensionOf(path);
+/** Adds the selected items, or all files with the extension they share, to the ignore, cloaked or hidden-changes rules. */
+export function filterRulesSubmenu(workspacePath: string, paths: string[]): GroupedEntry {
+  const itemPatterns = itemRulePatterns(paths);
+  const extension = sharedExtension(paths);
+  const itemsLabel = itemPatterns.length === 1 ? `This item (${itemPatterns[0]})` : `These ${formatCount(itemPatterns.length)} items`;
   const patternsFor = (list: FilterRuleList): MenuEntry[] =>
     tidyMenu([
-      { id: `${list}.path`, label: `This item (/${path})`, run: () => void addFilterRule(workspacePath, list, `/${path}`) },
-      extension !== null && { id: `${list}.extension`, label: `All ${extension} files`, run: () => void addFilterRule(workspacePath, list, `*${extension}`) },
+      { id: `${list}.path`, label: itemsLabel, run: () => void addFilterRules(workspacePath, list, itemPatterns) },
+      extension !== null && { id: `${list}.extension`, label: `All ${extension} files`, run: () => void addFilterRules(workspacePath, list, [`*${extension}`]) },
     ]);
 
   return menuSubmenu('filterRules', [
