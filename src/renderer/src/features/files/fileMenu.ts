@@ -83,7 +83,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
         { id: 'type.bin', label: 'Binary', run: () => void changeRevisionType(workspacePath, typedFiles, 'bin') },
         { id: 'type.txt', label: 'Text', run: () => void changeRevisionType(workspacePath, typedFiles, 'txt') },
       ]),
-    single && !hasRoot && filterRulesSubmenu(workspacePath, single.path),
+    !hasRoot && filterRulesSubmenu(workspacePath, items.map((item) => item.path)),
     single && !single.isPrivate && pathPermissionsAction(workspacePath, single),
     undoable.length > 0 &&
       menuAction('undo', () => void undoChanges(workspacePath, undoable), {

@@ -11,6 +11,13 @@ export function fileNameOf(path: string): string {
   return path.split('/').filter(Boolean).at(-1) ?? path;
 }
 
+/** The extension of a file name or workspace path, dot included (`.asset`); null when it has none or is a dotfile. */
+export function extensionOf(path: string): string | null {
+  const name = fileNameOf(path);
+  const dot = name.lastIndexOf('.');
+  return dot > 0 ? name.slice(dot) : null;
+}
+
 /** How many rows a list shows: "340", or "12 of 340" while its filters hide some of what it read. */
 export function shownCount(shown: number, total: number = shown): string {
   return shown === total ? formatCount(total) : `${formatCount(shown)} of ${formatCount(total)}`;

@@ -17,8 +17,8 @@ export interface PendingChangesApi {
   add(workspacePath: string, paths: string[]): Promise<void>;
   remove(workspacePath: string, paths: string[]): Promise<void>;
   checkout(workspacePath: string, paths: string[]): Promise<void>;
-  /** Appends a pattern to `ignore.conf`, `cloaked.conf` or `hidden_changes.conf`. */
-  addFilterRule(workspacePath: string, list: FilterRuleList, pattern: string): Promise<void>;
+  /** Appends patterns to `ignore.conf`, `cloaked.conf` or `hidden_changes.conf`, leaving out those already there. */
+  addFilterRules(workspacePath: string, list: FilterRuleList, patterns: string[]): Promise<void>;
   /** Shelves the changes and keeps them in the workspace. Resolves to the shelve's id. */
   shelve(workspacePath: string, paths: string[], comment: string, operationId: string): Promise<number>;
   /**

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatCount, pluralize, shownCount } from './text';
+import { extensionOf, formatCount, pluralize, shownCount } from './text';
 
 describe('formatCount', () => {
   it('groups thousands', () => {
@@ -23,5 +23,18 @@ describe('shownCount', () => {
     expect(shownCount(340)).toBe('340');
     expect(shownCount(340, 340)).toBe('340');
     expect(shownCount(12, 1340)).toBe('12 of 1,340');
+  });
+});
+
+describe('extensionOf', () => {
+  it('is the last extension of the name, dot included', () => {
+    expect(extensionOf('ProjectSettings/AudioManager.asset')).toBe('.asset');
+    expect(extensionOf('build/app.gradle.kts')).toBe('.kts');
+  });
+
+  it('is null for a name with none, or a dotfile', () => {
+    expect(extensionOf('ProjectSettings')).toBeNull();
+    expect(extensionOf('src.v2/Makefile')).toBeNull();
+    expect(extensionOf('.gitignore')).toBeNull();
   });
 });

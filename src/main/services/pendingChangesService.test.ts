@@ -247,10 +247,10 @@ describe('filter rules', () => {
     await writeFile(join(workspace, 'ignore.conf'), 'Library\n', 'utf8');
     const { service, commands } = pendingChanges({});
 
-    await service.addFilterRule(workspace, 'ignore', 'Temp');
-    await service.addFilterRule(workspace, 'cloaked', 'Assets/Big');
+    await service.addFilterRules(workspace, 'ignore', ['Temp', 'Library', 'Logs']);
+    await service.addFilterRules(workspace, 'cloaked', ['Assets/Big']);
 
-    expect(await readFile(join(workspace, 'ignore.conf'), 'utf8')).toMatch(/^Library\r?\nTemp/);
+    expect(await readFile(join(workspace, 'ignore.conf'), 'utf8')).toBe('Library\nTemp\nLogs\n');
     expect(await readFile(join(workspace, 'cloaked.conf'), 'utf8')).toContain('Assets/Big');
     expect(commands).toEqual([]);
   });

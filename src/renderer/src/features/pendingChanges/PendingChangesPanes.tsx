@@ -35,7 +35,7 @@ import { moveToChangelist } from './changelistOperations';
 import { changeTones } from './changeTone';
 import { checkinDraftOf, useCheckinDraftStore, useExcludedPaths } from './checkinDraftStore';
 import { pendingChangeMenu } from './pendingChangeMenu';
-import { addFilterRule, openChange, undoChanges } from './pendingChangeOperations';
+import { addFilterRules, openChange, undoChanges } from './pendingChangeOperations';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
 import { useChangeRows } from './useChangeRows';
 import { useCheckinPanelSubmit } from './useCheckinPanelSubmit';
@@ -180,7 +180,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
               <BulkPrivateNotice
                 bulk={bulkPrivate}
                 onExclude={() => setIncludedChanges(bulkPrivate.changes, false)}
-                onIgnoreFolder={(folder) => void addFilterRule(workspacePath, 'ignore', `/${folder}`)}
+                onIgnoreFolder={(folder) => void addFilterRules(workspacePath, 'ignore', [`/${folder}`])}
               />
             )}
             {checkinAfterUpdate && (
