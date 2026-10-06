@@ -75,9 +75,9 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     useDiffPreferences();
   const paneRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const canvasHostRef = useRef<HTMLDivElement>(null);
   const palette = useModelPalette(paneRef);
-  const renderer = useModelRenderer(canvasRef);
+  const { renderer, unavailable } = useModelRenderer(canvasHostRef);
   const paneWidth = useSize(paneRef).width;
   // Open, the panel docks beside the model where the pane has room for it, and floats over it where it hasn't.
   const changesOpen = modelChangesOpen;
@@ -193,11 +193,14 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     const words = modelReadFailureWords(failed.failure);
     return <EmptyState icon={<BoxIcon size={22} />} title={words.title} description={words.description} />;
   }
+  if (unavailable) {
+    return <EmptyState icon={<BoxIcon size={22} />} title="Couldn't start the 3D view" description="This computer's graphics didn't let the app draw the model. Its file still shows in Code." />;
+  }
 
   return (
     <div className={styles.pane} ref={paneRef} tabIndex={0} onKeyDown={onKeyDown}>
       <div className={styles.stage} ref={stageRef} data-mode={shownMode ?? 'single'}>
-        <canvas ref={canvasRef} className={styles.canvas} aria-label="3D view of the model" />
+        <div ref={canvasHostRef} className={styles.canvasHost} role="img" aria-label="3D view of the model" />
         {loading && spin && <CenteredSpinner />}
         {!loading && (
           <>

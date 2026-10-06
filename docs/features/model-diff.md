@@ -89,7 +89,10 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
 
 One `ModelRenderer` per viewer draws on one WebGL canvas, only when something changes (`requestRender`: a gesture, a
 mode, a look), never on a loop; disposing it frees the GPU's memory at once (`forceContextLoss`), as stepping through
-files makes many viewers. What changes every frame or tick (a playing take's skeleton, the tolerance's colors) is
+files makes many viewers. So each renderer gets a canvas of its own (`useModelRenderer` puts it in and takes it out):
+a canvas whose context was lost hands that lost context to the next renderer, which three can't start on, as
+StrictMode's second mount showed. Where WebGL can't start at all (no usable GPU, the browser's limit of contexts), the
+pane says "Couldn't start the 3D view", not the window's error screen. What changes every frame or tick (a playing take's skeleton, the tolerance's colors) is
 written into the buffers it has (`writeAttribute`), and a side replaced frees its own (`disposeSide`). The model worker
 answers every request, a failure too ("Couldn't compare these surfaces"): no view waits for good. Each version is a scene of its own (`buildModelScene`: its hierarchy, a material per slot, a
 wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out per mode (`layoutOf`):

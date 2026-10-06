@@ -390,6 +390,13 @@ renderer/src/
 `ui/` either): what they need from there is handed to them (`setAvatarPictureSource`) or lives a tier up
 (`rendererTiers.test.ts` checks it).
 
+- **Effects survive a second mount**: in development React's StrictMode mounts every component, runs its cleanup and
+  mounts it again on the same DOM nodes. An effect that owns a resource builds a fresh one on each run and frees it in
+  its cleanup, never leaving behind something its next run can't use: `useModelRenderer` gives each renderer a new
+  canvas, as disposing one loses its WebGL context for good; `useModelScene` builds its scene in the effect, not in a
+  memo. The production build runs each effect once and hides such a bug, so `npm run e2e` runs the smoke test over a
+  development build too (scripts/e2e/README.md).
+
 - **Data**: TanStack Query. Every workspace query key starts with `queryKeys.inWorkspace(path, ...)`, so `invalidateWorkspace(path)` refreshes everything after an operation
   (or what it can touch: `invalidateWorkspace(path, affected)`, `runOperation({ affects })`).
 - **Refresh**: views refresh themselves when something changes, never on a timer except the incoming check (the app's

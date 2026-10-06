@@ -103,7 +103,7 @@ npm start            # the built app
 npm run app:debug    # the built app with CDP on UVCS_CDP_PORT (9333 by default)
 npm run typecheck    # main + renderer
 npm test             # vitest, every src/**/*.test.ts and scripts/build/**/*.test.ts
-npm run e2e          # build, then the smoke test: every view of the real app against a fake cm (~10 s)
+npm run e2e          # the smoke test, every view of the real app against a fake cm, over a development build then a production one (~30 s)
 npm run dist         # the installer for this OS, into dist/
 npm run release      # dist, uploaded to the GitHub release (the Release workflow runs it; needs GH_TOKEN)
 node scripts/perf/startup.mjs [--cm=real]   # after a build: median start-up times, cold and warm (header: options)
@@ -126,6 +126,9 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
 ```
 
 - Check **both themes** and a narrow window, and that the console shows no errors (`playwright-cli console`).
+- Check a **development build** too, where StrictMode mounts every component twice (ARCHITECTURE.md "Effects survive a
+  second mount"): `npx electron-vite build --mode development`, then `npm run app:debug`; or `npx electron-vite dev
+  --remoteDebuggingPort 9333` and attach. A production build alone hid a crash of the model diff.
 - Parallel agents: a distinct `UVCS_CDP_PORT` and `-s=<session>` each.
 - One-shot screenshots: `node scripts/screenshot.mjs /tmp/shot.png open:<workspace> key:Meta+3` (steps in its header;
   it prints renderer errors as `[renderer]` and `[pageerror]`).

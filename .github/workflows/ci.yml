@@ -76,7 +76,7 @@ jobs:
       - if: ${{ !matrix.smoke }}
         run: npm run build
         working-directory: ${{ env.BUILD_DIR || github.workspace }}
-      # The build, then the smoke test.
+      # The smoke test over a development build (React's StrictMode), then over the production build.
       - if: ${{ matrix.smoke }}
         run: npm run e2e
         working-directory: ${{ env.BUILD_DIR || github.workspace }}

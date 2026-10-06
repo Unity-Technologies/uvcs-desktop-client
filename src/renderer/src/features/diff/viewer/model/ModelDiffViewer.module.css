@@ -37,9 +37,13 @@
   cursor: grabbing;
 }
 
-.canvas {
+/* Holds the renderer's canvas, which `useModelRenderer` puts in and takes out. */
+.canvasHost {
   position: absolute;
   inset: 0;
+}
+
+.canvasHost > canvas {
   width: 100%;
   height: 100%;
   display: block;
