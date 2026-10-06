@@ -21,13 +21,17 @@ export function DiffFileTitle({ status, path, oldPath }: DiffFileTitleProps) {
       <span className={styles.status}>
         <ItemStatusMark status={status} move={oldPath !== undefined ? { from: oldPath, to: path } : undefined} />
       </span>
-      <PathLabel path={path} oldPath={oldPath} fitContent={oldPath !== undefined} />
-      {oldPath !== undefined && (
-        <span className={styles.from}>
-          from
-          <PathLabel path={movedFrom(path, oldPath)} fitContent tooltip={false} />
-        </span>
-      )}
+      <span className={styles.paths}>
+        <PathLabel path={path} oldPath={oldPath} fitContent={oldPath !== undefined} />
+        {oldPath !== undefined && (
+          <span className={styles.from}>
+            from
+            <span className={styles.fromPath}>
+              <PathLabel path={movedFrom(path, oldPath)} fitContent tooltip={false} />
+            </span>
+          </span>
+        )}
+      </span>
     </>
   );
 }
