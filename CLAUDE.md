@@ -126,6 +126,9 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
 ```
 
 - Check **both themes** and a narrow window, and that the console shows no errors (`playwright-cli console`).
+- Check a **development build** too, where StrictMode mounts every component twice (ARCHITECTURE.md "Effects survive a
+  second mount"): `npx electron-vite build --mode development`, then `npm run app:debug`; or `npx electron-vite dev
+  --remoteDebuggingPort 9333` and attach. A production build alone hid a crash of the model diff.
 - Parallel agents: a distinct `UVCS_CDP_PORT` and `-s=<session>` each.
 - One-shot screenshots: `node scripts/screenshot.mjs /tmp/shot.png open:<workspace> key:Meta+3` (steps in its header;
   it prints renderer errors as `[renderer]` and `[pageerror]`).
