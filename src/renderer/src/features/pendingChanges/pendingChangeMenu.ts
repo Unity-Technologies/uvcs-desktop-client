@@ -9,7 +9,7 @@ import { copySubmenu } from '../../components/copyMenu';
 import { openOnDiskEntries } from '../../components/externalApps/openWithMenu';
 import { menuAction, menuSubmenu } from '../../components/menuWords';
 import { TRASH_NAME } from '../../lib/platform';
-import { formatCount } from '../../lib/text';
+import { extensionOf, formatCount } from '../../lib/text';
 import { categoryOf, existsOnDisk, hasRevisions, isCheckinCandidate, isControlled } from './changeCategories';
 import { moveToChangelistSubmenu } from './changelistMenu';
 import { showInLocks } from '../locks/showInLocks';
@@ -22,7 +22,6 @@ import {
   addToSourceControl,
   checkout,
   deletePrivateFiles,
-  extensionOf,
   FILTER_LIST_FILES,
   undoChanges,
 } from './pendingChangeOperations';

@@ -101,9 +101,3 @@ export const FILTER_LIST_FILES: Record<FilterRuleList, string> = {
   cloaked: 'cloaked.conf',
   hidden: 'hidden_changes.conf',
 };
-
-export function extensionOf(path: string): string | null {
-  const name = fileNameOf(path);
-  const dot = name.lastIndexOf('.');
-  return dot > 0 ? name.slice(dot) : null;
-}
