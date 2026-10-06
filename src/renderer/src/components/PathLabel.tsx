@@ -54,8 +54,9 @@ export function PathLabel({ path, nameOnly, oldPath, strikethrough, matches, fit
       const measure = textMeasurer(element);
       if (fitContent) {
         const { width, nameWidth } = fittedPathWidth(directory, name, measure, maxWidth);
-        // Next to other labels, the one with the most folder to drop gives way first.
-        setContentSize({ width, minWidth: `min(${nameWidth}px, 100%)`, flexShrink: measure(directory) });
+        // Next to other labels, the one with the most folder to drop gives way first; a bare name still gives way
+        // last rather than never, or it would spill over what follows its container.
+        setContentSize({ width, minWidth: `min(${nameWidth}px, 100%)`, flexShrink: Math.max(1, measure(directory)) });
       }
       // Widths are rounded; the extra pixel keeps a rounded-up width from clipping the fitted text.
       const fitted = fitPath(directory, name, element.clientWidth - 1, measure);
