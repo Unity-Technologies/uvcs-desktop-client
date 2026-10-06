@@ -27,12 +27,15 @@ describe('installBoundedLineDiff', () => {
     }
   });
 
-  it('diffs 100,000 lines with every seventh one changed as that many changes', () => {
-    const original = code(100_000, () => false);
-    const modified = code(100_000, (index) => index % 7 === 3);
+  it('diffs 20,000 lines with every seventh one changed as that many changes', () => {
+    // Myers would spend 40,000 lines × 2,857 edits, far past the budget. Not 100,000 lines: boundedDiff.test.ts
+    // already diffs that many as ids, and building and reading them as text here took up to 5 s on a Windows arm64
+    // runner, past vitest's timeout.
+    const original = code(20_000, () => false);
+    const modified = code(20_000, (index) => index % 7 === 3);
     const { result, comparisons } = countLineComparisons(() => lineDiff(original, modified, 'ignoreWhitespace'));
     expect(comparisons).toBeLessThanOrEqual(MYERS_BUDGET);
-    expect(result).toMatchObject({ added: 14_286, removed: 14_286 });
+    expect(result).toMatchObject({ added: 2_857, removed: 2_857 });
   });
 
   it('compares lines by the comparison method, as a comparator would', () => {
