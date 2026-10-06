@@ -26,7 +26,7 @@
     "test": "vitest run",
     "app:debug": "node scripts/app-debug.mjs",
     "icons": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/icons/makeAppIcons.mjs",
-    "e2e": "electron-vite build && node scripts/e2e/smoke.mjs",
+    "e2e": "electron-vite build --mode development && node scripts/e2e/smoke.mjs && electron-vite build && node scripts/e2e/smoke.mjs",
     "postinstall": "install-electron",
     "dist": "electron-vite build && electron-builder",
     "release": "electron-vite build && electron-builder --publish always"

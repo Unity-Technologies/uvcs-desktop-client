@@ -1,11 +1,15 @@
 # Smoke test (`npm run e2e`)
 
 A light pass over the real built app, to catch what unit tests can't: wiring, startup, a view that fails to render.
-`npm run e2e` builds, then `smoke.mjs` launches `out/` with Playwright's Electron driver and a throwaway
+`npm run e2e` runs it twice: over a development build (`electron-vite build --mode development`, React's development
+build, as `npm run dev` serves it), then over the production build, which it leaves in `out/`. The development build
+is what catches a bug only `npm run dev` shows: StrictMode mounts every component, unmounts it and mounts it again,
+so an effect whose cleanup leaves something its second run can't use (a WebGL canvas whose context was lost) fails
+there, while the production build, which ships, runs each effect once. Each run builds, then `smoke.mjs` launches `out/` with Playwright's Electron driver and a throwaway
 `--user-data-dir`, opens a workspace, visits every sidebar view, a diff, a model diff (a 3D model's, in its worker), a branch's permissions (an edit, then discarded), the command palette and Settings, and switches
 to the dark theme. It fails on any `pageerror` or `console.error`, a view whose heading doesn't show or that stays
 `Loading`, and any `cm` command the fake couldn't answer. It asserts only that things appear, never pixels or copy.
-About 10 seconds. Screenshots of each step go to `<os temp>/uvcs-e2e-shots` (a failed step's is `NN-FAILED-<step>.png`).
+About 10 seconds a run. Screenshots of each step go to `<os temp>/uvcs-e2e-shots` (a failed step's is `NN-FAILED-<step>.png`).
 
 It never touches UVCS infrastructure or the user's config: the only backend is the fake `cm` (`UVCS_CM_PATH`), the
 workspace is a temp folder (`workspaceFixture.mjs`: `.plastic/plastic.selector` and a few files, one edited, one
