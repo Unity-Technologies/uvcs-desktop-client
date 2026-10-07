@@ -145,6 +145,19 @@ export function itemsUnderRows<T>(rows: readonly PathTreeRow<T>[]): T[] {
   return [...items];
 }
 
+/**
+ * The rows up to the first `limit` files, without folders whose files all come after them, and how many files are
+ * left out: a list that shows only so many rows (a details pane) says how many more there are.
+ */
+export function firstFilesOf<T>(rows: PathTreeRow<T>[], limit: number): { rows: PathTreeRow<T>[]; unlistedFiles: number } {
+  let files = 0;
+  let end = rows.findIndex((row) => row.type === 'file' && ++files > limit);
+  if (end === -1) return { rows, unlistedFiles: 0 };
+  const unlistedFiles = rows.slice(end).filter((row) => row.type === 'file').length;
+  while (end > 0 && rows[end - 1]!.type === 'folder') end--;
+  return { rows: rows.slice(0, end), unlistedFiles };
+}
+
 /** Whether all a folder holds is `child`, one of its folders, or in it. */
 function holdsOnly<T extends { path: string }>(inside: T[], child: string): boolean {
   // Sorted by `comparePaths`, the first and the last item tell for all of them.

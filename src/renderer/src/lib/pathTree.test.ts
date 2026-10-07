@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { comparePaths } from '@shared/pathOrder';
 import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
-import { collapseTreeRows, itemsUnderRows, layoutPathList, layoutPathTree, pathTreeKeyMove, type PathTreeRow } from './pathTree';
+import { collapseTreeRows, firstFilesOf, itemsUnderRows, layoutPathList, layoutPathTree, pathTreeKeyMove, type PathTreeRow } from './pathTree';
 
 interface Item {
   path: string;
@@ -116,6 +116,24 @@ describe('itemsUnderRows', () => {
     const pick = (...keys: string[]) => rows.filter((row) => keys.includes(row.key));
     expect(itemsUnderRows(pick('folder:all:src', 'src/lib/b.ts', 'z.ts')).map(keyOf)).toEqual(['src/a.ts', 'src/lib/b.ts', 'z.ts']);
     expect(itemsUnderRows(pick('folder:all:src/lib')).map(keyOf)).toEqual(['src/lib/b.ts']);
+  });
+});
+
+describe('firstFilesOf', () => {
+  const rows = tree(['a/1.ts', 'a/2.ts', 'b/c/3.ts', 'd.ts']);
+
+  it('keeps the rows up to the limit of files and counts the files left out', () => {
+    const first = firstFilesOf(rows, 2);
+    expect(first.rows.map((row) => row.key)).toEqual(['folder:all:a', 'a/1.ts', 'a/2.ts']);
+    expect(first.unlistedFiles).toBe(2);
+  });
+
+  it('leaves out folders whose files are all left out', () => {
+    expect(firstFilesOf(rows, 2).rows.some((row) => row.key === 'folder:all:b/c')).toBe(false);
+  });
+
+  it('gives back the very rows when they hold no more files than the limit', () => {
+    expect(firstFilesOf(rows, 4)).toEqual({ rows, unlistedFiles: 0 });
   });
 });
 
