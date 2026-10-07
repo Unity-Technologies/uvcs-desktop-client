@@ -36,6 +36,19 @@ describe('protectMainRules', () => {
 
     it('lets main be read and brought up to date', () => {
       expect(violation('git status && git log --oneline -5 && git pull --ff-only')).toBeNull();
+      expect(violation('git pull --ff-only origin main')).toBeNull();
+      expect(violation('git fetch origin && git merge --ff-only origin/main')).toBeNull();
+    });
+
+    // A pull is a fetch and a merge: one that may merge, or brings in another branch, is a local merge into main.
+    it.each([
+      'git pull',
+      'git pull --no-rebase',
+      'git pull origin feature/x',
+      'git pull --ff-only origin feature/x',
+      'git merge --ff-only feature/x',
+    ])('refuses %s', (command) => {
+      expect(violation(command)).not.toBeNull();
     });
   });
 
