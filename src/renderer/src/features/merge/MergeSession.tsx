@@ -1,5 +1,11 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import type { DirectoryConflictResolution, MergePlan, MergeRequest } from '@shared/domain/merge';
+import { Folder } from 'lucide-react';
+import { useChangeFilter } from '../../components/useChangeFilter';
+import { useGroupedFileTree } from '../../components/useGroupedFileTree';
+import { isHeaderRow } from '../../lib/groupedPathTree';
+import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
+import { pluralize } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { SplitPane } from '../../ui/SplitPane';
 import { defaultMergeComment } from '../mergeTask/mergeTaskSummary';
@@ -13,7 +19,8 @@ import type { MergeCompletion } from './MergeCompleted';
 import { mergeLabels } from './mergeDescription';
 import { MergeHeader } from './MergeHeader';
 import { MergeItemList } from './MergeItemList';
-import { buildMergeItems, needsDecision, toListRows, type MergeItem } from './mergeItems';
+import { buildMergeItems, mergeItemGroups, mergeItemTones, needsDecision, type MergeItem } from './mergeItems';
+import { mergeItemMenu } from './mergeItemMenu';
 import { ResolveRunControl, useRunOffer } from './mergeTools/ResolveRunControl';
 import { useResolveRun } from './mergeTools/useResolveRun';
 import { completeMerge } from './mergeOperations';
@@ -31,6 +38,9 @@ interface MergeSessionProps {
   onCompleted: (completion: MergeCompletion) => void;
 }
 
+const itemKey = (item: MergeItem): string => item.key;
+const itemPath = (item: MergeItem): string => item.path;
+
 /** The decisions for one merge plan, from the first conflict to "Complete merge". */
 export function MergeSession({ workspacePath, request, plan, task, onCompleted }: MergeSessionProps) {
   const labels = useMemo(() => mergeLabels(request, plan), [request, plan]);
@@ -39,7 +49,8 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const [directoryResolutions, setDirectoryResolutions] = useState<(DirectoryConflictResolution | undefined)[]>([]);
   const [comment, setComment] = useState(() => (task ? defaultMergeComment(task.branch) : `Merge from ${labels.source}`));
   const { choices: taskChoices, setChoices: setTaskChoices, finishing } = useFinishingTask(task);
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
+  const selectedKey = selection.anchor;
   const [merging, setMerging] = useState(false);
   const mergeButtonRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
@@ -49,10 +60,13 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const conflicting = plan.fileConflicts.length + plan.directoryConflicts.length > 0;
   // Thousands of items: built again only when a decision changes, not for every file selected or key typed.
   const items = useMemo(() => buildMergeItems(plan, fileStates, directoryResolutions), [plan, fileStates, directoryResolutions]);
-  const rows = useMemo(() => toListRows(items), [items]);
+  const filter = useChangeFilter(items, itemPath, mergeItemTones, true);
+  const content = useMemo(() => ({ groups: mergeItemGroups(filter.visible) }), [filter.visible]);
+  const { rows, tree, toggleCollapsed } = useGroupedFileTree(content, itemKey, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`);
   const conflictStatuses = useMemo(() => items.map(conflictStatusOf).filter((status) => status !== null), [items]);
   const resolutions = collectResolutions({ plan, fileStates, directoryResolutions, comment });
   const selected = items.find((item) => item.key === selectedKey);
+  const selectedGroup = selected ? undefined : rows.filter(isHeaderRow).find((row) => row.key === selectedKey);
   // The list follows the keys at once; the file behind it (a few hundred ms to highlight a file of a few thousand
   // lines) follows once they stop coming, instead of every file an arrow key passes through holding the list back.
   const shown = useDeferredValue(selected);
@@ -60,14 +74,14 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
 
   // The selection follows the run while the user stays on the file it opened; looking elsewhere doesn't stop it.
   const followRun = useCallback((key: string, previousKey: string | undefined) => {
-    setSelectedKey((current) => (!previousKey || current === `file:${previousKey}` ? `file:${key}` : current));
+    setSelection((current) => (!previousKey || current.anchor === `file:${previousKey}` ? singleSelection(`file:${key}`) : current));
   }, []);
   // Once it ends: the first thing still waiting for the user, or else completing the merge.
   const afterRun = useCallback(() => {
     const waiting = latestItems.current.find(needsDecision);
     if (waiting) {
-      setSelectedKey(waiting.key);
-      listRef.current?.focus({ preventScroll: true });
+      setSelection(singleSelection(waiting.key));
+      listRef.current?.querySelector<HTMLElement>('[role="grid"]')?.focus({ preventScroll: true });
     } else {
       mergeButtonRef.current?.focus();
     }
@@ -77,7 +91,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
 
   // Start on the first thing that needs the user.
   useEffect(() => {
-    if (!selectedKey && items.length > 0) setSelectedKey((items.find(needsDecision) ?? items[0]!).key);
+    if (!selectedKey && items.length > 0) setSelection(singleSelection((items.find(needsDecision) ?? items[0]!).key));
   }, [selectedKey, items]);
 
   const resolveDirectoryConflict = (index: number, resolution: DirectoryConflictResolution): void =>
@@ -118,14 +132,22 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
         initialSize={360}
         minSize={240}
         maxSize={640}
-        first={<MergeItemList
-            ref={listRef}
-            rows={rows}
-            labels={labels}
-            selectedKey={selectedKey}
-            runKey={run.progress && `file:${run.progress.currentKey}`}
-            onSelect={setSelectedKey}
-          />}
+        first={
+          <div ref={listRef} className={styles.list}>
+            <MergeItemList
+              rows={rows}
+              tree={tree}
+              toggleCollapsed={toggleCollapsed}
+              items={items}
+              labels={labels}
+              query={filter.query}
+              filterBar={filter.bar}
+              selection={selection}
+              onSelectionChange={setSelection}
+              contextMenu={(selectedItems) => mergeItemMenu(selectedItems, labels, decide)}
+            />
+          </div>
+        }
         second={
           shown ? (
             <MergeDetail
@@ -138,6 +160,12 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
               onDecideFile={decide}
               onStartOverFile={reset}
               onResolveDirectory={resolveDirectoryConflict}
+            />
+          ) : selectedGroup ? (
+            <EmptyState
+              icon={<Folder size={24} />}
+              title={selectedGroup.type === 'group' ? selectedGroup.label : selectedGroup.path}
+              description={`${pluralize(selectedGroup.items.length, 'item')}. Select one to see what the merge does to it.`}
             />
           ) : (
             <EmptyState title="Nothing selected" />

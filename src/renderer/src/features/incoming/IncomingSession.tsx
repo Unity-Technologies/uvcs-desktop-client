@@ -2,7 +2,7 @@ import { Folder } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { DiffEntry } from '@shared/domain/diff';
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
-import type { GroupedTreeRow } from '../../lib/groupedPathTree';
+import { isHeaderRow } from '../../lib/groupedPathTree';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { pluralize } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
@@ -20,7 +20,7 @@ import { useFileConflicts } from '../merge/resolve/useFileConflicts';
 import { IncomingChangesetList } from './IncomingChangesetList';
 import { IncomingConflictMark } from './IncomingConflictMark';
 import { IncomingFileDiff } from './IncomingDetail';
-import { ALL_INCOMING, collidesWithLocal, firstIncomingFile, incomingDiffTarget, type IncomingFileGroup, type IncomingScope } from './incomingScope';
+import { ALL_INCOMING, collidesWithLocal, firstIncomingFile, incomingDiffTarget, type IncomingScope } from './incomingScope';
 import { IncomingFiles } from './IncomingFiles';
 import { UpdateBar } from './UpdateBar';
 import { UPDATE_LABELS, updateConflictFiles, updateResolutionsOf } from './updateConflictFiles';
@@ -71,7 +71,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const resolutions = updateResolutionsOf(states);
 
   const focusedFile = files?.find((file) => diffEntryKey(file) === selection.anchor);
-  const focusedGroup = focusedFile ? undefined : rows.find((row): row is Exclude<GroupedTreeRow<DiffEntry, IncomingFileGroup>, { type: 'file' }> => row.type !== 'file' && row.key === selection.anchor);
+  const focusedGroup = focusedFile ? undefined : rows.filter(isHeaderRow).find((row) => row.key === selection.anchor);
   const firstFile = files && scope.kind === 'all' ? firstIncomingFile(files, collides) : undefined;
 
   // The whole update opens on the first file that needs merging, or the first file.

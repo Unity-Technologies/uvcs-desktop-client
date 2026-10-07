@@ -1,4 +1,4 @@
-import { collapseTreeRows, layoutPathList, layoutPathTree, type PathTreeRow } from './pathTree';
+import { collapseTreeRows, layoutPathList, layoutPathTree, type PathTreeRow, type TreeFolderRow } from './pathTree';
 import { treeArrowMove, type TreeArrowMove, type TreeArrowRow } from './treeArrowMove';
 
 /**
@@ -40,6 +40,11 @@ export function layoutGroupedTree<T extends { path: string }, G>(groups: readonl
     for (const row of laidOut) rows.push(row);
   }
   return rows;
+}
+
+/** A row that holds others: a group or a folder. */
+export function isHeaderRow<T, G>(row: GroupedTreeRow<T, G>): row is TreeGroupRow<T, G> | TreeFolderRow<T> {
+  return row.type !== 'file';
 }
 
 /** Whether the rows are grouped: groups, when there are any, lead them. */

@@ -4,3 +4,11 @@
   flex-direction: column;
   min-height: 0;
 }
+
+/* The list of what the merge does: the filter bar, then the items. */
+.list {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
