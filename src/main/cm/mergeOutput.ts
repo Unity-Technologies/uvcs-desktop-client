@@ -10,6 +10,7 @@ import type {
   MergePlan,
   MergePlanStatus,
 } from '@shared/domain/merge';
+import { comparePaths } from '@shared/pathOrder';
 import { FIELD_SEPARATOR } from './formatRecords';
 
 /** Separates fields in `cm merge --machinereadable` output. */
@@ -97,7 +98,7 @@ function readStatus(plan: PrintedMergePlan, [code = '', message]: string[]): voi
 }
 
 function byPath(a: { path: string }, b: { path: string }): number {
-  return a.path.localeCompare(b.path);
+  return comparePaths(a.path, b.path);
 }
 
 function addContributor(contributors: Partial<MergeContributors>, [role, changesetId, , branch]: string[]): void {
