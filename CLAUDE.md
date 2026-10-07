@@ -296,7 +296,8 @@ them on the server, and reading shell command lines cost more to keep right than
    development build, a clean console).
 4. **Have it reviewed in a clean context.** Give the reviewer's brief (`.claude/agents/reviewer.md`; in Claude Code,
    the `reviewer` agent) to a fresh agent or session that didn't write the change, with the branch, its folder, what
-   the change is for and how you verified it. A fresh context sees what the author's can't. A subagent that can't
+   the change is for and how you verified it. A fresh context sees what the author's can't. The reviewer only reads:
+   it runs no tests, builds or app, since step 3 and CI already do. A subagent that can't
    start agents of its own stops after step 3 and reports its branch, folder and verification; the agent that started
    it runs the review, then resumes it (Claude Code: `SendMessage`) to do steps 5 and 6, or does them itself.
 5. **Apply the review**: fix every must-fix and what's worth it among the rest, in new commits; re-run step 3. If the

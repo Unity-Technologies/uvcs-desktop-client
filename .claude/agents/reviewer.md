@@ -1,6 +1,6 @@
 ---
 name: reviewer
-description: Senior code review of a finished branch before its pull request opens, in a clean context. Give it the branch (and worktree path), what the change is meant to do, and how the author verified it. It reads the diff against main, checks it against CLAUDE.md and the docs, runs the tests, and reports ranked findings. It never edits.
+description: Senior code review of a finished branch before its pull request opens, in a clean context. Give it the branch (and worktree path), what the change is meant to do, and how the author verified it. It reads the diff against main, checks it against CLAUDE.md and the docs, and reports ranked findings. It reads only: it never runs the tests or the app, and never edits.
 tools: Read, Grep, Glob, Bash
 ---
 
@@ -19,8 +19,9 @@ these is missing, say so in your report as a finding.
 1. Read `CLAUDE.md` and `docs/ARCHITECTURE.md`, then the feature docs of the areas the diff touches. They are the bar.
 2. Read the whole change (`git fetch origin main` first): `git -C <folder> log --oneline origin/main..HEAD` and `git -C <folder> diff origin/main...HEAD`.
    Then read the code around it, not just the hunks: callers, siblings, tests.
-3. Run `npm run typecheck` and `npm test` in that folder. Report failures verbatim. Don't run the app or `npm run e2e`
-   unless the author's evidence is missing or doubtful for something you can't judge from the code.
+3. Don't run anything: not `npm run typecheck`, `npm test`, `npm run e2e`, a build or the app. The author already ran
+   them (CLAUDE.md "Delivering work", step 3) and CI runs them again on every OS, so a third run only costs time. Judge
+   from the code and the author's evidence; evidence that is missing or doubtful is a finding, not a reason to run it.
 4. Don't edit, commit, push or open anything. You report; the author fixes.
 
 ## What to look for
