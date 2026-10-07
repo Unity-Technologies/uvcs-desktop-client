@@ -1,4 +1,5 @@
 import type { DiffEntry } from '@shared/domain/diff';
+import type { MergeTool } from '@shared/domain/mergeTools';
 import type { MenuEntry } from '../../lib/actions';
 import { diffEntryMenu } from '../diff/diffEntryMenu';
 import { keepVersionEntries } from '../merge/resolve/keepVersionEntries';
@@ -15,7 +16,13 @@ export interface IncomingFileMenuContext {
   headChangeset: number;
   /** The conflict of a path changed on both sides, by its path; none for the others. */
   conflictOf: (path: string) => FileConflictState | undefined;
+  /** The tool "Resolve in…" opens; none when no merge tool was found. */
+  preferredTool: MergeTool | undefined;
+  /** Files resolve one by one in a tool: no other opens meanwhile. */
+  running: boolean;
   decide: (key: string, decision: FileConflictDecision) => void;
+  reset: (key: string) => void;
+  resolveIn: (key: string, tool: MergeTool) => void;
 }
 
 /**
