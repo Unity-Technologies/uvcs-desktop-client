@@ -8,14 +8,9 @@ export interface ChangeFilter {
   tones: ReadonlySet<StatusTone>;
 }
 
-// The order the Plastic desktop GUI lists change categories in.
+// The order of the status chips: the one the Plastic desktop GUI lists change categories in.
 const TONE_ORDER: StatusTone[] = ['changed', 'moved', 'deleted', 'permissions', 'added', 'private', 'conflict', 'muted'];
 const ALWAYS_OFFERED: ReadonlySet<StatusTone> = new Set(['added', 'changed', 'deleted', 'moved']);
-
-/** Orders changes by status the way the filter chips are laid out: changed, moved, deleted, …, private. */
-export function compareTones(a: StatusTone, b: StatusTone): number {
-  return TONE_ORDER.indexOf(a) - TONE_ORDER.indexOf(b);
-}
 
 /** The status chips to offer: the common ones always, the rest only while some change has them. */
 export function offeredTones(present: ReadonlySet<StatusTone>): StatusTone[] {

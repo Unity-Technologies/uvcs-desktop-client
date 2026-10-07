@@ -77,11 +77,11 @@ describe('parseDiffEntries', () => {
     ]);
   });
 
-  it('reads a big diff in one pass: a few reads of each character, whatever the size', () => {
-    const output = formatOutput(...Array.from({ length: 5_000 }, (_, index) => ['C', `"/src/folder${index % 100}/file_${(index * 7919) % 5_000}.ts"`, '""', '12', '13', 'F', GAME]));
-    const { result: entries, charactersRead } = countCharactersRead(() => parseDiffEntries(output));
-    // About 4.2 reads of each character; a pass over the rest of the output per record reads each thousands of times.
-    expect(charactersRead / output.length).toBeLessThan(6);
-    expect(entries).toHaveLength(5_000);
+  it('reads a big diff in one pass: doubling it about doubles the work, sorting included', () => {
+    const diffOf = (size: number) => formatOutput(...Array.from({ length: size }, (_, index) => ['C', `"/src/folder${index % 100}/file_${(index * 7919) % size}.ts"`, '""', '12', '13', 'F', GAME]));
+    const charactersReadFor = (size: number) => countCharactersRead(() => parseDiffEntries(diffOf(size))).charactersRead;
+    // About 2.2 (n·log n, the sort by path); a pass over the rest of the output per record reads 4 times as much.
+    expect(charactersReadFor(10_000) / charactersReadFor(5_000)).toBeLessThan(2.5);
+    expect(parseDiffEntries(diffOf(5_000))).toHaveLength(5_000);
   });
 });

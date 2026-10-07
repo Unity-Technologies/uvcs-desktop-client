@@ -71,7 +71,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
   const { changelists } = snapshot;
   const locks = usePendingLocks(workspacePath, workspace?.repository, allChanges, readAt);
   // Sorted once for the layout; filtering keeps the order, so typing in the filter or opening a folder never sorts again.
-  const sorted = useSortedChanges(allChanges, layout);
+  const sorted = useSortedChanges(allChanges);
   const { visible: filtered, query, clear: clearTextFilter, bar: filterBar } = useChangeFilter(sorted, changePath, changeTones, true);
   const changes = useMemo(() => review.narrow(filtered), [review.narrow, filtered]);
   const clearFilter = (): void => {

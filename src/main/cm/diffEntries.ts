@@ -1,5 +1,6 @@
 import type { DiffEntry, DiffStatus } from '@shared/domain/diff';
 import type { ItemType } from '@shared/domain/pendingChanges';
+import { comparePaths } from '@shared/pathOrder';
 import { parseRecords, recordFormat } from './formatRecords';
 
 /**
@@ -10,9 +11,6 @@ export const DIFF_FORMAT = recordFormat(['status', 'path', 'srccmpath', 'baserev
 
 const STATUSES: Record<string, DiffStatus> = { A: 'added', C: 'changed', D: 'deleted', M: 'moved' };
 const ITEM_TYPES: Record<string, ItemType> = { F: 'file', B: 'binaryFile', D: 'directory', X: 'xlink' };
-
-/** As people read them: file_2 before file_10. One collator: `localeCompare` with options builds one per call. */
-const PATH_ORDER = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
 
 /**
  * Parses `cm diff` records. `cm` reports a moved-and-changed item twice (M and C), so entries
@@ -28,7 +26,7 @@ export function parseDiffEntries(output: string): DiffEntry[] {
     entriesByPath.set(entry.path, existing ? mergeEntries(existing, entry) : entry);
   }
 
-  return [...entriesByPath.values()].sort((a, b) => PATH_ORDER.compare(a.path, b.path));
+  return [...entriesByPath.values()].sort((a, b) => comparePaths(a.path, b.path));
 }
 
 function toDiffEntry([statusCode = '', path = '', sourcePath = '', baseRevision = '', revision = '', typeCode = '', repository = '']: string[]): DiffEntry | null {

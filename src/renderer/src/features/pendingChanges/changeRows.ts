@@ -1,5 +1,5 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
-import { sortForLayout } from './changeOrder';
+import { sortChanges } from './changeOrder';
 import { treeLevel } from './changeRowLevels';
 
 /** A changelist header. */
@@ -67,7 +67,7 @@ export function layoutChangeRows({ changes, changelists, layout, grouping }: Lay
   }
 
   for (const group of groupByChangelist(changes, changelists)) {
-    const sorted = sortForLayout(group.changes, layout);
+    const sorted = sortChanges(group.changes);
     rows.push({
       type: 'group',
       key: group.key,
@@ -127,7 +127,7 @@ export function menuTargetOf(row: ChangeRow | null): Changelist | PendingChange[
 }
 
 function appendChangeRows(rows: ChangeRow[], changes: PendingChange[], groupKey: string, layout: ChangesLayout): void {
-  const sorted = sortForLayout(changes, layout);
+  const sorted = sortChanges(changes);
   if (layout === 'tree') {
     appendTreeRows(rows, sorted, groupKey);
     return;

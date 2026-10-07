@@ -28,5 +28,5 @@ function compareSegments(a: string[], b: string[]): number {
   return a.length - b.length;
 }
 
-/** `localeCompare`'s order, many times faster over thousands of paths. */
-const collator = new Intl.Collator();
+/** Names as people read them: file_2 before file_10, case only between names otherwise equal. Faster than `localeCompare`. */
+const collator = new Intl.Collator(undefined, { numeric: true });

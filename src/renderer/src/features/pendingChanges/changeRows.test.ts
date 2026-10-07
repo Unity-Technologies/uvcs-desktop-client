@@ -27,9 +27,9 @@ const base = {
 };
 
 describe('buildChangeRows', () => {
-  it('lists every change without a header, by status in filter order and then by path', () => {
+  it('lists every change without a header, by path', () => {
     const rows = buildChangeRows(base);
-    expect(rows.map((row) => row.key)).toEqual(['change:src/a.ts', 'change:src/b.ts', 'change:src/lib/c.ts', 'change:new.txt']);
+    expect(rows.map((row) => row.key)).toEqual(['change:new.txt', 'change:src/a.ts', 'change:src/b.ts', 'change:src/lib/c.ts']);
   });
 
   it('reports a mixed check state when only some changes are checked', () => {

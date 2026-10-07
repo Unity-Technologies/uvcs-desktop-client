@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { isCheckinCandidate } from '../../features/pendingChanges/changeCategories';
 // The palette lists changes as the flat list does.
-import { sortByStatus } from '../../features/pendingChanges/changeOrder';
+import { sortChanges } from '../../features/pendingChanges/changeOrder';
 import { createFuzzyIndex } from '../../lib/fuzzyIndex';
 import type { ResultContext } from './objectResults';
 import { paletteGroups } from './paletteGroups';
@@ -42,7 +42,7 @@ export function usePaletteSearch(workspacePath: string | null, query: string, sc
   const fileIndex = useMemo(() => createFuzzyIndex(files.data?.map((entry) => entry.path) ?? []), [files.data]);
   const branchIndex = useMemo(() => createFuzzyIndex(branches.data?.map((branch) => branch.name) ?? []), [branches.data]);
   const labelIndex = useMemo(() => createFuzzyIndex(labels.data?.map((label) => label.name) ?? []), [labels.data]);
-  const changes = useMemo(() => sortByStatus((pendingChanges.data?.changes ?? []).filter(isCheckinCandidate)), [pendingChanges.data]);
+  const changes = useMemo(() => sortChanges((pendingChanges.data?.changes ?? []).filter(isCheckinCandidate)), [pendingChanges.data]);
 
   const serverWaits = (search: { isFetching: boolean }): boolean => server.searches && (serverTerm !== term || search.isFetching);
   const isLoading =
