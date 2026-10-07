@@ -32,3 +32,11 @@ export function listedIncomingChangesets(
 export function showMoreStep(pages: readonly IncomingChangesetPage[] | undefined): 'nextPage' | 'firstPage' {
   return pages && pages.length > 0 ? 'nextPage' : 'firstPage';
 }
+
+/**
+ * The changeset the arrows go on from after Enter on "Show more": the first of the page that landed at `landingAt` (how
+ * many changesets the list had when it was asked for); null while none is awaited or it hasn't landed.
+ */
+export function landingSelection(changesets: readonly Changeset[], landingAt: number | null): Changeset | null {
+  return landingAt !== null && changesets.length > landingAt ? changesets[landingAt]! : null;
+}
