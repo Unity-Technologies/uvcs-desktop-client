@@ -10,7 +10,7 @@ vi.mock('electron', () => ({ dialog: { showSaveDialog: vi.fn() }, shell: { openP
 
 const WORKSPACE = join(tmpdir(), 'wkspaces', 'game');
 const openInEditor = vi.fn(async (_path: string, _editorId: string) => {});
-const REVISION = { revisionId: 45, repository: 'game@local' };
+const REVISION = { kind: 'revision', revision: { revisionId: 45, repository: 'game@local' }, fileName: 'a.cs' } as const;
 
 /** `cm cat` writing the old version to the file it is given. */
 const CAT: CmAnswer = async ({ args }) => {
@@ -64,6 +64,15 @@ describe('revision files', () => {
     expect([basename(path), editorId]).toEqual(['a.cs', 'vscode']);
     expect(await readFile(path, 'utf8')).toBe('old version');
     expect(shell.openPath).not.toHaveBeenCalled();
+  });
+
+  it('saves a version named by its path at a changeset, as a merge reads its sides', async () => {
+    const target = join(await mkdtemp(join(tmpdir(), 'save-')), 'a.cs');
+    vi.mocked(dialog.showSaveDialog).mockResolvedValueOnce({ canceled: false, filePath: target });
+    const fake = fakeCmClient({ cat: CAT });
+
+    await revisionFiles(fake.cm, openInEditor).saveAs(WORKSPACE, { kind: 'spec', spec: 'itemid:27#cs:12@game@local', fileName: 'a.cs' }, 'a.cs');
+    expect(fake.lines()).toEqual([`cat itemid:27#cs:12@game@local --file=${target}`]);
   });
 
   it("fails with the OS's reason when no app opens it", async () => {
