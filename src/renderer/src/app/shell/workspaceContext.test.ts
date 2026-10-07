@@ -12,7 +12,7 @@ const info = (selector: WorkspaceSelector, loadedChangeset: number | null = 11):
   selector,
   loadedChangeset,
 });
-const summary = (changesetCount: number, branch = '/main'): IncomingSummary => ({ branch, loadedChangeset: 11, headChangeset: 11 + changesetCount, changesetCount, authors: [] });
+const summary = (changesetCount: number, branch = '/main'): IncomingSummary => ({ branch, loadedChangeset: 11, headChangeset: 11 + changesetCount, changesetCount, countCapped: false, authors: [] });
 
 describe('workspaceContext', () => {
   it('tells the loaded changeset and keeps its branch for the tooltip', () => {

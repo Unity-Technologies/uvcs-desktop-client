@@ -7,6 +7,7 @@ const summary = (changesetCount: number, authors: string[] = [], branch = '/main
   loadedChangeset: 10,
   headChangeset: 10 + changesetCount,
   changesetCount,
+  countCapped: false,
   authors,
 });
 
@@ -19,7 +20,7 @@ describe('behindBranch', () => {
     expect(behindBranch(summary(0), '/main/task', false)).toBeNull();
     expect(behindBranch(undefined, '/main/task', false)).toBeNull();
     expect(behindBranch(summary(2), '/main', false)).toBeNull();
-    expect(behindBranch({ branch: null, changesetCount: 0, authors: [] }, undefined, false)).toBeNull();
+    expect(behindBranch({ branch: null, changesetCount: 0, countCapped: false, authors: [] }, undefined, false)).toBeNull();
   });
 
   it('is null while a merge is pending: checking in completes it as it is, without updating first', () => {

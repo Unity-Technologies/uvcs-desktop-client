@@ -1,4 +1,4 @@
-import type { IncomingChanges, IncomingSummary, LoadedBranch, ShelvedForUpdate, UpdateResolutions, UpdateResult } from '../domain/incoming';
+import type { IncomingChangesetPage, IncomingChangesetsRequest, IncomingChanges, IncomingSummary, LoadedBranch, ShelvedForUpdate, UpdateResolutions, UpdateResult } from '../domain/incoming';
 import type { MergePlan, MergeRequest, MergeResolutions, MergeResult } from '../domain/merge';
 
 export interface MergeApi {
@@ -14,9 +14,15 @@ export interface MergeApi {
    * null when it wasn't merged there. One `cm find merge` returning a single link.
    */
   mergedInto(workspacePath: string, sourceChangeset: number, destinationBranch: string): Promise<number | null>;
-  /** One light `cm find` for the changesets on `loaded.branch` after the loaded one; polled, so it reads nothing else. */
+  /**
+   * One light `cm find` for the newest changesets on `loaded.branch` after the loaded one, at most 100 of them however
+   * far behind the workspace is (`countCapped` beyond); polled, so it reads nothing else.
+   */
   incomingSummary(workspacePath: string, loaded: LoadedBranch): Promise<IncomingSummary>;
+  /** What updating brings: the newest page of changesets, one diff from the loaded changeset to the head, and what collides locally. */
   incomingChanges(workspacePath: string): Promise<IncomingChanges>;
+  /** One page of the incoming changesets: the incoming card's newest few, or Incoming's older ones. */
+  incomingChangesets(workspacePath: string, request: IncomingChangesetsRequest): Promise<IncomingChangesetPage>;
   /** Updates the workspace, merging locally changed files that also changed on the branch. */
   updateResolvingConflicts(workspacePath: string, resolutions: UpdateResolutions, operationId: string): Promise<UpdateResult>;
   /**

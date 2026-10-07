@@ -21,6 +21,7 @@ const behind = (headChangeset: number, changesetCount: number, loadedChangeset =
   loadedChangeset,
   headChangeset,
   changesetCount,
+  countCapped: false,
   authors: ['ana'],
 });
 

@@ -37,6 +37,8 @@ function incoming(overrides: Partial<BranchIncomingChanges> = {}): BranchIncomin
     loadedChangeset: 41,
     headChangeset: 43,
     changesetCount: 1,
+    countCapped: false,
+    moreChangesets: false,
     authors: ['bob'],
     changesets: [{ id: 43, guid: 'g', branch: '/main', comment: 'Fix', owner: 'bob', date: '', parent: 41, repository: 'game@local' }],
     files: [{ status: 'changed', path: 'src/other.ts', itemType: 'file', baseRevisionId: 1, revisionId: 2, repository: 'game@local' }],

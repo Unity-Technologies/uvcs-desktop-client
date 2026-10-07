@@ -9,6 +9,8 @@ const incoming = (changesets: Changeset[]): BranchIncomingChanges => ({
   loadedChangeset: 10,
   headChangeset: 10 + changesets.length,
   changesetCount: changesets.length,
+  countCapped: false,
+  moreChangesets: false,
   authors: [],
   changesets,
   files: [],

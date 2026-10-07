@@ -8,10 +8,12 @@ const summary = (changesetCount: number): BranchIncoming => ({
   loadedChangeset: 10,
   headChangeset: 10 + changesetCount,
   changesetCount,
+  countCapped: false,
   authors: [],
 });
 const changes = (conflicts: number, blocked = 0, headChangeset = 13): BranchIncomingChanges => ({
   ...summary(3),
+  moreChangesets: false,
   headChangeset,
   changesets: [],
   files: [],
@@ -22,7 +24,7 @@ const changes = (conflicts: number, blocked = 0, headChangeset = 13): BranchInco
 describe('incomingChipState', () => {
   it('shows nothing when up to date or not on a branch', () => {
     expect(incomingChipState(summary(0), undefined, undefined)).toBeNull();
-    expect(incomingChipState({ branch: null, changesetCount: 0, authors: [] }, undefined, undefined)).toBeNull();
+    expect(incomingChipState({ branch: null, changesetCount: 0, countCapped: false, authors: [] }, undefined, undefined)).toBeNull();
     expect(incomingChipState(undefined, undefined, undefined)).toBeNull();
   });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { change, changesetsFound, diffRecord, NOTHING_FOUND, pendingStatus, statusHeader } from '../cm/testing/cmOutput';
+import { change, changesetsFound, diffRecord, formatOutput, NOTHING_FOUND, pendingStatus, statusHeader } from '../cm/testing/cmOutput';
 import { INCOMING_CHANGESETS_PAGE } from '@shared/domain/incoming';
 import { fakeCmClient } from '../cm/testing/fakeCmClient';
 import { incomingChangesetsArgs, INCOMING_CHECK_LIMIT, readIncomingChangesetPage, readIncomingChanges, readIncomingSummary, summarizeIncoming } from './incoming';
@@ -40,7 +40,7 @@ describe('the incoming summary', () => {
   });
 
   it('costs one bounded find however far behind the workspace is', async () => {
-    const behind = Array.from({ length: INCOMING_CHECK_LIMIT + 1 }, (_, index) => `${1000 - index}#ana`).join('\n');
+    const behind = formatOutput(...Array.from({ length: INCOMING_CHECK_LIMIT + 1 }, (_, index) => [1000 - index, 'ana']));
     const { cm, lines, linesVia } = fakeCmClient({ 'find changeset': behind });
 
     const summary = await readIncomingSummary(cm, '/w', { branch: '/main', loadedChangeset: 41 });
