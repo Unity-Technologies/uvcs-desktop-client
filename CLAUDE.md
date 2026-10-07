@@ -42,6 +42,27 @@ A fast, beautiful desktop client for Unity Version Control (Plastic SCM). Electr
 This file holds the rules and where to find things; ARCHITECTURE.md holds the details and the numbers. When they
 seem to disagree, the code and its tests decide, and the doc gets fixed.
 
+## The UVCS sources, for UVCS developers
+
+Unity's UVCS developers have the sources of `cm`, its server and the legacy clients (the desktop GUI, the diff and
+merge tools, the Unity plugin) on their machines; everyone else doesn't, and this repository never assumes them. A
+developer who has them writes where they are in `CLAUDE.local.md` at the repository's root (gitignored, never
+committed; Claude Code loads it, in worktrees too, and `AGENTS.md` sends other tools to it), and lets the agent read
+those folders (Claude Code: `permissions.additionalDirectories` in `.claude/settings.local.json`, or `/add-dir`).
+
+When `CLAUDE.local.md` exists, use those sources to answer what `cm`'s output, its help and the docs can't: the exact
+format a command prints and its edge cases, why it fails, what a server round trip costs, how the legacy GUI does a
+flow users already know. They are a reference to understand behaviour, never a source to copy:
+
+- **Nothing from them enters this repository.** It's public under Apache-2.0 and those sources are proprietary: no
+  code, translated or not, no excerpts, internal class or file names, private paths or ticket numbers in code,
+  comments, tests, docs, commits, pull requests or issues. Write it fresh, in this codebase's own idiom.
+- **Behaviour is pinned by tests, not by citation**: what you learn becomes a test with output shaped as `cm` prints
+  it (see "`cm` output is synthetic") and, when it's a rule, a line in the docs, both in this repository's own words.
+- **The legacy GUI is a reference for what users expect, not for how to build it**: this app follows its own
+  principles (Max UX, `cm` economy) even where the legacy client does otherwise.
+- **Read only**: never build, run or change anything in those folders.
+
 ## Architecture in one screen
 
 ```
