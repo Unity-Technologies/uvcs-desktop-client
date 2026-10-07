@@ -106,6 +106,21 @@ describe('protectMainRules', () => {
     expect(violation('echo "git commit -m x"')).toBeNull();
   });
 
+  // How agents commit: the message in a heredoc, fed on stdin or through "$(cat ...)". Its lines are text, not commands.
+  it('ignores git words inside a heredoc message', () => {
+    const plainMessage = ['Title', '', 'git push origin main is refused now', 'EOF'].join('\n');
+    const quotingMessage = ['Title', '', 'Don\'t "git merge main";', 'git push origin main is refused now', 'EOF'].join('\n');
+    for (const message of [plainMessage, quotingMessage]) {
+      expect(violation(`git commit -F - <<'EOF'\n${message}\ngit log --oneline -1`, WORKTREE)).toBeNull();
+      expect(violation(`git commit -F - <<EOF\n${message}`, WORKTREE)).toBeNull();
+      expect(violation(`git commit -m "$(cat <<'EOF'\n${message}\n)"`, WORKTREE)).toBeNull();
+    }
+  });
+
+  it('reads the commands after a heredoc', () => {
+    expect(violation(`git commit -F - <<'EOF' --quiet\nTitle\nEOF\ngit push origin main`, WORKTREE)).not.toBeNull();
+  });
+
   it('reads environment assignments before git', () => {
     expect(violation('GIT_EDITOR=true git merge feature/x')).not.toBeNull();
   });
