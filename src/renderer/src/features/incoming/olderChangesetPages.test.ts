@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
-import { firstOlderPageParam, listedIncomingChangesets, nextOlderPageParam } from './olderChangesetPages';
+import { firstOlderPageParam, listedIncomingChangesets, nextOlderPageParam, showMoreStep } from './olderChangesetPages';
 
 const changeset = (id: number): Changeset => ({ id }) as Changeset;
 const ids = (changesets: Changeset[]) => changesets.map((one) => one.id);
@@ -27,5 +27,16 @@ describe('older incoming changeset pages', () => {
     const listed = listedIncomingChangesets(first, [{ changesets: [changeset(7), changeset(6)], more: true }, { changesets: [changeset(5)], more: false }]);
     expect(ids(listed.changesets)).toEqual([9, 8, 7, 6, 5]);
     expect(listed.more).toBe(false);
+  });
+});
+
+describe('showMoreStep', () => {
+  it('reads the next page after those already read, even when the list was left and opened again', () => {
+    expect(showMoreStep([{ changesets: [changeset(7)], more: true }])).toBe('nextPage');
+  });
+
+  it('reads the first older page while none is read, after a failure too', () => {
+    expect(showMoreStep(undefined)).toBe('firstPage');
+    expect(showMoreStep([])).toBe('firstPage');
   });
 });

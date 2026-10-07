@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { BranchIncoming, BranchIncomingChanges } from '@shared/domain/incoming';
 import { nextProgressBar, SWEEP } from '../../app/operations/progressBar';
 import type { Changeset } from '@shared/domain/changeset';
-import { cardChangesets, cardReadsNewest, chipReadsIncomingChanges, incomingChipState, knownIncomingSummary } from './incomingChipState';
+import { cardChangesets, cardFailed, cardReadsNewest, chipReadsIncomingChanges, incomingChipState, knownIncomingSummary } from './incomingChipState';
 
 const summary = (changesetCount: number, countCapped = false): BranchIncoming => ({
   branch: '/main',
@@ -128,5 +128,29 @@ describe('knownIncomingSummary', () => {
 
   it('keeps the check when it knows as much', () => {
     expect(knownIncomingSummary(summary(3), { ...changes(0), changesetCount: 3 })).toMatchObject({ changesetCount: 3, countCapped: false });
+  });
+});
+
+describe('cardFailed', () => {
+  const none = { changes: false, newest: false };
+
+  it('says so when the incoming changes it lists failed, below the count or pinned past it', () => {
+    expect(cardFailed(summary(3), undefined, { open: true, pinned: false }, { ...none, changes: true })).toBe(true);
+    expect(cardFailed(summary(100, true), undefined, { open: true, pinned: true }, { changes: true, newest: true })).toBe(true);
+  });
+
+  it('says so when its own read of the newest failed past the count', () => {
+    expect(cardFailed(summary(100, true), undefined, { open: true, pinned: false }, { ...none, newest: true })).toBe(true);
+  });
+
+  it('keeps waiting while a read it waits on may still answer', () => {
+    expect(cardFailed(summary(3), undefined, { open: true, pinned: false }, none)).toBe(false);
+    expect(cardFailed(summary(100, true), undefined, { open: true, pinned: true }, { ...none, changes: true })).toBe(false);
+    expect(cardFailed(summary(100, true), undefined, { open: true, pinned: false }, { ...none, changes: true })).toBe(false);
+  });
+
+  it('never fails once it has changesets to list', () => {
+    const read = { ...changes(0), changesets: listed(3) };
+    expect(cardFailed(summary(3), read, { open: true, pinned: false }, { changes: true, newest: true })).toBe(false);
   });
 });
