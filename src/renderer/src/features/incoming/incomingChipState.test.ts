@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { BranchIncoming, BranchIncomingChanges } from '@shared/domain/incoming';
 import { nextProgressBar, SWEEP } from '../../app/operations/progressBar';
-import { chipReadsIncomingChanges, incomingChipState } from './incomingChipState';
+import type { Changeset } from '@shared/domain/changeset';
+import { cardChangesets, cardReadsNewest, chipReadsIncomingChanges, incomingChipState, knownIncomingSummary } from './incomingChipState';
 
 const summary = (changesetCount: number, countCapped = false): BranchIncoming => ({
   branch: '/main',
@@ -72,7 +73,7 @@ describe('chipReadsIncomingChanges', () => {
     expect(chipReadsIncomingChanges(summary(99), false)).toBe(true);
   });
 
-  it('waits for the card to open once the check stopped counting: the diff of that many changesets is a heavy read', () => {
+  it('waits for the card to be pinned once the check stopped counting: a hover never starts the diff of that many changesets', () => {
     expect(chipReadsIncomingChanges(summary(100, true), false)).toBe(false);
     expect(chipReadsIncomingChanges(summary(100, true), true)).toBe(true);
   });
@@ -80,5 +81,52 @@ describe('chipReadsIncomingChanges', () => {
   it('reads nothing when nothing came in', () => {
     expect(chipReadsIncomingChanges(summary(0), true)).toBe(false);
     expect(chipReadsIncomingChanges(undefined, true)).toBe(false);
+  });
+});
+
+const listed = (count: number, head = 13): Changeset[] => Array.from({ length: count }, (_, index) => ({ id: head - index }) as Changeset);
+
+describe('the incoming card', () => {
+  it('lists the newest of the incoming changes already read for the same head, without a read of its own', () => {
+    const read = { ...changes(0), changesets: listed(7) };
+    expect(cardChangesets(summary(3), read, undefined)?.map((one) => one.id)).toEqual([13, 12, 11, 10, 9]);
+    expect(cardReadsNewest(summary(3), read, true)).toBe(false);
+  });
+
+  it('reads its newest only past the count, while open, when nothing was read for that head', () => {
+    expect(cardReadsNewest(summary(100, true), undefined, true)).toBe(true);
+    expect(cardReadsNewest(summary(100, true), undefined, false)).toBe(false);
+    expect(cardReadsNewest(summary(3), undefined, true)).toBe(false);
+    expect(cardChangesets(summary(100, true), undefined, listed(5, 110))?.map((one) => one.id)).toEqual([110, 109, 108, 107, 106]);
+  });
+
+  it('waits while neither is in', () => {
+    expect(cardChangesets(summary(3), undefined, undefined)).toBeUndefined();
+    expect(cardChangesets(summary(3), changes(0, 0, 12), undefined)).toBeUndefined();
+  });
+});
+
+describe('knownIncomingSummary', () => {
+  const capped = summary(100, true);
+  const read = (changesetCount: number, countCapped: boolean, headChangeset = capped.headChangeset): BranchIncomingChanges => ({
+    ...changes(0, 0, headChangeset),
+    changesetCount,
+    countCapped,
+    authors: ['ana', 'bob'],
+  });
+
+  it('counts with the incoming changes once they are in for the same head, which count further than the check', () => {
+    expect(knownIncomingSummary(capped, read(150, false))).toMatchObject({ changesetCount: 150, countCapped: false, authors: ['ana', 'bob'] });
+    expect(knownIncomingSummary(capped, read(200, true))).toMatchObject({ changesetCount: 200, countCapped: true });
+  });
+
+  it('keeps the check for another head, or while nothing else is in', () => {
+    expect(knownIncomingSummary(capped, read(150, false, 90))).toBe(capped);
+    expect(knownIncomingSummary(capped, undefined)).toBe(capped);
+    expect(knownIncomingSummary(undefined, read(150, false))).toBeUndefined();
+  });
+
+  it('keeps the check when it knows as much', () => {
+    expect(knownIncomingSummary(summary(3), { ...changes(0), changesetCount: 3 })).toMatchObject({ changesetCount: 3, countCapped: false });
   });
 });
