@@ -30,6 +30,7 @@ import { completeMerge } from './mergeOperations';
 import { collectResolutions } from './mergeResolutions';
 import { conflictStatusOf, planProgress, summarizePlan } from './mergeStatus';
 import { useFileConflicts } from './resolve/useFileConflicts';
+import { useSelectionFollowsItem } from './useSelectionFollowsItem';
 import styles from './MergeSession.module.css';
 
 interface MergeSessionProps {
@@ -102,18 +103,9 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
     if (!selectedKey && items.length > 0) setSelection(singleSelection(rowKeyOf((firstWaiting(items) ?? inListOrder(items)[0]!).key)));
   }, [selectedKey, items, rowKeyOf]);
 
-  // A folder conflict is its folder's row in a tree and a row of its own in a list: switching between them keeps it
-  // selected, by the item the selection was made on.
-  const selectedItemKey = useRef<string | undefined>(undefined);
-  useEffect(() => {
-    selectedItemKey.current = selected?.key;
-  }, [selectedKey]); // Only a new selection says which item it is on; a new layout keeps the one it had.
-  useEffect(() => {
-    const itemKey = selectedItemKey.current;
-    if (!itemKey || selection.selected.size > 1) return;
-    const rowKey = rowKeyOf(itemKey);
-    if (rowKey !== selectedKey) setSelection(singleSelection(rowKey));
-  }, [rowKeyOf]); // Each new layout of the rows, and only then.
+  // A folder conflict is its folder's row in a tree and a row of its own in a list: switching keeps it selected.
+  const listedKeys = useMemo(() => new Set(filter.visible.map(itemKey)), [filter.visible]);
+  useSelectionFollowsItem(selectedKey, selected?.key, selection, setSelection, (key) => listedKeys.has(key), rowKeyOf);
 
   const resolveDirectoryConflict = (index: number, resolution: DirectoryConflictResolution): void =>
     setDirectoryResolutions((current) => Object.assign([...current], { [index]: resolution }));
