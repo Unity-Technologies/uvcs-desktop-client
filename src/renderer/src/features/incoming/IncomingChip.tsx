@@ -13,7 +13,7 @@ import { ProgressRing } from '../../ui/ProgressRing';
 import { Spinner } from '../../ui/Spinner';
 import { toast } from '../../ui/toast/toastStore';
 import { IncomingCard } from './IncomingCard';
-import { cardChangesets, cardReadsNewest, chipReadsIncomingChanges, incomingChipState, knownIncomingSummary } from './incomingChipState';
+import { cardChangesets, cardFailed, cardReadsNewest, chipReadsIncomingChanges, incomingChipState, knownIncomingSummary } from './incomingChipState';
 import { updateToIncoming } from './updateOperations';
 import { incomingChangesKey, useIncomingChanges } from './useIncomingChanges';
 import { useNewestIncomingChangesets } from './useIncomingChangesets';
@@ -29,7 +29,7 @@ export function IncomingChip() {
   const workspacePath = useWorkspacePath();
   const { data: checked } = useIncomingSummary();
   const card = useHoverCard();
-  const { data: changes } = useIncomingChanges({ enabled: chipReadsIncomingChanges(checked, card.open && card.pinned) });
+  const { data: changes, isError: changesFailed } = useIncomingChanges({ enabled: chipReadsIncomingChanges(checked, card.open && card.pinned) });
   const summary = knownIncomingSummary(checked, changes);
   const newest = useNewestIncomingChangesets(summary, cardReadsNewest(summary, changes, card.open));
   const running = useRunningOperationOfKind(workspacePath, 'update');
@@ -113,7 +113,8 @@ export function IncomingChip() {
           <IncomingCard
             state={state}
             changesets={cardChangesets(summary, changes, newest.data)}
-            failed={newest.isError}
+            failed={cardFailed(summary, changes, card, { changes: changesFailed, newest: newest.isError })}
+            checking={card.pinned}
             actions={
               <>
                 <Button size="small" variant={conflicts ? 'primary' : 'secondary'} onClick={review}>

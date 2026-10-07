@@ -76,6 +76,24 @@ export function cardReadsNewest(summary: IncomingSummary | undefined, changes: I
 }
 
 /**
+ * Whether the card says its changesets couldn't be read: it has none to list, and every read it waits on failed (the
+ * incoming changes the chip reads, `chipReadsIncomingChanges`, and its own read of the newest, `cardReadsNewest`).
+ */
+export function cardFailed(
+  summary: IncomingSummary | undefined,
+  changes: IncomingChanges | undefined,
+  card: { open: boolean; pinned: boolean },
+  failed: { changes: boolean; newest: boolean },
+): boolean {
+  if (cardChangesets(summary, changes, undefined)) return false;
+  const waited = [
+    ...(chipReadsIncomingChanges(summary, card.open && card.pinned) ? [failed.changes] : []),
+    ...(cardReadsNewest(summary, changes, card.open) ? [failed.newest] : []),
+  ];
+  return waited.length > 0 && waited.every(Boolean);
+}
+
+/**
  * One count on every screen: the check's, until the incoming changes are read for the same head, which count further
  * (up to a page instead of the check's 100) and name more authors. The chip, the sidebar and the status bar show this.
  */

@@ -14,13 +14,15 @@ interface IncomingCardProps {
   state: Extract<IncomingChipState, { kind: 'incoming' | 'conflicts' }>;
   /** The newest changesets (`cardChangesets`), undefined while they load. */
   changesets: Changeset[] | undefined;
-  /** They couldn't be read. */
+  /** They couldn't be read (`cardFailed`). */
   failed: boolean;
+  /** The card is pinned, which checks the incoming changes against the local ones (`chipReadsIncomingChanges`). */
+  checking: boolean;
   actions: React.ReactNode;
 }
 
 /** The incoming changesets at a glance: who, what and when, and whether they collide with local changes. */
-export function IncomingCard({ state, changesets, failed, actions }: IncomingCardProps) {
+export function IncomingCard({ state, changesets, failed, checking, actions }: IncomingCardProps) {
   const more = state.count - (changesets?.length ?? 0);
 
   return (
@@ -32,8 +34,8 @@ export function IncomingCard({ state, changesets, failed, actions }: IncomingCar
           on <PathLabel path={state.branch} fitContent />
         </span>
       </header>
-      {state.kind === 'incoming' && state.countCapped && !state.checked && (
-        <p className={styles.unchecked}>Checked against your changes when you update or open Incoming.</p>
+      {state.kind === 'incoming' && state.countCapped && !state.checked && !checking && (
+        <p className={styles.unchecked}>Click to check them against your changes. Updating and Incoming check too.</p>
       )}
       {state.kind === 'conflicts' && (
         <p className={styles.conflicts}>
