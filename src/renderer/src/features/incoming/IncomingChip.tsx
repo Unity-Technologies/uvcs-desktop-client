@@ -6,31 +6,33 @@ import { navigation } from '../../app/navigation/navigationStore';
 import { useRunningOperationOfKind } from '../../app/operations/runningOperationsStore';
 import { queryClient } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { pluralize } from '../../lib/text';
+import { formatCountAtLeast, pluralize, pluralizeAtLeast } from '../../lib/text';
 import { useHoverCard } from '../../lib/useHoverCard';
 import { Button } from '../../ui/Button';
 import { ProgressRing } from '../../ui/ProgressRing';
 import { Spinner } from '../../ui/Spinner';
 import { toast } from '../../ui/toast/toastStore';
 import { IncomingCard } from './IncomingCard';
-import { incomingChipState } from './incomingChipState';
+import { chipReadsIncomingChanges, incomingChipState } from './incomingChipState';
 import { updateToIncoming } from './updateOperations';
 import { incomingChangesKey, useIncomingChanges } from './useIncomingChanges';
+import { useNewestIncomingChangesets } from './useIncomingChangesets';
 import { useIncomingSummary } from './useIncomingSummary';
 import styles from './IncomingChip.module.css';
 
 /**
  * A segment of the branch pill that shows up only when the branch has changesets the workspace doesn't: how many,
- * and whether they collide with local changes. Hovering lists them, with Update (or Resolve in Incoming) one click away.
+ * and whether they collide with local changes (read up front only below "100+": `chipReadsIncomingChanges`). Hovering
+ * lists the newest, read as it opens, with Update (or Resolve in Incoming) one click away.
  */
 export function IncomingChip() {
   const workspacePath = useWorkspacePath();
   const { data: summary } = useIncomingSummary();
-  const hasIncoming = Boolean(summary?.branch && summary.changesetCount > 0);
-  const { data: changes } = useIncomingChanges({ enabled: hasIncoming });
+  const card = useHoverCard();
+  const { data: changes } = useIncomingChanges({ enabled: chipReadsIncomingChanges(summary, card.open) });
+  const { data: newest } = useNewestIncomingChangesets(summary, card.open);
   const running = useRunningOperationOfKind(workspacePath, 'update');
   const state = incomingChipState(summary, changes, running);
-  const card = useHoverCard();
   const [verifying, setVerifying] = useState(false);
   // Only a card opened by clicking takes focus, so only that one gives it back: a hover never leaves a focus ring behind.
   const tookFocus = useRef(false);
@@ -76,8 +78,8 @@ export function IncomingChip() {
           className={styles.chip}
           aria-label={
             conflicts
-              ? `${pluralize(state.count, 'new changeset')}, ${pluralize(state.conflictCount, 'conflict')}`
-              : pluralize(state.count, 'new changeset')
+              ? `${pluralizeAtLeast(state.count, state.countCapped, 'new changeset')}, ${pluralize(state.conflictCount, 'conflict')}`
+              : pluralizeAtLeast(state.count, state.countCapped, 'new changeset')
           }
           {...card.hoverProps}
           onClick={(event: MouseEvent) => {
@@ -86,7 +88,7 @@ export function IncomingChip() {
           }}
         >
           {verifying ? <Spinner size={13} /> : <ArrowDownToLine size={14} className={styles.icon} />}
-          <span className={styles.count}>{state.count}</span>
+          <span className={styles.count}>{formatCountAtLeast(state.count, state.countCapped)}</span>
           {conflicts && (
             <span className={styles.conflicts}>
               <AlertTriangle size={13} className={styles.icon} />
@@ -109,7 +111,7 @@ export function IncomingChip() {
         >
           <IncomingCard
             state={state}
-            changes={changes}
+            newest={newest}
             actions={
               <>
                 <Button size="small" variant={conflicts ? 'primary' : 'secondary'} onClick={review}>

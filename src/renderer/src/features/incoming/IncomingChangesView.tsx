@@ -2,6 +2,7 @@ import { CheckCircle2, GitBranch, RefreshCw } from 'lucide-react';
 import { invalidateWorkspace } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { branchLabel } from '../../lib/branchLabels';
+import { formatCountAtLeast } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
 import { CenteredSpinner } from '../../ui/Spinner';
@@ -19,7 +20,7 @@ export function IncomingChangesView() {
       subtitle={
         incoming?.branch && (
           <span data-tip={incoming.branch}>
-            {incoming.changesetCount > 0 ? `${incoming.changesetCount} new on ${branchLabel(incoming.branch)}` : branchLabel(incoming.branch)}
+            {incoming.changesetCount > 0 ? `${formatCountAtLeast(incoming.changesetCount, incoming.countCapped)} new on ${branchLabel(incoming.branch)}` : branchLabel(incoming.branch)}
           </span>
         )
       }

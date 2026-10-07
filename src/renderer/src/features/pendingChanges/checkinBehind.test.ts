@@ -44,6 +44,6 @@ describe('behindDescription', () => {
   });
 
   it('leaves the authors out when unknown', () => {
-    expect(behindDescription({ count: 2, authors: [] })).toBe('2 new changesets on this branch');
+    expect(behindDescription({ count: 2, countCapped: false, authors: [] })).toBe('2 new changesets on this branch');
   });
 });

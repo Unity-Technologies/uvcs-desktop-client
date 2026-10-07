@@ -32,3 +32,13 @@ export function formatCount(count: number): string {
 export function pluralize(count: number, singular: string, plural = `${singular}s`): string {
   return `${formatCount(count)} ${count === 1 ? singular : plural}`;
 }
+
+/** A count that may have stopped short (`more`: there are more than `count`, e.g. a capped `cm find`): "100+". */
+export function formatCountAtLeast(count: number, more: boolean): string {
+  return more ? `${formatCount(count)}+` : formatCount(count);
+}
+
+/** `pluralize` for a count that may have stopped short: "100+ new changesets", plural however few it counted. */
+export function pluralizeAtLeast(count: number, more: boolean, singular: string, plural = `${singular}s`): string {
+  return more ? `${formatCountAtLeast(count, true)} ${plural}` : pluralize(count, singular, plural);
+}

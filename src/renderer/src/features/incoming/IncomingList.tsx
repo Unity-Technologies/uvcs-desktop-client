@@ -3,12 +3,14 @@ import { GitCommitVertical } from 'lucide-react';
 import { useId, useMemo, useRef, type KeyboardEvent } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import type { DiffEntry } from '@shared/domain/diff';
+import { INCOMING_CHANGESETS_PAGE } from '@shared/domain/incoming';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { navigationTarget } from '../../lib/listNavigation';
-import { firstLine } from '../../lib/text';
+import { firstLine, formatCountAtLeast } from '../../lib/text';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { Avatar } from '../../ui/Avatar';
 import { RelativeTime } from '../../ui/RelativeTime';
+import { Spinner } from '../../ui/Spinner';
 import { diffEntryStatus } from '../diff/diffEntrySources';
 import { ConflictStatusChip } from '../merge/ConflictStatusChip';
 import type { ConflictStatus } from '../merge/mergeStatus';
@@ -16,8 +18,8 @@ import { UPDATE_LABELS } from './updateConflictFiles';
 import { incomingRows, selectionKey, type IncomingRow, type IncomingSelection } from './incomingRows';
 import styles from './IncomingList.module.css';
 
-/** Estimates until each row is measured: a section header, a changeset (two lines) and a file. */
-const ESTIMATED_HEIGHTS: Record<IncomingRow['type'], number> = { section: 29, changeset: 49, file: 28 };
+/** Estimates until each row is measured: a section header, a changeset (two lines), "Show more" and a file. */
+const ESTIMATED_HEIGHTS: Record<IncomingRow['type'], number> = { section: 29, changeset: 49, moreChangesets: 28, file: 28 };
 
 interface IncomingListProps {
   changesets: Changeset[];
@@ -30,11 +32,17 @@ interface IncomingListProps {
   blockedPaths: ReadonlySet<string>;
   selection: IncomingSelection | null;
   onSelect: (selection: IncomingSelection) => void;
+  /** Older changesets remain to be read: the changesets end with "Show more", reading them while `loading`. */
+  olderChangesets: { loading: boolean; onShowMore: () => void } | null;
 }
 
 /** Hundreds of changesets and thousands of files: only the rows in view render. */
-export function IncomingList({ changesets, files, conflictPaths, conflictStates, blockedPaths, selection, onSelect }: IncomingListProps) {
-  const { rows, entries, rowIndexOf } = useMemo(() => incomingRows(changesets, files, conflictPaths, blockedPaths), [changesets, files, conflictPaths, blockedPaths]);
+export function IncomingList({ changesets, files, conflictPaths, conflictStates, blockedPaths, selection, onSelect, olderChangesets }: IncomingListProps) {
+  const hasOlder = olderChangesets !== null;
+  const { rows, entries, rowIndexOf } = useMemo(
+    () => incomingRows(changesets, files, conflictPaths, blockedPaths, hasOlder),
+    [changesets, files, conflictPaths, blockedPaths, hasOlder],
+  );
   const viewportRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -46,7 +54,7 @@ export function IncomingList({ changesets, files, conflictPaths, conflictStates,
   const idPrefix = useId();
   const selectedKey = selection && selectionKey(selection);
   const selectedRow = selectedKey === null ? undefined : rows[rowIndexOf.get(selectedKey) ?? -1];
-  const selectedIndex = selectedRow && selectedRow.type !== 'section' ? selectedRow.entryIndex : -1;
+  const selectedIndex = selectedRow && 'entryIndex' in selectedRow ? selectedRow.entryIndex : -1;
   const isBlocking = (file: DiffEntry): boolean => blockedPaths.has(file.oldPath ?? file.path);
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -141,8 +149,13 @@ export function IncomingList({ changesets, files, conflictPaths, conflictStates,
               {row.type === 'section' ? (
                 <div className={styles.sectionHeader}>
                   <span>{row.label}</span>
-                  <span className={styles.count}>{row.count}</span>
+                  <span className={styles.count}>{formatCountAtLeast(row.count, row.countCapped)}</span>
                 </div>
+              ) : row.type === 'moreChangesets' ? (
+                <button type="button" tabIndex={-1} className={styles.showMore} disabled={olderChangesets?.loading} onClick={olderChangesets?.onShowMore}>
+                  {olderChangesets?.loading && <Spinner size={12} />}
+                  Show {INCOMING_CHANGESETS_PAGE} more
+                </button>
               ) : row.type === 'file' ? (
                 fileRow(row.file, row.key, row.entryIndex)
               ) : (

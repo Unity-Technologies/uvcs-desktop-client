@@ -33,8 +33,8 @@ describe('updateBarMessage', () => {
   });
 
   it('asks to update once every file is merged', () => {
-    expect(updateBarMessage(3, '/main', 1, 0)).toBe('The file is merged. Update to apply it.');
-    expect(updateBarMessage(3, '/main', 2, 0)).toBe('All 2 files are merged. Update to apply them.');
+    expect(updateBarMessage(incoming(3), 1, 0)).toBe('The file is merged. Update to apply it.');
+    expect(updateBarMessage(incoming(3), 2, 0)).toBe('All 2 files are merged. Update to apply them.');
   });
 });
 

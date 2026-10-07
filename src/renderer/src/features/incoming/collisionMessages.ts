@@ -1,5 +1,6 @@
 import { branchLabel } from '../../lib/branchLabels';
-import { pluralize } from '../../lib/text';
+import type { BranchIncoming } from '@shared/domain/incoming';
+import { pluralize, pluralizeAtLeast } from '../../lib/text';
 
 /** "2 files you changed were", "A file you changed was". */
 function filesYouChanged(count: number): string {
@@ -13,8 +14,12 @@ export function blockedMessage(blockedCount: number, branch: string, pendingMerg
 }
 
 /** The update bar otherwise: what updating does, or which merges it waits for. */
-export function updateBarMessage(changesetCount: number, branch: string, mergeCount: number, pendingMergeCount: number): string {
-  if (mergeCount === 0) return `Update to get ${pluralize(changesetCount, 'new changeset')}. Your local changes stay as they are.`;
+export function updateBarMessage(
+  { branch, changesetCount, countCapped }: Pick<BranchIncoming, 'branch' | 'changesetCount' | 'countCapped'>,
+  mergeCount: number,
+  pendingMergeCount: number,
+): string {
+  if (mergeCount === 0) return `Update to get ${pluralizeAtLeast(changesetCount, countCapped, 'new changeset')}. Your local changes stay as they are.`;
   if (pendingMergeCount === mergeCount) {
     return mergeCount === 1
       ? `A file you changed also changed on ${branchLabel(branch)}. Merge it to update.`
