@@ -246,7 +246,6 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `scripts/build/dependencyLicenses.test.ts`                | every package in package-lock.json has a permissive license (`PERMISSIVE_LICENSES`) |
 | `scripts/build/pinnedActions.test.ts`                     | every GitHub action is pinned to a commit SHA                     |
 | `scripts/build/pierreSkillVersion.test.ts`                | the `pierre-diffs` skill describes the @pierre/diffs version installed   |
-| `scripts/agents/protectMainRules.test.ts`, `protectMainHook.test.ts` | Claude Code never commits, merges or pushes to `main` (a hook in `.claude/settings.json`) |
 
 Not enforced yet: no `any` (there are none today). A static test for it is welcome.
 
@@ -302,9 +301,10 @@ Commit like a careful human. The history should show *how* the work happened.
 ## Delivering work: a pull request
 
 The only way work reaches `main` is a pull request on GitHub. `main` takes nothing else: never commit on it, merge
-into it or push to it locally, not even a "verified" branch (in Claude Code the `protectMain` hook refuses it; with
-any other tool the rule is yours to keep). An agent's job ends with a pull request that passes the QA gate, not with a
-merge. These steps are for every agent, whatever the tool (`AGENTS.md` points other tools here).
+into it or push to it locally, not even a "verified" branch. An agent's job ends with a pull request that passes the
+QA gate, not with a merge. These steps are for every agent, whatever the tool (`AGENTS.md` points other tools here).
+A Claude Code hook refusing local writes to `main` was tried and dropped: GitHub's branch protection already refuses
+them on the server, and reading shell command lines cost more to keep right than it saved.
 
 1. **Branch first.** Before the first edit: `git pull --ff-only` then `git switch -c <kind>/<topic>` in the main
    checkout, or rename a worktree's generated branch (see "Commits"). One task, one branch, one pull request.

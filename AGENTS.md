@@ -16,5 +16,3 @@ What lives under `.claude/` is plain Markdown any agent can use:
 - **The reviewer** (`.claude/agents/reviewer.md`): the brief for the clean-context review every branch gets before
   its pull request ("Delivering work: a pull request" in CLAUDE.md). Give it to a fresh agent or session, one that
   didn't write the change, along with the branch and what the change is for.
-- **The `main` guard** (`.claude/settings.json` → `scripts/agents/protectMain.mjs`): a Claude Code hook refusing
-  commits, merges and pushes to `main`. Other tools don't run it, so the rule it enforces is yours to keep.

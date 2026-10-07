@@ -7,7 +7,7 @@ dist
 .playwright-cli/
 .claude/worktrees/
 *.tsbuildinfo
-# Personal Claude Code settings (the shared ones are .claude/settings.json)
+# Personal Claude Code settings
 .claude/settings.local.json
 # A UVCS developer's private notes for agents, such as where the UVCS sources are (CLAUDE.md)
 CLAUDE.local.md
