@@ -19,7 +19,7 @@ import type { MergeCompletion } from './MergeCompleted';
 import { mergeLabels } from './mergeDescription';
 import { MergeHeader } from './MergeHeader';
 import { MergeItemList } from './MergeItemList';
-import { buildMergeItems, mergeItemGroups, mergeItemTones, needsDecision, type MergeItem } from './mergeItems';
+import { buildMergeItems, firstWaiting, inListOrder, mergeItemGroups, mergeItemTones, type MergeItem } from './mergeItems';
 import { mergeItemMenu } from './mergeItemMenu';
 import { mergeItemTypes } from './mergeItemTypes';
 import { ResolveRunControl, useRunOffer } from './mergeTools/ResolveRunControl';
@@ -82,7 +82,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   }, []);
   // Once it ends: the first thing still waiting for the user, or else completing the merge.
   const afterRun = useCallback(() => {
-    const waiting = latestItems.current.find(needsDecision);
+    const waiting = firstWaiting(latestItems.current);
     if (waiting) {
       setSelection(singleSelection(waiting.key));
       listRef.current?.querySelector<HTMLElement>('[role="grid"]')?.focus({ preventScroll: true });
@@ -93,9 +93,9 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const run = useResolveRun({ states: fileStates, resolveInTool, onOpen: followRun, onEnd: afterRun });
   const runPlans = useRunOffer(fileStates, run);
 
-  // Start on the first thing that needs the user.
+  // Start on the first thing that needs the user, as the list shows them, else on its first row.
   useEffect(() => {
-    if (!selectedKey && items.length > 0) setSelection(singleSelection((items.find(needsDecision) ?? items[0]!).key));
+    if (!selectedKey && items.length > 0) setSelection(singleSelection((firstWaiting(items) ?? inListOrder(items)[0]!).key));
   }, [selectedKey, items]);
 
   const resolveDirectoryConflict = (index: number, resolution: DirectoryConflictResolution): void =>

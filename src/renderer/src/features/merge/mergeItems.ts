@@ -63,6 +63,16 @@ export function needsDecision(item: MergeItem): boolean {
   return false;
 }
 
+/** The items in the order the list shows them: by group, then by path (as a list, and as a tree, folder by folder). */
+export function inListOrder(items: MergeItem[]): MergeItem[] {
+  return mergeItemGroups(items).flatMap((group) => group.sorted);
+}
+
+/** The first item still waiting for the user, as the list shows them: where the page starts, and goes after a run. */
+export function firstWaiting(items: MergeItem[]): MergeItem | undefined {
+  return inListOrder(items).find(needsDecision);
+}
+
 /** The conflicts, then the changes that apply cleanly, each in path order as every list of changed files; empty ones left out. */
 export function mergeItemGroups(items: MergeItem[]): TreeGroup<MergeItem, MergeGroup>[] {
   const byPath = (a: MergeItem, b: MergeItem): number => comparePaths(a.path, b.path);
