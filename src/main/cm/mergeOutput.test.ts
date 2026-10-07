@@ -58,6 +58,12 @@ describe('parseMergePlan', () => {
     expect(shuffled.fileConflicts.map((conflict) => conflict.path)).toEqual(['/src/app.ts', '/src/b/Component01.tsx', '/src/b/Component08.tsx']);
   });
 
+  it('lists files in the order of every list of files: folder by folder, numbers as people read them', () => {
+    const paths = ['/a-b.txt', '/a/c.txt', '/file10.txt', '/file2.txt'];
+    const plan = parseMergePlan(output(...paths.map((path, index) => `FILE_CONFLICT|${path}|1|2|4|${index}`)));
+    expect(plan.fileConflicts.map((conflict) => conflict.path)).toEqual(['/a/c.txt', '/a-b.txt', '/file2.txt', '/file10.txt']);
+  });
+
   it('reads both sides of directory conflicts, with old and new paths for moves', () => {
     expect(plan.directoryConflicts.map((conflict) => conflict.type)).toEqual(['divergentMove', 'evilTwin', 'deleteMove', 'changeDelete']);
     expect(plan.directoryConflicts[0]).toMatchObject({
