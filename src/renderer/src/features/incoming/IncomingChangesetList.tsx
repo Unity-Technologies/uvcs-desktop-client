@@ -143,6 +143,8 @@ export function IncomingChangesetList({ changesets, more, scope, onScope, collap
             aria-label="Incoming changesets"
             aria-activedescendant={selectedIndex === -1 ? undefined : `${idPrefix}-${selectedIndex}`}
             onKeyDown={onKeyDown}
+            // Focus lands on the rows, as tall as all of them: the browser scrolls to their top, so bring back the one selected.
+            onFocus={() => selectedIndex !== -1 && virtualizer.scrollToIndex(selectedIndex)}
           >
             {virtualizer.getVirtualItems().map((item) => (
               <div key={item.key} ref={virtualizer.measureElement} data-index={item.index} role="presentation" className={styles.slot} style={{ transform: `translateY(${item.start}px)` }}>
