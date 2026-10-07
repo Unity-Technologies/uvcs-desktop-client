@@ -609,11 +609,13 @@ renderer/src/
 - **Lists of changed files** read and work the same everywhere: Changes, every diff (changeset, branch, shelve, code
   review: `DiffEntryList`), the details panels' changed files (`ChangedFilesSection`), Incoming and the merge page.
   - **One order**: by path, folder by folder, names as people read them (`file_2` before `file_10`, case only between
-    names otherwise equal): `comparePaths` (`shared/pathOrder`), used where the files are read (`parseDiffEntries`,
-    `parseMergePlan`) and by Changes (`sortChanges`). A list and a tree show the files in the same order. Ordering by
-    kind of change first was tried and rejected: it split a folder's changes apart, and a row jumped to another group
-    when its status changed; the status chips of the filter bar (`useChangeFilter`) are how to look at one kind.
-    Sorting controls were rejected too: the only other order anyone asked for is by kind, which the chips give.
+    names otherwise equal; different names read the same, "v01" and "v1" or a name in two Unicode forms, by their code
+    units, so each folder's files stay together): `comparePaths` (`shared/pathOrder`), used where the files are read
+    (`parseDiffEntries`, `parseMergePlan`) and by Changes (`sortChanges`). A list and a tree show the files in the same
+    order. Ordering by kind of change first was tried and rejected: it split a folder's changes apart, and a row jumped
+    to another group when its status changed; the status chips of the filter bar (`useChangeFilter`) are how to look at
+    one kind. Sorting controls were rejected too: the only other order anyone asked for is by kind, which the chips
+    give.
   - **One layout, List or Tree**, for every list at once and across sessions (`useFileListLayoutStore`, which took the
     one Changes kept first). Its switch, a menu (`FileListLayoutMenu`: it takes the room of one button), ends the filter
     bar, so it is in the same place in each list; a details panel too short for a filter bar has it in its title.

@@ -10,9 +10,13 @@ export function comparePaths(a: string, b: string): number {
   while (differ < shorter && a.charCodeAt(differ) === b.charCodeAt(differ)) differ++;
   if (differ === a.length && differ === b.length) return 0;
   const start = a.lastIndexOf('/', differ - 1) + 1;
-  const order = collator.compare(segmentAt(a, start), segmentAt(b, start));
-  // Names the collator takes as equal (other Unicode forms of the same text) leave it to the rest of the paths.
-  return order !== 0 ? order : compareSegments(a.split('/'), b.split('/'));
+  const [nameA, nameB] = [segmentAt(a, start), segmentAt(b, start)];
+  const order = collator.compare(nameA, nameB);
+  if (order !== 0) return order;
+  // Different names the collator reads as the same ("v01" and "v1", "café" composed and decomposed) are different
+  // folders: ordered by their code units, so neither's items slip in between the other's.
+  if (nameA !== nameB) return nameA < nameB ? -1 : 1;
+  return compareSegments(a.split('/'), b.split('/'));
 }
 
 function segmentAt(path: string, start: number): string {
