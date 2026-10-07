@@ -10,6 +10,7 @@ import { pluralize } from '../../lib/text';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { SplitPane } from '../../ui/SplitPane';
+import { ReviewModeButton } from '../review/ReviewModeButton';
 import { diffEntryTones } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
 import { diffEntryMenu } from './diffEntryMenu';
@@ -38,7 +39,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
   });
   const focused = entries.find((entry) => diffEntryKey(entry) === selection.anchor);
   const firstKey = entries[0] && diffEntryKey(entries[0]);
-  const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, true);
+  const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true, actions: <ReviewModeButton workspacePath={workspacePath} /> });
   const shown = useMemo(() => review.narrow(filter.visible), [review.narrow, filter.visible]);
   const { rows, tree, toggleCollapsed } = useFileTree(shown, diffEntryKey, folderListScope(workspacePath, `diff:${JSON.stringify(target)}`), selection.anchor);
   // A folder the keyboard (or a click) is on, in a tree.

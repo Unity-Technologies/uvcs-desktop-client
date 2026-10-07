@@ -67,7 +67,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const typeOf = useMemo(() => mergeItemTypes(plan.changes.map((change) => change.path)), [plan.changes]);
   const mergeTools = useMergeTools();
   const preferredTool = primaryMergeTool(mergeTools);
-  const filter = useChangeFilter(items, itemPath, mergeItemTones, true);
+  const filter = useChangeFilter(items, itemPath, mergeItemTones, { isViewFilter: true });
   const content = useMemo(() => ({ groups: mergeItemGroups(filter.visible) }), [filter.visible]);
   const { rows, tree, toggleCollapsed, rowKeyOf } = useGroupedFileTree(content, itemKey, folderListScope(workspacePath, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`), selectedKey);
   const latestRowKeyOf = useRef(rowKeyOf);

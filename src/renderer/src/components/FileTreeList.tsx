@@ -21,9 +21,9 @@ interface FileTreeListProps<T, G> {
   groupTip?: (group: G) => string | undefined;
   /** The filter's text, marked in the rows. */
   query: string;
-  /** Above the filter bar, e.g. the review bar. */
-  header?: ReactNode;
-  /** The filter's field, status chips and List/Tree menu (`useChangeFilter`). */
+  /** Under the filter bar, e.g. the review bar: what its `actions` open, right beneath them. */
+  belowFilterBar?: ReactNode;
+  /** The filter's field, status chips, List/Tree menu and the list's `actions` (`useChangeFilter`). */
   filterBar: ReactNode;
   selection: SelectionState;
   onSelectionChange: (selection: SelectionState) => void;
@@ -50,7 +50,7 @@ export function FileTreeList<T, G>({
   renderItem,
   groupTip,
   query,
-  header,
+  belowFilterBar,
   filterBar,
   selection,
   onSelectionChange,
@@ -79,8 +79,8 @@ export function FileTreeList<T, G>({
 
   return (
     <div className={styles.list}>
-      {header}
       {filterBar}
+      {belowFilterBar}
       <HighlightQuery query={query}>
         <DataTable
           rows={rows}

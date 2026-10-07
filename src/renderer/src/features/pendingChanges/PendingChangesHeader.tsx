@@ -4,7 +4,6 @@ import { formatCount } from '../../lib/text';
 import { IconButton } from '../../ui/IconButton';
 import { SegmentedControl } from '../../ui/SegmentedControl';
 import { ViewHeader } from '../../ui/ViewHeader';
-import { ReviewModeButton } from '../review/ReviewModeButton';
 import { MyShelvesButton } from '../shelves/MyShelvesButton';
 import type { ChangesGrouping } from './changeRows';
 import { usePendingChangesViewStore } from './pendingChangesViewStore';
@@ -30,7 +29,6 @@ export function PendingChangesHeader({ workspacePath, pendingCount, empty, fetch
       actions={
         <>
           <MyShelvesButton />
-          <ReviewModeButton workspacePath={workspacePath} />
           <RefreshButton workspacePath={workspacePath} fetching={fetching} />
           <IconButton icon={<SlidersHorizontal size={14} />} label="What to show" onClick={() => openSettingsDialogAt('pendingChanges')} />
         </>

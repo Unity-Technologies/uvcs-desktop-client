@@ -19,7 +19,7 @@ export interface ReviewMode<T> extends ListReview<T> {
   /** Leaves out what's reviewed while the "Unreviewed" filter is on. */
   narrow: (items: T[]) => T[];
   showAll: () => void;
-  /** Above the list: the progress and actions in review mode, or the one-time offer to turn it on. */
+  /** Under the filter bar, beneath the review mode toggle: the progress and actions in review mode, or the one-time offer to turn it on. */
   bar: ReactNode;
 }
 
@@ -75,7 +75,6 @@ export function useReviewMode<T>({ workspacePath, items, statusOf: storedStatusO
             onMarkAll={() => setReviewed(items.filter((item) => needsReview(statusOf, item)), true)}
             onClearMarks={() => setReviewed(items.filter((item) => hasMark(statusOf, item)), false)}
             hasMarks={hasMarks}
-            onLeave={() => void setReviewMode(workspacePath, false)}
           />
         )
       : hint,

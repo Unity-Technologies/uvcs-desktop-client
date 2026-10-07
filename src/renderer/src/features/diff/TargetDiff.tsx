@@ -6,7 +6,6 @@ import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { PathLabel } from '../../components/PathLabel';
 import { ChangesetSummary } from '../changesets/ChangesetSummary';
 import { useChangeset } from '../changesets/useChangeset';
-import { ReviewModeButton } from '../review/ReviewModeButton';
 import { cachedShelve } from '../shelves/cachedShelve';
 import { ShelveSummary } from '../shelves/ShelveSummary';
 import { DiffBrowser } from './DiffBrowser';
@@ -23,7 +22,6 @@ interface TargetDiffProps {
 }
 
 export function TargetDiff({ target, toolbar, focusPath, branchHead }: TargetDiffProps) {
-  const workspacePath = useWorkspacePath();
   const { data: entries, error } = useDiffEntries(target, { branchHead });
 
   return (
@@ -34,7 +32,6 @@ export function TargetDiff({ target, toolbar, focusPath, branchHead }: TargetDif
           <TargetDescription key={JSON.stringify(target)} target={target} />
         </div>
         {toolbar}
-        <ReviewModeButton workspacePath={workspacePath} />
       </header>
       {error ? (
         <EmptyState title="Couldn't calculate the differences" description={error.message} />

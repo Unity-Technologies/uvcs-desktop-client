@@ -57,7 +57,7 @@ export function DiffEntryList({ rows, tree, toggleCollapsed, query, filterBar, s
       toggleCollapsed={toggleCollapsed}
       renderItem={renderItem}
       query={query}
-      header={review.bar}
+      belowFilterBar={review.bar}
       filterBar={filterBar}
       selection={selection}
       onSelectionChange={onSelectionChange}
