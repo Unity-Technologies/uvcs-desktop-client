@@ -2,6 +2,7 @@ import { FileSearch, Folder } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useFileTree } from '../../components/useFileTree';
 import type { TreeFolderRow } from '../../lib/pathTree';
@@ -39,7 +40,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
   const firstKey = entries[0] && diffEntryKey(entries[0]);
   const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, true);
   const shown = useMemo(() => review.narrow(filter.visible), [review.narrow, filter.visible]);
-  const { rows, tree, toggleCollapsed } = useFileTree(shown, diffEntryKey, `diff:${JSON.stringify(target)}`);
+  const { rows, tree, toggleCollapsed } = useFileTree(shown, diffEntryKey, folderListScope(workspacePath, `diff:${JSON.stringify(target)}`));
   // A folder the keyboard (or a click) is on, in a tree.
   const focusedFolder = focused ? undefined : rows.find((row): row is TreeFolderRow<DiffEntry> => row.type === 'folder' && row.key === selection.anchor);
   // The diff's change navigation goes on to the files before and after, as the list shows them.

@@ -625,7 +625,8 @@ renderer/src/
     (`itemsUnderRows`), and in review mode its mark marks every file in it, showing how far its review got ("2/5",
     `partialReviewCount`). Closed folders are remembered for the session per list (`useCollapsedFolders`: the Changes of
     a workspace, one diff, one details pane, one Incoming scope, one merge), so closing one in a changeset's diff leaves
-    every other diff alone.
+    every other diff alone. A list is scoped by its workspace too (`folderListScope`): `/main/feature` or cs:3 name
+    other things in another repository.
   - **One way to group**: a list whose files fall in groups (Changes' changelists, Incoming's conflicts with your
     changes and changes to apply, the merge page's conflicts and changes to apply) lays them out with
     `layoutGroupedTree` (`lib/groupedPathTree`): each group's header row (`TreeGroupLabel`: chevron, name, count, what

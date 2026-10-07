@@ -1,5 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import type { DiffEntry } from '@shared/domain/diff';
+import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useGroupedFileTree, type FileListContent } from '../../components/useGroupedFileTree';
 import { useSettledValue } from '../../lib/useSettled';
@@ -17,6 +19,7 @@ const NO_FILES: DiffEntry[] = [];
  * the scope's files are in.
  */
 export function useIncomingFiles(scope: IncomingScope, updateFiles: DiffEntry[], collides: (file: DiffEntry) => boolean) {
+  const workspacePath = useWorkspacePath();
   const settled = useSettledValue(scope, scopeKey(scope));
   const isSettled = scopeKey(settled) === scopeKey(scope);
   const changesetTarget = settled.kind === 'changeset' ? ({ kind: 'changeset', changesetId: settled.id } as const) : null;
@@ -32,6 +35,6 @@ export function useIncomingFiles(scope: IncomingScope, updateFiles: DiffEntry[],
     () => (scope.kind === 'all' ? incomingFileContent(filter.visible, collides) : { sorted: filter.visible }),
     [scope.kind, filter.visible, collides],
   );
-  const tree = useGroupedFileTree(content, diffEntryKey, `incoming:${scopeKey(scope)}`);
+  const tree = useGroupedFileTree(content, diffEntryKey, folderListScope(workspacePath, `incoming:${scopeKey(scope)}`));
   return { files, filter, ...tree };
 }

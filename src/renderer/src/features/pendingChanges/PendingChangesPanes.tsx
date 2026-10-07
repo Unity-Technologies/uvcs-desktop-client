@@ -2,6 +2,7 @@ import { GitMerge } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
 import type { PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
+import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useFileListLayoutStore } from '../../components/fileListLayoutStore';
 import { selectAfterLeaving } from '../../app/navigation/leaveGuard';
@@ -79,7 +80,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
     clearTextFilter();
     review.showAll();
   };
-  const { rows, changesByKey, fileKeys, checkboxInset, toggleCollapsed } = useChangeRows({ changes, changelists, layout, grouping, scope: `changes:${workspacePath}` });
+  const { rows, changesByKey, fileKeys, checkboxInset, toggleCollapsed } = useChangeRows({ changes, changelists, layout, grouping, scope: folderListScope(workspacePath, 'changes') });
   const { isIncluded, included, upload, shelvable, shelvableUpload, bulkPrivate } = useCheckinSelection(allChanges, excludedPaths);
   // The changes shown are some of all of them: the checked ones they leave out are the rest.
   const hiddenIncludedCount = useMemo(() => included.length - changes.filter(isIncluded).length, [changes, included, isIncluded]);

@@ -33,3 +33,11 @@ export function toggledKey(keys: ReadonlySet<string>, key: string): ReadonlySet<
   else next.add(key);
   return next;
 }
+
+/**
+ * The scope of one list of files in one workspace (`useCollapsedFolders`). A list alone isn't enough: a diff's target
+ * names a branch or a changeset, the same in two repositories, and Incoming's changesets are numbered per repository.
+ */
+export function folderListScope(workspacePath: string, list: string): string {
+  return JSON.stringify([workspacePath, list]);
+}

@@ -3,6 +3,7 @@ import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { FileListLayoutMenu } from '../../components/FileListLayoutMenu';
+import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useFileTree } from '../../components/useFileTree';
 import { firstFilesOf, pathTreeKeyMove } from '../../lib/pathTree';
@@ -44,15 +45,15 @@ interface ChangedFilesSectionProps {
  */
 export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFilesSectionProps) {
   const [requested, setRequested] = useState(false);
+  const workspacePath = useWorkspacePath();
   const { changesCollapsed: collapsed, set } = useDetailsLayoutStore();
   const { data: diffEntries, error } = useDiffEntries(target, { enabled: requested, branchHead });
   // The files the diff lists, so the count and the rows match the diff's: no folder added or deleted with its files.
   const entries = useMemo(() => diffEntries && listedEntries(diffEntries), [diffEntries]);
   const { visible, query, bar } = useChangeFilter(entries ?? [], diffEntryKey, diffEntryTones);
-  const { rows, tree, toggleCollapsed } = useFileTree(visible, diffEntryKey, `details:${JSON.stringify(target)}`);
+  const { rows, tree, toggleCollapsed } = useFileTree(visible, diffEntryKey, folderListScope(workspacePath, `details:${JSON.stringify(target)}`));
   const listed = useMemo(() => firstFilesOf(rows, MAX_LISTED_FILES), [rows]);
   const listRef = useRef<HTMLDivElement>(null);
-  const workspacePath = useWorkspacePath();
   // The same menu as in the diff, review marks included, read once the files are asked for or shown from the cache.
   const review = useDiffReview(target, entries ?? NO_ENTRIES, requested || entries !== undefined);
   const shown = entries && !collapsed ? entries : undefined;

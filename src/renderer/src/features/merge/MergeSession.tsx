@@ -1,6 +1,7 @@
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import type { DirectoryConflictResolution, MergePlan, MergeRequest } from '@shared/domain/merge';
 import { Folder } from 'lucide-react';
+import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useGroupedFileTree } from '../../components/useGroupedFileTree';
 import { isHeaderRow } from '../../lib/groupedPathTree';
@@ -66,7 +67,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const preferredTool = primaryMergeTool(useMergeTools());
   const filter = useChangeFilter(items, itemPath, mergeItemTones, true);
   const content = useMemo(() => ({ groups: mergeItemGroups(filter.visible) }), [filter.visible]);
-  const { rows, tree, toggleCollapsed } = useGroupedFileTree(content, itemKey, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`);
+  const { rows, tree, toggleCollapsed } = useGroupedFileTree(content, itemKey, folderListScope(workspacePath, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`));
   const conflictStatuses = useMemo(() => items.map(conflictStatusOf).filter((status) => status !== null), [items]);
   const resolutions = collectResolutions({ plan, fileStates, directoryResolutions, comment });
   const selected = items.find((item) => item.key === selectedKey);
