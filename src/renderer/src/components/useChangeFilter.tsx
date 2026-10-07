@@ -34,8 +34,15 @@ export interface ChangeFilterResult<T> {
  * (`statusTones`: a moved file that changed by C and M). Its bar also holds the List/Tree switch every list of
  * changed files shares, at the same place in each. `isViewFilter` for the list a view or page
  * works on (Changes, a diff's files): its field takes ⌘F as every view's filter does; a list inside details doesn't.
+ * `toneLabels` words a chip as the list's groups do (Incoming's "Conflicts with your changes").
  */
-export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tonesOf: (item: T) => readonly StatusTone[], isViewFilter = false): ChangeFilterResult<T> {
+export function useChangeFilter<T>(
+  items: T[],
+  pathOf: (item: T) => string,
+  tonesOf: (item: T) => readonly StatusTone[],
+  isViewFilter = false,
+  toneLabels: Partial<Record<StatusTone, string>> = {},
+): ChangeFilterResult<T> {
   const [query, setQuery] = useState('');
   const [chosenTones, setChosenTones] = useState<ReadonlySet<StatusTone>>(new Set());
 
@@ -71,7 +78,8 @@ export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tone
       )}
       {tones.map((tone) => {
         const count = counts.get(tone) ?? 0;
-        const label = count > 0 ? `${TONE_LABELS[tone]} (${formatCount(count)})` : TONE_LABELS[tone];
+        const name = toneLabels[tone] ?? TONE_LABELS[tone];
+        const label = count > 0 ? `${name} (${formatCount(count)})` : name;
         return (
           <Tooltip key={tone} content={label}>
             <button type="button" className={styles.chip} data-tone={tone} data-empty={count === 0} aria-pressed={activeTones.has(tone)} aria-label={label} onClick={() => toggle(tone)}>

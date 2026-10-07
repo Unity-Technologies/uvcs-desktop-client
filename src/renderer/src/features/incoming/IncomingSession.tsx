@@ -20,7 +20,7 @@ import { useFileConflicts } from '../merge/resolve/useFileConflicts';
 import { IncomingChangesetList } from './IncomingChangesetList';
 import { IncomingConflictMark } from './IncomingConflictMark';
 import { IncomingFileDiff } from './IncomingDetail';
-import { ALL_INCOMING, collidesWithLocal, firstIncomingFile, incomingDiffTarget, type IncomingScope } from './incomingScope';
+import { ALL_INCOMING, collidesWithLocal, firstIncomingFile, incomingDiffTarget, incomingFilesSummary, type IncomingScope } from './incomingScope';
 import { IncomingFiles } from './IncomingFiles';
 import { UpdateBar } from './UpdateBar';
 import { UPDATE_LABELS, updateConflictFiles, updateResolutionsOf } from './updateConflictFiles';
@@ -168,6 +168,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
               changeset={scopedChangeset}
               onShowAll={() => changeScope(ALL_INCOMING)}
               files={files}
+              summary={incomingFilesSummary(scope, files?.length ?? 0, files && scope.kind === 'all' ? files.filter(collides).length : 0)}
               rows={rows}
               tree={tree}
               toggleCollapsed={toggleFolder}

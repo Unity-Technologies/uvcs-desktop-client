@@ -25,8 +25,8 @@ describe('updateBarMessage', () => {
   });
 
   it('counts down the files left to merge', () => {
-    expect(updateBarMessage(3, '/main', 3, 1)).toBe('1 of 3 files changed on both sides still needs merging.');
-    expect(updateBarMessage(3, '/main', 3, 2)).toBe('2 of 3 files changed on both sides still need merging.');
+    expect(updateBarMessage(3, '/main', 3, 1)).toBe('1 of 3 conflicts with your changes still needs merging.');
+    expect(updateBarMessage(3, '/main', 3, 2)).toBe('2 of 3 conflicts with your changes still need merging.');
   });
 
   it('asks to update once every file is merged', () => {

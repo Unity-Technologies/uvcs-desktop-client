@@ -6,7 +6,7 @@ import { useSettledValue } from '../../lib/useSettled';
 import { diffEntryKey } from '../diff/DiffEntryList';
 import { listedEntries } from '../diff/listedEntries';
 import { useDiffEntries } from '../diff/useDiffEntries';
-import { incomingFileContent, incomingFileTones, scopeKey, type IncomingFileGroup, type IncomingScope } from './incomingScope';
+import { INCOMING_TONE_LABELS, incomingFileContent, incomingFileTones, scopeKey, type IncomingFileGroup, type IncomingScope } from './incomingScope';
 
 const NO_FILES: DiffEntry[] = [];
 
@@ -26,7 +26,7 @@ export function useIncomingFiles(scope: IncomingScope, updateFiles: DiffEntry[],
   const files = scope.kind === 'all' ? allListed : isSettled ? changesetListed : undefined;
 
   const tonesOf = useCallback((file: DiffEntry) => incomingFileTones(file, collides(file)), [collides]);
-  const filter = useChangeFilter(files ?? NO_FILES, diffEntryKey, tonesOf, true);
+  const filter = useChangeFilter(files ?? NO_FILES, diffEntryKey, tonesOf, true, INCOMING_TONE_LABELS);
   const content = useMemo<FileListContent<DiffEntry, IncomingFileGroup>>(
     // Only the whole update is what updating merges: a changeset's files are what it did, without groups.
     () => (scope.kind === 'all' ? incomingFileContent(filter.visible, collides) : { sorted: filter.visible }),

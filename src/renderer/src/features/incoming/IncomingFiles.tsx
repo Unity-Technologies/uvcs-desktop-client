@@ -6,7 +6,7 @@ import { FileTreeList } from '../../components/FileTreeList';
 import type { MenuEntry } from '../../lib/actions';
 import type { GroupedTreeRow } from '../../lib/groupedPathTree';
 import type { SelectionState } from '../../lib/selection';
-import { firstLine, formatCount } from '../../lib/text';
+import { firstLine } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
 import { IconButton } from '../../ui/IconButton';
 import { CenteredSpinner } from '../../ui/Spinner';
@@ -20,6 +20,8 @@ interface IncomingFilesProps {
   onShowAll: () => void;
   /** The scope's files; undefined until they are in. */
   files: DiffEntry[] | undefined;
+  /** What they are, under the header (`incomingFilesSummary`). */
+  summary: string;
   rows: GroupedTreeRow<DiffEntry, IncomingFileGroup>[];
   tree: boolean;
   toggleCollapsed: (key: string) => void;
@@ -33,16 +35,16 @@ interface IncomingFilesProps {
 }
 
 /** Incoming's files: what the whole update brings, or what one changeset changed, as every list of changed files shows them. */
-export function IncomingFiles({ changeset, onShowAll, files, rows, tree, toggleCollapsed, query, filterBar, selection, onSelectionChange, contextMenu, markOf }: IncomingFilesProps) {
+export function IncomingFiles({ changeset, onShowAll, files, summary, rows, tree, toggleCollapsed, query, filterBar, selection, onSelectionChange, contextMenu, markOf }: IncomingFilesProps) {
   return (
     <div className={styles.files}>
       <div className={styles.header}>
         <span className={styles.title} data-tip={changeset ? firstLine(changeset.comment) : undefined}>
           {changeset ? `cs:${changeset.id} · ${firstLine(changeset.comment) || 'No comment'}` : 'All incoming changes'}
         </span>
-        {files && <span className={styles.count}>{formatCount(files.length)}</span>}
         {changeset && <IconButton icon={<X size={13} />} label="Show all incoming changes" size="small" onClick={onShowAll} />}
       </div>
+      {files && files.length > 0 && <div className={styles.summary}>{summary}</div>}
       {!files ? (
         <CenteredSpinner />
       ) : files.length === 0 ? (
