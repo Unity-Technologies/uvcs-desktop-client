@@ -84,17 +84,18 @@ and many people use the same server. Every `cm` command other than local reads (
   and the local `cm status`, `useIncomingChanges`) once per head, to warn about conflicts before any hover, as the
   native client does, and its card lists the newest of what that read brought. At "100+" a hover reads nothing heavy:
   the card reads its five newest itself (`cm find ... limit 6`, `cardReadsNewest`, `useNewestIncomingChangesets`) and
-  says a click checks them against the local changes, as updating and opening Incoming do; pinning the card (that
-  click), opening Incoming or Update reads the diff, Update again right before updating (`chipReadsIncomingChanges`). A
-  card whose reads failed says so (`cardFailed`). Incoming reads the newest 200 changesets with the incoming changes and
-  "Show 200 more" (reached by the arrows; Enter, then the arrows go on from the page's first changeset) reads the next
-  older page (`changesetid <` the oldest shown, `useIncomingChangesetList`); what it reads is decided from the pages
-  cached, not from the list's state, so it goes on after a visit elsewhere (`showMoreStep`), and a failed page says so
-  once. Counts past what was read show as "200+". Those pages and the card's read are keyed by the head and left out of
-  the automatic refreshes (new changesets, check-ins, updates, switches, focus: `isIncomingChangesetPage`, `staleTime:
-  Infinity`): a new head is a new key. Only Refresh, asked for on screen, reads again the pages shown. Once the incoming
-  changes are in for the check's head, the chip, the sidebar, the status bar, the check-in note, the merge page and the
-  success moment count with them (`knownIncomingSummary`): one count per screen.
+  says a click checks them against the local changes, then that it is checking or couldn't (`cardCheck`); pinning the
+  card (that click), opening Incoming or Update reads the diff, Update again right before updating
+  (`chipReadsIncomingChanges`). A card whose reads failed says so (`cardFailed`). Incoming reads the newest 200
+  changesets with the incoming changes and "Show 200 more" (reached by the arrows; Enter, then the arrows go on from the
+  page's first changeset) reads the next older page (`changesetid <` the oldest shown, `useIncomingChangesetList`); what
+  it reads is decided from the pages cached, not from the list's state, so it goes on after a visit elsewhere
+  (`showMoreStep`), and a failed page says so once. Counts past what was read show as "200+". Those pages and the card's
+  read are keyed by the head and left out of the automatic refreshes (new changesets, check-ins, updates, switches,
+  focus: `isIncomingChangesetPage`, `staleTime: Infinity`): a new head is a new key. Refresh reads the newest page
+  again; the older pages stay until the head moves. Once the incoming changes are in for the check's head, the chip, the
+  sidebar, the status bar, the check-in note, the merge page and the success moment count with them, exactly once
+  Incoming read every older page for that head (`knownIncomingSummary`, never lower): one count per screen.
 - **Focus**: the incoming check if older than 20 s, and the server views on screen once stale (30 s by default). Lists
   that hardly change by themselves and are heavy to read use `SLOW_CHANGING_QUERY` (every branch, every label, attribute
   types, attribute values, the working object's comment, the palette's lists, the recent shelves in Changes, the user's and everyone's): five minutes, and focus never re-reads them. The Branch

@@ -1,6 +1,6 @@
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { infiniteQueryOptions, useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import type { Changeset } from '@shared/domain/changeset';
-import { INCOMING_CHANGESETS_PAGE, type BranchIncomingChanges, type IncomingSummary } from '@shared/domain/incoming';
+import { INCOMING_CHANGESETS_PAGE, type BranchIncomingChanges, type IncomingChangesetPage, type IncomingSummary } from '@shared/domain/incoming';
 import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
@@ -33,8 +33,8 @@ export interface IncomingChangesetList {
   /** Older ones remain to be read. */
   more: boolean;
   loading: boolean;
-  /** Reads the next `INCOMING_CHANGESETS_PAGE` older ones. */
-  showMore: () => void;
+  /** Reads the next `INCOMING_CHANGESETS_PAGE` older ones; resolves to whether it read them. */
+  showMore: () => Promise<boolean>;
 }
 
 /**
@@ -45,19 +45,34 @@ export interface IncomingChangesetList {
  */
 export function useIncomingChangesetList(incoming: BranchIncomingChanges): IncomingChangesetList {
   const workspacePath = useWorkspacePath();
-  const { branch, loadedChangeset, headChangeset } = incoming;
-  const older = useInfiniteQuery({
-    queryKey: queryKeys.inWorkspace(workspacePath, 'incoming', 'older', branch, loadedChangeset, headChangeset),
-    // Read only when asked for (`showMore`); what was read shows on every visit.
+  const older = useInfiniteQuery(olderPagesQuery(workspacePath, incoming));
+  const showMore = async (): Promise<boolean> => {
+    const before = older.data?.pages.length ?? 0;
+    const read = showMoreStep(older.data?.pages) === 'nextPage' ? await older.fetchNextPage() : await older.refetch();
+    if (read.error) toast.error("Couldn't read the older changesets", read.error);
+    return (read.data?.pages.length ?? 0) > before;
+  };
+  return { ...listedIncomingChangesets(incoming, older.data?.pages ?? []), loading: older.isFetching, showMore };
+}
+
+/**
+ * The older pages Incoming read for the incoming changes' head, as the cache holds them, reading nothing: what lets every
+ * screen count exactly once they are all read (`knownIncomingSummary`). Undefined while none is.
+ */
+export function useReadOlderIncomingPages(incoming: BranchIncomingChanges | undefined): readonly IncomingChangesetPage[] | undefined {
+  const workspacePath = useWorkspacePath();
+  return useInfiniteQuery(olderPagesQuery(workspacePath, incoming)).data?.pages;
+}
+
+/** Incoming's older pages for `incoming`'s head: read only when "Show more" asks (`showMore`); what was read shows on every visit. */
+function olderPagesQuery(workspacePath: string, incoming: BranchIncomingChanges | undefined) {
+  return infiniteQueryOptions({
+    queryKey: queryKeys.inWorkspace(workspacePath, 'incoming', 'older', incoming?.branch, incoming?.loadedChangeset, incoming?.headChangeset),
     enabled: false,
-    initialPageParam: firstOlderPageParam(incoming),
-    queryFn: ({ pageParam }) => api.merge.incomingChangesets(workspacePath, { branch, loadedChangeset, olderThan: pageParam, limit: INCOMING_CHANGESETS_PAGE }),
+    initialPageParam: incoming ? firstOlderPageParam(incoming) : 0,
+    queryFn: ({ pageParam }) =>
+      api.merge.incomingChangesets(workspacePath, { branch: incoming!.branch, loadedChangeset: incoming!.loadedChangeset, olderThan: pageParam, limit: INCOMING_CHANGESETS_PAGE }),
     getNextPageParam: nextOlderPageParam,
     staleTime: Infinity,
   });
-  const showMore = async (): Promise<void> => {
-    const read = showMoreStep(older.data?.pages) === 'nextPage' ? await older.fetchNextPage() : await older.refetch();
-    if (read.error) toast.error("Couldn't read the older changesets", read.error);
-  };
-  return { ...listedIncomingChangesets(incoming, older.data?.pages ?? []), loading: older.isFetching, showMore: () => void showMore() };
 }
