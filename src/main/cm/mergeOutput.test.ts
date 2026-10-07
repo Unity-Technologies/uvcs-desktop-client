@@ -64,6 +64,16 @@ describe('parseMergePlan', () => {
     expect(plan.fileConflicts.map((conflict) => conflict.path)).toEqual(['/a/c.txt', '/a-b.txt', '/file2.txt', '/file10.txt']);
   });
 
+  it("names directory conflicts in plain words, not cm's names for them (\"Evil twin conflict\")", () => {
+    expect(plan.directoryConflicts.map((conflict) => conflict.title)).toEqual([
+      'Moved to different places on each side',
+      'Added on both sides with the same name',
+      'Deleted on one side, moved on the other',
+      'Changed on one side, deleted on the other',
+    ]);
+    expect(plan.directoryConflicts[1]!.explanation).toBe('Each side added a different item here. Keep one, or both under different names.');
+  });
+
   it('reads both sides of directory conflicts, with old and new paths for moves', () => {
     expect(plan.directoryConflicts.map((conflict) => conflict.type)).toEqual(['divergentMove', 'evilTwin', 'deleteMove', 'changeDelete']);
     expect(plan.directoryConflicts[0]).toMatchObject({
