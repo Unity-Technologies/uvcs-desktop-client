@@ -35,7 +35,7 @@ changeset it shows what that changeset did, its conflict mark still on its row.
 
 ## Menus
 
-A file's menu is a diff's (`diffEntryMenu`: history, annotate, open or save the revision, Copy), read from the scope's
+A file's menu is a diff's (`diffEntryMenu`, on `changedFileMenu`: history, annotate, open or save the revision, Copy), read from the scope's
 diff (`incomingDiffTarget`). In "All incoming changes" the conflicts selected add "Keep yours" and "Keep incoming"
 (`keepVersionEntries`), for several at once too. A changeset's row has the changeset's menu (`changesetMenu`), the same
 as in History.

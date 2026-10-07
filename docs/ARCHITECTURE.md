@@ -637,6 +637,15 @@ renderer/src/
     `useFileTree`), with a desktop list's selection of several rows and their menu, which acts on every item the
     selected rows stand for. A list renders its own rows (`DiffEntryRow`, `MergeItemList`'s) and adds its marks (a
     conflict's status, the review mark).
+  - **One menu**: a file's menu is `changedFileMenu` (`components/`) in every list but Changes: its history (annotated
+    or not), "Open this revision" and "Save this revision as…" for the version the list shows (a diff's newer side, a
+    merge's incoming version; nothing to open for a deleted file or a folder), and Copy; a list adds its own after the
+    shared entries of each group (a diff the review mark, `diffEntryMenu`; a merge the ways to settle a conflict,
+    `mergeItemMenu`). Nothing is read to build it: what Open and Save as take out of the repository is a
+    `RepositoryVersion` (a revision, or a path or item at a changeset, as a merge knows its sides), read when they run.
+  - **Folders once**: a folder added or deleted along with what it holds is left out, its items say it already, but a
+    moved one stays, a move listing the folder alone (`withoutRepeatedFolders`, `lib/enclosingFolders`: `listedEntries`
+    for a diff, `buildMergeItems` for a merge).
 - **File icons**: `ItemIcon` draws every file as the same filled Lucide page (`--icon-file` on `--icon-file-fill`) beside solid
   folders (directories and xlinks; `itemIconShape`), so every row reads with one weight; a glyph on the page tells the
   file's family (`fileFamilyOf`, by name
