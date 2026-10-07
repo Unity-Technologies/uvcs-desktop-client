@@ -109,10 +109,11 @@ npm run release      # dist, uploaded to the GitHub release (the Release workflo
 node scripts/perf/startup.mjs [--cm=real]   # after a build: median start-up times, cold and warm (header: options)
 ```
 
-**Done means**: `npm run typecheck` and `npm test` pass (and CI, on every OS), the new code is tested (see "Tests are the quality gate"),
-the change is seen working in the app (anything visible), and the docs say what's now true (see "Docs"). There is no
-linter or formatter: match the surrounding code. Before merging anything that touches startup, navigation or many
-views, `npm run e2e` passes too.
+**Done means** a pull request that passes the QA gate (see "Delivering work: a pull request"): `npm run typecheck`
+and `npm test` pass (and CI, on every OS), the new code is tested (see "Tests are the quality gate"), the change is
+seen working in the app (anything visible), a clean-context review has passed, and the docs say what's now true (see
+"Docs"). There is no linter or formatter: match the surrounding code. Anything that touches startup, navigation or
+many views passes `npm run e2e` too.
 
 ## Seeing the app (Playwright)
 
@@ -273,10 +274,42 @@ Commit like a careful human. The history should show *how* the work happened.
 - A branch is named for its work: `<kind>/<topic>` in kebab case, where kind is `feature`, `fix`, `refactor`,
   `tests`, `docs`, `perf` or `chore` (`fix/palette-apostrophe`, `refactor/main-services`). An agent whose worktree
   came with a generated name (`worktree-agent-a571eb…`) renames it first: `git branch -m <kind>/<topic>`.
-- Parallel agents each work in their own git worktree and branch (`.claude/worktrees/`, ignored). A verified branch
-  joins `main` with a merge commit, never squashed or rebased: the real path is the story. Don't squash or rewrite
-  history unless the user asks. It joins through the merge queue (`gh pr merge --auto --merge`), which tests it on top
-  of the latest `main`: never update a branch just to merge it (docs/features/updates.md "CI").
+- Parallel agents each work in their own git worktree and branch (`.claude/worktrees/`, ignored). Don't squash or
+  rewrite history unless the user asks: the real path is the story.
+
+## Delivering work: a pull request
+
+The only way work reaches `main` is a pull request on GitHub. `main` takes nothing else: never commit on it, merge
+into it or push to it locally, not even a "verified" branch. An agent's job ends with a pull request that passes the
+QA gate, not with a merge. These steps are for every agent, whatever the tool (`AGENTS.md` points other tools here).
+A Claude Code hook refusing local writes to `main` was tried and dropped: GitHub's branch protection already refuses
+them on the server, and reading shell command lines cost more to keep right than it saved.
+
+1. **Branch first.** Before the first edit: `git pull --ff-only` then `git switch -c <kind>/<topic>` in the main
+   checkout, or rename a worktree's generated branch (see "Commits"). One task, one branch, one pull request.
+2. **Build it** in small commits (see "Commits"), adjusting every place the change reaches: callers, other views that
+   share a component, menus, shortcuts, the e2e fake, the docs.
+3. **Verify it yourself**: `npm run typecheck` and `npm test`; `npm run e2e` when it touches startup, navigation or
+   many views; anything visible seen in the app with Playwright (see "Seeing the app": both themes, a narrow window, a
+   development build, a clean console).
+4. **Have it reviewed in a clean context.** Give the reviewer's brief (`.claude/agents/reviewer.md`; in Claude Code,
+   the `reviewer` agent) to a fresh agent or session that didn't write the change, with the branch, its folder, what
+   the change is for and how you verified it. A fresh context sees what the author's can't. A subagent that can't
+   start agents of its own stops after step 3 and reports its branch, folder and verification; the agent that started
+   it runs the review, then resumes it (Claude Code: `SendMessage`) to do steps 5 and 6, or does them itself.
+5. **Apply the review**: fix every must-fix and what's worth it among the rest, in new commits; re-run step 3. If the
+   fixes went beyond small, review again. A finding you decline gets one line of why in the pull request.
+6. **Open the pull request**: `git push -u origin <branch>`, then `gh pr create` with the template filled in
+   (`.github/pull_request_template.md`): what the user can now do, how it was checked, what the review found and what
+   changed for it, the docs. The title says what the user can now do, like a commit message.
+7. **Stop there**, and report the pull request's link to the user, with what to try in the app for anything visible.
+   A person approves and merges it: don't approve or merge it yourself. Comments on the pull request are answered
+   with new commits on the same branch, never a force push.
+
+Only when the user asks you to merge it: `gh pr merge --auto --merge` puts it in the merge queue, which tests it on
+top of the latest `main` and joins it with a merge commit, never squashed or rebased; never update a branch just to
+merge it (docs/features/updates.md "CI"). Once the user says it merged, remove its worktree (`git worktree remove
+<folder>`) and branch.
 
 ## Docs
 
