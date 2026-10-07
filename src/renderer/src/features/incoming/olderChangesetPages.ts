@@ -23,3 +23,12 @@ export function listedIncomingChangesets(
   if (!last) return { changesets: first.changesets, more: first.moreChangesets };
   return { changesets: [...first.changesets, ...pages.flatMap((page) => page.changesets)], more: last.more };
 }
+
+/**
+ * What "Show more" reads, decided from what the cache holds rather than from the list's own state, which a visit to
+ * another view resets while the pages read stay: the page after the last one read, or the first older page while
+ * none is (never asked for, or it failed).
+ */
+export function showMoreStep(pages: readonly IncomingChangesetPage[] | undefined): 'nextPage' | 'firstPage' {
+  return pages && pages.length > 0 ? 'nextPage' : 'firstPage';
+}
