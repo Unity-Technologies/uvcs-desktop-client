@@ -58,3 +58,16 @@ describe('incomingRows', () => {
     expect(growth).toBeLessThan(2.05);
   });
 });
+
+describe('older incoming changesets', () => {
+  it('end the changesets with a row to show more, which the arrows pass by', () => {
+    const { rows, entries } = incomingRows([changeset(3), changeset(2)], [file('/a.ts')], new Set(), new Set(), true);
+    expect(rows.map((row) => row.key)).toEqual(['section:Changesets', 'changeset:3', 'changeset:2', 'more:changesets', 'section:Files', 'file:/a.ts']);
+    expect(entries.map((entry) => entry.key)).toEqual(['changeset:3', 'changeset:2', 'file:/a.ts']);
+  });
+
+  it('count the changesets section as at least those read', () => {
+    const section = incomingRows([changeset(3)], [], new Set(), new Set(), true).rows[0];
+    expect(section).toMatchObject({ type: 'section', count: 1, countCapped: true });
+  });
+});

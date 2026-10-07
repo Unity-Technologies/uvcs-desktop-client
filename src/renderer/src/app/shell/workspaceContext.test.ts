@@ -12,7 +12,14 @@ const info = (selector: WorkspaceSelector, loadedChangeset: number | null = 11):
   selector,
   loadedChangeset,
 });
-const summary = (changesetCount: number, branch = '/main'): IncomingSummary => ({ branch, loadedChangeset: 11, headChangeset: 11 + changesetCount, changesetCount, countCapped: false, authors: [] });
+const summary = (changesetCount: number, branch = '/main', countCapped = false): IncomingSummary => ({
+  branch,
+  loadedChangeset: 11,
+  headChangeset: 11 + changesetCount,
+  changesetCount,
+  countCapped,
+  authors: [],
+});
 
 describe('workspaceContext', () => {
   it('tells the loaded changeset and keeps its branch for the tooltip', () => {
@@ -32,6 +39,15 @@ describe('workspaceContext', () => {
       tip: '3 new changesets on /main: review them in Incoming',
     });
     expect(workspaceContext(info({ kind: 'branch', name: '/main' }), summary(1)).sync?.tip).toBe('1 new changeset on /main: review them in Incoming');
+  });
+
+  it('says 100+ once the incoming check stopped counting', () => {
+    expect(workspaceContext(info({ kind: 'branch', name: '/main' }), summary(100, '/main', true)).sync).toEqual({
+      kind: 'behind',
+      count: 100,
+      label: '100+ incoming',
+      tip: '100+ new changesets on /main: review them in Incoming',
+    });
   });
 
   it('leaves the sync state out while unknown or checked for another branch', () => {
