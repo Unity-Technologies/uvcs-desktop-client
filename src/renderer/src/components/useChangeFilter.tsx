@@ -3,7 +3,7 @@ import { formatCount } from '../lib/text';
 import { FilterField } from '../ui/FilterField';
 import { SearchField } from '../ui/SearchField';
 import { Tooltip } from '../ui/Tooltip';
-import { FileListLayoutToggle } from './FileListLayoutToggle';
+import { FileListLayoutMenu } from './FileListLayoutMenu';
 import { changeFilterPlaceholder, countTones, matchesChangeFilter, offeredTones } from './changeFilter';
 import { STATUS_LETTERS, StatusLetter, type StatusTone } from './StatusBadge';
 import styles from './useChangeFilter.module.css';
@@ -25,7 +25,7 @@ interface ChangeFilterResult<T> {
   query: string;
   /** Empties the text and turns every status chip off. */
   clear: () => void;
-  /** The filter field followed by one toggle chip per status, and the List/Tree switch (`FileListLayoutToggle`). */
+  /** The filter field followed by one toggle chip per status, and the List/Tree switch (`FileListLayoutMenu`). */
   bar: ReactNode;
 }
 
@@ -81,7 +81,7 @@ export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tone
         );
       })}
       <span className={styles.layout}>
-        <FileListLayoutToggle />
+        <FileListLayoutMenu />
       </span>
     </div>
   );

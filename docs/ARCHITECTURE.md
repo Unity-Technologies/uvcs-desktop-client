@@ -605,9 +605,10 @@ renderer/src/
     when its status changed; the status chips of the filter bar (`useChangeFilter`) are how to look at one kind.
     Sorting controls were rejected too: the only other order anyone asked for is by kind, which the chips give.
   - **One layout, List or Tree**, for every list at once and across sessions (`useFileListLayoutStore`, which took the
-    one Changes kept first). Its switch (`FileListLayoutToggle`) ends the filter bar, so it is in the same place in each
-    list; a details panel too short for a filter bar has it in its title. Incoming and the merge page, whose rows are
-    grouped by their own sections (`incomingRows`, `mergeItems`), are always a list for now.
+    one Changes kept first). Its switch, a menu (`FileListLayoutMenu`: it takes the room of one button), ends the filter
+    bar, so it is in the same place in each list; a details panel too short for a filter bar has it in its title.
+    Incoming and the merge page, whose rows are grouped by their own sections (`incomingRows`, `mergeItems`), are always
+    a list for now.
   - **One tree**: `layoutPathTree` (`lib/pathTree`) lays out any items with a path, in n·log n: a folder's row, folders
     holding only the next one sharing it ("deep/very"), and a folder that is an item itself (an added or moved folder)
     as its own row, with its status. `useFileTree` gives a list its rows; Changes adds its changelists on top

@@ -2,7 +2,7 @@ import { ChevronRight } from 'lucide-react';
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { FileListLayoutToggle } from '../../components/FileListLayoutToggle';
+import { FileListLayoutMenu } from '../../components/FileListLayoutMenu';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useFileTree } from '../../components/useFileTree';
 import { firstFilesOf, pathTreeKeyMove } from '../../lib/pathTree';
@@ -76,7 +76,7 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
     // No "Open diff" here: the panel's primary action at the top opens it.
     <DetailsChangesPane
       title={entries ? `${pluralize(entries.length, 'file')} changed` : 'Changes'}
-      action={shown && shown.length > 0 && !filterShown && <FileListLayoutToggle />}
+      action={shown && shown.length > 0 && !filterShown && <FileListLayoutMenu />}
       expanded={Boolean(shown?.length)}
       disclosure={entries && { open: !collapsed, toggle: () => set({ changesCollapsed: !collapsed }) }}
     >

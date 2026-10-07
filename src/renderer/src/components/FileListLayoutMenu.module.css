@@ -1,0 +1,9 @@
+/* As tight as an icon button: the chevron only marks it as a menu. */
+.trigger {
+  gap: 2px;
+  padding-inline: var(--space-1);
+}
+
+.chevron {
+  opacity: 0.7;
+}
