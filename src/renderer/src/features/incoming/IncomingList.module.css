@@ -66,6 +66,12 @@
   background: var(--bg-selected-strong);
 }
 
+/* Still selected, while the arrows rest on "Show more". */
+.row[data-selected='quiet'],
+.changeset[data-selected='quiet'] {
+  background: var(--bg-selected);
+}
+
 .changesetIcon {
   flex: none;
   margin-top: 2px;

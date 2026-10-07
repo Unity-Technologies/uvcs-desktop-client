@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { GitCommitVertical } from 'lucide-react';
-import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import type { DiffEntry } from '@shared/domain/diff';
 import { INCOMING_CHANGESETS_PAGE } from '@shared/domain/incoming';
@@ -58,10 +58,24 @@ export function IncomingList({ changesets, files, conflictPaths, conflictStates,
   const selectedKey = selection && selectionKey(selection);
   const activeRow = activeKey === null ? undefined : rows[rowIndexOf.get(activeKey) ?? -1];
   const selectedIndex = activeRow && 'entryIndex' in activeRow ? activeRow.entryIndex : -1;
+  const restingOnShowMore = activeKey === MORE_CHANGESETS_KEY;
+  // The selection stays while the arrows rest on "Show more", quieter, as the pane beside the list still shows it.
+  const selectedLook = (key: string): 'true' | 'quiet' | 'false' => (key !== selectedKey ? 'false' : restingOnShowMore ? 'quiet' : 'true');
   const select = (next: IncomingSelection): void => {
     setOnShowMore(false);
     onSelect(next);
   };
+
+  // Enter on "Show more": once the page lands, the arrows go on from its first changeset, scrolled into view.
+  const [landingAt, setLandingAt] = useState<number | null>(null);
+  useEffect(() => {
+    if (landingAt === null || changesets.length <= landingAt) return;
+    const first = changesets[landingAt]!;
+    setLandingAt(null);
+    select({ kind: 'changeset', id: first.id });
+    virtualizer.scrollToIndex(rowIndexOf.get(selectionKey({ kind: 'changeset', id: first.id }))!);
+    // Only the page landing moves the arrows: not the selection, the rows or the virtualizer changing.
+  }, [changesets, landingAt]);
   const isBlocking = (file: DiffEntry): boolean => blockedPaths.has(file.oldPath ?? file.path);
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -69,7 +83,10 @@ export function IncomingList({ changesets, files, conflictPaths, conflictStates,
     if (event.altKey) return;
     if (event.key === 'Enter' && activeKey === MORE_CHANGESETS_KEY) {
       event.preventDefault();
-      if (!olderChangesets?.loading) olderChangesets?.onShowMore();
+      if (olderChangesets && !olderChangesets.loading) {
+        setLandingAt(changesets.length);
+        olderChangesets.onShowMore();
+      }
       return;
     }
     const ends: Record<string, number> = { Home: 0, End: entries.length - 1 };
@@ -101,7 +118,7 @@ export function IncomingList({ changesets, files, conflictPaths, conflictStates,
       aria-selected={key === selectedKey}
       tabIndex={-1}
       className={styles.row}
-      data-selected={key === selectedKey}
+      data-selected={selectedLook(key)}
       onClick={() => select({ kind: 'file', path: file.path })}
     >
       <ItemPathRow
@@ -121,7 +138,7 @@ export function IncomingList({ changesets, files, conflictPaths, conflictStates,
       aria-selected={key === selectedKey}
       tabIndex={-1}
       className={styles.changeset}
-      data-selected={key === selectedKey}
+      data-selected={selectedLook(key)}
       onClick={() => select({ kind: 'changeset', id: changeset.id })}
     >
       <GitCommitVertical size={14} className={styles.changesetIcon} />
