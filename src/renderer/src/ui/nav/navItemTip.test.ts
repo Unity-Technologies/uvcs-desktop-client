@@ -5,7 +5,7 @@ describe('navItemTip', () => {
   describe('wide', () => {
     it('says nothing an entry already shows', () => {
       expect(navItemTip({ label: 'Settings' }, false)).toBeUndefined();
-      expect(navItemTip({ label: 'Changes', badge: 12 }, false)).toBeUndefined();
+      expect(navItemTip({ label: 'Changes', badge: { count: 12 } }, false)).toBeUndefined();
       expect(navItemTip({ label: 'acme', detail: 'Cloud' }, false)).toBeUndefined();
     });
 
@@ -31,8 +31,9 @@ describe('navItemTip', () => {
     });
 
     it('adds the count and the detail the tile leaves out', () => {
-      expect(navItemTip({ label: 'Changes', badge: 1234, shortcut: 'mod+1' }, true)).toBe('Changes · 1234');
+      expect(navItemTip({ label: 'Changes', badge: { count: 1234 }, shortcut: 'mod+1' }, true)).toBe('Changes · 1234');
       expect(navItemTip({ label: 'acme', detail: 'Cloud' }, true)).toBe('acme · Cloud');
+      expect(navItemTip({ label: 'Incoming', badge: { count: 100, more: true } }, true)).toBe('Incoming · 100+');
     });
 
     it('spells out a label the tile shortens', () => {
@@ -40,7 +41,7 @@ describe('navItemTip', () => {
     });
 
     it('treats a count of zero as none', () => {
-      expect(navItemTip({ label: 'Incoming', badge: 0 }, true)).toBeUndefined();
+      expect(navItemTip({ label: 'Incoming', badge: { count: 0 } }, true)).toBeUndefined();
     });
   });
 });

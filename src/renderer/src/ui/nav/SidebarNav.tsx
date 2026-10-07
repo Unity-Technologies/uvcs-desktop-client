@@ -2,7 +2,7 @@ import * as Popover from '@radix-ui/react-popover';
 import { MoreHorizontal } from 'lucide-react';
 import { createContext, useContext, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode, type Ref } from 'react';
 import { shownItemCount, type NavLayout } from './navOverflow';
-import { navBadgeText } from './navBadgeText';
+import { navBadgeText, type NavBadge } from './navBadgeText';
 import { navItemTip } from './navItemTip';
 import styles from './SidebarNav.module.css';
 
@@ -38,7 +38,7 @@ interface NavItemProps {
   /** Quiet text at the right, e.g. "Cloud". */
   detail?: string;
   /** A count at the right, e.g. pending changes. */
-  badge?: number;
+  badge?: NavBadge;
   /**
    * A dot at the right, saying what waits there ("Changes left on /main/task · restore them in Changes"): the words
    * show under the item's tooltip and are read with it.
@@ -79,7 +79,7 @@ export function NavItem(props: NavItemProps) {
       <span className={styles.label}>{shownLabel}</span>
       {detail && <span className={styles.detail}>{detail}</span>}
       {dot && <span className={styles.dot} />}
-      {badge ? <span className={styles.badge}>{navBadgeText(badge, rail)}</span> : null}
+      {badge?.count ? <span className={styles.badge}>{navBadgeText(badge, rail)}</span> : null}
     </button>
   );
 }

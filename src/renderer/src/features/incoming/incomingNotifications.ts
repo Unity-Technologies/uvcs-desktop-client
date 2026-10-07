@@ -5,7 +5,7 @@ import { useUvcsEvent } from '../../api/useUvcsEvent';
 import { navigation } from '../../app/navigation/navigationStore';
 import { queryClient } from '../../app/queryClient';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { incomingNotificationMessage } from './incomingNotificationMessage';
+import { incomingNotificationMessage, newChangesetCount } from './incomingNotificationMessage';
 
 /**
  * Someone checked in to the loaded branch (not from this workspace: that moves the loaded changeset too): with the setting on and the window in the background, an OS
@@ -18,7 +18,7 @@ export async function notifyIncoming(workspacePath: string, before: IncomingSumm
     if (!settings.notifyOnIncoming) return;
 
     const newest = await api.changesets.get(workspacePath, after.headChangeset);
-    await api.system.notifyIncoming(workspacePath, incomingNotificationMessage(newest, after.branch, after.changesetCount - before.changesetCount));
+    await api.system.notifyIncoming(workspacePath, incomingNotificationMessage(newest, after.branch, newChangesetCount(before, after)));
   } catch {
     // Nothing to report: the incoming chip shows the new changesets anyway.
   }

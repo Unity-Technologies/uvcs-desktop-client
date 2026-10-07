@@ -20,9 +20,12 @@ import { useFileConflicts } from '../merge/resolve/useFileConflicts';
 import { IncomingChangesetList } from './IncomingChangesetList';
 import { IncomingConflictMark } from './IncomingConflictMark';
 import { IncomingFileDiff } from './IncomingDetail';
+import { IncomingShowMore } from './IncomingShowMore';
+import { incomingSubtitle } from './incomingSubtitle';
 import { ALL_INCOMING, collidesWithLocal, firstIncomingFile, incomingDiffTarget, incomingFilesSummary, type IncomingScope } from './incomingScope';
 import { IncomingFiles } from './IncomingFiles';
 import { UpdateBar } from './UpdateBar';
+import { useIncomingChangesetList } from './useIncomingChangesets';
 import { UPDATE_LABELS, updateConflictFiles, updateResolutionsOf } from './updateConflictFiles';
 import { shelveBlockedAndUpdate, updateResolvingConflicts, updateToIncoming } from './updateOperations';
 import { useIncomingFiles } from './useIncomingFiles';
@@ -32,7 +35,8 @@ import styles from './IncomingSession.module.css';
 interface IncomingSessionProps {
   workspacePath: string;
   incoming: BranchIncomingChanges;
-  header: ReactNode;
+  /** The view's header, saying the words given (`incomingSubtitle`). */
+  header: (subtitle: string) => ReactNode;
 }
 
 /**
@@ -49,6 +53,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const selectionRef = useRef(selection);
   selectionRef.current = selection;
   const { changesetsCollapsed, toggleChangesets } = useIncomingViewStore();
+  const changesetList = useIncomingChangesetList(incoming);
 
   const conflictPaths = useMemo(() => new Set(incoming.conflicts.map((conflict) => conflict.path)), [incoming.conflicts]);
   const blockedPaths = useMemo(() => new Set(incoming.blockedPaths), [incoming.blockedPaths]);
@@ -104,7 +109,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
     });
 
   const menuContext = { workspacePath, loadedChangeset: incoming.loadedChangeset, loadedBranch: incoming.branch ?? undefined };
-  const scopedChangeset = scope.kind === 'changeset' ? incoming.changesets.find((changeset) => changeset.id === scope.id) : undefined;
+  const scopedChangeset = scope.kind === 'changeset' ? changesetList.changesets.find((changeset) => changeset.id === scope.id) : undefined;
   // Conflicts are settled in the whole update, the merge updating makes; a changeset's files are what it did.
   const fileMenu = (selected: DiffEntry[]) => {
     const conflicts = scope.kind === 'all' ? selected.filter((file) => conflictPaths.has(file.path)).map((file) => file.path) : [];
@@ -140,7 +145,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
 
   return (
     <>
-      {header}
+      {header(incomingSubtitle(incoming.branch, changesetList))}
       <UpdateBar
         incoming={incoming}
         pendingConflictCount={pendingConflictPaths.size}
@@ -157,7 +162,9 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
         first={
           <div className={styles.pane}>
             <IncomingChangesetList
-              changesets={incoming.changesets}
+              changesets={changesetList.changesets}
+              more={changesetList.more}
+              footer={changesetList.more && <IncomingShowMore loading={changesetList.loading} onShowMore={changesetList.showMore} />}
               scope={scope}
               onScope={changeScope}
               collapsed={changesetsCollapsed}

@@ -1,18 +1,18 @@
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
-import { pluralize } from '../../lib/text';
+import { pluralizeAtLeast } from '../../lib/text';
 import { displayName } from '../../lib/userName';
 
 const NAMED_AUTHORS = 3;
 
 /** "Updated to cs:14 · 3 changesets from Ana, Bob" — what an update brought in, and from whom. */
 export function updatedMessage(incoming: BranchIncomingChanges): string {
-  return `Updated to cs:${incoming.headChangeset} · ${changesetsFrom(incoming.changesets.length, incoming.changesets.map((changeset) => changeset.owner))}`;
+  return `Updated to cs:${incoming.headChangeset} · ${changesetsFrom(incoming.changesetCount, incoming.countCapped, incoming.changesets.map((changeset) => changeset.owner))}`;
 }
 
-/** "3 changesets from Ana, Bob", naming each author once. */
-export function changesetsFrom(count: number, owners: string[]): string {
+/** "3 changesets from Ana, Bob" ("200+ changesets" when `countCapped`), naming each author once. */
+export function changesetsFrom(count: number, countCapped: boolean, owners: string[]): string {
   const authors = authorNames(owners);
-  return `${pluralize(count, 'changeset')}${authors ? ` from ${authors}` : ''}`;
+  return `${pluralizeAtLeast(count, countCapped, 'changeset')}${authors ? ` from ${authors}` : ''}`;
 }
 
 /** "Ana, Bob and 2 more": each author once, by name, the first few; empty without any. */

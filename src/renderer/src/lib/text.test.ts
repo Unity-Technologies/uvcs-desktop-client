@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extensionOf, formatCount, pluralize, shownCount } from './text';
+import { extensionOf, formatCount, formatCountAtLeast, pluralize, pluralizeAtLeast, shownCount } from './text';
 
 describe('formatCount', () => {
   it('groups thousands', () => {
@@ -36,5 +36,20 @@ describe('extensionOf', () => {
     expect(extensionOf('ProjectSettings')).toBeNull();
     expect(extensionOf('src.v2/Makefile')).toBeNull();
     expect(extensionOf('.gitignore')).toBeNull();
+  });
+});
+
+describe('a count that stopped counting', () => {
+  it('reads as at least that many, with a plus', () => {
+    expect(formatCountAtLeast(100, true)).toBe('100+');
+    expect(formatCountAtLeast(1200, true)).toBe('1,200+');
+    expect(formatCountAtLeast(3, false)).toBe('3');
+  });
+
+  it('takes the plural however few it counted', () => {
+    expect(pluralizeAtLeast(100, true, 'new changeset')).toBe('100+ new changesets');
+    expect(pluralizeAtLeast(1, true, 'changeset')).toBe('1+ changesets');
+    expect(pluralizeAtLeast(1, false, 'changeset')).toBe('1 changeset');
+    expect(pluralizeAtLeast(3, false, 'file')).toBe('3 files');
   });
 });

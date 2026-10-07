@@ -1,7 +1,7 @@
 import type { IncomingSummary } from '@shared/domain/incoming';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
 import { SELECTOR_KIND_LABELS, workingObjectName } from '../../components/workingObject';
-import { pluralize } from '../../lib/text';
+import { formatCountAtLeast, pluralizeAtLeast } from '../../lib/text';
 
 /** How the workspace compares to its branch head, as the status bar words it. */
 export type SyncState = { kind: 'upToDate'; label: string; tip: string } | { kind: 'behind'; count: number; label: string; tip: string };
@@ -41,10 +41,15 @@ export function workspaceContext(info: WorkspaceInfo, summary: IncomingSummary |
   const branch = selector.name;
   const changeset = { id: loadedChangeset, spec, description: `${spec} on ${branch}` };
   if (!summary || summary.branch !== branch) return { changeset, repository, sync: null };
-  const count = summary.changesetCount;
+  const { changesetCount: count, countCapped } = summary;
   const sync: SyncState =
     count === 0
       ? { kind: 'upToDate', label: 'Up to date', tip: `Nothing new on ${branch}` }
-      : { kind: 'behind', count, label: `${count} incoming`, tip: `${pluralize(count, 'new changeset')} on ${branch}: review them in Incoming` };
+      : {
+          kind: 'behind',
+          count,
+          label: `${formatCountAtLeast(count, countCapped)} incoming`,
+          tip: `${pluralizeAtLeast(count, countCapped, 'new changeset')} on ${branch}: review them in Incoming`,
+        };
   return { changeset, repository, sync };
 }

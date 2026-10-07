@@ -1,5 +1,5 @@
 import type { Changeset } from '@shared/domain/changeset';
-import { pluralize } from '../../lib/text';
+import { pluralizeAtLeast } from '../../lib/text';
 import { authorNames } from './updatedMessage';
 
 /** The heights the section's rows are drawn at: "All incoming changes", and a changeset (comment, then author and date). */
@@ -19,9 +19,9 @@ export function changesetListMaxHeight(shown = CHANGESETS_SHOWN): number {
 
 /**
  * What the section's header says while it is closed: "3 changesets · Ana, Luis", from the changesets already read
- * (nothing more is asked of `cm`). Open, the rows say it.
+ * (nothing more is asked of `cm`), "200+ changesets" while older ones remain to be read (`more`). Open, the rows say it.
  */
-export function changesetsSummary(changesets: Changeset[]): string {
+export function changesetsSummary(changesets: Changeset[], more: boolean): string {
   const authors = authorNames(changesets.map((changeset) => changeset.owner));
-  return `${pluralize(changesets.length, 'changeset')}${authors ? ` · ${authors}` : ''}`;
+  return `${pluralizeAtLeast(changesets.length, more, 'changeset')}${authors ? ` · ${authors}` : ''}`;
 }

@@ -4,7 +4,7 @@ import { useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import type { MenuEntry } from '../../lib/actions';
 import { navigationTarget } from '../../lib/listNavigation';
-import { firstLine, formatCount } from '../../lib/text';
+import { firstLine, formatCountAtLeast } from '../../lib/text';
 import { Avatar } from '../../ui/Avatar';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { RelativeTime } from '../../ui/RelativeTime';
@@ -15,6 +15,8 @@ import styles from './IncomingChangesetList.module.css';
 
 interface IncomingChangesetListProps {
   changesets: Changeset[];
+  /** Older changesets remain to be read: the counts say "200+". */
+  more: boolean;
   scope: IncomingScope;
   onScope: (scope: IncomingScope) => void;
   collapsed: boolean;
@@ -31,7 +33,7 @@ interface IncomingChangesetListProps {
  * (`changesetListMaxHeight`), and closed, its header sums them up (`changesetsSummary`). Hundreds of changesets: only
  * the rows in view render.
  */
-export function IncomingChangesetList({ changesets, scope, onScope, collapsed, onToggleCollapsed, changesetMenu, footer }: IncomingChangesetListProps) {
+export function IncomingChangesetList({ changesets, more, scope, onScope, collapsed, onToggleCollapsed, changesetMenu, footer }: IncomingChangesetListProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
   const scopes: IncomingScope[] = [ALL_INCOMING, ...changesets.map((changeset): IncomingScope => ({ kind: 'changeset', id: changeset.id }))];
   const virtualizer = useVirtualizer({
@@ -97,11 +99,11 @@ export function IncomingChangesetList({ changesets, scope, onScope, collapsed, o
       <button type="button" className={styles.header} aria-expanded={!collapsed} aria-controls={listId} onClick={onToggleCollapsed}>
         <ChevronRight size={13} className={styles.chevron} data-collapsed={collapsed} aria-hidden />
         {collapsed ? (
-          <span className={styles.title}>{changesetsSummary(changesets)}</span>
+          <span className={styles.title}>{changesetsSummary(changesets, more)}</span>
         ) : (
           <>
             <span className={styles.title}>Changesets</span>
-            <span className={styles.count}>{formatCount(changesets.length)}</span>
+            <span className={styles.count}>{formatCountAtLeast(changesets.length, more)}</span>
           </>
         )}
       </button>

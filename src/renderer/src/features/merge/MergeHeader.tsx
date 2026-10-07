@@ -5,7 +5,7 @@ import { shortBranchName } from '@shared/domain/specs';
 import { updateWorkspace } from '../../app/shell/workspaceOperations';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { hotkey } from '../../lib/shortcutRegistry';
-import { pluralize } from '../../lib/text';
+import { pluralizeAtLeast } from '../../lib/text';
 import { useShortcut } from '../../lib/useShortcut';
 import { Button } from '../../ui/Button';
 import { Kbd } from '../../ui/Kbd';
@@ -130,7 +130,7 @@ function BehindHeadNotice() {
   return (
     <div className={styles.notice}>
       <ArrowDownToLine size={13} />
-      Your workspace is {pluralize(incoming.changesetCount, 'changeset')} behind {incoming.branch}. Update first
+      Your workspace is {pluralizeAtLeast(incoming.changesetCount, incoming.countCapped, 'changeset')} behind {incoming.branch}. Update first
       to merge into the latest version.
       <Button size="small" onClick={() => void updateWorkspace(workspacePath)}>
         Update

@@ -13,7 +13,9 @@ The left pane is the incoming changesets above the files, as every list of chang
   scrolls inside itself (`changesetListMaxHeight`, `CHANGESETS_SHOWN`), so the files always start right below. It
   closes, and stays closed across sessions (`useIncomingViewStore`); closed, its header sums the changesets up: "3
   changesets · Ana, Luis" (`changesetsSummary`). Each row is what the list of changesets read (comment, author, date):
-  nothing is asked of `cm` per row, and no row counts its files.
+  nothing is asked of `cm` per row, and no row counts its files. It holds the changesets read so far, 200 at a time
+  (`useIncomingChangesetList`): while older ones remain it ends with "Show 200 more" (`IncomingShowMore`) and its
+  counts say "200+" (ARCHITECTURE.md "Server budget").
 - **"All incoming changes"**, where Incoming opens, lists the whole update: the diff from the loaded changeset to the
   head that Incoming reads anyway. The files that collide with local changes (changed on both sides, or changed
   locally and deleted or moved on the branch: `collidesWithLocal`) are a group of their own, "Conflicts with your

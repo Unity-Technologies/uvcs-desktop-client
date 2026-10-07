@@ -34,12 +34,12 @@ export async function updateToIncoming(workspacePath: string, incoming: BranchIn
 /** Changes shows what the update brought until the next change, as it does after a check-in. */
 export function showUpdatedMoment(workspacePath: string, summary: IncomingSummary): void {
   if (!summary.branch || summary.changesetCount === 0) return;
-  const { loadedChangeset, headChangeset, changesetCount, authors } = summary;
+  const { loadedChangeset, headChangeset, changesetCount, countCapped, authors } = summary;
   useSuccessMomentStore.getState().show(workspacePath, {
     verb: 'Updated to',
     changesetId: headChangeset,
     fromChangeset: loadedChangeset,
-    detail: changesetsFrom(changesetCount, authors),
+    detail: changesetsFrom(changesetCount, countCapped, authors),
   });
 }
 
@@ -81,12 +81,12 @@ export function explainUpdateConflicts(error: unknown): boolean {
   return true;
 }
 
-function viewIncoming({ loadedChangeset, headChangeset, changesets }: BranchIncomingChanges): void {
+function viewIncoming({ loadedChangeset, headChangeset, changesetCount }: BranchIncomingChanges): void {
   const target =
-    changesets.length === 1
+    changesetCount === 1
       ? ({ kind: 'changeset', changesetId: headChangeset } as const)
       : ({ kind: 'range', fromSpec: spec.changeset(loadedChangeset), toSpec: spec.changeset(headChangeset) } as const);
-  const title = changesets.length === 1 ? `Changeset ${headChangeset}` : `Changesets ${loadedChangeset + 1} to ${headChangeset}`;
+  const title = changesetCount === 1 ? `Changeset ${headChangeset}` : `Changesets ${loadedChangeset + 1} to ${headChangeset}`;
   navigation.openPage({ kind: 'diff', title, target });
 }
 

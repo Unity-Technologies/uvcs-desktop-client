@@ -13,19 +13,15 @@ export function IncomingChangesView() {
   const workspacePath = useWorkspacePath();
   const { data: incoming, isLoading, isFetching, error } = useIncomingChanges();
 
-  const header = (
+  // The session says how many came in, as its list knows them (`incomingSubtitle`); before, only the branch.
+  const headerSaying = (words: string | undefined) => (
     <ViewHeader
       title="Incoming"
-      subtitle={
-        incoming?.branch && (
-          <span data-tip={incoming.branch}>
-            {incoming.changesetCount > 0 ? `${incoming.changesetCount} new on ${branchLabel(incoming.branch)}` : branchLabel(incoming.branch)}
-          </span>
-        )
-      }
+      subtitle={incoming?.branch && words && <span data-tip={incoming.branch}>{words}</span>}
       actions={<IconButton icon={<RefreshCw size={14} />} label="Refresh" loading={isFetching} onClick={() => void invalidateWorkspace(workspacePath)} />}
     />
   );
+  const header = headerSaying(incoming?.branch ? branchLabel(incoming.branch) : undefined);
 
   if (isLoading) return <>{header}<CenteredSpinner /></>;
   if (error || !incoming) return <>{header}<EmptyState title="Couldn't check for incoming changes" description={error?.message} /></>;
@@ -48,5 +44,5 @@ export function IncomingChangesView() {
     );
   }
 
-  return <IncomingSession key={incoming.headChangeset} workspacePath={workspacePath} incoming={incoming} header={header} />;
+  return <IncomingSession key={incoming.headChangeset} workspacePath={workspacePath} incoming={incoming} header={headerSaying} />;
 }

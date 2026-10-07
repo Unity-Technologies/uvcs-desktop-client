@@ -13,11 +13,12 @@ import {
   Tags,
 } from 'lucide-react';
 import type { ComponentType } from 'react';
-import { useIncomingChangesCount } from '../../features/incoming/useIncomingChangesCount';
+import { useIncomingChangesBadge } from '../../features/incoming/useIncomingChangesBadge';
 import { useLeftChangesSummary } from '../../features/leftChanges/useLeftChanges';
-import { usePendingChangesCount } from '../../features/pendingChanges/usePendingChanges';
+import { usePendingChangesBadge } from '../../features/pendingChanges/usePendingChanges';
 import type { Icon } from '../../lib/actions';
 import { lazyComponent } from '../../lib/lazyComponent';
+import type { NavBadge } from '../../ui/nav/navBadgeText';
 import { isMac } from '../../lib/platform';
 import { viewShortcut } from '../../lib/shortcutRegistry';
 import type { ViewId } from './views';
@@ -45,14 +46,14 @@ export interface ViewDefinition {
   shortcut: string;
   component: ComponentType;
   /** A hook returning a count to show next to the view in the sidebar. */
-  useBadge?: () => number | undefined;
+  useBadge?: () => NavBadge | undefined;
   /** A hook saying what waits in the view, shown as a dot with those words; undefined when nothing waits. */
   useDot?: () => string | undefined;
 }
 
 const SIDEBAR_VIEWS: Omit<ViewDefinition, 'shortcut'>[] = [
-  { id: 'changes', label: 'Changes', icon: FileDiff, group: 'Workspace', component: PendingChangesView, useBadge: usePendingChangesCount, useDot: useLeftChangesSummary },
-  { id: 'incoming', label: 'Incoming', icon: ArrowDownToLine, group: 'Workspace', component: IncomingChangesView, useBadge: useIncomingChangesCount },
+  { id: 'changes', label: 'Changes', icon: FileDiff, group: 'Workspace', component: PendingChangesView, useBadge: usePendingChangesBadge, useDot: useLeftChangesSummary },
+  { id: 'incoming', label: 'Incoming', icon: ArrowDownToLine, group: 'Workspace', component: IncomingChangesView, useBadge: useIncomingChangesBadge },
   { id: 'files', label: 'Files', icon: FolderTree, group: 'Workspace', component: FilesView },
   { id: 'branchExplorer', label: 'Branch Explorer', icon: GitGraph, group: 'History', component: BranchExplorerView },
   { id: 'changesets', label: 'Changesets', icon: GitCommitVertical, group: 'History', component: ChangesetsView },

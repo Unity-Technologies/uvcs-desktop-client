@@ -18,6 +18,8 @@ function incoming(...changesets: Changeset[]): BranchIncomingChanges {
     loadedChangeset: 10,
     headChangeset: changesets[0]!.id,
     changesetCount: changesets.length,
+    countCapped: false,
+    moreChangesets: false,
     authors: [...new Set(changesets.map((each) => each.owner))],
     changesets,
     files: [],

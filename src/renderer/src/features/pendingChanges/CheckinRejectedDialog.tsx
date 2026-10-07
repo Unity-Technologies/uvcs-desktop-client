@@ -1,6 +1,6 @@
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import { branchLabel } from '../../lib/branchLabels';
-import { fileNameOf, firstLine, pluralize } from '../../lib/text';
+import { fileNameOf, firstLine, formatCountAtLeast, pluralize } from '../../lib/text';
 import { displayName } from '../../lib/userName';
 import { Avatar } from '../../ui/Avatar';
 import { Button } from '../../ui/Button';
@@ -31,7 +31,7 @@ export function askCatchUpForCheckin(request: CheckinRejectedRequest): Promise<C
 function CheckinRejectedDialog({ incoming, overlapping, needsReview, rejected, onFinish }: CheckinRejectedRequest & { onFinish: (choice: CatchUpChoice | undefined) => void }) {
   const primary: CatchUpChoice = needsReview ? 'review' : 'updateAndCheckin';
   const shown = incoming.changesets.slice(0, SHOWN_CHANGESETS);
-  const more = incoming.changesets.length - shown.length;
+  const more = incoming.changesetCount - shown.length;
 
   return (
     <Dialog
@@ -62,7 +62,7 @@ function CheckinRejectedDialog({ incoming, overlapping, needsReview, rejected, o
             </span>
           </li>
         ))}
-        {more > 0 && <li className={styles.more}>and {more} more</li>}
+        {more > 0 && <li className={styles.more}>and {formatCountAtLeast(more, incoming.countCapped)} more</li>}
       </ul>
       {needsReview && <p className={styles.review}>{reviewReason(incoming, overlapping)}</p>}
     </Dialog>
@@ -73,6 +73,6 @@ function reviewReason(incoming: BranchIncomingChanges, overlapping: string[]): s
   if (overlapping.length === 0) return 'Some of your other changes collide with what came in. Review it before updating.';
   const names = overlapping.slice(0, 2).map(fileNameOf).join(', ');
   const rest = overlapping.length > 2 ? ` and ${overlapping.length - 2} more` : '';
-  const them = incoming.changesets.length === 1 ? 'It' : 'They';
+  const them = incoming.changesetCount === 1 ? 'It' : 'They';
   return `${them} also changed ${pluralize(overlapping.length, 'file')} you're checking in (${names}${rest}). Review what came in before updating.`;
 }

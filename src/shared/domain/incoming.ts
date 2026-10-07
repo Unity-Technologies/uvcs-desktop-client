@@ -11,12 +11,21 @@ export type LoadedBranch = { branch: string; loadedChangeset: number } | null;
 /** A cheap check of how far behind its branch head the workspace is. */
 export type IncomingSummary = BranchIncoming | NothingIncoming;
 
+/** How many incoming changesets a page of Incoming reads at a time, newest first. */
+export const INCOMING_CHANGESETS_PAGE = 200;
+
 export interface BranchIncoming {
   branch: string;
   loadedChangeset: number;
   headChangeset: number;
+  /** How many changesets came in, up to what was read: with `countCapped`, at least this many. */
   changesetCount: number;
-  /** Who checked in the incoming changesets, newest first, each once. */
+  /**
+   * There are more than `changesetCount`: reads stop counting (100 for the check, a page for Incoming), so a workspace
+   * 100,000 changesets behind costs the server as much as one 100 behind. Shown as "100+".
+   */
+  countCapped: boolean;
+  /** Who checked in the incoming changesets counted, newest first, each once. */
   authors: string[];
 }
 
@@ -24,6 +33,7 @@ export interface BranchIncoming {
 export interface NothingIncoming {
   branch: null;
   changesetCount: 0;
+  countCapped: false;
   authors: [];
 }
 
@@ -45,8 +55,10 @@ export type IncomingChanges = BranchIncomingChanges | (NothingIncoming & Incomin
 export type BranchIncomingChanges = BranchIncoming & IncomingDetails;
 
 interface IncomingDetails {
-  /** Newest first. */
+  /** The newest `INCOMING_CHANGESETS_PAGE`, newest first; `incomingChangesets` reads the older ones, page by page. */
   changesets: Changeset[];
+  /** Older incoming changesets than those in `changesets` remain to be read. */
+  moreChangesets: boolean;
   /** Every item that changes between the loaded changeset and the head. */
   files: DiffEntry[];
   conflicts: UpdateConflict[];
@@ -55,6 +67,20 @@ interface IncomingDetails {
    * the user has to check them in, shelve them or undo them first.
    */
   blockedPaths: string[];
+}
+
+/** A page of incoming changesets, newest first, and whether older ones remain. */
+export interface IncomingChangesetPage {
+  changesets: Changeset[];
+  more: boolean;
+}
+
+/** Which incoming changesets to read: the newest `limit` after the loaded one, older than `olderThan` when given. */
+export interface IncomingChangesetsRequest {
+  branch: string;
+  loadedChangeset: number;
+  olderThan?: number;
+  limit: number;
 }
 
 /**
