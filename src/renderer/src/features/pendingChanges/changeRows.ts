@@ -1,22 +1,14 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
 import type { FileListLayout } from '../../components/fileListLayoutStore';
-import { collapseTreeRows, layoutPathList, layoutPathTree, type PathTreeRow } from '../../lib/pathTree';
+import { collapseGroupedTreeRows, layoutGroupedTree, type GroupedTreeRow } from '../../lib/groupedPathTree';
+import { layoutPathList, layoutPathTree } from '../../lib/pathTree';
 import { sortChanges } from './changeOrder';
-import { treeLevel } from './changeRowLevels';
 
-/** A changelist header. */
-interface GroupRow {
-  type: 'group';
-  key: string;
-  label: string;
-  /** Set when the group is a user changelist. */
-  changelist?: Changelist;
-  items: PendingChange[];
-  collapsed: boolean;
-}
-
-/** A changelist, a folder of changes or a change: folders and changes are the rows of every tree of files (`pathTree`). */
-export type ChangeRow = GroupRow | PathTreeRow<PendingChange>;
+/**
+ * A changelist, a folder of changes or a change, as every grouped list of files has them (`groupedPathTree`). A
+ * changelist's `group` is the user changelist it is, undefined for the default one.
+ */
+export type ChangeRow = GroupedTreeRow<PendingChange, Changelist | undefined>;
 
 export type ChangesGrouping = 'none' | 'changelist';
 
@@ -42,32 +34,17 @@ interface Group {
  * to `rowCheckState`: checking files doesn't lay tens of thousands of rows out again either.
  */
 export function layoutChangeRows({ changes, changelists, layout, grouping }: LayoutInput): ChangeRow[] {
-  const rows: ChangeRow[] = [];
   if (grouping === 'none') {
-    appendChangeRows(rows, changes, 'all', layout);
-    return rows;
+    const sorted = sortChanges(changes);
+    return layout === 'tree' ? layoutPathTree({ sorted, keyOf: changeKey, folderScope: 'all' }) : layoutPathList(sorted, changeKey);
   }
-
-  for (const group of groupByChangelist(changes, changelists)) {
-    const sorted = sortChanges(group.changes);
-    rows.push({
-      type: 'group',
-      key: group.key,
-      label: group.label,
-      changelist: group.changelist,
-      items: sorted,
-      collapsed: false,
-    });
-    appendChangeRows(rows, sorted, group.key, layout);
-  }
-  return rows;
+  const groups = groupByChangelist(changes, changelists).map(({ key, label, changelist, changes: inGroup }) => ({ key, label, group: changelist, sorted: sortChanges(inGroup) }));
+  return layoutGroupedTree(groups, changeKey, layout === 'tree');
 }
 
 /** The rows laid out by `layoutChangeRows` but for what collapsed changelists and folders hold. */
 export function collapseRows(rows: ChangeRow[], collapsed: ReadonlySet<string>): ChangeRow[] {
-  // Changelists, when there are any, lead the rows.
-  const grouped = rows[0]?.type === 'group';
-  return collapseTreeRows(rows, collapsed, (row) => treeLevel(row, grouped));
+  return collapseGroupedTreeRows(rows, collapsed);
 }
 
 /** Kept per change: lists of tens of thousands of rows look keys up in maps and sets, which hash each new string again. */
@@ -90,15 +67,9 @@ export function changesUnderRow(row: ChangeRow): PendingChange[] {
 /** What the menu of a right-clicked row is for: a changelist, the changes in a folder or the default changelist, or the selected files (null). */
 export function menuTargetOf(row: ChangeRow | null): Changelist | PendingChange[] | null {
   if (!row || row.type === 'file') return null;
-  return row.type === 'group' && row.changelist ? row.changelist : row.items;
+  return row.type === 'group' && row.group ? row.group : row.items;
 }
 
-function appendChangeRows(rows: ChangeRow[], changes: PendingChange[], groupKey: string, layout: FileListLayout): void {
-  const sorted = sortChanges(changes);
-  const laidOut = layout === 'tree' ? layoutPathTree({ sorted, keyOf: changeKey, folderScope: groupKey }) : layoutPathList(sorted, changeKey);
-  // One at a time: spreading 100,000 rows into `push` passes more arguments than a call takes.
-  for (const row of laidOut) rows.push(row);
-}
 
 function groupByChangelist(changes: PendingChange[], changelists: Changelist[]): Group[] {
   const defaultGroup: Group = {

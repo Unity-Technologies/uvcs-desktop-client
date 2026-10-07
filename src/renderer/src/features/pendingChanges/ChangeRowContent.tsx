@@ -40,11 +40,11 @@ export function GroupRowContent({ row, checkState, onToggleIncluded, changelistM
       <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
       <RowCheckbox row={row} checkState={checkState} label={row.label} onToggleIncluded={onToggleIncluded} />
       <ListChecks size={14} className={styles.groupIcon} aria-hidden />
-      <span className={styles.groupLabel} data-tip={row.changelist?.description}>
+      <span className={styles.groupLabel} data-tip={row.group?.description}>
         {row.label}
       </span>
-      {row.changelist && (
-        <ActionDropdownMenu entries={changelistMenu(row.changelist)}>
+      {row.group && (
+        <ActionDropdownMenu entries={changelistMenu(row.group)}>
           <button className={styles.groupMenu} onMouseDown={(event) => event.stopPropagation()} aria-label="Changelist actions">
             <MoreHorizontal size={14} />
           </button>

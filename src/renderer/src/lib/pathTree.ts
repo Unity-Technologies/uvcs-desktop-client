@@ -132,11 +132,14 @@ export function pathTreeKeyMove<T>(rows: readonly PathTreeRow<T>[], index: numbe
   return treeArrowMove(pathTreeArrowRows(rows), index, key);
 }
 
+/** A row that stands for items: a file for its own, a folder or a group (`groupedPathTree`) for all it holds. */
+type RowOfItems<T> = { type: 'file'; item: T } | { type: 'folder' | 'group'; items: T[] };
+
 /**
- * The items rows stand for, each once, in the rows' order: a file's own, everything in a folder. What a menu or the
- * review key acts on when folders are selected along with files.
+ * The items rows stand for, each once, in the rows' order: a file's own, everything in a folder or a group. What a
+ * menu or the review key acts on when folders are selected along with files.
  */
-export function itemsUnderRows<T>(rows: readonly PathTreeRow<T>[]): T[] {
+export function itemsUnderRows<T>(rows: readonly RowOfItems<T>[]): T[] {
   const items = new Set<T>();
   for (const row of rows) {
     if (row.type === 'file') items.add(row.item);
