@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MergePlan } from '@shared/domain/merge';
-import { buildMergeItems, mergeItemGroups, mergeItemTones, needsDecision } from './mergeItems';
+import { buildMergeItems, firstWaiting, mergeItemGroups, mergeItemTones, needsDecision } from './mergeItems';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 const side = { operation: 'added' as const, path: '/twin.txt', description: 'Added /twin.txt' };
@@ -59,6 +59,13 @@ describe('merge items', () => {
   it('knows which items still need the user', () => {
     const items = buildMergeItems(plan, [fileState(true)], [undefined]);
     expect(items.map(needsDecision)).toEqual([true, false, false]);
+  });
+
+  it('starts on the first item waiting for the user in the order the list shows, not directory conflicts first', () => {
+    // The directory conflict is /twin.txt, after /a.txt in path order.
+    expect(firstWaiting(buildMergeItems(plan, [fileState(false)], []))?.path).toBe('a.txt');
+    expect(firstWaiting(buildMergeItems(plan, [fileState(true)], []))?.path).toBe('twin.txt');
+    expect(firstWaiting(buildMergeItems(plan, [fileState(true)], [{ choice: 'source' }]))).toBeUndefined();
   });
 
   it('omits empty groups', () => {
