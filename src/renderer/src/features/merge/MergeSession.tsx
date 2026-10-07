@@ -64,7 +64,8 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   // Thousands of items: built again only when a decision changes, not for every file selected or key typed.
   const items = useMemo(() => buildMergeItems(plan, fileStates, directoryResolutions), [plan, fileStates, directoryResolutions]);
   const typeOf = useMemo(() => mergeItemTypes(plan.changes.map((change) => change.path)), [plan.changes]);
-  const preferredTool = primaryMergeTool(useMergeTools());
+  const mergeTools = useMergeTools();
+  const preferredTool = primaryMergeTool(mergeTools);
   const filter = useChangeFilter(items, itemPath, mergeItemTones, true);
   const content = useMemo(() => ({ groups: mergeItemGroups(filter.visible) }), [filter.visible]);
   const { rows, tree, toggleCollapsed, rowKeyOf } = useGroupedFileTree(content, itemKey, folderListScope(workspacePath, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`), selectedKey);
