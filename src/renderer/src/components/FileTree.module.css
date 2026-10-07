@@ -44,3 +44,14 @@
     transition: none;
   }
 }
+
+/* A group's name: set apart from the folders and files it holds, as a section's title is. */
+.groupLabel {
+  flex: 1;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

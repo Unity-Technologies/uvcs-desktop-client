@@ -8,6 +8,8 @@ import { diffEntryStatus } from './diffEntrySources';
 
 interface DiffEntryRowProps {
   row: PathTreeRow<DiffEntry>;
+  /** How far in it sits (`groupedRowLevel`): its depth, one more inside a group. */
+  level?: number;
   tree: boolean;
   /** The review mark, in review mode. */
   extras?: ReactNode;
@@ -15,11 +17,11 @@ interface DiffEntryRowProps {
 }
 
 /** A file or folder of a diff's changed files, as a list or a tree shows it. */
-export function DiffEntryRow({ row, tree, extras, faded }: DiffEntryRowProps) {
+export function DiffEntryRow({ row, level = row.depth, tree, extras, faded }: DiffEntryRowProps) {
   if (row.type === 'folder') {
     const status = row.item && diffEntryStatus(row.item);
     return (
-      <FileTreeCell depth={row.depth} tree={tree} folder>
+      <FileTreeCell depth={level} tree={tree} folder>
         <TreeFolderLabel
           name={row.name}
           collapsed={row.collapsed}
@@ -34,7 +36,7 @@ export function DiffEntryRow({ row, tree, extras, faded }: DiffEntryRowProps) {
   }
   const entry = row.item;
   return (
-    <FileTreeCell depth={row.depth} tree={tree} folder={false}>
+    <FileTreeCell depth={level} tree={tree} folder={false}>
       <ItemPathRow path={entry.path} itemType={entry.itemType} oldPath={entry.oldPath} nameOnly={row.depth > 0} status={diffEntryStatus(entry)} faded={faded} extras={extras} />
     </FileTreeCell>
   );
