@@ -22,7 +22,7 @@ describe('changesToMove', () => {
 
 describe('dragFromRow', () => {
   const [edited, inList, privateFile] = [change('a.ts', ['changed']), change('b.ts', ['checkedOut'], 'UI'), change('new.ts', ['private'])];
-  const row = (item: PendingChange) => ({ type: 'change' as const, key: item.path, change: item, depth: 0 });
+  const row = (item: PendingChange) => ({ type: 'file' as const, key: item.path, item, depth: 0 });
   const selected: SelectionState = { selected: new Set(['a.ts', 'new.ts']), anchor: 'a.ts' };
 
   it("carries the selection's changes under version control when the row is in it", () => {
@@ -46,11 +46,11 @@ describe('changelistHeadersOf', () => {
     const headers = changelistHeadersOf(rows);
     expect(rows.map((row) => [row.key, headers.get(row.key)?.key])).toEqual([
       ['changelist:', 'changelist:'],
-      ['directory:changelist::src', 'changelist:'],
+      ['folder:changelist::src', 'changelist:'],
       ['change:src/a.ts', 'changelist:'],
       ['changelist:UI', 'changelist:UI'],
       ['change:c.ts', 'changelist:UI'],
-      ['directory:changelist:UI:src/ui', 'changelist:UI'],
+      ['folder:changelist:UI:src/ui', 'changelist:UI'],
       ['change:src/ui/b.ts', 'changelist:UI'],
     ]);
   });

@@ -13,12 +13,12 @@ export function changesToMove(changes: PendingChange[], changelist: string | nul
  * the row alone, which becomes the selection (`select`).
  */
 export function dragFromRow(
-  row: ChangeRow & { type: 'change' },
+  row: ChangeRow & { type: 'file' },
   selection: SelectionState,
   selectedChanges: () => PendingChange[],
 ): { changes: PendingChange[]; select?: SelectionState } {
   if (selection.selected.has(row.key)) return { changes: selectedChanges().filter(isControlled) };
-  return { changes: [row.change], select: singleSelection(row.key) };
+  return { changes: [row.item], select: singleSelection(row.key) };
 }
 
 /**

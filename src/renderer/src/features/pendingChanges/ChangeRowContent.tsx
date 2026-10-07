@@ -53,7 +53,7 @@ export function GroupRowContent({ row, checkState, onToggleIncluded, changelistM
           </button>
         </ActionDropdownMenu>
       )}
-      <span className={styles.count}>{row.changes.length}</span>
+      <span className={styles.count}>{row.items.length}</span>
     </>
   );
 }
@@ -70,7 +70,7 @@ interface ItemRowContentProps {
 
 /** A file or folder as every list shows one (`ItemRow`), after its check (and a folder's chevron). */
 export const ItemRowContent = memo(function ItemRowContent({ row, checkState, reviewStatus, lock, actions }: ItemRowContentProps) {
-  if (row.type === 'directory') {
+  if (row.type === 'folder') {
     return (
       <>
         <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
@@ -83,16 +83,16 @@ export const ItemRowContent = memo(function ItemRowContent({ row, checkState, re
               <Highlight text={row.name} />
             </span>
           }
-          extras={reviewStatus && <ReviewToggle folder status={reviewStatus} onToggle={() => actions.toggleReviewed(row.changes)} />}
-          status={<ItemStatusMark status={row.change && changeStatus(row.change)} />}
-          presence={row.change ? changePresence(row.change) : 'controlled'}
-          deleted={row.change && changeTone(row.change) === 'deleted'}
+          extras={reviewStatus && <ReviewToggle folder status={reviewStatus} onToggle={() => actions.toggleReviewed(row.items)} />}
+          status={<ItemStatusMark status={row.item && changeStatus(row.item)} />}
+          presence={row.item ? changePresence(row.item) : 'controlled'}
+          deleted={row.item && changeTone(row.item) === 'deleted'}
           faded={reviewStatus === 'reviewed'}
         />
       </>
     );
   }
-  const { change } = row;
+  const { item: change } = row;
   return (
     <>
       {checkState !== null ? (

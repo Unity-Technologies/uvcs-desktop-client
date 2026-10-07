@@ -32,7 +32,7 @@ export function useChangeRows({ changes, changelists, layout, grouping }: Change
   const allRows = useMemo(() => layoutChangeRows({ changes, changelists, layout, grouping }), [changes, changelists, layout, grouping]);
   const rows = useMemo(() => collapseRows(allRows, collapsed), [allRows, collapsed]);
   const checkboxInset = useMemo(() => topLevelCheckboxInset(rows), [rows]);
-  const fileKeys = useMemo(() => rows.flatMap((row) => (row.type === 'change' ? [row.key] : [])), [rows]);
+  const fileKeys = useMemo(() => rows.flatMap((row) => (row.type === 'file' ? [row.key] : [])), [rows]);
   const toggleCollapsed = (key: string): void =>
     setCollapsed((current) => {
       const next = new Set(current);

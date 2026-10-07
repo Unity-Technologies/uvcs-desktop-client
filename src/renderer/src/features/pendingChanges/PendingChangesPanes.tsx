@@ -101,7 +101,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
   // Holding ↓ moves through the list at once; the diff (a read and an editor to lay out) follows where it stops.
   const diffChange = useSettledValue(focused, selection.anchor ?? '') ?? focused;
   // A folder or changelist the keyboard (or a click) is on.
-  const focusedFolder = focused ? undefined : rows.find((row): row is Exclude<ChangeRow, { type: 'change' }> => row.type !== 'change' && row.key === selection.anchor);
+  const focusedFolder = focused ? undefined : rows.find((row): row is Exclude<ChangeRow, { type: 'file' }> => row.type !== 'file' && row.key === selection.anchor);
   const fileSteps = useFileSteps({
     keys: fileKeys,
     current: selection.anchor,

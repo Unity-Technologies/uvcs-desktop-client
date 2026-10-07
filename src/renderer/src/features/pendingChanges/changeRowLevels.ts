@@ -26,7 +26,7 @@ export function treeLevel(row: ChangeRow, grouped: boolean): number {
 /** The rows as ← and → see them (`treeArrowMove`): changelists and folders open and close. */
 export function changeTreeArrowRows(rows: readonly ChangeRow[]): TreeArrowRow[] {
   const grouped = rows.some((row) => row.type === 'group');
-  return rows.map((row) => ({ depth: treeLevel(row, grouped), isFolder: row.type !== 'change', isExpanded: row.type !== 'change' && !row.collapsed }));
+  return rows.map((row) => ({ depth: treeLevel(row, grouped), isFolder: row.type !== 'file', isExpanded: row.type !== 'file' && !row.collapsed }));
 }
 
 /** Changelist headers lead the rows: the top-level checkboxes are theirs, after their chevrons. */

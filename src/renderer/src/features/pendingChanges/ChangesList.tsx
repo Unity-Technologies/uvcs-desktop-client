@@ -110,7 +110,7 @@ export function ChangesList({
     if (index !== undefined) virtualizer.scrollToIndex(index);
   }, [selection.anchor]);
 
-  const selectedChanges = (): PendingChange[] => changeRows.filter((row) => selection.selected.has(row.key)).map((row) => row.change);
+  const selectedChanges = (): PendingChange[] => changeRows.filter((row) => selection.selected.has(row.key)).map((row) => row.item);
   const menuEntries = (): MenuEntry[] => {
     const target = menuTargetOf(menuRow.current);
     if (target === null) return contextMenu(selectedChanges());
@@ -156,7 +156,7 @@ export function ChangesList({
       event.preventDefault();
       onSelectionChange({ selected: new Set(orderedKeys), anchor: orderedKeys[0] ?? null });
     } else if (event.key === 'Enter' && focusedRow) {
-      if (focusedRow.type === 'change') onOpen(focusedRow.change);
+      if (focusedRow.type === 'file') onOpen(focusedRow.item);
       else onToggleCollapsed(focusedRow.key);
     } else if (focusedIndex !== -1 && isListMenuKey(event)) {
       // At the focused row, where the browser would open it at the list's middle.
@@ -166,7 +166,7 @@ export function ChangesList({
   };
 
   const onRowMouseDown = (row: ChangeRow, event: MouseEvent): void => {
-    if (row.type !== 'change') {
+    if (row.type !== 'file') {
       if (event.button !== 0) return;
       // Selected like a file, so the keyboard goes on from it.
       setFocusedKey(row.key);
@@ -205,7 +205,7 @@ export function ChangesList({
         onKeyUp={holdBackMenuKeyRelease}
         {...listDropProps}
         // From the keyboard, the menu is for the folder or changelist focused; a right-click on a row says which below.
-        onContextMenuCapture={() => (menuRow.current = focusedRow && focusedRow.type !== 'change' ? focusedRow : null)}
+        onContextMenuCapture={() => (menuRow.current = focusedRow && focusedRow.type !== 'file' ? focusedRow : null)}
         {...MAIN_FOCUS}
       >
         <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
@@ -217,7 +217,7 @@ export function ChangesList({
                 id={`${rowIdPrefix}-${item.index}`}
                 role={isTree ? 'treeitem' : 'option'}
                 aria-level={isTree ? treeLevel(row, grouped) : undefined}
-                aria-expanded={row.type === 'change' ? undefined : !row.collapsed}
+                aria-expanded={row.type === 'file' ? undefined : !row.collapsed}
                 aria-selected={selection.selected.has(row.key)}
                 className={styles.row}
                 data-type={row.type}
@@ -230,8 +230,8 @@ export function ChangesList({
                 style={{ top: item.start, height: ROW_HEIGHT, '--row-indent': `${rowIndent(row, grouped)}px` } as CSSProperties}
                 onMouseDown={(event) => onRowMouseDown(row, event)}
                 onClick={() => onRowClick(row)}
-                onDoubleClick={() => row.type === 'change' && onOpen(row.change)}
-                onContextMenu={() => (menuRow.current = row.type === 'change' ? null : row)}
+                onDoubleClick={() => row.type === 'file' && onOpen(row.item)}
+                onContextMenu={() => (menuRow.current = row.type === 'file' ? null : row)}
                 {...dragProps(row)}
                 {...dropProps(row)}
               >
@@ -242,7 +242,7 @@ export function ChangesList({
                     row={row}
                     checkState={checkStateOf(row)}
                     reviewStatus={reviewStatusOf(row)}
-                    lock={row.type === 'change' ? locks.get(row.change.path) : undefined}
+                    lock={row.type === 'file' ? locks.get(row.item.path) : undefined}
                     actions={rowActions}
                   />
                 )}
@@ -257,6 +257,6 @@ export function ChangesList({
 
 /** A file's mark, or a folder's once every file in it is reviewed; changelist headers have none. */
 function rowReviewStatus(row: ChangeRow, statusOf: ReviewStatusOf<PendingChange>): ReviewStatus | null {
-  if (row.type === 'change') return statusOf(row.change);
-  return row.type === 'directory' ? groupReviewStatus(row.changes, statusOf) : null;
+  if (row.type === 'file') return statusOf(row.item);
+  return row.type === 'folder' ? groupReviewStatus(row.items, statusOf) : null;
 }
