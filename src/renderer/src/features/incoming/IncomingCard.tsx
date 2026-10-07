@@ -7,8 +7,14 @@ import { Avatar } from '../../ui/Avatar';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { Spinner } from '../../ui/Spinner';
 import { collisionNote } from './collisionMessages';
-import type { IncomingChipState } from './incomingChipState';
+import type { CardCheck, IncomingChipState } from './incomingChipState';
 import styles from './IncomingCard.module.css';
+
+const CHECK_WORDS: Record<NonNullable<CardCheck>, string> = {
+  unchecked: 'Click to check them against your changes. Updating or opening Incoming checks too.',
+  checking: 'Checking against your changes…',
+  failed: "Couldn't check them against your changes",
+};
 
 interface IncomingCardProps {
   state: Extract<IncomingChipState, { kind: 'incoming' | 'conflicts' }>;
@@ -16,13 +22,13 @@ interface IncomingCardProps {
   changesets: Changeset[] | undefined;
   /** They couldn't be read (`cardFailed`). */
   failed: boolean;
-  /** The card is pinned, which checks the incoming changes against the local ones (`chipReadsIncomingChanges`). */
-  checking: boolean;
+  /** Past the check's count, where checking the incoming changes against the local ones stands (`cardCheck`). */
+  check: CardCheck;
   actions: React.ReactNode;
 }
 
 /** The incoming changesets at a glance: who, what and when, and whether they collide with local changes. */
-export function IncomingCard({ state, changesets, failed, checking, actions }: IncomingCardProps) {
+export function IncomingCard({ state, changesets, failed, check, actions }: IncomingCardProps) {
   const more = state.count - (changesets?.length ?? 0);
 
   return (
@@ -34,9 +40,7 @@ export function IncomingCard({ state, changesets, failed, checking, actions }: I
           on <PathLabel path={state.branch} fitContent />
         </span>
       </header>
-      {state.kind === 'incoming' && state.countCapped && !state.checked && !checking && (
-        <p className={styles.unchecked}>Click to check them against your changes. Updating and Incoming check too.</p>
-      )}
+      {check && <p className={styles.unchecked}>{CHECK_WORDS[check]}</p>}
       {state.kind === 'conflicts' && (
         <p className={styles.conflicts}>
           <AlertTriangle size={14} className={styles.conflictsIcon} />
