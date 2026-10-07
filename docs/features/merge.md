@@ -50,7 +50,9 @@ menu": history, open or save the incoming version, Copy) with what a merge adds 
 entries as in Incoming (`conflictMenuEntries`), "Resolve in <tool>" (the preferred one, `primaryMergeTool`; disabled while files resolve one by one), Keep yours or
 incoming, Start over once decided, annotate at the incoming revision `cm` names for it, and "Open version ▸" Yours (the
 workspace file; the destination's version merging into a server branch), Incoming and Base; a directory conflict its
-panel's choices, Keep both under the name the panel suggests. A clean change isn't annotated: `cm` names only the
+panel's choices, Keep both under the name the panel suggests. A directory conflict holding another conflict (a folder
+added on both sides, a file in it changed on both) is its folder's row in a tree: selecting that row selects the
+conflict, and its menu acts on it alone (`mergeItemAt`, `mergeItemsActedOn`). A clean change isn't annotated: `cm` names only the
 merge's changesets, where the file may not have changed. A folder added with its files is listed once, through them
 (ARCHITECTURE.md "Folders once"). The page starts on the first item that needs the user in the order the list shows
 (`firstWaiting`), and goes back there after a run. Directory conflicts are named in plain words ("Added on both sides

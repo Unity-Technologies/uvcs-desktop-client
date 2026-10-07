@@ -73,14 +73,27 @@ export function firstWaiting(items: MergeItem[]): MergeItem | undefined {
   return inListOrder(items).find(needsDecision);
 }
 
-/** The item shown by the row keyed `key`: its own row, or a folder's row when the item is that folder (`mergeItemAt`). */
+/**
+ * The item shown by the row keyed `key`: its own row, or a folder's row when the item is that folder. A folder
+ * conflict holding another conflict (a folder added on both sides, a file in it changed on both) is its folder's row
+ * in a tree (`layoutPathTree`), with no row of its own: selecting that row is selecting the conflict.
+ */
 export function mergeItemAt(items: MergeItem[], rows: readonly GroupedTreeRow<MergeItem, MergeGroup>[], key: string | null): MergeItem | undefined {
-  return undefined;
+  if (key === null) return undefined;
+  const item = items.find((candidate) => candidate.key === key);
+  if (item) return item;
+  const row = rows.find((candidate) => candidate.key === key);
+  return row?.type === 'folder' ? row.item : undefined;
 }
 
-/** What a menu over the rows `selected` acts on (`mergeItemsActedOn`). */
+/**
+ * What a menu over the rows `selected` acts on: what they hold (`underRows`), but a folder conflict's row alone acts on
+ * that conflict, so its menu offers its choices (`mergeItemAt`).
+ */
 export function mergeItemsActedOn(rows: readonly GroupedTreeRow<MergeItem, MergeGroup>[], selected: ReadonlySet<string>, underRows: MergeItem[]): MergeItem[] {
-  return underRows;
+  if (selected.size !== 1) return underRows;
+  const row = rows.find((candidate) => selected.has(candidate.key));
+  return row?.type === 'folder' && row.item && row.item.kind !== 'change' ? [row.item] : underRows;
 }
 
 /** The conflicts, then the changes that apply cleanly, each in path order as every list of changed files; empty ones left out. */

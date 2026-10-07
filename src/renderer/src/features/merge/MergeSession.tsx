@@ -20,7 +20,7 @@ import type { MergeCompletion } from './MergeCompleted';
 import { mergeLabels } from './mergeDescription';
 import { MergeHeader } from './MergeHeader';
 import { MergeItemList } from './MergeItemList';
-import { buildMergeItems, firstWaiting, inListOrder, mergeItemGroups, mergeItemTones, type MergeItem } from './mergeItems';
+import { buildMergeItems, firstWaiting, inListOrder, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, type MergeItem } from './mergeItems';
 import { mergeItemMenu } from './mergeItemMenu';
 import { mergeItemTypes } from './mergeItemTypes';
 import { ResolveRunControl, useRunOffer } from './mergeTools/ResolveRunControl';
@@ -70,7 +70,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const { rows, tree, toggleCollapsed } = useGroupedFileTree(content, itemKey, folderListScope(workspacePath, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`));
   const conflictStatuses = useMemo(() => items.map(conflictStatusOf).filter((status) => status !== null), [items]);
   const resolutions = collectResolutions({ plan, fileStates, directoryResolutions, comment });
-  const selected = items.find((item) => item.key === selectedKey);
+  const selected = mergeItemAt(items, rows, selectedKey);
   const selectedGroup = selected ? undefined : rows.filter(isHeaderRow).find((row) => row.key === selectedKey);
   // The list follows the keys at once; the file behind it (a few hundred ms to highlight a file of a few thousand
   // lines) follows once they stop coming, instead of every file an arrow key passes through holding the list back.
@@ -150,7 +150,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
               selection={selection}
               onSelectionChange={setSelection}
               contextMenu={(selectedItems) =>
-                mergeItemMenu(selectedItems, {
+                mergeItemMenu(mergeItemsActedOn(rows, selection.selected, selectedItems), {
                   workspacePath,
                   request,
                   plan,
