@@ -8,6 +8,7 @@ const summary = (loadedChangeset: number, headChangeset: number): IncomingSummar
   loadedChangeset,
   headChangeset,
   changesetCount: headChangeset - loadedChangeset,
+  countCapped: false,
   authors: [],
 });
 
@@ -53,7 +54,7 @@ describe('branchHeadMovedOnServer', () => {
   });
 
   it('sees nothing move off a branch', () => {
-    const nothing = { branch: null, changesetCount: 0, authors: [] } as const satisfies IncomingSummary;
+    const nothing = { branch: null, changesetCount: 0, countCapped: false, authors: [] } as const satisfies IncomingSummary;
     expect(branchHeadMovedOnServer(nothing, summary(3, 5))).toBe(false);
     expect(branchHeadMovedOnServer(summary(3, 5), nothing)).toBe(false);
   });

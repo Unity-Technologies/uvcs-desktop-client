@@ -12,14 +12,17 @@ import { useFileConflicts } from '../merge/resolve/useFileConflicts';
 import { IncomingFileDiff } from './IncomingDetail';
 import { IncomingList } from './IncomingList';
 import type { IncomingSelection } from './incomingRows';
+import { incomingSubtitle } from './incomingSubtitle';
 import { UpdateBar } from './UpdateBar';
+import { useIncomingChangesetList } from './useIncomingChangesets';
 import { UPDATE_LABELS, updateConflictFiles, updateResolutionsOf } from './updateConflictFiles';
 import { shelveBlockedAndUpdate, updateResolvingConflicts, updateToIncoming } from './updateOperations';
 
 interface IncomingSessionProps {
   workspacePath: string;
   incoming: BranchIncomingChanges;
-  header: ReactNode;
+  /** The view's header, saying the words given (`incomingSubtitle`). */
+  header: (subtitle: string) => ReactNode;
 }
 
 /** Changesets came in: what they bring, what collides with local changes, and the update that takes them. */
@@ -27,6 +30,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const conflictedFiles = useMemo(() => updateConflictFiles(incoming.conflicts), [incoming.conflicts]);
   const { states, decide, reset, resolveInTool } = useFileConflicts(workspacePath, conflictedFiles, UPDATE_LABELS);
   const [selection, setSelection] = useState<IncomingSelection | null>(null);
+  const changesetList = useIncomingChangesetList(incoming);
   // Resolving the files one by one: the selection follows while the user stays on the file it opened.
   const followRun = useCallback((key: string, previousKey: string | undefined) => {
     setSelection((current) => (!previousKey || (current?.kind === 'file' && current.path === previousKey) ? { kind: 'file', path: key } : current));
@@ -62,13 +66,13 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
       else if (resolutions) await updateResolvingConflicts(workspacePath, incoming, resolutions);
     });
 
-  const selectedChangeset = selection?.kind === 'changeset' ? incoming.changesets.find((changeset) => changeset.id === selection.id) : undefined;
+  const selectedChangeset = selection?.kind === 'changeset' ? changesetList.changesets.find((changeset) => changeset.id === selection.id) : undefined;
   const selectedFile = selection?.kind === 'file' ? incoming.files.find((file) => file.path === selection.path) : undefined;
   const selectedConflict = selectedFile && states.find((state) => state.file.key === selectedFile.path);
 
   return (
     <>
-      {header}
+      {header(incomingSubtitle(incoming.branch, changesetList))}
       <UpdateBar
         incoming={incoming}
         pendingConflictCount={pendingConflictPaths.size}
@@ -84,13 +88,14 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
         maxSize={640}
         first={
           <IncomingList
-            changesets={incoming.changesets}
+            changesets={changesetList.changesets}
             files={incoming.files}
             conflictPaths={conflictPaths}
             conflictStates={conflictStates}
             blockedPaths={blockedPaths}
             selection={selection}
             onSelect={setSelection}
+            olderChangesets={changesetList.more ? { loading: changesetList.loading, onShowMore: changesetList.showMore } : null}
           />
         }
         second={

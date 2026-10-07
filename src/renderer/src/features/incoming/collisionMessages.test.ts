@@ -14,24 +14,27 @@ describe('blockedMessage', () => {
 });
 
 describe('updateBarMessage', () => {
+  const incoming = (changesetCount: number, countCapped = false) => ({ branch: '/main', changesetCount, countCapped });
+
   it('says what updating brings when nothing collides', () => {
-    expect(updateBarMessage(1, '/main', 0, 0)).toBe('Update to get 1 new changeset. Your local changes stay as they are.');
-    expect(updateBarMessage(3, '/main', 0, 0)).toBe('Update to get 3 new changesets. Your local changes stay as they are.');
+    expect(updateBarMessage(incoming(200, true), 0, 0)).toBe('Update to get 200+ new changesets. Your local changes stay as they are.');
+    expect(updateBarMessage(incoming(1), 0, 0)).toBe('Update to get 1 new changeset. Your local changes stay as they are.');
+    expect(updateBarMessage(incoming(3), 0, 0)).toBe('Update to get 3 new changesets. Your local changes stay as they are.');
   });
 
   it('agrees in number with the files to merge', () => {
-    expect(updateBarMessage(3, '/main', 1, 1)).toBe('A file you changed also changed on main. Merge it to update.');
-    expect(updateBarMessage(3, '/main', 2, 2)).toBe('2 files you changed also changed on main. Merge them to update.');
+    expect(updateBarMessage(incoming(3), 1, 1)).toBe('A file you changed also changed on main. Merge it to update.');
+    expect(updateBarMessage(incoming(3), 2, 2)).toBe('2 files you changed also changed on main. Merge them to update.');
   });
 
   it('counts down the files left to merge', () => {
-    expect(updateBarMessage(3, '/main', 3, 1)).toBe('1 of 3 files changed on both sides still needs merging.');
-    expect(updateBarMessage(3, '/main', 3, 2)).toBe('2 of 3 files changed on both sides still need merging.');
+    expect(updateBarMessage(incoming(3), 3, 1)).toBe('1 of 3 files changed on both sides still needs merging.');
+    expect(updateBarMessage(incoming(3), 3, 2)).toBe('2 of 3 files changed on both sides still need merging.');
   });
 
   it('asks to update once every file is merged', () => {
-    expect(updateBarMessage(3, '/main', 1, 0)).toBe('The file is merged. Update to apply it.');
-    expect(updateBarMessage(3, '/main', 2, 0)).toBe('All 2 files are merged. Update to apply them.');
+    expect(updateBarMessage(incoming(3), 1, 0)).toBe('The file is merged. Update to apply it.');
+    expect(updateBarMessage(incoming(3), 2, 0)).toBe('All 2 files are merged. Update to apply them.');
   });
 });
 

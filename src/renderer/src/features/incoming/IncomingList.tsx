@@ -1,23 +1,26 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { GitCommitVertical } from 'lucide-react';
-import { useId, useMemo, useRef, type KeyboardEvent } from 'react';
+import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import type { DiffEntry } from '@shared/domain/diff';
+import { INCOMING_CHANGESETS_PAGE } from '@shared/domain/incoming';
 import { ItemPathRow } from '../../components/ItemPathRow';
 import { navigationTarget } from '../../lib/listNavigation';
-import { firstLine } from '../../lib/text';
+import { firstLine, formatCountAtLeast } from '../../lib/text';
 import { MAIN_FOCUS } from '../../lib/mainFocus';
 import { Avatar } from '../../ui/Avatar';
 import { RelativeTime } from '../../ui/RelativeTime';
+import { Spinner } from '../../ui/Spinner';
 import { diffEntryStatus } from '../diff/diffEntrySources';
 import { ConflictStatusChip } from '../merge/ConflictStatusChip';
 import type { ConflictStatus } from '../merge/mergeStatus';
 import { UPDATE_LABELS } from './updateConflictFiles';
-import { incomingRows, selectionKey, type IncomingRow, type IncomingSelection } from './incomingRows';
+import { landingSelection } from './olderChangesetPages';
+import { incomingRows, MORE_CHANGESETS_KEY, selectionKey, type IncomingRow, type IncomingSelection } from './incomingRows';
 import styles from './IncomingList.module.css';
 
-/** Estimates until each row is measured: a section header, a changeset (two lines) and a file. */
-const ESTIMATED_HEIGHTS: Record<IncomingRow['type'], number> = { section: 29, changeset: 49, file: 28 };
+/** Estimates until each row is measured: a section header, a changeset (two lines), "Show more" and a file. */
+const ESTIMATED_HEIGHTS: Record<IncomingRow['type'], number> = { section: 29, changeset: 49, moreChangesets: 28, file: 28 };
 
 interface IncomingListProps {
   changesets: Changeset[];
@@ -30,11 +33,17 @@ interface IncomingListProps {
   blockedPaths: ReadonlySet<string>;
   selection: IncomingSelection | null;
   onSelect: (selection: IncomingSelection) => void;
+  /** Older changesets remain to be read: the changesets end with "Show more", reading them while `loading`. */
+  olderChangesets: { loading: boolean; onShowMore: () => Promise<boolean> } | null;
 }
 
 /** Hundreds of changesets and thousands of files: only the rows in view render. */
-export function IncomingList({ changesets, files, conflictPaths, conflictStates, blockedPaths, selection, onSelect }: IncomingListProps) {
-  const { rows, entries, rowIndexOf } = useMemo(() => incomingRows(changesets, files, conflictPaths, blockedPaths), [changesets, files, conflictPaths, blockedPaths]);
+export function IncomingList({ changesets, files, conflictPaths, conflictStates, blockedPaths, selection, onSelect, olderChangesets }: IncomingListProps) {
+  const hasOlder = olderChangesets !== null;
+  const { rows, entries, rowIndexOf } = useMemo(
+    () => incomingRows(changesets, files, conflictPaths, blockedPaths, hasOlder),
+    [changesets, files, conflictPaths, blockedPaths, hasOlder],
+  );
   const viewportRef = useRef<HTMLDivElement>(null);
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -44,20 +53,50 @@ export function IncomingList({ changesets, files, conflictPaths, conflictStates,
     overscan: 12,
   });
   const idPrefix = useId();
+  // The arrows can rest on "Show more", which selects nothing: Enter reads the next page there, and it stays put.
+  const [onShowMore, setOnShowMore] = useState(false);
+  const activeKey = onShowMore && rowIndexOf.has(MORE_CHANGESETS_KEY) ? MORE_CHANGESETS_KEY : selection && selectionKey(selection);
   const selectedKey = selection && selectionKey(selection);
-  const selectedRow = selectedKey === null ? undefined : rows[rowIndexOf.get(selectedKey) ?? -1];
-  const selectedIndex = selectedRow && selectedRow.type !== 'section' ? selectedRow.entryIndex : -1;
+  const activeRow = activeKey === null ? undefined : rows[rowIndexOf.get(activeKey) ?? -1];
+  const selectedIndex = activeRow && 'entryIndex' in activeRow ? activeRow.entryIndex : -1;
+  const restingOnShowMore = activeKey === MORE_CHANGESETS_KEY;
+  // The selection stays while the arrows rest on "Show more", quieter, as the pane beside the list still shows it.
+  const selectedLook = (key: string): 'true' | 'quiet' | 'false' => (key !== selectedKey ? 'false' : restingOnShowMore ? 'quiet' : 'true');
+  // Enter on "Show more": once the page lands, the arrows go on from its first changeset, scrolled into view. Any
+  // selection, or a read that brought nothing, forgets it, so a later page read with the mouse moves nothing.
+  const [landingAt, setLandingAt] = useState<number | null>(null);
+  const select = (next: IncomingSelection): void => {
+    setOnShowMore(false);
+    setLandingAt(null);
+    onSelect(next);
+  };
+  useEffect(() => {
+    const first = landingSelection(changesets, landingAt);
+    if (!first) return;
+    select({ kind: 'changeset', id: first.id });
+    virtualizer.scrollToIndex(rowIndexOf.get(selectionKey({ kind: 'changeset', id: first.id }))!);
+    // Only the page landing moves the arrows: not the selection, the rows or the virtualizer changing.
+  }, [changesets, landingAt]);
   const isBlocking = (file: DiffEntry): boolean => blockedPaths.has(file.oldPath ?? file.path);
 
   const onKeyDown = (event: KeyboardEvent): void => {
     // ⌥↑ ⌥↓ move through the changes of the diff beside the list (`useChangeNavigation`).
     if (event.altKey) return;
+    if (event.key === 'Enter' && activeKey === MORE_CHANGESETS_KEY) {
+      event.preventDefault();
+      if (olderChangesets && !olderChangesets.loading) {
+        setLandingAt(changesets.length);
+        void olderChangesets.onShowMore().then((read) => !read && setLandingAt(null));
+      }
+      return;
+    }
     const ends: Record<string, number> = { Home: 0, End: entries.length - 1 };
     const target = ends[event.key] ?? navigationTarget(event.key, selectedIndex, entries.length);
     if (target === null || target === undefined || entries.length === 0) return;
     event.preventDefault();
     const entry = entries[target]!;
-    onSelect(entry.selection);
+    if (entry.selection) select(entry.selection);
+    else setOnShowMore(true);
     // The first one shows its section's header too.
     virtualizer.scrollToIndex(target === 0 ? 0 : rowIndexOf.get(entry.key)!);
   };
@@ -77,11 +116,11 @@ export function IncomingList({ changesets, files, conflictPaths, conflictStates,
     <button
       id={`${idPrefix}-${entryIndex}`}
       role="option"
-      aria-selected={key === selectedKey}
+      aria-selected={key === activeKey}
       tabIndex={-1}
       className={styles.row}
-      data-selected={key === selectedKey}
-      onClick={() => onSelect({ kind: 'file', path: file.path })}
+      data-selected={selectedLook(key)}
+      onClick={() => select({ kind: 'file', path: file.path })}
     >
       <ItemPathRow
         path={file.path}
@@ -97,11 +136,11 @@ export function IncomingList({ changesets, files, conflictPaths, conflictStates,
     <button
       id={`${idPrefix}-${entryIndex}`}
       role="option"
-      aria-selected={key === selectedKey}
+      aria-selected={key === activeKey}
       tabIndex={-1}
       className={styles.changeset}
-      data-selected={key === selectedKey}
-      onClick={() => onSelect({ kind: 'changeset', id: changeset.id })}
+      data-selected={selectedLook(key)}
+      onClick={() => select({ kind: 'changeset', id: changeset.id })}
     >
       <GitCommitVertical size={14} className={styles.changesetIcon} />
       <span className={styles.changesetText}>
@@ -141,8 +180,23 @@ export function IncomingList({ changesets, files, conflictPaths, conflictStates,
               {row.type === 'section' ? (
                 <div className={styles.sectionHeader}>
                   <span>{row.label}</span>
-                  <span className={styles.count}>{row.count}</span>
+                  <span className={styles.count}>{formatCountAtLeast(row.count, row.countCapped)}</span>
                 </div>
+              ) : row.type === 'moreChangesets' ? (
+                <button
+                  id={`${idPrefix}-${row.entryIndex}`}
+                  type="button"
+                  role="option"
+                  aria-selected={activeKey === row.key}
+                  tabIndex={-1}
+                  className={styles.showMore}
+                  data-selected={activeKey === row.key}
+                  disabled={olderChangesets?.loading}
+                  onClick={() => void olderChangesets?.onShowMore()}
+                >
+                  {olderChangesets?.loading && <Spinner size={12} />}
+                  Show {INCOMING_CHANGESETS_PAGE} more
+                </button>
               ) : row.type === 'file' ? (
                 fileRow(row.file, row.key, row.entryIndex)
               ) : (

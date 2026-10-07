@@ -5,11 +5,11 @@ import { shortBranchName } from '@shared/domain/specs';
 import { updateWorkspace } from '../../app/shell/workspaceOperations';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { hotkey } from '../../lib/shortcutRegistry';
-import { pluralize } from '../../lib/text';
+import { pluralizeAtLeast } from '../../lib/text';
 import { useShortcut } from '../../lib/useShortcut';
 import { Button } from '../../ui/Button';
 import { Kbd } from '../../ui/Kbd';
-import { useIncomingSummary } from '../incoming/useIncomingSummary';
+import { useKnownIncomingSummary } from '../incoming/useKnownIncomingSummary';
 import { MergeContributors } from './MergeContributors';
 import { mergeTitle, type MergeLabels } from './mergeDescription';
 import { MergeHeading } from './MergeHeading';
@@ -124,13 +124,13 @@ export function MergeHeader({
 /** Merging into an outdated workspace works, but checking in the result will need an update first. */
 function BehindHeadNotice() {
   const workspacePath = useWorkspacePath();
-  const { data: incoming } = useIncomingSummary();
+  const incoming = useKnownIncomingSummary();
   if (!incoming?.changesetCount) return null;
 
   return (
     <div className={styles.notice}>
       <ArrowDownToLine size={13} />
-      Your workspace is {pluralize(incoming.changesetCount, 'changeset')} behind {incoming.branch}. Update first
+      Your workspace is {pluralizeAtLeast(incoming.changesetCount, incoming.countCapped, 'changeset')} behind {incoming.branch}. Update first
       to merge into the latest version.
       <Button size="small" onClick={() => void updateWorkspace(workspacePath)}>
         Update

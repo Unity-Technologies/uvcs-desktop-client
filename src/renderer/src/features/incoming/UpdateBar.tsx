@@ -44,7 +44,7 @@ export function UpdateBar({ incoming, pendingConflictCount, canUpdate, updating,
   return (
     <div className={styles.bar}>
       <ArrowDownToLine size={15} className={styles.icon} />
-      <span className={styles.text}>{updateBarMessage(incoming.changesetCount, branch, incoming.conflicts.length, pendingConflictCount)}</span>
+      <span className={styles.text}>{updateBarMessage(incoming, incoming.conflicts.length, pendingConflictCount)}</span>
       {run}
       <Button variant={run && !canUpdate ? 'secondary' : 'primary'} loading={updating} disabled={!canUpdate} onClick={onUpdate}>
         {incoming.conflicts.length === 0 ? 'Update workspace' : 'Update and apply merges'}
