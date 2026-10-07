@@ -19,12 +19,20 @@ const PENDING_CHANGES_VIEW_KEY = 'pending-changes-view';
 export const useFileListLayoutStore = create<FileListLayoutStore>()(
   persist(
     (set) => ({
-      layout: layoutFromPendingChangesView(globalThis.localStorage?.getItem(PENDING_CHANGES_VIEW_KEY) ?? null),
+      layout: layoutFromPendingChangesView(storedPendingChangesView()),
       setLayout: (layout) => set({ layout }),
     }),
     { name: 'file-list-layout', partialize: ({ layout }) => ({ layout }) },
   ),
 );
+
+/**
+ * What the Changes view kept, in the window's storage. Outside a window (the tests) there is none: reaching for Node's
+ * own `globalThis.localStorage` there prints a warning on every run.
+ */
+function storedPendingChangesView(): string | null {
+  return typeof window === 'undefined' ? null : window.localStorage.getItem(PENDING_CHANGES_VIEW_KEY);
+}
 
 /** The layout to start from: the one chosen in the Changes view when it had its own, so nobody loses their choice. */
 export function layoutFromPendingChangesView(stored: string | null): FileListLayout {
