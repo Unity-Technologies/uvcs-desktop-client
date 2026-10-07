@@ -19,7 +19,7 @@ const TONE_LABELS: Record<StatusTone, string> = {
   muted: 'Ignored, cloaked and hidden',
 };
 
-interface ChangeFilterResult<T> {
+export interface ChangeFilterResult<T> {
   visible: T[];
   /** The text typed, for highlighting matches. */
   query: string;

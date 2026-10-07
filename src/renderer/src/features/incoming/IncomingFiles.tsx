@@ -1,0 +1,67 @@
+import { FileSearch, X } from 'lucide-react';
+import type { ReactNode } from 'react';
+import type { Changeset } from '@shared/domain/changeset';
+import type { DiffEntry } from '@shared/domain/diff';
+import { FileTreeList } from '../../components/FileTreeList';
+import type { MenuEntry } from '../../lib/actions';
+import type { GroupedTreeRow } from '../../lib/groupedPathTree';
+import type { SelectionState } from '../../lib/selection';
+import { firstLine, formatCount } from '../../lib/text';
+import { EmptyState } from '../../ui/EmptyState';
+import { IconButton } from '../../ui/IconButton';
+import { CenteredSpinner } from '../../ui/Spinner';
+import { DiffEntryRow } from '../diff/DiffEntryRow';
+import { INCOMING_GROUP_TIPS, type IncomingFileGroup } from './incomingScope';
+import styles from './IncomingFiles.module.css';
+
+interface IncomingFilesProps {
+  /** The changeset whose files show; none for the whole update. */
+  changeset?: Changeset;
+  onShowAll: () => void;
+  /** The scope's files; undefined until they are in. */
+  files: DiffEntry[] | undefined;
+  rows: GroupedTreeRow<DiffEntry, IncomingFileGroup>[];
+  tree: boolean;
+  toggleCollapsed: (key: string) => void;
+  query: string;
+  filterBar: ReactNode;
+  selection: SelectionState;
+  onSelectionChange: (selection: SelectionState) => void;
+  contextMenu: (files: DiffEntry[]) => MenuEntry[];
+  /** Where a file that collides with local changes stands. */
+  markOf: (file: DiffEntry) => ReactNode;
+}
+
+/** Incoming's files: what the whole update brings, or what one changeset changed, as every list of changed files shows them. */
+export function IncomingFiles({ changeset, onShowAll, files, rows, tree, toggleCollapsed, query, filterBar, selection, onSelectionChange, contextMenu, markOf }: IncomingFilesProps) {
+  return (
+    <div className={styles.files}>
+      <div className={styles.header}>
+        <span className={styles.title} data-tip={changeset ? firstLine(changeset.comment) : undefined}>
+          {changeset ? `cs:${changeset.id} · ${firstLine(changeset.comment) || 'No comment'}` : 'All incoming changes'}
+        </span>
+        {files && <span className={styles.count}>{formatCount(files.length)}</span>}
+        {changeset && <IconButton icon={<X size={13} />} label="Show all incoming changes" size="small" onClick={onShowAll} />}
+      </div>
+      {!files ? (
+        <CenteredSpinner />
+      ) : files.length === 0 ? (
+        <EmptyState icon={<FileSearch size={22} />} title="No file changes" />
+      ) : (
+        <FileTreeList
+          rows={rows}
+          tree={tree}
+          toggleCollapsed={toggleCollapsed}
+          renderItem={(row, level) => <DiffEntryRow row={row} level={level} tree={tree} extras={row.type === 'file' ? markOf(row.item) : undefined} />}
+          groupTip={(group) => INCOMING_GROUP_TIPS[group]}
+          query={query}
+          filterBar={filterBar}
+          selection={selection}
+          onSelectionChange={onSelectionChange}
+          contextMenu={contextMenu}
+          label={changeset ? `Files changed in cs:${changeset.id}` : 'Incoming files'}
+        />
+      )}
+    </div>
+  );
+}
