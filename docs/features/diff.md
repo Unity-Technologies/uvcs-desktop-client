@@ -130,7 +130,10 @@ as changes are always in the hunks shown), lights up for a moment and, where dis
 the last or first change, a diff beside a list of files (a diff page, Changes: `FileStepsContext`) goes on to the next
 file's first change or the previous file's last, asking about unsaved edits first. A version shown alone (an added
 or deleted file) is one change, "1 of 1"; a file with none to step through (an image, a binary, identical versions)
-keeps the arrows, "No changes", so stepping through the list never stops there.
+keeps the arrows, "No changes", so stepping through the list never stops there. It steps through the files as the list
+shows them: in a tree, those in a closed folder are skipped. The list itself, its order and its List/Tree layout, are
+every list of changed files' (ARCHITECTURE.md "Lists of changed files"); a folder selected in it shows how many changes
+it holds instead of a diff.
 
 ## Moved code
 
@@ -238,6 +241,7 @@ Committed diffs (changeset, branch, shelve, range, code review) keep marks too, 
 by the diff's name (`cs:42`, `br:/main/task`, `sh:3`) and the revision reviewed, so a branch's file is changed since its review once
 another revision shows; the least recently reviewed diffs are forgotten. `features/review` holds the shared list pieces.
 Marks only show in review mode, a per-workspace setting (`reviewModeWorkspaces`, off by default); leaving it keeps the marks.
+In a tree, a folder's mark marks every file in it, and shows how many are reviewed while some are (`partialReviewCount`).
 
 ## Pierre workarounds
 

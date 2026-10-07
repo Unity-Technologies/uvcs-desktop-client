@@ -596,6 +596,27 @@ renderer/src/
   pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. The Changes list renders
   its file and folder rows memoized with stable callbacks: holding ↓ over 100,000 changes re-renders none of them
   (0.5-0.6 ms a step).
+- **Lists of changed files** read and work the same everywhere: Changes, every diff (changeset, branch, shelve, code
+  review: `DiffEntryList`), the details panels' changed files (`ChangedFilesSection`), Incoming and the merge page.
+  - **One order**: by path, folder by folder, names as people read them (`file_2` before `file_10`, case only between
+    names otherwise equal): `comparePaths` (`shared/pathOrder`), used where the files are read (`parseDiffEntries`,
+    `parseMergePlan`) and by Changes (`sortChanges`). A list and a tree show the files in the same order. Ordering by
+    kind of change first was tried and rejected: it split a folder's changes apart, and a row jumped to another group
+    when its status changed; the status chips of the filter bar (`useChangeFilter`) are how to look at one kind.
+    Sorting controls were rejected too: the only other order anyone asked for is by kind, which the chips give.
+  - **One layout, List or Tree**, for every list at once and across sessions (`useFileListLayoutStore`, which took the
+    one Changes kept first). Its switch (`FileListLayoutToggle`) ends the filter bar, so it is in the same place in each
+    list; a details panel too short for a filter bar has it in its title. Incoming and the merge page, whose rows are
+    grouped by their own sections (`incomingRows`, `mergeItems`), are always a list for now.
+  - **One tree**: `layoutPathTree` (`lib/pathTree`) lays out any items with a path, in n·log n: a folder's row, folders
+    holding only the next one sharing it ("deep/very"), and a folder that is an item itself (an added or moved folder)
+    as its own row, with its status. `useFileTree` gives a list its rows; Changes adds its changelists on top
+    (`layoutChangeRows`). Every folder row is `TreeFolderLabel` (chevron, icon, name, and how many items it holds while
+    closed); `FileTreeCell` indents rows to their depth. A click, Enter, ← and → open and close folders
+    (`pathTreeKeyMove`); a folder's menu and the review key act on everything in it (`itemsUnderRows`), and in review
+    mode its mark marks every file in it, showing how far its review got ("2/5", `partialReviewCount`). Closed folders
+    are remembered for the session per list (`useCollapsedFolders`: the Changes of a workspace, one diff, one details
+    pane), so closing one in a changeset's diff leaves every other diff alone.
 - **File icons**: `ItemIcon` draws every file as the same filled Lucide page (`--icon-file` on `--icon-file-fill`) beside solid
   folders (directories and xlinks; `itemIconShape`), so every row reads with one weight; a glyph on the page tells the
   file's family (`fileFamilyOf`, by name
