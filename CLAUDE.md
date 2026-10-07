@@ -111,7 +111,7 @@ node scripts/perf/startup.mjs [--cm=real]   # after a build: median start-up tim
 
 **Done means** a pull request that passes the QA gate (see "Delivering work: a pull request"): `npm run typecheck`
 and `npm test` pass (and CI, on every OS), the new code is tested (see "Tests are the quality gate"), the change is
-seen working in the app (anything visible), a reviewer agent has reviewed it, and the docs say what's now true (see
+seen working in the app (anything visible), a clean-context review has passed, and the docs say what's now true (see
 "Docs"). There is no linter or formatter: match the surrounding code. Anything that touches startup, navigation or
 many views passes `npm run e2e` too.
 
@@ -225,7 +225,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `scripts/build/dependencyLicenses.test.ts`                | every package in package-lock.json has a permissive license (`PERMISSIVE_LICENSES`) |
 | `scripts/build/pinnedActions.test.ts`                     | every GitHub action is pinned to a commit SHA                     |
 | `scripts/build/pierreSkillVersion.test.ts`                | the `pierre-diffs` skill describes the @pierre/diffs version installed   |
-| `scripts/agents/protectMain.test.ts`                      | agents never commit, merge or push to `main` (a hook in `.claude/settings.json`) |
+| `scripts/agents/protectMainRules.test.ts`, `protectMainHook.test.ts` | Claude Code never commits, merges or pushes to `main` (a hook in `.claude/settings.json`) |
 
 Not enforced yet: no `any` (there are none today). A static test for it is welcome.
 
@@ -281,8 +281,9 @@ Commit like a careful human. The history should show *how* the work happened.
 ## Delivering work: a pull request
 
 The only way work reaches `main` is a pull request on GitHub. `main` takes nothing else: never commit on it, merge
-into it or push to it locally, not even a "verified" branch (the `protectMain` hook refuses it). An agent's job ends
-with a pull request that passes the QA gate, not with a merge.
+into it or push to it locally, not even a "verified" branch (in Claude Code the `protectMain` hook refuses it; with
+any other tool the rule is yours to keep). An agent's job ends with a pull request that passes the QA gate, not with a
+merge. These steps are for every agent, whatever the tool (`AGENTS.md` points other tools here).
 
 1. **Branch first.** Before the first edit: `git switch -c <kind>/<topic>` in the main checkout, or rename a
    worktree's generated branch (see "Commits"). One task, one branch, one pull request.
@@ -291,22 +292,24 @@ with a pull request that passes the QA gate, not with a merge.
 3. **Verify it yourself**: `npm run typecheck` and `npm test`; `npm run e2e` when it touches startup, navigation or
    many views; anything visible seen in the app with Playwright (see "Seeing the app": both themes, a narrow window, a
    development build, a clean console).
-4. **Have it reviewed in a clean context.** Spawn the `reviewer` agent (`.claude/agents/reviewer.md`) with the branch,
-   its folder, what the change is for and how you verified it. A fresh context sees what the author's can't. An agent
-   that can't spawn agents reports back instead, and the agent that started it runs the review and sends it the
-   findings.
+4. **Have it reviewed in a clean context.** Give the reviewer's brief (`.claude/agents/reviewer.md`; in Claude Code,
+   the `reviewer` agent) to a fresh agent or session that didn't write the change, with the branch, its folder, what
+   the change is for and how you verified it. A fresh context sees what the author's can't. A subagent that can't
+   start agents of its own stops after step 3 and reports its branch, folder and verification; the agent that started
+   it runs the review, then resumes it (Claude Code: `SendMessage`) to do steps 5 and 6, or does them itself.
 5. **Apply the review**: fix every must-fix and what's worth it among the rest, in new commits; re-run step 3. If the
    fixes went beyond small, review again. A finding you decline gets one line of why in the pull request.
 6. **Open the pull request**: `git push -u origin <branch>`, then `gh pr create` with the template filled in
    (`.github/pull_request_template.md`): what the user can now do, how it was checked, what the review found and what
    changed for it, the docs. The title says what the user can now do, like a commit message.
-7. **Stop there.** A person approves and merges it: don't approve, merge, or turn on auto-merge unless the user asks.
-   It joins through the merge queue (`gh pr merge --auto --merge`), which tests it on top of the latest `main`: never
-   update a branch just to merge it (docs/features/updates.md "CI"). It joins with a merge commit, never squashed or
-   rebased. Comments on the pull request are answered with new commits on the same branch, never a force push.
+7. **Stop there**, and report the pull request's link to the user, with what to try in the app for anything visible.
+   A person approves and merges it: don't approve or merge it yourself. Comments on the pull request are answered
+   with new commits on the same branch, never a force push.
 
-When it has merged, remove its worktree (`git worktree remove <folder>`) and branch. Report the pull request's link
-to the user, and, for anything visible, what to try in the app.
+Only when the user asks you to merge it: `gh pr merge --auto --merge` puts it in the merge queue, which tests it on
+top of the latest `main` and joins it with a merge commit, never squashed or rebased; never update a branch just to
+merge it (docs/features/updates.md "CI"). Once the user says it merged, remove its worktree (`git worktree remove
+<folder>`) and branch.
 
 ## Docs
 
