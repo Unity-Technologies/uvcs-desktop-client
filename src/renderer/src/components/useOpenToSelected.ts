@@ -5,7 +5,8 @@ import { rowKeyShowing } from '../lib/pathTree';
  * Opens the groups and folders holding the selection whenever it changes, so a file selected from outside the list (a
  * diff opened on it, a merge or an update starting on the first conflict, a resolve run moving on) has its row shown.
  * Only a change of selection opens anything: a folder the user closes around the selection stays closed.
- * `laidOut` are the rows as if nothing were closed; `holding` names the rows holding one (`rowsHolding`).
+ * `laidOut` are the rows as if nothing were closed; `holding` names the rows holding one (`rowsHolding`). The selection
+ * must arrive with its rows or after them: one set before its rows are laid out opens nothing when they arrive.
  */
 export function useOpenToSelected<T, Row extends { key: string; item?: T }>(
   laidOut: readonly Row[],
