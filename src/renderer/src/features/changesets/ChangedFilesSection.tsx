@@ -15,6 +15,7 @@ import { HighlightQuery } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { diffEntryKey } from '../diff/DiffEntryList';
 import { diffEntryMenu } from '../diff/diffEntryMenu';
+import { listedEntries } from '../diff/listedEntries';
 import { diffEntryTones } from '../diff/diffEntrySources';
 import { DiffEntryRow } from '../diff/DiffEntryRow';
 import { useDiffReview } from '../diff/review/useDiffReview';
@@ -44,7 +45,9 @@ interface ChangedFilesSectionProps {
 export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFilesSectionProps) {
   const [requested, setRequested] = useState(false);
   const { changesCollapsed: collapsed, set } = useDetailsLayoutStore();
-  const { data: entries, error } = useDiffEntries(target, { enabled: requested, branchHead });
+  const { data: diffEntries, error } = useDiffEntries(target, { enabled: requested, branchHead });
+  // The files the diff lists, so the count and the rows match the diff's: no folder added or deleted with its files.
+  const entries = useMemo(() => diffEntries && listedEntries(diffEntries), [diffEntries]);
   const { visible, query, bar } = useChangeFilter(entries ?? [], diffEntryKey, diffEntryTones);
   const { rows, tree, toggleCollapsed } = useFileTree(visible, diffEntryKey, `details:${JSON.stringify(target)}`);
   const listed = useMemo(() => firstFilesOf(rows, MAX_LISTED_FILES), [rows]);

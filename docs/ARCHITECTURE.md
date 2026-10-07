@@ -645,7 +645,7 @@ renderer/src/
     `RepositoryVersion` (a revision, or a path or item at a changeset, as a merge knows its sides), read when they run.
   - **Folders once**: a folder added or deleted along with what it holds is left out, its items say it already, but a
     moved one stays, a move listing the folder alone (`withoutRepeatedFolders`, `lib/enclosingFolders`: `listedEntries`
-    for a diff, `buildMergeItems` for a merge).
+    for a diff, Incoming and a details panel's changed files, so their counts agree; `buildMergeItems` for a merge).
 - **File icons**: `ItemIcon` draws every file as the same filled Lucide page (`--icon-file` on `--icon-file-fill`) beside solid
   folders (directories and xlinks; `itemIconShape`), so every row reads with one weight; a glyph on the page tells the
   file's family (`fileFamilyOf`, by name
