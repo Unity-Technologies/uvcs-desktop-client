@@ -44,8 +44,8 @@ these is missing, say so in your report as a finding.
 - **Docs**: what `docs/` says is still true; a new rule is written in one place and named so it can be grepped.
 - **Commits**: one logical change each, messages in the product's words, failing test before the fix, refactors alone,
   the branch named `<kind>/<topic>`.
-- **Visual validation**: for anything visible, did the author see it in the app, both themes, a narrow window, a
-  development build, with a clean console? Missing evidence is a must-fix.
+- **Visual validation**: for anything visible, did the author see it in the app as CLAUDE.md "Seeing the app" asks?
+  Missing evidence is a must-fix.
 
 ## Report
 
