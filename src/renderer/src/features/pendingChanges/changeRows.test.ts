@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
+import type { FileListLayout } from '../../components/fileListLayoutStore';
 import { treeArrowMove } from '../../lib/treeArrowMove';
 import { rowCheckState } from './changeRowChecks';
 import { changeTreeArrowRows, LEVEL_INDENT, rowIndent, topLevelCheckboxInset, treeLevel } from './changeRowLevels';
-import { changesUnderRow, collapseRows, layoutChangeRows, menuTargetOf, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { changesUnderRow, collapseRows, layoutChangeRows, menuTargetOf, type ChangeRow, type ChangesGrouping } from './changeRows';
 
 /** The rows the list shows. */
 function buildChangeRows({ collapsed, ...layout }: Parameters<typeof layoutChangeRows>[0] & { collapsed: ReadonlySet<string> }): ChangeRow[] {
@@ -21,7 +22,7 @@ const nested = [changes[3]!, changes[0]!];
 const base = {
   changes,
   changelists: [],
-  layout: 'list' as ChangesLayout,
+  layout: 'list' as FileListLayout,
   grouping: 'none' as ChangesGrouping,
   collapsed: new Set<string>(),
 };
@@ -264,7 +265,7 @@ describe('buildChangeRows at scale', () => {
         ? change(`src/m${index % 20}/p${index % 10}/s${index % 5}/f${index}.cs`, index % 3 ? ['changed'] : ['checkedOut', 'changed'])
         : change(`flat/asset${index}.txt`, index % 4 ? ['private'] : ['added']),
     );
-  const layouts: [ChangesLayout, ChangesGrouping][] = [
+  const layouts: [FileListLayout, ChangesGrouping][] = [
     ['list', 'none'],
     ['tree', 'none'],
     ['tree', 'changelist'],

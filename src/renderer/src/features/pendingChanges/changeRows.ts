@@ -1,4 +1,5 @@
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
+import type { FileListLayout } from '../../components/fileListLayoutStore';
 import { collapseTreeRows, layoutPathList, layoutPathTree, type PathTreeRow } from '../../lib/pathTree';
 import { sortChanges } from './changeOrder';
 import { treeLevel } from './changeRowLevels';
@@ -17,7 +18,6 @@ interface GroupRow {
 /** A changelist, a folder of changes or a change: folders and changes are the rows of every tree of files (`pathTree`). */
 export type ChangeRow = GroupRow | PathTreeRow<PendingChange>;
 
-export type ChangesLayout = 'list' | 'tree';
 export type ChangesGrouping = 'none' | 'changelist';
 
 export const DEFAULT_CHANGELIST_LABEL = 'Default changelist';
@@ -25,7 +25,7 @@ export const DEFAULT_CHANGELIST_LABEL = 'Default changelist';
 interface LayoutInput {
   changes: PendingChange[];
   changelists: Changelist[];
-  layout: ChangesLayout;
+  layout: FileListLayout;
   grouping: ChangesGrouping;
 }
 
@@ -93,7 +93,7 @@ export function menuTargetOf(row: ChangeRow | null): Changelist | PendingChange[
   return row.type === 'group' && row.changelist ? row.changelist : row.items;
 }
 
-function appendChangeRows(rows: ChangeRow[], changes: PendingChange[], groupKey: string, layout: ChangesLayout): void {
+function appendChangeRows(rows: ChangeRow[], changes: PendingChange[], groupKey: string, layout: FileListLayout): void {
   const sorted = sortChanges(changes);
   const laidOut = layout === 'tree' ? layoutPathTree({ sorted, keyOf: changeKey, folderScope: groupKey }) : layoutPathList(sorted, changeKey);
   // One at a time: spreading 100,000 rows into `push` passes more arguments than a call takes.
