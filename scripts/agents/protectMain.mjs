@@ -29,7 +29,8 @@ async function main() {
   if (!violation) return;
   const reason =
     `Blocked: ${violation}. Work reaches main only through a pull request (CLAUDE.md "Delivering work: a pull ` +
-    `request"): commit on a <kind>/<topic> branch, push that branch and open a PR with \`gh pr create\`.`;
+    `request"): commit on a <kind>/<topic> branch, push that branch and open a PR with \`gh pr create\`. To bring ` +
+    `main up to date: \`git pull --ff-only\`.`;
   process.stdout.write(
     JSON.stringify({
       hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: reason },

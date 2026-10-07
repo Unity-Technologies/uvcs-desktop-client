@@ -285,8 +285,8 @@ into it or push to it locally, not even a "verified" branch (in Claude Code the 
 any other tool the rule is yours to keep). An agent's job ends with a pull request that passes the QA gate, not with a
 merge. These steps are for every agent, whatever the tool (`AGENTS.md` points other tools here).
 
-1. **Branch first.** Before the first edit: `git switch -c <kind>/<topic>` in the main checkout, or rename a
-   worktree's generated branch (see "Commits"). One task, one branch, one pull request.
+1. **Branch first.** Before the first edit: `git pull --ff-only` then `git switch -c <kind>/<topic>` in the main
+   checkout, or rename a worktree's generated branch (see "Commits"). One task, one branch, one pull request.
 2. **Build it** in small commits (see "Commits"), adjusting every place the change reaches: callers, other views that
    share a component, menus, shortcuts, the e2e fake, the docs.
 3. **Verify it yourself**: `npm run typecheck` and `npm test`; `npm run e2e` when it touches startup, navigation or
