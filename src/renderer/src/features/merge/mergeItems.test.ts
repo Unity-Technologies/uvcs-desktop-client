@@ -33,6 +33,20 @@ describe('merge items', () => {
     ]);
   });
 
+  it("leaves out a folder added or deleted along with the items under it, which say it already, but keeps a moved one", () => {
+    const changes: MergePlan['changes'] = [
+      { kind: 'added', path: '/src/ui/widgets' },
+      { kind: 'added', path: '/src/ui/widgets/Lap_2.cs' },
+      { kind: 'deleted', path: '/old' },
+      { kind: 'deleted', path: '/old/a.cs' },
+      { kind: 'moved', path: '/assets', oldPath: '/art' },
+      { kind: 'moved', path: '/assets/ship.mat', oldPath: '/art/ship.mat' },
+      { kind: 'added', path: '/empty' },
+    ];
+    const listed = buildMergeItems({ ...plan, directoryConflicts: [], changes }, [], []).map((item) => item.path);
+    expect(listed).toEqual(['src/ui/widgets/Lap_2.cs', 'old/a.cs', 'assets', 'assets/ship.mat', 'empty']);
+  });
+
   it('names every item by its path without the root, for the tree and the filter', () => {
     expect(buildMergeItems(plan, [fileState(false)], []).map((item) => item.path)).toEqual(['twin.txt', 'a.txt', 'new.txt']);
   });
