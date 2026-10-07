@@ -5,10 +5,6 @@ changing anything. It holds the rules, the commands, the definition of done and 
 request, never a merge into `main`). Despite its name it isn't specific to Claude Code; this file exists so tools that
 read `AGENTS.md` find it.
 
-If `CLAUDE.local.md` exists at the repository's root (in a worktree, at the main checkout's root), read it too: it is
-a UVCS developer's private notes, such as where the UVCS sources are on this machine ("The UVCS sources, for UVCS
-developers" in CLAUDE.md says how to use them).
-
 What lives under `.claude/` is plain Markdown any agent can use:
 
 - **Skills** (`.claude/skills/<name>/SKILL.md`): instructions for a tool or library. When CLAUDE.md says to use a

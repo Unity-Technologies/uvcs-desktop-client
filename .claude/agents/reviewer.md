@@ -37,8 +37,7 @@ these is missing, say so in your report as a finding.
   timer, unsettled, or `query()` where it should be `execute()` (or the reverse) is a must-fix.
 - **Cross-platform**: paths and separators, drive letters, CRLF, NFD names, `.cmd` launchers, shortcuts and copy per OS.
 - **Safety**: secrets in logs or errors, a new IPC capability that isn't a typed `UvcsApi` method, anything opening
-  external tools by itself, anything that could write to real data, anything taken from the private UVCS sources
-  (code, internal names, paths: CLAUDE.md "The UVCS sources, for UVCS developers").
+  external tools by itself, anything that could write to real data.
 - **Tests**: every new or changed decision is tested at the level where it can break, with input shaped as `cm`
   prints it; a bug fix has a test that fails without it; nothing sleeps, polls, reads the clock or depends on the OS's
   separators. Flag tests that only restate the implementation.

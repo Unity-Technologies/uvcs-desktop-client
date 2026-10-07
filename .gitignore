@@ -9,5 +9,5 @@ dist
 *.tsbuildinfo
 # Personal Claude Code settings
 .claude/settings.local.json
-# A UVCS developer's private notes for agents, such as where the UVCS sources are (CLAUDE.md)
+# Personal Claude Code notes
 CLAUDE.local.md
