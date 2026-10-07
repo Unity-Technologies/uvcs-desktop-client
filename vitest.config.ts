@@ -15,7 +15,8 @@ export default defineConfig({
   resolve: { alias: { '@shared': resolve(__dirname, 'src/shared') } },
   test: {
     // scripts/build: the build's own logic (the third-party notices, the dependency license check).
-    include: ['src/**/*.test.ts', 'scripts/build/**/*.test.ts'],
+    // scripts/agents: the hooks that keep agents to the repository's workflow (protectMain).
+    include: ['src/**/*.test.ts', 'scripts/build/**/*.test.ts', 'scripts/agents/**/*.test.ts'],
     globalSetup: ['vitest.tempDirectory.ts'],
     pool: 'threads',
     maxWorkers: TEST_WORKERS,
