@@ -4,6 +4,7 @@ import { api } from '../../api/client';
 import { queryKeys } from '../../api/queryKeys';
 import { useSettings } from '../../app/settings/useSettings';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import type { NavBadge } from '../../ui/nav/navBadgeText';
 import { isCheckinCandidate } from './changeCategories';
 import { sharePendingChanges } from './sharePendingChanges';
 
@@ -37,4 +38,10 @@ export function usePendingChangesOf(workspacePath: string | null) {
 export function usePendingChangesCount(): number | undefined {
   const { data } = usePendingChanges();
   return data?.changes.filter(isCheckinCandidate).length;
+}
+
+/** The sidebar's count of the changes to check in. */
+export function usePendingChangesBadge(): NavBadge | undefined {
+  const count = usePendingChangesCount();
+  return count === undefined ? undefined : { count };
 }

@@ -1,3 +1,5 @@
+import type { NavBadge } from './navBadgeText';
+
 /** What a sidebar entry says: what shows on it, and what only its tooltip tells. */
 export interface NavItemWords {
   label: string;
@@ -6,7 +8,7 @@ export interface NavItemWords {
   /** Quiet text beside the label, e.g. "Cloud"; the rail's tile leaves it out. */
   detail?: string;
   /** A count, e.g. pending changes. */
-  badge?: number;
+  badge?: NavBadge;
   /** What waits there, shown as a dot; its words go under the tooltip's (`data-tip-sub`). */
   dot?: string;
   /** Shown beside the tooltip's words (`data-tip-shortcut`). */
@@ -22,6 +24,7 @@ export function navItemTip(words: NavItemWords, rail: boolean): string | undefin
   const { label, railLabel, detail, badge, dot, shortcut } = words;
   if (!rail) return shortcut || dot ? label : undefined;
 
-  const addsToTile = Boolean(shortcut || dot || detail || badge || (railLabel && railLabel !== label));
-  return addsToTile ? [label, detail, badge ? `${badge}` : undefined].filter(Boolean).join(' · ') : undefined;
+  const counted = badge?.count ? `${badge.count}${badge.more ? '+' : ''}` : undefined;
+  const addsToTile = Boolean(shortcut || dot || detail || counted || (railLabel && railLabel !== label));
+  return addsToTile ? [label, detail, counted].filter(Boolean).join(' · ') : undefined;
 }
