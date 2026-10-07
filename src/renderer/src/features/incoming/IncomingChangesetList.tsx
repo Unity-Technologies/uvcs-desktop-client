@@ -96,7 +96,7 @@ export function IncomingChangesetList({ changesets, more, scope, onScope, collap
 
   return (
     <section className={styles.section} data-collapsed={collapsed}>
-      <button type="button" className={styles.header} aria-expanded={!collapsed} aria-controls={listId} onClick={onToggleCollapsed}>
+      <button type="button" className={styles.header} aria-expanded={!collapsed} aria-controls={collapsed ? undefined : listId} onClick={onToggleCollapsed}>
         <ChevronRight size={13} className={styles.chevron} data-collapsed={collapsed} aria-hidden />
         {collapsed ? (
           <span className={styles.title}>{changesetsSummary(changesets, more)}</span>
