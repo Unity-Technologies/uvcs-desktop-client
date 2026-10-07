@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { mainBranchViolation, splitCommandLine } from './protectMainRules.mjs';
@@ -57,10 +56,10 @@ describe('protectMainRules', () => {
   });
 
   it('follows cd and git -C to the checkout the command writes to', () => {
-    expect(violation(`cd ${WORKTREE} && git commit -m "A fix"`)).toBeNull();
-    expect(violation(`git -C ${WORKTREE} commit -m "A fix"`)).toBeNull();
-    expect(violation(`cd ${REPOSITORY} && git merge feature/x`, WORKTREE)).not.toBeNull();
-    expect(violation(`git -C ${REPOSITORY} merge feature/x`, WORKTREE)).not.toBeNull();
+    expect(violation(`cd "${WORKTREE}" && git commit -m "A fix"`)).toBeNull();
+    expect(violation(`git -C "${WORKTREE}" commit -m "A fix"`)).toBeNull();
+    expect(violation(`cd "${REPOSITORY}" && git merge feature/x`, WORKTREE)).not.toBeNull();
+    expect(violation(`git -C "${REPOSITORY}" merge feature/x`, WORKTREE)).not.toBeNull();
   });
 
   it('follows a switch to main earlier in the same command line', () => {
@@ -131,12 +130,5 @@ describe('protectMainRules', () => {
 
   it('splits a command line on its unquoted separators only', () => {
     expect(splitCommandLine('a && b || c; d | e\nf "g && h"')).toEqual(['a', 'b', 'c', 'd', 'e', 'f "g && h"']);
-  });
-
-  it('is the PreToolUse hook of every Bash command in the project settings', () => {
-    const settings = JSON.parse(readFileSync(join(__dirname, '..', '..', '.claude', 'settings.json'), 'utf8'));
-    const bashHooks = settings.hooks.PreToolUse.filter((entry: { matcher: string }) => entry.matcher === 'Bash');
-    const commands = bashHooks.flatMap((entry: { hooks: { command: string }[] }) => entry.hooks.map((h) => h.command));
-    expect(commands.some((command: string) => command.includes('scripts/agents/protectMain.mjs'))).toBe(true);
   });
 });

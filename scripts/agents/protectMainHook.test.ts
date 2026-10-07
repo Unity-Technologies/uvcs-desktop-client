@@ -1,11 +1,16 @@
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, symlinkSync } from 'node:fs';
+import { mkdtempSync, readFileSync, symlinkSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 const AGENTS_FOLDER = __dirname;
 const PUSH_TO_MAIN = { tool_name: 'Bash', tool_input: { command: 'git push origin main' }, cwd: AGENTS_FOLDER };
+
+/** The part of `.claude/settings.json` that wires hooks. */
+interface HookSettings {
+  hooks: { PreToolUse: { matcher: string; hooks: { command: string }[] }[] };
+}
 
 /** Runs the hook as Claude Code does: its JSON on stdin, its decision on stdout. */
 function runHook(script: string, input: string): { stdout: string; status: number | null } {
@@ -18,6 +23,15 @@ function decision(stdout: string): string | undefined {
 }
 
 describe('the protectMain hook, run as Claude Code runs it', () => {
+  it('runs before every Bash command, as the project settings say', () => {
+    const settingsFile = join(AGENTS_FOLDER, '..', '..', '.claude', 'settings.json');
+    const settings: HookSettings = JSON.parse(readFileSync(settingsFile, 'utf8'));
+    const commands = settings.hooks.PreToolUse.filter((entry) => entry.matcher.split('|').includes('Bash')).flatMap(
+      (entry) => entry.hooks.map((hook) => hook.command),
+    );
+    expect(commands).toContain('node "$CLAUDE_PROJECT_DIR/scripts/agents/protectMain.mjs"');
+  });
+
   it('denies a push to main', () => {
     const { stdout, status } = runHook(join(AGENTS_FOLDER, 'protectMain.mjs'), JSON.stringify(PUSH_TO_MAIN));
     expect(status).toBe(0);
