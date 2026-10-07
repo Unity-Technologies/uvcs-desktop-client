@@ -2,7 +2,7 @@ import type { DiffEntry } from '@shared/domain/diff';
 import type { MergeTool } from '@shared/domain/mergeTools';
 import type { MenuEntry } from '../../lib/actions';
 import { diffEntryMenu } from '../diff/diffEntryMenu';
-import { keepVersionEntries } from '../merge/resolve/keepVersionEntries';
+import { conflictMenuEntries } from '../merge/resolve/conflictMenuEntries';
 import type { FileConflictDecision } from '../merge/resolve/fileConflictDecision';
 import type { FileConflictState } from '../merge/resolve/useFileConflicts';
 import { incomingDiffTarget, type IncomingScope } from './incomingScope';
@@ -27,7 +27,8 @@ export interface IncomingFileMenuContext {
 
 /**
  * The menu of Incoming's files: a diff's (`diffEntryMenu`), read from the scope's diff. In "All incoming changes" the
- * conflicts selected add what settles them; a changeset's files are what it did, so they add nothing.
+ * conflicts selected add what settles them, the same as the merge page's (`conflictMenuEntries`: resolve in a tool,
+ * each version to open, Keep yours or incoming, Start over); a changeset's files are what it did, so they add nothing.
  */
 export function incomingFileMenu(selected: DiffEntry[], context: IncomingFileMenuContext): MenuEntry[] {
   const { workspacePath, scope, loadedChangeset, headChangeset } = context;
@@ -38,10 +39,6 @@ export function incomingFileMenu(selected: DiffEntry[], context: IncomingFileMen
     target,
     selected,
     undefined,
-    keepVersionEntries(
-      conflicts.map((state) => state.file.key),
-      UPDATE_LABELS,
-      context.decide,
-    ),
+    conflictMenuEntries(conflicts, { ...context, labels: UPDATE_LABELS, yoursInWorkspace: true }),
   );
 }

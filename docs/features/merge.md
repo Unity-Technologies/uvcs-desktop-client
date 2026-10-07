@@ -46,8 +46,8 @@ The list (`MergeItemList`) is every list of changed files (ARCHITECTURE.md "List
 "Conflicts" then "Changes to apply" (`mergeItemGroups`), each by path: the filter (the "!" chip for conflicts,
 `mergeItemTones`), List or Tree, and several items selected at once, whose menu keeps yours or the incoming version of
 every conflicting file among them (`keepVersionEntries`). One item's menu is any changed file's (ARCHITECTURE.md "One
-menu": history, open or save the incoming version, Copy) with what a merge adds (`mergeItemMenu`): a conflicting file
-"Resolve in <tool>" (the preferred one, `primaryMergeTool`; disabled while files resolve one by one), Keep yours or
+menu": history, open or save the incoming version, Copy) with what a merge adds (`mergeItemMenu`): a conflicting file, the same
+entries as in Incoming (`conflictMenuEntries`), "Resolve in <tool>" (the preferred one, `primaryMergeTool`; disabled while files resolve one by one), Keep yours or
 incoming, Start over once decided, annotate at the incoming revision `cm` names for it, and "Open version ▸" Yours (the
 workspace file; the destination's version merging into a server branch), Incoming and Base; a directory conflict its
 panel's choices, Keep both under the name the panel suggests. A clean change isn't annotated: `cm` names only the

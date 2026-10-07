@@ -32,6 +32,7 @@ import { historyMenu } from '../features/history/historyMenu';
 import { labelMenu } from '../features/labels/labelMenu';
 import { lockMenu } from '../features/locks/lockMenu';
 import { WORKSPACE_ROLES } from '../features/merge/mergeDescription';
+import { incomingFileMenu, type IncomingFileMenuContext } from '../features/incoming/incomingFileMenu';
 import { mergeItemMenu, type MergeMenuContext } from '../features/merge/mergeItemMenu';
 import { changelistMenu } from '../features/pendingChanges/changelistMenu';
 import { pendingChangeMenu } from '../features/pendingChanges/pendingChangeMenu';
@@ -134,6 +135,19 @@ const mergeContext: MergeMenuContext = {
 };
 const mergeVersion = { kind: 'spec', spec: 'itemid:7#cs:11@game@local' } as const;
 const mergeConflict = { kind: 'fileConflict', key: 'file:/src/a.ts', path: 'src/a.ts', state: { file: { key: '/src/a.ts', path: 'src/a.ts', base: mergeVersion, source: mergeVersion, destination: mergeVersion }, status: 'ready', isBinary: false, decidedByUser: true, resolution: null } } as never;
+const incomingConflictFile = { path: 'src/a.ts', itemType: 'file', status: 'changed', revisionId: 40, baseRevisionId: 39, repository } as never;
+const incomingContext: IncomingFileMenuContext = {
+  workspacePath: ws,
+  scope: { kind: 'all' },
+  loadedChangeset: 1,
+  headChangeset: 4,
+  conflictOf: () => (mergeConflict as { state: never }).state,
+  preferredTool: { id: 'vscode', name: 'Visual Studio Code' } as never,
+  running: false,
+  decide: () => {},
+  reset: () => {},
+  resolveIn: () => {},
+};
 const mergeDirectoryConflict = {
   kind: 'directoryConflict',
   key: 'directory:0',
@@ -168,6 +182,8 @@ const MENUS: Record<string, () => MenuEntry[]> = {
   mergeChange: () => mergeItemMenu([{ kind: 'change', key: 'change:0', path: 'src/c.ts', change: { kind: 'changed', path: '/src/c.ts' } }], mergeContext),
   mergeDirectoryConflict: () => mergeItemMenu([mergeDirectoryConflict], mergeContext),
   mergeSeveral: () => mergeItemMenu([mergeConflict, mergeConflict], mergeContext),
+  incomingConflict: () => incomingFileMenu([incomingConflictFile], incomingContext),
+  incomingSeveralConflicts: () => incomingFileMenu([incomingConflictFile, incomingConflictFile], incomingContext),
   revision: () => revisionMenu(ws, 5, repository, [file]),
   lock: () => lockMenu(ws, [lock]),
   syncBranch: () => syncBranchMenu([branch], 'game@cloud', { push: () => {}, pull: () => {} }),
@@ -286,6 +302,7 @@ describe('one menu per object, the same everywhere', () => {
   it("a changed file reads the same in a diff, Incoming and a merge, the merge only adding its own", () => {
     const inDiff = diffEntryMenu(ws, { kind: 'changeset', changesetId: 5 }, [{ path: 'src/a.ts', itemType: 'file', revisionId: 40, baseRevisionId: 39, repository } as never]);
     expectOnlyAdds(mergeItemMenu([mergeConflict], mergeContext), inDiff);
+    expectOnlyAdds(incomingFileMenu([incomingConflictFile], incomingContext), inDiff);
   });
 
   it('a code review reads the same in the Code reviews view, the palette and the Branch Explorer', () => {
