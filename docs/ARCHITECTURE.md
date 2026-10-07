@@ -89,8 +89,8 @@ and many people use the same server. Every `cm` command other than local reads (
   changesets with the incoming changes and "Show 200 more" (reached by the arrows, Enter) reads the next older page
   (`changesetid <` the oldest shown, `useIncomingChangesetList`, `olderChangesetPages`); counts past what was read show
   as "200+". Those pages and the card's read are keyed by the head and left out of refreshes (`isIncomingChangesetPage`):
-  a new head is a new key. Once the incoming changes are in for the check's head, the chip, the sidebar, the status bar
-  and the success moment count with them (`knownIncomingSummary`): one count per screen.
+  a new head is a new key. Once the incoming changes are in for the check's head, the chip, the sidebar, the status bar,
+  the check-in note, the merge page and the success moment count with them (`knownIncomingSummary`): one count per screen.
 - **Focus**: the incoming check if older than 20 s, and the server views on screen once stale (30 s by default). Lists
   that hardly change by themselves and are heavy to read use `SLOW_CHANGING_QUERY` (every branch, every label, attribute
   types, attribute values, the working object's comment, the palette's lists, the recent shelves in Changes, the user's and everyone's): five minutes, and focus never re-reads them. The Branch

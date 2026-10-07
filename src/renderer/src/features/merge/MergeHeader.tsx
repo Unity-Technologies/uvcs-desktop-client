@@ -9,7 +9,7 @@ import { pluralizeAtLeast } from '../../lib/text';
 import { useShortcut } from '../../lib/useShortcut';
 import { Button } from '../../ui/Button';
 import { Kbd } from '../../ui/Kbd';
-import { useIncomingSummary } from '../incoming/useIncomingSummary';
+import { useKnownIncomingSummary } from '../incoming/useKnownIncomingSummary';
 import { MergeContributors } from './MergeContributors';
 import { mergeTitle, type MergeLabels } from './mergeDescription';
 import { MergeHeading } from './MergeHeading';
@@ -124,7 +124,7 @@ export function MergeHeader({
 /** Merging into an outdated workspace works, but checking in the result will need an update first. */
 function BehindHeadNotice() {
   const workspacePath = useWorkspacePath();
-  const { data: incoming } = useIncomingSummary();
+  const incoming = useKnownIncomingSummary();
   if (!incoming?.changesetCount) return null;
 
   return (
