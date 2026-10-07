@@ -14,7 +14,7 @@ import { HighlightQuery } from '../../ui/Highlight';
 import { SplitPane } from '../../ui/SplitPane';
 import { useChangeset } from '../changesets/useChangeset';
 import { useFileSteps } from '../diff/viewer/fileSteps';
-import { useIncomingSummary } from '../incoming/useIncomingSummary';
+import { useKnownIncomingSummary } from '../incoming/useKnownIncomingSummary';
 import { MergeTaskSuggestion } from '../mergeTask/MergeTaskSuggestion';
 import { reviewProgress } from '../review/reviewStatus';
 import { BulkPrivateNotice } from './BulkPrivateNotice';
@@ -59,7 +59,7 @@ interface PendingChangesPanesProps {
 
 /** Changes with something pending: the list and the check-in panel, beside the diff of the change selected. */
 export function PendingChangesPanes({ workspacePath, workspace, snapshot, review, readAt }: PendingChangesPanesProps) {
-  const { data: incomingSummary } = useIncomingSummary();
+  const incomingSummary = useKnownIncomingSummary();
   const settings = useSettings();
   // Only what the list shows: dragging the description's height or typing the comment doesn't render the list again.
   const layout = useFileListLayoutStore((state) => state.layout);

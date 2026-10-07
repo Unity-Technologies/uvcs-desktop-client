@@ -1,12 +1,16 @@
+import type { IncomingChanges } from '@shared/domain/incoming';
 import type { PendingChangesAction } from '@shared/domain/switchWithChanges';
 import { api } from '../../api/client';
 import { askSwitchWithChanges } from '../../features/branches/SwitchWithChangesDialog';
 import { planSwitch } from '../../features/branches/switchOptions';
+import { knownIncomingSummary } from '../../features/incoming/incomingChipState';
 import { explainUpdateConflicts, showUpdatedMoment } from '../../features/incoming/updateOperations';
+import { incomingChangesKey } from '../../features/incoming/useIncomingChanges';
 import { recheckIncoming } from '../../features/incoming/useIncomingSummary';
 import { branchLabel } from '../../lib/branchLabels';
 import { toast } from '../../ui/toast/toastStore';
 import { refuseWhileBusy, runOperation, runRead } from '../operations/runOperation';
+import { queryClient } from '../queryClient';
 import { isAffectedByCheckinOrUpdate } from '../refresh/refreshScopes';
 import { switchToast } from './switchToast';
 
@@ -29,7 +33,9 @@ export async function updateWorkspace(workspacePath: string): Promise<boolean> {
 
 /** Updates the workspace, after asking the server whether there is anything new; says so when there isn't. */
 export async function updateUnlessUpToDate(workspacePath: string): Promise<void> {
-  const summary = await recheckIncoming(workspacePath).catch(() => undefined);
+  const checked = await recheckIncoming(workspacePath).catch(() => undefined);
+  // The success moment counts as the chip did: further than the check once the incoming changes were read.
+  const summary = knownIncomingSummary(checked, queryClient.getQueryData<IncomingChanges>(incomingChangesKey(workspacePath)));
   if (summary?.branch && summary.changesetCount === 0) toast.info('Already up to date', `Your workspace has everything on ${branchLabel(summary.branch)}.`);
   else if ((await updateWorkspace(workspacePath)) && summary) showUpdatedMoment(workspacePath, summary);
 }

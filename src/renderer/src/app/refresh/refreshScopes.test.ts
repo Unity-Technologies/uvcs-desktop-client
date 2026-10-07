@@ -195,3 +195,27 @@ describe('refresh scopes', () => {
     expect(isAffectedByFileChangesIn(null)(key('explorer', 'directory', 'docs'))).toBe(true);
   });
 });
+
+describe('incoming changeset pages', () => {
+  const older = key('incoming', 'older', '/main', 1, 261);
+  const newest = key('incoming', 'newest', '/main', 1, 261);
+
+  it('are left alone by new changesets, check-ins, updates and switches: their key names the head they were read at', () => {
+    for (const page of [older, newest]) {
+      expect(isAffectedByNewChangesets(page)).toBe(false);
+      expect(isAffectedByServerMerge(page)).toBe(false);
+      expect(isAffectedByCheckinOrUpdate(page)).toBe(false);
+      expect(isAffectedByLoadedChangeset(page)).toBe(false);
+    }
+  });
+
+  it('are read again when a changeset is moved or deleted, which changes them under the same head', () => {
+    expect(isAffectedByChangesetMove(older)).toBe(true);
+    expect(isAffectedByChangesetMove(newest)).toBe(true);
+  });
+
+  it('leave the incoming changes themselves to the refreshes', () => {
+    expect(isAffectedByNewChangesets(key('incoming', 'changes'))).toBe(true);
+    expect(isAffectedByCheckinOrUpdate(key('incoming', 'changes'))).toBe(true);
+  });
+});

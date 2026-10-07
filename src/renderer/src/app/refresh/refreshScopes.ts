@@ -56,7 +56,16 @@ export function isAffectedByWorkspaceState(key: QueryKey): boolean {
 
 /** The workspace loads another changeset or branch: everything but the workspace info that told. */
 export function isAffectedByLoadedChangeset(key: QueryKey): boolean {
-  return area(key) !== 'info';
+  return area(key) !== 'info' && !isIncomingChangesetPage(key);
+}
+
+/**
+ * Incoming changesets read for one head (`['incoming', 'newest' | 'older', branch, loaded, head]`): a new head or another
+ * loaded changeset is a new key, so refreshes leave them alone instead of reading every "Show more" page again. Only
+ * moving or deleting a changeset changes them under the same key.
+ */
+function isIncomingChangesetPage(key: QueryKey): boolean {
+  return area(key) === 'incoming' && (detail(key) === 'newest' || detail(key) === 'older');
 }
 
 /** Repository objects a checkin by someone else doesn't touch. */
@@ -68,6 +77,7 @@ const UNTOUCHED_BY_CHECKINS = ['labels', 'shelves', 'attributeTypes', 'attribute
  */
 export function isAffectedByCheckinOrUpdate(key: QueryKey): boolean {
   if (area(key) === 'changesets' && detail(key) === 'byId') return false;
+  if (isIncomingChangesetPage(key)) return false;
   return !UNTOUCHED_BY_CHECKINS.includes(area(key) as string);
 }
 
@@ -173,7 +183,7 @@ export function isAffectedByNewChangesets(key: QueryKey): boolean {
   // The workspace's own version of a file (no revision spec) changes with the workspace, not with others' checkins.
   if (area(key) === 'annotate' && key[4] == null) return false;
   if (UNTOUCHED_BY_CHECKINS.includes(area(key) as string)) return false;
-  return !isIncomingCheck(key);
+  return !isIncomingCheck(key) && !isIncomingChangesetPage(key);
 }
 
 /**
