@@ -1,7 +1,8 @@
 // What the protectMain hook (protectMain.mjs) refuses: no commit, merge, pull, rebase, cherry-pick, revert or am
-// while `main` is checked out, but for a fast-forward to `origin/main`, and no push to `main`. It follows `cd <dir>`, `git -C <dir>` and `git switch`/`git checkout`
-// inside one command line, so `git checkout main && git merge feature/x` is caught before it runs. Pure but for
-// `checkedOutBranch`, so the tests feed it command lines and branches.
+// while `main` is checked out, but for a fast-forward to `origin/main`, and no push to `main`. It follows
+// `cd <dir>`, `git -C <dir>` and `git switch`/`git checkout` inside one command line, so
+// `git checkout main && git merge feature/x` is caught before it runs. Pure but for `checkedOutBranch`, so the tests
+// feed it command lines and branches.
 //
 // It reads command lines, not a full shell: these get through unseen (fail open), and that is accepted:
 // `bash -c "..."`, subshells `( ... )`, `--git-dir=`, `cd ~/...` or `cd "$VAR"`, Git Bash paths (`cd /c/Users/...`),
@@ -12,7 +13,7 @@ import { resolve } from 'node:path';
 
 const PROTECTED_BRANCH = 'main';
 const WRITING_SUBCOMMANDS = new Set(['commit', 'merge', 'pull', 'rebase', 'cherry-pick', 'revert', 'am']);
-/** What a fast-forward may name and still only bring main up to date with the remote's (`git pull --ff-only origin main`). */
+/** What a fast-forward may name and still only bring main up to date (`git pull --ff-only origin main`). */
 const UPSTREAM_OF_MAIN = new Set(['origin', PROTECTED_BRANCH, `origin/${PROTECTED_BRANCH}`, '@{u}', '@{upstream}']);
 /** Options that only stop or inspect an operation already under way, which is how an agent backs out of a mistake. */
 const BACKING_OUT_OPTIONS = new Set(['--abort', '--quit', '--show-current-patch']);
@@ -106,16 +107,19 @@ function withoutHeredocBodies(command) {
     lines.push(line);
     for (let i = 0; i < line.length; i++) {
       const char = line[i];
-      if (quote) {
-        if (char === quote) quote = null;
-      } else if (char === '"' || char === "'") {
-        quote = char;
-      } else if (line.startsWith('<<', i) && line[i + 2] !== '<') {
-        const heredoc = /^<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1/.exec(line.slice(i));
+      if (line.startsWith('<<<', i) && quote !== "'") {
+        i += 2; // a here-string: its word is on this line
+      } else if (line.startsWith('<<', i) && quote !== "'") {
+        // Inside double quotes too: `-m "$(cat <<'EOF' ...)"` is how Claude Code hands git a message.
+        const heredoc = /^<<-?\s*\\?(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1/.exec(line.slice(i));
         if (heredoc) {
           pendingDelimiters.push(heredoc[2]);
           i += heredoc[0].length - 1;
         }
+      } else if (quote) {
+        if (char === quote) quote = null;
+      } else if (char === '"' || char === "'") {
+        quote = char;
       }
     }
     for (const delimiter of pendingDelimiters) {
@@ -128,7 +132,7 @@ function withoutHeredocBodies(command) {
 }
 
 /** A segment's words, unquoted: enough for git's arguments, not a full shell parser. */
-export function shellWords(segment) {
+function shellWords(segment) {
   const words = [];
   let current = '';
   let inWord = false;
