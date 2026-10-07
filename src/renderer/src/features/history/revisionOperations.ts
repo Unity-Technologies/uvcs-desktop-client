@@ -1,3 +1,4 @@
+import type { RepositoryVersion } from '@shared/domain/content';
 import type { RevisionRef } from '@shared/domain/revision';
 import { api } from '../../api/client';
 import { currentExternalApps } from '../../components/externalApps/externalApps';
@@ -9,17 +10,27 @@ import { toast } from '../../ui/toast/toastStore';
  * Saves the revision to a temp file and opens it: in the editor `editorId`, with its default app for `null`, and as its
  * menu's first entry does when omitted (the user's editor, else the default app: a double-click in Browse repository).
  */
-export async function openRevision(workspacePath: string, revision: RevisionRef, fileName: string, editorId: string | null = currentExternalApps().editorId): Promise<void> {
+export function openRevision(workspacePath: string, revision: RevisionRef, fileName: string, editorId: string | null = currentExternalApps().editorId): Promise<void> {
+  return openVersion(workspacePath, { kind: 'revision', revision, fileName }, fileName, editorId);
+}
+
+export function saveRevisionAs(workspacePath: string, revision: RevisionRef, fileName: string): Promise<void> {
+  return saveVersionAs(workspacePath, { kind: 'revision', revision, fileName }, fileName);
+}
+
+/** `openRevision` for any version kept in the repository, e.g. a merge's incoming or base version of a file. */
+export async function openVersion(workspacePath: string, version: RepositoryVersion, fileName: string, editorId: string | null = currentExternalApps().editorId): Promise<void> {
   try {
-    await api.history.openRevision(workspacePath, revision, fileName, editorId ?? undefined);
+    await api.history.openRevision(workspacePath, version, fileName, editorId ?? undefined);
   } catch (error) {
     toast.error("Couldn't open the revision", error);
   }
 }
 
-export async function saveRevisionAs(workspacePath: string, revision: RevisionRef, fileName: string): Promise<void> {
+/** `saveRevisionAs` for any version kept in the repository. */
+export async function saveVersionAs(workspacePath: string, version: RepositoryVersion, fileName: string): Promise<void> {
   try {
-    const savedPath = await api.history.saveRevisionAs(workspacePath, revision, fileName);
+    const savedPath = await api.history.saveRevisionAs(workspacePath, version, fileName);
     if (savedPath) toast.success('Revision saved', savedPath);
   } catch (error) {
     toast.error("Couldn't save the revision", error);

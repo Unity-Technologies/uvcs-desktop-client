@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupReviewStatus, hasMark, needsReview, reviewableOf, reviewProgress, shouldMarkReviewed, shownStatusOf, type ReviewStatus } from './reviewStatus';
+import { groupReviewStatus, hasMark, needsReview, partialReviewCount, reviewableOf, reviewProgress, shouldMarkReviewed, shownStatusOf, type ReviewStatus } from './reviewStatus';
 
 const statuses: Record<string, ReviewStatus | null> = { a: 'reviewed', b: 'changedSinceReview', d: 'unreviewed', folder: null };
 const statusOf = (item: string): ReviewStatus | null => statuses[item] ?? null;
@@ -26,6 +26,12 @@ describe('review status', () => {
     expect(groupReviewStatus(['a', 'folder'], statusOf)).toBe('reviewed');
     expect(groupReviewStatus(['a', 'b'], statusOf)).toBe('unreviewed');
     expect(groupReviewStatus(['folder'], statusOf)).toBeNull();
+  });
+
+  it("counts a folder's reviewed files while its review is under way, not before or after", () => {
+    expect(partialReviewCount(['a', 'b', 'd', 'folder'], statusOf)).toBe('1/3');
+    expect(partialReviewCount(['b', 'd'], statusOf)).toBeNull();
+    expect(partialReviewCount(['a', 'folder'], statusOf)).toBeNull();
   });
 
   it('reviews files, not folders', () => {

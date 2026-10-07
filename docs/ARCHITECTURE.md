@@ -18,6 +18,7 @@ you touch:
 | `features/diff.md`                      | Editing, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
 | `features/model-diff.md`                | 3D models (FBX, OBJ, glTF): reading them as Unity imports them, what changed in Unity's terms, the 3D view |
 | `features/merge.md`                     | The merge page, conflict resolution, external merge tools, finishing a task    |
+| `features/incoming.md`                  | Incoming: changesets and their files, conflicts with your changes, updating    |
 | `features/open-with.md`                 | Finding apps per OS, the editors and terminals, opening items in them          |
 | `features/shelves-and-switching.md`     | Switching with changes, a workspace on a shelve, shelves in Changes, two people on one branch |
 | `features/files-history-annotate.md`    | Files, Browse repository, Go to file, cut and paste, history, annotate         |
@@ -87,9 +88,10 @@ and many people use the same server. Every `cm` command other than local reads (
   says a click checks them against the local changes, then that it is checking or couldn't (`cardCheck`); pinning the
   card (that click), opening Incoming or Update reads the diff, Update again right before updating
   (`chipReadsIncomingChanges`). A card whose reads failed says so (`cardFailed`). Incoming reads the newest 200
-  changesets with the incoming changes and "Show 200 more" (reached by the arrows; Enter, then the arrows go on from the
-  page's first changeset) reads the next older page (`changesetid <` the oldest shown, `useIncomingChangesetList`); what
-  it reads is decided from the pages cached, not from the list's state, so it goes on after a visit elsewhere
+  changesets with the incoming changes and "Show 200 more" (a button after the changesets, outside their listbox,
+  reached with Tab: `IncomingShowMore`; pressed from the keyboard, the arrows go on from the first changeset read,
+  `showMoreLanding`) reads the next older page (`changesetid <` the oldest shown, `useIncomingChangesetList`); what it
+  reads is decided from the pages cached, not from the list's state, so it goes on after a visit elsewhere
   (`showMoreStep`), and a failed page says so once. Counts past what was read show as "200+". Those pages and the card's
   read are keyed by the head and left out of the automatic refreshes (new changesets, check-ins, updates, switches,
   focus: `isIncomingChangesetPage`, `staleTime: Infinity`): a new head is a new key. Refresh reads the newest page
@@ -614,6 +616,51 @@ renderer/src/
   pending changes only (Files, Changes): other lists would need a `cm lock list` of their own. The Changes list renders
   its file and folder rows memoized with stable callbacks: holding ↓ over 100,000 changes re-renders none of them
   (0.5-0.6 ms a step).
+- **Lists of changed files** read and work the same everywhere: Changes, every diff (changeset, branch, shelve, code
+  review: `DiffEntryList`), the details panels' changed files (`ChangedFilesSection`), Incoming and the merge page.
+  - **One order**: by path, folder by folder, names as people read them (`file_2` before `file_10`, case only between
+    names otherwise equal; different names read the same, "v01" and "v1" or a name in two Unicode forms, by their code
+    units, so each folder's files stay together): `comparePaths` (`shared/pathOrder`), used where the files are read
+    (`parseDiffEntries`, `parseMergePlan`) and by Changes (`sortChanges`). A list and a tree show the files in the same
+    order. Ordering by kind of change first was tried and rejected: it split a folder's changes apart, and a row jumped
+    to another group when its status changed; the status chips of the filter bar (`useChangeFilter`) are how to look at
+    one kind. Sorting controls were rejected too: the only other order anyone asked for is by kind, which the chips
+    give.
+  - **One layout, List or Tree**, for every list at once and across sessions (`useFileListLayoutStore`, which took the
+    one Changes kept first). Its switch, a menu (`FileListLayoutMenu`: it takes the room of one button), ends the filter
+    bar, so it is in the same place in each list; a details panel too short for a filter bar has it in its title.
+  - **One tree**: `layoutPathTree` (`lib/pathTree`) lays out any items with a path, in n·log n: a folder's row, folders
+    holding only the next one sharing it ("deep/very"), and a folder that is an item itself (an added or moved folder)
+    as its own row, with its status. Every folder row is `TreeFolderLabel` (chevron, icon, name, and how many items it
+    holds while closed); `FileTreeCell` indents rows to their level. A click, Enter, ← and → open and close folders
+    (`pathTreeKeyMove`, `groupedTreeKeyMove`); a folder's menu and the review key act on everything in it
+    (`itemsUnderRows`), and in review mode its mark marks every file in it, showing how far its review got ("2/5",
+    `partialReviewCount`). Closed folders are remembered for the session per list (`useCollapsedFolders`: the Changes of
+    a workspace, one diff, one details pane, one Incoming scope, one merge), so closing one in a changeset's diff leaves
+    every other diff alone. A list is scoped by its workspace too (`folderListScope`): `/main/feature` or cs:3 name
+    other things in another repository. A selection made from outside the list (a diff opened on a file, the merge
+    page or a resolve run moving to a conflict) opens the groups and folders holding it, so its row shows
+    (`useOpenToSelected`, `rowsHolding`); only a new selection opens anything, so a folder closed around it stays closed.
+  - **One way to group**: a list whose files fall in groups (Changes' changelists, Incoming's conflicts with your
+    changes and changes to apply, the merge page's conflicts and changes to apply) lays them out with
+    `layoutGroupedTree` (`lib/groupedPathTree`): each group's header row (`TreeGroupLabel`: chevron, name, count, what
+    it is as its tooltip), then its files as a list or a tree, a level in (`groupedRowLevel`). Groups close as folders
+    do. A group only exists where the user acts on it differently; kinds of change are never groups, the chips filter by
+    them.
+  - **One list**: `FileTreeList` (`components/`) is every one of them but Changes, which adds checkboxes and drag and
+    drop, and the details panes' short lists: the filter bar, then the rows, grouped or not (`useGroupedFileTree`,
+    `useFileTree`), with a desktop list's selection of several rows and their menu, which acts on every item the
+    selected rows stand for. A list renders its own rows (`DiffEntryRow`, `MergeItemList`'s) and adds its marks (a
+    conflict's status, the review mark).
+  - **One menu**: a file's menu is `changedFileMenu` (`components/`) in every list but Changes: its history (annotated
+    or not), "Open this revision" and "Save this revision as…" for the version the list shows (a diff's newer side, a
+    merge's incoming version; nothing to open for a deleted file or a folder), and Copy; a list adds its own after the
+    shared entries of each group (a diff the review mark, `diffEntryMenu`; a merge the ways to settle a conflict,
+    `mergeItemMenu`). Nothing is read to build it: what Open and Save as take out of the repository is a
+    `RepositoryVersion` (a revision, or a path or item at a changeset, as a merge knows its sides), read when they run.
+  - **Folders once**: a folder added or deleted along with what it holds is left out, its items say it already, but a
+    moved one stays, a move listing the folder alone (`withoutRepeatedFolders`, `lib/enclosingFolders`: `listedEntries`
+    for a diff, Incoming and a details panel's changed files, so their counts agree; `buildMergeItems` for a merge).
 - **File icons**: `ItemIcon` draws every file as the same filled Lucide page (`--icon-file` on `--icon-file-fill`) beside solid
   folders (directories and xlinks; `itemIconShape`), so every row reads with one weight; a glyph on the page tells the
   file's family (`fileFamilyOf`, by name

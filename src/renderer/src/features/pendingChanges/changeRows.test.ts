@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { PendingChange } from '@shared/domain/pendingChanges';
 import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
+import type { FileListLayout } from '../../components/fileListLayoutStore';
 import { treeArrowMove } from '../../lib/treeArrowMove';
 import { rowCheckState } from './changeRowChecks';
 import { changeTreeArrowRows, LEVEL_INDENT, rowIndent, topLevelCheckboxInset, treeLevel } from './changeRowLevels';
-import { changesUnderRow, collapseRows, layoutChangeRows, menuTargetOf, type ChangeRow, type ChangesGrouping, type ChangesLayout } from './changeRows';
+import { changesUnderRow, collapseRows, layoutChangeRows, menuTargetOf, type ChangeRow, type ChangesGrouping } from './changeRows';
 
 /** The rows the list shows. */
 function buildChangeRows({ collapsed, ...layout }: Parameters<typeof layoutChangeRows>[0] & { collapsed: ReadonlySet<string> }): ChangeRow[] {
@@ -21,15 +22,15 @@ const nested = [changes[3]!, changes[0]!];
 const base = {
   changes,
   changelists: [],
-  layout: 'list' as ChangesLayout,
+  layout: 'list' as FileListLayout,
   grouping: 'none' as ChangesGrouping,
   collapsed: new Set<string>(),
 };
 
 describe('buildChangeRows', () => {
-  it('lists every change without a header, by status in filter order and then by path', () => {
+  it('lists every change without a header, by path', () => {
     const rows = buildChangeRows(base);
-    expect(rows.map((row) => row.key)).toEqual(['change:src/a.ts', 'change:src/b.ts', 'change:src/lib/c.ts', 'change:new.txt']);
+    expect(rows.map((row) => row.key)).toEqual(['change:new.txt', 'change:src/a.ts', 'change:src/b.ts', 'change:src/lib/c.ts']);
   });
 
   it('reports a mixed check state when only some changes are checked', () => {
@@ -47,7 +48,7 @@ describe('buildChangeRows', () => {
         { name: 'Empty', description: '' },
       ],
     });
-    expect(rows.filter((row) => row.type === 'group').map((row) => [row.key, row.type === 'group' && row.changes.length])).toEqual([
+    expect(rows.filter((row) => row.type === 'group').map((row) => [row.key, row.type === 'group' && row.items.length])).toEqual([
       ['changelist:', 3],
       ['changelist:UI', 1],
       ['changelist:Empty', 0],
@@ -57,9 +58,9 @@ describe('buildChangeRows', () => {
   it('nests changes under their folders in tree layout', () => {
     const rows = buildChangeRows({ ...base, changes: nested, layout: 'tree' });
     expect(rows.map((row) => [row.key, row.type === 'group' ? -1 : row.depth])).toEqual([
-      ['directory:all:src', 0],
+      ['folder:all:src', 0],
       ['change:src/b.ts', 1],
-      ['directory:all:src/lib', 1],
+      ['folder:all:src/lib', 1],
       ['change:src/lib/c.ts', 2],
     ]);
   });
@@ -67,35 +68,35 @@ describe('buildChangeRows', () => {
   it('shows folders that only hold the next one as one row, named by their path', () => {
     const paths = ['deep/very/long/a.ts', 'deep/very/long/b.ts', 'deep/very/other/c.ts', 'z.ts'];
     const rows = buildChangeRows({ ...base, changes: paths.map((path) => change(path, ['changed'])), layout: 'tree' });
-    expect(rows.map((row) => [row.key, row.type === 'directory' ? row.name : '', row.type === 'group' ? -1 : row.depth])).toEqual([
-      ['directory:all:deep/very', 'deep/very', 0],
-      ['directory:all:deep/very/long', 'long', 1],
+    expect(rows.map((row) => [row.key, row.type === 'folder' ? row.name : '', row.type === 'group' ? -1 : row.depth])).toEqual([
+      ['folder:all:deep/very', 'deep/very', 0],
+      ['folder:all:deep/very/long', 'long', 1],
       ['change:deep/very/long/a.ts', '', 2],
       ['change:deep/very/long/b.ts', '', 2],
-      ['directory:all:deep/very/other', 'other', 1],
+      ['folder:all:deep/very/other', 'other', 1],
       ['change:deep/very/other/c.ts', '', 2],
       ['change:z.ts', '', 0],
     ]);
-    const collapsedChain = buildChangeRows({ ...base, changes: paths.map((path) => change(path, ['changed'])), layout: 'tree', collapsed: new Set(['directory:all:deep/very']) });
-    expect(collapsedChain.map((row) => row.key)).toEqual(['directory:all:deep/very', 'change:z.ts']);
+    const collapsedChain = buildChangeRows({ ...base, changes: paths.map((path) => change(path, ['changed'])), layout: 'tree', collapsed: new Set(['folder:all:deep/very']) });
+    expect(collapsedChain.map((row) => row.key)).toEqual(['folder:all:deep/very', 'change:z.ts']);
   });
 
   it('ends a row of folders at a folder that is a change itself, so it keeps its status', () => {
     const folder = { ...change('a/new', ['added']), itemType: 'directory' as const };
     const rows = buildChangeRows({ ...base, changes: [folder, change('a/new/x/f.ts', ['added'])], layout: 'tree' });
-    expect(rows.map((row) => [row.key, row.type === 'directory' ? row.name : ''])).toEqual([
-      ['directory:all:a/new', 'a/new'],
-      ['directory:all:a/new/x', 'x'],
+    expect(rows.map((row) => [row.key, row.type === 'folder' ? row.name : ''])).toEqual([
+      ['folder:all:a/new', 'a/new'],
+      ['folder:all:a/new/x', 'x'],
       ['change:a/new/x/f.ts', ''],
     ]);
-    expect(rows[0]).toMatchObject({ change: folder });
+    expect(rows[0]).toMatchObject({ item: folder });
   });
 
   it('shows a folder that is a change itself as the row of its folder, holding its own change and its files', () => {
     const folder = { ...change('privs', ['private']), itemType: 'directory' as const };
     const rows = buildChangeRows({ ...base, changes: [change('privs/a.txt', ['private']), folder, change('private.txt', ['private'])], layout: 'tree' });
-    expect(rows.map((row) => row.key)).toEqual(['change:private.txt', 'directory:all:privs', 'change:privs/a.txt']);
-    expect(rows[1]).toMatchObject({ change: folder });
+    expect(rows.map((row) => row.key)).toEqual(['change:private.txt', 'folder:all:privs', 'change:privs/a.txt']);
+    expect(rows[1]).toMatchObject({ item: folder });
     expect(rowCheckState(rows[1]!, (item) => item !== folder)).toBe('mixed');
     expect(changesUnderRow(rows[1]!).map((item) => item.path)).toEqual(['privs', 'privs/a.txt']);
   });
@@ -103,7 +104,7 @@ describe('buildChangeRows', () => {
   it('gives each folder every change in it, at every level', () => {
     const paths = ['src/a.ts', 'src/lib/b.ts', 'src/lib/deep/c.ts', 'src-old.ts', 'z.ts'];
     const rows = buildChangeRows({ ...base, changes: paths.map((path) => change(path, ['changed'])), layout: 'tree' });
-    const folderContents = rows.filter((row) => row.type === 'directory').map((row) => [row.path, changesUnderRow(row).map((item) => item.path)]);
+    const folderContents = rows.filter((row) => row.type === 'folder').map((row) => [row.path, changesUnderRow(row).map((item) => item.path)]);
     expect(folderContents).toEqual([
       ['src', ['src/a.ts', 'src/lib/b.ts', 'src/lib/deep/c.ts']],
       ['src/lib', ['src/lib/b.ts', 'src/lib/deep/c.ts']],
@@ -120,11 +121,11 @@ describe('buildChangeRows', () => {
   it('keeps each folder of the tree in one place, whatever sorts between its path and its files', () => {
     const paths = ['a/c.txt', 'a-b.txt', 'a/b.txt', 'Src/c.ts', 'src/b.ts', 'Src/a.ts'];
     const rows = buildChangeRows({ ...base, changes: paths.map((path) => change(path, ['changed'])), layout: 'tree' });
-    const directories = rows.filter((row) => row.type === 'directory').map((row) => row.key);
+    const directories = rows.filter((row) => row.type === 'folder').map((row) => row.key);
     expect(new Set(directories).size).toBe(directories.length);
-    const underA = rows.findIndex((row) => row.key === 'directory:all:a');
+    const underA = rows.findIndex((row) => row.key === 'folder:all:a');
     expect(rows.slice(underA + 1, underA + 3).map((row) => row.key)).toEqual(['change:a/b.txt', 'change:a/c.txt']);
-    const underSrc = rows.findIndex((row) => row.key === 'directory:all:Src');
+    const underSrc = rows.findIndex((row) => row.key === 'folder:all:Src');
     expect(rows.slice(underSrc + 1, underSrc + 3).map((row) => row.key)).toEqual(['change:Src/a.ts', 'change:Src/c.ts']);
   });
 
@@ -134,11 +135,11 @@ describe('buildChangeRows', () => {
       changes: [change('bin/out.log', ['ignored']), change('src/a.ts', ['changed']), change('src/build.log', ['ignored'])],
       layout: 'tree',
     });
-    expect(rows.filter((row) => row.type === 'directory').map((row) => [row.path, row.type === 'directory' && rowCheckState(row, () => true)])).toEqual([
+    expect(rows.filter((row) => row.type === 'folder').map((row) => [row.path, row.type === 'folder' && rowCheckState(row, () => true)])).toEqual([
       ['bin', null],
       ['src', true],
     ]);
-    const files = rows.filter((row) => row.type === 'change');
+    const files = rows.filter((row) => row.type === 'file');
     expect(files.map((row) => rowCheckState(row, (item) => item.path !== 'src/a.ts'))).toEqual([null, false, null]);
   });
 
@@ -147,9 +148,9 @@ describe('buildChangeRows', () => {
       ...base,
       changes: [change('src/a.ts', ['changed']), change('src/b.ts', ['changed']), change('z.ts', ['changed'])],
       layout: 'tree',
-      collapsed: new Set(['directory:all:src']),
+      collapsed: new Set(['folder:all:src']),
     });
-    expect(rows.map((row) => row.key)).toEqual(['directory:all:src', 'change:z.ts']);
+    expect(rows.map((row) => row.key)).toEqual(['folder:all:src', 'change:z.ts']);
   });
 
   it('leaves out what collapsed changelists and folders hold, and nothing after them', () => {
@@ -157,19 +158,19 @@ describe('buildChangeRows', () => {
     expect(layout.map((row) => row.key)).toEqual([
       'changelist:',
       'change:new.txt',
-      'directory:changelist::src',
+      'folder:changelist::src',
       'change:src/b.ts',
-      'directory:changelist::src/lib',
+      'folder:changelist::src/lib',
       'change:src/lib/c.ts',
       'changelist:UI',
-      'directory:changelist:UI:src',
+      'folder:changelist:UI:src',
       'change:src/a.ts',
     ]);
-    const shown = collapseRows(layout, new Set(['directory:changelist::src', 'directory:changelist::src/lib', 'changelist:UI']));
-    expect(shown.map((row) => [row.key, row.type !== 'change' && row.collapsed])).toEqual([
+    const shown = collapseRows(layout, new Set(['folder:changelist::src', 'folder:changelist::src/lib', 'changelist:UI']));
+    expect(shown.map((row) => [row.key, row.type !== 'file' && row.collapsed])).toEqual([
       ['changelist:', false],
       ['change:new.txt', false],
-      ['directory:changelist::src', true],
+      ['folder:changelist::src', true],
       ['changelist:UI', true],
     ]);
     expect(collapseRows(layout, new Set())).toBe(layout);
@@ -178,15 +179,15 @@ describe('buildChangeRows', () => {
 
 describe('changeTreeArrowRows', () => {
   it('lets ← and → close and open changelists and folders, and step between them and their files', () => {
-    const rows = buildChangeRows({ ...base, changes: nested, layout: 'tree', grouping: 'changelist', collapsed: new Set(['directory:changelist::src/lib']) });
+    const rows = buildChangeRows({ ...base, changes: nested, layout: 'tree', grouping: 'changelist', collapsed: new Set(['folder:changelist::src/lib']) });
     const arrowRows = changeTreeArrowRows(rows);
     const at = (key: string) => rows.findIndex((row) => row.key === key);
-    expect(rows.map((row) => row.key)).toEqual(['changelist:', 'directory:changelist::src', 'change:src/b.ts', 'directory:changelist::src/lib']);
-    expect(treeArrowMove(arrowRows, at('directory:changelist::src/lib'), 'ArrowRight')).toEqual({ kind: 'toggle' });
-    expect(treeArrowMove(arrowRows, at('directory:changelist::src'), 'ArrowLeft')).toEqual({ kind: 'toggle' });
+    expect(rows.map((row) => row.key)).toEqual(['changelist:', 'folder:changelist::src', 'change:src/b.ts', 'folder:changelist::src/lib']);
+    expect(treeArrowMove(arrowRows, at('folder:changelist::src/lib'), 'ArrowRight')).toEqual({ kind: 'toggle' });
+    expect(treeArrowMove(arrowRows, at('folder:changelist::src'), 'ArrowLeft')).toEqual({ kind: 'toggle' });
     expect(treeArrowMove(arrowRows, at('change:src/b.ts'), 'ArrowLeft')).toEqual({ kind: 'moveBy', step: -1 });
-    expect(treeArrowMove(arrowRows, at('directory:changelist::src'), 'ArrowRight')).toEqual({ kind: 'moveBy', step: 1 });
-    expect(treeArrowMove(arrowRows, at('directory:changelist::src/lib'), 'ArrowLeft')).toEqual({ kind: 'moveBy', step: -2 });
+    expect(treeArrowMove(arrowRows, at('folder:changelist::src'), 'ArrowRight')).toEqual({ kind: 'moveBy', step: 1 });
+    expect(treeArrowMove(arrowRows, at('folder:changelist::src/lib'), 'ArrowLeft')).toEqual({ kind: 'moveBy', step: -2 });
   });
 });
 
@@ -200,7 +201,7 @@ describe('menuTargetOf', () => {
   const row = (key: string) => rows.find((candidate) => candidate.key === key)!;
 
   it("opens a folder's or the default changelist's menu on the changes in it, not on the selected files", () => {
-    expect((menuTargetOf(row('directory:changelist::src')) as PendingChange[]).map((item) => item.path)).toEqual(['src/b.ts', 'src/lib/c.ts']);
+    expect((menuTargetOf(row('folder:changelist::src')) as PendingChange[]).map((item) => item.path)).toEqual(['src/b.ts', 'src/lib/c.ts']);
     expect((menuTargetOf(row('changelist:')) as PendingChange[]).length).toBe(3);
   });
 
@@ -220,7 +221,7 @@ describe('rowIndent', () => {
 
   it('keeps top-level files where the flat list has them when it becomes a tree', () => {
     const rows = buildChangeRows({ ...base, layout: 'tree' });
-    const rootFile = rows.find((row) => row.type === 'change' && row.depth === 0)!;
+    const rootFile = rows.find((row) => row.type === 'file' && row.depth === 0)!;
     expect(rowIndent(rootFile, false)).toBe(0);
     expect(topLevelCheckboxInset(rows)).toBe(0);
   });
@@ -243,10 +244,10 @@ describe('treeLevel', () => {
     const rows = buildChangeRows({ ...base, changes: nested, layout: 'tree', grouping: 'changelist' });
     expect(rows.map((row) => [row.type, treeLevel(row, true)])).toEqual([
       ['group', 1],
-      ['directory', 2],
-      ['change', 3],
-      ['directory', 3],
-      ['change', 4],
+      ['folder', 2],
+      ['file', 3],
+      ['folder', 3],
+      ['file', 4],
     ]);
   });
 
@@ -264,7 +265,7 @@ describe('buildChangeRows at scale', () => {
         ? change(`src/m${index % 20}/p${index % 10}/s${index % 5}/f${index}.cs`, index % 3 ? ['changed'] : ['checkedOut', 'changed'])
         : change(`flat/asset${index}.txt`, index % 4 ? ['private'] : ['added']),
     );
-  const layouts: [ChangesLayout, ChangesGrouping][] = [
+  const layouts: [FileListLayout, ChangesGrouping][] = [
     ['list', 'none'],
     ['tree', 'none'],
     ['tree', 'changelist'],
@@ -272,7 +273,7 @@ describe('buildChangeRows at scale', () => {
 
   it.each(layouts)('lays out a %s grouped by %s of 100,000 changes, every change once', (layout, grouping) => {
     const rows = buildChangeRows({ ...base, changes: many(100_000), layout, grouping });
-    expect(rows.filter((row) => row.type === 'change')).toHaveLength(100_000);
+    expect(rows.filter((row) => row.type === 'file')).toHaveLength(100_000);
   });
 
   it.each(layouts)('lays out a %s grouped by %s in n·log n work: twice the changes, about twice the reads', (layout, grouping) => {

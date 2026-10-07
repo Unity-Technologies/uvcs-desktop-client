@@ -14,7 +14,7 @@ interface ChangeSelectionPaneProps {
   /** The change the diff shows: it follows the selection once it settles. */
   diffChange: PendingChange | undefined;
   /** The folder or changelist the selection is on, when it is on no change. */
-  focusedFolder: Exclude<ChangeRow, { type: 'change' }> | undefined;
+  focusedFolder: Exclude<ChangeRow, { type: 'file' }> | undefined;
   fileSteps: FileSteps;
   reviewMarks: ReviewMarks;
 }
@@ -36,7 +36,7 @@ export function ChangeSelectionPane({ workspacePath, selectedCount, diffChange, 
       <EmptyState
         icon={<Folder size={24} />}
         title={focusedFolder.type === 'group' ? focusedFolder.label : focusedFolder.path}
-        description={`${pluralize(focusedFolder.changes.length, 'change')}. Select a file to see its diff.`}
+        description={`${pluralize(focusedFolder.items.length, 'change')}. Select a file to see its diff.`}
       />
     );
   }

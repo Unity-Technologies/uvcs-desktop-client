@@ -3,6 +3,7 @@ import { formatCount } from '../lib/text';
 import { FilterField } from '../ui/FilterField';
 import { SearchField } from '../ui/SearchField';
 import { Tooltip } from '../ui/Tooltip';
+import { FileListLayoutMenu } from './FileListLayoutMenu';
 import { changeFilterPlaceholder, countTones, matchesChangeFilter, offeredTones } from './changeFilter';
 import { STATUS_LETTERS, StatusLetter, type StatusTone } from './StatusBadge';
 import styles from './useChangeFilter.module.css';
@@ -18,22 +19,30 @@ const TONE_LABELS: Record<StatusTone, string> = {
   muted: 'Ignored, cloaked and hidden',
 };
 
-interface ChangeFilterResult<T> {
+export interface ChangeFilterResult<T> {
   visible: T[];
   /** The text typed, for highlighting matches. */
   query: string;
   /** Empties the text and turns every status chip off. */
   clear: () => void;
-  /** The filter field followed by one toggle chip per status. */
+  /** The filter field followed by one toggle chip per status, and the List/Tree switch (`FileListLayoutMenu`). */
   bar: ReactNode;
 }
 
 /**
  * Filters a list of changed files by path and by status (A, M, D, R...), each file found by any of its statuses
- * (`statusTones`: a moved file that changed by C and M). `isViewFilter` for the list a view or page
+ * (`statusTones`: a moved file that changed by C and M). Its bar also holds the List/Tree switch every list of
+ * changed files shares, at the same place in each. `isViewFilter` for the list a view or page
  * works on (Changes, a diff's files): its field takes ⌘F as every view's filter does; a list inside details doesn't.
+ * `toneLabels` words a chip as the list's groups do (Incoming's "Conflicts with your changes").
  */
-export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tonesOf: (item: T) => readonly StatusTone[], isViewFilter = false): ChangeFilterResult<T> {
+export function useChangeFilter<T>(
+  items: T[],
+  pathOf: (item: T) => string,
+  tonesOf: (item: T) => readonly StatusTone[],
+  isViewFilter = false,
+  toneLabels: Partial<Record<StatusTone, string>> = {},
+): ChangeFilterResult<T> {
   const [query, setQuery] = useState('');
   const [chosenTones, setChosenTones] = useState<ReadonlySet<StatusTone>>(new Set());
 
@@ -69,7 +78,8 @@ export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tone
       )}
       {tones.map((tone) => {
         const count = counts.get(tone) ?? 0;
-        const label = count > 0 ? `${TONE_LABELS[tone]} (${formatCount(count)})` : TONE_LABELS[tone];
+        const name = toneLabels[tone] ?? TONE_LABELS[tone];
+        const label = count > 0 ? `${name} (${formatCount(count)})` : name;
         return (
           <Tooltip key={tone} content={label}>
             <button type="button" className={styles.chip} data-tone={tone} data-empty={count === 0} aria-pressed={activeTones.has(tone)} aria-label={label} onClick={() => toggle(tone)}>
@@ -78,6 +88,9 @@ export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tone
           </Tooltip>
         );
       })}
+      <span className={styles.layout}>
+        <FileListLayoutMenu />
+      </span>
     </div>
   );
 

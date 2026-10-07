@@ -1,0 +1,7 @@
+/* The changesets above, then the files: the whole update's, or the changeset's picked above. */
+.pane {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}

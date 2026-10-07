@@ -6,7 +6,7 @@ import type { ChangeRow } from './changeRows';
  */
 export interface ChangeRowIndex {
   /** The rows of files, in order. */
-  changeRows: (ChangeRow & { type: 'change' })[];
+  changeRows: (ChangeRow & { type: 'file' })[];
   /** The keys of the files, in order. */
   orderedKeys: string[];
   /** The keys of every row, folders and changelists too: the keyboard moves through all of them. */
@@ -15,14 +15,14 @@ export interface ChangeRowIndex {
 }
 
 export function indexChangeRows(rows: ChangeRow[]): ChangeRowIndex {
-  const changeRows: (ChangeRow & { type: 'change' })[] = [];
+  const changeRows: (ChangeRow & { type: 'file' })[] = [];
   const orderedKeys: string[] = [];
   const rowKeys: string[] = [];
   const rowIndexes = new Map<string, number>();
   rows.forEach((row, index) => {
     rowKeys.push(row.key);
     rowIndexes.set(row.key, index);
-    if (row.type !== 'change') return;
+    if (row.type !== 'file') return;
     changeRows.push(row);
     orderedKeys.push(row.key);
   });

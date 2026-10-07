@@ -10,7 +10,9 @@ import type {
   MergePlan,
   MergePlanStatus,
 } from '@shared/domain/merge';
+import { comparePaths } from '@shared/pathOrder';
 import { FIELD_SEPARATOR } from './formatRecords';
+import { directoryConflictWords } from './directoryConflictWords';
 
 /** Separates fields in `cm merge --machinereadable` output. */
 export const MERGE_FIELD_SEPARATOR = FIELD_SEPARATOR;
@@ -97,7 +99,7 @@ function readStatus(plan: PrintedMergePlan, [code = '', message]: string[]): voi
 }
 
 function byPath(a: { path: string }, b: { path: string }): number {
-  return a.path.localeCompare(b.path);
+  return comparePaths(a.path, b.path);
 }
 
 function addContributor(contributors: Partial<MergeContributors>, [role, changesetId, , branch]: string[]): void {
@@ -132,17 +134,18 @@ function parseChangeToApply([operation, path, destinationPath]: string[]): Merge
 
 /**
  * `TYPE, title, explanation, source text, destination text, item id, is directory`, followed by
- * each side's operation and its path (or its old and new paths for moves).
+ * each side's operation and its path (or its old and new paths for moves). `cm`'s title and explanation give way to
+ * plain words (`directoryConflictWords`).
  */
 function parseDirectoryConflict(fields: string[]): DirectoryConflict {
   const [type, title, explanation, sourceText, destinationText, itemId, isDirectory, ...sides] = fields;
   const [source, rest] = parseSide(sides, sourceText!);
   const [destination] = parseSide(rest, destinationText!);
+  const conflictType = DIRECTORY_CONFLICT_TYPES[type!] ?? 'xlink';
 
   return {
-    type: DIRECTORY_CONFLICT_TYPES[type!] ?? 'xlink',
-    title: title!,
-    explanation: explanation!,
+    type: conflictType,
+    ...directoryConflictWords(conflictType, title!, explanation!),
     itemId: Number(itemId),
     isDirectory: isDirectory === 'True',
     source,

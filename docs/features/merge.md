@@ -42,6 +42,22 @@ way from their middle; it keeps that room in a narrow window, ARCHITECTURE.md "L
 ("cs:3 → cs:5"; a click lists them with the base), where it stands ("2 conflicts to decide", the full summary in its
 tooltip) and the merge button, the primary action only once nothing waits. Merging into a server branch, a second row
 holds the changeset comment (`Merge from <source>`) and the button.
+The list (`MergeItemList`) is every list of changed files (ARCHITECTURE.md "Lists of changed files") in two groups,
+"Conflicts" then "Changes to apply" (`mergeItemGroups`), each by path: the filter (the "!" chip for conflicts,
+`mergeItemTones`), List or Tree, and several items selected at once, whose menu keeps yours or the incoming version of
+every conflicting file among them (`keepVersionEntries`). One item's menu is any changed file's (ARCHITECTURE.md "One
+menu": history, open or save the incoming version, Copy) with what a merge adds (`mergeItemMenu`): a conflicting file, the same
+entries as in Incoming (`conflictMenuEntries`), "Resolve in <tool>" (the preferred one, `primaryMergeTool`; disabled while files resolve one by one), Keep yours or
+incoming, Start over once decided, annotate at the incoming revision `cm` names for it, and "Open version ▸" Yours (the
+workspace file; the destination's version merging into a server branch), Incoming and Base; a directory conflict its
+panel's choices, Keep both under the name the panel suggests. A directory conflict holding another conflict (a folder
+added on both sides, a file in it changed on both) is its folder's row in a tree: selecting that row selects the
+conflict, and its menu acts on it alone (`mergeItemAt`, `mergeItemsActedOn`). A clean change isn't annotated: `cm` names only the
+merge's changesets, where the file may not have changed. A folder added with its files is listed once, through them
+(ARCHITECTURE.md "Folders once"). The page starts on the first item that needs the user in the order the list shows
+(`firstWaiting`), and goes back there after a run. Directory conflicts are named in plain words ("Added on both sides
+with the same name", `directoryConflictWords`), not `cm`'s ("Evil twin conflict"). Sandbox:
+`scripts/sandboxes/merge-conflicts.sh`.
 Every status reads as what the merge will do, never as done (`mergeStatus`): "Will merge automatically", "Needs your
 decision", then the user's choice ("Keeping yours", "Keeping incoming", "Combined", "Edited by you"; "Open in VS Code…",
 "Resolved in VS Code" for merge tools): an icon in the list and a chip in the file's toolbar, with a short tooltip. Sides
@@ -65,7 +81,8 @@ or to Complete merge. With one file left, its own toolbar is the way.
 A conflicting file is read-only. Its toolbar holds the file, its status and the ways out: "Resolve in <tool>"
 (`MergeToolButton`, a split button, primary while the file waits and the header offers nothing; disabled during a run:
 the other tools found, "Choose another app…", "Edit the text in the app" and the settings behind the caret), then "Keep Yours | Incoming | Both" for the whole file (`KeepChoices`, `conflictChoices`)
-and Start over. Below, short one-line views: "Conflicts" with the count left, then "Changes" (the destination now → after
+and Start over. In a narrow pane the controls wrap within themselves, the Keep choices under the tool's button, so none
+is cut off. Below, short one-line views: "Conflicts" with the count left, then "Changes" (the destination now → after
 the merge), "Yours", "Incoming" and "Base". Conflicts read as labeled blocks instead of conflict markers
 (`conflictHunkCss` over Pierre's view): a header naming the destination's side with Keep yours / Keep incoming / Keep both
 for that conflict, its lines, the source's label and its lines. While a tool has the file, a banner says so (Bring to

@@ -26,9 +26,11 @@ interface ChangesetDetailsProps {
   links?: ObjectLinks;
   /** Merges from and into it, where the view knows them. */
   relations?: Property[];
+  /** False where the files it changed are listed beside the panel already (Incoming). */
+  withChangedFiles?: boolean;
 }
 
-export function ChangesetDetails({ changeset, menu, links = PLAIN_LINKS, relations = [] }: ChangesetDetailsProps) {
+export function ChangesetDetails({ changeset, menu, links = PLAIN_LINKS, relations = [], withChangedFiles = true }: ChangesetDetailsProps) {
   const { data: workspace } = useWorkspaceInfo();
   const changesetLabels = useLabelsByChangeset().get(changeset.id) ?? [];
   const workspacePath = useWorkspacePath();
@@ -80,7 +82,7 @@ export function ChangesetDetails({ changeset, menu, links = PLAIN_LINKS, relatio
         { label: 'GUID', value: changeset.guid, mono: true, copyText: changeset.guid },
         ...relations,
       ]}
-      changes={<ChangedFilesSection target={{ kind: 'changeset', changesetId: changeset.id }} onOpen={(path) => openChangesetDiff(changeset, path)} />}
+      changes={withChangedFiles && <ChangedFilesSection target={{ kind: 'changeset', changesetId: changeset.id }} onOpen={(path) => openChangesetDiff(changeset, path)} />}
     />
   );
 }

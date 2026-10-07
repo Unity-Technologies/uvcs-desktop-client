@@ -22,12 +22,12 @@ describe('spaceToggle', () => {
   });
 
   it('with no file selected, toggles the folder the keyboard is on, over what it holds', () => {
-    const folder = row('directory:all:src');
+    const folder = row('folder:all:src');
     expect(spaceToggle([], folder, checkedPaths(['src/a.ts']))).toEqual({ rows: [folder], include: true });
     expect(spaceToggle([], folder, checkedPaths(['src/a.ts', 'src/b.ts']))).toEqual({ rows: [folder], include: false });
   });
 
   it('leaves a folder holding nothing to check in alone', () => {
-    expect(spaceToggle([], row('directory:all:bin'), checkedPaths([]))).toEqual({ rows: [], include: false });
+    expect(spaceToggle([], row('folder:all:bin'), checkedPaths([]))).toEqual({ rows: [], include: false });
   });
 });

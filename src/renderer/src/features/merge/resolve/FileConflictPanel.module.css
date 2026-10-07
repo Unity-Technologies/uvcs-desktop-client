@@ -26,11 +26,19 @@
   min-width: 0;
 }
 
+/*
+ * Wraps within itself too: in a narrow pane the tool's button and the Keep choices don't fit one row, and Keep goes
+ * under the button instead of being cut off at the pane's edge.
+ */
 .controls {
   display: flex;
-  flex: none;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
   gap: var(--space-2);
+  min-width: 0;
+  max-width: 100%;
   margin-left: auto;
 }
 

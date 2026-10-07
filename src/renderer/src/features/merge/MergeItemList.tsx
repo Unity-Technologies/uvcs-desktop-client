@@ -1,134 +1,119 @@
-import { useVirtualizer } from '@tanstack/react-virtual';
-import { useId, useImperativeHandle, useMemo, useRef, type KeyboardEvent, type Ref } from 'react';
+import type { ReactNode } from 'react';
 import type { ItemType } from '@shared/domain/pendingChanges';
+import { FileTreeCell } from '../../components/FileTreeCell';
+import { FileTreeList } from '../../components/FileTreeList';
 import { ItemPathRow } from '../../components/ItemPathRow';
-import { MAIN_FOCUS } from '../../lib/mainFocus';
+import { TreeFolderLabel } from '../../components/TreeFolderLabel';
+import type { MenuEntry } from '../../lib/actions';
+import type { GroupedTreeRow } from '../../lib/groupedPathTree';
+import type { PathTreeRow } from '../../lib/pathTree';
+import type { SelectionState } from '../../lib/selection';
 import { ConflictStatusChip } from './ConflictStatusChip';
 import type { MergeLabels } from './mergeDescription';
-import type { MergeItem, MergeListRow } from './mergeItems';
-import { mergeItemTypes } from './mergeItemTypes';
+import { MERGE_GROUP_TIPS, type MergeGroup, type MergeItem } from './mergeItems';
 import { changeTone, describeChange, directoryConflictStatus, fileConflictStatus, fileConflictTool } from './mergeStatus';
-import styles from './MergeItemList.module.css';
-
-const ROW_HEIGHT = 30;
 
 interface MergeItemListProps {
-  rows: MergeListRow[];
+  /** Conflicts, then the changes that apply cleanly, as a list or a tree (`useGroupedFileTree`). */
+  rows: GroupedTreeRow<MergeItem, MergeGroup>[];
+  tree: boolean;
+  toggleCollapsed: (key: string) => void;
+  /** What each repository path of the merge is, for its icon (`mergeItemTypes`). */
+  typeOf: (path: string) => ItemType;
   labels: MergeLabels;
-  selectedKey: string | null;
-  /** The file open in the merge tool while resolving one by one. */
-  runKey?: string | null;
-  onSelect: (key: string) => void;
-  ref?: Ref<HTMLDivElement>;
+  query: string;
+  filterBar: ReactNode;
+  selection: SelectionState;
+  onSelectionChange: (selection: SelectionState) => void;
+  contextMenu: (items: MergeItem[]) => MenuEntry[];
 }
 
-export function MergeItemList({ rows, labels, selectedKey, runKey, onSelect, ref }: MergeItemListProps) {
-  const viewportRef = useRef<HTMLDivElement>(null);
-  useImperativeHandle(ref, () => viewportRef.current!, []);
-  const itemKeys = rows.filter((row) => row.type === 'item').map((row) => row.key);
-  const typeOf = useMemo(() => mergeItemTypes(rows.flatMap((row) => (row.type === 'item' && row.item.kind === 'change' ? [row.item.change.path] : []))), [rows]);
-  const virtualizer = useVirtualizer({ count: rows.length, getScrollElement: () => viewportRef.current, estimateSize: () => ROW_HEIGHT, overscan: 12 });
-  const idPrefix = useId();
-  const selectedIndex = rows.findIndex((row) => row.key === selectedKey);
+/** What the merge does, item by item, as every list of changed files shows its files: in groups, as a list or a tree. */
+export function MergeItemList({ rows, tree, toggleCollapsed, typeOf, labels, query, filterBar, selection, onSelectionChange, contextMenu }: MergeItemListProps) {
 
-  const onKeyDown = (event: KeyboardEvent): void => {
-    // ⌥↑ ⌥↓ move through the changes of the diff beside the list (`useChangeNavigation`).
-    if ((event.key !== 'ArrowDown' && event.key !== 'ArrowUp') || event.altKey) return;
-    event.preventDefault();
-    const current = selectedKey ? itemKeys.indexOf(selectedKey) : -1;
-    const next = itemKeys[Math.min(itemKeys.length - 1, Math.max(0, current + (event.key === 'ArrowDown' ? 1 : -1)))];
-    if (!next) return;
-    onSelect(next);
-    virtualizer.scrollToIndex(rows.findIndex((row) => row.key === next));
+  const renderItem = (row: PathTreeRow<MergeItem>, level: number) => {
+    if (row.type === 'folder') {
+      return (
+        <FileTreeCell depth={level} tree={tree} folder>
+          <TreeFolderLabel name={row.name} collapsed={row.collapsed} count={row.items.length - (row.item ? 1 : 0)} extras={row.item && <MergeItemMarks item={row.item} labels={labels} />} />
+        </FileTreeCell>
+      );
+    }
+    return (
+      <FileTreeCell depth={level} tree={tree} folder={false}>
+        <MergeItemRow item={row.item} labels={labels} typeOf={typeOf} nameOnly={row.depth > 0} />
+      </FileTreeCell>
+    );
   };
 
   return (
-    <div
-      ref={viewportRef}
-      className={styles.list}
-      tabIndex={0}
-      role="listbox"
-      aria-label="Files to merge"
-      aria-activedescendant={selectedIndex === -1 ? undefined : `${idPrefix}-${selectedIndex}`}
-      onKeyDown={onKeyDown}
-      {...MAIN_FOCUS}
-    >
-      <div style={{ height: virtualizer.getTotalSize(), position: 'relative' }}>
-        {virtualizer.getVirtualItems().map((virtualRow) => {
-          const row = rows[virtualRow.index]!;
-          return (
-            <div
-              key={row.key}
-              id={`${idPrefix}-${virtualRow.index}`}
-              role={row.type === 'item' ? 'option' : 'presentation'}
-              aria-selected={row.type === 'item' ? row.key === selectedKey : undefined}
-              className={styles.row}
-              data-type={row.type}
-              data-selected={row.key === selectedKey}
-              data-running={row.key === runKey || undefined}
-              style={{ top: virtualRow.start, height: ROW_HEIGHT }}
-              onMouseDown={() => row.type === 'item' && onSelect(row.key)}
-            >
-              {row.type === 'section' ? (
-                <>
-                  <span className={styles.sectionLabel} data-tip={row.explanation}>
-                    {row.label}
-                  </span>
-                  <span className={styles.count}>{row.count}</span>
-                </>
-              ) : (
-                <MergeItemRow item={row.item} labels={labels} typeOf={typeOf} />
-              )}
-            </div>
-          );
-        })}
-      </div>
-    </div>
+    <FileTreeList
+      rows={rows}
+      tree={tree}
+      toggleCollapsed={toggleCollapsed}
+      renderItem={renderItem}
+      groupTip={(group) => MERGE_GROUP_TIPS[group]}
+      query={query}
+      filterBar={filterBar}
+      selection={selection}
+      onSelectionChange={onSelectionChange}
+      contextMenu={contextMenu}
+      label="Files to merge"
+    />
   );
 }
 
 /** Every item as in any list of changed files: what the merge does to it as its letter, where its conflict stands before. */
-function MergeItemRow({ item, labels, typeOf }: { item: MergeItem; labels: MergeLabels; typeOf: (path: string) => ItemType }) {
+function MergeItemRow({ item, labels, typeOf, nameOnly }: { item: MergeItem; labels: MergeLabels; typeOf: (path: string) => ItemType; nameOnly: boolean }) {
   switch (item.kind) {
     case 'directoryConflict': {
       const { conflict } = item;
       return (
         <ItemPathRow
-          path={withoutRoot(conflict.destination.path)}
+          path={item.path}
+          nameOnly={nameOnly}
           itemType={conflict.isDirectory ? 'directory' : 'file'}
           status={{ tone: conflict.source.operation, label: `${conflict.title}: ${conflict.source.description}` }}
-          extras={
-            <ConflictStatusChip
-              status={directoryConflictStatus(item.resolution)}
-              labels={labels}
-              explanation={item.resolution ? undefined : `${conflict.title}: ${conflict.explanation}`}
-              compact
-            />
-          }
+          extras={<MergeItemMarks item={item} labels={labels} />}
         />
       );
     }
     case 'fileConflict':
       return (
         <ItemPathRow
-          path={withoutRoot(item.state.file.path)}
+          path={item.path}
+          nameOnly={nameOnly}
           itemType="file"
           status={{ tone: 'changed', label: 'Will be changed: both sides changed it' }}
-          extras={<ConflictStatusChip status={fileConflictStatus(item.state)} labels={labels} tool={fileConflictTool(item.state)} compact />}
+          extras={<MergeItemMarks item={item} labels={labels} />}
         />
       );
     case 'change':
       return (
         <ItemPathRow
-          path={withoutRoot(item.change.path)}
+          path={item.path}
+          nameOnly={nameOnly}
           itemType={typeOf(item.change.path)}
-          oldPath={item.change.oldPath && withoutRoot(item.change.oldPath)}
+          oldPath={item.change.oldPath && item.change.oldPath.replace(/^\//, '')}
           status={{ tone: changeTone(item.change), label: describeChange(item.change, labels) }}
         />
       );
   }
 }
 
-function withoutRoot(path: string): string {
-  return path.replace(/^\//, '');
+/** Where a conflict stands; nothing for a change that applies cleanly. */
+function MergeItemMarks({ item, labels }: { item: MergeItem; labels: MergeLabels }) {
+  if (item.kind === 'directoryConflict') {
+    const { conflict, resolution } = item;
+    return (
+      <ConflictStatusChip
+        status={directoryConflictStatus(resolution)}
+        labels={labels}
+        explanation={resolution ? undefined : `${conflict.title}: ${conflict.explanation}`}
+        compact
+      />
+    );
+  }
+  if (item.kind === 'fileConflict') return <ConflictStatusChip status={fileConflictStatus(item.state)} labels={labels} tool={fileConflictTool(item.state)} compact />;
+  return null;
 }

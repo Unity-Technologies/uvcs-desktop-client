@@ -2,7 +2,9 @@ import { GitMerge } from 'lucide-react';
 import { useEffect, useMemo, useRef } from 'react';
 import type { PendingChange, PendingChangesSnapshot } from '@shared/domain/pendingChanges';
 import type { WorkspaceInfo } from '@shared/domain/workspace';
+import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
+import { useFileListLayoutStore } from '../../components/fileListLayoutStore';
 import { selectAfterLeaving } from '../../app/navigation/leaveGuard';
 import { useViewSelection } from '../../app/navigation/viewSelectionStore';
 import { useSettings } from '../../app/settings/useSettings';
@@ -60,7 +62,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
   const incomingSummary = useKnownIncomingSummary();
   const settings = useSettings();
   // Only what the list shows: dragging the description's height or typing the comment doesn't render the list again.
-  const layout = usePendingChangesViewStore((state) => state.layout);
+  const layout = useFileListLayoutStore((state) => state.layout);
   const grouping = usePendingChangesViewStore((state) => state.grouping);
   const excludedPaths = useExcludedPaths(workspacePath);
   const setIncluded = useCheckinDraftStore((state) => state.setIncluded);
@@ -71,14 +73,14 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
   const { changelists } = snapshot;
   const locks = usePendingLocks(workspacePath, workspace?.repository, allChanges, readAt);
   // Sorted once for the layout; filtering keeps the order, so typing in the filter or opening a folder never sorts again.
-  const sorted = useSortedChanges(allChanges, layout);
+  const sorted = useSortedChanges(allChanges);
   const { visible: filtered, query, clear: clearTextFilter, bar: filterBar } = useChangeFilter(sorted, changePath, changeTones, true);
   const changes = useMemo(() => review.narrow(filtered), [review.narrow, filtered]);
   const clearFilter = (): void => {
     clearTextFilter();
     review.showAll();
   };
-  const { rows, changesByKey, fileKeys, checkboxInset, toggleCollapsed } = useChangeRows({ changes, changelists, layout, grouping });
+  const { rows, changesByKey, fileKeys, checkboxInset, toggleCollapsed } = useChangeRows({ changes, changelists, layout, grouping, scope: folderListScope(workspacePath, 'changes') });
   const { isIncluded, included, upload, shelvable, shelvableUpload, bulkPrivate } = useCheckinSelection(allChanges, excludedPaths);
   // The changes shown are some of all of them: the checked ones they leave out are the rest.
   const hiddenIncludedCount = useMemo(() => included.length - changes.filter(isIncluded).length, [changes, included, isIncluded]);
@@ -101,7 +103,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
   // Holding ↓ moves through the list at once; the diff (a read and an editor to lay out) follows where it stops.
   const diffChange = useSettledValue(focused, selection.anchor ?? '') ?? focused;
   // A folder or changelist the keyboard (or a click) is on.
-  const focusedFolder = focused ? undefined : rows.find((row): row is Exclude<ChangeRow, { type: 'change' }> => row.type !== 'change' && row.key === selection.anchor);
+  const focusedFolder = focused ? undefined : rows.find((row): row is Exclude<ChangeRow, { type: 'file' }> => row.type !== 'file' && row.key === selection.anchor);
   const fileSteps = useFileSteps({
     keys: fileKeys,
     current: selection.anchor,

@@ -6,6 +6,13 @@
   padding: var(--space-2);
 }
 
+/* The List/Tree switch, set apart from the status chips. */
+.layout {
+  display: flex;
+  flex: none;
+  margin-left: var(--space-1);
+}
+
 .chip {
   display: inline-flex;
   flex: none;

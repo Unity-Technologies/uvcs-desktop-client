@@ -38,7 +38,7 @@ export const WORKSPACE_ROLES: MergeLabels['roles'] = {
   source: { name: 'Incoming', version: 'the incoming version' },
   destination: { name: 'Yours', version: 'your version' },
 };
-const SERVER_ROLES: MergeLabels['roles'] = {
+export const SERVER_ROLES: MergeLabels['roles'] = {
   source: { name: 'Source', version: 'the source version' },
   destination: { name: 'Destination', version: 'the destination version' },
 };

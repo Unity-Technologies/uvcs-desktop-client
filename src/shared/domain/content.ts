@@ -21,6 +21,9 @@ export type ContentSource =
    */
   | { kind: 'spec'; spec: string; fileName?: string };
 
+/** A version kept in the repository, as opposed to a file of the workspace: what Open and Save as take out of it. */
+export type RepositoryVersion = Extract<ContentSource, { kind: 'revision' | 'repositoryPath' | 'spec' }>;
+
 /** An image's file bytes and type, as read: they cross IPC as binary, and the renderer paints them from a blob URL. */
 export interface ImageBytes {
   bytes: Uint8Array;

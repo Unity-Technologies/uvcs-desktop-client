@@ -5,8 +5,8 @@ import type { ChangeRow } from './changeRows';
 
 /** A file's check, or a folder's or changelist's over what it holds that can go into a check-in; null when none can (ignored files). */
 export function rowCheckState(row: ChangeRow, isChecked: (change: PendingChange) => boolean): CheckState | null {
-  if (row.type === 'change') return isCheckinCandidate(row.change) ? isChecked(row.change) : null;
-  return combinedCheckState(row.changes, isChecked);
+  if (row.type === 'file') return isCheckinCandidate(row.item) ? isChecked(row.item) : null;
+  return combinedCheckState(row.items, isChecked);
 }
 
 function combinedCheckState(changes: PendingChange[], isChecked: (change: PendingChange) => boolean): CheckState | null {
@@ -33,7 +33,7 @@ export interface SpaceToggle {
  * changelist the keyboard is on, over what it holds, unless nothing in it can be checked in.
  */
 export function spaceToggle(selectedRows: ChangeRow[], focusedRow: ChangeRow | undefined, checkStateOf: (row: ChangeRow) => CheckState | null): SpaceToggle {
-  if (selectedRows.length === 0 && focusedRow && focusedRow.type !== 'change') {
+  if (selectedRows.length === 0 && focusedRow && focusedRow.type !== 'file') {
     const focusedState = checkStateOf(focusedRow);
     if (focusedState !== null) return { rows: [focusedRow], include: focusedState !== true };
   }

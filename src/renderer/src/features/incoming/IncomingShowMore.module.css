@@ -1,0 +1,30 @@
+/* Reads the next page of older changesets: as quiet as a row, as the list's own way to go on. */
+.showMore {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--accent-text);
+  font-size: var(--text-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.showMore:hover:not([aria-disabled='true']) {
+  background: var(--bg-hover);
+}
+
+.showMore[aria-disabled='true'] {
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.showMore:focus-visible {
+  box-shadow: var(--focus-ring-inset);
+  outline: none;
+}

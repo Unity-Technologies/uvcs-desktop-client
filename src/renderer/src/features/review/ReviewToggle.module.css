@@ -35,6 +35,20 @@
   color: var(--status-changed);
 }
 
+/* A folder under review: how many of its files are reviewed, before its check. */
+.partial {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+}
+
+.partialCount {
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .toggle {
     animation: none;

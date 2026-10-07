@@ -60,6 +60,11 @@ describe('parseDiffEntries', () => {
     expect(parseDiffEntries(output).map((entry) => entry.path)).toEqual(['File_1.txt', 'file_2.txt', 'file_10.txt', 'file_100.txt']);
   });
 
+  it('lists everything in a folder right after it, as every list of files does', () => {
+    const output = ['a-b.txt', 'a/c.txt', 'a', 'ab'].map((path) => formatOutput(['A', `"/${path}"`, '""', '-1', '5', 'F', GAME])).join('');
+    expect(parseDiffEntries(output).map((entry) => entry.path)).toEqual(['a', 'a/c.txt', 'a-b.txt', 'ab']);
+  });
+
   it('shows the same revision on both sides of a pure move', () => {
     const [moved] = parseDiffEntries(formatOutput(['M', '"/docs/changelog.md"', '"/docs/notes.md"', '-1', '14', 'F', GAME]));
     expect(moved).toMatchObject({ status: 'moved', oldPath: 'docs/notes.md', baseRevisionId: 14, revisionId: 14 });
@@ -72,11 +77,11 @@ describe('parseDiffEntries', () => {
     ]);
   });
 
-  it('reads a big diff in one pass: a few reads of each character, whatever the size', () => {
-    const output = formatOutput(...Array.from({ length: 5_000 }, (_, index) => ['C', `"/src/folder${index % 100}/file_${(index * 7919) % 5_000}.ts"`, '""', '12', '13', 'F', GAME]));
-    const { result: entries, charactersRead } = countCharactersRead(() => parseDiffEntries(output));
-    // About 4.2 reads of each character; a pass over the rest of the output per record reads each thousands of times.
-    expect(charactersRead / output.length).toBeLessThan(6);
-    expect(entries).toHaveLength(5_000);
+  it('reads a big diff in one pass: doubling it about doubles the work, sorting included', () => {
+    const diffOf = (size: number) => formatOutput(...Array.from({ length: size }, (_, index) => ['C', `"/src/folder${index % 100}/file_${(index * 7919) % size}.ts"`, '""', '12', '13', 'F', GAME]));
+    const charactersReadFor = (size: number) => countCharactersRead(() => parseDiffEntries(diffOf(size))).charactersRead;
+    // About 2.2 (n·log n, the sort by path); a pass over the rest of the output per record reads 4 times as much.
+    expect(charactersReadFor(10_000) / charactersReadFor(5_000)).toBeLessThan(2.5);
+    expect(parseDiffEntries(diffOf(5_000))).toHaveLength(5_000);
   });
 });

@@ -1,11 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { ChangesGrouping, ChangesLayout } from './changeRows';
+import type { ChangesGrouping } from './changeRows';
 
+/** How the Changes view shows its list; its layout, list or tree, is every list of files' (`useFileListLayoutStore`). */
 interface PendingChangesViewStore {
-  layout: ChangesLayout;
   grouping: ChangesGrouping;
-  setLayout: (layout: ChangesLayout) => void;
   setGrouping: (grouping: ChangesGrouping) => void;
   /** Height of the check-in description, set by dragging the top edge of the check-in panel. */
   descriptionHeight: number;
@@ -15,9 +14,7 @@ interface PendingChangesViewStore {
 export const usePendingChangesViewStore = create<PendingChangesViewStore>()(
   persist(
     (set) => ({
-      layout: 'list',
       grouping: 'none',
-      setLayout: (layout) => set({ layout }),
       setGrouping: (grouping) => set({ grouping }),
       descriptionHeight: 96,
       setDescriptionHeight: (descriptionHeight) => set({ descriptionHeight }),

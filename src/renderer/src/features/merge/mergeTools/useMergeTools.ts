@@ -22,6 +22,11 @@ export function useMergeTools(): MergeToolList & { preferred: MergeTool | undefi
   return { ...data, preferred: data.tools.find((tool) => tool.id === data.preferredId) };
 }
 
+/** The tool "Resolve in…" opens: the preferred one, else the first found; none when no tool was found. */
+export function primaryMergeTool({ tools, preferredId }: MergeToolList): MergeTool | undefined {
+  return tools.find((tool) => tool.id === preferredId) ?? tools[0];
+}
+
 /** Makes the tool the one "Resolve in…" opens. */
 export function preferMergeTool(toolId: string): Promise<void> {
   return saveSettings({ mergeTool: toolId });

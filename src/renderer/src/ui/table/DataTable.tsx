@@ -27,6 +27,8 @@ interface DataTableProps<Row> {
   contextMenu?: (selectedRows: Row[]) => MenuEntry[];
   rowHeight?: number;
   initialSort?: TableSort;
+  /** After a plain click (no Shift, no ⌘/Ctrl) selects a row: a tree's folder opens or closes on it. */
+  onRowPressed?: (row: Row) => void;
   /** Keys the table does not handle itself (e.g. ←/→ to collapse or expand a tree row); `moveBy` moves the selection like the arrows. */
   onRowKeyDown?: (event: KeyboardEvent, focusedRow: Row, moveBy: (step: number) => void) => void;
   /** J and K move like ↓ and ↑, for lists read one row after another (e.g. reviewing files). */
@@ -58,6 +60,7 @@ export function DataTable<Row>({
   contextMenu,
   rowHeight = 30,
   initialSort,
+  onRowPressed,
   onRowKeyDown,
   letterMoves = false,
   revealKey,
@@ -149,6 +152,7 @@ export function DataTable<Row>({
     if (event.button === 2 && selection.selected.has(key)) return;
     setFocusedKey(key);
     onSelectionChange(selectOnClick(selection, key, orderedKeys, { shift: event.shiftKey, toggle: isModPressed(event) }));
+    if (event.button === 0 && !event.shiftKey && !isModPressed(event)) onRowPressed?.(rowsByKey.get(key)!);
   };
 
   const isSelectedAt = (index: number): boolean => selection.selected.has(orderedKeys[index] ?? '');

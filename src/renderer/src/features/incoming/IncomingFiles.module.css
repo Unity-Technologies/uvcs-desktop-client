@@ -1,0 +1,37 @@
+.files {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* What the files below are: the whole update, or one changeset's. */
+.header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 30px;
+  padding: 2px var(--space-2) 0;
+}
+
+.title {
+  flex: 1;
+  overflow: hidden;
+  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* What the files are: what updating does with them, or how many a changeset changed. */
+.summary {
+  flex: none;
+  padding: 0 var(--space-2) 2px;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -34,7 +34,7 @@ export function useChangelistDrop({ rows, selection, onSelectionChange, selected
   };
 
   const dragProps = (row: ChangeRow): HTMLAttributes<HTMLElement> => {
-    if (!onMoveToChangelist || row.type !== 'change' || !isControlled(row.change)) return {};
+    if (!onMoveToChangelist || row.type !== 'file' || !isControlled(row.item)) return {};
     return {
       draggable: true,
       onDragStart: (event: DragEvent) => {
@@ -51,7 +51,7 @@ export function useChangelistDrop({ rows, selection, onSelectionChange, selected
   const dropProps = (row: ChangeRow): HTMLAttributes<HTMLElement> => {
     const header = headers.get(row.key);
     if (!onMoveToChangelist || !header) return {};
-    const target = header.changelist?.name ?? null;
+    const target = header.group?.name ?? null;
     return {
       onDragOver: (event: DragEvent) => {
         if (!dragged.current) return;

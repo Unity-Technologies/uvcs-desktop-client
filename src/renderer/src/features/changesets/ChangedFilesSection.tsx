@@ -1,9 +1,12 @@
 import { ChevronRight } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
-import { ItemPathRow } from '../../components/ItemPathRow';
+import { FileListLayoutMenu } from '../../components/FileListLayoutMenu';
+import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
+import { useFileTree } from '../../components/useFileTree';
+import { firstFilesOf, pathTreeKeyMove } from '../../lib/pathTree';
 import { moveRovingFocus, ROVING_ITEM } from '../../lib/rovingFocus';
 import { pluralize } from '../../lib/text';
 import { DetailsChangesPane } from '../../ui/DetailsChangesPane';
@@ -13,7 +16,9 @@ import { HighlightQuery } from '../../ui/Highlight';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { diffEntryKey } from '../diff/DiffEntryList';
 import { diffEntryMenu } from '../diff/diffEntryMenu';
-import { diffEntryStatus, diffEntryTones } from '../diff/diffEntrySources';
+import { listedEntries } from '../diff/listedEntries';
+import { diffEntryTones } from '../diff/diffEntrySources';
+import { DiffEntryRow } from '../diff/DiffEntryRow';
 import { useDiffReview } from '../diff/review/useDiffReview';
 import { useDiffEntries } from '../diff/useDiffEntries';
 import styles from './ChangedFilesSection.module.css';
@@ -40,19 +45,42 @@ interface ChangedFilesSectionProps {
  */
 export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFilesSectionProps) {
   const [requested, setRequested] = useState(false);
-  const { changesCollapsed: collapsed, set } = useDetailsLayoutStore();
-  const { data: entries, error } = useDiffEntries(target, { enabled: requested, branchHead });
-  const { visible, query, bar } = useChangeFilter(entries ?? [], diffEntryKey, diffEntryTones);
-  const listRef = useRef<HTMLDivElement>(null);
   const workspacePath = useWorkspacePath();
+  const { changesCollapsed: collapsed, set } = useDetailsLayoutStore();
+  const { data: diffEntries, error } = useDiffEntries(target, { enabled: requested, branchHead });
+  // The files the diff lists, so the count and the rows match the diff's: no folder added or deleted with its files.
+  const entries = useMemo(() => diffEntries && listedEntries(diffEntries), [diffEntries]);
+  const { visible, query, bar } = useChangeFilter(entries ?? [], diffEntryKey, diffEntryTones);
+  const { rows, tree, toggleCollapsed } = useFileTree(visible, diffEntryKey, folderListScope(workspacePath, `details:${JSON.stringify(target)}`));
+  const listed = useMemo(() => firstFilesOf(rows, MAX_LISTED_FILES), [rows]);
+  const listRef = useRef<HTMLDivElement>(null);
   // The same menu as in the diff, review marks included, read once the files are asked for or shown from the cache.
   const review = useDiffReview(target, entries ?? NO_ENTRIES, requested || entries !== undefined);
   const shown = entries && !collapsed ? entries : undefined;
+  const filterShown = shown !== undefined && shown.length > FILTER_FROM;
+
+  const onListKeyDown = (event: KeyboardEvent): void => {
+    const list = listRef.current;
+    if (!list) return;
+    const buttons = [...list.querySelectorAll<HTMLElement>('[data-roving-item]')];
+    const index = buttons.findIndex((button) => button === document.activeElement);
+    const move = index === -1 ? null : pathTreeKeyMove(listed.rows, index, event.key);
+    if (move?.kind === 'toggle' && event.key !== 'Enter') {
+      event.preventDefault();
+      toggleCollapsed(listed.rows[index]!.key);
+    } else if (move?.kind === 'moveBy') {
+      event.preventDefault();
+      buttons[index + move.step]?.focus();
+    } else {
+      moveRovingFocus(list, event);
+    }
+  };
 
   return (
     // No "Open diff" here: the panel's primary action at the top opens it.
     <DetailsChangesPane
       title={entries ? `${pluralize(entries.length, 'file')} changed` : 'Changes'}
+      action={shown && shown.length > 0 && !filterShown && <FileListLayoutMenu />}
       expanded={Boolean(shown?.length)}
       disclosure={entries && { open: !collapsed, toggle: () => set({ changesCollapsed: !collapsed }) }}
     >
@@ -72,23 +100,32 @@ export function ChangedFilesSection({ target, branchHead, onOpen }: ChangedFiles
         {error && <DetailsEmpty>{error.message}</DetailsEmpty>}
         {!entries && requested && !error && <DetailsSkeleton />}
         {shown?.length === 0 && <DetailsEmpty>No file changes.</DetailsEmpty>}
-        {shown && shown.length > FILTER_FROM && <div className={styles.filter}>{bar}</div>}
+        {filterShown && <div className={styles.filter}>{bar}</div>}
         {shown && shown.length > 0 && visible.length === 0 && <DetailsEmpty>No files match the filter.</DetailsEmpty>}
       </div>
       {shown && shown.length > 0 && (
         <HighlightQuery query={query}>
-          <div ref={listRef} className={styles.files} onKeyDown={(event) => listRef.current && moveRovingFocus(listRef.current, event)}>
-            {visible.slice(0, MAX_LISTED_FILES).map((entry) => (
-              <ActionContextMenu key={entry.path} entries={() => diffEntryMenu(workspacePath, target, [entry], review)}>
-                <button className={styles.file} onClick={() => onOpen(entry.path)} {...ROVING_ITEM}>
-                  <ItemPathRow path={entry.path} itemType={entry.itemType} oldPath={entry.oldPath} status={diffEntryStatus(entry)} />
-                </button>
-              </ActionContextMenu>
-            ))}
-            {visible.length > MAX_LISTED_FILES && <DetailsEmpty>And {visible.length - MAX_LISTED_FILES} more — open the diff to see them all.</DetailsEmpty>}
+          <div ref={listRef} className={styles.files} onKeyDown={onListKeyDown}>
+            {listed.rows.map((row) =>
+              row.type === 'folder' ? (
+                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(workspacePath, target, row.items, review)}>
+                  <button className={styles.file} onClick={() => toggleCollapsed(row.key)} aria-expanded={!row.collapsed} {...ROVING_ITEM}>
+                    <DiffEntryRow row={row} tree={tree} />
+                  </button>
+                </ActionContextMenu>
+              ) : (
+                <ActionContextMenu key={row.key} entries={() => diffEntryMenu(workspacePath, target, [row.item], review)}>
+                  <button className={styles.file} onClick={() => onOpen(row.item.path)} {...ROVING_ITEM}>
+                    <DiffEntryRow row={row} tree={tree} />
+                  </button>
+                </ActionContextMenu>
+              ),
+            )}
+            {listed.unlistedFiles > 0 && <DetailsEmpty>And {listed.unlistedFiles} more — open the diff to see them all.</DetailsEmpty>}
           </div>
         </HighlightQuery>
       )}
     </DetailsChangesPane>
   );
 }
+

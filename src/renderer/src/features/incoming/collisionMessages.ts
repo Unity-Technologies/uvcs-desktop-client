@@ -25,7 +25,7 @@ export function updateBarMessage(
       ? `A file you changed also changed on ${branchLabel(branch)}. Merge it to update.`
       : `${mergeCount} files you changed also changed on ${branchLabel(branch)}. Merge them to update.`;
   }
-  if (pendingMergeCount > 0) return `${pendingMergeCount} of ${mergeCount} files changed on both sides still ${pendingMergeCount === 1 ? 'needs' : 'need'} merging.`;
+  if (pendingMergeCount > 0) return `${pendingMergeCount} of ${mergeCount} conflicts with your changes still ${pendingMergeCount === 1 ? 'needs' : 'need'} merging.`;
   return mergeCount === 1 ? 'The file is merged. Update to apply it.' : `All ${mergeCount} files are merged. Update to apply them.`;
 }
 

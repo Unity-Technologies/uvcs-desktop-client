@@ -1,14 +1,11 @@
 import { ChevronRight, ListChecks, MoreHorizontal } from 'lucide-react';
 import { memo } from 'react';
 import type { Changelist, PendingChange } from '@shared/domain/pendingChanges';
-import { ItemIcon } from '../../components/ItemIcon';
 import { ItemPathRow } from '../../components/ItemPathRow';
-import { ItemRow } from '../../components/ItemRow';
-import { ItemStatusMark } from '../../components/ItemStatusMark';
 import { ItemTag } from '../../components/ItemTag';
+import { TreeFolderLabel } from '../../components/TreeFolderLabel';
 import type { MenuEntry } from '../../lib/actions';
 import { Checkbox, type CheckState } from '../../ui/Checkbox';
-import { Highlight } from '../../ui/Highlight';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
 import type { ReviewStatus } from '../review/reviewStatus';
 import { ReviewToggle } from '../review/ReviewToggle';
@@ -43,17 +40,17 @@ export function GroupRowContent({ row, checkState, onToggleIncluded, changelistM
       <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
       <RowCheckbox row={row} checkState={checkState} label={row.label} onToggleIncluded={onToggleIncluded} />
       <ListChecks size={14} className={styles.groupIcon} aria-hidden />
-      <span className={styles.groupLabel} data-tip={row.changelist?.description}>
+      <span className={styles.groupLabel} data-tip={row.group?.description}>
         {row.label}
       </span>
-      {row.changelist && (
-        <ActionDropdownMenu entries={changelistMenu(row.changelist)}>
+      {row.group && (
+        <ActionDropdownMenu entries={changelistMenu(row.group)}>
           <button className={styles.groupMenu} onMouseDown={(event) => event.stopPropagation()} aria-label="Changelist actions">
             <MoreHorizontal size={14} />
           </button>
         </ActionDropdownMenu>
       )}
-      <span className={styles.count}>{row.changes.length}</span>
+      <span className={styles.count}>{row.items.length}</span>
     </>
   );
 }
@@ -64,35 +61,30 @@ interface ItemRowContentProps {
   checkState: CheckState | null;
   /** Null outside review mode. */
   reviewStatus: ReviewStatus | null;
+  /** A folder's review while under way ("2/5", `partialReviewCount`). */
+  reviewPartial?: string | null;
   lock?: PendingLock;
   actions: RowActions;
 }
 
 /** A file or folder as every list shows one (`ItemRow`), after its check (and a folder's chevron). */
-export const ItemRowContent = memo(function ItemRowContent({ row, checkState, reviewStatus, lock, actions }: ItemRowContentProps) {
-  if (row.type === 'directory') {
+export const ItemRowContent = memo(function ItemRowContent({ row, checkState, reviewStatus, reviewPartial, lock, actions }: ItemRowContentProps) {
+  if (row.type === 'folder') {
     return (
-      <>
-        <ChevronRight size={13} className={styles.chevron} data-collapsed={row.collapsed} />
-        <RowCheckbox row={row} checkState={checkState} label={row.name} onToggleIncluded={actions.toggleIncluded} />
-        {/* Every folder here holds changes, so only its own change marks it. */}
-        <ItemRow
-          icon={<ItemIcon itemType="directory" name={row.name} />}
-          label={
-            <span className={styles.directoryName} data-tip={row.name.includes('/') ? row.name : undefined}>
-              <Highlight text={row.name} />
-            </span>
-          }
-          extras={reviewStatus && <ReviewToggle folder status={reviewStatus} onToggle={() => actions.toggleReviewed(row.changes)} />}
-          status={<ItemStatusMark status={row.change && changeStatus(row.change)} />}
-          presence={row.change ? changePresence(row.change) : 'controlled'}
-          deleted={row.change && changeTone(row.change) === 'deleted'}
-          faded={reviewStatus === 'reviewed'}
-        />
-      </>
+      <TreeFolderLabel
+        name={row.name}
+        collapsed={row.collapsed}
+        count={row.items.length - (row.item ? 1 : 0)}
+        before={<RowCheckbox row={row} checkState={checkState} label={row.name} onToggleIncluded={actions.toggleIncluded} />}
+        extras={reviewStatus && <ReviewToggle folder status={reviewStatus} partial={reviewPartial} onToggle={() => actions.toggleReviewed(row.items)} />}
+        status={row.item && changeStatus(row.item)}
+        presence={row.item ? changePresence(row.item) : 'controlled'}
+        deleted={row.item && changeTone(row.item) === 'deleted'}
+        faded={reviewStatus === 'reviewed'}
+      />
     );
   }
-  const { change } = row;
+  const { item: change } = row;
   return (
     <>
       {checkState !== null ? (

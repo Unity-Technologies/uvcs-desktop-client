@@ -15,7 +15,7 @@ describe('indexChangeRows', () => {
 
     expect(index.rowKeys).toEqual(rows.map((row) => row.key));
     expect([...index.rowIndexes].every(([key, at]) => rows[at]!.key === key)).toBe(true);
-    expect(index.changeRows.map((row) => row.change.path)).toEqual(['src/a.ts', 'src/b.ts']);
+    expect(index.changeRows.map((row) => row.item.path)).toEqual(['src/a.ts', 'src/b.ts']);
     expect(index.orderedKeys).toEqual(index.changeRows.map((row) => row.key));
   });
 });
@@ -57,7 +57,7 @@ describe('holding ↓ over 100,000 changes', () => {
       checkStateOf(rows[0]!);
       for (const row of rows.slice(at, at + 40)) {
         checkStateOf(row);
-        if (row.type === 'change') filesShown.add(row);
+        if (row.type === 'file') filesShown.add(row);
       }
     }
 

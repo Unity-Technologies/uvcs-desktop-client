@@ -11,9 +11,14 @@ export function updatedMessage(incoming: BranchIncomingChanges): string {
 
 /** "3 changesets from Ana, Bob" ("200+ changesets" when `countCapped`), naming each author once. */
 export function changesetsFrom(count: number, countCapped: boolean, owners: string[]): string {
+  const authors = authorNames(owners);
+  return `${pluralizeAtLeast(count, countCapped, 'changeset')}${authors ? ` from ${authors}` : ''}`;
+}
+
+/** "Ana, Bob and 2 more": each author once, by name, the first few; empty without any. */
+export function authorNames(owners: string[]): string {
   const authors = [...new Set(owners.map(displayName))];
   const named = authors.slice(0, NAMED_AUTHORS).join(', ');
   const others = authors.length - NAMED_AUTHORS;
-  const from = authors.length === 0 ? '' : ` from ${others > 0 ? `${named} and ${others} more` : named}`;
-  return `${pluralizeAtLeast(count, countCapped, 'changeset')}${from}`;
+  return others > 0 ? `${named} and ${others} more` : named;
 }
