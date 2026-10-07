@@ -23,7 +23,7 @@ interface FileTreeListProps<T, G> {
   query: string;
   /** Under the filter bar, e.g. the review bar: what its `actions` open, right beneath them. */
   belowFilterBar?: ReactNode;
-  /** The filter's field, status chips and List/Tree menu (`useChangeFilter`). */
+  /** The filter's field, status chips, List/Tree menu and the list's `actions` (`useChangeFilter`). */
   filterBar: ReactNode;
   selection: SelectionState;
   onSelectionChange: (selection: SelectionState) => void;

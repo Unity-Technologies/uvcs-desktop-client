@@ -10,6 +10,7 @@ import { pluralize } from '../../lib/text';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { SplitPane } from '../../ui/SplitPane';
+import { ReviewModeButton } from '../review/ReviewModeButton';
 import { diffEntryTones } from './diffEntrySources';
 import { DiffEntryList, diffEntryKey } from './DiffEntryList';
 import { diffEntryMenu } from './diffEntryMenu';
@@ -17,7 +18,6 @@ import { entryToFocus } from './diffFocus';
 import { EntryDiff } from './EntryDiff';
 import { listedEntries } from './listedEntries';
 import { useDiffReview } from './review/useDiffReview';
-import { ReviewModeButton } from '../review/ReviewModeButton';
 import { FileStepsContext, useFileSteps } from './viewer/fileSteps';
 import { diffSibling, SiblingFinderContext } from './viewer/model/modelSiblings';
 

@@ -16,7 +16,7 @@ interface ReviewBarProps {
   hasMarks: boolean;
 }
 
-/** How far the review of the pending changes got, a filter for what is left, and ways to mark or clear everything. It opens under the review mode toggle (`ReviewModeButton`), which also closes it. */
+/** How far the review of the list's files got, a filter for what is left, and ways to mark or clear everything. It opens under the review mode toggle (`ReviewModeButton`), which also closes it. */
 export function ReviewBar({ progress, onlyUnreviewed, onOnlyUnreviewedChange, onMarkAll, onClearMarks, hasMarks }: ReviewBarProps) {
   const { total, reviewed } = progress;
   const left = total - reviewed;
