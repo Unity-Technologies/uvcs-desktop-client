@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { MergePlan } from '@shared/domain/merge';
-import { buildMergeItems, needsDecision, toListRows } from './mergeItems';
+import { buildMergeItems, mergeItemGroups, mergeItemTones, needsDecision } from './mergeItems';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 const side = { operation: 'added' as const, path: '/twin.txt', description: 'Added /twin.txt' };
@@ -25,9 +25,21 @@ function fileState(resolved: boolean): FileConflictState {
 }
 
 describe('merge items', () => {
-  it('lists conflicts before the changes that apply cleanly', () => {
-    const rows = toListRows(buildMergeItems(plan, [fileState(false)], []));
-    expect(rows.map((row) => row.key)).toEqual(['section:conflicts', 'directory:0', 'file:/a.txt', 'section:changes', 'change:0']);
+  it('groups the conflicts before the changes that apply cleanly, each group by path as every list of files', () => {
+    const groups = mergeItemGroups(buildMergeItems({ ...plan, changes: [{ kind: 'added', path: '/src/b.txt' }, { kind: 'changed', path: '/new.txt' }] }, [fileState(false)], []));
+    expect(groups.map((group) => [group.key, group.label, group.sorted.map((item) => item.path)])).toEqual([
+      ['group:conflicts', 'Conflicts', ['a.txt', 'twin.txt']],
+      ['group:changes', 'Changes to apply', ['new.txt', 'src/b.txt']],
+    ]);
+  });
+
+  it('names every item by its path without the root, for the tree and the filter', () => {
+    expect(buildMergeItems(plan, [fileState(false)], []).map((item) => item.path)).toEqual(['twin.txt', 'a.txt', 'new.txt']);
+  });
+
+  it('offers the conflicts under the Conflicts chip too, keeping what each side did', () => {
+    const [directory, file, change] = buildMergeItems(plan, [fileState(false)], []);
+    expect([mergeItemTones(directory!), mergeItemTones(file!), mergeItemTones(change!)]).toEqual([['added', 'conflict'], ['changed', 'conflict'], ['added']]);
   });
 
   it('knows which items still need the user', () => {
@@ -35,7 +47,7 @@ describe('merge items', () => {
     expect(items.map(needsDecision)).toEqual([true, false, false]);
   });
 
-  it('omits empty sections', () => {
-    expect(toListRows(buildMergeItems({ ...plan, directoryConflicts: [] }, [], []))[0]).toMatchObject({ label: 'Changes to apply' });
+  it('omits empty groups', () => {
+    expect(mergeItemGroups(buildMergeItems({ ...plan, directoryConflicts: [] }, [], [])).map((group) => group.label)).toEqual(['Changes to apply']);
   });
 });
