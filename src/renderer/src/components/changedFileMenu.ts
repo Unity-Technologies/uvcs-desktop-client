@@ -29,12 +29,13 @@ export interface ChangedFile {
 export function changedFileMenu(workspacePath: string, files: ChangedFile[], added: (GroupedEntry | null)[] = []): MenuEntry[] {
   const single = files.length === 1 ? files[0]! : null;
   const version = single?.version;
+  // What the list adds goes after the shared entries of its group, so every list reads the same with its own at the end.
   return groupedMenu([
-    ...added,
     single?.history && menuAction('history', () => navigation.openPage(single.history!)),
     single?.annotation && menuAction('annotate', () => navigation.openPage(single.annotation!)),
     ...(version ? openRevisionEntries((editorId) => openVersion(workspacePath, version, fileNameOf(single.path), editorId)) : []),
     version && menuAction('saveAs', () => void saveVersionAs(workspacePath, version, fileNameOf(single!.path))),
     copySubmenu('', { path: files.map((file) => file.path).join('\n') }, { count: files.length }),
+    ...added,
   ]);
 }

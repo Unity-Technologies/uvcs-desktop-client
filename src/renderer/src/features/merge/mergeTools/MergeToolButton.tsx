@@ -7,7 +7,7 @@ import type { FileConflictState } from '../resolve/useFileConflicts';
 import { addMergeToolAndPick } from './CustomMergeToolDialog';
 import type { RunProgress } from './resolveRun';
 import { toolChoiceEntries } from './toolChoices';
-import { preferMergeTool, useMergeTools } from './useMergeTools';
+import { preferMergeTool, primaryMergeTool, useMergeTools } from './useMergeTools';
 
 /** What the page offers to do with merge tools, for the file at hand. */
 export interface ConflictToolActions {
@@ -32,8 +32,9 @@ interface MergeToolButtonProps {
  * opens until the user clicks the button.
  */
 export function MergeToolButton({ state, actions, onEditInApp, variant = 'primary' }: MergeToolButtonProps) {
-  const { tools, preferredId } = useMergeTools();
-  const primary = tools.find((tool) => tool.id === preferredId) ?? tools[0];
+  const mergeTools = useMergeTools();
+  const { tools } = mergeTools;
+  const primary = primaryMergeTool(mergeTools);
   const resolve = (tool: MergeTool): void => actions.resolveIn(state.file.key, tool);
   const addAppAndResolve = async (): Promise<void> => {
     const added = await addMergeToolAndPick();

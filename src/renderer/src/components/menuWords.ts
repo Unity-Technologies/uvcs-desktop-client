@@ -22,6 +22,7 @@ import {
   FileDiff,
   FileDown,
   FilePlus,
+  Files,
   Filter,
   FolderGit2,
   FolderInput,
@@ -38,8 +39,10 @@ import {
   GitPullRequest,
   GitPullRequestArrow,
   History,
+  Layers,
   Lock,
   LockOpen,
+  Merge,
   MessageSquareCode,
   MessageSquareText,
   Minus,
@@ -104,6 +107,8 @@ export const MENU_WORDS = {
   openRevision: word('open', AppWindow),
   openWith: word('open', SquareArrowOutUpRight, 'Open with'),
   openRevisionWith: word('open', SquareArrowOutUpRight, 'Open this revision with'),
+  // A merge's file as each side has it, or the base: the entries name the sides ("Yours", "Incoming", "Base").
+  openVersion: word('open', Layers, 'Open version'),
   reveal: word('open', FolderSearch, REVEAL_LABEL),
   openInFileManager: word('open', FolderSearch, OPEN_IN_FILE_MANAGER_LABEL),
 
@@ -119,6 +124,12 @@ export const MENU_WORDS = {
   // A conflicting file of a merge or an update settled by taking one version whole; the words name the side ("Keep yours").
   keepDestination: word('act', FileCheck),
   keepSource: word('act', FileDown),
+  // A directory conflict settled by keeping both items, yours under a new name.
+  keepBoth: word('act', Files, 'Keep both'),
+  // A conflicting file opened in a merge tool; the words name the tool ("Resolve in Visual Studio Code").
+  resolveIn: word('act', Merge),
+  // A conflicting file back to how the merge started it, the user's decision dropped.
+  startOver: word('act', RotateCcw, 'Start over'),
   add: word('act', Plus),
   checkout: word('act', PenLine, 'Check out'),
   status: word('act', CircleDot, 'Set status'),

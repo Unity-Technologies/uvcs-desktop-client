@@ -9,8 +9,11 @@ import { mergeItemMenu, type MergeMenuContext } from './mergeItemMenu';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 const labels: MergeLabels = { source: '/main/task', destination: '/main', roles: WORKSPACE_ROLES };
-const request: MergeRequest = { kind: 'branch', sourceSpec: 'br:/main/task' } as MergeRequest;
-const plan = { contributors: { source: { changesetId: 12, branch: '/main/task' }, destination: { changesetId: 10, branch: '/main' } } } as MergePlan;
+const request: MergeRequest = { kind: 'merge', sourceSpec: 'br:/main/task' };
+const plan = {
+  contributors: { source: { changesetId: 12, branch: '/main/task' }, destination: { changesetId: 10, branch: '/main' } },
+  fileConflicts: [{ path: '/src/a.ts', sourceChangeset: 11 }],
+} as MergePlan;
 const vscode: MergeTool = { id: 'vscode', name: 'Visual Studio Code', canBringToFront: true } as MergeTool;
 
 const versions = {
@@ -126,7 +129,13 @@ describe('mergeItemMenu', () => {
   });
 
   it('offers a change that applies cleanly what any changed file has, never a choice: it is no conflict', () => {
-    expect(ids(mergeItemMenu([change('changed')], context()))).toEqual(['openRevision', 'openRevisionWith', 'history', 'annotate', 'saveAs', 'copy']);
+    expect(ids(mergeItemMenu([change('changed')], context()))).toEqual(['openRevision', 'openRevisionWith', 'history', 'saveAs', 'copy']);
+  });
+
+  it("annotates a conflicting file's incoming revision, by the changeset cm names for it", () => {
+    expect(ids(mergeItemMenu([conflict('src/a.ts')], context()))).toContain('annotate');
+    expect(ids(mergeItemMenu([conflict('src/b.ts')], context()))).not.toContain('annotate');
+    expect(ids(mergeItemMenu([conflict('src/a.ts', { isBinary: true })], context()))).not.toContain('annotate');
   });
 
   it('opens a clean change as the source has it, by its path at the source changeset', async () => {
@@ -136,7 +145,7 @@ describe('mergeItemMenu', () => {
     expect(fakeApi.argsOf('history.openRevision').map(([, version]) => version)).toEqual([{ kind: 'repositoryPath', path: '/src/c.ts', at: 'cs:12' }]);
   });
 
-  it("has nothing to open, save or annotate for a deleted file or a folder, nor annotates a file the destination doesn't have", () => {
+  it('has nothing to open or save for a deleted file or a folder', () => {
     expect(ids(mergeItemMenu([change('deleted')], context()))).toEqual(['history', 'copy']);
     expect(ids(mergeItemMenu([change('added')], context()))).toEqual(['openRevision', 'openRevisionWith', 'history', 'saveAs', 'copy']);
     expect(ids(mergeItemMenu([change('changed', 'src/ui')], context({ itemTypeOf: () => 'directory' })))).toEqual(['history', 'copy']);

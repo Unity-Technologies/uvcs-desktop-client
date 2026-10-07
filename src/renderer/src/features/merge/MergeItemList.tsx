@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type { ItemType } from '@shared/domain/pendingChanges';
 import { FileTreeCell } from '../../components/FileTreeCell';
 import { FileTreeList } from '../../components/FileTreeList';
@@ -11,7 +11,6 @@ import type { SelectionState } from '../../lib/selection';
 import { ConflictStatusChip } from './ConflictStatusChip';
 import type { MergeLabels } from './mergeDescription';
 import { MERGE_GROUP_TIPS, type MergeGroup, type MergeItem } from './mergeItems';
-import { mergeItemTypes } from './mergeItemTypes';
 import { changeTone, describeChange, directoryConflictStatus, fileConflictStatus, fileConflictTool } from './mergeStatus';
 
 interface MergeItemListProps {
@@ -19,8 +18,8 @@ interface MergeItemListProps {
   rows: GroupedTreeRow<MergeItem, MergeGroup>[];
   tree: boolean;
   toggleCollapsed: (key: string) => void;
-  /** Every item of the merge, whatever the filter shows: what each path is, for its icon. */
-  items: MergeItem[];
+  /** What each repository path of the merge is, for its icon (`mergeItemTypes`). */
+  typeOf: (path: string) => ItemType;
   labels: MergeLabels;
   query: string;
   filterBar: ReactNode;
@@ -30,8 +29,7 @@ interface MergeItemListProps {
 }
 
 /** What the merge does, item by item, as every list of changed files shows its files: in groups, as a list or a tree. */
-export function MergeItemList({ rows, tree, toggleCollapsed, items, labels, query, filterBar, selection, onSelectionChange, contextMenu }: MergeItemListProps) {
-  const typeOf = useMemo(() => mergeItemTypes(items.flatMap((item) => (item.kind === 'change' ? [item.change.path] : []))), [items]);
+export function MergeItemList({ rows, tree, toggleCollapsed, typeOf, labels, query, filterBar, selection, onSelectionChange, contextMenu }: MergeItemListProps) {
 
   const renderItem = (row: PathTreeRow<MergeItem>, level: number) => {
     if (row.type === 'folder') {

@@ -21,8 +21,10 @@ import { MergeHeader } from './MergeHeader';
 import { MergeItemList } from './MergeItemList';
 import { buildMergeItems, mergeItemGroups, mergeItemTones, needsDecision, type MergeItem } from './mergeItems';
 import { mergeItemMenu } from './mergeItemMenu';
+import { mergeItemTypes } from './mergeItemTypes';
 import { ResolveRunControl, useRunOffer } from './mergeTools/ResolveRunControl';
 import { useResolveRun } from './mergeTools/useResolveRun';
+import { primaryMergeTool, useMergeTools } from './mergeTools/useMergeTools';
 import { completeMerge } from './mergeOperations';
 import { collectResolutions } from './mergeResolutions';
 import { conflictStatusOf, planProgress, summarizePlan } from './mergeStatus';
@@ -60,6 +62,8 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const conflicting = plan.fileConflicts.length + plan.directoryConflicts.length > 0;
   // Thousands of items: built again only when a decision changes, not for every file selected or key typed.
   const items = useMemo(() => buildMergeItems(plan, fileStates, directoryResolutions), [plan, fileStates, directoryResolutions]);
+  const typeOf = useMemo(() => mergeItemTypes(plan.changes.map((change) => change.path)), [plan.changes]);
+  const preferredTool = primaryMergeTool(useMergeTools());
   const filter = useChangeFilter(items, itemPath, mergeItemTones, true);
   const content = useMemo(() => ({ groups: mergeItemGroups(filter.visible) }), [filter.visible]);
   const { rows, tree, toggleCollapsed } = useGroupedFileTree(content, itemKey, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`);
@@ -138,13 +142,27 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
               rows={rows}
               tree={tree}
               toggleCollapsed={toggleCollapsed}
-              items={items}
+              typeOf={typeOf}
               labels={labels}
               query={filter.query}
               filterBar={filter.bar}
               selection={selection}
               onSelectionChange={setSelection}
-              contextMenu={(selectedItems) => mergeItemMenu(selectedItems, labels, decide)}
+              contextMenu={(selectedItems) =>
+                mergeItemMenu(selectedItems, {
+                  workspacePath,
+                  request,
+                  plan,
+                  labels,
+                  itemTypeOf: typeOf,
+                  preferredTool,
+                  running: Boolean(run.progress),
+                  decide,
+                  reset,
+                  resolveIn: (key, tool) => void resolveInTool(key, tool),
+                  resolveDirectory: resolveDirectoryConflict,
+                })
+              }
             />
           </div>
         }
