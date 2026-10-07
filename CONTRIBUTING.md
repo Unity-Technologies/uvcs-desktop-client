@@ -19,6 +19,8 @@ behalf of your company. A pull request is merged only once it's accepted.
 3. Make sure `npm run typecheck` and `npm test` pass. For a change to startup, navigation or many views, run
    `npm run e2e` too. CI runs them on macOS, Windows and Linux.
 4. Check anything visible in the running app, in both themes.
+5. Have the branch reviewed before you open the pull request: with Claude Code, by the `reviewer` agent
+   ("Delivering work: a pull request" in CLAUDE.md).
 
 ## Never write to real data
 
