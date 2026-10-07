@@ -42,6 +42,11 @@ way from their middle; it keeps that room in a narrow window, ARCHITECTURE.md "L
 ("cs:3 → cs:5"; a click lists them with the base), where it stands ("2 conflicts to decide", the full summary in its
 tooltip) and the merge button, the primary action only once nothing waits. Merging into a server branch, a second row
 holds the changeset comment (`Merge from <source>`) and the button.
+The list (`MergeItemList`) is every list of changed files (ARCHITECTURE.md "Lists of changed files") in two groups,
+"Conflicts" then "Changes to apply" (`mergeItemGroups`), each by path: the filter (the "!" chip for conflicts,
+`mergeItemTones`), List or Tree, and several items selected at once, whose menu keeps yours or the incoming version of
+every conflicting file among them (`mergeItemMenu`, `keepVersionEntries`). The page starts on the first item that
+needs the user. Sandbox: `scripts/sandboxes/merge-conflicts.sh`.
 Every status reads as what the merge will do, never as done (`mergeStatus`): "Will merge automatically", "Needs your
 decision", then the user's choice ("Keeping yours", "Keeping incoming", "Combined", "Edited by you"; "Open in VS Code…",
 "Resolved in VS Code" for merge tools): an icon in the list and a chip in the file's toolbar, with a short tooltip. Sides

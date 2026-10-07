@@ -18,6 +18,7 @@ you touch:
 | `features/diff.md`                      | Editing, discarding, stepping through changes, comparison methods, line breaks, images, review marks, highlighting memory |
 | `features/model-diff.md`                | 3D models (FBX, OBJ, glTF): reading them as Unity imports them, what changed in Unity's terms, the 3D view |
 | `features/merge.md`                     | The merge page, conflict resolution, external merge tools, finishing a task    |
+| `features/incoming.md`                  | Incoming: changesets and their files, conflicts with your changes, updating    |
 | `features/open-with.md`                 | Finding apps per OS, the editors and terminals, opening items in them          |
 | `features/shelves-and-switching.md`     | Switching with changes, a workspace on a shelve, shelves in Changes, two people on one branch |
 | `features/files-history-annotate.md`    | Files, Browse repository, Go to file, cut and paste, history, annotate         |
@@ -607,17 +608,26 @@ renderer/src/
   - **One layout, List or Tree**, for every list at once and across sessions (`useFileListLayoutStore`, which took the
     one Changes kept first). Its switch, a menu (`FileListLayoutMenu`: it takes the room of one button), ends the filter
     bar, so it is in the same place in each list; a details panel too short for a filter bar has it in its title.
-    Incoming and the merge page, whose rows are grouped by their own sections (`incomingRows`, `mergeItems`), are always
-    a list for now.
   - **One tree**: `layoutPathTree` (`lib/pathTree`) lays out any items with a path, in n·log n: a folder's row, folders
     holding only the next one sharing it ("deep/very"), and a folder that is an item itself (an added or moved folder)
-    as its own row, with its status. `useFileTree` gives a list its rows; Changes adds its changelists on top
-    (`layoutChangeRows`). Every folder row is `TreeFolderLabel` (chevron, icon, name, and how many items it holds while
-    closed); `FileTreeCell` indents rows to their depth. A click, Enter, ← and → open and close folders
-    (`pathTreeKeyMove`); a folder's menu and the review key act on everything in it (`itemsUnderRows`), and in review
-    mode its mark marks every file in it, showing how far its review got ("2/5", `partialReviewCount`). Closed folders
-    are remembered for the session per list (`useCollapsedFolders`: the Changes of a workspace, one diff, one details
-    pane), so closing one in a changeset's diff leaves every other diff alone.
+    as its own row, with its status. Every folder row is `TreeFolderLabel` (chevron, icon, name, and how many items it
+    holds while closed); `FileTreeCell` indents rows to their level. A click, Enter, ← and → open and close folders
+    (`pathTreeKeyMove`, `groupedTreeKeyMove`); a folder's menu and the review key act on everything in it
+    (`itemsUnderRows`), and in review mode its mark marks every file in it, showing how far its review got ("2/5",
+    `partialReviewCount`). Closed folders are remembered for the session per list (`useCollapsedFolders`: the Changes of
+    a workspace, one diff, one details pane, one Incoming scope, one merge), so closing one in a changeset's diff leaves
+    every other diff alone.
+  - **One way to group**: a list whose files fall in groups (Changes' changelists, Incoming's conflicts with your
+    changes and changes to apply, the merge page's conflicts and changes to apply) lays them out with
+    `layoutGroupedTree` (`lib/groupedPathTree`): each group's header row (`TreeGroupLabel`: chevron, name, count, what
+    it is as its tooltip), then its files as a list or a tree, a level in (`groupedRowLevel`). Groups close as folders
+    do. A group only exists where the user acts on it differently; kinds of change are never groups, the chips filter by
+    them.
+  - **One list**: `FileTreeList` (`components/`) is every one of them but Changes, which adds checkboxes and drag and
+    drop, and the details panes' short lists: the filter bar, then the rows, grouped or not (`useGroupedFileTree`,
+    `useFileTree`), with a desktop list's selection of several rows and their menu, which acts on every item the
+    selected rows stand for. A list renders its own rows (`DiffEntryRow`, `MergeItemList`'s) and adds its marks (a
+    conflict's status, the review mark).
 - **File icons**: `ItemIcon` draws every file as the same filled Lucide page (`--icon-file` on `--icon-file-fill`) beside solid
   folders (directories and xlinks; `itemIconShape`), so every row reads with one weight; a glyph on the page tells the
   file's family (`fileFamilyOf`, by name

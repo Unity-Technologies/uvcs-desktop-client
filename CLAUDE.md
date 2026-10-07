@@ -137,7 +137,9 @@ npx playwright-cli attach --cdp=http://localhost:9333    # then snapshot, click 
   (every kind of move, some changed too, checked in and pending), `moved-code.sh` (code moved inside a file, as it
   was and edited, checked in and pending), `permissions.sh` (permissions at every level, a secured path and a group of
   branches; never the server's own), `models.sh` (a Unity project with one changeset per 3D model diff case: units,
-  rotation, pivot, hierarchy, material slots, sculpt, polycount, UVs; a branch and a pending model too).
+  rotation, pivot, hierarchy, material slots, sculpt, polycount, UVs; a branch and a pending model too), `incoming.sh`
+  (a workspace three changesets behind, with a local change that conflicts: Incoming), `merge-conflicts.sh` (a branch
+  whose merge has file and directory conflicts and changes in several folders: the merge page).
   `scripts/perf/soak.mjs` catches leaks.
 - `UVCS_RENDERER_PLATFORM=win32` (or `linux`) previews another OS's shortcuts, copy and layout from a Mac (the page
   only: the menus and window frame stay the Mac's).
