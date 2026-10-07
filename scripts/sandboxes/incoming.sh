@@ -2,10 +2,17 @@
 # Builds a workspace three changesets behind its branch, to see Incoming: changes, adds, a delete, a move, files in
 # several folders (Lap_2 and Lap_10 for the order), and a local edit to a file the branch changed too (a conflict).
 # A second workspace checks the changesets in.
-# Usage: scripts/sandboxes/incoming.sh [repo [workspace]]   → repo incoming-demo@local, workspace /tmp/uvcs-incoming
+# Usage: scripts/sandboxes/incoming.sh [repo-name [workspace-folder]]   → repo incoming-demo@local, workspace /tmp/uvcs-incoming
+# It deletes and recreates both, so it takes only names: the repository is always on the local server, the
+# workspace always a folder of /tmp.
 set -euo pipefail
-REPO=${1:-incoming-demo@local}
-WK=${2:-/tmp/uvcs-incoming}
+NAME=${1:-incoming-demo}
+FOLDER=${2:-uvcs-incoming}
+case "$NAME/$FOLDER" in
+  */*/* | *@* | *..* | */. | */-* | *[[:space:]]*) echo "Give names only (no server, no path): $NAME $FOLDER" >&2; exit 1 ;;
+esac
+REPO="$NAME@local"
+WK="/tmp/$FOLDER"
 OTHER="$WK-other"
 
 cm rmrep "$REPO" >/dev/null 2>&1 || true

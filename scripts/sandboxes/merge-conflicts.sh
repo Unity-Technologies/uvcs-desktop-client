@@ -2,10 +2,17 @@
 # Builds a branch to merge into main with every kind of item the merge page lists: files changed on both sides
 # (conflicts), an item added on both sides with the same name and a file one side moved while the other deleted it
 # (directory conflicts), and changes that apply cleanly in several folders. Merge /main/feature from the Branches view.
-# Usage: scripts/sandboxes/merge-conflicts.sh [repo [workspace]]   → repo merge-demo@local, workspace /tmp/uvcs-merge-demo
+# Usage: scripts/sandboxes/merge-conflicts.sh [repo-name [workspace-folder]]   → repo merge-demo@local, workspace /tmp/uvcs-merge-demo
+# It deletes and recreates both, so it takes only names: the repository is always on the local server, the
+# workspace always a folder of /tmp.
 set -euo pipefail
-REPO=${1:-merge-demo@local}
-WK=${2:-/tmp/uvcs-merge-demo}
+NAME=${1:-merge-demo}
+FOLDER=${2:-uvcs-merge-demo}
+case "$NAME/$FOLDER" in
+  */*/* | *@* | *..* | */. | */-* | *[[:space:]]*) echo "Give names only (no server, no path): $NAME $FOLDER" >&2; exit 1 ;;
+esac
+REPO="$NAME@local"
+WK="/tmp/$FOLDER"
 
 cm rmrep "$REPO" >/dev/null 2>&1 || true
 cm wk delete "$WK" >/dev/null 2>&1 || true
