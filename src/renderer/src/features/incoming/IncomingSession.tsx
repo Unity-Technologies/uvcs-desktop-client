@@ -10,19 +10,18 @@ import { SplitPane } from '../../ui/SplitPane';
 import { ChangesetDetails } from '../changesets/ChangesetDetails';
 import { changesetMenu } from '../changesets/changesetMenu';
 import { diffEntryKey } from '../diff/DiffEntryList';
-import { diffEntryMenu } from '../diff/diffEntryMenu';
 import { fileConflictStatus, fileConflictTool } from '../merge/mergeStatus';
 import { ResolveRunControl, useRunOffer } from '../merge/mergeTools/ResolveRunControl';
 import { useResolveRun } from '../merge/mergeTools/useResolveRun';
 import { FileConflictPanel } from '../merge/resolve/FileConflictPanel';
-import { keepVersionEntries } from '../merge/resolve/keepVersionEntries';
 import { useFileConflicts } from '../merge/resolve/useFileConflicts';
 import { IncomingChangesetList } from './IncomingChangesetList';
 import { IncomingConflictMark } from './IncomingConflictMark';
 import { IncomingFileDiff } from './IncomingDetail';
+import { incomingFileMenu } from './incomingFileMenu';
 import { IncomingShowMore } from './IncomingShowMore';
 import { incomingSubtitle } from './incomingSubtitle';
-import { ALL_INCOMING, collidesWithLocal, firstIncomingFile, incomingDiffTarget, incomingFilesSummary, type IncomingScope } from './incomingScope';
+import { ALL_INCOMING, collidesWithLocal, firstIncomingFile, incomingFilesSummary, type IncomingScope } from './incomingScope';
 import { IncomingFiles } from './IncomingFiles';
 import { UpdateBar } from './UpdateBar';
 import { useIncomingChangesetList } from './useIncomingChangesets';
@@ -111,11 +110,9 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const menuContext = { workspacePath, loadedChangeset: incoming.loadedChangeset, loadedBranch: incoming.branch ?? undefined };
   const scopedChangeset = scope.kind === 'changeset' ? changesetList.changesets.find((changeset) => changeset.id === scope.id) : undefined;
   // Conflicts are settled in the whole update, the merge updating makes; a changeset's files are what it did.
-  const fileMenu = (selected: DiffEntry[]) => {
-    const conflicts = scope.kind === 'all' ? selected.filter((file) => conflictPaths.has(file.path)).map((file) => file.path) : [];
-    const target = incomingDiffTarget(scope, incoming.loadedChangeset, incoming.headChangeset);
-    return diffEntryMenu(workspacePath, target, selected, undefined, keepVersionEntries(conflicts, UPDATE_LABELS, decide));
-  };
+  const conflictOf = (path: string) => (conflictPaths.has(path) ? states.find((state) => state.file.key === path) : undefined);
+  const fileMenu = (selected: DiffEntry[]) =>
+    incomingFileMenu(selected, { workspacePath, scope, loadedChangeset: incoming.loadedChangeset, headChangeset: incoming.headChangeset, conflictOf, decide });
   const selectedConflict = scope.kind === 'all' && focusedFile ? states.find((state) => state.file.key === focusedFile.path) : undefined;
 
   const detail = () => {
