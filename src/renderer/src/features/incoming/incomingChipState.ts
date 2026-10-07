@@ -94,11 +94,32 @@ export function cardFailed(
 }
 
 /**
- * One count on every screen: the check's, until the incoming changes are read for the same head, which count further
- * (up to a page instead of the check's 100) and name more authors. The chip, the sidebar and the status bar show this.
+ * What the card says, past the check's count, about checking the incoming changes against the local ones: that a click
+ * checks them (pinning reads them, `chipReadsIncomingChanges`), that it is checking, or that the check failed. Nothing
+ * below the count, where the chip checked up front, nor once this head was checked (the conflicts show, or none).
  */
-export function knownIncomingSummary(summary: IncomingSummary | undefined, changes: IncomingChanges | undefined): IncomingSummary | undefined {
+export type CardCheck = 'unchecked' | 'checking' | 'failed' | null;
+
+export function cardCheck(summary: IncomingSummary | undefined, changes: IncomingChanges | undefined, card: { pinned: boolean }, checkFailed: boolean): CardCheck {
+  if (!summary?.branch || !summary.countCapped || sameHeadChanges(summary, changes)) return null;
+  if (!card.pinned) return 'unchecked';
+  return checkFailed ? 'failed' : 'checking';
+}
+
+/**
+ * One count on every screen: the check's, until the incoming changes are read for the same head, which count further
+ * (up to a page instead of the check's 100) and name more authors; exact once Incoming read every older page for that
+ * head (`listed` with no more). It never goes down. The chip, the sidebar and the status bar show this.
+ */
+export function knownIncomingSummary(
+  summary: IncomingSummary | undefined,
+  changes: IncomingChanges | undefined,
+  listed?: { changesets: readonly unknown[]; more: boolean },
+): IncomingSummary | undefined {
   const read = sameHeadChanges(summary, changes);
-  if (!summary?.branch || !read || read.changesetCount <= summary.changesetCount) return summary;
-  return { ...summary, changesetCount: read.changesetCount, countCapped: read.countCapped, authors: read.authors };
+  if (!summary?.branch || !read) return summary;
+  const known = listed && !listed.more ? { changesetCount: listed.changesets.length, countCapped: false } : read;
+  const best = known.changesetCount >= read.changesetCount ? known : read;
+  if (best.changesetCount <= summary.changesetCount) return summary;
+  return { ...summary, changesetCount: best.changesetCount, countCapped: best.countCapped, authors: read.authors };
 }

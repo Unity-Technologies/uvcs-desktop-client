@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Changeset } from '@shared/domain/changeset';
-import { firstOlderPageParam, listedIncomingChangesets, nextOlderPageParam, showMoreStep } from './olderChangesetPages';
+import { firstOlderPageParam, landingSelection, listedIncomingChangesets, nextOlderPageParam, showMoreStep } from './olderChangesetPages';
 
 const changeset = (id: number): Changeset => ({ id }) as Changeset;
 const ids = (changesets: Changeset[]) => changesets.map((one) => one.id);
@@ -38,5 +38,16 @@ describe('showMoreStep', () => {
   it('reads the first older page while none is read, after a failure too', () => {
     expect(showMoreStep(undefined)).toBe('firstPage');
     expect(showMoreStep([])).toBe('firstPage');
+  });
+});
+
+describe('landingSelection', () => {
+  it('is the first changeset of the page that landed', () => {
+    expect(landingSelection([changeset(9), changeset(8), changeset(7)], 2)?.id).toBe(7);
+  });
+
+  it('is nothing while no page is awaited or it has not landed', () => {
+    expect(landingSelection([changeset(9), changeset(8)], null)).toBeNull();
+    expect(landingSelection([changeset(9), changeset(8)], 2)).toBeNull();
   });
 });
