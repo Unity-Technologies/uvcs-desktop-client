@@ -116,6 +116,21 @@ describe('protectMainRules', () => {
     }
   });
 
+  // Claude Code's own commit form: the heredoc sits inside double quotes, and the message may hold a lone `"`.
+  it('ignores a heredoc message inside "$(cat ...)" whatever quotes it holds', () => {
+    const message = ['The guard refuses "a pull', 'git push origin main for sure', 'EOF'].join('\n');
+    expect(violation(`git commit -m "$(cat <<'EOF'\n${message}\n)"`, WORKTREE)).toBeNull();
+    expect(violation(`git commit -m "$(cat <<'EOF'\n${message}\n)"\ngit push origin main`, WORKTREE)).not.toBeNull();
+  });
+
+  it('ignores a heredoc whose delimiter is escaped', () => {
+    expect(violation(`git commit -F - <<\\EOF\nTitle\ngit push origin main\nEOF`, WORKTREE)).toBeNull();
+  });
+
+  it('does not take a here-string for a heredoc', () => {
+    expect(violation(`cat <<< "EOF"\ngit merge feature/x`)).not.toBeNull();
+  });
+
   it('reads the commands after a heredoc', () => {
     expect(violation(`git commit -F - <<'EOF' --quiet\nTitle\nEOF\ngit push origin main`, WORKTREE)).not.toBeNull();
   });
