@@ -1,34 +1,28 @@
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { revisionIn } from '@shared/domain/revision';
-import { navigation } from '../../app/navigation/navigationStore';
+import { changedFileMenu, type ChangedFile } from '../../components/changedFileMenu';
 import type { MenuEntry } from '../../lib/actions';
-import { copySubmenu } from '../../components/copyMenu';
-import { openRevisionEntries } from '../../components/externalApps/openWithMenu';
-import { menuAction } from '../../components/menuWords';
-import { groupedMenu, type GroupedEntry } from '../../lib/menuGroups';
-import { fileNameOf } from '../../lib/text';
-import { openRevision, saveRevisionAs } from '../history/revisionOperations';
+import type { GroupedEntry } from '../../lib/menuGroups';
 import { reviewMenuEntry } from '../review/reviewMenuEntry';
 import type { ListReview } from '../review/useReviewMode';
 import { diffEntryAnnotation, diffEntryHistory } from './diffEntryHistory';
 
 /**
- * Context menu for a file in a diff: mark it reviewed (where the list reviews), open or save the newer revision, or
- * jump to its history, annotated or not. `added`: what the list adds in its groups, e.g. a conflict's "Keep yours".
+ * Context menu for a file in a diff (`changedFileMenu`): mark it reviewed (where the list reviews), open or save the
+ * newer revision, or jump to its history, annotated or not. `added`: what the list adds in its groups, e.g. a
+ * conflict's "Keep yours".
  */
 export function diffEntryMenu(workspacePath: string, target: DiffTarget, entries: DiffEntry[], review?: ListReview<DiffEntry>, added: GroupedEntry[] = []): MenuEntry[] {
-  const single = entries.length === 1 ? entries[0]! : null;
-  const revision = single && (revisionIn(single.repository, single.revisionId) ?? revisionIn(single.repository, single.baseRevisionId));
-  const isFile = single !== null && single.itemType !== 'directory' && revision !== null;
-  const annotated = single && diffEntryAnnotation(target, single);
+  return changedFileMenu(workspacePath, entries.map((entry) => changedFileOf(target, entry, entries.length === 1)), [review ? reviewMenuEntry(entries, review) : null, ...added]);
+}
 
-  return groupedMenu([
-    review && reviewMenuEntry(entries, review),
-    ...added,
-    single && menuAction('history', () => navigation.openPage(diffEntryHistory(target, single))),
-    annotated && menuAction('annotate', () => navigation.openPage(annotated)),
-    ...(isFile ? openRevisionEntries((editorId) => openRevision(workspacePath, revision, fileNameOf(single.path), editorId)) : []),
-    isFile && menuAction('saveAs', () => void saveRevisionAs(workspacePath, revision, fileNameOf(single.path))),
-    copySubmenu('', { path: entries.map((entry) => entry.path).join('\n') }, { count: entries.length }),
-  ]);
+/** A diff's file as its menu needs it: the newer revision, or else the older one (a deleted file's). */
+function changedFileOf(target: DiffTarget, entry: DiffEntry, single: boolean): ChangedFile {
+  const revision = revisionIn(entry.repository, entry.revisionId) ?? revisionIn(entry.repository, entry.baseRevisionId);
+  return {
+    path: entry.path,
+    history: single ? diffEntryHistory(target, entry) : null,
+    annotation: single ? diffEntryAnnotation(target, entry) : null,
+    version: entry.itemType !== 'directory' && revision ? { kind: 'revision', revision, fileName: entry.path } : null,
+  };
 }
