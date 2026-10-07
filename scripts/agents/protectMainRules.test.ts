@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { mainBranchViolation, splitCommandLine } from './protectMain.mjs';
+import { mainBranchViolation, splitCommandLine } from './protectMainRules.mjs';
 
 const REPOSITORY = resolve('repo');
 const WORKTREE = join(REPOSITORY, '.claude', 'worktrees', 'agent-1');
@@ -15,7 +15,7 @@ function branchIn(dir: string): string | null {
 
 const violation = (command: string, cwd = REPOSITORY) => mainBranchViolation(command, cwd, branchIn);
 
-describe('protectMain', () => {
+describe('protectMainRules', () => {
   describe('on main', () => {
     it.each([
       'git merge feature/x',
