@@ -12,6 +12,7 @@ import { useFileConflicts } from '../merge/resolve/useFileConflicts';
 import { IncomingFileDiff } from './IncomingDetail';
 import { IncomingList } from './IncomingList';
 import type { IncomingSelection } from './incomingRows';
+import { incomingSubtitle } from './incomingSubtitle';
 import { UpdateBar } from './UpdateBar';
 import { useIncomingChangesetList } from './useIncomingChangesets';
 import { UPDATE_LABELS, updateConflictFiles, updateResolutionsOf } from './updateConflictFiles';
@@ -20,7 +21,8 @@ import { shelveBlockedAndUpdate, updateResolvingConflicts, updateToIncoming } fr
 interface IncomingSessionProps {
   workspacePath: string;
   incoming: BranchIncomingChanges;
-  header: ReactNode;
+  /** The view's header, saying the words given (`incomingSubtitle`). */
+  header: (subtitle: string) => ReactNode;
 }
 
 /** Changesets came in: what they bring, what collides with local changes, and the update that takes them. */
@@ -70,7 +72,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
 
   return (
     <>
-      {header}
+      {header(incomingSubtitle(incoming.branch, changesetList))}
       <UpdateBar
         incoming={incoming}
         pendingConflictCount={pendingConflictPaths.size}
