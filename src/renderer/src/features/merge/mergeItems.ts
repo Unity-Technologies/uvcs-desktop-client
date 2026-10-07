@@ -3,7 +3,7 @@ import { comparePaths } from '@shared/pathOrder';
 import { statusTones } from '../../components/changeFilter';
 import type { StatusTone } from '../../components/StatusBadge';
 import { withoutRepeatedFolders } from '../../lib/enclosingFolders';
-import type { TreeGroup } from '../../lib/groupedPathTree';
+import type { GroupedTreeRow, TreeGroup } from '../../lib/groupedPathTree';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 /**
@@ -71,6 +71,16 @@ export function inListOrder(items: MergeItem[]): MergeItem[] {
 /** The first item still waiting for the user, as the list shows them: where the page starts, and goes after a run. */
 export function firstWaiting(items: MergeItem[]): MergeItem | undefined {
   return inListOrder(items).find(needsDecision);
+}
+
+/** The item shown by the row keyed `key`: its own row, or a folder's row when the item is that folder (`mergeItemAt`). */
+export function mergeItemAt(items: MergeItem[], rows: readonly GroupedTreeRow<MergeItem, MergeGroup>[], key: string | null): MergeItem | undefined {
+  return undefined;
+}
+
+/** What a menu over the rows `selected` acts on (`mergeItemsActedOn`). */
+export function mergeItemsActedOn(rows: readonly GroupedTreeRow<MergeItem, MergeGroup>[], selected: ReadonlySet<string>, underRows: MergeItem[]): MergeItem[] {
+  return underRows;
 }
 
 /** The conflicts, then the changes that apply cleanly, each in path order as every list of changed files; empty ones left out. */

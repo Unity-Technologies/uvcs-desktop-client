@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { MergePlan } from '@shared/domain/merge';
-import { buildMergeItems, firstWaiting, mergeItemGroups, mergeItemTones, needsDecision } from './mergeItems';
+import { layoutGroupedTree } from '../../lib/groupedPathTree';
+import { buildMergeItems, firstWaiting, mergeItemAt, mergeItemGroups, mergeItemsActedOn, mergeItemTones, needsDecision, type MergeItem } from './mergeItems';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
 const side = { operation: 'added' as const, path: '/twin.txt', description: 'Added /twin.txt' };
@@ -70,5 +71,28 @@ describe('merge items', () => {
 
   it('omits empty groups', () => {
     expect(mergeItemGroups(buildMergeItems({ ...plan, directoryConflicts: [] }, [], [])).map((group) => group.label)).toEqual(['Changes to apply']);
+  });
+});
+
+describe('a folder conflict that holds another conflict', () => {
+  // Added on both sides as a folder, with a file in it changed on both sides: in a tree the folder conflict is the
+  // folder's row, not a row of its own.
+  const folder = { operation: 'added' as const, path: '/src/shared', description: 'Added /src/shared' };
+  const nested: MergePlan = { ...plan, directoryConflicts: [{ ...plan.directoryConflicts[0]!, isDirectory: true, source: folder, destination: folder }] };
+  const inside: FileConflictState = { ...fileState(false), file: { ...fileState(false).file, key: '/src/shared/a.txt', path: 'src/shared/a.txt' } };
+  const items = buildMergeItems(nested, [inside], []);
+  const rows = layoutGroupedTree(mergeItemGroups(items), (item: MergeItem) => item.key, true);
+  const folderRow = rows.find((row) => row.type === 'folder' && row.item?.kind === 'directoryConflict')!;
+
+  it('is the item its folder row shows, so selecting the row selects the conflict', () => {
+    expect(folderRow).toBeDefined();
+    expect(mergeItemAt(items, rows, folderRow.key)?.key).toBe('directory:0');
+    expect(mergeItemAt(items, rows, 'file:/src/shared/a.txt')?.kind).toBe('fileConflict');
+    expect(mergeItemAt(items, rows, 'group:conflicts')).toBeUndefined();
+  });
+
+  it("is what the folder row's menu acts on, alone, instead of everything the folder holds", () => {
+    expect(mergeItemsActedOn(rows, new Set([folderRow.key]), items).map((item) => item.key)).toEqual(['directory:0']);
+    expect(mergeItemsActedOn(rows, new Set([folderRow.key, 'file:/src/shared/a.txt']), items)).toEqual(items);
   });
 });
