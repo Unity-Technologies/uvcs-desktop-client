@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import type { DiffEntry } from '@shared/domain/diff';
 import type { BranchIncomingChanges } from '@shared/domain/incoming';
 import type { GroupedTreeRow } from '../../lib/groupedPathTree';
-import { useCollapsedFolders } from '../../components/collapsedFoldersStore';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { pluralize } from '../../lib/text';
 import { EmptyState } from '../../ui/EmptyState';
@@ -27,6 +26,7 @@ import { UpdateBar } from './UpdateBar';
 import { UPDATE_LABELS, updateConflictFiles, updateResolutionsOf } from './updateConflictFiles';
 import { shelveBlockedAndUpdate, updateResolvingConflicts, updateToIncoming } from './updateOperations';
 import { useIncomingFiles } from './useIncomingFiles';
+import { useIncomingViewStore } from './incomingViewStore';
 import styles from './IncomingSession.module.css';
 
 interface IncomingSessionProps {
@@ -34,9 +34,6 @@ interface IncomingSessionProps {
   incoming: BranchIncomingChanges;
   header: ReactNode;
 }
-
-/** The key of the changesets' section among what Incoming keeps closed (`useCollapsedFolders`). */
-const CHANGESETS_SECTION = 'changesets';
 
 /**
  * Changesets came in: what they bring, all of it or one changeset's, what collides with local changes, and the update
@@ -51,7 +48,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const [selection, setSelection] = useState<SelectionState>(EMPTY_SELECTION);
   const selectionRef = useRef(selection);
   selectionRef.current = selection;
-  const { collapsed, toggleCollapsed } = useCollapsedFolders('incoming');
+  const { changesetsCollapsed, toggleChangesets } = useIncomingViewStore();
 
   const conflictPaths = useMemo(() => new Set(incoming.conflicts.map((conflict) => conflict.path)), [incoming.conflicts]);
   const blockedPaths = useMemo(() => new Set(incoming.blockedPaths), [incoming.blockedPaths]);
@@ -163,8 +160,8 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
               changesets={incoming.changesets}
               scope={scope}
               onScope={changeScope}
-              collapsed={collapsed.has(CHANGESETS_SECTION)}
-              onToggleCollapsed={() => toggleCollapsed(CHANGESETS_SECTION)}
+              collapsed={changesetsCollapsed}
+              onToggleCollapsed={toggleChangesets}
               changesetMenu={(changeset) => changesetMenu(menuContext, [changeset])}
             />
             <IncomingFiles

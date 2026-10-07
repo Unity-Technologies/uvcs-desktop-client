@@ -8,11 +8,10 @@ import { firstLine, formatCount } from '../../lib/text';
 import { Avatar } from '../../ui/Avatar';
 import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { RelativeTime } from '../../ui/RelativeTime';
+import { ALL_ROW_HEIGHT, CHANGESET_ROW_HEIGHT, changesetListMaxHeight, changesetsSummary } from './incomingChangesetSection';
 import { ALL_INCOMING, scopeKey, type IncomingScope } from './incomingScope';
 import styles from './IncomingChangesetList.module.css';
 
-/** Estimates until each row is measured: "All incoming changes", and a changeset (two lines). */
-const ESTIMATED_HEIGHTS = { all: 30, changeset: 49 };
 
 interface IncomingChangesetListProps {
   changesets: Changeset[];
@@ -28,7 +27,9 @@ interface IncomingChangesetListProps {
 /**
  * The incoming changesets, to see what one of them changed, under "All incoming changes", which shows the whole
  * update. Each row is what the list of changesets read (comment, author, date): nothing is asked of `cm` per row.
- * Hundreds of changesets: only the rows in view render.
+ * The files below are what Incoming is for: the section shows a few changesets and scrolls the rest
+ * (`changesetListMaxHeight`), and closed, its header sums them up (`changesetsSummary`). Hundreds of changesets: only
+ * the rows in view render.
  */
 export function IncomingChangesetList({ changesets, scope, onScope, collapsed, onToggleCollapsed, changesetMenu, footer }: IncomingChangesetListProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -36,7 +37,7 @@ export function IncomingChangesetList({ changesets, scope, onScope, collapsed, o
   const virtualizer = useVirtualizer({
     count: scopes.length,
     getScrollElement: () => viewportRef.current,
-    estimateSize: (index) => (index === 0 ? ESTIMATED_HEIGHTS.all : ESTIMATED_HEIGHTS.changeset),
+    estimateSize: (index) => (index === 0 ? ALL_ROW_HEIGHT : CHANGESET_ROW_HEIGHT),
     getItemKey: (index) => scopeKey(scopes[index]!),
     overscan: 12,
   });
@@ -95,14 +96,21 @@ export function IncomingChangesetList({ changesets, scope, onScope, collapsed, o
     <section className={styles.section} data-collapsed={collapsed}>
       <button type="button" className={styles.header} aria-expanded={!collapsed} aria-controls={listId} onClick={onToggleCollapsed}>
         <ChevronRight size={13} className={styles.chevron} data-collapsed={collapsed} aria-hidden />
-        <span className={styles.title}>Changesets</span>
-        <span className={styles.count}>{formatCount(changesets.length)}</span>
+        {collapsed ? (
+          <span className={styles.title}>{changesetsSummary(changesets)}</span>
+        ) : (
+          <>
+            <span className={styles.title}>Changesets</span>
+            <span className={styles.count}>{formatCount(changesets.length)}</span>
+          </>
+        )}
       </button>
       {!collapsed && (
         <div
           ref={viewportRef}
           id={listId}
           className={styles.list}
+          style={{ maxHeight: changesetListMaxHeight() }}
           tabIndex={0}
           role="listbox"
           aria-label="Incoming changesets"

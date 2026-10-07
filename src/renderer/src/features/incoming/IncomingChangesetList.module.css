@@ -1,10 +1,8 @@
-/* The changesets take the room they need, up to part of the pane: the files below always keep some. */
+/* A few changesets, then the files: the list's height is capped in code (`changesetListMaxHeight`). */
 .section {
   display: flex;
-  flex: 0 1 auto;
+  flex: none;
   flex-direction: column;
-  max-height: 40%;
-  min-height: 0;
   border-bottom: 1px solid var(--border-subtle);
 }
 
@@ -42,6 +40,9 @@
 
 .title {
   flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--text-secondary);
   font-size: var(--text-sm);
   font-weight: 600;
@@ -54,9 +55,7 @@
 }
 
 .list {
-  flex: 1;
-  min-height: 0;
-  padding: 0 var(--space-1) var(--space-1);
+  padding: 0 var(--space-1);
   overflow: auto;
   outline: none;
 }
