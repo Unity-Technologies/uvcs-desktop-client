@@ -18,7 +18,7 @@ const NO_FILES: DiffEntry[] = [];
  * and kept for good, the very query its details panel elsewhere reads (`useDiffEntries`). `files` is undefined until
  * the scope's files are in.
  */
-export function useIncomingFiles(scope: IncomingScope, updateFiles: DiffEntry[], collides: (file: DiffEntry) => boolean) {
+export function useIncomingFiles(scope: IncomingScope, updateFiles: DiffEntry[], collides: (file: DiffEntry) => boolean, selectedKey: string | null) {
   const workspacePath = useWorkspacePath();
   const settled = useSettledValue(scope, scopeKey(scope));
   const isSettled = scopeKey(settled) === scopeKey(scope);
@@ -35,6 +35,6 @@ export function useIncomingFiles(scope: IncomingScope, updateFiles: DiffEntry[],
     () => (scope.kind === 'all' ? incomingFileContent(filter.visible, collides) : { sorted: filter.visible }),
     [scope.kind, filter.visible, collides],
   );
-  const tree = useGroupedFileTree(content, diffEntryKey, folderListScope(workspacePath, `incoming:${scopeKey(scope)}`));
+  const tree = useGroupedFileTree(content, diffEntryKey, folderListScope(workspacePath, `incoming:${scopeKey(scope)}`), selectedKey);
   return { files, filter, ...tree };
 }

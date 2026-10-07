@@ -67,7 +67,9 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const preferredTool = primaryMergeTool(useMergeTools());
   const filter = useChangeFilter(items, itemPath, mergeItemTones, true);
   const content = useMemo(() => ({ groups: mergeItemGroups(filter.visible) }), [filter.visible]);
-  const { rows, tree, toggleCollapsed } = useGroupedFileTree(content, itemKey, folderListScope(workspacePath, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`));
+  const { rows, tree, toggleCollapsed, rowKeyOf } = useGroupedFileTree(content, itemKey, folderListScope(workspacePath, `merge:${request.sourceSpec}:${request.destinationBranch ?? ''}`), selectedKey);
+  const latestRowKeyOf = useRef(rowKeyOf);
+  latestRowKeyOf.current = rowKeyOf;
   const conflictStatuses = useMemo(() => items.map(conflictStatusOf).filter((status) => status !== null), [items]);
   const resolutions = collectResolutions({ plan, fileStates, directoryResolutions, comment });
   const selected = mergeItemAt(items, rows, selectedKey);
@@ -85,7 +87,7 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
   const afterRun = useCallback(() => {
     const waiting = firstWaiting(latestItems.current);
     if (waiting) {
-      setSelection(singleSelection(waiting.key));
+      setSelection(singleSelection(latestRowKeyOf.current(waiting.key)));
       listRef.current?.querySelector<HTMLElement>('[role="grid"]')?.focus({ preventScroll: true });
     } else {
       mergeButtonRef.current?.focus();
@@ -96,8 +98,8 @@ export function MergeSession({ workspacePath, request, plan, task, onCompleted }
 
   // Start on the first thing that needs the user, as the list shows them, else on its first row.
   useEffect(() => {
-    if (!selectedKey && items.length > 0) setSelection(singleSelection((firstWaiting(items) ?? inListOrder(items)[0]!).key));
-  }, [selectedKey, items]);
+    if (!selectedKey && items.length > 0) setSelection(singleSelection(rowKeyOf((firstWaiting(items) ?? inListOrder(items)[0]!).key)));
+  }, [selectedKey, items, rowKeyOf]);
 
   const resolveDirectoryConflict = (index: number, resolution: DirectoryConflictResolution): void =>
     setDirectoryResolutions((current) => Object.assign([...current], { [index]: resolution }));

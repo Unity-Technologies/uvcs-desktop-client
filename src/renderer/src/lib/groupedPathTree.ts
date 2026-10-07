@@ -1,4 +1,4 @@
-import { collapseTreeRows, layoutPathList, layoutPathTree, type PathTreeRow, type TreeFolderRow } from './pathTree';
+import { collapseTreeRows, layoutPathList, layoutPathTree, rowsHolding, type PathTreeRow, type TreeFolderRow } from './pathTree';
 import { treeArrowMove, type TreeArrowMove, type TreeArrowRow } from './treeArrowMove';
 
 /**
@@ -77,7 +77,8 @@ export function groupedTreeKeyMove<T, G>(rows: readonly GroupedTreeRow<T, G>[], 
   return treeArrowMove(groupedTreeArrowRows(rows), index, key);
 }
 
-/** The groups and folders holding the row keyed `key` (`groupedRowsHolding`). */
-export function groupedRowsHolding<T, G>(_rows: readonly GroupedTreeRow<T, G>[], _key: string): string[] {
-  return [];
+/** The folders, then the group, holding the row keyed `key`, as `rowsHolding` finds them: opening them shows it. */
+export function groupedRowsHolding<T, G>(rows: readonly GroupedTreeRow<T, G>[], key: string): string[] {
+  const grouped = isGroupedList(rows);
+  return rowsHolding(rows, key, (row) => groupedRowLevel(row, grouped));
 }

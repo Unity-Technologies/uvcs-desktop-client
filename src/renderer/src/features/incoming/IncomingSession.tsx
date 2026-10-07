@@ -58,7 +58,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const conflictPaths = useMemo(() => new Set(incoming.conflicts.map((conflict) => conflict.path)), [incoming.conflicts]);
   const blockedPaths = useMemo(() => new Set(incoming.blockedPaths), [incoming.blockedPaths]);
   const collides = useCallback((file: DiffEntry) => collidesWithLocal(file, conflictPaths, blockedPaths), [conflictPaths, blockedPaths]);
-  const { files, filter, rows, tree, toggleCollapsed: toggleFolder } = useIncomingFiles(scope, incoming.files, collides);
+  const { files, filter, rows, tree, toggleCollapsed: toggleFolder } = useIncomingFiles(scope, incoming.files, collides, selection.anchor);
 
   // Resolving the files one by one: the selection follows while the user stays on the file it opened.
   const followRun = useCallback((key: string, previousKey: string | undefined) => {

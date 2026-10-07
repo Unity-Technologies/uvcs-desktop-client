@@ -183,12 +183,29 @@ function pathPrefixes(path: string): string[] {
   return prefixes;
 }
 
-/** The key of the row showing the item keyed `itemKey` (`rowKeyShowing`). */
-export function rowKeyShowing<T>(_rows: readonly { key: string; item?: T }[], itemKey: string, _keyOf: (item: T) => string): string {
+/**
+ * The key of the row showing the item keyed `itemKey`: its own row, or its folder's row when the item is a folder that
+ * holds others (`layoutPathTree` gives it no row of its own). `itemKey` itself when no row shows it.
+ */
+export function rowKeyShowing<T>(rows: readonly { key: string; item?: T }[], itemKey: string, keyOf: (item: T) => string): string {
+  for (const row of rows) if (row.key === itemKey || (row.item !== undefined && keyOf(row.item) === itemKey)) return row.key;
   return itemKey;
 }
 
-/** The groups and folders holding the row keyed `key` (`rowsHolding`). */
-export function rowsHolding<Row extends { key: string }>(_rows: readonly Row[], _key: string, _levelOf: (row: Row) => number): string[] {
-  return [];
+/**
+ * The keys of the groups and folders holding the row keyed `key`, nearest first: opening them all shows it. `rows` are
+ * laid out as if nothing were closed (`layoutPathTree`), and `levelOf` tells how deep each sits.
+ */
+export function rowsHolding<Row extends { key: string }>(rows: readonly Row[], key: string, levelOf: (row: Row) => number): string[] {
+  const index = rows.findIndex((row) => row.key === key);
+  if (index === -1) return [];
+  const holding: string[] = [];
+  let level = levelOf(rows[index]!);
+  for (let above = index - 1; above >= 0 && level > 0; above--) {
+    const aboveLevel = levelOf(rows[above]!);
+    if (aboveLevel >= level) continue;
+    holding.push(rows[above]!.key);
+    level = aboveLevel;
+  }
+  return holding;
 }

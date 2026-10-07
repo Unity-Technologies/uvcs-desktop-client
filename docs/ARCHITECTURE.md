@@ -628,7 +628,9 @@ renderer/src/
     `partialReviewCount`). Closed folders are remembered for the session per list (`useCollapsedFolders`: the Changes of
     a workspace, one diff, one details pane, one Incoming scope, one merge), so closing one in a changeset's diff leaves
     every other diff alone. A list is scoped by its workspace too (`folderListScope`): `/main/feature` or cs:3 name
-    other things in another repository.
+    other things in another repository. A selection made from outside the list (a diff opened on a file, the merge
+    page or a resolve run moving to a conflict) opens the groups and folders holding it, so its row shows
+    (`useOpenToSelected`, `rowsHolding`); only a new selection opens anything, so a folder closed around it stays closed.
   - **One way to group**: a list whose files fall in groups (Changes' changelists, Incoming's conflicts with your
     changes and changes to apply, the merge page's conflicts and changes to apply) lays them out with
     `layoutGroupedTree` (`lib/groupedPathTree`): each group's header row (`TreeGroupLabel`: chevron, name, count, what

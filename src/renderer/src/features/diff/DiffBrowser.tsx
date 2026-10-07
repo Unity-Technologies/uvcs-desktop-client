@@ -40,7 +40,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
   const firstKey = entries[0] && diffEntryKey(entries[0]);
   const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, true);
   const shown = useMemo(() => review.narrow(filter.visible), [review.narrow, filter.visible]);
-  const { rows, tree, toggleCollapsed } = useFileTree(shown, diffEntryKey, folderListScope(workspacePath, `diff:${JSON.stringify(target)}`));
+  const { rows, tree, toggleCollapsed } = useFileTree(shown, diffEntryKey, folderListScope(workspacePath, `diff:${JSON.stringify(target)}`), selection.anchor);
   // A folder the keyboard (or a click) is on, in a tree.
   const focusedFolder = focused ? undefined : rows.find((row): row is TreeFolderRow<DiffEntry> => row.type === 'folder' && row.key === selection.anchor);
   // The diff's change navigation goes on to the files before and after, as the list shows them.
