@@ -1,5 +1,5 @@
-// What the protectMain hook (protectMain.mjs) refuses: no commit, merge, rebase, cherry-pick, revert or am while
-// `main` is checked out, and no push to `main`. It follows `cd <dir>`, `git -C <dir>` and `git switch`/`git checkout`
+// What the protectMain hook (protectMain.mjs) refuses: no commit, merge, pull, rebase, cherry-pick, revert or am
+// while `main` is checked out, but for a fast-forward to `origin/main`, and no push to `main`. It follows `cd <dir>`, `git -C <dir>` and `git switch`/`git checkout`
 // inside one command line, so `git checkout main && git merge feature/x` is caught before it runs. Pure but for
 // `checkedOutBranch`, so the tests feed it command lines and branches.
 //
@@ -11,7 +11,9 @@ import { execFileSync } from 'node:child_process';
 import { resolve } from 'node:path';
 
 const PROTECTED_BRANCH = 'main';
-const WRITING_SUBCOMMANDS = new Set(['commit', 'merge', 'rebase', 'cherry-pick', 'revert', 'am']);
+const WRITING_SUBCOMMANDS = new Set(['commit', 'merge', 'pull', 'rebase', 'cherry-pick', 'revert', 'am']);
+/** What a fast-forward may name and still only bring main up to date with the remote's (`git pull --ff-only origin main`). */
+const UPSTREAM_OF_MAIN = new Set(['origin', PROTECTED_BRANCH, `origin/${PROTECTED_BRANCH}`, '@{u}', '@{upstream}']);
 /** Options that only stop or inspect an operation already under way, which is how an agent backs out of a mistake. */
 const BACKING_OUT_OPTIONS = new Set(['--abort', '--quit', '--show-current-patch']);
 /** git's own options that take a value as the next word (`git -C <dir> ...`, `git -c key=value ...`). */
@@ -41,7 +43,7 @@ export function mainBranchViolation(command, cwd, branchIn) {
       switchedTo.set(gitDirectory, switched);
       continue;
     }
-    if (WRITING_SUBCOMMANDS.has(subcommand) && !args.some((arg) => BACKING_OUT_OPTIONS.has(arg))) {
+    if (WRITING_SUBCOMMANDS.has(subcommand) && !backsOut(args) && !fastForwardsToUpstream(subcommand, args)) {
       if (branchAt(gitDirectory) === PROTECTED_BRANCH) {
         return `\`git ${subcommand}\` on ${PROTECTED_BRANCH}`;
       }
@@ -51,6 +53,17 @@ export function mainBranchViolation(command, cwd, branchIn) {
     }
   }
   return null;
+}
+
+function backsOut(args) {
+  return args.some((arg) => BACKING_OUT_OPTIONS.has(arg));
+}
+
+/** Whether a pull or merge only fast-forwards main to the remote's main: how main is brought up to date. */
+function fastForwardsToUpstream(subcommand, args) {
+  if (subcommand !== 'pull' && subcommand !== 'merge') return false;
+  if (!args.includes('--ff-only')) return false;
+  return args.filter((arg) => !arg.startsWith('-')).every((arg) => UPSTREAM_OF_MAIN.has(arg));
 }
 
 /** The parts of a command line that run one after another: split on unquoted `&&`, `||`, `;`, `|` and new lines. */
