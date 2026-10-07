@@ -60,6 +60,11 @@ describe('parseDiffEntries', () => {
     expect(parseDiffEntries(output).map((entry) => entry.path)).toEqual(['File_1.txt', 'file_2.txt', 'file_10.txt', 'file_100.txt']);
   });
 
+  it('lists everything in a folder right after it, as every list of files does', () => {
+    const output = ['a-b.txt', 'a/c.txt', 'a', 'ab'].map((path) => formatOutput(['A', `"/${path}"`, '""', '-1', '5', 'F', GAME])).join('');
+    expect(parseDiffEntries(output).map((entry) => entry.path)).toEqual(['a', 'a/c.txt', 'a-b.txt', 'ab']);
+  });
+
   it('shows the same revision on both sides of a pure move', () => {
     const [moved] = parseDiffEntries(formatOutput(['M', '"/docs/changelog.md"', '"/docs/notes.md"', '-1', '14', 'F', GAME]));
     expect(moved).toMatchObject({ status: 'moved', oldPath: 'docs/notes.md', baseRevisionId: 14, revisionId: 14 });

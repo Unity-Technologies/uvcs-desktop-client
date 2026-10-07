@@ -6,8 +6,17 @@ describe('comparePaths', () => {
     expect(['a-b.txt', 'a/c.txt', 'a', 'ab'].sort(comparePaths)).toEqual(['a', 'a/c.txt', 'a-b.txt', 'ab']);
   });
 
-  it('orders like comparing name by name in the language order', () => {
-    const collator = new Intl.Collator();
+  it('orders numbered names as people read them', () => {
+    expect(['x/file10.txt', 'x/file2.txt', 'x/File1.txt', 'x/file100.txt'].sort(comparePaths)).toEqual(['x/File1.txt', 'x/file2.txt', 'x/file10.txt', 'x/file100.txt']);
+    expect(['task-10/a', 'task-2/a', 'task-2'].sort(comparePaths)).toEqual(['task-2', 'task-2/a', 'task-10/a']);
+  });
+
+  it('orders letters regardless of case first, then by case', () => {
+    expect(['b', 'B/x', 'a', 'A'].sort(comparePaths)).toEqual(['a', 'A', 'b', 'B/x']);
+  });
+
+  it('orders like comparing name by name in the language order, numbers as people read them', () => {
+    const collator = new Intl.Collator(undefined, { numeric: true });
     const nameByName = (a: string, b: string): number => {
       const [namesA, namesB] = [a.split('/'), b.split('/')];
       for (let index = 0; index < Math.min(namesA.length, namesB.length); index++) {
