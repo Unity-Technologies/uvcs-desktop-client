@@ -74,10 +74,19 @@ and many people use the same server. Every `cm` command other than local reads (
   (`repositoryPath`). Reads go through `CmClient.query()`, so they reuse a warm `cm shell` instead of starting a
   process; `execute()` is only for long, streamed or cancellable work.
 
-- **Idle** (focused, nothing touched): only the incoming check, one `cm find changeset ... --format={changesetid}{owner}` a
-  minute (every five behind other apps, none while hidden). It takes the branch and loaded changeset from the workspace
-  info, which follows `.plastic`, instead of asking `cm status`. Nothing else polls: left changes, locks and lists wait
-  for an event, a focus or an operation.
+- **Idle** (focused, nothing touched): only the incoming check, one `cm find changeset "... order by changesetid desc
+  limit 101" --format={changesetid}{owner}` a minute (every five behind other apps, none while hidden). It takes the
+  branch and loaded changeset from the workspace info, which follows `.plastic`, instead of asking `cm status`. It
+  counts at most `INCOMING_CHECK_LIMIT` (100) changesets, the 101st telling there are more (`countCapped`, shown as
+  "100+", `pluralizeAtLeast`): a workspace 100,000 changesets behind costs the server what one 100 behind does. Nothing
+  else polls: left changes, locks and lists wait for an event, a focus or an operation.
+- **Incoming, by how far behind**: below the cap, the chip reads what the update collides with (the update's `cm diff`
+  and the local `cm status`, `useIncomingChanges`) once per head, to warn about conflicts before any hover, as the
+  native client does; at "100+" that diff waits for the card to open, Incoming to open or Update, which reads it again
+  right before updating (`chipReadsIncomingChanges`). The card reads its five newest changesets as it opens (`cm find
+  ... limit 6`, `useNewestIncomingChangesets`, kept until the head moves). Incoming reads the newest 200 changesets with
+  the incoming changes and "Show 200 more" reads the next older page (`changesetid <` the oldest shown,
+  `useIncomingChangesetList`); counts past what was read show as "200+".
 - **Focus**: the incoming check if older than 20 s, and the server views on screen once stale (30 s by default). Lists
   that hardly change by themselves and are heavy to read use `SLOW_CHANGING_QUERY` (every branch, every label, attribute
   types, attribute values, the working object's comment, the palette's lists, the recent shelves in Changes, the user's and everyone's): five minutes, and focus never re-reads them. The Branch
