@@ -131,15 +131,16 @@
   font-size: var(--text-xs);
 }
 
-.list:focus-visible {
+.rows:focus-visible {
   box-shadow: var(--focus-ring-inset);
+  outline: none;
 }
 
-.list:focus-visible:has([data-selected='true']) {
+.rows:focus-visible:has([data-selected='true']) {
   box-shadow: none;
 }
 
-.list:focus-visible [data-selected='true'] {
+.rows:focus-visible [data-selected='true'] {
   box-shadow: var(--focus-ring-inset);
 }
 

@@ -20,7 +20,6 @@ import { IncomingChangesetList } from './IncomingChangesetList';
 import { IncomingConflictMark } from './IncomingConflictMark';
 import { IncomingFileDiff } from './IncomingDetail';
 import { incomingFileMenu } from './incomingFileMenu';
-import { IncomingShowMore } from './IncomingShowMore';
 import { incomingSubtitle } from './incomingSubtitle';
 import { ALL_INCOMING, collidesWithLocal, firstIncomingFile, incomingFilesSummary, type IncomingScope } from './incomingScope';
 import { IncomingFiles } from './IncomingFiles';
@@ -164,7 +163,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
             <IncomingChangesetList
               changesets={changesetList.changesets}
               more={changesetList.more}
-              footer={changesetList.more && <IncomingShowMore loading={changesetList.loading} onShowMore={changesetList.showMore} />}
+              older={changesetList.more ? { loading: changesetList.loading, onShowMore: changesetList.showMore } : undefined}
               scope={scope}
               onScope={changeScope}
               collapsed={changesetsCollapsed}

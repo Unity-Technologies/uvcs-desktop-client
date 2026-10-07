@@ -15,11 +15,16 @@
   cursor: pointer;
 }
 
-.showMore:hover:not(:disabled) {
+.showMore:hover:not([aria-disabled='true']) {
   background: var(--bg-hover);
 }
 
-.showMore:disabled {
+.showMore[aria-disabled='true'] {
   color: var(--text-secondary);
   cursor: default;
+}
+
+.showMore:focus-visible {
+  box-shadow: var(--focus-ring-inset);
+  outline: none;
 }

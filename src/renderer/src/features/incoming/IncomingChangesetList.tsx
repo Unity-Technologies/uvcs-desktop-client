@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { ChevronRight, GitCommitVertical, Layers } from 'lucide-react';
-import { useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import type { MenuEntry } from '../../lib/actions';
 import { navigationTarget } from '../../lib/listNavigation';
@@ -10,6 +10,8 @@ import { ActionContextMenu } from '../../ui/menu/ActionContextMenu';
 import { RelativeTime } from '../../ui/RelativeTime';
 import { ALL_ROW_HEIGHT, CHANGESET_ROW_HEIGHT, changesetListMaxHeight, changesetsSummary } from './incomingChangesetSection';
 import { ALL_INCOMING, scopeKey, type IncomingScope } from './incomingScope';
+import { IncomingShowMore } from './IncomingShowMore';
+import { showMoreLanding } from './showMoreLanding';
 import styles from './IncomingChangesetList.module.css';
 
 
@@ -22,8 +24,8 @@ interface IncomingChangesetListProps {
   collapsed: boolean;
   onToggleCollapsed: () => void;
   changesetMenu: (changeset: Changeset) => MenuEntry[];
-  /** After the last changeset, e.g. to read more of them. */
-  footer?: ReactNode;
+  /** Older changesets remain to be read: "Show more" after the last one reads the next page. */
+  older?: { loading: boolean; onShowMore: () => void };
 }
 
 /**
@@ -33,8 +35,9 @@ interface IncomingChangesetListProps {
  * (`changesetListMaxHeight`), and closed, its header sums them up (`changesetsSummary`). Hundreds of changesets: only
  * the rows in view render.
  */
-export function IncomingChangesetList({ changesets, more, scope, onScope, collapsed, onToggleCollapsed, changesetMenu, footer }: IncomingChangesetListProps) {
+export function IncomingChangesetList({ changesets, more, scope, onScope, collapsed, onToggleCollapsed, changesetMenu, older }: IncomingChangesetListProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const listboxRef = useRef<HTMLDivElement>(null);
   const scopes: IncomingScope[] = [ALL_INCOMING, ...changesets.map((changeset): IncomingScope => ({ kind: 'changeset', id: changeset.id }))];
   const virtualizer = useVirtualizer({
     count: scopes.length,
@@ -54,6 +57,28 @@ export function IncomingChangesetList({ changesets, more, scope, onScope, collap
     event.preventDefault();
     onScope(scopes[target]!);
     virtualizer.scrollToIndex(target);
+  };
+
+  // "Show more" pressed from the keyboard: once the page is in, the arrows go on from its first changeset.
+  const [landing, setLanding] = useState<{ countBefore: number; started: boolean } | null>(null);
+  const loading = older?.loading ?? false;
+  useEffect(() => {
+    if (!landing) return;
+    if (loading && !landing.started) {
+      setLanding({ ...landing, started: true });
+      return;
+    }
+    const next = showMoreLanding({ ...landing, count: changesets.length, loading });
+    if (next.kind === 'wait') return;
+    setLanding(null);
+    if (next.kind === 'cancel') return;
+    onScope(scopes[next.index]!);
+    virtualizer.scrollToIndex(next.index);
+    listboxRef.current?.focus({ preventScroll: true });
+  }, [landing, loading, changesets.length]); // As the read goes, not on every render.
+  const showMore = (fromKeyboard: boolean): void => {
+    if (fromKeyboard) setLanding({ countBefore: changesets.length, started: false });
+    older?.onShowMore();
   };
 
   const changesetRow = (changeset: Changeset, index: number) => (
@@ -108,25 +133,25 @@ export function IncomingChangesetList({ changesets, more, scope, onScope, collap
         )}
       </button>
       {!collapsed && (
-        <div
-          ref={viewportRef}
-          id={listId}
-          className={styles.list}
-          style={{ maxHeight: changesetListMaxHeight() }}
-          tabIndex={0}
-          role="listbox"
-          aria-label="Incoming changesets"
-          aria-activedescendant={selectedIndex === -1 ? undefined : `${idPrefix}-${selectedIndex}`}
-          onKeyDown={onKeyDown}
-        >
-          <div className={styles.rows} style={{ height: virtualizer.getTotalSize() }}>
+        <div ref={viewportRef} id={listId} className={styles.list} style={{ maxHeight: changesetListMaxHeight() }}>
+          <div
+            ref={listboxRef}
+            className={styles.rows}
+            style={{ height: virtualizer.getTotalSize() }}
+            tabIndex={0}
+            role="listbox"
+            aria-label="Incoming changesets"
+            aria-activedescendant={selectedIndex === -1 ? undefined : `${idPrefix}-${selectedIndex}`}
+            onKeyDown={onKeyDown}
+          >
             {virtualizer.getVirtualItems().map((item) => (
               <div key={item.key} ref={virtualizer.measureElement} data-index={item.index} role="presentation" className={styles.slot} style={{ transform: `translateY(${item.start}px)` }}>
                 {item.index === 0 ? allRow : changesetRow(changesets[item.index - 1]!, item.index)}
               </div>
             ))}
           </div>
-          {footer}
+          {/* After the listbox, not in it: its keys stay its own, and Tab reaches it. */}
+          {older && <IncomingShowMore loading={older.loading} onShowMore={showMore} />}
         </div>
       )}
     </section>

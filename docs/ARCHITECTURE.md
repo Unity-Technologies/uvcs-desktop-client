@@ -88,8 +88,9 @@ and many people use the same server. Every `cm` command other than local reads (
   says a click checks them against the local changes, as updating and opening Incoming do; pinning the card (that
   click), opening Incoming or Update reads the diff, Update again right before updating (`chipReadsIncomingChanges`). A
   card whose reads failed says so (`cardFailed`). Incoming reads the newest 200 changesets with the incoming changes and
-  "Show 200 more" (a button after the changesets, reached with Tab: `IncomingShowMore`) reads the next
-  older page (`changesetid <` the oldest shown, `useIncomingChangesetList`); what it reads is decided from the pages
+  "Show 200 more" (a button after the changesets, outside their listbox, reached with Tab: `IncomingShowMore`; pressed
+  from the keyboard, the arrows go on from the first changeset read, `showMoreLanding`) reads the next older page
+  (`changesetid <` the oldest shown, `useIncomingChangesetList`); what it reads is decided from the pages
   cached, not from the list's state, so it goes on after a visit elsewhere (`showMoreStep`), and a failed page says so
   once. Counts past what was read show as "200+". Those pages and the card's read are keyed by the head and left out of
   the automatic refreshes (new changesets, check-ins, updates, switches, focus: `isIncomingChangesetPage`, `staleTime:
