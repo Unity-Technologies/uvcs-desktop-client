@@ -2,6 +2,7 @@ import type { DirectoryConflict, DirectoryConflictResolution, MergeChange, Merge
 import { comparePaths } from '@shared/pathOrder';
 import { statusTones } from '../../components/changeFilter';
 import type { StatusTone } from '../../components/StatusBadge';
+import { withoutRepeatedFolders } from '../../lib/enclosingFolders';
 import type { TreeGroup } from '../../lib/groupedPathTree';
 import type { FileConflictState } from './resolve/useFileConflicts';
 
@@ -23,7 +24,10 @@ export const MERGE_GROUP_TIPS: Record<MergeGroup, string> = {
   changes: 'Changed on one side only',
 };
 
-/** Conflicts first (directory ones, then files), then everything that merges cleanly. */
+/**
+ * Conflicts first (directory ones, then files), then everything that merges cleanly, but a folder added or deleted
+ * with what it holds: its items say it already, as in a diff (`withoutRepeatedFolders`); a moved one stays.
+ */
 export function buildMergeItems(
   plan: MergePlan,
   fileStates: FileConflictState[],
@@ -41,7 +45,11 @@ export function buildMergeItems(
       }),
     ),
     ...fileStates.map((state): MergeItem => ({ kind: 'fileConflict', key: `file:${state.file.key}`, path: withoutRoot(state.file.path), state })),
-    ...plan.changes.map((change, index): MergeItem => ({ kind: 'change', key: `change:${index}`, path: withoutRoot(change.path), change })),
+    ...withoutRepeatedFolders(
+      plan.changes.map((change, index): MergeItem & { kind: 'change' } => ({ kind: 'change', key: `change:${index}`, path: withoutRoot(change.path), change })),
+      (item) => item.change.path,
+      (item) => item.change.kind === 'moved',
+    ),
   ];
 }
 
