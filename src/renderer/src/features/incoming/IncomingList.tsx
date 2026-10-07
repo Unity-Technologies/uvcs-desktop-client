@@ -1,6 +1,6 @@
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { GitCommitVertical } from 'lucide-react';
-import { useId, useMemo, useRef, type KeyboardEvent } from 'react';
+import { useId, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { Changeset } from '@shared/domain/changeset';
 import type { DiffEntry } from '@shared/domain/diff';
 import { INCOMING_CHANGESETS_PAGE } from '@shared/domain/incoming';
@@ -15,7 +15,7 @@ import { diffEntryStatus } from '../diff/diffEntrySources';
 import { ConflictStatusChip } from '../merge/ConflictStatusChip';
 import type { ConflictStatus } from '../merge/mergeStatus';
 import { UPDATE_LABELS } from './updateConflictFiles';
-import { incomingRows, selectionKey, type IncomingRow, type IncomingSelection } from './incomingRows';
+import { incomingRows, MORE_CHANGESETS_KEY, selectionKey, type IncomingRow, type IncomingSelection } from './incomingRows';
 import styles from './IncomingList.module.css';
 
 /** Estimates until each row is measured: a section header, a changeset (two lines), "Show more" and a file. */
@@ -52,20 +52,33 @@ export function IncomingList({ changesets, files, conflictPaths, conflictStates,
     overscan: 12,
   });
   const idPrefix = useId();
+  // The arrows can rest on "Show more", which selects nothing: Enter reads the next page there, and it stays put.
+  const [onShowMore, setOnShowMore] = useState(false);
+  const activeKey = onShowMore && rowIndexOf.has(MORE_CHANGESETS_KEY) ? MORE_CHANGESETS_KEY : selection && selectionKey(selection);
   const selectedKey = selection && selectionKey(selection);
-  const selectedRow = selectedKey === null ? undefined : rows[rowIndexOf.get(selectedKey) ?? -1];
-  const selectedIndex = selectedRow && 'entryIndex' in selectedRow ? selectedRow.entryIndex : -1;
+  const activeRow = activeKey === null ? undefined : rows[rowIndexOf.get(activeKey) ?? -1];
+  const selectedIndex = activeRow && 'entryIndex' in activeRow ? activeRow.entryIndex : -1;
+  const select = (next: IncomingSelection): void => {
+    setOnShowMore(false);
+    onSelect(next);
+  };
   const isBlocking = (file: DiffEntry): boolean => blockedPaths.has(file.oldPath ?? file.path);
 
   const onKeyDown = (event: KeyboardEvent): void => {
     // ⌥↑ ⌥↓ move through the changes of the diff beside the list (`useChangeNavigation`).
     if (event.altKey) return;
+    if (event.key === 'Enter' && activeKey === MORE_CHANGESETS_KEY) {
+      event.preventDefault();
+      if (!olderChangesets?.loading) olderChangesets?.onShowMore();
+      return;
+    }
     const ends: Record<string, number> = { Home: 0, End: entries.length - 1 };
     const target = ends[event.key] ?? navigationTarget(event.key, selectedIndex, entries.length);
     if (target === null || target === undefined || entries.length === 0) return;
     event.preventDefault();
     const entry = entries[target]!;
-    onSelect(entry.selection);
+    if (entry.selection) select(entry.selection);
+    else setOnShowMore(true);
     // The first one shows its section's header too.
     virtualizer.scrollToIndex(target === 0 ? 0 : rowIndexOf.get(entry.key)!);
   };
@@ -89,7 +102,7 @@ export function IncomingList({ changesets, files, conflictPaths, conflictStates,
       tabIndex={-1}
       className={styles.row}
       data-selected={key === selectedKey}
-      onClick={() => onSelect({ kind: 'file', path: file.path })}
+      onClick={() => select({ kind: 'file', path: file.path })}
     >
       <ItemPathRow
         path={file.path}
@@ -109,7 +122,7 @@ export function IncomingList({ changesets, files, conflictPaths, conflictStates,
       tabIndex={-1}
       className={styles.changeset}
       data-selected={key === selectedKey}
-      onClick={() => onSelect({ kind: 'changeset', id: changeset.id })}
+      onClick={() => select({ kind: 'changeset', id: changeset.id })}
     >
       <GitCommitVertical size={14} className={styles.changesetIcon} />
       <span className={styles.changesetText}>
@@ -152,7 +165,17 @@ export function IncomingList({ changesets, files, conflictPaths, conflictStates,
                   <span className={styles.count}>{formatCountAtLeast(row.count, row.countCapped)}</span>
                 </div>
               ) : row.type === 'moreChangesets' ? (
-                <button type="button" tabIndex={-1} className={styles.showMore} disabled={olderChangesets?.loading} onClick={olderChangesets?.onShowMore}>
+                <button
+                  id={`${idPrefix}-${row.entryIndex}`}
+                  type="button"
+                  role="option"
+                  aria-selected={activeKey === row.key}
+                  tabIndex={-1}
+                  className={styles.showMore}
+                  data-selected={activeKey === row.key}
+                  disabled={olderChangesets?.loading}
+                  onClick={olderChangesets?.onShowMore}
+                >
                   {olderChangesets?.loading && <Spinner size={12} />}
                   Show {INCOMING_CHANGESETS_PAGE} more
                 </button>

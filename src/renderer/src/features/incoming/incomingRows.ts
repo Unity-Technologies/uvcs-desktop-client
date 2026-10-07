@@ -9,14 +9,18 @@ export type IncomingSelection = { kind: 'changeset'; id: number } | { kind: 'fil
  */
 export type IncomingRow =
   | { type: 'section'; key: string; label: string; count: number; countCapped: boolean }
-  | { type: 'moreChangesets'; key: string }
+  | { type: 'moreChangesets'; key: string; entryIndex: number }
   | { type: 'file'; key: string; file: DiffEntry; entryIndex: number }
   | { type: 'changeset'; key: string; changeset: Changeset; entryIndex: number };
 
+/** A row the arrows reach: something to select, or (`selection: null`) the row that shows older changesets. */
 export interface IncomingEntry {
   key: string;
-  selection: IncomingSelection;
+  selection: IncomingSelection | null;
 }
+
+/** The row that shows older changesets. */
+export const MORE_CHANGESETS_KEY = 'more:changesets';
 
 export function selectionKey(selection: IncomingSelection): string {
   return selection.kind === 'file' ? `file:${selection.path}` : `changeset:${selection.id}`;
@@ -58,7 +62,12 @@ export function incomingRows(
   for (const changeset of changesets) {
     addEntry({ kind: 'changeset', id: changeset.id }, (key, entryIndex) => ({ type: 'changeset', key, changeset, entryIndex }));
   }
-  if (moreChangesets) rows.push({ type: 'moreChangesets', key: 'more:changesets' });
+  if (moreChangesets) {
+    const key = MORE_CHANGESETS_KEY;
+    rowIndexOf.set(key, rows.length);
+    rows.push({ type: 'moreChangesets', key, entryIndex: entries.length });
+    entries.push({ key, selection: null });
+  }
   addFiles('Files', others);
   return { rows, entries, rowIndexOf };
 }

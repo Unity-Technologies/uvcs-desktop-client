@@ -61,7 +61,8 @@
 }
 
 .row[data-selected='true'],
-.changeset[data-selected='true'] {
+.changeset[data-selected='true'],
+.showMore[data-selected='true'] {
   background: var(--bg-selected-strong);
 }
 
