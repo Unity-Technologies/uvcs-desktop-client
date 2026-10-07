@@ -243,8 +243,8 @@ another revision shows; the least recently reviewed diffs are forgotten. `featur
 Marks only show in review mode, a per-workspace setting (`reviewModeWorkspaces`, off by default); leaving it keeps the marks.
 Its toggle (`ReviewModeButton`) ends the filter bar of the lists that review (Changes and every diff), and the review bar
 (`ReviewBar`: progress, the "Unreviewed" filter, mark all, clear) opens right beneath it, between the filter bar and the
-files: the toggle never moves as the bar comes and goes, and it is the one way out of review mode. It was in the view's
-header first, far from the bar it opened and in a different place in each view.
+files: the toggle never moves as the bar comes and goes, and it is the one way out of review mode. The view's header was
+rejected: far from the bar it opens, and in a different place in each view.
 In a tree, a folder's mark marks every file in it, and shows how many are reviewed while some are (`partialReviewCount`).
 
 ## Pierre workarounds
