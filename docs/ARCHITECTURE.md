@@ -82,11 +82,15 @@ and many people use the same server. Every `cm` command other than local reads (
   else polls: left changes, locks and lists wait for an event, a focus or an operation.
 - **Incoming, by how far behind**: below the cap, the chip reads what the update collides with (the update's `cm diff`
   and the local `cm status`, `useIncomingChanges`) once per head, to warn about conflicts before any hover, as the
-  native client does; at "100+" that diff waits for the card to open, Incoming to open or Update, which reads it again
-  right before updating (`chipReadsIncomingChanges`). The card reads its five newest changesets as it opens (`cm find
-  ... limit 6`, `useNewestIncomingChangesets`, kept until the head moves). Incoming reads the newest 200 changesets with
-  the incoming changes and "Show 200 more" reads the next older page (`changesetid <` the oldest shown,
-  `useIncomingChangesetList`); counts past what was read show as "200+".
+  native client does, and its card lists the newest of what that read brought. At "100+" a hover reads nothing heavy:
+  the card reads its five newest itself (`cm find ... limit 6`, `cardReadsNewest`, `useNewestIncomingChangesets`) and
+  says collisions are checked on updating or opening Incoming; pinning the card (a click), opening Incoming or Update
+  reads the diff, Update again right before updating (`chipReadsIncomingChanges`). Incoming reads the newest 200
+  changesets with the incoming changes and "Show 200 more" (reached by the arrows, Enter) reads the next older page
+  (`changesetid <` the oldest shown, `useIncomingChangesetList`, `olderChangesetPages`); counts past what was read show
+  as "200+". Those pages and the card's read are keyed by the head and left out of refreshes (`isIncomingChangesetPage`):
+  a new head is a new key. Once the incoming changes are in for the check's head, the chip, the sidebar, the status bar
+  and the success moment count with them (`knownIncomingSummary`): one count per screen.
 - **Focus**: the incoming check if older than 20 s, and the server views on screen once stale (30 s by default). Lists
   that hardly change by themselves and are heavy to read use `SLOW_CHANGING_QUERY` (every branch, every label, attribute
   types, attribute values, the working object's comment, the palette's lists, the recent shelves in Changes, the user's and everyone's): five minutes, and focus never re-reads them. The Branch

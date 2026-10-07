@@ -3,7 +3,7 @@ import type { WorkspaceSelector } from '@shared/domain/workspace';
 import { ArrowDownToLine, Check, GitCommitVertical, TerminalSquare } from 'lucide-react';
 import { PathLabel } from '../../components/PathLabel';
 import { SELECTOR_ICONS, SELECTOR_KIND_LABELS, workingObjectName } from '../../components/workingObject';
-import { useIncomingSummary } from '../../features/incoming/useIncomingSummary';
+import { useKnownIncomingSummary } from '../../features/incoming/useKnownIncomingSummary';
 import { hotkey } from '../../lib/shortcutRegistry';
 import { copyToClipboard } from '../../ui/copyToClipboard';
 import { ProgressRing } from '../../ui/ProgressRing';
@@ -29,7 +29,7 @@ import styles from './StatusBar.module.css';
 export function StatusBar() {
   const workspacePath = useWorkspacePath();
   const { data: info } = useWorkspaceInfo();
-  const { data: summary } = useIncomingSummary();
+  const summary = useKnownIncomingSummary();
   const running = useRunningOperation(workspacePath);
   const lastCommand = useCommandLogStore((state) => state.entries.findLast((entry) => ranInWorkspace(entry, workspacePath)));
   const failure = useCommandLogStore((state) =>
