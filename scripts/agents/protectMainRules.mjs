@@ -67,7 +67,8 @@ function fastForwardsToUpstream(subcommand, args) {
 }
 
 /** The parts of a command line that run one after another: split on unquoted `&&`, `||`, `;`, `|` and new lines. */
-export function splitCommandLine(command) {
+export function splitCommandLine(commandLine) {
+  const command = withoutHeredocBodies(commandLine);
   const segments = [];
   let current = '';
   let quote = null;
@@ -89,6 +90,41 @@ export function splitCommandLine(command) {
   }
   segments.push(current);
   return segments.map((segment) => segment.trim()).filter(Boolean);
+}
+
+/**
+ * The command line without the bodies of its heredocs (`<<'EOF'` ... `EOF`), the usual way an agent hands git a
+ * commit message: its lines are text, and one starting with "git push origin main" must not read as a command.
+ */
+function withoutHeredocBodies(command) {
+  const lines = [];
+  let pendingDelimiters = [];
+  let quote = null;
+  const allLines = command.split('\n');
+  for (let lineIndex = 0; lineIndex < allLines.length; lineIndex++) {
+    const line = allLines[lineIndex];
+    lines.push(line);
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (quote) {
+        if (char === quote) quote = null;
+      } else if (char === '"' || char === "'") {
+        quote = char;
+      } else if (line.startsWith('<<', i) && line[i + 2] !== '<') {
+        const heredoc = /^<<-?\s*(['"]?)([A-Za-z_][A-Za-z0-9_]*)\1/.exec(line.slice(i));
+        if (heredoc) {
+          pendingDelimiters.push(heredoc[2]);
+          i += heredoc[0].length - 1;
+        }
+      }
+    }
+    for (const delimiter of pendingDelimiters) {
+      while (lineIndex + 1 < allLines.length && allLines[lineIndex + 1].trim() !== delimiter) lineIndex++;
+      lineIndex++;
+    }
+    pendingDelimiters = [];
+  }
+  return lines.join('\n');
 }
 
 /** A segment's words, unquoted: enough for git's arguments, not a full shell parser. */
