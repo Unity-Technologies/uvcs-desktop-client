@@ -17,6 +17,7 @@ import { entryToFocus } from './diffFocus';
 import { EntryDiff } from './EntryDiff';
 import { listedEntries } from './listedEntries';
 import { useDiffReview } from './review/useDiffReview';
+import { ReviewModeButton } from '../review/ReviewModeButton';
 import { FileStepsContext, useFileSteps } from './viewer/fileSteps';
 import { diffSibling, SiblingFinderContext } from './viewer/model/modelSiblings';
 
@@ -38,7 +39,7 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
   });
   const focused = entries.find((entry) => diffEntryKey(entry) === selection.anchor);
   const firstKey = entries[0] && diffEntryKey(entries[0]);
-  const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true });
+  const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, { isViewFilter: true, actions: <ReviewModeButton workspacePath={workspacePath} /> });
   const shown = useMemo(() => review.narrow(filter.visible), [review.narrow, filter.visible]);
   const { rows, tree, toggleCollapsed } = useFileTree(shown, diffEntryKey, folderListScope(workspacePath, `diff:${JSON.stringify(target)}`), selection.anchor);
   // A folder the keyboard (or a click) is on, in a tree.

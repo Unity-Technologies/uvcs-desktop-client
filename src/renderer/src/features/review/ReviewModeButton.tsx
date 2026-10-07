@@ -4,7 +4,7 @@ import { setReviewMode, useReviewModeOn } from './reviewModeSetting';
 import styles from './ReviewModeButton.module.css';
 import { hotkey } from '../../lib/shortcutRegistry';
 
-/** Turns review mode on or off for the workspace; lit while it's on. */
+/** Turns review mode on or off for the workspace; lit while it's on. At the end of the filter bar of the lists that review (`useChangeFilter`'s `actions`), right above the review bar it opens. */
 export function ReviewModeButton({ workspacePath }: { workspacePath: string }) {
   const on = useReviewModeOn(workspacePath);
   return (

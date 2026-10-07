@@ -24,6 +24,8 @@ export interface ChangeFilterOptions {
   isViewFilter?: boolean;
   /** Words a chip as the list's groups do (Incoming's "Conflicts with your changes"). */
   toneLabels?: Partial<Record<StatusTone, string>>;
+  /** At the row's end, after the List/Tree switch: the list's own modes (the review mode toggle). */
+  actions?: ReactNode;
 }
 
 const NO_TONE_LABELS: Partial<Record<StatusTone, string>> = {};
@@ -34,7 +36,7 @@ export interface ChangeFilterResult<T> {
   query: string;
   /** Empties the text and turns every status chip off. */
   clear: () => void;
-  /** The filter field followed by one toggle chip per status, and the List/Tree switch (`FileListLayoutMenu`). */
+  /** The filter field followed by one toggle chip per status, the List/Tree switch (`FileListLayoutMenu`) and the list's `actions`. */
   bar: ReactNode;
 }
 
@@ -47,7 +49,7 @@ export function useChangeFilter<T>(
   items: T[],
   pathOf: (item: T) => string,
   tonesOf: (item: T) => readonly StatusTone[],
-  { isViewFilter = false, toneLabels = NO_TONE_LABELS }: ChangeFilterOptions = {},
+  { isViewFilter = false, toneLabels = NO_TONE_LABELS, actions }: ChangeFilterOptions = {},
 ): ChangeFilterResult<T> {
   const [query, setQuery] = useState('');
   const [chosenTones, setChosenTones] = useState<ReadonlySet<StatusTone>>(new Set());
@@ -97,6 +99,7 @@ export function useChangeFilter<T>(
       <span className={styles.layout}>
         <FileListLayoutMenu />
       </span>
+      {actions && <span className={styles.actions}>{actions}</span>}
     </div>
   );
 

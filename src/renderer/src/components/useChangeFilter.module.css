@@ -13,6 +13,12 @@
   margin-left: var(--space-1);
 }
 
+/* The list's own modes (the review mode toggle), full size however narrow the pane: the field gives way first. */
+.actions {
+  display: flex;
+  flex: none;
+}
+
 .chip {
   display: inline-flex;
   flex: none;

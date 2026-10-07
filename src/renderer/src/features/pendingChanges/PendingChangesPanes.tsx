@@ -16,6 +16,7 @@ import { useChangeset } from '../changesets/useChangeset';
 import { useFileSteps } from '../diff/viewer/fileSteps';
 import { useKnownIncomingSummary } from '../incoming/useKnownIncomingSummary';
 import { MergeTaskSuggestion } from '../mergeTask/MergeTaskSuggestion';
+import { ReviewModeButton } from '../review/ReviewModeButton';
 import { reviewProgress } from '../review/reviewStatus';
 import { BulkPrivateNotice } from './BulkPrivateNotice';
 import { ChangeSelectionPane } from './ChangeSelectionPane';
@@ -74,7 +75,7 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
   const locks = usePendingLocks(workspacePath, workspace?.repository, allChanges, readAt);
   // Sorted once for the layout; filtering keeps the order, so typing in the filter or opening a folder never sorts again.
   const sorted = useSortedChanges(allChanges);
-  const { visible: filtered, query, clear: clearTextFilter, bar: filterBar } = useChangeFilter(sorted, changePath, changeTones, { isViewFilter: true });
+  const { visible: filtered, query, clear: clearTextFilter, bar: filterBar } = useChangeFilter(sorted, changePath, changeTones, { isViewFilter: true, actions: <ReviewModeButton workspacePath={workspacePath} /> });
   const changes = useMemo(() => review.narrow(filtered), [review.narrow, filtered]);
   const clearFilter = (): void => {
     clearTextFilter();
@@ -144,8 +145,8 @@ export function PendingChangesPanes({ workspacePath, workspace, snapshot, review
               onUndoUnchanged={() => void undoUnchangedCheckouts(workspacePath)}
               checkboxInset={checkboxInset}
             />
-            {review.bar}
             {filterBar}
+            {review.bar}
             {changes.length === 0 ? (
               <NoFilterMatches onClear={clearFilter} />
             ) : (

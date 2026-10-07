@@ -1,4 +1,4 @@
-import { CircleCheck, Eraser, ListChecks, MoreHorizontal, X } from 'lucide-react';
+import { CircleCheck, Eraser, ListChecks, MoreHorizontal } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { IconButton } from '../../ui/IconButton';
 import { ActionDropdownMenu } from '../../ui/menu/ActionDropdownMenu';
@@ -14,12 +14,10 @@ interface ReviewBarProps {
   onMarkAll: () => void;
   onClearMarks: () => void;
   hasMarks: boolean;
-  /** Leaves review mode; the marks stay for when it's back. */
-  onLeave: () => void;
 }
 
-/** How far the review of the pending changes got, a filter for what is left, and ways to mark or clear everything. */
-export function ReviewBar({ progress, onlyUnreviewed, onOnlyUnreviewedChange, onMarkAll, onClearMarks, hasMarks, onLeave }: ReviewBarProps) {
+/** How far the review of the pending changes got, a filter for what is left, and ways to mark or clear everything. It opens under the review mode toggle (`ReviewModeButton`), which also closes it. */
+export function ReviewBar({ progress, onlyUnreviewed, onOnlyUnreviewedChange, onMarkAll, onClearMarks, hasMarks }: ReviewBarProps) {
   const { total, reviewed } = progress;
   const left = total - reviewed;
   const done = left === 0;
@@ -44,7 +42,6 @@ export function ReviewBar({ progress, onlyUnreviewed, onOnlyUnreviewedChange, on
       >
         <IconButton size="small" className={styles.push} icon={<MoreHorizontal size={14} />} label="Review actions" />
       </ActionDropdownMenu>
-      <IconButton size="small" icon={<X size={13} />} label="Leave review mode" onClick={onLeave} />
     </div>
   );
 }
