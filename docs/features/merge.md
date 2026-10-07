@@ -79,7 +79,8 @@ or to Complete merge. With one file left, its own toolbar is the way.
 A conflicting file is read-only. Its toolbar holds the file, its status and the ways out: "Resolve in <tool>"
 (`MergeToolButton`, a split button, primary while the file waits and the header offers nothing; disabled during a run:
 the other tools found, "Choose another app…", "Edit the text in the app" and the settings behind the caret), then "Keep Yours | Incoming | Both" for the whole file (`KeepChoices`, `conflictChoices`)
-and Start over. Below, short one-line views: "Conflicts" with the count left, then "Changes" (the destination now → after
+and Start over. In a narrow pane the controls wrap within themselves, the Keep choices under the tool's button, so none
+is cut off. Below, short one-line views: "Conflicts" with the count left, then "Changes" (the destination now → after
 the merge), "Yours", "Incoming" and "Base". Conflicts read as labeled blocks instead of conflict markers
 (`conflictHunkCss` over Pierre's view): a header naming the destination's side with Keep yours / Keep incoming / Keep both
 for that conflict, its lines, the source's label and its lines. While a tool has the file, a banner says so (Bring to
