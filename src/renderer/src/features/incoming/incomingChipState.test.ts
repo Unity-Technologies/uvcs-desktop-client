@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { BranchIncoming, BranchIncomingChanges } from '@shared/domain/incoming';
 import { nextProgressBar, SWEEP } from '../../app/operations/progressBar';
 import type { Changeset } from '@shared/domain/changeset';
-import { cardChangesets, cardFailed, cardReadsNewest, chipReadsIncomingChanges, incomingChipState, knownIncomingSummary } from './incomingChipState';
+import { cardChangesets, cardCheck, cardFailed, cardReadsNewest, chipReadsIncomingChanges, incomingChipState, knownIncomingSummary } from './incomingChipState';
 
 const summary = (changesetCount: number, countCapped = false): BranchIncoming => ({
   branch: '/main',
@@ -152,5 +152,43 @@ describe('cardFailed', () => {
   it('never fails once it has changesets to list', () => {
     const read = { ...changes(0), changesets: listed(3) };
     expect(cardFailed(summary(3), read, { open: true, pinned: false }, { changes: true, newest: true })).toBe(false);
+  });
+});
+
+describe('knownIncomingSummary once Incoming read every page', () => {
+  const capped = summary(100, true);
+  const read = { ...changes(0, 0, capped.headChangeset), changesetCount: 200, countCapped: true, authors: ['ana'] };
+  const pages = (count: number, more: boolean) => ({ changesets: listed(count), more });
+
+  it('counts exactly what Incoming listed once no older page remains', () => {
+    expect(knownIncomingSummary(capped, read, pages(462, false))).toMatchObject({ changesetCount: 462, countCapped: false });
+  });
+
+  it('keeps the count of the incoming changes while older pages remain', () => {
+    expect(knownIncomingSummary(capped, read, pages(400, true))).toMatchObject({ changesetCount: 200, countCapped: true });
+  });
+
+  it('never lowers the count, and takes no pages read for another head', () => {
+    expect(knownIncomingSummary(capped, read, pages(150, false))).toMatchObject({ changesetCount: 200, countCapped: true });
+    expect(knownIncomingSummary(capped, { ...read, headChangeset: 90 }, pages(462, false))).toBe(capped);
+  });
+});
+
+describe('cardCheck', () => {
+  const hovered = { open: true, pinned: false };
+  const pinned = { open: true, pinned: true };
+
+  it('says past the count that a click checks the changes, while nothing checked them', () => {
+    expect(cardCheck(summary(100, true), undefined, hovered, false)).toBe('unchecked');
+  });
+
+  it('says it is checking once pinned, and when the check failed', () => {
+    expect(cardCheck(summary(100, true), undefined, pinned, false)).toBe('checking');
+    expect(cardCheck(summary(100, true), undefined, pinned, true)).toBe('failed');
+  });
+
+  it('says nothing below the count, where the chip checked up front, or once this head was checked', () => {
+    expect(cardCheck(summary(3), undefined, pinned, false)).toBeNull();
+    expect(cardCheck(summary(100, true), { ...changes(0, 0, 110) }, pinned, false)).toBeNull();
   });
 });
