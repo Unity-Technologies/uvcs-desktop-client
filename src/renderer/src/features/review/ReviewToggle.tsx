@@ -21,12 +21,14 @@ interface ReviewToggleProps {
   onToggle: () => void;
   /** A folder row marks every file in it; R only toggles the selected files. */
   folder?: boolean;
+  /** How far a folder's review went while under way ("2/5", `partialReviewCount`), before its check. */
+  partial?: string | null;
 }
 
 /** The check at the end of a pending change row: whether the file (or every file in the folder) was reviewed, and a click to change it. */
-export function ReviewToggle({ status, onToggle, folder = false }: ReviewToggleProps) {
+export function ReviewToggle({ status, onToggle, folder = false, partial }: ReviewToggleProps) {
   const label = (folder ? FOLDER_LABELS : LABELS)[status];
-  return (
+  const toggle = (
     <Tooltip content={label} shortcut={folder ? undefined : hotkey('review')}>
       <button
         type="button"
@@ -44,5 +46,14 @@ export function ReviewToggle({ status, onToggle, folder = false }: ReviewToggleP
         <CircleCheck size={14} />
       </button>
     </Tooltip>
+  );
+  if (!partial) return toggle;
+  return (
+    <span className={styles.partial}>
+      <span className={styles.partialCount} aria-label={`${partial} reviewed`}>
+        {partial}
+      </span>
+      {toggle}
+    </span>
   );
 }

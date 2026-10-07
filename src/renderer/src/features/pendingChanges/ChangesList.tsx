@@ -16,7 +16,7 @@ import { changeTreeArrowRows, rowIndent, treeLevel } from './changeRowLevels';
 import { menuTargetOf, type ChangeRow } from './changeRows';
 import type { PendingLocks } from './locks/pendingLocks';
 import { isReviewKey, toggleReviewedFromKey } from '../review/reviewKey';
-import { groupReviewStatus, type ReviewStatus, type ReviewStatusOf } from '../review/reviewStatus';
+import { groupReviewStatus, partialReviewCount, type ReviewStatus, type ReviewStatusOf } from '../review/reviewStatus';
 import type { ListReview } from '../review/useReviewMode';
 import { useChangelistDrop } from './useChangelistDrop';
 import styles from './ChangesList.module.css';
@@ -81,6 +81,7 @@ export function ChangesList({
   // A folder's check and mark go over everything in it: worked out once per row, not on every arrow key.
   const checkStateOf = useMemo(() => perRow((row) => rowCheckState(row, isIncluded)), [rows, isIncluded]);
   const reviewStatusOf = useMemo(() => perRow((row) => (review.on ? rowReviewStatus(row, review.statusOf) : null)), [rows, review.on, review.statusOf]);
+  const reviewPartialOf = useMemo(() => perRow((row) => (review.on && row.type === 'folder' ? partialReviewCount(row.items, review.statusOf) : null)), [rows, review.on, review.statusOf]);
 
   // A plain press on a row of a multi-selection keeps the selection until release, so the whole of it can be dragged.
   const narrowOnClick = useRef<string | null>(null);
@@ -242,6 +243,7 @@ export function ChangesList({
                     row={row}
                     checkState={checkStateOf(row)}
                     reviewStatus={reviewStatusOf(row)}
+                    reviewPartial={reviewPartialOf(row)}
                     lock={row.type === 'file' ? locks.get(row.item.path) : undefined}
                     actions={rowActions}
                   />

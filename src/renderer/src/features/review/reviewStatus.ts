@@ -49,3 +49,9 @@ export function groupReviewStatus<T>(items: readonly T[], statusOf: ReviewStatus
   if (total === 0) return null;
   return reviewed === total ? 'reviewed' : 'unreviewed';
 }
+
+/** How far a folder's review went ("2/5") while it is under way: null before the first file and after the last. */
+export function partialReviewCount<T>(items: readonly T[], statusOf: ReviewStatusOf<T>): string | null {
+  const { total, reviewed } = reviewProgress(items, statusOf);
+  return reviewed > 0 && reviewed < total ? `${reviewed}/${total}` : null;
+}

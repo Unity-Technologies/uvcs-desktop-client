@@ -60,7 +60,7 @@
 
 .chevron {
   flex: none;
-  /* As wide as a checkbox, so a folder's chevron fills its siblings' checkbox column. */
+  /* As wide as a checkbox, as a folder's (`TreeFolderLabel`), so the chevron fills the checkbox column. */
   margin: 0 1px;
   color: var(--text-tertiary);
   transform: rotate(90deg);
@@ -108,11 +108,6 @@
   color: var(--text-tertiary);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
-}
-
-.directoryName {
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .checkboxPlaceholder {

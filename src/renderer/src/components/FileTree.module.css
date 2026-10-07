@@ -1,0 +1,46 @@
+/* One level of a tree of files: a folder's chevron and the gap after it, so a folder's children line up under its icon. */
+.cell {
+  --tree-indent: 19px;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding-left: calc(var(--tree-depth, 0) * var(--tree-indent));
+}
+
+/* In a tree, files leave the room of the chevron their sibling folders have, so every icon of a level lines up. */
+.cell[data-chevron-room] {
+  padding-left: calc((var(--tree-depth, 0) + 1) * var(--tree-indent));
+}
+
+.chevron {
+  flex: none;
+  /* 15px wide with its margins: a checkbox's width, so in Changes a folder's chevron fills its siblings' checkbox column. */
+  margin: 0 1px;
+  color: var(--text-tertiary);
+  transform: rotate(90deg);
+  transition: transform var(--duration-fast);
+}
+
+.chevron[data-collapsed='true'] {
+  transform: none;
+}
+
+.folderName {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* How many items a closed folder hides. */
+.count {
+  flex: none;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}
