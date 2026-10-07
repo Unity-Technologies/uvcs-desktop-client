@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { comparePaths } from '@shared/pathOrder';
 import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
-import { collapseTreeRows, firstFilesOf, itemsUnderRows, layoutPathList, layoutPathTree, pathTreeKeyMove, type PathTreeRow } from './pathTree';
+import { collapseTreeRows, firstFilesOf, itemsUnderRows, layoutPathList, layoutPathTree, pathTreeKeyMove, rowKeyShowing, rowsHolding, type PathTreeRow } from './pathTree';
 
 interface Item {
   path: string;
@@ -167,5 +167,33 @@ describe('collapseTreeRows', () => {
 
   it('gives back the very rows when nothing is collapsed', () => {
     expect(collapseTreeRows(rows, new Set(), levelOf)).toBe(rows);
+  });
+});
+
+describe('rowKeyShowing', () => {
+  const rows = tree(['src', 'src/a.ts', 'z.ts']);
+
+  it("is a file's own row, and a folder's row for an item that is that folder", () => {
+    expect(rowKeyShowing(rows, 'src/a.ts', keyOf)).toBe('src/a.ts');
+    expect(rowKeyShowing(rows, 'src', keyOf)).toBe('folder:all:src');
+  });
+
+  it('is the key itself when no row shows it', () => {
+    expect(rowKeyShowing(rows, 'gone.ts', keyOf)).toBe('gone.ts');
+  });
+});
+
+describe('rowsHolding', () => {
+  const rows = tree(['src/a.ts', 'src/lib/b.ts', 'z.ts']);
+  const levelOf = (row: PathTreeRow<Item>): number => row.depth;
+
+  it('names every folder above a row, nearest first: opening them shows it', () => {
+    expect(rowsHolding(rows, 'src/lib/b.ts', levelOf)).toEqual(['folder:all:src/lib', 'folder:all:src']);
+    expect(rowsHolding(rows, 'folder:all:src/lib', levelOf)).toEqual(['folder:all:src']);
+  });
+
+  it('names none for a row at the top, or one not laid out', () => {
+    expect(rowsHolding(rows, 'z.ts', levelOf)).toEqual([]);
+    expect(rowsHolding(rows, 'gone.ts', levelOf)).toEqual([]);
   });
 });

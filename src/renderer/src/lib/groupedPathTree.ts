@@ -76,3 +76,8 @@ export function groupedTreeKeyMove<T, G>(rows: readonly GroupedTreeRow<T, G>[], 
   if (key !== 'ArrowLeft' && key !== 'ArrowRight') return null;
   return treeArrowMove(groupedTreeArrowRows(rows), index, key);
 }
+
+/** The groups and folders holding the row keyed `key` (`groupedRowsHolding`). */
+export function groupedRowsHolding<T, G>(_rows: readonly GroupedTreeRow<T, G>[], _key: string): string[] {
+  return [];
+}

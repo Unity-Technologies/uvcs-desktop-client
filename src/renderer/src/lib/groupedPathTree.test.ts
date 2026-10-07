@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { comparePaths } from '@shared/pathOrder';
-import { collapseGroupedTreeRows, groupedRowLevel, groupedTreeKeyMove, layoutGroupedTree, type GroupedTreeRow, type TreeGroup } from './groupedPathTree';
+import { collapseGroupedTreeRows, groupedRowLevel, groupedRowsHolding, groupedTreeKeyMove, layoutGroupedTree, type GroupedTreeRow, type TreeGroup } from './groupedPathTree';
 import { itemsUnderRows, layoutPathTree } from './pathTree';
 
 interface Item {
@@ -87,5 +87,17 @@ describe('groupedTreeKeyMove', () => {
 
   it('does nothing with Enter on a file: that opens it', () => {
     expect(groupedTreeKeyMove(rows, indexOf('z.ts'), 'Enter')).toBeNull();
+  });
+});
+
+describe('groupedRowsHolding', () => {
+  it("names a file's folders, then its group: opening them shows it", () => {
+    const rows = layoutGroupedTree([group('one', ['x.ts']), group('two', ['src/lib/b.ts'])], keyOf, true);
+    expect(groupedRowsHolding(rows, 'src/lib/b.ts')).toEqual(['folder:two:src/lib', 'two']);
+  });
+
+  it('names only the group in a list', () => {
+    const rows = layoutGroupedTree([group('one', ['src/a.ts'])], keyOf, false);
+    expect(groupedRowsHolding(rows, 'src/a.ts')).toEqual(['one']);
   });
 });

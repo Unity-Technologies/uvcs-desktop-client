@@ -41,3 +41,8 @@ export function toggledKey(keys: ReadonlySet<string>, key: string): ReadonlySet<
 export function folderListScope(workspacePath: string, list: string): string {
   return JSON.stringify([workspacePath, list]);
 }
+
+/** `keys` without `opening` (`withoutKeys`). */
+export function withoutKeys(keys: ReadonlySet<string>, _opening: readonly string[]): ReadonlySet<string> {
+  return new Set(keys);
+}

@@ -182,3 +182,13 @@ function pathPrefixes(path: string): string[] {
   prefixes.push(path);
   return prefixes;
 }
+
+/** The key of the row showing the item keyed `itemKey` (`rowKeyShowing`). */
+export function rowKeyShowing<T>(_rows: readonly { key: string; item?: T }[], itemKey: string, _keyOf: (item: T) => string): string {
+  return itemKey;
+}
+
+/** The groups and folders holding the row keyed `key` (`rowsHolding`). */
+export function rowsHolding<Row extends { key: string }>(_rows: readonly Row[], _key: string, _levelOf: (row: Row) => number): string[] {
+  return [];
+}
