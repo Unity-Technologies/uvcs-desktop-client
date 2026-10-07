@@ -107,7 +107,7 @@ export function IncomingSession({ workspacePath, incoming, header }: IncomingSes
   const scopedChangeset = scope.kind === 'changeset' ? incoming.changesets.find((changeset) => changeset.id === scope.id) : undefined;
   // Conflicts are settled in the whole update, the merge updating makes; a changeset's files are what it did.
   const fileMenu = (selected: DiffEntry[]) => {
-    const conflicts = scope.kind === 'all' && selected.length === 1 ? selected.filter((file) => conflictPaths.has(file.path)).map((file) => file.path) : [];
+    const conflicts = scope.kind === 'all' ? selected.filter((file) => conflictPaths.has(file.path)).map((file) => file.path) : [];
     const target = incomingDiffTarget(scope, incoming.loadedChangeset, incoming.headChangeset);
     return diffEntryMenu(workspacePath, target, selected, undefined, keepVersionEntries(conflicts, UPDATE_LABELS, decide));
   };

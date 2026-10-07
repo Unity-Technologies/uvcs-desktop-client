@@ -9,12 +9,12 @@ import type { FileConflictDecision } from './resolve/fileConflictDecision';
 import { keepVersionEntries } from './resolve/keepVersionEntries';
 
 /**
- * The menu of what the merge page lists, as any list of changed files has it: a conflicting file's "Keep yours" and
- * "Keep incoming" (`keepVersionEntries`), its history, and Copy.
+ * The menu of what the merge page lists, as any list of changed files has it: "Keep yours" and "Keep incoming" for
+ * the conflicting files selected (`keepVersionEntries`), a single item's history, and Copy.
  */
 export function mergeItemMenu(items: MergeItem[], labels: MergeLabels, decide: (key: string, decision: FileConflictDecision) => void): MenuEntry[] {
   const single = items.length === 1 ? items[0]! : null;
-  const conflictKeys = single?.kind === 'fileConflict' ? [single.state.file.key] : [];
+  const conflictKeys = items.flatMap((item) => (item.kind === 'fileConflict' ? [item.state.file.key] : []));
   return groupedMenu([
     ...keepVersionEntries(conflictKeys, labels, decide),
     single && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path })),
