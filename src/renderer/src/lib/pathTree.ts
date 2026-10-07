@@ -1,3 +1,5 @@
+import { treeArrowMove, type TreeArrowMove, type TreeArrowRow } from './treeArrowMove';
+
 /** A folder of a tree of files: one row, even for folders that only hold the next one ("deep/very/long"). */
 export interface TreeFolderRow<T> {
   type: 'folder';
@@ -116,6 +118,31 @@ export function collapseTreeRows<Row extends { key: string; collapsed?: boolean 
     }
   }
   return shown;
+}
+
+/** The rows as ← and → see them (`treeArrowMove`): folders open and close. */
+export function pathTreeArrowRows<T>(rows: readonly PathTreeRow<T>[]): TreeArrowRow[] {
+  return rows.map((row) => ({ depth: row.depth, isFolder: row.type === 'folder', isExpanded: row.type === 'folder' && !row.collapsed }));
+}
+
+/** What a key does on the row at `index` of a tree of files: ← and → as in any tree (`treeArrowMove`), Enter opens or closes a folder. */
+export function pathTreeKeyMove<T>(rows: readonly PathTreeRow<T>[], index: number, key: string): TreeArrowMove | null {
+  if (key === 'Enter') return rows[index]?.type === 'folder' ? { kind: 'toggle' } : null;
+  if (key !== 'ArrowLeft' && key !== 'ArrowRight') return null;
+  return treeArrowMove(pathTreeArrowRows(rows), index, key);
+}
+
+/**
+ * The items rows stand for, each once, in the rows' order: a file's own, everything in a folder. What a menu or the
+ * review key acts on when folders are selected along with files.
+ */
+export function itemsUnderRows<T>(rows: readonly PathTreeRow<T>[]): T[] {
+  const items = new Set<T>();
+  for (const row of rows) {
+    if (row.type === 'file') items.add(row.item);
+    else for (const item of row.items) items.add(item);
+  }
+  return [...items];
 }
 
 /** Whether all a folder holds is `child`, one of its folders, or in it. */

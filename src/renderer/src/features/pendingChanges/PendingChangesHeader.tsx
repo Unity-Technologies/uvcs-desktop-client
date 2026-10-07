@@ -1,6 +1,5 @@
 import { SlidersHorizontal } from 'lucide-react';
 import { openSettingsDialogAt } from '../../app/settings/SettingsDialog';
-import { FileListLayoutToggle } from '../../components/FileListLayoutToggle';
 import { formatCount } from '../../lib/text';
 import { IconButton } from '../../ui/IconButton';
 import { SegmentedControl } from '../../ui/SegmentedControl';
@@ -20,7 +19,7 @@ interface PendingChangesHeaderProps {
   fetching: boolean;
 }
 
-/** The Changes view's header: the count, how the list is grouped and laid out, and the view's buttons. */
+/** The Changes view's header: the count, how the list is grouped, and the view's buttons. The List/Tree switch is the filter bar's, as in every list of files. */
 export function PendingChangesHeader({ workspacePath, pendingCount, empty, fetching }: PendingChangesHeaderProps) {
   const grouping = usePendingChangesViewStore((state) => state.grouping);
   const setGrouping = usePendingChangesViewStore((state) => state.setGrouping);
@@ -38,17 +37,14 @@ export function PendingChangesHeader({ workspacePath, pendingCount, empty, fetch
       }
     >
       {!empty && (
-        <>
-          <SegmentedControl<ChangesGrouping>
-            value={grouping}
-            onChange={setGrouping}
-            segments={[
-              { value: 'none', label: 'Files' },
-              { value: 'changelist', label: 'Changelists' },
-            ]}
-          />
-          <FileListLayoutToggle />
-        </>
+        <SegmentedControl<ChangesGrouping>
+          value={grouping}
+          onChange={setGrouping}
+          segments={[
+            { value: 'none', label: 'Files' },
+            { value: 'changelist', label: 'Changelists' },
+          ]}
+        />
       )}
     </ViewHeader>
   );

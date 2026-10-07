@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { comparePaths } from '@shared/pathOrder';
 import { readGrowthWhenDoubled } from '@shared/testing/countedReads';
-import { collapseTreeRows, layoutPathList, layoutPathTree, type PathTreeRow } from './pathTree';
+import { collapseTreeRows, itemsUnderRows, layoutPathList, layoutPathTree, pathTreeKeyMove, type PathTreeRow } from './pathTree';
 
 interface Item {
   path: string;
@@ -87,6 +87,35 @@ describe('layoutPathList', () => {
       ['a.ts', 0],
       ['b/x.ts', 0],
     ]);
+  });
+});
+
+describe('pathTreeKeyMove', () => {
+  const rows = collapseTreeRows(tree(['src/a.ts', 'src/lib/b.ts', 'z.ts']), new Set(['folder:all:src/lib']), (row) => row.depth);
+  const at = (key: string): number => rows.findIndex((row) => row.key === key);
+
+  it('opens and closes folders with Enter, ← and →, and steps into a folder and out to its parent', () => {
+    expect(rows.map((row) => row.key)).toEqual(['folder:all:src', 'src/a.ts', 'folder:all:src/lib', 'z.ts']);
+    expect(pathTreeKeyMove(rows, at('folder:all:src/lib'), 'Enter')).toEqual({ kind: 'toggle' });
+    expect(pathTreeKeyMove(rows, at('folder:all:src/lib'), 'ArrowRight')).toEqual({ kind: 'toggle' });
+    expect(pathTreeKeyMove(rows, at('folder:all:src'), 'ArrowLeft')).toEqual({ kind: 'toggle' });
+    expect(pathTreeKeyMove(rows, at('folder:all:src'), 'ArrowRight')).toEqual({ kind: 'moveBy', step: 1 });
+    expect(pathTreeKeyMove(rows, at('src/a.ts'), 'ArrowLeft')).toEqual({ kind: 'moveBy', step: -1 });
+  });
+
+  it('leaves Enter on a file, and every other key, to the list', () => {
+    expect(pathTreeKeyMove(rows, at('src/a.ts'), 'Enter')).toBeNull();
+    expect(pathTreeKeyMove(rows, at('folder:all:src'), 'ArrowDown')).toBeNull();
+    expect(pathTreeKeyMove(rows, at('z.ts'), 'ArrowLeft')).toBeNull();
+  });
+});
+
+describe('itemsUnderRows', () => {
+  it('gives what files and folders stand for, each once, in order', () => {
+    const rows = tree(['src/a.ts', 'src/lib/b.ts', 'z.ts']);
+    const pick = (...keys: string[]) => rows.filter((row) => keys.includes(row.key));
+    expect(itemsUnderRows(pick('folder:all:src', 'src/lib/b.ts', 'z.ts')).map(keyOf)).toEqual(['src/a.ts', 'src/lib/b.ts', 'z.ts']);
+    expect(itemsUnderRows(pick('folder:all:src/lib')).map(keyOf)).toEqual(['src/lib/b.ts']);
   });
 });
 

@@ -3,6 +3,7 @@ import { formatCount } from '../lib/text';
 import { FilterField } from '../ui/FilterField';
 import { SearchField } from '../ui/SearchField';
 import { Tooltip } from '../ui/Tooltip';
+import { FileListLayoutToggle } from './FileListLayoutToggle';
 import { changeFilterPlaceholder, countTones, matchesChangeFilter, offeredTones } from './changeFilter';
 import { STATUS_LETTERS, StatusLetter, type StatusTone } from './StatusBadge';
 import styles from './useChangeFilter.module.css';
@@ -24,13 +25,14 @@ interface ChangeFilterResult<T> {
   query: string;
   /** Empties the text and turns every status chip off. */
   clear: () => void;
-  /** The filter field followed by one toggle chip per status. */
+  /** The filter field followed by one toggle chip per status, and the List/Tree switch (`FileListLayoutToggle`). */
   bar: ReactNode;
 }
 
 /**
  * Filters a list of changed files by path and by status (A, M, D, R...), each file found by any of its statuses
- * (`statusTones`: a moved file that changed by C and M). `isViewFilter` for the list a view or page
+ * (`statusTones`: a moved file that changed by C and M). Its bar also holds the List/Tree switch every list of
+ * changed files shares, at the same place in each. `isViewFilter` for the list a view or page
  * works on (Changes, a diff's files): its field takes ⌘F as every view's filter does; a list inside details doesn't.
  */
 export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tonesOf: (item: T) => readonly StatusTone[], isViewFilter = false): ChangeFilterResult<T> {
@@ -78,6 +80,9 @@ export function useChangeFilter<T>(items: T[], pathOf: (item: T) => string, tone
           </Tooltip>
         );
       })}
+      <span className={styles.layout}>
+        <FileListLayoutToggle />
+      </span>
     </div>
   );
 

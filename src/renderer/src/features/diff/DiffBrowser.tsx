@@ -1,8 +1,11 @@
-import { FileSearch } from 'lucide-react';
+import { FileSearch, Folder } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
 import { useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { useChangeFilter } from '../../components/useChangeFilter';
+import { useFileTree } from '../../components/useFileTree';
+import type { TreeFolderRow } from '../../lib/pathTree';
+import { pluralize } from '../../lib/text';
 import { EMPTY_SELECTION, singleSelection, type SelectionState } from '../../lib/selection';
 import { EmptyState } from '../../ui/EmptyState';
 import { SplitPane } from '../../ui/SplitPane';
@@ -35,16 +38,19 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
   const focused = entries.find((entry) => diffEntryKey(entry) === selection.anchor);
   const firstKey = entries[0] && diffEntryKey(entries[0]);
   const filter = useChangeFilter(entries, diffEntryKey, diffEntryTones, true);
-  const rows = useMemo(() => review.narrow(filter.visible), [review.narrow, filter.visible]);
+  const shown = useMemo(() => review.narrow(filter.visible), [review.narrow, filter.visible]);
+  const { rows, tree, toggleCollapsed } = useFileTree(shown, diffEntryKey, `diff:${JSON.stringify(target)}`);
+  // A folder the keyboard (or a click) is on, in a tree.
+  const focusedFolder = focused ? undefined : rows.find((row): row is TreeFolderRow<DiffEntry> => row.type === 'folder' && row.key === selection.anchor);
   // The diff's change navigation goes on to the files before and after, as the list shows them.
-  const rowKeys = useMemo(() => rows.filter((entry) => entry.itemType !== 'directory').map(diffEntryKey), [rows]);
+  const rowKeys = useMemo(() => rows.flatMap((row) => (row.type === 'file' && row.item.itemType !== 'directory' ? [row.key] : [])), [rows]);
   // A model's companions (a glTF's `.bin`) are entries of the same diff, or the files where it points to.
   const findSibling = useMemo(() => diffSibling(diffEntries, target), [diffEntries, target]);
   const fileSteps = useFileSteps({ keys: rowKeys, current: selection.anchor, select: (key) => setSelection(singleSelection(key)), pathOf: (key) => key });
 
   useEffect(() => {
-    if (!focused && firstKey) setSelection(singleSelection(firstKey));
-  }, [focused, firstKey]);
+    if (!focused && !focusedFolder && firstKey) setSelection(singleSelection(firstKey));
+  }, [focused, focusedFolder, firstKey]);
 
   if (entries.length === 0) {
     return <EmptyState icon={<FileSearch size={22} />} title="No differences" description="There are no file changes to show." />;
@@ -58,6 +64,8 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
       first={
         <DiffEntryList
           rows={rows}
+          tree={tree}
+          toggleCollapsed={toggleCollapsed}
           query={filter.query}
           filterBar={filter.bar}
           selection={selection}
@@ -73,6 +81,8 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
               <EntryDiff workspacePath={workspacePath} entry={focused} reviewMarks={review.marks} />
             </SiblingFinderContext.Provider>
           </FileStepsContext.Provider>
+        ) : focusedFolder ? (
+          <EmptyState icon={<Folder size={24} />} title={focusedFolder.path} description={`${pluralize(focusedFolder.items.length, 'change')}. Select a file to see its diff.`} />
         ) : null
       }
     />
