@@ -29,10 +29,15 @@ describe('comparePaths', () => {
     for (const a of paths) for (const b of paths) expect(Math.sign(comparePaths(a, b)), `${a} vs ${b}`).toBe(Math.sign(nameByName(a, b)));
   });
 
-  it('goes on past names that differ only in their Unicode form', () => {
+  it('keeps a folder\'s items together when another name reads the same: v01 and v1, café composed and decomposed', () => {
+    expect(['a01/z', 'a1/y', 'a01/x'].sort(comparePaths)).toEqual(['a01/x', 'a01/z', 'a1/y']);
+    expect(['Levels/v01/a.txt', 'Levels/v1/b.txt', 'Levels/v01/c.txt'].sort(comparePaths)).toEqual(['Levels/v01/a.txt', 'Levels/v01/c.txt', 'Levels/v1/b.txt']);
     const composed = 'caf\u00e9';
     const decomposed = 'cafe\u0301';
-    expect(comparePaths(`${composed}/b`, `${decomposed}/a`)).toBeGreaterThan(0);
-    expect(comparePaths(`${composed}/a`, `${decomposed}/a`)).toBe(0);
+    const sorted = [`${composed}/b`, `${decomposed}/a`, `${composed}/a`].sort(comparePaths);
+    const folders = sorted.map((path) => path.split('/')[0]);
+    // Each folder once in a row: the two spellings are two folders on disk.
+    expect(folders.filter((folder, index) => folder !== folders[index - 1])).toHaveLength(2);
+    expect(comparePaths(`${composed}/a`, `${decomposed}/a`)).not.toBe(0);
   });
 });

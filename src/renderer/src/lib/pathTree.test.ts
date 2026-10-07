@@ -13,6 +13,17 @@ const tree = (paths: string[]): PathTreeRow<Item>[] => layoutPathTree({ sorted: 
 const shape = (rows: PathTreeRow<Item>[]) => rows.map((row) => [row.type === 'folder' ? `${row.name}/` : row.key, row.depth]);
 
 describe('layoutPathTree', () => {
+  it('gives folders whose names read the same (v01 and v1) a row each, with their own files', () => {
+    expect(shape(tree(['Levels/v01/a.txt', 'Levels/v1/b.txt', 'Levels/v01/c.txt']))).toEqual([
+      ['Levels/', 0],
+      ['v01/', 1],
+      ['Levels/v01/a.txt', 2],
+      ['Levels/v01/c.txt', 2],
+      ['v1/', 1],
+      ['Levels/v1/b.txt', 2],
+    ]);
+  });
+
   it('puts each folder before what it holds, one level deeper', () => {
     expect(shape(tree(['src/lib/c.ts', 'src/b.ts', 'z.ts']))).toEqual([
       ['src/', 0],
