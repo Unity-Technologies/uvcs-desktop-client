@@ -19,6 +19,15 @@ const TONE_LABELS: Record<StatusTone, string> = {
   muted: 'Ignored, cloaked and hidden',
 };
 
+export interface ChangeFilterOptions {
+  /** The list a view or page works on (Changes, a diff's files): its field takes ⌘F as every view's filter does. */
+  isViewFilter?: boolean;
+  /** Words a chip as the list's groups do (Incoming's "Conflicts with your changes"). */
+  toneLabels?: Partial<Record<StatusTone, string>>;
+}
+
+const NO_TONE_LABELS: Partial<Record<StatusTone, string>> = {};
+
 export interface ChangeFilterResult<T> {
   visible: T[];
   /** The text typed, for highlighting matches. */
@@ -32,16 +41,13 @@ export interface ChangeFilterResult<T> {
 /**
  * Filters a list of changed files by path and by status (A, M, D, R...), each file found by any of its statuses
  * (`statusTones`: a moved file that changed by C and M). Its bar also holds the List/Tree switch every list of
- * changed files shares, at the same place in each. `isViewFilter` for the list a view or page
- * works on (Changes, a diff's files): its field takes ⌘F as every view's filter does; a list inside details doesn't.
- * `toneLabels` words a chip as the list's groups do (Incoming's "Conflicts with your changes").
+ * changed files shares, at the same place in each.
  */
 export function useChangeFilter<T>(
   items: T[],
   pathOf: (item: T) => string,
   tonesOf: (item: T) => readonly StatusTone[],
-  isViewFilter = false,
-  toneLabels: Partial<Record<StatusTone, string>> = {},
+  { isViewFilter = false, toneLabels = NO_TONE_LABELS }: ChangeFilterOptions = {},
 ): ChangeFilterResult<T> {
   const [query, setQuery] = useState('');
   const [chosenTones, setChosenTones] = useState<ReadonlySet<StatusTone>>(new Set());
