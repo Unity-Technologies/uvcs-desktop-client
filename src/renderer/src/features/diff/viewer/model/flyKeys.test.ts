@@ -20,6 +20,30 @@ describe('flyDirectionOf', () => {
     expect(flyDirectionOf(press('f'), true)).toBeNull();
   });
 
+  it("reads a keyboard event's keys, which are getters of its prototype, as the browser's are", () => {
+    class BrowserKeyEvent {
+      get key() {
+        return 's';
+      }
+      get code() {
+        return 'KeyS';
+      }
+      get metaKey() {
+        return false;
+      }
+      get ctrlKey() {
+        return false;
+      }
+      get altKey() {
+        return false;
+      }
+      get shiftKey() {
+        return true;
+      }
+    }
+    expect(flyDirectionOf(new BrowserKeyEvent(), true)).toBe('back');
+  });
+
   it('moves with Shift held too (faster), and leaves keys held with ⌘, Ctrl or Alt to the window', () => {
     expect(flyDirectionOf(press('W', { shiftKey: true }), true)).toBe('forward');
     expect(flyDirectionOf(press('w', { metaKey: true }), true)).toBeNull();
