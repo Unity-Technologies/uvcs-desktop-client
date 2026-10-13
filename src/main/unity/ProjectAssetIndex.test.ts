@@ -7,10 +7,11 @@ const meta = (n: number): string => `fileFormatVersion: 2\r\nguid: ${guid(n)}\r\
 
 /**
  * Files in memory, by workspace-relative path, with the folders they make; what is read is counted. `failing`: reads
- * of these that fail as many times, as a file another program holds open does (EMFILE, EBUSY). Paths are found
- * whatever their Unicode form, as macOS finds them.
+ * of these that fail as many times, as a file another program holds open does (EMFILE, EBUSY). `held`: folders whose
+ * next listing, read as the disk is then, is answered only once the promise its function gives settles, as a slow
+ * disk answers while files change. Paths are found whatever their Unicode form, as macOS finds them.
  */
-function memoryFiles(files: Map<string, string>, failing: Map<string, number> = new Map()) {
+function memoryFiles(files: Map<string, string>, failing: Map<string, number> = new Map(), held: Map<string, () => Promise<void>> = new Map()) {
   const reads = { lists: 0, heads: 0 };
   const fail = (path: string): void => {
     const left = failing.get(path) ?? 0;
@@ -30,6 +31,9 @@ function memoryFiles(files: Map<string, string>, failing: Map<string, number> = 
         const [name, ...rest] = path.slice(prefix.length).split('/');
         entries.set(name!, rest.length > 0);
       }
+      const hold = held.get(folder);
+      held.delete(folder);
+      await hold?.();
       return [...entries].map(([name, isFolder]) => ({ name, isFolder }));
     },
     async head(path, length) {
@@ -151,5 +155,43 @@ describe('ProjectAssetIndex', () => {
     expect(await index.pathOfGuid(guid(2), composed.normalize('NFD'))).toBe(`${composed}/escudo.png`);
     // The folder read once again, under one key.
     expect(reads.lists).toBe(before + 1);
+  });
+
+  it('keeps no answer a change made stale while the whole project was being read', async () => {
+    const files = project(3);
+    const packagesReached = Promise.withResolvers<void>();
+    const packagesRead = Promise.withResolvers<void>();
+    const holdPackages = () => (packagesReached.resolve(), packagesRead.promise);
+    const { disk } = memoryFiles(files, new Map(), new Map([['Game/Packages', holdPackages]]));
+    const index = new ProjectAssetIndex(unityProjectOf('Game/Assets/Art/Tree/Tree.fbx')!, disk, 'linux');
+    const walk = index.pathOfGuid(guid(999999), MODEL_FOLDER);
+    // Unity saves a material in a folder the walk already read, before the walk ends.
+    await packagesReached.promise;
+    files.set('Game/Assets/Far1/Bark2.mat', 'mat');
+    files.set('Game/Assets/Far1/Bark2.mat.meta', meta(77));
+    index.noteChange({ content: true, pathsChanged: true, metadata: false, folders: ['Game/Assets/Far1'] });
+    packagesRead.resolve();
+    expect(await walk).toBeNull();
+    expect(await index.pathOfGuid(guid(77), MODEL_FOLDER)).toBe('Game/Assets/Far1/Bark2.mat');
+  });
+
+  it('a find after a change reads the disk again, never joining or keeping a read started before it', async () => {
+    const files = project(3);
+    const far1Reached = Promise.withResolvers<void>();
+    const far1Read = Promise.withResolvers<void>();
+    const holdFar1 = () => (far1Reached.resolve(), far1Read.promise);
+    const { disk } = memoryFiles(files, new Map(), new Map([['Game/Assets/Far1', holdFar1]]));
+    const index = new ProjectAssetIndex(unityProjectOf('Game/Assets/Art/Tree/Tree.fbx')!, disk, 'linux');
+    const before = index.pathOfGuid(guid(999999), MODEL_FOLDER);
+    await far1Reached.promise;
+    files.set('Game/Assets/Far1/Bark2.mat', 'mat');
+    files.set('Game/Assets/Far1/Bark2.mat.meta', meta(77));
+    index.clear();
+    const after = index.pathOfGuid(guid(77), MODEL_FOLDER);
+    far1Read.resolve();
+    expect(await before).toBeNull();
+    expect(await after).toBe('Game/Assets/Far1/Bark2.mat');
+    // Nor does the stale listing, settled after the change, stand in for the folder.
+    expect(await index.pathOfGuid(guid(77), MODEL_FOLDER)).toBe('Game/Assets/Far1/Bark2.mat');
   });
 });
