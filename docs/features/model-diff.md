@@ -68,6 +68,10 @@ bounds in Unity's space, and each mesh's triangles, material slots, blendshapes,
 - **Fingerprints** of each attribute's exact values tell what changed without keeping both versions' arrays, and
   `placedPositions` (where the vertices end up in Unity's space, to 10 µm) tells a mesh whose vertices were shifted to
   stay in place (a pivot moved, a new parent) from one whose shape changed.
+- **Where a vertex is, is where it is drawn** (`placedPositionsOf`): through its node, or, skinned, through its bones
+  at rest as its file bound them (`bone's world × inverse bind × bind matrix`). The bounds, the size in the strip and
+  the Differences mode's measure all read it, so a weapon bound upright and held across by the rest pose is measured
+  across, as Unity shows it.
 
 ## What changed (`modelChanges`, `nodeMatching`, `modelChangeWords`)
 
@@ -142,8 +146,11 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   (`timeInTake`), so a shorter take ends sooner beside the longer one; a take only one version has says so. It starts
   at the rest pose, and going back to it or leaving puts every node back (`resetPose`). Bones are `Bone`s and skinned
   meshes `SkinnedMesh`es (their twins too, so they deform alike), named as the takes' tracks address them
-  (`PropertyBinding.sanitizeNodeName`); the file's inverse bind matrices are carried into the viewer's space
-  (`bindSkin`), or the root's units and axes would skin the mesh twice.
+  (`PropertyBinding.sanitizeNodeName`); the file's inverse bind matrices and bind matrix are carried into the viewer's
+  space (`bindSkin`), or the root's units and axes would skin the mesh twice. The bind matrix is the loader's
+  (`MeshSkin.bindMatrix`): an FBX binds a mesh where its node is, glTF in the file's space, ignoring the skinned mesh's
+  node. Binding a glTF at its node instead drew a Sketchfab export (its meshes under a `Sketchfab_model` root that turns
+  Z up and a node that scales centimetres) under them twice: a hundredth of its size, or torn into stray triangles.
 - **The scene**: clay lit by a soft studio (three's `RoomEnvironment`) and a key light over the camera's shoulder;
   a ground grid a power of ten apart that suits the model (1 m for a person), X and Z through the origin in Unity's
   axis colors; each version's pivot axes, turned as the node every mesh hangs under. A picked node with no geometry
