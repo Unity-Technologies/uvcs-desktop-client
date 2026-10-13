@@ -13,6 +13,12 @@ export interface OrbitView {
   distance: number;
 }
 
+/** A ray from the camera through a point of the screen, its direction a unit vector. */
+export interface Ray {
+  origin: Vector;
+  direction: Vector;
+}
+
 export interface BoundsLike {
   min: Vector;
   max: Vector;
@@ -133,6 +139,13 @@ export function flown(view: OrbitView, move: FlyMove, step: number): OrbitView {
   const forward = forwardOf(view);
   const target = view.target.map((value, i) => value + (forward[i]! * move.forward + right[i]! * move.right + (i === 1 ? move.up : 0)) * step) as Vector;
   return { ...view, target };
+}
+
+/** The point of `ray` (from the camera) at `depth` ahead of it, along where it looks: under the pointer, that deep. */
+export function pointOnRay(view: OrbitView, ray: Ray, depth: number): Vector {
+  const forward = forwardOf(view);
+  const along = ray.direction.reduce((sum, value, i) => sum + value * forward[i]!, 0);
+  return ray.origin.map((value, i) => value + ray.direction[i]! * (depth / Math.max(along, 1e-6))) as Vector;
 }
 
 export function cameraPositionOf(view: OrbitView): Vector {

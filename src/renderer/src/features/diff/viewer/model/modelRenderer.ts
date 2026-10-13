@@ -39,7 +39,7 @@ import type { SlotLook } from './materials/materialPlan';
 import type { ModelPalette } from './modelPalette';
 import { slotColor } from './modelPalette';
 import { modelOrientation, type ModelScene } from './modelScene';
-import { cameraPositionOf, clipPlanesOf, FIELD_OF_VIEW, type BoundsLike, type OrbitView, type Vector } from './orbitCamera';
+import { cameraPositionOf, clipPlanesOf, FIELD_OF_VIEW, type BoundsLike, type OrbitView, type Ray, type Vector } from './orbitCamera';
 import type { SurfaceLook } from './surfaceLook';
 import { layoutOf, paneAt, type Layout, type ModelLayoutMode, type Side } from './viewLayout';
 
@@ -244,9 +244,10 @@ export class ModelRenderer {
 
   /**
    * What is under a point of the canvas (CSS pixels): the side, the node key of the mesh hit and where, in the
-   * viewer's space. On the onion skin, the version blended in most.
+   * viewer's space, and the ray from the camera through it (`pointOnRay`: a zoom where nothing is hit). On the onion
+   * skin, the version blended in most.
    */
-  pick(x: number, y: number): { side: Side; key: string | null; point: Vector | null } | null {
+  pick(x: number, y: number): { side: Side; key: string | null; point: Vector | null; ray: Ray } | null {
     const layout = this.layout();
     let pane = paneAt(layout, x, y, this.height, this.pixelRatio);
     if (layout.blended) pane = layout.panes.find((candidate) => candidate.side === (this.layoutState.blend >= 0.5 ? 'after' : 'before')) ?? null;
@@ -259,7 +260,8 @@ export class ModelRenderer {
     raycaster.setFromCamera(ndc, this.camera);
     const hits: Intersection[] = raycaster.intersectObjects(side.model.meshes.filter((mesh) => mesh.solid.visible || mesh.wire.visible).map((mesh) => mesh.solid), false);
     const [hit] = hits;
-    return { side: pane.side, key: (hit?.object.userData.key as string | undefined) ?? null, point: hit ? (hit.point.toArray() as Vector) : null };
+    const ray: Ray = { origin: raycaster.ray.origin.toArray(), direction: raycaster.ray.direction.toArray() };
+    return { side: pane.side, key: (hit?.object.userData.key as string | undefined) ?? null, point: hit ? (hit.point.toArray() as Vector) : null, ray };
   }
 
   /** Draws now, for a still (a thumbnail read back at once); views draw on the next frame (`requestRender`). */

@@ -9,7 +9,7 @@ import { PanInertia } from '../../../../lib/panInertia';
 import { isDiscreteWheel, wheelZoomFactor } from '../../../../lib/wheelZoom';
 import { followDrag, isOnStageControl } from '../image/pointerDrag';
 import type { ModelRenderer } from './modelRenderer';
-import { dollied, orbited, panned, workingDepth, type OrbitView, type Vector } from './orbitCamera';
+import { dollied, orbited, panned, pointOnRay, workingDepth, type OrbitView, type Vector } from './orbitCamera';
 
 /**
  * How a turn coasts once let go: much less than a pan, as each pixel turns the model (`orbited`): a slow release turns
@@ -107,7 +107,7 @@ export function useOrbitGestures({ element, renderer, view, onView, onDollyStep,
     const onWheel = (event: WheelEvent): void => {
       event.preventDefault();
       stopCoasting();
-      if (event.timeStamp - zoomPoint.at > ZOOM_POINT_MS) zoomPoint = { at: event.timeStamp, point: renderer.pick(...local(event))?.point ?? null };
+      if (event.timeStamp - zoomPoint.at > ZOOM_POINT_MS) zoomPoint = { at: event.timeStamp, point: zoomPointAt(...local(event)) };
       else zoomPoint.at = event.timeStamp;
       if (isDiscreteWheel(event.deltaY, event.deltaMode)) {
         latest.current.onDollyStep(zoomPoint.point, wheelZoomFactor(event.deltaY, event.deltaMode));
@@ -116,6 +116,16 @@ export function useOrbitGestures({ element, renderer, view, onView, onDollyStep,
       // A pinch arrives as a wheel with Ctrl and small deltas: as fast to the eye as a trackpad's scroll.
       const delta = event.ctrlKey ? event.deltaY * 8 : event.deltaY;
       latest.current.onView(dollied(latest.current.view(), delta, zoomPoint.point));
+    };
+
+    // What a zoom heads for: what is under the pointer, else the point under it as deep as the model (`workingDepth`),
+    // so zooming beside the model keeps its pace; towards the target alone, it slowed to a crawl as it neared it.
+    const zoomPointAt = (x: number, y: number): Vector | null => {
+      const picked = renderer.pick(x, y);
+      if (!picked) return null;
+      if (picked.point) return picked.point;
+      const view = latest.current.view();
+      return pointOnRay(view, picked.ray, workingDepth(view, null, latest.current.modelCentre()));
     };
 
     const onDoubleClick = (event: MouseEvent): void => {

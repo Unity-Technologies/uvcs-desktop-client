@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { PerspectiveCamera, Vector3 } from 'three';
-import { cameraPositionOf, clipPlanesOf, dollied, FIELD_OF_VIEW, FIRST_PITCH, FIRST_YAW, flown, flyStep, framedView, orbited, panned, workingDepth, type OrbitView, type Vector } from './orbitCamera';
+import { cameraPositionOf, clipPlanesOf, dollied, FIELD_OF_VIEW, FIRST_PITCH, FIRST_YAW, flown, flyStep, framedView, orbited, panned, pointOnRay, workingDepth, type OrbitView, type Vector } from './orbitCamera';
 
 const cube = { min: [-1, 0, -1] as [number, number, number], max: [1, 2, 1] as [number, number, number] };
 const front: OrbitView = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 };
@@ -96,6 +96,16 @@ describe('workingDepth', () => {
 
   it("takes the target's depth when the centre is behind the camera, inside a level", () => {
     expect(workingDepth(view, null, [0, 0, 50])).toBe(2);
+  });
+});
+
+describe('pointOnRay', () => {
+  it('is the point of the ray as deep as asked, along where the camera looks', () => {
+    // The camera at z = 10 looks down -Z; a ray to the right of the centre.
+    const view: OrbitView = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 };
+    const direction = new Vector3(1, 0, -2).normalize().toArray() as Vector;
+    const point = pointOnRay(view, { origin: cameraPositionOf(view), direction }, 20);
+    point.forEach((value, i) => expect(value).toBeCloseTo([10, 0, -10][i]!, 10));
   });
 });
 

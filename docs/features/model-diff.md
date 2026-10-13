@@ -178,7 +178,8 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   `TURN_FLING` for a turn; a trackpad's scroll already coasts by itself). A pan moves what it grabbed exactly with the
   pointer: what was under it, else the model's centre (`workingDepth`); panning at the orbit target's depth crawled
   once the target was zoomed close in front of the model,
-  scroll or pinch zooms at the point under the pointer (a mouse wheel's notches glide, as in the Branch Explorer:
+  scroll or pinch zooms at the point under the pointer (with nothing there, the point under it as deep as the model's
+  centre, `pointOnRay`: zooming towards the target alone slowed to a crawl as it neared it; a mouse wheel's notches glide, as in the Branch Explorer:
   `dollyGlide`, `isDiscreteWheel`; jumping at once by what the wheel said threw a model out of sight when spun fast;
   a trackpad and a pinch follow the fingers), double-click orbits around the point clicked, a click picks the
   part under it and its match on the other side. F frames what is picked, or the whole model; 0 the whole model
