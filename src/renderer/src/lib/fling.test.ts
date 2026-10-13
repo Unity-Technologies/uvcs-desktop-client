@@ -1,11 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  LONG_FLING,
+  SHORT_FLING,
   decayFling,
-  FLING_MAX_SPEED,
   FLING_MIN_LAUNCH,
   FLING_MIN_SPEED,
-  FLING_TAU_MAX_MS,
-  FLING_TAU_MIN_MS,
   flingTau,
   flingVelocity,
   pushPanSample,
@@ -62,20 +61,20 @@ describe('pan inertia', () => {
       { x: 90, y: 120, t: 12 },
     ];
     const fling = flingVelocity(violent, 12)!;
-    expect(Math.hypot(fling.vx, fling.vy)).toBeCloseTo(FLING_MAX_SPEED);
+    expect(Math.hypot(fling.vx, fling.vy)).toBeCloseTo(LONG_FLING.maxSpeed);
     expect(fling.vy / fling.vx).toBeCloseTo(120 / 90);
-    expect(fling.tauMs).toBe(flingTau(FLING_MAX_SPEED));
+    expect(fling.tauMs).toBe(flingTau(LONG_FLING.maxSpeed));
   });
 
   it('glides disproportionately farther after a harder throw, within limits', () => {
     const glide = (speed: number): number => speed * flingTau(speed);
     expect(glide(4)).toBeGreaterThan(4 * glide(1));
-    expect(flingTau(0)).toBe(FLING_TAU_MIN_MS);
-    expect(flingTau(100)).toBe(FLING_TAU_MAX_MS);
+    expect(flingTau(0)).toBe(LONG_FLING.tauMinMs);
+    expect(flingTau(100)).toBe(LONG_FLING.tauMaxMs);
   });
 
   it('decays the same at any frame rate', () => {
-    const fling = { vx: 1, vy: 0, tauMs: FLING_TAU_MIN_MS };
+    const fling = { vx: 1, vy: 0, tauMs: LONG_FLING.tauMinMs };
     const half = decayFling(fling, 8);
     const rest = decayFling(half.next, 8);
     const whole = decayFling(fling, 16);
@@ -84,7 +83,7 @@ describe('pan inertia', () => {
   });
 
   it('lands within a few seconds even after the hardest throw', () => {
-    let fling = { vx: FLING_MAX_SPEED, vy: 0, tauMs: flingTau(FLING_MAX_SPEED) };
+    let fling = { vx: LONG_FLING.maxSpeed, vy: 0, tauMs: flingTau(LONG_FLING.maxSpeed) };
     let elapsed = 0;
     let done = false;
     while (!done) {
@@ -93,5 +92,14 @@ describe('pan inertia', () => {
     }
     expect(fling.vx).toBeLessThan(FLING_MIN_SPEED);
     expect(elapsed).toBeLessThan(6000);
+  });
+
+  it('coasts a shorter way with a short feel, from the same flick', () => {
+    const samples = steadyDrag(2, 1000);
+    const long = flingVelocity(samples, 1000)!;
+    const short = flingVelocity(samples, 1000, SHORT_FLING)!;
+    expect(short.vx).toBeCloseTo(long.vx);
+    expect(short.tauMs).toBeLessThan(long.tauMs);
+    expect(flingVelocity(steadyDrag(50, 1000), 1000, SHORT_FLING)!.vx).toBeCloseTo(SHORT_FLING.maxSpeed);
   });
 });

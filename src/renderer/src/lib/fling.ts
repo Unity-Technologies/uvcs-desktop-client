@@ -15,14 +15,22 @@ export interface PanSample {
 export const VELOCITY_WINDOW_MS = 100;
 /** px/ms below which a release is a positioning drag, not a fling. */
 export const FLING_MIN_LAUNCH = 0.25;
-/** px/ms ceiling, so a violent flick glides fast but never teleports. */
-export const FLING_MAX_SPEED = 9;
 /** px/ms below which the glide has landed. */
 export const FLING_MIN_SPEED = 0.01;
-/** The decay time grows with the launch speed: a gentle push parks nearby, a hard throw sails. */
-export const FLING_TAU_MIN_MS = 180;
-export const FLING_TAU_MAX_MS = 800;
-const FLING_TAU_PER_SPEED_MS = 75;
+
+/** How a view coasts after a fling: its speed ceiling, and a decay time that grows with the launch speed. */
+export interface FlingFeel {
+  /** px/ms ceiling, so a violent flick glides fast but never teleports. */
+  maxSpeed: number;
+  tauMinMs: number;
+  tauMaxMs: number;
+  tauPerSpeedMs: number;
+}
+
+/** The Branch Explorer's: a gentle push parks nearby, a hard throw sails across the graph. */
+export const LONG_FLING: FlingFeel = { maxSpeed: 9, tauMinMs: 180, tauMaxMs: 800, tauPerSpeedMs: 75 };
+/** The model viewer's: a little coast that settles within a quarter of a second, never a drift away from the model. */
+export const SHORT_FLING: FlingFeel = { maxSpeed: 4, tauMinMs: 90, tauMaxMs: 250, tauPerSpeedMs: 50 };
 
 export interface Fling {
   vx: number;
@@ -30,8 +38,8 @@ export interface Fling {
   tauMs: number;
 }
 
-export function flingTau(speed: number): number {
-  return Math.min(FLING_TAU_MAX_MS, FLING_TAU_MIN_MS + FLING_TAU_PER_SPEED_MS * speed);
+export function flingTau(speed: number, feel: FlingFeel = LONG_FLING): number {
+  return Math.min(feel.tauMaxMs, feel.tauMinMs + feel.tauPerSpeedMs * speed);
 }
 
 /** Adds a sample, dropping the ones older than the velocity window. */
@@ -41,7 +49,7 @@ export function pushPanSample(samples: PanSample[], sample: PanSample): void {
 }
 
 /** The release velocity, or null when the release should not fling (parked pointer, slow drag, jitter). */
-export function flingVelocity(samples: readonly PanSample[], releaseT: number): Fling | null {
+export function flingVelocity(samples: readonly PanSample[], releaseT: number, feel: FlingFeel = LONG_FLING): Fling | null {
   const recent = samples.filter((sample) => releaseT - sample.t <= VELOCITY_WINDOW_MS);
   const first = recent[0];
   const last = recent.at(-1);
@@ -52,8 +60,8 @@ export function flingVelocity(samples: readonly PanSample[], releaseT: number): 
   const vy = (last.y - first.y) / dt;
   const speed = Math.hypot(vx, vy);
   if (speed < FLING_MIN_LAUNCH) return null;
-  const clamped = Math.min(speed, FLING_MAX_SPEED);
-  return { vx: (vx * clamped) / speed, vy: (vy * clamped) / speed, tauMs: flingTau(clamped) };
+  const clamped = Math.min(speed, feel.maxSpeed);
+  return { vx: (vx * clamped) / speed, vy: (vy * clamped) / speed, tauMs: flingTau(clamped, feel) };
 }
 
 /**

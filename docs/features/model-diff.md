@@ -173,7 +173,9 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
 - **Framing**: both versions together (`framedBounds`), once both are read: framing one alone framed a pair whose other
   half was 100 times its size. Until the user moves the camera, the model stays framed as the stage resizes and the
   panel docks.
-- **Controls** (`useOrbitGestures`), as Unity's Scene view: drag (or Alt+drag) orbits, right, middle or Shift+drag pans,
+- **Controls** (`useOrbitGestures`), as Unity's Scene view: drag (or Alt+drag) orbits, right, middle or Shift+drag pans
+  (let go moving, it coasts a little, `SHORT_FLING`, the Branch Explorer's inertia with a shorter decay; a trackpad's
+  scroll already coasts by itself),
   scroll or pinch zooms at the point under the pointer (a mouse wheel's notches glide, as in the Branch Explorer:
   `dollyGlide`, `isDiscreteWheel`; jumping at once by what the wheel said threw a model out of sight when spun fast;
   a trackpad and a pinch follow the fingers), double-click orbits around the point clicked, a click picks the

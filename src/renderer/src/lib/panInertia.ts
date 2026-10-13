@@ -1,5 +1,5 @@
 import type { FrameClock } from './frameClock';
-import { decayFling, flingVelocity, pushPanSample, type Fling, type PanSample } from './fling';
+import { decayFling, flingVelocity, LONG_FLING, pushPanSample, type Fling, type FlingFeel, type PanSample } from './fling';
 
 /** Longer frame gaps (a stall, a hidden window) don't make the graph jump. */
 const MAX_FRAME_MS = 64;
@@ -15,6 +15,7 @@ export class PanInertia {
     /** Pans by a screen delta and returns how far the view actually moved once clamped. */
     private readonly panBy: (dx: number, dy: number) => { dx: number; dy: number },
     private readonly clock: FrameClock,
+    private readonly feel: FlingFeel = LONG_FLING,
   ) {}
 
   /** Records a drag position; pass the event's timeStamp so coalesced events keep their real timing. */
@@ -24,7 +25,7 @@ export class PanInertia {
 
   /** The drag ended: glides on if it was a flick. */
   release(): void {
-    const fling = flingVelocity(this.samples, this.clock.now());
+    const fling = flingVelocity(this.samples, this.clock.now(), this.feel);
     this.samples = [];
     if (!fling) return;
     this.fling = fling;
