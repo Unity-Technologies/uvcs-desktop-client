@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { FoundFile, UnityAssetsRequest } from '@shared/domain/unityAssets';
-import { foundAssets, materialFiles, textureRequestOf, uniqueFiles, uniqueRequests } from './assetAnswers';
+import { BRANCH_TREE_LIFE_MS, type FoundFile, type UnityAssetsAnswer, type UnityAssetsRequest } from '@shared/domain/unityAssets';
+import { findStaleTime, foundAssets, materialFiles, textureRequestOf, uniqueFiles, uniqueRequests } from './assetAnswers';
 import { lookupKey } from './materialPlan';
 import { named } from './testing/testMaterials';
 import type { UnityMaterial } from './unityMaterial';
@@ -47,5 +47,20 @@ describe('asset answers', () => {
     expect(found.paths).toEqual(new Map([['images/a.png', null]]));
     expect(found.guids).toEqual(new Map([[MAT, file('Bark.mat')], [BARK, file('bark.psd')]]));
     expect(found.importsPsb).toBe(true);
+  });
+});
+
+describe('findStaleTime', () => {
+  const answer = (guidMisses: UnityAssetsAnswer['guidMisses']): UnityAssetsAnswer => ({ textures: [], guids: [], paths: [], importsPsb: false, guidMisses });
+
+  it("keeps a changeset's answer for good, a branch head's a while, the disk's not at all", () => {
+    expect(findStaleTime({ kind: 'repository', at: 'cs:12' }, answer('known'))).toBe(Number.POSITIVE_INFINITY);
+    expect(findStaleTime({ kind: 'repository', at: 'br:/main' }, answer('known'))).toBe(BRANCH_TREE_LIFE_MS);
+    expect(findStaleTime({ kind: 'workspace' }, answer('known'))).toBe(0);
+  });
+
+  it("never keeps an answer that couldn't be read whole (the server down): the next look asks again", () => {
+    expect(findStaleTime({ kind: 'repository', at: 'cs:12' }, answer('unread'))).toBe(0);
+    expect(findStaleTime({ kind: 'repository', at: 'cs:12' }, undefined)).toBe(Number.POSITIVE_INFINITY);
   });
 });
