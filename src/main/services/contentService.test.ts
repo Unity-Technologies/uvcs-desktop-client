@@ -136,6 +136,35 @@ describe('reading the bytes of a model companion', () => {
     expect(lines()).toEqual(['ls /Assets/Shared/Hero.fbx.meta --tree=cs:3 --xml']);
   });
 
+  describe("of the workspace's repository that isn't there", () => {
+    /** As cm prints it: `serverpath:` can't tell a missing file from one under an xlink, so the tree is asked. */
+    const notFound = ({ args }: FakeCmCommand) => cmFails(`The specified revision was not found ${args[1]}`);
+    const notInTree = ({ args }: FakeCmCommand) =>
+      cmFails([`Can't resolve the selector for the item ${args[1]}`, '<?xml version="1.0" encoding="utf-8"?>', '<LsResults>', '  <LsItems />', '</LsResults>'].join('\n'));
+
+    it.each(['cs:3', 'br:/main'])('reads it as nothing at %s once the tree says it is not there', async (at) => {
+      const { service, lines } = content({ cat: notFound, ls: notInTree });
+      expect(await service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at })).toBeNull();
+      expect(lines().map((line) => line.split(' --file=')[0])).toEqual([`cat serverpath:/Assets/Crate.fbx.meta#${at}`, `ls /Assets/Crate.fbx.meta --tree=${at} --xml`]);
+    });
+
+    it("reads it as nothing in a shelve, whose tree can't be asked, from its one failing cm cat", async () => {
+      const { service, lines } = content({ cat: notFound });
+      expect(await service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at: 'sh:2' })).toBeNull();
+      expect(lines()).toHaveLength(1);
+    });
+
+    it("fails when the tree can't be asked: the file may well be there", async () => {
+      const { service } = content({ cat: notFound, ls: cmFails('Error: The server is unreachable.') });
+      await expect(service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at: 'cs:3' })).rejects.toThrow();
+    });
+
+    it('fails for a revision not found, which names one that should be there', async () => {
+      const { service } = content({ cat: ({ args }) => cmFails(`The specified revision was not found ${args[1]}`) });
+      await expect(service.readBytes(await newWorkspace(), { kind: 'revision', revision: { revisionId: 4, repository: 'game@local' }, fileName: 'a.bin' })).rejects.toThrow('not found');
+    });
+  });
+
   it('fails on any other error, which is no answer about the file', async () => {
     const { service } = content({ cat: () => cmFails('Error: The server is unreachable.') });
     await expect(service.readBytes(await newWorkspace(), { kind: 'revision', revision: { revisionId: 4, repository: 'game@local' }, fileName: 'a.bin' })).rejects.toThrow('unreachable');
