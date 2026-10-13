@@ -16,8 +16,9 @@ const NAME_SHARE = 1 / 3;
 
 /**
  * The parts give way in this order, each stage only as much as the line still needs: unchanged folders (whole
- * folders from their middle, `src/…/merge/`), unchanged names down to a third of the line, then what the move changed
- * (whole folders from the middle of changed folders, `tools/…/runtime-adapters/`), and last the names again.
+ * folders from their middle, `src/…/merge/`, then their last folder cut, `src/…itclient/`: `trimFolderToFit`),
+ * unchanged names down to a third of the line, then what the move changed (the same way, from the middle of changed
+ * folders, `tools/…/runtime-adapters/`), and last the names again.
  */
 const STAGES: Stage[] = [
   { shrinks: (part) => !part.changed && isFolder(part), floor: () => 0 },
@@ -53,8 +54,8 @@ function shrink(parts: PathPart[], { shrinks, floor }: Stage, excess: number, ma
 }
 
 /**
- * Folders lose whole folders from their middle; a changed folder too short for that (one folder, or nothing but `…/`
- * left) and anything else is cut in its middle.
+ * Folders lose whole folders from their middle, then their last folder is cut (`trimFolderToFit`); a changed folder
+ * too short for that (one folder, or nothing but `…/` left) and anything else is cut in its middle.
  */
 function cutToFit(part: PathPart, width: number, measure: Measure): string {
   if (!isFolder(part)) return trimMiddleToFit(part.text, width, measure);

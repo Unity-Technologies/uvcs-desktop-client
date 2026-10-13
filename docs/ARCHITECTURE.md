@@ -627,9 +627,10 @@ renderer/src/
     keeps fewer, `serverMergeLabel`), two side by side told apart by `branchLabels` ("Merge merge-test into subtask").
     The full name goes in the tooltip where the control has one.
   - **On its own** (a row, a cell, a chip, a header, a field's button): the whole path fitted to the room by
-    `PathLabel` (parents dropped from the middle, `/main/…/child_1/subtask`, the name cut in its middle last), the
-    full name in its tooltip; the Branch Explorer's canvas the same way (`fitBranchName`, a tooltip on a cut name), the
-    merge page's title both branches together (`fitMergeTitle`). A table cell may show just the own name, its tooltip
+    `PathLabel` (parents dropped from the middle, `/main/…/child_1/subtask`, then the last parent cut rather than
+    dropped while `MIN_CUT_FOLDER_CHARS` of it stay, `/main/child…mple/subtask`, the name cut in its middle last: the
+    one rule for every path and branch, `trimFolderToFit`), the full name in its tooltip; the Branch Explorer's canvas
+    the same way (`fitBranchName`, a tooltip on a cut name), the merge page's title both branches together (`fitMergeTitle`). A table cell may show just the own name, its tooltip
     the path (Changesets' Branch column).
   - The full path stays in words only where the user must know exactly which branch: the confirmation to delete it,
     the rename dialog's description, the new branch's "A child of …" and "Full name: …". There it wraps anywhere
@@ -646,7 +647,7 @@ renderer/src/
   (`statusTones`). A moved item's name and its M show the move on hover, through the one tooltip
   (`data-tip-move-from`/`-to`, `PathMoveLines`): the folder both paths share said once ("in"), then one line each for
   where it was ("from") and is ("to"), what the move removed and added tinted as a diff tints them
-  (`pathChangeSegments`); a line too wide is cut where nothing changed, whole folders first, never wrapped
+  (`pathChangeSegments`); a line too wide is cut where nothing changed, folders first (`trimFolderToFit`), never wrapped
   (`fitPathParts`). Wrapping the two whole paths was tried and rejected: a long path broke inside what the move added,
   and the shared folder, said twice, hid what changed. `ItemPathRow` is an item
   named by its path, the folders dimmed. Extras go in one order: tags (`ItemTag`: a merge), where a conflict
