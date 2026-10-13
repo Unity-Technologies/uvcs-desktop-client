@@ -48,8 +48,13 @@ export interface AppSettings {
   reviewModeWorkspaces: string[];
   /** The offer to turn on review mode after a burst of changes was dismissed or taken: it never shows again. */
   reviewModeHintDone: boolean;
-  /** Show people's Gravatar pictures (their hashed email goes to gravatar.com); initials otherwise. */
+  /**
+   * Show people's Gravatar pictures (their hashed email goes to gravatar.com); initials otherwise. Off until the user
+   * chooses it (`gravatarChoiceAsked`, `showsGravatar`).
+   */
   showGravatar: boolean;
+  /** The user chose whether to show Gravatar pictures, in the one-time prompt or in Settings: it never asks again. */
+  gravatarChoiceAsked: boolean;
   /** Show an OS notification when someone checks in to the loaded branch while the window is in the background. */
   notifyOnIncoming: boolean;
   /** The merge tool "Resolve in…" opens: `auto` (the UVCS merge tool, else the first found) or a tool id. */
@@ -94,7 +99,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   switchShelves: [],
   reviewModeWorkspaces: [],
   reviewModeHintDone: false,
-  showGravatar: true,
+  showGravatar: false,
+  gravatarChoiceAsked: false,
   notifyOnIncoming: false,
   mergeTool: AUTO_MERGE_TOOL,
   customMergeTools: [],
