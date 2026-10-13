@@ -2,8 +2,9 @@
 // the model. A workspace file's sibling is the file beside it, on disk or as loaded. In a committed diff, a model's
 // shape lives in its `.bin`, so a changed shape changed the `.bin` too, which is then an entry of the same diff with
 // its own revisions; a sibling the diff didn't change is the same on both sides, read where the diff points to (the
-// changeset, the branch's head, the shelve). Anything else (a history's revisions, a merge's) finds none, and the
-// viewer says what the model needs.
+// changeset, the branch's head, the shelve). A last change in Files or Browse repository finds them in the tree's
+// listings (`lastChangeSibling`). Anything else (a history's revisions, a merge's) finds none, and the viewer says what
+// the model needs.
 
 import { createContext } from 'react';
 import type { ContentSource } from '@shared/domain/content';
@@ -16,7 +17,7 @@ export type DiffSide = 'original' | 'modified';
 export type SiblingFinder = (side: DiffSide, source: ContentSource, path: string, fileName: string) => ContentSource | null;
 
 /** What a sibling's name may be: a name or a path below the model's folder, never above it or elsewhere. */
-function siblingPath(path: string, fileName: string): string | null {
+export function siblingPath(path: string, fileName: string): string | null {
   const parts = fileName.split(/[\\/]/);
   if (fileName.startsWith('/') || /^[a-z]:/i.test(fileName) || parts.some((part) => part === '..' || part === '')) return null;
   const separator = path.includes('\\') && !path.includes('/') ? '\\' : '/';
@@ -80,5 +81,8 @@ export function sourcePathOf(source: ContentSource): string | null {
   }
 }
 
-/** How the model viewer finds siblings where it shows: workspace files anywhere, a committed diff's where it provides. */
+/**
+ * How the model viewer finds siblings where it shows: workspace files anywhere; a committed diff's where `DiffBrowser`
+ * provides `diffSibling`, a last change's where `RevisionChanges` provides `lastChangeSibling`.
+ */
 export const SiblingFinderContext = createContext<SiblingFinder>(workspaceSibling);

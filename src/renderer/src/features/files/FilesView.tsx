@@ -139,7 +139,7 @@ export function FilesView() {
               lock={locks.get(focused.path)}
               menu={focusedMenu}
               onSelectFolder={selectFolder}
-              folderContents={childrenByDirectory.get(focused.path)}
+              listings={childrenByDirectory}
             />
           ) : (
             <NoSelection noun="file" />

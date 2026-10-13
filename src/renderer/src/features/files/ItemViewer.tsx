@@ -23,6 +23,8 @@ interface ItemViewerProps {
   comparison: ItemComparison;
   /** The last change's comment, once read. */
   comment?: string;
+  /** The tree's listings, by folder: where a model's last change finds the files it needs beside it. */
+  listings: ReadonlyMap<string, TreeItem[]>;
   /** The key that switches "Diff | Annotate", where one does (the Files view's commands). */
   viewShortcut?: string;
 }
@@ -32,7 +34,7 @@ interface ItemViewerProps {
  * (`itemComparison`), saying what it compares; or, switched with "Diff | Annotate" before that, the file annotated.
  * The tree keeps the keyboard; F6 moves it into the file to scroll it, and F6 or Esc back.
  */
-export function ItemViewer({ workspacePath, item, comparison, comment, viewShortcut }: ItemViewerProps) {
+export function ItemViewer({ workspacePath, item, comparison, comment, listings, viewShortcut }: ItemViewerProps) {
   const { fileView, setFileView } = useFilesViewStore();
   // A file with changes is annotated as it is on disk; any other as its revision, read once (a shelve's has none to annotate).
   const revision = comparison.kind === 'changes' ? undefined : itemRevision(item);
@@ -73,7 +75,7 @@ export function ItemViewer({ workspacePath, item, comparison, comment, viewShort
       {annotating ? (
         <AnnotationPane key={item.path} path={item.path} repository={item.repository} revision={revision ?? undefined} leading={viewSwitch} />
       ) : comparison.kind === 'lastChange' ? (
-        <RevisionChanges workspacePath={workspacePath} item={item} title={title} />
+        <RevisionChanges workspacePath={workspacePath} item={item} listings={listings} title={title} />
       ) : comparison.change ? (
         <ChangeDiffPanel workspacePath={workspacePath} change={comparison.change} title={title} />
       ) : (
