@@ -19,7 +19,7 @@ import { useCutItems } from './cutItemsStore';
 import { directoryListingQuery } from './directoryListing';
 import { CutHint } from './CutHint';
 import { createItem, openItem, targetDirectoryFor } from './fileOperations';
-import { useFilesViewStore } from './filesViewStore';
+import { revealRequestIn, useFilesViewStore } from './filesViewStore';
 import { FileTreeTable } from './FileTreeTable';
 import { FILE_TREE_WIDTH } from './fileTreeWidth';
 import { ancestorsOf, buildFileTreeRows } from './fileTreeRows';
@@ -57,17 +57,18 @@ export function FilesView() {
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
   const focusedMenu = focused ? fileMenu(workspacePath, [focused], pendingIndex, locks) : [];
 
-  const revealRequest = useFilesViewStore((state) => state.revealRequest);
+  const revealRequest = useFilesViewStore((state) => revealRequestIn(state, workspacePath));
   useEffect(() => {
     if (!revealRequest) return;
     const { path, selected = [path] } = revealRequest;
     expand(workspacePath, ancestorsOf(path));
     setSelection({ selected: new Set(selected), anchor: path });
     setRevealPath(path);
+    useFilesViewStore.getState().revealed();
   }, [revealRequest, expand, workspacePath]);
 
   const openGoToFile = useCallback(
-    (query?: string) => void goToFile(workspacePath, query).then((path) => path && useFilesViewStore.getState().requestReveal(path)),
+    (query?: string) => void goToFile(workspacePath, query).then((path) => path && useFilesViewStore.getState().requestReveal(workspacePath, path)),
     [workspacePath],
   );
   useFileCommands(workspacePath, selectedItems, pendingIndex, locks, openGoToFile);

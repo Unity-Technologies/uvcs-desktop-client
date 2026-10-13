@@ -73,7 +73,7 @@ describe('renaming an item', () => {
     answerPrompts('b.ts');
     await renameItem(ws, item('src/a.ts'));
     expect(fakeApi.calls()).toEqual([{ method: 'explorer.move', args: [ws, 'src/a.ts', 'src/b.ts'] }]);
-    expect(useFilesViewStore.getState().revealRequest).toEqual({ path: 'src/b.ts', selected: undefined });
+    expect(useFilesViewStore.getState().revealRequest).toEqual({ workspacePath: ws, path: 'src/b.ts', selected: undefined });
   });
 
   it('renames a private item on disk only, at the root too', async () => {

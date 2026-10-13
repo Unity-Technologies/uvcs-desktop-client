@@ -27,7 +27,9 @@ changeset's tree never changes, so each of its folders is read once (`repository
 One way to find a file, Go to file (⌘P anywhere; in Files also ⌘F or Ctrl+F, where the legacy
 client finds files, and / from the tree: `filesGoToFile`; the header's search button): a fuzzy search (`fuzzyIndex`)
 over every path on disk (`useWorkspacePaths`, read once, no `cm`), its results as the tree's rows. The one picked is
-revealed in the tree, its folders expanded, and selected with its diff. The view has no find field of its own:
+revealed in the tree, its folders expanded, and selected with its diff. A reveal (Go to file, the palette's Show in
+Files, a new, renamed or moved item) is taken once, by the Files view of the workspace it was asked in
+(`revealRequestIn`). The view has no find field of its own:
 Go to file is the one way to find a file.
 
 ## History

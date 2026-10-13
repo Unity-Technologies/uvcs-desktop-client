@@ -36,10 +36,10 @@ export const FILE_SHORTCUTS = {
 };
 
 /** The file annotated beside the tree, in the diff's place (from Go to file's actions too: the tree selects it). */
-function showAnnotated(path: string): void {
+function showAnnotated(workspacePath: string, path: string): void {
   const view = useFilesViewStore.getState();
   view.setFileView('annotate');
-  view.requestReveal(path);
+  view.requestReveal(workspacePath, path);
 }
 
 /** Who may check in under the item's path, on every branch (a secured path). */
@@ -70,7 +70,7 @@ export function fileMenu(workspacePath: string, items: TreeItem[], pendingChange
     single && menuAction('newFolder', () => void createItem(workspacePath, directory, 'directory'), { shortcut: FILE_SHORTCUTS.newFolder }),
     single && views?.changes && menuAction('changes', () => useFilesViewStore.getState().setFileView('diff'), { shortcut: FILE_SHORTCUTS.showChanges }),
     single && views?.history && menuAction('history', () => navigation.openPage({ kind: 'history', path: single.path }), { shortcut: FILE_SHORTCUTS.history }),
-    single && views?.annotate && menuAction('annotate', () => showAnnotated(single.path), { shortcut: FILE_SHORTCUTS.annotate }),
+    single && views?.annotate && menuAction('annotate', () => showAnnotated(workspacePath, single.path), { shortcut: FILE_SHORTCUTS.annotate }),
     lock ? menuAction('showInLocks', () => showInLocks(workspacePath, lock)) : menuAction('locks', () => navigation.goToView('locks')),
     ...(single ? openOnDiskEntries({ path: absolutePath(workspacePath, single.path), isFolder: single.itemType === 'directory' }) : []),
     // Cut and Paste move items into another folder.
