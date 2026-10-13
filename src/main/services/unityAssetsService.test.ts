@@ -122,6 +122,12 @@ describe('unityAssets.find', () => {
     expect((await service(await workspaceWith({})).find({ modelPath: 'Art/Tree.fbx' })).importsPsb).toBe(false);
   });
 
+  it("finds the model's project as Unity does: the nearest folder whose Assets has ProjectSettings beside it", async () => {
+    const manifest = JSON.stringify({ dependencies: { 'com.unity.2d.psdimporter': '9.0.0' } });
+    const workspace = await workspaceWith({ 'Hub/Assets/Game/ProjectSettings/ProjectVersion.txt': '', 'Hub/ProjectSettings/ProjectVersion.txt': '', 'Hub/Assets/Game/Packages/manifest.json': manifest });
+    expect((await service(workspace).find({ modelPath: 'Hub/Assets/Game/Assets/Tree.fbx' })).importsPsb).toBe(true);
+  });
+
   it("keeps no index of a workspace whose watcher doesn't see every change: each find reads afresh", async () => {
     const files = { 'Game/Assets/Art/Materials/Bark.mat': 'mat', 'Game/Assets/Art/Materials/Bark.mat.meta': meta(MAT_GUID) };
     for (const coverage of ['partial', 'unwatched'] as const) {
