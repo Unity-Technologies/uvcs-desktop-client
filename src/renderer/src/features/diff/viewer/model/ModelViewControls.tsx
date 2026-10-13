@@ -43,7 +43,7 @@ export function ModelViewControls({ drawMode, onDrawMode, surface, onSurface, ma
       {materialsOffered && (
         <StageButton
           icon={<Image size={15} />}
-          label="Show materials and textures, as the workspace has them"
+          label="Show materials and textures"
           active={surfaceButtonOn(surface, 'materials', surfaceUnavailable !== null)}
           unavailable={surfaceUnavailable}
           onClick={() => onSurface(clickedSurface(surface, 'materials'))}

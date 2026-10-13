@@ -82,10 +82,13 @@ const LISTED_ISSUES = 8;
  */
 export function texturesStat(report: TexturesReport): ModelStat | null {
   if (report.total === 0) return null;
-  const { total, shown, loading, issues } = report;
-  const lines = ['Textures shown, as the workspace has them'];
+  const { total, shown, loading, downloading, issues } = report;
+  const lines = ['Textures shown'];
   for (const issue of issues.slice(0, LISTED_ISSUES)) lines.push(`${issue.name}: ${textureProblemWords(issue.problem)}`);
   if (issues.length > LISTED_ISSUES) lines.push(`and ${formatCount(issues.length - LISTED_ISSUES)} more`);
-  if (loading > 0) lines.push(`Loading ${formatCount(loading)}…`);
-  return { label: 'Textures', before: null, after: shown === total ? formatCount(total) : `${formatCount(shown)} of ${formatCount(total)}`, tip: lines.join('\n') };
+  if (downloading > 0) lines.push(`Getting ${formatCount(downloading)} from the repository…`);
+  if (loading > downloading) lines.push(`Loading ${formatCount(loading - downloading)}…`);
+  // Counting up while they load: what may take a while (a download) shows it's under way.
+  const count = shown === total ? formatCount(total) : `${formatCount(shown)} of ${formatCount(total)}`;
+  return { label: 'Textures', before: null, after: loading > 0 ? `${count}…` : count, tip: lines.join('\n') };
 }

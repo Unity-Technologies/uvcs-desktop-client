@@ -2,7 +2,7 @@
 // material's color meanwhile (or clay): a missing texture never fails the model or the other textures.
 
 export type TextureProblem =
-  /** No file of its name where Unity looks, in the workspace on disk. */
+  /** No file of its name where Unity looks, where the version is (`AssetsPoint`). */
   | 'missing'
   /** DDS, KTX and the like: GPU formats, and the rare ones. */
   | 'unsupportedFormat'
@@ -20,7 +20,7 @@ export type TextureProblem =
   | 'unreadable';
 
 const WORDS: Record<TextureProblem, string> = {
-  missing: 'not in the workspace',
+  missing: 'not found where Unity looks',
   unsupportedFormat: "this format isn't shown",
   tooLarge: 'too large to show',
   psdWithoutComposite: "can't read this PSD: save it with Maximize Compatibility",
