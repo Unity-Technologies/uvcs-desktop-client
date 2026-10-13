@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { WorkspaceChange } from '@shared/domain/workspaceChange';
+import { AFTER_OWN_WRITE_GRACE_MS } from './OwnWrites';
 import { WorkspaceWatchers, type Watcher } from './WorkspaceWatchers';
 
 const CHANGE: WorkspaceChange = { content: true, pathsChanged: false, metadata: false, folders: [''] };
@@ -114,6 +115,25 @@ describe('WorkspaceWatchers', () => {
     await write;
     await Promise.resolve();
     expect(heard).toEqual(['/wk/a changed in anywhere']);
+  });
+
+  it("tells what listens to the files again once the own write's grace ends: a change the watcher dropped meanwhile isn't lost", async () => {
+    vi.useFakeTimers();
+    try {
+      const { watchers } = setUp();
+      const heard: string[] = [];
+      watchers.listen({ changed: (path, change) => heard.push(`${path} changed in ${change.folders === null ? 'anywhere' : change.folders}`), unwatched: () => undefined });
+      watchers.watch(1, '/wk/a');
+      const write = Promise.resolve();
+      watchers.ignoreOwnWrite(write, '/wk/a');
+      await write;
+      await Promise.resolve();
+      expect(heard).toEqual(['/wk/a changed in anywhere']);
+      await vi.advanceTimersByTimeAsync(AFTER_OWN_WRITE_GRACE_MS);
+      expect(heard).toEqual(['/wk/a changed in anywhere', '/wk/a changed in anywhere']);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('tells how much of a workspace its watcher sees, and nothing for one not watched', () => {
