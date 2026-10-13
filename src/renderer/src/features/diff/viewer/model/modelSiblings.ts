@@ -16,7 +16,7 @@ export type DiffSide = 'original' | 'modified';
 export type SiblingFinder = (side: DiffSide, source: ContentSource, path: string, fileName: string) => ContentSource | null;
 
 /** What a sibling's name may be: a name or a path below the model's folder, never above it or elsewhere. */
-function siblingPath(path: string, fileName: string): string | null {
+export function siblingPath(path: string, fileName: string): string | null {
   const parts = fileName.split(/[\\/]/);
   if (fileName.startsWith('/') || /^[a-z]:/i.test(fileName) || parts.some((part) => part === '..' || part === '')) return null;
   const separator = path.includes('\\') && !path.includes('/') ? '\\' : '/';
