@@ -1,4 +1,5 @@
 import type { ModelBytes } from '@shared/domain/content';
+import { DEFAULT_IMPORT_SETTINGS, type ModelImportSettings } from '../modelImportSettings';
 import type { FileMaterial, ParsedModel } from '../parsedModel';
 import type { ModelReadOptions } from '../readModelFile';
 import { slotKeysOf } from './slotKeys';
@@ -14,9 +15,11 @@ export interface MaterialVersion {
 
 /**
  * What decides a version's materials: each slot once by its key (`slotKeysOf`), with the material the file defines for
- * it: the model's own, or for an OBJ the `.mtl`'s of the slot's name (`mtl`, read beside it).
+ * it: the model's own, or for an OBJ the `.mtl`'s of the slot's name (`mtl`, read beside it); and the import settings
+ * of the version's `.meta`, or, when none was found for the version (`DEFAULT_IMPORT_SETTINGS` itself: a last change
+ * whose `.meta` changed since), of the workspace's (`workspaceSettings`), as Unity imports the model now.
  */
-export function materialsInputOf(version: MaterialVersion | null, mtl: FileMaterial[] | null): ModelMaterialsInput | null {
+export function materialsInputOf(version: MaterialVersion | null, mtl: FileMaterial[] | null, workspaceSettings: ModelImportSettings | null = null): ModelMaterialsInput | null {
   if (!version) return null;
   const { model } = version;
   const mtlByName = new Map((mtl ?? []).map((material) => [material.name, material]));
@@ -29,5 +32,6 @@ export function materialsInputOf(version: MaterialVersion | null, mtl: FileMater
       slots.set(key, { key, name, material });
     });
   }
-  return { format: model.format, slots: [...slots.values()], settings: version.options.settings };
+  const read = version.options.settings;
+  return { format: model.format, slots: [...slots.values()], settings: read === DEFAULT_IMPORT_SETTINGS && workspaceSettings ? workspaceSettings : read };
 }

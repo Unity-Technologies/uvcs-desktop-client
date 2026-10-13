@@ -8,6 +8,7 @@ import { materialsInputOf, type MaterialVersion } from './materialVersion';
 import { materialsOffered, slotSources } from './slotSources';
 import { useMtlMaterials } from './useMtlMaterials';
 import { useUnityAssets, useUnityMaterials } from './useUnityAssets';
+import { useWorkspaceImportSettings } from './useWorkspaceImportSettings';
 
 export type { MaterialVersion } from './materialVersion';
 
@@ -30,9 +31,13 @@ const NO_LOOKS = { before: null, after: null };
  */
 export function useModelMaterials(workspacePath: string, versions: Record<Side, MaterialVersion | null>, wanted: boolean): ModelMaterials {
   const mtl = useMtlMaterials(workspacePath, versions);
+  const workspaceSettings = useWorkspaceImportSettings(workspacePath, versions);
   const inputs = useMemo(
-    () => ({ before: materialsInputOf(versions.before, mtl.before), after: materialsInputOf(versions.after, mtl.after) }),
-    [versions.before, versions.after, mtl.before, mtl.after],
+    () => ({
+      before: materialsInputOf(versions.before, mtl.before, workspaceSettings.before),
+      after: materialsInputOf(versions.after, mtl.after, workspaceSettings.after),
+    }),
+    [versions.before, versions.after, mtl.before, mtl.after, workspaceSettings],
   );
   const offered = workspacePath !== '' && materialsOffered([inputs.before, inputs.after]);
   const active = useLatch(wanted && offered, inputs);
