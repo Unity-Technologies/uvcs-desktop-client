@@ -3,6 +3,7 @@ import { Users } from 'lucide-react';
 import { gravatarChoice } from '@shared/domain/gravatarChoice';
 import { usePeopleShown } from '../../lib/avatars/peopleShown';
 import { Button } from '../../ui/Button';
+import { useDialogStore } from '../../ui/dialog/dialogStore';
 import { CornerCard, CornerCardText } from '../../ui/toast/CornerCard';
 import { asksAboutGravatar } from './asksAboutGravatar';
 import { saveSettings, settingsQuery } from './useSettings';
@@ -16,7 +17,8 @@ const answer = (show: boolean): void => void saveSettings(gravatarChoice(show));
 export function GravatarPrompt() {
   const { data: settings } = useQuery(settingsQuery);
   const peopleShown = usePeopleShown();
-  if (!asksAboutGravatar(settings, peopleShown)) return null;
+  const dialogOpen = useDialogStore((state) => state.dialogs.length > 0);
+  if (!asksAboutGravatar(settings, { peopleShown, dialogOpen })) return null;
 
   return (
     <CornerCard
