@@ -59,23 +59,27 @@ export function materialFoldWords(run: MaterialChange[]): { title: string; detai
     case 'source':
       return SOURCE_FOLDS[first.after.kind](count);
     case 'baseMap':
-      return { title: `Base map changed on ${count} materials` };
+      return { title: `Base map changed in ${count} slots` };
     case 'normalMap':
-      return { title: `Normal map changed on ${count} materials` };
+      return { title: `Normal map changed in ${count} slots` };
     case 'baseColor':
-      return { title: `Base color changed on ${count} materials` };
+      return { title: `Base color changed in ${count} slots` };
     case 'alpha':
-      return { title: `${count} materials now ${ALPHA_WORDS[first.after]}` };
+      return { title: `${count} slots now ${ALPHA_WORDS[first.after]}` };
     case 'cutoff':
-      return { title: `Alpha cutoff changed on ${count} materials` };
+      return { title: `Alpha cutoff changed in ${count} slots` };
     case 'opacity':
-      return { title: `Opacity changed on ${count} materials` };
+      return { title: `Opacity changed in ${count} slots` };
     case 'doubleSided':
-      return { title: `${count} materials now ${first.now ? 'double-sided' : 'one-sided'}` };
+      return { title: `${count} slots now ${first.now ? 'double-sided' : 'one-sided'}` };
     case 'tiling':
-      return { title: `Base map tiling changed on ${count} materials` };
-    case 'textureMissing':
-      return { title: `${count} textures the materials use aren't in the workspace`, detail: 'Unity shows the materials without them.' };
+      return { title: `Base map tiling changed in ${count} slots` };
+    case 'textureMissing': {
+      // A texture is missing once, however many slots use it.
+      const textures = new Set(run.flatMap((change) => (change.kind === 'textureMissing' ? [change.texture] : [])));
+      if (textures.size === 1) return { title: `${first.texture} isn't in the workspace, for ${count} slots`, detail: 'Unity shows the materials without it.' };
+      return { title: `${textures.size} textures the materials use aren't in the workspace`, detail: 'Unity shows the materials without them.' };
+    }
   }
 }
 

@@ -128,7 +128,8 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   (`whatChanged`).
 
 `changeRows` words them for the panel, with the line on why a risk matters in Unity, and folds three or more of a kind
-(`FOLD_FROM`: "Added 6 bones") into one row listing them. Lengths read in the unit that suits them (`formatLength`).
+(`FOLD_FROM`: "Added 6 bones") into one row listing them; material rows count slots ("3 slots now transparent"), and
+a missing texture once however many slots use it. Lengths read in the unit that suits them (`formatLength`).
 
 ## The view
 
