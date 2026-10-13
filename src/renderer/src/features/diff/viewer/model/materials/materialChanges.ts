@@ -81,23 +81,28 @@ export interface MaterialSide {
 /**
  * Whether two versions' materials may resolve differently, so they're worth reading to list their changes, with the
  * look off too: versions whose slots take other sources or ask other lookups; or ask the same at two points of one
- * diff that changed a file such lookups read (a `.mat`, a `.meta`, a texture: `changesMaterialAssets`). The two sides
+ * diff that changed a file such lookups read (a `.mat`, a texture, either's `.meta`, the model's: `changesMaterialAssets`). The two sides
  * of a committed diff are always at two points: comparing the points themselves would list the model's folder for
  * every model diff opened, the look off, to tell nothing. A history's or a last change's two points, whose changes
  * aren't known, are compared with the look on only.
  */
 export function materialsMayDiffer(before: MaterialSide, after: MaterialSide): boolean {
   const keyOf = ({ sources, request }: MaterialSide): string => JSON.stringify([[...sources].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)), request && { ...request, point: null }]);
-  return keyOf(before) !== keyOf(after) || changesMaterialAssets(before.request?.point) || changesMaterialAssets(after.request?.point);
+  return keyOf(before) !== keyOf(after) || changesMaterialAssets(before.request) || changesMaterialAssets(after.request);
 }
 
-/** Whether a diff's side before undoes a change to a file a material lookup reads: a `.mat`, a `.meta`, an image, an `.mtl`. */
-function changesMaterialAssets(point: AssetsPoint | undefined): boolean {
+/**
+ * Whether a diff's side before undoes a change to a file a material lookup reads: a `.mat`, an image, an `.mtl`, the
+ * `.meta` of one of those (its GUID), or the model's own `.meta` (its remaps). A script's `.meta` names nothing a
+ * material reads.
+ */
+function changesMaterialAssets(request: UnityAssetsRequest | null | undefined): boolean {
+  const point: AssetsPoint | undefined = request?.point;
   if (point?.kind !== 'repository' || point.before?.kind !== 'changes') return false;
-  return point.before.changes.some((change) => MATERIAL_ASSET.test(change.path));
+  return point.before.changes.some((change) => MATERIAL_ASSET.test(change.path) || change.path === `${request!.modelPath}.meta`);
 }
 
-const MATERIAL_ASSET = /\.(?:mat|meta|mtl|png|jpe?g|gif|bmp|webp|tga|tiff?|exr|hdr|psd|psb|dds|ktx2?)$/i;
+const MATERIAL_ASSET = /\.(?:mat|mtl|png|jpe?g|gif|bmp|webp|tga|tiff?|exr|hdr|psd|psb|dds|ktx2?)(?:\.meta)?$/i;
 
 /** A slot's own material is the same on both sides, whatever the file calls it: what changed in it is its look. */
 function sameMaterial(before: ResolvedMaterial, after: ResolvedMaterial): boolean {
