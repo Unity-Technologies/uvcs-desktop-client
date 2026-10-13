@@ -178,7 +178,11 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   `dollyGlide`, `isDiscreteWheel`; jumping at once by what the wheel said threw a model out of sight when spun fast;
   a trackpad and a pinch follow the fingers), double-click orbits around the point clicked, a click picks the
   part under it and its match on the other side. F frames what is picked, or the whole model; 0 the whole model
-  (`modelKeys`, in the shortcut registry). Draw modes are Unity's (Shaded, Wireframe, Shaded wireframe), and material
+  (`modelKeys`, in the shortcut registry). W, A, S, D (or the arrows), Q and E move through the model while held, as
+  Unity's Scene view moves through a level (without holding its right button), the target going along: forward where
+  the camera looks, at its distance to the target a second, so it slows as it gets close, four times as fast with
+  Shift (`flown`, `flyKeys`, `useFlyKeys`: every frame, never at the keyboard's repeat). Only keys pressed on the
+  stage itself move it: a control's arrows (the take's scrubber) stay the control's. Draw modes are Unity's (Shaded, Wireframe, Shaded wireframe), and material
   slots can show in their colors (`slotColor`: the avatar fills by name, so a renamed slot changes color) or their
   materials ("Materials" below).
 - **Bones** (offered when a version has some, remembered): each version's skeleton over it, a line from each bone

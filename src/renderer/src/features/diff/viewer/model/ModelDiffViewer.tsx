@@ -39,6 +39,7 @@ import { useModelPalette } from './useModelPalette';
 import { useModelReadOptions } from './useModelReadOptions';
 import { useModelRenderer } from './useModelRenderer';
 import { useModelScene } from './useModelScene';
+import { useFlyKeys } from './useFlyKeys';
 import { useOrbitGestures } from './useOrbitGestures';
 import { useReadModel, type ModelReadState } from './useReadModel';
 import { useSize } from './useSize';
@@ -205,7 +206,13 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     [frame, pickedBounds],
   );
 
+  const flyKeys = useFlyKeys({ view: camera.currentView, onView: camera.onGesture });
   const onKeyDown = (event: KeyboardEvent): void => {
+    // Only the stage's own: the arrows of a control in it (the take's scrubber, the panel's rows) stay the control's.
+    if (event.target === event.currentTarget && flyKeys.onKeyDown(event)) {
+      event.preventDefault();
+      return;
+    }
     const command = modelCommandOf(event.nativeEvent);
     if (!command) return;
     event.preventDefault();
@@ -231,7 +238,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   }
 
   return (
-    <div className={styles.pane} ref={paneRef} tabIndex={0} onKeyDown={onKeyDown}>
+    <div className={styles.pane} ref={paneRef} tabIndex={0} onKeyDown={onKeyDown} onKeyUp={flyKeys.onKeyUp} onBlur={flyKeys.onBlur}>
       <div className={styles.stage} ref={stageRef} data-mode={shownMode ?? 'single'}>
         <div ref={canvasHostRef} className={styles.canvasHost} role="img" aria-label="3D view of the model" />
         {loading && spin && <CenteredSpinner />}

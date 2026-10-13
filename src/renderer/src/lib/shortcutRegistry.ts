@@ -167,6 +167,12 @@ export const SHORTCUTS = {
 
   modelFrame: { area: 'Model diff', label: 'Frame the part picked, or the whole model', keys: ['f'] },
   modelFrameAll: { area: 'Model diff', label: 'Frame the whole model', keys: ['0'] },
+  modelFlyForward: { area: 'Model diff', label: 'Move forward (Shift: faster)', keys: ['w', 'up'] },
+  modelFlyBack: { area: 'Model diff', label: 'Move back (Shift: faster)', keys: ['s', 'down'] },
+  modelFlyLeft: { area: 'Model diff', label: 'Move left (Shift: faster)', keys: ['a', 'left'] },
+  modelFlyRight: { area: 'Model diff', label: 'Move right (Shift: faster)', keys: ['d', 'right'] },
+  modelFlyUp: { area: 'Model diff', label: 'Move up (Shift: faster)', keys: ['e'] },
+  modelFlyDown: { area: 'Model diff', label: 'Move down (Shift: faster)', keys: ['q'] },
 
   commandLogFilter: { area: 'Command log', label: 'Filter the commands, from the log', keys: ['mod+f', '/'] },
 } as const satisfies Record<string, ShortcutDefinition>;

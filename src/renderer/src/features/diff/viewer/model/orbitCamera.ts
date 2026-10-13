@@ -75,6 +75,30 @@ export function dolliedTo(view: OrbitView, distance: number, point: Vector | nul
   return { ...view, target, distance: closer };
 }
 
+/** How fast the keys move the camera: its distance to the target per second, so it slows as it gets close. */
+const FLY_SPEED = 1;
+/** With Shift held. */
+const FLY_FAST = 4;
+
+/** How the held keys move the camera, each -1, 0 or 1: forward where it looks, right, and up (Unity's up, Y). */
+export interface FlyMove {
+  forward: number;
+  right: number;
+  up: number;
+}
+
+/**
+ * The camera moved by the keys for `seconds`, as Unity's Scene view moves it with WASD, QE: forward where it looks
+ * (down, when it looks down), right, and straight up; the target goes with it, so it still turns around what is ahead.
+ */
+export function flown(view: OrbitView, move: FlyMove, seconds: number, fast = false): OrbitView {
+  const step = view.distance * FLY_SPEED * (fast ? FLY_FAST : 1) * seconds;
+  const { right } = axesOf(view);
+  const forward = cameraPositionOf({ ...view, target: [0, 0, 0], distance: -1 });
+  const target = view.target.map((value, i) => value + (forward[i]! * move.forward + right[i]! * move.right + (i === 1 ? move.up : 0)) * step) as Vector;
+  return { ...view, target };
+}
+
 export function cameraPositionOf(view: OrbitView): Vector {
   const { yaw, pitch, distance, target } = view;
   return [target[0] + distance * Math.cos(pitch) * Math.sin(yaw), target[1] + distance * Math.sin(pitch), target[2] + distance * Math.cos(pitch) * Math.cos(yaw)];

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cameraPositionOf, clipPlanesOf, dollied, FIELD_OF_VIEW, FIRST_PITCH, FIRST_YAW, framedView, orbited, panned, type OrbitView } from './orbitCamera';
+import { cameraPositionOf, clipPlanesOf, dollied, FIELD_OF_VIEW, FIRST_PITCH, FIRST_YAW, flown, framedView, orbited, panned, type OrbitView, type Vector } from './orbitCamera';
 
 const cube = { min: [-1, 0, -1] as [number, number, number], max: [1, 2, 1] as [number, number, number] };
 const front: OrbitView = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 };
@@ -56,5 +56,26 @@ describe('clipPlanesOf', () => {
     const { near, far } = clipPlanesOf({ ...front, target: [0, 1, 0] }, cube);
     expect(near).toBeCloseTo(10 - Math.sqrt(3));
     expect(far).toBeGreaterThan(10 + Math.sqrt(3));
+  });
+});
+
+describe('flown', () => {
+  const view: OrbitView = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 };
+  const close = (actual: Vector, expected: Vector) => actual.forEach((value, i) => expect(value).toBeCloseTo(expected[i]!, 10));
+
+  it('moves where the camera looks, its distance a second, the target with it', () => {
+    // At yaw 0 the camera looks from +Z towards -Z.
+    const forward = flown(view, { forward: 1, right: 0, up: 0 }, 1);
+    close(forward.target, [0, 0, -10]);
+    expect(forward.distance).toBe(10);
+    close(flown(view, { forward: 0, right: 1, up: 0 }, 0.5).target, [5, 0, 0]);
+    close(flown(view, { forward: 0, right: 0, up: -1 }, 0.1).target, [0, -1, 0]);
+  });
+
+  it('goes down as it goes forward while looking down, and faster with Shift', () => {
+    const looking = flown({ ...view, pitch: Math.PI / 2 }, { forward: 1, right: 0, up: 0 }, 1);
+    close(looking.target, [0, -10, 0]);
+    const fast = flown(view, { forward: 1, right: 0, up: 0 }, 1, true);
+    expect(fast.target[2]).toBeLessThan(-10);
   });
 });
