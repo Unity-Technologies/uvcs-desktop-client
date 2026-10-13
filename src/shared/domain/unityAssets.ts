@@ -50,8 +50,8 @@ export interface UnityAssetsAnswer {
  * Unity project (a package's own repository, which no project's index looks up); `outsidePackage`, a project that
  * loads a package from a folder outside it (`file:../…` in its manifest), whose assets no folder read holds; `noLibrary`, a project without a
  * `Library` (never opened in Unity on this machine: no package cache to look in); `unread`, a read that couldn't
- * finish (a file held, a change overtaking it), a file found the disk refused to check (an antivirus holding it:
- * textures too), or a find that keeps no index (whose misses never read the cache).
+ * finish (a file held, a change overtaking it), or a file found the disk refused to check (an antivirus holding
+ * it: textures too).
  */
 export type GuidMisses = 'known' | 'noProject' | 'outsidePackage' | 'noLibrary' | 'unread';
 

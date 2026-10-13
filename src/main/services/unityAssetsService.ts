@@ -37,18 +37,16 @@ export function createUnityAssetsService({ watchers, platform = process.platform
   });
 
   /**
-   * The project's index: kept while the workspace's watcher sees every change (what it doesn't see would leave the
-   * index wrong for the session); otherwise one for this find alone.
+   * The project's index, kept per project. Where the workspace's watcher doesn't see every change (what it doesn't
+   * see would leave the index wrong for the session), the project's folders are read afresh for each find (`clear`);
+   * its package cache, which no watcher sees anyway and which checks itself (`packageCacheUnchanged`), is kept.
    */
   function indexOf(workspacePath: string, project: UnityProject): ProjectAssetIndex {
-    if (watchers.coverageOf(workspacePath) !== 'full') {
-      indexes.delete(workspacePath);
-      return new ProjectAssetIndex(project, filesOf(workspacePath), platform, false);
-    }
     const ofWorkspace = indexes.get(workspacePath) ?? new Map<string, ProjectAssetIndex>();
     indexes.set(workspacePath, ofWorkspace);
     const index = ofWorkspace.get(project.root) ?? new ProjectAssetIndex(project, filesOf(workspacePath), platform);
     ofWorkspace.set(project.root, index);
+    if (watchers.coverageOf(workspacePath) !== 'full') index.clear();
     return index;
   }
 

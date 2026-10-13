@@ -331,8 +331,8 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   anywhere drops it, and so does the watch breaking or stopping; the app's own `cm` writes, whose events the watcher
   drops, count as a change anywhere once they settle, and again when their grace ends, `AFTER_OWN_WRITE_GRACE_MS`, as
   the watcher drops what changed meanwhile as theirs). It is kept only while the watcher sees the whole workspace
-  (`coverageOf` is `full`); otherwise each find reads afresh, and never the package cache (it would read all of it,
-  20,000 to 60,000 `.meta` files for URP, on every miss): such a miss isn't known missing. A GUID found is checked against its `.meta` once more. A
+  (`coverageOf` is `full`); otherwise each find reads the project's folders afresh, and keeps only
+  the package cache (which no watcher sees anyway, and which checks itself: `packageCacheUnchanged`). A GUID found is checked against its `.meta` once more. A
   folder is read once however many finds ask at once; once all is read, a miss misses at once. A read that a change
   overtook keeps nothing, and a find after the change never joins it: the listing or GUIDs of a folder forgotten (or of
   everything cleared) while being read are dropped when they arrive, and a whole read the project changed under isn't
