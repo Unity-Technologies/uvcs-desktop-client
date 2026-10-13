@@ -143,8 +143,10 @@ markup from the network.
   `scripts/build/suppliedLicenses/`, copied from its upstream repository, or the standard text of the license its
   package.json names with its author when upstream has none either), and `npm run build` fails on a bundled package
   with neither, or whose supplied text is for another license than the one it names. A new dependency that fails it
-  gets its upstream license text added there. electron-builder.yml's `extraResources` ships it with the app's `LICENSE.md` and `NOTICE` as plain files in the
-  resources folder, outside `app.asar`.
+  gets its upstream license text added there; an entry whose package now ships its own license file fails
+  `suppliedLicenses.test.ts` until it is removed. electron-builder.yml's `extraResources` ships
+  `THIRD_PARTY_NOTICES.txt` with the app's `LICENSE.md` and `NOTICE` as plain files in the resources folder, outside
+  `app.asar`.
 - **Licenses**: the app is Apache-2.0 (`LICENSE.md`, `NOTICE`), and every package in package-lock.json must have a
   permissive license (`PERMISSIVE_LICENSES`, `scripts/build/dependencyLicenses.test.ts`): a copyleft one fails the tests
   and needs a legal decision before it joins.
