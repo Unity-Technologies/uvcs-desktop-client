@@ -21,7 +21,8 @@ const FLY_SHORTCUTS: [ShortcutId, FlyDirection][] = [
  * held with ⌘, Ctrl or Alt they're the window's.
  */
 export function flyDirectionOf(event: PressedKey, mac = isMac): FlyDirection | null {
-  const unshifted = { ...event, shiftKey: false };
+  // Field by field: a KeyboardEvent's are getters of its prototype, which spreading it leaves behind.
+  const unshifted: PressedKey = { key: event.key, code: event.code, metaKey: event.metaKey, ctrlKey: event.ctrlKey, altKey: event.altKey, shiftKey: false };
   return FLY_SHORTCUTS.find(([id]) => hotkeys(id).some((key) => matchesShortcut(unshifted, key, mac)))?.[1] ?? null;
 }
 
