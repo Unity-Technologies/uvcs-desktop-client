@@ -19,7 +19,7 @@ export function playableTake(take: AnimationClip, root: Object3D): PlayableTake 
   return { clip: dropped.length === 0 ? take : new AnimationClip(take.name, take.duration, kept, take.blendMode), dropped };
 }
 
-/** One short line for the take picker when part of a take isn't played; null when all of it is. */
+/** One short line for the take bar when part of a take isn't played; null when all of it is. */
 export function unplayableWords(dropped: KeyframeTrack[]): string | null {
   if (dropped.length === 0) return null;
   return dropped.some(isBlendshapeTrack) ? "Blendshape animation isn't shown" : "Part of this take isn't shown";

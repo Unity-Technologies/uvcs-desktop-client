@@ -131,7 +131,7 @@ function seek(mixers: Record<'before' | 'after', AnimationMixer | null>, choice:
   }
 }
 
-/** Each take parsed (its tracks are three's clip JSON) and cut to what the scene can play once per scene. */
+/** Each take parsed (its tracks are three's clip JSON) and cut to what a scene can play, once per scene and take. */
 const playables = new WeakMap<ModelScene, WeakMap<ModelClip, PlayableTake>>();
 function playableOn(scene: ModelScene | null, take: ModelClip | undefined): PlayableTake | null {
   if (!scene || !take) return null;
