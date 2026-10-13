@@ -2,8 +2,9 @@ import { existsSync } from 'node:fs';
 import { copyFile, writeFile } from 'node:fs/promises';
 import { basename, dirname } from 'node:path';
 import type { ContentSource } from '@shared/domain/content';
-import { spec } from '@shared/domain/specs';
+import { listsTree, spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
+import { isNotInTreeError } from '../cm/missingItem';
 import { removedItemSpec } from '../cm/removedItemSpec';
 import { parseTreeItems } from '../cm/treeItemsXml';
 import { toAbsolutePath } from './workspacePaths';
@@ -20,7 +21,9 @@ export async function saveContent(cm: CmClient, workspacePath: string, source: E
     case 'revision':
       return saveRevision(cm, workspacePath, spec.revision(source.revision), target);
     case 'repositoryPath':
-      return saveRepositoryPath(cm, workspacePath, source.path, source.at, target);
+      return source.repository === undefined
+        ? saveRepositoryPath(cm, workspacePath, source.path, source.at, target)
+        : saveFromTree(cm, workspacePath, source.path, source.at, target);
     case 'spec':
       return saveRevision(cm, workspacePath, source.spec, target);
   }
@@ -56,18 +59,34 @@ async function withFallback(first: () => Promise<void>, fallback: () => Promise<
 
 /**
  * `serverpath:` reads the path in the repository's own tree, where an xlink is a leaf: nothing under one is found.
- * Then the changeset's tree, which `cm ls` walks through xlinks (nested ones too), names the file's revision in the
- * xlinked repository. A shelve has no such tree (`--tree` takes changesets): its paths are read as they are.
+ * Then, for a path not known to be under an xlink (a merge's change, a model's sibling), the tree at the point
+ * (`saveFromTree`), only once `serverpath:` found nothing; the tree not having the path is the failure then, telling
+ * the file is absent (`isNotInTreeError`), which `serverpath:`'s doesn't. A shelve or a label has no such tree: its
+ * paths are read as they are.
  */
 async function saveRepositoryPath(cm: CmClient, workspacePath: string, path: string, at: string, target: string): Promise<void> {
   try {
     await saveRevision(cm, workspacePath, spec.serverPathAt(path, at), target);
   } catch (error) {
-    const listed = at.startsWith('cs:') ? await cm.query(['ls', path, `--tree=${at}`, '--xml'], { cwd: workspacePath }).catch(() => '') : '';
-    const item = listed && parseTreeItems(listed).find((candidate) => `/${candidate.path}` === path);
-    if (!item || item.revisionId < 0) throw error;
-    await saveRevision(cm, workspacePath, spec.revision(item), target);
+    if (!listsTree(at)) throw error;
+    await saveFromTree(cm, workspacePath, path, at, target).catch((treeError: unknown) => {
+      throw isNotInTreeError(treeError) ? treeError : error;
+    });
   }
+}
+
+/**
+ * The tree at a changeset or a branch's head, which `cm ls` walks through xlinks (nested ones too), names the path's
+ * revision in the xlinked repository. A path missing there fails as `cm ls` does ("Can't resolve the selector for the
+ * item"). A shelve's or a label's tree can't be listed and its `serverpath:` doesn't reach through an xlink: nothing
+ * is asked.
+ */
+async function saveFromTree(cm: CmClient, workspacePath: string, path: string, at: string, target: string): Promise<void> {
+  if (!listsTree(at)) throw new Error(`${path} is under an xlink, which ${at} can't be read through`);
+  const listed = await cm.query(['ls', path, `--tree=${at}`, '--xml'], { cwd: workspacePath });
+  const item = parseTreeItems(listed).find((candidate) => `/${candidate.path}` === path);
+  if (!item || item.revisionId < 0) throw new Error(`${path} isn't in the tree at ${at}`);
+  await saveRevision(cm, workspacePath, spec.revision(item), target);
 }
 
 async function saveRevision(cm: CmClient, workspacePath: string, revisionSpec: string, target: string): Promise<void> {

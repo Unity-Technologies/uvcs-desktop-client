@@ -1,7 +1,7 @@
 import { FileSearch, Folder } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
-import { useWorkspacePath } from '../../app/workspace/useWorkspace';
+import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { folderListScope } from '../../components/collapsedFoldersStore';
 import { useChangeFilter } from '../../components/useChangeFilter';
 import { useFileTree } from '../../components/useFileTree';
@@ -47,7 +47,8 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
   // The diff's change navigation goes on to the files before and after, as the list shows them.
   const rowKeys = useMemo(() => rows.flatMap((row) => (row.type === 'file' && row.item.itemType !== 'directory' ? [row.key] : [])), [rows]);
   // A model's companions (a glTF's `.bin`) are entries of the same diff, or the files where it points to.
-  const findSibling = useMemo(() => diffSibling(diffEntries, target), [diffEntries, target]);
+  const workspaceRepository = useWorkspaceInfo().data?.repository;
+  const findSibling = useMemo(() => diffSibling(diffEntries, target, workspaceRepository), [diffEntries, target, workspaceRepository]);
   const fileSteps = useFileSteps({ keys: rowKeys, current: selection.anchor, select: (key) => setSelection(singleSelection(key)), pathOf: (key) => key });
 
   useEffect(() => {

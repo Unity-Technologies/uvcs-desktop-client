@@ -2,14 +2,16 @@
 // the model. A workspace file's sibling is the file beside it, on disk or as loaded. In a committed diff, a model's
 // shape lives in its `.bin`, so a changed shape changed the `.bin` too, which is then an entry of the same diff with
 // its own revisions; a sibling the diff didn't change is the same on both sides, read where the diff points to (the
-// changeset, the branch's head, the shelve). A last change in Files or Browse repository finds them in the tree's
-// listings (`lastChangeSibling`). Anything else (a history's revisions, a merge's) finds none, and the viewer says what
-// the model needs.
+// changeset, the branch's head, the shelve, the label; under an xlink, through the tree there). A last change in Files
+// or Browse repository finds them in the tree's listings (`lastChangeSibling`). Anything else (a history's revisions,
+// a merge's) finds none, and the viewer says what the model needs.
 
 import { createContext } from 'react';
 import type { ContentSource } from '@shared/domain/content';
 import type { DiffEntry, DiffTarget } from '@shared/domain/diff';
+import { otherRepository } from '@shared/domain/repository';
 import { revisionIn } from '@shared/domain/revision';
+import { listsTree } from '@shared/domain/specs';
 
 export type DiffSide = 'original' | 'modified';
 
@@ -32,8 +34,12 @@ export const workspaceSibling: SiblingFinder = (_side, source, _path, fileName) 
   return path === null ? null : { kind: source.kind, path };
 };
 
-/** A committed diff's siblings: the entry of the same diff, or the file where the diff points to when it didn't change. */
-export function diffSibling(entries: DiffEntry[], target: DiffTarget): SiblingFinder {
+/**
+ * A committed diff's siblings: the entry of the same diff, or the file where the diff points to when it didn't change.
+ * Beside a model of another repository than `workspaceRepository` (under an xlink), that file is read through the
+ * tree there, which `cm ls` can't list in a shelve or at a label (`listsTree`): there it isn't found.
+ */
+export function diffSibling(entries: DiffEntry[], target: DiffTarget, workspaceRepository: string | undefined): SiblingFinder {
   return (side, source, path, fileName) => {
     if (source.kind !== 'revision') return workspaceSibling(side, source, path, fileName);
     const sibling = siblingPath(path, fileName);
@@ -44,7 +50,10 @@ export function diffSibling(entries: DiffEntry[], target: DiffTarget): SiblingFi
       const revision = revisionIn(entry.repository, side === 'original' ? entry.baseRevisionId : entry.revisionId);
       return revision ? { kind: 'revision', revision, fileName: sibling } : null;
     }
-    return { kind: 'repositoryPath', path: `/${sibling}`, at: pointOf(target) };
+    const at = pointOf(target);
+    const xlinked = otherRepository(source.revision.repository, workspaceRepository);
+    if (!xlinked) return { kind: 'repositoryPath', path: `/${sibling}`, at };
+    return listsTree(at) ? { kind: 'repositoryPath', path: `/${sibling}`, at, repository: xlinked } : null;
   };
 }
 

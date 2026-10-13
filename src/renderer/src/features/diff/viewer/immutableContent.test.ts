@@ -9,6 +9,10 @@ describe('isImmutableContent', () => {
     expect(isImmutableContent({ kind: 'spec', spec: 'itemid:27#sh:5', fileName: 'src/file2.txt' })).toBe(true);
   });
 
+  it("holds for a model's sibling left alone at a branch's head: one that changes there becomes an entry of the diff", () => {
+    expect(isImmutableContent({ kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at: 'br:/main/art' })).toBe(true);
+  });
+
   it("doesn't hold for workspace files, the loaded revision, or specs that follow a branch", () => {
     expect(isImmutableContent({ kind: 'workspaceFile', path: 'src/a.ts' })).toBe(false);
     expect(isImmutableContent({ kind: 'workspaceBase', path: 'src/a.ts' })).toBe(false);

@@ -128,6 +128,52 @@ describe('reading the bytes of a model companion', () => {
     expect(await service.readBytes(workspace, { kind: 'repositoryPath', path: '/Assets/Hero.fbx.meta', at: 'cs:4' })).toBeNull();
   });
 
+  it("reads a companion under an xlink that the tree hasn't as nothing", async () => {
+    const { service, lines } = content({
+      ls: cmFails(`Can't resolve the selector for the item /Assets/Shared/Hero.fbx.meta\n<?xml version="1.0" encoding="utf-8"?>\n<LsResults>\n  <LsItems />\n</LsResults>`),
+    });
+    expect(await service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Shared/Hero.fbx.meta', at: 'cs:3', repository: 'art@local' })).toBeNull();
+    expect(lines()).toEqual(['ls /Assets/Shared/Hero.fbx.meta --tree=cs:3 --xml']);
+  });
+
+  describe("of the workspace's repository that isn't there", () => {
+    /** As cm prints it: `serverpath:` can't tell a missing file from one under an xlink, so the tree is asked. */
+    const notFound = ({ args }: FakeCmCommand) => cmFails(`The specified revision was not found ${args[1]}`);
+    const notInTree = ({ args }: FakeCmCommand) =>
+      cmFails([`Can't resolve the selector for the item ${args[1]}`, '<?xml version="1.0" encoding="utf-8"?>', '<LsResults>', '  <LsItems />', '</LsResults>'].join('\n'));
+
+    it.each(['cs:3', 'br:/main'])('reads it as nothing at %s once the tree says it is not there', async (at) => {
+      const { service, lines } = content({ cat: notFound, ls: notInTree });
+      expect(await service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at })).toBeNull();
+      expect(lines().map((line) => line.split(' --file=')[0])).toEqual([`cat serverpath:/Assets/Crate.fbx.meta#${at}`, `ls /Assets/Crate.fbx.meta --tree=${at} --xml`]);
+    });
+
+    it.each(['sh:2', 'lb:v1.0'])("reads it as nothing at %s, whose tree cm ls can't list, from its one failing cm cat", async (at) => {
+      const { service, lines } = content({ cat: notFound });
+      expect(await service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at })).toBeNull();
+      expect(lines()).toHaveLength(1);
+    });
+
+    it("fails when the tree can't be asked: the file may well be there", async () => {
+      const { service } = content({ cat: notFound, ls: cmFails('Error: The server is unreachable.') });
+      await expect(service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at: 'cs:3' })).rejects.toThrow();
+    });
+
+    it.each(['The specified changeset cs:9 does not exist.', 'Specified branch /main/old does not exist'])(
+      'fails when the tree tells the point is gone (%s), which says nothing of the file',
+      async (gone) => {
+        const { service } = content({ cat: notFound, ls: cmFails(gone) });
+        await expect(service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at: 'cs:9' })).rejects.toThrow();
+        await expect(service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Shared/Crate.fbx.meta', at: 'cs:9', repository: 'art@local' })).rejects.toThrow();
+      },
+    );
+
+    it('fails for a revision not found, which names one that should be there', async () => {
+      const { service } = content({ cat: ({ args }) => cmFails(`The specified revision was not found ${args[1]}`) });
+      await expect(service.readBytes(await newWorkspace(), { kind: 'revision', revision: { revisionId: 4, repository: 'game@local' }, fileName: 'a.bin' })).rejects.toThrow('not found');
+    });
+  });
+
   it('fails on any other error, which is no answer about the file', async () => {
     const { service } = content({ cat: () => cmFails('Error: The server is unreachable.') });
     await expect(service.readBytes(await newWorkspace(), { kind: 'revision', revision: { revisionId: 4, repository: 'game@local' }, fileName: 'a.bin' })).rejects.toThrow('unreachable');

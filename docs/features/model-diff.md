@@ -177,7 +177,10 @@ A version is read with what it needs beside it (`useModelReadOptions`), found by
 a committed diff's (`diffSibling`, provided by `DiffBrowser`) is the entry of the same diff (a glTF's shape lives in
 its `.bin`, so a changed shape changed the `.bin` too, with its own revisions; a moved model's `.meta` moved with it, at
 its old path on the side before), or, when the diff left it alone, the file where the diff points to (`cs:N`, the
-branch's head, `sh:N`: the same on both sides). A last change in Files or Browse repository (`lastChangeSibling`,
+branch's head, `sh:N`, a label's: the same on both sides). Beside a model under an xlink (its repository isn't the workspace's),
+that file is read through the tree there, one `cm ls --tree` and its `cm cat`, never a `serverpath:` that can't reach
+it (ARCHITECTURE.md "Xlinks"); in a shelve or at a label, whose trees `cm ls` can't list, it isn't found, and the viewer
+says what the model needs. A last change in Files or Browse repository (`lastChangeSibling`,
 provided by `RevisionChanges`) finds it in the tree's own listings, no `cm` command added: changed in the same
 changeset or shelve as the model, its revision and the one before; untouched by it, its one revision on both sides;
 changed since, in another repository, or not listed (private, in a folder not opened), none. Elsewhere (history,
@@ -187,9 +190,14 @@ folder, and main refuses a workspace file outside the workspace anyway (`workspa
 trusted.
 
 - **Absent is an answer**: `api.content.readBytes` reads a file that isn't there as null (the disk's `ENOENT`, `cm`'s
-  "does not exist"), cached as any content, so a model without a `.meta` costs its `cm cat` once; any other failure
-  (the server) rejects, shows Unity's defaults meanwhile and is read again, never kept as "no `.meta`". It checks a
-  file's size before reading it.
+  "The item … does not exist": `isMissingItemError`; `cm ls --tree`'s "Can't resolve the selector for the item":
+  `isNotInTreeError`), cached as any content, so a model without a `.meta` costs its failing reads once. Any other
+  failure rejects, shows Unity's defaults meanwhile and is read again, never kept as "no `.meta`": the server, and a
+  changeset, branch or shelve that is gone (`cm` says "does not exist" of those too, which tells nothing of the file).
+  `serverpath:`'s "The specified revision was not found" can't tell a missing file from one under an xlink: at a
+  changeset or a branch the tree is asked next and its answer decides (two failing commands, once); in a shelve or at
+  a label, which have no tree to ask, it is the answer (`isMissingWhereNoTreeIsListed`). It checks a file's size
+  before reading it.
 - **Read once**: a pending file is read anew on every focus, as new arrays; while its bytes are the same (`sameBytes`),
   the viewer keeps the model it has (`useStableModel`), its read, scene and comparison. Typing into a model written as
   text (or its `.meta`) renders it once typing pauses (`useTypingPause`), not at every keystroke.
