@@ -297,12 +297,14 @@ export function budgeted(plans: readonly (VersionPlan | null)[]): { needs: Textu
 }
 
 /** A texture's state as it loads: its bitmap once decoded, why not if it failed. */
-export type NeedState = { kind: 'loading' } | { kind: 'ready'; key: string; bitmap: ImageBitmap } | { kind: 'failed'; problem: TextureProblem };
+export type NeedState = { kind: 'loading' } | { kind: 'ready'; key: string; bitmap: ImageBitmap; opaque: boolean } | { kind: 'failed'; problem: TextureProblem };
 
 export interface MapLook {
   /** The decoded texture's key: one GPU texture per key. */
   key: string;
   bitmap: ImageBitmap;
+  /** No pixel of it is see-through (`TextureDecoded.opaque`). */
+  opaque: boolean;
   repeat: [number, number];
   offset: [number, number];
   rotation: number;
@@ -314,6 +316,7 @@ export interface MapLook {
 export interface SlotLook {
   color: [number, number, number];
   opacity: number;
+  /** As drawn (`drawnAlpha`), which may differ from the material's. */
   alpha: AlphaMode;
   cutoff: number;
   doubleSided: boolean;
@@ -326,7 +329,7 @@ export function slotLooks(plan: VersionPlan, states: ReadonlyMap<string, NeedSta
   const looks = new Map<string, SlotLook>();
   const mapOf = (planned: PlannedMap | null): MapLook | null => {
     const state = planned && states.get(planned.need);
-    return planned && state?.kind === 'ready' ? { key: state.key, bitmap: state.bitmap, repeat: planned.repeat, offset: planned.offset, rotation: planned.rotation, channel: planned.channel } : null;
+    return planned && state?.kind === 'ready' ? { key: state.key, bitmap: state.bitmap, opaque: state.opaque, repeat: planned.repeat, offset: planned.offset, rotation: planned.rotation, channel: planned.channel } : null;
   };
   for (const [slot, planned] of plan.slots) {
     if (!planned) continue;
@@ -335,7 +338,7 @@ export function slotLooks(plan: VersionPlan, states: ReadonlyMap<string, NeedSta
     looks.set(slot, {
       color: baseMap ? planned.colorWithMap : waiting ? waitingColorOf(planned.color) : planned.color,
       opacity: planned.opacity,
-      alpha: planned.alpha,
+      alpha: drawnAlpha(planned.alpha, planned.opacity, baseMap),
       cutoff: planned.cutoff,
       doubleSided: planned.doubleSided,
       baseMap,
@@ -360,7 +363,7 @@ export function findingLooks(sources: ReadonlyMap<string, SlotSource>): Map<stri
     looks.set(slot, {
       color: material && !material.baseMap ? material.color : waitingColorOf(material?.color ?? [1, 1, 1]),
       opacity: material?.opacity ?? 1,
-      alpha: material?.alpha ?? 'opaque',
+      alpha: drawnAlpha(material?.alpha ?? 'opaque', material?.opacity ?? 1, null),
       cutoff: material?.cutoff ?? 0.5,
       doubleSided: material?.doubleSided ?? false,
       baseMap: null,
@@ -368,6 +371,17 @@ export function findingLooks(sources: ReadonlyMap<string, SlotSource>): Map<stri
     });
   }
   return looks;
+}
+
+/**
+ * How a slot's alpha is drawn: a blended material with nothing see-through (its color whole, and no base map yet or
+ * one without a transparent pixel) is drawn opaque. Blended, its triangles draw without depth and in no order, each
+ * over the ones before: Sketchfab's glTF exports mark skin and cloth as blended over textures with no alpha, and the
+ * inside of a character's mouth showed through its lips, its skirt's lining through the cloth. Drawn opaque, they
+ * look the same, in depth. One loading is drawn opaque until its base map tells otherwise.
+ */
+function drawnAlpha(alpha: AlphaMode, opacity: number, baseMap: MapLook | null): AlphaMode {
+  return alpha === 'blend' && opacity >= 1 && (baseMap === null || baseMap.opaque) ? 'opaque' : alpha;
 }
 
 export interface TexturesReport {

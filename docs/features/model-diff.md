@@ -439,7 +439,10 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
 - **Drawn** (`SlotLookMaterials`): MeshStandardMaterial, no metal, roughness 0.6, under the same studio; base maps sRGB,
   normal maps linear (a texture's own `.meta` isn't read); an FBX's or OBJ's textured material untinted (Unity's
   ModelImporter drops the diffuse tint), a glTF's tinted by its base color; alpha clip as `alphaTest`, transparency
-  blended without depth writes, both sides per material; textures the right way up from the decoder (FBX, OBJ and Unity
+  blended without depth writes, both sides per material. A blended material with nothing see-through (its color whole,
+  its base map without a transparent pixel, `TextureDecoded.opaque`, or not decoded yet) is drawn opaque (`drawnAlpha`):
+  Sketchfab exports skin and cloth as blended over textures with no alpha, and blended, a character's triangles drew
+  in no order, the inside of its mouth through its lips; textures the right way up from the decoder (FBX, OBJ and Unity
   UVs start at the image's bottom). The model shows in its materials' colors (darkened where a texture is on its way,
   "Progress" above) at once and textures appear as they decode: nothing over the model, no reframing. A picked part lights up and the rest fade, as with clay. Turned off, the look's
   materials and textures stay until the file changes, so turning it on again is immediate.
