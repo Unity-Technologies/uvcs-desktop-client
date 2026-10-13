@@ -54,11 +54,13 @@ describe('glTF images', () => {
     const pixels = new Uint8Array([...PNG_BYTES, ...PNG_BYTES, ...PNG_BYTES]);
     const json = { images: [0, 1, 2].map((view) => ({ bufferView: view, mimeType: 'image/png' })), bufferViews: [0, 1, 2].map((view) => ({ buffer: 0, byteOffset: view * 7, byteLength: 7 })), buffers: [{ byteLength: 21, uri: `data:application/octet-stream;base64,${btoa(String.fromCharCode(...pixels))}` }] };
     const bytes = new TextEncoder().encode(JSON.stringify(json));
-    const { result: images, calls: parses } = countCalls(JSON, 'parse', () => gltfImagesOf(bytes, 'gltf', {}));
+    // The companions as read with the version: the same object while it is.
+    const companions = {};
+    const { result: images, calls: parses } = countCalls(JSON, 'parse', () => gltfImagesOf(bytes, 'gltf', companions));
     expect(parses).toBe(1);
     const { calls: decodes } = countCalls(globalThis, 'atob', () => [0, 1, 2].map((image) => images(image)));
     expect(decodes).toBe(1);
-    const { calls: again } = countCalls(JSON, 'parse', () => gltfImagesOf(bytes, 'gltf', {})(0));
+    const { calls: again } = countCalls(JSON, 'parse', () => gltfImagesOf(bytes, 'gltf', companions)(0));
     expect(again).toBe(0);
     expect([...images(2)!.bytes]).toEqual([...PNG_BYTES]);
   });

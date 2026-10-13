@@ -85,39 +85,71 @@ export function gltfImagePlace(json: unknown, image: number): GltfImagePlace | n
 const GLB_BINARY_CHUNK = 0x004e4942;
 const IMAGE_EXTENSIONS_BY_TYPE: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/ktx2': 'ktx2', 'image/avif': 'avif' };
 
+/** An image a glTF holds, by its index: its bytes and a file name whose extension tells their format; null if none. */
+export type GltfImages = (image: number) => { bytes: Uint8Array; name: string } | null;
+
+/** Each version's images, by its bytes and companions: its JSON read and its buffers decoded once. */
+const imagesOfBytes = new WeakMap<Uint8Array, { companions: Readonly<Record<string, Uint8Array>>; images: GltfImages }>();
+
 /**
- * The bytes of an image the glTF holds (in a buffer view of its binary chunk, of a `data:` buffer, or of a buffer in
- * a companion file; or a `data:` URI of its own), with a file name whose extension tells their format; null for an
- * image in a file of its own or one that doesn't read. The bytes are a view of the model's, never copied.
+ * The images a glTF holds (in a buffer view of its binary chunk, of a `data:` buffer, or of a buffer in a companion
+ * file; or a `data:` URI of their own), read once per version: its JSON parsed and each buffer decoded once, however
+ * many of its images are asked for. An image of a buffer is a view of it, never copied; a `data:` URI is decoded into
+ * bytes of its own once. None for an image in a file of its own, or one that doesn't read.
  */
-export function gltfImageBytes(bytes: Uint8Array, format: ModelFormat, image: number, companions: Readonly<Record<string, Uint8Array>> = {}): { bytes: Uint8Array; name: string } | null {
-  if (format !== 'gltf' && format !== 'glb') return null;
-  const json = readJson(bytes, format);
-  const images = json?.images;
-  const definition = Array.isArray(images) ? (images[image] as { uri?: unknown; bufferView?: unknown; mimeType?: unknown } | undefined) : undefined;
-  if (!json || !definition) return null;
-  try {
-    if (typeof definition.uri === 'string') {
-      const data = dataUri(definition.uri);
-      return data && { bytes: data.bytes, name: `image.${IMAGE_EXTENSIONS_BY_TYPE[data.type] ?? 'bin'}` };
-    }
-    const view = Array.isArray(json.bufferViews) ? (json.bufferViews[definition.bufferView as number] as { buffer?: number; byteOffset?: number; byteLength?: number } | undefined) : undefined;
-    const buffer = view && bufferBytes(bytes, format, json, view.buffer ?? 0, companions);
-    if (!view || !buffer || typeof view.byteLength !== 'number') return null;
-    const start = view.byteOffset ?? 0;
-    if (start + view.byteLength > buffer.length) return null;
-    return { bytes: buffer.subarray(start, start + view.byteLength), name: `image.${IMAGE_EXTENSIONS_BY_TYPE[String(definition.mimeType)] ?? 'bin'}` };
-  } catch {
-    return null;
-  }
+export function gltfImagesOf(bytes: Uint8Array, format: ModelFormat, companions: Readonly<Record<string, Uint8Array>> = {}): GltfImages {
+  const kept = imagesOfBytes.get(bytes);
+  if (kept && kept.companions === companions) return kept.images;
+  const images = readImages(bytes, format, companions);
+  imagesOfBytes.set(bytes, { companions, images });
+  return images;
 }
 
-/** A glTF buffer's bytes: a GLB's binary chunk, a `data:` URI, or the companion file its URI names. */
+/** One image a glTF holds (`gltfImagesOf`, which reads a version's once). */
+export function gltfImageBytes(bytes: Uint8Array, format: ModelFormat, image: number, companions: Readonly<Record<string, Uint8Array>> = {}): { bytes: Uint8Array; name: string } | null {
+  return gltfImagesOf(bytes, format, companions)(image);
+}
+
+function readImages(bytes: Uint8Array, format: ModelFormat, companions: Readonly<Record<string, Uint8Array>>): GltfImages {
+  if (format !== 'gltf' && format !== 'glb') return () => null;
+  const json = readJson(bytes, format);
+  if (!json) return () => null;
+  const buffers = new Map<number, Uint8Array | null>();
+  const bufferOf = (index: number): Uint8Array | null => {
+    if (!buffers.has(index)) buffers.set(index, bufferBytes(bytes, format, json, index, companions));
+    return buffers.get(index)!;
+  };
+  return (image) => {
+    const images = json.images;
+    const definition = Array.isArray(images) ? (images[image] as { uri?: unknown; bufferView?: unknown; mimeType?: unknown } | undefined) : undefined;
+    if (!definition) return null;
+    try {
+      if (typeof definition.uri === 'string') {
+        const data = dataUri(definition.uri);
+        return data && { bytes: data.bytes, name: `image.${IMAGE_EXTENSIONS_BY_TYPE[data.type] ?? 'bin'}` };
+      }
+      const view = Array.isArray(json.bufferViews) ? (json.bufferViews[definition.bufferView as number] as { buffer?: number; byteOffset?: number; byteLength?: number } | undefined) : undefined;
+      const buffer = view && bufferOf(view.buffer ?? 0);
+      if (!view || !buffer || typeof view.byteLength !== 'number') return null;
+      const start = view.byteOffset ?? 0;
+      if (start + view.byteLength > buffer.length) return null;
+      return { bytes: buffer.subarray(start, start + view.byteLength), name: `image.${IMAGE_EXTENSIONS_BY_TYPE[String(definition.mimeType)] ?? 'bin'}` };
+    } catch {
+      return null;
+    }
+  };
+}
+
+/** A glTF buffer's bytes: a GLB's binary chunk, a `data:` URI decoded, or the companion file its URI names. */
 function bufferBytes(bytes: Uint8Array, format: 'gltf' | 'glb', json: GltfJson, index: number, companions: Readonly<Record<string, Uint8Array>>): Uint8Array | null {
   const buffer = Array.isArray(json.buffers) ? (json.buffers[index] as { uri?: unknown } | undefined) : undefined;
   if (!buffer) return null;
-  if (typeof buffer.uri === 'string') return buffer.uri.startsWith('data:') ? (dataUri(buffer.uri)?.bytes ?? null) : (companions[decodedUri(buffer.uri)] ?? null);
-  return format === 'glb' && index === 0 ? glbBinaryChunk(bytes) : null;
+  try {
+    if (typeof buffer.uri === 'string') return buffer.uri.startsWith('data:') ? (dataUri(buffer.uri)?.bytes ?? null) : (companions[decodedUri(buffer.uri)] ?? null);
+    return format === 'glb' && index === 0 ? glbBinaryChunk(bytes) : null;
+  } catch {
+    return null;
+  }
 }
 
 function dataUri(uri: string): { type: string; bytes: Uint8Array } | null {
