@@ -72,7 +72,8 @@ export function answerStateOf(
   let state: AnswerState = 'answered';
   for (const [asked, answer] of rounds) {
     if (answer === null) return 'unread';
-    if (answer && answer.guidMisses !== 'known' && asksGuids(asked)) return answer.guidMisses;
+    // A file unread leaves any lookup unanswered; no project or Library, only a GUID's.
+    if (answer && (answer.guidMisses === 'unread' || (answer.guidMisses !== 'known' && asksGuids(asked)))) return answer.guidMisses;
     if (answer === undefined) state = 'reading';
   }
   return materials === undefined ? 'reading' : state;
