@@ -206,6 +206,19 @@ describe('parseModel, glTF', () => {
     });
   });
 
+  it('keeps unnamed materials apart, each slot knowing its own', async () => {
+    const gltf = triangleGltf('inline', {
+      meshes: [{ primitives: [{ attributes: { POSITION: 0 }, material: 0 }, { attributes: { POSITION: 0 }, material: 1 }] }],
+      materials: [{ pbrMetallicRoughness: { baseColorFactor: [1, 0, 0, 1] } }, { pbrMetallicRoughness: { baseColorFactor: [0, 0, 1, 1] } }],
+    });
+    const model = await parsed(bytesOf(gltf, 'gltf'));
+    expect(model.materials.map((material) => material.color)).toEqual([
+      [1, 0, 0],
+      [0, 0, 1],
+    ]);
+    expect(model.meshes.flatMap((mesh) => mesh.slotMaterials)).toEqual([0, 1]);
+  });
+
   it('names the compression a glTF needs a decoder for', async () => {
     const draco = triangleGltf('inline', { extensionsUsed: ['KHR_draco_mesh_compression'], extensionsRequired: ['KHR_draco_mesh_compression'] });
     expect(await parseModel(bytesOf(draco, 'gltf'))).toEqual({ kind: 'failed', failure: { kind: 'compressed', compression: 'Draco' } });

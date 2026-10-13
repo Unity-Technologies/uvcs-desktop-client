@@ -67,6 +67,8 @@ export interface ModelMesh {
   index: Uint32Array | null;
   /** The material slots' names: Unity remaps materials onto a model by these. */
   slots: string[];
+  /** Each slot's material, as an index in `ParsedModel.materials`: a glTF's materials may all be unnamed. */
+  slotMaterials: number[];
   groups: MeshGroup[];
   skin: MeshSkin | null;
   blendShapes: BlendShape[];
@@ -122,7 +124,7 @@ export interface ParsedModel {
   clips: ModelClip[];
   /** The texture files the materials name, sorted; never read. */
   textures: string[];
-  /** Each material slot's material, by slot name, once each: what the Materials look starts from. */
+  /** Each material the meshes use, once (`ModelMesh.slotMaterials`): what the Materials look starts from. */
   materials: FileMaterial[];
   /** Metres per file unit, as Unity imports it ("Convert Units"): an FBX in centimetres is 0.01. */
   unitScale: number;

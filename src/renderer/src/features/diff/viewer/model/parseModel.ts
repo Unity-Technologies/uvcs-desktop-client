@@ -36,10 +36,10 @@ export async function parseModel({ bytes, format }: ModelBytes, companions: Read
   const manager = noTextureLoading((name) => textures.add(name), companionUrls);
   try {
     const loaded = await load(bytes, format, manager);
-    const materials = fileMaterialsOf(loaded.root, loaded.textureSource);
+    const { materials, indexOf } = fileMaterialsOf(loaded.root, loaded.textureSource);
     const facts: ModelFileFacts = { format, textures: [...textures].sort(), materials, unitScale: 1, upAxis: 'y', axisConversion: new Matrix4().elements, exportedFrom: null, frameRate: null };
     if (format === 'fbx') Object.assign(facts, fbxFacts(bytes, loaded.root));
-    return { kind: 'parsed', model: fromThreeObject(loaded.root, loaded.animations, facts) };
+    return { kind: 'parsed', model: fromThreeObject(loaded.root, loaded.animations, facts, indexOf) };
   } catch {
     return { kind: 'failed', failure: { kind: 'unreadable' } };
   } finally {

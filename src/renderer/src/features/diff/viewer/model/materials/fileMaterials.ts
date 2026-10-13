@@ -24,17 +24,23 @@ interface LoadedMaterial {
 /** glTF's default alpha cutoff, which a material in MASK mode without one has. */
 const DEFAULT_CUTOFF = 0.5;
 
-/** Each slot's material, once per name, in the order the meshes use them. */
-export function fileMaterialsOf(root: Object3D, sourceOf: TextureSource): FileMaterial[] {
-  const byName = new Map<string, FileMaterial>();
+/**
+ * Each material the meshes use, once, in the order they use them, and where each of the loader's materials is among
+ * them (`ModelMesh.slotMaterials`). By the material, not its name: a glTF's materials may all be unnamed.
+ */
+export function fileMaterialsOf(root: Object3D, sourceOf: TextureSource): { materials: FileMaterial[]; indexOf: Map<Material, number> } {
+  const indexOf = new Map<Material, number>();
+  const materials: FileMaterial[] = [];
   root.traverse((object) => {
     if (!(object as Mesh).isMesh) return;
     const { material } = object as Mesh;
     for (const each of Array.isArray(material) ? material : [material]) {
-      if (!byName.has(each.name)) byName.set(each.name, fileMaterialOf(each, sourceOf));
+      if (indexOf.has(each)) continue;
+      indexOf.set(each, materials.length);
+      materials.push(fileMaterialOf(each, sourceOf));
     }
   });
-  return [...byName.values()];
+  return { materials, indexOf };
 }
 
 function fileMaterialOf(material: Material, sourceOf: TextureSource): FileMaterial {

@@ -123,6 +123,7 @@ function boxMesh(node: number, mesh: TestMesh, nodeIndex: Map<string, number>): 
     },
     index: null,
     slots,
+    slotMaterials: slots.map(() => -1),
     groups: slots.map((_, slot) => ({ start: slot * facesPerSlot * 6, count: facesPerSlot * 6, slot })),
     skin: mesh.bones ? { bones: mesh.bones.map((bone) => nodeIndex.get(bone)!), boneInverses: new Float32Array(mesh.bones.length * 16) } : null,
     blendShapes: (mesh.blendShapes ?? []).map((name) => ({ name, deltas: new Float32Array(vertexCount * 3) })),
