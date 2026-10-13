@@ -1,5 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import { bundledPackageRoots, LICENSE_FILE_NAME, manifestLicense, packageRootOf, thirdPartyNotices, type BundledPackage } from './thirdPartyNotices';
+import {
+  bundledPackageRoots,
+  LICENSE_FILE_NAME,
+  manifestLicense,
+  packageRootOf,
+  thirdPartyNotices,
+  type BundledPackage,
+  type FindSuppliedLicense,
+  type SuppliedLicenseText,
+} from './thirdPartyNotices';
 
 describe('packageRootOf', () => {
   it('finds the package folder of a bundled module, scoped or not', () => {
@@ -54,6 +63,7 @@ describe('thirdPartyNotices', () => {
     const text = thirdPartyNotices(
       ['/r/node_modules/zustand/index.js', '/r/node_modules/@pierre/diffs/dist/a.js', '/r/node_modules/a/node_modules/zustand/index.js'],
       read,
+      noneSupplied,
     );
     const sections = text.split(`\n\n${'='.repeat(80)}\n\n`);
 
@@ -65,16 +75,48 @@ describe('thirdPartyNotices', () => {
     expect(text).not.toContain('\r');
   });
 
-  it('says so when a package has no license file', () => {
-    expect(thirdPartyNotices(['/r/node_modules/tiny/index.js'], read)).toContain(
-      'tiny 1.0.0\nLicense: ISC\n\n(The package has no license file; its package.json names the license above.)',
+  it('gives a package that ships no license file the text supplied for it', () => {
+    const supplied = suppliedFor({ tiny: { license: 'ISC', source: 'taken from github.com/someone/tiny', text: 'ISC License\r\n\r\nCopyright (c) Someone\r\n' } });
+
+    expect(thirdPartyNotices(['/r/node_modules/tiny/index.js'], read, supplied)).toContain(
+      'tiny 1.0.0\nLicense: ISC\n\n--- LICENSE (the package ships none; taken from github.com/someone/tiny) ---\n\nISC License\n\nCopyright (c) Someone\n',
+    );
+  });
+
+  it("keeps a package's own license files over a text supplied for it", () => {
+    const supplied = suppliedFor({ zustand: { license: 'MIT', source: 'taken from elsewhere', text: 'Supplied text' } });
+    const text = thirdPartyNotices(['/r/node_modules/zustand/index.js'], read, supplied);
+
+    expect(text).toContain('--- LICENSE ---\n\nMIT License\n\nCopyright (c) Paul');
+    expect(text).not.toContain('Supplied text');
+  });
+
+  it('fails, naming every package left without a license text', () => {
+    const noLicense = (name: string): BundledPackage => ({ name, version: '1.0.0', license: 'MIT', licenseFiles: [] });
+
+    expect(() => thirdPartyNotices(['/r/node_modules/b/index.js', '/r/node_modules/a/index.js'], (root) => noLicense(root.slice(-1)), noneSupplied)).toThrow(
+      /these have none: a 1\.0\.0 \(MIT\), b 1\.0\.0 \(MIT\)\. Add each one's upstream license text to SUPPLIED_LICENSES/,
+    );
+  });
+
+  it('fails when the supplied text is for another license than the package names now', () => {
+    const supplied = suppliedFor({ tiny: { license: 'MIT', source: 'taken from github.com/someone/tiny', text: 'MIT License' } });
+
+    expect(() => thirdPartyNotices(['/r/node_modules/tiny/index.js'], read, supplied)).toThrow(
+      'these have none: tiny 1.0.0 (ISC; SUPPLIED_LICENSES has MIT: review it).',
     );
   });
 
   it('lists no package for a bundle of only the app’s own code', () => {
-    expect(thirdPartyNotices(['/r/src/main/index.ts'], read)).toContain('the 0 open-source packages');
+    expect(thirdPartyNotices(['/r/src/main/index.ts'], read, noneSupplied)).toContain('the 0 open-source packages');
   });
 });
+
+function suppliedFor(texts: Record<string, SuppliedLicenseText>): FindSuppliedLicense {
+  return (packageName) => texts[packageName];
+}
+
+const noneSupplied: FindSuppliedLicense = () => undefined;
 
 describe('LICENSE_FILE_NAME', () => {
   it('matches the names license files go by, and nothing else', () => {
