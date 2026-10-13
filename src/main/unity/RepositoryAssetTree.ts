@@ -35,8 +35,12 @@ export interface RepositoryTreeSource {
 export const MAX_META_DOWNLOADS = 2000;
 
 export class RepositoryAssetTree {
-  /** The point's listings as `cm` gave them, by kind and folder (`R:` with everything below it, `S:` its children). */
-  private readonly listed = new Map<string, Promise<ListedItem[] | null>>();
+  /**
+   * The point's listings as `cm` gave them, by kind and comparable folder (`R:` with everything below it, `S:` its
+   * children), with the folder as it was asked: a listing is asked again in the tree's own spelling, never the
+   * comparable one (lowercased on macOS and Windows).
+   */
+  private readonly listed = new Map<string, { folder: string; items: Promise<ListedItem[] | null> }>();
   private metaDownloads = 0;
 
   constructor(
@@ -110,9 +114,9 @@ export class RepositoryAssetTree {
     return fileOf(items?.find((item) => this.comparable(item.path) === this.comparable(path)) ?? null);
   }
 
-  /** The top of a listing with everything below it, asked already, that holds the path. */
+  /** The top of a listing with everything below it, asked already, that holds the (comparable) path. */
   private coveringTop(path: string): string | null {
-    for (const key of this.listed.keys()) if (key.startsWith('R:') && this.isUnder(path, key.slice(2))) return key.slice(2);
+    for (const [key, { folder }] of this.listed) if (key.startsWith('R:') && this.isUnder(path, key.slice(2))) return folder;
     return null;
   }
 
@@ -127,12 +131,13 @@ export class RepositoryAssetTree {
   /** A listing, asked once however many reads need it at once. */
   private listing(key: string, folder: string, recursive: boolean): Promise<ListedItem[] | null> {
     const known = this.listed.get(key);
-    if (known) return known;
-    const listing = this.source.list(folder, recursive).catch((error: unknown) => Promise.reject(new TreeListingError(folder, error)));
+    if (known) return known.items;
+    const items = this.source.list(folder, recursive).catch((error: unknown) => Promise.reject(new TreeListingError(folder, error)));
+    const entry = { folder, items };
     // A listing that failed (the server) is asked again by the next read, unless another took its place meanwhile.
-    listing.catch(() => this.listed.get(key) === listing && this.listed.delete(key));
-    this.listed.set(key, listing);
-    return listing;
+    items.catch(() => this.listed.get(key) === entry && this.listed.delete(key));
+    this.listed.set(key, entry);
+    return items;
   }
 
   /** The listed items as one side sees them: the tree's, or with the change undone (`before`). */

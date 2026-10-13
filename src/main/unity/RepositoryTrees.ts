@@ -1,7 +1,8 @@
 // The repository's trees at the points a model viewer reads (a changeset, a branch's head), each listed once while
 // kept and shared by every read there (docs/features/model-diff.md, "Beside the model" and "Materials"): the Materials
 // look's lookups (`unityAssetsService`) and a model's files beside it (`contentService.readBytes`: its `.meta`, a
-// glTF's `.bin`), so one `cm ls` of the model's folder answers them all, and a file the tree hasn't costs no command.
+// glTF's `.bin`). A file beside the model is found in its folder's children (`cm ls` without `-R`), or in a listing
+// with everything below it the look asked first; a file the tree hasn't costs no command.
 
 import type { RevisionRef } from '@shared/domain/revision';
 import { BRANCH_TREE_LIFE_MS } from '@shared/domain/unityAssets';
