@@ -175,9 +175,12 @@ folder, and main refuses a workspace file outside the workspace anyway (`workspa
 trusted.
 
 - **Absent is an answer**: `api.content.readBytes` reads a file that isn't there as null (the disk's `ENOENT`, `cm`'s
-  "does not exist"), cached as any content, so a model without a `.meta` costs its `cm cat` once; any other failure
-  (the server) rejects, shows Unity's defaults meanwhile and is read again, never kept as "no `.meta`". It checks a
-  file's size before reading it.
+  "does not exist", `cm ls --tree`'s "Can't resolve the selector for the item": `isMissingItemError`), cached as any
+  content, so a model without a `.meta` costs its failing reads once; any other failure (the server) rejects, shows
+  Unity's defaults meanwhile and is read again, never kept as "no `.meta`". `serverpath:`'s "The specified revision
+  was not found" can't tell a missing file from one under an xlink: at a changeset or a branch the tree is asked
+  next and its answer decides (two failing commands, once); in a shelve, which has no tree to ask, it is the answer
+  (`isMissingFromShelve`). It checks a file's size before reading it.
 - **Read once**: a pending file is read anew on every focus, as new arrays; while its bytes are the same (`sameBytes`),
   the viewer keeps the model it has (`useStableModel`), its read, scene and comparison. Typing into a model written as
   text (or its `.meta`) renders it once typing pauses (`useTypingPause`), not at every keystroke.

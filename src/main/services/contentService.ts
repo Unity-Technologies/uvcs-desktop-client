@@ -1,7 +1,8 @@
 import { readFile, stat, writeFile } from 'node:fs/promises';
-import { isMissingItemError } from '../cm/missingItem';
+import { isMissingItemError, isServerPathNotFoundError } from '../cm/missingItem';
 import type { ContentApi } from '@shared/api/content';
 import type { ContentSource, FileContent } from '@shared/domain/content';
+import { listsTree } from '@shared/domain/specs';
 import { EMPTY_CONTENT, MAX_MODEL_BYTES, toFileContent } from '../files/fileContent';
 import { explainLockedFile } from '../files/lockedFile';
 import { saveContent } from '../files/saveContent';
@@ -38,7 +39,7 @@ export function createContentService({ cm, reviews }: ServiceContext): ContentAp
       // A plain Uint8Array: IPC copies it as binary (a Buffer would arrive as one too, pool slice and all).
       return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     } catch (error) {
-      if (isMissingItem(error)) return null;
+      if (isMissingItem(error) || isMissingFromShelve(source, error)) return null;
       throw error;
     }
   }
@@ -74,6 +75,15 @@ export function createContentService({ cm, reviews }: ServiceContext): ContentAp
 /** `cm` telling an item isn't there (`isMissingItemError`), or the disk telling a file isn't. */
 function isMissingItem(error: unknown): boolean {
   return isMissingItemError(error) || (error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT';
+}
+
+/**
+ * A shelve's path whose `serverpath:` found nothing: no tree can be asked there (`listsTree`), so that is the answer.
+ * Not for a path known to be under an xlink (never read by `serverpath:`), nor at a changeset or a branch, where the
+ * tree is asked and answers itself.
+ */
+function isMissingFromShelve(source: ContentSource, error: unknown): boolean {
+  return source.kind === 'repositoryPath' && source.repository === undefined && !listsTree(source.at) && isServerPathNotFoundError(error);
 }
 
 function fileNameOfAny(source: Exclude<ContentSource, { kind: 'empty' | 'reviewSnapshot' }>): string {

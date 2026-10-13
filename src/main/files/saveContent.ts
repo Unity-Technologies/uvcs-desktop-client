@@ -4,6 +4,7 @@ import { basename, dirname } from 'node:path';
 import type { ContentSource } from '@shared/domain/content';
 import { listsTree, spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
+import { isMissingItemError } from '../cm/missingItem';
 import { removedItemSpec } from '../cm/removedItemSpec';
 import { parseTreeItems } from '../cm/treeItemsXml';
 import { toAbsolutePath } from './workspacePaths';
@@ -58,16 +59,18 @@ async function withFallback(first: () => Promise<void>, fallback: () => Promise<
 
 /**
  * `serverpath:` reads the path in the repository's own tree, where an xlink is a leaf: nothing under one is found.
- * Then, for a path not known to be under an xlink (a merge's change), the tree at the point (`saveFromTree`), only
- * once `serverpath:` found nothing. A shelve has no such tree: its paths are read as they are.
+ * Then, for a path not known to be under an xlink (a merge's change, a model's sibling), the tree at the point
+ * (`saveFromTree`), only once `serverpath:` found nothing; the tree not having the path is the failure then, telling
+ * the file is absent (`isMissingItemError`), which `serverpath:`'s doesn't. A shelve has no such tree: its paths are
+ * read as they are.
  */
 async function saveRepositoryPath(cm: CmClient, workspacePath: string, path: string, at: string, target: string): Promise<void> {
   try {
     await saveRevision(cm, workspacePath, spec.serverPathAt(path, at), target);
   } catch (error) {
     if (!listsTree(at)) throw error;
-    await saveFromTree(cm, workspacePath, path, at, target).catch(() => {
-      throw error;
+    await saveFromTree(cm, workspacePath, path, at, target).catch((treeError: unknown) => {
+      throw isMissingItemError(treeError) ? treeError : error;
     });
   }
 }
