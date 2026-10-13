@@ -15,7 +15,7 @@ import {
   type ComparisonInput,
   type NotKnownReason,
 } from './materialComparison';
-import { assetsRequest, budgeted, planVersion, slotLooks, texturesReport, type Side, type SlotLook, type TexturesReport, type VersionPlan } from './materialPlan';
+import { assetsRequest, budgeted, findingLooks, planVersion, slotLooks, texturesReport, type Side, type SlotLook, type TexturesReport, type VersionPlan } from './materialPlan';
 import { materialsInputOf, type MaterialVersion } from './materialVersion';
 import { materialsOffered, slotSources, type SlotSource } from './slotSources';
 import { useMtlMaterials } from './useMtlMaterials';
@@ -129,11 +129,15 @@ export function useModelMaterials(workspacePath: string, versions: Record<Side, 
       changes,
       notCompared,
       offered,
-      looks: { before: before ? slotLooks(before, states) : null, after: after ? slotLooks(after, states) : null },
+      // While a version's materials are being found, its slots as they'll be while their textures load: no clay first.
+      looks: {
+        before: before ? slotLooks(before, states) : sources.before ? findingLooks(sources.before) : null,
+        after: after ? slotLooks(after, states) : sources.after ? findingLooks(sources.after) : null,
+      },
       // From the look's first moment: finding what a version's materials use may take a while (a project's listing).
       report: texturesReport(SIDES.map((side, i) => (versions[side] ? plans[i]! : NO_PLAN)), states, budget.over),
     };
-  }, [active, offered, plans, states, budget, changes, notCompared, versions]);
+  }, [active, offered, plans, states, budget, changes, notCompared, versions, sources]);
 }
 
 /** True from the first time `on` is, until `of` changes: the look's reads and decodes stay while it's off. */

@@ -345,6 +345,31 @@ export function slotLooks(plan: VersionPlan, states: ReadonlyMap<string, NeedSta
   return looks;
 }
 
+/**
+ * Each slot as it will be drawn while its textures load, from its source alone, while the version's materials are
+ * still being found (a listing, the `.meta` and `.mat` files): a file's material in its color, darkened where it has a
+ * base map (`WAITING_SHADE`), as `slotLooks` draws it once found; a project's material darkened too, as most are
+ * textured. So the look goes from these straight to the textures, never through clay first. A slot in Unity's default
+ * material is absent: clay, as it stays.
+ */
+export function findingLooks(sources: ReadonlyMap<string, SlotSource>): Map<string, SlotLook> {
+  const looks = new Map<string, SlotLook>();
+  for (const [slot, source] of sources) {
+    if (source.kind === 'default') continue;
+    const material = source.kind === 'file' ? source.material : null;
+    looks.set(slot, {
+      color: material && !material.baseMap ? material.color : waitingColorOf(material?.color ?? [1, 1, 1]),
+      opacity: material?.opacity ?? 1,
+      alpha: material?.alpha ?? 'opaque',
+      cutoff: material?.cutoff ?? 0.5,
+      doubleSided: material?.doubleSided ?? false,
+      baseMap: null,
+      normalMap: null,
+    });
+  }
+  return looks;
+}
+
 export interface TexturesReport {
   /** Every texture the versions' materials use, each file once. */
   total: number;

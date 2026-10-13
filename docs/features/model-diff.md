@@ -348,7 +348,9 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   repository…") and how many decode; gone once done. Nothing over the model: a slot whose base map is on its way is
   drawn in its color darkened to a mid tone (`WAITING_SHADE`, `slotLooks`), so a model whose materials are white under
   their textures (most glTF exports) reads as not yet textured rather than flashing bright clay; its own color where
-  the texture fails.
+  the texture fails. Before the materials are found, each slot is already drawn so, from its source alone (`findingLooks`: a
+  file's material in its color, darkened where it has a base map; a project's material darkened), so turning the look
+  on, or selecting another model with it on, goes from that straight to the textures, never through clay first.
 - **Where each slot's material comes from** (`slotSources`, as Unity's ModelImporter decides for FBX and OBJ): with
   Material Creation Mode None (`materialImportMode: 0`, or `importMaterials: 0` in a `.meta` older than Unity 2019.3)
   clay, unless `remapMaterialsIfMaterialImportModeIsNone: 1` (absent, as before 2021.2: clay, as Unity imports it); a
