@@ -77,7 +77,8 @@ describe('texturesStat', () => {
     // A ring spinning: how far along isn't known yet.
     expect(texturesStat({ total: 0, shown: 0, loading: 0, downloading: 0, issues: [], finding: true })).toEqual({ label: 'Textures', before: null, after: null, tip: 'Finding the materials and textures…', progress: null });
     const oneSideKnown = texturesStat({ total: 2, shown: 2, loading: 0, downloading: 0, issues: [], finding: true })!;
-    expect(oneSideKnown).toMatchObject({ after: '2', progress: 1 });
+    // Spinning still: the other version's count isn't known, so how far along isn't either.
+    expect(oneSideKnown).toMatchObject({ after: '2', progress: null });
     expect(oneSideKnown.tip).toContain("Finding the other version's materials and textures…");
   });
 });
