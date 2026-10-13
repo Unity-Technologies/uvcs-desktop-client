@@ -53,7 +53,7 @@ async function runMoves(workspacePath: string, moves: ItemMove[], title: string)
     affects: (key) => isAffectedByFileChangesIn(folders)(key) || isAffectedByMovedPaths(key),
   });
   if (!moved) return false;
-  useFilesViewStore.getState().requestReveal(moves[0]!.to, moves.map((move) => move.to));
+  useFilesViewStore.getState().requestReveal(workspacePath, moves[0]!.to, moves.map((move) => move.to));
   return true;
 }
 

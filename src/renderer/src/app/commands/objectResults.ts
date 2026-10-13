@@ -52,7 +52,7 @@ export function fileResult(entry: { path: string; isDirectory: boolean }, contex
   const change = context.changeAt(entry.path);
   const reveal = (): void => {
     navigation.goToView('files');
-    useFilesViewStore.getState().requestReveal(entry.path);
+    useFilesViewStore.getState().requestReveal(workspacePath, entry.path);
   };
   return {
     id: `file:${entry.path}`,
