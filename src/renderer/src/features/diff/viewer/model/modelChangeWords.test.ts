@@ -119,6 +119,9 @@ describe('changeRows, for the materials', () => {
       detail: "Was the project's Lantern_Glass.",
     });
     expect(changeRows([material({ kind: 'source', slot: 'Glass', before: lit, after: DEFAULT })])[0]!.detail).toBe("Was the package's Lit.");
+    // A folder of the project's Assets that happens to be named so is the project's.
+    const odd = project('Lit', 'Game/Assets/Vendor/Library/PackageCache/Lit.mat');
+    expect(changeRows([material({ kind: 'source', slot: 'Glass', before: DEFAULT, after: odd })])[0]!.title).toBe("Glass now uses the project's Lit");
   });
 
   it('names a project material by its folder too where another of its name was', () => {
