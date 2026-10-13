@@ -4,6 +4,7 @@ import { boneLinks, buildModelScene } from './modelScene';
 import { modelSummary } from './modelSummary';
 import type { ParsedModel } from './parsedModel';
 import { parseModel } from './parseModel';
+import { placedMeshesOf } from './surfaceComparison';
 import { SKINNED_TOP_CORNER, skinnedGltf } from './testing/skinnedGltf';
 import { testModel } from './testing/testModels';
 
@@ -45,6 +46,22 @@ describe('buildModelScene', () => {
     (body as unknown as SkinnedMesh).skeleton.update();
     const moved = (body as unknown as SkinnedMesh).applyBoneTransform(0, rest.clone());
     expect(moved.x - rest.x).toBeCloseTo(3);
+  });
+});
+
+describe('buildModelScene, a joint that is no node of the model', () => {
+  it('holds its share of the mesh where it was bound, drawn where it is measured', () => {
+    const model = testModel({ nodes: [{ name: 'Hips', kind: 'bone', position: [0, 1, 0] }, { name: 'Body', position: [3, 0, 0], mesh: { bones: ['Hips'] } }] });
+    // A loader's stand-in for a joint it couldn't find among the nodes.
+    model.meshes[0]!.skin!.bones = [-1];
+    const scene = sceneOf(model);
+    scene.root.updateMatrixWorld(true);
+    const body = scene.meshes[0]!.solid as unknown as SkinnedMesh;
+    body.skeleton.update();
+    const drawn = body.getVertexPosition(0, new Vector3()).applyMatrix4(body.matrixWorld);
+    const measured = placedMeshesOf(model).meshes[0]!.positions;
+    expect(drawn.toArray()).toEqual([expect.closeTo(measured[0]!), expect.closeTo(measured[1]!), expect.closeTo(measured[2]!)]);
+    expect(measured[0]).toBeCloseTo(3.5);
   });
 });
 
