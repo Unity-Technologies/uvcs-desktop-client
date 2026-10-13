@@ -9,6 +9,10 @@ const STAGING_USER_ID_HEADER = 'x-user-staging-id';
  * in `<userData>/.updaterId` on first use, and `computeFinalHeaders` (private) builds the headers of every request,
  * the check's with the id. The types hide them, hence this shape; `withoutStagingUserId.test.ts` runs against the real
  * `AppUpdater`, so an upgrade that renames or reworks them fails there instead of sending the id again.
+ *
+ * Resolving the id to '' is safe only because `isUserWithinRollout` is replaced too: the default, `isStagingMatch`,
+ * reads that id as a UUID, and '' reads as all zeros, so it would let every user into a release staged above 0% and
+ * keep every user out of one staged at 0%, by accident rather than by decision.
  */
 interface StagingInternals {
   stagingUserIdPromise: { readonly value: Promise<string> };
