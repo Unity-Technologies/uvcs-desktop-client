@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import type { AssetsPoint, UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { treeListingOutput, type ListedRecord } from '../cm/testing/cmOutput';
-import type { RevisionFile } from '../unity/RevisionDownloads';
+import { RevisionDownloads, type RevisionFile } from '../unity/RevisionDownloads';
 import { BRANCH_TREE_LIFE_MS } from '@shared/domain/unityAssets';
 import { RepositoryTrees } from '../unity/RepositoryTrees';
 import { createUnityAssetsService } from './unityAssetsService';
@@ -167,11 +167,31 @@ describe('unityAssets.find at a point of the repository', () => {
     expect(lsLines(fake)).toEqual(['execute /Game --tree=cs:12']);
   });
 
-  it(".meta files of a folder are read together: their downloads go in one batch", async () => {
-    const { find, downloaded } = await setUp([...PROJECT, { path: 'Game/Assets/Art/Materials/Leaf.mat.meta', type: 'txt', revid: 13 }, { path: 'Game/Assets/Art/Materials/Leaf.mat', type: 'txt', revid: 14 }]);
-    await find({ guids: [MAT_GUID] });
-    const materials = downloaded.filter((file) => file.path.startsWith('Game/Assets/Art/Materials/'));
-    expect([...new Set(materials.map((file) => file.path))].sort()).toEqual(['Game/Assets/Art/Materials/Bark.mat.meta', 'Game/Assets/Art/Materials/Leaf.mat.meta']);
+  it(".meta files of a folder are downloaded together, in one cm cat, past the 16 the index asks at once", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'assets-at-point-'));
+    await mkdir(join(workspace, 'Game', 'ProjectSettings'), { recursive: true });
+    const guidOf = (i: number) => i.toString(16).padStart(32, 'a');
+    const materials: ListedRecord[] = Array.from({ length: 20 }, (_, i) => [
+      { path: `Game/Assets/Art/Tree/Materials/M${i}.mat`, type: 'txt' as const, revid: 100 + 2 * i },
+      { path: `Game/Assets/Art/Tree/Materials/M${i}.mat.meta`, type: 'txt' as const, revid: 101 + 2 * i },
+    ]).flat();
+    const fake = fakeCmClient({
+      ls: listing([...TREE_FOLDER, { path: 'Game/Assets/Art/Tree/Materials', type: 'dir', revid: 99 }, ...materials]),
+      cat: async ({ args }) => {
+        for (const arg of args.slice(1)) {
+          const [revisionSpec = '', target = ''] = arg.split(';');
+          const id = Number(/^revid:(\d+)@/.exec(revisionSpec)?.[1]);
+          await writeFile(target, meta(guidOf((id - 101) / 2)));
+        }
+        return '';
+      },
+    });
+    const downloads = new RevisionDownloads({ cm: fake.cm, tempFolder: workspace, pid: 1, isRunning: () => false });
+    const unityAssets = createUnityAssetsService({ trees: new RepositoryTrees({ cm: fake.cm, downloads }), downloads, watchers: { listen: () => () => undefined, coverageOf: () => 'full' } });
+    const answer = await unityAssets.find(workspace, { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', point: { kind: 'repository', at: 'cs:12' }, textures: [], guids: [guidOf(19)], paths: [], searchTexturesGlobally: false });
+    expect(paths(answer.guids)).toEqual(['Game/Assets/Art/Tree/Materials/M19.mat']);
+    const cats = fake.commands.filter((command) => command.args[0] === 'cat');
+    expect(cats.map((command) => command.args.length - 1)).toEqual([20]);
   });
 
   it("reads the side before of a diff: what the diff changed as it was, what it added gone, what it deleted there", async () => {
