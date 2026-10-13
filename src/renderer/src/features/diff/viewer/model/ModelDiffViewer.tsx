@@ -33,6 +33,7 @@ import { useModelMaterials, type MaterialVersion } from './materials/useModelMat
 import { modelStats, movedStat, texturesStat } from './modelStats';
 import { ModelViewControls } from './ModelViewControls';
 import { matchNodes } from './nodeMatching';
+import { centreOf } from './orbitCamera';
 import { useModelCamera } from './useModelCamera';
 import { useModelDifferences } from './useModelDifferences';
 import { useModelPalette } from './useModelPalette';
@@ -131,6 +132,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const bounds = useMemo(() => (allRead ? framedBounds(old?.summary ?? null, next?.summary ?? null) : null), [allRead, old, next]);
 
   const camera = useModelCamera(renderer, bounds, stageRef);
+  const modelCentre = useCallback(() => (bounds ? centreOf(bounds) : null), [bounds]);
   const { frame } = camera;
   const pickedBounds = useCallback(
     (nodes: NodeRef[]) => nodesBounds(nodes, old?.summary ?? null, next?.summary ?? null) ?? aroundPoints(markersOf(nodes, sceneBefore, sceneAfter), bounds),
@@ -193,7 +195,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     },
     [renderer, old, next, matching],
   );
-  useOrbitGestures({ element: stageRef, renderer, view: camera.currentView, onView: camera.onGesture, onDollyStep: camera.onDollyStep, onClick });
+  useOrbitGestures({ element: stageRef, renderer, view: camera.currentView, onView: camera.onGesture, onDollyStep: camera.onDollyStep, modelCentre, onClick });
 
   const onPickRow = useCallback(
     (id: string | null, row: ChangeRow, item?: number) => {
@@ -206,7 +208,7 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
     [frame, pickedBounds],
   );
 
-  const flyKeys = useFlyKeys({ view: camera.currentView, onView: camera.onGesture });
+  const flyKeys = useFlyKeys({ view: camera.currentView, onView: camera.onGesture, modelCentre });
   const onKeyDown = (event: KeyboardEvent): void => {
     // Only the stage's own: the arrows of a control in it (the take's scrubber, the panel's rows) stay the control's.
     if (event.target === event.currentTarget && flyKeys.onKeyDown(event)) {

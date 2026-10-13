@@ -1,20 +1,23 @@
 import { useCallback, useEffect, useRef, type KeyboardEvent } from 'react';
 import { flyDirectionOf, flyMoveOf, type FlyDirection } from './flyKeys';
-import { flown, type OrbitView } from './orbitCamera';
+import { flown, flyStep, workingDepth, type OrbitView, type Vector } from './orbitCamera';
 
 interface FlyKeys {
   view: () => OrbitView;
   onView: (view: OrbitView) => void;
+  /** The centre of what is shown: the keys move at its depth (`workingDepth`), whatever the orbit's target. */
+  modelCentre: () => Vector | null;
 }
 
 /**
  * Moves the camera while W, A, S, D, Q, E or the arrows are held on the model stage (`flyDirectionOf`): every frame,
- * by the time since the last, so it moves as smoothly as the screen draws, never at the keyboard's repeat. Keys are
+ * by the time since the last, so it moves as smoothly as the screen draws, never at the keyboard's repeat, speeding up
+ * the longer they're held (`flyStep`). Keys are
  * held by their position (`code`), so one let go with another modifier, or after the stage lost focus, still stops.
  */
-export function useFlyKeys({ view, onView }: FlyKeys) {
-  const latest = useRef({ view, onView });
-  latest.current = { view, onView };
+export function useFlyKeys({ view, onView, modelCentre }: FlyKeys) {
+  const latest = useRef({ view, onView, modelCentre });
+  latest.current = { view, onView, modelCentre };
   const held = useRef(new Map<string, FlyDirection>());
   const fast = useRef(false);
   const frame = useRef<number | null>(null);
@@ -27,11 +30,16 @@ export function useFlyKeys({ view, onView }: FlyKeys) {
   useEffect(() => stop, [stop]);
 
   const fly = useCallback(() => {
-    let last = performance.now();
+    const start = performance.now();
+    let last = start;
     const tick = (now: number): void => {
-      const seconds = Math.min((now - last) / 1000, 0.1);
-      last = now;
-      latest.current.onView(flown(latest.current.view(), flyMoveOf(held.current.values()), seconds, fast.current));
+      // A frame's time is when it began, which may come before the key was pressed.
+      const seconds = Math.min(Math.max(now - last, 0) / 1000, 0.1);
+      last = Math.max(now, last);
+      const { view: current, onView: setView, modelCentre: centre } = latest.current;
+      const view = current();
+      const step = flyStep(workingDepth(view, null, centre()), (last - start) / 1000, seconds, fast.current);
+      setView(flown(view, flyMoveOf(held.current.values()), step));
       frame.current = held.current.size > 0 ? requestAnimationFrame(tick) : null;
     };
     frame.current = requestAnimationFrame(tick);

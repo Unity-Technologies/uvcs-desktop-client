@@ -174,16 +174,19 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   half was 100 times its size. Until the user moves the camera, the model stays framed as the stage resizes and the
   panel docks.
 - **Controls** (`useOrbitGestures`), as Unity's Scene view: drag (or Alt+drag) orbits, right, middle or Shift+drag pans
-  (either, let go moving, coasts a little: `SHORT_FLING`, the Branch Explorer's inertia with a shorter decay; a
-  trackpad's scroll already coasts by itself),
+  (either, let go moving, coasts a little: `SHORT_FLING`, the Branch Explorer's inertia with a shorter decay, a softer
+  `TURN_FLING` for a turn; a trackpad's scroll already coasts by itself). A pan moves what it grabbed exactly with the
+  pointer: what was under it, else the model's centre (`workingDepth`); panning at the orbit target's depth crawled
+  once the target was zoomed close in front of the model,
   scroll or pinch zooms at the point under the pointer (a mouse wheel's notches glide, as in the Branch Explorer:
   `dollyGlide`, `isDiscreteWheel`; jumping at once by what the wheel said threw a model out of sight when spun fast;
   a trackpad and a pinch follow the fingers), double-click orbits around the point clicked, a click picks the
   part under it and its match on the other side. F frames what is picked, or the whole model; 0 the whole model
   (`modelKeys`, in the shortcut registry). W, A, S, D (or the arrows), Q and E move through the model while held, as
   Unity's Scene view moves through a level (without holding its right button), the target going along: forward where
-  the camera looks, at its distance to the target a second, so it slows as it gets close, four times as fast with
-  Shift (`flown`, `flyKeys`, `useFlyKeys`: every frame, never at the keyboard's repeat). Only keys pressed on the
+  the camera looks, at first half the model's depth a second (`workingDepth`: its centre's, or the target's from inside
+  it), speeding up while held to five times that over a second and a half, four times as fast with Shift (`flyStep`,
+  `flown`, `flyKeys`, `useFlyKeys`: every frame, never at the keyboard's repeat). Only keys pressed on the
   stage itself move it: a control's arrows (the take's scrubber) stay the control's. Draw modes are Unity's (Shaded, Wireframe, Shaded wireframe), and material
   slots can show in their colors (`slotColor`: the avatar fills by name, so a renamed slot changes color) or their
   materials ("Materials" below).

@@ -47,12 +47,36 @@ export function orbited(view: OrbitView, dx: number, dy: number): OrbitView {
   return { ...view, yaw: view.yaw - dx * ORBIT_SPEED, pitch };
 }
 
-/** The target moved with the pointer: what was under it stays under it, at the target's depth. */
-export function panned(view: OrbitView, dx: number, dy: number, viewportHeight: number): OrbitView {
-  const perPixel = (2 * view.distance * Math.tan((FIELD_OF_VIEW * Math.PI) / 360)) / Math.max(viewportHeight, 1);
+/**
+ * The target moved with the pointer, so that what sits `depth` ahead of the camera (what the drag grabbed:
+ * `workingDepth`) moves exactly with it, at any zoom: by the target's own depth, a drag that grabbed a model far
+ * behind a target zoomed close to crawled under the mouse.
+ */
+export function panned(view: OrbitView, dx: number, dy: number, viewportHeight: number, depth = view.distance): OrbitView {
+  const perPixel = (2 * depth * Math.tan((FIELD_OF_VIEW * Math.PI) / 360)) / Math.max(viewportHeight, 1);
   const { right, up } = axesOf(view);
   const target = view.target.map((value, i) => value - right[i]! * dx * perPixel + up[i]! * dy * perPixel) as Vector;
   return { ...view, target };
+}
+
+/** How far ahead of the camera `point` is, along where it looks; negative behind it. */
+export function depthOf(view: OrbitView, point: Vector): number {
+  const camera = cameraPositionOf(view);
+  const forward = forwardOf(view);
+  return point.reduce((sum, value, i) => sum + (value - camera[i]!) * forward[i]!, 0);
+}
+
+/**
+ * The depth a gesture moves things at: what is under the pointer, else the model's centre, so a pan or a key moves the
+ * model as far as asked whatever the orbit's target; the target's own depth when neither is ahead of the camera
+ * (the camera inside the model, past its centre).
+ */
+export function workingDepth(view: OrbitView, grabbed: Vector | null, centre: Vector | null): number {
+  for (const point of [grabbed, centre]) {
+    const depth = point ? depthOf(view, point) : 0;
+    if (depth > view.distance * 1e-3) return depth;
+  }
+  return view.distance;
 }
 
 /**
@@ -75,8 +99,11 @@ export function dolliedTo(view: OrbitView, distance: number, point: Vector | nul
   return { ...view, target, distance: closer };
 }
 
-/** How fast the keys move the camera: its distance to the target per second, so it slows as it gets close. */
-const FLY_SPEED = 1;
+/** How fast the keys move the camera at first: half the working depth (`workingDepth`) a second. */
+const FLY_SPEED = 0.5;
+/** Held, they speed up to this many times as fast, over `FLY_RAMP_SECONDS`, so a long way takes no longer to cross. */
+const FLY_TOP_SPEED_UP = 5;
+const FLY_RAMP_SECONDS = 1.5;
 /** With Shift held. */
 const FLY_FAST = 4;
 
@@ -88,13 +115,22 @@ export interface FlyMove {
 }
 
 /**
- * The camera moved by the keys for `seconds`, as Unity's Scene view moves it with WASD, QE: forward where it looks
- * (down, when it looks down), right, and straight up; the target goes with it, so it still turns around what is ahead.
+ * How far the keys move the camera in a frame of `seconds`, having been held `heldSeconds`: from `FLY_SPEED` up to
+ * `FLY_TOP_SPEED_UP` times it, eased in and out, so a tap nudges and holding sails.
  */
-export function flown(view: OrbitView, move: FlyMove, seconds: number, fast = false): OrbitView {
-  const step = view.distance * FLY_SPEED * (fast ? FLY_FAST : 1) * seconds;
+export function flyStep(depth: number, heldSeconds: number, seconds: number, fast = false): number {
+  const ramp = Math.min(1, heldSeconds / FLY_RAMP_SECONDS);
+  const speedUp = 1 + (FLY_TOP_SPEED_UP - 1) * ramp * ramp * (3 - 2 * ramp);
+  return depth * FLY_SPEED * speedUp * (fast ? FLY_FAST : 1) * seconds;
+}
+
+/**
+ * The camera moved `step` by the keys, as Unity's Scene view moves it with WASD, QE: forward where it looks (down,
+ * when it looks down), right, and straight up; the target goes with it, so it still turns around what is ahead.
+ */
+export function flown(view: OrbitView, move: FlyMove, step: number): OrbitView {
   const { right } = axesOf(view);
-  const forward = cameraPositionOf({ ...view, target: [0, 0, 0], distance: -1 });
+  const forward = forwardOf(view);
   const target = view.target.map((value, i) => value + (forward[i]! * move.forward + right[i]! * move.right + (i === 1 ? move.up : 0)) * step) as Vector;
   return { ...view, target };
 }
@@ -114,6 +150,12 @@ export function clipPlanesOf(view: OrbitView, bounds: BoundsLike): { near: numbe
   return { near: Math.max(toCentre - radius, far / 10000, MIN_DISTANCE / 10), far };
 }
 
+/** Where the camera looks, as a unit vector: from it towards the target. */
+function forwardOf(view: OrbitView): Vector {
+  const { yaw, pitch } = view;
+  return [-Math.cos(pitch) * Math.sin(yaw), -Math.sin(pitch), -Math.cos(pitch) * Math.cos(yaw)];
+}
+
 /** The camera's right and up, as unit vectors in the viewer's space. */
 function axesOf(view: OrbitView): { right: Vector; up: Vector } {
   const { yaw, pitch } = view;
@@ -122,7 +164,7 @@ function axesOf(view: OrbitView): { right: Vector; up: Vector } {
   return { right, up };
 }
 
-function centreOf(bounds: BoundsLike): Vector {
+export function centreOf(bounds: BoundsLike): Vector {
   return bounds.min.map((value, i) => (value + bounds.max[i]!) / 2) as Vector;
 }
 

@@ -9,7 +9,7 @@ import { PanInertia } from '../../../../lib/panInertia';
 import { isDiscreteWheel, wheelZoomFactor } from '../../../../lib/wheelZoom';
 import { followDrag, isOnStageControl } from '../image/pointerDrag';
 import type { ModelRenderer } from './modelRenderer';
-import { dollied, orbited, panned, type OrbitView, type Vector } from './orbitCamera';
+import { dollied, orbited, panned, workingDepth, type OrbitView, type Vector } from './orbitCamera';
 
 /**
  * How a turn coasts once let go: much less than a pan, as each pixel turns the model (`orbited`): a slow release turns
@@ -29,22 +29,26 @@ interface OrbitGestures {
   onView: (view: OrbitView) => void;
   /** A wheel's notch: closer (`factor` over 1) or farther, towards the point under the pointer. */
   onDollyStep: (point: Vector | null, factor: number) => void;
+  /** The centre of what is shown: a pan that grabs nothing moves it with the pointer (`workingDepth`). */
+  modelCentre: () => Vector | null;
   /** A click: what is under the pointer, in CSS pixels of the element. */
   onClick: (x: number, y: number) => void;
 }
 
-export function useOrbitGestures({ element, renderer, view, onView, onDollyStep, onClick }: OrbitGestures): void {
-  const latest = useRef({ view, onView, onDollyStep, onClick });
-  latest.current = { view, onView, onDollyStep, onClick };
+export function useOrbitGestures({ element, renderer, view, onView, onDollyStep, modelCentre, onClick }: OrbitGestures): void {
+  const latest = useRef({ view, onView, onDollyStep, modelCentre, onClick });
+  latest.current = { view, onView, onDollyStep, modelCentre, onClick };
 
   useEffect(() => {
     const target = element.current;
     if (!target || !renderer) return;
     let zoomPoint: { at: number; point: Vector | null } = { at: -Infinity, point: null };
+    // How deep the pan under way grabbed (`workingDepth`): what was under the pointer moves exactly with it.
+    let panDepth = 1;
     // A drag coasts on as it went once let go; the model turns and pans without bounds, as far as asked.
     const panInertia = new PanInertia(
       (dx, dy) => {
-        latest.current.onView(panned(latest.current.view(), dx, dy, target.clientHeight));
+        latest.current.onView(panned(latest.current.view(), dx, dy, target.clientHeight, panDepth));
         return { dx, dy };
       },
       browserFrameClock,
@@ -76,6 +80,7 @@ export function useOrbitGestures({ element, renderer, view, onView, onDollyStep,
       // The pane holding the stage takes the keys (F, W, A, S, D…): the stage itself can't be focused, and the default
       // focus is cancelled above.
       (target.closest<HTMLElement>('[tabindex]') ?? target).focus({ preventScroll: true });
+      if (pans) panDepth = workingDepth(latest.current.view(), renderer.pick(...local(event))?.point ?? null, latest.current.modelCentre());
       const inertia = pans ? panInertia : turnInertia;
       inertia.sample(event.clientX, event.clientY, event.timeStamp);
       let last = { x: event.clientX, y: event.clientY };
@@ -90,7 +95,7 @@ export function useOrbitGestures({ element, renderer, view, onView, onDollyStep,
           travelled += Math.abs(dx) + Math.abs(dy);
           inertia.sample(move.clientX, move.clientY, move.timeStamp);
           const current = latest.current.view();
-          latest.current.onView(pans ? panned(current, dx, dy, target.clientHeight) : orbited(current, dx, dy));
+          latest.current.onView(pans ? panned(current, dx, dy, target.clientHeight, panDepth) : orbited(current, dx, dy));
         },
         () => {
           if (travelled < CLICK_SLOP && !pans) latest.current.onClick(...local(event));
