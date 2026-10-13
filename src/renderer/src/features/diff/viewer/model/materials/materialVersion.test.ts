@@ -12,7 +12,7 @@ describe('materialsInputOf', () => {
   it("gives each of a glTF's slots its own material, unnamed ones apart", () => {
     const model = { ...testModel({ nodes: [{ name: 'Box', mesh: { slots: ['', ''] } }] }), format: 'glb' as const, materials: [red, blue] };
     model.meshes[0]!.slotMaterials = [0, 1];
-    const input = materialsInputOf({ model, bytes: { bytes: new Uint8Array(), format: 'glb' }, options: PLAIN_READ, path: 'Box.glb' }, null, null);
+    const input = materialsInputOf({ model, bytes: { bytes: new Uint8Array(), format: 'glb' }, options: PLAIN_READ, path: 'Box.glb', point: null, sibling: () => null }, null, null);
     expect(input?.slots).toEqual([
       { key: '#0', name: '', material: red },
       { key: '#1', name: '', material: blue },
@@ -23,7 +23,7 @@ describe('materialsInputOf', () => {
   it("gives an OBJ's slots the .mtl's materials of their names, and none for a slot it doesn't define", () => {
     const model = { ...testModel({ nodes: [{ name: 'Wall', mesh: { slots: ['Brick', 'Plaster'] } }] }), format: 'obj' as const };
     const brick = fileMaterial('Brick', { color: [0.5, 0.2, 0.1] });
-    const input = materialsInputOf({ model, bytes: { bytes: new Uint8Array(), format: 'obj' }, options: PLAIN_READ, path: 'Wall.obj' }, [brick], null);
+    const input = materialsInputOf({ model, bytes: { bytes: new Uint8Array(), format: 'obj' }, options: PLAIN_READ, path: 'Wall.obj', point: null, sibling: () => null }, [brick], null);
     expect(input?.slots).toEqual([
       { key: 'Brick', name: 'Brick', material: brick },
       { key: 'Plaster', name: 'Plaster', material: null },
@@ -41,6 +41,8 @@ describe('materialsInputOf', () => {
       bytes: { bytes: new Uint8Array(), format: 'fbx' as const },
       options: { ...PLAIN_READ, settings, settingsFrom },
       path: 'Assets/Ball.fbx',
+      point: null,
+      sibling: () => null,
     });
     // No .meta for the version (a last change whose .meta changed since, a revision in History): the workspace's decides.
     expect(materialsInputOf(version('none'), null, workspace)?.settings).toBe(workspace);

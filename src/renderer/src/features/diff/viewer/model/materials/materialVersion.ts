@@ -1,16 +1,21 @@
-import type { ModelBytes } from '@shared/domain/content';
+import type { ContentSource, ModelBytes } from '@shared/domain/content';
+import type { AssetsPoint } from '@shared/domain/unityAssets';
 import type { ModelImportSettings } from '../modelImportSettings';
 import type { FileMaterial, ParsedModel } from '../parsedModel';
 import type { ModelReadOptions } from '../readModelFile';
 import { slotKeysOf } from './slotKeys';
 import type { MaterialSlot, ModelMaterialsInput } from './slotSources';
 
-/** A version of the model as read, and where it is in the workspace (null when it names no path there). */
+/** A version of the model as read, where it is in the workspace (null when it names no path there), and at what point. */
 export interface MaterialVersion {
   model: ParsedModel;
   bytes: ModelBytes;
   options: ModelReadOptions;
   path: string | null;
+  /** Where its materials and textures are looked up (`AssetsPoint`); null where none is known: only the file's own show. */
+  point: AssetsPoint | null;
+  /** A file beside it, as the version of it that goes with this one (`SiblingFinder`): an OBJ's `.mtl`. */
+  sibling: (fileName: string) => ContentSource | null;
 }
 
 /**

@@ -164,7 +164,7 @@ describe('materialsMayDiffer', () => {
     slots: materials.map((material) => ({ key: material.name, name: material.name, material })),
     settings: { ...DEFAULT_IMPORT_SETTINGS, ...settings },
   });
-  const side = (version: ModelMaterialsInput, path = 'Assets/Lantern/Lantern.fbx') => ({ sources: slotSources(version), request: assetsRequest(version, slotSources(version), path) });
+  const side = (version: ModelMaterialsInput, path = 'Assets/Lantern/Lantern.fbx') => ({ sources: slotSources(version), request: assetsRequest(version, slotSources(version), path, { kind: 'workspace' }) });
 
   it('reads nothing for versions whose slots take the same materials and textures the same way', () => {
     expect(materialsMayDiffer(side(input()), side(input()))).toBe(false);

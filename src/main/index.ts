@@ -13,6 +13,7 @@ import { sendEvent, sendEventToCaller } from './ipc/sendEvent';
 import { DiffReviewStore } from './review/DiffReviewStore';
 import { ReviewStore } from './review/ReviewStore';
 import { createServices } from './services/createServices';
+import { RevisionDownloads } from './unity/RevisionDownloads';
 import { openFirstWindow } from './startup/firstWindow';
 import { handleLaunchRequests, isTheRunningApp } from './startup/launchRequests';
 import { trackOperations } from './startup/operationTracking';
@@ -34,6 +35,7 @@ const settings = openSettings(userData);
 // What a workspace is loaded from, shared by the reads that follow one another as a window opens it.
 const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
 const watchers = watchShownWorkspaces(cm, headers);
+const revisionDownloads = new RevisionDownloads({ cm });
 const operations = trackOperations(watchers);
 const updates = createAppUpdates({
   writesRunning: () => operations.writesRunning(),
@@ -64,6 +66,7 @@ function start(launched: Promise<void>): void {
   if (!app.isPackaged) app.dock?.setIcon(DEVELOPMENT_DOCK_ICON);
   sendSettingsChanges(settings, (changed) => sendEvent('settingsChanged', changed));
   ignoreOwnCommandWrites(cm, watchers, headers);
+  void revisionDownloads.removeLeftOvers();
   const api = createServices({
     cm,
     operations,
@@ -74,6 +77,7 @@ function start(launched: Promise<void>): void {
     windows,
     headers,
     updates,
+    revisionDownloads,
   });
   const early = new EarlyCalls(apiMethods(api));
   registerApi(api, early);
@@ -98,4 +102,7 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-app.on('will-quit', () => cm.dispose());
+app.on('will-quit', () => {
+  cm.dispose();
+  revisionDownloads.dispose();
+});

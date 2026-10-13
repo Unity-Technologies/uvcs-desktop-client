@@ -22,9 +22,9 @@ export function uniqueRequests(requests: readonly (UnityAssetsRequest | null)[])
   return { requests: unique, indices };
 }
 
-/** Files once each, by path. */
-export function uniqueFiles<T extends { path: string }>(files: readonly T[]): T[] {
-  return [...new Map(files.map((file) => [file.path, file])).values()];
+/** Files once each, by what tells one apart (`keyOf`: a found file's version, a source's place). */
+export function uniqueFiles<T>(files: readonly T[], keyOf: (file: T) => string): T[] {
+  return [...new Map(files.map((file) => [keyOf(file), file])).values()];
 }
 
 /** Each side's remapped materials, by GUID, with the file found for each (null while unanswered or not found). */

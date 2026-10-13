@@ -46,8 +46,9 @@ const NO_REQUESTS = [null, null];
 
 /**
  * The Materials look for a model's versions (docs/features/model-diff.md, "Materials"): whether it's offered, and,
- * once `wanted`, each slot's material and textures as Unity would show them, read from the workspace on disk (never
- * the server: no `cm` command), textures appearing as they decode. Turned off, what was read and decoded stays until
+ * once `wanted`, each slot's material and textures as Unity would show them, found where each version is (its
+ * `AssetsPoint`: the disk, or the repository's tree at its point, `api.unityAssets.find`), textures appearing as they
+ * download and decode. Turned off, what was read and decoded stays until
  * the versions change, so turning it on again is immediate. What changed in the materials is told with the look off
  * too, from the same reads (so the look reads nothing again), and only for versions whose materials may resolve
  * differently (`materialsMayDiffer`); no texture is decoded for it.
@@ -67,7 +68,11 @@ export function useModelMaterials(workspacePath: string, versions: Record<Side, 
 
   const sources = useMemo(() => ({ before: inputs.before && slotSources(inputs.before), after: inputs.after && slotSources(inputs.after) }), [inputs]);
   const sideRequests = useMemo(
-    () => SIDES.map((side) => (inputs[side] && sources[side] && versions[side]?.path ? assetsRequest(inputs[side]!, sources[side]!, versions[side]!.path!) : null)),
+    () =>
+      SIDES.map((side) => {
+        const version = versions[side];
+        return inputs[side] && sources[side] && version?.path && version.point ? assetsRequest(inputs[side]!, sources[side]!, version.path, version.point) : null;
+      }),
     [inputs, sources, versions],
   );
   const comparison = useMemo(
@@ -92,7 +97,7 @@ export function useModelMaterials(workspacePath: string, versions: Record<Side, 
       const version = versions[side];
       const request = requests[i];
       if (!input || !version || !sources[side]) return null;
-      // Without a path in the workspace, only what the file holds (a glTF's own images) can show.
+      // Without a path in the workspace or a point to look at, only what the file holds (a glTF's own images) can show.
       if (!request) return planVersion(input, sources[side]!, nothingFound(), version.path ?? '', side);
       const first = firstAnswers[i];
       if (first === undefined || (secondRequests[i] && secondAnswers[i] === undefined) || materials[i] === undefined) return null;

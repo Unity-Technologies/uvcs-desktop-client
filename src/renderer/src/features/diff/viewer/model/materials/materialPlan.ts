@@ -9,7 +9,7 @@
 //   5. `slotLooks`: each slot as drawn now, with the textures decoded so far; `texturesReport` for the info strip.
 // Materials and textures are always the workspace's, whichever version of the model shows (docs/features/model-diff.md).
 
-import type { FoundFile, TextureLookup, UnityAssetsRequest } from '@shared/domain/unityAssets';
+import { foundFileKey, type AssetsPoint, type FoundFile, type TextureLookup, type UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { Color, SRGBColorSpace } from 'three';
 import { siblingPath } from '../modelSiblings';
 import type { AlphaMode, FileMaterial, FileTexture, TextureUse } from '../parsedModel';
@@ -114,7 +114,7 @@ export interface VersionPlan {
 }
 
 /** Step 1. */
-export function assetsRequest(version: ModelMaterialsInput, sources: Map<string, SlotSource>, modelPath: string): UnityAssetsRequest {
+export function assetsRequest(version: ModelMaterialsInput, sources: Map<string, SlotSource>, modelPath: string, point: AssetsPoint): UnityAssetsRequest {
   const textures = new Map<string, TextureLookup>();
   const paths = new Set<string>();
   const guids = new Set<string>();
@@ -130,7 +130,7 @@ export function assetsRequest(version: ModelMaterialsInput, sources: Map<string,
       }
     }
   }
-  return { modelPath, textures: [...textures.values()], guids: [...guids], paths: [...paths], searchTexturesGlobally: version.settings.searchTexturesGlobally };
+  return { modelPath, point, textures: [...textures.values()], guids: [...guids], paths: [...paths], searchTexturesGlobally: version.settings.searchTexturesGlobally };
 }
 
 /** Step 2: the textures the `.mat` files read use, to look up by GUID. */
@@ -176,7 +176,8 @@ export function planVersion(version: ModelMaterialsInput, sources: Map<string, S
       issues.set(fileName, { name: fileName, problem: 'psbNotImported' });
       return null;
     }
-    const id = `${flipY ? 'up' : 'down'}:${file.path}`;
+    // One per version of the file: both versions of a model may find a texture at one path in two revisions.
+    const id = `${flipY ? 'up' : 'down'}:${foundFileKey(file)}`;
     needs.set(id, { id, name: fileName, where: { kind: 'file', file }, flipY });
     return { need: id, ...transform };
   };
@@ -348,6 +349,8 @@ export interface TexturesReport {
   total: number;
   shown: number;
   loading: number;
+  /** Of those loading, the ones a version found in the repository: they may come from the server. */
+  downloading: number;
   issues: TextureIssue[];
 }
 
@@ -359,15 +362,19 @@ export function texturesReport(plans: readonly (VersionPlan | null)[], states: R
   const overIds = new Set(over.map((need) => need.id));
   let shown = 0;
   let loading = 0;
+  let downloading = 0;
   for (const need of needs.values()) {
     const state = states.get(need.id);
     if (state?.kind === 'ready') shown++;
     else if (state?.kind === 'failed') issues.set(need.name, { name: need.name, problem: state.problem });
-    else if (!overIds.has(need.id)) loading++;
+    else if (!overIds.has(need.id)) {
+      loading++;
+      if (need.where.kind === 'file' && need.where.file.stored === 'repository') downloading++;
+    }
   }
   for (const need of over) issues.set(need.name, { name: need.name, problem: 'overBudget' });
   const unplanned = [...issues.values()].filter(({ problem }) => problem === 'missing' || problem === 'unsupportedFormat' || problem === 'psbNotImported');
-  return { total: needs.size + unplanned.length, shown, loading, issues: [...issues.values()] };
+  return { total: needs.size + unplanned.length, shown, loading, downloading, issues: [...issues.values()] };
 }
 
 /** A Unity material's color (sRGB, as kept) in three's linear working space. */

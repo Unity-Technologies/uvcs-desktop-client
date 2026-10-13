@@ -7,15 +7,15 @@ import type { UnityMaterial } from './unityMaterial';
 
 const MAT = '0f2b6c1e9a8d4b3c8e7f6a5b4c3d2e1f';
 const BARK = '6d1e0c9b8a7f4e3d2c1b0a9f8e7d6c5b';
-const file = (path: string): FoundFile => ({ path, size: 1, modified: 1 });
-const request = (overrides: Partial<UnityAssetsRequest> = {}): UnityAssetsRequest => ({ modelPath: 'Assets/Tree.fbx', textures: [], guids: [], paths: [], searchTexturesGlobally: false, ...overrides });
+const file = (path: string): FoundFile => ({ path, size: 1, stored: 'disk', modified: 1 });
+const request = (overrides: Partial<UnityAssetsRequest> = {}): UnityAssetsRequest => ({ modelPath: 'Assets/Tree.fbx', point: { kind: 'workspace' }, textures: [], guids: [], paths: [], searchTexturesGlobally: false, ...overrides });
 const material: UnityMaterial = { baseMap: { guid: BARK, scale: [1, 1], offset: [0, 0] }, normalMap: null, baseColor: [1, 1, 1, 1], alpha: 'opaque', cutoff: 0.5, doubleSided: false };
 
 describe('asset answers', () => {
   it('asks once for what both versions ask alike, and nothing for a side without a request', () => {
     const same = request({ guids: [MAT] });
     expect(uniqueRequests([same, { ...same }, null])).toEqual({ requests: [same], indices: [0, 0, -1] });
-    expect(uniqueFiles([file('a.mat'), file('b.mat'), file('a.mat')]).map(({ path }) => path)).toEqual(['a.mat', 'b.mat']);
+    expect(uniqueFiles([file('a.mat'), file('b.mat'), file('a.mat')], (found) => found.path).map(({ path }) => path)).toEqual(['a.mat', 'b.mat']);
   });
 
   it("pairs each side's remapped materials with the files found, none while unanswered", () => {

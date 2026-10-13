@@ -1,5 +1,5 @@
-// What to load for each texture a version's look needs, within the budget (`budgeted`): a workspace file by its path,
-// size and time written, or an image a glTF holds by its model's bytes. Pure: `useTextureStates` loads them.
+// What to load for each texture a version's look needs, within the budget (`budgeted`): a file found, by its version
+// (`foundFileKey`), or an image a glTF holds by its model's bytes. Pure: `useTextureStates` loads them.
 
 import type { Side, TextureNeed } from '../materials/materialPlan';
 import { textureKey, type TextureLoad } from './textureLoads';
@@ -12,7 +12,7 @@ export function textureLoadsOf(workspacePath: string, needs: readonly TextureNee
   const loads = new Map<string, TextureLoad | null>();
   for (const need of needs) {
     if (need.where.kind === 'file') {
-      const load = { name: need.name, source: { kind: 'workspaceFile' as const, file: need.where.file }, longest, flipY: need.flipY };
+      const load = { name: need.name, source: { kind: 'found' as const, file: need.where.file }, longest, flipY: need.flipY };
       loads.set(need.id, { ...load, key: textureKey(workspacePath, load) });
       continue;
     }
