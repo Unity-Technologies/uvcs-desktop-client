@@ -16,6 +16,7 @@ import type { AlphaMode, FileMaterial, FileTexture, TextureUse } from '../parsed
 import { MAX_TEXTURE_FILES, textureSideFor } from '../textures/textureBudget';
 import { textureFormatOf } from '../textures/textureFormats';
 import type { TextureProblem } from '../textures/textureProblems';
+import { isBuiltInGuid } from './builtInAssets';
 import type { ModelMaterialsInput, SlotSource } from './slotSources';
 import type { UnityMaterial } from './unityMaterial';
 
@@ -135,7 +136,7 @@ export function assetsRequest(version: ModelMaterialsInput, sources: Map<string,
 /** Step 2: the textures the `.mat` files read use, to look up by GUID. */
 export function materialTextureGuids(materials: Iterable<UnityMaterial | null>): string[] {
   const guids = new Set<string>();
-  for (const material of materials) for (const map of [material?.baseMap, material?.normalMap]) if (map) guids.add(map.guid);
+  for (const material of materials) for (const map of [material?.baseMap, material?.normalMap]) if (map && !isBuiltInGuid(map.guid)) guids.add(map.guid);
   return [...guids];
 }
 
@@ -146,7 +147,7 @@ export function lookupKey(texture: Extract<FileTexture, { kind: 'named' }>): str
 
 function lookupOf(texture: Extract<FileTexture, { kind: 'named' }>, version: ModelMaterialsInput): TextureLookup {
   const bare = texture.name.replace(/\.[^.]*$/, '');
-  const remap = version.settings.textureRemaps.find((candidate) => candidate.name === bare);
+  const remap = version.settings.textureRemaps.find((candidate) => candidate.name === bare && !isBuiltInGuid(candidate.guid));
   return { name: texture.name, storedPaths: texture.storedPaths, remapGuid: remap?.guid ?? null };
 }
 
@@ -208,8 +209,9 @@ export function planVersion(version: ModelMaterialsInput, sources: Map<string, S
   // A material's texture that isn't found is known by its GUID only: named by what it is to the slot.
   const fromUnity = (material: UnityMaterial, slot: string): PlannedSlot => {
     const color = linearOf(material.baseColor);
+    // One of Unity's own textures is there, though not drawn: no file to decode, nothing to say.
     const map = (texture: UnityMaterial['baseMap'], role: string): PlannedMap | null =>
-      texture && fileMap(found.guids.get(texture.guid), `${slot}'s ${role}`, { repeat: texture.scale, offset: texture.offset, rotation: 0, channel: 0 });
+      texture && !isBuiltInGuid(texture.guid) ? fileMap(found.guids.get(texture.guid), `${slot}'s ${role}`, { repeat: texture.scale, offset: texture.offset, rotation: 0, channel: 0 }) : null;
     return {
       color,
       colorWithMap: color,
@@ -257,8 +259,11 @@ function resolvedSlot(slot: string, key: string, source: SlotSource, found: Foun
     if (texture.kind === 'gltfImage') return { id: `image:${texture.image}`, name: imageName(texture.image), missing: false, repeat: use.repeat, offset: use.offset };
     return located(locateFileTexture(texture, found, modelPath), use.repeat, use.offset);
   };
-  const unityTexture = (texture: UnityMaterial['baseMap'], role: string): SlotTexture | null =>
-    texture && located({ file: found.guids.get(texture.guid) ?? null, id: texture.guid, name: `${key}'s ${role}` }, texture.scale, texture.offset);
+  const unityTexture = (texture: UnityMaterial['baseMap'], role: string): SlotTexture | null => {
+    if (!texture) return null;
+    if (isBuiltInGuid(texture.guid)) return { id: texture.guid, name: `Unity's built-in ${role}`, missing: false, repeat: texture.scale, offset: texture.offset };
+    return located({ file: found.guids.get(texture.guid) ?? null, id: texture.guid, name: `${key}'s ${role}` }, texture.scale, texture.offset);
+  };
 
   if (source.kind === 'default') return { slot, material: { kind: 'default' }, baseMap: null, normalMap: null };
   if (source.kind === 'file') return { slot, material: { kind: 'file', name: source.material.name }, baseMap: fileTexture(source.material.baseMap), normalMap: fileTexture(source.material.normalMap) };

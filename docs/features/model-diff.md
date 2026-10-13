@@ -278,7 +278,9 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   Material Creation Mode None (`materialImportMode: 0`, or `importMaterials: 0` in a `.meta` older than Unity 2019.3)
   clay, unless `remapMaterialsIfMaterialImportModeIsNone: 1` (absent, as before 2021.2: clay, as Unity imports it); a
   slot the `.meta` remaps (`externalObjects`, by slot name) takes that `.mat`, and one remapped to a GUID the project
-  hasn't is clay (Unity assigns the missing asset, never the file's own); any other slot the file's material, an OBJ's
+  hasn't is clay (Unity assigns the missing asset, never the file's own), and one remapped to Unity's own
+  (Default-Material, by the built-in GUIDs `0000000000000000f000000000000000` and `…e000…`, `isBuiltInGuid`) is Unity's
+  default look, looked up nowhere; any other slot the file's material, an OBJ's
   from its `.mtl` (`readMtlMaterials`, read beside it on disk). The legacy external location (`materialLocation: 0`,
   obsolete since 2019.3) counts as the file's own; its `Materials/` folder search isn't done. A glTF's materials are
   glTFast's: the file's, keyed by material, not name (`slotKeysOf`: Sponza's 25 are all unnamed); a map on the second UV
@@ -292,7 +294,7 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   `_BaseColor` or `_Color` (sRGB); alpha clip (`_AlphaClip`, `_AlphaCutoffEnable`, Built-in `_Mode` 1, cutoff
   `_Cutoff`/`_AlphaCutoff`), transparency (`_Surface`, `_SurfaceType`, `_Mode` 2 or 3; a `_Mode` left over is ignored
   where `_Surface` or `_SurfaceType` is set), both sides (`_Cull` or `_CullMode` 0, `_DoubleSidedEnable`). Textures by
-  GUID.
+  GUID; one of Unity's own is there, never missing, and not drawn.
 - **Unity's texture search** (`textureCandidates`, `main/unity/textureSearch.ts`), for a texture the file names: a
   `.meta` remap of the texture by its name without extension (by GUID); the model's folder; `Textures/` there and in
   each folder above it up to `Assets` (the project, `unityProjectFound`: the nearest folder above the model whose

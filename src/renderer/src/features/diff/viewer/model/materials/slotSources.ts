@@ -7,6 +7,7 @@
 import type { ModelFormat } from '@shared/domain/content';
 import type { ModelImportSettings } from '../modelImportSettings';
 import type { FileMaterial } from '../parsedModel';
+import { isBuiltInGuid } from './builtInAssets';
 
 export type SlotSource =
   /** Unity's default material: the clay. */
@@ -36,11 +37,13 @@ export interface ModelMaterialsInput {
 /** Each slot's source, by its key. */
 export function slotSources({ format, slots, settings }: ModelMaterialsInput): Map<string, SlotSource> {
   const remaps = new Map(settings.materialRemaps.map(({ slot, guid }) => [slot, guid]));
+  // A remap to one of Unity's own materials (Default-Material) shows Unity's default look.
+  const remapped = (guid: string): SlotSource => (isBuiltInGuid(guid) ? { kind: 'default' } : { kind: 'remapped', guid });
   const sourceOf = ({ name, material }: MaterialSlot): SlotSource => {
     if (format === 'gltf' || format === 'glb') return material ? { kind: 'file', material } : { kind: 'default' };
     const remap = remaps.get(name);
-    if (settings.materialImport === 'none') return remap && settings.remapsWithoutMaterials ? { kind: 'remapped', guid: remap } : { kind: 'default' };
-    if (remap) return { kind: 'remapped', guid: remap };
+    if (settings.materialImport === 'none') return remap && settings.remapsWithoutMaterials ? remapped(remap) : { kind: 'default' };
+    if (remap) return remapped(remap);
     return material ? { kind: 'file', material } : { kind: 'default' };
   };
   return new Map(slots.map((slot) => [slot.key, sourceOf(slot)]));
