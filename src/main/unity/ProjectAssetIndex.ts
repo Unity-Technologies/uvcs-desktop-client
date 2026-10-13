@@ -25,8 +25,10 @@ interface Listing {
   /** The files' paths, `.meta` files apart. */
   files: string[];
   metas: string[];
-  /** The GUIDs its `.meta` files give, once all read: asset path by GUID. */
-  guids: Map<string, string> | null;
+  /** The GUIDs its `.meta` files gave, asset path by GUID: what forgetting it drops from `byGuid`. */
+  guids: Map<string, string>;
+  /** Whether every `.meta` of it was read: one that failed is read again when next needed. */
+  guidsWhole: boolean;
 }
 
 /** Enough for `fileFormatVersion: 2` and the GUID line that follows, whatever the line ends. */
@@ -153,7 +155,7 @@ export class ProjectAssetIndex {
     const read = async (folder: string): Promise<void> => {
       const listing = await this.listingOf(folder);
       if (!listing) return void (whole = false);
-      if (guids && listing.guids === null && !(await this.guidsOf(folder, listing))) whole = false;
+      if (guids && !listing.guidsWhole && !(await this.guidsOf(folder, listing))) whole = false;
       pending.push(...listing.folders);
     };
     while (pending.length > 0) await Promise.all(pending.splice(0, FOLDERS_AT_ONCE).map(read));
@@ -180,7 +182,7 @@ export class ProjectAssetIndex {
     const read = this.readStamp(key);
     const entries = await this.files.list(folder).catch(() => null);
     if (!entries) return null;
-    const listing: Listing = { folders: [], files: [], metas: [], guids: null };
+    const listing: Listing = { folders: [], files: [], metas: [], guids: new Map(), guidsWhole: false };
     for (const { name, isFolder } of entries.filter((entry) => isAsset(entry.name))) {
       const path = joined(folder, name);
       if (isFolder) listing.folders.push(path);
@@ -224,9 +226,12 @@ export class ProjectAssetIndex {
       );
     }
     if (this.listings.get(key) !== listing) return whole;
-    for (const [guid, path] of guids) this.byGuid.set(guid, path);
+    for (const [guid, path] of guids) {
+      this.byGuid.set(guid, path);
+      listing.guids.set(guid, path);
+    }
     // A `.meta` that couldn't be read is read again next time: the folder's GUIDs aren't known whole.
-    if (whole) listing.guids = guids;
+    listing.guidsWhole = whole;
     return whole;
   }
 
@@ -242,8 +247,8 @@ export class ProjectAssetIndex {
     if (!listing) return;
     this.listings.delete(key);
     for (const path of listing.files) this.byName.get(this.comparable(fileNameOf(path)))?.delete(path);
-    const assets = new Set(listing.metas.map((meta) => meta.slice(0, -'.meta'.length)));
-    for (const [guid, path] of this.byGuid) if (assets.has(path)) this.byGuid.delete(guid);
+    // Only the folder's own GUIDs, never a scan of the whole index: a batch of changes forgets many folders at once.
+    for (const [guid, path] of listing.guids) if (this.byGuid.get(guid) === path) this.byGuid.delete(guid);
   }
 
   /** Changes when the folder is forgotten or everything is cleared: a read that started before keeps nothing. */
