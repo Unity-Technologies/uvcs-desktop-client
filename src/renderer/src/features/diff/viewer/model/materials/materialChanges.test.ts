@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { materialChanges } from './materialChanges';
-import type { PlannedSlot, ResolvedMaterial, ResolvedSlot, SlotTexture, VersionPlan } from './materialPlan';
+import { DEFAULT_IMPORT_SETTINGS, type ModelImportSettings } from '../modelImportSettings';
+import { materialChanges, materialsMayDiffer } from './materialChanges';
+import { assetsRequest, type PlannedSlot, type ResolvedMaterial, type ResolvedSlot, type SlotTexture, type VersionPlan } from './materialPlan';
+import { slotSources, type ModelMaterialsInput } from './slotSources';
+import { fileMaterial, named, use } from './testing/testMaterials';
 
 const DEFAULT: ResolvedMaterial = { kind: 'default' };
 const project = (name: string): ResolvedMaterial => ({ kind: 'project', name });
@@ -109,6 +112,31 @@ describe('materialChanges: within the same material', () => {
     const before = version({ Ball: { material: project('Ball_Planks'), baseMap: texture('planks.png') } });
     const after = version({ Ball: { material: project('Ball_Rock'), baseMap: texture('rock.png'), look: { alpha: 'clip' } } });
     expect(materialChanges(before, after).map((change) => change.kind)).toEqual(['source']);
+  });
+});
+
+describe('materialsMayDiffer', () => {
+  const metal = fileMaterial('Metal', { baseMap: use(named('metal.png')) });
+  const input = (settings: Partial<ModelImportSettings> = {}, materials = [metal]): ModelMaterialsInput => ({
+    format: 'fbx',
+    slots: materials.map((material) => ({ key: material.name, name: material.name, material })),
+    settings: { ...DEFAULT_IMPORT_SETTINGS, ...settings },
+  });
+  const side = (version: ModelMaterialsInput, path = 'Assets/Lantern/Lantern.fbx') => ({ sources: slotSources(version), request: assetsRequest(version, slotSources(version), path) });
+
+  it('reads nothing for versions whose slots take the same materials and textures the same way', () => {
+    expect(materialsMayDiffer(side(input()), side(input()))).toBe(false);
+  });
+
+  it('reads them when a remap, the material creation mode, a material of the file or the texture search changed', () => {
+    expect(materialsMayDiffer(side(input()), side(input({ materialRemaps: [{ slot: 'Metal', guid: '0f2b6c1e9a8d4b3c8e7f6a5b4c3d2e1f' }] })))).toBe(true);
+    expect(materialsMayDiffer(side(input()), side(input({ materialImport: 'none' })))).toBe(true);
+    expect(materialsMayDiffer(side(input()), side(input({}, [fileMaterial('Metal', { alpha: 'blend' })])))).toBe(true);
+    expect(materialsMayDiffer(side(input()), side(input({ searchTexturesGlobally: true })))).toBe(true);
+  });
+
+  it('reads them for a model moved, whose textures Unity searches from another folder', () => {
+    expect(materialsMayDiffer(side(input()), side(input(), 'Assets/Props/Lantern.fbx'))).toBe(true);
   });
 });
 
