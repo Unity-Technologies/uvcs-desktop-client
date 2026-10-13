@@ -7,7 +7,7 @@ import { downloadInstaller } from './downloadInstaller';
 import { installerAsset } from './installerAsset';
 import { needsManualInstall } from './macSignature';
 import { releaseFileUrl } from './releaseFeed';
-import { withoutStagingUserId } from './withoutStagingUserId';
+import { removeLeftoverStagingUserId, withoutStagingUserId } from './withoutStagingUserId';
 
 /** The operations changing a workspace, which installing waits for (`OperationTracker`), and what quitting to install does first. */
 type AroundInstalling = Pick<AppUpdatesDependencies, 'writesRunning' | 'writesFinished' | 'beforeRestart'>;
@@ -21,6 +21,7 @@ export function createAppUpdates(aroundInstalling: AroundInstalling): AppUpdates
   autoUpdater.fullChangelog = true;
   // A check is a standard request: no installation id.
   withoutStagingUserId(autoUpdater);
+  removeLeftoverStagingUserId(app.getPath('userData')).catch((error: unknown) => console.warn('[updates] The old staging user id stays:', error));
 
   return new AppUpdates({
     feed: autoUpdater,

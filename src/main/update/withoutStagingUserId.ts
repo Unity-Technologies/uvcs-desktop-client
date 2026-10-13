@@ -1,8 +1,13 @@
+import { rm } from 'node:fs/promises';
 import type { OutgoingHttpHeaders } from 'node:http';
+import { join } from 'node:path';
 import type { AppUpdater } from 'electron-updater';
 
 /** The header electron-updater sends the staging user id in, with every check (`getUpdateInfoAndProvider`). */
 const STAGING_USER_ID_HEADER = 'x-user-staging-id';
+
+/** The file in the user data folder electron-updater keeps the staging user id in (`getOrCreateStagingUserId`). */
+const STAGING_USER_ID_FILE = '.updaterId';
 
 /**
  * The two members of electron-updater's `AppUpdater` this replaces: `stagingUserIdPromise` (protected) creates the id
@@ -43,4 +48,12 @@ export function withoutStagingUserId(updater: AppUpdater): void {
     delete sent[STAGING_USER_ID_HEADER];
     return computeFinalHeaders(sent);
   };
+}
+
+/**
+ * Removes the staging user id an earlier version of the app created, before `withoutStagingUserId` stopped it: the id
+ * is never sent again, and nothing that identifies the installation stays behind. Nothing there is fine.
+ */
+export async function removeLeftoverStagingUserId(userDataPath: string): Promise<void> {
+  await rm(join(userDataPath, STAGING_USER_ID_FILE), { force: true });
 }

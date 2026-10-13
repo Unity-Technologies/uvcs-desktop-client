@@ -45,7 +45,8 @@ tells every window each step (`updateStatusChanged`, an `UpdateStatus`); a windo
   identifies the installation. electron-updater would give each installation a random id (`.updaterId` in the user
   data folder) and send it as `x-user-staging-id` with every check, only to serve staged rollouts (a release's
   `stagingPercentage`); `withoutStagingUserId` (applied in `createAppUpdates`) drops the header, never creates the
-  file, and offers every release to everyone. The releases never stage, so nothing is lost; a staged rollout would need
+  file, and offers every release to everyone; `removeLeftoverStagingUserId` deletes, at start, the file an earlier
+  version left. The releases never stage, so nothing is lost; a staged rollout would need
   another way to pick its users. Downloads send no id either, the unsigned-macOS installer's included
   (`downloadInstaller` fetches the bare URL).
 - **Download**: an update found downloads by itself, then waits (`ready`). A check while one is under way or ready
