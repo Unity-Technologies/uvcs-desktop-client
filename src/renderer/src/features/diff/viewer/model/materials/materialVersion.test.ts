@@ -49,6 +49,9 @@ describe('materialsInputOf', () => {
     expect(materialsInputOf(version('meta', { ...DEFAULT_IMPORT_SETTINGS }), null, workspace)?.settings).toEqual(DEFAULT_IMPORT_SETTINGS);
     // A read that failed shows the defaults until it is read again, never the workspace's look meanwhile.
     expect(materialsInputOf(version('failed'), null, workspace)?.settings).toEqual(DEFAULT_IMPORT_SETTINGS);
+    // While the workspace's .meta is still being read, nothing is decided (nor looked up with the defaults).
+    expect(materialsInputOf(version('none'), null, undefined)).toBeUndefined();
+    expect(materialsInputOf(version('meta'), null, undefined)?.settings).toBe(DEFAULT_IMPORT_SETTINGS);
     expect(takesWorkspaceSettings(version('none').options)).toBe(true);
     expect(takesWorkspaceSettings(version('failed').options)).toBe(false);
   });
