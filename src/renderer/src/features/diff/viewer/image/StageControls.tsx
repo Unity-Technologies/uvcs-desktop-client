@@ -13,6 +13,7 @@ interface StageButtonProps {
   icon: ReactNode;
   label: string;
   shortcut?: string;
+  /** On or off, for a button that toggles (a draw mode, a look); absent for one that acts (framing). */
   active?: boolean;
   /**
    * Why the button can't be used now, said in its tooltip under its label. It stays focusable and hoverable (not
@@ -22,11 +23,12 @@ interface StageButtonProps {
   onClick: () => void;
 }
 
-export function StageButton({ icon, label, shortcut, active = false, unavailable = null, onClick }: StageButtonProps) {
+export function StageButton({ icon, label, shortcut, active, unavailable = null, onClick }: StageButtonProps) {
   return (
     <IconButton
       className={styles.button}
       data-active={active || undefined}
+      aria-pressed={active}
       aria-disabled={unavailable !== null || undefined}
       icon={icon}
       label={unavailable === null ? label : `${label}\n${unavailable}`}

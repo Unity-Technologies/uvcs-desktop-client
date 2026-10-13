@@ -21,7 +21,6 @@
 }
 
 .controls .button[aria-disabled='true'] {
-  opacity: 0.45;
   cursor: default;
 }
 
