@@ -109,7 +109,8 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   versions' plans (`planVersion`'s `resolved`, "Materials" below), each slot both versions have (a glTF's materials,
   keyed by their place in the file, paired by name instead, and only where both files name one material so:
   `pairedSlots`; its images held in the file are compared by their place, never their content): where it takes its
-  material from (Unity's default; a project's `.mat`, by its GUID, one of the same name elsewhere named by its folder;
+  material from (Unity's default; a project's `.mat`, by its GUID, one of the same name elsewhere named by its folder,
+  a registry package's in `Library/PackageCache` named the package's;
   the model's own; a remap to a material the project hasn't: Unity's missing material, a risk), and, for the same
   material, its base map, normal map, base color (as the Inspector shows
   it, `#RRGGBB`), alpha (opaque, cutout, transparent), alpha cutoff, opacity (in whole percents, as told), sides and the base map's tiling and offset; and a

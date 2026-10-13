@@ -114,10 +114,15 @@ function described(material: ResolvedMaterial, byPath = false): string {
     case 'missing':
       return "Unity's missing material";
     case 'project':
-      return `the project's ${byPath ? material.path.replace(/\.mat$/i, '') : material.name}`;
+      return `${isPackageCached(material.path) ? "the package's" : "the project's"} ${byPath ? material.path.replace(/\.mat$/i, '') : material.name}`;
     case 'file':
       return "the model's own material";
   }
+}
+
+/** A registry package's material, which Unity keeps in `Library/PackageCache`: the package's, not the project's. */
+function isPackageCached(path: string): boolean {
+  return /(^|\/)Library\/PackageCache\//.test(path);
 }
 
 function mapChange(map: string, before: string | null, after: string | null): string {
