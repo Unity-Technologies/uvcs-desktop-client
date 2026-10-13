@@ -148,9 +148,9 @@ describe('reading the bytes of a model companion', () => {
       expect(lines().map((line) => line.split(' --file=')[0])).toEqual([`cat serverpath:/Assets/Crate.fbx.meta#${at}`, `ls /Assets/Crate.fbx.meta --tree=${at} --xml`]);
     });
 
-    it("reads it as nothing in a shelve, whose tree can't be asked, from its one failing cm cat", async () => {
+    it.each(['sh:2', 'lb:v1.0'])("reads it as nothing at %s, whose tree cm ls can't list, from its one failing cm cat", async (at) => {
       const { service, lines } = content({ cat: notFound });
-      expect(await service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at: 'sh:2' })).toBeNull();
+      expect(await service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at })).toBeNull();
       expect(lines()).toHaveLength(1);
     });
 
@@ -158,6 +158,15 @@ describe('reading the bytes of a model companion', () => {
       const { service } = content({ cat: notFound, ls: cmFails('Error: The server is unreachable.') });
       await expect(service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at: 'cs:3' })).rejects.toThrow();
     });
+
+    it.each(['The specified changeset cs:9 does not exist.', 'Specified branch /main/old does not exist'])(
+      'fails when the tree tells the point is gone (%s), which says nothing of the file',
+      async (gone) => {
+        const { service } = content({ cat: notFound, ls: cmFails(gone) });
+        await expect(service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at: 'cs:9' })).rejects.toThrow();
+        await expect(service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Shared/Crate.fbx.meta', at: 'cs:9', repository: 'art@local' })).rejects.toThrow();
+      },
+    );
 
     it('fails for a revision not found, which names one that should be there', async () => {
       const { service } = content({ cat: ({ args }) => cmFails(`The specified revision was not found ${args[1]}`) });

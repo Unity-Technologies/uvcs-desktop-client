@@ -39,6 +39,7 @@ describe('diffSibling', () => {
     expect(diffSibling(entries, { kind: 'changeset', changesetId: 7 }, 'game@local')('original', gltf, 'Assets/Barrel.gltf', 'Barrel.bin')).toEqual({ kind: 'repositoryPath', path: '/Assets/Barrel.bin', at: 'cs:7' });
     expect(diffSibling(entries, { kind: 'branch', branch: '/main/art' }, 'game@local')('modified', gltf, 'Assets/Barrel.gltf', 'Barrel.bin')).toMatchObject({ at: 'br:/main/art' });
     expect(diffSibling(entries, { kind: 'shelve', shelveId: 3 }, 'game@local')('modified', gltf, 'Assets/Barrel.gltf', 'Barrel.bin')).toMatchObject({ at: 'sh:3' });
+    expect(diffSibling(entries, { kind: 'range', fromSpec: 'lb:v1.0', toSpec: 'lb:v1.1' }, 'game@local')('modified', gltf, 'Assets/Barrel.gltf', 'Barrel.bin')).toMatchObject({ at: 'lb:v1.1' });
   });
 
   describe('of a model under an xlink', () => {
@@ -50,8 +51,9 @@ describe('diffSibling', () => {
       expect(diffSibling(entries, { kind: 'branch', branch: '/main/art' }, 'game@local')('original', shared, 'Assets/Shared/scene.gltf', 'scene.bin')).toMatchObject({ at: 'br:/main/art', repository: 'art@local' });
     });
 
-    it("finds none in a shelve, whose tree cm can't list", () => {
+    it("finds none in a shelve or at a label, whose trees cm ls can't list", () => {
       expect(diffSibling(entries, { kind: 'shelve', shelveId: 3 }, 'game@local')('modified', shared, 'Assets/Shared/scene.gltf', 'scene.bin')).toBeNull();
+      expect(diffSibling(entries, { kind: 'range', fromSpec: 'lb:v1.0', toSpec: 'lb:v1.1' }, 'game@local')('modified', shared, 'Assets/Shared/scene.gltf', 'scene.bin')).toBeNull();
     });
 
     it("reads one of the workspace's repository by its path, and any while the workspace's repository is unknown", () => {
