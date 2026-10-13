@@ -222,7 +222,13 @@ export class RevisionDownloads {
     await Promise.all(batchesOf(waiting, folder).map((batch) => this.downloadBatch(batch, folder)));
   }
 
-  private async downloadBatch(batch: Waiting[], folder: string): Promise<void> {
+  /**
+   * One `cm cat` of the batch. `cm cat` writes every revision it found even when another failed: each is told on its
+   * own. After a failure, a file is kept only when it is whole as far as the listing tells (its size, its hash): one
+   * cut short by a dropped connection would serve a broken texture for the session. Those that can't be told (a diff's
+   * side before, size and hash unknown) are downloaded again once, together (`retried`); failing again, they fail.
+   */
+  private async downloadBatch(batch: Waiting[], folder: string, retried = false): Promise<void> {
     const targets = batch.map((one) => join(folder, one.target));
     // The OS's cleaning (macOS's of folders idle for days, systemd-tmpfiles) may have taken the folder meanwhile.
     const failure = await mkdir(folder, { recursive: true })
@@ -231,10 +237,7 @@ export class RevisionDownloads {
         () => null,
         (error: unknown) => error,
       );
-    // `cm cat` writes every revision it found even when another failed: each is told on its own. After a failure, a
-    // file is kept only when it is whole as far as the listing tells (its size, its hash): one cut short by a dropped
-    // connection would serve a broken texture for the session. One that can't be told (a diff's side before, its size
-    // and hash unknown) is downloaded again alone, where a failure is its own.
+    const again: Waiting[] = [];
     await Promise.all(
       batch.map(async (one, i) => {
         const size = await stat(targets[i]!).then((stats) => stats.size, () => null);
@@ -242,10 +245,11 @@ export class RevisionDownloads {
         const whole = failure === null || (await isWhole(one.file, targets[i]!, size));
         if (whole) return this.keep(one.key, { target: targets[i]!, size }), one.resolve(targets[i]!);
         await rm(targets[i]!, { force: true }).catch(() => undefined);
-        if (batch.length > 1 && !canTellWhole(one.file)) return this.downloadBatch([{ ...one, target: `${one.target}-alone` }], folder);
-        one.reject(failure);
+        if (!retried && !canTellWhole(one.file)) again.push({ ...one, target: `${one.target}-again` });
+        else one.reject(failure);
       }),
     );
+    if (again.length > 0) await this.downloadBatch(again, folder, true);
   }
 
   private sessionFolder(): Promise<string> {

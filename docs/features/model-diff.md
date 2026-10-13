@@ -327,8 +327,8 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   start; a folder whose path holds `;` takes each as `--file=`. A revision listed past `MAX_MODEL_BYTES` is refused
   unread. `cm cat` writes every revision it has even when one fails, so each read is told apart; after a failure a file
   is kept only when its size and hash are the listed ones (one cut short by a dropped connection would serve a broken
-  texture for the session), and one that can't be told (the side before, size and hash unknown) is downloaded again
-  alone. A revision is downloaded once however many ask, each download to a file of its own (one let go and its
+  texture for the session), and those that can't be told (the side before, size and hash unknown) are downloaded
+  again once, together, in one more batch (never one process each: a failed batch of 64 would start 64). A revision is downloaded once however many ask, each download to a file of its own (one let go and its
   download again never meet); the session keeps the latest `MAX_KEPT_BYTES` (1 GB) of downloads in
   `uvcs-revisions-<pid>-…` under the OS's temp folder, a file let go read again if a read still wanted it, the folder
   made again before each batch (macOS and systemd-tmpfiles clean temp folders idle for days). It is deleted as the app
