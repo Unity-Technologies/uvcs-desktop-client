@@ -34,18 +34,21 @@ import {
   type Texture,
 } from 'three';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
+import { LookTextures, SlotLookMaterials } from './materials/slotLookMaterials';
+import type { SlotLook } from './materials/materialPlan';
 import type { ModelPalette } from './modelPalette';
 import { slotColor } from './modelPalette';
 import { modelOrientation, type ModelScene } from './modelScene';
 import { cameraPositionOf, clipPlanesOf, FIELD_OF_VIEW, type BoundsLike, type OrbitView, type Vector } from './orbitCamera';
+import type { SurfaceLook } from './surfaceLook';
 import { layoutOf, paneAt, type Layout, type ModelLayoutMode, type Side } from './viewLayout';
 
 export type DrawMode = 'shaded' | 'wireframe' | 'shadedWireframe';
 
 export interface ModelLook {
   drawMode: DrawMode;
-  /** Clay, or each material slot in its color. */
-  colorBySlot: boolean;
+  /** Clay, each material slot in its color, or its material (`setMaterialLooks`). */
+  surface: SurfaceLook;
   /** Node keys lit up on each side; the rest fade while any is. */
   highlighted: { before: Set<string>; after: Set<string> };
 }
@@ -76,6 +79,8 @@ interface SideScene {
   /** The skeleton: a line from each bone to its parent and a dot at each joint, on top of the model. */
   skeleton: LineSegments<BufferGeometry, LineBasicMaterial>;
   joints: Points<BufferGeometry, ShaderMaterial>;
+  /** Each mesh's materials as the Materials look draws them, made the first time it does. */
+  looks: SlotLookMaterials;
 }
 
 /** How much a node that isn't lit up fades towards the backdrop while others are. */
@@ -93,7 +98,11 @@ export class ModelRenderer {
   private readonly region = new Box3Helper(new Box3());
   private view: OrbitView = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 5 };
   private layoutState: ModelLayoutState = { mode: 'sideBySide', blend: 0.5, split: 0.5 };
-  private look: ModelLook = { drawMode: 'shaded', colorBySlot: false, highlighted: { before: new Set(), after: new Set() } };
+  private look: ModelLook = { drawMode: 'shaded', surface: 'clay', highlighted: { before: new Set(), after: new Set() } };
+  /** Each side's slots as the Materials look draws them (`slotLooks`); a slot absent stays clay. */
+  private materialLooks: Record<Side, ReadonlyMap<string, SlotLook> | null> = { before: null, after: null };
+  /** The GPU textures of the decoded bitmaps the looks use, one per bitmap and use, shared by the sides. */
+  private readonly lookTextures: LookTextures;
   private palette: ModelPalette | null = null;
   private heat: ModelHeat | null = null;
   private showBones = false;
@@ -120,6 +129,7 @@ export class ModelRenderer {
     this.environment = generator.fromScene(new RoomEnvironment(), 0.04).texture;
     generator.dispose();
     canvas.addEventListener('webglcontextrestored', this.requestRender);
+    this.lookTextures = new LookTextures(Math.min(8, this.renderer.capabilities.getMaxAnisotropy()));
   }
 
   setModels(before: ModelScene | null, after: ModelScene | null, bounds: BoundsLike): void {
@@ -128,8 +138,11 @@ export class ModelRenderer {
       const current = this.sides[side];
       if (current?.model === model) continue;
       if (current) disposeSide(current);
+      // The looks were the replaced model's: the next model's come with `setMaterialLooks`.
+      this.materialLooks = { ...this.materialLooks, [side]: null };
       this.sides[side] = model && this.sceneOf(model);
     }
+    this.lookTextures.keepOnly(this.materialLooks);
     this.bounds = bounds;
     this.rebuildGrid();
     this.applyLook();
@@ -177,6 +190,18 @@ export class ModelRenderer {
 
   setLook(look: ModelLook): void {
     this.look = look;
+    this.applyLook();
+    this.requestRender();
+  }
+
+  /**
+   * Each side's slots as the Materials look draws them, as their textures decode. Kept when the look is off, so
+   * turning it back on shows them at once; a side's go with it when it is replaced.
+   */
+  setMaterialLooks(looks: Record<Side, ReadonlyMap<string, SlotLook> | null>): void {
+    this.materialLooks = looks;
+    for (const side of ['before', 'after'] as const) this.sides[side]?.looks.update(looks[side]);
+    this.lookTextures.keepOnly(looks);
     this.applyLook();
     this.requestRender();
   }
@@ -256,6 +281,7 @@ export class ModelRenderer {
   dispose(): void {
     cancelAnimationFrame(this.frame);
     for (const side of Object.values(this.sides)) if (side) disposeSide(side);
+    this.lookTextures.dispose();
     this.targets?.forEach((target) => target.dispose());
     this.blender.dispose();
     this.environment.dispose();
@@ -376,7 +402,8 @@ export class ModelRenderer {
     (pivot.material as LineBasicMaterial).depthTest = false;
     pivot.renderOrder = 10;
     scene.add(key, key.target, new HemisphereLight(0xffffff, 0x000000, 0.25), model.root, markers, pivot, skeleton, joints);
-    return { scene, model, key, markers, pivot, skeleton, joints };
+    const looks = new SlotLookMaterials(model, this.lookTextures);
+    return { scene, model, key, markers, pivot, skeleton, joints, looks };
   }
 
   private applyLook(): void {
@@ -399,7 +426,8 @@ export class ModelRenderer {
       }
       if (differences) {
         // The after's heat in its draw mode's wires; the before only as the ghost of what is gone.
-        for (const mesh of scene.model.meshes) {
+        for (const [index, mesh] of scene.model.meshes.entries()) {
+          scene.looks.show(index, false, null);
           mesh.solid.visible = false;
           mesh.wire.visible = side === 'after' && this.look.drawMode !== 'shaded';
           mesh.wire.material.color.set(palette.wire);
@@ -409,18 +437,19 @@ export class ModelRenderer {
       }
       const highlighted = this.look.highlighted[side];
       const anyHighlighted = this.look.highlighted.before.size + this.look.highlighted.after.size > 0;
-      for (const mesh of scene.model.meshes) {
+      for (const [index, mesh] of scene.model.meshes.entries()) {
         const lit = highlighted.has(mesh.key) || [...highlighted].some((key) => mesh.key.startsWith(`${key}/`));
         const faded = anyHighlighted && !lit;
-        const { drawMode } = this.look;
+        const { drawMode, surface } = this.look;
         mesh.solid.visible = drawMode !== 'wireframe';
         mesh.wire.visible = drawMode !== 'shaded' || lit;
-        mesh.solid.material.forEach((material, slot) => {
-          const color = new Color(this.look.colorBySlot ? slotColor(palette, mesh.slots[slot] ?? '') : palette.clay);
+        mesh.clay.forEach((material, slot) => {
+          const color = new Color(surface === 'slotColors' ? slotColor(palette, mesh.slots[slot] ?? '') : palette.clay);
           material.color.copy(faded ? color.lerp(backdrop, FADE) : color);
           material.emissive.set(lit ? palette.highlight : 0x000000);
           material.emissiveIntensity = lit ? 0.35 : 0;
         });
+        scene.looks.show(index, surface === 'materials', { lit, faded, highlight: palette.highlight, backdrop: palette.backdrop, fade: FADE });
         mesh.wire.material.color.set(lit ? palette.highlight : palette.wire);
         mesh.wire.material.opacity = drawMode === 'wireframe' ? 0.9 : lit ? 0.6 : faded ? 0.1 : 0.28;
       }
@@ -549,6 +578,7 @@ function disposeSide(side: SideScene): void {
     overlay.material.dispose();
   }
   side.pivot.dispose();
+  side.looks.dispose();
 }
 
 function disposeGroup(group: Group): void {

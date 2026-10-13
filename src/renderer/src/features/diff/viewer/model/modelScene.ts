@@ -41,7 +41,9 @@ export interface ModelScene {
 export interface SceneMesh {
   /** The node key of the mesh. */
   key: string;
+  /** Drawn with `clay` (one material per slot, in the clay or the slot colors), or the Materials look's (`SlotLookMaterials`). */
   solid: Mesh<BufferGeometry, MeshStandardMaterial[]>;
+  clay: MeshStandardMaterial[];
   wire: Mesh<BufferGeometry, MeshBasicMaterial>;
   /** The Differences mode's twins, on the same geometry: the version after colored by how far it moved, the version
    *  before as a ghost of what is gone (`heatColors`, set as the geometry's `color`). Hidden in other modes. */
@@ -92,9 +94,9 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
       });
     },
     dispose() {
-      for (const { solid, wire, heat, ghost } of meshes) {
+      for (const { solid, clay, wire, heat, ghost } of meshes) {
         solid.geometry.dispose();
-        for (const material of solid.material) material.dispose();
+        for (const material of clay) material.dispose();
         wire.material.dispose();
         heat.material.dispose();
         ghost.material.dispose();
@@ -131,7 +133,7 @@ function meshOf(mesh: ModelMesh, key: string): SceneMesh {
   heat.visible = false;
   ghost.visible = false;
   for (const object of [solid, wire, heat, ghost]) object.userData.key = key;
-  return { key, solid, wire, heat, ghost, slots: mesh.slots };
+  return { key, solid, clay: materials, wire, heat, ghost, slots: mesh.slots };
 }
 
 /** Each bone with its parent, where the parent is a bone too: the skeleton's lines. */
