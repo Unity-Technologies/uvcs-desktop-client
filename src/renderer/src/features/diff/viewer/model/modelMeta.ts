@@ -20,3 +20,22 @@ export function modelBesideMeta(findSibling: SiblingFinder, sources: Record<Diff
   const found = { original: beside('original'), modified: beside('modified') };
   return found.original || found.modified ? found : null;
 }
+
+/**
+ * The model reads both sides need, each once, and which one each side shows: a `.meta` changed alone has the same
+ * model on both sides, one query (TanStack warns of one key asked twice). A side without a model reads nothing.
+ */
+export function modelReadsOfSides(sources: Record<DiffSide, ContentSource | null>): { reads: (ContentSource | null)[]; readOf: Record<DiffSide, number> } {
+  const keys: string[] = [];
+  const reads: (ContentSource | null)[] = [];
+  const readOf = (side: DiffSide): number => {
+    const key = JSON.stringify(sources[side]);
+    if (!keys.includes(key)) {
+      keys.push(key);
+      reads.push(sources[side]);
+    }
+    return keys.indexOf(key);
+  };
+  const original = readOf('original');
+  return { reads, readOf: { original, modified: readOf('modified') } };
+}
