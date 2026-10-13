@@ -1,7 +1,8 @@
 // Plays a model's takes, both versions on one timeline: pick a take, play or scrub, and see what an animator changed
 // move side by side (or blended, or swiped). Each version plays its own take of that name at its own length; a take
 // only one version has plays there, the other keeps its rest pose and the bar says so. It starts at the rest pose,
-// so a diff opens still; leaving it, or going back to the rest pose, puts every node back.
+// so a diff opens still; leaving it, or going back to the rest pose, puts every node back. What of a take the viewer
+// can't play (blendshapes: `playableTake`) is left out, and the bar says so.
 
 import { Clapperboard, Pause, Play } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -9,6 +10,7 @@ import { AnimationClip, AnimationMixer } from 'three';
 import { ChoiceChip } from '../../../../ui/ChoiceChip';
 import { PillButton } from '../image/stage';
 import { choiceLength, timeInTake, type ClipChoice } from './modelClips';
+import { playableTake, unplayableWords, type PlayableTake } from './playableTake';
 import type { ModelRenderer } from './modelRenderer';
 import type { ModelScene } from './modelScene';
 import type { ModelClip } from './parsedModel';
@@ -32,6 +34,10 @@ export function ModelAnimationBar({ renderer, scenes, choices, comparable }: Mod
   const choice = choices.find((candidate) => candidate.name === picked) ?? null;
   const length = choice ? choiceLength(choice) : 0;
   const mixers = useMemo(() => ({ before: scenes.before && new AnimationMixer(scenes.before.root), after: scenes.after && new AnimationMixer(scenes.after.root) }), [scenes.before, scenes.after]);
+  const takes = useMemo(
+    () => ({ before: playableOn(scenes.before, choice?.before), after: playableOn(scenes.after, choice?.after) }),
+    [scenes.before, scenes.after, choice],
+  );
 
   // Each version's take of the choice, set playing; the rest pose first, so a node the take doesn't key stays put.
   useEffect(() => {
@@ -39,8 +45,8 @@ export function ModelAnimationBar({ renderer, scenes, choices, comparable }: Mod
       const mixer = mixers[side];
       scenes[side]?.resetPose();
       mixer?.stopAllAction();
-      const take = choice?.[side];
-      if (mixer && take) mixer.clipAction(clipOf(take)).play();
+      const take = takes[side];
+      if (mixer && take) mixer.clipAction(take.clip).play();
     }
     seek(mixers, choice, 0);
     setTime(0);
@@ -52,7 +58,7 @@ export function ModelAnimationBar({ renderer, scenes, choices, comparable }: Mod
       }
       renderer.requestRender();
     };
-  }, [mixers, choice, scenes, renderer]);
+  }, [mixers, choice, takes, scenes, renderer]);
 
   // Playing: the timeline runs with the clock, every version seeking to it each frame.
   const latest = useRef(time);
@@ -80,6 +86,7 @@ export function ModelAnimationBar({ renderer, scenes, choices, comparable }: Mod
     renderer.requestRender();
   };
 
+  const unplayable = unplayableWords([...(takes.before?.dropped ?? []), ...(takes.after?.dropped ?? [])]);
   const only = comparable && choice && !(choice.before && choice.after) ? (choice.after ? 'Only in the version after' : 'Only in the version before') : null;
   return (
     <div className={styles.bar} data-no-pan>
@@ -109,7 +116,8 @@ export function ModelAnimationBar({ renderer, scenes, choices, comparable }: Mod
           <span className={styles.time}>
             {time.toFixed(2)} / {length.toFixed(2)} s
           </span>
-          {only && <span className={styles.only}>{only}</span>}
+          {only && <span className={styles.note}>{only}</span>}
+          {unplayable && <span className={styles.note}>{unplayable}</span>}
         </>
       )}
     </div>
@@ -123,10 +131,13 @@ function seek(mixers: Record<'before' | 'after', AnimationMixer | null>, choice:
   }
 }
 
-/** Each take parsed once: its tracks are three's clip JSON. */
-const clips = new WeakMap<ModelClip, AnimationClip>();
-function clipOf(take: ModelClip): AnimationClip {
-  let clip = clips.get(take);
-  if (!clip) clips.set(take, (clip = AnimationClip.parse(take.tracks)));
-  return clip;
+/** Each take parsed (its tracks are three's clip JSON) and cut to what the scene can play once per scene. */
+const playables = new WeakMap<ModelScene, WeakMap<ModelClip, PlayableTake>>();
+function playableOn(scene: ModelScene | null, take: ModelClip | undefined): PlayableTake | null {
+  if (!scene || !take) return null;
+  let ofScene = playables.get(scene);
+  if (!ofScene) playables.set(scene, (ofScene = new WeakMap()));
+  let playable = ofScene.get(take);
+  if (!playable) ofScene.set(take, (playable = playableTake(AnimationClip.parse(take.tracks), scene.root)));
+  return playable;
 }

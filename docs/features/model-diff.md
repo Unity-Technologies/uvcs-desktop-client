@@ -159,6 +159,11 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   (`MeshSkin.bindMatrix`): an FBX binds a mesh where its node is, glTF in the file's space, ignoring the skinned mesh's
   node. Binding a glTF at its node instead drew a Sketchfab export (its meshes under a `Sketchfab_model` root that turns
   Z up and a node that scales centimetres) under them twice: a hundredth of its size, or torn into stray triangles.
+  Blendshape animation isn't played: the viewer builds no morph targets, and a take's blendshape track names the
+  mesh's node, a Group above the mesh, so three's `AnimationMixer` would log an error for each one it can't bind. Before
+  binding, `playableTake` leaves out every track whose node or property the scene hasn't (blendshapes, a node it
+  doesn't have), so the bones' tracks beside them still play; the bar then says so in one line (`unplayableWords`:
+  "Blendshape animation isn't shown").
 - **The scene**: clay lit by a soft studio (three's `RoomEnvironment`) and a key light over the camera's shoulder;
   a ground grid a power of ten apart that suits the model (1 m for a person), X and Z through the origin in Unity's
   axis colors; each version's pivot axes, turned as the node every mesh hangs under. A picked node with no geometry

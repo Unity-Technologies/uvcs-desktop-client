@@ -24,7 +24,7 @@
   white-space: nowrap;
 }
 
-.only {
+.note {
   color: var(--label-text);
   font-size: var(--text-xs);
   white-space: nowrap;
