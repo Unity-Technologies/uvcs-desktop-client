@@ -210,7 +210,7 @@ choice comes back in the other modes. The merge cards' stills stay clay (`modelT
   Without a workspace the look isn't offered.
 - **Where each slot's material comes from** (`slotSources`, as Unity's ModelImporter decides for FBX and OBJ): with
   Material Creation Mode None (`materialImportMode: 0`, or `importMaterials: 0` in a `.meta` older than Unity 2019.3)
-  clay, unless `remapMaterialsIfMaterialImportModeIsNone` (absent before 2021.2: the remaps applied then); a slot the
+  clay, unless `remapMaterialsIfMaterialImportModeIsNone: 1` (absent, as before 2021.2: clay, as Unity imports it); a slot the
   `.meta` remaps (`externalObjects`, by slot name) takes that `.mat`, and one remapped to a GUID the project hasn't is
   clay (Unity assigns the missing asset, never the file's own); any other slot the file's material, an OBJ's from its
   `.mtl` (`readMtlMaterials`, read beside it on disk). The legacy external location (`materialLocation: 0`, obsolete

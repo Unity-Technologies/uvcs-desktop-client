@@ -23,8 +23,8 @@ export interface ModelImportSettings {
    */
   materialImport: 'none' | 'fromFile';
   /**
-   * With no materials made, whether the remaps still apply (`remapMaterialsIfMaterialImportModeIsNone`). A `.meta`
-   * older than the setting (Unity 2021.2) doesn't write it: they applied then, and an upgraded project keeps that.
+   * With no materials made, whether the remaps still apply (`remapMaterialsIfMaterialImportModeIsNone: 1`). A `.meta`
+   * older than the setting (Unity 2021.2) doesn't write it, and Unity then imports with its default material.
    */
   remapsWithoutMaterials: boolean;
   /** Material slots remapped to a material of the project (`externalObjects`), by slot name: its GUID. */
@@ -77,7 +77,7 @@ export function readImportSettings(metaText: string): ModelImportSettings {
       return typeof name === 'string' ? [{ name, takeName: typeof takeName === 'string' ? takeName : name, firstFrame: numberOf(firstFrame, 0), lastFrame: numberOf(lastFrame, 0) }] : [];
     }),
     materialImport: (materials.materialImportMode ?? materials.importMaterials) === NO_MATERIALS ? 'none' : 'fromFile',
-    remapsWithoutMaterials: importer.remapMaterialsIfMaterialImportModeIsNone === undefined || importer.remapMaterialsIfMaterialImportModeIsNone === '1',
+    remapsWithoutMaterials: importer.remapMaterialsIfMaterialImportModeIsNone === '1',
     materialRemaps: remapsOf(importer.externalObjects, 'UnityEngine:Material').map(({ name, guid }) => ({ slot: name, guid })),
     textureRemaps: remapsOf(importer.externalObjects, 'UnityEngine:Texture2D'),
     searchTexturesGlobally:
