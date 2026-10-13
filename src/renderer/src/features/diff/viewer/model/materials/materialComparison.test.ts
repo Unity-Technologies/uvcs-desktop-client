@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { UnityAssetsAnswer, UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { DEFAULT_IMPORT_SETTINGS } from '../modelImportSettings';
 import type { ImportSettingsSource } from '../modelImportSettings';
-import { answerStateOf, comparableVersions, materialChangesOf, type AnswerState, type ComparisonInput } from './materialComparison';
+import { answerStateOf, comparableVersions, materialChangesOf, materialsNotComparedOf, type AnswerState, type ComparisonInput } from './materialComparison';
 import type { VersionPlan } from './materialPlan';
 import { slotSources, type ModelMaterialsInput } from './slotSources';
 import { fileMaterial } from './testing/testMaterials';
@@ -52,6 +52,22 @@ describe('materialChangesOf', () => {
   it('is being told while a side is read', () => {
     expect(materialChangesOf(input({ sides: [none, undefined] }))).toBeUndefined();
     expect(materialChangesOf(input({ answers: ['answered', 'reading'], plans: [plan('default'), null] }))).toBeUndefined();
+  });
+});
+
+describe('materialsNotComparedOf', () => {
+  it("says why the materials, which may have changed, can't be compared, the reason a person can act on first", () => {
+    expect(materialsNotComparedOf(input({ answers: ['answered', 'noLibrary'] }))).toBe('noLibrary');
+    expect(materialsNotComparedOf(input({ answers: ['unread', 'noLibrary'] }))).toBe('noLibrary');
+    expect(materialsNotComparedOf(input({ answers: ['unread', 'noProject'] }))).toBe('noProject');
+    expect(materialsNotComparedOf(input({ answers: ['unread', 'reading'] }))).toBe('unread');
+  });
+
+  it('says nothing when they were compared, are being read, nothing could differ, or the versions are no pair to compare', () => {
+    expect(materialsNotComparedOf(input())).toBeNull();
+    expect(materialsNotComparedOf(input({ answers: ['reading', 'reading'] }))).toBeNull();
+    expect(materialsNotComparedOf(input({ sides: [none, none], answers: ['noLibrary', 'noLibrary'] }))).toBeNull();
+    expect(materialsNotComparedOf(input({ comparable: false, answers: ['noLibrary', 'noLibrary'] }))).toBeNull();
   });
 });
 

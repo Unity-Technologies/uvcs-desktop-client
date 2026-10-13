@@ -11,7 +11,7 @@ const MISSING: MaterialChange = { kind: 'source', slot: 'Glass', before: { kind:
 const kinds = (changes: ModelChange[]): string[] => changes.map((change) => (change.kind === 'material' ? `material:${change.change.kind}` : change.kind));
 
 function of(overrides: Partial<ChangesOfVersions> = {}): ChangesOfVersions {
-  return { file: [EXPORTER, TEXTURES], importSettings: [SCALE], settingsRead: true, materials: [], gltf: false, ...overrides };
+  return { file: [EXPORTER, TEXTURES], importSettings: [SCALE], settingsRead: true, materials: [], materialsNotCompared: null, gltf: false, ...overrides };
 }
 
 describe('whatChanged', () => {
@@ -27,6 +27,11 @@ describe('whatChanged', () => {
   it("keeps them where the materials can't be told, and for a glTF, whose images in the file the materials know by place only", () => {
     expect(kinds(whatChanged(of({ materials: null })))).toEqual(['exporter', 'textures', 'scaleFactor']);
     expect(kinds(whatChanged(of({ gltf: true })))).toEqual(['exporter', 'textures', 'scaleFactor']);
+  });
+
+  it("tells, as a note, materials that may have changed but couldn't be compared: never that nothing changed", () => {
+    expect(whatChanged(of({ file: [], importSettings: [], materials: null, materialsNotCompared: 'noLibrary' }))).toEqual([{ kind: 'materialsNotCompared', reason: 'noLibrary' }]);
+    expect(kinds(whatChanged(of({ materials: null, materialsNotCompared: 'unread' })))).toEqual(['exporter', 'textures', 'scaleFactor', 'materialsNotCompared']);
   });
 
   it("a .meta whose read failed tells nothing of its settings: Unity's defaults stand in for it", () => {

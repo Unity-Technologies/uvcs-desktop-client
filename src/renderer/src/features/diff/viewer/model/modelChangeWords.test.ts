@@ -180,6 +180,16 @@ describe('changeRows, for the materials', () => {
     expect(row!.items!.map((item) => item.label)).toEqual(['Glass', 'Visor', 'Bottle']);
   });
 
+  it("tells materials it couldn't compare as a note, with what keeps it from it in plain words", () => {
+    expect(changeRows([{ kind: 'materialsNotCompared', reason: 'noLibrary' }])[0]).toMatchObject({
+      tone: 'note',
+      title: 'Materials not compared',
+      detail: 'Open the project in Unity once on this computer to compare them.',
+    });
+    expect(changeRows([{ kind: 'materialsNotCompared', reason: 'unread' }])[0]!.detail).toBe("The project's files couldn't all be read.");
+    expect(changeRows([{ kind: 'materialsNotCompared', reason: 'noProject' }])[0]!.detail).toBe("The model isn't in a Unity project.");
+  });
+
   it("tells a texture the workspace lacks as a risk, and folds three of them", () => {
     expect(changeRows([material({ kind: 'textureMissing', slot: 'Wood', texture: 'planks.png' })])[0]).toMatchObject({
       tone: 'risk',
