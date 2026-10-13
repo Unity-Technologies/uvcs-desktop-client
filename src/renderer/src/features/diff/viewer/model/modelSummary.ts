@@ -3,8 +3,9 @@
 // (metres, Y up, X mirrored as Unity's importer turns right-handed files left-handed). Computed once per version in
 // the model worker; `modelChanges` compares two of them, the info strip and the "What changed" panel read them.
 
-import { Box3, Matrix4, Vector3 } from 'three';
+import { Box3, Vector3 } from 'three';
 import type { ModelMesh, ModelNodeKind, ParsedModel } from './parsedModel';
+import { placedPositionsOf } from './meshPlacement';
 import { worldMatricesOf } from './modelSpaces';
 import { countUniqueVertices, fingerprintOf, NORMAL_WELD_STEP } from './uniqueVertices';
 
@@ -88,10 +89,12 @@ export function modelSummary(model: ParsedModel): ModelSummary {
   const keys = nodeKeys(model);
   const world = worldMatricesOf(model);
   const meshOfNode = new Map(model.meshes.map((mesh, i) => [mesh.node, i]));
-  const meshes = model.meshes.map((mesh) => meshSummary(mesh, keys, world[mesh.node]!));
+  // Where each mesh's vertices sit in Unity's space, as drawn at rest: skinned ones where their bones hold them.
+  const placed = model.meshes.map((mesh) => placedPositionsOf(mesh, world));
+  const meshes = model.meshes.map((mesh, i) => meshSummary(mesh, keys, placed[i]!));
   const ownBounds = model.nodes.map((_, i) => {
     const mesh = meshOfNode.get(i);
-    return mesh === undefined ? null : transformedBounds(model.meshes[mesh]!.attributes.position, world[i]!);
+    return mesh === undefined ? null : boundsOf(placed[mesh]!);
   });
   const subtreeBounds = [...ownBounds];
   // Children come after their parents: walking back, each node's bounds are complete before its parent takes them.
@@ -134,7 +137,7 @@ export function modelSummary(model: ParsedModel): ModelSummary {
   };
 }
 
-function meshSummary(mesh: ModelMesh, keys: string[], world: Matrix4): MeshSummary {
+function meshSummary(mesh: ModelMesh, keys: string[], placed: Float64Array): MeshSummary {
   const { attributes } = mesh;
   const vertexCount = attributes.position.length / 3;
   const drawn = [
@@ -155,10 +158,10 @@ function meshSummary(mesh: ModelMesh, keys: string[], world: Matrix4): MeshSumma
     hasUv: attributes.uv !== null,
     hasLightmapUv: attributes.uv1 !== null,
     hasColors: attributes.color !== null,
-    localBounds: transformedBounds(attributes.position, new Matrix4())!,
+    localBounds: boundsOf(attributes.position)!,
     fingerprints: {
       positions: fingerprintOf(attributes.position),
-      placedPositions: fingerprintOf(placedPositions(attributes.position, world)),
+      placedPositions: fingerprintOf(inPlacedSteps(placed)),
       normals: fingerprintOf(attributes.normal),
       uv: fingerprintOf(attributes.uv),
       uv1: fingerprintOf(attributes.uv1),
@@ -170,17 +173,9 @@ function meshSummary(mesh: ModelMesh, keys: string[], world: Matrix4): MeshSumma
   };
 }
 
-/** Where the mesh's vertices end up in Unity's space, in steps of 10 µm, so float noise from the matrices weighs nothing. */
-function placedPositions(positions: Float32Array, world: Matrix4): Int32Array {
-  const placed = new Int32Array(positions.length);
-  const point = new Vector3();
-  for (let i = 0; i < positions.length; i += 3) {
-    point.set(positions[i]!, positions[i + 1]!, positions[i + 2]!).applyMatrix4(world);
-    placed[i] = Math.round(point.x / PLACED_STEP_METRES);
-    placed[i + 1] = Math.round(point.y / PLACED_STEP_METRES);
-    placed[i + 2] = Math.round(point.z / PLACED_STEP_METRES);
-  }
-  return placed;
+/** Placed positions in steps of 10 µm, so float noise from the matrices weighs nothing. */
+function inPlacedSteps(placed: Float64Array): Int32Array {
+  return Int32Array.from(placed, (value) => Math.round(value / PLACED_STEP_METRES));
 }
 
 /**
@@ -207,16 +202,11 @@ function pathOf(model: ParsedModel, index: number): string {
   return names.join('/');
 }
 
-function transformedBounds(positions: Float32Array, matrix: Matrix4): Bounds | null {
+function boundsOf(positions: Float32Array | Float64Array): Bounds | null {
   if (positions.length === 0) return null;
   const box = new Box3();
   const point = new Vector3();
-  const identity = matrix.equals(new Matrix4());
-  for (let i = 0; i < positions.length; i += 3) {
-    point.set(positions[i]!, positions[i + 1]!, positions[i + 2]!);
-    if (!identity) point.applyMatrix4(matrix);
-    box.expandByPoint(point);
-  }
+  for (let i = 0; i < positions.length; i += 3) box.expandByPoint(point.set(positions[i]!, positions[i + 1]!, positions[i + 2]!));
   return { min: box.min.toArray(), max: box.max.toArray() };
 }
 

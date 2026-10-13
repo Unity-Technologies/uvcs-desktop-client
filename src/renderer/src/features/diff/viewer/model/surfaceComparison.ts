@@ -2,14 +2,14 @@
 // in metres in the viewer's space. Both surfaces are taken whole (every mesh), so a mesh renamed, split or merged
 // still compares by its shape, as the eye compares them; what no surface is near saturates at a tenth of the model.
 
-import { Vector3 } from 'three';
+import { placedPositionsOf, type PlaceableMesh } from './meshPlacement';
 import { viewerSpaceOf, worldMatricesOf } from './modelSpaces';
 import type { ParsedModel } from './parsedModel';
 import { surfaceDistances } from './surfaceDistance';
 
-/** What placing a version's meshes takes of it: its nodes, units and axes, and each mesh's positions and indices. */
+/** What placing a version's meshes takes of it: its nodes, units and axes, and each mesh's positions, skin and indices. */
 export type PlaceableModel = Pick<ParsedModel, 'nodes' | 'unitScale' | 'importScale' | 'axisConversion'> & {
-  meshes: { node: number; attributes: { position: Float32Array }; index: Uint32Array | null }[];
+  meshes: (PlaceableMesh & { index: Uint32Array | null })[];
 };
 
 /** A version's meshes placed in the viewer's space: each mesh's vertices where they sit, and its triangles' corners. */
@@ -30,24 +30,10 @@ export interface SurfaceComparison {
 /** What is far from everything is told as this share of the model. */
 const SATURATION = 0.1;
 
-/** The meshes of a version with their vertices moved where they sit in the viewer's space. */
+/** The meshes of a version with their vertices moved where they sit in the viewer's space, as drawn at rest. */
 export function placedMeshesOf(model: PlaceableModel): PlacedMeshes {
   const world = worldMatricesOf(model, viewerSpaceOf(model));
-  const point = new Vector3();
-  return {
-    meshes: model.meshes.map((mesh) => {
-      const source = mesh.attributes.position;
-      const positions = new Float32Array(source.length);
-      const matrix = world[mesh.node]!;
-      for (let i = 0; i < source.length; i += 3) {
-        point.set(source[i]!, source[i + 1]!, source[i + 2]!).applyMatrix4(matrix);
-        positions[i] = point.x;
-        positions[i + 1] = point.y;
-        positions[i + 2] = point.z;
-      }
-      return { positions, index: mesh.index };
-    }),
-  };
+  return { meshes: model.meshes.map((mesh) => ({ positions: new Float32Array(placedPositionsOf(mesh, world)), index: mesh.index })) };
 }
 
 export function compareSurfaces(before: PlacedMeshes, after: PlacedMeshes): SurfaceComparison {
