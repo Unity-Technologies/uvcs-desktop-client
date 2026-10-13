@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -195,6 +195,16 @@ describe('unityAssets.find', () => {
     await writeAt(workspace, 'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat', 'mat');
     changed({ folders: ['Game/Packages'] });
     expect(paths((await find({ guids: [LIT] })).guids)).toEqual(['Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat']);
+  });
+
+  it("can't tell an asset missing whose file the disk refused (an antivirus holding it): the answer says it was unread", async () => {
+    const workspace = await workspaceWith({ 'Game/Assets/Art/Tree/Materials/Bark.mat': 'mat', 'Game/Assets/Art/Tree/Materials/Bark.mat.meta': meta(MAT_GUID), 'Game/Assets/Art/Tree/bark.png': 'png' });
+    const refused = (path: string) => (/Bark\.mat$|bark\.png$/.test(path) ? Promise.reject(Object.assign(new Error('EPERM: operation not permitted'), { code: 'EPERM' })) : stat(path));
+    const unityAssets = createUnityAssetsService({ watchers: { listen: () => () => undefined, coverageOf: () => 'full' }, statOf: refused });
+    const request = { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', textures: [], guids: [], paths: [], searchTexturesGlobally: false };
+    expect(await unityAssets.find(workspace, { ...request, guids: [MAT_GUID] })).toMatchObject({ guids: [null], guidMisses: 'unread' });
+    expect(await unityAssets.find(workspace, { ...request, textures: [lookup('bark.png')] })).toMatchObject({ textures: [null], guidMisses: 'unread' });
+    expect(await unityAssets.find(workspace, { ...request, textures: [lookup('gone.png')] })).toMatchObject({ textures: [null], guidMisses: 'known' });
   });
 
   it('finds an asset of a local package by GUID', async () => {
