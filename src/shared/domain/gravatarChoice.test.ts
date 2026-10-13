@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { gravatarChoice, showsGravatar, withGravatarAskedFirst } from './gravatarChoice';
+import { gravatarChoice, showsGravatar, storedGravatarChoice } from './gravatarChoice';
 import { DEFAULT_SETTINGS } from './settings';
 
 describe('the Gravatar choice', () => {
@@ -21,17 +21,25 @@ describe('the Gravatar choice', () => {
   });
 });
 
-describe('settings saved before the user was asked', () => {
-  it('turn pictures off that were on only by the old default', () => {
-    expect(withGravatarAskedFirst({ theme: 'dark', showGravatar: true, gravatarChoiceAsked: false })).toEqual({
-      theme: 'dark',
-      showGravatar: false,
-      gravatarChoiceAsked: false,
-    });
+describe('the choice in saved settings', () => {
+  it('keeps what the user chose', () => {
+    expect(storedGravatarChoice(gravatarChoice(true))).toEqual(gravatarChoice(true));
+    expect(storedGravatarChoice(gravatarChoice(false))).toEqual(gravatarChoice(false));
   });
 
-  it('keep what the user chose', () => {
-    expect(withGravatarAskedFirst(gravatarChoice(true))).toEqual(gravatarChoice(true));
-    expect(withGravatarAskedFirst(gravatarChoice(false))).toEqual(gravatarChoice(false));
+  it('is off and unasked in settings without it', () => {
+    expect(storedGravatarChoice({})).toEqual({ showGravatar: false, gravatarChoiceAsked: false });
+  });
+
+  it('turns off pictures saved before the question, when they were on by the default nobody chose', () => {
+    expect(storedGravatarChoice({ showGravatar: true })).toEqual({ showGravatar: false, gravatarChoiceAsked: false });
+  });
+
+  it('keeps pictures saved off before the question as the user’s answer: the default was on', () => {
+    expect(storedGravatarChoice({ showGravatar: false })).toEqual(gravatarChoice(false));
+  });
+
+  it('never shows pictures that are on but unanswered', () => {
+    expect(storedGravatarChoice({ showGravatar: true, gravatarChoiceAsked: false })).toEqual({ showGravatar: false, gravatarChoiceAsked: false });
   });
 });

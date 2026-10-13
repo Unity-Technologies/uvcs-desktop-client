@@ -88,6 +88,14 @@ describe('SettingsStore reading its file', () => {
     expect(new SettingsStore(filePath).get()).toMatchObject({ theme: 'dark', showGravatar: false, gravatarChoiceAsked: false });
   });
 
+  it('keeps Gravatar pictures saved off before the question as the user’s answer, as they were on by default', () => {
+    const folder = mkdtempSync(join(tmpdir(), 'uvcs-settings-'));
+    const filePath = join(folder, 'settings.json');
+    writeFileSync(filePath, JSON.stringify({ theme: 'dark', showGravatar: false }));
+
+    expect(new SettingsStore(filePath).get()).toMatchObject({ showGravatar: false, gravatarChoiceAsked: true });
+  });
+
   it('keeps Gravatar pictures the user turned on', () => {
     const { settings, filePath } = store();
     settings.update({ showGravatar: true, gravatarChoiceAsked: true });

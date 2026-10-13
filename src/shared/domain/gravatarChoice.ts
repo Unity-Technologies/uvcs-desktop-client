@@ -17,9 +17,13 @@ export function showsGravatar(settings: GravatarChoice): boolean {
 }
 
 /**
- * Settings saved before the user was asked may hold `showGravatar: true` from when it was the default, which nobody
- * chose: until they answer, pictures are off (and Settings shows them off).
+ * The choice held by settings as saved, by this version or one from before the question existed. Those saved
+ * `showGravatar` without `gravatarChoiceAsked`, with every other setting (`SettingsStore` writes them all), when
+ * pictures were on by default: off there can only be the user's choice, kept as answered; on may be only the old
+ * default, which nobody chose, so pictures are off until the user answers (and Settings shows them off).
  */
-export function withGravatarAskedFirst<T extends GravatarChoice>(settings: T): T {
-  return settings.gravatarChoiceAsked || !settings.showGravatar ? settings : { ...settings, showGravatar: false };
+export function storedGravatarChoice(stored: Partial<GravatarChoice>): GravatarChoice {
+  if (stored.gravatarChoiceAsked === undefined && stored.showGravatar === false) return gravatarChoice(false);
+  const asked = stored.gravatarChoiceAsked ?? false;
+  return { showGravatar: asked && (stored.showGravatar ?? false), gravatarChoiceAsked: asked };
 }

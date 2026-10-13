@@ -284,8 +284,10 @@ user decides whether it leaves the machine.
   with `gravatarChoiceAsked` (`gravatarChoice`), and it never asks again, in this window or another. Quitting without
   answering keeps pictures off and asks again the next time people show.
 - **Settings › Appearance › People** turns pictures on or off at any time; that's a choice too (`gravatarChoice`).
-- **Settings saved before the question existed** may hold `showGravatar: true` from when it was the default, which the
-  user never chose: `SettingsStore` reads them with pictures off until asked (`withGravatarAskedFirst`).
+- **Settings saved before the question existed** hold `showGravatar` without `gravatarChoiceAsked`, written with every
+  other setting while pictures were on by default (`storedGravatarChoice`, read by `SettingsStore`): `true` may be
+  only that default, which the user never chose, so pictures are off until asked; `false` can only be the user's own
+  choice, kept as answered, so they aren't asked again.
 
 ## Operation progress
 
