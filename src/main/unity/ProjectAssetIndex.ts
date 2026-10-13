@@ -48,6 +48,14 @@ export class ProjectAssetIndex {
   /** Read whole (the GUIDs of `Assets` and `Packages`, the names of `Assets`): a lookup that misses misses at once. */
   private wholeGuids = false;
   private wholeNames = false;
+  /**
+   * What tells a read that a change made it stale: a read that settles after its folder was forgotten, or everything
+   * cleared, keeps nothing (`isCurrent`), and a walk the project changed under never counts as whole.
+   */
+  private changes = 0;
+  private clears = 0;
+  /** By `folderKey`: how many times each folder was forgotten since the last `clear`. */
+  private readonly forgotten = new Map<string, number>();
 
   constructor(
     readonly project: UnityProject,
@@ -83,7 +91,9 @@ export class ProjectAssetIndex {
         const found = within(ring);
         if (found.length > 0) return found;
       }
-      this.wholeNames = await this.readSubtree(this.project.assets, false);
+      const changes = this.changes;
+      const whole = await this.readSubtree(this.project.assets, false);
+      this.wholeNames = whole && this.changes === changes;
     }
     for (const ring of rings) {
       const found = within(ring);
@@ -100,8 +110,13 @@ export class ProjectAssetIndex {
 
   clear(): void {
     this.listings.clear();
+    this.listingReads.clear();
+    this.guidReads.clear();
     this.byGuid.clear();
     this.byName.clear();
+    this.forgotten.clear();
+    this.clears++;
+    this.changes++;
     this.wholeGuids = this.wholeNames = false;
   }
 
@@ -110,6 +125,7 @@ export class ProjectAssetIndex {
    * `Assets`, then the project's packages.
    */
   private async inRings(near: string, answer: () => string | null): Promise<string | null> {
+    const changes = this.changes;
     for (const folder of foldersUp(this.folderKey(near), this.folderKey(this.project.assets))) {
       const known = answer();
       if (known !== null) return known;
@@ -121,7 +137,7 @@ export class ProjectAssetIndex {
       if (known !== null) return known;
       whole = (await this.readSubtree(folder, true)) && whole;
     }
-    this.wholeGuids = whole;
+    this.wholeGuids = whole && this.changes === changes;
     return answer();
   }
 
@@ -151,13 +167,17 @@ export class ProjectAssetIndex {
     if (known) return Promise.resolve(known);
     let reading = this.listingReads.get(key);
     if (!reading) {
-      reading = this.list(folder, key).finally(() => this.listingReads.delete(key));
-      this.listingReads.set(key, reading);
+      const started: Promise<Listing | null> = this.list(folder, key).finally(() => {
+        if (this.listingReads.get(key) === started) this.listingReads.delete(key);
+      });
+      this.listingReads.set(key, (reading = started));
     }
     return reading;
   }
 
+  /** The folder's listing as the disk gives it; kept only when no change made it stale while it was read. */
   private async list(folder: string, key: string): Promise<Listing | null> {
+    const read = this.readStamp(key);
     const entries = await this.files.list(folder).catch(() => null);
     if (!entries) return null;
     const listing: Listing = { folders: [], files: [], metas: [], guids: null };
@@ -167,6 +187,7 @@ export class ProjectAssetIndex {
       else if (name.toLowerCase().endsWith('.meta')) listing.metas.push(path);
       else listing.files.push(path);
     }
+    if (this.readStamp(key) !== read) return listing;
     this.listings.set(key, listing);
     for (const path of listing.files) {
       const name = this.comparable(fileNameOf(path));
@@ -180,13 +201,16 @@ export class ProjectAssetIndex {
     const key = this.folderKey(folder);
     let reading = this.guidReads.get(key);
     if (!reading) {
-      reading = this.readGuids(listing).finally(() => this.guidReads.delete(key));
-      this.guidReads.set(key, reading);
+      const started: Promise<boolean> = this.readGuids(key, listing).finally(() => {
+        if (this.guidReads.get(key) === started) this.guidReads.delete(key);
+      });
+      this.guidReads.set(key, (reading = started));
     }
     return reading;
   }
 
-  private async readGuids(listing: Listing): Promise<boolean> {
+  /** Reads the GUIDs of the listing's `.meta` files; kept only while the listing is still the folder's. */
+  private async readGuids(key: string, listing: Listing): Promise<boolean> {
     const guids = new Map<string, string>();
     let whole = true;
     for (let at = 0; at < listing.metas.length; at += HEADS_AT_ONCE) {
@@ -199,6 +223,7 @@ export class ProjectAssetIndex {
         }),
       );
     }
+    if (this.listings.get(key) !== listing) return whole;
     for (const [guid, path] of guids) this.byGuid.set(guid, path);
     // A `.meta` that couldn't be read is read again next time: the folder's GUIDs aren't known whole.
     if (whole) listing.guids = guids;
@@ -209,12 +234,21 @@ export class ProjectAssetIndex {
   private forget(folder: string): void {
     const key = this.folderKey(folder);
     const listing = this.listings.get(key);
+    this.forgotten.set(key, (this.forgotten.get(key) ?? 0) + 1);
+    this.changes++;
+    this.listingReads.delete(key);
+    this.guidReads.delete(key);
     this.wholeGuids = this.wholeNames = false;
     if (!listing) return;
     this.listings.delete(key);
     for (const path of listing.files) this.byName.get(this.comparable(fileNameOf(path)))?.delete(path);
     const assets = new Set(listing.metas.map((meta) => meta.slice(0, -'.meta'.length)));
     for (const [guid, path] of this.byGuid) if (assets.has(path)) this.byGuid.delete(guid);
+  }
+
+  /** Changes when the folder is forgotten or everything is cleared: a read that started before keeps nothing. */
+  private readStamp(key: string): string {
+    return `${this.clears}:${this.forgotten.get(key) ?? 0}`;
   }
 
   private comparable(name: string): string {
