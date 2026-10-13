@@ -24,7 +24,9 @@ export function useModelReadOptions(
 ): ModelReadOptions | null {
   const companions = useModelCompanions(workspacePath, side, source, model);
   const readSettings = useImportSettings(workspacePath, side, source, model !== undefined && knownSettings === undefined);
-  const settings = knownSettings ? { settings: knownSettings, from: 'meta' as const } : readSettings;
+  // Kept while the known settings stay: new options each render have the model read again, render after render.
+  const known = useMemo(() => (knownSettings ? { settings: knownSettings, from: 'meta' as const } : null), [knownSettings]);
+  const settings = known ?? readSettings;
   return useMemo(() => (companions && settings ? { companions, settings: settings.settings, settingsFrom: settings.from } : null), [companions, settings]);
 }
 

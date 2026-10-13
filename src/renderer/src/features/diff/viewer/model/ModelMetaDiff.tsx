@@ -13,7 +13,7 @@ import { contentCaching } from '../useDiffContents';
 import { ModelDiffViewer } from './ModelDiffViewer';
 import type { ModelDiffMode } from './modelDiffModes';
 import { readImportSettings } from './modelImportSettings';
-import { modelBesideMeta, modelOfMeta } from './modelMeta';
+import { modelBesideMeta, modelOfMeta, modelReadsOfSides } from './modelMeta';
 import { SiblingFinderContext, sourcePathOf } from './modelSiblings';
 
 interface ModelMetaDiffProps {
@@ -32,22 +32,22 @@ export function ModelMetaDiff({ workspacePath, sources, texts, mode }: ModelMeta
   // Each side's model is beside that side's `.meta`; a side without one (added, deleted) has no model to show.
   const modelSources = modelBesideMeta(findSibling, sources) ?? { original: null, modified: null };
   const modelName = sourcePathOf(sources.modified) ?? sourcePathOf(sources.original) ?? '';
+  // A `.meta` changed alone has the same model on both sides: read once, shown on both.
+  const { reads: modelReads, readOf } = modelReadsOfSides(modelSources);
   const reads = useQueries({
-    queries: (['original', 'modified'] as const).map((side) => {
-      const source = modelSources[side];
-      return {
-        queryKey: queryKeys.inWorkspace(workspacePath, 'content', source),
-        queryFn: () => (source ? api.content.read(workspacePath, source) : Promise.resolve(EMPTY)),
-        retry: false,
-        ...(source ? contentCaching([source]) : {}),
-      };
-    }),
+    queries: modelReads.map((source) => ({
+      queryKey: queryKeys.inWorkspace(workspacePath, 'content', source),
+      queryFn: () => (source ? api.content.read(workspacePath, source) : Promise.resolve(EMPTY)),
+      retry: false,
+      ...(source ? contentCaching([source]) : {}),
+    })),
   });
   const settings = useMemo(
     () => ({ original: readImportSettings(texts.original ?? ''), modified: readImportSettings(texts.modified ?? '') }),
     [texts.original, texts.modified],
   );
-  const [original, modified] = reads.map((read) => read.data);
+  const original = reads[readOf.original]?.data;
+  const modified = reads[readOf.modified]?.data;
   if (reads.some((read) => read.isError)) {
     return <EmptyState title={`Couldn't read ${modelOfMeta(modelName)?.split(/[\\/]/).pop() ?? 'the model'}`} description="The model this .meta belongs to isn't where the .meta is." />;
   }

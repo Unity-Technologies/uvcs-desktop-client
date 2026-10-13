@@ -209,7 +209,7 @@ trusted.
 - **A model's `.meta` diffed alone** (`modelOfMeta`) shows as the model under each version's settings (`ModelMetaDiff`,
   "Code | Model", the model by default, remembered as `representations.meta`): raising the Scale Factor instead of
   exporting again reads "100× larger in Unity". Only where the model can be found beside it (`modelBesideMeta`);
-  elsewhere the `.meta` is its text.
+  elsewhere the `.meta` is its text. A model that didn't change is read once for both sides (`modelReadsOfSides`).
 
 ## Materials
 
