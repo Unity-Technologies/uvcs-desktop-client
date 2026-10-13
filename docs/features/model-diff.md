@@ -44,9 +44,10 @@ reads a file otherwise:
   (`withCameraWindow`).
 - **OBJ line elements are dropped** (`withoutLineElements`): OBJLoader turns an object with any `l` into lines only,
   losing its faces; Unity imports the faces.
-- **An FBX older than 7.0 says so** (`oldFbx`): FBXLoader reads FBX 2011 (7.0) and later; Unity still imports an FBX 6
-  file (BoatAttack's `Renegade.fbx`). Some 7.x files make FBXLoader itself throw (`buildSkeleton` on a skin whose
-  bones it can't place: GraphicsTests' `Fern 2sided.fbx`, `Floor.fbx`); they show "Couldn't display this model".
+- **An FBX older than 7.0 says so** (`oldFbx`, by the binary header's version or ASCII `FBXVersion`): FBXLoader reads
+  FBX 2011 (7.0) and later, while Unity still imports older ones. Some files FBXLoader can't read at all (it throws in
+  `buildSkeleton` on a skin whose bones it can't place, or on content of an old exporter in a 7.x container, as
+  BoatAttack's `Renegade.fbx`): they show "Couldn't display this model", a known limit of the loader.
 - **A glTF that needs more than its bytes says so** (`gltfNeed`): a buffer in a `.bin` beside it, or Draco or meshopt
   compression, which the viewer has no decoder for (`modelReadFailureWords`).
 
