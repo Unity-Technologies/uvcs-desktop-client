@@ -42,6 +42,8 @@ export interface ModelMaterials {
 const SIDES = ['before', 'after'] as const;
 const NO_LOOKS = { before: null, after: null };
 const NO_PLANS: (VersionPlan | null)[] = [null, null];
+/** A side with no version to plan: nothing to find. */
+const NO_PLAN: VersionPlan = { slots: new Map(), resolved: new Map(), needs: [], issues: [] };
 const NO_REQUESTS = [null, null];
 
 /**
@@ -127,9 +129,10 @@ export function useModelMaterials(workspacePath: string, versions: Record<Side, 
       notCompared,
       offered,
       looks: { before: before ? slotLooks(before, states) : null, after: after ? slotLooks(after, states) : null },
-      report: plans.some((plan) => plan !== null) ? texturesReport(plans, states, budget.over) : null,
+      // From the look's first moment: finding what a version's materials use may take a while (a project's listing).
+      report: texturesReport(SIDES.map((side, i) => (versions[side] ? plans[i]! : NO_PLAN)), states, budget.over),
     };
-  }, [active, offered, plans, states, budget, changes, notCompared]);
+  }, [active, offered, plans, states, budget, changes, notCompared, versions]);
 }
 
 /** True from the first time `on` is, until `of` changes: the look's reads and decodes stay while it's off. */

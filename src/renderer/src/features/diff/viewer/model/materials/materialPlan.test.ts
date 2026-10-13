@@ -207,6 +207,14 @@ describe('budgeted', () => {
 });
 
 describe('texturesReport', () => {
+  it("is finding while a version's plan isn't made yet, and counts what the other's is downloading", () => {
+    const file = { path: 'Assets/bark.png', size: 1, stored: 'repository' as const, revision: { revisionId: 4, repository: 'eco@local' }, hash: null };
+    const plan = { slots: new Map(), resolved: new Map(), needs: [{ id: 'n', name: 'bark.png', where: { kind: 'file' as const, file }, flipY: true }], issues: [] };
+    expect(texturesReport([null, null], new Map(), [])).toMatchObject({ total: 0, finding: true });
+    expect(texturesReport([plan, null], new Map(), [])).toMatchObject({ total: 1, loading: 1, downloading: 1, finding: true });
+    expect(texturesReport([plan, plan], new Map(), [])).toMatchObject({ finding: false });
+  });
+
   it('counts each texture once across both versions: shown, loading, and those that failed or are missing', () => {
     const input = version([fileMaterial('Bark', { baseMap: use(named('bark.png')), normalMap: use(named('moss.psd')) }), fileMaterial('Leaves', { baseMap: use(named('gone.png')) })]);
     const assets = found({
@@ -226,6 +234,7 @@ describe('texturesReport', () => {
       shown: 1,
       loading: 0,
       downloading: 0,
+      finding: false,
       issues: [
         { name: 'gone.png', problem: 'missing' },
         { name: 'moss.psd', problem: 'psdWithoutComposite' },

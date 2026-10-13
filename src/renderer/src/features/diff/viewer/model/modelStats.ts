@@ -81,14 +81,15 @@ const LISTED_ISSUES = 8;
  * naming the ones that don't and why. None for materials without textures.
  */
 export function texturesStat(report: TexturesReport): ModelStat | null {
-  if (report.total === 0) return null;
-  const { total, shown, loading, downloading, issues } = report;
+  const { total, shown, loading, downloading, issues, finding } = report;
+  if (total === 0) return finding ? { label: 'Textures', before: null, after: '…', tip: 'Finding the materials and textures…' } : null;
   const lines = ['Textures shown'];
   for (const issue of issues.slice(0, LISTED_ISSUES)) lines.push(`${issue.name}: ${textureProblemWords(issue.problem)}`);
   if (issues.length > LISTED_ISSUES) lines.push(`and ${formatCount(issues.length - LISTED_ISSUES)} more`);
   if (downloading > 0) lines.push(`Getting ${formatCount(downloading)} from the repository…`);
   if (loading > downloading) lines.push(`Loading ${formatCount(loading - downloading)}…`);
+  if (finding) lines.push("Finding the other version's materials and textures…");
   // Counting up while they load: what may take a while (a download) shows it's under way.
   const count = shown === total ? formatCount(total) : `${formatCount(shown)} of ${formatCount(total)}`;
-  return { label: 'Textures', before: null, after: loading > 0 ? `${count}…` : count, tip: lines.join('\n') };
+  return { label: 'Textures', before: null, after: loading > 0 || finding ? `${count}…` : count, tip: lines.join('\n') };
 }

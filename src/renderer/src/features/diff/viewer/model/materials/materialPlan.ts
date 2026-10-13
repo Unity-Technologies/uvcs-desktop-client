@@ -352,6 +352,8 @@ export interface TexturesReport {
   /** Of those loading, the ones a version found in the repository: they may come from the server. */
   downloading: number;
   issues: TextureIssue[];
+  /** Whether a version's materials and textures are still being found (listed, their `.meta` and `.mat` files read). */
+  finding: boolean;
 }
 
 export function texturesReport(plans: readonly (VersionPlan | null)[], states: ReadonlyMap<string, NeedState>, over: readonly TextureNeed[]): TexturesReport {
@@ -374,7 +376,7 @@ export function texturesReport(plans: readonly (VersionPlan | null)[], states: R
   }
   for (const need of over) issues.set(need.name, { name: need.name, problem: 'overBudget' });
   const unplanned = [...issues.values()].filter(({ problem }) => problem === 'missing' || problem === 'unsupportedFormat' || problem === 'psbNotImported');
-  return { total: needs.size + unplanned.length, shown, loading, downloading, issues: [...issues.values()] };
+  return { total: needs.size + unplanned.length, shown, loading, downloading, issues: [...issues.values()], finding: plans.includes(null) };
 }
 
 /** A Unity material's color (sRGB, as kept) in three's linear working space. */
