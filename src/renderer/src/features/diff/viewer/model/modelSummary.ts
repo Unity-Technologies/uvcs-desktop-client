@@ -89,12 +89,13 @@ export function modelSummary(model: ParsedModel): ModelSummary {
   const keys = nodeKeys(model);
   const world = worldMatricesOf(model);
   const meshOfNode = new Map(model.meshes.map((mesh, i) => [mesh.node, i]));
-  // Where each mesh's vertices sit in Unity's space, as drawn at rest: skinned ones where their bones hold them.
-  const placed = model.meshes.map((mesh) => placedPositionsOf(mesh, world));
-  const meshes = model.meshes.map((mesh, i) => meshSummary(mesh, keys, placed[i]!));
-  const ownBounds = model.nodes.map((_, i) => {
-    const mesh = meshOfNode.get(i);
-    return mesh === undefined ? null : boundsOf(placed[mesh]!);
+  const ownBounds: (Bounds | null)[] = model.nodes.map(() => null);
+  const meshes = model.meshes.map((mesh) => {
+    // Where its vertices sit in Unity's space, as drawn at rest (skinned ones where their bones hold them): read
+    // here and let go, so a big model never holds every mesh's placement at once.
+    const placed = placedPositionsOf(mesh, world, new Float64Array(mesh.attributes.position.length));
+    ownBounds[mesh.node] = boundsOf(placed);
+    return meshSummary(mesh, keys, placed);
   });
   const subtreeBounds = [...ownBounds];
   // Children come after their parents: walking back, each node's bounds are complete before its parent takes them.

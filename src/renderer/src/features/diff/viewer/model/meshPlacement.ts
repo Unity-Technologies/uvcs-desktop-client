@@ -9,14 +9,18 @@ import type { MeshAttributes, ModelMesh } from './parsedModel';
 /** What placing a mesh takes: its node, its skin, and its positions with their bones and weights. */
 export type PlaceableMesh = Pick<ModelMesh, 'node' | 'skin'> & { attributes: Pick<MeshAttributes, 'position' | 'skinIndex' | 'skinWeight'> };
 
+/** Floats to place into: singles for drawing and comparing (`placedMeshesOf`), doubles for fingerprints (`modelSummary`). */
+export type PlacedArray = Float32Array | Float64Array;
+
 /**
- * The mesh's vertices in the space `world` (each node's matrix into it, `worldMatricesOf`) places the nodes in, in
- * doubles: a model a kilometre across still places them to the micrometre (`modelSummary` fingerprints them).
+ * The mesh's vertices in the space `world` (each node's matrix into it, `worldMatricesOf`) places the nodes in,
+ * written into `into` (as long as the positions) and returned. In doubles, a rigid mesh a kilometre across is placed
+ * to the micrometre; a skinned one only as well as its inverse bind matrices, which files keep in singles.
  */
-export function placedPositionsOf(mesh: PlaceableMesh, world: Matrix4[]): Float64Array {
+export function placedPositionsOf<T extends PlacedArray>(mesh: PlaceableMesh, world: Matrix4[], into: T): T {
   const { position, skinIndex, skinWeight } = mesh.attributes;
-  if (!mesh.skin || !skinIndex || !skinWeight) return transformed(position, world[mesh.node]!.elements);
-  return skinned(position, skinningMatrices(mesh.skin, world, mesh.node), skinIndex, skinWeight);
+  if (!mesh.skin || !skinIndex || !skinWeight) return transformed(position, world[mesh.node]!.elements, into);
+  return skinned(position, skinningMatrices(mesh.skin, world, mesh.node), skinIndex, skinWeight, into);
 }
 
 /**
@@ -33,39 +37,40 @@ function skinningMatrices(skin: NonNullable<ModelMesh['skin']>, world: Matrix4[]
 }
 
 /** Each vertex by its four bones' matrices, weighted as three skins it (weights as the file has them, unnormalized). */
-function skinned(positions: Float32Array, matrices: number[][], indices: Uint16Array, weights: Float32Array): Float64Array {
-  const placed = new Float64Array(positions.length);
+function skinned<T extends PlacedArray>(positions: Float32Array, matrices: number[][], indices: Uint16Array, weights: Float32Array, into: T): T {
+  const point = [0, 0, 0];
   for (let v = 0, i = 0; i < positions.length; v++, i += 3) {
-    const x = positions[i]!;
-    const y = positions[i + 1]!;
-    const z = positions[i + 2]!;
-    let px = 0;
-    let py = 0;
-    let pz = 0;
+    into[i] = into[i + 1] = into[i + 2] = 0;
     for (let influence = v * 4; influence < v * 4 + 4; influence++) {
       const weight = weights[influence]!;
-      const m = matrices[indices[influence]!];
-      if (weight === 0 || !m) continue;
-      px += weight * (m[0]! * x + m[4]! * y + m[8]! * z + m[12]!);
-      py += weight * (m[1]! * x + m[5]! * y + m[9]! * z + m[13]!);
-      pz += weight * (m[2]! * x + m[6]! * y + m[10]! * z + m[14]!);
+      const matrix = matrices[indices[influence]!];
+      if (weight === 0 || !matrix) continue;
+      timesPoint(matrix, positions, i, point);
+      into[i] += weight * point[0]!;
+      into[i + 1] += weight * point[1]!;
+      into[i + 2] += weight * point[2]!;
     }
-    placed[i] = px;
-    placed[i + 1] = py;
-    placed[i + 2] = pz;
   }
-  return placed;
+  return into;
 }
 
-function transformed(positions: Float32Array, m: number[]): Float64Array {
-  const placed = new Float64Array(positions.length);
+function transformed<T extends PlacedArray>(positions: Float32Array, matrix: number[], into: T): T {
+  const point = [0, 0, 0];
   for (let i = 0; i < positions.length; i += 3) {
-    const x = positions[i]!;
-    const y = positions[i + 1]!;
-    const z = positions[i + 2]!;
-    placed[i] = m[0]! * x + m[4]! * y + m[8]! * z + m[12]!;
-    placed[i + 1] = m[1]! * x + m[5]! * y + m[9]! * z + m[13]!;
-    placed[i + 2] = m[2]! * x + m[6]! * y + m[10]! * z + m[14]!;
+    timesPoint(matrix, positions, i, point);
+    into[i] = point[0]!;
+    into[i + 1] = point[1]!;
+    into[i + 2] = point[2]!;
   }
-  return placed;
+  return into;
+}
+
+/** A column-major 4×4 affine matrix times the point at `positions[i]`, into `point`. */
+function timesPoint(m: number[], positions: Float32Array, i: number, point: number[]): void {
+  const x = positions[i]!;
+  const y = positions[i + 1]!;
+  const z = positions[i + 2]!;
+  point[0] = m[0]! * x + m[4]! * y + m[8]! * z + m[12]!;
+  point[1] = m[1]! * x + m[5]! * y + m[9]! * z + m[13]!;
+  point[2] = m[2]! * x + m[6]! * y + m[10]! * z + m[14]!;
 }

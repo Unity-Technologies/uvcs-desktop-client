@@ -33,7 +33,7 @@ const SATURATION = 0.1;
 /** The meshes of a version with their vertices moved where they sit in the viewer's space, as drawn at rest. */
 export function placedMeshesOf(model: PlaceableModel): PlacedMeshes {
   const world = worldMatricesOf(model, viewerSpaceOf(model));
-  return { meshes: model.meshes.map((mesh) => ({ positions: new Float32Array(placedPositionsOf(mesh, world)), index: mesh.index })) };
+  return { meshes: model.meshes.map((mesh) => ({ positions: placedPositionsOf(mesh, world, new Float32Array(mesh.attributes.position.length)), index: mesh.index })) };
 }
 
 export function compareSurfaces(before: PlacedMeshes, after: PlacedMeshes): SurfaceComparison {
