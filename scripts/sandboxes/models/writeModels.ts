@@ -9,6 +9,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node
 import { dirname, join } from 'node:path';
 import { asciiFbx, box, sphere, type FbxNodeSpec, type FbxTake } from '../../../src/renderer/src/features/diff/viewer/model/testing/asciiFbx';
 import { barrelGltf, lampGlb, scoutGlb, type LampVersion, type ScoutVersion } from './gltfModels';
+import { texturedFiles, texturedRemaps, type TexturedVersion } from './texturedModels';
 import { defaultImporterMeta, gltfastImporterMeta, guidOf, modelImporterMeta, type ClipSplit, type ModelImporterSettings } from './unityMeta';
 
 /** What the artists have done so far: each step changes some of it. */
@@ -26,6 +27,8 @@ interface Project {
   /** The barrel exported again as a glTF, its geometry in a `.bin`: its height, in metres. */
   barrelGltf: { height: number } | null;
   lamp: LampVersion | null;
+  /** Props with materials and textures, one per way Unity finds them (`texturedModels.ts`). */
+  textured: TexturedVersion | null;
 }
 
 /** Maya's one take, at 30 fps: the robot breathes for 60 frames (2 s), then waves for 36 (1.2 s). */
@@ -44,6 +47,7 @@ const INITIAL: Project = {
   scout: null,
   barrelGltf: null,
   lamp: null,
+  textured: null,
 };
 
 interface Step {
@@ -86,7 +90,9 @@ const STEPS: Record<string, Step> = {
   lamp: { after: 'robot-wave-clip', change: (p) => (p.lamp = { poleHeight: 1.6, shadeRadius: 0.25 }) },
   'lamp-taller': { after: 'lamp', change: (p) => (p.lamp = { poleHeight: 1.9, shadeRadius: 0.25 }) },
   'lamp-wider': { after: 'lamp', change: (p) => (p.lamp = { poleHeight: 1.6, shadeRadius: 0.35 }) },
-  pending: { after: 'lamp-wider', change: (p) => (p.crate.unitScaleFactor = 100) },
+  textured: { after: 'lamp-wider', change: (p) => (p.textured = { treeHeight: 3 }) },
+  'textured-tree-taller': { after: 'textured', change: (p) => (p.textured = { treeHeight: 4 }) },
+  pending: { after: 'textured-tree-taller', change: (p) => (p.crate.unitScaleFactor = 100) },
 };
 
 function projectAfter(stepName: string): Project {
@@ -116,7 +122,9 @@ async function filesOf(p: Project): Promise<Record<string, FileContent>> {
     [`${MODELS}/Characters/Robot.fbx`]: robot(p),
     [`${MODELS}/Characters/Scout.glb`]: p.scout ? await scoutGlb(p.scout) : null,
   };
-  const files: Record<string, FileContent> = { ...models };
+  const textured = p.textured ? await texturedFiles(p.textured) : {};
+  for (const [path, content] of Object.entries(textured)) if (/\.(fbx|gltf|glb)$/.test(path)) models[path] = content;
+  const files: Record<string, FileContent> = { ...textured, ...models };
   for (const [path, content] of Object.entries(models)) files[`${path}.meta`] = content === null ? null : modelMeta(path, p);
   // Unity imports the glTF, not its buffer: the `.bin` is an asset of no type to it.
   files[`${MODELS}/Props/Barrel.bin`] = barrelExport?.bin ?? null;
@@ -317,7 +325,7 @@ function lantern(scale: number): string {
 /** Unity imports FBX and OBJ itself, glTF and GLB with glTFast; the crate's scale and the robot's clips are the artists'. */
 function modelMeta(path: string, p: Project): string {
   if (/\.(gltf|glb)$/.test(path)) return gltfastImporterMeta(path);
-  const settings: ModelImporterSettings = { globalScale: 1 };
+  const settings: ModelImporterSettings = { globalScale: 1, materialRemaps: texturedRemaps(path) };
   if (path === `${MODELS}/Props/Crate.fbx`) settings.globalScale = p.crate.globalScale;
   if (path === `${MODELS}/Characters/Robot.fbx` && p.robot.animated) settings.clips = robotClips(p.robot.waveLastFrame);
   return modelImporterMeta(path, settings);

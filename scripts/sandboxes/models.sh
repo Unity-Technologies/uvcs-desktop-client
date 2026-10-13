@@ -4,7 +4,9 @@
 # material slots, a sculpt, more polygons, new UVs, a model added and one deleted; a branch with several models
 # changed; an animated GLB character whose takes change; a glTF with its geometry in a .bin beside it; import
 # settings changed in a .meta alone (the scale, a clip cut past its take's end); a branch that conflicts with /main on
-# a GLB; and a model edited and not checked in. The models are written by models/writeModels.ts, one step each.
+# a GLB; textured props, one per way Unity finds a model's materials and textures (beside it, in a Textures folder,
+# remapped to a .mat with PSD and PNG maps, an alpha-clipped leaf card, a glTF's and a GLB's images, a texture missing);
+# and a model edited and not checked in. The models are written by models/writeModels.ts, one step each.
 # Usage: scripts/sandboxes/models.sh   (from the repository root) → repo models@local, workspace /tmp/uvcs-models
 set -euo pipefail
 REPO=models@local
@@ -62,6 +64,8 @@ cm switch /main/conflict-lamp --noinput >/dev/null
 step lamp-taller "Made the lamp taller"
 cm switch /main --noinput >/dev/null
 step lamp-wider "Gave the lamp a wider shade"
+step textured "Added textured props: a tree, a supply crate, a boulder, a bench, a fern, a sign and a floor tile"
+step textured-tree-taller "Made the tree taller"
 
 # Pending: what Changes shows.
 models pending
