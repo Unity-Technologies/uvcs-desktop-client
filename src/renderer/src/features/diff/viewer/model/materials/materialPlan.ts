@@ -29,6 +29,8 @@ export interface FoundAssets {
   guids: Map<string, FoundFile | null>;
   /** By the material's GUID; null when it doesn't read as one. */
   materials: Map<string, UnityMaterial | null>;
+  /** Whether the project imports `.psb` textures (`UnityAssetsAnswer.importsPsb`). */
+  importsPsb: boolean;
 }
 
 /** A texture file to decode: one per file and orientation, whichever slots and versions use it. */

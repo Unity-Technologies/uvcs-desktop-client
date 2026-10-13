@@ -20,7 +20,7 @@ function version(fileMaterials: FileMaterial[], settings: Partial<ModelImportSet
 }
 
 function found(overrides: Partial<FoundAssets> = {}): FoundAssets {
-  return { textures: new Map(), paths: new Map(), guids: new Map(), materials: new Map(), ...overrides };
+  return { textures: new Map(), paths: new Map(), guids: new Map(), materials: new Map(), importsPsb: false, ...overrides };
 }
 
 function plan(input: ModelMaterialsInput, assets: FoundAssets, side = 'after'): VersionPlan {
@@ -101,6 +101,24 @@ describe('planVersion and slotLooks', () => {
       { name: 'bark_n.dds', problem: 'unsupportedFormat' },
     ]);
     expect(plan(version([fileMaterial('Bark', { color: [1, 0, 0] })], { materialImport: 'none' }), found()).slots.get('Bark')).toBeNull();
+  });
+});
+
+describe('PSB textures', () => {
+  const input = version([fileMaterial('Sprite', { color: [0.5, 0.5, 0.5] })], { materialRemaps: [{ slot: 'Sprite', guid: BARK_MAT }] });
+  const assets = (importsPsb: boolean) => found({ importsPsb, guids: new Map([[BARK_PSD, file('Assets/Art/Fei.psb')]]), materials: new Map([[BARK_MAT, { ...URP_BARK, normalMap: null }]]) });
+
+  it("shows a .psb only in a project with the 2D PSD Importer, and says why it doesn't otherwise", () => {
+    expect(plan(input, assets(true)).needs.map((need) => need.name)).toEqual(['Fei.psb']);
+    const without = plan(input, assets(false));
+    expect(without.needs).toEqual([]);
+    expect(without.issues).toEqual([{ name: 'Fei.psb', problem: 'psbNotImported' }]);
+    expect(without.slots.get('Sprite')).toMatchObject({ baseMap: null, color: [1, 1, 1] });
+  });
+
+  it('shows a .psd in any project', () => {
+    const psd = found({ guids: new Map([[BARK_PSD, file('Assets/Art/bark.psd')]]), materials: new Map([[BARK_MAT, { ...URP_BARK, normalMap: null }]]) });
+    expect(plan(input, psd).needs.map((need) => need.name)).toEqual(['bark.psd']);
   });
 });
 

@@ -262,11 +262,12 @@ function foundAssets(first: UnityAssetsRequest, answer: UnityAssetsAnswer | null
     paths: pair(first.paths, answer?.paths),
     guids,
     materials,
+    importsPsb: answer?.importsPsb ?? false,
   };
 }
 
 function emptyFound(): FoundAssets {
-  return { textures: new Map(), paths: new Map(), guids: new Map(), materials: new Map() };
+  return { textures: new Map(), paths: new Map(), guids: new Map(), materials: new Map(), importsPsb: false };
 }
 
 /** What to load for each texture within the budget, by its need: a workspace file, or a glTF's own image. */

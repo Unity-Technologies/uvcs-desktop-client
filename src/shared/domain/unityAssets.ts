@@ -36,6 +36,11 @@ export interface UnityAssetsAnswer {
   textures: (FoundFile | null)[];
   guids: (FoundFile | null)[];
   paths: (FoundFile | null)[];
+  /**
+   * Whether the model's Unity project imports `.psb` files as textures: only with the 2D PSD Importer package
+   * (`com.unity.2d.psdimporter`) in its `Packages/manifest.json` or `packages-lock.json`. A `.psd` it always imports.
+   */
+  importsPsb: boolean;
 }
 
 /** The most lookups of each kind one request may carry: a model is read with at most 64 textures. */

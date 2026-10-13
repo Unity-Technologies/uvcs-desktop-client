@@ -109,6 +109,18 @@ describe('unityAssets.find', () => {
     expect(paths((await find({ guids: [MAT_GUID] })).guids)).toEqual([null]);
   });
 
+  it("tells whether the model's project imports .psb files: only with the 2D PSD Importer package", async () => {
+    const manifest = (packages: string[]) => JSON.stringify({ dependencies: Object.fromEntries(packages.map((name) => [name, '1.0.0'])) });
+    const withImporter = await workspaceWith({ 'Game/Packages/manifest.json': manifest(['com.unity.render-pipelines.universal', 'com.unity.2d.psdimporter']) });
+    expect((await service(withImporter).find({})).importsPsb).toBe(true);
+    // Brought in by another package: the lock lists it.
+    const locked = await workspaceWith({ 'Game/Packages/manifest.json': manifest(['com.unity.feature.2d']), 'Game/Packages/packages-lock.json': JSON.stringify({ dependencies: { 'com.unity.2d.psdimporter': { version: '9.0.0' } } }) });
+    expect((await service(locked).find({})).importsPsb).toBe(true);
+    const without = await workspaceWith({ 'Game/Packages/manifest.json': manifest(['com.unity.render-pipelines.universal']) });
+    expect((await service(without).find({})).importsPsb).toBe(false);
+    expect((await service(await workspaceWith({})).find({ modelPath: 'Art/Tree.fbx' })).importsPsb).toBe(false);
+  });
+
   it('finds an asset of a local package by GUID', async () => {
     const workspace = await workspaceWith({ 'Game/Packages/com.studio.trees/Materials/Leaf.mat': 'mat', 'Game/Packages/com.studio.trees/Materials/Leaf.mat.meta': meta(MAT_GUID) });
     expect(paths((await service(workspace).find({ guids: [MAT_GUID] })).guids)).toEqual(['Game/Packages/com.studio.trees/Materials/Leaf.mat']);
