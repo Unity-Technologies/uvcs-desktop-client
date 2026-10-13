@@ -6,14 +6,16 @@ const guid = (n: number): string => n.toString(16).padStart(32, '0');
 const meta = (n: number): string => `fileFormatVersion: 2\r\nguid: ${guid(n)}\r\nDefaultImporter:\r\n`;
 
 /**
- * Files in memory, by workspace-relative path, with the folders they make; what is read is counted. `failOnce`: reads
- * of these that fail the first time, as a file another program holds open does (EMFILE, EBUSY). Paths are found
+ * Files in memory, by workspace-relative path, with the folders they make; what is read is counted. `failing`: reads
+ * of these that fail as many times, as a file another program holds open does (EMFILE, EBUSY). Paths are found
  * whatever their Unicode form, as macOS finds them.
  */
-function memoryFiles(files: Map<string, string>, failOnce: Set<string> = new Set()) {
+function memoryFiles(files: Map<string, string>, failing: Map<string, number> = new Map()) {
   const reads = { lists: 0, heads: 0 };
   const fail = (path: string): void => {
-    if (!failOnce.delete(path)) return;
+    const left = failing.get(path) ?? 0;
+    if (left === 0) return;
+    failing.set(path, left - 1);
     throw Object.assign(new Error(`EBUSY: resource busy or locked, ${path}`), { code: 'EBUSY' });
   };
   const disk: ProjectFiles = {
@@ -124,12 +126,13 @@ describe('ProjectAssetIndex', () => {
   });
 
   it("doesn't keep a read that failed as an empty folder or a .meta without a GUID: the next find reads it again", async () => {
-    const files = project(1);
-    const { disk } = memoryFiles(files, new Set(['Game/Assets/Art/Tree', 'Game/Assets/Far0/rock3.png.meta']));
-    const index = new ProjectAssetIndex(unityProjectOf('Game/Assets/Art/Tree/Tree.fbx')!, disk, 'linux');
-    expect(await index.pathOfGuid(guid(1), MODEL_FOLDER)).toBeNull();
-    expect(await index.pathOfGuid(guid(1), MODEL_FOLDER)).toBe('Game/Assets/Art/Tree/Bark.mat');
-    expect(await index.pathOfGuid(guid(1003), MODEL_FOLDER)).toBe('Game/Assets/Far0/rock3.png');
+    for (const failing of ['Game/Assets/Far0', 'Game/Assets/Far0/rock3.png.meta']) {
+      // Failing as long as the first find reads it (its rings reach `Assets` twice).
+      const { disk } = memoryFiles(project(1), new Map([[failing, 2]]));
+      const index = new ProjectAssetIndex(unityProjectOf('Game/Assets/Art/Tree/Tree.fbx')!, disk, 'linux');
+      expect(await index.pathOfGuid(guid(1003), MODEL_FOLDER)).toBeNull();
+      expect(await index.pathOfGuid(guid(1003), MODEL_FOLDER)).toBe('Game/Assets/Far0/rock3.png');
+    }
   });
 
   it('on macOS, takes a change the watcher names in another Unicode form for the folder it listed', async () => {

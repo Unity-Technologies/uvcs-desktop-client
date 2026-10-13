@@ -3,12 +3,16 @@
 // holds up to hundreds of thousands of assets, while a model's materials and textures are nearly always near it, so
 // the index is read outward from the model: the subtree of its folder, then of each folder above it (as Unity's texture
 // search prefers), then the rest of the project; a lookup stops reading at the first ring that answers it. Only a GUID
-// or a name the project doesn't have reads it all, once: from then on it is known whole.
+// or a name the project doesn't have reads it all, once: from then on it is known whole, and a miss misses at once.
 
 import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 import type { UnityProject } from './unityProject';
 
-/** The disk, as the index reads it: tests count what it reads. Paths are workspace-relative, `/`-separated. */
+/**
+ * The disk, as the index reads it: tests count what it reads. Paths are workspace-relative, `/`-separated. Only a
+ * thing that isn't there is an answer (none, null); any other failure (a file another program holds, too many open)
+ * rejects, and nothing of it is kept.
+ */
 export interface ProjectFiles {
   /** A folder's entries; none when it isn't there (or isn't a folder). */
   list(folder: string): Promise<{ name: string; isFolder: boolean }[]>;
@@ -21,22 +25,29 @@ interface Listing {
   /** The files' paths, `.meta` files apart. */
   files: string[];
   metas: string[];
-  /** The GUIDs its `.meta` files give, once read: asset path by GUID. */
+  /** The GUIDs its `.meta` files give, once all read: asset path by GUID. */
   guids: Map<string, string> | null;
 }
 
 /** Enough for `fileFormatVersion: 2` and the GUID line that follows, whatever the line ends. */
 const META_HEAD_BYTES = 256;
 const GUID_LINE = /^guid:\s*([0-9a-f]{32})\s*$/m;
-/** Folders read at once while a ring is read, and `.meta` files per folder: the disk's threads, kept busy. */
+/** Folders read at once while a ring is read, and `.meta` files per folder: the disk kept busy, its open files few. */
 const FOLDERS_AT_ONCE = 8;
-const HEADS_AT_ONCE = 32;
+const HEADS_AT_ONCE = 16;
 
 export class ProjectAssetIndex {
+  /** By `folderKey`. */
   private readonly listings = new Map<string, Listing>();
+  /** Reads in flight, by `folderKey`: two finds at once read a folder once. */
+  private readonly listingReads = new Map<string, Promise<Listing | null>>();
+  private readonly guidReads = new Map<string, Promise<boolean>>();
   private readonly byGuid = new Map<string, string>();
   /** Every file of the project by its name as the OS compares names: folded on Windows and macOS. */
   private readonly byName = new Map<string, Set<string>>();
+  /** Read whole (the GUIDs of `Assets` and `Packages`, the names of `Assets`): a lookup that misses misses at once. */
+  private wholeGuids = false;
+  private wholeNames = false;
 
   constructor(
     readonly project: UnityProject,
@@ -48,10 +59,12 @@ export class ProjectAssetIndex {
   async pathOfGuid(guid: string, near: string): Promise<string | null> {
     const wanted = guid.toLowerCase();
     for (let attempt = 0; attempt < 2; attempt++) {
-      const found = await this.inRings(near, () => this.byGuid.get(wanted) ?? null);
+      const found = this.byGuid.get(wanted) ?? (this.wholeGuids ? null : await this.inRings(near, () => this.byGuid.get(wanted) ?? null));
       if (found === null) return null;
-      // A folder changed while unwatched may still list a `.meta` that moved: what it says now decides.
-      if (GUID_LINE.exec((await this.files.head(`${found}.meta`, META_HEAD_BYTES)) ?? '')?.[1] === wanted) return found;
+      // A folder changed while unwatched may still list a `.meta` that moved: what it says now decides (a read that
+      // fails tells nothing, and the index stands).
+      const head = await this.files.head(`${found}.meta`, META_HEAD_BYTES).catch(() => undefined);
+      if (head === undefined || GUID_LINE.exec(head ?? '')?.[1] === wanted) return found;
       this.forget(folderOf(found));
     }
     return null;
@@ -63,13 +76,19 @@ export class ProjectAssetIndex {
    */
   async pathsNamed(name: string, rings: readonly string[]): Promise<string[]> {
     const key = this.comparable(name);
-    const within = (folder: string) => [...(this.byName.get(key) ?? [])].filter((path) => isUnder(path, folder)).sort();
+    const within = (folder: string) => [...(this.byName.get(key) ?? [])].filter((path) => this.isUnder(path, folder)).sort();
+    if (!this.wholeNames) {
+      for (const ring of rings) {
+        await this.readSubtree(ring, false);
+        const found = within(ring);
+        if (found.length > 0) return found;
+      }
+      this.wholeNames = await this.readSubtree(this.project.assets, false);
+    }
     for (const ring of rings) {
-      await this.readSubtree(ring, false);
       const found = within(ring);
       if (found.length > 0) return found;
     }
-    await this.readSubtree(this.project.assets, false);
     return within(this.project.assets);
   }
 
@@ -83,6 +102,7 @@ export class ProjectAssetIndex {
     this.listings.clear();
     this.byGuid.clear();
     this.byName.clear();
+    this.wholeGuids = this.wholeNames = false;
   }
 
   /**
@@ -90,11 +110,18 @@ export class ProjectAssetIndex {
    * `Assets`, then the project's packages.
    */
   private async inRings(near: string, answer: () => string | null): Promise<string | null> {
-    for (const folder of [...foldersUp(near, this.project.assets), ...this.roots()]) {
+    for (const folder of foldersUp(this.folderKey(near), this.folderKey(this.project.assets))) {
       const known = answer();
       if (known !== null) return known;
       await this.readSubtree(folder, true);
     }
+    let whole = true;
+    for (const folder of this.roots()) {
+      const known = answer();
+      if (known !== null) return known;
+      whole = (await this.readSubtree(folder, true)) && whole;
+    }
+    this.wholeGuids = whole;
     return answer();
   }
 
@@ -103,59 +130,107 @@ export class ProjectAssetIndex {
     return [this.project.assets, joined(this.project.root, 'Packages')];
   }
 
-  /** Lists every folder of the subtree not listed yet, and reads its GUIDs when asked. */
-  private async readSubtree(top: string, guids: boolean): Promise<void> {
+  /** Lists every folder of the subtree, and reads its GUIDs when asked; false when a read failed (nothing kept of it). */
+  private async readSubtree(top: string, guids: boolean): Promise<boolean> {
     const pending = [top];
+    let whole = true;
     const read = async (folder: string): Promise<void> => {
-      const listing = this.listings.get(folder) ?? (await this.list(folder));
-      if (guids && listing.guids === null) await this.readGuids(listing);
+      const listing = await this.listingOf(folder);
+      if (!listing) return void (whole = false);
+      if (guids && listing.guids === null && !(await this.guidsOf(folder, listing))) whole = false;
       pending.push(...listing.folders);
     };
     while (pending.length > 0) await Promise.all(pending.splice(0, FOLDERS_AT_ONCE).map(read));
+    return whole;
   }
 
-  private async list(folder: string): Promise<Listing> {
-    const entries = (await this.files.list(folder)).filter(({ name }) => isAsset(name));
+  /** The folder's listing, read once however many finds ask at once; null when the read failed. */
+  private listingOf(folder: string): Promise<Listing | null> {
+    const key = this.folderKey(folder);
+    const known = this.listings.get(key);
+    if (known) return Promise.resolve(known);
+    let reading = this.listingReads.get(key);
+    if (!reading) {
+      reading = this.list(folder, key).finally(() => this.listingReads.delete(key));
+      this.listingReads.set(key, reading);
+    }
+    return reading;
+  }
+
+  private async list(folder: string, key: string): Promise<Listing | null> {
+    const entries = await this.files.list(folder).catch(() => null);
+    if (!entries) return null;
     const listing: Listing = { folders: [], files: [], metas: [], guids: null };
-    for (const { name, isFolder } of entries) {
+    for (const { name, isFolder } of entries.filter((entry) => isAsset(entry.name))) {
       const path = joined(folder, name);
       if (isFolder) listing.folders.push(path);
       else if (name.toLowerCase().endsWith('.meta')) listing.metas.push(path);
       else listing.files.push(path);
     }
-    this.listings.set(folder, listing);
+    this.listings.set(key, listing);
     for (const path of listing.files) {
-      const key = this.comparable(path.slice(path.lastIndexOf('/') + 1));
-      this.byName.set(key, (this.byName.get(key) ?? new Set()).add(path));
+      const name = this.comparable(fileNameOf(path));
+      this.byName.set(name, (this.byName.get(name) ?? new Set()).add(path));
     }
     return listing;
   }
 
-  private async readGuids(listing: Listing): Promise<void> {
+  /** Reads the GUIDs of a folder's `.meta` files once however many finds ask; false when a read failed. */
+  private guidsOf(folder: string, listing: Listing): Promise<boolean> {
+    const key = this.folderKey(folder);
+    let reading = this.guidReads.get(key);
+    if (!reading) {
+      reading = this.readGuids(listing).finally(() => this.guidReads.delete(key));
+      this.guidReads.set(key, reading);
+    }
+    return reading;
+  }
+
+  private async readGuids(listing: Listing): Promise<boolean> {
     const guids = new Map<string, string>();
+    let whole = true;
     for (let at = 0; at < listing.metas.length; at += HEADS_AT_ONCE) {
       await Promise.all(
         listing.metas.slice(at, at + HEADS_AT_ONCE).map(async (meta) => {
-          const guid = GUID_LINE.exec((await this.files.head(meta, META_HEAD_BYTES)) ?? '')?.[1];
+          const head = await this.files.head(meta, META_HEAD_BYTES).catch(() => undefined);
+          if (head === undefined) return void (whole = false);
+          const guid = GUID_LINE.exec(head ?? '')?.[1];
           if (guid) guids.set(guid, meta.slice(0, -'.meta'.length));
         }),
       );
     }
-    listing.guids = guids;
     for (const [guid, path] of guids) this.byGuid.set(guid, path);
+    // A `.meta` that couldn't be read is read again next time: the folder's GUIDs aren't known whole.
+    if (whole) listing.guids = guids;
+    return whole;
   }
 
   /** Drops what a folder's listing told: it is listed again when a lookup next reaches it. */
   private forget(folder: string): void {
-    const listing = this.listings.get(folder);
+    const key = this.folderKey(folder);
+    const listing = this.listings.get(key);
+    this.wholeGuids = this.wholeNames = false;
     if (!listing) return;
-    this.listings.delete(folder);
-    for (const path of listing.files) this.byName.get(this.comparable(path.slice(path.lastIndexOf('/') + 1)))?.delete(path);
-    for (const [guid, path] of listing.guids ?? []) if (this.byGuid.get(guid) === path) this.byGuid.delete(guid);
+    this.listings.delete(key);
+    for (const path of listing.files) this.byName.get(this.comparable(fileNameOf(path)))?.delete(path);
+    const assets = new Set(listing.metas.map((meta) => meta.slice(0, -'.meta'.length)));
+    for (const [guid, path] of this.byGuid) if (assets.has(path)) this.byGuid.delete(guid);
   }
 
   private comparable(name: string): string {
     return this.platform === 'linux' ? name : name.normalize('NFC').toLowerCase();
+  }
+
+  /**
+   * A folder as the index keys it: macOS reports a changed folder decomposed (NFD) while a model's path and a folder's
+   * listing may be composed (NFC), and finds a file by either. The paths returned keep the listing's own form.
+   */
+  private folderKey(folder: string): string {
+    return this.platform === 'darwin' ? folder.normalize('NFC') : folder;
+  }
+
+  private isUnder(path: string, folder: string): boolean {
+    return isUnder(this.folderKey(path), this.folderKey(folder));
   }
 }
 
@@ -177,6 +252,10 @@ function foldersUp(near: string, top: string): string[] {
 function folderOf(path: string): string {
   const end = path.lastIndexOf('/');
   return end === -1 ? '' : path.slice(0, end);
+}
+
+function fileNameOf(path: string): string {
+  return path.slice(path.lastIndexOf('/') + 1);
 }
 
 function joined(folder: string, name: string): string {

@@ -248,6 +248,10 @@ choice comes back in the other modes. The merge cards' stills stay clay (`modelT
   anywhere drops it, and so does the watch breaking or stopping; the app's own `cm` writes, whose events the watcher
   drops, count as a change anywhere once they settle). It is kept only while the watcher sees the whole workspace
   (`coverageOf` is `full`); otherwise each find reads afresh. A GUID found is checked against its `.meta` once more.
+  A folder is read once however many finds ask at once; once all is read, a miss misses at once. Only what isn't
+  there is an answer: a read the disk refused (a `.meta` Unity or an antivirus holds, too many files open) is kept as
+  nothing and read again, and at most 32 files are open at once (`diskProjectFiles`). On macOS folders compare in one
+  Unicode form (the watcher names them decomposed, listings may be composed).
   Changes inside folders `ignore.conf` hides from the watcher aren't seen: an `Assets` folder is versioned content. Measured by hand on a project of 100,000 assets (1,000 folders): a GUID it lacks reads it all in about 2.1 s,
   once; the next lookup reads nothing. Tests count the reads (`ProjectAssetIndex.test.ts`).
 - **Formats** (`textureFormatOf`), decoded in a worker of their own (`texture.worker`), never on the UI thread (where
