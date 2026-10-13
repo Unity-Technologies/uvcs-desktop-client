@@ -43,11 +43,8 @@ describe('assetsRequest', () => {
     const fbx = version([bark, leaves], { materialRemaps: [{ slot: 'Leaves', guid: BARK_MAT }], textureRemaps: [{ name: 'bark_albedo', guid: BARK_PSD }], searchTexturesGlobally: true });
     expect(assetsRequest(fbx, slotSources(fbx), MODEL)).toEqual({
       modelPath: MODEL,
-      // A remapped slot's own textures still count: its material may not be found.
-      textures: [
-        { name: 'bark_albedo.png', storedPaths: ['..\\Textures\\bark_albedo.png'], remapGuid: BARK_PSD },
-        { name: 'leaves.tga', storedPaths: [], remapGuid: null },
-      ],
+      // A remapped slot's own textures aren't looked for: the project's material replaces them.
+      textures: [{ name: 'bark_albedo.png', storedPaths: ['..\\Textures\\bark_albedo.png'], remapGuid: BARK_PSD }],
       guids: [BARK_MAT],
       paths: [],
       searchTexturesGlobally: true,

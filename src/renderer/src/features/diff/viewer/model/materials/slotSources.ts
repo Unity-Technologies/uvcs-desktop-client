@@ -11,8 +11,11 @@ import type { FileMaterial } from '../parsedModel';
 export type SlotSource =
   /** Unity's default material: the clay. */
   | { kind: 'default' }
-  /** A material of the project by GUID; while it can't be found, the file's (or the default, without one). */
-  | { kind: 'remapped'; guid: string; fallback: FileMaterial | null }
+  /**
+   * A material of the project by GUID. One the project hasn't (deleted, never checked in) is clay: Unity assigns the
+   * missing asset, its "missing material", never the file's own.
+   */
+  | { kind: 'remapped'; guid: string }
   | { kind: 'file'; material: FileMaterial };
 
 /** What decides a version's materials. */
@@ -32,8 +35,8 @@ export function slotSources({ format, slots, fileMaterials, settings }: ModelMat
     const material = byName.get(slot) ?? null;
     if (format === 'gltf' || format === 'glb') return material ? { kind: 'file', material } : { kind: 'default' };
     const remap = remaps.get(slot);
-    if (settings.materialImport === 'none') return remap && settings.remapsWithoutMaterials ? { kind: 'remapped', guid: remap, fallback: null } : { kind: 'default' };
-    if (remap) return { kind: 'remapped', guid: remap, fallback: material };
+    if (settings.materialImport === 'none') return remap && settings.remapsWithoutMaterials ? { kind: 'remapped', guid: remap } : { kind: 'default' };
+    if (remap) return { kind: 'remapped', guid: remap };
     return material ? { kind: 'file', material } : { kind: 'default' };
   };
   return new Map(slots.map((slot) => [slot, sourceOf(slot)]));

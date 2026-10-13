@@ -15,13 +15,13 @@ describe('slotSources', () => {
   it("gives each slot of an FBX the file's material, or the project's one its .meta remaps it to", () => {
     const sources = slotSources(version({ settings: { materialRemaps: [{ slot: 'Leaves', guid: GUID }] } }));
     expect(sources.get('Bark')).toEqual({ kind: 'file', material: textured('Bark') });
-    expect(sources.get('Leaves')).toEqual({ kind: 'remapped', guid: GUID, fallback: fileMaterial('Leaves') });
+    expect(sources.get('Leaves')).toEqual({ kind: 'remapped', guid: GUID });
   });
 
   it("gives every slot Unity's default material with Material Creation Mode None, unless remaps apply then", () => {
     const none = version({ settings: { materialImport: 'none', materialRemaps: [{ slot: 'Bark', guid: GUID }] } });
     expect([...slotSources(none).values()]).toEqual([{ kind: 'default' }, { kind: 'default' }]);
-    expect(slotSources({ ...none, settings: { ...none.settings, remapsWithoutMaterials: true } }).get('Bark')).toEqual({ kind: 'remapped', guid: GUID, fallback: null });
+    expect(slotSources({ ...none, settings: { ...none.settings, remapsWithoutMaterials: true } }).get('Bark')).toEqual({ kind: 'remapped', guid: GUID });
   });
 
   it("gives a slot the file defines no material for Unity's default (an OBJ without its .mtl)", () => {

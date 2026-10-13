@@ -81,7 +81,7 @@ export function assetsRequest(version: ModelMaterialsInput, sources: Map<string,
   const guids = new Set<string>();
   for (const source of sources.values()) {
     if (source.kind === 'remapped') guids.add(source.guid);
-    const material = source.kind === 'file' ? source.material : source.kind === 'remapped' ? source.fallback : null;
+    const material = source.kind === 'file' ? source.material : null;
     for (const use of [material?.baseMap, material?.normalMap]) {
       const texture = use?.texture;
       if (texture?.kind === 'named') textures.set(lookupKey(texture), lookupOf(texture, version));
@@ -186,8 +186,7 @@ export function planVersion(version: ModelMaterialsInput, sources: Map<string, S
     if (source.kind === 'default') return null;
     if (source.kind === 'file') return fromFile(source.material);
     const material = found.materials.get(source.guid);
-    if (material) return fromUnity(material, slot);
-    return source.fallback ? fromFile(source.fallback) : null;
+    return material ? fromUnity(material, slot) : null;
   };
 
   const slots = new Map([...sources].map(([slot, source]) => [slot, slotOf(slot, source)]));
