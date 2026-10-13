@@ -129,10 +129,10 @@ describe('withoutStagingUserId', () => {
     expect(headerNames(updater.downloadHeaders[0])).not.toContain('x-user-staging-id');
   });
 
-  it('offers a release that asks for a staged rollout to everyone', async () => {
+  it('offers every release to everyone, even one staged to reach no one', async () => {
     const { updater } = await updaterOverRecordingFeed();
 
-    updater.latestRelease = { ...NEWER_RELEASE, stagingPercentage: 1 };
+    updater.latestRelease = { ...NEWER_RELEASE, stagingPercentage: 0 };
 
     const result = await updater.checkForUpdates();
 
