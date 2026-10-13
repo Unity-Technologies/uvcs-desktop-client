@@ -13,12 +13,29 @@ interface StageButtonProps {
   icon: ReactNode;
   label: string;
   shortcut?: string;
+  /** On or off, for a button that toggles (a draw mode, a look); absent for one that acts (framing). */
   active?: boolean;
+  /**
+   * Why the button can't be used now, said in its tooltip under its label. It stays focusable and hoverable (not
+   * `disabled`, which hides its tooltip from the pointer), and its click does nothing.
+   */
+  unavailable?: string | null;
   onClick: () => void;
 }
 
-export function StageButton({ icon, label, shortcut, active = false, onClick }: StageButtonProps) {
-  return <IconButton className={styles.button} data-active={active || undefined} icon={icon} label={label} shortcut={shortcut} onClick={onClick} />;
+export function StageButton({ icon, label, shortcut, active, unavailable = null, onClick }: StageButtonProps) {
+  return (
+    <IconButton
+      className={styles.button}
+      data-active={active || undefined}
+      aria-pressed={active}
+      aria-disabled={unavailable !== null || undefined}
+      icon={icon}
+      label={unavailable === null ? label : `${label}\n${unavailable}`}
+      shortcut={shortcut}
+      onClick={unavailable === null ? onClick : undefined}
+    />
+  );
 }
 
 export function StageSeparator() {

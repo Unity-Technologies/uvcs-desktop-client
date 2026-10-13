@@ -1,5 +1,5 @@
 /** File system events arrive a little after the write that caused them. */
-const AFTER_OWN_WRITE_GRACE_MS = 250;
+export const AFTER_OWN_WRITE_GRACE_MS = 250;
 
 /**
  * The app's own writes to a workspace in progress, and the moment their last file system events should have arrived

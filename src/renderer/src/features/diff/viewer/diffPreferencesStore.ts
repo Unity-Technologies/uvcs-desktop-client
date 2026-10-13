@@ -6,6 +6,7 @@ import type { AnchorMode } from './image/composedFrame';
 import type { ImageDiffMode } from './image/imageDiffModes';
 import type { ModelDiffMode } from './model/modelDiffModes';
 import type { DrawMode } from './model/modelRenderer';
+import { surfaceFromColorBySlot, type SurfaceLook } from './model/surfaceLook';
 
 export type DiffLayout = 'split' | 'unified';
 
@@ -26,8 +27,8 @@ interface DiffPreferences {
   modelMode: ModelDiffMode;
   /** Unity's Scene view draw modes: shaded, wireframe, or both. */
   modelDrawMode: DrawMode;
-  /** Each material slot in its color, instead of clay. */
-  modelColorBySlot: boolean;
+  /** Clay, each material slot in its color, or the materials as Unity shows them (`SurfaceLook`). */
+  modelSurface: SurfaceLook;
   /** Each version's skeleton drawn over it. */
   modelShowBones: boolean;
   /** The "What changed" panel open; folded by default, so the model has the stage, its count and risks still shown. */
@@ -44,7 +45,7 @@ interface DiffPreferences {
   setImageTolerance: (tolerance: number) => void;
   setModelMode: (mode: ModelDiffMode) => void;
   setModelDrawMode: (drawMode: DrawMode) => void;
-  setModelColorBySlot: (colorBySlot: boolean) => void;
+  setModelSurface: (surface: SurfaceLook) => void;
   setModelToleranceShare: (share: number) => void;
   setModelShowBones: (show: boolean) => void;
   setModelChangesOpen: (open: boolean) => void;
@@ -63,7 +64,7 @@ export const useDiffPreferences = create<DiffPreferences>()(
       imageTolerance: 0,
       modelMode: 'sideBySide',
       modelDrawMode: 'shaded',
-      modelColorBySlot: false,
+      modelSurface: 'clay',
       modelToleranceShare: 0.001,
       modelShowBones: false,
       modelChangesOpen: false,
@@ -78,11 +79,17 @@ export const useDiffPreferences = create<DiffPreferences>()(
       setImageTolerance: (imageTolerance) => set({ imageTolerance }),
       setModelMode: (modelMode) => set({ modelMode }),
       setModelDrawMode: (modelDrawMode) => set({ modelDrawMode }),
-      setModelColorBySlot: (modelColorBySlot) => set({ modelColorBySlot }),
+      setModelSurface: (modelSurface) => set({ modelSurface }),
       setModelToleranceShare: (modelToleranceShare) => set({ modelToleranceShare }),
       setModelShowBones: (modelShowBones) => set({ modelShowBones }),
       setModelChangesOpen: (modelChangesOpen) => set({ modelChangesOpen }),
     }),
-    { name: 'diff-preferences' },
+    { name: 'diff-preferences', version: 1, migrate: migrateDiffPreferences },
   ),
 );
+
+/** Version 0 kept slot colors as `modelColorBySlot`: version 1 keeps the surface look, one choice of three. */
+export function migrateDiffPreferences(persisted: unknown, version: number): DiffPreferences {
+  const { modelColorBySlot, ...rest } = (persisted ?? {}) as Partial<DiffPreferences> & { modelColorBySlot?: unknown };
+  return (version < 1 ? { ...rest, modelSurface: surfaceFromColorBySlot(modelColorBySlot) } : rest) as DiffPreferences;
+}

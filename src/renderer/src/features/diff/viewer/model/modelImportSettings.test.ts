@@ -24,7 +24,7 @@ describe('readImportSettings', () => {
         '      type: UnityEngine:Material',
         '      assembly: UnityEngine.CoreModule',
         '      name: Wood',
-        '    second: {fileID: 2100000, guid: 0f2b, type: 2}',
+        '    second: {fileID: 2100000, guid: 0f2b6c1e9a8d4b3c8e7f6a5b4c3d2e1f, type: 2}',
         '  animations:',
         '    clipAnimations:',
         '    - serializedVersion: 16',
@@ -35,11 +35,64 @@ describe('readImportSettings', () => {
       ),
     );
     expect(settings.clips).toEqual([{ name: 'Wave', takeName: 'Wave', firstFrame: 0, lastFrame: 36 }]);
-    expect(settings.remappedSlots).toEqual(['Wood']);
+    expect(settings.materialRemaps).toEqual([{ slot: 'Wood', guid: '0f2b6c1e9a8d4b3c8e7f6a5b4c3d2e1f' }]);
+  });
+
+  it('reads how materials are made: the mode, the textures remapped by name and the global texture search', () => {
+    const settings = readImportSettings(
+      meta(
+        '  externalObjects:',
+        '  - first:',
+        '      type: UnityEngine:Texture2D',
+        '      assembly: UnityEngine.CoreModule',
+        '      name: bark_albedo',
+        '    second: {fileID: 2800000, guid: 6d1e0c9b8a7f4e3d2c1b0a9f8e7d6c5b, type: 3}',
+        '  - first:',
+        '      type: UnityEngine:Material',
+        '      assembly: UnityEngine.CoreModule',
+        "      name: 'Leaves: Oak'",
+        '    second: {fileID: 0}',
+        '  materials:',
+        '    materialImportMode: 0',
+        '    materialName: 0',
+        '    materialSearch: 1',
+        '    materialLocation: 1',
+        '    searchTexturesGlobally: 0',
+        '  remapMaterialsIfMaterialImportModeIsNone: 1',
+      ),
+    );
+    expect(settings).toMatchObject({
+      materialImport: 'none',
+      remapsWithoutMaterials: true,
+      // A remap to nothing (`{fileID: 0}`, the asset was deleted) remaps nothing.
+      materialRemaps: [],
+      textureRemaps: [{ name: 'bark_albedo', guid: '6d1e0c9b8a7f4e3d2c1b0a9f8e7d6c5b' }],
+      searchTexturesGlobally: false,
+    });
+  });
+
+  it("reads a .meta older than Unity 2019.3's import mode; without 2021.2's setting, remaps don't apply with None, as Unity imports it", () => {
+    const legacy = readImportSettings(meta('  materials:', '    importMaterials: 0', '    materialName: 0', '    materialSearch: 1'));
+    expect(legacy).toMatchObject({ materialImport: 'none', remapsWithoutMaterials: false });
+    expect(readImportSettings(meta('  materials:', '    materialImportMode: 0', '  remapMaterialsIfMaterialImportModeIsNone: 1')).remapsWithoutMaterials).toBe(true);
+    expect(readImportSettings(meta('  materials:', '    importMaterials: 1')).materialImport).toBe('fromFile');
+    expect(readImportSettings(meta('  materials:', '    materialImportMode: 0', '  remapMaterialsIfMaterialImportModeIsNone: 0')).remapsWithoutMaterials).toBe(false);
+  });
+
+  it('searches textures globally as the .meta says, or, without the setting, as the importer version it was written by did', () => {
+    const importer = (version: number, ...lines: string[]) => ['fileFormatVersion: 2', 'ModelImporter:', `  serializedVersion: ${version}`, '  materials:', '    materialImportMode: 2', ...lines].join('\n');
+    expect(readImportSettings(importer(24600, '    searchTexturesGlobally: 1')).searchTexturesGlobally).toBe(true);
+    expect(readImportSettings(importer(22200, '    searchTexturesGlobally: 0')).searchTexturesGlobally).toBe(false);
+    // Before the setting (ModelImporter 24600) Unity always searched; from it, a .meta without it doesn't.
+    expect(readImportSettings(importer(22200)).searchTexturesGlobally).toBe(true);
+    expect(readImportSettings(importer(24600)).searchTexturesGlobally).toBe(false);
+    expect(readImportSettings(importer(24300)).materialImport).toBe('fromFile');
+    expect(DEFAULT_IMPORT_SETTINGS.searchTexturesGlobally).toBe(false);
   });
 
   it("keeps Unity's defaults for what the .meta doesn't set, or a .meta that is no ModelImporter's", () => {
-    expect(readImportSettings(meta())).toEqual(DEFAULT_IMPORT_SETTINGS);
+    // An importer's .meta without the texture search predates it: textures were searched for everywhere then.
+    expect(readImportSettings(meta())).toEqual({ ...DEFAULT_IMPORT_SETTINGS, searchTexturesGlobally: true });
     expect(readImportSettings('fileFormatVersion: 2\nScriptedImporter:\n  userData: \n')).toEqual(DEFAULT_IMPORT_SETTINGS);
     expect(readImportSettings('not yaml at all {')).toEqual(DEFAULT_IMPORT_SETTINGS);
   });

@@ -6,11 +6,12 @@ import { AnimationClip, type BufferAttribute, type BufferGeometry, type Interlea
 import type { BlendShape, MeshAttributes, MeshGroup, ModelClip, ModelMesh, ModelNode, ModelNodeKind, ParsedModel } from './parsedModel';
 
 /** What the loader told besides the objects (`parseModel` reads it from the file). */
-export type ModelFileFacts = Pick<ParsedModel, 'format' | 'textures' | 'unitScale' | 'upAxis' | 'axisConversion' | 'exportedFrom' | 'frameRate'>;
+export type ModelFileFacts = Pick<ParsedModel, 'format' | 'textures' | 'materials' | 'unitScale' | 'upAxis' | 'axisConversion' | 'exportedFrom' | 'frameRate'>;
 
 type AnyAttribute = BufferAttribute | InterleavedBufferAttribute;
 
-export function fromThreeObject(root: Object3D, animations: AnimationClip[], facts: ModelFileFacts): ParsedModel {
+/** `materialIndexOf`: where each of the loader's materials is in `facts.materials` (`fileMaterialsOf`). */
+export function fromThreeObject(root: Object3D, animations: AnimationClip[], facts: ModelFileFacts, materialIndexOf: ReadonlyMap<Material, number> = new Map()): ParsedModel {
   const nodes: ModelNode[] = [];
   const meshes: ModelMesh[] = [];
   const indexOf = new Map<Object3D, number>();
@@ -36,7 +37,7 @@ export function fromThreeObject(root: Object3D, animations: AnimationClip[], fac
       scale: object.scale.toArray(),
     });
     if (isMesh(object)) {
-      const parsed = meshOf(object as Mesh, index);
+      const parsed = meshOf(object as Mesh, index, materialIndexOf);
       meshes.push(parsed);
       if ((object as SkinnedMesh).isSkinnedMesh) skinned.push({ mesh: object as SkinnedMesh, parsed });
     }
@@ -68,7 +69,7 @@ function isMesh(object: Object3D): boolean {
   return (object as Mesh).isMesh === true;
 }
 
-function meshOf(mesh: Mesh, node: number): ModelMesh {
+function meshOf(mesh: Mesh, node: number, materialIndexOf: ReadonlyMap<Material, number>): ModelMesh {
   const geometry = mesh.geometry;
   const materials: Material[] = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
   const color = geometry.getAttribute('color') as AnyAttribute | undefined;
@@ -87,6 +88,7 @@ function meshOf(mesh: Mesh, node: number): ModelMesh {
     attributes,
     index: geometry.index ? Uint32Array.from(geometry.index.array) : null,
     slots: materials.map((material) => material.name),
+    slotMaterials: materials.map((material) => materialIndexOf.get(material) ?? -1),
     groups: groupsOf(geometry, attributes.position.length / 3),
     skin: null,
     blendShapes: blendShapesOf(mesh),

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { WorkspaceChange } from '@shared/domain/workspaceChange';
+import { AFTER_OWN_WRITE_GRACE_MS } from './OwnWrites';
 import { WorkspaceWatchers, type Watcher } from './WorkspaceWatchers';
 
 const CHANGE: WorkspaceChange = { content: true, pathsChanged: false, metadata: false, folders: [''] };
@@ -81,5 +82,66 @@ describe('WorkspaceWatchers', () => {
     expect(created.map((watcher) => watcher.ignored)).toEqual([0, 1]);
     watchers.ignoreOwnWrite(Promise.resolve());
     expect(created.map((watcher) => watcher.ignored)).toEqual([1, 2]);
+  });
+
+  it('tells what listens to the files every change, and when they stop being all seen', () => {
+    const { watchers, created } = setUp();
+    const heard: string[] = [];
+    const stop = watchers.listen({ changed: (path, change) => heard.push(`${path} changed in ${change.folders}`), unwatched: (path) => heard.push(`${path} unwatched`) });
+    watchers.watch(1, '/wk/a');
+    watchers.watch(2, '/wk/b');
+
+    created[0]!.emit();
+    created[1]!.breaks();
+    watchers.release(1);
+    stop();
+    created[1]!.emit();
+    expect(heard).toEqual(['/wk/a changed in ', '/wk/b unwatched', '/wk/a unwatched']);
+  });
+
+  it("tells what listens to the files that the app's own write changed anything, once it settles, though the windows don't hear it", async () => {
+    const { watchers } = setUp();
+    const heard: string[] = [];
+    watchers.listen({ changed: (path, change) => heard.push(`${path} changed in ${change.folders === null ? 'anywhere' : change.folders}`), unwatched: () => undefined });
+    watchers.watch(1, '/wk/a');
+    watchers.watch(2, '/wk/b');
+
+    let finish = () => {};
+    const write = new Promise<void>((resolve) => (finish = resolve));
+    watchers.ignoreOwnWrite(write, '/wk/a/src');
+    watchers.ignoreOwnWrite(Promise.resolve(), '/wk/a', 'changelists');
+    expect(heard).toEqual([]);
+    finish();
+    await write;
+    await Promise.resolve();
+    expect(heard).toEqual(['/wk/a changed in anywhere']);
+  });
+
+  it("tells what listens to the files again once the own write's grace ends: a change the watcher dropped meanwhile isn't lost", async () => {
+    vi.useFakeTimers();
+    try {
+      const { watchers } = setUp();
+      const heard: string[] = [];
+      watchers.listen({ changed: (path, change) => heard.push(`${path} changed in ${change.folders === null ? 'anywhere' : change.folders}`), unwatched: () => undefined });
+      watchers.watch(1, '/wk/a');
+      const write = Promise.resolve();
+      watchers.ignoreOwnWrite(write, '/wk/a');
+      await write;
+      await Promise.resolve();
+      expect(heard).toEqual(['/wk/a changed in anywhere']);
+      await vi.advanceTimersByTimeAsync(AFTER_OWN_WRITE_GRACE_MS);
+      expect(heard).toEqual(['/wk/a changed in anywhere', '/wk/a changed in anywhere']);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('tells how much of a workspace its watcher sees, and nothing for one not watched', () => {
+    const { watchers, created } = setUp();
+    watchers.watch(1, '/wk/a');
+    expect(watchers.coverageOf('/wk/a')).toBe('full');
+    created[0]!.breaks();
+    expect(watchers.coverageOf('/wk/a')).toBe('partial');
+    expect(watchers.coverageOf('/wk/b')).toBeUndefined();
   });
 });

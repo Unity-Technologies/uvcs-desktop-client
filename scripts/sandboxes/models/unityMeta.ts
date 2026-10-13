@@ -24,6 +24,8 @@ export interface ModelImporterSettings {
   /** The import settings' Scale Factor, applied over the file's own units ("Convert Units", `useFileScale`). */
   globalScale: number;
   clips?: ClipSplit[];
+  /** Material slots remapped to a material of the project ("On Demand Remap" in the Materials tab), by slot name. */
+  materialRemaps?: { slot: string; materialPath: string }[];
 }
 
 /** Unity's class ID for an AnimationClip, which `internalIDToNameTable` names the clips by. */
@@ -41,7 +43,7 @@ export function modelImporterMeta(path: string, settings: ModelImporterSettings)
       `      ${ANIMATION_CLIP_CLASS_ID}: ${internalIdOf(path, clip.name)}`,
       `    second: ${clip.name}`,
     ])),
-    '  externalObjects: {}',
+    ...externalObjects(settings.materialRemaps ?? []),
     '  materials:',
     '    materialImportMode: 2',
     '    materialName: 0',
@@ -220,6 +222,66 @@ export function gltfastImporterMeta(path: string): string {
     '  reportItems: []',
     '',
   ].join('\n');
+}
+
+/** `externalObjects`: each remap names the slot and points at the material asset by its GUID. */
+function externalObjects(remaps: { slot: string; materialPath: string }[]): string[] {
+  if (remaps.length === 0) return ['  externalObjects: {}'];
+  return [
+    '  externalObjects:',
+    ...remaps.flatMap(({ slot, materialPath }) => [
+      '  - first:',
+      '      type: UnityEngine:Material',
+      '      assembly: UnityEngine.CoreModule',
+      `      name: ${slot}`,
+      `    second: {fileID: 2100000, guid: ${guidOf(materialPath)}, type: 2}`,
+    ]),
+  ];
+}
+
+/** A texture's `.meta`, its TextureImporter's defaults (a normal map's type 1, not sRGB), as Unity 6.3 writes the start of it. */
+export function textureImporterMeta(path: string, { normalMap = false } = {}): string {
+  return [
+    'fileFormatVersion: 2',
+    `guid: ${guidOf(path)}`,
+    'TextureImporter:',
+    '  internalIDToNameTable: []',
+    '  externalObjects: {}',
+    '  serializedVersion: 13',
+    '  mipmaps:',
+    '    mipMapMode: 0',
+    '    enableMipMap: 1',
+    `    sRGBTexture: ${normalMap ? 0 : 1}`,
+    '    linearTexture: 0',
+    '  isReadable: 0',
+    '  streamingMipmaps: 0',
+    '  textureFormat: 1',
+    '  maxTextureSize: 2048',
+    '  textureSettings:',
+    '    serializedVersion: 2',
+    '    filterMode: 1',
+    '    aniso: 1',
+    '    mipBias: 0',
+    '    wrapU: 0',
+    '    wrapV: 0',
+    '    wrapW: 0',
+    '  nPOTScale: 1',
+    '  lightmap: 0',
+    '  compressionQuality: 50',
+    '  alphaUsage: 1',
+    '  alphaIsTransparency: 0',
+    `  textureType: ${normalMap ? 1 : 0}`,
+    '  textureShape: 1',
+    '  userData: ',
+    '  assetBundleName: ',
+    '  assetBundleVariant: ',
+    '',
+  ].join('\n');
+}
+
+/** A material's `.meta`: Unity keeps the material in the file itself (NativeFormatImporter). */
+export function materialMeta(path: string): string {
+  return ['fileFormatVersion: 2', `guid: ${guidOf(path)}`, 'NativeFormatImporter:', '  externalObjects: {}', '  mainObjectFileID: 2100000', '  userData: ', '  assetBundleName: ', '  assetBundleVariant: ', ''].join('\n');
 }
 
 /** The `.meta` of a file Unity imports as nothing in particular, like a glTF's `.bin`. */

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { modelStats, movedStat } from './modelStats';
+import type { TextureIssue } from './materials/materialPlan';
+import { modelStats, movedStat, texturesStat } from './modelStats';
 import { modelSummary } from './modelSummary';
 import { testModel } from './testing/testModels';
 
@@ -44,5 +45,27 @@ describe('movedStat', () => {
   it('tells a tiny share as under 1%, and nothing moved as None', () => {
     expect(movedStat(comparison([...Array(999).fill(0), 0.5]), 0.001).after).toBe('<1% · up to 50 cm');
     expect(movedStat(comparison([0, 0.0005]), 0.001).after).toBe('None');
+  });
+});
+
+describe('texturesStat', () => {
+  it('counts the textures that show, naming the first eight that don\'t and why', () => {
+    const issues: TextureIssue[] = Array.from({ length: 10 }, (_, i) => ({ name: `gone${i}.png`, problem: 'missing' }));
+    issues[1] = { name: 'bark.psd', problem: 'psdWithoutComposite' };
+    const stat = texturesStat({ total: 22, shown: 12, loading: 0, issues });
+    expect(stat).toMatchObject({ label: 'Textures', before: null, after: '12 of 22' });
+    expect(stat!.tip!.split('\n')).toEqual([
+      'Textures shown, as the workspace has them',
+      'gone0.png: not in the workspace',
+      "bark.psd: can't read this PSD: save it with Maximize Compatibility",
+      ...[2, 3, 4, 5, 6, 7].map((i) => `gone${i}.png: not in the workspace`),
+      'and 2 more',
+    ]);
+  });
+
+  it('reads "12" when all show, says how many are loading, and shows nothing without textures', () => {
+    expect(texturesStat({ total: 12, shown: 12, loading: 0, issues: [] })?.after).toBe('12');
+    expect(texturesStat({ total: 3, shown: 1, loading: 2, issues: [] })?.tip).toContain('Loading 2…');
+    expect(texturesStat({ total: 0, shown: 0, loading: 0, issues: [] })).toBeNull();
   });
 });

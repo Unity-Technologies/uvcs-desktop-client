@@ -15,17 +15,24 @@ export function noTextureLoading(onTexture: (fileName: string) => void, companio
   return manager;
 }
 
-/** A texture loader that loads nothing: FBXLoader takes the texture `load` returns, glTF's loader the one it calls back with. */
-class TextureNames extends Loader<Texture> {
+/**
+ * A texture loader that loads nothing: FBXLoader takes the texture `load` returns, glTF's loader the one it calls back
+ * with (`parseModel` routes every glTF texture here, embedded ones too, so none is decoded).
+ */
+export class TextureNames extends Loader<Texture> {
   constructor(private readonly onTexture: (fileName: string) => void) {
     super();
   }
 
   override load(url: string, onLoad?: (texture: Texture) => void): Texture {
+    const texture = new Texture();
     // A texture embedded in the file comes as a blob URL the loader made: nothing names it, and nothing will read it.
     if (url.startsWith('blob:')) URL.revokeObjectURL(url);
-    else if (!isOwnBytes(url)) this.onTexture(decodedName(fileNameOf(url)));
-    const texture = new Texture();
+    else if (!isOwnBytes(url)) {
+      this.onTexture(decodedName(fileNameOf(url)));
+      // The path as the loader asked for it: what the file's materials tell of the texture (`textureSources`).
+      texture.userData.path = decodedName(url);
+    }
     onLoad?.(texture);
     return texture;
   }

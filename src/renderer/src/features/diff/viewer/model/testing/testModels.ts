@@ -3,7 +3,7 @@
 
 import { AnimationClip, Euler, Quaternion } from 'three';
 import { fbxAxisConversion, Y_UP_AXES } from '../fbxAxes';
-import type { ModelClip, ModelMesh, ModelNode, ModelNodeKind, ParsedModel } from '../parsedModel';
+import type { FileMaterial, ModelClip, ModelMesh, ModelNode, ModelNodeKind, ParsedModel } from '../parsedModel';
 
 export interface TestNode {
   name: string;
@@ -41,6 +41,7 @@ export interface TestModel {
   upAxis?: 'y' | 'z';
   clips?: { name: string; duration: number }[];
   textures?: string[];
+  materials?: FileMaterial[];
   exportedFrom?: string | null;
 }
 
@@ -70,6 +71,7 @@ export function testModel(spec: TestModel): ParsedModel {
     meshes,
     clips: (spec.clips ?? []).map((clip): ModelClip => ({ ...clip, tracks: AnimationClip.toJSON(new AnimationClip(clip.name, clip.duration, [])) })),
     textures: spec.textures ?? [],
+    materials: spec.materials ?? [],
     unitScale: spec.unitScale ?? 1,
     importScale: spec.importScale ?? 1,
     frameRate: spec.frameRate ?? null,
@@ -121,6 +123,7 @@ function boxMesh(node: number, mesh: TestMesh, nodeIndex: Map<string, number>): 
     },
     index: null,
     slots,
+    slotMaterials: slots.map(() => -1),
     groups: slots.map((_, slot) => ({ start: slot * facesPerSlot * 6, count: facesPerSlot * 6, slot })),
     skin: mesh.bones ? { bones: mesh.bones.map((bone) => nodeIndex.get(bone)!), boneInverses: new Float32Array(mesh.bones.length * 16) } : null,
     blendShapes: (mesh.blendShapes ?? []).map((name) => ({ name, deltas: new Float32Array(vertexCount * 3) })),

@@ -1,7 +1,7 @@
 // Writes ASCII FBX 7.4, as the DCC tools export it, for tests and the models sandbox (`scripts/sandboxes/models.sh`):
 // a hierarchy of meshes, empties and bones with their transforms, each mesh's material slots per polygon and its UVs,
-// animation takes, and the global settings (up axis, units, the exporting app). Only what the diff reads; never
-// shipped in the app.
+// the materials' colors and the texture files they name, animation takes, and the global settings (up axis, units,
+// the exporting app). Only what the diff reads; never shipped in the app.
 
 export interface FbxScene {
   /** 1: Y-up (Maya), 2: Z-up (Blender's own axes, 3ds Max). */
@@ -12,6 +12,22 @@ export interface FbxScene {
   nodes: FbxNodeSpec[];
   /** Animation takes ("AnimStack"s), which Unity imports as clips: Maya names its one take "Take 001". */
   takes?: FbxTake[];
+  /** What a material slot's material sets, by its name; a slot without one is a plain Phong material. */
+  materials?: Record<string, FbxMaterialSpec>;
+}
+
+export interface FbxMaterialSpec {
+  /** sRGB, as DCC tools write `DiffuseColor`. */
+  diffuse?: [number, number, number];
+  opacity?: number;
+  diffuseTexture?: FbxTextureSpec;
+  normalTexture?: FbxTextureSpec;
+}
+
+/** A texture file as an exporter names it: the path on the artist's machine, and relative to the FBX. */
+export interface FbxTextureSpec {
+  fileName: string;
+  relativeFileName?: string;
 }
 
 export interface FbxTake {
@@ -74,8 +90,11 @@ export function asciiFbx(scene: FbxScene): string {
       connections.push(`\tC: "OO",${id + 1},${id}`);
       for (const material of node.mesh.materials) {
         if (!materialIds.has(material)) {
-          materialIds.set(material, 900000 + materialIds.size);
-          objects.push(`\tMaterial: ${materialIds.get(material)}, "Material::${material}", "" {\n\t\tVersion: 102\n\t\tShadingModel: "phong"\n\t}`);
+          const materialId = 900000 + materialIds.size * 10;
+          materialIds.set(material, materialId);
+          const written = materialObjects(materialId, material, scene.materials?.[material] ?? {});
+          objects.push(...written.objects);
+          connections.push(...written.connections);
         }
         connections.push(`\tC: "OO",${materialIds.get(material)},${id}`);
       }
@@ -169,6 +188,42 @@ function takeObjects(take: FbxTake, firstId: number, nodeIds: Map<string, number
       );
       connections.push(`\tC: "OP",${curveId},${curveNodeId}, "d|${axis}"`);
     });
+  });
+  return { objects, connections };
+}
+
+/** A material with its colors, and each texture as FBX nests it: a Texture object over a Video (the image file). */
+function materialObjects(id: number, name: string, spec: FbxMaterialSpec): { objects: string[]; connections: string[] } {
+  const properties = [
+    spec.diffuse && `\t\t\tP: "DiffuseColor", "Color", "", "A",${spec.diffuse.join(',')}`,
+    spec.opacity !== undefined && `\t\t\tP: "Opacity", "double", "Number", "",${spec.opacity}`,
+  ].filter((line): line is string => typeof line === 'string');
+  const objects = [`\tMaterial: ${id}, "Material::${name}", "" {`, '\t\tVersion: 102', '\t\tShadingModel: "phong"', '\t\tProperties70:  {', ...properties, '\t\t}', '\t}'];
+  const connections: string[] = [];
+  const textures: [FbxTextureSpec | undefined, string][] = [
+    [spec.diffuseTexture, 'DiffuseColor'],
+    [spec.normalTexture, 'NormalMap'],
+  ];
+  textures.forEach(([texture, property], i) => {
+    if (!texture) return;
+    const textureId = id + 1 + i * 2;
+    const videoId = textureId + 1;
+    const fileName = texture.fileName.split(/[\\/]/).pop()!;
+    const files = [`\t\tFileName: "${texture.fileName}"`, `\t\tRelativeFilename: "${texture.relativeFileName ?? ''}"`];
+    objects.push(
+      `\tVideo: ${videoId}, "Video::${fileName}", "Clip" {`,
+      '\t\tType: "Clip"',
+      ...files.map((line) => line.replace('FileName', 'Filename')),
+      '\t}',
+      `\tTexture: ${textureId}, "Texture::${fileName}", "" {`,
+      '\t\tType: "TextureVideoClip"',
+      '\t\tVersion: 202',
+      `\t\tTextureName: "Texture::${fileName}"`,
+      `\t\tMedia: "Video::${fileName}"`,
+      ...files,
+      '\t}',
+    );
+    connections.push(`\tC: "OO",${videoId},${textureId}`, `\tC: "OP",${textureId},${id}, "${property}"`);
   });
   return { objects, connections };
 }

@@ -67,6 +67,8 @@ export interface ModelMesh {
   index: Uint32Array | null;
   /** The material slots' names: Unity remaps materials onto a model by these. */
   slots: string[];
+  /** Each slot's material, as an index in `ParsedModel.materials`: a glTF's materials may all be unnamed. */
+  slotMaterials: number[];
   groups: MeshGroup[];
   skin: MeshSkin | null;
   blendShapes: BlendShape[];
@@ -80,6 +82,42 @@ export interface ModelClip {
   tracks: AnimationClipJSON;
 }
 
+/** How a material treats its alpha: ignored, cut out below a cutoff (leaves, fences), or blended (glass). */
+export type AlphaMode = 'opaque' | 'clip' | 'blend';
+
+/** Where a texture a material of the file uses comes from. */
+export type FileTexture =
+  /** A file Unity searches the project for (FBX, OBJ's MTL): its name, and the paths the file stores for it. */
+  | { kind: 'named'; name: string; storedPaths: string[] }
+  /** One of a glTF's images, by its index, held in the file (a buffer view, a `data:` URI). */
+  | { kind: 'gltfImage'; image: number }
+  /** A glTF image in a file of its own, by the path its URI gives from the glTF's folder. */
+  | { kind: 'beside'; path: string };
+
+/** A texture as a material maps it: `uv * repeat + offset`, turned by `rotation` radians (three's texture transform). */
+export interface TextureUse {
+  texture: FileTexture;
+  repeat: [number, number];
+  offset: [number, number];
+  rotation: number;
+  /** The UV set it samples: 0, or 1 (`MeshAttributes.uv1`) for a glTF map with `texCoord: 1`. */
+  channel: number;
+}
+
+/** A material slot's material as the file defines it, which Unity makes its material of (unless remapped). */
+export interface FileMaterial {
+  /** The slot's name. */
+  name: string;
+  /** Linear RGB (three's working space): the file's sRGB colors converted, a glTF's as they are. */
+  color: [number, number, number];
+  opacity: number;
+  baseMap: TextureUse | null;
+  normalMap: TextureUse | null;
+  alpha: AlphaMode;
+  cutoff: number;
+  doubleSided: boolean;
+}
+
 export interface ParsedModel {
   format: ModelFormat;
   /** Parents before their children; `nodes[0]` is the root (the model itself). */
@@ -88,6 +126,8 @@ export interface ParsedModel {
   clips: ModelClip[];
   /** The texture files the materials name, sorted; never read. */
   textures: string[];
+  /** Each material the meshes use, once (`ModelMesh.slotMaterials`): what the Materials look starts from. */
+  materials: FileMaterial[];
   /** Metres per file unit, as Unity imports it ("Convert Units"): an FBX in centimetres is 0.01. */
   unitScale: number;
   /** What the model's import settings multiply that by (`importScaleOf`: its Scale Factor); 1 when none are read. */

@@ -22,6 +22,7 @@ import {
 } from 'three';
 import type { ModelMesh, ParsedModel } from './parsedModel';
 import type { ModelSummary } from './modelSummary';
+import { slotKeysOf } from './materials/slotKeys';
 import { viewerSpaceOf } from './modelSpaces';
 
 export interface ModelScene {
@@ -41,7 +42,9 @@ export interface ModelScene {
 export interface SceneMesh {
   /** The node key of the mesh. */
   key: string;
+  /** Drawn with `clay` (one material per slot, in the clay or the slot colors), or the Materials look's (`SlotLookMaterials`). */
   solid: Mesh<BufferGeometry, MeshStandardMaterial[]>;
+  clay: MeshStandardMaterial[];
   wire: Mesh<BufferGeometry, MeshBasicMaterial>;
   /** The Differences mode's twins, on the same geometry: the version after colored by how far it moved, the version
    *  before as a ghost of what is gone (`heatColors`, set as the geometry's `color`). Hidden in other modes. */
@@ -49,6 +52,8 @@ export interface SceneMesh {
   ghost: Mesh<BufferGeometry, MeshBasicMaterial>;
   /** Each material slot's name, in the order of `solid.material`. */
   slots: string[];
+  /** Each slot's key to the Materials look (`slotKeysOf`). */
+  slotKeys: string[];
 }
 
 export function buildModelScene(model: ParsedModel, summary: ModelSummary): ModelScene {
@@ -69,7 +74,7 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
     objects.set(summary.nodes[i]!.key, object);
   });
   const meshes = model.meshes.map((mesh) => {
-    const sceneMesh = meshOf(mesh, summary.nodes[mesh.node]!.key);
+    const sceneMesh = meshOf(mesh, summary.nodes[mesh.node]!.key, slotKeysOf(model.format, mesh));
     nodes[mesh.node]!.add(sceneMesh.solid, sceneMesh.wire, sceneMesh.heat, sceneMesh.ghost);
     return sceneMesh;
   });
@@ -92,9 +97,9 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
       });
     },
     dispose() {
-      for (const { solid, wire, heat, ghost } of meshes) {
+      for (const { solid, clay, wire, heat, ghost } of meshes) {
         solid.geometry.dispose();
-        for (const material of solid.material) material.dispose();
+        for (const material of clay) material.dispose();
         wire.material.dispose();
         heat.material.dispose();
         ghost.material.dispose();
@@ -107,7 +112,7 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
  * The mesh as drawn: in its bind pose (a take poses a skinned one: `ModelAnimationBar`), its slots as groups,
  * its normals computed when the file has none, as Unity's importer does.
  */
-function meshOf(mesh: ModelMesh, key: string): SceneMesh {
+function meshOf(mesh: ModelMesh, key: string, slotKeys: string[]): SceneMesh {
   const geometry = new BufferGeometry();
   const skinned = mesh.skin !== null && mesh.attributes.skinIndex !== null && mesh.attributes.skinWeight !== null;
   if (skinned) {
@@ -119,6 +124,8 @@ function meshOf(mesh: ModelMesh, key: string): SceneMesh {
   geometry.setAttribute('position', new BufferAttribute(mesh.attributes.position, 3));
   if (mesh.attributes.normal) geometry.setAttribute('normal', new BufferAttribute(mesh.attributes.normal, 3));
   if (mesh.attributes.uv) geometry.setAttribute('uv', new BufferAttribute(mesh.attributes.uv, 2));
+  // The Materials look's maps on the second UV set sample it (`TextureUse.channel`).
+  if (mesh.attributes.uv1) geometry.setAttribute('uv1', new BufferAttribute(mesh.attributes.uv1, 2));
   if (mesh.index) geometry.setIndex(new BufferAttribute(mesh.index, 1));
   if (!mesh.attributes.normal) geometry.computeVertexNormals();
   for (const group of mesh.groups) geometry.addGroup(group.start, group.count, group.slot);
@@ -131,7 +138,7 @@ function meshOf(mesh: ModelMesh, key: string): SceneMesh {
   heat.visible = false;
   ghost.visible = false;
   for (const object of [solid, wire, heat, ghost]) object.userData.key = key;
-  return { key, solid, wire, heat, ghost, slots: mesh.slots };
+  return { key, solid, clay: materials, wire, heat, ghost, slots: mesh.slots, slotKeys };
 }
 
 /** Each bone with its parent, where the parent is a bone too: the skeleton's lines. */

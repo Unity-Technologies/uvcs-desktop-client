@@ -1,5 +1,5 @@
 import type { ModelBytes } from '@shared/domain/content';
-import { DEFAULT_IMPORT_SETTINGS, importScaleOf, type ModelImportSettings } from './modelImportSettings';
+import { DEFAULT_IMPORT_SETTINGS, importScaleOf, type ImportSettingsSource, type ModelImportSettings } from './modelImportSettings';
 import { modelSummary, type ModelSummary } from './modelSummary';
 import { parseModel, type ModelReadFailure } from './parseModel';
 import type { ParsedModel } from './parsedModel';
@@ -11,9 +11,11 @@ export type ModelFileRead = { kind: 'read'; model: ParsedModel; summary: ModelSu
 export interface ModelReadOptions {
   companions: Readonly<Record<string, Uint8Array>>;
   settings: ModelImportSettings;
+  /** Where `settings` came from: the Materials look takes the workspace's for a version without a `.meta` of its own. */
+  settingsFrom: ImportSettingsSource;
 }
 
-export const PLAIN_READ: ModelReadOptions = { companions: {}, settings: DEFAULT_IMPORT_SETTINGS };
+export const PLAIN_READ: ModelReadOptions = { companions: {}, settings: DEFAULT_IMPORT_SETTINGS, settingsFrom: 'none' };
 
 /**
  * All a model diff needs of one version, worked out once: in the model worker, or on the main thread without it. The
