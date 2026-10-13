@@ -12,26 +12,32 @@ export type PlaceableMesh = Pick<ModelMesh, 'node' | 'skin'> & { attributes: Pic
 /** Floats to place into: singles for drawing and comparing (`placedMeshesOf`), doubles for fingerprints (`modelSummary`). */
 export type PlacedArray = Float32Array | Float64Array;
 
-/**
- * The mesh's vertices in the space `world` (each node's matrix into it, `worldMatricesOf`) places the nodes in,
- * written into `into` (as long as the positions) and returned. In doubles, a rigid mesh a kilometre across is placed
- * to the micrometre; a skinned one only as well as its inverse bind matrices, which files keep in singles.
- */
-export function placedPositionsOf<T extends PlacedArray>(mesh: PlaceableMesh, world: Matrix4[], into: T): T {
-  const { position, skinIndex, skinWeight } = mesh.attributes;
-  if (!mesh.skin || !skinIndex || !skinWeight) return transformed(position, world[mesh.node]!.elements, into);
-  return skinned(position, skinningMatrices(mesh.skin, world, mesh.node), skinIndex, skinWeight, into);
+/** A space to place in, and each node's matrix into it (`worldMatricesOf`). */
+export interface NodePlacement {
+  space: Matrix4;
+  world: Matrix4[];
 }
 
 /**
- * Each bone's matrix from the bound vertices to the space: `bone's world × inverse bind × bind matrix`. A bone that
- * isn't a node of the model (a loader's stand-in) leaves its share of a vertex where the mesh's node puts it.
+ * The mesh's vertices in the placement's space, written into `into` (as long as the positions) and returned. In doubles, a rigid mesh a kilometre across is placed
+ * to the micrometre; a skinned one only as well as its inverse bind matrices, which files keep in singles.
  */
-function skinningMatrices(skin: NonNullable<ModelMesh['skin']>, world: Matrix4[], node: number): number[][] {
+export function placedPositionsOf<T extends PlacedArray>(mesh: PlaceableMesh, { space, world }: NodePlacement, into: T): T {
+  const { position, skinIndex, skinWeight } = mesh.attributes;
+  if (!mesh.skin || !skinIndex || !skinWeight) return transformed(position, world[mesh.node]!.elements, into);
+  return skinned(position, skinningMatrices(mesh.skin, space, world), skinIndex, skinWeight, into);
+}
+
+/**
+ * Each bone's matrix from the bound vertices to the space: `bone's world × inverse bind × bind matrix`. A joint that
+ * isn't a node of the model (a loader's stand-in) stands where it was bound, holding its share of a vertex where the
+ * bind matrix puts it, as `bindSkin` draws it.
+ */
+function skinningMatrices(skin: NonNullable<ModelMesh['skin']>, space: Matrix4, world: Matrix4[]): number[][] {
   const bindMatrix = new Matrix4().fromArray(skin.bindMatrix);
   return skin.bones.map((bone, i) => {
     const boneWorld = world[bone];
-    if (!boneWorld) return world[node]!.elements;
+    if (!boneWorld) return space.clone().multiply(bindMatrix).elements;
     return boneWorld.clone().multiply(new Matrix4().fromArray(skin.boneInverses, i * 16)).multiply(bindMatrix).elements;
   });
 }

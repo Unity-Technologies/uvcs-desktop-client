@@ -6,7 +6,7 @@
 import { Box3, Vector3 } from 'three';
 import type { ModelMesh, ModelNodeKind, ParsedModel } from './parsedModel';
 import { placedPositionsOf } from './meshPlacement';
-import { worldMatricesOf } from './modelSpaces';
+import { unitySpaceOf, worldMatricesOf } from './modelSpaces';
 import { countUniqueVertices, fingerprintOf, NORMAL_WELD_STEP } from './uniqueVertices';
 
 export interface Bounds {
@@ -87,13 +87,14 @@ const PLACED_STEP_METRES = 1e-5;
 
 export function modelSummary(model: ParsedModel): ModelSummary {
   const keys = nodeKeys(model);
-  const world = worldMatricesOf(model);
+  const space = unitySpaceOf(model);
+  const world = worldMatricesOf(model, space);
   const meshOfNode = new Map(model.meshes.map((mesh, i) => [mesh.node, i]));
   const ownBounds: (Bounds | null)[] = model.nodes.map(() => null);
   const meshes = model.meshes.map((mesh) => {
     // Where its vertices sit in Unity's space, as drawn at rest (skinned ones where their bones hold them): read
     // here and let go, so a big model never holds every mesh's placement at once.
-    const placed = placedPositionsOf(mesh, world, new Float64Array(mesh.attributes.position.length));
+    const placed = placedPositionsOf(mesh, { space, world }, new Float64Array(mesh.attributes.position.length));
     ownBounds[mesh.node] = boundsOf(placed);
     return meshSummary(mesh, keys, placed);
   });
