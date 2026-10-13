@@ -87,9 +87,10 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   meshes still made the same way), never from the overall bounds, so adding a backpack isn't a resize and subdividing
   a rock isn't a move. A resize must grow every axis alike: a sculpted ledge is a shape change. A mesh's placement
   (`MeshSummary.placement`) is its node's world, or, skinned, the space it was bound in, so a glTF's skinned mesh
-  whose node alone turned (which places nothing) is no turn. Where geometry went is read of rigid meshes only: a
-  skinned one goes where its bones hold it, and a bone whose rest pose moved is told as that bone, not as the model
-  moved off its pivot.
+  whose node alone turned (which places nothing) is no turn. Where geometry went is told by rigid meshes: a skinned
+  one goes where its bones hold it, so a bone whose rest pose moved is told as that bone, not as the model moved off
+  its pivot. A skinned mesh made the same way must still agree, so a hat scaled or moved beside a body that stayed is
+  no whole-model change.
 - **The hierarchy**: renamed, moved, removed (once, at the top of what went), added; nodes moved, turned or scaled on
   their own; a node's pivot moved (the node moved, its geometry stayed; not told of a skinned mesh's node, whose
   pivot skins nothing). A unit change made up for in the root's scale

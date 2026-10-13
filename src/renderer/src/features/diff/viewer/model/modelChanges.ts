@@ -160,22 +160,31 @@ function refOf(after: SummaryNode | undefined, before: SummaryNode | undefined):
 /**
  * Resized, turned, moved off its pivot: told when every matched mesh moved the same way in Unity's space. A turn and
  * a scale are read from the meshes' placement; a scale applied to the vertices (Blender's "Apply Scale") and a move
- * off the pivot (geometry moved, the model's origin not) from where the geometry went, of rigid meshes only: a skinned
- * mesh's geometry goes where its bones hold it, and a bone moved is told as the bone (`transformChanges`).
+ * off the pivot (geometry moved, the model's origin not) from where the geometry went. Rigid meshes tell that; a
+ * skinned mesh's geometry goes where its bones hold it, so it tells nothing alone (a bone moved is told as the bone,
+ * `transformChanges`), but it must agree: a hat scaled beside a body that stayed is no resize.
  */
 function wholeModelChanges(before: ModelSummary, after: ModelSummary, pairs: MeshPair[]): ModelChange[] {
   const drawn = pairs.filter((pair) => pair.nodeBefore.bounds && pair.nodeAfter.bounds);
   if (drawn.length === 0) return [];
   const motions = drawn.map(motionOf);
-  // Where the geometry went tells a resize or a move only for rigid meshes still made the same way: subdividing or
+  // Where the geometry went tells a resize or a move only for meshes still made the same way: subdividing or
   // sculpting one moves its bounds too.
-  const rigid = drawn.flatMap((pair, i) => (pair.before.skinned || pair.after.skinned ? [] : [{ pair, motion: motions[i]! }]));
-  const geometric = rigid.filter(({ pair: { before, after } }) => before.triangles === after.triangles && before.fingerprints.index === after.fingerprints.index).map(({ motion }) => motion);
+  const sameTopology = drawn.map(({ before, after }) => before.triangles === after.triangles && before.fingerprints.index === after.fingerprints.index);
+  const isSkinned = drawn.map((pair) => pair.before.skinned || pair.after.skinned);
+  const rigid = motions.filter((_, i) => !isSkinned[i]);
+  const geometric = motions.filter((_, i) => !isSkinned[i] && sameTopology[i]);
+  const skinnedAlike = motions.filter((_, i) => isSkinned[i] && sameTopology[i]);
   const geometryTells = rigid.length > 0 && geometric.length === rigid.length;
+  /** What the rigid meshes' geometry agrees on, when every skinned mesh made the same way agrees too. */
+  const agreed = <T>(value: (motion: Motion) => T, close: (a: T, b: T) => boolean): T | undefined => {
+    const told = geometryTells ? shared(geometric.map(value), close) : undefined;
+    return told !== undefined && skinnedAlike.every((motion) => close(value(motion), told)) ? told : undefined;
+  };
   const rotation = shared(motions.map((motion) => motion.rotation), (a, b) => a.angleTo(b) <= radians(TURN_TOLERANCE_DEGREES));
   const unturned = rotation !== undefined && rotation.angleTo(new Quaternion()) <= radians(TURN_TOLERANCE_DEGREES);
   const placementScale = shared(motions.map((motion) => motion.placementScale), closeRatio);
-  const geometryScale = geometryTells ? shared(geometric.map((motion) => motion.geometryScale), closeRatio) : undefined;
+  const geometryScale = agreed((motion) => motion.geometryScale, closeRatio);
   const scale = placementScale !== undefined && !closeRatio(placementScale, 1) ? placementScale : unturned ? geometryScale : undefined;
   const changes: ModelChange[] = [];
   if (scale !== undefined && Math.abs(scale - 1) > SCALE_TOLERANCE) {
@@ -190,8 +199,8 @@ function wholeModelChanges(before: ModelSummary, after: ModelSummary, pairs: Mes
   const degrees = rotation ? (rotation.angleTo(new Quaternion()) * 180) / Math.PI : 0;
   if (rotation && degrees > TURN_TOLERANCE_DEGREES) changes.push({ kind: 'turned', degrees: Math.round(degrees), axis: principalAxis(rotation) });
   if (changes.length === 0) {
-    const offset = geometryTells ? shared(geometric.map((motion) => motion.geometryOffset), (a, b) => a.distanceTo(b) <= DISTANCE_TOLERANCE_METRES) : undefined;
-    if (offset && offset.length() > DISTANCE_TOLERANCE_METRES && geometric.every((motion) => closeRatio(motion.geometryScale, 1))) {
+    const offset = agreed((motion) => motion.geometryOffset, (a, b) => a.distanceTo(b) <= DISTANCE_TOLERANCE_METRES);
+    if (offset && offset.length() > DISTANCE_TOLERANCE_METRES && [...geometric, ...skinnedAlike].every((motion) => closeRatio(motion.geometryScale, 1))) {
       changes.push({ kind: 'offPivot', distance: offset.length() });
     }
   }
