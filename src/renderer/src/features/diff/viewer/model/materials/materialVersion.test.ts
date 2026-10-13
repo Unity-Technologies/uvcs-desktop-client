@@ -30,4 +30,17 @@ describe('materialsInputOf', () => {
     ]);
     expect(materialsInputOf(null, [brick])).toBeNull();
   });
+
+  it(".meta settings: the version's when its .meta was read, the workspace's when none was found for it", () => {
+    const model = testModel({ nodes: [{ name: 'Ball', mesh: { slots: ['Mat1'] } }] });
+    model.meshes[0]!.slotMaterials = [0];
+    model.materials = [fileMaterial('Mat1', { color: [0, 0, 0] })];
+    const none = { ...DEFAULT_IMPORT_SETTINGS, materialImport: 'none' as const };
+    const version = (settings = DEFAULT_IMPORT_SETTINGS) => ({ model, bytes: { bytes: new Uint8Array(), format: 'fbx' as const }, options: { ...PLAIN_READ, settings }, path: 'Assets/Ball.fbx' });
+    // The last change in Files reads no .meta for a version whose .meta changed since: the workspace's decides.
+    expect(materialsInputOf(version(), null, none)?.settings).toBe(none);
+    const remapped = { ...DEFAULT_IMPORT_SETTINGS, materialRemaps: [{ slot: 'Mat1', guid: '0f2b6c1e9a8d4b3c8e7f6a5b4c3d2e1f' }] };
+    expect(materialsInputOf(version(remapped), null, none)?.settings).toBe(remapped);
+    expect(materialsInputOf(version(), null, null)?.settings).toBe(DEFAULT_IMPORT_SETTINGS);
+  });
 });
