@@ -57,7 +57,8 @@ export function diffSibling(entries: DiffEntry[], target: DiffTarget, workspaceR
   };
 }
 
-function pointOf(target: DiffTarget): string {
+/** Where a committed diff points to: a changeset, a branch's head, a shelve, the end of a range. */
+export function pointOf(target: DiffTarget): string {
   switch (target.kind) {
     case 'changeset':
       return `cs:${target.changesetId}`;

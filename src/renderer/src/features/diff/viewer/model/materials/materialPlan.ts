@@ -7,9 +7,9 @@
 //      can't show (`TextureProblem`);
 //   4. `budgeted`: both versions' textures within the budget, the same file once;
 //   5. `slotLooks`: each slot as drawn now, with the textures decoded so far; `texturesReport` for the info strip.
-// Materials and textures are always the workspace's, whichever version of the model shows (docs/features/model-diff.md).
+// Materials and textures are those where each version is (its `AssetsPoint`, docs/features/model-diff.md "Materials").
 
-import type { FoundFile, TextureLookup, UnityAssetsRequest } from '@shared/domain/unityAssets';
+import { foundFileKey, type AssetsPoint, type FoundFile, type TextureLookup, type UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { Color, SRGBColorSpace } from 'three';
 import { siblingPath } from '../modelSiblings';
 import type { AlphaMode, FileMaterial, FileTexture, TextureUse } from '../parsedModel';
@@ -114,7 +114,7 @@ export interface VersionPlan {
 }
 
 /** Step 1. */
-export function assetsRequest(version: ModelMaterialsInput, sources: Map<string, SlotSource>, modelPath: string): UnityAssetsRequest {
+export function assetsRequest(version: ModelMaterialsInput, sources: Map<string, SlotSource>, modelPath: string, point: AssetsPoint): UnityAssetsRequest {
   const textures = new Map<string, TextureLookup>();
   const paths = new Set<string>();
   const guids = new Set<string>();
@@ -130,7 +130,7 @@ export function assetsRequest(version: ModelMaterialsInput, sources: Map<string,
       }
     }
   }
-  return { modelPath, textures: [...textures.values()], guids: [...guids], paths: [...paths], searchTexturesGlobally: version.settings.searchTexturesGlobally };
+  return { modelPath, point, textures: [...textures.values()], guids: [...guids], paths: [...paths], searchTexturesGlobally: version.settings.searchTexturesGlobally };
 }
 
 /** Step 2: the textures the `.mat` files read use, to look up by GUID. */
@@ -176,7 +176,8 @@ export function planVersion(version: ModelMaterialsInput, sources: Map<string, S
       issues.set(fileName, { name: fileName, problem: 'psbNotImported' });
       return null;
     }
-    const id = `${flipY ? 'up' : 'down'}:${file.path}`;
+    // One per version of the file: both versions of a model may find a texture at one path in two revisions.
+    const id = `${flipY ? 'up' : 'down'}:${foundFileKey(file)}`;
     needs.set(id, { id, name: fileName, where: { kind: 'file', file }, flipY });
     return { need: id, ...transform };
   };
@@ -330,8 +331,9 @@ export function slotLooks(plan: VersionPlan, states: ReadonlyMap<string, NeedSta
   for (const [slot, planned] of plan.slots) {
     if (!planned) continue;
     const baseMap = mapOf(planned.baseMap);
+    const waiting = planned.baseMap !== null && states.get(planned.baseMap.need)?.kind === 'loading';
     looks.set(slot, {
-      color: baseMap ? planned.colorWithMap : planned.color,
+      color: baseMap ? planned.colorWithMap : waiting ? waitingColorOf(planned.color) : planned.color,
       opacity: planned.opacity,
       alpha: planned.alpha,
       cutoff: planned.cutoff,
@@ -343,12 +345,41 @@ export function slotLooks(plan: VersionPlan, states: ReadonlyMap<string, NeedSta
   return looks;
 }
 
+/**
+ * Each slot as it will be drawn while its textures load, from its source alone, while the version's materials are
+ * still being found (a listing, the `.meta` and `.mat` files): a file's material in its color, darkened where it has a
+ * base map (`WAITING_SHADE`), as `slotLooks` draws it once found; a project's material darkened too, as most are
+ * textured. So the look goes from these straight to the textures, never through clay first. A slot in Unity's default
+ * material is absent: clay, as it stays.
+ */
+export function findingLooks(sources: ReadonlyMap<string, SlotSource>): Map<string, SlotLook> {
+  const looks = new Map<string, SlotLook>();
+  for (const [slot, source] of sources) {
+    if (source.kind === 'default') continue;
+    const material = source.kind === 'file' ? source.material : null;
+    looks.set(slot, {
+      color: material && !material.baseMap ? material.color : waitingColorOf(material?.color ?? [1, 1, 1]),
+      opacity: material?.opacity ?? 1,
+      alpha: material?.alpha ?? 'opaque',
+      cutoff: material?.cutoff ?? 0.5,
+      doubleSided: material?.doubleSided ?? false,
+      baseMap: null,
+      normalMap: null,
+    });
+  }
+  return looks;
+}
+
 export interface TexturesReport {
   /** Every texture the versions' materials use, each file once. */
   total: number;
   shown: number;
   loading: number;
+  /** Of those loading, the ones a version found in the repository: they may come from the server. */
+  downloading: number;
   issues: TextureIssue[];
+  /** Whether a version's materials and textures are still being found (listed, their `.meta` and `.mat` files read). */
+  finding: boolean;
 }
 
 export function texturesReport(plans: readonly (VersionPlan | null)[], states: ReadonlyMap<string, NeedState>, over: readonly TextureNeed[]): TexturesReport {
@@ -359,15 +390,30 @@ export function texturesReport(plans: readonly (VersionPlan | null)[], states: R
   const overIds = new Set(over.map((need) => need.id));
   let shown = 0;
   let loading = 0;
+  let downloading = 0;
   for (const need of needs.values()) {
     const state = states.get(need.id);
     if (state?.kind === 'ready') shown++;
     else if (state?.kind === 'failed') issues.set(need.name, { name: need.name, problem: state.problem });
-    else if (!overIds.has(need.id)) loading++;
+    else if (!overIds.has(need.id)) {
+      loading++;
+      if (need.where.kind === 'file' && need.where.file.stored === 'repository') downloading++;
+    }
   }
   for (const need of over) issues.set(need.name, { name: need.name, problem: 'overBudget' });
   const unplanned = [...issues.values()].filter(({ problem }) => problem === 'missing' || problem === 'unsupportedFormat' || problem === 'psbNotImported');
-  return { total: needs.size + unplanned.length, shown, loading, issues: [...issues.values()] };
+  return { total: needs.size + unplanned.length, shown, loading, downloading, issues: [...issues.values()], finding: plans.includes(null) };
+}
+
+/**
+ * How a slot whose base map is on its way is drawn meanwhile: its color (linear) darkened to a mid tone, so a model whose
+ * materials are white under their textures (most glTF exports) doesn't flash as bright clay while they download, and
+ * reads as not yet textured. Its own color once the texture shows, or where it fails.
+ */
+const WAITING_SHADE = 0.35;
+
+function waitingColorOf([r, g, b]: [number, number, number]): [number, number, number] {
+  return [r * WAITING_SHADE, g * WAITING_SHADE, b * WAITING_SHADE];
 }
 
 /** A Unity material's color (sRGB, as kept) in three's linear working space. */

@@ -15,6 +15,8 @@ export interface ModelStat {
   after: string | null;
   /** Its tooltip: what the figure is. */
   tip?: string;
+  /** Work under way behind the figure: how far along (0..1), or null where that isn't known yet; none when done. */
+  progress?: number | null;
 }
 
 export function modelStats(before: ModelSummary | null, after: ModelSummary | null): ModelStat[] {
@@ -81,11 +83,16 @@ const LISTED_ISSUES = 8;
  * naming the ones that don't and why. None for materials without textures.
  */
 export function texturesStat(report: TexturesReport): ModelStat | null {
-  if (report.total === 0) return null;
-  const { total, shown, loading, issues } = report;
-  const lines = ['Textures shown, as the workspace has them'];
+  const { total, shown, loading, downloading, issues, finding } = report;
+  if (total === 0) return finding ? { label: 'Textures', before: null, after: null, tip: 'Finding the materials and textures…', progress: null } : null;
+  const lines = ['Textures shown'];
   for (const issue of issues.slice(0, LISTED_ISSUES)) lines.push(`${issue.name}: ${textureProblemWords(issue.problem)}`);
   if (issues.length > LISTED_ISSUES) lines.push(`and ${formatCount(issues.length - LISTED_ISSUES)} more`);
-  if (loading > 0) lines.push(`Loading ${formatCount(loading)}…`);
-  return { label: 'Textures', before: null, after: shown === total ? formatCount(total) : `${formatCount(shown)} of ${formatCount(total)}`, tip: lines.join('\n') };
+  if (downloading > 0) lines.push(`Getting ${formatCount(downloading)} from the repository…`);
+  if (loading > downloading) lines.push(`Loading ${formatCount(loading - downloading)}…`);
+  if (finding) lines.push("Finding the other version's materials and textures…");
+  // Counting up while they load, a ring filling beside: what may take a while (a download) shows it's under way.
+  const count = shown === total ? formatCount(total) : `${formatCount(shown)} of ${formatCount(total)}`;
+  const busy = loading > 0 || finding;
+  return { label: 'Textures', before: null, after: count, tip: lines.join('\n'), ...(busy && { progress: finding ? null : shown / total }) };
 }

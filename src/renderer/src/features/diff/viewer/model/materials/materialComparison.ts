@@ -3,7 +3,7 @@
 // what the workspace answered for both versions: a find that failed, or a GUID not found that can't be told missing
 // (`guidMisses`: a model outside a Unity project, or in one without a `Library`), would read as missing materials.
 
-import type { GuidMisses, UnityAssetsAnswer, UnityAssetsRequest } from '@shared/domain/unityAssets';
+import type { AssetsPoint, GuidMisses, UnityAssetsAnswer, UnityAssetsRequest } from '@shared/domain/unityAssets';
 import type { ImportSettingsSource } from '../modelImportSettings';
 import { materialChanges, materialsMayDiffer, type MaterialChange, type MaterialSide } from './materialChanges';
 import type { VersionPlan } from './materialPlan';
@@ -26,11 +26,15 @@ export interface ComparisonInput {
 }
 
 /**
- * Whether two versions' materials can be compared: both in a workspace, with a path in it, and a `.meta` read or
- * absent (one whose read failed plans with Unity's defaults, which aren't its settings).
+ * Whether two versions' materials can be compared: both in a workspace, with a path in it and a point to look them up
+ * at (`AssetsPoint`), and a `.meta` read or absent (one whose read failed plans with Unity's defaults, which aren't its
+ * settings).
  */
-export function comparableVersions(workspacePath: string, versions: readonly ({ path: string | null; options: { settingsFrom: ImportSettingsSource } } | null)[]): boolean {
-  return workspacePath !== '' && versions.every((version) => version !== null && version.path !== null && version.options.settingsFrom !== 'failed');
+export function comparableVersions(
+  workspacePath: string,
+  versions: readonly ({ path: string | null; point: AssetsPoint | null; options: { settingsFrom: ImportSettingsSource } } | null)[],
+): boolean {
+  return workspacePath !== '' && versions.every((version) => version !== null && version.path !== null && version.point !== null && version.options.settingsFrom !== 'failed');
 }
 
 /** Whether the versions' materials are read to be compared: only those that may resolve differently. */

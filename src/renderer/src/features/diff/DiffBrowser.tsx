@@ -19,6 +19,7 @@ import { EntryDiff } from './EntryDiff';
 import { listedEntries } from './listedEntries';
 import { useDiffReview } from './review/useDiffReview';
 import { FileStepsContext, useFileSteps } from './viewer/fileSteps';
+import { AssetsPointContext, diffAssetsPoint } from './viewer/model/assetsPoints';
 import { diffSibling, SiblingFinderContext } from './viewer/model/modelSiblings';
 
 interface DiffBrowserProps {
@@ -49,6 +50,8 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
   // A model's companions (a glTF's `.bin`) are entries of the same diff, or the files where it points to.
   const workspaceRepository = useWorkspaceInfo().data?.repository;
   const findSibling = useMemo(() => diffSibling(diffEntries, target, workspaceRepository), [diffEntries, target, workspaceRepository]);
+  // A model's materials and textures are the ones where the diff points to, the side before with its changes undone.
+  const findAssetsPoint = useMemo(() => diffAssetsPoint(diffEntries, target), [diffEntries, target]);
   const fileSteps = useFileSteps({ keys: rowKeys, current: selection.anchor, select: (key) => setSelection(singleSelection(key)), pathOf: (key) => key });
 
   useEffect(() => {
@@ -81,7 +84,9 @@ export function DiffBrowser({ target, entries: diffEntries, initialPath }: DiffB
         focused ? (
           <FileStepsContext.Provider value={fileSteps}>
             <SiblingFinderContext.Provider value={findSibling}>
-              <EntryDiff workspacePath={workspacePath} entry={focused} reviewMarks={review.marks} />
+              <AssetsPointContext.Provider value={findAssetsPoint}>
+                <EntryDiff workspacePath={workspacePath} entry={focused} reviewMarks={review.marks} />
+              </AssetsPointContext.Provider>
             </SiblingFinderContext.Provider>
           </FileStepsContext.Provider>
         ) : focusedFolder ? (

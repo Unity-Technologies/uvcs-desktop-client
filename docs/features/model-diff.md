@@ -114,14 +114,19 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   hasn't: Unity's missing material, a risk), and, for the same material, its base map, normal map, base color (as the
   Inspector shows it, `#RRGGBB`), alpha (opaque, cutout, transparent), alpha cutoff, opacity (in whole percents, as
   told), sides and the base map's tiling and offset; and a texture it now uses that the workspace hasn't (a risk; one it
-  lacked before isn't news). The workspace's materials read alike for both versions, so a `.mat` changed alone never
-  shows here: its own diff is its text. They're told with the Materials look off too, from the very reads the look makes
+  lacked before isn't news). Each version's materials are read where it is (its point, "Materials" below), so a
+  `.mat` the diff changed is told too. They're told with the Materials look off too, from the very reads the look makes
   (one query each, shared): only for versions whose materials may resolve differently (`materialsMayDiffer`: their
-  slots' sources or their lookups differ), so a re-export that changed no material reads nothing, and never decoding a
-  texture. Waiting for the look to resolve them was rejected: a change is a change, and the reads are the workspace's
-  disk, no `cm` command; the one cost, a GUID the project lacks, reads the project's index once, as the look would.
-  They're not told (`materialChangesOf` is null) without a workspace, for a version with no path in it or whose `.meta`
-  read failed (`comparableVersions`), or when the workspace couldn't answer for a side (`answerStateOf`): a find that
+  slots' sources or their lookups differ, the points themselves aside; or a diff's side before undoes a change to a
+  `.mat`, an image, an `.mtl`, the `.meta` of one of those, or the model's own `.meta`; a script's `.meta` names
+  nothing a material reads), so a re-export that changed no material reads nothing, and never decoding a
+  texture. The two sides of a committed diff are always at two points: comparing them listed the model's folder for
+  every model diff opened, the look off, to tell nothing. A history's and a last change's two points, whose changes
+  aren't known, are compared with the look on only. Waiting for the look to resolve them was rejected: a change is a
+  change, and the reads are the disk's, or listings of the point shared by both sides; a GUID the project lacks
+  reads the project's index once, as the look would. They're not told (`materialChangesOf` is null) without a
+  workspace, for a version with no path in it, no point (`AssetsPoint`), or whose `.meta` read failed
+  (`comparableVersions`), or when the workspace couldn't answer for a side (`answerStateOf`): a find that
   failed, a file the disk refused to check (only `ENOENT` and `ENOTDIR` say a file isn't there: `foundFile`), or a GUID
   not found that can't be told missing (`UnityAssetsAnswer.guidMisses`: a model outside a Unity project, as in a
   package's own repository, or in a project without a `Library`, never opened in Unity on this machine, "The project's
@@ -221,14 +226,20 @@ file name, which names the next file while the one before still shows. Its name 
 folder, and main refuses a workspace file outside the workspace anyway (`workspaceFileOf`): the renderer is not
 trusted.
 
+- **Read from the folder's listing**: at a changeset or a branch's head, `api.content.readBytes` reads a sibling
+  (`repositoryPath`) by its revision there, as the listing of its folder names it (`RepositoryTrees.revisionAt`,
+  `fileBeside`: the folder's children alone, `cm ls --tree` without `-R`, in a pooled `cm shell`, kept per point; or a
+  listing with everything below it the Materials look already asked; then one `cm cat revid:`), through xlinks too.
+  Never a whole subtree for one file: a model in `Assets` itself would list the project. A sibling the tree hasn't, as a model without a `.meta`, costs no command at all: a
+  `serverpath:` then the tree asked in turn left two failing commands in the log for each.
 - **Absent is an answer**: `api.content.readBytes` reads a file that isn't there as null (the disk's `ENOENT`, `cm`'s
   "The item … does not exist": `isMissingItemError`; `cm ls --tree`'s "Can't resolve the selector for the item":
-  `isNotInTreeError`), cached as any content, so a model without a `.meta` costs its failing reads once. Any other
+  `isNotInTreeError`; a folder listing without it), cached as any content, so a model without a `.meta` costs its
+  reads once. Any other
   failure rejects, shows Unity's defaults meanwhile and is read again, never kept as "no `.meta`": the server, and a
   changeset, branch or shelve that is gone (`cm` says "does not exist" of those too, which tells nothing of the file).
-  `serverpath:`'s "The specified revision was not found" can't tell a missing file from one under an xlink: at a
-  changeset or a branch the tree is asked next and its answer decides (two failing commands, once); in a shelve or at
-  a label, which have no tree to ask, it is the answer (`isMissingWhereNoTreeIsListed`). It checks a file's size
+  In a shelve or at a label, which have no tree to list, a sibling is read by `serverpath:`, whose "The specified
+  revision was not found" is the answer there (`isMissingWhereNoTreeIsListed`). It checks a file's size
   before reading it.
 - **Read once**: a pending file is read anew on every focus, as new arrays; while its bytes are the same (`sameBytes`),
   the viewer keeps the model it has (`useStableModel`), its read, scene and comparison. Typing into a model written as
@@ -258,25 +269,88 @@ trusted.
 The **Materials** look (off by default) shows each material slot with its color and textures as Unity would show them.
 With slot colors it is one choice (`SurfaceLook`: clay, slot colors, materials; `clickedSurface`): turning one button on
 turns the other off, the one on clicked again goes back to clay, and the choice is remembered across files and sessions
-(`modelSurface` in `diffPreferencesStore`, which migrated the old `modelColorBySlot`). The button shows only when some
+(`modelSurface` in `diffPreferencesStore`, which migrated the old `modelColorBySlot`). The button ("Show materials and
+textures") shows only when some
 slot would show more than clay (`materialsOffered`: a remap, a texture, a color or transparency of its own). In Diffs
 both buttons stay, off, saying why (`surfaceButtonDisabledReason`: the heatmap colors the model), and the choice comes
 back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
 
-- **From the workspace, never the server.** Materials and textures are read from the workspace on disk as it is now,
-  whatever version of the model shows (pending, Files, a changeset, history); only the model's own `.meta` is the
-  version's (its remaps, read with its import settings). In a committed diff and in Files each side keeps its own; where
-  none was found for the version (`settingsFrom: 'none'`: a last change whose `.meta` changed since, a revision in
-  History or a merge, which find no sibling) the workspace's (`takesWorkspaceSettings`, `useWorkspaceImportSettings`),
-  as Unity imports it now: an FBX whose materials Unity doesn't make shows clay, never the file's own. A `.meta` whose
-  read failed (`'failed'`) shows the defaults until it is read again, never the workspace's look meanwhile; a side
-  waiting for the workspace's `.meta` looks nothing up until it is read (`materialsInputOf` is undefined). No `cm`
-  command is added (`api.unityAssets.find` reads the disk only; `unityAssetsService.test.ts` checks it can't reach
-  `cm`). Reading them from the server was rejected: one `cm cat` per texture per side, on a server many people share,
-  for a look whose textures have their own image diff. Without a workspace the look isn't offered. A model under an
-  xlink is where the workspace has it too, though its revision is the xlinked repository's: Files' last change and a
-  changeset diff name it by its workspace path, the xlink's folder included (`modelWorkspacePath`), and Unity sees
-  that folder as part of the project. Only a version without a path shows just what its file holds.
+- **Where the version is, never another revision's files.** Each version's materials and textures are the ones that
+  go with it, looked up at its point (`AssetsPoint`, found by `AssetsPointContext`, `assetsPoints.ts`): a workspace
+  file's (pending changes, a workspace file anywhere) on the disk as it is now; a committed diff's (`diffAssetsPoint`)
+  in the repository's tree where the diff points to (`cs:N`, the branch's head), the side before as that tree with the
+  diff's own changes undone (`changedAssetsOf`: each file as it was, one the diff added gone, a move both ways; past
+  `MAX_CHANGED_ASSETS` the side before has none; a request carries only those under the model's Unity project, or its
+  folder outside one, `pointForModel`, as main's search goes no further); a history's revision at the changeset that made it
+  (`revisionsAssetsPoint`); Files' last change at its changeset, and before it, that changeset's own changes as their
+  parent revisions (`lastChangeAssetsPoint`, `AssetsBefore` `changeset`). Anything else has no point (a merge's
+  versions, a shelve's or a label's tree, which `cm ls` can't list, a revision of an xlinked repository in History or
+  Files, whose tree's paths aren't the workspace's, and any revision there while the workspace's repository isn't
+  known yet, `inWorkspaceRepository`): only what its file holds shows (a glTF's own images), never the
+  disk's files, which may be another revision's. The disk's look was rejected for that reason: a model on a branch
+  the workspace never loaded showed clay, and one at another revision showed the workspace's textures, wrong. Only the
+  model's own `.meta` is read as the version's sibling (its remaps, with its import settings), and an OBJ's `.mtl`
+  (`MaterialVersion.sibling`). In a committed diff and in Files each side keeps its own; where none was found for the
+  version (`settingsFrom: 'none'`: a last change whose `.meta` changed since, a revision in History or a merge, which
+  find no sibling) the workspace's (`takesWorkspaceSettings`, `useWorkspaceImportSettings`), as Unity imports it now:
+  an FBX whose materials Unity doesn't make shows clay, never the file's own. A `.meta` whose read failed (`'failed'`)
+  shows the defaults until it is read again, never the workspace's look meanwhile; a side waiting for the workspace's
+  `.meta` looks nothing up until it is read (`materialsInputOf` is undefined). Without a workspace the look isn't
+  offered. A model under an xlink is where the workspace has it, though its revision is the xlinked repository's: a
+  diff names it by its workspace path, the xlink's folder included (`modelWorkspacePath`), and the tree's listing walks
+  through the xlink, naming each file's revision in its own repository.
+- **At a point of the repository** (`RepositoryAssetTree`, one per workspace and point, kept by `RepositoryTrees`):
+  the same Unity search as on the disk, over what `cm ls <folder> --tree=<point> -R --format=…` lists there
+  (`treeListingArgs`: path, type, size, revision, hash, repository, changeset, parent revision). The listings are the
+  point's, whichever side asks: both sides of a diff share them, each seeing them through its own view with its change
+  undone (`view`'s `before`; keying the tree by the side too listed the same folder twice). The model's folder is listed
+  first (most lookups end there: a glTF's images, a `Textures` folder of its own); the project's root only when a
+  lookup reaches past it, once; a model right in the project's root or `Assets` lists the project once for both. Both
+  run in a process of their own (`execute`): a subtree may be a whole project, which must never hold a pooled shell
+  other reads wait for. Outside a Unity project, only the model's folder is listed. A changeset's tree is kept for
+  good, a branch head's for `BRANCH_TREE_LIFE_MS` (shared with the renderer's queries: people check in), the latest
+  eight points; reads at once share one listing, one that failed (the server) fails the find, never reads as "not
+  there" (`TreeListingError`), and is asked again by the next read, a project index's included (a GUID's search
+  answers `unread` meanwhile, and the renderer never keeps such an answer: `findStaleTime`). Names
+  compare as the disk does (case aside on macOS and Windows). The project itself, its packages (`Packages/manifest.json`)
+  and its `Library/PackageCache` are read on the disk: they are how this machine's Unity imports the project. A
+  GUID's search reads each `.meta` head by its revision, a folder's `.meta` files together (their downloads one batch,
+  where the index asks 16 at a time), at most `MAX_META_DOWNLOADS` downloaded per point; past it the GUID isn't known
+  missing (`unread`). The side before a changeset (Files' last change) undoes only the files of its own repository
+  (changeset numbers are per repository, an xlinked one's may match); a file it deleted isn't in the tree after it, and
+  isn't found.
+- **Reading a file found** (`api.unityAssets.read`, `RevisionDownloads`): a disk file from the disk; a repository's
+  revision from the disk when the workspace's file at that path has its content (same size and MD5 as the listing's
+  hash, the hash kept by path, size and time written), else downloaded. The reads asked at once (both versions'
+  textures, a ring of `.meta` files) wait until each has checked the disk, then go in one `cm cat <spec>;<file>
+  <spec>;<file> …` (`catArgs`), which downloads them in one batch, in a process of its own; a batch holds one
+  repository's revisions (an xlinked one's apart: `cm cat` resolves each repository's on its own) and stops at
+  `MAX_BATCH_BYTES` (64 MB by the sizes listed, so the first textures show sooner) and at a command line Windows can
+  start; a folder whose path holds `;` takes each as `--file=`. A revision listed past `MAX_MODEL_BYTES` is refused
+  unread. `cm cat` writes every revision it has even when one fails, so each read is told apart; after a failure a file
+  is kept only when its size and hash are the listed ones (one cut short by a dropped connection would serve a broken
+  texture for the session), and those that can't be told (the side before, size and hash unknown) are downloaded
+  again once, together, in one more batch (never one process each: a failed batch of 64 would start 64). A revision is downloaded once however many ask, each download to a file of its own (one let go and its
+  download again never meet); the session keeps the latest `MAX_KEPT_BYTES` (1 GB) of downloads in
+  `uvcs-revisions-<pid>-…` under the OS's temp folder, a file let go read again if a read still wanted it, the folder
+  made again before each batch (macOS and systemd-tmpfiles clean temp folders idle for days). It is deleted as the app
+  quits (`dispose`, on `will-quit`; a file Windows still holds leaves it, never failing the quit), and those a crashed
+  or killed session left (their process gone; never another app's running beside it, as a development build beside
+  the installed one; a pid Windows reused keeps one until that process ends) as the next one starts
+  (`removeLeftOvers`), before it makes its own. The renderer keys
+  each read by the file's version (`foundFileKey`), and a texture need by it too: both versions of a model may find a
+  texture at one path in two revisions, each shows its own. Reading the textures by `cm cat` one by one, as the
+  sibling reads do, was rejected: a batch costs one round trip.
+- **Progress, said in the info strip**: the Textures figure with a small ring (`ModelStat.progress`, the design
+  system's `ProgressRing`), spinning from the moment the look is on while the versions' materials and textures are
+  being found (`TexturesReport.finding`: a listing, `.meta` and `.mat` reads), then filling as "Textures 1 of 2" counts
+  up while they download and decode, its tooltip saying how many come from the repository ("Getting 2 from the
+  repository…") and how many decode; gone once done. Nothing over the model: a slot whose base map is on its way is
+  drawn in its color darkened to a mid tone (`WAITING_SHADE`, `slotLooks`), so a model whose materials are white under
+  their textures (most glTF exports) reads as not yet textured rather than flashing bright clay; its own color where
+  the texture fails. Before the materials are found, each slot is already drawn so, from its source alone (`findingLooks`: a
+  file's material in its color, darkened where it has a base map; a project's material darkened), so turning the look
+  on, or selecting another model with it on, goes from that straight to the textures, never through clay first.
 - **Where each slot's material comes from** (`slotSources`, as Unity's ModelImporter decides for FBX and OBJ): with
   Material Creation Mode None (`materialImportMode: 0`, or `importMaterials: 0` in a `.meta` older than Unity 2019.3)
   clay, unless `remapMaterialsIfMaterialImportModeIsNone: 1` (absent, as before 2021.2: clay, as Unity imports it); a
@@ -284,7 +358,7 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   hasn't is clay (Unity assigns the missing asset, never the file's own), and one remapped to Unity's own
   (Default-Material, by the built-in GUIDs `0000000000000000f000000000000000` and `…e000…`, `isBuiltInGuid`) is Unity's
   default look, looked up nowhere; any other slot the file's material, an OBJ's from its `.mtl` (`readMtlMaterials`,
-  read beside it on disk). The legacy external location (`materialLocation: 0`, obsolete since 2019.3) counts as the
+  read beside it as the version's sibling). The legacy external location (`materialLocation: 0`, obsolete since 2019.3) counts as the
   file's own; its `Materials/` folder search isn't done. A glTF's materials are glTFast's: the file's, keyed by
   material, not name (`slotKeysOf`: Sponza's 25 are all unnamed); a map on the second UV set (`texCoord: 1`,
   `TextureUse.channel`) samples it (`uv1`), GLTFLoader's copy of its texture known by the image source it shares; a
@@ -310,7 +384,7 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   read as written; without it, as the importer that wrote the `.meta` did: below ModelImporter `serializedVersion` 24600
   it always searched, from it it doesn't. Names compare as the disk does (case-insensitive on macOS and Windows);
   nothing outside the workspace is read (`workspaceFileOf`). A glTF's images by URI are files beside it (`siblingPath`),
-  on disk.
+  where the version is.
 - **The project's index** (`ProjectAssetIndex`): GUIDs from each `.meta`'s second line, and file names, read outward
   from the model (its folder's subtree, then each folder above it, then `Assets` and the project's `Packages`), a lookup
   stopping at the first ring that answers; what Unity skips (`.hidden`, `Name~`) is left out. A GUID none of them has is
@@ -359,18 +433,18 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
 - **Budget** (`textureBudget`): at most 64 texture files a model (`MAX_TEXTURE_FILES`, both versions together, each file
   once); each drawn at most 2048 px on its longest side, 1024 past 24 textures, with mipmaps; refused before decoding
   past 16384 px a side or 8192² pixels (`imageSizeOf` reads each format's header first), and unread past the read's own
-  size cap (100 MB, `MAX_MODEL_BYTES`). A file version decodes once (`textureLoads`: by path, size and time written; the
+  size cap (100 MB, `MAX_MODEL_BYTES`). A file version decodes once (`textureLoads`: by its version, `foundFileKey`; the
   latest 384 MB of bitmaps kept), one GPU texture per bitmap and use (`LookTextures`), freed when no look uses it, or
   with the renderer.
 - **Drawn** (`SlotLookMaterials`): MeshStandardMaterial, no metal, roughness 0.6, under the same studio; base maps sRGB,
   normal maps linear (a texture's own `.meta` isn't read); an FBX's or OBJ's textured material untinted (Unity's
   ModelImporter drops the diffuse tint), a glTF's tinted by its base color; alpha clip as `alphaTest`, transparency
   blended without depth writes, both sides per material; textures the right way up from the decoder (FBX, OBJ and Unity
-  UVs start at the image's bottom). The model shows in its materials' colors (or clay) at once and textures appear as
-  they decode: no spinner, no reframing. A picked part lights up and the rest fade, as with clay. Turned off, the look's
+  UVs start at the image's bottom). The model shows in its materials' colors (darkened where a texture is on its way,
+  "Progress" above) at once and textures appear as they decode: nothing over the model, no reframing. A picked part lights up and the rest fade, as with clay. Turned off, the look's
   materials and textures stay until the file changes, so turning it on again is immediate.
 - **What doesn't show, said once** (`texturesStat`): the info strip's "Textures 9 of 12" (or "Textures 12") while the
-  look is on, its tooltip naming the first eight that don't and why (`textureProblemWords`: "not in the workspace",
+  look is on, its tooltip naming the first eight that don't and why (`textureProblemWords`: "not found where Unity looks",
   "can't read this PSD: save it with Maximize Compatibility"…). No toast, no dialog, nothing over the model.
 - **Not shown, and why**: textures embedded in an FBX (Unity uses them only once extracted, as files the search then
   finds); DDS and KTX (GPU formats); the legacy external materials' `Materials/` search; anything but base color,

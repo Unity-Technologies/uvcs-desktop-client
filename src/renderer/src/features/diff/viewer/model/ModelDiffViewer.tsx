@@ -5,7 +5,7 @@
 // about, and so does a click on the model; the info strip narrates the figures a budget checks.
 
 import { Box as BoxIcon } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import type { ContentSource, FileContent } from '@shared/domain/content';
 import { useSpinDelay } from '../../../../lib/useSpinDelay';
 import { EmptyState } from '../../../../ui/EmptyState';
@@ -45,6 +45,8 @@ import { useSize } from './useSize';
 import { useStableModel } from './useStableModel';
 import { shownSurface, surfaceButtonDisabledReason } from './surfaceLook';
 import { modelWorkspacePath } from './materials/modelWorkspacePath';
+import { SiblingFinderContext, sourcePathOf, type DiffSide, type SiblingFinder } from './modelSiblings';
+import { AssetsPointContext, type AssetsPointFinder } from './assetsPoints';
 import styles from './ModelDiffViewer.module.css';
 
 /** From this pane width the "What changed" panel opens as a column beside the stage. */
@@ -97,12 +99,14 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const sceneBefore = useModelScene(old);
   const sceneAfter = useModelScene(next);
   const differences = comparable && mode === 'differences';
+  const findSibling = useContext(SiblingFinderContext);
+  const findAssetsPoint = useContext(AssetsPointContext);
   const materialVersions = useMemo(
     () => ({
-      before: materialVersionOf(old, modelBefore, optionsBefore, sources.original),
-      after: materialVersionOf(next, modelAfter, optionsAfter, sources.modified),
+      before: materialVersionOf(old, modelBefore, optionsBefore, { side: 'original', source: sources.original, findSibling, findAssetsPoint }),
+      after: materialVersionOf(next, modelAfter, optionsAfter, { side: 'modified', source: sources.modified, findSibling, findAssetsPoint }),
     }),
-    [old, next, modelBefore, modelAfter, optionsBefore, optionsAfter, sources.original, sources.modified],
+    [old, next, modelBefore, modelAfter, optionsBefore, optionsAfter, sources.original, sources.modified, findSibling, findAssetsPoint],
   );
   const materials = useModelMaterials(workspacePath, materialVersions, modelSurface === 'materials' && !differences);
   const surface = shownSurface(modelSurface, materials.offered);
@@ -291,15 +295,25 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   );
 }
 
-/** A version as the Materials look reads it: where it is in the workspace, its bytes and what it was read with. */
+/** Where a side's version is: what it was read from, and how the view finds what goes with it. */
+interface VersionPlace {
+  side: DiffSide;
+  source: ContentSource;
+  findSibling: SiblingFinder;
+  findAssetsPoint: AssetsPointFinder;
+}
+
+/** A version as the Materials look reads it: where it is in the workspace and at what point, its bytes and what it was read with. */
 function materialVersionOf(
   read: Extract<ModelReadState, { status: 'ready' }> | null,
   bytes: FileContent['model'],
   options: ReturnType<typeof useModelReadOptions>,
-  source: ContentSource,
+  { side, source, findSibling, findAssetsPoint }: VersionPlace,
 ): MaterialVersion | null {
   if (!read || !bytes || !options) return null;
-  return { model: read.model, bytes, options, path: modelWorkspacePath(source) };
+  const path = sourcePathOf(source);
+  const sibling = (fileName: string) => (path === null ? null : findSibling(side, source, path, fileName));
+  return { model: read.model, bytes, options, path: modelWorkspacePath(source), point: findAssetsPoint(side, source), sibling };
 }
 
 function readyOf(state: ModelReadState): Extract<ModelReadState, { status: 'ready' }> | null {

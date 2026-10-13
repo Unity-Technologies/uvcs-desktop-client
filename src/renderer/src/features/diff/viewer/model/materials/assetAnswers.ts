@@ -2,7 +2,7 @@
 // once, the remapped materials' files, and the two rounds of GUIDs (the materials, then their textures) as one
 // `FoundAssets` a version is planned with (`planVersion`). Pure: the hooks that ask are `useUnityAssets`.
 
-import type { FoundFile, UnityAssetsAnswer, UnityAssetsRequest } from '@shared/domain/unityAssets';
+import { BRANCH_TREE_LIFE_MS, type AssetsPoint, type FoundFile, type UnityAssetsAnswer, type UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { lookupKey, materialTextureGuids, type FoundAssets } from './materialPlan';
 import type { UnityMaterial } from './unityMaterial';
 
@@ -22,9 +22,19 @@ export function uniqueRequests(requests: readonly (UnityAssetsRequest | null)[])
   return { requests: unique, indices };
 }
 
-/** Files once each, by path. */
-export function uniqueFiles<T extends { path: string }>(files: readonly T[]): T[] {
-  return [...new Map(files.map((file) => [file.path, file])).values()];
+/**
+ * How long a find's answer holds: the disk changes under us, as a workspace file's content does; a changeset's tree
+ * never changes; a branch's head moves as people check in (`BRANCH_TREE_LIFE_MS`, as main keeps its tree). An answer
+ * that couldn't be read whole (`unread`: the server down for a listing) holds not at all, so the next look asks again.
+ */
+export function findStaleTime(point: AssetsPoint, answer: UnityAssetsAnswer | undefined): number {
+  if (point.kind === 'workspace' || answer?.guidMisses === 'unread') return 0;
+  return point.at.startsWith('cs:') ? Number.POSITIVE_INFINITY : BRANCH_TREE_LIFE_MS;
+}
+
+/** Files once each, by what tells one apart (`keyOf`: a found file's version, a source's place). */
+export function uniqueFiles<T>(files: readonly T[], keyOf: (file: T) => string): T[] {
+  return [...new Map(files.map((file) => [keyOf(file), file])).values()];
 }
 
 /** Each side's remapped materials, by GUID, with the file found for each (null while unanswered or not found). */

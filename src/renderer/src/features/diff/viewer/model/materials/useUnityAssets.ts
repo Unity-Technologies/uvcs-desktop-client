@@ -1,11 +1,10 @@
 import { useQueries } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import type { ContentSource } from '@shared/domain/content';
-import type { UnityAssetsAnswer, UnityAssetsRequest } from '@shared/domain/unityAssets';
+import { foundFileKey, type UnityAssetsAnswer, type UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { api } from '../../../../../api/client';
+import { IMMUTABLE_QUERY } from '../../../../../app/queryClient';
 import { queryKeys } from '../../../../../api/queryKeys';
-import { contentCaching } from '../../useDiffContents';
-import { materialFiles, uniqueFiles, uniqueRequests } from './assetAnswers';
+import { findStaleTime, materialFiles, uniqueFiles, uniqueRequests } from './assetAnswers';
 import { readUnityMaterial, type UnityMaterial } from './unityMaterial';
 
 /** Each request's answer (`api.unityAssets.find`), undefined while it's being found, null for none or a failure. */
@@ -16,8 +15,7 @@ export function useUnityAssets(workspacePath: string, requests: (UnityAssetsRequ
     queries: unique.requests.map((request) => ({
       queryKey: queryKeys.inWorkspace(workspacePath, 'unityAssets', request),
       queryFn: () => api.unityAssets.find(workspacePath, request),
-      // The disk changes under us, as a workspace file's content does.
-      staleTime: 0,
+      staleTime: (query: { state: { data?: UnityAssetsAnswer } }) => findStaleTime(request.point, query.state.data),
     })),
     combine: answersOf,
   });
@@ -30,21 +28,24 @@ export function useUnityMaterials(
   answers: (UnityAssetsAnswer | null | undefined)[],
   requests: (UnityAssetsRequest | null)[],
 ): (Map<string, UnityMaterial | null> | undefined)[] {
-  const files = uniqueFiles(materialFiles(answers, requests).flat().flatMap(({ file }) => (file ? [file] : [])));
+  const files = uniqueFiles(materialFiles(answers, requests).flat().flatMap(({ file }) => (file ? [file] : [])), foundFileKey);
   const reads = useQueries({
-    queries: files.map((file) => {
-      const source: ContentSource = { kind: 'workspaceFile', path: file.path };
-      return { queryKey: queryKeys.inWorkspace(workspacePath, 'contentBytes', source), queryFn: () => api.content.readBytes(workspacePath, source), ...contentCaching([source]) };
-    }),
+    queries: files.map((file) => ({
+      // Keyed by the version of the file found: a disk file written again is found anew, with its new time.
+      queryKey: queryKeys.inWorkspace(workspacePath, 'unityAsset', foundFileKey(file)),
+      queryFn: () => api.unityAssets.read(workspacePath, file),
+      staleTime: Number.POSITIVE_INFINITY,
+      meta: IMMUTABLE_QUERY,
+    })),
     combine: settledDataOf,
   });
   return useMemo(() => {
     const found = materialFiles(answers, requests);
-    const read = uniqueFiles(found.flat().flatMap(({ file }) => (file ? [file] : [])));
-    const byPath = new Map(read.map((file, i) => [file.path, reads[i]]));
+    const read = uniqueFiles(found.flat().flatMap(({ file }) => (file ? [file] : [])), foundFileKey);
+    const byKey = new Map(read.map((file, i) => [foundFileKey(file), reads[i]]));
     return found.map((side, i) => {
-      if (answers[i] === undefined || side.some(({ file }) => file && byPath.get(file.path) === undefined)) return requests[i] ? undefined : new Map();
-      return new Map(side.map(({ guid, file }) => [guid, file ? materialOf(byPath.get(file.path) ?? null) : null]));
+      if (answers[i] === undefined || side.some(({ file }) => file && byKey.get(foundFileKey(file)) === undefined)) return requests[i] ? undefined : new Map();
+      return new Map(side.map(({ guid, file }) => [guid, file ? materialOf(byKey.get(foundFileKey(file)) ?? null) : null]));
     });
   }, [reads, answers, requests]);
 }

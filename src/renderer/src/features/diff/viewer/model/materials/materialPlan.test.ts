@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { FoundFile } from '@shared/domain/unityAssets';
+import { foundFileKey, type FoundFile } from '@shared/domain/unityAssets';
 import { DEFAULT_IMPORT_SETTINGS, type ModelImportSettings } from '../modelImportSettings';
 import type { FileMaterial } from '../parsedModel';
-import { assetsRequest, budgeted, lookupKey, materialTextureGuids, planVersion, slotLooks, texturesReport, type FoundAssets, type NeedState, type Side, type VersionPlan } from './materialPlan';
+import { assetsRequest, budgeted, findingLooks, lookupKey, materialTextureGuids, planVersion, slotLooks, texturesReport, type FoundAssets, type NeedState, type Side, type VersionPlan } from './materialPlan';
 import { slotSources, type ModelMaterialsInput } from './slotSources';
 import { fileMaterial, named, use } from './testing/testMaterials';
 import type { UnityMaterial } from './unityMaterial';
@@ -12,7 +12,7 @@ const BARK_MAT = '0f2b6c1e9a8d4b3c8e7f6a5b4c3d2e1f';
 const BARK_PSD = '6d1e0c9b8a7f4e3d2c1b0a9f8e7d6c5b';
 const BARK_NORMAL = '1a2b3c4d5e6f708192a3b4c5d6e7f809';
 
-const file = (path: string): FoundFile => ({ path, size: 10, modified: 1 });
+const file = (path: string): FoundFile => ({ path, size: 10, stored: 'disk', modified: 1 });
 const bitmap = {} as ImageBitmap;
 
 function version(fileMaterials: FileMaterial[], settings: Partial<ModelImportSettings> = {}, format: ModelMaterialsInput['format'] = 'fbx'): ModelMaterialsInput {
@@ -41,8 +41,9 @@ describe('assetsRequest', () => {
     const bark = fileMaterial('Bark', { baseMap: use(named('bark_albedo.png', ['..\\Textures\\bark_albedo.png'])) });
     const leaves = fileMaterial('Leaves', { baseMap: use(named('leaves.tga')) });
     const fbx = version([bark, leaves], { materialRemaps: [{ slot: 'Leaves', guid: BARK_MAT }], textureRemaps: [{ name: 'bark_albedo', guid: BARK_PSD }], searchTexturesGlobally: true });
-    expect(assetsRequest(fbx, slotSources(fbx), MODEL)).toEqual({
+    expect(assetsRequest(fbx, slotSources(fbx), MODEL, { kind: 'workspace' })).toEqual({
       modelPath: MODEL,
+      point: { kind: 'workspace' },
       // A remapped slot's own textures aren't looked for: the project's material replaces them.
       textures: [{ name: 'bark_albedo.png', storedPaths: ['..\\Textures\\bark_albedo.png'], remapGuid: BARK_PSD }],
       guids: [BARK_MAT],
@@ -50,7 +51,7 @@ describe('assetsRequest', () => {
       searchTexturesGlobally: true,
     });
     const gltf = version([fileMaterial('Leaf', { baseMap: use({ kind: 'beside', path: 'textures/leaf.png' }), normalMap: use({ kind: 'beside', path: '../escape.png' }) })], {}, 'gltf');
-    expect(assetsRequest(gltf, slotSources(gltf), 'Models/Leaf.gltf').paths).toEqual(['Models/textures/leaf.png']);
+    expect(assetsRequest(gltf, slotSources(gltf), 'Models/Leaf.gltf', { kind: 'workspace' }).paths).toEqual(['Models/textures/leaf.png']);
   });
 
   it("asks a .mat's textures by their GUIDs", () => {
@@ -59,13 +60,29 @@ describe('assetsRequest', () => {
 });
 
 describe('planVersion and slotLooks', () => {
+  it('draws a slot waiting for its base map darker than its color, never as bright clay; its own color where the texture fails', () => {
+    const bark = fileMaterial('Bark', { color: [1, 1, 1], baseMap: use(named('bark.png')) });
+    const planned = plan(version([bark]), found({ textures: new Map([[lookupKey(named('bark.png')), file('Assets/Tree/bark.png')]]) }));
+    const need = `up:${foundFileKey(file('Assets/Tree/bark.png'))}`;
+    const waiting = slotLooks(planned, new Map<string, NeedState>([[need, { kind: 'loading' }]])).get('Bark')!.color;
+    expect(waiting.every((channel) => channel > 0 && channel < 0.5)).toBe(true);
+    expect(slotLooks(planned, new Map<string, NeedState>([[need, { kind: 'failed', problem: 'missing' }]])).get('Bark')!.color).toEqual([1, 1, 1]);
+  });
+
   it("shows a file's textured material untinted once its texture decodes, in its color meanwhile", () => {
     const bark = fileMaterial('Bark', { color: [0.5, 0.2, 0.1], baseMap: use(named('bark.png')) });
     const planned = plan(version([bark]), found({ textures: new Map([[lookupKey(named('bark.png')), file('Assets/Tree/bark.png')]]) }));
-    expect(planned.needs).toEqual([{ id: 'up:Assets/Tree/bark.png', name: 'bark.png', where: { kind: 'file', file: file('Assets/Tree/bark.png') }, flipY: true }]);
+    expect(planned.needs).toEqual([{ id: `up:${foundFileKey(file('Assets/Tree/bark.png'))}`, name: 'bark.png', where: { kind: 'file', file: file('Assets/Tree/bark.png') }, flipY: true }]);
     expect(slotLooks(planned, new Map()).get('Bark')).toMatchObject({ color: [0.5, 0.2, 0.1], baseMap: null });
-    const ready = new Map<string, NeedState>([['up:Assets/Tree/bark.png', { kind: 'ready', key: 'k', bitmap }]]);
+    const ready = new Map<string, NeedState>([[`up:${foundFileKey(file('Assets/Tree/bark.png'))}`, { kind: 'ready', key: 'k', bitmap }]]);
     expect(slotLooks(planned, ready).get('Bark')).toMatchObject({ color: [1, 1, 1], baseMap: { key: 'k', repeat: [1, 1] } });
+  });
+
+  it('needs a texture found at one path in two revisions once per revision: each version shows its own', () => {
+    const bark = fileMaterial('Bark', { baseMap: use(named('bark.png')) });
+    const at = (revisionId: number) => plan(version([bark]), found({ textures: new Map([[lookupKey(named('bark.png')), { path: 'Assets/Tree/bark.png', size: -1, stored: 'repository', revision: { revisionId, repository: 'eco@local' }, hash: null }]]) }));
+    expect(at(4).needs[0]!.id).not.toBe(at(5).needs[0]!.id);
+    expect(at(4).needs[0]!.id).toBe(at(4).needs[0]!.id);
   });
 
   it('keeps the base color under a glTF base map, as glTFast multiplies them', () => {
@@ -79,7 +96,7 @@ describe('planVersion and slotLooks', () => {
     const input = version([fileMaterial('Bark', { color: [0.3, 0.3, 0.3] })], { materialRemaps: [{ slot: 'Bark', guid: BARK_MAT }] });
     const assets = found({ guids: new Map([[BARK_PSD, file('Assets/Art/bark.psd')], [BARK_NORMAL, file('Assets/Art/bark_n.png')]]), materials: new Map([[BARK_MAT, URP_BARK]]) });
     const planned = plan(input, assets);
-    expect(planned.slots.get('Bark')).toMatchObject({ baseMap: { need: 'up:Assets/Art/bark.psd', repeat: [2, 2], offset: [0.5, 0] }, normalMap: { need: 'up:Assets/Art/bark_n.png' }, color: [1, 1, 1] });
+    expect(planned.slots.get('Bark')).toMatchObject({ baseMap: { need: `up:${foundFileKey(file('Assets/Art/bark.psd'))}`, repeat: [2, 2], offset: [0.5, 0] }, normalMap: { need: `up:${foundFileKey(file('Assets/Art/bark_n.png'))}` }, color: [1, 1, 1] });
     // Unity assigns the missing asset (its missing material), never the file's own: no guessed look.
     expect(plan(input, found({ guids: new Map([[BARK_MAT, null]]) })).slots.get('Bark')).toBeNull();
   });
@@ -151,7 +168,7 @@ describe("Unity's built-in assets", () => {
 
   it("asks for no texture the .meta remaps to one of Unity's own", () => {
     const input = version([fileMaterial('Bark', { baseMap: use(named('bark.png')) })], { textureRemaps: [{ name: 'bark', guid: BUILT_IN_EXTRA }] });
-    expect(assetsRequest(input, slotSources(input), MODEL).textures).toEqual([{ name: 'bark.png', storedPaths: [], remapGuid: null }]);
+    expect(assetsRequest(input, slotSources(input), MODEL, { kind: 'workspace' }).textures).toEqual([{ name: 'bark.png', storedPaths: [], remapGuid: null }]);
   });
 });
 
@@ -198,7 +215,37 @@ describe('budgeted', () => {
   });
 });
 
+describe('findingLooks', () => {
+  it("draws each slot as it will be while its textures load, before they're found: no clay first, then colors", () => {
+    const bark = fileMaterial('Bark', { color: [1, 1, 1], baseMap: use(named('bark.png')) });
+    const glass = fileMaterial('Glass', { color: [0.2, 0.4, 0.6], alpha: 'blend', opacity: 0.5 });
+    const input = version([bark, glass, fileMaterial('Leaves')], { materialRemaps: [{ slot: 'Leaves', guid: BARK_MAT }] });
+    const planned = plan(input, found({ textures: new Map([[lookupKey(named('bark.png')), file('Assets/Tree/bark.png')]]) }));
+    const loading = new Map<string, NeedState>(planned.needs.map((need) => [need.id, { kind: 'loading' }]));
+    const finding = findingLooks(slotSources(input));
+    // The textured slot reads as it will once found, its texture still loading.
+    expect(finding.get('Bark')).toEqual(slotLooks(planned, loading).get('Bark'));
+    // An untextured one in its own color, as it stays.
+    expect(finding.get('Glass')).toMatchObject({ color: [0.2, 0.4, 0.6], alpha: 'blend', opacity: 0.5, baseMap: null });
+    // A remapped one darkened as one waiting for its textures, its project material not read yet.
+    expect(finding.get('Leaves')!.color.every((channel) => channel > 0 && channel < 0.5)).toBe(true);
+  });
+
+  it('leaves a slot in clay where Unity shows its default material', () => {
+    const input = version([fileMaterial('Bark', { baseMap: use(named('bark.png')) })], { materialImport: 'none' });
+    expect(findingLooks(slotSources(input)).size).toBe(0);
+  });
+});
+
 describe('texturesReport', () => {
+  it("is finding while a version's plan isn't made yet, and counts what the other's is downloading", () => {
+    const file = { path: 'Assets/bark.png', size: 1, stored: 'repository' as const, revision: { revisionId: 4, repository: 'eco@local' }, hash: null };
+    const plan = { slots: new Map(), resolved: new Map(), needs: [{ id: 'n', name: 'bark.png', where: { kind: 'file' as const, file }, flipY: true }], issues: [] };
+    expect(texturesReport([null, null], new Map(), [])).toMatchObject({ total: 0, finding: true });
+    expect(texturesReport([plan, null], new Map(), [])).toMatchObject({ total: 1, loading: 1, downloading: 1, finding: true });
+    expect(texturesReport([plan, plan], new Map(), [])).toMatchObject({ finding: false });
+  });
+
   it('counts each texture once across both versions: shown, loading, and those that failed or are missing', () => {
     const input = version([fileMaterial('Bark', { baseMap: use(named('bark.png')), normalMap: use(named('moss.psd')) }), fileMaterial('Leaves', { baseMap: use(named('gone.png')) })]);
     const assets = found({
@@ -210,13 +257,15 @@ describe('texturesReport', () => {
     const before = plan(input, assets, 'before');
     const after = plan(input, assets, 'after');
     const states = new Map<string, NeedState>([
-      ['up:Assets/Tree/bark.png', { kind: 'ready', key: 'k', bitmap }],
-      ['up:Assets/Tree/moss.psd', { kind: 'failed', problem: 'psdWithoutComposite' }],
+      [`up:${foundFileKey(file('Assets/Tree/bark.png'))}`, { kind: 'ready', key: 'k', bitmap }],
+      [`up:${foundFileKey(file('Assets/Tree/moss.psd'))}`, { kind: 'failed', problem: 'psdWithoutComposite' }],
     ]);
     expect(texturesReport([before, after], states, [])).toEqual({
       total: 3,
       shown: 1,
       loading: 0,
+      downloading: 0,
+      finding: false,
       issues: [
         { name: 'gone.png', problem: 'missing' },
         { name: 'moss.psd', problem: 'psdWithoutComposite' },

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { UnityAssetsAnswer, UnityAssetsRequest } from '@shared/domain/unityAssets';
+import type { AssetsPoint, UnityAssetsAnswer, UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { DEFAULT_IMPORT_SETTINGS } from '../modelImportSettings';
 import type { ImportSettingsSource } from '../modelImportSettings';
 import { answerStateOf, comparableVersions, materialChangesOf, materialsNotComparedOf, type AnswerState, type ComparisonInput } from './materialComparison';
@@ -10,7 +10,7 @@ import { fileMaterial } from './testing/testMaterials';
 const GLASS_MAT = '0f2b6c1e9a8d4b3c8e7f6a5b4c3d2e1f';
 const MODEL = 'Assets/Lantern/Lantern.fbx';
 
-const request = (overrides: Partial<UnityAssetsRequest> = {}): UnityAssetsRequest => ({ modelPath: MODEL, textures: [], guids: [], paths: [], searchTexturesGlobally: false, ...overrides });
+const request = (overrides: Partial<UnityAssetsRequest> = {}): UnityAssetsRequest => ({ modelPath: MODEL, point: { kind: 'workspace' }, textures: [], guids: [], paths: [], searchTexturesGlobally: false, ...overrides });
 const answer = (overrides: Partial<UnityAssetsAnswer> = {}): UnityAssetsAnswer => ({ textures: [], guids: [], paths: [], importsPsb: false, guidMisses: 'known', ...overrides });
 
 function side(settings: Partial<ModelMaterialsInput['settings']> = {}) {
@@ -99,13 +99,14 @@ describe('answerStateOf', () => {
 });
 
 describe('comparableVersions', () => {
-  const version = (path: string | null, settingsFrom: ImportSettingsSource = 'meta') => ({ path, options: { settingsFrom } });
+  const version = (path: string | null, settingsFrom: ImportSettingsSource = 'meta', point: AssetsPoint | null = { kind: 'workspace' }) => ({ path, point, options: { settingsFrom } });
 
   it('compares two versions with a path in a workspace whose .meta was read or absent', () => {
     expect(comparableVersions('/ws', [version(MODEL), version(MODEL, 'none')])).toBe(true);
   });
 
-  it("doesn't without a workspace, a version, a path, or with a .meta whose read failed (its defaults aren't its settings)", () => {
+  it("doesn't without a workspace, a version, a path, a point to look at, or with a .meta whose read failed (its defaults aren't its settings)", () => {
+    expect(comparableVersions('/ws', [version(MODEL, 'meta', null), version(MODEL)])).toBe(false);
     expect(comparableVersions('', [version(MODEL), version(MODEL)])).toBe(false);
     expect(comparableVersions('/ws', [null, version(MODEL)])).toBe(false);
     expect(comparableVersions('/ws', [version(null), version(MODEL)])).toBe(false);

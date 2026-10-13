@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -8,6 +8,8 @@ import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 import { diskProjectFiles } from '../unity/diskProjectFiles';
 import type { ProjectFiles } from '../unity/ProjectAssetIndex';
 import type { WorkspaceFilesListener } from '../watch/WorkspaceWatchers';
+import { fakeCmClient } from '../cm/testing/fakeCmClient';
+import { RepositoryTrees } from '../unity/RepositoryTrees';
 import { createUnityAssetsService } from './unityAssetsService';
 
 const BARK_GUID = '6d1e0c9b8a7f4e3d2c1b0a9f8e7d6c5b';
@@ -26,6 +28,14 @@ async function writeAt(workspace: string, path: string, text: string): Promise<v
   await writeFile(file, text);
 }
 
+const WORKSPACE = { kind: 'workspace' } as const;
+
+/** A service for the disk alone: any \`cm\` command fails the test (\`fakeCmClient\` answers none), and nothing downloads. */
+function onDisk(cm = fakeCmClient().cm) {
+  const downloads = { read: () => Promise.reject(new Error('Nothing downloads on the disk')) };
+  return { trees: new RepositoryTrees({ cm, downloads }), downloads };
+}
+
 const meta = (guid: string): string => `fileFormatVersion: 2\nguid: ${guid}\nTextureImporter:\n  serializedVersion: 13\n`;
 
 /** The service over a workspace, with the reads its project index makes counted and the watcher's events in hand. */
@@ -41,9 +51,9 @@ function service(workspace: string, platform: NodeJS.Platform = process.platform
       head: (file, length) => (reads.heads++, disk.head(file, length)),
     };
   };
-  const unityAssets = createUnityAssetsService({ watchers: { listen: (listener) => (listeners.push(listener), () => undefined), coverageOf: () => (coverage === 'unwatched' ? undefined : coverage) }, platform, filesOf: counted });
+  const unityAssets = createUnityAssetsService({ ...onDisk(), watchers: { listen: (listener) => (listeners.push(listener), () => undefined), coverageOf: () => (coverage === 'unwatched' ? undefined : coverage) }, platform, filesOf: counted });
   const changed = (change: Partial<WorkspaceChange>) => listeners.forEach((listener) => listener.changed(workspace, { content: true, pathsChanged: true, metadata: false, folders: null, ...change }));
-  return { find: (request: Partial<UnityAssetsRequest>) => unityAssets.find(workspace, { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', textures: [], guids: [], paths: [], searchTexturesGlobally: false, ...request }), reads, listed, changed };
+  return { find: (request: Partial<UnityAssetsRequest>) => unityAssets.find(workspace, { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', point: WORKSPACE, textures: [], guids: [], paths: [], searchTexturesGlobally: false, ...request }), reads, listed, changed };
 }
 
 const lookup = (name: string, storedPaths: string[] = [], remapGuid: string | null = null) => ({ name, storedPaths, remapGuid });
@@ -137,7 +147,7 @@ describe('unityAssets.find', () => {
       'Game/Library/PackageCache/com.unity.ugui@2.0.0/package.json': '{}',
     });
     // A material the project hasn't, looked for first: told missing only by a walk no other find's start overtook.
-    const request = { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', textures: [], guids: [BARK_GUID, MAT_GUID], paths: [], searchTexturesGlobally: false };
+    const request = { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', point: WORKSPACE, textures: [], guids: [BARK_GUID, MAT_GUID], paths: [], searchTexturesGlobally: false };
     const listed: string[] = [];
     // The other version of the diff asks while this one's read is under way: the read waits until it has its index.
     let secondFind: Promise<unknown> | null = null;
@@ -145,6 +155,7 @@ describe('unityAssets.find', () => {
     let secondHasIndex = (): void => undefined;
     const secondIndexed = new Promise<void>((resolve) => (secondHasIndex = resolve));
     const unityAssets = createUnityAssetsService({
+      ...onDisk(),
       watchers: { listen: () => () => undefined, coverageOf: () => (++finds === 2 && secondHasIndex(), 'partial') },
       filesOf: (path) => {
         const disk = diskProjectFiles(path);
@@ -252,8 +263,8 @@ describe('unityAssets.find', () => {
   it("can't tell an asset missing whose file the disk refused (an antivirus holding it): the answer says it was unread", async () => {
     const workspace = await workspaceWith({ 'Game/Assets/Art/Tree/Materials/Bark.mat': 'mat', 'Game/Assets/Art/Tree/Materials/Bark.mat.meta': meta(MAT_GUID), 'Game/Assets/Art/Tree/bark.png': 'png' });
     const refused = (path: string) => (/Bark\.mat$|bark\.png$/.test(path) ? Promise.reject(Object.assign(new Error('EPERM: operation not permitted'), { code: 'EPERM' })) : stat(path));
-    const unityAssets = createUnityAssetsService({ watchers: { listen: () => () => undefined, coverageOf: () => 'full' }, statOf: refused });
-    const request = { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', textures: [], guids: [], paths: [], searchTexturesGlobally: false };
+    const unityAssets = createUnityAssetsService({ ...onDisk(), watchers: { listen: () => () => undefined, coverageOf: () => 'full' }, statOf: refused });
+    const request = { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', point: WORKSPACE, textures: [], guids: [], paths: [], searchTexturesGlobally: false };
     expect(await unityAssets.find(workspace, { ...request, guids: [MAT_GUID] })).toMatchObject({ guids: [null], guidMisses: 'unread' });
     expect(await unityAssets.find(workspace, { ...request, textures: [lookup('bark.png')] })).toMatchObject({ textures: [null], guidMisses: 'unread' });
     expect(await unityAssets.find(workspace, { ...request, textures: [lookup('gone.png')] })).toMatchObject({ textures: [null], guidMisses: 'known' });
@@ -271,8 +282,12 @@ describe('unityAssets.find', () => {
     await expect(service(workspace).find({ modelPath: '../Outside.fbx' })).rejects.toThrow('outside the workspace');
   });
 
-  it('runs no cm command: neither it nor what it reads with can reach cm', async () => {
-    const sources = [join(__dirname, 'unityAssetsService.ts'), ...(await readdir(join(__dirname, '..', 'unity'))).filter((name) => !name.endsWith('.test.ts')).map((name) => join(__dirname, '..', 'unity', name))];
-    for (const source of sources) expect(await readFile(source, 'utf8'), source).not.toMatch(/from '\.\.?\/(\.\.\/)?cm\//);
+  it('runs no cm command for a version in the workspace: its disk answers everything', async () => {
+    const workspace = await workspaceWith({ 'Game/ProjectSettings/ProjectVersion.txt': 'v', 'Game/Assets/Art/Tree/bark.png': 'png', 'Game/Assets/Art/Tree/Bark.mat.meta': meta(MAT_GUID), 'Game/Assets/Art/Tree/Bark.mat': 'mat' });
+    const fake = fakeCmClient();
+    const unityAssets = createUnityAssetsService({ ...onDisk(fake.cm), watchers: { listen: () => () => undefined, coverageOf: () => 'full' } });
+    const answer = await unityAssets.find(workspace, { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', point: WORKSPACE, textures: [lookup('bark.png')], guids: [MAT_GUID, BARK_GUID], paths: [], searchTexturesGlobally: true });
+    expect(paths(answer.textures)).toEqual(['Game/Assets/Art/Tree/bark.png']);
+    expect(fake.commands).toEqual([]);
   });
 });

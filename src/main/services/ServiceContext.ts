@@ -8,6 +8,8 @@ import type { AppIcons } from '../system/apps/AppIcons';
 import type { ExternalAppsCatalog } from '../system/apps/ExternalAppsCatalog';
 import type { InstalledAppsCache } from '../system/apps/installedApps';
 import type { AppUpdates } from '../update/AppUpdates';
+import type { RepositoryTrees } from '../unity/RepositoryTrees';
+import type { RevisionDownloads } from '../unity/RevisionDownloads';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
 import type { WorkspaceWindows } from '../window/WorkspaceWindows';
 import type { LeftChangesFinder } from '../workspace/leftChanges';
@@ -24,6 +26,10 @@ export interface ServiceContext {
   watchers: WorkspaceWatchers;
   windows: WorkspaceWindows;
   headers: WorkspaceHeaders;
+  /** The revisions the Materials look reads at a version's point, downloaded in batches and kept for the session. */
+  revisionDownloads: RevisionDownloads;
+  /** The repository's trees at the points a model viewer reads, listed once each and shared (`RepositoryTrees`). */
+  repositoryTrees: RepositoryTrees;
   updates: AppUpdates;
 }
 

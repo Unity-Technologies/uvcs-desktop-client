@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { treeListingOutput } from '../cm/testing/cmOutput';
 import { cmFails, fakeCmClient, optionValue, type CmAnswer, type FakeCmCommand } from '../cm/testing/fakeCmClient';
 import type { ReviewStore } from '../review/ReviewStore';
 import { createContentService } from './contentService';
@@ -28,6 +29,14 @@ function catWriting(text: string) {
   };
   return { written, answer };
 }
+
+/** `/Assets` at a point: a glTF, its `.bin` and its `.meta`. */
+const ASSETS_LISTING = treeListingOutput(
+  { path: 'Assets', type: 'dir', revid: 40 },
+  { path: 'Assets/Barrel.bin', revid: 41 },
+  { path: 'Assets/Barrel.gltf.meta', type: 'txt', revid: 42 },
+  { path: 'Assets/Barrel.gltf', type: 'txt', revid: 43 },
+);
 
 const LS_UNDER_XLINK = `<?xml version="1.0" encoding="utf-8"?>
 <LsResults><LsItems>
@@ -110,30 +119,38 @@ describe('reading the bytes of a model companion', () => {
     expect(commands).toEqual([]);
   });
 
-  it('reads a revision of one with one quick cm cat, as any content', async () => {
+  it("reads one at a changeset or branch head by its revision there, from its folder's listing, which its other companions share", async () => {
     const workspace = await newWorkspace();
     const { written, answer } = catWriting('BIN');
-    const { service, commands } = content({ cat: answer });
+    const { service, commands } = content({ cat: answer, ls: ASSETS_LISTING });
 
     const bytes = await service.readBytes(workspace, { kind: 'repositoryPath', path: '/Assets/Barrel.bin', at: 'cs:12' });
+    await service.readBytes(workspace, { kind: 'repositoryPath', path: '/Assets/Barrel.gltf.meta', at: 'cs:12' });
 
     expect(new TextDecoder().decode(bytes!)).toBe('BIN');
-    expect(commands).toMatchObject([{ via: 'query', args: ['cat', 'serverpath:/Assets/Barrel.bin#cs:12', `--file=${written[0]}`] }]);
+    expect(commands.map(({ via, args }) => [via, args[0], args[1]])).toEqual([
+      // Its children alone, never the subtree: a model in a big folder lists only that folder.
+      ['query', 'ls', '/Assets'],
+      ['query', 'cat', 'revid:41@eco@local'],
+      ['query', 'cat', 'revid:42@eco@local'],
+    ]);
+    expect(written).toHaveLength(2);
   });
 
-  it("reads a companion that isn't there as nothing, from the disk or from cm, so it is an answer", async () => {
+  it("reads a companion that isn't there as nothing, from the disk or from the tree's listing, without a failing command", async () => {
     const workspace = await newWorkspace();
-    const { service } = content({ cat: () => cmFails('Error: The specified item /Assets/Hero.fbx.meta does not exist.'), ls: '<?xml version="1.0" encoding="utf-8"?><LsResults><LsItems></LsItems></LsResults>' });
+    const { service, lines } = content({ ls: ASSETS_LISTING });
     expect(await service.readBytes(workspace, { kind: 'workspaceFile', path: 'Assets/Hero.fbx.meta' })).toBeNull();
     expect(await service.readBytes(workspace, { kind: 'repositoryPath', path: '/Assets/Hero.fbx.meta', at: 'cs:4' })).toBeNull();
+    expect(await service.readBytes(workspace, { kind: 'repositoryPath', path: '/Assets/Shared/Hero.fbx.meta', at: 'cs:4', repository: 'art@local' })).toBeNull();
+    expect(lines().map((line) => line.split(' --format')[0])).toEqual(['ls /Assets --tree=cs:4', 'ls /Assets/Shared --tree=cs:4']);
   });
 
-  it("reads a companion under an xlink that the tree hasn't as nothing", async () => {
-    const { service, lines } = content({
-      ls: cmFails(`Can't resolve the selector for the item /Assets/Shared/Hero.fbx.meta\n<?xml version="1.0" encoding="utf-8"?>\n<LsResults>\n  <LsItems />\n</LsResults>`),
-    });
-    expect(await service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Shared/Hero.fbx.meta', at: 'cs:3', repository: 'art@local' })).toBeNull();
-    expect(lines()).toEqual(['ls /Assets/Shared/Hero.fbx.meta --tree=cs:3 --xml']);
+  it('reads a companion under an xlink by its revision in the xlinked repository, as the listing names it', async () => {
+    const { answer } = catWriting('META');
+    const { service, lines } = content({ cat: answer, ls: treeListingOutput({ path: 'Assets/Shared', type: 'xlink', revid: 3 }, { path: 'Assets/Shared/Hero.fbx.meta', type: 'txt', revid: 77, repository: 'art@local' }) });
+    expect(await service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Shared/Hero.fbx.meta', at: 'cs:3', repository: 'art@local' })).not.toBeNull();
+    expect(lines()[1]).toMatch(/^cat revid:77@art@local --file=/);
   });
 
   describe("of the workspace's repository that isn't there", () => {
@@ -142,10 +159,10 @@ describe('reading the bytes of a model companion', () => {
     const notInTree = ({ args }: FakeCmCommand) =>
       cmFails([`Can't resolve the selector for the item ${args[1]}`, '<?xml version="1.0" encoding="utf-8"?>', '<LsResults>', '  <LsItems />', '</LsResults>'].join('\n'));
 
-    it.each(['cs:3', 'br:/main'])('reads it as nothing at %s once the tree says it is not there', async (at) => {
+    it.each(['cs:3', 'br:/main'])('reads it as nothing at %s, where the tree has no such folder', async (at) => {
       const { service, lines } = content({ cat: notFound, ls: notInTree });
       expect(await service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at })).toBeNull();
-      expect(lines().map((line) => line.split(' --file=')[0])).toEqual([`cat serverpath:/Assets/Crate.fbx.meta#${at}`, `ls /Assets/Crate.fbx.meta --tree=${at} --xml`]);
+      expect(lines().map((line) => line.split(' --format')[0])).toEqual([`ls /Assets --tree=${at}`]);
     });
 
     it.each(['sh:2', 'lb:v1.0'])("reads it as nothing at %s, whose tree cm ls can't list, from its one failing cm cat", async (at) => {

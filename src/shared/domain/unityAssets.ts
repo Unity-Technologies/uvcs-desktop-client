@@ -1,6 +1,38 @@
-// What a model's materials name, looked up in the workspace on disk as Unity would find it: textures by the file name
-// the model stores (Unity's texture search), assets by their GUID (a `.meta`'s remaps, a material's textures), and
-// files at paths already known (a glTF's images beside it). Paths are workspace-relative, `/`-separated.
+// What a model's materials name, looked up as Unity would find it, where the version of the model shown is (its
+// `AssetsPoint`): textures by the file name the model stores (Unity's texture search), assets by their GUID (a `.meta`'s
+// remaps, a material's textures), and files at paths already known (a glTF's images beside it). Paths are
+// workspace-relative, `/`-separated.
+
+import type { RevisionRef } from './revision';
+
+/**
+ * Where a version of a model is, so its materials and textures are the ones that go with it: the workspace's disk as
+ * it is (pending changes, a workspace file), or the repository's tree at a changeset or a branch's head (`cs:12`,
+ * `br:/main/task`: what `cm ls --tree` lists), never the disk's files of another revision.
+ */
+export type AssetsPoint = { kind: 'workspace' } | { kind: 'repository'; at: string; before?: AssetsBefore };
+
+/**
+ * The side before a change, at the tree after it: `changes`, the files a diff changed, each as it was before it (none:
+ * the diff added it); `changeset`, every file of `repository` the changeset made, as it was before it (its parent
+ * revision), as the tree's listing tells. Changeset numbers are per repository: a file under an xlink made in its own
+ * repository's changeset of the same number stays. A file the changeset deleted isn't in the tree after it: the side
+ * before doesn't find it.
+ */
+export type AssetsBefore = { kind: 'changes'; changes: ChangedAsset[] } | { kind: 'changeset'; changeset: number; repository: string };
+
+/**
+ * How long a branch head's tree is taken as it was listed, by main (`RepositoryTrees`) and the renderer's queries
+ * alike: a changeset's never changes, a branch's moves as people check in. Long enough for the reads of the diff on
+ * screen, both sides and both rounds of lookups, to share one listing.
+ */
+export const BRANCH_TREE_LIFE_MS = 60_000;
+
+/** A file a diff changed, as it was on the side before: its revision there, or null where it wasn't there yet. */
+export interface ChangedAsset {
+  path: string;
+  revision: RevisionRef | null;
+}
 
 /** A texture a model's material names, to be found as Unity's texture search finds it. */
 export interface TextureLookup {
@@ -15,6 +47,8 @@ export interface TextureLookup {
 export interface UnityAssetsRequest {
   /** The model's path in the workspace: Unity's project and the folders searched are found from it. */
   modelPath: string;
+  /** Where the version of the model is: what is looked up is what was there with it. */
+  point: AssetsPoint;
   textures: TextureLookup[];
   /** Assets by GUID (32 hex digits). */
   guids: string[];
@@ -24,11 +58,17 @@ export interface UnityAssetsRequest {
   searchTexturesGlobally: boolean;
 }
 
-/** A file found, with what tells one version of it from another: its size and when it was last written. */
-export interface FoundFile {
-  path: string;
-  size: number;
-  modified: number;
+/**
+ * A file found, with what tells one version of it from another: on the workspace's disk, its size and when it was
+ * last written; in the repository, its revision and content hash (MD5, base64, as `cm` gives it; null where not known,
+ * as for a diff's side before). Read with `unityAssets.read`.
+ */
+export type FoundFile = { path: string; size: number } & ({ stored: 'disk'; modified: number } | { stored: 'repository'; revision: RevisionRef; hash: string | null });
+
+/** One key per version of a file found: its path, and what tells that version (`FoundFile`). */
+export function foundFileKey(file: FoundFile): string {
+  const version = file.stored === 'disk' ? `${file.size}\0${file.modified}` : `${file.revision.revisionId}@${file.revision.repository}`;
+  return `${file.path}\0${file.stored}\0${version}`;
 }
 
 /** Each lookup's file, in the request's order; null where nothing was found. */
@@ -61,3 +101,5 @@ export const MAX_UNITY_ASSET_LOOKUPS = 512;
 export const MAX_STORED_PATHS = 16;
 /** The longest name or path a request may carry: past any OS's path length. */
 export const MAX_UNITY_ASSET_PATH_LENGTH = 4096;
+/** The most files a diff's side before may say it changed (`AssetsBefore`'s `changes`). */
+export const MAX_CHANGED_ASSETS = 20_000;
