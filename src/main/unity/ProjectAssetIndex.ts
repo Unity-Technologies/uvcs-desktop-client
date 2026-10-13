@@ -195,17 +195,15 @@ export class ProjectAssetIndex {
   }
 
   /**
-   * Reads the package cache's GUIDs; true only once read whole with no change meanwhile. False without a `Library`
-   * (listed again on the next miss: it may come later).
+   * Reads the package cache's GUIDs; true only once read whole with no change meanwhile. False without a package in
+   * it (no `Library`, or one Unity hasn't resolved packages into on this machine: listed again on the next miss).
    */
   private async readPackageCache(): Promise<boolean> {
-    const library = joined(this.project.root, 'Library');
     const changes = this.changes;
-    const entries = await this.files.list(library).catch(() => null);
-    this.libraryMissing = entries !== null && entries.length === 0;
-    if (entries === null || entries.length === 0) return false;
     const whole = await this.readSubtree(this.packageCache(), true);
-    this.wholePackageCache = whole && this.changes === changes;
+    const top = this.listings.get(this.folderKey(this.packageCache()));
+    this.libraryMissing = whole && top !== undefined && top.folders.length === 0;
+    this.wholePackageCache = whole && !this.libraryMissing && this.changes === changes;
     return this.wholePackageCache;
   }
 

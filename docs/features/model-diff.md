@@ -317,8 +317,8 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   lookup stopping at the first ring that answers; what Unity skips (`.hidden`, `Name~`) is left out. A GUID none of
   them has is looked for last in `Library/PackageCache`, where Unity keeps the registry packages it resolved (a URP
   material a model is remapped to), with the same head-only `.meta` reads: only on such a miss, as the cache holds
-  thousands of package files, and never the rest of `Library`. Without a `Library` (a project never opened in Unity on
-  this machine) a GUID missing elsewhere isn't known missing (`pathOfGuid` is undefined): no risk is told, and the
+  thousands of package files, and never the rest of `Library`. Without a package in `Library/PackageCache` (no `Library`:
+  a project never opened in Unity on this machine; or packages not yet resolved there) a GUID missing elsewhere isn't known missing (`pathOfGuid` is undefined): no risk is told, and the
   look shows clay, as for any material not found. The watcher doesn't see `Library` (`ignore.conf` hides it), so the
   package cache is read again once `Packages` itself changes (Unity rewrites `manifest.json` or `packages-lock.json`
   as it changes the packages it caches); a change anywhere, which drops the rest of the index, keeps it, as it says
