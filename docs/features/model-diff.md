@@ -102,11 +102,38 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
 - **Each mesh**: triangles (and nothing else then: a rebuilt mesh changed everything), shape, normals, UVs, lightmap
   UVs (lost is a risk: baked lighting needs them), vertex colors, skinning, blendshapes renamed, removed or added.
 - **Takes** (Unity's clips are cut from them by name): renamed (one gone and one of the same length come), removed,
-  added, of another length. **Textures** the materials name, the **up axis**, the **exporting app** (all a re-export
-  with nothing else changed tells: the panel says "Nothing Unity imports changed" when there's nothing at all).
+  added, of another length. **Textures** the file's materials name (where materials aren't told, below), the **up
+  axis**, the **exporting app** (all a re-export with nothing else changed tells: the panel says "Nothing Unity imports
+  changed" when there's nothing at all).
+- **Materials as Unity resolves them** (`materialChanges`, worded by `materialChangeWords`), compared from both
+  versions' plans (`planVersion`'s `resolved`, "Materials" below), each slot both versions have (a glTF's materials,
+  keyed by their place in the file, paired by name instead, and only where both files name one material so:
+  `pairedSlots`; its images held in the file are compared by their place, never their content): where it takes its
+  material from (Unity's default; a project's `.mat`, by its GUID, one of the same name elsewhere named by its folder, a
+  registry package's in `Library/PackageCache` named the package's; the model's own; a remap to a material the project
+  hasn't: Unity's missing material, a risk), and, for the same material, its base map, normal map, base color (as the
+  Inspector shows it, `#RRGGBB`), alpha (opaque, cutout, transparent), alpha cutoff, opacity (in whole percents, as
+  told), sides and the base map's tiling and offset; and a texture it now uses that the workspace hasn't (a risk; one it
+  lacked before isn't news). The workspace's materials read alike for both versions, so a `.mat` changed alone never
+  shows here: its own diff is its text. They're told with the Materials look off too, from the very reads the look makes
+  (one query each, shared): only for versions whose materials may resolve differently (`materialsMayDiffer`: their
+  slots' sources or their lookups differ), so a re-export that changed no material reads nothing, and never decoding a
+  texture. Waiting for the look to resolve them was rejected: a change is a change, and the reads are the workspace's
+  disk, no `cm` command; the one cost, a GUID the project lacks, reads the project's index once, as the look would.
+  They're not told (`materialChangesOf` is null) without a workspace, for a version with no path in it or whose `.meta`
+  read failed (`comparableVersions`), or when the workspace couldn't answer for a side (`answerStateOf`): a find that
+  failed, a file the disk refused to check (only `ENOENT` and `ENOTDIR` say a file isn't there: `foundFile`), or a GUID
+  not found that can't be told missing (`UnityAssetsAnswer.guidMisses`: a model outside a Unity project, as in a
+  package's own repository, or in a project without a `Library`, never opened in Unity on this machine, "The project's
+  index" below). Then the file's own list of textures named (`textures`) stands in, and where the materials may have
+  changed (`materialsMayDiffer`) a note says they weren't compared and why ("Materials not compared": open the project
+  in Unity once on this computer; the project's files couldn't all be read; the model isn't in a Unity project;
+  `materialsNotComparedOf`), so the panel never says nothing changed; where they are told, or being read, it goes, as
+  the materials say which textures Unity uses (`whatChanged`).
 
 `changeRows` words them for the panel, with the line on why a risk matters in Unity, and folds three or more of a kind
-(`FOLD_FROM`: "Added 6 bones") into one row listing them. Lengths read in the unit that suits them (`formatLength`).
+(`FOLD_FROM`: "Added 6 bones") into one row listing them; material rows count slots ("3 slots now transparent"), and
+a missing texture once however many slots use it. Lengths read in the unit that suits them (`formatLength`).
 
 ## The view
 
@@ -159,6 +186,11 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   (`MeshSkin.bindMatrix`): an FBX binds a mesh where its node is, glTF in the file's space, ignoring the skinned mesh's
   node. Binding a glTF at its node instead drew a Sketchfab export (its meshes under a `Sketchfab_model` root that turns
   Z up and a node that scales centimetres) under them twice: a hundredth of its size, or torn into stray triangles.
+  Blendshape animation isn't played: the viewer builds no morph targets, and a take's blendshape track names the
+  mesh's node, a Group above the mesh, so three's `AnimationMixer` would log an error for each one it can't bind. Before
+  binding, `playableTake` leaves out every track whose node or property the scene hasn't (blendshapes, a node it
+  doesn't have), so the bones' tracks beside them still play; the bar then says so in one line (`unplayableWords`:
+  "Blendshape animation isn't shown").
 - **The scene**: clay lit by a soft studio (three's `RoomEnvironment`) and a key light over the camera's shoulder;
   a ground grid a power of ten apart that suits the model (1 m for a person), X and Z through the origin in Unity's
   axis colors; each version's pivot axes, turned as the node every mesh hangs under. A picked node with no geometry
@@ -213,7 +245,9 @@ trusted.
   the clips cut from the takes by frames (counted at the FBX's frame rate, `TimeMode`; 30 fps without one), and the
   materials remapped onto slots. `importSettingsChanges` tells what the settings do with the model that no longer
   fits it, only when this change broke it: a remap onto a slot it doesn't have, an avatar bone it doesn't have, a clip
-  past its take's end or from a take it doesn't have; and a Scale Factor changed. One `cm cat` a side, cached.
+  past its take's end or from a take it doesn't have; and a Scale Factor changed. Nothing of them is told when a
+  side's `.meta` read failed (`whatChanged`'s `settingsRead`): Unity's defaults stand in for it, and aren't its
+  settings. One `cm cat` a side, cached.
 - **A model's `.meta` diffed alone** (`modelOfMeta`) shows as the model under each version's settings (`ModelMetaDiff`,
   "Code | Model", the model by default, remembered as `representations.meta`): raising the Scale Factor instead of
   exporting again reads "100× larger in Unity". Only where the model can be found beside it (`modelBesideMeta`);
@@ -247,13 +281,15 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   Material Creation Mode None (`materialImportMode: 0`, or `importMaterials: 0` in a `.meta` older than Unity 2019.3)
   clay, unless `remapMaterialsIfMaterialImportModeIsNone: 1` (absent, as before 2021.2: clay, as Unity imports it); a
   slot the `.meta` remaps (`externalObjects`, by slot name) takes that `.mat`, and one remapped to a GUID the project
-  hasn't is clay (Unity assigns the missing asset, never the file's own); any other slot the file's material, an OBJ's
-  from its `.mtl` (`readMtlMaterials`, read beside it on disk). The legacy external location (`materialLocation: 0`,
-  obsolete since 2019.3) counts as the file's own; its `Materials/` folder search isn't done. A glTF's materials are
-  glTFast's: the file's, keyed by material, not name (`slotKeysOf`: Sponza's 25 are all unnamed); a map on the second UV
-  set (`texCoord: 1`, `TextureUse.channel`) samples it (`uv1`), GLTFLoader's copy of its texture known by the image
-  source it shares; a specular-glossiness material (`KHR_materials_pbrSpecularGlossiness`, which three no longer reads)
-  takes its diffuse texture and factor as glTFast does (`withSpecularGlossiness`).
+  hasn't is clay (Unity assigns the missing asset, never the file's own), and one remapped to Unity's own
+  (Default-Material, by the built-in GUIDs `0000000000000000f000000000000000` and `…e000…`, `isBuiltInGuid`) is Unity's
+  default look, looked up nowhere; any other slot the file's material, an OBJ's from its `.mtl` (`readMtlMaterials`,
+  read beside it on disk). The legacy external location (`materialLocation: 0`, obsolete since 2019.3) counts as the
+  file's own; its `Materials/` folder search isn't done. A glTF's materials are glTFast's: the file's, keyed by
+  material, not name (`slotKeysOf`: Sponza's 25 are all unnamed); a map on the second UV set (`texCoord: 1`,
+  `TextureUse.channel`) samples it (`uv1`), GLTFLoader's copy of its texture known by the image source it shares; a
+  specular-glossiness material (`KHR_materials_pbrSpecularGlossiness`, which three no longer reads) takes its diffuse
+  texture and factor as glTFast does (`withSpecularGlossiness`).
 - **A `.mat`** (`readUnityMaterial`, over `parseUnityYaml`, which joins values Unity folded onto the next lines): the
   base map is the first set of `_BaseMap` (URP), `_BaseColorMap` (HDRP), `_MainTex` (Built-in), else a Shader Graph
   texture whose name says it is the base color (`_MainTexture`; never one named normal, mask, detail…; a name that says
@@ -261,7 +297,7 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   `_BaseColor` or `_Color` (sRGB); alpha clip (`_AlphaClip`, `_AlphaCutoffEnable`, Built-in `_Mode` 1, cutoff
   `_Cutoff`/`_AlphaCutoff`), transparency (`_Surface`, `_SurfaceType`, `_Mode` 2 or 3; a `_Mode` left over is ignored
   where `_Surface` or `_SurfaceType` is set), both sides (`_Cull` or `_CullMode` 0, `_DoubleSidedEnable`). Textures by
-  GUID.
+  GUID; one of Unity's own is there, never missing, and not drawn.
 - **Unity's texture search** (`textureCandidates`, `main/unity/textureSearch.ts`), for a texture the file names: a
   `.meta` remap of the texture by its name without extension (by GUID); the model's folder; `Textures/` there and in
   each folder above it up to `Assets` (the project, `unityProjectFound`: the nearest folder above the model whose
@@ -276,22 +312,40 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   nothing outside the workspace is read (`workspaceFileOf`). A glTF's images by URI are files beside it (`siblingPath`),
   on disk.
 - **The project's index** (`ProjectAssetIndex`): GUIDs from each `.meta`'s second line, and file names, read outward
-  from the model (its folder's subtree, then each folder above it, then `Assets` and the project's `Packages`, never
-  `Library`), a lookup stopping at the first ring that answers; what Unity skips (`.hidden`, `Name~`) is left out. The
-  watcher keeps it current (`WorkspaceWatchers.listen`: a changed folder is read again when next needed, a change
-  anywhere drops it, and so does the watch breaking or stopping; the app's own `cm` writes, whose events the watcher
-  drops, count as a change anywhere once they settle, and again when their grace ends, `AFTER_OWN_WRITE_GRACE_MS`, as
-  the watcher drops what changed meanwhile as theirs). It is kept only while the watcher sees the whole workspace
-  (`coverageOf` is `full`); otherwise each find reads afresh. A GUID found is checked against its `.meta` once more. A
-  folder is read once however many finds ask at once; once all is read, a miss misses at once. A read that a change
-  overtook keeps nothing, and a find after the change never joins it: the listing or GUIDs of a folder forgotten (or of
-  everything cleared) while being read are dropped when they arrive, and a whole read the project changed under isn't
-  whole. Only what isn't there is an answer: a read the disk refused (a `.meta` Unity or an antivirus holds, too many
-  files open) is kept as nothing and read again, and at most 32 files are open at once (`diskProjectFiles`). On macOS
-  folders compare in one Unicode form (the watcher names them decomposed, listings may be composed). Changes inside
-  folders `ignore.conf` hides from the watcher aren't seen: an `Assets` folder is versioned content. Measured by hand on
-  a project of 100,000 assets (1,000 folders): a GUID it lacks reads it all in about 2.1 s, once; the next lookup reads
-  nothing. Tests count the reads (`ProjectAssetIndex.test.ts`).
+  from the model (its folder's subtree, then each folder above it, then `Assets` and the project's `Packages`), a lookup
+  stopping at the first ring that answers; what Unity skips (`.hidden`, `Name~`) is left out. A GUID none of them has is
+  looked for last in `Library/PackageCache`, where Unity keeps the registry packages it resolved (a URP material a model
+  is remapped to), with the same head-only `.meta` reads: only on such a miss, as the cache holds thousands of package
+  files, and never the rest of `Library`. A package loaded from a folder outside the project
+  (`file:../../Shared/com.studio.art` in `Packages/manifest.json`, `loadsPackagesFromOutside`), which Unity reads where
+  it lies, isn't read: in such a project a GUID found nowhere isn't known missing (`outsidePackage`). Without a package
+  in `Library/PackageCache` (no `Library`: a project never opened in Unity on this machine; or packages not yet resolved
+  there) a GUID missing elsewhere isn't known missing (`pathOfGuid` answers `GuidNotKnown`, `noLibrary`): no risk is
+  told, and the look shows clay, as for any material not found. The watcher doesn't see `Library` (`ignore.conf` hides
+  it), so the package cache is read again once `Packages` itself changes (Unity rewrites `manifest.json` or
+  `packages-lock.json` as it changes the packages it caches); a change anywhere, which drops the rest of the index,
+  keeps it, as it says nothing of the cache. As Unity also changes the cache unseen (an upgrade replaces `@17.0.3` with
+  `@17.0.4`; the `Library` deleted), a hit there whose `.meta` no longer says so drops the whole cache, and each miss
+  over a cache read whole lists its top again (one directory read per miss) and reads it again where its packages differ
+  (`packageCacheUnchanged`). The watcher keeps the rest current (`WorkspaceWatchers.listen`: a changed folder is read
+  again when next needed, a change anywhere drops it, and so does the watch breaking or stopping; the app's own `cm`
+  writes, whose events the watcher drops, count as a change anywhere once they settle, and again when their grace ends,
+  `AFTER_OWN_WRITE_GRACE_MS`, as the watcher drops what changed meanwhile as theirs). It is kept only while the watcher
+  sees the whole workspace (`coverageOf` is `full`); otherwise a find that starts while no other is under way reads the
+  project's folders afresh (finds at once, both versions of a diff, share that read: one starting would overtake the
+  other's), and keeps only the package cache (which no watcher sees anyway, and which checks itself:
+  `packageCacheUnchanged`). A GUID found is checked against its `.meta` once more. A folder is read once however many
+  finds ask at once; once all is read, a miss misses at once. A read that a change overtook keeps nothing, and a find
+  after the change never joins it: the listing or GUIDs of a folder forgotten (or of everything cleared) while being
+  read are dropped when they arrive, and a whole read the project changed under isn't whole. Only what isn't there is an
+  answer: a read the disk refused (a `.meta` Unity or an antivirus holds, too many files open) is kept as nothing and
+  read again, and at most 32 files are open at once (`diskProjectFiles`); a GUID is told missing (`pathOfGuid` null)
+  only after whole reads no change overtook, of the project and its package cache: when in doubt it says why it can't
+  tell (`GuidNotKnown`, with each lookup: finds at once each get their own), as a material told missing that isn't is
+  worse than one not told. On macOS folders compare in one Unicode form (the watcher names them decomposed, listings may
+  be composed). Changes inside folders `ignore.conf` hides from the watcher aren't seen: an `Assets` folder is versioned
+  content. Measured by hand on a project of 100,000 assets (1,000 folders): a GUID it lacks reads it all in about 2.1 s,
+  once; the next lookup reads nothing. Tests count the reads (`ProjectAssetIndex.test.ts`).
 - **Formats** (`textureFormatOf`), decoded in a worker of their own (`texture.worker`), never on the UI thread (where it
   can't start, textures don't show): PNG, JPEG, GIF, BMP, WebP by the browser (`createImageBitmap`); TGA, TIFF (LZW
   too), EXR (DWAA too) and Radiance HDR by three's loaders (high dynamic range clamped and encoded as sRGB); PSD and PSB

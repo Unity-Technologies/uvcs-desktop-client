@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readdir, readFile, rename, rm, stat, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -31,17 +31,19 @@ const meta = (guid: string): string => `fileFormatVersion: 2\nguid: ${guid}\nTex
 /** The service over a workspace, with the reads its project index makes counted and the watcher's events in hand. */
 function service(workspace: string, platform: NodeJS.Platform = process.platform, coverage: WatchCoverage | 'unwatched' = 'full') {
   const reads = { lists: 0, heads: 0 };
+  /** Every folder listed, in order. */
+  const listed: string[] = [];
   const listeners: WorkspaceFilesListener[] = [];
   const counted = (path: string): ProjectFiles => {
     const disk = diskProjectFiles(path);
     return {
-      list: (folder) => (reads.lists++, disk.list(folder)),
+      list: (folder) => (reads.lists++, listed.push(folder), disk.list(folder)),
       head: (file, length) => (reads.heads++, disk.head(file, length)),
     };
   };
   const unityAssets = createUnityAssetsService({ watchers: { listen: (listener) => (listeners.push(listener), () => undefined), coverageOf: () => (coverage === 'unwatched' ? undefined : coverage) }, platform, filesOf: counted });
   const changed = (change: Partial<WorkspaceChange>) => listeners.forEach((listener) => listener.changed(workspace, { content: true, pathsChanged: true, metadata: false, folders: null, ...change }));
-  return { find: (request: Partial<UnityAssetsRequest>) => unityAssets.find(workspace, { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', textures: [], guids: [], paths: [], searchTexturesGlobally: false, ...request }), reads, changed };
+  return { find: (request: Partial<UnityAssetsRequest>) => unityAssets.find(workspace, { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', textures: [], guids: [], paths: [], searchTexturesGlobally: false, ...request }), reads, listed, changed };
 }
 
 const lookup = (name: string, storedPaths: string[] = [], remapGuid: string | null = null) => ({ name, storedPaths, remapGuid });
@@ -128,6 +130,57 @@ describe('unityAssets.find', () => {
     expect((await service(workspace).find({ modelPath: 'Hub/Assets/Game/Assets/Tree.fbx' })).importsPsb).toBe(true);
   });
 
+  it('shares one fresh read of the project among finds at once where the watcher sees only part of the workspace', async () => {
+    const workspace = await workspaceWith({
+      'Game/Assets/Art/Materials/Bark.mat': 'mat',
+      'Game/Assets/Art/Materials/Bark.mat.meta': meta(MAT_GUID),
+      'Game/Library/PackageCache/com.unity.ugui@2.0.0/package.json': '{}',
+    });
+    // A material the project hasn't, looked for first: told missing only by a walk no other find's start overtook.
+    const request = { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', textures: [], guids: [BARK_GUID, MAT_GUID], paths: [], searchTexturesGlobally: false };
+    const listed: string[] = [];
+    // The other version of the diff asks while this one's read is under way: the read waits until it has its index.
+    let secondFind: Promise<unknown> | null = null;
+    let finds = 0;
+    let secondHasIndex = (): void => undefined;
+    const secondIndexed = new Promise<void>((resolve) => (secondHasIndex = resolve));
+    const unityAssets = createUnityAssetsService({
+      watchers: { listen: () => () => undefined, coverageOf: () => (++finds === 2 && secondHasIndex(), 'partial') },
+      filesOf: (path) => {
+        const disk = diskProjectFiles(path);
+        return {
+          list: async (folder) => {
+            listed.push(folder);
+            if (folder === 'Game/Assets/Art' && !secondFind) {
+              secondFind = unityAssets.find(workspace, request);
+              await secondIndexed;
+            }
+            return disk.list(folder);
+          },
+          head: disk.head,
+        };
+      },
+    });
+    const first = await unityAssets.find(workspace, request);
+    for (const answer of [first, await secondFind]) expect(answer).toMatchObject({ guids: [null, { path: 'Game/Assets/Art/Materials/Bark.mat' }], guidMisses: 'known' });
+    expect(listed.filter((folder) => folder === 'Game/Assets/Art/Materials')).toHaveLength(1);
+  });
+
+  it("keeps the package cache, which no watcher sees, for a workspace whose project folders each find reads afresh", async () => {
+    const LIT = '22222222222222222222222222222222';
+    const files = {
+      'Game/Assets/Tree.fbx.meta': meta(MAT_GUID),
+      'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat': 'mat',
+      'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat.meta': meta(LIT),
+    };
+    const { find, listed } = service(await workspaceWith(files), process.platform, 'partial');
+    expect(await find({ guids: [LIT] })).toMatchObject({ guids: [{ path: 'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat' }], guidMisses: 'known' });
+    const cacheListed = listed.filter((folder) => folder.startsWith('Game/Library')).length;
+    expect(await find({ guids: [LIT] })).toMatchObject({ guidMisses: 'known' });
+    // The second find reads the project's folders again, never the package cache.
+    expect(listed.filter((folder) => folder.startsWith('Game/Library')).length).toBe(cacheListed);
+  });
+
   it("keeps no index of a workspace whose watcher doesn't see every change: each find reads afresh", async () => {
     const files = { 'Game/Assets/Art/Materials/Bark.mat': 'mat', 'Game/Assets/Art/Materials/Bark.mat.meta': meta(MAT_GUID) };
     for (const coverage of ['partial', 'unwatched'] as const) {
@@ -144,6 +197,66 @@ describe('unityAssets.find', () => {
     await expect(find({ textures: [lookup('bark.png', Array.from({ length: 17 }, (_, i) => `p${i}/bark.png`))] })).rejects.toThrow('Too many');
     await expect(find({ textures: [lookup('a'.repeat(5000))] })).rejects.toThrow('too long');
     await expect(find({ paths: [`${'b/'.repeat(3000)}c.png`] })).rejects.toThrow('too long');
+  });
+
+  it("says whether GUIDs were looked up in a project's index: never for a model outside a Unity project, as in a package's own repository", async () => {
+    const project = await workspaceWith({ 'Game/Assets/Art/Tree/Materials/Bark.mat.meta': meta(MAT_GUID) });
+    expect((await service(project).find({ guids: [MAT_GUID] })).guidMisses).toBe('known');
+    const packageRepository = await workspaceWith({ 'Packages/com.studio.trees/Materials/Leaf.mat.meta': meta(MAT_GUID) });
+    const answer = await service(packageRepository).find({ modelPath: 'Packages/com.studio.trees/Models/Tree.fbx', guids: [MAT_GUID] });
+    expect(answer).toMatchObject({ guids: [null], guidMisses: 'noProject' });
+  });
+
+  it("finds a registry package's asset by GUID in the project's package cache, read only on a miss in Assets and Packages", async () => {
+    const LIT = '22222222222222222222222222222222';
+    const workspace = await workspaceWith({
+      'Game/Assets/Art/Tree/Materials/Bark.mat': 'mat',
+      'Game/Assets/Art/Tree/Materials/Bark.mat.meta': meta(MAT_GUID),
+      'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Runtime/Materials/Lit.mat': 'mat',
+      'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Runtime/Materials/Lit.mat.meta': meta(LIT),
+    });
+    const { find, listed } = service(workspace);
+    expect(paths((await find({ guids: [MAT_GUID] })).guids)).toEqual(['Game/Assets/Art/Tree/Materials/Bark.mat']);
+    expect(listed.filter((folder) => folder.startsWith('Game/Library'))).toEqual([]);
+    expect(await find({ guids: [LIT] })).toMatchObject({ guids: [{ path: 'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Runtime/Materials/Lit.mat' }], guidMisses: 'known' });
+    expect(await find({ guids: ['33333333333333333333333333333333'] })).toMatchObject({ guids: [null], guidMisses: 'known' });
+  });
+
+  it("can't tell a GUID missing in a project without a Library, never opened in Unity on this machine", async () => {
+    const workspace = await workspaceWith({ 'Game/Assets/Art/Tree/Materials/Bark.mat': 'mat', 'Game/Assets/Art/Tree/Materials/Bark.mat.meta': meta(MAT_GUID) });
+    expect(await service(workspace).find({ guids: [MAT_GUID] })).toMatchObject({ guidMisses: 'known' });
+    expect(await service(workspace).find({ guids: [MAT_GUID, BARK_GUID] })).toMatchObject({ guids: [{ path: 'Game/Assets/Art/Tree/Materials/Bark.mat' }, null], guidMisses: 'noLibrary' });
+    expect(await service(workspace).find({ textures: [lookup('bark.png', [], BARK_GUID)] })).toMatchObject({ textures: [null], guidMisses: 'noLibrary' });
+  });
+
+  it("can't tell a GUID missing in a project that loads a package from a folder outside it, which isn't read", async () => {
+    const workspace = await workspaceWith({
+      'Game/Assets/Tree.fbx.meta': meta(MAT_GUID),
+      'Game/Packages/manifest.json': JSON.stringify({ dependencies: { 'com.studio.art': 'file:../../Shared/com.studio.art' } }),
+      'Game/Library/PackageCache/com.unity.ugui@2.0.0/package.json': '{}',
+    });
+    expect(await service(workspace).find({ guids: [BARK_GUID] })).toMatchObject({ guids: [null], guidMisses: 'outsidePackage' });
+  });
+
+  it("reads the package cache again once the project's packages change, which the watcher sees in Packages", async () => {
+    const LIT = '22222222222222222222222222222222';
+    const workspace = await workspaceWith({ 'Game/Assets/Tree.fbx.meta': meta(MAT_GUID), 'Game/Packages/manifest.json': '{}', 'Game/Library/PackageCache/com.unity.ugui@2.0.0/package.json': '{}' });
+    const { find, changed } = service(workspace);
+    expect((await find({ guids: [LIT] })).guids).toEqual([null]);
+    await writeAt(workspace, 'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat.meta', meta(LIT));
+    await writeAt(workspace, 'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat', 'mat');
+    changed({ folders: ['Game/Packages'] });
+    expect(paths((await find({ guids: [LIT] })).guids)).toEqual(['Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat']);
+  });
+
+  it("can't tell an asset missing whose file the disk refused (an antivirus holding it): the answer says it was unread", async () => {
+    const workspace = await workspaceWith({ 'Game/Assets/Art/Tree/Materials/Bark.mat': 'mat', 'Game/Assets/Art/Tree/Materials/Bark.mat.meta': meta(MAT_GUID), 'Game/Assets/Art/Tree/bark.png': 'png' });
+    const refused = (path: string) => (/Bark\.mat$|bark\.png$/.test(path) ? Promise.reject(Object.assign(new Error('EPERM: operation not permitted'), { code: 'EPERM' })) : stat(path));
+    const unityAssets = createUnityAssetsService({ watchers: { listen: () => () => undefined, coverageOf: () => 'full' }, statOf: refused });
+    const request = { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', textures: [], guids: [], paths: [], searchTexturesGlobally: false };
+    expect(await unityAssets.find(workspace, { ...request, guids: [MAT_GUID] })).toMatchObject({ guids: [null], guidMisses: 'unread' });
+    expect(await unityAssets.find(workspace, { ...request, textures: [lookup('bark.png')] })).toMatchObject({ textures: [null], guidMisses: 'unread' });
+    expect(await unityAssets.find(workspace, { ...request, textures: [lookup('gone.png')] })).toMatchObject({ textures: [null], guidMisses: 'known' });
   });
 
   it('finds an asset of a local package by GUID', async () => {

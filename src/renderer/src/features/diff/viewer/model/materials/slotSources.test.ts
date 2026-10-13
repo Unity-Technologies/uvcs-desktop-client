@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_IMPORT_SETTINGS, type ModelImportSettings } from '../modelImportSettings';
+import { DEFAULT_IMPORT_SETTINGS, readImportSettings, type ModelImportSettings } from '../modelImportSettings';
 import type { FileMaterial } from '../parsedModel';
 import { materialsOffered, slotSources, type ModelMaterialsInput } from './slotSources';
 import { fileMaterial, named, use } from './testing/testMaterials';
@@ -20,7 +20,27 @@ function version({ format = 'fbx', materials = [textured('Bark'), fileMaterial('
   return { format, slots: ['Bark', 'Leaves'].map((name) => ({ key: name, name, material: byName.get(name) ?? null })), settings: { ...DEFAULT_IMPORT_SETTINGS, ...settings } };
 }
 
+/** Unity's `unity_builtin_extra`, where Default-Material is (fileID 10303). */
+const BUILT_IN_EXTRA = '0000000000000000f000000000000000';
+
 describe('slotSources', () => {
+  it("gives a slot remapped to one of Unity's built-in materials Unity's default look, looked up nowhere", () => {
+    const meta = [
+      'fileFormatVersion: 2',
+      'guid: 1156b86fa47a743339813f160e676ce3',
+      'ModelImporter:',
+      '  serializedVersion: 24300',
+      '  externalObjects:',
+      '  - first:',
+      '      type: UnityEngine:Material',
+      '      assembly: UnityEngine.CoreModule',
+      '      name: Leaves',
+      `    second: {fileID: 10303, guid: ${BUILT_IN_EXTRA}, type: 0}`,
+    ].join('\n');
+    const sources = slotSources(version({ settings: readImportSettings(meta) }));
+    expect(sources.get('Leaves')).toEqual({ kind: 'default' });
+  });
+
   it("gives each slot of an FBX the file's material, or the project's one its .meta remaps it to", () => {
     const sources = slotSources(version({ settings: { materialRemaps: [{ slot: 'Leaves', guid: GUID }] } }));
     expect(sources.get('Bark')).toEqual({ kind: 'file', material: textured('Bark') });

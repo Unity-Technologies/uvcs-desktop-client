@@ -145,11 +145,12 @@ markup from the network.
   with neither, or whose supplied text is for another license than the one it names. A new dependency that fails it
   gets its upstream license text added there; an entry whose package now ships its own license file fails
   `suppliedLicenses.test.ts` until it is removed. electron-builder.yml's `extraResources` ships
-  `THIRD_PARTY_NOTICES.txt` with the app's `LICENSE.md` and `NOTICE` as plain files in the resources folder, outside
-  `app.asar`.
-- **Licenses**: the app is Apache-2.0 (`LICENSE.md`, `NOTICE`), and every package in package-lock.json must have a
-  permissive license (`PERMISSIVE_LICENSES`, `scripts/build/dependencyLicenses.test.ts`): a copyleft one fails the tests
-  and needs a legal decision before it joins.
+  `THIRD_PARTY_NOTICES.txt` with the app's `LICENSE.md` as plain files in the resources folder, outside `app.asar`.
+- **Licenses**: the app is made available under the Unity Terms of Service (`LICENSE.md`; package.json says
+  `SEE LICENSE IN LICENSE.md`). It has no `NOTICE` file: that is an Apache-2.0 convention, and `LICENSE.md` holds the
+  copyright line. Every package in package-lock.json must have a permissive license (`PERMISSIVE_LICENSES`,
+  `scripts/build/dependencyLicenses.test.ts`): a copyleft one fails the tests and needs a legal decision before it
+  joins.
 - **macOS** releases are signed with Unity's Developer ID (`Unity Technologies SF (9QW8UQUTAA)`, the certificate Unity
   Hub uses, imported from Key Vault on Unity's macOS runners) and notarized, so updates install on a restart. macOS
   installs an update only from the same team, so that identity must never change. A local build (`npm run dist`) is

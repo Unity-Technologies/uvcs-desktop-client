@@ -10,7 +10,7 @@ describe('every dependency', () => {
     expect(
       nonPermissivePackages(lockfile),
       'These packages have a license that is not on PERMISSIVE_LICENSES (scripts/build/dependencyLicenses.ts). Replace ' +
-        'the package, or, once its license is confirmed to allow shipping the app under Apache-2.0, add it to the list.',
+        'the package, or, once its license is confirmed to allow shipping the app under its own license (LICENSE.md), add it to the list.',
     ).toEqual([]);
   });
 });
@@ -46,7 +46,7 @@ describe('nonPermissivePackages', () => {
   it('names each package that fails, with its license, skipping the app itself', () => {
     const lockfile = {
       packages: {
-        '': { license: 'Apache-2.0' },
+        '': { license: 'SEE LICENSE IN LICENSE.md' },
         'node_modules/react': { license: 'MIT' },
         'node_modules/@scope/copyleft': { license: 'GPL-3.0-only' },
         'node_modules/a/node_modules/nameless': {},

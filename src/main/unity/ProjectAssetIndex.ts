@@ -4,6 +4,8 @@
 // the index is read outward from the model: the subtree of its folder, then of each folder above it (as Unity's texture
 // search prefers), then the rest of the project; a lookup stops reading at the first ring that answers it. Only a GUID
 // or a name the project doesn't have reads it all, once: from then on it is known whole, and a miss misses at once.
+// A GUID missing from all of it is looked for, last, in the registry packages Unity keeps in `Library/PackageCache`
+// (a URP material a model is remapped to): read only on such a miss, as the cache holds thousands of package files.
 
 import type { WorkspaceChange } from '@shared/domain/workspaceChange';
 import type { UnityProject } from './unityProject';
@@ -33,6 +35,11 @@ interface Listing {
 
 /** Enough for `fileFormatVersion: 2` and the GUID line that follows, whatever the line ends. */
 const META_HEAD_BYTES = 256;
+
+/** Why a GUID found nowhere isn't known missing: no package cache to look in (`noLibrary`), or a read unfinished. */
+export type GuidNotKnown = { notKnown: 'noLibrary' | 'unread' };
+const UNREAD: GuidNotKnown = { notKnown: 'unread' };
+type PackageCacheRead = 'whole' | GuidNotKnown['notKnown'];
 const GUID_LINE = /^guid:\s*([0-9a-f]{32})\s*$/m;
 /** Folders read at once while a ring is read, and `.meta` files per folder: the disk kept busy, its open files few. */
 const FOLDERS_AT_ONCE = 8;
@@ -50,6 +57,10 @@ export class ProjectAssetIndex {
   /** Read whole (the GUIDs of `Assets` and `Packages`, the names of `Assets`): a lookup that misses misses at once. */
   private wholeGuids = false;
   private wholeNames = false;
+  /** `Library/PackageCache` read whole: a GUID missing from it too is missing. */
+  private wholePackageCache = false;
+  /** The package cache's read in flight: two finds at once read it once, and take its outcome. */
+  private packageCacheRead: Promise<PackageCacheRead> | null = null;
   /**
    * What tells a read that a change made it stale: a read that settles after its folder was forgotten, or everything
    * cleared, keeps nothing (`isCurrent`), and a walk the project changed under never counts as whole.
@@ -65,19 +76,35 @@ export class ProjectAssetIndex {
     private readonly platform: NodeJS.Platform,
   ) {}
 
-  /** The asset of a GUID: in the project's `Assets` or `Packages`, read outward from `near` (a folder). */
-  async pathOfGuid(guid: string, near: string): Promise<string | null> {
+  /**
+   * The asset of a GUID: in the project's `Assets` or `Packages`, read outward from `near` (a folder), else in its
+   * package cache. Null only when it's missing from all of them, every one read whole and current; whenever that can't
+   * be told, why (`GuidNotKnown`): a material told missing that isn't is worse than one not told.
+   */
+  async pathOfGuid(guid: string, near: string): Promise<string | null | GuidNotKnown> {
     const wanted = guid.toLowerCase();
     for (let attempt = 0; attempt < 2; attempt++) {
-      const found = this.byGuid.get(wanted) ?? (this.wholeGuids ? null : await this.inRings(near, () => this.byGuid.get(wanted) ?? null));
-      if (found === null) return null;
+      const found = this.byGuid.get(wanted) ?? (await this.notKnownYet(wanted, near));
+      if (typeof found !== 'string') return found;
       // A folder changed while unwatched may still list a `.meta` that moved: what it says now decides (a read that
       // fails tells nothing, and the index stands).
       const head = await this.files.head(`${found}.meta`, META_HEAD_BYTES).catch(() => undefined);
       if (head === undefined || GUID_LINE.exec(head ?? '')?.[1] === wanted) return found;
-      this.forget(folderOf(found));
+      // Unity changes the package cache unseen (`noteChange`): a hit there gone stale makes all of it suspect.
+      if (this.isUnder(found, this.packageCache())) this.forgetPackageCache();
+      else this.forget(folderOf(found));
     }
-    return null;
+    return UNREAD;
+  }
+
+  /** A GUID the index doesn't know: looked for in the project's rings, then in its package cache. */
+  private async notKnownYet(wanted: string, near: string): Promise<string | null | GuidNotKnown> {
+    const inProject = this.wholeGuids ? null : await this.inRings(near, () => this.byGuid.get(wanted) ?? null);
+    if (typeof inProject === 'string') return inProject;
+    const inCache = await this.inPackageCache(wanted);
+    if (typeof inCache === 'string') return inCache;
+    // The package cache's reason first: no `Library` is what a person can act on.
+    return inCache ?? (inProject === null ? null : UNREAD);
   }
 
   /**
@@ -104,29 +131,110 @@ export class ProjectAssetIndex {
     return within(this.project.assets);
   }
 
-  /** What the watcher saw: the folders changed are read again when next needed; a change anywhere, everything. */
+  /**
+   * What the watcher saw: the folders changed are read again when next needed; a change anywhere, everything. The
+   * watcher doesn't see `Library` (`ignore.conf` hides it); Unity rewrites `Packages/manifest.json` or
+   * `packages-lock.json` as it changes the packages it caches, so a change in `Packages` itself drops the package cache.
+   */
   noteChange(change: WorkspaceChange): void {
     if (change.folders === null) return this.clear();
     for (const folder of change.folders) this.forget(folder);
+    if (change.folders.some((folder) => this.folderKey(folder) === this.folderKey(joined(this.project.root, 'Packages')))) this.forgetPackageCache();
   }
 
+  /**
+   * Drops what was read of the project, keeping the package cache: the watcher never sees it, so a change it saw says
+   * nothing of it (Unity's own changes there are caught by `packageCacheUnchanged` and a hit's `.meta` check).
+   */
   clear(): void {
+    const cache = this.folderKey(this.packageCache());
+    const keptCache = [...this.listings].filter(([key, listing]) => isUnder(key, cache) && listing.guidsWhole);
+    const wholePackageCache = this.wholePackageCache && keptCache.length === [...this.listings.keys()].filter((key) => isUnder(key, cache)).length;
     this.listings.clear();
     this.listingReads.clear();
     this.guidReads.clear();
     this.byGuid.clear();
     this.byName.clear();
     this.forgotten.clear();
+    this.packageCacheRead = null;
     this.clears++;
     this.changes++;
     this.wholeGuids = this.wholeNames = false;
+    for (const [key, listing] of keptCache) {
+      this.listings.set(key, listing);
+      for (const [guid, path] of listing.guids) this.byGuid.set(guid, path);
+    }
+    this.wholePackageCache = wholePackageCache;
+  }
+
+  /**
+   * A GUID in the registry packages Unity caches (`Library/PackageCache/<package>@<version>`), read whole on the first
+   * GUID the rest of the project lacks; without a package there, or a read unfinished, nothing tells it's missing.
+   */
+  private async inPackageCache(guid: string): Promise<string | null | GuidNotKnown> {
+    if (this.wholePackageCache && !(await this.packageCacheUnchanged())) this.forgetPackageCache();
+    if (!this.wholePackageCache) {
+      let reading = this.packageCacheRead;
+      if (!reading) {
+        const started: Promise<PackageCacheRead> = this.readPackageCache().finally(() => {
+          if (this.packageCacheRead === started) this.packageCacheRead = null;
+        });
+        this.packageCacheRead = reading = started;
+      }
+      const read = await reading;
+      if (read !== 'whole') return { notKnown: read };
+      // Another find may have dropped the cache meanwhile (a stale hit): what's left can't tell a GUID missing.
+      if (!this.wholePackageCache) return UNREAD;
+    }
+    return this.byGuid.get(guid) ?? null;
+  }
+
+  /**
+   * Reads the package cache's GUIDs: `whole` once read whole with no change meanwhile; `noLibrary` without a package
+   * in it (no `Library`, or one Unity hasn't resolved packages into on this machine: listed again on the next miss).
+   */
+  private async readPackageCache(): Promise<PackageCacheRead> {
+    const changes = this.changes;
+    const whole = await this.readSubtree(this.packageCache(), true);
+    const top = this.listings.get(this.folderKey(this.packageCache()));
+    if (whole && top !== undefined && top.folders.length === 0) return 'noLibrary';
+    this.wholePackageCache = whole && this.changes === changes;
+    return this.wholePackageCache ? 'whole' : 'unread';
+  }
+
+  /**
+   * Whether the package cache still holds the packages it was read with: Unity adds, replaces (an upgrade: `@17.0.3`
+   * goes, `@17.0.4` comes) and removes them unseen by the watcher, so a miss over a cache read whole lists its top
+   * again, once, before telling the GUID missing.
+   */
+  private async packageCacheUnchanged(): Promise<boolean> {
+    const known = this.listings.get(this.folderKey(this.packageCache()));
+    const entries = await this.files.list(this.packageCache()).catch(() => null);
+    if (!known || entries === null) return false;
+    const names = (paths: string[]) => paths.map(fileNameOf);
+    const before = [...names(known.folders), ...names(known.files), ...names(known.metas)].sort();
+    const now = entries.map((entry) => entry.name).filter(isAsset).sort();
+    return before.length === now.length && before.every((name, i) => name === now[i]);
+  }
+
+  private packageCache(): string {
+    return joined(this.project.root, 'Library/PackageCache');
+  }
+
+  /** Drops every folder of the package cache read: it is read again on the next miss. */
+  private forgetPackageCache(): void {
+    const cache = this.folderKey(this.packageCache());
+    for (const key of [...this.listings.keys()]) if (isUnder(key, cache)) this.forget(key);
+    this.forget(cache);
+    this.packageCacheRead = null;
+    this.wholePackageCache = false;
   }
 
   /**
    * Reads the GUIDs ring after ring around `near` until `answer` has one: the subtree of each folder from `near` up to
-   * `Assets`, then the project's packages.
+   * `Assets`, then the project's packages. Null only for a GUID none has, read whole and current; else undefined.
    */
-  private async inRings(near: string, answer: () => string | null): Promise<string | null> {
+  private async inRings(near: string, answer: () => string | null): Promise<string | null | GuidNotKnown> {
     const changes = this.changes;
     for (const folder of foldersUp(this.folderKey(near), this.folderKey(this.project.assets))) {
       const known = answer();
@@ -140,7 +248,7 @@ export class ProjectAssetIndex {
       whole = (await this.readSubtree(folder, true)) && whole;
     }
     this.wholeGuids = whole && this.changes === changes;
-    return answer();
+    return answer() ?? (this.wholeGuids ? null : UNREAD);
   }
 
   /** `Assets`, and `Packages` where the project's own packages are (a GUID may be one of theirs). */

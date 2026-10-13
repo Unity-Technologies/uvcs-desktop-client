@@ -104,6 +104,57 @@ describe('planVersion and slotLooks', () => {
   });
 });
 
+describe('planVersion: what each slot resolved to', () => {
+  it("names each slot's material and the textures it uses, found or not, with their tiling", () => {
+    const input = version(
+      [fileMaterial('Bark', { baseMap: use(named('bark.png')), normalMap: use(named('gone_n.png')) }), fileMaterial('Glass'), fileMaterial('Leaf')],
+      { materialRemaps: [{ slot: 'Glass', guid: BARK_MAT }, { slot: 'Leaf', guid: BARK_NORMAL }] },
+    );
+    const assets = found({
+      textures: new Map([[lookupKey(named('bark.png')), file('Assets/Tree/bark.png')]]),
+      guids: new Map([[BARK_MAT, file('Assets/Materials/Tree_Glass.mat')], [BARK_PSD, null], [BARK_NORMAL, null]]),
+      materials: new Map([[BARK_MAT, { ...URP_BARK, normalMap: null }]]),
+    });
+    const { resolved } = plan(input, assets);
+    expect(resolved.get('Bark')).toEqual({
+      slot: 'Bark',
+      material: { kind: 'file', name: 'Bark' },
+      baseMap: { id: 'Assets/Tree/bark.png', name: 'bark.png', missing: false, repeat: [1, 1], offset: [0, 0] },
+      normalMap: { id: lookupKey(named('gone_n.png')), name: 'gone_n.png', missing: true, repeat: [1, 1], offset: [0, 0] },
+    });
+    // A .mat's texture the workspace hasn't is known by its GUID only: named by what it is to the slot.
+    expect(resolved.get('Glass')).toEqual({
+      slot: 'Glass',
+      material: { kind: 'project', guid: BARK_MAT, name: 'Tree_Glass', path: 'Assets/Materials/Tree_Glass.mat' },
+      baseMap: { id: BARK_PSD, name: "Glass's base map", missing: true, repeat: [2, 2], offset: [0.5, 0] },
+      normalMap: null,
+    });
+    expect(resolved.get('Leaf')).toEqual({ slot: 'Leaf', material: { kind: 'missing' }, baseMap: null, normalMap: null });
+    const none = version([fileMaterial('Dust')], { materialImport: 'none' });
+    expect(plan(none, found()).resolved.get('Dust')).toEqual({ slot: 'Dust', material: { kind: 'default' }, baseMap: null, normalMap: null });
+  });
+});
+
+describe("Unity's built-in assets", () => {
+  const BUILT_IN_EXTRA = '0000000000000000f000000000000000';
+  const BUILT_IN_RESOURCES = '0000000000000000e000000000000000';
+
+  it('never looks up a texture of Unity\'s own, nor tells it missing: it is there, only not drawn', () => {
+    const builtInMap = { ...URP_BARK, baseMap: { guid: BUILT_IN_EXTRA, scale: [1, 1] as [number, number], offset: [0, 0] as [number, number] }, normalMap: { guid: BUILT_IN_RESOURCES, scale: [1, 1] as [number, number], offset: [0, 0] as [number, number] } };
+    expect(materialTextureGuids([builtInMap])).toEqual([]);
+    const input = version([fileMaterial('Bark')], { materialRemaps: [{ slot: 'Bark', guid: BARK_MAT }] });
+    const planned = plan(input, found({ guids: new Map([[BARK_MAT, file('Assets/Tree/Bark.mat')]]), materials: new Map([[BARK_MAT, builtInMap]]) }));
+    expect(planned.issues).toEqual([]);
+    expect(planned.slots.get('Bark')).toMatchObject({ baseMap: null, normalMap: null });
+    expect(planned.resolved.get('Bark')?.baseMap).toMatchObject({ missing: false });
+  });
+
+  it("asks for no texture the .meta remaps to one of Unity's own", () => {
+    const input = version([fileMaterial('Bark', { baseMap: use(named('bark.png')) })], { textureRemaps: [{ name: 'bark', guid: BUILT_IN_EXTRA }] });
+    expect(assetsRequest(input, slotSources(input), MODEL).textures).toEqual([{ name: 'bark.png', storedPaths: [], remapGuid: null }]);
+  });
+});
+
 describe('PSB textures', () => {
   const input = version([fileMaterial('Sprite', { color: [0.5, 0.5, 0.5] })], { materialRemaps: [{ slot: 'Sprite', guid: BARK_MAT }] });
   const assets = (importsPsb: boolean) => found({ importsPsb, guids: new Map([[BARK_PSD, file('Assets/Art/Fei.psb')]]), materials: new Map([[BARK_MAT, { ...URP_BARK, normalMap: null }]]) });
@@ -125,6 +176,7 @@ describe('PSB textures', () => {
 describe('budgeted', () => {
   const needs = (side: string, count: number) => ({
     slots: new Map(),
+    resolved: new Map(),
     issues: [],
     needs: Array.from({ length: count }, (_, i) => ({ id: `up:Assets/t${side === 'shared' ? 0 : i}-${i}.png`, name: `t${i}.png`, where: { kind: 'file' as const, file: file(`t${i}.png`) }, flipY: true })),
   });

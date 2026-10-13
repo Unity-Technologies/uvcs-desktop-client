@@ -2,15 +2,16 @@
 // "Materials"): no `cm` command, nothing from the server, nothing outside the workspace. The materials and textures a
 // model shows are the workspace's as they are now, whichever version of the model is shown.
 
+import type { Stats } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { posix } from 'node:path';
 import type { UnityAssetsApi } from '@shared/api/unityAssets';
-import { MAX_STORED_PATHS, MAX_UNITY_ASSET_LOOKUPS, MAX_UNITY_ASSET_PATH_LENGTH, type FoundFile, type TextureLookup, type UnityAssetsRequest } from '@shared/domain/unityAssets';
+import { MAX_STORED_PATHS, MAX_UNITY_ASSET_LOOKUPS, MAX_UNITY_ASSET_PATH_LENGTH, type FoundFile, type GuidMisses, type TextureLookup, type UnityAssetsAnswer, type UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { workspaceFileOf } from '../files/workspacePaths';
 import { diskProjectFiles } from '../unity/diskProjectFiles';
 import { ProjectAssetIndex, type ProjectFiles } from '../unity/ProjectAssetIndex';
 import { preferredMatches, searchedFolders, textureCandidates } from '../unity/textureSearch';
-import { listsPsdImporter, packageListsOf } from '../unity/unityPackages';
+import { listsPsdImporter, loadsPackagesFromOutside, packageListsOf } from '../unity/unityPackages';
 import { unityProjectFound, type UnityProject } from '../unity/unityProject';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
 
@@ -19,9 +20,13 @@ interface UnityAssetsContext {
   platform?: NodeJS.Platform;
   /** The disk as the project indexes read it; tests count the reads. */
   filesOf?: (workspacePath: string) => ProjectFiles;
+  /** How a file found is checked on disk; tests pass one that refuses. */
+  statOf?: (path: string) => Promise<FileStats>;
 }
 
-export function createUnityAssetsService({ watchers, platform = process.platform, filesOf = diskProjectFiles }: UnityAssetsContext): UnityAssetsApi {
+type FileStats = Pick<Stats, 'size' | 'mtimeMs'> & { isFile(): boolean };
+
+export function createUnityAssetsService({ watchers, platform = process.platform, filesOf = diskProjectFiles, statOf = stat }: UnityAssetsContext): UnityAssetsApi {
   /** Each project's index by workspace, kept while the watcher sees every change of the workspace. */
   const indexes = new Map<string, Map<string, ProjectAssetIndex>>();
   watchers.listen({
@@ -31,33 +36,72 @@ export function createUnityAssetsService({ watchers, platform = process.platform
     unwatched: (workspacePath) => void indexes.delete(workspacePath),
   });
 
+  /** Finds under way on each index: a fresh read starts only when none is. */
+  const findsUnderWay = new Map<ProjectAssetIndex, number>();
+
   /**
-   * The project's index: kept while the workspace's watcher sees every change (what it doesn't see would leave the
-   * index wrong for the session); otherwise one for this find alone.
+   * The project's index, kept per project. Where the workspace's watcher doesn't see every change (what it doesn't
+   * see would leave the index wrong for the session), the project's folders are read afresh (`clear`) by a find that
+   * starts when no other is under way: finds at once (both versions of a diff) share one fresh read, as a clear would
+   * overtake the other's. Its package cache, which no watcher sees anyway and which checks itself
+   * (`packageCacheUnchanged`), is kept. Released with `doneWith`.
    */
   function indexOf(workspacePath: string, project: UnityProject): ProjectAssetIndex {
-    if (watchers.coverageOf(workspacePath) !== 'full') {
-      indexes.delete(workspacePath);
-      return new ProjectAssetIndex(project, filesOf(workspacePath), platform);
-    }
     const ofWorkspace = indexes.get(workspacePath) ?? new Map<string, ProjectAssetIndex>();
     indexes.set(workspacePath, ofWorkspace);
     const index = ofWorkspace.get(project.root) ?? new ProjectAssetIndex(project, filesOf(workspacePath), platform);
     ofWorkspace.set(project.root, index);
+    const readsAfresh = watchers.coverageOf(workspacePath) !== 'full';
+    const underWay = findsUnderWay.get(index) ?? 0;
+    if (readsAfresh && underWay === 0) index.clear();
+    findsUnderWay.set(index, underWay + 1);
     return index;
   }
 
-  async function find(workspacePath: string, request: UnityAssetsRequest) {
+  function doneWith(index: ProjectAssetIndex): void {
+    const underWay = (findsUnderWay.get(index) ?? 1) - 1;
+    if (underWay === 0) findsUnderWay.delete(index);
+    else findsUnderWay.set(index, underWay);
+  }
+
+  async function find(workspacePath: string, request: UnityAssetsRequest): Promise<UnityAssetsAnswer> {
     refuseUnlikely(request);
     const modelPath = workspacePathOf(request.modelPath);
     if (modelPath === null) throw new Error(`${request.modelPath} is outside the workspace`);
     const project = await unityProjectFound(modelPath, (root) => isFolder(workspacePath, root === '' ? 'ProjectSettings' : `${root}/ProjectSettings`));
     const index = project && indexOf(workspacePath, project);
+    try {
+      return await findIn(workspacePath, request, modelPath, project, index);
+    } finally {
+      if (index) doneWith(index);
+    }
+  }
+
+  async function findIn(workspacePath: string, request: UnityAssetsRequest, modelPath: string, project: UnityProject | null, index: ProjectAssetIndex | null): Promise<UnityAssetsAnswer> {
     const modelFolder = posix.dirname(modelPath) === '.' ? '' : posix.dirname(modelPath);
-    const found = (path: string | null): Promise<FoundFile | null> => (path === null ? Promise.resolve(null) : foundFile(workspacePath, path));
+    // Outside a project, or in one without a `Library`, a GUID not found isn't known missing (`pathOfGuid`); nor in one
+    // that loads a package from a folder outside it, which isn't read.
+    let guidMisses: GuidMisses = index ? 'known' : 'noProject';
+    const [manifest] = project ? packageListsOf(project.root) : [];
+    const outsidePackages = manifest !== undefined && loadsPackagesFromOutside(await readText(workspacePath, manifest));
+    // A file the disk refused (an antivirus holding it, too many open) is no answer: the find says it was unread.
+    const found = async (path: string | null): Promise<FoundFile | null> => {
+      if (path === null) return null;
+      return foundFile(workspacePath, path, statOf).catch(() => {
+        guidMisses = 'unread';
+        return null;
+      });
+    };
+    const byGuid = async (guid: string): Promise<FoundFile | null> => {
+      const path = index ? await index.pathOfGuid(guid, modelFolder) : null;
+      if (path === null && outsidePackages && guidMisses === 'known') guidMisses = 'outsidePackage';
+      if (path === null || typeof path === 'string') return found(path);
+      if (guidMisses === 'known') guidMisses = path.notKnown;
+      return null;
+    };
 
     const findTexture = async (lookup: TextureLookup): Promise<FoundFile | null> => {
-      const remapped = lookup.remapGuid && index ? await found(await index.pathOfGuid(lookup.remapGuid, modelFolder)) : null;
+      const remapped = lookup.remapGuid ? await byGuid(lookup.remapGuid) : null;
       if (remapped) return remapped;
       for (const candidate of textureCandidates({ modelPath, project, name: lookup.name, storedPaths: lookup.storedPaths, workspacePath, platform })) {
         const file = await found(candidate);
@@ -76,10 +120,10 @@ export function createUnityAssetsService({ watchers, platform = process.platform
     const textures: (FoundFile | null)[] = [];
     for (const lookup of request.textures) textures.push(await findTexture(lookup));
     const guids: (FoundFile | null)[] = [];
-    for (const guid of request.guids) guids.push(index ? await found(await index.pathOfGuid(guid, modelFolder)) : null);
+    for (const guid of request.guids) guids.push(await byGuid(guid));
     const paths = await Promise.all(request.paths.map((path) => found(workspacePathOf(path))));
     const importsPsb = project !== null && (await Promise.all(packageListsOf(project.root).map((list) => readText(workspacePath, list)))).some(listsPsdImporter);
-    return { textures, guids, paths, importsPsb };
+    return { textures, guids, paths, importsPsb, guidMisses };
   }
 
   return { find };
@@ -100,13 +144,18 @@ function workspacePathOf(path: string): string | null {
   return normalized === '.' ? '' : normalized;
 }
 
-/** The file at a workspace-relative path, with its size and when it was written; null when it isn't a file there. */
-async function foundFile(workspacePath: string, path: string): Promise<FoundFile | null> {
+/**
+ * The file at a workspace-relative path, with its size and when it was written; null when it isn't a file there
+ * (`ENOENT`, `ENOTDIR`, as `diskProjectFiles` takes them). Any other failure rejects: it tells nothing.
+ */
+async function foundFile(workspacePath: string, path: string, statOf: (path: string) => Promise<FileStats>): Promise<FoundFile | null> {
   try {
-    const stats = await stat(workspaceFileOf(workspacePath, path));
+    const stats = await statOf(workspaceFileOf(workspacePath, path));
     return stats.isFile() ? { path, size: stats.size, modified: stats.mtimeMs } : null;
-  } catch {
-    return null;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT' || code === 'ENOTDIR') return null;
+    throw error;
   }
 }
 
