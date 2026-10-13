@@ -100,6 +100,8 @@ export interface TextureUse {
   repeat: [number, number];
   offset: [number, number];
   rotation: number;
+  /** The UV set it samples: 0, or 1 (`MeshAttributes.uv1`) for a glTF map with `texCoord: 1`. */
+  channel: number;
 }
 
 /** A material slot's material as the file defines it, which Unity makes its material of (unless remapped). */

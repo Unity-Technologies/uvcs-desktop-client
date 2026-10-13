@@ -8,7 +8,7 @@ export function fileMaterial(name: string, overrides: Partial<FileMaterial> = {}
 
 /** A texture as a material maps it, untransformed. */
 export function use(texture: FileTexture): TextureUse {
-  return { texture, repeat: [1, 1], offset: [0, 0], rotation: 0 };
+  return { texture, repeat: [1, 1], offset: [0, 0], rotation: 0, channel: 0 };
 }
 
 /** A texture an FBX names by file name. */

@@ -66,5 +66,5 @@ function alphaModeOf(material: LoadedMaterial): AlphaMode {
 function useOf(texture: Texture | null | undefined, sourceOf: TextureSource): TextureUse | null {
   const source = texture ? sourceOf(texture) : null;
   if (!texture || !source) return null;
-  return { texture: source, repeat: [texture.repeat.x, texture.repeat.y], offset: [texture.offset.x, texture.offset.y], rotation: texture.rotation };
+  return { texture: source, repeat: [texture.repeat.x, texture.repeat.y], offset: [texture.offset.x, texture.offset.y], rotation: texture.rotation, channel: texture.channel };
 }

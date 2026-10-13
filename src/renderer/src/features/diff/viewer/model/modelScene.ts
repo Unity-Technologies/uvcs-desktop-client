@@ -124,6 +124,8 @@ function meshOf(mesh: ModelMesh, key: string, slotKeys: string[]): SceneMesh {
   geometry.setAttribute('position', new BufferAttribute(mesh.attributes.position, 3));
   if (mesh.attributes.normal) geometry.setAttribute('normal', new BufferAttribute(mesh.attributes.normal, 3));
   if (mesh.attributes.uv) geometry.setAttribute('uv', new BufferAttribute(mesh.attributes.uv, 2));
+  // The Materials look's maps on the second UV set sample it (`TextureUse.channel`).
+  if (mesh.attributes.uv1) geometry.setAttribute('uv1', new BufferAttribute(mesh.attributes.uv1, 2));
   if (mesh.index) geometry.setIndex(new BufferAttribute(mesh.index, 1));
   if (!mesh.attributes.normal) geometry.computeVertexNormals();
   for (const group of mesh.groups) geometry.addGroup(group.start, group.count, group.slot);

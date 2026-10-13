@@ -21,10 +21,20 @@ export function fbxTextureSource(files: ReadonlyMap<number, FbxTextureFile>): Te
   };
 }
 
-/** A glTF texture: its image, in the file or in a file beside it. */
+/**
+ * A glTF texture: its image, in the file or in a file beside it. GLTFLoader copies a texture for a map on another UV
+ * set (`texCoord`), and its association stays with the original: a copy is known by the image source it shares.
+ */
 export function gltfTextureSource(parser: Pick<GLTFParser, 'associations' | 'json'>): TextureSource {
+  let bySource: Map<unknown, number> | null = null;
+  const indexOf = (texture: Texture): number | undefined => {
+    const own = parser.associations.get(texture)?.textures;
+    if (own !== undefined) return own;
+    bySource ??= new Map([...parser.associations].flatMap(([object, reference]) => ((object as Texture).isTexture && reference.textures !== undefined ? [[(object as Texture).source, reference.textures]] : [])));
+    return bySource.get(texture.source);
+  };
   return (texture: Texture) => {
-    const index = parser.associations.get(texture)?.textures;
+    const index = indexOf(texture);
     const image = index === undefined ? null : gltfTextureImage(parser.json, index);
     const place = image === null ? null : gltfImagePlace(parser.json, image);
     if (image === null || !place) return null;

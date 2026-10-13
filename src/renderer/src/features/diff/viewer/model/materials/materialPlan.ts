@@ -47,6 +47,8 @@ export interface PlannedMap {
   repeat: [number, number];
   offset: [number, number];
   rotation: number;
+  /** The UV set the map samples (`TextureUse.channel`). */
+  channel: number;
 }
 
 /** A slot as planned: its look without textures, and the maps to add as they decode. */
@@ -143,7 +145,7 @@ export function planVersion(version: ModelMaterialsInput, sources: Map<string, S
 
   const useMap = (use: TextureUse | null): PlannedMap | null => {
     if (!use) return null;
-    const transform = { repeat: use.repeat, offset: use.offset, rotation: use.rotation };
+    const transform = { repeat: use.repeat, offset: use.offset, rotation: use.rotation, channel: use.channel };
     const { texture } = use;
     switch (texture.kind) {
       case 'named':
@@ -176,7 +178,7 @@ export function planVersion(version: ModelMaterialsInput, sources: Map<string, S
   const fromUnity = (material: UnityMaterial, slot: string): PlannedSlot => {
     const color = linearOf(material.baseColor);
     const map = (texture: UnityMaterial['baseMap'], role: string): PlannedMap | null =>
-      texture && fileMap(found.guids.get(texture.guid), `${slot}'s ${role}`, { repeat: texture.scale, offset: texture.offset, rotation: 0 });
+      texture && fileMap(found.guids.get(texture.guid), `${slot}'s ${role}`, { repeat: texture.scale, offset: texture.offset, rotation: 0, channel: 0 });
     return {
       color,
       colorWithMap: color,
@@ -218,6 +220,8 @@ export interface MapLook {
   repeat: [number, number];
   offset: [number, number];
   rotation: number;
+  /** The UV set the map samples (`TextureUse.channel`). */
+  channel: number;
 }
 
 /** A slot as drawn. */
@@ -236,7 +240,7 @@ export function slotLooks(plan: VersionPlan, states: ReadonlyMap<string, NeedSta
   const looks = new Map<string, SlotLook>();
   const mapOf = (planned: PlannedMap | null): MapLook | null => {
     const state = planned && states.get(planned.need);
-    return planned && state?.kind === 'ready' ? { key: state.key, bitmap: state.bitmap, repeat: planned.repeat, offset: planned.offset, rotation: planned.rotation } : null;
+    return planned && state?.kind === 'ready' ? { key: state.key, bitmap: state.bitmap, repeat: planned.repeat, offset: planned.offset, rotation: planned.rotation, channel: planned.channel } : null;
   };
   for (const [slot, planned] of plan.slots) {
     if (!planned) continue;

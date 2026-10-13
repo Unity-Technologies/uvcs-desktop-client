@@ -95,13 +95,14 @@ export class SlotLookMaterials {
     texture.repeat.set(...map.repeat);
     texture.offset.set(...map.offset);
     texture.rotation = map.rotation;
+    texture.channel = map.channel;
     return texture;
   }
 }
 
 /** What makes three compile another shader for a material. */
 function programKey(material: MeshStandardMaterial): string {
-  return [material.map !== null, material.normalMap !== null, material.alphaTest > 0, material.transparent, material.side].join();
+  return [material.map?.channel ?? -1, material.normalMap?.channel ?? -1, material.alphaTest > 0, material.transparent, material.side].join();
 }
 
 function disposeMaterial(material: MeshStandardMaterial): void {

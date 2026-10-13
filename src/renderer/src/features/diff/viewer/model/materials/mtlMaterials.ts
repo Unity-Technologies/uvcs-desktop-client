@@ -55,7 +55,7 @@ function textureOf(value: MtlInfo[string]): TextureUse | null {
     at += 1 + values.length;
   }
   const path = words.slice(at).join(' ');
-  return { texture: { kind: 'named', name: fileNameOf(path), storedPaths: [path] }, repeat, offset, rotation: 0 };
+  return { texture: { kind: 'named', name: fileNameOf(path), storedPaths: [path] }, repeat, offset, rotation: 0, channel: 0 };
 }
 
 /**
