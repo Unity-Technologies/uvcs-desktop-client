@@ -10,12 +10,14 @@ function search(overrides: Partial<TextureSearch> = {}): TextureSearch {
 }
 
 describe('unityProjectOf', () => {
-  it('finds the nearest folder with an Assets folder the model is under, whatever its case', () => {
+  it('finds the outermost folder with an Assets folder the model is under, whatever its case', () => {
     expect(unityProjectOf('Game/Assets/Art/Tree.fbx')).toEqual({ root: 'Game', assets: 'Game/Assets' });
     expect(unityProjectOf('assets/Tree.fbx')).toEqual({ root: '', assets: 'assets' });
     expect(unityProjectOf('SourceArt/Tree.fbx')).toBeNull();
     // A file named Assets is no folder the model is under.
     expect(unityProjectOf('Art/Assets')).toBeNull();
+    // A vendor's package keeps an Assets folder of its own inside the project's: the project is the outer one.
+    expect(unityProjectOf('Game/Assets/Vendor/Assets/Tree.fbx')).toEqual({ root: 'Game', assets: 'Game/Assets' });
   });
 });
 
