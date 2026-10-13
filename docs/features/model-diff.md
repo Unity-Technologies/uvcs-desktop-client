@@ -233,7 +233,7 @@ choice comes back in the other modes. The merge cards' stills stay clay (`modelT
   `_CullMode` 0, `_DoubleSidedEnable`). Textures by GUID.
 - **Unity's texture search** (`textureCandidates`, `main/unity/textureSearch.ts`), for a texture the file names: a
   `.meta` remap of the texture by its name without extension (by GUID); the model's folder; `Textures/` there and in
-  each folder above it up to `Assets` (the project: the nearest folder above the model with an `Assets` folder it is
+  each folder above it up to `Assets` (the project: the outermost folder above the model with an `Assets` folder it is
   under, `unityProjectOf`; outside one, up to the workspace's root); the stored relative path (FBX `RelativeFilename`,
   `..` resolved, kept only inside the project); the stored absolute path, only when it is inside the project on this
   machine (another OS's path is nothing here); then, with "search textures globally", any file of that name in

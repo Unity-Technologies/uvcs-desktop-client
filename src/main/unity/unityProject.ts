@@ -7,14 +7,13 @@ export interface UnityProject {
 }
 
 /**
- * The Unity project a model is in: the nearest folder above it holding an `Assets` folder the model is under (its
- * name matched whatever its case, as Unity projects copied between machines have it). Null outside one (a model in a
- * package, in a folder of source art): Unity's search then climbs to the workspace's root.
+ * The Unity project a model is in: the outermost folder above it holding an `Assets` folder the model is under (its
+ * name matched whatever its case, as Unity projects copied between machines have it). The outermost, as an asset
+ * store package can keep an `Assets` folder of its own inside the project's. Null outside one (a model in a package,
+ * in a folder of source art): Unity's search then climbs to the workspace's root.
  */
 export function unityProjectOf(modelPath: string): UnityProject | null {
   const parts = modelPath.split('/');
-  for (let at = parts.length - 2; at >= 0; at--) {
-    if (parts[at]!.toLowerCase() === 'assets') return { root: parts.slice(0, at).join('/'), assets: parts.slice(0, at + 1).join('/') };
-  }
-  return null;
+  const at = parts.slice(0, -1).findIndex((part) => part.toLowerCase() === 'assets');
+  return at === -1 ? null : { root: parts.slice(0, at).join('/'), assets: parts.slice(0, at + 1).join('/') };
 }
