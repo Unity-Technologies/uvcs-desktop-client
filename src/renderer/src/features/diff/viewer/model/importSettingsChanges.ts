@@ -32,7 +32,7 @@ function brokenBy({ summary, settings }: ImportedVersion): ModelChange[] {
   const takes = new Map(summary.clips.map((clip) => [clip.name, clip.duration]));
   const frameRate = summary.frameRate ?? DEFAULT_FRAME_RATE;
   const broken: ModelChange[] = [];
-  for (const slot of settings.remappedSlots) if (!slots.has(slot)) broken.push({ kind: 'remapLost', slot });
+  for (const { slot } of settings.materialRemaps) if (!slots.has(slot)) broken.push({ kind: 'remapLost', slot });
   if (settings.humanoid) {
     for (const { humanName, boneName } of settings.humanBones) if (!names.has(boneName)) broken.push({ kind: 'avatarBoneLost', humanName, boneName });
   }

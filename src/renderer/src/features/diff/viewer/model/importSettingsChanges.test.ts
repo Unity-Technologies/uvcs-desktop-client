@@ -11,11 +11,12 @@ const robot = (overrides: Partial<TestModel> = {}): TestModel => ({
   ...overrides,
 });
 const settings = (overrides: Partial<ModelImportSettings> = {}): ModelImportSettings => ({ ...DEFAULT_IMPORT_SETTINGS, ...overrides });
+const remap = (slot: string) => ({ slot, guid: '0f2b6c1e9a8d4b3c8e7f6a5b4c3d2e1f' });
 const side = (model: TestModel, importSettings: ModelImportSettings) => ({ summary: modelSummary(testModel(model)), settings: importSettings });
 
 describe('importSettingsChanges', () => {
   it('finds nothing when the settings still fit the model', () => {
-    const fitted = settings({ humanoid: true, humanBones: [{ humanName: 'LeftHand', boneName: 'Hand_L' }], clips: [{ name: 'Wave', takeName: 'Wave', firstFrame: 0, lastFrame: 36 }], remappedSlots: ['Skin'] });
+    const fitted = settings({ humanoid: true, humanBones: [{ humanName: 'LeftHand', boneName: 'Hand_L' }], clips: [{ name: 'Wave', takeName: 'Wave', firstFrame: 0, lastFrame: 36 }], materialRemaps: [remap('Skin')] });
     expect(importSettingsChanges(side(robot(), fitted), side(robot(), fitted))).toEqual([]);
   });
 
@@ -26,7 +27,7 @@ describe('importSettingsChanges', () => {
   });
 
   it('tells a material remapped onto a slot the model no longer has', () => {
-    const remapped = settings({ remappedSlots: ['Skin', 'Metal'] });
+    const remapped = settings({ materialRemaps: [remap('Skin'), remap('Metal')] });
     const after = robot({ nodes: [{ name: 'Hips', kind: 'bone' }, { name: 'Hand_L', parent: 'Hips', kind: 'bone' }, { name: 'Body', mesh: { slots: ['Skin_mat', 'Metal'] } }] });
     expect(importSettingsChanges(side(robot(), remapped), side(after, remapped))).toEqual([{ kind: 'remapLost', slot: 'Skin' }]);
   });
@@ -47,7 +48,7 @@ describe('importSettingsChanges', () => {
   });
 
   it('tells only what this change broke, not what was broken already', () => {
-    const remapped = settings({ remappedSlots: ['Gone'] });
+    const remapped = settings({ materialRemaps: [remap('Gone')] });
     expect(importSettingsChanges(side(robot(), remapped), side(robot(), remapped))).toEqual([]);
   });
 });
