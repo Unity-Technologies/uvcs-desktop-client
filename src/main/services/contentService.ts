@@ -11,7 +11,7 @@ import { retryWhileBusy } from '../files/whileBusy';
 import { workspaceFileOf } from '../files/workspacePaths';
 import type { ServiceContext } from './ServiceContext';
 
-export function createContentService({ cm, reviews }: ServiceContext): ContentApi {
+export function createContentService({ cm, reviews, repositoryTrees }: Pick<ServiceContext, 'cm' | 'reviews' | 'repositoryTrees'>): ContentApi {
   async function read(workspacePath: string, source: ContentSource): Promise<FileContent> {
     if (source.kind === 'empty') return EMPTY_CONTENT;
     if (source.kind === 'reviewSnapshot') return reviews.readSnapshot(workspacePath, source.path);
@@ -23,8 +23,10 @@ export function createContentService({ cm, reviews }: ServiceContext): ContentAp
    * Null when the file isn't there (a model without a `.meta`): that is an answer, which the renderer keeps. Any other
    * failure (the server, a locked file) fails, to be read again; a file past `MAX_MODEL_BYTES` fails unread.
    */
-  async function readBytes(workspacePath: string, source: ContentSource): Promise<Uint8Array | null> {
-    if (source.kind === 'empty' || source.kind === 'reviewSnapshot') return null;
+  async function readBytes(workspacePath: string, asked: ContentSource): Promise<Uint8Array | null> {
+    if (asked.kind === 'empty' || asked.kind === 'reviewSnapshot') return null;
+    const source = await listedRevisionOf(workspacePath, asked);
+    if (source === null) return null;
     if (source.kind === 'workspaceFile') {
       const size = await stat(workspaceFileOf(workspacePath, source.path)).then(
         (stats) => stats.size,
@@ -42,6 +44,18 @@ export function createContentService({ cm, reviews }: ServiceContext): ContentAp
       if (isMissingItem(error) || isMissingWhereNoTreeIsListed(source, error)) return null;
       throw error;
     }
+  }
+
+  /**
+   * A file at a point whose tree `cm ls` lists (a model's `.meta` or `.bin` beside it at a changeset or branch head),
+   * as its revision there, from the listing of its folder that the model's other reads there share
+   * (`RepositoryTrees`): one `cm ls`, then one `cm cat` by revision; null where the tree hasn't the file, which costs
+   * no failing command (a `serverpath:` and a tree asked in turn did). Any other source as it is.
+   */
+  async function listedRevisionOf(workspacePath: string, source: Exclude<ContentSource, { kind: 'empty' | 'reviewSnapshot' }>) {
+    if (source.kind !== 'repositoryPath' || !listsTree(source.at)) return source;
+    const revision = await repositoryTrees.revisionAt(workspacePath, source.at, source.path.replace(/^\/+/, ''));
+    return revision && { kind: 'revision' as const, revision, fileName: source.path };
   }
 
   /** A file's bytes from the disk or `cm cat`, and the name that tells what they are. */

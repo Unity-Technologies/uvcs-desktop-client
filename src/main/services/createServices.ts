@@ -78,7 +78,7 @@ export function createServices(context: ServiceContext): UvcsApi {
     shelves: createShelvesService(context, switching),
     sync: createSyncService(context),
     system: createSystemService(context),
-    unityAssets: createUnityAssetsService({ watchers: context.watchers, cm: context.cm, downloads: context.revisionDownloads }),
+    unityAssets: createUnityAssetsService({ watchers: context.watchers, trees: context.repositoryTrees, downloads: context.revisionDownloads }),
     updates: createUpdatesService(context),
     windows: createWindowsService(context),
     workspaces: createWorkspacesService(context, switching),

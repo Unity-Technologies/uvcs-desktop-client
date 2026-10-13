@@ -9,6 +9,7 @@ import { diskProjectFiles } from '../unity/diskProjectFiles';
 import type { ProjectFiles } from '../unity/ProjectAssetIndex';
 import type { WorkspaceFilesListener } from '../watch/WorkspaceWatchers';
 import { fakeCmClient } from '../cm/testing/fakeCmClient';
+import { RepositoryTrees } from '../unity/RepositoryTrees';
 import { createUnityAssetsService } from './unityAssetsService';
 
 const BARK_GUID = '6d1e0c9b8a7f4e3d2c1b0a9f8e7d6c5b';
@@ -30,8 +31,9 @@ async function writeAt(workspace: string, path: string, text: string): Promise<v
 const WORKSPACE = { kind: 'workspace' } as const;
 
 /** A service for the disk alone: any \`cm\` command fails the test (\`fakeCmClient\` answers none), and nothing downloads. */
-function onDisk() {
-  return { cm: fakeCmClient().cm, downloads: { read: () => Promise.reject(new Error('Nothing downloads on the disk')) } };
+function onDisk(cm = fakeCmClient().cm) {
+  const downloads = { read: () => Promise.reject(new Error('Nothing downloads on the disk')) };
+  return { trees: new RepositoryTrees({ cm, downloads }), downloads };
 }
 
 const meta = (guid: string): string => `fileFormatVersion: 2\nguid: ${guid}\nTextureImporter:\n  serializedVersion: 13\n`;
@@ -283,7 +285,7 @@ describe('unityAssets.find', () => {
   it('runs no cm command for a version in the workspace: its disk answers everything', async () => {
     const workspace = await workspaceWith({ 'Game/ProjectSettings/ProjectVersion.txt': 'v', 'Game/Assets/Art/Tree/bark.png': 'png', 'Game/Assets/Art/Tree/Bark.mat.meta': meta(MAT_GUID), 'Game/Assets/Art/Tree/Bark.mat': 'mat' });
     const fake = fakeCmClient();
-    const unityAssets = createUnityAssetsService({ cm: fake.cm, downloads: onDisk().downloads, watchers: { listen: () => () => undefined, coverageOf: () => 'full' } });
+    const unityAssets = createUnityAssetsService({ ...onDisk(fake.cm), watchers: { listen: () => () => undefined, coverageOf: () => 'full' } });
     const answer = await unityAssets.find(workspace, { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', point: WORKSPACE, textures: [lookup('bark.png')], guids: [MAT_GUID, BARK_GUID], paths: [], searchTexturesGlobally: true });
     expect(paths(answer.textures)).toEqual(['Game/Assets/Art/Tree/bark.png']);
     expect(fake.commands).toEqual([]);

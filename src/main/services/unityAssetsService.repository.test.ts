@@ -6,7 +6,8 @@ import type { AssetsPoint, UnityAssetsRequest } from '@shared/domain/unityAssets
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { treeListingOutput, type ListedRecord } from '../cm/testing/cmOutput';
 import type { RevisionFile } from '../unity/RevisionDownloads';
-import { BRANCH_TREE_LIFE_MS, createUnityAssetsService } from './unityAssetsService';
+import { BRANCH_TREE_LIFE_MS, RepositoryTrees } from '../unity/RepositoryTrees';
+import { createUnityAssetsService } from './unityAssetsService';
 
 // The Materials look at a version's point of the repository (`AssetsPoint` `repository`): what `cm ls --tree` lists
 // there, never the workspace's disk, whose files may be another revision's or not there at all.
@@ -59,18 +60,14 @@ async function setUp(items: ListedRecord[], { platform = 'darwin' as NodeJS.Plat
   const fake = fakeCmClient({ ls: listing(items) });
   const downloaded: RevisionFile[] = [];
   let time = 0;
-  const unityAssets = createUnityAssetsService({
-    cm: fake.cm,
-    downloads: {
-      read: async (_workspace, file) => {
-        downloaded.push(file);
-        return Buffer.from(METAS[file.revision.revisionId] ?? 'bytes');
-      },
+  const downloads = {
+    read: async (_workspace: string, file: RevisionFile) => {
+      downloaded.push(file);
+      return Buffer.from(METAS[file.revision.revisionId] ?? 'bytes');
     },
-    watchers: { listen: () => () => undefined, coverageOf: () => 'full' },
-    platform,
-    now: () => time,
-  });
+  };
+  const trees = new RepositoryTrees({ cm: fake.cm, downloads, platform, now: () => time });
+  const unityAssets = createUnityAssetsService({ trees, downloads, watchers: { listen: () => () => undefined, coverageOf: () => 'full' }, platform });
   const find = (request: Partial<UnityAssetsRequest>, point: AssetsPoint = { kind: 'repository', at: 'cs:12' }) =>
     unityAssets.find(workspace, { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', point, textures: [], guids: [], paths: [], searchTexturesGlobally: false, ...request });
   return { workspace, unityAssets, fake, downloaded, find, later: (ms: number) => (time += ms) };
@@ -126,7 +123,8 @@ describe('unityAssets.find at a point of the repository', () => {
     const workspace = await mkdtemp(join(tmpdir(), 'assets-at-point-'));
     let fail = true;
     const fake = fakeCmClient({ ls: (command) => (fail ? ((fail = false), cmFails('The server is down')) : listing(TREE_FOLDER)(command) as string) });
-    const unityAssets = createUnityAssetsService({ cm: fake.cm, downloads: { read: () => Promise.reject(new Error('no')) }, watchers: { listen: () => () => undefined, coverageOf: () => 'full' } });
+    const downloads = { read: () => Promise.reject(new Error('no')) };
+    const unityAssets = createUnityAssetsService({ trees: new RepositoryTrees({ cm: fake.cm, downloads }), downloads, watchers: { listen: () => () => undefined, coverageOf: () => 'full' } });
     const request = { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', point: { kind: 'repository', at: 'cs:12' } as const, textures: [], guids: [], paths: ['Game/Assets/Art/Tree/Tree.fbx'], searchTexturesGlobally: false };
     await expect(unityAssets.find(workspace, request)).rejects.toThrow('The server is down');
     expect(paths((await unityAssets.find(workspace, request)).paths)).toEqual(['Game/Assets/Art/Tree/Tree.fbx']);

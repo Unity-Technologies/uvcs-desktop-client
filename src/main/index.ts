@@ -13,6 +13,7 @@ import { sendEvent, sendEventToCaller } from './ipc/sendEvent';
 import { DiffReviewStore } from './review/DiffReviewStore';
 import { ReviewStore } from './review/ReviewStore';
 import { createServices } from './services/createServices';
+import { RepositoryTrees } from './unity/RepositoryTrees';
 import { RevisionDownloads } from './unity/RevisionDownloads';
 import { openFirstWindow } from './startup/firstWindow';
 import { handleLaunchRequests, isTheRunningApp } from './startup/launchRequests';
@@ -36,6 +37,7 @@ const settings = openSettings(userData);
 const headers = new WorkspaceHeaders(cmHeaderReaders(cm));
 const watchers = watchShownWorkspaces(cm, headers);
 const revisionDownloads = new RevisionDownloads({ cm });
+const repositoryTrees = new RepositoryTrees({ cm, downloads: revisionDownloads });
 const operations = trackOperations(watchers);
 const updates = createAppUpdates({
   writesRunning: () => operations.writesRunning(),
@@ -78,6 +80,7 @@ function start(launched: Promise<void>): void {
     headers,
     updates,
     revisionDownloads,
+    repositoryTrees,
   });
   const early = new EarlyCalls(apiMethods(api));
   registerApi(api, early);

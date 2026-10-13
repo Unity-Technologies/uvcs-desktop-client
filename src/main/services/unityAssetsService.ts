@@ -22,14 +22,12 @@ import {
   type UnityAssetsRequest,
 } from '@shared/domain/unityAssets';
 import type { RevisionRef } from '@shared/domain/revision';
-import type { CmClient } from '../cm/CmClient';
-import { isNotInTreeError } from '../cm/missingItem';
-import { parseTreeListing, treeListingArgs } from '../cm/treeListing';
 import { MAX_MODEL_BYTES } from '../files/fileContent';
 import { workspaceFileOf } from '../files/workspacePaths';
 import { diskProjectFiles } from '../unity/diskProjectFiles';
 import { ProjectAssetIndex, type ProjectFiles } from '../unity/ProjectAssetIndex';
-import { RepositoryAssetTree, TreeListingError, type AssetTreeView } from '../unity/RepositoryAssetTree';
+import { TreeListingError, type AssetTreeView } from '../unity/RepositoryAssetTree';
+import type { RepositoryTrees } from '../unity/RepositoryTrees';
 import type { RevisionDownloads } from '../unity/RevisionDownloads';
 import { preferredMatches, searchedFolders, textureCandidates } from '../unity/textureSearch';
 import { listsPsdImporter, loadsPackagesFromOutside, packageListsOf } from '../unity/unityPackages';
@@ -38,39 +36,21 @@ import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
 
 interface UnityAssetsContext {
   watchers: Pick<WorkspaceWatchers, 'listen' | 'coverageOf'>;
-  cm: Pick<CmClient, 'query' | 'execute'>;
+  /** The repository's trees at the points looked at, shared with the reads of a model's files beside it. */
+  trees: Pick<RepositoryTrees, 'at'>;
   downloads: Pick<RevisionDownloads, 'read'>;
   platform?: NodeJS.Platform;
   /** The disk as the project indexes read it; tests count the reads. */
   filesOf?: (workspacePath: string) => ProjectFiles;
   /** How a file found is checked on disk; tests pass one that refuses. */
   statOf?: (path: string) => Promise<FileStats>;
-  /** The time, which a branch head's tree is kept for (`BRANCH_TREE_LIFE_MS`). */
-  now?: () => number;
 }
 
 type FileStats = Pick<Stats, 'size' | 'mtimeMs'> & { isFile(): boolean };
 
-/** The points whose trees are kept, the latest used: both sides of a few diffs. */
-const KEPT_TREES = 8;
-/**
- * How long a branch head's tree is kept: a changeset's never changes, a branch's moves as people check in. Long enough
- * for the lookups of the diff on screen, both sides and both rounds, to share one listing.
- */
-export const BRANCH_TREE_LIFE_MS = 60_000;
-
-/** A point's tree, when it was listed first, and the project indexes read over it (by project and model folder). */
-interface KeptTree {
-  tree: RepositoryAssetTree;
-  since: number;
-  indexes: Map<string, ProjectAssetIndex>;
-}
-
-export function createUnityAssetsService({ watchers, cm, downloads, platform = process.platform, filesOf = diskProjectFiles, statOf = stat, now = Date.now }: UnityAssetsContext): UnityAssetsApi {
+export function createUnityAssetsService({ watchers, trees, downloads, platform = process.platform, filesOf = diskProjectFiles, statOf = stat }: UnityAssetsContext): UnityAssetsApi {
   /** Each project's index by workspace, kept while the watcher sees every change of the workspace. */
   const indexes = new Map<string, Map<string, ProjectAssetIndex>>();
-  /** The repository's trees by workspace and point, the latest used last. */
-  const trees = new Map<string, KeptTree>();
   watchers.listen({
     changed: (workspacePath, change) => {
       for (const index of indexes.get(workspacePath)?.values() ?? []) index.noteChange(change);
@@ -106,30 +86,6 @@ export function createUnityAssetsService({ watchers, cm, downloads, platform = p
     else findsUnderWay.set(index, underWay);
   }
 
-  /** The point's tree, listed once while kept: a branch head's for `BRANCH_TREE_LIFE_MS`. */
-  function treeAt(workspacePath: string, point: Extract<AssetsPoint, { kind: 'repository' }>): KeptTree {
-    const key = JSON.stringify([workspacePath, point]);
-    const kept = trees.get(key);
-    trees.delete(key);
-    if (kept && (point.at.startsWith('cs:') || now() - kept.since < BRANCH_TREE_LIFE_MS)) return trees.set(key, kept), kept;
-    const source = {
-      // The model's folder is quick to list; a whole project may take a while, in a process of its own.
-      list: (folder: string, scope: 'near' | 'wide') => {
-        const args = treeListingArgs(folder, point.at);
-        const listed = scope === 'near' ? cm.query(args, { cwd: workspacePath }) : cm.execute(args, { cwd: workspacePath });
-        return listed.then(parseTreeListing, (error: unknown) => (isNotInTreeError(error) ? null : Promise.reject(error)));
-      },
-      read: (file: Parameters<RevisionDownloads['read']>[1], mayDownload: () => boolean) => downloads.read(workspacePath, file, mayDownload),
-    };
-    const fresh = { tree: new RepositoryAssetTree(source, point.before, platform), since: now(), indexes: new Map<string, ProjectAssetIndex>() };
-    trees.set(key, fresh);
-    for (const oldest of trees.keys()) {
-      if (trees.size <= KEPT_TREES) break;
-      trees.delete(oldest);
-    }
-    return fresh;
-  }
-
   async function find(workspacePath: string, request: UnityAssetsRequest): Promise<UnityAssetsAnswer> {
     refuseUnlikely(request);
     const modelPath = workspacePathOf(request.modelPath);
@@ -148,7 +104,7 @@ export function createUnityAssetsService({ watchers, cm, downloads, platform = p
 
   /** At a point of the repository: the model's folder listed first, the project's only when a lookup reaches past it. */
   function findInTree(workspacePath: string, request: UnityAssetsRequest, modelPath: string, project: UnityProject | null, point: Extract<AssetsPoint, { kind: 'repository' }>): Promise<UnityAssetsAnswer> {
-    const kept = treeAt(workspacePath, point);
+    const kept = trees.at(workspacePath, point);
     const near = folderOf(modelPath);
     const library = project && { folder: project.root === '' ? 'Library' : `${project.root}/Library`, files: filesOf(workspacePath) };
     const view: AssetTreeView = kept.tree.view(near, project ? project.root : near, library);
