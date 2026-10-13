@@ -11,7 +11,7 @@ import { diskProjectFiles } from '../unity/diskProjectFiles';
 import { ProjectAssetIndex, type ProjectFiles } from '../unity/ProjectAssetIndex';
 import { preferredMatches, searchedFolders, textureCandidates } from '../unity/textureSearch';
 import { listsPsdImporter, packageListsOf } from '../unity/unityPackages';
-import { unityProjectOf, type UnityProject } from '../unity/unityProject';
+import { unityProjectFound, type UnityProject } from '../unity/unityProject';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
 
 interface UnityAssetsContext {
@@ -51,7 +51,7 @@ export function createUnityAssetsService({ watchers, platform = process.platform
     refuseUnlikely(request);
     const modelPath = workspacePathOf(request.modelPath);
     if (modelPath === null) throw new Error(`${request.modelPath} is outside the workspace`);
-    const project = unityProjectOf(modelPath);
+    const project = await unityProjectFound(modelPath, (root) => isFolder(workspacePath, root === '' ? 'ProjectSettings' : `${root}/ProjectSettings`));
     const index = project && indexOf(workspacePath, project);
     const modelFolder = posix.dirname(modelPath) === '.' ? '' : posix.dirname(modelPath);
     const found = (path: string | null): Promise<FoundFile | null> => (path === null ? Promise.resolve(null) : foundFile(workspacePath, path));
@@ -108,6 +108,14 @@ async function foundFile(workspacePath: string, path: string): Promise<FoundFile
   } catch {
     return null;
   }
+}
+
+/** Whether a workspace-relative path is a folder on disk. */
+async function isFolder(workspacePath: string, path: string): Promise<boolean> {
+  return stat(workspaceFileOf(workspacePath, path)).then(
+    (stats) => stats.isDirectory(),
+    () => false,
+  );
 }
 
 /** A small file's text in the workspace; null when it isn't there. */
