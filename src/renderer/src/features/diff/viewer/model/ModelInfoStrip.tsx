@@ -20,7 +20,7 @@ export function ModelInfoStrip({ stats }: { stats: ModelStat[] }) {
             ) : (
               (stat.after ?? stat.before) !== null && <span>{stat.after ?? stat.before}</span>
             )}
-            {stat.progress !== undefined && <ProgressRing value={stat.progress} size={12} />}
+            {stat.progress !== undefined && <ProgressRing value={stat.progress} size={12} label={`${stat.label} loading`} />}
           </span>
         );
       })}
