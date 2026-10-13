@@ -82,4 +82,19 @@ describe('WorkspaceWatchers', () => {
     watchers.ignoreOwnWrite(Promise.resolve());
     expect(created.map((watcher) => watcher.ignored)).toEqual([1, 2]);
   });
+
+  it('tells what listens to the files every change, and when they stop being all seen', () => {
+    const { watchers, created } = setUp();
+    const heard: string[] = [];
+    const stop = watchers.listen({ changed: (path, change) => heard.push(`${path} changed in ${change.folders}`), unwatched: (path) => heard.push(`${path} unwatched`) });
+    watchers.watch(1, '/wk/a');
+    watchers.watch(2, '/wk/b');
+
+    created[0]!.emit();
+    created[1]!.breaks();
+    watchers.release(1);
+    stop();
+    created[1]!.emit();
+    expect(heard).toEqual(['/wk/a changed in ', '/wk/b unwatched', '/wk/a unwatched']);
+  });
 });

@@ -22,6 +22,16 @@ interface WatchersListener {
   stopped(workspacePath: string): void;
 }
 
+/**
+ * What a part of the main process keeping something of a workspace's files (an index of a Unity project's assets)
+ * hears of them: each change the watcher saw, and when its changes stop being all seen (the watch broke, or no window
+ * shows the workspace anymore).
+ */
+export interface WorkspaceFilesListener {
+  changed(workspacePath: string, change: WorkspaceChange): void;
+  unwatched(workspacePath: string): void;
+}
+
 interface Entry {
   watcher: Watcher;
   coverage: WatchCoverage;
@@ -35,6 +45,7 @@ interface Entry {
 export class WorkspaceWatchers {
   private readonly byPath = new Map<string, Entry>();
   private readonly watchedBy = new Map<number, string>();
+  private readonly fileListeners = new Set<WorkspaceFilesListener>();
 
   constructor(
     private readonly listener: WatchersListener,
@@ -64,7 +75,14 @@ export class WorkspaceWatchers {
       entry.watcher.stop();
       this.byPath.delete(workspacePath);
       this.listener.stopped(workspacePath);
+      for (const listener of this.fileListeners) listener.unwatched(workspacePath);
     }
+  }
+
+  /** Hears every watched workspace's changes from now on; the returned function stops it. */
+  listen(listener: WorkspaceFilesListener): () => void {
+    this.fileListeners.add(listener);
+    return () => void this.fileListeners.delete(listener);
   }
 
   workspaceOf(viewer: number): string | undefined {
@@ -82,10 +100,14 @@ export class WorkspaceWatchers {
     const viewers = new Set<number>();
     const watcher = this.createWatcher(
       workspacePath,
-      (change) => this.listener.changed([...viewers], workspacePath, change),
+      (change) => {
+        this.listener.changed([...viewers], workspacePath, change);
+        for (const listener of this.fileListeners) listener.changed(workspacePath, change);
+      },
       () => {
         entry.coverage = 'partial';
         this.listener.broken([...viewers], workspacePath);
+        for (const listener of this.fileListeners) listener.unwatched(workspacePath);
       },
     );
     const entry: Entry = { watcher, coverage: watcher.start(), viewers };
