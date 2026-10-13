@@ -187,6 +187,13 @@ describe('materialsMayDiffer', () => {
     for (const path of ['Assets/Materials/Glass.mat', 'Assets/Lantern/Lantern.fbx.meta', 'Assets/Textures/metal.PNG', 'Assets/Textures/metal.tga']) {
       expect(materialsMayDiffer(at(undoing(path)), at(after)), path).toBe(true);
     }
+    // A script's .meta, or a prefab's, names nothing a material lookup reads: nothing is read for it.
+    for (const path of ['Assets/Scripts/Player.cs.meta', 'Assets/Prefabs/Lantern.prefab.meta', 'Assets/Scripts/Player.cs']) {
+      expect(materialsMayDiffer(at(undoing(path)), at(after)), path).toBe(false);
+    }
+    for (const path of ['Assets/Materials/Glass.mat.meta', 'Assets/Textures/metal.png.meta']) {
+      expect(materialsMayDiffer(at(undoing(path)), at(after)), path).toBe(true);
+    }
   });
 
   it('reads them for a model moved, whose textures Unity searches from another folder', () => {
