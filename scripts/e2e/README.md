@@ -13,7 +13,7 @@ About 10 seconds a run. Screenshots of each step go to `<os temp>/uvcs-e2e-shots
 
 It never touches UVCS infrastructure or the user's config: the only backend is the fake `cm` (`UVCS_CM_PATH`), the
 workspace is a temp folder (`workspaceFixture.mjs`: `.plastic/plastic.selector` and a few files, one edited, one
-private), the first-run import reads an empty `PLASTIC_HOME` (`plasticConfigFolder`), and Gravatar is off.
+private), the first-run import reads an empty `PLASTIC_HOME` (`plasticConfigFolder`), and Gravatar is off, chosen so (`gravatarChoiceAsked`): nothing asks about it.
 
 ## The fake `cm` (`fakeCm/`)
 

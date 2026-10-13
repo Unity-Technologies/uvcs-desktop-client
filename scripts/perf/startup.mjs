@@ -70,7 +70,7 @@ const STEPS = [
 
 function settings() {
   // The workspace is the only recent one: the one the installed app reopens, and the one the home screen opens.
-  return { theme: 'light', showGravatar: false, legacySettingsImported: false, recentWorkspacePaths: [workspace] };
+  return { theme: 'light', showGravatar: false, gravatarChoiceAsked: true, legacySettingsImported: false, recentWorkspacePaths: [workspace] };
 }
 
 const results = [];

@@ -24,9 +24,10 @@ const workspace = join(temp, 'demo');
 const cmLog = join(temp, 'cm.log');
 const userData = join(temp, 'user-data');
 createWorkspace(workspace);
-// Light theme to start with, and no Gravatar pictures: nothing leaves the machine.
+// Light theme to start with, and no Gravatar pictures, already chosen: nothing leaves the machine, and the question
+// about them doesn't cover the corner.
 mkdirSync(userData);
-writeFileSync(join(userData, 'settings.json'), JSON.stringify({ theme: 'light', showGravatar: false }));
+writeFileSync(join(userData, 'settings.json'), JSON.stringify({ theme: 'light', showGravatar: false, gravatarChoiceAsked: true }));
 
 const app = await electron.launch({
   args: ['.', `--user-data-dir=${userData}`],
