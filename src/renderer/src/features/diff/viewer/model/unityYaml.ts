@@ -1,6 +1,6 @@
 // Unity's `.meta` files as data: the YAML subset Unity writes (two-space indented block mappings, block sequences
-// whose items are mappings, one-line flow mappings like `{fileID: 0, guid: …}` and `[]`/`{}`), scalars kept as the
-// strings they are. Enough for a ModelImporter's settings; a full YAML library would be a dependency for this one
+// whose items are mappings, flow mappings like `{fileID: 0, guid: …}` and `[]`/`{}`, a value folded onto more indented
+// lines past Unity's line width), scalars kept as the strings they are. Enough for a ModelImporter's settings; a full YAML library would be a dependency for this one
 // reader.
 
 export type UnityYaml = string | UnityYaml[] | { [key: string]: UnityYaml };
@@ -11,13 +11,45 @@ interface Line {
 }
 
 export function parseUnityYaml(text: string): { [key: string]: UnityYaml } {
-  const lines: Line[] = text
-    .split(/\r?\n/)
-    .filter((line) => line.trim() !== '' && !line.trimStart().startsWith('#') && !line.startsWith('%') && !line.startsWith('---'))
-    .map((line) => ({ indent: line.length - line.trimStart().length, text: line.trim() }));
+  const lines = unfolded(
+    text
+      .split(/\r?\n/)
+      .filter((line) => line.trim() !== '' && !line.trimStart().startsWith('#') && !line.startsWith('%') && !line.startsWith('---'))
+      .map((line) => ({ indent: line.length - line.trimStart().length, text: line.trim() })),
+  );
   const at = { index: 0 };
   const root = block(lines, at, 0);
   return isMapping(root) ? root : {};
+}
+
+/**
+ * The lines with each folded value joined back onto its key's line: Unity wraps a long value (`m_Shader: {fileID: …,`
+ * then `type: 3}` indented below it), and a line more indented than a key that has its value is only ever that.
+ */
+function unfolded(lines: Line[]): Line[] {
+  const joined: Line[] = [];
+  for (const line of lines) {
+    const previous = joined[joined.length - 1];
+    if (previous && line.indent > valueIndent(previous) && hasValue(previous.text)) previous.text = `${previous.text} ${line.text}`;
+    else joined.push({ ...line });
+  }
+  return joined;
+}
+
+/**
+ * The indent a line's own mapping continues at: a sequence item's (`- name: Wave`) goes on with keys two columns in,
+ * under `name`, which are no fold.
+ */
+function valueIndent(line: Line): number {
+  return line.text.startsWith('- ') && keyEnd(line.text.slice(2)) !== -1 ? line.indent + 2 : line.indent;
+}
+
+/** `key: value` or `- value`: a line whose value is on it, not on the lines below. */
+function hasValue(text: string): boolean {
+  const content = text.startsWith('- ') ? text.slice(2).trim() : text;
+  const colon = keyEnd(content);
+  if (colon === -1) return text.startsWith('- ') || content.startsWith('{');
+  return content.slice(colon + 1).trim() !== '';
 }
 
 /** The block starting at `at` whose lines are indented `indent` or more: a sequence if it starts with `- `. */
