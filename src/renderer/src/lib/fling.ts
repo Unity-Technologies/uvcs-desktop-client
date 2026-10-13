@@ -1,7 +1,7 @@
 /**
- * Inertia for dragging the graph with the mouse. Trackpad scrolling already coasts (the OS bakes
- * inertia into its wheel events), but a drag would stop dead on release. The release velocity is
- * estimated from the last pointer samples and then decays exponentially. The frame loop lives in panInertia.ts.
+ * Inertia for dragging a view with the mouse (the Branch Explorer's graph). Trackpad scrolling already coasts (the OS
+ * bakes inertia into its wheel events), but a drag would stop dead on release. The release velocity is estimated from
+ * the last pointer samples and then decays exponentially. The frame loop lives in panInertia.ts.
  */
 
 /** A pointer position during a drag: screen px and ms. */
@@ -11,7 +11,7 @@ export interface PanSample {
   t: number;
 }
 
-/** Only this recent movement counts: pausing before letting go parks the graph. */
+/** Only this recent movement counts: pausing before letting go parks the view. */
 export const VELOCITY_WINDOW_MS = 100;
 /** px/ms below which a release is a positioning drag, not a fling. */
 export const FLING_MIN_LAUNCH = 0.25;

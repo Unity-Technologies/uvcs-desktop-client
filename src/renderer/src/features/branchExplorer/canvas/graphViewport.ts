@@ -1,5 +1,5 @@
 import type { FrameClock } from '../../../lib/frameClock';
-import { PanInertia } from './panInertia';
+import { PanInertia } from '../../../lib/panInertia';
 import { clampViewport, MAX_ZOOM, MIN_ZOOM, zoomAt, type Size, type Viewport } from './viewport';
 import { ViewportGlide } from './viewportGlide';
 import { ZoomGlide } from '../../../lib/zoomGlide';

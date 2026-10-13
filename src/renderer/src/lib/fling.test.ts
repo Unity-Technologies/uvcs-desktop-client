@@ -11,7 +11,7 @@ import {
   pushPanSample,
   VELOCITY_WINDOW_MS,
   type PanSample,
-} from './pan';
+} from './fling';
 
 /** A steady drag along x at `speed` px/ms, sampled every 16ms up to `endT`. */
 function steadyDrag(speed: number, endT: number): PanSample[] {

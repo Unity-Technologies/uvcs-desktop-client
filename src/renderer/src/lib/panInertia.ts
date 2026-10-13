@@ -1,10 +1,10 @@
-import type { FrameClock } from '../../../lib/frameClock';
-import { decayFling, flingVelocity, pushPanSample, type Fling, type PanSample } from './pan';
+import type { FrameClock } from './frameClock';
+import { decayFling, flingVelocity, pushPanSample, type Fling, type PanSample } from './fling';
 
 /** Longer frame gaps (a stall, a hidden window) don't make the graph jump. */
 const MAX_FRAME_MS = 64;
 
-/** Keeps a mouse drag gliding after release (see pan.ts), one frame at a time. */
+/** Keeps a mouse drag gliding after release (see fling.ts), one frame at a time. */
 export class PanInertia {
   private samples: PanSample[] = [];
   private fling: Fling | null = null;
@@ -50,7 +50,7 @@ export class PanInertia {
     const frame = decayFling(fling, Math.min(MAX_FRAME_MS, now - this.lastFrameAt));
     this.lastFrameAt = now;
     const moved = this.panBy(frame.dx, frame.dy);
-    // An axis stopped by the edge of the graph has nowhere left to glide.
+    // An axis stopped by the edge of the view (the graph's) has nowhere left to glide.
     const vx = Math.abs(moved.dx - frame.dx) > 0.5 ? 0 : frame.next.vx;
     const vy = Math.abs(moved.dy - frame.dy) > 0.5 ? 0 : frame.next.vy;
     if (frame.done || (vx === 0 && vy === 0)) {
