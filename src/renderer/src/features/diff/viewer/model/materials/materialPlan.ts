@@ -131,6 +131,11 @@ export function planVersion(version: ModelMaterialsInput, sources: Map<string, S
       issues.set(fileName, { name: fileName, problem: 'unsupportedFormat' });
       return null;
     }
+    // Unity imports a `.psb` only with the 2D PSD Importer: without it the material has no texture there.
+    if (/\.psb$/i.test(fileName) && !found.importsPsb) {
+      issues.set(fileName, { name: fileName, problem: 'psbNotImported' });
+      return null;
+    }
     const id = `${flipY ? 'up' : 'down'}:${file.path}`;
     needs.set(id, { id, name: fileName, where: { kind: 'file', file }, flipY });
     return { need: id, ...transform };
@@ -272,7 +277,8 @@ export function texturesReport(plans: readonly (VersionPlan | null)[], states: R
     else if (!overIds.has(need.id)) loading++;
   }
   for (const need of over) issues.set(need.name, { name: need.name, problem: 'overBudget' });
-  return { total: needs.size + [...issues.values()].filter(({ problem }) => problem === 'missing' || problem === 'unsupportedFormat').length, shown, loading, issues: [...issues.values()] };
+  const unplanned = [...issues.values()].filter(({ problem }) => problem === 'missing' || problem === 'unsupportedFormat' || problem === 'psbNotImported');
+  return { total: needs.size + unplanned.length, shown, loading, issues: [...issues.values()] };
 }
 
 /** A Unity material's color (sRGB, as kept) in three's linear working space. */

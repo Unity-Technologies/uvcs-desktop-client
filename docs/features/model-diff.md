@@ -244,7 +244,9 @@ choice comes back in the other modes. The merge cards' stills stay clay (`modelT
   it can't start, textures don't show): PNG, JPEG, GIF, BMP, WebP by the browser (`createImageBitmap`); TGA, TIFF (LZW
   too), EXR (DWAA too) and Radiance HDR by three's loaders (high dynamic range clamped and encoded as sRGB); PSD and PSB
   by the app's own reader of the composite image (`readPsd`: raw or RLE, 8 or 16 bits, RGB or grayscale, alpha; read
-  by content, so a PSD named `.psb` reads). A PSD saved without "Maximize Compatibility" (Version Info's
+  by content, so a PSD named `.psb` reads). Unity imports a `.psb` (a PSD named so too) only in a project with the
+  2D PSD Importer package in `Packages/manifest.json` or `packages-lock.json` (`listsPsdImporter`, `importsPsb`);
+  elsewhere it says "this project doesn't import PSB files" and the slot keeps its color. A PSD saved without "Maximize Compatibility" (Version Info's
   `hasRealMergedData`), or in CMYK, Lab, indexed or 32 bits, says so. DDS, KTX and the rest aren't shown. A library
   for PSD (ag-psd) was set aside: layers, effects and text a texture never needs, more of an untrusted file parsed; the
   one thing it would add is flattening the layers of a PSD whose composite is blank.

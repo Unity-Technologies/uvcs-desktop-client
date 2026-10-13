@@ -12,6 +12,8 @@ export type TextureProblem =
   | 'psdWithoutComposite'
   /** A Photoshop file in CMYK, Lab, indexed, bitmap or 32 bits per channel. */
   | 'psdColorMode'
+  /** A `.psb` in a project without the 2D PSD Importer package: Unity doesn't import it. */
+  | 'psbNotImported'
   /** Past the most textures one model shows (`MAX_TEXTURE_FILES`). */
   | 'overBudget'
   /** Bytes that don't decode, or a read that failed. */
@@ -23,6 +25,7 @@ const WORDS: Record<TextureProblem, string> = {
   tooLarge: 'too large to show',
   psdWithoutComposite: "can't read this PSD: save it with Maximize Compatibility",
   psdColorMode: "can't read this PSD: save it as 8 or 16-bit RGB",
+  psbNotImported: "this project doesn't import PSB files",
   overBudget: 'past the 64 textures a model shows',
   unreadable: "couldn't read it",
 };

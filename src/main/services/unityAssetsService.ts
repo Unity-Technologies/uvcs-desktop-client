@@ -2,7 +2,7 @@
 // "Materials"): no `cm` command, nothing from the server, nothing outside the workspace. The materials and textures a
 // model shows are the workspace's as they are now, whichever version of the model is shown.
 
-import { stat } from 'node:fs/promises';
+import { readFile, stat } from 'node:fs/promises';
 import { posix } from 'node:path';
 import type { UnityAssetsApi } from '@shared/api/unityAssets';
 import { MAX_UNITY_ASSET_LOOKUPS, type FoundFile, type TextureLookup, type UnityAssetsRequest } from '@shared/domain/unityAssets';
@@ -10,6 +10,7 @@ import { workspaceFileOf } from '../files/workspacePaths';
 import { diskProjectFiles } from '../unity/diskProjectFiles';
 import { ProjectAssetIndex, type ProjectFiles } from '../unity/ProjectAssetIndex';
 import { preferredMatches, searchedFolders, textureCandidates } from '../unity/textureSearch';
+import { listsPsdImporter, packageListsOf } from '../unity/unityPackages';
 import { unityProjectOf, type UnityProject } from '../unity/unityProject';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
 
@@ -69,7 +70,8 @@ export function createUnityAssetsService({ watchers, platform = process.platform
     const guids: (FoundFile | null)[] = [];
     for (const guid of request.guids) guids.push(index ? await found(await index.pathOfGuid(guid, modelFolder)) : null);
     const paths = await Promise.all(request.paths.map((path) => found(workspacePathOf(path))));
-    return { textures, guids, paths, importsPsb: false };
+    const importsPsb = project !== null && (await Promise.all(packageListsOf(project.root).map((list) => readText(workspacePath, list)))).some(listsPsdImporter);
+    return { textures, guids, paths, importsPsb };
   }
 
   return { find };
@@ -90,4 +92,9 @@ async function foundFile(workspacePath: string, path: string): Promise<FoundFile
   } catch {
     return null;
   }
+}
+
+/** A small file's text in the workspace; null when it isn't there. */
+async function readText(workspacePath: string, path: string): Promise<string | null> {
+  return readFile(workspaceFileOf(workspacePath, path), 'utf8').catch(() => null);
 }
