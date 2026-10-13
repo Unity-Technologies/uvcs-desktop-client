@@ -92,7 +92,9 @@ describe('answerStateOf', () => {
     expect(state(answer(), { second: null })).toBe('unread');
     expect(state(answer({ guids: [null], guidMisses: 'noProject' }))).toBe('noProject');
     expect(answerStateOf(request({ textures: [{ name: 'glass.png', storedPaths: [], remapGuid: GLASS_MAT }] }), answer({ textures: [null], guidMisses: 'noLibrary' }), null, undefined, new Map())).toBe('noLibrary');
-    expect(answerStateOf(request(), answer({ guidMisses: 'unread' }), null, undefined, new Map())).toBe('answered');
+    // Without a project or a Library, only a GUID can't be told missing; a file unread, a texture's too.
+    expect(answerStateOf(request(), answer({ guidMisses: 'noLibrary' }), null, undefined, new Map())).toBe('answered');
+    expect(answerStateOf(request({ textures: [{ name: 'glass.png', storedPaths: [], remapGuid: null }] }), answer({ textures: [null], guidMisses: 'unread' }), null, undefined, new Map())).toBe('unread');
   });
 });
 
