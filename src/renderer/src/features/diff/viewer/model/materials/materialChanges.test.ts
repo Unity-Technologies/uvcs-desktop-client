@@ -71,7 +71,34 @@ describe('materialChanges: where a slot takes its material from', () => {
   });
 });
 
+describe("materialChanges: a glTF's materials, keyed by their place in the file", () => {
+  /** A glTF version: each of its materials at its place (`#0`, `#1`…), by name ('' for none). */
+  function gltf(materials: [string, TestSlot][]): VersionPlan {
+    const named = version(Object.fromEntries(materials.map(([name, slot], i) => [`#${i}`, slot])));
+    for (const [key, slot] of named.resolved) named.resolved.set(key, { ...slot, slot: materials[Number(key.slice(1))]![0] });
+    return named;
+  }
+  const material = (name: string, slot: Partial<TestSlot> = {}): [string, TestSlot] => [name, { material: own(name), ...slot }];
+
+  it('pairs them by name, so a material added first moves none of the others', () => {
+    const before = gltf([material('Wood', { baseMap: texture('planks.png') }), material('Metal')]);
+    const after = gltf([material('Grass'), material('Wood', { baseMap: texture('rock.png') }), material('Metal')]);
+    expect(materialChanges(before, after)).toEqual([{ kind: 'baseMap', slot: 'Wood', before: 'planks.png', after: 'rock.png' }]);
+  });
+
+  it("pairs none without a name, or with a name another of the file's materials has: nothing tells which is which", () => {
+    expect(materialChanges(gltf([material(''), material('')]), gltf([material('', { look: { alpha: 'blend' } }), material('')]))).toEqual([]);
+    expect(materialChanges(gltf([material('Leaf'), material('Leaf')]), gltf([material('Leaf', { look: { alpha: 'blend' } }), material('Leaf')]))).toEqual([]);
+  });
+});
+
 describe('materialChanges: within the same material', () => {
+  it("compares a slot's own material on both sides whatever the file calls it: never a change of where it comes from", () => {
+    const before = version({ Body: { material: own('Body') } });
+    const after = version({ Body: { material: own('Body_old'), look: { doubleSided: true } } });
+    expect(materialChanges(before, after)).toEqual([{ kind: 'doubleSided', slot: 'Body', now: true }]);
+  });
+
   const wood = (slot: Partial<TestSlot>): VersionPlan => version({ Wood: { material: own('Wood'), ...slot } });
 
   it('tells a base map that is another texture file, one added and one taken away', () => {
