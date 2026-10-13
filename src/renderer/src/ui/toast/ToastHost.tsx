@@ -16,7 +16,7 @@ interface ToastHostProps {
   errorAction?: (title: string, error: unknown) => ToastAction | undefined;
   /** Draws the card of a toast that follows an operation (`operationId`). */
   renderOperation?: (toast: Toast, dismiss: () => void) => React.ReactNode;
-  /** Cards of the app's own that stack with the toasts, under them, nearest the corner (the app's update). */
+  /** Cards of the app's own (`CornerCard`) that stack with the toasts, under them, nearest the corner: the question about profile pictures, the app's update. */
   children?: React.ReactNode;
 }
 

@@ -1,8 +1,8 @@
-/* Same surface as a toast, stacked with them in the corner, like the update card. */
+/* Same surface as a toast, stacked with them in the corner. */
 .card {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  gap: var(--space-3);
   padding: var(--space-3);
   border: 1px solid var(--border-default);
   border-radius: var(--radius-lg);
@@ -19,6 +19,7 @@
 }
 
 .icon {
+  display: flex;
   flex: none;
   color: var(--accent-text);
 }
@@ -39,5 +40,4 @@
   display: flex;
   justify-content: flex-end;
   gap: var(--space-2);
-  margin-top: var(--space-1);
 }

@@ -3,9 +3,9 @@ import { Users } from 'lucide-react';
 import { gravatarChoice } from '@shared/domain/gravatarChoice';
 import { usePeopleShown } from '../../lib/avatars/peopleShown';
 import { Button } from '../../ui/Button';
+import { CornerCard, CornerCardText } from '../../ui/toast/CornerCard';
 import { asksAboutGravatar } from './asksAboutGravatar';
 import { saveSettings, settingsQuery } from './useSettings';
-import styles from './GravatarPrompt.module.css';
 
 const answer = (show: boolean): void => void saveSettings(gravatarChoice(show));
 
@@ -19,20 +19,22 @@ export function GravatarPrompt() {
   if (!asksAboutGravatar(settings, peopleShown)) return null;
 
   return (
-    <div className={styles.card} role="status">
-      <div className={styles.row}>
-        <Users size={15} className={styles.icon} />
-        <span className={styles.title}>Show profile pictures?</span>
-      </div>
-      <p className={styles.text}>Pictures come from Gravatar. To find them, the app sends a hash of each email address shown to gravatar.com.</p>
-      <div className={styles.actions}>
-        <Button variant="ghost" size="small" onClick={() => answer(false)}>
-          Not now
-        </Button>
-        <Button variant="primary" size="small" onClick={() => answer(true)}>
-          Show pictures
-        </Button>
-      </div>
-    </div>
+    <CornerCard
+      role="status"
+      icon={<Users size={15} />}
+      title="Show profile pictures?"
+      actions={
+        <>
+          <Button variant="ghost" size="small" onClick={() => answer(false)}>
+            Not now
+          </Button>
+          <Button variant="primary" size="small" onClick={() => answer(true)}>
+            Show pictures
+          </Button>
+        </>
+      }
+    >
+      <CornerCardText>Pictures come from Gravatar. To find them, the app sends a hash of each email address shown to gravatar.com.</CornerCardText>
+    </CornerCard>
   );
 }
