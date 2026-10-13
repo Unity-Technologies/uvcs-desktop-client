@@ -44,7 +44,6 @@ import { useSize } from './useSize';
 import { useStableModel } from './useStableModel';
 import { shownSurface, surfaceButtonDisabledReason } from './surfaceLook';
 import { modelWorkspacePath } from './materials/modelWorkspacePath';
-import { useWorkspaceInfoOf } from '../../../../app/workspace/useWorkspace';
 import styles from './ModelDiffViewer.module.css';
 
 /** From this pane width the "What changed" panel opens as a column beside the stage. */
@@ -97,13 +96,12 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
   const sceneBefore = useModelScene(old);
   const sceneAfter = useModelScene(next);
   const differences = comparable && mode === 'differences';
-  const workspaceRepository = useWorkspaceInfoOf(workspacePath === '' ? null : workspacePath).data?.repository;
   const materialVersions = useMemo(
     () => ({
-      before: materialVersionOf(old, modelBefore, optionsBefore, sources.original, workspaceRepository),
-      after: materialVersionOf(next, modelAfter, optionsAfter, sources.modified, workspaceRepository),
+      before: materialVersionOf(old, modelBefore, optionsBefore, sources.original),
+      after: materialVersionOf(next, modelAfter, optionsAfter, sources.modified),
     }),
-    [old, next, modelBefore, modelAfter, optionsBefore, optionsAfter, sources.original, sources.modified, workspaceRepository],
+    [old, next, modelBefore, modelAfter, optionsBefore, optionsAfter, sources.original, sources.modified],
   );
   const materials = useModelMaterials(workspacePath, materialVersions, modelSurface === 'materials' && !differences);
   const surface = shownSurface(modelSurface, materials.offered);
@@ -289,10 +287,9 @@ function materialVersionOf(
   bytes: FileContent['model'],
   options: ReturnType<typeof useModelReadOptions>,
   source: ContentSource,
-  workspaceRepository: string | undefined,
 ): MaterialVersion | null {
   if (!read || !bytes || !options) return null;
-  return { model: read.model, bytes, options, path: modelWorkspacePath(source, workspaceRepository) };
+  return { model: read.model, bytes, options, path: modelWorkspacePath(source) };
 }
 
 function readyOf(state: ModelReadState): Extract<ModelReadState, { status: 'ready' }> | null {

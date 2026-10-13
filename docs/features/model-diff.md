@@ -216,8 +216,10 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   waiting for the workspace's `.meta` looks nothing up until it is read (`materialsInputOf` is undefined). No `cm`
   command is added (`api.unityAssets.find` reads the disk only; `unityAssetsService.test.ts` checks it can't reach
   `cm`). Reading them from the server was rejected: one `cm cat` per texture per side, on a server many people share,
-  for a look whose textures have their own image diff. Without a workspace the look isn't offered. A revision of another
-  repository (an xlinked one's) has no place in the workspace (`modelWorkspacePath`): only what its file holds shows.
+  for a look whose textures have their own image diff. Without a workspace the look isn't offered. A model under an
+  xlink is where the workspace has it too, though its revision is the xlinked repository's: Files' last change and a
+  changeset diff name it by its workspace path, the xlink's folder included (`modelWorkspacePath`), and Unity sees
+  that folder as part of the project. Only a version without a path shows just what its file holds.
 - **Where each slot's material comes from** (`slotSources`, as Unity's ModelImporter decides for FBX and OBJ): with
   Material Creation Mode None (`materialImportMode: 0`, or `importMaterials: 0` in a `.meta` older than Unity 2019.3)
   clay, unless `remapMaterialsIfMaterialImportModeIsNone: 1` (absent, as before 2021.2: clay, as Unity imports it); a
