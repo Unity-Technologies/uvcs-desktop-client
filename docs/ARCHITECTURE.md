@@ -280,10 +280,11 @@ user decides whether it leaves the machine.
   the window (`notePersonShown`, from `avatarImageFor`); the user's own account (the top bar, the account menu,
   Settings' accounts, `ownAccount`) doesn't, so the question never comes at launch with only the user on screen. Then
   a card in the toast corner (`GravatarPrompt` on `CornerCard`, `asksAboutGravatar`) asks "Show profile pictures?"
-  with "Show pictures" and "Not now". While a dialog is open (`useDialogStore`: Settings, About, confirmations...) it
-  waits, so it never sits over the dialog's buttons, and shows again once the dialog closes. It has no close button and doesn't time out, as the question needs an answer: either one is saved
-  with `gravatarChoiceAsked` (`gravatarChoice`), and it never asks again, in this window or another. Quitting without
-  answering keeps pictures off and asks again the next time people show.
+  with "Show pictures" and "Not now". While a dialog opened with `openDialog` or `askDialog` is open (`useDialogStore`:
+  Settings, About, confirmations...; the command palette isn't one) it waits, so it never sits over the dialog's
+  buttons, and shows again once the dialog closes. It has no close button and doesn't time out, as the question needs
+  an answer: either one is saved with `gravatarChoiceAsked` (`gravatarChoice`), and it never asks again, in this
+  window or another. Quitting without answering keeps pictures off and asks again the next time people show.
 - **Settings › Appearance › People** turns pictures on or off at any time; that's a choice too (`gravatarChoice`).
 - **Settings saved before the question existed** hold `showGravatar` without `gravatarChoiceAsked`, written with every
   other setting while pictures were on by default (`storedGravatarChoice`, read by `SettingsStore`): `true` may be
