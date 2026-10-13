@@ -129,6 +129,12 @@ describe('materialChanges: within the same material', () => {
     expect(materialChanges(wood({ baseMap: planks, look: { color: [1, 0, 0] } }), wood({ baseMap: planks, look: { color: [0, 0, 1] } }))).toEqual([]);
   });
 
+  it('tells the opacity of one transparent on both sides, as the Inspector keeps it, in 8 bits', () => {
+    expect(materialChanges(wood({ look: { alpha: 'blend', opacity: 0.4 } }), wood({ look: { alpha: 'blend', opacity: 0.6 } }))).toEqual([{ kind: 'opacity', slot: 'Wood', before: 0.4, after: 0.6 }]);
+    expect(materialChanges(wood({ look: { alpha: 'blend', opacity: 0.4 } }), wood({ look: { alpha: 'blend', opacity: 0.4001 } }))).toEqual([]);
+    expect(materialChanges(wood({ look: { opacity: 1 } }), wood({ look: { alpha: 'blend', opacity: 0.5 } }))).toEqual([{ kind: 'alpha', slot: 'Wood', before: 'opaque', after: 'blend' }]);
+  });
+
   it('tells the alpha mode, the cutoff of one clipped on both sides, and both sides drawn or one', () => {
     expect(materialChanges(wood({}), wood({ look: { alpha: 'blend' } }))).toEqual([{ kind: 'alpha', slot: 'Wood', before: 'opaque', after: 'blend' }]);
     expect(materialChanges(wood({ look: { alpha: 'clip', cutoff: 0.5 } }), wood({ look: { alpha: 'clip', cutoff: 0.8 } }))).toEqual([{ kind: 'cutoff', slot: 'Wood', before: 0.5, after: 0.8 }]);

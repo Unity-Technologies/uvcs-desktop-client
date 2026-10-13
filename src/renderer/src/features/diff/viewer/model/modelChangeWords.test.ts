@@ -144,6 +144,7 @@ describe('changeRows, for the materials', () => {
         material({ kind: 'alpha', slot: 'Net', before: 'clip', after: 'opaque' }),
         material({ kind: 'cutoff', slot: 'Fern', before: 0.5, after: 0.8 }),
         material({ kind: 'doubleSided', slot: 'Leaf', now: true }),
+        material({ kind: 'opacity', slot: 'Visor', before: 0.4, after: 0.6 }),
         material({ kind: 'tiling', slot: 'Floor', before: { repeat: [1, 1], offset: [0, 0] }, after: { repeat: [2, 2], offset: [0, 0] } }),
         material({ kind: 'tiling', slot: 'Wall', before: { repeat: [1, 1], offset: [0, 0] }, after: { repeat: [1, 1], offset: [0.5, 0] } }),
       ]),
@@ -156,6 +157,7 @@ describe('changeRows, for the materials', () => {
       'Net: now opaque',
       'Fern: alpha cutoff 0.5 → 0.8',
       'Leaf: now double-sided',
+      'Visor: opacity 40% → 60%',
       'Floor: base map tiling 1 × 1 → 2 × 2',
       'Wall: base map offset 0, 0 → 0.5, 0',
     ]);
