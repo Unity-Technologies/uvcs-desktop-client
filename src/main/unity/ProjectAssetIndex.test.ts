@@ -64,6 +64,13 @@ function project(far: number) {
 
 const MODEL_FOLDER = 'Game/Assets/Art/Tree';
 
+/** A promise and what settles it, for a read the test answers when it chooses. */
+function deferred(): { promise: Promise<void>; resolve: () => void } {
+  let resolve = (): void => undefined;
+  const promise = new Promise<void>((settle) => (resolve = settle));
+  return { promise, resolve };
+}
+
 describe('ProjectAssetIndex', () => {
   it("reads only the model's surroundings for an asset near it, however big the project", async () => {
     const small = memoryFiles(project(10));
@@ -159,8 +166,8 @@ describe('ProjectAssetIndex', () => {
 
   it('keeps no answer a change made stale while the whole project was being read', async () => {
     const files = project(3);
-    const packagesReached = Promise.withResolvers<void>();
-    const packagesRead = Promise.withResolvers<void>();
+    const packagesReached = deferred();
+    const packagesRead = deferred();
     const holdPackages = () => (packagesReached.resolve(), packagesRead.promise);
     const { disk } = memoryFiles(files, new Map(), new Map([['Game/Packages', holdPackages]]));
     const index = new ProjectAssetIndex(unityProjectOf('Game/Assets/Art/Tree/Tree.fbx')!, disk, 'linux');
@@ -177,8 +184,8 @@ describe('ProjectAssetIndex', () => {
 
   it('a find after a change reads the disk again, never joining or keeping a read started before it', async () => {
     const files = project(3);
-    const far1Reached = Promise.withResolvers<void>();
-    const far1Read = Promise.withResolvers<void>();
+    const far1Reached = deferred();
+    const far1Read = deferred();
     const holdFar1 = () => (far1Reached.resolve(), far1Read.promise);
     const { disk } = memoryFiles(files, new Map(), new Map([['Game/Assets/Far1', holdFar1]]));
     const index = new ProjectAssetIndex(unityProjectOf('Game/Assets/Art/Tree/Tree.fbx')!, disk, 'linux');
