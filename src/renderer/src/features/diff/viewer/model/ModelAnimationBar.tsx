@@ -116,8 +116,8 @@ export function ModelAnimationBar({ renderer, scenes, choices, comparable }: Mod
           <span className={styles.time}>
             {time.toFixed(2)} / {length.toFixed(2)} s
           </span>
-          {only && <span className={styles.note}>{only}</span>}
-          {unplayable && <span className={styles.note}>{unplayable}</span>}
+          {only && <span className={styles.note} title={only}>{only}</span>}
+          {unplayable && <span className={styles.note} title={unplayable}>{unplayable}</span>}
         </>
       )}
     </div>

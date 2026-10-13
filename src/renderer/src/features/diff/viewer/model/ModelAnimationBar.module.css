@@ -25,7 +25,10 @@
 }
 
 .note {
+  min-width: 0;
+  overflow: hidden;
   color: var(--label-text);
   font-size: var(--text-xs);
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
