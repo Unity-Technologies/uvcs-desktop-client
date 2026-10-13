@@ -71,9 +71,12 @@ export function createContentService({ cm, reviews }: ServiceContext): ContentAp
   return { read, readBytes, writeWorkspaceFile };
 }
 
-/** `cm` telling an item isn't there (`The specified item /a.cs does not exist.`), or the disk telling a file isn't. */
+/**
+ * `cm` telling an item isn't there (`The specified item /a.cs does not exist.`, or `cm ls --tree`'s `Can't resolve the
+ * selector for the item /a.cs`), or the disk telling a file isn't.
+ */
 function isMissingItem(error: unknown): boolean {
-  if (error instanceof CmError) return /does not exist/i.test(error.message);
+  if (error instanceof CmError) return /does not exist|can't resolve the selector for the item/i.test(error.message);
   return (error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT';
 }
 

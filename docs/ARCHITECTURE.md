@@ -177,8 +177,12 @@ repository, set where `cm` names it, and every spec built from it names both (`s
   it, so two repositories' revision 45 never share a cached content.
 - No repository path reaches through an xlink (`serverpath:/lib/a.cs#cs:12` finds nothing when `lib` is one), but
   workspace paths and `cm ls --tree` do. A history opened from a diff or a repository tree reads the item of its
-  revision (`rev:revid:N@repo`, `itemHistoryTarget`); a merge change's version under an xlink is looked up in the
-  changeset's tree once `serverpath:` finds nothing (`repositoryPath`, a second command only for those).
+  revision (`rev:revid:N@repo`, `itemHistoryTarget`). A path known to be under an xlink (a model's sibling in a
+  committed diff, a `repositoryPath` with its `repository`) is read from the tree at once (`saveFromTree`: one
+  `cm ls <path> --tree=<point> --xml`, then `cm cat revid:N@repo`), never by a `serverpath:` bound to fail; a merge
+  change's version, not known to be under one, is looked up there once `serverpath:` finds nothing (a second command
+  only for those). `cm ls --tree` takes a changeset or a branch (`listsTree`) and refuses a shelve: under an xlink, a
+  shelve's unchanged files can't be read by path.
 - `cm merge` prints conflicting files under a writable xlink with the xlinked repository's item id and changesets but
   not the repository: one `cm ls` of the conflicting files in the destination's tree names each one's
   (`withConflictRepositories`), only when some file conflicts.
