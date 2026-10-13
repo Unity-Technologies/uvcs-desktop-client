@@ -41,14 +41,17 @@ export interface UnityAssetsAnswer {
    * (`com.unity.2d.psdimporter`) in its `Packages/manifest.json` or `packages-lock.json`. A `.psd` it always imports.
    */
   importsPsb: boolean;
-  /**
-   * Whether every GUID answered null is known missing. False when one isn't: a model outside any project (a package's
-   * own repository, which no project's index looks up), a project without a `Library` (never opened in Unity on this
-   * machine: no package cache to look in), a read that couldn't finish (a file held, a change overtaking it), or a
-   * find that keeps no index (whose misses never read the package cache).
-   */
-  guidMissesKnown: boolean;
+  /** Whether every GUID answered null is known missing, and if not, why (`GuidMisses`). */
+  guidMisses: GuidMisses;
 }
+
+/**
+ * `known`: every GUID answered null is missing. Otherwise one isn't known missing: `noProject`, a model outside any
+ * Unity project (a package's own repository, which no project's index looks up); `noLibrary`, a project without a
+ * `Library` (never opened in Unity on this machine: no package cache to look in); `unread`, a read that couldn't
+ * finish (a file held, a change overtaking it) or a find that keeps no index (whose misses never read the cache).
+ */
+export type GuidMisses = 'known' | 'noProject' | 'noLibrary' | 'unread';
 
 /** The most lookups of each kind one request may carry: a model is read with at most 64 textures. */
 export const MAX_UNITY_ASSET_LOOKUPS = 512;

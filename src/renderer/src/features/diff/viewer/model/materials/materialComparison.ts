@@ -1,16 +1,19 @@
 // When the "What changed" panel tells what changed in the materials (`materialChanges`), and when it can't: the
 // decisions `useModelMaterials` makes around the reads (docs/features/model-diff.md, "What changed"). Told only from
 // what the workspace answered for both versions: a find that failed, or a GUID not found that can't be told missing
-// (`guidMissesKnown`: a model outside a Unity project, or in one without a `Library`), would read as missing materials.
+// (`guidMisses`: a model outside a Unity project, or in one without a `Library`), would read as missing materials.
 
-import type { UnityAssetsAnswer, UnityAssetsRequest } from '@shared/domain/unityAssets';
+import type { GuidMisses, UnityAssetsAnswer, UnityAssetsRequest } from '@shared/domain/unityAssets';
 import type { ImportSettingsSource } from '../modelImportSettings';
 import { materialChanges, materialsMayDiffer, type MaterialChange, type MaterialSide } from './materialChanges';
 import type { VersionPlan } from './materialPlan';
 import type { UnityMaterial } from './unityMaterial';
 
-/** How far the workspace answered a version's lookups: `unknown` when what it answered can't be taken as so. */
-export type AnswerState = 'reading' | 'answered' | 'unknown';
+/** Why what the workspace answered can't be taken as so (`GuidMisses`); a find that failed is `unread`. */
+export type NotKnownReason = Exclude<GuidMisses, 'known'>;
+
+/** How far the workspace answered a version's lookups, or why what it answered can't be taken as so. */
+export type AnswerState = 'reading' | 'answered' | NotKnownReason;
 
 export interface ComparisonInput {
   /** `comparableVersions`. */
@@ -40,7 +43,7 @@ export function materialChangesOf(input: ComparisonInput): MaterialChange[] | nu
   if (!input.comparable) return null;
   if (input.sides.some((side) => side === undefined)) return undefined;
   if (!comparesMaterials(input)) return [];
-  if (input.answers.includes('unknown')) return null;
+  if (input.answers.some(isNotKnown)) return null;
   const [before, after] = input.plans;
   return input.answers.includes('reading') || !before || !after ? undefined : materialChanges(before, after);
 }
@@ -56,10 +59,15 @@ export function answerStateOf(
   const rounds: [UnityAssetsRequest, UnityAssetsAnswer | null | undefined][] = [[request, first], ...(secondRequest ? [[secondRequest, second] as [UnityAssetsRequest, UnityAssetsAnswer | null | undefined]] : [])];
   let state: AnswerState = 'answered';
   for (const [asked, answer] of rounds) {
-    if (answer === null || (answer && !answer.guidMissesKnown && asksGuids(asked))) return 'unknown';
+    if (answer === null) return 'unread';
+    if (answer && answer.guidMisses !== 'known' && asksGuids(asked)) return answer.guidMisses;
     if (answer === undefined) state = 'reading';
   }
   return materials === undefined ? 'reading' : state;
+}
+
+export function isNotKnown(state: AnswerState): state is NotKnownReason {
+  return state !== 'reading' && state !== 'answered';
 }
 
 function asksGuids(request: UnityAssetsRequest): boolean {

@@ -11,7 +11,7 @@ const GLASS_MAT = '0f2b6c1e9a8d4b3c8e7f6a5b4c3d2e1f';
 const MODEL = 'Assets/Lantern/Lantern.fbx';
 
 const request = (overrides: Partial<UnityAssetsRequest> = {}): UnityAssetsRequest => ({ modelPath: MODEL, textures: [], guids: [], paths: [], searchTexturesGlobally: false, ...overrides });
-const answer = (overrides: Partial<UnityAssetsAnswer> = {}): UnityAssetsAnswer => ({ textures: [], guids: [], paths: [], importsPsb: false, guidMissesKnown: true, ...overrides });
+const answer = (overrides: Partial<UnityAssetsAnswer> = {}): UnityAssetsAnswer => ({ textures: [], guids: [], paths: [], importsPsb: false, guidMisses: 'known', ...overrides });
 
 function side(settings: Partial<ModelMaterialsInput['settings']> = {}) {
   const input: ModelMaterialsInput = { format: 'fbx', slots: [{ key: 'Glass', name: 'Glass', material: fileMaterial('Glass') }], settings: { ...DEFAULT_IMPORT_SETTINGS, ...settings } };
@@ -46,7 +46,7 @@ describe('materialChangesOf', () => {
 
   it("can't tell without a workspace, a path in it, or a side the workspace couldn't answer", () => {
     expect(materialChangesOf(input({ comparable: false }))).toBeNull();
-    expect(materialChangesOf(input({ answers: ['answered', 'unknown'] }))).toBeNull();
+    expect(materialChangesOf(input({ answers: ['answered', 'noLibrary'] }))).toBeNull();
   });
 
   it('is being told while a side is read', () => {
@@ -71,12 +71,12 @@ describe('answerStateOf', () => {
     expect(state(answer(), { materials: undefined })).toBe('reading');
   });
 
-  it("is unknown when a find failed, or GUIDs weren't looked up in a project's index: nothing tells they're missing", () => {
-    expect(state(null)).toBe('unknown');
-    expect(state(answer(), { second: null })).toBe('unknown');
-    expect(state(answer({ guids: [null], guidMissesKnown: false }))).toBe('unknown');
-    expect(answerStateOf(request({ textures: [{ name: 'glass.png', storedPaths: [], remapGuid: GLASS_MAT }] }), answer({ textures: [null], guidMissesKnown: false }), null, undefined, new Map())).toBe('unknown');
-    expect(answerStateOf(request(), answer({ guidMissesKnown: false }), null, undefined, new Map())).toBe('answered');
+  it("says why it can't be taken as so when a find failed, or a GUID not found isn't known missing", () => {
+    expect(state(null)).toBe('unread');
+    expect(state(answer(), { second: null })).toBe('unread');
+    expect(state(answer({ guids: [null], guidMisses: 'noProject' }))).toBe('noProject');
+    expect(answerStateOf(request({ textures: [{ name: 'glass.png', storedPaths: [], remapGuid: GLASS_MAT }] }), answer({ textures: [null], guidMisses: 'noLibrary' }), null, undefined, new Map())).toBe('noLibrary');
+    expect(answerStateOf(request(), answer({ guidMisses: 'unread' }), null, undefined, new Map())).toBe('answered');
   });
 });
 

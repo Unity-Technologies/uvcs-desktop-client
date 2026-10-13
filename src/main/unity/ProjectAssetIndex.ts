@@ -54,6 +54,8 @@ export class ProjectAssetIndex {
   private wholeNames = false;
   /** `Library/PackageCache` read whole: a GUID missing from it too is missing. */
   private wholePackageCache = false;
+  /** The last read of the package cache found no `Library` (`whyNotKnown`). */
+  private libraryMissing = false;
   /** The package cache's read in flight: two finds at once read it once. */
   private packageCacheRead: Promise<boolean> | null = null;
   /**
@@ -96,6 +98,11 @@ export class ProjectAssetIndex {
       else this.forget(folderOf(found));
     }
     return undefined;
+  }
+
+  /** Why the last GUID answered undefined isn't known missing: a project without a `Library`, or a read unfinished. */
+  whyNotKnown(): 'noLibrary' | 'unread' {
+    return this.readsPackageCache && this.libraryMissing ? 'noLibrary' : 'unread';
   }
 
   /** A GUID the index doesn't know: looked for in the project's rings, then in its package cache. */
@@ -195,6 +202,7 @@ export class ProjectAssetIndex {
     const library = joined(this.project.root, 'Library');
     const changes = this.changes;
     const entries = await this.files.list(library).catch(() => null);
+    this.libraryMissing = entries !== null && entries.length === 0;
     if (entries === null || entries.length === 0) return false;
     const whole = await this.readSubtree(this.packageCache(), true);
     this.wholePackageCache = whole && this.changes === changes;

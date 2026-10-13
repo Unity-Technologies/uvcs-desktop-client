@@ -5,7 +5,7 @@
 import { readFile, stat } from 'node:fs/promises';
 import { posix } from 'node:path';
 import type { UnityAssetsApi } from '@shared/api/unityAssets';
-import { MAX_STORED_PATHS, MAX_UNITY_ASSET_LOOKUPS, MAX_UNITY_ASSET_PATH_LENGTH, type FoundFile, type TextureLookup, type UnityAssetsRequest } from '@shared/domain/unityAssets';
+import { MAX_STORED_PATHS, MAX_UNITY_ASSET_LOOKUPS, MAX_UNITY_ASSET_PATH_LENGTH, type FoundFile, type GuidMisses, type TextureLookup, type UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { workspaceFileOf } from '../files/workspacePaths';
 import { diskProjectFiles } from '../unity/diskProjectFiles';
 import { ProjectAssetIndex, type ProjectFiles } from '../unity/ProjectAssetIndex';
@@ -56,10 +56,10 @@ export function createUnityAssetsService({ watchers, platform = process.platform
     const modelFolder = posix.dirname(modelPath) === '.' ? '' : posix.dirname(modelPath);
     const found = (path: string | null): Promise<FoundFile | null> => (path === null ? Promise.resolve(null) : foundFile(workspacePath, path));
     // Outside a project, or in one without a `Library`, a GUID not found isn't known missing (`pathOfGuid`).
-    let guidMissesKnown = index !== null;
+    let guidMisses: GuidMisses = index ? 'known' : 'noProject';
     const byGuid = async (guid: string): Promise<FoundFile | null> => {
       const path = index ? await index.pathOfGuid(guid, modelFolder) : null;
-      if (path === undefined) guidMissesKnown = false;
+      if (path === undefined && index && guidMisses === 'known') guidMisses = index.whyNotKnown();
       return found(path ?? null);
     };
 
@@ -86,7 +86,7 @@ export function createUnityAssetsService({ watchers, platform = process.platform
     for (const guid of request.guids) guids.push(await byGuid(guid));
     const paths = await Promise.all(request.paths.map((path) => found(workspacePathOf(path))));
     const importsPsb = project !== null && (await Promise.all(packageListsOf(project.root).map((list) => readText(workspacePath, list)))).some(listsPsdImporter);
-    return { textures, guids, paths, importsPsb, guidMissesKnown };
+    return { textures, guids, paths, importsPsb, guidMisses };
   }
 
   return { find };
