@@ -112,6 +112,15 @@ describe('changeRows, for the materials', () => {
     ]);
   });
 
+  it("names a material of a registry package, which Unity keeps in Library/PackageCache, the package's", () => {
+    const lit = project('Lit', 'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Runtime/Materials/Lit.mat');
+    expect(changeRows([material({ kind: 'source', slot: 'Glass', before: project('Lantern_Glass'), after: lit })])[0]).toMatchObject({
+      title: "Glass now uses the package's Lit",
+      detail: "Was the project's Lantern_Glass.",
+    });
+    expect(changeRows([material({ kind: 'source', slot: 'Glass', before: lit, after: DEFAULT })])[0]!.detail).toBe("Was the package's Lit.");
+  });
+
   it('names a project material by its folder too where another of its name was', () => {
     const [row] = changeRows([material({ kind: 'source', slot: 'Ball', before: project('Wood', 'Assets/Props/Wood.mat'), after: project('Wood', 'Assets/Balls/Wood.mat') })]);
     expect(row).toMatchObject({ title: "Ball now uses the project's Assets/Balls/Wood", detail: "Was the project's Assets/Props/Wood." });
