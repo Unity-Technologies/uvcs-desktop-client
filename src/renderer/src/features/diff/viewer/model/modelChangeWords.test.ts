@@ -183,6 +183,9 @@ describe('changeRows, for the materials', () => {
     // Counted once each, however many slots use them.
     const shared = ['Wood', 'Bark', 'Plank'].map((slot) => material({ kind: 'textureMissing', slot, texture: 'planks.png' }));
     expect(changeRows(shared)[0]).toMatchObject({ tone: 'risk', title: "planks.png isn't in the workspace, for 3 slots" });
+    // Its slots counted once each too: one slot using it as its base map and normal map is one slot.
+    const twice = [...shared, material({ kind: 'textureMissing', slot: 'Wood', texture: 'planks.png' })];
+    expect(changeRows(twice)[0]!.title).toBe("planks.png isn't in the workspace, for 3 slots");
   });
 });
 

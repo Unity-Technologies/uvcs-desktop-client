@@ -132,6 +132,8 @@ describe('materialChanges: within the same material', () => {
   it('tells the opacity of one transparent on both sides, as the Inspector keeps it, in 8 bits', () => {
     expect(materialChanges(wood({ look: { alpha: 'blend', opacity: 0.4 } }), wood({ look: { alpha: 'blend', opacity: 0.6 } }))).toEqual([{ kind: 'opacity', slot: 'Wood', before: 0.4, after: 0.6 }]);
     expect(materialChanges(wood({ look: { alpha: 'blend', opacity: 0.4 } }), wood({ look: { alpha: 'blend', opacity: 0.4001 } }))).toEqual([]);
+    // Compared as it is told, in whole percents: never "40% → 40%".
+    expect(materialChanges(wood({ look: { alpha: 'blend', opacity: 0.4 } }), wood({ look: { alpha: 'blend', opacity: 0.402 } }))).toEqual([]);
     expect(materialChanges(wood({ look: { opacity: 1 } }), wood({ look: { alpha: 'blend', opacity: 0.5 } }))).toEqual([{ kind: 'alpha', slot: 'Wood', before: 'opaque', after: 'blend' }]);
   });
 
