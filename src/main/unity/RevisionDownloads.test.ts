@@ -30,7 +30,7 @@ async function setUp(maxKeptBytes?: number) {
   const workspace = await mkdtemp(join(tmpdir(), 'revisions-workspace-'));
   const sessions = await mkdtemp(join(tmpdir(), 'revisions-session-'));
   const fake = fakeCmClient({ cat: catAnswer });
-  const downloads = new RevisionDownloads({ cm: fake.cm, tempFolder: sessions, ...(maxKeptBytes !== undefined && { maxKeptBytes }) });
+  const downloads = new RevisionDownloads({ cm: fake.cm, tempFolder: sessions, pid: 100, isRunning: (pid) => pid === 200, ...(maxKeptBytes !== undefined && { maxKeptBytes }) });
   return { workspace, sessions, fake, downloads, text: async (read: Promise<Buffer>) => (await read).toString() };
 }
 
@@ -72,9 +72,11 @@ describe('RevisionDownloads', () => {
     expect(fake.commands).toHaveLength(4);
   });
 
-  it("deletes the folders a crashed session left before making its own, never its own, and its own as the app quits", async () => {
+  it("deletes the folders a crashed session left before making its own, never another running app's, and its own as the app quits", async () => {
     const { workspace, sessions, downloads, text } = await setUp();
-    await mkdir(join(sessions, 'uvcs-revisions-left'));
+    // Process 300 crashed; 200 is another app running now (a development build beside the installed one).
+    await mkdir(join(sessions, 'uvcs-revisions-300-left'));
+    await mkdir(join(sessions, 'uvcs-revisions-200-inUse'));
     await mkdir(join(sessions, 'uvcs-1E3ke9'));
     // At startup and on the first download at once: the folders left go first, then the session's own is made.
     const startup = downloads.removeLeftOvers();
@@ -82,8 +84,7 @@ describe('RevisionDownloads', () => {
     await startup;
     await downloads.removeLeftOvers();
     const folders = (await readdir(sessions)).sort();
-    expect(folders).toEqual(['uvcs-1E3ke9', expect.stringMatching(/^uvcs-revisions-/)]);
-    expect(folders[1]).not.toBe('uvcs-revisions-left');
+    expect(folders).toEqual(['uvcs-1E3ke9', expect.stringMatching(/^uvcs-revisions-100-/), 'uvcs-revisions-200-inUse']);
     expect(await text(downloads.read(workspace, file(1)))).toBe('bark v1');
 
     downloads.dispose();

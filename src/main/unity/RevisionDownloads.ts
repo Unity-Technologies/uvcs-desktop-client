@@ -28,7 +28,11 @@ export interface RevisionFile {
   size: number;
 }
 
-/** The session's downloads folders, under the OS's temp folder: only one app runs at a time, so any other is left over. */
+/**
+ * The session's downloads folders, under the OS's temp folder, named with the process that owns them
+ * (`uvcs-revisions-<pid>-…`): one whose process is gone was left over. Two apps may run at once (a development build
+ * beside the installed one, each with its profile), so the owner, never "any other", tells.
+ */
 const FOLDER_PREFIX = 'uvcs-revisions-';
 /** The most bytes of downloads kept for the session; the oldest go first. */
 export const MAX_KEPT_BYTES = 1024 * 1024 * 1024;
@@ -47,6 +51,9 @@ interface RevisionDownloadsOptions {
   maxKeptBytes?: number;
   /** Runs the downloads asked so far: after the reads asked at once are in (IPC calls arriving together). */
   schedule?: (run: () => void) => void;
+  /** This process's id, and whether another is running: what tells a folder left over from one in use. */
+  pid?: number;
+  isRunning?: (pid: number) => boolean;
 }
 
 interface Waiting {
@@ -61,6 +68,8 @@ export class RevisionDownloads {
   private readonly cm: Pick<CmClient, 'execute'>;
   private readonly tempFolder: string;
   private leftOvers: Promise<void> | null = null;
+  private readonly pid: number;
+  private readonly isRunning: (pid: number) => boolean;
   private readonly maxKeptBytes: number;
   private readonly schedule: (run: () => void) => void;
   private folder: Promise<string> | null = null;
@@ -77,7 +86,9 @@ export class RevisionDownloads {
   /** The hashes of disk files, by path, size and time written. */
   private readonly diskHashes = new Map<string, string>();
 
-  constructor({ cm, tempFolder = tmpdir(), maxKeptBytes = MAX_KEPT_BYTES, schedule = (run) => void setImmediate(run) }: RevisionDownloadsOptions) {
+  constructor({ cm, tempFolder = tmpdir(), maxKeptBytes = MAX_KEPT_BYTES, schedule = (run) => void setImmediate(run), pid = process.pid, isRunning = processIsRunning }: RevisionDownloadsOptions) {
+    this.pid = pid;
+    this.isRunning = isRunning;
     this.cm = cm;
     this.tempFolder = tempFolder;
     this.maxKeptBytes = maxKeptBytes;
@@ -122,15 +133,22 @@ export class RevisionDownloads {
   }
 
   /**
-   * Deletes the downloads folders a session before this one left (it crashed, or was killed): only one app runs at a
-   * time (`requestSingleInstanceLock`), and this session's own is made only once they're gone.
+   * Deletes the downloads folders a session left as it crashed or was killed: those whose process is gone. Another
+   * app's running now (a development build beside the installed one) stays. This session's own is made once they're gone.
    */
   removeLeftOvers(): Promise<void> {
     this.leftOvers ??= readdir(this.tempFolder).then(
-      (names) => Promise.all(names.filter((name) => name.startsWith(FOLDER_PREFIX)).map((name) => rm(join(this.tempFolder, name), { recursive: true, force: true }).catch(() => undefined))).then(() => undefined),
+      (names) => Promise.all(names.filter((name) => this.isLeftOver(name)).map((name) => rm(join(this.tempFolder, name), { recursive: true, force: true }).catch(() => undefined))).then(() => undefined),
       () => undefined,
     );
     return this.leftOvers;
+  }
+
+  private isLeftOver(name: string): boolean {
+    const owner = new RegExp(`^${FOLDER_PREFIX}(\\d+)-`).exec(name);
+    if (!owner) return false;
+    const pid = Number(owner[1]);
+    return pid !== this.pid && !this.isRunning(pid);
   }
 
   /** Deletes the session's downloads, at once: the app is quitting. */
@@ -205,7 +223,7 @@ export class RevisionDownloads {
 
   private sessionFolder(): Promise<string> {
     this.folder ??= this.removeLeftOvers()
-      .then(() => mkdtemp(join(this.tempFolder, FOLDER_PREFIX)))
+      .then(() => mkdtemp(join(this.tempFolder, `${FOLDER_PREFIX}${this.pid}-`)))
       .then(
       (made) => (this.folderMade = made),
       (error: unknown) => {
@@ -237,6 +255,16 @@ export class RevisionDownloads {
     this.kept.delete(key);
     this.keptBytes -= kept.size;
     if (deleteFile) void rm(kept.target, { force: true }).catch(() => undefined);
+  }
+}
+
+/** Whether a process is running: signal 0 checks without sending one (`EPERM`: it runs, as another user's). */
+function processIsRunning(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === 'EPERM';
   }
 }
 
