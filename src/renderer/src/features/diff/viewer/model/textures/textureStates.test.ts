@@ -28,5 +28,7 @@ describe('texture states', () => {
       ['old', ready('old')],
     ]);
     expect([...onlyLoaded(decoded, new Map([['a', load('k1')]])).keys()]).toEqual(['k1']);
+    // Nothing to drop: the same map, so the view isn't drawn again for it.
+    expect(onlyLoaded(decoded, new Map([['a', load('k1')], ['b', load('old')], ['c', load('k3')]]))).toBe(decoded);
   });
 });
