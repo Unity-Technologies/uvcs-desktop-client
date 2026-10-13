@@ -78,9 +78,14 @@ describe('readImportSettings', () => {
     expect(readImportSettings(meta('  materials:', '    materialImportMode: 0', '  remapMaterialsIfMaterialImportModeIsNone: 0')).remapsWithoutMaterials).toBe(false);
   });
 
-  it('searches textures globally for a .meta older than the setting, and not for a model Unity has no .meta of yet', () => {
-    expect(readImportSettings(meta('  materials:', '    materialImportMode: 2')).searchTexturesGlobally).toBe(true);
-    expect(readImportSettings(meta('  materials:', '    materialImportMode: 1')).materialImport).toBe('fromFile');
+  it('searches textures globally as the .meta says, or, without the setting, as the importer version it was written by did', () => {
+    const importer = (version: number, ...lines: string[]) => ['fileFormatVersion: 2', 'ModelImporter:', `  serializedVersion: ${version}`, '  materials:', '    materialImportMode: 2', ...lines].join('\n');
+    expect(readImportSettings(importer(24600, '    searchTexturesGlobally: 1')).searchTexturesGlobally).toBe(true);
+    expect(readImportSettings(importer(22200, '    searchTexturesGlobally: 0')).searchTexturesGlobally).toBe(false);
+    // Before the setting (ModelImporter 24600) Unity always searched; from it, a .meta without it doesn't.
+    expect(readImportSettings(importer(22200)).searchTexturesGlobally).toBe(true);
+    expect(readImportSettings(importer(24600)).searchTexturesGlobally).toBe(false);
+    expect(readImportSettings(importer(24300)).materialImport).toBe('fromFile');
     expect(DEFAULT_IMPORT_SETTINGS.searchTexturesGlobally).toBe(false);
   });
 
