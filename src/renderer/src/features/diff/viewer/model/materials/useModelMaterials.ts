@@ -45,6 +45,8 @@ export interface ModelMaterials {
 }
 
 const SIDES = ['before', 'after'] as const;
+
+type WorkspaceFileSource = Extract<ContentSource, { kind: 'workspaceFile' }>;
 const NO_LOOKS = { before: null, after: null };
 
 /**
@@ -128,7 +130,7 @@ function useLatch(on: boolean, of: unknown): boolean {
 function useMtlMaterials(workspacePath: string, versions: Record<'before' | 'after', MaterialVersion | null>): Record<'before' | 'after', ParsedModel['materials'] | null> {
   const files = useMemo(() => SIDES.map((side) => mtlFiles(versions[side])), [versions]);
   const reads = useQueries({
-    queries: files.flat().map((source) => ({
+    queries: uniqueFiles(files.flat()).map((source) => ({
       queryKey: queryKeys.inWorkspace(workspacePath, 'contentBytes', source),
       queryFn: () => api.content.readBytes(workspacePath, source),
       ...contentCaching([source]),
@@ -136,21 +138,25 @@ function useMtlMaterials(workspacePath: string, versions: Record<'before' | 'aft
     combine: dataOf,
   });
   return useMemo(() => {
-    let at = 0;
+    const unique = uniqueFiles(files.flat());
+    const byPath = new Map(unique.map((source, i) => [source.path, reads[i]]));
     const [before, after] = files.map((sideFiles) => {
-      const read = reads.slice(at, (at += sideFiles.length));
-      return sideFiles.length === 0 ? null : read.flatMap((bytes) => (bytes ? readMtlMaterials(new TextDecoder().decode(bytes)) : []));
+      if (sideFiles.length === 0) return null;
+      return sideFiles.flatMap((source) => {
+        const bytes = byPath.get(source.path);
+        return bytes ? readMtlMaterials(new TextDecoder().decode(bytes)) : [];
+      });
     });
     return { before: before!, after: after! };
   }, [files, reads]);
 }
 
 /** The `.mtl` files an OBJ names, beside it in the workspace on disk; none for another format. */
-function mtlFiles(version: MaterialVersion | null): ContentSource[] {
+function mtlFiles(version: MaterialVersion | null): WorkspaceFileSource[] {
   if (!version || version.model.format !== 'obj' || !version.path) return [];
   return objMaterialLibraries(new TextDecoder().decode(version.bytes.bytes)).flatMap((name) => {
     const path = siblingPath(version.path!, name);
-    return path === null ? [] : [{ kind: 'workspaceFile', path } satisfies ContentSource];
+    return path === null ? [] : [{ kind: 'workspaceFile', path } satisfies WorkspaceFileSource];
   });
 }
 
@@ -171,20 +177,44 @@ function answersOf(results: { isError: boolean; data?: UnityAssetsAnswer | null 
 
 /** Each request's answer, undefined while it's being found. */
 function useAssets(workspacePath: string, requests: (UnityAssetsRequest | null)[]): (UnityAssetsAnswer | null | undefined)[] {
-  return useQueries({
-    queries: requests.map((request) => ({
+  // Both versions of a model at one path ask the same: one query (TanStack warns of the same key twice).
+  const unique = useMemo(() => uniqueRequests(requests), [requests]);
+  const answers = useQueries({
+    queries: unique.requests.map((request) => ({
       queryKey: queryKeys.inWorkspace(workspacePath, 'unityAssets', request),
-      queryFn: () => (request ? api.unityAssets.find(workspacePath, request) : Promise.resolve(null)),
+      queryFn: () => api.unityAssets.find(workspacePath, request),
       // The disk changes under us, as a workspace file's content does.
       staleTime: 0,
     })),
     combine: answersOf,
   });
+  return useMemo(() => unique.indices.map((index) => (index === -1 ? null : answers[index])), [unique, answers]);
+}
+
+/** The requests once each, and where each of the given ones is among them (-1 for none). */
+function uniqueRequests(requests: (UnityAssetsRequest | null)[]): { requests: UnityAssetsRequest[]; indices: number[] } {
+  const keys: string[] = [];
+  const unique: UnityAssetsRequest[] = [];
+  const indices = requests.map((request) => {
+    if (!request) return -1;
+    const key = JSON.stringify(request);
+    if (!keys.includes(key)) {
+      keys.push(key);
+      unique.push(request);
+    }
+    return keys.indexOf(key);
+  });
+  return { requests: unique, indices };
+}
+
+/** Files once each, by path. */
+function uniqueFiles<T extends { path: string }>(files: T[]): T[] {
+  return [...new Map(files.map((file) => [file.path, file])).values()];
 }
 
 /** The `.mat` files each side's first answer found, read and parsed by GUID; undefined while being read. */
 function useUnityMaterials(workspacePath: string, answers: (UnityAssetsAnswer | null | undefined)[], requests: (UnityAssetsRequest | null)[]): (Map<string, UnityMaterial | null> | undefined)[] {
-  const files = materialFiles(answers, requests).flat().flatMap(({ file }) => (file ? [file] : []));
+  const files = uniqueFiles(materialFiles(answers, requests).flat().flatMap(({ file }) => (file ? [file] : [])));
   const reads = useQueries({
     queries: files.map((file) => {
       const source: ContentSource = { kind: 'workspaceFile', path: file.path };
@@ -194,7 +224,7 @@ function useUnityMaterials(workspacePath: string, answers: (UnityAssetsAnswer | 
   });
   return useMemo(() => {
     const found = materialFiles(answers, requests);
-    const read = found.flat().flatMap(({ file }) => (file ? [file] : []));
+    const read = uniqueFiles(found.flat().flatMap(({ file }) => (file ? [file] : [])));
     const byPath = new Map(read.map((file, i) => [file.path, reads[i]]));
     return found.map((side, i) => {
       if (answers[i] === undefined || side.some(({ file }) => file && byPath.get(file.path) === undefined)) return requests[i] ? undefined : new Map();
