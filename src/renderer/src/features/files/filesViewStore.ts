@@ -34,3 +34,7 @@ export const useFilesViewStore = create<FilesViewStore>((set) => ({
 export function revealRequestIn(state: Pick<FilesViewStore, 'revealRequest'>, workspacePath: string): RevealRequest | null {
   return state.revealRequest?.workspacePath === workspacePath ? state.revealRequest : null;
 }
+
+export function useRevealRequest(workspacePath: string): RevealRequest | null {
+  return useFilesViewStore((state) => revealRequestIn(state, workspacePath));
+}

@@ -19,7 +19,7 @@ import { useCutItems } from './cutItemsStore';
 import { directoryListingQuery } from './directoryListing';
 import { CutHint } from './CutHint';
 import { createItem, openItem, targetDirectoryFor } from './fileOperations';
-import { revealRequestIn, useFilesViewStore } from './filesViewStore';
+import { useFilesViewStore, useRevealRequest } from './filesViewStore';
 import { FileTreeTable } from './FileTreeTable';
 import { FILE_TREE_WIDTH } from './fileTreeWidth';
 import { ancestorsOf, buildFileTreeRows } from './fileTreeRows';
@@ -57,7 +57,7 @@ export function FilesView() {
   const focused = rows.find((row) => row.item.path === selection.anchor)?.item;
   const focusedMenu = focused ? fileMenu(workspacePath, [focused], pendingIndex, locks) : [];
 
-  const revealRequest = useFilesViewStore((state) => revealRequestIn(state, workspacePath));
+  const revealRequest = useRevealRequest(workspacePath);
   useEffect(() => {
     if (!revealRequest) return;
     const { path, selected = [path] } = revealRequest;
