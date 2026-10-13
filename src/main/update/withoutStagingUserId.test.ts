@@ -12,22 +12,26 @@ import { withoutStagingUserId } from './withoutStagingUserId';
 
 const NEWER_RELEASE: UpdateInfo = { version: '1.1.0', files: [], path: '', sha512: '', releaseDate: '2026-10-13T00:00:00.000Z' };
 
-/** The headers every check gave the provider, which it sends with each request to the releases feed. */
-const providerHeaders: (OutgoingHttpHeaders | null)[] = [];
-
-/** A releases feed answering with a newer release, recording the headers instead of sending them. */
+/**
+ * A releases feed answering with the updater's `latestRelease`, recording on it the headers it was given instead of
+ * sending them. electron-updater builds it with the updater (`createClient`: `new updateProvider(options, updater, …)`).
+ */
 class RecordingProvider extends Provider<UpdateInfo> {
-  constructor(_options: unknown, _updater: unknown, runtimeOptions: ProviderRuntimeOptions) {
+  constructor(
+    _options: unknown,
+    private readonly updater: TestUpdater,
+    runtimeOptions: ProviderRuntimeOptions,
+  ) {
     super(runtimeOptions);
   }
 
   override setRequestHeaders(value: OutgoingHttpHeaders | null): void {
-    providerHeaders.push(value);
+    this.updater.providerHeaders.push(value);
     super.setRequestHeaders(value);
   }
 
   async getLatestVersion(): Promise<UpdateInfo> {
-    return NEWER_RELEASE;
+    return this.updater.latestRelease;
   }
 
   resolveFiles(): [] {
@@ -40,7 +44,10 @@ class RecordingProvider extends Provider<UpdateInfo> {
  * it reads the app through `AppAdapter`, and records what a download would send instead of downloading.
  */
 class TestUpdater extends AppUpdater {
+  /** The headers every check gave the provider, which it sends with each request to the releases feed. */
+  readonly providerHeaders: (OutgoingHttpHeaders | null)[] = [];
   readonly downloadHeaders: (OutgoingHttpHeaders | undefined)[] = [];
+  latestRelease: UpdateInfo = NEWER_RELEASE;
 
   constructor(app: AppAdapter) {
     super(null, app);
@@ -70,7 +77,6 @@ function fakeApp(userDataPath: string): AppAdapter {
 }
 
 async function updaterOverRecordingFeed(): Promise<{ updater: TestUpdater; userDataPath: string }> {
-  providerHeaders.length = 0;
   const userDataPath = await mkdtemp(join(tmpdir(), 'updater-'));
   const updater = new TestUpdater(fakeApp(userDataPath));
   updater.logger = null;
@@ -91,8 +97,8 @@ describe('withoutStagingUserId', () => {
     const result = await updater.checkForUpdates();
 
     expect(result?.isUpdateAvailable).toBe(true);
-    expect(providerHeaders).not.toHaveLength(0);
-    for (const headers of providerHeaders) expect(headerNames(headers)).not.toContain('x-user-staging-id');
+    expect(updater.providerHeaders).not.toHaveLength(0);
+    for (const headers of updater.providerHeaders) expect(headerNames(headers)).not.toContain('x-user-staging-id');
   });
 
   it('keeps the headers the app sets itself', async () => {
@@ -101,7 +107,7 @@ describe('withoutStagingUserId', () => {
 
     await updater.checkForUpdates();
 
-    expect(providerHeaders.at(-1)).toEqual({ 'x-app-header': 'kept' });
+    expect(updater.providerHeaders.at(-1)).toEqual({ 'x-app-header': 'kept' });
   });
 
   it('writes no staging user id file', async () => {
@@ -126,6 +132,10 @@ describe('withoutStagingUserId', () => {
   it('offers a release that asks for a staged rollout to everyone', async () => {
     const { updater } = await updaterOverRecordingFeed();
 
-    expect(await updater.isUserWithinRollout({ ...NEWER_RELEASE, stagingPercentage: 1 })).toBe(true);
+    updater.latestRelease = { ...NEWER_RELEASE, stagingPercentage: 1 };
+
+    const result = await updater.checkForUpdates();
+
+    expect(result?.isUpdateAvailable).toBe(true);
   });
 });
