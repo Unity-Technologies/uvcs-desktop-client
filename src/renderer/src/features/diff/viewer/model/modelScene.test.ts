@@ -6,7 +6,7 @@ import type { ParsedModel } from './parsedModel';
 import { parseModel } from './parseModel';
 import { placedMeshesOf } from './surfaceComparison';
 import { SKINNED_TOP_CORNER, skinnedGltf } from './testing/skinnedGltf';
-import { testModel } from './testing/testModels';
+import { boundInFileSpace, testModel } from './testing/testModels';
 
 function sceneOf(model: ParsedModel) {
   return buildModelScene(model, modelSummary(model));
@@ -50,8 +50,8 @@ describe('buildModelScene', () => {
 });
 
 describe('buildModelScene, a joint that is no node of the model', () => {
-  it('holds its share of the mesh where it was bound, drawn where it is measured', () => {
-    const model = testModel({ nodes: [{ name: 'Hips', kind: 'bone', position: [0, 1, 0] }, { name: 'Body', position: [3, 0, 0], mesh: { bones: ['Hips'] } }] });
+  // Body's vertex 0 is at (0.5, -0.5, 0.5) in its own space, its node 3 m along X.
+  const drawnAndMeasured = (model: ParsedModel) => {
     // A loader's stand-in for a joint it couldn't find among the nodes.
     model.meshes[0]!.skin!.bones = [-1];
     const scene = sceneOf(model);
@@ -61,7 +61,17 @@ describe('buildModelScene, a joint that is no node of the model', () => {
     const drawn = body.getVertexPosition(0, new Vector3()).applyMatrix4(body.matrixWorld);
     const measured = placedMeshesOf(model).meshes[0]!.positions;
     expect(drawn.toArray()).toEqual([expect.closeTo(measured[0]!), expect.closeTo(measured[1]!), expect.closeTo(measured[2]!)]);
-    expect(measured[0]).toBeCloseTo(3.5);
+    return measured[0];
+  };
+  const nodes = [{ name: 'Hips', kind: 'bone' as const, position: [0, 1, 0] as [number, number, number] }, { name: 'Body', position: [3, 0, 0] as [number, number, number], mesh: { bones: ['Hips'] } }];
+
+  it('holds its share of the mesh where it was bound, drawn where it is measured', () => {
+    // Bound as FBX binds, at Body's node.
+    expect(drawnAndMeasured(testModel({ nodes }))).toBeCloseTo(3.5);
+  });
+
+  it("holds it in the file's space for a glTF, whose mesh node places nothing", () => {
+    expect(drawnAndMeasured(boundInFileSpace(testModel({ nodes })))).toBeCloseTo(0.5);
   });
 });
 
