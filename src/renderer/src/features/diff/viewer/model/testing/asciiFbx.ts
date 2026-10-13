@@ -257,6 +257,8 @@ function skinObjects(skinId: number, geometryId: number, mesh: FbxMeshSpec, node
     '\t\tVersion: 100',
     array('Indexes', vertices),
     array('Weights', vertices.map(() => 1)),
+    // Exporters write the mesh's world at bind here; FBXLoader (three 0.186) doesn't read it, binding at the mesh's
+    // world as loaded, so the identity stands in.
     array('Transform', [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]),
     array('TransformLink', transformLink),
     '\t}',
