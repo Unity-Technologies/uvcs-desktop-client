@@ -10,7 +10,7 @@ import type { OrbitView } from './orbitCamera';
  */
 export class ViewCoast {
   private readonly inertia: PanInertia;
-  /** The view the coast set last; null until it moves. */
+  /** The view the coast set last, or the one it was let go on: any other means the camera was taken over. */
   private placed: OrbitView | null = null;
 
   constructor(
@@ -28,7 +28,7 @@ export class ViewCoast {
   }
 
   release(): void {
-    this.placed = null;
+    this.placed = this.view();
     this.inertia.release();
   }
 
