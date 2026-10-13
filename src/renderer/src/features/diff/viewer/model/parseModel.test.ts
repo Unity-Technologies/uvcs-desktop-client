@@ -275,6 +275,17 @@ describe('parseModel, glTF', () => {
   });
 });
 
+describe('parseModel, FBX older than 7.0', () => {
+  it("says an FBX 6 file (FBX 2006-2010) is one three's loader doesn't read, binary or ASCII", async () => {
+    const binary = new Uint8Array(64);
+    binary.set(new TextEncoder().encode('Kaydara FBX Binary  \0\x1a\0'));
+    new DataView(binary.buffer).setUint32(23, 6100, true);
+    expect(await parseModel({ bytes: binary, format: 'fbx' })).toEqual({ kind: 'failed', failure: { kind: 'oldFbx', version: 6100 } });
+    const ascii = '; FBX 6.1.0 project file\nFBXHeaderExtension:  {\n\tFBXHeaderVersion: 1003\n\tFBXVersion: 6100\n}\n';
+    expect(await parseModel(bytesOf(ascii, 'fbx'))).toEqual({ kind: 'failed', failure: { kind: 'oldFbx', version: 6100 } });
+  });
+});
+
 describe('parseModel, unreadable files', () => {
   it('fails on bytes that are no model of their format', async () => {
     expect(await parseModel(bytesOf('not a model', 'fbx'))).toEqual({ kind: 'failed', failure: { kind: 'unreadable' } });
