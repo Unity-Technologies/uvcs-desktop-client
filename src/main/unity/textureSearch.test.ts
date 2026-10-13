@@ -43,6 +43,11 @@ describe('textureCandidates', () => {
     expect(textureCandidates(windows).slice(4)).toEqual(['Game/Assets/Shared/bark.png']);
   });
 
+  it('matches the absolute path as macOS does, its case and Unicode form aside, and takes its own spelling after the workspace', () => {
+    const mac = search({ storedPaths: ['/Users/ana/WK/Game/Assets/Ñandú/bark.png'.normalize('NFD')] });
+    expect(textureCandidates(mac).slice(4)).toEqual(['Game/Assets/Ñandú/bark.png'.normalize('NFD')]);
+  });
+
   it("reads another OS's absolute path as nothing here, never as a relative one", () => {
     expect(textureCandidates(search({ storedPaths: ['C:\\Users\\Ana\\wk\\Game\\Assets\\bark.png'] })).slice(4)).toEqual([]);
     expect(textureCandidates(search({ platform: 'win32', workspacePath: 'C:\\wk', storedPaths: ['/Users/ana/wk/Game/Assets/bark.png'] })).slice(4)).toEqual([]);
