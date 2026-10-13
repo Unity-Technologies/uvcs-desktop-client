@@ -25,7 +25,7 @@ function flying() {
     () => [0, 0, 0],
     frames.clock,
   );
-  return { loop, frames, z: () => view.target[2] };
+  return { loop, frames, x: () => view.target[0], z: () => view.target[2] };
 }
 
 describe('FlyKeysLoop', () => {
@@ -47,14 +47,15 @@ describe('FlyKeysLoop', () => {
   });
 
   it('speeds up while held', () => {
-    const { loop, frames, z } = flying();
-    loop.keyDown(key('KeyW'));
+    // Sideways, so the model stays as deep and only the time held changes the pace.
+    const { loop, frames, x } = flying();
+    loop.keyDown(key('KeyD'));
     frames.frame();
-    const first = -z();
+    const first = x();
     for (let i = 0; i < 60; i++) frames.frame();
-    const before = z();
+    const before = x();
     frames.frame();
-    expect(before - z()).toBeGreaterThan(first * 2);
+    expect(x() - before).toBeGreaterThan(first * 2);
   });
 
   it('goes faster as soon as Shift is pressed, a key already held', () => {

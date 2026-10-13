@@ -187,7 +187,7 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   Unity's Scene view moves through a level (without holding its right button), the target going along: forward where
   the camera looks, at first half the model's depth a second (`workingDepth`: its centre's, or the target's from inside
   it), speeding up while held to five times that over a second and a half, four times as fast with Shift (`flyStep`,
-  `flown`, `flyKeys`, `useFlyKeys`: every frame, never at the keyboard's repeat). Only keys pressed on the
+  `flown`, `flyKeys`, `FlyKeysLoop`: every frame, never at the keyboard's repeat; ⌘, Ctrl or Alt joining in stops it, as macOS sends no key up for a key let go under ⌘). Only keys pressed on the
   stage itself move it: a control's arrows (the take's scrubber) stay the control's. Draw modes are Unity's (Shaded, Wireframe, Shaded wireframe), and material
   slots can show in their colors (`slotColor`: the avatar fills by name, so a renamed slot changes color) or their
   materials ("Materials" below).
