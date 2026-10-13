@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_IMPORT_SETTINGS } from '../modelImportSettings';
+import { DEFAULT_IMPORT_SETTINGS, type ImportSettingsSource } from '../modelImportSettings';
 import { PLAIN_READ } from '../readModelFile';
 import { testModel } from '../testing/testModels';
-import { materialsInputOf } from './materialVersion';
+import { materialsInputOf, takesWorkspaceSettings } from './materialVersion';
 import { fileMaterial } from './testing/testMaterials';
 
 const red = fileMaterial('', { color: [1, 0, 0] });
@@ -31,16 +31,25 @@ describe('materialsInputOf', () => {
     expect(materialsInputOf(null, [brick])).toBeNull();
   });
 
-  it(".meta settings: the version's when its .meta was read, the workspace's when none was found for it", () => {
+  it(".meta settings: the version's own, the workspace's only when no .meta was found for the version", () => {
     const model = testModel({ nodes: [{ name: 'Ball', mesh: { slots: ['Mat1'] } }] });
     model.meshes[0]!.slotMaterials = [0];
     model.materials = [fileMaterial('Mat1', { color: [0, 0, 0] })];
-    const none = { ...DEFAULT_IMPORT_SETTINGS, materialImport: 'none' as const };
-    const version = (settings = DEFAULT_IMPORT_SETTINGS) => ({ model, bytes: { bytes: new Uint8Array(), format: 'fbx' as const }, options: { ...PLAIN_READ, settings }, path: 'Assets/Ball.fbx' });
-    // The last change in Files reads no .meta for a version whose .meta changed since: the workspace's decides.
-    expect(materialsInputOf(version(), null, none)?.settings).toBe(none);
-    const remapped = { ...DEFAULT_IMPORT_SETTINGS, materialRemaps: [{ slot: 'Mat1', guid: '0f2b6c1e9a8d4b3c8e7f6a5b4c3d2e1f' }] };
-    expect(materialsInputOf(version(remapped), null, none)?.settings).toBe(remapped);
-    expect(materialsInputOf(version(), null, null)?.settings).toBe(DEFAULT_IMPORT_SETTINGS);
+    const workspace = { ...DEFAULT_IMPORT_SETTINGS, materialImport: 'none' as const };
+    const version = (settingsFrom: ImportSettingsSource, settings = DEFAULT_IMPORT_SETTINGS) => ({
+      model,
+      bytes: { bytes: new Uint8Array(), format: 'fbx' as const },
+      options: { ...PLAIN_READ, settings, settingsFrom },
+      path: 'Assets/Ball.fbx',
+    });
+    // No .meta for the version (a last change whose .meta changed since, a revision in History): the workspace's decides.
+    expect(materialsInputOf(version('none'), null, workspace)?.settings).toBe(workspace);
+    expect(materialsInputOf(version('none'), null, null)?.settings).toEqual(DEFAULT_IMPORT_SETTINGS);
+    // Its own .meta, even one that reads as the defaults (no ModelImporter in it).
+    expect(materialsInputOf(version('meta', { ...DEFAULT_IMPORT_SETTINGS }), null, workspace)?.settings).toEqual(DEFAULT_IMPORT_SETTINGS);
+    // A read that failed shows the defaults until it is read again, never the workspace's look meanwhile.
+    expect(materialsInputOf(version('failed'), null, workspace)?.settings).toEqual(DEFAULT_IMPORT_SETTINGS);
+    expect(takesWorkspaceSettings(version('none').options)).toBe(true);
+    expect(takesWorkspaceSettings(version('failed').options)).toBe(false);
   });
 });
