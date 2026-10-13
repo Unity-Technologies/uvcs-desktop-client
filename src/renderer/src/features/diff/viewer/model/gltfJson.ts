@@ -11,6 +11,7 @@ interface GltfJson {
   extensionsRequired?: string[];
   textures?: unknown;
   images?: unknown;
+  bufferViews?: unknown;
 }
 
 /** Extensions that give a texture its image in another format than PNG or JPEG, in its `extensions`. */
@@ -79,6 +80,60 @@ export function gltfImagePlace(json: unknown, image: number): GltfImagePlace | n
   if (!definition) return null;
   if (typeof definition.uri === 'string') return definition.uri.startsWith('data:') ? { kind: 'inFile' } : { kind: 'beside', path: decodedUri(definition.uri) };
   return Number.isInteger(definition.bufferView) ? { kind: 'inFile' } : null;
+}
+
+const GLB_BINARY_CHUNK = 0x004e4942;
+const IMAGE_EXTENSIONS_BY_TYPE: Record<string, string> = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/ktx2': 'ktx2', 'image/avif': 'avif' };
+
+/**
+ * The bytes of an image the glTF holds (in a buffer view of its binary chunk, of a `data:` buffer, or of a buffer in
+ * a companion file; or a `data:` URI of its own), with a file name whose extension tells their format; null for an
+ * image in a file of its own or one that doesn't read. The bytes are a view of the model's, never copied.
+ */
+export function gltfImageBytes(bytes: Uint8Array, format: ModelFormat, image: number, companions: Readonly<Record<string, Uint8Array>> = {}): { bytes: Uint8Array; name: string } | null {
+  if (format !== 'gltf' && format !== 'glb') return null;
+  const json = readJson(bytes, format);
+  const images = json?.images;
+  const definition = Array.isArray(images) ? (images[image] as { uri?: unknown; bufferView?: unknown; mimeType?: unknown } | undefined) : undefined;
+  if (!json || !definition) return null;
+  try {
+    if (typeof definition.uri === 'string') {
+      const data = dataUri(definition.uri);
+      return data && { bytes: data.bytes, name: `image.${IMAGE_EXTENSIONS_BY_TYPE[data.type] ?? 'bin'}` };
+    }
+    const view = Array.isArray(json.bufferViews) ? (json.bufferViews[definition.bufferView as number] as { buffer?: number; byteOffset?: number; byteLength?: number } | undefined) : undefined;
+    const buffer = view && bufferBytes(bytes, format, json, view.buffer ?? 0, companions);
+    if (!view || !buffer || typeof view.byteLength !== 'number') return null;
+    const start = view.byteOffset ?? 0;
+    if (start + view.byteLength > buffer.length) return null;
+    return { bytes: buffer.subarray(start, start + view.byteLength), name: `image.${IMAGE_EXTENSIONS_BY_TYPE[String(definition.mimeType)] ?? 'bin'}` };
+  } catch {
+    return null;
+  }
+}
+
+/** A glTF buffer's bytes: a GLB's binary chunk, a `data:` URI, or the companion file its URI names. */
+function bufferBytes(bytes: Uint8Array, format: 'gltf' | 'glb', json: GltfJson, index: number, companions: Readonly<Record<string, Uint8Array>>): Uint8Array | null {
+  const buffer = Array.isArray(json.buffers) ? (json.buffers[index] as { uri?: unknown } | undefined) : undefined;
+  if (!buffer) return null;
+  if (typeof buffer.uri === 'string') return buffer.uri.startsWith('data:') ? (dataUri(buffer.uri)?.bytes ?? null) : (companions[decodedUri(buffer.uri)] ?? null);
+  return format === 'glb' && index === 0 ? glbBinaryChunk(bytes) : null;
+}
+
+function dataUri(uri: string): { type: string; bytes: Uint8Array } | null {
+  const match = /^data:([^;,]*)(;base64)?,(.*)$/s.exec(uri);
+  if (!match) return null;
+  const text = match[2] ? atob(match[3]!) : decodedUri(match[3]!);
+  return { type: match[1]!, bytes: Uint8Array.from(text, (character) => character.charCodeAt(0)) };
+}
+
+/** A GLB's second chunk, its binary buffer, after the JSON chunk (padded to 4 bytes). */
+function glbBinaryChunk(bytes: Uint8Array): Uint8Array | null {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const at = GLB_HEADER_BYTES + GLB_CHUNK_HEADER_BYTES + view.getUint32(GLB_HEADER_BYTES, true);
+  if (at + GLB_CHUNK_HEADER_BYTES > bytes.length || view.getUint32(at + 4, true) !== GLB_BINARY_CHUNK) return null;
+  const length = view.getUint32(at, true);
+  return bytes.subarray(at + GLB_CHUNK_HEADER_BYTES, at + GLB_CHUNK_HEADER_BYTES + length);
 }
 
 /** A URI's file name, `%20` as a space; one that isn't validly encoded (`100%.bin`) as written. */
