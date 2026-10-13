@@ -115,10 +115,11 @@ export function ModelDiffViewer({ workspacePath, sources, original, modified, mo
         importSettings: importSettingsChanges({ summary: old.summary, settings: optionsBefore.settings }, { summary: next.summary, settings: optionsAfter.settings }),
         settingsRead: optionsBefore.settingsFrom !== 'failed' && optionsAfter.settingsFrom !== 'failed',
         materials: materials.changes,
+        materialsNotCompared: materials.notCompared,
         gltf,
       }),
     );
-  }, [old, next, optionsBefore, optionsAfter, materials.changes]);
+  }, [old, next, optionsBefore, optionsAfter, materials.changes, materials.notCompared]);
   const stats = useMemo(() => modelStats(old?.summary ?? null, next?.summary ?? null), [old, next]);
   // Every version there is, read: framing one alone would frame a pair whose other half may be 100 times its size.
   const allRead = (!original.model || old !== null) && (!modified.model || next !== null);

@@ -48,6 +48,18 @@ export function materialChangesOf(input: ComparisonInput): MaterialChange[] | nu
   return input.answers.includes('reading') || !before || !after ? undefined : materialChanges(before, after);
 }
 
+/** The reasons a person can act on first: the project isn't one, then it was never opened in Unity here. */
+const REASONS_FIRST: NotKnownReason[] = ['noProject', 'noLibrary', 'unread'];
+
+/**
+ * Why materials that may have changed couldn't be compared, for the panel to say so rather than that nothing changed;
+ * null when they were, are being read, couldn't have changed, or the versions are no pair to compare.
+ */
+export function materialsNotComparedOf(input: ComparisonInput): NotKnownReason | null {
+  if (!comparesMaterials(input)) return null;
+  return REASONS_FIRST.find((reason) => input.answers.includes(reason)) ?? null;
+}
+
 /** How far a version's two rounds of lookups (`assetsRequest`, then its `.mat` files' textures) and reads are answered. */
 export function answerStateOf(
   request: UnityAssetsRequest,

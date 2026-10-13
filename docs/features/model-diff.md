@@ -126,7 +126,9 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   can't be told missing (`UnityAssetsAnswer.guidMisses`: a model outside a Unity project, as in a package's own
   repository, or in a project without a `Library`, never opened in Unity on this machine, "The project's index"
   below). Then the file's own list of textures named (`textures`)
-  stands in; where they are told, or being read, it goes, as the materials say which textures Unity uses
+  stands in, and where the materials may have changed (`materialsMayDiffer`) a note says they weren't compared and
+  why ("Materials not compared": open the project in Unity once on this computer; the project's files couldn't all be
+  read; the model isn't in a Unity project; `materialsNotComparedOf`), so the panel never says nothing changed; where they are told, or being read, it goes, as the materials say which textures Unity uses
   (`whatChanged`).
 
 `changeRows` words them for the panel, with the line on why a risk matters in Unity, and folds three or more of a kind

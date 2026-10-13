@@ -10,6 +10,7 @@ import type { ModelNodeKind } from './parsedModel';
 import type { Bounds, MeshSummary, ModelSummary, SummaryNode } from './modelSummary';
 import { matchNodes, type NodeMatching } from './nodeMatching';
 import { isMaterialRisk, type MaterialChange } from './materials/materialChanges';
+import type { NotKnownReason } from './materials/materialComparison';
 
 /** A node a change is about, on the sides it is on: `before` and `after` are node keys, for framing it. */
 export interface NodeRef {
@@ -65,7 +66,9 @@ export type ModelChange =
   | { kind: 'clipTakeLost'; clip: string; take: string }
   | { kind: 'exporter'; before: string | null; after: string | null }
   /** What changed in a slot's material as Unity resolves it (`materialChanges`). */
-  | { kind: 'material'; change: MaterialChange };
+  | { kind: 'material'; change: MaterialChange }
+  /** Materials that may have changed but couldn't be compared, and why (`materialsNotComparedOf`). */
+  | { kind: 'materialsNotCompared'; reason: NotKnownReason };
 
 export type ModelChangeKind = ModelChange['kind'];
 

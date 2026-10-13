@@ -5,7 +5,16 @@ import { textureLoadsOf, type GltfImage } from '../textures/textureLoadPlan';
 import { useTextureStates } from '../textures/useTextureStates';
 import { foundAssets, nothingFound, textureRequestOf } from './assetAnswers';
 import type { MaterialChange, MaterialSide } from './materialChanges';
-import { answerStateOf, comparableVersions, comparesMaterials, materialChangesOf, type AnswerState, type ComparisonInput } from './materialComparison';
+import {
+  answerStateOf,
+  comparableVersions,
+  comparesMaterials,
+  materialChangesOf,
+  materialsNotComparedOf,
+  type AnswerState,
+  type ComparisonInput,
+  type NotKnownReason,
+} from './materialComparison';
 import { assetsRequest, budgeted, planVersion, slotLooks, texturesReport, type Side, type SlotLook, type TexturesReport, type VersionPlan } from './materialPlan';
 import { materialsInputOf, type MaterialVersion } from './materialVersion';
 import { materialsOffered, slotSources, type SlotSource } from './slotSources';
@@ -26,6 +35,8 @@ export interface ModelMaterials {
    * read, null where it can't be told (no workspace, a version alone, or one with no path in the workspace).
    */
   changes: MaterialChange[] | null | undefined;
+  /** Why materials that may have changed couldn't be compared (`materialsNotComparedOf`). */
+  notCompared: NotKnownReason | null;
 }
 
 const SIDES = ['before', 'after'] as const;
@@ -94,24 +105,26 @@ export function useModelMaterials(workspacePath: string, versions: Record<Side, 
   const loads = useMemo(() => textureLoadsOf(workspacePath, budget.needs, budget.longest, (side, image) => gltfImageOf(versions[side], image)), [workspacePath, budget, versions]);
   const states = useTextureStates(workspacePath, loads);
 
-  const changes = useMemo(() => {
+  const { changes, notCompared } = useMemo(() => {
     const answerOf = (i: number): AnswerState => {
       const request = requests[i];
       return request ? answerStateOf(request, firstAnswers[i], secondRequests[i] ?? null, secondAnswers[i], materials[i]) : 'reading';
     };
-    return materialChangesOf({ ...comparison, answers: [answerOf(0), answerOf(1)], plans: [plans[0] ?? null, plans[1] ?? null] });
+    const input: ComparisonInput = { ...comparison, answers: [answerOf(0), answerOf(1)], plans: [plans[0] ?? null, plans[1] ?? null] };
+    return { changes: materialChangesOf(input), notCompared: materialsNotComparedOf(input) };
   }, [comparison, requests, firstAnswers, secondRequests, secondAnswers, materials, plans]);
 
   return useMemo((): ModelMaterials => {
-    if (!active) return { offered, looks: NO_LOOKS, report: null, changes };
+    if (!active) return { offered, looks: NO_LOOKS, report: null, changes, notCompared };
     const [before, after] = plans;
     return {
       changes,
+      notCompared,
       offered,
       looks: { before: before ? slotLooks(before, states) : null, after: after ? slotLooks(after, states) : null },
       report: plans.some((plan) => plan !== null) ? texturesReport(plans, states, budget.over) : null,
     };
-  }, [active, offered, plans, states, budget, changes]);
+  }, [active, offered, plans, states, budget, changes, notCompared]);
 }
 
 /** True from the first time `on` is, until `of` changes: the look's reads and decodes stay while it's off. */

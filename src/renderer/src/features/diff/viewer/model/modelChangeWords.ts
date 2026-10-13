@@ -7,6 +7,7 @@ import { formatCount } from '../../../../lib/text';
 import { formatLength, formatUnits } from './modelUnits';
 import type { ModelChange, NodeRef } from './modelChanges';
 import { isRisk } from './modelChanges';
+import type { NotKnownReason } from './materials/materialComparison';
 import { materialFoldKey, materialFoldWords, materialItemLabel, materialWords } from './materials/materialChangeWords';
 
 export interface ChangeRow {
@@ -232,10 +233,18 @@ function wordsOf(change: ModelChange): { title: string; detail?: string } {
       };
     case 'material':
       return materialWords(change.change);
+    case 'materialsNotCompared':
+      return { title: 'Materials not compared', detail: NOT_COMPARED_WORDS[change.reason] };
     case 'clipTakeLost':
       return { title: `Clip ${change.clip} is cut from the take ${change.take}, which is gone`, detail: 'Unity imports no clip from it until it is cut from a take the model has.' };
   }
 }
+
+const NOT_COMPARED_WORDS: Record<NotKnownReason, string> = {
+  noLibrary: 'Open the project in Unity once on this computer to compare them.',
+  unread: "The project's files couldn't all be read.",
+  noProject: "The model isn't in a Unity project.",
+};
 
 function scaleSettingsTitle(before: { scaleFactor: number; convertUnits: boolean }, after: { scaleFactor: number; convertUnits: boolean }): string {
   if (before.convertUnits !== after.convertUnits && before.scaleFactor === after.scaleFactor) return `Convert Units turned ${after.convertUnits ? 'on' : 'off'} in the import settings`;
