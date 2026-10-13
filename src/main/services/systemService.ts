@@ -3,6 +3,7 @@ import { homedir } from 'node:os';
 import { normalize } from 'node:path';
 import { app, dialog, net, shell } from 'electron';
 import type { SystemApi } from '@shared/api/system';
+import { showsGravatar } from '@shared/domain/gravatarChoice';
 import { checkSetup } from '../cm/setupCheck';
 import { outermostPaths } from '../files/pathContainment';
 import { callerId } from '../ipc/caller';
@@ -58,7 +59,8 @@ export function createSystemService({ cm, operations, windows, settings }: Servi
     cancelOperation: async (operationId) => operations.cancel(operationId),
     addRecentDocument: async (workspacePath) => app.addRecentDocument(workspacePath),
     takeRequestedWorkspace: async () => windows.takeRequested(callerId()),
-    gravatar: async (user, size) => (settings.get().showGravatar ? gravatars.picture(user, size) : null),
+    // The one gate on Gravatar: nothing goes there until the user turned pictures on themselves.
+    gravatar: async (user, size) => (showsGravatar(settings.get()) ? gravatars.picture(user, size) : null),
     notifyIncoming: async (workspacePath, message) => showIncomingNotification(windows, workspacePath, message),
   };
 }

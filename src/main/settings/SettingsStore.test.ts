@@ -79,4 +79,34 @@ describe('SettingsStore reading its file', () => {
     expect(new SettingsStore(join(folder, 'settings.json')).get()).toEqual(DEFAULT_SETTINGS);
     expect(readdirSync(folder)).toEqual([]);
   });
+
+  it('turns off Gravatar pictures saved on only by the old default, until the user chooses', () => {
+    const folder = mkdtempSync(join(tmpdir(), 'uvcs-settings-'));
+    const filePath = join(folder, 'settings.json');
+    writeFileSync(filePath, JSON.stringify({ theme: 'dark', showGravatar: true }));
+
+    expect(new SettingsStore(filePath).get()).toMatchObject({ theme: 'dark', showGravatar: false, gravatarChoiceAsked: false });
+  });
+
+  it('keeps Gravatar pictures saved off before the question as the user’s answer, as they were on by default', () => {
+    const folder = mkdtempSync(join(tmpdir(), 'uvcs-settings-'));
+    const filePath = join(folder, 'settings.json');
+    writeFileSync(filePath, JSON.stringify({ theme: 'dark', showGravatar: false }));
+
+    expect(new SettingsStore(filePath).get()).toMatchObject({ showGravatar: false, gravatarChoiceAsked: true });
+  });
+
+  it('keeps the profile pictures question unasked across another change, as every setting is written', () => {
+    const { settings, filePath } = store();
+    settings.update({ theme: 'dark' });
+
+    expect(new SettingsStore(filePath).get()).toMatchObject({ theme: 'dark', showGravatar: false, gravatarChoiceAsked: false });
+  });
+
+  it('keeps Gravatar pictures the user turned on', () => {
+    const { settings, filePath } = store();
+    settings.update({ showGravatar: true, gravatarChoiceAsked: true });
+
+    expect(new SettingsStore(filePath).get()).toMatchObject({ showGravatar: true, gravatarChoiceAsked: true });
+  });
 });

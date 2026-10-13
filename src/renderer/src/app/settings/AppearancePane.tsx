@@ -1,3 +1,4 @@
+import { gravatarChoice, showsGravatar } from '@shared/domain/gravatarChoice';
 import { Checkbox } from '../../ui/Checkbox';
 import { SettingsChoice } from './SettingsChoice';
 import { SettingsGroup } from './SettingsGroup';
@@ -30,8 +31,9 @@ export function AppearancePane() {
       <SettingsGroup title="People">
         <Checkbox
           label="Show profile pictures from Gravatar (sends a hash of each email address to gravatar.com)"
-          checked={settings.showGravatar}
-          onChange={(showGravatar) => updateSettings({ showGravatar })}
+          checked={showsGravatar(settings)}
+          // Either way it's the user's choice: the corner prompt never asks again.
+          onChange={(show) => updateSettings(gravatarChoice(show))}
         />
       </SettingsGroup>
     </>

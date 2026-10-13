@@ -17,6 +17,7 @@ import { queryClient } from './queryClient';
 import { useAppMenuKeys } from './shell/appMenu';
 import { useSettingsFromOtherWindows } from './settings/useSettings';
 import { useTheme } from './settings/useTheme';
+import { GravatarPrompt } from './settings/GravatarPrompt';
 import { useGravatarSetting } from './settings/useGravatarSetting';
 import { CmUnavailableScreen } from './startup/CmUnavailableScreen';
 import { SetupProblemScreen } from './startup/SetupProblemScreen';
@@ -38,6 +39,7 @@ export function App() {
       <CommandShortcuts />
       <DialogHost />
       <ToastHost errorAction={errorDetailsAction} renderOperation={(toast, dismiss) => <OperationCard toast={toast} dismiss={dismiss} />}>
+        <GravatarPrompt />
         <UpdateCard />
       </ToastHost>
       <TooltipLayer />

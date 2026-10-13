@@ -24,9 +24,11 @@ const workspace = join(temp, 'demo');
 const cmLog = join(temp, 'cm.log');
 const userData = join(temp, 'user-data');
 createWorkspace(workspace);
-// Light theme to start with, and no Gravatar pictures: nothing leaves the machine.
+// Light theme to start with, and Gravatar as on a first run: pictures off until asked. The run answers "Not now", so
+// nothing leaves the machine.
+const settingsFile = join(userData, 'settings.json');
 mkdirSync(userData);
-writeFileSync(join(userData, 'settings.json'), JSON.stringify({ theme: 'light', showGravatar: false }));
+writeFileSync(settingsFile, JSON.stringify({ theme: 'light' }));
 
 const app = await electron.launch({
   args: ['.', `--user-data-dir=${userData}`],
@@ -77,6 +79,13 @@ try {
   await step('Open workspace', async () => {
     await workspaceOnHome.click();
     await window.getByRole('navigation').getByRole('button', { name: 'Switch workspace' }).waitFor();
+  });
+  await step('Profile pictures question', async () => {
+    // Changesets show their owners, named by email addresses: the first people the window shows.
+    await window.getByRole('navigation').getByRole('button', { name: /^Changesets( \d+)?$/ }).click();
+    const question = window.getByRole('alert').filter({ hasText: 'Show profile pictures?' });
+    await question.getByRole('button', { name: 'Not now' }).click();
+    await question.waitFor({ state: 'detached' });
   });
   for (const view of VIEWS) {
     await step(view, async () => {
@@ -132,6 +141,13 @@ try {
   errors.push(error.message);
 } finally {
   await app.close();
+}
+
+// "Not now" was saved as the user's answer, so the app never asks again. Checked only after a clean run: a step that
+// failed already says what went wrong.
+const savedSettings = existsSync(settingsFile) ? JSON.parse(readFileSync(settingsFile, 'utf8')) : {};
+if (errors.length === 0 && (savedSettings.showGravatar !== false || savedSettings.gravatarChoiceAsked !== true)) {
+  errors.push(`"Not now" wasn't saved: showGravatar ${savedSettings.showGravatar}, gravatarChoiceAsked ${savedSettings.gravatarChoiceAsked}`);
 }
 
 // Every command the fake couldn't answer, its `--format` separators made visible.

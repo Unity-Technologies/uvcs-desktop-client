@@ -1,13 +1,19 @@
 import type { CSSProperties } from 'react';
 import { avatarColorOf } from '../lib/avatarColors';
-import { useAvatarImage } from '../lib/avatars/avatarImages';
+import { useAvatarImage, type AvatarPlace } from '../lib/avatars/avatarImages';
 import { displayName, initials } from '../lib/userName';
 import { Highlight } from './Highlight';
 import styles from './Avatar.module.css';
 
+interface AvatarProps extends AvatarPlace {
+  user: string;
+  size?: number;
+  tip?: string | null;
+}
+
 /** The user's Gravatar when they have one; otherwise their white initials on their own avatar fill (`avatarColorOf`). The tooltip is their name unless `tip` says otherwise (null: none). */
-export function Avatar({ user, size = 20, tip = displayName(user) }: { user: string; size?: number; tip?: string | null }) {
-  const image = useAvatarImage(user);
+export function Avatar({ user, size = 20, tip = displayName(user), ownAccount }: AvatarProps) {
+  const image = useAvatarImage(user, { ownAccount });
 
   return (
     <span className={styles.avatar} data-tip={tip ?? undefined} style={{ width: size, height: size }}>

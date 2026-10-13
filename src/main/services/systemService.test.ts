@@ -3,10 +3,12 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { net, shell } from 'electron';
-import type { AppSettings } from '@shared/domain/settings';
+import { gravatarChoice } from '@shared/domain/gravatarChoice';
+import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { memorySettings } from '../settings/testing/memorySettings';
 import { readDraggedPath } from '../system/dragPasteboard';
+import { gravatarUrl } from '../system/gravatar';
 import { createSystemService } from './systemService';
 import { serviceContext } from './testing/serviceContext';
 
@@ -81,11 +83,33 @@ describe('gravatars', () => {
     vi.mocked(net.fetch).mockReset();
   });
 
-  it('asks the network for nothing when the user turned gravatars off', async () => {
-    const { service } = system({}, { showGravatar: false });
+  it('asks the network for nothing by default, before the user chose', async () => {
+    const { service } = system({}, DEFAULT_SETTINGS);
 
     expect(await service.gravatar('ana@unity.com', 32)).toBeNull();
     expect(net.fetch).not.toHaveBeenCalled();
+  });
+
+  it('asks the network for nothing when the user turned gravatars off', async () => {
+    const { service } = system({}, gravatarChoice(false));
+
+    expect(await service.gravatar('ana@unity.com', 32)).toBeNull();
+    expect(net.fetch).not.toHaveBeenCalled();
+  });
+
+  it('asks the network for nothing when pictures are on but the user never chose it', async () => {
+    const { service } = system({}, { showGravatar: true, gravatarChoiceAsked: false });
+
+    expect(await service.gravatar('ana@unity.com', 32)).toBeNull();
+    expect(net.fetch).not.toHaveBeenCalled();
+  });
+
+  it('fetches the picture once the user turned gravatars on', async () => {
+    vi.mocked(net.fetch).mockResolvedValue(new Response(new Uint8Array([1, 2, 3]), { headers: { 'content-type': 'image/png' } }));
+    const { service } = system({}, gravatarChoice(true));
+
+    expect(await service.gravatar('ana@unity.com', 32)).toBe('data:image/png;base64,AQID');
+    expect(vi.mocked(net.fetch).mock.calls.map(([url]) => String(url))).toEqual([gravatarUrl('ana@unity.com', 32)]);
   });
 });
 

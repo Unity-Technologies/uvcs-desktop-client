@@ -6,14 +6,17 @@ build, as `npm run dev` serves it), then over the production build, which it lea
 is what catches a bug only `npm run dev` shows: StrictMode mounts every component, unmounts it and mounts it again,
 so an effect whose cleanup leaves something its second run can't use (a WebGL canvas whose context was lost) fails
 there, while the production build, which ships, runs each effect once. Each run builds, then `smoke.mjs` launches `out/` with Playwright's Electron driver and a throwaway
-`--user-data-dir`, opens a workspace, visits every sidebar view, a diff, a model diff (a 3D model's, in its worker), a branch's permissions (an edit, then discarded), the command palette and Settings, and switches
+`--user-data-dir`, opens a workspace, answers the question about profile pictures, visits every sidebar view, a diff, a model diff (a 3D model's, in its worker), a branch's permissions (an edit, then discarded), the command palette and Settings, and switches
 to the dark theme. It fails on any `pageerror` or `console.error`, a view whose heading doesn't show or that stays
-`Loading`, and any `cm` command the fake couldn't answer. It asserts only that things appear, never pixels or copy.
+`Loading`, any `cm` command the fake couldn't answer, and an answer to the profile pictures question that wasn't
+saved. Beyond that answer, it asserts only that things appear, never pixels or copy.
 About 10 seconds a run. Screenshots of each step go to `<os temp>/uvcs-e2e-shots` (a failed step's is `NN-FAILED-<step>.png`).
 
 It never touches UVCS infrastructure or the user's config: the only backend is the fake `cm` (`UVCS_CM_PATH`), the
 workspace is a temp folder (`workspaceFixture.mjs`: `.plastic/plastic.selector` and a few files, one edited, one
-private), the first-run import reads an empty `PLASTIC_HOME` (`plasticConfigFolder`), and Gravatar is off.
+private), the first-run import reads an empty `PLASTIC_HOME` (`plasticConfigFolder`), and Gravatar is off as on a
+first run: the first people shown (Changesets' owners) bring up the question about profile pictures, which the run
+answers "Not now" and, once the app quits, checks was saved (`gravatarChoiceAsked`), so nothing is ever sent.
 
 ## The fake `cm` (`fakeCm/`)
 

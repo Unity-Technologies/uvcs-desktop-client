@@ -48,7 +48,7 @@ function AccountRow({ account, inUse }: { account: Account; inUse: boolean }) {
 
   return (
     <li className={styles.row}>
-      <Avatar user={account.user} size={28} />
+      <Avatar user={account.user} size={28} ownAccount />
       <div className={styles.text}>
         <span className={styles.server}>
           <ServerIcon server={account.server} size={13} />
