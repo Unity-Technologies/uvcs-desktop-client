@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { isEmailAddress } from '@shared/domain/gravatarChoice';
+import { isEmailAddress } from '@shared/domain/emailAddress';
 
 /** Fetches a URL: the picture's bytes and type, or null when there is none (404) or it can't be reached. */
 export type FetchImage = (url: string) => Promise<{ type: string; bytes: Uint8Array } | null>;

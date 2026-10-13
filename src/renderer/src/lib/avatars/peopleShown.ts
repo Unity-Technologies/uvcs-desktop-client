@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { isEmailAddress } from '@shared/domain/gravatarChoice';
+import { isEmailAddress } from '@shared/domain/emailAddress';
 
 const listeners = new Set<() => void>();
 let shown = false;

@@ -6,13 +6,6 @@ import type { AppSettings } from './settings';
  */
 export type GravatarChoice = Pick<AppSettings, 'showGravatar' | 'gravatarChoiceAsked'>;
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/** Gravatar knows people by email address: a user named otherwise has no picture to ask for, and nothing is sent. */
-export function isEmailAddress(user: string): boolean {
-  return EMAIL.test(user.trim().toLowerCase());
-}
-
 /** What the settings become once the user answers, in the prompt or in Settings. */
 export function gravatarChoice(show: boolean): GravatarChoice {
   return { showGravatar: show, gravatarChoiceAsked: true };
