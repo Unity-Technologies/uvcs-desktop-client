@@ -132,6 +132,20 @@ describe('unityAssets.find at a point of the repository', () => {
     expect(paths((await unityAssets.find(workspace, { ...request, modelPath: 'Gone/Model.fbx', paths: ['Gone/a.png'] })).paths)).toEqual([null]);
   });
 
+  it("finds a GUID once the point's project listing that failed is listed again: one failure never sticks", async () => {
+    const workspace = await mkdtemp(join(tmpdir(), 'assets-at-point-'));
+    await mkdir(join(workspace, 'Game', 'ProjectSettings'), { recursive: true });
+    let failProject = true;
+    const fake = fakeCmClient({
+      ls: (command) => (command.args[1] === '/Game' && failProject ? ((failProject = false), cmFails('The server is down')) : (listing(PROJECT)(command) as string)),
+    });
+    const downloads = { read: async (_workspace: string, file: RevisionFile) => Buffer.from(METAS[file.revision.revisionId] ?? 'bytes') };
+    const unityAssets = createUnityAssetsService({ trees: new RepositoryTrees({ cm: fake.cm, downloads }), downloads, watchers: { listen: () => () => undefined, coverageOf: () => 'full' } });
+    const request = { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', point: { kind: 'repository', at: 'cs:12' } as const, textures: [], guids: [MAT_GUID], paths: [], searchTexturesGlobally: false };
+    expect((await unityAssets.find(workspace, request)).guidMisses).toBe('unread');
+    expect(paths((await unityAssets.find(workspace, request)).guids)).toEqual(['Game/Assets/Art/Materials/Bark.mat']);
+  });
+
   it('lists the folder once for both sides of a diff, each seeing it with its own change', async () => {
     const { find, fake } = await setUp(PROJECT);
     const after: AssetsPoint = { kind: 'repository', at: BRANCH };
