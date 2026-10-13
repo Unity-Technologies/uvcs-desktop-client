@@ -1,5 +1,6 @@
 import { mkdirSync, readFileSync, renameSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { withGravatarAskedFirst } from '@shared/domain/gravatarChoice';
 import { DEFAULT_SETTINGS, type AppSettings } from '@shared/domain/settings';
 import { replaceFileSync } from '../files/replaceFileSync';
 import { withRecentBranch } from './recentBranches';
@@ -68,11 +69,11 @@ export class SettingsStore {
     }
     try {
       const stored = JSON.parse(json) as Partial<AppSettings>;
-      return {
+      return withGravatarAskedFirst({
         ...DEFAULT_SETTINGS,
         ...stored,
         pendingChanges: { ...DEFAULT_SETTINGS.pendingChanges, ...stored.pendingChanges },
-      };
+      });
     } catch {
       this.keepAside();
       return DEFAULT_SETTINGS;

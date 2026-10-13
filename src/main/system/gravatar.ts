@@ -1,6 +1,5 @@
 import { createHash } from 'node:crypto';
-
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+import { isEmailAddress } from '@shared/domain/gravatarChoice';
 
 /** Fetches a URL: the picture's bytes and type, or null when there is none (404) or it can't be reached. */
 export type FetchImage = (url: string) => Promise<{ type: string; bytes: Uint8Array } | null>;
@@ -10,8 +9,8 @@ export type FetchImage = (url: string) => Promise<{ type: string; bytes: Uint8Ar
  * trimmed, lowercased email; `d=404` answers 404 for someone without a picture, so the app shows their initials.
  */
 export function gravatarUrl(user: string, size: number): string | null {
+  if (!isEmailAddress(user)) return null;
   const email = user.trim().toLowerCase();
-  if (!EMAIL.test(email)) return null;
   return `https://gravatar.com/avatar/${createHash('sha256').update(email).digest('hex')}?s=${size}&d=404`;
 }
 
