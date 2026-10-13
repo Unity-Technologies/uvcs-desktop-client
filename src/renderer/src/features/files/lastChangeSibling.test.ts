@@ -47,6 +47,12 @@ describe('lastChangeSibling', () => {
   it('finds none of a sibling changed after the model, which no longer goes with its revision', () => {
     const find = lastChangeSibling(model, listings(item('Models/Car/scene.bin', { changeset: 300 })));
     expect(find('modified', side(11), model.path, 'scene.bin')).toBeNull();
+    expect(find('original', side(10), model.path, 'scene.bin')).toBeNull();
+  });
+
+  it('finds none in another repository than the model, across an xlink', () => {
+    const find = lastChangeSibling(model, listings(item('Models/Car/scene.bin', { repository: 'art@local', changeset: 120 })));
+    expect(find('modified', side(11), model.path, 'scene.bin')).toBeNull();
   });
 
   it('finds a sibling in a folder below the model, once that folder is listed', () => {
@@ -73,7 +79,16 @@ describe('lastChangeSibling', () => {
     const shelved = item('Models/Car/scene.gltf', { changeset: null, shelveId: 4, revisionId: 11, parentRevisionId: 10 });
     const bin = item('Models/Car/scene.bin', { changeset: null, shelveId: 4, revisionId: 21, parentRevisionId: 20 });
     const find = lastChangeSibling(shelved, new Map([['Models/Car', [shelved, bin]]]));
+    expect(find('modified', side(11), shelved.path, 'scene.bin')).toEqual(revisionOf(21));
     expect(find('original', side(10), shelved.path, 'scene.bin')).toEqual(revisionOf(20));
+  });
+
+  it('reads the one revision of a sibling a shelve left alone, on both sides', () => {
+    const shelved = item('Models/Car/scene.gltf', { changeset: null, shelveId: 4, revisionId: 11, parentRevisionId: 10 });
+    const bin = item('Models/Car/scene.bin', { changeset: 120, revisionId: 21, parentRevisionId: 20 });
+    const find = lastChangeSibling(shelved, new Map([['Models/Car', [shelved, bin]]]));
+    expect(find('modified', side(11), shelved.path, 'scene.bin')).toEqual(revisionOf(21));
+    expect(find('original', side(10), shelved.path, 'scene.bin')).toEqual(revisionOf(21));
   });
 
   it('finds a workspace file beside it on disk, as anywhere else', () => {
