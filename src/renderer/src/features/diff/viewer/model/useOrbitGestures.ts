@@ -73,7 +73,9 @@ export function useOrbitGestures({ element, renderer, view, onView, onDollyStep,
       if (!pans && event.button !== 0) return;
       event.preventDefault();
       stopCoasting();
-      target.focus({ preventScroll: true });
+      // The pane holding the stage takes the keys (F, W, A, S, D…): the stage itself can't be focused, and the default
+      // focus is cancelled above.
+      (target.closest<HTMLElement>('[tabindex]') ?? target).focus({ preventScroll: true });
       const inertia = pans ? panInertia : turnInertia;
       inertia.sample(event.clientX, event.clientY, event.timeStamp);
       let last = { x: event.clientX, y: event.clientY };
