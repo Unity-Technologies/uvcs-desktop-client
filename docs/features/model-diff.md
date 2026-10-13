@@ -112,7 +112,7 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   material from (Unity's default; a project's `.mat`, by its GUID, one of the same name elsewhere named by its folder;
   the model's own; a remap to a material the project hasn't: Unity's missing material, a risk), and, for the same
   material, its base map, normal map, base color (as the Inspector shows
-  it, `#RRGGBB`), alpha (opaque, cutout, transparent), alpha cutoff, sides and the base map's tiling and offset; and a
+  it, `#RRGGBB`), alpha (opaque, cutout, transparent), alpha cutoff, opacity (in 8 bits), sides and the base map's tiling and offset; and a
   texture it now uses that the workspace hasn't (a risk; one it lacked before isn't news). The workspace's materials
   read alike for both versions, so a `.mat` changed alone never shows here: its own diff is its text. They're told
   with the Materials look off too, from the very reads the look makes (one query each, shared): only for versions

@@ -27,6 +27,8 @@ export function materialWords(change: MaterialChange): { title: string; detail?:
       return { title: `${slot}: alpha cutoff ${number(change.before)} → ${number(change.after)}` };
     case 'doubleSided':
       return { title: `${slot}: now ${change.now ? 'double-sided' : 'one-sided'}` };
+    case 'opacity':
+      return { title: `${slot}: opacity ${percent(change.before)} → ${percent(change.after)}` };
     case 'tiling':
       return { title: `${slot}: base map ${tilingChange(change.before, change.after)}` };
     case 'textureMissing':
@@ -66,6 +68,8 @@ export function materialFoldWords(run: MaterialChange[]): { title: string; detai
       return { title: `${count} materials now ${ALPHA_WORDS[first.after]}` };
     case 'cutoff':
       return { title: `Alpha cutoff changed on ${count} materials` };
+    case 'opacity':
+      return { title: `Opacity changed on ${count} materials` };
     case 'doubleSided':
       return { title: `${count} materials now ${first.now ? 'double-sided' : 'one-sided'}` };
     case 'tiling':
@@ -127,6 +131,10 @@ function tilingChange(before: Tiling, after: Tiling): string {
 /** A glTF's material may have no name. */
 function slotName(slot: string): string {
   return slot === '' ? 'An unnamed material' : slot;
+}
+
+function percent(value: number): string {
+  return `${Math.round(value * 100)}%`;
 }
 
 function number(value: number): string {

@@ -28,6 +28,8 @@ export type MaterialChange =
   | { kind: 'alpha'; slot: string; before: AlphaMode; after: AlphaMode }
   | { kind: 'cutoff'; slot: string; before: number; after: number }
   | { kind: 'doubleSided'; slot: string; now: boolean }
+  /** A transparent material's alpha, 0 to 1. */
+  | { kind: 'opacity'; slot: string; before: number; after: number }
   | { kind: 'tiling'; slot: string; before: Tiling; after: Tiling }
   /** A texture the slot's material now uses that the workspace hasn't. */
   | { kind: 'textureMissing'; slot: string; texture: string };
@@ -103,6 +105,7 @@ function lookChanges(was: ResolvedSlot, now: ResolvedSlot, before: PlannedSlot |
   if (colorBefore !== colorAfter) changes.push({ kind: 'baseColor', slot, before: colorBefore, after: colorAfter });
   if (before.alpha !== after.alpha) changes.push({ kind: 'alpha', slot, before: before.alpha, after: after.alpha });
   else if (before.alpha === 'clip' && before.cutoff !== after.cutoff) changes.push({ kind: 'cutoff', slot, before: before.cutoff, after: after.cutoff });
+  else if (before.alpha === 'blend' && eightBits(before.opacity) !== eightBits(after.opacity)) changes.push({ kind: 'opacity', slot, before: before.opacity, after: after.opacity });
   if (before.doubleSided !== after.doubleSided) changes.push({ kind: 'doubleSided', slot, now: after.doubleSided });
   return changes;
 }
@@ -128,6 +131,11 @@ function sameTiling(a: SlotTexture, b: SlotTexture): boolean {
 /** The color the slot shows: a file's material under its base map is drawn untinted (`colorWithMap`). */
 function shownColor(slot: PlannedSlot): [number, number, number] {
   return slot.baseMap ? slot.colorWithMap : slot.color;
+}
+
+/** An alpha as a material keeps it: in 8 bits, so what rounds alike is no change. */
+function eightBits(value: number): number {
+  return Math.round(value * 255);
 }
 
 /** A linear color as the Inspector shows it: in sRGB, 8 bits a channel, so what rounds alike is no change. */
