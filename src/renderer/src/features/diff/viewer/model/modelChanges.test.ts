@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { isRisk, modelChanges, type ModelChange } from './modelChanges';
 import { modelSummary } from './modelSummary';
-import { testModel, type TestModel, type TestNode } from './testing/testModels';
+import { boundAtOrigin, boundInFileSpace, testModel, type TestModel, type TestNode } from './testing/testModels';
 
 const changes = (before: TestModel, after: TestModel): ModelChange[] => modelChanges(modelSummary(testModel(before)), modelSummary(testModel(after)));
 const kinds = (list: ModelChange[]): string[] => list.map((change) => change.kind);
@@ -84,6 +84,32 @@ describe('modelChanges: the whole model', () => {
     const list = changes({ nodes: crate }, { nodes: hinged });
     expect(kinds(list)).toEqual(['pivotMoved']);
     expect(list[0]).toMatchObject({ node: { name: 'Lid', path: 'Crate/Lid' } });
+  });
+});
+
+describe('modelChanges: a skinned model', () => {
+  const character = (hips: [number, number, number], body: TestNode = { name: 'Body', parent: 'Armature', mesh: { size: [0.5, 1.6, 0.3], bones: ['Hips'] } }): TestNode[] => [
+    { name: 'Armature' },
+    { name: 'Hips', parent: 'Armature', kind: 'bone', position: hips },
+    body,
+  ];
+  const summaryOf = (nodes: TestNode[], bind: (model: ReturnType<typeof testModel>) => ReturnType<typeof testModel>) => modelSummary(bind(testModel({ nodes })));
+
+  it("tells no change for a skinned mesh's node turned alone, which places nothing", () => {
+    // glTF ignores a skinned mesh's node: its joints alone place it, and they didn't move.
+    const turned = character([0, 1, 0], { name: 'Body', parent: 'Armature', rotation: [0, 90, 0], mesh: { size: [0.5, 1.6, 0.3], bones: ['Hips'] } });
+    expect(modelChanges(summaryOf(character([0, 1, 0]), boundInFileSpace), summaryOf(turned, boundInFileSpace))).toEqual([]);
+  });
+
+  it("tells a bone's rest pose moved as the bone, not as the model moved off its pivot", () => {
+    // Both bound with the bones at the origin: the Hips standing 5 cm higher carries the mesh up with it.
+    const list = modelChanges(summaryOf(character([0, 1, 0]), boundAtOrigin), summaryOf(character([0, 1.05, 0]), boundAtOrigin));
+    expect(list).toEqual([{ kind: 'transformed', nodes: [expect.objectContaining({ name: 'Hips' })] }]);
+  });
+
+  it('still tells a skinned model 100× larger, with its units as the cause', () => {
+    const list = modelChanges(modelSummary(testModel({ nodes: character([0, 1, 0]), unitScale: 0.01 })), modelSummary(testModel({ nodes: character([0, 1, 0]), unitScale: 1 })));
+    expect(list).toEqual([expect.objectContaining({ kind: 'resized', cause: { kind: 'units', before: 0.01, after: 1 } })]);
   });
 });
 

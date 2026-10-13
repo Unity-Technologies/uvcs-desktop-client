@@ -95,6 +95,11 @@ export function boundAtOrigin(model: ParsedModel): ParsedModel {
   };
 }
 
+/** A copy of the model with each skinned mesh bound in the file's space, as glTF binds it: its own node places nothing. */
+export function boundInFileSpace(model: ParsedModel): ParsedModel {
+  return { ...model, meshes: model.meshes.map((mesh) => (mesh.skin ? { ...mesh, skin: { ...mesh.skin, bindMatrix: new Matrix4().elements } } : mesh)) };
+}
+
 /** The six faces of a box, as a file stores them: four corners each, every corner its own vertex. */
 const FACES: { normal: [number, number, number]; corners: [number, number, number][] }[] = [
   { normal: [1, 0, 0], corners: [[1, -1, -1], [1, 1, -1], [1, 1, 1], [1, -1, 1]] },
