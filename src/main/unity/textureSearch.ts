@@ -71,8 +71,11 @@ function storedCandidate({ project, workspacePath, platform }: TextureSearch, fo
     const paths = pathsOf(platform);
     const projectFolder = paths.join(workspacePath, ...top.split('/').filter(Boolean));
     if (!isAbsoluteHere(stored, platform) || !isSameOrInside(projectFolder, stored, platform)) return [];
-    const relative = paths.relative(paths.resolve(workspacePath), paths.resolve(stored)).split(paths.sep).join('/');
-    return relative === '' || relative.startsWith('..') ? [] : [relative];
+    // Inside the workspace as the OS compares paths (`isSameOrInside`: case and Unicode form aside on macOS and
+    // Windows): what follows the workspace's folders, in the stored path's own spelling.
+    const workspaceParts = paths.resolve(workspacePath).split(paths.sep).filter(Boolean).length;
+    const relative = paths.resolve(stored).split(paths.sep).filter(Boolean).slice(workspaceParts).join('/');
+    return relative === '' ? [] : [relative];
   }
   const resolved = posix.normalize(joined(folder, ...stored.split(/[\\/]/)));
   if (resolved.startsWith('../') || resolved === '..' || resolved.startsWith('/')) return [];
