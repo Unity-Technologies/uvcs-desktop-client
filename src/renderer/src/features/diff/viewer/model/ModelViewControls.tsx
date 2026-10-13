@@ -4,7 +4,7 @@ import { Bone, Box, Focus, Grid3x3, Image, Palette, Shapes } from 'lucide-react'
 import { hotkey } from '../../../../lib/shortcutRegistry';
 import { StageButton, StageControls, StageSeparator } from '../image/StageControls';
 import type { DrawMode } from './modelRenderer';
-import { clickedSurface, type SurfaceLook } from './surfaceLook';
+import { clickedSurface, surfaceButtonOn, type SurfaceLook } from './surfaceLook';
 
 interface ModelViewControlsProps {
   drawMode: DrawMode;
@@ -36,7 +36,7 @@ export function ModelViewControls({ drawMode, onDrawMode, surface, onSurface, ma
       <StageButton
         icon={<Palette size={15} />}
         label="Color each material slot"
-        active={surface === 'slotColors'}
+        active={surfaceButtonOn(surface, 'slotColors', surfaceUnavailable !== null)}
         unavailable={surfaceUnavailable}
         onClick={() => onSurface(clickedSurface(surface, 'slotColors'))}
       />
@@ -44,7 +44,7 @@ export function ModelViewControls({ drawMode, onDrawMode, surface, onSurface, ma
         <StageButton
           icon={<Image size={15} />}
           label="Show materials and textures, as the workspace has them"
-          active={surface === 'materials'}
+          active={surfaceButtonOn(surface, 'materials', surfaceUnavailable !== null)}
           unavailable={surfaceUnavailable}
           onClick={() => onSurface(clickedSurface(surface, 'materials'))}
         />

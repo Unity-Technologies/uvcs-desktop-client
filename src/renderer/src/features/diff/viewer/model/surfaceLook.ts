@@ -14,6 +14,11 @@ export function surfaceButtonDisabledReason(differences: boolean): string | null
   return differences ? 'Diffs colors the model by how far it moved' : null;
 }
 
+/** Whether a look's button shows on: its look chosen, and the buttons usable (in Diffs, none is). */
+export function surfaceButtonOn(surface: SurfaceLook, button: Exclude<SurfaceLook, 'clay'>, differences: boolean): boolean {
+  return !differences && surface === button;
+}
+
 /**
  * What the surfaces show: the choice kept, but clay where the materials can't show (the look isn't offered for this
  * model). Diffs mode draws its heatmap whatever this says, and the choice comes back in the other modes.
