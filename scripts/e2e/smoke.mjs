@@ -143,9 +143,10 @@ try {
   await app.close();
 }
 
-// "Not now" was saved as the user's answer, so the app never asks again.
+// "Not now" was saved as the user's answer, so the app never asks again. Checked only after a clean run: a step that
+// failed already says what went wrong.
 const savedSettings = existsSync(settingsFile) ? JSON.parse(readFileSync(settingsFile, 'utf8')) : {};
-if (savedSettings.showGravatar !== false || savedSettings.gravatarChoiceAsked !== true) {
+if (errors.length === 0 && (savedSettings.showGravatar !== false || savedSettings.gravatarChoiceAsked !== true)) {
   errors.push(`"Not now" wasn't saved: showGravatar ${savedSettings.showGravatar}, gravatarChoiceAsked ${savedSettings.gravatarChoiceAsked}`);
 }
 
