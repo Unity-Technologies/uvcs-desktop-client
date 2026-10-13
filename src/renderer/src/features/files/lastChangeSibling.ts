@@ -33,7 +33,12 @@ function listedSibling(model: TreeItem, listings: ReadonlyMap<string, TreeItem[]
   return listings.get(folder)?.find((item) => item.path === path);
 }
 
-/** Whether the sibling's revision was made before the model's, in a changeset (a repository numbers them in order). */
+/**
+ * Whether the sibling's revision was made before the model's: in an earlier changeset (a repository numbers them in
+ * order), or in any changeset when the model's is a shelve's (a workspace on a shelve lists what it left alone as
+ * checked in).
+ */
 function changedBefore(sibling: TreeItem, model: TreeItem): boolean {
-  return sibling.changeset !== null && model.changeset !== null && sibling.changeset < model.changeset;
+  if (sibling.changeset === null) return false;
+  return model.changeset === null ? model.shelveId !== undefined : sibling.changeset < model.changeset;
 }
