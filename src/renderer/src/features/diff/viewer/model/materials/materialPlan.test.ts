@@ -135,6 +135,26 @@ describe('planVersion: what each slot resolved to', () => {
   });
 });
 
+describe("Unity's built-in assets", () => {
+  const BUILT_IN_EXTRA = '0000000000000000f000000000000000';
+  const BUILT_IN_RESOURCES = '0000000000000000e000000000000000';
+
+  it('never looks up a texture of Unity\'s own, nor tells it missing: it is there, only not drawn', () => {
+    const builtInMap = { ...URP_BARK, baseMap: { guid: BUILT_IN_EXTRA, scale: [1, 1] as [number, number], offset: [0, 0] as [number, number] }, normalMap: { guid: BUILT_IN_RESOURCES, scale: [1, 1] as [number, number], offset: [0, 0] as [number, number] } };
+    expect(materialTextureGuids([builtInMap])).toEqual([]);
+    const input = version([fileMaterial('Bark')], { materialRemaps: [{ slot: 'Bark', guid: BARK_MAT }] });
+    const planned = plan(input, found({ guids: new Map([[BARK_MAT, file('Assets/Tree/Bark.mat')]]), materials: new Map([[BARK_MAT, builtInMap]]) }));
+    expect(planned.issues).toEqual([]);
+    expect(planned.slots.get('Bark')).toMatchObject({ baseMap: null, normalMap: null });
+    expect(planned.resolved.get('Bark')?.baseMap).toMatchObject({ missing: false });
+  });
+
+  it("asks for no texture the .meta remaps to one of Unity's own", () => {
+    const input = version([fileMaterial('Bark', { baseMap: use(named('bark.png')) })], { textureRemaps: [{ name: 'bark', guid: BUILT_IN_EXTRA }] });
+    expect(assetsRequest(input, slotSources(input), MODEL).textures).toEqual([{ name: 'bark.png', storedPaths: [], remapGuid: null }]);
+  });
+});
+
 describe('PSB textures', () => {
   const input = version([fileMaterial('Sprite', { color: [0.5, 0.5, 0.5] })], { materialRemaps: [{ slot: 'Sprite', guid: BARK_MAT }] });
   const assets = (importsPsb: boolean) => found({ importsPsb, guids: new Map([[BARK_PSD, file('Assets/Art/Fei.psb')]]), materials: new Map([[BARK_MAT, { ...URP_BARK, normalMap: null }]]) });
