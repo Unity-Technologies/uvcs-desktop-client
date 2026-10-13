@@ -206,6 +206,30 @@ describe('parseModel, glTF', () => {
     });
   });
 
+  it('reads a map on the second UV set: its image, which set it samples, and that set', async () => {
+    // Positions, then UV set 0 (all zeros) and UV set 1 (the triangle's corners), in one inline buffer.
+    const values = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 1]);
+    const gltf = triangleGltf('inline', {
+      meshes: [{ primitives: [{ attributes: { POSITION: 0, TEXCOORD_0: 1, TEXCOORD_1: 2 }, material: 0 }] }],
+      materials: [{ name: 'Desk', pbrMetallicRoughness: { baseColorTexture: { index: 0, texCoord: 1 } } }],
+      images: [{ bufferView: 0, mimeType: 'image/png' }],
+      accessors: [
+        { bufferView: 0, componentType: 5126, count: 3, type: 'VEC3', min: [0, 0, 0], max: [1, 1, 0] },
+        { bufferView: 1, componentType: 5126, count: 3, type: 'VEC2' },
+        { bufferView: 2, componentType: 5126, count: 3, type: 'VEC2' },
+      ],
+      bufferViews: [
+        { buffer: 0, byteLength: 36 },
+        { buffer: 0, byteOffset: 36, byteLength: 24 },
+        { buffer: 0, byteOffset: 60, byteLength: 24 },
+      ],
+      buffers: [{ byteLength: 84, uri: `data:application/octet-stream;base64,${Buffer.from(values.buffer).toString('base64')}` }],
+    });
+    const model = await parsed(bytesOf(gltf, 'gltf'));
+    expect(model.materials[0]!.baseMap).toMatchObject({ texture: { kind: 'gltfImage', image: 0 }, channel: 1 });
+    expect([...model.meshes[0]!.attributes.uv1!]).toEqual([0, 0, 1, 0, 0, 1]);
+  });
+
   it('keeps unnamed materials apart, each slot knowing its own', async () => {
     const gltf = triangleGltf('inline', {
       meshes: [{ primitives: [{ attributes: { POSITION: 0 }, material: 0 }, { attributes: { POSITION: 0 }, material: 1 }] }],
