@@ -190,7 +190,8 @@ describe('ProjectAssetIndex', () => {
     files.set('Game/Assets/Far1/Bark2.mat.meta', meta(77));
     index.noteChange({ content: true, pathsChanged: true, metadata: false, folders: ['Game/Assets/Far1'] });
     packagesRead.resolve();
-    expect(await walk).toBeNull();
+    // Overtaken: it can't tell the GUID missing.
+    expect(await walk).toBeUndefined();
     expect(await index.pathOfGuid(guid(77), MODEL_FOLDER)).toBe('Game/Assets/Far1/Bark2.mat');
   });
 
@@ -208,7 +209,7 @@ describe('ProjectAssetIndex', () => {
     index.clear();
     const after = index.pathOfGuid(guid(77), MODEL_FOLDER);
     far1Read.resolve();
-    expect(await before).toBeNull();
+    expect(await before).toBeUndefined();
     expect(await after).toBe('Game/Assets/Far1/Bark2.mat');
     // Nor does the stale listing, settled after the change, stand in for the folder.
     expect(await index.pathOfGuid(guid(77), MODEL_FOLDER)).toBe('Game/Assets/Far1/Bark2.mat');
@@ -228,12 +229,11 @@ describe('ProjectAssetIndex', () => {
       }
     });
 
-    it('answers undefined, to every find joining it, for a read of the cache a change overtook', async () => {
+    it('answers undefined for a read of the cache a change overtook', async () => {
       let index: ProjectAssetIndex;
       const held = new Map([[CACHE, async () => index.noteChange({ content: true, pathsChanged: true, metadata: false, folders: null })]]);
       index = indexOf(memoryFiles(withCache(), new Map(), held).disk);
-      const finds = await Promise.all([index.pathOfGuid(guid(99), MODEL_FOLDER), index.pathOfGuid(guid(98), MODEL_FOLDER)]);
-      expect(finds).toEqual([undefined, undefined]);
+      expect(await index.pathOfGuid(guid(99), MODEL_FOLDER)).toBeUndefined();
       expect(await index.pathOfGuid(guid(42), MODEL_FOLDER)).toBe(`${URP}/Lit.mat`);
     });
   });

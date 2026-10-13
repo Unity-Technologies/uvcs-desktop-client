@@ -73,13 +73,14 @@ export class ProjectAssetIndex {
 
   /**
    * The asset of a GUID: in the project's `Assets` or `Packages`, read outward from `near` (a folder), else in its
-   * package cache. Null when it's missing; undefined when that can't be told: a project without a `Library` (never
-   * opened in Unity on this machine) has no package cache to look in.
+   * package cache. Null only when it's missing from all of them, every one read whole and current; undefined whenever
+   * that can't be told (a read that failed or a change overtook, a project without a `Library`, never opened in Unity
+   * on this machine): a material told missing that isn't is worse than one not told.
    */
   async pathOfGuid(guid: string, near: string): Promise<string | null | undefined> {
     const wanted = guid.toLowerCase();
     for (let attempt = 0; attempt < 2; attempt++) {
-      const found = this.byGuid.get(wanted) ?? (this.wholeGuids ? null : await this.inRings(near, () => this.byGuid.get(wanted) ?? null)) ?? (await this.inPackageCache(wanted));
+      const found = this.byGuid.get(wanted) ?? (await this.notKnownYet(wanted, near));
       if (found === null || found === undefined) return found;
       // A folder changed while unwatched may still list a `.meta` that moved: what it says now decides (a read that
       // fails tells nothing, and the index stands).
@@ -87,7 +88,16 @@ export class ProjectAssetIndex {
       if (head === undefined || GUID_LINE.exec(head ?? '')?.[1] === wanted) return found;
       this.forget(folderOf(found));
     }
-    return null;
+    return undefined;
+  }
+
+  /** A GUID the index doesn't know: looked for in the project's rings, then in its package cache. */
+  private async notKnownYet(wanted: string, near: string): Promise<string | null | undefined> {
+    const inProject = this.wholeGuids ? null : await this.inRings(near, () => this.byGuid.get(wanted) ?? null);
+    if (typeof inProject === 'string') return inProject;
+    const inCache = await this.inPackageCache(wanted);
+    if (typeof inCache === 'string') return inCache;
+    return inProject === null && inCache === null ? null : undefined;
   }
 
   /**
@@ -132,6 +142,7 @@ export class ProjectAssetIndex {
     this.byGuid.clear();
     this.byName.clear();
     this.forgotten.clear();
+    this.packageCacheRead = null;
     this.clears++;
     this.changes++;
     this.wholeGuids = this.wholeNames = this.wholePackageCache = false;
@@ -143,35 +154,46 @@ export class ProjectAssetIndex {
    */
   private async inPackageCache(guid: string): Promise<string | null | undefined> {
     if (!this.wholePackageCache) {
-      const reading = (this.packageCacheRead ??= this.readPackageCache().finally(() => (this.packageCacheRead = null)));
+      let reading = this.packageCacheRead;
+      if (!reading) {
+        const started: Promise<boolean> = this.readPackageCache().finally(() => {
+          if (this.packageCacheRead === started) this.packageCacheRead = null;
+        });
+        this.packageCacheRead = reading = started;
+      }
       if (!(await reading)) return undefined;
     }
     return this.byGuid.get(guid) ?? null;
   }
 
-  /** Reads the package cache's GUIDs; false without a `Library` (not listed every time: it may come later). */
+  /**
+   * Reads the package cache's GUIDs; true only once read whole with no change meanwhile. False without a `Library`
+   * (listed again on the next miss: it may come later).
+   */
   private async readPackageCache(): Promise<boolean> {
     const library = joined(this.project.root, 'Library');
+    const changes = this.changes;
     const entries = await this.files.list(library).catch(() => null);
     if (entries === null || entries.length === 0) return false;
-    const changes = this.changes;
     const whole = await this.readSubtree(joined(library, 'PackageCache'), true);
     this.wholePackageCache = whole && this.changes === changes;
-    return true;
+    return this.wholePackageCache;
   }
 
   /** Drops every folder of the package cache read: it is read again on the next miss. */
   private forgetPackageCache(): void {
     const cache = this.folderKey(joined(this.project.root, 'Library/PackageCache'));
     for (const key of [...this.listings.keys()]) if (isUnder(key, cache)) this.forget(key);
+    this.forget(cache);
+    this.packageCacheRead = null;
     this.wholePackageCache = false;
   }
 
   /**
    * Reads the GUIDs ring after ring around `near` until `answer` has one: the subtree of each folder from `near` up to
-   * `Assets`, then the project's packages.
+   * `Assets`, then the project's packages. Null only for a GUID none has, read whole and current; else undefined.
    */
-  private async inRings(near: string, answer: () => string | null): Promise<string | null> {
+  private async inRings(near: string, answer: () => string | null): Promise<string | null | undefined> {
     const changes = this.changes;
     for (const folder of foldersUp(this.folderKey(near), this.folderKey(this.project.assets))) {
       const known = answer();
@@ -185,7 +207,7 @@ export class ProjectAssetIndex {
       whole = (await this.readSubtree(folder, true)) && whole;
     }
     this.wholeGuids = whole && this.changes === changes;
-    return answer();
+    return answer() ?? (this.wholeGuids ? null : undefined);
   }
 
   /** `Assets`, and `Packages` where the project's own packages are (a GUID may be one of theirs). */

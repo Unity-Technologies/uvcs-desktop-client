@@ -325,7 +325,9 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   overtook keeps nothing, and a find after the change never joins it: the listing or GUIDs of a folder forgotten (or of
   everything cleared) while being read are dropped when they arrive, and a whole read the project changed under isn't
   whole. Only what isn't there is an answer: a read the disk refused (a `.meta` Unity or an antivirus holds, too many
-  files open) is kept as nothing and read again, and at most 32 files are open at once (`diskProjectFiles`). On macOS
+  files open) is kept as nothing and read again, and at most 32 files are open at once (`diskProjectFiles`); a GUID is
+  told missing (`pathOfGuid` null) only after whole reads no change overtook, of the project and its package cache:
+  when in doubt it is undefined, as a material told missing that isn't is worse than one not told. On macOS
   folders compare in one Unicode form (the watcher names them decomposed, listings may be composed). Changes inside
   folders `ignore.conf` hides from the watcher aren't seen: an `Assets` folder is versioned content. Measured by hand on
   a project of 100,000 assets (1,000 folders): a GUID it lacks reads it all in about 2.1 s, once; the next lookup reads
