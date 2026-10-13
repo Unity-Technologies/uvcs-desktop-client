@@ -150,7 +150,10 @@ A version is read with what it needs beside it (`useModelReadOptions`), found by
 a committed diff's (`diffSibling`, provided by `DiffBrowser`) is the entry of the same diff (a glTF's shape lives in
 its `.bin`, so a changed shape changed the `.bin` too, with its own revisions; a moved model's `.meta` moved with it, at
 its old path on the side before), or, when the diff left it alone, the file where the diff points to (`cs:N`, the
-branch's head, `sh:N`: the same on both sides). Elsewhere (history, merges) none is found. A sibling is found beside
+branch's head, `sh:N`: the same on both sides). A last change in Files or Browse repository (`lastChangeSibling`,
+provided by `RevisionChanges`) finds it in the tree's own listings, no `cm` command added: changed in the same changeset
+or shelve as the model, its revision and the one before; untouched by it, its one revision on both sides; changed
+since, or not listed (private, in a folder not opened), none. Elsewhere (history, merges) none is found. A sibling is found beside
 the path each side was read from (`sourcePathOf`), never the diff's file name, which names the next file while the one
 before still shows. Its name never reaches above the model's folder, and main refuses a workspace file outside the
 workspace anyway (`workspaceFileOf`): the renderer is not trusted.
