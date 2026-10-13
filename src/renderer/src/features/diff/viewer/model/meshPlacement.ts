@@ -34,11 +34,28 @@ export function isSkinned(mesh: PlaceableMesh): boolean {
 }
 
 /**
- * Where the mesh is placed before any bone moves it: its node's world, or, skinned, the space it was bound in
- * (`MeshSkin.bindMatrix`), which a glTF's own node doesn't move.
+ * Where the mesh is placed at rest, which a turn or a scale of the whole model turns or scales: its node's world, or,
+ * skinned, the frame its top-most joint carries the bound mesh to (`joint's world × inverse bind × bind matrix`), so
+ * whatever turns or scales the skeleton from above turns it, and a glTF's mesh node turned alone (it places nothing)
+ * doesn't. The top-most joint, not the heaviest: it carries the whole skeleton, and repainting weights doesn't change
+ * it. A rest pose turning that joint reads as the whole model turned, as Unity shows it.
  */
 export function restingPlacementOf(mesh: PlaceableMesh, { space, world }: NodePlacement): Matrix4 {
-  return isSkinned(mesh) ? space.clone().multiply(new Matrix4().fromArray(mesh.skin!.bindMatrix)) : world[mesh.node]!.clone();
+  if (!isSkinned(mesh)) return world[mesh.node]!.clone();
+  const skin = mesh.skin!;
+  const bound = new Matrix4().fromArray(skin.bindMatrix);
+  const top = topJointOf(skin.bones);
+  if (top === -1) return space.clone().multiply(bound);
+  return world[skin.bones[top]!]!.clone().multiply(new Matrix4().fromArray(skin.boneInverses, top * 16)).multiply(bound);
+}
+
+/** The joint (its index in the skin) first in node order: parents come before children, so nothing above it is a joint. -1 when no joint is a node. */
+function topJointOf(bones: number[]): number {
+  let top = -1;
+  bones.forEach((node, i) => {
+    if (node >= 0 && (top === -1 || node < bones[top]!)) top = i;
+  });
+  return top;
 }
 
 /**

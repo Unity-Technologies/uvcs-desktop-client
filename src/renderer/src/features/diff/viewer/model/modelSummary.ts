@@ -46,8 +46,8 @@ export interface MeshSummary {
   bones: string[];
   /** Placed by its bones (`placedPositionsOf`), not by its node: its node's own transform says nothing of where it is. */
   skinned: boolean;
-  /** Where it is placed before any bone moves it, in Unity's space (`restingPlacementOf`), column-major: a turn or a
-   *  scale of the whole model is read from it. */
+  /** Where it is placed at rest, in Unity's space (`restingPlacementOf`: skinned, where its top-most joint carries it),
+   *  column-major: a turn or a scale of the whole model is read from it. */
   placement: number[];
   hasNormals: boolean;
   hasUv: boolean;
