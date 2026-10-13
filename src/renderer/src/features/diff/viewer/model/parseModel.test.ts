@@ -67,6 +67,27 @@ describe('parseModel, FBX', () => {
     expect(model.clips[0]!.tracks.tracks.map((track) => track.name)).toEqual(['UpperArm_L.quaternion']);
   });
 
+  it("reads each slot's material: its color, and the textures it maps by the paths the file stores", async () => {
+    const tree = asciiFbx({
+      nodes: [{ name: 'Tree', kind: 'mesh', mesh: { ...box([1, 1, 1]), materials: ['Bark', 'Leaves'], polygonMaterials: [0, 0, 0, 1, 1, 1], uvs: true } }],
+      materials: {
+        Bark: { diffuse: [1, 0.5, 0], diffuseTexture: { fileName: 'C:\\Art\\bark.png', relativeFileName: '..\\Textures\\bark.png' }, normalTexture: { fileName: 'C:\\Art\\bark_n.png' } },
+        Leaves: { diffuse: [0.2, 0.6, 0.2], opacity: 0.5 },
+      },
+    });
+    const [bark, leaves] = (await parsed(bytesOf(tree, 'fbx'))).materials;
+    expect(bark).toMatchObject({
+      name: 'Bark',
+      // FBXLoader asks for the relative path's last part; the file stores both paths.
+      baseMap: { texture: { kind: 'named', name: 'bark.png', storedPaths: ['..\\Textures\\bark.png', 'C:\\Art\\bark.png', 'bark.png'] }, repeat: [1, 1], offset: [0, 0] },
+      normalMap: { texture: { kind: 'named', name: 'bark_n.png' } },
+      alpha: 'opaque',
+    });
+    // The file's sRGB colors, in three's linear working space.
+    expect(bark!.color.map((value) => Number(value.toFixed(3)))).toEqual([1, 0.214, 0]);
+    expect(leaves).toMatchObject({ name: 'Leaves', baseMap: null, opacity: 0.5, alpha: 'blend' });
+  });
+
   it('converts a Z-up file onto Y by its axes, apart from the root rotation FBXLoader set', async () => {
     const model = await parsed(bytesOf(asciiFbx({ upAxis: 2, nodes: [{ name: 'Rock', kind: 'mesh', mesh: { ...box([1, 1, 1]), materials: ['Rock'] } }] }), 'fbx'));
     expect(model.upAxis).toBe('z');
@@ -155,6 +176,34 @@ describe('parseModel, glTF', () => {
     expect(gltfCompanions(json([{ uri: '100%.bin' }]), 'gltf')).toEqual(['100%.bin']);
     expect(gltfCompanions(json([{ uri: 7 }]), 'gltf')).toEqual([]);
     expect(gltfCompanions(json({}), 'gltf')).toEqual([]);
+  });
+
+  it("reads each material's base color, maps, alpha and sides, and where each map's image is", async () => {
+    const gltf = triangleGltf('inline', {
+      extensionsUsed: ['KHR_texture_transform'],
+      materials: [
+        {
+          name: 'Foliage',
+          alphaMode: 'MASK',
+          alphaCutoff: 0.3,
+          doubleSided: true,
+          pbrMetallicRoughness: { baseColorFactor: [0.5, 1, 1, 1], baseColorTexture: { index: 0, extensions: { KHR_texture_transform: { scale: [2, 2], offset: [0.5, 0] } } } },
+          normalTexture: { index: 1 },
+        },
+      ],
+      textures: [{ source: 0 }, { source: 1 }],
+      images: [{ uri: 'textures/leaf%20color.png' }, { bufferView: 0, mimeType: 'image/png' }],
+    });
+    const [foliage] = (await parsed(bytesOf(gltf, 'gltf'))).materials;
+    expect(foliage).toMatchObject({
+      name: 'Foliage',
+      color: [0.5, 1, 1],
+      baseMap: { texture: { kind: 'beside', path: 'textures/leaf color.png' }, repeat: [2, 2], offset: [0.5, 0] },
+      normalMap: { texture: { kind: 'gltfImage', image: 1 } },
+      alpha: 'clip',
+      cutoff: 0.3,
+      doubleSided: true,
+    });
   });
 
   it('names the compression a glTF needs a decoder for', async () => {

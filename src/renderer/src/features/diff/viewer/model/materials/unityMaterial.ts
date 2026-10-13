@@ -4,6 +4,7 @@
 // their own way, and a material keeps the values of the ones its shader has, so the first one present is taken.
 
 import { isGuid } from '../modelImportSettings';
+import type { AlphaMode } from '../parsedModel';
 import { isMapping, parseUnityYaml, type UnityYaml } from '../unityYaml';
 
 /** A texture a material uses: the asset's GUID, and the tiling and offset applied to the UVs (`uv * scale + offset`). */
@@ -12,8 +13,6 @@ export interface MaterialTexture {
   scale: [number, number];
   offset: [number, number];
 }
-
-export type AlphaMode = 'opaque' | 'clip' | 'blend';
 
 export interface UnityMaterial {
   baseMap: MaterialTexture | null;

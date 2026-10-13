@@ -3,7 +3,7 @@
 
 import { AnimationClip, Euler, Quaternion } from 'three';
 import { fbxAxisConversion, Y_UP_AXES } from '../fbxAxes';
-import type { ModelClip, ModelMesh, ModelNode, ModelNodeKind, ParsedModel } from '../parsedModel';
+import type { FileMaterial, ModelClip, ModelMesh, ModelNode, ModelNodeKind, ParsedModel } from '../parsedModel';
 
 export interface TestNode {
   name: string;
@@ -41,6 +41,7 @@ export interface TestModel {
   upAxis?: 'y' | 'z';
   clips?: { name: string; duration: number }[];
   textures?: string[];
+  materials?: FileMaterial[];
   exportedFrom?: string | null;
 }
 
@@ -70,6 +71,7 @@ export function testModel(spec: TestModel): ParsedModel {
     meshes,
     clips: (spec.clips ?? []).map((clip): ModelClip => ({ ...clip, tracks: AnimationClip.toJSON(new AnimationClip(clip.name, clip.duration, [])) })),
     textures: spec.textures ?? [],
+    materials: spec.materials ?? [],
     unitScale: spec.unitScale ?? 1,
     importScale: spec.importScale ?? 1,
     frameRate: spec.frameRate ?? null,

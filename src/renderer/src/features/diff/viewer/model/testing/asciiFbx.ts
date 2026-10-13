@@ -197,7 +197,7 @@ function materialObjects(id: number, name: string, spec: FbxMaterialSpec): { obj
   const properties = [
     spec.diffuse && `\t\t\tP: "DiffuseColor", "Color", "", "A",${spec.diffuse.join(',')}`,
     spec.opacity !== undefined && `\t\t\tP: "Opacity", "double", "Number", "",${spec.opacity}`,
-  ].filter(Boolean);
+  ].filter((line): line is string => typeof line === 'string');
   const objects = [`\tMaterial: ${id}, "Material::${name}", "" {`, '\t\tVersion: 102', '\t\tShadingModel: "phong"', '\t\tProperties70:  {', ...properties, '\t\t}', '\t}'];
   const connections: string[] = [];
   const textures: [FbxTextureSpec | undefined, string][] = [

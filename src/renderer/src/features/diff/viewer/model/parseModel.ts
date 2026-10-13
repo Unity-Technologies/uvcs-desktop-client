@@ -1,15 +1,18 @@
 // A model file's bytes as a `ParsedModel`, through three's loaders for its format. Nothing but the bytes is read
 // (`noTextureLoading`), and nothing needs a DOM, so it runs in the model worker (`model.worker`) and in tests.
 
-import { Matrix4, Quaternion, type AnimationClip, type Object3D } from 'three';
+import { Matrix4, Quaternion, type AnimationClip, type Loader, type Object3D } from 'three';
 import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { GLTFLoader, type GLTFParser } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import type { ModelBytes } from '@shared/domain/content';
 import { fbxAxisConversion, Y_UP_AXES, type FbxAxisSystem } from './fbxAxes';
 import { readFbxProperty, type FbxPropertyName } from './fbxProperties';
 import { fromThreeObject, type ModelFileFacts } from './fromThreeObject';
-import { gltfNeed, type GltfNeed } from './gltfJson';
+import { readFbxTextureFiles } from './fbxTextureFiles';
+import { gltfNeed, gltfTextureImage, type GltfNeed } from './gltfJson';
+import { fileMaterialsOf, type TextureSource } from './materials/fileMaterials';
+import { fbxTextureSource, gltfTextureSource } from './materials/textureSources';
 import { noTextureLoading } from './noTextureLoading';
 import type { ParsedModel } from './parsedModel';
 
@@ -33,7 +36,8 @@ export async function parseModel({ bytes, format }: ModelBytes, companions: Read
   const manager = noTextureLoading((name) => textures.add(name), companionUrls);
   try {
     const loaded = await load(bytes, format, manager);
-    const facts: ModelFileFacts = { format, textures: [...textures].sort(), unitScale: 1, upAxis: 'y', axisConversion: new Matrix4().elements, exportedFrom: null, frameRate: null };
+    const materials = fileMaterialsOf(loaded.root, loaded.textureSource);
+    const facts: ModelFileFacts = { format, textures: [...textures].sort(), materials, unitScale: 1, upAxis: 'y', axisConversion: new Matrix4().elements, exportedFrom: null, frameRate: null };
     if (format === 'fbx') Object.assign(facts, fbxFacts(bytes, loaded.root));
     return { kind: 'parsed', model: fromThreeObject(loaded.root, loaded.animations, facts) };
   } catch {
@@ -46,22 +50,44 @@ export async function parseModel({ bytes, format }: ModelBytes, companions: Read
 interface Loaded {
   root: Object3D;
   animations: AnimationClip[];
+  /** What the materials' textures stand for, as the loader tells. */
+  textureSource: TextureSource;
 }
+
+const NO_TEXTURES: TextureSource = () => null;
 
 async function load(bytes: Uint8Array, format: ModelBytes['format'], manager: ReturnType<typeof noTextureLoading>): Promise<Loaded> {
   switch (format) {
     case 'fbx': {
       const root = withCameraWindow(() => new FBXLoader(manager).parse(arrayBufferOf(bytes), ''));
-      return { root, animations: root.animations };
+      return { root, animations: root.animations, textureSource: fbxTextureSource(readFbxTextureFiles(bytes)) };
     }
+    // An OBJ's materials are in its `.mtl`, a file of its own (`mtlMaterials`): the OBJ names only its slots.
     case 'obj':
-      return { root: new OBJLoader(manager).parse(withoutLineElements(new TextDecoder().decode(bytes))), animations: [] };
+      return { root: new OBJLoader(manager).parse(withoutLineElements(new TextDecoder().decode(bytes))), animations: [], textureSource: NO_TEXTURES };
     case 'gltf':
     case 'glb': {
-      const gltf = await new GLTFLoader(manager).parseAsync(format === 'gltf' ? new TextDecoder().decode(bytes) : arrayBufferOf(bytes), '');
-      return { root: gltf.scene, animations: gltf.animations };
+      const loader = new GLTFLoader(manager);
+      loader.register((parser) => texturesNamedOnly(parser, manager.getHandler('texture')!));
+      const gltf = await loader.parseAsync(format === 'gltf' ? new TextDecoder().decode(bytes) : arrayBufferOf(bytes), '');
+      return { root: gltf.scene, animations: gltf.animations, textureSource: gltfTextureSource(gltf.parser) };
     }
   }
+}
+
+/**
+ * Every glTF texture through the loader that loads nothing (`noTextureLoading`): GLTFLoader loads an image held in the
+ * file (a buffer view) with its own image loader, which would decode it in full, and in Node not at all, leaving its
+ * material without the map. The texture keeps its association with the glTF's texture (`gltfTextureSource`).
+ */
+function texturesNamedOnly(parser: GLTFParser, textureNames: Loader) {
+  return {
+    name: 'texturesNamedOnly',
+    loadTexture: (textureIndex: number) => {
+      const image = gltfTextureImage(parser.json, textureIndex);
+      return image === null ? null : parser.loadTextureImage(textureIndex, image, textureNames);
+    },
+  };
 }
 
 /**
