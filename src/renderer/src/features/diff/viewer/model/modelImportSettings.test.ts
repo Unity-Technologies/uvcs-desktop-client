@@ -71,9 +71,10 @@ describe('readImportSettings', () => {
     });
   });
 
-  it("reads a .meta older than Unity 2019.3's import mode, and one older than 2021.2's remaps with None, as Unity upgrades them", () => {
+  it("reads a .meta older than Unity 2019.3's import mode; without 2021.2's setting, remaps don't apply with None, as Unity imports it", () => {
     const legacy = readImportSettings(meta('  materials:', '    importMaterials: 0', '    materialName: 0', '    materialSearch: 1'));
-    expect(legacy).toMatchObject({ materialImport: 'none', remapsWithoutMaterials: true });
+    expect(legacy).toMatchObject({ materialImport: 'none', remapsWithoutMaterials: false });
+    expect(readImportSettings(meta('  materials:', '    materialImportMode: 0', '  remapMaterialsIfMaterialImportModeIsNone: 1')).remapsWithoutMaterials).toBe(true);
     expect(readImportSettings(meta('  materials:', '    importMaterials: 1')).materialImport).toBe('fromFile');
     expect(readImportSettings(meta('  materials:', '    materialImportMode: 0', '  remapMaterialsIfMaterialImportModeIsNone: 0')).remapsWithoutMaterials).toBe(false);
   });
@@ -91,7 +92,7 @@ describe('readImportSettings', () => {
 
   it("keeps Unity's defaults for what the .meta doesn't set, or a .meta that is no ModelImporter's", () => {
     // An importer's .meta without the texture search predates it: textures were searched for everywhere then.
-    expect(readImportSettings(meta())).toEqual({ ...DEFAULT_IMPORT_SETTINGS, searchTexturesGlobally: true, remapsWithoutMaterials: true });
+    expect(readImportSettings(meta())).toEqual({ ...DEFAULT_IMPORT_SETTINGS, searchTexturesGlobally: true });
     expect(readImportSettings('fileFormatVersion: 2\nScriptedImporter:\n  userData: \n')).toEqual(DEFAULT_IMPORT_SETTINGS);
     expect(readImportSettings('not yaml at all {')).toEqual(DEFAULT_IMPORT_SETTINGS);
   });
