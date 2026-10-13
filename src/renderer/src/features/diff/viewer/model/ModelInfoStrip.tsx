@@ -1,3 +1,4 @@
+import { ProgressRing } from '../../../../ui/ProgressRing';
 import type { ModelStat } from './modelStats';
 import styles from './ModelInfoStrip.module.css';
 
@@ -17,8 +18,9 @@ export function ModelInfoStrip({ stats }: { stats: ModelStat[] }) {
                 <span data-side="new">{stat.after}</span>
               </>
             ) : (
-              <span>{stat.after ?? stat.before}</span>
+              (stat.after ?? stat.before) !== null && <span>{stat.after ?? stat.before}</span>
             )}
+            {stat.progress !== undefined && <ProgressRing value={stat.progress} size={12} />}
           </span>
         );
       })}

@@ -331,8 +331,9 @@ export function slotLooks(plan: VersionPlan, states: ReadonlyMap<string, NeedSta
   for (const [slot, planned] of plan.slots) {
     if (!planned) continue;
     const baseMap = mapOf(planned.baseMap);
+    const waiting = planned.baseMap !== null && states.get(planned.baseMap.need)?.kind === 'loading';
     looks.set(slot, {
-      color: baseMap ? planned.colorWithMap : planned.color,
+      color: baseMap ? planned.colorWithMap : waiting ? waitingColorOf(planned.color) : planned.color,
       opacity: planned.opacity,
       alpha: planned.alpha,
       cutoff: planned.cutoff,
@@ -377,6 +378,17 @@ export function texturesReport(plans: readonly (VersionPlan | null)[], states: R
   for (const need of over) issues.set(need.name, { name: need.name, problem: 'overBudget' });
   const unplanned = [...issues.values()].filter(({ problem }) => problem === 'missing' || problem === 'unsupportedFormat' || problem === 'psbNotImported');
   return { total: needs.size + unplanned.length, shown, loading, downloading, issues: [...issues.values()], finding: plans.includes(null) };
+}
+
+/**
+ * How a slot whose base map is on its way is drawn meanwhile: its color (linear) darkened to a mid tone, so a model whose
+ * materials are white under their textures (most glTF exports) doesn't flash as bright clay while they download, and
+ * reads as not yet textured. Its own color once the texture shows, or where it fails.
+ */
+const WAITING_SHADE = 0.35;
+
+function waitingColorOf([r, g, b]: [number, number, number]): [number, number, number] {
+  return [r * WAITING_SHADE, g * WAITING_SHADE, b * WAITING_SHADE];
 }
 
 /** A Unity material's color (sRGB, as kept) in three's linear working space. */

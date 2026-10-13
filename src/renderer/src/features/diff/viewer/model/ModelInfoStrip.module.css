@@ -37,3 +37,8 @@
 .arrow {
   color: var(--text-tertiary);
 }
+
+/* The progress ring beside a figure still being worked out (`ModelStat.progress`), centred on its text. */
+.stat > svg {
+  align-self: center;
+}

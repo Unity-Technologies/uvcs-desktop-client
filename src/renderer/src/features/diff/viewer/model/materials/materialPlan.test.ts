@@ -60,6 +60,15 @@ describe('assetsRequest', () => {
 });
 
 describe('planVersion and slotLooks', () => {
+  it('draws a slot waiting for its base map darker than its color, never as bright clay; its own color where the texture fails', () => {
+    const bark = fileMaterial('Bark', { color: [1, 1, 1], baseMap: use(named('bark.png')) });
+    const planned = plan(version([bark]), found({ textures: new Map([[lookupKey(named('bark.png')), file('Assets/Tree/bark.png')]]) }));
+    const need = `up:${foundFileKey(file('Assets/Tree/bark.png'))}`;
+    const waiting = slotLooks(planned, new Map<string, NeedState>([[need, { kind: 'loading' }]])).get('Bark')!.color;
+    expect(waiting.every((channel) => channel > 0 && channel < 0.5)).toBe(true);
+    expect(slotLooks(planned, new Map<string, NeedState>([[need, { kind: 'failed', problem: 'missing' }]])).get('Bark')!.color).toEqual([1, 1, 1]);
+  });
+
   it("shows a file's textured material untinted once its texture decodes, in its color meanwhile", () => {
     const bark = fileMaterial('Bark', { color: [0.5, 0.2, 0.1], baseMap: use(named('bark.png')) });
     const planned = plan(version([bark]), found({ textures: new Map([[lookupKey(named('bark.png')), file('Assets/Tree/bark.png')]]) }));

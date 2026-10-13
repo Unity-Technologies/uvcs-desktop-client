@@ -339,10 +339,14 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   each read by the file's version (`foundFileKey`), and a texture need by it too: both versions of a model may find a
   texture at one path in two revisions, each shows its own. Reading the textures by `cm cat` one by one, as the
   sibling reads do, was rejected: a batch costs one round trip.
-- **Progress, said in the info strip**: "Textures …" from the moment the look is on, while the versions' materials and
-  textures are being found (`TexturesReport.finding`: a listing, `.meta` and `.mat` reads); then "Textures 1 of 2…",
-  counting up as they download and decode, its tooltip saying how many come from the repository ("Getting 2 from the
-  repository…") and how many decode. No spinner over the model, which shows its colors (or clay) meanwhile.
+- **Progress, said in the info strip**: the Textures figure with a small ring (`ModelStat.progress`, the design
+  system's `ProgressRing`), spinning from the moment the look is on while the versions' materials and textures are
+  being found (`TexturesReport.finding`: a listing, `.meta` and `.mat` reads), then filling as "Textures 1 of 2" counts
+  up while they download and decode, its tooltip saying how many come from the repository ("Getting 2 from the
+  repository…") and how many decode; gone once done. Nothing over the model: a slot whose base map is on its way is
+  drawn in its color darkened to a mid tone (`WAITING_SHADE`, `slotLooks`), so a model whose materials are white under
+  their textures (most glTF exports) reads as not yet textured rather than flashing bright clay; its own color where
+  the texture fails.
 - **Where each slot's material comes from** (`slotSources`, as Unity's ModelImporter decides for FBX and OBJ): with
   Material Creation Mode None (`materialImportMode: 0`, or `importMaterials: 0` in a `.meta` older than Unity 2019.3)
   clay, unless `remapMaterialsIfMaterialImportModeIsNone: 1` (absent, as before 2021.2: clay, as Unity imports it); a
@@ -432,8 +436,8 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   normal maps linear (a texture's own `.meta` isn't read); an FBX's or OBJ's textured material untinted (Unity's
   ModelImporter drops the diffuse tint), a glTF's tinted by its base color; alpha clip as `alphaTest`, transparency
   blended without depth writes, both sides per material; textures the right way up from the decoder (FBX, OBJ and Unity
-  UVs start at the image's bottom). The model shows in its materials' colors (or clay) at once and textures appear as
-  they decode: no spinner, no reframing. A picked part lights up and the rest fade, as with clay. Turned off, the look's
+  UVs start at the image's bottom). The model shows in its materials' colors (darkened where a texture is on its way,
+  "Progress" above) at once and textures appear as they decode: nothing over the model, no reframing. A picked part lights up and the rest fade, as with clay. Turned off, the look's
   materials and textures stay until the file changes, so turning it on again is immediate.
 - **What doesn't show, said once** (`texturesStat`): the info strip's "Textures 9 of 12" (or "Textures 12") while the
   look is on, its tooltip naming the first eight that don't and why (`textureProblemWords`: "not found where Unity looks",

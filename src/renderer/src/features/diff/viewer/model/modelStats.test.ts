@@ -65,17 +65,19 @@ describe('texturesStat', () => {
 
   it('reads "12" when all show, counts up while they load, says how many come from the repository, and shows nothing without textures', () => {
     expect(texturesStat({ total: 12, shown: 12, loading: 0, downloading: 0, issues: [], finding: false })?.after).toBe('12');
-    expect(texturesStat({ total: 3, shown: 1, loading: 2, downloading: 0, issues: [], finding: false })).toMatchObject({ after: '1 of 3…', tip: expect.stringContaining('Loading 2…') });
+    expect(texturesStat({ total: 12, shown: 12, loading: 0, downloading: 0, issues: [], finding: false })).not.toHaveProperty('progress');
+    expect(texturesStat({ total: 4, shown: 1, loading: 3, downloading: 0, issues: [], finding: false })).toMatchObject({ after: '1 of 4', progress: 0.25, tip: expect.stringContaining('Loading 3…') });
     const downloading = texturesStat({ total: 5, shown: 1, loading: 4, downloading: 3, issues: [], finding: false })!;
-    expect(downloading.after).toBe('1 of 5…');
+    expect(downloading).toMatchObject({ after: '1 of 5', progress: 0.2 });
     expect(downloading.tip!.split('\n')).toEqual(['Textures shown', 'Getting 3 from the repository…', 'Loading 1…']);
     expect(texturesStat({ total: 0, shown: 0, loading: 0, downloading: 0, issues: [], finding: false })).toBeNull();
   });
 
   it('says the materials and textures are being found from the moment the look is on, before any is known', () => {
-    expect(texturesStat({ total: 0, shown: 0, loading: 0, downloading: 0, issues: [], finding: true })).toEqual({ label: 'Textures', before: null, after: '…', tip: 'Finding the materials and textures…' });
+    // A ring spinning: how far along isn't known yet.
+    expect(texturesStat({ total: 0, shown: 0, loading: 0, downloading: 0, issues: [], finding: true })).toEqual({ label: 'Textures', before: null, after: null, tip: 'Finding the materials and textures…', progress: null });
     const oneSideKnown = texturesStat({ total: 2, shown: 2, loading: 0, downloading: 0, issues: [], finding: true })!;
-    expect(oneSideKnown.after).toBe('2…');
+    expect(oneSideKnown).toMatchObject({ after: '2', progress: 1 });
     expect(oneSideKnown.tip).toContain("Finding the other version's materials and textures…");
   });
 });
