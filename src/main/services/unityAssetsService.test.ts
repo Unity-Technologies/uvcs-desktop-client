@@ -130,12 +130,19 @@ describe('unityAssets.find', () => {
     expect((await service(workspace).find({ modelPath: 'Hub/Assets/Game/Assets/Tree.fbx' })).importsPsb).toBe(true);
   });
 
-  it("never reads the package cache for a find that keeps no index, which would read it whole each time: such a miss can't be told", async () => {
+  it("keeps the package cache, which no watcher sees, for a workspace whose project folders each find reads afresh", async () => {
     const LIT = '22222222222222222222222222222222';
-    const files = { 'Game/Assets/Tree.fbx.meta': meta(MAT_GUID), 'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat.meta': meta(LIT) };
+    const files = {
+      'Game/Assets/Tree.fbx.meta': meta(MAT_GUID),
+      'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat': 'mat',
+      'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat.meta': meta(LIT),
+    };
     const { find, listed } = service(await workspaceWith(files), process.platform, 'partial');
-    expect(await find({ guids: [LIT] })).toMatchObject({ guids: [null], guidMisses: 'unread' });
-    expect(listed.filter((folder) => folder.startsWith('Game/Library'))).toEqual([]);
+    expect(await find({ guids: [LIT] })).toMatchObject({ guids: [{ path: 'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat' }], guidMisses: 'known' });
+    const cacheListed = listed.filter((folder) => folder.startsWith('Game/Library')).length;
+    expect(await find({ guids: [LIT] })).toMatchObject({ guidMisses: 'known' });
+    // The second find reads the project's folders again, never the package cache.
+    expect(listed.filter((folder) => folder.startsWith('Game/Library')).length).toBe(cacheListed);
   });
 
   it("keeps no index of a workspace whose watcher doesn't see every change: each find reads afresh", async () => {
