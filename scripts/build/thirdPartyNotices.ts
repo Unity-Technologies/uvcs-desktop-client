@@ -2,7 +2,9 @@
  * THIRD_PARTY_NOTICES.txt: the name, version, license and license files of every package bundled into `out/`. The
  * build minifies the libraries into the app's own files, which drops the license headers that MIT, BSD, ISC and Apache
  * ask to keep with the code, so the notices ship beside it instead (`thirdPartyNoticesPlugin`, electron-builder.yml's
- * `extraResources`). Pure: the plugin passes the bundle's module ids and a way to read a package folder.
+ * `extraResources`). Every package's notice carries a full license text: its own license files, or the text the build
+ * supplies for a package that ships none (`SUPPLIED_LICENSES`); a package with neither fails the build. Pure: the
+ * plugin passes the bundle's module ids, a way to read a package folder and a way to find a supplied text.
  */
 
 /** A package folder as the notices need it: its package.json fields and the text of its license files. */
@@ -15,6 +17,17 @@ export interface BundledPackage {
 }
 
 export type ReadPackage = (packageRoot: string) => BundledPackage;
+
+/** A license text the build supplies for a package that ships no license file (`SUPPLIED_LICENSES`). */
+export interface SuppliedLicenseText {
+  /** The license the package's package.json must name for the text to apply. */
+  license: string;
+  /** Where the text comes from, as the notice shows it. */
+  source: string;
+  text: string;
+}
+
+export type FindSuppliedLicense = (packageName: string) => SuppliedLicenseText | undefined;
 
 const NODE_MODULES = '/node_modules/';
 
@@ -48,15 +61,21 @@ export function bundledPackageRoots(moduleIds: Iterable<string>): string[] {
   return [...roots].sort();
 }
 
-/** The text of THIRD_PARTY_NOTICES.txt for the packages the modules come from, one section each, by name. */
-export function thirdPartyNotices(moduleIds: Iterable<string>, readPackage: ReadPackage): string {
+/**
+ * The text of THIRD_PARTY_NOTICES.txt for the packages the modules come from, one section each, by name. Throws when
+ * a package has no license text: neither a license file of its own nor a supplied text for the license it names.
+ */
+export function thirdPartyNotices(moduleIds: Iterable<string>, readPackage: ReadPackage, findSuppliedLicense: FindSuppliedLicense): string {
   const packages = new Map<string, BundledPackage>();
   for (const root of bundledPackageRoots(moduleIds)) {
     const found = readPackage(root);
     // Two folders holding the same version of a package (nested copies) are one notice.
     packages.set(`${found.name}@${found.version}`, found);
   }
-  const sorted = [...packages.values()].sort((a, b) => a.name.localeCompare(b.name, 'en') || a.version.localeCompare(b.version, 'en'));
+  const sorted = [...packages.values()]
+    .sort((a, b) => a.name.localeCompare(b.name, 'en') || a.version.localeCompare(b.version, 'en'))
+    .map((found) => withLicenseText(found, findSuppliedLicense));
+  failOnMissingLicenseTexts(sorted);
 
   const header = [
     'Third-party software in Unity Version Control — Desktop',
@@ -66,9 +85,26 @@ export function thirdPartyNotices(moduleIds: Iterable<string>, readPackage: Read
   return [header, ...sorted.map(packageNotice)].join(`\n\n${'='.repeat(80)}\n\n`) + '\n';
 }
 
+/** The package with the license files its notice shows: its own, or the supplied text when it ships none. */
+function withLicenseText(found: BundledPackage, findSuppliedLicense: FindSuppliedLicense): BundledPackage {
+  if (found.licenseFiles.length > 0) return found;
+  const supplied = findSuppliedLicense(found.name);
+  // A supplied text for another license than the one the package names now is stale: no text, so the build fails.
+  if (!supplied || supplied.license !== found.license) return found;
+  return { ...found, licenseFiles: [{ fileName: `LICENSE (the package ships none; ${supplied.source})`, text: supplied.text }] };
+}
+
+function failOnMissingLicenseTexts(packages: BundledPackage[]): void {
+  const missing = packages.filter((found) => found.licenseFiles.length === 0).map((found) => `${found.name} ${found.version} (${found.license})`);
+  if (missing.length === 0) return;
+  throw new Error(
+    `THIRD_PARTY_NOTICES.txt needs the full license text of every bundled package, and these have none: ${missing.join(', ')}. ` +
+      "Add each one's upstream license text to SUPPLIED_LICENSES (scripts/build/suppliedLicenses.ts), for the license its package.json names.",
+  );
+}
+
 function packageNotice(found: BundledPackage): string {
   const title = `${found.name} ${found.version}\nLicense: ${found.license}`;
-  if (found.licenseFiles.length === 0) return `${title}\n\n(The package has no license file; its package.json names the license above.)`;
   const files = [...found.licenseFiles]
     .sort((a, b) => a.fileName.localeCompare(b.fileName, 'en'))
     .map((file) => `--- ${file.fileName} ---\n\n${file.text.replace(/\r\n?/g, '\n').trim()}`);

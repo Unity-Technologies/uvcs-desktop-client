@@ -1,7 +1,8 @@
 import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import type { Plugin } from 'vite';
-import { LICENSE_FILE_NAME, manifestLicense, thirdPartyNotices, type BundledPackage } from './thirdPartyNotices';
+import { SUPPLIED_LICENSES, SUPPLIED_LICENSES_FOLDER } from './suppliedLicenses';
+import { LICENSE_FILE_NAME, manifestLicense, thirdPartyNotices, type BundledPackage, type SuppliedLicenseText } from './thirdPartyNotices';
 
 /**
  * Writes `outFile` (THIRD_PARTY_NOTICES.txt) with the packages of every bundle the plugin sees. electron-vite builds
@@ -24,10 +25,18 @@ export function thirdPartyNoticesCollector(outFile: string): { plugin: () => Plu
       },
       writeBundle() {
         mkdirSync(dirname(outFile), { recursive: true });
-        writeFileSync(outFile, thirdPartyNotices(moduleIds, readPackageFolder));
+        // Throws, failing the build, when a bundled package has no license text (`thirdPartyNotices`).
+        writeFileSync(outFile, thirdPartyNotices(moduleIds, readPackageFolder, readSuppliedLicense));
       },
     }),
   };
+}
+
+function readSuppliedLicense(packageName: string): SuppliedLicenseText | undefined {
+  const supplied = SUPPLIED_LICENSES[packageName];
+  if (!supplied) return undefined;
+  const text = readFileSync(join(SUPPLIED_LICENSES_FOLDER, supplied.fileName), 'utf8');
+  return { license: supplied.license, source: supplied.source, text };
 }
 
 function readPackageFolder(packageRoot: string): BundledPackage {
