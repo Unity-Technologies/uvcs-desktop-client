@@ -49,7 +49,8 @@ export interface UnityAssetsAnswer {
  * `known`: every GUID answered null is missing. Otherwise one isn't known missing: `noProject`, a model outside any
  * Unity project (a package's own repository, which no project's index looks up); `noLibrary`, a project without a
  * `Library` (never opened in Unity on this machine: no package cache to look in); `unread`, a read that couldn't
- * finish (a file held, a change overtaking it) or a find that keeps no index (whose misses never read the cache).
+ * finish (a file held, a change overtaking it), a file found the disk refused to check (an antivirus holding it:
+ * textures too), or a find that keeps no index (whose misses never read the cache).
  */
 export type GuidMisses = 'known' | 'noProject' | 'noLibrary' | 'unread';
 

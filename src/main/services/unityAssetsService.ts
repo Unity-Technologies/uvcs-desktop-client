@@ -2,6 +2,7 @@
 // "Materials"): no `cm` command, nothing from the server, nothing outside the workspace. The materials and textures a
 // model shows are the workspace's as they are now, whichever version of the model is shown.
 
+import type { Stats } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { posix } from 'node:path';
 import type { UnityAssetsApi } from '@shared/api/unityAssets';
@@ -19,9 +20,13 @@ interface UnityAssetsContext {
   platform?: NodeJS.Platform;
   /** The disk as the project indexes read it; tests count the reads. */
   filesOf?: (workspacePath: string) => ProjectFiles;
+  /** How a file found is checked on disk; tests pass one that refuses. */
+  statOf?: (path: string) => Promise<FileStats>;
 }
 
-export function createUnityAssetsService({ watchers, platform = process.platform, filesOf = diskProjectFiles }: UnityAssetsContext): UnityAssetsApi {
+type FileStats = Pick<Stats, 'size' | 'mtimeMs'> & { isFile(): boolean };
+
+export function createUnityAssetsService({ watchers, platform = process.platform, filesOf = diskProjectFiles, statOf = stat }: UnityAssetsContext): UnityAssetsApi {
   /** Each project's index by workspace, kept while the watcher sees every change of the workspace. */
   const indexes = new Map<string, Map<string, ProjectAssetIndex>>();
   watchers.listen({
@@ -54,9 +59,16 @@ export function createUnityAssetsService({ watchers, platform = process.platform
     const project = await unityProjectFound(modelPath, (root) => isFolder(workspacePath, root === '' ? 'ProjectSettings' : `${root}/ProjectSettings`));
     const index = project && indexOf(workspacePath, project);
     const modelFolder = posix.dirname(modelPath) === '.' ? '' : posix.dirname(modelPath);
-    const found = (path: string | null): Promise<FoundFile | null> => (path === null ? Promise.resolve(null) : foundFile(workspacePath, path));
     // Outside a project, or in one without a `Library`, a GUID not found isn't known missing (`pathOfGuid`).
     let guidMisses: GuidMisses = index ? 'known' : 'noProject';
+    // A file the disk refused (an antivirus holding it, too many open) is no answer: the find says it was unread.
+    const found = async (path: string | null): Promise<FoundFile | null> => {
+      if (path === null) return null;
+      return foundFile(workspacePath, path, statOf).catch(() => {
+        guidMisses = 'unread';
+        return null;
+      });
+    };
     const byGuid = async (guid: string): Promise<FoundFile | null> => {
       const path = index ? await index.pathOfGuid(guid, modelFolder) : null;
       if (path === undefined && index && guidMisses === 'known') guidMisses = index.whyNotKnown();
@@ -107,13 +119,18 @@ function workspacePathOf(path: string): string | null {
   return normalized === '.' ? '' : normalized;
 }
 
-/** The file at a workspace-relative path, with its size and when it was written; null when it isn't a file there. */
-async function foundFile(workspacePath: string, path: string): Promise<FoundFile | null> {
+/**
+ * The file at a workspace-relative path, with its size and when it was written; null when it isn't a file there
+ * (`ENOENT`, `ENOTDIR`, as `diskProjectFiles` takes them). Any other failure rejects: it tells nothing.
+ */
+async function foundFile(workspacePath: string, path: string, statOf: (path: string) => Promise<FileStats>): Promise<FoundFile | null> {
   try {
-    const stats = await stat(workspaceFileOf(workspacePath, path));
+    const stats = await statOf(workspaceFileOf(workspacePath, path));
     return stats.isFile() ? { path, size: stats.size, modified: stats.mtimeMs } : null;
-  } catch {
-    return null;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === 'ENOENT' || code === 'ENOTDIR') return null;
+    throw error;
   }
 }
 

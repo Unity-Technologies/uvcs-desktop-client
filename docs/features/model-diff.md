@@ -122,7 +122,8 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   them was rejected: a change is a change, and the reads are the workspace's disk, no `cm` command; the one cost, a
   GUID the project lacks, reads the project's index once, as the look would. They're not told (`materialChangesOf`
   is null) without a workspace, for a version with no path in it or whose `.meta` read failed (`comparableVersions`),
-  or when the workspace couldn't answer for a side (`answerStateOf`): a find that failed, or a GUID not found that
+  or when the workspace couldn't answer for a side (`answerStateOf`): a find that failed, a file the disk refused to
+  check (only `ENOENT` and `ENOTDIR` say a file isn't there: `foundFile`), or a GUID not found that
   can't be told missing (`UnityAssetsAnswer.guidMisses`: a model outside a Unity project, as in a package's own
   repository, or in a project without a `Library`, never opened in Unity on this machine, "The project's index"
   below). Then the file's own list of textures named (`textures`)
