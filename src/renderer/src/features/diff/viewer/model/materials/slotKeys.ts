@@ -10,6 +10,13 @@ export function slotKeysOf(format: ModelFormat, mesh: Pick<ModelMesh, 'slots' | 
   const byMaterial = format === 'gltf' || format === 'glb';
   return mesh.slots.map((name, i) => {
     const material = mesh.slotMaterials[i] ?? -1;
-    return byMaterial && material >= 0 ? `#${material}` : name;
+    return byMaterial && material >= 0 ? `${MATERIAL_KEY}${material}` : name;
   });
+}
+
+const MATERIAL_KEY = '#';
+
+/** Whether a key is a material's place in its file (a glTF's), which another version of the file may give another. */
+export function isPlaceKey(key: string): boolean {
+  return key.startsWith(MATERIAL_KEY);
 }

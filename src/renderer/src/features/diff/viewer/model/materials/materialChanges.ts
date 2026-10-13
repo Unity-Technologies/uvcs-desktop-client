@@ -9,6 +9,7 @@ import type { UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { Color, LinearSRGBColorSpace } from 'three';
 import type { AlphaMode } from '../parsedModel';
 import type { PlannedSlot, ResolvedMaterial, ResolvedSlot, SlotTexture, VersionPlan } from './materialPlan';
+import { isPlaceKey } from './slotKeys';
 import type { SlotSource } from './slotSources';
 
 /** A map's tiling and offset, as the material's Inspector shows them. */
@@ -39,14 +40,34 @@ export function isMaterialRisk(change: MaterialChange): boolean {
 /** Each slot both versions have, in the version after's order. */
 export function materialChanges(before: VersionPlan, after: VersionPlan): MaterialChange[] {
   const changes: MaterialChange[] = [];
-  for (const [key, now] of after.resolved) {
-    const was = before.resolved.get(key);
-    if (!was) continue;
-    if (sameMaterial(was.material, now.material)) changes.push(...lookChanges(was, now, before.slots.get(key) ?? null, after.slots.get(key) ?? null));
+  for (const [keyBefore, keyAfter] of pairedSlots(before.resolved, after.resolved)) {
+    const was = before.resolved.get(keyBefore)!;
+    const now = after.resolved.get(keyAfter)!;
+    if (sameMaterial(was.material, now.material)) changes.push(...lookChanges(was, now, before.slots.get(keyBefore) ?? null, after.slots.get(keyAfter) ?? null));
     else changes.push({ kind: 'source', slot: now.slot, before: was.material, after: now.material });
     changes.push(...newlyMissing(was, now));
   }
   return changes;
+}
+
+/**
+ * The slots both versions have, as [key before, key after], in the version after's order: by key where it is the
+ * slot's name; a glTF's materials, keyed by their place in the file, by their name where both files name one material
+ * so (a material added first moves every other), and none that is unnamed or shares its name, as nothing tells them apart.
+ */
+function pairedSlots(before: ReadonlyMap<string, ResolvedSlot>, after: ReadonlyMap<string, ResolvedSlot>): [string, string][] {
+  const byUniqueName = (slots: ReadonlyMap<string, ResolvedSlot>): Map<string, string> => {
+    const keys = new Map<string, string | null>();
+    for (const [key, { slot }] of slots) if (isPlaceKey(key) && slot !== '') keys.set(slot, keys.has(slot) ? null : key);
+    return new Map([...keys].flatMap(([slot, key]) => (key === null ? [] : [[slot, key]])));
+  };
+  const namedBefore = byUniqueName(before);
+  const namedAfter = byUniqueName(after);
+  return [...after].flatMap(([key, { slot }]): [string, string][] => {
+    if (!isPlaceKey(key)) return before.has(key) ? [[key, key]] : [];
+    const was = namedAfter.get(slot) === key ? namedBefore.get(slot) : undefined;
+    return was ? [[was, key]] : [];
+  });
 }
 
 /** A version as the comparison would read it: its slots' sources, and what it would ask the workspace. */
@@ -65,9 +86,10 @@ export function materialsMayDiffer(before: MaterialSide, after: MaterialSide): b
   return keyOf(before) !== keyOf(after);
 }
 
+/** A slot's own material is the same on both sides, whatever the file calls it: what changed in it is its look. */
 function sameMaterial(before: ResolvedMaterial, after: ResolvedMaterial): boolean {
   if (before.kind !== after.kind) return false;
-  return !('name' in before) || before.name === (after as typeof before).name;
+  return before.kind !== 'project' || before.name === (after as typeof before).name;
 }
 
 function lookChanges(was: ResolvedSlot, now: ResolvedSlot, before: PlannedSlot | null, after: PlannedSlot | null): MaterialChange[] {

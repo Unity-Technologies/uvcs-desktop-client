@@ -74,7 +74,7 @@ describe('materialChanges: where a slot takes its material from', () => {
 describe("materialChanges: a glTF's materials, keyed by their place in the file", () => {
   /** A glTF version: each of its materials at its place (`#0`, `#1`…), by name ('' for none). */
   function gltf(materials: [string, TestSlot][]): VersionPlan {
-    const named = version(Object.fromEntries(materials.map(([name, slot], i) => [`#${i}`, slot])));
+    const named = version(Object.fromEntries(materials.map(([, slot], i) => [`#${i}`, slot])));
     for (const [key, slot] of named.resolved) named.resolved.set(key, { ...slot, slot: materials[Number(key.slice(1))]![0] });
     return named;
   }
