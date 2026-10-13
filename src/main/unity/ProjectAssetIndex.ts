@@ -86,7 +86,9 @@ export class ProjectAssetIndex {
       // fails tells nothing, and the index stands).
       const head = await this.files.head(`${found}.meta`, META_HEAD_BYTES).catch(() => undefined);
       if (head === undefined || GUID_LINE.exec(head ?? '')?.[1] === wanted) return found;
-      this.forget(folderOf(found));
+      // Unity changes the package cache unseen (`noteChange`): a hit there gone stale makes all of it suspect.
+      if (this.isUnder(found, this.packageCache())) this.forgetPackageCache();
+      else this.forget(folderOf(found));
     }
     return undefined;
   }
@@ -153,6 +155,7 @@ export class ProjectAssetIndex {
    * GUID the rest of the project lacks; undefined without a `Library`, as nothing then tells the GUID is missing.
    */
   private async inPackageCache(guid: string): Promise<string | null | undefined> {
+    if (this.wholePackageCache && !(await this.packageCacheUnchanged())) this.forgetPackageCache();
     if (!this.wholePackageCache) {
       let reading = this.packageCacheRead;
       if (!reading) {
@@ -175,14 +178,33 @@ export class ProjectAssetIndex {
     const changes = this.changes;
     const entries = await this.files.list(library).catch(() => null);
     if (entries === null || entries.length === 0) return false;
-    const whole = await this.readSubtree(joined(library, 'PackageCache'), true);
+    const whole = await this.readSubtree(this.packageCache(), true);
     this.wholePackageCache = whole && this.changes === changes;
     return this.wholePackageCache;
   }
 
+  /**
+   * Whether the package cache still holds the packages it was read with: Unity adds, replaces (an upgrade: `@17.0.3`
+   * goes, `@17.0.4` comes) and removes them unseen by the watcher, so a miss over a cache read whole lists its top
+   * again, once, before telling the GUID missing.
+   */
+  private async packageCacheUnchanged(): Promise<boolean> {
+    const known = this.listings.get(this.folderKey(this.packageCache()));
+    const entries = await this.files.list(this.packageCache()).catch(() => null);
+    if (!known || entries === null) return false;
+    const names = (paths: string[]) => paths.map(fileNameOf);
+    const before = [...names(known.folders), ...names(known.files), ...names(known.metas)].sort();
+    const now = entries.map((entry) => entry.name).filter(isAsset).sort();
+    return before.length === now.length && before.every((name, i) => name === now[i]);
+  }
+
+  private packageCache(): string {
+    return joined(this.project.root, 'Library/PackageCache');
+  }
+
   /** Drops every folder of the package cache read: it is read again on the next miss. */
   private forgetPackageCache(): void {
-    const cache = this.folderKey(joined(this.project.root, 'Library/PackageCache'));
+    const cache = this.folderKey(this.packageCache());
     for (const key of [...this.listings.keys()]) if (isUnder(key, cache)) this.forget(key);
     this.forget(cache);
     this.packageCacheRead = null;

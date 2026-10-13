@@ -90,8 +90,8 @@ describe('ProjectAssetIndex', () => {
     expect(reads).toEqual({ lists: 26, heads: 201 });
     expect(await index.pathOfGuid(guid(1000 + 55), MODEL_FOLDER)).toBe('Game/Assets/Far5/rock5.png');
     expect(await index.pathOfGuid(guid(888888), MODEL_FOLDER)).toBeNull();
-    // The hit's .meta read again to check it, nothing else.
-    expect(reads).toEqual({ lists: 26, heads: 202 });
+    // The hit's .meta read again to check it, and the package cache's top listed again for the miss, nothing else.
+    expect(reads).toEqual({ lists: 27, heads: 202 });
   });
 
   it("finds a registry package's GUID in Library/PackageCache, and can't tell one missing without a Library", async () => {
