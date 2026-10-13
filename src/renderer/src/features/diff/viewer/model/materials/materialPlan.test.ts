@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { foundFileKey, type FoundFile } from '@shared/domain/unityAssets';
 import { DEFAULT_IMPORT_SETTINGS, type ModelImportSettings } from '../modelImportSettings';
 import type { FileMaterial } from '../parsedModel';
-import { assetsRequest, budgeted, lookupKey, materialTextureGuids, planVersion, slotLooks, texturesReport, type FoundAssets, type NeedState, type Side, type VersionPlan } from './materialPlan';
+import { assetsRequest, budgeted, findingLooks, lookupKey, materialTextureGuids, planVersion, slotLooks, texturesReport, type FoundAssets, type NeedState, type Side, type VersionPlan } from './materialPlan';
 import { slotSources, type ModelMaterialsInput } from './slotSources';
 import { fileMaterial, named, use } from './testing/testMaterials';
 import type { UnityMaterial } from './unityMaterial';
@@ -212,6 +212,28 @@ describe('budgeted', () => {
     const report = texturesReport([needs('a', 70)], new Map(), many.over);
     expect(report.issues.filter(({ problem }) => problem === 'overBudget')).toHaveLength(6);
     expect(report).toMatchObject({ total: 70, shown: 0, loading: 64 });
+  });
+});
+
+describe('findingLooks', () => {
+  it("draws each slot as it will be while its textures load, before they're found: no clay first, then colors", () => {
+    const bark = fileMaterial('Bark', { color: [1, 1, 1], baseMap: use(named('bark.png')) });
+    const glass = fileMaterial('Glass', { color: [0.2, 0.4, 0.6], alpha: 'blend', opacity: 0.5 });
+    const input = version([bark, glass, fileMaterial('Leaves')], { materialRemaps: [{ slot: 'Leaves', guid: BARK_MAT }] });
+    const planned = plan(input, found({ textures: new Map([[lookupKey(named('bark.png')), file('Assets/Tree/bark.png')]]) }));
+    const loading = new Map<string, NeedState>(planned.needs.map((need) => [need.id, { kind: 'loading' }]));
+    const finding = findingLooks(slotSources(input));
+    // The textured slot reads as it will once found, its texture still loading.
+    expect(finding.get('Bark')).toEqual(slotLooks(planned, loading).get('Bark'));
+    // An untextured one in its own color, as it stays.
+    expect(finding.get('Glass')).toMatchObject({ color: [0.2, 0.4, 0.6], alpha: 'blend', opacity: 0.5, baseMap: null });
+    // A remapped one darkened as one waiting for its textures, its project material not read yet.
+    expect(finding.get('Leaves')!.color.every((channel) => channel > 0 && channel < 0.5)).toBe(true);
+  });
+
+  it('leaves a slot in clay where Unity shows its default material', () => {
+    const input = version([fileMaterial('Bark', { baseMap: use(named('bark.png')) })], { materialImport: 'none' });
+    expect(findingLooks(slotSources(input)).size).toBe(0);
   });
 });
 
