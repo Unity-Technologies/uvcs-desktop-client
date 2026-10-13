@@ -5,12 +5,22 @@ import { unityProjectOf } from './unityProject';
 const guid = (n: number): string => n.toString(16).padStart(32, '0');
 const meta = (n: number): string => `fileFormatVersion: 2\r\nguid: ${guid(n)}\r\nDefaultImporter:\r\n`;
 
-/** Files in memory, by workspace-relative path, with the folders they make; what is read is counted. */
-function memoryFiles(files: Map<string, string>) {
+/**
+ * Files in memory, by workspace-relative path, with the folders they make; what is read is counted. `failOnce`: reads
+ * of these that fail the first time, as a file another program holds open does (EMFILE, EBUSY). Paths are found
+ * whatever their Unicode form, as macOS finds them.
+ */
+function memoryFiles(files: Map<string, string>, failOnce: Set<string> = new Set()) {
   const reads = { lists: 0, heads: 0 };
+  const fail = (path: string): void => {
+    if (!failOnce.delete(path)) return;
+    throw Object.assign(new Error(`EBUSY: resource busy or locked, ${path}`), { code: 'EBUSY' });
+  };
   const disk: ProjectFiles = {
     async list(folder) {
       reads.lists++;
+      fail(folder);
+      folder = folder.normalize('NFC');
       const prefix = folder === '' ? '' : `${folder}/`;
       const entries = new Map<string, boolean>();
       for (const path of files.keys()) {
@@ -22,7 +32,8 @@ function memoryFiles(files: Map<string, string>) {
     },
     async head(path, length) {
       reads.heads++;
-      return files.get(path)?.slice(0, length) ?? null;
+      fail(path);
+      return files.get(path.normalize('NFC'))?.slice(0, length) ?? null;
     },
   };
   return { disk, reads };
@@ -103,5 +114,39 @@ describe('ProjectAssetIndex', () => {
     const index = new ProjectAssetIndex(unityProjectOf('Game/Assets/Tree.fbx')!, memoryFiles(files).disk, 'linux');
     expect(await index.pathOfGuid(guid(5), 'Game/Assets')).toBeNull();
     expect(await index.pathOfGuid(guid(6), 'Game/Assets')).toBeNull();
+  });
+
+  it('reads each folder once for finds made at the same time, and nothing for a GUID it lacks once it read all', async () => {
+    const { disk, reads } = memoryFiles(project(20));
+    const index = new ProjectAssetIndex(unityProjectOf('Game/Assets/Art/Tree/Tree.fbx')!, disk, 'linux');
+    await Promise.all([index.pathOfGuid(guid(999999), MODEL_FOLDER), index.pathOfGuid(guid(888888), MODEL_FOLDER)]);
+    expect(reads).toEqual({ lists: 24, heads: 201 });
+  });
+
+  it("doesn't keep a read that failed as an empty folder or a .meta without a GUID: the next find reads it again", async () => {
+    const files = project(1);
+    const { disk } = memoryFiles(files, new Set(['Game/Assets/Art/Tree', 'Game/Assets/Far0/rock3.png.meta']));
+    const index = new ProjectAssetIndex(unityProjectOf('Game/Assets/Art/Tree/Tree.fbx')!, disk, 'linux');
+    expect(await index.pathOfGuid(guid(1), MODEL_FOLDER)).toBeNull();
+    expect(await index.pathOfGuid(guid(1), MODEL_FOLDER)).toBe('Game/Assets/Art/Tree/Bark.mat');
+    expect(await index.pathOfGuid(guid(1003), MODEL_FOLDER)).toBe('Game/Assets/Far0/rock3.png');
+  });
+
+  it('on macOS, takes a change the watcher names in another Unicode form for the folder it listed', async () => {
+    const composed = 'Game/Assets/Ñandú Armería';
+    const files = new Map([
+      [`${composed}/espada.png.meta`, meta(1)],
+      [`${composed}/espada.png`, ''],
+    ]);
+    const { disk, reads } = memoryFiles(files);
+    const index = new ProjectAssetIndex(unityProjectOf(`${composed}/Espada.fbx`)!, disk, 'darwin');
+    expect(await index.pathOfGuid(guid(1), composed)).toBe(`${composed}/espada.png`);
+    files.set(`${composed}/escudo.png.meta`, meta(2));
+    files.set(`${composed}/escudo.png`, '');
+    index.noteChange({ content: true, pathsChanged: true, metadata: false, folders: [composed.normalize('NFD')] });
+    const before = reads.lists;
+    expect(await index.pathOfGuid(guid(2), composed.normalize('NFD'))).toBe(`${composed}/escudo.png`);
+    // The folder read once again, under one key.
+    expect(reads.lists).toBe(before + 1);
   });
 });
