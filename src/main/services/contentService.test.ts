@@ -128,6 +128,14 @@ describe('reading the bytes of a model companion', () => {
     expect(await service.readBytes(workspace, { kind: 'repositoryPath', path: '/Assets/Hero.fbx.meta', at: 'cs:4' })).toBeNull();
   });
 
+  it("reads a companion under an xlink that the tree hasn't as nothing", async () => {
+    const { service, lines } = content({
+      ls: cmFails(`Can't resolve the selector for the item /Assets/Shared/Hero.fbx.meta\n<?xml version="1.0" encoding="utf-8"?>\n<LsResults>\n  <LsItems />\n</LsResults>`),
+    });
+    expect(await service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Shared/Hero.fbx.meta', at: 'cs:3', repository: 'art@local' })).toBeNull();
+    expect(lines()).toEqual(['ls /Assets/Shared/Hero.fbx.meta --tree=cs:3 --xml']);
+  });
+
   it('fails on any other error, which is no answer about the file', async () => {
     const { service } = content({ cat: () => cmFails('Error: The server is unreachable.') });
     await expect(service.readBytes(await newWorkspace(), { kind: 'revision', revision: { revisionId: 4, repository: 'game@local' }, fileName: 'a.bin' })).rejects.toThrow('unreachable');
