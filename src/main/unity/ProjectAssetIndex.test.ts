@@ -236,5 +236,42 @@ describe('ProjectAssetIndex', () => {
       expect(await index.pathOfGuid(guid(99), MODEL_FOLDER)).toBeUndefined();
       expect(await index.pathOfGuid(guid(42), MODEL_FOLDER)).toBe(`${URP}/Lit.mat`);
     });
+
+    it('reads the cache again when Unity replaced a package in it, which the watcher never tells', async () => {
+      const files = withCache();
+      const { disk, reads } = memoryFiles(files);
+      const index = indexOf(disk);
+      expect(await index.pathOfGuid(guid(42), MODEL_FOLDER)).toBe(`${URP}/Lit.mat`);
+      expect(await index.pathOfGuid(guid(99), MODEL_FOLDER)).toBeNull();
+      // Unity upgrades URP: the old version's folder goes, the new one comes, and Packages' lock already said so.
+      const upgraded = `${CACHE}/com.unity.render-pipelines.universal@17.0.4`;
+      for (const path of [...files.keys()]) if (path.startsWith(URP)) files.delete(path);
+      files.set(`${upgraded}/Lit.mat`, 'mat');
+      files.set(`${upgraded}/Lit.mat.meta`, meta(42));
+      files.set(`${upgraded}/Decal.mat.meta`, meta(44));
+      expect(await index.pathOfGuid(guid(42), MODEL_FOLDER)).toBe(`${upgraded}/Lit.mat`);
+      expect(await index.pathOfGuid(guid(44), MODEL_FOLDER)).toBe(`${upgraded}/Decal.mat`);
+      // Read whole and unchanged, a miss costs one listing of the cache's top.
+      const before = reads.lists;
+      expect(await index.pathOfGuid(guid(99), MODEL_FOLDER)).toBeNull();
+      expect(reads.lists).toBe(before + 1);
+    });
+
+    it('finds a GUID of a package Unity added to the cache, which the watcher never tells', async () => {
+      const files = withCache();
+      const index = indexOf(memoryFiles(files).disk);
+      expect(await index.pathOfGuid(guid(44), MODEL_FOLDER)).toBeNull();
+      files.set(`${CACHE}/com.unity.shadergraph@17.0.3/Decal.mat.meta`, meta(44));
+      files.set(`${CACHE}/com.unity.shadergraph@17.0.3/Decal.mat`, 'mat');
+      expect(await index.pathOfGuid(guid(44), MODEL_FOLDER)).toBe(`${CACHE}/com.unity.shadergraph@17.0.3/Decal.mat`);
+    });
+
+    it("can't tell a GUID missing once the Library is deleted", async () => {
+      const files = withCache();
+      const index = indexOf(memoryFiles(files).disk);
+      expect(await index.pathOfGuid(guid(99), MODEL_FOLDER)).toBeNull();
+      for (const path of [...files.keys()]) if (path.startsWith('Game/Library/')) files.delete(path);
+      expect(await index.pathOfGuid(guid(99), MODEL_FOLDER)).toBeUndefined();
+    });
   });
 });
