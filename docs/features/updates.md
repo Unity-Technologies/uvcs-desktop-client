@@ -137,8 +137,13 @@ markup from the network.
 - **Third-party notices**: the build minifies every library into `out/`, which drops the license headers MIT, BSD, ISC
   and Apache ask to keep, so `npm run build` also writes `out/THIRD_PARTY_NOTICES.txt`: the name, version, license
   and LICENSE/NOTICE files of exactly the packages whose code is in the bundles (`thirdPartyNoticesCollector` in
-  `scripts/build/`, one plugin for main, preload, renderer and its workers; the text is `thirdPartyNotices`).
-  electron-builder.yml's `extraResources` ships it with the app's `LICENSE.md` and `NOTICE` as plain files in the
+  `scripts/build/`, one plugin for main, preload, renderer and its workers; the text is `thirdPartyNotices`). Every
+  package's entry carries a full license text, as Unity Legal requires: a package whose npm package ships no license
+  file gets the text in `SUPPLIED_LICENSES` (`scripts/build/suppliedLicenses.ts`, one reviewed file per package in
+  `scripts/build/suppliedLicenses/`, copied from its upstream repository, or the standard text of the license its
+  package.json names with its author when upstream has none either), and `npm run build` fails on a bundled package
+  with neither, or whose supplied text is for another license than the one it names. A new dependency that fails it
+  gets its upstream license text added there. electron-builder.yml's `extraResources` ships it with the app's `LICENSE.md` and `NOTICE` as plain files in the
   resources folder, outside `app.asar`.
 - **Licenses**: the app is Apache-2.0 (`LICENSE.md`, `NOTICE`), and every package in package-lock.json must have a
   permissive license (`PERMISSIVE_LICENSES`, `scripts/build/dependencyLicenses.test.ts`): a copyleft one fails the tests

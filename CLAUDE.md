@@ -225,6 +225,7 @@ Static tests keep the load-bearing rules; extend them rather than working around
 | `window/workspaceMenuCommands.test.ts`                    | app menu commands match the workspace commands                    |
 | `main/settings/ownConfig.test.ts`                         | only the first-run import reads the official client's config; nothing writes it |
 | `scripts/build/dependencyLicenses.test.ts`                | every package in package-lock.json has a permissive license (`PERMISSIVE_LICENSES`) |
+| `scripts/build/thirdPartyNotices.test.ts`, `suppliedLicenses.test.ts` | every bundled package's notice has a full license text (the build fails otherwise) |
 | `scripts/build/pinnedActions.test.ts`                     | every GitHub action is pinned to a commit SHA                     |
 | `scripts/build/pierreSkillVersion.test.ts`                | the `pierre-diffs` skill describes the @pierre/diffs version installed   |
 
