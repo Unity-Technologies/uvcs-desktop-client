@@ -163,9 +163,11 @@ describe('changeRows, for the materials', () => {
     ]);
   });
 
-  it('folds three or more materials turned the same way', () => {
+  it('folds three or more slots whose materials turned the same way, counting slots as it says', () => {
     const [row] = changeRows(['Glass', 'Visor', 'Bottle'].map((slot) => material({ kind: 'alpha', slot, before: 'opaque', after: 'blend' })));
-    expect(row).toMatchObject({ title: '3 materials now transparent' });
+    expect(row).toMatchObject({ title: '3 slots now transparent' });
+    const maps = ['Wood', 'Bark', 'Plank'].map((slot) => material({ kind: 'baseMap', slot, before: 'a.png', after: 'b.png' }));
+    expect(changeRows(maps)[0]!.title).toBe('Base map changed in 3 slots');
     expect(row!.items!.map((item) => item.label)).toEqual(['Glass', 'Visor', 'Bottle']);
   });
 
@@ -178,6 +180,9 @@ describe('changeRows, for the materials', () => {
     expect(titles([material({ kind: 'textureMissing', slot: 'Glass', texture: "Glass's base map" })])).toEqual(["Glass's base map isn't in the workspace"]);
     const gone = ['a.png', 'b.png', 'c.png'].map((texture) => material({ kind: 'textureMissing', slot: 'Wood', texture }));
     expect(changeRows(gone)[0]).toMatchObject({ tone: 'risk', title: "3 textures the materials use aren't in the workspace" });
+    // Counted once each, however many slots use them.
+    const shared = ['Wood', 'Bark', 'Plank'].map((slot) => material({ kind: 'textureMissing', slot, texture: 'planks.png' }));
+    expect(changeRows(shared)[0]).toMatchObject({ tone: 'risk', title: "planks.png isn't in the workspace, for 3 slots" });
   });
 });
 
