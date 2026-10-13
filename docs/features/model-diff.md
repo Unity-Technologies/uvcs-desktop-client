@@ -315,7 +315,8 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   this machine) a GUID missing elsewhere isn't known missing (`pathOfGuid` is undefined): no risk is told, and the
   look shows clay, as for any material not found. The watcher doesn't see `Library` (`ignore.conf` hides it), so the
   package cache is read again once `Packages` itself changes (Unity rewrites `manifest.json` or `packages-lock.json`
-  as it changes the packages it caches), or everything is dropped. As Unity also changes the cache unseen (an upgrade
+  as it changes the packages it caches); a change anywhere, which drops the rest of the index, keeps it, as it says
+  nothing of the cache. As Unity also changes the cache unseen (an upgrade
   replaces `@17.0.3` with `@17.0.4`; the `Library` deleted), a hit there whose `.meta` no longer says so drops the whole
   cache, and a miss over a cache read whole lists its top once more (one directory read) and reads it again where its
   packages differ (`packageCacheUnchanged`). The watcher keeps the rest current (`WorkspaceWatchers.listen`: a changed folder is read again when next needed, a change

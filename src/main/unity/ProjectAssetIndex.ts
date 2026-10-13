@@ -142,7 +142,14 @@ export class ProjectAssetIndex {
     if (change.folders.some((folder) => this.folderKey(folder) === this.folderKey(joined(this.project.root, 'Packages')))) this.forgetPackageCache();
   }
 
+  /**
+   * Drops what was read of the project, keeping the package cache: the watcher never sees it, so a change it saw says
+   * nothing of it (Unity's own changes there are caught by `packageCacheUnchanged` and a hit's `.meta` check).
+   */
   clear(): void {
+    const cache = this.folderKey(this.packageCache());
+    const keptCache = [...this.listings].filter(([key, listing]) => isUnder(key, cache) && listing.guidsWhole);
+    const wholePackageCache = this.wholePackageCache && keptCache.length === [...this.listings.keys()].filter((key) => isUnder(key, cache)).length;
     this.listings.clear();
     this.listingReads.clear();
     this.guidReads.clear();
@@ -152,7 +159,12 @@ export class ProjectAssetIndex {
     this.packageCacheRead = null;
     this.clears++;
     this.changes++;
-    this.wholeGuids = this.wholeNames = this.wholePackageCache = false;
+    this.wholeGuids = this.wholeNames = false;
+    for (const [key, listing] of keptCache) {
+      this.listings.set(key, listing);
+      for (const [guid, path] of listing.guids) this.byGuid.set(guid, path);
+    }
+    this.wholePackageCache = wholePackageCache;
   }
 
   /**
