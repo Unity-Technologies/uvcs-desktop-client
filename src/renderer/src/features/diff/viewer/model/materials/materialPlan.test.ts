@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { FoundFile } from '@shared/domain/unityAssets';
 import { DEFAULT_IMPORT_SETTINGS, type ModelImportSettings } from '../modelImportSettings';
 import type { FileMaterial } from '../parsedModel';
-import { assetsRequest, budgeted, lookupKey, materialTextureGuids, planVersion, slotLooks, texturesReport, type FoundAssets, type NeedState, type VersionPlan } from './materialPlan';
+import { assetsRequest, budgeted, lookupKey, materialTextureGuids, planVersion, slotLooks, texturesReport, type FoundAssets, type NeedState, type Side, type VersionPlan } from './materialPlan';
 import { slotSources, type ModelMaterialsInput } from './slotSources';
 import { fileMaterial, named, use } from './testing/testMaterials';
 import type { UnityMaterial } from './unityMaterial';
@@ -23,7 +23,7 @@ function found(overrides: Partial<FoundAssets> = {}): FoundAssets {
   return { textures: new Map(), paths: new Map(), guids: new Map(), materials: new Map(), importsPsb: false, ...overrides };
 }
 
-function plan(input: ModelMaterialsInput, assets: FoundAssets, side = 'after'): VersionPlan {
+function plan(input: ModelMaterialsInput, assets: FoundAssets, side: Side = 'after'): VersionPlan {
   return planVersion(input, slotSources(input), assets, MODEL, side);
 }
 
@@ -71,7 +71,7 @@ describe('planVersion and slotLooks', () => {
   it('keeps the base color under a glTF base map, as glTFast multiplies them', () => {
     const leaf = fileMaterial('Leaf', { color: [0.5, 1, 1], baseMap: use({ kind: 'gltfImage', image: 0 }) });
     const planned = plan(version([leaf], {}, 'glb'), found(), 'before');
-    expect(planned.needs).toEqual([{ id: 'before:image:0', name: 'image 1', where: { kind: 'gltfImage', image: 0 }, flipY: false }]);
+    expect(planned.needs).toEqual([{ id: 'before:image:0', name: 'image 1', where: { kind: 'gltfImage', side: 'before', image: 0 }, flipY: false }]);
     expect(slotLooks(planned, new Map([['before:image:0', { kind: 'ready', key: 'k', bitmap }]])).get('Leaf')?.color).toEqual([0.5, 1, 1]);
   });
 

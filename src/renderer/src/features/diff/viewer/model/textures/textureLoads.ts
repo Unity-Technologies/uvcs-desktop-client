@@ -7,6 +7,7 @@ import type { FoundFile } from '@shared/domain/unityAssets';
 import { api } from '../../../../../api/client';
 import type { TextureDecoded } from './decodeTexture';
 import { MAX_TEXTURE_FILE_BYTES } from './textureBudget';
+import { DecodeCache } from './decodeCache';
 import { decodeOffThread } from './textureWorkerSession';
 
 /** Where a texture's bytes come from: a workspace file, or bytes already at hand (an image a glTF holds). */
@@ -23,8 +24,7 @@ export interface TextureLoad {
 }
 
 /** The decoded bitmaps kept, by the pixels they hold (four bytes each). */
-const KEPT_BYTES = 384 * 1024 * 1024;
-const decodes = new Map<string, { decoded: Promise<TextureDecoded>; bytes: number }>();
+const decodes = new DecodeCache<Promise<TextureDecoded>>(384 * 1024 * 1024);
 
 export function textureKey(workspacePath: string, load: Omit<TextureLoad, 'key'>): string {
   const of = load.source.kind === 'workspaceFile' ? `${load.source.file.path}\0${load.source.file.size}\0${load.source.file.modified}` : load.source.id;
@@ -34,20 +34,15 @@ export function textureKey(workspacePath: string, load: Omit<TextureLoad, 'key'>
 /** The texture decoded, from the one decode of the same file version if there was one. */
 export function loadTexture(workspacePath: string, load: TextureLoad): Promise<TextureDecoded> {
   const kept = decodes.get(load.key);
-  if (kept) {
-    // Most recently used last: the first ones go when there are too many.
-    decodes.delete(load.key);
-    decodes.set(load.key, kept);
-    return kept.decoded;
-  }
-  const entry = { decoded: readAndDecode(workspacePath, load), bytes: load.longest * load.longest * 4 };
-  decodes.set(load.key, entry);
-  void entry.decoded.then((decoded) => {
-    if (decoded.kind === 'decoded') entry.bytes = decoded.bitmap.width * decoded.bitmap.height * 4;
-    else if (decoded.problem === 'unreadable') decodes.delete(load.key);
-    letGoOfOldest();
+  if (kept) return kept;
+  const decoded = readAndDecode(workspacePath, load);
+  // Sized as at most the budget's side until it is known; a decode that failed to read is tried again next time.
+  decodes.set(load.key, decoded, load.longest * load.longest * 4);
+  void decoded.then((result) => {
+    if (result.kind === 'decoded') decodes.resize(load.key, result.bitmap.width * result.bitmap.height * 4);
+    else if (result.problem === 'unreadable') decodes.delete(load.key);
   });
-  return entry.decoded;
+  return decoded;
 }
 
 async function readAndDecode(workspacePath: string, load: TextureLoad): Promise<TextureDecoded> {
@@ -64,16 +59,5 @@ async function readWorkspaceFile(workspacePath: string, file: FoundFile): Promis
   } catch (error) {
     // The read refuses a file past its size cap unread.
     return { kind: 'failed', problem: error instanceof Error && /too large/i.test(error.message) ? 'tooLarge' : 'unreadable' };
-  }
-}
-
-/** Drops the least recently used decodes past the bytes kept; a bitmap still drawn stays alive through its texture. */
-function letGoOfOldest(): void {
-  let total = 0;
-  for (const entry of decodes.values()) total += entry.bytes;
-  for (const [key, entry] of decodes) {
-    if (total <= KEPT_BYTES) return;
-    decodes.delete(key);
-    total -= entry.bytes;
   }
 }

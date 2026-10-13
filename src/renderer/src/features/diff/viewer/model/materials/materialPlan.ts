@@ -37,7 +37,8 @@ export interface FoundAssets {
 export interface TextureNeed {
   id: string;
   name: string;
-  where: { kind: 'file'; file: FoundFile } | { kind: 'gltfImage'; image: number };
+  /** A workspace file, or an image a version's glTF holds. */
+  where: { kind: 'file'; file: FoundFile } | { kind: 'gltfImage'; side: Side; image: number };
   /** UVs from the image's bottom (all but glTF). */
   flipY: boolean;
 }
@@ -116,8 +117,11 @@ function lookupOf(texture: Extract<FileTexture, { kind: 'named' }>, version: Mod
   return { name: texture.name, storedPaths: texture.storedPaths, remapGuid: remap?.guid ?? null };
 }
 
+/** Which version of the model. */
+export type Side = 'before' | 'after';
+
 /** Step 3. `side` keeps a glTF's own images apart from the other version's. */
-export function planVersion(version: ModelMaterialsInput, sources: Map<string, SlotSource>, found: FoundAssets, modelPath: string, side: string): VersionPlan {
+export function planVersion(version: ModelMaterialsInput, sources: Map<string, SlotSource>, found: FoundAssets, modelPath: string, side: Side): VersionPlan {
   const needs = new Map<string, TextureNeed>();
   const issues = new Map<string, TextureIssue>();
   const gltf = version.format === 'gltf' || version.format === 'glb';
@@ -156,7 +160,7 @@ export function planVersion(version: ModelMaterialsInput, sources: Map<string, S
       }
       case 'gltfImage': {
         const id = `${side}:image:${texture.image}`;
-        needs.set(id, { id, name: `image ${texture.image + 1}`, where: { kind: 'gltfImage', image: texture.image }, flipY: false });
+        needs.set(id, { id, name: `image ${texture.image + 1}`, where: { kind: 'gltfImage', side, image: texture.image }, flipY: false });
         return { need: id, ...transform };
       }
     }
