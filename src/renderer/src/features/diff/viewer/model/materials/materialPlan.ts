@@ -16,6 +16,7 @@ import type { AlphaMode, FileMaterial, FileTexture, TextureUse } from '../parsed
 import { MAX_TEXTURE_FILES, textureSideFor } from '../textures/textureBudget';
 import { textureFormatOf } from '../textures/textureFormats';
 import type { TextureProblem } from '../textures/textureProblems';
+import { isBuiltInGuid } from './builtInAssets';
 import type { ModelMaterialsInput, SlotSource } from './slotSources';
 import type { UnityMaterial } from './unityMaterial';
 
@@ -72,9 +73,42 @@ export interface TextureIssue {
   problem: TextureProblem;
 }
 
+/** Where a slot's material resolved to, by name: what the "What changed" panel compares (`materialChanges`). */
+export type ResolvedMaterial =
+  /** Unity's default material. */
+  | { kind: 'default' }
+  /** Remapped to a material the project hasn't: Unity shows its missing material. */
+  | { kind: 'missing' }
+  /** A `.mat` of the project: known by its GUID, named by its file name (and its path where names alike meet). */
+  | { kind: 'project'; guid: string; name: string; path: string }
+  /** The material the model file defines (an OBJ's `.mtl`'s). */
+  | { kind: 'file'; name: string };
+
+/** A texture a slot's material uses, found or not. */
+export interface SlotTexture {
+  /** The same for the same texture on both sides: its path when found, else its GUID or name. */
+  id: string;
+  /** Its file name; a `.mat`'s texture the workspace hasn't, by what it is to the slot ("Glass's base map"). */
+  name: string;
+  /** Not in the workspace. */
+  missing: boolean;
+  repeat: [number, number];
+  offset: [number, number];
+}
+
+/** A slot by name, with its material and the textures that material uses. */
+export interface ResolvedSlot {
+  slot: string;
+  material: ResolvedMaterial;
+  baseMap: SlotTexture | null;
+  normalMap: SlotTexture | null;
+}
+
 export interface VersionPlan {
   /** Null for a slot drawn in clay (Unity's default material). */
   slots: Map<string, PlannedSlot | null>;
+  /** By the same keys. */
+  resolved: Map<string, ResolvedSlot>;
   needs: TextureNeed[];
   issues: TextureIssue[];
 }
@@ -102,7 +136,7 @@ export function assetsRequest(version: ModelMaterialsInput, sources: Map<string,
 /** Step 2: the textures the `.mat` files read use, to look up by GUID. */
 export function materialTextureGuids(materials: Iterable<UnityMaterial | null>): string[] {
   const guids = new Set<string>();
-  for (const material of materials) for (const map of [material?.baseMap, material?.normalMap]) if (map) guids.add(map.guid);
+  for (const material of materials) for (const map of [material?.baseMap, material?.normalMap]) if (map && !isBuiltInGuid(map.guid)) guids.add(map.guid);
   return [...guids];
 }
 
@@ -113,7 +147,7 @@ export function lookupKey(texture: Extract<FileTexture, { kind: 'named' }>): str
 
 function lookupOf(texture: Extract<FileTexture, { kind: 'named' }>, version: ModelMaterialsInput): TextureLookup {
   const bare = texture.name.replace(/\.[^.]*$/, '');
-  const remap = version.settings.textureRemaps.find((candidate) => candidate.name === bare);
+  const remap = version.settings.textureRemaps.find((candidate) => candidate.name === bare && !isBuiltInGuid(candidate.guid));
   return { name: texture.name, storedPaths: texture.storedPaths, remapGuid: remap?.guid ?? null };
 }
 
@@ -132,7 +166,7 @@ export function planVersion(version: ModelMaterialsInput, sources: Map<string, S
       issues.set(name, { name, problem: 'missing' });
       return null;
     }
-    const fileName = file.path.slice(file.path.lastIndexOf('/') + 1);
+    const fileName = fileNameOf(file.path);
     if (textureFormatOf(fileName) === 'unsupported') {
       issues.set(fileName, { name: fileName, problem: 'unsupportedFormat' });
       return null;
@@ -151,19 +185,13 @@ export function planVersion(version: ModelMaterialsInput, sources: Map<string, S
     if (!use) return null;
     const transform = { repeat: use.repeat, offset: use.offset, rotation: use.rotation, channel: use.channel };
     const { texture } = use;
-    switch (texture.kind) {
-      case 'named':
-        return fileMap(found.textures.get(lookupKey(texture)), texture.name, transform);
-      case 'beside': {
-        const path = siblingPath(modelPath, texture.path);
-        return fileMap(path === null ? null : found.paths.get(path), texture.path.split('/').pop()!, transform);
-      }
-      case 'gltfImage': {
-        const id = `${side}:image:${texture.image}`;
-        needs.set(id, { id, name: `image ${texture.image + 1}`, where: { kind: 'gltfImage', side, image: texture.image }, flipY: false });
-        return { need: id, ...transform };
-      }
+    if (texture.kind === 'gltfImage') {
+      const id = `${side}:image:${texture.image}`;
+      needs.set(id, { id, name: imageName(texture.image), where: { kind: 'gltfImage', side, image: texture.image }, flipY: false });
+      return { need: id, ...transform };
     }
+    const located = locateFileTexture(texture, found, modelPath);
+    return fileMap(located.file, located.name, transform);
   };
 
   const fromFile = (material: FileMaterial): PlannedSlot => ({
@@ -181,8 +209,9 @@ export function planVersion(version: ModelMaterialsInput, sources: Map<string, S
   // A material's texture that isn't found is known by its GUID only: named by what it is to the slot.
   const fromUnity = (material: UnityMaterial, slot: string): PlannedSlot => {
     const color = linearOf(material.baseColor);
+    // One of Unity's own textures is there, though not drawn: no file to decode, nothing to say.
     const map = (texture: UnityMaterial['baseMap'], role: string): PlannedMap | null =>
-      texture && fileMap(found.guids.get(texture.guid), `${slot}'s ${role}`, { repeat: texture.scale, offset: texture.offset, rotation: 0, channel: 0 });
+      texture && !isBuiltInGuid(texture.guid) ? fileMap(found.guids.get(texture.guid), `${slot}'s ${role}`, { repeat: texture.scale, offset: texture.offset, rotation: 0, channel: 0 }) : null;
     return {
       color,
       colorWithMap: color,
@@ -203,7 +232,59 @@ export function planVersion(version: ModelMaterialsInput, sources: Map<string, S
   };
 
   const slots = new Map([...sources].map(([slot, source]) => [slot, slotOf(slot, source)]));
-  return { slots, needs: [...needs.values()], issues: [...issues.values()] };
+  const names = new Map(version.slots.map(({ key, name }) => [key, name]));
+  const resolved = new Map([...sources].map(([slot, source]) => [slot, resolvedSlot(names.get(slot) ?? slot, slot, source, found, modelPath)]));
+  return { slots, resolved, needs: [...needs.values()], issues: [...issues.values()] };
+}
+
+/** A file's material's texture in the workspace: its file, null when not found; and what names it meanwhile. */
+function locateFileTexture(texture: Exclude<FileTexture, { kind: 'gltfImage' }>, found: FoundAssets, modelPath: string): { file: FoundFile | null; id: string; name: string } {
+  if (texture.kind === 'named') return { file: found.textures.get(lookupKey(texture)) ?? null, id: lookupKey(texture), name: texture.name };
+  const path = siblingPath(modelPath, texture.path);
+  return { file: (path !== null && found.paths.get(path)) || null, id: texture.path, name: texture.path.split('/').pop()! };
+}
+
+/** What a slot (`key`, named `slot`) resolved to: its material by name, and the textures it uses. */
+function resolvedSlot(slot: string, key: string, source: SlotSource, found: FoundAssets, modelPath: string): ResolvedSlot {
+  const located = (at: { file: FoundFile | null; id: string; name: string }, repeat: [number, number], offset: [number, number]): SlotTexture => ({
+    id: at.file?.path ?? at.id,
+    name: at.file ? fileNameOf(at.file.path) : at.name,
+    missing: !at.file,
+    repeat,
+    offset,
+  });
+  const fileTexture = (use: TextureUse | null): SlotTexture | null => {
+    if (!use) return null;
+    const { texture } = use;
+    if (texture.kind === 'gltfImage') return { id: `image:${texture.image}`, name: imageName(texture.image), missing: false, repeat: use.repeat, offset: use.offset };
+    return located(locateFileTexture(texture, found, modelPath), use.repeat, use.offset);
+  };
+  const unityTexture = (texture: UnityMaterial['baseMap'], role: string): SlotTexture | null => {
+    if (!texture) return null;
+    if (isBuiltInGuid(texture.guid)) return { id: texture.guid, name: `Unity's built-in ${role}`, missing: false, repeat: texture.scale, offset: texture.offset };
+    return located({ file: found.guids.get(texture.guid) ?? null, id: texture.guid, name: `${key}'s ${role}` }, texture.scale, texture.offset);
+  };
+
+  if (source.kind === 'default') return { slot, material: { kind: 'default' }, baseMap: null, normalMap: null };
+  if (source.kind === 'file') return { slot, material: { kind: 'file', name: source.material.name }, baseMap: fileTexture(source.material.baseMap), normalMap: fileTexture(source.material.normalMap) };
+  const file = found.guids.get(source.guid);
+  if (!file) return { slot, material: { kind: 'missing' }, baseMap: null, normalMap: null };
+  const material = found.materials.get(source.guid) ?? null;
+  return {
+    slot,
+    material: { kind: 'project', guid: source.guid, name: fileNameOf(file.path).replace(/\.mat$/i, ''), path: file.path },
+    baseMap: unityTexture(material?.baseMap ?? null, 'base map'),
+    normalMap: unityTexture(material?.normalMap ?? null, 'normal map'),
+  };
+}
+
+function fileNameOf(path: string): string {
+  return path.slice(path.lastIndexOf('/') + 1);
+}
+
+/** A glTF's image the file holds, by its place in it. */
+function imageName(image: number): string {
+  return `image ${image + 1}`;
 }
 
 /** Step 4: the textures both versions need, each once, the first `MAX_TEXTURE_FILES` decoded at the budget's side. */

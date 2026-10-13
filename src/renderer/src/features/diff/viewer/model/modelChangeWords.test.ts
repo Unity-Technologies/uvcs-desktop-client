@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { changeRows } from './modelChangeWords';
 import type { ModelChange, NodeRef } from './modelChanges';
 import { formatLength, formatUnits } from './modelUnits';
+import type { MaterialChange } from './materials/materialChanges';
 
 const bone = (name: string, path = `Armature/${name}`): NodeRef => ({ name, path, kind: 'bone', after: path });
 const mesh = (name: string): NodeRef => ({ name, path: name, kind: 'mesh', before: name, after: name });
@@ -90,6 +91,124 @@ describe('changeRows, for the import settings', () => {
     const [row] = changeRows(lost);
     expect(row).toMatchObject({ tone: 'risk', title: 'The Humanoid avatar lost 3 of its bones' });
     expect(row!.items!.map((item) => item.label)).toEqual(['LeftHand → LeftHand_bone', 'LeftLowerArm → LeftLowerArm_bone', 'LeftUpperArm → LeftUpperArm_bone']);
+  });
+});
+
+describe('changeRows, for the materials', () => {
+  const material = (change: MaterialChange): ModelChange => ({ kind: 'material', change });
+  const project = (name: string, path = `Assets/Materials/${name}.mat`) => ({ kind: 'project' as const, guid: path, name, path });
+  const DEFAULT = { kind: 'default' as const };
+
+  it('tells where a slot takes its material from now, and from where before', () => {
+    const rows = changeRows([
+      material({ kind: 'source', slot: 'Metal', before: DEFAULT, after: project('Lantern_Metal') }),
+      material({ kind: 'source', slot: 'Body', before: { kind: 'file', name: 'Body' }, after: DEFAULT }),
+      material({ kind: 'source', slot: 'Ball', before: project('Ball_Planks'), after: { kind: 'file', name: 'Ball' } }),
+    ]);
+    expect(rows.map((row) => [row.tone, row.title, row.detail])).toEqual([
+      ['note', "Metal now uses the project's Lantern_Metal", "Was Unity's default material."],
+      ['note', "Body now uses Unity's default material", "Was the model's own material."],
+      ['note', "Ball now uses the model's own material", "Was the project's Ball_Planks."],
+    ]);
+  });
+
+  it("names a material of a registry package, which Unity keeps in Library/PackageCache, the package's", () => {
+    const lit = project('Lit', 'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Runtime/Materials/Lit.mat');
+    expect(changeRows([material({ kind: 'source', slot: 'Glass', before: project('Lantern_Glass'), after: lit })])[0]).toMatchObject({
+      title: "Glass now uses the package's Lit",
+      detail: "Was the project's Lantern_Glass.",
+    });
+    expect(changeRows([material({ kind: 'source', slot: 'Glass', before: lit, after: DEFAULT })])[0]!.detail).toBe("Was the package's Lit.");
+    // A folder of the project's Assets that happens to be named so is the project's.
+    const odd = project('Lit', 'Game/Assets/Vendor/Library/PackageCache/Lit.mat');
+    expect(changeRows([material({ kind: 'source', slot: 'Glass', before: DEFAULT, after: odd })])[0]!.title).toBe("Glass now uses the project's Lit");
+  });
+
+  it('names a project material by its folder too where another of its name was', () => {
+    const [row] = changeRows([material({ kind: 'source', slot: 'Ball', before: project('Wood', 'Assets/Props/Wood.mat'), after: project('Wood', 'Assets/Balls/Wood.mat') })]);
+    expect(row).toMatchObject({ title: "Ball now uses the project's Assets/Balls/Wood", detail: "Was the project's Assets/Props/Wood." });
+  });
+
+  it("tells a slot now showing Unity's missing material as a risk", () => {
+    expect(changeRows([material({ kind: 'source', slot: 'Glass', before: project('Lantern_Glass'), after: { kind: 'missing' } })])[0]).toMatchObject({
+      tone: 'risk',
+      title: "Glass now shows Unity's missing material",
+      detail: "It's remapped to a material the project doesn't have. Was the project's Lantern_Glass.",
+    });
+  });
+
+  it('folds three or more slots taking their materials from one place, naming each', () => {
+    const slots = ['Metal', 'Glass', 'Candle'].map((slot) => material({ kind: 'source', slot, before: DEFAULT, after: project(`Lantern_${slot}`) }));
+    const [row] = changeRows(slots);
+    expect(row).toMatchObject({ tone: 'note', title: "3 slots now use the project's materials" });
+    expect(row!.detail).toBeUndefined();
+    expect(row!.items!.map((item) => item.label)).toEqual(['Metal: Lantern_Metal', 'Glass: Lantern_Glass', 'Candle: Lantern_Candle']);
+  });
+
+  it('tells what changed within a material in a few words, naming the slot', () => {
+    expect(
+      titles([
+        material({ kind: 'baseMap', slot: 'Wood', before: 'planks.png', after: 'rock.png' }),
+        material({ kind: 'baseMap', slot: 'Bark', before: null, after: 'bark.png' }),
+        material({ kind: 'normalMap', slot: 'Wood', before: 'planks_n.png', after: null }),
+        material({ kind: 'baseColor', slot: 'Paint', before: '#C8A27A', after: '#8B5A2B' }),
+        material({ kind: 'alpha', slot: 'Glass', before: 'opaque', after: 'blend' }),
+        material({ kind: 'alpha', slot: 'Net', before: 'clip', after: 'opaque' }),
+        material({ kind: 'cutoff', slot: 'Fern', before: 0.5, after: 0.8 }),
+        material({ kind: 'doubleSided', slot: 'Leaf', now: true }),
+        material({ kind: 'opacity', slot: 'Visor', before: 0.4, after: 0.6 }),
+        material({ kind: 'tiling', slot: 'Floor', before: { repeat: [1, 1], offset: [0, 0] }, after: { repeat: [2, 2], offset: [0, 0] } }),
+        material({ kind: 'tiling', slot: 'Wall', before: { repeat: [1, 1], offset: [0, 0] }, after: { repeat: [1, 1], offset: [0.5, 0] } }),
+      ]),
+    ).toEqual([
+      'Wood: base map planks.png → rock.png',
+      'Bark: base map bark.png added',
+      'Wood: normal map planks_n.png removed',
+      'Paint: base color #C8A27A → #8B5A2B',
+      'Glass: now transparent',
+      'Net: now opaque',
+      'Fern: alpha cutoff 0.5 → 0.8',
+      'Leaf: now double-sided',
+      'Visor: opacity 40% → 60%',
+      'Floor: base map tiling 1 × 1 → 2 × 2',
+      'Wall: base map offset 0, 0 → 0.5, 0',
+    ]);
+  });
+
+  it('folds three or more slots whose materials turned the same way, counting slots as it says', () => {
+    const [row] = changeRows(['Glass', 'Visor', 'Bottle'].map((slot) => material({ kind: 'alpha', slot, before: 'opaque', after: 'blend' })));
+    expect(row).toMatchObject({ title: '3 slots now transparent' });
+    const maps = ['Wood', 'Bark', 'Plank'].map((slot) => material({ kind: 'baseMap', slot, before: 'a.png', after: 'b.png' }));
+    expect(changeRows(maps)[0]!.title).toBe('Base map changed in 3 slots');
+    expect(row!.items!.map((item) => item.label)).toEqual(['Glass', 'Visor', 'Bottle']);
+  });
+
+  it("tells materials it couldn't compare as a note, with what keeps it from it in plain words", () => {
+    expect(changeRows([{ kind: 'materialsNotCompared', reason: 'noLibrary' }])[0]).toMatchObject({
+      tone: 'note',
+      title: 'Materials not compared',
+      detail: 'Open the project in Unity once on this computer to compare them.',
+    });
+    expect(changeRows([{ kind: 'materialsNotCompared', reason: 'unread' }])[0]!.detail).toBe("The project's files couldn't all be read.");
+    expect(changeRows([{ kind: 'materialsNotCompared', reason: 'noProject' }])[0]!.detail).toBe("The model isn't in a Unity project.");
+    expect(changeRows([{ kind: 'materialsNotCompared', reason: 'outsidePackage' }])[0]!.detail).toBe("The project uses a package from a folder outside it, which isn't read.");
+  });
+
+  it("tells a texture the workspace lacks as a risk, and folds three of them", () => {
+    expect(changeRows([material({ kind: 'textureMissing', slot: 'Wood', texture: 'planks.png' })])[0]).toMatchObject({
+      tone: 'risk',
+      title: "Wood: planks.png isn't in the workspace",
+      detail: 'Unity shows the material without it.',
+    });
+    expect(titles([material({ kind: 'textureMissing', slot: 'Glass', texture: "Glass's base map" })])).toEqual(["Glass's base map isn't in the workspace"]);
+    const gone = ['a.png', 'b.png', 'c.png'].map((texture) => material({ kind: 'textureMissing', slot: 'Wood', texture }));
+    expect(changeRows(gone)[0]).toMatchObject({ tone: 'risk', title: "3 textures the materials use aren't in the workspace" });
+    // Counted once each, however many slots use them.
+    const shared = ['Wood', 'Bark', 'Plank'].map((slot) => material({ kind: 'textureMissing', slot, texture: 'planks.png' }));
+    expect(changeRows(shared)[0]).toMatchObject({ tone: 'risk', title: "planks.png isn't in the workspace, for 3 slots" });
+    // Its slots counted once each too: one slot using it as its base map and normal map is one slot.
+    const twice = [...shared, material({ kind: 'textureMissing', slot: 'Wood', texture: 'planks.png' })];
+    expect(changeRows(twice)[0]!.title).toBe("planks.png isn't in the workspace, for 3 slots");
   });
 });
 

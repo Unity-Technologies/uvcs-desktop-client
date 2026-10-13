@@ -20,7 +20,7 @@ describe('asset answers', () => {
 
   it("pairs each side's remapped materials with the files found, none while unanswered", () => {
     const asked = request({ guids: [MAT, BARK] });
-    expect(materialFiles([{ textures: [], guids: [file('Bark.mat'), null], paths: [], importsPsb: false }, undefined], [asked, asked])).toEqual([
+    expect(materialFiles([{ textures: [], guids: [file('Bark.mat'), null], paths: [], importsPsb: false, guidMisses: 'known' }, undefined], [asked, asked])).toEqual([
       [
         { guid: MAT, file: file('Bark.mat') },
         { guid: BARK, file: null },
@@ -42,7 +42,7 @@ describe('asset answers', () => {
   it("merges both rounds' GUIDs with the textures and paths found by key", () => {
     const first = request({ guids: [MAT], textures: [{ name: 'bark.png', storedPaths: ['T\\bark.png'], remapGuid: null }], paths: ['images/a.png'] });
     const second = request({ guids: [BARK] });
-    const found = foundAssets(first, { textures: [file('T/bark.png')], guids: [file('Bark.mat')], paths: [null], importsPsb: true }, second, { textures: [], guids: [file('bark.psd')], paths: [], importsPsb: true }, new Map([[MAT, material]]));
+    const found = foundAssets(first, { textures: [file('T/bark.png')], guids: [file('Bark.mat')], paths: [null], importsPsb: true, guidMisses: 'known' }, second, { textures: [], guids: [file('bark.psd')], paths: [], importsPsb: true, guidMisses: 'known' }, new Map([[MAT, material]]));
     expect(found.textures).toEqual(new Map([[lookupKey(named('bark.png', ['T\\bark.png'])), file('T/bark.png')]]));
     expect(found.paths).toEqual(new Map([['images/a.png', null]]));
     expect(found.guids).toEqual(new Map([[MAT, file('Bark.mat')], [BARK, file('bark.psd')]]));
