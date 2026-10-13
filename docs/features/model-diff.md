@@ -116,9 +116,13 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   whose materials may resolve differently (`materialsMayDiffer`: their slots' sources or their lookups differ), so a
   re-export that changed no material reads nothing, and never decoding a texture. Waiting for the look to resolve
   them was rejected: a change is a change, and the reads are the workspace's disk, no `cm` command; the one cost, a
-  GUID the project lacks, reads the project's index once, as the look would. Without a workspace, or for a version
-  with no path in it, they're not told, and the file's own list of textures named (`textures`) stands in; where they
-  are told, it goes, as the materials say which textures Unity uses.
+  GUID the project lacks, reads the project's index once, as the look would. They're not told (`materialChangesOf`
+  is null) without a workspace, for a version with no path in it or whose `.meta` read failed (`comparableVersions`),
+  or when the workspace couldn't answer for a side (`answerStateOf`): a find that failed, or GUIDs no project's index
+  looked up (`UnityAssetsAnswer.guidsIndexed`: a model outside a Unity project, as in a package's own repository),
+  which answer every asset "not found" without it being so. Then the file's own list of textures named (`textures`)
+  stands in; where they are told, or being read, it goes, as the materials say which textures Unity uses
+  (`whatChanged`).
 
 `changeRows` words them for the panel, with the line on why a risk matters in Unity, and folds three or more of a kind
 (`FOLD_FROM`: "Added 6 bones") into one row listing them. Lengths read in the unit that suits them (`formatLength`).

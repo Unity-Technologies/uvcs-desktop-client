@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
+import type { UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { gltfImageBytes } from '../gltfJson';
 import { textureLoadsOf, type GltfImage } from '../textures/textureLoadPlan';
 import { useTextureStates } from '../textures/useTextureStates';
 import { foundAssets, nothingFound, textureRequestOf } from './assetAnswers';
-import { materialChanges, materialsMayDiffer, type MaterialChange } from './materialChanges';
+import type { MaterialChange, MaterialSide } from './materialChanges';
+import { answerStateOf, comparableVersions, comparesMaterials, materialChangesOf, type AnswerState, type ComparisonInput } from './materialComparison';
 import { assetsRequest, budgeted, planVersion, slotLooks, texturesReport, type Side, type SlotLook, type TexturesReport, type VersionPlan } from './materialPlan';
 import { materialsInputOf, type MaterialVersion } from './materialVersion';
-import { materialsOffered, slotSources } from './slotSources';
+import { materialsOffered, slotSources, type SlotSource } from './slotSources';
 import { useMtlMaterials } from './useMtlMaterials';
 import { useUnityAssets, useUnityMaterials } from './useUnityAssets';
 import { useWorkspaceImportSettings } from './useWorkspaceImportSettings';
@@ -57,9 +59,14 @@ export function useModelMaterials(workspacePath: string, versions: Record<Side, 
     () => SIDES.map((side) => (inputs[side] && sources[side] && versions[side]?.path ? assetsRequest(inputs[side]!, sources[side]!, versions[side]!.path!) : null)),
     [inputs, sources, versions],
   );
-  const comparable = workspacePath !== '' && versions.before?.path != null && versions.after?.path != null;
-  const comparing =
-    comparable && Boolean(sources.before && sources.after) && materialsMayDiffer({ sources: sources.before!, request: sideRequests[0] ?? null }, { sources: sources.after!, request: sideRequests[1] ?? null });
+  const comparison = useMemo(
+    (): Pick<ComparisonInput, 'comparable' | 'sides'> => ({
+      comparable: comparableVersions(workspacePath, [versions.before, versions.after]),
+      sides: [sideOf(sources.before, sideRequests[0]), sideOf(sources.after, sideRequests[1])],
+    }),
+    [workspacePath, versions, sources, sideRequests],
+  );
+  const comparing = useMemo(() => comparesMaterials(comparison), [comparison]);
   const reading = active || comparing;
   const requests = useMemo(() => (reading ? sideRequests : NO_REQUESTS), [reading, sideRequests]);
   const firstAnswers = useUnityAssets(workspacePath, requests);
@@ -87,13 +94,13 @@ export function useModelMaterials(workspacePath: string, versions: Record<Side, 
   const loads = useMemo(() => textureLoadsOf(workspacePath, budget.needs, budget.longest, (side, image) => gltfImageOf(versions[side], image)), [workspacePath, budget, versions]);
   const states = useTextureStates(workspacePath, loads);
 
-  const changes = useMemo((): MaterialChange[] | null | undefined => {
-    if (!comparable) return null;
-    if (!sources.before || !sources.after) return undefined;
-    if (!comparing) return [];
-    const [before, after] = plans;
-    return before && after ? materialChanges(before, after) : undefined;
-  }, [comparable, comparing, sources, plans]);
+  const changes = useMemo(() => {
+    const answerOf = (i: number): AnswerState => {
+      const request = requests[i];
+      return request ? answerStateOf(request, firstAnswers[i], secondRequests[i] ?? null, secondAnswers[i], materials[i]) : 'reading';
+    };
+    return materialChangesOf({ ...comparison, answers: [answerOf(0), answerOf(1)], plans: [plans[0] ?? null, plans[1] ?? null] });
+  }, [comparison, requests, firstAnswers, secondRequests, secondAnswers, materials, plans]);
 
   return useMemo((): ModelMaterials => {
     if (!active) return { offered, looks: NO_LOOKS, report: null, changes };
@@ -130,4 +137,8 @@ function idOf(bytes: Uint8Array): number {
   let id = ids.get(bytes);
   if (id === undefined) ids.set(bytes, (id = ++lastId));
   return id;
+}
+
+function sideOf(sources: Map<string, SlotSource> | null | undefined, request: UnityAssetsRequest | null | undefined): MaterialSide | undefined {
+  return sources ? { sources, request: request ?? null } : undefined;
 }
