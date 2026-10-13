@@ -265,6 +265,28 @@ user `cm whoami` shows; `PendingChangesOnSwitchAction`, neutralized by `switchWi
 created (its automatic shelves, offered as left changes). Its merge tools (client.conf's `<MergeTools>`) aren't
 offered: the app finds the well-known tools itself, and the user adds any other (docs/features/merge.md).
 
+## Profile pictures (Gravatar)
+
+People show as their initials on their own color (`ui/Avatar`, `avatarColorOf`) until the user chooses to see their
+Gravatar pictures. Nothing goes to gravatar.com before that choice: it's a hash of each email address shown, and the
+user decides whether it leaves the machine.
+
+- **Off until chosen**: `showGravatar` and `gravatarChoiceAsked` both start false (`shared/domain/gravatarChoice.ts`).
+  Pictures show only when both are true (`showsGravatar`), checked in one place, the main process's `system.gravatar`
+  (`systemService`), which alone fetches (`GravatarCache`, `net.fetch`); the renderer only follows it
+  (`useGravatarSetting`, `setAvatarPictureSource`). Only users named by an email address are ever looked up
+  (`isEmailAddress`).
+- **Asked once, when people show**: the first avatar of someone named by an email address marks people as shown in
+  the window (`notePersonShown`, from `avatarImageFor`); the user's own account (the top bar, the account menu,
+  Settings' accounts, `ownAccount`) doesn't, so the question never comes at launch with only the user on screen. Then
+  a card in the toast corner (`GravatarPrompt`, `asksAboutGravatar`) asks "Show profile pictures?" with "Show pictures"
+  and "Not now". It has no close button and doesn't time out, as the question needs an answer: either one is saved
+  with `gravatarChoiceAsked` (`gravatarChoice`), and it never asks again, in this window or another. Quitting without
+  answering keeps pictures off and asks again the next time people show.
+- **Settings › Appearance › People** turns pictures on or off at any time; that's a choice too (`gravatarChoice`).
+- **Settings saved before the question existed** may hold `showGravatar: true` from when it was the default, which the
+  user never chose: `SettingsStore` reads them with pictures off until asked (`withGravatarAskedFirst`).
+
 ## Operation progress
 
 Long operations report a structured `OperationProgress` (`shared/domain/operation.ts`): a stage (`preparing`,
