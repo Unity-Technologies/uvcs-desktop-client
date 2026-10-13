@@ -94,5 +94,5 @@ export function texturesStat(report: TexturesReport): ModelStat | null {
   // Counting up while they load, a ring filling beside: what may take a while (a download) shows it's under way.
   const count = shown === total ? formatCount(total) : `${formatCount(shown)} of ${formatCount(total)}`;
   const busy = loading > 0 || finding;
-  return { label: 'Textures', before: null, after: count, tip: lines.join('\n'), ...(busy && { progress: shown / total }) };
+  return { label: 'Textures', before: null, after: count, tip: lines.join('\n'), ...(busy && { progress: finding ? null : shown / total }) };
 }
