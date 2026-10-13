@@ -37,6 +37,13 @@ describe('readUnityMaterial', () => {
     expect(readUnityMaterial(fade)?.alpha).toBe('blend');
   });
 
+  it("ignores a Built-in _Mode a URP or HDRP material kept from before its conversion: its own surface decides", () => {
+    const converted = unityMaterialYaml({ name: 'Rock', pipeline: 'urp' }).replace('    - _Metallic: 0', '    - _Metallic: 0\n    - _Mode: 3');
+    expect(readUnityMaterial(converted)?.alpha).toBe('opaque');
+    const hdrp = unityMaterialYaml({ name: 'Rock', pipeline: 'hdrp' }).replace('    - _Metallic: 0', '    - _Metallic: 0\n    - _Mode: 1');
+    expect(readUnityMaterial(hdrp)?.alpha).toBe('opaque');
+  });
+
   it('takes the first base map set: a null reference sets none', () => {
     // A URP material whose `_BaseMap` was cleared still has the `_MainTex` a Built-in material it was converted from had.
     const converted = unityMaterialYaml({ name: 'Rock', pipeline: 'urp', baseMap: { guid: BARK } }).replace(/(- _BaseMap:\n\s+m_Texture: )\{[^}]*\}/, '$1{fileID: 0}');
