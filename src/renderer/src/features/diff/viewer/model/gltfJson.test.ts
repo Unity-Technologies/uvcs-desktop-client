@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { gltfImageBytes, gltfImagePlace, gltfTextureImage } from './gltfJson';
+import { countCalls } from '@shared/testing/countCalls';
+import { gltfImageBytes, gltfImagePlace, gltfImagesOf, gltfTextureImage } from './gltfJson';
 
 /** A GLB: its JSON chunk (padded with spaces) and its binary chunk (padded with zeros), as glTF lays them out. */
 function glb(json: object, binary: Uint8Array): Uint8Array {
@@ -47,5 +48,18 @@ describe('glTF images', () => {
     expect(gltfImageBytes(model, 'glb', 0)).toBeNull();
     expect(gltfImageBytes(model, 'glb', 1)).toBeNull();
     expect(gltfImageBytes(model, 'fbx', 0)).toBeNull();
+  });
+
+  it("reads a version's JSON and decodes its data: buffer once, however many of its images are asked for", () => {
+    const pixels = new Uint8Array([...PNG_BYTES, ...PNG_BYTES, ...PNG_BYTES]);
+    const json = { images: [0, 1, 2].map((view) => ({ bufferView: view, mimeType: 'image/png' })), bufferViews: [0, 1, 2].map((view) => ({ buffer: 0, byteOffset: view * 7, byteLength: 7 })), buffers: [{ byteLength: 21, uri: `data:application/octet-stream;base64,${btoa(String.fromCharCode(...pixels))}` }] };
+    const bytes = new TextEncoder().encode(JSON.stringify(json));
+    const { result: images, calls: parses } = countCalls(JSON, 'parse', () => gltfImagesOf(bytes, 'gltf', {}));
+    expect(parses).toBe(1);
+    const { calls: decodes } = countCalls(globalThis, 'atob', () => [0, 1, 2].map((image) => images(image)));
+    expect(decodes).toBe(1);
+    const { calls: again } = countCalls(JSON, 'parse', () => gltfImagesOf(bytes, 'gltf', {})(0));
+    expect(again).toBe(0);
+    expect([...images(2)!.bytes]).toEqual([...PNG_BYTES]);
   });
 });
