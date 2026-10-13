@@ -9,7 +9,9 @@ export function needStatesOf(loads: ReadonlyMap<string, TextureLoad | null>, dec
 }
 
 /** The decodes the loads use, by key: a model left behind lets its bitmaps go (the decode cache keeps what it may). */
-export function onlyLoaded(decoded: ReadonlyMap<string, NeedState>, loads: ReadonlyMap<string, TextureLoad | null>): Map<string, NeedState> {
+export function onlyLoaded(decoded: ReadonlyMap<string, NeedState>, loads: ReadonlyMap<string, TextureLoad | null>): ReadonlyMap<string, NeedState> {
   const keys = new Set([...loads.values()].flatMap((load) => (load ? [load.key] : [])));
-  return new Map([...decoded].filter(([key]) => keys.has(key)));
+  const kept = [...decoded].filter(([key]) => keys.has(key));
+  // The same map when nothing goes: React then doesn't draw the view again for it.
+  return kept.length === decoded.size ? decoded : new Map(kept);
 }
