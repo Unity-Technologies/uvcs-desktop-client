@@ -24,7 +24,7 @@ const remapped = side({ materialImport: 'none', remapsWithoutMaterials: true, ma
 
 const plan = (material: 'default' | 'project'): VersionPlan => ({
   slots: new Map([['Glass', null]]),
-  resolved: new Map([['Glass', { slot: 'Glass', material: material === 'default' ? { kind: 'default' } : { kind: 'project', name: 'Lantern_Glass' }, baseMap: null, normalMap: null }]]),
+  resolved: new Map([['Glass', { slot: 'Glass', material: material === 'default' ? { kind: 'default' } : { kind: 'project', guid: GLASS_MAT, name: 'Lantern_Glass', path: 'Assets/Lantern/Lantern_Glass.mat' }, baseMap: null, normalMap: null }]]),
   needs: [],
   issues: [],
 });
@@ -36,7 +36,7 @@ function input(overrides: Partial<ComparisonInput> = {}): ComparisonInput {
 describe('materialChangesOf', () => {
   it("tells what changed once both sides' materials are answered", () => {
     expect(materialChangesOf(input())).toEqual([
-      { kind: 'source', slot: 'Glass', before: { kind: 'default' }, after: { kind: 'project', name: 'Lantern_Glass' } },
+      { kind: 'source', slot: 'Glass', before: { kind: 'default' }, after: { kind: 'project', guid: GLASS_MAT, name: 'Lantern_Glass', path: 'Assets/Lantern/Lantern_Glass.mat' } },
     ]);
   });
 

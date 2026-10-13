@@ -96,7 +96,7 @@ describe('changeRows, for the import settings', () => {
 
 describe('changeRows, for the materials', () => {
   const material = (change: MaterialChange): ModelChange => ({ kind: 'material', change });
-  const project = (name: string) => ({ kind: 'project' as const, name });
+  const project = (name: string, path = `Assets/Materials/${name}.mat`) => ({ kind: 'project' as const, guid: path, name, path });
   const DEFAULT = { kind: 'default' as const };
 
   it('tells where a slot takes its material from now, and from where before', () => {
@@ -110,6 +110,11 @@ describe('changeRows, for the materials', () => {
       ['note', "Body now uses Unity's default material", "Was the model's own material."],
       ['note', "Ball now uses the model's own material", "Was the project's Ball_Planks."],
     ]);
+  });
+
+  it('names a project material by its folder too where another of its name was', () => {
+    const [row] = changeRows([material({ kind: 'source', slot: 'Ball', before: project('Wood', 'Assets/Props/Wood.mat'), after: project('Wood', 'Assets/Balls/Wood.mat') })]);
+    expect(row).toMatchObject({ title: "Ball now uses the project's Assets/Balls/Wood", detail: "Was the project's Assets/Props/Wood." });
   });
 
   it("tells a slot now showing Unity's missing material as a risk", () => {

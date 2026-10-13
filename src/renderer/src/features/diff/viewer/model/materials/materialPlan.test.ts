@@ -125,7 +125,7 @@ describe('planVersion: what each slot resolved to', () => {
     // A .mat's texture the workspace hasn't is known by its GUID only: named by what it is to the slot.
     expect(resolved.get('Glass')).toEqual({
       slot: 'Glass',
-      material: { kind: 'project', name: 'Tree_Glass' },
+      material: { kind: 'project', guid: BARK_MAT, name: 'Tree_Glass', path: 'Assets/Materials/Tree_Glass.mat' },
       baseMap: { id: BARK_PSD, name: "Glass's base map", missing: true, repeat: [2, 2], offset: [0.5, 0] },
       normalMap: null,
     });

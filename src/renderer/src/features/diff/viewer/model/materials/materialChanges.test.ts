@@ -6,7 +6,8 @@ import { slotSources, type ModelMaterialsInput } from './slotSources';
 import { fileMaterial, named, use } from './testing/testMaterials';
 
 const DEFAULT: ResolvedMaterial = { kind: 'default' };
-const project = (name: string): ResolvedMaterial => ({ kind: 'project', name });
+/** A project's material, its GUID and file told by its name unless given. */
+const project = (name: string, path = `Assets/Materials/${name}.mat`): ResolvedMaterial => ({ kind: 'project', guid: path, name, path });
 const own = (name: string): ResolvedMaterial => ({ kind: 'file', name });
 
 const texture = (name: string, overrides: Partial<SlotTexture> = {}): SlotTexture => ({ id: `Assets/Textures/${name}`, name, missing: false, repeat: [1, 1], offset: [0, 0], ...overrides });
@@ -53,6 +54,12 @@ describe('materialChanges: where a slot takes its material from', () => {
       { kind: 'source', slot: 'Ball', before: project('Ball_Planks'), after: project('Ball_Rock') },
       { kind: 'source', slot: 'Body', before: own('Body'), after: project('Body_URP') },
     ]);
+  });
+
+  it('tells a project material swapped for another of the same name in another folder', () => {
+    const before = version({ Ball: { material: project('Wood', 'Assets/Props/Wood.mat') } });
+    const after = version({ Ball: { material: project('Wood', 'Assets/Balls/Wood.mat') } });
+    expect(materialChanges(before, after)).toEqual([{ kind: 'source', slot: 'Ball', before: project('Wood', 'Assets/Props/Wood.mat'), after: project('Wood', 'Assets/Balls/Wood.mat') }]);
   });
 
   it("tells a slot now remapped to a material the project hasn't, and nothing for one that already was", () => {
