@@ -7,6 +7,7 @@ import { downloadInstaller } from './downloadInstaller';
 import { installerAsset } from './installerAsset';
 import { needsManualInstall } from './macSignature';
 import { releaseFileUrl } from './releaseFeed';
+import { withoutStagingUserId } from './withoutStagingUserId';
 
 /** The operations changing a workspace, which installing waits for (`OperationTracker`), and what quitting to install does first. */
 type AroundInstalling = Pick<AppUpdatesDependencies, 'writesRunning' | 'writesFinished' | 'beforeRestart'>;
@@ -18,6 +19,8 @@ export function createAppUpdates(aroundInstalling: AroundInstalling): AppUpdates
   autoUpdater.autoInstallOnAppQuit = true;
   // The notes of every release since the running one, not just the latest: an update may skip a few.
   autoUpdater.fullChangelog = true;
+  // A check is a standard request: no installation id.
+  withoutStagingUserId(autoUpdater);
 
   return new AppUpdates({
     feed: autoUpdater,
