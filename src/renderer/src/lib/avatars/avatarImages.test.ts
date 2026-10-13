@@ -126,3 +126,18 @@ describe('the Gravatar setting', () => {
     expect(avatarImageFor('ana@example.com')).toBeInstanceOf(FakeImage);
   });
 });
+
+describe('people showing', () => {
+  it('are noted by every avatar but the user’s own account, pictures on or off', async () => {
+    vi.resetModules();
+    const { avatarImageFor } = await import('./avatarImages');
+    const { havePeopleShown } = await import('./peopleShown');
+
+    avatarImageFor('me@example.com', { ownAccount: true });
+    expect(havePeopleShown()).toBe(false);
+
+    avatarImageFor('ana@example.com');
+    expect(havePeopleShown()).toBe(true);
+    expect(fetched).toEqual([]);
+  });
+});

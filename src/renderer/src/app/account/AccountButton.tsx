@@ -21,7 +21,7 @@ export function AccountButton() {
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild>
         <button className={styles.trigger} aria-label="Account" data-tip={displayName(identity.user)} data-tip-sub={`${identity.user} · ${server}`}>
-          <Avatar user={identity.user} size={24} tip={null} />
+          <Avatar user={identity.user} size={24} tip={null} ownAccount />
         </button>
       </Popover.Trigger>
       <Popover.Portal>

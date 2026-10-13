@@ -45,7 +45,7 @@ export function AccountMenu({ server, identity, onDone }: AccountMenuProps) {
   return (
     <>
       <div className={styles.identity}>
-        <Avatar user={user} size={40} tip={null} />
+        <Avatar user={user} size={40} tip={null} ownAccount />
         <div className={styles.who}>
           <span className={styles.name}>{displayName(user)}</span>
           <span className={styles.user}>{user}</span>
