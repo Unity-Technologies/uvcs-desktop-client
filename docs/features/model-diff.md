@@ -244,8 +244,10 @@ choice comes back in the other modes. The merge cards' stills stay clay (`modelT
   from the model (its folder's subtree, then each folder above it, then `Assets` and the project's `Packages`, never
   `Library`), a lookup stopping at the first ring that answers; what Unity skips (`.hidden`, `Name~`) is left out.
   The watcher keeps it current (`WorkspaceWatchers.listen`: a changed folder is read again when next needed, a change
-  anywhere drops it, and so does the watch breaking or stopping); a GUID found is checked against its `.meta` once
-  more. Measured by hand on a project of 100,000 assets (1,000 folders): a GUID it lacks reads it all in about 2.1 s,
+  anywhere drops it, and so does the watch breaking or stopping; the app's own `cm` writes, whose events the watcher
+  drops, count as a change anywhere once they settle). It is kept only while the watcher sees the whole workspace
+  (`coverageOf` is `full`); otherwise each find reads afresh. A GUID found is checked against its `.meta` once more.
+  Changes inside folders `ignore.conf` hides from the watcher aren't seen: an `Assets` folder is versioned content. Measured by hand on a project of 100,000 assets (1,000 folders): a GUID it lacks reads it all in about 2.1 s,
   once; the next lookup reads nothing. Tests count the reads (`ProjectAssetIndex.test.ts`).
 - **Formats** (`textureFormatOf`), decoded in a worker of their own (`texture.worker`), never on the UI thread (where
   it can't start, textures don't show): PNG, JPEG, GIF, BMP, WebP by the browser (`createImageBitmap`); TGA, TIFF (LZW

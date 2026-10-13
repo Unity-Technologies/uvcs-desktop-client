@@ -29,7 +29,7 @@ async function writeAt(workspace: string, path: string, text: string): Promise<v
 const meta = (guid: string): string => `fileFormatVersion: 2\nguid: ${guid}\nTextureImporter:\n  serializedVersion: 13\n`;
 
 /** The service over a workspace, with the reads its project index makes counted and the watcher's events in hand. */
-function service(workspace: string, platform: NodeJS.Platform = process.platform, coverage: WatchCoverage | undefined = 'full') {
+function service(workspace: string, platform: NodeJS.Platform = process.platform, coverage: WatchCoverage | 'unwatched' = 'full') {
   const reads = { lists: 0, heads: 0 };
   const listeners: WorkspaceFilesListener[] = [];
   const counted = (path: string): ProjectFiles => {
@@ -39,7 +39,7 @@ function service(workspace: string, platform: NodeJS.Platform = process.platform
       head: (file, length) => (reads.heads++, disk.head(file, length)),
     };
   };
-  const unityAssets = createUnityAssetsService({ watchers: { listen: (listener) => (listeners.push(listener), () => undefined), coverageOf: () => coverage }, platform, filesOf: counted });
+  const unityAssets = createUnityAssetsService({ watchers: { listen: (listener) => (listeners.push(listener), () => undefined), coverageOf: () => (coverage === 'unwatched' ? undefined : coverage) }, platform, filesOf: counted });
   const changed = (change: Partial<WorkspaceChange>) => listeners.forEach((listener) => listener.changed(workspace, { content: true, pathsChanged: true, metadata: false, folders: null, ...change }));
   return { find: (request: Partial<UnityAssetsRequest>) => unityAssets.find(workspace, { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', textures: [], guids: [], paths: [], searchTexturesGlobally: false, ...request }), reads, changed };
 }
@@ -124,7 +124,7 @@ describe('unityAssets.find', () => {
 
   it("keeps no index of a workspace whose watcher doesn't see every change: each find reads afresh", async () => {
     const files = { 'Game/Assets/Art/Materials/Bark.mat': 'mat', 'Game/Assets/Art/Materials/Bark.mat.meta': meta(MAT_GUID) };
-    for (const coverage of ['partial', undefined] as const) {
+    for (const coverage of ['partial', 'unwatched'] as const) {
       const { find, reads } = service(await workspaceWith(files), process.platform, coverage);
       await find({ guids: [MAT_GUID] });
       const first = reads.lists;

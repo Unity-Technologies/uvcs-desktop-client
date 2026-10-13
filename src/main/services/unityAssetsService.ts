@@ -15,7 +15,7 @@ import { unityProjectOf, type UnityProject } from '../unity/unityProject';
 import type { WorkspaceWatchers } from '../watch/WorkspaceWatchers';
 
 interface UnityAssetsContext {
-  watchers: Pick<WorkspaceWatchers, 'listen'>;
+  watchers: Pick<WorkspaceWatchers, 'listen' | 'coverageOf'>;
   platform?: NodeJS.Platform;
   /** The disk as the project indexes read it; tests count the reads. */
   filesOf?: (workspacePath: string) => ProjectFiles;
@@ -31,7 +31,15 @@ export function createUnityAssetsService({ watchers, platform = process.platform
     unwatched: (workspacePath) => void indexes.delete(workspacePath),
   });
 
+  /**
+   * The project's index: kept while the workspace's watcher sees every change (what it doesn't see would leave the
+   * index wrong for the session); otherwise one for this find alone.
+   */
   function indexOf(workspacePath: string, project: UnityProject): ProjectAssetIndex {
+    if (watchers.coverageOf(workspacePath) !== 'full') {
+      indexes.delete(workspacePath);
+      return new ProjectAssetIndex(project, filesOf(workspacePath), platform);
+    }
     const ofWorkspace = indexes.get(workspacePath) ?? new Map<string, ProjectAssetIndex>();
     indexes.set(workspacePath, ofWorkspace);
     const index = ofWorkspace.get(project.root) ?? new ProjectAssetIndex(project, filesOf(workspacePath), platform);
