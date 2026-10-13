@@ -31,17 +31,19 @@ const meta = (guid: string): string => `fileFormatVersion: 2\nguid: ${guid}\nTex
 /** The service over a workspace, with the reads its project index makes counted and the watcher's events in hand. */
 function service(workspace: string, platform: NodeJS.Platform = process.platform, coverage: WatchCoverage | 'unwatched' = 'full') {
   const reads = { lists: 0, heads: 0 };
+  /** Every folder listed, in order. */
+  const listed: string[] = [];
   const listeners: WorkspaceFilesListener[] = [];
   const counted = (path: string): ProjectFiles => {
     const disk = diskProjectFiles(path);
     return {
-      list: (folder) => (reads.lists++, disk.list(folder)),
+      list: (folder) => (reads.lists++, listed.push(folder), disk.list(folder)),
       head: (file, length) => (reads.heads++, disk.head(file, length)),
     };
   };
   const unityAssets = createUnityAssetsService({ watchers: { listen: (listener) => (listeners.push(listener), () => undefined), coverageOf: () => (coverage === 'unwatched' ? undefined : coverage) }, platform, filesOf: counted });
   const changed = (change: Partial<WorkspaceChange>) => listeners.forEach((listener) => listener.changed(workspace, { content: true, pathsChanged: true, metadata: false, folders: null, ...change }));
-  return { find: (request: Partial<UnityAssetsRequest>) => unityAssets.find(workspace, { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', textures: [], guids: [], paths: [], searchTexturesGlobally: false, ...request }), reads, changed };
+  return { find: (request: Partial<UnityAssetsRequest>) => unityAssets.find(workspace, { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', textures: [], guids: [], paths: [], searchTexturesGlobally: false, ...request }), reads, listed, changed };
 }
 
 const lookup = (name: string, storedPaths: string[] = [], remapGuid: string | null = null) => ({ name, storedPaths, remapGuid });
@@ -152,6 +154,38 @@ describe('unityAssets.find', () => {
     const packageRepository = await workspaceWith({ 'Packages/com.studio.trees/Materials/Leaf.mat.meta': meta(MAT_GUID) });
     const answer = await service(packageRepository).find({ modelPath: 'Packages/com.studio.trees/Models/Tree.fbx', guids: [MAT_GUID] });
     expect(answer).toMatchObject({ guids: [null], guidMissesKnown: false });
+  });
+
+  it("finds a registry package's asset by GUID in the project's package cache, read only on a miss in Assets and Packages", async () => {
+    const LIT = '22222222222222222222222222222222';
+    const workspace = await workspaceWith({
+      'Game/Assets/Art/Tree/Materials/Bark.mat.meta': meta(MAT_GUID),
+      'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Runtime/Materials/Lit.mat': 'mat',
+      'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Runtime/Materials/Lit.mat.meta': meta(LIT),
+    });
+    const { find, listed } = service(workspace);
+    expect(paths((await find({ guids: [MAT_GUID] })).guids)).toEqual(['Game/Assets/Art/Tree/Materials/Bark.mat']);
+    expect(listed.filter((folder) => folder.startsWith('Game/Library'))).toEqual([]);
+    expect(await find({ guids: [LIT] })).toMatchObject({ guids: [{ path: 'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Runtime/Materials/Lit.mat' }], guidMissesKnown: true });
+    expect(await find({ guids: ['33333333333333333333333333333333'] })).toMatchObject({ guids: [null], guidMissesKnown: true });
+  });
+
+  it("can't tell a GUID missing in a project without a Library, never opened in Unity on this machine", async () => {
+    const workspace = await workspaceWith({ 'Game/Assets/Art/Tree/Materials/Bark.mat.meta': meta(MAT_GUID) });
+    expect(await service(workspace).find({ guids: [MAT_GUID] })).toMatchObject({ guidMissesKnown: true });
+    expect(await service(workspace).find({ guids: [MAT_GUID, BARK_GUID] })).toMatchObject({ guids: [{ path: 'Game/Assets/Art/Tree/Materials/Bark.mat' }, null], guidMissesKnown: false });
+    expect(await service(workspace).find({ textures: [lookup('bark.png', [], BARK_GUID)] })).toMatchObject({ textures: [null], guidMissesKnown: false });
+  });
+
+  it("reads the package cache again once the project's packages change, which the watcher sees in Packages", async () => {
+    const LIT = '22222222222222222222222222222222';
+    const workspace = await workspaceWith({ 'Game/Assets/Tree.fbx.meta': meta(MAT_GUID), 'Game/Packages/manifest.json': '{}', 'Game/Library/PackageCache/.keep': '' });
+    const { find, changed } = service(workspace);
+    expect((await find({ guids: [LIT] })).guids).toEqual([null]);
+    await writeAt(workspace, 'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat.meta', meta(LIT));
+    await writeAt(workspace, 'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat', 'mat');
+    changed({ folders: ['Game/Packages'] });
+    expect(paths((await find({ guids: [LIT] })).guids)).toEqual(['Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat']);
   });
 
   it('finds an asset of a local package by GUID', async () => {
