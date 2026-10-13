@@ -134,7 +134,7 @@ describe('unityAssets.find', () => {
     const LIT = '22222222222222222222222222222222';
     const files = { 'Game/Assets/Tree.fbx.meta': meta(MAT_GUID), 'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat.meta': meta(LIT) };
     const { find, listed } = service(await workspaceWith(files), process.platform, 'partial');
-    expect(await find({ guids: [LIT] })).toMatchObject({ guids: [null], guidMissesKnown: false });
+    expect(await find({ guids: [LIT] })).toMatchObject({ guids: [null], guidMisses: 'unread' });
     expect(listed.filter((folder) => folder.startsWith('Game/Library'))).toEqual([]);
   });
 
@@ -158,10 +158,10 @@ describe('unityAssets.find', () => {
 
   it("says whether GUIDs were looked up in a project's index: never for a model outside a Unity project, as in a package's own repository", async () => {
     const project = await workspaceWith({ 'Game/Assets/Art/Tree/Materials/Bark.mat.meta': meta(MAT_GUID) });
-    expect((await service(project).find({ guids: [MAT_GUID] })).guidMissesKnown).toBe(true);
+    expect((await service(project).find({ guids: [MAT_GUID] })).guidMisses).toBe('known');
     const packageRepository = await workspaceWith({ 'Packages/com.studio.trees/Materials/Leaf.mat.meta': meta(MAT_GUID) });
     const answer = await service(packageRepository).find({ modelPath: 'Packages/com.studio.trees/Models/Tree.fbx', guids: [MAT_GUID] });
-    expect(answer).toMatchObject({ guids: [null], guidMissesKnown: false });
+    expect(answer).toMatchObject({ guids: [null], guidMisses: 'noProject' });
   });
 
   it("finds a registry package's asset by GUID in the project's package cache, read only on a miss in Assets and Packages", async () => {
@@ -175,15 +175,15 @@ describe('unityAssets.find', () => {
     const { find, listed } = service(workspace);
     expect(paths((await find({ guids: [MAT_GUID] })).guids)).toEqual(['Game/Assets/Art/Tree/Materials/Bark.mat']);
     expect(listed.filter((folder) => folder.startsWith('Game/Library'))).toEqual([]);
-    expect(await find({ guids: [LIT] })).toMatchObject({ guids: [{ path: 'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Runtime/Materials/Lit.mat' }], guidMissesKnown: true });
-    expect(await find({ guids: ['33333333333333333333333333333333'] })).toMatchObject({ guids: [null], guidMissesKnown: true });
+    expect(await find({ guids: [LIT] })).toMatchObject({ guids: [{ path: 'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Runtime/Materials/Lit.mat' }], guidMisses: 'known' });
+    expect(await find({ guids: ['33333333333333333333333333333333'] })).toMatchObject({ guids: [null], guidMisses: 'known' });
   });
 
   it("can't tell a GUID missing in a project without a Library, never opened in Unity on this machine", async () => {
     const workspace = await workspaceWith({ 'Game/Assets/Art/Tree/Materials/Bark.mat': 'mat', 'Game/Assets/Art/Tree/Materials/Bark.mat.meta': meta(MAT_GUID) });
-    expect(await service(workspace).find({ guids: [MAT_GUID] })).toMatchObject({ guidMissesKnown: true });
-    expect(await service(workspace).find({ guids: [MAT_GUID, BARK_GUID] })).toMatchObject({ guids: [{ path: 'Game/Assets/Art/Tree/Materials/Bark.mat' }, null], guidMissesKnown: false });
-    expect(await service(workspace).find({ textures: [lookup('bark.png', [], BARK_GUID)] })).toMatchObject({ textures: [null], guidMissesKnown: false });
+    expect(await service(workspace).find({ guids: [MAT_GUID] })).toMatchObject({ guidMisses: 'known' });
+    expect(await service(workspace).find({ guids: [MAT_GUID, BARK_GUID] })).toMatchObject({ guids: [{ path: 'Game/Assets/Art/Tree/Materials/Bark.mat' }, null], guidMisses: 'noLibrary' });
+    expect(await service(workspace).find({ textures: [lookup('bark.png', [], BARK_GUID)] })).toMatchObject({ textures: [null], guidMisses: 'noLibrary' });
   });
 
   it("reads the package cache again once the project's packages change, which the watcher sees in Packages", async () => {
