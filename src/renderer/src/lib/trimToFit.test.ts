@@ -77,6 +77,10 @@ describe('trimFolderToFit', () => {
     expect(trimFolderToFit('Assets/Art/Models/heart_-_animated_model/', 25, measure)).toBe('Assets/…-_animated_model/');
   });
 
+  it('never drops folders without an ellipsis, even where the last folder would fit right after the first', () => {
+    expect(trimFolderToFit('Assets/Art/heart_model/', 19, measure)).toBe('Assets/…eart_model/');
+  });
+
   it('drops the last folder when too little of it would be left', () => {
     expect(trimFolderToFit('3DModels/heart_-_animated/', 14, measure)).toBe('3DModels/…/');
   });
@@ -101,6 +105,10 @@ describe('positionsInTrimmed', () => {
   it('moves positions after a folder cut in its middle', () => {
     // '3DModels/heart_-_an' + '…' + '_3d_model/' out of '3DModels/heart_-_animated_anatomical_3d_model/'.
     expect(positionsInTrimmed('3DModels/heart_-_animated_anatomical_3d_model/', '3DModels/heart_-_an…_3d_model/', [9, 20, 36])).toEqual([9, 20]);
+  });
+
+  it('moves positions after a last folder cut from its start', () => {
+    expect(positionsInTrimmed('Assets/Art/Models/heart_-_animated_model/', 'Assets/…-_animated_model/', [0, 18, 24])).toEqual([0, 8]);
   });
 
   it('drops positions cut from the end', () => {
