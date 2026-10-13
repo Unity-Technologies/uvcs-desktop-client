@@ -220,6 +220,14 @@ through the one invoke channel, and never open a window of their own: a link tha
 (`setWindowOpenHandler`, `shell.openExternal`). Only web pages open that way (`isWebAddress`): the OS would hand
 any other scheme (`file:`, `smb:`, `ms-msdt:`) to a program.
 
+## What leaves the device
+
+Besides `cm`, which talks only to the user's own servers, the app reaches two places, both listed with what they
+receive in `PRIVACY.md` at the repository root: Gravatar for profile pictures (`gravatarUrl`, `GravatarCache` in
+`main/system/gravatar.ts`) and GitHub for updates (`AppUpdates`, docs/features/updates.md). There is no telemetry,
+analytics or crash reporting. A change that sends anything new, or something more to either, updates `PRIVACY.md` in
+the same pull request.
+
 ## Errors
 
 Every error is the app's to tell, in its own UI; Electron's native "A JavaScript error occurred in the main process"
