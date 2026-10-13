@@ -39,6 +39,13 @@ export interface ModelImportSettings {
   searchTexturesGlobally: boolean;
 }
 
+/**
+ * Where a version's import settings came from: its own `.meta` (`meta`, even one without a ModelImporter, whose
+ * settings are the defaults); no `.meta` found for it (`none`: Unity's defaults); or a read of it that failed
+ * (`failed`: the defaults until it is read again).
+ */
+export type ImportSettingsSource = 'meta' | 'none' | 'failed';
+
 export const DEFAULT_IMPORT_SETTINGS: ModelImportSettings = {
   scaleFactor: 1,
   convertUnits: true,

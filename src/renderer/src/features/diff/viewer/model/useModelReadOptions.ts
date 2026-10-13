@@ -4,7 +4,7 @@ import type { ContentSource, ModelBytes } from '@shared/domain/content';
 import { api } from '../../../../api/client';
 import { queryKeys } from '../../../../api/queryKeys';
 import { contentCaching } from '../useDiffContents';
-import { DEFAULT_IMPORT_SETTINGS, readImportSettings, type ModelImportSettings } from './modelImportSettings';
+import { DEFAULT_IMPORT_SETTINGS, readImportSettings, type ImportSettingsSource, type ModelImportSettings } from './modelImportSettings';
 import { SiblingFinderContext, sourcePathOf, type DiffSide } from './modelSiblings';
 import type { ModelReadOptions } from './readModelFile';
 import { useModelCompanions } from './useModelCompanions';
@@ -24,11 +24,19 @@ export function useModelReadOptions(
 ): ModelReadOptions | null {
   const companions = useModelCompanions(workspacePath, side, source, model);
   const readSettings = useImportSettings(workspacePath, side, source, model !== undefined && knownSettings === undefined);
-  const settings = knownSettings ?? readSettings;
-  return useMemo(() => (companions && settings ? { companions, settings } : null), [companions, settings]);
+  const settings = knownSettings ? { settings: knownSettings, from: 'meta' as const } : readSettings;
+  return useMemo(() => (companions && settings ? { companions, settings: settings.settings, settingsFrom: settings.from } : null), [companions, settings]);
 }
 
-function useImportSettings(workspacePath: string, side: DiffSide, source: ContentSource, wanted: boolean): ModelImportSettings | null {
+interface SettingsRead {
+  settings: ModelImportSettings;
+  from: ImportSettingsSource;
+}
+
+const NO_META: SettingsRead = { settings: DEFAULT_IMPORT_SETTINGS, from: 'none' };
+const FAILED_READ: SettingsRead = { settings: DEFAULT_IMPORT_SETTINGS, from: 'failed' };
+
+function useImportSettings(workspacePath: string, side: DiffSide, source: ContentSource, wanted: boolean): SettingsRead | null {
   const findSibling = useContext(SiblingFinderContext);
   const path = sourcePathOf(source);
   const fileName = path?.split(/[\\/]/).pop();
@@ -36,14 +44,16 @@ function useImportSettings(workspacePath: string, side: DiffSide, source: Conten
   const read = useQuery({
     queryKey: queryKeys.inWorkspace(workspacePath, 'importSettings', meta),
     // A `.meta` that isn't there (outside a Unity project) is an answer, kept as any other: Unity's defaults.
-    queryFn: async () => {
+    queryFn: async (): Promise<SettingsRead> => {
       const bytes = await api.content.readBytes(workspacePath, meta!);
-      return bytes ? readImportSettings(new TextDecoder().decode(bytes)) : DEFAULT_IMPORT_SETTINGS;
+      return bytes ? { settings: readImportSettings(new TextDecoder().decode(bytes)), from: 'meta' } : NO_META;
     },
     enabled: meta !== null,
     ...(meta && contentCaching([meta])),
   });
-  // A read that failed (the server) shows the defaults meanwhile, and is read again, never kept as the answer.
-  if (meta === null || read.isError) return DEFAULT_IMPORT_SETTINGS;
+  // No sibling finder for the version (a revision in History) finds no `.meta`. A read that failed (the server) shows
+  // the defaults meanwhile, and is read again, never kept as the answer.
+  if (meta === null) return NO_META;
+  if (read.isError) return FAILED_READ;
   return read.data ?? null;
 }

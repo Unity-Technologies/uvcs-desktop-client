@@ -4,21 +4,21 @@ import type { ContentSource } from '@shared/domain/content';
 import { api } from '../../../../../api/client';
 import { queryKeys } from '../../../../../api/queryKeys';
 import { contentCaching } from '../../useDiffContents';
-import { DEFAULT_IMPORT_SETTINGS, readImportSettings, type ModelImportSettings } from '../modelImportSettings';
-import type { MaterialVersion } from './materialVersion';
+import { readImportSettings, type ModelImportSettings } from '../modelImportSettings';
+import { takesWorkspaceSettings, type MaterialVersion } from './materialVersion';
 
 const SIDES = ['before', 'after'] as const;
 
 /**
  * The import settings of the `.meta` the workspace has beside each version's model on disk, for a version none was
- * found for (`materialsInputOf`); null for the others, while reading, and where the workspace has none.
+ * found for (`takesWorkspaceSettings`); null for the others, while reading, and where the workspace has none.
  */
 export function useWorkspaceImportSettings(workspacePath: string, versions: Record<'before' | 'after', MaterialVersion | null>): Record<'before' | 'after', ModelImportSettings | null> {
   const metas = useMemo(
     () =>
       SIDES.map((side) => {
         const version = versions[side];
-        return version?.path && version.options.settings === DEFAULT_IMPORT_SETTINGS ? `${version.path}.meta` : null;
+        return version?.path && takesWorkspaceSettings(version.options) ? `${version.path}.meta` : null;
       }),
     [versions],
   );

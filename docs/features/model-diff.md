@@ -208,10 +208,12 @@ choice comes back in the other modes. The merge cards' stills stay clay (`modelT
 
 - **From the workspace, never the server.** Materials and textures are read from the workspace on disk as it is now,
   whatever version of the model shows (pending, Files, a changeset, history); only the model's own `.meta` is the
-  version's (its remaps, read with its import settings), and where none was found for the version (a last change
-  whose `.meta` changed since) the workspace's (`materialsInputOf`, `useWorkspaceImportSettings`), as Unity imports it
-  now: an FBX whose materials Unity doesn't make shows clay, never the file's own. No `cm` command is added (`api.unityAssets.find` reads the
-  disk only; `unityAssetsService.test.ts` checks it can't reach `cm`). Reading them from the server was rejected: one
+  version's (its remaps, read with its import settings). In a committed diff and in Files each side keeps its own; where
+  none was found for the version (`settingsFrom: 'none'`: a last change whose `.meta` changed since, a revision in
+  History or a merge, which find no sibling) the workspace's (`takesWorkspaceSettings`, `useWorkspaceImportSettings`),
+  as Unity imports it now: an FBX whose materials Unity doesn't make shows clay, never the file's own. A `.meta` whose
+  read failed (`'failed'`) shows the defaults until it is read again, never the workspace's look meanwhile. No `cm`
+  command is added (`api.unityAssets.find` reads the disk only; `unityAssetsService.test.ts` checks it can't reach `cm`). Reading them from the server was rejected: one
   `cm cat` per texture per side, on a server many people share, for a look whose textures have their own image diff.
   Without a workspace the look isn't offered. A revision of another repository (an xlinked one's) has no place in the
   workspace (`modelWorkspacePath`): only what its file holds shows.
