@@ -48,7 +48,7 @@ export function materialChangesOf(input: ComparisonInput): MaterialChange[] | nu
   return input.answers.includes('reading') || !before || !after ? undefined : materialChanges(before, after);
 }
 
-/** The reasons a person can act on first: the project isn't one, then it was never opened in Unity here. */
+/** The most specific first: no project, a package read from outside it, no Library, then a read unfinished. */
 const REASONS_FIRST: NotKnownReason[] = ['noProject', 'outsidePackage', 'noLibrary', 'unread'];
 
 /**
