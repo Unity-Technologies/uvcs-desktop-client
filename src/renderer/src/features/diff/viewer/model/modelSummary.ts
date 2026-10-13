@@ -5,7 +5,7 @@
 
 import { Box3, Vector3 } from 'three';
 import type { ModelMesh, ModelNodeKind, ParsedModel } from './parsedModel';
-import { placedPositionsOf } from './meshPlacement';
+import { isSkinned, placedPositionsOf, restingPlacementOf } from './meshPlacement';
 import { unitySpaceOf, worldMatricesOf } from './modelSpaces';
 import { countUniqueVertices, fingerprintOf, NORMAL_WELD_STEP } from './uniqueVertices';
 
@@ -44,6 +44,11 @@ export interface MeshSummary {
   blendShapes: string[];
   /** Bones the mesh is skinned to, by node key; empty for a mesh that isn't skinned. */
   bones: string[];
+  /** Placed by its bones (`placedPositionsOf`), not by its node: its node's own transform says nothing of where it is. */
+  skinned: boolean;
+  /** Where it is placed before any bone moves it, in Unity's space (`restingPlacementOf`), column-major: a turn or a
+   *  scale of the whole model is read from it. */
+  placement: number[];
   hasNormals: boolean;
   hasUv: boolean;
   /** UV1: lightmap UVs the artist made, which Unity's "Generate Lightmap UVs" would otherwise have to. */
@@ -96,7 +101,7 @@ export function modelSummary(model: ParsedModel): ModelSummary {
     // here and let go, so a big model never holds every mesh's placement at once.
     const placed = placedPositionsOf(mesh, { space, world }, new Float64Array(mesh.attributes.position.length));
     ownBounds[mesh.node] = boundsOf(placed);
-    return meshSummary(mesh, keys, placed);
+    return meshSummary(mesh, keys, placed, restingPlacementOf(mesh, { space, world }).elements);
   });
   const subtreeBounds = [...ownBounds];
   // Children come after their parents: walking back, each node's bounds are complete before its parent takes them.
@@ -139,7 +144,7 @@ export function modelSummary(model: ParsedModel): ModelSummary {
   };
 }
 
-function meshSummary(mesh: ModelMesh, keys: string[], placed: Float64Array): MeshSummary {
+function meshSummary(mesh: ModelMesh, keys: string[], placed: Float64Array, placement: number[]): MeshSummary {
   const { attributes } = mesh;
   const vertexCount = attributes.position.length / 3;
   const drawn = [
@@ -156,6 +161,8 @@ function meshSummary(mesh: ModelMesh, keys: string[], placed: Float64Array): Mes
     slots: mesh.slots.filter((_, slot) => mesh.groups.some((group) => group.slot === slot && group.count > 0)),
     blendShapes: mesh.blendShapes.map((shape) => shape.name),
     bones: mesh.skin ? mesh.skin.bones.map((bone) => keys[bone] ?? '') : [],
+    skinned: isSkinned(mesh),
+    placement,
     hasNormals: attributes.normal !== null,
     hasUv: attributes.uv !== null,
     hasLightmapUv: attributes.uv1 !== null,

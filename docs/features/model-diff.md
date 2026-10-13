@@ -85,9 +85,14 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
 - **The whole model**: resized (with its units as the cause when they changed), turned (around X, Y or Z when it is),
   moved off its pivot. Told from what every matched mesh agrees on (their placement, or where their geometry went for
   meshes still made the same way), never from the overall bounds, so adding a backpack isn't a resize and subdividing
-  a rock isn't a move. A resize must grow every axis alike: a sculpted ledge is a shape change.
+  a rock isn't a move. A resize must grow every axis alike: a sculpted ledge is a shape change. A mesh's placement
+  (`MeshSummary.placement`) is its node's world, or, skinned, the space it was bound in, so a glTF's skinned mesh
+  whose node alone turned (which places nothing) is no turn. Where geometry went is read of rigid meshes only: a
+  skinned one goes where its bones hold it, and a bone whose rest pose moved is told as that bone, not as the model
+  moved off its pivot.
 - **The hierarchy**: renamed, moved, removed (once, at the top of what went), added; nodes moved, turned or scaled on
-  their own; a node's pivot moved (the node moved, its geometry stayed). A unit change made up for in the root's scale
+  their own; a node's pivot moved (the node moved, its geometry stayed; not told of a skinned mesh's node, whose
+  pivot skins nothing). A unit change made up for in the root's scale
   moves nothing in Unity and isn't listed.
 - **Material slots**, model-wide as Unity remaps them by name: renamed (a name gone and another come in the same slot
   of the same mesh), removed, added; a mesh that uses another of the model's slots.

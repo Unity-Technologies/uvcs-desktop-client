@@ -24,8 +24,21 @@ export interface NodePlacement {
  */
 export function placedPositionsOf<T extends PlacedArray>(mesh: PlaceableMesh, { space, world }: NodePlacement, into: T): T {
   const { position, skinIndex, skinWeight } = mesh.attributes;
-  if (!mesh.skin || !skinIndex || !skinWeight) return transformed(position, world[mesh.node]!.elements, into);
-  return skinned(position, skinningMatrices(mesh.skin, space, world), skinIndex, skinWeight, into);
+  if (!isSkinned(mesh)) return transformed(position, world[mesh.node]!.elements, into);
+  return skinned(position, skinningMatrices(mesh.skin!, space, world), skinIndex!, skinWeight!, into);
+}
+
+/** Placed by its bones: a skin, and bones and weights for its vertices (`buildModelScene` skins the same ones). */
+export function isSkinned(mesh: PlaceableMesh): boolean {
+  return mesh.skin !== null && mesh.attributes.skinIndex !== null && mesh.attributes.skinWeight !== null;
+}
+
+/**
+ * Where the mesh is placed before any bone moves it: its node's world, or, skinned, the space it was bound in
+ * (`MeshSkin.bindMatrix`), which a glTF's own node doesn't move.
+ */
+export function restingPlacementOf(mesh: PlaceableMesh, { space, world }: NodePlacement): Matrix4 {
+  return isSkinned(mesh) ? space.clone().multiply(new Matrix4().fromArray(mesh.skin!.bindMatrix)) : world[mesh.node]!.clone();
 }
 
 /**
