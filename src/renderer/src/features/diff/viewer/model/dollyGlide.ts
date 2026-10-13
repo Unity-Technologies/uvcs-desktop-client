@@ -8,8 +8,8 @@ import { ZoomGlide } from '../../../../lib/zoomGlide';
 import { dolliedTo, MIN_DISTANCE, type OrbitView, type Vector } from './orbitCamera';
 
 /**
- * The glide zooms closeness, the distance's inverse, towards the point under the pointer (none: the target), reading
- * the view each frame, so an orbit during it keeps its turn. Anything else that sets the view stops it first.
+ * The glide zooms closeness, the distance's inverse, towards the point under the pointer (none: the target). Anything
+ * else that sets the view (a drag, F, the keys) stops it where it is (`useModelCamera`).
  */
 export function dollyGlide(view: () => OrbitView, onView: (view: OrbitView) => void, clock: FrameClock): ZoomGlide<Vector | null> {
   return new ZoomGlide<Vector | null>((point, closeness) => onView(dolliedTo(view(), 1 / closeness, point)), () => 1 / view().distance, clock, { min: 0, max: 1 / MIN_DISTANCE });

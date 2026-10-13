@@ -14,7 +14,7 @@ function camera(start: OrbitView = { target: [0, 0, 0], yaw: 0, pitch: 0, distan
     (next) => (view = next),
     frames.clock,
   );
-  return { glide, frames, view: () => view, orbit: (yaw: number) => (view = { ...view, yaw }) };
+  return { glide, frames, view: () => view };
 }
 
 describe('dollyGlide', () => {
@@ -31,16 +31,13 @@ describe('dollyGlide', () => {
     view().target.forEach((value, i) => expect(value).toBeCloseTo(point[i]! * (1 - 1 / NOTCH_IN), 10));
   });
 
-  it('compounds notches spun in a row, and keeps the turn an orbit gave meanwhile', () => {
-    const { glide, frames, view, orbit } = camera();
+  it('compounds notches spun in a row', () => {
+    const { glide, frames, view } = camera();
     glide.zoomStep(null, NOTCH_IN);
     frames.frame();
     glide.zoomStep(null, NOTCH_IN);
-    frames.frame();
-    orbit(1);
     frames.settle();
     expect(view().distance).toBeCloseTo(10 / NOTCH_IN / NOTCH_IN, 10);
-    expect(view().yaw).toBe(1);
   });
 
   it('stops where it is when something else sets the view', () => {

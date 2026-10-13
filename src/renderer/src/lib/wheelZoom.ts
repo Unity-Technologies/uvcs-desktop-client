@@ -1,9 +1,9 @@
 /**
- * Smooth zooming with the mouse wheel, for every view that zooms (the Branch Explorer, the model viewer). A trackpad
- * pinch streams many tiny deltas and is applied 1:1; a wheel notch is one big step, so it becomes an eased glide
- * instead. Each step multiplies an accumulated target (spinning during a glide compounds it and stretches the glide a
- * little, which reads as momentum); reversing direction starts over from the current zoom. The frame loop lives in
- * zoomGlide.ts.
+ * Smooth zooming with the mouse wheel, for the Branch Explorer and the model viewer (the image diff zooms its own way:
+ * `wheelZoomScale`). A trackpad pinch streams many tiny deltas and is applied 1:1; a wheel notch is one big step, so it
+ * becomes an eased glide instead. Each step multiplies an accumulated target (spinning during a glide compounds it and
+ * stretches the glide a little, which reads as momentum); reversing direction starts over from the current zoom. The
+ * frame loop lives in zoomGlide.ts.
  */
 /** Zoom change per wheel notch (about 11%). */
 const NOTCH_SENSITIVITY = 0.1;
