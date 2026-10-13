@@ -42,8 +42,10 @@ export interface UnityAssetsAnswer {
    */
   importsPsb: boolean;
   /**
-   * Whether a GUID answered null is known missing: false for a model outside any project (a package's own repository),
-   * where no project's index looks GUIDs up and every one is answered null without telling whether the asset exists.
+   * Whether every GUID answered null is known missing. False when one isn't: a model outside any project (a package's
+   * own repository, which no project's index looks up), a project without a `Library` (never opened in Unity on this
+   * machine: no package cache to look in), a read that couldn't finish (a file held, a change overtaking it), or a
+   * find that keeps no index (whose misses never read the package cache).
    */
   guidMissesKnown: boolean;
 }
