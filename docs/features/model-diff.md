@@ -318,7 +318,7 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   them has is looked for last in `Library/PackageCache`, where Unity keeps the registry packages it resolved (a URP
   material a model is remapped to), with the same head-only `.meta` reads: only on such a miss, as the cache holds
   thousands of package files, and never the rest of `Library`. Without a package in `Library/PackageCache` (no `Library`:
-  a project never opened in Unity on this machine; or packages not yet resolved there) a GUID missing elsewhere isn't known missing (`pathOfGuid` is undefined): no risk is told, and the
+  a project never opened in Unity on this machine; or packages not yet resolved there) a GUID missing elsewhere isn't known missing (`pathOfGuid` answers `GuidNotKnown`, `noLibrary`): no risk is told, and the
   look shows clay, as for any material not found. The watcher doesn't see `Library` (`ignore.conf` hides it), so the
   package cache is read again once `Packages` itself changes (Unity rewrites `manifest.json` or `packages-lock.json`
   as it changes the packages it caches); a change anywhere, which drops the rest of the index, keeps it, as it says
@@ -337,7 +337,8 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   whole. Only what isn't there is an answer: a read the disk refused (a `.meta` Unity or an antivirus holds, too many
   files open) is kept as nothing and read again, and at most 32 files are open at once (`diskProjectFiles`); a GUID is
   told missing (`pathOfGuid` null) only after whole reads no change overtook, of the project and its package cache:
-  when in doubt it is undefined, as a material told missing that isn't is worse than one not told. On macOS
+  when in doubt it says why it can't tell (`GuidNotKnown`, with each lookup: finds at once each get their own), as a
+  material told missing that isn't is worse than one not told. On macOS
   folders compare in one Unicode form (the watcher names them decomposed, listings may be composed). Changes inside
   folders `ignore.conf` hides from the watcher aren't seen: an `Assets` folder is versioned content. Measured by hand on
   a project of 100,000 assets (1,000 folders): a GUID it lacks reads it all in about 2.1 s, once; the next lookup reads

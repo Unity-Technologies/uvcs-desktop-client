@@ -71,8 +71,9 @@ export function createUnityAssetsService({ watchers, platform = process.platform
     };
     const byGuid = async (guid: string): Promise<FoundFile | null> => {
       const path = index ? await index.pathOfGuid(guid, modelFolder) : null;
-      if (path === undefined && index && guidMisses === 'known') guidMisses = index.whyNotKnown();
-      return found(path ?? null);
+      if (path === null || typeof path === 'string') return found(path);
+      if (guidMisses === 'known') guidMisses = path.notKnown;
+      return null;
     };
 
     const findTexture = async (lookup: TextureLookup): Promise<FoundFile | null> => {
