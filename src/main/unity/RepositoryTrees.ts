@@ -3,7 +3,8 @@
 // look's lookups (`unityAssetsService`) and a model's files beside it (`contentService.readBytes`: its `.meta`, a
 // glTF's `.bin`), so one `cm ls` of the model's folder answers them all, and a file the tree hasn't costs no command.
 
-import type { AssetsPoint } from '@shared/domain/unityAssets';
+import type { RevisionRef } from '@shared/domain/revision';
+import { BRANCH_TREE_LIFE_MS } from '@shared/domain/unityAssets';
 import type { CmClient } from '../cm/CmClient';
 import { isNotInTreeError } from '../cm/missingItem';
 import { parseTreeListing, treeListingArgs } from '../cm/treeListing';
@@ -11,7 +12,7 @@ import type { ProjectAssetIndex } from './ProjectAssetIndex';
 import { RepositoryAssetTree } from './RepositoryAssetTree';
 import type { RevisionDownloads } from './RevisionDownloads';
 
-/** A point's tree, when it was listed first, and the project indexes read over it (by project and model folder). */
+/** A point's tree, when it was listed first, and the project indexes read over it (by project, model folder and side). */
 export interface KeptTree {
   tree: RepositoryAssetTree;
   since: number;
@@ -20,11 +21,6 @@ export interface KeptTree {
 
 /** The points whose trees are kept, the latest used: both sides of a few diffs. */
 const KEPT_TREES = 8;
-/**
- * How long a branch head's tree is kept: a changeset's never changes, a branch's moves as people check in. Long enough
- * for the reads of the diff on screen, both sides and both rounds of lookups, to share one listing.
- */
-export const BRANCH_TREE_LIFE_MS = 60_000;
 
 interface RepositoryTreesOptions {
   cm: Pick<CmClient, 'query' | 'execute'>;
@@ -49,22 +45,26 @@ export class RepositoryTrees {
     this.now = now;
   }
 
-  /** The point's tree, listed once while kept: a branch head's for `BRANCH_TREE_LIFE_MS`. */
-  at(workspacePath: string, point: Extract<AssetsPoint, { kind: 'repository' }>): KeptTree {
-    const key = JSON.stringify([workspacePath, point]);
+  /**
+   * The point's tree, listed once while kept: a branch head's for `BRANCH_TREE_LIFE_MS`. One per point, whichever side
+   * asks: both sides of a diff share its listings, each seeing them with its own change undone (`view`'s `before`).
+   */
+  at(workspacePath: string, at: string): KeptTree {
+    const key = JSON.stringify([workspacePath, at]);
     const kept = this.trees.get(key);
     this.trees.delete(key);
-    if (kept && (point.at.startsWith('cs:') || this.now() - kept.since < BRANCH_TREE_LIFE_MS)) return this.trees.set(key, kept), kept;
+    if (kept && (at.startsWith('cs:') || this.now() - kept.since < BRANCH_TREE_LIFE_MS)) return this.trees.set(key, kept), kept;
     const source = {
-      // The model's folder is quick to list; a whole project may take a while, in a process of its own.
-      list: (folder: string, scope: 'near' | 'wide') => {
-        const args = treeListingArgs(folder, point.at);
-        const listed = scope === 'near' ? this.cm.query(args, { cwd: workspacePath }) : this.cm.execute(args, { cwd: workspacePath });
+      // A folder's children are quick to list, in a pooled `cm shell`; a subtree, however small it looks, may be a
+      // whole project, in a process of its own (`execute`), never holding a shell other reads wait for.
+      list: (folder: string, recursive: boolean) => {
+        const args = treeListingArgs(folder, at, recursive);
+        const listed = recursive ? this.cm.execute(args, { cwd: workspacePath }) : this.cm.query(args, { cwd: workspacePath });
         return listed.then(parseTreeListing, (error: unknown) => (isNotInTreeError(error) ? null : Promise.reject(error)));
       },
       read: (file: Parameters<RevisionDownloads['read']>[1], mayDownload: () => boolean) => this.downloads.read(workspacePath, file, mayDownload),
     };
-    const fresh = { tree: new RepositoryAssetTree(source, point.before, this.platform), since: this.now(), indexes: new Map<string, ProjectAssetIndex>() };
+    const fresh = { tree: new RepositoryAssetTree(source, this.platform), since: this.now(), indexes: new Map<string, ProjectAssetIndex>() };
     this.trees.set(key, fresh);
     for (const oldest of this.trees.keys()) {
       if (this.trees.size <= KEPT_TREES) break;
@@ -74,12 +74,11 @@ export class RepositoryTrees {
   }
 
   /**
-   * The revision of a workspace-relative file at a point whose tree `cm ls` lists (`listsTree`), from the listing of its
-   * folder; null where the tree hasn't it. Rejects where the tree couldn't be listed.
+   * The revision of a workspace-relative file beside a model at a point whose tree `cm ls` lists (`listsTree`), from
+   * its folder's listing (`fileBeside`); null where the tree hasn't it. Rejects where the tree couldn't be listed.
    */
-  async revisionAt(workspacePath: string, at: string, path: string) {
-    const folder = path.includes('/') ? path.slice(0, path.lastIndexOf('/')) : '';
-    const file = await this.at(workspacePath, { kind: 'repository', at }).tree.view(folder, folder, null).file(path);
+  async revisionAt(workspacePath: string, at: string, path: string): Promise<RevisionRef | null> {
+    const file = await this.at(workspacePath, at).tree.fileBeside(path);
     return file?.stored === 'repository' ? file.revision : null;
   }
 }

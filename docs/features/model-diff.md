@@ -223,9 +223,10 @@ folder, and main refuses a workspace file outside the workspace anyway (`workspa
 trusted.
 
 - **Read from the folder's listing**: at a changeset or a branch's head, `api.content.readBytes` reads a sibling
-  (`repositoryPath`) by its revision there, as the listing of its folder names it (`RepositoryTrees.revisionAt`:
-  one `cm ls --tree -R` of the folder, kept per point and shared with the Materials look's lookups, then one `cm cat
-  revid:`), through xlinks too. A sibling the tree hasn't, as a model without a `.meta`, costs no command at all: a
+  (`repositoryPath`) by its revision there, as the listing of its folder names it (`RepositoryTrees.revisionAt`,
+  `fileBeside`: the folder's children alone, `cm ls --tree` without `-R`, in a pooled `cm shell`, kept per point; or a
+  listing with everything below it the Materials look already asked; then one `cm cat revid:`), through xlinks too.
+  Never a whole subtree for one file: a model in `Assets` itself would list the project. A sibling the tree hasn't, as a model without a `.meta`, costs no command at all: a
   `serverpath:` then the tree asked in turn left two failing commands in the log for each.
 - **Absent is an answer**: `api.content.readBytes` reads a file that isn't there as null (the disk's `ENOENT`, `cm`'s
   "The item … does not exist": `isMissingItemError`; `cm ls --tree`'s "Can't resolve the selector for the item":
@@ -292,30 +293,44 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   offered. A model under an xlink is where the workspace has it, though its revision is the xlinked repository's: a
   diff names it by its workspace path, the xlink's folder included (`modelWorkspacePath`), and the tree's listing walks
   through the xlink, naming each file's revision in its own repository.
-- **At a point of the repository** (`RepositoryAssetTree`, kept per workspace and point by `RepositoryTrees`): the same
-  Unity search as on the disk, over what `cm ls <folder> --tree=<point> -R --format=…` lists there (`treeListingArgs`:
-  path, type, size, revision, hash, repository, changeset, parent revision). The model's folder is listed first, in a
-  pooled `cm shell` (most lookups end there: a glTF's images, a `Textures` folder of its own, its `.meta`); the
-  project's root only when a lookup reaches past it, once, in a process of its own (`execute`). Outside a Unity
-  project, only the model's folder is listed. A changeset's tree is kept for good, a branch head's for
-  `BRANCH_TREE_LIFE_MS` (people check in), the latest eight points; reads at once share one listing, one that failed
-  (the server) fails the find, never reads as "not there" (`TreeListingError`), and is asked again next time. Names
+- **At a point of the repository** (`RepositoryAssetTree`, one per workspace and point, kept by `RepositoryTrees`):
+  the same Unity search as on the disk, over what `cm ls <folder> --tree=<point> -R --format=…` lists there
+  (`treeListingArgs`: path, type, size, revision, hash, repository, changeset, parent revision). The listings are the
+  point's, whichever side asks: both sides of a diff share them, each seeing them through its own view with its change
+  undone (`view`'s `before`; keying the tree by the side too listed the same folder twice). The model's folder is listed
+  first (most lookups end there: a glTF's images, a `Textures` folder of its own); the project's root only when a
+  lookup reaches past it, once; a model right in the project's root or `Assets` lists the project once for both. Both
+  run in a process of their own (`execute`): a subtree may be a whole project, which must never hold a pooled shell
+  other reads wait for. Outside a Unity project, only the model's folder is listed. A changeset's tree is kept for
+  good, a branch head's for `BRANCH_TREE_LIFE_MS` (shared with the renderer's queries: people check in), the latest
+  eight points; reads at once share one listing, one that failed (the server) fails the find, never reads as "not
+  there" (`TreeListingError`), and is asked again next time. Names
   compare as the disk does (case aside on macOS and Windows). The project itself, its packages (`Packages/manifest.json`)
   and its `Library/PackageCache` are read on the disk: they are how this machine's Unity imports the project. A
-  GUID's search reads each `.meta` head by its revision, at most `MAX_META_DOWNLOADS` downloaded per point; past it
-  the GUID isn't known missing (`unread`).
+  GUID's search reads each `.meta` head by its revision, a folder's `.meta` files together (their downloads one batch,
+  where the index asks 16 at a time), at most `MAX_META_DOWNLOADS` downloaded per point; past it the GUID isn't known
+  missing (`unread`). The side before a changeset (Files' last change) undoes only the files of its own repository
+  (changeset numbers are per repository, an xlinked one's may match); a file it deleted isn't in the tree after it, and
+  isn't found.
 - **Reading a file found** (`api.unityAssets.read`, `RevisionDownloads`): a disk file from the disk; a repository's
   revision from the disk when the workspace's file at that path has its content (same size and MD5 as the listing's
   hash, the hash kept by path, size and time written), else downloaded. The reads asked at once (both versions'
   textures, a ring of `.meta` files) wait until each has checked the disk, then go in one `cm cat <spec>;<file>
-  <spec>;<file> …` (`catArgs`), which downloads them in one batch, in a process of its own; batches stop at
+  <spec>;<file> …` (`catArgs`), which downloads them in one batch, in a process of its own; a batch holds one
+  repository's revisions (an xlinked one's apart: `cm cat` resolves each repository's on its own) and stops at
   `MAX_BATCH_BYTES` (64 MB by the sizes listed, so the first textures show sooner) and at a command line Windows can
-  start; a folder whose path holds `;` takes each as `--file=`. `cm cat` writes every revision it has even when one
-  fails, so each read is told apart. A revision is downloaded once however many ask; the session keeps the latest
-  `MAX_KEPT_BYTES` (1 GB) of downloads in `uvcs-revisions-<pid>-…` under the OS's temp folder, a file let go read
-  again if a read still wanted it. The folder is deleted as the app quits (`dispose`, on `will-quit`), and those a
-  crashed or killed session left (their process gone; never another app's running beside it, as a development build
-  beside the installed one) as the next one starts (`removeLeftOvers`), before it makes its own. The renderer keys
+  start; a folder whose path holds `;` takes each as `--file=`. A revision listed past `MAX_MODEL_BYTES` is refused
+  unread. `cm cat` writes every revision it has even when one fails, so each read is told apart; after a failure a file
+  is kept only when its size and hash are the listed ones (one cut short by a dropped connection would serve a broken
+  texture for the session), and one that can't be told (the side before, size and hash unknown) is downloaded again
+  alone. A revision is downloaded once however many ask, each download to a file of its own (one let go and its
+  download again never meet); the session keeps the latest `MAX_KEPT_BYTES` (1 GB) of downloads in
+  `uvcs-revisions-<pid>-…` under the OS's temp folder, a file let go read again if a read still wanted it, the folder
+  made again before each batch (macOS and systemd-tmpfiles clean temp folders idle for days). It is deleted as the app
+  quits (`dispose`, on `will-quit`; a file Windows still holds leaves it, never failing the quit), and those a crashed
+  or killed session left (their process gone; never another app's running beside it, as a development build beside
+  the installed one; a pid Windows reused keeps one until that process ends) as the next one starts
+  (`removeLeftOvers`), before it makes its own. The renderer keys
   each read by the file's version (`foundFileKey`), and a texture need by it too: both versions of a model may find a
   texture at one path in two revisions, each shows its own. Reading the textures by `cm cat` one by one, as the
   sibling reads do, was rejected: a batch costs one round trip.

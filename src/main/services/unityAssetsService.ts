@@ -4,6 +4,7 @@
 // so a version's textures are the ones that go with it, never the disk's of another revision. Nothing outside the
 // workspace. A file found is read with `read`: the disk's, or its revision (`RevisionDownloads`).
 
+import { createHash } from 'node:crypto';
 import type { Stats } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { posix } from 'node:path';
@@ -104,13 +105,16 @@ export function createUnityAssetsService({ watchers, trees, downloads, platform 
 
   /** At a point of the repository: the model's folder listed first, the project's only when a lookup reaches past it. */
   function findInTree(workspacePath: string, request: UnityAssetsRequest, modelPath: string, project: UnityProject | null, point: Extract<AssetsPoint, { kind: 'repository' }>): Promise<UnityAssetsAnswer> {
-    const kept = trees.at(workspacePath, point);
-    const near = folderOf(modelPath);
+    const kept = trees.at(workspacePath, point.at);
+    const wide = project ? project.root : folderOf(modelPath);
+    // A model at the root or right in `Assets` would list its project as its folder: the project's listing serves both.
+    const near = project && [project.root, project.assets].includes(folderOf(modelPath)) ? wide : folderOf(modelPath);
     const library = project && { folder: project.root === '' ? 'Library' : `${project.root}/Library`, files: filesOf(workspacePath) };
-    const view: AssetTreeView = kept.tree.view(near, project ? project.root : near, library);
+    const view: AssetTreeView = kept.tree.view(near, wide, library, point.before);
     let index: ProjectAssetIndex | null = null;
     if (project) {
-      const key = `${project.root}\0${near}`;
+      // An index per side: its change undone, a side reads other GUIDs (the key holds the side's change, hashed).
+      const key = `${project.root}\0${near}\0${point.before ? createHash('sha1').update(JSON.stringify(point.before)).digest('hex') : ''}`;
       index = kept.indexes.get(key) ?? new ProjectAssetIndex(project, view.files, platform);
       kept.indexes.set(key, index);
     }
@@ -217,7 +221,10 @@ function refuseUnlikelyRevision({ revisionId, repository }: RevisionRef): void {
 function refuseUnlikelyPoint(point: AssetsPoint): void {
   if (point.kind === 'workspace') return;
   if (!listsTree(point.at) || /[;"\r\n]/.test(point.at) || point.at.length > MAX_UNITY_ASSET_PATH_LENGTH) throw new Error(`${point.at} can't be listed`);
-  if (point.before?.kind === 'changeset' && (!Number.isSafeInteger(point.before.changeset) || point.before.changeset < 0)) throw new Error('Not a changeset');
+  if (point.before?.kind === 'changeset') {
+    if (!Number.isSafeInteger(point.before.changeset) || point.before.changeset < 0) throw new Error('Not a changeset');
+    refuseUnlikelyRevision({ revisionId: 0, repository: point.before.repository });
+  }
   if (point.before?.kind === 'changes') {
     if (point.before.changes.length > MAX_CHANGED_ASSETS) throw new Error('Too many changes for one diff');
     for (const change of point.before.changes) {

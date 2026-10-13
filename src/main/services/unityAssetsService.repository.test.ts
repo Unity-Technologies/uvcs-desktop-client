@@ -6,7 +6,8 @@ import type { AssetsPoint, UnityAssetsRequest } from '@shared/domain/unityAssets
 import { cmFails, fakeCmClient, type CmAnswer } from '../cm/testing/fakeCmClient';
 import { treeListingOutput, type ListedRecord } from '../cm/testing/cmOutput';
 import type { RevisionFile } from '../unity/RevisionDownloads';
-import { BRANCH_TREE_LIFE_MS, RepositoryTrees } from '../unity/RepositoryTrees';
+import { BRANCH_TREE_LIFE_MS } from '@shared/domain/unityAssets';
+import { RepositoryTrees } from '../unity/RepositoryTrees';
 import { createUnityAssetsService } from './unityAssetsService';
 
 // The Materials look at a version's point of the repository (`AssetsPoint` `repository`): what `cm ls --tree` lists
@@ -89,14 +90,14 @@ describe('unityAssets.find at a point of the repository', () => {
       { path: '3DModels/izh-27/textures/izh-27_normal.png', size: 12670152, stored: 'repository', revision: { revisionId: 29684, repository: 'eco@local' }, hash: 'hash29684==' },
       null,
     ]);
-    expect(lsLines(fake)).toEqual([`query /3DModels/izh-27 --tree=${BRANCH}`]);
+    expect(lsLines(fake)).toEqual([`execute /3DModels/izh-27 --tree=${BRANCH}`]);
   });
 
   it("finds a texture past the model's folder in the project's listing, asked once, in a process of its own", async () => {
     const { find, fake } = await setUp(PROJECT);
     expect(paths((await find({ textures: [lookup('bark.png'), lookup('gone.png')] })).textures)).toEqual(['Game/Assets/Art/Textures/bark.png', null]);
     expect(paths((await find({ textures: [lookup('moss.png')] })).textures)).toEqual(['Game/Assets/Art/Textures/moss.png']);
-    expect(lsLines(fake)).toEqual(['query /Game/Assets/Art/Tree --tree=cs:12', 'execute /Game --tree=cs:12']);
+    expect(lsLines(fake)).toEqual(['execute /Game/Assets/Art/Tree --tree=cs:12', 'execute /Game --tree=cs:12']);
   });
 
   it('finds a remapped material by GUID through the .meta files of the point, read by revision', async () => {
@@ -116,7 +117,7 @@ describe('unityAssets.find at a point of the repository', () => {
     expect(lsLines(fake)).toHaveLength(2);
     later(BRANCH_TREE_LIFE_MS);
     await Promise.all([find(model), find(model, branch)]);
-    expect(lsLines(fake)).toEqual(['query /Game/Assets/Art/Tree --tree=cs:12', `query /Game/Assets/Art/Tree --tree=${BRANCH}`, `query /Game/Assets/Art/Tree --tree=${BRANCH}`]);
+    expect(lsLines(fake)).toEqual(['execute /Game/Assets/Art/Tree --tree=cs:12', `execute /Game/Assets/Art/Tree --tree=${BRANCH}`, `execute /Game/Assets/Art/Tree --tree=${BRANCH}`]);
   });
 
   it('lists again after a listing failed, and finds nothing where the point has no such folder', async () => {
@@ -129,6 +130,30 @@ describe('unityAssets.find at a point of the repository', () => {
     await expect(unityAssets.find(workspace, request)).rejects.toThrow('The server is down');
     expect(paths((await unityAssets.find(workspace, request)).paths)).toEqual(['Game/Assets/Art/Tree/Tree.fbx']);
     expect(paths((await unityAssets.find(workspace, { ...request, modelPath: 'Gone/Model.fbx', paths: ['Gone/a.png'] })).paths)).toEqual([null]);
+  });
+
+  it('lists the folder once for both sides of a diff, each seeing it with its own change', async () => {
+    const { find, fake } = await setUp(PROJECT);
+    const after: AssetsPoint = { kind: 'repository', at: BRANCH };
+    const before: AssetsPoint = { ...after, before: { kind: 'changes', changes: [{ path: 'Game/Assets/Art/Textures/bark.png', revision: { revisionId: 50, repository: 'eco@local' } }] } };
+    const request = { textures: [lookup('bark.png')] };
+    const [was, now] = await Promise.all([find(request, before), find(request, after)]);
+    expect(was.textures[0]).toMatchObject({ revision: { revisionId: 50 } });
+    expect(now.textures[0]).toMatchObject({ revision: { revisionId: 5 } });
+    expect(lsLines(fake)).toEqual([`execute /Game/Assets/Art/Tree --tree=${BRANCH}`, `execute /Game --tree=${BRANCH}`]);
+  });
+
+  it("lists a model's project once where its folder is the project's root or Assets, never the same subtree twice", async () => {
+    const { find, fake } = await setUp([...PROJECT, { path: 'Game/Assets/Rock.fbx', revid: 70 }]);
+    await find({ modelPath: 'Game/Assets/Rock.fbx', textures: [lookup('bark.png')], paths: ['Game/Assets/Rock.fbx'] });
+    expect(lsLines(fake)).toEqual(['execute /Game --tree=cs:12']);
+  });
+
+  it(".meta files of a folder are read together: their downloads go in one batch", async () => {
+    const { find, downloaded } = await setUp([...PROJECT, { path: 'Game/Assets/Art/Materials/Leaf.mat.meta', type: 'txt', revid: 13 }, { path: 'Game/Assets/Art/Materials/Leaf.mat', type: 'txt', revid: 14 }]);
+    await find({ guids: [MAT_GUID] });
+    const materials = downloaded.filter((file) => file.path.startsWith('Game/Assets/Art/Materials/'));
+    expect([...new Set(materials.map((file) => file.path))].sort()).toEqual(['Game/Assets/Art/Materials/Bark.mat.meta', 'Game/Assets/Art/Materials/Leaf.mat.meta']);
   });
 
   it("reads the side before of a diff: what the diff changed as it was, what it added gone, what it deleted there", async () => {
@@ -155,8 +180,15 @@ describe('unityAssets.find at a point of the repository', () => {
 
   it('reads the tree before a changeset: what it made as its parent revision, what it added gone', async () => {
     const { find } = await setUp(PROJECT);
-    const answer = await find({ textures: [lookup('bark.png'), lookup('moss.png')] }, { kind: 'repository', at: 'cs:12', before: { kind: 'changeset', changeset: 12 } });
+    const answer = await find({ textures: [lookup('bark.png'), lookup('moss.png')] }, { kind: 'repository', at: 'cs:12', before: { kind: 'changeset', changeset: 12, repository: 'eco@local' } });
     expect(answer.textures).toEqual([{ path: 'Game/Assets/Art/Textures/bark.png', size: -1, stored: 'repository', revision: { revisionId: 50, repository: 'eco@local' }, hash: null }, null]);
+  });
+
+  it("leaves a file under an xlink made in its own repository's changeset of the same number", async () => {
+    const xlinked = PROJECT.map((item) => (item.path.endsWith('moss.png') ? { ...item, repository: 'art@local' } : item));
+    const { find } = await setUp(xlinked);
+    const answer = await find({ textures: [lookup('moss.png')] }, { kind: 'repository', at: 'cs:12', before: { kind: 'changeset', changeset: 12, repository: 'eco@local' } });
+    expect(answer.textures[0]).toMatchObject({ revision: { revisionId: 7, repository: 'art@local' } });
   });
 
   it('compares names as the disk does: case aside on macOS and Windows, exactly on Linux', async () => {

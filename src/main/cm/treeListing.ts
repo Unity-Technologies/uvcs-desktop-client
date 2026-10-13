@@ -24,9 +24,12 @@ export interface ListedItem {
 
 const FIELDS = ['wkpath', 'type', 'size', 'revid', 'hash', 'repspec', 'changeset', 'parentrevid'];
 
-/** `cm ls` of a workspace-relative folder (`''` for the root) and everything below it, at `point` (`cs:12`, `br:/main`). */
-export function treeListingArgs(folder: string, point: string): string[] {
-  return ['ls', `/${folder}`, `--tree=${point}`, '-R', `--format=${recordFormat(FIELDS)}`];
+/**
+ * `cm ls` of a workspace-relative folder (`''` for the root) at `point` (`cs:12`, `br:/main`): with everything below
+ * it when `recursive`, else its children.
+ */
+export function treeListingArgs(folder: string, point: string, recursive: boolean): string[] {
+  return ['ls', `/${folder}`, `--tree=${point}`, ...(recursive ? ['-R'] : []), `--format=${recordFormat(FIELDS)}`];
 }
 
 /** The items listed, the folder itself included. */

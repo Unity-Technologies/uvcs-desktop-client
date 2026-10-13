@@ -14,10 +14,19 @@ export type AssetsPoint = { kind: 'workspace' } | { kind: 'repository'; at: stri
 
 /**
  * The side before a change, at the tree after it: `changes`, the files a diff changed, each as it was before it (none:
- * the diff added it); `changeset`, every file the changeset `at` names changed, as it was before it (its parent
- * revision), as the tree's listing tells.
+ * the diff added it); `changeset`, every file of `repository` the changeset made, as it was before it (its parent
+ * revision), as the tree's listing tells. Changeset numbers are per repository: a file under an xlink made in its own
+ * repository's changeset of the same number stays. A file the changeset deleted isn't in the tree after it: the side
+ * before doesn't find it.
  */
-export type AssetsBefore = { kind: 'changes'; changes: ChangedAsset[] } | { kind: 'changeset'; changeset: number };
+export type AssetsBefore = { kind: 'changes'; changes: ChangedAsset[] } | { kind: 'changeset'; changeset: number; repository: string };
+
+/**
+ * How long a branch head's tree is taken as it was listed, by main (`RepositoryTrees`) and the renderer's queries
+ * alike: a changeset's never changes, a branch's moves as people check in. Long enough for the reads of the diff on
+ * screen, both sides and both rounds of lookups, to share one listing.
+ */
+export const BRANCH_TREE_LIFE_MS = 60_000;
 
 /** A file a diff changed, as it was on the side before: its revision there, or null where it wasn't there yet. */
 export interface ChangedAsset {

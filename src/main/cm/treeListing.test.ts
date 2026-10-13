@@ -3,9 +3,11 @@ import { formatOutput, treeListingOutput } from './testing/cmOutput';
 import { parseTreeListing, treeListingArgs } from './treeListing';
 
 describe('treeListingArgs', () => {
-  it('lists a folder and everything below it at a point, the root as /', () => {
-    expect(treeListingArgs('Game/Assets', 'cs:12').slice(0, 4)).toEqual(['ls', '/Game/Assets', '--tree=cs:12', '-R']);
-    expect(treeListingArgs('', 'br:/main/task')[1]).toBe('/');
+  it('lists a folder and everything below it at a point, or its children alone, the root as /', () => {
+    expect(treeListingArgs('Game/Assets', 'cs:12', true).slice(0, 4)).toEqual(['ls', '/Game/Assets', '--tree=cs:12', '-R']);
+    expect(treeListingArgs('Game/Assets', 'cs:12', false).slice(0, 3)).toEqual(['ls', '/Game/Assets', '--tree=cs:12']);
+    expect(treeListingArgs('Game/Assets', 'cs:12', false)).not.toContain('-R');
+    expect(treeListingArgs('', 'br:/main/task', true)[1]).toBe('/');
   });
 });
 

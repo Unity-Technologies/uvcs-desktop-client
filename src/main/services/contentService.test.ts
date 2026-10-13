@@ -129,6 +129,7 @@ describe('reading the bytes of a model companion', () => {
 
     expect(new TextDecoder().decode(bytes!)).toBe('BIN');
     expect(commands.map(({ via, args }) => [via, args[0], args[1]])).toEqual([
+      // Its children alone, never the subtree: a model in a big folder lists only that folder.
       ['query', 'ls', '/Assets'],
       ['query', 'cat', 'revid:41@eco@local'],
       ['query', 'cat', 'revid:42@eco@local'],
@@ -142,8 +143,7 @@ describe('reading the bytes of a model companion', () => {
     expect(await service.readBytes(workspace, { kind: 'workspaceFile', path: 'Assets/Hero.fbx.meta' })).toBeNull();
     expect(await service.readBytes(workspace, { kind: 'repositoryPath', path: '/Assets/Hero.fbx.meta', at: 'cs:4' })).toBeNull();
     expect(await service.readBytes(workspace, { kind: 'repositoryPath', path: '/Assets/Shared/Hero.fbx.meta', at: 'cs:4', repository: 'art@local' })).toBeNull();
-    // The listing of `/Assets` answers for `/Assets/Shared` too: one command.
-    expect(lines().map((line) => line.split(' --format')[0])).toEqual(['ls /Assets --tree=cs:4 -R']);
+    expect(lines().map((line) => line.split(' --format')[0])).toEqual(['ls /Assets --tree=cs:4', 'ls /Assets/Shared --tree=cs:4']);
   });
 
   it('reads a companion under an xlink by its revision in the xlinked repository, as the listing names it', async () => {
@@ -162,7 +162,7 @@ describe('reading the bytes of a model companion', () => {
     it.each(['cs:3', 'br:/main'])('reads it as nothing at %s, where the tree has no such folder', async (at) => {
       const { service, lines } = content({ cat: notFound, ls: notInTree });
       expect(await service.readBytes(await newWorkspace(), { kind: 'repositoryPath', path: '/Assets/Crate.fbx.meta', at })).toBeNull();
-      expect(lines().map((line) => line.split(' --format')[0])).toEqual([`ls /Assets --tree=${at} -R`]);
+      expect(lines().map((line) => line.split(' --format')[0])).toEqual([`ls /Assets --tree=${at}`]);
     });
 
     it.each(['sh:2', 'lb:v1.0'])("reads it as nothing at %s, whose tree cm ls can't list, from its one failing cm cat", async (at) => {
