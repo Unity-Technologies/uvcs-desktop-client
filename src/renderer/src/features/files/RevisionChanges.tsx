@@ -2,9 +2,8 @@ import { useMemo, type ReactNode } from 'react';
 import type { ContentSource } from '@shared/domain/content';
 import type { TreeItem } from '@shared/domain/explorer';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
-import { otherRepository } from '@shared/domain/repository';
 import { useWorkspaceInfo } from '../../app/workspace/useWorkspace';
-import { AssetsPointContext, lastChangeAssetsPoint } from '../diff/viewer/model/assetsPoints';
+import { AssetsPointContext, inWorkspaceRepository, lastChangeAssetsPoint } from '../diff/viewer/model/assetsPoints';
 import { SiblingFinderContext } from '../diff/viewer/model/modelSiblings';
 import { lastChangeSibling } from './lastChangeSibling';
 
@@ -28,8 +27,8 @@ export function RevisionChanges({ workspacePath, item, listings, title }: Revisi
   const previous: ContentSource =
     item.parentRevisionId > 0 ? { kind: 'revision', revision: { revisionId: item.parentRevisionId, repository }, fileName: item.path } : { kind: 'empty' };
   const findSibling = useMemo(() => lastChangeSibling(item, listings), [item, listings]);
-  const inWorkspaceRepository = !otherRepository(repository, useWorkspaceInfo().data?.repository);
-  const findAssetsPoint = useMemo(() => lastChangeAssetsPoint(item.changeset, inWorkspaceRepository), [item.changeset, inWorkspaceRepository]);
+  const inWorkspace = inWorkspaceRepository(repository, useWorkspaceInfo().data?.repository);
+  const findAssetsPoint = useMemo(() => lastChangeAssetsPoint(item.changeset, repository, inWorkspace), [item.changeset, repository, inWorkspace]);
 
   return (
     <SiblingFinderContext.Provider value={findSibling}>

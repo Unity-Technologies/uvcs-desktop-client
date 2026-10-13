@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { AssetsPoint } from '@shared/domain/unityAssets';
 import { DEFAULT_IMPORT_SETTINGS, type ModelImportSettings } from '../modelImportSettings';
 import { materialChanges, materialsMayDiffer } from './materialChanges';
 import { assetsRequest, type PlannedSlot, type ResolvedMaterial, type ResolvedSlot, type SlotTexture, type VersionPlan } from './materialPlan';
@@ -175,6 +176,17 @@ describe('materialsMayDiffer', () => {
     expect(materialsMayDiffer(side(input()), side(input({ materialImport: 'none' })))).toBe(true);
     expect(materialsMayDiffer(side(input()), side(input({}, [fileMaterial('Metal', { alpha: 'blend' })])))).toBe(true);
     expect(materialsMayDiffer(side(input()), side(input({ searchTexturesGlobally: true })))).toBe(true);
+  });
+
+  it("reads nothing for the two sides of a committed diff, at two points, unless the diff changed what their lookups read", () => {
+    const at = (point: AssetsPoint, version = input()) => ({ sources: slotSources(version), request: assetsRequest(version, slotSources(version), 'Assets/Lantern/Lantern.fbx', point) });
+    const after: AssetsPoint = { kind: 'repository', at: 'br:/main/task' };
+    const undoing = (path: string): AssetsPoint => ({ ...after, before: { kind: 'changes', changes: [{ path, revision: { revisionId: 3, repository: 'eco@local' } }] } });
+    expect(materialsMayDiffer(at(undoing('Assets/Lantern/Lantern.fbx')), at(after))).toBe(false);
+    expect(materialsMayDiffer(at({ kind: 'repository', at: 'cs:7' }), at({ kind: 'repository', at: 'cs:9' }))).toBe(false);
+    for (const path of ['Assets/Materials/Glass.mat', 'Assets/Lantern/Lantern.fbx.meta', 'Assets/Textures/metal.PNG', 'Assets/Textures/metal.tga']) {
+      expect(materialsMayDiffer(at(undoing(path)), at(after)), path).toBe(true);
+    }
   });
 
   it('reads them for a model moved, whose textures Unity searches from another folder', () => {

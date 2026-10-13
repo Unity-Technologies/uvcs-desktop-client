@@ -7,7 +7,7 @@
 //      can't show (`TextureProblem`);
 //   4. `budgeted`: both versions' textures within the budget, the same file once;
 //   5. `slotLooks`: each slot as drawn now, with the textures decoded so far; `texturesReport` for the info strip.
-// Materials and textures are always the workspace's, whichever version of the model shows (docs/features/model-diff.md).
+// Materials and textures are those where each version is (its `AssetsPoint`, docs/features/model-diff.md "Materials").
 
 import { foundFileKey, type AssetsPoint, type FoundFile, type TextureLookup, type UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { Color, SRGBColorSpace } from 'three';

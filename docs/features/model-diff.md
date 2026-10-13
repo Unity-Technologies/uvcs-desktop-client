@@ -117,9 +117,12 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   lacked before isn't news). Each version's materials are read where it is (its point, "Materials" below), so a
   `.mat` the diff changed is told too. They're told with the Materials look off too, from the very reads the look makes
   (one query each, shared): only for versions whose materials may resolve differently (`materialsMayDiffer`: their
-  slots' sources or their lookups differ), so a re-export that changed no material reads nothing, and never decoding a
-  texture. Waiting for the look to resolve them was rejected: a change is a change, and the reads are the disk's, or
-  one listing of the model's folder at the point, shared with the `.meta` read beside it; a GUID the project lacks
+  slots' sources or their lookups differ, the points themselves aside; or a diff's side before undoes a change to a
+  `.mat`, a `.meta`, an image or an `.mtl`), so a re-export that changed no material reads nothing, and never decoding a
+  texture. The two sides of a committed diff are always at two points: comparing them listed the model's folder for
+  every model diff opened, the look off, to tell nothing. A history's and a last change's two points, whose changes
+  aren't known, are compared with the look on only. Waiting for the look to resolve them was rejected: a change is a
+  change, and the reads are the disk's, or listings of the point shared by both sides; a GUID the project lacks
   reads the project's index once, as the look would. They're not told (`materialChangesOf` is null) without a
   workspace, for a version with no path in it, no point (`AssetsPoint`), or whose `.meta` read failed
   (`comparableVersions`), or when the workspace couldn't answer for a side (`answerStateOf`): a find that
@@ -276,11 +279,13 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   file's (pending changes, a workspace file anywhere) on the disk as it is now; a committed diff's (`diffAssetsPoint`)
   in the repository's tree where the diff points to (`cs:N`, the branch's head), the side before as that tree with the
   diff's own changes undone (`changedAssetsOf`: each file as it was, one the diff added gone, a move both ways; past
-  `MAX_CHANGED_ASSETS` the side before has none); a history's revision at the changeset that made it
+  `MAX_CHANGED_ASSETS` the side before has none; a request carries only those under the model's Unity project, or its
+  folder outside one, `pointForModel`, as main's search goes no further); a history's revision at the changeset that made it
   (`revisionsAssetsPoint`); Files' last change at its changeset, and before it, that changeset's own changes as their
   parent revisions (`lastChangeAssetsPoint`, `AssetsBefore` `changeset`). Anything else has no point (a merge's
   versions, a shelve's or a label's tree, which `cm ls` can't list, a revision of an xlinked repository in History or
-  Files, whose tree's paths aren't the workspace's): only what its file holds shows (a glTF's own images), never the
+  Files, whose tree's paths aren't the workspace's, and any revision there while the workspace's repository isn't
+  known yet, `inWorkspaceRepository`): only what its file holds shows (a glTF's own images), never the
   disk's files, which may be another revision's. The disk's look was rejected for that reason: a model on a branch
   the workspace never loaded showed clay, and one at another revision showed the workspace's textures, wrong. Only the
   model's own `.meta` is read as the version's sibling (its remaps, with its import settings), and an OBJ's `.mtl`

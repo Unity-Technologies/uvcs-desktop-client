@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { ContentSource } from '@shared/domain/content';
 import type { DiffEntry } from '@shared/domain/diff';
 import { MAX_CHANGED_ASSETS } from '@shared/domain/unityAssets';
-import { changedAssetsOf, diffAssetsPoint, lastChangeAssetsPoint, revisionsAssetsPoint, workspaceAssetsPoint } from './assetsPoints';
+import { changedAssetsOf, diffAssetsPoint, inWorkspaceRepository, pointForModel, lastChangeAssetsPoint, revisionsAssetsPoint, workspaceAssetsPoint } from './assetsPoints';
 
 const revision = (revisionId: number, fileName = 'Art/Tree.fbx'): ContentSource => ({ kind: 'revision', revision: { revisionId, repository: 'eco@local' }, fileName });
 const workspaceFile: ContentSource = { kind: 'workspaceFile', path: 'Art/Tree.fbx' };
@@ -67,6 +67,23 @@ describe('changedAssetsOf', () => {
   });
 });
 
+describe('pointForModel', () => {
+  const change = (path: string) => ({ path, revision: null });
+  const undoing = (...paths: string[]) => ({ kind: 'repository' as const, at: 'cs:3', before: { kind: 'changes' as const, changes: paths.map(change) } });
+
+  it("keeps the changes under the model's Unity project, or under its folder outside one", () => {
+    const point = undoing('Game/Assets/Art/bark.png', 'Game/Packages/manifest.json', 'Docs/readme.md', 'Gamer/x.png');
+    expect(pointForModel(point, 'Game/Assets/Art/Tree/Tree.fbx')).toEqual(undoing('Game/Assets/Art/bark.png', 'Game/Packages/manifest.json'));
+    expect(pointForModel(undoing('3DModels/izh-27/textures/a.png', '3DModels/other/b.png'), '3DModels/izh-27/scene.gltf')).toEqual(undoing('3DModels/izh-27/textures/a.png'));
+    expect(pointForModel(undoing('a.png', 'Docs/b.png'), 'scene.gltf')).toEqual(undoing('a.png', 'Docs/b.png'));
+  });
+
+  it('leaves any other point as it is', () => {
+    expect(pointForModel({ kind: 'workspace' }, 'Assets/Tree.fbx')).toEqual({ kind: 'workspace' });
+    expect(pointForModel({ kind: 'repository', at: 'cs:3', before: { kind: 'changeset', changeset: 3, repository: 'eco@local' } }, 'Assets/Tree.fbx')).toEqual({ kind: 'repository', at: 'cs:3', before: { kind: 'changeset', changeset: 3, repository: 'eco@local' } });
+  });
+});
+
 describe('revisionsAssetsPoint and lastChangeAssetsPoint', () => {
   it("puts a history's revisions each at the changeset that made it, only in the workspace's repository", () => {
     const pointOf = revisionsAssetsPoint({ original: 7, modified: 9 }, true);
@@ -76,9 +93,17 @@ describe('revisionsAssetsPoint and lastChangeAssetsPoint', () => {
   });
 
   it("puts Files' last change at its changeset, and before it, that changeset undone; a shelve's has none", () => {
-    const pointOf = lastChangeAssetsPoint(12, true);
+    const pointOf = lastChangeAssetsPoint(12, 'eco@local', true);
     expect(pointOf('modified', revision(4))).toEqual({ kind: 'repository', at: 'cs:12' });
-    expect(pointOf('original', revision(3))).toEqual({ kind: 'repository', at: 'cs:12', before: { kind: 'changeset', changeset: 12 } });
-    expect(lastChangeAssetsPoint(null, true)('modified', revision(4))).toBeNull();
+    expect(pointOf('original', revision(3))).toEqual({ kind: 'repository', at: 'cs:12', before: { kind: 'changeset', changeset: 12, repository: 'eco@local' } });
+    expect(lastChangeAssetsPoint(null, 'eco@local', true)('modified', revision(4))).toBeNull();
+  });
+
+  it("gives no point while the workspace's repository isn't known: an xlinked revision would list the wrong tree", () => {
+    expect(inWorkspaceRepository('eco@local', undefined)).toBeUndefined();
+    expect(inWorkspaceRepository('eco@local', 'eco@local')).toBe(true);
+    expect(inWorkspaceRepository('art@local', 'eco@local')).toBe(false);
+    expect(revisionsAssetsPoint({ original: 7, modified: 9 }, undefined)('modified', revision(4))).toBeNull();
+    expect(lastChangeAssetsPoint(12, 'eco@local', undefined)('modified', revision(4))).toBeNull();
   });
 });

@@ -55,10 +55,33 @@ export function changedAssetsOf(entries: readonly DiffEntry[]): ChangedAsset[] |
 }
 
 /**
+ * The point as one model's lookups read it: a diff's side before keeps only the changes they can reach, those under
+ * the model's Unity project (the folder holding the outermost `Assets` above it, where main's search stays) or, outside
+ * one, under its folder. A diff of thousands of files then asks with the few that matter, in every request and query
+ * key.
+ */
+export function pointForModel(point: AssetsPoint, modelPath: string): AssetsPoint {
+  if (point.kind !== 'repository' || point.before?.kind !== 'changes') return point;
+  const parts = modelPath.split('/');
+  const assets = parts.slice(0, -1).findIndex((part) => part.toLowerCase() === 'assets');
+  const top = (assets === -1 ? parts.slice(0, -1) : parts.slice(0, assets)).join('/');
+  const changes = point.before.changes.filter((change) => top === '' || change.path.startsWith(`${top}/`));
+  return { ...point, before: { kind: 'changes', changes } };
+}
+
+/**
+ * Whether a revision of `repository` is in the workspace's: undefined while the workspace's isn't known yet, when no
+ * point is given (a revision of an xlinked repository would list the wrong tree meanwhile).
+ */
+export function inWorkspaceRepository(repository: string, workspaceRepository: string | undefined): boolean | undefined {
+  return workspaceRepository === undefined ? undefined : repository === workspaceRepository;
+}
+
+/**
  * Two revisions of a history, each at the changeset that made it. Only in the workspace's repository: a revision of an
  * xlinked one is in a tree whose paths aren't the workspace's.
  */
-export function revisionsAssetsPoint(changesets: Record<DiffSide, number | null>, inWorkspaceRepository: boolean): AssetsPointFinder {
+export function revisionsAssetsPoint(changesets: Record<DiffSide, number | null>, inWorkspaceRepository: boolean | undefined): AssetsPointFinder {
   return (side, source) => {
     if (source.kind !== 'revision') return workspaceAssetsPoint(side, source);
     const changeset = changesets[side];
@@ -70,12 +93,12 @@ export function revisionsAssetsPoint(changesets: Record<DiffSide, number | null>
  * Files' last change of an item, made in `changeset`: the tree there, and before it, that tree with what the changeset
  * made undone. Only in the workspace's repository (as `revisionsAssetsPoint`); none for a shelve's change.
  */
-export function lastChangeAssetsPoint(changeset: number | null, inWorkspaceRepository: boolean): AssetsPointFinder {
+export function lastChangeAssetsPoint(changeset: number | null, repository: string, inWorkspaceRepository: boolean | undefined): AssetsPointFinder {
   return (side, source) => {
     if (source.kind !== 'revision') return workspaceAssetsPoint(side, source);
     if (!inWorkspaceRepository || changeset === null || changeset < 0) return null;
     const at = `cs:${changeset}`;
-    return side === 'modified' ? { kind: 'repository', at } : { kind: 'repository', at, before: { kind: 'changeset', changeset } };
+    return side === 'modified' ? { kind: 'repository', at } : { kind: 'repository', at, before: { kind: 'changeset', changeset, repository } };
   };
 }
 

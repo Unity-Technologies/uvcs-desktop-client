@@ -2,10 +2,10 @@
 // model-diff.md, "What changed"): where the slot takes its material from (Unity's default, a project's `.mat`, the
 // file's own, a remap to a material the project hasn't), and, for the same material on both sides, what a person sees
 // change (base map, base color, normal map, alpha, sides, tiling). Compared from both versions' plans (`planVersion`),
-// which read the materials from the workspace on disk: the same `.mat` reads the same on both sides, so a change
-// within a material is one of the file's own. Words are `materialChangeWords`'.
+// each read where its version is (its `AssetsPoint`): a `.mat` the diff changed reads as it was on one side and as it
+// is on the other. Words are `materialChangeWords`'.
 
-import type { UnityAssetsRequest } from '@shared/domain/unityAssets';
+import type { AssetsPoint, UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { Color, LinearSRGBColorSpace } from 'three';
 import type { AlphaMode } from '../parsedModel';
 import type { PlannedSlot, ResolvedMaterial, ResolvedSlot, SlotTexture, VersionPlan } from './materialPlan';
@@ -79,14 +79,25 @@ export interface MaterialSide {
 }
 
 /**
- * Whether two versions' materials may resolve differently, so they're worth reading to list their changes. The
- * workspace answers both alike (its materials and textures are the same for both versions), so versions whose slots
- * take the same sources and ask the same lookups resolve the same: nothing is read just to say so.
+ * Whether two versions' materials may resolve differently, so they're worth reading to list their changes, with the
+ * look off too: versions whose slots take other sources or ask other lookups; or ask the same at two points of one
+ * diff that changed a file such lookups read (a `.mat`, a `.meta`, a texture: `changesMaterialAssets`). The two sides
+ * of a committed diff are always at two points: comparing the points themselves would list the model's folder for
+ * every model diff opened, the look off, to tell nothing. A history's or a last change's two points, whose changes
+ * aren't known, are compared with the look on only.
  */
 export function materialsMayDiffer(before: MaterialSide, after: MaterialSide): boolean {
-  const keyOf = ({ sources, request }: MaterialSide): string => JSON.stringify([[...sources].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)), request]);
-  return keyOf(before) !== keyOf(after);
+  const keyOf = ({ sources, request }: MaterialSide): string => JSON.stringify([[...sources].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)), request && { ...request, point: null }]);
+  return keyOf(before) !== keyOf(after) || changesMaterialAssets(before.request?.point) || changesMaterialAssets(after.request?.point);
 }
+
+/** Whether a diff's side before undoes a change to a file a material lookup reads: a `.mat`, a `.meta`, an image, an `.mtl`. */
+function changesMaterialAssets(point: AssetsPoint | undefined): boolean {
+  if (point?.kind !== 'repository' || point.before?.kind !== 'changes') return false;
+  return point.before.changes.some((change) => MATERIAL_ASSET.test(change.path));
+}
+
+const MATERIAL_ASSET = /\.(?:mat|meta|mtl|png|jpe?g|gif|bmp|webp|tga|tiff?|exr|hdr|psd|psb|dds|ktx2?)$/i;
 
 /** A slot's own material is the same on both sides, whatever the file calls it: what changed in it is its look. */
 function sameMaterial(before: ResolvedMaterial, after: ResolvedMaterial): boolean {

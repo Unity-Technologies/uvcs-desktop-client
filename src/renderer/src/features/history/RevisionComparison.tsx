@@ -1,9 +1,8 @@
 import { useMemo, type ReactNode } from 'react';
 import type { ContentSource } from '@shared/domain/content';
 import type { ItemRevision } from '@shared/domain/history';
-import { otherRepository } from '@shared/domain/repository';
 import { revisionRef } from '@shared/domain/revision';
-import { AssetsPointContext, revisionsAssetsPoint } from '../diff/viewer/model/assetsPoints';
+import { AssetsPointContext, inWorkspaceRepository, revisionsAssetsPoint } from '../diff/viewer/model/assetsPoints';
 import { useWorkspaceInfo, useWorkspacePath } from '../../app/workspace/useWorkspace';
 import { FileDiffViewer } from '../diff/viewer/FileDiffViewer';
 import styles from './RevisionComparison.module.css';
@@ -20,10 +19,10 @@ interface RevisionComparisonProps {
 /** The diff between two revisions of a file. */
 export function RevisionComparison({ path, newer, older, leading }: RevisionComparisonProps) {
   const workspacePath = useWorkspacePath();
-  const inWorkspaceRepository = !otherRepository(newer.repository, useWorkspaceInfo().data?.repository);
+  const inWorkspace = inWorkspaceRepository(newer.repository, useWorkspaceInfo().data?.repository);
   const findAssetsPoint = useMemo(
-    () => revisionsAssetsPoint({ original: older?.changesetId ?? null, modified: newer.changesetId }, inWorkspaceRepository),
-    [older?.changesetId, newer.changesetId, inWorkspaceRepository],
+    () => revisionsAssetsPoint({ original: older?.changesetId ?? null, modified: newer.changesetId }, inWorkspace),
+    [older?.changesetId, newer.changesetId, inWorkspace],
   );
 
   return (

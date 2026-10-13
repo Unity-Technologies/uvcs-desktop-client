@@ -1,6 +1,6 @@
 import { useQueries } from '@tanstack/react-query';
 import { useMemo } from 'react';
-import { foundFileKey, type AssetsPoint, type UnityAssetsAnswer, type UnityAssetsRequest } from '@shared/domain/unityAssets';
+import { BRANCH_TREE_LIFE_MS, foundFileKey, type AssetsPoint, type UnityAssetsAnswer, type UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { api } from '../../../../../api/client';
 import { IMMUTABLE_QUERY } from '../../../../../app/queryClient';
 import { queryKeys } from '../../../../../api/queryKeys';
@@ -52,11 +52,11 @@ export function useUnityMaterials(
 
 /**
  * How long a find's answer holds: the disk changes under us, as a workspace file's content does; a changeset's tree
- * never changes; a branch's head moves as people check in (main keeps its tree as long, `BRANCH_TREE_LIFE_MS`).
+ * never changes; a branch's head moves as people check in (`BRANCH_TREE_LIFE_MS`, as main keeps its tree).
  */
 function staleTimeAt(point: AssetsPoint): number {
   if (point.kind === 'workspace') return 0;
-  return point.at.startsWith('cs:') ? Number.POSITIVE_INFINITY : 60_000;
+  return point.at.startsWith('cs:') ? Number.POSITIVE_INFINITY : BRANCH_TREE_LIFE_MS;
 }
 
 function materialOf(bytes: Uint8Array | null): UnityMaterial | null {

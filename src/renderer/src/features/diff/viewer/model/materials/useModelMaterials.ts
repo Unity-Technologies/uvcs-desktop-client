@@ -21,6 +21,7 @@ import { materialsOffered, slotSources, type SlotSource } from './slotSources';
 import { useMtlMaterials } from './useMtlMaterials';
 import { useUnityAssets, useUnityMaterials } from './useUnityAssets';
 import { useWorkspaceImportSettings } from './useWorkspaceImportSettings';
+import { pointForModel } from '../assetsPoints';
 
 export type { MaterialVersion } from './materialVersion';
 
@@ -73,7 +74,7 @@ export function useModelMaterials(workspacePath: string, versions: Record<Side, 
     () =>
       SIDES.map((side) => {
         const version = versions[side];
-        return inputs[side] && sources[side] && version?.path && version.point ? assetsRequest(inputs[side]!, sources[side]!, version.path, version.point) : null;
+        return inputs[side] && sources[side] && version?.path && version.point ? assetsRequest(inputs[side]!, sources[side]!, version.path, pointForModel(version.point, version.path)) : null;
       }),
     [inputs, sources, versions],
   );
