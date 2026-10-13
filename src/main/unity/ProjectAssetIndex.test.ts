@@ -81,16 +81,27 @@ describe('ProjectAssetIndex', () => {
     expect(big.reads).toEqual(small.reads);
   });
 
-  it('reads the whole project once for a GUID it lacks, never Library, and nothing more for the next', async () => {
+  it("reads the whole project once for a GUID it lacks, of Library only its package cache, and nothing more for the next", async () => {
     const { disk, reads } = memoryFiles(project(20));
     const index = new ProjectAssetIndex(unityProjectOf('Game/Assets/Art/Tree/Tree.fbx')!, disk, 'linux');
     expect(await index.pathOfGuid(guid(999999), MODEL_FOLDER)).toBeNull();
-    // Every .meta of Assets once (201), each folder of Assets and Packages once (24).
-    expect(reads).toEqual({ lists: 24, heads: 201 });
+    // Every .meta of Assets once (201), each folder of Assets and Packages once (24), Library's top and its PackageCache
+    // (none here) once (2): never Library's Artifacts.
+    expect(reads).toEqual({ lists: 26, heads: 201 });
     expect(await index.pathOfGuid(guid(1000 + 55), MODEL_FOLDER)).toBe('Game/Assets/Far5/rock5.png');
     expect(await index.pathOfGuid(guid(888888), MODEL_FOLDER)).toBeNull();
     // The hit's .meta read again to check it, nothing else.
-    expect(reads).toEqual({ lists: 24, heads: 202 });
+    expect(reads).toEqual({ lists: 26, heads: 202 });
+  });
+
+  it("finds a registry package's GUID in Library/PackageCache, and can't tell one missing without a Library", async () => {
+    const files = new Map([...project(1), ['Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat.meta', meta(42)]]);
+    const index = new ProjectAssetIndex(unityProjectOf('Game/Assets/Art/Tree/Tree.fbx')!, memoryFiles(files).disk, 'linux');
+    expect(await index.pathOfGuid(guid(42), MODEL_FOLDER)).toBe('Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat');
+    const fresh = new Map([...project(1)].filter(([path]) => !path.startsWith('Game/Library/')));
+    const neverOpened = new ProjectAssetIndex(unityProjectOf('Game/Assets/Art/Tree/Tree.fbx')!, memoryFiles(fresh).disk, 'linux');
+    expect(await neverOpened.pathOfGuid(guid(42), MODEL_FOLDER)).toBeUndefined();
+    expect(await neverOpened.pathOfGuid(guid(1), MODEL_FOLDER)).toBe('Game/Assets/Art/Tree/Bark.mat');
   });
 
   it('reads again only the folders the watcher saw change', async () => {
@@ -123,6 +134,7 @@ describe('ProjectAssetIndex', () => {
     const files = new Map([
       ['Game/Assets/Docs~/a.mat.meta', meta(5)],
       ['Game/Assets/.hidden/b.mat.meta', meta(6)],
+      ['Game/Library/PackageCache/.keep', ''],
     ]);
     const index = new ProjectAssetIndex(unityProjectOf('Game/Assets/Tree.fbx')!, memoryFiles(files).disk, 'linux');
     expect(await index.pathOfGuid(guid(5), 'Game/Assets')).toBeNull();
@@ -133,7 +145,7 @@ describe('ProjectAssetIndex', () => {
     const { disk, reads } = memoryFiles(project(20));
     const index = new ProjectAssetIndex(unityProjectOf('Game/Assets/Art/Tree/Tree.fbx')!, disk, 'linux');
     await Promise.all([index.pathOfGuid(guid(999999), MODEL_FOLDER), index.pathOfGuid(guid(888888), MODEL_FOLDER)]);
-    expect(reads).toEqual({ lists: 24, heads: 201 });
+    expect(reads).toEqual({ lists: 26, heads: 201 });
   });
 
   it("doesn't keep a read that failed as an empty folder or a .meta without a GUID: the next find reads it again", async () => {

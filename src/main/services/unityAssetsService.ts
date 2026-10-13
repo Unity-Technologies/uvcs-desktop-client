@@ -55,9 +55,16 @@ export function createUnityAssetsService({ watchers, platform = process.platform
     const index = project && indexOf(workspacePath, project);
     const modelFolder = posix.dirname(modelPath) === '.' ? '' : posix.dirname(modelPath);
     const found = (path: string | null): Promise<FoundFile | null> => (path === null ? Promise.resolve(null) : foundFile(workspacePath, path));
+    // Outside a project, or in one without a `Library`, a GUID not found isn't known missing (`pathOfGuid`).
+    let guidMissesKnown = index !== null;
+    const byGuid = async (guid: string): Promise<FoundFile | null> => {
+      const path = index ? await index.pathOfGuid(guid, modelFolder) : null;
+      if (path === undefined) guidMissesKnown = false;
+      return found(path ?? null);
+    };
 
     const findTexture = async (lookup: TextureLookup): Promise<FoundFile | null> => {
-      const remapped = lookup.remapGuid && index ? await found(await index.pathOfGuid(lookup.remapGuid, modelFolder)) : null;
+      const remapped = lookup.remapGuid ? await byGuid(lookup.remapGuid) : null;
       if (remapped) return remapped;
       for (const candidate of textureCandidates({ modelPath, project, name: lookup.name, storedPaths: lookup.storedPaths, workspacePath, platform })) {
         const file = await found(candidate);
@@ -76,10 +83,10 @@ export function createUnityAssetsService({ watchers, platform = process.platform
     const textures: (FoundFile | null)[] = [];
     for (const lookup of request.textures) textures.push(await findTexture(lookup));
     const guids: (FoundFile | null)[] = [];
-    for (const guid of request.guids) guids.push(index ? await found(await index.pathOfGuid(guid, modelFolder)) : null);
+    for (const guid of request.guids) guids.push(await byGuid(guid));
     const paths = await Promise.all(request.paths.map((path) => found(workspacePathOf(path))));
     const importsPsb = project !== null && (await Promise.all(packageListsOf(project.root).map((list) => readText(workspacePath, list)))).some(listsPsdImporter);
-    return { textures, guids, paths, importsPsb, guidMissesKnown: index !== null };
+    return { textures, guids, paths, importsPsb, guidMissesKnown };
   }
 
   return { find };

@@ -121,9 +121,10 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   them was rejected: a change is a change, and the reads are the workspace's disk, no `cm` command; the one cost, a
   GUID the project lacks, reads the project's index once, as the look would. They're not told (`materialChangesOf`
   is null) without a workspace, for a version with no path in it or whose `.meta` read failed (`comparableVersions`),
-  or when the workspace couldn't answer for a side (`answerStateOf`): a find that failed, or GUIDs no project's index
-  looked up (`UnityAssetsAnswer.guidMissesKnown`: a model outside a Unity project, as in a package's own repository),
-  which answer every asset "not found" without it being so. Then the file's own list of textures named (`textures`)
+  or when the workspace couldn't answer for a side (`answerStateOf`): a find that failed, or a GUID not found that
+  can't be told missing (`UnityAssetsAnswer.guidMissesKnown`: a model outside a Unity project, as in a package's own
+  repository, or in a project without a `Library`, never opened in Unity on this machine, "The project's index"
+  below). Then the file's own list of textures named (`textures`)
   stands in; where they are told, or being read, it goes, as the materials say which textures Unity uses
   (`whatChanged`).
 
@@ -306,8 +307,15 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   nothing outside the workspace is read (`workspaceFileOf`). A glTF's images by URI are files beside it (`siblingPath`),
   on disk.
 - **The project's index** (`ProjectAssetIndex`): GUIDs from each `.meta`'s second line, and file names, read outward
-  from the model (its folder's subtree, then each folder above it, then `Assets` and the project's `Packages`, never
-  `Library`), a lookup stopping at the first ring that answers; what Unity skips (`.hidden`, `Name~`) is left out. The
+  from the model (its folder's subtree, then each folder above it, then `Assets` and the project's `Packages`), a
+  lookup stopping at the first ring that answers; what Unity skips (`.hidden`, `Name~`) is left out. A GUID none of
+  them has is looked for last in `Library/PackageCache`, where Unity keeps the registry packages it resolved (a URP
+  material a model is remapped to), with the same head-only `.meta` reads: only on such a miss, as the cache holds
+  thousands of package files, and never the rest of `Library`. Without a `Library` (a project never opened in Unity on
+  this machine) a GUID missing elsewhere isn't known missing (`pathOfGuid` is undefined): no risk is told, and the
+  look shows clay, as for any material not found. The watcher doesn't see `Library` (`ignore.conf` hides it), so the
+  package cache is read again once `Packages` itself changes (Unity rewrites `manifest.json` or `packages-lock.json`
+  as it changes the packages it caches), or everything is dropped; a hit is checked against its `.meta`, as every one. The
   watcher keeps it current (`WorkspaceWatchers.listen`: a changed folder is read again when next needed, a change
   anywhere drops it, and so does the watch breaking or stopping; the app's own `cm` writes, whose events the watcher
   drops, count as a change anywhere once they settle, and again when their grace ends, `AFTER_OWN_WRITE_GRACE_MS`, as
