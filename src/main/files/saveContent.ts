@@ -4,7 +4,7 @@ import { basename, dirname } from 'node:path';
 import type { ContentSource } from '@shared/domain/content';
 import { listsTree, spec } from '@shared/domain/specs';
 import type { CmClient } from '../cm/CmClient';
-import { isMissingItemError } from '../cm/missingItem';
+import { isNotInTreeError } from '../cm/missingItem';
 import { removedItemSpec } from '../cm/removedItemSpec';
 import { parseTreeItems } from '../cm/treeItemsXml';
 import { toAbsolutePath } from './workspacePaths';
@@ -61,8 +61,8 @@ async function withFallback(first: () => Promise<void>, fallback: () => Promise<
  * `serverpath:` reads the path in the repository's own tree, where an xlink is a leaf: nothing under one is found.
  * Then, for a path not known to be under an xlink (a merge's change, a model's sibling), the tree at the point
  * (`saveFromTree`), only once `serverpath:` found nothing; the tree not having the path is the failure then, telling
- * the file is absent (`isMissingItemError`), which `serverpath:`'s doesn't. A shelve has no such tree: its paths are
- * read as they are.
+ * the file is absent (`isNotInTreeError`), which `serverpath:`'s doesn't. A shelve or a label has no such tree: its
+ * paths are read as they are.
  */
 async function saveRepositoryPath(cm: CmClient, workspacePath: string, path: string, at: string, target: string): Promise<void> {
   try {
@@ -70,7 +70,7 @@ async function saveRepositoryPath(cm: CmClient, workspacePath: string, path: str
   } catch (error) {
     if (!listsTree(at)) throw error;
     await saveFromTree(cm, workspacePath, path, at, target).catch((treeError: unknown) => {
-      throw isMissingItemError(treeError) ? treeError : error;
+      throw isNotInTreeError(treeError) ? treeError : error;
     });
   }
 }
@@ -78,7 +78,8 @@ async function saveRepositoryPath(cm: CmClient, workspacePath: string, path: str
 /**
  * The tree at a changeset or a branch's head, which `cm ls` walks through xlinks (nested ones too), names the path's
  * revision in the xlinked repository. A path missing there fails as `cm ls` does ("Can't resolve the selector for the
- * item"). A shelve's tree can't be listed and its `serverpath:` doesn't reach through an xlink: nothing is asked.
+ * item"). A shelve's or a label's tree can't be listed and its `serverpath:` doesn't reach through an xlink: nothing
+ * is asked.
  */
 async function saveFromTree(cm: CmClient, workspacePath: string, path: string, at: string, target: string): Promise<void> {
   if (!listsTree(at)) throw new Error(`${path} is under an xlink, which ${at} can't be read through`);

@@ -2,9 +2,9 @@
 // the model. A workspace file's sibling is the file beside it, on disk or as loaded. In a committed diff, a model's
 // shape lives in its `.bin`, so a changed shape changed the `.bin` too, which is then an entry of the same diff with
 // its own revisions; a sibling the diff didn't change is the same on both sides, read where the diff points to (the
-// changeset, the branch's head, the shelve; under an xlink, through the tree there). A last change in Files or Browse repository finds them in the tree's
-// listings (`lastChangeSibling`). Anything else (a history's revisions, a merge's) finds none, and the viewer says what
-// the model needs.
+// changeset, the branch's head, the shelve, the label; under an xlink, through the tree there). A last change in Files
+// or Browse repository finds them in the tree's listings (`lastChangeSibling`). Anything else (a history's revisions,
+// a merge's) finds none, and the viewer says what the model needs.
 
 import { createContext } from 'react';
 import type { ContentSource } from '@shared/domain/content';
@@ -37,7 +37,7 @@ export const workspaceSibling: SiblingFinder = (_side, source, _path, fileName) 
 /**
  * A committed diff's siblings: the entry of the same diff, or the file where the diff points to when it didn't change.
  * Beside a model of another repository than `workspaceRepository` (under an xlink), that file is read through the
- * tree there, which `cm` can't list in a shelve (`listsTree`): there it isn't found.
+ * tree there, which `cm ls` can't list in a shelve or at a label (`listsTree`): there it isn't found.
  */
 export function diffSibling(entries: DiffEntry[], target: DiffTarget, workspaceRepository: string | undefined): SiblingFinder {
   return (side, source, path, fileName) => {

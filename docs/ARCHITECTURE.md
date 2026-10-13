@@ -181,8 +181,8 @@ repository, set where `cm` names it, and every spec built from it names both (`s
   committed diff, a `repositoryPath` with its `repository`) is read from the tree at once (`saveFromTree`: one
   `cm ls <path> --tree=<point> --xml`, then `cm cat revid:N@repo`), never by a `serverpath:` bound to fail; a merge
   change's version, not known to be under one, is looked up there once `serverpath:` finds nothing (a second command
-  only for those). `cm ls --tree` takes a changeset or a branch (`listsTree`) and refuses a shelve: under an xlink, a
-  shelve's unchanged files can't be read by path.
+  only for those). `cm ls --tree` takes a changeset or a branch (`listsTree`) and refuses a shelve or a label
+  ("Incorrect object specification"): under an xlink, their unchanged files can't be read by path.
 - `cm merge` prints conflicting files under a writable xlink with the xlinked repository's item id and changesets but
   not the repository: one `cm ls` of the conflicting files in the destination's tree names each one's
   (`withConflictRepositories`), only when some file conflicts.

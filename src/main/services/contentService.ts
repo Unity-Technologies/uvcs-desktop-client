@@ -1,5 +1,5 @@
 import { readFile, stat, writeFile } from 'node:fs/promises';
-import { isMissingItemError, isServerPathNotFoundError } from '../cm/missingItem';
+import { isMissingItemError, isNotInTreeError, isServerPathNotFoundError } from '../cm/missingItem';
 import type { ContentApi } from '@shared/api/content';
 import type { ContentSource, FileContent } from '@shared/domain/content';
 import { listsTree } from '@shared/domain/specs';
@@ -39,7 +39,7 @@ export function createContentService({ cm, reviews }: ServiceContext): ContentAp
       // A plain Uint8Array: IPC copies it as binary (a Buffer would arrive as one too, pool slice and all).
       return new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     } catch (error) {
-      if (isMissingItem(error) || isMissingFromShelve(source, error)) return null;
+      if (isMissingItem(error) || isMissingWhereNoTreeIsListed(source, error)) return null;
       throw error;
     }
   }
@@ -72,17 +72,17 @@ export function createContentService({ cm, reviews }: ServiceContext): ContentAp
   return { read, readBytes, writeWorkspaceFile };
 }
 
-/** `cm` telling an item isn't there (`isMissingItemError`), or the disk telling a file isn't. */
+/** `cm` telling an item isn't there (`isMissingItemError`) or a tree that hasn't it (`isNotInTreeError`), or the disk. */
 function isMissingItem(error: unknown): boolean {
-  return isMissingItemError(error) || (error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT';
+  return isMissingItemError(error) || isNotInTreeError(error) || (error as NodeJS.ErrnoException | undefined)?.code === 'ENOENT';
 }
 
 /**
- * A shelve's path whose `serverpath:` found nothing: no tree can be asked there (`listsTree`), so that is the answer.
- * Not for a path known to be under an xlink (never read by `serverpath:`), nor at a changeset or a branch, where the
- * tree is asked and answers itself.
+ * A path whose `serverpath:` found nothing at a point whose tree `cm ls` can't list (`listsTree`: a shelve, a label):
+ * nothing else can be asked there, so that is the answer. Not for a path known to be under an xlink (never read by
+ * `serverpath:`), nor at a changeset or a branch, where the tree is asked and its answer decides.
  */
-function isMissingFromShelve(source: ContentSource, error: unknown): boolean {
+function isMissingWhereNoTreeIsListed(source: ContentSource, error: unknown): boolean {
   return source.kind === 'repositoryPath' && source.repository === undefined && !listsTree(source.at) && isServerPathNotFoundError(error);
 }
 
