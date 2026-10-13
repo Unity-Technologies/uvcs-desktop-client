@@ -266,6 +266,17 @@ describe('ProjectAssetIndex', () => {
       expect(await index.pathOfGuid(guid(44), MODEL_FOLDER)).toBe(`${CACHE}/com.unity.shadergraph@17.0.3/Decal.mat`);
     });
 
+    it("keeps the cache across a change anywhere, as the watcher never sees it: a package's GUID is known at once", async () => {
+      const { disk, reads } = memoryFiles(withCache());
+      const index = indexOf(disk);
+      expect(await index.pathOfGuid(guid(42), MODEL_FOLDER)).toBe(`${URP}/Lit.mat`);
+      index.noteChange({ content: true, pathsChanged: true, metadata: false, folders: null });
+      const before = { ...reads };
+      expect(await index.pathOfGuid(guid(42), MODEL_FOLDER)).toBe(`${URP}/Lit.mat`);
+      // Only its .meta, checked.
+      expect(reads).toEqual({ lists: before.lists, heads: before.heads + 1 });
+    });
+
     it("can't tell a GUID missing once the Library is deleted", async () => {
       const files = withCache();
       const index = indexOf(memoryFiles(files).disk);
