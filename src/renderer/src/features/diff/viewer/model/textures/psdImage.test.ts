@@ -67,6 +67,23 @@ describe('readPsd', () => {
     expect(readPsd(withHeader(22, 32))).toEqual({ kind: 'unsupportedMode' });
   });
 
+  // The writer's header (26), color mode (4), Version Info resource (22) and empty layer section (4): the composite next.
+  const COMPOSITE_AT = 56;
+
+  it('reads a damaged RLE row as far as its bytes go, never past its row or its packed bytes', () => {
+    const header = picture({ width: 4, height: 1, mode: 'gray', compression: 'rle' }).subarray(0, COMPOSITE_AT);
+    // RLE; the one row's 3 bytes: a literal run claiming 128 bytes where 2 follow.
+    const damaged = new Uint8Array([...header, 0, 1, 0, 3, 127, 9, 9]);
+    const read = readPsd(damaged);
+    expect(read.kind === 'image' && [...read.rgba].filter((_, i) => i % 4 === 0)).toEqual([9, 9, 0, 0]);
+  });
+
+  it('reads nothing when the RLE row counts run past the end of the file', () => {
+    const bytes = picture({ width: 4, height: 3, mode: 'rgb', compression: 'rle' });
+    // Nine counts of two bytes each; the file ends after two of them.
+    expect(readPsd(bytes.subarray(0, COMPOSITE_AT + 2 + 4))).toEqual({ kind: 'unreadable' });
+  });
+
   it('reads nothing from a truncated file or one that is no PSD', () => {
     const bytes = picture({ compression: 'rle' });
     expect(readPsd(bytes.subarray(0, bytes.length - 10))).toEqual({ kind: 'unreadable' });
