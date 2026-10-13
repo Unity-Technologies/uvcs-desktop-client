@@ -92,6 +92,14 @@ describe('RevisionDownloads', () => {
     expect(fake.commands.map((command) => command.args.length)).toEqual([3, 2]);
   });
 
+  it("downloads again, together in one more batch, the revisions a failed batch can't tell whole: never one process each", async () => {
+    const { workspace, fake, downloads, text } = await setUp();
+    const reads = [file(1), file(2), file(3), file(404)].map((asked) => text(downloads.read(workspace, asked)));
+    const results = await Promise.allSettled(reads);
+    expect(results.map((result) => result.status)).toEqual(['fulfilled', 'fulfilled', 'fulfilled', 'rejected']);
+    expect(fake.commands.map((command) => command.args.length - 1)).toEqual([4, 3]);
+  });
+
   it('refuses unread a revision listed past what is read', async () => {
     const { workspace, fake, downloads } = await setUp();
     await expect(downloads.read(workspace, file(1, 'Art/huge.psd', null, 200 * 1024 * 1024))).rejects.toThrow('too large');
