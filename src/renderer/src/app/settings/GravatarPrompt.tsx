@@ -21,8 +21,9 @@ export function GravatarPrompt() {
   if (!asksAboutGravatar(settings, { peopleShown, dialogOpen })) return null;
 
   return (
+    // A decision waiting on the user, read out like the update ready to install.
     <CornerCard
-      role="status"
+      role="alert"
       icon={<Users size={15} />}
       title="Show profile pictures?"
       actions={
