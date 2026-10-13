@@ -1,8 +1,8 @@
-import type { FrameClock } from './frameClock';
+import type { FrameClock } from '../../../lib/frameClock';
 import { PanInertia } from './panInertia';
-import { clampViewport, zoomAt, type Size, type Viewport } from './viewport';
+import { clampViewport, MAX_ZOOM, MIN_ZOOM, zoomAt, type Size, type Viewport } from './viewport';
 import { ViewportGlide } from './viewportGlide';
-import { ZoomAnimation } from './zoomAnimation';
+import { ZoomGlide } from '../../../lib/zoomGlide';
 
 export interface GraphViewport {
   viewportRef: { readonly current: Viewport };
@@ -62,12 +62,12 @@ export function createGraphViewport(sources: GraphViewportSources, clock: FrameC
   const zoomTo = (screenX: number, screenY: number, zoom: number): void =>
     apply(zoomAt(viewportRef.current, zoom / viewportRef.current.zoom, screenX, screenY));
 
-  const zoomAnimation = new ZoomAnimation(zoomTo, () => viewportRef.current.zoom, clock);
+  const zoomGlide = new ZoomGlide<{ x: number; y: number }>(({ x, y }, zoom) => zoomTo(x, y, zoom), () => viewportRef.current.zoom, clock, { min: MIN_ZOOM, max: MAX_ZOOM });
   const inertia = new PanInertia(panBy, clock);
   const glide = new ViewportGlide(apply, () => viewportRef.current, () => sources.screenSize(), clock);
 
   const stop = (): void => {
-    zoomAnimation.stop();
+    zoomGlide.stop();
     inertia.cancel();
     glide.stop();
   };
@@ -86,14 +86,14 @@ export function createGraphViewport(sources: GraphViewportSources, clock: FrameC
       glide.glideTo(bounded(viewport));
     },
     pinchZoom: (screenX, screenY, factor) => {
-      zoomAnimation.stop();
+      zoomGlide.stop();
       glide.stop();
       zoomTo(screenX, screenY, viewportRef.current.zoom * factor);
     },
     zoomStep: (screenX, screenY, factor) => {
       inertia.cancel();
       glide.stop();
-      zoomAnimation.zoomStep(screenX, screenY, factor);
+      zoomGlide.zoomStep({ x: screenX, y: screenY }, factor);
     },
     keepInBounds: () => apply(viewportRef.current),
     gliding: () => glide.gliding(),

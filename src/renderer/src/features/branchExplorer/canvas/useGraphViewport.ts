@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { browserFrameClock } from './frameClock';
+import { browserFrameClock } from '../../../lib/frameClock';
 import { createGraphViewport, type GraphViewport } from './graphViewport';
 import type { Size } from './viewport';
 

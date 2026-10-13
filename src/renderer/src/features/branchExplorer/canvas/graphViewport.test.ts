@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { FrameClock } from './frameClock';
+import type { FrameClock } from '../../../lib/frameClock';
 import { createGraphViewport } from './graphViewport';
 import { OVERSCROLL, toWorld, type Size, type Viewport } from './viewport';
 import { GLIDE_MS } from './viewportGlide';
-import { ZOOM_GLIDE_MAX_MS, ZOOM_STEP } from './zoom';
+import { ZOOM_GLIDE_MAX_MS } from '../../../lib/wheelZoom';
+import { ZOOM_STEP } from './zoom';
 
 const FRAME_MS = 16;
 

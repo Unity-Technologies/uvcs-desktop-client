@@ -1,4 +1,4 @@
-import type { FrameClock } from './frameClock';
+import type { FrameClock } from '../../../lib/frameClock';
 import { decayFling, flingVelocity, pushPanSample, type Fling, type PanSample } from './pan';
 
 /** Longer frame gaps (a stall, a hidden window) don't make the graph jump. */
