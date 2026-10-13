@@ -40,4 +40,11 @@ describe('ViewCoast', () => {
     expect(x()).toBe(100);
     expect(frames.animating()).toBe(false);
   });
+
+  it('stops too when the camera is placed before its first frame, just let go', () => {
+    const { frames, x, place } = flung();
+    place({ target: [100, 0, 0], yaw: 0, pitch: 0, distance: 10 });
+    frames.settle();
+    expect(x()).toBe(100);
+  });
 });
