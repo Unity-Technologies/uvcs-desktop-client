@@ -118,7 +118,8 @@ moved node are matched under it, so renaming `Arm_L` is one rename, not every bo
   `.mat` the diff changed is told too. They're told with the Materials look off too, from the very reads the look makes
   (one query each, shared): only for versions whose materials may resolve differently (`materialsMayDiffer`: their
   slots' sources or their lookups differ, the points themselves aside; or a diff's side before undoes a change to a
-  `.mat`, a `.meta`, an image or an `.mtl`), so a re-export that changed no material reads nothing, and never decoding a
+  `.mat`, an image, an `.mtl`, the `.meta` of one of those, or the model's own `.meta`; a script's `.meta` names
+  nothing a material reads), so a re-export that changed no material reads nothing, and never decoding a
   texture. The two sides of a committed diff are always at two points: comparing them listed the model's folder for
   every model diff opened, the look off, to tell nothing. A history's and a last change's two points, whose changes
   aren't known, are compared with the look on only. Waiting for the look to resolve them was rejected: a change is a
@@ -309,7 +310,8 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   other reads wait for. Outside a Unity project, only the model's folder is listed. A changeset's tree is kept for
   good, a branch head's for `BRANCH_TREE_LIFE_MS` (shared with the renderer's queries: people check in), the latest
   eight points; reads at once share one listing, one that failed (the server) fails the find, never reads as "not
-  there" (`TreeListingError`), and is asked again next time. Names
+  there" (`TreeListingError`), and is asked again by the next read, a project index's included (a GUID's search
+  answers `unread` meanwhile, and the renderer never keeps such an answer: `findStaleTime`). Names
   compare as the disk does (case aside on macOS and Windows). The project itself, its packages (`Packages/manifest.json`)
   and its `Library/PackageCache` are read on the disk: they are how this machine's Unity imports the project. A
   GUID's search reads each `.meta` head by its revision, a folder's `.meta` files together (their downloads one batch,
