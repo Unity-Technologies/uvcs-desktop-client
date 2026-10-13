@@ -230,6 +230,32 @@ describe('parseModel, glTF', () => {
     expect([...model.meshes[0]!.attributes.uv1!]).toEqual([0, 0, 1, 0, 0, 1]);
   });
 
+  it("reads a specular-glossiness material's diffuse texture and factor, as glTFast does", async () => {
+    const gltf = triangleGltf('inline', {
+      extensionsUsed: ['KHR_materials_pbrSpecularGlossiness'],
+      materials: [
+        {
+          name: 'Baron',
+          alphaMode: 'BLEND',
+          doubleSided: true,
+          extensions: { KHR_materials_pbrSpecularGlossiness: { diffuseFactor: [0.5, 0.25, 1, 0.8], diffuseTexture: { index: 0 }, glossinessFactor: 0.3 } },
+          normalTexture: { index: 1 },
+        },
+      ],
+      textures: [{ source: 0 }, { source: 1 }],
+      images: [{ uri: 'textures/baron_diffuse.png' }, { uri: 'textures/baron_normal.png' }],
+    });
+    const [baron] = (await parsed(bytesOf(gltf, 'gltf'))).materials;
+    expect(baron).toMatchObject({
+      color: [0.5, 0.25, 1],
+      opacity: 0.8,
+      alpha: 'blend',
+      doubleSided: true,
+      baseMap: { texture: { kind: 'beside', path: 'textures/baron_diffuse.png' }, channel: 0 },
+      normalMap: { texture: { kind: 'beside', path: 'textures/baron_normal.png' } },
+    });
+  });
+
   it('keeps unnamed materials apart, each slot knowing its own', async () => {
     const gltf = triangleGltf('inline', {
       meshes: [{ primitives: [{ attributes: { POSITION: 0 }, material: 0 }, { attributes: { POSITION: 0 }, material: 1 }] }],
