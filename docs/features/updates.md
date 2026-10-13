@@ -41,6 +41,14 @@ tells every window each step (`updateStatusChanged`, an `UpdateStatus`); a windo
   (`FIRST_CHECK_DELAY_MS`, `CHECK_INTERVAL_MS`), and when the user asks (`check`: the About dialog, Check for
   Updates… in the menus, the palette). It asks GitHub, never the UVCS server: the one timer besides the incoming check.
   Development builds have no feed: they never check, and say so when asked (`unavailable`).
+- **What a check sends**: a standard web request, so GitHub sees the IP address and the user agent, and nothing that
+  identifies the installation. electron-updater would give each installation a random id (`.updaterId` in the user
+  data folder) and send it as `x-user-staging-id` with every check, only to serve staged rollouts (a release's
+  `stagingPercentage`); `withoutStagingUserId` (applied in `createAppUpdates`) drops the header, never creates the
+  file, and offers every release to everyone; `removeLeftoverStagingUserId` deletes, at start, the file an earlier
+  version left. The releases never stage, so nothing is lost; a staged rollout would need
+  another way to pick its users. Downloads send no id either, the unsigned-macOS installer's included
+  (`downloadInstaller` fetches the bare URL).
 - **Download**: an update found downloads by itself, then waits (`ready`). A check while one is under way or ready
   checks nothing and tells where it stands.
 - **Install**: "Restart & Install" quits into it (Windows runs the installer silently, per user, and starts the app
