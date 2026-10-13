@@ -84,6 +84,17 @@ export function testModel(spec: TestModel): ParsedModel {
   };
 }
 
+/**
+ * The model with each skinned mesh bound while its bones stood at the file's origin, unturned: where the bones are now
+ * (their rest pose) moves it, as a weapon bound straight is held across.
+ */
+export function boundAtOrigin(model: ParsedModel): ParsedModel {
+  for (const { skin } of model.meshes) {
+    if (skin) skin.boneInverses = new Float32Array(skin.bones.flatMap(() => new Matrix4().elements));
+  }
+  return model;
+}
+
 /** The six faces of a box, as a file stores them: four corners each, every corner its own vertex. */
 const FACES: { normal: [number, number, number]; corners: [number, number, number][] }[] = [
   { normal: [1, 0, 0], corners: [[1, -1, -1], [1, 1, -1], [1, 1, 1], [1, -1, 1]] },
