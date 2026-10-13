@@ -96,6 +96,13 @@ describe('SettingsStore reading its file', () => {
     expect(new SettingsStore(filePath).get()).toMatchObject({ showGravatar: false, gravatarChoiceAsked: true });
   });
 
+  it('keeps the profile pictures question unasked across another change, as every setting is written', () => {
+    const { settings, filePath } = store();
+    settings.update({ theme: 'dark' });
+
+    expect(new SettingsStore(filePath).get()).toMatchObject({ theme: 'dark', showGravatar: false, gravatarChoiceAsked: false });
+  });
+
   it('keeps Gravatar pictures the user turned on', () => {
     const { settings, filePath } = store();
     settings.update({ showGravatar: true, gravatarChoiceAsked: true });

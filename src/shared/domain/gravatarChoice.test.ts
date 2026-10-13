@@ -42,4 +42,8 @@ describe('the choice in saved settings', () => {
   it('never shows pictures that are on but unanswered', () => {
     expect(storedGravatarChoice({ showGravatar: true, gravatarChoiceAsked: false })).toEqual({ showGravatar: false, gravatarChoiceAsked: false });
   });
+
+  it('keeps pictures off and unasked when saved by this version before the user answered', () => {
+    expect(storedGravatarChoice({ showGravatar: false, gravatarChoiceAsked: false })).toEqual({ showGravatar: false, gravatarChoiceAsked: false });
+  });
 });
