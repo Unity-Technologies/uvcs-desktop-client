@@ -38,7 +38,7 @@ export function createUnityAssetsService({ watchers, platform = process.platform
   function indexOf(workspacePath: string, project: UnityProject): ProjectAssetIndex {
     if (watchers.coverageOf(workspacePath) !== 'full') {
       indexes.delete(workspacePath);
-      return new ProjectAssetIndex(project, filesOf(workspacePath), platform);
+      return new ProjectAssetIndex(project, filesOf(workspacePath), platform, false);
     }
     const ofWorkspace = indexes.get(workspacePath) ?? new Map<string, ProjectAssetIndex>();
     indexes.set(workspacePath, ofWorkspace);

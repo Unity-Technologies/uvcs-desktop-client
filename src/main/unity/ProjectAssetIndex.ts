@@ -69,6 +69,11 @@ export class ProjectAssetIndex {
     readonly project: UnityProject,
     private readonly files: ProjectFiles,
     private readonly platform: NodeJS.Platform,
+    /**
+     * Whether a miss looks in the package cache: not for an index kept for one find alone (a watcher that doesn't see
+     * every change), which would read all of it (tens of thousands of `.meta` files for URP) on every miss.
+     */
+    private readonly readsPackageCache = true,
   ) {}
 
   /**
@@ -155,6 +160,7 @@ export class ProjectAssetIndex {
    * GUID the rest of the project lacks; undefined without a `Library`, as nothing then tells the GUID is missing.
    */
   private async inPackageCache(guid: string): Promise<string | null | undefined> {
+    if (!this.readsPackageCache) return undefined;
     if (this.wholePackageCache && !(await this.packageCacheUnchanged())) this.forgetPackageCache();
     if (!this.wholePackageCache) {
       let reading = this.packageCacheRead;
