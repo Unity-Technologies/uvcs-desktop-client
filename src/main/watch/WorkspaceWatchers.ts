@@ -1,5 +1,6 @@
 import type { WatchCoverage } from '@shared/api/workspaces';
 import type { WorkspaceChange } from '@shared/domain/workspaceChange';
+import { AFTER_OWN_WRITE_GRACE_MS } from './OwnWrites';
 import { WorkspaceWatcher } from './WorkspaceWatcher';
 
 /** What the registry needs from a watcher; tests pass a fake. */
@@ -103,7 +104,12 @@ export class WorkspaceWatchers {
       const tell = (): void => {
         for (const listener of this.fileListeners) listener.changed(watcher.workspacePath, anywhere);
       };
-      write.then(tell, tell);
+      // Once it settles, and again when its grace ends: what changed meanwhile, the watcher dropped as the write's.
+      const settled = (): void => {
+        tell();
+        setTimeout(tell, AFTER_OWN_WRITE_GRACE_MS);
+      };
+      write.then(settled, settled);
     }
   }
 

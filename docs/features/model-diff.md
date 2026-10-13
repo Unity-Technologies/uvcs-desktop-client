@@ -253,7 +253,8 @@ choice comes back in the other modes. The merge cards' stills stay clay (`modelT
   `Library`), a lookup stopping at the first ring that answers; what Unity skips (`.hidden`, `Name~`) is left out.
   The watcher keeps it current (`WorkspaceWatchers.listen`: a changed folder is read again when next needed, a change
   anywhere drops it, and so does the watch breaking or stopping; the app's own `cm` writes, whose events the watcher
-  drops, count as a change anywhere once they settle). It is kept only while the watcher sees the whole workspace
+  drops, count as a change anywhere once they settle, and again when their grace ends, `AFTER_OWN_WRITE_GRACE_MS`, as
+  the watcher drops what changed meanwhile as theirs). It is kept only while the watcher sees the whole workspace
   (`coverageOf` is `full`); otherwise each find reads afresh. A GUID found is checked against its `.meta` once more.
   A folder is read once however many finds ask at once; once all is read, a miss misses at once. A read that a change
   overtook keeps nothing, and a find after the change never joins it: the listing or GUIDs of a folder forgotten (or
