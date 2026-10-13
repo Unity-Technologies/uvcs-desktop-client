@@ -41,6 +41,11 @@ export interface UnityAssetsAnswer {
    * (`com.unity.2d.psdimporter`) in its `Packages/manifest.json` or `packages-lock.json`. A `.psd` it always imports.
    */
   importsPsb: boolean;
+  /**
+   * Whether GUIDs were looked up in a Unity project's index: false for a model outside any project (a package's own
+   * repository), where every GUID is answered null without telling whether the asset exists.
+   */
+  guidsIndexed: boolean;
 }
 
 /** The most lookups of each kind one request may carry: a model is read with at most 64 textures. */
