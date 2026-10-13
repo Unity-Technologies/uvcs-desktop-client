@@ -19,9 +19,13 @@ export interface ModelImportSettings {
   /**
    * "Material Creation Mode" (`materials.materialImportMode`): 0 none (every slot gets Unity's default material),
    * 1 the legacy Standard, 2 Import via MaterialDescription (the default). Both of the last make the file's materials.
+   * A `.meta` older than Unity 2019.3 says it as `materials.importMaterials`: 0 none, 1 the file's.
    */
   materialImport: 'none' | 'fromFile';
-  /** With no materials made, whether the remaps still apply (`remapMaterialsIfMaterialImportModeIsNone`). */
+  /**
+   * With no materials made, whether the remaps still apply (`remapMaterialsIfMaterialImportModeIsNone`). A `.meta`
+   * older than the setting (Unity 2021.2) doesn't write it: they applied then, and an upgraded project keeps that.
+   */
   remapsWithoutMaterials: boolean;
   /** Material slots remapped to a material of the project (`externalObjects`), by slot name: its GUID. */
   materialRemaps: { slot: string; guid: string }[];
@@ -69,8 +73,8 @@ export function readImportSettings(metaText: string): ModelImportSettings {
       const { name, takeName, firstFrame, lastFrame } = mappingOf(clip);
       return typeof name === 'string' ? [{ name, takeName: typeof takeName === 'string' ? takeName : name, firstFrame: numberOf(firstFrame, 0), lastFrame: numberOf(lastFrame, 0) }] : [];
     }),
-    materialImport: materials.materialImportMode === NO_MATERIALS ? 'none' : 'fromFile',
-    remapsWithoutMaterials: importer.remapMaterialsIfMaterialImportModeIsNone === '1',
+    materialImport: (materials.materialImportMode ?? materials.importMaterials) === NO_MATERIALS ? 'none' : 'fromFile',
+    remapsWithoutMaterials: importer.remapMaterialsIfMaterialImportModeIsNone === undefined || importer.remapMaterialsIfMaterialImportModeIsNone === '1',
     materialRemaps: remapsOf(importer.externalObjects, 'UnityEngine:Material').map(({ name, guid }) => ({ slot: name, guid })),
     textureRemaps: remapsOf(importer.externalObjects, 'UnityEngine:Texture2D'),
     searchTexturesGlobally: materials.searchTexturesGlobally === undefined || numberOf(materials.searchTexturesGlobally, 1) !== 0,
