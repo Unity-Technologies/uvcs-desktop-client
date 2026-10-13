@@ -25,7 +25,8 @@ import {
   type VersionPlan,
 } from './materialPlan';
 import { objMaterialLibraries, readMtlMaterials } from './mtlMaterials';
-import { materialsOffered, slotSources, type ModelMaterialsInput } from './slotSources';
+import { slotKeysOf } from './slotKeys';
+import { materialsOffered, slotSources, type MaterialSlot, type ModelMaterialsInput } from './slotSources';
 import { readUnityMaterial, type UnityMaterial } from './unityMaterial';
 
 /** A version of the model as read, and where it is in the workspace (null when it names no path there). */
@@ -113,8 +114,19 @@ export function useModelMaterials(workspacePath: string, versions: Record<'befor
 
 function inputOf(version: MaterialVersion | null, mtl: ParsedModel['materials'] | null): ModelMaterialsInput | null {
   if (!version) return null;
-  const slots = [...new Set(version.model.meshes.flatMap((mesh) => mesh.slots))];
-  return { format: version.model.format, slots, fileMaterials: version.model.format === 'obj' ? (mtl ?? []) : version.model.materials, settings: version.options.settings };
+  const { model } = version;
+  const mtlByName = new Map((mtl ?? []).map((material) => [material.name, material]));
+  const slots = new Map<string, MaterialSlot>();
+  for (const mesh of model.meshes) {
+    slotKeysOf(model.format, mesh).forEach((key, i) => {
+      if (slots.has(key)) return;
+      const name = mesh.slots[i]!;
+      // An OBJ names its slots, and its `.mtl` defines them by those names.
+      const material = model.format === 'obj' ? (mtlByName.get(name) ?? null) : (model.materials[mesh.slotMaterials[i] ?? -1] ?? null);
+      slots.set(key, { key, name, material });
+    });
+  }
+  return { format: model.format, slots: [...slots.values()], settings: version.options.settings };
 }
 
 /** True from the first time `on` is, until `of` changes: the look's reads and decodes stay while it's off. */

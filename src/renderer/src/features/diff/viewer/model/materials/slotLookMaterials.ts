@@ -36,7 +36,7 @@ export class SlotLookMaterials {
   /** The slots' looks now; a slot without one draws in clay. */
   update(looks: ReadonlyMap<string, SlotLook> | null): void {
     this.model.meshes.forEach((mesh, meshIndex) => {
-      mesh.slots.forEach((slot, slotIndex) => {
+      mesh.slotKeys.forEach((slot, slotIndex) => {
         const look = looks?.get(slot);
         const current = this.materials[meshIndex]![slotIndex]!;
         if (!look) {
@@ -45,7 +45,7 @@ export class SlotLookMaterials {
           return;
         }
         const clay = mesh.clay[slotIndex]!;
-        const material = current ?? new MeshStandardMaterial({ name: slot, metalness: 0, roughness: ROUGHNESS, polygonOffset: clay.polygonOffset, polygonOffsetFactor: clay.polygonOffsetFactor, polygonOffsetUnits: clay.polygonOffsetUnits });
+        const material = current ?? new MeshStandardMaterial({ name: mesh.slots[slotIndex], metalness: 0, roughness: ROUGHNESS, polygonOffset: clay.polygonOffset, polygonOffsetFactor: clay.polygonOffsetFactor, polygonOffsetUnits: clay.polygonOffsetUnits });
         this.materials[meshIndex]![slotIndex] = material;
         this.apply(material, look);
       });

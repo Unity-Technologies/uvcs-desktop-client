@@ -18,28 +18,32 @@ export type SlotSource =
   | { kind: 'remapped'; guid: string }
   | { kind: 'file'; material: FileMaterial };
 
+/** A slot of the model's meshes, once per `slotKeysOf` key: its name, and the material the file defines for it. */
+export interface MaterialSlot {
+  key: string;
+  name: string;
+  /** The model's own, or an OBJ's `.mtl`'s; null where the file defines none. */
+  material: FileMaterial | null;
+}
+
 /** What decides a version's materials. */
 export interface ModelMaterialsInput {
   format: ModelFormat;
-  /** Every slot its meshes use. */
-  slots: string[];
-  /** What the file defines: the model's own, or an OBJ's `.mtl`'s. */
-  fileMaterials: FileMaterial[];
+  slots: MaterialSlot[];
   settings: ModelImportSettings;
 }
 
-export function slotSources({ format, slots, fileMaterials, settings }: ModelMaterialsInput): Map<string, SlotSource> {
-  const byName = new Map(fileMaterials.map((material) => [material.name, material]));
+/** Each slot's source, by its key. */
+export function slotSources({ format, slots, settings }: ModelMaterialsInput): Map<string, SlotSource> {
   const remaps = new Map(settings.materialRemaps.map(({ slot, guid }) => [slot, guid]));
-  const sourceOf = (slot: string): SlotSource => {
-    const material = byName.get(slot) ?? null;
+  const sourceOf = ({ name, material }: MaterialSlot): SlotSource => {
     if (format === 'gltf' || format === 'glb') return material ? { kind: 'file', material } : { kind: 'default' };
-    const remap = remaps.get(slot);
+    const remap = remaps.get(name);
     if (settings.materialImport === 'none') return remap && settings.remapsWithoutMaterials ? { kind: 'remapped', guid: remap } : { kind: 'default' };
     if (remap) return { kind: 'remapped', guid: remap };
     return material ? { kind: 'file', material } : { kind: 'default' };
   };
-  return new Map(slots.map((slot) => [slot, sourceOf(slot)]));
+  return new Map(slots.map((slot) => [slot.key, sourceOf(slot)]));
 }
 
 /**

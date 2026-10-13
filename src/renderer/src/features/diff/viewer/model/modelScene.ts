@@ -22,6 +22,7 @@ import {
 } from 'three';
 import type { ModelMesh, ParsedModel } from './parsedModel';
 import type { ModelSummary } from './modelSummary';
+import { slotKeysOf } from './materials/slotKeys';
 import { viewerSpaceOf } from './modelSpaces';
 
 export interface ModelScene {
@@ -51,6 +52,8 @@ export interface SceneMesh {
   ghost: Mesh<BufferGeometry, MeshBasicMaterial>;
   /** Each material slot's name, in the order of `solid.material`. */
   slots: string[];
+  /** Each slot's key to the Materials look (`slotKeysOf`). */
+  slotKeys: string[];
 }
 
 export function buildModelScene(model: ParsedModel, summary: ModelSummary): ModelScene {
@@ -71,7 +74,7 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
     objects.set(summary.nodes[i]!.key, object);
   });
   const meshes = model.meshes.map((mesh) => {
-    const sceneMesh = meshOf(mesh, summary.nodes[mesh.node]!.key);
+    const sceneMesh = meshOf(mesh, summary.nodes[mesh.node]!.key, slotKeysOf(model.format, mesh));
     nodes[mesh.node]!.add(sceneMesh.solid, sceneMesh.wire, sceneMesh.heat, sceneMesh.ghost);
     return sceneMesh;
   });
@@ -109,7 +112,7 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
  * The mesh as drawn: in its bind pose (a take poses a skinned one: `ModelAnimationBar`), its slots as groups,
  * its normals computed when the file has none, as Unity's importer does.
  */
-function meshOf(mesh: ModelMesh, key: string): SceneMesh {
+function meshOf(mesh: ModelMesh, key: string, slotKeys: string[]): SceneMesh {
   const geometry = new BufferGeometry();
   const skinned = mesh.skin !== null && mesh.attributes.skinIndex !== null && mesh.attributes.skinWeight !== null;
   if (skinned) {
@@ -133,7 +136,7 @@ function meshOf(mesh: ModelMesh, key: string): SceneMesh {
   heat.visible = false;
   ghost.visible = false;
   for (const object of [solid, wire, heat, ghost]) object.userData.key = key;
-  return { key, solid, clay: materials, wire, heat, ghost, slots: mesh.slots };
+  return { key, solid, clay: materials, wire, heat, ghost, slots: mesh.slots, slotKeys };
 }
 
 /** Each bone with its parent, where the parent is a bone too: the skeleton's lines. */

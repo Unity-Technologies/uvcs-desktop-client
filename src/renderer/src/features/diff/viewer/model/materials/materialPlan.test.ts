@@ -16,7 +16,7 @@ const file = (path: string): FoundFile => ({ path, size: 10, modified: 1 });
 const bitmap = {} as ImageBitmap;
 
 function version(fileMaterials: FileMaterial[], settings: Partial<ModelImportSettings> = {}, format: ModelMaterialsInput['format'] = 'fbx'): ModelMaterialsInput {
-  return { format, slots: fileMaterials.map((material) => material.name), fileMaterials, settings: { ...DEFAULT_IMPORT_SETTINGS, ...settings } };
+  return { format, slots: fileMaterials.map((material) => ({ key: material.name, name: material.name, material })), settings: { ...DEFAULT_IMPORT_SETTINGS, ...settings } };
 }
 
 function found(overrides: Partial<FoundAssets> = {}): FoundAssets {
