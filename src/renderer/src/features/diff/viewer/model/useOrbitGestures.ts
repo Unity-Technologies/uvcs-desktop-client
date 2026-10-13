@@ -1,14 +1,15 @@
 // The model stage's pointer, as Unity's Scene view takes it: drag to orbit (Alt+drag too, Unity's habit), drag with
-// the right or middle button or with Shift to pan (either coasts a little once let go: `SHORT_FLING`), scroll or pinch to zoom at the pointer (a wheel's notches glide:
-// `dollyGlide`), double-click to orbit around the point clicked. A press that doesn't move is a click: it picks the part under it.
+// the right or middle button or with Shift to pan, each coasting a little once let go (`TURN_FLING`, `SHORT_FLING`);
+// scroll or pinch to zoom at the pointer (a wheel's notches glide: `dollyGlide`); double-click to orbit around the
+// point clicked. A press that doesn't move is a click: it picks the part under it.
 
 import { useEffect, useRef, type RefObject } from 'react';
 import { SHORT_FLING, type FlingFeel } from '../../../../lib/fling';
 import { browserFrameClock } from '../../../../lib/frameClock';
-import { PanInertia } from '../../../../lib/panInertia';
 import { isDiscreteWheel, wheelZoomFactor } from '../../../../lib/wheelZoom';
 import { followDrag, isOnStageControl } from '../image/pointerDrag';
 import type { ModelRenderer } from './modelRenderer';
+import { ViewCoast } from './viewCoast';
 import { dollied, orbited, panned, pointOnRay, workingDepth, type OrbitView, type Vector } from './orbitCamera';
 
 /**
@@ -45,23 +46,11 @@ export function useOrbitGestures({ element, renderer, view, onView, onDollyStep,
     let zoomPoint: { at: number; point: Vector | null } = { at: -Infinity, point: null };
     // How deep the pan under way grabbed (`workingDepth`): what was under the pointer moves exactly with it.
     let panDepth = 1;
-    // A drag coasts on as it went once let go; the model turns and pans without bounds, as far as asked.
-    const panInertia = new PanInertia(
-      (dx, dy) => {
-        latest.current.onView(panned(latest.current.view(), dx, dy, target.clientHeight, panDepth));
-        return { dx, dy };
-      },
-      browserFrameClock,
-      SHORT_FLING,
-    );
-    const turnInertia = new PanInertia(
-      (dx, dy) => {
-        latest.current.onView(orbited(latest.current.view(), dx, dy));
-        return { dx, dy };
-      },
-      browserFrameClock,
-      TURN_FLING,
-    );
+    // A drag coasts on as it went once let go (`ViewCoast`); the model turns and pans without bounds.
+    const coast = (move: (view: OrbitView, dx: number, dy: number) => OrbitView, feel: FlingFeel): ViewCoast =>
+      new ViewCoast(() => latest.current.view(), (next) => latest.current.onView(next), move, browserFrameClock, feel);
+    const panInertia = coast((current, dx, dy) => panned(current, dx, dy, target.clientHeight, panDepth), SHORT_FLING);
+    const turnInertia = coast(orbited, TURN_FLING);
     const stopCoasting = (): void => {
       panInertia.cancel();
       turnInertia.cancel();

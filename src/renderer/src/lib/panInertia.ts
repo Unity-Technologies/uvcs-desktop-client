@@ -51,6 +51,8 @@ export class PanInertia {
     const frame = decayFling(fling, Math.min(MAX_FRAME_MS, now - this.lastFrameAt));
     this.lastFrameAt = now;
     const moved = this.panBy(frame.dx, frame.dy);
+    // Cancelled by the move itself (the view taken over meanwhile): no frame after this one.
+    if (this.fling === null) return;
     // An axis stopped by the edge of the view (the graph's) has nowhere left to glide.
     const vx = Math.abs(moved.dx - frame.dx) > 0.5 ? 0 : frame.next.vx;
     const vy = Math.abs(moved.dy - frame.dy) > 0.5 ? 0 : frame.next.vy;
