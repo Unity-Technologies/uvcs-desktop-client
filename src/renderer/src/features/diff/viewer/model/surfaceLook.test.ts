@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { migrateDiffPreferences } from '../diffPreferencesStore';
-import { clickedSurface, shownSurface, surfaceButtonDisabledReason } from './surfaceLook';
+import { clickedSurface, shownSurface, surfaceButtonDisabledReason, surfaceButtonOn } from './surfaceLook';
 
 describe('the surface look', () => {
   it('is one choice: a button turns its look on and the other off, and clicked again goes back to clay', () => {
@@ -15,6 +15,12 @@ describe('the surface look', () => {
     expect(shownSurface('materials', false)).toBe('clay');
     expect(shownSurface('materials', true)).toBe('materials');
     expect(shownSurface('slotColors', false)).toBe('slotColors');
+  });
+
+  it('shows a button on only while its look is chosen and can show: in Diffs none is on', () => {
+    expect(surfaceButtonOn('materials', 'materials', false)).toBe(true);
+    expect(surfaceButtonOn('materials', 'slotColors', false)).toBe(false);
+    expect(surfaceButtonOn('materials', 'materials', true)).toBe(false);
   });
 
   it('says why its buttons are off in Diffs, and only there', () => {
