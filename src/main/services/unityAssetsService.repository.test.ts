@@ -137,12 +137,16 @@ describe('unityAssets.find at a point of the repository', () => {
     await mkdir(join(workspace, 'Game', 'ProjectSettings'), { recursive: true });
     let failProject = true;
     const fake = fakeCmClient({
-      ls: (command) => (command.args[1] === '/Game' && failProject ? ((failProject = false), cmFails('The server is down')) : (listing(PROJECT)(command) as string)),
+      ls: (command) => (command.args[1] === '/Game' && failProject ? cmFails('The server is down') : (listing(PROJECT)(command) as string)),
     });
     const downloads = { read: async (_workspace: string, file: RevisionFile) => Buffer.from(METAS[file.revision.revisionId] ?? 'bytes') };
     const unityAssets = createUnityAssetsService({ trees: new RepositoryTrees({ cm: fake.cm, downloads }), downloads, watchers: { listen: () => () => undefined, coverageOf: () => 'full' } });
     const request = { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', point: { kind: 'repository', at: 'cs:12' } as const, textures: [], guids: [MAT_GUID], paths: [], searchTexturesGlobally: false };
-    expect((await unityAssets.find(workspace, request)).guidMisses).toBe('unread');
+    // The server is down for the whole first find: it can't tell.
+    const first = await unityAssets.find(workspace, request);
+    expect(first.guids).toEqual([null]);
+    expect(first.guidMisses).not.toBe('known');
+    failProject = false;
     expect(paths((await unityAssets.find(workspace, request)).guids)).toEqual(['Game/Assets/Art/Materials/Bark.mat']);
   });
 
