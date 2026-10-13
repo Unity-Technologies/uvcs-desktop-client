@@ -7,7 +7,7 @@ import { GLTFLoader, type GLTFParser } from 'three/examples/jsm/loaders/GLTFLoad
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader.js';
 import type { ModelBytes } from '@shared/domain/content';
 import { fbxAxisConversion, Y_UP_AXES, type FbxAxisSystem } from './fbxAxes';
-import { readFbxProperty, type FbxPropertyName } from './fbxProperties';
+import { isBinaryFbx, readFbxProperty, type FbxPropertyName } from './fbxProperties';
 import { fromThreeObject, type ModelFileFacts } from './fromThreeObject';
 import { readFbxTextureFiles } from './fbxTextureFiles';
 import { gltfNeed, gltfTextureImage, type GltfNeed } from './gltfJson';
@@ -18,9 +18,19 @@ import { noTextureLoading } from './noTextureLoading';
 import type { ParsedModel } from './parsedModel';
 
 /** Why a model can't be shown: what its bytes don't hold (a glTF's other file, a decoder), or bytes that don't read. */
-export type ModelReadFailure = GltfNeed | { kind: 'unreadable' };
+export type ModelReadFailure = GltfNeed | { kind: 'oldFbx'; version: number } | { kind: 'unreadable' };
 
 export type ModelReadResult = { kind: 'parsed'; model: ParsedModel } | { kind: 'failed'; failure: ModelReadFailure };
+
+/** FBXLoader reads FBX 7.0 (2011) and later: an FBX 6 file it can't. */
+const FIRST_READ_FBX_VERSION = 7000;
+
+/** The FBX's format version: a binary file's after its 23-byte magic, an ASCII one's `FBXVersion`; null if unsaid. */
+function fbxVersion(bytes: Uint8Array): number | null {
+  if (isBinaryFbx(bytes)) return bytes.length >= 27 ? new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength).getUint32(23, true) : null;
+  const match = /^\s*FBXVersion:\s*(\d+)/m.exec(new TextDecoder().decode(bytes.subarray(0, 4096)));
+  return match ? Number(match[1]) : null;
+}
 
 /** FBX keeps lengths in centimetres: Unity's "Convert Units" turns them into metres. */
 const FBX_UNITS_PER_METRE = 100;
@@ -31,6 +41,10 @@ export async function parseModel({ bytes, format }: ModelBytes, companions: Read
   if (format === 'gltf' || format === 'glb') {
     const need = gltfNeed(bytes, format, new Set(Object.keys(companions)));
     if (need) return { kind: 'failed', failure: need };
+  }
+  if (format === 'fbx') {
+    const version = fbxVersion(bytes);
+    if (version !== null && version < FIRST_READ_FBX_VERSION) return { kind: 'failed', failure: { kind: 'oldFbx', version } };
   }
   const textures = new Set<string>();
   const companionUrls = new Map(Object.entries(companions).map(([name, data]) => [name, URL.createObjectURL(new Blob([data as Uint8Array<ArrayBuffer>]))]));

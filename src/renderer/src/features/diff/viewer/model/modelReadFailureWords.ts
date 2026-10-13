@@ -13,6 +13,11 @@ export function modelReadFailureWords(failure: ModelReadFailure): { title: strin
         title: `This glTF is compressed with ${failure.compression}`,
         description: "Its meshes need a decoder the diff doesn't have. Compare an uncompressed export instead.",
       };
+    case 'oldFbx':
+      return {
+        title: `This FBX is in an older format (${Math.floor(failure.version / 1000)}.${Math.floor((failure.version % 1000) / 100)})`,
+        description: 'The 3D view reads FBX 7.0 and later. Unity still imports it; export it again from a newer tool to see it here.',
+      };
     case 'unreadable':
       return { title: "Couldn't display this model", description: "The file looks like a 3D model but couldn't be read." };
   }
