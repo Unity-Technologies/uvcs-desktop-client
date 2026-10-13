@@ -1,15 +1,21 @@
 // The model stage's pointer, as Unity's Scene view takes it: drag to orbit (Alt+drag too, Unity's habit), drag with
-// the right or middle button or with Shift to pan (it coasts a little once let go: `SHORT_FLING`), scroll or pinch to zoom at the pointer (a wheel's notches glide:
+// the right or middle button or with Shift to pan (either coasts a little once let go: `SHORT_FLING`), scroll or pinch to zoom at the pointer (a wheel's notches glide:
 // `dollyGlide`), double-click to orbit around the point clicked. A press that doesn't move is a click: it picks the part under it.
 
 import { useEffect, useRef, type RefObject } from 'react';
-import { SHORT_FLING } from '../../../../lib/fling';
+import { SHORT_FLING, type FlingFeel } from '../../../../lib/fling';
 import { browserFrameClock } from '../../../../lib/frameClock';
 import { PanInertia } from '../../../../lib/panInertia';
 import { isDiscreteWheel, wheelZoomFactor } from '../../../../lib/wheelZoom';
 import { followDrag, isOnStageControl } from '../image/pointerDrag';
 import type { ModelRenderer } from './modelRenderer';
 import { dollied, orbited, panned, type OrbitView, type Vector } from './orbitCamera';
+
+/**
+ * How a turn coasts once let go: much less than a pan, as each pixel turns the model (`orbited`): a slow release turns
+ * it on by a few degrees, the hardest flick about 30°. The pan's coast on a turn spun the model round and more.
+ */
+const TURN_FLING: FlingFeel = { maxSpeed: 1, tauMinMs: 50, tauMaxMs: 90, tauPerSpeedMs: 40 };
 
 /** A press that moves less than this, in pixels, is a click. */
 const CLICK_SLOP = 4;
@@ -35,8 +41,8 @@ export function useOrbitGestures({ element, renderer, view, onView, onDollyStep,
     const target = element.current;
     if (!target || !renderer) return;
     let zoomPoint: { at: number; point: Vector | null } = { at: -Infinity, point: null };
-    // The model pans without bounds: it moves as far as asked.
-    const inertia = new PanInertia(
+    // A drag coasts on as it went once let go; the model turns and pans without bounds, as far as asked.
+    const panInertia = new PanInertia(
       (dx, dy) => {
         latest.current.onView(panned(latest.current.view(), dx, dy, target.clientHeight));
         return { dx, dy };
@@ -44,6 +50,18 @@ export function useOrbitGestures({ element, renderer, view, onView, onDollyStep,
       browserFrameClock,
       SHORT_FLING,
     );
+    const turnInertia = new PanInertia(
+      (dx, dy) => {
+        latest.current.onView(orbited(latest.current.view(), dx, dy));
+        return { dx, dy };
+      },
+      browserFrameClock,
+      TURN_FLING,
+    );
+    const stopCoasting = (): void => {
+      panInertia.cancel();
+      turnInertia.cancel();
+    };
     const local = (event: MouseEvent): [number, number] => {
       const rect = target.getBoundingClientRect();
       return [event.clientX - rect.left, event.clientY - rect.top];
@@ -54,9 +72,10 @@ export function useOrbitGestures({ element, renderer, view, onView, onDollyStep,
       const pans = event.button === 1 || event.button === 2 || (event.button === 0 && event.shiftKey);
       if (!pans && event.button !== 0) return;
       event.preventDefault();
-      inertia.cancel();
+      stopCoasting();
       target.focus({ preventScroll: true });
-      if (pans) inertia.sample(event.clientX, event.clientY, event.timeStamp);
+      const inertia = pans ? panInertia : turnInertia;
+      inertia.sample(event.clientX, event.clientY, event.timeStamp);
       let last = { x: event.clientX, y: event.clientY };
       let travelled = 0;
       followDrag(
@@ -67,20 +86,20 @@ export function useOrbitGestures({ element, renderer, view, onView, onDollyStep,
           const dy = move.clientY - last.y;
           last = { x: move.clientX, y: move.clientY };
           travelled += Math.abs(dx) + Math.abs(dy);
-          if (pans) inertia.sample(move.clientX, move.clientY, move.timeStamp);
+          inertia.sample(move.clientX, move.clientY, move.timeStamp);
           const current = latest.current.view();
           latest.current.onView(pans ? panned(current, dx, dy, target.clientHeight) : orbited(current, dx, dy));
         },
         () => {
-          if (pans) inertia.release();
-          else if (travelled < CLICK_SLOP) latest.current.onClick(...local(event));
+          if (travelled < CLICK_SLOP && !pans) latest.current.onClick(...local(event));
+          else inertia.release();
         },
       );
     };
 
     const onWheel = (event: WheelEvent): void => {
       event.preventDefault();
-      inertia.cancel();
+      stopCoasting();
       if (event.timeStamp - zoomPoint.at > ZOOM_POINT_MS) zoomPoint = { at: event.timeStamp, point: renderer.pick(...local(event))?.point ?? null };
       else zoomPoint.at = event.timeStamp;
       if (isDiscreteWheel(event.deltaY, event.deltaMode)) {
@@ -94,7 +113,7 @@ export function useOrbitGestures({ element, renderer, view, onView, onDollyStep,
 
     const onDoubleClick = (event: MouseEvent): void => {
       if (isOnStageControl(event)) return;
-      inertia.cancel();
+      stopCoasting();
       const point = renderer.pick(...local(event))?.point;
       if (point) latest.current.onView({ ...latest.current.view(), target: point });
     };
@@ -110,7 +129,7 @@ export function useOrbitGestures({ element, renderer, view, onView, onDollyStep,
     target.addEventListener('dblclick', onDoubleClick);
     target.addEventListener('contextmenu', onContextMenu);
     return () => {
-      inertia.cancel();
+      stopCoasting();
       target.removeEventListener('pointerdown', onPointerDown);
       target.removeEventListener('wheel', onWheel);
       target.removeEventListener('dblclick', onDoubleClick);
