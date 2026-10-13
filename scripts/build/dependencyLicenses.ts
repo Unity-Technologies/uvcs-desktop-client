@@ -1,7 +1,8 @@
 /**
- * The licenses a dependency may have: permissive ones, which let the app be shipped under Apache-2.0 with only their
- * notices kept (THIRD_PARTY_NOTICES.txt). A copyleft license (GPL, LGPL, MPL, EUPL...) would put conditions on the
- * app itself, so a package under one needs a legal decision first. SPDX ids, compared case-insensitively as SPDX says.
+ * The licenses a dependency may have: permissive ones, which let the app be shipped under its own license (LICENSE.md)
+ * with only their notices kept (THIRD_PARTY_NOTICES.txt). A copyleft license (GPL, LGPL, MPL, EUPL...) would put
+ * conditions on the app itself, so a package under one needs a legal decision first. SPDX ids, compared
+ * case-insensitively as SPDX says.
  */
 export const PERMISSIVE_LICENSES: readonly string[] = [
   'MIT',
