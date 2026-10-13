@@ -2,7 +2,7 @@
 // texture, base map, transparent): the slot named, then briefly what changed. `changeRows` folds and lays them out.
 
 import type { AlphaMode } from '../parsedModel';
-import type { MaterialChange, Tiling } from './materialChanges';
+import { percentOf, type MaterialChange, type Tiling } from './materialChanges';
 import type { ResolvedMaterial } from './materialPlan';
 
 export function materialWords(change: MaterialChange): { title: string; detail?: string } {
@@ -77,7 +77,8 @@ export function materialFoldWords(run: MaterialChange[]): { title: string; detai
     case 'textureMissing': {
       // A texture is missing once, however many slots use it.
       const textures = new Set(run.flatMap((change) => (change.kind === 'textureMissing' ? [change.texture] : [])));
-      if (textures.size === 1) return { title: `${first.texture} isn't in the workspace, for ${count} slots`, detail: 'Unity shows the materials without it.' };
+      const slots = new Set(run.map((change) => change.slot));
+      if (textures.size === 1) return { title: `${first.texture} isn't in the workspace, for ${slots.size} slots`, detail: 'Unity shows the materials without it.' };
       return { title: `${textures.size} textures the materials use aren't in the workspace`, detail: 'Unity shows the materials without them.' };
     }
   }
@@ -138,7 +139,7 @@ function slotName(slot: string): string {
 }
 
 function percent(value: number): string {
-  return `${Math.round(value * 100)}%`;
+  return `${percentOf(value)}%`;
 }
 
 function number(value: number): string {
