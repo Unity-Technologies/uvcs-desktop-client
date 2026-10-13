@@ -1,4 +1,4 @@
-import { isDiscreteWheel, wheelZoomFactor } from './zoom';
+import { isDiscreteWheel, wheelZoomFactor } from '../../../lib/wheelZoom';
 
 /** What a wheel or trackpad event does to the graph. */
 export type WheelGesture =

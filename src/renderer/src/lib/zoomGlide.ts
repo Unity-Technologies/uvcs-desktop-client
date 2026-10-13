@@ -1,24 +1,28 @@
 import type { FrameClock } from './frameClock';
-import { accumulateZoom, cubicEaseOut, type ZoomMomentum } from './zoom';
+import { accumulateZoom, cubicEaseOut, type ZoomLimits, type ZoomMomentum } from './wheelZoom';
 
-/** Turns discrete zoom steps (wheel notches, buttons, keys) into an eased glide (see zoom.ts), one frame at a time. */
-export class ZoomAnimation {
+/**
+ * Turns discrete zoom steps (wheel notches, buttons, keys) into an eased glide (see wheelZoom.ts), one frame at a
+ * time, towards an anchor that stays still: what the view zooms at (a screen point, a point of a model).
+ */
+export class ZoomGlide<Anchor> {
   private momentum: ZoomMomentum | null = null;
-  private glide: { anchorX: number; anchorY: number; from: number } | null = null;
+  private glide: { anchor: Anchor; from: number } | null = null;
   private frame: number | null = null;
 
   constructor(
-    /** Sets an absolute zoom keeping the anchor screen point over the same world point. */
-    private readonly applyZoomAt: (anchorX: number, anchorY: number, zoom: number) => void,
+    /** Sets an absolute zoom keeping the anchor where it is on screen. */
+    private readonly applyZoomAt: (anchor: Anchor, zoom: number) => void,
     private readonly currentZoom: () => number,
     private readonly clock: FrameClock,
+    private readonly limits: ZoomLimits,
   ) {}
 
   /** Folds one zoom step in and glides towards the accumulated target, keeping the anchor still. */
-  zoomStep(anchorX: number, anchorY: number, factor: number): void {
+  zoomStep(anchor: Anchor, factor: number): void {
     const from = this.currentZoom();
-    this.momentum = accumulateZoom(this.momentum, from, factor, this.clock.now());
-    this.glide = { anchorX, anchorY, from };
+    this.momentum = accumulateZoom(this.momentum, from, factor, this.clock.now(), this.limits);
+    this.glide = { anchor, from };
     this.frame ??= this.clock.request(this.step);
   }
 
@@ -37,7 +41,7 @@ export class ZoomAnimation {
       return;
     }
     const t = Math.min(1, (this.clock.now() - momentum.startedAt) / momentum.duration);
-    this.applyZoomAt(glide.anchorX, glide.anchorY, glide.from + (momentum.target - glide.from) * cubicEaseOut(t));
+    this.applyZoomAt(glide.anchor, glide.from + (momentum.target - glide.from) * cubicEaseOut(t));
     if (t < 1) {
       this.frame = this.clock.request(this.step);
       return;

@@ -173,12 +173,29 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
 - **Framing**: both versions together (`framedBounds`), once both are read: framing one alone framed a pair whose other
   half was 100 times its size. Until the user moves the camera, the model stays framed as the stage resizes and the
   panel docks.
-- **Controls** (`useOrbitGestures`), as Unity's Scene view: drag (or Alt+drag) orbits, right, middle or Shift+drag pans,
-  scroll or pinch zooms at the point under the pointer, double-click orbits around the point clicked, a click picks the
-  part under it and its match on the other side. F frames what is picked, or the whole model; 0 the whole model
-  (`modelKeys`, in the shortcut registry). Draw modes are Unity's (Shaded, Wireframe, Shaded wireframe), and material
-  slots can show in their colors (`slotColor`: the avatar fills by name, so a renamed slot changes color) or their
-  materials ("Materials" below).
+- **Controls**, as Unity's Scene view (`useOrbitGestures`); every move takes the model as far as the hand asked, at
+  any zoom:
+  - **Orbit and pan**: drag (or Alt+drag) orbits; right, middle or Shift+drag pans. A pan moves what it grabbed exactly
+    with the pointer: what was under it, else the model's centre (`workingDepth`); panning at the orbit target's depth
+    crawled once the target was zoomed close in front of the model. Let go moving, either coasts a little
+    (`ViewCoast`: the Branch Explorer's inertia, `SHORT_FLING` for a pan, the much softer `TURN_FLING` for a turn), and
+    stops as soon as anything else places the camera. A trackpad's scroll already coasts by itself.
+  - **Zoom**: scroll or pinch zooms at the point under the pointer; with nothing there, at the point under it as deep
+    as the model's centre (`pointOnRay`: zooming towards the target alone slowed to a crawl as it neared it). A mouse
+    wheel's notches glide, as in the Branch Explorer (`dollyGlide`, `isDiscreteWheel`): jumping at once by what the
+    wheel said threw a model out of sight when spun fast. A trackpad and a pinch follow the fingers.
+  - **Clicks and keys**: double-click orbits around the point clicked; a click picks the part under it and its match on
+    the other side, and gives the pane the keyboard. F frames what is picked, or the whole model; 0 the whole model
+    (`modelKeys`, in the shortcut registry).
+  - **Moving through**: W, A, S, D (or the arrows), Q and E move through the model while held, as Unity's Scene view
+    moves through a level (without holding its right button), the target going along: forward where the camera looks,
+    at first half the model's depth a second (`workingDepth`: its centre's, or the target's from inside it), speeding up
+    while held to five times that over a second and a half, four times as fast with Shift (`flyStep`, `flown`,
+    `flyKeys`, `FlyKeysLoop`: every frame, never at the keyboard's repeat). ⌘, Ctrl or Alt joining in stops it, as
+    macOS sends no key up for a key let go under ⌘. Only keys pressed on the pane itself move it: a control's arrows
+    (the take's scrubber) stay the control's.
+- **Draw modes** are Unity's (Shaded, Wireframe, Shaded wireframe), and material slots can show in their colors
+  (`slotColor`: the avatar fills by name, so a renamed slot changes color) or their materials ("Materials" below).
 - **Bones** (offered when a version has some, remembered): each version's skeleton over it, a line from each bone
   to its parent bone (`boneLinks`) and a dot per joint, where the bones are now.
 - **Takes** (`ModelAnimationBar`, when a version has any): a take picked from both versions' (matched by name,
@@ -191,11 +208,14 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   (`MeshSkin.bindMatrix`): an FBX binds a mesh where its node is, glTF in the file's space, ignoring the skinned mesh's
   node. Binding a glTF at its node instead drew a Sketchfab export (its meshes under a `Sketchfab_model` root that turns
   Z up and a node that scales centimetres) under them twice: a hundredth of its size, or torn into stray triangles.
-  Blendshape animation isn't played: the viewer builds no morph targets, and a take's blendshape track names the
-  mesh's node, a Group above the mesh, so three's `AnimationMixer` would log an error for each one it can't bind. Before
-  binding, `playableTake` leaves out every track whose node or property the scene hasn't (blendshapes, a node it
-  doesn't have), so the bones' tracks beside them still play; the bar then says so in one line (`unplayableWords`:
-  "Blendshape animation isn't shown").
+  Blendshapes play too (a beating heart, a face): each mesh's are morph targets (`addBlendShapes`, at rest at 0, its
+  twins sharing its weights), and a take's blendshape track, which names the mesh's node (a Group holding the mesh in
+  the scene), is pointed at the mesh itself (`playableTake`), glTF's whole set of weights and FBX's one by its index.
+  Before binding, `playableTake` leaves out every track whose node or property the scene hasn't (a node it doesn't
+  have, blendshapes of a mesh without them), as three's `AnimationMixer` would log an error for each one it can't
+  bind, so the tracks beside them still play; the bar then says so in one line (`unplayableWords`: "Blendshape
+  animation isn't shown"). The rest pose puts the blendshapes back at 0 too (`resetPose`): a glTF's default weights
+  (its mesh's or node's `weights`) aren't carried, so one whose rest shape isn't its base shows the base.
 - **The scene**: clay lit by a soft studio (three's `RoomEnvironment`) and a key light over the camera's shoulder;
   a ground grid a power of ten apart that suits the model (1 m for a person), X and Z through the origin in Unity's
   axis colors; each version's pivot axes, turned as the node every mesh hangs under. A picked node with no geometry
@@ -439,7 +459,10 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
 - **Drawn** (`SlotLookMaterials`): MeshStandardMaterial, no metal, roughness 0.6, under the same studio; base maps sRGB,
   normal maps linear (a texture's own `.meta` isn't read); an FBX's or OBJ's textured material untinted (Unity's
   ModelImporter drops the diffuse tint), a glTF's tinted by its base color; alpha clip as `alphaTest`, transparency
-  blended without depth writes, both sides per material; textures the right way up from the decoder (FBX, OBJ and Unity
+  blended without depth writes, both sides per material. A blended material with nothing see-through (its color whole,
+  its base map without a transparent pixel, `TextureDecoded.opaque`, or not decoded yet) is drawn opaque (`drawnAlpha`):
+  Sketchfab exports skin and cloth as blended over textures with no alpha, and blended, a character's triangles drew
+  in no order, the inside of its mouth through its lips; textures the right way up from the decoder (FBX, OBJ and Unity
   UVs start at the image's bottom). The model shows in its materials' colors (darkened where a texture is on its way,
   "Progress" above) at once and textures appear as they decode: nothing over the model, no reframing. A picked part lights up and the rest fade, as with clay. Turned off, the look's
   materials and textures stay until the file changes, so turning it on again is immediate.

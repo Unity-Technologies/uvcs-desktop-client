@@ -74,7 +74,7 @@ describe('planVersion and slotLooks', () => {
     const planned = plan(version([bark]), found({ textures: new Map([[lookupKey(named('bark.png')), file('Assets/Tree/bark.png')]]) }));
     expect(planned.needs).toEqual([{ id: `up:${foundFileKey(file('Assets/Tree/bark.png'))}`, name: 'bark.png', where: { kind: 'file', file: file('Assets/Tree/bark.png') }, flipY: true }]);
     expect(slotLooks(planned, new Map()).get('Bark')).toMatchObject({ color: [0.5, 0.2, 0.1], baseMap: null });
-    const ready = new Map<string, NeedState>([[`up:${foundFileKey(file('Assets/Tree/bark.png'))}`, { kind: 'ready', key: 'k', bitmap }]]);
+    const ready = new Map<string, NeedState>([[`up:${foundFileKey(file('Assets/Tree/bark.png'))}`, { kind: 'ready', key: 'k', bitmap, opaque: true }]]);
     expect(slotLooks(planned, ready).get('Bark')).toMatchObject({ color: [1, 1, 1], baseMap: { key: 'k', repeat: [1, 1] } });
   });
 
@@ -89,7 +89,20 @@ describe('planVersion and slotLooks', () => {
     const leaf = fileMaterial('Leaf', { color: [0.5, 1, 1], baseMap: use({ kind: 'gltfImage', image: 0 }) });
     const planned = plan(version([leaf], {}, 'glb'), found(), 'before');
     expect(planned.needs).toEqual([{ id: 'before:image:0', name: 'image 1', where: { kind: 'gltfImage', side: 'before', image: 0 }, flipY: false }]);
-    expect(slotLooks(planned, new Map([['before:image:0', { kind: 'ready', key: 'k', bitmap }]])).get('Leaf')?.color).toEqual([0.5, 1, 1]);
+    expect(slotLooks(planned, new Map([['before:image:0', { kind: 'ready', key: 'k', bitmap, opaque: true }]])).get('Leaf')?.color).toEqual([0.5, 1, 1]);
+  });
+
+  it('draws a blended slot opaque while nothing of it is see-through: its base map loading or without a transparent pixel, its color whole', () => {
+    // As Sketchfab exports skin and cloth: blended, over a base map with no alpha. Blended, their triangles draw
+    // without depth, in no order, and the inside of the mouth showed through the lips.
+    const skin = fileMaterial('Skin', { alpha: 'blend', baseMap: use({ kind: 'gltfImage', image: 0 }) });
+    const planned = plan(version([skin], {}, 'glb'), found());
+    const drawn = (state: NeedState) => slotLooks(planned, new Map([['after:image:0', state]])).get('Skin')!.alpha;
+    expect(drawn({ kind: 'loading' })).toBe('opaque');
+    expect(drawn({ kind: 'ready', key: 'k', bitmap, opaque: true })).toBe('opaque');
+    expect(drawn({ kind: 'ready', key: 'k', bitmap, opaque: false })).toBe('blend');
+    const glass = plan(version([fileMaterial('Glass', { alpha: 'blend', opacity: 0.5 })], {}, 'glb'), found());
+    expect(slotLooks(glass, new Map()).get('Glass')!.alpha).toBe('blend');
   });
 
   it(".mat: its maps by GUID with their tiling and its color; clay for a remap to a material the project hasn't", () => {
@@ -257,7 +270,7 @@ describe('texturesReport', () => {
     const before = plan(input, assets, 'before');
     const after = plan(input, assets, 'after');
     const states = new Map<string, NeedState>([
-      [`up:${foundFileKey(file('Assets/Tree/bark.png'))}`, { kind: 'ready', key: 'k', bitmap }],
+      [`up:${foundFileKey(file('Assets/Tree/bark.png'))}`, { kind: 'ready', key: 'k', bitmap, opaque: true }],
       [`up:${foundFileKey(file('Assets/Tree/moss.psd'))}`, { kind: 'failed', problem: 'psdWithoutComposite' }],
     ]);
     expect(texturesReport([before, after], states, [])).toEqual({

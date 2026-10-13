@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { wheelGesture } from './wheelGesture';
-import { wheelZoomFactor } from './zoom';
+import { wheelZoomFactor } from '../../../lib/wheelZoom';
 
 const wheel = (deltaY: number, keys: { ctrlKey?: boolean; metaKey?: boolean; shiftKey?: boolean } = {}, deltaX = 0, deltaMode = 0) => ({
   deltaX,

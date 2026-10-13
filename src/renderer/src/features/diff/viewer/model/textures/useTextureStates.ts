@@ -14,7 +14,7 @@ export function useTextureStates(workspacePath: string, loads: Map<string, Textu
       if (!load) continue;
       void loadTexture(workspacePath, load).then((result) => {
         if (!live) return;
-        const state: NeedState = result.kind === 'decoded' ? { kind: 'ready', key: load.key, bitmap: result.bitmap } : { kind: 'failed', problem: result.problem };
+        const state: NeedState = result.kind === 'decoded' ? { kind: 'ready', key: load.key, bitmap: result.bitmap, opaque: result.opaque } : { kind: 'failed', problem: result.problem };
         setDecoded((current) => new Map(current).set(load.key, state));
       });
     }

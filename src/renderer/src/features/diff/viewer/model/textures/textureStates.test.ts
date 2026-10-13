@@ -4,7 +4,7 @@ import type { TextureLoad } from './textureLoads';
 import { needStatesOf, onlyLoaded } from './textureStates';
 
 const load = (key: string): TextureLoad => ({ key, name: `${key}.png`, source: { kind: 'bytes', bytes: new Uint8Array(), id: key }, longest: 1024, flipY: false });
-const ready = (key: string): NeedState => ({ kind: 'ready', key, bitmap: {} as ImageBitmap });
+const ready = (key: string): NeedState => ({ kind: 'ready', key, bitmap: {} as ImageBitmap, opaque: true });
 
 describe('texture states', () => {
   it("tells each need's state: decoded, loading, or failed for an image that doesn't read", () => {

@@ -1,6 +1,6 @@
-import type { FrameClock } from './frameClock';
+import type { FrameClock } from '../../../lib/frameClock';
 import { interpolateViewport, type Size, type Viewport } from './viewport';
-import { cubicEaseOut } from './zoom';
+import { cubicEaseOut } from '../../../lib/wheelZoom';
 
 export const GLIDE_MS = 420;
 

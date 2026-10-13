@@ -2,7 +2,7 @@
 // move side by side (or blended, or swiped). Each version plays its own take of that name at its own length; a take
 // only one version has plays there, the other keeps its rest pose and the bar says so. It starts at the rest pose,
 // so a diff opens still; leaving it, or going back to the rest pose, puts every node back. What of a take the viewer
-// can't play (blendshapes: `playableTake`) is left out, and the bar says so.
+// can't play (a node it hasn't, blendshapes of a mesh without them: `playableTake`) is left out, and the bar says so.
 
 import { Clapperboard, Pause, Play } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -138,6 +138,6 @@ function playableOn(scene: ModelScene | null, take: ModelClip | undefined): Play
   let ofScene = playables.get(scene);
   if (!ofScene) playables.set(scene, (ofScene = new WeakMap()));
   let playable = ofScene.get(take);
-  if (!playable) ofScene.set(take, (playable = playableTake(AnimationClip.parse(take.tracks), scene.root)));
+  if (!playable) ofScene.set(take, (playable = playableTake(AnimationClip.parse(take.tracks), scene)));
   return playable;
 }

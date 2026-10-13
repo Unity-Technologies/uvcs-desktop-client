@@ -1,11 +1,13 @@
 // One texture file's bytes as an ImageBitmap ready for the GPU, in the texture worker: its size checked from its
 // header first, decoded by the browser or by `decodePixels`, shrunk to the budget's side (`fittedSize`), turned upside
 // down for the models whose UVs start at the image's bottom (FBX, OBJ, Unity's materials: three's `flipY`, which
-// WebGL can't apply to a bitmap), its alpha kept apart from its color. Never on the UI thread.
+// WebGL can't apply to a bitmap), its alpha kept apart from its color, and whether any pixel is see-through
+// (`bitmapIsOpaque`). Never on the UI thread.
 
 import { decodePixels } from './decodePixels';
 import { fittedSize, sizeProblem } from './textureBudget';
 import { imageSizeOf, textureFormatOf } from './textureFormats';
+import { bitmapIsOpaque } from './textureOpacity';
 import type { TextureProblem } from './textureProblems';
 
 export interface TextureDecodeRequest {
@@ -18,7 +20,7 @@ export interface TextureDecodeRequest {
   flipY: boolean;
 }
 
-export type TextureDecoded = { kind: 'decoded'; bitmap: ImageBitmap } | { kind: 'failed'; problem: TextureProblem };
+export type TextureDecoded = { kind: 'decoded'; bitmap: ImageBitmap; opaque: boolean } | { kind: 'failed'; problem: TextureProblem };
 
 export async function decodeTexture({ bytes, name, longest, flipY }: TextureDecodeRequest): Promise<TextureDecoded> {
   const format = textureFormatOf(name);
@@ -44,7 +46,7 @@ export async function decodeTexture({ bytes, name, longest, flipY }: TextureDeco
       resizeHeight: target.height,
       resizeQuality: 'high',
     });
-    return { kind: 'decoded', bitmap };
+    return { kind: 'decoded', bitmap, opaque: bitmapIsOpaque(bitmap) };
   } catch {
     return { kind: 'failed', problem: 'unreadable' };
   }

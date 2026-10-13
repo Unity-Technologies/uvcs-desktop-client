@@ -34,7 +34,7 @@ export interface ModelScene {
   /** The skeleton to draw: each bone, and each bone with its parent bone (`boneLinks`). */
   bones: Object3D[];
   links: [Object3D, Object3D][];
-  /** Puts every node back where the file has it, after a take moved them. */
+  /** Puts every node back where the file has it, and every blendshape at rest, after a take moved them. */
   resetPose(): void;
   dispose(): void;
 }
@@ -95,6 +95,7 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
         node.quaternion.copy(rest[i]!.quaternion);
         node.scale.copy(rest[i]!.scale);
       });
+      for (const { solid } of meshes) solid.morphTargetInfluences?.fill(0);
     },
     dispose() {
       for (const { solid, clay, wire, heat, ghost } of meshes) {
@@ -110,7 +111,7 @@ export function buildModelScene(model: ParsedModel, summary: ModelSummary): Mode
 
 /**
  * The mesh as drawn: in its bind pose (a take poses a skinned one: `ModelAnimationBar`), its slots as groups,
- * its normals computed when the file has none, as Unity's importer does.
+ * its normals computed when the file has none, as Unity's importer does, its blendshapes ready for a take to play.
  */
 function meshOf(mesh: ModelMesh, key: string, slotKeys: string[]): SceneMesh {
   const geometry = new BufferGeometry();
@@ -129,6 +130,7 @@ function meshOf(mesh: ModelMesh, key: string, slotKeys: string[]): SceneMesh {
   if (mesh.index) geometry.setIndex(new BufferAttribute(mesh.index, 1));
   if (!mesh.attributes.normal) geometry.computeVertexNormals();
   for (const group of mesh.groups) geometry.addGroup(group.start, group.count, group.slot);
+  addBlendShapes(geometry, mesh.blendShapes);
   geometry.computeBoundingSphere();
   const materials = mesh.slots.map((slot) => new MeshStandardMaterial({ name: slot, roughness: 0.72, metalness: 0, polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1 }));
   const solid = new MeshKind(geometry, materials);
@@ -137,8 +139,24 @@ function meshOf(mesh: ModelMesh, key: string, slotKeys: string[]): SceneMesh {
   const ghost = new MeshKind(geometry, new MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false }));
   heat.visible = false;
   ghost.visible = false;
+  // The twins deform as the solid does: one set of blendshape weights, the one a take sets (`playableTake`).
+  for (const twin of [wire, heat, ghost]) twin.morphTargetInfluences = solid.morphTargetInfluences;
   for (const object of [solid, wire, heat, ghost]) object.userData.key = key;
   return { key, solid, clay: materials, wire, heat, ghost, slots: mesh.slots, slotKeys };
+}
+
+/**
+ * The blendshapes as morph targets, offsets from the base shape, named as a take's tracks name them, all at rest (0).
+ * Set before the meshes are made, which size their weights from them; the bounds then hold every shape whole.
+ */
+function addBlendShapes(geometry: BufferGeometry, shapes: ModelMesh['blendShapes']): void {
+  if (shapes.length === 0) return;
+  geometry.morphTargetsRelative = true;
+  geometry.morphAttributes.position = shapes.map(({ name, deltas }) => {
+    const target = new BufferAttribute(deltas, 3);
+    target.name = name;
+    return target;
+  });
 }
 
 /** Each bone with its parent, where the parent is a bone too: the skeleton's lines. */
