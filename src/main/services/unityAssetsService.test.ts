@@ -130,6 +130,14 @@ describe('unityAssets.find', () => {
     expect((await service(workspace).find({ modelPath: 'Hub/Assets/Game/Assets/Tree.fbx' })).importsPsb).toBe(true);
   });
 
+  it("never reads the package cache for a find that keeps no index, which would read it whole each time: such a miss can't be told", async () => {
+    const LIT = '22222222222222222222222222222222';
+    const files = { 'Game/Assets/Tree.fbx.meta': meta(MAT_GUID), 'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat.meta': meta(LIT) };
+    const { find, listed } = service(await workspaceWith(files), process.platform, 'partial');
+    expect(await find({ guids: [LIT] })).toMatchObject({ guids: [null], guidMissesKnown: false });
+    expect(listed.filter((folder) => folder.startsWith('Game/Library'))).toEqual([]);
+  });
+
   it("keeps no index of a workspace whose watcher doesn't see every change: each find reads afresh", async () => {
     const files = { 'Game/Assets/Art/Materials/Bark.mat': 'mat', 'Game/Assets/Art/Materials/Bark.mat.meta': meta(MAT_GUID) };
     for (const coverage of ['partial', 'unwatched'] as const) {
