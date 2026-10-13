@@ -188,7 +188,7 @@ describe('unityAssets.find', () => {
 
   it("reads the package cache again once the project's packages change, which the watcher sees in Packages", async () => {
     const LIT = '22222222222222222222222222222222';
-    const workspace = await workspaceWith({ 'Game/Assets/Tree.fbx.meta': meta(MAT_GUID), 'Game/Packages/manifest.json': '{}', 'Game/Library/PackageCache/.keep': '' });
+    const workspace = await workspaceWith({ 'Game/Assets/Tree.fbx.meta': meta(MAT_GUID), 'Game/Packages/manifest.json': '{}', 'Game/Library/PackageCache/com.unity.ugui@2.0.0/package.json': '{}' });
     const { find, changed } = service(workspace);
     expect((await find({ guids: [LIT] })).guids).toEqual([null]);
     await writeAt(workspace, 'Game/Library/PackageCache/com.unity.render-pipelines.universal@17.0.3/Lit.mat.meta', meta(LIT));

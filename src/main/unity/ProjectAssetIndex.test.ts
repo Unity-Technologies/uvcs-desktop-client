@@ -52,6 +52,7 @@ function project(far: number) {
     ['Game/Assets/Art/Tree/Bark.mat', 'mat'],
     ['Game/Assets/Art/Tree/Bark.mat.meta', meta(1)],
     ['Game/Library/Artifacts/big.bin', 'cache'],
+    ['Game/Library/PackageCache/com.unity.ugui@2.0.0/package.json', '{}'],
   ]);
   for (let folder = 0; folder < far; folder++) {
     for (let asset = 0; asset < 10; asset++) {
@@ -85,13 +86,13 @@ describe('ProjectAssetIndex', () => {
     const { disk, reads } = memoryFiles(project(20));
     const index = new ProjectAssetIndex(unityProjectOf('Game/Assets/Art/Tree/Tree.fbx')!, disk, 'linux');
     expect(await index.pathOfGuid(guid(999999), MODEL_FOLDER)).toBeNull();
-    // Every .meta of Assets once (201), each folder of Assets and Packages once (24), Library's top and its PackageCache
-    // (none here) once (2): never Library's Artifacts.
-    expect(reads).toEqual({ lists: 26, heads: 201 });
+    // Every .meta of Assets once (201), each folder of Assets and Packages once (24), Library's top, its PackageCache
+    // and the one package there once (3): never Library's Artifacts.
+    expect(reads).toEqual({ lists: 27, heads: 201 });
     expect(await index.pathOfGuid(guid(1000 + 55), MODEL_FOLDER)).toBe('Game/Assets/Far5/rock5.png');
     expect(await index.pathOfGuid(guid(888888), MODEL_FOLDER)).toBeNull();
     // The hit's .meta read again to check it, and the package cache's top listed again for the miss, nothing else.
-    expect(reads).toEqual({ lists: 27, heads: 202 });
+    expect(reads).toEqual({ lists: 28, heads: 202 });
   });
 
   it("finds a registry package's GUID in Library/PackageCache, and can't tell one missing without a Library", async () => {
@@ -134,7 +135,7 @@ describe('ProjectAssetIndex', () => {
     const files = new Map([
       ['Game/Assets/Docs~/a.mat.meta', meta(5)],
       ['Game/Assets/.hidden/b.mat.meta', meta(6)],
-      ['Game/Library/PackageCache/.keep', ''],
+      ['Game/Library/PackageCache/com.unity.ugui@2.0.0/package.json', '{}'],
     ]);
     const index = new ProjectAssetIndex(unityProjectOf('Game/Assets/Tree.fbx')!, memoryFiles(files).disk, 'linux');
     expect(await index.pathOfGuid(guid(5), 'Game/Assets')).toBeNull();
@@ -145,7 +146,7 @@ describe('ProjectAssetIndex', () => {
     const { disk, reads } = memoryFiles(project(20));
     const index = new ProjectAssetIndex(unityProjectOf('Game/Assets/Art/Tree/Tree.fbx')!, disk, 'linux');
     await Promise.all([index.pathOfGuid(guid(999999), MODEL_FOLDER), index.pathOfGuid(guid(888888), MODEL_FOLDER)]);
-    expect(reads).toEqual({ lists: 26, heads: 201 });
+    expect(reads).toEqual({ lists: 27, heads: 201 });
   });
 
   it("doesn't keep a read that failed as an empty folder or a .meta without a GUID, nor tell the GUID missing: the next find reads it again", async () => {
@@ -275,6 +276,15 @@ describe('ProjectAssetIndex', () => {
       expect(await index.pathOfGuid(guid(42), MODEL_FOLDER)).toBe(`${URP}/Lit.mat`);
       // Only its .meta, checked.
       expect(reads).toEqual({ lists: before.lists, heads: before.heads + 1 });
+    });
+
+    it("can't tell a GUID missing in a Library without a package cache, or with an empty one: Unity hasn't resolved its packages here", async () => {
+      const withoutCache = new Map([...project(1)].filter(([path]) => !path.startsWith('Game/Library/PackageCache/')));
+      expect(await indexOf(memoryFiles(withoutCache).disk).pathOfGuid(guid(99), MODEL_FOLDER)).toBeUndefined();
+      const emptyCache = new Map([...withoutCache, ['Game/Library/PackageCache/.DS_Store', '']]);
+      const index = indexOf(memoryFiles(emptyCache).disk);
+      expect(await index.pathOfGuid(guid(99), MODEL_FOLDER)).toBeUndefined();
+      expect(index.whyNotKnown()).toBe('noLibrary');
     });
 
     it("can't tell a GUID missing once the Library is deleted", async () => {
