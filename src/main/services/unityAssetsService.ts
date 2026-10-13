@@ -6,7 +6,7 @@ import type { Stats } from 'node:fs';
 import { readFile, stat } from 'node:fs/promises';
 import { posix } from 'node:path';
 import type { UnityAssetsApi } from '@shared/api/unityAssets';
-import { MAX_STORED_PATHS, MAX_UNITY_ASSET_LOOKUPS, MAX_UNITY_ASSET_PATH_LENGTH, type FoundFile, type GuidMisses, type TextureLookup, type UnityAssetsRequest } from '@shared/domain/unityAssets';
+import { MAX_STORED_PATHS, MAX_UNITY_ASSET_LOOKUPS, MAX_UNITY_ASSET_PATH_LENGTH, type FoundFile, type GuidMisses, type TextureLookup, type UnityAssetsAnswer, type UnityAssetsRequest } from '@shared/domain/unityAssets';
 import { workspaceFileOf } from '../files/workspacePaths';
 import { diskProjectFiles } from '../unity/diskProjectFiles';
 import { ProjectAssetIndex, type ProjectFiles } from '../unity/ProjectAssetIndex';
@@ -36,26 +36,48 @@ export function createUnityAssetsService({ watchers, platform = process.platform
     unwatched: (workspacePath) => void indexes.delete(workspacePath),
   });
 
+  /** Finds under way on each index: a fresh read starts only when none is. */
+  const findsUnderWay = new Map<ProjectAssetIndex, number>();
+
   /**
    * The project's index, kept per project. Where the workspace's watcher doesn't see every change (what it doesn't
-   * see would leave the index wrong for the session), the project's folders are read afresh for each find (`clear`);
-   * its package cache, which no watcher sees anyway and which checks itself (`packageCacheUnchanged`), is kept.
+   * see would leave the index wrong for the session), the project's folders are read afresh (`clear`) by a find that
+   * starts when no other is under way: finds at once (both versions of a diff) share one fresh read, as a clear would
+   * overtake the other's. Its package cache, which no watcher sees anyway and which checks itself
+   * (`packageCacheUnchanged`), is kept. Released with `doneWith`.
    */
   function indexOf(workspacePath: string, project: UnityProject): ProjectAssetIndex {
     const ofWorkspace = indexes.get(workspacePath) ?? new Map<string, ProjectAssetIndex>();
     indexes.set(workspacePath, ofWorkspace);
     const index = ofWorkspace.get(project.root) ?? new ProjectAssetIndex(project, filesOf(workspacePath), platform);
     ofWorkspace.set(project.root, index);
-    if (watchers.coverageOf(workspacePath) !== 'full') index.clear();
+    const readsAfresh = watchers.coverageOf(workspacePath) !== 'full';
+    const underWay = findsUnderWay.get(index) ?? 0;
+    if (readsAfresh && underWay === 0) index.clear();
+    findsUnderWay.set(index, underWay + 1);
     return index;
   }
 
-  async function find(workspacePath: string, request: UnityAssetsRequest) {
+  function doneWith(index: ProjectAssetIndex): void {
+    const underWay = (findsUnderWay.get(index) ?? 1) - 1;
+    if (underWay === 0) findsUnderWay.delete(index);
+    else findsUnderWay.set(index, underWay);
+  }
+
+  async function find(workspacePath: string, request: UnityAssetsRequest): Promise<UnityAssetsAnswer> {
     refuseUnlikely(request);
     const modelPath = workspacePathOf(request.modelPath);
     if (modelPath === null) throw new Error(`${request.modelPath} is outside the workspace`);
     const project = await unityProjectFound(modelPath, (root) => isFolder(workspacePath, root === '' ? 'ProjectSettings' : `${root}/ProjectSettings`));
     const index = project && indexOf(workspacePath, project);
+    try {
+      return await findIn(workspacePath, request, modelPath, project, index);
+    } finally {
+      if (index) doneWith(index);
+    }
+  }
+
+  async function findIn(workspacePath: string, request: UnityAssetsRequest, modelPath: string, project: UnityProject | null, index: ProjectAssetIndex | null): Promise<UnityAssetsAnswer> {
     const modelFolder = posix.dirname(modelPath) === '.' ? '' : posix.dirname(modelPath);
     // Outside a project, or in one without a `Library`, a GUID not found isn't known missing (`pathOfGuid`); nor in one
     // that loads a package from a folder outside it, which isn't read.

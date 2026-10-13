@@ -331,20 +331,21 @@ back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
   again when next needed, a change anywhere drops it, and so does the watch breaking or stopping; the app's own `cm`
   writes, whose events the watcher drops, count as a change anywhere once they settle, and again when their grace ends,
   `AFTER_OWN_WRITE_GRACE_MS`, as the watcher drops what changed meanwhile as theirs). It is kept only while the watcher
-  sees the whole workspace (`coverageOf` is `full`); otherwise each find reads the project's folders afresh, and keeps
-  only the package cache (which no watcher sees anyway, and which checks itself: `packageCacheUnchanged`). A GUID found
-  is checked against its `.meta` once more. A folder is read once however many finds ask at once; once all is read, a
-  miss misses at once. A read that a change overtook keeps nothing, and a find after the change never joins it: the
-  listing or GUIDs of a folder forgotten (or of everything cleared) while being read are dropped when they arrive, and a
-  whole read the project changed under isn't whole. Only what isn't there is an answer: a read the disk refused (a
-  `.meta` Unity or an antivirus holds, too many files open) is kept as nothing and read again, and at most 32 files are
-  open at once (`diskProjectFiles`); a GUID is told missing (`pathOfGuid` null) only after whole reads no change
-  overtook, of the project and its package cache: when in doubt it says why it can't tell (`GuidNotKnown`, with each
-  lookup: finds at once each get their own), as a material told missing that isn't is worse than one not told. On macOS
-  folders compare in one Unicode form (the watcher names them decomposed, listings may be composed). Changes inside
-  folders `ignore.conf` hides from the watcher aren't seen: an `Assets` folder is versioned content. Measured by hand on
-  a project of 100,000 assets (1,000 folders): a GUID it lacks reads it all in about 2.1 s, once; the next lookup reads
-  nothing. Tests count the reads (`ProjectAssetIndex.test.ts`).
+  sees the whole workspace (`coverageOf` is `full`); otherwise a find that starts while no other is under way reads the
+  project's folders afresh (finds at once, both versions of a diff, share that read: one starting would overtake the
+  other's), and keeps only the package cache (which no watcher sees anyway, and which checks itself:
+  `packageCacheUnchanged`). A GUID found is checked against its `.meta` once more. A folder is read once however many
+  finds ask at once; once all is read, a miss misses at once. A read that a change overtook keeps nothing, and a find
+  after the change never joins it: the listing or GUIDs of a folder forgotten (or of everything cleared) while being
+  read are dropped when they arrive, and a whole read the project changed under isn't whole. Only what isn't there is an
+  answer: a read the disk refused (a `.meta` Unity or an antivirus holds, too many files open) is kept as nothing and
+  read again, and at most 32 files are open at once (`diskProjectFiles`); a GUID is told missing (`pathOfGuid` null)
+  only after whole reads no change overtook, of the project and its package cache: when in doubt it says why it can't
+  tell (`GuidNotKnown`, with each lookup: finds at once each get their own), as a material told missing that isn't is
+  worse than one not told. On macOS folders compare in one Unicode form (the watcher names them decomposed, listings may
+  be composed). Changes inside folders `ignore.conf` hides from the watcher aren't seen: an `Assets` folder is versioned
+  content. Measured by hand on a project of 100,000 assets (1,000 folders): a GUID it lacks reads it all in about 2.1 s,
+  once; the next lookup reads nothing. Tests count the reads (`ProjectAssetIndex.test.ts`).
 - **Formats** (`textureFormatOf`), decoded in a worker of their own (`texture.worker`), never on the UI thread (where it
   can't start, textures don't show): PNG, JPEG, GIF, BMP, WebP by the browser (`createImageBitmap`); TGA, TIFF (LZW
   too), EXR (DWAA too) and Radiance HDR by three's loaders (high dynamic range clamped and encoded as sRGB); PSD and PSB
