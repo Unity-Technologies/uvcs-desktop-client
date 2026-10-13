@@ -130,6 +130,42 @@ describe('unityAssets.find', () => {
     expect((await service(workspace).find({ modelPath: 'Hub/Assets/Game/Assets/Tree.fbx' })).importsPsb).toBe(true);
   });
 
+  it('shares one fresh read of the project among finds at once where the watcher sees only part of the workspace', async () => {
+    const workspace = await workspaceWith({
+      'Game/Assets/Art/Materials/Bark.mat': 'mat',
+      'Game/Assets/Art/Materials/Bark.mat.meta': meta(MAT_GUID),
+      'Game/Library/PackageCache/com.unity.ugui@2.0.0/package.json': '{}',
+    });
+    // A material the project hasn't, looked for first: told missing only by a walk no other find's start overtook.
+    const request = { modelPath: 'Game/Assets/Art/Tree/Tree.fbx', textures: [], guids: [BARK_GUID, MAT_GUID], paths: [], searchTexturesGlobally: false };
+    const listed: string[] = [];
+    // The other version of the diff asks while this one's read is under way: the read waits until it has its index.
+    let secondFind: Promise<unknown> | null = null;
+    let finds = 0;
+    let secondHasIndex = (): void => undefined;
+    const secondIndexed = new Promise<void>((resolve) => (secondHasIndex = resolve));
+    const unityAssets = createUnityAssetsService({
+      watchers: { listen: () => () => undefined, coverageOf: () => (++finds === 2 && secondHasIndex(), 'partial') },
+      filesOf: (path) => {
+        const disk = diskProjectFiles(path);
+        return {
+          list: async (folder) => {
+            listed.push(folder);
+            if (folder === 'Game/Assets/Art' && !secondFind) {
+              secondFind = unityAssets.find(workspace, request);
+              await secondIndexed;
+            }
+            return disk.list(folder);
+          },
+          head: disk.head,
+        };
+      },
+    });
+    const first = await unityAssets.find(workspace, request);
+    for (const answer of [first, await secondFind]) expect(answer).toMatchObject({ guids: [null, { path: 'Game/Assets/Art/Materials/Bark.mat' }], guidMisses: 'known' });
+    expect(listed.filter((folder) => folder === 'Game/Assets/Art/Materials')).toHaveLength(1);
+  });
+
   it("keeps the package cache, which no watcher sees, for a workspace whose project folders each find reads afresh", async () => {
     const LIT = '22222222222222222222222222222222';
     const files = {
