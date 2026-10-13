@@ -24,7 +24,14 @@ reads a file otherwise:
 
 - **Nothing outside the file loads** (`noTextureLoading`): every texture goes to one handler that records its file
   name (`ParsedModel.textures`) and loads nothing, and every other URL becomes an empty one; only `data:` and the
-  loader's own `blob:` URLs (the file's bytes) read. It is also what lets the loaders run without a DOM.
+  loader's own `blob:` URLs (the file's bytes) read. It is also what lets the loaders run without a DOM. A glTF's
+  images held in the file go there too (`texturesNamedOnly`, a GLTFLoader plugin): its own image loader decoded them
+  in full in the worker, for nothing.
+- **Materials as the file defines them** (`fileMaterialsOf`, `ParsedModel.materials`, `ModelMesh.slotMaterials`):
+  each material once, by itself and not by name (a glTF's may all be unnamed), with its color, opacity, alpha mode,
+  sides, and the texture each map names: an FBX's by the paths it stores (`readFbxTextureFiles`, by the Texture
+  object's id that FBXLoader sets as `texture.ID`, ASCII and binary), a glTF's by its image (`gltfTextureSource`). They
+  change nothing the diff tells: only the Materials look reads them.
 - **Names are the file's**: FBXLoader renames nodes for its animation bindings (`Hand L` becomes `Hand_L`); the
   file's name, which is Unity's GameObject's, is in `userData.originalName` (`fromThreeObject`).
 - **Units and axes as Unity converts them** (`fbxProperties`, `fbxAxes`): FBXLoader ignores `UnitScaleFactor` and turns
@@ -122,7 +129,8 @@ wireframe twin sharing the geometry) under one camera (`orbitCamera`), laid out 
   scroll or pinch zooms at the point under the pointer, double-click orbits around the point clicked, a click picks the
   part under it and its match on the other side. F frames what is picked, or the whole model; 0 the whole model
   (`modelKeys`, in the shortcut registry). Draw modes are Unity's (Shaded, Wireframe, Shaded wireframe), and material
-  slots can show in their colors (`slotColor`: the avatar fills by name, so a renamed slot changes color).
+  slots can show in their colors (`slotColor`: the avatar fills by name, so a renamed slot changes color) or their
+  materials ("Materials" below).
 - **Bones** (offered when a version has some, remembered): each version's skeleton over it, a line from each bone
   to its parent bone (`boneLinks`) and a dot per joint, where the bones are now.
 - **Takes** (`ModelAnimationBar`, when a version has any): a take picked from both versions' (matched by name,
@@ -184,6 +192,82 @@ trusted.
   exporting again reads "100× larger in Unity". Only where the model can be found beside it (`modelBesideMeta`);
   elsewhere the `.meta` is its text.
 
+## Materials
+
+The **Materials** look (off by default) shows each material slot with its color and textures as Unity would show
+them. With slot colors it is one choice (`SurfaceLook`: clay, slot colors, materials; `clickedSurface`): turning one
+button on turns the other off, the one on clicked again goes back to clay, and the choice is remembered across files and
+sessions (`modelSurface` in `diffPreferencesStore`, which migrated the old `modelColorBySlot`). The button shows only
+when some slot would show more than clay (`materialsOffered`: a remap, a texture, a color or transparency of its own).
+In Diffs both buttons stay, off, saying why (`surfaceButtonDisabledReason`: the heatmap colors the model), and the
+choice comes back in the other modes. The merge cards' stills stay clay (`modelThumbnail`).
+
+- **From the workspace, never the server.** Materials and textures are read from the workspace on disk as it is now,
+  whatever version of the model shows (pending, Files, a changeset, history); only the model's own `.meta` is the
+  version's (its remaps, read with its import settings). No `cm` command is added (`api.unityAssets.find` reads the
+  disk only; `unityAssetsService.test.ts` checks it can't reach `cm`). Reading them from the server was rejected: one
+  `cm cat` per texture per side, on a server many people share, for a look whose textures have their own image diff.
+  Without a workspace the look isn't offered.
+- **Where each slot's material comes from** (`slotSources`, as Unity's ModelImporter decides for FBX and OBJ): with
+  Material Creation Mode None (`materialImportMode: 0`, or `importMaterials: 0` in a `.meta` older than Unity 2019.3)
+  clay, unless `remapMaterialsIfMaterialImportModeIsNone` (absent before 2021.2: the remaps applied then); a slot the
+  `.meta` remaps (`externalObjects`, by slot name) takes that `.mat`, and one remapped to a GUID the project hasn't is
+  clay (Unity assigns the missing asset, never the file's own); any other slot the file's material, an OBJ's from its
+  `.mtl` (`readMtlMaterials`, read beside it on disk). The legacy external location (`materialLocation: 0`, obsolete
+  since 2019.3) counts as the file's own; its `Materials/` folder search isn't done. A glTF's materials are glTFast's:
+  the file's, keyed by material, not name (`slotKeysOf`: Sponza's 25 are all unnamed).
+- **A `.mat`** (`readUnityMaterial`, over `parseUnityYaml`, which joins values Unity folded onto the next lines): the
+  base map is the first set of `_BaseMap` (URP), `_BaseColorMap` (HDRP), `_MainTex` (Built-in), else a Shader Graph
+  texture whose name says it is the base color (`_MainTexture`; never one named normal, mask, detail…; a name that says
+  nothing, `Texture2D_B222E8F`, is none); the normal map `_BumpMap` or `_NormalMap`; tiling and offset; the color
+  `_BaseColor` or `_Color` (sRGB); alpha clip (`_AlphaClip`, `_AlphaCutoffEnable`, Built-in `_Mode` 1, cutoff
+  `_Cutoff`/`_AlphaCutoff`), transparency (`_Surface`, `_SurfaceType`, `_Mode` 2 or 3), both sides (`_Cull` or
+  `_CullMode` 0, `_DoubleSidedEnable`). Textures by GUID.
+- **Unity's texture search** (`textureCandidates`, `main/unity/textureSearch.ts`), for a texture the file names: a
+  `.meta` remap of the texture by its name without extension (by GUID); the model's folder; `Textures/` there and in
+  each folder above it up to `Assets` (the project: the nearest folder above the model with an `Assets` folder it is
+  under, `unityProjectOf`; outside one, up to the workspace's root); the stored relative path (FBX `RelativeFilename`,
+  `..` resolved, kept only inside the project); the stored absolute path, only when it is inside the project on this
+  machine (another OS's path is nothing here); then, with "search textures globally", any file of that name in
+  `Assets`, nearest first (`preferredMatches`). That setting (`searchTexturesGlobally` under `materials:`) is read as
+  written; without it, as the importer that wrote the `.meta` did: below ModelImporter `serializedVersion` 24600 it
+  always searched, from it it doesn't. Names compare as the disk does (case-insensitive on macOS and Windows); nothing
+  outside the workspace is read (`workspaceFileOf`). A glTF's images by URI are files beside it (`siblingPath`), on disk.
+- **The project's index** (`ProjectAssetIndex`): GUIDs from each `.meta`'s second line, and file names, read outward
+  from the model (its folder's subtree, then each folder above it, then `Assets` and the project's `Packages`, never
+  `Library`), a lookup stopping at the first ring that answers; what Unity skips (`.hidden`, `Name~`) is left out.
+  The watcher keeps it current (`WorkspaceWatchers.listen`: a changed folder is read again when next needed, a change
+  anywhere drops it, and so does the watch breaking or stopping); a GUID found is checked against its `.meta` once
+  more. Measured by hand on a project of 100,000 assets (1,000 folders): a GUID it lacks reads it all in about 2.1 s,
+  once; the next lookup reads nothing. Tests count the reads (`ProjectAssetIndex.test.ts`).
+- **Formats** (`textureFormatOf`), decoded in a worker of their own (`texture.worker`), never on the UI thread (where
+  it can't start, textures don't show): PNG, JPEG, GIF, BMP, WebP by the browser (`createImageBitmap`); TGA, TIFF (LZW
+  too), EXR (DWAA too) and Radiance HDR by three's loaders (high dynamic range clamped and encoded as sRGB); PSD and PSB
+  by the app's own reader of the composite image (`readPsd`: raw or RLE, 8 or 16 bits, RGB or grayscale, alpha; read
+  by content, so a PSD named `.psb` reads). A PSD saved without "Maximize Compatibility" (Version Info's
+  `hasRealMergedData`), or in CMYK, Lab, indexed or 32 bits, says so. DDS, KTX and the rest aren't shown. A library
+  for PSD (ag-psd) was set aside: layers, effects and text a texture never needs, more of an untrusted file parsed; the
+  one thing it would add is flattening the layers of a PSD whose composite is blank.
+- **Budget** (`textureBudget`): at most 64 texture files a model (`MAX_TEXTURE_FILES`, both versions together, each
+  file once); each drawn at most 2048 px on its longest side, 1024 past 24 textures, with mipmaps; refused before
+  decoding past 16384 px a side or 8192² pixels (`imageSizeOf` reads each format's header first), and unread past the
+  read's own size cap (100 MB, `MAX_MODEL_BYTES`). A file version decodes once (`textureLoads`: by path, size and
+  time written; the latest 384 MB of bitmaps kept), one GPU texture per bitmap and use (`LookTextures`), freed when no
+  look uses it, or with the renderer.
+- **Drawn** (`SlotLookMaterials`): MeshStandardMaterial, no metal, roughness 0.6, under the same studio; base maps
+  sRGB, normal maps linear (a texture's own `.meta` isn't read); an FBX's or OBJ's textured material untinted (Unity's
+  ModelImporter drops the diffuse tint), a glTF's tinted by its base color; alpha clip as `alphaTest`, transparency
+  blended without depth writes, both sides per material; textures the right way up from the decoder (FBX, OBJ and
+  Unity UVs start at the image's bottom). The model shows in its materials' colors (or clay) at once and textures
+  appear as they decode: no spinner, no reframing. A picked part lights up and the rest fade, as with clay. Turned off,
+  the look's materials and textures stay until the file changes, so turning it on again is immediate.
+- **What doesn't show, said once** (`texturesStat`): the info strip's "Textures 9 of 12" (or "Textures 12") while
+  the look is on, its tooltip naming the first eight that don't and why (`textureProblemWords`: "not in the
+  workspace", "can't read this PSD: save it with Maximize Compatibility"…). No toast, no dialog, nothing over the model.
+- **Not shown, and why**: textures embedded in an FBX (Unity uses them only once extracted, as files the search then
+  finds); DDS and KTX (GPU formats); the legacy external materials' `Materials/` search; anything but base color,
+  normal, alpha and sides (metal, smoothness, emission, detail maps: the look is for seeing the model, not lighting it).
+
 ## In a merge
 
 A binary conflict whose versions render (models or images: `rendersVersions`) opens on its versions to keep
@@ -198,7 +282,10 @@ re-export, wrong units, a turn, a pivot, hierarchy edits, material slots, a scul
 models), a branch of model changes and a pending one. Then, on /main: a skinned GLB character (`Scout.glb`) whose
 takes change (a shorter `Wave`, a new `Jump`), a `.gltf` whose geometry is in the `.bin` beside it (`Barrel.gltf`),
 import settings changed in a `.meta` alone (the crate's `globalScale`, the robot's `Wave` clip cut past the end of its
-take), and `/main/conflict-lamp`, which conflicts with /main on `Lamp.glb` when merged. Its FBX files are ASCII,
+take), and `/main/conflict-lamp`, which conflicts with /main on `Lamp.glb` when merged. Then textured props, one per
+way Unity finds materials and textures (`models/texturedModels.ts`: textures beside the model and in a `Textures`
+folder of its own or its parent's, a TGA, a `.mat` remap with a PSD base map and a PNG normal map, an alpha-clipped
+double-sided leaf card, a glTF's images beside it and a GLB's inside it, a texture missing), all painted in code. Its FBX files are ASCII,
 written by `testing/asciiFbx`, which tests use too; its glTF ones are three.js scenes written by GLTFExporter
 (`models/gltfModels.ts`, with a `FileReader` stand-in for Node); its `.meta` files are Unity 6.3's (`models/unityMeta.ts`:
 ModelImporter for FBX and OBJ, glTFast's ScriptedImporter for glTF and GLB).
