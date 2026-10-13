@@ -120,9 +120,14 @@ function described(material: ResolvedMaterial, byPath = false): string {
   }
 }
 
-/** A registry package's material, which Unity keeps in `Library/PackageCache`: the package's, not the project's. */
+/**
+ * A registry package's material, which Unity keeps in the project's `Library/PackageCache`: the package's, not the
+ * project's. The project's own `Library` is beside its `Assets`, never inside them.
+ */
 function isPackageCached(path: string): boolean {
-  return /(^|\/)Library\/PackageCache\//.test(path);
+  const parts = path.split('/');
+  const at = parts.findIndex((part, i) => part === 'Library' && parts[i + 1] === 'PackageCache');
+  return at !== -1 && !parts.slice(0, at).includes('Assets');
 }
 
 function mapChange(map: string, before: string | null, after: string | null): string {
