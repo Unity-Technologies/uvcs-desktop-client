@@ -186,6 +186,15 @@ describe('unityAssets.find', () => {
     expect(await service(workspace).find({ textures: [lookup('bark.png', [], BARK_GUID)] })).toMatchObject({ textures: [null], guidMisses: 'noLibrary' });
   });
 
+  it("can't tell a GUID missing in a project that loads a package from a folder outside it, which isn't read", async () => {
+    const workspace = await workspaceWith({
+      'Game/Assets/Tree.fbx.meta': meta(MAT_GUID),
+      'Game/Packages/manifest.json': JSON.stringify({ dependencies: { 'com.studio.art': 'file:../../Shared/com.studio.art' } }),
+      'Game/Library/PackageCache/com.unity.ugui@2.0.0/package.json': '{}',
+    });
+    expect(await service(workspace).find({ guids: [BARK_GUID] })).toMatchObject({ guids: [null], guidMisses: 'outsidePackage' });
+  });
+
   it("reads the package cache again once the project's packages change, which the watcher sees in Packages", async () => {
     const LIT = '22222222222222222222222222222222';
     const workspace = await workspaceWith({ 'Game/Assets/Tree.fbx.meta': meta(MAT_GUID), 'Game/Packages/manifest.json': '{}', 'Game/Library/PackageCache/com.unity.ugui@2.0.0/package.json': '{}' });
