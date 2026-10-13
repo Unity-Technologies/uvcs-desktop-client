@@ -7,6 +7,7 @@ import { formatCount } from '../../../../lib/text';
 import { formatLength, formatUnits } from './modelUnits';
 import type { ModelChange, NodeRef } from './modelChanges';
 import { isRisk } from './modelChanges';
+import { materialFoldKey, materialFoldWords, materialItemLabel, materialWords } from './materials/materialChangeWords';
 
 export interface ChangeRow {
   /** Stable for the change: a key for the list and for the row picked. */
@@ -61,6 +62,8 @@ function foldKey(change: ModelChange): string | null {
       return `${change.kind}:${change.now}`;
     case 'avatarBoneLost':
       return change.kind;
+    case 'material':
+      return `material:${materialFoldKey(change.change)}`;
     default:
       return null;
   }
@@ -70,6 +73,10 @@ function foldedRow(key: string, run: ModelChange[]): ChangeRow {
   const first = run[0]!;
   const count = run.length;
   const items = run.map((change) => ({ label: itemLabel(change), focus: focusOf(change) }));
+  if (first.kind === 'material') {
+    const words = materialFoldWords(run.flatMap((change) => (change.kind === 'material' ? [change.change] : [])));
+    return { id: `fold:${key}`, tone: isRisk(first) ? 'risk' : 'note', ...words, focus: [], items };
+  }
   const noun = 'node' in first ? plural(family(first.node), count) : 'meshes';
   const titles: Partial<Record<ModelChange['kind'], string>> = {
     renamed: `Renamed ${count} ${noun}`,
@@ -109,6 +116,8 @@ function itemLabel(change: ModelChange): string {
       return `${change.node.name}: ${change.before.join(', ')} → ${change.after.join(', ')}`;
     case 'avatarBoneLost':
       return `${change.humanName} → ${change.boneName}`;
+    case 'material':
+      return materialItemLabel(change.change);
     default:
       return 'node' in change ? change.node.name : change.kind;
   }
@@ -221,6 +230,8 @@ function wordsOf(change: ModelChange): { title: string; detail?: string } {
         title: `Clip ${change.clip} ends at frame ${change.lastFrame}, past its take's ${change.takeFrames} frames`,
         detail: 'Unity holds the last frame for the rest: shorten the clip in the import settings.',
       };
+    case 'material':
+      return materialWords(change.change);
     case 'clipTakeLost':
       return { title: `Clip ${change.clip} is cut from the take ${change.take}, which is gone`, detail: 'Unity imports no clip from it until it is cut from a take the model has.' };
   }

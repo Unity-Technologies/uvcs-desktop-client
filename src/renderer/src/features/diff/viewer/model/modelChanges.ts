@@ -9,6 +9,7 @@ import { Matrix4, Quaternion, Vector3 } from 'three';
 import type { ModelNodeKind } from './parsedModel';
 import type { Bounds, MeshSummary, ModelSummary, SummaryNode } from './modelSummary';
 import { matchNodes, type NodeMatching } from './nodeMatching';
+import { isMaterialRisk, type MaterialChange } from './materials/materialChanges';
 
 /** A node a change is about, on the sides it is on: `before` and `after` are node keys, for framing it. */
 export interface NodeRef {
@@ -62,7 +63,9 @@ export type ModelChange =
   | { kind: 'avatarBoneLost'; humanName: string; boneName: string }
   | { kind: 'clipPastTake'; clip: string; take: string; lastFrame: number; takeFrames: number }
   | { kind: 'clipTakeLost'; clip: string; take: string }
-  | { kind: 'exporter'; before: string | null; after: string | null };
+  | { kind: 'exporter'; before: string | null; after: string | null }
+  /** What changed in a slot's material as Unity resolves it (`materialChanges`). */
+  | { kind: 'material'; change: MaterialChange };
 
 export type ModelChangeKind = ModelChange['kind'];
 
@@ -97,6 +100,8 @@ export function isRisk(change: ModelChange): boolean {
       return true;
     case 'lightmapUvs':
       return !change.now;
+    case 'material':
+      return isMaterialRisk(change.change);
     default:
       return false;
   }
